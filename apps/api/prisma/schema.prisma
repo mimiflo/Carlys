@@ -1,8 +1,8 @@
 // Schéma Prisma de Carlys.
 //
 // Introduit par tranches verticales :
-//   - Étape 2 (actuelle) : identité et authentification.
-//   - Étape 3 : exercices (Exercise, MuscleGroup, Equipment, …)
+//   - Étape 2 : identité et authentification.
+//   - Étape 3 (actuelle) : catalogue d'exercices.
 //   - Étape 4 : séances (WorkoutSession, WorkoutSet, …)
 // Le modèle de données cible complet est documenté dans docs/database/schema.md.
 
@@ -178,4 +178,93 @@ model AuditLog {
 
   @@index([userId, createdAt])
   @@index([action, createdAt])
+}
+
+// ───────────────────── Catalogue d'exercices (Étape 3) ─────────────────────
+
+enum ExerciseDifficulty {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
+enum ExerciseType {
+  STRENGTH
+  CARDIO
+  MOBILITY
+  STRETCHING
+}
+
+enum ExerciseMuscleRole {
+  PRIMARY
+  SECONDARY
+}
+
+model MuscleGroup {
+  id        String   @id @default(uuid()) @db.Uuid
+  slug      String   @unique
+  name      String
+  sortOrder Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  exerciseLinks ExerciseMuscle[]
+}
+
+model Equipment {
+  id        String   @id @default(uuid()) @db.Uuid
+  slug      String   @unique
+  name      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  exerciseLinks ExerciseEquipment[]
+}
+
+model Exercise {
+  id           String             @id @default(uuid()) @db.Uuid
+  slug         String             @unique
+  name         String
+  description  String
+  /// Étapes d'exécution, dans l'ordre.
+  instructions String[]
+  difficulty   ExerciseDifficulty
+  type         ExerciseType
+  /// Réservé aux abonnés — le droit effectif sera décidé côté serveur (Étape 6).
+  isPremium    Boolean            @default(false)
+  /// Un exercice non publié n'apparaît jamais dans le catalogue.
+  isPublished  Boolean            @default(true)
+  tags         String[]
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  muscles   ExerciseMuscle[]
+  equipment ExerciseEquipment[]
+
+  @@index([isPublished, name])
+}
+
+/// Groupes musculaires travaillés — exactement un rôle PRIMARY par exercice
+/// (garanti par la couche application et le seed).
+model ExerciseMuscle {
+  exerciseId    String             @db.Uuid
+  muscleGroupId String             @db.Uuid
+  role          ExerciseMuscleRole
+
+  exercise    Exercise    @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  muscleGroup MuscleGroup @relation(fields: [muscleGroupId], references: [id], onDelete: Cascade)
+
+  @@id([exerciseId, muscleGroupId])
+  @@index([muscleGroupId])
+}
+
+model ExerciseEquipment {
+  exerciseId  String @db.Uuid
+  equipmentId String @db.Uuid
+
+  exercise  Exercise  @relation(fields: [exerciseId], references: [id], onDelete: Cascade)
+  equipment Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+
+  @@id([exerciseId, equipmentId])
+  @@index([equipmentId])
 }

@@ -6,4 +6,7 @@ abstract final class AppRoutes {
   static const String forgotPassword = '/forgot-password';
   static const String home = '/home';
   static const String sessions = '/home/sessions';
+  static const String exercises = '/home/exercises';
+
+  static String exerciseDetail(String idOrSlug) => '/home/exercises/$idOrSlug';
 }

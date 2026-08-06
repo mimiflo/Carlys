@@ -50,7 +50,8 @@ describe('Authentification (e2e)', () => {
   });
 
   afterAll(async () => {
-    await prisma.user.deleteMany({ where: { email: { endsWith: '@carlys.test' } } });
+    // Nettoyage strictement limité à cette suite (les e2e partagent la base).
+    await prisma.user.deleteMany({ where: { email } });
     await prisma.$disconnect();
     await app.close();
   });

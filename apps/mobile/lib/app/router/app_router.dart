@@ -8,6 +8,8 @@ import '../../features/authentication/presentation/screens/login_screen.dart';
 import '../../features/authentication/presentation/screens/register_screen.dart';
 import '../../features/authentication/presentation/screens/sessions_screen.dart';
 import '../../features/dashboard/presentation/screens/home_screen.dart';
+import '../../features/exercises/presentation/screens/exercise_detail_screen.dart';
+import '../../features/exercises/presentation/screens/exercise_library_screen.dart';
 import '../../features/onboarding/presentation/screens/splash_screen.dart';
 import 'app_routes.dart';
 
@@ -72,6 +74,20 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: 'sessions',
             name: 'sessions',
             builder: (context, state) => const SessionsScreen(),
+          ),
+          GoRoute(
+            path: 'exercises',
+            name: 'exercises',
+            builder: (context, state) => const ExerciseLibraryScreen(),
+            routes: [
+              GoRoute(
+                path: ':idOrSlug',
+                name: 'exercise-detail',
+                builder: (context, state) => ExerciseDetailScreen(
+                  idOrSlug: state.pathParameters['idOrSlug'] ?? '',
+                ),
+              ),
+            ],
           ),
         ],
       ),

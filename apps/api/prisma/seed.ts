@@ -1,18 +1,728 @@
 /**
- * Seed de développement Carlys.
+ * Seed de développement Carlys — IDEMPOTENT (upsert par slug / e-mail).
  *
- * Étape 1 : le schéma ne contient pas encore de modèles, il n'y a donc rien à
- * insérer. Le seed complet (admin de dev, groupes musculaires, équipements,
- * 30+ exercices, programmes, utilisateurs de démonstration) arrive avec les
- * tranches verticales correspondantes (Étapes 2 à 6).
+ * ⚠️  Les identifiants créés ici sont STRICTEMENT réservés au développement
+ *     et ne doivent JAMAIS exister en production.
  *
- * Les identifiants créés par ce seed ne devront JAMAIS être utilisés en
- * production.
+ * Contenu : groupes musculaires, équipements, 32 exercices publiés,
+ * deux utilisateurs de démonstration (gratuit et « premium » — le droit
+ * réel arrivera avec les entitlements de l'Étape 6).
  */
-function main(): void {
+import { ExerciseDifficulty, ExerciseMuscleRole, ExerciseType, PrismaClient } from '@prisma/client';
+import * as argon2 from 'argon2';
+
+const prisma = new PrismaClient();
+
+const MUSCLE_GROUPS: { slug: string; name: string }[] = [
+  { slug: 'pectoraux', name: 'Pectoraux' },
+  { slug: 'dos', name: 'Dos' },
+  { slug: 'epaules', name: 'Épaules' },
+  { slug: 'biceps', name: 'Biceps' },
+  { slug: 'triceps', name: 'Triceps' },
+  { slug: 'avant-bras', name: 'Avant-bras' },
+  { slug: 'abdominaux', name: 'Abdominaux' },
+  { slug: 'lombaires', name: 'Lombaires' },
+  { slug: 'fessiers', name: 'Fessiers' },
+  { slug: 'quadriceps', name: 'Quadriceps' },
+  { slug: 'ischio-jambiers', name: 'Ischio-jambiers' },
+  { slug: 'mollets', name: 'Mollets' },
+];
+
+const EQUIPMENT: { slug: string; name: string }[] = [
+  { slug: 'poids-du-corps', name: 'Poids du corps' },
+  { slug: 'barre', name: 'Barre' },
+  { slug: 'halteres', name: 'Haltères' },
+  { slug: 'kettlebell', name: 'Kettlebell' },
+  { slug: 'machine', name: 'Machine guidée' },
+  { slug: 'poulie', name: 'Poulie' },
+  { slug: 'banc', name: 'Banc' },
+  { slug: 'elastique', name: 'Élastique' },
+  { slug: 'barre-de-traction', name: 'Barre de traction' },
+  { slug: 'tapis', name: 'Tapis' },
+];
+
+interface SeedExercise {
+  slug: string;
+  name: string;
+  description: string;
+  instructions: string[];
+  difficulty: ExerciseDifficulty;
+  type: ExerciseType;
+  isPremium?: boolean;
+  tags: string[];
+  primary: string;
+  secondary: string[];
+  equipment: string[];
+}
+
+const { BEGINNER, INTERMEDIATE, ADVANCED } = ExerciseDifficulty;
+const { STRENGTH, CARDIO, MOBILITY, STRETCHING } = ExerciseType;
+
+const EXERCISES: SeedExercise[] = [
+  {
+    slug: 'developpe-couche',
+    name: 'Développé couché',
+    description:
+      'Le mouvement de référence pour la force du haut du corps, barre en mains sur un banc horizontal.',
+    instructions: [
+      'Allongez-vous sur le banc, pieds ancrés au sol, omoplates serrées.',
+      'Saisissez la barre avec une prise légèrement plus large que les épaules.',
+      'Descendez la barre avec contrôle jusqu’au bas des pectoraux.',
+      'Poussez vers le haut jusqu’à l’extension complète des bras, sans verrouiller brutalement.',
+    ],
+    difficulty: INTERMEDIATE,
+    type: STRENGTH,
+    tags: ['force', 'polyarticulaire', 'barre'],
+    primary: 'pectoraux',
+    secondary: ['triceps', 'epaules'],
+    equipment: ['barre', 'banc'],
+  },
+  {
+    slug: 'developpe-incline-halteres',
+    name: 'Développé incliné haltères',
+    description:
+      'Cible la portion haute des pectoraux avec une plus grande amplitude que la barre.',
+    instructions: [
+      'Réglez le banc entre 30 et 45 degrés.',
+      'Montez les haltères au-dessus des épaules, paumes vers l’avant.',
+      'Descendez avec contrôle jusqu’à un léger étirement des pectoraux.',
+      'Poussez en rapprochant légèrement les haltères en haut.',
+    ],
+    difficulty: INTERMEDIATE,
+    type: STRENGTH,
+    tags: ['haut-des-pectoraux', 'halteres'],
+    primary: 'pectoraux',
+    secondary: ['epaules', 'triceps'],
+    equipment: ['halteres', 'banc'],
+  },
+  {
+    slug: 'pompes',
+    name: 'Pompes',
+    description: 'Le classique au poids du corps pour pectoraux, triceps et gainage.',
+    instructions: [
+      'Placez les mains au sol, écartées de la largeur des épaules.',
+      'Gardez le corps parfaitement gainé, des talons à la tête.',
+      'Descendez la poitrine près du sol en gardant les coudes à ~45°.',
+      'Repoussez jusqu’à l’extension complète des bras.',
+    ],
+    difficulty: BEGINNER,
+    type: STRENGTH,
+    tags: ['poids-du-corps', 'maison', 'gainage'],
+    primary: 'pectoraux',
+    secondary: ['triceps', 'epaules', 'abdominaux'],
+    equipment: ['poids-du-corps'],
+  },
+  {
+    slug: 'ecarte-poulie-vis-a-vis',
+    name: 'Écarté à la poulie vis-à-vis',
+    description: 'Isolation des pectoraux sous tension continue, idéale en fin de séance.',
+    instructions: [
+      'Réglez les poulies à hauteur d’épaules, un pas en avant du vis-à-vis.',
+      'Bras semi-fléchis, ramenez les poignées devant vous en arc de cercle.',
+      'Serrez les pectoraux une seconde au point de contraction.',
+      'Revenez lentement sans laisser les charges vous tirer en arrière.',
+    ],
+    difficulty: BEGINNER,
+    type: STRENGTH,
+    tags: ['isolation', 'poulie'],
+    primary: 'pectoraux',
+    secondary: ['epaules'],
+    equipment: ['poulie'],
+  },
+  {
+    slug: 'tractions',
+    name: 'Tractions',
+    description: 'Le meilleur exercice au poids du corps pour l’épaisseur et la largeur du dos.',
+    instructions: [
+      'Suspendez-vous à la barre, prise pronation légèrement plus large que les épaules.',
+      'Tirez en amenant la poitrine vers la barre, coudes vers le bas.',
+      'Passez le menton au-dessus de la barre sans élan.',
+      'Redescendez avec contrôle jusqu’à l’extension complète.',
+    ],
+    difficulty: ADVANCED,
+    type: STRENGTH,
+    tags: ['poids-du-corps', 'polyarticulaire'],
+    primary: 'dos',
+    secondary: ['biceps', 'avant-bras'],
+    equipment: ['barre-de-traction'],
+  },
+  {
+    slug: 'rowing-barre',
+    name: 'Rowing barre buste penché',
+    description: 'Développe l’épaisseur du dos et renforce toute la chaîne postérieure.',
+    instructions: [
+      'Penchez le buste à ~45°, dos plat, genoux souples.',
+      'Saisissez la barre en pronation, bras tendus.',
+      'Tirez la barre vers le nombril en serrant les omoplates.',
+      'Redescendez avec contrôle sans arrondir le dos.',
+    ],
+    difficulty: INTERMEDIATE,
+    type: STRENGTH,
+    tags: ['barre', 'polyarticulaire'],
+    primary: 'dos',
+    secondary: ['biceps', 'lombaires'],
+    equipment: ['barre'],
+  },
+  {
+    slug: 'tirage-vertical-poulie',
+    name: 'Tirage vertical à la poulie',
+    description: 'Alternative guidée aux tractions pour construire la largeur du dos.',
+    instructions: [
+      'Asseyez-vous cuisses calées, prise large en pronation.',
+      'Tirez la barre vers le haut des pectoraux en sortant la poitrine.',
+      'Contrôlez la remontée jusqu’à l’étirement complet des dorsaux.',
+    ],
+    difficulty: BEGINNER,
+    type: STRENGTH,
+    tags: ['poulie', 'machine'],
+    primary: 'dos',
+    secondary: ['biceps'],
+    equipment: ['poulie', 'machine'],
+  },
+  {
+    slug: 'rowing-halteres-unilateral',
+    name: 'Rowing haltère unilatéral',
+    description: 'Travail du dos un côté à la fois, corrige les déséquilibres.',
+    instructions: [
+      'Posez un genou et une main sur le banc, dos plat.',
+      'Tirez l’haltère vers la hanche, coude près du corps.',
+      'Redescendez lentement jusqu’à l’étirement complet.',
+    ],
+    difficulty: BEGINNER,
+    type: STRENGTH,
+    tags: ['halteres', 'unilateral'],
+    primary: 'dos',
+    secondary: ['biceps'],
+    equipment: ['halteres', 'banc'],
+  },
+  {
+    slug: 'souleve-de-terre',
+    name: 'Soulevé de terre',
+    description: 'Le mouvement de force le plus complet : toute la chaîne postérieure y participe.',
+    instructions: [
+      'Barre au sol contre les tibias, pieds sous les hanches.',
+      'Dos plat, saisissez la barre en dehors des jambes.',
+      'Poussez le sol avec les jambes puis tendez les hanches, barre au contact du corps.',
+      'Verrouillez debout, puis redescendez la barre en gardant le dos neutre.',
+    ],
+    difficulty: ADVANCED,
+    type: STRENGTH,
+    tags: ['barre', 'polyarticulaire', 'force'],
+    primary: 'lombaires',
+    secondary: ['fessiers', 'ischio-jambiers', 'dos', 'avant-bras'],
+    equipment: ['barre'],
+  },
+  {
+    slug: 'developpe-militaire',
+    name: 'Développé militaire',
+    description: 'Presse verticale debout, référence pour la force des épaules.',
+    instructions: [
+      'Barre au niveau des clavicules, prise à la largeur des épaules.',
+      'Gainez le tronc et poussez la barre au-dessus de la tête.',
+      'Terminez bras tendus, la barre alignée avec les oreilles.',
+      'Redescendez sous contrôle jusqu’aux clavicules.',
+    ],
+    difficulty: INTERMEDIATE,
+    type: STRENGTH,
+    tags: ['barre', 'polyarticulaire'],
+    primary: 'epaules',
+    secondary: ['triceps', 'abdominaux'],
+    equipment: ['barre'],
+  },
+  {
+    slug: 'elevations-laterales',
+    name: 'Élévations latérales',
+    description: 'Isolation du deltoïde moyen pour élargir les épaules.',
+    instructions: [
+      'Debout, un haltère dans chaque main le long du corps.',
+      'Montez les bras sur les côtés jusqu’à l’horizontale, coudes souples.',
+      'Redescendez lentement sans balancer le buste.',
+    ],
+    difficulty: BEGINNER,
+    type: STRENGTH,
+    tags: ['halteres', 'isolation'],
+    primary: 'epaules',
+    secondary: [],
+    equipment: ['halteres'],
+  },
+  {
+    slug: 'oiseau-halteres',
+    name: 'Oiseau (élévations buste penché)',
+    description: 'Cible l’arrière d’épaule, souvent négligé, essentiel à l’équilibre articulaire.',
+    instructions: [
+      'Buste penché à l’horizontale, haltères sous la poitrine.',
+      'Écartez les bras sur les côtés en serrant les omoplates.',
+      'Redescendez sans à-coups.',
+    ],
+    difficulty: BEGINNER,
+    type: STRENGTH,
+    tags: ['halteres', 'isolation', 'posture'],
+    primary: 'epaules',
+    secondary: ['dos'],
+    equipment: ['halteres'],
+  },
+  {
+    slug: 'curl-biceps-halteres',
+    name: 'Curl biceps haltères',
+    description: 'Flexion de coude stricte pour le volume des biceps.',
+    instructions: [
+      'Debout, haltères en supination le long du corps.',
+      'Fléchissez les coudes sans bouger les épaules.',
+      'Serrez en haut puis redescendez lentement.',
+    ],
+    difficulty: BEGINNER,
+    type: STRENGTH,
+    tags: ['halteres', 'isolation'],
+    primary: 'biceps',
+    secondary: ['avant-bras'],
+    equipment: ['halteres'],
+  },
+  {
+    slug: 'curl-marteau',
+    name: 'Curl marteau',
+    description: 'Variante en prise neutre qui sollicite biceps et avant-bras.',
+    instructions: [
+      'Haltères en prise neutre (paumes face à face).',
+      'Fléchissez les coudes en gardant les poignets fixes.',
+      'Contrôlez la descente complète.',
+    ],
+    difficulty: BEGINNER,
+    type: STRENGTH,
+    tags: ['halteres', 'isolation'],
+    primary: 'biceps',
+    secondary: ['avant-bras'],
+    equipment: ['halteres'],
+  },
+  {
+    slug: 'dips',
+    name: 'Dips',
+    description:
+      'Poussée verticale au poids du corps, très efficace pour les triceps et les pectoraux.',
+    instructions: [
+      'Suspendez-vous entre les barres, bras tendus.',
+      'Descendez en fléchissant les coudes jusqu’à ~90°.',
+      'Remontez en poussant fort, buste légèrement penché.',
+    ],
+    difficulty: INTERMEDIATE,
+    type: STRENGTH,
+    tags: ['poids-du-corps', 'polyarticulaire'],
+    primary: 'triceps',
+    secondary: ['pectoraux', 'epaules'],
+    equipment: ['poids-du-corps'],
+  },
+  {
+    slug: 'extension-triceps-poulie',
+    name: 'Extension triceps à la poulie',
+    description: 'Isolation des triceps à la corde, tension continue et coudes fixes.',
+    instructions: [
+      'Face à la poulie haute, saisissez la corde coudes au corps.',
+      'Tendez les bras vers le bas en écartant la corde en fin de mouvement.',
+      'Remontez lentement sans décoller les coudes.',
+    ],
+    difficulty: BEGINNER,
+    type: STRENGTH,
+    tags: ['poulie', 'isolation'],
+    primary: 'triceps',
+    secondary: [],
+    equipment: ['poulie'],
+  },
+  {
+    slug: 'squat-barre',
+    name: 'Squat barre',
+    description: 'Le roi des exercices de jambes : quadriceps, fessiers et gainage.',
+    instructions: [
+      'Barre sur les trapèzes, pieds à la largeur des épaules.',
+      'Descendez en poussant les hanches en arrière, genoux dans l’axe des pieds.',
+      'Passez sous la parallèle si votre mobilité le permet.',
+      'Remontez en poussant le sol, buste gainé.',
+    ],
+    difficulty: INTERMEDIATE,
+    type: STRENGTH,
+    tags: ['barre', 'polyarticulaire', 'force'],
+    primary: 'quadriceps',
+    secondary: ['fessiers', 'lombaires', 'abdominaux'],
+    equipment: ['barre'],
+  },
+  {
+    slug: 'squat-gobelet',
+    name: 'Squat gobelet',
+    description: 'Squat avec un haltère contre la poitrine — parfait pour apprendre le mouvement.',
+    instructions: [
+      'Tenez un haltère verticalement contre la poitrine.',
+      'Descendez entre vos jambes, buste droit.',
+      'Remontez en gardant les talons au sol.',
+    ],
+    difficulty: BEGINNER,
+    type: STRENGTH,
+    tags: ['halteres', 'technique', 'maison'],
+    primary: 'quadriceps',
+    secondary: ['fessiers', 'abdominaux'],
+    equipment: ['halteres'],
+  },
+  {
+    slug: 'fentes-marchees',
+    name: 'Fentes marchées',
+    description: 'Travail unilatéral des jambes avec un fort transfert athlétique.',
+    instructions: [
+      'Faites un grand pas en avant, buste droit.',
+      'Descendez le genou arrière près du sol.',
+      'Poussez sur la jambe avant pour enchaîner le pas suivant.',
+    ],
+    difficulty: INTERMEDIATE,
+    type: STRENGTH,
+    tags: ['unilateral', 'halteres', 'maison'],
+    primary: 'quadriceps',
+    secondary: ['fessiers', 'ischio-jambiers'],
+    equipment: ['poids-du-corps', 'halteres'],
+  },
+  {
+    slug: 'presse-a-cuisses',
+    name: 'Presse à cuisses',
+    description: 'Poussée de jambes guidée qui charge lourd en sécurité.',
+    instructions: [
+      'Pieds à plat sur le plateau, largeur d’épaules.',
+      'Descendez le plateau jusqu’à ~90° de flexion de genoux.',
+      'Poussez sans verrouiller brutalement les genoux.',
+    ],
+    difficulty: BEGINNER,
+    type: STRENGTH,
+    tags: ['machine'],
+    primary: 'quadriceps',
+    secondary: ['fessiers'],
+    equipment: ['machine'],
+  },
+  {
+    slug: 'souleve-de-terre-roumain',
+    name: 'Soulevé de terre roumain',
+    description: 'Charnière de hanche jambes semi-tendues, référence pour les ischio-jambiers.',
+    instructions: [
+      'Barre en mains, jambes presque tendues.',
+      'Poussez les hanches en arrière, barre au contact des cuisses.',
+      'Descendez jusqu’à l’étirement des ischio-jambiers, dos plat.',
+      'Remontez en contractant les fessiers.',
+    ],
+    difficulty: INTERMEDIATE,
+    type: STRENGTH,
+    tags: ['barre', 'charniere-de-hanche'],
+    primary: 'ischio-jambiers',
+    secondary: ['fessiers', 'lombaires'],
+    equipment: ['barre'],
+  },
+  {
+    slug: 'leg-curl-machine',
+    name: 'Leg curl à la machine',
+    description: 'Isolation des ischio-jambiers en flexion de genou.',
+    instructions: [
+      'Réglez la machine pour aligner le genou avec l’axe de rotation.',
+      'Fléchissez les jambes en amenant les talons vers les fessiers.',
+      'Retenez le retour sur toute l’amplitude.',
+    ],
+    difficulty: BEGINNER,
+    type: STRENGTH,
+    tags: ['machine', 'isolation'],
+    primary: 'ischio-jambiers',
+    secondary: [],
+    equipment: ['machine'],
+  },
+  {
+    slug: 'hip-thrust',
+    name: 'Hip thrust',
+    description: 'Extension de hanche dos sur banc — l’exercice le plus direct pour les fessiers.',
+    instructions: [
+      'Haut du dos sur le banc, barre sur les hanches.',
+      'Poussez les hanches vers le plafond jusqu’à l’alignement épaules-genoux.',
+      'Serrez fort les fessiers une seconde puis redescendez.',
+    ],
+    difficulty: INTERMEDIATE,
+    type: STRENGTH,
+    tags: ['barre', 'banc'],
+    primary: 'fessiers',
+    secondary: ['ischio-jambiers'],
+    equipment: ['barre', 'banc'],
+  },
+  {
+    slug: 'pont-fessier',
+    name: 'Pont fessier',
+    description: 'Version au sol du hip thrust, idéale à la maison et en échauffement.',
+    instructions: [
+      'Allongé sur le dos, pieds à plat près des fessiers.',
+      'Poussez les hanches vers le haut en serrant les fessiers.',
+      'Redescendez sans reposer complètement entre les répétitions.',
+    ],
+    difficulty: BEGINNER,
+    type: STRENGTH,
+    tags: ['poids-du-corps', 'maison', 'echauffement'],
+    primary: 'fessiers',
+    secondary: ['ischio-jambiers', 'lombaires'],
+    equipment: ['tapis'],
+  },
+  {
+    slug: 'mollets-debout',
+    name: 'Extensions mollets debout',
+    description: 'Montées sur pointes pour développer les mollets.',
+    instructions: [
+      'Avant-pieds sur une marche, talons dans le vide.',
+      'Montez sur les pointes le plus haut possible.',
+      'Descendez lentement sous l’horizontale pour étirer.',
+    ],
+    difficulty: BEGINNER,
+    type: STRENGTH,
+    tags: ['poids-du-corps', 'isolation', 'maison'],
+    primary: 'mollets',
+    secondary: [],
+    equipment: ['poids-du-corps'],
+  },
+  {
+    slug: 'planche',
+    name: 'Planche',
+    description: 'Gainage isométrique de référence pour un tronc solide.',
+    instructions: [
+      'Appui sur les avant-bras et les pointes de pieds.',
+      'Alignez tête, dos et bassin — ni cambré ni voûté.',
+      'Respirez normalement en maintenant la position.',
+    ],
+    difficulty: BEGINNER,
+    type: STRENGTH,
+    tags: ['gainage', 'isometrique', 'maison'],
+    primary: 'abdominaux',
+    secondary: ['lombaires', 'epaules'],
+    equipment: ['tapis'],
+  },
+  {
+    slug: 'crunch',
+    name: 'Crunch',
+    description: 'Flexion de buste ciblée sur le grand droit de l’abdomen.',
+    instructions: [
+      'Allongé, genoux fléchis, mains aux tempes.',
+      'Enroulez le buste en décollant les omoplates.',
+      'Redescendez lentement sans tirer sur la nuque.',
+    ],
+    difficulty: BEGINNER,
+    type: STRENGTH,
+    tags: ['maison', 'isolation'],
+    primary: 'abdominaux',
+    secondary: [],
+    equipment: ['tapis'],
+  },
+  {
+    slug: 'releve-de-jambes-suspendu',
+    name: 'Relevé de jambes suspendu',
+    description: 'Exercice avancé d’abdominaux, jambes tendues depuis la barre de traction.',
+    instructions: [
+      'Suspendu à la barre, épaules actives.',
+      'Montez les jambes tendues au-dessus de l’horizontale.',
+      'Contrôlez la descente sans balancement.',
+    ],
+    difficulty: ADVANCED,
+    type: STRENGTH,
+    tags: ['poids-du-corps', 'gainage'],
+    primary: 'abdominaux',
+    secondary: ['avant-bras'],
+    equipment: ['barre-de-traction'],
+  },
+  {
+    slug: 'burpees',
+    name: 'Burpees',
+    description: 'Enchaînement complet cardio et renforcement, redoutable en intervalles.',
+    instructions: [
+      'Depuis la position debout, posez les mains et jetez les pieds en arrière.',
+      'Faites une pompe, ramenez les pieds sous vous.',
+      'Sautez en tendant les bras au-dessus de la tête.',
+    ],
+    difficulty: INTERMEDIATE,
+    type: CARDIO,
+    tags: ['hiit', 'maison', 'poids-du-corps'],
+    primary: 'quadriceps',
+    secondary: ['pectoraux', 'abdominaux', 'epaules'],
+    equipment: ['poids-du-corps'],
+  },
+  {
+    slug: 'mountain-climbers',
+    name: 'Mountain climbers',
+    description: 'Course en planche : cardio et gainage dynamique.',
+    instructions: [
+      'En position de planche haute, bras tendus.',
+      'Ramenez alternativement les genoux vers la poitrine, à un rythme soutenu.',
+      'Gardez le bassin stable pendant tout l’exercice.',
+    ],
+    difficulty: BEGINNER,
+    type: CARDIO,
+    tags: ['hiit', 'maison', 'gainage'],
+    primary: 'abdominaux',
+    secondary: ['quadriceps', 'epaules'],
+    equipment: ['poids-du-corps'],
+  },
+  {
+    slug: 'balancier-kettlebell',
+    name: 'Balancier kettlebell (swing)',
+    description: 'Extension de hanche explosive — puissance, cardio et chaîne postérieure.',
+    instructions: [
+      'Kettlebell à deux mains, charnière de hanche marquée.',
+      'Projetez la cloche vers l’avant en claquant l’extension de hanches.',
+      'Laissez-la redescendre entre les jambes et enchaînez.',
+    ],
+    difficulty: INTERMEDIATE,
+    type: CARDIO,
+    isPremium: true,
+    tags: ['kettlebell', 'explosif', 'hiit'],
+    primary: 'fessiers',
+    secondary: ['ischio-jambiers', 'lombaires', 'epaules'],
+    equipment: ['kettlebell'],
+  },
+  {
+    slug: 'etirement-chat-vache',
+    name: 'Étirement chat-vache',
+    description:
+      'Mobilisation douce de la colonne, parfaite en échauffement ou en retour au calme.',
+    instructions: [
+      'À quatre pattes, mains sous les épaules.',
+      'Inspirez en creusant le dos, regard vers l’avant.',
+      'Expirez en arrondissant le dos, menton vers la poitrine.',
+      'Alternez lentement au rythme de la respiration.',
+    ],
+    difficulty: BEGINNER,
+    type: MOBILITY,
+    tags: ['mobilite', 'echauffement', 'maison'],
+    primary: 'lombaires',
+    secondary: ['abdominaux'],
+    equipment: ['tapis'],
+  },
+  {
+    slug: 'etirement-ischio-debout',
+    name: 'Étirement des ischio-jambiers debout',
+    description: 'Étirement statique de l’arrière de cuisse, à tenir sans à-coups.',
+    instructions: [
+      'Posez un talon devant vous, jambe tendue.',
+      'Penchez le buste vers l’avant, dos plat.',
+      'Maintenez 20 à 30 secondes par jambe en respirant profondément.',
+    ],
+    difficulty: BEGINNER,
+    type: STRETCHING,
+    tags: ['etirement', 'maison', 'recuperation'],
+    primary: 'ischio-jambiers',
+    secondary: ['mollets', 'lombaires'],
+    equipment: ['poids-du-corps'],
+  },
+];
+
+const DEV_USERS = [
+  { email: 'dev.gratuit@carlys.local', displayName: 'Dev Gratuit' },
+  { email: 'dev.premium@carlys.local', displayName: 'Dev Premium' },
+];
+const DEV_PASSWORD = 'Carlys-Dev-2026!';
+
+async function seedCatalog(): Promise<void> {
+  for (const [index, group] of MUSCLE_GROUPS.entries()) {
+    await prisma.muscleGroup.upsert({
+      where: { slug: group.slug },
+      update: { name: group.name, sortOrder: index },
+      create: { slug: group.slug, name: group.name, sortOrder: index },
+    });
+  }
+
+  for (const equipment of EQUIPMENT) {
+    await prisma.equipment.upsert({
+      where: { slug: equipment.slug },
+      update: { name: equipment.name },
+      create: equipment,
+    });
+  }
+
+  const groups = new Map(
+    (await prisma.muscleGroup.findMany()).map((group) => [group.slug, group.id]),
+  );
+  const equipmentIds = new Map(
+    (await prisma.equipment.findMany()).map((equipment) => [equipment.slug, equipment.id]),
+  );
+
+  for (const exercise of EXERCISES) {
+    const data = {
+      name: exercise.name,
+      description: exercise.description,
+      instructions: exercise.instructions,
+      difficulty: exercise.difficulty,
+      type: exercise.type,
+      isPremium: exercise.isPremium ?? false,
+      isPublished: true,
+      tags: exercise.tags,
+    };
+    const { id } = await prisma.exercise.upsert({
+      where: { slug: exercise.slug },
+      update: data,
+      create: { slug: exercise.slug, ...data },
+    });
+
+    // Liens muscles/équipements reconstruits à chaque seed (idempotent).
+    await prisma.exerciseMuscle.deleteMany({ where: { exerciseId: id } });
+    await prisma.exerciseMuscle.createMany({
+      data: [
+        {
+          exerciseId: id,
+          muscleGroupId: mustGet(groups, exercise.primary),
+          role: ExerciseMuscleRole.PRIMARY,
+        },
+        ...exercise.secondary.map((slug) => ({
+          exerciseId: id,
+          muscleGroupId: mustGet(groups, slug),
+          role: ExerciseMuscleRole.SECONDARY,
+        })),
+      ],
+    });
+
+    await prisma.exerciseEquipment.deleteMany({ where: { exerciseId: id } });
+    await prisma.exerciseEquipment.createMany({
+      data: exercise.equipment.map((slug) => ({
+        exerciseId: id,
+        equipmentId: mustGet(equipmentIds, slug),
+      })),
+    });
+  }
+}
+
+async function seedDevUsers(): Promise<void> {
+  const passwordHash = await argon2.hash(DEV_PASSWORD, { type: argon2.argon2id });
+  for (const user of DEV_USERS) {
+    await prisma.user.upsert({
+      where: { email: user.email },
+      update: {},
+      create: {
+        email: user.email,
+        emailVerifiedAt: new Date(),
+        profile: { create: { displayName: user.displayName } },
+        credential: { create: { passwordHash } },
+      },
+    });
+  }
+}
+
+function mustGet(map: Map<string, string>, key: string): string {
+  const value = map.get(key);
+  if (value === undefined) {
+    throw new Error(`Seed incohérent : slug inconnu « ${key} »`);
+  }
+  return value;
+}
+
+async function main(): Promise<void> {
+  await seedCatalog();
+  await seedDevUsers();
+
+  const [exercises, groups, equipment] = await Promise.all([
+    prisma.exercise.count(),
+    prisma.muscleGroup.count(),
+    prisma.equipment.count(),
+  ]);
   process.stdout.write(
-    'Seed Carlys : aucun modèle à peupler pour le moment (Étape 1 — fondation).\n',
+    `Seed terminé : ${exercises} exercices, ${groups} groupes musculaires, ` +
+      `${equipment} équipements.\n` +
+      `Comptes de DÉVELOPPEMENT (jamais en production) :\n` +
+      DEV_USERS.map((user) => `  - ${user.email} / ${DEV_PASSWORD}\n`).join(''),
   );
 }
 
-main();
+main()
+  .catch((error: unknown) => {
+    console.error(error);
+    process.exitCode = 1;
+  })
+  .finally(() => prisma.$disconnect());

@@ -2,7 +2,7 @@
 
 Plateforme fitness SaaS multiplateforme — application mobile Flutter (iOS & Android), API NestJS et tableau de bord d'administration Next.js, dans un monorepo unique.
 
-> **État actuel : Étapes 1 (fondation) et 2 (authentification) terminées.** Les fonctionnalités métier arrivent par tranches verticales — voir [État du projet](#état-du-projet).
+> **État actuel : Étapes 1 (fondation), 2 (authentification) et 3 (exercices) terminées.** Les fonctionnalités métier arrivent par tranches verticales — voir [État du projet](#état-du-projet).
 
 ---
 
@@ -353,11 +353,13 @@ Politique complète et signalement de vulnérabilités : [SECURITY.md](./SECURIT
 
 **Étape 2 — Authentification : terminée.** Tranche verticale complète : schéma Prisma + migration (User, UserSession, RefreshToken, …), inscription/connexion/refresh rotatif avec détection de réutilisation, verrouillage temporaire, vérification d'e-mail et réinitialisation de mot de passe (Mailpit), gestion des appareils connectés, suppression de compte, audit — et côté Flutter : stockage sécurisé des jetons, renouvellement automatique (single-flight), écrans Connexion/Inscription/Mot de passe oublié/Appareils, routage gardé par l'état de session. Tests unitaires et e2e sur les parcours critiques.
 
+**Étape 3 — Exercices : terminée.** Catalogue relationnel (Exercise, MuscleGroup, Equipment + liaisons rôles primaire/secondaire), **seed de 33 exercices** en français avec 12 groupes musculaires et 10 équipements (`pnpm prisma:seed`, comptes de dev inclus), API `GET /exercises` avec recherche, filtres (groupe musculaire, équipement, difficulté, type) et **pagination par curseur**, fiche détaillée par id ou slug, référentiels `muscle-groups`/`equipment` — le tout servi à travers un **cache Redis tolérant aux pannes** (la base reste la source de vérité si Redis tombe). Côté Flutter : écran bibliothèque (recherche débouncée, puces de filtres, défilement infini), fiche d'exercice complète, nouveaux composants du design system (AppCard, AppSearchField, AppBadge). Tests unitaires, e2e et widgets.
+
 | Étape | Tranche verticale | Contenu principal | Statut |
 | --- | --- | --- | --- |
 | 1 | Fondation | Monorepo, outillage, sécurité de base, design system, CI | ✅ Terminée |
 | 2 | Authentification | JWT access court + refresh rotatif hashé, Argon2id, sessions par appareil, détection de réutilisation | ✅ Terminée |
-| 3 | Exercices | Bibliothèque + seed 30+ exercices, cache Redis | À venir |
+| 3 | Exercices | Bibliothèque + seed 30+ exercices, cache Redis | ✅ Terminée |
 | 4 | Séances | Offline-first Drift + file de synchronisation idempotente | À venir |
 | 5 | Progression | Records, historique, graphiques | À venir |
 | 6 | Abonnements | Entitlements côté serveur, RevenueCat possible, Stripe web, webhooks idempotents signés | À venir |

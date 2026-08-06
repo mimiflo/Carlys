@@ -184,7 +184,7 @@ docs) et sera documentée précisément ici à sa livraison.
 | --- | --- | --- |
 | Authentification | **Livré** — voir le tableau détaillé ci-dessous | Étape 2 ✅ |
 | Utilisateur courant | **Livré** — `GET/PATCH/DELETE /api/v1/users/me`, sessions | Étape 2 ✅ |
-| Exercices | `GET /api/v1/exercises` (paginé, filtrable), `GET /api/v1/exercises/:id`, `GET /api/v1/muscle-groups` — catalogue seedé (30+ exercices), cache Redis | Étape 3 |
+| Exercices | **Livré** — `GET /api/v1/exercises` (recherche `search`, filtres `muscleGroup`/`equipment`/`difficulty`/`type`, pagination `cursor`+`limit`, `meta.nextCursor`/`hasMore`), `GET /api/v1/exercises/:idOrSlug`, `GET /api/v1/muscle-groups`, `GET /api/v1/equipment` — catalogue seedé (33 exercices), cache Redis tolérant aux pannes, exercices non publiés jamais servis | Étape 3 ✅ |
 | Programmes | `GET/POST /api/v1/programs`, modèles de séances (`workout-templates`) | Étape 4 |
 | Séances | `POST /api/v1/workout-sessions`, `GET /api/v1/workout-sessions`, clôture de séance — synchronisation offline-first **idempotente** (rejeu sans doublon) | Étape 4 |
 | Séries | `POST /api/v1/workout-sets` (rattachées à une séance), corrections | Étape 4 |

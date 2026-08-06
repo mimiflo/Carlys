@@ -19,7 +19,7 @@ migration manque par rapport au schéma.
 | Domaine | Modèles | Tranche |
 |---|---|---|
 | Identité | `User`, `UserProfile`, `UserCredential`, `UserSession`, `RefreshToken`, `EmailVerification`, `PasswordReset`, `ExternalIdentity` — **implémenté** (migration `20260806180000_auth_foundation`) ; `UserDevice` et `UserPreference` différés | Étape 2 ✅ |
-| Catalogue d'exercices | `Exercise`, `ExerciseTranslation`, `ExerciseMedia`, `ExerciseMuscle`, `MuscleGroup`, `Equipment`, `ExerciseVariant`, `CustomExercise` | Étape 3 |
+| Catalogue d'exercices | `Exercise`, `ExerciseMuscle`, `ExerciseEquipment`, `MuscleGroup`, `Equipment` — **implémenté** (migration `20260806220000_exercise_catalog`, contenu français directement sur `Exercise`) ; `ExerciseTranslation`, `ExerciseMedia`, `ExerciseVariant`, `CustomExercise` différés | Étape 3 ✅ |
 | Médias | `MediaAsset` | Étape 3 (premier besoin : médias d'exercices) |
 | Programmes | `TrainingProgram`, `ProgramWeek`, `ProgramDay`, `WorkoutTemplate`, `WorkoutTemplateExercise`, `WorkoutTemplateSet` | Étape 4 |
 | Séances | `WorkoutSession`, `WorkoutSessionExercise`, `WorkoutSet`, `WorkoutNote`, `PersonalRecord` | Étape 4 |
@@ -184,7 +184,18 @@ explicites** (pas de sac JSON) : chaque nouvelle préférence est une migration.
 
 ---
 
-## Catalogue d'exercices — Étape 3
+## Catalogue d'exercices — Étape 3 (implémenté)
+
+> Implémenté (migration `20260806220000_exercise_catalog`, seed
+> `pnpm prisma:seed` : 33 exercices, 12 groupes musculaires, 10 équipements).
+> Ajustements par rapport à la cible : le contenu (nom, description,
+> instructions) vit en français directement sur `Exercise` —
+> `ExerciseTranslation` arrivera avec l'i18n ; `ExerciseMedia`,
+> `ExerciseVariant` et `CustomExercise` sont différés (médias avec le module
+> `media`, exercices personnalisés avec le créateur de programme). Les
+> équipements passent par la table de liaison `ExerciseEquipment`, et
+> `ExerciseMuscle` porte un rôle `PRIMARY | SECONDARY` (exactement un
+> `PRIMARY` par exercice, garanti par le seed et la couche application).
 
 Catalogue officiel (seed ≥ 30 exercices, `pnpm prisma:seed`), multilingue,
 servi avec cache Redis (lecture intensive, écriture rare — invalidation à la

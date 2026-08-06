@@ -50,11 +50,18 @@ class HomeScreen extends ConsumerWidget {
               ),
             ],
             const SizedBox(height: AppSpacing.lg),
+            Text('Entraînement', style: theme.textTheme.titleLarge),
+            const SizedBox(height: AppSpacing.sm),
+            AppButton(
+              label: 'Bibliothèque d’exercices',
+              icon: AppIcons.workout,
+              isExpanded: true,
+              onPressed: () => context.push(AppRoutes.exercises),
+            ),
+            const SizedBox(height: AppSpacing.md),
             const AppEmptyState(
               title: 'Aucune séance pour le moment',
-              message:
-                  'La bibliothèque d’exercices et les séances arrivent aux '
-                  'Étapes 3 et 4.',
+              message: 'Les séances et le suivi arrivent à l’Étape 4.',
               icon: AppIcons.timer,
             ),
             const SizedBox(height: AppSpacing.xl),
