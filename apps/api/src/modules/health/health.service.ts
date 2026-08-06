@@ -33,9 +33,7 @@ export class HealthService {
       [this.redisProbe.key]: redis,
     };
 
-    const allUp = Object.values(components).every(
-      (component) => component.status === 'up',
-    );
+    const allUp = Object.values(components).every((component) => component.status === 'up');
 
     return {
       status: allUp ? 'ok' : 'error',

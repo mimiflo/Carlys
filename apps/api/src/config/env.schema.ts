@@ -11,17 +11,14 @@ import { z } from 'zod';
  * invalide : la validation est exécutée par ConfigModule au bootstrap.
  */
 export const envSchema = z.object({
-  NODE_ENV: z
-    .enum(['development', 'test', 'staging', 'production'])
-    .default('development'),
+  NODE_ENV: z.enum(['development', 'test', 'staging', 'production']).default('development'),
   PORT: z.coerce.number().int().min(1).max(65535).default(3000),
 
   DATABASE_URL: z
     .string()
     .min(1)
     .refine(
-      (value) =>
-        value.startsWith('postgresql://') || value.startsWith('postgres://'),
+      (value) => value.startsWith('postgresql://') || value.startsWith('postgres://'),
       'DATABASE_URL doit être une URL de connexion PostgreSQL (postgresql://…)',
     ),
   REDIS_URL: z
@@ -33,9 +30,7 @@ export const envSchema = z.object({
     ),
 
   CORS_ORIGINS: z.string().default('http://localhost:3001'),
-  LOG_LEVEL: z
-    .enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent'])
-    .default('info'),
+  LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
 
   RATE_LIMIT_TTL_SECONDS: z.coerce
     .number()
@@ -56,6 +51,32 @@ export const envSchema = z.object({
 
   /** Requis pour exposer /metrics en production (Bearer token). */
   METRICS_TOKEN: z.string().min(16).optional(),
+
+  // ── Authentification ────────────────────────────────────────────────────
+  /** Secret de signature des access tokens JWT — obligatoire, jamais par défaut. */
+  JWT_ACCESS_SECRET: z.string().min(32, 'JWT_ACCESS_SECRET doit faire au moins 32 caractères'),
+  JWT_ACCESS_TTL_SECONDS: z.coerce.number().int().min(60).max(3600).default(900),
+  JWT_ISSUER: z.string().min(1).default('carlys-api'),
+  JWT_AUDIENCE: z.string().min(1).default('carlys-mobile'),
+  REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().min(1).max(365).default(30),
+
+  AUTH_MAX_LOGIN_ATTEMPTS: z.coerce.number().int().min(3).max(20).default(5),
+  AUTH_LOCKOUT_MINUTES: z.coerce.number().int().min(1).max(1440).default(15),
+
+  /** Paramètres Argon2id (défauts alignés sur les recommandations OWASP). */
+  ARGON2_MEMORY_KIB: z.coerce.number().int().min(8192).default(19456),
+  ARGON2_TIME_COST: z.coerce.number().int().min(2).default(2),
+  ARGON2_PARALLELISM: z.coerce.number().int().min(1).max(16).default(1),
+
+  EMAIL_VERIFICATION_TTL_HOURS: z.coerce.number().int().min(1).max(168).default(24),
+  PASSWORD_RESET_TTL_MINUTES: z.coerce.number().int().min(5).max(1440).default(60),
+
+  // ── E-mails (Mailpit en développement) ─────────────────────────────────
+  SMTP_HOST: z.string().min(1).default('localhost'),
+  SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(1025),
+  EMAIL_FROM: z.string().min(3).default('Carlys <no-reply@carlys.local>'),
+  /** Base des liens contenus dans les e-mails (vérification, réinitialisation). */
+  PUBLIC_APP_URL: z.string().url().default('http://localhost:3000'),
 });
 
 export type Env = z.infer<typeof envSchema>;
@@ -64,10 +85,7 @@ export function validateEnv(config: Record<string, unknown>): Env {
   const result = envSchema.safeParse(config);
   if (!result.success) {
     const issues = result.error.issues
-      .map(
-        (issue) =>
-          `  - ${issue.path.join('.') || '(racine)'}: ${issue.message}`,
-      )
+      .map((issue) => `  - ${issue.path.join('.') || '(racine)'}: ${issue.message}`)
       .join('\n');
     throw new Error(`Configuration invalide — démarrage refusé.\n${issues}`);
   }

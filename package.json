@@ -28,6 +28,7 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "@prisma/client",
+      "argon2",
       "@prisma/engines",
       "@tailwindcss/oxide",
       "esbuild",

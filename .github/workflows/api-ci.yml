@@ -53,6 +53,7 @@ jobs:
     env:
       DATABASE_URL: postgresql://carlys:carlys@localhost:5432/carlys_test
       REDIS_URL: redis://localhost:6379
+      JWT_ACCESS_SECRET: secret-ci-uniquement-32-caracteres-minimum-x
 
     steps:
       - uses: actions/checkout@v4

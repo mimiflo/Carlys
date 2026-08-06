@@ -3,6 +3,7 @@ import { validateEnv } from './env.schema';
 const validEnv = {
   DATABASE_URL: 'postgresql://user:password@localhost:5432/carlys_dev',
   REDIS_URL: 'redis://localhost:6379',
+  JWT_ACCESS_SECRET: 'secret-de-test-uniquement-32-caracteres-mini',
 };
 
 describe('validateEnv', () => {
@@ -17,40 +18,35 @@ describe('validateEnv', () => {
   });
 
   it('refuse le démarrage sans DATABASE_URL', () => {
-    expect(() => validateEnv({ REDIS_URL: validEnv.REDIS_URL })).toThrow(
-      /Configuration invalide/,
-    );
+    const { DATABASE_URL: _omitted, ...withoutDatabase } = validEnv;
+    expect(() => validateEnv(withoutDatabase)).toThrow(/Configuration invalide/);
+  });
+
+  it('refuse le démarrage sans JWT_ACCESS_SECRET ou avec un secret trop court', () => {
+    const { JWT_ACCESS_SECRET: _omitted, ...withoutSecret } = validEnv;
+    expect(() => validateEnv(withoutSecret)).toThrow(/Configuration invalide/);
+    expect(() => validateEnv({ ...validEnv, JWT_ACCESS_SECRET: 'court' })).toThrow(/32 caractères/);
   });
 
   it('refuse une DATABASE_URL qui ne pointe pas vers PostgreSQL', () => {
-    expect(() =>
-      validateEnv({ ...validEnv, DATABASE_URL: 'mysql://localhost:3306/db' }),
-    ).toThrow(/PostgreSQL/);
+    expect(() => validateEnv({ ...validEnv, DATABASE_URL: 'mysql://localhost:3306/db' })).toThrow(
+      /PostgreSQL/,
+    );
   });
 
   it('refuse une REDIS_URL invalide', () => {
-    expect(() =>
-      validateEnv({ ...validEnv, REDIS_URL: 'http://localhost' }),
-    ).toThrow(/Redis/);
+    expect(() => validateEnv({ ...validEnv, REDIS_URL: 'http://localhost' })).toThrow(/Redis/);
   });
 
   it('convertit PORT en nombre et rejette les valeurs hors bornes', () => {
     expect(validateEnv({ ...validEnv, PORT: '8080' }).PORT).toBe(8080);
-    expect(() => validateEnv({ ...validEnv, PORT: '0' })).toThrow(
-      /Configuration invalide/,
-    );
-    expect(() => validateEnv({ ...validEnv, PORT: 'abc' })).toThrow(
-      /Configuration invalide/,
-    );
+    expect(() => validateEnv({ ...validEnv, PORT: '0' })).toThrow(/Configuration invalide/);
+    expect(() => validateEnv({ ...validEnv, PORT: 'abc' })).toThrow(/Configuration invalide/);
   });
 
   it('interprète SWAGGER_ENABLED comme booléen strict', () => {
-    expect(
-      validateEnv({ ...validEnv, SWAGGER_ENABLED: 'true' }).SWAGGER_ENABLED,
-    ).toBe(true);
-    expect(
-      validateEnv({ ...validEnv, SWAGGER_ENABLED: 'false' }).SWAGGER_ENABLED,
-    ).toBe(false);
+    expect(validateEnv({ ...validEnv, SWAGGER_ENABLED: 'true' }).SWAGGER_ENABLED).toBe(true);
+    expect(validateEnv({ ...validEnv, SWAGGER_ENABLED: 'false' }).SWAGGER_ENABLED).toBe(false);
     expect(() => validateEnv({ ...validEnv, SWAGGER_ENABLED: 'yes' })).toThrow(
       /Configuration invalide/,
     );
@@ -61,8 +57,7 @@ describe('validateEnv', () => {
       /Configuration invalide/,
     );
     expect(
-      validateEnv({ ...validEnv, METRICS_TOKEN: 'un-token-suffisamment-long' })
-        .METRICS_TOKEN,
+      validateEnv({ ...validEnv, METRICS_TOKEN: 'un-token-suffisamment-long' }).METRICS_TOKEN,
     ).toBe('un-token-suffisamment-long');
   });
 });

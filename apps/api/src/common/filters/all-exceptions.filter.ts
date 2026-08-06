@@ -50,9 +50,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
 
     if (exception instanceof HttpException) {
       status = exception.getStatus();
-      code =
-        STATUS_TO_CODE[status] ??
-        (status >= 500 ? 'INTERNAL_ERROR' : 'BAD_REQUEST');
+      code = STATUS_TO_CODE[status] ?? (status >= 500 ? 'INTERNAL_ERROR' : 'BAD_REQUEST');
       const payload = exception.getResponse();
 
       if (typeof payload === 'string') {
@@ -60,10 +58,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       } else if (payload !== null && typeof payload === 'object') {
         const body = payload as { message?: string | string[] };
         if (Array.isArray(body.message)) {
-          code =
-            status === Number(HttpStatus.BAD_REQUEST)
-              ? 'VALIDATION_ERROR'
-              : code;
+          code = status === Number(HttpStatus.BAD_REQUEST) ? 'VALIDATION_ERROR' : code;
           message = 'Certaines données sont invalides.';
           details = body.message.map((entry) => ({ message: entry }));
         } else if (typeof body.message === 'string') {
@@ -74,10 +69,7 @@ export class AllExceptionsFilter implements ExceptionFilter {
       if (status >= 500) {
         message = 'Une erreur interne est survenue.';
         details = [];
-        this.logger.error(
-          { err: exception, requestId, status },
-          'Exception HTTP 5xx',
-        );
+        this.logger.error({ err: exception, requestId, status }, 'Exception HTTP 5xx');
       }
     } else {
       this.logger.error({ err: exception, requestId }, 'Exception non gérée');

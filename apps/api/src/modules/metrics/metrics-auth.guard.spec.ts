@@ -11,10 +11,7 @@ function contextWithAuthorization(authorization?: string): ExecutionContext {
   } as unknown as ExecutionContext;
 }
 
-function configStub(overrides: {
-  isProduction: boolean;
-  metricsToken?: string;
-}): AppConfigService {
+function configStub(overrides: { isProduction: boolean; metricsToken?: string }): AppConfigService {
   return overrides as unknown as AppConfigService;
 }
 
@@ -28,9 +25,7 @@ describe('MetricsAuthGuard', () => {
   it('renvoie 404 en production quand aucun jeton n’est configuré', () => {
     const guard = new MetricsAuthGuard(configStub({ isProduction: true }));
 
-    expect(() => guard.canActivate(contextWithAuthorization())).toThrow(
-      NotFoundException,
-    );
+    expect(() => guard.canActivate(contextWithAuthorization())).toThrow(NotFoundException);
   });
 
   it('refuse un jeton invalide en production', () => {
@@ -41,12 +36,10 @@ describe('MetricsAuthGuard', () => {
       }),
     );
 
-    expect(() =>
-      guard.canActivate(contextWithAuthorization('Bearer mauvais-jeton')),
-    ).toThrow(UnauthorizedException);
-    expect(() => guard.canActivate(contextWithAuthorization())).toThrow(
+    expect(() => guard.canActivate(contextWithAuthorization('Bearer mauvais-jeton'))).toThrow(
       UnauthorizedException,
     );
+    expect(() => guard.canActivate(contextWithAuthorization())).toThrow(UnauthorizedException);
   });
 
   it('accepte le jeton attendu en production', () => {
@@ -57,10 +50,8 @@ describe('MetricsAuthGuard', () => {
       }),
     );
 
-    expect(
-      guard.canActivate(
-        contextWithAuthorization('Bearer token-metrics-secret-dev'),
-      ),
-    ).toBe(true);
+    expect(guard.canActivate(contextWithAuthorization('Bearer token-metrics-secret-dev'))).toBe(
+      true,
+    );
   });
 });

@@ -1,9 +1,30 @@
 # Authentification — conception détaillée
 
-> **Statut : conception validée — implémentation prévue à l'Étape 2.**
-> Rien de ce qui est décrit ici n'existe encore dans le code (le schéma Prisma
-> est vide à l'Étape 1). Ce document est la référence que l'implémentation de
-> l'Étape 2 devra respecter ; tout écart devra être justifié ici même.
+> **Statut : implémenté (Étape 2)** — modules `apps/api/src/modules/auth`,
+> `users`, `audit`, guard global `src/common/guards/jwt-auth.guard.ts`,
+> migration `20260806180000_auth_foundation`.
+>
+> Écarts et précisions de l'implémentation par rapport à la conception :
+>
+> - **Modèles réels** : `UserSession` (session par appareil) + `RefreshToken`
+>   (une ligne par jeton, hash SHA-256 unique, statuts
+>   `ACTIVE | ROTATED | REVOKED`). La « famille » de la conception correspond
+>   à la session : réutilisation détectée → révocation de la session entière.
+>   `UserDevice` est différé : les métadonnées d'appareil (nom, plateforme,
+>   IP, user-agent) vivent sur la session ; le modèle dédié arrivera avec les
+>   notifications push.
+> - **Rotation conditionnelle** : la rotation n'aboutit que si le jeton est
+>   encore `ACTIVE` (mise à jour conditionnelle en transaction) ; deux refresh
+>   concurrents du même jeton → le second est traité comme une réutilisation.
+> - **Révocation immédiate** : le guard vérifie le JWT (signature, expiration,
+>   `issuer`, `audience`) **puis** l'état de la session en base — révoquer une
+>   session invalide ses access tokens sans attendre leur expiration.
+> - **Verrouillage** : compteur Redis par e-mail normalisé, fenêtre reposée à
+>   chaque échec ; si Redis est indisponible, fail-open journalisé (le rate
+>   limiting HTTP global reste actif).
+> - **Restent à venir** : OAuth Apple/Google (modèle `ExternalIdentity` et
+>   contrainte d'unicité déjà en place), 2FA, purge/anonymisation différée des
+>   comptes supprimés.
 
 Ce document s'appuie sur les fondations déjà en place (Étape 1) : enveloppes de
 réponse `{ data, meta, requestId }` / `{ error: { code, message, details, requestId } }`

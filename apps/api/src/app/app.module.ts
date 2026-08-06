@@ -11,20 +11,18 @@ import { AppConfigModule } from '../config/app-config.module';
 import { AppConfigService } from '../config/app-config.service';
 import { PrismaModule } from '../database/prisma/prisma.module';
 import { RedisModule } from '../infrastructure/cache/redis.module';
+import { AuditModule } from '../modules/audit/audit.module';
+import { AuthModule } from '../modules/auth/auth.module';
 import { HealthModule } from '../modules/health/health.module';
 import { MetricsModule } from '../modules/metrics/metrics.module';
+import { UsersModule } from '../modules/users/users.module';
 
 const REQUEST_ID_PATTERN = /^[\w-]{1,64}$/;
 
-function generateRequestId(
-  request: IncomingMessage,
-  response: ServerResponse,
-): string {
+function generateRequestId(request: IncomingMessage, response: ServerResponse): string {
   const incoming = request.headers[REQUEST_ID_HEADER];
   const requestId =
-    typeof incoming === 'string' && REQUEST_ID_PATTERN.test(incoming)
-      ? incoming
-      : randomUUID();
+    typeof incoming === 'string' && REQUEST_ID_PATTERN.test(incoming) ? incoming : randomUUID();
   response.setHeader(REQUEST_ID_HEADER, requestId);
   return requestId;
 }
@@ -69,8 +67,11 @@ function generateRequestId(
     }),
     PrismaModule,
     RedisModule,
+    AuditModule,
     HealthModule,
     MetricsModule,
+    UsersModule,
+    AuthModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

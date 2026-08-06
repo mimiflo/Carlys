@@ -182,8 +182,8 @@ docs) et sera documentée précisément ici à sa livraison.
 
 | Domaine | Routes cibles (indicatives) | Étape |
 | --- | --- | --- |
-| Authentification | `POST /api/v1/auth/register`, `POST /api/v1/auth/login`, `POST /api/v1/auth/refresh`, `POST /api/v1/auth/logout` — JWT access court + refresh rotatif hashé, Argon2id, sessions par appareil, détection de réutilisation | Étape 2 |
-| Utilisateur courant | `GET /api/v1/users/me`, `PATCH /api/v1/users/me`, gestion des appareils/sessions | Étape 2 |
+| Authentification | **Livré** — voir le tableau détaillé ci-dessous | Étape 2 ✅ |
+| Utilisateur courant | **Livré** — `GET/PATCH/DELETE /api/v1/users/me`, sessions | Étape 2 ✅ |
 | Exercices | `GET /api/v1/exercises` (paginé, filtrable), `GET /api/v1/exercises/:id`, `GET /api/v1/muscle-groups` — catalogue seedé (30+ exercices), cache Redis | Étape 3 |
 | Programmes | `GET/POST /api/v1/programs`, modèles de séances (`workout-templates`) | Étape 4 |
 | Séances | `POST /api/v1/workout-sessions`, `GET /api/v1/workout-sessions`, clôture de séance — synchronisation offline-first **idempotente** (rejeu sans doublon) | Étape 4 |
@@ -195,6 +195,32 @@ docs) et sera documentée précisément ici à sa livraison.
 
 Les chemins exacts, les DTO et les réponses seront fixés à l'implémentation ;
 le tableau engage le périmètre, pas la signature finale.
+
+### Endpoints livrés — authentification (Étape 2)
+
+Tous enveloppés (`{ data, meta, requestId }` / enveloppe d'erreur) et
+authentifiés par le guard global sauf mention `public`. Les endpoints
+sensibles à l'abus (`register`, `login`, `verify-email`, `forgot-password`,
+`reset-password`) portent un throttle renforcé (10 requêtes / 60 s) en plus du
+rate limiting global.
+
+| Endpoint | Statuts | Notes |
+| --- | --- | --- |
+| `POST /api/v1/auth/register` (public) | 201, 400, 409 | Ouvre une session ; envoie l'e-mail de vérification |
+| `POST /api/v1/auth/login` (public) | 200, 401, 429 | 401 générique (anti-énumération) ; 429 en cas de verrouillage |
+| `POST /api/v1/auth/refresh` (public) | 200, 401 | Rotation ; réutilisation détectée → session révoquée |
+| `POST /api/v1/auth/logout` | 204, 401 | Révoque la session courante |
+| `POST /api/v1/auth/verify-email` (public) | 204, 401 | Jeton à usage unique |
+| `POST /api/v1/auth/resend-verification` | 204 | Sans effet si déjà vérifié |
+| `POST /api/v1/auth/forgot-password` (public) | 202 | Réponse identique que le compte existe ou non |
+| `POST /api/v1/auth/reset-password` (public) | 204, 401 | Révoque **toutes** les sessions |
+| `POST /api/v1/auth/change-password` | 204, 401 | Révoque les autres sessions |
+| `GET /api/v1/auth/sessions` | 200 | Appareils connectés (`current` sur la session appelante) |
+| `DELETE /api/v1/auth/sessions/:id` | 204, 404 | Déconnexion d'un appareil |
+| `DELETE /api/v1/auth/sessions` | 204 | Déconnexion de tous les autres appareils |
+| `GET /api/v1/users/me` | 200, 401 | Profil de l'utilisateur connecté |
+| `PATCH /api/v1/users/me` | 200, 400 | `displayName`, `locale`, `timezone` |
+| `DELETE /api/v1/users/me` | 204, 401 | Mot de passe requis ; suppression logique + révocation totale |
 
 ## Swagger et client typé
 

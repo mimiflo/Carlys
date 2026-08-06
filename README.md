@@ -2,7 +2,7 @@
 
 Plateforme fitness SaaS multiplateforme — application mobile Flutter (iOS & Android), API NestJS et tableau de bord d'administration Next.js, dans un monorepo unique.
 
-> **État actuel : Étape 1 (fondation) terminée.** Les fonctionnalités métier arrivent par tranches verticales — voir [État du projet](#état-du-projet).
+> **État actuel : Étapes 1 (fondation) et 2 (authentification) terminées.** Les fonctionnalités métier arrivent par tranches verticales — voir [État du projet](#état-du-projet).
 
 ---
 
@@ -161,6 +161,15 @@ Toutes les valeurs des `.env.example` sont **factices** et adaptées au dévelop
 | `RATE_LIMIT_MAX_REQUESTS` | Requêtes max par fenêtre | `100` |
 | `SWAGGER_ENABLED` | Optionnel — Swagger actif par défaut hors production | `true` |
 | `METRICS_TOKEN` | Requis en production pour exposer `/metrics` (min. 16 caractères) | `jeton-factice-a-remplacer` |
+| `JWT_ACCESS_SECRET` | **Requis** (≥ 32 caractères) — signature des access tokens | `openssl rand -base64 48` |
+| `JWT_ACCESS_TTL_SECONDS` | Durée de vie de l'access token | `900` |
+| `JWT_ISSUER` / `JWT_AUDIENCE` | Claims vérifiés à chaque requête | `carlys-api` / `carlys-mobile` |
+| `REFRESH_TOKEN_TTL_DAYS` | Durée de vie (glissante) des sessions | `30` |
+| `AUTH_MAX_LOGIN_ATTEMPTS` / `AUTH_LOCKOUT_MINUTES` | Verrouillage temporaire après échecs | `5` / `15` |
+| `ARGON2_MEMORY_KIB` / `ARGON2_TIME_COST` / `ARGON2_PARALLELISM` | Paramètres Argon2id (défauts OWASP) | `19456` / `2` / `1` |
+| `EMAIL_VERIFICATION_TTL_HOURS` / `PASSWORD_RESET_TTL_MINUTES` | Durée des jetons envoyés par e-mail | `24` / `60` |
+| `SMTP_HOST` / `SMTP_PORT` / `EMAIL_FROM` | SMTP (Mailpit en local) | `localhost` / `1025` / `Carlys <no-reply@carlys.local>` |
+| `PUBLIC_APP_URL` | Base des liens contenus dans les e-mails | `http://localhost:3000` |
 
 La validation Zod (`src/config/env.schema.ts`) fait échouer le démarrage si une variable requise manque ou est invalide.
 
@@ -310,7 +319,8 @@ Résumé des règles en place à l'Étape 1 :
 - API durcie : Helmet, CORS liste blanche, rate limiting, validation stricte des entrées (whitelist + `forbidNonWhitelisted`), limite de taille de body (1 Mo), config validée au démarrage ;
 - `/metrics` protégé par Bearer token en production ; Swagger désactivé en production ;
 - logs structurés Pino avec `requestId` propagé (en-tête `x-request-id`), sans données sensibles ;
-- à venir : Argon2id, JWT access court + refresh rotatif hashé, détection de réutilisation de refresh token (Étape 2) ; webhooks signés et idempotents (Étape 6).
+- authentification (Étape 2) : mots de passe **Argon2id**, access token JWT court (issuer/audience vérifiés + session contrôlée en base à chaque requête), refresh token **rotatif** stocké hashé (SHA-256) avec **détection de réutilisation** (révocation immédiate de la session), verrouillage temporaire après échecs répétés, réponses anti-énumération, jetons e-mail à usage unique, journal d'audit des événements de sécurité ;
+- à venir : OAuth Apple/Google, 2FA (Étape 2+) ; webhooks signés et idempotents (Étape 6).
 
 Politique complète et signalement de vulnérabilités : [SECURITY.md](./SECURITY.md).
 
@@ -341,10 +351,12 @@ Politique complète et signalement de vulnérabilités : [SECURITY.md](./SECURIT
 
 **Étape 1 — Fondation : terminée.** Monorepo, API durcie et observable, admin avec statut de plateforme, app Flutter avec design system complet, Docker Compose, scripts, CI, documentation.
 
+**Étape 2 — Authentification : terminée.** Tranche verticale complète : schéma Prisma + migration (User, UserSession, RefreshToken, …), inscription/connexion/refresh rotatif avec détection de réutilisation, verrouillage temporaire, vérification d'e-mail et réinitialisation de mot de passe (Mailpit), gestion des appareils connectés, suppression de compte, audit — et côté Flutter : stockage sécurisé des jetons, renouvellement automatique (single-flight), écrans Connexion/Inscription/Mot de passe oublié/Appareils, routage gardé par l'état de session. Tests unitaires et e2e sur les parcours critiques.
+
 | Étape | Tranche verticale | Contenu principal | Statut |
 | --- | --- | --- | --- |
 | 1 | Fondation | Monorepo, outillage, sécurité de base, design system, CI | ✅ Terminée |
-| 2 | Authentification | JWT access court + refresh rotatif hashé, Argon2id, sessions par appareil, détection de réutilisation | À venir |
+| 2 | Authentification | JWT access court + refresh rotatif hashé, Argon2id, sessions par appareil, détection de réutilisation | ✅ Terminée |
 | 3 | Exercices | Bibliothèque + seed 30+ exercices, cache Redis | À venir |
 | 4 | Séances | Offline-first Drift + file de synchronisation idempotente | À venir |
 | 5 | Progression | Records, historique, graphiques | À venir |

@@ -1,20 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
-import '../../../../app/environment/app_environment.dart';
+import '../../../../app/router/app_routes.dart';
 import '../../../../design_system/design_system.dart';
+import '../../../authentication/presentation/controllers/auth_controller.dart';
 
-/// Accueil provisoire de l'Étape 1.
-///
-/// Sert de vitrine au design system et confirme la configuration
-/// d'environnement. Remplacé par le vrai tableau de bord (séances du jour,
-/// progression) lors des tranches verticales du MVP.
+/// Accueil provisoire (Étape 2) : compte connecté et accès aux appareils.
+/// Remplacé par le vrai tableau de bord (séances, progression) à l'Étape 4+.
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final environment = ref.watch(appEnvironmentProvider);
+    final authState = ref.watch(authControllerProvider);
+    final user = switch (authState) {
+      AuthAuthenticated(:final user) => user,
+      _ => null,
+    };
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -23,29 +26,29 @@ class HomeScreen extends ConsumerWidget {
         child: ListView(
           padding: const EdgeInsets.all(AppSpacing.md),
           children: [
-            Text('Fondation prête', style: theme.textTheme.headlineMedium),
-            const SizedBox(height: AppSpacing.xs),
             Text(
-              'Environnement : ${environment.flavor.name}\n'
-              'API : ${environment.apiBaseUrl}',
-              style: theme.textTheme.bodySmall,
+              user == null ? 'Bienvenue !' : 'Bienvenue, ${user.displayName} !',
+              style: theme.textTheme.headlineMedium,
             ),
-            const SizedBox(height: AppSpacing.lg),
-            Text('Design system', style: theme.textTheme.titleLarge),
-            const SizedBox(height: AppSpacing.md),
-            const AppButton(label: 'Action principale', onPressed: _noop),
-            const SizedBox(height: AppSpacing.sm),
-            const AppButton(
-              label: 'Action secondaire',
-              onPressed: _noop,
-              variant: AppButtonVariant.secondary,
-            ),
-            const SizedBox(height: AppSpacing.sm),
-            const AppButton(
-              label: 'Chargement…',
-              onPressed: _noop,
-              isLoading: true,
-            ),
+            const SizedBox(height: AppSpacing.xs),
+            if (user != null) ...[
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(user.email, style: theme.textTheme.bodySmall),
+                  ),
+                  if (!user.emailVerified)
+                    Tooltip(
+                      message: 'Adresse e-mail non vérifiée',
+                      child: Icon(
+                        Icons.mark_email_unread_outlined,
+                        size: 18,
+                        color: theme.colorScheme.error,
+                      ),
+                    ),
+                ],
+              ),
+            ],
             const SizedBox(height: AppSpacing.lg),
             const AppEmptyState(
               title: 'Aucune séance pour le moment',
@@ -54,11 +57,28 @@ class HomeScreen extends ConsumerWidget {
                   'Étapes 3 et 4.',
               icon: AppIcons.timer,
             ),
+            const SizedBox(height: AppSpacing.xl),
+            Text('Compte', style: theme.textTheme.titleLarge),
+            const SizedBox(height: AppSpacing.sm),
+            AppButton(
+              label: 'Appareils connectés',
+              icon: Icons.devices,
+              variant: AppButtonVariant.secondary,
+              isExpanded: true,
+              onPressed: () => context.push(AppRoutes.sessions),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            AppButton(
+              label: 'Se déconnecter',
+              icon: Icons.logout,
+              variant: AppButtonVariant.ghost,
+              isExpanded: true,
+              onPressed: () =>
+                  ref.read(authControllerProvider.notifier).logout(),
+            ),
           ],
         ),
       ),
     );
   }
 }
-
-void _noop() {}

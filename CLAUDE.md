@@ -12,7 +12,7 @@ jamais une couche horizontale isolée.
 | Étape | Contenu | Statut |
 | ----- | ------- | ------ |
 | 1 | Fondation (monorepo, design system, infra, CI, observabilité) | **Faite** |
-| 2 | Authentification (JWT access court + refresh rotatif hashé, Argon2id, sessions par appareil, détection de réutilisation) | À venir |
+| 2 | Authentification (JWT access court + refresh rotatif hashé, Argon2id, sessions par appareil, détection de réutilisation) | **Faite** |
 | 3 | Exercices (catalogue, seed 30+ exercices, cache Redis) | À venir |
 | 4 | Séances (offline-first Drift + file de synchronisation idempotente) | À venir |
 | 5 | Progression | À venir |

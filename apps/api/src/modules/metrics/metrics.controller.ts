@@ -1,18 +1,14 @@
-import {
-  Controller,
-  Get,
-  Res,
-  UseGuards,
-  VERSION_NEUTRAL,
-} from '@nestjs/common';
+import { Controller, Get, Res, UseGuards, VERSION_NEUTRAL } from '@nestjs/common';
 import { ApiExcludeController } from '@nestjs/swagger';
 import { SkipThrottle } from '@nestjs/throttler';
 import { type Response } from 'express';
+import { Public } from '../../common/decorators/public.decorator';
 import { MetricsAuthGuard } from './metrics-auth.guard';
 import { MetricsService } from './metrics.service';
 
 /** GET /metrics — exposition Prometheus, protégée en production. */
 @ApiExcludeController()
+@Public()
 @SkipThrottle()
 @Controller({ path: 'metrics', version: VERSION_NEUTRAL })
 export class MetricsController {

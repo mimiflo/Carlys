@@ -59,12 +59,74 @@ export class AppConfigService {
   }
 
   get swaggerEnabled(): boolean {
-    return (
-      this.config.get('SWAGGER_ENABLED', { infer: true }) ?? !this.isProduction
-    );
+    return this.config.get('SWAGGER_ENABLED', { infer: true }) ?? !this.isProduction;
   }
 
   get metricsToken(): string | undefined {
     return this.config.get('METRICS_TOKEN', { infer: true });
+  }
+
+  // ── Authentification ────────────────────────────────────────────────────
+
+  get jwtAccessSecret(): string {
+    return this.config.get('JWT_ACCESS_SECRET', { infer: true });
+  }
+
+  get jwtAccessTtlSeconds(): number {
+    return this.config.get('JWT_ACCESS_TTL_SECONDS', { infer: true });
+  }
+
+  get jwtIssuer(): string {
+    return this.config.get('JWT_ISSUER', { infer: true });
+  }
+
+  get jwtAudience(): string {
+    return this.config.get('JWT_AUDIENCE', { infer: true });
+  }
+
+  get refreshTokenTtlDays(): number {
+    return this.config.get('REFRESH_TOKEN_TTL_DAYS', { infer: true });
+  }
+
+  get maxLoginAttempts(): number {
+    return this.config.get('AUTH_MAX_LOGIN_ATTEMPTS', { infer: true });
+  }
+
+  get lockoutMinutes(): number {
+    return this.config.get('AUTH_LOCKOUT_MINUTES', { infer: true });
+  }
+
+  get argon2Options(): { memoryCost: number; timeCost: number; parallelism: number } {
+    return {
+      memoryCost: this.config.get('ARGON2_MEMORY_KIB', { infer: true }),
+      timeCost: this.config.get('ARGON2_TIME_COST', { infer: true }),
+      parallelism: this.config.get('ARGON2_PARALLELISM', { infer: true }),
+    };
+  }
+
+  get emailVerificationTtlHours(): number {
+    return this.config.get('EMAIL_VERIFICATION_TTL_HOURS', { infer: true });
+  }
+
+  get passwordResetTtlMinutes(): number {
+    return this.config.get('PASSWORD_RESET_TTL_MINUTES', { infer: true });
+  }
+
+  // ── E-mails ────────────────────────────────────────────────────────────
+
+  get smtpHost(): string {
+    return this.config.get('SMTP_HOST', { infer: true });
+  }
+
+  get smtpPort(): number {
+    return this.config.get('SMTP_PORT', { infer: true });
+  }
+
+  get emailFrom(): string {
+    return this.config.get('EMAIL_FROM', { infer: true });
+  }
+
+  get publicAppUrl(): string {
+    return this.config.get('PUBLIC_APP_URL', { infer: true });
   }
 }

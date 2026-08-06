@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  type OnModuleDestroy,
-  type OnModuleInit,
-} from '@nestjs/common';
+import { Injectable, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { AppConfigService } from '../../config/app-config.service';
@@ -12,10 +8,7 @@ import { AppConfigService } from '../../config/app-config.service';
  * directement : seuls les repositories/services de domaine y accèdent.
  */
 @Injectable()
-export class PrismaService
-  extends PrismaClient
-  implements OnModuleInit, OnModuleDestroy
-{
+export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
   constructor(
     config: AppConfigService,
     @InjectPinoLogger(PrismaService.name)

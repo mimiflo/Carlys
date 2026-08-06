@@ -1,8 +1,7 @@
 // Schéma Prisma de Carlys.
 //
-// Étape 1 (fondation) : uniquement la connexion et le générateur.
-// Les modèles arrivent par tranches verticales :
-//   - Étape 2 : authentification (User, UserCredential, UserSession, …)
+// Introduit par tranches verticales :
+//   - Étape 2 (actuelle) : identité et authentification.
 //   - Étape 3 : exercices (Exercise, MuscleGroup, Equipment, …)
 //   - Étape 4 : séances (WorkoutSession, WorkoutSet, …)
 // Le modèle de données cible complet est documenté dans docs/database/schema.md.
@@ -14,4 +13,169 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL")
+}
+
+// ─────────────────────────────── Identité ────────────────────────────────
+
+enum UserStatus {
+  ACTIVE
+  SUSPENDED
+  DELETED
+}
+
+model User {
+  id              String     @id @default(uuid()) @db.Uuid
+  /// Normalisé en minuscules par la couche application avant écriture.
+  email           String     @unique
+  status          UserStatus @default(ACTIVE)
+  emailVerifiedAt DateTime?
+  createdAt       DateTime   @default(now())
+  updatedAt       DateTime   @updatedAt
+  /// Suppression logique : le compte est désactivé, purge différée.
+  deletedAt       DateTime?
+
+  profile            UserProfile?
+  credential         UserCredential?
+  sessions           UserSession[]
+  emailVerifications EmailVerification[]
+  passwordResets     PasswordReset[]
+  externalIdentities ExternalIdentity[]
+  auditLogs          AuditLog[]
+}
+
+model UserProfile {
+  userId      String   @id @db.Uuid
+  displayName String
+  locale      String   @default("fr")
+  timezone    String   @default("Europe/Paris")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model UserCredential {
+  userId       String   @id @db.Uuid
+  /// Hash Argon2id — jamais le mot de passe, jamais loggé, jamais retourné.
+  passwordHash String
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/// Connexion via fournisseur externe (Apple, Google) — endpoints à venir,
+/// le modèle fixe dès maintenant la contrainte d'unicité.
+enum ExternalIdentityProvider {
+  APPLE
+  GOOGLE
+}
+
+model ExternalIdentity {
+  id        String                   @id @default(uuid()) @db.Uuid
+  userId    String                   @db.Uuid
+  provider  ExternalIdentityProvider
+  /// Identifiant stable du compte chez le fournisseur (claim `sub`).
+  subject   String
+  email     String?
+  createdAt DateTime                 @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, subject])
+  @@index([userId])
+}
+
+// ─────────────────────────── Sessions & tokens ───────────────────────────
+
+/// Session par appareil. L'access token JWT référence la session (claim sid) ;
+/// la révoquer invalide immédiatement les requêtes authentifiées.
+model UserSession {
+  id             String    @id @default(uuid()) @db.Uuid
+  userId         String    @db.Uuid
+  deviceName     String?
+  devicePlatform String?
+  ipAddress      String?
+  userAgent      String?
+  createdAt      DateTime  @default(now())
+  lastUsedAt     DateTime  @default(now())
+  /// Expiration glissante : repoussée à chaque rotation du refresh token.
+  expiresAt      DateTime
+  revokedAt      DateTime?
+  revokedReason  String?
+
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshTokens RefreshToken[]
+
+  @@index([userId])
+}
+
+enum RefreshTokenStatus {
+  ACTIVE
+  ROTATED
+  REVOKED
+}
+
+/// Jeton opaque à usage unique (hash SHA-256 en base). Présenter un jeton
+/// ROTATED ou REVOKED = réutilisation détectée → révocation de la session.
+model RefreshToken {
+  id        String             @id @default(uuid()) @db.Uuid
+  sessionId String             @db.Uuid
+  tokenHash String             @unique
+  status    RefreshTokenStatus @default(ACTIVE)
+  createdAt DateTime           @default(now())
+  expiresAt DateTime
+  rotatedAt DateTime?
+
+  session UserSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+
+  @@index([sessionId])
+}
+
+// ─────────────────────── Vérifications par e-mail ────────────────────────
+
+model EmailVerification {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+model PasswordReset {
+  id        String    @id @default(uuid()) @db.Uuid
+  userId    String    @db.Uuid
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+}
+
+// ────────────────────────────── Audit ────────────────────────────────────
+
+/// Journal des événements de sécurité et des actions sensibles.
+/// Alimenté dès l'Étape 2 ; consulté par l'admin à l'Étape 7.
+model AuditLog {
+  id        String   @id @default(uuid()) @db.Uuid
+  userId    String?  @db.Uuid
+  /// Ex. auth.login, auth.login_failed, auth.lockout, auth.refresh_reuse_detected…
+  action    String
+  ipAddress String?
+  userAgent String?
+  /// Contexte non sensible uniquement — jamais de mot de passe ni de jeton.
+  metadata  Json?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([userId, createdAt])
+  @@index([action, createdAt])
 }

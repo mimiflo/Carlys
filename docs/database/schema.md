@@ -18,7 +18,7 @@ migration manque par rapport au schéma.
 
 | Domaine | Modèles | Tranche |
 |---|---|---|
-| Identité | `User`, `UserProfile`, `UserCredential`, `UserSession`, `UserDevice`, `EmailVerification`, `PasswordReset`, `ExternalIdentity`, `UserPreference` | Étape 2 |
+| Identité | `User`, `UserProfile`, `UserCredential`, `UserSession`, `RefreshToken`, `EmailVerification`, `PasswordReset`, `ExternalIdentity` — **implémenté** (migration `20260806180000_auth_foundation`) ; `UserDevice` et `UserPreference` différés | Étape 2 ✅ |
 | Catalogue d'exercices | `Exercise`, `ExerciseTranslation`, `ExerciseMedia`, `ExerciseMuscle`, `MuscleGroup`, `Equipment`, `ExerciseVariant`, `CustomExercise` | Étape 3 |
 | Médias | `MediaAsset` | Étape 3 (premier besoin : médias d'exercices) |
 | Programmes | `TrainingProgram`, `ProgramWeek`, `ProgramDay`, `WorkoutTemplate`, `WorkoutTemplateExercise`, `WorkoutTemplateSet` | Étape 4 |
@@ -82,11 +82,19 @@ répétées modèle par modèle.
 
 ---
 
-## Identité — Étape 2
+## Identité — Étape 2 (implémenté)
 
 Cœur de l'authentification : JWT d'accès courts, refresh tokens **rotatifs et
 hashés**, mots de passe **Argon2id**, sessions par appareil, détection de
 réutilisation d'un refresh token déjà consommé.
+
+> Implémenté dans `apps/api/prisma/schema.prisma` (migration
+> `20260806180000_auth_foundation`). Deux ajustements par rapport à la cible
+> initiale : la chaîne de rotation est portée par le couple
+> `UserSession` + `RefreshToken` (une ligne par jeton, statuts
+> `ACTIVE | ROTATED | REVOKED`) plutôt que par un `familyId` ; et `UserDevice`
+> est différé — les métadonnées d'appareil vivent sur `UserSession` jusqu'à
+> l'arrivée des notifications push.
 
 ### `User`
 Racine de l'identité d'un membre (application mobile). Aucune donnée sensible
@@ -114,20 +122,31 @@ lecture.
 - Relations : 1–1 `User`. Nullable côté usage : un compte purement OAuth n'a pas
   de ligne ici.
 
-### `UserSession`
-Une session de rafraîchissement **par appareil**. Le refresh token n'est
-**jamais stocké en clair** : seul son hash est persisté.
-- Champs clés : `userId`, `deviceId` (→ `UserDevice`), `refreshTokenHash`
-  (unique), `familyId` (chaîne de rotation : chaque rotation crée une nouvelle
-  ligne dans la même famille), `expiresAt`, `lastUsedAt`, `revokedAt`,
-  `revokedReason` (`logout | rotation | reuse_detected | admin`), `ip`,
-  `userAgent`.
-- Relations : n–1 `User`, n–1 `UserDevice`.
-- Détection de réutilisation : présenter un token déjà consommé de la famille →
-  révocation de **toute** la famille, en transaction.
-- Index : `(user_id)`, `(family_id)`, `(expires_at)` pour la purge.
+### `UserSession` (implémenté)
+Une session **par appareil**. L'access token JWT référence la session (claim
+`sid`) : le guard vérifie son état en base à chaque requête, la révoquer
+invalide donc immédiatement ses access tokens.
+- Champs clés : `userId`, `deviceName`, `devicePlatform`, `ipAddress`,
+  `userAgent`, `expiresAt` (expiration **glissante**, repoussée à chaque
+  rotation), `lastUsedAt`, `revokedAt`, `revokedReason`
+  (`logout | user_revoked | user_revoked_all | password_reset |
+  password_changed | refresh_reuse_detected | account_deleted`).
+- Relations : n–1 `User` ; 1–n `RefreshToken`.
+- Index : `(user_id)`.
 
-### `UserDevice`
+### `RefreshToken` (implémenté)
+Un jeton opaque par rotation — **jamais stocké en clair**, uniquement son hash
+SHA-256 (`tokenHash` unique).
+- Champs clés : `sessionId`, `tokenHash` (unique), `status`
+  (`ACTIVE | ROTATED | REVOKED`), `expiresAt`, `rotatedAt`.
+- Rotation **conditionnelle** en transaction : seul un jeton encore `ACTIVE`
+  peut être rotaté ; deux refresh concurrents du même jeton → le second est
+  traité comme une réutilisation.
+- Détection de réutilisation : présenter un jeton `ROTATED`/`REVOKED` →
+  révocation de **toute la session** + événement d'audit.
+- Index : `(session_id)`.
+
+### `UserDevice` (différé — arrivera avec les notifications push)
 Appareil logique de l'utilisateur (un téléphone = un appareil), support des
 sessions et du push.
 - Champs clés : `userId`, `platform` (`ios | android`), `model`, `osVersion`,

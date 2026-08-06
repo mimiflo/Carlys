@@ -14,11 +14,7 @@ export class DatabaseHealthProbe {
   async check(): Promise<HealthComponent> {
     const startedAt = Date.now();
     try {
-      await withTimeout(
-        this.prisma.$queryRaw`SELECT 1`,
-        PROBE_TIMEOUT_MS,
-        'PostgreSQL',
-      );
+      await withTimeout(this.prisma.$queryRaw`SELECT 1`, PROBE_TIMEOUT_MS, 'PostgreSQL');
       return { status: 'up', latencyMs: Date.now() - startedAt };
     } catch (error) {
       return {

@@ -40,9 +40,7 @@ async function bootstrap(): Promise<void> {
   }
 
   await app.listen(config.port, '0.0.0.0');
-  logger.log(
-    `Carlys API démarrée sur le port ${config.port} (${config.nodeEnv})`,
-  );
+  logger.log(`Carlys API démarrée sur le port ${config.port} (${config.nodeEnv})`);
 }
 
 void bootstrap();

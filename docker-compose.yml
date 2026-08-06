@@ -100,6 +100,9 @@ services:
       REDIS_URL: redis://redis:6379
       CORS_ORIGINS: http://localhost:3001
       LOG_LEVEL: debug
+      JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-secret-jwt-de-developpement-a-remplacer-absolument}
+      SMTP_HOST: mailpit
+      SMTP_PORT: 1025
     ports:
       - '3000:3000'
     depends_on:

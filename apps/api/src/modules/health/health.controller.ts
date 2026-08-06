@@ -1,14 +1,9 @@
 import { type HealthReport, type LivenessReport } from '@carlys/api-contracts';
-import {
-  Controller,
-  Get,
-  HttpStatus,
-  Res,
-  VERSION_NEUTRAL,
-} from '@nestjs/common';
+import { Controller, Get, HttpStatus, Res, VERSION_NEUTRAL } from '@nestjs/common';
 import { ApiOperation, ApiTags } from '@nestjs/swagger';
 import { SkipThrottle } from '@nestjs/throttler';
 import { type Response } from 'express';
+import { Public } from '../../common/decorators/public.decorator';
 import { HealthService } from './health.service';
 
 /**
@@ -18,6 +13,7 @@ import { HealthService } from './health.service';
  *   GET /health/ready  — readiness (PostgreSQL + Redis joignables)
  */
 @ApiTags('health')
+@Public()
 @SkipThrottle()
 @Controller({ path: 'health', version: VERSION_NEUTRAL })
 export class HealthController {
@@ -25,13 +21,9 @@ export class HealthController {
 
   @Get()
   @ApiOperation({ summary: 'État de santé complet du service' })
-  async check(
-    @Res({ passthrough: true }) response: Response,
-  ): Promise<HealthReport> {
+  async check(@Res({ passthrough: true }) response: Response): Promise<HealthReport> {
     const report = await this.health.readiness();
-    response.status(
-      report.status === 'ok' ? HttpStatus.OK : HttpStatus.SERVICE_UNAVAILABLE,
-    );
+    response.status(report.status === 'ok' ? HttpStatus.OK : HttpStatus.SERVICE_UNAVAILABLE);
     return report;
   }
 
@@ -43,13 +35,9 @@ export class HealthController {
 
   @Get('ready')
   @ApiOperation({ summary: 'Readiness — dépendances critiques joignables' })
-  async ready(
-    @Res({ passthrough: true }) response: Response,
-  ): Promise<HealthReport> {
+  async ready(@Res({ passthrough: true }) response: Response): Promise<HealthReport> {
     const report = await this.health.readiness();
-    response.status(
-      report.status === 'ok' ? HttpStatus.OK : HttpStatus.SERVICE_UNAVAILABLE,
-    );
+    response.status(report.status === 'ok' ? HttpStatus.OK : HttpStatus.SERVICE_UNAVAILABLE);
     return report;
   }
 }

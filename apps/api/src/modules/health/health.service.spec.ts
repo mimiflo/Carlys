@@ -3,10 +3,7 @@ import { HealthService } from './health.service';
 import { type DatabaseHealthProbe } from './probes/database.probe';
 import { type RedisHealthProbe } from './probes/redis.probe';
 
-function probeStub(
-  key: string,
-  result: HealthComponent,
-): DatabaseHealthProbe & RedisHealthProbe {
+function probeStub(key: string, result: HealthComponent): DatabaseHealthProbe & RedisHealthProbe {
   return {
     key,
     check: jest.fn().mockResolvedValue(result),

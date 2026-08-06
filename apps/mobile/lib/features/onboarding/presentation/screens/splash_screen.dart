@@ -1,34 +1,27 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../app/router/app_routes.dart';
 import '../../../../design_system/design_system.dart';
+import '../../../authentication/presentation/controllers/auth_controller.dart';
 
-/// Écran de démarrage.
-///
-/// Étape 1 : affiche la marque puis navigue vers l'accueil. Les vérifications
-/// réelles (session, mise à jour obligatoire, restauration de séance) s'y
-/// grefferont lors des tranches suivantes.
-class SplashScreen extends StatefulWidget {
+/// Écran de démarrage : déclenche la restauration de session.
+/// Le routeur redirige dès que l'état de session est connu
+/// (connexion ou accueil). Les vérifications futures (mise à jour
+/// obligatoire, restauration de séance) se grefferont ici.
+class SplashScreen extends ConsumerStatefulWidget {
   const SplashScreen({super.key});
 
   @override
-  State<SplashScreen> createState() => _SplashScreenState();
+  ConsumerState<SplashScreen> createState() => _SplashScreenState();
 }
 
-class _SplashScreenState extends State<SplashScreen> {
+class _SplashScreenState extends ConsumerState<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) => _navigateToHome());
-  }
-
-  Future<void> _navigateToHome() async {
-    final delay = AppMotion.resolve(context, AppMotion.deliberate * 2);
-    await Future<void>.delayed(delay);
-    if (mounted) {
-      context.go(AppRoutes.home);
-    }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      ref.read(authControllerProvider.notifier).restore();
+    });
   }
 
   @override
