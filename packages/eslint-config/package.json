@@ -1,0 +1,18 @@
+{
+  "name": "@carlys/eslint-config",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Configuration ESLint partagée (flat config) du monorepo Carlys",
+  "type": "module",
+  "exports": {
+    ".": "./base.mjs"
+  },
+  "dependencies": {
+    "@eslint/js": "^9.18.0",
+    "eslint-config-prettier": "^10.0.1",
+    "typescript-eslint": "^8.20.0"
+  },
+  "peerDependencies": {
+    "eslint": "^9.0.0"
+  }
+}

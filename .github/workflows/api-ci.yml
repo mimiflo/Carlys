@@ -1,0 +1,108 @@
+name: api-ci
+
+on:
+  pull_request:
+    paths:
+      - 'apps/api/**'
+      - 'packages/**'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.github/workflows/api-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/api/**'
+      - 'packages/**'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.github/workflows/api-ci.yml'
+
+concurrency:
+  group: api-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: carlys
+          POSTGRES_PASSWORD: carlys
+          POSTGRES_DB: carlys_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U carlys -d carlys_test"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://carlys:carlys@localhost:5432/carlys_test
+      REDIS_URL: redis://localhost:6379
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Installation
+        run: pnpm install --frozen-lockfile
+
+      - name: Build des packages partagés
+        run: pnpm --filter "./packages/**" build
+
+      - name: Formatage
+        run: pnpm format:check
+
+      - name: Client Prisma
+        run: pnpm --filter @carlys/api prisma:generate
+
+      - name: Validation du schéma Prisma
+        run: pnpm --filter @carlys/api exec prisma validate
+
+      - name: Détection des migrations manquantes
+        working-directory: apps/api
+        run: |
+          if [ -d prisma/migrations ]; then
+            pnpm exec prisma migrate diff \
+              --from-migrations prisma/migrations \
+              --to-schema-datamodel prisma/schema.prisma \
+              --shadow-database-url "$DATABASE_URL" \
+              --exit-code
+          else
+            echo "Aucune migration pour le moment (schéma vide — Étape 1)."
+          fi
+
+      - name: Lint
+        run: pnpm --filter @carlys/api lint
+
+      - name: Types
+        run: pnpm --filter @carlys/api typecheck
+
+      - name: Tests unitaires
+        run: pnpm --filter @carlys/api test
+
+      - name: Tests end-to-end
+        run: pnpm --filter @carlys/api test:e2e
+
+      - name: Build
+        run: pnpm --filter @carlys/api build

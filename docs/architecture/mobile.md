@@ -1,0 +1,350 @@
+# Architecture — application mobile Flutter
+
+L'application mobile (`apps/mobile`) est le client principal de Carlys :
+iOS et Android d'abord, desktop préparé. Elle suit une architecture
+**feature-first inspirée de Clean Architecture, sans complexité inutile** :
+les frontières interface / logique / données sont strictes, mais on n'ajoute
+ni couche ni abstraction qui ne paie pas immédiatement. Ce document décrit
+l'état réel à l'Étape 1 (fondation) et les cibles explicitement planifiées.
+
+L'app est volontairement **hors du workspace pnpm** : outillage Flutter
+(`flutter pub get`, `build_runner`) et CI dédiée (`.github/workflows/mobile-ci.yml` :
+`dart format` bloquant, `flutter analyze`, `flutter test`).
+
+## Arborescence de `lib/`
+
+Structure réelle (les dossiers marqués `∅` existent mais sont encore vides —
+ils matérialisent l'emplacement des briques à venir) :
+
+```
+lib/
+├── main.dart                     # Délègue tout à bootstrap()
+├── app/                          # Assemblage de l'application
+│   ├── bootstrap.dart            # runZonedGuarded, capture d'erreurs, ProviderScope
+│   ├── app.dart                  # CarlysApp : MaterialApp.router, thèmes, locales fr/en
+│   ├── environment/
+│   │   └── app_environment.dart  # AppEnvironment (--dart-define) + appEnvironmentProvider
+│   ├── observers/
+│   │   └── app_provider_observer.dart  # Journalisation Riverpod (debug)
+│   └── router/
+│       ├── app_router.dart       # appRouterProvider (GoRouter)
+│       └── app_routes.dart       # Chemins nommés
+├── core/                         # Briques transverses, sans logique métier
+│   ├── api/          ∅           # Client API Dio + interceptors (Étape 2)
+│   ├── auth/         ∅           # Session, tokens (Étape 2)
+│   ├── database/     ∅           # Drift/SQLite (Étape 4)
+│   ├── errors/                   # AppException (hiérarchie scellée)
+│   ├── logging/                  # AppLogger (dart:developer ; Sentry s'y branchera)
+│   ├── network/      ∅           # Connectivité (connectivity_plus)
+│   ├── permissions/  ∅           # Permissions plateforme
+│   ├── security/     ∅           # flutter_secure_storage (Étape 2)
+│   ├── synchronization/ ∅        # File de synchronisation (Étape 4)
+│   ├── utilities/    ∅
+│   └── validators/   ∅
+├── design_system/                # Source unique des valeurs visuelles
+│   ├── design_system.dart        # Barrel : seul import autorisé depuis les écrans
+│   ├── colors/ · typography/ · spacing/ · radius/ · shadows/ · motion/ · icons/
+│   ├── theme/                    # AppTheme (clair/sombre/OLED), AppColorSchemes, AppBreakpoints
+│   └── components/               # AppButton, AppLoadingIndicator, AppErrorState, AppEmptyState
+├── features/                     # Fonctionnalités en tranches verticales
+│   ├── README.md                 # Structure data/domain/presentation détaillée
+│   ├── onboarding/presentation/screens/splash_screen.dart
+│   ├── dashboard/presentation/screens/home_screen.dart
+│   └── authentication/ · exercises/ · workout_session/ · workout_builder/
+│       · workout_history/ · programs/ · progress/ · body_metrics/ · profile/
+│       · settings/ · subscriptions/ · notifications/ · coaching/ · health/
+│       · nutrition/ · social/    ∅  (réservés, remplis par tranche)
+└── shared/                       # Transverse métier (≠ design system générique)
+    ├── models/       ∅
+    ├── providers/    ∅
+    └── widgets/      ∅
+```
+
+## Couches et structure d'une fonctionnalité
+
+Chaque fonctionnalité importante suit la structure documentée dans
+`lib/features/README.md` :
+
+```
+feature/
+├── data/
+│   ├── datasources/     # API distante (Dio) et base locale (Drift)
+│   ├── dto/             # Objets de transfert (json_serializable)
+│   ├── mappers/         # DTO/Drift ⇄ entités du domaine
+│   └── repositories/    # Implémentations des contrats du domaine
+├── domain/
+│   ├── entities/        # Objets métier immuables (Freezed)
+│   ├── repositories/    # Contrats abstraits
+│   ├── services/        # Logique métier pure
+│   └── usecases/        # Cas d'usage orchestrant les repositories
+└── presentation/
+    ├── controllers/     # Contrôleurs Riverpod (état des écrans)
+    ├── providers/       # Providers de la fonctionnalité
+    ├── screens/         # Écrans
+    └── widgets/         # Widgets propres à la fonctionnalité
+```
+
+Les dépendances vont dans un seul sens : `presentation → domain ← data`.
+Le domaine ne connaît ni Flutter, ni Dio, ni Drift. Une petite fonctionnalité
+peut alléger cette structure (pas de use case pour un simple passe-plat),
+mais sépare toujours interface / logique / données.
+
+### Règles non négociables
+
+- **Aucun widget n'appelle l'API directement.** Toujours widget → contrôleur
+  Riverpod → use case / repository → datasource. Idem pour la base locale.
+- **Aucune valeur visuelle en dur.** Couleurs, espacements, rayons, durées,
+  icônes : uniquement via le design system (`design_system.dart`). Les écrans
+  n'importent jamais un fichier interne du design system ni `Icons.*`.
+- **Erreurs converties en frontière.** Les repositories convertissent les
+  exceptions brutes (Dio, Drift, plateforme) en `AppException`
+  (`core/errors/app_exception.dart` : `NetworkException`, `ServerException`,
+  `StorageException`, `UnauthorizedException`, `ValidationException`,
+  `UnknownException`). La présentation ne manipule que ces types et choisit
+  le texte utilisateur localisé.
+- **`const` partout où c'est possible** (imposé par l'analyseur strict —
+  `analysis_options.yaml` : strict-casts, strict-inference, strict-raw-types).
+- **Reconstructions maîtrisées** : providers granulaires, `select` pour
+  n'écouter qu'un fragment d'état, widgets découpés petit, jamais de
+  `ref.watch` d'un gros état dans un widget racine.
+- **Listes paginées** : toute liste venant de l'API respecte la pagination
+  du serveur (20 par défaut, 100 max — `packages/shared-config`) avec
+  chargement incrémental côté UI ; jamais de « tout charger ».
+- **Aucun secret dans les logs** (`AppLogger` : règle documentée dans le code).
+
+## État et injection de dépendances — Riverpod
+
+- `flutter_riverpod` + `riverpod_annotation` sont en place ;
+  `riverpod_generator` et `build_runner` sont installés. La **génération de
+  code (annotations `@riverpod`) sera activée dès les premiers contrôleurs**
+  (Étape 2) — à l'Étape 1, les rares providers sont déclarés manuellement.
+- **`appEnvironmentProvider` est surchargé au bootstrap** via
+  `overrideWithValue` avec la configuration lue des `--dart-define`. Sa
+  déclaration lève `UnimplementedError` s'il est lu sans override : impossible
+  d'utiliser un environnement implicite. Les tests utilisent le même mécanisme
+  (`test/app/app_test.dart`).
+- Riverpod sert aussi de **conteneur d'injection** : les repositories,
+  datasources et clients (Dio, Drift) seront exposés comme providers,
+  remplaçables en test par des overrides — pas de framework DI supplémentaire.
+- `AppProviderObserver` journalise les mises à jour de providers en debug et
+  les échecs en toutes circonstances.
+- `bootstrap()` (`lib/app/bootstrap.dart`) encadre tout dans
+  `runZonedGuarded`, installe `FlutterError.onError` et loggue les erreurs non
+  interceptées ; Sentry s'y branchera avec son DSN par environnement (cible,
+  pas de dépendance morte en attendant).
+
+## Navigation — GoRouter
+
+Le routeur est exposé par `appRouterProvider` (`lib/app/router/app_router.dart`)
+et consommé par `MaterialApp.router`. Les chemins vivent dans `AppRoutes`.
+
+Routes actuelles (Étape 1) :
+
+| Chemin  | Nom      | Écran                              |
+| ------- | -------- | ---------------------------------- |
+| `/`     | `splash` | `SplashScreen` (marque, puis `/home`) |
+| `/home` | `home`   | `HomeScreen` (vitrine du design system) |
+
+Cibles planifiées (branchées tranche par tranche) :
+
+- **Navigation principale à cinq destinations** — Accueil, Entraînement,
+  Programmes, Progression, Profil — via une shell route ; les icônes
+  sémantiques existent déjà (`AppIcons.home`, `workout`, `programs`,
+  `progress`, `profile`).
+- **Accès rapide à la séance active** (Étape 4) : une séance en cours reste
+  joignable en un geste depuis toute l'app (mini-barre persistante).
+- **Route de restauration de séance interrompue** (Étape 4) : au démarrage,
+  si une séance active existe en base locale, une redirection (`redirect`
+  GoRouter) propose de la reprendre — l'emplacement est déjà commenté dans
+  `app_router.dart`.
+- **Gardes d'authentification** (Étape 2) : redirection vers le flux de
+  connexion pour les routes protégées.
+- **Navigation adaptative** selon `AppBreakpoints` : barre inférieure en
+  `compact`, rail de navigation en `medium`/`expanded`, panneau latéral en
+  `large`/`xlarge` — même arbre de routes, seul l'habillage change.
+
+## Design system
+
+`packages/design-tokens/src/tokens.json` est la **source de vérité
+multiplateforme** (primaire `#5B5BF6`, accent `#C6F432`, espacements 4→64,
+radius, typo, ombres, motion, breakpoints). Le design system Flutter
+(`lib/design_system/`) reflète ces valeurs à la main ; un générateur de code
+pourra automatiser la synchronisation plus tard (cible).
+
+Fondations actuelles :
+
+| Classe            | Rôle                                                                 |
+| ----------------- | -------------------------------------------------------------------- |
+| `AppColors`       | Palette (marque, neutres, sémantiques, surfaces clair/sombre/OLED)   |
+| `AppTypography`   | Échelle typographique ; fonte système tant que les fontes ne sont pas embarquées dans `assets/fonts` |
+| `AppSpacing`      | Espacements `xxs` 4 → `xxxl` 64                                       |
+| `AppRadius`       | Rayons 4 → 24 + `full`                                                |
+| `AppShadows`      | Ombres sm/md/lg                                                       |
+| `AppMotion`       | Durées (100→600 ms) et courbes ; `AppMotion.resolve`                  |
+| `AppIcons`        | Icônes sémantiques métier — jamais `Icons.*` dans les écrans          |
+| `AppBreakpoints`  | Window size classes M3 (`WindowSize` + extension `context.windowSize`) |
+| `AppTheme`        | `light()`, `dark()`, `oledDark()` construits depuis les tokens        |
+
+Thèmes : clair et sombre sont branchés (`themeMode: ThemeMode.system` dans
+`CarlysApp`). La variante **OLED (fond noir pur)** existe (`AppTheme.oledDark()`)
+et deviendra un choix utilisateur avec la fonctionnalité `settings` (cible).
+
+**Réduction des animations** : toute animation décorative passe par
+`AppMotion.resolve(context, duration)`, qui renvoie `Duration.zero` quand le
+système demande la réduction des animations (`MediaQuery.disableAnimationsOf`).
+Le splash l'applique déjà à son délai de transition.
+
+Composants actuels : `AppButton` (variantes primary/secondary/ghost/destructive,
+trois tailles, état de chargement anti-double-soumission, `isExpanded`,
+`Semantics` intégré), `AppLoadingIndicator` (libellé accessible),
+`AppErrorState` (icône, titre, message, réessai), `AppEmptyState`.
+
+Composants cibles (créés avec la tranche qui en a besoin) :
+
+| Composant              | Rôle                                                | Étape |
+| ---------------------- | --------------------------------------------------- | ----- |
+| `AppTextField`         | Champ de saisie standard (validation, erreurs)      | 2     |
+| `AppCard`              | Conteneur surface standard                          | 3     |
+| `ResponsiveScaffold`   | Scaffold adaptatif (barre/rail/panneau)             | 3–4   |
+| `WorkoutCard`          | Carte de séance                                     | 4     |
+| `SetInputRow`          | Saisie d'une série (répétitions, charge)            | 4     |
+| `RestTimer`            | Minuteur de repos                                   | 4     |
+| `MetricCard`           | Indicateur chiffré (progression)                    | 5     |
+| `MuscleMap`            | Corps humain interactif (Rive)                      | 5     |
+| `SubscriptionPaywall`  | Écran d'abonnement                                  | 6     |
+
+## Animations
+
+Deux niveaux, tous deux soumis à `AppMotion.resolve` :
+
+1. **Standard Flutter** — transitions implicites/explicites avec les durées et
+   courbes d'`AppMotion` uniquement. C'est le niveau par défaut pour tout
+   feedback d'interface.
+2. **Avancé Rive** (`package:rive`, assets dans `assets/rive/`) — réservé aux
+   moments à forte valeur : illustrations d'onboarding, corps humain
+   interactif (`MuscleMap`), célébrations de records personnels (Étape 5).
+
+Règles : les animations ne bloquent jamais l'UI ni une action utilisateur
+(elles accompagnent, elles ne conditionnent pas) ; elles sont désactivables
+(réduction d'animations système respectée) ; les fichiers Rive sont préchargés
+hors du fil critique d'affichage. Les dossiers `assets/` existent mais ne sont
+déclarés dans `pubspec.yaml` que lorsqu'ils contiennent de vrais fichiers.
+
+## Offline-first
+
+Principe (mise en œuvre à l'Étape 4) : **Drift/SQLite est la source de données
+immédiate** — chaque lecture et chaque écriture passent d'abord par la base
+locale, l'UI ne dépend jamais du réseau pour afficher ou enregistrer une
+séance. Une **file de synchronisation idempotente** (`core/synchronization/`)
+rejoue ensuite les écritures vers l'API quand la connectivité le permet
+(`connectivity_plus`). Le protocole complet (identifiants `uuid` générés
+côté client, idempotence, résolution de conflits) est spécifié dans
+[docs/synchronization/offline-first.md](../synchronization/offline-first.md).
+
+## Réseau
+
+- **Dio** est le client HTTP (`core/api/`, vide à l'Étape 1), configuré depuis
+  `AppEnvironment` : `apiBaseUrl` sans version, `apiV1Url` (= `…/api/v1`) pour
+  les routes métier.
+- Interceptors cibles (Étape 2) : propagation d'un `x-request-id`
+  (`packages/shared-config`), en-tête `Authorization: Bearer`, **renouvellement
+  automatique du token d'accès** sur 401 via le refresh token rotatif — une
+  seule requête de rafraîchissement en vol, les autres requêtes attendent puis
+  rejouent ; en cas d'échec, déconnexion propre.
+- Les datasources désérialisent les **enveloppes de réponse** de l'API
+  (`{ data, meta, requestId }` / `{ error: { code, message, details, requestId } }`,
+  contrats définis dans `packages/api-contracts`) et convertissent les erreurs
+  en `AppException` — le code d'erreur serveur pilote le type d'exception.
+
+## Sécurité locale
+
+- Les secrets (tokens de session, Étape 2) vivent exclusivement dans
+  **`flutter_secure_storage`** (Keychain iOS / Keystore Android), via
+  `core/security/`. Jamais dans SharedPreferences, un fichier ou la base Drift.
+- Drift contient des données métier, pas des secrets.
+- Aucun token ni secret dans les logs (`AppLogger`) ; les erreurs remontées à
+  Sentry (cible) seront filtrées de la même façon.
+
+## Adaptatif et préparation desktop
+
+L'app vise Windows/macOS à terme : **on ne portera pas un écran de téléphone
+étiré**, on compose des layouts par classe de taille.
+
+- `WindowSize` (`compact` < 600 < `medium` < 840 < `expanded` < 1200 <
+  `large` < 1600 ≤ `xlarge`) est disponible partout via `context.windowSize`.
+- Cibles : `ResponsiveScaffold` (barre inférieure / rail / panneau latéral),
+  layouts maître-détail en `expanded` et plus (liste d'exercices + détail,
+  progression + graphique), largeurs de contenu bornées.
+- `scripts/bootstrap_mobile.sh` ne génère aujourd'hui que `android/` et
+  `ios/` ; les plateformes desktop seront ajoutées à `flutter create` quand
+  la cible sera activée.
+
+## Accessibilité
+
+- **Labels sémantiques** systématiques : `AppButton.semanticLabel`,
+  `semanticsLabel` sur `AppLoadingIndicator` et sur les icônes signifiantes
+  (déjà en place sur le splash).
+- **Tailles de texte dynamiques** : les styles d'`AppTypography` passent par
+  `TextTheme`, donc respectent le facteur d'échelle système ; les layouts
+  doivent survivre aux grandes tailles (pas de hauteur fixe sur du texte).
+- **Zones sûres** : `SafeArea` sur tous les écrans (splash et accueil le font
+  déjà).
+- **Clavier** : les formulaires gèrent focus, `textInputAction` et défilement
+  du champ actif (règle appliquée dès `AppTextField`, Étape 2).
+- Cibles de toucher ≥ 48 px (imposé par les thèmes de boutons dans `AppTheme`)
+  et réduction d'animations (voir plus haut).
+
+## Tests
+
+En place à l'Étape 1 (exécutés par la CI mobile) :
+
+- `test/app/app_test.dart` — widget test du démarrage complet : `CarlysApp`
+  sous `ProviderScope` avec `appEnvironmentProvider` surchargé, splash puis
+  navigation vers l'accueil ;
+- `test/design_system/app_button_test.dart` — comportement d'`AppButton`
+  (tap, désactivation, chargement).
+
+Stratégie cible, par tranche :
+
+| Niveau                  | Portée                                                        |
+| ----------------------- | ------------------------------------------------------------- |
+| Unitaires domaine       | Entités, services, use cases — purs, sans Flutter             |
+| Contrôleurs Riverpod    | `ProviderContainer` + overrides de repositories factices      |
+| Widget tests            | Écrans et composants du design system                         |
+| Golden tests (cible)    | Composants clés en clair/sombre, plusieurs tailles de texte   |
+| Intégration (`integration_test/`) | Scénarios offline/synchronisation : séance enregistrée hors ligne, rejouée à la reconnexion (Étape 4) |
+
+## Plateformes, environnement d'exécution et commandes
+
+Les dossiers de plateformes (`android/`, `ios/`) ne sont **pas versionnés** :
+ils se génèrent localement via `./scripts/bootstrap_mobile.sh`, qui exécute
+`flutter create --org com.carlys --project-name carlys_mobile
+--platforms android,ios .`, puis `flutter pub get` et `flutter analyze`.
+
+La configuration d'exécution est injectée **uniquement par `--dart-define`**
+(`lib/app/environment/app_environment.dart`) — aucun fichier d'environnement
+embarqué :
+
+| Dart-define           | Valeurs                                   | Défaut                  |
+| --------------------- | ----------------------------------------- | ----------------------- |
+| `CARLYS_FLAVOR`       | `development` \| `staging` \| `production` (alignés sur les environnements serveur) | `development` |
+| `CARLYS_API_BASE_URL` | Base de l'API sans préfixe de version     | `http://localhost:3000` |
+
+```bash
+cd apps/mobile
+flutter run \
+  --dart-define=CARLYS_FLAVOR=development \
+  --dart-define=CARLYS_API_BASE_URL=http://localhost:3000
+
+# Génération de code (Riverpod, Freezed, Drift, JSON) — dès qu'elle sera utilisée :
+dart run build_runner build --delete-conflicting-outputs
+
+# Builds de distribution (mêmes --dart-define, valeurs de l'environnement visé)
+flutter build apk
+flutter build appbundle
+flutter build ios
+```
+
+Firebase Cloud Messaging et Sentry seront ajoutés **avec leur configuration
+réelle** (`google-services.json`, DSN) — pas de dépendance morte tant que la
+configuration n'existe pas.

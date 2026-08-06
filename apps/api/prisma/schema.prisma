@@ -1,0 +1,17 @@
+// Schéma Prisma de Carlys.
+//
+// Étape 1 (fondation) : uniquement la connexion et le générateur.
+// Les modèles arrivent par tranches verticales :
+//   - Étape 2 : authentification (User, UserCredential, UserSession, …)
+//   - Étape 3 : exercices (Exercise, MuscleGroup, Equipment, …)
+//   - Étape 4 : séances (WorkoutSession, WorkoutSet, …)
+// Le modèle de données cible complet est documenté dans docs/database/schema.md.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}

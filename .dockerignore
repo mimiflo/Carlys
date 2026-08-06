@@ -1,0 +1,13 @@
+**/node_modules
+**/dist
+**/.next
+**/coverage
+**/build
+.git
+apps/mobile
+docs
+infrastructure/monitoring
+infrastructure/deployment
+**/.env
+**/.env.*
+!**/.env.example

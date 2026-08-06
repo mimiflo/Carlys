@@ -1,0 +1,81 @@
+import { REQUEST_ID_HEADER } from '@carlys/shared-config';
+import { Module } from '@nestjs/common';
+import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { randomUUID } from 'node:crypto';
+import { type IncomingMessage, type ServerResponse } from 'node:http';
+import { LoggerModule } from 'nestjs-pino';
+import { AllExceptionsFilter } from '../common/filters/all-exceptions.filter';
+import { ResponseEnvelopeInterceptor } from '../common/interceptors/response-envelope.interceptor';
+import { AppConfigModule } from '../config/app-config.module';
+import { AppConfigService } from '../config/app-config.service';
+import { PrismaModule } from '../database/prisma/prisma.module';
+import { RedisModule } from '../infrastructure/cache/redis.module';
+import { HealthModule } from '../modules/health/health.module';
+import { MetricsModule } from '../modules/metrics/metrics.module';
+
+const REQUEST_ID_PATTERN = /^[\w-]{1,64}$/;
+
+function generateRequestId(
+  request: IncomingMessage,
+  response: ServerResponse,
+): string {
+  const incoming = request.headers[REQUEST_ID_HEADER];
+  const requestId =
+    typeof incoming === 'string' && REQUEST_ID_PATTERN.test(incoming)
+      ? incoming
+      : randomUUID();
+  response.setHeader(REQUEST_ID_HEADER, requestId);
+  return requestId;
+}
+
+@Module({
+  imports: [
+    AppConfigModule,
+    LoggerModule.forRootAsync({
+      inject: [AppConfigService],
+      useFactory: (config: AppConfigService) => ({
+        pinoHttp: {
+          level: config.logLevel,
+          genReqId: generateRequestId,
+          autoLogging: {
+            ignore: (request) =>
+              request.url?.startsWith('/health') === true ||
+              request.url?.startsWith('/metrics') === true,
+          },
+          redact: {
+            paths: ['req.headers.authorization', 'req.headers.cookie'],
+            remove: true,
+          },
+          transport: config.isDevelopment
+            ? {
+                target: 'pino-pretty',
+                options: { singleLine: true, translateTime: 'SYS:HH:MM:ss' },
+              }
+            : undefined,
+        },
+      }),
+    }),
+    ThrottlerModule.forRootAsync({
+      inject: [AppConfigService],
+      useFactory: (config: AppConfigService) => ({
+        throttlers: [
+          {
+            ttl: config.rateLimitTtlSeconds * 1_000,
+            limit: config.rateLimitMaxRequests,
+          },
+        ],
+      }),
+    }),
+    PrismaModule,
+    RedisModule,
+    HealthModule,
+    MetricsModule,
+  ],
+  providers: [
+    { provide: APP_GUARD, useClass: ThrottlerGuard },
+    { provide: APP_FILTER, useClass: AllExceptionsFilter },
+    { provide: APP_INTERCEPTOR, useClass: ResponseEnvelopeInterceptor },
+  ],
+})
+export class AppModule {}

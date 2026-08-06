@@ -1,0 +1,40 @@
+@import 'tailwindcss';
+
+/* Couleurs issues de @carlys/design-tokens (src/tokens.json). */
+:root {
+  --background: #fafafc;
+  --foreground: #16162a;
+  --surface: #ffffff;
+  --primary: #5b5bf6;
+  --primary-dark: #4747d1;
+  --accent: #c6f432;
+  --muted: #7a7a8c;
+  --danger: #ef4444;
+  --success: #22c55e;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-surface: var(--surface);
+  --color-primary: var(--primary);
+  --color-primary-dark: var(--primary-dark);
+  --color-accent: var(--accent);
+  --color-muted: var(--muted);
+  --color-danger: var(--danger);
+  --color-success: var(--success);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0e0e1a;
+    --foreground: #f4f4f6;
+    --surface: #171727;
+    --muted: #a5a5b5;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
