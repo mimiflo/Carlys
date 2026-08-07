@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/app_routes.dart';
 import '../../../../core/validators/form_validators.dart';
 import '../../../../design_system/design_system.dart';
 import '../controllers/register_controller.dart';
@@ -41,6 +43,17 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Inscription réussie → onboarding (le profil métabolique se remplit là).
+    ref.listen(registerControllerProvider, (previous, next) {
+      if (previous is AsyncLoading<void> && next is AsyncData<void>) {
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+          if (context.mounted) {
+            context.go(AppRoutes.onboarding);
+          }
+        });
+      }
+    });
+
     final state = ref.watch(registerControllerProvider);
     final isLoading = state.isLoading;
 
