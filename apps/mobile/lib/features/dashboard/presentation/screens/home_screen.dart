@@ -103,6 +103,14 @@ class HomeScreen extends ConsumerWidget {
             Text('Compte', style: theme.textTheme.titleLarge),
             const SizedBox(height: AppSpacing.sm),
             AppButton(
+              label: 'Abonnement',
+              icon: AppIcons.premium,
+              variant: AppButtonVariant.secondary,
+              isExpanded: true,
+              onPressed: () => context.push(AppRoutes.subscription),
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            AppButton(
               label: 'Appareils connectés',
               icon: Icons.devices,
               variant: AppButtonVariant.secondary,

@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/app_routes.dart';
+import '../../../../core/errors/app_exception.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/exercise.dart';
 import '../controllers/exercise_library_controller.dart';
@@ -20,11 +23,14 @@ class ExerciseDetailScreen extends ConsumerWidget {
       body: SafeArea(
         child: detail.when(
           loading: () => const AppLoadingIndicator(label: 'Chargement'),
-          error: (error, _) => AppErrorState(
-            title: 'Exercice indisponible',
-            message: 'Vérifiez votre connexion puis réessayez.',
-            onRetry: () => ref.invalidate(exerciseDetailProvider(idOrSlug)),
-          ),
+          error: (error, _) => error is ForbiddenException
+              ? const _PremiumRequiredState()
+              : AppErrorState(
+                  title: 'Exercice indisponible',
+                  message: 'Vérifiez votre connexion puis réessayez.',
+                  onRetry: () =>
+                      ref.invalidate(exerciseDetailProvider(idOrSlug)),
+                ),
           data: (exercise) => _ExerciseDetailBody(exercise: exercise),
         ),
       ),
@@ -120,6 +126,51 @@ class _ExerciseDetailBody extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+}
+
+/// Exercice réservé aux membres Premium (décision prise par le serveur).
+class _PremiumRequiredState extends StatelessWidget {
+  const _PremiumRequiredState();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.lg),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Icon(
+              AppIcons.premium,
+              size: 48,
+              color: theme.colorScheme.primary,
+            ),
+            const SizedBox(height: AppSpacing.md),
+            Text(
+              'Exercice Premium',
+              style: theme.textTheme.titleLarge,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Text(
+              'Cet exercice fait partie du catalogue Premium. '
+              'Découvrez votre abonnement pour y accéder.',
+              style: theme.textTheme.bodySmall,
+              textAlign: TextAlign.center,
+            ),
+            const SizedBox(height: AppSpacing.lg),
+            AppButton(
+              label: 'Voir mon abonnement',
+              icon: AppIcons.premium,
+              onPressed: () => context.push(AppRoutes.subscription),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

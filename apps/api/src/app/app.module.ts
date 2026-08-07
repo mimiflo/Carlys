@@ -17,7 +17,9 @@ import { ExercisesModule } from '../modules/exercises/exercises.module';
 import { HealthModule } from '../modules/health/health.module';
 import { MetricsModule } from '../modules/metrics/metrics.module';
 import { ProgressModule } from '../modules/progress/progress.module';
+import { SubscriptionsModule } from '../modules/subscriptions/subscriptions.module';
 import { UsersModule } from '../modules/users/users.module';
+import { WebhooksModule } from '../modules/webhooks/webhooks.module';
 import { WorkoutsModule } from '../modules/workout_sessions/workouts.module';
 
 const REQUEST_ID_PATTERN = /^[\w-]{1,64}$/;
@@ -78,6 +80,8 @@ function generateRequestId(request: IncomingMessage, response: ServerResponse): 
     ExercisesModule,
     WorkoutsModule,
     ProgressModule,
+    SubscriptionsModule,
+    WebhooksModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

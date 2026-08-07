@@ -4,8 +4,9 @@ import {
   type ExerciseSummary,
   type MuscleGroup,
 } from '@carlys/api-contracts';
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { CacheService } from '../../../infrastructure/cache/cache.service';
+import { EntitlementsService } from '../../subscriptions/application/entitlements.service';
 import {
   ExercisesRepository,
   type ListExercisesFilters,
@@ -34,6 +35,7 @@ export class ExercisesService {
   constructor(
     private readonly exercises: ExercisesRepository,
     private readonly cache: CacheService,
+    private readonly entitlements: EntitlementsService,
   ) {}
 
   async list(
@@ -60,20 +62,30 @@ export class ExercisesService {
     return page;
   }
 
-  async detail(idOrSlug: string): Promise<ExerciseDetail> {
+  /**
+   * Fiche complète. Le cache est PARTAGÉ (clé par exercice) : la décision
+   * d'accès premium — décidée côté serveur, par utilisateur — est prise
+   * APRÈS la lecture du cache, jamais mise en cache.
+   */
+  async detail(idOrSlug: string, userId: string): Promise<ExerciseDetail> {
     const cacheKey = `${CACHE_PREFIX}exercise:${idOrSlug.toLowerCase()}`;
-    const cached = await this.cache.getJson<ExerciseDetail>(cacheKey);
-    if (cached !== null) {
-      return cached;
+    let detail = await this.cache.getJson<ExerciseDetail>(cacheKey);
+
+    if (detail === null) {
+      const exercise = await this.exercises.findPublishedByIdOrSlug(idOrSlug);
+      if (exercise === null) {
+        throw new NotFoundException('Exercice introuvable.');
+      }
+      detail = presentExerciseDetail(exercise);
+      await this.cache.setJson(cacheKey, detail, DETAIL_TTL_SECONDS);
     }
 
-    const exercise = await this.exercises.findPublishedByIdOrSlug(idOrSlug);
-    if (exercise === null) {
-      throw new NotFoundException('Exercice introuvable.');
+    if (detail.isPremium) {
+      const allowed = await this.entitlements.hasEntitlement(userId, 'premium_exercises');
+      if (!allowed) {
+        throw new ForbiddenException('Exercice réservé aux membres Premium.');
+      }
     }
-
-    const detail = presentExerciseDetail(exercise);
-    await this.cache.setJson(cacheKey, detail, DETAIL_TTL_SECONDS);
     return detail;
   }
 

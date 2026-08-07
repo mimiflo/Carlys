@@ -12,6 +12,7 @@ import '../../features/exercises/presentation/screens/exercise_detail_screen.dar
 import '../../features/exercises/presentation/screens/exercise_library_screen.dart';
 import '../../features/onboarding/presentation/screens/splash_screen.dart';
 import '../../features/progress/presentation/screens/progress_screen.dart';
+import '../../features/subscription/presentation/screens/subscription_screen.dart';
 import '../../features/workout_history/presentation/screens/workout_detail_screen.dart';
 import '../../features/workout_history/presentation/screens/workout_history_screen.dart';
 import '../../features/workout_session/presentation/screens/active_workout_screen.dart';
@@ -102,6 +103,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: 'progress',
             name: 'progress',
             builder: (context, state) => const ProgressScreen(),
+          ),
+          GoRoute(
+            path: 'subscription',
+            name: 'subscription',
+            builder: (context, state) => const SubscriptionScreen(),
           ),
           GoRoute(
             path: 'history',

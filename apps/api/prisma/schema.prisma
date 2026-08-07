@@ -44,6 +44,8 @@ model User {
   workoutSessions    WorkoutSession[]
   personalRecords    PersonalRecord[]
   bodyMetrics        BodyMetric[]
+  subscriptions      Subscription[]
+  entitlements       UserEntitlement[]
 }
 
 model UserProfile {
@@ -388,4 +390,116 @@ model BodyMetric {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, metricType, measuredAt])
+}
+
+// ─────────────────────────── Abonnements (Étape 6) ───────────────────────────
+
+enum PaymentProvider {
+  STRIPE
+  REVENUECAT
+  APP_STORE
+  PLAY_STORE
+}
+
+enum BillingPeriod {
+  MONTHLY
+  YEARLY
+}
+
+enum SubscriptionStatus {
+  TRIALING
+  ACTIVE
+  PAST_DUE
+  CANCELED
+  EXPIRED
+}
+
+/// Plan commercial interne, indépendant des fournisseurs de paiement.
+model SubscriptionPlan {
+  id        String   @id @default(uuid()) @db.Uuid
+  slug      String   @unique
+  name      String
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  products      SubscriptionProduct[]
+  subscriptions Subscription[]
+}
+
+/// Correspondance plan interne ↔ produit chez un fournisseur.
+model SubscriptionProduct {
+  id                String          @id @default(uuid()) @db.Uuid
+  planId            String          @db.Uuid
+  provider          PaymentProvider
+  externalProductId String
+  billingPeriod     BillingPeriod
+  createdAt         DateTime        @default(now())
+
+  plan SubscriptionPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, externalProductId])
+}
+
+/// État courant de l'abonnement, projeté depuis les événements fournisseurs.
+model Subscription {
+  id                     String             @id @default(uuid()) @db.Uuid
+  userId                 String             @db.Uuid
+  planId                 String             @db.Uuid
+  provider               PaymentProvider
+  externalSubscriptionId String
+  status                 SubscriptionStatus
+  currentPeriodStart     DateTime?
+  currentPeriodEnd       DateTime?
+  cancelAtPeriodEnd      Boolean            @default(false)
+  trialEndsAt            DateTime?
+  createdAt              DateTime           @default(now())
+  updatedAt              DateTime           @updatedAt
+
+  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan         SubscriptionPlan   @relation(fields: [planId], references: [id])
+  events       SubscriptionEvent[]
+  entitlements UserEntitlement[]
+
+  @@unique([provider, externalSubscriptionId])
+  @@index([userId, status])
+}
+
+/// Journal APPEND-ONLY des webhooks reçus — la garantie d'idempotence :
+/// un événement (provider, externalEventId) n'est traité qu'une seule fois.
+model SubscriptionEvent {
+  id              String          @id @default(uuid()) @db.Uuid
+  provider        PaymentProvider
+  externalEventId String
+  eventType       String
+  /// JSON brut du webhook (usage légitime du JSON : trace de traitement).
+  payload         Json
+  receivedAt      DateTime        @default(now())
+  processedAt     DateTime?
+  processingError String?
+  subscriptionId  String?         @db.Uuid
+
+  subscription Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+
+  @@unique([provider, externalEventId])
+  @@index([receivedAt])
+}
+
+/// Source de vérité SERVEUR des droits effectifs, matérialisée pour une
+/// lecture O(1). Peut aussi être accordé manuellement (Étape 7, audité).
+model UserEntitlement {
+  id                   String    @id @default(uuid()) @db.Uuid
+  userId               String    @db.Uuid
+  entitlementKey       String
+  isActive             Boolean   @default(false)
+  expiresAt            DateTime?
+  sourceSubscriptionId String?   @db.Uuid
+  createdAt            DateTime  @default(now())
+  updatedAt            DateTime  @updatedAt
+
+  user               User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sourceSubscription Subscription? @relation(fields: [sourceSubscriptionId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, entitlementKey])
+  @@index([userId, isActive])
 }

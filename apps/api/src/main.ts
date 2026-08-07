@@ -16,13 +16,16 @@ async function bootstrap(): Promise<void> {
   const logger = app.get(Logger);
   app.useLogger(logger);
 
+  // configureApp enregistre le parseur BRUT des webhooks : il doit précéder
+  // les parseurs JSON/urlencoded (express applique les middlewares dans
+  // l'ordre d'enregistrement).
+  configureApp(app);
+
   app.useBodyParser('json', { limit: MAX_JSON_BODY_SIZE });
   app.useBodyParser('urlencoded', {
     extended: true,
     limit: MAX_JSON_BODY_SIZE,
   });
-
-  configureApp(app);
 
   const config = app.get(AppConfigService);
 

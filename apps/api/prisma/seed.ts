@@ -5,10 +5,19 @@
  *     et ne doivent JAMAIS exister en production.
  *
  * Contenu : groupes musculaires, équipements, 32 exercices publiés,
- * deux utilisateurs de démonstration (gratuit et « premium » — le droit
- * réel arrivera avec les entitlements de l'Étape 6).
+ * plans d'abonnement (gratuit, premium) et deux utilisateurs de
+ * démonstration — le compte premium reçoit ses entitlements (droits
+ * décidés côté serveur, Étape 6).
  */
-import { ExerciseDifficulty, ExerciseMuscleRole, ExerciseType, PrismaClient } from '@prisma/client';
+import { PREMIUM_ENTITLEMENT_KEYS } from '@carlys/api-contracts';
+import {
+  BillingPeriod,
+  ExerciseDifficulty,
+  ExerciseMuscleRole,
+  ExerciseType,
+  PaymentProvider,
+  PrismaClient,
+} from '@prisma/client';
 import * as argon2 from 'argon2';
 
 const prisma = new PrismaClient();
@@ -679,10 +688,78 @@ async function seedCatalog(): Promise<void> {
   }
 }
 
+/**
+ * Plans d'abonnement et correspondances produit chez les fournisseurs.
+ * Identifiants produits FACTICES (remplacés par la vraie configuration
+ * Stripe/RevenueCat via le tableau de bord de chaque fournisseur).
+ */
+const SUBSCRIPTION_PLANS = [
+  { slug: 'free', name: 'Gratuit' },
+  { slug: 'premium', name: 'Premium' },
+];
+
+const SUBSCRIPTION_PRODUCTS = [
+  {
+    plan: 'premium',
+    provider: PaymentProvider.STRIPE,
+    externalProductId: 'price_carlys_premium_monthly',
+    billingPeriod: BillingPeriod.MONTHLY,
+  },
+  {
+    plan: 'premium',
+    provider: PaymentProvider.STRIPE,
+    externalProductId: 'price_carlys_premium_yearly',
+    billingPeriod: BillingPeriod.YEARLY,
+  },
+  {
+    plan: 'premium',
+    provider: PaymentProvider.REVENUECAT,
+    externalProductId: 'carlys_premium_monthly',
+    billingPeriod: BillingPeriod.MONTHLY,
+  },
+  {
+    plan: 'premium',
+    provider: PaymentProvider.REVENUECAT,
+    externalProductId: 'carlys_premium_yearly',
+    billingPeriod: BillingPeriod.YEARLY,
+  },
+];
+
+async function seedSubscriptionPlans(): Promise<void> {
+  for (const plan of SUBSCRIPTION_PLANS) {
+    await prisma.subscriptionPlan.upsert({
+      where: { slug: plan.slug },
+      update: { name: plan.name },
+      create: plan,
+    });
+  }
+
+  const plans = new Map(
+    (await prisma.subscriptionPlan.findMany()).map((plan) => [plan.slug, plan.id]),
+  );
+  for (const product of SUBSCRIPTION_PRODUCTS) {
+    await prisma.subscriptionProduct.upsert({
+      where: {
+        provider_externalProductId: {
+          provider: product.provider,
+          externalProductId: product.externalProductId,
+        },
+      },
+      update: { billingPeriod: product.billingPeriod },
+      create: {
+        planId: mustGet(plans, product.plan),
+        provider: product.provider,
+        externalProductId: product.externalProductId,
+        billingPeriod: product.billingPeriod,
+      },
+    });
+  }
+}
+
 async function seedDevUsers(): Promise<void> {
   const passwordHash = await argon2.hash(DEV_PASSWORD, { type: argon2.argon2id });
   for (const user of DEV_USERS) {
-    await prisma.user.upsert({
+    const { id } = await prisma.user.upsert({
       where: { email: user.email },
       update: {},
       create: {
@@ -692,6 +769,17 @@ async function seedDevUsers(): Promise<void> {
         credential: { create: { passwordHash } },
       },
     });
+
+    // Le compte « premium » reçoit ses droits (attribution manuelle de dev).
+    if (user.email === 'dev.premium@carlys.local') {
+      for (const key of PREMIUM_ENTITLEMENT_KEYS) {
+        await prisma.userEntitlement.upsert({
+          where: { userId_entitlementKey: { userId: id, entitlementKey: key } },
+          update: { isActive: true, expiresAt: null },
+          create: { userId: id, entitlementKey: key, isActive: true },
+        });
+      }
+    }
   }
 }
 
@@ -705,6 +793,7 @@ function mustGet(map: Map<string, string>, key: string): string {
 
 async function main(): Promise<void> {
   await seedCatalog();
+  await seedSubscriptionPlans();
   await seedDevUsers();
 
   const [exercises, groups, equipment] = await Promise.all([

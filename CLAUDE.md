@@ -16,7 +16,7 @@ jamais une couche horizontale isolée.
 | 3 | Exercices (catalogue, seed 30+ exercices, cache Redis) | **Faite** |
 | 4 | Séances (offline-first Drift + file de synchronisation idempotente) | **Faite** |
 | 5 | Progression (records recalculés à la clôture, stats par période, mesures corporelles idempotentes) | **Faite** |
-| 6 | Abonnements (entitlements côté serveur, RevenueCat possible, Stripe web, webhooks idempotents signés) | À venir |
+| 6 | Abonnements (entitlements côté serveur, RevenueCat possible, Stripe web, webhooks idempotents signés) | **Faite** |
 | 7 | Administration (rôles, permissions, audit) | À venir |
 
 ## Commandes essentielles

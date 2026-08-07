@@ -24,7 +24,7 @@ migration manque par rapport au schéma.
 | Programmes | `TrainingProgram`, `ProgramWeek`, `ProgramDay`, `WorkoutTemplate`, `WorkoutTemplateExercise`, `WorkoutTemplateSet` | Étape 4 |
 | Séances | `WorkoutSession`, `WorkoutSet` — **implémenté** (migration `20260807010000_workout_sessions`, ids générés sur l'appareil, écritures idempotentes) ; `WorkoutSessionExercise` fusionné dans `WorkoutSet` (`exerciseId` + `exerciseName` dénormalisé), `WorkoutNote` porté par `WorkoutSession.notes`, `PersonalRecord` livré à l'Étape 5 | Étape 4 ✅ |
 | Progression | `PersonalRecord`, `BodyMetric` — **implémenté** (migration `20260807040000_progress`, records recalculés à la clôture, mesures idempotentes) ; `ProgressGoal` et `ProgressSnapshot` différés (agrégats calculés à la volée) | Étape 5 ✅ |
-| Abonnements | `SubscriptionPlan`, `SubscriptionProduct`, `Subscription`, `SubscriptionEvent`, `UserEntitlement` | Étape 6 |
+| Abonnements | `SubscriptionPlan`, `SubscriptionProduct`, `Subscription`, `SubscriptionEvent`, `UserEntitlement` — **implémenté** (migration `20260807064832_subscriptions`, conforme à la cible) | Étape 6 ✅ |
 | Notifications | `Notification`, `NotificationPreference`, `PushDevice` | Introduit avec l'intégration FCM réelle (au plus tôt Étape 4, `NotificationPreference` au plus tard Étape 6) |
 | Administration | `AuditLog`, `AdminUser`, `AdminRole`, `AdminPermission` | Étape 7 (`AuditLog` introduit dès l'Étape 2 pour les événements de sécurité — voir `docs/security/authentication.md`) |
 
@@ -441,7 +441,16 @@ répartition musculaire) pour servir les graphiques sans re-agréger les
 
 ---
 
-## Abonnements — Étape 6
+## Abonnements — Étape 6 (implémenté)
+
+> Implémenté (migration `20260807064832_subscriptions`), conforme à la cible.
+> Précisions : `UserEntitlement.entitlementKey` est une chaîne (les clés
+> réservées vivent dans `packages/api-contracts` — le code est la source de
+> vérité) ; `SubscriptionEvent.subscriptionId` est nullable et détaché
+> (`SET NULL`) si l'abonnement disparaît, le journal restant append-only ;
+> l'accès est maintenu jusqu'à la fin de la période payée pour
+> `PAST_DUE`/`CANCELED`, et les attributions manuelles (Étape 7) ne sont
+> jamais écrasées par la synchronisation des webhooks.
 
 Les droits (**entitlements**) sont évalués **côté serveur** — jamais déduits
 par le client. Fournisseurs : Stripe (web), RevenueCat possible pour les stores

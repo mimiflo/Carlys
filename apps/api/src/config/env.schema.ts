@@ -71,6 +71,15 @@ export const envSchema = z.object({
   EMAIL_VERIFICATION_TTL_HOURS: z.coerce.number().int().min(1).max(168).default(24),
   PASSWORD_RESET_TTL_MINUTES: z.coerce.number().int().min(5).max(1440).default(60),
 
+  // ── Abonnements (Étape 6) ──────────────────────────────────────────────
+  /**
+   * Secrets de signature des webhooks de paiement. Optionnels : tant qu'ils
+   * ne sont pas configurés, l'endpoint correspondant répond 503 — aucun
+   * webhook non signé n'est jamais traité.
+   */
+  STRIPE_WEBHOOK_SECRET: z.string().min(16).optional(),
+  REVENUECAT_WEBHOOK_SECRET: z.string().min(16).optional(),
+
   // ── E-mails (Mailpit en développement) ─────────────────────────────────
   SMTP_HOST: z.string().min(1).default('localhost'),
   SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(1025),

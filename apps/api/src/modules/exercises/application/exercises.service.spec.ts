@@ -1,11 +1,14 @@
-import { NotFoundException } from '@nestjs/common';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { ExerciseDifficulty, ExerciseMuscleRole, ExerciseType } from '@prisma/client';
 import { type CacheService } from '../../../infrastructure/cache/cache.service';
+import { type EntitlementsService } from '../../subscriptions/application/entitlements.service';
 import {
   type ExercisesRepository,
   type ExerciseWithRelations,
 } from '../infrastructure/exercises.repository';
 import { ExercisesService } from './exercises.service';
+
+const USER = 'user-1';
 
 function exerciseRow(id: string, name: string): ExerciseWithRelations {
   return {
@@ -48,6 +51,7 @@ interface Stubs {
     listEquipment: jest.Mock;
   };
   cache: { getJson: jest.Mock; setJson: jest.Mock; invalidatePrefix: jest.Mock };
+  entitlements: { hasEntitlement: jest.Mock };
 }
 
 function buildStubs(): Stubs {
@@ -63,6 +67,9 @@ function buildStubs(): Stubs {
       setJson: jest.fn().mockResolvedValue(undefined),
       invalidatePrefix: jest.fn().mockResolvedValue(undefined),
     },
+    entitlements: {
+      hasEntitlement: jest.fn().mockResolvedValue(false),
+    },
   };
 }
 
@@ -70,6 +77,7 @@ function buildService(stubs: Stubs): ExercisesService {
   return new ExercisesService(
     stubs.repository as unknown as ExercisesRepository,
     stubs.cache as unknown as CacheService,
+    stubs.entitlements as unknown as EntitlementsService,
   );
 }
 
@@ -143,7 +151,7 @@ describe('ExercisesService', () => {
   it('détail introuvable ou non publié → 404', async () => {
     const service = buildService(buildStubs());
 
-    await expect(service.detail('inconnu')).rejects.toThrow(NotFoundException);
+    await expect(service.detail('inconnu', USER)).rejects.toThrow(NotFoundException);
   });
 
   it('détail : présente muscles et instructions, puis met en cache', async () => {
@@ -151,7 +159,7 @@ describe('ExercisesService', () => {
     stubs.repository.findPublishedByIdOrSlug.mockResolvedValue(exerciseRow('id-1', 'Squat'));
     const service = buildService(stubs);
 
-    const detail = await service.detail('squat');
+    const detail = await service.detail('squat', USER);
 
     expect(detail.primaryMuscleGroup?.slug).toBe('pectoraux');
     expect(detail.instructions).toHaveLength(2);
@@ -160,6 +168,31 @@ describe('ExercisesService', () => {
       expect.objectContaining({ id: 'id-1' }),
       3_600,
     );
+  });
+
+  it('exercice premium : refusé sans entitlement, servi avec (décision serveur)', async () => {
+    const stubs = buildStubs();
+    stubs.repository.findPublishedByIdOrSlug.mockResolvedValue({
+      ...exerciseRow('id-1', 'Squat bulgare'),
+      isPremium: true,
+    });
+    const service = buildService(stubs);
+
+    await expect(service.detail('squat-bulgare', USER)).rejects.toThrow(ForbiddenException);
+
+    stubs.entitlements.hasEntitlement.mockResolvedValue(true);
+    const detail = await service.detail('squat-bulgare', USER);
+    expect(detail.isPremium).toBe(true);
+    expect(stubs.entitlements.hasEntitlement).toHaveBeenCalledWith(USER, 'premium_exercises');
+  });
+
+  it('la décision premium est réévaluée même sur un cache hit', async () => {
+    const stubs = buildStubs();
+    stubs.cache.getJson.mockResolvedValue({ id: 'id-1', isPremium: true });
+    const service = buildService(stubs);
+
+    await expect(service.detail('squat-bulgare', USER)).rejects.toThrow(ForbiddenException);
+    expect(stubs.repository.findPublishedByIdOrSlug).not.toHaveBeenCalled();
   });
 
   it('référentiels servis depuis le cache quand disponible', async () => {

@@ -37,6 +37,9 @@ AppException _mapResponse(DioException exception) {
   if (statusCode == 401) {
     return UnauthorizedException(message, cause: exception);
   }
+  if (statusCode == 403) {
+    return ForbiddenException(message, cause: exception);
+  }
   if (statusCode == 400 || statusCode == 409 || statusCode == 422) {
     return ValidationException(
       message,

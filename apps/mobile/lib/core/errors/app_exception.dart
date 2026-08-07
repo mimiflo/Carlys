@@ -38,6 +38,12 @@ final class UnauthorizedException extends AppException {
   const UnauthorizedException(super.message, {super.cause, super.stackTrace});
 }
 
+/// Accès refusé par le serveur (ex. contenu réservé aux membres Premium —
+/// les droits sont TOUJOURS décidés côté serveur).
+final class ForbiddenException extends AppException {
+  const ForbiddenException(super.message, {super.cause, super.stackTrace});
+}
+
 /// Données saisies invalides (validation serveur ou locale).
 final class ValidationException extends AppException {
   const ValidationException(super.message, {this.fieldErrors = const {}, super.cause, super.stackTrace});

@@ -112,6 +112,16 @@ export class AppConfigService {
     return this.config.get('PASSWORD_RESET_TTL_MINUTES', { infer: true });
   }
 
+  // ── Abonnements ────────────────────────────────────────────────────────
+
+  get stripeWebhookSecret(): string | undefined {
+    return this.config.get('STRIPE_WEBHOOK_SECRET', { infer: true });
+  }
+
+  get revenueCatWebhookSecret(): string | undefined {
+    return this.config.get('REVENUECAT_WEBHOOK_SECRET', { infer: true });
+  }
+
   // ── E-mails ────────────────────────────────────────────────────────────
 
   get smtpHost(): string {

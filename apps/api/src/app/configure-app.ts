@@ -1,6 +1,7 @@
-import { API_GLOBAL_PREFIX, API_VERSION } from '@carlys/shared-config';
+import { API_GLOBAL_PREFIX, API_VERSION, MAX_JSON_BODY_SIZE } from '@carlys/shared-config';
 import { ValidationPipe, VersioningType } from '@nestjs/common';
 import { type NestExpressApplication } from '@nestjs/platform-express';
+import express from 'express';
 import helmet from 'helmet';
 import { AppConfigService } from '../config/app-config.service';
 
@@ -16,6 +17,14 @@ export function configureApp(app: NestExpressApplication): void {
     origin: config.corsOrigins,
     credentials: true,
   });
+
+  // Webhooks de paiement : le corps BRUT est indispensable à la vérification
+  // de signature — ce middleware doit précéder tout parseur JSON (l'ordre
+  // d'enregistrement fait foi, voir main.ts).
+  app.use(
+    `/${API_GLOBAL_PREFIX}/v${API_VERSION}/webhooks`,
+    express.raw({ type: () => true, limit: MAX_JSON_BODY_SIZE }),
+  );
 
   app.setGlobalPrefix(API_GLOBAL_PREFIX, {
     exclude: ['health', 'health/live', 'health/ready', 'metrics'],

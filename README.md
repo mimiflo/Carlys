@@ -359,6 +359,8 @@ Politique complète et signalement de vulnérabilités : [SECURITY.md](./SECURIT
 
 **Étape 5 — Progression : terminée.** Les données déjà collectées deviennent lisibles : **records personnels** (charge max, répétitions max, volume max sur une série) recalculés automatiquement à la clôture d'une séance — sans jamais la faire échouer —, **statistiques par période** (semaine/mois/année : séances, séries, volume, durée + volume par intervalle via `date_trunc` whitelisté), **progression par exercice** (meilleure charge et volume à chaque séance) et **mesures corporelles** (poids, masse grasse) à identifiants générés sur l'appareil — création **idempotente** et suppression logique **rejouable**, comme les séances. Côté app : écran **Progression** (sélecteur de période, cartes de synthèse, graphique de volume en barres, records regroupés par exercice, courbe de poids avec ajout/suppression de mesures), accessible depuis l'accueil. Graphiques fl_chart, états erreur/chargement/vide couverts.
 
+**Étape 6 — Abonnements : terminée.** Le premium existe, et c'est le **serveur qui décide** : plans (`free`, `premium`) et correspondances produits par fournisseur en base, webhooks **Stripe** (signature `Stripe-Signature` HMAC vérifiée sur le corps brut, fenêtre anti-rejeu) et **RevenueCat** (Bearer dédié) — tous **idempotents** grâce au journal append-only `SubscriptionEvent` (unicité `(provider, externalEventId)` ; un échec de traitement est journalisé sur l'événement et retraitable par rejeu). Chaque événement projette l'état `Subscription` puis matérialise les **`UserEntitlement`** (accès maintenu jusqu'à la fin de période payée en cas d'impayé/résiliation, expiration réévaluée à chaque lecture, attributions manuelles jamais écrasées). API : `GET /subscriptions/me`, `GET /entitlements` — et le catalogue applique le droit `premium_exercises` : la fiche d'un exercice premium répond 403 sans abonnement. Côté app : écran **Abonnement** (plan effectif, état, droits verrouillés/actifs), écran d'exercice avec état « Exercice Premium » et renvoi vers l'abonnement. Aucun faux paiement : l'achat passera par les stores/Stripe, l'app ne fait qu'afficher l'état serveur.
+
 | Étape | Tranche verticale | Contenu principal | Statut |
 | --- | --- | --- | --- |
 | 1 | Fondation | Monorepo, outillage, sécurité de base, design system, CI | ✅ Terminée |
@@ -366,7 +368,7 @@ Politique complète et signalement de vulnérabilités : [SECURITY.md](./SECURIT
 | 3 | Exercices | Bibliothèque + seed 30+ exercices, cache Redis | ✅ Terminée |
 | 4 | Séances | Offline-first Drift + file de synchronisation idempotente | ✅ Terminée |
 | 5 | Progression | Records, historique, graphiques | ✅ Terminée |
-| 6 | Abonnements | Entitlements côté serveur, RevenueCat possible, Stripe web, webhooks idempotents signés | À venir |
+| 6 | Abonnements | Entitlements côté serveur, RevenueCat possible, Stripe web, webhooks idempotents signés | ✅ Terminée |
 | 7 | Administration | Rôles, permissions, audit | À venir |
 
 ## Documentation

@@ -6,6 +6,8 @@ import {
 } from '@carlys/api-contracts';
 import { Controller, Get, Param, Query, Req } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { CurrentUser } from '../../../../common/decorators/current-user.decorator';
+import { type AuthenticatedPrincipal } from '../../../../common/types/authenticated-request';
 import { type RequestWithId } from '../../../../common/types/request-with-id';
 import { enveloped } from '../../../../common/utilities/enveloped';
 import { ExercisesService } from '../../application/exercises.service';
@@ -42,7 +44,10 @@ export class ExercisesController {
 
   @Get(':idOrSlug')
   @ApiOperation({ summary: "Fiche complète d'un exercice (par id ou par slug)" })
-  detail(@Param('idOrSlug') idOrSlug: string): Promise<ExerciseDetail> {
-    return this.exercises.detail(idOrSlug);
+  detail(
+    @Param('idOrSlug') idOrSlug: string,
+    @CurrentUser() user: AuthenticatedPrincipal,
+  ): Promise<ExerciseDetail> {
+    return this.exercises.detail(idOrSlug, user.userId);
   }
 }
