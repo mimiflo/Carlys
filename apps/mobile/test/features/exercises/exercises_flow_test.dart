@@ -71,9 +71,19 @@ void main() {
     await tester.tap(squatCard);
     await tester.pumpAndSettle();
 
+    await tester.scrollUntilVisible(
+      find.text('Description de Squat'),
+      150,
+      scrollable: find.byType(Scrollable).last,
+    );
     expect(find.text('Description de Squat'), findsOneWidget);
+    await tester.scrollUntilVisible(
+      find.text('Première étape'),
+      150,
+      scrollable: find.byType(Scrollable).last,
+    );
     expect(find.text('Première étape'), findsOneWidget);
-    expect(find.text('Muscles travaillés'), findsOneWidget);
+    expect(find.text('Technique'), findsOneWidget);
   });
 
   testWidgets('bibliothèque vide : état dédié avec message', (tester) async {

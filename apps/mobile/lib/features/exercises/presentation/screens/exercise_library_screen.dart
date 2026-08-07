@@ -3,13 +3,13 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_routes.dart';
-
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/exercise.dart';
 import '../controllers/exercise_library_controller.dart';
 import '../widgets/exercise_card.dart';
 
-/// Bibliothèque d'exercices : recherche, filtres et défilement infini.
+/// Bibliothèque d'exercices (maquette 2d) : compteur en mono, pastilles de
+/// filtres, recherche, lignes avec fondu de conteneur en bas.
 class ExerciseLibraryScreen extends ConsumerStatefulWidget {
   const ExerciseLibraryScreen({super.key});
 
@@ -30,17 +30,48 @@ class _ExerciseLibraryScreenState extends ConsumerState<ExerciseLibraryScreen> {
   @override
   Widget build(BuildContext context) {
     final library = ref.watch(exerciseLibraryControllerProvider);
+    final loaded = library.valueOrNull;
+    final count = loaded == null
+        ? null
+        : '${loaded.items.length}${loaded.hasMore ? '+' : ''} MOUVEMENTS';
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Bibliothèque d’exercices')),
+      backgroundColor: AppColors.darkBackground,
       body: SafeArea(
+        bottom: false,
         child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(
+                AppSpacing.gutter,
                 AppSpacing.md,
-                AppSpacing.xs,
+                AppSpacing.gutter,
+                0,
+              ),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Exercices',
+                      style: AppTypography.title
+                          .copyWith(color: AppColors.darkTextPrimary),
+                    ),
+                  ),
+                  if (count != null)
+                    AppSectionLabel(
+                      count,
+                      color: AppColors.darkTextTertiary,
+                    ),
+                ],
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.gutter,
                 AppSpacing.md,
+                AppSpacing.gutter,
                 AppSpacing.sm,
               ),
               child: AppSearchField(
@@ -83,36 +114,48 @@ class _FiltersBar extends ConsumerWidget {
     final filters =
         ref.watch(exerciseLibraryControllerProvider).valueOrNull?.filters;
     final controller = ref.read(exerciseLibraryControllerProvider.notifier);
+    final noMuscleFilter = filters?.muscleGroupSlug == null;
 
     return SizedBox(
-      height: 40,
+      height: 36,
       child: ListView(
         scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
         children: [
-          for (final difficulty in ExerciseDifficulty.values) ...[
-            FilterChip(
-              label: Text(difficulty.label),
-              selected: filters?.difficulty == difficulty,
-              onSelected: (selected) =>
-                  controller.setDifficulty(selected ? difficulty : null),
-            ),
-            const SizedBox(width: AppSpacing.xs),
-          ],
+          AppPill(
+            label: 'Tous',
+            selected: noMuscleFilter && filters?.difficulty == null,
+            onTap: () {
+              controller.setMuscleGroup(null);
+              controller.setDifficulty(null);
+            },
+          ),
+          const SizedBox(width: AppSpacing.xs),
           ...muscleGroups.maybeWhen(
             data: (groups) => [
               for (final group in groups) ...[
-                FilterChip(
-                  label: Text(group.name),
+                AppPill(
+                  label: group.name,
                   selected: filters?.muscleGroupSlug == group.slug,
-                  onSelected: (selected) =>
-                      controller.setMuscleGroup(selected ? group.slug : null),
+                  onTap: () => controller.setMuscleGroup(
+                    filters?.muscleGroupSlug == group.slug ? null : group.slug,
+                  ),
                 ),
                 const SizedBox(width: AppSpacing.xs),
               ],
             ],
             orElse: () => const <Widget>[],
           ),
+          for (final difficulty in ExerciseDifficulty.values) ...[
+            AppPill(
+              label: difficulty.label,
+              selected: filters?.difficulty == difficulty,
+              onTap: () => controller.setDifficulty(
+                filters?.difficulty == difficulty ? null : difficulty,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.xs),
+          ],
         ],
       ),
     );
@@ -137,33 +180,43 @@ class _ExerciseList extends ConsumerWidget {
     final bottomInset =
         AppBottomBar.height + MediaQuery.paddingOf(context).bottom;
 
-    return ListView.separated(
-      padding: EdgeInsets.fromLTRB(
-        AppSpacing.md,
-        AppSpacing.md,
-        AppSpacing.md,
-        AppSpacing.md + bottomInset,
-      ),
-      itemCount: state.items.length + (state.hasMore ? 1 : 0),
-      separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
-      itemBuilder: (context, index) {
-        if (index >= state.items.length) {
-          // Sentinelle de fin de liste : la page suivante est demandée après
-          // le frame (jamais pendant le build).
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-            ref.read(exerciseLibraryControllerProvider.notifier).loadMore();
-          });
-          return const Padding(
-            padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
-            child: AppLoadingIndicator(size: 24),
+    // Fondu de conteneur : le rognage se lit comme un défilement (2d).
+    return ShaderMask(
+      shaderCallback: (bounds) => const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [Colors.white, Colors.white, Colors.transparent],
+        stops: [0.0, 0.86, 0.99],
+      ).createShader(bounds),
+      blendMode: BlendMode.dstIn,
+      child: ListView.separated(
+        padding: EdgeInsets.fromLTRB(
+          AppSpacing.gutter,
+          AppSpacing.md,
+          AppSpacing.gutter,
+          AppSpacing.md + bottomInset,
+        ),
+        itemCount: state.items.length + (state.hasMore ? 1 : 0),
+        separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.xs),
+        itemBuilder: (context, index) {
+          if (index >= state.items.length) {
+            // Sentinelle de fin de liste : la page suivante est demandée
+            // après le frame (jamais pendant le build).
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              ref.read(exerciseLibraryControllerProvider.notifier).loadMore();
+            });
+            return const Padding(
+              padding: EdgeInsets.symmetric(vertical: AppSpacing.md),
+              child: AppLoadingIndicator(size: 24),
+            );
+          }
+          final exercise = state.items[index];
+          return ExerciseCard(
+            exercise: exercise,
+            onTap: () => context.push(AppRoutes.exerciseDetail(exercise.slug)),
           );
-        }
-        final exercise = state.items[index];
-        return ExerciseCard(
-          exercise: exercise,
-          onTap: () => context.push(AppRoutes.exerciseDetail(exercise.slug)),
-        );
-      },
+        },
+      ),
     );
   }
 }
