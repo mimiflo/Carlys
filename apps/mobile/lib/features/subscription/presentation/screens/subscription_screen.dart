@@ -2,12 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../design_system/design_system.dart';
+import '../../../../design_system/scenes/app_scene_container.dart';
 import '../../domain/entities/subscription.dart';
 import '../controllers/subscription_controllers.dart';
 
-/// Abonnement : plan effectif, état de l'abonnement, droits actifs.
-/// Aucun faux paiement : l'achat passera par les stores (RevenueCat) ou
-/// Stripe web — cet écran AFFICHE l'état décidé par le serveur.
+/// Abonnement (maquette 2h) : hero sur cœur ambiant, avantages réels
+/// (droits décidés côté serveur), carte de plan — l'offre d'achat arrivera
+/// avec les produits stores, aucun prix inventé d'ici là.
 class SubscriptionScreen extends ConsumerWidget {
   const SubscriptionScreen({super.key});
 
@@ -15,47 +16,86 @@ class SubscriptionScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final plan = ref.watch(planStatusProvider);
     final entitlements = ref.watch(entitlementsProvider);
-    final theme = Theme.of(context);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Abonnement')),
-      body: SafeArea(
-        child: ListView(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          children: [
-            plan.when(
-              loading: () => const AppLoadingIndicator(label: 'Chargement'),
-              error: (_, __) => AppErrorState(
-                title: 'Abonnement indisponible',
-                onRetry: () => ref.invalidate(planStatusProvider),
-              ),
-              data: (status) => _PlanCard(status: status),
+      backgroundColor: AppColors.darkBackground,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        title: const Text('Abonnement'),
+      ),
+      body: Stack(
+        children: [
+          // Cœur ambiant haut-droite, débordant du cadre (2h).
+          const Positioned(
+            top: 14,
+            right: -118,
+            child: AppSceneContainer(
+              size: 300,
+              opacity: 0.55,
+              verticalFadeStops: [0.0, 0.22, 0.58, 0.90],
+              child: AppSceneHalo(),
             ),
-            const SizedBox(height: AppSpacing.lg),
-            Text('Vos droits', style: theme.textTheme.titleLarge),
-            const SizedBox(height: AppSpacing.sm),
-            entitlements.when(
-              loading: () => const AppLoadingIndicator(label: 'Chargement'),
-              error: (_, __) => AppErrorState(
-                title: 'Droits indisponibles',
-                onRetry: () => ref.invalidate(entitlementsProvider),
-              ),
-              data: (entries) => Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  for (final entry in entries) _EntitlementTile(entry: entry),
-                ],
-              ),
+          ),
+          const Positioned.fill(child: AppSceneScrim.lateral()),
+          SafeArea(
+            child: ListView(
+              padding: const EdgeInsets.all(AppSpacing.gutter),
+              children: [
+                const AppSectionLabel('Carlys Premium'),
+                const SizedBox(height: 10),
+                Text(
+                  'Ton coach\nne dort jamais.',
+                  style: AppTypography.display
+                      .copyWith(color: AppColors.darkTextPrimary),
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  'Programmation adaptative, macros recalculées chaque jour, '
+                  'historique illimité.',
+                  style: AppTypography.body
+                      .copyWith(color: AppColors.darkTextSecondary),
+                ),
+                const SizedBox(height: AppSpacing.gapSection),
+                entitlements.when(
+                  loading: () =>
+                      const AppLoadingIndicator(label: 'Chargement des droits'),
+                  error: (_, __) => AppErrorState(
+                    title: 'Droits indisponibles',
+                    onRetry: () => ref.invalidate(entitlementsProvider),
+                  ),
+                  data: (entries) => Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      for (final entry in entries)
+                        _EntitlementRow(entry: entry),
+                    ],
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.gapSection),
+                plan.when(
+                  loading: () =>
+                      const AppLoadingIndicator(label: 'Chargement du plan'),
+                  error: (_, __) => AppErrorState(
+                    title: 'Plan indisponible',
+                    onRetry: () => ref.invalidate(planStatusProvider),
+                  ),
+                  data: (status) => _PlanCard(status: status),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                Text(
+                  'La souscription se fera via l’App Store, Google Play ou le '
+                  'site web. Vos droits sont toujours validés par le serveur — '
+                  'la restauration d’achat les réactive automatiquement.',
+                  style: AppTypography.label.copyWith(
+                    fontSize: 11,
+                    height: 1.5,
+                    color: AppColors.darkTextTertiary,
+                  ),
+                ),
+              ],
             ),
-            const SizedBox(height: AppSpacing.lg),
-            Text(
-              'La souscription se fera via l’App Store, Google Play ou le '
-              'site web. Vos droits sont toujours validés par le serveur — '
-              'la restauration d’achat les réactive automatiquement.',
-              style: theme.textTheme.bodySmall,
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }
@@ -68,64 +108,62 @@ class _PlanCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final subscription = status.subscription;
-
-    return AppCard(
-      semanticLabel: 'Plan actuel : ${status.planName}',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                AppIcons.premium,
-                color: status.isPremium
-                    ? theme.colorScheme.primary
-                    : theme.colorScheme.onSurfaceVariant,
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(
+              child: Text(
+                status.planName,
+                style: AppTypography.metricL
+                    .copyWith(color: AppColors.darkTextPrimary),
               ),
-              const SizedBox(width: AppSpacing.xs),
-              Expanded(
-                child: Text(
-                  status.planName,
-                  style: theme.textTheme.headlineMedium,
-                ),
-              ),
-              AppBadge(
-                label: status.isPremium ? 'Premium' : 'Gratuit',
-                variant: status.isPremium
-                    ? AppBadgeVariant.accent
-                    : AppBadgeVariant.neutral,
-              ),
-            ],
-          ),
-          if (subscription != null) ...[
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              _subscriptionSummary(subscription),
-              style: theme.textTheme.bodySmall,
+            ),
+            AppPill(
+              label: status.isPremium ? 'ACTIF' : 'GRATUIT',
+              tone: status.isPremium ? AppPillTone.accent : AppPillTone.neutral,
+              mono: true,
             ),
           ],
+        ),
+        if (subscription != null) ...[
+          const SizedBox(height: AppSpacing.sm),
+          Text(
+            _subscriptionSummary(subscription),
+            style:
+                AppTypography.body.copyWith(color: AppColors.darkTextSecondary),
+          ),
         ],
+      ],
+    );
+
+    // L'offre active porte la bordure animée de la maquette.
+    if (status.isPremium) {
+      return AppAnimatedBorderCard(child: content);
+    }
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: const BoxDecoration(
+        color: AppColors.darkSurface,
+        borderRadius: AppRadius.cardSecondaryAll,
+        border: Border.fromBorderSide(BorderSide(color: AppColors.darkBorder)),
       ),
+      child: content,
     );
   }
 }
 
-class _EntitlementTile extends StatelessWidget {
-  const _EntitlementTile({required this.entry});
+class _EntitlementRow extends StatelessWidget {
+  const _EntitlementRow({required this.entry});
 
   final EntitlementEntry entry;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final color = entry.isActive
-        ? theme.colorScheme.primary
-        : theme.colorScheme.onSurfaceVariant;
-
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxs),
+      padding: const EdgeInsets.symmetric(vertical: 6),
       child: Row(
         children: [
           Icon(
@@ -133,22 +171,25 @@ class _EntitlementTile extends StatelessWidget {
                 ? Icons.check_circle_rounded
                 : Icons.lock_outline_rounded,
             size: 20,
-            color: color,
+            color:
+                entry.isActive ? AppColors.accent : AppColors.darkTextTertiary,
           ),
-          const SizedBox(width: AppSpacing.xs),
+          const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Text(
               entry.label,
-              style: theme.textTheme.bodyLarge?.copyWith(
-                color:
-                    entry.isActive ? null : theme.colorScheme.onSurfaceVariant,
+              style: AppTypography.body.copyWith(
+                color: entry.isActive
+                    ? AppColors.darkTextPrimary
+                    : AppColors.darkTextTertiary,
               ),
             ),
           ),
           if (entry.isActive && entry.expiresAt != null)
             Text(
               'jusqu’au ${_formatDate(entry.expiresAt!)}',
-              style: theme.textTheme.bodySmall,
+              style: AppTypography.labelMono
+                  .copyWith(color: AppColors.darkTextTertiary),
             ),
         ],
       ),

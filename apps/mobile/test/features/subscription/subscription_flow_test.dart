@@ -52,6 +52,18 @@ Future<void> reveal(WidgetTester tester, Finder item) async {
 }
 
 void main() {
+  setUp(() {
+    // La carte de plan premium porte une bordure animée en boucle :
+    // animations réduites pour que pumpAndSettle converge.
+    TestWidgetsFlutterBinding.instance.platformDispatcher
+        .accessibilityFeaturesTestValue = FakeAccessibilityFeatures.allOn;
+  });
+
+  tearDown(() {
+    TestWidgetsFlutterBinding.instance.platformDispatcher
+        .clearAccessibilityFeaturesTestValue();
+  });
+
   testWidgets('plan gratuit : droits verrouillés affichés', (tester) async {
     await tester.pumpWidget(
       appWith(subscription: FakeSubscriptionRepository()),
@@ -129,7 +141,7 @@ void main() {
     await tester.tap(find.text('Voir mon abonnement'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Vos droits'), findsOneWidget);
+    expect(find.text('GRATUIT'), findsOneWidget);
   });
 }
 

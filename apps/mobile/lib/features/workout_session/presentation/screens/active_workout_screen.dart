@@ -4,14 +4,17 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_routes.dart';
 import '../../../../design_system/design_system.dart';
+import '../../../../design_system/scenes/app_scene_container.dart';
 import '../../domain/entities/workout.dart';
 import '../controllers/workout_controllers.dart';
+import '../widgets/active_set_row.dart';
+import '../widgets/active_workout_header.dart';
 import '../widgets/exercise_picker_sheet.dart';
 import '../widgets/rest_timer_bar.dart';
 import '../widgets/set_input_sheet.dart';
 
-/// Séance active : saisie des séries, minuteur de repos, clôture.
-/// Toutes les écritures partent dans la base locale — utilisable hors ligne.
+/// Séance active (maquette 2c) : mode plein écran sans bottom bar, saisie
+/// des séries, minuteur de repos, clôture. Écritures 100 % locales.
 class ActiveWorkoutScreen extends ConsumerWidget {
   const ActiveWorkoutScreen({super.key});
 
@@ -20,21 +23,38 @@ class ActiveWorkoutScreen extends ConsumerWidget {
     final workout = ref.watch(activeWorkoutProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Séance en cours')),
-      body: SafeArea(
-        child: workout.when(
-          loading: () => const AppLoadingIndicator(label: 'Chargement'),
-          error: (_, __) => const AppErrorState(
-            title: 'Séance indisponible',
+      backgroundColor: AppColors.darkBackground,
+      body: Stack(
+        children: [
+          // Cœur ambiant recadré en tête — jamais sous les cartes.
+          const Positioned(
+            top: -104,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: AppSceneContainer(
+                size: 360,
+                opacity: 0.32,
+                verticalFadeStops: [0.0, 0.02, 0.40, 0.82],
+                child: AppSceneHalo(),
+              ),
+            ),
           ),
-          data: (active) => active == null
-              ? const AppEmptyState(
-                  title: 'Aucune séance en cours',
-                  message: 'Démarrez une séance depuis l’accueil.',
-                  icon: AppIcons.timer,
-                )
-              : _ActiveWorkoutBody(workout: active),
-        ),
+          SafeArea(
+            child: workout.when(
+              loading: () => const AppLoadingIndicator(label: 'Chargement'),
+              error: (_, __) =>
+                  const AppErrorState(title: 'Séance indisponible'),
+              data: (active) => active == null
+                  ? const AppEmptyState(
+                      title: 'Aucune séance en cours',
+                      message: 'Démarrez une séance depuis l’accueil.',
+                      icon: AppIcons.timer,
+                    )
+                  : _ActiveWorkoutBody(workout: active),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -47,11 +67,13 @@ class _ActiveWorkoutBody extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-
     return Column(
       children: [
-        _ElapsedHeader(startedAt: workout.session.startedAt),
+        ActiveWorkoutHeader(
+          startedAt: workout.session.startedAt,
+          onClose: () => _close(context, ref, abandon: true),
+          onFinish: () => _close(context, ref, abandon: false),
+        ),
         const RestTimerBar(),
         Expanded(
           child: workout.sets.isEmpty
@@ -60,54 +82,61 @@ class _ActiveWorkoutBody extends ConsumerWidget {
                   message: 'Ajoutez un exercice pour commencer votre séance.',
                   icon: AppIcons.workout,
                 )
-              : ListView.separated(
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  itemCount: workout.sets.length,
-                  separatorBuilder: (_, __) =>
-                      const SizedBox(height: AppSpacing.xs),
-                  itemBuilder: (context, index) =>
-                      _SetTile(set: workout.sets[index]),
+              // Fondu de conteneur : le rognage se lit comme un défilement.
+              : ShaderMask(
+                  shaderCallback: (bounds) => const LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [Colors.white, Colors.white, Colors.transparent],
+                    stops: [0.0, 0.86, 0.99],
+                  ).createShader(bounds),
+                  blendMode: BlendMode.dstIn,
+                  child: ListView.separated(
+                    padding: const EdgeInsets.fromLTRB(
+                      AppSpacing.gutter,
+                      AppSpacing.md,
+                      AppSpacing.gutter,
+                      AppSpacing.xl,
+                    ),
+                    itemCount: workout.sets.length,
+                    separatorBuilder: (_, __) =>
+                        const SizedBox(height: AppSpacing.xs),
+                    itemBuilder: (context, index) => ActiveSetRow(
+                      set: workout.sets[index],
+                      // La dernière série saisie est la série « active ».
+                      highlighted: index == workout.sets.length - 1,
+                    ),
+                  ),
                 ),
         ),
         SafeArea(
           top: false,
           child: Padding(
-            padding: const EdgeInsets.all(AppSpacing.md),
+            padding: const EdgeInsets.fromLTRB(
+              AppSpacing.gutter,
+              AppSpacing.sm,
+              AppSpacing.gutter,
+              AppSpacing.md,
+            ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                AppButton(
-                  label: 'Ajouter une série',
-                  icon: AppIcons.add,
-                  isExpanded: true,
+                // L'unique CTA accent de l'écran.
+                FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: AppColors.accent,
+                    foregroundColor: AppColors.darkBackground,
+                  ),
                   onPressed: () => _addSet(context, ref),
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                Row(
-                  children: [
-                    Expanded(
-                      child: AppButton(
-                        label: 'Abandonner',
-                        variant: AppButtonVariant.ghost,
-                        onPressed: () => _close(context, ref, abandon: true),
-                      ),
-                    ),
-                    const SizedBox(width: AppSpacing.sm),
-                    Expanded(
-                      child: AppButton(
-                        label: 'Terminer',
-                        variant: AppButtonVariant.secondary,
-                        onPressed: () => _close(context, ref, abandon: false),
-                      ),
-                    ),
-                  ],
+                  child: const Text('Série suivante'),
                 ),
                 const SizedBox(height: AppSpacing.xs),
-                Text(
-                  '${workout.setsCount} série(s) — '
-                  '${workout.totalVolumeKg.round()} kg de volume',
-                  textAlign: TextAlign.center,
-                  style: theme.textTheme.bodySmall,
+                Center(
+                  child: AppSectionLabel(
+                    '${workout.setsCount} séries · '
+                    '${workout.totalVolumeKg.round()} kg',
+                    color: AppColors.darkTextTertiary,
+                  ),
                 ),
               ],
             ),
@@ -188,101 +217,3 @@ class _ActiveWorkoutBody extends ConsumerWidget {
     }
   }
 }
-
-class _ElapsedHeader extends StatelessWidget {
-  const _ElapsedHeader({required this.startedAt});
-
-  final DateTime startedAt;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return StreamBuilder<DateTime>(
-      stream: Stream<DateTime>.periodic(
-        const Duration(seconds: 1),
-        (_) => DateTime.now(),
-      ),
-      builder: (context, snapshot) {
-        final elapsed =
-            (snapshot.data ?? DateTime.now()).difference(startedAt.toLocal());
-        final hours = elapsed.inHours;
-        final minutes = (elapsed.inMinutes % 60).toString().padLeft(2, '0');
-        final seconds = (elapsed.inSeconds % 60).toString().padLeft(2, '0');
-        return Padding(
-          padding: const EdgeInsets.only(top: AppSpacing.sm),
-          child: Text(
-            hours > 0 ? '$hours:$minutes:$seconds' : '$minutes:$seconds',
-            textAlign: TextAlign.center,
-            style: AppTypography.metric.copyWith(
-              color: theme.colorScheme.primary,
-            ),
-            semanticsLabel: 'Durée écoulée',
-          ),
-        );
-      },
-    );
-  }
-}
-
-class _SetTile extends ConsumerWidget {
-  const _SetTile({required this.set});
-
-  final WorkoutSetEntry set;
-
-  @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final detail = [
-      if (set.reps != null) '${set.reps} reps',
-      if (set.weightKg != null) '${_formatWeight(set.weightKg!)} kg',
-    ].join(' × ');
-
-    return AppCard(
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.md,
-        vertical: AppSpacing.xs,
-      ),
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(set.exerciseName, style: theme.textTheme.bodyLarge),
-                const SizedBox(height: AppSpacing.xxs),
-                Row(
-                  children: [
-                    if (set.kind != SetKind.normal) ...[
-                      AppBadge(label: set.kind.label),
-                      const SizedBox(width: AppSpacing.xs),
-                    ],
-                    Text(detail, style: theme.textTheme.bodySmall),
-                  ],
-                ),
-              ],
-            ),
-          ),
-          if (set.syncState == LocalSyncState.pending)
-            Tooltip(
-              message: 'En attente de synchronisation',
-              child: Icon(
-                AppIcons.offline,
-                size: 18,
-                color: theme.colorScheme.onSurfaceVariant,
-              ),
-            ),
-          IconButton(
-            tooltip: 'Supprimer la série',
-            icon: Icon(AppIcons.delete, color: theme.colorScheme.error),
-            onPressed: () => ref.read(workoutActionsProvider).deleteSet(set.id),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-String _formatWeight(double weight) => weight == weight.roundToDouble()
-    ? weight.toStringAsFixed(0)
-    : weight.toStringAsFixed(1);
