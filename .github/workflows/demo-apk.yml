@@ -1,9 +1,14 @@
 # APK de démonstration : application complète SANS serveur (flavor `demo`).
-# Déclenché à la demande ; publie l'APK sur la release `demo-latest`.
+# Publie l'APK sur la release `demo-latest` (une URL stable de téléchargement).
 name: demo-apk
 
 on:
   workflow_dispatch:
+  push:
+    branches: [claude/carlys-fitness-foundation-lqv2hl, main]
+    paths:
+      - 'apps/mobile/**'
+      - '.github/workflows/demo-apk.yml'
 
 permissions:
   contents: write
