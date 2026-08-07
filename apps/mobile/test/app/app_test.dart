@@ -1,6 +1,7 @@
 import 'package:carlys_mobile/app/app.dart';
 import 'package:carlys_mobile/app/environment/app_environment.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
+import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
 import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';
 import 'package:flutter/material.dart';
@@ -45,8 +46,7 @@ void main() {
     await tester.pumpWidget(buildApp(FakeAuthRepository(storedSession: true)));
     await tester.pumpAndSettle();
 
-    expect(find.text('Bienvenue, Camille !'), findsOneWidget);
-    expect(find.text('camille@example.com'), findsOneWidget);
+    expect(find.text('Bonjour,\nCamille'), findsOneWidget);
   });
 
   testWidgets('connexion complète depuis l’écran de connexion', (tester) async {
@@ -66,7 +66,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(repository.loginCalls, 1);
-    expect(find.text('Bienvenue, Camille !'), findsOneWidget);
+    expect(find.text('Bonjour,\nCamille'), findsOneWidget);
   });
 
   testWidgets('erreur de connexion affichée sans quitter l’écran',
@@ -95,9 +95,15 @@ void main() {
     await tester.pumpWidget(buildApp(repository));
     await tester.pumpAndSettle();
 
-    // Le bouton vit en bas de l'accueil : le rendre visible avant le tap.
+    // La déconnexion vit désormais dans l'onglet Profil.
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AppBottomBar),
+        matching: find.text('Profil'),
+      ),
+    );
+    await tester.pumpAndSettle();
     await tester.scrollUntilVisible(find.text('Se déconnecter'), 150);
-    await tester.ensureVisible(find.text('Se déconnecter'));
     await tester.pumpAndSettle();
     await tester.tap(find.text('Se déconnecter'), warnIfMissed: false);
     await tester.pumpAndSettle();

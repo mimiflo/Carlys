@@ -52,7 +52,7 @@ void main() {
     await tester.pumpWidget(demoApp());
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('Visiteur Carlys'), findsOneWidget);
+    expect(find.textContaining('Visiteur'), findsWidgets);
   });
 
   testWidgets('bibliothèque servie en mémoire', (tester) async {

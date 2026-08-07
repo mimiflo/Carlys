@@ -2,6 +2,7 @@ import 'package:carlys_mobile/app/app.dart';
 import 'package:carlys_mobile/app/environment/app_environment.dart';
 import 'package:carlys_mobile/core/errors/app_exception.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
+import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
 import 'package:carlys_mobile/features/exercises/data/repositories/exercises_repository_impl.dart';
 import 'package:carlys_mobile/features/exercises/domain/entities/exercise.dart';
@@ -57,6 +58,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AppBottomBar),
+        matching: find.text('Profil'),
+      ),
+    );
+    await tester.pumpAndSettle();
     await reveal(tester, find.text('Abonnement'));
     await tester.tap(find.text('Abonnement'));
     await tester.pumpAndSettle();
@@ -74,6 +82,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AppBottomBar),
+        matching: find.text('Profil'),
+      ),
+    );
+    await tester.pumpAndSettle();
     await reveal(tester, find.text('Abonnement'));
     await tester.tap(find.text('Abonnement'));
     await tester.pumpAndSettle();
@@ -98,7 +113,13 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Bibliothèque d’exercices'));
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AppBottomBar),
+        matching: find.text('Exercices'),
+      ),
+    );
+    await tester.pumpAndSettle();
     await tester.pumpAndSettle();
     await tester.tap(find.text('Balancier kettlebell'));
     await tester.pumpAndSettle();

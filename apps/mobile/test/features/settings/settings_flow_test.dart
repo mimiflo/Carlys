@@ -39,8 +39,16 @@ Future<void> reveal(WidgetTester tester, Finder item) async {
 
 Future<void> openSettings(WidgetTester tester) async {
   await tester.pumpAndSettle();
-  await reveal(tester, find.text('Réglages'));
-  await tester.tap(find.text('Réglages'));
+  // L'apparence se règle depuis l'onglet Profil.
+  await tester.tap(
+    find.descendant(
+      of: find.byType(AppBottomBar),
+      matching: find.text('Profil'),
+    ),
+  );
+  await tester.pumpAndSettle();
+  await reveal(tester, find.text('Apparence'));
+  await tester.tap(find.text('Apparence'));
   await tester.pumpAndSettle();
 }
 
