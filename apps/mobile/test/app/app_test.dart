@@ -1,11 +1,14 @@
 import 'package:carlys_mobile/app/app.dart';
 import 'package:carlys_mobile/app/environment/app_environment.dart';
+import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
+import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../support/fake_auth_repository.dart';
+import '../support/fake_workout_repository.dart';
 
 void main() {
   Widget buildApp(FakeAuthRepository repository) {
@@ -18,6 +21,8 @@ void main() {
           ),
         ),
         authRepositoryProvider.overrideWithValue(repository),
+        workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
+        syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
       ],
       child: const CarlysApp(),
     );

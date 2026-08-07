@@ -41,6 +41,7 @@ model User {
   passwordResets     PasswordReset[]
   externalIdentities ExternalIdentity[]
   auditLogs          AuditLog[]
+  workoutSessions    WorkoutSession[]
 }
 
 model UserProfile {
@@ -238,8 +239,9 @@ model Exercise {
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt
 
-  muscles   ExerciseMuscle[]
-  equipment ExerciseEquipment[]
+  muscles     ExerciseMuscle[]
+  equipment   ExerciseEquipment[]
+  workoutSets WorkoutSet[]
 
   @@index([isPublished, name])
 }
@@ -267,4 +269,65 @@ model ExerciseEquipment {
 
   @@id([exerciseId, equipmentId])
   @@index([equipmentId])
+}
+
+// ─────────────────────────── Séances (Étape 4) ─────────────────────────────
+
+enum WorkoutSessionStatus {
+  IN_PROGRESS
+  COMPLETED
+  ABANDONED
+}
+
+enum WorkoutSetKind {
+  WARMUP
+  NORMAL
+  DROP
+}
+
+/// Séance réelle. L'id est un UUID généré SUR L'APPAREIL (offline-first) :
+/// la création est idempotente, rejouer la requête ne duplique rien.
+model WorkoutSession {
+  id              String               @id @db.Uuid
+  userId          String               @db.Uuid
+  name            String?
+  notes           String?
+  status          WorkoutSessionStatus @default(IN_PROGRESS)
+  startedAt       DateTime
+  endedAt         DateTime?
+  durationSeconds Int?
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  deletedAt       DateTime?
+
+  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sets WorkoutSet[]
+
+  @@index([userId, startedAt(sort: Desc)])
+}
+
+/// Série effectuée. Id généré sur l'appareil, écriture en upsert (rejouable).
+/// exerciseName est dénormalisé : l'historique survit au catalogue.
+model WorkoutSet {
+  id              String         @id @db.Uuid
+  sessionId       String         @db.Uuid
+  exerciseId      String?        @db.Uuid
+  exerciseName    String
+  position        Int
+  kind            WorkoutSetKind @default(NORMAL)
+  reps            Int?
+  weightKg        Decimal?       @db.Decimal(6, 2)
+  durationSeconds Int?
+  distanceMeters  Int?
+  rpe             Int?
+  restSeconds     Int?
+  completedAt     DateTime
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  deletedAt       DateTime?
+
+  session  WorkoutSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  exercise Exercise?      @relation(fields: [exerciseId], references: [id], onDelete: SetNull)
+
+  @@index([sessionId, position])
 }

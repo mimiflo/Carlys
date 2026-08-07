@@ -14,7 +14,7 @@ jamais une couche horizontale isolée.
 | 1 | Fondation (monorepo, design system, infra, CI, observabilité) | **Faite** |
 | 2 | Authentification (JWT access court + refresh rotatif hashé, Argon2id, sessions par appareil, détection de réutilisation) | **Faite** |
 | 3 | Exercices (catalogue, seed 30+ exercices, cache Redis) | **Faite** |
-| 4 | Séances (offline-first Drift + file de synchronisation idempotente) | À venir |
+| 4 | Séances (offline-first Drift + file de synchronisation idempotente) | **Faite** |
 | 5 | Progression | À venir |
 | 6 | Abonnements (entitlements côté serveur, RevenueCat possible, Stripe web, webhooks idempotents signés) | À venir |
 | 7 | Administration (rôles, permissions, audit) | À venir |

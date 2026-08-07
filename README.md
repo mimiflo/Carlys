@@ -2,7 +2,7 @@
 
 Plateforme fitness SaaS multiplateforme — application mobile Flutter (iOS & Android), API NestJS et tableau de bord d'administration Next.js, dans un monorepo unique.
 
-> **État actuel : Étapes 1 (fondation), 2 (authentification) et 3 (exercices) terminées.** Les fonctionnalités métier arrivent par tranches verticales — voir [État du projet](#état-du-projet).
+> **État actuel : Étapes 1 (fondation), 2 (authentification), 3 (exercices) et 4 (séances offline-first) terminées.** Les fonctionnalités métier arrivent par tranches verticales — voir [État du projet](#état-du-projet).
 
 ---
 
@@ -355,12 +355,14 @@ Politique complète et signalement de vulnérabilités : [SECURITY.md](./SECURIT
 
 **Étape 3 — Exercices : terminée.** Catalogue relationnel (Exercise, MuscleGroup, Equipment + liaisons rôles primaire/secondaire), **seed de 33 exercices** en français avec 12 groupes musculaires et 10 équipements (`pnpm prisma:seed`, comptes de dev inclus), API `GET /exercises` avec recherche, filtres (groupe musculaire, équipement, difficulté, type) et **pagination par curseur**, fiche détaillée par id ou slug, référentiels `muscle-groups`/`equipment` — le tout servi à travers un **cache Redis tolérant aux pannes** (la base reste la source de vérité si Redis tombe). Côté Flutter : écran bibliothèque (recherche débouncée, puces de filtres, défilement infini), fiche d'exercice complète, nouveaux composants du design system (AppCard, AppSearchField, AppBadge). Tests unitaires, e2e et widgets.
 
+**Étape 4 — Séances offline-first : terminée.** La plus grosse tranche du MVP : base locale **Drift** (séances, séries, file `sync_operations`), chaque écriture part d'abord dans SQLite (aucune série jamais perdue, y compris sans réseau ou après fermeture brutale), puis un **moteur de synchronisation** FIFO strict la rejoue vers l'API (backoff exponentiel 5 s → 5 min, déclencheurs : lancement, retour de connectivité, périodique 3 min, opportuniste). Côté serveur : `WorkoutSession`/`WorkoutSet` avec **UUID générés sur l'appareil** — création, séries (upsert), clôture et abandon **idempotents** (rejouer une requête ne duplique jamais rien), historique paginé par curseur, propriété vérifiée sans fuite d'information. Côté app : écran de **séance active** (saisie des séries avec steppers, types échauffement/normale/dégressive, **minuteur de repos**, durée écoulée, indicateurs de synchronisation), sélecteur d'exercice depuis le catalogue ou libre, reprise de séance depuis l'accueil, **historique** et détail avec volume total. La génération de code (Drift) entre en CI mobile.
+
 | Étape | Tranche verticale | Contenu principal | Statut |
 | --- | --- | --- | --- |
 | 1 | Fondation | Monorepo, outillage, sécurité de base, design system, CI | ✅ Terminée |
 | 2 | Authentification | JWT access court + refresh rotatif hashé, Argon2id, sessions par appareil, détection de réutilisation | ✅ Terminée |
 | 3 | Exercices | Bibliothèque + seed 30+ exercices, cache Redis | ✅ Terminée |
-| 4 | Séances | Offline-first Drift + file de synchronisation idempotente | À venir |
+| 4 | Séances | Offline-first Drift + file de synchronisation idempotente | ✅ Terminée |
 | 5 | Progression | Records, historique, graphiques | À venir |
 | 6 | Abonnements | Entitlements côté serveur, RevenueCat possible, Stripe web, webhooks idempotents signés | À venir |
 | 7 | Administration | Rôles, permissions, audit | À venir |

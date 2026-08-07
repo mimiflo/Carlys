@@ -3,21 +3,26 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_routes.dart';
+import '../../../../core/synchronization/sync_lifecycle.dart';
 import '../../../../design_system/design_system.dart';
 import '../../../authentication/presentation/controllers/auth_controller.dart';
+import '../../../workout_session/presentation/controllers/workout_controllers.dart';
 
-/// Accueil provisoire (Étape 2) : compte connecté et accès aux appareils.
-/// Remplacé par le vrai tableau de bord (séances, progression) à l'Étape 4+.
+/// Accueil : séance (démarrer/reprendre), bibliothèque, historique, compte.
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Démarre les déclencheurs de synchronisation (connectivité, périodique).
+    ref.watch(syncLifecycleProvider).ensureStarted();
+
     final authState = ref.watch(authControllerProvider);
     final user = switch (authState) {
       AuthAuthenticated(:final user) => user,
       _ => null,
     };
+    final activeWorkout = ref.watch(activeWorkoutProvider).valueOrNull;
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -31,7 +36,7 @@ class HomeScreen extends ConsumerWidget {
               style: theme.textTheme.headlineMedium,
             ),
             const SizedBox(height: AppSpacing.xs),
-            if (user != null) ...[
+            if (user != null)
               Row(
                 children: [
                   Expanded(
@@ -48,21 +53,43 @@ class HomeScreen extends ConsumerWidget {
                     ),
                 ],
               ),
-            ],
             const SizedBox(height: AppSpacing.lg),
             Text('Entraînement', style: theme.textTheme.titleLarge),
+            const SizedBox(height: AppSpacing.sm),
+            if (activeWorkout != null)
+              AppButton(
+                label: 'Reprendre la séance',
+                icon: AppIcons.timer,
+                isExpanded: true,
+                onPressed: () => context.push(AppRoutes.activeWorkout),
+              )
+            else
+              AppButton(
+                label: 'Démarrer une séance',
+                icon: AppIcons.add,
+                isExpanded: true,
+                onPressed: () async {
+                  await ref.read(workoutActionsProvider).start();
+                  if (context.mounted) {
+                    await context.push(AppRoutes.activeWorkout);
+                  }
+                },
+              ),
             const SizedBox(height: AppSpacing.sm),
             AppButton(
               label: 'Bibliothèque d’exercices',
               icon: AppIcons.workout,
+              variant: AppButtonVariant.secondary,
               isExpanded: true,
               onPressed: () => context.push(AppRoutes.exercises),
             ),
-            const SizedBox(height: AppSpacing.md),
-            const AppEmptyState(
-              title: 'Aucune séance pour le moment',
-              message: 'Les séances et le suivi arrivent à l’Étape 4.',
-              icon: AppIcons.timer,
+            const SizedBox(height: AppSpacing.sm),
+            AppButton(
+              label: 'Historique',
+              icon: AppIcons.history,
+              variant: AppButtonVariant.secondary,
+              isExpanded: true,
+              onPressed: () => context.push(AppRoutes.history),
             ),
             const SizedBox(height: AppSpacing.xl),
             Text('Compte', style: theme.textTheme.titleLarge),

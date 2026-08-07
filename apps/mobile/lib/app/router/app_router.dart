@@ -11,6 +11,9 @@ import '../../features/dashboard/presentation/screens/home_screen.dart';
 import '../../features/exercises/presentation/screens/exercise_detail_screen.dart';
 import '../../features/exercises/presentation/screens/exercise_library_screen.dart';
 import '../../features/onboarding/presentation/screens/splash_screen.dart';
+import '../../features/workout_history/presentation/screens/workout_detail_screen.dart';
+import '../../features/workout_history/presentation/screens/workout_history_screen.dart';
+import '../../features/workout_session/presentation/screens/active_workout_screen.dart';
 import 'app_routes.dart';
 
 const _authRoutes = {
@@ -85,6 +88,25 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 name: 'exercise-detail',
                 builder: (context, state) => ExerciseDetailScreen(
                   idOrSlug: state.pathParameters['idOrSlug'] ?? '',
+                ),
+              ),
+            ],
+          ),
+          GoRoute(
+            path: 'workout',
+            name: 'active-workout',
+            builder: (context, state) => const ActiveWorkoutScreen(),
+          ),
+          GoRoute(
+            path: 'history',
+            name: 'history',
+            builder: (context, state) => const WorkoutHistoryScreen(),
+            routes: [
+              GoRoute(
+                path: ':sessionId',
+                name: 'workout-detail',
+                builder: (context, state) => WorkoutDetailScreen(
+                  sessionId: state.pathParameters['sessionId'] ?? '',
                 ),
               ),
             ],

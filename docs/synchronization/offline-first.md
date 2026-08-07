@@ -1,13 +1,31 @@
 # Stratégie offline-first — synchronisation des données
 
-> **Statut : document de référence.** La stratégie décrite ici sera implémentée à
-> l'**Étape 4** (séances offline-first), dans `apps/mobile/lib/core/synchronization/`
-> (dossier réservé, actuellement vide) et dans le module API `workout_sessions`
-> (voir [docs/architecture/backend.md](../architecture/backend.md)). Les
-> fondations existent déjà à l'Étape 1 : Drift/SQLite, `connectivity_plus`,
-> `uuid` et Dio sont déclarés dans `apps/mobile/pubspec.yaml`, et les enveloppes
-> de réponse de l'API (dont le code d'erreur `CONFLICT`) sont définies dans
-> `packages/api-contracts`.
+> **Statut : implémenté (Étape 4)** pour les séances — Drift dans
+> `apps/mobile/lib/core/database/app_database.dart`, file et moteur dans
+> `apps/mobile/lib/core/synchronization/` (`sync_engine.dart`,
+> `sync_lifecycle.dart`, `sync_api.dart`), écritures locales dans
+> `features/workout_session/data/`, endpoints idempotents dans le module API
+> `workout_sessions`.
+>
+> Paramètres effectifs de l'implémentation :
+>
+> - table locale `sync_operations` avec exactement les colonnes décrites plus
+>   bas ; **une opération réussie est supprimée** (l'état `synced` vit sur
+>   l'entité), `failed` est réservé aux refus définitifs du serveur (4xx) ;
+> - **FIFO strict** : la file est rejouée dans l'ordre d'écriture locale ; un
+>   échec réseau interrompt le drainage (aucune opération ne double une autre) ;
+> - **backoff exponentiel** par opération : 5 s, 10 s, 20 s… plafonné à 5 min ;
+> - déclencheurs : entrée dans l'application, retour de connectivité
+>   (`connectivity_plus`), périodique (3 min), et opportuniste après chaque
+>   écriture locale ;
+> - **l'id de l'entité (UUID généré sur l'appareil) est la clé d'idempotence** :
+>   les endpoints `workout-sessions`/`workout-sets` sont rejouables sans doublon
+>   (vérifié par les tests e2e côté API et la suite
+>   `test/features/workout/workout_offline_sync_test.dart` côté mobile) ;
+> - un refus serveur 4xx marque l'opération et l'entité `failed` sans bloquer
+>   le reste de la file ; 401/5xx/réseau ⇒ nouvel essai plus tard ;
+> - la **récupération multi-appareils** (tirer les séances créées ailleurs)
+>   est différée — l'historique local reflète cet appareil, le serveur agrège.
 
 ## Objectif
 

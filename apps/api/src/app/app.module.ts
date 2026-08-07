@@ -17,6 +17,7 @@ import { ExercisesModule } from '../modules/exercises/exercises.module';
 import { HealthModule } from '../modules/health/health.module';
 import { MetricsModule } from '../modules/metrics/metrics.module';
 import { UsersModule } from '../modules/users/users.module';
+import { WorkoutsModule } from '../modules/workout_sessions/workouts.module';
 
 const REQUEST_ID_PATTERN = /^[\w-]{1,64}$/;
 
@@ -74,6 +75,7 @@ function generateRequestId(request: IncomingMessage, response: ServerResponse): 
     UsersModule,
     AuthModule,
     ExercisesModule,
+    WorkoutsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

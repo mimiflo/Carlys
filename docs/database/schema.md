@@ -22,7 +22,7 @@ migration manque par rapport au schéma.
 | Catalogue d'exercices | `Exercise`, `ExerciseMuscle`, `ExerciseEquipment`, `MuscleGroup`, `Equipment` — **implémenté** (migration `20260806220000_exercise_catalog`, contenu français directement sur `Exercise`) ; `ExerciseTranslation`, `ExerciseMedia`, `ExerciseVariant`, `CustomExercise` différés | Étape 3 ✅ |
 | Médias | `MediaAsset` | Étape 3 (premier besoin : médias d'exercices) |
 | Programmes | `TrainingProgram`, `ProgramWeek`, `ProgramDay`, `WorkoutTemplate`, `WorkoutTemplateExercise`, `WorkoutTemplateSet` | Étape 4 |
-| Séances | `WorkoutSession`, `WorkoutSessionExercise`, `WorkoutSet`, `WorkoutNote`, `PersonalRecord` | Étape 4 |
+| Séances | `WorkoutSession`, `WorkoutSet` — **implémenté** (migration `20260807010000_workout_sessions`, ids générés sur l'appareil, écritures idempotentes) ; `WorkoutSessionExercise` fusionné dans `WorkoutSet` (`exerciseId` + `exerciseName` dénormalisé), `WorkoutNote` porté par `WorkoutSession.notes`, `PersonalRecord` différé (Étape 5) | Étape 4 ✅ |
 | Progression | `BodyMetric`, `ProgressGoal`, `ProgressSnapshot` | Étape 5 |
 | Abonnements | `SubscriptionPlan`, `SubscriptionProduct`, `Subscription`, `SubscriptionEvent`, `UserEntitlement` | Étape 6 |
 | Notifications | `Notification`, `NotificationPreference`, `PushDevice` | Introduit avec l'intégration FCM réelle (au plus tôt Étape 4, `NotificationPreference` au plus tard Étape 6) |
@@ -331,7 +331,15 @@ Série prescrite d'une ligne de modèle.
 
 ---
 
-## Séances — Étape 4
+## Séances — Étape 4 (implémenté)
+
+> Implémenté (migration `20260807010000_workout_sessions`). Ajustements par
+> rapport à la cible : `WorkoutSessionExercise` est fusionné dans `WorkoutSet`
+> (chaque série porte `exerciseId` nullable + `exerciseName` dénormalisé — le
+> regroupement par exercice se fait à l'affichage) ; les notes vivent sur
+> `WorkoutSession.notes` ; `PersonalRecord` arrive à l'Étape 5. Les ids sont
+> des **UUID générés sur l'appareil** et toutes les écritures sont rejouables
+> (voir `docs/synchronization/offline-first.md`).
 
 Séances **réalisées**, écrites offline-first : le mobile journalise dans Drift
 et rejoue une file de synchronisation **idempotente** vers l'API. Toute

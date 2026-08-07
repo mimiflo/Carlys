@@ -186,8 +186,8 @@ docs) et sera documentée précisément ici à sa livraison.
 | Utilisateur courant | **Livré** — `GET/PATCH/DELETE /api/v1/users/me`, sessions | Étape 2 ✅ |
 | Exercices | **Livré** — `GET /api/v1/exercises` (recherche `search`, filtres `muscleGroup`/`equipment`/`difficulty`/`type`, pagination `cursor`+`limit`, `meta.nextCursor`/`hasMore`), `GET /api/v1/exercises/:idOrSlug`, `GET /api/v1/muscle-groups`, `GET /api/v1/equipment` — catalogue seedé (33 exercices), cache Redis tolérant aux pannes, exercices non publiés jamais servis | Étape 3 ✅ |
 | Programmes | `GET/POST /api/v1/programs`, modèles de séances (`workout-templates`) | Étape 4 |
-| Séances | `POST /api/v1/workout-sessions`, `GET /api/v1/workout-sessions`, clôture de séance — synchronisation offline-first **idempotente** (rejeu sans doublon) | Étape 4 |
-| Séries | `POST /api/v1/workout-sets` (rattachées à une séance), corrections | Étape 4 |
+| Séances | **Livré** — `POST /workout-sessions` (création idempotente, id appareil), `GET /workout-sessions` (curseur), `GET/PATCH /workout-sessions/:id`, `POST …/:id/complete` et `…/:id/abandon` (rejouables, 409 si clôture croisée) | Étape 4 ✅ |
+| Séries | **Livré** — `POST /workout-sessions/:id/sets` (upsert idempotent, nom d'exercice résolu depuis le catalogue), `PATCH /workout-sets/:id`, `DELETE /workout-sets/:id` (suppression logique rejouable) | Étape 4 ✅ |
 | Progression | `GET /api/v1/progress` (records, volumes, tendances), `GET/POST /api/v1/body-metrics` | Étape 5 |
 | Abonnements | `GET /api/v1/subscriptions/me`, `GET /api/v1/entitlements` — entitlements décidés **côté serveur** | Étape 6 |
 | Webhooks paiement | `POST /api/v1/webhooks/revenuecat`, `POST /api/v1/webhooks/stripe` — signés, idempotents | Étape 6 |

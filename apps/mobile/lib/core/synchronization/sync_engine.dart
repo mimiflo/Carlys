@@ -1,0 +1,165 @@
+import 'dart:convert';
+import 'dart:math' as math;
+
+import 'package:dio/dio.dart';
+import 'package:drift/drift.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../database/app_database.dart';
+import '../logging/app_logger.dart';
+import 'sync_api.dart';
+
+/// Draine la file d'opérations vers l'API.
+///
+/// Propriétés :
+///  - FIFO strict : l'ordre d'écriture local est préservé côté serveur ;
+///  - single-flight : un seul drainage à la fois ;
+///  - backoff exponentiel par opération après un échec réseau ;
+///  - une erreur 4xx marque l'opération `failed` sans bloquer la file ;
+///  - une opération réussie est supprimée (résiste à une fermeture brutale :
+///    au pire elle est rejouée, le serveur est idempotent).
+class SyncEngine {
+  SyncEngine({
+    required AppDatabase database,
+    required SyncApi api,
+    DateTime Function()? now,
+  })  : _db = database,
+        _api = api,
+        _now = now ?? DateTime.now;
+
+  static const _logger = AppLogger('SyncEngine');
+
+  final AppDatabase _db;
+  final SyncApi _api;
+
+  /// Horloge injectable (déterminisme des tests de backoff).
+  final DateTime Function() _now;
+  Future<void>? _inFlight;
+
+  /// Délai d'attente avant nouvel essai : 5 s, 10 s, 20 s… plafonné à 5 min.
+  static Duration backoff(int attemptCount) {
+    final seconds = 5 * math.pow(2, math.max(0, attemptCount - 1)).toInt();
+    return Duration(seconds: math.min(seconds, 300));
+  }
+
+  Future<void> syncNow() {
+    return _inFlight ??= _drain().whenComplete(() => _inFlight = null);
+  }
+
+  Future<void> _drain() async {
+    final operations = await (_db.select(_db.syncOperations)
+          ..where((op) => op.status.equals('pending'))
+          ..orderBy([(op) => OrderingTerm.asc(op.createdAt)]))
+        .get();
+
+    for (final operation in operations) {
+      if (!_isDue(operation)) {
+        // FIFO strict : on ne double jamais une opération en attente.
+        return;
+      }
+      try {
+        await _send(operation);
+        await _onSuccess(operation);
+      } on DioException catch (exception) {
+        final statusCode = exception.response?.statusCode;
+        if (statusCode != null && statusCode >= 400 && statusCode < 500 && statusCode != 401) {
+          // Refus définitif du serveur : on ne bloque pas la file.
+          await _onRejected(operation, 'HTTP $statusCode');
+          continue;
+        }
+        // Réseau, 401 (session à renouveler) ou 5xx : on retentera plus tard.
+        await _onRetryLater(operation);
+        return;
+      } on Exception catch (exception) {
+        _logger.error('Opération de sync inattendue en échec', error: exception);
+        await _onRejected(operation, exception.toString());
+      }
+    }
+  }
+
+  bool _isDue(SyncOperation operation) {
+    final lastAttempt = operation.lastAttemptAt;
+    if (lastAttempt == null) {
+      return true;
+    }
+    return _now().isAfter(lastAttempt.add(backoff(operation.attemptCount)));
+  }
+
+  Future<void> _send(SyncOperation operation) async {
+    final payload = jsonDecode(operation.payload) as Map<String, dynamic>;
+    switch (operation.operationType) {
+      case 'session.create':
+        await _api.createSession(payload);
+      case 'session.complete':
+        await _api.completeSession(
+          operation.entityId,
+          payload['body'] as Map<String, dynamic>,
+        );
+      case 'session.abandon':
+        await _api.abandonSession(
+          operation.entityId,
+          payload['body'] as Map<String, dynamic>,
+        );
+      case 'set.upsert':
+        await _api.upsertSet(
+          payload['sessionId'] as String,
+          payload['body'] as Map<String, dynamic>,
+        );
+      case 'set.delete':
+        await _api.deleteSet(operation.entityId);
+      default:
+        throw StateError('Opération inconnue : ${operation.operationType}');
+    }
+  }
+
+  Future<void> _onSuccess(SyncOperation operation) async {
+    await _db.transaction(() async {
+      await (_db.delete(_db.syncOperations)
+            ..where((op) => op.id.equals(operation.id)))
+          .go();
+      await _markEntity(operation, 'synced');
+    });
+  }
+
+  Future<void> _onRetryLater(SyncOperation operation) async {
+    await (_db.update(_db.syncOperations)
+          ..where((op) => op.id.equals(operation.id)))
+        .write(
+      SyncOperationsCompanion(
+        attemptCount: Value(operation.attemptCount + 1),
+        lastAttemptAt: Value(_now()),
+      ),
+    );
+  }
+
+  Future<void> _onRejected(SyncOperation operation, String error) async {
+    _logger.warning('Opération rejetée par le serveur : $error');
+    await _db.transaction(() async {
+      await (_db.update(_db.syncOperations)
+            ..where((op) => op.id.equals(operation.id)))
+          .write(
+        SyncOperationsCompanion(status: const Value('failed'), error: Value(error)),
+      );
+      await _markEntity(operation, 'failed');
+    });
+  }
+
+  Future<void> _markEntity(SyncOperation operation, String syncStatus) async {
+    if (operation.entityType == 'session') {
+      await (_db.update(_db.localWorkoutSessions)
+            ..where((session) => session.id.equals(operation.entityId)))
+          .write(LocalWorkoutSessionsCompanion(syncStatus: Value(syncStatus)));
+    } else if (operation.entityType == 'set') {
+      await (_db.update(_db.localWorkoutSets)
+            ..where((set) => set.id.equals(operation.entityId)))
+          .write(LocalWorkoutSetsCompanion(syncStatus: Value(syncStatus)));
+    }
+  }
+}
+
+final syncEngineProvider = Provider<SyncEngine>((ref) {
+  return SyncEngine(
+    database: ref.watch(appDatabaseProvider),
+    api: ref.watch(syncApiProvider),
+  );
+});

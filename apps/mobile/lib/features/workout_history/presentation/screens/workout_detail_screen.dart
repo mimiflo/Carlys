@@ -1,0 +1,146 @@
+import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+
+import '../../../../design_system/design_system.dart';
+import '../../../workout_session/domain/entities/workout.dart';
+import '../../../workout_session/presentation/controllers/workout_controllers.dart';
+
+/// Détail (et résumé de fin) d'une séance.
+class WorkoutDetailScreen extends ConsumerWidget {
+  const WorkoutDetailScreen({required this.sessionId, super.key});
+
+  final String sessionId;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final detail = ref.watch(workoutDetailProvider(sessionId));
+
+    return Scaffold(
+      appBar: AppBar(title: const Text('Séance')),
+      body: SafeArea(
+        child: detail.when(
+          loading: () => const AppLoadingIndicator(label: 'Chargement'),
+          error: (_, __) => const AppErrorState(title: 'Séance indisponible'),
+          data: (workout) => workout == null
+              ? const AppEmptyState(
+                  title: 'Séance introuvable',
+                  icon: AppIcons.history,
+                )
+              : _DetailBody(workout: workout),
+        ),
+      ),
+    );
+  }
+}
+
+class _DetailBody extends StatelessWidget {
+  const _DetailBody({required this.workout});
+
+  final WorkoutWithSets workout;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final session = workout.session;
+
+    return ListView(
+      padding: const EdgeInsets.all(AppSpacing.md),
+      children: [
+        Row(
+          children: [
+            AppBadge(
+              label: session.status.label,
+              variant: session.status == WorkoutStatus.completed
+                  ? AppBadgeVariant.primary
+                  : AppBadgeVariant.neutral,
+            ),
+            const SizedBox(width: AppSpacing.xs),
+            if (session.syncState != LocalSyncState.synced)
+              AppBadge(
+                label: session.syncState.label,
+                variant: session.syncState == LocalSyncState.failed
+                    ? AppBadgeVariant.warning
+                    : AppBadgeVariant.neutral,
+              ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.md),
+        Row(
+          children: [
+            _Metric(label: 'Séries', value: '${workout.setsCount}'),
+            _Metric(label: 'Volume', value: '${workout.totalVolumeKg.round()} kg'),
+            _Metric(
+              label: 'Durée',
+              value: session.durationSeconds == null
+                  ? '—'
+                  : '${session.durationSeconds! ~/ 60} min',
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.lg),
+        Text('Séries', style: theme.textTheme.titleLarge),
+        const SizedBox(height: AppSpacing.sm),
+        for (final set in workout.sets)
+          Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+            child: AppCard(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.md,
+                vertical: AppSpacing.sm,
+              ),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: Text(set.exerciseName,
+                        style: theme.textTheme.bodyLarge),
+                  ),
+                  if (set.kind != SetKind.normal) ...[
+                    AppBadge(label: set.kind.label),
+                    const SizedBox(width: AppSpacing.xs),
+                  ],
+                  Text(
+                    [
+                      if (set.reps != null) '${set.reps}',
+                      if (set.weightKg != null) '${set.weightKg} kg',
+                    ].join(' × '),
+                    style: AppTypography.metric.copyWith(
+                      fontSize: 16,
+                      color: theme.colorScheme.onSurface,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+}
+
+class _Metric extends StatelessWidget {
+  const _Metric({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Expanded(
+      child: Column(
+        children: [
+          Text(
+            value,
+            style: AppTypography.metric.copyWith(
+              fontSize: 24,
+              color: theme.colorScheme.primary,
+            ),
+          ),
+          const SizedBox(height: AppSpacing.xxs),
+          Text(label, style: theme.textTheme.bodySmall),
+        ],
+      ),
+    );
+  }
+}
