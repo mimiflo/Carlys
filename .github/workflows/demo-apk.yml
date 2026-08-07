@@ -1,0 +1,69 @@
+# APK de démonstration : application complète SANS serveur (flavor `demo`).
+# Déclenché à la demande ; publie l'APK sur la release `demo-latest`.
+name: demo-apk
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: demo-apk
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    defaults:
+      run:
+        working-directory: apps/mobile
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      # android/ n'est pas versionné : il se régénère à la demande.
+      - name: Dossiers de plateformes
+        run: |
+          flutter create --org com.carlys --project-name carlys_mobile \
+            --platforms android .
+
+      - name: Dépendances
+        run: flutter pub get
+
+      - name: Génération de code (Drift, …)
+        run: dart run build_runner build --delete-conflicting-outputs
+
+      - name: Build APK (mode démo, hors ligne)
+        run: |
+          flutter build apk --release \
+            --dart-define=CARLYS_FLAVOR=demo \
+            --dart-define=CARLYS_API_BASE_URL=http://localhost:3000
+          mv build/app/outputs/flutter-apk/app-release.apk \
+             build/app/outputs/flutter-apk/carlys-demo.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: carlys-demo-apk
+          path: apps/mobile/build/app/outputs/flutter-apk/carlys-demo.apk
+          retention-days: 30
+
+      # Release pré-taguée « demo-latest », écrasée à chaque build :
+      # une seule URL stable pour télécharger l'APK depuis un téléphone.
+      - name: Publier sur la release demo-latest
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create demo-latest \
+            --prerelease \
+            --title "Carlys — démo Android (sans serveur)" \
+            --notes "APK de visite : données intégrées, aucun serveur requis. Installer puis ouvrir — la session est déjà connectée." \
+            --target "$GITHUB_SHA" || true
+          gh release upload demo-latest \
+            build/app/outputs/flutter-apk/carlys-demo.apk --clobber

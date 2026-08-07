@@ -1,7 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Flavors de l'application, alignés sur les environnements serveur.
-enum AppFlavor { development, staging, production }
+/// `demo` : visite hors ligne sur données intégrées, aucun serveur requis.
+enum AppFlavor { development, staging, production, demo }
 
 /// Configuration d'exécution injectée au lancement via --dart-define :
 ///   flutter run \
@@ -38,6 +39,7 @@ class AppEnvironment {
 
   bool get isDevelopment => flavor == AppFlavor.development;
   bool get isProduction => flavor == AppFlavor.production;
+  bool get isDemo => flavor == AppFlavor.demo;
 
   /// Préfixe complet des routes métier.
   String get apiV1Url => '$apiBaseUrl/api/v1';

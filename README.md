@@ -130,6 +130,11 @@ pnpm prisma:generate
 ./scripts/bootstrap_mobile.sh
 ```
 
+> **Juste regarder l'app, sans rien installer ?** Le workflow GitHub
+> `demo-apk` publie un APK de démonstration **sans serveur** (flavor `demo`,
+> données intégrées) sur la release `demo-latest` du dépôt — à installer
+> directement sur un téléphone Android.
+
 Ce script génère les dossiers de plateformes `android/` et `ios/` via `flutter create` (org `com.carlys`, projet `carlys_mobile`), puis exécute `flutter pub get` et `flutter analyze`. Les dossiers de plateformes ne sont pas versionnés : ils se régénèrent à la demande.
 
 ## Variables d'environnement

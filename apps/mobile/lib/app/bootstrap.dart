@@ -4,6 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../core/logging/app_logger.dart';
+import '../demo/demo_overrides.dart';
 import 'app.dart';
 import 'environment/app_environment.dart';
 import 'observers/app_provider_observer.dart';
@@ -37,6 +38,8 @@ Future<void> bootstrap() async {
           observers: const [AppProviderObserver()],
           overrides: [
             appEnvironmentProvider.overrideWithValue(environment),
+            // Mode démo : dépôts en mémoire, aucun serveur requis.
+            if (environment.isDemo) ...demoOverrides(),
           ],
           child: const CarlysApp(),
         ),

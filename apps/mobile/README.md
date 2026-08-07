@@ -38,6 +38,21 @@ flutter build appbundle
 flutter build ios
 ```
 
+## Mode démo (sans serveur)
+
+Le flavor `demo` fait tourner l'application entièrement hors ligne :
+session déjà ouverte, catalogue/progression/nutrition servis par les dépôts
+en mémoire de `lib/demo/` (exception documentée à la règle « pas de données
+codées en dur » — jamais chargés dans les autres flavors). Les séances
+restent réelles (Drift local), seule la synchronisation est désactivée.
+
+```bash
+flutter run --dart-define=CARLYS_FLAVOR=demo
+```
+
+Le workflow `demo-apk` (`.github/workflows/demo-apk.yml`, déclenchement
+manuel) construit cet APK et le publie sur la release `demo-latest`.
+
 ## Structure
 
 - `lib/app/` — bootstrap, environnement, routeur, observers ;
