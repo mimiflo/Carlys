@@ -46,7 +46,8 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       return switch (authState) {
         AuthUnknown() => onSplash ? null : AppRoutes.splash,
         AuthUnauthenticated() => onAuthScreen ? null : AppRoutes.login,
-        AuthAuthenticated() => (onSplash || onAuthScreen) ? AppRoutes.home : null,
+        AuthAuthenticated() =>
+          (onSplash || onAuthScreen) ? AppRoutes.home : null,
       };
     },
     routes: [

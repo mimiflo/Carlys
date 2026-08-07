@@ -150,7 +150,8 @@ class _ActiveWorkoutBody extends ConsumerWidget {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: Text(abandon ? 'Abandonner la séance ?' : 'Terminer la séance ?'),
+        title:
+            Text(abandon ? 'Abandonner la séance ?' : 'Terminer la séance ?'),
         content: Text(
           abandon
               ? 'La séance sera marquée comme abandonnée.'
@@ -274,8 +275,7 @@ class _SetTile extends ConsumerWidget {
           IconButton(
             tooltip: 'Supprimer la série',
             icon: Icon(AppIcons.delete, color: theme.colorScheme.error),
-            onPressed: () =>
-                ref.read(workoutActionsProvider).deleteSet(set.id),
+            onPressed: () => ref.read(workoutActionsProvider).deleteSet(set.id),
           ),
         ],
       ),

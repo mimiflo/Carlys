@@ -44,7 +44,11 @@ Future<void> bootstrap() async {
     },
     (error, stackTrace) {
       // Sentry sera branché ici (avec son DSN par environnement).
-      logger.error('Erreur non interceptée', error: error, stackTrace: stackTrace);
+      logger.error(
+        'Erreur non interceptée',
+        error: error,
+        stackTrace: stackTrace,
+      );
     },
   );
 }

@@ -49,7 +49,8 @@ class ExercisesRepositoryImpl implements ExercisesRepository {
   @override
   Future<ExerciseDetail> byIdOrSlug(String idOrSlug) {
     return _guard(() async {
-      final response = await _dio.get<Map<String, dynamic>>('/exercises/$idOrSlug');
+      final response =
+          await _dio.get<Map<String, dynamic>>('/exercises/$idOrSlug');
       return exerciseDetailFromJson(
         response.data?['data'] as Map<String, dynamic>? ?? const {},
       );

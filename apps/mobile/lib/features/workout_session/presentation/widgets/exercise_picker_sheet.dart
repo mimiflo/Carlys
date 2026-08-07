@@ -76,7 +76,8 @@ class _ExercisePickerState extends ConsumerState<_ExercisePicker> {
                 error: (_, __) => AppErrorState(
                   title: 'Catalogue indisponible',
                   message: 'Vous pouvez réessayer ou saisir un exercice libre.',
-                  onRetry: () => ref.invalidate(_pickerResultsProvider(_search)),
+                  onRetry: () =>
+                      ref.invalidate(_pickerResultsProvider(_search)),
                 ),
                 data: (exercises) => ListView.separated(
                   itemCount: exercises.length,

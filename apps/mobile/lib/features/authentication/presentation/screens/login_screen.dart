@@ -83,9 +83,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         Align(
           alignment: Alignment.centerRight,
           child: TextButton(
-            onPressed: isLoading
-                ? null
-                : () => context.push(AppRoutes.forgotPassword),
+            onPressed:
+                isLoading ? null : () => context.push(AppRoutes.forgotPassword),
             child: const Text('Mot de passe oublié ?'),
           ),
         ),
@@ -100,11 +99,16 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           isExpanded: true,
         ),
         const SizedBox(height: AppSpacing.md),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.center,
+        // Wrap : passe à la ligne sur les écrans étroits ou avec une grande
+        // taille de police système, au lieu de déborder.
+        Wrap(
+          alignment: WrapAlignment.center,
+          crossAxisAlignment: WrapCrossAlignment.center,
           children: [
-            Text('Pas encore de compte ?',
-                style: Theme.of(context).textTheme.bodySmall),
+            Text(
+              'Pas encore de compte ?',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
             TextButton(
               onPressed:
                   isLoading ? null : () => context.push(AppRoutes.register),

@@ -37,7 +37,10 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
             _db.localWorkoutSets.deleted.equals(false),
       ),
     ])
-      ..where(_db.localWorkoutSessions.status.equals(WorkoutStatus.inProgress.apiValue));
+      ..where(
+        _db.localWorkoutSessions.status
+            .equals(WorkoutStatus.inProgress.apiValue),
+      );
 
     return query.watch().map((rows) {
       final workouts = _groupRows(rows);
@@ -61,7 +64,8 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
       ),
     ])
       ..where(
-        _db.localWorkoutSessions.status.isNotValue(WorkoutStatus.inProgress.apiValue),
+        _db.localWorkoutSessions.status
+            .isNotValue(WorkoutStatus.inProgress.apiValue),
       );
 
     return query.watch().map((rows) {
@@ -100,7 +104,8 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
   Future<String> startWorkout({String? name}) async {
     final active = await (_db.select(_db.localWorkoutSessions)
           ..where(
-            (session) => session.status.equals(WorkoutStatus.inProgress.apiValue),
+            (session) =>
+                session.status.equals(WorkoutStatus.inProgress.apiValue),
           ))
         .get();
     if (active.isNotEmpty) {
@@ -216,7 +221,8 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
     final session = await (_db.select(_db.localWorkoutSessions)
           ..where((row) => row.id.equals(sessionId)))
         .getSingleOrNull();
-    if (session == null || session.status != WorkoutStatus.inProgress.apiValue) {
+    if (session == null ||
+        session.status != WorkoutStatus.inProgress.apiValue) {
       return; // déjà clôturée : idempotent côté client aussi
     }
 
@@ -291,7 +297,9 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
     }
 
     return sessions.values.map((session) {
-      final sets = (setsBySession[session.id] ?? const [])
+      // Copie modifiable : une séance sans série retombait sur une liste
+      // constante, que le tri faisait planter.
+      final sets = [...setsBySession[session.id] ?? const <LocalWorkoutSet>[]]
         ..sort((a, b) => a.position.compareTo(b.position));
       return WorkoutWithSets(
         session: _mapSession(session),

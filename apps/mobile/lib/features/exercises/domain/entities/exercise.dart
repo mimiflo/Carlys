@@ -45,7 +45,11 @@ enum ExerciseKind {
 }
 
 class MuscleGroupRef {
-  const MuscleGroupRef({required this.id, required this.slug, required this.name});
+  const MuscleGroupRef({
+    required this.id,
+    required this.slug,
+    required this.name,
+  });
 
   final String id;
   final String slug;
@@ -59,7 +63,11 @@ class MuscleGroupRef {
 }
 
 class EquipmentRef {
-  const EquipmentRef({required this.id, required this.slug, required this.name});
+  const EquipmentRef({
+    required this.id,
+    required this.slug,
+    required this.name,
+  });
 
   final String id;
   final String slug;
@@ -89,7 +97,10 @@ class ExerciseSummary {
 }
 
 class ExerciseMuscleLink {
-  const ExerciseMuscleLink({required this.muscleGroup, required this.isPrimary});
+  const ExerciseMuscleLink({
+    required this.muscleGroup,
+    required this.isPrimary,
+  });
 
   final MuscleGroupRef muscleGroup;
   final bool isPrimary;

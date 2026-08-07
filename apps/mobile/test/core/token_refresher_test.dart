@@ -58,7 +58,10 @@ void main() {
 
   test('rafraîchit et persiste la nouvelle paire de jetons', () async {
     await storage.save(
-      const StoredTokens(accessToken: 'old-access', refreshToken: 'old-refresh'),
+      const StoredTokens(
+        accessToken: 'old-access',
+        refreshToken: 'old-refresh',
+      ),
     );
     dio.httpClientAdapter = _FakeAdapter(
       (_) async => _json(200, {

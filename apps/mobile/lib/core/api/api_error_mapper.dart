@@ -9,6 +9,7 @@ AppException mapDioException(DioException exception) {
     case DioExceptionType.connectionTimeout:
     case DioExceptionType.sendTimeout:
     case DioExceptionType.receiveTimeout:
+    case DioExceptionType.transformTimeout:
     case DioExceptionType.connectionError:
       return NetworkException(
         'Serveur injoignable',
@@ -31,8 +32,8 @@ AppException mapDioException(DioException exception) {
 AppException _mapResponse(DioException exception) {
   final statusCode = exception.response?.statusCode ?? 0;
   final envelope = _errorEnvelopeOf(exception.response?.data);
-  final message = envelope?.message ??
-      'Le serveur a répondu avec une erreur ($statusCode)';
+  final message =
+      envelope?.message ?? 'Le serveur a répondu avec une erreur ($statusCode)';
 
   if (statusCode == 401) {
     return UnauthorizedException(message, cause: exception);

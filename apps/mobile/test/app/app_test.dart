@@ -95,6 +95,8 @@ void main() {
     await tester.pumpWidget(buildApp(repository));
     await tester.pumpAndSettle();
 
+    // Le bouton vit en bas de l'accueil : le rendre visible avant le tap.
+    await tester.scrollUntilVisible(find.text('Se déconnecter'), 150);
     await tester.tap(find.text('Se déconnecter'));
     await tester.pumpAndSettle();
 
@@ -102,7 +104,8 @@ void main() {
     expect(find.text('Se connecter'), findsOneWidget);
   });
 
-  testWidgets('e-mail invalide bloqué par la validation locale', (tester) async {
+  testWidgets('e-mail invalide bloqué par la validation locale',
+      (tester) async {
     final repository = FakeAuthRepository();
     await tester.pumpWidget(buildApp(repository));
     await tester.pumpAndSettle();

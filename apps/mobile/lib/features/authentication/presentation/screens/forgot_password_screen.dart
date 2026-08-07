@@ -47,8 +47,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
         children: [
           const AppEmptyState(
             title: 'Vérifiez votre boîte de réception',
-            message:
-                'Si un compte existe avec cette adresse, un e-mail de '
+            message: 'Si un compte existe avec cette adresse, un e-mail de '
                 'réinitialisation vient de lui être envoyé.',
             icon: Icons.mark_email_read_outlined,
           ),

@@ -3,6 +3,7 @@ import 'package:carlys_mobile/app/environment/app_environment.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
 import 'package:carlys_mobile/features/exercises/data/repositories/exercises_repository_impl.dart';
+import 'package:carlys_mobile/features/exercises/presentation/widgets/exercise_card.dart';
 import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,10 +17,13 @@ void main() {
   testWidgets(
       'parcours : accueil → bibliothèque → recherche → fiche d’exercice',
       (tester) async {
-    final exercises = FakeExercisesRepository([
-      summary('id-1', 'Pompes', group: 'pectoraux'),
-      summary('id-2', 'Squat', group: 'quadriceps'),
-    ], pageSize: 10);
+    final exercises = FakeExercisesRepository(
+      [
+        summary('id-1', 'Pompes', group: 'pectoraux'),
+        summary('id-2', 'Squat', group: 'quadriceps'),
+      ],
+      pageSize: 10,
+    );
 
     await tester.pumpWidget(
       ProviderScope(
@@ -53,10 +57,12 @@ void main() {
     await tester.pumpAndSettle(const Duration(milliseconds: 500));
 
     expect(find.text('Pompes'), findsNothing);
-    expect(find.text('Squat'), findsOneWidget);
+    // « Squat » vit aussi dans le champ de recherche : cibler la carte.
+    final squatCard = find.widgetWithText(ExerciseCard, 'Squat');
+    expect(squatCard, findsOneWidget);
 
     // Fiche détaillée.
-    await tester.tap(find.text('Squat'));
+    await tester.tap(squatCard);
     await tester.pumpAndSettle();
 
     expect(find.text('Description de Squat'), findsOneWidget);

@@ -68,7 +68,10 @@ class _DetailBody extends StatelessWidget {
         Row(
           children: [
             _Metric(label: 'Séries', value: '${workout.setsCount}'),
-            _Metric(label: 'Volume', value: '${workout.totalVolumeKg.round()} kg'),
+            _Metric(
+              label: 'Volume',
+              value: '${workout.totalVolumeKg.round()} kg',
+            ),
             _Metric(
               label: 'Durée',
               value: session.durationSeconds == null
@@ -91,8 +94,10 @@ class _DetailBody extends StatelessWidget {
               child: Row(
                 children: [
                   Expanded(
-                    child: Text(set.exerciseName,
-                        style: theme.textTheme.bodyLarge),
+                    child: Text(
+                      set.exerciseName,
+                      style: theme.textTheme.bodyLarge,
+                    ),
                   ),
                   if (set.kind != SetKind.normal) ...[
                     AppBadge(label: set.kind.label),

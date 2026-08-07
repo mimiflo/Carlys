@@ -18,11 +18,11 @@ class AuthSessionDevice {
   final String? deviceName;
   final String? devicePlatform;
 
-  String get label =>
-      deviceName ?? devicePlatform ?? 'Appareil inconnu';
+  String get label => deviceName ?? devicePlatform ?? 'Appareil inconnu';
 
   @override
-  bool operator ==(Object other) => other is AuthSessionDevice && other.id == id;
+  bool operator ==(Object other) =>
+      other is AuthSessionDevice && other.id == id;
 
   @override
   int get hashCode => id.hashCode;

@@ -54,7 +54,10 @@ class _ExerciseDetailBody extends StatelessWidget {
           spacing: AppSpacing.xs,
           runSpacing: AppSpacing.xs,
           children: [
-            AppBadge(label: exercise.difficulty.label, variant: AppBadgeVariant.primary),
+            AppBadge(
+              label: exercise.difficulty.label,
+              variant: AppBadgeVariant.primary,
+            ),
             AppBadge(label: exercise.kind.label),
             if (exercise.isPremium)
               const AppBadge(

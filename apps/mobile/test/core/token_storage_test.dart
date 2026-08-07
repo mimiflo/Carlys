@@ -20,10 +20,13 @@ void main() {
     expect(await storage.hasSession, isTrue);
     // Les jetons ne partent jamais dans les préférences classiques :
     // ils sont bien dans le stockage sécurisé injecté.
-    expect(secureStorage.values.keys, containsAll(<String>[
-      'carlys_access_token',
-      'carlys_refresh_token',
-    ]));
+    expect(
+      secureStorage.values.keys,
+      containsAll(<String>[
+        'carlys_access_token',
+        'carlys_refresh_token',
+      ]),
+    );
 
     await storage.clear();
     expect(await storage.readAccessToken(), isNull);

@@ -39,6 +39,17 @@ Widget appWith({
       child: const CarlysApp(),
     );
 
+/// Rend visible un élément de l'écran COURANT (dernier Scrollable de la
+/// pile) : remonte d'abord en haut, puis descend jusqu'à la cible —
+/// déterministe quelle que soit la position de défilement précédente.
+Future<void> reveal(WidgetTester tester, Finder item) async {
+  final scrollable = find.byType(Scrollable).last;
+  await tester.drag(scrollable, const Offset(0, 2000), warnIfMissed: false);
+  await tester.pumpAndSettle();
+  await tester.scrollUntilVisible(item, 150, scrollable: scrollable);
+  await tester.pumpAndSettle();
+}
+
 void main() {
   testWidgets('plan gratuit : droits verrouillés affichés', (tester) async {
     await tester.pumpWidget(
@@ -46,6 +57,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    await reveal(tester, find.text('Abonnement'));
     await tester.tap(find.text('Abonnement'));
     await tester.pumpAndSettle();
 
@@ -62,6 +74,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    await reveal(tester, find.text('Abonnement'));
     await tester.tap(find.text('Abonnement'));
     await tester.pumpAndSettle();
 

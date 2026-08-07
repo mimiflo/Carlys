@@ -23,7 +23,12 @@ final class NetworkException extends AppException {
 
 /// Le serveur a répondu avec une erreur (5xx, contrat invalide…).
 final class ServerException extends AppException {
-  const ServerException(super.message, {this.statusCode, super.cause, super.stackTrace});
+  const ServerException(
+    super.message, {
+    this.statusCode,
+    super.cause,
+    super.stackTrace,
+  });
 
   final int? statusCode;
 }
@@ -46,7 +51,12 @@ final class ForbiddenException extends AppException {
 
 /// Données saisies invalides (validation serveur ou locale).
 final class ValidationException extends AppException {
-  const ValidationException(super.message, {this.fieldErrors = const {}, super.cause, super.stackTrace});
+  const ValidationException(
+    super.message, {
+    this.fieldErrors = const {},
+    super.cause,
+    super.stackTrace,
+  });
 
   /// Erreurs par champ, ex. {'email': 'Adresse invalide'}.
   final Map<String, String> fieldErrors;

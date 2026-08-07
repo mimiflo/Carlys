@@ -26,7 +26,10 @@ class FakeAuthRepository implements AuthRepository {
   Future<bool> hasStoredSession() async => storedSession;
 
   @override
-  Future<AuthUser> login({required String email, required String password}) async {
+  Future<AuthUser> login({
+    required String email,
+    required String password,
+  }) async {
     loginCalls++;
     if (failLogin) {
       throw const UnauthorizedException('E-mail ou mot de passe incorrect.');

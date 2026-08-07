@@ -15,8 +15,8 @@ final workoutHistoryProvider = StreamProvider<List<WorkoutHistoryEntry>>((ref) {
   return ref.watch(workoutRepositoryProvider).watchHistory();
 });
 
-final workoutDetailProvider =
-    FutureProvider.autoDispose.family<WorkoutWithSets?, String>((ref, sessionId) {
+final workoutDetailProvider = FutureProvider.autoDispose
+    .family<WorkoutWithSets?, String>((ref, sessionId) {
   return ref.watch(workoutRepositoryProvider).workoutDetail(sessionId);
 });
 
@@ -51,9 +51,8 @@ class RestTimerState {
   final Duration total;
   final Duration remaining;
 
-  double get progress => total.inSeconds == 0
-      ? 0
-      : remaining.inSeconds / total.inSeconds;
+  double get progress =>
+      total.inSeconds == 0 ? 0 : remaining.inSeconds / total.inSeconds;
 }
 
 /// Minuteur de repos entre les séries.
@@ -91,6 +90,7 @@ class RestTimerController extends Notifier<RestTimerState?> {
   }
 }
 
-final restTimerProvider = NotifierProvider<RestTimerController, RestTimerState?>(
+final restTimerProvider =
+    NotifierProvider<RestTimerController, RestTimerState?>(
   RestTimerController.new,
 );

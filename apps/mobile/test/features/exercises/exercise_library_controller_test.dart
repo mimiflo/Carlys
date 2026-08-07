@@ -27,6 +27,11 @@ void main() {
       summary('id-5', 'Tractions', group: 'dos'),
     ]);
     container = buildContainer();
+    // Le provider est autoDispose : sans écouteur il serait détruit entre
+    // deux interactions (comme un écran fermé), annulant le debounce.
+    final subscription =
+        container.listen(exerciseLibraryControllerProvider, (_, __) {});
+    addTearDown(subscription.close);
   });
 
   test('charge la première page avec pagination', () async {
@@ -72,7 +77,8 @@ void main() {
     controller.setSearch('Sq');
     controller.setSearch('Squat');
     await Future<void>.delayed(
-      ExerciseLibraryController.searchDebounce + const Duration(milliseconds: 50),
+      ExerciseLibraryController.searchDebounce +
+          const Duration(milliseconds: 50),
     );
 
     final state = container.read(exerciseLibraryControllerProvider).value!;
@@ -88,8 +94,10 @@ void main() {
         container.read(exerciseLibraryControllerProvider.notifier);
 
     await controller.setDifficulty(ExerciseDifficulty.advanced);
-    expect(repository.receivedFilters.last.difficulty,
-        ExerciseDifficulty.advanced);
+    expect(
+      repository.receivedFilters.last.difficulty,
+      ExerciseDifficulty.advanced,
+    );
 
     await controller.setDifficulty(null);
     expect(repository.receivedFilters.last.difficulty, isNull);

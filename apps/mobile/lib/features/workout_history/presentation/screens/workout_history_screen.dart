@@ -20,7 +20,8 @@ class WorkoutHistoryScreen extends ConsumerWidget {
       body: SafeArea(
         child: history.when(
           loading: () => const AppLoadingIndicator(label: 'Chargement'),
-          error: (_, __) => const AppErrorState(title: 'Historique indisponible'),
+          error: (_, __) =>
+              const AppErrorState(title: 'Historique indisponible'),
           data: (entries) => entries.isEmpty
               ? const AppEmptyState(
                   title: 'Aucune séance terminée',
@@ -114,5 +115,7 @@ String _formatDuration(int? seconds) {
     return '—';
   }
   final minutes = seconds ~/ 60;
-  return minutes >= 60 ? '${minutes ~/ 60} h ${minutes % 60} min' : '$minutes min';
+  return minutes >= 60
+      ? '${minutes ~/ 60} h ${minutes % 60} min'
+      : '$minutes min';
 }

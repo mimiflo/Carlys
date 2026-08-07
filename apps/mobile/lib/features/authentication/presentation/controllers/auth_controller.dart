@@ -55,7 +55,10 @@ class AuthController extends Notifier<AuthState> {
     }
   }
 
-  Future<AuthUser> login({required String email, required String password}) async {
+  Future<AuthUser> login({
+    required String email,
+    required String password,
+  }) async {
     final user = await ref.read(authRepositoryProvider).login(
           email: email,
           password: password,
@@ -86,7 +89,8 @@ class AuthController extends Notifier<AuthState> {
   /// Recharge le profil (après une modification par exemple).
   Future<void> refreshProfile() async {
     if (state is! AuthAuthenticated) return;
-    state = AuthAuthenticated(user: await ref.read(authRepositoryProvider).me());
+    state =
+        AuthAuthenticated(user: await ref.read(authRepositoryProvider).me());
   }
 
   void _onSessionExpired() {

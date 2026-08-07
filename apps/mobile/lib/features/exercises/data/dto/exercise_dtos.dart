@@ -25,7 +25,9 @@ ExerciseSummary exerciseSummaryFromJson(Map<String, dynamic> json) =>
       isPremium: json['isPremium'] as bool,
       primaryMuscleGroup: json['primaryMuscleGroup'] == null
           ? null
-          : muscleGroupFromJson(json['primaryMuscleGroup'] as Map<String, dynamic>),
+          : muscleGroupFromJson(
+              json['primaryMuscleGroup'] as Map<String, dynamic>,
+            ),
       equipment: (json['equipment'] as List<dynamic>)
           .whereType<Map<String, dynamic>>()
           .map(equipmentFromJson)
@@ -51,8 +53,9 @@ ExerciseDetail exerciseDetailFromJson(Map<String, dynamic> json) {
         .whereType<Map<String, dynamic>>()
         .map(
           (link) => ExerciseMuscleLink(
-            muscleGroup:
-                muscleGroupFromJson(link['muscleGroup'] as Map<String, dynamic>),
+            muscleGroup: muscleGroupFromJson(
+              link['muscleGroup'] as Map<String, dynamic>,
+            ),
             isPrimary: link['role'] == 'PRIMARY',
           ),
         )

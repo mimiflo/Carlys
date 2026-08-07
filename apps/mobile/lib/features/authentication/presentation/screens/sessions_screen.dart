@@ -125,7 +125,11 @@ String _formatDate(DateTime utc) {
       '${pad(local.hour)}:${pad(local.minute)}';
 }
 
-Future<bool> _confirm(BuildContext context, String title, String message) async {
+Future<bool> _confirm(
+  BuildContext context,
+  String title,
+  String message,
+) async {
   final result = await showDialog<bool>(
     context: context,
     builder: (dialogContext) => AlertDialog(

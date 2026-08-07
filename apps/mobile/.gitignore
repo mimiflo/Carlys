@@ -25,3 +25,4 @@ linux/flutter/ephemeral/
 *.env
 .env*
 !.env.example
+tool/screenshots/goldens/

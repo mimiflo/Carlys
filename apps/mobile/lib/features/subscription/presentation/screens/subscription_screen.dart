@@ -140,9 +140,8 @@ class _EntitlementTile extends StatelessWidget {
             child: Text(
               entry.label,
               style: theme.textTheme.bodyLarge?.copyWith(
-                color: entry.isActive
-                    ? null
-                    : theme.colorScheme.onSurfaceVariant,
+                color:
+                    entry.isActive ? null : theme.colorScheme.onSurfaceVariant,
               ),
             ),
           ),

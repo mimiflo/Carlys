@@ -62,7 +62,10 @@ class SyncEngine {
         await _onSuccess(operation);
       } on DioException catch (exception) {
         final statusCode = exception.response?.statusCode;
-        if (statusCode != null && statusCode >= 400 && statusCode < 500 && statusCode != 401) {
+        if (statusCode != null &&
+            statusCode >= 400 &&
+            statusCode < 500 &&
+            statusCode != 401) {
           // Refus définitif du serveur : on ne bloque pas la file.
           await _onRejected(operation, 'HTTP $statusCode');
           continue;
@@ -71,7 +74,10 @@ class SyncEngine {
         await _onRetryLater(operation);
         return;
       } on Exception catch (exception) {
-        _logger.error('Opération de sync inattendue en échec', error: exception);
+        _logger.error(
+          'Opération de sync inattendue en échec',
+          error: exception,
+        );
         await _onRejected(operation, exception.toString());
       }
     }
@@ -138,7 +144,10 @@ class SyncEngine {
       await (_db.update(_db.syncOperations)
             ..where((op) => op.id.equals(operation.id)))
           .write(
-        SyncOperationsCompanion(status: const Value('failed'), error: Value(error)),
+        SyncOperationsCompanion(
+          status: const Value('failed'),
+          error: Value(error),
+        ),
       );
       await _markEntity(operation, 'failed');
     });

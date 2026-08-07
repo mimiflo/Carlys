@@ -71,7 +71,8 @@ void main() {
       );
 
       final button = tester.widget<FilledButton>(find.byType(FilledButton));
-      final background = button.style?.backgroundColor?.resolve(<WidgetState>{});
+      final background =
+          button.style?.backgroundColor?.resolve(<WidgetState>{});
       expect(background, AppColors.danger);
     });
   });

@@ -47,3 +47,13 @@ flutter build ios
 - `lib/features/` — fonctionnalités en tranches verticales
   (voir `lib/features/README.md`) ;
 - `lib/shared/` — modèles, providers et widgets transverses.
+
+## Captures d'écran
+
+Une galerie d'écrans (données factices, rendu par le moteur de test) se
+génère à la demande :
+
+```bash
+flutter test tool/screenshots --update-goldens
+# → PNG dans apps/mobile/tool/screenshots/goldens/ (ignorés par git)
+```

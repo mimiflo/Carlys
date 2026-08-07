@@ -70,9 +70,7 @@ class FakeProgressRepository implements ProgressRepository {
     BodyMetricKind kind = BodyMetricKind.weightKg,
     int limit = 90,
   }) async {
-    return _bodyMetrics
-        .where((metric) => metric.kind == kind)
-        .toList()
+    return _bodyMetrics.where((metric) => metric.kind == kind).toList()
       ..sort((a, b) => a.measuredAt.compareTo(b.measuredAt));
   }
 

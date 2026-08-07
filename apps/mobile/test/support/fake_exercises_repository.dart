@@ -62,8 +62,10 @@ class FakeExercisesRepository implements ExercisesRepository {
     }
     if (filters.muscleGroupSlug != null) {
       filtered = filtered
-          .where((exercise) =>
-              exercise.primaryMuscleGroup?.slug == filters.muscleGroupSlug)
+          .where(
+            (exercise) =>
+                exercise.primaryMuscleGroup?.slug == filters.muscleGroupSlug,
+          )
           .toList();
     }
     if (filters.difficulty != null) {

@@ -44,7 +44,8 @@ enum LocalSyncState {
   final String dbValue;
   final String label;
 
-  static LocalSyncState fromDb(String value) => LocalSyncState.values.firstWhere(
+  static LocalSyncState fromDb(String value) =>
+      LocalSyncState.values.firstWhere(
         (state) => state.dbValue == value,
         orElse: () => LocalSyncState.pending,
       );

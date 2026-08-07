@@ -39,13 +39,19 @@ class FakeSyncApi implements SyncApi {
   }
 
   @override
-  Future<void> completeSession(String sessionId, Map<String, dynamic> body) async {
+  Future<void> completeSession(
+    String sessionId,
+    Map<String, dynamic> body,
+  ) async {
     _guard(sessionId);
     log.add('session.complete:$sessionId');
   }
 
   @override
-  Future<void> abandonSession(String sessionId, Map<String, dynamic> body) async {
+  Future<void> abandonSession(
+    String sessionId,
+    Map<String, dynamic> body,
+  ) async {
     _guard(sessionId);
     log.add('session.abandon:$sessionId');
   }

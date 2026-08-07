@@ -53,8 +53,9 @@ class _ExerciseLibraryScreenState extends ConsumerState<ExerciseLibraryScreen> {
             const SizedBox(height: AppSpacing.xs),
             Expanded(
               child: library.when(
-                loading: () =>
-                    const AppLoadingIndicator(label: 'Chargement des exercices'),
+                loading: () => const AppLoadingIndicator(
+                  label: 'Chargement des exercices',
+                ),
                 error: (error, _) => AppErrorState(
                   title: 'Impossible de charger la bibliothèque',
                   message: 'Vérifiez votre connexion puis réessayez.',
@@ -77,10 +78,8 @@ class _FiltersBar extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final muscleGroups = ref.watch(muscleGroupsProvider);
-    final filters = ref
-        .watch(exerciseLibraryControllerProvider)
-        .valueOrNull
-        ?.filters;
+    final filters =
+        ref.watch(exerciseLibraryControllerProvider).valueOrNull?.filters;
     final controller = ref.read(exerciseLibraryControllerProvider.notifier);
 
     return SizedBox(

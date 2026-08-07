@@ -41,7 +41,8 @@ class AppButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final button = _buildVariant(context);
-    final sized = isExpanded ? SizedBox(width: double.infinity, child: button) : button;
+    final sized =
+        isExpanded ? SizedBox(width: double.infinity, child: button) : button;
 
     return Semantics(
       button: true,

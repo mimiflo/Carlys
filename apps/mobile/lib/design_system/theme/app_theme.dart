@@ -29,16 +29,24 @@ abstract final class AppTheme {
     required ColorScheme colorScheme,
     required Color background,
   }) {
-    final textTheme = AppTypography.textTheme(
-      colorScheme.onSurface,
-      colorScheme.onSurfaceVariant,
-    );
-
-    return ThemeData(
+    // Première passe : ThemeData fusionne notre échelle typographique avec
+    // la typographie de la plateforme (famille de police résolue incluse).
+    final base = ThemeData(
       useMaterial3: true,
       colorScheme: colorScheme,
+      textTheme: AppTypography.textTheme(
+        colorScheme.onSurface,
+        colorScheme.onSurfaceVariant,
+      ),
+    );
+    // Les styles explicites (AppBar, boutons) dérivent du thème RÉSOLU :
+    // même famille de police que le reste de l'app sur chaque plateforme.
+    final textTheme = base.textTheme;
+    final buttonTextStyle =
+        textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600);
+
+    return base.copyWith(
       scaffoldBackgroundColor: background,
-      textTheme: textTheme,
       appBarTheme: AppBarTheme(
         backgroundColor: background,
         foregroundColor: colorScheme.onSurface,
@@ -51,7 +59,7 @@ abstract final class AppTheme {
           minimumSize: const Size(64, 48),
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
           shape: const RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
-          textStyle: AppTypography.bodyLarge.copyWith(fontWeight: FontWeight.w600),
+          textStyle: buttonTextStyle,
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
@@ -59,7 +67,7 @@ abstract final class AppTheme {
           minimumSize: const Size(64, 48),
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
           shape: const RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
-          textStyle: AppTypography.bodyLarge.copyWith(fontWeight: FontWeight.w600),
+          textStyle: buttonTextStyle,
         ),
       ),
       textButtonTheme: TextButtonThemeData(

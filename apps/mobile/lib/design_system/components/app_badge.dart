@@ -43,7 +43,8 @@ class AppBadge extends StatelessWidget {
         horizontal: AppSpacing.xs,
         vertical: AppSpacing.xxs,
       ),
-      decoration: BoxDecoration(color: background, borderRadius: AppRadius.smAll),
+      decoration:
+          BoxDecoration(color: background, borderRadius: AppRadius.smAll),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [

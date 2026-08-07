@@ -140,7 +140,7 @@ final muscleGroupsProvider =
 });
 
 /// Fiche détaillée d'un exercice.
-final exerciseDetailProvider = FutureProvider.autoDispose
-    .family<ExerciseDetail, String>((ref, idOrSlug) {
+final exerciseDetailProvider =
+    FutureProvider.autoDispose.family<ExerciseDetail, String>((ref, idOrSlug) {
   return ref.watch(exercisesRepositoryProvider).byIdOrSlug(idOrSlug);
 });

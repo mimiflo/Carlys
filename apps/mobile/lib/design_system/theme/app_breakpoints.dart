@@ -32,5 +32,6 @@ abstract final class AppBreakpoints {
 
 extension WindowSizeContext on BuildContext {
   /// Classe de taille de la fenêtre courante.
-  WindowSize get windowSize => WindowSize.fromWidth(MediaQuery.sizeOf(this).width);
+  WindowSize get windowSize =>
+      WindowSize.fromWidth(MediaQuery.sizeOf(this).width);
 }

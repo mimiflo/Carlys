@@ -31,6 +31,17 @@ Widget appWith(FakeProgressRepository progress) => ProviderScope(
       child: const CarlysApp(),
     );
 
+/// Rend visible un élément de l'écran COURANT (dernier Scrollable de la
+/// pile) : remonte d'abord en haut, puis descend jusqu'à la cible —
+/// déterministe quelle que soit la position de défilement précédente.
+Future<void> reveal(WidgetTester tester, Finder item) async {
+  final scrollable = find.byType(Scrollable).last;
+  await tester.drag(scrollable, const Offset(0, 2000), warnIfMissed: false);
+  await tester.pumpAndSettle();
+  await tester.scrollUntilVisible(item, 150, scrollable: scrollable);
+  await tester.pumpAndSettle();
+}
+
 void main() {
   testWidgets('parcours : accueil → progression (stats, records, poids)',
       (tester) async {
@@ -59,6 +70,7 @@ void main() {
     await tester.pumpWidget(appWith(progress));
     await tester.pumpAndSettle();
 
+    await reveal(tester, find.text('Progression'));
     await tester.tap(find.text('Progression'));
     await tester.pumpAndSettle();
 
@@ -67,20 +79,20 @@ void main() {
     expect(find.text('1540 kg'), findsOneWidget);
     expect(find.text('1 h 30'), findsOneWidget);
 
-    // Records regroupés par exercice.
+    // Changement de période → nouvelle requête (sélecteur en haut d'écran).
+    await tester.tap(find.text('Mois'));
+    await tester.pumpAndSettle();
+    expect(progress.requestedPeriods, contains(ProgressPeriod.month));
+
+    // Records regroupés par exercice (plus bas dans la page).
+    await reveal(tester, find.text('Squat'));
     expect(find.text('Développé couché'), findsOneWidget);
-    expect(find.text('Squat'), findsOneWidget);
     expect(find.text('80 kg'), findsOneWidget);
     expect(find.text('12 rép.'), findsOneWidget);
 
     // Poids corporel : dernières mesures, plus récente en premier.
+    await reveal(tester, find.text('84 kg'));
     expect(find.text('82.5 kg'), findsOneWidget);
-    expect(find.text('84 kg'), findsOneWidget);
-
-    // Changement de période → nouvelle requête.
-    await tester.tap(find.text('Mois'));
-    await tester.pumpAndSettle();
-    expect(progress.requestedPeriods, contains(ProgressPeriod.month));
   });
 
   testWidgets('ajoute puis supprime une mesure de poids', (tester) async {
@@ -89,12 +101,14 @@ void main() {
     await tester.pumpWidget(appWith(progress));
     await tester.pumpAndSettle();
 
+    await reveal(tester, find.text('Progression'));
     await tester.tap(find.text('Progression'));
     await tester.pumpAndSettle();
 
-    expect(find.text('Aucune mesure enregistrée'), findsOneWidget);
+    await reveal(tester, find.text('Aucune mesure enregistrée'));
 
     // Ajout : la feuille propose 70 kg par défaut, +0,5 → 70,5 kg.
+    await reveal(tester, find.text('Ajouter mon poids'));
     await tester.tap(find.text('Ajouter mon poids'));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Augmenter le poids'));
@@ -102,13 +116,15 @@ void main() {
     await tester.tap(find.text('Enregistrer'));
     await tester.pumpAndSettle();
 
-    expect(find.text('70.5 kg'), findsOneWidget);
+    await reveal(tester, find.text('70.5 kg'));
     expect(find.text('Aucune mesure enregistrée'), findsNothing);
 
     // Suppression rejouable côté API ; ici la liste redevient vide.
+    await reveal(tester, find.byIcon(AppIcons.delete));
     await tester.tap(find.byIcon(AppIcons.delete));
     await tester.pumpAndSettle();
 
+    await reveal(tester, find.text('Aucune mesure enregistrée'));
     expect(find.text('Aucune mesure enregistrée'), findsOneWidget);
   });
 
@@ -119,6 +135,7 @@ void main() {
     await tester.pumpWidget(appWith(progress));
     await tester.pumpAndSettle();
 
+    await reveal(tester, find.text('Progression'));
     await tester.tap(find.text('Progression'));
     await tester.pumpAndSettle();
 
