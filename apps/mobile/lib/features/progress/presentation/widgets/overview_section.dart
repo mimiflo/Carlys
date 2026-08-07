@@ -6,7 +6,8 @@ import '../../../../design_system/design_system.dart';
 import '../../domain/entities/progress.dart';
 import '../controllers/progress_controllers.dart';
 
-/// Statistiques de la période : sélecteur, cartes de synthèse, volume.
+/// Statistiques de la période (2f) : sélecteur en pastilles, carte de
+/// volume avec graphe en barres, grille de tuiles.
 class OverviewSection extends ConsumerWidget {
   const OverviewSection({super.key});
 
@@ -18,14 +19,18 @@ class OverviewSection extends ConsumerWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        SegmentedButton<ProgressPeriod>(
-          segments: [
-            for (final value in ProgressPeriod.values)
-              ButtonSegment(value: value, label: Text(value.label)),
+        Row(
+          children: [
+            for (final value in ProgressPeriod.values) ...[
+              AppPill(
+                label: value.label,
+                selected: period == value,
+                onTap: () =>
+                    ref.read(progressPeriodProvider.notifier).state = value,
+              ),
+              const SizedBox(width: AppSpacing.xs),
+            ],
           ],
-          selected: {period},
-          onSelectionChanged: (selection) =>
-              ref.read(progressPeriodProvider.notifier).state = selection.first,
         ),
         const SizedBox(height: AppSpacing.md),
         overview.when(
@@ -52,39 +57,6 @@ class _OverviewContent extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: _StatCard(
-                label: 'Séances',
-                value: '${overview.sessionsCount}',
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: _StatCard(label: 'Séries', value: '${overview.setsCount}'),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        Row(
-          children: [
-            Expanded(
-              child: _StatCard(
-                label: 'Volume',
-                value: '${overview.totalVolumeKg.round()} kg',
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: _StatCard(
-                label: 'Durée',
-                value: _formatDuration(overview.totalDurationSeconds),
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.md),
         if (overview.points.isEmpty)
           const AppEmptyState(
             title: 'Aucune séance sur la période',
@@ -92,88 +64,120 @@ class _OverviewContent extends StatelessWidget {
             icon: AppIcons.progress,
           )
         else
-          _VolumeChart(points: overview.points),
+          _VolumeCard(overview: overview),
+        const SizedBox(height: AppSpacing.md),
+        Row(
+          children: [
+            Expanded(
+              child: AppStatTile(
+                label: 'Séances',
+                value: '${overview.sessionsCount}',
+              ),
+            ),
+            const SizedBox(width: AppSpacing.gapTile),
+            Expanded(
+              child: AppStatTile(
+                label: 'Séries',
+                value: '${overview.setsCount}',
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.gapTile),
+        Row(
+          children: [
+            Expanded(
+              child: AppStatTile(
+                label: 'Volume',
+                value: '${overview.totalVolumeKg.round()}',
+                unit: ' kg',
+              ),
+            ),
+            const SizedBox(width: AppSpacing.gapTile),
+            Expanded(
+              child: AppStatTile(
+                label: 'Durée',
+                value: _formatDuration(overview.totalDurationSeconds),
+              ),
+            ),
+          ],
+        ),
       ],
     );
   }
 }
 
-class _StatCard extends StatelessWidget {
-  const _StatCard({required this.label, required this.value});
+/// Carte de volume : label mono, total en grand, barres primary — la
+/// dernière période en accent.
+class _VolumeCard extends StatelessWidget {
+  const _VolumeCard({required this.overview});
 
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return AppCard(
-      semanticLabel: '$label : $value',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            value,
-            style: AppTypography.metric.copyWith(
-              fontSize: 24,
-              color: theme.colorScheme.onSurface,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xxs),
-          Text(label, style: theme.textTheme.bodySmall),
-        ],
-      ),
-    );
-  }
-}
-
-class _VolumeChart extends StatelessWidget {
-  const _VolumeChart({required this.points});
-
-  final List<ProgressPoint> points;
+  final ProgressOverviewEntity overview;
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
+    final points = overview.points;
     final maxVolume = points.fold<double>(
       1,
       (max, point) => point.volumeKg > max ? point.volumeKg : max,
     );
 
-    return AppCard(
-      child: Semantics(
-        label: 'Volume soulevé par intervalle sur la période',
-        // Isole le rendu du graphique : ses repeints ne redessinent pas l'écran.
-        child: RepaintBoundary(
-          child: AspectRatio(
-            aspectRatio: 16 / 9,
-            child: BarChart(
-              BarChartData(
-                maxY: maxVolume * 1.15,
-                alignment: BarChartAlignment.spaceAround,
-                barTouchData: BarTouchData(enabled: false),
-                titlesData: const FlTitlesData(show: false),
-                gridData: const FlGridData(show: false),
-                borderData: FlBorderData(show: false),
-                barGroups: [
-                  for (var i = 0; i < points.length; i++)
-                    BarChartGroupData(
-                      x: i,
-                      barRods: [
-                        BarChartRodData(
-                          toY: points[i].volumeKg,
-                          color: scheme.primary,
-                          width: AppSpacing.xs,
-                          borderRadius: AppRadius.xsAll,
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: const BoxDecoration(
+        color: AppColors.darkSurface,
+        borderRadius: AppRadius.cardMainAll,
+        border: Border.fromBorderSide(BorderSide(color: AppColors.darkBorder)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const AppSectionLabel('Volume soulevé'),
+          const SizedBox(height: 8),
+          Text(
+            '${overview.totalVolumeKg.round()} kg',
+            style: AppTypography.metricL
+                .copyWith(color: AppColors.darkTextPrimary),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Semantics(
+            label: 'Volume soulevé par intervalle sur la période',
+            // Isole le rendu du graphique : ses repeints restent locaux.
+            child: RepaintBoundary(
+              child: AspectRatio(
+                aspectRatio: 16 / 7,
+                child: BarChart(
+                  BarChartData(
+                    maxY: maxVolume * 1.15,
+                    alignment: BarChartAlignment.spaceAround,
+                    barTouchData: BarTouchData(enabled: false),
+                    titlesData: const FlTitlesData(show: false),
+                    gridData: const FlGridData(show: false),
+                    borderData: FlBorderData(show: false),
+                    barGroups: [
+                      for (var i = 0; i < points.length; i++)
+                        BarChartGroupData(
+                          x: i,
+                          barRods: [
+                            BarChartRodData(
+                              toY: points[i].volumeKg,
+                              color: i == points.length - 1
+                                  ? AppColors.accent
+                                  : AppColors.primaryFill,
+                              width: 8,
+                              borderRadius: const BorderRadius.all(
+                                Radius.circular(4),
+                              ),
+                            ),
+                          ],
                         ),
-                      ],
-                    ),
-                ],
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
-        ),
+        ],
       ),
     );
   }

@@ -68,10 +68,10 @@ class _ExerciseRecordsCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              Icon(
+              const Icon(
                 AppIcons.record,
                 size: 18,
-                color: theme.colorScheme.primary,
+                color: AppColors.accent,
               ),
               const SizedBox(width: AppSpacing.xs),
               Expanded(
@@ -91,10 +91,8 @@ class _ExerciseRecordsCard extends StatelessWidget {
                 ),
                 Text(
                   record.formattedValue,
-                  style: AppTypography.metric.copyWith(
-                    fontSize: 16,
-                    color: theme.colorScheme.onSurface,
-                  ),
+                  style:
+                      AppTypography.metricS.copyWith(color: AppColors.accent),
                 ),
                 const SizedBox(width: AppSpacing.sm),
                 Text(

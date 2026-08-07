@@ -4,118 +4,162 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_routes.dart';
 import '../../../../design_system/design_system.dart';
+import '../../../progress/presentation/controllers/progress_controllers.dart';
 import '../../../workout_session/domain/entities/workout.dart';
 import '../../../workout_session/presentation/controllers/workout_controllers.dart';
+import '../widgets/history_calendar.dart';
 
-/// Historique des séances (données locales, synchronisées en arrière-plan).
-class WorkoutHistoryScreen extends ConsumerWidget {
+/// Historique (maquette 2g) : sélecteur de mois, grille calendaire
+/// (séances en violet, records en accent), liste des séances du mois.
+class WorkoutHistoryScreen extends ConsumerStatefulWidget {
   const WorkoutHistoryScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<WorkoutHistoryScreen> createState() =>
+      _WorkoutHistoryScreenState();
+}
+
+class _WorkoutHistoryScreenState extends ConsumerState<WorkoutHistoryScreen> {
+  late DateTime _month;
+
+  @override
+  void initState() {
+    super.initState();
+    final now = DateTime.now();
+    _month = DateTime(now.year, now.month);
+  }
+
+  void _shiftMonth(int delta) {
+    setState(() => _month = DateTime(_month.year, _month.month + delta));
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final history = ref.watch(workoutHistoryProvider);
+    final records = ref.watch(personalRecordsProvider).valueOrNull;
+    final now = DateTime.now();
+    final isCurrentMonth = _month.year == now.year && _month.month == now.month;
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Historique')),
+      backgroundColor: AppColors.darkBackground,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        title: const Text('Historique'),
+      ),
       body: SafeArea(
         child: history.when(
           loading: () => const AppLoadingIndicator(label: 'Chargement'),
           error: (_, __) =>
               const AppErrorState(title: 'Historique indisponible'),
-          data: (entries) => entries.isEmpty
-              ? const AppEmptyState(
-                  title: 'Aucune séance terminée',
-                  message: 'Vos séances apparaîtront ici une fois clôturées.',
-                  icon: AppIcons.history,
-                )
-              : ListView.separated(
-                  padding: const EdgeInsets.all(AppSpacing.md),
-                  itemCount: entries.length,
-                  separatorBuilder: (_, __) =>
-                      const SizedBox(height: AppSpacing.sm),
-                  itemBuilder: (context, index) =>
-                      _HistoryTile(entry: entries[index]),
+          data: (entries) {
+            if (entries.isEmpty) {
+              return const AppEmptyState(
+                title: 'Aucune séance terminée',
+                message: 'Vos séances apparaîtront ici une fois clôturées.',
+                icon: AppIcons.history,
+              );
+            }
+            final monthEntries = entries.where((entry) {
+              final local = entry.session.startedAt.toLocal();
+              return local.year == _month.year && local.month == _month.month;
+            }).toList();
+
+            return ListView(
+              padding: const EdgeInsets.all(AppSpacing.gutter),
+              children: [
+                Row(
+                  children: [
+                    IconButton(
+                      tooltip: 'Mois précédent',
+                      onPressed: () => _shiftMonth(-1),
+                      icon: const Icon(
+                        Icons.chevron_left_rounded,
+                        color: AppColors.darkTextSecondary,
+                      ),
+                    ),
+                    Expanded(
+                      child: Center(
+                        child: Text(
+                          formatMonth(_month),
+                          style: AppTypography.subheading
+                              .copyWith(color: AppColors.darkTextPrimary),
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      tooltip: 'Mois suivant',
+                      onPressed: isCurrentMonth ? null : () => _shiftMonth(1),
+                      icon: Icon(
+                        Icons.chevron_right_rounded,
+                        color: isCurrentMonth
+                            ? AppColors.darkTextTertiary
+                            : AppColors.darkTextSecondary,
+                      ),
+                    ),
+                  ],
                 ),
+                const SizedBox(height: AppSpacing.sm),
+                HistoryCalendar(
+                  month: _month,
+                  entries: monthEntries,
+                  records: records,
+                ),
+                const SizedBox(height: AppSpacing.gapSection),
+                if (monthEntries.isEmpty)
+                  const AppEmptyState(
+                    title: 'Aucune séance ce mois-ci',
+                    message: 'Change de mois avec les flèches ci-dessus.',
+                    icon: AppIcons.history,
+                  )
+                else
+                  for (final entry in monthEntries) ...[
+                    _HistoryRow(entry: entry),
+                    const SizedBox(height: AppSpacing.xs),
+                  ],
+              ],
+            );
+          },
         ),
       ),
     );
   }
 }
 
-class _HistoryTile extends StatelessWidget {
-  const _HistoryTile({required this.entry});
+class _HistoryRow extends StatelessWidget {
+  const _HistoryRow({required this.entry});
 
   final WorkoutHistoryEntry entry;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final session = entry.session;
+    final local = session.startedAt.toLocal();
+    final trailing = session.syncState != LocalSyncState.synced
+        ? Icon(
+            session.syncState == LocalSyncState.failed
+                ? AppIcons.error
+                : AppIcons.offline,
+            size: 16,
+            color: session.syncState == LocalSyncState.failed
+                ? AppColors.danger
+                : AppColors.darkTextTertiary,
+          )
+        : null;
 
-    return AppCard(
-      onTap: () => context.push(AppRoutes.workoutDetail(session.id)),
-      semanticLabel: 'Séance du ${_formatDate(session.startedAt)}',
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  session.name ?? 'Séance du ${_formatDate(session.startedAt)}',
-                  style: theme.textTheme.titleLarge,
-                ),
-                const SizedBox(height: AppSpacing.xxs),
-                Text(
-                  '${entry.setsCount} série(s) — '
-                  '${entry.totalVolumeKg.round()} kg — '
-                  '${_formatDuration(session.durationSeconds)}',
-                  style: theme.textTheme.bodySmall,
-                ),
-              ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              AppBadge(
-                label: session.status.label,
-                variant: session.status == WorkoutStatus.completed
-                    ? AppBadgeVariant.primary
-                    : AppBadgeVariant.neutral,
-              ),
-              if (session.syncState != LocalSyncState.synced) ...[
-                const SizedBox(height: AppSpacing.xxs),
-                Icon(
-                  session.syncState == LocalSyncState.failed
-                      ? AppIcons.error
-                      : AppIcons.offline,
-                  size: 16,
-                  color: session.syncState == LocalSyncState.failed
-                      ? theme.colorScheme.error
-                      : theme.colorScheme.onSurfaceVariant,
-                ),
-              ],
-            ],
-          ),
-        ],
+    return Semantics(
+      label: 'Séance du ${local.day} ${formatMonth(local)}',
+      button: true,
+      child: AppListRow(
+        title: session.name ?? 'Séance libre',
+        subtitle: '${local.day.toString().padLeft(2, '0')} '
+            '${formatMonth(local).split(' ').first} · '
+            '${entry.setsCount} séries',
+        leading: AppIcons.history,
+        trailing: trailing,
+        trailingText:
+            trailing == null ? '${entry.totalVolumeKg.round()} kg' : null,
+        onTap: () => context.push(AppRoutes.workoutDetail(session.id)),
       ),
     );
   }
-}
-
-String _formatDate(DateTime utc) {
-  final local = utc.toLocal();
-  String pad(int value) => value.toString().padLeft(2, '0');
-  return '${pad(local.day)}/${pad(local.month)}/${local.year}';
-}
-
-String _formatDuration(int? seconds) {
-  if (seconds == null) {
-    return '—';
-  }
-  final minutes = seconds ~/ 60;
-  return minutes >= 60
-      ? '${minutes ~/ 60} h ${minutes % 60} min'
-      : '$minutes min';
 }

@@ -8,13 +8,14 @@ const _storageKey = 'apparence.theme';
 const _logger = AppLogger('settings');
 
 /// Préférence de thème, persistée localement (préférence UI, non sensible).
-/// Démarre sur « Système » puis restaure la valeur enregistrée — un échec de
-/// lecture est journalisé et retombe sur le défaut, jamais bloquant.
+/// Dark-first : démarre sur « Sombre » puis restaure la valeur enregistrée —
+/// un échec de lecture est journalisé et retombe sur le défaut, jamais
+/// bloquant.
 class ThemeSettingController extends Notifier<AppThemeSetting> {
   @override
   AppThemeSetting build() {
     Future<void>.microtask(_restore);
-    return AppThemeSetting.system;
+    return AppThemeSetting.dark;
   }
 
   Future<void> _restore() async {

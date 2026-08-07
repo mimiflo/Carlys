@@ -79,9 +79,15 @@ void main() {
     await tester.pumpAndSettle();
 
     // Statistiques de la période.
-    expect(find.text('Séances'), findsOneWidget);
-    expect(find.text('1540 kg'), findsOneWidget);
-    expect(find.text('1 h 30'), findsOneWidget);
+    expect(find.text('SÉANCES'), findsOneWidget);
+    expect(
+      find.textContaining('1540', findRichText: true),
+      findsWidgets,
+    );
+    expect(
+      find.textContaining('1 h 30', findRichText: true),
+      findsOneWidget,
+    );
 
     // Changement de période → nouvelle requête (sélecteur en haut d'écran).
     await tester.tap(find.text('Mois'));
@@ -158,7 +164,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Statistiques indisponibles'), findsNothing);
-    expect(find.text('Séances'), findsOneWidget);
+    expect(find.text('SÉANCES'), findsOneWidget);
   });
 }
 

@@ -13,6 +13,6 @@ enum AppThemeSetting {
   static AppThemeSetting fromStorage(String? value) =>
       AppThemeSetting.values.firstWhere(
         (setting) => setting.storageValue == value,
-        orElse: () => AppThemeSetting.system,
+        orElse: () => AppThemeSetting.dark,
       );
 }

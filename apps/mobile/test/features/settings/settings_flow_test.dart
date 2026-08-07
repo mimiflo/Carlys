@@ -65,7 +65,12 @@ void main() {
     await tester.pumpWidget(app());
     await openSettings(tester);
 
-    expect(themeModeOf(tester), ThemeMode.system);
+    // Dark-first : sombre par défaut.
+    expect(themeModeOf(tester), ThemeMode.dark);
+
+    await tester.tap(find.text('Clair'));
+    await tester.pumpAndSettle();
+    expect(themeModeOf(tester), ThemeMode.light);
 
     await tester.tap(find.text('Sombre'));
     await tester.pumpAndSettle();

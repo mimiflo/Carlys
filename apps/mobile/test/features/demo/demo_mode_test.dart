@@ -102,7 +102,7 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    expect(find.text('Séances'), findsOneWidget);
+    expect(find.text('SÉANCES'), findsOneWidget);
 
     // L'abonnement se rejoint depuis l'onglet Profil.
     await tester.tap(
