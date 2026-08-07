@@ -11,6 +11,7 @@ import { AppConfigModule } from '../config/app-config.module';
 import { AppConfigService } from '../config/app-config.service';
 import { PrismaModule } from '../database/prisma/prisma.module';
 import { RedisModule } from '../infrastructure/cache/redis.module';
+import { AdminModule } from '../modules/admin/admin.module';
 import { AuditModule } from '../modules/audit/audit.module';
 import { AuthModule } from '../modules/auth/auth.module';
 import { ExercisesModule } from '../modules/exercises/exercises.module';
@@ -82,6 +83,7 @@ function generateRequestId(request: IncomingMessage, response: ServerResponse): 
     ProgressModule,
     SubscriptionsModule,
     WebhooksModule,
+    AdminModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

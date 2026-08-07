@@ -8,9 +8,9 @@ export default function Home() {
         <p className="text-sm font-medium uppercase tracking-widest text-primary">Carlys</p>
         <h1 className="mt-2 text-3xl font-bold tracking-tight">Tableau de bord d’administration</h1>
         <p className="mt-4 text-muted">
-          Fondation du projet (Étape 1). L’authentification administrateur, la gestion des
-          utilisateurs, des exercices et des abonnements arrivent avec les prochaines tranches
-          verticales.
+          Gestion des utilisateurs, des droits premium et du catalogue, journal d’audit (Étape 7).
+          Connectez-vous avec un compte administrateur — les comptes admin sont séparés des comptes
+          mobiles.
         </p>
 
         <section className="mt-8" aria-labelledby="api-status-title">

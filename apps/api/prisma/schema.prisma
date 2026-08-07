@@ -166,23 +166,39 @@ model PasswordReset {
 
 // ────────────────────────────── Audit ────────────────────────────────────
 
-/// Journal des événements de sécurité et des actions sensibles.
-/// Alimenté dès l'Étape 2 ; consulté par l'admin à l'Étape 7.
-model AuditLog {
-  id        String   @id @default(uuid()) @db.Uuid
-  userId    String?  @db.Uuid
-  /// Ex. auth.login, auth.login_failed, auth.lockout, auth.refresh_reuse_detected…
-  action    String
-  ipAddress String?
-  userAgent String?
-  /// Contexte non sensible uniquement — jamais de mot de passe ni de jeton.
-  metadata  Json?
-  createdAt DateTime @default(now())
+enum AuditActorType {
+  USER
+  ADMIN
+  SYSTEM
+}
 
-  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+/// Journal APPEND-ONLY des événements de sécurité et des actions sensibles.
+/// Alimenté dès l'Étape 2 ; enrichi et consulté par l'admin à l'Étape 7.
+/// Volontairement sans clé étrangère vers les ressources auditées : le
+/// journal survit à leur suppression (référence logique resourceType/Id).
+model AuditLog {
+  id          String         @id @default(uuid()) @db.Uuid
+  actorType   AuditActorType @default(USER)
+  userId      String?        @db.Uuid
+  adminUserId String?        @db.Uuid
+  /// Ex. auth.login, auth.refresh_reuse_detected, admin.user_suspended…
+  action      String
+  resourceType String?
+  resourceId   String?
+  /// Corrélation avec les logs Pino et l'en-tête x-request-id.
+  requestId    String?
+  ipAddress   String?
+  userAgent   String?
+  /// Contexte non sensible uniquement — jamais de mot de passe ni de jeton.
+  metadata    Json?
+  createdAt   DateTime       @default(now())
+
+  user      User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
+  adminUser AdminUser? @relation(fields: [adminUserId], references: [id], onDelete: SetNull)
 
   @@index([userId, createdAt])
   @@index([action, createdAt])
+  @@index([resourceType, resourceId, createdAt])
 }
 
 // ───────────────────── Catalogue d'exercices (Étape 3) ─────────────────────
@@ -502,4 +518,70 @@ model UserEntitlement {
 
   @@unique([userId, entitlementKey])
   @@index([userId, isActive])
+}
+
+// ────────────────────────── Administration (Étape 7) ──────────────────────────
+
+enum AdminUserStatus {
+  ACTIVE
+  DISABLED
+}
+
+/// Compte d'administration — JAMAIS confondu avec User (comptes mobiles).
+model AdminUser {
+  id           String          @id @default(uuid()) @db.Uuid
+  /// Normalisé en minuscules par la couche application avant écriture.
+  email        String          @unique
+  /// Hash Argon2id — jamais le mot de passe, jamais loggé, jamais retourné.
+  passwordHash String
+  displayName  String
+  status       AdminUserStatus @default(ACTIVE)
+  lastLoginAt  DateTime?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  roles     AdminUserRole[]
+  auditLogs AuditLog[]
+}
+
+/// Rôle nommé (ex. superadmin, support, content-manager).
+model AdminRole {
+  id          String  @id @default(uuid()) @db.Uuid
+  slug        String  @unique
+  name        String
+  description String?
+
+  users       AdminUserRole[]
+  permissions AdminRolePermission[]
+}
+
+/// Permission granulaire, seedée par le code (source de vérité de la liste).
+model AdminPermission {
+  id       String @id @default(uuid()) @db.Uuid
+  resource String
+  action   String
+
+  roles AdminRolePermission[]
+
+  @@unique([resource, action])
+}
+
+model AdminUserRole {
+  adminUserId String @db.Uuid
+  roleId      String @db.Uuid
+
+  adminUser AdminUser @relation(fields: [adminUserId], references: [id], onDelete: Cascade)
+  role      AdminRole @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([adminUserId, roleId])
+}
+
+model AdminRolePermission {
+  roleId       String @db.Uuid
+  permissionId String @db.Uuid
+
+  role       AdminRole       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission AdminPermission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
 }

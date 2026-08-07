@@ -9,7 +9,7 @@
  * démonstration — le compte premium reçoit ses entitlements (droits
  * décidés côté serveur, Étape 6).
  */
-import { PREMIUM_ENTITLEMENT_KEYS } from '@carlys/api-contracts';
+import { ADMIN_PERMISSIONS, PREMIUM_ENTITLEMENT_KEYS } from '@carlys/api-contracts';
 import {
   BillingPeriod,
   ExerciseDifficulty,
@@ -756,6 +756,71 @@ async function seedSubscriptionPlans(): Promise<void> {
   }
 }
 
+/**
+ * RBAC de l'administration. Le code est la SOURCE DE VÉRITÉ de la liste
+ * des permissions (`ADMIN_PERMISSIONS` dans packages/api-contracts).
+ */
+const ADMIN_ROLES: { slug: string; name: string; permissions: readonly string[] }[] = [
+  { slug: 'superadmin', name: 'Super-administrateur', permissions: ADMIN_PERMISSIONS },
+  { slug: 'support', name: 'Support', permissions: ['user:read', 'audit:read'] },
+  {
+    slug: 'content-manager',
+    name: 'Gestion du contenu',
+    permissions: ['exercise:publish'],
+  },
+];
+
+const DEV_ADMIN = { email: 'dev.admin@carlys.local', displayName: 'Dev Admin' };
+const DEV_ADMIN_PASSWORD = 'Carlys-Admin-2026!';
+
+async function seedAdministration(): Promise<void> {
+  for (const permission of ADMIN_PERMISSIONS) {
+    const [resource, action] = permission.split(':') as [string, string];
+    await prisma.adminPermission.upsert({
+      where: { resource_action: { resource, action } },
+      update: {},
+      create: { resource, action },
+    });
+  }
+  const permissionIds = new Map(
+    (await prisma.adminPermission.findMany()).map((permission) => [
+      `${permission.resource}:${permission.action}`,
+      permission.id,
+    ]),
+  );
+
+  for (const role of ADMIN_ROLES) {
+    const { id } = await prisma.adminRole.upsert({
+      where: { slug: role.slug },
+      update: { name: role.name },
+      create: { slug: role.slug, name: role.name },
+    });
+    // Liens reconstruits à chaque seed (idempotent).
+    await prisma.adminRolePermission.deleteMany({ where: { roleId: id } });
+    await prisma.adminRolePermission.createMany({
+      data: role.permissions.map((permission) => ({
+        roleId: id,
+        permissionId: mustGet(permissionIds, permission),
+      })),
+    });
+  }
+
+  const passwordHash = await argon2.hash(DEV_ADMIN_PASSWORD, { type: argon2.argon2id });
+  const admin = await prisma.adminUser.upsert({
+    where: { email: DEV_ADMIN.email },
+    update: {},
+    create: { email: DEV_ADMIN.email, displayName: DEV_ADMIN.displayName, passwordHash },
+  });
+  const superadmin = await prisma.adminRole.findUniqueOrThrow({
+    where: { slug: 'superadmin' },
+  });
+  await prisma.adminUserRole.upsert({
+    where: { adminUserId_roleId: { adminUserId: admin.id, roleId: superadmin.id } },
+    update: {},
+    create: { adminUserId: admin.id, roleId: superadmin.id },
+  });
+}
+
 async function seedDevUsers(): Promise<void> {
   const passwordHash = await argon2.hash(DEV_PASSWORD, { type: argon2.argon2id });
   for (const user of DEV_USERS) {
@@ -794,6 +859,7 @@ function mustGet(map: Map<string, string>, key: string): string {
 async function main(): Promise<void> {
   await seedCatalog();
   await seedSubscriptionPlans();
+  await seedAdministration();
   await seedDevUsers();
 
   const [exercises, groups, equipment] = await Promise.all([
@@ -805,7 +871,8 @@ async function main(): Promise<void> {
     `Seed terminé : ${exercises} exercices, ${groups} groupes musculaires, ` +
       `${equipment} équipements.\n` +
       `Comptes de DÉVELOPPEMENT (jamais en production) :\n` +
-      DEV_USERS.map((user) => `  - ${user.email} / ${DEV_PASSWORD}\n`).join(''),
+      DEV_USERS.map((user) => `  - ${user.email} / ${DEV_PASSWORD}\n`).join('') +
+      `  - ${DEV_ADMIN.email} / ${DEV_ADMIN_PASSWORD} (admin)\n`,
   );
 }
 

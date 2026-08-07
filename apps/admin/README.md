@@ -15,5 +15,13 @@ pnpm typecheck  # tsc --noEmit
 pnpm test       # vitest + Testing Library
 ```
 
-L'authentification administrateur, les rôles et les permissions sont livrés à
-l'Étape 7 — la page `/login` est un emplacement documenté, pas une simulation.
+Étape 7 livrée : connexion administrateur réelle (`/login`, comptes séparés
+des comptes mobiles, jeton à audience dédiée en sessionStorage), gestion des
+utilisateurs (`/users` — recherche, fiche, suspension avec révocation des
+sessions, attribution manuelle du premium) et journal d'audit (`/audit`).
+Les réponses de l'API sont validées par les contrats Zod partagés
+(`@carlys/api-contracts`) ; le contrôle d'accès réel reste côté serveur (RBAC
+par permission), l'interface ne fait que refléter les refus (403).
+
+Compte de développement (seed, jamais en production) :
+`dev.admin@carlys.local` / `Carlys-Admin-2026!`.

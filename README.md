@@ -361,6 +361,8 @@ Politique complète et signalement de vulnérabilités : [SECURITY.md](./SECURIT
 
 **Étape 6 — Abonnements : terminée.** Le premium existe, et c'est le **serveur qui décide** : plans (`free`, `premium`) et correspondances produits par fournisseur en base, webhooks **Stripe** (signature `Stripe-Signature` HMAC vérifiée sur le corps brut, fenêtre anti-rejeu) et **RevenueCat** (Bearer dédié) — tous **idempotents** grâce au journal append-only `SubscriptionEvent` (unicité `(provider, externalEventId)` ; un échec de traitement est journalisé sur l'événement et retraitable par rejeu). Chaque événement projette l'état `Subscription` puis matérialise les **`UserEntitlement`** (accès maintenu jusqu'à la fin de période payée en cas d'impayé/résiliation, expiration réévaluée à chaque lecture, attributions manuelles jamais écrasées). API : `GET /subscriptions/me`, `GET /entitlements` — et le catalogue applique le droit `premium_exercises` : la fiche d'un exercice premium répond 403 sans abonnement. Côté app : écran **Abonnement** (plan effectif, état, droits verrouillés/actifs), écran d'exercice avec état « Exercice Premium » et renvoi vers l'abonnement. Aucun faux paiement : l'achat passera par les stores/Stripe, l'app ne fait qu'afficher l'état serveur.
 
+**Étape 7 — Administration : terminée.** Le back-office devient réel, avec des **comptes administrateurs séparés** des comptes mobiles (Argon2id, jeton JWT à **audience dédiée** `carlys-admin` — jamais interchangeable avec un jeton mobile, dans un sens comme dans l'autre) et un **RBAC par permissions** (`user:read`, `user:update`, `entitlement:grant`, `exercise:publish`, `audit:read`) seedé depuis le code avec les rôles `superadmin`, `support` et `content-manager`. API : synthèse plateforme, liste/fiche des utilisateurs, **suspension** (toutes les sessions révoquées immédiatement, reconnexion refusée), **attribution manuelle d'entitlements** (jamais écrasée par la synchro des webhooks), publication/dépublication d'exercices (cache catalogue invalidé), **journal d'audit** enrichi (acteur, ressource, `requestId`) et paginé. Côté `apps/admin` : connexion réelle, tableau utilisateurs avec recherche, fiche avec actions, journal d'audit — réponses validées par les contrats Zod partagés, le serveur restant seul décideur des accès.
+
 | Étape | Tranche verticale | Contenu principal | Statut |
 | --- | --- | --- | --- |
 | 1 | Fondation | Monorepo, outillage, sécurité de base, design system, CI | ✅ Terminée |
@@ -369,7 +371,7 @@ Politique complète et signalement de vulnérabilités : [SECURITY.md](./SECURIT
 | 4 | Séances | Offline-first Drift + file de synchronisation idempotente | ✅ Terminée |
 | 5 | Progression | Records, historique, graphiques | ✅ Terminée |
 | 6 | Abonnements | Entitlements côté serveur, RevenueCat possible, Stripe web, webhooks idempotents signés | ✅ Terminée |
-| 7 | Administration | Rôles, permissions, audit | À venir |
+| 7 | Administration | Rôles, permissions, audit | ✅ Terminée |
 
 ## Documentation
 

@@ -17,7 +17,7 @@ jamais une couche horizontale isolée.
 | 4 | Séances (offline-first Drift + file de synchronisation idempotente) | **Faite** |
 | 5 | Progression (records recalculés à la clôture, stats par période, mesures corporelles idempotentes) | **Faite** |
 | 6 | Abonnements (entitlements côté serveur, RevenueCat possible, Stripe web, webhooks idempotents signés) | **Faite** |
-| 7 | Administration (rôles, permissions, audit) | À venir |
+| 7 | Administration (comptes admin séparés, RBAC par permissions, audit) | **Faite** |
 
 ## Commandes essentielles
 

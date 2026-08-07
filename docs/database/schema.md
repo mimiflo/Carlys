@@ -26,7 +26,7 @@ migration manque par rapport au schéma.
 | Progression | `PersonalRecord`, `BodyMetric` — **implémenté** (migration `20260807040000_progress`, records recalculés à la clôture, mesures idempotentes) ; `ProgressGoal` et `ProgressSnapshot` différés (agrégats calculés à la volée) | Étape 5 ✅ |
 | Abonnements | `SubscriptionPlan`, `SubscriptionProduct`, `Subscription`, `SubscriptionEvent`, `UserEntitlement` — **implémenté** (migration `20260807064832_subscriptions`, conforme à la cible) | Étape 6 ✅ |
 | Notifications | `Notification`, `NotificationPreference`, `PushDevice` | Introduit avec l'intégration FCM réelle (au plus tôt Étape 4, `NotificationPreference` au plus tard Étape 6) |
-| Administration | `AuditLog`, `AdminUser`, `AdminRole`, `AdminPermission` | Étape 7 (`AuditLog` introduit dès l'Étape 2 pour les événements de sécurité — voir `docs/security/authentication.md`) |
+| Administration | `AdminUser`, `AdminRole`, `AdminPermission` (+ jointures), `AuditLog` enrichi (`actorType`, `resourceType`/`resourceId`, `requestId`) — **implémenté** (migration `20260807070624_administration` ; `AuditLog` introduit dès l'Étape 2) | Étape 7 ✅ |
 
 ## Conventions transverses
 
@@ -535,7 +535,17 @@ Jeton FCM enregistré pour un appareil.
 
 ---
 
-## Administration — Étape 7
+## Administration — Étape 7 (implémenté)
+
+> Implémenté (migration `20260807070624_administration`), conforme à la cible.
+> Précisions : `AdminUser.email` est un `String` unique normalisé en
+> minuscules par la couche application (même convention que `User`, pas de
+> `citext`) ; les jetons admin portent une **audience JWT dédiée**
+> (`carlys-admin`, 12 h, sans refresh — jamais interchangeables avec les
+> jetons mobiles) ; le RBAC est seedé depuis la liste `ADMIN_PERMISSIONS`
+> de `packages/api-contracts` (le code est la source de vérité) avec les
+> rôles `superadmin`, `support` et `content-manager` ; la suspension d'un
+> utilisateur révoque immédiatement toutes ses sessions.
 
 Back-office (`apps/admin`) : comptes **séparés** des comptes mobiles, RBAC, et
 journal d'audit immuable.

@@ -5,6 +5,14 @@ import { PrismaService } from '../../database/prisma/prisma.service';
 export interface AuditEntry {
   action: string;
   userId?: string;
+  /** USER par défaut ; ADMIN pour les actions du back-office. */
+  actorType?: 'USER' | 'ADMIN' | 'SYSTEM';
+  adminUserId?: string;
+  /** Référence LOGIQUE de la ressource touchée (sans clé étrangère). */
+  resourceType?: string;
+  resourceId?: string;
+  /** Corrélation avec les logs Pino et l'en-tête x-request-id. */
+  requestId?: string;
   ipAddress?: string;
   userAgent?: string;
   /** Contexte non sensible uniquement — jamais de mot de passe ni de jeton. */
@@ -29,7 +37,12 @@ export class AuditService {
       .create({
         data: {
           action: entry.action,
+          actorType: entry.actorType ?? 'USER',
           userId: entry.userId ?? null,
+          adminUserId: entry.adminUserId ?? null,
+          resourceType: entry.resourceType ?? null,
+          resourceId: entry.resourceId ?? null,
+          requestId: entry.requestId ?? null,
           ipAddress: entry.ipAddress ?? null,
           userAgent: entry.userAgent ?? null,
           metadata: entry.metadata ?? undefined,
