@@ -1,6 +1,7 @@
 import 'package:carlys_mobile/app/app.dart';
 import 'package:carlys_mobile/app/environment/app_environment.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
+import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
 import 'package:carlys_mobile/features/exercises/data/repositories/exercises_repository_impl.dart';
 import 'package:carlys_mobile/features/exercises/presentation/widgets/exercise_card.dart';
@@ -46,7 +47,12 @@ void main() {
     await tester.pumpAndSettle();
 
     // Accueil authentifié → bibliothèque.
-    await tester.tap(find.text('Bibliothèque d’exercices'));
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AppBottomBar),
+        matching: find.text('Exercices'),
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('Pompes'), findsOneWidget);
@@ -92,7 +98,12 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Bibliothèque d’exercices'));
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AppBottomBar),
+        matching: find.text('Exercices'),
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('Aucun exercice trouvé'), findsOneWidget);

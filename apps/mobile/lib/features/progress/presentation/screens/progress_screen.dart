@@ -18,7 +18,14 @@ class ProgressScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Progression')),
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.all(AppSpacing.md),
+          padding: EdgeInsets.fromLTRB(
+            AppSpacing.md,
+            AppSpacing.md,
+            AppSpacing.md,
+            AppSpacing.md +
+                AppBottomBar.height +
+                MediaQuery.paddingOf(context).bottom,
+          ),
           children: [
             const OverviewSection(),
             const SizedBox(height: AppSpacing.lg),

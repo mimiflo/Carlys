@@ -1,4 +1,4 @@
-import 'package:flutter/foundation.dart';
+import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
@@ -12,12 +12,14 @@ import '../../features/exercises/presentation/screens/exercise_detail_screen.dar
 import '../../features/exercises/presentation/screens/exercise_library_screen.dart';
 import '../../features/nutrition/presentation/screens/nutrition_screen.dart';
 import '../../features/onboarding/presentation/screens/splash_screen.dart';
+import '../../features/profile/presentation/screens/profile_screen.dart';
 import '../../features/progress/presentation/screens/progress_screen.dart';
 import '../../features/settings/presentation/screens/settings_screen.dart';
 import '../../features/subscription/presentation/screens/subscription_screen.dart';
 import '../../features/workout_history/presentation/screens/workout_detail_screen.dart';
 import '../../features/workout_history/presentation/screens/workout_history_screen.dart';
 import '../../features/workout_session/presentation/screens/active_workout_screen.dart';
+import '../shell/app_shell.dart';
 import 'app_routes.dart';
 
 const _authRoutes = {
@@ -26,16 +28,19 @@ const _authRoutes = {
   AppRoutes.forgotPassword,
 };
 
+final _rootNavigatorKey = GlobalKey<NavigatorState>();
+
 /// Routeur applicatif, gardé par l'état de session :
 ///  - session inconnue → splash (restauration en cours) ;
 ///  - non authentifié → écrans d'authentification uniquement ;
-///  - authentifié → jamais sur splash/login.
+///  - authentifié → coquille 5 onglets, écrans de détail plein écran.
 final appRouterProvider = Provider<GoRouter>((ref) {
   final refreshListenable = ValueNotifier(0);
   ref.onDispose(refreshListenable.dispose);
   ref.listen(authControllerProvider, (_, __) => refreshListenable.value++);
 
   final router = GoRouter(
+    navigatorKey: _rootNavigatorKey,
     initialLocation: AppRoutes.splash,
     debugLogDiagnostics: false,
     refreshListenable: refreshListenable,
@@ -73,70 +78,110 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         name: 'forgot-password',
         builder: (context, state) => const ForgotPasswordScreen(),
       ),
-      GoRoute(
-        path: AppRoutes.home,
-        name: 'home',
-        builder: (context, state) => const HomeScreen(),
-        routes: [
-          GoRoute(
-            path: 'sessions',
-            name: 'sessions',
-            builder: (context, state) => const SessionsScreen(),
-          ),
-          GoRoute(
-            path: 'exercises',
-            name: 'exercises',
-            builder: (context, state) => const ExerciseLibraryScreen(),
+
+      // ── Coquille : 5 onglets avec bottom bar ──────────────────────
+      StatefulShellRoute.indexedStack(
+        builder: (context, state, navigationShell) =>
+            AppShell(navigationShell: navigationShell),
+        branches: [
+          StatefulShellBranch(
             routes: [
               GoRoute(
-                path: ':idOrSlug',
-                name: 'exercise-detail',
-                builder: (context, state) => ExerciseDetailScreen(
-                  idOrSlug: state.pathParameters['idOrSlug'] ?? '',
-                ),
+                path: AppRoutes.home,
+                name: 'home',
+                builder: (context, state) => const HomeScreen(),
               ),
             ],
           ),
-          GoRoute(
-            path: 'workout',
-            name: 'active-workout',
-            builder: (context, state) => const ActiveWorkoutScreen(),
-          ),
-          GoRoute(
-            path: 'progress',
-            name: 'progress',
-            builder: (context, state) => const ProgressScreen(),
-          ),
-          GoRoute(
-            path: 'nutrition',
-            name: 'nutrition',
-            builder: (context, state) => const NutritionScreen(),
-          ),
-          GoRoute(
-            path: 'subscription',
-            name: 'subscription',
-            builder: (context, state) => const SubscriptionScreen(),
-          ),
-          GoRoute(
-            path: 'settings',
-            name: 'settings',
-            builder: (context, state) => const SettingsScreen(),
-          ),
-          GoRoute(
-            path: 'history',
-            name: 'history',
-            builder: (context, state) => const WorkoutHistoryScreen(),
+          StatefulShellBranch(
             routes: [
               GoRoute(
-                path: ':sessionId',
-                name: 'workout-detail',
-                builder: (context, state) => WorkoutDetailScreen(
-                  sessionId: state.pathParameters['sessionId'] ?? '',
-                ),
+                path: AppRoutes.exercises,
+                name: 'exercises',
+                builder: (context, state) => const ExerciseLibraryScreen(),
+                routes: [
+                  GoRoute(
+                    path: ':idOrSlug',
+                    name: 'exercise-detail',
+                    parentNavigatorKey: _rootNavigatorKey,
+                    builder: (context, state) => ExerciseDetailScreen(
+                      idOrSlug: state.pathParameters['idOrSlug'] ?? '',
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.progress,
+                name: 'progress',
+                builder: (context, state) => const ProgressScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.nutrition,
+                name: 'nutrition',
+                builder: (context, state) => const NutritionScreen(),
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.profile,
+                name: 'profile',
+                builder: (context, state) => const ProfileScreen(),
               ),
             ],
           ),
         ],
+      ),
+
+      // ── Plein écran, hors coquille (pas de bottom bar) ────────────
+      GoRoute(
+        path: AppRoutes.activeWorkout,
+        name: 'active-workout',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const ActiveWorkoutScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.history,
+        name: 'history',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const WorkoutHistoryScreen(),
+        routes: [
+          GoRoute(
+            path: ':sessionId',
+            name: 'workout-detail',
+            parentNavigatorKey: _rootNavigatorKey,
+            builder: (context, state) => WorkoutDetailScreen(
+              sessionId: state.pathParameters['sessionId'] ?? '',
+            ),
+          ),
+        ],
+      ),
+      GoRoute(
+        path: AppRoutes.sessions,
+        name: 'sessions',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const SessionsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.subscription,
+        name: 'subscription',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const SubscriptionScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.settings,
+        name: 'settings',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const SettingsScreen(),
       ),
     ],
   );

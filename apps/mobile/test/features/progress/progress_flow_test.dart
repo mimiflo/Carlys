@@ -70,8 +70,12 @@ void main() {
     await tester.pumpWidget(appWith(progress));
     await tester.pumpAndSettle();
 
-    await reveal(tester, find.text('Progression'));
-    await tester.tap(find.text('Progression'));
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AppBottomBar),
+        matching: find.text('Progrès'),
+      ),
+    );
     await tester.pumpAndSettle();
 
     // Statistiques de la période.
@@ -101,8 +105,12 @@ void main() {
     await tester.pumpWidget(appWith(progress));
     await tester.pumpAndSettle();
 
-    await reveal(tester, find.text('Progression'));
-    await tester.tap(find.text('Progression'));
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AppBottomBar),
+        matching: find.text('Progrès'),
+      ),
+    );
     await tester.pumpAndSettle();
 
     await reveal(tester, find.text('Aucune mesure enregistrée'));
@@ -135,8 +143,12 @@ void main() {
     await tester.pumpWidget(appWith(progress));
     await tester.pumpAndSettle();
 
-    await reveal(tester, find.text('Progression'));
-    await tester.tap(find.text('Progression'));
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AppBottomBar),
+        matching: find.text('Progrès'),
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('Statistiques indisponibles'), findsOneWidget);

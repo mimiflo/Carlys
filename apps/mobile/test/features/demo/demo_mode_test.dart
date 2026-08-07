@@ -1,6 +1,7 @@
 import 'package:carlys_mobile/app/app.dart';
 import 'package:carlys_mobile/app/environment/app_environment.dart';
 import 'package:carlys_mobile/demo/demo_overrides.dart';
+import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -58,7 +59,12 @@ void main() {
     await tester.pumpWidget(demoApp());
     await tester.pumpAndSettle();
 
-    await tester.tap(find.text('Bibliothèque d’exercices'));
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AppBottomBar),
+        matching: find.text('Exercices'),
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('Développé couché'), findsOneWidget);
@@ -69,8 +75,12 @@ void main() {
     await tester.pumpWidget(demoApp());
     await tester.pumpAndSettle();
 
-    await reveal(tester, find.text('Nutrition'));
-    await tester.tap(find.text('Nutrition'));
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AppBottomBar),
+        matching: find.text('Nutrition'),
+      ),
+    );
     await tester.pumpAndSettle();
 
     expect(find.text('Objectif quotidien'), findsOneWidget);
@@ -82,14 +92,23 @@ void main() {
     await tester.pumpWidget(demoApp());
     await tester.pumpAndSettle();
 
-    await reveal(tester, find.text('Progression'));
-    await tester.tap(find.text('Progression'));
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AppBottomBar),
+        matching: find.text('Progrès'),
+      ),
+    );
     await tester.pumpAndSettle();
     expect(find.text('Séances'), findsOneWidget);
 
-    await tester.pageBack();
+    // L'abonnement se rejoint depuis l'onglet Profil.
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AppBottomBar),
+        matching: find.text('Profil'),
+      ),
+    );
     await tester.pumpAndSettle();
-
     await reveal(tester, find.text('Abonnement'));
     await tester.tap(find.text('Abonnement'));
     await tester.pumpAndSettle();

@@ -29,7 +29,14 @@ class HomeScreen extends ConsumerWidget {
       appBar: AppBar(title: const Text('Carlys')),
       body: SafeArea(
         child: ListView(
-          padding: const EdgeInsets.all(AppSpacing.md),
+          padding: EdgeInsets.fromLTRB(
+            AppSpacing.md,
+            AppSpacing.md,
+            AppSpacing.md,
+            AppSpacing.md +
+                AppBottomBar.height +
+                MediaQuery.paddingOf(context).bottom,
+          ),
           children: [
             Text(
               user == null ? 'Bienvenue !' : 'Bienvenue, ${user.displayName} !',
@@ -81,7 +88,7 @@ class HomeScreen extends ConsumerWidget {
               icon: AppIcons.workout,
               variant: AppButtonVariant.secondary,
               isExpanded: true,
-              onPressed: () => context.push(AppRoutes.exercises),
+              onPressed: () => context.go(AppRoutes.exercises),
             ),
             const SizedBox(height: AppSpacing.sm),
             AppButton(
@@ -97,7 +104,7 @@ class HomeScreen extends ConsumerWidget {
               icon: AppIcons.progress,
               variant: AppButtonVariant.secondary,
               isExpanded: true,
-              onPressed: () => context.push(AppRoutes.progress),
+              onPressed: () => context.go(AppRoutes.progress),
             ),
             const SizedBox(height: AppSpacing.sm),
             AppButton(
@@ -105,7 +112,7 @@ class HomeScreen extends ConsumerWidget {
               icon: AppIcons.nutrition,
               variant: AppButtonVariant.secondary,
               isExpanded: true,
-              onPressed: () => context.push(AppRoutes.nutrition),
+              onPressed: () => context.go(AppRoutes.nutrition),
             ),
             const SizedBox(height: AppSpacing.xl),
             Text('Compte', style: theme.textTheme.titleLarge),

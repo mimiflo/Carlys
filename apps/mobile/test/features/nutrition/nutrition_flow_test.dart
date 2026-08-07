@@ -1,6 +1,7 @@
 import 'package:carlys_mobile/app/app.dart';
 import 'package:carlys_mobile/app/environment/app_environment.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
+import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
 import 'package:carlys_mobile/features/nutrition/data/repositories/nutrition_repository_impl.dart';
 import 'package:carlys_mobile/features/nutrition/domain/entities/nutrition.dart';
@@ -43,8 +44,12 @@ Future<void> reveal(WidgetTester tester, Finder item) async {
 
 Future<void> openNutrition(WidgetTester tester) async {
   await tester.pumpAndSettle();
-  await reveal(tester, find.text('Nutrition'));
-  await tester.tap(find.text('Nutrition'));
+  await tester.tap(
+    find.descendant(
+      of: find.byType(AppBottomBar),
+      matching: find.text('Nutrition'),
+    ),
+  );
   await tester.pumpAndSettle();
 }
 
@@ -84,6 +89,7 @@ void main() {
       await tester.pumpWidget(appWith(nutrition));
       await openNutrition(tester);
 
+      await reveal(tester, find.text('Homme'));
       await tester.tap(find.text('Homme'));
       await tester.pumpAndSettle();
 

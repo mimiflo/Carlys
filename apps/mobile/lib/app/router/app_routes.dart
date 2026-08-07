@@ -4,17 +4,22 @@ abstract final class AppRoutes {
   static const String login = '/login';
   static const String register = '/register';
   static const String forgotPassword = '/forgot-password';
+
+  // Onglets de la coquille (bottom bar)
   static const String home = '/home';
-  static const String sessions = '/home/sessions';
-  static const String exercises = '/home/exercises';
-  static const String activeWorkout = '/home/workout';
-  static const String history = '/home/history';
-  static const String progress = '/home/progress';
-  static const String nutrition = '/home/nutrition';
-  static const String subscription = '/home/subscription';
-  static const String settings = '/home/settings';
+  static const String exercises = '/exercises';
+  static const String progress = '/progress';
+  static const String nutrition = '/nutrition';
+  static const String profile = '/profile';
 
-  static String exerciseDetail(String idOrSlug) => '/home/exercises/$idOrSlug';
+  // Plein écran, hors coquille (pas de bottom bar)
+  static const String activeWorkout = '/workout';
+  static const String history = '/history';
+  static const String sessions = '/sessions';
+  static const String subscription = '/subscription';
+  static const String settings = '/settings';
 
-  static String workoutDetail(String sessionId) => '/home/history/$sessionId';
+  static String exerciseDetail(String idOrSlug) => '/exercises/$idOrSlug';
+
+  static String workoutDetail(String sessionId) => '/history/$sessionId';
 }

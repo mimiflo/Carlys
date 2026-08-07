@@ -44,8 +44,16 @@ class _NutritionContent extends StatelessWidget {
     final theme = Theme.of(context);
     final metabolism = report.metabolism;
 
+    final bottomInset =
+        AppBottomBar.height + MediaQuery.paddingOf(context).bottom;
+
     return ListView(
-      padding: const EdgeInsets.all(AppSpacing.md),
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        AppSpacing.md,
+        AppSpacing.md,
+        AppSpacing.md + bottomInset,
+      ),
       children: [
         AppCard(
           child: Column(

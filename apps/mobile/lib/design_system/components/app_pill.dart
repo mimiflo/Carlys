@@ -1,0 +1,81 @@
+import 'package:flutter/material.dart';
+
+import '../colors/app_colors.dart';
+import '../typography/app_typography.dart';
+
+/// Ton d'une pastille de la refonte.
+enum AppPillTone { neutral, accent, primary }
+
+/// Pastille stadium : durée, groupe musculaire, filtre…
+/// Accent = fond lime .12 + bordure .28 ; neutre = blanc .07.
+class AppPill extends StatelessWidget {
+  const AppPill({
+    required this.label,
+    this.tone = AppPillTone.neutral,
+    this.mono = false,
+    this.onTap,
+    this.selected = false,
+    super.key,
+  });
+
+  final String label;
+  final AppPillTone tone;
+
+  /// Vrai pour les valeurs chiffrées (« 52 MIN ») — rendu mono MAJUSCULES.
+  final bool mono;
+
+  /// Pastille-filtre interactive.
+  final VoidCallback? onTap;
+  final bool selected;
+
+  @override
+  Widget build(BuildContext context) {
+    final effectiveTone = selected ? AppPillTone.accent : tone;
+    final (background, borderColor, textColor) = switch (effectiveTone) {
+      AppPillTone.accent => (
+          AppColors.accentBadgeBg,
+          AppColors.accentBadgeBorder,
+          AppColors.accent,
+        ),
+      AppPillTone.primary => (
+          AppColors.primaryCardSoft,
+          AppColors.primaryLightBorder,
+          AppColors.primaryLight,
+        ),
+      AppPillTone.neutral => (
+          AppColors.neutralBadgeBg,
+          Colors.transparent,
+          AppColors.neutralBadgeText,
+        ),
+    };
+
+    final style = mono
+        ? AppTypography.labelMono.copyWith(color: textColor)
+        : AppTypography.label.copyWith(fontSize: 11, color: textColor);
+
+    final pill = Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 7),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: borderColor),
+      ),
+      child: Text(mono ? label.toUpperCase() : label, style: style),
+    );
+
+    if (onTap == null) {
+      return pill;
+    }
+    return Semantics(
+      button: true,
+      selected: selected,
+      child: GestureDetector(
+        onTap: onTap,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: 32),
+          child: pill,
+        ),
+      ),
+    );
+  }
+}

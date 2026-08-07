@@ -4,14 +4,23 @@
 library;
 
 export 'colors/app_colors.dart';
+export 'components/app_animated_border_card.dart';
 export 'components/app_badge.dart';
+export 'components/app_bottom_bar.dart';
 export 'components/app_button.dart';
 export 'components/app_card.dart';
 export 'components/app_empty_state.dart';
 export 'components/app_error_state.dart';
+export 'components/app_form_ring.dart';
+export 'components/app_gauge.dart';
+export 'components/app_glass_card.dart';
+export 'components/app_list_row.dart';
 export 'components/app_loading_indicator.dart';
 export 'components/app_password_field.dart';
+export 'components/app_pill.dart';
 export 'components/app_search_field.dart';
+export 'components/app_section_label.dart';
+export 'components/app_stat_tile.dart';
 export 'components/app_text_field.dart';
 export 'icons/app_icons.dart';
 export 'motion/app_motion.dart';

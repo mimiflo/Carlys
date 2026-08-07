@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/app_routes.dart';
+
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/exercise.dart';
 import '../controllers/exercise_library_controller.dart';
@@ -132,8 +134,16 @@ class _ExerciseList extends ConsumerWidget {
       );
     }
 
+    final bottomInset =
+        AppBottomBar.height + MediaQuery.paddingOf(context).bottom;
+
     return ListView.separated(
-      padding: const EdgeInsets.all(AppSpacing.md),
+      padding: EdgeInsets.fromLTRB(
+        AppSpacing.md,
+        AppSpacing.md,
+        AppSpacing.md,
+        AppSpacing.md + bottomInset,
+      ),
       itemCount: state.items.length + (state.hasMore ? 1 : 0),
       separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
       itemBuilder: (context, index) {
@@ -151,7 +161,7 @@ class _ExerciseList extends ConsumerWidget {
         final exercise = state.items[index];
         return ExerciseCard(
           exercise: exercise,
-          onTap: () => context.push('/home/exercises/${exercise.slug}'),
+          onTap: () => context.push(AppRoutes.exerciseDetail(exercise.slug)),
         );
       },
     );
