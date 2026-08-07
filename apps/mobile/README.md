@@ -63,6 +63,16 @@ manuel) construit cet APK et le publie sur la release `demo-latest`.
   (voir `lib/features/README.md`) ;
 - `lib/shared/` — modèles, providers et widgets transverses.
 
+## Refonte « premium dark-first »
+
+L'interface suit le handoff Claude Design (10 écrans, tokens, scènes 3D) :
+fond `#06060C`, chiffres en JetBrains Mono tabulaire, lime réservé à UNE
+action par écran, violet purement atmosphérique. Les scènes 3D (cœur
+battant cardioïde, hélice ADN) sont des `CustomPainter`/`drawVertices`
+sans dépendance externe — maillage généré à l'`initState`, buffers
+réécrits par frame, pose statique si la réduction d'animations système
+est active.
+
 ## Captures d'écran
 
 Une galerie d'écrans (données factices, rendu par le moteur de test) se

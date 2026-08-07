@@ -43,6 +43,18 @@ Future<void> reveal(WidgetTester tester, Finder item) async {
 }
 
 void main() {
+  setUp(() {
+    // Les scènes 3D (cœur, hélice) bouclent en continu : réduction
+    // d'animations pour que pumpAndSettle converge.
+    TestWidgetsFlutterBinding.instance.platformDispatcher
+        .accessibilityFeaturesTestValue = FakeAccessibilityFeatures.allOn;
+  });
+
+  tearDown(() {
+    TestWidgetsFlutterBinding.instance.platformDispatcher
+        .clearAccessibilityFeaturesTestValue();
+  });
+
   testWidgets('parcours : accueil → progression (stats, records, poids)',
       (tester) async {
     final progress = FakeProgressRepository(

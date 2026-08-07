@@ -12,6 +12,18 @@ import '../support/fake_auth_repository.dart';
 import '../support/fake_workout_repository.dart';
 
 void main() {
+  setUp(() {
+    // Les scènes 3D (cœur, hélice) bouclent en continu : réduction
+    // d'animations pour que pumpAndSettle converge.
+    TestWidgetsFlutterBinding.instance.platformDispatcher
+        .accessibilityFeaturesTestValue = FakeAccessibilityFeatures.allOn;
+  });
+
+  tearDown(() {
+    TestWidgetsFlutterBinding.instance.platformDispatcher
+        .clearAccessibilityFeaturesTestValue();
+  });
+
   Widget buildApp(FakeAuthRepository repository) {
     return ProviderScope(
       overrides: [

@@ -29,6 +29,7 @@ class AppGauge extends StatelessWidget {
             alignment: Alignment.centerLeft,
             child: FractionallySizedBox(
               widthFactor: progress.clamp(0.0, 1.0),
+              heightFactor: 1,
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   color: color,

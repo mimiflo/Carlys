@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../design_system/design_system.dart';
 import '../../../../design_system/scenes/app_scene_container.dart';
+import '../../../../design_system/scenes/heart_scene.dart';
 import '../../domain/entities/subscription.dart';
 import '../controllers/subscription_controllers.dart';
 
@@ -33,7 +34,7 @@ class SubscriptionScreen extends ConsumerWidget {
               size: 300,
               opacity: 0.55,
               verticalFadeStops: [0.0, 0.22, 0.58, 0.90],
-              child: AppSceneHalo(),
+              child: HeartScene(),
             ),
           ),
           const Positioned.fill(child: AppSceneScrim.lateral()),

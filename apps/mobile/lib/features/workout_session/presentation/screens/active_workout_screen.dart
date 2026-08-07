@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/app_routes.dart';
 import '../../../../design_system/design_system.dart';
 import '../../../../design_system/scenes/app_scene_container.dart';
+import '../../../../design_system/scenes/heart_scene.dart';
 import '../../domain/entities/workout.dart';
 import '../controllers/workout_controllers.dart';
 import '../widgets/active_set_row.dart';
@@ -36,7 +37,7 @@ class ActiveWorkoutScreen extends ConsumerWidget {
                 size: 360,
                 opacity: 0.32,
                 verticalFadeStops: [0.0, 0.02, 0.40, 0.82],
-                child: AppSceneHalo(),
+                child: HeartScene(),
               ),
             ),
           ),

@@ -6,6 +6,7 @@ import '../../../../app/router/app_routes.dart';
 import '../../../../core/synchronization/sync_lifecycle.dart';
 import '../../../../design_system/design_system.dart';
 import '../../../../design_system/scenes/app_scene_container.dart';
+import '../../../../design_system/scenes/heart_scene.dart';
 import '../../../authentication/presentation/controllers/auth_controller.dart';
 import '../../../nutrition/presentation/controllers/nutrition_controllers.dart';
 import '../../../workout_session/presentation/controllers/workout_controllers.dart';
@@ -49,7 +50,7 @@ class HomeScreen extends ConsumerWidget {
               size: 330,
               opacity: 0.9,
               verticalFadeStops: [0.0, 0.18, 0.56, 0.90],
-              child: AppSceneHalo(),
+              child: HeartScene(),
             ),
           ),
           const Positioned.fill(child: AppSceneScrim.vertical()),

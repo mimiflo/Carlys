@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/app_routes.dart';
 import '../../../../design_system/design_system.dart';
 import '../../../../design_system/scenes/app_scene_container.dart';
+import '../../../../design_system/scenes/heart_scene.dart';
 import '../../../nutrition/domain/entities/nutrition.dart';
 import '../../../nutrition/presentation/controllers/nutrition_controllers.dart';
 import '../widgets/onboarding_option_card.dart';
@@ -98,7 +99,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 size: 360,
                 opacity: 0.42,
                 verticalFadeStops: [0.0, 0.22, 0.58, 0.88],
-                child: AppSceneHalo(),
+                child: HeartScene(),
               ),
             ),
           ),

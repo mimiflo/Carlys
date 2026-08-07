@@ -13,6 +13,7 @@ import 'package:carlys_mobile/app/app.dart';
 import 'package:carlys_mobile/app/environment/app_environment.dart';
 import 'package:carlys_mobile/core/errors/app_exception.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
+import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
 import 'package:carlys_mobile/features/exercises/data/repositories/exercises_repository_impl.dart';
 import 'package:carlys_mobile/features/exercises/domain/entities/exercise.dart';
@@ -153,6 +154,14 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
+  // Les scènes 3D bouclent en continu : pumps BORNÉS uniquement, calés
+  // sur le pic de systole du battement (~80 ms) pour de belles captures.
+  Future<void> settle(WidgetTester tester) async {
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 350));
+    await tester.pump(const Duration(milliseconds: 80));
+  }
+
   Future<void> pumpApp(
     WidgetTester tester, {
     bool authenticated = true,
@@ -194,7 +203,8 @@ void main() {
         child: const CarlysApp(),
       ),
     );
-    await tester.pumpAndSettle();
+    await settle(tester);
+    await settle(tester);
   }
 
   Future<void> capture(WidgetTester tester, String name) async {
@@ -204,11 +214,14 @@ void main() {
     );
   }
 
-  Future<void> goHomeButton(WidgetTester tester, String label) async {
-    await tester.scrollUntilVisible(find.text(label), 150);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text(label));
-    await tester.pumpAndSettle();
+  Future<void> goTab(WidgetTester tester, String label) async {
+    await tester.tap(
+      find.descendant(
+        of: find.byType(AppBottomBar),
+        matching: find.text(label),
+      ),
+    );
+    await settle(tester);
   }
 
   testWidgets('connexion', (tester) async {
@@ -223,24 +236,25 @@ void main() {
 
   testWidgets('bibliothèque + fiche exercice', (tester) async {
     await pumpApp(tester);
-    await goHomeButton(tester, 'Bibliothèque d’exercices');
+    await goTab(tester, 'Exercices');
     await capture(tester, '03-bibliotheque');
 
     await tester.tap(find.widgetWithText(ExerciseCard, 'Squat'));
-    await tester.pumpAndSettle();
+    await settle(tester);
     await capture(tester, '04-fiche-exercice');
   });
 
   testWidgets('séance active', (tester) async {
     final workouts = FakeWorkoutRepository()..active = activeWorkoutOf();
     await pumpApp(tester, workouts: workouts);
-    await goHomeButton(tester, 'Reprendre la séance');
+    await tester.tap(find.text('Reprendre la séance'));
+    await settle(tester);
     await capture(tester, '05-seance-active');
   });
 
   testWidgets('progression', (tester) async {
     await pumpApp(tester);
-    await goHomeButton(tester, 'Progression');
+    await goTab(tester, 'Progrès');
     await capture(tester, '06-progression');
 
     await tester.scrollUntilVisible(
@@ -248,33 +262,25 @@ void main() {
       150,
       scrollable: find.byType(Scrollable).last,
     );
-    await tester.pumpAndSettle();
+    await settle(tester);
     await capture(tester, '07-progression-poids');
   });
 
   testWidgets('abonnement premium', (tester) async {
     await pumpApp(tester, premium: true);
-    await goHomeButton(tester, 'Abonnement');
+    await goTab(tester, 'Profil');
+    await tester.tap(find.text('Abonnement'));
+    await settle(tester);
     await capture(tester, '08-abonnement');
   });
 
-  // L'hélice ADN tourne en boucle : pumps bornés uniquement (jamais
-  // pumpAndSettle une fois l'écran nutrition affiché).
-  Future<void> goNutrition(WidgetTester tester) async {
-    await tester.scrollUntilVisible(find.text('Nutrition'), 150);
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Nutrition'));
-    await tester.pump();
-    await tester.pump(const Duration(milliseconds: 700));
-  }
-
   testWidgets('nutrition — métabolisme complet', (tester) async {
     await pumpApp(tester);
-    await goNutrition(tester);
+    await goTab(tester, 'Nutrition');
     await capture(tester, '10-nutrition-metabolisme');
 
     await tester.scrollUntilVisible(
-      find.text('Macro-nutriments'),
+      find.text('Macros'),
       150,
       scrollable: find.byType(Scrollable).last,
     );
@@ -284,37 +290,28 @@ void main() {
 
   testWidgets('nutrition — profil à compléter', (tester) async {
     await pumpApp(tester, nutrition: nutritionOf(complete: false));
-    await goNutrition(tester);
+    await goTab(tester, 'Nutrition');
     await capture(tester, '12-nutrition-profil');
   });
 
-  testWidgets('réglages + thème sombre', (tester) async {
-    await pumpApp(tester);
-    await goHomeButton(tester, 'Réglages');
-    await capture(tester, '13-reglages');
+  testWidgets('profil + réglages + thème clair', (tester) async {
+    await pumpApp(tester, premium: true);
+    await goTab(tester, 'Profil');
+    await capture(tester, '13-profil');
 
-    await tester.tap(find.text('Sombre'));
-    await tester.pumpAndSettle();
-    await capture(tester, '14-reglages-sombre');
-
-    await tester.pageBack();
-    await tester.pumpAndSettle();
-    await capture(tester, '15-accueil-sombre');
-  });
-
-  testWidgets('nutrition en thème sombre OLED', (tester) async {
-    SharedPreferences.setMockInitialValues({'apparence.theme': 'oled'});
-    await pumpApp(tester);
-    await goNutrition(tester);
-    await capture(tester, '16-nutrition-oled');
+    await tester.scrollUntilVisible(find.text('Apparence'), 150);
+    await settle(tester);
+    await tester.tap(find.text('Apparence'));
+    await settle(tester);
+    await capture(tester, '14-reglages');
   });
 
   testWidgets('paywall exercice premium', (tester) async {
     final gated = _PremiumGated([summary('id-1', 'Balancier kettlebell')]);
     await pumpApp(tester, exercises: gated);
-    await goHomeButton(tester, 'Bibliothèque d’exercices');
+    await goTab(tester, 'Exercices');
     await tester.tap(find.text('Balancier kettlebell'));
-    await tester.pumpAndSettle();
+    await settle(tester);
     await capture(tester, '09-exercice-premium');
   });
 }

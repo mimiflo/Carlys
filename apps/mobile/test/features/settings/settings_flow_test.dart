@@ -57,6 +57,18 @@ ThemeMode themeModeOf(WidgetTester tester) =>
 
 void main() {
   setUp(() {
+    // Les scènes 3D (cœur, hélice) bouclent en continu : réduction
+    // d'animations pour que pumpAndSettle converge.
+    TestWidgetsFlutterBinding.instance.platformDispatcher
+        .accessibilityFeaturesTestValue = FakeAccessibilityFeatures.allOn;
+  });
+
+  tearDown(() {
+    TestWidgetsFlutterBinding.instance.platformDispatcher
+        .clearAccessibilityFeaturesTestValue();
+  });
+
+  setUp(() {
     SharedPreferences.setMockInitialValues({});
   });
 
