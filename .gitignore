@@ -53,3 +53,6 @@ ds-bundle/
 .design-sync/.cache/
 .design-sync/learnings/
 .design-sync/node_modules
+
+# Artefact Redis local (jamais versionné)
+dump.rdb
