@@ -7,5 +7,12 @@ abstract final class AppSpacing {
   static const double lg = 24;
   static const double xl = 32;
   static const double xxl = 48;
+
+  // Refonte : gouttière d'écran et gaps récurrents
+  static const double gutter = 22;
+  static const double gapTile = 10;
+  static const double gapRow = 14;
+  static const double gapSection = 26;
+  static const double touchTarget = 48;
   static const double xxxl = 64;
 }

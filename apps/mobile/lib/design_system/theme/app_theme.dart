@@ -56,17 +56,19 @@ abstract final class AppTheme {
       ),
       filledButtonTheme: FilledButtonThemeData(
         style: FilledButton.styleFrom(
-          minimumSize: const Size(64, 48),
+          minimumSize: const Size(64, AppSpacing.touchTarget),
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          shape: const RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
+          shape:
+              const RoundedRectangleBorder(borderRadius: AppRadius.buttonAll),
           textStyle: buttonTextStyle,
         ),
       ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
-          minimumSize: const Size(64, 48),
+          minimumSize: const Size(64, AppSpacing.touchTarget),
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          shape: const RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
+          shape:
+              const RoundedRectangleBorder(borderRadius: AppRadius.buttonAll),
           textStyle: buttonTextStyle,
         ),
       ),
@@ -84,15 +86,15 @@ abstract final class AppTheme {
           vertical: AppSpacing.sm,
         ),
         border: const OutlineInputBorder(
-          borderRadius: AppRadius.mdAll,
+          borderRadius: AppRadius.buttonAll,
           borderSide: BorderSide.none,
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: AppRadius.mdAll,
+          borderRadius: AppRadius.buttonAll,
           borderSide: BorderSide(color: colorScheme.primary, width: 2),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: AppRadius.mdAll,
+          borderRadius: AppRadius.buttonAll,
           borderSide: BorderSide(color: colorScheme.error),
         ),
       ),

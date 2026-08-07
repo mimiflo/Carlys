@@ -97,7 +97,9 @@ void main() {
 
     // Le bouton vit en bas de l'accueil : le rendre visible avant le tap.
     await tester.scrollUntilVisible(find.text('Se déconnecter'), 150);
-    await tester.tap(find.text('Se déconnecter'));
+    await tester.ensureVisible(find.text('Se déconnecter'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Se déconnecter'), warnIfMissed: false);
     await tester.pumpAndSettle();
 
     expect(repository.logoutCalls, 1);

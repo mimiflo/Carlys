@@ -63,8 +63,30 @@ dev_dependencies:
 flutter:
   uses-material-design: true
 
-  # Les dossiers d'assets (assets/animations, assets/rive, assets/images…)
-  # seront déclarés ici dès qu'ils contiendront de vrais fichiers.
+  # Polices de la refonte (licences OFL dans assets/fonts/) :
+  # Inter pour le texte, JetBrains Mono pour TOUS les chiffres (tabulaires).
+  fonts:
+    - family: Inter
+      fonts:
+        - asset: assets/fonts/Inter-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/Inter-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/Inter-SemiBold.ttf
+          weight: 600
+        - asset: assets/fonts/Inter-Bold.ttf
+          weight: 700
+    - family: JetBrainsMono
+      fonts:
+        - asset: assets/fonts/JetBrainsMono-Regular.ttf
+          weight: 400
+        - asset: assets/fonts/JetBrainsMono-Medium.ttf
+          weight: 500
+        - asset: assets/fonts/JetBrainsMono-Bold.ttf
+          weight: 700
+
+  # Les autres dossiers d'assets (animations, images…) seront déclarés ici
+  # dès qu'ils contiendront de vrais fichiers.
 
   # Firebase Cloud Messaging et Sentry seront ajoutés avec la configuration
   # de projet correspondante (google-services.json, DSN) — pas de dépendance

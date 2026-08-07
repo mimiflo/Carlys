@@ -1,10 +1,16 @@
 import 'dart:ui';
 
-/// Palette Carlys.
+/// Palette Carlys — refonte « premium dark-first ».
 ///
 /// Source de vérité : packages/design-tokens/src/tokens.json.
 /// Toute nouvelle couleur doit être ajoutée aux tokens PUIS reflétée ici —
 /// jamais codée en dur dans un écran.
+///
+/// Règles d'usage (handoff/README.md) :
+///  - l'accent lime ne sert qu'à UNE action ou métrique clé par écran ;
+///  - le violet porte l'atmosphère (halos, gradients, scènes 3D), pas les
+///    boutons ;
+///  - aucune ombre portée sur les cartes.
 abstract final class AppColors {
   // Marque
   static const Color primary = Color(0xFF5B5BF6);
@@ -32,13 +38,42 @@ abstract final class AppColors {
   static const Color warning = Color(0xFFF59E0B);
   static const Color danger = Color(0xFFEF4444);
   static const Color info = Color(0xFF3B82F6);
+  static const Color logout = Color(0xFFFF6B6B);
 
-  // Surfaces
+  // Surfaces — thème sombre de RÉFÉRENCE (dark-first)
+  static const Color darkBackground = Color(0xFF06060C);
+  static const Color darkSurface = Color(0xFF101019);
+  static const Color darkSurfaceAlt = Color(0xFF16161F);
+
+  /// Cartes posées sur une scène 3D uniquement (avec BackdropFilter blur 24).
+  static const Color darkGlass = Color(0xB8101019);
+
+  // Rôles de texte et traits du thème sombre
+  static const Color darkTextPrimary = Color(0xFFF2F2F6);
+  static const Color darkTextSecondary = Color(0xFF9A9AAE);
+  static const Color darkTextTertiary = Color(0xFF7A7A8C);
+  static const Color darkIconInactive = Color(0xFF6A6A7E);
+  static const Color darkBorder = Color(0x12FFFFFF);
+  static const Color darkBorderStrong = Color(0x24FFFFFF);
+
+  /// Trou central de l'anneau de forme.
+  static const Color ringHole = Color(0xFF0C0C15);
+
+  // Surfaces — thème clair (secondaire) et OLED
   static const Color lightBackground = Color(0xFFFAFAFC);
   static const Color lightSurface = Color(0xFFFFFFFF);
   static const Color lightSurfaceAlt = Color(0xFFF4F4F6);
-  static const Color darkBackground = Color(0xFF0E0E1A);
-  static const Color darkSurface = Color(0xFF171727);
-  static const Color darkSurfaceAlt = Color(0xFF1F1F33);
   static const Color oledBackground = Color(0xFF000000);
+
+  // Teintes dérivées récurrentes (handoff/design-tokens.md)
+  static const Color primaryHalo = Color(0x4D5B5BF6); // primary .30
+  static const Color primaryCardStrong = Color(0x475B5BF6); // primary .28
+  static const Color primaryCardSoft = Color(0x0D5B5BF6); // primary .05
+  static const Color primaryFill = Color(0x735B5BF6); // primary .45
+  static const Color accentBadgeBg = Color(0x1FC6F432); // accent .12
+  static const Color accentBadgeBorder = Color(0x47C6F432); // accent .28
+  static const Color neutralBadgeBg = Color(0x12FFFFFF); // blanc .07
+  static const Color neutralBadgeText = Color(0xFFD3D3E4);
+  static const Color gaugeTrack = Color(0x12FFFFFF); // blanc .07
+  static const Color primaryLightBorder = Color(0x4D8A8AFA); // primaryLight .30
 }
