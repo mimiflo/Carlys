@@ -26,6 +26,7 @@ import request from 'supertest';
 import { type App } from 'supertest/types';
 import { AppModule } from '../src/app/app.module';
 import { configureApp } from '../src/app/configure-app';
+import { ensureExerciseFixture } from './support/exercise-fixture';
 
 const ADMIN_PASSWORD = 'MotDePasseAdmin42!';
 
@@ -119,9 +120,8 @@ describe('Administration (e2e)', () => {
     memberId = member.user.id;
     witnessToken = (await register(witnessEmail)).tokens.accessToken;
 
-    const freeExercise = await prisma.exercise.findFirstOrThrow({
-      where: { isPremium: false, isPublished: true },
-    });
+    // Fixture dédiée : la suite ne dépend jamais du seed (base CI vierge).
+    const freeExercise = await ensureExerciseFixture(prisma, 'e2e-admin-moderation');
     freeExerciseSlug = freeExercise.slug;
     freeExerciseId = freeExercise.id;
   });
@@ -133,10 +133,7 @@ describe('Administration (e2e)', () => {
     });
     await prisma.adminUser.deleteMany({ where: { email: { in: [superEmail, supportEmail] } } });
     await prisma.user.deleteMany({ where: { email: { in: [memberEmail, witnessEmail] } } });
-    await prisma.exercise.update({
-      where: { id: freeExerciseId },
-      data: { isPublished: true },
-    });
+    await prisma.exercise.deleteMany({ where: { slug: 'e2e-admin-moderation' } });
     await prisma.$disconnect();
     await app.close();
   });

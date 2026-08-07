@@ -21,6 +21,7 @@ import request from 'supertest';
 import { type App } from 'supertest/types';
 import { AppModule } from '../src/app/app.module';
 import { configureApp } from '../src/app/configure-app';
+import { ensureExerciseFixture } from './support/exercise-fixture';
 
 /**
  * Séances offline-first : chaque écriture est REJOUÉE pour vérifier
@@ -61,6 +62,7 @@ describe('Séances (e2e)', () => {
   afterAll(async () => {
     // Nettoyage strictement limité à cette suite (les e2e partagent la base).
     await prisma.user.deleteMany({ where: { email: { in: [userEmail, otherEmail] } } });
+    await prisma.exercise.deleteMany({ where: { slug: 'e2e-workouts-exercice' } });
     await prisma.$disconnect();
     await app.close();
   });
@@ -100,9 +102,8 @@ describe('Séances (e2e)', () => {
   });
 
   it('ajoute une série depuis le catalogue et REJOUE l’ajout sans doublon', async () => {
-    const exercise = await prisma.exercise.findFirstOrThrow({
-      where: { isPublished: true },
-    });
+    // Fixture dédiée : la suite ne dépend jamais du seed (base CI vierge).
+    const exercise = await ensureExerciseFixture(prisma, 'e2e-workouts-exercice');
     const payload = {
       id: setId,
       exerciseId: exercise.id,

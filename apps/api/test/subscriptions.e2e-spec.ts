@@ -21,6 +21,7 @@ import request from 'supertest';
 import { type App } from 'supertest/types';
 import { AppModule } from '../src/app/app.module';
 import { configureApp } from '../src/app/configure-app';
+import { ensureExerciseFixture } from './support/exercise-fixture';
 
 const STRIPE_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
 const REVENUECAT_SECRET = process.env.REVENUECAT_WEBHOOK_SECRET;
@@ -125,8 +126,9 @@ describe('Abonnements (e2e)', () => {
       });
     }
 
-    const premiumExercise = await prisma.exercise.findFirstOrThrow({
-      where: { isPremium: true, isPublished: true },
+    // Fixture dédiée : la suite ne dépend jamais du seed (base CI vierge).
+    const premiumExercise = await ensureExerciseFixture(prisma, 'e2e-subs-premium', {
+      isPremium: true,
     });
     premiumExerciseSlug = premiumExercise.slug;
   });
@@ -137,6 +139,7 @@ describe('Abonnements (e2e)', () => {
       where: { externalEventId: { startsWith: eventPrefix } },
     });
     await prisma.user.deleteMany({ where: { email: { in: [userEmail, rcEmail] } } });
+    await prisma.exercise.deleteMany({ where: { slug: 'e2e-subs-premium' } });
     await prisma.$disconnect();
     await app.close();
   });

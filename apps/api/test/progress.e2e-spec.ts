@@ -21,6 +21,7 @@ import request from 'supertest';
 import { type App } from 'supertest/types';
 import { AppModule } from '../src/app/app.module';
 import { configureApp } from '../src/app/configure-app';
+import { ensureExerciseFixture } from './support/exercise-fixture';
 
 /**
  * Progression : records recalculés à la clôture, statistiques par période,
@@ -65,7 +66,8 @@ describe('Progression (e2e)', () => {
     accessToken = data<AuthResult>((await register(userEmail)).body).tokens.accessToken;
     otherAccessToken = data<AuthResult>((await register(otherEmail)).body).tokens.accessToken;
 
-    const exercise = await prisma.exercise.findFirstOrThrow({ where: { isPublished: true } });
+    // Fixture dédiée : la suite ne dépend jamais du seed (base CI vierge).
+    const exercise = await ensureExerciseFixture(prisma, 'e2e-progress-exercice');
     exerciseId = exercise.id;
     exerciseName = exercise.name;
   });
@@ -73,6 +75,7 @@ describe('Progression (e2e)', () => {
   afterAll(async () => {
     // Nettoyage strictement limité à cette suite (les e2e partagent la base).
     await prisma.user.deleteMany({ where: { email: { in: [userEmail, otherEmail] } } });
+    await prisma.exercise.deleteMany({ where: { slug: 'e2e-progress-exercice' } });
     await prisma.$disconnect();
     await app.close();
   });
