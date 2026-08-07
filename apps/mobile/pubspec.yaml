@@ -36,6 +36,9 @@ dependencies:
   # Sécurité locale
   flutter_secure_storage: ^9.2.2
 
+  # Préférences UI non sensibles (thème…) — solution standard de persistance
+  shared_preferences: ^2.3.2
+
   # Visualisation & animations
   fl_chart: ^0.69.0
   rive: ^0.13.15

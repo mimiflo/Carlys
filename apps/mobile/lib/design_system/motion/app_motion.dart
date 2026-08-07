@@ -8,6 +8,9 @@ abstract final class AppMotion {
   static const Duration slow = Duration(milliseconds: 400);
   static const Duration deliberate = Duration(milliseconds: 600);
 
+  /// Cycle des animations d'ambiance en boucle (décoratives, jamais bloquantes).
+  static const Duration ambient = Duration(milliseconds: 6000);
+
   static const Curve standard = Curves.easeOutCubic;
   static const Curve decelerate = Curves.decelerate;
   static const Curve accelerate = Curves.easeInCubic;

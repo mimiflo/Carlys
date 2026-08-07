@@ -10,8 +10,10 @@ import '../../features/authentication/presentation/screens/sessions_screen.dart'
 import '../../features/dashboard/presentation/screens/home_screen.dart';
 import '../../features/exercises/presentation/screens/exercise_detail_screen.dart';
 import '../../features/exercises/presentation/screens/exercise_library_screen.dart';
+import '../../features/nutrition/presentation/screens/nutrition_screen.dart';
 import '../../features/onboarding/presentation/screens/splash_screen.dart';
 import '../../features/progress/presentation/screens/progress_screen.dart';
+import '../../features/settings/presentation/screens/settings_screen.dart';
 import '../../features/subscription/presentation/screens/subscription_screen.dart';
 import '../../features/workout_history/presentation/screens/workout_detail_screen.dart';
 import '../../features/workout_history/presentation/screens/workout_history_screen.dart';
@@ -106,9 +108,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => const ProgressScreen(),
           ),
           GoRoute(
+            path: 'nutrition',
+            name: 'nutrition',
+            builder: (context, state) => const NutritionScreen(),
+          ),
+          GoRoute(
             path: 'subscription',
             name: 'subscription',
             builder: (context, state) => const SubscriptionScreen(),
+          ),
+          GoRoute(
+            path: 'settings',
+            name: 'settings',
+            builder: (context, state) => const SettingsScreen(),
           ),
           GoRoute(
             path: 'history',

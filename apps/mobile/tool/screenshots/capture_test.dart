@@ -2,6 +2,10 @@
 //   flutter test tool/screenshots --update-goldens
 // Volontairement HORS de test/ : la CI ne compare jamais ces rendus
 // (fragiles entre versions de moteur) ; les PNG générés sont ignorés par git.
+//
+// Ce fichier EST un harnais de test (exécuté via `flutter test`), simplement
+// rangé hors de test/ — l'avertissement visible_for_testing est donc infondé :
+// ignore_for_file: invalid_use_of_visible_for_testing_member
 import 'dart:convert';
 import 'dart:io';
 
@@ -13,6 +17,8 @@ import 'package:carlys_mobile/features/authentication/data/repositories/auth_rep
 import 'package:carlys_mobile/features/exercises/data/repositories/exercises_repository_impl.dart';
 import 'package:carlys_mobile/features/exercises/domain/entities/exercise.dart';
 import 'package:carlys_mobile/features/exercises/presentation/widgets/exercise_card.dart';
+import 'package:carlys_mobile/features/nutrition/data/repositories/nutrition_repository_impl.dart';
+import 'package:carlys_mobile/features/nutrition/domain/entities/nutrition.dart';
 import 'package:carlys_mobile/features/progress/data/repositories/progress_repository_impl.dart';
 import 'package:carlys_mobile/features/progress/domain/entities/progress.dart';
 import 'package:carlys_mobile/features/subscription/data/repositories/subscription_repository_impl.dart';
@@ -22,9 +28,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../test/support/fake_auth_repository.dart';
 import '../../test/support/fake_exercises_repository.dart';
+import '../../test/support/fake_nutrition_repository.dart';
 import '../../test/support/fake_progress_repository.dart';
 import '../../test/support/fake_subscription_repository.dart';
 import '../../test/support/fake_workout_repository.dart';
@@ -127,14 +135,30 @@ FakeProgressRepository progressOf() => FakeProgressRepository(
       ],
     );
 
+FakeNutritionRepository nutritionOf({bool complete = true}) => complete
+    ? FakeNutritionRepository(
+        weightKg: 82.5,
+        sex: BiologicalSex.male,
+        birthDate: DateTime.utc(1996, 3, 12),
+        heightCm: 180,
+        activityLevel: ActivityLevel.moderate,
+        goal: NutritionGoal.gainMuscle,
+      )
+    : FakeNutritionRepository(weightKg: 82.5);
+
 void main() {
   setUpAll(loadRealFonts);
+
+  setUp(() {
+    SharedPreferences.setMockInitialValues({});
+  });
 
   Future<void> pumpApp(
     WidgetTester tester, {
     bool authenticated = true,
     FakeExercisesRepository? exercises,
     FakeWorkoutRepository? workouts,
+    FakeNutritionRepository? nutrition,
     bool premium = false,
   }) async {
     tester.view.physicalSize = const Size(1179, 2556);
@@ -159,6 +183,9 @@ void main() {
             workouts ?? FakeWorkoutRepository(),
           ),
           progressRepositoryProvider.overrideWithValue(progressOf()),
+          nutritionRepositoryProvider.overrideWithValue(
+            nutrition ?? nutritionOf(),
+          ),
           subscriptionRepositoryProvider.overrideWithValue(
             FakeSubscriptionRepository(isPremium: premium),
           ),
@@ -229,6 +256,57 @@ void main() {
     await pumpApp(tester, premium: true);
     await goHomeButton(tester, 'Abonnement');
     await capture(tester, '08-abonnement');
+  });
+
+  // L'hélice ADN tourne en boucle : pumps bornés uniquement (jamais
+  // pumpAndSettle une fois l'écran nutrition affiché).
+  Future<void> goNutrition(WidgetTester tester) async {
+    await tester.scrollUntilVisible(find.text('Nutrition'), 150);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Nutrition'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 700));
+  }
+
+  testWidgets('nutrition — métabolisme complet', (tester) async {
+    await pumpApp(tester);
+    await goNutrition(tester);
+    await capture(tester, '10-nutrition-metabolisme');
+
+    await tester.scrollUntilVisible(
+      find.text('Macro-nutriments'),
+      150,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await tester.pump(const Duration(milliseconds: 200));
+    await capture(tester, '11-nutrition-macros');
+  });
+
+  testWidgets('nutrition — profil à compléter', (tester) async {
+    await pumpApp(tester, nutrition: nutritionOf(complete: false));
+    await goNutrition(tester);
+    await capture(tester, '12-nutrition-profil');
+  });
+
+  testWidgets('réglages + thème sombre', (tester) async {
+    await pumpApp(tester);
+    await goHomeButton(tester, 'Réglages');
+    await capture(tester, '13-reglages');
+
+    await tester.tap(find.text('Sombre'));
+    await tester.pumpAndSettle();
+    await capture(tester, '14-reglages-sombre');
+
+    await tester.pageBack();
+    await tester.pumpAndSettle();
+    await capture(tester, '15-accueil-sombre');
+  });
+
+  testWidgets('nutrition en thème sombre OLED', (tester) async {
+    SharedPreferences.setMockInitialValues({'apparence.theme': 'oled'});
+    await pumpApp(tester);
+    await goNutrition(tester);
+    await capture(tester, '16-nutrition-oled');
   });
 
   testWidgets('paywall exercice premium', (tester) async {

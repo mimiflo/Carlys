@@ -16,7 +16,9 @@ Carlys est une application d'entraînement destinée à l'App Store et à Google
 - **Offline-first** : les séances s'enregistrent localement (Drift/SQLite) puis se synchronisent via une file idempotente dès que le réseau revient (Étape 4) ;
 - **Progression** : records personnels, historique, graphiques (Étape 5) ;
 - **Premium** : entitlements calculés côté serveur, achats in-app (RevenueCat possible) et Stripe sur le web (Étape 6) ;
-- **Administration** : back-office avec rôles, permissions et journal d'audit (Étape 7).
+- **Administration** : back-office avec rôles, permissions et journal d'audit (Étape 7) ;
+- **Nutrition** : métabolisme calculé côté serveur (BMR, TDEE, objectif calorique, macros, IMC, hydratation) à partir du profil et de la dernière pesée, avec un écran mobile animé (hélice d'ADN) ;
+- **Réglages** : thème clair/sombre/sombre OLED persistant, respect de la réduction d'animations système.
 
 L'Étape 1 pose la fondation : monorepo outillé, API durcie (sécurité, observabilité, contrats de réponse), design system mobile complet, infrastructure Docker locale et CI.
 
@@ -363,6 +365,8 @@ Politique complète et signalement de vulnérabilités : [SECURITY.md](./SECURIT
 
 **Étape 7 — Administration : terminée.** Le back-office devient réel, avec des **comptes administrateurs séparés** des comptes mobiles (Argon2id, jeton JWT à **audience dédiée** `carlys-admin` — jamais interchangeable avec un jeton mobile, dans un sens comme dans l'autre) et un **RBAC par permissions** (`user:read`, `user:update`, `entitlement:grant`, `exercise:publish`, `audit:read`) seedé depuis le code avec les rôles `superadmin`, `support` et `content-manager`. API : synthèse plateforme, liste/fiche des utilisateurs, **suspension** (toutes les sessions révoquées immédiatement, reconnexion refusée), **attribution manuelle d'entitlements** (jamais écrasée par la synchro des webhooks), publication/dépublication d'exercices (cache catalogue invalidé), **journal d'audit** enrichi (acteur, ressource, `requestId`) et paginé. Côté `apps/admin` : connexion réelle, tableau utilisateurs avec recherche, fiche avec actions, journal d'audit — réponses validées par les contrats Zod partagés, le serveur restant seul décideur des accès.
 
+**Nutrition & réglages : terminés.** La nutrition suit la même règle que le premium : **le serveur calcule, l'app affiche**. `GET /nutrition/metabolism` renvoie un rapport complet — **BMR** (Mifflin-St Jeor), **TDEE** (facteur d'activité), **objectif calorique** selon le but (perte/maintien/prise de muscle), **macros** (protéines par kg selon l'objectif, lipides 25 %, glucides en complément), **IMC** avec catégorie OMS et **hydratation** (35 ml/kg). Le poids n'est jamais ressaisi : il provient de la **dernière mesure corporelle** (Étape 5), le reste du profil (sexe biologique, naissance, taille, activité, objectif) se complète via `PATCH /users/me` (migration `nutrition_profile`, validations bornées). Côté app : écran **Nutrition** avec **hélice d'ADN animée en continu** (CustomPainter isolé dans un RepaintBoundary, pose statique si l'utilisateur réduit les animations), objectif calorique en grand, barres de macros, IMC et hydratation, et formulaire de profil sur place (champs manquants listés par le serveur). S'y ajoutent un écran **Réglages** avec thème **système/clair/sombre/sombre OLED** (persisté via `shared_preferences`, appliqué instantanément) et des optimisations de rendu (graphiques fl_chart isolés dans des RepaintBoundary).
+
 | Étape | Tranche verticale | Contenu principal | Statut |
 | --- | --- | --- | --- |
 | 1 | Fondation | Monorepo, outillage, sécurité de base, design system, CI | ✅ Terminée |
@@ -372,6 +376,7 @@ Politique complète et signalement de vulnérabilités : [SECURITY.md](./SECURIT
 | 5 | Progression | Records, historique, graphiques | ✅ Terminée |
 | 6 | Abonnements | Entitlements côté serveur, RevenueCat possible, Stripe web, webhooks idempotents signés | ✅ Terminée |
 | 7 | Administration | Rôles, permissions, audit | ✅ Terminée |
+| + | Nutrition & réglages | Métabolisme côté serveur (BMR/TDEE/macros/IMC), écran animé (ADN), thèmes clair/sombre/OLED persistants | ✅ Terminée |
 
 ## Documentation
 

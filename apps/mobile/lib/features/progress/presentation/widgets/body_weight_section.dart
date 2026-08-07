@@ -132,32 +132,35 @@ class _WeightChart extends StatelessWidget {
     return AppCard(
       child: Semantics(
         label: 'Évolution du poids corporel',
-        child: AspectRatio(
-          aspectRatio: 16 / 9,
-          child: LineChart(
-            LineChartData(
-              minY: minValue - 1,
-              maxY: maxValue + 1,
-              lineTouchData: LineTouchData(enabled: false),
-              titlesData: const FlTitlesData(show: false),
-              gridData: const FlGridData(show: false),
-              borderData: FlBorderData(show: false),
-              lineBarsData: [
-                LineChartBarData(
-                  spots: [
-                    for (var i = 0; i < entries.length; i++)
-                      FlSpot(i.toDouble(), entries[i].value),
-                  ],
-                  isCurved: true,
-                  color: scheme.primary,
-                  barWidth: AppSpacing.xxs / 2,
-                  dotData: const FlDotData(show: false),
-                  belowBarData: BarAreaData(
-                    show: true,
-                    color: scheme.primary.withValues(alpha: 0.12),
+        // Isole le rendu du graphique : ses repeints ne redessinent pas l'écran.
+        child: RepaintBoundary(
+          child: AspectRatio(
+            aspectRatio: 16 / 9,
+            child: LineChart(
+              LineChartData(
+                minY: minValue - 1,
+                maxY: maxValue + 1,
+                lineTouchData: LineTouchData(enabled: false),
+                titlesData: const FlTitlesData(show: false),
+                gridData: const FlGridData(show: false),
+                borderData: FlBorderData(show: false),
+                lineBarsData: [
+                  LineChartBarData(
+                    spots: [
+                      for (var i = 0; i < entries.length; i++)
+                        FlSpot(i.toDouble(), entries[i].value),
+                    ],
+                    isCurved: true,
+                    color: scheme.primary,
+                    barWidth: AppSpacing.xxs / 2,
+                    dotData: const FlDotData(show: false),
+                    belowBarData: BarAreaData(
+                      show: true,
+                      color: scheme.primary.withValues(alpha: 0.12),
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
           ),
         ),

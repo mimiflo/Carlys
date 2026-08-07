@@ -112,6 +112,11 @@ Données de présentation et de contexte, séparées de l'identité pour garder
 - Champs clés : `userId` (unique), `displayName`, `avatarMediaId` (→
   `MediaAsset`, nullable), `birthDate`, `heightCm`, `unitSystem`
   (`metric | imperial`), `locale`, `timezone`.
+- Profil métabolique (migration `20260807171346_nutrition_profile`) : `sex`
+  (`MALE | FEMALE`, nullable), `activityLevel` (`SEDENTARY → VERY_ACTIVE`,
+  nullable), `nutritionGoal` (`LOSE_WEIGHT | MAINTAIN | GAIN_MUSCLE`,
+  nullable) — consommés par `GET /nutrition/metabolism` ; le poids n'est
+  **pas** stocké ici, il provient de la dernière `BodyMetric` `WEIGHT_KG`.
 - Relations : 1–1 `User` ; n–1 `MediaAsset` (avatar).
 
 ### `UserCredential`

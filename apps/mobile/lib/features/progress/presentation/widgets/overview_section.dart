@@ -144,30 +144,33 @@ class _VolumeChart extends StatelessWidget {
     return AppCard(
       child: Semantics(
         label: 'Volume soulevé par intervalle sur la période',
-        child: AspectRatio(
-          aspectRatio: 16 / 9,
-          child: BarChart(
-            BarChartData(
-              maxY: maxVolume * 1.15,
-              alignment: BarChartAlignment.spaceAround,
-              barTouchData: BarTouchData(enabled: false),
-              titlesData: const FlTitlesData(show: false),
-              gridData: const FlGridData(show: false),
-              borderData: FlBorderData(show: false),
-              barGroups: [
-                for (var i = 0; i < points.length; i++)
-                  BarChartGroupData(
-                    x: i,
-                    barRods: [
-                      BarChartRodData(
-                        toY: points[i].volumeKg,
-                        color: scheme.primary,
-                        width: AppSpacing.xs,
-                        borderRadius: AppRadius.xsAll,
-                      ),
-                    ],
-                  ),
-              ],
+        // Isole le rendu du graphique : ses repeints ne redessinent pas l'écran.
+        child: RepaintBoundary(
+          child: AspectRatio(
+            aspectRatio: 16 / 9,
+            child: BarChart(
+              BarChartData(
+                maxY: maxVolume * 1.15,
+                alignment: BarChartAlignment.spaceAround,
+                barTouchData: BarTouchData(enabled: false),
+                titlesData: const FlTitlesData(show: false),
+                gridData: const FlGridData(show: false),
+                borderData: FlBorderData(show: false),
+                barGroups: [
+                  for (var i = 0; i < points.length; i++)
+                    BarChartGroupData(
+                      x: i,
+                      barRods: [
+                        BarChartRodData(
+                          toY: points[i].volumeKg,
+                          color: scheme.primary,
+                          width: AppSpacing.xs,
+                          borderRadius: AppRadius.xsAll,
+                        ),
+                      ],
+                    ),
+                ],
+              ),
             ),
           ),
         ),

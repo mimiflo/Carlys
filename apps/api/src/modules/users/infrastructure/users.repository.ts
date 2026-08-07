@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { type User, type UserProfile, UserStatus } from '@prisma/client';
+import { type Prisma, type User, type UserProfile, UserStatus } from '@prisma/client';
 import { PrismaService } from '../../../database/prisma/prisma.service';
 
 export type UserWithProfile = User & { profile: UserProfile | null };
@@ -75,7 +75,7 @@ export class UsersRepository {
 
   updateProfile(
     userId: string,
-    data: { displayName?: string; locale?: string; timezone?: string },
+    data: Prisma.UserProfileUpdateWithoutUserInput,
   ): Promise<UserWithProfile> {
     return this.prisma.user.update({
       where: { id: userId },

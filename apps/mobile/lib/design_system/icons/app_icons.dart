@@ -22,6 +22,7 @@ abstract final class AppIcons {
   static const IconData delete = Icons.delete_outline_rounded;
 
   // Métier
+  static const IconData nutrition = Icons.restaurant_rounded;
   static const IconData timer = Icons.timer_rounded;
   static const IconData history = Icons.history_rounded;
   static const IconData record = Icons.emoji_events_rounded;

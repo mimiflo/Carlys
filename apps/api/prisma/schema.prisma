@@ -48,6 +48,26 @@ model User {
   entitlements       UserEntitlement[]
 }
 
+/// Sexe biologique — nécessaire aux formules métaboliques (Mifflin-St Jeor).
+enum BiologicalSex {
+  MALE
+  FEMALE
+}
+
+enum ActivityLevel {
+  SEDENTARY
+  LIGHT
+  MODERATE
+  ACTIVE
+  VERY_ACTIVE
+}
+
+enum NutritionGoal {
+  LOSE_WEIGHT
+  MAINTAIN
+  GAIN_MUSCLE
+}
+
 model UserProfile {
   userId      String   @id @db.Uuid
   displayName String
@@ -55,6 +75,14 @@ model UserProfile {
   timezone    String   @default("Europe/Paris")
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  // ── Profil métabolique (Étape nutrition) — tous facultatifs, le rapport
+  // liste les champs manquants ; le poids vient des mesures corporelles.
+  sex           BiologicalSex?
+  birthDate     DateTime?
+  heightCm      Decimal?       @db.Decimal(4, 1)
+  activityLevel ActivityLevel?
+  nutritionGoal NutritionGoal?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
