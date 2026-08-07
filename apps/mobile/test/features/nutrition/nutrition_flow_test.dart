@@ -113,9 +113,12 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(nutrition.updateCount, 1);
-      expect(find.text('Objectif quotidien'), findsOneWidget);
-      expect(find.text('2759 kcal'), findsWidgets);
-      expect(find.text('Macro-nutriments'), findsOneWidget);
+      expect(find.text('OBJECTIF QUOTIDIEN'), findsOneWidget);
+      expect(
+        find.textContaining('2759', findRichText: true),
+        findsWidgets,
+      );
+      expect(find.text('Macros'), findsOneWidget);
       expect(find.text('128 g'), findsOneWidget);
       expect(find.text('Corpulence normale'), findsOneWidget);
     });
@@ -136,11 +139,11 @@ void main() {
       );
       await openNutrition(tester);
 
-      expect(find.text('Objectif quotidien'), findsOneWidget);
+      expect(find.text('OBJECTIF QUOTIDIEN'), findsOneWidget);
       expect(find.text('Maintenir'), findsWidgets);
       expect(find.text('24.7'), findsOneWidget);
-      await reveal(tester, find.text('2,8 L'));
-      expect(find.text('2,8 L'), findsOneWidget);
+      await reveal(tester, find.textContaining('2,8'));
+      expect(find.textContaining('2,8'), findsWidgets);
       // Le profil reste modifiable sous les résultats.
       await reveal(tester, find.text('Enregistrer mon profil'));
       expect(find.text('Enregistrer mon profil'), findsOneWidget);

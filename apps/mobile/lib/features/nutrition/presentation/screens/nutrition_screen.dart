@@ -4,11 +4,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/nutrition.dart';
 import '../controllers/nutrition_controllers.dart';
-import '../widgets/dna_helix.dart';
 import '../widgets/metabolic_profile_form.dart';
+import '../widgets/metabolism_hero.dart';
 import '../widgets/metabolism_view.dart';
 
-/// Nutrition : métabolisme calculé côté serveur, profil complété sur place.
+/// Nutrition (maquette 2b) : hero métabolisme sur hélice ADN, macros en
+/// jauges, profil complété sur place — calculs côté serveur uniquement.
 class NutritionScreen extends ConsumerWidget {
   const NutritionScreen({super.key});
 
@@ -17,8 +18,9 @@ class NutritionScreen extends ConsumerWidget {
     final report = ref.watch(metabolismReportProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Nutrition')),
+      backgroundColor: AppColors.darkBackground,
       body: SafeArea(
+        bottom: false,
         child: report.when(
           loading: () =>
               const AppLoadingIndicator(label: 'Analyse du métabolisme'),
@@ -43,46 +45,27 @@ class _NutritionContent extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final metabolism = report.metabolism;
-
     final bottomInset =
         AppBottomBar.height + MediaQuery.paddingOf(context).bottom;
 
     return ListView(
       padding: EdgeInsets.fromLTRB(
+        AppSpacing.gutter,
         AppSpacing.md,
-        AppSpacing.md,
-        AppSpacing.md,
-        AppSpacing.md + bottomInset,
+        AppSpacing.gutter,
+        AppSpacing.gutter + bottomInset,
       ),
       children: [
-        AppCard(
-          child: Column(
-            children: [
-              const DnaHelix(),
-              const SizedBox(height: AppSpacing.sm),
-              Text(
-                'Votre métabolisme',
-                style: theme.textTheme.titleLarge,
-                textAlign: TextAlign.center,
-              ),
-              const SizedBox(height: AppSpacing.xxs),
-              Text(
-                metabolism == null
-                    ? 'Complétez votre profil pour calculer vos besoins '
-                        'quotidiens — calculs faits sur nos serveurs.'
-                    : 'Besoins estimés par la formule de Mifflin-St Jeor, '
-                        'à partir de votre dernière pesée.',
-                style: theme.textTheme.bodySmall,
-                textAlign: TextAlign.center,
-              ),
-            ],
-          ),
-        ),
+        MetabolismHero(metabolism: metabolism),
         const SizedBox(height: AppSpacing.md),
         if (metabolism != null) ...[
           MetabolismView(profile: report.profile, metabolism: metabolism),
-          const SizedBox(height: AppSpacing.lg),
-          Text('Mon profil', style: theme.textTheme.titleLarge),
+          const SizedBox(height: AppSpacing.gapSection),
+          Text(
+            'Mon profil',
+            style: AppTypography.heading
+                .copyWith(color: theme.colorScheme.onSurface),
+          ),
           const SizedBox(height: AppSpacing.sm),
           MetabolicProfileForm(profile: report.profile),
         ] else ...[
@@ -102,26 +85,38 @@ class _MissingFieldsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return AppCard(
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: const BoxDecoration(
+        color: AppColors.darkSurface,
+        borderRadius: AppRadius.cardSecondaryAll,
+        border: Border.fromBorderSide(BorderSide(color: AppColors.darkBorder)),
+      ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text('Informations manquantes', style: theme.textTheme.titleMedium),
-          const SizedBox(height: AppSpacing.xs),
+          Text(
+            'Informations manquantes',
+            style: AppTypography.heading
+                .copyWith(color: AppColors.darkTextPrimary),
+          ),
+          const SizedBox(height: AppSpacing.sm),
           for (final field in missing)
             Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.xxs),
+              padding: const EdgeInsets.only(bottom: AppSpacing.xs),
               child: Row(
                 children: [
-                  Icon(
+                  const Icon(
                     Icons.radio_button_unchecked,
                     size: 16,
-                    color: theme.colorScheme.onSurfaceVariant,
+                    color: AppColors.darkTextTertiary,
                   ),
                   const SizedBox(width: AppSpacing.xs),
-                  Text(field.label, style: theme.textTheme.bodyMedium),
+                  Text(
+                    field.label,
+                    style: AppTypography.body
+                        .copyWith(color: AppColors.darkTextSecondary),
+                  ),
                 ],
               ),
             ),

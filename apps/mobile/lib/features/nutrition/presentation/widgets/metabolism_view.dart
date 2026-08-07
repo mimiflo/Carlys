@@ -2,8 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/nutrition.dart';
+import 'metabolism_hero.dart';
 
-/// Résultats métaboliques : objectif calorique, BMR/TDEE, macros, IMC, eau.
+/// Résultats métaboliques (2b) : macros en jauges, objectif, IMC, eau.
 class MetabolismView extends StatelessWidget {
   const MetabolismView({
     required this.profile,
@@ -16,124 +17,102 @@ class MetabolismView extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final water =
+        (metabolism.waterMl / 1000).toStringAsFixed(1).replaceFirst('.', ',');
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        AppCard(
-          semanticLabel:
-              'Objectif calorique : ${metabolism.targetKcal} kilocalories par jour',
-          child: Column(
-            children: [
-              Text('Objectif quotidien', style: theme.textTheme.bodySmall),
-              const SizedBox(height: AppSpacing.xxs),
-              Text(
-                '${metabolism.targetKcal} kcal',
-                style: AppTypography.metric.copyWith(
-                  fontSize: 40,
-                  color: theme.colorScheme.primary,
-                ),
-              ),
-              if (profile.goal != null) ...[
-                const SizedBox(height: AppSpacing.xs),
-                AppBadge(
-                  label: profile.goal!.label,
-                  variant: AppBadgeVariant.primary,
-                ),
-              ],
-            ],
+        // ── Macros ───────────────────────────────────────────────────
+        Container(
+          padding: const EdgeInsets.all(18),
+          decoration: const BoxDecoration(
+            color: AppColors.darkSurface,
+            borderRadius: AppRadius.cardSecondaryAll,
+            border:
+                Border.fromBorderSide(BorderSide(color: AppColors.darkBorder)),
           ),
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        Row(
-          children: [
-            Expanded(
-              child: _MetricCard(
-                label: 'Métabolisme de base',
-                value: '${metabolism.bmrKcal} kcal',
-              ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: _MetricCard(
-                label: 'Dépense totale',
-                value: '${metabolism.tdeeKcal} kcal',
-              ),
-            ),
-          ],
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        AppCard(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text('Macro-nutriments', style: theme.textTheme.titleMedium),
-              const SizedBox(height: AppSpacing.sm),
-              _MacroBar(
+              Row(
+                children: [
+                  Expanded(
+                    child: Text(
+                      'Macros',
+                      style: AppTypography.heading
+                          .copyWith(color: AppColors.darkTextPrimary),
+                    ),
+                  ),
+                  AppSectionLabel(
+                    '${MetabolismHero.formatKcal(metabolism.targetKcal)} '
+                    'kcal objectif',
+                    color: AppColors.darkTextTertiary,
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.md),
+              _MacroRow(
                 label: 'Protéines',
                 grams: metabolism.proteinG,
                 kcalPerGram: 4,
                 targetKcal: metabolism.targetKcal,
-                color: theme.colorScheme.primary,
+                color: AppColors.accent,
               ),
               const SizedBox(height: AppSpacing.sm),
-              _MacroBar(
-                label: 'Lipides',
-                grams: metabolism.fatG,
-                kcalPerGram: 9,
-                targetKcal: metabolism.targetKcal,
-                color: AppColors.warning,
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              _MacroBar(
+              _MacroRow(
                 label: 'Glucides',
                 grams: metabolism.carbsG,
                 kcalPerGram: 4,
                 targetKcal: metabolism.targetKcal,
-                color: AppColors.accentDark,
+                color: AppColors.primary,
+              ),
+              const SizedBox(height: AppSpacing.sm),
+              _MacroRow(
+                label: 'Lipides',
+                grams: metabolism.fatG,
+                kcalPerGram: 9,
+                targetKcal: metabolism.targetKcal,
+                color: AppColors.primaryLight,
               ),
             ],
           ),
         ),
-        const SizedBox(height: AppSpacing.sm),
+        const SizedBox(height: AppSpacing.md),
+
+        // ── Objectif · IMC · Eau ─────────────────────────────────────
         Row(
           children: [
             Expanded(
-              child: AppCard(
-                semanticLabel:
-                    'IMC : ${metabolism.bmi}, ${metabolism.bmiCategory.label}',
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      '${metabolism.bmi}',
-                      style: AppTypography.metric.copyWith(
-                        fontSize: 24,
-                        color: theme.colorScheme.onSurface,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.xxs),
-                    Text('IMC', style: theme.textTheme.bodySmall),
-                    const SizedBox(height: AppSpacing.xs),
-                    AppBadge(
-                      label: metabolism.bmiCategory.label,
-                      variant: metabolism.bmiCategory == BmiCategory.normal
-                          ? AppBadgeVariant.accent
-                          : AppBadgeVariant.warning,
-                    ),
-                  ],
-                ),
+              child: AppStatTile(
+                label: 'Objectif quotidien',
+                value: '${metabolism.targetKcal}',
+                unit: ' kcal',
               ),
             ),
-            const SizedBox(width: AppSpacing.sm),
+            const SizedBox(width: AppSpacing.gapTile),
             Expanded(
-              child: _MetricCard(
-                label: 'Hydratation conseillée',
-                value:
-                    '${(metabolism.waterMl / 1000).toStringAsFixed(1).replaceFirst('.', ',')} L',
-              ),
+              child: AppStatTile(label: 'IMC', value: '${metabolism.bmi}'),
             ),
+            const SizedBox(width: AppSpacing.gapTile),
+            Expanded(
+              child: AppStatTile(label: 'Eau', value: water, unit: ' L'),
+            ),
+          ],
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Row(
+          children: [
+            AppPill(
+              label: metabolism.bmiCategory.label,
+              tone: metabolism.bmiCategory == BmiCategory.normal
+                  ? AppPillTone.accent
+                  : AppPillTone.primary,
+            ),
+            if (profile.goal != null) ...[
+              const SizedBox(width: AppSpacing.xs),
+              AppPill(label: profile.goal!.label),
+            ],
           ],
         ),
       ],
@@ -141,38 +120,8 @@ class MetabolismView extends StatelessWidget {
   }
 }
 
-class _MetricCard extends StatelessWidget {
-  const _MetricCard({required this.label, required this.value});
-
-  final String label;
-  final String value;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return AppCard(
-      semanticLabel: '$label : $value',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            value,
-            style: AppTypography.metric.copyWith(
-              fontSize: 24,
-              color: theme.colorScheme.onSurface,
-            ),
-          ),
-          const SizedBox(height: AppSpacing.xxs),
-          Text(label, style: theme.textTheme.bodySmall),
-        ],
-      ),
-    );
-  }
-}
-
-class _MacroBar extends StatelessWidget {
-  const _MacroBar({
+class _MacroRow extends StatelessWidget {
+  const _MacroRow({
     required this.label,
     required this.grams,
     required this.kcalPerGram,
@@ -188,7 +137,6 @@ class _MacroBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final share = targetKcal <= 0
         ? 0.0
         : (grams * kcalPerGram / targetKcal).clamp(0.0, 1.0);
@@ -201,24 +149,20 @@ class _MacroBar extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              Text(label, style: theme.textTheme.bodyMedium),
+              Text(
+                label,
+                style: AppTypography.body
+                    .copyWith(color: AppColors.darkTextSecondary),
+              ),
               Text(
                 '$grams g',
-                style: theme.textTheme.bodyMedium
-                    ?.copyWith(fontWeight: FontWeight.w600),
+                style: AppTypography.metricS
+                    .copyWith(color: AppColors.darkTextPrimary),
               ),
             ],
           ),
-          const SizedBox(height: AppSpacing.xxs),
-          ClipRRect(
-            borderRadius: AppRadius.xsAll,
-            child: LinearProgressIndicator(
-              value: share,
-              minHeight: AppSpacing.xs,
-              color: color,
-              backgroundColor: theme.colorScheme.surfaceContainerHighest,
-            ),
-          ),
+          const SizedBox(height: 8),
+          AppGauge(progress: share, color: color),
         ],
       ),
     );

@@ -83,8 +83,11 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('Objectif quotidien'), findsOneWidget);
-    expect(find.text('3040 kcal'), findsOneWidget);
+    expect(find.text('OBJECTIF QUOTIDIEN'), findsOneWidget);
+    expect(
+      find.textContaining('3040', findRichText: true),
+      findsWidgets,
+    );
   });
 
   testWidgets('progression et abonnement premium servis en mémoire',
