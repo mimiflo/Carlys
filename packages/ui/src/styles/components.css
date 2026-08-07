@@ -1,0 +1,304 @@
+/* Design system web Carlys — styles des composants.
+   Idiome : classes `carlys-*`, valeurs UNIQUEMENT via var(--carlys-*).
+   Les thèmes basculent par [data-carlys-theme] sur CarlysProvider. */
+
+.carlys-root {
+  --carlys-background: var(--carlys-surface-lightBackground);
+  --carlys-surface: var(--carlys-surface-lightSurface);
+  --carlys-surface-alt: var(--carlys-surface-lightSurfaceAlt);
+  --carlys-text: var(--carlys-neutral-900);
+  --carlys-text-muted: var(--carlys-neutral-500);
+  --carlys-border: var(--carlys-neutral-200);
+
+  background: var(--carlys-background);
+  color: var(--carlys-text);
+  font-family: var(--carlys-font-body);
+  font-size: var(--carlys-text-md);
+  line-height: var(--carlys-leading-normal);
+  min-height: 100%;
+}
+
+.carlys-root[data-carlys-theme='dark'] {
+  --carlys-background: var(--carlys-surface-darkBackground);
+  --carlys-surface: var(--carlys-surface-darkSurface);
+  --carlys-surface-alt: var(--carlys-surface-darkSurfaceAlt);
+  --carlys-text: var(--carlys-neutral-50);
+  --carlys-text-muted: var(--carlys-neutral-400);
+  --carlys-border: var(--carlys-neutral-700);
+}
+
+.carlys-root[data-carlys-theme='oled'] {
+  --carlys-background: var(--carlys-surface-oledBackground);
+  --carlys-surface: var(--carlys-surface-darkSurface);
+  --carlys-surface-alt: var(--carlys-surface-darkSurfaceAlt);
+  --carlys-text: var(--carlys-neutral-50);
+  --carlys-text-muted: var(--carlys-neutral-400);
+  --carlys-border: var(--carlys-neutral-700);
+}
+
+/* ── Bouton ─────────────────────────────────────────────────────── */
+
+.carlys-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--carlys-spacing-xs);
+  border: 1px solid transparent;
+  border-radius: var(--carlys-radius-md);
+  font-family: var(--carlys-font-body);
+  font-weight: var(--carlys-weight-semibold);
+  cursor: pointer;
+  transition:
+    background var(--carlys-duration-fast) var(--carlys-easing-standard),
+    box-shadow var(--carlys-duration-fast) var(--carlys-easing-standard);
+}
+
+.carlys-button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.carlys-button--sm {
+  min-height: 36px;
+  padding: 0 var(--carlys-spacing-sm);
+  font-size: var(--carlys-text-sm);
+}
+.carlys-button--md {
+  min-height: 44px;
+  padding: 0 var(--carlys-spacing-md);
+  font-size: var(--carlys-text-md);
+}
+.carlys-button--lg {
+  min-height: 52px;
+  padding: 0 var(--carlys-spacing-lg);
+  font-size: var(--carlys-text-lg);
+}
+
+.carlys-button--primary {
+  background: var(--carlys-color-primary);
+  color: var(--carlys-neutral-0);
+}
+.carlys-button--primary:hover:not(:disabled) {
+  background: var(--carlys-color-primaryDark);
+  box-shadow: var(--carlys-shadow-sm);
+}
+
+.carlys-button--secondary {
+  background: var(--carlys-surface);
+  color: var(--carlys-color-primary);
+  border-color: var(--carlys-border);
+}
+.carlys-button--secondary:hover:not(:disabled) {
+  background: var(--carlys-surface-alt);
+}
+
+.carlys-button--ghost {
+  background: transparent;
+  color: var(--carlys-text-muted);
+}
+.carlys-button--ghost:hover:not(:disabled) {
+  background: var(--carlys-surface-alt);
+}
+
+.carlys-button--destructive {
+  background: var(--carlys-color-danger);
+  color: var(--carlys-neutral-0);
+}
+.carlys-button--destructive:hover:not(:disabled) {
+  filter: brightness(0.92);
+}
+
+.carlys-button--expanded {
+  width: 100%;
+}
+
+/* ── Carte ──────────────────────────────────────────────────────── */
+
+.carlys-card {
+  background: var(--carlys-surface);
+  border: 1px solid var(--carlys-border);
+  border-radius: var(--carlys-radius-lg);
+  padding: var(--carlys-spacing-md);
+  color: var(--carlys-text);
+  text-align: inherit;
+}
+
+button.carlys-card {
+  display: block;
+  width: 100%;
+  cursor: pointer;
+  font: inherit;
+  transition: box-shadow var(--carlys-duration-fast) var(--carlys-easing-standard);
+}
+button.carlys-card:hover {
+  box-shadow: var(--carlys-shadow-md);
+}
+
+/* ── Pastille ───────────────────────────────────────────────────── */
+
+.carlys-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--carlys-spacing-xxs);
+  padding: var(--carlys-spacing-xxs) var(--carlys-spacing-xs);
+  border-radius: var(--carlys-radius-sm);
+  font-size: var(--carlys-text-xs);
+  font-weight: var(--carlys-weight-semibold);
+  line-height: var(--carlys-leading-tight);
+}
+
+.carlys-badge--neutral {
+  background: var(--carlys-surface-alt);
+  color: var(--carlys-text-muted);
+}
+.carlys-badge--primary {
+  background: color-mix(in srgb, var(--carlys-color-primary) 14%, transparent);
+  color: var(--carlys-color-primary);
+}
+.carlys-badge--accent {
+  background: var(--carlys-color-accent);
+  color: var(--carlys-neutral-950);
+}
+.carlys-badge--warning {
+  background: color-mix(in srgb, var(--carlys-color-warning) 16%, transparent);
+  color: var(--carlys-color-warning);
+}
+
+/* ── Métrique ───────────────────────────────────────────────────── */
+
+.carlys-metric__value {
+  font-family: var(--carlys-font-display);
+  font-size: var(--carlys-text-xl);
+  font-weight: var(--carlys-weight-bold);
+  line-height: var(--carlys-leading-tight);
+  color: var(--carlys-text);
+}
+.carlys-metric--lg .carlys-metric__value {
+  font-size: var(--carlys-text-display);
+  color: var(--carlys-color-primary);
+}
+.carlys-metric__label {
+  margin-top: var(--carlys-spacing-xxs);
+  font-size: var(--carlys-text-sm);
+  color: var(--carlys-text-muted);
+}
+
+/* ── Champs ─────────────────────────────────────────────────────── */
+
+.carlys-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--carlys-spacing-xxs);
+}
+
+.carlys-field__label {
+  font-size: var(--carlys-text-sm);
+  font-weight: var(--carlys-weight-medium);
+  color: var(--carlys-text);
+}
+
+.carlys-field__input {
+  min-height: 44px;
+  padding: 0 var(--carlys-spacing-sm);
+  border: 1px solid var(--carlys-border);
+  border-radius: var(--carlys-radius-md);
+  background: var(--carlys-surface);
+  color: var(--carlys-text);
+  font-family: var(--carlys-font-body);
+  font-size: var(--carlys-text-md);
+  transition: border-color var(--carlys-duration-fast) var(--carlys-easing-standard);
+}
+.carlys-field__input::placeholder {
+  color: var(--carlys-text-muted);
+}
+.carlys-field__input:focus {
+  outline: 2px solid var(--carlys-color-primary);
+  outline-offset: -1px;
+  border-color: var(--carlys-color-primary);
+}
+.carlys-field__input:disabled {
+  background: var(--carlys-surface-alt);
+  color: var(--carlys-text-muted);
+  cursor: not-allowed;
+}
+.carlys-field--error .carlys-field__input {
+  border-color: var(--carlys-color-danger);
+}
+
+.carlys-field__hint {
+  font-size: var(--carlys-text-xs);
+  color: var(--carlys-text-muted);
+}
+.carlys-field__error {
+  font-size: var(--carlys-text-xs);
+  color: var(--carlys-color-danger);
+}
+
+/* ── États (vide, erreur, chargement) ───────────────────────────── */
+
+.carlys-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--carlys-spacing-xs);
+  padding: var(--carlys-spacing-xl) var(--carlys-spacing-md);
+  text-align: center;
+}
+
+.carlys-state__icon {
+  color: var(--carlys-text-muted);
+}
+.carlys-state--error .carlys-state__icon {
+  color: var(--carlys-color-danger);
+}
+
+.carlys-state__title {
+  margin: 0;
+  font-size: var(--carlys-text-lg);
+  font-weight: var(--carlys-weight-semibold);
+  color: var(--carlys-text);
+}
+.carlys-state__message {
+  margin: 0;
+  font-size: var(--carlys-text-sm);
+  color: var(--carlys-text-muted);
+  max-width: 36ch;
+}
+.carlys-state__action {
+  margin-top: var(--carlys-spacing-sm);
+}
+
+/* ── Indicateur de chargement ───────────────────────────────────── */
+
+.carlys-spinner {
+  width: 20px;
+  height: 20px;
+  border-radius: var(--carlys-radius-full);
+  border: 2px solid var(--carlys-border);
+  border-top-color: var(--carlys-color-primary);
+  animation: carlys-spin 0.8s linear infinite;
+}
+
+.carlys-button .carlys-spinner {
+  width: 16px;
+  height: 16px;
+  border-color: color-mix(in srgb, currentColor 30%, transparent);
+  border-top-color: currentColor;
+}
+
+@keyframes carlys-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .carlys-spinner {
+    animation-duration: 2.4s;
+  }
+  .carlys-button,
+  .carlys-card,
+  .carlys-field__input {
+    transition: none;
+  }
+}

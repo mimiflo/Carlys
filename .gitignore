@@ -46,3 +46,10 @@ apps/mobile/**/*.gr.dart
 
 # Docker volumes (local bind mounts if any)
 .docker-data/
+
+# design-sync (état machine, régénéré)
+.ds-sync/
+ds-bundle/
+.design-sync/.cache/
+.design-sync/learnings/
+.design-sync/node_modules

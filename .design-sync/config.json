@@ -1,0 +1,15 @@
+{
+  "shape": "package",
+  "pkg": "@carlys/ui",
+  "globalName": "CarlysUI",
+  "buildCmd": "pnpm --filter @carlys/ui build",
+  "cssEntry": "dist/carlys-ui.css",
+  "extraFonts": ["src/fonts/fonts.css"],
+  "provider": { "component": "CarlysProvider" },
+  "overrides": {
+    "EmptyState": { "cardMode": "column" },
+    "ErrorState": { "cardMode": "column" },
+    "Metric": { "cardMode": "column" }
+  },
+  "readmeHeader": ".design-sync/conventions.md"
+}
