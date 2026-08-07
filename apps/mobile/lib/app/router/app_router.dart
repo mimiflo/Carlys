@@ -11,6 +11,7 @@ import '../../features/dashboard/presentation/screens/home_screen.dart';
 import '../../features/exercises/presentation/screens/exercise_detail_screen.dart';
 import '../../features/exercises/presentation/screens/exercise_library_screen.dart';
 import '../../features/onboarding/presentation/screens/splash_screen.dart';
+import '../../features/progress/presentation/screens/progress_screen.dart';
 import '../../features/workout_history/presentation/screens/workout_detail_screen.dart';
 import '../../features/workout_history/presentation/screens/workout_history_screen.dart';
 import '../../features/workout_session/presentation/screens/active_workout_screen.dart';
@@ -96,6 +97,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             path: 'workout',
             name: 'active-workout',
             builder: (context, state) => const ActiveWorkoutScreen(),
+          ),
+          GoRoute(
+            path: 'progress',
+            name: 'progress',
+            builder: (context, state) => const ProgressScreen(),
           ),
           GoRoute(
             path: 'history',

@@ -42,6 +42,8 @@ model User {
   externalIdentities ExternalIdentity[]
   auditLogs          AuditLog[]
   workoutSessions    WorkoutSession[]
+  personalRecords    PersonalRecord[]
+  bodyMetrics        BodyMetric[]
 }
 
 model UserProfile {
@@ -239,9 +241,10 @@ model Exercise {
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt
 
-  muscles     ExerciseMuscle[]
-  equipment   ExerciseEquipment[]
-  workoutSets WorkoutSet[]
+  muscles         ExerciseMuscle[]
+  equipment       ExerciseEquipment[]
+  workoutSets     WorkoutSet[]
+  personalRecords PersonalRecord[]
 
   @@index([isPublished, name])
 }
@@ -300,8 +303,9 @@ model WorkoutSession {
   updatedAt       DateTime             @updatedAt
   deletedAt       DateTime?
 
-  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  sets WorkoutSet[]
+  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  sets            WorkoutSet[]
+  personalRecords PersonalRecord[]
 
   @@index([userId, startedAt(sort: Desc)])
 }
@@ -330,4 +334,58 @@ model WorkoutSet {
   exercise Exercise?      @relation(fields: [exerciseId], references: [id], onDelete: SetNull)
 
   @@index([sessionId, position])
+}
+
+// ────────────────────────── Progression (Étape 5) ──────────────────────────
+
+enum PersonalRecordType {
+  MAX_WEIGHT
+  MAX_REPS
+  MAX_SET_VOLUME
+}
+
+/// Records personnels, recalculés à la clôture de chaque séance.
+/// Clé par exerciseName (dénormalisé) : les records survivent au catalogue.
+model PersonalRecord {
+  id           String             @id @default(uuid()) @db.Uuid
+  userId       String             @db.Uuid
+  exerciseId   String?            @db.Uuid
+  exerciseName String
+  recordType   PersonalRecordType
+  /// kg, répétitions ou kg de volume selon recordType.
+  value        Decimal            @db.Decimal(10, 2)
+  reps         Int?
+  weightKg     Decimal?           @db.Decimal(6, 2)
+  achievedAt   DateTime
+  sessionId    String?            @db.Uuid
+  createdAt    DateTime           @default(now())
+  updatedAt    DateTime           @updatedAt
+
+  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exercise Exercise?       @relation(fields: [exerciseId], references: [id], onDelete: SetNull)
+  session  WorkoutSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+
+  @@unique([userId, exerciseName, recordType])
+  @@index([userId, achievedAt])
+}
+
+enum BodyMetricType {
+  WEIGHT_KG
+  BODY_FAT_PERCENT
+}
+
+/// Mesure corporelle. Id généré côté client (création idempotente).
+model BodyMetric {
+  id         String         @id @db.Uuid
+  userId     String         @db.Uuid
+  metricType BodyMetricType
+  value      Decimal        @db.Decimal(6, 2)
+  measuredAt DateTime
+  createdAt  DateTime       @default(now())
+  updatedAt  DateTime       @updatedAt
+  deletedAt  DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, metricType, measuredAt])
 }

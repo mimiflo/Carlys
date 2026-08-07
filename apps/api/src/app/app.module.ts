@@ -16,6 +16,7 @@ import { AuthModule } from '../modules/auth/auth.module';
 import { ExercisesModule } from '../modules/exercises/exercises.module';
 import { HealthModule } from '../modules/health/health.module';
 import { MetricsModule } from '../modules/metrics/metrics.module';
+import { ProgressModule } from '../modules/progress/progress.module';
 import { UsersModule } from '../modules/users/users.module';
 import { WorkoutsModule } from '../modules/workout_sessions/workouts.module';
 
@@ -76,6 +77,7 @@ function generateRequestId(request: IncomingMessage, response: ServerResponse): 
     AuthModule,
     ExercisesModule,
     WorkoutsModule,
+    ProgressModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

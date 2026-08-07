@@ -1,5 +1,6 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { WorkoutSessionStatus, WorkoutSetKind } from '@prisma/client';
+import { type ProgressService } from '../../progress/application/progress.service';
 import {
   type SessionWithSets,
   type WorkoutsRepository,
@@ -55,8 +56,16 @@ function buildStubs(): Stubs {
   };
 }
 
-function buildService(stubs: Stubs): WorkoutsService {
-  return new WorkoutsService(stubs as unknown as WorkoutsRepository);
+function buildService(
+  stubs: Stubs,
+  progress: { updateRecordsForSession: jest.Mock } = {
+    updateRecordsForSession: jest.fn().mockResolvedValue(undefined),
+  },
+): WorkoutsService {
+  return new WorkoutsService(
+    stubs as unknown as WorkoutsRepository,
+    progress as unknown as ProgressService,
+  );
 }
 
 const createInput = {
@@ -162,6 +171,30 @@ describe('WorkoutsService', () => {
         WorkoutSessionStatus.COMPLETED,
         expect.objectContaining({ durationSeconds: 45 * 60 }),
       );
+    });
+
+    it('déclenche le recalcul des records avec les séries de la séance', async () => {
+      const stubs = buildStubs();
+      const sets = [setRow()] as never;
+      stubs.findSessionById
+        .mockResolvedValueOnce(sessionRow()) // pré-vérification
+        .mockResolvedValue(sessionRow({ status: WorkoutSessionStatus.COMPLETED, sets }));
+      const progress = { updateRecordsForSession: jest.fn().mockResolvedValue(undefined) };
+      const service = buildService(stubs, progress);
+
+      await service.completeSession(USER, 'session-1', {});
+
+      expect(progress.updateRecordsForSession).toHaveBeenCalledWith(USER, 'session-1', sets);
+    });
+
+    it('abandonner une séance ne recalcule pas les records', async () => {
+      const stubs = buildStubs();
+      const progress = { updateRecordsForSession: jest.fn().mockResolvedValue(undefined) };
+      const service = buildService(stubs, progress);
+
+      await service.abandonSession(USER, 'session-1', {});
+
+      expect(progress.updateRecordsForSession).not.toHaveBeenCalled();
     });
   });
 

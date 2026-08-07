@@ -10,6 +10,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { WorkoutSessionStatus, WorkoutSetKind } from '@prisma/client';
+import { ProgressService } from '../../progress/application/progress.service';
 import { type SessionWithSets, WorkoutsRepository } from '../infrastructure/workouts.repository';
 import { presentSessionDetail, presentSessionSummary, presentSet } from './workout.presenter';
 
@@ -47,7 +48,10 @@ export interface SessionsPage {
  */
 @Injectable()
 export class WorkoutsService {
-  constructor(private readonly workouts: WorkoutsRepository) {}
+  constructor(
+    private readonly workouts: WorkoutsRepository,
+    private readonly progress: ProgressService,
+  ) {}
 
   async createSession(userId: string, input: CreateSessionInput): Promise<WorkoutSessionDetail> {
     const created = await this.workouts.createSession({
@@ -222,7 +226,12 @@ export class WorkoutsService {
       // Déjà clôturée avec un AUTRE statut : conflit réel, pas un rejeu.
       throw new ConflictException('La séance est déjà clôturée.');
     }
-    return presentSessionDetail(await this.ownedSession(userId, sessionId));
+    const closed = await this.ownedSession(userId, sessionId);
+    if (to === WorkoutSessionStatus.COMPLETED) {
+      // Ne fait jamais échouer la clôture : le service journalise ses erreurs.
+      await this.progress.updateRecordsForSession(userId, sessionId, closed.sets);
+    }
+    return presentSessionDetail(closed);
   }
 
   private async ownedSession(userId: string, sessionId: string): Promise<SessionWithSets> {

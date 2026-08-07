@@ -9,6 +9,7 @@ abstract final class AppRoutes {
   static const String exercises = '/home/exercises';
   static const String activeWorkout = '/home/workout';
   static const String history = '/home/history';
+  static const String progress = '/home/progress';
 
   static String exerciseDetail(String idOrSlug) => '/home/exercises/$idOrSlug';
 

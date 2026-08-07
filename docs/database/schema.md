@@ -22,8 +22,8 @@ migration manque par rapport au schéma.
 | Catalogue d'exercices | `Exercise`, `ExerciseMuscle`, `ExerciseEquipment`, `MuscleGroup`, `Equipment` — **implémenté** (migration `20260806220000_exercise_catalog`, contenu français directement sur `Exercise`) ; `ExerciseTranslation`, `ExerciseMedia`, `ExerciseVariant`, `CustomExercise` différés | Étape 3 ✅ |
 | Médias | `MediaAsset` | Étape 3 (premier besoin : médias d'exercices) |
 | Programmes | `TrainingProgram`, `ProgramWeek`, `ProgramDay`, `WorkoutTemplate`, `WorkoutTemplateExercise`, `WorkoutTemplateSet` | Étape 4 |
-| Séances | `WorkoutSession`, `WorkoutSet` — **implémenté** (migration `20260807010000_workout_sessions`, ids générés sur l'appareil, écritures idempotentes) ; `WorkoutSessionExercise` fusionné dans `WorkoutSet` (`exerciseId` + `exerciseName` dénormalisé), `WorkoutNote` porté par `WorkoutSession.notes`, `PersonalRecord` différé (Étape 5) | Étape 4 ✅ |
-| Progression | `BodyMetric`, `ProgressGoal`, `ProgressSnapshot` | Étape 5 |
+| Séances | `WorkoutSession`, `WorkoutSet` — **implémenté** (migration `20260807010000_workout_sessions`, ids générés sur l'appareil, écritures idempotentes) ; `WorkoutSessionExercise` fusionné dans `WorkoutSet` (`exerciseId` + `exerciseName` dénormalisé), `WorkoutNote` porté par `WorkoutSession.notes`, `PersonalRecord` livré à l'Étape 5 | Étape 4 ✅ |
+| Progression | `PersonalRecord`, `BodyMetric` — **implémenté** (migration `20260807040000_progress`, records recalculés à la clôture, mesures idempotentes) ; `ProgressGoal` et `ProgressSnapshot` différés (agrégats calculés à la volée) | Étape 5 ✅ |
 | Abonnements | `SubscriptionPlan`, `SubscriptionProduct`, `Subscription`, `SubscriptionEvent`, `UserEntitlement` | Étape 6 |
 | Notifications | `Notification`, `NotificationPreference`, `PushDevice` | Introduit avec l'intégration FCM réelle (au plus tôt Étape 4, `NotificationPreference` au plus tard Étape 6) |
 | Administration | `AuditLog`, `AdminUser`, `AdminRole`, `AdminPermission` | Étape 7 (`AuditLog` introduit dès l'Étape 2 pour les événements de sécurité — voir `docs/security/authentication.md`) |
@@ -337,7 +337,8 @@ Série prescrite d'une ligne de modèle.
 > rapport à la cible : `WorkoutSessionExercise` est fusionné dans `WorkoutSet`
 > (chaque série porte `exerciseId` nullable + `exerciseName` dénormalisé — le
 > regroupement par exercice se fait à l'affichage) ; les notes vivent sur
-> `WorkoutSession.notes` ; `PersonalRecord` arrive à l'Étape 5. Les ids sont
+> `WorkoutSession.notes` ; `PersonalRecord` est livré à l'Étape 5 (voir la
+> section Progression). Les ids sont
 > des **UUID générés sur l'appareil** et toutes les écritures sont rejouables
 > (voir `docs/synchronization/offline-first.md`).
 
@@ -395,7 +396,22 @@ recalculé en transaction lors de l'ingestion d'une séance.
 
 ---
 
-## Progression — Étape 5
+## Progression — Étape 5 (implémenté)
+
+> Implémenté (migration `20260807040000_progress`). Ajustements par rapport à
+> la cible : `PersonalRecord` est rangé dans ce domaine et sa clé unique est
+> `(userId, exerciseName, recordType)` — le nom dénormalisé couvre aussi les
+> exercices saisis librement ; `exerciseId` et `sessionId` restent des liens
+> optionnels (`SET NULL`). Les types de record livrés sont
+> `MAX_WEIGHT | MAX_REPS | MAX_SET_VOLUME` (le 1RM estimé et les records de
+> durée/distance viendront avec les besoins réels). Le recalcul a lieu à la
+> **clôture** de la séance et ne peut jamais la faire échouer (erreur
+> journalisée, rattrapage à la séance suivante). `BodyMetric` est livré avec
+> `metricType` (`WEIGHT_KG | BODY_FAT_PERCENT`) et sans colonne `unit` (tout
+> est stocké en unités métriques). `ProgressGoal` et `ProgressSnapshot` sont
+> **différés** : les agrégats (totaux et volume par intervalle `date_trunc`
+> whitelisté) se calculent à la volée sur les index existants, largement
+> suffisant à cette échelle.
 
 ### `BodyMetric`
 Mesure corporelle horodatée saisie par l'utilisateur.

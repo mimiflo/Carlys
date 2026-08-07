@@ -188,7 +188,7 @@ docs) et sera documentée précisément ici à sa livraison.
 | Programmes | `GET/POST /api/v1/programs`, modèles de séances (`workout-templates`) | Étape 4 |
 | Séances | **Livré** — `POST /workout-sessions` (création idempotente, id appareil), `GET /workout-sessions` (curseur), `GET/PATCH /workout-sessions/:id`, `POST …/:id/complete` et `…/:id/abandon` (rejouables, 409 si clôture croisée) | Étape 4 ✅ |
 | Séries | **Livré** — `POST /workout-sessions/:id/sets` (upsert idempotent, nom d'exercice résolu depuis le catalogue), `PATCH /workout-sets/:id`, `DELETE /workout-sets/:id` (suppression logique rejouable) | Étape 4 ✅ |
-| Progression | `GET /api/v1/progress` (records, volumes, tendances), `GET/POST /api/v1/body-metrics` | Étape 5 |
+| Progression | **Livré** — `GET /api/v1/progress/overview?period=week\|month\|year` (totaux + volume par intervalle), `GET /api/v1/progress/records` (records personnels), `GET /api/v1/progress/exercises/:exerciseId` (progression par séance), `GET/POST /api/v1/body-metrics` (création idempotente, id appareil), `DELETE /api/v1/body-metrics/:id` (suppression logique rejouable) | Étape 5 ✅ |
 | Abonnements | `GET /api/v1/subscriptions/me`, `GET /api/v1/entitlements` — entitlements décidés **côté serveur** | Étape 6 |
 | Webhooks paiement | `POST /api/v1/webhooks/revenuecat`, `POST /api/v1/webhooks/stripe` — signés, idempotents | Étape 6 |
 | Administration | routes d'administration (rôles, permissions, audit) | Étape 7 |

@@ -357,13 +357,15 @@ Politique complète et signalement de vulnérabilités : [SECURITY.md](./SECURIT
 
 **Étape 4 — Séances offline-first : terminée.** La plus grosse tranche du MVP : base locale **Drift** (séances, séries, file `sync_operations`), chaque écriture part d'abord dans SQLite (aucune série jamais perdue, y compris sans réseau ou après fermeture brutale), puis un **moteur de synchronisation** FIFO strict la rejoue vers l'API (backoff exponentiel 5 s → 5 min, déclencheurs : lancement, retour de connectivité, périodique 3 min, opportuniste). Côté serveur : `WorkoutSession`/`WorkoutSet` avec **UUID générés sur l'appareil** — création, séries (upsert), clôture et abandon **idempotents** (rejouer une requête ne duplique jamais rien), historique paginé par curseur, propriété vérifiée sans fuite d'information. Côté app : écran de **séance active** (saisie des séries avec steppers, types échauffement/normale/dégressive, **minuteur de repos**, durée écoulée, indicateurs de synchronisation), sélecteur d'exercice depuis le catalogue ou libre, reprise de séance depuis l'accueil, **historique** et détail avec volume total. La génération de code (Drift) entre en CI mobile.
 
+**Étape 5 — Progression : terminée.** Les données déjà collectées deviennent lisibles : **records personnels** (charge max, répétitions max, volume max sur une série) recalculés automatiquement à la clôture d'une séance — sans jamais la faire échouer —, **statistiques par période** (semaine/mois/année : séances, séries, volume, durée + volume par intervalle via `date_trunc` whitelisté), **progression par exercice** (meilleure charge et volume à chaque séance) et **mesures corporelles** (poids, masse grasse) à identifiants générés sur l'appareil — création **idempotente** et suppression logique **rejouable**, comme les séances. Côté app : écran **Progression** (sélecteur de période, cartes de synthèse, graphique de volume en barres, records regroupés par exercice, courbe de poids avec ajout/suppression de mesures), accessible depuis l'accueil. Graphiques fl_chart, états erreur/chargement/vide couverts.
+
 | Étape | Tranche verticale | Contenu principal | Statut |
 | --- | --- | --- | --- |
 | 1 | Fondation | Monorepo, outillage, sécurité de base, design system, CI | ✅ Terminée |
 | 2 | Authentification | JWT access court + refresh rotatif hashé, Argon2id, sessions par appareil, détection de réutilisation | ✅ Terminée |
 | 3 | Exercices | Bibliothèque + seed 30+ exercices, cache Redis | ✅ Terminée |
 | 4 | Séances | Offline-first Drift + file de synchronisation idempotente | ✅ Terminée |
-| 5 | Progression | Records, historique, graphiques | À venir |
+| 5 | Progression | Records, historique, graphiques | ✅ Terminée |
 | 6 | Abonnements | Entitlements côté serveur, RevenueCat possible, Stripe web, webhooks idempotents signés | À venir |
 | 7 | Administration | Rôles, permissions, audit | À venir |
 
