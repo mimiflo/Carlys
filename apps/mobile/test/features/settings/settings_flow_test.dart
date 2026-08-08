@@ -47,8 +47,10 @@ Future<void> openSettings(WidgetTester tester) async {
     ),
   );
   await tester.pumpAndSettle();
-  await reveal(tester, find.text('Apparence'));
-  await tester.tap(find.text('Apparence'));
+  // La ligne « Thème sombre » ouvre l'écran d'apparence (l'interrupteur ne
+  // bascule que clair ↔ sombre).
+  await reveal(tester, find.text('Thème sombre'));
+  await tester.tap(find.text('Thème sombre'));
   await tester.pumpAndSettle();
 }
 

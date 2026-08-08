@@ -2,13 +2,23 @@ import 'package:flutter/material.dart';
 
 import '../../../../design_system/design_system.dart';
 import '../../../progress/domain/entities/progress.dart';
+import '../controllers/dashboard_controllers.dart';
 
-/// « Ta semaine » : 7 barres (hauteur max 56) — séances faites en violet
-/// atténué, aujourd'hui en accent, jours vides en piste neutre.
+/// « Ta semaine » : en-tête de section puis 7 barres — séances faites en
+/// violet atténué, jour courant en accent, jours sans séance en piste neutre.
+///
+/// La hauteur d'une barre suit le volume réel du jour, rapporté au meilleur
+/// jour de la semaine.
 class WeekBars extends StatelessWidget {
   const WeekBars({required this.week, super.key});
 
   final ProgressOverviewEntity? week;
+
+  /// Géométrie de la maquette : barres de 46 au plus, talon visible pour les
+  /// jours vides.
+  static const double _maxHeight = 46;
+  static const double _minHeight = 10;
+  static const double _sessionFloor = 18;
 
   @override
   Widget build(BuildContext context) {
@@ -27,53 +37,47 @@ class WeekBars extends StatelessWidget {
       final index = day.difference(monday).inDays;
       if (index >= 0 && index < 7) {
         byDay[index] += point.volumeKg;
-        if (byDay[index] > maxVolume) maxVolume = byDay[index];
+        if (byDay[index] > maxVolume) {
+          maxVolume = byDay[index];
+        }
       }
     }
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                'Ta semaine',
-                style: AppTypography.heading
-                    .copyWith(color: AppColors.darkTextPrimary),
+        AppSectionHeader(
+          title: 'Ta semaine',
+          trailing: '$sessions / $weeklySessionsTarget séances',
+          trailingTone: AppSectionTrailingTone.primary,
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        Semantics(
+          label: '$sessions séance${sessions > 1 ? 's' : ''} '
+              'sur $weeklySessionsTarget cette semaine',
+          child: ExcludeSemantics(
+            child: SizedBox(
+              height: _maxHeight,
+              child: Row(
+                children: [
+                  for (var day = 0; day < 7; day++) ...[
+                    if (day > 0) const SizedBox(width: AppSpacing.xs),
+                    Expanded(
+                      child: _DayBar(
+                        fraction: maxVolume == 0 ? 0 : byDay[day] / maxVolume,
+                        isToday: day == now.weekday - 1,
+                        hasSession: byDay[day] > 0,
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
-            AppSectionLabel(
-              '$sessions / ${FormeCardTarget.weekly} séances',
-            ),
-          ],
-        ),
-        const SizedBox(height: 14),
-        SizedBox(
-          height: 56,
-          child: Row(
-            children: [
-              for (var day = 0; day < 7; day++) ...[
-                if (day > 0) const SizedBox(width: 8),
-                Expanded(
-                  child: _DayBar(
-                    fraction: maxVolume == 0 ? 0 : byDay[day] / maxVolume,
-                    isToday: day == now.weekday - 1,
-                    hasSession: byDay[day] > 0,
-                  ),
-                ),
-              ],
-            ],
           ),
         ),
       ],
     );
   }
-}
-
-/// Objectif hebdomadaire partagé entre la carte de forme et les barres.
-abstract final class FormeCardTarget {
-  static const int weekly = 5;
 }
 
 class _DayBar extends StatelessWidget {
@@ -94,7 +98,11 @@ class _DayBar extends StatelessWidget {
         : hasSession
             ? AppColors.primaryFill
             : AppColors.gaugeTrack;
-    final height = hasSession ? (12 + 44 * fraction.clamp(0.0, 1.0)) : 12.0;
+    final height = hasSession
+        ? WeekBars._sessionFloor +
+            (WeekBars._maxHeight - WeekBars._sessionFloor) *
+                fraction.clamp(0.0, 1.0)
+        : WeekBars._minHeight;
 
     return Align(
       alignment: Alignment.bottomCenter,
@@ -102,7 +110,7 @@ class _DayBar extends StatelessWidget {
         height: height,
         decoration: BoxDecoration(
           color: color,
-          borderRadius: BorderRadius.circular(6),
+          borderRadius: AppRadius.smAll,
         ),
       ),
     );

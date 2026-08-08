@@ -3,17 +3,24 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_routes.dart';
+import '../../../../core/errors/app_exception.dart';
 import '../../../../design_system/design_system.dart';
-import '../../../../design_system/scenes/app_scene_container.dart';
-import '../../../../design_system/scenes/heart_scene.dart';
 import '../../../nutrition/domain/entities/nutrition.dart';
 import '../../../nutrition/presentation/controllers/nutrition_controllers.dart';
+import '../widgets/onboarding_backdrop.dart';
+import '../widgets/onboarding_birth_date_card.dart';
+import '../widgets/onboarding_choices.dart';
+import '../widgets/onboarding_cta.dart';
+import '../widgets/onboarding_header.dart';
+import '../widgets/onboarding_height_card.dart';
 import '../widgets/onboarding_option_card.dart';
+import '../widgets/onboarding_step_body.dart';
 
-/// Onboarding (maquette 2i) : 4 étapes qui remplissent le profil
+/// Onboarding (maquette 2a) : 4 étapes qui remplissent le profil
 /// métabolique réel (objectif, sexe, naissance/taille, activité).
-/// « Passer » est toujours possible — le profil se complète aussi depuis
-/// l'onglet Nutrition.
+///
+/// Le contenu vit en bas de l'écran, sous le cœur ambient ; « Passer » reste
+/// toujours possible — le profil se complète aussi depuis l'onglet Nutrition.
 class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
 
@@ -22,16 +29,17 @@ class OnboardingScreen extends ConsumerStatefulWidget {
 }
 
 class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
+  static const int _stepCount = 4;
+  static const double _defaultHeightCm = 175;
+
   int _step = 0;
   NutritionGoal? _goal;
   BiologicalSex? _sex;
   DateTime? _birthDate;
-  double _heightCm = 175;
+  double _heightCm = _defaultHeightCm;
   bool _heightTouched = false;
   ActivityLevel? _activity;
   bool _saving = false;
-
-  static const _stepCount = 4;
 
   bool get _stepComplete => switch (_step) {
         0 => _goal != null,
@@ -40,11 +48,23 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         _ => _activity != null,
       };
 
+  bool get _isLastStep => _step == _stepCount - 1;
+
+  void _back() {
+    if (_step > 0) {
+      setState(() => _step--);
+    }
+  }
+
   Future<void> _next() async {
-    if (_step < _stepCount - 1) {
+    if (!_isLastStep) {
       setState(() => _step++);
       return;
     }
+    await _save();
+  }
+
+  Future<void> _save() async {
     setState(() => _saving = true);
     try {
       await ref.read(nutritionActionsProvider).saveProfile(
@@ -56,11 +76,23 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
               activityLevel: _activity,
             ),
           );
-    } finally {
       if (mounted) {
-        setState(() => _saving = false);
         context.go(AppRoutes.home);
       }
+    } on AppException catch (exception) {
+      if (!mounted) {
+        return;
+      }
+      setState(() => _saving = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            exception is NetworkException
+                ? 'Serveur injoignable — réessaie une fois connecté.'
+                : 'Enregistrement impossible. Réessaie dans un instant.',
+          ),
+        ),
+      );
     }
   }
 
@@ -75,11 +107,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     );
     if (picked != null) {
       setState(
-        () => _birthDate = DateTime.utc(
-          picked.year,
-          picked.month,
-          picked.day,
-        ),
+        () => _birthDate = DateTime.utc(picked.year, picked.month, picked.day),
       );
     }
   }
@@ -90,51 +118,24 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       backgroundColor: AppColors.darkBackground,
       body: Stack(
         children: [
-          const Positioned(
-            top: 24,
-            left: 0,
-            right: 0,
-            child: Center(
-              child: AppSceneContainer(
-                size: 360,
-                opacity: 0.42,
-                verticalFadeStops: [0.0, 0.22, 0.58, 0.88],
-                child: HeartScene(),
-              ),
-            ),
-          ),
+          const Positioned.fill(child: OnboardingBackdrop()),
           SafeArea(
             child: Padding(
-              padding: const EdgeInsets.all(AppSpacing.gutter),
+              padding: const EdgeInsets.fromLTRB(
+                AppSpacing.gutter,
+                AppSpacing.gutter,
+                AppSpacing.gutter,
+                AppSpacing.gapSection,
+              ),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  _SegmentsBar(current: _step, total: _stepCount),
-                  const SizedBox(height: AppSpacing.gapSection),
-                  Expanded(child: _buildStep()),
-                  FilledButton(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: AppColors.accent,
-                      foregroundColor: AppColors.darkBackground,
-                      disabledBackgroundColor: AppColors.darkSurfaceAlt,
-                      disabledForegroundColor: AppColors.darkTextTertiary,
-                    ),
-                    onPressed: _stepComplete && !_saving ? _next : null,
-                    child: Text(
-                      _step < _stepCount - 1 ? 'Continuer' : 'Terminer',
-                    ),
+                  OnboardingHeader(
+                    step: _step,
+                    stepCount: _stepCount,
+                    onBack: _step == 0 || _saving ? null : _back,
                   ),
-                  const SizedBox(height: AppSpacing.xs),
-                  Center(
-                    child: TextButton(
-                      onPressed: () => context.go(AppRoutes.home),
-                      child: Text(
-                        'Passer',
-                        style: AppTypography.body
-                            .copyWith(color: AppColors.darkTextTertiary),
-                      ),
-                    ),
-                  ),
+                  Expanded(child: _buildBottomBlock()),
                 ],
               ),
             ),
@@ -144,33 +145,51 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     );
   }
 
+  /// Le bloc bas est collé en bas de l'espace disponible, et défile si
+  /// l'écran est trop court pour lui.
+  Widget _buildBottomBlock() {
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              _buildStep(),
+              const SizedBox(height: AppSpacing.lg),
+              OnboardingCta(
+                label: _isLastStep ? 'Terminer' : 'Continuer',
+                loading: _saving,
+                onPressed: _stepComplete ? _next : null,
+                onSkip: () => context.go(AppRoutes.home),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildStep() {
     return switch (_step) {
-      0 => _StepScaffold(
+      0 => OnboardingStepBody(
           label: 'Ton objectif',
-          question: 'Qu’est-ce qu’on\nconstruit ensemble ?',
+          question: 'Qu’est-ce qu’on\nconstruit ensemble ?',
           subtitle: 'On calibre tes charges, ton volume et tes macros '
               'à partir de ça.',
           options: [
-            for (final goal in NutritionGoal.values)
+            for (final goal in onboardingGoals)
               OnboardingOptionCard(
                 title: goal.label,
-                subtitle: switch (goal) {
-                  NutritionGoal.gainMuscle => 'Surplus léger, volume élevé',
-                  NutritionGoal.loseWeight => 'Déficit, maîtrise, cardio',
-                  NutritionGoal.maintain => 'Régularité avant tout',
-                },
-                icon: switch (goal) {
-                  NutritionGoal.gainMuscle => AppIcons.workout,
-                  NutritionGoal.loseWeight => Icons.local_fire_department,
-                  NutritionGoal.maintain => Icons.self_improvement,
-                },
+                subtitle: goalSubtitle(goal),
+                icon: goalIcon(goal),
                 selected: _goal == goal,
                 onTap: () => setState(() => _goal = goal),
               ),
           ],
         ),
-      1 => _StepScaffold(
+      1 => OnboardingStepBody(
           label: 'Ton profil',
           question: 'Pour calibrer\nton métabolisme',
           subtitle: 'La formule de Mifflin-St Jeor dépend du sexe biologique.',
@@ -178,25 +197,22 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             for (final sex in BiologicalSex.values)
               OnboardingOptionCard(
                 title: sex.label,
+                icon: sexIcon(sex),
                 selected: _sex == sex,
                 onTap: () => setState(() => _sex = sex),
               ),
           ],
         ),
-      2 => _StepScaffold(
+      2 => OnboardingStepBody(
           label: 'Tes mesures',
           question: 'Naissance\net taille',
           subtitle: 'L’âge et la taille entrent dans le calcul quotidien.',
           options: [
-            OnboardingOptionCard(
-              title: _birthDate == null
-                  ? 'Choisir ma date de naissance'
-                  : 'Né(e) le ${_formatDate(_birthDate!)}',
-              icon: Icons.cake_outlined,
-              selected: _birthDate != null,
+            OnboardingBirthDateCard(
+              birthDate: _birthDate,
               onTap: _pickBirthDate,
             ),
-            _HeightCard(
+            OnboardingHeightCard(
               heightCm: _heightCm,
               touched: _heightTouched,
               onChanged: (value) => setState(() {
@@ -206,159 +222,21 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
             ),
           ],
         ),
-      _ => _StepScaffold(
+      _ => OnboardingStepBody(
           label: 'Ton rythme',
-          question: 'À quelle fréquence\nbouges-tu ?',
+          question: 'À quelle fréquence\nbouges-tu ?',
           subtitle: 'Ta dépense d’activité s’ajoute à ton métabolisme de base.',
           options: [
             for (final level in ActivityLevel.values)
               OnboardingOptionCard(
                 title: level.label,
                 subtitle: level.description,
+                icon: activityIcon(level),
                 selected: _activity == level,
                 onTap: () => setState(() => _activity = level),
               ),
           ],
         ),
     };
-  }
-
-  static String _formatDate(DateTime date) {
-    String pad(int value) => value.toString().padLeft(2, '0');
-    return '${pad(date.day)}/${pad(date.month)}/${date.year}';
-  }
-}
-
-class _SegmentsBar extends StatelessWidget {
-  const _SegmentsBar({required this.current, required this.total});
-
-  final int current;
-  final int total;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      label: 'Étape ${current + 1} sur $total',
-      child: Row(
-        children: [
-          for (var i = 0; i < total; i++) ...[
-            if (i > 0) const SizedBox(width: 8),
-            Expanded(
-              child: Container(
-                height: 4,
-                decoration: BoxDecoration(
-                  color: i <= current ? AppColors.accent : AppColors.gaugeTrack,
-                  borderRadius: BorderRadius.circular(2),
-                ),
-              ),
-            ),
-          ],
-        ],
-      ),
-    );
-  }
-}
-
-class _StepScaffold extends StatelessWidget {
-  const _StepScaffold({
-    required this.label,
-    required this.question,
-    required this.subtitle,
-    required this.options,
-  });
-
-  final String label;
-  final String question;
-  final String subtitle;
-  final List<Widget> options;
-
-  @override
-  Widget build(BuildContext context) {
-    return ListView(
-      children: [
-        AppSectionLabel(label),
-        const SizedBox(height: 10),
-        Text(
-          question,
-          style:
-              AppTypography.display.copyWith(color: AppColors.darkTextPrimary),
-        ),
-        const SizedBox(height: 8),
-        Text(
-          subtitle,
-          style:
-              AppTypography.body.copyWith(color: AppColors.darkTextSecondary),
-        ),
-        const SizedBox(height: AppSpacing.gutter),
-        for (final option in options) ...[
-          option,
-          const SizedBox(height: AppSpacing.sm),
-        ],
-      ],
-    );
-  }
-}
-
-class _HeightCard extends StatelessWidget {
-  const _HeightCard({
-    required this.heightCm,
-    required this.touched,
-    required this.onChanged,
-  });
-
-  final double heightCm;
-  final bool touched;
-  final ValueChanged<double> onChanged;
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.darkSurface,
-        borderRadius: AppRadius.cardSecondaryAll,
-        border: Border.all(
-          color: touched ? AppColors.primaryLight : AppColors.darkBorder,
-        ),
-      ),
-      child: Row(
-        children: [
-          const Icon(
-            Icons.height_rounded,
-            size: 22,
-            color: AppColors.darkTextTertiary,
-          ),
-          const SizedBox(width: AppSpacing.gapRow),
-          Expanded(
-            child: Text(
-              'Taille',
-              style: AppTypography.subheading
-                  .copyWith(color: AppColors.darkTextPrimary),
-            ),
-          ),
-          IconButton(
-            tooltip: 'Réduire',
-            onPressed: () => onChanged(heightCm - 1),
-            icon: const Icon(
-              Icons.remove_rounded,
-              color: AppColors.darkTextSecondary,
-            ),
-          ),
-          Text(
-            '${heightCm.round()} cm',
-            style: AppTypography.metricM
-                .copyWith(color: AppColors.darkTextPrimary),
-          ),
-          IconButton(
-            tooltip: 'Augmenter',
-            onPressed: () => onChanged(heightCm + 1),
-            icon: const Icon(
-              Icons.add_rounded,
-              color: AppColors.darkTextSecondary,
-            ),
-          ),
-        ],
-      ),
-    );
   }
 }

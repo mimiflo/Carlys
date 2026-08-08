@@ -1,127 +1,110 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
-import '../../../progress/domain/entities/progress.dart';
-import '../../../workout_session/domain/entities/workout.dart';
+import '../utils/history_stats.dart';
 
-const _months = [
-  'janvier',
-  'février',
-  'mars',
-  'avril',
-  'mai',
-  'juin',
-  'juillet',
-  'août',
-  'septembre',
-  'octobre',
-  'novembre',
-  'décembre',
-];
+/// Géométrie de la grille (maquette) : 7 colonnes, gouttière 6, cellules
+/// carrées sans numéro de jour.
+const int _columns = 7;
+const double _cellGap = 6;
+const double _cardPadding = 18;
+const double _headerGap = 13;
 
-/// « novembre 2025 » — partagé avec l'écran d'historique.
-String formatMonth(DateTime month) =>
-    '${_months[month.month - 1]} ${month.year}';
-
-/// Grille calendaire (2g) : jour avec séance = pastille violette, jour de
-/// record = accent, jour vide = piste neutre. Cellule 36, gap 8.
+/// Carte calendaire du mois : en-tête « Novembre 2025 » + nombre de séances,
+/// puis une grille de chaleur où l'intensité vient du volume réel du jour.
 class HistoryCalendar extends StatelessWidget {
-  const HistoryCalendar({
-    required this.month,
-    required this.entries,
-    required this.records,
-    super.key,
-  });
+  const HistoryCalendar({required this.stats, super.key});
 
-  final DateTime month;
-  final List<WorkoutHistoryEntry> entries;
-  final List<PersonalRecordEntry>? records;
+  final HistoryMonthStats stats;
 
   @override
   Widget build(BuildContext context) {
+    final month = stats.month;
     final daysInMonth = DateTime(month.year, month.month + 1, 0).day;
-    final firstWeekday = DateTime(month.year, month.month).weekday; // 1=lundi
-    final today = DateTime.now();
+    // `weekday` vaut 1 pour lundi : la grille démarre donc sur le lundi.
+    final leadingBlanks = DateTime(month.year, month.month).weekday - 1;
+    final usedCells = leadingBlanks + daysInMonth;
+    final totalCells = ((usedCells + _columns - 1) ~/ _columns) * _columns;
+    final sessionsLabel = stats.sessionsCount > 1
+        ? '${formatThousands(stats.sessionsCount)} séances'
+        : '${formatThousands(stats.sessionsCount)} séance';
 
-    final sessionDays = <int>{};
-    for (final entry in entries) {
-      sessionDays.add(entry.session.startedAt.toLocal().day);
-    }
-    final recordDays = <int>{};
-    for (final record in records ?? const <PersonalRecordEntry>[]) {
-      final local = record.achievedAt.toLocal();
-      if (local.year == month.year && local.month == month.month) {
-        recordDays.add(local.day);
-      }
-    }
+    return Container(
+      padding: const EdgeInsets.all(_cardPadding),
+      decoration: const BoxDecoration(
+        color: AppColors.darkSurface,
+        borderRadius: AppRadius.cardSecondaryAll,
+        border: Border.fromBorderSide(BorderSide(color: AppColors.darkBorder)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          AppSectionHeader(
+            title: formatMonthYearCapitalized(month),
+            trailing: sessionsLabel,
+            trailingTone: AppSectionTrailingTone.accent,
+          ),
+          const SizedBox(height: _headerGap),
+          Semantics(
+            label: '$sessionsLabel en ${formatMonthYear(month)}',
+            excludeSemantics: true,
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                final cell =
+                    (constraints.maxWidth - _cellGap * (_columns - 1)) /
+                        _columns;
 
-    return Semantics(
-      label: '${sessionDays.length} jours de séance en ${formatMonth(month)}',
-      child: LayoutBuilder(
-        builder: (context, constraints) {
-          const columns = 7;
-          const gap = 8.0;
-          final cell = (constraints.maxWidth - gap * (columns - 1)) / columns;
-
-          return Wrap(
-            spacing: gap,
-            runSpacing: gap,
-            children: [
-              for (var blank = 1; blank < firstWeekday; blank++)
-                SizedBox(width: cell, height: 36),
-              for (var day = 1; day <= daysInMonth; day++)
-                _DayCell(
-                  day: day,
-                  width: cell,
-                  isToday: today.year == month.year &&
-                      today.month == month.month &&
-                      today.day == day,
-                  hasSession: sessionDays.contains(day),
-                  hasRecord: recordDays.contains(day),
-                ),
-            ],
-          );
-        },
+                return Wrap(
+                  spacing: _cellGap,
+                  runSpacing: _cellGap,
+                  children: [
+                    for (var index = 0; index < totalCells; index++)
+                      _DayCell(
+                        size: cell,
+                        color: _cellColor(
+                          index - leadingBlanks + 1,
+                          daysInMonth: daysInMonth,
+                        ),
+                      ),
+                  ],
+                );
+              },
+            ),
+          ),
+        ],
       ),
     );
+  }
+
+  Color _cellColor(int day, {required int daysInMonth}) {
+    if (day < 1 || day > daysInMonth) {
+      return AppColors.heatOutOfMonth;
+    }
+    if (stats.hasRecord(day)) {
+      return AppColors.accent;
+    }
+    if (stats.hasSession(day)) {
+      return AppColors.heatFill(stats.intensity(day));
+    }
+    return AppColors.heatEmpty;
   }
 }
 
 class _DayCell extends StatelessWidget {
-  const _DayCell({
-    required this.day,
-    required this.width,
-    required this.isToday,
-    required this.hasSession,
-    required this.hasRecord,
-  });
+  const _DayCell({required this.size, required this.color});
 
-  final int day;
-  final double width;
-  final bool isToday;
-  final bool hasSession;
-  final bool hasRecord;
+  final double size;
+  final Color color;
 
   @override
   Widget build(BuildContext context) {
-    final (background, textColor) = hasRecord
-        ? (AppColors.accent, AppColors.darkBackground)
-        : hasSession
-            ? (AppColors.primaryFill, AppColors.darkTextPrimary)
-            : (AppColors.gaugeTrack, AppColors.darkTextTertiary);
-
     return Container(
-      width: width,
-      height: 36,
-      alignment: Alignment.center,
+      width: size,
+      height: size,
       decoration: BoxDecoration(
-        color: background,
-        borderRadius: AppRadius.mdAll,
-        border: isToday ? Border.all(color: AppColors.primaryLight) : null,
-      ),
-      child: Text(
-        '$day',
-        style: AppTypography.labelMono.copyWith(color: textColor),
+        color: color,
+        borderRadius: AppRadius.smAll,
       ),
     );
   }

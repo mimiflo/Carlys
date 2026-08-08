@@ -1,53 +1,51 @@
-import 'package:fl_chart/fl_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/progress.dart';
 import '../controllers/progress_controllers.dart';
 import 'add_weight_sheet.dart';
+import 'body_weight_chart.dart';
 
 /// Suivi du poids corporel : courbe, dernières mesures, ajout et suppression.
+///
+/// Même grammaire visuelle que les records : carte de tête, puis lignes.
 class BodyWeightSection extends ConsumerWidget {
   const BodyWeightSection({super.key});
 
-  static const int _recentCount = 3;
+  /// Mesures listées sous la courbe (les plus récentes).
+  static const int recentCount = 3;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final metrics = ref.watch(bodyWeightMetricsProvider);
 
-    return metrics.when(
-      loading: () => const AppLoadingIndicator(label: 'Chargement'),
-      error: (_, __) => AppErrorState(
-        title: 'Mesures indisponibles',
-        onRetry: () => ref.invalidate(bodyWeightMetricsProvider),
-      ),
-      data: (entries) => Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          if (entries.isEmpty)
-            const AppEmptyState(
-              title: 'Aucune mesure enregistrée',
-              message: 'Ajoutez votre poids pour suivre son évolution.',
-              icon: AppIcons.bodyMetrics,
-            )
-          else ...[
-            _WeightChart(entries: entries),
-            const SizedBox(height: AppSpacing.sm),
-            for (final entry in entries.reversed.take(_recentCount))
-              _WeightTile(entry: entry),
-          ],
-          const SizedBox(height: AppSpacing.sm),
-          AppButton(
-            label: 'Ajouter mon poids',
-            icon: AppIcons.add,
-            variant: AppButtonVariant.secondary,
-            isExpanded: true,
-            onPressed: () => _addWeight(context, ref, entries),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AppSectionHeader(
+          title: 'Poids corporel',
+          trailing: 'Ajouter',
+          trailingIcon: AppIcons.add,
+          trailingTone: AppSectionTrailingTone.primary,
+          onTrailingTap: () => _addWeight(
+            context,
+            ref,
+            metrics.valueOrNull ?? const [],
           ),
-        ],
-      ),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        metrics.when(
+          loading: () => const AppLoadingIndicator(label: 'Chargement'),
+          error: (_, __) => AppErrorState(
+            title: 'Mesures indisponibles',
+            message: 'Vérifiez votre connexion puis réessayez.',
+            onRetry: () => ref.invalidate(bodyWeightMetricsProvider),
+          ),
+          data: (entries) => _BodyWeightContent(entries: entries),
+        ),
+      ],
     );
   }
 
@@ -75,32 +73,130 @@ class BodyWeightSection extends ConsumerWidget {
   }
 }
 
-class _WeightTile extends ConsumerWidget {
-  const _WeightTile({required this.entry});
+class _BodyWeightContent extends StatelessWidget {
+  const _BodyWeightContent({required this.entries});
+
+  /// Du plus ancien au plus récent, comme le renvoie le repository.
+  final List<BodyMetricEntry> entries;
+
+  @override
+  Widget build(BuildContext context) {
+    if (entries.isEmpty) {
+      return const AppEmptyState(
+        title: 'Aucune mesure enregistrée',
+        message: 'Ajoutez votre poids pour suivre son évolution.',
+        icon: AppIcons.bodyMetrics,
+      );
+    }
+
+    final recent =
+        entries.reversed.take(BodyWeightSection.recentCount).toList();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        BodyWeightChart(entries: entries),
+        for (final (index, entry) in recent.indexed) ...[
+          const SizedBox(height: AppSpacing.sm),
+          _WeightRow(entry: entry, isLatest: index == 0),
+        ],
+      ],
+    );
+  }
+}
+
+/// Ligne de mesure : date en mono, valeur à droite, suppression au bout.
+class _WeightRow extends ConsumerWidget {
+  const _WeightRow({required this.entry, required this.isLatest});
 
   final BodyMetricEntry entry;
+  final bool isLatest;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final theme = Theme.of(context);
-    final date = _formatDate(entry.measuredAt);
+    final date = formatShortDateMono(entry.measuredAt.toLocal());
+    final value = formatDecimal(entry.value);
 
-    return Row(
-      children: [
-        Expanded(child: Text(date, style: theme.textTheme.bodyLarge)),
-        Text(
-          '${_formatWeight(entry.value)} kg',
-          style: AppTypography.metric.copyWith(
-            fontSize: 16,
-            color: theme.colorScheme.onSurface,
-          ),
+    return Semantics(
+      label: 'Poids du $date : $value kg',
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(
+          AppSpacing.md,
+          AppSpacing.xs,
+          AppSpacing.xs,
+          AppSpacing.xs,
         ),
-        IconButton(
-          onPressed: () => _remove(context, ref),
-          tooltip: 'Supprimer la mesure du $date',
-          icon: const Icon(AppIcons.delete, size: 20),
+        decoration: const BoxDecoration(
+          color: AppColors.darkSurface,
+          borderRadius: AppRadius.statTileAll,
+          border:
+              Border.fromBorderSide(BorderSide(color: AppColors.darkBorder)),
         ),
-      ],
+        child: Row(
+          children: [
+            Icon(
+              AppIcons.bodyMetrics,
+              size: 22,
+              color: isLatest ? AppColors.accent : AppColors.primaryLight,
+            ),
+            const SizedBox(width: AppSpacing.gapRow),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    date,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.metricS.copyWith(
+                      fontSize: 13,
+                      color: AppColors.darkTextPrimary,
+                    ),
+                  ),
+                  const SizedBox(height: AppSpacing.xxs),
+                  Text(
+                    formatRelativeDayMono(entry.measuredAt),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.labelMono.copyWith(
+                      fontSize: 11,
+                      color: AppColors.darkTextTertiary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: AppSpacing.xs),
+            Text.rich(
+              TextSpan(
+                text: value,
+                style: AppTypography.metricS.copyWith(
+                  fontSize: 15,
+                  color: AppColors.darkTextPrimary,
+                ),
+                children: [
+                  TextSpan(
+                    text: 'kg',
+                    style: AppTypography.metricS.copyWith(
+                      fontSize: 11,
+                      color: AppColors.darkTextTertiary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            IconButton(
+              onPressed: () => _remove(context, ref),
+              tooltip: 'Supprimer la mesure du $date',
+              icon: const Icon(
+                AppIcons.delete,
+                size: 20,
+                color: AppColors.darkTextTertiary,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 
@@ -115,66 +211,4 @@ class _WeightTile extends ConsumerWidget {
       }
     }
   }
-}
-
-class _WeightChart extends StatelessWidget {
-  const _WeightChart({required this.entries});
-
-  final List<BodyMetricEntry> entries;
-
-  @override
-  Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final values = entries.map((entry) => entry.value);
-    final minValue = values.reduce((a, b) => a < b ? a : b);
-    final maxValue = values.reduce((a, b) => a > b ? a : b);
-
-    return AppCard(
-      child: Semantics(
-        label: 'Évolution du poids corporel',
-        // Isole le rendu du graphique : ses repeints ne redessinent pas l'écran.
-        child: RepaintBoundary(
-          child: AspectRatio(
-            aspectRatio: 16 / 9,
-            child: LineChart(
-              LineChartData(
-                minY: minValue - 1,
-                maxY: maxValue + 1,
-                lineTouchData: LineTouchData(enabled: false),
-                titlesData: const FlTitlesData(show: false),
-                gridData: const FlGridData(show: false),
-                borderData: FlBorderData(show: false),
-                lineBarsData: [
-                  LineChartBarData(
-                    spots: [
-                      for (var i = 0; i < entries.length; i++)
-                        FlSpot(i.toDouble(), entries[i].value),
-                    ],
-                    isCurved: true,
-                    color: scheme.primary,
-                    barWidth: AppSpacing.xxs / 2,
-                    dotData: const FlDotData(show: false),
-                    belowBarData: BarAreaData(
-                      show: true,
-                      color: scheme.primary.withValues(alpha: 0.12),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-String _formatWeight(double value) => value == value.roundToDouble()
-    ? value.toStringAsFixed(0)
-    : value.toStringAsFixed(1);
-
-String _formatDate(DateTime utc) {
-  final local = utc.toLocal();
-  String pad(int value) => value.toString().padLeft(2, '0');
-  return '${pad(local.day)}/${pad(local.month)}/${local.year}';
 }

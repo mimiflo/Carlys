@@ -1,15 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/nutrition.dart';
 import '../controllers/nutrition_controllers.dart';
 import '../widgets/metabolic_profile_form.dart';
 import '../widgets/metabolism_hero.dart';
 import '../widgets/metabolism_view.dart';
+import '../widgets/missing_profile_card.dart';
 
-/// Nutrition (maquette 2b) : hero métabolisme sur hélice ADN, macros en
+/// Nutrition (maquette 2g) : hero métabolisme sur hélice ADN, macros en
 /// jauges, profil complété sur place — calculs côté serveur uniquement.
+///
+/// La section « Repas » de la maquette est absente : le domaine ne suit aucun
+/// apport alimentaire, et l'app n'affiche jamais de donnée inventée.
 class NutritionScreen extends ConsumerWidget {
   const NutritionScreen({super.key});
 
@@ -19,18 +24,18 @@ class NutritionScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.darkBackground,
-      body: SafeArea(
-        bottom: false,
-        child: report.when(
-          loading: () =>
-              const AppLoadingIndicator(label: 'Analyse du métabolisme'),
-          error: (_, __) => AppErrorState(
+      body: report.when(
+        loading: () => const SafeArea(
+          child: AppLoadingIndicator(label: 'Analyse du métabolisme'),
+        ),
+        error: (_, __) => SafeArea(
+          child: AppErrorState(
             title: 'Métabolisme indisponible',
             message: 'Vérifiez votre connexion puis réessayez.',
             onRetry: () => ref.invalidate(metabolismReportProvider),
           ),
-          data: (data) => _NutritionContent(report: data),
         ),
+        data: (data) => _NutritionContent(report: data),
       ),
     );
   }
@@ -43,85 +48,63 @@ class _NutritionContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     final metabolism = report.metabolism;
     final bottomInset =
         AppBottomBar.height + MediaQuery.paddingOf(context).bottom;
 
     return ListView(
-      padding: EdgeInsets.fromLTRB(
-        AppSpacing.gutter,
-        AppSpacing.md,
-        AppSpacing.gutter,
-        AppSpacing.gutter + bottomInset,
-      ),
+      // Le hero est à fond perdu : chaque section pose sa propre gouttière.
+      padding: EdgeInsets.only(bottom: bottomInset + AppSpacing.gapSection),
       children: [
         MetabolismHero(metabolism: metabolism),
-        const SizedBox(height: AppSpacing.md),
-        if (metabolism != null) ...[
-          MetabolismView(profile: report.profile, metabolism: metabolism),
-          const SizedBox(height: AppSpacing.gapSection),
-          Text(
-            'Mon profil',
-            style: AppTypography.heading
-                .copyWith(color: theme.colorScheme.onSurface),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          MetabolicProfileForm(profile: report.profile),
-        ] else ...[
-          _MissingFieldsCard(missing: report.missing),
-          const SizedBox(height: AppSpacing.md),
-          MetabolicProfileForm(profile: report.profile),
-        ],
+        if (metabolism != null)
+          _Section(child: MetabolismView(metabolism: metabolism))
+        else
+          _Section(child: _MissingSection(missing: report.missing)),
+        const SizedBox(height: AppSpacing.gapSection),
+        const _Section(child: AppSectionHeader(title: 'Mon profil')),
+        const SizedBox(height: AppSpacing.sm),
+        _Section(child: MetabolicProfileForm(profile: report.profile)),
       ],
     );
   }
 }
 
-class _MissingFieldsCard extends StatelessWidget {
-  const _MissingFieldsCard({required this.missing});
+/// Champs manquants : ce que le serveur attend pour calculer le métabolisme.
+class _MissingSection extends StatelessWidget {
+  const _MissingSection({required this.missing});
 
   final List<MetabolismMissingField> missing;
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: const BoxDecoration(
-        color: AppColors.darkSurface,
-        borderRadius: AppRadius.cardSecondaryAll,
-        border: Border.fromBorderSide(BorderSide(color: AppColors.darkBorder)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Informations manquantes',
-            style: AppTypography.heading
-                .copyWith(color: AppColors.darkTextPrimary),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          for (final field in missing)
-            Padding(
-              padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-              child: Row(
-                children: [
-                  const Icon(
-                    Icons.radio_button_unchecked,
-                    size: 16,
-                    color: AppColors.darkTextTertiary,
-                  ),
-                  const SizedBox(width: AppSpacing.xs),
-                  Text(
-                    field.label,
-                    style: AppTypography.body
-                        .copyWith(color: AppColors.darkTextSecondary),
-                  ),
-                ],
-              ),
-            ),
-        ],
-      ),
+    final count = formatThousands(missing.length);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AppSectionHeader(
+          title: 'Informations manquantes',
+          trailing: '$count champ${missing.length > 1 ? 's' : ''}',
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        MissingProfileCard(missing: missing),
+      ],
+    );
+  }
+}
+
+/// Gouttière d'écran commune aux sections posées sous le hero.
+class _Section extends StatelessWidget {
+  const _Section({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
+      child: child,
     );
   }
 }

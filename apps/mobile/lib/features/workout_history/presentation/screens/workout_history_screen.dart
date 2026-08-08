@@ -3,14 +3,20 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_routes.dart';
+import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
+import '../../../progress/domain/entities/progress.dart';
 import '../../../progress/presentation/controllers/progress_controllers.dart';
 import '../../../workout_session/domain/entities/workout.dart';
 import '../../../workout_session/presentation/controllers/workout_controllers.dart';
+import '../utils/history_stats.dart';
 import '../widgets/history_calendar.dart';
+import '../widgets/history_header.dart';
+import '../widgets/history_month_sheet.dart';
+import '../widgets/history_session_card.dart';
 
-/// Historique (maquette 2g) : sélecteur de mois, grille calendaire
-/// (séances en violet, records en accent), liste des séances du mois.
+/// Historique : carte calendaire du mois (chaleur = volume réel du jour,
+/// accent = record) puis les séances du mois en cartes riches.
 class WorkoutHistoryScreen extends ConsumerStatefulWidget {
   const WorkoutHistoryScreen({super.key});
 
@@ -20,146 +26,137 @@ class WorkoutHistoryScreen extends ConsumerStatefulWidget {
 }
 
 class _WorkoutHistoryScreenState extends ConsumerState<WorkoutHistoryScreen> {
-  late DateTime _month;
+  /// Mois choisi dans la feuille ; `null` = mois courant.
+  DateTime? _selectedMonth;
 
-  @override
-  void initState() {
-    super.initState();
+  DateTime get _month {
+    final selected = _selectedMonth;
+    if (selected != null) {
+      return selected;
+    }
     final now = DateTime.now();
-    _month = DateTime(now.year, now.month);
+    return DateTime(now.year, now.month);
   }
 
-  void _shiftMonth(int delta) {
-    setState(() => _month = DateTime(_month.year, _month.month + delta));
+  Future<void> _pickMonth() async {
+    final history = ref.read(workoutHistoryProvider).valueOrNull ??
+        const <WorkoutHistoryEntry>[];
+    final chosen = await showHistoryMonthSheet(
+      context,
+      months: historyMonths(history, DateTime.now()),
+      selected: _month,
+    );
+    if (chosen != null && mounted) {
+      setState(() => _selectedMonth = chosen);
+    }
   }
 
   @override
   Widget build(BuildContext context) {
     final history = ref.watch(workoutHistoryProvider);
-    final records = ref.watch(personalRecordsProvider).valueOrNull;
-    final now = DateTime.now();
-    final isCurrentMonth = _month.year == now.year && _month.month == now.month;
+    final records = ref.watch(personalRecordsProvider).valueOrNull ??
+        const <PersonalRecordEntry>[];
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
 
     return Scaffold(
       backgroundColor: AppColors.darkBackground,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        title: const Text('Historique'),
-      ),
       body: SafeArea(
-        child: history.when(
-          loading: () => const AppLoadingIndicator(label: 'Chargement'),
-          error: (_, __) =>
-              const AppErrorState(title: 'Historique indisponible'),
-          data: (entries) {
-            if (entries.isEmpty) {
-              return const AppEmptyState(
-                title: 'Aucune séance terminée',
-                message: 'Vos séances apparaîtront ici une fois clôturées.',
-                icon: AppIcons.history,
-              );
-            }
-            final monthEntries = entries.where((entry) {
-              final local = entry.session.startedAt.toLocal();
-              return local.year == _month.year && local.month == _month.month;
-            }).toList();
-
-            return ListView(
-              padding: const EdgeInsets.all(AppSpacing.gutter),
-              children: [
-                Row(
-                  children: [
-                    IconButton(
-                      tooltip: 'Mois précédent',
-                      onPressed: () => _shiftMonth(-1),
-                      icon: const Icon(
-                        Icons.chevron_left_rounded,
-                        color: AppColors.darkTextSecondary,
+        bottom: false,
+        child: ListView(
+          padding: EdgeInsets.fromLTRB(
+            AppSpacing.gutter,
+            AppSpacing.gutter,
+            AppSpacing.gutter,
+            AppSpacing.gutter + bottomInset,
+          ),
+          children: [
+            HistoryHeader(onPickMonth: _pickMonth),
+            const SizedBox(height: AppSpacing.md),
+            history.when(
+              loading: () => const Padding(
+                padding: EdgeInsets.only(top: AppSpacing.xl),
+                child: AppLoadingIndicator(label: 'Chargement de l’historique'),
+              ),
+              error: (_, __) => AppErrorState(
+                title: 'Historique indisponible',
+                message: 'Vos séances n’ont pas pu être chargées.',
+                onRetry: () => ref.invalidate(workoutHistoryProvider),
+              ),
+              data: (entries) => entries.isEmpty
+                  ? const AppEmptyState(
+                      title: 'Aucune séance terminée',
+                      message:
+                          'Vos séances apparaîtront ici une fois clôturées.',
+                      icon: AppIcons.history,
+                    )
+                  : _MonthView(
+                      stats: monthStats(
+                        month: _month,
+                        history: entries,
+                        records: records,
                       ),
                     ),
-                    Expanded(
-                      child: Center(
-                        child: Text(
-                          formatMonth(_month),
-                          style: AppTypography.subheading
-                              .copyWith(color: AppColors.darkTextPrimary),
-                        ),
-                      ),
-                    ),
-                    IconButton(
-                      tooltip: 'Mois suivant',
-                      onPressed: isCurrentMonth ? null : () => _shiftMonth(1),
-                      icon: Icon(
-                        Icons.chevron_right_rounded,
-                        color: isCurrentMonth
-                            ? AppColors.darkTextTertiary
-                            : AppColors.darkTextSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.sm),
-                HistoryCalendar(
-                  month: _month,
-                  entries: monthEntries,
-                  records: records,
-                ),
-                const SizedBox(height: AppSpacing.gapSection),
-                if (monthEntries.isEmpty)
-                  const AppEmptyState(
-                    title: 'Aucune séance ce mois-ci',
-                    message: 'Change de mois avec les flèches ci-dessus.',
-                    icon: AppIcons.history,
-                  )
-                else
-                  for (final entry in monthEntries) ...[
-                    _HistoryRow(entry: entry),
-                    const SizedBox(height: AppSpacing.xs),
-                  ],
-              ],
-            );
-          },
+            ),
+          ],
         ),
       ),
     );
   }
 }
 
-class _HistoryRow extends StatelessWidget {
-  const _HistoryRow({required this.entry});
+/// Contenu du mois affiché : grille de chaleur puis liste des séances.
+class _MonthView extends StatelessWidget {
+  const _MonthView({required this.stats});
 
-  final WorkoutHistoryEntry entry;
+  final HistoryMonthStats stats;
 
   @override
   Widget build(BuildContext context) {
-    final session = entry.session;
-    final local = session.startedAt.toLocal();
-    final trailing = session.syncState != LocalSyncState.synced
-        ? Icon(
-            session.syncState == LocalSyncState.failed
-                ? AppIcons.error
-                : AppIcons.offline,
-            size: 16,
-            color: session.syncState == LocalSyncState.failed
-                ? AppColors.danger
-                : AppColors.darkTextTertiary,
-          )
-        : null;
+    final now = DateTime.now();
+    final isCurrentMonth =
+        stats.month.year == now.year && stats.month.month == now.month;
 
-    return Semantics(
-      label: 'Séance du ${local.day} ${formatMonth(local)}',
-      button: true,
-      child: AppListRow(
-        title: session.name ?? 'Séance libre',
-        subtitle: '${local.day.toString().padLeft(2, '0')} '
-            '${formatMonth(local).split(' ').first} · '
-            '${entry.setsCount} séries',
-        leading: AppIcons.history,
-        trailing: trailing,
-        trailingText:
-            trailing == null ? '${entry.totalVolumeKg.round()} kg' : null,
-        onTap: () => context.push(AppRoutes.workoutDetail(session.id)),
-      ),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        HistoryCalendar(stats: stats),
+        const SizedBox(height: AppSpacing.md),
+        AppSectionLabel(
+          isCurrentMonth ? 'Ce mois-ci' : formatMonthYear(stats.month),
+          color: AppColors.darkTextTertiary,
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        if (stats.entries.isEmpty)
+          const AppEmptyState(
+            title: 'Aucune séance ce mois-ci',
+            message: 'Choisissez un autre mois avec l’icône calendrier.',
+            icon: AppIcons.history,
+          )
+        else
+          for (var index = 0; index < stats.entries.length; index++) ...[
+            if (index > 0) const SizedBox(height: AppSpacing.gapTile),
+            _SessionCard(entry: stats.entries[index], stats: stats),
+          ],
+      ],
+    );
+  }
+}
+
+/// Carte de séance branchée sur la navigation vers le détail.
+class _SessionCard extends StatelessWidget {
+  const _SessionCard({required this.entry, required this.stats});
+
+  final WorkoutHistoryEntry entry;
+  final HistoryMonthStats stats;
+
+  @override
+  Widget build(BuildContext context) {
+    final day = entry.session.startedAt.toLocal().day;
+
+    return HistorySessionCard(
+      entry: entry,
+      hasRecord: stats.hasRecord(day),
+      onTap: () => context.push(AppRoutes.workoutDetail(entry.session.id)),
     );
   }
 }

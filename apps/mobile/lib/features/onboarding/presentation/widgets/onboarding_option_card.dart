@@ -2,7 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../../../../design_system/design_system.dart';
 
-/// Carte de réponse sélectionnable (2i) : gradient primary quand choisie.
+/// Carte de réponse de l'onboarding.
+///
+/// Non sélectionnée : surface sombre + bordure discrète, icône violette.
+/// Sélectionnée : fond accent voilé, bordure accent 1,5 et pastille de
+/// validation à droite.
 class OnboardingOptionCard extends StatelessWidget {
   const OnboardingOptionCard({
     required this.title,
@@ -10,6 +14,7 @@ class OnboardingOptionCard extends StatelessWidget {
     required this.onTap,
     this.subtitle,
     this.icon,
+    this.trailing,
     super.key,
   });
 
@@ -19,31 +24,32 @@ class OnboardingOptionCard extends StatelessWidget {
   final bool selected;
   final VoidCallback onTap;
 
+  /// Contrôle à droite (pas à pas de la taille) — remplace la coche.
+  final Widget? trailing;
+
+  /// Géométrie de la maquette : icône 24, coche 22.
+  static const double _iconSize = 24;
+  static const double _checkSize = 22;
+  static const double _selectedBorderWidth = 1.5;
+
   @override
   Widget build(BuildContext context) {
     return Semantics(
       button: true,
       selected: selected,
       child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
         onTap: onTap,
         child: AnimatedContainer(
           duration: AppMotion.resolve(context, AppMotion.fast),
-          padding: const EdgeInsets.all(16),
+          curve: AppMotion.standard,
+          padding: const EdgeInsets.all(AppSpacing.md),
           decoration: BoxDecoration(
-            color: selected ? null : AppColors.darkSurface,
-            gradient: selected
-                ? const LinearGradient(
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                    colors: [
-                      AppColors.primaryCardStrong,
-                      AppColors.primaryCardSoft,
-                    ],
-                  )
-                : null,
-            borderRadius: AppRadius.cardSecondaryAll,
+            color: selected ? AppColors.accentBadgeBg : AppColors.darkSurface,
+            borderRadius: AppRadius.listRowAll,
             border: Border.all(
-              color: selected ? AppColors.primaryLight : AppColors.darkBorder,
+              color: selected ? AppColors.accent : AppColors.darkBorder,
+              width: selected ? _selectedBorderWidth : 1,
             ),
           ),
           child: Row(
@@ -51,10 +57,8 @@ class OnboardingOptionCard extends StatelessWidget {
               if (icon != null) ...[
                 Icon(
                   icon,
-                  size: 22,
-                  color: selected
-                      ? AppColors.primaryLight
-                      : AppColors.darkTextTertiary,
+                  size: _iconSize,
+                  color: selected ? AppColors.accent : AppColors.primaryLight,
                 ),
                 const SizedBox(width: AppSpacing.gapRow),
               ],
@@ -68,21 +72,23 @@ class OnboardingOptionCard extends StatelessWidget {
                           .copyWith(color: AppColors.darkTextPrimary),
                     ),
                     if (subtitle != null) ...[
-                      const SizedBox(height: 5),
+                      const SizedBox(height: AppSpacing.xxs),
                       Text(
                         subtitle!,
-                        style: AppTypography.body
+                        style: AppTypography.label
                             .copyWith(color: AppColors.darkTextSecondary),
                       ),
                     ],
                   ],
                 ),
               ),
-              if (selected)
+              if (trailing != null)
+                trailing!
+              else if (selected)
                 const Icon(
-                  Icons.check_circle_rounded,
-                  size: 20,
-                  color: AppColors.primaryLight,
+                  AppIcons.checkCircle,
+                  size: _checkSize,
+                  color: AppColors.accent,
                 ),
             ],
           ),

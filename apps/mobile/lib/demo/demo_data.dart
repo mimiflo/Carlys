@@ -270,7 +270,7 @@ PersonalRecordEntry _record(
       exerciseName: exercise,
       type: type,
       value: value,
-      achievedAt: DateTime.utc(2026, 8, 7).subtract(Duration(days: daysAgo)),
+      achievedAt: DateTime.now().toUtc().subtract(Duration(days: daysAgo)),
     );
 
 /// Courbe de poids sur huit semaines — termine à 79,8 kg (IMC normal).
@@ -289,6 +289,8 @@ List<BodyMetricEntry> get demoWeights => [
           id: 'demo-w-$index',
           kind: BodyMetricKind.weightKg,
           value: value,
-          measuredAt: DateTime.utc(2026, 6, 12).add(Duration(days: index * 8)),
+          measuredAt: DateTime.now()
+              .toUtc()
+              .subtract(Duration(days: (7 - index) * 8)),
         ),
     ];

@@ -1,7 +1,20 @@
 import 'package:carlys_mobile/features/exercises/domain/entities/exercise.dart';
 import 'package:carlys_mobile/features/exercises/domain/repositories/exercises_repository.dart';
 
-ExerciseSummary summary(String id, String name, {String? group}) =>
+/// Matériel par défaut du catalogue de test : l'API en renvoie toujours au
+/// moins un pour les mouvements de renforcement.
+const _barbell = EquipmentRef(id: 'eq-barre', slug: 'barre', name: 'Barre');
+
+/// Muscle secondaire par défaut des fiches de test (rôle SECONDARY côté API).
+const _secondaryMuscle =
+    MuscleGroupRef(id: 'mg-triceps', slug: 'triceps', name: 'Triceps');
+
+ExerciseSummary summary(
+  String id,
+  String name, {
+  String? group,
+  List<EquipmentRef> equipment = const [_barbell],
+}) =>
     ExerciseSummary(
       id: id,
       slug: name.toLowerCase().replaceAll(' ', '-'),
@@ -12,7 +25,7 @@ ExerciseSummary summary(String id, String name, {String? group}) =>
       primaryMuscleGroup: group == null
           ? null
           : MuscleGroupRef(id: 'mg-$group', slug: group, name: group),
-      equipment: const [],
+      equipment: equipment,
     );
 
 ExerciseDetail detailOf(ExerciseSummary base) => ExerciseDetail(
@@ -33,6 +46,10 @@ ExerciseDetail detailOf(ExerciseSummary base) => ExerciseDetail(
             muscleGroup: base.primaryMuscleGroup!,
             isPrimary: true,
           ),
+        const ExerciseMuscleLink(
+          muscleGroup: _secondaryMuscle,
+          isPrimary: false,
+        ),
       ],
     );
 

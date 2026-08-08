@@ -113,14 +113,16 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(nutrition.updateCount, 1);
-      expect(find.text('OBJECTIF QUOTIDIEN'), findsOneWidget);
+      // Dépense totale du hero et objectif de l'en-tête « Macros » : les
+      // milliers sont séparés par une espace fine insécable.
       expect(
-        find.textContaining('2759', findRichText: true),
+        find.textContaining('2\u202F759', findRichText: true),
         findsWidgets,
       );
       expect(find.text('Macros'), findsOneWidget);
+      expect(find.textContaining('OBJECTIF'), findsOneWidget);
       expect(find.text('128 g'), findsOneWidget);
-      expect(find.text('Corpulence normale'), findsOneWidget);
+      expect(find.text('CORPULENCE NORMALE'), findsOneWidget);
     });
 
     testWidgets('profil complet : résultats, IMC et hydratation affichés',
@@ -139,11 +141,13 @@ void main() {
       );
       await openNutrition(tester);
 
-      expect(find.text('OBJECTIF QUOTIDIEN'), findsOneWidget);
-      expect(find.text('Maintenir'), findsWidgets);
-      expect(find.text('24.7'), findsOneWidget);
+      expect(find.textContaining('OBJECTIF'), findsOneWidget);
+      expect(find.text('24,7'), findsOneWidget);
       await reveal(tester, find.textContaining('2,8'));
       expect(find.textContaining('2,8'), findsWidgets);
+      // L'objectif nutritionnel reste lisible dans le formulaire de profil.
+      await reveal(tester, find.text('Maintenir'));
+      expect(find.text('Maintenir'), findsWidgets);
       // Le profil reste modifiable sous les résultats.
       await reveal(tester, find.text('Enregistrer mon profil'));
       expect(find.text('Enregistrer mon profil'), findsOneWidget);

@@ -6,6 +6,7 @@
 // Ce fichier EST un harnais de test (exécuté via `flutter test`), simplement
 // rangé hors de test/ — l'avertissement visible_for_testing est donc infondé :
 // ignore_for_file: invalid_use_of_visible_for_testing_member
+import 'dart:async';
 import 'dart:convert';
 import 'dart:io';
 
@@ -21,8 +22,10 @@ import 'package:carlys_mobile/features/exercises/domain/entities/exercise.dart';
 import 'package:carlys_mobile/features/exercises/presentation/widgets/exercise_card.dart';
 import 'package:carlys_mobile/features/nutrition/data/repositories/nutrition_repository_impl.dart';
 import 'package:carlys_mobile/features/nutrition/domain/entities/nutrition.dart';
+import 'package:carlys_mobile/features/profile/presentation/widgets/profile_plan_card.dart';
 import 'package:carlys_mobile/features/progress/data/repositories/progress_repository_impl.dart';
 import 'package:carlys_mobile/features/progress/domain/entities/progress.dart';
+import 'package:carlys_mobile/features/progress/presentation/widgets/body_weight_section.dart';
 import 'package:carlys_mobile/features/subscription/data/repositories/subscription_repository_impl.dart';
 import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';
 import 'package:carlys_mobile/features/workout_session/domain/entities/workout.dart';
@@ -282,7 +285,7 @@ void main() {
     await capture(tester, '06-progression');
 
     await tester.scrollUntilVisible(
-      find.text('82.5 kg'),
+      find.byType(BodyWeightSection),
       150,
       scrollable: find.byType(Scrollable).last,
     );
@@ -293,7 +296,7 @@ void main() {
   testWidgets('abonnement premium', (tester) async {
     await pumpApp(tester, premium: true);
     await goTab(tester, 'Profil');
-    await tester.tap(find.text('Abonnement'));
+    await tester.tap(find.byType(ProfilePlanCard));
     await settle(tester);
     await capture(tester, '08-abonnement');
   });
@@ -323,9 +326,9 @@ void main() {
     await goTab(tester, 'Profil');
     await capture(tester, '13-profil');
 
-    await tester.scrollUntilVisible(find.text('Apparence'), 150);
+    await tester.scrollUntilVisible(find.text('Thème sombre'), 150);
     await settle(tester);
-    await tester.tap(find.text('Apparence'));
+    await tester.tap(find.text('Thème sombre'));
     await settle(tester);
     await capture(tester, '14-reglages');
   });
@@ -334,7 +337,7 @@ void main() {
     final workouts = FakeWorkoutRepository()..history = historyOf();
     await pumpApp(tester, workouts: workouts);
     final context = tester.element(find.byType(AppBottomBar));
-    GoRouter.of(context).push(AppRoutes.history);
+    unawaited(GoRouter.of(context).push(AppRoutes.history));
     await settle(tester);
     await capture(tester, '15-historique');
   });

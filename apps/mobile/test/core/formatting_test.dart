@@ -65,17 +65,14 @@ void main() {
 
     test('dates relatives', () {
       final now = DateTime(2025, 11, 15, 10);
-      expect(formatRelativeDayMono(DateTime(2025, 11, 15), now: now),
-          'AUJOURD’HUI');
-      expect(formatRelativeDayMono(DateTime(2025, 11, 14), now: now), 'HIER');
-      expect(formatRelativeDayMono(DateTime(2025, 11, 11), now: now),
-          'IL Y A 4 JOURS');
-      expect(formatRelativeDayMono(DateTime(2025, 11, 4), now: now),
-          'IL Y A 1 SEMAINE');
-      expect(formatRelativeDayMono(DateTime(2025, 10, 25), now: now),
-          'IL Y A 3 SEMAINES');
-      expect(
-          formatRelativeDayMono(DateTime(2025, 8, 15), now: now), 'IL Y A 3 MOIS');
+      String relative(DateTime date) => formatRelativeDayMono(date, now: now);
+
+      expect(relative(DateTime(2025, 11, 15)), 'AUJOURD’HUI');
+      expect(relative(DateTime(2025, 11, 14)), 'HIER');
+      expect(relative(DateTime(2025, 11, 11)), 'IL Y A 4 JOURS');
+      expect(relative(DateTime(2025, 11, 4)), 'IL Y A 1 SEMAINE');
+      expect(relative(DateTime(2025, 10, 25)), 'IL Y A 3 SEMAINES');
+      expect(relative(DateTime(2025, 8, 15)), 'IL Y A 3 MOIS');
     });
   });
 }

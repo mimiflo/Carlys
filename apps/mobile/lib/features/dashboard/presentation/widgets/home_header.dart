@@ -1,43 +1,20 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
 
-const _weekdays = [
-  'lundi',
-  'mardi',
-  'mercredi',
-  'jeudi',
-  'vendredi',
-  'samedi',
-  'dimanche',
-];
-const _months = [
-  'janv.',
-  'févr.',
-  'mars',
-  'avr.',
-  'mai',
-  'juin',
-  'juil.',
-  'août',
-  'sept.',
-  'oct.',
-  'nov.',
-  'déc.',
-];
-
 /// En-tête de l'accueil : date du jour en mono, salutation en display,
-/// avatar dégradé 44×44.
+/// avatar 44×44 en dégradé violet portant l'initiale.
 class HomeHeader extends StatelessWidget {
   const HomeHeader({required this.displayName, super.key});
 
   final String? displayName;
 
+  /// Géométrie de la maquette : vignette carrée de 44.
+  static const double _avatarSize = 44;
+
   @override
   Widget build(BuildContext context) {
-    final now = DateTime.now();
-    final date =
-        '${_weekdays[now.weekday - 1]} ${now.day} ${_months[now.month - 1]}';
     final firstName = displayName?.split(' ').first;
     final initial = firstName == null || firstName.isEmpty
         ? '?'
@@ -50,8 +27,8 @@ class HomeHeader extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              AppSectionLabel(date),
-              const SizedBox(height: 10),
+              AppSectionLabel(formatLongDateMono(DateTime.now())),
+              const SizedBox(height: AppSpacing.xs),
               Text(
                 firstName == null ? 'Bonjour' : 'Bonjour,\n$firstName',
                 style: AppTypography.display
@@ -60,25 +37,38 @@ class HomeHeader extends StatelessWidget {
             ],
           ),
         ),
-        Container(
-          width: 44,
-          height: 44,
-          decoration: const BoxDecoration(
-            borderRadius: AppRadius.avatarAll,
-            gradient: LinearGradient(
-              begin: Alignment.topLeft,
-              end: Alignment.bottomRight,
-              colors: [AppColors.primary, Color(0xFF2B2B7A)],
+        Semantics(
+          label: firstName == null ? 'Profil' : 'Profil de $firstName',
+          child: Container(
+            width: _avatarSize,
+            height: _avatarSize,
+            decoration: BoxDecoration(
+              borderRadius: AppRadius.avatarAll,
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  AppColors.primary,
+                  // Violet éteint de la maquette, dérivé des tokens.
+                  Color.lerp(
+                    AppColors.primary,
+                    AppColors.darkBackground,
+                    0.55,
+                  )!,
+                ],
+              ),
+              border: const Border.fromBorderSide(
+                BorderSide(color: AppColors.darkBorderStrong),
+              ),
             ),
-            border: Border.fromBorderSide(
-              BorderSide(color: AppColors.darkBorderStrong),
-            ),
-          ),
-          child: Center(
-            child: Text(
-              initial,
-              style:
-                  AppTypography.subheading.copyWith(color: AppColors.neutral0),
+            child: Center(
+              child: Text(
+                initial,
+                style: AppTypography.subheading.copyWith(
+                  fontWeight: FontWeight.w700,
+                  color: AppColors.neutral0,
+                ),
+              ),
             ),
           ),
         ),

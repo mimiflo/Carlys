@@ -4,113 +4,142 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/progress.dart';
 import '../controllers/progress_controllers.dart';
+import 'record_row.dart';
 
-/// Records personnels, regroupés par exercice.
+/// Records personnels : une ligne par record, du plus récent au plus ancien.
 class RecordsSection extends ConsumerWidget {
   const RecordsSection({super.key});
+
+  /// Lignes visibles dans la page ; le reste passe par « TOUT VOIR ».
+  static const int previewCount = 3;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final records = ref.watch(personalRecordsProvider);
 
     return records.when(
-      loading: () => const AppLoadingIndicator(label: 'Chargement'),
-      error: (_, __) => AppErrorState(
-        title: 'Records indisponibles',
-        onRetry: () => ref.invalidate(personalRecordsProvider),
+      loading: () => const Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          AppSectionHeader(title: 'Records personnels'),
+          SizedBox(height: AppSpacing.sm),
+          AppLoadingIndicator(label: 'Chargement des records'),
+        ],
       ),
-      data: (entries) {
-        if (entries.isEmpty) {
-          return const AppEmptyState(
-            title: 'Aucun record pour l’instant',
-            message: 'Terminez une séance pour décrocher vos premiers records.',
-            icon: AppIcons.record,
-          );
-        }
-        final byExercise = <String, List<PersonalRecordEntry>>{};
-        for (final entry in entries) {
-          byExercise.putIfAbsent(entry.exerciseName, () => []).add(entry);
-        }
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            for (final exercise in byExercise.entries) ...[
-              _ExerciseRecordsCard(
-                exerciseName: exercise.key,
-                records: exercise.value,
-              ),
-              const SizedBox(height: AppSpacing.sm),
-            ],
-          ],
-        );
-      },
+      error: (_, __) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          const AppSectionHeader(title: 'Records personnels'),
+          const SizedBox(height: AppSpacing.sm),
+          AppErrorState(
+            title: 'Records indisponibles',
+            message: 'Vérifiez votre connexion puis réessayez.',
+            onRetry: () => ref.invalidate(personalRecordsProvider),
+          ),
+        ],
+      ),
+      data: (entries) => _RecordsList(records: sortedByRecency(entries)),
     );
   }
+
+  /// Du record le plus récent au plus ancien — le premier porte l'accent.
+  static List<PersonalRecordEntry> sortedByRecency(
+    List<PersonalRecordEntry> entries,
+  ) =>
+      [...entries]..sort((a, b) => b.achievedAt.compareTo(a.achievedAt));
 }
 
-class _ExerciseRecordsCard extends StatelessWidget {
-  const _ExerciseRecordsCard({
-    required this.exerciseName,
-    required this.records,
-  });
+class _RecordsList extends StatelessWidget {
+  const _RecordsList({required this.records});
 
-  final String exerciseName;
   final List<PersonalRecordEntry> records;
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final preview = records.take(RecordsSection.previewCount).toList();
 
-    return AppCard(
-      semanticLabel: 'Records sur $exerciseName',
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(
-                AppIcons.record,
-                size: 18,
-                color: AppColors.accent,
-              ),
-              const SizedBox(width: AppSpacing.xs),
-              Expanded(
-                child: Text(exerciseName, style: theme.textTheme.titleLarge),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          for (final record in records) ...[
-            Row(
-              children: [
-                Expanded(
-                  child: Text(
-                    record.type.label,
-                    style: theme.textTheme.bodyLarge,
-                  ),
-                ),
-                Text(
-                  record.formattedValue,
-                  style:
-                      AppTypography.metricS.copyWith(color: AppColors.accent),
-                ),
-                const SizedBox(width: AppSpacing.sm),
-                Text(
-                  _formatDate(record.achievedAt),
-                  style: theme.textTheme.bodySmall,
-                ),
-              ],
-            ),
-            if (record != records.last) const SizedBox(height: AppSpacing.xs),
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        AppSectionHeader(
+          title: 'Records personnels',
+          trailing: records.isEmpty ? null : 'Tout voir',
+          trailingTone: AppSectionTrailingTone.primary,
+          onTrailingTap: records.isEmpty
+              ? null
+              : () => showAllRecordsSheet(context, records),
+        ),
+        const SizedBox(height: AppSpacing.sm),
+        if (records.isEmpty)
+          const AppEmptyState(
+            title: 'Aucun record pour l’instant',
+            message: 'Terminez une séance pour décrocher vos premiers records.',
+            icon: AppIcons.record,
+          )
+        else
+          for (final (index, record) in preview.indexed) ...[
+            if (index > 0) const SizedBox(height: AppSpacing.sm),
+            RecordRow(record: record, isLatest: index == 0),
           ],
-        ],
-      ),
+      ],
     );
   }
 }
 
-String _formatDate(DateTime utc) {
-  final local = utc.toLocal();
-  String pad(int value) => value.toString().padLeft(2, '0');
-  return '${pad(local.day)}/${pad(local.month)}/${local.year}';
+/// Liste complète des records, ouverte depuis « TOUT VOIR ».
+Future<void> showAllRecordsSheet(
+  BuildContext context,
+  List<PersonalRecordEntry> records,
+) {
+  return showModalBottomSheet<void>(
+    context: context,
+    backgroundColor: AppColors.darkSurfaceAlt,
+    isScrollControlled: true,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(
+        top: Radius.circular(AppRadius.cardMain),
+      ),
+    ),
+    builder: (sheetContext) => _AllRecordsSheet(records: records),
+  );
+}
+
+class _AllRecordsSheet extends StatelessWidget {
+  const _AllRecordsSheet({required this.records});
+
+  final List<PersonalRecordEntry> records;
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: ConstrainedBox(
+        constraints: BoxConstraints(
+          maxHeight: MediaQuery.sizeOf(context).height * 0.8,
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(AppSpacing.gutter),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              const AppSectionHeader(title: 'Tous mes records'),
+              const SizedBox(height: AppSpacing.sm),
+              Flexible(
+                child: ListView.separated(
+                  shrinkWrap: true,
+                  itemCount: records.length,
+                  separatorBuilder: (_, __) =>
+                      const SizedBox(height: AppSpacing.sm),
+                  itemBuilder: (_, index) => RecordRow(
+                    record: records[index],
+                    isLatest: index == 0,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }

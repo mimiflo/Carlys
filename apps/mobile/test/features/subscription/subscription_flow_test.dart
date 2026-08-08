@@ -6,6 +6,7 @@ import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
 import 'package:carlys_mobile/features/exercises/data/repositories/exercises_repository_impl.dart';
 import 'package:carlys_mobile/features/exercises/domain/entities/exercise.dart';
+import 'package:carlys_mobile/features/profile/presentation/widgets/profile_plan_card.dart';
 import 'package:carlys_mobile/features/subscription/data/repositories/subscription_repository_impl.dart';
 import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';
 import 'package:flutter/material.dart';
@@ -53,8 +54,9 @@ Future<void> reveal(WidgetTester tester, Finder item) async {
 
 void main() {
   setUp(() {
-    // La carte de plan premium porte une bordure animée en boucle :
+    // L'écran porte une scène 3D et une bordure animée en boucle :
     // animations réduites pour que pumpAndSettle converge.
+    TestWidgetsFlutterBinding.ensureInitialized();
     TestWidgetsFlutterBinding.instance.platformDispatcher
         .accessibilityFeaturesTestValue = FakeAccessibilityFeatures.allOn;
   });
@@ -77,14 +79,24 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await reveal(tester, find.text('Abonnement'));
-    await tester.tap(find.text('Abonnement'));
+    // L'abonnement s'ouvre depuis la bannière de plan du profil.
+    await reveal(tester, find.byType(ProfilePlanCard));
+    await tester.tap(find.byType(ProfilePlanCard));
     await tester.pumpAndSettle();
+
+    // Accroche de la maquette 2i : label mono, titre display, croix de
+    // fermeture — plus aucune barre de titre.
+    expect(find.text('CARLYS PREMIUM'), findsOneWidget);
+    expect(find.text('Ton coach\nne dort jamais.'), findsOneWidget);
+    expect(find.byIcon(Icons.close_rounded), findsOneWidget);
+    expect(find.byType(AppBar), findsNothing);
 
     expect(find.text('Programmes illimités'), findsOneWidget);
     expect(find.text('Statistiques avancées'), findsOneWidget);
     expect(find.byIcon(Icons.lock_outline_rounded), findsWidgets);
     expect(find.byIcon(Icons.check_circle_rounded), findsNothing);
+    expect(find.text('GRATUIT'), findsOneWidget);
+    expect(find.text('Aucun abonnement actif'), findsOneWidget);
   });
 
   testWidgets('plan premium : droits actifs et état de l’abonnement',
@@ -101,13 +113,18 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await reveal(tester, find.text('Abonnement'));
-    await tester.tap(find.text('Abonnement'));
+    // L'abonnement s'ouvre depuis la bannière de plan du profil.
+    await reveal(tester, find.byType(ProfilePlanCard));
+    await tester.tap(find.byType(ProfilePlanCard));
     await tester.pumpAndSettle();
 
     expect(find.text('Premium'), findsWidgets);
+    expect(find.text('ACTIF'), findsOneWidget);
     expect(find.byIcon(Icons.check_circle_rounded), findsNWidgets(3));
-    expect(find.textContaining('renouvellement le'), findsOneWidget);
+    // Échéance formatée par formatShortDateMono (« DIM. 6 SEPT. » en UTC ;
+    // le jour local dépend du fuseau de la machine de test).
+    expect(find.textContaining('Renouvellement le '), findsOneWidget);
+    expect(find.textContaining('SEPT.'), findsOneWidget);
   });
 
   testWidgets(

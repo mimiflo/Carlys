@@ -5,20 +5,17 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/app_routes.dart';
 import '../../../../core/synchronization/sync_lifecycle.dart';
 import '../../../../design_system/design_system.dart';
-import '../../../../design_system/scenes/app_scene_container.dart';
-import '../../../../design_system/scenes/heart_scene.dart';
 import '../../../authentication/presentation/controllers/auth_controller.dart';
 import '../../../nutrition/presentation/controllers/nutrition_controllers.dart';
 import '../../../workout_session/presentation/controllers/workout_controllers.dart';
 import '../controllers/dashboard_controllers.dart';
-import '../widgets/forme_card.dart';
-import '../widgets/home_header.dart';
+import '../widgets/home_hero.dart';
 import '../widgets/home_stat_tiles.dart';
 import '../widgets/today_workout_card.dart';
 import '../widgets/week_bars.dart';
 
-/// Accueil (maquette 2a) : scène ambiante, indice de forme, séance du
-/// jour (unique CTA accent), tuiles et semaine.
+/// Accueil (maquette 2b) : zone haute avec la scène cœur et l'indice de
+/// forme, séance du jour (unique CTA accent), tuiles et semaine.
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
@@ -40,51 +37,39 @@ class HomeScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.darkBackground,
-      body: Stack(
+      body: ListView(
+        // La zone haute est à fond perdu : chaque section pose sa gouttière.
+        padding: EdgeInsets.only(bottom: bottomInset + AppSpacing.gapSection),
         children: [
-          // Scène du cœur, ancrée haut-droite, débordant du cadre (2a).
-          const Positioned(
-            top: 22,
-            right: -126,
-            child: AppSceneContainer(
-              size: 330,
-              opacity: 0.9,
-              verticalFadeStops: [0.0, 0.18, 0.56, 0.90],
-              child: HeartScene(),
+          HomeHero(
+            displayName: user?.displayName,
+            fitnessIndex: ref.watch(fitnessIndexProvider),
+            week: week,
+            restSinceLastWorkout: ref.watch(restSinceLastWorkoutProvider),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
+            child: TodayWorkoutCard(
+              activeWorkout: activeWorkout,
+              onStart: () async {
+                if (activeWorkout == null) {
+                  await ref.read(workoutActionsProvider).start();
+                }
+                if (context.mounted) {
+                  await context.push(AppRoutes.activeWorkout);
+                }
+              },
             ),
           ),
-          const Positioned.fill(child: AppSceneScrim.vertical()),
-          SafeArea(
-            bottom: false,
-            child: ListView(
-              padding: EdgeInsets.fromLTRB(
-                AppSpacing.gutter,
-                AppSpacing.md,
-                AppSpacing.gutter,
-                bottomInset + AppSpacing.gutter,
-              ),
-              children: [
-                HomeHeader(displayName: user?.displayName),
-                const SizedBox(height: AppSpacing.gutter),
-                FormeCard(week: week),
-                const SizedBox(height: AppSpacing.md),
-                TodayWorkoutCard(
-                  activeWorkout: activeWorkout,
-                  onStart: () async {
-                    if (activeWorkout == null) {
-                      await ref.read(workoutActionsProvider).start();
-                    }
-                    if (context.mounted) {
-                      await context.push(AppRoutes.activeWorkout);
-                    }
-                  },
-                ),
-                const SizedBox(height: AppSpacing.md),
-                HomeStatTiles(report: report, week: week),
-                const SizedBox(height: AppSpacing.gapSection),
-                WeekBars(week: week),
-              ],
-            ),
+          const SizedBox(height: AppSpacing.gapRow),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
+            child: HomeStatTiles(report: report, week: week),
+          ),
+          const SizedBox(height: AppSpacing.md),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
+            child: WeekBars(week: week),
           ),
         ],
       ),

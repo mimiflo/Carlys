@@ -2,6 +2,7 @@ import 'package:carlys_mobile/app/app.dart';
 import 'package:carlys_mobile/app/environment/app_environment.dart';
 import 'package:carlys_mobile/demo/demo_overrides.dart';
 import 'package:carlys_mobile/design_system/design_system.dart';
+import 'package:carlys_mobile/features/profile/presentation/widgets/profile_plan_card.dart';
 import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -83,9 +84,11 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    expect(find.text('OBJECTIF QUOTIDIEN'), findsOneWidget);
+    // L'objectif calorique est annoncé par l'en-tête « Macros » ; les
+    // milliers sont séparés par une espace fine insécable.
+    expect(find.text('Macros'), findsOneWidget);
     expect(
-      find.textContaining('3040', findRichText: true),
+      find.textContaining('3\u202F040', findRichText: true),
       findsWidgets,
     );
   });
@@ -112,8 +115,9 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
-    await reveal(tester, find.text('Abonnement'));
-    await tester.tap(find.text('Abonnement'));
+    // L'abonnement s'ouvre depuis la bannière de plan du profil.
+    await reveal(tester, find.byType(ProfilePlanCard));
+    await tester.tap(find.byType(ProfilePlanCard));
     await tester.pumpAndSettle();
     expect(find.textContaining('Premium (démo)'), findsWidgets);
   });

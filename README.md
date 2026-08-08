@@ -385,7 +385,8 @@ Politique complète et signalement de vulnérabilités : [SECURITY.md](./SECURIT
 
 ## Documentation
 
-- [`docs/product/`](./docs/product/) — vision produit et fonctionnalités ;
+- [`docs/product/`](./docs/product/) — vision produit et fonctionnalités, dont
+  [la conformité à la maquette Claude Design](./docs/product/design-conformity.md) ;
 - [`docs/architecture/`](./docs/architecture/) — architecture technique ;
 - [`docs/api/`](./docs/api/) — conventions et contrats de l'API ;
 - [`docs/database/`](./docs/database/) — base de données et migrations ;

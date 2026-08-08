@@ -69,6 +69,9 @@ void main() {
 
     expect(find.text('Pompes'), findsOneWidget);
     expect(find.text('Squat'), findsOneWidget);
+    // Compteur des pages chargées et sous-ligne « GROUPE · MATÉRIEL ».
+    expect(find.text('2 mouvements'), findsOneWidget);
+    expect(find.text('PECTORAUX · BARRE'), findsOneWidget);
 
     // Recherche débouncée.
     await tester.enterText(find.byType(TextField), 'Squat');
@@ -83,19 +86,23 @@ void main() {
     await tester.tap(squatCard);
     await tester.pumpAndSettle();
 
+    // La fiche ouvre sur son en-tête média : sur-titre « GROUPE · TYPE »
+    // puis le nom du mouvement.
+    expect(find.text('QUADRICEPS · RENFORCEMENT'), findsOneWidget);
     await tester.scrollUntilVisible(
-      find.text('Description de Squat'),
+      find.text('Muscles sollicités'),
       150,
       scrollable: find.byType(Scrollable).last,
     );
-    expect(find.text('Description de Squat'), findsOneWidget);
+    expect(find.text('Muscles sollicités'), findsOneWidget);
     await tester.scrollUntilVisible(
       find.text('Première étape'),
       150,
       scrollable: find.byType(Scrollable).last,
     );
     expect(find.text('Première étape'), findsOneWidget);
-    expect(find.text('Technique'), findsOneWidget);
+    expect(find.text('Exécution'), findsOneWidget);
+    expect(find.text('Ajouter à la séance'), findsOneWidget);
   });
 
   testWidgets('bibliothèque vide : état dédié avec message', (tester) async {

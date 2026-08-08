@@ -1,15 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/app_routes.dart';
 import '../../../../design_system/design_system.dart';
 import '../../../../design_system/scenes/app_scene_container.dart';
 import '../../../../design_system/scenes/heart_scene.dart';
-import '../../domain/entities/subscription.dart';
 import '../controllers/subscription_controllers.dart';
+import '../widgets/subscription_benefits.dart';
+import '../widgets/subscription_hero.dart';
+import '../widgets/subscription_plan_card.dart';
 
-/// Abonnement (maquette 2h) : hero sur cœur ambiant, avantages réels
-/// (droits décidés côté serveur), carte de plan — l'offre d'achat arrivera
-/// avec les produits stores, aucun prix inventé d'ici là.
+/// Abonnement (maquette 2i) : plein écran sans barre de titre, cœur ambiant
+/// débordant en haut à droite, accroche premium, avantages issus des droits
+/// réels puis carte du plan.
+///
+/// La maquette montre deux cartes d'offre chiffrées et un bouton d'achat :
+/// l'API ne sert aucun catalogue de prix ni action d'achat, ces blocs sont
+/// donc omis plutôt qu'inventés.
 class SubscriptionScreen extends ConsumerWidget {
   const SubscriptionScreen({super.key});
 
@@ -20,13 +28,9 @@ class SubscriptionScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.darkBackground,
-      appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        title: const Text('Abonnement'),
-      ),
       body: Stack(
         children: [
-          // Cœur ambiant haut-droite, débordant du cadre (2h).
+          // Cœur ambiant haut-droite, débordant du cadre (2i).
           const Positioned(
             top: 14,
             right: -118,
@@ -39,60 +43,53 @@ class SubscriptionScreen extends ConsumerWidget {
           ),
           const Positioned.fill(child: AppSceneScrim.lateral()),
           SafeArea(
-            child: ListView(
-              padding: const EdgeInsets.all(AppSpacing.gutter),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const AppSectionLabel('Carlys Premium'),
-                const SizedBox(height: 10),
-                Text(
-                  'Ton coach\nne dort jamais.',
-                  style: AppTypography.display
-                      .copyWith(color: AppColors.darkTextPrimary),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  'Programmation adaptative, macros recalculées chaque jour, '
-                  'historique illimité.',
-                  style: AppTypography.body
-                      .copyWith(color: AppColors.darkTextSecondary),
-                ),
-                const SizedBox(height: AppSpacing.gapSection),
-                entitlements.when(
-                  loading: () =>
-                      const AppLoadingIndicator(label: 'Chargement des droits'),
-                  error: (_, __) => AppErrorState(
-                    title: 'Droits indisponibles',
-                    onRetry: () => ref.invalidate(entitlementsProvider),
-                  ),
-                  data: (entries) => Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                const _CloseButton(),
+                Expanded(
+                  child: ListView(
+                    padding: const EdgeInsets.only(
+                      top: AppSpacing.lg,
+                      bottom: AppSpacing.gapSection,
+                    ),
                     children: [
-                      for (final entry in entries)
-                        _EntitlementRow(entry: entry),
+                      const SubscriptionHero(),
+                      const SizedBox(height: AppSpacing.gapSection),
+                      entitlements.when(
+                        loading: () => const AppLoadingIndicator(
+                          label: 'Chargement des droits',
+                        ),
+                        error: (_, __) => AppErrorState(
+                          title: 'Droits indisponibles',
+                          onRetry: () => ref.invalidate(entitlementsProvider),
+                        ),
+                        data: (entries) => SubscriptionBenefits(
+                          entries: entries,
+                        ),
+                      ),
+                      const SizedBox(height: AppSpacing.gapSection),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.gutter,
+                        ),
+                        child: plan.when(
+                          loading: () => const AppLoadingIndicator(
+                            label: 'Chargement du plan',
+                          ),
+                          error: (_, __) => AppErrorState(
+                            title: 'Plan indisponible',
+                            onRetry: () => ref.invalidate(planStatusProvider),
+                          ),
+                          data: (status) => SubscriptionPlanCard(
+                            status: status,
+                          ),
+                        ),
+                      ),
                     ],
                   ),
                 ),
-                const SizedBox(height: AppSpacing.gapSection),
-                plan.when(
-                  loading: () =>
-                      const AppLoadingIndicator(label: 'Chargement du plan'),
-                  error: (_, __) => AppErrorState(
-                    title: 'Plan indisponible',
-                    onRetry: () => ref.invalidate(planStatusProvider),
-                  ),
-                  data: (status) => _PlanCard(status: status),
-                ),
-                const SizedBox(height: AppSpacing.md),
-                Text(
-                  'La souscription se fera via l’App Store, Google Play ou le '
-                  'site web. Vos droits sont toujours validés par le serveur — '
-                  'la restauration d’achat les réactive automatiquement.',
-                  style: AppTypography.label.copyWith(
-                    fontSize: 11,
-                    height: 1.5,
-                    color: AppColors.darkTextTertiary,
-                  ),
-                ),
+                const _PurchaseNote(),
               ],
             ),
           ),
@@ -102,118 +99,68 @@ class SubscriptionScreen extends ConsumerWidget {
   }
 }
 
-class _PlanCard extends StatelessWidget {
-  const _PlanCard({required this.status});
+/// Croix de fermeture de la maquette, calée sur la gouttière : la gouttière
+/// moins la demi-boîte tactile place l'icône exactement sur la marge.
+class _CloseButton extends StatelessWidget {
+  const _CloseButton();
 
-  final PlanStatus status;
+  static const double _iconSize = 23;
+  static const double _tapSize = 44;
 
   @override
   Widget build(BuildContext context) {
-    final subscription = status.subscription;
-    final content = Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Row(
-          children: [
-            Expanded(
-              child: Text(
-                status.planName,
-                style: AppTypography.metricL
-                    .copyWith(color: AppColors.darkTextPrimary),
-              ),
-            ),
-            AppPill(
-              label: status.isPremium ? 'ACTIF' : 'GRATUIT',
-              tone: status.isPremium ? AppPillTone.accent : AppPillTone.neutral,
-              mono: true,
-            ),
-          ],
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: Padding(
+        padding: const EdgeInsets.only(
+          left: AppSpacing.sm,
+          top: AppSpacing.xs,
         ),
-        if (subscription != null) ...[
-          const SizedBox(height: AppSpacing.sm),
-          Text(
-            _subscriptionSummary(subscription),
-            style:
-                AppTypography.body.copyWith(color: AppColors.darkTextSecondary),
+        child: IconButton(
+          tooltip: 'Fermer',
+          padding: EdgeInsets.zero,
+          constraints: const BoxConstraints.tightFor(
+            width: _tapSize,
+            height: _tapSize,
           ),
-        ],
-      ],
-    );
-
-    // L'offre active porte la bordure animée de la maquette.
-    if (status.isPremium) {
-      return AppAnimatedBorderCard(child: content);
-    }
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: const BoxDecoration(
-        color: AppColors.darkSurface,
-        borderRadius: AppRadius.cardSecondaryAll,
-        border: Border.fromBorderSide(BorderSide(color: AppColors.darkBorder)),
+          onPressed: () =>
+              context.canPop() ? context.pop() : context.go(AppRoutes.profile),
+          icon: const Icon(
+            AppIcons.close,
+            size: _iconSize,
+            color: AppColors.darkTextSecondary,
+          ),
+        ),
       ),
-      child: content,
     );
   }
 }
 
-class _EntitlementRow extends StatelessWidget {
-  const _EntitlementRow({required this.entry});
-
-  final EntitlementEntry entry;
+/// Bas d'écran de la maquette : la mention légale reste, le bouton d'achat
+/// attend un catalogue de prix et une action de paiement côté serveur.
+class _PurchaseNote extends StatelessWidget {
+  const _PurchaseNote();
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 6),
-      child: Row(
-        children: [
-          Icon(
-            entry.isActive
-                ? Icons.check_circle_rounded
-                : Icons.lock_outline_rounded,
-            size: 20,
-            color:
-                entry.isActive ? AppColors.accent : AppColors.darkTextTertiary,
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Text(
-              entry.label,
-              style: AppTypography.body.copyWith(
-                color: entry.isActive
-                    ? AppColors.darkTextPrimary
-                    : AppColors.darkTextTertiary,
-              ),
-            ),
-          ),
-          if (entry.isActive && entry.expiresAt != null)
-            Text(
-              'jusqu’au ${_formatDate(entry.expiresAt!)}',
-              style: AppTypography.labelMono
-                  .copyWith(color: AppColors.darkTextTertiary),
-            ),
-        ],
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.gutter,
+        AppSpacing.md,
+        AppSpacing.gutter,
+        AppSpacing.lg,
+      ),
+      child: Text(
+        'La souscription se fait via l’App Store, Google Play ou le site web. '
+        'Vos droits sont toujours validés par le serveur — la restauration '
+        'd’achat les réactive automatiquement.',
+        textAlign: TextAlign.center,
+        style: AppTypography.label.copyWith(
+          fontSize: 11,
+          height: 1.4,
+          color: AppColors.darkTextTertiary,
+        ),
       ),
     );
   }
-}
-
-String _subscriptionSummary(SubscriptionInfo subscription) {
-  final buffer = StringBuffer(subscription.state.label);
-  final end = subscription.currentPeriodEnd;
-  if (end != null) {
-    buffer.write(
-      subscription.cancelAtPeriodEnd ||
-              subscription.state == SubscriptionState.canceled
-          ? ' — accès jusqu’au ${_formatDate(end)}'
-          : ' — renouvellement le ${_formatDate(end)}',
-    );
-  }
-  return buffer.toString();
-}
-
-String _formatDate(DateTime utc) {
-  final local = utc.toLocal();
-  String pad(int value) => value.toString().padLeft(2, '0');
-  return '${pad(local.day)}/${pad(local.month)}/${local.year}';
 }
