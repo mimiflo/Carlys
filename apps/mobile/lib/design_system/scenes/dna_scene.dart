@@ -30,6 +30,17 @@ class DnaScenePainter extends CustomPainter {
   static const double _offsetX = 0.9;
   static const double _spin = 0.22;
 
+  /// Gain de luminosité appliqué aux matériaux et à l'exposition.
+  ///
+  /// La maquette est faite pour un écran de bureau ; sur téléphone, en
+  /// extérieur, l'hélice devenait trop discrète. Le gain porte sur l'émissivité
+  /// et l'opacité, pas sur les couleurs : la teinte reste celle du handoff.
+  static const double _emissiveGain = 1.7;
+  static const double _opacityGain = 1.22;
+
+  static double _op(double value) =>
+      (value * _opacityGain).clamp(0.0, 1.0).toDouble();
+
   /// Matériaux de la maquette, dans l'ordre de [DnaMaterialId].
   static final List<StandardMaterial> _materials = [
     _strand(0x5B5BF6),
@@ -37,18 +48,18 @@ class DnaScenePainter extends CustomPainter {
     StandardMaterial(
       base: LinearRgb.fromHex(0xC6F432),
       emissive: LinearRgb.fromHex(0xC6F432),
-      emissiveIntensity: 0.5,
+      emissiveIntensity: 0.5 * _emissiveGain,
       roughness: 0.4,
       metalness: 0,
-      opacity: 0.6,
+      opacity: _op(0.6),
     ),
     StandardMaterial(
       base: const LinearRgb(1, 1, 1),
       emissive: LinearRgb.fromHex(0x8A8AFA),
-      emissiveIntensity: 0.35,
+      emissiveIntensity: 0.35 * _emissiveGain,
       roughness: 0.5,
       metalness: 0,
-      opacity: 0.4,
+      opacity: _op(0.4),
     ),
     _node(0xC6F432, 0xC6F432),
     _node(0xC9C9FF, 0x5B5BF6),
@@ -57,19 +68,19 @@ class DnaScenePainter extends CustomPainter {
   static StandardMaterial _strand(int hex) => StandardMaterial(
         base: LinearRgb.fromHex(hex),
         emissive: LinearRgb.fromHex(hex),
-        emissiveIntensity: 0.6,
+        emissiveIntensity: 0.6 * _emissiveGain,
         roughness: 0.3,
         metalness: 0.35,
-        opacity: 0.8,
+        opacity: _op(0.8),
       );
 
   static StandardMaterial _node(int hex, int emissive) => StandardMaterial(
         base: LinearRgb.fromHex(hex),
         emissive: LinearRgb.fromHex(emissive),
-        emissiveIntensity: 0.6,
+        emissiveIntensity: 0.6 * _emissiveGain,
         roughness: 0.35,
         metalness: 0,
-        opacity: 0.55,
+        opacity: _op(0.55),
       );
 
   static final SceneCamera _camera = SceneCamera(
@@ -84,7 +95,7 @@ class DnaScenePainter extends CustomPainter {
 
   /// Les quatre lumières du mode hero, à l'unité près.
   static final SceneShader _shader = SceneShader(
-    exposure: 1.05,
+    exposure: 1.22,
     cameraX: 0,
     cameraY: 0,
     cameraZ: _cameraZ,

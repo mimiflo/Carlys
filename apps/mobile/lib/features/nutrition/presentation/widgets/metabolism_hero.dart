@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../../../core/utilities/formatting.dart';
@@ -50,13 +52,15 @@ class MetabolismHero extends StatelessWidget {
             child: Opacity(opacity: _haloOpacity, child: AppSceneHalo()),
           ),
           Positioned(
-            top: topInset + _sceneTop,
+            // Jamais au-dessus du bord : la scène serait tranchée net,
+            // fondu compris, sur les écrans sans encoche.
+            top: math.max(0, topInset + _sceneTop),
             left: 0,
             right: 0,
             child: const Center(
               child: AppSceneContainer(
                 size: _heroHeight,
-                opacity: 0.85,
+                opacity: 1,
                 verticalFadeStops: _sceneFade,
                 child: Center(child: DnaHelix(height: _helixHeight)),
               ),

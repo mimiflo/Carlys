@@ -35,8 +35,25 @@ jobs:
           channel: stable
           cache: true
 
+      - name: Cache des paquets Dart
+        uses: actions/cache@v4
+        with:
+          path: ~/.pub-cache
+          key: pub-${{ runner.os }}-${{ hashFiles('apps/mobile/pubspec.lock') }}
+          restore-keys: pub-${{ runner.os }}-
+
       - name: Dépendances
         run: flutter pub get
+
+      # Le cache de build_runner évite de tout régénérer à chaque exécution.
+      - name: Cache de génération de code
+        uses: actions/cache@v4
+        with:
+          path: apps/mobile/.dart_tool/build
+          key: buildrunner-${{ runner.os }}-${{ hashFiles('apps/mobile/pubspec.lock') }}-${{ hashFiles('apps/mobile/lib/**/*.dart') }}
+          restore-keys: |
+            buildrunner-${{ runner.os }}-${{ hashFiles('apps/mobile/pubspec.lock') }}-
+            buildrunner-${{ runner.os }}-
 
       - name: Génération de code (Drift, …)
         run: dart run build_runner build --delete-conflicting-outputs

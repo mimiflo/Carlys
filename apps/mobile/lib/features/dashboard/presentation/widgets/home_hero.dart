@@ -27,11 +27,16 @@ class HomeHero extends StatelessWidget {
   /// Géométrie de la maquette : scène de 330 posée à 22 du haut, débordant
   /// de 126 à droite.
   static const double _sceneSize = 330;
-  static const double _sceneTop = 22;
+
+  /// Descendu par rapport à la maquette : sur un téléphone réel, le cœur
+  /// mordait sur l'avatar du profil, en haut à droite.
+  static const double _sceneTop = 64;
   static const double _sceneRight = -126;
 
   /// Fondu vertical de la scène (transparent → plein → transparent).
-  static const List<double> _sceneFade = [0.0, 0.18, 0.56, 0.90];
+  /// Le fondu doit être ACHEVÉ avant le bas de la zone haute, sinon la scène
+  /// se fait trancher net à la limite du bloc.
+  static const List<double> _sceneFade = [0.0, 0.16, 0.46, 0.76];
 
   /// Respiration entre l'en-tête et l'indice de forme, qui donne à la zone
   /// haute ses 322 de la maquette.
