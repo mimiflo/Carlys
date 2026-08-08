@@ -4,23 +4,28 @@ import '../../../../design_system/design_system.dart';
 import '../../../../design_system/scenes/app_scene_container.dart';
 import '../../../../design_system/scenes/heart_scene.dart';
 import '../../../progress/domain/entities/progress.dart';
-import 'fitness_index_block.dart';
+import '../../domain/entities/daily_quote.dart';
+import 'daily_quote_block.dart';
 import 'home_fact_pills.dart';
 import 'home_header.dart';
 
 /// Zone haute de l'accueil : scène cœur ancrée haut-droite qui déborde du
-/// cadre, dégradés de lisibilité, en-tête, indice de forme et faits du jour.
+/// cadre, dégradés de lisibilité, en-tête, maxime du jour et faits.
+///
+/// Sous le cœur vit désormais la MAXIME, pas l'indice de forme : ce qu'on lit
+/// en ouvrant l'application doit donner envie de s'y mettre. Le chiffre est
+/// descendu près de « Ta semaine », où il se compare à quelque chose.
 class HomeHero extends StatelessWidget {
   const HomeHero({
     required this.displayName,
-    required this.fitnessIndex,
+    required this.quote,
     required this.week,
     required this.restSinceLastWorkout,
     super.key,
   });
 
   final String? displayName;
-  final int? fitnessIndex;
+  final DailyQuote quote;
   final ProgressOverviewEntity? week;
   final Duration? restSinceLastWorkout;
 
@@ -38,8 +43,8 @@ class HomeHero extends StatelessWidget {
   /// se fait trancher net à la limite du bloc.
   static const List<double> _sceneFade = [0.0, 0.16, 0.46, 0.76];
 
-  /// Respiration entre l'en-tête et l'indice de forme, qui donne à la zone
-  /// haute ses 322 de la maquette.
+  /// Respiration entre l'en-tête et la maxime, qui donne à la zone haute ses
+  /// 322 de la maquette.
   static const double _headroom = 84;
 
   @override
@@ -86,7 +91,7 @@ class HomeHero extends StatelessWidget {
               Padding(
                 padding:
                     const EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
-                child: FitnessIndexBlock(score: fitnessIndex),
+                child: DailyQuoteBlock(quote: quote),
               ),
               const SizedBox(height: AppSpacing.sm),
               HomeFactPills(

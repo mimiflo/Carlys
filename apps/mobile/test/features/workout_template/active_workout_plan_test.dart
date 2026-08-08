@@ -1,3 +1,4 @@
+import 'package:carlys_mobile/app/restore/app_restore.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
 import 'package:carlys_mobile/demo/demo_templates.dart';
 import 'package:carlys_mobile/design_system/design_system.dart';
@@ -83,6 +84,7 @@ void main() {
             ),
           ),
           syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
+          appRestoreProvider.overrideWithValue(NoopAppRestore()),
         ],
         child: MaterialApp(
           theme: AppTheme.dark(),

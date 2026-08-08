@@ -1,5 +1,6 @@
 import 'package:carlys_mobile/app/app.dart';
 import 'package:carlys_mobile/app/environment/app_environment.dart';
+import 'package:carlys_mobile/app/restore/app_restore.dart';
 import 'package:carlys_mobile/app/router/app_routes.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
 import 'package:carlys_mobile/design_system/design_system.dart';
@@ -55,6 +56,7 @@ void main() {
           workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
           nutritionRepositoryProvider.overrideWithValue(nutrition),
           syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
+          appRestoreProvider.overrideWithValue(NoopAppRestore()),
         ],
         child: const CarlysApp(),
       ),

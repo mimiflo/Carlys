@@ -10,13 +10,16 @@ import '../../../authentication/presentation/controllers/auth_controller.dart';
 import '../../../nutrition/presentation/controllers/nutrition_controllers.dart';
 import '../../../workout_session/presentation/controllers/workout_controllers.dart';
 import '../controllers/dashboard_controllers.dart';
+import '../widgets/consistency_streak.dart';
+import '../widgets/fitness_index_block.dart';
 import '../widgets/home_hero.dart';
 import '../widgets/home_stat_tiles.dart';
 import '../widgets/today_workout_card.dart';
 import '../widgets/week_bars.dart';
 
-/// Accueil (maquette 2b) : zone haute avec la scène cœur et l'indice de
-/// forme, séance du jour (unique CTA accent), tuiles et semaine.
+/// Accueil : zone haute avec la scène cœur et la maxime du jour, série de
+/// constance, séance du jour (unique CTA accent), tuiles, puis l'indice de
+/// forme adossé à « Ta semaine ».
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
@@ -47,10 +50,15 @@ class HomeScreen extends ConsumerWidget {
         children: [
           HomeHero(
             displayName: user?.displayName,
-            fitnessIndex: ref.watch(fitnessIndexProvider),
+            quote: ref.watch(dailyQuoteProvider),
             week: week,
             restSinceLastWorkout: ref.watch(restSinceLastWorkoutProvider),
           ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
+            child: ConsistencyStreak(week: ref.watch(consistencyWeekProvider)),
+          ),
+          const SizedBox(height: AppSpacing.gapRow),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
             child: TodayWorkoutCard(
@@ -71,10 +79,20 @@ class HomeScreen extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
             child: HomeStatTiles(report: report, week: week),
           ),
-          const SizedBox(height: AppSpacing.md),
+          const SizedBox(height: AppSpacing.gapSection),
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
-            child: WeekBars(week: week),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // L'indice de forme EST le taux d'accomplissement de
+                // l'objectif hebdomadaire : sa place est contre les barres
+                // qui le détaillent, pas seul en haut d'écran.
+                FitnessIndexBlock(score: ref.watch(fitnessIndexProvider)),
+                const SizedBox(height: AppSpacing.gapRow),
+                WeekBars(week: week),
+              ],
+            ),
           ),
         ],
       ),

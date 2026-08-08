@@ -108,6 +108,10 @@ void main() {
     await tester.pumpAndSettle();
 
     // « Lancer un modèle » : l'entrée naturelle, sous le démarrage de séance.
+    // La série de constance a repoussé la carte plus bas : on l'amène à
+    // l'écran avant de la toucher.
+    await tester.ensureVisible(find.text('Lancer un modèle'));
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Lancer un modèle'));
     await tester.pumpAndSettle();
 

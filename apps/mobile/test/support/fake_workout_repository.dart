@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:carlys_mobile/app/restore/app_restore.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
 import 'package:carlys_mobile/features/workout_session/domain/entities/workout.dart';
 import 'package:carlys_mobile/features/workout_session/domain/repositories/workout_repository.dart';
@@ -126,6 +127,16 @@ class FakeWorkoutRepository implements WorkoutRepository {
     active = workout;
     _activeController.add(workout);
   }
+}
+
+/// Rapatriement inerte pour les tests de widgets : sans lui, l'accueil
+/// ouvrirait la vraie base Drift pour tirer les séances du serveur.
+class NoopAppRestore implements AppRestore {
+  @override
+  void ensureRestored() {}
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 /// SyncLifecycle inerte pour les tests de widgets.

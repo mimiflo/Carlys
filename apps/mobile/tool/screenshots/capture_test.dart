@@ -12,6 +12,7 @@ import 'dart:io';
 
 import 'package:carlys_mobile/app/app.dart';
 import 'package:carlys_mobile/app/environment/app_environment.dart';
+import 'package:carlys_mobile/app/restore/app_restore.dart';
 import 'package:carlys_mobile/app/router/app_routes.dart';
 import 'package:carlys_mobile/core/errors/app_exception.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
@@ -228,6 +229,7 @@ void main() {
             FakeSubscriptionRepository(isPremium: premium),
           ),
           syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
+          appRestoreProvider.overrideWithValue(NoopAppRestore()),
         ],
         child: const CarlysApp(),
       ),
@@ -259,7 +261,12 @@ void main() {
   });
 
   testWidgets('accueil', (tester) async {
-    await pumpApp(tester);
+    // Un historique est nécessaire : sans lui, la série de constance
+    // s'afficherait vide et la capture ne montrerait pas la fonctionnalité.
+    await pumpApp(
+      tester,
+      workouts: FakeWorkoutRepository()..history = historyOf(),
+    );
     await capture(tester, '02-accueil');
   });
 

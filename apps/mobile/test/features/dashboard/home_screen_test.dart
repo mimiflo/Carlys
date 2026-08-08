@@ -1,7 +1,12 @@
 import 'package:carlys_mobile/app/app.dart';
 import 'package:carlys_mobile/app/environment/app_environment.dart';
+import 'package:carlys_mobile/app/restore/app_restore.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
+import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
+import 'package:carlys_mobile/features/dashboard/data/daily_quotes.dart';
+import 'package:carlys_mobile/features/dashboard/presentation/widgets/consistency_streak.dart';
+import 'package:carlys_mobile/features/dashboard/presentation/widgets/home_hero.dart';
 import 'package:carlys_mobile/features/nutrition/data/repositories/nutrition_repository_impl.dart';
 import 'package:carlys_mobile/features/nutrition/domain/entities/nutrition.dart';
 import 'package:carlys_mobile/features/progress/data/repositories/progress_repository_impl.dart';
@@ -17,8 +22,9 @@ import '../../support/fake_progress_repository.dart';
 import '../../support/fake_workout_repository.dart';
 import '../../support/first_run_prefs.dart';
 
-/// Accueil : l'écran ne montre que des faits réels — indice de forme déduit
-/// de la semaine, faits d'entraînement, séance du jour, tuiles et semaine.
+/// Accueil : l'écran ne montre que des faits réels — maxime du jour et série
+/// de constance sous le cœur, séance du jour, tuiles, puis l'indice de forme
+/// adossé à « Ta semaine ».
 void main() {
   setUp(() {
     // Parcours de première ouverture déjà terminé : l'application démarre
@@ -69,6 +75,7 @@ void main() {
               .overrideWithValue(FakeProgressRepository()),
           nutritionRepositoryProvider.overrideWithValue(completeNutrition()),
           syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
+          appRestoreProvider.overrideWithValue(NoopAppRestore()),
         ],
         child: const CarlysApp(),
       ),
@@ -124,6 +131,87 @@ void main() {
 
     expect(find.text('Ta semaine'), findsOneWidget);
     expect(find.text('2 / 5 SÉANCES'), findsOneWidget);
+  });
+
+  testWidgets('sous le cœur : la maxime du jour, pas un chiffre',
+      (tester) async {
+    await pumpHome(tester);
+
+    // Celle du jour, exactement — c'est le câblage qu'on vérifie ici ; la
+    // règle de rotation a ses propres tests.
+    final today = quoteOfTheDay(DateTime.now());
+    expect(find.text(today.text), findsOneWidget);
+    expect(
+      find.text(today.value.label.toUpperCase()),
+      findsOneWidget,
+    );
+
+    // La maxime est DANS la zone haute, l'indice de forme n'y est plus.
+    final hero = find.byType(HomeHero);
+    expect(
+      find.descendant(of: hero, matching: find.text(today.text)),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: hero, matching: find.text('INDICE DE FORME')),
+      findsNothing,
+    );
+  });
+
+  testWidgets('série de constance : sept jours en ronds, L M M J V S D',
+      (tester) async {
+    await pumpHome(tester);
+
+    expect(find.text('Ta constance'), findsOneWidget);
+
+    final streak = find.byType(ConsistencyStreak);
+    Finder dayOf(String initial) =>
+        find.descendant(of: streak, matching: find.text(initial));
+
+    expect(dayOf('L'), findsOneWidget);
+    expect(dayOf('M'), findsNWidgets(2)); // mardi et mercredi
+    expect(dayOf('J'), findsOneWidget);
+    expect(dayOf('V'), findsOneWidget);
+    expect(dayOf('S'), findsOneWidget);
+    expect(dayOf('D'), findsOneWidget);
+  });
+
+  testWidgets('une flamme par jour tenu, et la série annoncée', (tester) async {
+    // Deux jours consécutifs tenus, en terminant hier : la série court
+    // toujours puisque la journée en cours n'est pas finie.
+    final today = DateTime.now();
+    final yesterday = DateTime(today.year, today.month, today.day - 1);
+    final before = DateTime(today.year, today.month, today.day - 2);
+    final workouts = FakeWorkoutRepository()
+      ..history = [
+        for (final (index, day) in [yesterday, before].indexed)
+          WorkoutHistoryEntry(
+            session: WorkoutInfo(
+              id: 'w-$index',
+              status: WorkoutStatus.completed,
+              startedAt: day.add(const Duration(hours: 18)),
+              endedAt: day.add(const Duration(hours: 19)),
+              syncState: LocalSyncState.synced,
+            ),
+            setsCount: 5,
+            totalVolumeKg: 700,
+          ),
+      ];
+
+    await pumpHome(tester, workouts: workouts);
+
+    expect(find.text('2 JOURS D’AFFILÉE'), findsOneWidget);
+    // Une flamme par jour tenu de la semaine affichée : les deux jours ne
+    // débordent sur la semaine précédente que le lundi et le mardi.
+    final expectedFlames =
+        [yesterday, before].where((day) => day.weekday <= today.weekday).length;
+    expect(
+      find.descendant(
+        of: find.byType(ConsistencyStreak),
+        matching: find.byIcon(AppIcons.streak),
+      ),
+      findsNWidgets(expectedFlames),
+    );
   });
 
   testWidgets('séance en cours : titre, durée écoulée et reprise',

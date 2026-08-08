@@ -42,6 +42,9 @@ abstract final class AppIcons {
   static const IconData chevronRight = Icons.chevron_right_rounded;
   static const IconData minus = Icons.remove_rounded;
   static const IconData recovery = Icons.battery_charging_full_rounded;
+
+  /// Jour tenu dans la série de constance.
+  static const IconData streak = Icons.local_fire_department_rounded;
   static const IconData goal = Icons.flag_rounded;
   static const IconData units = Icons.straighten_rounded;
   static const IconData theme = Icons.dark_mode_rounded;

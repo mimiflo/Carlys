@@ -1,5 +1,6 @@
 import 'package:carlys_mobile/app/app.dart';
 import 'package:carlys_mobile/app/environment/app_environment.dart';
+import 'package:carlys_mobile/app/restore/app_restore.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
@@ -27,6 +28,7 @@ Widget appWith(FakeProgressRepository progress) => ProviderScope(
             .overrideWithValue(FakeAuthRepository(storedSession: true)),
         workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
         syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
+        appRestoreProvider.overrideWithValue(NoopAppRestore()),
         progressRepositoryProvider.overrideWithValue(progress),
       ],
       child: const CarlysApp(),

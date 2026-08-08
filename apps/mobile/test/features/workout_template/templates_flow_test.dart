@@ -1,5 +1,6 @@
 import 'package:carlys_mobile/app/app.dart';
 import 'package:carlys_mobile/app/environment/app_environment.dart';
+import 'package:carlys_mobile/app/restore/app_restore.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
 import 'package:carlys_mobile/demo/demo_templates.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
@@ -80,6 +81,7 @@ void main() {
             DemoWorkoutTemplateRepository(workouts, seed: seed),
           ),
           syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
+          appRestoreProvider.overrideWithValue(NoopAppRestore()),
         ],
         child: const CarlysApp(),
       ),

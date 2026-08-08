@@ -26,6 +26,30 @@ Trois convictions structurent le produit :
 - **Le serveur décide.** Les droits d'accès (entitlements d'abonnement) sont
   évalués côté serveur ; le client affiche, il n'autorise jamais (Étape 6).
 
+## Les cinq valeurs Carlys
+
+Ce que le produit défend, et ce sur quoi son discours s'aligne d'un écran à
+l'autre :
+
+| Valeur | Ce qu'elle veut dire | Où elle se voit |
+| --- | --- | --- |
+| **Dépassement** | Aller chercher la répétition d'après | Records personnels, cible affichée pendant la séance |
+| **Connaissance** | Comprendre ce qu'on fait, et pourquoi | Fiches d'exercice, mesures et statistiques |
+| **Maîtrise** | La qualité du mouvement avant la charge | Séries prévues (tempo, repos), consignes de la fiche |
+| **Constance** | Ce qu'on répète devient ce qu'on est | Série de constance de l'accueil, « Ta semaine » |
+| **Équilibre** | Le repos et la nutrition font partie de l'entraînement | Récupération, métabolisme, onglet Nutrition |
+
+Elles ordonnent aussi la **maxime du jour** de l'accueil : le recueil
+(`apps/mobile/lib/features/dashboard/data/daily_quotes.dart`) est entrelacé par
+valeur, donc deux jours consécutifs n'en servent jamais la même.
+
+Deux règles s'y attachent, à ne pas contourner :
+
+- les maximes sont **du contenu d'application**, embarqué : une phrase doit
+  s'afficher hors ligne dès le premier lancement, comme le reste des libellés ;
+- aucune n'est **attribuée à une personne réelle**. Prêter une phrase inventée
+  à un athlète ou à un auteur serait une citation fabriquée.
+
 ## Utilisateurs cibles
 
 | Public | Horizon | Besoin principal |

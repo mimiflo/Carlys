@@ -1,5 +1,6 @@
 import 'package:carlys_mobile/app/app.dart';
 import 'package:carlys_mobile/app/environment/app_environment.dart';
+import 'package:carlys_mobile/app/restore/app_restore.dart';
 import 'package:carlys_mobile/core/errors/app_exception.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
 import 'package:carlys_mobile/design_system/design_system.dart';
@@ -35,6 +36,7 @@ Widget appWith({
             .overrideWithValue(FakeAuthRepository(storedSession: true)),
         workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
         syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
+        appRestoreProvider.overrideWithValue(NoopAppRestore()),
         subscriptionRepositoryProvider.overrideWithValue(subscription),
         if (exercises != null)
           exercisesRepositoryProvider.overrideWithValue(exercises),
