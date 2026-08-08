@@ -24,6 +24,8 @@ import 'package:carlys_mobile/features/exercises/presentation/widgets/exercise_c
 import 'package:carlys_mobile/features/nutrition/data/repositories/nutrition_repository_impl.dart';
 import 'package:carlys_mobile/features/nutrition/domain/entities/nutrition.dart';
 import 'package:carlys_mobile/features/onboarding/domain/first_run_step.dart';
+import 'package:carlys_mobile/features/onboarding/presentation/screens/welcome_screen.dart';
+import 'package:carlys_mobile/features/onboarding/presentation/widgets/brand_signature.dart';
 import 'package:carlys_mobile/features/profile/presentation/widgets/profile_plan_card.dart';
 import 'package:carlys_mobile/features/progress/data/repositories/progress_repository_impl.dart';
 import 'package:carlys_mobile/features/progress/domain/entities/progress.dart';
@@ -193,6 +195,25 @@ void main() {
     await tester.pump(const Duration(milliseconds: 80));
   }
 
+  /// Décode les images du bundle AVANT la capture.
+  ///
+  /// Le harnais de test fait tourner un temps FICTIF : le décodage d'une image,
+  /// lui, est du vrai travail asynchrone, et ne s'achève jamais tant qu'on
+  /// n'ouvre pas une fenêtre de temps réel. Sans ça, les écrans à photographie
+  /// se capturent vides — et la capture ment.
+  Future<void> precacheBrandImages(WidgetTester tester) async {
+    final context = tester.element(find.byType(MaterialApp));
+    for (final asset in const [
+      BrandSignature.markAsset,
+      WelcomeScreen.athleteAsset,
+    ]) {
+      await tester.runAsync(
+        () => precacheImage(AssetImage(asset), context),
+      );
+    }
+    await settle(tester);
+  }
+
   Future<void> pumpApp(
     WidgetTester tester, {
     bool authenticated = true,
@@ -261,6 +282,7 @@ void main() {
     // toute première chose que voit un nouvel arrivant.
     seedFirstRunStep(FirstRunStep.welcome);
     await pumpApp(tester, authenticated: false);
+    await precacheBrandImages(tester);
     await capture(tester, '00-bienvenue');
   });
 

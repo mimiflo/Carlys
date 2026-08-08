@@ -61,13 +61,9 @@ class _Pillar extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // L'icône porte le dégradé de marque, comme le sceau.
-          ShaderMask(
-            shaderCallback: (bounds) =>
-                AppColors.signature.createShader(bounds),
-            blendMode: BlendMode.srcIn,
-            child: Icon(icon, size: _iconSize, color: AppColors.neutral0),
-          ),
+          // Icône sobre : ces vignettes annoncent, elles ne réclament pas le
+          // regard. Le dégradé reste au sceau et au bouton.
+          Icon(icon, size: _iconSize, color: AppColors.darkTextSecondary),
           const SizedBox(height: AppSpacing.xs),
           Text(
             'CARLYS',

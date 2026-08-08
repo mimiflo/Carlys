@@ -90,15 +90,31 @@ valent **que là** :
 
 - un **dégradé de signature** (`AppColors.signature`, violet → magenta → rose
   saumon) relevé sur le logo. Il est déclaré dans
-  `packages/design-tokens/src/tokens.json` sous `color.brand.signature*` et
-  réservé aux surfaces de marque : il ne remplace jamais `primary`/`accent`
-  dans l'application ;
+  `packages/design-tokens/src/tokens.json` sous `color.brand.signature*`,
+  réservé aux surfaces de marque — il ne remplace jamais `primary`/`accent`
+  dans l'application — et, sur la page elle-même, **il ne peint qu'une seule
+  chose : le bouton**. Le sceau EST déjà un dégradé ; en poser un second sur la
+  devise ou sur les vignettes ne l'accompagnait pas, ça le concurrençait ;
 - un bouton dédié, `AppBrandButton`, qui porte ce dégradé. Ailleurs, l'action
   principale reste `AppButton` en accent — deux boutons « principaux » de
   couleurs différentes dans un même écran annuleraient la hiérarchie ;
-- deux images de marque (`assets/brand/`) : le sceau détouré et la
-  photographie, fondue vers la gauche pour ne pas former un rectangle posé sur
-  la page.
+- deux images de marque (`assets/brand/`) : le sceau et la photographie.
+
+Le sceau est livré en **rendu lumineux sur fond gris**. Le PNG du dépôt en est
+la transposition pour fond sombre : on retranche le gris **en lumière linéaire**
+(le soustraire sur les octets sRGB ferait virer le magenta au rouge), ce qui est
+plus sombre que le fond tombe à zéro — une ombre portée n'a rien à dire sur une
+page noire — et l'opacité se lit sur le canal **maximal**, seule conversion
+prémultiplié → droit qui n'écrête pas les teintes saturées. Un premier essai par
+seuillage avait gardé la nappe diffuse et l'avait rendue opaque : le sceau
+traînait un nuage violet. La recette est dans l'historique du dépôt ; la planche
+d'origine reste la source.
+
+La photographie est fondue vers la gauche, mais **court** : le fondu ne mange
+que son bord. Deux voiles légers suffisent ensuite — un sur la colonne de
+lecture, un sur le pied de page — au lieu de l'assombrissement pleine hauteur
+des scènes 3D, qui éteignait la personne. Le texte, lui, reste dans sa colonne
+(64 % de la largeur) plutôt que de se poser sur elle.
 
 Les quatre vignettes (App, Academy, Events, Wear) sont **une présentation, pas
 une navigation** : seule l'application existe aujourd'hui, et les rendre

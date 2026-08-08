@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../design_system/design_system.dart';
-import '../../../../design_system/scenes/app_scene_container.dart';
 import '../controllers/first_run_controller.dart';
 import '../widgets/brand_pillars.dart';
 import '../widgets/brand_signature.dart';
@@ -24,7 +23,15 @@ class WelcomeScreen extends ConsumerWidget {
   /// Fondu de la photographie vers le fond : opaque à droite, transparente
   /// avant la colonne de texte. Sans lui, le cliché formerait un rectangle
   /// posé sur la page.
-  static const List<double> _photoFade = [0.0, 0.42, 1.0];
+  ///
+  /// Le fondu est COURT — il ne mange que le bord gauche du cliché. Étalé, il
+  /// délavait la personne sur la moitié de sa largeur : on ne montre pas
+  /// quelqu'un pour l'effacer ensuite. Assez long, tout de même, pour qu'aucune
+  /// couture verticale ne se lise entre la page et le cliché.
+  static const List<double> _photoFade = [0.0, 0.30, 1.0];
+
+  /// Part de la largeur laissée au texte. Il ne déborde pas dessus.
+  static const double _textWidthFactor = 0.64;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -33,9 +40,7 @@ class WelcomeScreen extends ConsumerWidget {
       body: Stack(
         children: [
           Positioned.fill(child: _Photo(widthFactor: _photoWidthFactor)),
-          // Assombrissement vertical : le bas de la page porte les vignettes
-          // et le bouton, qui ont besoin d'un fond calme.
-          const Positioned.fill(child: AppSceneScrim.vertical()),
+          const Positioned.fill(child: _Veil()),
           SafeArea(
             // La page tient l'écran : signature en haut, appel à l'action en
             // pied. Elle défile seulement si l'écran est trop court — jamais
@@ -44,33 +49,40 @@ class WelcomeScreen extends ConsumerWidget {
               builder: (context, constraints) => SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(
                   horizontal: AppSpacing.gutter,
-                  vertical: AppSpacing.lg,
+                  vertical: AppSpacing.md,
                 ),
                 child: ConstrainedBox(
                   constraints: BoxConstraints(
-                    minHeight: constraints.maxHeight - AppSpacing.lg * 2,
+                    minHeight: constraints.maxHeight - AppSpacing.md * 2,
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisSize: MainAxisSize.min,
-                        children: const [
-                          BrandSignature(),
-                          SizedBox(height: AppSpacing.xl),
-                          _Claim(),
-                          SizedBox(height: AppSpacing.lg),
-                          _Creed(),
-                        ],
+                      // Le texte reste dans SA colonne. Étalé sur toute la
+                      // largeur, il se posait sur la personne : ni le texte ni
+                      // la photographie n'y gagnaient.
+                      FractionallySizedBox(
+                        widthFactor: _textWidthFactor,
+                        alignment: Alignment.centerLeft,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          mainAxisSize: MainAxisSize.min,
+                          children: const [
+                            BrandSignature(),
+                            SizedBox(height: AppSpacing.lg),
+                            _Claim(),
+                            SizedBox(height: AppSpacing.md),
+                            _Creed(),
+                          ],
+                        ),
                       ),
                       Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           const BrandPillars(),
-                          const SizedBox(height: AppSpacing.lg),
+                          const SizedBox(height: AppSpacing.md),
                           AppBrandButton(
                             label: 'Commencer mon parcours',
                             onPressed: () => ref
@@ -81,6 +93,65 @@ class WelcomeScreen extends ConsumerWidget {
                       ),
                     ],
                   ),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Deux voiles LÉGERS, chacun pour une raison précise.
+///
+/// L'assombrissement générique des scènes 3D ([AppSceneScrim]) couvre toute la
+/// hauteur et éteignait la personne. Ici on n'assombrit que ce qui doit l'être :
+/// la colonne de gauche, où vit le texte, et le tout bas, où se posent les
+/// vignettes et le bouton. Entre les deux, le cliché reste net.
+class _Veil extends StatelessWidget {
+  const _Veil();
+
+  /// Colonne de lecture : opaque au bord gauche — c'est déjà le fond — et
+  /// éteinte avant le milieu.
+  static const List<double> _readingStops = [0.0, 0.28, 0.58];
+
+  /// Pied de page : rien ne s'assombrit avant les deux tiers.
+  static const List<double> _footStops = [0.62, 0.86, 1.0];
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: Stack(
+        children: [
+          const Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                  colors: [
+                    AppColors.darkBackground,
+                    Color(0x7306060C),
+                    Colors.transparent,
+                  ],
+                  stops: _readingStops,
+                ),
+              ),
+            ),
+          ),
+          const Positioned.fill(
+            child: DecoratedBox(
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    Color(0x9906060C),
+                    AppColors.darkBackground,
+                  ],
+                  stops: _footStops,
                 ),
               ),
             ),
@@ -128,7 +199,10 @@ class _Photo extends StatelessWidget {
   }
 }
 
-/// La promesse, en deux lignes.
+/// La promesse, en quatre lignes courtes.
+///
+/// Les coupes sont ÉCRITES, pas laissées au retour à la ligne automatique :
+/// c'est une accroche d'affiche, son rythme fait partie du message.
 class _Claim extends StatelessWidget {
   const _Claim();
 
@@ -146,7 +220,7 @@ class _Claim extends StatelessWidget {
     return Text.rich(
       TextSpan(
         children: [
-          const TextSpan(text: 'SCULPTE TON PARCOURS.\nSIGNE TON '),
+          const TextSpan(text: 'SCULPTE\nTON PARCOURS.\nSIGNE TON\n'),
           TextSpan(
             text: 'CHEF-D’ŒUVRE.',
             style: base.copyWith(color: AppColors.signatureMid),
@@ -170,9 +244,11 @@ class _Creed extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // 14 et non 15 : à 15, « Ton parcours est TON histoire. » débordait de la
+    // colonne et laissait « histoire. » seul sur sa ligne.
     final base = AppTypography.body.copyWith(
-      fontSize: 15,
-      height: 1.9,
+      fontSize: 14,
+      height: 1.75,
       color: AppColors.darkTextSecondary,
     );
 
