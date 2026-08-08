@@ -32,9 +32,15 @@ class _HeartSceneState extends State<HeartScene>
   );
 
   @override
-  void initState() {
-    super.initState();
-    _controller.repeat();
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // La boucle ne doit JAMAIS tourner sous réduction d'animations : sinon la
+    // scène empêche toute stabilisation (accessibilité, et tests de widgets).
+    if (MediaQuery.disableAnimationsOf(context)) {
+      _controller.stop();
+    } else if (!_controller.isAnimating) {
+      _controller.repeat();
+    }
   }
 
   @override

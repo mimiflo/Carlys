@@ -14,11 +14,14 @@ class MetabolismHero extends StatelessWidget {
 
   final MetabolismResult? metabolism;
 
-  /// Géométrie de la maquette : hero de 378, hélice de la même hauteur
-  /// débordant de 60 à droite (`root.position.x = 0.9`).
+  /// Géométrie relevée sur la maquette : hero de 378, scène centrée en
+  /// largeur (c'est `root.position.x = 0.9` qui décale l'hélice vers la
+  /// droite, pas le cadrage) et remontée de 35 pour passer sous la barre
+  /// d'état. La hauteur de canevas 361 donne l'échelle de la référence :
+  /// 26 barreaux espacés de 55,3 points à l'écran.
   static const double _heroHeight = 378;
-  static const double _sceneRight = -60;
-  static const double _helixHeight = 330;
+  static const double _sceneTop = -35;
+  static const double _helixHeight = 361;
 
   /// Fondu vertical de la scène (transparent → plein → transparent).
   static const List<double> _sceneFade = [0.0, 0.16, 0.62, 0.94];
@@ -47,13 +50,16 @@ class MetabolismHero extends StatelessWidget {
             child: Opacity(opacity: _haloOpacity, child: AppSceneHalo()),
           ),
           Positioned(
-            top: topInset,
-            right: _sceneRight,
-            child: const AppSceneContainer(
-              size: _heroHeight,
-              opacity: 0.85,
-              verticalFadeStops: _sceneFade,
-              child: Center(child: DnaHelix(height: _helixHeight)),
+            top: topInset + _sceneTop,
+            left: 0,
+            right: 0,
+            child: const Center(
+              child: AppSceneContainer(
+                size: _heroHeight,
+                opacity: 0.85,
+                verticalFadeStops: _sceneFade,
+                child: Center(child: DnaHelix(height: _helixHeight)),
+              ),
             ),
           ),
           // Lisibilité : la colonne de texte est à gauche, le fond s'éteint

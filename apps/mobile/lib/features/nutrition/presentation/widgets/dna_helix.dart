@@ -1,17 +1,20 @@
 import 'dart:math' as math;
+import 'dart:typed_data';
+import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
-import '../../../../design_system/design_system.dart';
-import '../../../../design_system/scenes/scene_math.dart';
+import '../../../../design_system/scenes/dna_mesh.dart';
+import '../../../../design_system/scenes/scene3d.dart';
 
-/// Double hélice d'ADN (handoff/animations-3d.md + dna-helix.js).
+/// Double hélice d'ADN — portage fidèle de `dna-helix.js` (mode « hero »).
 ///
-/// Deux brins déphasés de π (primary / primaryLight), barreaux en DEUX
-/// demi-bâtons qui se rejoignent au centre avec un léger jeu — un sur
-/// trois en accent. Rotation continue 0,22 rad/s, respiration globale
-/// ±3 % à 0,65 Hz, écartement individuel des paires. Purement décorative :
-/// pose statique si la réduction d'animations système est active.
+/// Deux brins en TUBE lustré (violet `0x5B5BF6` et `0x8A8AFA`, déphasés de π)
+/// reliés par 26 barreaux en deux demi-cylindres avec un jeu central, un sur
+/// trois en lime. Même caméra, mêmes quatre lumières, même tone mapping ACES
+/// que la maquette : le rendu doit être indiscernable de la référence WebGL.
+///
+/// Purement décorative : pose figée si la réduction d'animations est active.
 class DnaHelix extends StatefulWidget {
   const DnaHelix({this.height = 140, super.key});
 
@@ -23,7 +26,7 @@ class DnaHelix extends StatefulWidget {
 
 class _DnaHelixState extends State<DnaHelix>
     with SingleTickerProviderStateMixin {
-  // Un tour complet à 0,22 rad/s : ~28,6 s par cycle.
+  /// Un tour complet à 0,22 rad/s : ~28,6 s par cycle.
   static const _cycle = Duration(milliseconds: 28560);
 
   late final AnimationController _controller;
@@ -37,7 +40,7 @@ class _DnaHelixState extends State<DnaHelix>
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    // Préférence système : animation en boucle, ou pose statique.
+    // Préférence système : animation en boucle, ou pose figée à t = 0.
     if (MediaQuery.disableAnimationsOf(context)) {
       _controller.stop();
       _controller.value = 0;
@@ -76,118 +79,237 @@ class _DnaHelixState extends State<DnaHelix>
   }
 }
 
+/// Rendu d'une image de l'hélice.
 class _DnaHelixPainter extends CustomPainter {
   const _DnaHelixPainter({required this.time});
 
   /// Temps absolu (secondes) — pilote rotation, respiration et pulsations.
   final double time;
 
-  static const int _samples = 96;
-  static const double _turns = 2.4;
-  static const int _rungs = 26;
-  static const double _radius = 1.32;
-  static const double _halfHeight = 4.7; // H 9,4
+  /// Cadrage de la maquette : `camera.position.z = 13`, champ 30°,
+  /// `root.rotation.z = 0.16`, `root.position.x = 0.9`, exposition 1,05.
+  static const double _cameraZ = 13;
+  static const double _fov = 30;
+  static const double _tiltZ = 0.16;
+  static const double _offsetX = 0.9;
+  static const double _exposure = 1.05;
+  static const double _spin = 0.22;
+
+  /// Matériaux de la maquette, dans l'ordre de [DnaMaterialId].
+  static final List<StandardMaterial> _materials = [
+    _strand(0x5B5BF6),
+    _strand(0x8A8AFA),
+    StandardMaterial(
+      base: LinearRgb.fromHex(0xC6F432),
+      emissive: LinearRgb.fromHex(0xC6F432),
+      emissiveIntensity: 0.5,
+      roughness: 0.4,
+      metalness: 0,
+      opacity: 0.6,
+    ),
+    StandardMaterial(
+      base: const LinearRgb(1, 1, 1),
+      emissive: LinearRgb.fromHex(0x8A8AFA),
+      emissiveIntensity: 0.35,
+      roughness: 0.5,
+      metalness: 0,
+      opacity: 0.4,
+    ),
+    _node(0xC6F432, 0xC6F432),
+    _node(0xC9C9FF, 0x5B5BF6),
+  ];
+
+  static StandardMaterial _strand(int hex) => StandardMaterial(
+        base: LinearRgb.fromHex(hex),
+        emissive: LinearRgb.fromHex(hex),
+        emissiveIntensity: 0.6,
+        roughness: 0.3,
+        metalness: 0.35,
+        opacity: 0.8,
+      );
+
+  static StandardMaterial _node(int hex, int emissive) => StandardMaterial(
+        base: LinearRgb.fromHex(hex),
+        emissive: LinearRgb.fromHex(emissive),
+        emissiveIntensity: 0.6,
+        roughness: 0.35,
+        metalness: 0,
+        opacity: 0.55,
+      );
+
+  static final SceneCamera _camera = SceneCamera(
+    fovDegrees: _fov,
+    x: 0,
+    y: 0,
+    z: _cameraZ,
+    targetX: 0,
+    targetY: 0,
+    targetZ: 0,
+  );
+
+  /// Les quatre lumières du mode hero, à l'unité près.
+  static final SceneShader _shader = SceneShader(
+    exposure: _exposure,
+    cameraX: 0,
+    cameraY: 0,
+    cameraZ: _cameraZ,
+    lights: [
+      SceneLight.ambient(LinearRgb.fromHex(0x6A6AFF).scaled(0.5)),
+      SceneLight.point(
+        LinearRgb.fromHex(0x5B5BF6),
+        30,
+        x: 4,
+        y: 5,
+        z: 7,
+        cutoff: 60,
+      ),
+      SceneLight.point(
+        LinearRgb.fromHex(0xC6F432),
+        20,
+        x: -5,
+        y: -4,
+        z: 5,
+        cutoff: 60,
+      ),
+      SceneLight.directional(const LinearRgb(1, 1, 1), 0.5, x: -2, y: 3, z: -6),
+    ],
+  );
 
   @override
   void paint(Canvas canvas, Size size) {
-    final rotation = time * 0.22;
-    final breathe = 1 + 0.03 * math.sin(time * 2 * math.pi * 0.65);
-    final worldScale = size.height * 0.062 * breathe;
-    const focal = 13.0;
+    if (size.width <= 0 || size.height <= 0) {
+      return;
+    }
+    final mesh = DnaMesh.instance;
 
-    // Cadrage hero : légère inclinaison rotation.z = 0,16.
-    canvas.save();
-    canvas.translate(size.width / 2, size.height / 2);
-    canvas.rotate(0.16);
-    canvas.translate(-size.width / 2, -size.height / 2);
+    // --- Animation de la maquette ---
+    final rotation = EulerRotation(0, time * _spin, _tiltZ);
+    final breath = 1 + math.sin(time * 0.65) * 0.03;
+    final breathY = 1 + math.sin(time * 0.65) * 0.008;
+    final rungScale = Float64List(DnaMesh.rungCount);
+    for (var i = 0; i < DnaMesh.rungCount; i++) {
+      final pulse = 0.5 + 0.5 * math.sin(time * 1.4 - DnaMesh.rungPhases[i]);
+      rungScale[i] = 0.985 + pulse * 0.03;
+    }
 
-    final elements = <({double depth, void Function(Canvas) draw})>[];
+    _shadeVertices(mesh, size, rotation, breath, breathY, rungScale);
+    _sortParts(mesh, rotation, breath, rungScale);
+    _draw(canvas, mesh);
+  }
 
-    (Offset, double) strandPoint(double s, double phase) {
-      final theta = 2 * math.pi * _turns * s + rotation + phase;
-      final x = _radius * math.cos(theta);
-      final z = _radius * math.sin(theta);
-      final y = _halfHeight * (2 * s - 1);
-      return (
-        project(x, -y, z, focal: focal, size: size, worldScale: worldScale),
-        z,
+  /// Transformation, éclairage et projection de chaque sommet.
+  void _shadeVertices(
+    DnaMesh mesh,
+    Size size,
+    EulerRotation rotation,
+    double breath,
+    double breathY,
+    Float64List rungScale,
+  ) {
+    final screen = mesh.screen;
+    final facing = mesh.facing;
+    final colors = mesh.colors;
+
+    for (var v = 0; v < mesh.vertexCount; v++) {
+      final rung = mesh.rungs[v];
+      final radial = rung < 0 ? breath : breath * rungScale[rung];
+      final i3 = v * 3;
+
+      final lx = mesh.positions[i3] * radial;
+      final ly = mesh.positions[i3 + 1] * breathY;
+      final lz = mesh.positions[i3 + 2] * radial;
+
+      // Normale d'un étirement diagonal : transposée inverse des échelles.
+      var nx = mesh.normals[i3] / radial;
+      var ny = mesh.normals[i3 + 1] / breathY;
+      var nz = mesh.normals[i3 + 2] / radial;
+      final nLength = math.sqrt(nx * nx + ny * ny + nz * nz);
+      nx /= nLength;
+      ny /= nLength;
+      nz /= nLength;
+
+      final wx = rotation.rotX(lx, ly, lz) + _offsetX;
+      final wy = rotation.rotY(lx, ly, lz);
+      final wz = rotation.rotZ(lx, ly, lz);
+      final rnx = rotation.rotX(nx, ny, nz);
+      final rny = rotation.rotY(nx, ny, nz);
+      final rnz = rotation.rotZ(nx, ny, nz);
+
+      final p = _camera.project(wx, wy, wz, size.width, size.height);
+      screen[v * 2] = p.sx;
+      screen[v * 2 + 1] = p.sy;
+      // Élimination des faces arrière : signe de N · (caméra − P).
+      facing[v] = -rnx * wx - rny * wy + rnz * (_cameraZ - wz);
+      colors[v] = _shader.shade(
+        rnx,
+        rny,
+        rnz,
+        wx,
+        wy,
+        wz,
+        _materials[mesh.materials[v]],
       );
     }
+  }
 
-    void addStrand(Color color, double phase) {
-      for (var i = 0; i < _samples; i++) {
-        final (from, depthFrom) = strandPoint(i / _samples, phase);
-        final (to, depthTo) = strandPoint((i + 1) / _samples, phase);
-        final depth = (depthFrom + depthTo) / 2;
-        final near = (depth / _radius + 1) / 2;
-        final paint = Paint()
-          ..color = color.withValues(alpha: 0.24 + 0.56 * near)
-          ..strokeWidth = size.height * 0.012 * (0.75 + 0.65 * near)
-          ..strokeCap = StrokeCap.round;
-        elements.add(
-          (depth: depth, draw: (canvas) => canvas.drawLine(from, to, paint)),
-        );
-      }
-    }
-
-    // Barreaux : deux demi-bâtons avec un jeu central (liaison hydrogène),
-    // un sur trois en accent ; écartement individuel des paires.
-    for (var rungIndex = 0; rungIndex < _rungs; rungIndex++) {
-      final s = (rungIndex + 0.5) / _rungs;
-      final pulse = 0.5 + 0.5 * math.sin(time * 1.4 - rungIndex * 0.7 - s * 4);
-      final spread = 0.985 + pulse * 0.03;
-      final theta = 2 * math.pi * _turns * s + rotation;
-      final y = -_halfHeight * (2 * s - 1);
-
-      Offset at(double factor, double phase) {
-        final x = _radius * spread * factor * math.cos(theta + phase);
-        final z = _radius * spread * factor * math.sin(theta + phase);
-        return project(
-          x,
-          y,
-          z,
-          focal: focal,
-          size: size,
-          worldScale: worldScale,
-        );
-      }
-
-      final depth = 0.0 +
-          (_radius * math.sin(theta) + _radius * math.sin(theta + math.pi)) / 2;
-      final facing = math.cos(theta).abs();
-      final color = rungIndex % 3 == 0
-          ? AppColors.accent
-          : AppColors.neutralBadgeText.withValues(alpha: 0.8);
-      final paint = Paint()
-        ..color = color.withValues(alpha: 0.18 + 0.5 * facing)
-        ..strokeWidth = size.height * 0.008
-        ..strokeCap = StrokeCap.round;
-      final beadPaint = Paint()
-        ..color = color.withValues(alpha: 0.55 * (0.4 + 0.6 * facing));
-
-      elements.add(
-        (
-          depth: depth - 0.02,
-          draw: (canvas) {
-            // Demi-bâton de chaque brin vers le centre, avec un jeu.
-            canvas.drawLine(at(1, 0), at(0.08, 0), paint);
-            canvas.drawLine(at(1, math.pi), at(0.08, math.pi), paint);
-            // Billes d'ancrage discrètes — jamais des perles.
-            canvas.drawCircle(at(1, 0), size.height * 0.006, beadPaint);
-            canvas.drawCircle(at(1, math.pi), size.height * 0.006, beadPaint);
-          },
-        ),
+  /// Tri des parties du plus lointain au plus proche : la caméra regarde
+  /// l'origine depuis +Z, la profondeur de vue est donc simplement `z`.
+  void _sortParts(
+    DnaMesh mesh,
+    EulerRotation rotation,
+    double breath,
+    Float64List rungScale,
+  ) {
+    final depth = mesh.partDepth;
+    for (var i = 0; i < mesh.parts.length; i++) {
+      final part = mesh.parts[i];
+      final radial = part.rung < 0 ? breath : breath * rungScale[part.rung];
+      depth[i] = rotation.rotZ(
+        part.cx * radial,
+        part.cy,
+        part.cz * radial,
       );
     }
+    mesh.partOrder.sort((a, b) => depth[a].compareTo(depth[b]));
+  }
 
-    addStrand(AppColors.primary, 0);
-    addStrand(AppColors.primaryLight, math.pi);
+  /// Émission des triangles visibles, dans l'ordre de profondeur.
+  void _draw(Canvas canvas, DnaMesh mesh) {
+    final facing = mesh.facing;
+    final indices = mesh.indices;
+    final out = mesh.drawOrder;
+    var n = 0;
 
-    elements.sort((a, b) => a.depth.compareTo(b.depth));
-    for (final element in elements) {
-      element.draw(canvas);
+    for (final partIndex in mesh.partOrder) {
+      final part = mesh.parts[partIndex];
+      final end = part.first + part.count;
+      for (var i = part.first; i < end; i += 3) {
+        final a = indices[i];
+        final b = indices[i + 1];
+        final c = indices[i + 2];
+        if (facing[a] + facing[b] + facing[c] <= 0) {
+          continue;
+        }
+        out[n] = a;
+        out[n + 1] = b;
+        out[n + 2] = c;
+        n += 3;
+      }
     }
-    canvas.restore();
+    if (n == 0) {
+      return;
+    }
+
+    canvas.drawVertices(
+      ui.Vertices.raw(
+        ui.VertexMode.triangles,
+        mesh.screen,
+        colors: mesh.colors,
+        indices: Uint16List.sublistView(out, 0, n),
+      ),
+      BlendMode.srcOver,
+      Paint(),
+    );
   }
 
   @override
