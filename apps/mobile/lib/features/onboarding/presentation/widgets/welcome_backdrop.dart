@@ -243,6 +243,14 @@ abstract final class AthletePhotoFraming {
   /// planche. La descendre l'éloignait du bord et la rapetissait à l'œil.
   static const double dropFactor = 0;
 
+  /// Bornes du fondu du BAS, en fractions de la hauteur du cadre.
+  ///
+  /// Absentes de la planche, et pour cause : la photographie y occupe toute la
+  /// hauteur, elle n'a pas de bord bas. Ici le cadre s'arrête au-dessus du
+  /// pied de page, et sans extinction on voyait la coupe nette des jambes.
+  /// Le fondu commence au bassin.
+  static const List<double> bottomFade = [0.70, 1.0];
+
   /// Bornes du fondu du bord gauche, en fractions de la largeur d'écran :
   /// transparent avant la première, opaque après la seconde.
   ///
@@ -261,7 +269,7 @@ abstract final class AthletePhotoFraming {
   /// cadre, tout le reste en découle. Moins que 1 rapetitit la personne sans
   /// rien changer à la part du cliché montrée. Le bas manquant tombe sous le
   /// bouton, là où le voile de pied de page est déjà opaque.
-  static const double heightFactor = 0.85;
+  static const double heightFactor = 0.80;
 
   /// Cadre de la photographie, ancré à droite.
   ///
@@ -362,25 +370,34 @@ class _AthletePhoto extends StatelessWidget {
     return RepaintBoundary(
       child: ShaderMask(
         blendMode: BlendMode.dstIn,
-        shaderCallback: (rect) => LinearGradient(
-          begin: Alignment.centerLeft,
-          end: Alignment.centerRight,
-          colors: const [Color(0x00FFFFFF), Color(0xFFFFFFFF)],
-          stops: stops,
+        shaderCallback: (rect) => const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Color(0xFFFFFFFF), Color(0x00FFFFFF)],
+          stops: AthletePhotoFraming.bottomFade,
         ).createShader(rect),
-        child: BrandGlowImage(
-          expand: true,
-          glows: _glows,
-          image: ColorFiltered(
-            // brightness(0.9) : l'alpha n'est pas touché, sans quoi le
-            // détourage se remettrait à baver.
-            colorFilter: const ColorFilter.matrix(<double>[
-              0.9, 0, 0, 0, 0, //
-              0, 0.9, 0, 0, 0, //
-              0, 0, 0.9, 0, 0, //
-              0, 0, 0, 1, 0, //
-            ]),
-            child: image,
+        child: ShaderMask(
+          blendMode: BlendMode.dstIn,
+          shaderCallback: (rect) => LinearGradient(
+            begin: Alignment.centerLeft,
+            end: Alignment.centerRight,
+            colors: const [Color(0x00FFFFFF), Color(0xFFFFFFFF)],
+            stops: stops,
+          ).createShader(rect),
+          child: BrandGlowImage(
+            expand: true,
+            glows: _glows,
+            image: ColorFiltered(
+              // brightness(0.9) : l'alpha n'est pas touché, sans quoi le
+              // détourage se remettrait à baver.
+              colorFilter: const ColorFilter.matrix(<double>[
+                0.9, 0, 0, 0, 0, //
+                0, 0.9, 0, 0, 0, //
+                0, 0, 0.9, 0, 0, //
+                0, 0, 0, 1, 0, //
+              ]),
+              child: image,
+            ),
           ),
         ),
       ),
