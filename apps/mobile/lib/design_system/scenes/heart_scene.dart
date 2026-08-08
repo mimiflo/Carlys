@@ -4,23 +4,20 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
-import '../colors/app_colors.dart';
-import '../motion/app_motion.dart';
-import 'scene_math.dart';
+import 'scene3d.dart';
 
-/// Cœur battant (handoff/animations-3d.md + pulse-heart.js).
+/// Cœur battant de la refonte — portage fidèle de `pulse-heart.js`.
 ///
-/// Cardioïde 2D (sin³/cosinus composés) tournée autour de Y et gonflée en
-/// Z par un profil elliptique — un cœur PLEIN, pas une icône extrudée.
-/// Le maillage se génère une fois à l'initState ; seul le buffer de
-/// positions/couleurs est réécrit par frame (drawVertices).
+/// Même géométrie (profil cardiaque révolutionné, 1,05 × 1,02 × 0,86), même
+/// matériau (violet auto-éclairé, rugosité 0,42, métallicité 0,3), mêmes
+/// lumières et même tone mapping ACES que la maquette : le rendu doit être
+/// indiscernable de la référence WebGL.
 ///
-/// Battement 57 bpm : somme de deux gaussiennes (systole marquée, rebond
-/// diastolique), contraction −8,5 % sur les rayons, −5,5 % en hauteur.
-/// Réduction d'animations : pose statique au pic de systole.
+/// Le battement est calé sur 57 bpm (fréquence de repos d'un athlète).
 class HeartScene extends StatefulWidget {
   const HeartScene({this.hero = false, super.key});
 
+  /// Mode « hero » : plus opaque et plus lumineux que le mode d'ambiance.
   final bool hero;
 
   @override
@@ -29,26 +26,15 @@ class HeartScene extends StatefulWidget {
 
 class _HeartSceneState extends State<HeartScene>
     with SingleTickerProviderStateMixin {
-  static const _period = Duration(milliseconds: 21053); // 20 battements/tour
-
-  late final AnimationController _controller;
+  late final AnimationController _controller = AnimationController(
+    vsync: this,
+    duration: const Duration(seconds: 30),
+  );
 
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(vsync: this, duration: _period);
-  }
-
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    final reduced = AppMotion.resolve(context, _period) == Duration.zero;
-    if (reduced) {
-      _controller.stop();
-      _controller.value = 0.004; // pic de systole du premier battement
-    } else if (!_controller.isAnimating) {
-      _controller.repeat();
-    }
+    _controller.repeat();
   }
 
   @override
@@ -59,286 +45,513 @@ class _HeartSceneState extends State<HeartScene>
 
   @override
   Widget build(BuildContext context) {
-    return RepaintBoundary(
-      child: AnimatedBuilder(
-        animation: _controller,
-        builder: (context, _) => CustomPaint(
-          painter: _HeartPainter(
-            time: _controller.value * _period.inMilliseconds / 1000.0,
-            hero: widget.hero,
-          ),
-          child: const SizedBox.expand(),
+    // Réduction d'animations : on fige le cœur sur une pose de diastole.
+    final still = MediaQuery.disableAnimationsOf(context);
+    if (still) {
+      return CustomPaint(
+        painter: _HeartPainter(seconds: 0, hero: widget.hero, still: true),
+        size: Size.infinite,
+      );
+    }
+    return AnimatedBuilder(
+      animation: _controller,
+      builder: (context, _) => CustomPaint(
+        painter: _HeartPainter(
+          seconds: _controller.value * 30,
+          hero: widget.hero,
         ),
+        size: Size.infinite,
       ),
     );
   }
 }
 
-/// Maillage partagé entre toutes les instances (généré une seule fois).
+/// Maillage du cœur, construit une seule fois pour toute l'application.
 class _HeartMesh {
-  _HeartMesh._();
+  _HeartMesh._(this.rings, this.segments) {
+    final row = segments + 1;
+    final count = (rings + 1) * row;
+    positions = Float32List(count * 3);
+    normals = Float32List(count * 3);
 
-  static final _HeartMesh instance = _HeartMesh._();
-
-  static const rings = 40;
-  static const segments = 56;
-
-  // Position de repos (x, y, z) et normale par sommet.
-  late final Float32List rest = _buildRest();
-  late final Float32List normals = _buildNormals();
-  late final Uint16List triangles = _buildTriangles();
-
-  /// Profil du cœur : la courbe classique x=16sin³t, y=13cost−5cos2t−…
-  /// donne le rayon et la hauteur de chaque anneau.
-  static (double, double) _profile(double t) {
-    final radius = math.pow(math.sin(t), 3).toDouble() * 1.0;
-    final height = (13 * math.cos(t) -
-            5 * math.cos(2 * t) -
-            2 * math.cos(3 * t) -
-            math.cos(4 * t)) /
-        16.0;
-    return (radius, height);
-  }
-
-  Float32List _buildRest() {
-    final data = Float32List(rings * segments * 3);
-    var cursor = 0;
-    for (var ring = 0; ring < rings; ring++) {
-      final t = math.pi * ring / (rings - 1);
-      final (radius, height) = _profile(t);
-      for (var seg = 0; seg < segments; seg++) {
-        final phi = 2 * math.pi * seg / segments;
-        // Gonflement elliptique en Z : le cœur est plein, pas plat.
-        data[cursor++] = radius * math.cos(phi);
-        data[cursor++] = height;
-        data[cursor++] = radius * math.sin(phi) * 0.72;
+    var p = 0;
+    for (var k = 0; k <= rings; k++) {
+      final th = (k / rings) * math.pi;
+      final s = math.sin(th);
+      final z = math.cos(th) * _depth;
+      for (var i = 0; i <= segments; i++) {
+        final t = (i / segments) * math.pi * 2;
+        final sinT = math.sin(t);
+        final hx = sinT * sinT * sinT;
+        final hy = (13 * math.cos(t) -
+                5 * math.cos(2 * t) -
+                2 * math.cos(3 * t) -
+                math.cos(4 * t)) /
+            16;
+        positions[p++] = hx * s * 1.05;
+        positions[p++] = (hy * s - 0.12) * 1.02;
+        positions[p++] = z * s * 0.92 + z * 0.08;
       }
     }
-    return data;
+
+    _computeNormals(row);
   }
 
-  Float32List _buildNormals() {
-    // Normales par différences finies sur la grille (anneau, segment).
-    final normals = Float32List(rings * segments * 3);
-    for (var ring = 0; ring < rings; ring++) {
-      for (var seg = 0; seg < segments; seg++) {
-        final i = (ring * segments + seg) * 3;
-        final ringNext = (ring + 1).clamp(0, rings - 1) * segments;
-        final ringPrev = (ring - 1).clamp(0, rings - 1) * segments;
-        final a = (ringNext + seg) * 3;
-        final b = (ringPrev + seg) * 3;
-        final c = (ring * segments + (seg + 1) % segments) * 3;
-        final d = (ring * segments + (seg - 1 + segments) % segments) * 3;
+  static const double _depth = 0.86;
+  static final _HeartMesh instance = _HeartMesh._(120, 160);
 
-        final ux = rest[a] - rest[b];
-        final uy = rest[a + 1] - rest[b + 1];
-        final uz = rest[a + 2] - rest[b + 2];
-        final vx = rest[c] - rest[d];
-        final vy = rest[c + 1] - rest[d + 1];
-        final vz = rest[c + 2] - rest[d + 2];
+  final int rings;
+  final int segments;
+  late final Float32List positions;
+  late final Float32List normals;
 
-        var nx = uy * vz - uz * vy;
-        var ny = uz * vx - ux * vz;
-        var nz = ux * vy - uy * vx;
-        final length = math.sqrt(nx * nx + ny * ny + nz * nz);
-        if (length > 1e-9) {
-          nx /= length;
-          ny /= length;
-          nz /= length;
-        }
-        // Oriente vers l'extérieur (le centre est en 0,±,0).
-        final outward = nx * rest[i] + nz * rest[i + 2];
-        final sign = outward >= 0 ? 1.0 : -1.0;
-        normals[i] = nx * sign;
-        normals[i + 1] = ny * sign;
-        normals[i + 2] = nz * sign;
+  /// Tampons de travail, alloués une fois pour toutes.
+  late final Float32List screen = Float32List(positions.length ~/ 3 * 2);
+  late final Float32List wide = Float32List(positions.length ~/ 3 * 2);
+  late final Int32List colors = Int32List(positions.length ~/ 3);
+  late final Int32List coreColors = Int32List(positions.length ~/ 3);
+  late final Float32List depth = Float32List(positions.length ~/ 3);
+  late final Uint16List faces = Uint16List(rings * segments * 6);
+  late final Uint16List coreFaces = Uint16List(rings * segments * 6);
+
+  /// Normales moyennées par sommet, comme `computeVertexNormals`.
+  void _computeNormals(int row) {
+    final acc = Float32List(normals.length);
+    void addFace(int a, int b, int c) {
+      final ax = positions[a * 3], ay = positions[a * 3 + 1];
+      final az = positions[a * 3 + 2];
+      final e1x = positions[b * 3] - ax;
+      final e1y = positions[b * 3 + 1] - ay;
+      final e1z = positions[b * 3 + 2] - az;
+      final e2x = positions[c * 3] - ax;
+      final e2y = positions[c * 3 + 1] - ay;
+      final e2z = positions[c * 3 + 2] - az;
+      final nx = e1y * e2z - e1z * e2y;
+      final ny = e1z * e2x - e1x * e2z;
+      final nz = e1x * e2y - e1y * e2x;
+      for (final v in [a, b, c]) {
+        acc[v * 3] += nx;
+        acc[v * 3 + 1] += ny;
+        acc[v * 3 + 2] += nz;
       }
     }
-    return normals;
-  }
 
-  Uint16List _buildTriangles() {
-    final indices = Uint16List((rings - 1) * segments * 6);
-    var cursor = 0;
-    for (var ring = 0; ring < rings - 1; ring++) {
-      for (var seg = 0; seg < segments; seg++) {
-        final a = ring * segments + seg;
-        final b = ring * segments + (seg + 1) % segments;
-        final c = a + segments;
-        final d = b + segments;
-        indices[cursor++] = a;
-        indices[cursor++] = b;
-        indices[cursor++] = c;
-        indices[cursor++] = b;
-        indices[cursor++] = d;
-        indices[cursor++] = c;
+    for (var k = 0; k < rings; k++) {
+      for (var i = 0; i < segments; i++) {
+        final a = k * row + i;
+        final b = a + 1;
+        final c = a + row;
+        final d = c + 1;
+        addFace(a, c, b);
+        addFace(b, c, d);
       }
     }
-    return indices;
+
+    for (var v = 0; v < acc.length; v += 3) {
+      final x = acc[v], y = acc[v + 1], z = acc[v + 2];
+      final len = math.sqrt(x * x + y * y + z * z);
+      if (len > 1e-9) {
+        normals[v] = x / len;
+        normals[v + 1] = y / len;
+        normals[v + 2] = z / len;
+      } else {
+        normals[v + 1] = 1;
+      }
+    }
   }
 }
 
+/// Rendu d'une image du cœur.
 class _HeartPainter extends CustomPainter {
-  _HeartPainter({required this.time, required this.hero});
+  _HeartPainter({
+    required this.seconds,
+    required this.hero,
+    this.still = false,
+  });
 
-  final double time;
+  final double seconds;
   final bool hero;
 
-  /// Battement à deux temps : gaussiennes en phase 0,08 (systole) et
-  /// 0,30 (rebond diastolique) de la période ~1,05 s (57 bpm).
-  static double beatOf(double time) {
-    final phase = (time / 1.053) % 1.0;
-    double gauss(double centre, double width) {
-      final delta = phase - centre;
-      return math.exp(-delta * delta / (2 * width * width));
+  /// Pose figée (réduction d'animations) : diastole franche, sans contraction.
+  final bool still;
+
+  static final LinearRgb _violet = LinearRgb.fromHex(0x5B5BF6);
+  static final LinearRgb _lime = LinearRgb.fromHex(0xC6F432);
+  static final LinearRgb _baseColor = LinearRgb.fromHex(0x2E2760);
+
+  /// Courbe cardiaque : systole marquée puis rebond diastolique.
+  static double _cardiac(double p) {
+    double g(double c, double w) {
+      final d = (p - c) / w;
+      return math.exp(-d * d);
     }
 
-    return (gauss(0.08, 0.045) + 0.55 * gauss(0.30, 0.10)).clamp(0.0, 1.0);
+    return g(0.08, 0.055) + g(0.30, 0.075) * 0.42;
   }
 
   @override
   void paint(Canvas canvas, Size size) {
-    final mesh = _HeartMesh.instance;
-    final rig = SceneLightRig(hero: hero);
-    final beat = beatOf(time);
-    final radial = 1 - 0.085 * beat;
-    final vertical = 1 - 0.055 * beat;
-    final float = math.sin(time * 0.45) * 0.06;
-    // Repos : oscillation lente ±0,28 rad — jamais de rotation continue.
-    final yaw = math.sin(time * 0.35) * 0.28;
-    final cosYaw = math.cos(yaw);
-    final sinYaw = math.sin(yaw);
-    final emissive = (hero ? 0.16 : 0.10) + beat * (hero ? 0.30 : 0.16);
-    final alpha = hero ? 0.88 : 0.82;
-    final worldScale = size.shortestSide * 0.30;
-    final focal = 6.0;
+    if (size.width <= 0 || size.height <= 0) {
+      return;
+    }
 
-    // Halo de pouls : dégradé radial animé (repli validé par le handoff).
-    final haloIntensity =
-        ((hero ? 0.20 : 0.10) + beat * (hero ? 0.30 : 0.16)) * 1.4;
-    final haloColor = Color.lerp(
-      AppColors.primary,
-      AppColors.accent,
-      beat * 0.3,
-    )!;
+    final period = 60 / 57;
+    final phase = (seconds % period) / period;
+    final beat = still ? 0.0 : _cardiac(phase);
+
+    final mesh = _HeartMesh.instance;
+    final row = mesh.segments + 1;
+    final vertexCount = (mesh.rings + 1) * row;
+
+    // --- Transformations de la maquette ---
+    final rotation = EulerRotation(
+      0.16,
+      -0.42 + math.sin(seconds * 0.22) * 0.28,
+      0.18,
+    );
+    final bob = math.sin(seconds * 0.45) * 0.06;
+    final scale = 1.62 * (1 + beat * 0.035);
+
+    final camera = SceneCamera(
+      fovDegrees: 32,
+      x: 0.1,
+      y: 0.15,
+      z: 7.4,
+      targetX: 0,
+      targetY: -0.05,
+      targetZ: 0,
+    );
+
+    final material = StandardMaterial(
+      base: _baseColor,
+      emissive: _violet,
+      emissiveIntensity: (hero ? 0.72 : 0.5) + beat * (hero ? 1.5 : 0.9),
+      roughness: 0.42,
+      metalness: 0.3,
+      opacity: hero ? 0.88 : 0.82,
+    );
+
+    final shader = SceneShader(
+      exposure: hero ? 1.3 : 1.05,
+      cameraX: camera.x,
+      cameraY: camera.y,
+      cameraZ: camera.z,
+      lights: [
+        SceneLight.ambient(LinearRgb.fromHex(0x4A4A9A).scaled(0.55)),
+        SceneLight.point(
+          LinearRgb.fromHex(0x9A9AFF),
+          hero ? 40 : 22,
+          x: 3.2,
+          y: 3.6,
+          z: 5,
+          cutoff: 40,
+        ),
+        SceneLight.point(
+          LinearRgb.fromHex(0xC6F432),
+          hero ? 18 : 9,
+          x: -3.6,
+          y: -2.4,
+          z: 3,
+          cutoff: 40,
+        ),
+        SceneLight.directional(
+          const LinearRgb(1, 1, 1),
+          hero ? 0.42 : 0.22,
+          x: -2.5,
+          y: 1.5,
+          z: -5,
+        ),
+      ],
+    );
+
+    // --- Sommets : déformation, transformation, éclairage ---
+    final screen = mesh.screen;
+    final colors = mesh.colors;
+    final viewDepth = mesh.depth;
+
+    final squeezeY = 1 - beat * 0.055;
+    for (var v = 0; v < vertexCount; v++) {
+      final i3 = v * 3;
+      final bx = mesh.positions[i3];
+      final by = mesh.positions[i3 + 1];
+      final bz = mesh.positions[i3 + 2];
+
+      // Contraction du muscle (identique à la maquette).
+      final twist = math.sin(by * 2.4 + seconds * 0.8) * 0.012;
+      final k = 1 - beat * 0.085 + twist;
+
+      final dx = bx * k * scale;
+      final dy = by * squeezeY * scale;
+      final dz = bz * k * scale;
+
+      // Normale : transposée inverse d'un étirement diagonal.
+      var nx = mesh.normals[i3] / k;
+      var ny = mesh.normals[i3 + 1] / squeezeY;
+      var nz = mesh.normals[i3 + 2] / k;
+      final nLen = math.sqrt(nx * nx + ny * ny + nz * nz);
+      nx /= nLen;
+      ny /= nLen;
+      nz /= nLen;
+
+      final wx = rotation.rotX(dx, dy, dz);
+      final wy = rotation.rotY(dx, dy, dz) + bob;
+      final wz = rotation.rotZ(dx, dy, dz);
+
+      final rnx = rotation.rotX(nx, ny, nz);
+      final rny = rotation.rotY(nx, ny, nz);
+      final rnz = rotation.rotZ(nx, ny, nz);
+
+      final p = camera.project(wx, wy, wz, size.width, size.height);
+      screen[v * 2] = p.sx;
+      screen[v * 2 + 1] = p.sy;
+      viewDepth[v] = p.viewZ;
+      colors[v] = shader.shade(rnx, rny, rnz, wx, wy, wz, material);
+    }
+
+    // --- Halo interne, sous le maillage ---
+    _paintHalo(canvas, size, camera, bob, beat);
+
+    // --- Voile interne : silhouette additive qui donne sa densité au volume
+    // (le maillage `core` en BackSide de la maquette). ---
+    _paintCore(canvas, screen, mesh, row);
+
+    // --- Faces avant, des plus lointaines aux plus proches ---
+    final ringOrder = List<int>.generate(mesh.rings, (i) => i);
+    ringOrder.sort((a, b) {
+      final za = viewDepth[a * row] + viewDepth[(a + 1) * row];
+      final zb = viewDepth[b * row] + viewDepth[(b + 1) * row];
+      return za.compareTo(zb);
+    });
+
+    final indices = mesh.faces;
+    var n = 0;
+    for (final k in ringOrder) {
+      for (var i = 0; i < mesh.segments; i++) {
+        final a = k * row + i;
+        final b = a + 1;
+        final c = a + row;
+        final d = c + 1;
+        n = _emit(indices, n, screen, a, c, b);
+        n = _emit(indices, n, screen, b, c, d);
+      }
+    }
+
+    if (n > 0) {
+      canvas.drawVertices(
+        ui.Vertices.raw(
+          ui.VertexMode.triangles,
+          screen,
+          colors: colors,
+          indices: Uint16List.sublistView(indices, 0, n),
+        ),
+        BlendMode.srcOver,
+        Paint(),
+      );
+    }
+
+    _paintParticles(canvas, size, camera, rotation, bob, beat);
+  }
+
+  /// N'émet un triangle que s'il fait face à la caméra (aire 2D signée).
+  int _emit(Uint16List out, int n, Float32List screen, int a, int b, int c) {
+    final ax = screen[a * 2], ay = screen[a * 2 + 1];
+    final bx = screen[b * 2], by = screen[b * 2 + 1];
+    final cx = screen[c * 2], cy = screen[c * 2 + 1];
+    final area = (bx - ax) * (cy - ay) - (by - ay) * (cx - ax);
+    if (area <= 0) {
+      return n;
+    }
+    out[n] = a;
+    out[n + 1] = b;
+    out[n + 2] = c;
+    return n + 3;
+  }
+
+  /// Lueur de pouls : la sphère de Fresnel de la maquette, transposée en
+  /// dégradé radial dont le profil suit exactement `pow(1 - |N·V|, 2.6)` —
+  /// donc sombre au centre et lumineuse sur le pourtour, comme un liseré.
+  void _paintHalo(
+    Canvas canvas,
+    Size size,
+    SceneCamera camera,
+    double bob,
+    double beat,
+  ) {
+    final center = camera.project(0, bob, 0, size.width, size.height);
+    final unit = camera.pixelsPerUnit(camera.z, size.height);
+    final glow = _violet.lerpTo(_lime, beat * 0.30);
+    final intensity = (hero ? 0.20 : 0.10) + beat * (hero ? 0.30 : 0.16);
+    final color = Color.fromARGB(
+      255,
+      (linearToSrgb(glow.r.clamp(0.0, 1.0)) * 255).round(),
+      (linearToSrgb(glow.g.clamp(0.0, 1.0)) * 255).round(),
+      (linearToSrgb(glow.b.clamp(0.0, 1.0)) * 255).round(),
+    );
+
+    // Halo diffus de fond (sphère 1.8, face interne, opacité .05).
+    final haloRadius = unit * 1.8 * (1 + beat * 0.09);
     canvas.drawCircle(
-      size.center(Offset.zero),
-      size.shortestSide * 0.5 * (1 + beat * 0.06),
+      Offset(center.sx, center.sy),
+      haloRadius,
       Paint()
         ..shader = ui.Gradient.radial(
-          size.center(Offset.zero),
-          size.shortestSide * 0.5,
+          Offset(center.sx, center.sy),
+          haloRadius,
           [
-            haloColor.withValues(alpha: haloIntensity.clamp(0.0, 1.0)),
-            haloColor.withValues(alpha: 0),
+            color.withValues(alpha: hero ? 0.09 : 0.05),
+            color.withValues(alpha: 0),
           ],
-          [0.0, 1.0],
+          const [0.55, 1.0],
         ),
     );
 
-    // Particules orbitales déterministes — jamais dans le volume du cœur.
-    final particleCount = hero ? 150 : 90;
-    final particlePaint = Paint();
-    for (var i = 0; i < particleCount; i++) {
-      final seedA = hashNoise(i);
-      final seedB = hashNoise(i + 1000);
-      final seedC = hashNoise(i + 2000);
-      final orbit = 1.35 + seedA * 0.9;
-      final angle = seedB * 2 * math.pi + time * (0.05 + seedC * 0.08);
-      final height = (seedC - 0.5) * 2.2;
-      final x = orbit * math.cos(angle);
-      final z = orbit * math.sin(angle) * 0.8;
-      final centre = project(
-        x * cosYaw + z * sinYaw,
-        height + float,
-        -x * sinYaw + z * cosYaw,
-        focal: focal,
-        size: size,
-        worldScale: worldScale,
-      );
-      particlePaint.color = AppColors.primaryLight.withValues(
-        alpha: (hero ? 0.5 : 0.26) * (0.4 + 0.6 * seedA),
-      );
-      canvas.drawCircle(centre, 0.9 + seedB * 1.3, particlePaint);
+    // Liseré de Fresnel (sphère 1.95, additive).
+    final rimRadius = unit * 1.95 * (1 + beat * 0.06);
+    const steps = 8;
+    final stops = <double>[];
+    final colors = <Color>[];
+    for (var i = 0; i <= steps; i++) {
+      final d = i / steps;
+      final cosTheta = math.sqrt(math.max(0.0, 1 - d * d));
+      final fresnel = math.pow(1 - cosTheta, 2.6).toDouble();
+      stops.add(d);
+      colors.add(color.withValues(alpha: (fresnel * intensity).clamp(0.0, 1.0)));
     }
 
-    // Sommets : transformation + éclairage par frame.
-    final count = _HeartMesh.rings * _HeartMesh.segments;
-    final positions = Float32List(count * 2);
-    final colors = Int32List(count);
-    final viewZ = Float32List(count);
-    const base = (0.18, 0.15, 0.38); // #2E2760
+    canvas.drawCircle(
+      Offset(center.sx, center.sy),
+      rimRadius,
+      Paint()
+        ..blendMode = BlendMode.plus
+        ..shader = ui.Gradient.radial(
+          Offset(center.sx, center.sy),
+          rimRadius,
+          colors,
+          stops,
+        ),
+    );
+  }
 
+  /// Voile interne : les faces arrière du cœur en aplat additif pâle. C'est ce
+  /// qui donne au volume sa densité sans dessiner la moindre structure.
+  void _paintCore(
+    Canvas canvas,
+    Float32List screen,
+    _HeartMesh mesh,
+    int row,
+  ) {
+    final count = screen.length ~/ 2;
+    const stride = 3;
+
+    // Le voile est un second maillage 6 % plus grand : on dilate la silhouette
+    // projetée autour de son centre plutôt que de refaire une projection.
+    const spread = 1.72 / 1.62;
+    var cx = 0.0;
+    var cy = 0.0;
     for (var i = 0; i < count; i++) {
-      final px = mesh.rest[i * 3] * radial;
-      final py = mesh.rest[i * 3 + 1] * vertical + float;
-      final pz = mesh.rest[i * 3 + 2] * radial;
-      final x = px * cosYaw + pz * sinYaw;
-      final z = -px * sinYaw + pz * cosYaw;
-
-      final nxr = mesh.normals[i * 3];
-      final ny = mesh.normals[i * 3 + 1];
-      final nzr = mesh.normals[i * 3 + 2];
-      final nx = nxr * cosYaw + nzr * sinYaw;
-      final nz = -nxr * sinYaw + nzr * cosYaw;
-
-      final offset = project(
-        x,
-        py,
-        z,
-        focal: focal,
-        size: size,
-        worldScale: worldScale,
-      );
-      positions[i * 2] = offset.dx;
-      positions[i * 2 + 1] = offset.dy;
-      viewZ[i] = z;
-
-      // Fresnel : halo sur la silhouette (remplace le mesh de liseré).
-      final fresnel = math.pow(1 - nz.abs().clamp(0.0, 1.0), 2.6).toDouble();
-      final (r, g, b) = rig.shade(
-        nx: nx,
-        ny: ny,
-        nz: nz,
-        base: base,
-        emissive: emissive + fresnel * (hero ? 0.16 : 0.10) * (0.6 + beat),
-      );
-      colors[i] = packColor(r, g, b, alpha);
+      cx += screen[i * 2];
+      cy += screen[i * 2 + 1];
+    }
+    cx /= count;
+    cy /= count;
+    final wide = mesh.wide;
+    for (var i = 0; i < count; i++) {
+      wide[i * 2] = cx + (screen[i * 2] - cx) * spread;
+      wide[i * 2 + 1] = cy + (screen[i * 2 + 1] - cy) * spread;
     }
 
-    // Élimination des faces arrière : le cœur ne montre jamais son
-    // intérieur (équivalent depthWrite du handoff).
-    final source = mesh.triangles;
-    final visible = Uint16List(source.length);
-    var cursor = 0;
-    for (var t = 0; t < source.length; t += 3) {
-      final a = source[t];
-      final b = source[t + 1];
-      final c = source[t + 2];
-      final ax = positions[a * 2];
-      final ay = positions[a * 2 + 1];
-      final cross = (positions[b * 2] - ax) * (positions[c * 2 + 1] - ay) -
-          (positions[c * 2] - ax) * (positions[b * 2 + 1] - ay);
-      if (cross < 0 || viewZ[a] + viewZ[b] + viewZ[c] > 0.6) {
-        visible[cursor++] = a;
-        visible[cursor++] = b;
-        visible[cursor++] = c;
+    final colors = mesh.coreColors;
+    final alpha = ((hero ? 0.16 : 0.10) * 255).round();
+    const pale = 0x8A8AFA;
+    final packed = (alpha << 24) | pale;
+    if (colors.isNotEmpty && colors[0] != packed) {
+      colors.fillRange(0, colors.length, packed);
+    } else if (colors.isNotEmpty && colors[0] == 0) {
+      colors.fillRange(0, colors.length, packed);
+    }
+
+    final indices = mesh.coreFaces;
+    var n = 0;
+    for (var k = 0; k + stride <= mesh.rings; k += stride) {
+      for (var i = 0; i + stride <= mesh.segments; i += stride) {
+        final a = k * row + i;
+        final b = a + stride;
+        final c = a + row * stride;
+        final d = c + stride;
+        // Ordre inversé : on ne garde que les faces arrière.
+        n = _emit(indices, n, wide, c, a, b);
+        n = _emit(indices, n, wide, c, b, d);
       }
+    }
+    if (n == 0) {
+      return;
     }
 
     canvas.drawVertices(
       ui.Vertices.raw(
         ui.VertexMode.triangles,
-        positions,
+        wide,
         colors: colors,
-        indices: Uint16List.sublistView(visible, 0, cursor),
+        indices: Uint16List.sublistView(indices, 0, n),
       ),
-      BlendMode.srcOver,
+      BlendMode.plus,
       Paint(),
     );
   }
 
+  /// Flux sanguin : points déterministes en orbite (aucun aléatoire, le rendu
+  /// doit être reproductible d'une image à l'autre et d'un test à l'autre).
+  void _paintParticles(
+    Canvas canvas,
+    Size size,
+    SceneCamera camera,
+    EulerRotation rotation,
+    double bob,
+    double beat,
+  ) {
+    const count = 140;
+    final paint = Paint()
+      ..blendMode = BlendMode.plus
+      ..color = const Color(0xFFD6D6FF).withValues(alpha: hero ? 0.5 : 0.26);
+
+    for (var i = 0; i < count; i++) {
+      final h1 = _hash(i * 1.0);
+      final h2 = _hash(i * 1.0 + 97);
+      final h3 = _hash(i * 1.0 + 211);
+      final h4 = _hash(i * 1.0 + 331);
+
+      final r = (2.5 + h1 * 1.7) * (1 + beat * 0.08);
+      final angle = h2 * math.pi * 2 + seconds * (0.15 + h4 * 0.4) * 0.4;
+      final y = (h3 - 0.5) * 3.4 + math.sin(seconds * 0.5 + h2 * math.pi * 2) * 0.16;
+
+      final lx = math.cos(angle) * r;
+      final lz = math.sin(angle) * r;
+
+      final wx = rotation.rotX(lx, y, lz);
+      final wy = rotation.rotY(lx, y, lz) + bob;
+      final wz = rotation.rotZ(lx, y, lz);
+
+      final p = camera.project(wx, wy, wz, size.width, size.height);
+      if (p.viewZ >= 0) {
+        continue;
+      }
+      final diameter =
+          (hero ? 0.045 : 0.032) * (size.height * 0.5) / p.viewZ.abs();
+      canvas.drawCircle(
+        Offset(p.sx, p.sy),
+        math.max(diameter * 0.5, 0.35),
+        paint,
+      );
+    }
+  }
+
+  /// Bruit déterministe 0..1.
+  static double _hash(double n) {
+    final s = math.sin(n * 127.1) * 43758.5453;
+    return s - s.floorToDouble();
+  }
+
   @override
-  bool shouldRepaint(_HeartPainter oldDelegate) =>
-      oldDelegate.time != time || oldDelegate.hero != hero;
+  bool shouldRepaint(covariant _HeartPainter old) =>
+      old.seconds != seconds || old.hero != hero || old.still != still;
 }

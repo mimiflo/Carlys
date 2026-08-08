@@ -34,8 +34,10 @@ class OnboardingBackdrop extends StatelessWidget {
               ),
             ),
           ),
-          Positioned.fill(child: _PrimaryHalo()),
+          // Ordre de la maquette : l'extinction verticale d'abord, le halo
+          // violet PAR-DESSUS (en CSS, la première couche listée est au-dessus).
           Positioned.fill(child: _BottomFade()),
+          Positioned.fill(child: _PrimaryHalo()),
         ],
       ),
     );

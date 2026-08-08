@@ -54,10 +54,18 @@ class HomeHero extends StatelessWidget {
             child: HeartScene(),
           ),
         ),
-        // Lisibilité : la colonne de texte est à gauche, le fond s'éteint
-        // ensuite vers le bas.
-        const Positioned.fill(child: AppSceneScrim.lateral()),
+        // Lisibilité, dans l'ordre de la maquette (la couche listée en premier
+        // en CSS est la plus haute) : extinction verticale, puis assombrissement
+        // latéral, puis le halo violet PAR-DESSUS.
         const Positioned.fill(child: AppSceneScrim.vertical()),
+        const Positioned.fill(child: AppSceneScrim.lateral()),
+        const Positioned.fill(
+          child: AppSceneGlow(
+            center: Alignment(0.48, -0.16),
+            radius: 0.71,
+            alpha: 0.32,
+          ),
+        ),
         Padding(
           padding: EdgeInsets.only(top: topInset + AppSpacing.gutter),
           child: Column(

@@ -29,9 +29,11 @@ class AppSceneContainer extends StatelessWidget {
   Widget build(BuildContext context) {
     Widget scene = ShaderMask(
       // Extinction radiale : jamais d'arête droite au bord du canvas.
+      // Mêmes points que le masque du canvas de la maquette
+      // (`radial-gradient(closest-side, #000 62%, transparent 97%)`).
       shaderCallback: (bounds) => const RadialGradient(
         colors: [Colors.white, Colors.white, Colors.transparent],
-        stops: [0.0, 0.58, 0.96],
+        stops: [0.0, 0.62, 0.97],
       ).createShader(bounds),
       blendMode: BlendMode.dstIn,
       child: child,
@@ -99,6 +101,53 @@ class AppSceneScrim extends StatelessWidget {
                   ],
                   stops: [0.3, 0.75, 1.0],
                 ),
+        ),
+        child: const SizedBox.expand(),
+      ),
+    );
+  }
+}
+
+/// Halo violet de lisibilité posé PAR-DESSUS les scrims.
+///
+/// Dans la maquette, ce dégradé est la PREMIÈRE couche de `background`, donc la
+/// plus haute : il repasse du violet sur la scène déjà assombrie. L'ordre
+/// compte — placé dessous, la zone devient nettement plus terne.
+class AppSceneGlow extends StatelessWidget {
+  const AppSceneGlow({
+    required this.center,
+    required this.radius,
+    required this.alpha,
+    this.end = 0.68,
+    super.key,
+  });
+
+  /// Centre du halo, converti depuis le `at x% y%` de la maquette.
+  final Alignment center;
+
+  /// Rayon en fraction du plus petit côté.
+  final double radius;
+
+  /// Opacité au centre.
+  final double alpha;
+
+  /// Point où le halo devient transparent, en fraction du rayon.
+  final double end;
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: DecoratedBox(
+        decoration: BoxDecoration(
+          gradient: RadialGradient(
+            center: center,
+            radius: radius,
+            colors: [
+              AppColors.primary.withValues(alpha: alpha),
+              AppColors.primary.withValues(alpha: 0),
+            ],
+            stops: [0.0, end],
+          ),
         ),
         child: const SizedBox.expand(),
       ),

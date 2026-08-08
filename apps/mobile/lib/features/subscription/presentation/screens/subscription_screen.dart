@@ -41,7 +41,16 @@ class SubscriptionScreen extends ConsumerWidget {
               child: HeartScene(),
             ),
           ),
+          // Ordre de la maquette : assombrissement latéral puis halo violet
+          // par-dessus, sans quoi le coin haut-droit vire au gris.
           const Positioned.fill(child: AppSceneScrim.lateral()),
+          const Positioned.fill(
+            child: AppSceneGlow(
+              center: Alignment(0.64, -0.72),
+              radius: 0.62,
+              alpha: 0.30,
+            ),
+          ),
           SafeArea(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,

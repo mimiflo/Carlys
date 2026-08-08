@@ -24,6 +24,41 @@ Le rendu des captures de référence exige de vendoriser Inter, JetBrains Mono e
 Material Symbols Rounded : sans elles, la maquette tombe en serif et devient
 trompeuse.
 
+## Rendre la référence : deux pièges
+
+Les captures de référence ne valent que si la maquette s'affiche vraiment.
+Deux erreurs donnent une référence **fausse mais crédible** :
+
+1. **Polices non chargées** — la maquette tombe en serif et affiche les noms de
+   glyphes en clair (« check_circle »). Il faut vendoriser Inter, JetBrains Mono
+   et Material Symbols Rounded et intercepter les requêtes Google Fonts.
+2. **Scènes 3D absentes** — les modules ES sont bloqués par CORS en `file://`
+   (le cœur et l'hélice ne se dessinent alors pas du tout, ne laissant que le
+   halo violet du CSS). Il faut **servir le dossier en HTTP** et lancer Chromium
+   avec WebGL logiciel :
+   `--use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader`.
+
+Pour comparer à pose égale, activer la réduction d'animations des deux côtés
+(`page.emulateMedia({ reducedMotion: 'reduce' })` côté maquette) : les scènes
+rendent alors une image unique à t = 0, comme les captures Flutter.
+
+## Les scènes 3D
+
+Le cœur et l'hélice sont des portages **fidèles** de `pulse-heart.js` et
+`dna-helix.js` : mêmes géométries, mêmes matériaux, mêmes lumières.
+`lib/design_system/scenes/scene3d.dart` reproduit le modèle d'éclairage de
+three.js — métallique/rugosité, spéculaire GGX, tone mapping ACES filmique,
+sortie sRGB — de sorte que les couleurs tombent aux mêmes valeurs qu'en WebGL.
+
+Deux limites assumées :
+
+- l'éclairage est calculé **par sommet** (Flutter n'expose pas de varyings aux
+  shaders de fragment) : les reflets sont un peu plus doux que dans la
+  référence, d'où un maillage volontairement dense (120 × 160 pour le cœur) ;
+- l'ordre des calques compte. Dans la maquette, le dégradé violet de lisibilité
+  est la **première** couche CSS, donc la plus haute : posé sous
+  l'assombrissement, il rend la zone nettement plus terne.
+
 ## Traduction, pas copie
 
 La maquette est du **React DOM (web)**. L'application est en Flutter : le code
