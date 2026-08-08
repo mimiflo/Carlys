@@ -1,4 +1,4 @@
-import 'dart:ui';
+import 'package:flutter/material.dart';
 
 /// Palette Carlys — refonte « premium dark-first ».
 ///
@@ -17,6 +17,20 @@ abstract final class AppColors {
   static const Color primaryDark = Color(0xFF4747D1);
   static const Color primaryLight = Color(0xFF8A8AFA);
   static const Color accent = Color(0xFFC6F432);
+
+  // ── Dégradé de MARQUE ────────────────────────────────────────────
+  //
+  // Relevé sur le logo Carlys. Réservé aux surfaces de marque (page de
+  // bienvenue, logo) : il ne remplace jamais `primary`/`accent`, qui restent
+  // les couleurs de l'application. Les mélanger diluerait les deux.
+  static const Color signatureStart = Color(0xFF7B4BF6);
+  static const Color signatureMid = Color(0xFFCD2EDA);
+  static const Color signatureEnd = Color(0xFFF7708F);
+
+  /// Dégradé de marque, de gauche à droite.
+  static const LinearGradient signature = LinearGradient(
+    colors: [signatureStart, signatureMid, signatureEnd],
+  );
   static const Color accentDark = Color(0xFFA8D41E);
 
   // Neutres

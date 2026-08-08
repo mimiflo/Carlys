@@ -19,6 +19,7 @@ abstract final class AppRoutes {
   static const String sessions = '/sessions';
   static const String subscription = '/subscription';
   static const String settings = '/settings';
+  static const String welcome = '/bienvenue';
   static const String onboarding = '/onboarding';
 
   static String exerciseDetail(String idOrSlug) => '/exercises/$idOrSlug';

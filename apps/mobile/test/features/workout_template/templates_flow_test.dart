@@ -88,6 +88,15 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    // La carte « séance du jour » est passée sous le résumé du jour, et
+    // la liste est PARESSEUSE : il faut défiler jusqu'à elle pour
+    // qu'elle existe.
+    await tester.scrollUntilVisible(
+      find.text('Lancer un modèle'),
+      240,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
     await tester.tap(find.text('Lancer un modèle'));
     await tester.pumpAndSettle();
     return workouts;

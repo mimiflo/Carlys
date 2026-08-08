@@ -45,6 +45,12 @@ abstract final class AppIcons {
 
   /// Jour tenu dans la série de constance.
   static const IconData streak = Icons.local_fire_department_rounded;
+
+  // Univers de marque (page de bienvenue)
+  static const IconData brandApp = Icons.smartphone_rounded;
+  static const IconData brandAcademy = Icons.school_rounded;
+  static const IconData brandEvents = Icons.emoji_events_rounded;
+  static const IconData brandWear = Icons.checkroom_rounded;
   static const IconData goal = Icons.flag_rounded;
   static const IconData units = Icons.straighten_rounded;
   static const IconData theme = Icons.dark_mode_rounded;

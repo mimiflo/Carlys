@@ -15,7 +15,7 @@ class FirstRunState {
 
   /// Avant lecture des préférences : l'étape réelle n'est pas encore connue.
   const FirstRunState.unknown()
-      : step = FirstRunStep.onboarding,
+      : step = FirstRunStep.welcome,
         restored = false;
 
   final FirstRunStep step;
@@ -64,6 +64,9 @@ class FirstRunController extends Notifier<FirstRunState> {
     await completeOnboarding();
   }
 
+  /// La page de marque est vue : au tour des questions de profil.
+  Future<void> completeWelcome() => markReached(FirstRunStep.onboarding);
+
   /// L'onboarding est franchi (répondu ou passé) : au tour du compte.
   Future<void> completeOnboarding() => markReached(FirstRunStep.account);
 
@@ -88,7 +91,7 @@ class FirstRunController extends Notifier<FirstRunState> {
   }
 
   Future<void> _restore() async {
-    var step = FirstRunStep.onboarding;
+    var step = FirstRunStep.welcome;
     try {
       step = await _store.readStep();
     } on Exception catch (error) {

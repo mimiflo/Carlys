@@ -68,6 +68,10 @@ void main() {
     await tester.pumpWidget(demoApp());
     await tester.pumpAndSettle();
 
+    // 0. La page de marque ouvre le parcours, en démo comme ailleurs.
+    await tester.tap(find.text('COMMENCER MON PARCOURS'));
+    await tester.pumpAndSettle();
+
     // 1. Onboarding — la session démo étant déjà ouverte, l'étape « compte »
     // est satisfaite : « Passer » enchaîne directement sur Premium.
     expect(find.text('1/4'), findsOneWidget);
@@ -108,9 +112,14 @@ void main() {
     await tester.pumpAndSettle();
 
     // « Lancer un modèle » : l'entrée naturelle, sous le démarrage de séance.
-    // La série de constance a repoussé la carte plus bas : on l'amène à
-    // l'écran avant de la toucher.
-    await tester.ensureVisible(find.text('Lancer un modèle'));
+    // La carte « séance du jour » est passée sous le résumé du jour, et
+    // la liste est PARESSEUSE : il faut défiler jusqu'à elle pour
+    // qu'elle existe.
+    await tester.scrollUntilVisible(
+      find.text('Lancer un modèle'),
+      240,
+      scrollable: find.byType(Scrollable).first,
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.text('Lancer un modèle'));
     await tester.pumpAndSettle();

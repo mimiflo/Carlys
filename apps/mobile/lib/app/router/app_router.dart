@@ -15,6 +15,7 @@ import '../../features/onboarding/domain/first_run_step.dart';
 import '../../features/onboarding/presentation/controllers/first_run_controller.dart';
 import '../../features/onboarding/presentation/screens/onboarding_screen.dart';
 import '../../features/onboarding/presentation/screens/splash_screen.dart';
+import '../../features/onboarding/presentation/screens/welcome_screen.dart';
 import '../../features/profile/presentation/screens/profile_screen.dart';
 import '../../features/progress/presentation/screens/progress_screen.dart';
 import '../../features/settings/presentation/screens/settings_screen.dart';
@@ -38,7 +39,8 @@ final _rootNavigatorKey = GlobalKey<NavigatorState>();
 /// Destination imposée par le PARCOURS DE PREMIÈRE OUVERTURE, ou `null` si
 /// l'emplacement demandé est légitime à cette étape.
 ///
-/// Le tunnel se traverse par redirection : onboarding → création de compte →
+/// Le tunnel se traverse par redirection : page de marque → onboarding →
+/// création de compte →
 /// proposition Premium → accueil. La connexion reste accessible depuis
 /// l'onboarding (« j'ai déjà un compte ») et depuis l'étape compte ; une
 /// fois la session ouverte, le parcours reprend là où il en était.
@@ -50,6 +52,9 @@ String? _firstRunRedirect(
   final onAuthScreen = _authRoutes.contains(location) && !authenticated;
 
   return switch (step) {
+    // Rien n'est demandé ici : aucune échappatoire vers l'authentification.
+    FirstRunStep.welcome =>
+      location == AppRoutes.welcome ? null : AppRoutes.welcome,
     FirstRunStep.onboarding =>
       (location == AppRoutes.onboarding || onAuthScreen)
           ? null
@@ -248,6 +253,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         name: 'settings',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const SettingsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.welcome,
+        name: 'welcome',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const WelcomeScreen(),
       ),
       GoRoute(
         path: AppRoutes.onboarding,

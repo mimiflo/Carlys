@@ -23,6 +23,7 @@ import 'package:carlys_mobile/features/exercises/domain/entities/exercise.dart';
 import 'package:carlys_mobile/features/exercises/presentation/widgets/exercise_card.dart';
 import 'package:carlys_mobile/features/nutrition/data/repositories/nutrition_repository_impl.dart';
 import 'package:carlys_mobile/features/nutrition/domain/entities/nutrition.dart';
+import 'package:carlys_mobile/features/onboarding/domain/first_run_step.dart';
 import 'package:carlys_mobile/features/profile/presentation/widgets/profile_plan_card.dart';
 import 'package:carlys_mobile/features/progress/data/repositories/progress_repository_impl.dart';
 import 'package:carlys_mobile/features/progress/domain/entities/progress.dart';
@@ -254,6 +255,14 @@ void main() {
     );
     await settle(tester);
   }
+
+  testWidgets('bienvenue', (tester) async {
+    // Parcours de première ouverture NON franchi : la page de marque est la
+    // toute première chose que voit un nouvel arrivant.
+    seedFirstRunStep(FirstRunStep.welcome);
+    await pumpApp(tester, authenticated: false);
+    await capture(tester, '00-bienvenue');
+  });
 
   testWidgets('connexion', (tester) async {
     await pumpApp(tester, authenticated: false);

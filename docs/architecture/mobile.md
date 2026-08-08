@@ -159,6 +159,7 @@ explicite.
 | `/templates/:templateId`| `template-editor` | Éditeur de modèle (plein écran)    |
 | `/history`              | `history`         | Historique (plein écran)           |
 | `/history/:sessionId`   | `workout-detail`  | Détail d'une séance                |
+| `/bienvenue`            | `welcome`         | Page de marque, première ouverture |
 | `/sessions` · `/subscription` · `/settings` · `/onboarding` | — | Plein écran |
 
 Il n'existe **pas** de route `/templates/new` : créer un modèle, c'est
@@ -169,16 +170,21 @@ traduction directe du principe « identifiants générés hors ligne », et ça
 ### Parcours de première ouverture
 
 Au tout premier lancement, l'application n'ouvre pas l'accueil : elle
-déroule un tunnel en trois temps, entièrement piloté par la **redirection**
+déroule un tunnel en quatre temps, entièrement piloté par la **redirection**
 du routeur (aucun `push` impératif dispersé dans les écrans).
 
 | Étape          | Écran                      | Sortie                                     |
 | -------------- | -------------------------- | ------------------------------------------ |
+| `welcome`      | `/bienvenue`               | Le bouton, et lui seul                     |
 | `onboarding`   | `/onboarding`              | Répondre ou « Passer » ; « J'ai déjà un compte » mène à `/login` |
 | `account`      | `/register` (ou `/login`)  | Session ouverte                            |
 | `subscription` | `/subscription`            | Premium, ou repli explicite en version gratuite |
 | `done`         | —                          | Comportement normal (session → accueil)    |
 
+- La page de marque ne demande **rien** : ni compte, ni « passer », ni
+  échappatoire vers la connexion. On dit qui est Carlys avant de poser la
+  première question. Son contenu est décrit dans
+  [`docs/product/design-conformity.md`](../product/design-conformity.md).
 - L'étape atteinte est persistée dans SharedPreferences
   (`FirstRunStore.stepKey` = `parcours.premiere_ouverture.etape`) : la
   réouverture reprend au bon endroit et le tunnel ne se rejoue **jamais**

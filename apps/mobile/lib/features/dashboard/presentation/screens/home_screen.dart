@@ -20,9 +20,9 @@ import '../widgets/week_bars.dart';
 /// Accueil — un tableau de bord en cartes, ouvert par le cœur.
 ///
 /// Ordre de lecture : le **cœur** (signature de l'app) avec l'état du jour et
-/// la citation à sa gauche, la série de constance, la séance du jour (unique
-/// CTA accent), le résumé du jour, puis l'indice de forme adossé à
-/// « Ta semaine ».
+/// la citation à sa gauche, la série de constance, le résumé du jour, puis la
+/// séance du jour (unique CTA accent) — l'action vient APRÈS le constat — et
+/// enfin l'indice de forme adossé à « Ta semaine ».
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
@@ -60,6 +60,13 @@ class HomeScreen extends ConsumerWidget {
             child: ConsistencyStreak(week: ref.watch(consistencyWeekProvider)),
           ),
           _Section(
+            child: DaySummaryGrid(
+              training: ref.watch(todayTrainingProvider),
+              report: report,
+              week: week,
+            ),
+          ),
+          _Section(
             child: TodayWorkoutCard(
               activeWorkout: activeWorkout,
               onOpenTemplates: () => context.push(AppRoutes.templates),
@@ -71,13 +78,6 @@ class HomeScreen extends ConsumerWidget {
                   await context.push(AppRoutes.activeWorkout);
                 }
               },
-            ),
-          ),
-          _Section(
-            child: DaySummaryGrid(
-              training: ref.watch(todayTrainingProvider),
-              report: report,
-              week: week,
             ),
           ),
           _Section(

@@ -4,6 +4,10 @@
 ///
 /// L'ordre de déclaration fait foi (`index`) : une étape ne peut qu'avancer.
 enum FirstRunStep {
+  /// Page de marque : qui est Carlys. On dit ce qu'on est avant de demander
+  /// quoi que ce soit.
+  welcome('bienvenue'),
+
   /// Questions de profil (objectif, sexe, naissance, taille, activité).
   onboarding('onboarding'),
 
@@ -24,7 +28,7 @@ enum FirstRunStep {
   static FirstRunStep fromStorage(String? value) =>
       FirstRunStep.values.firstWhere(
         (step) => step.storageValue == value,
-        orElse: () => FirstRunStep.onboarding,
+        orElse: () => FirstRunStep.welcome,
       );
 
   bool get isTunnel => this != FirstRunStep.done;
@@ -38,6 +42,9 @@ enum FirstRunStep {
         FirstRunStep.account ||
         FirstRunStep.subscription =>
           authenticated ? FirstRunStep.subscription : FirstRunStep.account,
-        FirstRunStep.onboarding || FirstRunStep.done => this,
+        FirstRunStep.welcome ||
+        FirstRunStep.onboarding ||
+        FirstRunStep.done =>
+          this,
       };
 }

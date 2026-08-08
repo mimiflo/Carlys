@@ -7,6 +7,8 @@ import 'package:carlys_mobile/features/authentication/data/repositories/auth_rep
 import 'package:carlys_mobile/features/nutrition/data/repositories/nutrition_repository_impl.dart';
 import 'package:carlys_mobile/features/nutrition/domain/entities/nutrition.dart';
 import 'package:carlys_mobile/features/onboarding/domain/first_run_step.dart';
+import 'package:carlys_mobile/features/onboarding/presentation/widgets/brand_pillars.dart';
+import 'package:carlys_mobile/features/onboarding/presentation/widgets/brand_signature.dart';
 import 'package:carlys_mobile/features/onboarding/presentation/widgets/onboarding_height_card.dart';
 import 'package:carlys_mobile/features/progress/data/repositories/progress_repository_impl.dart';
 import 'package:carlys_mobile/features/subscription/data/repositories/subscription_repository_impl.dart';
@@ -22,7 +24,8 @@ import '../../support/fake_subscription_repository.dart';
 import '../../support/fake_workout_repository.dart';
 import '../../support/first_run_prefs.dart';
 
-/// PARCOURS DE PREMIÈRE OUVERTURE : onboarding → création de compte →
+/// PARCOURS DE PREMIÈRE OUVERTURE : page de marque → onboarding →
+/// création de compte →
 /// proposition Premium → repli gratuit → accueil, puis réouvertures.
 ///
 /// Le tunnel est entièrement piloté par la redirection du routeur : ces
@@ -70,13 +73,23 @@ void main() {
 
   /// Démarre l'application sur un écran de téléphone (les cartes de
   /// l'onboarding ont besoin de hauteur).
-  Future<void> launch(WidgetTester tester) async {
+  ///
+  /// Le tunnel s'ouvre désormais sur la PAGE DE MARQUE : sauf demande
+  /// contraire, on la franchit, les tests qui suivent portant sur les étapes
+  /// d'après.
+  Future<void> launch(WidgetTester tester, {bool passWelcome = true}) async {
     tester.view.physicalSize = const Size(1179, 2556);
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
 
     await tester.pumpWidget(app());
     await tester.pumpAndSettle();
+
+    if (passWelcome &&
+        find.text('COMMENCER MON PARCOURS').evaluate().isNotEmpty) {
+      await tester.tap(find.text('COMMENCER MON PARCOURS'));
+      await tester.pumpAndSettle();
+    }
   }
 
   Future<void> tapText(WidgetTester tester, String label) async {
@@ -116,8 +129,34 @@ void main() {
   }
 
   testWidgets(
-      'première ouverture : onboarding → inscription → Premium → gratuit → '
-      'accueil', (tester) async {
+      'tout premier lancement : la page de marque, avant toute question',
+      (tester) async {
+    await launch(tester, passWelcome: false);
+
+    // Qui est Carlys se dit AVANT de demander quoi que ce soit.
+    expect(
+      find.descendant(
+        of: find.byType(BrandSignature),
+        matching: find.text('CARLYS'),
+      ),
+      findsOneWidget,
+    );
+    expect(find.text('L’ART DE DEVENIR'), findsOneWidget);
+    // Les quatre univers sont annoncés, sans prétendre être navigables.
+    expect(find.byType(BrandPillars), findsOneWidget);
+    expect(find.text('1/4'), findsNothing);
+    expect(find.byType(AppBottomBar), findsNothing);
+
+    // Rien d'autre n'en sort : pas d'échappatoire vers la connexion.
+    expect(find.text('J’ai déjà un compte'), findsNothing);
+
+    await tapText(tester, 'COMMENCER MON PARCOURS');
+    expect(find.text('1/4'), findsOneWidget);
+  });
+
+  testWidgets(
+      'première ouverture : marque → onboarding → inscription → Premium → '
+      'gratuit → accueil', (tester) async {
     await launch(tester);
 
     // 1. L'application s'ouvre sur l'onboarding, pas sur l'accueil.
@@ -224,7 +263,7 @@ void main() {
   testWidgets('réouverture au milieu du tunnel : reprise à l’étape atteinte',
       (tester) async {
     seedFirstRunStep(FirstRunStep.account);
-    await launch(tester);
+    await launch(tester, passWelcome: false);
 
     expect(find.text('Créer un compte'), findsOneWidget);
     expect(find.text('1/4'), findsNothing);
@@ -239,7 +278,7 @@ void main() {
       (tester) async {
     seedCompletedFirstRun();
     auth.storedSession = true;
-    await launch(tester);
+    await launch(tester, passWelcome: false);
 
     expect(find.byType(AppBottomBar), findsOneWidget);
     expect(find.text('1/4'), findsNothing);

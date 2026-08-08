@@ -79,11 +79,40 @@ La maquette est peuplée de données d'exemple. L'application n'affiche que des
 fait exception, et lui seul : ses dépôts en mémoire (`lib/demo/`) servent un jeu
 d'exemple pour visiter l'app sans serveur.
 
+## La page de marque, hors maquette
+
+La toute première ouverture affiche une **page de marque**
+(`features/onboarding/presentation/screens/welcome_screen.dart`) *avant* la
+première question d'onboarding : on dit qui l'on est avant de demander quoi que
+ce soit. Elle est traduite d'une planche de direction artistique fournie par le
+produit, pas de la maquette Claude Design — d'où trois particularités qui ne
+valent **que là** :
+
+- un **dégradé de signature** (`AppColors.signature`, violet → magenta → rose
+  saumon) relevé sur le logo. Il est déclaré dans
+  `packages/design-tokens/src/tokens.json` sous `color.brand.signature*` et
+  réservé aux surfaces de marque : il ne remplace jamais `primary`/`accent`
+  dans l'application ;
+- un bouton dédié, `AppBrandButton`, qui porte ce dégradé. Ailleurs, l'action
+  principale reste `AppButton` en accent — deux boutons « principaux » de
+  couleurs différentes dans un même écran annuleraient la hiérarchie ;
+- deux images de marque (`assets/brand/`) : le sceau détouré et la
+  photographie, fondue vers la gauche pour ne pas former un rectangle posé sur
+  la page.
+
+Les quatre vignettes (App, Academy, Events, Wear) sont **une présentation, pas
+une navigation** : seule l'application existe aujourd'hui, et les rendre
+cliquables promettrait des écrans qui n'existent pas.
+
+L'étape correspondante, `FirstRunStep.welcome`, précède `onboarding` dans
+l'énumération : le parcours ne pouvant qu'avancer, la page ne se rejoue jamais.
+
 ## Écarts assumés
 
 | Écran | Écart | Raison |
 | ----- | ----- | ------ |
 | Tous | Barre de statut simulée (9:41, batterie) absente | Fournie par l'OS |
+| Bienvenue | Écran entier absent de la maquette | Écart VOULU : planche de marque fournie par le produit, montrée avant l'onboarding |
 | Accueil | Pastilles « 57 BPM » et « 7H20 » remplacées par des faits d'entraînement | Aucune donnée de santé dans le domaine |
 | Accueil | **Citation du jour** en carte compacte À GAUCHE du cœur, à son niveau ; l'indice de forme est descendu près de « Ta semaine » | Écart VOULU, hors maquette : ce qu'on lit en ouvrant l'app doit motiver, pas mesurer — et le cœur, signature de l'app, ne se laisse rien poser sur sa masse |
 | Accueil | **Série de constance** (L M M J V S D, flamme sur les jours tenus) sous la zone haute | Écart VOULU, hors maquette : demandé au produit, alimenté par les séances réellement terminées |
