@@ -1,3 +1,5 @@
+import 'package:carlys_mobile/design_system/design_system.dart';
+import 'package:carlys_mobile/features/onboarding/presentation/screens/welcome_screen.dart';
 import 'package:carlys_mobile/features/onboarding/presentation/widgets/brand_manifesto.dart';
 import 'package:carlys_mobile/features/onboarding/presentation/widgets/welcome_backdrop.dart';
 import 'package:flutter/material.dart';
@@ -9,6 +11,13 @@ import 'package:flutter_test/flutter_test.dart';
 /// mais crédible. Ils sont verrouillés ici, parce qu'un œil ne les rattrape
 /// pas : la page reste jolie quand ils reviennent, elle cesse simplement
 /// d'être la maquette.
+/// Petits calculs de mise en page, refaits ici pour ne pas dupliquer les
+/// constantes de l'écran.
+abstract final class AthleteFramingHelpers {
+  static double textWidth(Size screen) =>
+      WelcomeScreen.textWidthFactor * (screen.width - 2 * AppSpacing.gutter);
+}
+
 void main() {
   group('accroche en relief', () {
     testWidgets('la perspective RAPPROCHE le texte au lieu de l’éloigner',
@@ -58,12 +67,10 @@ void main() {
   });
 
   group('cadrage de la photographie', () {
-    (double, double) windowFor(Size screen) => AthletePhotoFraming.windowFor(
-          Size(
-            AthletePhotoFraming.widthFactor * screen.width,
-            AthletePhotoFraming.heightFactor * screen.height,
-          ),
-        );
+    // Le cadrage est exprimé en fractions d'écran : on l'interroge donc avec
+    // la taille de l'écran, pas celle du cadre.
+    (double, double) windowFor(Size screen) =>
+        AthletePhotoFraming.windowFor(screen);
 
     // « Le logo dans le dos de l'athlète doit rester visible » — SPEC.md, §6.
     // La spécification donne aussi un cadrage fixe (22 %), relevé sur une
@@ -92,6 +99,21 @@ void main() {
       });
     }
 
+    test('la personne ne déborde pas sur le texte', () {
+      // Demande du produit, et écart assumé avec la planche : sur un écran
+      // plus étroit, la même tranche de cliché occupe 29 % de largeur en plus,
+      // et la personne ressortait SUR les mots. Le fondu doit donc être éteint
+      // partout où le texte s'écrit.
+      const screen = Size(393, 852);
+      final textRight =
+          (AppSpacing.gutter + AthleteFramingHelpers.textWidth(screen)) /
+              screen.width;
+      final visibility = ((textRight - AthletePhotoFraming.fadeFrom) /
+              (AthletePhotoFraming.fadeTo - AthletePhotoFraming.fadeFrom))
+          .clamp(0.0, 1.0);
+      expect(visibility, lessThan(0.05));
+    });
+
     test('le cadrage reste un portrait, pas un gros plan', () {
       // Le défaut d'origine : `cover` dans une boîte étroite ET pleine hauteur
       // ne gardait que 43 % de la largeur du cliché — la personne devenait un
@@ -100,7 +122,7 @@ void main() {
       // planche validée où la page coupe aussi le bras droit.
       final (left, right) = windowFor(const Size(393, 852));
       final shown = (right - left) / AthletePhotoFraming.source.width;
-      expect(shown, greaterThanOrEqualTo(0.55));
+      expect(shown, closeTo(AthletePhotoFraming.shownWidth, 0.01));
     });
   });
 

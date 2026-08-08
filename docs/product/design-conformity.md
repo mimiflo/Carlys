@@ -140,41 +140,46 @@ seulement d'être la maquette. Les trois premiers sont verrouillés par
    C'est ce que fait `BrandGlowImage`. Les rayons de la référence sont des
    `blur-radius` CSS : l'écart-type gaussien en vaut la **moitié**.
 
-### Le cadrage de la photographie : deux valeurs de la spec écartées
+### Le cadrage de la photographie : trois valeurs de la spec écartées
 
-La spécification donne à la photographie `height: 100%` et
-`object-position: 22% top`. Ces deux valeurs ont été **validées sur une planche
-large** ; sur un écran de téléphone, elles produisent autre chose.
+La spécification donne à la photographie `width: 62%`, `height: 100%` et
+`object-position: 22% top`. Ces valeurs ont été validées sur des planches au
+rapport largeur/hauteur **0,59** ; un téléphone fait **0,46**.
 
-`BoxFit.cover` agrandit le cliché jusqu'à couvrir sa boîte. Une boîte étroite
-(62 % de la largeur) **et** pleine hauteur se règle donc sur la hauteur, agrandit
-d'autant, et ne garde que 43 % de la largeur du cliché : la personne devient un
-buste et le logo dans son dos sort du cadre. La planche, elle, était large : elle
-n'en rognait qu'un quart, d'où la silhouette entière.
+`BoxFit.cover` agrandit le cliché jusqu'à couvrir son cadre, en se réglant sur
+la hauteur dès que le cadre est plus étroit — proportion gardée — que le cliché.
+À hauteur égale, l'écran le plus étroit agrandit donc davantage et montre
+**moins** de la personne : 43 % de la largeur du cliché contre 55 % sur la
+planche. On y perdait la silhouette, et le logo dans le dos sortait du cadre.
 
-Le rapport largeur/hauteur explique tout : les planches validées font **0,59**,
-un téléphone **0,46**. À hauteur égale, l'écran le plus étroit agrandit
-davantage et montre donc MOINS de la personne.
+La spécification tranche pourtant elle-même, au §6 : « le logo dans le dos de
+l'athlète doit rester visible ». On garde donc **les exigences**, et on
+reformule les valeurs en fractions d'**écran** — le seul repère qui se
+transpose d'un format à l'autre, et accessoirement ce qu'on voit :
 
-Or la spécification tranche elle-même, au §6 : « le logo dans le dos de
-l'athlète doit rester visible ». On garde donc **l'exigence**, pas les chiffres :
+| Relevé sur la planche | Valeur |
+| --- | --- |
+| Part du cliché montrée en largeur | 0,55 |
+| Position du logo dorsal | 0,928 de la largeur d'écran |
+| Longueur du fondu du bord gauche | 0,186 de la largeur d'écran |
 
-- la hauteur du cadre descend à **77,5 %** de l'écran — moins de hauteur, moins
-  d'agrandissement, plus de largeur montrée. La valeur n'est pas choisie à
-  l'œil : elle rend exactement la fenêtre de la planche validée (567 px du
-  cliché sur 1024, contre 565 relevés) ;
-- le cadrage horizontal n'est plus une constante mais se **recalcule** à partir
-  de la position mesurée du logo dans le fichier, pour viser une position à
-  l'écran — 0,928 de la largeur, relevée sur la planche — et non une position
-  dans le cadre, qui ne se transpose pas d'un format à l'autre ;
-- un **fondu bas** est ajouté, absent de la référence pour la bonne raison
-  qu'une photographie pleine hauteur n'a pas de bord bas. Sans lui, la personne
-  serait tranchée net en travers des cuisses : le voile de pied de page ne
-  commence qu'à 62 % et laisse passer la coupe.
+`AthletePhotoFraming` en déduit la largeur du cadre, le cadrage horizontal et
+les bornes du fondu, pour chaque taille d'écran. Vérification après coup sur le
+rendu : logo à 0,930 (planche 0,928), personne descendant jusqu'à 0,699
+(planche 0,694).
 
-`AthletePhotoFraming` porte ces trois valeurs et le calcul ;
-`welcome_fidelity_test.dart` vérifie sur cinq tailles d'écran que le logo dorsal
-reste visible et que le cadrage reste un portrait.
+**Un écart demeure, et il est irréductible.** Le fondu de la planche s'éteint à
+0,566 ; à cette place, sur un écran étroit, la personne ressortait **sur le
+texte**. Il est donc reporté pour s'éteindre là où la colonne de texte s'arrête
+(0,62), en gardant sa longueur. Elle émerge de ce fait un peu plus à droite que
+sur la planche (0,761 contre 0,680). Même cause pour le logo dorsal, qui occupe
+7,5 % de la largeur ici contre 5,8 % sur la planche : le rapport 0,59 / 0,46 =
+1,29, exactement. Sur un écran plus étroit, à hauteur égale, tout est
+relativement plus large.
+
+`welcome_fidelity_test.dart` vérifie sur cinq tailles d'écran que le logo
+dorsal reste visible, que le cadrage reste un portrait, et que le fondu est
+éteint partout où le texte s'écrit.
 
 ### Limite du harnais de capture
 

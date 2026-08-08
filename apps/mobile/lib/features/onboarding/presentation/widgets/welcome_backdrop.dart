@@ -45,24 +45,15 @@ class WelcomeBackdrop extends StatelessWidget {
                 ),
               ),
 
-              // 3 — la photographie.
-              //
-              // ÉCART ASSUMÉ sur la HAUTEUR. La spécification lui donne toute
-              // la hauteur ; la planche validée était LARGE, et `cover` n'y
-              // rognait qu'un quart du cliché — on y voyait la silhouette
-              // entière et le logo dans son dos. Sur un écran de téléphone, la
-              // même boîte est étroite et haute : `cover` s'y règle sur la
-              // hauteur, agrandit d'autant, et n'en garde plus que 43 % de
-              // largeur — un gros plan qui perd et la silhouette et le logo.
-              // Lui donner moins de hauteur réduit l'agrandissement, donc rend
-              // le cadrage de la planche. Le bas manquant est du fond, que le
-              // voile de pied de page couvre déjà.
+              // 3 — la photographie, ancrée à droite sur toute la hauteur.
+              // Sa largeur se déduit du cadrage voulu : voir
+              // [AthletePhotoFraming].
               Positioned(
                 top: 0,
                 right: 0,
-                width: AthletePhotoFraming.widthFactor * w,
-                height: AthletePhotoFraming.heightFactor * h,
-                child: const _AthletePhoto(),
+                width: AthletePhotoFraming.boxFor(Size(w, h)).width,
+                height: h,
+                child: _AthletePhoto(screen: Size(w, h)),
               ),
 
               // 4 — voile horizontal : la colonne de texte reprend le fond.
@@ -222,64 +213,85 @@ abstract final class AthletePhotoFraming {
   static const double markLeft = 565;
   static const double markRight = 636;
 
-  /// Part de la hauteur d'écran occupée par le cliché.
-  ///
-  /// **ÉCART ASSUMÉ** : la spécification lui donne toute la hauteur. Elle a été
-  /// validée sur des planches plus LARGES qu'un téléphone (rapport 0,59 contre
-  /// 0,46) ; or `cover` s'y règle sur la hauteur dès que la boîte est plus
-  /// étroite, proportion gardée, que le cliché. À hauteur égale, un écran plus
-  /// étroit agrandit donc davantage et montre MOINS de la personne : 43 % de la
-  /// largeur du cliché contre 55 % sur la planche. On perdait la silhouette et
-  /// le logo dorsal.
-  ///
-  /// Cette valeur rend exactement le cadrage validé : elle donne la même
-  /// fenêtre de cliché (567 px sur 1024, contre 565 relevés sur la planche).
-  static const double heightFactor = 0.775;
+  // ── Trois valeurs relevées sur la planche validée ──────────────────
+  //
+  // Elles sont exprimées en fractions d'ÉCRAN, pas de cadre : c'est ce qu'on
+  // voit, et c'est la seule forme qui se transpose d'un format à l'autre. La
+  // spécification, elle, donne des valeurs de cadre (`width: 62%`,
+  // `object-position: 22%`) relevées sur une planche au rapport 0,59 ; un
+  // téléphone fait 0,46, et les mêmes chiffres y donnent un tout autre cadrage.
 
-  /// Où le logo dorsal tombe, en fraction de la LARGEUR D'ÉCRAN.
-  ///
-  /// Relevé sur la planche validée : 0,928. Exprimé à l'écran et non dans le
-  /// cadre, parce que c'est ce qu'on voit — et parce que la spécification donne
-  /// ici une exigence (« le logo dans le dos de l'athlète doit rester
-  /// visible ») plutôt qu'une valeur transposable : son `object-position: 22%`
-  /// vaut pour une planche large et laisse le logo hors champ sur un téléphone.
+  /// Part du cliché montrée en largeur.
+  static const double shownWidth = 0.55;
+
+  /// Position du logo dorsal, en fraction de la largeur d'écran.
   static const double markScreenX = 0.928;
 
-  /// Part de la largeur d'écran occupée par le cadre, depuis la droite.
-  static const double widthFactor = 0.62;
-
-  /// Fondu du BAS, en fraction de la hauteur du cadre.
+  /// Bornes du fondu du bord gauche, en fractions de la largeur d'écran :
+  /// transparent avant la première, opaque après la seconde.
   ///
-  /// Absent de la référence, et pour cause : la photographie y occupe toute la
-  /// hauteur, elle n'a pas de bord bas. Lui en donner un sans l'éteindre
-  /// trancherait la personne au couteau, en travers des cuisses ; le voile de
-  /// pied de page ne suffit pas, il ne commence qu'à 62 %.
-  static const List<double> bottomFade = [0.74, 1.0];
+  /// La planche les met à 0,38 et 0,566 ; sur un écran plus étroit, la même
+  /// tranche de cliché occupe 29 % de largeur en plus, et la personne
+  /// ressortait alors SUR le texte. Le fondu est donc reporté pour s'éteindre
+  /// là où la colonne de texte s'arrête (0,62), en gardant sa longueur.
+  static const double fadeFrom = 0.62;
+  static const double fadeTo = fadeFrom + (0.566 - 0.38);
 
-  /// Cadrage horizontal qui pose le logo dorsal à [markPlacement] du cadre.
+  /// Cadre de la photographie : toute la hauteur, ancré à droite.
   ///
-  /// `cover` agrandit le cliché jusqu'à couvrir la boîte, puis en rogne le
+  /// La largeur n'est pas la constante de la spécification mais se DÉDUIT de
+  /// [shownWidth] : `cover` se règle sur la hauteur (le cliché est plus large,
+  /// proportion gardée, que le cadre), donc c'est la largeur du cadre qui
+  /// décide de la part du cliché visible. Fixée à 62 %, elle n'en montrait que
+  /// 43 % sur un téléphone contre 55 % sur la planche — d'où le gros plan, la
+  /// silhouette perdue et le logo dorsal hors champ.
+  static Size boxFor(Size screen) {
+    final width = math.min(
+      screen.width,
+      shownWidth * source.width * screen.height / source.height,
+    );
+    return Size(width, screen.height);
+  }
+
+  /// Cadrage horizontal qui pose le logo dorsal à [markScreenX] de l'écran.
+  ///
+  /// `cover` agrandit le cliché jusqu'à couvrir le cadre, puis en rogne le
   /// surplus ; `Alignment.x` choisit quelle part de ce surplus part à gauche.
   /// On ne fait qu'inverser la relation.
-  static double alignmentFor(Size box) {
-    final scale =
-        math.max(box.width / source.width, box.height / source.height);
-    final window = box.width / scale; // en pixels du fichier
-    final slack = source.width - window; // ce que `cover` va rogner
+  static double alignmentFor(Size screen) {
+    final box = boxFor(screen);
+    final window = _windowWidth(box);
+    final slack = source.width - window;
     if (slack <= 0) return 0;
-    // La cible est donnée à l'écran : on la ramène dans le cadre.
-    final placement = (markScreenX - (1 - widthFactor)) / widthFactor;
+    final boxLeft = 1 - box.width / screen.width;
+    final placement = (markScreenX - boxLeft) / (box.width / screen.width);
     final left = (markLeft + markRight) / 2 - placement * window;
     return (2 * left / slack - 1).clamp(-1.0, 1.0);
   }
 
+  /// Bornes du fondu, ramenées du repère de l'écran à celui du cadre.
+  static List<double> fadeStopsFor(Size screen) {
+    final box = boxFor(screen);
+    final boxLeft = 1 - box.width / screen.width;
+    final span = box.width / screen.width;
+    return [
+      ((fadeFrom - boxLeft) / span).clamp(0.0, 1.0),
+      ((fadeTo - boxLeft) / span).clamp(0.0, 1.0),
+    ];
+  }
+
   /// Fenêtre du cliché réellement visible, en pixels du fichier.
-  static (double, double) windowFor(Size box) {
+  static (double, double) windowFor(Size screen) {
+    final box = boxFor(screen);
+    final window = _windowWidth(box);
+    final left = (1 + alignmentFor(screen)) / 2 * (source.width - window);
+    return (left, left + window);
+  }
+
+  static double _windowWidth(Size box) {
     final scale =
         math.max(box.width / source.width, box.height / source.height);
-    final window = box.width / scale;
-    final left = (1 + alignmentFor(box)) / 2 * (source.width - window);
-    return (left, left + window);
+    return box.width / scale;
   }
 }
 
@@ -290,7 +302,11 @@ abstract final class AthletePhotoFraming {
 /// cliché se voit — un trait vertical au milieu de la page, un trait horizontal
 /// en travers des cuisses.
 class _AthletePhoto extends StatelessWidget {
-  const _AthletePhoto();
+  const _AthletePhoto({required this.screen});
+
+  /// Taille de l'ÉCRAN, pas du cadre : le cadrage et le fondu sont exprimés
+  /// en fractions d'écran, seul repère qui se transpose d'un format à l'autre.
+  final Size screen;
 
   /// Trois lueurs, de la plus serrée à la plus large. Les rayons de la
   /// référence sont des `blur-radius` CSS : l'écart-type gaussien en vaut la
@@ -303,36 +319,22 @@ class _AthletePhoto extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return LayoutBuilder(
-      builder: (context, c) => RepaintBoundary(
-        child: _framed(Size(c.maxWidth, c.maxHeight)),
-      ),
-    );
-  }
-
-  Widget _framed(Size box) {
+    final stops = AthletePhotoFraming.fadeStopsFor(screen);
     final image = Image(
       image: const AssetImage(WelcomeBackdrop.athleteAsset),
       fit: BoxFit.cover,
-      alignment: Alignment(AthletePhotoFraming.alignmentFor(box), -1),
+      alignment: Alignment(AthletePhotoFraming.alignmentFor(screen), -1),
       excludeFromSemantics: true,
     );
 
-    return ShaderMask(
-      blendMode: BlendMode.dstIn,
-      shaderCallback: (rect) => const LinearGradient(
-        begin: Alignment.topCenter,
-        end: Alignment.bottomCenter,
-        colors: [Color(0xFFFFFFFF), Color(0x00FFFFFF)],
-        stops: AthletePhotoFraming.bottomFade,
-      ).createShader(rect),
+    return RepaintBoundary(
       child: ShaderMask(
         blendMode: BlendMode.dstIn,
-        shaderCallback: (rect) => const LinearGradient(
+        shaderCallback: (rect) => LinearGradient(
           begin: Alignment.centerLeft,
           end: Alignment.centerRight,
-          colors: [Color(0x00FFFFFF), Color(0xFFFFFFFF)],
-          stops: [0, 0.30],
+          colors: const [Color(0x00FFFFFF), Color(0xFFFFFFFF)],
+          stops: stops,
         ).createShader(rect),
         child: BrandGlowImage(
           expand: true,

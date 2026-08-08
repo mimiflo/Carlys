@@ -20,8 +20,10 @@ class WelcomeScreen extends ConsumerWidget {
   const WelcomeScreen({super.key});
 
   /// Part de la largeur laissée au texte. Au-delà, il passerait sur la
-  /// personne.
-  static const double _textWidthFactor = 0.64;
+  /// personne — et c'est aussi ce qui borne le fondu de la photographie
+  /// (`AthletePhotoFraming.fadeFrom`), qui doit s'éteindre avant lui.
+  @visibleForTesting
+  static const double textWidthFactor = 0.64;
 
   /// Écart minimal entre le bloc haut et le bloc bas.
   static const double _blockGap = AppSpacing.xl;
@@ -55,7 +57,7 @@ class WelcomeScreen extends ConsumerWidget {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       FractionallySizedBox(
-                        widthFactor: _textWidthFactor,
+                        widthFactor: textWidthFactor,
                         alignment: Alignment.centerLeft,
                         child: _HeroBlock(),
                       ),
