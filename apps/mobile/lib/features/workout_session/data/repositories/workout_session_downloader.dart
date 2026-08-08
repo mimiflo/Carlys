@@ -3,6 +3,7 @@ import 'package:drift/drift.dart';
 import '../../../../core/database/app_database.dart';
 import '../../../../core/logging/app_logger.dart';
 import '../../../workout_template/data/datasources/session_plan_local_data_source.dart';
+import '../../domain/entities/workout.dart';
 import '../datasources/workout_session_remote_data_source.dart';
 import '../dto/workout_session_dtos.dart';
 
@@ -38,6 +39,8 @@ class WorkoutSessionDownloader {
   /// Taille de page demandée au serveur (borne partagée `MAX_PAGE_SIZE`).
   static const _pageSize = 50;
 
+  static final _inProgress = WorkoutStatus.inProgress.apiValue;
+
   final AppDatabase _db;
   final WorkoutSessionRemoteDataSource _remote;
   final SessionPlanLocalDataSource _plans;
@@ -54,10 +57,39 @@ class WorkoutSessionDownloader {
         continue;
       }
       final detail = await _remote.detail(ref.id);
+      if (await _wouldBreakSingleActiveRule(detail)) {
+        continue;
+      }
       await _write(detail);
       restored++;
     }
     return restored;
+  }
+
+  /// Le domaine impose **au plus une séance en cours**. Si l'appareil en a
+  /// déjà une autre, la sienne gagne : importer la séance distante rendrait
+  /// l'écran de séance et l'appariement au plan ambigus. Rien n'est perdu —
+  /// elle reste sur le serveur et sera rapatriée quand celle-ci sera clôturée.
+  Future<bool> _wouldBreakSingleActiveRule(RemoteWorkoutSession session) async {
+    if (session.status != _inProgress) {
+      return false;
+    }
+    final active = await (_db.select(_db.localWorkoutSessions)
+          ..where(
+            (row) =>
+                row.status.equals(_inProgress) &
+                row.id.equals(session.id).not(),
+          )
+          ..limit(1))
+        .get();
+    if (active.isEmpty) {
+      return false;
+    }
+    _logger.info(
+      'Séance distante ${session.id} non rapatriée : une autre séance est '
+      'déjà en cours sur cet appareil',
+    );
+    return true;
   }
 
   /// Parcourt les pages jusqu'au plafond. Le dépassement est JOURNALISÉ :

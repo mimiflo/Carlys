@@ -258,6 +258,28 @@ void main() {
     expect(history.single.session.status, WorkoutStatus.completed);
   });
 
+  test('la séance en cours DE CET APPAREIL prime sur celle du serveur',
+      () async {
+    final remote = _FakeRemote([_pushSession()]);
+    // L'utilisateur a démarré une séance libre ici, déjà acquittée.
+    await db.into(db.localWorkoutSessions).insert(
+          LocalWorkoutSessionsCompanion.insert(
+            id: 'session-locale',
+            name: const Value('Séance libre'),
+            status: 'IN_PROGRESS',
+            startedAt: DateTime.utc(2026, 8, 8, 18),
+            syncStatus: const Value('synced'),
+          ),
+        );
+
+    await repositoryOn(remote).restoreSessions();
+
+    // Au plus une séance en cours : la distante attend son tour sur le
+    // serveur, elle n'est pas perdue.
+    final active = await db.select(db.localWorkoutSessions).get();
+    expect(active.map((row) => row.id), ['session-locale']);
+  });
+
   test('sans source distante, le rapatriement ne fait rien', () async {
     final workouts = WorkoutRepositoryImpl(database: db, syncEngine: engine);
 
