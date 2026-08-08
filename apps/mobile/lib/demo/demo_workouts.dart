@@ -204,7 +204,11 @@ class DemoWorkoutRepository implements WorkoutRepository {
   }
 
   @override
-  Future<String> startWorkout({String? name}) async {
+  Future<String> startWorkout({
+    String? name,
+    String? templateId,
+    String? templateName,
+  }) async {
     final id = 'demo-live-${_nextId++}';
     _publish(
       WorkoutWithSets(
@@ -213,6 +217,8 @@ class DemoWorkoutRepository implements WorkoutRepository {
           name: name,
           status: WorkoutStatus.inProgress,
           startedAt: DateTime.now().toUtc(),
+          templateId: templateId,
+          templateName: templateName,
           syncState: LocalSyncState.synced,
         ),
         sets: const [],
@@ -222,10 +228,11 @@ class DemoWorkoutRepository implements WorkoutRepository {
   }
 
   @override
-  Future<void> addSet(AddSetInput input) async {
+  Future<String> addSet(AddSetInput input) async {
     final current = _active;
+    final id = 'demo-live-set-${_nextId++}';
     if (current == null) {
-      return;
+      return id;
     }
     _publish(
       WorkoutWithSets(
@@ -233,7 +240,7 @@ class DemoWorkoutRepository implements WorkoutRepository {
         sets: [
           ...current.sets,
           WorkoutSetEntry(
-            id: 'demo-live-set-${_nextId++}',
+            id: id,
             exerciseId: input.exerciseId,
             exerciseName: input.exerciseName,
             position: current.sets.length,
@@ -241,12 +248,15 @@ class DemoWorkoutRepository implements WorkoutRepository {
             reps: input.reps,
             weightKg: input.weightKg,
             restSeconds: input.restSeconds,
+            plannedReps: input.plannedReps,
+            plannedWeightKg: input.plannedWeightKg,
             completedAt: DateTime.now().toUtc(),
             syncState: LocalSyncState.synced,
           ),
         ],
       ),
     );
+    return id;
   }
 
   @override

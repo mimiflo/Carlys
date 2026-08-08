@@ -16,10 +16,26 @@ const ACTIVE_SETS = {
 export class WorkoutsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  /** Création idempotente : l'id vient de l'appareil. Retourne null si l'id existe déjà. */
-  async createSession(data: Prisma.WorkoutSessionUncheckedCreateInput): Promise<boolean> {
+  /**
+   * Création idempotente : l'id vient de l'appareil. Retourne false si l'id
+   * existe déjà. Quand la séance vient d'un modèle, le dernier lancement de
+   * celui-ci est daté DANS LA MÊME TRANSACTION : un rejeu, qui échoue sur la
+   * clé primaire, ne redate donc jamais le modèle.
+   */
+  async createSession(
+    data: Prisma.WorkoutSessionUncheckedCreateInput,
+    touchTemplate?: { templateId: string; userId: string; lastUsedAt: Date },
+  ): Promise<boolean> {
     try {
-      await this.prisma.workoutSession.create({ data });
+      await this.prisma.$transaction(async (tx) => {
+        await tx.workoutSession.create({ data });
+        if (touchTemplate !== undefined) {
+          await tx.workoutTemplate.updateMany({
+            where: { id: touchTemplate.templateId, userId: touchTemplate.userId, deletedAt: null },
+            data: { lastUsedAt: touchTemplate.lastUsedAt },
+          });
+        }
+      });
       return true;
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {

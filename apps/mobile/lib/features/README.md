@@ -23,6 +23,27 @@ feature/
     └── widgets/         # Widgets propres à la fonctionnalité
 ```
 
+## Dépendances entre fonctionnalités
+
+| Fonctionnalité     | Dépend de         | Détail                                                          |
+| ------------------ | ----------------- | --------------------------------------------------------------- |
+| `workout_session`  | —                 | Séances **réalisées** offline-first (Drift → file de sync → API) |
+| `workout_template` | `workout_session` | Modèles de séance **prescriptifs** : composer, enregistrer, puis lancer une vraie séance pré-remplie |
+
+`workout_template` réutilise les entités `SetKind` / `LocalSyncState`, les
+écritures de séance (`WorkoutSessionWriter`) et le sélecteur d'exercice
+(`showExercisePickerSheet`) de `workout_session`.
+
+Dans l'autre sens, le contact est réduit à **un seul point** :
+l'orchestrateur `ActiveWorkoutBody` lit `sessionPlanProvider` et le traduit
+en valeurs simples (`guidanceFor`) avant de les passer à ses widgets. Ni le
+domaine, ni les données, ni les widgets de `workout_session` ne connaissent
+les modèles : ils reçoivent un sur-titre, des cibles et des compteurs. Sans
+plan, l'écran de séance se comporte **exactement** comme avant.
+
+Le contrat complet est dans
+[`docs/product/workout-templates.md`](../../../../docs/product/workout-templates.md).
+
 Règles :
 
 - une petite fonctionnalité peut alléger cette structure, mais sépare

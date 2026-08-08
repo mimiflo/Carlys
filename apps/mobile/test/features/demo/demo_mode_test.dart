@@ -103,6 +103,19 @@ void main() {
     expect(find.text('Squat'), findsOneWidget);
   });
 
+  testWidgets('modèles de séance servis en mémoire', (tester) async {
+    await tester.pumpWidget(demoApp());
+    await tester.pumpAndSettle();
+
+    // « Lancer un modèle » : l'entrée naturelle, sous le démarrage de séance.
+    await tester.tap(find.text('Lancer un modèle'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Mes modèles'), findsOneWidget);
+    expect(find.text('Push — Force'), findsOneWidget);
+    expect(find.text('Pull — Hypertrophie'), findsOneWidget);
+  });
+
   testWidgets('nutrition complète servie en mémoire', (tester) async {
     await tester.pumpWidget(demoApp());
     await tester.pumpAndSettle();

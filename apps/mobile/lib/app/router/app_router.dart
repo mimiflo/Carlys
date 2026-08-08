@@ -22,6 +22,8 @@ import '../../features/subscription/presentation/screens/subscription_screen.dar
 import '../../features/workout_history/presentation/screens/workout_detail_screen.dart';
 import '../../features/workout_history/presentation/screens/workout_history_screen.dart';
 import '../../features/workout_session/presentation/screens/active_workout_screen.dart';
+import '../../features/workout_template/presentation/screens/template_editor_screen.dart';
+import '../../features/workout_template/presentation/screens/templates_screen.dart';
 import '../shell/app_shell.dart';
 import 'app_routes.dart';
 
@@ -194,6 +196,24 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         name: 'active-workout',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const ActiveWorkoutScreen(),
+      ),
+      // Les modèles de séance : liste puis éditeur. Pas de `/templates/new` —
+      // l'identifiant d'un nouveau modèle est un UUID généré sur l'appareil.
+      GoRoute(
+        path: AppRoutes.templates,
+        name: 'templates',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const TemplatesScreen(),
+        routes: [
+          GoRoute(
+            path: ':templateId',
+            name: 'template-editor',
+            parentNavigatorKey: _rootNavigatorKey,
+            builder: (context, state) => TemplateEditorScreen(
+              templateId: state.pathParameters['templateId'] ?? '',
+            ),
+          ),
+        ],
       ),
       GoRoute(
         path: AppRoutes.history,

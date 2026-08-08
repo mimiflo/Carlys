@@ -1,6 +1,7 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { WorkoutSessionStatus, WorkoutSetKind } from '@prisma/client';
 import { type ProgressService } from '../../progress/application/progress.service';
+import { type WorkoutTemplatesService } from '../../workout_templates/application/workout-templates.service';
 import {
   type SessionWithSets,
   type WorkoutsRepository,
@@ -23,6 +24,8 @@ function sessionRow(overrides: Partial<SessionWithSets> = {}): SessionWithSets {
     createdAt: new Date(),
     updatedAt: new Date(),
     deletedAt: null,
+    templateId: null,
+    templateName: null,
     sets: [],
     ...overrides,
   };
@@ -56,15 +59,27 @@ function buildStubs(): Stubs {
   };
 }
 
+/** Par défaut : aucun modèle résolu — une séance libre, comme avant. */
+function buildTemplates(origin: { templateId: string | null; templateName: string | null }): {
+  resolveSessionOrigin: jest.Mock;
+} {
+  return { resolveSessionOrigin: jest.fn().mockResolvedValue(origin) };
+}
+
 function buildService(
   stubs: Stubs,
   progress: { updateRecordsForSession: jest.Mock } = {
     updateRecordsForSession: jest.fn().mockResolvedValue(undefined),
   },
+  templates: { resolveSessionOrigin: jest.Mock } = buildTemplates({
+    templateId: null,
+    templateName: null,
+  }),
 ): WorkoutsService {
   return new WorkoutsService(
     stubs as unknown as WorkoutsRepository,
     progress as unknown as ProgressService,
+    templates as unknown as WorkoutTemplatesService,
   );
 }
 
@@ -96,6 +111,8 @@ function setRow(overrides: Record<string, unknown> = {}): unknown {
     distanceMeters: null,
     rpe: null,
     restSeconds: null,
+    plannedReps: null,
+    plannedWeightKg: null,
     completedAt: new Date('2026-08-07T10:05:00Z'),
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -125,6 +142,37 @@ describe('WorkoutsService', () => {
       const service = buildService(stubs);
 
       await expect(service.createSession(USER, createInput)).rejects.toThrow(NotFoundException);
+    });
+
+    it('date le dernier lancement du modèle DANS la création quand il est résolu', async () => {
+      const stubs = buildStubs();
+      const templates = buildTemplates({ templateId: 'modele-1', templateName: 'Push — Force' });
+      const service = buildService(stubs, undefined, templates);
+
+      await service.createSession(USER, { ...createInput, templateId: 'modele-1' });
+
+      expect(stubs.createSession).toHaveBeenCalledWith(
+        expect.objectContaining({ templateId: 'modele-1', templateName: 'Push — Force' }),
+        { templateId: 'modele-1', userId: USER, lastUsedAt: createInput.startedAt },
+      );
+    });
+
+    it('un modèle inconnu n’empêche JAMAIS la séance : nom client conservé', async () => {
+      const stubs = buildStubs();
+      // Résolution en échec : le service des modèles ne lève jamais.
+      const templates = buildTemplates({ templateId: null, templateName: 'Push — Force' });
+      const service = buildService(stubs, undefined, templates);
+
+      await service.createSession(USER, {
+        ...createInput,
+        templateId: 'modele-inconnu',
+        templateName: 'Push — Force',
+      });
+
+      expect(stubs.createSession).toHaveBeenCalledWith(
+        expect.objectContaining({ templateId: null, templateName: 'Push — Force' }),
+        undefined,
+      );
     });
   });
 
@@ -230,6 +278,39 @@ describe('WorkoutsService', () => {
       expect(stubs.createSet).toHaveBeenCalledWith(
         expect.objectContaining({ exerciseName: 'Développé couché' }),
       );
+    });
+
+    it('enregistre la cible affichée à côté de ce qui a été RÉELLEMENT fait', async () => {
+      const stubs = buildStubs();
+      stubs.findSetById.mockResolvedValueOnce(null).mockResolvedValue(setRow());
+      const service = buildService(stubs);
+
+      // Déviation assumée : 7 reps faites pour 8 prévues — jamais une erreur.
+      await service.addSet(USER, 'session-1', {
+        ...setInput,
+        reps: 7,
+        plannedReps: 8,
+        plannedWeightKg: 60,
+      });
+
+      expect(stubs.createSet).toHaveBeenCalledWith(
+        expect.objectContaining({ reps: 7, plannedReps: 8, plannedWeightKg: 60 }),
+      );
+    });
+  });
+
+  describe('updateSet', () => {
+    it('ne réécrit jamais la cible affichée à la validation', async () => {
+      const stubs = buildStubs();
+      stubs.findSetById.mockResolvedValue(setRow());
+      stubs.updateSet.mockResolvedValue(setRow({ reps: 12 }));
+      const service = buildService(stubs);
+
+      await service.updateSet(USER, 'set-1', { reps: 12 });
+
+      const [, patch] = stubs.updateSet.mock.calls[0] as [string, Record<string, unknown>];
+      expect(patch).not.toHaveProperty('plannedReps');
+      expect(patch).not.toHaveProperty('plannedWeightKg');
     });
   });
 

@@ -72,6 +72,8 @@ describe('Séances (e2e)', () => {
       request(app.getHttpServer()).post(url).set('Authorization', `Bearer ${token}`),
     get: (url: string) =>
       request(app.getHttpServer()).get(url).set('Authorization', `Bearer ${token}`),
+    put: (url: string) =>
+      request(app.getHttpServer()).put(url).set('Authorization', `Bearer ${token}`),
     patch: (url: string) =>
       request(app.getHttpServer()).patch(url).set('Authorization', `Bearer ${token}`),
     delete: (url: string) =>
@@ -211,6 +213,86 @@ describe('Séances (e2e)', () => {
       .post('/api/v1/workout-sessions')
       .send({ id: sessionId, startedAt: '2026-08-07T10:00:00.000Z' })
       .expect(404);
+  });
+
+  it('lance un modèle : templateId retenu, dernier lancement daté, cible persistée', async () => {
+    const templateId = randomUUID();
+    const exercise = await ensureExerciseFixture(prisma, 'e2e-workouts-exercice');
+    await authed(accessToken)
+      .put(`/api/v1/workout-templates/${templateId}`)
+      .send({
+        name: 'Push — Force',
+        exercises: [
+          {
+            id: randomUUID(),
+            exerciseId: exercise.id,
+            sets: [{ id: randomUUID(), targetReps: 8 }],
+          },
+        ],
+      })
+      .expect(201);
+
+    const fromTemplateId = randomUUID();
+    const startedAt = '2026-08-07T14:00:00.000Z';
+    const created = await authed(accessToken)
+      .post('/api/v1/workout-sessions')
+      .send({ id: fromTemplateId, startedAt, templateId, templateName: 'Nom client périmé' })
+      .expect(201);
+    const session = data<WorkoutSessionDetail>(created.body);
+
+    // Le nom SERVEUR gagne : la provenance est décidée côté serveur.
+    expect(session.templateId).toBe(templateId);
+    expect(session.templateName).toBe('Push — Force');
+    const template = await prisma.workoutTemplate.findUnique({ where: { id: templateId } });
+    expect(template?.lastUsedAt?.toISOString()).toBe(startedAt);
+
+    // Déviation assumée : 7 reps faites pour 8 prévues — enregistré, jamais refusé.
+    const deviatedSetId = randomUUID();
+    const set = await authed(accessToken)
+      .post(`/api/v1/workout-sessions/${fromTemplateId}/sets`)
+      .send({
+        id: deviatedSetId,
+        exerciseId: exercise.id,
+        position: 0,
+        reps: 7,
+        weightKg: 60,
+        plannedReps: 8,
+        plannedWeightKg: 60,
+        completedAt: '2026-08-07T14:10:00.000Z',
+      })
+      .expect(201);
+    expect(data<WorkoutSet>(set.body).reps).toBe(7);
+    expect(data<WorkoutSet>(set.body).plannedReps).toBe(8);
+    expect(data<WorkoutSet>(set.body).plannedWeightKg).toBe(60);
+
+    // Corriger le FAIT ne réécrit jamais la cible affichée à la validation.
+    await authed(accessToken)
+      .patch(`/api/v1/workout-sets/${deviatedSetId}`)
+      .send({ reps: 9, plannedReps: 3 })
+      .expect(400);
+    const corrected = await authed(accessToken)
+      .patch(`/api/v1/workout-sets/${deviatedSetId}`)
+      .send({ reps: 9 })
+      .expect(200);
+    expect(data<WorkoutSet>(corrected.body).reps).toBe(9);
+    expect(data<WorkoutSet>(corrected.body).plannedReps).toBe(8);
+  });
+
+  it('une séance dont le modèle est inconnu arrive QUAND MÊME, nom client conservé', async () => {
+    const orphanId = randomUUID();
+    const created = await authed(accessToken)
+      .post('/api/v1/workout-sessions')
+      .send({
+        id: orphanId,
+        startedAt: '2026-08-07T15:00:00.000Z',
+        templateId: randomUUID(), // jamais synchronisé, ou refusé définitivement
+        templateName: '  Push — Force  ',
+      })
+      .expect(201);
+    const session = data<WorkoutSessionDetail>(created.body);
+
+    expect(session.templateId).toBeNull();
+    expect(session.templateName).toBe('Push — Force');
   });
 
   it('abandonne une autre séance (rejouable)', async () => {

@@ -41,6 +41,7 @@ model User {
   passwordResets     PasswordReset[]
   externalIdentities ExternalIdentity[]
   auditLogs          AuditLog[]
+  workoutTemplates   WorkoutTemplate[]
   workoutSessions    WorkoutSession[]
   personalRecords    PersonalRecord[]
   bodyMetrics        BodyMetric[]
@@ -205,21 +206,21 @@ enum AuditActorType {
 /// Volontairement sans clé étrangère vers les ressources auditées : le
 /// journal survit à leur suppression (référence logique resourceType/Id).
 model AuditLog {
-  id          String         @id @default(uuid()) @db.Uuid
-  actorType   AuditActorType @default(USER)
-  userId      String?        @db.Uuid
-  adminUserId String?        @db.Uuid
+  id           String         @id @default(uuid()) @db.Uuid
+  actorType    AuditActorType @default(USER)
+  userId       String?        @db.Uuid
+  adminUserId  String?        @db.Uuid
   /// Ex. auth.login, auth.refresh_reuse_detected, admin.user_suspended…
-  action      String
+  action       String
   resourceType String?
   resourceId   String?
   /// Corrélation avec les logs Pino et l'en-tête x-request-id.
   requestId    String?
-  ipAddress   String?
-  userAgent   String?
+  ipAddress    String?
+  userAgent    String?
   /// Contexte non sensible uniquement — jamais de mot de passe ni de jeton.
-  metadata    Json?
-  createdAt   DateTime       @default(now())
+  metadata     Json?
+  createdAt    DateTime       @default(now())
 
   user      User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
   adminUser AdminUser? @relation(fields: [adminUserId], references: [id], onDelete: SetNull)
@@ -287,10 +288,11 @@ model Exercise {
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt
 
-  muscles         ExerciseMuscle[]
-  equipment       ExerciseEquipment[]
-  workoutSets     WorkoutSet[]
-  personalRecords PersonalRecord[]
+  muscles           ExerciseMuscle[]
+  equipment         ExerciseEquipment[]
+  workoutSets       WorkoutSet[]
+  templateExercises WorkoutTemplateExercise[]
+  personalRecords   PersonalRecord[]
 
   @@index([isPublished, name])
 }
@@ -349,11 +351,20 @@ model WorkoutSession {
   updatedAt       DateTime             @updatedAt
   deletedAt       DateTime?
 
+  /// Modèle lancé, s'il y en a un. SetNull : une purge physique du modèle
+  /// n'efface jamais la séance.
+  templateId   String? @db.Uuid
+  /// Nom du modèle AU MOMENT DU LANCEMENT — dénormalisé, immuable :
+  /// l'historique reste lisible même modèle supprimé ou renommé.
+  templateName String?
+
   user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  template        WorkoutTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
   sets            WorkoutSet[]
   personalRecords PersonalRecord[]
 
   @@index([userId, startedAt(sort: Desc)])
+  @@index([templateId])
 }
 
 /// Série effectuée. Id généré sur l'appareil, écriture en upsert (rejouable).
@@ -376,10 +387,79 @@ model WorkoutSet {
   updatedAt       DateTime       @updatedAt
   deletedAt       DateTime?
 
+  /// Cible AFFICHÉE quand l'utilisateur a validé cette série (null hors modèle).
+  /// Fait historique : jamais modifiable après coup (PATCH ne les accepte pas).
+  plannedReps     Int?
+  plannedWeightKg Decimal? @db.Decimal(6, 2)
+
   session  WorkoutSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
   exercise Exercise?      @relation(fields: [exerciseId], references: [id], onDelete: SetNull)
 
   @@index([sessionId, position])
+}
+
+// ───────────────────────── Modèles de séance ──────────────────────────────
+//
+// Documents PRESCRIPTIFS (ce qui est prévu), distincts des séances réalisées.
+// Au lancement, le modèle est COPIÉ dans la séance : il n'y a aucun lien
+// vivant, modifier un modèle ne réécrit jamais une séance passée.
+
+/// Modèle de séance : ce que l'utilisateur a PRÉVU de faire, réutilisable.
+/// L'id est un UUID généré SUR L'APPAREIL — l'écriture est rejouable.
+model WorkoutTemplate {
+  id                       String    @id @db.Uuid
+  userId                   String    @db.Uuid
+  name                     String
+  notes                    String?
+  /// Saisie facultative de l'utilisateur — JAMAIS calculée par le serveur.
+  estimatedDurationMinutes Int?
+  /// Dernier lancement : posé à la création d'une séance qui référence ce modèle.
+  lastUsedAt               DateTime?
+  createdAt                DateTime  @default(now())
+  updatedAt                DateTime  @updatedAt
+  deletedAt                DateTime?
+
+  user      User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exercises WorkoutTemplateExercise[]
+  sessions  WorkoutSession[]
+
+  @@index([userId, updatedAt(sort: Desc)])
+}
+
+/// Ligne d'exercice prescrite dans un modèle, ordonnée.
+/// exerciseName est dénormalisé : le modèle survit au catalogue.
+model WorkoutTemplateExercise {
+  id           String  @id @db.Uuid
+  templateId   String  @db.Uuid
+  exerciseId   String? @db.Uuid
+  exerciseName String
+  /// Entier contigu à partir de 0, dérivé de l'ordre du tableau reçu.
+  /// L'unicité tient parce que le contenu est TOUJOURS réécrit intégralement.
+  position     Int
+  notes        String?
+
+  template WorkoutTemplate      @relation(fields: [templateId], references: [id], onDelete: Cascade)
+  exercise Exercise?            @relation(fields: [exerciseId], references: [id], onDelete: SetNull)
+  sets     WorkoutTemplateSet[]
+
+  @@unique([templateId, position])
+  @@index([exerciseId])
+}
+
+/// Série prévue d'une ligne d'exercice. Cibles, pas mesures :
+/// ce qui sera réellement fait vit dans WorkoutSet.
+model WorkoutTemplateSet {
+  id                 String         @id @db.Uuid
+  templateExerciseId String         @db.Uuid
+  position           Int
+  kind               WorkoutSetKind @default(NORMAL)
+  targetReps         Int?
+  targetWeightKg     Decimal?       @db.Decimal(6, 2)
+  restSeconds        Int?
+
+  templateExercise WorkoutTemplateExercise @relation(fields: [templateExerciseId], references: [id], onDelete: Cascade)
+
+  @@unique([templateExerciseId, position])
 }
 
 // ────────────────────────── Progression (Étape 5) ──────────────────────────
@@ -500,8 +580,8 @@ model Subscription {
   createdAt              DateTime           @default(now())
   updatedAt              DateTime           @updatedAt
 
-  user         User               @relation(fields: [userId], references: [id], onDelete: Cascade)
-  plan         SubscriptionPlan   @relation(fields: [planId], references: [id])
+  user         User                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  plan         SubscriptionPlan    @relation(fields: [planId], references: [id])
   events       SubscriptionEvent[]
   entitlements UserEntitlement[]
 

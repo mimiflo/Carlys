@@ -16,16 +16,27 @@ import '../features/nutrition/data/repositories/nutrition_repository_impl.dart';
 import '../features/progress/data/repositories/progress_repository_impl.dart';
 import '../features/subscription/data/repositories/subscription_repository_impl.dart';
 import '../features/workout_session/data/repositories/workout_repository_impl.dart';
+import '../features/workout_template/data/repositories/workout_template_repository_impl.dart';
 import 'demo_repositories.dart';
+import 'demo_templates.dart';
 import 'demo_workouts.dart';
 
-List<Override> demoOverrides() => [
-      authRepositoryProvider.overrideWithValue(DemoAuthRepository()),
-      exercisesRepositoryProvider.overrideWithValue(DemoExercisesRepository()),
-      progressRepositoryProvider.overrideWithValue(DemoProgressRepository()),
-      subscriptionRepositoryProvider
-          .overrideWithValue(DemoSubscriptionRepository()),
-      nutritionRepositoryProvider.overrideWithValue(DemoNutritionRepository()),
-      workoutRepositoryProvider.overrideWithValue(DemoWorkoutRepository()),
-      syncLifecycleProvider.overrideWithValue(DemoSyncLifecycle()),
-    ];
+List<Override> demoOverrides() {
+  // Les modèles lancent de VRAIES séances de démonstration : les deux dépôts
+  // partagent donc la même instance, comme en production ils partagent la
+  // même base locale.
+  final workouts = DemoWorkoutRepository();
+
+  return [
+    authRepositoryProvider.overrideWithValue(DemoAuthRepository()),
+    exercisesRepositoryProvider.overrideWithValue(DemoExercisesRepository()),
+    progressRepositoryProvider.overrideWithValue(DemoProgressRepository()),
+    subscriptionRepositoryProvider
+        .overrideWithValue(DemoSubscriptionRepository()),
+    nutritionRepositoryProvider.overrideWithValue(DemoNutritionRepository()),
+    workoutRepositoryProvider.overrideWithValue(workouts),
+    workoutTemplateRepositoryProvider
+        .overrideWithValue(DemoWorkoutTemplateRepository(workouts)),
+    syncLifecycleProvider.overrideWithValue(DemoSyncLifecycle()),
+  ];
+}

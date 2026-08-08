@@ -69,6 +69,34 @@ manuel) construit cet APK et le publie sur la release `demo-latest`.
   (voir `lib/features/README.md`) ;
 - `lib/shared/` — modèles, providers et widgets transverses.
 
+## Modèles de séance
+
+Un **modèle de séance** est une séance type enregistrée : un nom, des
+exercices, et pour chacun des séries prévues (répétitions, charge, repos).
+On le compose une fois, on le relance en un geste.
+
+- **Y accéder** : depuis l'accueil (« Lancer un modèle », sous le bouton de
+  démarrage — c'est là qu'un entraînement commence) ou depuis
+  Profil → Entraînement → « Mes modèles de séance ».
+- **Composer** : `/templates` → « Nouveau ». Les exercices viennent du
+  catalogue (option « exercice libre » comprise) ; chaque série se règle au
+  pas-à-pas, se duplique et se réordonne. Le brouillon reste en mémoire
+  jusqu'à « Enregistrer » — quitter sans enregistrer demande confirmation.
+- **Lancer** : « Lancer » crée une vraie séance pré-remplie, **entièrement
+  hors ligne** (séance + plan + mise en file dans une seule transaction
+  locale), puis ouvre l'écran de séance active.
+- **Dérouler** : l'écran affiche l'objectif de la série en cours
+  (« série 2 sur 4 · 8 reps à 60 kg »), amorce le pas-à-pas sur cette cible
+  et laisse saisir ce qui a été **réellement** fait. Faire moins que prévu
+  n'est ni une erreur ni un blocage : la série est enregistrée telle quelle
+  et l'objectif reste consultable dans l'historique.
+- **Terminer** : le résumé de clôture constate l'avancement (« 9 séries sur
+  12 prévues »), puis la séance rejoint l'historique.
+
+Une séance libre (démarrée sans modèle) garde exactement son comportement.
+Contrat détaillé :
+[docs/product/workout-templates.md](../../docs/product/workout-templates.md).
+
 ## Parcours de première ouverture
 
 Au tout premier lancement, l'application déroule un tunnel avant l'accueil :

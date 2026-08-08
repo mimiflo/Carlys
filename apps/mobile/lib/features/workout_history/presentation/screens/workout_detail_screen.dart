@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
 import '../../../workout_session/domain/entities/workout.dart';
 import '../../../workout_session/presentation/controllers/workout_controllers.dart';
@@ -42,10 +43,20 @@ class _DetailBody extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
     final session = workout.session;
+    final templateName = session.templateName;
 
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.md),
       children: [
+        // Provenance de la séance : dénormalisée au lancement, donc lisible
+        // pour toujours — même modèle renommé ou supprimé depuis.
+        if (templateName != null) ...[
+          Text(
+            'Modèle · $templateName',
+            style: theme.textTheme.bodySmall,
+          ),
+          const SizedBox(height: AppSpacing.xs),
+        ],
         Row(
           children: [
             AppBadge(
@@ -94,9 +105,19 @@ class _DetailBody extends StatelessWidget {
               child: Row(
                 children: [
                   Expanded(
-                    child: Text(
-                      set.exerciseName,
-                      style: theme.textTheme.bodyLarge,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          set.exerciseName,
+                          style: theme.textTheme.bodyLarge,
+                        ),
+                        if (_plannedLabel(set) != null)
+                          Text(
+                            _plannedLabel(set)!,
+                            style: theme.textTheme.bodySmall,
+                          ),
+                      ],
                     ),
                   ),
                   if (set.kind != SetKind.normal) ...[
@@ -120,6 +141,23 @@ class _DetailBody extends StatelessWidget {
       ],
     );
   }
+}
+
+/// « Prévu 8 × 60 kg » — la cible AFFICHÉE au moment de la validation.
+///
+/// Elle est stockée sur la série elle-même : l'écart prévu/réalisé reste
+/// consultable des mois plus tard, indépendamment du modèle d'origine.
+String? _plannedLabel(WorkoutSetEntry set) {
+  final reps = set.plannedReps;
+  final weight = set.plannedWeightKg;
+  if (reps == null && weight == null) {
+    return null;
+  }
+  final parts = [
+    if (reps != null) formatThousands(reps),
+    if (weight != null) '${formatDecimal(weight)} kg',
+  ];
+  return 'Prévu ${parts.join(' × ')}';
 }
 
 class _Metric extends StatelessWidget {

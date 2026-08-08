@@ -185,9 +185,9 @@ docs) et sera documentée précisément ici à sa livraison.
 | Authentification | **Livré** — voir le tableau détaillé ci-dessous | Étape 2 ✅ |
 | Utilisateur courant | **Livré** — `GET/PATCH/DELETE /api/v1/users/me`, sessions | Étape 2 ✅ |
 | Exercices | **Livré** — `GET /api/v1/exercises` (recherche `search`, filtres `muscleGroup`/`equipment`/`difficulty`/`type`, pagination `cursor`+`limit`, `meta.nextCursor`/`hasMore`), `GET /api/v1/exercises/:idOrSlug`, `GET /api/v1/muscle-groups`, `GET /api/v1/equipment` — catalogue seedé (33 exercices), cache Redis tolérant aux pannes, exercices non publiés jamais servis | Étape 3 ✅ |
-| Programmes | `GET/POST /api/v1/programs`, modèles de séances (`workout-templates`) | Étape 4 |
-| Séances | **Livré** — `POST /workout-sessions` (création idempotente, id appareil), `GET /workout-sessions` (curseur), `GET/PATCH /workout-sessions/:id`, `POST …/:id/complete` et `…/:id/abandon` (rejouables, 409 si clôture croisée) | Étape 4 ✅ |
-| Séries | **Livré** — `POST /workout-sessions/:id/sets` (upsert idempotent, nom d'exercice résolu depuis le catalogue), `PATCH /workout-sets/:id`, `DELETE /workout-sets/:id` (suppression logique rejouable) | Étape 4 ✅ |
+| Modèles de séance | **Livré** — `GET /api/v1/workout-templates` (curseur), `GET /workout-templates/:id`, `PUT /workout-templates/:id` (**unique écriture**, create-or-replace, 201/200), `DELETE /workout-templates/:id` (suppression logique rejouable) — voir le tableau détaillé ci-dessous. Programmes multi-semaines (`/programs`) toujours cible | Étape 4 ✅ |
+| Séances | **Livré** — `POST /workout-sessions` (création idempotente, id appareil, `templateId`/`templateName` facultatifs et jamais bloquants), `GET /workout-sessions` (curseur), `GET/PATCH /workout-sessions/:id`, `POST …/:id/complete` et `…/:id/abandon` (rejouables, 409 si clôture croisée) | Étape 4 ✅ |
+| Séries | **Livré** — `POST /workout-sessions/:id/sets` (upsert idempotent, nom d'exercice résolu depuis le catalogue, `plannedReps`/`plannedWeightKg` facultatifs), `PATCH /workout-sets/:id` (corrige le fait réalisé, jamais la cible), `DELETE /workout-sets/:id` (suppression logique rejouable) | Étape 4 ✅ |
 | Progression | **Livré** — `GET /api/v1/progress/overview?period=week\|month\|year` (totaux + volume par intervalle), `GET /api/v1/progress/records` (records personnels), `GET /api/v1/progress/exercises/:exerciseId` (progression par séance), `GET/POST /api/v1/body-metrics` (création idempotente, id appareil), `DELETE /api/v1/body-metrics/:id` (suppression logique rejouable) | Étape 5 ✅ |
 | Nutrition | **Livré** — `GET /api/v1/nutrition/metabolism` : rapport métabolique calculé **côté serveur** (BMR Mifflin-St Jeor, TDEE par niveau d'activité, objectif calorique selon le but, macros protéines/lipides/glucides, IMC + catégorie OMS, hydratation) ; le poids provient de la **dernière mesure corporelle**, le profil (sexe, naissance, taille, activité, objectif) se complète via `PATCH /users/me` ; profil incomplet → `metabolism: null` + liste `missing` | Post-Étape 7 ✅ |
 | Abonnements | **Livré** — `GET /api/v1/subscriptions/me` (plan effectif + abonnement projeté), `GET /api/v1/entitlements` (droits évalués **côté serveur**, expiration réévaluée à chaque lecture) ; le catalogue applique `premium_exercises` (fiche premium → 403 sans droit) | Étape 6 ✅ |
@@ -222,6 +222,53 @@ rate limiting global.
 | `GET /api/v1/users/me` | 200, 401 | Profil de l'utilisateur connecté |
 | `PATCH /api/v1/users/me` | 200, 400 | `displayName`, `locale`, `timezone` |
 | `DELETE /api/v1/users/me` | 204, 401 | Mot de passe requis ; suppression logique + révocation totale |
+
+### Endpoints livrés — modèles de séance (Étape 4)
+
+Un **modèle de séance** est un document *prescriptif* réutilisable (« ce qui
+est prévu »), distinct de la séance *réalisée*. Contrat complet et décisions
+argumentées : [`docs/product/workout-templates.md`](../product/workout-templates.md).
+
+| Endpoint | Statuts | Notes |
+| --- | --- | --- |
+| `GET /api/v1/workout-templates` | 200, 401 | Mes modèles, `updatedAt DESC, id DESC`, pagination `cursor` + `limit` ; `meta.nextCursor`/`hasMore` |
+| `GET /api/v1/workout-templates/:id` | 200, 401, 404 | Détail complet, exercices et séries prévues ordonnés. **404 dans les trois cas** : inconnu, supprimé, ou appartenant à autrui |
+| `PUT /api/v1/workout-templates/:id` | 200, 201, 400, 401, 404, 409 | **Unique écriture** : le corps décrit l'état complet, le serveur y fait converger la base en une transaction. **201** à la création, **200** au remplacement |
+| `DELETE /api/v1/workout-templates/:id` | 204, 401, 404 | Suppression **logique**, rejouable : modèle inconnu ou déjà supprimé → 204 ; modèle d'autrui → 404 |
+
+Ce que le `PUT` garantit, et pourquoi le mobile peut le rejouer sans état :
+
+- **Tous les identifiants viennent de l'appareil** (modèle, lignes d'exercice,
+  séries prévues) et sont conservés tels quels : rejouer le même corps redonne
+  exactement le même état, sans journal de clés d'idempotence côté serveur.
+- **Les positions ne sont jamais transmises** : l'ordre des tableaux JSON fait
+  foi, le serveur écrit `position = index`. Un client ne peut donc produire ni
+  trou ni doublon de position.
+- **Le nom d'exercice est résolu comme pour les séries** : si `exerciseId`
+  désigne un exercice **publié**, son nom du catalogue gagne ; sinon la ligne
+  devient un exercice libre porté par `exerciseName` trimé. Les deux absents →
+  `400 VALIDATION_ERROR`.
+- **Le contenu est remplacé physiquement** (lignes et séries prévues) dans la
+  transaction : ce n'est pas de l'historique. `lastUsedAt` et `deletedAt` ne
+  sont jamais touchés par un `PUT` — et un modèle supprimé ne ressuscite pas
+  (404).
+- Erreurs : `400` (bornes, `exercises` vide ou > 30, > 20 séries par exercice,
+  identifiant dupliqué dans le corps), `404` (modèle supprimé logiquement),
+  `409` (`:id` appartient à un autre compte).
+
+Effets sur les endpoints de séance existants, **additifs et non cassants** :
+
+| Route | Ajout | Règle |
+| --- | --- | --- |
+| `POST /workout-sessions` | `templateId`, `templateName` (facultatifs) | La création **n'échoue jamais** à cause du modèle : `templateId` inconnu, supprimé ou à autrui est ignoré (`templateId: null`) et le `templateName` du client est conservé. Sinon, le nom **serveur** est retenu et `lastUsedAt` est daté dans la même transaction |
+| `POST /workout-sessions/:id/sets` | `plannedReps`, `plannedWeightKg` (facultatifs) | La cible **affichée** au moment de la validation. La déviation est normale : une série faite à 7 reps pour 8 prévues s'enregistre sans erreur |
+| `PATCH /workout-sets/:id` | — | **Ne les accepte pas** (400) : corriger une série corrige le fait réalisé, la cible affichée à l'instant de la validation n'est pas réécrivable |
+
+Journalisation : un log Pino `info` par écriture (`workout_template.saved`,
+`workout_template.deleted`) avec `templateId`, `exercisesCount`,
+`plannedSetsCount`, corrélé au `requestId` — **jamais** le contenu des notes.
+Pas d'entrée `AuditLog` : ce journal est réservé aux événements de sécurité et
+aux actions d'administration.
 
 ## Swagger et client typé
 

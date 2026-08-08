@@ -60,6 +60,8 @@ class WorkoutInfo {
     this.name,
     this.endedAt,
     this.durationSeconds,
+    this.templateId,
+    this.templateName,
   });
 
   final String id;
@@ -68,7 +70,18 @@ class WorkoutInfo {
   final DateTime startedAt;
   final DateTime? endedAt;
   final int? durationSeconds;
+
+  /// Modèle de séance lancé, s'il y en a un.
+  final String? templateId;
+
+  /// Nom du modèle au moment du lancement — provenance immuable, à distinguer
+  /// de [name] qui reste le titre modifiable de CETTE séance.
+  final String? templateName;
+
   final LocalSyncState syncState;
+
+  /// `true` quand la séance a été lancée depuis un modèle.
+  bool get isFromTemplate => templateName != null;
 }
 
 class WorkoutSetEntry {
@@ -84,6 +97,8 @@ class WorkoutSetEntry {
     this.weightKg,
     this.restSeconds,
     this.rpe,
+    this.plannedReps,
+    this.plannedWeightKg,
   });
 
   final String id;
@@ -95,8 +110,23 @@ class WorkoutSetEntry {
   final double? weightKg;
   final int? restSeconds;
   final int? rpe;
+
+  /// Cible AFFICHÉE au moment de la validation (null hors modèle). Permet de
+  /// relire « prévu 8 × 60 kg, fait 7 × 60 kg » des mois plus tard, sans
+  /// dépendre de la survie du modèle.
+  final int? plannedReps;
+  final double? plannedWeightKg;
+
   final DateTime completedAt;
   final LocalSyncState syncState;
+
+  /// `true` quand la série portait une cible et s'en est écartée.
+  /// Une déviation est **normale**, jamais une erreur.
+  bool get deviatesFromPlan =>
+      (plannedReps != null && reps != null && plannedReps != reps) ||
+      (plannedWeightKg != null &&
+          weightKg != null &&
+          plannedWeightKg != weightKg);
 }
 
 /// Séance avec ses séries (active ou historique).
@@ -139,6 +169,8 @@ class AddSetInput {
     this.weightKg,
     this.restSeconds,
     this.rpe,
+    this.plannedReps,
+    this.plannedWeightKg,
   });
 
   final String sessionId;
@@ -149,4 +181,24 @@ class AddSetInput {
   final double? weightKg;
   final int? restSeconds;
   final int? rpe;
+
+  /// Cible affichée à l'instant de la validation. Renseignée par le cas
+  /// d'usage d'appariement au plan, jamais saisie à la main par un écran.
+  final int? plannedReps;
+  final double? plannedWeightKg;
+
+  AddSetInput copyWith({int? plannedReps, double? plannedWeightKg}) {
+    return AddSetInput(
+      sessionId: sessionId,
+      exerciseName: exerciseName,
+      exerciseId: exerciseId,
+      kind: kind,
+      reps: reps,
+      weightKg: weightKg,
+      restSeconds: restSeconds,
+      rpe: rpe,
+      plannedReps: plannedReps ?? this.plannedReps,
+      plannedWeightKg: plannedWeightKg ?? this.plannedWeightKg,
+    );
+  }
 }

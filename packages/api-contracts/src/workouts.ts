@@ -27,6 +27,12 @@ export const workoutSetSchema = z.object({
   rpe: z.number().nullable(),
   restSeconds: z.number().nullable(),
   completedAt: z.string(),
+  /**
+   * Cible AFFICHÉE au moment où la série a été validée (null hors modèle).
+   * Fait historique : jamais réécrit par une correction ultérieure.
+   */
+  plannedReps: z.number().nullable(),
+  plannedWeightKg: z.number().nullable(),
 });
 export type WorkoutSet = z.infer<typeof workoutSetSchema>;
 
@@ -40,6 +46,10 @@ export const workoutSessionSummarySchema = z.object({
   setsCount: z.number(),
   /** Somme reps × charge des séries avec charge, arrondie au kg. */
   totalVolumeKg: z.number(),
+  /** Modèle lancé, s'il y en a un — null pour une séance libre. */
+  templateId: z.string().nullable(),
+  /** Nom du modèle AU MOMENT DU LANCEMENT : provenance immuable. */
+  templateName: z.string().nullable(),
 });
 export type WorkoutSessionSummary = z.infer<typeof workoutSessionSummarySchema>;
 

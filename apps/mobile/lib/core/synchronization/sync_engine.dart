@@ -113,6 +113,13 @@ class SyncEngine {
         );
       case 'set.delete':
         await _api.deleteSet(operation.entityId);
+      case 'template.save':
+        await _api.saveTemplate(
+          operation.entityId,
+          payload['body'] as Map<String, dynamic>,
+        );
+      case 'template.delete':
+        await _api.deleteTemplate(operation.entityId);
       default:
         throw StateError('Opération inconnue : ${operation.operationType}');
     }
@@ -162,6 +169,10 @@ class SyncEngine {
       await (_db.update(_db.localWorkoutSets)
             ..where((set) => set.id.equals(operation.entityId)))
           .write(LocalWorkoutSetsCompanion(syncStatus: Value(syncStatus)));
+    } else if (operation.entityType == 'template') {
+      await (_db.update(_db.localWorkoutTemplates)
+            ..where((template) => template.id.equals(operation.entityId)))
+          .write(LocalWorkoutTemplatesCompanion(syncStatus: Value(syncStatus)));
     }
   }
 }

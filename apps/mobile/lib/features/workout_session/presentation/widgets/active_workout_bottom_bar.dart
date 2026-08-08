@@ -1,12 +1,11 @@
-import 'dart:math' as math;
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
 import '../controllers/workout_controllers.dart';
+import 'rest_timer_row.dart';
 
 /// Barre basse en verre de la séance active (maquette 2e).
 ///
@@ -43,12 +42,11 @@ class ActiveWorkoutBottomBar extends ConsumerWidget {
               AppSpacing.gutter,
               AppSpacing.lg + bottomInset,
             ),
-            child: AnimatedSize(
+            child: _Morph(
               duration: AppMotion.resolve(context, AppMotion.normal),
-              curve: AppMotion.standard,
               child: timer == null
                   ? _FinishButton(onPressed: onFinish)
-                  : _RestRow(
+                  : RestTimerRow(
                       timer: timer,
                       onSkip: () => ref.read(restTimerProvider.notifier).stop(),
                     ),
@@ -60,147 +58,28 @@ class ActiveWorkoutBottomBar extends ConsumerWidget {
   }
 }
 
-/// Ligne de repos : anneau, libellés et action de reprise anticipée.
-class _RestRow extends StatelessWidget {
-  const _RestRow({required this.timer, required this.onSkip});
+/// Transition de hauteur entre le bouton de clôture et la ligne de repos.
+///
+/// Avec la réduction d'animations système, la durée vaut zéro : `AnimatedSize`
+/// se relance alors pendant sa propre mise en page. On bascule donc sans
+/// animation dans ce cas — c'est exactement ce que la préférence demande.
+class _Morph extends StatelessWidget {
+  const _Morph({required this.duration, required this.child});
 
-  final RestTimerState timer;
-  final VoidCallback onSkip;
-
-  @override
-  Widget build(BuildContext context) {
-    final remaining = formatChrono(timer.remaining.inSeconds);
-
-    return Semantics(
-      liveRegion: true,
-      label: 'Repos en cours, temps restant $remaining',
-      child: Row(
-        children: [
-          _RestRing(progress: timer.progress, label: remaining),
-          const SizedBox(width: AppSpacing.gapRow),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Repos en cours',
-                  style: AppTypography.subheading.copyWith(
-                    fontSize: 14,
-                    color: AppColors.darkTextPrimary,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.xxs),
-                Text(
-                  'Prochaine série dans $remaining',
-                  style: AppTypography.label.copyWith(
-                    fontWeight: FontWeight.w400,
-                    color: AppColors.darkTextTertiary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: AppSpacing.sm),
-          TextButton(
-            style: TextButton.styleFrom(
-              foregroundColor: AppColors.accent,
-              backgroundColor: AppColors.accentBadgeBg,
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.gapRow,
-                vertical: AppSpacing.gapTile,
-              ),
-              minimumSize: Size.zero,
-              tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-              textStyle: AppTypography.label.copyWith(
-                fontWeight: FontWeight.w600,
-              ),
-              shape: const RoundedRectangleBorder(
-                borderRadius: AppRadius.lgAll,
-                side: BorderSide(color: AppColors.accentBadgeBorder),
-              ),
-            ),
-            onPressed: onSkip,
-            child: const Text('Passer'),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Anneau de repos : arc primaire sur piste neutre, temps restant au centre.
-class _RestRing extends StatelessWidget {
-  const _RestRing({required this.progress, required this.label});
-
-  final double progress;
-  final String label;
-
-  static const double _diameter = 52;
-  static const double _stroke = 5;
+  final Duration duration;
+  final Widget child;
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: _diameter,
-      height: _diameter,
-      child: CustomPaint(
-        painter: _RestRingPainter(progress: progress),
-        child: Center(
-          child: Text(
-            label,
-            style: AppTypography.metricS.copyWith(
-              fontSize: 13,
-              color: AppColors.primaryLight,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-class _RestRingPainter extends CustomPainter {
-  const _RestRingPainter({required this.progress});
-
-  final double progress;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = size.center(Offset.zero);
-    final radius = (size.shortestSide - _RestRing._stroke) / 2;
-
-    // Trou central : la valeur reste lisible par-dessus le voile flouté.
-    canvas.drawCircle(
-      center,
-      radius - _RestRing._stroke / 2,
-      Paint()..color = AppColors.darkSurfaceAlt,
-    );
-
-    final track = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = _RestRing._stroke
-      ..color = AppColors.gaugeTrack;
-    canvas.drawCircle(center, radius, track);
-
-    final fraction = progress.clamp(0.0, 1.0);
-    if (fraction > 0) {
-      canvas.drawArc(
-        Rect.fromCircle(center: center, radius: radius),
-        -math.pi / 2,
-        2 * math.pi * fraction,
-        false,
-        Paint()
-          ..style = PaintingStyle.stroke
-          ..strokeWidth = _RestRing._stroke
-          ..strokeCap = StrokeCap.round
-          ..color = AppColors.primary,
-      );
+    if (duration == Duration.zero) {
+      return child;
     }
+    return AnimatedSize(
+      duration: duration,
+      curve: AppMotion.standard,
+      child: child,
+    );
   }
-
-  @override
-  bool shouldRepaint(_RestRingPainter oldDelegate) =>
-      oldDelegate.progress != progress;
 }
 
 /// Clôture de séance — action secondaire : l'accent reste sur la validation

@@ -51,6 +51,7 @@ class HomeScreen extends ConsumerWidget {
             padding: const EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
             child: TodayWorkoutCard(
               activeWorkout: activeWorkout,
+              onOpenTemplates: () => context.push(AppRoutes.templates),
               onStart: () async {
                 if (activeWorkout == null) {
                   await ref.read(workoutActionsProvider).start();

@@ -72,6 +72,7 @@ class ProfileScreen extends ConsumerWidget {
               // L'objectif se règle dans le profil métabolique (onglet
               // Nutrition), seul écrivain de cette donnée.
               onGoal: () => context.go(AppRoutes.nutrition),
+              onTemplates: () => context.push(AppRoutes.templates),
               onHistory: () => context.push(AppRoutes.history),
               onBodyMetrics: () => context.go(AppRoutes.progress),
             ),

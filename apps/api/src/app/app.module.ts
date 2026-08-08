@@ -23,6 +23,7 @@ import { SubscriptionsModule } from '../modules/subscriptions/subscriptions.modu
 import { UsersModule } from '../modules/users/users.module';
 import { WebhooksModule } from '../modules/webhooks/webhooks.module';
 import { WorkoutsModule } from '../modules/workout_sessions/workouts.module';
+import { WorkoutTemplatesModule } from '../modules/workout_templates/workout-templates.module';
 
 const REQUEST_ID_PATTERN = /^[\w-]{1,64}$/;
 
@@ -80,6 +81,7 @@ function generateRequestId(request: IncomingMessage, response: ServerResponse): 
     UsersModule,
     AuthModule,
     ExercisesModule,
+    WorkoutTemplatesModule,
     WorkoutsModule,
     ProgressModule,
     NutritionModule,

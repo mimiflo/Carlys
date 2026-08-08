@@ -50,6 +50,7 @@ lib/
 │   ├── README.md                 # Structure data/domain/presentation détaillée
 │   ├── onboarding/presentation/screens/splash_screen.dart
 │   ├── dashboard/presentation/screens/home_screen.dart
+│   ├── workout_template/         # Modèles de séance (prescriptif) → workout_session
 │   └── authentication/ · exercises/ · workout_session/ · workout_builder/
 │       · workout_history/ · programs/ · progress/ · body_metrics/ · profile/
 │       · settings/ · subscriptions/ · notifications/ · coaching/ · health/
@@ -138,12 +139,32 @@ mais sépare toujours interface / logique / données.
 Le routeur est exposé par `appRouterProvider` (`lib/app/router/app_router.dart`)
 et consommé par `MaterialApp.router`. Les chemins vivent dans `AppRoutes`.
 
-Routes actuelles (Étape 1) :
+Deux familles de routes : la **coquille à cinq onglets**
+(`StatefulShellRoute.indexedStack`, barre basse visible) et le **plein écran**
+(hors coquille), pour tout ce qui demande de la concentration ou une sortie
+explicite.
 
-| Chemin  | Nom      | Écran                              |
-| ------- | -------- | ---------------------------------- |
-| `/`     | `splash` | `SplashScreen` (marque, puis `/home`) |
-| `/home` | `home`   | `HomeScreen` (vitrine du design system) |
+| Chemin                  | Nom               | Écran                              |
+| ----------------------- | ----------------- | ---------------------------------- |
+| `/`                     | `splash`          | `SplashScreen`                     |
+| `/login` · `/register` · `/forgot-password` | —  | Authentification    |
+| `/home`                 | `home`            | Accueil (onglet)                   |
+| `/exercises`            | `exercises`       | Bibliothèque (onglet)              |
+| `/exercises/:idOrSlug`  | `exercise-detail` | Fiche d'exercice (plein écran)     |
+| `/progress`             | `progress`        | Progression (onglet)               |
+| `/nutrition`            | `nutrition`       | Nutrition (onglet)                 |
+| `/profile`              | `profile`         | Profil & réglages (onglet)         |
+| `/workout`              | `active-workout`  | Séance active (plein écran)        |
+| `/templates`            | `templates`       | Mes modèles de séance (plein écran)|
+| `/templates/:templateId`| `template-editor` | Éditeur de modèle (plein écran)    |
+| `/history`              | `history`         | Historique (plein écran)           |
+| `/history/:sessionId`   | `workout-detail`  | Détail d'une séance                |
+| `/sessions` · `/subscription` · `/settings` · `/onboarding` | — | Plein écran |
+
+Il n'existe **pas** de route `/templates/new` : créer un modèle, c'est
+générer un UUID sur l'appareil puis ouvrir `/templates/<uuid>`. C'est la
+traduction directe du principe « identifiants générés hors ligne », et ça
+évite la collision de chemins entre `new` et `:templateId`.
 
 ### Parcours de première ouverture
 
@@ -274,6 +295,44 @@ rejoue ensuite les écritures vers l'API quand la connectivité le permet
 côté client, idempotence, résolution de conflits) est spécifié dans
 [docs/synchronization/offline-first.md](../synchronization/offline-first.md).
 
+## Modèles de séance (`features/workout_template`)
+
+Un **modèle de séance** est un document *prescriptif* réutilisable : un nom,
+des lignes d'exercice, et pour chacune des séries prévues (répétitions, charge,
+repos). Le lancer crée une **séance** ordinaire — un fait — pré-remplie par le
+programme. Contrat complet :
+[docs/product/workout-templates.md](../product/workout-templates.md).
+
+Parcours : accueil ou profil → `/templates` → éditeur `/templates/:id` →
+« Lancer » → `/workout` → « Terminer » → `/history/:sessionId`.
+
+| Écran / brique                        | Rôle                                                        |
+| ------------------------------------- | ----------------------------------------------------------- |
+| `TemplatesScreen`                     | Liste locale, temps réel ; état vide, pastille de synchronisation par modèle |
+| `TemplateEditorScreen` + `TemplateEditorForm`, `TemplateExerciseTile`, `PlannedSetRow`, `TemplateEditorBottomBar` | Composition : nom, notes, durée, exercices réordonnables, séries prévues au pas-à-pas |
+| `TemplateEditorController` (`TemplateDraft`) | Brouillon **en mémoire** ; l'écriture Drift et la mise en file n'ont lieu qu'à « Enregistrer » |
+| `guidanceFor(SessionPlan)` (`session_guidance.dart`) | Fonction pure : traduit le plan en consigne d'écran (sur-titre, cible, compteurs) |
+| `RecordPlannedSet`                    | Valide une série : appariement au plan → écriture → item honoré |
+
+Points structurants :
+
+- **Les exercices viennent du catalogue existant** (`showExercisePickerSheet`
+  de `workout_session`, option « exercice libre » comprise) : composer un
+  modèle et saisir une série se font au même endroit.
+- **Le lancement est entièrement local** : séance, plan aplati et opération
+  `session.create` dans une seule transaction SQLite, aucun appel réseau.
+- **La déviation n'est jamais une erreur.** Le pas-à-pas est amorcé sur la
+  cible, mais l'utilisateur valide ce qu'il a réellement fait ; la série
+  enregistre le réalisé et conserve la cible affichée (`plannedReps` /
+  `plannedWeightKg`), ce qui rend l'écart consultable pour toujours dans
+  `/history/:sessionId`.
+- **Sens de dépendance** : `workout_template → workout_session`, jamais
+  l'inverse. Le seul point de contact dans l'autre sens est l'orchestrateur
+  `ActiveWorkoutBody`, qui lit `sessionPlanProvider` et le traduit en valeurs
+  simples ; ni le domaine, ni les données, ni les widgets de `workout_session`
+  ne connaissent les modèles, et sans plan l'écran de séance se comporte
+  exactement comme avant.
+
 ## Réseau
 
 - **Dio** est le client HTTP (`core/api/`, vide à l'Étape 1), configuré depuis
@@ -336,6 +395,15 @@ En place à l'Étape 1 (exécutés par la CI mobile) :
   navigation vers l'accueil ;
 - `test/design_system/app_button_test.dart` — comportement d'`AppButton`
   (tap, désactivation, chargement).
+
+Modèles de séance (interface) :
+
+- `test/features/workout_template/templates_flow_test.dart` — état vide,
+  composition d'un modèle depuis le catalogue, enregistrement, puis lancement
+  d'une séance pré-remplie ;
+- `test/features/workout_template/active_workout_plan_test.dart` — objectif
+  affiché (« série 2 sur 4 · 8 reps à 60 kg »), validation d'une série avec
+  déviation, saut d'une série, et **non-régression de la séance libre**.
 
 Stratégie cible, par tranche :
 

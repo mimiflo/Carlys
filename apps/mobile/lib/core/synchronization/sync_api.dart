@@ -11,6 +11,14 @@ abstract interface class SyncApi {
   Future<void> abandonSession(String sessionId, Map<String, dynamic> body);
   Future<void> upsertSet(String sessionId, Map<String, dynamic> body);
   Future<void> deleteSet(String setId);
+
+  /// `PUT /workout-templates/{templateId}` : le corps décrit l'ÉTAT COMPLET du
+  /// modèle, l'idempotence est donc naturelle (rejouer = même état).
+  Future<void> saveTemplate(String templateId, Map<String, dynamic> body);
+
+  /// `DELETE /workout-templates/{templateId}` : suppression logique, rejouable
+  /// (supprimer deux fois répond 204).
+  Future<void> deleteTemplate(String templateId);
 }
 
 class DioSyncApi implements SyncApi {
@@ -37,6 +45,14 @@ class DioSyncApi implements SyncApi {
   @override
   Future<void> deleteSet(String setId) =>
       _dio.delete<void>('/workout-sets/$setId');
+
+  @override
+  Future<void> saveTemplate(String templateId, Map<String, dynamic> body) =>
+      _dio.put<void>('/workout-templates/$templateId', data: body);
+
+  @override
+  Future<void> deleteTemplate(String templateId) =>
+      _dio.delete<void>('/workout-templates/$templateId');
 }
 
 final syncApiProvider = Provider<SyncApi>((ref) {

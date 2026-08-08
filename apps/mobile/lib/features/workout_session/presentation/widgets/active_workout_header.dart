@@ -11,6 +11,7 @@ class ActiveWorkoutHeader extends StatelessWidget {
     required this.sessionName,
     required this.onClose,
     required this.onPickExercise,
+    this.templateName,
     super.key,
   });
 
@@ -18,6 +19,12 @@ class ActiveWorkoutHeader extends StatelessWidget {
 
   /// Nom de la séance, `null` quand elle a été démarrée sans intitulé.
   final String? sessionName;
+
+  /// Nom du modèle lancé — provenance immuable de la séance, `null` pour une
+  /// séance libre. Affiché en pastille : on sait à tout moment quel programme
+  /// on est en train de suivre.
+  final String? templateName;
+
   final VoidCallback onClose;
   final VoidCallback onPickExercise;
 
@@ -47,16 +54,22 @@ class ActiveWorkoutHeader extends StatelessWidget {
               children: [
                 _ElapsedTimer(startedAt: startedAt),
                 const SizedBox(height: AppSpacing.xxs),
-                Text(
-                  name.toUpperCase(),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTypography.labelMono.copyWith(
-                    fontSize: 9,
-                    letterSpacing: 1.08,
-                    color: AppColors.darkTextTertiary,
+                if (templateName != null)
+                  AppPill(
+                    label: templateName!,
+                    tone: AppPillTone.primary,
+                  )
+                else
+                  Text(
+                    name.toUpperCase(),
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.labelMono.copyWith(
+                      fontSize: 9,
+                      letterSpacing: 1.08,
+                      color: AppColors.darkTextTertiary,
+                    ),
                   ),
-                ),
               ],
             ),
           ),

@@ -68,4 +68,23 @@ class FakeSyncApi implements SyncApi {
     _guard(setId);
     log.add('set.delete:$setId');
   }
+
+  @override
+  Future<void> saveTemplate(
+    String templateId,
+    Map<String, dynamic> body,
+  ) async {
+    _guard(templateId);
+    log.add('template.save:$templateId');
+    savedTemplates.add(body);
+  }
+
+  @override
+  Future<void> deleteTemplate(String templateId) async {
+    _guard(templateId);
+    log.add('template.delete:$templateId');
+  }
+
+  /// Corps `PUT` reçus, dans l'ordre — pour vérifier la sérialisation.
+  final List<Map<String, dynamic>> savedTemplates = [];
 }

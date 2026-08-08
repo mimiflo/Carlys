@@ -13,10 +13,13 @@ class AppTextField extends StatelessWidget {
     this.textInputAction,
     this.autofillHints,
     this.validator,
+    this.onChanged,
     this.onFieldSubmitted,
     this.enabled = true,
     this.autocorrect = true,
     this.prefixIcon,
+    this.maxLines = 1,
+    this.maxLength,
     super.key,
   });
 
@@ -28,10 +31,19 @@ class AppTextField extends StatelessWidget {
   final TextInputAction? textInputAction;
   final Iterable<String>? autofillHints;
   final String? Function(String?)? validator;
+
+  /// Saisie en direct — pour un formulaire dont l'état vit dans un contrôleur.
+  final ValueChanged<String>? onChanged;
   final ValueChanged<String>? onFieldSubmitted;
   final bool enabled;
   final bool autocorrect;
   final IconData? prefixIcon;
+
+  /// Nombre de lignes visibles ; > 1 pour un champ multiligne (notes).
+  final int maxLines;
+
+  /// Longueur maximale acceptée — reprend la borne partagée avec l'API.
+  final int? maxLength;
 
   @override
   Widget build(BuildContext context) {
@@ -47,8 +59,11 @@ class AppTextField extends StatelessWidget {
           textInputAction: textInputAction,
           autofillHints: autofillHints,
           validator: validator,
+          onChanged: onChanged,
           onFieldSubmitted: onFieldSubmitted,
           autocorrect: autocorrect,
+          maxLines: maxLines,
+          maxLength: maxLength,
           decoration: InputDecoration(
             hintText: hint,
             errorText: errorText,

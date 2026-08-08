@@ -14,9 +14,22 @@ abstract interface class WorkoutRepository {
   Future<WorkoutWithSets?> workoutDetail(String sessionId);
 
   /// Démarre une séance ; échoue si une séance est déjà en cours.
-  Future<String> startWorkout({String? name});
+  ///
+  /// [templateId] / [templateName] tracent la provenance quand la séance est
+  /// lancée depuis un modèle. Le serveur ne refuse **jamais** une séance à
+  /// cause d'un modèle inconnu : il ignore alors l'identifiant et conserve le
+  /// nom transmis par le client.
+  Future<String> startWorkout({
+    String? name,
+    String? templateId,
+    String? templateName,
+  });
 
-  Future<void> addSet(AddSetInput input);
+  /// Enregistre une série réalisée et renvoie son identifiant (UUID appareil).
+  ///
+  /// L'identifiant est nécessaire pour rattacher la série à l'item de plan
+  /// qu'elle honore (cf. `workout_template`).
+  Future<String> addSet(AddSetInput input);
 
   Future<void> deleteSet(String setId);
 

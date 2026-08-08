@@ -11,6 +11,7 @@ import {
 } from '@nestjs/common';
 import { WorkoutSessionStatus, WorkoutSetKind } from '@prisma/client';
 import { ProgressService } from '../../progress/application/progress.service';
+import { WorkoutTemplatesService } from '../../workout_templates/application/workout-templates.service';
 import { type SessionWithSets, WorkoutsRepository } from '../infrastructure/workouts.repository';
 import { presentSessionDetail, presentSessionSummary, presentSet } from './workout.presenter';
 
@@ -19,6 +20,10 @@ export interface CreateSessionInput {
   name?: string;
   notes?: string;
   startedAt: Date;
+  /** Modèle lancé — facultatif, et jamais bloquant s'il est inconnu. */
+  templateId?: string;
+  /** Nom du modèle conservé par le client, utilisé en secours. */
+  templateName?: string;
 }
 
 export interface CreateSetInput {
@@ -33,6 +38,9 @@ export interface CreateSetInput {
   distanceMeters?: number;
   rpe?: number;
   restSeconds?: number;
+  /** Cible AFFICHÉE au moment de la validation — fait historique figé. */
+  plannedReps?: number;
+  plannedWeightKg?: number;
   completedAt: Date;
 }
 
@@ -51,20 +59,35 @@ export class WorkoutsService {
   constructor(
     private readonly workouts: WorkoutsRepository,
     private readonly progress: ProgressService,
+    private readonly templates: WorkoutTemplatesService,
   ) {}
 
+  /**
+   * La création NE PEUT PAS échouer à cause du modèle : un `templateId`
+   * inconnu, supprimé ou appartenant à autrui est simplement ignoré, le nom
+   * conservé par le client prenant le relais. Aucune séance n'est perdue.
+   */
   async createSession(userId: string, input: CreateSessionInput): Promise<WorkoutSessionDetail> {
-    const created = await this.workouts.createSession({
-      id: input.id,
-      userId,
-      name: input.name ?? null,
-      notes: input.notes ?? null,
-      startedAt: input.startedAt,
+    const origin = await this.templates.resolveSessionOrigin(userId, {
+      ...(input.templateId === undefined ? {} : { templateId: input.templateId }),
+      ...(input.templateName === undefined ? {} : { templateName: input.templateName }),
     });
-    if (!created) {
-      // Rejeu : l'id existe déjà — il doit appartenir au même utilisateur.
-      return presentSessionDetail(await this.ownedSession(userId, input.id));
-    }
+    await this.workouts.createSession(
+      {
+        id: input.id,
+        userId,
+        name: input.name ?? null,
+        notes: input.notes ?? null,
+        startedAt: input.startedAt,
+        templateId: origin.templateId,
+        templateName: origin.templateName,
+      },
+      origin.templateId === null
+        ? undefined
+        : { templateId: origin.templateId, userId, lastUsedAt: input.startedAt },
+    );
+    // Créée ou rejouée : dans les deux cas on sert l'état stocké, qui doit
+    // appartenir au même utilisateur.
     return presentSessionDetail(await this.ownedSession(userId, input.id));
   }
 
@@ -144,6 +167,8 @@ export class WorkoutsService {
       distanceMeters: input.distanceMeters ?? null,
       rpe: input.rpe ?? null,
       restSeconds: input.restSeconds ?? null,
+      plannedReps: input.plannedReps ?? null,
+      plannedWeightKg: input.plannedWeightKg ?? null,
       completedAt: input.completedAt,
     });
     if (!created) {
@@ -161,10 +186,19 @@ export class WorkoutsService {
     return presentSet(stored);
   }
 
+  /**
+   * Corriger une série, c'est corriger le FAIT réalisé : la cible affichée à
+   * l'instant de la validation (`planned*`) n'est jamais réécrivable.
+   */
   async updateSet(
     userId: string,
     setId: string,
-    data: Partial<Omit<CreateSetInput, 'id' | 'exerciseId' | 'exerciseName' | 'position'>>,
+    data: Partial<
+      Omit<
+        CreateSetInput,
+        'id' | 'exerciseId' | 'exerciseName' | 'position' | 'plannedReps' | 'plannedWeightKg'
+      >
+    >,
   ): Promise<WorkoutSetContract> {
     await this.ownedSet(userId, setId);
     const updated = await this.workouts.updateSet(setId, {

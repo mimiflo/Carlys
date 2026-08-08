@@ -27,6 +27,39 @@
 > - la **récupération multi-appareils** (tirer les séances créées ailleurs)
 >   est différée — l'historique local reflète cet appareil, le serveur agrège.
 
+## Opérations de la file
+
+| `operationType`    | `entityType` | Appel HTTP                             |
+| ------------------ | ------------ | -------------------------------------- |
+| `session.create`   | `session`    | `POST /workout-sessions`               |
+| `session.complete` | `session`    | `POST /workout-sessions/{id}/complete` |
+| `session.abandon`  | `session`    | `POST /workout-sessions/{id}/abandon`  |
+| `set.upsert`       | `set`        | `POST /workout-sessions/{id}/sets`     |
+| `set.delete`       | `set`        | `DELETE /workout-sets/{id}`            |
+| `template.save`    | `template`   | `PUT /workout-templates/{id}`          |
+| `template.delete`  | `template`   | `DELETE /workout-templates/{id}`       |
+
+Les **modèles de séance**
+([docs/product/workout-templates.md](../product/workout-templates.md)) suivent
+exactement le même protocole, avec deux particularités :
+
+- `template.save` transporte l'**état complet** du modèle : l'idempotence est
+  naturelle (rejouer le même corps donne le même état), et une sauvegarde
+  encore `pending` est *remplacée* par la suivante plutôt que d'empiler N
+  opérations pendant l'édition ;
+- le **plan de la séance en cours** (`LocalSessionPlanItems`, copie aplatie du
+  modèle au lancement) n'est **jamais synchronisé**. Le serveur ne reçoit que
+  des faits : la séance, ses séries, et la cible qui était affichée au moment
+  de chaque validation (`plannedReps` / `plannedWeightKg`). Une série sautée
+  n'est donc jamais envoyée — une série non faite n'est pas un fait.
+
+Lancer un modèle fonctionne **intégralement hors ligne** : la séance, son plan
+et l'opération `session.create` sont écrits dans une seule transaction SQLite,
+sans le moindre appel réseau. Et si `template.save` a été refusée
+définitivement par le serveur, la séance part quand même : l'API ignore alors
+le `templateId` inconnu et conserve le `templateName` transmis. **Aucune séance
+n'est jamais perdue à cause d'un modèle.**
+
 ## Objectif
 
 Une séance d'entraînement se déroule souvent dans une salle de sport : réseau

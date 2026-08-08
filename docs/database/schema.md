@@ -21,8 +21,8 @@ migration manque par rapport au schéma.
 | Identité | `User`, `UserProfile`, `UserCredential`, `UserSession`, `RefreshToken`, `EmailVerification`, `PasswordReset`, `ExternalIdentity` — **implémenté** (migration `20260806180000_auth_foundation`) ; `UserDevice` et `UserPreference` différés | Étape 2 ✅ |
 | Catalogue d'exercices | `Exercise`, `ExerciseMuscle`, `ExerciseEquipment`, `MuscleGroup`, `Equipment` — **implémenté** (migration `20260806220000_exercise_catalog`, contenu français directement sur `Exercise`) ; `ExerciseTranslation`, `ExerciseMedia`, `ExerciseVariant`, `CustomExercise` différés | Étape 3 ✅ |
 | Médias | `MediaAsset` | Étape 3 (premier besoin : médias d'exercices) |
-| Programmes | `TrainingProgram`, `ProgramWeek`, `ProgramDay`, `WorkoutTemplate`, `WorkoutTemplateExercise`, `WorkoutTemplateSet` | Étape 4 |
-| Séances | `WorkoutSession`, `WorkoutSet` — **implémenté** (migration `20260807010000_workout_sessions`, ids générés sur l'appareil, écritures idempotentes) ; `WorkoutSessionExercise` fusionné dans `WorkoutSet` (`exerciseId` + `exerciseName` dénormalisé), `WorkoutNote` porté par `WorkoutSession.notes`, `PersonalRecord` livré à l'Étape 5 | Étape 4 ✅ |
+| Programmes | `WorkoutTemplate`, `WorkoutTemplateExercise`, `WorkoutTemplateSet` — **implémenté** (migration `20260808135805_workout_templates`, modèles de séance autonomes, ids générés sur l'appareil) ; `TrainingProgram`, `ProgramWeek`, `ProgramDay` (programmes multi-semaines) différés | Étape 4 ✅ |
+| Séances | `WorkoutSession`, `WorkoutSet` — **implémenté** (migration `20260807010000_workout_sessions`, ids générés sur l'appareil, écritures idempotentes ; provenance et cibles ajoutées par `20260808135805_workout_templates`) ; `WorkoutSessionExercise` fusionné dans `WorkoutSet` (`exerciseId` + `exerciseName` dénormalisé), `WorkoutNote` porté par `WorkoutSession.notes`, `PersonalRecord` livré à l'Étape 5 | Étape 4 ✅ |
 | Progression | `PersonalRecord`, `BodyMetric` — **implémenté** (migration `20260807040000_progress`, records recalculés à la clôture, mesures idempotentes) ; `ProgressGoal` et `ProgressSnapshot` différés (agrégats calculés à la volée) | Étape 5 ✅ |
 | Abonnements | `SubscriptionPlan`, `SubscriptionProduct`, `Subscription`, `SubscriptionEvent`, `UserEntitlement` — **implémenté** (migration `20260807064832_subscriptions`, conforme à la cible) | Étape 6 ✅ |
 | Notifications | `Notification`, `NotificationPreference`, `PushDevice` | Introduit avec l'intégration FCM réelle (au plus tôt Étape 4, `NotificationPreference` au plus tard Étape 6) |
@@ -308,31 +308,60 @@ Jour d'une semaine : repos, ou renvoi vers un modèle de séance.
   template.
 - Relations : n–1 `ProgramWeek` ; n–1 `WorkoutTemplate` (optionnelle).
 
-### `WorkoutTemplate`
-Modèle de séance réutilisable, seul ou au sein d'un programme.
-- Champs clés : `id`, `ownerId` nullable (officiel/personnel), `name`,
-  `description`, `estimatedDurationMinutes`, `deletedAt`.
-- Relations : 1–n `WorkoutTemplateExercise` ; référencé par `ProgramDay` et par
-  `WorkoutSession.templateId` (traçabilité de l'origine d'une séance).
+### `WorkoutTemplate` — implémenté
 
-### `WorkoutTemplateExercise`
-Ligne d'exercice prescrite dans un modèle, ordonnée, groupable.
-- Champs clés : `templateId`, `position`, `exerciseId` **ou**
-  `customExerciseId` (exactement un des deux, `CHECK` d'exclusion mutuelle),
-  `supersetGroup` (entier nullable : les lignes partageant la même valeur
-  forment un superset/circuit), `restSecondsDefault`, `notes`.
-  Unique `(templateId, position)`.
-- Relations : n–1 `WorkoutTemplate` ; n–1 `Exercise` / `CustomExercise` ; 1–n
-  `WorkoutTemplateSet`.
+> Implémenté (migration `20260808135805_workout_templates`). Contrat détaillé :
+> [`docs/product/workout-templates.md`](../product/workout-templates.md).
+> Écarts assumés par rapport à la cible ci-dessus, tous rattrapables par des
+> colonnes nullables plus tard :
+>
+> - **D10** — `userId` est **non nul** (pas `ownerId` nullable) : aucun modèle
+>   officiel n'est produit aujourd'hui, et un champ nullable obligerait chaque
+>   requête à gérer un cas inexistant.
+> - **D8** — une seule mesure prévue, **répétitions × charge** :
+>   `targetDurationSeconds`, `targetDistanceMeters`, `targetRpe`, `tempo`,
+>   `targetPercentOf1Rm` et `supersetGroup` sont hors périmètre.
+> - `CustomExercise` n'existe pas : un exercice hors catalogue est une ligne à
+>   `exerciseId` nul portée par son seul `exerciseName` dénormalisé.
 
-### `WorkoutTemplateSet`
-Série prescrite d'une ligne de modèle.
-- Champs clés : `templateExerciseId`, `position`, `setType`
-  (`warmup | normal | dropset`), cibles selon `measurementType` : `repsMin`/
-  `repsMax`, `targetWeightKg` ou `targetPercentOf1Rm`, `targetDurationSeconds`,
-  `targetDistanceMeters` ; `targetRpe`/`targetRir`, `tempo` (notation
-  « 3-1-1-0 »), `restSeconds`. Unique `(templateExerciseId, position)`.
-- Relations : n–1 `WorkoutTemplateExercise`.
+Modèle de séance réutilisable — document **prescriptif**, autonome (les
+programmes multi-semaines restent différés).
+- Champs clés : `id` (**UUID généré par le client**, hors ligne), `userId`,
+  `name`, `notes`, `estimatedDurationMinutes` (saisie utilisateur, jamais
+  calculée), `lastUsedAt` (daté par le serveur au lancement d'une séance),
+  `deletedAt` (suppression **logique** — les séances passées n'y perdent rien).
+- Relations : n–1 `User` (`onDelete: Cascade`) ; 1–n
+  `WorkoutTemplateExercise` ; référencé par `WorkoutSession.templateId`.
+- Index : `(userId, updatedAt DESC)` (liste paginée par curseur).
+- **Pas d'unicité sur `name`** : un appareil hors ligne ne peut pas vérifier
+  une unicité globale, et la vérifier au serveur transformerait une création
+  hors ligne acquittée en travail perdu.
+
+### `WorkoutTemplateExercise` — implémenté
+Ligne d'exercice prescrite dans un modèle, ordonnée.
+- Champs clés : `id` (UUID client), `templateId`, `exerciseId` nullable,
+  `exerciseName` **dénormalisé** (le modèle survit au catalogue), `position`,
+  `notes`. Unique `(templateId, position)`.
+- Relations : n–1 `WorkoutTemplate` (`onDelete: Cascade`) ; n–1 `Exercise`
+  (`onDelete: SetNull`) ; 1–n `WorkoutTemplateSet`.
+- `position` est **dérivée de l'ordre du tableau reçu**, jamais transmise :
+  un client ne peut produire ni trou ni doublon. L'unicité tient parce que le
+  contenu est toujours réécrit intégralement dans une transaction.
+
+### `WorkoutTemplateSet` — implémenté
+Série **prévue** d'une ligne de modèle : des cibles, pas des mesures.
+- Champs clés : `id` (UUID client), `templateExerciseId`, `position`, `kind`
+  (`WorkoutSetKind` réutilisé : `WARMUP | NORMAL | DROP`), `targetReps`,
+  `targetWeightKg` (`decimal(6,2)`), `restSeconds`.
+  Unique `(templateExerciseId, position)`.
+- Relations : n–1 `WorkoutTemplateExercise` (`onDelete: Cascade`).
+- Les trois cibles sont **facultatives** : un modèle « 4 × 8 » sans charge
+  prévue est légitime (poids du corps, charge décidée le jour même).
+
+Le **contenu** d'un modèle (lignes et séries prévues) est supprimé
+**physiquement** à chaque enregistrement et à chaque suppression du modèle : ce
+n'est pas de l'historique, rien ne le référence. Seul `WorkoutTemplate` porte un
+`deletedAt`.
 
 ---
 
@@ -346,6 +375,11 @@ Série prescrite d'une ligne de modèle.
 > section Progression). Les ids sont
 > des **UUID générés sur l'appareil** et toutes les écritures sont rejouables
 > (voir `docs/synchronization/offline-first.md`).
+>
+> La migration `20260808135805_workout_templates` ajoute quatre colonnes
+> **nullables sans valeur par défaut** (donc non bloquantes, aucune ligne
+> réécrite) : `WorkoutSession.templateId` / `templateName` et
+> `WorkoutSet.plannedReps` / `plannedWeightKg`.
 
 Séances **réalisées**, écrites offline-first : le mobile journalise dans Drift
 et rejoue une file de synchronisation **idempotente** vers l'API. Toute
@@ -354,6 +388,11 @@ transactionnelle.
 
 ### `WorkoutSession`
 Une séance effectuée (ou en cours) par un utilisateur.
+- **Provenance (implémenté)** : `templateId` nullable (FK
+  `onDelete: SetNull` — une purge physique du modèle n'efface jamais la
+  séance) et `templateName` **dénormalisé, immuable** : le nom du modèle *au
+  moment du lancement*. `name` reste le titre modifiable de la séance ;
+  renommer la séance ne falsifie pas son origine. Index `(templateId)`.
 - Champs clés : `id` (**UUID généré par le client**, hors ligne),
   `idempotencyKey` (**unique** — un rejeu de la file de synchronisation ne crée
   jamais de doublon), `userId`, `templateId` nullable (origine), `startedAt`,
@@ -375,6 +414,11 @@ circuits.
 
 ### `WorkoutSet`
 Série réalisée — la donnée la plus volumineuse de la plateforme.
+- **Cible du moment (implémenté)** : `plannedReps` et `plannedWeightKg`
+  (`decimal(6,2)`) figent ce qui était **affiché** quand l'utilisateur a validé
+  la série, null hors modèle. C'est ce qui permet à l'historique de dire
+  « prévu 8 × 60 kg, fait 7 × 60 kg » des mois plus tard, même modèle supprimé.
+  Fait historique : `PATCH /workout-sets/:id` ne les accepte pas.
 - Champs clés : `id` (UUID client), `sessionExerciseId`, `position`, `setType`
   (`warmup | normal | dropset`), mesures selon le type d'exercice : `reps` +
   `weightKg` (décimal), ou `durationSeconds`, ou `distanceMeters` ; ressenti :

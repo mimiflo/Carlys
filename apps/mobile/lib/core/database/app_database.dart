@@ -21,6 +21,13 @@ class LocalWorkoutSessions extends Table {
   DateTimeColumn get endedAt => dateTime().nullable()();
   IntColumn get durationSeconds => integer().nullable()();
 
+  /// Modèle de séance lancé, s'il y en a un (UUID appareil).
+  TextColumn get templateId => text().nullable()();
+
+  /// Nom du modèle AU MOMENT DU LANCEMENT — dénormalisé, immuable : la
+  /// provenance reste lisible même si le modèle est renommé ou supprimé.
+  TextColumn get templateName => text().nullable()();
+
   /// pending | synced | failed.
   TextColumn get syncStatus => text().withDefault(const Constant('pending'))();
 
@@ -43,9 +50,95 @@ class LocalWorkoutSets extends Table {
   IntColumn get durationSeconds => integer().nullable()();
   IntColumn get restSeconds => integer().nullable()();
   IntColumn get rpe => integer().nullable()();
+
+  /// Cible AFFICHÉE au moment où l'utilisateur a validé la série (null hors
+  /// modèle). Fait historique : jamais réécrit après coup.
+  IntColumn get plannedReps => integer().nullable()();
+  RealColumn get plannedWeightKg => real().nullable()();
   DateTimeColumn get completedAt => dateTime()();
   BoolColumn get deleted => boolean().withDefault(const Constant(false))();
   TextColumn get syncStatus => text().withDefault(const Constant('pending'))();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+}
+
+/// Modèle de séance local — document PRESCRIPTIF réutilisable.
+///
+/// Le contenu (lignes d'exercice et séries prévues) est physiquement réécrit
+/// à chaque enregistrement, en miroir exact du `PUT` serveur ; le modèle
+/// lui-même porte un tombstone (`deleted`) jusqu'à l'acquittement.
+class LocalWorkoutTemplates extends Table {
+  /// UUID généré sur l'appareil, partagé avec le serveur.
+  TextColumn get id => text()();
+  TextColumn get name => text()();
+  TextColumn get notes => text().nullable()();
+  IntColumn get estimatedDurationMinutes => integer().nullable()();
+
+  /// Dernier lancement — miroir local de la valeur serveur.
+  DateTimeColumn get lastUsedAt => dateTime().nullable()();
+  DateTimeColumn get updatedAt => dateTime()();
+  BoolColumn get deleted => boolean().withDefault(const Constant(false))();
+  TextColumn get syncStatus => text().withDefault(const Constant('pending'))();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+}
+
+/// Ligne d'exercice d'un modèle, ordonnée par [position] (contiguë depuis 0).
+class LocalTemplateExercises extends Table {
+  TextColumn get id => text()();
+  TextColumn get templateId => text()();
+  TextColumn get exerciseId => text().nullable()();
+
+  /// Dénormalisé : le modèle survit aux évolutions du catalogue.
+  TextColumn get exerciseName => text()();
+  IntColumn get position => integer()();
+  TextColumn get notes => text().nullable()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+}
+
+/// Série PRÉVUE d'une ligne d'exercice : des cibles, pas des mesures.
+class LocalTemplateSets extends Table {
+  TextColumn get id => text()();
+  TextColumn get templateExerciseId => text()();
+  IntColumn get position => integer()();
+
+  /// WARMUP | NORMAL | DROP (valeurs API).
+  TextColumn get kind => text().withDefault(const Constant('NORMAL'))();
+  IntColumn get targetReps => integer().nullable()();
+  RealColumn get targetWeightKg => real().nullable()();
+  IntColumn get restSeconds => integer().nullable()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {id};
+}
+
+/// Plan de la séance en cours — copie APLATIE du modèle au lancement :
+/// une ligne par série prévue, c'est la forme dont l'écran a besoin
+/// (« série 2 sur 4 »).
+///
+/// PUREMENT LOCAL, jamais synchronisé : le serveur ne reçoit que des faits
+/// (docs/product/workout-templates.md, D5).
+class LocalSessionPlanItems extends Table {
+  TextColumn get id => text()();
+  TextColumn get sessionId => text()();
+  IntColumn get exercisePosition => integer()();
+  TextColumn get exerciseId => text().nullable()();
+  TextColumn get exerciseName => text()();
+
+  /// Rang de la série DANS l'exercice, à partir de 0.
+  IntColumn get setPosition => integer()();
+  TextColumn get kind => text().withDefault(const Constant('NORMAL'))();
+  IntColumn get targetReps => integer().nullable()();
+  RealColumn get targetWeightKg => real().nullable()();
+  IntColumn get restSeconds => integer().nullable()();
+
+  /// Série réalisée qui a honoré cet item, sinon null.
+  TextColumn get doneSetId => text().nullable()();
+  BoolColumn get skipped => boolean().withDefault(const Constant(false))();
 
   @override
   Set<Column<Object>> get primaryKey => {id};
@@ -55,11 +148,12 @@ class LocalWorkoutSets extends Table {
 class SyncOperations extends Table {
   TextColumn get id => text()();
 
-  /// session | set.
+  /// session | set | template.
   TextColumn get entityType => text()();
   TextColumn get entityId => text()();
 
-  /// session.create | session.complete | session.abandon | set.upsert | set.delete.
+  /// session.create | session.complete | session.abandon | set.upsert |
+  /// set.delete | template.save | template.delete.
   TextColumn get operationType => text()();
 
   /// Corps JSON de la requête à rejouer.
@@ -79,12 +173,59 @@ class SyncOperations extends Table {
   Set<Column<Object>> get primaryKey => {id};
 }
 
-@DriftDatabase(tables: [LocalWorkoutSessions, LocalWorkoutSets, SyncOperations])
+@DriftDatabase(
+  tables: [
+    LocalWorkoutSessions,
+    LocalWorkoutSets,
+    LocalWorkoutTemplates,
+    LocalTemplateExercises,
+    LocalTemplateSets,
+    LocalSessionPlanItems,
+    SyncOperations,
+  ],
+)
 class AppDatabase extends _$AppDatabase {
   AppDatabase(super.e);
 
+  /// Historique des versions du schéma local :
+  ///  - **1** — séances, séries, file de synchronisation (Étape 4) ;
+  ///  - **2** — modèles de séance : quatre tables ajoutées, `templateId` /
+  ///    `templateName` sur les séances, `plannedReps` / `plannedWeightKg` sur
+  ///    les séries.
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  /// Migration locale : les colonnes ajoutées sont toutes **nullables**, donc
+  /// la montée de version ne réécrit ni ne perd aucune donnée déjà saisie —
+  /// une séance en cours au moment de la mise à jour reste intacte.
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+        onCreate: (migrator) => migrator.createAll(),
+        onUpgrade: (migrator, from, to) async {
+          if (from < 2) {
+            await migrator.createTable(localWorkoutTemplates);
+            await migrator.createTable(localTemplateExercises);
+            await migrator.createTable(localTemplateSets);
+            await migrator.createTable(localSessionPlanItems);
+            await migrator.addColumn(
+              localWorkoutSessions,
+              localWorkoutSessions.templateId,
+            );
+            await migrator.addColumn(
+              localWorkoutSessions,
+              localWorkoutSessions.templateName,
+            );
+            await migrator.addColumn(
+              localWorkoutSets,
+              localWorkoutSets.plannedReps,
+            );
+            await migrator.addColumn(
+              localWorkoutSets,
+              localWorkoutSets.plannedWeightKg,
+            );
+          }
+        },
+      );
 }
 
 /// Connexion sur fichier, ouverte paresseusement dans un isolate dédié.

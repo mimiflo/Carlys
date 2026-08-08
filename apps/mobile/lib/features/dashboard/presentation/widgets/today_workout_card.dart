@@ -7,18 +7,28 @@ import '../../../workout_session/domain/entities/workout.dart';
 /// Carte « séance du jour » (dégradé violet) avec l'UNIQUE CTA accent de
 /// l'écran : démarrer — ou reprendre — la séance.
 ///
-/// Le domaine n'a pas de programme planifié : le titre reprend la séance en
-/// cours quand il y en a une, sinon l'entraînement libre. Les pastilles ne
-/// portent que des faits mesurés (durée écoulée, exercices, séries).
+/// Le titre reprend la séance en cours quand il y en a une, sinon
+/// l'entraînement libre. Les pastilles ne portent que des faits mesurés
+/// (durée écoulée, exercices, séries).
+///
+/// Hors séance, une seconde action mène aux **modèles de séance** : c'est ici
+/// qu'un entraînement commence, donc ici qu'on choisit de partir d'un
+/// programme enregistré plutôt qu'à blanc. L'accent reste sur l'action unique
+/// de l'écran — démarrer.
 class TodayWorkoutCard extends StatelessWidget {
   const TodayWorkoutCard({
     required this.activeWorkout,
     required this.onStart,
+    required this.onOpenTemplates,
     super.key,
   });
 
   final WorkoutWithSets? activeWorkout;
   final Future<void> Function() onStart;
+
+  /// Ouvre « Mes modèles ». Proposé seulement hors séance : pendant une
+  /// séance, on n'en lance pas une autre.
+  final VoidCallback onOpenTemplates;
 
   /// Maquette : padding interne de 20 (md + xxs) et gouttière verticale 16.
   static const double _padding = AppSpacing.md + AppSpacing.xxs;
@@ -92,6 +102,17 @@ class TodayWorkoutCard extends StatelessWidget {
                 active == null ? 'Démarrer la séance' : 'Reprendre la séance',
             onPressed: onStart,
           ),
+          if (active == null) ...[
+            const SizedBox(height: AppSpacing.xs),
+            AppButton(
+              label: 'Lancer un modèle',
+              variant: AppButtonVariant.ghost,
+              icon: AppIcons.programs,
+              isExpanded: true,
+              onPressed: onOpenTemplates,
+              semanticLabel: 'Lancer un modèle de séance enregistré',
+            ),
+          ],
         ],
       ),
     );

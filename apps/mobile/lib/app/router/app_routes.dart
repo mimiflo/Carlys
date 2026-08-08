@@ -14,6 +14,7 @@ abstract final class AppRoutes {
 
   // Plein écran, hors coquille (pas de bottom bar)
   static const String activeWorkout = '/workout';
+  static const String templates = '/templates';
   static const String history = '/history';
   static const String sessions = '/sessions';
   static const String subscription = '/subscription';
@@ -23,4 +24,12 @@ abstract final class AppRoutes {
   static String exerciseDetail(String idOrSlug) => '/exercises/$idOrSlug';
 
   static String workoutDetail(String sessionId) => '/history/$sessionId';
+
+  /// Éditeur d'un modèle de séance.
+  ///
+  /// Il n'existe **pas** de route `/templates/new` : créer un modèle, c'est
+  /// générer un UUID côté client puis ouvrir son éditeur. C'est la traduction
+  /// directe du principe « identifiants générés hors ligne », et ça évite la
+  /// collision de chemins entre `new` et `:templateId`.
+  static String templateEditor(String templateId) => '/templates/$templateId';
 }

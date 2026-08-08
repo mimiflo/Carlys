@@ -13,6 +13,7 @@ class ProfileTrainingSettings extends StatelessWidget {
   const ProfileTrainingSettings({
     required this.goalLabel,
     required this.onGoal,
+    required this.onTemplates,
     required this.onHistory,
     required this.onBodyMetrics,
     super.key,
@@ -21,6 +22,10 @@ class ProfileTrainingSettings extends StatelessWidget {
   /// Libellé de l'objectif nutritionnel courant, `null` s'il n'est pas défini.
   final String? goalLabel;
   final VoidCallback onGoal;
+
+  /// Ouvre « Mes modèles » : gérer ses séances types est un réglage
+  /// d'entraînement, pas un geste de démarrage.
+  final VoidCallback onTemplates;
   final VoidCallback onHistory;
   final VoidCallback onBodyMetrics;
 
@@ -34,6 +39,11 @@ class ProfileTrainingSettings extends StatelessWidget {
           label: 'Objectif',
           value: goalLabel,
           onTap: onGoal,
+        ),
+        AppSettingsRow(
+          icon: AppIcons.programs,
+          label: 'Mes modèles de séance',
+          onTap: onTemplates,
         ),
         AppSettingsRow(
           icon: AppIcons.history,

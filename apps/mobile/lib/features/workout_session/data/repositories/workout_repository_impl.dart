@@ -1,5 +1,4 @@
 import 'dart:async';
-import 'dart:convert';
 
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -9,6 +8,7 @@ import '../../../../core/database/app_database.dart';
 import '../../../../core/synchronization/sync_engine.dart';
 import '../../domain/entities/workout.dart';
 import '../../domain/repositories/workout_repository.dart';
+import '../local/workout_session_writer.dart';
 
 /// Implémentation offline-first : Drift est écrit en premier, chaque mutation
 /// enfile une opération idempotente, puis la synchronisation est tentée en
@@ -20,11 +20,13 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
     Uuid uuid = const Uuid(),
   })  : _db = database,
         _sync = syncEngine,
-        _uuid = uuid;
+        _uuid = uuid,
+        _writer = WorkoutSessionWriter(database: database, uuid: uuid);
 
   final AppDatabase _db;
   final SyncEngine _sync;
   final Uuid _uuid;
+  final WorkoutSessionWriter _writer;
 
   // ── Lectures ─────────────────────────────────────────────────────────────
 
@@ -101,47 +103,32 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
   // ── Écritures ────────────────────────────────────────────────────────────
 
   @override
-  Future<String> startWorkout({String? name}) async {
-    final active = await (_db.select(_db.localWorkoutSessions)
-          ..where(
-            (session) =>
-                session.status.equals(WorkoutStatus.inProgress.apiValue),
-          ))
-        .get();
-    if (active.isNotEmpty) {
-      throw StateError('Une séance est déjà en cours.');
-    }
+  Future<String> startWorkout({
+    String? name,
+    String? templateId,
+    String? templateName,
+  }) async {
+    await _writer.requireNoActiveSession();
 
     final id = _uuid.v4();
     final startedAt = DateTime.now().toUtc();
 
-    await _db.transaction(() async {
-      await _db.into(_db.localWorkoutSessions).insert(
-            LocalWorkoutSessionsCompanion.insert(
-              id: id,
-              name: Value(name),
-              status: WorkoutStatus.inProgress.apiValue,
-              startedAt: startedAt,
-            ),
-          );
-      await _enqueue(
-        entityType: 'session',
-        entityId: id,
-        operationType: 'session.create',
-        payload: {
-          'id': id,
-          if (name != null) 'name': name,
-          'startedAt': startedAt.toIso8601String(),
-        },
-      );
-    });
+    await _db.transaction(
+      () => _writer.insertSession(
+        id: id,
+        name: name,
+        startedAt: startedAt,
+        templateId: templateId,
+        templateName: templateName,
+      ),
+    );
 
     _poke();
     return id;
   }
 
   @override
-  Future<void> addSet(AddSetInput input) async {
+  Future<String> addSet(AddSetInput input) async {
     final id = _uuid.v4();
     final completedAt = DateTime.now().toUtc();
     final existing = await (_db.select(_db.localWorkoutSets)
@@ -159,6 +146,9 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
       if (input.weightKg != null) 'weightKg': input.weightKg,
       if (input.restSeconds != null) 'restSeconds': input.restSeconds,
       if (input.rpe != null) 'rpe': input.rpe,
+      if (input.plannedReps != null) 'plannedReps': input.plannedReps,
+      if (input.plannedWeightKg != null)
+        'plannedWeightKg': input.plannedWeightKg,
       'completedAt': completedAt.toIso8601String(),
     };
 
@@ -175,10 +165,12 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
               weightKg: Value(input.weightKg),
               restSeconds: Value(input.restSeconds),
               rpe: Value(input.rpe),
+              plannedReps: Value(input.plannedReps),
+              plannedWeightKg: Value(input.plannedWeightKg),
               completedAt: completedAt,
             ),
           );
-      await _enqueue(
+      await _writer.enqueue(
         entityType: 'set',
         entityId: id,
         operationType: 'set.upsert',
@@ -187,6 +179,7 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
     });
 
     _poke();
+    return id;
   }
 
   @override
@@ -195,7 +188,7 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
       await (_db.update(_db.localWorkoutSets)
             ..where((set) => set.id.equals(setId)))
           .write(const LocalWorkoutSetsCompanion(deleted: Value(true)));
-      await _enqueue(
+      await _writer.enqueue(
         entityType: 'set',
         entityId: setId,
         operationType: 'set.delete',
@@ -241,7 +234,7 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
           syncStatus: const Value('pending'),
         ),
       );
-      await _enqueue(
+      await _writer.enqueue(
         entityType: 'session',
         entityId: sessionId,
         operationType: operationType,
@@ -259,25 +252,6 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
   }
 
   // ── Interne ──────────────────────────────────────────────────────────────
-
-  Future<void> _enqueue({
-    required String entityType,
-    required String entityId,
-    required String operationType,
-    required Map<String, dynamic> payload,
-  }) {
-    return _db.into(_db.syncOperations).insert(
-          SyncOperationsCompanion.insert(
-            id: _uuid.v4(),
-            entityType: entityType,
-            entityId: entityId,
-            operationType: operationType,
-            payload: jsonEncode(payload),
-            createdAt: DateTime.now().toUtc(),
-            idempotencyKey: entityId,
-          ),
-        );
-  }
 
   void _poke() {
     unawaited(_sync.syncNow());
@@ -315,6 +289,8 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
         startedAt: row.startedAt,
         endedAt: row.endedAt,
         durationSeconds: row.durationSeconds,
+        templateId: row.templateId,
+        templateName: row.templateName,
         syncState: LocalSyncState.fromDb(row.syncStatus),
       );
 
@@ -328,6 +304,8 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
         weightKg: row.weightKg,
         restSeconds: row.restSeconds,
         rpe: row.rpe,
+        plannedReps: row.plannedReps,
+        plannedWeightKg: row.plannedWeightKg,
         completedAt: row.completedAt,
         syncState: LocalSyncState.fromDb(row.syncStatus),
       );

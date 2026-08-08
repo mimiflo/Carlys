@@ -37,6 +37,22 @@ export class CreateWorkoutSessionDto {
   @Type(() => Date)
   @IsDate()
   startedAt!: Date;
+
+  @ApiPropertyOptional({
+    description: 'Modèle lancé — ignoré s’il est inconnu, jamais bloquant',
+  })
+  @IsOptional()
+  @IsUUID()
+  templateId?: string;
+
+  @ApiPropertyOptional({
+    description: 'Nom du modèle conservé par le client, utilisé en secours',
+    maxLength: WORKOUT_LIMITS.nameMax,
+  })
+  @IsOptional()
+  @IsString()
+  @MaxLength(WORKOUT_LIMITS.nameMax)
+  templateName?: string;
 }
 
 export class UpdateWorkoutSessionDto {
@@ -136,6 +152,26 @@ export class CreateWorkoutSetDto {
   @Min(0)
   @Max(WORKOUT_LIMITS.restSecondsMax)
   restSeconds?: number;
+
+  @ApiPropertyOptional({
+    description: 'Répétitions PRÉVUES affichées à la validation (jamais modifiables ensuite)',
+    maximum: WORKOUT_LIMITS.repsMax,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(WORKOUT_LIMITS.repsMax)
+  plannedReps?: number;
+
+  @ApiPropertyOptional({
+    description: 'Charge PRÉVUE affichée à la validation (jamais modifiable ensuite)',
+    maximum: WORKOUT_LIMITS.weightKgMax,
+  })
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  @Max(WORKOUT_LIMITS.weightKgMax)
+  plannedWeightKg?: number;
 
   @ApiProperty({ description: 'Fin de la série, UTC (ISO 8601)' })
   @Type(() => Date)

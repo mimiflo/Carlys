@@ -6,12 +6,21 @@ import '../../domain/entities/workout.dart';
 import 'set_stepper_field.dart';
 
 /// Carte de saisie de la série en cours (maquette 2e) : rang de la série,
-/// rappel de la performance précédente, charge, répétitions et validation.
+/// cible du programme s'il y en a une, rappel de la performance précédente,
+/// charge, répétitions et validation.
+///
+/// Quand la séance suit un modèle, [plannedReps] / [plannedWeightKg] portent
+/// la **cible affichée** : elle amorce le pas-à-pas et s'affiche en pastille
+/// accent. C'est une **proposition, jamais une contrainte** — l'utilisateur
+/// valide ce qu'il a réellement fait, et un écart n'est ni une erreur ni un
+/// blocage.
 class SetEntryCard extends StatefulWidget {
   const SetEntryCard({
     required this.setNumber,
     required this.previous,
     required this.onValidate,
+    this.plannedReps,
+    this.plannedWeightKg,
     super.key,
   });
 
@@ -21,11 +30,15 @@ class SetEntryCard extends StatefulWidget {
   /// Dernière performance connue sur cet exercice — `null` s'il n'y en a pas.
   final WorkoutSetEntry? previous;
 
+  /// Cible du programme pour cette série, `null` hors modèle.
+  final int? plannedReps;
+  final double? plannedWeightKg;
+
   final void Function(double weightKg, int reps) onValidate;
 
-  /// Valeurs de départ quand aucun historique n'existe (pas de donnée à
-  /// rappeler : ce sont des valeurs de formulaire, jamais affichées comme
-  /// une performance).
+  /// Valeurs de départ quand aucune cible ni aucun historique n'existe (pas de
+  /// donnée à rappeler : ce sont des valeurs de formulaire, jamais affichées
+  /// comme une performance).
   static const double _defaultWeightKg = 20;
   static const int _defaultReps = 10;
   static const double _weightStep = 2.5;
@@ -44,17 +57,24 @@ class _SetEntryCardState extends State<SetEntryCard> {
   late double _weightKg = _seedWeight();
   late int _reps = _seedReps();
 
+  /// La cible du programme prime sur la dernière performance : c'est ce qu'on
+  /// a décidé de faire aujourd'hui.
   double _seedWeight() =>
-      widget.previous?.weightKg ?? SetEntryCard._defaultWeightKg;
+      widget.plannedWeightKg ??
+      widget.previous?.weightKg ??
+      SetEntryCard._defaultWeightKg;
 
-  int _seedReps() => widget.previous?.reps ?? SetEntryCard._defaultReps;
+  int _seedReps() =>
+      widget.plannedReps ?? widget.previous?.reps ?? SetEntryCard._defaultReps;
 
   @override
   void didUpdateWidget(SetEntryCard oldWidget) {
     super.didUpdateWidget(oldWidget);
-    // Changement d'exercice ou nouvelle série validée : on repart de la
-    // dernière performance connue.
-    if (oldWidget.previous?.id != widget.previous?.id) {
+    // Changement d'exercice, nouvelle série validée ou nouvelle cible de
+    // programme : on repart de la meilleure amorce disponible.
+    if (oldWidget.previous?.id != widget.previous?.id ||
+        oldWidget.plannedReps != widget.plannedReps ||
+        oldWidget.plannedWeightKg != widget.plannedWeightKg) {
       _weightKg = _seedWeight();
       _reps = _seedReps();
     }
@@ -62,8 +82,6 @@ class _SetEntryCardState extends State<SetEntryCard> {
 
   @override
   Widget build(BuildContext context) {
-    final previous = widget.previous;
-
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.md,
@@ -77,28 +95,25 @@ class _SetEntryCardState extends State<SetEntryCard> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Série ${formatThousands(widget.setNumber)}',
-                  style: AppTypography.subheading.copyWith(
-                    fontSize: 14,
-                    color: AppColors.darkTextPrimary,
-                  ),
-                ),
-              ),
-              if (previous != null &&
-                  previous.weightKg != null &&
-                  previous.reps != null)
-                AppPill(
-                  label: 'Précédent ${formatDecimal(previous.weightKg!)} kg '
-                      '× ${formatThousands(previous.reps!)}',
-                  tone: AppPillTone.accent,
-                  mono: true,
-                ),
-            ],
+          Text(
+            'Série ${formatThousands(widget.setNumber)}',
+            style: AppTypography.subheading.copyWith(
+              fontSize: 14,
+              color: AppColors.darkTextPrimary,
+            ),
           ),
+          if (_pills().isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.xs),
+            // Les pastilles occupent leur propre ligne : avec une cible ET un
+            // rappel de performance, deux pastilles mono ne tiennent pas à
+            // côté du titre sur un écran étroit.
+            Wrap(
+              alignment: WrapAlignment.end,
+              spacing: AppSpacing.xxs,
+              runSpacing: AppSpacing.xxs,
+              children: _pills(),
+            ),
+          ],
           const SizedBox(height: AppSpacing.md),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -136,6 +151,44 @@ class _SetEntryCardState extends State<SetEntryCard> {
         ],
       ),
     );
+  }
+
+  /// La cible du programme passe en premier, en accent ; le rappel de la
+  /// performance précédente devient secondaire et neutre.
+  List<Widget> _pills() {
+    final planned = _plannedLabel();
+    final previous = widget.previous;
+    final hasPrevious =
+        previous != null && previous.weightKg != null && previous.reps != null;
+
+    return [
+      if (planned != null)
+        AppPill(label: planned, tone: AppPillTone.accent, mono: true),
+      if (hasPrevious)
+        AppPill(
+          label: 'Précédent ${formatDecimal(previous.weightKg!)} kg '
+              '× ${formatThousands(previous.reps!)}',
+          tone: planned == null ? AppPillTone.accent : AppPillTone.neutral,
+          mono: true,
+        ),
+    ];
+  }
+
+  /// « Prévu 8 × 60 kg » ; une cible partielle reste lisible (« Prévu 8 reps »,
+  /// « Prévu 60 kg ») — un modèle sans charge prévue est légitime.
+  String? _plannedLabel() {
+    final reps = widget.plannedReps;
+    final weight = widget.plannedWeightKg;
+    if (reps != null && weight != null) {
+      return 'Prévu ${formatThousands(reps)} × ${formatDecimal(weight)} kg';
+    }
+    if (reps != null) {
+      return 'Prévu ${formatThousands(reps)} reps';
+    }
+    if (weight != null) {
+      return 'Prévu ${formatDecimal(weight)} kg';
+    }
+    return null;
   }
 }
 

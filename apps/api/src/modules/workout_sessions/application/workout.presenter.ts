@@ -20,6 +20,8 @@ export function presentSet(set: WorkoutSet): WorkoutSetContract {
     rpe: set.rpe,
     restSeconds: set.restSeconds,
     completedAt: set.completedAt.toISOString(),
+    plannedReps: set.plannedReps,
+    plannedWeightKg: set.plannedWeightKg === null ? null : Number(set.plannedWeightKg),
   };
 }
 
@@ -40,6 +42,8 @@ export function presentSessionSummary(session: SessionWithSets): WorkoutSessionS
     durationSeconds: session.durationSeconds,
     setsCount: session.sets.length,
     totalVolumeKg: Math.round(totalVolumeKg),
+    templateId: session.templateId,
+    templateName: session.templateName,
   };
 }
 
