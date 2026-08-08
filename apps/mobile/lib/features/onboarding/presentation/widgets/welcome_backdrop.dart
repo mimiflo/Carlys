@@ -248,8 +248,12 @@ abstract final class AthletePhotoFraming {
   /// Absentes de la planche, et pour cause : la photographie y occupe toute la
   /// hauteur, elle n'a pas de bord bas. Ici le cadre s'arrête au-dessus du
   /// pied de page, et sans extinction on voyait la coupe nette des jambes.
-  /// Le fondu commence au bassin.
-  static const List<double> bottomFade = [0.70, 1.0];
+  ///
+  /// Le fondu s'éteint AVANT le bord du cadre, pas dessus : terminé à 1.0, il
+  /// restait quelques pour cent d'opacité juste avant la coupe — assez, sur du
+  /// quasi-noir, pour qu'un liseré horizontal se lise encore. Les derniers
+  /// 12 % du cadre sont donc entièrement transparents.
+  static const List<double> bottomFade = [0.50, 0.88];
 
   /// Bornes du fondu du bord gauche, en fractions de la largeur d'écran :
   /// transparent avant la première, opaque après la seconde.
@@ -260,8 +264,14 @@ abstract final class AthletePhotoFraming {
   /// vignette confinée à droite. C'est la PLAQUE SOMBRE (couche 7) et le voile
   /// horizontal (couche 4) qui rendent le texte lisible, pas l'effacement de
   /// la photographie.
-  static const double fadeFrom = 0.38;
-  static const double fadeTo = 0.566;
+  ///
+  /// ÉCART ASSUMÉ : la planche les met à 0,38 et 0,566. Sur un écran étroit,
+  /// la même tranche de cliché occupe 29 % de largeur en plus, et l'avant-bras
+  /// venait toucher la fin des lignes. Le fondu est donc décalé — juste assez
+  /// pour que le bras s'efface là où le texte s'écrit, pas au point de faire
+  /// disparaître la personne, qui reste pleinement présente dès 0,64.
+  static const double fadeFrom = 0.46;
+  static const double fadeTo = 0.64;
 
   /// Part de la hauteur d'écran occupée par le cadre.
   ///
