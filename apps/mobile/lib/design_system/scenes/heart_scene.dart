@@ -26,6 +26,9 @@ class HeartScene extends StatefulWidget {
 
 class _HeartSceneState extends State<HeartScene>
     with SingleTickerProviderStateMixin {
+  /// Cadence de rendu de la scène, indépendante de celle de l'écran.
+  static const double _framesPerSecond = 30;
+
   late final AnimationController _controller = AnimationController(
     vsync: this,
     duration: const Duration(seconds: 30),
@@ -63,7 +66,10 @@ class _HeartSceneState extends State<HeartScene>
       animation: _controller,
       builder: (context, _) => CustomPaint(
         painter: _HeartPainter(
-          seconds: _controller.value * 30,
+          // Quantifié à 1/30 s : au-delà, le battement ne gagne rien de
+          // perceptible et chaque image coûte un maillage entier.
+          seconds: (_controller.value * 30 * _framesPerSecond).floor() /
+              _framesPerSecond,
           hero: widget.hero,
         ),
         size: Size.infinite,
@@ -104,7 +110,26 @@ class _HeartMesh {
   }
 
   static const double _depth = 0.86;
-  static final _HeartMesh instance = _HeartMesh._(120, 160);
+
+  /// Maillages par niveau de détail, construits à la première demande.
+  ///
+  /// La maquette rend 120 × 160 sur un écran de bureau ; à 300 points de côté
+  /// sur un téléphone, un segment ferait moins de deux pixels — autant de
+  /// sommets éclairés pour rien. La densité suit donc la taille réellement
+  /// rendue, et le reflet spéculaire reste net là où il se voit.
+  static final Map<int, _HeartMesh> _cache = {};
+
+  static _HeartMesh forSize(double side) {
+    final rings = side < 240
+        ? 56
+        : side < 420
+            ? 96
+            : 120;
+    return _cache.putIfAbsent(
+      rings,
+      () => _HeartMesh._(rings, (rings * 4 ~/ 3)),
+    );
+  }
 
   final int rings;
   final int segments;
@@ -205,7 +230,7 @@ class _HeartPainter extends CustomPainter {
     final phase = (seconds % period) / period;
     final beat = still ? 0.0 : _cardiac(phase);
 
-    final mesh = _HeartMesh.instance;
+    final mesh = _HeartMesh.forSize(math.min(size.width, size.height));
     final row = mesh.segments + 1;
     final vertexCount = (mesh.rings + 1) * row;
 
@@ -231,14 +256,14 @@ class _HeartPainter extends CustomPainter {
     final material = StandardMaterial(
       base: _baseColor,
       emissive: _violet,
-      emissiveIntensity: (hero ? 0.72 : 0.5) + beat * (hero ? 1.5 : 0.9),
+      emissiveIntensity: (hero ? 0.82 : 0.62) + beat * (hero ? 1.5 : 0.9),
       roughness: 0.42,
       metalness: 0.3,
       opacity: hero ? 0.88 : 0.82,
     );
 
     final shader = SceneShader(
-      exposure: hero ? 1.3 : 1.05,
+      exposure: hero ? 1.34 : 1.12,
       cameraX: camera.x,
       cameraY: camera.y,
       cameraZ: camera.z,

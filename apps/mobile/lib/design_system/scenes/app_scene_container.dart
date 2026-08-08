@@ -67,7 +67,9 @@ class AppSceneContainer extends StatelessWidget {
           // Découpe stricte : une scène plus haute que son cadre (l'hélice
           // dépasse le champ de la caméra) déborderait sinon jusque dans la
           // barre d'onglets, translucide.
-          child: ClipRect(child: scene),
+          // La scène se redessine en continu : l'isoler évite d'entraîner
+          // tout l'écran dans ses repeints.
+          child: ClipRect(child: RepaintBoundary(child: scene)),
         ),
       ),
     );
