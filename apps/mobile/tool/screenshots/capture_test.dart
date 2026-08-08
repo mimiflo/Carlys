@@ -11,6 +11,7 @@ import 'dart:io';
 
 import 'package:carlys_mobile/app/app.dart';
 import 'package:carlys_mobile/app/environment/app_environment.dart';
+import 'package:carlys_mobile/app/router/app_routes.dart';
 import 'package:carlys_mobile/core/errors/app_exception.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
 import 'package:carlys_mobile/design_system/design_system.dart';
@@ -29,6 +30,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:go_router/go_router.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../test/support/fake_auth_repository.dart';
@@ -114,6 +116,28 @@ WorkoutWithSets activeWorkoutOf() {
       set(2, 'Développé couché', 8, 70),
     ],
   );
+}
+
+List<WorkoutHistoryEntry> historyOf() {
+  WorkoutHistoryEntry entry(int day, String name, int sets, double volume) =>
+      WorkoutHistoryEntry(
+        session: WorkoutInfo(
+          id: 'h-$day',
+          name: name,
+          status: WorkoutStatus.completed,
+          startedAt: DateTime.utc(2026, 8, day, 9),
+          syncState: LocalSyncState.synced,
+        ),
+        setsCount: sets,
+        totalVolumeKg: volume,
+      );
+  return [
+    entry(7, 'Push A', 14, 2140),
+    entry(6, 'Legs', 12, 3260),
+    entry(4, 'Pull A', 15, 1980),
+    entry(2, 'Push B', 13, 2050),
+    entry(1, 'Full body', 10, 1720),
+  ];
 }
 
 FakeProgressRepository progressOf() => FakeProgressRepository(
@@ -304,6 +328,23 @@ void main() {
     await tester.tap(find.text('Apparence'));
     await settle(tester);
     await capture(tester, '14-reglages');
+  });
+
+  testWidgets('historique', (tester) async {
+    final workouts = FakeWorkoutRepository()..history = historyOf();
+    await pumpApp(tester, workouts: workouts);
+    final context = tester.element(find.byType(AppBottomBar));
+    GoRouter.of(context).push(AppRoutes.history);
+    await settle(tester);
+    await capture(tester, '15-historique');
+  });
+
+  testWidgets('onboarding', (tester) async {
+    await pumpApp(tester);
+    final context = tester.element(find.byType(AppBottomBar));
+    GoRouter.of(context).go(AppRoutes.onboarding);
+    await settle(tester);
+    await capture(tester, '16-onboarding');
   });
 
   testWidgets('paywall exercice premium', (tester) async {

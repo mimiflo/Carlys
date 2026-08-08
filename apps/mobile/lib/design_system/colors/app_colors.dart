@@ -76,4 +76,16 @@ abstract final class AppColors {
   static const Color neutralBadgeText = Color(0xFFD3D3E4);
   static const Color gaugeTrack = Color(0x12FFFFFF); // blanc .07
   static const Color primaryLightBorder = Color(0x4D8A8AFA); // primaryLight .30
+  static const Color difficultyTrack = Color(0x1FFFFFFF); // blanc .12
+  static const Color vignetteBorder = Color(0x388A8AFA); // primaryLight .22
+  static const Color rowDivider = Color(0x0FFFFFFF); // blanc .06
+  static const Color heatEmpty = Color(0x0DFFFFFF); // blanc .05
+  static const Color heatOutOfMonth = Color(0x08FFFFFF); // blanc .03
+
+  /// Remplissage d'un jour du calendrier selon l'intensité 0..1 (violet).
+  static Color heatFill(double intensity) => Color.lerp(
+        const Color(0x805B5BF6),
+        const Color(0xE65B5BF6),
+        intensity.clamp(0, 1),
+      )!;
 }

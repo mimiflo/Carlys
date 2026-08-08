@@ -29,6 +29,26 @@ abstract final class AppIcons {
   static const IconData bodyMetrics = Icons.monitor_weight_rounded;
   static const IconData premium = Icons.workspace_premium_rounded;
 
+  static const IconData exercises = Icons.sports_gymnastics_rounded;
+  static const IconData check = Icons.check_rounded;
+  static const IconData checkCircle = Icons.check_circle_rounded;
+  static const IconData lock = Icons.lock_outline_rounded;
+  static const IconData play = Icons.play_arrow_rounded;
+  static const IconData pause = Icons.pause_rounded;
+  static const IconData trendingUp = Icons.trending_up_rounded;
+  static const IconData calendar = Icons.calendar_month_rounded;
+  static const IconData filter = Icons.tune_rounded;
+  static const IconData bookmark = Icons.bookmark_border_rounded;
+  static const IconData chevronRight = Icons.chevron_right_rounded;
+  static const IconData minus = Icons.remove_rounded;
+  static const IconData recovery = Icons.battery_charging_full_rounded;
+  static const IconData goal = Icons.flag_rounded;
+  static const IconData units = Icons.straighten_rounded;
+  static const IconData theme = Icons.dark_mode_rounded;
+  static const IconData notifications = Icons.notifications_rounded;
+  static const IconData devices = Icons.devices_rounded;
+  static const IconData logout = Icons.logout_rounded;
+
   // États
   static const IconData error = Icons.error_outline_rounded;
   static const IconData empty = Icons.inbox_rounded;

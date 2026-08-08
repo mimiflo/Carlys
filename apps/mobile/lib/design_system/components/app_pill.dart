@@ -4,7 +4,10 @@ import '../colors/app_colors.dart';
 import '../typography/app_typography.dart';
 
 /// Ton d'une pastille de la refonte.
-enum AppPillTone { neutral, accent, primary }
+///
+/// `accentSolid` est le lime en aplat (texte sombre) : réservé au filtre actif
+/// de la bibliothèque, seul usage plein du lime sur cet écran.
+enum AppPillTone { neutral, accent, accentSolid, primary }
 
 /// Pastille stadium : durée, groupe musculaire, filtre…
 /// Accent = fond lime .12 + bordure .28 ; neutre = blanc .07.
@@ -15,11 +18,19 @@ class AppPill extends StatelessWidget {
     this.mono = false,
     this.onTap,
     this.selected = false,
+    this.icon,
+    this.selectedTone = AppPillTone.accent,
     super.key,
   });
 
   final String label;
   final AppPillTone tone;
+
+  /// Icône optionnelle devant le libellé (ex. tendance « ↗ +18 % »).
+  final IconData? icon;
+
+  /// Ton appliqué quand la pastille est sélectionnée.
+  final AppPillTone selectedTone;
 
   /// Vrai pour les valeurs chiffrées (« 52 MIN ») — rendu mono MAJUSCULES.
   final bool mono;
@@ -30,12 +41,17 @@ class AppPill extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final effectiveTone = selected ? AppPillTone.accent : tone;
+    final effectiveTone = selected ? selectedTone : tone;
     final (background, borderColor, textColor) = switch (effectiveTone) {
       AppPillTone.accent => (
           AppColors.accentBadgeBg,
           AppColors.accentBadgeBorder,
           AppColors.accent,
+        ),
+      AppPillTone.accentSolid => (
+          AppColors.accent,
+          Colors.transparent,
+          AppColors.darkBackground,
         ),
       AppPillTone.primary => (
           AppColors.primaryCardSoft,
@@ -60,7 +76,16 @@ class AppPill extends StatelessWidget {
         borderRadius: BorderRadius.circular(999),
         border: Border.all(color: borderColor),
       ),
-      child: Text(mono ? label.toUpperCase() : label, style: style),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (icon != null) ...[
+            Icon(icon, size: 14, color: textColor),
+            const SizedBox(width: 4),
+          ],
+          Text(mono ? label.toUpperCase() : label, style: style),
+        ],
+      ),
     );
 
     if (onTap == null) {
