@@ -3,106 +3,112 @@ import 'package:flutter/material.dart';
 import '../../../../design_system/design_system.dart';
 import '../../../../design_system/scenes/app_scene_container.dart';
 import '../../../../design_system/scenes/heart_scene.dart';
-import '../../../progress/domain/entities/progress.dart';
 import '../../domain/entities/daily_quote.dart';
-import 'daily_quote_block.dart';
-import 'home_fact_pills.dart';
+import 'daily_quote_card.dart';
 import 'home_header.dart';
 
-/// Zone haute de l'accueil : scène cœur ancrée haut-droite qui déborde du
-/// cadre, dégradés de lisibilité, en-tête, maxime du jour et faits.
+/// Zone haute de l'accueil : **le cœur qui bat** à droite, la citation du
+/// jour à sa gauche, au même niveau.
 ///
-/// Sous le cœur vit désormais la MAXIME, pas l'indice de forme : ce qu'on lit
-/// en ouvrant l'application doit donner envie de s'y mettre. Le chiffre est
-/// descendu près de « Ta semaine », où il se compare à quelque chose.
+/// Le cœur est la signature de l'application : rien ne se pose sur sa masse.
+/// La citation occupe la colonne restée vide à gauche — d'où sa forme
+/// compacte, presque carrée.
 class HomeHero extends StatelessWidget {
   const HomeHero({
     required this.displayName,
+    required this.subtitle,
     required this.quote,
-    required this.week,
-    required this.restSinceLastWorkout,
     super.key,
   });
 
   final String? displayName;
+  final String subtitle;
   final DailyQuote quote;
-  final ProgressOverviewEntity? week;
-  final Duration? restSinceLastWorkout;
 
-  /// Géométrie de la maquette : scène de 330 posée à 22 du haut, débordant
-  /// de 126 à droite.
+  /// Géométrie de la scène, inchangée depuis l'origine : 330 posée à 64 du
+  /// haut, débordant de 126 à droite.
   static const double _sceneSize = 330;
-
-  /// Descendu par rapport à la maquette : sur un téléphone réel, le cœur
-  /// mordait sur l'avatar du profil, en haut à droite.
   static const double _sceneTop = 64;
   static const double _sceneRight = -126;
 
   /// Fondu vertical de la scène (transparent → plein → transparent).
-  /// Le fondu doit être ACHEVÉ avant le bas de la zone haute, sinon la scène
-  /// se fait trancher net à la limite du bloc.
   static const List<double> _sceneFade = [0.0, 0.16, 0.46, 0.76];
 
-  /// Respiration entre l'en-tête et la maxime, qui donne à la zone haute ses
-  /// 322 de la maquette.
-  static const double _headroom = 84;
+  /// Hauteur à laquelle le fondu a ÉTEINT la scène (dernier point de
+  /// [_sceneFade]) : plancher sous lequel la série peut vivre sans recouvrir
+  /// le cœur.
+  static const double _sceneBottom = _sceneTop + _sceneSize * 0.76;
+
+  /// Hauteur réservée : la scène éteinte plus une gouttière. Une citation
+  /// plus longue que la moyenne fait grandir la zone au-delà.
+  static const double _minHeight = _sceneBottom + AppSpacing.gapRow;
+
+  /// Part de la largeur laissée à la citation. Le cœur entame l'écran à
+  /// `largeur − 330 + 126` ; on s'arrête juste avant sa masse, sans jamais
+  /// mordre sur son centre.
+  static const int _quoteFlex = 55;
+  static const int _sceneFlex = 45;
 
   @override
   Widget build(BuildContext context) {
     final topInset = MediaQuery.paddingOf(context).top;
 
-    return Stack(
-      clipBehavior: Clip.none,
-      children: [
-        const Positioned(
-          top: _sceneTop,
-          right: _sceneRight,
-          child: AppSceneContainer(
-            size: _sceneSize,
-            opacity: 0.9,
-            verticalFadeStops: _sceneFade,
-            child: HeartScene(),
+    return ConstrainedBox(
+      constraints: const BoxConstraints(minHeight: _minHeight),
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          const Positioned(
+            top: _sceneTop,
+            right: _sceneRight,
+            child: AppSceneContainer(
+              size: _sceneSize,
+              opacity: 0.9,
+              verticalFadeStops: _sceneFade,
+              child: HeartScene(),
+            ),
           ),
-        ),
-        // Lisibilité, dans l'ordre de la maquette (la couche listée en premier
-        // en CSS est la plus haute) : extinction verticale, puis assombrissement
-        // latéral, puis le halo violet PAR-DESSUS.
-        const Positioned.fill(child: AppSceneScrim.vertical()),
-        const Positioned.fill(child: AppSceneScrim.lateral()),
-        const Positioned.fill(
-          child: AppSceneGlow(
-            center: Alignment(0.48, -0.16),
-            radius: 0.71,
-            alpha: 0.32,
+          // Lisibilité, dans l'ordre de la maquette (la couche listée en
+          // premier en CSS est la plus haute) : extinction verticale, puis
+          // assombrissement latéral, puis le halo violet PAR-DESSUS.
+          const Positioned.fill(child: AppSceneScrim.vertical()),
+          const Positioned.fill(child: AppSceneScrim.lateral()),
+          const Positioned.fill(
+            child: AppSceneGlow(
+              center: Alignment(0.48, -0.16),
+              radius: 0.71,
+              alpha: 0.32,
+            ),
           ),
-        ),
-        Padding(
-          padding: EdgeInsets.only(top: topInset + AppSpacing.gutter),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
-                child: HomeHeader(displayName: displayName),
-              ),
-              const SizedBox(height: _headroom),
-              Padding(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
-                child: DailyQuoteBlock(quote: quote),
-              ),
-              const SizedBox(height: AppSpacing.sm),
-              HomeFactPills(
-                week: week,
-                restSinceLastWorkout: restSinceLastWorkout,
-              ),
-              const SizedBox(height: AppSpacing.gapRow),
-            ],
+          Padding(
+            padding: EdgeInsets.only(
+              top: topInset + AppSpacing.gutter,
+              left: AppSpacing.gutter,
+              right: AppSpacing.gutter,
+              bottom: AppSpacing.gapRow,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                HomeHeader(displayName: displayName, subtitle: subtitle),
+                const SizedBox(height: AppSpacing.gapRow),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Expanded(
+                      flex: _quoteFlex,
+                      child: DailyQuoteCard(quote: quote),
+                    ),
+                    // Colonne laissée au cœur : rien ne s'y pose.
+                    const Expanded(flex: _sceneFlex, child: SizedBox()),
+                  ],
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 }

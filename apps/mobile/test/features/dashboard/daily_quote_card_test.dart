@@ -1,6 +1,6 @@
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/dashboard/data/daily_quotes.dart';
-import 'package:carlys_mobile/features/dashboard/presentation/widgets/daily_quote_block.dart';
+import 'package:carlys_mobile/features/dashboard/presentation/widgets/daily_quote_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -24,7 +24,7 @@ void main() {
           body: SingleChildScrollView(
             child: Padding(
               padding: const EdgeInsets.all(AppSpacing.gutter),
-              child: DailyQuoteBlock(quote: longest),
+              child: DailyQuoteCard(quote: longest),
             ),
           ),
         ),

@@ -3,12 +3,15 @@ import 'package:flutter/material.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/consistency_week.dart';
 
-/// **Série de constance** : les sept jours de la semaine en ronds (L M M J V
-/// S D), une flamme au-dessus de ceux qui ont été tenus.
+/// **Série de constance** : label, « Jour N » avec sa flamme, puis les sept
+/// jours de la semaine en ronds (L M M J V S D) — petite flamme au-dessus de
+/// ceux qui ont été tenus.
 ///
-/// Ce qu'on montre, ce sont des séances RÉELLEMENT terminées — jamais une
-/// estimation. Les jours à venir sont en retrait plutôt qu'en échec : on ne
-/// reproche à personne de ne pas avoir déjà fait demain.
+/// Sans cadre de carte : elle vit dans la zone haute, aux côtés du cœur, dont
+/// elle occupe le vide. Ce qu'elle montre, ce sont des séances RÉELLEMENT
+/// terminées — jamais une estimation. Les jours à venir sont en retrait
+/// plutôt qu'en échec : on ne reproche à personne de ne pas avoir déjà fait
+/// demain.
 class ConsistencyStreak extends StatelessWidget {
   const ConsistencyStreak({required this.week, super.key});
 
@@ -18,28 +21,60 @@ class ConsistencyStreak extends StatelessWidget {
   /// Géométrie : rond de 38, gouttière à flamme réservée au-dessus pour que
   /// tous les ronds restent alignés, flamme ou pas.
   static const double _circleSize = 38;
-  static const double _flameSlot = 18;
-  static const double _flameSize = 15;
+  static const double _flameSlot = 16;
+  static const double _flameSize = 13;
+  static const double _headlineFlameSize = 18;
+  static const double _labelSlot = 16;
+
+  /// Hauteur totale du bloc. La zone haute s'en sert pour se réserver la
+  /// place de la série SOUS le cœur, sans la mesurer après coup.
+  static const double height =
+      _labelSlot + AppSpacing.xs + _flameSlot + _circleSize;
 
   @override
   Widget build(BuildContext context) {
     final data = week;
+    final streak = data?.streakDays ?? 0;
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        AppSectionHeader(
-          title: 'Ta constance',
-          trailing: _trailingLabel(data),
-          trailingTone: data != null && data.streakDays > 0
-              ? AppSectionTrailingTone.accent
-              : AppSectionTrailingTone.tertiary,
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        Semantics(
-          label: _semanticsLabel(data),
-          child: ExcludeSemantics(
-            child: Row(
+    return Semantics(
+      label: _semanticsLabel(data),
+      child: ExcludeSemantics(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Row(
+              children: [
+                const Expanded(
+                  child: SizedBox(
+                    height: _labelSlot,
+                    child: AppSectionLabel(
+                      'Série de constance',
+                      color: AppColors.darkTextTertiary,
+                    ),
+                  ),
+                ),
+                if (streak > 0) ...[
+                  const Icon(
+                    AppIcons.streak,
+                    size: _headlineFlameSize,
+                    color: AppColors.accent,
+                  ),
+                  const SizedBox(width: AppSpacing.xxs),
+                ],
+                Text(
+                  _headline(data),
+                  style: AppTypography.labelMono.copyWith(
+                    fontSize: 12,
+                    color: streak > 0
+                        ? AppColors.accent
+                        : AppColors.darkTextTertiary,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            Row(
               children: [
                 for (var index = 0; index < 7; index++) ...[
                   if (index > 0) const SizedBox(width: AppSpacing.xs),
@@ -50,26 +85,25 @@ class ConsistencyStreak extends StatelessWidget {
                 ],
               ],
             ),
-          ),
+          ],
         ),
-      ],
+      ),
     );
   }
 
-  static String _trailingLabel(ConsistencyWeek? week) {
+  static String _headline(ConsistencyWeek? week) {
     if (week == null) {
       return '—';
     }
     return switch (week.streakDays) {
       0 => 'À relancer',
-      1 => '1 jour d’affilée',
-      final days => '$days jours d’affilée',
+      final days => 'Jour $days',
     };
   }
 
   static String _semanticsLabel(ConsistencyWeek? week) {
     if (week == null) {
-      return 'Constance de la semaine en cours de chargement';
+      return 'Série de constance en cours de chargement';
     }
     final trained = week.trainedCount;
     final base = trained == 0
@@ -79,8 +113,7 @@ class ConsistencyStreak extends StatelessWidget {
     if (week.streakDays == 0) {
       return '$base. Série à relancer.';
     }
-    return '$base. Série en cours : ${week.streakDays} '
-        'jour${week.streakDays > 1 ? 's' : ''} d’affilée.';
+    return '$base. Série en cours : jour ${week.streakDays}.';
   }
 }
 
@@ -112,13 +145,13 @@ class _DayDot extends StatelessWidget {
         ),
       // Aujourd'hui, pas encore fait : la journée est ouverte, pas ratée.
       (false, true) => (
-          Colors.transparent,
+          AppColors.primaryFill,
           AppColors.primary,
-          AppColors.primaryLight,
+          AppColors.neutral0,
         ),
       _ => (
           AppColors.gaugeTrack,
-          AppColors.darkBorder,
+          AppColors.darkBorderStrong,
           isFuture ? AppColors.darkTextTertiary : AppColors.darkTextSecondary,
         ),
     };

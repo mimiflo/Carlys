@@ -11,15 +11,18 @@ import '../../../nutrition/presentation/controllers/nutrition_controllers.dart';
 import '../../../workout_session/presentation/controllers/workout_controllers.dart';
 import '../controllers/dashboard_controllers.dart';
 import '../widgets/consistency_streak.dart';
+import '../widgets/day_summary_grid.dart';
 import '../widgets/fitness_index_block.dart';
 import '../widgets/home_hero.dart';
-import '../widgets/home_stat_tiles.dart';
 import '../widgets/today_workout_card.dart';
 import '../widgets/week_bars.dart';
 
-/// Accueil : zone haute avec la scène cœur et la maxime du jour, série de
-/// constance, séance du jour (unique CTA accent), tuiles, puis l'indice de
-/// forme adossé à « Ta semaine ».
+/// Accueil — un tableau de bord en cartes, ouvert par le cœur.
+///
+/// Ordre de lecture : le **cœur** (signature de l'app) avec l'état du jour et
+/// la citation à sa gauche, la série de constance, la séance du jour (unique
+/// CTA accent), le résumé du jour, puis l'indice de forme adossé à
+/// « Ta semaine ».
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
@@ -45,22 +48,18 @@ class HomeScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.darkBackground,
       body: ListView(
-        // La zone haute est à fond perdu : chaque section pose sa gouttière.
+        // La zone haute est à fond perdu : les cartes posent leur gouttière.
         padding: EdgeInsets.only(bottom: bottomInset + AppSpacing.gapSection),
         children: [
           HomeHero(
             displayName: user?.displayName,
+            subtitle: ref.watch(homeSubtitleProvider),
             quote: ref.watch(dailyQuoteProvider),
-            week: week,
-            restSinceLastWorkout: ref.watch(restSinceLastWorkoutProvider),
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
+          _Section(
             child: ConsistencyStreak(week: ref.watch(consistencyWeekProvider)),
           ),
-          const SizedBox(height: AppSpacing.gapRow),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
+          _Section(
             child: TodayWorkoutCard(
               activeWorkout: activeWorkout,
               onOpenTemplates: () => context.push(AppRoutes.templates),
@@ -74,14 +73,14 @@ class HomeScreen extends ConsumerWidget {
               },
             ),
           ),
-          const SizedBox(height: AppSpacing.gapRow),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
-            child: HomeStatTiles(report: report, week: week),
+          _Section(
+            child: DaySummaryGrid(
+              training: ref.watch(todayTrainingProvider),
+              report: report,
+              week: week,
+            ),
           ),
-          const SizedBox(height: AppSpacing.gapSection),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
+          _Section(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -96,6 +95,26 @@ class HomeScreen extends ConsumerWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// Gouttière et espacement communs à toutes les sections de l'accueil.
+class _Section extends StatelessWidget {
+  const _Section({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.gutter,
+        0,
+        AppSpacing.gutter,
+        AppSpacing.gapRow,
+      ),
+      child: child,
     );
   }
 }

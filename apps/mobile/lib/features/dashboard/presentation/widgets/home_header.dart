@@ -3,12 +3,23 @@ import 'package:flutter/material.dart';
 import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
 
-/// En-tête de l'accueil : date du jour en mono, salutation en display,
+/// En-tête de l'accueil : date du jour en mono, salutation, phrase d'état,
 /// avatar 44×44 en dégradé violet portant l'initiale.
+///
+/// La salutation tient sur UNE ligne : la zone haute appartient au cœur, et
+/// chaque ligne de texte gagnée est du cœur rendu visible.
 class HomeHeader extends StatelessWidget {
-  const HomeHeader({required this.displayName, super.key});
+  const HomeHeader({
+    required this.displayName,
+    required this.subtitle,
+    super.key,
+  });
 
   final String? displayName;
+
+  /// Phrase d'état, toujours adossée à un fait (séance en cours, séance du
+  /// jour faite, récupération écoulée).
+  final String subtitle;
 
   /// Géométrie de la maquette : vignette carrée de 44.
   static const double _avatarSize = 44;
@@ -30,9 +41,17 @@ class HomeHeader extends StatelessWidget {
               AppSectionLabel(formatLongDateMono(DateTime.now())),
               const SizedBox(height: AppSpacing.xs),
               Text(
-                firstName == null ? 'Bonjour' : 'Bonjour,\n$firstName',
-                style: AppTypography.display
+                firstName == null ? 'Bonjour' : 'Bonjour, $firstName.',
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: AppTypography.title
                     .copyWith(color: AppColors.darkTextPrimary),
+              ),
+              const SizedBox(height: AppSpacing.xxs),
+              Text(
+                subtitle,
+                style: AppTypography.body
+                    .copyWith(color: AppColors.darkTextSecondary),
               ),
             ],
           ),

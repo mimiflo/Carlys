@@ -85,8 +85,10 @@ d'exemple pour visiter l'app sans serveur.
 | ----- | ----- | ------ |
 | Tous | Barre de statut simulée (9:41, batterie) absente | Fournie par l'OS |
 | Accueil | Pastilles « 57 BPM » et « 7H20 » remplacées par des faits d'entraînement | Aucune donnée de santé dans le domaine |
-| Accueil | **Maxime du jour** sous le cœur, à la place de l'indice de forme (descendu près de « Ta semaine ») | Écart VOULU, hors maquette : ce qu'on lit en ouvrant l'app doit motiver, pas mesurer |
-| Accueil | **Série de constance** (L M M J V S D, flamme sur les jours tenus) ajoutée sous la zone haute | Écart VOULU, hors maquette : demandé au produit, alimenté par les séances réellement terminées |
+| Accueil | **Citation du jour** en carte compacte À GAUCHE du cœur, à son niveau ; l'indice de forme est descendu près de « Ta semaine » | Écart VOULU, hors maquette : ce qu'on lit en ouvrant l'app doit motiver, pas mesurer — et le cœur, signature de l'app, ne se laisse rien poser sur sa masse |
+| Accueil | **Série de constance** (L M M J V S D, flamme sur les jours tenus) sous la zone haute | Écart VOULU, hors maquette : demandé au produit, alimenté par les séances réellement terminées |
+| Accueil | **Résumé du jour** en grille 2×2 : entraînement, nutrition, protéines, volume | Écart VOULU : la référence y met aussi sommeil et hydratation, que le domaine ignore — on garde la forme, jamais des chiffres inventés |
+| Accueil | Pas de « prochaine séance » planifiée à une heure donnée | Aucune planification côté serveur : la carte annonce la séance du jour, pas un rendez-vous |
 | Accueil | Carte « séance du jour » sans pastilles descriptives ni durée prévue | Pas de module programmes |
 | Nutrition | Macros affichées en objectif, sans « consommé / objectif » | Pas de suivi des apports |
 | Nutrition | Section « Repas » absente | Pas de journal alimentaire |

@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/utilities/formatting.dart';
 import '../../../progress/data/repositories/progress_repository_impl.dart';
 import '../../../progress/domain/entities/progress.dart';
 import '../../../workout_session/domain/entities/workout.dart';
@@ -62,6 +63,75 @@ final consistencyWeekProvider = Provider.autoDispose<ConsistencyWeek?>((ref) {
     trainedDays: trainedDays,
     today: DateTime(now.year, now.month, now.day),
   );
+});
+
+/// Ce que l'accueil peut dire de l'entraînement du JOUR, sans rien inventer.
+class TodayTraining {
+  const TodayTraining({required this.value, this.detail});
+
+  /// Ligne principale de la tuile (nom de séance, « À faire »…).
+  final String value;
+
+  /// Précision facultative (durée, « en cours »).
+  final String? detail;
+}
+
+/// Entraînement du jour : séance en cours, séance déjà faite, ou rien encore.
+final todayTrainingProvider = Provider.autoDispose<TodayTraining>((ref) {
+  final active = ref.watch(activeWorkoutProvider).valueOrNull;
+  if (active != null) {
+    return TodayTraining(
+      value: active.session.name ?? 'Séance libre',
+      detail: 'en cours',
+    );
+  }
+
+  final history = ref.watch(workoutHistoryProvider).valueOrNull;
+  final now = DateTime.now();
+  final today = DateTime(now.year, now.month, now.day);
+  for (final entry in history ?? const <WorkoutHistoryEntry>[]) {
+    if (entry.session.status != WorkoutStatus.completed) {
+      continue;
+    }
+    final local = entry.session.startedAt.toLocal();
+    if (DateTime(local.year, local.month, local.day) != today) {
+      continue;
+    }
+    final seconds = entry.session.durationSeconds;
+    return TodayTraining(
+      value: entry.session.name ?? 'Séance faite',
+      // La tuile n'est pas en mono : on reprend le format partagé, en bas de
+      // casse, plutôt que d'en écrire un second.
+      detail: seconds == null
+          ? 'terminée'
+          : formatDurationShort(seconds).toLowerCase(),
+    );
+  }
+  return const TodayTraining(value: 'À faire');
+});
+
+/// Phrase d'état sous la salutation — toujours adossée à un fait : séance en
+/// cours, séance du jour déjà faite, ou temps de récupération écoulé.
+final homeSubtitleProvider = Provider.autoDispose<String>((ref) {
+  if (ref.watch(activeWorkoutProvider).valueOrNull != null) {
+    return 'Séance en cours.';
+  }
+  if (ref.watch(todayTrainingProvider).value != 'À faire') {
+    return 'Séance faite aujourd’hui. Beau travail.';
+  }
+
+  final rest = ref.watch(restSinceLastWorkoutProvider);
+  if (rest == null) {
+    return 'Ton parcours commence aujourd’hui.';
+  }
+  final hours = rest.inHours;
+  if (hours < 20) {
+    return 'Ton corps encaisse encore la dernière séance.';
+  }
+  if (hours < 72) {
+    return 'Récupération faite : le créneau est bon.';
+  }
+  return '${rest.inDays} jours de repos. On s’y remet ?';
 });
 
 /// Temps écoulé depuis la fin de la dernière séance terminée — seule base

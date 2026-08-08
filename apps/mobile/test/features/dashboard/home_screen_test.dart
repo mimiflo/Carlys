@@ -3,9 +3,11 @@ import 'package:carlys_mobile/app/environment/app_environment.dart';
 import 'package:carlys_mobile/app/restore/app_restore.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
 import 'package:carlys_mobile/design_system/design_system.dart';
+import 'package:carlys_mobile/design_system/scenes/heart_scene.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
 import 'package:carlys_mobile/features/dashboard/data/daily_quotes.dart';
 import 'package:carlys_mobile/features/dashboard/presentation/widgets/consistency_streak.dart';
+import 'package:carlys_mobile/features/dashboard/presentation/widgets/daily_quote_card.dart';
 import 'package:carlys_mobile/features/dashboard/presentation/widgets/home_hero.dart';
 import 'package:carlys_mobile/features/nutrition/data/repositories/nutrition_repository_impl.dart';
 import 'package:carlys_mobile/features/nutrition/domain/entities/nutrition.dart';
@@ -83,6 +85,17 @@ void main() {
     await tester.pumpAndSettle();
   }
 
+  /// La page est plus longue que l'écran et la ListView est PARESSEUSE : une
+  /// section basse n'existe pas tant qu'on ne l'a pas atteinte.
+  Future<void> scrollTo(WidgetTester tester, Finder target) async {
+    await tester.scrollUntilVisible(
+      target,
+      240,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+  }
+
   testWidgets('en-tête, indice de forme et faits de la semaine',
       (tester) async {
     final workouts = FakeWorkoutRepository()
@@ -102,56 +115,91 @@ void main() {
 
     await pumpHome(tester, workouts: workouts);
 
-    expect(find.text('Bonjour,\nCamille'), findsOneWidget);
+    expect(find.text('Bonjour, Camille.'), findsOneWidget);
+    // La phrase d'état est adossée au seul fait connu : 30 h de récupération.
+    expect(
+      find.text('Récupération faite : le créneau est bon.'),
+      findsOneWidget,
+    );
+
+    await scrollTo(tester, find.text('INDICE DE FORME'));
     expect(find.text('INDICE DE FORME'), findsOneWidget);
     // 2 séances sur les 5 visées.
     expect(find.text('40'), findsOneWidget);
     expect(find.text('Prêt pour du lourd'), findsOneWidget);
+  });
 
-    // Faits réels : récupération, séances et volume de la semaine.
-    expect(find.text('RÉCUP OK'), findsOneWidget);
-    expect(find.text('2 SÉANCES'), findsOneWidget);
-    expect(find.text('1,5 T'), findsOneWidget);
+  testWidgets('résumé du jour : quatre faits réels, aucun inventé',
+      (tester) async {
+    await pumpHome(tester);
+
+    await scrollTo(tester, find.text('RÉSUMÉ DU JOUR'));
+    expect(find.text('RÉSUMÉ DU JOUR'), findsOneWidget);
+    expect(find.text('ENTRAÎNEMENT'), findsOneWidget);
+    expect(find.text('NUTRITION'), findsOneWidget);
+    expect(find.text('PROTÉINES'), findsOneWidget);
+    expect(find.text('VOLUME'), findsOneWidget);
+
+    // Objectifs CALCULÉS, jamais un consommé : le domaine ne suit pas les
+    // repas. Le libellé le dit, et rien n'affiche « x / y ».
+    expect(find.text('2\u202F759 kcal'), findsOneWidget);
+    expect(find.text('128 g'), findsOneWidget);
+    expect(find.text('objectif du jour'), findsNWidgets(2));
+    expect(find.text('1,5 t'), findsOneWidget);
+    expect(find.text('cette semaine'), findsOneWidget);
+
+    // Aucune séance faite aujourd'hui dans ce cas.
+    expect(find.text('À faire'), findsOneWidget);
+
+    // Ce que la maquette de référence montre mais que le domaine ignore.
+    expect(find.text('SOMMEIL'), findsNothing);
+    expect(find.text('HYDRATATION'), findsNothing);
   });
 
   testWidgets('sans séance en cours : entraînement libre et tuiles',
       (tester) async {
     await pumpHome(tester);
 
+    await scrollTo(tester, find.text('Entraînement libre'));
     expect(find.text('SÉANCE DU JOUR'), findsOneWidget);
     expect(find.text('Entraînement libre'), findsOneWidget);
     expect(find.text('Démarrer la séance'), findsOneWidget);
 
-    expect(find.text('KCAL'), findsOneWidget);
-    expect(find.text('PROTÉINES'), findsOneWidget);
-    expect(find.text('VOLUME'), findsOneWidget);
-    expect(find.text('2 759', findRichText: true), findsOneWidget);
-    expect(find.text('128g', findRichText: true), findsOneWidget);
-    expect(find.text('1,5t', findRichText: true), findsOneWidget);
-
+    await scrollTo(tester, find.text('Ta semaine'));
     expect(find.text('Ta semaine'), findsOneWidget);
     expect(find.text('2 / 5 SÉANCES'), findsOneWidget);
   });
 
-  testWidgets('sous le cœur : la maxime du jour, pas un chiffre',
+  testWidgets('la citation du jour est en carte, à gauche du cœur',
       (tester) async {
     await pumpHome(tester);
+
+    expect(find.text('CITATION DU JOUR'), findsOneWidget);
 
     // Celle du jour, exactement — c'est le câblage qu'on vérifie ici ; la
     // règle de rotation a ses propres tests.
     final today = quoteOfTheDay(DateTime.now());
     expect(find.text(today.text), findsOneWidget);
-    expect(
-      find.text(today.value.label.toUpperCase()),
-      findsOneWidget,
-    );
+    // La valeur Carlys ordonne la rotation, elle ne s'affiche pas.
+    expect(find.text(today.value.label), findsNothing);
 
-    // La maxime est DANS la zone haute, l'indice de forme n'y est plus.
+    // Elle vit DANS la zone haute, au même niveau que le cœur — mais dans
+    // la colonne de gauche, jamais sur la masse de la scène.
     final hero = find.byType(HomeHero);
     expect(
       find.descendant(of: hero, matching: find.text(today.text)),
       findsOneWidget,
     );
+    expect(find.byType(HeartScene), findsOneWidget);
+
+    // Le canvas de la scène est LARGEMENT transparent sur son bord gauche
+    // (masque radial) : la carte peut mordre sur sa boîte sans toucher au
+    // cœur. Ce qu'on garantit, c'est qu'elle n'atteint jamais sa masse.
+    final quote = tester.getRect(find.byType(DailyQuoteCard));
+    final scene = tester.getRect(find.byType(HeartScene));
+    expect(quote.right, lessThan(scene.center.dx));
+
+    // L'indice de forme, lui, est bien descendu hors de la zone haute.
     expect(
       find.descendant(of: hero, matching: find.text('INDICE DE FORME')),
       findsNothing,
@@ -162,7 +210,16 @@ void main() {
       (tester) async {
     await pumpHome(tester);
 
-    expect(find.text('Ta constance'), findsOneWidget);
+    // Elle vit SOUS la zone haute, la colonne de gauche revenant à la
+    // citation.
+    expect(find.text('SÉRIE DE CONSTANCE'), findsOneWidget);
+    expect(
+      find.descendant(
+        of: find.byType(HomeHero),
+        matching: find.byType(ConsistencyStreak),
+      ),
+      findsNothing,
+    );
 
     final streak = find.byType(ConsistencyStreak);
     Finder dayOf(String initial) =>
@@ -200,10 +257,11 @@ void main() {
 
     await pumpHome(tester, workouts: workouts);
 
-    expect(find.text('2 JOURS D’AFFILÉE'), findsOneWidget);
-    // Une flamme par jour tenu de la semaine affichée : les deux jours ne
-    // débordent sur la semaine précédente que le lundi et le mardi.
-    final expectedFlames =
+    expect(find.text('Jour 2'), findsOneWidget);
+    // Une flamme par jour tenu de la semaine affichée, PLUS celle qui
+    // accompagne « Jour N ». Les deux jours ne débordent sur la semaine
+    // précédente que le lundi et le mardi.
+    final expectedFlames = 1 +
         [yesterday, before].where((day) => day.weekday <= today.weekday).length;
     expect(
       find.descendant(
@@ -252,7 +310,10 @@ void main() {
 
     await pumpHome(tester, workouts: workouts);
 
-    expect(find.text('Push — Force'), findsOneWidget);
+    // Deux fois : la carte « séance du jour » ET la tuile ENTRAÎNEMENT du
+    // résumé, qui reflète la séance en cours.
+    expect(find.text('Push — Force'), findsNWidgets(2));
+    expect(find.text('en cours'), findsOneWidget);
     expect(find.text('52 MIN'), findsOneWidget);
     expect(find.text('1 exercice'), findsOneWidget);
     expect(find.text('2 séries'), findsOneWidget);

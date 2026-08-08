@@ -64,7 +64,7 @@ void main() {
     await tester.pumpWidget(buildApp(FakeAuthRepository(storedSession: true)));
     await tester.pumpAndSettle();
 
-    expect(find.text('Bonjour,\nCamille'), findsOneWidget);
+    expect(find.text('Bonjour, Camille.'), findsOneWidget);
   });
 
   testWidgets('connexion complète depuis l’écran de connexion', (tester) async {
@@ -84,7 +84,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(repository.loginCalls, 1);
-    expect(find.text('Bonjour,\nCamille'), findsOneWidget);
+    expect(find.text('Bonjour, Camille.'), findsOneWidget);
   });
 
   testWidgets('erreur de connexion affichée sans quitter l’écran',
