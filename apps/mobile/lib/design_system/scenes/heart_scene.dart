@@ -3,7 +3,9 @@ import 'dart:typed_data';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/scheduler.dart';
 
+import 'heart_flakes.dart';
 import 'scene3d.dart';
 
 /// Cœur battant de la refonte — portage fidèle de `pulse-heart.js`.
@@ -29,10 +31,18 @@ class _HeartSceneState extends State<HeartScene>
   /// Cadence de rendu de la scène, indépendante de celle de l'écran.
   static const double _framesPerSecond = 30;
 
-  late final AnimationController _controller = AnimationController(
-    vsync: this,
-    duration: const Duration(seconds: 30),
-  );
+  /// Temps ÉCOULÉ, jamais ramené à zéro.
+  ///
+  /// Un `AnimationController` rebouclé sur trente secondes rendait le temps
+  /// discontinu, et rien dans cette scène n'a de période qui divise le tour :
+  /// la rotation (0,22 rad/s), le ballant (0,45) et le battement (57 bpm,
+  /// soit 28,5 battements) sautaient donc tous ensemble à chaque tour.
+  /// Relevé sur la planche de contrôle avant correction : 6 106 pixels
+  /// changeaient d'un coup entre la dernière image d'un tour et la première du
+  /// suivant, dont 1 974 sur la silhouette même du cœur. Un temps monotone
+  /// supprime la question au lieu d'accorder les fréquences une à une.
+  late final Ticker _ticker = createTicker(_onTick);
+  double _seconds = 0;
 
   @override
   void didChangeDependencies() {
@@ -40,15 +50,26 @@ class _HeartSceneState extends State<HeartScene>
     // La boucle ne doit JAMAIS tourner sous réduction d'animations : sinon la
     // scène empêche toute stabilisation (accessibilité, et tests de widgets).
     if (MediaQuery.disableAnimationsOf(context)) {
-      _controller.stop();
-    } else if (!_controller.isAnimating) {
-      _controller.repeat();
+      _ticker.stop();
+    } else if (!_ticker.isActive) {
+      _ticker.start();
+    }
+  }
+
+  void _onTick(Duration elapsed) {
+    // Quantifié à 1/30 s : au-delà, le battement ne gagne rien de perceptible
+    // et chaque image coûte un maillage entier.
+    final seconds =
+        (elapsed.inMicroseconds * _framesPerSecond / 1000000).floor() /
+            _framesPerSecond;
+    if (seconds != _seconds) {
+      setState(() => _seconds = seconds);
     }
   }
 
   @override
   void dispose() {
-    _controller.dispose();
+    _ticker.dispose();
     super.dispose();
   }
 
@@ -56,24 +77,13 @@ class _HeartSceneState extends State<HeartScene>
   Widget build(BuildContext context) {
     // Réduction d'animations : on fige le cœur sur une pose de diastole.
     final still = MediaQuery.disableAnimationsOf(context);
-    if (still) {
-      return CustomPaint(
-        painter: _HeartPainter(seconds: 0, hero: widget.hero, still: true),
-        size: Size.infinite,
-      );
-    }
-    return AnimatedBuilder(
-      animation: _controller,
-      builder: (context, _) => CustomPaint(
-        painter: _HeartPainter(
-          // Quantifié à 1/30 s : au-delà, le battement ne gagne rien de
-          // perceptible et chaque image coûte un maillage entier.
-          seconds: (_controller.value * 30 * _framesPerSecond).floor() /
-              _framesPerSecond,
-          hero: widget.hero,
-        ),
-        size: Size.infinite,
+    return CustomPaint(
+      painter: HeartScenePainter(
+        seconds: still ? 0 : _seconds,
+        hero: widget.hero,
+        still: still,
       ),
+      size: Size.infinite,
     );
   }
 }
@@ -193,8 +203,14 @@ class _HeartMesh {
 }
 
 /// Rendu d'une image du cœur.
-class _HeartPainter extends CustomPainter {
-  _HeartPainter({
+///
+/// Public comme celui de l'hélice, et pour la même raison : certains défauts
+/// n'existent qu'en mouvement (un cristal qui se téléporte au rebouclage, une
+/// nuée qui apparaît d'un coup). La planche de contrôle
+/// `tool/screenshots/heart_frames_test.dart` rend la scène à des instants
+/// choisis, ce qu'aucune capture d'écran ne saurait montrer.
+class HeartScenePainter extends CustomPainter {
+  HeartScenePainter({
     required this.seconds,
     required this.hero,
     this.still = false,
@@ -339,6 +355,16 @@ class _HeartPainter extends CustomPainter {
       colors[v] = shader.shade(rnx, rny, rnz, wx, wy, wz, material);
     }
 
+    // --- Cristaux de givre passant DERRIÈRE la masse ---
+    HeartFlakes.paint(
+      canvas,
+      size,
+      camera,
+      seconds: seconds,
+      hero: hero,
+      front: false,
+    );
+
     // --- Halo interne, sous le maillage ---
     _paintHalo(canvas, size, camera, bob, beat);
 
@@ -381,6 +407,16 @@ class _HeartPainter extends CustomPainter {
     }
 
     _paintParticles(canvas, size, camera, rotation, bob, beat);
+
+    // --- Cristaux de givre passant DEVANT la masse ---
+    HeartFlakes.paint(
+      canvas,
+      size,
+      camera,
+      seconds: seconds,
+      hero: hero,
+      front: true,
+    );
   }
 
   /// N'émet un triangle que s'il fait face à la caméra (aire 2D signée).
@@ -547,10 +583,10 @@ class _HeartPainter extends CustomPainter {
       ..color = const Color(0xFFD6D6FF).withValues(alpha: hero ? 0.5 : 0.26);
 
     for (var i = 0; i < count; i++) {
-      final h1 = _hash(i * 1.0);
-      final h2 = _hash(i * 1.0 + 97);
-      final h3 = _hash(i * 1.0 + 211);
-      final h4 = _hash(i * 1.0 + 331);
+      final h1 = sceneNoise(i * 1.0);
+      final h2 = sceneNoise(i * 1.0 + 97);
+      final h3 = sceneNoise(i * 1.0 + 211);
+      final h4 = sceneNoise(i * 1.0 + 331);
 
       final r = (2.5 + h1 * 1.7) * (1 + beat * 0.08);
       final angle = h2 * math.pi * 2 + seconds * (0.15 + h4 * 0.4) * 0.4;
@@ -578,13 +614,7 @@ class _HeartPainter extends CustomPainter {
     }
   }
 
-  /// Bruit déterministe 0..1.
-  static double _hash(double n) {
-    final s = math.sin(n * 127.1) * 43758.5453;
-    return s - s.floorToDouble();
-  }
-
   @override
-  bool shouldRepaint(covariant _HeartPainter old) =>
+  bool shouldRepaint(covariant HeartScenePainter old) =>
       old.seconds != seconds || old.hero != hero || old.still != still;
 }

@@ -59,6 +59,45 @@ Deux limites assumées :
   est la **première** couche CSS, donc la plus haute : posé sous
   l'assombrissement, il rend la zone nettement plus terne.
 
+### Les cristaux de givre du cœur
+
+Ajout produit, absent de la maquette : de petits cristaux à six branches
+dérivent autour du cœur et devant lui
+(`lib/design_system/scenes/heart_flakes.dart`). Trois règles les tiennent :
+
+- **un accent, pas une tempête** : chacun ne vit qu'un tiers du cycle, si bien
+  qu'à un instant donné quatre ou cinq flottent au plus, sur un vivier de
+  quatorze ;
+- **aucun aléatoire**, comme pour le flux sanguin du cœur : tout état dérive de
+  `sceneNoise`, donc le rendu est reproductible d'une image et d'un test à
+  l'autre ;
+- **jamais dans la masse du cœur** : la bande de profondeur qu'il occupe est
+  interdite, ce qui permet de trancher entre « devant » et « derrière » par une
+  simple passe avant et une passe après le maillage — un rendu sans tampon de
+  profondeur ne saurait pas départager les cas intermédiaires.
+
+### Le temps des scènes
+
+Le cœur avance désormais sur un **temps monotone** (`Ticker`), et non plus sur
+un `AnimationController` rebouclé. La boucle de trente secondes ramenait le
+temps à zéro alors qu'aucune période de la scène ne divise le tour — rotation
+(0,22 rad/s), ballant (0,45) et battement (57 bpm, soit 28,5 battements) :
+tout sautait ensemble une fois par tour. Mesuré sur la planche de contrôle
+avant correction, entre la dernière image d'un tour et la première du suivant :
+**6 106 pixels** changeaient d'un coup, dont **1 974** sur la silhouette même
+du cœur. Un test de non-régression garde le sens du temps.
+
+`tool/screenshots/heart_frames_test.dart` rend la scène à des instants choisis :
+c'est le seul moyen de voir ce qu'une capture d'écran cache — la dérive des
+cristaux, leur apparition en fondu, la continuité au rebouclage.
+
+**Reste à faire** : l'hélice d'ADN (`DnaHelix`, écran Nutrition) garde le même
+défaut en plus discret. Son cycle de 28,56 s vaut exactement un tour de
+rotation, mais la respiration (`sin(t × 0,65)`) et la pulsation des barreaux
+(`sin(t × 1,4)`) ne bouclent pas avec lui : les barreaux sautent d'un tiers de
+leur cycle de luminosité une fois toutes les 28 secondes. Même correctif à
+appliquer.
+
 ## Traduction, pas copie
 
 La maquette est du **React DOM (web)**. L'application est en Flutter : le code
@@ -198,6 +237,7 @@ entre une capture et la référence n'est donc pas, en soi, un défaut de l'appl
 | Tous | Barre de statut simulée (9:41, batterie) absente | Fournie par l'OS |
 | Bienvenue | Écran entier absent de la maquette | Écart VOULU : planche de marque fournie par le produit, montrée avant l'onboarding |
 | Accueil | Pastilles « 57 BPM » et « 7H20 » remplacées par des faits d'entraînement | Aucune donnée de santé dans le domaine |
+| Accueil, Abonnement, Onboarding | **Cristaux de givre** dérivant autour du cœur et devant lui | Écart VOULU, hors maquette : demandé au produit ; réglé pour rester un accent (quatre ou cinq à la fois, 5 à 15 points de pointe à pointe) |
 | Accueil | **Citation du jour** en carte compacte À GAUCHE du cœur, à son niveau ; l'indice de forme est descendu près de « Ta semaine » | Écart VOULU, hors maquette : ce qu'on lit en ouvrant l'app doit motiver, pas mesurer — et le cœur, signature de l'app, ne se laisse rien poser sur sa masse |
 | Accueil | **Série de constance** (L M M J V S D, flamme sur les jours tenus) sous la zone haute | Écart VOULU, hors maquette : demandé au produit, alimenté par les séances réellement terminées |
 | Accueil | **Résumé du jour** en grille 2×2 : entraînement, nutrition, protéines, volume | Écart VOULU : la référence y met aussi sommeil et hydratation, que le domaine ignore — on garde la forme, jamais des chiffres inventés |

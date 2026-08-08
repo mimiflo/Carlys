@@ -16,6 +16,16 @@ import 'dart:typed_data';
 double srgbToLinear(double c) =>
     c < 0.04045 ? c / 12.92 : math.pow((c + 0.055) / 1.055, 2.4).toDouble();
 
+/// Bruit déterministe 0..1.
+///
+/// Les scènes n'utilisent JAMAIS `Random` : le rendu doit être reproductible
+/// d'une image à l'autre — sinon les particules scintillent — et d'un test à
+/// l'autre.
+double sceneNoise(double n) {
+  final s = math.sin(n * 127.1) * 43758.5453;
+  return s - s.floorToDouble();
+}
+
 /// Linéaire (0..1) → sRGB.
 double linearToSrgb(double c) =>
     c < 0.0031308 ? c * 12.92 : 1.055 * math.pow(c, 1 / 2.4).toDouble() - 0.055;
