@@ -57,6 +57,12 @@ class WelcomeBackdrop extends StatelessWidget {
               ),
 
               // 4 — voile horizontal : la colonne de texte reprend le fond.
+              //
+              // ÉCART ASSUMÉ. La planche l'éteint à 0,66 ; l'avant-bras de la
+              // personne arrive exactement au bout des dernières lignes, et y
+              // restait trop clair. Le voile est donc étiré de 0,66 à 0,78 et
+              // à peine renforcé — assez pour que le bras s'efface derrière
+              // les mots, pas assez pour l'effacer, lui.
               const Positioned.fill(
                 child: DecoratedBox(
                   decoration: BoxDecoration(
@@ -65,10 +71,10 @@ class WelcomeBackdrop extends StatelessWidget {
                       end: Alignment.centerRight,
                       colors: [
                         AppColors.darkBackground,
-                        Color(0xC706060C),
+                        Color(0xD406060C),
                         Color(0x0006060C),
                       ],
-                      stops: [0, 0.34, 0.66],
+                      stops: [0, 0.40, 0.78],
                     ),
                   ),
                 ),
