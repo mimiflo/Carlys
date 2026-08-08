@@ -63,13 +63,17 @@ class DnaMesh {
   static const double radius = 1.32;
   static const double height = 9.4;
   static const double turns = 2.4;
-  static const double tubeRadius = 0.082;
+
+  /// Brins volontairement plus épais que la maquette (0,082) : sur téléphone,
+  /// l'hélice doit se lire d'un coup d'œil. La luminosité, elle, est au
+  /// plafond — au-delà le tone mapping délave le violet vers le blanc.
+  static const double tubeRadius = 0.104;
   static const int tubeSteps = 180;
-  static const int tubeSides = 12;
+  static const int tubeSides = 20;
   static const int rungCount = 26;
-  static const double rungRadius = 0.026;
-  static const int rungSides = 8;
-  static const double nodeRadius = 0.042;
+  static const double rungRadius = 0.032;
+  static const int rungSides = 10;
+  static const double nodeRadius = 0.05;
 
   /// Décalage du demi-barreau depuis le centre (`lerp(mid, end, 0.52)`) et sa
   /// demi-longueur (`len * 0.44 / 2`) : c'est ce couple qui ménage le jeu
@@ -94,6 +98,19 @@ class DnaMesh {
 
   /// Tampons de travail du peintre, alloués une fois pour toutes.
   late final Float32List screen = Float32List(vertexCount * 2);
+
+  /// Profondeur de vue par sommet — base du tri par triangle.
+  late final Float32List depth = Float32List(vertexCount);
+
+  /// Tri par compartiments : un passage linéaire au lieu d'un tri comparatif.
+  late final int triangleCount = indices.length ~/ 3;
+  late final Int32List triangleStart = Int32List(triangleCount);
+  late final Float32List triangleDepth = Float32List(triangleCount);
+  late final Int32List triangleSlot = Int32List(triangleCount);
+  late final Int32List bucketOffsets = Int32List(depthBuckets + 1);
+
+  /// Résolution du tri : au-delà, deux triangles sont visuellement confondus.
+  static const int depthBuckets = 1024;
   late final Float32List facing = Float32List(vertexCount);
   late final Int32List colors = Int32List(vertexCount);
   late final Uint16List drawOrder = Uint16List(indices.length);

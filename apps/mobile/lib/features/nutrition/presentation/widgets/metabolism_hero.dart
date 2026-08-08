@@ -29,7 +29,7 @@ class MetabolismHero extends StatelessWidget {
   static const List<double> _sceneFade = [0.0, 0.16, 0.62, 0.94];
 
   /// Halo violet de la maquette (.22) obtenu depuis le halo du design system.
-  static const double _haloOpacity = 0.55;
+  static const double _haloOpacity = 0.85;
 
   /// Valeur absente tant que le serveur n'a pas pu calculer le métabolisme.
   static const String _placeholder = '—';

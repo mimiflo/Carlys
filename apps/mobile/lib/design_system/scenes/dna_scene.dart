@@ -35,8 +35,8 @@ class DnaScenePainter extends CustomPainter {
   /// La maquette est faite pour un écran de bureau ; sur téléphone, en
   /// extérieur, l'hélice devenait trop discrète. Le gain porte sur l'émissivité
   /// et l'opacité, pas sur les couleurs : la teinte reste celle du handoff.
-  static const double _emissiveGain = 1.7;
-  static const double _opacityGain = 1.22;
+  static const double _emissiveGain = 1.62;
+  static const double _opacityGain = 1.55;
 
   static double _op(double value) =>
       (value * _opacityGain).clamp(0.0, 1.0).toDouble();
@@ -95,7 +95,7 @@ class DnaScenePainter extends CustomPainter {
 
   /// Les quatre lumières du mode hero, à l'unité près.
   static final SceneShader _shader = SceneShader(
-    exposure: 1.22,
+    exposure: 1.12,
     cameraX: 0,
     cameraY: 0,
     cameraZ: _cameraZ,
@@ -139,7 +139,6 @@ class DnaScenePainter extends CustomPainter {
     }
 
     _shadeVertices(mesh, size, rotation, breath, breathY, rungScale);
-    _sortParts(mesh, rotation, breath, rungScale);
     _draw(canvas, mesh);
   }
 
@@ -184,6 +183,8 @@ class DnaScenePainter extends CustomPainter {
       final p = _camera.project(wx, wy, wz, size.width, size.height);
       screen[v * 2] = p.sx;
       screen[v * 2 + 1] = p.sy;
+      // La caméra vise l'origine depuis +Z : la profondeur, c'est z.
+      mesh.depth[v] = wz;
       // Élimination des faces arrière : signe de N · (caméra − P).
       facing[v] = -rnx * wx - rny * wy + rnz * (_cameraZ - wz);
       colors[v] = _shader.shade(
@@ -198,49 +199,73 @@ class DnaScenePainter extends CustomPainter {
     }
   }
 
-  /// Tri des parties du plus lointain au plus proche : la caméra vise
-  /// l'origine depuis +Z, la profondeur de vue est donc simplement `z`.
-  void _sortParts(
-    DnaMesh mesh,
-    EulerRotation rotation,
-    double breath,
-    Float64List rungScale,
-  ) {
-    final depth = mesh.partDepth;
-    for (var i = 0; i < mesh.parts.length; i++) {
-      final part = mesh.parts[i];
-      final radial = part.group < 0 ? breath : breath * rungScale[part.group];
-      depth[i] = rotation.rotZ(part.cx * radial, part.cy, part.cz * radial);
-    }
-    mesh.partOrder.sort((a, b) => depth[a].compareTo(depth[b]));
-  }
-
-  /// Émission des triangles visibles, dans l'ordre de profondeur.
+  /// Émission des triangles visibles, du plus lointain au plus proche.
+  ///
+  /// Sans tampon de profondeur, l'ordre de dessin EST la profondeur. Trier par
+  /// groupe (un brin, un barreau, une bille) ne suffit pas : deux groupes qui
+  /// s'entrecroisent se départagent alors en bloc, et l'on voit une bille ou un
+  /// barreau passer devant un brin qui devrait le masquer. Le tri se fait donc
+  /// triangle par triangle, en un seul passage linéaire (tri par
+  /// compartiments) — un tri comparatif sur quinze mille triangles coûterait
+  /// bien plus cher à chaque image.
   void _draw(Canvas canvas, DnaMesh mesh) {
     final facing = mesh.facing;
+    final depth = mesh.depth;
     final indices = mesh.indices;
+    final starts = mesh.triangleStart;
+    final keys = mesh.triangleDepth;
     final out = mesh.drawOrder;
-    var n = 0;
 
-    for (final partIndex in mesh.partOrder) {
-      final part = mesh.parts[partIndex];
-      final end = part.first + part.count;
-      for (var i = part.first; i < end; i += 3) {
-        final a = indices[i];
-        final b = indices[i + 1];
-        final c = indices[i + 2];
-        if (facing[a] + facing[b] + facing[c] <= 0) {
-          continue;
-        }
-        out[n] = a;
-        out[n + 1] = b;
-        out[n + 2] = c;
-        n += 3;
+    var visible = 0;
+    var minDepth = double.infinity;
+    var maxDepth = -double.infinity;
+    for (var i = 0; i < indices.length; i += 3) {
+      final a = indices[i];
+      final b = indices[i + 1];
+      final c = indices[i + 2];
+      if (facing[a] + facing[b] + facing[c] <= 0) {
+        continue;
       }
+      final d = (depth[a] + depth[b] + depth[c]) / 3;
+      starts[visible] = i;
+      keys[visible] = d;
+      if (d < minDepth) {
+        minDepth = d;
+      }
+      if (d > maxDepth) {
+        maxDepth = d;
+      }
+      visible++;
     }
-    if (n == 0) {
+    if (visible == 0) {
       return;
     }
+
+    const buckets = DnaMesh.depthBuckets;
+    final offsets = mesh.bucketOffsets..fillRange(0, buckets + 1, 0);
+    final slots = mesh.triangleSlot;
+    final span = maxDepth - minDepth;
+    final scale = span > 1e-9 ? (buckets - 1) / span : 0.0;
+
+    for (var t = 0; t < visible; t++) {
+      final slot = ((keys[t] - minDepth) * scale).toInt();
+      slots[t] = slot;
+      offsets[slot]++;
+    }
+    var running = 0;
+    for (var b = 0; b < buckets; b++) {
+      final size = offsets[b];
+      offsets[b] = running;
+      running += size;
+    }
+    for (var t = 0; t < visible; t++) {
+      final position = offsets[slots[t]]++ * 3;
+      final i = starts[t];
+      out[position] = indices[i];
+      out[position + 1] = indices[i + 1];
+      out[position + 2] = indices[i + 2];
+    }
+    final n = visible * 3;
 
     canvas.drawVertices(
       ui.Vertices.raw(
