@@ -59,8 +59,7 @@ class HomeHero extends StatelessWidget {
     // Ce qui reste à la citation entre l'en-tête et le pied de la zone. Tout
     // est connu — l'encoche, la gouttière, la hauteur FIXE de l'en-tête —
     // donc la carte descend exactement jusqu'à la série, quel que soit
-    // l'appareil. Si la phrase du jour demande plus, la carte grandit et la
-    // zone haute avec elle.
+    // l'appareil, et la zone haute garde la même hauteur tous les jours.
     final quoteHeight = math.max(
       0.0,
       _minHeight -
@@ -119,8 +118,11 @@ class HomeHero extends StatelessWidget {
                   children: [
                     Expanded(
                       flex: _quoteFlex,
-                      child: ConstrainedBox(
-                        constraints: BoxConstraints(minHeight: quoteHeight),
+                      // Hauteur FERME, pas un plancher : la citation choisit
+                      // son corps pour remplir exactement ce cadre, donc rien
+                      // ne peut ni déborder ni sonner creux.
+                      child: SizedBox(
+                        height: quoteHeight,
                         child: DailyQuoteCard(quote: quote),
                       ),
                     ),

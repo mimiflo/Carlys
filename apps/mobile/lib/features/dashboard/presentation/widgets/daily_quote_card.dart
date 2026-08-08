@@ -13,15 +13,13 @@ class DailyQuoteCard extends StatelessWidget {
 
   final DailyQuote quote;
 
-  /// Géométrie : la carte vit à gauche du cœur, sur un peu plus d'une
-  /// demi-largeur, et descend jusqu'à la série de constance.
-  ///
-  /// La phrase est en 17 — assez grande pour que la carte remplisse sa bande
-  /// d'elle-même. La hauteur n'est JAMAIS imposée : la zone haute pose un
-  /// plancher, une maxime longue fait grandir la carte au-delà. Rien ne peut
-  /// donc déborder, quelle que soit la largeur de l'écran.
-  static const double _quoteSize = 17;
-  static const double _quoteHeight = 1.38;
+  /// La phrase **s'adapte à la carte** : elle grossit quand elle est courte,
+  /// se resserre quand elle est longue, et remplit toujours la place reçue.
+  /// Les maximes vont du simple au double en longueur — sans cela, le cadre
+  /// paraîtrait creux un jour et déborderait le lendemain.
+  static const double _quoteMinSize = 13;
+  static const double _quoteMaxSize = 26;
+  static const double _quoteHeight = 1.32;
   static const double _glyphSize = 28;
 
   /// Interligne ÉCRASÉ du glyphe : sans lui, sa boîte de ligne de 38 pousse
@@ -34,10 +32,9 @@ class DailyQuoteCard extends StatelessWidget {
     return AppLabeledCard(
       label: 'Citation du jour',
       padding: const EdgeInsets.all(AppSpacing.sm),
-      // La carte est plus haute que sa phrase : label en haut, maxime en bas.
-      // L'espace devient de la respiration entre les deux, pas un trou sous
-      // le texte.
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      // La hauteur vient de la zone haute : le texte reçoit tout l'espace
+      // sous le label, et s'y ajuste.
+      expandChild: true,
       semanticLabel: 'Citation du jour, ${quote.value.label} : ${quote.text}',
       trailing: Text(
         '”',
@@ -47,10 +44,11 @@ class DailyQuoteCard extends StatelessWidget {
           color: AppColors.primaryLight,
         ),
       ),
-      child: Text(
+      child: AppFittedText(
         quote.text,
+        minFontSize: _quoteMinSize,
+        maxFontSize: _quoteMaxSize,
         style: AppTypography.title.copyWith(
-          fontSize: _quoteSize,
           height: _quoteHeight,
           fontWeight: FontWeight.w600,
           color: AppColors.darkTextPrimary,

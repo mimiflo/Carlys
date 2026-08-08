@@ -18,7 +18,7 @@ class AppLabeledCard extends StatelessWidget {
     this.trailing,
     this.labelColor = AppColors.darkTextTertiary,
     this.padding = const EdgeInsets.all(AppSpacing.md),
-    this.mainAxisAlignment = MainAxisAlignment.start,
+    this.expandChild = false,
     this.semanticLabel,
     super.key,
   });
@@ -31,12 +31,13 @@ class AppLabeledCard extends StatelessWidget {
   final Color labelColor;
   final EdgeInsetsGeometry padding;
 
-  /// Répartition verticale quand la carte reçoit une hauteur plus grande que
-  /// son contenu. `spaceBetween` pose le label en haut et le contenu en bas ;
-  /// c'est le seul levier possible ici, la colonne se dimensionnant sur son
-  /// contenu (un `Expanded` exigerait une hauteur bornée, que la carte n'a
-  /// pas dans une liste).
-  final MainAxisAlignment mainAxisAlignment;
+  /// Donne au contenu TOUTE la hauteur restante sous le label.
+  ///
+  /// À n'activer que si la carte reçoit elle-même une hauteur bornée : sans
+  /// plafond vertical, l'étirement n'a rien à quoi se mesurer et la mise en
+  /// page échoue. En contrepartie le contenu peut s'adapter à la place reçue —
+  /// c'est ce dont [AppFittedText] a besoin.
+  final bool expandChild;
   final Widget child;
 
   /// Remplace la lecture d'écran du contenu quand celui-ci est décoratif.
@@ -54,8 +55,7 @@ class AppLabeledCard extends StatelessWidget {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisSize: MainAxisSize.min,
-        mainAxisAlignment: mainAxisAlignment,
+        mainAxisSize: expandChild ? MainAxisSize.max : MainAxisSize.min,
         children: [
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -65,7 +65,7 @@ class AppLabeledCard extends StatelessWidget {
             ],
           ),
           const SizedBox(height: AppSpacing.sm),
-          child,
+          if (expandChild) Expanded(child: child) else child,
         ],
       ),
     );
