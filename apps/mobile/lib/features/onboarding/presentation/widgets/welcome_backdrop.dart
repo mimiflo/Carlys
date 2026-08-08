@@ -261,7 +261,7 @@ abstract final class AthletePhotoFraming {
   /// cadre, tout le reste en découle. Moins que 1 rapetitit la personne sans
   /// rien changer à la part du cliché montrée. Le bas manquant tombe sous le
   /// bouton, là où le voile de pied de page est déjà opaque.
-  static const double heightFactor = 0.92;
+  static const double heightFactor = 0.85;
 
   /// Cadre de la photographie, ancré à droite.
   ///
