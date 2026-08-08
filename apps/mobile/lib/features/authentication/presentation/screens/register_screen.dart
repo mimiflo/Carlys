@@ -43,17 +43,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Inscription réussie → onboarding (le profil métabolique se remplit là).
-    ref.listen(registerControllerProvider, (previous, next) {
-      if (previous is AsyncLoading<void> && next is AsyncData<void>) {
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (context.mounted) {
-            context.go(AppRoutes.onboarding);
-          }
-        });
-      }
-    });
-
+    // Aucune navigation impérative ici : l'ouverture de session fait avancer
+    // le routeur (proposition Premium pendant le parcours de première
+    // ouverture, accueil ensuite).
     final state = ref.watch(registerControllerProvider);
     final isLoading = state.isLoading;
 
@@ -110,6 +102,24 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           onPressed: _submit,
           isLoading: isLoading,
           isExpanded: true,
+        ),
+        const SizedBox(height: AppSpacing.md),
+        // Sortie de secours : pendant le parcours de première ouverture,
+        // cet écran s'impose — qui a déjà un compte doit pouvoir se
+        // connecter d'ici.
+        Wrap(
+          alignment: WrapAlignment.center,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            Text(
+              'Déjà un compte ?',
+              style: Theme.of(context).textTheme.bodySmall,
+            ),
+            TextButton(
+              onPressed: isLoading ? null : () => context.go(AppRoutes.login),
+              child: const Text('Se connecter'),
+            ),
+          ],
         ),
       ],
     );

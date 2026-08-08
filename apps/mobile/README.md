@@ -50,6 +50,12 @@ restent réelles (Drift local), seule la synchronisation est désactivée.
 flutter run --dart-define=CARLYS_FLAVOR=demo
 ```
 
+Au premier lancement, la démo présente le parcours de première ouverture
+(onboarding, puis proposition Premium et repli gratuit) avant de laisser
+entrer : la session démo étant déjà ouverte, l'étape de création de compte
+est considérée comme satisfaite. Le parcours ne se rejoue pas ensuite —
+pour le revoir, désinstalle l'APK (les préférences locales sont effacées).
+
 Le workflow `demo-apk` (`.github/workflows/demo-apk.yml`, déclenchement
 manuel) construit cet APK et le publie sur la release `demo-latest`.
 
@@ -62,6 +68,15 @@ manuel) construit cet APK et le publie sur la release `demo-latest`.
 - `lib/features/` — fonctionnalités en tranches verticales
   (voir `lib/features/README.md`) ;
 - `lib/shared/` — modèles, providers et widgets transverses.
+
+## Parcours de première ouverture
+
+Au tout premier lancement, l'application déroule un tunnel avant l'accueil :
+onboarding (profil métabolique) → création de compte → proposition Premium
+avec repli gratuit explicite. L'étape atteinte est persistée
+(`FirstRunStore`, SharedPreferences), le tunnel ne se rejoue jamais une fois
+terminé, et tout l'enchaînement passe par la redirection de `go_router`.
+Détails : [docs/architecture/mobile.md](../../docs/architecture/mobile.md).
 
 ## Refonte « premium dark-first »
 

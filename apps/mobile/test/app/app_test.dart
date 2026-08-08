@@ -10,9 +10,13 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../support/fake_auth_repository.dart';
 import '../support/fake_workout_repository.dart';
+import '../support/first_run_prefs.dart';
 
 void main() {
   setUp(() {
+    // Parcours de première ouverture déjà terminé : ces tests portent sur la
+    // session, pas sur le tunnel (couvert par first_run_journey_test.dart).
+    seedCompletedFirstRun();
     // Les scènes 3D (cœur, hélice) bouclent en continu : réduction
     // d'animations pour que pumpAndSettle converge.
     TestWidgetsFlutterBinding.instance.platformDispatcher

@@ -6,10 +6,14 @@ import '../../../../app/router/app_routes.dart';
 import '../../../../design_system/design_system.dart';
 import '../../../../design_system/scenes/app_scene_container.dart';
 import '../../../../design_system/scenes/heart_scene.dart';
+import '../../../onboarding/domain/first_run_step.dart';
+import '../../../onboarding/presentation/controllers/first_run_controller.dart';
 import '../controllers/subscription_controllers.dart';
+import '../widgets/first_run_premium_footer.dart';
 import '../widgets/subscription_benefits.dart';
 import '../widgets/subscription_hero.dart';
 import '../widgets/subscription_plan_card.dart';
+import '../widgets/subscription_purchase_note.dart';
 
 /// Abonnement (maquette 2i) : plein écran sans barre de titre, cœur ambiant
 /// débordant en haut à droite, accroche premium, avantages issus des droits
@@ -18,6 +22,10 @@ import '../widgets/subscription_plan_card.dart';
 /// La maquette montre deux cartes d'offre chiffrées et un bouton d'achat :
 /// l'API ne sert aucun catalogue de prix ni action d'achat, ces blocs sont
 /// donc omis plutôt qu'inventés.
+///
+/// Le même écran sert de temps d'arrêt au parcours de première ouverture :
+/// il n'est alors pas refermable, et son bas d'écran propose Premium puis,
+/// en cas de refus, la version gratuite (`FirstRunPremiumFooter`).
 class SubscriptionScreen extends ConsumerWidget {
   const SubscriptionScreen({super.key});
 
@@ -25,6 +33,8 @@ class SubscriptionScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final plan = ref.watch(planStatusProvider);
     final entitlements = ref.watch(entitlementsProvider);
+    final firstRun =
+        ref.watch(firstRunStepProvider) == FirstRunStep.subscription;
 
     return Scaffold(
       backgroundColor: AppColors.darkBackground,
@@ -55,7 +65,12 @@ class SubscriptionScreen extends ConsumerWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                const _CloseButton(),
+                // Pendant le parcours, l'écran ne se referme pas : la sortie
+                // passe par le bas d'écran (Premium ou version gratuite).
+                if (firstRun)
+                  const SizedBox(height: AppSpacing.lg)
+                else
+                  const _CloseButton(),
                 Expanded(
                   child: ListView(
                     padding: const EdgeInsets.only(
@@ -98,7 +113,10 @@ class SubscriptionScreen extends ConsumerWidget {
                     ],
                   ),
                 ),
-                const _PurchaseNote(),
+                if (firstRun)
+                  const FirstRunPremiumFooter()
+                else
+                  const _PurchaseNote(),
               ],
             ),
           ),
@@ -152,24 +170,14 @@ class _PurchaseNote extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
+    return const Padding(
+      padding: EdgeInsets.fromLTRB(
         AppSpacing.gutter,
         AppSpacing.md,
         AppSpacing.gutter,
         AppSpacing.lg,
       ),
-      child: Text(
-        'La souscription se fait via l’App Store, Google Play ou le site web. '
-        'Vos droits sont toujours validés par le serveur — la restauration '
-        'd’achat les réactive automatiquement.',
-        textAlign: TextAlign.center,
-        style: AppTypography.label.copyWith(
-          fontSize: 11,
-          height: 1.4,
-          color: AppColors.darkTextTertiary,
-        ),
-      ),
+      child: SubscriptionPurchaseNote(),
     );
   }
 }

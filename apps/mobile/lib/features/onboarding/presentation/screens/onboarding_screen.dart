@@ -5,19 +5,21 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/app_routes.dart';
 import '../../../../core/errors/app_exception.dart';
 import '../../../../design_system/design_system.dart';
+import '../../../authentication/presentation/controllers/auth_controller.dart';
 import '../../../nutrition/domain/entities/nutrition.dart';
-import '../../../nutrition/presentation/controllers/nutrition_controllers.dart';
+import '../../domain/onboarding_answers.dart';
+import '../controllers/first_run_controller.dart';
 import '../widgets/onboarding_backdrop.dart';
-import '../widgets/onboarding_birth_date_card.dart';
-import '../widgets/onboarding_choices.dart';
 import '../widgets/onboarding_cta.dart';
 import '../widgets/onboarding_header.dart';
-import '../widgets/onboarding_height_card.dart';
-import '../widgets/onboarding_option_card.dart';
-import '../widgets/onboarding_step_body.dart';
+import '../widgets/onboarding_question.dart';
 
 /// Onboarding (maquette 2a) : 4 étapes qui remplissent le profil
 /// métabolique réel (objectif, sexe, naissance/taille, activité).
+///
+/// Première marche du parcours de première ouverture : les réponses sont
+/// enregistrées tout de suite si un compte existe, conservées localement
+/// sinon puis reportées sur le profil dès la création du compte.
 ///
 /// Le contenu vit en bas de l'écran, sous le cœur ambient ; « Passer » reste
 /// toujours possible — le profil se complète aussi depuis l'onglet Nutrition.
@@ -50,6 +52,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   bool get _isLastStep => _step == _stepCount - 1;
 
+  OnboardingAnswers get _answers => OnboardingAnswers(
+        goal: _goal,
+        sex: _sex,
+        birthDate: _birthDate,
+        heightCm: _heightTouched ? _heightCm : null,
+        activityLevel: _activity,
+      );
+
   void _back() {
     if (_step > 0) {
       setState(() => _step--);
@@ -64,18 +74,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     await _save();
   }
 
+  /// Enregistre puis laisse le routeur enchaîner : à la fin du parcours de
+  /// première ouverture, `/home` est redirigé vers l'étape suivante.
   Future<void> _save() async {
     setState(() => _saving = true);
     try {
-      await ref.read(nutritionActionsProvider).saveProfile(
-            MetabolicProfileUpdate(
-              goal: _goal,
-              sex: _sex,
-              birthDate: _birthDate,
-              heightCm: _heightTouched ? _heightCm : null,
-              activityLevel: _activity,
-            ),
-          );
+      await ref
+          .read(firstRunControllerProvider.notifier)
+          .submitOnboarding(_answers);
       if (mounted) {
         context.go(AppRoutes.home);
       }
@@ -93,6 +99,15 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
           ),
         ),
       );
+    }
+  }
+
+  /// « Passer » : rien n'est enregistré, mais l'étape est franchie — le
+  /// parcours enchaîne sur la suite au lieu de reboucler.
+  Future<void> _skip() async {
+    await ref.read(firstRunControllerProvider.notifier).completeOnboarding();
+    if (mounted) {
+      context.go(AppRoutes.home);
     }
   }
 
@@ -114,6 +129,11 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Sans session ouverte, l'onboarding précède la création de compte :
+    // qui en a déjà un rejoint la connexion depuis ici.
+    final authenticated =
+        ref.watch(authControllerProvider) is AuthAuthenticated;
+
     return Scaffold(
       backgroundColor: AppColors.darkBackground,
       body: Stack(
@@ -135,7 +155,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                     stepCount: _stepCount,
                     onBack: _step == 0 || _saving ? null : _back,
                   ),
-                  Expanded(child: _buildBottomBlock()),
+                  Expanded(
+                    child: _buildBottomBlock(authenticated: authenticated),
+                  ),
                 ],
               ),
             ),
@@ -147,7 +169,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   /// Le bloc bas est collé en bas de l'espace disponible, et défile si
   /// l'écran est trop court pour lui.
-  Widget _buildBottomBlock() {
+  Widget _buildBottomBlock({required bool authenticated}) {
     return LayoutBuilder(
       builder: (context, constraints) => SingleChildScrollView(
         child: ConstrainedBox(
@@ -162,7 +184,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 label: _isLastStep ? 'Terminer' : 'Continuer',
                 loading: _saving,
                 onPressed: _stepComplete ? _next : null,
-                onSkip: () => context.go(AppRoutes.home),
+                onSkip: _skip,
+                onLogin:
+                    authenticated ? null : () => context.go(AppRoutes.login),
               ),
             ],
           ),
@@ -172,71 +196,22 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   }
 
   Widget _buildStep() {
-    return switch (_step) {
-      0 => OnboardingStepBody(
-          label: 'Ton objectif',
-          question: 'Qu’est-ce qu’on\nconstruit ensemble ?',
-          subtitle: 'On calibre tes charges, ton volume et tes macros '
-              'à partir de ça.',
-          options: [
-            for (final goal in onboardingGoals)
-              OnboardingOptionCard(
-                title: goal.label,
-                subtitle: goalSubtitle(goal),
-                icon: goalIcon(goal),
-                selected: _goal == goal,
-                onTap: () => setState(() => _goal = goal),
-              ),
-          ],
-        ),
-      1 => OnboardingStepBody(
-          label: 'Ton profil',
-          question: 'Pour calibrer\nton métabolisme',
-          subtitle: 'La formule de Mifflin-St Jeor dépend du sexe biologique.',
-          options: [
-            for (final sex in BiologicalSex.values)
-              OnboardingOptionCard(
-                title: sex.label,
-                icon: sexIcon(sex),
-                selected: _sex == sex,
-                onTap: () => setState(() => _sex = sex),
-              ),
-          ],
-        ),
-      2 => OnboardingStepBody(
-          label: 'Tes mesures',
-          question: 'Naissance\net taille',
-          subtitle: 'L’âge et la taille entrent dans le calcul quotidien.',
-          options: [
-            OnboardingBirthDateCard(
-              birthDate: _birthDate,
-              onTap: _pickBirthDate,
-            ),
-            OnboardingHeightCard(
-              heightCm: _heightCm,
-              touched: _heightTouched,
-              onChanged: (value) => setState(() {
-                _heightCm = value;
-                _heightTouched = true;
-              }),
-            ),
-          ],
-        ),
-      _ => OnboardingStepBody(
-          label: 'Ton rythme',
-          question: 'À quelle fréquence\nbouges-tu ?',
-          subtitle: 'Ta dépense d’activité s’ajoute à ton métabolisme de base.',
-          options: [
-            for (final level in ActivityLevel.values)
-              OnboardingOptionCard(
-                title: level.label,
-                subtitle: level.description,
-                icon: activityIcon(level),
-                selected: _activity == level,
-                onTap: () => setState(() => _activity = level),
-              ),
-          ],
-        ),
-    };
+    return OnboardingQuestion(
+      step: _step,
+      goal: _goal,
+      sex: _sex,
+      birthDate: _birthDate,
+      heightCm: _heightCm,
+      heightTouched: _heightTouched,
+      activityLevel: _activity,
+      onGoal: (value) => setState(() => _goal = value),
+      onSex: (value) => setState(() => _sex = value),
+      onPickBirthDate: _pickBirthDate,
+      onHeight: (value) => setState(() {
+        _heightCm = value;
+        _heightTouched = true;
+      }),
+      onActivity: (value) => setState(() => _activity = value),
+    );
   }
 }

@@ -145,6 +145,39 @@ Routes actuelles (Étape 1) :
 | `/`     | `splash` | `SplashScreen` (marque, puis `/home`) |
 | `/home` | `home`   | `HomeScreen` (vitrine du design system) |
 
+### Parcours de première ouverture
+
+Au tout premier lancement, l'application n'ouvre pas l'accueil : elle
+déroule un tunnel en trois temps, entièrement piloté par la **redirection**
+du routeur (aucun `push` impératif dispersé dans les écrans).
+
+| Étape          | Écran                      | Sortie                                     |
+| -------------- | -------------------------- | ------------------------------------------ |
+| `onboarding`   | `/onboarding`              | Répondre ou « Passer » ; « J'ai déjà un compte » mène à `/login` |
+| `account`      | `/register` (ou `/login`)  | Session ouverte                            |
+| `subscription` | `/subscription`            | Premium, ou repli explicite en version gratuite |
+| `done`         | —                          | Comportement normal (session → accueil)    |
+
+- L'étape atteinte est persistée dans SharedPreferences
+  (`FirstRunStore.stepKey` = `parcours.premiere_ouverture.etape`) : la
+  réouverture reprend au bon endroit et le tunnel ne se rejoue **jamais**
+  une fois terminé.
+- Les réponses d'onboarding sont collectées avant que le compte n'existe :
+  elles sont conservées localement
+  (`parcours.premiere_ouverture.reponses`) puis reportées sur le profil
+  métabolique dès qu'une session est ouverte (`FirstRunController`).
+- L'étape effective croise l'étape stockée et l'état de session
+  (`FirstRunStep.resolved`) : une session déjà ouverte satisfait l'étape
+  « compte » — c'est ce qui permet au **mode démo**, dont le dépôt d'auth
+  est toujours connecté, de présenter le tunnel puis de laisser entrer.
+- L'écran d'abonnement sert de temps d'arrêt : pendant le tunnel il n'a pas
+  de croix de fermeture, met en avant les **droits réels** renvoyés par le
+  serveur (aucun tarif : l'API n'en expose pas) et propose explicitement de
+  continuer en version gratuite en cas de refus.
+
+Couverture : `test/features/onboarding/first_run_journey_test.dart` et
+`test/features/demo/demo_mode_test.dart`.
+
 Cibles planifiées (branchées tranche par tranche) :
 
 - **Navigation principale à cinq destinations** — Accueil, Entraînement,

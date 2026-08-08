@@ -10,11 +10,11 @@ import 'package:carlys_mobile/features/workout_session/data/repositories/workout
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../support/fake_auth_repository.dart';
 import '../../support/fake_nutrition_repository.dart';
 import '../../support/fake_workout_repository.dart';
+import '../../support/first_run_prefs.dart';
 
 Widget appWith(FakeNutritionRepository nutrition) => ProviderScope(
       overrides: [
@@ -55,7 +55,8 @@ Future<void> openNutrition(WidgetTester tester) async {
 
 void main() {
   setUp(() {
-    SharedPreferences.setMockInitialValues({});
+    // Parcours de première ouverture déjà terminé.
+    seedCompletedFirstRun();
   });
 
   group('réduction d’animations active (hélice statique)', () {

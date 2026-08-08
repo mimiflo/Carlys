@@ -15,11 +15,15 @@ import '../../support/fake_auth_repository.dart';
 import '../../support/fake_nutrition_repository.dart';
 import '../../support/fake_progress_repository.dart';
 import '../../support/fake_workout_repository.dart';
+import '../../support/first_run_prefs.dart';
 
 /// Accueil : l'écran ne montre que des faits réels — indice de forme déduit
 /// de la semaine, faits d'entraînement, séance du jour, tuiles et semaine.
 void main() {
   setUp(() {
+    // Parcours de première ouverture déjà terminé : l'application démarre
+    // sur l'accueil.
+    seedCompletedFirstRun();
     // La scène cœur boucle en continu : réduction d'animations pour que
     // pumpAndSettle converge.
     TestWidgetsFlutterBinding.instance.platformDispatcher

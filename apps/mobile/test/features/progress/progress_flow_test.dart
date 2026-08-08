@@ -13,6 +13,7 @@ import 'package:flutter_test/flutter_test.dart';
 import '../../support/fake_auth_repository.dart';
 import '../../support/fake_progress_repository.dart';
 import '../../support/fake_workout_repository.dart';
+import '../../support/first_run_prefs.dart';
 
 Widget appWith(FakeProgressRepository progress) => ProviderScope(
       overrides: [
@@ -54,6 +55,9 @@ Future<void> openProgressTab(WidgetTester tester) async {
 
 void main() {
   setUp(() {
+    // Parcours de première ouverture déjà terminé : l'application démarre
+    // sur l'accueil.
+    seedCompletedFirstRun();
     // Les scènes 3D (cœur, hélice) bouclent en continu : réduction
     // d'animations pour que pumpAndSettle converge.
     TestWidgetsFlutterBinding.instance.platformDispatcher

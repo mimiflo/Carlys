@@ -17,6 +17,7 @@ import '../../support/fake_auth_repository.dart';
 import '../../support/fake_exercises_repository.dart';
 import '../../support/fake_subscription_repository.dart';
 import '../../support/fake_workout_repository.dart';
+import '../../support/first_run_prefs.dart';
 
 Widget appWith({
   required FakeSubscriptionRepository subscription,
@@ -54,6 +55,10 @@ Future<void> reveal(WidgetTester tester, Finder item) async {
 
 void main() {
   setUp(() {
+    // Parcours de première ouverture déjà terminé : l'abonnement s'ouvre
+    // depuis le profil, avec sa croix de fermeture (le temps d'arrêt du
+    // tunnel est couvert par first_run_journey_test.dart).
+    seedCompletedFirstRun();
     // L'écran porte une scène 3D et une bordure animée en boucle :
     // animations réduites pour que pumpAndSettle converge.
     TestWidgetsFlutterBinding.ensureInitialized();

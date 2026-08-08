@@ -34,7 +34,6 @@ import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../test/support/fake_auth_repository.dart';
 import '../../test/support/fake_exercises_repository.dart';
@@ -42,6 +41,7 @@ import '../../test/support/fake_nutrition_repository.dart';
 import '../../test/support/fake_progress_repository.dart';
 import '../../test/support/fake_subscription_repository.dart';
 import '../../test/support/fake_workout_repository.dart';
+import '../../test/support/first_run_prefs.dart';
 
 Future<void> loadRealFonts() async {
   // Polices du bundle (MaterialIcons…).
@@ -178,7 +178,9 @@ void main() {
   setUpAll(loadRealFonts);
 
   setUp(() {
-    SharedPreferences.setMockInitialValues({});
+    // Galerie d'une app déjà installée : le parcours de première ouverture
+    // est terminé, sinon toutes les captures repartiraient du tunnel.
+    seedCompletedFirstRun();
   });
 
   // Les scènes 3D bouclent en continu : pumps BORNÉS uniquement, calés

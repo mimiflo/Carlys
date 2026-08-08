@@ -12,17 +12,19 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../support/fake_auth_repository.dart';
 import '../../support/fake_nutrition_repository.dart';
 import '../../support/fake_workout_repository.dart';
+import '../../support/first_run_prefs.dart';
 
 void main() {
   final binding = TestWidgetsFlutterBinding.ensureInitialized();
 
   setUp(() {
-    SharedPreferences.setMockInitialValues({});
+    // Écran ouvert hors tunnel : le parcours de première ouverture est
+    // déjà terminé (il est couvert par first_run_journey_test.dart).
+    seedCompletedFirstRun();
     // L'écran porte une scène 3D en boucle : sans réduction d'animations,
     // pumpAndSettle ne rendrait jamais la main.
     binding.platformDispatcher.accessibilityFeaturesTestValue =

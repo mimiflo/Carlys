@@ -11,6 +11,8 @@ import '../../features/dashboard/presentation/screens/home_screen.dart';
 import '../../features/exercises/presentation/screens/exercise_detail_screen.dart';
 import '../../features/exercises/presentation/screens/exercise_library_screen.dart';
 import '../../features/nutrition/presentation/screens/nutrition_screen.dart';
+import '../../features/onboarding/domain/first_run_step.dart';
+import '../../features/onboarding/presentation/controllers/first_run_controller.dart';
 import '../../features/onboarding/presentation/screens/onboarding_screen.dart';
 import '../../features/onboarding/presentation/screens/splash_screen.dart';
 import '../../features/profile/presentation/screens/profile_screen.dart';
@@ -31,14 +33,43 @@ const _authRoutes = {
 
 final _rootNavigatorKey = GlobalKey<NavigatorState>();
 
-/// Routeur applicatif, gardé par l'état de session :
-///  - session inconnue → splash (restauration en cours) ;
-///  - non authentifié → écrans d'authentification uniquement ;
-///  - authentifié → coquille 5 onglets, écrans de détail plein écran.
+/// Destination imposée par le PARCOURS DE PREMIÈRE OUVERTURE, ou `null` si
+/// l'emplacement demandé est légitime à cette étape.
+///
+/// Le tunnel se traverse par redirection : onboarding → création de compte →
+/// proposition Premium → accueil. La connexion reste accessible depuis
+/// l'onboarding (« j'ai déjà un compte ») et depuis l'étape compte ; une
+/// fois la session ouverte, le parcours reprend là où il en était.
+String? _firstRunRedirect(
+  FirstRunStep step,
+  String location, {
+  required bool authenticated,
+}) {
+  final onAuthScreen = _authRoutes.contains(location) && !authenticated;
+
+  return switch (step) {
+    FirstRunStep.onboarding =>
+      (location == AppRoutes.onboarding || onAuthScreen)
+          ? null
+          : AppRoutes.onboarding,
+    FirstRunStep.account => onAuthScreen ? null : AppRoutes.register,
+    FirstRunStep.subscription =>
+      location == AppRoutes.subscription ? null : AppRoutes.subscription,
+    FirstRunStep.done => null,
+  };
+}
+
+/// Routeur applicatif, gardé par le parcours de première ouverture puis par
+/// l'état de session :
+///  - parcours ou session inconnus → splash (restauration en cours) ;
+///  - parcours en cours → tunnel de première ouverture ;
+///  - parcours terminé, non authentifié → écrans d'authentification ;
+///  - parcours terminé, authentifié → coquille 5 onglets et plein écran.
 final appRouterProvider = Provider<GoRouter>((ref) {
   final refreshListenable = ValueNotifier(0);
   ref.onDispose(refreshListenable.dispose);
   ref.listen(authControllerProvider, (_, __) => refreshListenable.value++);
+  ref.listen(firstRunStepProvider, (_, __) => refreshListenable.value++);
 
   final router = GoRouter(
     navigatorKey: _rootNavigatorKey,
@@ -46,17 +77,31 @@ final appRouterProvider = Provider<GoRouter>((ref) {
     debugLogDiagnostics: false,
     refreshListenable: refreshListenable,
     redirect: (context, state) {
-      final authState = ref.read(authControllerProvider);
       final location = state.matchedLocation;
+      final firstRunStep = ref.read(firstRunStepProvider);
+
+      // Étape du parcours ou session encore inconnue : on patiente.
+      if (firstRunStep == null) {
+        return location == AppRoutes.splash ? null : AppRoutes.splash;
+      }
+
+      final authenticated =
+          ref.read(authControllerProvider) is AuthAuthenticated;
+
+      if (firstRunStep.isTunnel) {
+        return _firstRunRedirect(
+          firstRunStep,
+          location,
+          authenticated: authenticated,
+        );
+      }
+
       final onAuthScreen = _authRoutes.contains(location);
       final onSplash = location == AppRoutes.splash;
 
-      return switch (authState) {
-        AuthUnknown() => onSplash ? null : AppRoutes.splash,
-        AuthUnauthenticated() => onAuthScreen ? null : AppRoutes.login,
-        AuthAuthenticated() =>
-          (onSplash || onAuthScreen) ? AppRoutes.home : null,
-      };
+      return authenticated
+          ? ((onSplash || onAuthScreen) ? AppRoutes.home : null)
+          : (onAuthScreen ? null : AppRoutes.login);
     },
     routes: [
       GoRoute(

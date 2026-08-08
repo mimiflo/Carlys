@@ -7,9 +7,9 @@ import 'package:carlys_mobile/features/workout_session/data/repositories/workout
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../support/fake_workout_repository.dart';
+import '../../support/first_run_prefs.dart';
 
 /// Le mode démo doit ouvrir l'application SANS serveur : session déjà
 /// ouverte, catalogue, progression et nutrition servis en mémoire.
@@ -39,7 +39,9 @@ Future<void> reveal(WidgetTester tester, Finder item) async {
 
 void main() {
   setUp(() {
-    SharedPreferences.setMockInitialValues({});
+    // Par défaut : appareil dont le parcours de première ouverture est
+    // terminé. Le premier lancement a son propre test ci-dessous.
+    seedCompletedFirstRun();
     TestWidgetsFlutterBinding.instance.platformDispatcher
         .accessibilityFeaturesTestValue = FakeAccessibilityFeatures.allOn;
   });
@@ -54,6 +56,35 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.textContaining('Visiteur'), findsWidgets);
+  });
+
+  testWidgets('premier lancement : le parcours est présenté puis laisse entrer',
+      (tester) async {
+    seedFirstOpen();
+    tester.view.physicalSize = const Size(1179, 2556);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+
+    await tester.pumpWidget(demoApp());
+    await tester.pumpAndSettle();
+
+    // 1. Onboarding — la session démo étant déjà ouverte, l'étape « compte »
+    // est satisfaite : « Passer » enchaîne directement sur Premium.
+    expect(find.text('1/4'), findsOneWidget);
+    await tester.tap(find.text('Passer'));
+    await tester.pumpAndSettle();
+
+    // 2. Temps d'arrêt Premium, sans croix de fermeture.
+    expect(find.text('CARLYS PREMIUM'), findsOneWidget);
+    expect(find.byIcon(AppIcons.close), findsNothing);
+
+    // 3. Repli gratuit explicite, puis l'application s'ouvre.
+    await tester.tap(find.text('Continuer sans Premium'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Continuer en version gratuite'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AppBottomBar), findsOneWidget);
   });
 
   testWidgets('bibliothèque servie en mémoire', (tester) async {

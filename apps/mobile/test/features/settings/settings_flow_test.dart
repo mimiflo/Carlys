@@ -11,6 +11,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../support/fake_auth_repository.dart';
 import '../../support/fake_workout_repository.dart';
+import '../../support/first_run_prefs.dart';
 
 Widget app() => ProviderScope(
       overrides: [
@@ -71,7 +72,8 @@ void main() {
   });
 
   setUp(() {
-    SharedPreferences.setMockInitialValues({});
+    // Parcours de première ouverture déjà terminé.
+    seedCompletedFirstRun();
   });
 
   testWidgets('thème sombre : appliqué immédiatement et persisté',
@@ -110,7 +112,7 @@ void main() {
   });
 
   testWidgets('préférence restaurée au démarrage', (tester) async {
-    SharedPreferences.setMockInitialValues({'apparence.theme': 'light'});
+    seedCompletedFirstRun({'apparence.theme': 'light'});
 
     await tester.pumpWidget(app());
     await tester.pumpAndSettle();
