@@ -75,6 +75,11 @@ class WelcomeBackdrop extends StatelessWidget {
               ),
 
               // 5 — voile bas : les vignettes et le bouton se posent au calme.
+              //
+              // ÉCART ASSUMÉ. La planche l'ouvre à 0,62 et ne le ferme qu'au
+              // bord ; le halo de marque, lui, descend jusqu'à 0,76 et laissait
+              // le pied de page violacé. Le voile monte donc et se ferme plus
+              // tôt : sous 0,88, on est sur le fond, pas sur une nappe colorée.
               const Positioned.fill(
                 child: DecoratedBox(
                   decoration: BoxDecoration(
@@ -83,10 +88,10 @@ class WelcomeBackdrop extends StatelessWidget {
                       end: Alignment.bottomCenter,
                       colors: [
                         Color(0x0006060C),
-                        Color(0x9906060C),
+                        Color(0xCC06060C),
                         AppColors.darkBackground,
                       ],
-                      stops: [0.62, 0.86, 1],
+                      stops: [0.56, 0.76, 0.88],
                     ),
                   ),
                 ),
@@ -239,9 +244,8 @@ abstract final class AthletePhotoFraming {
   /// sans quoi elle reste accrochée au bord haut pendant que les mots
   /// descendent. Ce qui sort en bas est de toute façon couvert par les
   /// vignettes.
-  /// Aucune : la tête doit toucher le coin supérieur droit, comme sur la
-  /// planche. La descendre l'éloignait du bord et la rapetissait à l'œil.
-  static const double dropFactor = 0;
+  /// Descente de la photographie, en fraction de la hauteur d'écran.
+  static const double dropFactor = 0.04;
 
   /// Bornes du fondu du BAS, en fractions de la hauteur du cadre.
   ///
