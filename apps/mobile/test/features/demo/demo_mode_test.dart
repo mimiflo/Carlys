@@ -68,8 +68,14 @@ void main() {
     await tester.pumpWidget(demoApp());
     await tester.pumpAndSettle();
 
-    // 0. La page de marque ouvre le parcours, en démo comme ailleurs.
-    await tester.tap(find.text('COMMENCER MON PARCOURS'));
+    // 0. La page de marque ouvre le parcours, en démo comme ailleurs. Son
+    // bouton est en pied de page : on défile jusqu'à lui — le harnais de test
+    // dessine des glyphes carrés, bien plus larges que les vraies fontes, et
+    // la page s'allonge d'autant.
+    final start = find.text('COMMENCER MON PARCOURS');
+    await tester.ensureVisible(start);
+    await tester.pumpAndSettle();
+    await tester.tap(start);
     await tester.pumpAndSettle();
 
     // 1. Onboarding — la session démo étant déjà ouverte, l'étape « compte »

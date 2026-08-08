@@ -24,8 +24,8 @@ import 'package:carlys_mobile/features/exercises/presentation/widgets/exercise_c
 import 'package:carlys_mobile/features/nutrition/data/repositories/nutrition_repository_impl.dart';
 import 'package:carlys_mobile/features/nutrition/domain/entities/nutrition.dart';
 import 'package:carlys_mobile/features/onboarding/domain/first_run_step.dart';
-import 'package:carlys_mobile/features/onboarding/presentation/screens/welcome_screen.dart';
 import 'package:carlys_mobile/features/onboarding/presentation/widgets/brand_signature.dart';
+import 'package:carlys_mobile/features/onboarding/presentation/widgets/welcome_backdrop.dart';
 import 'package:carlys_mobile/features/profile/presentation/widgets/profile_plan_card.dart';
 import 'package:carlys_mobile/features/progress/data/repositories/progress_repository_impl.dart';
 import 'package:carlys_mobile/features/progress/domain/entities/progress.dart';
@@ -55,8 +55,21 @@ Future<void> loadRealFonts() async {
   );
   for (final entry in manifest.whereType<Map<String, dynamic>>()) {
     final loader = FontLoader(entry['family'] as String);
-    for (final font in (entry['fonts'] as List<dynamic>)
-        .whereType<Map<String, dynamic>>()) {
+    // LIMITE CONNUE : `FontLoader` n'expose aucun poids, et le harnais ne sait
+    // donc pas choisir la graisse — c'est la PREMIÈRE fonte chargée qui sert à
+    // tous les poids, les autres étant simulées. Les captures sous-rendent donc
+    // le gras : mesuré, « TON PARCOURS. » en 24/w700 fait 192 px ici contre
+    // ~211 sur un vrai appareil. On charge le 400 en tête, le plus proche de la
+    // moyenne de l'interface — sans quoi une fonte fine déclarée en premier
+    // amaigrirait toute la galerie.
+    final fonts = (entry['fonts'] as List<dynamic>)
+        .whereType<Map<String, dynamic>>()
+        .toList()
+      ..sort((a, b) {
+        int gap(Map<String, dynamic> f) => ((f['weight'] as int?) ?? 400) - 400;
+        return gap(a).abs().compareTo(gap(b).abs());
+      });
+    for (final font in fonts) {
       loader.addFont(rootBundle.load(font['asset'] as String));
     }
     await loader.load();
@@ -205,7 +218,7 @@ void main() {
     final context = tester.element(find.byType(MaterialApp));
     for (final asset in const [
       BrandSignature.markAsset,
-      WelcomeScreen.athleteAsset,
+      WelcomeBackdrop.athleteAsset,
     ]) {
       await tester.runAsync(
         () => precacheImage(AssetImage(asset), context),

@@ -71,6 +71,21 @@ void main() {
         child: const CarlysApp(),
       );
 
+  /// Franchit la page de marque.
+  ///
+  /// Le bouton est en pied de page : il faut défiler jusqu'à lui. La page tient
+  /// l'écran avec les vraies fontes, mais le harnais de test dessine des
+  /// glyphes CARRÉS, bien plus larges — le texte s'y enroule et la page
+  /// s'allonge. Défiler d'abord vaut mieux que d'accorder la mise en page à un
+  /// artefact de test.
+  Future<void> passWelcomePage(WidgetTester tester) async {
+    final cta = find.text('COMMENCER MON PARCOURS');
+    await tester.ensureVisible(cta);
+    await tester.pumpAndSettle();
+    await tester.tap(cta);
+    await tester.pumpAndSettle();
+  }
+
   /// Démarre l'application sur un écran de téléphone (les cartes de
   /// l'onboarding ont besoin de hauteur).
   ///
@@ -87,8 +102,7 @@ void main() {
 
     if (passWelcome &&
         find.text('COMMENCER MON PARCOURS').evaluate().isNotEmpty) {
-      await tester.tap(find.text('COMMENCER MON PARCOURS'));
-      await tester.pumpAndSettle();
+      await passWelcomePage(tester);
     }
   }
 
@@ -150,7 +164,7 @@ void main() {
     // Rien d'autre n'en sort : pas d'échappatoire vers la connexion.
     expect(find.text('J’ai déjà un compte'), findsNothing);
 
-    await tapText(tester, 'COMMENCER MON PARCOURS');
+    await passWelcomePage(tester);
     expect(find.text('1/4'), findsOneWidget);
   });
 

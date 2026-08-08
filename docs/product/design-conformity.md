@@ -84,44 +84,69 @@ d'exemple pour visiter l'app sans serveur.
 La toute première ouverture affiche une **page de marque**
 (`features/onboarding/presentation/screens/welcome_screen.dart`) *avant* la
 première question d'onboarding : on dit qui l'on est avant de demander quoi que
-ce soit. Elle est traduite d'une planche de direction artistique fournie par le
-produit, pas de la maquette Claude Design — d'où trois particularités qui ne
-valent **que là** :
+ce soit. Elle ne vient pas de la maquette « refonte complète » mais d'un
+**handoff Claude Design dédié**, dont les valeurs sont recopiées dans
+[`welcome-screen-spec.md`](welcome-screen-spec.md) — c'est ce fichier qui fait
+foi, pas le code.
+
+Trois particularités qui ne valent **que là** :
 
 - un **dégradé de signature** (`AppColors.signature`, violet → magenta → rose
-  saumon) relevé sur le logo. Il est déclaré dans
-  `packages/design-tokens/src/tokens.json` sous `color.brand.signature*`,
-  réservé aux surfaces de marque — il ne remplace jamais `primary`/`accent`
-  dans l'application — et, sur la page elle-même, **il ne peint qu'une seule
-  chose : le bouton**. Le sceau EST déjà un dégradé ; en poser un second sur la
-  devise ou sur les vignettes ne l'accompagnait pas, ça le concurrençait ;
+  saumon) relevé sur le logo, déjà déclaré dans
+  `packages/design-tokens/src/tokens.json` sous `color.brand.signature*`. Il
+  est réservé aux surfaces de marque — il ne remplace jamais `primary`/`accent`
+  dans l'application — et, sur la page, il ne peint que **deux** choses : le
+  bouton et une barre du motif de progression ;
 - un bouton dédié, `AppBrandButton`, qui porte ce dégradé. Ailleurs, l'action
   principale reste `AppButton` en accent — deux boutons « principaux » de
   couleurs différentes dans un même écran annuleraient la hiérarchie ;
-- deux images de marque (`assets/brand/`) : le sceau et la photographie.
+- **Inter en graisse 300**, uniquement pour le mot CARLYS.
 
-Le sceau est livré en **rendu lumineux sur fond gris**. Le PNG du dépôt en est
-la transposition pour fond sombre : on retranche le gris **en lumière linéaire**
-(le soustraire sur les octets sRGB ferait virer le magenta au rouge), ce qui est
-plus sombre que le fond tombe à zéro — une ombre portée n'a rien à dire sur une
-page noire — et l'opacité se lit sur le canal **maximal**, seule conversion
-prémultiplié → droit qui n'écrête pas les teintes saturées. Un premier essai par
-seuillage avait gardé la nappe diffuse et l'avait rendue opaque : le sceau
-traînait un nuage violet. La recette est dans l'historique du dépôt ; la planche
-d'origine reste la source.
-
-La photographie est fondue vers la gauche, mais **court** : le fondu ne mange
-que son bord. Deux voiles légers suffisent ensuite — un sur la colonne de
-lecture, un sur le pied de page — au lieu de l'assombrissement pleine hauteur
-des scènes 3D, qui éteignait la personne. Le texte, lui, reste dans sa colonne
-(64 % de la largeur) plutôt que de se poser sur elle.
+Toutes les autres couleurs de la spécification existaient déjà à l'identique
+dans le design system (`darkBackground` `#06060C`, `darkSurface` `#101019`,
+`darkBorder` `#12FFFFFF`, `darkTextSecondary` `#9A9AAE`, `darkTextTertiary`
+`#7A7A8C`, `primary` `#5B5BF6`) : rien n'a été ajouté aux tokens.
 
 Les quatre vignettes (App, Academy, Events, Wear) sont **une présentation, pas
 une navigation** : seule l'application existe aujourd'hui, et les rendre
-cliquables promettrait des écrans qui n'existent pas.
+cliquables promettrait des écrans qui n'existent pas. Le motif à cinq barres
+sous le credo est **purement graphique** : il ne mesure rien.
 
 L'étape correspondante, `FirstRunStep.welcome`, précède `onboarding` dans
 l'énumération : le parcours ne pouvant qu'avancer, la page ne se rejoue jamais.
+
+### Quatre pièges de traduction CSS → Flutter
+
+Chacun donne un rendu **faux mais crédible** — la page reste jolie, elle cesse
+seulement d'être la maquette. Les trois premiers sont verrouillés par
+`test/features/onboarding/welcome_fidelity_test.dart`.
+
+1. **Sens de la perspective.** CSS pose `m[3][2] = -1/d` : un point ramené vers
+   l'œil GRANDIT. L'idiome Flutter courant écrit `1/d`, qui inverse la
+   profondeur. Recopié tel quel, le slogan rétrécissait vers la droite au lieu
+   de s'élargir — 11 % de largeur en moins, mesuré.
+2. **Ordre des ombres de texte.** CSS empile les `text-shadow` de haut en bas
+   (la première déclarée est la plus haute) ; Flutter les peint dans l'ordre,
+   la dernière par-dessus. La liste doit donc être **inversée**, sans quoi la
+   teinte la plus sombre recouvre les autres et l'extrusion vire au noir au
+   lieu de s'éclaircir près des lettres.
+3. **Dégradés radiaux.** Flutter dessine un CERCLE (rayon × plus petit côté) là
+   où CSS inscrit une ELLIPSE dans la boîte. Dans un cadre allongé, le halo se
+   contracte en pastille. D'où `EllipticGradient`, une `GradientTransform` qui
+   étire l'axe long autour du centre du dégradé.
+4. **Lueurs (`drop-shadow`).** Une `BoxShadow` dessine l'ombre du CADRE : sur
+   une image détourée, elle produit un rectangle coloré. La lueur fidèle est
+   une copie floutée et teintée de l'image, posée dessous — elle suit l'alpha.
+   C'est ce que fait `BrandGlowImage`. Les rayons de la référence sont des
+   `blur-radius` CSS : l'écart-type gaussien en vaut la **moitié**.
+
+### Limite du harnais de capture
+
+`tool/screenshots` ne sait pas choisir les graisses : `FontLoader` n'expose
+aucun poids, donc la première fonte chargée sert à tous les poids et les autres
+sont simulées. Les captures **sous-rendent le gras** — « TON PARCOURS. » en
+24/w700 y mesure 192 px contre ~211 sur un appareil réel. Un écart de graisse
+entre une capture et la référence n'est donc pas, en soi, un défaut de l'appli.
 
 ## Écarts assumés
 

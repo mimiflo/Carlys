@@ -10,11 +10,13 @@ import '../../../../design_system/design_system.dart';
 class BrandPillars extends StatelessWidget {
   const BrandPillars({super.key});
 
+  static const double _gap = AppSpacing.xs;
+
   static const List<(IconData, String)> _pillars = [
-    (AppIcons.brandApp, 'App'),
-    (AppIcons.brandAcademy, 'Academy'),
-    (AppIcons.brandEvents, 'Events'),
-    (AppIcons.brandWear, 'Wear'),
+    (AppIcons.brandApp, 'APP'),
+    (AppIcons.brandAcademy, 'ACADEMY'),
+    (AppIcons.brandEvents, 'EVENTS'),
+    (AppIcons.brandWear, 'WEAR'),
   ];
 
   @override
@@ -27,7 +29,7 @@ class BrandPillars extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               for (final (index, pillar) in _pillars.indexed) ...[
-                if (index > 0) const SizedBox(width: AppSpacing.xs),
+                if (index > 0) const SizedBox(width: _gap),
                 Expanded(child: _Pillar(icon: pillar.$1, name: pillar.$2)),
               ],
             ],
@@ -45,9 +47,12 @@ class _Pillar extends StatelessWidget {
   final String name;
 
   static const double _iconSize = 26;
+  static const double _labelSize = 9;
 
   @override
   Widget build(BuildContext context) {
+    final label = AppTypography.labelMono.copyWith(fontSize: _labelSize);
+
     return Container(
       padding: const EdgeInsets.symmetric(
         horizontal: AppSpacing.xxs,
@@ -61,27 +66,20 @@ class _Pillar extends StatelessWidget {
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          // Icône sobre : ces vignettes annoncent, elles ne réclament pas le
-          // regard. Le dégradé reste au sceau et au bouton.
           Icon(icon, size: _iconSize, color: AppColors.darkTextSecondary),
           const SizedBox(height: AppSpacing.xs),
           Text(
             'CARLYS',
             textAlign: TextAlign.center,
-            style: AppTypography.labelMono.copyWith(
-              fontSize: 9,
-              color: AppColors.darkTextTertiary,
-            ),
+            style: label.copyWith(color: AppColors.darkTextTertiary),
           ),
+          const SizedBox(height: AppSpacing.xxs / 2),
           Text(
-            name.toUpperCase(),
+            name,
             textAlign: TextAlign.center,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: AppTypography.labelMono.copyWith(
-              fontSize: 9,
-              color: AppColors.darkTextSecondary,
-            ),
+            style: label.copyWith(color: AppColors.darkTextSecondary),
           ),
         ],
       ),

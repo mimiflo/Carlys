@@ -72,6 +72,9 @@ flutter:
   fonts:
     - family: Inter
       fonts:
+        # 300 : le mot CARLYS de la page de marque, et lui seul.
+        - asset: assets/fonts/Inter-Light.ttf
+          weight: 300
         - asset: assets/fonts/Inter-Regular.ttf
           weight: 400
         - asset: assets/fonts/Inter-Medium.ttf
