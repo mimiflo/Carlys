@@ -75,6 +75,10 @@ flutter:
           weight: 600
         - asset: assets/fonts/Inter-Bold.ttf
           weight: 700
+    - family: Oswald
+      fonts:
+        - asset: assets/fonts/Oswald-SemiBold.ttf
+          weight: 600
     - family: JetBrainsMono
       fonts:
         - asset: assets/fonts/JetBrainsMono-Regular.ttf

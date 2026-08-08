@@ -6,7 +6,7 @@ import '../../../nutrition/domain/entities/nutrition.dart';
 import '../../../progress/domain/entities/progress.dart';
 import '../controllers/dashboard_controllers.dart';
 
-/// « Résumé du jour » : grille 2×2 de faits.
+/// « Résumé du jour » : grille 2×2 de faits, dans un cadre commun.
 ///
 /// La maquette de référence y place aussi le sommeil et l'hydratation. Le
 /// domaine ne les connaît pas : plutôt que d'afficher des chiffres inventés,
@@ -64,28 +64,30 @@ class DaySummaryGrid extends StatelessWidget {
       ),
     ];
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const AppSectionLabel(
-          'Résumé du jour',
-          color: AppColors.darkTextTertiary,
-        ),
-        const SizedBox(height: AppSpacing.sm),
-        for (var row = 0; row < 2; row++) ...[
-          if (row > 0) const SizedBox(height: AppSpacing.gapTile),
-          IntrinsicHeight(
-            child: Row(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Expanded(child: tiles[row * 2]),
-                const SizedBox(width: AppSpacing.gapTile),
-                Expanded(child: tiles[row * 2 + 1]),
-              ],
+    return AppLabeledCard(
+      label: 'Résumé du jour',
+      // Cadre commun : les quatre tuiles forment un bloc, pas quatre îlots
+      // posés sur le fond. Le liseré reste discret — c'est un regroupement,
+      // pas une mise en avant.
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (var row = 0; row < 2; row++) ...[
+            if (row > 0) const SizedBox(height: AppSpacing.gapTile),
+            IntrinsicHeight(
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Expanded(child: tiles[row * 2]),
+                  const SizedBox(width: AppSpacing.gapTile),
+                  Expanded(child: tiles[row * 2 + 1]),
+                ],
+              ),
             ),
-          ),
+          ],
         ],
-      ],
+      ),
     );
   }
 }

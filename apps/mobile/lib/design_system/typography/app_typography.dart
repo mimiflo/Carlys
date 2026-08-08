@@ -2,12 +2,23 @@ import 'package:flutter/material.dart';
 
 /// Échelle typographique Carlys — refonte (tokens : typography.scale).
 ///
-/// Deux familles seulement : Inter (texte) et JetBrains Mono (TOUS les
-/// chiffres, en chiffres tabulaires — sans ça les compteurs sautent
-/// pendant les animations).
+/// Trois familles, chacune avec un rôle exclusif : Inter (texte), JetBrains
+/// Mono (TOUS les chiffres, en chiffres tabulaires — sans ça les compteurs
+/// sautent pendant les animations), et Oswald pour la seule maxime du jour.
 abstract final class AppTypography {
   static const String textFamily = 'Inter';
   static const String monoFamily = 'JetBrainsMono';
+
+  /// Famille d'AFFICHE, réservée à la maxime du jour.
+  ///
+  /// Oswald est la grotesque condensée des affiches de salle et des dossards :
+  /// elle porte une phrase courte avec une autorité qu'Inter, neutre par
+  /// vocation, n'a pas. Condensée, elle loge aussi plus de signes par ligne,
+  /// donc la citation s'affiche plus grande à surface égale.
+  ///
+  /// **Un seul usage** : l'étendre à d'autres écrans dissoudrait l'effet et
+  /// brouillerait la hiérarchie — Inter reste la voix de l'application.
+  static const String quoteFamily = 'Oswald';
 
   // ── Texte (Inter) ────────────────────────────────────────────────
   static const TextStyle display = TextStyle(
@@ -108,6 +119,16 @@ abstract final class AppTypography {
 
   /// Toujours en MAJUSCULES. `primaryLight` quand il introduit une section,
   /// `textTertiary` quand il légende une valeur.
+  /// Maxime du jour. Le corps est choisi à l'affichage par [AppFittedText] :
+  /// celui-ci n'est qu'un point de départ.
+  static const TextStyle quote = TextStyle(
+    fontFamily: quoteFamily,
+    fontSize: 24,
+    height: 1.22,
+    fontWeight: FontWeight.w600,
+    letterSpacing: 0.2,
+  );
+
   static const TextStyle labelMono = TextStyle(
     fontFamily: monoFamily,
     fontSize: 10,

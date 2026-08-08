@@ -50,7 +50,9 @@ class AppSummaryTile extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(AppSpacing.sm),
           decoration: const BoxDecoration(
-            color: AppColors.darkSurface,
+            // Surface SECONDAIRE : la tuile vit dans une carte, elle doit
+            // s'en détacher. Sur la même surface, elle disparaîtrait.
+            color: AppColors.darkSurfaceAlt,
             borderRadius: AppRadius.statTileAll,
             border:
                 Border.fromBorderSide(BorderSide(color: AppColors.darkBorder)),

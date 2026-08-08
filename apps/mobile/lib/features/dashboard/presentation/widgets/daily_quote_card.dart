@@ -17,9 +17,9 @@ class DailyQuoteCard extends StatelessWidget {
   /// se resserre quand elle est longue, et remplit toujours la place reçue.
   /// Les maximes vont du simple au double en longueur — sans cela, le cadre
   /// paraîtrait creux un jour et déborderait le lendemain.
-  static const double _quoteMinSize = 13;
-  static const double _quoteMaxSize = 26;
-  static const double _quoteHeight = 1.32;
+  static const double _quoteMinSize = 14;
+  static const double _quoteMaxSize = 30;
+  static const double _quoteHeight = 1.22;
   static const double _glyphSize = 28;
 
   /// Interligne ÉCRASÉ du glyphe : sans lui, sa boîte de ligne de 38 pousse
@@ -48,9 +48,8 @@ class DailyQuoteCard extends StatelessWidget {
         quote.text,
         minFontSize: _quoteMinSize,
         maxFontSize: _quoteMaxSize,
-        style: AppTypography.title.copyWith(
+        style: AppTypography.quote.copyWith(
           height: _quoteHeight,
-          fontWeight: FontWeight.w600,
           color: AppColors.darkTextPrimary,
         ),
       ),
