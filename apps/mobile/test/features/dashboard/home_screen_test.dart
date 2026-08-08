@@ -206,6 +206,22 @@ void main() {
     );
   });
 
+  testWidgets('la carte de citation descend jusqu’à la série de constance',
+      (tester) async {
+    await pumpHome(tester);
+
+    final quote = tester.getRect(find.byType(DailyQuoteCard));
+    final streak = tester.getRect(find.byType(ConsistencyStreak));
+
+    // Elle s'arrête juste au-dessus, à une gouttière près : ni carte
+    // riquiqui flottant en haut, ni chevauchement.
+    expect(quote.bottom, lessThan(streak.top));
+    expect(streak.top - quote.bottom, lessThan(AppSpacing.gapSection));
+
+    // Et elle occupe vraiment la bande : plus haute que large.
+    expect(quote.height, greaterThan(quote.width));
+  });
+
   testWidgets('série de constance : sept jours en ronds, L M M J V S D',
       (tester) async {
     await pumpHome(tester);

@@ -13,9 +13,14 @@ class DailyQuoteCard extends StatelessWidget {
 
   final DailyQuote quote;
 
-  /// Géométrie COMPACTE : la carte vit à gauche du cœur, sur un peu plus
-  /// d'une demi-largeur. Phrase en 15/1.38, glyphe décoratif de 28.
-  static const double _quoteSize = 15;
+  /// Géométrie : la carte vit à gauche du cœur, sur un peu plus d'une
+  /// demi-largeur, et descend jusqu'à la série de constance.
+  ///
+  /// La phrase est en 17 — assez grande pour que la carte remplisse sa bande
+  /// d'elle-même. La hauteur n'est JAMAIS imposée : la zone haute pose un
+  /// plancher, une maxime longue fait grandir la carte au-delà. Rien ne peut
+  /// donc déborder, quelle que soit la largeur de l'écran.
+  static const double _quoteSize = 17;
   static const double _quoteHeight = 1.38;
   static const double _glyphSize = 28;
 
@@ -29,6 +34,10 @@ class DailyQuoteCard extends StatelessWidget {
     return AppLabeledCard(
       label: 'Citation du jour',
       padding: const EdgeInsets.all(AppSpacing.sm),
+      // La carte est plus haute que sa phrase : label en haut, maxime en bas.
+      // L'espace devient de la respiration entre les deux, pas un trou sous
+      // le texte.
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
       semanticLabel: 'Citation du jour, ${quote.value.label} : ${quote.text}',
       trailing: Text(
         '”',

@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../../../design_system/design_system.dart';
@@ -8,11 +10,12 @@ import 'daily_quote_card.dart';
 import 'home_header.dart';
 
 /// Zone haute de l'accueil : **le cœur qui bat** à droite, la citation du
-/// jour à sa gauche, au même niveau.
+/// jour à sa gauche, sur toute la hauteur de la zone.
 ///
 /// Le cœur est la signature de l'application : rien ne se pose sur sa masse.
-/// La citation occupe la colonne restée vide à gauche — d'où sa forme
-/// compacte, presque carrée.
+/// La citation occupe la colonne restée vide à gauche et descend jusqu'au
+/// pied de la zone, là où commence la série de constance — d'où sa forme
+/// haute plutôt que compacte.
 class HomeHero extends StatelessWidget {
   const HomeHero({
     required this.displayName,
@@ -52,6 +55,21 @@ class HomeHero extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final topInset = MediaQuery.paddingOf(context).top;
+
+    // Ce qui reste à la citation entre l'en-tête et le pied de la zone. Tout
+    // est connu — l'encoche, la gouttière, la hauteur FIXE de l'en-tête —
+    // donc la carte descend exactement jusqu'à la série, quel que soit
+    // l'appareil. Si la phrase du jour demande plus, la carte grandit et la
+    // zone haute avec elle.
+    final quoteHeight = math.max(
+      0.0,
+      _minHeight -
+          (topInset +
+              AppSpacing.gutter +
+              HomeHeader.height +
+              AppSpacing.gapRow) -
+          AppSpacing.gapRow,
+    );
 
     return ConstrainedBox(
       constraints: const BoxConstraints(minHeight: _minHeight),
@@ -94,11 +112,17 @@ class HomeHero extends StatelessWidget {
                 HomeHeader(displayName: displayName, subtitle: subtitle),
                 const SizedBox(height: AppSpacing.gapRow),
                 Row(
+                  // `stretch` forcerait une hauteur infinie : dans une liste,
+                  // la colonne n'a pas de plafond vertical. C'est la
+                  // contrainte posée sur la carte qui lui donne sa hauteur.
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Expanded(
                       flex: _quoteFlex,
-                      child: DailyQuoteCard(quote: quote),
+                      child: ConstrainedBox(
+                        constraints: BoxConstraints(minHeight: quoteHeight),
+                        child: DailyQuoteCard(quote: quote),
+                      ),
                     ),
                     // Colonne laissée au cœur : rien ne s'y pose.
                     const Expanded(flex: _sceneFlex, child: SizedBox()),
