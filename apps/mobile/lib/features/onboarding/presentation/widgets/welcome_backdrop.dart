@@ -52,17 +52,11 @@ class WelcomeBackdrop extends StatelessWidget {
                 top: AthletePhotoFraming.dropFactor * h,
                 right: 0,
                 width: AthletePhotoFraming.boxFor(Size(w, h)).width,
-                height: h,
+                height: AthletePhotoFraming.boxFor(Size(w, h)).height,
                 child: _AthletePhoto(screen: Size(w, h)),
               ),
 
               // 4 — voile horizontal : la colonne de texte reprend le fond.
-              //
-              // ÉCART ASSUMÉ. La planche l'éteint à 0,66 ; l'avant-bras de la
-              // personne arrive exactement au bout des dernières lignes, et y
-              // restait trop clair. Le voile est donc étiré de 0,66 à 0,78 et
-              // à peine renforcé — assez pour que le bras s'efface derrière
-              // les mots, pas assez pour l'effacer, lui.
               const Positioned.fill(
                 child: DecoratedBox(
                   decoration: BoxDecoration(
@@ -71,10 +65,10 @@ class WelcomeBackdrop extends StatelessWidget {
                       end: Alignment.centerRight,
                       colors: [
                         AppColors.darkBackground,
-                        Color(0xD406060C),
+                        Color(0xC706060C),
                         Color(0x0006060C),
                       ],
-                      stops: [0, 0.40, 0.78],
+                      stops: [0, 0.34, 0.66],
                     ),
                   ),
                 ),
@@ -231,7 +225,11 @@ abstract final class AthletePhotoFraming {
   static const double shownWidth = 0.55;
 
   /// Position du logo dorsal, en fraction de la largeur d'écran.
-  static const double markScreenX = 0.928;
+  ///
+  /// La planche le pose à 0,928 ; on le décale un peu à droite, la personne
+  /// suivant. Le décalage est borné par lui : au-delà, il sort du cadre, et la
+  /// spécification exige qu'il reste visible.
+  static const double markScreenX = 0.945;
 
   /// Descente de la photographie, en fraction de la hauteur d'écran.
   ///
@@ -257,7 +255,15 @@ abstract final class AthletePhotoFraming {
   static const double fadeFrom = 0.38;
   static const double fadeTo = 0.566;
 
-  /// Cadre de la photographie : toute la hauteur, ancré à droite.
+  /// Part de la hauteur d'écran occupée par le cadre.
+  ///
+  /// C'est le seul réglage de TAILLE : `cover` se règle sur la hauteur du
+  /// cadre, tout le reste en découle. Moins que 1 rapetitit la personne sans
+  /// rien changer à la part du cliché montrée. Le bas manquant tombe sous le
+  /// bouton, là où le voile de pied de page est déjà opaque.
+  static const double heightFactor = 0.92;
+
+  /// Cadre de la photographie, ancré à droite.
   ///
   /// La largeur n'est pas la constante de la spécification mais se DÉDUIT de
   /// [shownWidth] : `cover` se règle sur la hauteur (le cliché est plus large,
@@ -266,11 +272,12 @@ abstract final class AthletePhotoFraming {
   /// 43 % sur un téléphone contre 55 % sur la planche — d'où le gros plan, la
   /// silhouette perdue et le logo dorsal hors champ.
   static Size boxFor(Size screen) {
+    final height = heightFactor * screen.height;
     final width = math.min(
       screen.width,
-      shownWidth * source.width * screen.height / source.height,
+      shownWidth * source.width * height / source.height,
     );
-    return Size(width, screen.height);
+    return Size(width, height);
   }
 
   /// Cadrage horizontal qui pose le logo dorsal à [markScreenX] de l'écran.
