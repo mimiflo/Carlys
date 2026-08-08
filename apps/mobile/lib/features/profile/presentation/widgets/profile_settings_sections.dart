@@ -83,10 +83,9 @@ class ProfileAppSettings extends ConsumerWidget {
           icon: AppIcons.theme,
           label: 'Thème sombre',
           toggleValue: isDark,
-          onToggle: (value) =>
-              ref.read(themeSettingProvider.notifier).setTheme(
-                    value ? AppThemeSetting.dark : AppThemeSetting.light,
-                  ),
+          onToggle: (value) => ref.read(themeSettingProvider.notifier).setTheme(
+                value ? AppThemeSetting.dark : AppThemeSetting.light,
+              ),
           onTap: onAppearance,
         ),
         AppSettingsRow(

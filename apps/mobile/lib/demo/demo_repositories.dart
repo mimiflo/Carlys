@@ -163,9 +163,8 @@ class DemoProgressRepository implements ProgressRepository {
       points: [
         for (var i = 0; i < buckets; i++)
           ProgressPoint(
-            bucketStart: DateTime.now()
-                .toUtc()
-                .subtract(Duration(days: buckets - i)),
+            bucketStart:
+                DateTime.now().toUtc().subtract(Duration(days: buckets - i)),
             sessionsCount: 1,
             // Variation déterministe autour de la moyenne (pas d'aléatoire).
             volumeKg: perBucket * (0.7 + 0.6 * ((i * 37) % 10) / 10),

@@ -126,9 +126,7 @@ class HistorySessionCard extends StatelessWidget {
     final failed = state == LocalSyncState.failed;
 
     return Semantics(
-      label: failed
-          ? 'Synchronisation en échec'
-          : 'Synchronisation en attente',
+      label: failed ? 'Synchronisation en échec' : 'Synchronisation en attente',
       child: Icon(
         failed ? AppIcons.error : AppIcons.offline,
         size: 16,

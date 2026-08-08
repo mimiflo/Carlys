@@ -61,7 +61,8 @@ void main() {
               .overrideWithValue(FakeAuthRepository(storedSession: true)),
           workoutRepositoryProvider
               .overrideWithValue(workouts ?? FakeWorkoutRepository()),
-          progressRepositoryProvider.overrideWithValue(FakeProgressRepository()),
+          progressRepositoryProvider
+              .overrideWithValue(FakeProgressRepository()),
           nutritionRepositoryProvider.overrideWithValue(completeNutrition()),
           syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
         ],

@@ -17,8 +17,8 @@ import '../../support/fake_workout_repository.dart';
 void main() {
   setUp(() {
     TestWidgetsFlutterBinding.ensureInitialized();
-    TestWidgetsFlutterBinding.instance.platformDispatcher
-        .accessibilityFeaturesTestValue =
+    TestWidgetsFlutterBinding
+            .instance.platformDispatcher.accessibilityFeaturesTestValue =
         const FakeAccessibilityFeatures(disableAnimations: true);
   });
 

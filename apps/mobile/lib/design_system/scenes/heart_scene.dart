@@ -421,7 +421,8 @@ class _HeartPainter extends CustomPainter {
       final cosTheta = math.sqrt(math.max(0.0, 1 - d * d));
       final fresnel = math.pow(1 - cosTheta, 2.6).toDouble();
       stops.add(d);
-      colors.add(color.withValues(alpha: (fresnel * intensity).clamp(0.0, 1.0)));
+      colors
+          .add(color.withValues(alpha: (fresnel * intensity).clamp(0.0, 1.0)));
     }
 
     canvas.drawCircle(
@@ -528,7 +529,8 @@ class _HeartPainter extends CustomPainter {
 
       final r = (2.5 + h1 * 1.7) * (1 + beat * 0.08);
       final angle = h2 * math.pi * 2 + seconds * (0.15 + h4 * 0.4) * 0.4;
-      final y = (h3 - 0.5) * 3.4 + math.sin(seconds * 0.5 + h2 * math.pi * 2) * 0.16;
+      final y =
+          (h3 - 0.5) * 3.4 + math.sin(seconds * 0.5 + h2 * math.pi * 2) * 0.16;
 
       final lx = math.cos(angle) * r;
       final lz = math.sin(angle) * r;

@@ -60,8 +60,9 @@ class SubscriptionPlanCard extends StatelessWidget {
             decoration: const BoxDecoration(
               color: AppColors.darkSurface,
               borderRadius: AppRadius.cardSecondaryAll,
-              border:
-                  Border.fromBorderSide(BorderSide(color: AppColors.darkBorder)),
+              border: Border.fromBorderSide(
+                BorderSide(color: AppColors.darkBorder),
+              ),
             ),
             child: content,
           );
@@ -95,9 +96,7 @@ String _planDetail(PlanStatus status) {
   // L'état « actif » est déjà porté par la pastille : ne pas le répéter,
   // la ligne tiendrait sinon sur deux lignes.
   if (subscription.state == SubscriptionState.active) {
-    return endsAccess
-        ? 'Accès jusqu’au $date'
-        : 'Renouvellement le $date';
+    return endsAccess ? 'Accès jusqu’au $date' : 'Renouvellement le $date';
   }
   return '${subscription.state.label} — jusqu’au $date';
 }

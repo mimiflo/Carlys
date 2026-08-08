@@ -30,8 +30,7 @@ class TodayWorkoutCard extends StatelessWidget {
     final title = active == null
         ? 'Entraînement libre'
         : (name == null || name.isEmpty ? 'Séance en cours' : name);
-    final elapsed =
-        active == null ? null : _elapsed(active.session.startedAt);
+    final elapsed = active == null ? null : _elapsed(active.session.startedAt);
     final facts = _facts(active);
 
     return Container(
@@ -89,7 +88,8 @@ class TodayWorkoutCard extends StatelessWidget {
           ],
           const SizedBox(height: AppSpacing.md),
           _AccentCta(
-            label: active == null ? 'Démarrer la séance' : 'Reprendre la séance',
+            label:
+                active == null ? 'Démarrer la séance' : 'Reprendre la séance',
             onPressed: onStart,
           ),
         ],
@@ -153,8 +153,8 @@ class _AccentCta extends StatelessWidget {
           style: FilledButton.styleFrom(
             backgroundColor: AppColors.accent,
             foregroundColor: AppColors.darkBackground,
-            textStyle: AppTypography.subheading
-                .copyWith(fontWeight: FontWeight.w700),
+            textStyle:
+                AppTypography.subheading.copyWith(fontWeight: FontWeight.w700),
           ),
           onPressed: onPressed,
           child: Row(

@@ -17,9 +17,8 @@ double srgbToLinear(double c) =>
     c < 0.04045 ? c / 12.92 : math.pow((c + 0.055) / 1.055, 2.4).toDouble();
 
 /// Linéaire (0..1) → sRGB.
-double linearToSrgb(double c) => c < 0.0031308
-    ? c * 12.92
-    : 1.055 * math.pow(c, 1 / 2.4).toDouble() - 0.055;
+double linearToSrgb(double c) =>
+    c < 0.0031308 ? c * 12.92 : 1.055 * math.pow(c, 1 / 2.4).toDouble() - 0.055;
 
 /// Table de conversion linéaire→sRGB en 8 bits.
 ///

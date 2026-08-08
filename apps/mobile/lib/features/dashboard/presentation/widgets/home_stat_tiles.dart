@@ -53,7 +53,8 @@ class HomeStatTiles extends StatelessWidget {
               // Part des protéines dans l'objectif calorique (4 kcal/g).
               progress: metabolism == null
                   ? null
-                  : (metabolism.proteinG * _kcalPerProteinGram /
+                  : (metabolism.proteinG *
+                          _kcalPerProteinGram /
                           metabolism.targetKcal)
                       .clamp(0.0, 1.0),
               gaugeColor: AppColors.accent,
