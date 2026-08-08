@@ -235,17 +235,21 @@ abstract final class AthletePhotoFraming {
   /// sans quoi elle reste accrochée au bord haut pendant que les mots
   /// descendent. Ce qui sort en bas est de toute façon couvert par les
   /// vignettes.
-  static const double dropFactor = 0.05;
+  /// Aucune : la tête doit toucher le coin supérieur droit, comme sur la
+  /// planche. La descendre l'éloignait du bord et la rapetissait à l'œil.
+  static const double dropFactor = 0;
 
   /// Bornes du fondu du bord gauche, en fractions de la largeur d'écran :
   /// transparent avant la première, opaque après la seconde.
   ///
-  /// La planche les met à 0,38 et 0,566 ; sur un écran plus étroit, la même
-  /// tranche de cliché occupe 29 % de largeur en plus, et la personne
-  /// ressortait alors SUR le texte. Le fondu est donc reporté pour s'éteindre
-  /// là où la colonne de texte s'arrête (0,62), en gardant sa longueur.
-  static const double fadeFrom = 0.62;
-  static const double fadeTo = fadeFrom + (0.566 - 0.38);
+  /// Ce sont celles de la planche. Les avoir décalées vers la droite, pour
+  /// que la personne ne passe pas derrière le texte, la faisait disparaître
+  /// aux DEUX TIERS : elle n'était plus un grand élément de fond mais une
+  /// vignette confinée à droite. C'est la PLAQUE SOMBRE (couche 7) et le voile
+  /// horizontal (couche 4) qui rendent le texte lisible, pas l'effacement de
+  /// la photographie.
+  static const double fadeFrom = 0.38;
+  static const double fadeTo = 0.566;
 
   /// Cadre de la photographie : toute la hauteur, ancré à droite.
   ///
@@ -334,10 +338,10 @@ class _AthletePhoto extends StatelessWidget {
       image: const AssetImage(WelcomeBackdrop.athleteAsset),
       fit: BoxFit.cover,
       alignment: Alignment(AthletePhotoFraming.alignmentFor(screen), -1),
-      // Le cliché fait 1024 de large et s'affiche sur ~940 pixels d'écran pour
-      // 563 pixels de fichier : il est AGRANDI de deux tiers. Le filtrage par
-      // défaut (bilinéaire sur mipmaps) rend alors une image molle ; la
-      // bicubique conserve le grain de la peau et le trait des cheveux.
+      // Le cliché est AGRANDI à l'affichage : le filtrage par défaut
+      // (bilinéaire sur mipmaps) le rendrait mou, la bicubique garde le grain
+      // de la peau et le trait des cheveux. Le fichier, lui, n'est PAS
+      // retouché — c'est le détourage fourni, dont les bords sont propres.
       filterQuality: FilterQuality.high,
       excludeFromSemantics: true,
     );

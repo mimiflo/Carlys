@@ -64,14 +64,9 @@ class WelcomeScreen extends ConsumerWidget {
               builder: (context, constraints) => SingleChildScrollView(
                 // Elle ne défile que si l'écran est trop court : sur un
                 // téléphone ordinaire, tout tient d'un seul regard.
-                padding: const EdgeInsets.fromLTRB(
-                  AppSpacing.gutter,
-                  AppSpacing.md,
-                  AppSpacing.gutter,
-                  // Le pied de page décolle du bord : la planche le pose à 16
-                  // d'un écran de 734 points, ce qui en fait bien plus, en
-                  // proportion, que sur un téléphone de 852.
-                  AppSpacing.xxl,
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.gutter,
+                  vertical: AppSpacing.md,
                 ),
                 child: ConstrainedBox(
                   constraints: BoxConstraints(
@@ -105,9 +100,14 @@ class WelcomeScreen extends ConsumerWidget {
                             scale: scaleFor(constraints.biggest),
                           ),
                         ),
-                        const Spacer(flex: 3),
+                        const Spacer(flex: 2),
                         const SizedBox(height: _blockGap),
                         const _ActionBlock(),
+                        // Le pied de page ne colle plus au bord : il remonte
+                        // vers le centre. La planche n'a presque pas de vide à
+                        // répartir, un téléphone en a beaucoup — collé en bas,
+                        // le bloc s'y retrouvait isolé, très loin du texte.
+                        const Spacer(flex: 2),
                       ],
                     ),
                   ),

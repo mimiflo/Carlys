@@ -168,14 +168,16 @@ les bornes du fondu, pour chaque taille d'écran. Vérification après coup sur 
 rendu : logo à 0,930 (planche 0,928), personne descendant jusqu'à 0,699
 (planche 0,694).
 
-**Un écart demeure, et il est irréductible.** Le fondu de la planche s'éteint à
-0,566 ; à cette place, sur un écran étroit, la personne ressortait **sur le
-texte**. Il est donc reporté pour s'éteindre là où la colonne de texte s'arrête
-(0,62), en gardant sa longueur. Elle émerge de ce fait un peu plus à droite que
-sur la planche (0,761 contre 0,680). Même cause pour le logo dorsal, qui occupe
-7,5 % de la largeur ici contre 5,8 % sur la planche : le rapport 0,59 / 0,46 =
-1,29, exactement. Sur un écran plus étroit, à hauteur égale, tout est
-relativement plus large.
+**La personne passe DERRIÈRE le texte, et c'est voulu.** Le fondu avait été
+reporté à 0,62 pour qu'elle ne le touche pas ; à ce compte elle disparaissait
+aux deux tiers et n'était plus un grand élément de fond mais une vignette
+confinée à droite. La lisibilité vient de la **plaque sombre** (couche 7) et du
+**voile horizontal** (couche 4), pas de l'effacement de la photographie : les
+bornes du fondu sont donc celles de la planche.
+
+Un écart demeure, irréductible : le logo dorsal occupe 7,5 % de la largeur ici
+contre 5,8 % sur la planche. C'est le rapport 0,59 / 0,46 = 1,29, exactement —
+sur un écran plus étroit, à hauteur égale, tout est relativement plus large.
 
 `welcome_fidelity_test.dart` vérifie sur cinq tailles d'écran que le logo
 dorsal reste visible, que le cadrage reste un portrait, et que le fondu est

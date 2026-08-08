@@ -99,19 +99,19 @@ void main() {
       });
     }
 
-    test('la personne ne déborde pas sur le texte', () {
-      // Demande du produit, et écart assumé avec la planche : sur un écran
-      // plus étroit, la même tranche de cliché occupe 29 % de largeur en plus,
-      // et la personne ressortait SUR les mots. Le fondu doit donc être éteint
-      // partout où le texte s'écrit.
+    test('la personne passe DERRIÈRE le texte, elle ne s’arrête pas devant',
+        () {
+      // Ce test a d'abord affirmé le contraire — que le fondu devait être
+      // éteint partout où le texte s'écrit. C'était une erreur de lecture : à
+      // ce compte, la photographie disparaissait aux deux tiers et n'était
+      // plus un grand élément de fond mais une vignette confinée à droite.
+      // La lisibilité vient de la PLAQUE SOMBRE et du voile horizontal, pas de
+      // l'effacement de la personne.
       const screen = Size(393, 852);
       final textRight =
           (AppSpacing.gutter + AthleteFramingHelpers.textWidth(screen)) /
               screen.width;
-      final visibility = ((textRight - AthletePhotoFraming.fadeFrom) /
-              (AthletePhotoFraming.fadeTo - AthletePhotoFraming.fadeFrom))
-          .clamp(0.0, 1.0);
-      expect(visibility, lessThan(0.05));
+      expect(AthletePhotoFraming.fadeFrom, lessThan(textRight));
     });
 
     test('le cadrage reste un portrait, pas un gros plan', () {
