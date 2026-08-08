@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -28,6 +30,24 @@ class WelcomeScreen extends ConsumerWidget {
   /// Écart minimal entre le bloc haut et le bloc bas.
   static const double _blockGap = AppSpacing.xl;
 
+  /// Largeur de l'écran sur lequel le design a été validé, en points.
+  ///
+  /// Déduite de la planche : le bouton, haut de 58 points, y mesure 158 pixels,
+  /// soit un facteur 2,72 pour une image de 1186 de large. Toutes les tailles
+  /// de la spécification sont donc pensées POUR cette largeur — sur un
+  /// téléphone plus étroit, les mêmes points occupent une part plus grande, et
+  /// le texte finissait par toucher la personne (et par se casser en deux
+  /// lignes sur les petits écrans).
+  static const double designWidth = 435;
+
+  /// Échelle du bloc de texte pour tenir les mêmes PROPORTIONS que la planche.
+  ///
+  /// Jamais au-dessus de 1 : sur un écran plus large, on ne grossit pas le
+  /// texte, on lui laisse de l'air.
+  @visibleForTesting
+  static double scaleFor(Size screen) =>
+      math.min(1, screen.width / designWidth);
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     return Scaffold(
@@ -44,26 +64,52 @@ class WelcomeScreen extends ConsumerWidget {
               builder: (context, constraints) => SingleChildScrollView(
                 // Elle ne défile que si l'écran est trop court : sur un
                 // téléphone ordinaire, tout tient d'un seul regard.
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.gutter,
-                  vertical: AppSpacing.md,
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.gutter,
+                  AppSpacing.md,
+                  AppSpacing.gutter,
+                  // Le pied de page décolle du bord : la planche le pose à 16
+                  // d'un écran de 734 points, ce qui en fait bien plus, en
+                  // proportion, que sur un téléphone de 852.
+                  AppSpacing.xxl,
                 ),
                 child: ConstrainedBox(
                   constraints: BoxConstraints(
-                    minHeight: constraints.maxHeight - AppSpacing.md * 2,
+                    minHeight:
+                        constraints.maxHeight - AppSpacing.md - AppSpacing.xxl,
                   ),
-                  child: const Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      FractionallySizedBox(
-                        widthFactor: textWidthFactor,
-                        alignment: Alignment.centerLeft,
-                        child: _HeroBlock(),
-                      ),
-                      SizedBox(height: _blockGap),
-                      _ActionBlock(),
-                    ],
+                  // La hauteur devient DÉFINIE, ce qui autorise les respirations
+                  // proportionnelles ci-dessous. Sans ça, la colonne n'a qu'un
+                  // minimum et `Spacer` n'a rien à répartir.
+                  child: IntrinsicHeight(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        // Le vide se partage moitié-moitié entre le haut de la
+                        // page et l'entre-deux. Tout lui donner au milieu —
+                        // `spaceBetween` — collait le texte en haut : la planche
+                        // n'a presque pas de vide à répartir, un téléphone en a
+                        // beaucoup, et le bloc y restait échoué contre le bord.
+                        // Un quart du vide au-dessus, trois quarts entre les
+                        // blocs. La planche n'a presque pas de vide à
+                        // répartir ; un téléphone en a beaucoup, et tout lui
+                        // donner au milieu laissait le texte échoué contre le
+                        // bord haut. Un `Spacer` se rétracte à zéro quand
+                        // l'écran est juste — le pied de page reste
+                        // atteignable.
+                        const Spacer(),
+                        FractionallySizedBox(
+                          widthFactor: textWidthFactor,
+                          alignment: Alignment.centerLeft,
+                          child: _HeroBlock(
+                            scale: scaleFor(constraints.biggest),
+                          ),
+                        ),
+                        const Spacer(flex: 3),
+                        const SizedBox(height: _blockGap),
+                        const _ActionBlock(),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -77,21 +123,23 @@ class WelcomeScreen extends ConsumerWidget {
 
 /// Bloc haut : signature, accroche, credo, motif.
 class _HeroBlock extends StatelessWidget {
-  const _HeroBlock();
+  const _HeroBlock({required this.scale});
+
+  final double scale;
 
   @override
   Widget build(BuildContext context) {
-    return const Column(
+    return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       mainAxisSize: MainAxisSize.min,
       children: [
-        BrandSignature(),
-        SizedBox(height: AppSpacing.lg),
-        BrandClaim(),
-        SizedBox(height: AppSpacing.md),
-        BrandCreed(),
-        SizedBox(height: _motifGap),
-        BrandProgressMotif(),
+        BrandSignature(scale: scale),
+        SizedBox(height: AppSpacing.lg * scale),
+        BrandClaim(scale: scale),
+        SizedBox(height: AppSpacing.md * scale),
+        BrandCreed(scale: scale),
+        SizedBox(height: _motifGap * scale),
+        BrandProgressMotif(scale: scale),
       ],
     );
   }

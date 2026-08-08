@@ -10,7 +10,10 @@ import 'brand_glow_image.dart';
 /// redessine pas. Il porte sa propre lueur ; le mot et la devise, eux, restent
 /// sobres.
 class BrandSignature extends StatelessWidget {
-  const BrandSignature({super.key});
+  const BrandSignature({this.scale = 1, super.key});
+
+  /// Échelle du bloc, voir [WelcomeScreen.scaleFor].
+  final double scale;
 
   static const String markAsset = 'assets/brand/carlys-mark.png';
 
@@ -39,8 +42,8 @@ class BrandSignature extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            const BrandGlowImage(
-              glows: [(Color(0x59CD2EDA), _markGlowBlur / 2)],
+            BrandGlowImage(
+              glows: const [(Color(0x59CD2EDA), _markGlowBlur / 2)],
               image: Image(
                 image: AssetImage(markAsset),
                 height: _markSize,
@@ -48,24 +51,24 @@ class BrandSignature extends StatelessWidget {
                 filterQuality: FilterQuality.medium,
               ),
             ),
-            const SizedBox(height: AppSpacing.sm),
+            SizedBox(height: AppSpacing.sm * scale),
             Text(
               'CARLYS',
               style: AppTypography.display.copyWith(
-                fontSize: _wordSize,
+                fontSize: _wordSize * scale,
                 height: 1,
-                letterSpacing: _wordTracking,
+                letterSpacing: _wordTracking * scale,
                 fontWeight: FontWeight.w300,
                 color: AppColors.neutral0,
                 shadows: blockShadows,
               ),
             ),
-            const SizedBox(height: AppSpacing.sm),
+            SizedBox(height: AppSpacing.sm * scale),
             Text(
               'L’ART DE DEVENIR',
               style: AppTypography.label.copyWith(
-                fontSize: _mottoSize,
-                letterSpacing: _mottoTracking,
+                fontSize: _mottoSize * scale,
+                letterSpacing: _mottoTracking * scale,
                 fontWeight: FontWeight.w600,
                 color: AppColors.darkTextSecondary,
                 shadows: blockShadows,

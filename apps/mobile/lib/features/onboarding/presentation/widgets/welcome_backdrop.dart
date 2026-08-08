@@ -49,7 +49,7 @@ class WelcomeBackdrop extends StatelessWidget {
               // Sa largeur se déduit du cadrage voulu : voir
               // [AthletePhotoFraming].
               Positioned(
-                top: 0,
+                top: AthletePhotoFraming.dropFactor * h,
                 right: 0,
                 width: AthletePhotoFraming.boxFor(Size(w, h)).width,
                 height: h,
@@ -227,6 +227,16 @@ abstract final class AthletePhotoFraming {
   /// Position du logo dorsal, en fraction de la largeur d'écran.
   static const double markScreenX = 0.928;
 
+  /// Descente de la photographie, en fraction de la hauteur d'écran.
+  ///
+  /// La planche n'en a pas besoin : son format laisse peu de vide, la personne
+  /// et le bloc de texte y commencent ensemble. Sur un téléphone, plus haut, le
+  /// texte descend d'un quart du vide disponible — et la personne doit suivre,
+  /// sans quoi elle reste accrochée au bord haut pendant que les mots
+  /// descendent. Ce qui sort en bas est de toute façon couvert par les
+  /// vignettes.
+  static const double dropFactor = 0.05;
+
   /// Bornes du fondu du bord gauche, en fractions de la largeur d'écran :
   /// transparent avant la première, opaque après la seconde.
   ///
@@ -324,6 +334,11 @@ class _AthletePhoto extends StatelessWidget {
       image: const AssetImage(WelcomeBackdrop.athleteAsset),
       fit: BoxFit.cover,
       alignment: Alignment(AthletePhotoFraming.alignmentFor(screen), -1),
+      // Le cliché fait 1024 de large et s'affiche sur ~940 pixels d'écran pour
+      // 563 pixels de fichier : il est AGRANDI de deux tiers. Le filtrage par
+      // défaut (bilinéaire sur mipmaps) rend alors une image molle ; la
+      // bicubique conserve le grain de la peau et le trait des cheveux.
+      filterQuality: FilterQuality.high,
       excludeFromSemantics: true,
     );
 

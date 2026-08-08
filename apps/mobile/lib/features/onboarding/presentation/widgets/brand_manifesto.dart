@@ -10,7 +10,10 @@ import 'brand_signature.dart';
 /// Les coupes de lignes sont ÉCRITES : c'est une accroche d'affiche, son rythme
 /// fait partie du message et ne se laisse pas au retour à la ligne automatique.
 class BrandClaim extends StatelessWidget {
-  const BrandClaim({super.key});
+  const BrandClaim({this.scale = 1, super.key});
+
+  /// Échelle du bloc, voir [WelcomeScreen.scaleFor].
+  final double scale;
 
   /// Extrusion : cinq ombres PLEINES (sans flou) décalées d'un pixel chacune,
   /// puis une ombre portée. C'est ce qui donne l'épaisseur ; les remplacer par
@@ -49,7 +52,7 @@ class BrandClaim extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final base = AppTypography.title.copyWith(
-      fontSize: _size,
+      fontSize: _size * scale,
       height: 1.24,
       fontWeight: FontWeight.w700,
       letterSpacing: -0.44,
@@ -81,7 +84,10 @@ class BrandClaim extends StatelessWidget {
 
 /// Les trois affirmations qui disent à qui appartient le parcours.
 class BrandCreed extends StatelessWidget {
-  const BrandCreed({super.key});
+  const BrandCreed({this.scale = 1, super.key});
+
+  /// Échelle du bloc, voir [WelcomeScreen.scaleFor].
+  final double scale;
 
   static const List<(String, String, String)> _lines = [
     ('Ton corps est ', 'TON', ' œuvre.'),
@@ -94,7 +100,7 @@ class BrandCreed extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final base = AppTypography.body.copyWith(
-      fontSize: _size,
+      fontSize: _size * scale,
       height: 1.75,
       color: AppColors.darkTextSecondary,
       shadows: BrandSignature.blockShadows,
@@ -128,7 +134,10 @@ class BrandCreed extends StatelessWidget {
 ///
 /// Purement graphique — elle ne mesure rien et ne prétend rien mesurer.
 class BrandProgressMotif extends StatelessWidget {
-  const BrandProgressMotif({super.key});
+  const BrandProgressMotif({this.scale = 1, super.key});
+
+  /// Échelle du bloc, voir [WelcomeScreen.scaleFor].
+  final double scale;
 
   static const double _height = 4;
   static const double _gap = 9;
@@ -167,9 +176,9 @@ class BrandProgressMotif extends StatelessWidget {
         mainAxisSize: MainAxisSize.min,
         children: [
           for (final (index, width) in _widths.indexed) ...[
-            if (index > 0) const SizedBox(width: _gap),
+            if (index > 0) SizedBox(width: _gap * scale),
             SizedBox(
-              width: width,
+              width: width * scale,
               height: _height,
               child: DecoratedBox(decoration: fills[index]),
             ),
