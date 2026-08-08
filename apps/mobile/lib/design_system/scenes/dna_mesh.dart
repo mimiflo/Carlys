@@ -3,16 +3,18 @@
 ///
 /// Le maillage est construit UNE seule fois pour toute l'application : deux
 /// brins en TUBE le long d'une courbe hélicoïdale, puis 26 barreaux faits de
-/// deux demi-cylindres et de deux billes. Chaque lot de triangles (une
-/// « partie ») porte son matériau et son centre local, ce qui permet au peintre
-/// de trier en profondeur à chaque image sans jamais retoucher la géométrie.
+/// deux demi-cylindres et de deux billes. Chaque partie ([MeshPart]) porte son
+/// centre local, ce qui permet au peintre de trier en profondeur à chaque
+/// image sans jamais retoucher la géométrie.
 ///
-/// Toutes les constantes ci-dessous viennent de la maquette : ce ne sont pas
-/// des valeurs visuelles arbitraires mais la définition même de la scène.
+/// Les constantes ci-dessous ne sont pas des valeurs visuelles arbitraires :
+/// ce sont les cotes de la maquette, la définition même de la scène.
 library;
 
 import 'dart:math' as math;
 import 'dart:typed_data';
+
+import 'mesh_builder.dart';
 
 /// Indices des matériaux de la scène ; le peintre tient la table associée.
 abstract final class DnaMaterialId {
@@ -35,36 +37,10 @@ abstract final class DnaMaterialId {
   static const int nodePlain = 5;
 }
 
-/// Lot de triangles d'un même matériau, trié en profondeur d'un seul bloc :
-/// une bande de tube, un demi-barreau ou une bille.
-class DnaPart {
-  const DnaPart({
-    required this.rung,
-    required this.first,
-    required this.count,
-    required this.cx,
-    required this.cy,
-    required this.cz,
-  });
-
-  /// Indice du barreau propriétaire, ou −1 pour un brin (le barreau respire
-  /// avec sa propre phase, le brin suit la respiration globale).
-  final int rung;
-
-  /// Plage occupée dans le tableau d'indices du maillage.
-  final int first;
-  final int count;
-
-  /// Centre local — clef de tri en profondeur.
-  final double cx;
-  final double cy;
-  final double cz;
-}
-
 /// Maillage complet de l'hélice, en espace local du groupe `root`.
 class DnaMesh {
   DnaMesh._() {
-    final builder = _MeshBuilder();
+    final builder = MeshBuilder();
     _addStrand(builder, 0, DnaMaterialId.strandA);
     _addStrand(builder, math.pi, DnaMaterialId.strandB);
     for (var index = 0; index < rungCount; index++) {
@@ -74,16 +50,16 @@ class DnaMesh {
     positions = Float32List.fromList(builder.positions);
     normals = Float32List.fromList(builder.normals);
     materials = Uint8List.fromList(builder.materials);
-    rungs = Int8List.fromList(builder.rungs);
+    rungs = Int8List.fromList(builder.groups);
     indices = Uint16List.fromList(builder.indices);
-    parts = List<DnaPart>.unmodifiable(builder.parts);
+    parts = List<MeshPart>.unmodifiable(builder.parts);
     vertexCount = positions.length ~/ 3;
   }
 
   /// Singleton : la construction coûte quelques millisecondes, jamais répétées.
   static final DnaMesh instance = DnaMesh._();
 
-  // --- Constantes de la maquette (mode hero) ---
+  // --- Cotes de la maquette (mode hero) ---
   static const double radius = 1.32;
   static const double height = 9.4;
   static const double turns = 2.4;
@@ -96,16 +72,19 @@ class DnaMesh {
   static const double nodeRadius = 0.042;
 
   /// Décalage du demi-barreau depuis le centre (`lerp(mid, end, 0.52)`) et sa
-  /// longueur (`len * 0.44`) : c'est ce couple qui ménage le jeu central.
+  /// demi-longueur (`len * 0.44 / 2`) : c'est ce couple qui ménage le jeu
+  /// central, la liaison hydrogène de la maquette.
   static const double rungOffset = 0.52;
   static const double rungHalfLength = 0.44;
 
   late final Float32List positions;
   late final Float32List normals;
   late final Uint8List materials;
+
+  /// Barreau propriétaire de chaque sommet, −1 pour un brin.
   late final Int8List rungs;
   late final Uint16List indices;
-  late final List<DnaPart> parts;
+  late final List<MeshPart> parts;
   late final int vertexCount;
 
   /// Phase de respiration de chaque barreau (`t * 4π` dans la maquette).
@@ -124,9 +103,9 @@ class DnaMesh {
 
   /// Brin en tube : repère parallèle transporté le long de l'hélice, donc
   /// aucune vrille des anneaux d'un bout à l'autre.
-  static void _addStrand(_MeshBuilder b, double phase, int material) {
+  static void _addStrand(MeshBuilder b, double phase, int material) {
     b.material = material;
-    b.rung = -1;
+    b.group = -1;
     const twoPi = 2 * math.pi;
     const k = turns * twoPi;
 
@@ -199,7 +178,6 @@ class DnaMesh {
           );
         }
         b.endPart(
-          -1,
           (cx + previousX) * 0.5,
           (cy + previousY) * 0.5,
           (cz + previousZ) * 0.5,
@@ -214,33 +192,27 @@ class DnaMesh {
   }
 
   /// Un barreau : deux demi-cylindres opposés et leurs deux billes d'ancrage.
-  static void _addRung(_MeshBuilder b, int index) {
+  static void _addRung(MeshBuilder b, int index) {
     final t = (index + 0.5) / rungCount;
     final theta = t * turns * 2 * math.pi;
     final y = (t - 0.5) * height;
     final accent = index % 3 == 0;
+    b.group = index;
 
     for (var side = 0; side < 2; side++) {
       final phi = theta + side * math.pi;
       final ux = math.cos(phi);
       final uz = math.sin(phi);
-      b.rung = index;
       b.material = accent ? DnaMaterialId.rungAccent : DnaMaterialId.rungPlain;
-      _addRod(b, ux, uz, y, index);
+      _addRod(b, ux, uz, y);
       b.material = accent ? DnaMaterialId.nodeAccent : DnaMaterialId.nodePlain;
-      _addBead(b, ux * radius, y, uz * radius, index);
+      _addBead(b, ux * radius, y, uz * radius);
     }
   }
 
-  /// Demi-barreau : cylindre radial de `radius * 0.88`, à `radius * 0.52`
-  /// du centre — le jeu central est la liaison hydrogène de la maquette.
-  static void _addRod(
-    _MeshBuilder b,
-    double ux,
-    double uz,
-    double y,
-    int rung,
-  ) {
+  /// Demi-barreau : cylindre radial long de `radius * 0.88`, centré à
+  /// `radius * 0.52` de l'axe — il court du jeu central jusqu'au brin.
+  static void _addRod(MeshBuilder b, double ux, double uz, double y) {
     final cx = ux * radius * rungOffset;
     final cz = uz * radius * rungOffset;
     final half = radius * rungHalfLength;
@@ -286,12 +258,10 @@ class DnaMesh {
       final ringStart = b.vertexCount;
       for (var i = 0; i <= rungSides; i++) {
         final angle = i / rungSides * 2 * math.pi;
-        final c = math.cos(angle);
-        final s = math.sin(angle);
         b.addVertex(
-          cx + ux * shift + sx * s * rungRadius,
-          y + c * rungRadius,
-          cz + uz * shift + sz * s * rungRadius,
+          cx + ux * shift + sx * math.sin(angle) * rungRadius,
+          y + math.cos(angle) * rungRadius,
+          cz + uz * shift + sz * math.sin(angle) * rungRadius,
           ux * sign,
           0,
           uz * sign,
@@ -301,18 +271,12 @@ class DnaMesh {
         b.addTriangle(centre, ringStart + i, ringStart + i + 1);
       }
     }
-    b.endPart(rung, cx, y, cz);
+    b.endPart(cx, y, cz);
   }
 
   /// Bille d'extrémité — sphère basse résolution : elle ne fait qu'une
   /// douzaine de pixels à l'écran.
-  static void _addBead(
-    _MeshBuilder b,
-    double cx,
-    double cy,
-    double cz,
-    int rung,
-  ) {
+  static void _addBead(MeshBuilder b, double cx, double cy, double cz) {
     const rings = 6;
     const segments = 8;
     final first = b.vertexCount;
@@ -343,73 +307,6 @@ class DnaMesh {
         b.addQuad(a, a + 1, a + row + 1, a + row);
       }
     }
-    b.endPart(rung, cx, cy, cz);
-  }
-}
-
-/// Accumulateur de sommets et de triangles pendant la construction.
-class _MeshBuilder {
-  final List<double> positions = <double>[];
-  final List<double> normals = <double>[];
-  final List<int> materials = <int>[];
-  final List<int> rungs = <int>[];
-  final List<int> indices = <int>[];
-  final List<DnaPart> parts = <DnaPart>[];
-
-  /// Matériau et barreau courants, appliqués aux sommets ajoutés ensuite.
-  int material = 0;
-  int rung = -1;
-
-  int _partStart = 0;
-
-  int get vertexCount => positions.length ~/ 3;
-
-  int addVertex(
-    double px,
-    double py,
-    double pz,
-    double nx,
-    double ny,
-    double nz,
-  ) {
-    final index = vertexCount;
-    positions
-      ..add(px)
-      ..add(py)
-      ..add(pz);
-    normals
-      ..add(nx)
-      ..add(ny)
-      ..add(nz);
-    materials.add(material);
-    rungs.add(rung);
-    return index;
-  }
-
-  void addTriangle(int a, int b, int c) {
-    indices
-      ..add(a)
-      ..add(b)
-      ..add(c);
-  }
-
-  void addQuad(int a, int b, int c, int d) {
-    addTriangle(a, b, c);
-    addTriangle(a, c, d);
-  }
-
-  void beginPart() => _partStart = indices.length;
-
-  void endPart(int rung, double cx, double cy, double cz) {
-    parts.add(
-      DnaPart(
-        rung: rung,
-        first: _partStart,
-        count: indices.length - _partStart,
-        cx: cx,
-        cy: cy,
-        cz: cz,
-      ),
-    );
+    b.endPart(cx, cy, cz);
   }
 }
