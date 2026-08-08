@@ -140,6 +140,34 @@ seulement d'être la maquette. Les trois premiers sont verrouillés par
    C'est ce que fait `BrandGlowImage`. Les rayons de la référence sont des
    `blur-radius` CSS : l'écart-type gaussien en vaut la **moitié**.
 
+### Le cadrage de la photographie : deux valeurs de la spec écartées
+
+La spécification donne à la photographie `height: 100%` et
+`object-position: 22% top`. Ces deux valeurs ont été **validées sur une planche
+large** ; sur un écran de téléphone, elles produisent autre chose.
+
+`BoxFit.cover` agrandit le cliché jusqu'à couvrir sa boîte. Une boîte étroite
+(62 % de la largeur) **et** pleine hauteur se règle donc sur la hauteur, agrandit
+d'autant, et ne garde que 43 % de la largeur du cliché : la personne devient un
+buste et le logo dans son dos sort du cadre. La planche, elle, était large : elle
+n'en rognait qu'un quart, d'où la silhouette entière.
+
+Or la spécification tranche elle-même, au §6 : « le logo dans le dos de
+l'athlète doit rester visible ». On garde donc **l'exigence**, pas les chiffres :
+
+- la hauteur du cadre descend à 72 % de l'écran — moins de hauteur, moins
+  d'agrandissement, plus de largeur montrée (60 % du cliché) ;
+- le cadrage horizontal n'est plus une constante mais se **recalcule** à partir
+  de la position mesurée du logo dans le fichier, pour chaque taille d'écran ;
+- un **fondu bas** est ajouté, absent de la référence pour la bonne raison
+  qu'une photographie pleine hauteur n'a pas de bord bas. Sans lui, la personne
+  serait tranchée net en travers des cuisses : le voile de pied de page ne
+  commence qu'à 62 % et laisse passer la coupe.
+
+`AthletePhotoFraming` porte ces trois valeurs et le calcul ;
+`welcome_fidelity_test.dart` vérifie sur cinq tailles d'écran que le logo dorsal
+reste visible et que le cadrage reste un portrait.
+
 ### Limite du harnais de capture
 
 `tool/screenshots` ne sait pas choisir les graisses : `FontLoader` n'expose

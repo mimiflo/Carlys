@@ -1,3 +1,4 @@
+import 'dart:math' as math;
 import 'dart:ui' show ImageFilter;
 
 import 'package:flutter/material.dart';
@@ -45,11 +46,22 @@ class WelcomeBackdrop extends StatelessWidget {
               ),
 
               // 3 — la photographie.
+              //
+              // ÉCART ASSUMÉ sur la HAUTEUR. La spécification lui donne toute
+              // la hauteur ; la planche validée était LARGE, et `cover` n'y
+              // rognait qu'un quart du cliché — on y voyait la silhouette
+              // entière et le logo dans son dos. Sur un écran de téléphone, la
+              // même boîte est étroite et haute : `cover` s'y règle sur la
+              // hauteur, agrandit d'autant, et n'en garde plus que 43 % de
+              // largeur — un gros plan qui perd et la silhouette et le logo.
+              // Lui donner moins de hauteur réduit l'agrandissement, donc rend
+              // le cadrage de la planche. Le bas manquant est du fond, que le
+              // voile de pied de page couvre déjà.
               Positioned(
                 top: 0,
                 right: 0,
                 width: 0.62 * w,
-                height: h,
+                height: AthletePhotoFraming.heightFactor * h,
                 child: const _AthletePhoto(),
               ),
 
@@ -198,16 +210,83 @@ class _Halo extends StatelessWidget {
   }
 }
 
-/// La photographie : lueur de marque, légère baisse de luminosité, fondu du
-/// bord gauche.
+/// Cadrage de la photographie : les seuls chiffres qui commandent la taille et
+/// la position de la personne à l'écran.
 ///
-/// Le fondu n'est pas un ornement : sans lui, la découpe rectangulaire du
-/// cliché se voit comme un trait vertical au milieu de la page.
+/// Sortis du widget pour être vérifiables sur toutes les tailles d'écran —
+/// c'est l'endroit du design qui se dérègle le plus vite, et le seul dont la
+/// spécification donne une exigence plutôt qu'une valeur.
+abstract final class AthletePhotoFraming {
+  /// Dimensions du fichier, et position du LOGO DORSAL dedans (mesurées).
+  static const Size source = Size(1024, 1536);
+  static const double markLeft = 565;
+  static const double markRight = 636;
+
+  /// Part de la hauteur d'écran occupée par le cliché.
+  ///
+  /// **ÉCART ASSUMÉ** : la spécification lui donne toute la hauteur. Elle a été
+  /// validée sur une planche LARGE, où `cover` ne rognait qu'un quart du
+  /// cliché — on y voyait la silhouette entière et le logo dans le dos. Sur un
+  /// écran de téléphone, la même boîte est étroite et haute : `cover` s'y règle
+  /// sur la hauteur, agrandit d'autant, et n'en garde que 43 % de largeur — un
+  /// gros plan qui perd et la silhouette et le logo. Moins de hauteur = moins
+  /// d'agrandissement = plus de largeur montrée. Au-delà de ~0.75, les bras
+  /// ressortent du cadre.
+  static const double heightFactor = 0.72;
+
+  /// Où le logo dorsal tombe dans le cadre.
+  ///
+  /// La spécification donne `object-position: 22% top`, relevé sur la même
+  /// planche large ; sur un téléphone, ce chiffre laisse le logo juste hors
+  /// champ. Elle tranche pourtant : « le logo dans le dos de l'athlète doit
+  /// rester visible ». On garde donc l'exigence plutôt que le chiffre.
+  ///
+  /// Aux deux tiers du cadre, les DEUX bras entrent. Plus à droite — la planche
+  /// large met le logo à 90 % de la page — le cadrage se resserre sur le buste
+  /// et coupe le bras droit.
+  static const double markPlacement = 0.63;
+
+  /// Fondu du BAS, en fraction de la hauteur du cadre.
+  ///
+  /// Absent de la référence, et pour cause : la photographie y occupe toute la
+  /// hauteur, elle n'a pas de bord bas. Lui en donner un sans l'éteindre
+  /// trancherait la personne au couteau, en travers des cuisses ; le voile de
+  /// pied de page ne suffit pas, il ne commence qu'à 62 %.
+  static const List<double> bottomFade = [0.74, 1.0];
+
+  /// Cadrage horizontal qui pose le logo dorsal à [markPlacement] du cadre.
+  ///
+  /// `cover` agrandit le cliché jusqu'à couvrir la boîte, puis en rogne le
+  /// surplus ; `Alignment.x` choisit quelle part de ce surplus part à gauche.
+  /// On ne fait qu'inverser la relation.
+  static double alignmentFor(Size box) {
+    final scale =
+        math.max(box.width / source.width, box.height / source.height);
+    final window = box.width / scale; // en pixels du fichier
+    final slack = source.width - window; // ce que `cover` va rogner
+    if (slack <= 0) return 0;
+    final left = (markLeft + markRight) / 2 - markPlacement * window;
+    return (2 * left / slack - 1).clamp(-1.0, 1.0);
+  }
+
+  /// Fenêtre du cliché réellement visible, en pixels du fichier.
+  static (double, double) windowFor(Size box) {
+    final scale =
+        math.max(box.width / source.width, box.height / source.height);
+    final window = box.width / scale;
+    final left = (1 + alignmentFor(box)) / 2 * (source.width - window);
+    return (left, left + window);
+  }
+}
+
+/// La photographie : lueur de marque, légère baisse de luminosité, fondus des
+/// bords gauche et bas.
+///
+/// Les fondus ne sont pas des ornements : sans eux, la découpe rectangulaire du
+/// cliché se voit — un trait vertical au milieu de la page, un trait horizontal
+/// en travers des cuisses.
 class _AthletePhoto extends StatelessWidget {
   const _AthletePhoto();
-
-  /// `object-position: 22% top` de la référence.
-  static const Alignment _framing = Alignment(-0.56, -1);
 
   /// Trois lueurs, de la plus serrée à la plus large. Les rayons de la
   /// référence sont des `blur-radius` CSS : l'écart-type gaussien en vaut la
@@ -220,14 +299,29 @@ class _AthletePhoto extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    const image = Image(
-      image: AssetImage(WelcomeBackdrop.athleteAsset),
+    return LayoutBuilder(
+      builder: (context, c) => RepaintBoundary(
+        child: _framed(Size(c.maxWidth, c.maxHeight)),
+      ),
+    );
+  }
+
+  Widget _framed(Size box) {
+    final image = Image(
+      image: const AssetImage(WelcomeBackdrop.athleteAsset),
       fit: BoxFit.cover,
-      alignment: _framing,
+      alignment: Alignment(AthletePhotoFraming.alignmentFor(box), -1),
       excludeFromSemantics: true,
     );
 
-    return RepaintBoundary(
+    return ShaderMask(
+      blendMode: BlendMode.dstIn,
+      shaderCallback: (rect) => const LinearGradient(
+        begin: Alignment.topCenter,
+        end: Alignment.bottomCenter,
+        colors: [Color(0xFFFFFFFF), Color(0x00FFFFFF)],
+        stops: AthletePhotoFraming.bottomFade,
+      ).createShader(rect),
       child: ShaderMask(
         blendMode: BlendMode.dstIn,
         shaderCallback: (rect) => const LinearGradient(
@@ -239,10 +333,10 @@ class _AthletePhoto extends StatelessWidget {
         child: BrandGlowImage(
           expand: true,
           glows: _glows,
-          image: const ColorFiltered(
+          image: ColorFiltered(
             // brightness(0.9) : l'alpha n'est pas touché, sans quoi le
             // détourage se remettrait à baver.
-            colorFilter: ColorFilter.matrix(<double>[
+            colorFilter: const ColorFilter.matrix(<double>[
               0.9, 0, 0, 0, 0, //
               0, 0.9, 0, 0, 0, //
               0, 0, 0.9, 0, 0, //

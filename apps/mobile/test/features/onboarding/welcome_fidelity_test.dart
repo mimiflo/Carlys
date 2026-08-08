@@ -57,6 +57,53 @@ void main() {
     });
   });
 
+  group('cadrage de la photographie', () {
+    (double, double) windowFor(Size screen) => AthletePhotoFraming.windowFor(
+          Size(
+            0.62 * screen.width,
+            AthletePhotoFraming.heightFactor * screen.height,
+          ),
+        );
+
+    // « Le logo dans le dos de l'athlète doit rester visible » — SPEC.md, §6.
+    // La spécification donne aussi un cadrage fixe (22 %), relevé sur une
+    // planche large ; sur un téléphone il laisse le logo hors champ. C'est
+    // l'exigence qui prime, pas le chiffre — d'où un cadrage recalculé, et ce
+    // test sur les tailles d'écran réelles plutôt que sur une seule.
+    for (final (name, screen) in const [
+      ('iPhone SE', Size(375, 667)),
+      ('petit Android', Size(360, 640)),
+      ('iPhone 15', Size(393, 852)),
+      ('grand Android', Size(412, 915)),
+      ('pliable ouvert', Size(600, 900)),
+    ]) {
+      test('le logo dorsal reste visible — $name', () {
+        final (left, right) = windowFor(screen);
+        expect(
+          left,
+          lessThanOrEqualTo(AthletePhotoFraming.markLeft),
+          reason: 'le logo est coupé à gauche',
+        );
+        expect(
+          right,
+          greaterThanOrEqualTo(AthletePhotoFraming.markRight),
+          reason: 'le logo est coupé à droite',
+        );
+      });
+    }
+
+    test('le cadrage reste un portrait, pas un gros plan', () {
+      // Le défaut d'origine : `cover` dans une boîte étroite ET pleine hauteur
+      // ne gardait que 43 % de la largeur du cliché — la personne devenait un
+      // buste, et le logo dorsal sortait du cadre. On exige d'en montrer plus
+      // de la moitié. Les bras restent rognés sur les bords, comme sur la
+      // planche validée où la page coupe aussi le bras droit.
+      final (left, right) = windowFor(const Size(393, 852));
+      final shown = (right - left) / AthletePhotoFraming.source.width;
+      expect(shown, greaterThan(0.55));
+    });
+  });
+
   testWidgets('les halos du décor sont ELLIPTIQUES, pas circulaires',
       (tester) async {
     // Flutter dessine un dégradé radial CIRCULAIRE (rayon × plus petit côté)
