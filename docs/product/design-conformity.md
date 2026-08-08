@@ -152,13 +152,21 @@ d'autant, et ne garde que 43 % de la largeur du cliché : la personne devient un
 buste et le logo dans son dos sort du cadre. La planche, elle, était large : elle
 n'en rognait qu'un quart, d'où la silhouette entière.
 
+Le rapport largeur/hauteur explique tout : les planches validées font **0,59**,
+un téléphone **0,46**. À hauteur égale, l'écran le plus étroit agrandit
+davantage et montre donc MOINS de la personne.
+
 Or la spécification tranche elle-même, au §6 : « le logo dans le dos de
 l'athlète doit rester visible ». On garde donc **l'exigence**, pas les chiffres :
 
-- la hauteur du cadre descend à 72 % de l'écran — moins de hauteur, moins
-  d'agrandissement, plus de largeur montrée (60 % du cliché) ;
+- la hauteur du cadre descend à **77,5 %** de l'écran — moins de hauteur, moins
+  d'agrandissement, plus de largeur montrée. La valeur n'est pas choisie à
+  l'œil : elle rend exactement la fenêtre de la planche validée (567 px du
+  cliché sur 1024, contre 565 relevés) ;
 - le cadrage horizontal n'est plus une constante mais se **recalcule** à partir
-  de la position mesurée du logo dans le fichier, pour chaque taille d'écran ;
+  de la position mesurée du logo dans le fichier, pour viser une position à
+  l'écran — 0,928 de la largeur, relevée sur la planche — et non une position
+  dans le cadre, qui ne se transpose pas d'un format à l'autre ;
 - un **fondu bas** est ajouté, absent de la référence pour la bonne raison
   qu'une photographie pleine hauteur n'a pas de bord bas. Sans lui, la personne
   serait tranchée net en travers des cuisses : le voile de pied de page ne

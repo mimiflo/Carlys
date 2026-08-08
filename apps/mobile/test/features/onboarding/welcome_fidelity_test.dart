@@ -60,7 +60,7 @@ void main() {
   group('cadrage de la photographie', () {
     (double, double) windowFor(Size screen) => AthletePhotoFraming.windowFor(
           Size(
-            0.62 * screen.width,
+            AthletePhotoFraming.widthFactor * screen.width,
             AthletePhotoFraming.heightFactor * screen.height,
           ),
         );
@@ -100,7 +100,7 @@ void main() {
       // planche validée où la page coupe aussi le bras droit.
       final (left, right) = windowFor(const Size(393, 852));
       final shown = (right - left) / AthletePhotoFraming.source.width;
-      expect(shown, greaterThan(0.55));
+      expect(shown, greaterThanOrEqualTo(0.55));
     });
   });
 

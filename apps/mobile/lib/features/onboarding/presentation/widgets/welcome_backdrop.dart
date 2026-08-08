@@ -60,7 +60,7 @@ class WelcomeBackdrop extends StatelessWidget {
               Positioned(
                 top: 0,
                 right: 0,
-                width: 0.62 * w,
+                width: AthletePhotoFraming.widthFactor * w,
                 height: AthletePhotoFraming.heightFactor * h,
                 child: const _AthletePhoto(),
               ),
@@ -225,26 +225,28 @@ abstract final class AthletePhotoFraming {
   /// Part de la hauteur d'écran occupée par le cliché.
   ///
   /// **ÉCART ASSUMÉ** : la spécification lui donne toute la hauteur. Elle a été
-  /// validée sur une planche LARGE, où `cover` ne rognait qu'un quart du
-  /// cliché — on y voyait la silhouette entière et le logo dans le dos. Sur un
-  /// écran de téléphone, la même boîte est étroite et haute : `cover` s'y règle
-  /// sur la hauteur, agrandit d'autant, et n'en garde que 43 % de largeur — un
-  /// gros plan qui perd et la silhouette et le logo. Moins de hauteur = moins
-  /// d'agrandissement = plus de largeur montrée. Au-delà de ~0.75, les bras
-  /// ressortent du cadre.
-  static const double heightFactor = 0.72;
+  /// validée sur des planches plus LARGES qu'un téléphone (rapport 0,59 contre
+  /// 0,46) ; or `cover` s'y règle sur la hauteur dès que la boîte est plus
+  /// étroite, proportion gardée, que le cliché. À hauteur égale, un écran plus
+  /// étroit agrandit donc davantage et montre MOINS de la personne : 43 % de la
+  /// largeur du cliché contre 55 % sur la planche. On perdait la silhouette et
+  /// le logo dorsal.
+  ///
+  /// Cette valeur rend exactement le cadrage validé : elle donne la même
+  /// fenêtre de cliché (567 px sur 1024, contre 565 relevés sur la planche).
+  static const double heightFactor = 0.775;
 
-  /// Où le logo dorsal tombe dans le cadre.
+  /// Où le logo dorsal tombe, en fraction de la LARGEUR D'ÉCRAN.
   ///
-  /// La spécification donne `object-position: 22% top`, relevé sur la même
-  /// planche large ; sur un téléphone, ce chiffre laisse le logo juste hors
-  /// champ. Elle tranche pourtant : « le logo dans le dos de l'athlète doit
-  /// rester visible ». On garde donc l'exigence plutôt que le chiffre.
-  ///
-  /// Aux deux tiers du cadre, les DEUX bras entrent. Plus à droite — la planche
-  /// large met le logo à 90 % de la page — le cadrage se resserre sur le buste
-  /// et coupe le bras droit.
-  static const double markPlacement = 0.63;
+  /// Relevé sur la planche validée : 0,928. Exprimé à l'écran et non dans le
+  /// cadre, parce que c'est ce qu'on voit — et parce que la spécification donne
+  /// ici une exigence (« le logo dans le dos de l'athlète doit rester
+  /// visible ») plutôt qu'une valeur transposable : son `object-position: 22%`
+  /// vaut pour une planche large et laisse le logo hors champ sur un téléphone.
+  static const double markScreenX = 0.928;
+
+  /// Part de la largeur d'écran occupée par le cadre, depuis la droite.
+  static const double widthFactor = 0.62;
 
   /// Fondu du BAS, en fraction de la hauteur du cadre.
   ///
@@ -265,7 +267,9 @@ abstract final class AthletePhotoFraming {
     final window = box.width / scale; // en pixels du fichier
     final slack = source.width - window; // ce que `cover` va rogner
     if (slack <= 0) return 0;
-    final left = (markLeft + markRight) / 2 - markPlacement * window;
+    // La cible est donnée à l'écran : on la ramène dans le cadre.
+    final placement = (markScreenX - (1 - widthFactor)) / widthFactor;
+    final left = (markLeft + markRight) / 2 - placement * window;
     return (2 * left / slack - 1).clamp(-1.0, 1.0);
   }
 
