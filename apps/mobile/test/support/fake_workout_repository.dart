@@ -119,6 +119,9 @@ class FakeWorkoutRepository implements WorkoutRepository {
     _publish(null);
   }
 
+  @override
+  Future<void> restoreSessions() async {}
+
   void _publish(WorkoutWithSets? workout) {
     active = workout;
     _activeController.add(workout);

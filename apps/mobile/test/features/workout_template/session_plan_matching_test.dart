@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:carlys_mobile/core/database/app_database.dart';
 import 'package:carlys_mobile/core/synchronization/sync_engine.dart';
 import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';
@@ -20,15 +22,14 @@ void main() {
   late WorkoutRepositoryImpl workouts;
   late WorkoutTemplateRepositoryImpl templates;
   late RecordPlannedSet recordSet;
+  late SyncEngine engine;
+  late DateTime clock;
 
   setUp(() {
     db = AppDatabase(NativeDatabase.memory());
     api = FakeSyncApi()..networkDown = true;
-    final engine = SyncEngine(
-      database: db,
-      api: api,
-      now: () => DateTime.utc(2026, 8, 8, 17),
-    );
+    clock = DateTime.utc(2026, 8, 8, 17);
+    engine = SyncEngine(database: db, api: api, now: () => clock);
     workouts = WorkoutRepositoryImpl(database: db, syncEngine: engine);
     templates = WorkoutTemplateRepositoryImpl(database: db, syncEngine: engine);
     recordSet = RecordPlannedSet(workouts: workouts, templates: templates);
@@ -154,7 +155,7 @@ void main() {
     expect(plan.progressOfExercise(1), (1, 1));
   });
 
-  test('passer une série : marquée localement, RIEN n’est envoyé au serveur',
+  test('passer une série : marquée localement ET propagée au serveur',
       () async {
     final sessionId = await startPush();
     final plan = await templates.sessionPlan(sessionId);
@@ -167,7 +168,26 @@ void main() {
     expect(after.doneCount, 0);
     expect(after.remainingCount, 2);
     expect(after.current!.setPosition, 1);
-    expect((await db.select(db.syncOperations).get()).length, before);
+
+    // Une SEULE opération, décrivant la liste complète des séries passées :
+    // sans elle, reprendre la séance sur un autre appareil la reproposerait.
+    final operations = await db.select(db.syncOperations).get();
+    expect(operations.length, before + 1);
+    expect(operations.last.operationType, 'plan.skip');
+    expect(operations.last.entityId, sessionId);
+    expect(
+      jsonDecode(operations.last.payload),
+      {
+        'sessionId': sessionId,
+        'body': {
+          'planItemIds': [plan.items.first.id],
+        },
+      },
+    );
+
+    // Rejeu : la série est déjà passée, aucune opération de plus.
+    await templates.skipPlanItem(plan.items.first.id);
+    expect(await db.select(db.syncOperations).get(), hasLength(before + 1));
 
     // La série suivante du même exercice honore l'item suivant, pas le sauté.
     final recorded = await recordSet(
@@ -200,6 +220,54 @@ void main() {
     expect(plan!.doneCount, 1); // la série déjà faite reste faite
     expect(plan.items[1].skipped, isTrue);
     expect(plan.current!.exerciseName, 'Dips');
+  });
+
+  test(
+      'l’appariement voyage AVEC la série, et l’acquittement suit son '
+      'transporteur — condition de la reprise multi-appareil', () async {
+    final sessionId = await startPush();
+    final plan = await templates.sessionPlan(sessionId);
+
+    final recorded = await recordSet(
+      AddSetInput(
+        sessionId: sessionId,
+        exerciseId: 'exo-dc',
+        exerciseName: 'Développé couché',
+        reps: 8,
+        weightKg: 60,
+      ),
+    );
+
+    // 1. Aucune opération supplémentaire : le corps de la série porte
+    //    l'identifiant de la prévision honorée.
+    final operations = await db.select(db.syncOperations).get();
+    expect(
+      operations.map((op) => op.operationType),
+      ['template.save', 'session.create', 'set.upsert'],
+    );
+    final body = (jsonDecode(operations.last.payload)
+        as Map<String, dynamic>)['body'] as Map<String, dynamic>;
+    expect(body['planItemId'], plan!.items.first.id);
+    expect(body['plannedReps'], 8);
+
+    // 2. Tant que rien n'est parti, tout le plan reste en attente.
+    final pending = await db.select(db.localSessionPlanItems).get();
+    expect(pending.every((item) => item.syncStatus == 'pending'), isTrue);
+
+    // 3. Une fois la file drainée, le plan est acquitté : la création de la
+    //    séance l'a transporté en bloc, la série a porté l'appariement.
+    api.networkDown = false;
+    clock = clock.add(const Duration(minutes: 10));
+    await engine.syncNow();
+
+    final acknowledged = await db.select(db.localSessionPlanItems).get();
+    expect(acknowledged.every((item) => item.syncStatus == 'synced'), isTrue);
+    expect(
+      acknowledged
+          .firstWhere((item) => item.id == recorded.fulfilled!.id)
+          .doneSetId,
+      recorded.setId,
+    );
   });
 
   test('séance libre : le cas d’usage ne change rien au comportement existant',

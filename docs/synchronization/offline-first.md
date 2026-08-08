@@ -24,8 +24,9 @@
 >   `test/features/workout/workout_offline_sync_test.dart` côté mobile) ;
 > - un refus serveur 4xx marque l'opération et l'entité `failed` sans bloquer
 >   le reste de la file ; 401/5xx/réseau ⇒ nouvel essai plus tard ;
-> - la **récupération multi-appareils** (tirer les séances créées ailleurs)
->   est différée — l'historique local reflète cet appareil, le serveur agrège.
+> - la **récupération multi-appareils** est assurée par un rapatriement au
+>   démarrage (`AppRestore`), pendant en LECTURE de la file : il retire du
+>   serveur les modèles, puis les séances avec leurs séries et leur plan.
 
 ## Opérations de la file
 
@@ -36,6 +37,7 @@
 | `session.abandon`  | `session`    | `POST /workout-sessions/{id}/abandon`  |
 | `set.upsert`       | `set`        | `POST /workout-sessions/{id}/sets`     |
 | `set.delete`       | `set`        | `DELETE /workout-sets/{id}`            |
+| `plan.skip`        | `plan`       | `POST /workout-sessions/{id}/plan/skip`|
 | `template.save`    | `template`   | `PUT /workout-templates/{id}`          |
 | `template.delete`  | `template`   | `DELETE /workout-templates/{id}`       |
 
@@ -48,10 +50,14 @@ exactement le même protocole, avec deux particularités :
   encore `pending` est *remplacée* par la suivante plutôt que d'empiler N
   opérations pendant l'édition ;
 - le **plan de la séance en cours** (`LocalSessionPlanItems`, copie aplatie du
-  modèle au lancement) n'est **jamais synchronisé**. Le serveur ne reçoit que
-  des faits : la séance, ses séries, et la cible qui était affichée au moment
-  de chaque validation (`plannedReps` / `plannedWeightKg`). Une série sautée
-  n'est donc jamais envoyée — une série non faite n'est pas un fait.
+  modèle au lancement) est synchronisé **sans opération dédiée**, sauf pour les
+  séries passées : il part en bloc dans le corps de `session.create`, et
+  l'appariement série ↔ prévision voyage dans le corps de `set.upsert`
+  (`planItemId`). Seul « passer une série » a son opération, `plan.skip`, dont
+  le corps porte la liste complète — donc naturellement rejouable. C'est ce qui
+  permet de reprendre sur un autre appareil une séance commencée ailleurs, avec
+  ses cibles (voir D5 dans
+  [docs/product/workout-templates.md](../product/workout-templates.md)).
 
 Lancer un modèle fonctionne **intégralement hors ligne** : la séance, son plan
 et l'opération `session.create` sont écrits dans une seule transaction SQLite,
@@ -341,7 +347,25 @@ réponse s'est perdue. Le client, sans acquittement, rejoue l'opération (même
 et renvoie la réponse d'origine. L'opération passe `synced`. Même garantie si
 l'utilisateur martèle un bouton de réessai manuel.
 
-### 5. Conflit multi-appareils
+### 5. Changement d'appareil
+
+L'utilisateur installe l'application sur un second téléphone, base locale vide.
+À l'entrée dans l'application authentifiée, `AppRestore` :
+
+1. **pousse d'abord** ce qui reste en file (sinon une saisie non acquittée
+   ferait barrage à l'étape suivante) ;
+2. rapatrie les **modèles** (`WorkoutTemplateDownloader`) ;
+3. rapatrie les **séances** (`WorkoutSessionDownloader`) : les 60 plus
+   récentes, avec leurs séries **et leur plan**. Le dépassement de ce plafond
+   est journalisé, jamais silencieux.
+
+Règle unique et non négociable : le rapatriement **saute** toute séance dont la
+séance, une série ou une prévision porte encore un `syncStatus` autre que
+`synced`. Un appareil ne perd jamais sa propre saisie au profit d'un état
+serveur plus ancien. Hors ligne, l'échec est journalisé et l'application
+démarre normalement sur son local.
+
+### 6. Conflit multi-appareils
 
 Un utilisateur saisit des séries sur son téléphone (hors ligne) et d'autres sur
 sa tablette (en ligne) pour la même séance. À la synchronisation du téléphone :

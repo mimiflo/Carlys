@@ -53,9 +53,42 @@ export const workoutSessionSummarySchema = z.object({
 });
 export type WorkoutSessionSummary = z.infer<typeof workoutSessionSummarySchema>;
 
+/**
+ * Série PRÉVUE d'une séance : copie aplatie du modèle au moment du lancement.
+ *
+ * C'est une COPIE, pas un lien vivant — modifier ou supprimer le modèle plus
+ * tard ne change rien à une séance déjà lancée. Le serveur la conserve pour
+ * qu'une séance commencée sur un appareil se reprenne telle quelle sur un
+ * autre : sans elle, l'appareil qui reprend voit les séries faites mais plus
+ * aucune cible.
+ *
+ * Les identifiants viennent de l'appareil, comme ceux des séances et séries.
+ */
+export const workoutSessionPlanItemSchema = z.object({
+  id: z.string(),
+  /** Rang de l'exercice dans la séance, à partir de 0. */
+  exercisePosition: z.number(),
+  exerciseId: z.string().nullable(),
+  /** Dénormalisé : le plan survit aux évolutions du catalogue. */
+  exerciseName: z.string(),
+  /** Rang de la série DANS l'exercice, à partir de 0. */
+  setPosition: z.number(),
+  kind: workoutSetKindSchema,
+  targetReps: z.number().nullable(),
+  targetWeightKg: z.number().nullable(),
+  restSeconds: z.number().nullable(),
+  /** Série réalisée qui a honoré cette prévision, sinon null. */
+  doneSetId: z.string().nullable(),
+  /** Prévision explicitement passée par l'utilisateur. */
+  skipped: z.boolean(),
+});
+export type WorkoutSessionPlanItem = z.infer<typeof workoutSessionPlanItemSchema>;
+
 export const workoutSessionDetailSchema = workoutSessionSummarySchema.extend({
   notes: z.string().nullable(),
   sets: z.array(workoutSetSchema),
+  /** Vide pour une séance libre (lancée sans modèle). */
+  plan: z.array(workoutSessionPlanItemSchema),
 });
 export type WorkoutSessionDetail = z.infer<typeof workoutSessionDetailSchema>;
 
@@ -70,4 +103,9 @@ export const WORKOUT_LIMITS = {
   restSecondsMax: 3_600,
   nameMax: 120,
   notesMax: 2_000,
+  /**
+   * Plafond du plan transmis à la création d'une séance : le maximum
+   * atteignable par un modèle (WORKOUT_TEMPLATE_LIMITS, 30 × 20).
+   */
+  planItemsMax: 600,
 } as const;

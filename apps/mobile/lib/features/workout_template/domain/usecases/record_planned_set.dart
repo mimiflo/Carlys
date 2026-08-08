@@ -55,6 +55,7 @@ class RecordPlannedSet {
           : input.copyWith(
               plannedReps: planItem.targetReps,
               plannedWeightKg: planItem.targetWeightKg,
+              planItemId: planItem.id,
             ),
     );
 

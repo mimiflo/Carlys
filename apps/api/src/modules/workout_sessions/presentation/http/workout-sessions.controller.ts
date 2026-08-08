@@ -29,6 +29,7 @@ import {
   CreateWorkoutSessionDto,
   CreateWorkoutSetDto,
   ListWorkoutSessionsQuery,
+  SkipWorkoutSessionPlanItemsDto,
   UpdateWorkoutSessionDto,
 } from './dto/workout.dto';
 
@@ -98,6 +99,17 @@ export class WorkoutSessionsController {
     @Body() dto: CloseWorkoutSessionDto,
   ): Promise<WorkoutSessionDetail> {
     return this.workouts.abandonSession(user.userId, sessionId, dto);
+  }
+
+  @Post(':id/plan/skip')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Passer des séries prévues (idempotent)' })
+  skipPlanItems(
+    @CurrentUser() user: AuthenticatedPrincipal,
+    @Param('id', new ParseUUIDPipe()) sessionId: string,
+    @Body() dto: SkipWorkoutSessionPlanItemsDto,
+  ): Promise<WorkoutSessionDetail> {
+    return this.workouts.skipPlanItems(user.userId, sessionId, dto.planItemIds);
   }
 
   @Post(':id/sets')

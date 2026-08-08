@@ -143,8 +143,9 @@ class WorkoutTemplateRepositoryImpl implements WorkoutTemplateRepository {
   ///
   /// Le plan est une **copie**, pas un lien vivant : modifier le modèle
   /// pendant la séance ne change rien à la séance en cours, et l'historique
-  /// reste vrai (D1). Il reste purement local : le serveur ne reçoit que des
-  /// faits (D5).
+  /// reste vrai (D1). Il part EN BLOC dans le corps de `session.create`, ce
+  /// qui rend la séance reprenable, cibles comprises, sur un autre appareil
+  /// (D5).
   ///
   /// Aucun appel réseau : lancer un modèle marche hors ligne, y compris au
   /// tout premier lancement. Si `template.save` n'est jamais partie, la séance
@@ -160,6 +161,7 @@ class WorkoutTemplateRepositoryImpl implements WorkoutTemplateRepository {
 
     final sessionId = _uuid.v4();
     final startedAt = DateTime.now().toUtc();
+    final plan = _flattenPlan(sessionId, template);
 
     await _db.transaction(() async {
       await _sessions.insertSession(
@@ -168,8 +170,9 @@ class WorkoutTemplateRepositoryImpl implements WorkoutTemplateRepository {
         startedAt: startedAt,
         templateId: template.id,
         templateName: template.name,
+        plan: plan.map(_planItemBody).toList(),
       );
-      await _plans.insertPlanItems(_flattenPlan(sessionId, template));
+      await _plans.insertPlanItems(plan);
       // Miroir local du `lastUsedAt` que le serveur posera à la création de la
       // séance : aucune opération de synchronisation, ce n'est pas une saisie.
       await _local.touchLastUsedAt(template.id, startedAt);
@@ -200,6 +203,24 @@ class WorkoutTemplateRepositoryImpl implements WorkoutTemplateRepository {
             restSeconds: Value(set.restSeconds),
           ),
     ];
+  }
+
+  /// Corps d'une prévision dans `session.create`. L'`exerciseName` part
+  /// toujours, même avec un `exerciseId` : c'est le repli qui garantit que le
+  /// serveur n'a aucune raison de refuser la séance.
+  Map<String, dynamic> _planItemBody(LocalSessionPlanItemsCompanion item) {
+    return <String, dynamic>{
+      'id': item.id.value,
+      'exercisePosition': item.exercisePosition.value,
+      if (item.exerciseId.value != null) 'exerciseId': item.exerciseId.value,
+      'exerciseName': item.exerciseName.value,
+      'setPosition': item.setPosition.value,
+      'kind': item.kind.value,
+      if (item.targetReps.value != null) 'targetReps': item.targetReps.value,
+      if (item.targetWeightKg.value != null)
+        'targetWeightKg': item.targetWeightKg.value,
+      if (item.restSeconds.value != null) 'restSeconds': item.restSeconds.value,
+    };
   }
 
   // ── Appariement plan ↔ série réalisée ────────────────────────────────────
@@ -234,17 +255,49 @@ class WorkoutTemplateRepositoryImpl implements WorkoutTemplateRepository {
       _plans.fulfillItem(planItemId: planItemId, setId: setId);
 
   @override
-  Future<void> skipPlanItem(String planItemId) => _plans.skipItem(planItemId);
+  Future<void> skipPlanItem(String planItemId) async {
+    final item = await _plans.itemOf(planItemId);
+    // Rejeu, ou prévision déjà honorée : une série réalisée est un fait
+    // acquis, on ne la « saute » pas après coup.
+    if (item == null || item.skipped || item.doneSetId != null) {
+      return;
+    }
+    await _enqueueSkip(item.sessionId, [planItemId]);
+  }
 
   @override
   Future<void> skipPlanExercise({
     required String sessionId,
     required int exercisePosition,
-  }) =>
-      _plans.skipExercise(
-        sessionId: sessionId,
-        exercisePosition: exercisePosition,
+  }) async {
+    final ids = await _plans.pendingItemIdsOf(
+      sessionId: sessionId,
+      exercisePosition: exercisePosition,
+    );
+    if (ids.isEmpty) {
+      return;
+    }
+    await _enqueueSkip(sessionId, ids);
+  }
+
+  /// Une seule opération, quel que soit le nombre de prévisions passées : le
+  /// corps décrit la liste complète, donc le rejeu est naturellement sans
+  /// effet supplémentaire.
+  Future<void> _enqueueSkip(String sessionId, List<String> planItemIds) async {
+    await _db.transaction(() async {
+      await _plans.markSkipped(planItemIds);
+      await _sessions.enqueue(
+        entityType: 'plan',
+        entityId: sessionId,
+        operationType: 'plan.skip',
+        payload: {
+          'sessionId': sessionId,
+          'body': {'planItemIds': planItemIds},
+        },
       );
+    });
+    _poke();
+  }
 
   @override
   Future<void> purgeSessionPlan(String sessionId) =>

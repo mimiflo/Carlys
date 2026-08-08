@@ -120,7 +120,10 @@ class LocalTemplateSets extends Table {
 /// une ligne par série prévue, c'est la forme dont l'écran a besoin
 /// (« série 2 sur 4 »).
 ///
-/// PUREMENT LOCAL, jamais synchronisé : le serveur ne reçoit que des faits
+/// Synchronisé, mais pas comme une saisie ordinaire : le plan part EN BLOC
+/// avec `session.create`, ses appariements voyagent avec la série qui les
+/// honore, et seuls les « passer » ont leur propre opération. C'est ce qui
+/// permet de reprendre sur un autre appareil une séance commencée ailleurs
 /// (docs/product/workout-templates.md, D5).
 class LocalSessionPlanItems extends Table {
   TextColumn get id => text()();
@@ -140,6 +143,13 @@ class LocalSessionPlanItems extends Table {
   TextColumn get doneSetId => text().nullable()();
   BoolColumn get skipped => boolean().withDefault(const Constant(false))();
 
+  /// pending | synced | failed — état de l'item VIS-À-VIS DU SERVEUR.
+  ///
+  /// Le rapatriement s'en sert comme garde-fou : il ne réécrit jamais un plan
+  /// dont une modification locale n'a pas encore été acquittée, sinon un
+  /// « passer » fait hors ligne serait effacé par un état serveur plus ancien.
+  TextColumn get syncStatus => text().withDefault(const Constant('pending'))();
+
   @override
   Set<Column<Object>> get primaryKey => {id};
 }
@@ -148,12 +158,15 @@ class LocalSessionPlanItems extends Table {
 class SyncOperations extends Table {
   TextColumn get id => text()();
 
-  /// session | set | template.
+  /// session | set | template | plan.
   TextColumn get entityType => text()();
+
+  /// Identifiant visé par l'opération. Pour `plan.skip`, c'est la SÉANCE :
+  /// une opération porte la liste des prévisions passées, pas une seule.
   TextColumn get entityId => text()();
 
   /// session.create | session.complete | session.abandon | set.upsert |
-  /// set.delete | template.save | template.delete.
+  /// set.delete | plan.skip | template.save | template.delete.
   TextColumn get operationType => text()();
 
   /// Corps JSON de la requête à rejouer.
@@ -191,9 +204,11 @@ class AppDatabase extends _$AppDatabase {
   ///  - **1** — séances, séries, file de synchronisation (Étape 4) ;
   ///  - **2** — modèles de séance : quatre tables ajoutées, `templateId` /
   ///    `templateName` sur les séances, `plannedReps` / `plannedWeightKg` sur
-  ///    les séries.
+  ///    les séries ;
+  ///  - **3** — reprise multi-appareil : `syncStatus` sur les items de plan,
+  ///    qui deviennent synchronisables.
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
   /// Migration locale : les colonnes ajoutées sont toutes **nullables**, donc
   /// la montée de version ne réécrit ni ne perd aucune donnée déjà saisie —
@@ -223,6 +238,18 @@ class AppDatabase extends _$AppDatabase {
               localWorkoutSets,
               localWorkoutSets.plannedWeightKg,
             );
+          }
+          // `from < 2` a créé la table avec sa définition ACTUELLE, colonne
+          // comprise : seule une base réellement en version 2 est à compléter.
+          if (from == 2) {
+            await migrator.addColumn(
+              localSessionPlanItems,
+              localSessionPlanItems.syncStatus,
+            );
+            // Un plan déjà local n'a jamais été transmis : il reste donc
+            // `pending` (valeur par défaut de la colonne), ce qui met le
+            // rapatriement en retrait sur cette séance — le bon réflexe, la
+            // saisie de l'appareil ne peut pas être écrasée.
           }
         },
       );

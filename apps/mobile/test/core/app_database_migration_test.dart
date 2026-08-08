@@ -3,7 +3,8 @@ import 'package:carlys_mobile/features/workout_session/domain/entities/workout.d
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// Migration locale 1 → 2 (modèles de séance).
+/// Migrations locales 1 → 2 (modèles de séance) puis 2 → 3 (plan
+/// synchronisable, pour la reprise multi-appareil).
 ///
 /// Première migration Drift du projet : elle doit être **non destructive**.
 /// Une séance en cours au moment de la mise à jour de l'application ne doit
@@ -100,7 +101,7 @@ void main() {
 
   tearDown(() => db.close());
 
-  test('la montée en version 2 préserve les données de séance déjà saisies',
+  test('la montée de version préserve les données de séance déjà saisies',
       () async {
     // La première requête déclenche `onUpgrade`.
     final sessions = await db.select(db.localWorkoutSessions).get();
@@ -125,7 +126,7 @@ void main() {
     expect(operations, hasLength(1));
     expect(operations.single.operationType, 'session.create');
 
-    expect(db.schemaVersion, 2);
+    expect(db.schemaVersion, 3);
   });
 
   test('les quatre tables des modèles de séance sont créées et utilisables',
@@ -134,5 +135,23 @@ void main() {
     expect(await db.select(db.localTemplateExercises).get(), isEmpty);
     expect(await db.select(db.localTemplateSets).get(), isEmpty);
     expect(await db.select(db.localSessionPlanItems).get(), isEmpty);
+  });
+
+  test('un plan hérité de la version 2 reste « pending », donc protégé',
+      () async {
+    // Une base v2 a des items de plan sans colonne `sync_status` : la valeur
+    // par défaut les met en attente, ce qui interdit au rapatriement de les
+    // écraser — la saisie de l'appareil prime toujours.
+    await db.into(db.localSessionPlanItems).insert(
+          LocalSessionPlanItemsCompanion.insert(
+            id: 'plan-1',
+            sessionId: 'session-v1',
+            exercisePosition: 0,
+            exerciseName: 'Développé couché',
+            setPosition: 0,
+          ),
+        );
+    final items = await db.select(db.localSessionPlanItems).get();
+    expect(items.single.syncStatus, 'pending');
   });
 }

@@ -52,12 +52,18 @@ class WorkoutSessionWriter {
   /// le modèle lui est inconnu (opération `template.save` encore en file ou
   /// définitivement refusée), il ignore l'identifiant et conserve le nom —
   /// **aucune séance n'est jamais perdue à cause d'un modèle**.
+  ///
+  /// [plan] est la copie aplatie du modèle, transmise EN BLOC avec la séance :
+  /// c'est ce qui permet de reprendre la séance sur un autre appareil, avec
+  /// ses cibles. Elle ne repart jamais ensuite — le plan est figé au
+  /// lancement.
   Future<void> insertSession({
     required String id,
     required DateTime startedAt,
     String? name,
     String? templateId,
     String? templateName,
+    List<Map<String, dynamic>> plan = const [],
   }) async {
     await _db.into(_db.localWorkoutSessions).insert(
           LocalWorkoutSessionsCompanion.insert(
@@ -79,6 +85,7 @@ class WorkoutSessionWriter {
         'startedAt': startedAt.toIso8601String(),
         if (templateId != null) 'templateId': templateId,
         if (templateName != null) 'templateName': templateName,
+        if (plan.isNotEmpty) 'plan': plan,
       },
     );
   }

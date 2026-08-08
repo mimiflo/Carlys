@@ -9,6 +9,7 @@ library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../app/restore/app_restore.dart';
 import '../core/synchronization/sync_lifecycle.dart';
 import '../features/authentication/data/repositories/auth_repository_impl.dart';
 import '../features/exercises/data/repositories/exercises_repository_impl.dart';
@@ -38,5 +39,6 @@ List<Override> demoOverrides() {
     workoutTemplateRepositoryProvider
         .overrideWithValue(DemoWorkoutTemplateRepository(workouts)),
     syncLifecycleProvider.overrideWithValue(DemoSyncLifecycle()),
+    appRestoreProvider.overrideWithValue(DemoAppRestore()),
   ];
 }

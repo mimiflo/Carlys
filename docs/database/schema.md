@@ -21,7 +21,7 @@ migration manque par rapport au schéma.
 | Identité | `User`, `UserProfile`, `UserCredential`, `UserSession`, `RefreshToken`, `EmailVerification`, `PasswordReset`, `ExternalIdentity` — **implémenté** (migration `20260806180000_auth_foundation`) ; `UserDevice` et `UserPreference` différés | Étape 2 ✅ |
 | Catalogue d'exercices | `Exercise`, `ExerciseMuscle`, `ExerciseEquipment`, `MuscleGroup`, `Equipment` — **implémenté** (migration `20260806220000_exercise_catalog`, contenu français directement sur `Exercise`) ; `ExerciseTranslation`, `ExerciseMedia`, `ExerciseVariant`, `CustomExercise` différés | Étape 3 ✅ |
 | Médias | `MediaAsset` | Étape 3 (premier besoin : médias d'exercices) |
-| Programmes | `WorkoutTemplate`, `WorkoutTemplateExercise`, `WorkoutTemplateSet` — **implémenté** (migration `20260808135805_workout_templates`, modèles de séance autonomes, ids générés sur l'appareil) ; `TrainingProgram`, `ProgramWeek`, `ProgramDay` (programmes multi-semaines) différés | Étape 4 ✅ |
+| Programmes | `WorkoutTemplate`, `WorkoutTemplateExercise`, `WorkoutTemplateSet`, `WorkoutSessionPlanItem` — **implémenté** (migrations `20260808135805_workout_templates` et `20260808153828_workout_session_plan_items` ; modèles de séance autonomes, plan de séance persisté pour la reprise multi-appareil, ids générés sur l'appareil) ; `TrainingProgram`, `ProgramWeek`, `ProgramDay` (programmes multi-semaines) différés | Étape 4 ✅ |
 | Séances | `WorkoutSession`, `WorkoutSet` — **implémenté** (migration `20260807010000_workout_sessions`, ids générés sur l'appareil, écritures idempotentes ; provenance et cibles ajoutées par `20260808135805_workout_templates`) ; `WorkoutSessionExercise` fusionné dans `WorkoutSet` (`exerciseId` + `exerciseName` dénormalisé), `WorkoutNote` porté par `WorkoutSession.notes`, `PersonalRecord` livré à l'Étape 5 | Étape 4 ✅ |
 | Progression | `PersonalRecord`, `BodyMetric` — **implémenté** (migration `20260807040000_progress`, records recalculés à la clôture, mesures idempotentes) ; `ProgressGoal` et `ProgressSnapshot` différés (agrégats calculés à la volée) | Étape 5 ✅ |
 | Abonnements | `SubscriptionPlan`, `SubscriptionProduct`, `Subscription`, `SubscriptionEvent`, `UserEntitlement` — **implémenté** (migration `20260807064832_subscriptions`, conforme à la cible) | Étape 6 ✅ |
@@ -399,8 +399,28 @@ Une séance effectuée (ou en cours) par un utilisateur.
   `endedAt` nullable, `status` (`in_progress | completed | abandoned`),
   `timezone` (contexte local de réalisation), `deletedAt`.
 - Relations : n–1 `User` ; n–1 `WorkoutTemplate` (optionnelle) ; 1–n
-  `WorkoutSessionExercise`, `WorkoutNote`.
+  `WorkoutSessionExercise`, `WorkoutNote`, `WorkoutSessionPlanItem`.
 - Index : `(user_id, started_at DESC, id)` (historique paginé par curseur).
+
+### `WorkoutSessionPlanItem` — implémenté
+Série **prévue** d'une séance : copie APLATIE du modèle au moment du lancement
+(migration `20260808153828_workout_session_plan_items`).
+- Raison d'être : rendre la reprise **multi-appareil** possible. Sans elle, un
+  téléphone qui reprend une séance commencée ailleurs voit les séries faites
+  mais plus aucune cible.
+- Champs clés : `id` (UUID client), `sessionId`, `exercisePosition`,
+  `exerciseId` nullable, `exerciseName` **dénormalisé**, `setPosition`, `kind`,
+  `targetReps`, `targetWeightKg` (`decimal(6,2)`), `restSeconds`, `doneSetId`
+  nullable, `skipped`. Unique `(sessionId, exercisePosition, setPosition)`.
+- Relations : n–1 `WorkoutSession` (`onDelete: Cascade`) ; n–1 `Exercise`
+  (`onDelete: SetNull`).
+- `doneSetId` est **volontairement sans clé étrangère** : hors ligne, la série
+  peut encore être dans la file d'envoi de l'appareil quand l'appariement
+  remonte. Une contrainte ferait échouer l'opération en 4xx, donc la perdrait ;
+  un identifiant orphelin est sans conséquence.
+- C'est une **copie**, pas un lien vivant : renommer ou supprimer le modèle
+  ensuite ne touche jamais une séance déjà lancée (D1 de
+  [workout-templates.md](../product/workout-templates.md)).
 
 ### `WorkoutSessionExercise`
 Exercice effectué au sein d'une séance, ordonné, groupable en supersets/

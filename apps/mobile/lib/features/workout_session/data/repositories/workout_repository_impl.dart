@@ -8,7 +8,9 @@ import '../../../../core/database/app_database.dart';
 import '../../../../core/synchronization/sync_engine.dart';
 import '../../domain/entities/workout.dart';
 import '../../domain/repositories/workout_repository.dart';
+import '../datasources/workout_session_remote_data_source.dart';
 import '../local/workout_session_writer.dart';
+import 'workout_session_downloader.dart';
 
 /// Implémentation offline-first : Drift est écrit en premier, chaque mutation
 /// enfile une opération idempotente, puis la synchronisation est tentée en
@@ -17,14 +19,17 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
   WorkoutRepositoryImpl({
     required AppDatabase database,
     required SyncEngine syncEngine,
+    WorkoutSessionRemoteDataSource? remote,
     Uuid uuid = const Uuid(),
   })  : _db = database,
         _sync = syncEngine,
+        _remote = remote,
         _uuid = uuid,
         _writer = WorkoutSessionWriter(database: database, uuid: uuid);
 
   final AppDatabase _db;
   final SyncEngine _sync;
+  final WorkoutSessionRemoteDataSource? _remote;
   final Uuid _uuid;
   final WorkoutSessionWriter _writer;
 
@@ -149,6 +154,10 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
       if (input.plannedReps != null) 'plannedReps': input.plannedReps,
       if (input.plannedWeightKg != null)
         'plannedWeightKg': input.plannedWeightKg,
+      // L'appariement au plan voyage AVEC la série : aucune opération
+      // supplémentaire, et l'ordre FIFO garantit que le serveur connaît déjà
+      // le plan (transmis avec la création de la séance).
+      if (input.planItemId != null) 'planItemId': input.planItemId,
       'completedAt': completedAt.toIso8601String(),
     };
 
@@ -251,6 +260,17 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
     _poke();
   }
 
+  // ── Rapatriement depuis le serveur ───────────────────────────────────────
+
+  @override
+  Future<void> restoreSessions() async {
+    final remote = _remote;
+    if (remote == null) {
+      return; // aucune source distante (mode démo, tests hors ligne)
+    }
+    await WorkoutSessionDownloader(database: _db, remote: remote).run();
+  }
+
   // ── Interne ──────────────────────────────────────────────────────────────
 
   void _poke() {
@@ -315,5 +335,6 @@ final workoutRepositoryProvider = Provider<WorkoutRepository>((ref) {
   return WorkoutRepositoryImpl(
     database: ref.watch(appDatabaseProvider),
     syncEngine: ref.watch(syncEngineProvider),
+    remote: ref.watch(workoutSessionRemoteDataSourceProvider),
   );
 });

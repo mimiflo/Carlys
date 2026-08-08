@@ -279,6 +279,9 @@ class DemoWorkoutRepository implements WorkoutRepository {
   @override
   Future<void> abandonWorkout(String sessionId) async => _publish(null);
 
+  @override
+  Future<void> restoreSessions() async {} // aucun serveur en démo
+
   void _publish(WorkoutWithSets? workout) {
     _active = workout;
     _activeController.add(workout);

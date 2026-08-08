@@ -27,6 +27,7 @@ function sessionRow(overrides: Partial<SessionWithSets> = {}): SessionWithSets {
     templateId: null,
     templateName: null,
     sets: [],
+    planItems: [],
     ...overrides,
   };
 }
@@ -42,6 +43,9 @@ interface Stubs {
   updateSet: jest.Mock;
   softDeleteSet: jest.Mock;
   exercisePublishedName: jest.Mock;
+  publishedExerciseNames: jest.Mock;
+  linkPlanItem: jest.Mock;
+  skipPlanItems: jest.Mock;
 }
 
 function buildStubs(): Stubs {
@@ -56,6 +60,9 @@ function buildStubs(): Stubs {
     updateSet: jest.fn(),
     softDeleteSet: jest.fn().mockResolvedValue(undefined),
     exercisePublishedName: jest.fn().mockResolvedValue('Développé couché'),
+    publishedExerciseNames: jest.fn().mockResolvedValue(new Map()),
+    linkPlanItem: jest.fn().mockResolvedValue(undefined),
+    skipPlanItems: jest.fn().mockResolvedValue(0),
   };
 }
 
@@ -154,6 +161,7 @@ describe('WorkoutsService', () => {
       expect(stubs.createSession).toHaveBeenCalledWith(
         expect.objectContaining({ templateId: 'modele-1', templateName: 'Push — Force' }),
         { templateId: 'modele-1', userId: USER, lastUsedAt: createInput.startedAt },
+        [],
       );
     });
 
@@ -172,7 +180,158 @@ describe('WorkoutsService', () => {
       expect(stubs.createSession).toHaveBeenCalledWith(
         expect.objectContaining({ templateId: null, templateName: 'Push — Force' }),
         undefined,
+        [],
       );
+    });
+  });
+
+  describe('createSession — plan de séance (reprise multi-appareil)', () => {
+    const planItem = {
+      id: 'plan-1',
+      exercisePosition: 0,
+      exerciseName: 'Développé couché',
+      setPosition: 0,
+      targetReps: 8,
+      targetWeightKg: 60,
+      restSeconds: 90,
+    };
+
+    it('écrit le plan DANS la création, donc annulé avec elle par un rejeu', async () => {
+      const stubs = buildStubs();
+      const service = buildService(stubs);
+
+      await service.createSession(USER, { ...createInput, plan: [planItem] });
+
+      expect(stubs.createSession).toHaveBeenCalledWith(expect.anything(), undefined, [
+        expect.objectContaining({
+          id: 'plan-1',
+          sessionId: 'session-1',
+          exerciseName: 'Développé couché',
+          targetReps: 8,
+          targetWeightKg: 60,
+          kind: WorkoutSetKind.NORMAL,
+        }),
+      ]);
+    });
+
+    it('un exerciseId inconnu dégrade la prévision au lieu de perdre la séance', async () => {
+      const stubs = buildStubs();
+      stubs.publishedExerciseNames.mockResolvedValue(new Map()); // catalogue muet
+      const service = buildService(stubs);
+
+      await service.createSession(USER, {
+        ...createInput,
+        plan: [{ ...planItem, exerciseId: 'exercice-inconnu' }],
+      });
+
+      expect(stubs.createSession).toHaveBeenCalledWith(expect.anything(), undefined, [
+        expect.objectContaining({ exerciseId: null, exerciseName: 'Développé couché' }),
+      ]);
+    });
+
+    it('le nom du catalogue prime sur le nom transmis quand il est résolu', async () => {
+      const stubs = buildStubs();
+      stubs.publishedExerciseNames.mockResolvedValue(
+        new Map([['exercice-1', 'Développé couché (barre)']]),
+      );
+      const service = buildService(stubs);
+
+      await service.createSession(USER, {
+        ...createInput,
+        plan: [{ ...planItem, exerciseId: 'exercice-1', exerciseName: 'Vieux nom' }],
+      });
+
+      expect(stubs.createSession).toHaveBeenCalledWith(expect.anything(), undefined, [
+        expect.objectContaining({
+          exerciseId: 'exercice-1',
+          exerciseName: 'Développé couché (barre)',
+        }),
+      ]);
+    });
+
+    it('sert le plan stocké dans le détail de la séance', async () => {
+      const stubs = buildStubs();
+      stubs.findSessionById.mockResolvedValue(
+        sessionRow({
+          planItems: [
+            {
+              id: 'plan-1',
+              sessionId: 'session-1',
+              exercisePosition: 0,
+              exerciseId: null,
+              exerciseName: 'Développé couché',
+              setPosition: 0,
+              kind: WorkoutSetKind.NORMAL,
+              targetReps: 8,
+              targetWeightKg: null,
+              restSeconds: 90,
+              doneSetId: null,
+              skipped: false,
+              createdAt: new Date(),
+              updatedAt: new Date(),
+            },
+          ],
+        }),
+      );
+      const service = buildService(stubs);
+
+      const session = await service.sessionDetail(USER, 'session-1');
+
+      expect(session.plan).toHaveLength(1);
+      expect(session.plan[0]).toMatchObject({ id: 'plan-1', targetReps: 8, skipped: false });
+    });
+  });
+
+  describe('appariement plan ↔ série', () => {
+    it('apparie la prévision honorée par la série qui vient d’être créée', async () => {
+      const stubs = buildStubs();
+      stubs.findSetById.mockResolvedValueOnce(null).mockResolvedValue(setRow());
+      const service = buildService(stubs);
+
+      await service.addSet(USER, 'session-1', { ...setInput, planItemId: 'plan-1' });
+
+      expect(stubs.linkPlanItem).toHaveBeenCalledWith('session-1', 'plan-1', 'set-1');
+    });
+
+    it('réapparie sur un rejeu : le premier envoi a pu s’interrompre entre les deux', async () => {
+      const stubs = buildStubs();
+      stubs.findSetById.mockResolvedValue(setRow()); // série déjà là
+      const service = buildService(stubs);
+
+      await service.addSet(USER, 'session-1', { ...setInput, planItemId: 'plan-1' });
+
+      expect(stubs.createSet).not.toHaveBeenCalled();
+      expect(stubs.linkPlanItem).toHaveBeenCalledWith('session-1', 'plan-1', 'set-1');
+    });
+
+    it('une série hors programme n’apparie rien', async () => {
+      const stubs = buildStubs();
+      stubs.findSetById.mockResolvedValueOnce(null).mockResolvedValue(setRow());
+      const service = buildService(stubs);
+
+      await service.addSet(USER, 'session-1', setInput);
+
+      expect(stubs.linkPlanItem).not.toHaveBeenCalled();
+    });
+
+    it('passer des prévisions reste invisible pour la séance d’autrui', async () => {
+      const stubs = buildStubs();
+      stubs.findSessionById.mockResolvedValue(sessionRow({ userId: OTHER_USER }));
+      const service = buildService(stubs);
+
+      await expect(service.skipPlanItems(USER, 'session-1', ['plan-1'])).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(stubs.skipPlanItems).not.toHaveBeenCalled();
+    });
+
+    it('passer des prévisions délègue au dépôt, qui protège celles déjà faites', async () => {
+      const stubs = buildStubs();
+      const service = buildService(stubs);
+
+      await service.skipPlanItems(USER, 'session-1', ['plan-1', 'plan-2']);
+
+      expect(stubs.skipPlanItems).toHaveBeenCalledWith('session-1', ['plan-1', 'plan-2']);
     });
   });
 

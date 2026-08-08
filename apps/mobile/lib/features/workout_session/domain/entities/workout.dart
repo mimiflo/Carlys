@@ -171,6 +171,7 @@ class AddSetInput {
     this.rpe,
     this.plannedReps,
     this.plannedWeightKg,
+    this.planItemId,
   });
 
   final String sessionId;
@@ -187,7 +188,16 @@ class AddSetInput {
   final int? plannedReps;
   final double? plannedWeightKg;
 
-  AddSetInput copyWith({int? plannedReps, double? plannedWeightKg}) {
+  /// Prévision du plan que cette série honore, renseignée par le même cas
+  /// d'usage. Elle voyage AVEC la série : l'appariement se retrouve donc sur
+  /// un autre appareil sans opération de synchronisation supplémentaire.
+  final String? planItemId;
+
+  AddSetInput copyWith({
+    int? plannedReps,
+    double? plannedWeightKg,
+    String? planItemId,
+  }) {
     return AddSetInput(
       sessionId: sessionId,
       exerciseName: exerciseName,
@@ -199,6 +209,7 @@ class AddSetInput {
       rpe: rpe,
       plannedReps: plannedReps ?? this.plannedReps,
       plannedWeightKg: plannedWeightKg ?? this.plannedWeightKg,
+      planItemId: planItemId ?? this.planItemId,
     );
   }
 }

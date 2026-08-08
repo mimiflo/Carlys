@@ -12,6 +12,11 @@ abstract interface class SyncApi {
   Future<void> upsertSet(String sessionId, Map<String, dynamic> body);
   Future<void> deleteSet(String setId);
 
+  /// `POST /workout-sessions/{sessionId}/plan/skip` : le corps liste les
+  /// prévisions passées, donc rejouer aboutit au même état. Les prévisions
+  /// déjà honorées par une série sont ignorées côté serveur.
+  Future<void> skipPlanItems(String sessionId, Map<String, dynamic> body);
+
   /// `PUT /workout-templates/{templateId}` : le corps décrit l'ÉTAT COMPLET du
   /// modèle, l'idempotence est donc naturelle (rejouer = même état).
   Future<void> saveTemplate(String templateId, Map<String, dynamic> body);
@@ -45,6 +50,10 @@ class DioSyncApi implements SyncApi {
   @override
   Future<void> deleteSet(String setId) =>
       _dio.delete<void>('/workout-sets/$setId');
+
+  @override
+  Future<void> skipPlanItems(String sessionId, Map<String, dynamic> body) =>
+      _dio.post<void>('/workout-sessions/$sessionId/plan/skip', data: body);
 
   @override
   Future<void> saveTemplate(String templateId, Map<String, dynamic> body) =>

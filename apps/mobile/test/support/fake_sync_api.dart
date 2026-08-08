@@ -36,6 +36,7 @@ class FakeSyncApi implements SyncApi {
     final id = body['id'] as String;
     _guard(id);
     log.add('session.create:$id');
+    createdSessions.add(body);
   }
 
   @override
@@ -61,12 +62,25 @@ class FakeSyncApi implements SyncApi {
     final id = body['id'] as String;
     _guard(id);
     log.add('set.upsert:$id');
+    upsertedSets.add(body);
   }
 
   @override
   Future<void> deleteSet(String setId) async {
     _guard(setId);
     log.add('set.delete:$setId');
+  }
+
+  @override
+  Future<void> skipPlanItems(
+    String sessionId,
+    Map<String, dynamic> body,
+  ) async {
+    _guard(sessionId);
+    log.add('plan.skip:$sessionId');
+    skippedPlanItems.addAll(
+      (body['planItemIds'] as List<dynamic>).cast<String>(),
+    );
   }
 
   @override
@@ -87,4 +101,13 @@ class FakeSyncApi implements SyncApi {
 
   /// Corps `PUT` reçus, dans l'ordre — pour vérifier la sérialisation.
   final List<Map<String, dynamic>> savedTemplates = [];
+
+  /// Prévisions passées reçues par le serveur, dans l'ordre.
+  final List<String> skippedPlanItems = [];
+
+  /// Corps de séries reçus, dans l'ordre.
+  final List<Map<String, dynamic>> upsertedSets = [];
+
+  /// Corps `session.create` reçus — pour vérifier que le plan part avec.
+  final List<Map<String, dynamic>> createdSessions = [];
 }

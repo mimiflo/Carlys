@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../../../app/restore/app_restore.dart';
 import '../../../../app/router/app_routes.dart';
 import '../../../../core/synchronization/sync_lifecycle.dart';
 import '../../../../design_system/design_system.dart';
@@ -21,8 +22,11 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    // Démarre les déclencheurs de synchronisation (connectivité, périodique).
+    // Démarre les déclencheurs de synchronisation (connectivité, périodique)
+    // puis rapatrie ce que le serveur détient — indispensable sur un appareil
+    // neuf, où la base locale est vide.
     ref.watch(syncLifecycleProvider).ensureStarted();
+    ref.watch(appRestoreProvider).ensureRestored();
 
     final authState = ref.watch(authControllerProvider);
     final user = switch (authState) {

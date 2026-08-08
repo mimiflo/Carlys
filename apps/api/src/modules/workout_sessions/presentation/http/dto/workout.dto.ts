@@ -1,8 +1,10 @@
-import { WORKOUT_LIMITS } from '@carlys/api-contracts';
+import { WORKOUT_LIMITS, WORKOUT_TEMPLATE_LIMITS } from '@carlys/api-contracts';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { WorkoutSetKind } from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
+  IsArray,
   IsDate,
   IsEnum,
   IsInt,
@@ -13,8 +15,83 @@ import {
   Max,
   MaxLength,
   Min,
+  MinLength,
+  ValidateNested,
 } from 'class-validator';
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from '@carlys/shared-config';
+
+/**
+ * Série PRÉVUE transmise au lancement d'une séance issue d'un modèle.
+ *
+ * `exerciseName` est obligatoire même avec un `exerciseId` : c'est le repli
+ * qui garantit qu'une séance n'échoue jamais à cause d'un exercice inconnu
+ * (le serveur dégrade alors la prévision en exercice libre).
+ */
+export class CreateWorkoutSessionPlanItemDto {
+  @ApiProperty({ description: "UUID généré sur l'appareil" })
+  @IsUUID()
+  id!: string;
+
+  @ApiProperty({ description: "Rang de l'exercice dans la séance, à partir de 0" })
+  @IsInt()
+  @Min(0)
+  @Max(WORKOUT_TEMPLATE_LIMITS.exercisesMax)
+  exercisePosition!: number;
+
+  @ApiPropertyOptional({ description: 'Exercice du catalogue' })
+  @IsOptional()
+  @IsUUID()
+  exerciseId?: string;
+
+  @ApiProperty({ maxLength: WORKOUT_LIMITS.nameMax })
+  @IsString()
+  @MinLength(1)
+  @MaxLength(WORKOUT_LIMITS.nameMax)
+  exerciseName!: string;
+
+  @ApiProperty({ description: "Rang de la série DANS l'exercice, à partir de 0" })
+  @IsInt()
+  @Min(0)
+  @Max(WORKOUT_TEMPLATE_LIMITS.setsPerExerciseMax)
+  setPosition!: number;
+
+  @ApiPropertyOptional({ enum: WorkoutSetKind })
+  @IsOptional()
+  @IsEnum(WorkoutSetKind)
+  kind?: WorkoutSetKind;
+
+  @ApiPropertyOptional({ maximum: WORKOUT_LIMITS.repsMax })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(WORKOUT_LIMITS.repsMax)
+  targetReps?: number;
+
+  @ApiPropertyOptional({ maximum: WORKOUT_LIMITS.weightKgMax })
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(0)
+  @Max(WORKOUT_LIMITS.weightKgMax)
+  targetWeightKg?: number;
+
+  @ApiPropertyOptional({ maximum: WORKOUT_LIMITS.restSecondsMax })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(WORKOUT_LIMITS.restSecondsMax)
+  restSeconds?: number;
+}
+
+export class SkipWorkoutSessionPlanItemsDto {
+  @ApiProperty({
+    description: 'Prévisions à passer — celles déjà honorées sont ignorées',
+    type: [String],
+  })
+  @IsArray()
+  @ArrayMaxSize(WORKOUT_LIMITS.planItemsMax)
+  @IsUUID('4', { each: true })
+  planItemIds!: string[];
+}
 
 export class CreateWorkoutSessionDto {
   @ApiProperty({ description: "UUID généré sur l'appareil (création idempotente)" })
@@ -53,6 +130,19 @@ export class CreateWorkoutSessionDto {
   @IsString()
   @MaxLength(WORKOUT_LIMITS.nameMax)
   templateName?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Plan copié du modèle au lancement — transmis À LA CRÉATION seulement, ' +
+      'ce qui permet de reprendre la séance sur un autre appareil',
+    type: [CreateWorkoutSessionPlanItemDto],
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(WORKOUT_LIMITS.planItemsMax)
+  @ValidateNested({ each: true })
+  @Type(() => CreateWorkoutSessionPlanItemDto)
+  plan?: CreateWorkoutSessionPlanItemDto[];
 }
 
 export class UpdateWorkoutSessionDto {
@@ -172,6 +262,13 @@ export class CreateWorkoutSetDto {
   @Min(0)
   @Max(WORKOUT_LIMITS.weightKgMax)
   plannedWeightKg?: number;
+
+  @ApiPropertyOptional({
+    description: 'Prévision du plan honorée par cette série — ignorée si inconnue ou déjà honorée',
+  })
+  @IsOptional()
+  @IsUUID()
+  planItemId?: string;
 
   @ApiProperty({ description: 'Fin de la série, UTC (ISO 8601)' })
   @Type(() => Date)

@@ -278,6 +278,117 @@ describe('Séances (e2e)', () => {
     expect(data<WorkoutSet>(corrected.body).plannedReps).toBe(8);
   });
 
+  it('le plan part avec la séance et se relit à l’identique — reprise multi-appareil', async () => {
+    const exercise = await ensureExerciseFixture(prisma, 'e2e-workouts-plan');
+    const plannedSessionId = randomUUID();
+    const [first, second, third] = [randomUUID(), randomUUID(), randomUUID()];
+    const body = {
+      id: plannedSessionId,
+      startedAt: '2026-08-07T16:00:00.000Z',
+      templateName: 'Push — Force',
+      plan: [
+        {
+          id: first,
+          exercisePosition: 0,
+          exerciseId: exercise.id,
+          exerciseName: 'Nom client périmé',
+          setPosition: 0,
+          targetReps: 8,
+          targetWeightKg: 60,
+          restSeconds: 90,
+        },
+        {
+          id: second,
+          exercisePosition: 0,
+          exerciseId: exercise.id,
+          exerciseName: 'Nom client périmé',
+          setPosition: 1,
+          targetReps: 8,
+          targetWeightKg: 60,
+          restSeconds: 90,
+        },
+        {
+          id: third,
+          exercisePosition: 1,
+          exerciseName: 'Gainage libre',
+          setPosition: 0,
+          targetReps: 3,
+        },
+      ],
+    };
+
+    const created = await authed(accessToken)
+      .post('/api/v1/workout-sessions')
+      .send(body)
+      .expect(201);
+    expect(data<WorkoutSessionDetail>(created.body).plan).toHaveLength(3);
+
+    // REJEU de la création : le plan ne doit surtout pas se dupliquer.
+    await authed(accessToken).post('/api/v1/workout-sessions').send(body).expect(201);
+    expect(
+      await prisma.workoutSessionPlanItem.count({ where: { sessionId: plannedSessionId } }),
+    ).toBe(3);
+
+    // Première série faite : elle honore la première prévision.
+    const doneSetId = randomUUID();
+    await authed(accessToken)
+      .post(`/api/v1/workout-sessions/${plannedSessionId}/sets`)
+      .send({
+        id: doneSetId,
+        exerciseId: exercise.id,
+        position: 0,
+        reps: 8,
+        weightKg: 60,
+        plannedReps: 8,
+        plannedWeightKg: 60,
+        planItemId: first,
+        completedAt: '2026-08-07T16:05:00.000Z',
+      })
+      .expect(201);
+
+    // Deuxième prévision explicitement passée (rejouable).
+    await authed(accessToken)
+      .post(`/api/v1/workout-sessions/${plannedSessionId}/plan/skip`)
+      .send({ planItemIds: [second] })
+      .expect(200);
+    await authed(accessToken)
+      .post(`/api/v1/workout-sessions/${plannedSessionId}/plan/skip`)
+      .send({ planItemIds: [second] })
+      .expect(200);
+
+    // Passer une prévision DÉJÀ FAITE ne l'écrase pas : un fait reste un fait.
+    await authed(accessToken)
+      .post(`/api/v1/workout-sessions/${plannedSessionId}/plan/skip`)
+      .send({ planItemIds: [first] })
+      .expect(200);
+
+    // Ce que verrait un second appareil : il relit simplement le détail.
+    const resumed = await authed(accessToken)
+      .get(`/api/v1/workout-sessions/${plannedSessionId}`)
+      .expect(200);
+    const plan = data<WorkoutSessionDetail>(resumed.body).plan;
+
+    expect(plan).toHaveLength(3);
+    expect(plan[0]).toMatchObject({
+      id: first,
+      // Nom du CATALOGUE, pas celui transmis par le client.
+      exerciseName: exercise.name,
+      targetReps: 8,
+      targetWeightKg: 60,
+      doneSetId,
+      skipped: false,
+    });
+    expect(plan[1]).toMatchObject({ id: second, skipped: true, doneSetId: null });
+    // Exercice hors catalogue : conservé tel quel, sans clé étrangère.
+    expect(plan[2]).toMatchObject({ id: third, exerciseId: null, exerciseName: 'Gainage libre' });
+
+    // Le plan d'autrui reste invisible.
+    await authed(otherAccessToken)
+      .post(`/api/v1/workout-sessions/${plannedSessionId}/plan/skip`)
+      .send({ planItemIds: [third] })
+      .expect(404);
+  });
+
   it('une séance dont le modèle est inconnu arrive QUAND MÊME, nom client conservé', async () => {
     const orphanId = randomUUID();
     const created = await authed(accessToken)

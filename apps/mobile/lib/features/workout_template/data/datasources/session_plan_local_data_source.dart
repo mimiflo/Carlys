@@ -6,10 +6,14 @@ import '../../domain/entities/session_plan.dart';
 
 /// Accès Drift du **plan de la séance en cours**.
 ///
-/// Table purement locale : rien de ce qui est ici ne part vers le serveur, qui
-/// ne reçoit que des faits. Séparé de l'accès aux modèles parce que c'est un
-/// autre cycle de vie — le plan naît au lancement d'une séance et meurt à sa
-/// clôture, alors qu'un modèle vit indéfiniment.
+/// Séparé de l'accès aux modèles parce que c'est un autre cycle de vie — le
+/// plan naît au lancement d'une séance et meurt à sa clôture, alors qu'un
+/// modèle vit indéfiniment.
+///
+/// Le plan voyage vers le serveur, mais jamais tout seul : il part en bloc
+/// avec `session.create`, ses appariements suivent la série qui les honore, et
+/// seuls les « passer » ont leur propre opération. `syncStatus` retrace cet
+/// acquittement, ce qui permet au rapatriement de savoir quand s'abstenir.
 ///
 /// Comme pour les modèles, aucune méthode n'ouvre de transaction : le
 /// repository décide de la frontière transactionnelle.
@@ -86,35 +90,92 @@ class SessionPlanLocalDataSource {
     );
   }
 
+  Future<LocalSessionPlanItem?> itemOf(String planItemId) {
+    return (_db.select(_db.localSessionPlanItems)
+          ..where((item) => item.id.equals(planItemId)))
+        .getSingleOrNull();
+  }
+
+  /// Prévisions encore ouvertes d'un exercice : ni honorées, ni déjà passées.
+  Future<List<String>> pendingItemIdsOf({
+    required String sessionId,
+    required int exercisePosition,
+  }) async {
+    final rows = await (_db.select(_db.localSessionPlanItems)
+          ..where(
+            (item) =>
+                item.sessionId.equals(sessionId) &
+                item.exercisePosition.equals(exercisePosition) &
+                item.doneSetId.isNull() &
+                item.skipped.equals(false),
+          ))
+        .get();
+    return rows.map((row) => row.id).toList();
+  }
+
+  /// L'appariement repart avec la série : l'item redevient donc `pending`
+  /// jusqu'à ce que cette série soit acquittée.
   Future<void> fulfillItem({
     required String planItemId,
     required String setId,
   }) {
     return (_db.update(_db.localSessionPlanItems)
           ..where((item) => item.id.equals(planItemId)))
-        .write(LocalSessionPlanItemsCompanion(doneSetId: Value(setId)));
+        .write(
+      LocalSessionPlanItemsCompanion(
+        doneSetId: Value(setId),
+        syncStatus: const Value('pending'),
+      ),
+    );
   }
 
-  Future<void> skipItem(String planItemId) {
+  Future<void> markSkipped(List<String> planItemIds) {
     return (_db.update(_db.localSessionPlanItems)
-          ..where((item) => item.id.equals(planItemId)))
-        .write(const LocalSessionPlanItemsCompanion(skipped: Value(true)));
+          ..where((item) => item.id.isIn(planItemIds)))
+        .write(
+      const LocalSessionPlanItemsCompanion(
+        skipped: Value(true),
+        syncStatus: Value('pending'),
+      ),
+    );
   }
 
-  /// Passe les séries **restantes** de l'exercice : celles déjà faites gardent
-  /// leur statut, une série réalisée est un fait acquis.
-  Future<void> skipExercise({
-    required String sessionId,
-    required int exercisePosition,
-  }) {
+  Future<void> markStatus(List<String> planItemIds, String syncStatus) {
     return (_db.update(_db.localSessionPlanItems)
+          ..where((item) => item.id.isIn(planItemIds)))
+        .write(LocalSessionPlanItemsCompanion(syncStatus: Value(syncStatus)));
+  }
+
+  /// Acquitte tout le plan d'une séance — utilisé quand `session.create`,
+  /// qui le transporte en bloc, aboutit.
+  Future<void> markSessionStatus(String sessionId, String syncStatus) {
+    return (_db.update(_db.localSessionPlanItems)
+          ..where((item) => item.sessionId.equals(sessionId)))
+        .write(LocalSessionPlanItemsCompanion(syncStatus: Value(syncStatus)));
+  }
+
+  /// Vrai si une modification locale du plan n'a pas encore été acquittée.
+  Future<bool> hasUnacknowledgedItems(String sessionId) async {
+    final rows = await (_db.select(_db.localSessionPlanItems)
           ..where(
             (item) =>
                 item.sessionId.equals(sessionId) &
-                item.exercisePosition.equals(exercisePosition) &
-                item.doneSetId.isNull(),
-          ))
-        .write(const LocalSessionPlanItemsCompanion(skipped: Value(true)));
+                item.syncStatus.isNotValue('synced'),
+          )
+          ..limit(1))
+        .get();
+    return rows.isNotEmpty;
+  }
+
+  /// Réécrit intégralement le plan rapatrié du serveur.
+  Future<void> replacePlan(
+    String sessionId,
+    List<LocalSessionPlanItemsCompanion> items,
+  ) async {
+    await purgePlan(sessionId);
+    await _db.batch(
+      (batch) => batch.insertAll(_db.localSessionPlanItems, items),
+    );
   }
 
   Future<void> purgePlan(String sessionId) {

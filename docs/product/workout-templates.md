@@ -635,7 +635,7 @@ class LocalTemplateSets extends Table {
   @override Set<Column<Object>> get primaryKey => {id};
 }
 
-/// Plan de la séance en cours — PUREMENT LOCAL, jamais synchronisé (D5).
+/// Plan de la séance en cours — synchronisé sans opération dédiée (D5).
 class LocalSessionPlanItems extends Table {
   TextColumn get id => text()();
   TextColumn get sessionId => text()();
@@ -649,6 +649,7 @@ class LocalSessionPlanItems extends Table {
   IntColumn  get restSeconds => integer().nullable()();
   TextColumn get doneSetId => text().nullable()();
   BoolColumn get skipped => boolean().withDefault(const Constant(false))();
+  TextColumn get syncStatus => text().withDefault(const Constant('pending'))();
   @override Set<Column<Object>> get primaryKey => {id};
 }
 ```
@@ -1007,23 +1008,44 @@ conséquence métier.
 séance est un fait qu'on **crée** puis qu'on complète ; un modèle est un
 document qu'on **remplace**. Précédent maison : `PUT /admin/users/:id/entitlements`.
 
-### D5 — Le plan non exécuté ne va pas au serveur
+### D5 — Le plan part avec la séance (révisée)
 
-Le plan matérialisé (`LocalSessionPlanItems`) reste **purement local**. Le
-serveur ne reçoit que des faits : la séance, ses séries, et la cible qui était
-affichée au moment de chaque validation.
+**Décision initiale, abandonnée.** Le plan matérialisé
+(`LocalSessionPlanItems`) devait rester purement local, le serveur ne recevant
+que des faits. La conséquence était assumée par écrit : une séance reprise sur
+un autre appareil perdait ses cibles.
 
-*Pourquoi.* Stocker le prévu-non-fait créerait une seconde source de vérité
-(le modèle et sa copie serveur), une table à synchroniser, des conflits
-supplémentaires — pour une valeur utilisateur nulle au MVP : ce qu'on veut
-revoir plus tard, c'est ce qu'on a fait et la cible qu'on visait, deux
-informations déjà couvertes par `plannedReps` / `plannedWeightKg`.
+**Ce qui a changé.** La limite s'est révélée plus large que prévu à la
+relecture : l'application ne rapatriait *aucune* séance. Sur un téléphone neuf,
+il n'y avait ni historique, ni séance en cours — la perte du plan n'en était
+que la partie visible. Réparer la reprise sans persister le plan aurait donc
+rendu les séries visibles sans leur objectif, ce qui est pire que rien.
 
-*Conséquence acceptée, à ne pas découvrir en route* : une séance en cours,
-interrompue puis reprise **sur un autre appareil**, perd son plan (la séance et
-ses séries, elles, sont intactes). La récupération multi-appareils est déjà
-explicitement différée dans la doc de synchronisation ; cette limite est du
-même ordre.
+**Décision retenue.** Le plan est persisté côté serveur
+(`WorkoutSessionPlanItem`) et voyage **sans opération de synchronisation
+dédiée**, ce qui préserve l'essentiel de l'argument d'origine — pas de seconde
+file, pas de nouveau front de conflits :
+
+| Fait | Transporteur | Idempotence |
+| ---- | ------------ | ----------- |
+| Le plan entier, au lancement | corps de `session.create` (`plan[]`) | la création l'est déjà : un rejeu annule tout le bloc |
+| L'appariement série ↔ prévision | `planItemId` dans le corps de `set.upsert` | premier appariement gagnant, rejeu sans effet |
+| Les prévisions passées | `plan.skip` (une opération, la liste complète) | le corps décrit l'état visé |
+
+Le plan reste une **copie** figée au lancement (D1) : il n'est jamais renvoyé
+après la création, donc modifier le modèle ne peut pas altérer une séance en
+cours, ici comme avant.
+
+*Garde-fou de rapatriement.* `LocalSessionPlanItems.syncStatus` (schéma local
+v3) dit si une modification locale a été acquittée. Le rapatriement s'abstient
+d'écrire une séance dont la séance, une série **ou** une prévision est encore
+en attente : l'appareil ne perd jamais sa propre saisie au profit d'un état
+serveur plus ancien.
+
+*Ce qui reste hors périmètre.* La fusion de deux séances en cours modifiées
+simultanément sur deux appareils. Le domaine impose « au plus une séance
+active » et le rapatriement s'efface devant le local : le cas ne produit pas de
+perte, seulement un retard de convergence.
 
 ### D6 — Pas d'unicité de nom
 
@@ -1147,8 +1169,8 @@ contrats partagés. Il se livre **en premier**, avant tout le reste.
   comme implémentés (avec le nom de migration) et consigner les écarts assumés
   (D8, D10) ; section « Séances » : `templateId`, `templateName`, `planned*`.
 - [`docs/synchronization/offline-first.md`](../synchronization/offline-first.md) —
-  ajouter `template.save` / `template.delete` aux opérations, et le fait que le
-  plan de séance n'est jamais synchronisé (D5).
+  ajouter `template.save` / `template.delete` / `plan.skip` aux opérations, et
+  décrire le rapatriement des séances (D5 révisée).
 - [`docs/product/product-scope.md`](./product-scope.md) — ligne « Création de
   programme » : préciser ce qui est livré (modèles de séance) et ce qui reste
   cible (programmes multi-semaines).

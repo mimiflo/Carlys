@@ -5,6 +5,7 @@
 /// côté serveur, hors de portée d'une démo hors ligne).
 library;
 
+import '../app/restore/app_restore.dart';
 import '../core/synchronization/sync_lifecycle.dart';
 import '../features/authentication/domain/entities/auth_session_device.dart';
 import '../features/authentication/domain/entities/auth_user.dart';
@@ -292,4 +293,11 @@ class DemoSyncLifecycle implements SyncLifecycle {
 
   @override
   void dispose() {}
+}
+
+/// Aucun rapatriement en démo, pour la même raison — et surtout : ne pas
+/// ouvrir la base Drift, dont le mode démo se passe entièrement.
+class DemoAppRestore implements AppRestore {
+  @override
+  void ensureRestored() {}
 }

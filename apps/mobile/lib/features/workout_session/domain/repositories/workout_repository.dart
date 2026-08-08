@@ -36,4 +36,14 @@ abstract interface class WorkoutRepository {
   Future<void> completeWorkout(String sessionId);
 
   Future<void> abandonWorkout(String sessionId);
+
+  /// Rapatrie les séances du serveur dans la base locale, avec leurs séries
+  /// **et leur plan**.
+  ///
+  /// Utile après une réinstallation ou un changement d'appareil : c'est ce qui
+  /// permet de reprendre sur un second téléphone une séance commencée sur un
+  /// premier, cibles comprises. Ne touche jamais une séance dont des
+  /// modifications locales n'ont pas encore été acquittées : l'appareil ne
+  /// perd jamais sa propre saisie.
+  Future<void> restoreSessions();
 }

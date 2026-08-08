@@ -9,11 +9,24 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { WorkoutSessionStatus, WorkoutSetKind } from '@prisma/client';
+import { type Prisma, WorkoutSessionStatus, WorkoutSetKind } from '@prisma/client';
 import { ProgressService } from '../../progress/application/progress.service';
 import { WorkoutTemplatesService } from '../../workout_templates/application/workout-templates.service';
 import { type SessionWithSets, WorkoutsRepository } from '../infrastructure/workouts.repository';
 import { presentSessionDetail, presentSessionSummary, presentSet } from './workout.presenter';
+
+/** Série prévue transmise au lancement — des cibles, pas des mesures. */
+export interface CreateSessionPlanItemInput {
+  id: string;
+  exercisePosition: number;
+  exerciseId?: string;
+  exerciseName: string;
+  setPosition: number;
+  kind?: WorkoutSetKind;
+  targetReps?: number;
+  targetWeightKg?: number;
+  restSeconds?: number;
+}
 
 export interface CreateSessionInput {
   id: string;
@@ -24,6 +37,12 @@ export interface CreateSessionInput {
   templateId?: string;
   /** Nom du modèle conservé par le client, utilisé en secours. */
   templateName?: string;
+  /**
+   * Plan de la séance, copié du modèle par l'appareil au lancement. Absent
+   * pour une séance libre. Transmis À LA CRÉATION et jamais ensuite : c'est
+   * ce qui permet de reprendre la séance sur un autre appareil.
+   */
+  plan?: CreateSessionPlanItemInput[];
 }
 
 export interface CreateSetInput {
@@ -41,8 +60,12 @@ export interface CreateSetInput {
   /** Cible AFFICHÉE au moment de la validation — fait historique figé. */
   plannedReps?: number;
   plannedWeightKg?: number;
+  /** Prévision du plan que cette série honore, s'il y en a une. */
+  planItemId?: string;
   completedAt: Date;
 }
+
+type PlanItemRow = Prisma.WorkoutSessionPlanItemUncheckedCreateInput;
 
 export interface SessionsPage {
   items: WorkoutSessionSummary[];
@@ -85,10 +108,58 @@ export class WorkoutsService {
       origin.templateId === null
         ? undefined
         : { templateId: origin.templateId, userId, lastUsedAt: input.startedAt },
+      await this.buildPlanRows(input.id, input.plan ?? []),
     );
     // Créée ou rejouée : dans les deux cas on sert l'état stocké, qui doit
     // appartenir au même utilisateur.
     return presentSessionDetail(await this.ownedSession(userId, input.id));
+  }
+
+  /**
+   * Prépare les lignes du plan. Comme pour les modèles, un `exerciseId`
+   * inconnu ou dépublié dégrade la prévision en exercice LIBRE (clé étrangère
+   * nulle, nom dénormalisé conservé) au lieu de faire échouer la requête :
+   * une séance ne se perd jamais à cause du catalogue.
+   */
+  private async buildPlanRows(
+    sessionId: string,
+    plan: CreateSessionPlanItemInput[],
+  ): Promise<PlanItemRow[]> {
+    const catalogNames = await this.workouts.publishedExerciseNames(
+      plan.flatMap((item) => (item.exerciseId === undefined ? [] : [item.exerciseId])),
+    );
+
+    return plan.map((item) => {
+      const catalogName =
+        item.exerciseId === undefined ? undefined : catalogNames.get(item.exerciseId);
+      return {
+        id: item.id,
+        sessionId,
+        exercisePosition: item.exercisePosition,
+        exerciseId: catalogName === undefined ? null : (item.exerciseId ?? null),
+        exerciseName: catalogName ?? item.exerciseName,
+        setPosition: item.setPosition,
+        kind: item.kind ?? WorkoutSetKind.NORMAL,
+        targetReps: item.targetReps ?? null,
+        targetWeightKg: item.targetWeightKg ?? null,
+        restSeconds: item.restSeconds ?? null,
+      };
+    });
+  }
+
+  /**
+   * Passe des prévisions du plan. Idempotent : rejouer la même liste répond
+   * la même chose, et une prévision déjà honorée par une série n'est jamais
+   * repassée en « sautée ».
+   */
+  async skipPlanItems(
+    userId: string,
+    sessionId: string,
+    planItemIds: string[],
+  ): Promise<WorkoutSessionDetail> {
+    await this.ownedSession(userId, sessionId);
+    await this.workouts.skipPlanItems(sessionId, planItemIds);
+    return presentSessionDetail(await this.ownedSession(userId, sessionId));
   }
 
   async listSessions(userId: string, limit: number, cursor?: string): Promise<SessionsPage> {
@@ -149,7 +220,11 @@ export class WorkoutsService {
       if (existing.sessionId !== sessionId || existing.session.userId !== userId) {
         throw new ConflictException('Identifiant de série déjà utilisé.');
       }
-      return presentSet(existing); // rejeu
+      // Rejeu : la série est là, mais l'appariement au plan a pu manquer si le
+      // premier envoi s'est interrompu entre les deux écritures. On le refait,
+      // il est idempotent.
+      await this.linkPlanItem(sessionId, input);
+      return presentSet(existing);
     }
 
     const exerciseName = await this.resolveExerciseName(input);
@@ -177,13 +252,28 @@ export class WorkoutsService {
       if (replayed === null || replayed.sessionId !== sessionId) {
         throw new ConflictException('Identifiant de série déjà utilisé.');
       }
+      await this.linkPlanItem(sessionId, input);
       return presentSet(replayed);
     }
+    await this.linkPlanItem(sessionId, input);
     const stored = await this.workouts.findSetById(input.id);
     if (stored === null) {
       throw new NotFoundException('Série introuvable.');
     }
     return presentSet(stored);
+  }
+
+  /**
+   * Marque la prévision honorée par cette série. Un `planItemId` inconnu, déjà
+   * honoré ou appartenant à une autre séance est simplement ignoré : la série
+   * est le fait, l'appariement n'est qu'un confort d'affichage et ne doit
+   * jamais faire échouer son enregistrement.
+   */
+  private async linkPlanItem(sessionId: string, input: CreateSetInput): Promise<void> {
+    if (input.planItemId === undefined) {
+      return;
+    }
+    await this.workouts.linkPlanItem(sessionId, input.planItemId, input.id);
   }
 
   /**

@@ -115,11 +115,21 @@ void main() {
     expect(payload['templateId'], templateId);
     expect(payload['templateName'], 'Push — Force');
 
-    // Le plan reste PUREMENT local : rien ne le décrit dans la file.
-    expect(
-      operations.every((op) => !op.operationType.startsWith('plan')),
-      isTrue,
-    );
+    // 4. Le plan voyage AVEC la séance — c'est ce qui rend la reprise
+    // possible sur un autre appareil. Aucune opération supplémentaire.
+    final sent =
+        (payload['plan'] as List<dynamic>).cast<Map<String, dynamic>>();
+    expect(sent, hasLength(4));
+    expect(sent.first['exerciseName'], 'Développé couché');
+    expect(sent.first['exerciseId'], 'exo-dc');
+    expect(sent.first['kind'], 'WARMUP');
+    expect(sent.first['targetReps'], 12);
+    expect(sent.first['targetWeightKg'], 40);
+    expect(sent.first['restSeconds'], 60);
+    // Exercice libre : pas d'identifiant, mais toujours un nom.
+    expect(sent.last.containsKey('exerciseId'), isFalse);
+    expect(sent.last['exerciseName'], 'Dips');
+    expect(operations, hasLength(2));
     expect(api.log, isEmpty);
   });
 

@@ -292,6 +292,7 @@ model Exercise {
   equipment         ExerciseEquipment[]
   workoutSets       WorkoutSet[]
   templateExercises WorkoutTemplateExercise[]
+  sessionPlanItems  WorkoutSessionPlanItem[]
   personalRecords   PersonalRecord[]
 
   @@index([isPublished, name])
@@ -361,10 +362,55 @@ model WorkoutSession {
   user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   template        WorkoutTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
   sets            WorkoutSet[]
+  planItems       WorkoutSessionPlanItem[]
   personalRecords PersonalRecord[]
 
   @@index([userId, startedAt(sort: Desc)])
   @@index([templateId])
+}
+
+/// Série PRÉVUE d'une séance : copie APLATIE du modèle au lancement.
+///
+/// Écrite en une fois avec la séance, elle rend la reprise MULTI-APPAREIL
+/// possible : sans elle, un téléphone qui reprend une séance commencée
+/// ailleurs voit les séries déjà faites mais plus aucune cible.
+///
+/// C'est une copie, pas un lien vivant : renommer ou supprimer le modèle
+/// ensuite ne touche jamais une séance déjà lancée.
+model WorkoutSessionPlanItem {
+  id        String @id @db.Uuid
+  sessionId String @db.Uuid
+
+  /// Rang de l'exercice dans la séance, à partir de 0.
+  exercisePosition Int
+  exerciseId       String?        @db.Uuid
+  /// Dénormalisé : le plan survit aux évolutions du catalogue.
+  exerciseName     String
+  /// Rang de la série DANS l'exercice, à partir de 0.
+  setPosition      Int
+  kind             WorkoutSetKind @default(NORMAL)
+  targetReps       Int?
+  targetWeightKg   Decimal?       @db.Decimal(6, 2)
+  restSeconds      Int?
+
+  /// Série qui a honoré cette prévision. VOLONTAIREMENT sans clé étrangère :
+  /// hors ligne, la série peut encore être dans la file d'envoi de l'appareil
+  /// quand l'appariement remonte. Une contrainte ferait échouer l'opération
+  /// en 4xx, donc la perdrait, alors qu'un identifiant orphelin est sans
+  /// conséquence — l'écran n'affiche que la présence de l'appariement.
+  doneSetId String? @db.Uuid
+  /// Prévision explicitement passée par l'utilisateur.
+  skipped   Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  session  WorkoutSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  exercise Exercise?      @relation(fields: [exerciseId], references: [id], onDelete: SetNull)
+
+  @@unique([sessionId, exercisePosition, setPosition])
+  @@index([sessionId])
+  @@index([exerciseId])
 }
 
 /// Série effectuée. Id généré sur l'appareil, écriture en upsert (rejouable).
