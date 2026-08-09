@@ -34,7 +34,8 @@ class DnaAnimation {
     final breathPhase = math.sin(time * breathRate);
     final rungScale = Float64List(DnaMesh.rungCount);
     for (var i = 0; i < DnaMesh.rungCount; i++) {
-      final pulse = 0.5 + 0.5 * math.sin(time * rungRate - DnaMesh.rungPhases[i]);
+      final pulse =
+          0.5 + 0.5 * math.sin(time * rungRate - DnaMesh.rungPhases[i]);
       rungScale[i] = 0.985 + pulse * 0.03;
     }
     return DnaPose(

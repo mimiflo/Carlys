@@ -130,7 +130,8 @@ FakeExercisesRepository catalogOf() => FakeExercisesRepository(
 WorkoutWithSets activeWorkoutOf() {
   // Départ RELATIF : une date fixe vieillit, et le chrono de la galerie
   // affichait « 54:37:39 » — une séance de deux jours et demi.
-  final startedAt = DateTime.now().toUtc().subtract(const Duration(minutes: 47));
+  final startedAt =
+      DateTime.now().toUtc().subtract(const Duration(minutes: 47));
   WorkoutSetEntry set(int position, String name, int reps, double weight) =>
       WorkoutSetEntry(
         id: 'set-$position',
@@ -433,16 +434,28 @@ void main() {
     await goTab(tester, 'Exercices');
     await precacheMuscleImages(tester);
     // Premier étage : la grille des groupes musculaires.
-    await capture(tester, '03-bibliotheque', shows: find.byType(MuscleGroupCard));
+    await capture(
+      tester,
+      '03-bibliotheque',
+      shows: find.byType(MuscleGroupCard),
+    );
 
     // Second étage : les mouvements du groupe choisi.
     await tester.tap(find.text('Tous les mouvements'));
     await settle(tester);
-    await capture(tester, '19-bibliotheque-mouvements', shows: find.byType(ExerciseCard));
+    await capture(
+      tester,
+      '19-bibliotheque-mouvements',
+      shows: find.byType(ExerciseCard),
+    );
 
     await tester.tap(find.widgetWithText(ExerciseCard, 'Squat'));
     await settle(tester);
-    await capture(tester, '04-fiche-exercice', shows: find.byType(ExerciseDetailScreen));
+    await capture(
+      tester,
+      '04-fiche-exercice',
+      shows: find.byType(ExerciseDetailScreen),
+    );
   });
 
   testWidgets('séance active', (tester) async {
@@ -491,7 +504,11 @@ void main() {
       scrollable: find.byType(Scrollable).last,
     );
     await settle(tester);
-    await capture(tester, '07-progression-poids', shows: find.byType(BodyWeightSection));
+    await capture(
+      tester,
+      '07-progression-poids',
+      shows: find.byType(BodyWeightSection),
+    );
   });
 
   testWidgets('abonnement premium', (tester) async {
@@ -499,13 +516,21 @@ void main() {
     await goTab(tester, 'Profil');
     await tester.tap(find.byType(ProfilePlanCard));
     await settle(tester);
-    await capture(tester, '08-abonnement', shows: find.byType(SubscriptionScreen));
+    await capture(
+      tester,
+      '08-abonnement',
+      shows: find.byType(SubscriptionScreen),
+    );
   });
 
   testWidgets('nutrition — métabolisme complet', (tester) async {
     await pumpApp(tester);
     await goTab(tester, 'Nutrition');
-    await capture(tester, '10-nutrition-metabolisme', shows: find.byType(NutritionScreen));
+    await capture(
+      tester,
+      '10-nutrition-metabolisme',
+      shows: find.byType(NutritionScreen),
+    );
 
     await tester.scrollUntilVisible(
       find.text('Macros'),
@@ -519,7 +544,11 @@ void main() {
   testWidgets('nutrition — profil à compléter', (tester) async {
     await pumpApp(tester, nutrition: nutritionOf(complete: false));
     await goTab(tester, 'Nutrition');
-    await capture(tester, '12-nutrition-profil', shows: find.byType(NutritionScreen));
+    await capture(
+      tester,
+      '12-nutrition-profil',
+      shows: find.byType(NutritionScreen),
+    );
   });
 
   testWidgets('profil + réglages + thème clair', (tester) async {
@@ -540,7 +569,11 @@ void main() {
     final context = tester.element(find.byType(AppBottomBar));
     unawaited(GoRouter.of(context).push(AppRoutes.history));
     await settle(tester);
-    await capture(tester, '15-historique', shows: find.byType(WorkoutHistoryScreen));
+    await capture(
+      tester,
+      '15-historique',
+      shows: find.byType(WorkoutHistoryScreen),
+    );
   });
 
   testWidgets('onboarding', (tester) async {
@@ -548,7 +581,11 @@ void main() {
     final context = tester.element(find.byType(AppBottomBar));
     GoRouter.of(context).go(AppRoutes.onboarding);
     await settle(tester);
-    await capture(tester, '16-onboarding', shows: find.byType(OnboardingScreen));
+    await capture(
+      tester,
+      '16-onboarding',
+      shows: find.byType(OnboardingScreen),
+    );
   });
 
   testWidgets('paywall exercice premium', (tester) async {
@@ -562,7 +599,11 @@ void main() {
     await settle(tester);
     await tester.tap(find.text('Balancier kettlebell'));
     await settle(tester);
-    await capture(tester, '09-exercice-premium', shows: find.byType(ExerciseDetailScreen));
+    await capture(
+      tester,
+      '09-exercice-premium',
+      shows: find.byType(ExerciseDetailScreen),
+    );
   });
 }
 

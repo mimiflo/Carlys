@@ -51,6 +51,7 @@ flutter pub get
 dart run build_runner build --delete-conflicting-outputs   # Freezed, Riverpod, Drift, json_serializable
 flutter analyze         # bloquant, comme en CI
 flutter test
+./scripts/check_mobile.sh   # tout ce que fait la CI, dans le même ordre
 flutter run --dart-define=CARLYS_FLAVOR=development --dart-define=CARLYS_API_BASE_URL=http://localhost:3000
 ```
 
@@ -161,7 +162,9 @@ Chaque fonctionnalité livrée comprend :
 4. Tests écrits/adaptés et exécutés : `pnpm test` (+ `pnpm --filter @carlys/api test:e2e`
    si l'API est touchée), `flutter test` si le mobile est touché.
 5. `./scripts/check.sh` passe (build, format, lint, typecheck, tests) ;
-   `flutter analyze && flutter test` passent pour le mobile.
+   `./scripts/check_mobile.sh` passe pour le mobile — il rejoue la CI Flutter
+   à l'identique, `dart format --set-exit-if-changed` compris, que
+   `flutter analyze && flutter test` ne couvre PAS.
 6. Documentation mise à jour (`docs/`, README, Swagger le cas échéant).
 7. États erreur/chargement/vide/hors-ligne couverts, accessibilité vérifiée,
    logs corrélés au `requestId`.

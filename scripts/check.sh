@@ -21,4 +21,4 @@ pnpm test
 
 echo ""
 echo "Toutes les vérifications TypeScript sont passées."
-echo "Pour Flutter : cd apps/mobile && flutter analyze && flutter test"
+echo "Pour Flutter : ./scripts/check_mobile.sh"
