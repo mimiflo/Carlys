@@ -4,6 +4,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 
+import 'dna_animation.dart';
 import 'dna_mesh.dart';
 import 'scene3d.dart';
 
@@ -23,12 +24,11 @@ class DnaScenePainter extends CustomPainter {
   final double time;
 
   /// Cadrage de la maquette : `camera.position.z = 13`, champ 30°,
-  /// `root.rotation.z = 0.16`, `root.position.x = 0.9`, exposition 1,05,
-  /// `speed = 0.22`.
+  /// `root.rotation.z = 0.16`, `root.position.x = 0.9`, exposition 1,05.
+  /// La vitesse de rotation vit dans [DnaAnimation], avec ce qui en dépend.
   static const double _cameraZ = 13;
   static const double _tiltZ = 0.16;
   static const double _offsetX = 0.9;
-  static const double _spin = 0.22;
 
   /// Gain de luminosité appliqué aux matériaux et à l'exposition.
   ///
@@ -128,17 +128,18 @@ class DnaScenePainter extends CustomPainter {
     }
     final mesh = DnaMesh.instance;
 
-    // --- Animation de la maquette ---
-    final rotation = EulerRotation(0, time * _spin, _tiltZ);
-    final breath = 1 + math.sin(time * 0.65) * 0.03;
-    final breathY = 1 + math.sin(time * 0.65) * 0.008;
-    final rungScale = Float64List(DnaMesh.rungCount);
-    for (var i = 0; i < DnaMesh.rungCount; i++) {
-      final pulse = 0.5 + 0.5 * math.sin(time * 1.4 - DnaMesh.rungPhases[i]);
-      rungScale[i] = 0.985 + pulse * 0.03;
-    }
+    // --- Animation de la maquette (voir DnaAnimation : tout boucle) ---
+    final pose = DnaAnimation.poseAt(time);
+    final rotation = EulerRotation(0, pose.spinY, _tiltZ);
 
-    _shadeVertices(mesh, size, rotation, breath, breathY, rungScale);
+    _shadeVertices(
+      mesh,
+      size,
+      rotation,
+      pose.breath,
+      pose.breathY,
+      pose.rungScale,
+    );
     _draw(canvas, mesh);
   }
 

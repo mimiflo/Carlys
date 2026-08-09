@@ -96,12 +96,22 @@ du cœur. Un test de non-régression garde le sens du temps.
 c'est le seul moyen de voir ce qu'une capture d'écran cache — la dérive des
 particules, leur apparition en fondu, la continuité au rebouclage.
 
-**Reste à faire** : l'hélice d'ADN (`DnaHelix`, écran Nutrition) garde le même
-défaut en plus discret. Son cycle de 28,56 s vaut exactement un tour de
-rotation, mais la respiration (`sin(t × 0,65)`) et la pulsation des barreaux
-(`sin(t × 1,4)`) ne bouclent pas avec lui : les barreaux sautent d'un tiers de
-leur cycle de luminosité une fois toutes les 28 secondes. Même correctif à
-appliquer.
+**Corrigé depuis** : l'hélice d'ADN (`DnaHelix`, écran Nutrition) avait le même
+défaut en plus discret. Son cycle vaut un tour de rotation (0,22 rad/s, soit
+28,56 s), mais la respiration (`sin(t × 0,65)`) et la pulsation des barreaux
+(`sin(t × 1,4)`) faisaient 2,95 et 6,36 cycles par tour au lieu d'un compte
+entier. Mesuré au rebouclage : la respiration sautait de **0,85 %** d'échelle
+et les barreaux de **1,13 %**, d'un seul coup, toutes les 28 secondes.
+
+Le correctif accorde les deux allures sur le tour — 3 et 6 cycles exactement —
+ce qui déplace la respiration de +1,5 % et la pulsation de −5,7 %, deux écarts
+qu'aucun œil ne relève. La durée du cycle n'est plus une constante recopiée
+mais se déduit de la vitesse de rotation, sans quoi l'arrondi rouvrait le même
+saut par la petite porte. Le tout vit dans `DnaAnimation`, séparé du rendu pour
+être vérifiable : `test/design_system/scenes/dna_animation_test.dart` compare la
+pose de fin de tour à celle du départ, et vérifie que les deux allures restent
+des harmoniques entières — la propriété qui garantit le rebouclage si la
+vitesse change un jour.
 
 ## Traduction, pas copie
 

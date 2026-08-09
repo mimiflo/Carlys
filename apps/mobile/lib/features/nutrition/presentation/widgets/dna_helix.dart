@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../design_system/scenes/dna_animation.dart';
 import '../../../../design_system/scenes/dna_scene.dart';
 
 /// Double hélice d'ADN — portage fidèle de `dna-helix.js` (mode « hero »).
@@ -26,8 +27,12 @@ class DnaHelix extends StatefulWidget {
 
 class _DnaHelixState extends State<DnaHelix>
     with SingleTickerProviderStateMixin {
-  /// Un tour complet à 0,22 rad/s : ~28,6 s par cycle.
-  static const _cycle = Duration(milliseconds: 28560);
+  /// Un tour complet, à la microseconde : la durée est DÉDUITE de la vitesse
+  /// de rotation, sinon l'arrondi rouvre par la petite porte le saut de
+  /// rebouclage qu'on vient de fermer.
+  static final _cycle = Duration(
+    microseconds: (DnaAnimation.cycleSeconds * 1000000).round(),
+  );
 
   late final AnimationController _controller;
 
@@ -68,7 +73,7 @@ class _DnaHelixState extends State<DnaHelix>
               animation: _controller,
               builder: (context, _) => CustomPaint(
                 painter: DnaScenePainter(
-                  time: _controller.value * _cycle.inMilliseconds / 1000.0,
+                  time: _controller.value * DnaAnimation.cycleSeconds,
                 ),
               ),
             ),
