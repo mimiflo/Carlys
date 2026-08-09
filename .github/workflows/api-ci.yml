@@ -9,7 +9,7 @@ on:
       - 'pnpm-workspace.yaml'
       - '.github/workflows/api-ci.yml'
   push:
-    branches: [main]
+    branches: [main, develop]
     paths:
       - 'apps/api/**'
       - 'packages/**'

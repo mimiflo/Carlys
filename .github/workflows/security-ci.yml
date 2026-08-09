@@ -3,7 +3,7 @@ name: security-ci
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [main, develop]
   schedule:
     # Chaque lundi à 06:00 UTC.
     - cron: '0 6 * * 1'

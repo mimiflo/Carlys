@@ -5,7 +5,8 @@ name: demo-apk
 on:
   workflow_dispatch:
   push:
-    branches: [claude/carlys-fitness-foundation-lqv2hl, main]
+    # `develop` d'abord : c'est la branche qu'on teste au quotidien.
+    branches: [develop, main]
     paths:
       - 'apps/mobile/**'
       - '.github/workflows/demo-apk.yml'

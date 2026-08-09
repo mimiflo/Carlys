@@ -308,8 +308,8 @@ docker build -f apps/admin/Dockerfile -t carlys-admin .
 
 - **Tranches verticales** : chaque étape livre une fonctionnalité complète de bout en bout (schéma Prisma + API + admin + mobile + tests + docs). Pas de couche « en avance » sans consommateur, pas de dépendance morte.
 - **Commits** : [Conventional Commits](https://www.conventionalcommits.org/fr/) — `feat(api): …`, `fix(mobile): …`, `docs: …`, `chore: …`.
-- **Branches** : `main` protégée ; travail sur `feat/<sujet>`, `fix/<sujet>`, `docs/<sujet>` ; intégration par pull request avec CI verte.
-- **CI GitHub Actions** : `api-ci.yml` (services PostgreSQL + Redis ; format, lint, typecheck, tests, e2e, build, `prisma validate`, détection de migrations manquantes), `admin-ci.yml`, `mobile-ci.yml` (Flutter stable : format bloquant, analyze, test), `security-ci.yml` (TruffleHog + `pnpm audit` niveau high, plus une exécution hebdomadaire).
+- **Branches** : `main` = **production** (protégée, taguée), `develop` = **développement** ; travail sur `feat/<sujet>`, `fix/<sujet>`, `docs/<sujet>` issues de `develop`, intégration par pull request avec CI verte. Le cycle complet, les correctifs urgents et les réglages GitHub à poser : [`docs/architecture/git-workflow.md`](./docs/architecture/git-workflow.md).
+- **CI GitHub Actions** : `api-ci.yml` (services PostgreSQL + Redis ; format, lint, typecheck, tests, e2e, build, `prisma validate`, détection de migrations manquantes), `admin-ci.yml`, `mobile-ci.yml` (Flutter stable : format bloquant, analyze, test), `security-ci.yml` (TruffleHog + `pnpm audit` niveau high, plus une exécution hebdomadaire). Toutes tournent sur les pull requests et sur les pousses vers `main` et `develop` ; `demo-apk.yml` construit l'APK de démonstration depuis ces deux branches.
 - **Documentation** : ne documenter que l'existant, ou du planifié explicitement marqué comme tel (« Étape N », « cible »).
 
 ## Déploiement
@@ -387,7 +387,8 @@ Politique complète et signalement de vulnérabilités : [SECURITY.md](./SECURIT
 
 - [`docs/product/`](./docs/product/) — vision produit et fonctionnalités, dont
   [la conformité à la maquette Claude Design](./docs/product/design-conformity.md) ;
-- [`docs/architecture/`](./docs/architecture/) — architecture technique ;
+- [`docs/architecture/`](./docs/architecture/) — architecture technique, dont
+  [les branches et le flux de travail Git](./docs/architecture/git-workflow.md) ;
 - [`docs/api/`](./docs/api/) — conventions et contrats de l'API ;
 - [`docs/database/`](./docs/database/) — base de données et migrations ;
 - [`docs/synchronization/`](./docs/synchronization/) — synchronisation offline-first ;

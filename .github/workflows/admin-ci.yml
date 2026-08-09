@@ -9,7 +9,7 @@ on:
       - 'pnpm-workspace.yaml'
       - '.github/workflows/admin-ci.yml'
   push:
-    branches: [main]
+    branches: [main, develop]
     paths:
       - 'apps/admin/**'
       - 'packages/**'

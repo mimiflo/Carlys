@@ -6,7 +6,7 @@ on:
       - 'apps/mobile/**'
       - '.github/workflows/mobile-ci.yml'
   push:
-    branches: [main]
+    branches: [main, develop]
     paths:
       - 'apps/mobile/**'
       - '.github/workflows/mobile-ci.yml'
