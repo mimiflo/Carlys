@@ -1,13 +1,16 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/media/remote_image.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/exercise.dart';
 
 /// En-tête média de la fiche (maquette 2e).
 ///
-/// Aucun média n'existe encore côté domaine : le bloc reste un placeholder
-/// assumé — dégradé sombre, grande icône très atténuée, voile vers le bas —
-/// surmonté du sur-titre « GROUPE · TYPE » et du nom du mouvement.
+/// La photo vient du stockage objet, déposée depuis l'administration. Tant
+/// qu'aucune n'est rattachée — le cas de la plupart des mouvements — le bloc
+/// garde son dégradé sombre et sa grande icône atténuée. Dans les deux cas, le
+/// voile du bas et le titre restent identiques : la fiche ne change pas de
+/// forme selon qu'elle est illustrée ou non.
 class ExerciseMediaHeader extends StatelessWidget {
   const ExerciseMediaHeader({required this.exercise, super.key});
 
@@ -30,25 +33,14 @@ class ExerciseMediaHeader extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
-          const DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topLeft,
-                end: Alignment.bottomRight,
-                colors: [AppColors.neutral900, AppColors.neutral950],
-              ),
+          if (exercise.imageUrl == null)
+            const _MediaPlaceholder()
+          else
+            RemoteImage(
+              url: exercise.imageUrl!,
+              placeholder: const _MediaPlaceholder(),
+              semanticLabel: 'Photo du mouvement',
             ),
-          ),
-          ExcludeSemantics(
-            child: Center(
-              child: Icon(
-                AppIcons.workout,
-                size: _placeholderIconSize,
-                color:
-                    AppColors.primaryLight.withValues(alpha: _placeholderAlpha),
-              ),
-            ),
-          ),
           // Voile : le bas de l'image se fond dans le fond de l'écran.
           DecoratedBox(
             decoration: BoxDecoration(
@@ -84,6 +76,35 @@ class ExerciseMediaHeader extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Repli de l'en-tête : dégradé sombre et icône très atténuée.
+class _MediaPlaceholder extends StatelessWidget {
+  const _MediaPlaceholder();
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [AppColors.neutral900, AppColors.neutral950],
+        ),
+      ),
+      child: ExcludeSemantics(
+        child: Center(
+          child: Icon(
+            AppIcons.workout,
+            size: ExerciseMediaHeader._placeholderIconSize,
+            color: AppColors.primaryLight.withValues(
+              alpha: ExerciseMediaHeader._placeholderAlpha,
+            ),
+          ),
+        ),
       ),
     );
   }

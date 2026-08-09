@@ -317,6 +317,11 @@ stockage : `imageUrl` sur `ExerciseSummary` (donc aussi sur le détail),
 `meshUrl` sur `ExerciseDetail`. Les deux valent `null` tant qu'aucun média
 n'est rattaché — l'écran retombe alors sur son repli.
 
+`imageUrl` est **consommé** par l'application (vignette de la carte et en-tête
+de la fiche), avec cache disque et repli hors ligne — voir
+[`docs/architecture/mobile.md`](../architecture/mobile.md). `meshUrl` est servi
+mais pas encore affiché : rien ne rend de maillage 3D aujourd'hui.
+
 ## Swagger et client typé
 
 - **Swagger / OpenAPI** : l'API expose sa documentation interactive sur

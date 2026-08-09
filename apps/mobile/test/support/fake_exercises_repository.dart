@@ -14,6 +14,7 @@ ExerciseSummary summary(
   String name, {
   String? group,
   List<EquipmentRef> equipment = const [_barbell],
+  String? imageUrl,
 }) =>
     ExerciseSummary(
       id: id,
@@ -26,6 +27,7 @@ ExerciseSummary summary(
           ? null
           : MuscleGroupRef(id: 'mg-$group', slug: group, name: group),
       equipment: equipment,
+      imageUrl: imageUrl,
     );
 
 ExerciseDetail detailOf(ExerciseSummary base) => ExerciseDetail(
@@ -37,6 +39,7 @@ ExerciseDetail detailOf(ExerciseSummary base) => ExerciseDetail(
       isPremium: base.isPremium,
       primaryMuscleGroup: base.primaryMuscleGroup,
       equipment: base.equipment,
+      imageUrl: base.imageUrl,
       description: 'Description de ${base.name}',
       instructions: const ['Première étape', 'Deuxième étape'],
       tags: const ['test'],

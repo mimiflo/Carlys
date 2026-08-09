@@ -84,6 +84,7 @@ class ExerciseSummary {
     required this.isPremium,
     required this.primaryMuscleGroup,
     required this.equipment,
+    this.imageUrl,
   });
 
   final String id;
@@ -94,6 +95,12 @@ class ExerciseSummary {
   final bool isPremium;
   final MuscleGroupRef? primaryMuscleGroup;
   final List<EquipmentRef> equipment;
+
+  /// Photo servie par le stockage objet, déposée depuis l'administration.
+  ///
+  /// `null` tant qu'aucune n'est rattachée — c'est un cas NORMAL, pas une
+  /// erreur : l'écran retombe alors sur sa vignette de marque.
+  final String? imageUrl;
 }
 
 class ExerciseMuscleLink {
@@ -116,6 +123,7 @@ class ExerciseDetail extends ExerciseSummary {
     required super.isPremium,
     required super.primaryMuscleGroup,
     required super.equipment,
+    super.imageUrl,
     required this.description,
     required this.instructions,
     required this.tags,

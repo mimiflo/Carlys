@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/media/remote_image.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/exercise.dart';
 
@@ -59,28 +60,11 @@ class ExerciseCard extends StatelessWidget {
             ),
             child: Row(
               children: [
-                Container(
-                  width: _thumbSize,
-                  height: _thumbSize,
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topLeft,
-                      end: Alignment.bottomRight,
-                      colors: [
-                        tint.withValues(alpha: _fillStart),
-                        tint.withValues(alpha: _fillEnd),
-                      ],
-                    ),
-                    borderRadius: AppRadius.avatarAll,
-                    border: Border.all(
-                      color: iconTint.withValues(alpha: _thumbBorderAlpha),
-                    ),
-                  ),
-                  child: Icon(
-                    exercise.isPremium ? AppIcons.premium : AppIcons.workout,
-                    size: _thumbIconSize,
-                    color: iconTint,
-                  ),
+                _Thumbnail(
+                  imageUrl: exercise.imageUrl,
+                  tint: tint,
+                  iconTint: iconTint,
+                  isPremium: exercise.isPremium,
                 ),
                 const SizedBox(width: AppSpacing.gapRow),
                 Expanded(
@@ -127,6 +111,61 @@ class ExerciseCard extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+}
+
+/// Vignette : la photo déposée depuis l'administration si elle existe, sinon
+/// la pastille de marque. Le repli n'est pas un état d'erreur — la plupart des
+/// mouvements n'ont pas encore de photo, et c'est très bien ainsi.
+class _Thumbnail extends StatelessWidget {
+  const _Thumbnail({
+    required this.imageUrl,
+    required this.tint,
+    required this.iconTint,
+    required this.isPremium,
+  });
+
+  final String? imageUrl;
+  final Color tint;
+  final Color iconTint;
+  final bool isPremium;
+
+  @override
+  Widget build(BuildContext context) {
+    final placeholder = DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            tint.withValues(alpha: ExerciseCard._fillStart),
+            tint.withValues(alpha: ExerciseCard._fillEnd),
+          ],
+        ),
+      ),
+      child: Center(
+        child: Icon(
+          isPremium ? AppIcons.premium : AppIcons.workout,
+          size: ExerciseCard._thumbIconSize,
+          color: iconTint,
+        ),
+      ),
+    );
+
+    return Container(
+      width: ExerciseCard._thumbSize,
+      height: ExerciseCard._thumbSize,
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        borderRadius: AppRadius.avatarAll,
+        border: Border.all(
+          color: iconTint.withValues(alpha: ExerciseCard._thumbBorderAlpha),
+        ),
+      ),
+      child: imageUrl == null
+          ? placeholder
+          : RemoteImage(url: imageUrl!, placeholder: placeholder),
     );
   }
 }

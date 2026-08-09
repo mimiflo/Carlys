@@ -32,6 +32,7 @@ ExerciseSummary exerciseSummaryFromJson(Map<String, dynamic> json) =>
           .whereType<Map<String, dynamic>>()
           .map(equipmentFromJson)
           .toList(),
+      imageUrl: json['imageUrl'] as String?,
     );
 
 ExerciseDetail exerciseDetailFromJson(Map<String, dynamic> json) {
@@ -45,6 +46,7 @@ ExerciseDetail exerciseDetailFromJson(Map<String, dynamic> json) {
     isPremium: summary.isPremium,
     primaryMuscleGroup: summary.primaryMuscleGroup,
     equipment: summary.equipment,
+    imageUrl: summary.imageUrl,
     description: json['description'] as String,
     instructions:
         (json['instructions'] as List<dynamic>).whereType<String>().toList(),

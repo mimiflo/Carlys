@@ -456,3 +456,29 @@ flutter build ios
 Firebase Cloud Messaging et Sentry seront ajoutés **avec leur configuration
 réelle** (`google-services.json`, DSN) — pas de dépendance morte tant que la
 configuration n'existe pas.
+
+## Photos d'exercices
+
+Les illustrations du catalogue ne sont **pas embarquées** dans l'application :
+elles sont déposées depuis le back-office et servies par le stockage objet
+([ADR 0009](../decisions/0009-use-object-storage-for-media.md)). L'API rend
+`imageUrl` sur le résumé d'exercice ; `null` — le cas de la plupart des
+mouvements — est un état NORMAL, pas une erreur.
+
+`core/media/` porte les deux pièces :
+
+- `RemoteImageCache` garde les octets en mémoire puis sur le disque. Le cache
+  est écrit à la main plutôt qu'emprunté à une bibliothèque parce qu'**une URL
+  de média ne change jamais de contenu** : la clé porte l'identifiant du média
+  et le serveur répond `immutable`, remplacer une photo revient à en déposer
+  une autre. Un cache sans invalidation tient en quelques dizaines de lignes ;
+  une dépendance apporterait un mécanisme d'expiration inutile ici. Le nom du
+  fichier local est le dernier segment de l'URL, passé au tamis — une URL
+  forgée ne peut pas écrire hors du dossier de cache.
+- `RemoteImage` affiche la photo, et **le même repli pendant le chargement et
+  en cas d'échec** : hors ligne, une illustration manquante ne troue pas la
+  page et n'affiche aucun message. C'est un ornement, pas une donnée.
+
+Les deux endroits qui en dépendent — la vignette de la carte et l'en-tête de
+la fiche — gardent exactement la même forme avec ou sans photo.
+
