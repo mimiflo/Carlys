@@ -31,11 +31,26 @@ class DemoCatalog {
   final List<EquipmentRef> equipment;
 }
 
+DemoCatalog? _catalog;
 Future<DemoCatalog>? _loading;
 
 /// Chargé une seule fois, puis partagé — la lecture d'un asset est un vrai
 /// travail asynchrone qu'on ne refait pas à chaque défilement.
-Future<DemoCatalog> loadDemoCatalog() => _loading ??= _read();
+///
+/// C'est le RÉSULTAT qui est gardé, pas la future : une future ne s'achève que
+/// dans la zone où elle est née. Garder la future faisait tenir indéfiniment
+/// le second test de widget d'un même fichier, qui attendait une future créée
+/// — et résolue — dans la zone de temps simulé du test précédent, désormais
+/// éteinte. La future reste mémorisée le temps du chargement, uniquement pour
+/// que deux appels simultanés ne lisent pas l'asset deux fois.
+Future<DemoCatalog> loadDemoCatalog() async {
+  final cached = _catalog;
+  if (cached != null) return cached;
+  final catalog = await (_loading ??= _read());
+  _catalog = catalog;
+  _loading = null;
+  return catalog;
+}
 
 Future<DemoCatalog> _read() async {
   // `load` + `utf8.decode`, et non `loadString` : au-delà de 50 Kio ce dernier

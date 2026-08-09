@@ -33,6 +33,7 @@ import 'package:carlys_mobile/features/exercises/domain/entities/exercise.dart';
 import 'package:carlys_mobile/features/exercises/presentation/screens/exercise_detail_screen.dart';
 import 'package:carlys_mobile/features/exercises/presentation/widgets/exercise_card.dart';
 import 'package:carlys_mobile/features/exercises/presentation/widgets/muscle_group_card.dart';
+import 'package:carlys_mobile/features/exercises/presentation/widgets/muscle_group_grid.dart';
 import 'package:carlys_mobile/features/nutrition/data/repositories/nutrition_repository_impl.dart';
 import 'package:carlys_mobile/features/nutrition/domain/entities/nutrition.dart';
 import 'package:carlys_mobile/features/nutrition/presentation/screens/nutrition_screen.dart';
@@ -512,22 +513,59 @@ void main() {
     );
   });
 
-  testWidgets('bibliothèque illustrée — le groupe Dos', (tester) async {
+  /// Un groupe musculaire illustré : sa liste, puis la fiche d'un mouvement.
+  Future<void> captureGroup(
+    WidgetTester tester, {
+    required String group,
+    required String exercise,
+    required String prefix,
+  }) async {
     await pumpDemoApp(tester);
     await goTab(tester, 'Exercices');
     await precacheMuscleImages(tester);
-    await tester.tap(find.widgetWithText(MuscleGroupCard, 'Dos'));
+    // La grille est PARESSEUSE : les groupes du bas ne sont pas construits
+    // tant qu'on n'a pas défilé jusqu'à eux. Sans ça, « Triceps » restait
+    // introuvable — mais seulement quand la capture du Dos l'avait précédée,
+    // c'est-à-dire de façon intermittente.
+    await tester.scrollUntilVisible(
+      find.widgetWithText(MuscleGroupCard, group),
+      240,
+      scrollable: find.descendant(
+        of: find.byType(MuscleGroupGrid),
+        matching: find.byType(Scrollable),
+      ),
+    );
+    await settle(tester);
+    await tester.tap(find.widgetWithText(MuscleGroupCard, group));
     await settle(tester);
     await precacheExercisePhotos(tester);
-    await capture(tester, '20-dos-liste', shows: find.byType(ExerciseCard));
+    await capture(tester, '$prefix-liste', shows: find.byType(ExerciseCard));
 
-    await tester.tap(find.widgetWithText(ExerciseCard, 'Tractions lestées'));
+    await tester.tap(find.widgetWithText(ExerciseCard, exercise));
     await settle(tester);
     await precacheExercisePhotos(tester);
     await capture(
       tester,
-      '21-dos-fiche',
+      '$prefix-fiche',
       shows: find.byType(ExerciseDetailScreen),
+    );
+  }
+
+  testWidgets('bibliothèque illustrée — le groupe Dos', (tester) async {
+    await captureGroup(
+      tester,
+      group: 'Dos',
+      exercise: 'Tractions lestées',
+      prefix: '20-dos',
+    );
+  });
+
+  testWidgets('bibliothèque illustrée — le groupe Triceps', (tester) async {
+    await captureGroup(
+      tester,
+      group: 'Triceps',
+      exercise: 'Dips',
+      prefix: '22-triceps',
     );
   });
 
