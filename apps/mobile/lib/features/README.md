@@ -29,10 +29,19 @@ feature/
 | ------------------ | ----------------- | --------------------------------------------------------------- |
 | `workout_session`  | —                 | Séances **réalisées** offline-first (Drift → file de sync → API) |
 | `workout_template` | `workout_session` | Modèles de séance **prescriptifs** : composer, enregistrer, puis lancer une vraie séance pré-remplie |
+| `coaching`         | `workout_session`, `workout_template`, `progress` | Le coach lit l'état réel (modèles, records, poids) pour ses amorces, et lance la séance qu'il propose |
 
 `workout_template` réutilise les entités `SetKind` / `LocalSyncState`, les
 écritures de séance (`WorkoutSessionWriter`) et le sélecteur d'exercice
 (`showExercisePickerSheet`) de `workout_session`.
+
+`coaching` suit la même règle, dans le même sens : `CoachSessionLauncher`
+réutilise `WorkoutSessionWriter` et `SessionPlanLocalDataSource` pour écrire la
+séance et son plan dans une seule transaction — exactement le chemin de
+`startFromTemplate`. Aucune des trois fonctionnalités amont ne connaît le
+coach. Ses amorces de conversation, elles, ne dépendent d'aucune entité
+extérieure : `CoachContext` ne porte que des valeurs simples, et la règle se
+teste seule.
 
 Dans l'autre sens, le contact est réduit à **un seul point** :
 l'orchestrateur `ActiveWorkoutBody` lit `sessionPlanProvider` et le traduit

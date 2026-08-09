@@ -231,7 +231,7 @@ client ne fait qu'afficher. Clés prévues :
 | `premium_exercises` | Exercices premium du catalogue |
 | `health_sync` | Synchronisation Apple Health / Health Connect (futur) |
 | `cloud_backup` | Sauvegarde cloud |
-| `ai_coaching` | Coaching intelligent (futur) |
+| `ai_coaching` | Coach IA (onglet Coach) |
 | `coach_dashboard` | Espace coach (futur) |
 | `custom_animations` | Animations Rive avancées (futur) |
 | `priority_support` | Support prioritaire |

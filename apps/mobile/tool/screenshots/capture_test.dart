@@ -18,6 +18,9 @@ import 'package:carlys_mobile/core/errors/app_exception.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
+import 'package:carlys_mobile/features/coaching/data/repositories/coach_repository_impl.dart';
+import 'package:carlys_mobile/features/coaching/domain/entities/coach.dart';
+import 'package:carlys_mobile/features/coaching/presentation/controllers/coach_controllers.dart';
 import 'package:carlys_mobile/features/exercises/data/repositories/exercises_repository_impl.dart';
 import 'package:carlys_mobile/features/exercises/domain/entities/exercise.dart';
 import 'package:carlys_mobile/features/exercises/presentation/widgets/exercise_card.dart';
@@ -40,6 +43,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../test/support/fake_auth_repository.dart';
+import '../../test/support/fake_coach_repository.dart';
 import '../../test/support/fake_exercises_repository.dart';
 import '../../test/support/fake_nutrition_repository.dart';
 import '../../test/support/fake_progress_repository.dart';
@@ -180,6 +184,55 @@ FakeProgressRepository progressOf() => FakeProgressRepository(
       ],
     );
 
+/// Conversation d'exemple de la galerie : une question, une réponse, et la
+/// séance qui en découle — c'est l'enchaînement que l'écran doit montrer.
+FakeCoachRepository coachOf() {
+  const proposal = CoachSessionProposal(
+    id: 'p1',
+    name: 'Haut du corps — format court',
+    estimatedMinutes: 28,
+    exercises: [
+      CoachProposedExercise(
+        name: 'Développé couché',
+        setCount: 3,
+        detail: '8 reps · 70 kg',
+      ),
+      CoachProposedExercise(name: 'Tractions', setCount: 3, detail: '6 reps'),
+      CoachProposedExercise(
+        name: 'Développé militaire',
+        setCount: 3,
+        detail: '10 reps · 35 kg',
+      ),
+    ],
+  );
+
+  return FakeCoachRepository(
+    threads: [
+      CoachConversationSummary(
+        id: 'thread-1',
+        title: 'Séance courte',
+        messagesCount: 4,
+        updatedAt: DateTime.utc(2026, 8, 9),
+      ),
+    ],
+    messages: const [
+      CoachMessage(
+        id: 'm1',
+        role: CoachRole.user,
+        content: 'J’ai seulement 30 minutes aujourd’hui.',
+      ),
+      CoachMessage(
+        id: 'm2',
+        role: CoachRole.assistant,
+        content: 'On garde les deux mouvements principaux et on resserre les '
+            'repos. Les charges ne bougent pas : c’est le volume qui tombe, '
+            'pas l’intensité.',
+        proposal: proposal,
+      ),
+    ],
+  );
+}
+
 FakeNutritionRepository nutritionOf({bool complete = true}) => complete
     ? FakeNutritionRepository(
         weightKg: 82.5,
@@ -233,6 +286,7 @@ void main() {
     FakeExercisesRepository? exercises,
     FakeWorkoutRepository? workouts,
     FakeNutritionRepository? nutrition,
+    FakeCoachRepository? coach,
     bool premium = false,
   }) async {
     tester.view.physicalSize = const Size(1179, 2556);
@@ -263,6 +317,16 @@ void main() {
           subscriptionRepositoryProvider.overrideWithValue(
             FakeSubscriptionRepository(isPremium: premium),
           ),
+          coachRepositoryProvider.overrideWithValue(
+            coach ?? FakeCoachRepository(),
+          ),
+          // Les puces se calculent depuis les modèles de séance, qui vivent
+          // dans Drift : la galerie n'ouvre pas de base locale, elle fige donc
+          // le résultat que la règle donnerait pour ce jeu d'exemple.
+          coachSuggestionsProvider.overrideWithValue(const [
+            'Adapte « Push A » à 30 minutes',
+            'Comment continuer sur Développé couché ?',
+          ]),
           syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
           appRestoreProvider.overrideWithValue(NoopAppRestore()),
         ],
@@ -330,6 +394,12 @@ void main() {
     await tester.tap(find.text('Reprendre la séance'));
     await settle(tester);
     await capture(tester, '05-seance-active');
+  });
+
+  testWidgets('onglet coach', (tester) async {
+    await pumpApp(tester, coach: coachOf(), premium: true);
+    await goTab(tester, 'Coach');
+    await capture(tester, '18-coach-onglet');
   });
 
   testWidgets('progression', (tester) async {

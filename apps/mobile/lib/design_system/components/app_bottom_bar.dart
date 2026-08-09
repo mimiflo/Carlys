@@ -20,8 +20,12 @@ class AppBottomBarItem {
   final String label;
 }
 
-/// Les 5 onglets de l'application (maquette : home, exercices, insights,
-/// nutrition, profil).
+/// Les 6 onglets de l'application.
+///
+/// La maquette en montrait cinq (home, exercices, insights, nutrition,
+/// profil) ; le coach s'est ajouté au **centre** de la barre — c'est la
+/// position la plus atteignable au pouce, et la fonctionnalité qu'on veut
+/// voir. Écart assumé, consigné dans `docs/product/design-conformity.md`.
 const List<AppBottomBarItem> appBottomBarItems = [
   AppBottomBarItem(
     icon: Icons.home_outlined,
@@ -32,6 +36,11 @@ const List<AppBottomBarItem> appBottomBarItems = [
     icon: Icons.fitness_center_outlined,
     activeIcon: AppIcons.workout,
     label: 'Exercices',
+  ),
+  AppBottomBarItem(
+    icon: AppIcons.coachOutline,
+    activeIcon: AppIcons.coach,
+    label: 'Coach',
   ),
   AppBottomBarItem(
     icon: Icons.insights_outlined,

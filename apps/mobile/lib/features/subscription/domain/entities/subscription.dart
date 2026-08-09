@@ -68,7 +68,7 @@ class EntitlementEntry {
     'premium_exercises': 'Exercices premium du catalogue',
     'health_sync': 'Synchronisation santé (à venir)',
     'cloud_backup': 'Sauvegarde cloud',
-    'ai_coaching': 'Coaching intelligent (à venir)',
+    'ai_coaching': 'Coach IA',
     'coach_dashboard': 'Espace coach (à venir)',
     'custom_animations': 'Animations avancées (à venir)',
     'priority_support': 'Support prioritaire',

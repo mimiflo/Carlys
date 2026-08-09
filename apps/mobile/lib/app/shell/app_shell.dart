@@ -3,7 +3,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../design_system/design_system.dart';
 
-/// Coquille des 5 onglets : le contenu défile SOUS la bottom bar floutée
+/// Coquille des 6 onglets : le contenu défile SOUS la bottom bar floutée
 /// (`extendBody`), chaque onglet garde sa propre pile de navigation.
 class AppShell extends StatelessWidget {
   const AppShell({required this.navigationShell, super.key});

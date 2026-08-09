@@ -769,7 +769,7 @@ flowchart LR
 ```
 
 Routes ajoutées à `lib/app/router/app_routes.dart` (plein écran, hors coquille
-à 5 onglets, comme `/workout` et `/history`) :
+à onglets, comme `/workout` et `/history`) :
 
 ```dart
 static const String templates = '/templates';

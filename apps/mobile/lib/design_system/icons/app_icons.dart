@@ -60,7 +60,11 @@ abstract final class AppIcons {
 
   // Coach IA
   static const IconData coach = Icons.auto_awesome_rounded;
+  static const IconData coachOutline = Icons.auto_awesome_outlined;
   static const IconData send = Icons.arrow_upward_rounded;
+
+  /// Précision neutre — jamais une erreur, jamais une alerte.
+  static const IconData info = Icons.info_outline_rounded;
 
   // États
   static const IconData error = Icons.error_outline_rounded;

@@ -21,6 +21,9 @@ class CoachScreen extends StatelessWidget {
     required this.onOpenProposal,
     this.isOffline = false,
     this.isSending = false,
+    this.notice,
+    this.showBackButton = true,
+    this.bottomInset = 0,
     super.key,
   });
 
@@ -31,6 +34,18 @@ class CoachScreen extends StatelessWidget {
   final ValueChanged<CoachSessionProposal> onOpenProposal;
   final bool isOffline;
   final bool isSending;
+
+  /// Refus explicite du serveur (plafond du jour, coach coupé). Jamais un
+  /// message d'ambiance : s'il est là, c'est qu'un envoi a été refusé.
+  final String? notice;
+
+  /// L'écran est atteint par un onglet : il n'y a alors nulle part où
+  /// revenir, et une flèche de retour promettrait un écran précédent.
+  final bool showBackButton;
+
+  /// Hauteur réservée sous le composeur. Dans la coquille, la barre d'onglets
+  /// flotte au-dessus du contenu : sans cette réserve, on écrirait derrière.
+  final double bottomInset;
 
   /// Part de la colonne qu'une bulle peut occuper. Au-delà, on ne lit plus une
   /// conversation mais un document : il faut voir que le bord est libre en
@@ -44,7 +59,7 @@ class CoachScreen extends StatelessWidget {
       body: SafeArea(
         child: Column(
           children: [
-            const _CoachHeader(),
+            _CoachHeader(showBackButton: showBackButton),
             Expanded(
               child: messages.isEmpty
                   ? const _CoachIntro()
@@ -58,6 +73,7 @@ class CoachScreen extends StatelessWidget {
                       ),
                     ),
             ),
+            if (notice case final text?) _CoachNotice(text: text),
             if (suggestions.isNotEmpty && !isOffline) ...[
               Padding(
                 padding: const EdgeInsets.fromLTRB(
@@ -73,11 +89,11 @@ class CoachScreen extends StatelessWidget {
               ),
             ],
             Padding(
-              padding: const EdgeInsets.fromLTRB(
+              padding: EdgeInsets.fromLTRB(
                 AppSpacing.gutter,
                 0,
                 AppSpacing.gutter,
-                AppSpacing.md,
+                AppSpacing.md + bottomInset,
               ),
               child: CoachComposer(
                 controller: composerController,
@@ -149,8 +165,49 @@ class _Conversation extends StatelessWidget {
   }
 }
 
+/// Refus du serveur, posé juste au-dessus du composeur — là où l'on vient
+/// d'appuyer, et non en haut d'un écran qu'on ne regarde plus.
+class _CoachNotice extends StatelessWidget {
+  const _CoachNotice({required this.text});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.gutter,
+        0,
+        AppSpacing.gutter,
+        AppSpacing.sm,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            AppIcons.info,
+            size: 16,
+            color: AppColors.darkTextTertiary,
+          ),
+          const SizedBox(width: AppSpacing.xs),
+          Expanded(
+            child: Text(
+              text,
+              style: AppTypography.label.copyWith(
+                color: AppColors.darkTextSecondary,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
 class _CoachHeader extends StatelessWidget {
-  const _CoachHeader();
+  const _CoachHeader({required this.showBackButton});
+
+  final bool showBackButton;
 
   /// Le bouton de retour et son symétrique à droite : sans le second, le titre
   /// n'est pas centré sur la page mais sur ce qui reste.
@@ -170,12 +227,14 @@ class _CoachHeader extends StatelessWidget {
         children: [
           SizedBox(
             width: _sideWidth,
-            child: IconButton(
-              onPressed: () => Navigator.of(context).maybePop(),
-              icon: const Icon(AppIcons.back),
-              color: AppColors.darkTextSecondary,
-              tooltip: 'Retour',
-            ),
+            child: showBackButton
+                ? IconButton(
+                    onPressed: () => Navigator.of(context).maybePop(),
+                    icon: const Icon(AppIcons.back),
+                    color: AppColors.darkTextSecondary,
+                    tooltip: 'Retour',
+                  )
+                : null,
           ),
           Expanded(
             child: Row(

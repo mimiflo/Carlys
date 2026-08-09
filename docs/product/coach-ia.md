@@ -314,41 +314,93 @@ Les tests **unitaires**, eux, tournent : validateur, quota, préfixe de cache.
 
 ```
 apps/mobile/lib/features/coaching/
-  data/{datasources,dto,local,repositories}
-  domain/{entities,repositories}
+  data/{dto,repositories}
+  domain/{entities,repositories,services}
   presentation/{controllers,screens,widgets}
 ```
 
-Écran `CoachScreen` : en-tête, liste inversée des messages, puces de
-suggestion, composeur. Widgets : `CoachMessageBubble`, `CoachSuggestions`,
-`CoachProposalCard`, `CoachComposer` — chacun sous 250 lignes.
+**Le coach a son onglet.** Sixième entrée de la barre basse, insérée au
+**centre** (entre Exercices et Progrès) : la position la plus atteignable au
+pouce, et la fonctionnalité qu'on veut voir. La question ouverte n° 4 est donc
+tranchée — onglet, pas carte sur l'accueil.
 
-**Déjà construit.** La couche de présentation existe et se capture par
-`tool/screenshots/coach_test.dart` (quatre états). L'écran est
-**présentationnel** : il reçoit ses données et ne va rien chercher — le jeu
-d'exemple vit dans le harnais de capture, jamais dans `lib/`. Le contrôleur et
-le dépôt arrivent avec la couche data.
+L'ordre des branches du routeur EST celui de `appBottomBarItems` : la barre
+rend un rang, la coquille ouvre la branche du même rang. Insérer un onglet au
+milieu décale tout ce qui suit, et un décalage d'un cran ne se voit pas à la
+lecture. `test/app/coach_tab_test.dart` tape chaque onglet et vérifie qu'il
+ouvre bien le sien.
+
+Deux écrans, deux rôles :
+
+- `CoachPage` (`ConsumerStatefulWidget`) branche l'écran sur ses données et
+  décide de tout : chargement, refus du serveur, envoi, lancement de la séance
+  proposée ;
+- `CoachScreen` reste **présentationnel** — il reçoit des messages et rend des
+  bulles. C'est lui que capture `tool/screenshots/coach_test.dart` (quatre
+  états) et que couvre `coach_screen_test.dart` ; le jeu d'exemple vit dans le
+  harnais, jamais dans `lib/`.
+
+Widgets : `CoachMessageBubble`, `CoachSuggestions`, `CoachProposalCard`,
+`CoachComposer` — chacun sous 250 lignes.
+
+**Le fil n'est créé qu'au premier message.** Ouvrir l'onglet pour regarder ne
+laisse derrière soi aucune conversation vide : l'identifiant est généré sur
+l'appareil, gardé en local, et le fil naît côté serveur au moment où il a
+quelque chose à contenir. Le même identifiant sert à rejouer l'envoi sans
+créer de doublon — ni de second message de quota.
+
+**Le droit vient du serveur, et de lui seul.** L'application ne calcule jamais
+si l'utilisateur a `ai_coaching` : elle appelle, et un `403` devient un écran
+qui explique et mène à Premium. Un `429` devient une phrase au-dessus du
+composeur — et la question reste dans le champ, prête à repartir demain. Un
+`503` devient « le coach est en pause ». Aucun des trois ne ressemble à une
+panne, parce qu'aucun n'en est une.
+
+**Accepter une proposition lance une vraie séance.** `CoachSessionLauncher`
+écrit la séance ET son plan dans **une seule** transaction locale, en
+réutilisant `WorkoutSessionWriter` et `SessionPlanLocalDataSource` — le chemin
+exact de `startFromTemplate`. Aucun appel réseau : lancer fonctionne hors
+ligne. La note au serveur (`/coach/proposals/:id/accepted`) part ensuite et son
+échec est **volontairement avalé** : la séance existe, elle est en file de
+synchronisation, c'est une statistique qui manque, pas un entraînement perdu.
 
 La liste est **inversée** : la conversation s'ancre en bas, là où l'on écrit et
 là où arrive la réponse. Une histoire courte flottant en haut d'un écran vide
 est le défaut le plus visible d'un premier jet de messagerie.
 
-**Hors ligne — écart assumé.** L'historique se lit hors connexion (stocké en
-local comme le reste). Le composeur, lui, est **désactivé** avec un état
+**Hors ligne — écart assumé.** Le composeur est **désactivé** avec un état
 explicite : une question posée hors ligne recevrait sa réponse des heures plus
 tard, ce qui n'est pas une conversation. C'est le seul écran de l'app qui
-n'écrit pas hors ligne, et c'est délibéré.
+n'écrit pas hors ligne, et c'est délibéré. Le dépôt du coach est donc, seul de
+toute l'application, **direct sur l'API** : ni Drift, ni file de
+synchronisation.
+
+**Ce qui n'est PAS fait :** l'historique ne se lit pas encore hors connexion.
+Ouvrir l'onglet sans réseau montre l'état hors ligne, pas la conversation
+passée. Il faudra pour cela une table Drift de messages en cache — c'est du
+travail de finition (étape 3 du découpage), pas une correction.
 
 **Les quatre états** sont obligatoires : chargement (`AppLoadingIndicator`),
 erreur (`AppErrorState`), vide (`AppEmptyState` avec les suggestions de
 départ), hors ligne (état dédié sur le composeur).
 
 **Les puces de suggestion** se calculent depuis l'état réel — modèle de séance
-disponible, record récent, poids stagnant — et jamais en dur. Sans données, une
-seule puce générique.
+disponible, record récent, poids qui bouge — et jamais en dur. Sans données,
+une seule puce générique. La règle vit dans `domain/services/coach_suggestions.dart`
+et ne prend qu'un `CoachContext` de valeurs simples : elle se teste seule, et
+`coaching` ne dépend pas de la forme interne de `progress` ou
+`workout_template`. Deux garde-fous mesurés : un record de plus de trois
+semaines n'invite plus à « continuer » mais à débloquer, et une variation de
+poids sous 400 g est du bruit de balance — elle ne dit rien.
 
-**Mode démo.** Le dépôt en mémoire de `lib/demo/` doit servir une conversation
-d'exemple, sinon l'APK de démonstration affiche un écran mort.
+**Mode démo.** `lib/demo/demo_coach.dart` sert une conversation d'exemple —
+sans lui, l'onglet Coach de l'APK de démonstration serait un écran mort. Il
+**dit ce qu'il est** : la réponse annonce qu'elle vient d'un mode démonstration
+plutôt que de se faire passer pour un raisonnement. La séance proposée s'appuie
+sur de vrais exercices du catalogue de démonstration, donc elle se lance
+vraiment ; son plan, en revanche, n'est pas matérialisé (le dépôt de
+démonstration ne stocke pas de plan) et la séance s'ouvre comme une séance
+libre. Limite écrite dans le code.
 
 ### Couleurs — une décision à prendre
 
@@ -387,8 +439,10 @@ un exercice inconnu — la réponse doit rester utilisable.
 1. **Socle serveur** — schéma + migration, module, port du modèle, outils de
    lecture, validateur, quota, droit `ai_coaching`, tests unitaires et e2e.
    Livrable vérifiable sans une seule ligne de Flutter.
-2. **Écran mobile** — dépôt, contrôleur, écran, widgets, quatre états, mode
-   démo, tests widget.
+2. ~~**Écran mobile**~~ — **fait** : dépôt, contrôleur, onglet, quatre états,
+   mode démo, tests widget. Les puces de suggestion sont calculées depuis
+   l'état réel dès cette étape (elles n'ont pas d'endpoint : la règle vit sur
+   l'appareil, dans `CoachContext`).
 3. **Finitions** — suggestions calculées depuis l'état réel, acceptation de
    proposition branchée sur la création de séance, documentation Swagger et
    `docs/`.
@@ -402,5 +456,6 @@ Le streaming, s'il est retenu, s'insère entre 2 et 3.
    `primary`.
 3. **Quota quotidien** — 30 messages par jour est une valeur de départ, à caler
    sur le prix de l'abonnement.
-4. **Point d'entrée** — carte sur l'accueil et lien depuis le débrief de séance,
-   plutôt qu'un sixième onglet. À confirmer.
+4. ~~**Point d'entrée**~~ — **tranché : un sixième onglet**, au centre de la
+   barre. La carte sur l'accueil et le lien depuis le débrief de séance restent
+   possibles en complément ; ils ne remplacent pas l'onglet.

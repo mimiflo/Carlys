@@ -8,6 +8,7 @@ abstract final class AppRoutes {
   // Onglets de la coquille (bottom bar)
   static const String home = '/home';
   static const String exercises = '/exercises';
+  static const String coach = '/coach';
   static const String progress = '/progress';
   static const String nutrition = '/nutrition';
   static const String profile = '/profile';

@@ -139,7 +139,7 @@ mais sépare toujours interface / logique / données.
 Le routeur est exposé par `appRouterProvider` (`lib/app/router/app_router.dart`)
 et consommé par `MaterialApp.router`. Les chemins vivent dans `AppRoutes`.
 
-Deux familles de routes : la **coquille à cinq onglets**
+Deux familles de routes : la **coquille à six onglets**
 (`StatefulShellRoute.indexedStack`, barre basse visible) et le **plein écran**
 (hors coquille), pour tout ce qui demande de la concentration ou une sortie
 explicite.
@@ -151,6 +151,7 @@ explicite.
 | `/home`                 | `home`            | Accueil (onglet)                   |
 | `/exercises`            | `exercises`       | Bibliothèque (onglet)              |
 | `/exercises/:idOrSlug`  | `exercise-detail` | Fiche d'exercice (plein écran)     |
+| `/coach`                | `coach`           | Coach IA (onglet)                  |
 | `/progress`             | `progress`        | Progression (onglet)               |
 | `/nutrition`            | `nutrition`       | Nutrition (onglet)                 |
 | `/profile`              | `profile`         | Profil & réglages (onglet)         |

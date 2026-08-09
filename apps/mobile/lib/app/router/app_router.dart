@@ -7,6 +7,7 @@ import '../../features/authentication/presentation/screens/forgot_password_scree
 import '../../features/authentication/presentation/screens/login_screen.dart';
 import '../../features/authentication/presentation/screens/register_screen.dart';
 import '../../features/authentication/presentation/screens/sessions_screen.dart';
+import '../../features/coaching/presentation/screens/coach_page.dart';
 import '../../features/dashboard/presentation/screens/home_screen.dart';
 import '../../features/exercises/presentation/screens/exercise_detail_screen.dart';
 import '../../features/exercises/presentation/screens/exercise_library_screen.dart';
@@ -71,7 +72,7 @@ String? _firstRunRedirect(
 ///  - parcours ou session inconnus → splash (restauration en cours) ;
 ///  - parcours en cours → tunnel de première ouverture ;
 ///  - parcours terminé, non authentifié → écrans d'authentification ;
-///  - parcours terminé, authentifié → coquille 5 onglets et plein écran.
+///  - parcours terminé, authentifié → coquille 6 onglets et plein écran.
 final appRouterProvider = Provider<GoRouter>((ref) {
   final refreshListenable = ValueNotifier(0);
   ref.onDispose(refreshListenable.dispose);
@@ -132,7 +133,9 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const ForgotPasswordScreen(),
       ),
 
-      // ── Coquille : 5 onglets avec bottom bar ──────────────────────
+      // ── Coquille : 6 onglets avec bottom bar ──────────────────────
+      // L'ordre des branches EST celui de `appBottomBarItems` : la barre
+      // rend un index, la coquille ouvre la branche du même rang.
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
             AppShell(navigationShell: navigationShell),
@@ -162,6 +165,15 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                     ),
                   ),
                 ],
+              ),
+            ],
+          ),
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.coach,
+                name: 'coach',
+                builder: (context, state) => const CoachPage(),
               ),
             ],
           ),
