@@ -14,29 +14,43 @@ import 'package:carlys_mobile/app/app.dart';
 import 'package:carlys_mobile/app/environment/app_environment.dart';
 import 'package:carlys_mobile/app/restore/app_restore.dart';
 import 'package:carlys_mobile/app/router/app_routes.dart';
+import 'package:carlys_mobile/core/database/app_database.dart';
 import 'package:carlys_mobile/core/errors/app_exception.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
+import 'package:carlys_mobile/features/authentication/presentation/screens/login_screen.dart';
 import 'package:carlys_mobile/features/coaching/data/repositories/coach_repository_impl.dart';
 import 'package:carlys_mobile/features/coaching/domain/entities/coach.dart';
 import 'package:carlys_mobile/features/coaching/presentation/controllers/coach_controllers.dart';
+import 'package:carlys_mobile/features/coaching/presentation/screens/coach_screen.dart';
+import 'package:carlys_mobile/features/dashboard/presentation/screens/home_screen.dart';
 import 'package:carlys_mobile/features/exercises/data/repositories/exercises_repository_impl.dart';
 import 'package:carlys_mobile/features/exercises/domain/entities/exercise.dart';
+import 'package:carlys_mobile/features/exercises/presentation/screens/exercise_detail_screen.dart';
 import 'package:carlys_mobile/features/exercises/presentation/widgets/exercise_card.dart';
 import 'package:carlys_mobile/features/exercises/presentation/widgets/muscle_group_card.dart';
 import 'package:carlys_mobile/features/nutrition/data/repositories/nutrition_repository_impl.dart';
 import 'package:carlys_mobile/features/nutrition/domain/entities/nutrition.dart';
+import 'package:carlys_mobile/features/nutrition/presentation/screens/nutrition_screen.dart';
 import 'package:carlys_mobile/features/onboarding/domain/first_run_step.dart';
+import 'package:carlys_mobile/features/onboarding/presentation/screens/onboarding_screen.dart';
+import 'package:carlys_mobile/features/onboarding/presentation/screens/welcome_screen.dart';
 import 'package:carlys_mobile/features/onboarding/presentation/widgets/brand_signature.dart';
 import 'package:carlys_mobile/features/onboarding/presentation/widgets/welcome_backdrop.dart';
+import 'package:carlys_mobile/features/profile/presentation/screens/profile_screen.dart';
 import 'package:carlys_mobile/features/profile/presentation/widgets/profile_plan_card.dart';
 import 'package:carlys_mobile/features/progress/data/repositories/progress_repository_impl.dart';
 import 'package:carlys_mobile/features/progress/domain/entities/progress.dart';
+import 'package:carlys_mobile/features/progress/presentation/screens/progress_screen.dart';
 import 'package:carlys_mobile/features/progress/presentation/widgets/body_weight_section.dart';
 import 'package:carlys_mobile/features/subscription/data/repositories/subscription_repository_impl.dart';
+import 'package:carlys_mobile/features/subscription/presentation/screens/subscription_screen.dart';
+import 'package:carlys_mobile/features/workout_history/presentation/screens/workout_history_screen.dart';
 import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';
 import 'package:carlys_mobile/features/workout_session/domain/entities/workout.dart';
+import 'package:carlys_mobile/features/workout_session/presentation/screens/active_workout_screen.dart';
+import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -114,6 +128,9 @@ FakeExercisesRepository catalogOf() => FakeExercisesRepository(
     );
 
 WorkoutWithSets activeWorkoutOf() {
+  // Départ RELATIF : une date fixe vieillit, et le chrono de la galerie
+  // affichait « 54:37:39 » — une séance de deux jours et demi.
+  final startedAt = DateTime.now().toUtc().subtract(const Duration(minutes: 47));
   WorkoutSetEntry set(int position, String name, int reps, double weight) =>
       WorkoutSetEntry(
         id: 'set-$position',
@@ -123,7 +140,7 @@ WorkoutWithSets activeWorkoutOf() {
         reps: reps,
         weightKg: weight,
         restSeconds: 90,
-        completedAt: DateTime.utc(2026, 8, 7, 10, 5 + position * 3),
+        completedAt: startedAt.add(Duration(minutes: 5 + position * 3)),
         syncState:
             position < 2 ? LocalSyncState.synced : LocalSyncState.pending,
       );
@@ -132,7 +149,7 @@ WorkoutWithSets activeWorkoutOf() {
       id: 'session-1',
       name: 'Push A',
       status: WorkoutStatus.inProgress,
-      startedAt: DateTime.utc(2026, 8, 7, 10),
+      startedAt: startedAt,
       syncState: LocalSyncState.synced,
     ),
     sets: [
@@ -342,6 +359,14 @@ void main() {
           ]),
           syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
           appRestoreProvider.overrideWithValue(NoopAppRestore()),
+          // Base EN MÉMOIRE : sans cet écrasement, le harnais ouvrait la vraie
+          // base de l'appareil — donc `path_provider`, absent des tests. Rien
+          // n'échouait bruyamment, l'ouverture restait simplement en attente.
+          appDatabaseProvider.overrideWith((ref) {
+            final database = AppDatabase(NativeDatabase.memory());
+            ref.onDispose(database.close);
+            return database;
+          }),
         ],
         child: const CarlysApp(),
       ),
@@ -350,7 +375,19 @@ void main() {
     await settle(tester);
   }
 
-  Future<void> capture(WidgetTester tester, String name) async {
+  /// Prend la capture — après avoir vérifié qu'on est bien sur le bon écran.
+  ///
+  /// `shows` n'est pas décoratif : sans lui, une navigation ratée produit un
+  /// PNG parfaitement lisible… d'un autre écran, et personne ne le voit. C'est
+  /// arrivé à `05-seance-active`, qui montrait la Progression.
+  WidgetController.hitTestWarningShouldBeFatal = true;
+
+  Future<void> capture(
+    WidgetTester tester,
+    String name, {
+    required Finder shows,
+  }) async {
+    expect(shows, findsWidgets, reason: 'Mauvais écran pour « $name »');
     await expectLater(
       find.byType(MaterialApp),
       matchesGoldenFile('goldens/$name.png'),
@@ -373,12 +410,12 @@ void main() {
     seedFirstRunStep(FirstRunStep.welcome);
     await pumpApp(tester, authenticated: false);
     await precacheBrandImages(tester);
-    await capture(tester, '00-bienvenue');
+    await capture(tester, '00-bienvenue', shows: find.byType(WelcomeScreen));
   });
 
   testWidgets('connexion', (tester) async {
     await pumpApp(tester, authenticated: false);
-    await capture(tester, '01-connexion');
+    await capture(tester, '01-connexion', shows: find.byType(LoginScreen));
   });
 
   testWidgets('accueil', (tester) async {
@@ -388,7 +425,7 @@ void main() {
       tester,
       workouts: FakeWorkoutRepository()..history = historyOf(),
     );
-    await capture(tester, '02-accueil');
+    await capture(tester, '02-accueil', shows: find.byType(HomeScreen));
   });
 
   testWidgets('bibliothèque + fiche exercice', (tester) async {
@@ -396,36 +433,57 @@ void main() {
     await goTab(tester, 'Exercices');
     await precacheMuscleImages(tester);
     // Premier étage : la grille des groupes musculaires.
-    await capture(tester, '03-bibliotheque');
+    await capture(tester, '03-bibliotheque', shows: find.byType(MuscleGroupCard));
 
     // Second étage : les mouvements du groupe choisi.
     await tester.tap(find.text('Tous les mouvements'));
     await settle(tester);
-    await capture(tester, '19-bibliotheque-mouvements');
+    await capture(tester, '19-bibliotheque-mouvements', shows: find.byType(ExerciseCard));
 
     await tester.tap(find.widgetWithText(ExerciseCard, 'Squat'));
     await settle(tester);
-    await capture(tester, '04-fiche-exercice');
+    await capture(tester, '04-fiche-exercice', shows: find.byType(ExerciseDetailScreen));
   });
 
   testWidgets('séance active', (tester) async {
     final workouts = FakeWorkoutRepository()..active = activeWorkoutOf();
     await pumpApp(tester, workouts: workouts);
+    // Le bouton naît SOUS la barre flottante (mesuré : y 824-839, barre
+    // 768-852). Taper sans faire défiler atteint la barre, pas le bouton —
+    // c'est ainsi que cette capture montrait la Progression.
+    await tester.scrollUntilVisible(
+      find.text('Reprendre la séance'),
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await settle(tester);
     await tester.tap(find.text('Reprendre la séance'));
     await settle(tester);
-    await capture(tester, '05-seance-active');
+    await capture(
+      tester,
+      '05-seance-active',
+      shows: find.byType(ActiveWorkoutScreen),
+    );
+
+    // `testWidgets` refuse qu'un minuteur soit en cours à la fin du corps, et
+    // il vérifie AVANT de démonter l'arbre. On démonte donc soi-même — ce qui
+    // annule le chrono de séance — puis on laisse filer un instant : Drift
+    // programme un `Timer.run` en fermant ses flux de requêtes, et un
+    // `pump()` sans durée n'avance pas assez le temps fictif pour le purger.
+    await tester.pumpWidget(const SizedBox.shrink());
+    await tester.pump(const Duration(milliseconds: 10));
   });
 
   testWidgets('onglet coach', (tester) async {
     await pumpApp(tester, coach: coachOf(), premium: true);
     await goTab(tester, 'Coach');
-    await capture(tester, '18-coach-onglet');
+    await capture(tester, '18-coach-onglet', shows: find.byType(CoachScreen));
   });
 
   testWidgets('progression', (tester) async {
     await pumpApp(tester);
     await goTab(tester, 'Progrès');
-    await capture(tester, '06-progression');
+    await capture(tester, '06-progression', shows: find.byType(ProgressScreen));
 
     await tester.scrollUntilVisible(
       find.byType(BodyWeightSection),
@@ -433,7 +491,7 @@ void main() {
       scrollable: find.byType(Scrollable).last,
     );
     await settle(tester);
-    await capture(tester, '07-progression-poids');
+    await capture(tester, '07-progression-poids', shows: find.byType(BodyWeightSection));
   });
 
   testWidgets('abonnement premium', (tester) async {
@@ -441,13 +499,13 @@ void main() {
     await goTab(tester, 'Profil');
     await tester.tap(find.byType(ProfilePlanCard));
     await settle(tester);
-    await capture(tester, '08-abonnement');
+    await capture(tester, '08-abonnement', shows: find.byType(SubscriptionScreen));
   });
 
   testWidgets('nutrition — métabolisme complet', (tester) async {
     await pumpApp(tester);
     await goTab(tester, 'Nutrition');
-    await capture(tester, '10-nutrition-metabolisme');
+    await capture(tester, '10-nutrition-metabolisme', shows: find.byType(NutritionScreen));
 
     await tester.scrollUntilVisible(
       find.text('Macros'),
@@ -455,25 +513,25 @@ void main() {
       scrollable: find.byType(Scrollable).last,
     );
     await tester.pump(const Duration(milliseconds: 200));
-    await capture(tester, '11-nutrition-macros');
+    await capture(tester, '11-nutrition-macros', shows: find.text('Macros'));
   });
 
   testWidgets('nutrition — profil à compléter', (tester) async {
     await pumpApp(tester, nutrition: nutritionOf(complete: false));
     await goTab(tester, 'Nutrition');
-    await capture(tester, '12-nutrition-profil');
+    await capture(tester, '12-nutrition-profil', shows: find.byType(NutritionScreen));
   });
 
   testWidgets('profil + réglages + thème clair', (tester) async {
     await pumpApp(tester, premium: true);
     await goTab(tester, 'Profil');
-    await capture(tester, '13-profil');
+    await capture(tester, '13-profil', shows: find.byType(ProfileScreen));
 
     await tester.scrollUntilVisible(find.text('Thème sombre'), 150);
     await settle(tester);
     await tester.tap(find.text('Thème sombre'));
     await settle(tester);
-    await capture(tester, '14-reglages');
+    await capture(tester, '14-reglages', shows: find.text('Thème sombre'));
   });
 
   testWidgets('historique', (tester) async {
@@ -482,7 +540,7 @@ void main() {
     final context = tester.element(find.byType(AppBottomBar));
     unawaited(GoRouter.of(context).push(AppRoutes.history));
     await settle(tester);
-    await capture(tester, '15-historique');
+    await capture(tester, '15-historique', shows: find.byType(WorkoutHistoryScreen));
   });
 
   testWidgets('onboarding', (tester) async {
@@ -490,7 +548,7 @@ void main() {
     final context = tester.element(find.byType(AppBottomBar));
     GoRouter.of(context).go(AppRoutes.onboarding);
     await settle(tester);
-    await capture(tester, '16-onboarding');
+    await capture(tester, '16-onboarding', shows: find.byType(OnboardingScreen));
   });
 
   testWidgets('paywall exercice premium', (tester) async {
@@ -504,7 +562,7 @@ void main() {
     await settle(tester);
     await tester.tap(find.text('Balancier kettlebell'));
     await settle(tester);
-    await capture(tester, '09-exercice-premium');
+    await capture(tester, '09-exercice-premium', shows: find.byType(ExerciseDetailScreen));
   });
 }
 

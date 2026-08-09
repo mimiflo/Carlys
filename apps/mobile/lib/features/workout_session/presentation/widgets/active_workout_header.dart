@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 
 import '../../../../core/utilities/formatting.dart';
@@ -115,31 +117,53 @@ class _HeaderIconButton extends StatelessWidget {
 }
 
 /// Chrono de séance, recalculé chaque seconde depuis l'horodatage de début.
-class _ElapsedTimer extends StatelessWidget {
+///
+/// Le battement vit dans l'état, pas dans `build` : un `Stream.periodic`
+/// construit à chaque rendu était remplacé — donc résilié puis recréé — à
+/// chaque reconstruction, or l'écran se reconstruit à chaque série validée.
+/// L'affichage restait juste (l'heure courante sert de repli), mais la phase
+/// du battement repartait de zéro et la seconde affichée pouvait tenir près
+/// de deux secondes avant de sauter. Ici, un seul minuteur, annulé à la
+/// destruction : il ne survit pas à l'écran.
+class _ElapsedTimer extends StatefulWidget {
   const _ElapsedTimer({required this.startedAt});
 
   final DateTime startedAt;
 
   @override
+  State<_ElapsedTimer> createState() => _ElapsedTimerState();
+}
+
+class _ElapsedTimerState extends State<_ElapsedTimer> {
+  Timer? _ticker;
+  DateTime _now = DateTime.now();
+
+  @override
+  void initState() {
+    super.initState();
+    _ticker = Timer.periodic(const Duration(seconds: 1), (_) {
+      if (mounted) setState(() => _now = DateTime.now());
+    });
+  }
+
+  @override
+  void dispose() {
+    _ticker?.cancel();
+    _ticker = null;
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return StreamBuilder<DateTime>(
-      stream: Stream<DateTime>.periodic(
-        const Duration(seconds: 1),
-        (_) => DateTime.now(),
+    final elapsed = _now.difference(widget.startedAt.toLocal());
+    return Text(
+      formatChrono(elapsed.inSeconds),
+      style: AppTypography.metricM.copyWith(
+        fontSize: 17,
+        letterSpacing: -0.34,
+        color: AppColors.darkTextPrimary,
       ),
-      builder: (context, snapshot) {
-        final elapsed =
-            (snapshot.data ?? DateTime.now()).difference(startedAt.toLocal());
-        return Text(
-          formatChrono(elapsed.inSeconds),
-          style: AppTypography.metricM.copyWith(
-            fontSize: 17,
-            letterSpacing: -0.34,
-            color: AppColors.darkTextPrimary,
-          ),
-          semanticsLabel: 'Durée écoulée',
-        );
-      },
+      semanticsLabel: 'Durée écoulée',
     );
   }
 }
