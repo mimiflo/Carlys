@@ -58,6 +58,10 @@ abstract final class AppIcons {
   static const IconData devices = Icons.devices_rounded;
   static const IconData logout = Icons.logout_rounded;
 
+  // Coach IA
+  static const IconData coach = Icons.auto_awesome_rounded;
+  static const IconData send = Icons.arrow_upward_rounded;
+
   // États
   static const IconData error = Icons.error_outline_rounded;
   static const IconData empty = Icons.inbox_rounded;

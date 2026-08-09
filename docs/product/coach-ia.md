@@ -298,8 +298,18 @@ apps/mobile/lib/features/coaching/
 ```
 
 Écran `CoachScreen` : en-tête, liste inversée des messages, puces de
-suggestion, composeur. Widgets : `CoachMessageBubble`, `CoachSuggestionChips`,
+suggestion, composeur. Widgets : `CoachMessageBubble`, `CoachSuggestions`,
 `CoachProposalCard`, `CoachComposer` — chacun sous 250 lignes.
+
+**Déjà construit.** La couche de présentation existe et se capture par
+`tool/screenshots/coach_test.dart` (quatre états). L'écran est
+**présentationnel** : il reçoit ses données et ne va rien chercher — le jeu
+d'exemple vit dans le harnais de capture, jamais dans `lib/`. Le contrôleur et
+le dépôt arrivent avec la couche data.
+
+La liste est **inversée** : la conversation s'ancre en bas, là où l'on écrit et
+là où arrive la réponse. Une histoire courte flottant en haut d'un écran vide
+est le défaut le plus visible d'un premier jet de messagerie.
 
 **Hors ligne — écart assumé.** L'historique se lit hors connexion (stocké en
 local comme le reste). Le composeur, lui, est **désactivé** avec un état
