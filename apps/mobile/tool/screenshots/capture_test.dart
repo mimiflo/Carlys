@@ -16,7 +16,10 @@ import 'package:carlys_mobile/app/restore/app_restore.dart';
 import 'package:carlys_mobile/app/router/app_routes.dart';
 import 'package:carlys_mobile/core/database/app_database.dart';
 import 'package:carlys_mobile/core/errors/app_exception.dart';
+import 'package:carlys_mobile/core/media/remote_image.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
+import 'package:carlys_mobile/demo/demo_catalog.dart';
+import 'package:carlys_mobile/demo/demo_overrides.dart';
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
 import 'package:carlys_mobile/features/authentication/presentation/screens/login_screen.dart';
@@ -298,6 +301,25 @@ void main() {
     await settle(tester);
   }
 
+  /// Les PHOTOS d'exercices, pour les captures qui tournent sur le catalogue
+  /// réel : elles passent par `RemoteImage`, donc par le cache d'images, et
+  /// leur décodage demande — comme les autres — une fenêtre de temps réel.
+  Future<void> precacheExercisePhotos(WidgetTester tester) async {
+    final context = tester.element(find.byType(MaterialApp));
+    final container = ProviderScope.containerOf(context);
+    final cache = container.read(remoteImageCacheProvider);
+    final catalog = await tester.runAsync(loadDemoCatalog);
+    for (final exercise in catalog!.exercises) {
+      final url = exercise.imageUrl;
+      if (url == null) continue;
+      await tester.runAsync(() async {
+        final bytes = await cache.bytesOf(url);
+        if (bytes != null) await precacheImage(MemoryImage(bytes), context);
+      });
+    }
+    await settle(tester);
+  }
+
   Future<void> precacheBrandImages(WidgetTester tester) async {
     final context = tester.element(find.byType(MaterialApp));
     for (final asset in const [
@@ -363,6 +385,38 @@ void main() {
           // Base EN MÉMOIRE : sans cet écrasement, le harnais ouvrait la vraie
           // base de l'appareil — donc `path_provider`, absent des tests. Rien
           // n'échouait bruyamment, l'ouverture restait simplement en attente.
+          appDatabaseProvider.overrideWith((ref) {
+            final database = AppDatabase(NativeDatabase.memory());
+            ref.onDispose(database.close);
+            return database;
+          }),
+        ],
+        child: const CarlysApp(),
+      ),
+    );
+    await settle(tester);
+    await settle(tester);
+  }
+
+  /// L'application sur le CATALOGUE RÉEL, celui du mode démonstration.
+  ///
+  /// Les autres captures tournent sur un faux dépôt de cinq exercices sans
+  /// photo : pratique pour figer un écran, inutile pour montrer la
+  /// bibliothèque telle qu'elle est vraiment servie.
+  Future<void> pumpDemoApp(WidgetTester tester) async {
+    tester.view.physicalSize = const Size(1179, 2556);
+    tester.view.devicePixelRatio = 3.0;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          appEnvironmentProvider.overrideWithValue(
+            const AppEnvironment(
+              flavor: AppFlavor.demo,
+              apiBaseUrl: 'http://localhost:3000',
+            ),
+          ),
+          ...demoOverrides(),
           appDatabaseProvider.overrideWith((ref) {
             final database = AppDatabase(NativeDatabase.memory());
             ref.onDispose(database.close);
@@ -454,6 +508,25 @@ void main() {
     await capture(
       tester,
       '04-fiche-exercice',
+      shows: find.byType(ExerciseDetailScreen),
+    );
+  });
+
+  testWidgets('bibliothèque illustrée — le groupe Dos', (tester) async {
+    await pumpDemoApp(tester);
+    await goTab(tester, 'Exercices');
+    await precacheMuscleImages(tester);
+    await tester.tap(find.widgetWithText(MuscleGroupCard, 'Dos'));
+    await settle(tester);
+    await precacheExercisePhotos(tester);
+    await capture(tester, '20-dos-liste', shows: find.byType(ExerciseCard));
+
+    await tester.tap(find.widgetWithText(ExerciseCard, 'Tractions lestées'));
+    await settle(tester);
+    await precacheExercisePhotos(tester);
+    await capture(
+      tester,
+      '21-dos-fiche',
       shows: find.byType(ExerciseDetailScreen),
     );
   });
