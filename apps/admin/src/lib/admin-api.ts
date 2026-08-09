@@ -1,17 +1,22 @@
 import {
   adminAuditLogSchema,
+  adminExerciseSummarySchema,
   adminLoginResultSchema,
   adminMeSchema,
   adminOverviewSchema,
   managedUserDetailSchema,
   managedUserSummarySchema,
+  mediaAssetSchema,
   type AdminAuditLog,
+  type AdminExerciseSummary,
   type AdminLoginResult,
   type AdminMe,
   type AdminOverview,
   type EntitlementKey,
   type ManagedUserDetail,
   type ManagedUserSummary,
+  type MediaAsset,
+  type MediaKind,
 } from '@carlys/api-contracts';
 import { z } from 'zod';
 import { publicEnv } from './env';
@@ -108,6 +113,27 @@ async function call(path: string, init: RequestInit = {}): Promise<unknown> {
   return body;
 }
 
+/**
+ * Dépôt de fichier — transport séparé, et pour une bonne raison : `call` pose
+ * `Content-Type: application/json`, alors qu'un envoi multipart doit laisser
+ * le navigateur écrire lui-même son en-tête avec la frontière (`boundary`).
+ * L'imposer à la main casse le décodage côté serveur.
+ */
+async function callUpload(path: string, form: FormData): Promise<unknown> {
+  const token = adminToken.get();
+  const response = await fetch(`${publicEnv.apiBaseUrl}/api/v1${path}`, {
+    method: 'POST',
+    body: form,
+    headers: token === null ? {} : { Authorization: `Bearer ${token}` },
+    cache: 'no-store',
+  });
+  const body: unknown = response.status === 204 ? null : await response.json().catch(() => null);
+  if (!response.ok) {
+    throw new AdminApiError(errorMessageOf(body, response.status), response.status);
+  }
+  return body;
+}
+
 function query(params: Record<string, string | undefined>): string {
   const search = new URLSearchParams();
   for (const [key, value] of Object.entries(params)) {
@@ -168,5 +194,48 @@ export const adminApi = {
   async auditLogs(cursor?: string): Promise<Page<AdminAuditLog>> {
     const body = await call(`/admin/audit-logs${query({ cursor, limit: '50' })}`);
     return parsePage(body, adminAuditLogSchema);
+  },
+
+  // ── Catalogue et médias ────────────────────────────────────────────────
+
+  async listExercises(search?: string, cursor?: string): Promise<Page<AdminExerciseSummary>> {
+    const body = await call(`/admin/exercises${query({ search, cursor })}`);
+    return parsePage(body, adminExerciseSummarySchema);
+  },
+
+  async setExercisePublication(id: string, isPublished: boolean): Promise<void> {
+    await call(`/admin/exercises/${id}/publication`, {
+      method: 'PATCH',
+      body: JSON.stringify({ isPublished }),
+    });
+  },
+
+  async listMedia(kind?: MediaKind): Promise<MediaAsset[]> {
+    const body = await call(`/admin/media${query({ kind })}`);
+    return parseData(body, z.array(mediaAssetSchema));
+  },
+
+  /**
+   * L'identifiant est fabriqué ICI, pas par le serveur : c'est ce qui rend le
+   * dépôt rejouable. Un envoi relancé après une coupure réseau retombe sur le
+   * même média au lieu d'en créer un second.
+   */
+  async uploadMedia(file: File, kind: MediaKind, id: string): Promise<MediaAsset> {
+    const form = new FormData();
+    form.set('id', id);
+    form.set('kind', kind);
+    form.set('file', file);
+    return parseData(await callUpload('/admin/media', form), mediaAssetSchema);
+  },
+
+  async deleteMedia(id: string): Promise<void> {
+    await call(`/admin/media/${id}`, { method: 'DELETE' });
+  },
+
+  async setExerciseImage(exerciseId: string, mediaId: string | null): Promise<void> {
+    await call(`/admin/exercises/${exerciseId}/image`, {
+      method: 'PUT',
+      body: JSON.stringify({ mediaId }),
+    });
   },
 };

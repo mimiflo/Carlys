@@ -18,6 +18,14 @@ export type ManagedUserRow = Prisma.UserGetPayload<{
   include: { profile: true; entitlements: true };
 }>;
 
+export type AdminExerciseRow = Prisma.ExerciseGetPayload<{
+  include: {
+    muscles: { include: { muscleGroup: true } };
+    image: true;
+    mesh: true;
+  };
+}>;
+
 export interface OverviewCounts {
   usersCount: number;
   premiumUsersCount: number;
@@ -122,6 +130,40 @@ export class AdminRepository {
   }
 
   // ── Catalogue ───────────────────────────────────────────────────────────
+
+  /**
+   * Exercices du back-office : **publiés ET non publiés**.
+   *
+   * Le catalogue mobile ne sert que le publié, par construction — c'est
+   * précisément ce qu'il faut ne PAS faire ici : un exercice dépublié n'est
+   * visible nulle part ailleurs, et il faut bien pouvoir le republier.
+   */
+  listExercises(
+    search: string | undefined,
+    limit: number,
+    cursor?: string,
+  ): Promise<AdminExerciseRow[]> {
+    const trimmed = search?.trim();
+    return this.prisma.exercise.findMany({
+      where:
+        trimmed === undefined || trimmed.length === 0
+          ? {}
+          : {
+              OR: [
+                { name: { contains: trimmed, mode: 'insensitive' } },
+                { slug: { contains: trimmed, mode: 'insensitive' } },
+              ],
+            },
+      include: {
+        muscles: { include: { muscleGroup: true }, orderBy: { role: 'asc' } },
+        image: true,
+        mesh: true,
+      },
+      orderBy: [{ name: 'asc' }, { id: 'asc' }],
+      take: limit + 1,
+      ...(cursor === undefined ? {} : { cursor: { id: cursor }, skip: 1 }),
+    });
+  }
 
   setExercisePublication(exerciseId: string, isPublished: boolean): Promise<boolean> {
     return this.prisma.exercise

@@ -7,6 +7,7 @@ process.env.JWT_ACCESS_SECRET ??= 'secret-e2e-uniquement-32-caracteres-minimum';
 import {
   ADMIN_PERMISSIONS,
   type AdminAuditLog,
+  type AdminExerciseSummary,
   type AdminLoginResult,
   type AdminMe,
   type AdminOverview,
@@ -231,6 +232,36 @@ describe('Administration (e2e)', () => {
       ).body,
     );
     expect(entitlements.isPremium).toBe(true);
+  });
+
+  it('le back-office liste AUSSI les exercices non publiés', async () => {
+    // Le catalogue mobile ne sert que le publié : sans cette route, un
+    // exercice dépublié disparaîtrait de partout, y compris de l'écran censé
+    // permettre de le republier.
+    await asAdmin(superToken)
+      .patch(`/api/v1/admin/exercises/${freeExerciseId}/publication`)
+      .send({ isPublished: false })
+      .expect(204);
+
+    const hidden = data<AdminExerciseSummary[]>(
+      (
+        await asAdmin(superToken)
+          .get(`/api/v1/admin/exercises?search=${encodeURIComponent(freeExerciseSlug)}`)
+          .expect(200)
+      ).body,
+    );
+    expect(hidden).toHaveLength(1);
+    expect(hidden[0]?.isPublished).toBe(false);
+    expect(hidden[0]?.image).toBeNull();
+
+    await asAdmin(superToken)
+      .patch(`/api/v1/admin/exercises/${freeExerciseId}/publication`)
+      .send({ isPublished: true })
+      .expect(204);
+  });
+
+  it('RBAC : le support ne voit pas le catalogue d’administration', async () => {
+    await asAdmin(supportToken).get('/api/v1/admin/exercises').expect(403);
   });
 
   it('dépublication d’un exercice : invisible côté mobile, republication rétablit', async () => {

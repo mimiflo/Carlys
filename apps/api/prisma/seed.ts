@@ -768,7 +768,13 @@ const ADMIN_ROLES: { slug: string; name: string; permissions: readonly string[] 
     // pourrait pas déposer la photo d'un exercice qu'il a le droit de publier.
     slug: 'content-manager',
     name: 'Gestion du contenu',
-    permissions: ['exercise:publish', 'exercise:write', 'media:read', 'media:write'],
+    permissions: [
+      'exercise:read',
+      'exercise:publish',
+      'exercise:write',
+      'media:read',
+      'media:write',
+    ],
   },
 ];
 

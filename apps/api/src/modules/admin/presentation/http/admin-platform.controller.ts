@@ -1,5 +1,6 @@
 import {
   type AdminAuditLog,
+  type AdminExerciseSummary,
   type AdminOverview,
   type ApiSuccessEnvelope,
   type CursorPaginationMeta,
@@ -25,7 +26,7 @@ import { AdminPlatformService } from '../../application/admin-platform.service';
 import { CurrentAdmin } from '../decorators/current-admin.decorator';
 import { AdminAuthGuard, type AdminPrincipal } from '../guards/admin-auth.guard';
 import { AdminPermissionsGuard, RequirePermissions } from '../guards/admin-permissions.guard';
-import { ListAuditLogsQuery, SetPublicationDto } from './dto/admin.dto';
+import { ListAdminExercisesQuery, ListAuditLogsQuery, SetPublicationDto } from './dto/admin.dto';
 
 /** Synthèse plateforme, journal d'audit, modération du catalogue. */
 @ApiTags('admin')
@@ -51,6 +52,23 @@ export class AdminPlatformController {
     @Req() request: RequestWithId,
   ): Promise<ApiSuccessEnvelope<AdminAuditLog[], CursorPaginationMeta>> {
     const page = await this.platform.auditLogs(query.limit, query.cursor);
+    return enveloped(page.items, { nextCursor: page.nextCursor, hasMore: page.hasMore }, request);
+  }
+
+  @Get('exercises')
+  @RequirePermissions('exercise:read')
+  @ApiOperation({
+    summary: 'Catalogue vu du back-office — publiés ET non publiés',
+    description:
+      'Le catalogue mobile ne sert que le publié : sans cette route, un ' +
+      'exercice dépublié n’apparaîtrait nulle part et ne pourrait plus être ' +
+      'republié.',
+  })
+  async exercises(
+    @Query() query: ListAdminExercisesQuery,
+    @Req() request: RequestWithId,
+  ): Promise<ApiSuccessEnvelope<AdminExerciseSummary[], CursorPaginationMeta>> {
+    const page = await this.platform.listExercises(query.limit, query.search, query.cursor);
     return enveloped(page.items, { nextCursor: page.nextCursor, hasMore: page.hasMore }, request);
   }
 

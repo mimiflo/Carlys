@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { mediaAssetSchema } from './media';
 import { entitlementSchema } from './subscriptions';
 
 /** Contrats de l'administration (/api/v1/admin/*) — comptes SÉPARÉS. */
@@ -11,6 +12,7 @@ export const ADMIN_PERMISSIONS = [
   'user:read',
   'user:update',
   'entitlement:grant',
+  'exercise:read',
   'exercise:publish',
   'exercise:write',
   'media:read',
@@ -85,3 +87,24 @@ export const adminOverviewSchema = z.object({
   publishedExercisesCount: z.number(),
 });
 export type AdminOverview = z.infer<typeof adminOverviewSchema>;
+
+/**
+ * Exercice vu du back-office.
+ *
+ * Distinct du catalogue mobile sur deux points qui justifient un contrat
+ * séparé : les exercices **non publiés** en font partie — c'est même leur
+ * raison d'être ici — et les médias sont rendus en entier, pas seulement leur
+ * URL, pour que l'écran d'administration puisse dire QUEL fichier est
+ * rattaché.
+ */
+export const adminExerciseSummarySchema = z.object({
+  id: z.string(),
+  slug: z.string(),
+  name: z.string(),
+  isPublished: z.boolean(),
+  isPremium: z.boolean(),
+  primaryMuscleGroupName: z.string().nullable(),
+  image: mediaAssetSchema.nullable(),
+  mesh: mediaAssetSchema.nullable(),
+});
+export type AdminExerciseSummary = z.infer<typeof adminExerciseSummarySchema>;

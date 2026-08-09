@@ -49,6 +49,27 @@ export class ListManagedUsersQuery {
   limit: number = 20;
 }
 
+export class ListAdminExercisesQuery {
+  @ApiPropertyOptional({ description: 'Recherche sur le nom ou le slug' })
+  @IsOptional()
+  @IsString()
+  @MaxLength(120)
+  search?: string;
+
+  @ApiPropertyOptional({ description: 'Curseur : id du dernier élément servi' })
+  @IsOptional()
+  @IsUUID()
+  cursor?: string;
+
+  @ApiPropertyOptional({ default: 50, maximum: 200 })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(200)
+  limit: number = 50;
+}
+
 export class SetUserStatusDto {
   @ApiProperty({ enum: ['ACTIVE', 'SUSPENDED'] })
   @IsIn(['ACTIVE', 'SUSPENDED'])

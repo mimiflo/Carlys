@@ -104,9 +104,9 @@ livré à l'Étape 7.
 | --- | --- |
 | Utilisateurs | recherche, fiche détaillée, sessions par appareil, suspension/réactivation avec raison |
 | Abonnements (Étape 6+) | état des entitlements (source d'autorité serveur), historique Stripe/RevenueCat, remboursements, litiges |
-| Exercices (Étape 3+) | CRUD du catalogue, taxonomie (groupes musculaires, matériel), publication/dépublication, invalidation du cache Redis |
+| Exercices | **Livré (partiel)** — `/exercises` : catalogue publiés ET non publiés, recherche, publication/dépublication, photo (dépôt, remplacement, retrait). Restent cibles : création/édition d'exercices et taxonomie |
 | Programmes | création et édition de programmes d'entraînement, assignation, versions |
-| Médias | bibliothèque S3 (`carlys-media`), upload, remplacement, purge |
+| Médias | **Livré (partiel)** — dépôt et rattachement depuis la page Exercices ; l'API porte déjà la bibliothèque complète (`GET/DELETE /admin/media`). Reste cible : un écran de bibliothèque autonome, pour réutiliser une photo sans la redéposer |
 | Notifications | campagnes push (après intégration FCM), modèles, ciblage, historique d'envoi |
 | Webhooks (Étape 6+) | journal des webhooks Stripe/RevenueCat signés, statut de traitement idempotent, rejeu |
 | Statistiques | tableaux de bord d'usage : inscriptions, rétention, séances, revenus |
