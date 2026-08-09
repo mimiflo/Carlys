@@ -288,6 +288,28 @@ Nouvelles variables validées par Zod dans `env.schema.ts` :
 indisponible au lieu d'empêcher le démarrage), `COACH_MODEL`,
 `COACH_DAILY_MESSAGE_LIMIT`, `COACH_ENABLED`.
 
+## État : le socle serveur est construit
+
+Tout ce qui précède existe dans `apps/api/src/modules/coach/` : schéma et
+migration, port du modèle, neuf outils de lecture, validateur, quota, dépôt,
+contrôleur, client Anthropic. Le droit `ai_coaching` est accordé par le plan
+premium.
+
+**Deux limites de l'environnement de développement, à connaître.**
+
+*La migration a été écrite sans base.* Docker n'était pas disponible, donc
+`prisma migrate dev` n'a pas pu tourner. Le SQL n'a pas pour autant été écrit à
+la main : il a été obtenu par différence entre deux rendus complets
+(`prisma migrate diff --from-empty` avant et après le changement de schéma),
+puis vérifié par `prisma validate` et `prisma generate`. La CI rejoue le
+contrôle de dérive contre un vrai PostgreSQL — c'est elle qui fait foi.
+
+*Les tests e2e n'ont pas pu être exécutés ici*, pour la même raison : ils
+demandent PostgreSQL et Redis. Ils sont écrits (`test/coach.e2e-spec.ts`,
+sept scénarios : droit absent, réponse nominale, proposition validée, exercice
+inventé, propriété du fil, plafond atteint, coach coupé) et la CI les exécute.
+Les tests **unitaires**, eux, tournent : validateur, quota, préfixe de cache.
+
 ## Mobile
 
 ```

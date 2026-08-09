@@ -122,6 +122,24 @@ export class AppConfigService {
     return this.config.get('REVENUECAT_WEBHOOK_SECRET', { infer: true });
   }
 
+  // ── Coach IA ───────────────────────────────────────────────────────────
+
+  get anthropicApiKey(): string | undefined {
+    return this.config.get('ANTHROPIC_API_KEY', { infer: true });
+  }
+
+  get coachModel(): string {
+    return this.config.get('COACH_MODEL', { infer: true });
+  }
+
+  get coachDailyMessageLimit(): number {
+    return this.config.get('COACH_DAILY_MESSAGE_LIMIT', { infer: true });
+  }
+
+  get coachEnabled(): boolean {
+    return this.config.get('COACH_ENABLED', { infer: true });
+  }
+
   // ── E-mails ────────────────────────────────────────────────────────────
 
   get smtpHost(): string {

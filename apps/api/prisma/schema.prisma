@@ -47,6 +47,7 @@ model User {
   bodyMetrics        BodyMetric[]
   subscriptions      Subscription[]
   entitlements       UserEntitlement[]
+  coachConversations CoachConversation[]
 }
 
 /// Sexe biologique — nécessaire aux formules métaboliques (Mifflin-St Jeor).
@@ -288,12 +289,13 @@ model Exercise {
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt
 
-  muscles           ExerciseMuscle[]
-  equipment         ExerciseEquipment[]
-  workoutSets       WorkoutSet[]
-  templateExercises WorkoutTemplateExercise[]
-  sessionPlanItems  WorkoutSessionPlanItem[]
-  personalRecords   PersonalRecord[]
+  muscles            ExerciseMuscle[]
+  equipment          ExerciseEquipment[]
+  workoutSets        WorkoutSet[]
+  templateExercises  WorkoutTemplateExercise[]
+  sessionPlanItems   WorkoutSessionPlanItem[]
+  personalRecords    PersonalRecord[]
+  coachProposalItems CoachSessionProposalItem[]
 
   @@index([isPublished, name])
 }
@@ -359,8 +361,8 @@ model WorkoutSession {
   /// l'historique reste lisible même modèle supprimé ou renommé.
   templateName String?
 
-  user            User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  template        WorkoutTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  user            User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  template        WorkoutTemplate?         @relation(fields: [templateId], references: [id], onDelete: SetNull)
   sets            WorkoutSet[]
   planItems       WorkoutSessionPlanItem[]
   personalRecords PersonalRecord[]
@@ -465,9 +467,10 @@ model WorkoutTemplate {
   updatedAt                DateTime  @updatedAt
   deletedAt                DateTime?
 
-  user      User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  exercises WorkoutTemplateExercise[]
-  sessions  WorkoutSession[]
+  user           User                      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  exercises      WorkoutTemplateExercise[]
+  sessions       WorkoutSession[]
+  coachProposals CoachSessionProposal[]
 
   @@index([userId, updatedAt(sort: Desc)])
 }
@@ -738,4 +741,102 @@ model AdminRolePermission {
   permission AdminPermission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
 
   @@id([roleId, permissionId])
+}
+
+// ─────────────────────────────── Coach IA ─────────────────────────────────
+//
+// L'IA PROPOSE, l'application EXÉCUTE. Le coach n'a aucun outil d'écriture :
+// sa seule sortie structurée est une proposition de séance, que l'utilisateur
+// accepte explicitement. La création passe ensuite par le chemin de séance
+// existant — idempotent, hors ligne, rejouable.
+
+enum CoachMessageRole {
+  USER
+  ASSISTANT
+}
+
+/// Fil de discussion. L'id vient de l'appareil : le premier message peut être
+/// composé avant que le serveur n'ait jamais entendu parler du fil.
+model CoachConversation {
+  id        String    @id @db.Uuid
+  userId    String    @db.Uuid
+  /// Résumé court du fil, écrit par le coach au premier échange.
+  title     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  user     User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  messages CoachMessage[]
+
+  @@index([userId, updatedAt(sort: Desc)])
+}
+
+model CoachMessage {
+  id             String           @id @db.Uuid
+  conversationId String           @db.Uuid
+  role           CoachMessageRole
+  content        String
+  /// Jetons consommés par CE message (rôle ASSISTANT uniquement) —
+  /// observabilité du coût, jamais de la facturation.
+  inputTokens    Int?
+  outputTokens   Int?
+  createdAt      DateTime         @default(now())
+
+  conversation CoachConversation     @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  proposal     CoachSessionProposal?
+
+  @@index([conversationId, createdAt])
+}
+
+/// Séance proposée par le coach. Tant qu'elle n'est pas acceptée, ce n'est
+/// qu'un document : elle ne compte NI dans l'historique, NI dans les
+/// statistiques, NI dans les records.
+model CoachSessionProposal {
+  id                String   @id @db.Uuid
+  messageId         String   @unique @db.Uuid
+  name              String
+  /// Durée annoncée à l'utilisateur, en minutes.
+  estimatedMinutes  Int
+  /// Modèle dont la proposition est dérivée, s'il y en a un.
+  sourceTemplateId  String?  @db.Uuid
+  /// Séance réellement lancée depuis cette proposition. Posé par l'application
+  /// à l'acceptation ; sert à mesurer ce que le coach fait vraiment démarrer.
+  /// VOLONTAIREMENT sans clé étrangère : la séance naît sur l'appareil et peut
+  /// être encore dans la file d'envoi quand l'acceptation remonte.
+  acceptedSessionId String?  @db.Uuid
+  createdAt         DateTime @default(now())
+
+  message  CoachMessage               @relation(fields: [messageId], references: [id], onDelete: Cascade)
+  template WorkoutTemplate?           @relation(fields: [sourceTemplateId], references: [id], onDelete: SetNull)
+  items    CoachSessionProposalItem[]
+}
+
+/// Série proposée — MÊME FORME que `WorkoutSessionPlanItem`, volontairement :
+/// l'acceptation est alors une copie, pas une traduction.
+model CoachSessionProposalItem {
+  id         String @id @db.Uuid
+  proposalId String @db.Uuid
+
+  exercisePosition Int
+  /// Clé étrangère FERME, contrairement à l'historique où un exercice supprimé
+  /// ne doit jamais effacer une séance passée. Une proposition n'est pas de
+  /// l'historique : si l'exercice n'existe pas, elle n'a aucune raison
+  /// d'exister. C'est la base qui rend l'invention impossible, pas le code.
+  exerciseId       String         @db.Uuid
+  /// Dénormalisé comme partout ailleurs : la proposition reste lisible même
+  /// si le catalogue évolue entre la proposition et sa lecture.
+  exerciseName     String
+  setPosition      Int
+  kind             WorkoutSetKind @default(NORMAL)
+  targetReps       Int?
+  targetWeightKg   Decimal?       @db.Decimal(6, 2)
+  restSeconds      Int?
+
+  proposal CoachSessionProposal @relation(fields: [proposalId], references: [id], onDelete: Cascade)
+  exercise Exercise             @relation(fields: [exerciseId], references: [id])
+
+  @@unique([proposalId, exercisePosition, setPosition])
+  @@index([proposalId])
+  @@index([exerciseId])
 }

@@ -23,6 +23,7 @@
     "prisma:seed": "ts-node prisma/seed.ts"
   },
   "dependencies": {
+    "@anthropic-ai/sdk": "^0.116.0",
     "@carlys/api-contracts": "workspace:*",
     "@carlys/shared-config": "workspace:*",
     "@nestjs/common": "^11.0.1",

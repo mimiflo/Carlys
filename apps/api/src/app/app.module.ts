@@ -14,6 +14,7 @@ import { RedisModule } from '../infrastructure/cache/redis.module';
 import { AdminModule } from '../modules/admin/admin.module';
 import { AuditModule } from '../modules/audit/audit.module';
 import { AuthModule } from '../modules/auth/auth.module';
+import { CoachModule } from '../modules/coach/coach.module';
 import { ExercisesModule } from '../modules/exercises/exercises.module';
 import { HealthModule } from '../modules/health/health.module';
 import { MetricsModule } from '../modules/metrics/metrics.module';
@@ -86,6 +87,7 @@ function generateRequestId(request: IncomingMessage, response: ServerResponse): 
     ProgressModule,
     NutritionModule,
     SubscriptionsModule,
+    CoachModule,
     WebhooksModule,
     AdminModule,
   ],

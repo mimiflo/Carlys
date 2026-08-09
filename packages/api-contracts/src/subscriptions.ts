@@ -65,6 +65,7 @@ export const PREMIUM_ENTITLEMENT_KEYS: readonly EntitlementKey[] = [
   'premium_exercises',
   'cloud_backup',
   'priority_support',
+  'ai_coaching',
 ];
 
 export const entitlementSchema = z.object({

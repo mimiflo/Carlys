@@ -80,6 +80,22 @@ export const envSchema = z.object({
   STRIPE_WEBHOOK_SECRET: z.string().min(16).optional(),
   REVENUECAT_WEBHOOK_SECRET: z.string().min(16).optional(),
 
+  // ── Coach IA ────────────────────────────────────────────────────────────
+  /**
+   * Clé du fournisseur de modèle. **Optionnelle** : sans elle, le module se
+   * déclare indisponible (503) au lieu d'empêcher le démarrage — l'API doit
+   * tourner en développement sans qu'on ait à fournir une clé payante.
+   */
+  ANTHROPIC_API_KEY: z.string().min(20).optional(),
+  COACH_MODEL: z.string().min(1).default('claude-opus-5'),
+  /** Plafond par utilisateur et par jour. Le coût du coach est réel. */
+  COACH_DAILY_MESSAGE_LIMIT: z.coerce.number().int().min(1).max(500).default(30),
+  /** Interrupteur global : coupe la fonctionnalité sans déploiement. */
+  COACH_ENABLED: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((value) => value === 'true'),
+
   // ── E-mails (Mailpit en développement) ─────────────────────────────────
   SMTP_HOST: z.string().min(1).default('localhost'),
   SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(1025),

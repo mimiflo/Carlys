@@ -1,5 +1,6 @@
 export * from './admin';
 export * from './auth';
+export * from './coach';
 export * from './envelope';
 export * from './exercises';
 export * from './health';
