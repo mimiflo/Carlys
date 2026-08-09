@@ -14,7 +14,9 @@ import 'muscle_group_card.dart';
 class MuscleGroupGrid extends ConsumerWidget {
   const MuscleGroupGrid({super.key});
 
-  static const int columns = 2;
+  /// Trois par rangée : les douze groupes et l'entrée « tout voir » tiennent
+  /// alors presque d'un seul écran, sans que la vignette devienne un timbre.
+  static const int columns = 3;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -33,8 +35,8 @@ class MuscleGroupGrid extends ConsumerWidget {
       data: (data) => GridView.count(
         crossAxisCount: columns,
         childAspectRatio: MuscleGroupCard.aspectRatio,
-        mainAxisSpacing: AppSpacing.gapTile,
-        crossAxisSpacing: AppSpacing.gapTile,
+        mainAxisSpacing: AppSpacing.xs,
+        crossAxisSpacing: AppSpacing.xs,
         padding: EdgeInsets.fromLTRB(
           AppSpacing.gutter,
           0,

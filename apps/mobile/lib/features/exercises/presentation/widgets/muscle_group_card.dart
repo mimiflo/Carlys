@@ -23,10 +23,10 @@ class MuscleGroupCard extends StatelessWidget {
   final VoidCallback onTap;
 
   /// Proportion de la carte : l'image respire au-dessus du nom.
-  static const double aspectRatio = 0.86;
+  static const double aspectRatio = 0.80;
 
   /// Hauteur réservée au nom, deux lignes comprises.
-  static const double _labelHeight = 38;
+  static const double _labelHeight = 28;
 
   /// Groupes dont le détourage est embarqué. Ce n'est pas un référentiel —
   /// c'est l'inventaire de `assets/muscles/`, qui ne peut pas se deviner à
@@ -110,10 +110,10 @@ class MuscleGroupCard extends StatelessWidget {
                 ),
                 Padding(
                   padding: const EdgeInsets.fromLTRB(
-                    AppSpacing.sm,
+                    AppSpacing.xxs,
                     0,
-                    AppSpacing.sm,
-                    AppSpacing.sm,
+                    AppSpacing.xxs,
+                    AppSpacing.xs,
                   ),
                   // Deux lignes réservées quel qu'en soit le besoin : sinon
                   // « Ischio-jambiers » descendrait son image d'un cran et la
@@ -126,9 +126,13 @@ class MuscleGroupCard extends StatelessWidget {
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
                         textAlign: TextAlign.center,
-                        style: AppTypography.subheading.copyWith(
+                        // Trois colonnes : le nom passe au corps « label »,
+                        // sinon « Ischio-jambiers » se tronque à la première
+                        // ligne.
+                        style: AppTypography.label.copyWith(
                           color: AppColors.darkTextPrimary,
-                          height: 1.15,
+                          fontWeight: FontWeight.w600,
+                          height: 1.1,
                         ),
                       ),
                     ),

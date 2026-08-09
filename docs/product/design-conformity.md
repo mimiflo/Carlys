@@ -157,6 +157,13 @@ La maquette posait une rangée de pastilles de texte qui défilait. Douze groupe
 n'y tenaient pas : trois se voyaient, les neuf autres se devinaient. La grille
 les montre tous, avec pour chacun le muscle sollicité en image.
 
+**Trois colonnes**, et non deux : à deux, six cartes seulement tenaient dans
+l'écran et il fallait défiler pour découvrir la moitié du catalogue — la grille
+reproduisait le défaut qu'elle corrigeait. À trois, douze des treize entrées se
+voient d'un seul coup d'œil, et la vignette reste au-dessus du timbre-poste.
+Le nom passe alors au corps « label » : en « subheading »,
+« Ischio-jambiers » se tronquait.
+
 Trois règles tiennent l'écran :
 
 - **la recherche court-circuite les deux étages** — chercher un nom ne suppose
