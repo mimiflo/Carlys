@@ -7,6 +7,7 @@ import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
 import 'package:carlys_mobile/features/exercises/data/repositories/exercises_repository_impl.dart';
 import 'package:carlys_mobile/features/exercises/domain/entities/exercise.dart';
+import 'package:carlys_mobile/features/exercises/presentation/widgets/muscle_group_card.dart';
 import 'package:carlys_mobile/features/profile/presentation/widgets/profile_plan_card.dart';
 import 'package:carlys_mobile/features/subscription/data/repositories/subscription_repository_impl.dart';
 import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';
@@ -156,6 +157,14 @@ void main() {
       ),
     );
     await tester.pumpAndSettle();
+    await tester.pumpAndSettle();
+
+    // La bibliothèque s'ouvre sur la grille des groupes : on passe par
+    // « Tous les mouvements » pour atteindre le catalogue. On vise la CARTE,
+    // pas son libellé, qui passe sous la barre d'onglets en petite surface.
+    await tester.tap(
+      find.widgetWithText(MuscleGroupCard, 'Tous les mouvements'),
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.text('Balancier kettlebell'));
     await tester.pumpAndSettle();

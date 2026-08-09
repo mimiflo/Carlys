@@ -66,6 +66,11 @@ flutter:
     # Images de MARQUE (sceau détouré, photographie) : servies par la page de
     # bienvenue, la première que voit un nouvel arrivant.
     - assets/brand/
+    # Vignettes des groupes musculaires (bibliothèque d'exercices). Embarquées
+    # et non servies : elles sont douze, fixes, et doivent s'afficher hors
+    # ligne. Les images PAR EXERCICE, elles, viendront du serveur — il y en
+    # aura des centaines et elles seront modifiables depuis l'admin.
+    - assets/muscles/
 
   # Polices de la refonte (licences OFL dans assets/fonts/) :
   # Inter pour le texte, JetBrains Mono pour TOUS les chiffres (tabulaires).

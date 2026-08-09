@@ -147,6 +147,43 @@ Deux corrections sont venues de la mesure, pas de l'œil :
   bouton de bienvenue, qui finissait donc en rose. D'où les arrêts explicites
   `[0, .45, .9]`, qui donnent à l'orange un dixième de course en aplat.
 
+## La bibliothèque a deux étages
+
+Écart **voulu**, hors maquette : la bibliothèque s'ouvre sur une **grille des
+groupes musculaires**, et la liste des mouvements ne s'affiche qu'une fois le
+groupe choisi.
+
+La maquette posait une rangée de pastilles de texte qui défilait. Douze groupes
+n'y tenaient pas : trois se voyaient, les neuf autres se devinaient. La grille
+les montre tous, avec pour chacun le muscle sollicité en image.
+
+Trois règles tiennent l'écran :
+
+- **la recherche court-circuite les deux étages** — chercher un nom ne suppose
+  pas de savoir quel muscle il travaille, et aucune barre de retour n'apparaît
+  alors : on n'est venu d'aucun groupe ;
+- **« Tous les mouvements » existe** — la grille ne doit pas enfermer
+  l'utilisateur dans un muscle pour voir un mouvement ;
+- **un étage sans retour serait un cul-de-sac** : la barre au-dessus de la
+  liste ramène aux groupes. `muscle_group_grid_test.dart` l'éprouve.
+
+### Les images des groupes
+
+Détourages anatomiques fournis par le produit (générés), embarqués dans
+`assets/muscles/` : douze fichiers WebP à canal alpha, 165 Ko en tout. Ils sont
+**embarqués et non servis** — ils sont douze, fixes, et doivent s'afficher hors
+ligne. Les images PAR EXERCICE suivront un autre chemin : elles seront des
+centaines et modifiables depuis l'admin, donc servies par le serveur.
+
+Le nom du groupe est écrit **par l'application**, jamais gravé dans l'image :
+il vient du référentiel de l'API, il se traduit, et il reste net à toutes les
+tailles. L'image ne porte que l'anatomie.
+
+**Manque aux images : `ischio-jambiers`.** La planche fournie couvre onze des
+douze groupes ; elle contient une vue de face des cuisses (quadriceps) mais
+aucune vue arrière. La carte s'affiche donc sans image, avec son nom — jamais
+avec celle d'un autre muscle : une anatomie fausse enseignerait une erreur.
+
 ## Règle sur les données
 
 La maquette est peuplée de données d'exemple. L'application n'affiche que des

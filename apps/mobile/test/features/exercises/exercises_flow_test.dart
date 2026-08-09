@@ -6,6 +6,7 @@ import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
 import 'package:carlys_mobile/features/exercises/data/repositories/exercises_repository_impl.dart';
 import 'package:carlys_mobile/features/exercises/presentation/widgets/exercise_card.dart';
+import 'package:carlys_mobile/features/exercises/presentation/widgets/muscle_group_card.dart';
 import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -70,6 +71,15 @@ void main() {
         of: find.byType(AppBottomBar),
         matching: find.text('Exercices'),
       ),
+    );
+    await tester.pumpAndSettle();
+
+    // La bibliothèque s'ouvre désormais sur la GRILLE des groupes musculaires :
+    // « Tous les mouvements » est la porte vers le catalogue entier. On vise
+    // la CARTE et non son libellé : sur la petite surface de test, le bas des
+    // cartes passe sous la barre d'onglets flottante.
+    await tester.tap(
+      find.widgetWithText(MuscleGroupCard, 'Tous les mouvements'),
     );
     await tester.pumpAndSettle();
 
@@ -139,6 +149,15 @@ void main() {
         of: find.byType(AppBottomBar),
         matching: find.text('Exercices'),
       ),
+    );
+    await tester.pumpAndSettle();
+
+    // La bibliothèque s'ouvre désormais sur la GRILLE des groupes musculaires :
+    // « Tous les mouvements » est la porte vers le catalogue entier. On vise
+    // la CARTE et non son libellé : sur la petite surface de test, le bas des
+    // cartes passe sous la barre d'onglets flottante.
+    await tester.tap(
+      find.widgetWithText(MuscleGroupCard, 'Tous les mouvements'),
     );
     await tester.pumpAndSettle();
 

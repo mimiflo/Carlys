@@ -24,6 +24,7 @@ import 'package:carlys_mobile/features/coaching/presentation/controllers/coach_c
 import 'package:carlys_mobile/features/exercises/data/repositories/exercises_repository_impl.dart';
 import 'package:carlys_mobile/features/exercises/domain/entities/exercise.dart';
 import 'package:carlys_mobile/features/exercises/presentation/widgets/exercise_card.dart';
+import 'package:carlys_mobile/features/exercises/presentation/widgets/muscle_group_card.dart';
 import 'package:carlys_mobile/features/nutrition/data/repositories/nutrition_repository_impl.dart';
 import 'package:carlys_mobile/features/nutrition/domain/entities/nutrition.dart';
 import 'package:carlys_mobile/features/onboarding/domain/first_run_step.dart';
@@ -267,6 +268,18 @@ void main() {
   /// lui, est du vrai travail asynchrone, et ne s'achève jamais tant qu'on
   /// n'ouvre pas une fenêtre de temps réel. Sans ça, les écrans à photographie
   /// se capturent vides — et la capture ment.
+  /// Les détourages des groupes musculaires : sans préchargement, le harnais
+  /// capture la grille avant que les images ne soient décodées.
+  Future<void> precacheMuscleImages(WidgetTester tester) async {
+    final context = tester.element(find.byType(MaterialApp));
+    for (final slug in <String?>[null, ...MuscleGroupCard.illustrated]) {
+      final asset = MuscleGroupCard.assetFor(slug);
+      if (asset == null) continue;
+      await tester.runAsync(() => precacheImage(AssetImage(asset), context));
+    }
+    await settle(tester);
+  }
+
   Future<void> precacheBrandImages(WidgetTester tester) async {
     final context = tester.element(find.byType(MaterialApp));
     for (final asset in const [
@@ -381,7 +394,14 @@ void main() {
   testWidgets('bibliothèque + fiche exercice', (tester) async {
     await pumpApp(tester);
     await goTab(tester, 'Exercices');
+    await precacheMuscleImages(tester);
+    // Premier étage : la grille des groupes musculaires.
     await capture(tester, '03-bibliotheque');
+
+    // Second étage : les mouvements du groupe choisi.
+    await tester.tap(find.text('Tous les mouvements'));
+    await settle(tester);
+    await capture(tester, '19-bibliotheque-mouvements');
 
     await tester.tap(find.widgetWithText(ExerciseCard, 'Squat'));
     await settle(tester);
@@ -477,6 +497,11 @@ void main() {
     final gated = _PremiumGated([summary('id-1', 'Balancier kettlebell')]);
     await pumpApp(tester, exercises: gated);
     await goTab(tester, 'Exercices');
+    // La bibliothèque s'ouvre sur la grille des groupes musculaires.
+    await tester.tap(
+      find.widgetWithText(MuscleGroupCard, 'Tous les mouvements'),
+    );
+    await settle(tester);
     await tester.tap(find.text('Balancier kettlebell'));
     await settle(tester);
     await capture(tester, '09-exercice-premium');

@@ -112,11 +112,28 @@ class FakeExercisesRepository implements ExercisesRepository {
     return detailOf(found);
   }
 
+  /// Le référentiel COMPLET du seed (`apps/api/prisma/seed.ts`), dans le même
+  /// ordre : la bibliothèque s'ouvre sur ces douze groupes, et un jeu tronqué
+  /// donnerait une grille qui ne ressemble à rien de réel.
   @override
   Future<List<MuscleGroupRef>> muscleGroups() async {
     return const [
+      MuscleGroupRef(id: 'mg-pec', slug: 'pectoraux', name: 'Pectoraux'),
       MuscleGroupRef(id: 'mg-dos', slug: 'dos', name: 'Dos'),
-      MuscleGroupRef(id: 'mg-pectoraux', slug: 'pectoraux', name: 'Pectoraux'),
+      MuscleGroupRef(id: 'mg-epa', slug: 'epaules', name: 'Épaules'),
+      MuscleGroupRef(id: 'mg-bic', slug: 'biceps', name: 'Biceps'),
+      MuscleGroupRef(id: 'mg-tri', slug: 'triceps', name: 'Triceps'),
+      MuscleGroupRef(id: 'mg-avb', slug: 'avant-bras', name: 'Avant-bras'),
+      MuscleGroupRef(id: 'mg-abd', slug: 'abdominaux', name: 'Abdominaux'),
+      MuscleGroupRef(id: 'mg-lom', slug: 'lombaires', name: 'Lombaires'),
+      MuscleGroupRef(id: 'mg-fes', slug: 'fessiers', name: 'Fessiers'),
+      MuscleGroupRef(id: 'mg-qua', slug: 'quadriceps', name: 'Quadriceps'),
+      MuscleGroupRef(
+        id: 'mg-isc',
+        slug: 'ischio-jambiers',
+        name: 'Ischio-jambiers',
+      ),
+      MuscleGroupRef(id: 'mg-mol', slug: 'mollets', name: 'Mollets'),
     ];
   }
 }

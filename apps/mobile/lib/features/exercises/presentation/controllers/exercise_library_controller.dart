@@ -135,6 +135,14 @@ final exerciseLibraryControllerProvider = AsyncNotifierProvider.autoDispose<
   ExerciseLibraryController.new,
 );
 
+/// L'utilisateur a demandé le catalogue ENTIER depuis la grille.
+///
+/// État de navigation, pas de filtre : « aucun groupe » veut dire deux choses
+/// opposées — on n'a pas encore choisi (grille), ou on a choisi de tout voir
+/// (liste). Le domaine n'a pas à porter cette nuance, l'écran si.
+final exerciseCatalogueOpenProvider =
+    StateProvider.autoDispose<bool>((ref) => false);
+
 /// Référentiel des groupes musculaires (pour les filtres).
 final muscleGroupsProvider =
     FutureProvider.autoDispose<List<MuscleGroupRef>>((ref) {
