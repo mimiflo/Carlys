@@ -18,24 +18,37 @@ class CoachSuggestions extends StatelessWidget {
   final List<String> suggestions;
   final ValueChanged<String> onSelected;
 
+  /// Hauteur de la bande. Fixe : une liste horizontale n'a pas de hauteur
+  /// intrinsèque, et la barre ne doit pas changer de taille d'un état à l'autre.
+  static const double _height = 34;
+
   @override
   Widget build(BuildContext context) {
     if (suggestions.isEmpty) {
       return const SizedBox.shrink();
     }
 
-    return Wrap(
-      alignment: WrapAlignment.end,
-      spacing: AppSpacing.xs,
-      runSpacing: AppSpacing.xs,
-      children: [
-        for (final suggestion in suggestions)
-          AppPill(
-            label: suggestion,
-            tone: AppPillTone.primary,
-            onTap: () => onSelected(suggestion),
-          ),
-      ],
+    // Une ligne qui part de la GAUCHE et défile, plutôt qu'un pavé qui se
+    // replie : les puces se lisent dans l'ordre où on les a écrites, et une
+    // suggestion de plus allonge la bande au lieu de pousser la conversation
+    // vers le haut.
+    return SizedBox(
+      height: _height,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        itemCount: suggestions.length,
+        separatorBuilder: (_, __) => const SizedBox(width: AppSpacing.xs),
+        itemBuilder: (context, index) {
+          final suggestion = suggestions[index];
+          return Align(
+            child: AppPill(
+              label: suggestion,
+              tone: AppPillTone.primary,
+              onTap: () => onSelected(suggestion),
+            ),
+          );
+        },
+      ),
     );
   }
 }

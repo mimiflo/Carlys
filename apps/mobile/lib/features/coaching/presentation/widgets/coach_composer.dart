@@ -40,14 +40,15 @@ class CoachComposer extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(
               horizontal: AppSpacing.md,
-              vertical: AppSpacing.xs,
+              vertical: AppSpacing.sm,
             ),
+            // Ni liseré, ni angle : sur fond sombre, un contour dessine une
+            // boîte autour du champ au lieu de le poser dessus. La surface
+            // seule suffit à dire où l'on écrit, et la forme stadium
+            // s'accorde au bouton d'envoi qui la jouxte.
             decoration: const BoxDecoration(
               color: AppColors.darkSurface,
-              borderRadius: AppRadius.xlAll,
-              border: Border.fromBorderSide(
-                BorderSide(color: AppColors.darkBorderStrong),
-              ),
+              borderRadius: AppRadius.fullAll,
             ),
             child: TextField(
               controller: controller,
@@ -125,12 +126,11 @@ class _OfflineNotice extends StatelessWidget {
         horizontal: AppSpacing.md,
         vertical: AppSpacing.sm,
       ),
+      // Même traitement que le champ de saisie qu'il remplace : la barre garde
+      // sa place et sa forme, seul son contenu change.
       decoration: const BoxDecoration(
         color: AppColors.darkSurface,
-        borderRadius: AppRadius.xlAll,
-        border: Border.fromBorderSide(
-          BorderSide(color: AppColors.darkBorder),
-        ),
+        borderRadius: AppRadius.fullAll,
       ),
       child: Row(
         children: [
