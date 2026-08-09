@@ -272,6 +272,49 @@ model Equipment {
   exerciseLinks ExerciseEquipment[]
 }
 
+/// Nature d'un média. La photo d'exercice et le maillage 3D suivent le MÊME
+/// chemin — dépôt depuis l'admin, stockage objet, URL servie à l'application —
+/// et ne se distinguent que par ce champ.
+enum MediaKind {
+  IMAGE
+  MESH_3D
+  VIDEO
+}
+
+/// Fichier déposé depuis l'administration et servi par le stockage objet.
+///
+/// Aucun média n'entre dans l'application par un autre chemin : ni asset
+/// embarqué, ni URL écrite à la main. C'est ce qui permet d'ajouter une photo
+/// ou un maillage sans publier une nouvelle version de l'app.
+model MediaAsset {
+  /// Fourni par l'administration : un dépôt rejoué ne crée pas de doublon.
+  id           String    @id @db.Uuid
+  kind         MediaKind
+  /// Clé dans le bucket. Unique : deux médias ne partagent jamais un objet.
+  storageKey   String    @unique
+  mimeType     String
+  byteSize     Int
+  /// Images et vidéos seulement — un maillage n'a pas de dimensions en pixels.
+  width        Int?
+  height       Int?
+  /// SHA-256 du contenu : reconnaître un fichier déjà déposé.
+  checksum     String
+  originalName String
+  /// Administrateur ayant déposé le fichier. Conservé même s'il part.
+  uploadedById String?   @db.Uuid
+  createdAt    DateTime  @default(now())
+  updatedAt    DateTime  @updatedAt
+  /// Suppression logique : l'objet reste en stockage tant qu'il est référencé.
+  deletedAt    DateTime?
+
+  uploadedBy     AdminUser? @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+  exerciseImages Exercise[] @relation("ExerciseImage")
+  exerciseMeshes Exercise[] @relation("ExerciseMesh")
+
+  @@index([kind, createdAt])
+  @@index([checksum])
+}
+
 model Exercise {
   id           String             @id @default(uuid()) @db.Uuid
   slug         String             @unique
@@ -286,9 +329,17 @@ model Exercise {
   /// Un exercice non publié n'apparaît jamais dans le catalogue.
   isPublished  Boolean            @default(true)
   tags         String[]
+  /// Photographie du mouvement, déposée depuis l'administration.
+  imageId      String?            @db.Uuid
+  /// Maillage 3D du mouvement (à venir) — même pipeline que la photo.
+  meshId       String?            @db.Uuid
   createdAt    DateTime           @default(now())
   updatedAt    DateTime           @updatedAt
 
+  /// `SetNull` et non `Cascade` : supprimer un média ne supprime jamais un
+  /// exercice — il le laisse simplement sans photo.
+  image              MediaAsset?                @relation("ExerciseImage", fields: [imageId], references: [id], onDelete: SetNull)
+  mesh               MediaAsset?                @relation("ExerciseMesh", fields: [meshId], references: [id], onDelete: SetNull)
   muscles            ExerciseMuscle[]
   equipment          ExerciseEquipment[]
   workoutSets        WorkoutSet[]
@@ -697,8 +748,10 @@ model AdminUser {
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
 
-  roles     AdminUserRole[]
-  auditLogs AuditLog[]
+  roles       AdminUserRole[]
+  auditLogs   AuditLog[]
+  /// Médias déposés par cet administrateur.
+  mediaAssets MediaAsset[]
 }
 
 /// Rôle nommé (ex. superadmin, support, content-manager).

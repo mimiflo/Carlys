@@ -140,6 +140,40 @@ export class AppConfigService {
     return this.config.get('COACH_ENABLED', { infer: true });
   }
 
+  // ── Stockage objet ─────────────────────────────────────────────────────
+
+  get s3Endpoint(): string {
+    return this.config.get('S3_ENDPOINT', { infer: true });
+  }
+
+  get s3Region(): string {
+    return this.config.get('S3_REGION', { infer: true });
+  }
+
+  get s3Bucket(): string {
+    return this.config.get('S3_BUCKET', { infer: true });
+  }
+
+  get s3AccessKeyId(): string {
+    return this.config.get('S3_ACCESS_KEY_ID', { infer: true });
+  }
+
+  get s3SecretAccessKey(): string {
+    return this.config.get('S3_SECRET_ACCESS_KEY', { infer: true });
+  }
+
+  get s3PublicBaseUrl(): string {
+    return this.config.get('S3_PUBLIC_BASE_URL', { infer: true });
+  }
+
+  get s3ForcePathStyle(): boolean {
+    return this.config.get('S3_FORCE_PATH_STYLE', { infer: true });
+  }
+
+  get mediaMaxUploadBytes(): number {
+    return this.config.get('MEDIA_MAX_UPLOAD_BYTES', { infer: true });
+  }
+
   // ── E-mails ────────────────────────────────────────────────────────────
 
   get smtpHost(): string {

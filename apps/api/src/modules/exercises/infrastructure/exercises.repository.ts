@@ -8,6 +8,7 @@ import {
   ExerciseMuscleRole,
   type ExerciseType,
   type MuscleGroup,
+  type MediaAsset,
   type Prisma,
 } from '@prisma/client';
 import { PrismaService } from '../../../database/prisma/prisma.service';
@@ -15,6 +16,8 @@ import { PrismaService } from '../../../database/prisma/prisma.service';
 export type ExerciseWithRelations = Exercise & {
   muscles: (ExerciseMuscle & { muscleGroup: MuscleGroup })[];
   equipment: (ExerciseEquipment & { equipment: Equipment })[];
+  image: MediaAsset | null;
+  mesh: MediaAsset | null;
 };
 
 export interface ListExercisesFilters {
@@ -30,6 +33,9 @@ const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{
 const RELATIONS = {
   muscles: { include: { muscleGroup: true }, orderBy: { role: 'asc' as const } },
   equipment: { include: { equipment: true } },
+  // Médias déposés depuis l'administration. Rien n'est embarqué dans l'app.
+  image: true,
+  mesh: true,
 };
 
 /** Accès Prisma du catalogue — uniquement des exercices publiés. */

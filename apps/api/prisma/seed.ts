@@ -764,9 +764,11 @@ const ADMIN_ROLES: { slug: string; name: string; permissions: readonly string[] 
   { slug: 'superadmin', name: 'Super-administrateur', permissions: ADMIN_PERMISSIONS },
   { slug: 'support', name: 'Support', permissions: ['user:read', 'audit:read'] },
   {
+    // Le contenu, c'est aussi les médias : sans `media:write`, ce rôle ne
+    // pourrait pas déposer la photo d'un exercice qu'il a le droit de publier.
     slug: 'content-manager',
     name: 'Gestion du contenu',
-    permissions: ['exercise:publish'],
+    permissions: ['exercise:publish', 'exercise:write', 'media:read', 'media:write'],
   },
 ];
 

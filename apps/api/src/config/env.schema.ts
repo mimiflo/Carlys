@@ -96,6 +96,28 @@ export const envSchema = z.object({
     .default('true')
     .transform((value) => value === 'true'),
 
+  // ── Stockage objet (MinIO en développement, S3 compatible en production) ─
+  //
+  // Tout média servi par l'application vit ici : photo d'exercice, maillage 3D
+  // à venir. Rien n'est embarqué dans l'app, rien n'est écrit en dur.
+  S3_ENDPOINT: z.string().url().default('http://localhost:9000'),
+  S3_REGION: z.string().min(1).default('us-east-1'),
+  S3_BUCKET: z.string().min(1).default('carlys-media'),
+  S3_ACCESS_KEY_ID: z.string().min(1).default('carlys-dev'),
+  S3_SECRET_ACCESS_KEY: z.string().min(1).default('carlys-dev-secret'),
+  /**
+   * Base publique des URL de médias. MinIO et la plupart des stockages
+   * compatibles n'acceptent pas les sous-domaines de bucket en local : le
+   * chemin est donc la valeur par défaut.
+   */
+  S3_PUBLIC_BASE_URL: z.string().url().default('http://localhost:9000/carlys-media'),
+  S3_FORCE_PATH_STYLE: z
+    .enum(['true', 'false'])
+    .default('true')
+    .transform((value) => value === 'true'),
+  /** Plafond par fichier. Un maillage 3D pèse plus lourd qu'une photo. */
+  MEDIA_MAX_UPLOAD_BYTES: z.coerce.number().int().min(1).default(20_971_520),
+
   // ── E-mails (Mailpit en développement) ─────────────────────────────────
   SMTP_HOST: z.string().min(1).default('localhost'),
   SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(1025),

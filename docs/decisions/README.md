@@ -48,6 +48,7 @@ vers l'ADR qui la remplace).
 | [0006](0006-use-entitlements.md) | Entitlements côté serveur pour les abonnements | Acceptée — 2026-08 |
 | [0007](0007-use-riverpod.md) | Riverpod pour l'état et l'injection de dépendances Flutter | Acceptée — 2026-08 |
 | [0008](0008-use-drift.md) | Drift (SQLite) pour la persistance locale mobile | Acceptée — 2026-08 |
+| [0009](0009-use-object-storage-for-media.md) | Stockage objet pour les médias, administrés depuis le back-office | Acceptée — 2026-08 |
 
 ## Ajouter un ADR
 

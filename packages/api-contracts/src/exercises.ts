@@ -41,6 +41,12 @@ export const exerciseSummarySchema = z.object({
   isPremium: z.boolean(),
   primaryMuscleGroup: muscleGroupSchema.nullable(),
   equipment: z.array(equipmentSchema),
+  /**
+   * Photographie du mouvement, servie par le stockage objet. `null` tant
+   * qu'aucune n'a été déposée depuis l'administration — l'application affiche
+   * alors son repli, jamais l'image d'un autre mouvement.
+   */
+  imageUrl: z.string().nullable(),
 });
 export type ExerciseSummary = z.infer<typeof exerciseSummarySchema>;
 
@@ -50,5 +56,7 @@ export const exerciseDetailSchema = exerciseSummarySchema.extend({
   instructions: z.array(z.string()),
   tags: z.array(z.string()),
   muscles: z.array(exerciseMuscleSchema),
+  /** Maillage 3D du mouvement, quand il existe. Même pipeline que la photo. */
+  meshUrl: z.string().nullable(),
 });
 export type ExerciseDetail = z.infer<typeof exerciseDetailSchema>;

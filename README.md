@@ -151,7 +151,7 @@ Toutes les valeurs des `.env.example` sont **factices** et adaptées au dévelop
 | `MINIO_ROOT_USER` | Identifiant MinIO | `carlys-dev` |
 | `MINIO_ROOT_PASSWORD` | Secret MinIO | `carlys-dev-secret` |
 | `S3_ENDPOINT` | Endpoint S3 local | `http://localhost:9000` |
-| `S3_BUCKET_MEDIA` | Bucket des médias (créé par `minio-init`) | `carlys-media` |
+| `S3_BUCKET` | Bucket des médias (créé et ouvert en lecture par `minio-init`) | `carlys-media` |
 | `SMTP_HOST` / `SMTP_PORT` | SMTP de dev (Mailpit, UI sur `http://localhost:8025`) | `localhost` / `1025` |
 
 ### `apps/api/.env`
@@ -177,6 +177,11 @@ Toutes les valeurs des `.env.example` sont **factices** et adaptées au dévelop
 | `EMAIL_VERIFICATION_TTL_HOURS` / `PASSWORD_RESET_TTL_MINUTES` | Durée des jetons envoyés par e-mail | `24` / `60` |
 | `SMTP_HOST` / `SMTP_PORT` / `EMAIL_FROM` | SMTP (Mailpit en local) | `localhost` / `1025` / `Carlys <no-reply@carlys.local>` |
 | `PUBLIC_APP_URL` | Base des liens contenus dans les e-mails | `http://localhost:3000` |
+| `S3_ENDPOINT` / `S3_REGION` / `S3_BUCKET` | Stockage objet des médias (MinIO en local, S3 ou compatible en production) | `http://localhost:9000` / `us-east-1` / `carlys-media` |
+| `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` | Identifiants du stockage objet | `carlys-dev` / `carlys-dev-secret` |
+| `S3_PUBLIC_BASE_URL` | Base des URLs **servies aux applications** — doit être joignable depuis le téléphone, pas seulement depuis l'API | `http://localhost:9000/carlys-media` |
+| `S3_FORCE_PATH_STYLE` | `true` pour MinIO (pas de sous-domaine de bucket) | `true` |
+| `MEDIA_MAX_UPLOAD_BYTES` | Plafond d'un dépôt de média | `20971520` |
 
 La validation Zod (`src/config/env.schema.ts`) fait échouer le démarrage si une variable requise manque ou est invalide.
 
@@ -293,7 +298,7 @@ docker compose down                  # arrêt (ajouter -v pour purger les volume
 | `redis` | `redis:7-alpine` | 6379 | Cache, rate limiting |
 | `mailpit` | `axllent/mailpit` | 1025 (SMTP), 8025 (UI) | Réception des e-mails de dev |
 | `minio` | `minio/minio` | 9000 (S3), 9001 (console) | Stockage compatible S3 |
-| `minio-init` | `minio/mc` | — | Crée le bucket `carlys-media` au premier démarrage |
+| `minio-init` | `minio/mc` | — | Crée le bucket `carlys-media` au premier démarrage et l'ouvre en lecture anonyme (les applications chargent les photos directement) |
 | `api` (profil `app`) | build `apps/api/Dockerfile` | 3000 | API conteneurisée |
 | `admin` (profil `app`) | build `apps/admin/Dockerfile` | 3001 | Admin conteneurisé (output standalone) |
 

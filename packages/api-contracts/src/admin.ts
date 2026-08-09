@@ -12,6 +12,9 @@ export const ADMIN_PERMISSIONS = [
   'user:update',
   'entitlement:grant',
   'exercise:publish',
+  'exercise:write',
+  'media:read',
+  'media:write',
   'audit:read',
 ] as const;
 

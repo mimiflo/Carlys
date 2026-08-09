@@ -1,5 +1,6 @@
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { ExerciseDifficulty, ExerciseMuscleRole, ExerciseType } from '@prisma/client';
+import { type AppConfigService } from '../../../config/app-config.service';
 import { type CacheService } from '../../../infrastructure/cache/cache.service';
 import { type EntitlementsService } from '../../subscriptions/application/entitlements.service';
 import {
@@ -22,6 +23,10 @@ function exerciseRow(id: string, name: string): ExerciseWithRelations {
     isPremium: false,
     isPublished: true,
     tags: ['test'],
+    imageId: null,
+    meshId: null,
+    image: null,
+    mesh: null,
     createdAt: new Date(),
     updatedAt: new Date(),
     muscles: [
@@ -78,6 +83,9 @@ function buildService(stubs: Stubs): ExercisesService {
     stubs.repository as unknown as ExercisesRepository,
     stubs.cache as unknown as CacheService,
     stubs.entitlements as unknown as EntitlementsService,
+    // Base publique des médias : le présentateur ne fabrique une URL que
+    // lorsqu'un média est rattaché, et aucun ne l'est ici.
+    { s3PublicBaseUrl: 'http://storage.test/carlys-media' } as AppConfigService,
   );
 }
 

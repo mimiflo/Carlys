@@ -253,19 +253,49 @@ schéma** au moment où le code qui les consomme arrive — jamais avant.
   de déploiement distincte, avant la bascule du trafic — jamais au démarrage
   du conteneur.
 
-## Stockage des médias : interface `StorageProvider` (cible)
+## Stockage des médias (livré)
 
-Le module `media` (cible) ne manipulera jamais un SDK de stockage
-directement : il dépendra d'une interface `StorageProvider` (port du
-domaine), avec une implémentation par environnement :
+**Tout média du catalogue entre par l'administration et sort du stockage
+objet** — photo d'exercice, maillage 3D, vidéo. Rien n'est embarqué dans
+l'application ni écrit en dur : ajouter une illustration ne demande donc
+aucune livraison. Décision et alternatives écartées :
+[ADR 0009](../decisions/0009-use-object-storage-for-media.md).
 
-| Implémentation | Usage |
+| Brique | Rôle |
 | --- | --- |
-| `LocalStorageProvider` | tests / dépannage local (système de fichiers) |
-| `S3StorageProvider` | MinIO en développement (bucket `carlys-media` créé par `minio-init` dans `docker-compose.yml`), S3 managé en staging/production |
-| `CloudflareR2StorageProvider` | alternative production (API compatible S3) |
+| `infrastructure/storage/storage.service.ts` | **Seul endroit qui connaît S3** (`@aws-sdk/client-s3`). MinIO en développement et en CI, S3 ou compatible (R2…) en production : même protocole, même code. |
+| `modules/media/` | Dépôt, bibliothèque, cycle de vie, rattachement aux exercices. |
+| `MediaAsset` (Prisma) | Une ligne par objet : clé de stockage unique, type MIME, taille, dimensions, empreinte SHA-256, suppression logique. |
+| `Exercise.imageId` / `Exercise.meshId` | Références en `ON DELETE SET NULL` — supprimer un média ne supprime jamais un exercice. |
 
-Contrat envisagé : URLs présignées pour l'upload direct depuis les clients
-(l'API ne relaie pas les octets), génération d'URL de lecture, suppression.
-L'implémentation est choisie par la configuration validée au démarrage, comme
-tout le reste.
+Les règles que le code applique, et leurs raisons :
+
+- **La clé de stockage est `<genre>/<id>.<extension>`**, dérivée de
+  l'identifiant du média et du type MIME — **jamais** du nom déposé. Deux
+  fichiers `photo.jpg` ne peuvent donc pas se recouvrir, et un nom fourni par
+  un tiers ne décide jamais d'un chemin.
+- **L'objet part au stockage AVANT la ligne en base.** Une ligne sans objet
+  servirait une URL morte à toutes les applications ; un objet sans ligne n'est
+  qu'un fichier orphelin, invisible et rattrapable.
+- **Le dépôt est rejouable** : l'identifiant vient de l'administration, donc un
+  envoi relancé après une coupure ne crée ni second objet ni seconde ligne.
+- **La suppression est logique et refusée tant qu'un exercice référence le
+  média** : une photo ne disparaît pas des applications déjà installées par
+  accident.
+- **Le rattachement invalide le cache Redis du catalogue**, sinon une nouvelle
+  photo attendrait une heure avant d'apparaître.
+- **La lecture ne passe pas par l'API** : le bucket est lisible en anonyme
+  (`mc anonymous set download`), l'application charge l'URL telle quelle.
+  L'API n'expose donc jamais la clé de stockage, seulement `imageUrl` /
+  `meshUrl`.
+- **Un stockage injoignable ne rend pas l'API « non prête »** : seuls les dépôts
+  d'administration en dépendent. `StorageService` vérifie le bucket au
+  démarrage et se contente d'un avertissement.
+
+Écart assumé par rapport à la cible initiale (URL présignées, upload direct
+depuis le client) : les octets transitent par l'API. Les fichiers sont déposés
+par une poignée d'administrateurs, pas par les utilisateurs ; faire transiter
+quelques centaines de fichiers par an ne justifie pas un second chemin
+d'authentification côté stockage. Le garde-fou reste explicite —
+`MEDIA_MAX_UPLOAD_BYTES` (plafond métier, configurable) et un plafond de
+transport coupé pendant la réception.

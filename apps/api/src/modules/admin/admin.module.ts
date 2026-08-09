@@ -28,5 +28,8 @@ import { AdminPermissionsGuard } from './presentation/guards/admin-permissions.g
     AdminAuthGuard,
     AdminPermissionsGuard,
   ],
+  // Les gardes servent aussi au module média : déposer un fichier est une
+  // action d'administration, soumise au même RBAC.
+  exports: [AdminAuthGuard, AdminPermissionsGuard],
 })
 export class AdminModule {}

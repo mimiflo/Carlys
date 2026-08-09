@@ -192,7 +192,8 @@ docs) et sera documentée précisément ici à sa livraison.
 | Nutrition | **Livré** — `GET /api/v1/nutrition/metabolism` : rapport métabolique calculé **côté serveur** (BMR Mifflin-St Jeor, TDEE par niveau d'activité, objectif calorique selon le but, macros protéines/lipides/glucides, IMC + catégorie OMS, hydratation) ; le poids provient de la **dernière mesure corporelle**, le profil (sexe, naissance, taille, activité, objectif) se complète via `PATCH /users/me` ; profil incomplet → `metabolism: null` + liste `missing` | Post-Étape 7 ✅ |
 | Abonnements | **Livré** — `GET /api/v1/subscriptions/me` (plan effectif + abonnement projeté), `GET /api/v1/entitlements` (droits évalués **côté serveur**, expiration réévaluée à chaque lecture) ; le catalogue applique `premium_exercises` (fiche premium → 403 sans droit) | Étape 6 ✅ |
 | Webhooks paiement | **Livré** — `POST /api/v1/webhooks/stripe` (signature `Stripe-Signature` HMAC-SHA256 sur corps brut, tolérance anti-rejeu 5 min), `POST /api/v1/webhooks/revenuecat` (`Authorization: Bearer`) — **idempotents** (journal `SubscriptionEvent`, unicité `(provider, externalEventId)`), 503 tant que le secret n'est pas configuré, échec de traitement journalisé et retraitable | Étape 6 ✅ |
-| Administration | **Livré** — `POST /api/v1/admin/auth/login` (comptes séparés, jeton à audience dédiée 12 h), `GET /admin/auth/me`, `GET /admin/overview`, `GET /admin/users` (recherche + curseur), `GET /admin/users/:id`, `PATCH /admin/users/:id/status` (suspension = sessions révoquées), `PUT /admin/users/:id/entitlements` (attribution manuelle auditée), `GET /admin/audit-logs`, `PATCH /admin/exercises/:id/publication` — RBAC par permission (`user:read`, `user:update`, `entitlement:grant`, `exercise:publish`, `audit:read`) | Étape 7 ✅ |
+| Administration | **Livré** — `POST /api/v1/admin/auth/login` (comptes séparés, jeton à audience dédiée 12 h), `GET /admin/auth/me`, `GET /admin/overview`, `GET /admin/users` (recherche + curseur), `GET /admin/users/:id`, `PATCH /admin/users/:id/status` (suspension = sessions révoquées), `PUT /admin/users/:id/entitlements` (attribution manuelle auditée), `GET /admin/audit-logs`, `PATCH /admin/exercises/:id/publication` — RBAC par permission (`user:read`, `user:update`, `entitlement:grant`, `exercise:publish`, `exercise:write`, `media:read`, `media:write`, `audit:read`) | Étape 7 ✅ |
+| Médias | **Livré** — `POST /api/v1/admin/media` (dépôt multipart rejouable), `GET /admin/media`, `DELETE /admin/media/:id`, `PUT /admin/exercises/:id/image`, `PUT /admin/exercises/:id/mesh` — voir le tableau détaillé ci-dessous | Post-Étape 7 ✅ |
 
 Les chemins exacts, les DTO et les réponses seront fixés à l'implémentation ;
 le tableau engage le périmètre, pas la signature finale.
@@ -273,6 +274,47 @@ Journalisation : un log Pino `info` par écriture (`workout_template.saved`,
 `plannedSetsCount`, corrélé au `requestId` — **jamais** le contenu des notes.
 Pas d'entrée `AuditLog` : ce journal est réservé aux événements de sécurité et
 aux actions d'administration.
+
+### Endpoints livrés — médias (administration)
+
+**Tout fichier servi par l'application entre par ici.** Photo d'exercice
+aujourd'hui, maillage 3D demain : même dépôt, même stockage objet, même URL.
+Rien n'est embarqué dans l'application, donc ajouter une illustration ne
+demande aucune livraison. Décision et alternatives écartées :
+[ADR 0009](../decisions/0009-use-object-storage-for-media.md).
+
+Toutes ces routes exigent un **jeton d'administration** (audience dédiée) et la
+permission indiquée.
+
+| Endpoint | Permission | Statuts | Notes |
+| --- | --- | --- | --- |
+| `POST /api/v1/admin/media` | `media:write` | 201, 400, 403, 413, 415 | `multipart/form-data` : `id` (**UUID fourni par l'admin**), `kind` (`IMAGE`/`MESH_3D`/`VIDEO`), `file`. **Rejouable** : le même `id` renvoie le média existant sans second dépôt |
+| `GET /api/v1/admin/media` | `media:read` | 200, 403 | Bibliothèque, du plus récent au plus ancien, filtrable par `kind` |
+| `DELETE /api/v1/admin/media/:id` | `media:write` | 204, 400, 403, 404 | Suppression **logique** ; **400 tant qu'un exercice référence le média** |
+| `PUT /api/v1/admin/exercises/:id/image` | `exercise:write` | 204, 400, 403, 404 | `{ "mediaId": "<uuid>" }` — `null` détache |
+| `PUT /api/v1/admin/exercises/:id/mesh` | `exercise:write` | 204, 400, 403, 404 | Idem pour le maillage 3D |
+
+Ce que ces routes garantissent :
+
+- **L'identifiant vient de l'administration**, et c'est lui qui fait la clé de
+  stockage (`image/<uuid>.webp`) — jamais le nom du fichier déposé. Un envoi
+  relancé après une coupure réseau ne crée donc ni doublon en base ni second
+  objet.
+- **Le genre et le type MIME doivent concorder** : un `model/gltf-binary`
+  annoncé `IMAGE` est refusé en `415`, et un média `MESH_3D` ne peut pas être
+  rattaché comme photo (`400`). Une fiche cassée ne s'installe pas par erreur.
+- **Deux plafonds** : `MEDIA_MAX_UPLOAD_BYTES` (métier, configurable, `413`) et
+  un plafond de transport coupé pendant la réception.
+- **Le rattachement invalide le cache du catalogue** : la photo apparaît à la
+  requête suivante, pas une heure plus tard.
+- **Toutes ces actions sont auditées** (`admin.media_uploaded`,
+  `admin.media_deleted`, `admin.exercise_media_attached`,
+  `admin.exercise_media_detached`).
+
+Côté mobile, le catalogue expose l'URL publique et **jamais** la clé de
+stockage : `imageUrl` sur `ExerciseSummary` (donc aussi sur le détail),
+`meshUrl` sur `ExerciseDetail`. Les deux valent `null` tant qu'aucun média
+n'est rattaché — l'écran retombe alors sur son repli.
 
 ## Swagger et client typé
 

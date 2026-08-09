@@ -12,6 +12,7 @@ import { AppConfigService } from '../config/app-config.service';
 import { PrismaModule } from '../database/prisma/prisma.module';
 import { RedisModule } from '../infrastructure/cache/redis.module';
 import { AdminModule } from '../modules/admin/admin.module';
+import { MediaModule } from '../modules/media/media.module';
 import { AuditModule } from '../modules/audit/audit.module';
 import { AuthModule } from '../modules/auth/auth.module';
 import { CoachModule } from '../modules/coach/coach.module';
@@ -90,6 +91,7 @@ function generateRequestId(request: IncomingMessage, response: ServerResponse): 
     CoachModule,
     WebhooksModule,
     AdminModule,
+    MediaModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

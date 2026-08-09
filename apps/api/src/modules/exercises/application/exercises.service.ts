@@ -5,6 +5,7 @@ import {
   type MuscleGroup,
 } from '@carlys/api-contracts';
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { AppConfigService } from '../../../config/app-config.service';
 import { CacheService } from '../../../infrastructure/cache/cache.service';
 import { EntitlementsService } from '../../subscriptions/application/entitlements.service';
 import {
@@ -36,6 +37,7 @@ export class ExercisesService {
     private readonly exercises: ExercisesRepository,
     private readonly cache: CacheService,
     private readonly entitlements: EntitlementsService,
+    private readonly config: AppConfigService,
   ) {}
 
   async list(
@@ -51,7 +53,9 @@ export class ExercisesService {
 
     const rows = await this.exercises.listPage(filters, limit, cursor);
     const hasMore = rows.length > limit;
-    const items = rows.slice(0, limit).map(presentExerciseSummary);
+    const items = rows
+      .slice(0, limit)
+      .map((row) => presentExerciseSummary(row, this.config.s3PublicBaseUrl));
     const page: ExercisesPage = {
       items,
       hasMore,
@@ -76,7 +80,7 @@ export class ExercisesService {
       if (exercise === null) {
         throw new NotFoundException('Exercice introuvable.');
       }
-      detail = presentExerciseDetail(exercise);
+      detail = presentExerciseDetail(exercise, this.config.s3PublicBaseUrl);
       await this.cache.setJson(cacheKey, detail, DETAIL_TTL_SECONDS);
     }
 

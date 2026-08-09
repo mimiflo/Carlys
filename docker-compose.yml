@@ -71,7 +71,9 @@ services:
       timeout: 5s
       retries: 5
 
-  # Crée le bucket de médias au premier démarrage.
+  # Crée le bucket de médias au premier démarrage, et le rend lisible en
+  # anonyme : les applications chargent les photos directement depuis son URL,
+  # sans passer par l'API ni présenter de jeton. Seul le DÉPÔT est protégé.
   minio-init:
     image: minio/mc:latest
     depends_on:
@@ -81,6 +83,7 @@ services:
       /bin/sh -c "
       mc alias set local http://minio:9000 $${MINIO_ROOT_USER:-carlys-dev} $${MINIO_ROOT_PASSWORD:-carlys-dev-secret} &&
       mc mb --ignore-existing local/carlys-media &&
+      mc anonymous set download local/carlys-media &&
       exit 0
       "
     environment:
@@ -103,12 +106,21 @@ services:
       JWT_ACCESS_SECRET: ${JWT_ACCESS_SECRET:-secret-jwt-de-developpement-a-remplacer-absolument}
       SMTP_HOST: mailpit
       SMTP_PORT: 1025
+      # Médias : le conteneur parle à MinIO par le réseau Compose, mais l'URL
+      # publique doit rester joignable depuis le téléphone ou le navigateur.
+      S3_ENDPOINT: http://minio:9000
+      S3_BUCKET: carlys-media
+      S3_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-carlys-dev}
+      S3_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-carlys-dev-secret}
+      S3_PUBLIC_BASE_URL: ${S3_PUBLIC_BASE_URL:-http://localhost:9000/carlys-media}
     ports:
       - '3000:3000'
     depends_on:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      minio:
         condition: service_healthy
 
   admin:
