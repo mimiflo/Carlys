@@ -1,6 +1,11 @@
 /**
  * Photos du catalogue livrées avec le seed.
  *
+ * Les fichiers sont DÉTOURÉS (WebP à canal alpha) : la figure seule, sans
+ * fond. C'est ce qui permet aux écrans de les poser sur leur propre fond
+ * sombre — et c'est pourquoi ils s'affichent en `contain`, jamais en `cover`,
+ * qui rognerait les bras et les barres.
+ *
  * Ce n'est PAS une entorse à l'ADR 0009 : rien n'est embarqué dans
  * l'application mobile. Ces fichiers suivent exactement le chemin d'un dépôt
  * d'administration — stockage objet, ligne `MediaAsset`, URL publique — mais

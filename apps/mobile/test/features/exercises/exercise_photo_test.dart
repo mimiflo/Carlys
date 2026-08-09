@@ -71,6 +71,9 @@ void main() {
 
     expect(cache.asked, ['http://storage.test/carlys-media/image/abc.webp']);
     expect(find.byType(Image), findsOneWidget);
+    // JAMAIS `cover` : les images sont détourées sur fond transparent, les
+    // rogner couperait les bras et les barres.
+    expect(tester.widget<Image>(find.byType(Image)).fit, BoxFit.contain);
   });
 
   testWidgets('une photo n’a pas de liseré teinté autour d’elle',
@@ -157,6 +160,7 @@ void main() {
 
     expect(cache.asked, ['http://s/image/squat.webp']);
     expect(find.text('Squat'), findsOneWidget);
+    expect(tester.widget<Image>(find.byType(Image)).fit, BoxFit.contain);
   });
 
   testWidgets('fiche sans photo : le placeholder garde la même forme',

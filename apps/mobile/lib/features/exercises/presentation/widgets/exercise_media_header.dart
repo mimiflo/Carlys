@@ -33,13 +33,25 @@ class ExerciseMediaHeader extends StatelessWidget {
       child: Stack(
         fit: StackFit.expand,
         children: [
+          // Le fond sombre est TOUJOURS posé : les images sont détourées, donc
+          // transparentes — sans lui, la figure flotterait sur le vide.
+          const _MediaPlaceholder(showIcon: false),
           if (exercise.imageUrl == null)
             const _MediaPlaceholder()
           else
-            RemoteImage(
-              url: exercise.imageUrl!,
-              placeholder: const _MediaPlaceholder(),
-              semanticLabel: 'Photo du mouvement',
+            Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.gutter,
+                vertical: AppSpacing.md,
+              ),
+              child: RemoteImage(
+                url: exercise.imageUrl!,
+                placeholder: const SizedBox.shrink(),
+                // Détourée : `contain` garde la figure entière, `cover` la
+                // rognerait pour remplir le cadre.
+                fit: BoxFit.contain,
+                semanticLabel: 'Photo du mouvement',
+              ),
             ),
           // Voile : le bas de l'image se fond dans le fond de l'écran.
           DecoratedBox(
@@ -83,7 +95,10 @@ class ExerciseMediaHeader extends StatelessWidget {
 
 /// Repli de l'en-tête : dégradé sombre et icône très atténuée.
 class _MediaPlaceholder extends StatelessWidget {
-  const _MediaPlaceholder();
+  const _MediaPlaceholder({this.showIcon = true});
+
+  /// Sans icône, il ne reste que le fond — le socle des figures détourées.
+  final bool showIcon;
 
   @override
   Widget build(BuildContext context) {
@@ -95,17 +110,19 @@ class _MediaPlaceholder extends StatelessWidget {
           colors: [AppColors.neutral900, AppColors.neutral950],
         ),
       ),
-      child: ExcludeSemantics(
-        child: Center(
-          child: Icon(
-            AppIcons.workout,
-            size: ExerciseMediaHeader._placeholderIconSize,
-            color: AppColors.primaryLight.withValues(
-              alpha: ExerciseMediaHeader._placeholderAlpha,
-            ),
-          ),
-        ),
-      ),
+      child: showIcon
+          ? ExcludeSemantics(
+              child: Center(
+                child: Icon(
+                  AppIcons.workout,
+                  size: ExerciseMediaHeader._placeholderIconSize,
+                  color: AppColors.primaryLight.withValues(
+                    alpha: ExerciseMediaHeader._placeholderAlpha,
+                  ),
+                ),
+              ),
+            )
+          : null,
     );
   }
 }

@@ -482,3 +482,16 @@ mouvements — est un état NORMAL, pas une erreur.
 Les deux endroits qui en dépendent — la vignette de la carte et l'en-tête de
 la fiche — gardent exactement la même forme avec ou sans photo.
 
+Les images du catalogue sont **détourées** (WebP à canal alpha) : la figure
+seule, sans fond. Deux conséquences dans l'interface :
+
+- l'affichage se fait en **`BoxFit.contain`, jamais `cover`** — rogner une
+  figure détourée lui couperait les bras et les barres ;
+- l'écran fournit le fond. La vignette pose un puits radial sombre
+  (`neutral900 → neutral950`) et la fiche garde son dégradé en socle, sinon la
+  figure flotterait sur le vide.
+
+Le liseré teinté de la vignette reste réservé à la **pastille de marque**, le
+repli affiché quand aucune photo n'est rattachée : autour d'une photo il ferait
+un néon coloré. Une photo n'a droit qu'au filet neutre.
+

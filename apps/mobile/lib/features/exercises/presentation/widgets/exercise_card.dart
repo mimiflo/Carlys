@@ -159,9 +159,12 @@ class _Thumbnail extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         borderRadius: AppRadius.avatarAll,
-        // Le liseré teinté appartient à la PASTILLE de marque : posé autour
-        // d'une photo, il lui fait un néon coloré et la dénature. Une photo
-        // n'a droit qu'au filet neutre qui détache sa découpe de la carte.
+        // Puits sombre légèrement éclairé en haut à gauche : c'est lui qui
+        // détache la figure détourée. La pastille de marque, elle, apporte
+        // son propre dégradé.
+        gradient: imageUrl == null ? null : _well,
+        // Le liseré teinté appartient à la PASTILLE : posé autour d'une photo,
+        // il lui fait un néon coloré. Une photo n'a droit qu'au filet neutre.
         border: Border.all(
           color: imageUrl == null
               ? iconTint.withValues(alpha: ExerciseCard._thumbBorderAlpha)
@@ -170,7 +173,21 @@ class _Thumbnail extends StatelessWidget {
       ),
       child: imageUrl == null
           ? placeholder
-          : RemoteImage(url: imageUrl!, placeholder: placeholder),
+          : Padding(
+              padding: const EdgeInsets.all(AppSpacing.xxs),
+              child: RemoteImage(
+                url: imageUrl!,
+                placeholder: placeholder,
+                // JAMAIS `cover` : les images sont détourées sur fond
+                // transparent, les rogner couperait bras et barres.
+                fit: BoxFit.contain,
+              ),
+            ),
     );
   }
+
+  static const RadialGradient _well = RadialGradient(
+    center: Alignment(-0.4, -0.6),
+    colors: [AppColors.neutral900, AppColors.neutral950],
+  );
 }
