@@ -4,5 +4,12 @@
     "outDir": "./dist",
     "baseUrl": "./"
   },
-  "include": ["src", "test", "prisma/seed.ts", "prisma/seed-media.ts"]
+  "include": [
+    "src",
+    "test",
+    "prisma/seed.ts",
+    "prisma/catalog.ts",
+    "prisma/export-demo-catalog.ts",
+    "prisma/seed-media.ts"
+  ]
 }

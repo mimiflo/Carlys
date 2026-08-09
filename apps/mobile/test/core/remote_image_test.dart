@@ -78,4 +78,31 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(Image), findsOneWidget);
   });
+
+  group('cache réel', () {
+    // Le mode démo n'a ni serveur ni stockage objet : ses vignettes voyagent
+    // dans le paquet et portent le schéma `asset:`. Le cache doit donc savoir
+    // les servir SANS toucher au réseau ni au disque.
+    test('schéma asset: : les octets viennent du paquet', () async {
+      TestWidgetsFlutterBinding.ensureInitialized();
+      final cache = DiskRemoteImageCache();
+
+      final bytes =
+          await cache.bytesOf('${assetImageScheme}assets/muscles/biceps.webp');
+
+      expect(bytes, isNotNull);
+      expect(bytes!.length, greaterThan(0));
+    });
+
+    test('asset absent : repli silencieux, comme une photo hors d’atteinte',
+        () async {
+      TestWidgetsFlutterBinding.ensureInitialized();
+      final cache = DiskRemoteImageCache();
+
+      final bytes =
+          await cache.bytesOf('${assetImageScheme}assets/muscles/néant.webp');
+
+      expect(bytes, isNull);
+    });
+  });
 }

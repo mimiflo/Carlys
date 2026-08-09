@@ -18,6 +18,7 @@ import '../features/progress/domain/entities/progress.dart';
 import '../features/progress/domain/repositories/progress_repository.dart';
 import '../features/subscription/domain/entities/subscription.dart';
 import '../features/subscription/domain/repositories/subscription_repository.dart';
+import 'demo_catalog.dart';
 import 'demo_data.dart';
 
 /// Session toujours ouverte ; la connexion accepte n'importe quels
@@ -89,7 +90,10 @@ class DemoAuthRepository implements AuthRepository {
   }
 }
 
-/// Catalogue en mémoire : recherche, filtres et pagination réels.
+/// Catalogue embarqué : recherche, filtres et pagination réels.
+///
+/// La liste vient de `assets/demo/catalog.json`, engendré depuis le seed de
+/// l'API — voir `demo_catalog.dart`.
 class DemoExercisesRepository implements ExercisesRepository {
   static const _pageSize = 6;
 
@@ -98,7 +102,8 @@ class DemoExercisesRepository implements ExercisesRepository {
     ExercisesFilters filters = const ExercisesFilters(),
     String? cursor,
   }) async {
-    var filtered = List<ExerciseDetail>.from(demoExercises);
+    final catalog = await loadDemoCatalog();
+    var filtered = List<ExerciseDetail>.from(catalog.exercises);
     final search = filters.search?.toLowerCase();
     if (search != null && search.isNotEmpty) {
       filtered = filtered
@@ -133,13 +138,16 @@ class DemoExercisesRepository implements ExercisesRepository {
   }
 
   @override
-  Future<ExerciseDetail> byIdOrSlug(String idOrSlug) async =>
-      demoExercises.firstWhere(
-        (exercise) => exercise.id == idOrSlug || exercise.slug == idOrSlug,
-      );
+  Future<ExerciseDetail> byIdOrSlug(String idOrSlug) async {
+    final catalog = await loadDemoCatalog();
+    return catalog.exercises.firstWhere(
+      (exercise) => exercise.id == idOrSlug || exercise.slug == idOrSlug,
+    );
+  }
 
   @override
-  Future<List<MuscleGroupRef>> muscleGroups() async => demoMuscleGroups;
+  Future<List<MuscleGroupRef>> muscleGroups() async =>
+      (await loadDemoCatalog()).muscleGroups;
 }
 
 /// Statistiques figées par période ; mesures corporelles modifiables.

@@ -43,7 +43,8 @@ flutter build ios
 Le flavor `demo` fait tourner l'application entièrement hors ligne :
 session déjà ouverte, catalogue/progression/nutrition servis par les dépôts
 en mémoire de `lib/demo/` (exception documentée à la règle « pas de données
-codées en dur » — jamais chargés dans les autres flavors). Les séances
+codées en dur » — jamais chargés dans les autres flavors ; le catalogue
+d'exercices, lui, est engendré depuis le seed, voir plus bas). Les séances
 restent réelles (Drift local), seule la synchronisation est désactivée.
 
 ```bash
@@ -55,6 +56,30 @@ Au premier lancement, la démo présente le parcours de première ouverture
 entrer : la session démo étant déjà ouverte, l'étape de création de compte
 est considérée comme satisfaite. Le parcours ne se rejoue pas ensuite —
 pour le revoir, désinstalle l'APK (les préférences locales sont effacées).
+
+### Catalogue de la démo : engendré, jamais recopié
+
+Le catalogue d'exercices **n'est pas écrit à la main** : il est engendré
+depuis le seed de l'API, unique source de vérité.
+
+```bash
+pnpm --filter @carlys/api demo:catalog
+```
+
+La commande écrit deux choses dans `assets/demo/`, versionnées pour que
+l'APK se construise sans lancer l'API :
+
+- `catalog.json` — exercices, groupes musculaires et matériels ;
+- `exercises/<slug>.webp` — les vignettes réduites (256 px). La démo n'a
+  aucun stockage objet : ses images voyagent dans l'APK et portent le
+  schéma `asset:`, que `DiskRemoteImageCache` sait résoudre — les écrans
+  gardent ainsi un seul chemin de code, réseau ou paquet.
+
+Relance la commande après toute modification du seed. Un fichier engendré
+et versionné dérive : `apps/api/prisma/export-demo-catalog.spec.ts` compare
+le JSON au seed et fait échouer la CI si les deux divergent. C'est
+exactement la panne qu'il garde — la liste recopiée à la main n'affichait
+plus que 11 exercices sur 55, et aucune vignette.
 
 Le workflow `demo-apk` (`.github/workflows/demo-apk.yml`, déclenchement
 manuel) construit cet APK et le publie sur la release `demo-latest`.

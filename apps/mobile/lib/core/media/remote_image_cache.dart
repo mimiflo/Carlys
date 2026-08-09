@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:flutter/services.dart' show rootBundle;
 import 'package:path_provider/path_provider.dart';
 
 /// Photos servies par le stockage objet, gardées sur l'appareil.
@@ -23,10 +24,24 @@ abstract interface class RemoteImageCache {
   Future<Uint8List?> bytesOf(String url);
 }
 
-class DiskRemoteImageCache implements RemoteImageCache {
-  DiskRemoteImageCache({HttpClient? client}) : _client = client ?? HttpClient();
+/// Préfixe des images EMBARQUÉES, servies au mode démonstration.
+///
+/// La démo tourne sans serveur : ses vignettes voyagent dans l'application.
+/// Leur donner ce schéma plutôt qu'un chemin nu évite toute ambiguïté — et
+/// permet aux écrans de garder un seul et même chemin de code, qu'une image
+/// vienne du réseau ou du paquet.
+const String assetImageScheme = 'asset:';
 
-  final HttpClient _client;
+class DiskRemoteImageCache implements RemoteImageCache {
+  DiskRemoteImageCache({HttpClient? client}) : _injected = client;
+
+  final HttpClient? _injected;
+
+  /// Ouvert à la PREMIÈRE image réseau seulement : la démonstration ne sert
+  /// que des images du paquet et n'a aucune raison d'ouvrir un client HTTP.
+  HttpClient? _opened;
+
+  HttpClient get _client => _injected ?? (_opened ??= HttpClient());
 
   /// Mémoire vive : évite de relire le disque à chaque défilement.
   final Map<String, Uint8List> _memory = {};
@@ -41,7 +56,25 @@ class DiskRemoteImageCache implements RemoteImageCache {
   Future<Uint8List?> bytesOf(String url) {
     final cached = _memory[url];
     if (cached != null) return Future.value(cached);
+    // Une image du paquet ne passe PAS par la file des téléchargements : elle
+    // est locale, donc rien à mutualiser — et `rootBundle` peut répondre par
+    // une future déjà résolue, qui achèverait `_fetch` avant même que la file
+    // ait enregistré l'entrée.
+    if (url.startsWith(assetImageScheme)) return _fromBundle(url);
     return _inFlight.putIfAbsent(url, () => _fetch(url));
+  }
+
+  Future<Uint8List?> _fromBundle(String url) async {
+    try {
+      final data =
+          await rootBundle.load(url.substring(assetImageScheme.length));
+      final bytes = data.buffer.asUint8List();
+      _memory[url] = bytes;
+      return bytes;
+    } on Object {
+      // Vignette absente du paquet : repli, comme une photo hors d'atteinte.
+      return null;
+    }
   }
 
   Future<Uint8List?> _fetch(String url) async {

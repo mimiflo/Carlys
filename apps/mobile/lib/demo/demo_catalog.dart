@@ -1,0 +1,117 @@
+/// Catalogue du MODE DÉMO, lu depuis `assets/demo/catalog.json`.
+///
+/// Ce fichier est ENGENDRÉ depuis le seed de l'API
+/// (`pnpm --filter @carlys/api demo:catalog`) : la démo montre donc exactement
+/// le même catalogue que l'application reliée au serveur. Auparavant la liste
+/// était recopiée à la main dans le code, et elle avait dérivé — onze
+/// exercices affichés contre cinquante-cinq au catalogue.
+///
+/// Les vignettes voyagent elles aussi dans l'application, faute de stockage
+/// objet en démo : elles portent le schéma `asset:` que le cache d'images sait
+/// résoudre, ce qui laisse aux écrans un seul chemin de code.
+library;
+
+import 'dart:convert';
+
+import 'package:flutter/services.dart' show rootBundle;
+
+import '../core/media/remote_image_cache.dart';
+import '../features/exercises/domain/entities/exercise.dart';
+
+class DemoCatalog {
+  const DemoCatalog({
+    required this.exercises,
+    required this.muscleGroups,
+    required this.equipment,
+  });
+
+  final List<ExerciseDetail> exercises;
+  final List<MuscleGroupRef> muscleGroups;
+  final List<EquipmentRef> equipment;
+}
+
+Future<DemoCatalog>? _loading;
+
+/// Chargé une seule fois, puis partagé — la lecture d'un asset est un vrai
+/// travail asynchrone qu'on ne refait pas à chaque défilement.
+Future<DemoCatalog> loadDemoCatalog() => _loading ??= _read();
+
+Future<DemoCatalog> _read() async {
+  final raw = await rootBundle.loadString('assets/demo/catalog.json');
+  final json = jsonDecode(raw) as Map<String, dynamic>;
+
+  MuscleGroupRef groupOf(Map<String, dynamic> entry) => MuscleGroupRef(
+        id: 'mg-${entry['slug']}',
+        slug: entry['slug'] as String,
+        name: entry['name'] as String,
+      );
+  EquipmentRef equipmentOf(Map<String, dynamic> entry) => EquipmentRef(
+        id: 'eq-${entry['slug']}',
+        slug: entry['slug'] as String,
+        name: entry['name'] as String,
+      );
+
+  final groups = <String, MuscleGroupRef>{
+    for (final entry in (json['muscleGroups'] as List<dynamic>)
+        .whereType<Map<String, dynamic>>())
+      entry['slug'] as String: groupOf(entry),
+  };
+  final equipment = <String, EquipmentRef>{
+    for (final entry in (json['equipment'] as List<dynamic>)
+        .whereType<Map<String, dynamic>>())
+      entry['slug'] as String: equipmentOf(entry),
+  };
+
+  final exercises = <ExerciseDetail>[];
+  for (final entry in (json['exercises'] as List<dynamic>)
+      .whereType<Map<String, dynamic>>()) {
+    final slug = entry['slug'] as String;
+    final primary = groups[entry['primary'] as String];
+    final secondary = (entry['secondary'] as List<dynamic>)
+        .whereType<String>()
+        .map((s) => groups[s])
+        .nonNulls
+        .toList();
+    exercises.add(
+      ExerciseDetail(
+        id: slug,
+        slug: slug,
+        name: entry['name'] as String,
+        difficulty: ExerciseDifficulty.fromApi(entry['difficulty'] as String),
+        kind: ExerciseKind.fromApi(entry['type'] as String),
+        isPremium: entry['isPremium'] as bool? ?? false,
+        primaryMuscleGroup: primary,
+        equipment: (entry['equipment'] as List<dynamic>)
+            .whereType<String>()
+            .map((s) => equipment[s])
+            .nonNulls
+            .toList(),
+        imageUrl: (entry['hasPhoto'] as bool? ?? false)
+            ? '${assetImageScheme}assets/demo/exercises/$slug.webp'
+            : null,
+        description: entry['description'] as String,
+        instructions: (entry['instructions'] as List<dynamic>)
+            .whereType<String>()
+            .toList(),
+        tags: (entry['tags'] as List<dynamic>).whereType<String>().toList(),
+        muscles: [
+          if (primary != null)
+            ExerciseMuscleLink(muscleGroup: primary, isPrimary: true),
+          for (final group in secondary)
+            ExerciseMuscleLink(muscleGroup: group, isPrimary: false),
+        ],
+      ),
+    );
+  }
+
+  // Les groupes SANS exercice ne sont pas montrés : une case vide dans la
+  // grille des muscles n'apprend rien et donne l'impression d'un bug.
+  final used =
+      exercises.map((e) => e.primaryMuscleGroup?.slug).nonNulls.toSet();
+  return DemoCatalog(
+    exercises: exercises,
+    muscleGroups:
+        groups.values.where((group) => used.contains(group.slug)).toList(),
+    equipment: equipment.values.toList(),
+  );
+}

@@ -2,6 +2,7 @@ import 'package:carlys_mobile/app/app.dart';
 import 'package:carlys_mobile/app/environment/app_environment.dart';
 import 'package:carlys_mobile/demo/demo_overrides.dart';
 import 'package:carlys_mobile/design_system/design_system.dart';
+import 'package:carlys_mobile/features/exercises/presentation/controllers/exercise_library_controller.dart';
 import 'package:carlys_mobile/features/exercises/presentation/widgets/muscle_group_card.dart';
 import 'package:carlys_mobile/features/profile/presentation/widgets/profile_plan_card.dart';
 import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';
@@ -120,7 +121,16 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Développé couché'), findsOneWidget);
-    expect(find.text('Squat'), findsOneWidget);
+
+    // Le catalogue de démonstration est engendré depuis le seed : il compte
+    // des dizaines de mouvements, paginés. « Squat » n'est donc pas sur la
+    // première page — on le rejoint par la recherche, qui interroge elle
+    // aussi le catalogue entier.
+    await tester.enterText(find.byType(AppSearchField), 'squat');
+    await tester.pump(ExerciseLibraryController.searchDebounce);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Squat barre'), findsOneWidget);
   });
 
   testWidgets('modèles de séance servis en mémoire', (tester) async {

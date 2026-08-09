@@ -1,7 +1,7 @@
 {
   "name": "@carlys/api",
   "version": "0.1.0",
-  "description": "Carlys API — backend NestJS (monolithe modulaire)",
+  "description": "Carlys API \u2014 backend NestJS (monolithe modulaire)",
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
@@ -20,7 +20,8 @@
     "prisma:migrate": "prisma migrate dev",
     "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
-    "prisma:seed": "ts-node prisma/seed.ts"
+    "prisma:seed": "ts-node prisma/seed.ts",
+    "demo:catalog": "ts-node prisma/export-demo-catalog.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",
@@ -82,6 +83,10 @@
       "ts"
     ],
     "rootDir": "src",
+    "roots": [
+      "<rootDir>",
+      "<rootDir>/../prisma"
+    ],
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {
       "^.+\\.(t|j)s$": "ts-jest"
