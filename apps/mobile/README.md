@@ -70,9 +70,9 @@ La commande écrit deux choses dans `assets/demo/`, versionnées pour que
 l'APK se construise sans lancer l'API :
 
 - `catalog.json` — exercices, groupes musculaires et matériels ;
-- `exercises/<slug>.webp` — les vignettes réduites (256 px). La démo n'a
-  aucun stockage objet : ses images voyagent dans l'APK et portent le
-  schéma `asset:`, que `DiskRemoteImageCache` sait résoudre — les écrans
+- `exercises/<slug>.webp` — les photos du seed, copiées telles quelles. La
+  démo n'a aucun stockage objet : ses images voyagent dans l'APK et portent
+  le schéma `asset:`, que `DiskRemoteImageCache` sait résoudre — les écrans
   gardent ainsi un seul chemin de code, réseau ou paquet.
 
 Relance la commande après toute modification du seed. Un fichier engendré

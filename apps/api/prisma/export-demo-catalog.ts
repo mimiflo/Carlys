@@ -11,23 +11,22 @@
  * Deux sorties dans `apps/mobile/assets/demo/` :
  *
  * - `catalog.json` — les exercices, groupes musculaires et matériels ;
- * - `exercises/<slug>.webp` — les vignettes, **réduites** : la démo ne dispose
- *   d'aucun stockage objet, ses images voyagent donc dans l'APK. À pleine
- *   résolution elles pèseraient des méga-octets pour un affichage de 58 points.
- *   La réduction passe par `cwebp` ; sans lui, le script prévient et copie tel
- *   quel plutôt que d'échouer — une démo lourde vaut mieux qu'une démo nue.
+ * - `exercises/<slug>.webp` — les vignettes, copiées telles quelles. La démo ne
+ *   dispose d'aucun stockage objet : ses images voyagent dans l'APK. On a
+ *   d'abord voulu les réduire, puis mesuré que les originaux plafonnent à
+ *   ~400 px et pèsent une dizaine de kilo-octets — alors que la fiche d'un
+ *   exercice les affiche sur 300 points de haut, soit 900 pixels. Les réduire
+ *   dégradait l'écran de détail pour quelques centaines de kilo-octets.
+ *   Copier garde en prime une sortie REPRODUCTIBLE, ce qui compte pour un
+ *   fichier engendré mais versionné : aucun encodeur externe dans la boucle.
  */
 import { ExerciseDifficulty, ExerciseType } from '@prisma/client';
-import { execFileSync } from 'node:child_process';
 import { copyFileSync, existsSync, mkdirSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { EQUIPMENT, EXERCISES, MUSCLE_GROUPS } from './catalog';
 
 const MOBILE_DEMO = join(__dirname, '..', '..', 'mobile', 'assets', 'demo');
 const SOURCE_MEDIA = join(__dirname, 'seed-media', 'exercises');
-
-/** Côté de la vignette embarquée : 58 points affichés, 3× sur mobile. */
-const THUMBNAIL_SIZE = 256;
 
 function difficultyOf(value: ExerciseDifficulty): string {
   return value;
@@ -61,50 +60,20 @@ function exportCatalog(withPhoto: Set<string>): void {
   writeFileSync(join(MOBILE_DEMO, 'catalog.json'), `${JSON.stringify(catalogue, null, 2)}\n`);
 }
 
-/**
- * Réduit chaque vignette du seed. Sans `cwebp` installé, on copie l'original :
- * l'APK est plus lourd, mais la démo reste illustrée — c'est le bon compromis
- * pour un outil de développement.
- */
+/** Recopie les photos du seed ; le dossier est reconstruit à chaque passage. */
 function exportThumbnails(): Set<string> {
   const out = join(MOBILE_DEMO, 'exercises');
+  // On efface avant de recopier : sans cela, la photo d'un exercice supprimé
+  // du catalogue resterait dans l'APK, et le test de fraîcheur ne le dirait pas.
   rmSync(out, { recursive: true, force: true });
   mkdirSync(out, { recursive: true });
 
   const slugs = new Set<string>();
   if (!existsSync(SOURCE_MEDIA)) return slugs;
-  let fullSize = 0;
 
   for (const file of readdirSync(SOURCE_MEDIA).filter((n) => n.endsWith('.webp'))) {
-    const slug = file.replace(/\.webp$/, '');
-    const source = join(SOURCE_MEDIA, file);
-    const target = join(out, file);
-    try {
-      execFileSync('cwebp', [
-        '-quiet',
-        '-resize',
-        String(THUMBNAIL_SIZE),
-        '0',
-        '-q',
-        '80',
-        '-alpha_q',
-        '90',
-        source,
-        '-o',
-        target,
-      ]);
-    } catch {
-      copyFileSync(source, target);
-      fullSize++;
-    }
-    slugs.add(slug);
-  }
-  if (fullSize > 0) {
-    console.warn(
-      `⚠️  cwebp introuvable : ${fullSize} vignettes copiées en pleine ` +
-        'résolution, l’APK de démo sera plus lourd que nécessaire. ' +
-        'Installe-le (`apt install webp` / `brew install webp`) puis relance.',
-    );
+    copyFileSync(join(SOURCE_MEDIA, file), join(out, file));
+    slugs.add(file.replace(/\.webp$/, ''));
   }
   return slugs;
 }

@@ -12,6 +12,7 @@
 library;
 
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:flutter/services.dart' show rootBundle;
 
@@ -37,7 +38,14 @@ Future<DemoCatalog>? _loading;
 Future<DemoCatalog> loadDemoCatalog() => _loading ??= _read();
 
 Future<DemoCatalog> _read() async {
-  final raw = await rootBundle.loadString('assets/demo/catalog.json');
+  // `load` + `utf8.decode`, et non `loadString` : au-delà de 50 Kio ce dernier
+  // délègue le décodage à un ISOLAT, qui ne s'achève jamais sous l'horloge
+  // simulée d'un test de widget. Le catalogue a franchi ce seuil en passant à
+  // 89 exercices, et la bibliothèque est restée bloquée sur son indicateur de
+  // chargement. On n'a de toute façon aucun besoin d'un isolat : le fichier
+  // est lu une seule fois, au premier affichage.
+  final data = await rootBundle.load('assets/demo/catalog.json');
+  final raw = utf8.decode(Uint8List.sublistView(data));
   final json = jsonDecode(raw) as Map<String, dynamic>;
 
   MuscleGroupRef groupOf(Map<String, dynamic> entry) => MuscleGroupRef(

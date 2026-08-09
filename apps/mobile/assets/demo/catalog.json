@@ -1,5 +1,5 @@
 {
-  "exercisesCount": 55,
+  "exercisesCount": 89,
   "muscleGroups": [
     {
       "slug": "pectoraux",
@@ -513,7 +513,7 @@
       "equipment": [
         "barre-de-traction"
       ],
-      "hasPhoto": false
+      "hasPhoto": true
     },
     {
       "slug": "rowing-barre",
@@ -540,7 +540,7 @@
       "equipment": [
         "barre"
       ],
-      "hasPhoto": false
+      "hasPhoto": true
     },
     {
       "slug": "tirage-vertical-poulie",
@@ -566,7 +566,7 @@
         "poulie",
         "machine"
       ],
-      "hasPhoto": false
+      "hasPhoto": true
     },
     {
       "slug": "rowing-halteres-unilateral",
@@ -592,7 +592,822 @@
         "halteres",
         "banc"
       ],
-      "hasPhoto": false
+      "hasPhoto": true
+    },
+    {
+      "slug": "tractions-prise-neutre",
+      "name": "Tractions prise neutre",
+      "description": "Paumes face à face : la traction la plus tolérante pour les épaules et les coudes.",
+      "instructions": [
+        "Suspendez-vous aux poignées parallèles, bras tendus.",
+        "Tirez les coudes vers les hanches en gardant le buste droit.",
+        "Montez jusqu’à ce que les mains arrivent au niveau de la poitrine.",
+        "Redescendez avec contrôle jusqu’à l’extension complète."
+      ],
+      "difficulty": "INTERMEDIATE",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "poids-du-corps",
+        "polyarticulaire"
+      ],
+      "primary": "dos",
+      "secondary": [
+        "biceps",
+        "avant-bras"
+      ],
+      "equipment": [
+        "barre-de-traction"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "tractions-lestees",
+      "name": "Tractions lestées",
+      "description": "Quand le poids du corps ne suffit plus : la traction devient un exercice de force.",
+      "instructions": [
+        "Fixez la charge à une ceinture de lest, prise pronation.",
+        "Partez bras tendus, épaules basses, gainage serré.",
+        "Tirez jusqu’à passer le menton au-dessus de la barre, sans balancer.",
+        "Contrôlez la descente : c’est là que la charge travaille le plus."
+      ],
+      "difficulty": "ADVANCED",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "poids-du-corps",
+        "polyarticulaire",
+        "force"
+      ],
+      "primary": "dos",
+      "secondary": [
+        "biceps",
+        "avant-bras"
+      ],
+      "equipment": [
+        "barre-de-traction"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "tractions-assistees",
+      "name": "Tractions assistées",
+      "description": "La machine allège une part du poids du corps : de quoi apprendre le mouvement complet.",
+      "instructions": [
+        "Réglez la contrepartie pour réussir 8 à 10 répétitions propres.",
+        "Posez les genoux sur le coussin, prise pronation un peu large.",
+        "Tirez la poitrine vers la barre, coudes vers le bas.",
+        "Redescendez lentement jusqu’aux bras tendus."
+      ],
+      "difficulty": "BEGINNER",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "machine",
+        "polyarticulaire",
+        "debutant"
+      ],
+      "primary": "dos",
+      "secondary": [
+        "biceps"
+      ],
+      "equipment": [
+        "machine"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "tirage-vertical-prise-serree",
+      "name": "Tirage vertical prise serrée",
+      "description": "Mains rapprochées : l’amplitude s’allonge et les dorsaux bas travaillent davantage.",
+      "instructions": [
+        "Cuisses calées, saisissez la barre à largeur d’épaules en pronation.",
+        "Sortez la poitrine et tirez la barre vers le sternum.",
+        "Marquez un temps coudes serrés le long du corps.",
+        "Remontez jusqu’à l’étirement complet, sans lâcher la posture."
+      ],
+      "difficulty": "BEGINNER",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "poulie",
+        "machine",
+        "largeur-du-dos"
+      ],
+      "primary": "dos",
+      "secondary": [
+        "biceps"
+      ],
+      "equipment": [
+        "poulie",
+        "machine"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "tirage-vertical-supination",
+      "name": "Tirage vertical en supination",
+      "description": "Prise inversée : les dorsaux restent moteurs, les biceps prennent une vraie part.",
+      "instructions": [
+        "Saisissez la barre en supination, mains à largeur d’épaules.",
+        "Tirez vers le haut des pectoraux en gardant les coudes près du corps.",
+        "Serrez les omoplates en bas du mouvement.",
+        "Contrôlez la remontée jusqu’aux bras tendus."
+      ],
+      "difficulty": "BEGINNER",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "poulie",
+        "machine"
+      ],
+      "primary": "dos",
+      "secondary": [
+        "biceps"
+      ],
+      "equipment": [
+        "poulie",
+        "machine"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "tirage-vertical-prise-neutre",
+      "name": "Tirage vertical prise neutre",
+      "description": "Poignée en V : la variante la plus confortable pour des épaules sensibles.",
+      "instructions": [
+        "Accrochez la poignée parallèle, cuisses calées sous les boudins.",
+        "Tirez la poignée vers le haut de la poitrine, buste légèrement incliné.",
+        "Serrez les omoplates sans hausser les épaules.",
+        "Remontez lentement jusqu’à l’étirement des dorsaux."
+      ],
+      "difficulty": "BEGINNER",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "poulie",
+        "machine"
+      ],
+      "primary": "dos",
+      "secondary": [
+        "biceps"
+      ],
+      "equipment": [
+        "poulie",
+        "machine"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "tirage-vertical-unilateral",
+      "name": "Tirage vertical unilatéral",
+      "description": "Un bras à la fois : chaque dorsal travaille sur toute son amplitude, sans compenser.",
+      "instructions": [
+        "Accrochez une poignée simple, asseyez-vous de trois quarts.",
+        "Tirez le coude vers la hanche en laissant l’épaule descendre.",
+        "Marquez l’arrivée, omoplate basse et serrée.",
+        "Laissez remonter le bras complètement avant la répétition suivante."
+      ],
+      "difficulty": "INTERMEDIATE",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "poulie",
+        "unilateral"
+      ],
+      "primary": "dos",
+      "secondary": [
+        "biceps"
+      ],
+      "equipment": [
+        "poulie"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "rowing-barre-supination",
+      "name": "Rowing barre en supination (Yates)",
+      "description": "Buste plus redressé et prise inversée : la version la plus lourde du rowing barre.",
+      "instructions": [
+        "Penchez le buste à ~30°, barre en supination, bras tendus.",
+        "Tirez la barre vers le bas-ventre, coudes le long du corps.",
+        "Serrez les omoplates sans redresser le buste avec l’élan.",
+        "Redescendez la barre en gardant le dos plat."
+      ],
+      "difficulty": "INTERMEDIATE",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "barre",
+        "polyarticulaire",
+        "epaisseur-du-dos"
+      ],
+      "primary": "dos",
+      "secondary": [
+        "biceps",
+        "lombaires"
+      ],
+      "equipment": [
+        "barre"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "pendlay-row",
+      "name": "Pendlay Row",
+      "description": "Chaque répétition repart du sol, buste à l’horizontale : de la force pure, sans élan.",
+      "instructions": [
+        "Buste parallèle au sol, barre posée au sol sous les épaules.",
+        "Tirez la barre vers le bas des pectoraux d’un geste explosif.",
+        "Reposez la barre au sol et stabilisez avant la répétition suivante.",
+        "Gardez le dos plat du début à la fin : le buste ne se relève jamais."
+      ],
+      "difficulty": "ADVANCED",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "barre",
+        "polyarticulaire",
+        "force"
+      ],
+      "primary": "dos",
+      "secondary": [
+        "lombaires",
+        "biceps"
+      ],
+      "equipment": [
+        "barre"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "rowing-t-bar",
+      "name": "Rowing T-Bar",
+      "description": "Barre ancrée au sol : la charge reste dans l’axe du corps, le dos encaisse lourd.",
+      "instructions": [
+        "Placez-vous au-dessus de la barre, poignée en prise neutre.",
+        "Buste penché à ~45°, dos plat, genoux souples.",
+        "Tirez la poignée vers le nombril en serrant les omoplates.",
+        "Redescendez jusqu’à l’étirement complet, sans arrondir le dos."
+      ],
+      "difficulty": "INTERMEDIATE",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "barre",
+        "polyarticulaire",
+        "epaisseur-du-dos"
+      ],
+      "primary": "dos",
+      "secondary": [
+        "biceps",
+        "lombaires"
+      ],
+      "equipment": [
+        "barre",
+        "machine"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "meadows-row",
+      "name": "Meadows Row",
+      "description": "Rowing unilatéral au bout d’une barre ancrée : un étirement du dorsal impossible ailleurs.",
+      "instructions": [
+        "Placez-vous perpendiculairement à la barre, main sur le genou avant.",
+        "Saisissez l’extrémité de la barre en pronation, bras tendu.",
+        "Tirez le coude haut, vers l’arrière, jusqu’à la hanche.",
+        "Laissez le bras redescendre complètement, épaule relâchée."
+      ],
+      "difficulty": "ADVANCED",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "barre",
+        "unilateral",
+        "epaisseur-du-dos"
+      ],
+      "primary": "dos",
+      "secondary": [
+        "biceps",
+        "epaules"
+      ],
+      "equipment": [
+        "barre"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "rowing-halteres-banc-incline",
+      "name": "Rowing haltères au banc incliné",
+      "description": "La poitrine posée sur le banc supprime l’élan : il ne reste que le dos.",
+      "instructions": [
+        "Allongez-vous à plat ventre sur un banc incliné à ~30°.",
+        "Laissez pendre les haltères bras tendus, paumes face à face.",
+        "Tirez les coudes vers le plafond en serrant les omoplates.",
+        "Redescendez lentement jusqu’à l’étirement complet."
+      ],
+      "difficulty": "BEGINNER",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "halteres",
+        "banc",
+        "epaisseur-du-dos"
+      ],
+      "primary": "dos",
+      "secondary": [
+        "biceps",
+        "epaules"
+      ],
+      "equipment": [
+        "halteres",
+        "banc"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "seal-row",
+      "name": "Seal Row",
+      "description": "Allongé sur un banc surélevé : aucune triche possible, le dos travaille seul.",
+      "instructions": [
+        "Allongez-vous à plat ventre sur un banc surélevé, bras pendants.",
+        "Saisissez les haltères, épaules relâchées vers le sol.",
+        "Tirez jusqu’à toucher le banc avec les coudes, omoplates serrées.",
+        "Redescendez sans laisser les épaules s’enrouler."
+      ],
+      "difficulty": "INTERMEDIATE",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "halteres",
+        "banc",
+        "epaisseur-du-dos"
+      ],
+      "primary": "dos",
+      "secondary": [
+        "biceps"
+      ],
+      "equipment": [
+        "halteres",
+        "banc"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "rowing-assis-poulie-basse",
+      "name": "Rowing assis à la poulie basse",
+      "description": "Le tirage horizontal de référence : tension continue du début à la fin.",
+      "instructions": [
+        "Assis, pieds calés, genoux légèrement fléchis, dos droit.",
+        "Tirez la barre vers le nombril en serrant les omoplates.",
+        "Gardez le buste immobile : ce sont les bras qui reviennent.",
+        "Laissez la barre repartir jusqu’à l’étirement, sans arrondir le dos."
+      ],
+      "difficulty": "BEGINNER",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "poulie",
+        "machine",
+        "tension-continue"
+      ],
+      "primary": "dos",
+      "secondary": [
+        "biceps",
+        "lombaires"
+      ],
+      "equipment": [
+        "poulie",
+        "machine"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "rowing-poulie-basse-prise-neutre",
+      "name": "Rowing poulie basse prise neutre",
+      "description": "Poignée en V : les coudes rasent le corps et les dorsaux prennent tout le travail.",
+      "instructions": [
+        "Assis, poignée parallèle en main, buste vertical.",
+        "Tirez vers le bas-ventre, coudes collés au corps.",
+        "Marquez un temps d’arrêt en position serrée.",
+        "Revenez lentement jusqu’à l’étirement complet."
+      ],
+      "difficulty": "BEGINNER",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "poulie",
+        "tension-continue"
+      ],
+      "primary": "dos",
+      "secondary": [
+        "biceps"
+      ],
+      "equipment": [
+        "poulie"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "rowing-poulie-basse-prise-large",
+      "name": "Rowing poulie basse prise large",
+      "description": "Coudes écartés, barre vers la poitrine : le haut du dos et les arrière-épaules mènent.",
+      "instructions": [
+        "Assis, barre longue en pronation, mains larges.",
+        "Tirez vers le haut du ventre en ouvrant les coudes vers l’extérieur.",
+        "Serrez les omoplates sans hausser les épaules.",
+        "Contrôlez le retour jusqu’à l’étirement."
+      ],
+      "difficulty": "INTERMEDIATE",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "poulie",
+        "epaisseur-du-dos"
+      ],
+      "primary": "dos",
+      "secondary": [
+        "epaules",
+        "biceps"
+      ],
+      "equipment": [
+        "poulie"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "rowing-poulie-basse-unilateral",
+      "name": "Rowing poulie basse unilatéral",
+      "description": "Un côté à la fois : l’amplitude gagne la rotation du buste, les déséquilibres se corrigent.",
+      "instructions": [
+        "Poignée simple en main, jambe opposée légèrement avancée.",
+        "Laissez l’épaule partir vers l’avant à l’étirement.",
+        "Tirez le coude vers la hanche en ramenant l’omoplate.",
+        "Revenez lentement, sans tourner le bassin."
+      ],
+      "difficulty": "INTERMEDIATE",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "poulie",
+        "unilateral"
+      ],
+      "primary": "dos",
+      "secondary": [
+        "biceps"
+      ],
+      "equipment": [
+        "poulie"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "rowing-machine-appui-poitrine",
+      "name": "Rowing machine appui poitrine",
+      "description": "Le buste calé contre le coussin : le bas du dos est déchargé, on peut charger lourd.",
+      "instructions": [
+        "Réglez le siège pour que les poignées arrivent à hauteur de poitrine.",
+        "Poitrine plaquée sur le coussin, bras tendus.",
+        "Tirez les poignées vers l’arrière en serrant les omoplates.",
+        "Revenez lentement jusqu’à l’étirement complet."
+      ],
+      "difficulty": "BEGINNER",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "machine",
+        "epaisseur-du-dos",
+        "debutant"
+      ],
+      "primary": "dos",
+      "secondary": [
+        "biceps",
+        "epaules"
+      ],
+      "equipment": [
+        "machine"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "low-row-machine",
+      "name": "Low Row machine",
+      "description": "Tirage bas guidé : la trajectoire est imposée, la charge va directement aux dorsaux.",
+      "instructions": [
+        "Réglez le siège, poitrine contre l’appui, poignées basses en main.",
+        "Tirez vers le bas des côtes, coudes près du corps.",
+        "Serrez les omoplates en fin de course.",
+        "Laissez revenir la charge sans à-coup."
+      ],
+      "difficulty": "BEGINNER",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "machine",
+        "debutant"
+      ],
+      "primary": "dos",
+      "secondary": [
+        "biceps"
+      ],
+      "equipment": [
+        "machine"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "high-row-machine",
+      "name": "High Row machine",
+      "description": "Tirage haut guidé : la trajectoire descendante cible le haut des dorsaux.",
+      "instructions": [
+        "Réglez le siège pour que les poignées soient au-dessus des épaules.",
+        "Poitrine contre l’appui, tirez les coudes vers le bas et l’arrière.",
+        "Marquez la contraction sans hausser les épaules.",
+        "Contrôlez la remontée jusqu’à l’étirement des dorsaux."
+      ],
+      "difficulty": "BEGINNER",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "machine",
+        "largeur-du-dos"
+      ],
+      "primary": "dos",
+      "secondary": [
+        "biceps"
+      ],
+      "equipment": [
+        "machine"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "rowing-convergent-machine",
+      "name": "Rowing convergent machine",
+      "description": "Les bras se rejoignent en fin de course : la contraction du dos est maximale.",
+      "instructions": [
+        "Réglez le siège, poitrine calée, une poignée dans chaque main.",
+        "Tirez en rapprochant les poignées l’une de l’autre.",
+        "Tenez la position serrée un temps complet.",
+        "Revenez jusqu’à l’étirement, bras tendus."
+      ],
+      "difficulty": "BEGINNER",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "machine",
+        "epaisseur-du-dos"
+      ],
+      "primary": "dos",
+      "secondary": [
+        "biceps"
+      ],
+      "equipment": [
+        "machine"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "rowing-unilateral-machine",
+      "name": "Rowing unilatéral machine",
+      "description": "Bras indépendants sur machine : la trajectoire est guidée, chaque côté travaille seul.",
+      "instructions": [
+        "Réglez le siège, calez la poitrine, une seule poignée en main.",
+        "Tirez le coude vers l’arrière sans tourner le buste.",
+        "Serrez l’omoplate en fin de course.",
+        "Revenez lentement, puis changez de côté."
+      ],
+      "difficulty": "INTERMEDIATE",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "machine",
+        "unilateral"
+      ],
+      "primary": "dos",
+      "secondary": [
+        "biceps"
+      ],
+      "equipment": [
+        "machine"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "face-pull",
+      "name": "Face Pull à la poulie",
+      "description": "Corde tirée vers le visage : le meilleur remède aux épaules enroulées.",
+      "instructions": [
+        "Réglez la poulie à hauteur de visage, corde en prise neutre.",
+        "Tirez la corde vers le front en écartant les mains.",
+        "Ouvrez la poitrine, coudes hauts, omoplates serrées.",
+        "Revenez lentement en gardant les épaules basses."
+      ],
+      "difficulty": "BEGINNER",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "poulie",
+        "posture",
+        "isolation"
+      ],
+      "primary": "dos",
+      "secondary": [
+        "epaules"
+      ],
+      "equipment": [
+        "poulie"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "reverse-pec-deck",
+      "name": "Reverse Pec Deck",
+      "description": "Le pec deck à l’envers : arrière-épaules et haut du dos, en isolation totale.",
+      "instructions": [
+        "Asseyez-vous face au dossier, poitrine calée, bras tendus devant.",
+        "Écartez les bras vers l’arrière dans un arc régulier.",
+        "Serrez les omoplates sans cambrer ni hausser les épaules.",
+        "Revenez lentement jusqu’aux mains devant la poitrine."
+      ],
+      "difficulty": "BEGINNER",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "machine",
+        "isolation",
+        "posture"
+      ],
+      "primary": "dos",
+      "secondary": [
+        "epaules"
+      ],
+      "equipment": [
+        "machine"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "pull-over-haltere",
+      "name": "Pull-over haltère",
+      "description": "Un haltère passé derrière la tête : l’étirement des dorsaux que rien d’autre ne donne.",
+      "instructions": [
+        "Allongé sur un banc, haltère tenu à deux mains au-dessus de la poitrine.",
+        "Descendez l’haltère derrière la tête, coudes à peine fléchis.",
+        "Arrêtez à l’étirement, sans cambrer le bas du dos.",
+        "Ramenez l’haltère au-dessus de la poitrine en tirant avec les dorsaux."
+      ],
+      "difficulty": "INTERMEDIATE",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "halteres",
+        "banc",
+        "isolation"
+      ],
+      "primary": "dos",
+      "secondary": [
+        "pectoraux",
+        "triceps"
+      ],
+      "equipment": [
+        "halteres",
+        "banc"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "pull-over-poulie",
+      "name": "Pull-over à la poulie haute",
+      "description": "Bras tendus, barre ramenée aux cuisses : les dorsaux sans les biceps.",
+      "instructions": [
+        "Debout face à la poulie haute, barre en pronation, bras tendus.",
+        "Buste légèrement penché, gainage serré.",
+        "Ramenez la barre jusqu’aux cuisses sans plier les coudes.",
+        "Laissez remonter la barre jusqu’à l’étirement complet."
+      ],
+      "difficulty": "INTERMEDIATE",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "poulie",
+        "isolation",
+        "tension-continue"
+      ],
+      "primary": "dos",
+      "secondary": [
+        "triceps"
+      ],
+      "equipment": [
+        "poulie"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "pull-over-machine",
+      "name": "Pull-over machine",
+      "description": "Le pull-over guidé : la tension reste constante et le mouvement s’apprend vite.",
+      "instructions": [
+        "Réglez le siège pour que les épaules soient dans l’axe de rotation.",
+        "Coudes posés sur les coussins, tirez les bras vers l’avant et le bas.",
+        "Marquez la contraction cuisses atteintes.",
+        "Laissez revenir jusqu’à l’étirement, sans relâcher d’un coup."
+      ],
+      "difficulty": "BEGINNER",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "machine",
+        "isolation"
+      ],
+      "primary": "dos",
+      "secondary": [
+        "triceps"
+      ],
+      "equipment": [
+        "machine"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "shrugs-barre",
+      "name": "Shrugs à la barre",
+      "description": "Hausser les épaules, charge en main : l’exercice le plus direct pour les trapèzes.",
+      "instructions": [
+        "Debout, barre tenue devant les cuisses, bras tendus.",
+        "Haussez les épaules vers les oreilles, sans plier les coudes.",
+        "Tenez la contraction un temps complet en haut.",
+        "Redescendez lentement jusqu’à l’étirement des trapèzes."
+      ],
+      "difficulty": "BEGINNER",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "barre",
+        "trapezes",
+        "isolation"
+      ],
+      "primary": "dos",
+      "secondary": [
+        "avant-bras"
+      ],
+      "equipment": [
+        "barre"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "shrugs-halteres",
+      "name": "Shrugs haltères",
+      "description": "Haltères le long du corps : les épaules montent plus haut qu’à la barre.",
+      "instructions": [
+        "Debout, un haltère dans chaque main, bras le long du corps.",
+        "Haussez les épaules le plus haut possible, buste immobile.",
+        "Marquez un temps d’arrêt en haut.",
+        "Redescendez avec contrôle, sans rouler les épaules."
+      ],
+      "difficulty": "BEGINNER",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "halteres",
+        "trapezes",
+        "isolation"
+      ],
+      "primary": "dos",
+      "secondary": [
+        "avant-bras"
+      ],
+      "equipment": [
+        "halteres"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "shrugs-machine",
+      "name": "Shrugs machine",
+      "description": "Version guidée : la prise ne lâche plus avant les trapèzes.",
+      "instructions": [
+        "Debout dans la machine, poignées en main, bras tendus.",
+        "Haussez les épaules en gardant les bras relâchés.",
+        "Tenez la contraction en haut du mouvement.",
+        "Laissez redescendre la charge jusqu’à l’étirement."
+      ],
+      "difficulty": "BEGINNER",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "machine",
+        "trapezes",
+        "isolation"
+      ],
+      "primary": "dos",
+      "secondary": [],
+      "equipment": [
+        "machine"
+      ],
+      "hasPhoto": true
     },
     {
       "slug": "souleve-de-terre",
@@ -622,7 +1437,94 @@
       "equipment": [
         "barre"
       ],
-      "hasPhoto": false
+      "hasPhoto": true
+    },
+    {
+      "slug": "souleve-de-terre-sumo",
+      "name": "Soulevé de terre sumo",
+      "description": "Pieds très écartés, mains à l’intérieur : la course est plus courte, les jambes prennent le relais.",
+      "instructions": [
+        "Pieds bien plus larges que les épaules, pointes ouvertes.",
+        "Saisissez la barre bras tendus, à l’intérieur des jambes.",
+        "Descendez les hanches, poitrine haute, puis poussez le sol.",
+        "Verrouillez debout hanches serrées, sans partir en arrière."
+      ],
+      "difficulty": "ADVANCED",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "barre",
+        "polyarticulaire",
+        "force"
+      ],
+      "primary": "lombaires",
+      "secondary": [
+        "fessiers",
+        "quadriceps",
+        "dos"
+      ],
+      "equipment": [
+        "barre"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "rack-pull",
+      "name": "Rack Pull",
+      "description": "Un soulevé de terre partiel, barre partie des genoux : de quoi charger plus lourd que la normale.",
+      "instructions": [
+        "Réglez les barres de sécurité à hauteur de genoux.",
+        "Dos plat, épaules au-dessus de la barre, prise ferme.",
+        "Tendez les hanches jusqu’au verrouillage debout.",
+        "Reposez la barre sur les supports en gardant le dos neutre."
+      ],
+      "difficulty": "INTERMEDIATE",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "barre",
+        "force",
+        "epaisseur-du-dos"
+      ],
+      "primary": "lombaires",
+      "secondary": [
+        "dos",
+        "fessiers",
+        "avant-bras"
+      ],
+      "equipment": [
+        "barre"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "extensions-lombaires",
+      "name": "Extensions lombaires au banc",
+      "description": "Le renforcement de base du bas du dos, sans charge et sans matériel compliqué.",
+      "instructions": [
+        "Calez les hanches sur le coussin, chevilles bloquées.",
+        "Descendez le buste en gardant le dos droit.",
+        "Remontez jusqu’à l’alignement du corps, sans cambrer au-delà.",
+        "Enchaînez lentement : le mouvement se contrôle, il ne se lance pas."
+      ],
+      "difficulty": "BEGINNER",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "poids-du-corps",
+        "banc",
+        "posture"
+      ],
+      "primary": "lombaires",
+      "secondary": [
+        "fessiers",
+        "ischio-jambiers"
+      ],
+      "equipment": [
+        "poids-du-corps",
+        "banc"
+      ],
+      "hasPhoto": true
     },
     {
       "slug": "developpe-militaire",
@@ -1280,6 +2182,33 @@
         "machine"
       ],
       "hasPhoto": false
+    },
+    {
+      "slug": "good-morning",
+      "name": "Good Morning",
+      "description": "Charnière de hanche barre sur les épaules : les ischio-jambiers travaillent en étirement.",
+      "instructions": [
+        "Barre sur les trapèzes, pieds largeur de bassin, genoux souples.",
+        "Poussez les hanches vers l’arrière en penchant le buste.",
+        "Descendez jusqu’à sentir l’étirement, dos strictement plat.",
+        "Revenez debout en serrant les fessiers, sans à-coup."
+      ],
+      "difficulty": "ADVANCED",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "barre",
+        "charniere-de-hanche"
+      ],
+      "primary": "ischio-jambiers",
+      "secondary": [
+        "lombaires",
+        "fessiers"
+      ],
+      "equipment": [
+        "barre"
+      ],
+      "hasPhoto": true
     },
     {
       "slug": "hip-thrust",
