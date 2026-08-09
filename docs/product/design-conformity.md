@@ -175,6 +175,25 @@ Détourages anatomiques fournis par le produit (générés), embarqués dans
 ligne. Les images PAR EXERCICE suivront un autre chemin : elles seront des
 centaines et modifiables depuis l'admin, donc servies par le serveur.
 
+**Le détourage, en trois passes.** La planche est fournie en JPEG sur fond
+blanc, sans canal alpha. Un seuil binaire ne suffit pas : mesurée sur un bord,
+la transition s'étale sur **six pixels** (253 → 230 → 185 → 157 → 114 → 89), et
+couper au milieu garde une frange laiteuse. D'où :
+
+1. **alpha continu** sur la bande qui borde le fond — repérée par remplissage
+   depuis les bords, pour ne pas trouer un reflet clair au milieu d'une épaule ;
+2. **décontamination** : le pixel observé vaut `C = α·F + (1−α)·blanc`, on
+   retire la part de blanc pour retrouver `F`. Sans elle, le contour reste
+   laiteux même avec le bon alpha ;
+3. **extinction de la lumière de contour** : les sujets sont éclairés POUR un
+   fond blanc, et ce halo se lit comme un trait sur fond sombre. Les quatre
+   derniers pixels s'assombrissent progressivement — on éteint la lumière au
+   lieu de découper, la silhouette reste douce.
+
+Contrôle : sur onze des douze images, les pixels de bord sont désormais **aussi
+sombres ou plus sombres** que le cœur du sujet. Le douzième (`triceps`) est à
++12 de luminance, invisible à la taille d'affichage.
+
 Le nom du groupe est écrit **par l'application**, jamais gravé dans l'image :
 il vient du référentiel de l'API, il se traduit, et il reste net à toutes les
 tailles. L'image ne porte que l'anatomie.
