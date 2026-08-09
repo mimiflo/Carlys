@@ -93,10 +93,18 @@ class _DayBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Le jour courant porte l'accent — un seul point chaud par écran. Les
+    // autres séances montent en dégradé : la barre s'éclaircit vers son
+    // sommet, ce qui donne du relief à une série de rectangles plats.
+    final gradient = isToday && hasSession
+        ? null
+        : hasSession
+            ? AppColors.violetRampUp
+            : null;
     final color = isToday && hasSession
         ? AppColors.accent
         : hasSession
-            ? AppColors.primaryFill
+            ? null
             : AppColors.gaugeTrack;
     final height = hasSession
         ? WeekBars._sessionFloor +
@@ -110,6 +118,7 @@ class _DayBar extends StatelessWidget {
         height: height,
         decoration: BoxDecoration(
           color: color,
+          gradient: gradient,
           borderRadius: AppRadius.smAll,
         ),
       ),

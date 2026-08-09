@@ -27,7 +27,7 @@ class ExerciseCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Le lime signale les mouvements Premium (décision serveur) ; tous les
+    // Le orange signale les mouvements Premium (décision serveur) ; tous les
     // autres portent le violet de marque.
     final tint = exercise.isPremium ? AppColors.accent : AppColors.primary;
     final iconTint =

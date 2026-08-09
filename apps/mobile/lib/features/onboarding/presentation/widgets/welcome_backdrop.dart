@@ -37,9 +37,9 @@ class WelcomeBackdrop extends StatelessWidget {
                 child: const _Halo(
                   sigma: 14,
                   colors: [
-                    Color(0x33CD2EDA),
-                    Color(0x1F7B4BF6),
-                    Color(0x0006060C),
+                    Color(0x33C42EE0),
+                    Color(0x1F7B1FFF),
+                    Color(0x0008050E),
                   ],
                   stops: [0, 0.46, 0.78],
                 ),
@@ -65,8 +65,8 @@ class WelcomeBackdrop extends StatelessWidget {
                       end: Alignment.centerRight,
                       colors: [
                         AppColors.darkBackground,
-                        Color(0xC706060C),
-                        Color(0x0006060C),
+                        Color(0xC708050E),
+                        Color(0x0008050E),
                       ],
                       stops: [0, 0.34, 0.66],
                     ),
@@ -87,8 +87,8 @@ class WelcomeBackdrop extends StatelessWidget {
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        Color(0x0006060C),
-                        Color(0xCC06060C),
+                        Color(0x0008050E),
+                        Color(0xCC08050E),
                         AppColors.darkBackground,
                       ],
                       stops: [0.56, 0.76, 0.88],
@@ -106,9 +106,9 @@ class WelcomeBackdrop extends StatelessWidget {
                 child: const _Halo(
                   sigma: 18,
                   colors: [
-                    Color(0x335B5BF6),
-                    Color(0x125B5BF6),
-                    Color(0x0006060C),
+                    Color(0x339B30FF),
+                    Color(0x129B30FF),
+                    Color(0x0008050E),
                   ],
                   stops: [0, 0.52, 0.80],
                 ),
@@ -130,8 +130,8 @@ class WelcomeBackdrop extends StatelessWidget {
                       colors: [
                         Color(0xEB000000),
                         Color(0xC7030308),
-                        Color(0x6B06060C),
-                        Color(0x0006060C),
+                        Color(0x6B08050E),
+                        Color(0x0008050E),
                       ],
                       stops: [0, 0.42, 0.72, 1],
                     ),
@@ -361,9 +361,9 @@ class _AthletePhoto extends StatelessWidget {
   /// référence sont des `blur-radius` CSS : l'écart-type gaussien en vaut la
   /// moitié.
   static const List<(Color, double)> _glows = [
-    (Color(0x47F7708F), 18 / 2),
-    (Color(0x3DCD2EDA), 46 / 2),
-    (Color(0x337B4BF6), 96 / 2),
+    (Color(0x47FF7A45), 18 / 2),
+    (Color(0x3DC42EE0), 46 / 2),
+    (Color(0x337B1FFF), 96 / 2),
   ];
 
   @override

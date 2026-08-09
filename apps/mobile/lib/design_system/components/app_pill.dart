@@ -5,12 +5,12 @@ import '../typography/app_typography.dart';
 
 /// Ton d'une pastille de la refonte.
 ///
-/// `accentSolid` est le lime en aplat (texte sombre) : réservé au filtre actif
-/// de la bibliothèque, seul usage plein du lime sur cet écran.
+/// `accentSolid` est l'orange en aplat (texte sombre) : réservé au filtre actif
+/// de la bibliothèque, seul usage plein du orange sur cet écran.
 enum AppPillTone { neutral, accent, accentSolid, primary }
 
 /// Pastille stadium : durée, groupe musculaire, filtre…
-/// Accent = fond lime .12 + bordure .28 ; neutre = blanc .07.
+/// Accent = fond orange .12 + bordure .28 ; neutre = blanc .07.
 class AppPill extends StatelessWidget {
   const AppPill({
     required this.label,

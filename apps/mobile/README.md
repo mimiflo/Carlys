@@ -109,7 +109,7 @@ Détails : [docs/architecture/mobile.md](../../docs/architecture/mobile.md).
 ## Refonte « premium dark-first »
 
 L'interface suit le handoff Claude Design (10 écrans, tokens, scènes 3D) :
-fond `#06060C`, chiffres en JetBrains Mono tabulaire, lime réservé à UNE
+fond `#08050E`, chiffres en JetBrains Mono tabulaire, orange réservé à UNE
 action par écran, violet purement atmosphérique. Les scènes 3D (cœur
 battant cardioïde, hélice ADN) sont des `CustomPainter`/`drawVertices`
 sans dépendance externe — maillage généré à l'`initState`, buffers

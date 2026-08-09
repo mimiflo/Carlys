@@ -4,7 +4,7 @@ import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
 import '../../../subscription/domain/entities/subscription.dart';
 
-/// Bannière d'abonnement : carte dégradée lime, icône premium, état du plan
+/// Bannière d'abonnement : carte dégradée orange, icône premium, état du plan
 /// et échéance réelle. Le libellé vient toujours du serveur (`planName`,
 /// `state`) — jamais d'état inventé côté client.
 ///

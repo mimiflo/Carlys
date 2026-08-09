@@ -226,7 +226,7 @@ Cibles planifiées (branchées tranche par tranche) :
 ## Design system
 
 `packages/design-tokens/src/tokens.json` est la **source de vérité
-multiplateforme** (primaire `#5B5BF6`, accent `#C6F432`, espacements 4→64,
+multiplateforme** (primaire `#9B30FF`, accent `#FF7A45`, espacements 4→64,
 radius, typo, ombres, motion, breakpoints). Le design system Flutter
 (`lib/design_system/`) reflète ces valeurs à la main ; un générateur de code
 pourra automatiser la synchronisation plus tard (cible).

@@ -82,7 +82,7 @@ Carlys/
 └── .env.example              # variables du docker-compose (valeurs factices)
 ```
 
-Le design system Flutter (`AppColors`, `AppTypography`, `AppSpacing`, `AppRadius`, `AppShadows`, `AppMotion`, `AppTheme` clair/sombre/OLED, `AppBreakpoints`, `AppIcons`, composants `AppButton`, `AppLoadingIndicator`, `AppErrorState`, `AppEmptyState`) reflète les valeurs de `packages/design-tokens/src/tokens.json` (primaire `#5B5BF6`, accent `#C6F432`, espacements 4→64, radius, typo, ombres, motion, breakpoints).
+Le design system Flutter (`AppColors`, `AppTypography`, `AppSpacing`, `AppRadius`, `AppShadows`, `AppMotion`, `AppTheme` clair/sombre/OLED, `AppBreakpoints`, `AppIcons`, composants `AppButton`, `AppLoadingIndicator`, `AppErrorState`, `AppEmptyState`) reflète les valeurs de `packages/design-tokens/src/tokens.json` (primaire `#9B30FF`, accent `#FF7A45`, espacements 4→64, radius, typo, ombres, motion, breakpoints).
 
 ## Prérequis
 

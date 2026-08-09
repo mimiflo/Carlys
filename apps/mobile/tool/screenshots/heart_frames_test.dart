@@ -17,7 +17,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: ColoredBox(
-            color: const Color(0xFF06060C),
+            color: const Color(0xFF08050E),
             child: CustomPaint(
               painter: HeartScenePainter(seconds: seconds, hero: false),
               size: const Size(330, 330),

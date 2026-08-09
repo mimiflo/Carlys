@@ -29,8 +29,8 @@ class BrandSignature extends StatelessWidget {
   /// Ombre portée commune à tout le bloc de texte : elle le décolle du cliché
   /// quand la page est vue sur un écran clair ou en plein soleil.
   static const List<Shadow> blockShadows = [
-    Shadow(color: Color(0xD906060C), offset: Offset(0, 2), blurRadius: 18),
-    Shadow(color: Color(0x9906060C), offset: Offset(0, 1), blurRadius: 3),
+    Shadow(color: Color(0xD908050E), offset: Offset(0, 2), blurRadius: 18),
+    Shadow(color: Color(0x9908050E), offset: Offset(0, 1), blurRadius: 3),
   ];
 
   @override
@@ -43,7 +43,7 @@ class BrandSignature extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             BrandGlowImage(
-              glows: const [(Color(0x59CD2EDA), _markGlowBlur / 2)],
+              glows: const [(Color(0x59C42EE0), _markGlowBlur / 2)],
               image: Image(
                 image: AssetImage(markAsset),
                 height: _markSize,

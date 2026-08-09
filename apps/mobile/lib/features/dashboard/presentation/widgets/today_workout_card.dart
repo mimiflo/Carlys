@@ -140,7 +140,7 @@ class TodayWorkoutCard extends StatelessWidget {
   }
 }
 
-/// CTA accent : texte sombre sur lime, pleine largeur, halo lime diffus.
+/// CTA accent : texte sombre sur orange, pleine largeur, halo orange diffus.
 class _AccentCta extends StatelessWidget {
   const _AccentCta({required this.label, required this.onPressed});
 

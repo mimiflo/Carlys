@@ -130,7 +130,7 @@ Chaque fonctionnalité livrée comprend :
   `{ data, meta, requestId }`, erreur `{ error: { code, message, details, requestId } }`.
   Toute nouvelle route les respecte ; versioning URI `/api/v1`.
 - **Tokens design** : `packages/design-tokens/src/tokens.json` est la **source de
-  vérité** (primaire `#5B5BF6`, accent `#C6F432`, espacements, radius, typo, ombres,
+  vérité** (primaire `#9B30FF`, accent `#FF7A45`, espacements, radius, typo, ombres,
   motion, breakpoints). Toute évolution s'y fait d'abord, puis se répercute dans le
   design system Flutter (`AppColors`, `AppTypography`, `AppSpacing`, `AppRadius`,
   `AppShadows`, `AppMotion`, `AppBreakpoints`) et côté admin.

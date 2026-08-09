@@ -6,7 +6,7 @@ import '../controllers/exercise_library_controller.dart';
 
 /// Rangée de pastilles de filtre par groupe musculaire (maquette 2d).
 ///
-/// La pastille active est le seul aplat lime de l'écran ; les groupes
+/// La pastille active est le seul aplat orange de l'écran ; les groupes
 /// proviennent du référentiel de l'API, jamais d'une liste codée en dur.
 class ExerciseFiltersBar extends ConsumerWidget {
   const ExerciseFiltersBar({super.key});

@@ -56,8 +56,8 @@ Points notables de l'Étape 1 :
 
 `globals.css` importe Tailwind (`@import "tailwindcss"`) et déclare les
 couleurs Carlys en variables CSS, recopiées depuis
-`packages/design-tokens/src/tokens.json` (primaire `#5B5BF6`, accent
-`#C6F432`, neutres, sémantiques). Le bloc `@theme inline` les expose comme
+`packages/design-tokens/src/tokens.json` (primaire `#9B30FF`, accent
+`#FF7A45`, neutres, sémantiques). Le bloc `@theme inline` les expose comme
 couleurs Tailwind (`bg-primary`, `text-muted`, `bg-surface`…), et un bloc
 `@media (prefers-color-scheme: dark)` fournit le thème sombre. Toute nouvelle
 couleur passe par les tokens, jamais par une valeur en dur dans un composant.

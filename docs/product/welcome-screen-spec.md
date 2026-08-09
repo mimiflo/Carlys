@@ -8,6 +8,15 @@
 
 # Carlys — Welcome screen · spec d'implémentation Flutter
 
+> **La palette a changé depuis.** Les hexadécimaux ci-dessous sont ceux du
+> handoff d'origine ; l'application est passée au violet électrique et à
+> l'accent orange (voir `packages/design-tokens/src/tokens.json`, section
+> `color.brand`). La **géométrie** de ce document — tailles, positions,
+> opacités, rayons, arrêts de dégradé — reste la référence ; seules les
+> couleurs sont périmées. Correspondance : `#7B4BF6` → `#7B1FFF`,
+> `#CD2EDA` → `#C42EE0`, `#F7708F` → `#FF7A45`, `#5B5BF6` → `#9B30FF`,
+> `#06060C` → `#08050E`, `#101019` → `#15101F`.
+
 Cible : `apps/mobile/lib/features/onboarding/presentation/screens/welcome_screen.dart`
 Référence visuelle : `Welcome.dc.html` (design validé). Reproduire **exactement** les valeurs ci-dessous.
 

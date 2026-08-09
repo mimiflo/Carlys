@@ -18,22 +18,22 @@ import 'mesh_builder.dart';
 
 /// Indices des matériaux de la scène ; le peintre tient la table associée.
 abstract final class DnaMaterialId {
-  /// Brin 1 — violet `0x5B5BF6`.
+  /// Brin 1 — violet `0x9B30FF`.
   static const int strandA = 0;
 
-  /// Brin 2 — violet clair `0x8A8AFA`, déphasé de π.
+  /// Brin 2 — violet clair `0xC88BFF`, déphasé de π.
   static const int strandB = 1;
 
-  /// Barreau lime `0xC6F432`, un sur trois.
+  /// Barreau orange `0xFF7A45`, un sur trois.
   static const int rungAccent = 2;
 
   /// Barreau blanc à émission violette.
   static const int rungPlain = 3;
 
-  /// Bille lime, au rythme des barreaux accentués.
+  /// Bille orange, au rythme des barreaux accentués.
   static const int nodeAccent = 4;
 
-  /// Bille `0xC9C9FF` à émission violette.
+  /// Bille `0xE7CCFF` à émission violette.
   static const int nodePlain = 5;
 }
 

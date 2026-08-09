@@ -7,7 +7,7 @@ import '../typography/app_typography.dart';
 
 /// Bouton pleine largeur au **dégradé de marque**.
 ///
-/// Réservé aux surfaces de marque, où le lime de l'application n'a pas encore
+/// Réservé aux surfaces de marque, où l'orange de l'application n'a pas encore
 /// de sens : sur la page de bienvenue, c'est l'identité qu'on montre, pas
 /// l'interface. Ailleurs, l'action principale reste [AppButton] en accent —
 /// deux boutons « principaux » de couleurs différentes dans un même écran

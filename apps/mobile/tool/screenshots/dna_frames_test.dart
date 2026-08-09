@@ -16,7 +16,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           home: ColoredBox(
-            color: const Color(0xFF06060C),
+            color: const Color(0xFF08050E),
             child: CustomPaint(
               painter: DnaScenePainter(time: seconds),
               size: const Size(360, 360),

@@ -20,8 +20,8 @@ Les composants se pilotent par **props** (`variant`, `size`, `isLoading`,
 Pour TA colle de mise en page (conteneurs, grilles, espacements), utilise
 les variables CSS du design system — jamais de valeurs en dur :
 
-- Couleurs : `var(--carlys-color-primary)` `#5B5BF6`, `--carlys-color-accent`
-  `#C6F432`, `--carlys-color-success|warning|danger|info`,
+- Couleurs : `var(--carlys-color-primary)` `#9B30FF`, `--carlys-color-accent`
+  `#FF7A45`, `--carlys-color-success|warning|danger|info`,
   neutres `--carlys-neutral-0` … `--carlys-neutral-950`.
 - Surfaces (suivent le thème) : `--carlys-background`, `--carlys-surface`,
   `--carlys-surface-alt`, `--carlys-text`, `--carlys-text-muted`,

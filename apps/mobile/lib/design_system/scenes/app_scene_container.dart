@@ -95,7 +95,7 @@ class AppSceneScrim extends StatelessWidget {
                   end: Alignment.centerRight,
                   colors: [
                     AppColors.darkBackground,
-                    Color(0xB306060C),
+                    Color(0xB308050E),
                     Colors.transparent,
                   ],
                   stops: [0.0, 0.34, 0.72],
@@ -105,7 +105,7 @@ class AppSceneScrim extends StatelessWidget {
                   end: Alignment.bottomCenter,
                   colors: [
                     Colors.transparent,
-                    Color(0x8006060C),
+                    Color(0x8008050E),
                     AppColors.darkBackground,
                   ],
                   stops: [0.3, 0.75, 1.0],
@@ -175,8 +175,8 @@ class AppSceneHalo extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: RadialGradient(
           colors: [
-            Color(0x665B5BF6),
-            Color(0x2E5B5BF6),
+            Color(0x669B30FF),
+            Color(0x2E9B30FF),
             Colors.transparent,
           ],
           stops: [0.0, 0.45, 0.85],

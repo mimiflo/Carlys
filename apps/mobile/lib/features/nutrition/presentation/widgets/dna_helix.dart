@@ -4,9 +4,9 @@ import '../../../../design_system/scenes/dna_scene.dart';
 
 /// Double hélice d'ADN — portage fidèle de `dna-helix.js` (mode « hero »).
 ///
-/// Deux brins en TUBE lustré (violet `0x5B5BF6` et `0x8A8AFA`, déphasés de π)
+/// Deux brins en TUBE lustré (violet `0x9B30FF` et `0xC88BFF`, déphasés de π)
 /// reliés par 26 barreaux faits de deux demi-cylindres avec un jeu central, un
-/// sur trois en lime. Rotation continue 0,22 rad/s, respiration globale ±3 % à
+/// sur trois en orange. Rotation continue 0,22 rad/s, respiration globale ±3 % à
 /// 0,65 Hz et écartement individuel des paires. Tout le rendu vit dans
 /// [DnaScenePainter] ; ce widget ne fait que piloter le temps.
 ///

@@ -57,7 +57,7 @@ ou conteneurisées derrière le profil Compose `app`.
   entitlements d'abonnement (Étape 6) : le client affiche, le serveur décide.
   Aucune logique d'autorisation critique côté client.
 - **Design tokens partagés.** `packages/design-tokens/src/tokens.json` est la
-  source de vérité (primaire `#5B5BF6`, accent `#C6F432`, espacements,
+  source de vérité (primaire `#9B30FF`, accent `#FF7A45`, espacements,
   radius, typographie, ombres, motion, breakpoints). Le design system Flutter
   (`apps/mobile/lib/design_system`) et le thème Tailwind de l'admin reflètent
   ces valeurs.

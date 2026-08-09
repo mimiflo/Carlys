@@ -6,7 +6,7 @@ import '../../../../design_system/design_system.dart';
 /// avant toute session, entrée vers la connexion.
 ///
 /// Le CTA reste éteint tant que l'étape n'a pas de réponse : c'est le seul
-/// aplat lime de l'écran.
+/// aplat orange de l'écran.
 class OnboardingCta extends StatelessWidget {
   const OnboardingCta({
     required this.label,
@@ -115,7 +115,7 @@ class OnboardingCta extends StatelessWidget {
   static final TextStyle _linkStyle =
       AppTypography.label.copyWith(color: AppColors.darkTextTertiary);
 
-  /// Halo lime sous la pastille (ombre de la maquette).
+  /// Halo orange sous la pastille (ombre de la maquette).
   static final List<BoxShadow> _accentGlow = [
     BoxShadow(
       color: AppColors.accent.withValues(alpha: 0.5),

@@ -115,6 +115,38 @@ n'est pas réutilisable tel quel, il est *traduit*. Deux conséquences :
   « 82,5 », « IL Y A 4 JOURS », « LUN. 11 NOV. · 54 MIN ») sont centralisés dans
   `lib/core/utilities/formatting.dart`.
 
+## La palette a changé : violet électrique, accent orange
+
+Écart **assumé et global** avec la maquette d'origine, décidé au produit. La
+maquette posait un indigo `#5B5BF6` et un accent lime `#C6F432` ; l'application
+est passée au violet électrique `#9B30FF` et à l'orange `#FF7A45`. Le reste de
+la maquette — géométrie, typographie, espacements — est inchangé.
+
+Trois règles rendent la palette tenable, et elles sont écrites en tête de
+`AppColors` :
+
+- **l'orange est l'accent unique** — une action ou une métrique clé par écran ;
+- **le magenta `#ED35A9` n'existe jamais à plat**, seulement comme transition
+  à l'intérieur d'un dégradé. Posé seul, c'est lui qui fait basculer un écran
+  du côté « rose » : c'est la leçon d'une première tentative où la couleur
+  d'accent avait été remplacée à l'identique partout ;
+- **`primaryFlash #B44DFF` ne porte jamais de texte** — mesuré à 3,86 sous du
+  blanc, sous le seuil AA. Il est réservé à ce qui se remplit.
+
+Contrastes mesurés sur le fond `#08050E` : orange 7,82 (et 8,12 sous du texte
+noir), violet clair 8,28, violet primaire 4,10, texte principal 18,11.
+
+Deux corrections sont venues de la mesure, pas de l'œil :
+
+- les scènes 3D **codaient le lime en dur** (`0xC6F432`, huit occurrences dans
+  `design_system/scenes/`), en violation de la règle « aucune valeur visuelle
+  en dur » : l'hélice ADN serait restée verte après le changement de palette ;
+- le dégradé de marque **n'atteignait jamais l'orange**. À parts égales, le
+  magenta central occupe la moitié de la course et la dernière couleur
+  n'apparaît que dans les tout derniers pixels — mangés par l'arrondi du
+  bouton de bienvenue, qui finissait donc en rose. D'où les arrêts explicites
+  `[0, .45, .9]`, qui donnent à l'orange un dixième de course en aplat.
+
 ## Règle sur les données
 
 La maquette est peuplée de données d'exemple. L'application n'affiche que des
@@ -147,9 +179,9 @@ Trois particularités qui ne valent **que là** :
 - **Inter en graisse 300**, uniquement pour le mot CARLYS.
 
 Toutes les autres couleurs de la spécification existaient déjà à l'identique
-dans le design system (`darkBackground` `#06060C`, `darkSurface` `#101019`,
+dans le design system (`darkBackground` `#08050E`, `darkSurface` `#15101F`,
 `darkBorder` `#12FFFFFF`, `darkTextSecondary` `#9A9AAE`, `darkTextTertiary`
-`#7A7A8C`, `primary` `#5B5BF6`) : rien n'a été ajouté aux tokens.
+`#7A7A8C`, `primary` `#9B30FF`) : rien n'a été ajouté aux tokens.
 
 Les quatre vignettes (App, Academy, Events, Wear) sont **une présentation, pas
 une navigation** : seule l'application existe aujourd'hui, et les rendre

@@ -222,9 +222,9 @@ class HeartScenePainter extends CustomPainter {
   /// Pose figée (réduction d'animations) : diastole franche, sans contraction.
   final bool still;
 
-  static final LinearRgb _violet = LinearRgb.fromHex(0x5B5BF6);
-  static final LinearRgb _lime = LinearRgb.fromHex(0xC6F432);
-  static final LinearRgb _baseColor = LinearRgb.fromHex(0x2E2760);
+  static final LinearRgb _violet = LinearRgb.fromHex(0x9B30FF);
+  static final LinearRgb _accent = LinearRgb.fromHex(0xFF7A45);
+  static final LinearRgb _baseColor = LinearRgb.fromHex(0x361A66);
 
   /// Courbe cardiaque : systole marquée puis rebond diastolique.
   static double _cardiac(double p) {
@@ -284,9 +284,9 @@ class HeartScenePainter extends CustomPainter {
       cameraY: camera.y,
       cameraZ: camera.z,
       lights: [
-        SceneLight.ambient(LinearRgb.fromHex(0x4A4A9A).scaled(0.55)),
+        SceneLight.ambient(LinearRgb.fromHex(0x5A2A8A).scaled(0.55)),
         SceneLight.point(
-          LinearRgb.fromHex(0x9A9AFF),
+          LinearRgb.fromHex(0xD3A8FF),
           hero ? 40 : 22,
           x: 3.2,
           y: 3.6,
@@ -294,7 +294,7 @@ class HeartScenePainter extends CustomPainter {
           cutoff: 40,
         ),
         SceneLight.point(
-          LinearRgb.fromHex(0xC6F432),
+          LinearRgb.fromHex(0xFF7A45),
           hero ? 18 : 9,
           x: -3.6,
           y: -2.4,
@@ -446,7 +446,7 @@ class HeartScenePainter extends CustomPainter {
   ) {
     final center = camera.project(0, bob, 0, size.width, size.height);
     final unit = camera.pixelsPerUnit(camera.z, size.height);
-    final glow = _violet.lerpTo(_lime, beat * 0.30);
+    final glow = _violet.lerpTo(_accent, beat * 0.30);
     final intensity = (hero ? 0.20 : 0.10) + beat * (hero ? 0.30 : 0.16);
     final color = Color.fromARGB(
       255,
@@ -530,7 +530,7 @@ class HeartScenePainter extends CustomPainter {
 
     final colors = mesh.coreColors;
     final alpha = ((hero ? 0.16 : 0.10) * 255).round();
-    const pale = 0x8A8AFA;
+    const pale = 0xC88BFF;
     final packed = (alpha << 24) | pale;
     if (colors.isNotEmpty && colors[0] != packed) {
       colors.fillRange(0, colors.length, packed);

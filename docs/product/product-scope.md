@@ -149,8 +149,8 @@ c'est un critère d'acceptation, pas une recommandation :
 
 Les composants cités viennent du design system
 (`lib/design_system/`), qui reflète les tokens de
-`packages/design-tokens/src/tokens.json` (primaire `#5B5BF6`, accent
-`#C6F432`).
+`packages/design-tokens/src/tokens.json` (primaire `#9B30FF`, accent
+`#FF7A45`).
 
 ## Ce qui n'est PAS construit immédiatement
 

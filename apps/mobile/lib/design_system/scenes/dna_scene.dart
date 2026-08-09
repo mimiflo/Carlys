@@ -43,11 +43,11 @@ class DnaScenePainter extends CustomPainter {
 
   /// Matériaux de la maquette, dans l'ordre de [DnaMaterialId].
   static final List<StandardMaterial> _materials = [
-    _strand(0x5B5BF6),
-    _strand(0x8A8AFA),
+    _strand(0x9B30FF),
+    _strand(0xC88BFF),
     StandardMaterial(
-      base: LinearRgb.fromHex(0xC6F432),
-      emissive: LinearRgb.fromHex(0xC6F432),
+      base: LinearRgb.fromHex(0xFF7A45),
+      emissive: LinearRgb.fromHex(0xFF7A45),
       emissiveIntensity: 0.5 * _emissiveGain,
       roughness: 0.4,
       metalness: 0,
@@ -55,14 +55,14 @@ class DnaScenePainter extends CustomPainter {
     ),
     StandardMaterial(
       base: const LinearRgb(1, 1, 1),
-      emissive: LinearRgb.fromHex(0x8A8AFA),
+      emissive: LinearRgb.fromHex(0xC88BFF),
       emissiveIntensity: 0.35 * _emissiveGain,
       roughness: 0.5,
       metalness: 0,
       opacity: _op(0.4),
     ),
-    _node(0xC6F432, 0xC6F432),
-    _node(0xC9C9FF, 0x5B5BF6),
+    _node(0xFF7A45, 0xFF7A45),
+    _node(0xE7CCFF, 0x9B30FF),
   ];
 
   static StandardMaterial _strand(int hex) => StandardMaterial(
@@ -100,9 +100,9 @@ class DnaScenePainter extends CustomPainter {
     cameraY: 0,
     cameraZ: _cameraZ,
     lights: [
-      SceneLight.ambient(LinearRgb.fromHex(0x6A6AFF).scaled(0.5)),
+      SceneLight.ambient(LinearRgb.fromHex(0xA84DFF).scaled(0.5)),
       SceneLight.point(
-        LinearRgb.fromHex(0x5B5BF6),
+        LinearRgb.fromHex(0x9B30FF),
         30,
         x: 4,
         y: 5,
@@ -110,7 +110,7 @@ class DnaScenePainter extends CustomPainter {
         cutoff: 60,
       ),
       SceneLight.point(
-        LinearRgb.fromHex(0xC6F432),
+        LinearRgb.fromHex(0xFF7A45),
         20,
         x: -5,
         y: -4,
