@@ -5,39 +5,42 @@ import 'package:flutter/material.dart';
 import '../colors/app_colors.dart';
 import 'scene3d.dart';
 
-/// État d'un cristal à un instant donné.
+/// État d'une particule à un instant donné.
 ///
 /// La position est exprimée en **demi-cadres à sa propre profondeur**
 /// (−1 = bord gauche ou bas, +1 = bord droit ou haut), jamais en pixels : le
-/// modèle reste ainsi vérifiable sans caméra ni canevas, et un cristal
-/// lointain balaie la même part de l'écran qu'un cristal proche.
-typedef FlakeState = ({
+/// modèle reste ainsi vérifiable sans caméra ni canevas, et une particule
+/// lointaine balaie la même part de l'écran qu'une particule proche.
+typedef SpeckState = ({
   double across,
   double fall,
-  double angle,
   double size,
   double opacity,
 });
 
-/// Cristaux de givre qui dérivent **autour du cœur**, et devant lui.
+/// Petites particules blanches qui dérivent **autour du cœur**, et devant lui.
 ///
-/// C'est un accent, pas une chute de neige : chaque cristal ne vit qu'un tiers
-/// du cycle, si bien qu'à un instant donné quatre ou cinq flottent au plus.
+/// Même famille que le flux sanguin déjà en orbite dans la scène — un point
+/// clair, rien d'autre — mais elles, on les remarque : elles passent de temps
+/// en temps, plus grosses, et traversent le cadre au lieu de tourner.
+///
+/// C'est un accent, pas une nuée : chaque particule ne vit qu'un tiers du
+/// cycle, si bien qu'à un instant donné quatre ou cinq flottent au plus.
 /// Aucun aléatoire — le rendu doit être reproductible d'une image à l'autre et
-/// d'un test à l'autre, exactement comme le flux sanguin du cœur.
-abstract final class HeartFlakes {
-  /// Vivier de cristaux. La moitié passe devant le cœur, l'autre derrière.
+/// d'un test à l'autre.
+abstract final class HeartSpecks {
+  /// Vivier de particules. La moitié passe devant le cœur, l'autre derrière.
   static const int count = 14;
 
   /// Durée du cycle, en secondes.
   ///
-  /// Tout état est fonction de l'avancement DANS ce cycle : un cristal
-  /// retrouve donc exactement sa place au tour suivant, et aucun ne se
+  /// Tout état est fonction de l'avancement DANS ce cycle : une particule
+  /// retrouve donc exactement sa place au tour suivant, et aucune ne se
   /// téléporte — propriété vérifiée par les tests, sans laquelle la dérive
   /// lente rendrait le saut criant.
   static const double cycle = 30;
 
-  /// Bornes de vie, en secondes. Les cristaux lointains tombent plus
+  /// Bornes de vie, en secondes. Les particules lointaines tombent plus
   /// longtemps : la parallaxe ne vient pas que de la taille.
   static const double shortestLife = 9;
   static const double longestLife = 14;
@@ -45,7 +48,7 @@ abstract final class HeartFlakes {
   /// Bande de profondeur **interdite** : celle qu'occupe la masse du cœur
   /// (±1,4 unité une fois le maillage mis à l'échelle 1,62).
   ///
-  /// Aucun cristal n'y entre. Chacun est donc franchement derrière ou
+  /// Aucune particule n'y entre. Chacune est donc franchement derrière ou
   /// franchement devant — il n'y a rien à départager, ce qu'un rendu sans
   /// tampon de profondeur ne saurait de toute façon pas faire.
   static const double behindZ = -1.7;
@@ -54,7 +57,7 @@ abstract final class HeartFlakes {
   static const double frontSpread = 1.0;
 
   /// Course verticale, en demi-cadres. Volontairement plus courte que le
-  /// cadre : au-delà, le cristal passerait le plus clair de sa vie sous le
+  /// cadre : au-delà, la particule passerait le plus clair de sa vie sous le
   /// masque du conteneur, donc invisible.
   static const double _travel = 0.85;
 
@@ -62,22 +65,25 @@ abstract final class HeartFlakes {
   /// radial de [AppSceneContainer] : les y envoyer serait les perdre.
   static const double _spread = 0.78;
 
-  /// Rayon d'un cristal moyen, en fraction du plus petit côté de la scène.
+  /// Rayon d'une particule moyenne, en fraction du plus petit côté de la scène.
   ///
-  /// Relevé sur le rendu : le plus gros cristal du premier plan mesure alors
-  /// 15 points de pointe à pointe sur une scène de 330, le plus petit du fond
-  /// en mesure 5. Au double, le cristal cessait d'être un accent et se posait
-  /// sur le cœur comme un motif.
-  static const double _radius = 0.014;
+  /// Relevé sur le rendu : la plus grosse du premier plan mesure alors 6 points
+  /// de diamètre sur une scène de 330, la plus petite du fond en mesure 2 —
+  /// soit à peine plus que les points du flux sanguin, ce qu'il faut pour
+  /// qu'elles appartiennent à la même famille sans se confondre avec lui.
+  static const double _radius = 0.0055;
 
-  /// Givre : un blanc à peine violacé, tiré des jetons de marque.
-  static final Color _ice =
-      Color.lerp(AppColors.neutral0, AppColors.primaryLight, 0.35)!;
+  /// Étalement du halo, en multiples du rayon.
+  static const double _glowSpread = 2.8;
 
-  /// Le cristal [index] passe-t-il **devant** le cœur ?
+  /// Blanc franc, comme demandé : le violet appartient au cœur, pas à ce qui
+  /// flotte autour.
+  static const Color _white = AppColors.neutral0;
+
+  /// La particule [index] passe-t-elle **devant** le cœur ?
   static bool isInFront(int index) => index.isEven;
 
-  /// Profondeur du cristal [index], en unités monde.
+  /// Profondeur de la particule [index], en unités monde.
   static double depthOf(int index) {
     final spread = sceneNoise(index * 1.0 + 17);
     return isInFront(index)
@@ -85,13 +91,13 @@ abstract final class HeartFlakes {
         : behindZ - spread * behindSpread;
   }
 
-  /// Durée de vie du cristal [index], en secondes.
+  /// Durée de vie de la particule [index], en secondes.
   static double lifeOf(int index) =>
       shortestLife +
       sceneNoise(index * 1.0 + 53) * (longestLife - shortestLife);
 
   /// Enveloppe d'apparition : nulle à la naissance ET à la mort, pleine au
-  /// milieu. Un cristal ne surgit donc jamais, et ne disparaît jamais net.
+  /// milieu. Une particule ne surgit donc jamais, et ne disparaît jamais net.
   @visibleForTesting
   static double envelope(double progress) {
     const rise = 0.18;
@@ -102,12 +108,13 @@ abstract final class HeartFlakes {
     return e * e * (3 - 2 * e);
   }
 
-  /// État du cristal [index] à [seconds], ou `null` s'il est **en sommeil**.
+  /// État de la particule [index] à [seconds], ou `null` si elle est **en
+  /// sommeil**.
   ///
   /// C'est là tout le « de temps en temps » : les naissances s'égrènent sur le
   /// cycle au lieu de se grouper, et chacune n'occupe qu'une fraction de
   /// celui-ci.
-  static FlakeState? stateAt(int index, double seconds) {
+  static SpeckState? stateAt(int index, double seconds) {
     final life = lifeOf(index);
     // Décalage régulier, plus une gigue bornée à un intervalle : l'égrènement
     // reste régulier sans être mécanique.
@@ -123,22 +130,19 @@ abstract final class HeartFlakes {
       progress * math.pi * 2 * (1 + index % 2) +
           sceneNoise(index * 1.0 + 71) * 6,
     );
-    final turns = 0.6 + sceneNoise(index * 1.0 + 191) * 0.9;
-    final direction = index % 3 == 0 ? -1 : 1;
 
     return (
       across: (sceneNoise(index * 1.0 + 131) * 2 - 1) * _spread + sway * 0.11,
       fall: _travel - 2 * _travel * progress,
-      angle: direction * turns * math.pi * 2 * progress,
       size: 0.65 + sceneNoise(index * 1.0 + 233) * 0.35,
       opacity: envelope(progress),
     );
   }
 
-  /// Dessine les cristaux du plan demandé.
+  /// Dessine les particules du plan demandé.
   ///
   /// Deux passes encadrent le cœur : [front] à `false` avant le maillage —
-  /// les cristaux passent alors derrière la masse —, à `true` après.
+  /// les particules passent alors derrière la masse —, à `true` après.
   static void paint(
     Canvas canvas,
     Size size,
@@ -147,10 +151,10 @@ abstract final class HeartFlakes {
     required bool hero,
     required bool front,
   }) {
-    // Échelle de référence : le plan du cœur. Les cristaux proches grossissent,
-    // les lointains rapetissent, dans ce même rapport.
+    // Échelle de référence : le plan du cœur. Les particules proches
+    // grossissent, les lointaines rapetissent, dans ce même rapport.
     final reference = camera.pixelsPerUnit(camera.z, size.height);
-    final peak = (hero ? 0.52 : 0.34) * (front ? 1 : 0.75);
+    final peak = (hero ? 0.85 : 0.62) * (front ? 1 : 0.7);
 
     for (var index = 0; index < count; index++) {
       if (isInFront(index) != front) {
@@ -176,80 +180,47 @@ abstract final class HeartFlakes {
       );
 
       final radius = math.max(
-        1.5,
+        0.7,
         _radius * size.shortestSide * state.size * (unit / reference),
       );
-      _paintCrystal(
+      _paintSpeck(
         canvas,
         Offset(point.sx, point.sy),
         radius,
-        state.angle,
-        _ice.withValues(alpha: (peak * state.opacity).clamp(0.0, 1.0)),
+        (peak * state.opacity).clamp(0.0, 1.0),
       );
     }
   }
 
-  /// Un cristal : six branches barbelées, additives comme tout ce qui brille
-  /// dans cette scène.
-  static void _paintCrystal(
+  /// Une particule : un point blanc et son halo, additifs comme tout ce qui
+  /// brille dans cette scène.
+  static void _paintSpeck(
     Canvas canvas,
     Offset center,
     double radius,
-    double angle,
-    Color color,
+    double alpha,
   ) {
-    final paint = Paint()
-      ..blendMode = BlendMode.plus
-      ..style = PaintingStyle.stroke
-      ..strokeCap = StrokeCap.round
-      ..color = color
-      // Le canevas est mis à l'échelle du cristal : l'épaisseur l'est aussi.
-      // Le plancher garde le trait visible sur les plus petits.
-      ..strokeWidth = math.max(0.1, 0.75 / radius);
-
-    canvas
-      ..save()
-      ..translate(center.dx, center.dy)
-      ..rotate(angle)
-      ..scale(radius)
-      ..drawPath(_crystal, paint)
-      ..drawCircle(
-        Offset.zero,
-        0.16,
-        Paint()
-          ..blendMode = BlendMode.plus
-          ..color = color,
-      )
-      ..restore();
-  }
-
-  /// Silhouette du cristal, de rayon 1, construite une seule fois.
-  static final Path _crystal = _buildCrystal();
-
-  /// Position et longueur des barbes, en fraction de la branche.
-  static const List<(double, double)> _barbs = [(0.42, 0.30), (0.70, 0.21)];
-  static const double _barbAngle = 0.61;
-
-  static Path _buildCrystal() {
-    final path = Path();
-    for (var arm = 0; arm < 6; arm++) {
-      final a = arm * math.pi / 3;
-      final dx = math.cos(a);
-      final dy = math.sin(a);
-      path
-        ..moveTo(0, 0)
-        ..lineTo(dx, dy);
-      for (final (at, length) in _barbs) {
-        final bx = dx * at;
-        final by = dy * at;
-        for (final side in const [1, -1]) {
-          final b = a + side * _barbAngle;
-          path
-            ..moveTo(bx, by)
-            ..lineTo(bx + math.cos(b) * length, by + math.sin(b) * length);
-        }
-      }
-    }
-    return path;
+    // Le halo est un dégradé, pas un second disque : un disque uni laisserait
+    // un bord franc, ce qui se voit immédiatement sur un fond sombre.
+    final glow = radius * _glowSpread;
+    canvas.drawCircle(
+      center,
+      glow,
+      Paint()
+        ..blendMode = BlendMode.plus
+        ..shader = RadialGradient(
+          colors: [
+            _white.withValues(alpha: alpha * 0.34),
+            _white.withValues(alpha: 0),
+          ],
+        ).createShader(Rect.fromCircle(center: center, radius: glow)),
+    );
+    canvas.drawCircle(
+      center,
+      radius,
+      Paint()
+        ..blendMode = BlendMode.plus
+        ..color = _white.withValues(alpha: alpha),
+    );
   }
 }

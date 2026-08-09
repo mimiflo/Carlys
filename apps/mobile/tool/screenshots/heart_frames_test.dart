@@ -1,6 +1,6 @@
 // Planche de contrôle du cœur : rend la scène à plusieurs instants du cycle
 // pour vérifier ce qu'une capture d'écran ne montre pas — la dérive des
-// cristaux de givre, leur apparition en fondu, et la continuité au
+// particules, leur apparition en fondu, et la continuité au
 // rebouclage (le cycle dure 30 s : l'image à 30 s doit être celle à 0 s).
 //   flutter test tool/screenshots/heart_frames_test.dart --update-goldens
 import 'package:carlys_mobile/design_system/scenes/heart_scene.dart';

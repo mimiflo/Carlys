@@ -5,7 +5,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
-import 'heart_flakes.dart';
+import 'heart_specks.dart';
 import 'scene3d.dart';
 
 /// Cœur battant de la refonte — portage fidèle de `pulse-heart.js`.
@@ -205,8 +205,8 @@ class _HeartMesh {
 /// Rendu d'une image du cœur.
 ///
 /// Public comme celui de l'hélice, et pour la même raison : certains défauts
-/// n'existent qu'en mouvement (un cristal qui se téléporte au rebouclage, une
-/// nuée qui apparaît d'un coup). La planche de contrôle
+/// n'existent qu'en mouvement (une particule qui se téléporte au rebouclage,
+/// une nuée qui apparaît d'un coup). La planche de contrôle
 /// `tool/screenshots/heart_frames_test.dart` rend la scène à des instants
 /// choisis, ce qu'aucune capture d'écran ne saurait montrer.
 class HeartScenePainter extends CustomPainter {
@@ -355,8 +355,8 @@ class HeartScenePainter extends CustomPainter {
       colors[v] = shader.shade(rnx, rny, rnz, wx, wy, wz, material);
     }
 
-    // --- Cristaux de givre passant DERRIÈRE la masse ---
-    HeartFlakes.paint(
+    // --- Particules passant DERRIÈRE la masse ---
+    HeartSpecks.paint(
       canvas,
       size,
       camera,
@@ -408,8 +408,8 @@ class HeartScenePainter extends CustomPainter {
 
     _paintParticles(canvas, size, camera, rotation, bob, beat);
 
-    // --- Cristaux de givre passant DEVANT la masse ---
-    HeartFlakes.paint(
+    // --- Particules passant DEVANT la masse ---
+    HeartSpecks.paint(
       canvas,
       size,
       camera,
