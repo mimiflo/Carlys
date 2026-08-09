@@ -153,15 +153,6 @@ Chaque fonctionnalité livrée comprend :
 - Ne **jamais** déclarer une fonctionnalité terminée sans avoir réellement exécuté
   ses tests (et les avoir vus passer).
 
-## Branches
-
-`main` est la **production** (protégée, taguée) ; `develop` est le
-**développement**. Les branches de fonctionnalité partent de `develop` et y
-reviennent par pull request. Ne jamais pousser directement sur `main` : une
-mise en production est une fusion `--ff-only` de `develop`, suivie d'un tag.
-Le cycle complet est dans
-[`docs/architecture/git-workflow.md`](docs/architecture/git-workflow.md).
-
 ## Check-list de fin de tâche
 
 1. Le code respecte les règles générales et les limites de taille ci-dessus.
