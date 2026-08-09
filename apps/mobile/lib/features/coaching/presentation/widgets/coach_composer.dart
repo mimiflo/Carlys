@@ -63,6 +63,14 @@ class CoachComposer extends StatelessWidget {
               decoration: InputDecoration(
                 isDense: true,
                 border: InputBorder.none,
+                // Le thème remplit les champs de saisie et leur pose un
+                // rectangle de fond. Ici la surface est déjà celle du
+                // conteneur, en forme de stade : sans ces deux lignes, le
+                // remplissage du thème dessine un rectangle à angles vifs
+                // À L'INTÉRIEUR de la pilule, et sa marge s'ajoute à celle
+                // du conteneur.
+                filled: false,
+                contentPadding: EdgeInsets.zero,
                 hintText: 'Pose ta question…',
                 hintStyle: AppTypography.body.copyWith(
                   color: AppColors.darkTextTertiary,

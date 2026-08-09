@@ -145,4 +145,32 @@ void main() {
     expect(find.text('Ton coach est là'), findsOneWidget);
     expect(find.byType(CoachMessageBubble), findsNothing);
   });
+
+  testWidgets('le champ de saisie est une pilule, pas un rectangle',
+      (tester) async {
+    await pumpCoach(tester);
+
+    // Le thème remplit les champs de saisie. Ici la surface est celle du
+    // conteneur, en forme de stade : si le champ se remplissait lui aussi,
+    // le thème dessinerait un rectangle à angles vifs À L'INTÉRIEUR de la
+    // pilule — c'est exactement ce qui était visible à l'écran.
+    final field = tester.widget<TextField>(find.byType(TextField));
+    expect(field.decoration?.filled, isFalse);
+    expect(field.decoration?.contentPadding, EdgeInsets.zero);
+
+    // La pilule elle-même : le rayon doit dépasser sa demi-hauteur, sinon
+    // ce sont des coins arrondis, pas un stade.
+    final pill = find.ancestor(
+      of: find.byType(TextField),
+      matching: find.byType(Container),
+    );
+    final box = tester.widget<Container>(pill.first);
+    final radius = (box.decoration! as BoxDecoration)
+        .borderRadius!
+        .resolve(TextDirection.ltr)
+        .topLeft
+        .x;
+    final height = tester.getSize(find.byType(TextField)).height;
+    expect(radius, greaterThan(height / 2));
+  });
 }
