@@ -14,6 +14,7 @@ import {
   type CoachReply,
 } from '@carlys/api-contracts';
 import { type INestApplication } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { type NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
 import { PrismaClient } from '@prisma/client';
@@ -23,6 +24,8 @@ import request from 'supertest';
 import { type App } from 'supertest/types';
 import { AppModule } from '../src/app/app.module';
 import { configureApp } from '../src/app/configure-app';
+import { AppConfigService } from '../src/config/app-config.service';
+import { type Env } from '../src/config/env.schema';
 import {
   COACH_MODEL_PORT,
   type CoachModelPort,
@@ -307,12 +310,26 @@ describe('Coach IA (e2e)', () => {
   it('coach coupé globalement : 503, jamais une erreur serveur', async () => {
     // L'interrupteur doit couper proprement, sans déploiement.
     await grantCoaching();
-    const previous = process.env.COACH_ENABLED;
-    process.env.COACH_ENABLED = 'false';
 
+    // On ne peut PAS l'éprouver en changeant `process.env` : `forRoot()` est
+    // évalué à l'IMPORT du module de configuration, une fois par processus.
+    // Reconstruire l'application ne relit pas l'environnement — elle
+    // repartirait de la même configuration validée. C'est donc la
+    // configuration elle-même qu'on substitue ; que `COACH_ENABLED=false`
+    // se lise bien en `false` est vérifié par `env.schema.spec.ts`.
     const restarted = await Test.createTestingModule({ imports: [AppModule] })
       .overrideProvider(COACH_MODEL_PORT)
       .useValue(fakeModel)
+      .overrideProvider(AppConfigService)
+      .useFactory({
+        inject: [ConfigService],
+        factory: (config: ConfigService<Env, true>) =>
+          // Prototype la vraie configuration : seul l'interrupteur change,
+          // tout le reste (base, Redis, secrets) reste celui de l'app.
+          Object.create(new AppConfigService(config), {
+            coachEnabled: { get: () => false },
+          }) as AppConfigService,
+      })
       .compile();
     const disabled = restarted.createNestApplication<NestExpressApplication>();
     configureApp(disabled);
@@ -324,6 +341,5 @@ describe('Coach IA (e2e)', () => {
       .expect(503);
 
     await disabled.close();
-    process.env.COACH_ENABLED = previous ?? 'true';
   });
 });
