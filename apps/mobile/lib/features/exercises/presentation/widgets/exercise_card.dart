@@ -159,8 +159,13 @@ class _Thumbnail extends StatelessWidget {
       clipBehavior: Clip.antiAlias,
       decoration: BoxDecoration(
         borderRadius: AppRadius.avatarAll,
+        // Le liseré teinté appartient à la PASTILLE de marque : posé autour
+        // d'une photo, il lui fait un néon coloré et la dénature. Une photo
+        // n'a droit qu'au filet neutre qui détache sa découpe de la carte.
         border: Border.all(
-          color: iconTint.withValues(alpha: ExerciseCard._thumbBorderAlpha),
+          color: imageUrl == null
+              ? iconTint.withValues(alpha: ExerciseCard._thumbBorderAlpha)
+              : AppColors.darkBorder,
         ),
       ),
       child: imageUrl == null

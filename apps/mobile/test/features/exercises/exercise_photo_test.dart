@@ -73,6 +73,45 @@ void main() {
     expect(find.byType(Image), findsOneWidget);
   });
 
+  testWidgets('une photo n’a pas de liseré teinté autour d’elle',
+      (tester) async {
+    // Le liseré violet (ou orange en premium) appartient à la pastille de
+    // marque. Autour d'une photo, il lui fait un néon coloré.
+    Color? borderOf(Finder finder) {
+      final decoration =
+          tester.widget<Container>(finder).decoration! as BoxDecoration;
+      return decoration.border?.top.color;
+    }
+
+    await _pump(
+      tester,
+      _Cache(),
+      Column(
+        children: [
+          ExerciseCard(
+            exercise: summary(
+              'id-1',
+              'Avec photo',
+              imageUrl: 'http://s/image/a.webp',
+            ),
+            onTap: () {},
+          ),
+          ExerciseCard(exercise: summary('id-2', 'Sans photo'), onTap: () {}),
+        ],
+      ),
+    );
+
+    final thumbnails = find.descendant(
+      of: find.byType(ExerciseCard),
+      matching: find.byWidgetPredicate(
+        (widget) =>
+            widget is Container && widget.clipBehavior == Clip.antiAlias,
+      ),
+    );
+    expect(borderOf(thumbnails.at(0)), AppColors.darkBorder);
+    expect(borderOf(thumbnails.at(1)), isNot(AppColors.darkBorder));
+  });
+
   testWidgets('carte sans photo : vignette de marque, aucun appel réseau',
       (tester) async {
     final cache = _Cache();
