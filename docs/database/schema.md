@@ -192,7 +192,7 @@ explicites** (pas de sac JSON) : chaque nouvelle préférence est une migration.
 ## Catalogue d'exercices — Étape 3 (implémenté)
 
 > Implémenté (migration `20260806220000_exercise_catalog`, seed
-> `pnpm prisma:seed` : 33 exercices, 12 groupes musculaires, 10 équipements).
+> `pnpm prisma:seed` : 43 exercices, 12 groupes musculaires, 10 équipements, et les photos du catalogue déposées dans le stockage objet).
 > Ajustements par rapport à la cible : le contenu (nom, description,
 > instructions) vit en français directement sur `Exercise` —
 > `ExerciseTranslation` arrivera avec l'i18n ; `ExerciseMedia`,

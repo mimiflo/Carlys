@@ -4,12 +4,15 @@
  * ⚠️  Les identifiants créés ici sont STRICTEMENT réservés au développement
  *     et ne doivent JAMAIS exister en production.
  *
- * Contenu : groupes musculaires, équipements, 32 exercices publiés,
+ * Contenu : groupes musculaires, équipements, 43 exercices publiés avec les
+ * photos qui les illustrent (déposées dans le stockage objet, jamais
+ * embarquées dans l'application),
  * plans d'abonnement (gratuit, premium) et deux utilisateurs de
  * démonstration — le compte premium reçoit ses entitlements (droits
  * décidés côté serveur, Étape 6).
  */
 import { ADMIN_PERMISSIONS, PREMIUM_ENTITLEMENT_KEYS } from '@carlys/api-contracts';
+import { seedExerciseMedia } from './seed-media';
 import {
   BillingPeriod,
   ExerciseDifficulty,
@@ -137,6 +140,185 @@ const EXERCISES: SeedExercise[] = [
     primary: 'pectoraux',
     secondary: ['epaules'],
     equipment: ['poulie'],
+  },
+  {
+    slug: 'developpe-incline',
+    name: 'Développé incliné',
+    description:
+      'La version barre du développé incliné : plus lourd que les haltères, cible le haut des pectoraux.',
+    instructions: [
+      'Réglez le banc entre 30 et 45 degrés — au-delà, ce sont les épaules qui travaillent.',
+      'Prise légèrement plus large que les épaules, omoplates serrées.',
+      'Descendez la barre vers le haut de la poitrine, coudes à 45 degrés du buste.',
+      'Poussez jusqu’à l’extension sans verrouiller brutalement les coudes.',
+    ],
+    difficulty: INTERMEDIATE,
+    type: STRENGTH,
+    tags: ['force', 'polyarticulaire', 'haut-des-pectoraux', 'barre'],
+    primary: 'pectoraux',
+    secondary: ['epaules', 'triceps'],
+    equipment: ['barre', 'banc'],
+  },
+  {
+    slug: 'developpe-decline',
+    name: 'Développé décliné',
+    description:
+      'Banc en pente négative : l’angle recrute davantage la portion basse des pectoraux.',
+    instructions: [
+      'Calez les jambes sous les boudins avant de vous allonger.',
+      'Prise un peu plus large que les épaules, barre au-dessus du bas de la poitrine.',
+      'Descendez avec contrôle jusqu’à effleurer le bas des pectoraux.',
+      'Poussez à la verticale ; faites-vous assister pour reposer la barre.',
+    ],
+    difficulty: INTERMEDIATE,
+    type: STRENGTH,
+    tags: ['force', 'polyarticulaire', 'bas-des-pectoraux', 'barre'],
+    primary: 'pectoraux',
+    secondary: ['triceps'],
+    equipment: ['barre', 'banc'],
+  },
+  {
+    slug: 'developpe-couche-halteres',
+    name: 'Développé couché haltères',
+    description:
+      'Le développé couché avec deux charges libres : amplitude plus grande, chaque bras travaille seul.',
+    instructions: [
+      'Assis sur le banc, haltères sur les cuisses, basculez en arrière en les accompagnant.',
+      'Descendez jusqu’à ce que les coudes passent légèrement sous la ligne du buste.',
+      'Poussez en rapprochant les haltères sans les entrechoquer.',
+      'Reposez les haltères sur les cuisses avant de vous relever.',
+    ],
+    difficulty: INTERMEDIATE,
+    type: STRENGTH,
+    tags: ['force', 'polyarticulaire', 'halteres'],
+    primary: 'pectoraux',
+    secondary: ['triceps', 'epaules'],
+    equipment: ['halteres', 'banc'],
+  },
+  {
+    slug: 'developpe-decline-halteres',
+    name: 'Développé décliné haltères',
+    description:
+      'Bas des pectoraux avec charges libres : l’amplitude des haltères sur l’angle du décliné.',
+    instructions: [
+      'Calez les jambes, haltères en mains, basculez en arrière avec contrôle.',
+      'Descendez jusqu’à un étirement franc, coudes légèrement rentrés.',
+      'Poussez vers le haut en resserrant les pectoraux.',
+      'Faites-vous aider pour reposer les haltères si la charge est lourde.',
+    ],
+    difficulty: INTERMEDIATE,
+    type: STRENGTH,
+    tags: ['bas-des-pectoraux', 'halteres'],
+    primary: 'pectoraux',
+    secondary: ['triceps'],
+    equipment: ['halteres', 'banc'],
+  },
+  {
+    slug: 'chest-press-machine',
+    name: 'Chest press machine',
+    description:
+      'La poussée guidée : trajectoire imposée, donc peu de technique à maîtriser — idéale pour débuter.',
+    instructions: [
+      'Réglez le siège pour que les poignées arrivent à mi-poitrine.',
+      'Dos plaqué au dossier, pieds au sol.',
+      'Poussez jusqu’à l’extension sans verrouiller les coudes.',
+      'Revenez lentement jusqu’à sentir l’étirement, sans laisser les plaques claquer.',
+    ],
+    difficulty: BEGINNER,
+    type: STRENGTH,
+    tags: ['machine', 'debutant'],
+    primary: 'pectoraux',
+    secondary: ['triceps', 'epaules'],
+    equipment: ['machine'],
+  },
+  {
+    slug: 'chest-press-incline-machine',
+    name: 'Chest press incliné machine',
+    description: 'Le chest press sur un angle incliné : haut des pectoraux, trajectoire guidée.',
+    instructions: [
+      'Réglez le siège pour que les poignées arrivent au niveau des clavicules.',
+      'Dos plaqué, omoplates serrées.',
+      'Poussez vers le haut et l’avant jusqu’à l’extension.',
+      'Contrôlez le retour sur toute l’amplitude.',
+    ],
+    difficulty: BEGINNER,
+    type: STRENGTH,
+    tags: ['machine', 'haut-des-pectoraux'],
+    primary: 'pectoraux',
+    secondary: ['epaules', 'triceps'],
+    equipment: ['machine'],
+  },
+  {
+    slug: 'ecarte-poulie-haut',
+    name: 'Écarté à la poulie haute',
+    description:
+      'Poulies réglées en haut, mouvement descendant : la tension se concentre sur le bas des pectoraux.',
+    instructions: [
+      'Réglez les deux poulies au point haut, un pied en avant pour la stabilité.',
+      'Bras semi-fléchis, ramenez les poignées vers le bas et l’avant.',
+      'Croisez légèrement les mains devant le bassin et serrez une seconde.',
+      'Remontez lentement en gardant le buste immobile.',
+    ],
+    difficulty: BEGINNER,
+    type: STRENGTH,
+    tags: ['isolation', 'poulie', 'bas-des-pectoraux'],
+    primary: 'pectoraux',
+    secondary: ['epaules'],
+    equipment: ['poulie'],
+  },
+  {
+    slug: 'ecarte-poulie-bas',
+    name: 'Écarté à la poulie basse',
+    description:
+      'Poulies au sol, mouvement montant : l’angle sollicite surtout le haut des pectoraux.',
+    instructions: [
+      'Réglez les deux poulies au point bas, un pied en avant.',
+      'Bras semi-fléchis, montez les poignées vers l’avant et le haut.',
+      'Rejoignez les mains à hauteur des clavicules, sans hausser les épaules.',
+      'Redescendez lentement jusqu’à l’étirement.',
+    ],
+    difficulty: BEGINNER,
+    type: STRENGTH,
+    tags: ['isolation', 'poulie', 'haut-des-pectoraux'],
+    primary: 'pectoraux',
+    secondary: ['epaules'],
+    equipment: ['poulie'],
+  },
+  {
+    slug: 'pec-deck',
+    name: 'Pec deck',
+    description:
+      'L’isolation guidée des pectoraux : le buste est calé, seuls les bras se referment.',
+    instructions: [
+      'Réglez le siège pour que les poignées soient à hauteur d’épaules.',
+      'Dos plaqué, avant-bras contre les coussinets.',
+      'Refermez les bras devant vous et tenez la contraction une seconde.',
+      'Ouvrez lentement jusqu’à l’étirement, sans forcer au-delà.',
+    ],
+    difficulty: BEGINNER,
+    type: STRENGTH,
+    tags: ['isolation', 'machine', 'debutant'],
+    primary: 'pectoraux',
+    secondary: ['epaules'],
+    equipment: ['machine'],
+  },
+  {
+    slug: 'ecarte-couche-halteres',
+    name: 'Écarté couché haltères',
+    description:
+      'L’isolation en charge libre : l’étirement le plus complet des pectoraux, à charge modérée.',
+    instructions: [
+      'Allongé sur le banc, haltères au-dessus de la poitrine, paumes face à face.',
+      'Gardez les coudes légèrement fléchis et FIXES pendant tout le mouvement.',
+      'Ouvrez les bras en arc de cercle jusqu’à sentir l’étirement.',
+      'Refermez en pensant à rapprocher les coudes, pas les mains.',
+    ],
+    difficulty: INTERMEDIATE,
+    type: STRENGTH,
+    tags: ['isolation', 'halteres'],
+    primary: 'pectoraux',
+    secondary: ['epaules'],
+    equipment: ['halteres', 'banc'],
   },
   {
     slug: 'tractions',
@@ -866,6 +1048,7 @@ function mustGet(map: Map<string, string>, key: string): string {
 
 async function main(): Promise<void> {
   await seedCatalog();
+  await seedExerciseMedia(prisma);
   await seedSubscriptionPlans();
   await seedAdministration();
   await seedDevUsers();

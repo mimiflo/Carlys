@@ -4,5 +4,5 @@
     "outDir": "./dist",
     "baseUrl": "./"
   },
-  "include": ["src", "test", "prisma/seed.ts"]
+  "include": ["src", "test", "prisma/seed.ts", "prisma/seed-media.ts"]
 }
