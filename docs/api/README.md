@@ -185,7 +185,7 @@ docs) et sera documentée précisément ici à sa livraison.
 | Authentification | **Livré** — voir le tableau détaillé ci-dessous | Étape 2 ✅ |
 | Utilisateur courant | **Livré** — `GET/PATCH/DELETE /api/v1/users/me`, sessions | Étape 2 ✅ |
 | Exercices | **Livré** — `GET /api/v1/exercises` (recherche `search`, filtres `muscleGroup`/`equipment`/`difficulty`/`type`, pagination `cursor`+`limit`, `meta.nextCursor`/`hasMore`), `GET /api/v1/exercises/:idOrSlug`, `GET /api/v1/muscle-groups`, `GET /api/v1/equipment` — catalogue seedé (33 exercices), cache Redis tolérant aux pannes, exercices non publiés jamais servis | Étape 3 ✅ |
-| Modèles de séance | **Livré** — `GET /api/v1/workout-templates` (curseur), `GET /workout-templates/:id`, `PUT /workout-templates/:id` (**unique écriture**, create-or-replace, 201/200), `DELETE /workout-templates/:id` (suppression logique rejouable) — voir le tableau détaillé ci-dessous. Programmes multi-semaines (`/programs`) toujours cible | Étape 4 ✅ |
+| Modèles de séance | **Livré** — `GET /api/v1/workout-templates` (curseur), `GET /workout-templates/:id`, `PUT /workout-templates/:id` (**unique écriture**, create-or-replace, 201/200), `DELETE /workout-templates/:id` (suppression logique rejouable) — voir le tableau détaillé ci-dessous. Programmes multi-semaines : voir la ligne dédiée | Étape 4 ✅ |
 | Séances | **Livré** — `POST /workout-sessions` (création idempotente, id appareil, `templateId`/`templateName` facultatifs et jamais bloquants), `GET /workout-sessions` (curseur), `GET/PATCH /workout-sessions/:id`, `POST …/:id/complete` et `…/:id/abandon` (rejouables, 409 si clôture croisée) | Étape 4 ✅ |
 | Séries | **Livré** — `POST /workout-sessions/:id/sets` (upsert idempotent, nom d'exercice résolu depuis le catalogue, `plannedReps`/`plannedWeightKg`/`planItemId` facultatifs), `PATCH /workout-sets/:id` (corrige le fait réalisé, jamais la cible), `DELETE /workout-sets/:id` (suppression logique rejouable) | Étape 4 ✅ |
 | Progression | **Livré** — `GET /api/v1/progress/overview?period=week\|month\|year` (totaux + volume par intervalle), `GET /api/v1/progress/records` (records personnels), `GET /api/v1/progress/exercises/:exerciseId` (progression par séance), `GET/POST /api/v1/body-metrics` (création idempotente, id appareil), `DELETE /api/v1/body-metrics/:id` (suppression logique rejouable) | Étape 5 ✅ |
@@ -193,6 +193,7 @@ docs) et sera documentée précisément ici à sa livraison.
 | Abonnements | **Livré** — `GET /api/v1/subscriptions/me` (plan effectif + abonnement projeté), `GET /api/v1/entitlements` (droits évalués **côté serveur**, expiration réévaluée à chaque lecture) ; le catalogue applique `premium_exercises` (fiche premium → 403 sans droit) | Étape 6 ✅ |
 | Webhooks paiement | **Livré** — `POST /api/v1/webhooks/stripe` (signature `Stripe-Signature` HMAC-SHA256 sur corps brut, tolérance anti-rejeu 5 min), `POST /api/v1/webhooks/revenuecat` (`Authorization: Bearer`) — **idempotents** (journal `SubscriptionEvent`, unicité `(provider, externalEventId)`), 503 tant que le secret n'est pas configuré, échec de traitement journalisé et retraitable | Étape 6 ✅ |
 | Administration | **Livré** — `POST /api/v1/admin/auth/login` (comptes séparés, jeton à audience dédiée 12 h), `GET /admin/auth/me`, `GET /admin/overview`, `GET /admin/users` (recherche + curseur), `GET /admin/users/:id`, `PATCH /admin/users/:id/status` (suspension = sessions révoquées), `PUT /admin/users/:id/entitlements` (attribution manuelle auditée), `GET /admin/audit-logs`, `GET /admin/exercises` (catalogue **publiés ET non publiés**, recherche, curseur), `PATCH /admin/exercises/:id/publication` — RBAC par permission (`user:read`, `user:update`, `entitlement:grant`, `exercise:read`, `exercise:publish`, `exercise:write`, `media:read`, `media:write`, `audit:read`) | Étape 7 ✅ |
+| Programmes | **Livré** — `GET /api/v1/programs` (curseur), `GET /programs/:id`, `PUT /programs/:id` (**unique écriture**, create-or-replace, 201/200), `DELETE /programs/:id` (suppression logique rejouable) — plafond du plan gratuit à la création (`unlimited_programs`), voir le tableau détaillé ci-dessous | Post-Étape 7 ✅ |
 | Médias | **Livré** — `POST /api/v1/admin/media` (dépôt multipart rejouable), `GET /admin/media`, `DELETE /admin/media/:id`, `PUT /admin/exercises/:id/image`, `PUT /admin/exercises/:id/mesh` — voir le tableau détaillé ci-dessous | Post-Étape 7 ✅ |
 
 Les chemins exacts, les DTO et les réponses seront fixés à l'implémentation ;
@@ -274,6 +275,41 @@ Journalisation : un log Pino `info` par écriture (`workout_template.saved`,
 `plannedSetsCount`, corrélé au `requestId` — **jamais** le contenu des notes.
 Pas d'entrée `AuditLog` : ce journal est réservé aux événements de sécurité et
 aux actions d'administration.
+
+### Endpoints livrés — programmes multi-semaines
+
+Un programme dit **quand** s'entraîner ; le modèle de séance dit **quoi**
+faire. Le programme ne duplique donc aucun exercice : chaque jour renvoie à un
+modèle existant, ou n'annonce qu'un intitulé (repos, activité libre).
+
+| Endpoint | Statuts | Notes |
+| --- | --- | --- |
+| `GET /api/v1/programs` | 200, 401 | Mes programmes, `updatedAt DESC`, pagination `cursor` + `limit` |
+| `GET /api/v1/programs/:id` | 200, 401, 404 | Jours triés (semaine, puis jour). **404 dans les trois cas** : inconnu, supprimé, ou à autrui |
+| `PUT /api/v1/programs/:id` | 200, 201, 400, 401, 403, 404, 409 | **Unique écriture** : le corps décrit l'état complet. **201** à la création, **200** au remplacement |
+| `DELETE /api/v1/programs/:id` | 204, 401, 404 | Suppression **logique**, rejouable ; programme d'autrui → 404 |
+
+Ce que le `PUT` garantit :
+
+- **Les identifiants viennent de l'appareil** (programme et jours) : rejouer le
+  même corps redonne exactement le même état, sans journal d'idempotence — et
+  un programme se crée hors ligne.
+- **Le contenu est remplacé physiquement** dans la transaction. Un programme
+  supprimé ne ressuscite pas (404).
+- **Un seul programme actif** par compte : activer le suivant désactive le
+  précédent dans la MÊME transaction, sinon deux plans « en cours »
+  coexisteraient le temps d'un aller-retour.
+- **Un modèle inconnu, supprimé ou appartenant à autrui ne fait pas échouer
+  l'enregistrement** : la case garde son intitulé et perd son lien. Le plan
+  reste lisible, ce qui compte plus que le lien.
+- Erreurs : `400` (semaine hors du plan, deux entrées sur la même case — refusé
+  ici pour donner un message lisible plutôt qu'un 500 de PostgreSQL), `403`
+  (plafond du plan gratuit), `409` (identifiant pris par un autre compte).
+
+Le plafond du plan gratuit (`PROGRAM_FREE_LIMIT`) ne s'applique **qu'à la
+création** : un compte redevenu gratuit garde ses programmes et peut les
+modifier, il ne peut simplement plus en ajouter. C'est une **décision
+serveur**, réévaluée à chaque écriture — le client ne fait jamais ce calcul.
 
 ### Endpoints livrés — médias (administration)
 

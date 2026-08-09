@@ -6,6 +6,7 @@ export * from './exercises';
 export * from './health';
 export * from './media';
 export * from './nutrition';
+export * from './programs';
 export * from './progress';
 export * from './subscriptions';
 export * from './workout-templates';

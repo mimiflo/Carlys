@@ -42,6 +42,7 @@ model User {
   externalIdentities ExternalIdentity[]
   auditLogs          AuditLog[]
   workoutTemplates   WorkoutTemplate[]
+  programs           Program[]
   workoutSessions    WorkoutSession[]
   personalRecords    PersonalRecord[]
   bodyMetrics        BodyMetric[]
@@ -522,6 +523,7 @@ model WorkoutTemplate {
   exercises      WorkoutTemplateExercise[]
   sessions       WorkoutSession[]
   coachProposals CoachSessionProposal[]
+  programDays    ProgramDay[]
 
   @@index([userId, updatedAt(sort: Desc)])
 }
@@ -892,4 +894,60 @@ model CoachSessionProposalItem {
   @@unique([proposalId, exercisePosition, setPosition])
   @@index([proposalId])
   @@index([exerciseId])
+}
+
+/// Programme multi-semaines : un plan d'entraînement dans le temps.
+///
+/// Un programme n'est PAS un modèle de séance : le modèle décrit le contenu
+/// d'une séance, le programme décrit à quel moment la faire. Il ne duplique
+/// donc aucun exercice — chaque jour pointe vers un modèle existant, ou
+/// n'annonce qu'un intitulé (repos, activité libre).
+///
+/// Comme le modèle de séance : identifiant fourni par l'appareil (création
+/// hors ligne), contenu TOUJOURS réécrit intégralement, suppression logique.
+model Program {
+  id          String    @id @db.Uuid
+  userId      String    @db.Uuid
+  name        String
+  description String?
+  /// Nombre de semaines du plan (1 à 52). Les jours au-delà sont refusés.
+  weeksCount  Int
+  /// Programme suivi en ce moment. UN SEUL par utilisateur : deux programmes
+  /// « en cours » n'ont aucun sens, l'application ne saurait lequel afficher.
+  /// PostgreSQL ne peut pas l'exprimer ici (il faudrait un index unique
+  /// PARTIEL, hors du vocabulaire Prisma), c'est donc le service qui l'impose,
+  /// en désactivant les autres dans la même transaction.
+  isActive    Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  deletedAt   DateTime?
+
+  user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  days ProgramDay[]
+
+  @@index([userId, updatedAt(sort: Desc)])
+}
+
+/// Une case du calendrier du programme : semaine N, jour J.
+model ProgramDay {
+  id         String  @id @db.Uuid
+  programId  String  @db.Uuid
+  /// 1 à `weeksCount`.
+  weekNumber Int
+  /// 1 (lundi) à 7 (dimanche).
+  dayOfWeek  Int
+  /// Modèle à jouer ce jour-là. `SetNull` : supprimer un modèle vide la case,
+  /// il ne fait jamais disparaître le programme.
+  templateId String? @db.Uuid
+  /// Intitulé affiché : nom du modèle figé à l'enregistrement, ou texte libre
+  /// (« Repos », « Course »). Garde un sens même sans modèle.
+  label      String
+  /// Jour de repos : ni modèle, ni séance attendue.
+  isRest     Boolean @default(false)
+
+  program  Program          @relation(fields: [programId], references: [id], onDelete: Cascade)
+  template WorkoutTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+
+  @@unique([programId, weekNumber, dayOfWeek])
+  @@index([templateId])
 }

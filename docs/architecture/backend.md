@@ -77,7 +77,7 @@ src/modules/
 ├── exercises/            # Étape 3 — + seed 30+ exercices, cache Redis
 ├── muscle_groups/        # Étape 3
 ├── media/                # Étape 3 — premiers médias d'exercices, via StorageProvider (voir plus bas)
-├── programs/             # Étape 4
+├── programs/             # LIVRÉ — plan multi-semaines, jours reliés aux modèles
 ├── workout_templates/    # Étape 4
 ├── workout_sessions/     # Étape 4 — synchronisation offline-first idempotente
 ├── workout_sets/         # Étape 4
