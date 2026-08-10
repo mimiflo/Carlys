@@ -569,6 +569,15 @@ void main() {
     );
   });
 
+  testWidgets('bibliothèque illustrée — le groupe Épaules', (tester) async {
+    await captureGroup(
+      tester,
+      group: 'Épaules',
+      exercise: 'Développé militaire',
+      prefix: '24-epaules',
+    );
+  });
+
   testWidgets('séance active', (tester) async {
     final workouts = FakeWorkoutRepository()..active = activeWorkoutOf();
     await pumpApp(tester, workouts: workouts);
