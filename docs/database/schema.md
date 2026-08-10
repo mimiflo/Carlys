@@ -192,7 +192,7 @@ explicites** (pas de sac JSON) : chaque nouvelle préférence est une migration.
 ## Catalogue d'exercices — Étape 3 (implémenté)
 
 > Implémenté (migration `20260806220000_exercise_catalog`, seed
-> `pnpm prisma:seed` : 146 exercices, 12 groupes musculaires, 12 équipements, et les photos du catalogue déposées dans le stockage objet).
+> `pnpm prisma:seed` : 170 exercices, 12 groupes musculaires, 15 équipements, et les photos du catalogue déposées dans le stockage objet).
 >
 > `Exercise.deletedAt` porte la suppression DOUCE venue de l'administration :
 > l'exercice quitte le catalogue (et `isPublished` tombe avec lui), mais les
