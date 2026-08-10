@@ -6,12 +6,12 @@ Chaque fonctionnalité importante suit cette structure :
 feature/
 ├── data/
 │   ├── datasources/     # API distante (Dio) et base locale (Drift)
-│   ├── dto/             # Objets de transfert (json_serializable)
+│   ├── dto/             # Objets de transfert (sérialisation écrite à la main)
 │   ├── mappers/         # DTO/Drift ⇄ entités du domaine
 │   └── repositories/    # Implémentations des contrats du domaine
 │
 ├── domain/
-│   ├── entities/        # Objets métier immuables (Freezed)
+│   ├── entities/        # Objets métier immuables (classes à champs `final`)
 │   ├── repositories/    # Contrats abstraits
 │   ├── services/        # Logique métier pure
 │   └── usecases/        # Cas d'usage orchestrant les repositories

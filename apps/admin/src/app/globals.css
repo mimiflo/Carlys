@@ -1,6 +1,8 @@
 @import 'tailwindcss';
 
-/* Couleurs issues de @carlys/design-tokens (src/tokens.json). */
+/* Couleurs RECOPIÉES depuis packages/design-tokens/src/tokens.json.
+   Elles ne sont pas importées : l'admin n'a pas de dépendance sur le paquet.
+   Toute évolution des jetons doit donc être reportée ici À LA MAIN. */
 :root {
   --background: #fafafc;
   --foreground: #16162a;

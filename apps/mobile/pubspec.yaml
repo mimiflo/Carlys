@@ -14,7 +14,6 @@ dependencies:
 
   # État & injection de dépendances
   flutter_riverpod: ^2.6.1
-  riverpod_annotation: ^2.6.1
 
   # Navigation
   go_router: ^14.8.0
@@ -28,10 +27,6 @@ dependencies:
   sqlite3_flutter_libs: ^0.5.28
   path_provider: ^2.1.5
   path: ^1.9.0
-
-  # Modèles immuables & sérialisation
-  freezed_annotation: ^2.4.4
-  json_annotation: ^4.9.0
 
   # Sécurité locale
   flutter_secure_storage: ^9.2.2
@@ -52,11 +47,13 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^5.0.0
 
-  # Génération de code (Riverpod, Freezed, JSON, Drift)
+  # Génération de code — DRIFT UNIQUEMENT.
+  #
+  # Les générateurs Riverpod, Freezed et json_serializable ont été retirés :
+  # aucune source ne portait leurs annotations, ils ne produisaient donc rien
+  # tout en tournant à chaque `build_runner` et à chaque exécution de la CI.
+  # Le seul fichier engendré du projet est `app_database.g.dart`.
   build_runner: ^2.4.13
-  riverpod_generator: ^2.6.3
-  freezed: ^2.5.7
-  json_serializable: ^6.9.0
   drift_dev: ^2.23.0
 
 flutter:

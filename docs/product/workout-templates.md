@@ -1149,7 +1149,7 @@ deux équipes s'y tiennent, elles n'ont pas besoin de se parler.
 | Ajouts à `packages/api-contracts/src/workouts.ts`                     | `lib/features/workout_template/domain/repositories/*.dart`           |
 | `apps/api/prisma/schema.prisma` + migration `_workout_templates`       | `lib/core/database/app_database.dart` (4 tables, 4 colonnes, `schemaVersion` 2 + `MigrationStrategy`) |
 | `apps/api/src/modules/workout_templates/**` (module, service, repository, presenter, contrôleur, DTO) | `lib/features/workout_template/data/repositories/*.dart`             |
-| `apps/api/src/app.module.ts` (enregistrement du module)                | `lib/core/synchronization/sync_api.dart` + `sync_engine.dart` (2 opérations) |
+| `apps/api/src/app/app.module.ts` (enregistrement du module)                | `lib/core/synchronization/sync_api.dart` + `sync_engine.dart` (2 opérations) |
 | `workout_sessions` : `templateId`/`templateName`, `planned*`, `lastUsedAt` | `lib/features/workout_template/presentation/**` (2 écrans + widgets) |
 | `apps/api/test/workout-templates.e2e-spec.ts`, `workouts.e2e-spec.ts`  | `lib/features/workout_session/**` (plan, en-tête, segments, pastille) |
 | Swagger + `docs/api/README.md`                                        | `lib/app/router/{app_routes,app_router}.dart`, `lib/demo/demo_templates.dart` |

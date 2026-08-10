@@ -73,6 +73,12 @@ au-dessus de **SQLite**.
 
 ## Conséquences
 
+> **Mise à jour (10 août 2026)** — cette conséquence s'est révélée plus légère
+> que prévu : Riverpod, Freezed et json_serializable n'ont finalement porté
+> aucune annotation, et leurs générateurs ont été retirés. Drift est le SEUL
+> utilisateur de `build_runner`, pour un unique fichier engendré.
+
+
 - Les premières tables Drift arrivent avec l'Étape 4 (séances) : entités
   synchronisables avec UUID locaux, et table de file d'opérations de
   synchronisation idempotentes.

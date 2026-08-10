@@ -28,7 +28,7 @@ flutter run \
   --dart-define=CARLYS_FLAVOR=development \
   --dart-define=CARLYS_API_BASE_URL=http://localhost:3000
 
-# Génération de code (Freezed, Riverpod, Drift, JSON) — dès qu'elle sera utilisée :
+# Génération de code — Drift uniquement (un seul fichier engendré) :
 dart run build_runner build --delete-conflicting-outputs
 dart run build_runner watch --delete-conflicting-outputs
 

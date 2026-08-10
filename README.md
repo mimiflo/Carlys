@@ -28,7 +28,7 @@ L'Étape 1 pose la fondation : monorepo outillé, API durcie (sécurité, observ
 | --- | --- | --- |
 | `apps/api` | Backend (monolithe modulaire) | NestJS 11, TypeScript strict, Prisma 6 + PostgreSQL 17, Redis (ioredis), Pino (`nestjs-pino`), Helmet, `@nestjs/throttler`, class-validator, Zod (validation de la config), Swagger, Jest |
 | `apps/admin` | Tableau de bord d'administration | Next.js 16 (App Router), TypeScript, Tailwind CSS v4, TanStack Query, React Hook Form + Zod, Vitest + Testing Library |
-| `apps/mobile` | Application mobile iOS/Android | Flutter, Riverpod (+ annotations), GoRouter, Dio, Drift/SQLite, Freezed, json_serializable, flutter_secure_storage, connectivity_plus, fl_chart, Rive |
+| `apps/mobile` | Application mobile iOS/Android | Flutter, Riverpod, GoRouter, Dio, Drift/SQLite, flutter_secure_storage, connectivity_plus, fl_chart |
 | `packages/*` | Code partagé TypeScript | Zod (contrats d'API), tokens de design (JSON), configs TypeScript/ESLint, constantes partagées |
 
 Points structurants de l'API :
@@ -275,7 +275,12 @@ flutter analyze
 
 ## Génération de code Flutter
 
-Riverpod (annotations), Freezed, json_serializable et Drift reposent sur `build_runner` :
+**Drift seul** repose sur `build_runner`, et engendre un unique fichier
+(`lib/core/database/app_database.g.dart`). Les générateurs Riverpod, Freezed et
+json_serializable ont été retirés : aucune source ne portait leurs annotations,
+ils tournaient donc à vide à chaque exécution. Les contrôleurs Riverpod sont
+écrits à la main (`Provider`, `NotifierProvider`), les entités du domaine sont
+des classes immuables ordinaires.
 
 ```bash
 cd apps/mobile

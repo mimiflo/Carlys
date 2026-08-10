@@ -29,9 +29,12 @@ propre CI (`mobile-ci.yml`).
 - **Contrôle total du pixel** : le design system Carlys (`lib/design_system` :
   AppColors, AppTypography, AppTheme clair/sombre/OLED…) reflète fidèlement
   `packages/design-tokens/src/tokens.json` sans dépendre des composants système.
-- **Animations** : support de première classe de **Rive** (dépendance `rive`
-  déjà en place) et pipeline d'animation performant, essentiel pour une app
-  fitness engageante.
+- **Animations** : support de première classe de **Rive** et pipeline
+  d'animation performant, essentiel pour une app fitness engageante. *(Mise à
+  jour du 10 août 2026 : la dépendance `rive` n'a jamais été ajoutée — aucune
+  animation Rive n'a encore été produite. Les scènes animées livrées, cœur et
+  hélice d'ADN, sont rendues par le moteur logiciel maison
+  `design_system/scenes/`.)*
 - **Extension future** : Flutter cible aussi desktop et web depuis le même code,
   ce qui garde ces options ouvertes sans réécriture.
 - Alternatives écartées :

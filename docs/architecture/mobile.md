@@ -271,7 +271,7 @@ Composants cibles (créés avec la tranche qui en a besoin) :
 | `SetInputRow`          | Saisie d'une série (répétitions, charge)            | 4     |
 | `RestTimer`            | Minuteur de repos                                   | 4     |
 | `MetricCard`           | Indicateur chiffré (progression)                    | 5     |
-| `MuscleMap`            | Corps humain interactif (Rive)                      | 5     |
+| `MuscleMap`            | Corps humain interactif (Rive) — **non réalisé**    | 5     |
 | `SubscriptionPaywall`  | Écran d'abonnement                                  | 6     |
 
 ## Animations
@@ -281,9 +281,14 @@ Deux niveaux, tous deux soumis à `AppMotion.resolve` :
 1. **Standard Flutter** — transitions implicites/explicites avec les durées et
    courbes d'`AppMotion` uniquement. C'est le niveau par défaut pour tout
    feedback d'interface.
-2. **Avancé Rive** (`package:rive`, assets dans `assets/rive/`) — réservé aux
-   moments à forte valeur : illustrations d'onboarding, corps humain
-   interactif (`MuscleMap`), célébrations de records personnels (Étape 5).
+2. **Avancé Rive** — **prévu, pas encore en place** : ni la dépendance
+   `package:rive` ni le dossier `assets/rive/` n'existent aujourd'hui. Ce
+   niveau est réservé aux moments à forte valeur (illustrations d'onboarding,
+   corps humain interactif, célébrations de records).
+
+Les deux scènes animées réellement livrées — le cœur de l'accueil et l'hélice
+d'ADN de la nutrition — ne relèvent d'aucun des deux : elles sont rendues par
+le moteur 3D logiciel de `design_system/scenes/`, sommet par sommet.
 
 Règles : les animations ne bloquent jamais l'UI ni une action utilisateur
 (elles accompagnent, elles ne conditionnent pas) ; elles sont désactivables

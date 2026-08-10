@@ -16,6 +16,12 @@ composer des états dérivés sans coupler les widgets aux implémentations.
 
 ## Décision
 
+> **Mise à jour (10 août 2026)** — la génération de code n'a jamais servi :
+> aucun provider n'a porté d'annotation `@riverpod`. `riverpod_annotation` et
+> `riverpod_generator` ont été retirés des dépendances ; les providers sont
+> écrits à la main. Le choix de Riverpod lui-même, décrit ci-dessous, reste
+> entier.
+
 **Riverpod** (`flutter_riverpod` + `riverpod_annotation`, avec génération de
 code via `riverpod_generator`) est le mécanisme unique de gestion d'état et
 d'injection de dépendances de l'application mobile.

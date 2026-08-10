@@ -190,8 +190,8 @@ Après le MVP, dans un ordre à arbitrer selon la traction :
   dossier `features/health/` scaffoldé) ;
 - **Montres connectées** (Watch / Wear OS) ;
 - **Vidéos d'exercices** (le pipeline média S3 arrive dès l'Étape 3) ;
-- **Animations Rive avancées** (Rive est déjà une dépendance du client
-  mobile ; entitlement `custom_animations` réservé) ;
+- **Animations Rive avancées** (entitlement `custom_animations` réservé ;
+  la dépendance `rive` reste à ajouter le jour où un fichier existera) ;
 - **Anatomie 2D/3D** interactive ;
 - **Desktop** (Flutter le permet ; les breakpoints du design system couvrent
   déjà les grandes largeurs).
