@@ -1299,23 +1299,6 @@ export const EXERCISES: SeedExercise[] = [
     equipment: ['poulie'],
   },
   {
-    slug: 'developpe-couche-prise-serree',
-    name: 'Développé couché prise serrée',
-    description: 'Le développé couché ramené à largeur d’épaules : la charge part sur les triceps.',
-    instructions: [
-      'Allongé, mains écartées de la largeur des épaules, pas moins.',
-      'Descendez la barre vers le bas des pectoraux, coudes près du corps.',
-      'Poussez jusqu’à l’extension sans verrouiller brutalement.',
-      'Gardez les poignets droits : une prise trop serrée les met en torsion.',
-    ],
-    difficulty: INTERMEDIATE,
-    type: STRENGTH,
-    tags: ['barre', 'polyarticulaire', 'force'],
-    primary: 'triceps',
-    secondary: ['pectoraux', 'epaules'],
-    equipment: ['barre', 'banc'],
-  },
-  {
     slug: 'developpe-incline-prise-serree',
     name: 'Développé incliné prise serrée',
     description:
