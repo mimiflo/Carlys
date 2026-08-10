@@ -49,7 +49,7 @@ class DaySummaryGrid extends StatelessWidget {
         detail: metabolism == null ? null : 'objectif du jour',
       ),
       AppSummaryTile(
-        icon: AppIcons.bodyMetrics,
+        icon: AppIcons.protein,
         iconColor: AppColors.primaryLight,
         label: 'Protéines',
         value: metabolism == null ? '—' : '${metabolism.proteinG} g',

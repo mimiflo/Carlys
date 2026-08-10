@@ -52,7 +52,31 @@ export class ExercisesRepository {
     limit: number,
     cursor?: string,
   ): Promise<ExerciseWithRelations[]> {
-    const where: Prisma.ExerciseWhereInput = {
+    const where = this.whereOf(filters);
+
+    return this.prisma.exercise.findMany({
+      where,
+      include: RELATIONS,
+      orderBy: [{ name: 'asc' }, { id: 'asc' }],
+      take: limit + 1,
+      ...(cursor === undefined ? {} : { cursor: { id: cursor }, skip: 1 }),
+    });
+  }
+
+  /** Nombre d'exercices que ces filtres retiennent, toutes pages confondues. */
+  countMatching(filters: ListExercisesFilters): Promise<number> {
+    return this.prisma.exercise.count({ where: this.whereOf(filters) });
+  }
+
+  /**
+   * Critères d'une liste de catalogue.
+   *
+   * Extrait pour que le COMPTAGE et la PAGE partent exactement des mêmes
+   * conditions : deux copies finiraient par diverger, et le compteur
+   * annoncerait un nombre que la liste ne montrerait pas.
+   */
+  private whereOf(filters: ListExercisesFilters): Prisma.ExerciseWhereInput {
+    return {
       isPublished: true,
       ...(filters.difficulty === undefined ? {} : { difficulty: filters.difficulty }),
       ...(filters.type === undefined ? {} : { type: filters.type }),
@@ -71,14 +95,6 @@ export class ExercisesRepository {
         ? {}
         : { equipment: { some: { equipment: { slug: filters.equipmentSlug } } } }),
     };
-
-    return this.prisma.exercise.findMany({
-      where,
-      include: RELATIONS,
-      orderBy: [{ name: 'asc' }, { id: 'asc' }],
-      take: limit + 1,
-      ...(cursor === undefined ? {} : { cursor: { id: cursor }, skip: 1 }),
-    });
   }
 
   findPublishedByIdOrSlug(idOrSlug: string): Promise<ExerciseWithRelations | null> {
@@ -89,8 +105,17 @@ export class ExercisesRepository {
     });
   }
 
+  /**
+   * Groupes musculaires qui ont au moins un exercice PUBLIÉ.
+   *
+   * La bibliothèque se parcourt par groupe : une catégorie vide s'ouvrirait
+   * sur une liste vide, ce qui se lit comme une panne. Le cas n'est pas
+   * théorique — une catégorie fraîchement créée depuis l'administration
+   * n'a, par construction, aucun exercice.
+   */
   listMuscleGroups(): Promise<MuscleGroup[]> {
     return this.prisma.muscleGroup.findMany({
+      where: { exerciseLinks: { some: { exercise: { isPublished: true } } } },
       orderBy: [{ sortOrder: 'asc' }, { name: 'asc' }],
     });
   }

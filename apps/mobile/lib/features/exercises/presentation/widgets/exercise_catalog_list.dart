@@ -29,10 +29,12 @@ class ExerciseCatalogList extends ConsumerWidget {
       );
     }
 
-    // Le compteur ne connaît que les pages déjà chargées : le « + » dit
-    // qu'il en reste, faute de total renvoyé par l'API.
-    final count = state.items.length;
-    final title = '${formatThousands(count)}${state.hasMore ? '+' : ''} '
+    // Le TOTAL vient du serveur ; le repli « N+ » ne sert plus qu'aux
+    // réponses qui ne le portent pas. Sans lui, un groupe de trente-huit
+    // mouvements s'annonçait « 12+ » — le nombre de la première page.
+    final count = state.total ?? state.items.length;
+    final approximate = state.total == null && state.hasMore;
+    final title = '${formatThousands(count)}${approximate ? '+' : ''} '
         '${count > 1 ? 'mouvements' : 'mouvement'}';
 
     return Column(

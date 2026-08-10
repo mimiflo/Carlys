@@ -4,9 +4,15 @@ import { AuthModule } from '../auth/auth.module';
 import { ExercisesModule } from '../exercises/exercises.module';
 import { AdminAccessModule } from './admin-access.module';
 import { AdminAuthService } from './application/admin-auth.service';
+import { AdminCatalogService } from './application/admin-catalog.service';
+import { AdminCategoriesService } from './application/admin-categories.service';
 import { AdminPlatformService } from './application/admin-platform.service';
 import { AdminUsersService } from './application/admin-users.service';
 import { AdminAuthController } from './presentation/http/admin-auth.controller';
+import {
+  AdminCatalogController,
+  AdminCategoriesController,
+} from './presentation/http/admin-catalog.controller';
 import { AdminPlatformController } from './presentation/http/admin-platform.controller';
 import { AdminUsersController } from './presentation/http/admin-users.controller';
 
@@ -18,7 +24,19 @@ import { AdminUsersController } from './presentation/http/admin-users.controller
  */
 @Module({
   imports: [AdminAccessModule, AuthModule, AuditModule, ExercisesModule],
-  controllers: [AdminAuthController, AdminUsersController, AdminPlatformController],
-  providers: [AdminAuthService, AdminUsersService, AdminPlatformService],
+  controllers: [
+    AdminAuthController,
+    AdminUsersController,
+    AdminPlatformController,
+    AdminCatalogController,
+    AdminCategoriesController,
+  ],
+  providers: [
+    AdminAuthService,
+    AdminUsersService,
+    AdminPlatformService,
+    AdminCatalogService,
+    AdminCategoriesService,
+  ],
 })
 export class AdminModule {}

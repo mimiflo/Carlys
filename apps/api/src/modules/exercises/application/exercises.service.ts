@@ -23,6 +23,8 @@ export interface ExercisesPage {
   items: ExerciseSummary[];
   nextCursor: string | null;
   hasMore: boolean;
+  /** Total des exercices retenus par les filtres, toutes pages confondues. */
+  total: number;
 }
 
 /** Préfixe commun : l'invalidation du catalogue purge tout d'un coup. */
@@ -51,7 +53,12 @@ export class ExercisesService {
       return cached;
     }
 
-    const rows = await this.exercises.listPage(filters, limit, cursor);
+    // Comptage et page partent des mêmes critères (`whereOf`) : le compteur
+    // ne peut donc pas annoncer un nombre que la liste ne montre pas.
+    const [rows, total] = await Promise.all([
+      this.exercises.listPage(filters, limit, cursor),
+      this.exercises.countMatching(filters),
+    ]);
     const hasMore = rows.length > limit;
     const items = rows
       .slice(0, limit)
@@ -59,6 +66,7 @@ export class ExercisesService {
     const page: ExercisesPage = {
       items,
       hasMore,
+      total,
       nextCursor: hasMore ? (items.at(-1)?.id ?? null) : null,
     };
 

@@ -39,7 +39,11 @@ export class ExercisesController {
       query.cursor,
     );
 
-    return enveloped(page.items, { nextCursor: page.nextCursor, hasMore: page.hasMore }, request);
+    return enveloped(
+      page.items,
+      { nextCursor: page.nextCursor, hasMore: page.hasMore, total: page.total },
+      request,
+    );
   }
 
   @Get(':idOrSlug')

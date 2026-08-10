@@ -104,7 +104,67 @@ export const adminExerciseSummarySchema = z.object({
   isPublished: z.boolean(),
   isPremium: z.boolean(),
   primaryMuscleGroupName: z.string().nullable(),
+  /** Groupes musculaires, principal en tête. */
+  muscleGroupSlugs: z.array(z.string()),
+  primaryMuscleGroupSlug: z.string().nullable(),
+  equipmentSlugs: z.array(z.string()),
+  /** Date de retrait du catalogue, `null` tant que l'exercice est vivant. */
+  deletedAt: z.string().nullable(),
   image: mediaAssetSchema.nullable(),
   mesh: mediaAssetSchema.nullable(),
 });
 export type AdminExerciseSummary = z.infer<typeof adminExerciseSummarySchema>;
+
+/**
+ * Groupe musculaire vu du back-office.
+ *
+ * Le contrat mobile (`muscleGroupSchema`) ne porte que l'identité : ici il
+ * faut aussi de quoi DÉCIDER — l'ordre d'affichage, et le nombre d'exercices
+ * rattachés, sans lequel on supprimerait une catégorie sans savoir ce qu'elle
+ * emporte.
+ */
+export const adminMuscleGroupSchema = z.object({
+  id: z.string(),
+  slug: z.string(),
+  name: z.string(),
+  sortOrder: z.number(),
+  /** Exercices vivants dont ce groupe est le PRINCIPAL. */
+  primaryExercisesCount: z.number(),
+  /** Exercices vivants où il figure, tous rôles confondus. */
+  exercisesCount: z.number(),
+});
+export type AdminMuscleGroup = z.infer<typeof adminMuscleGroupSchema>;
+
+/** Slug de catégorie : minuscules, chiffres et tirets simples. */
+export const categorySlugSchema = z
+  .string()
+  .min(2)
+  .max(48)
+  .regex(/^[a-z0-9]+(-[a-z0-9]+)*$/u);
+
+export const createMuscleGroupSchema = z.object({
+  slug: categorySlugSchema,
+  name: z.string().min(2).max(48),
+  sortOrder: z.number().int().min(0).max(999).optional(),
+});
+export type CreateMuscleGroupInput = z.infer<typeof createMuscleGroupSchema>;
+
+export const updateMuscleGroupSchema = z.object({
+  name: z.string().min(2).max(48).optional(),
+  sortOrder: z.number().int().min(0).max(999).optional(),
+});
+export type UpdateMuscleGroupInput = z.infer<typeof updateMuscleGroupSchema>;
+
+/**
+ * Catégories d'un exercice, remplacées EN BLOC.
+ *
+ * Un ensemble complet plutôt que des ajouts et des retraits : c'est ce que
+ * manipule l'écran (des cases à cocher), et cela rend l'appel idempotent —
+ * rejouer la même requête ne peut pas dédoubler un rattachement.
+ */
+export const setExerciseCategoriesSchema = z.object({
+  primaryMuscleGroupSlug: categorySlugSchema,
+  secondaryMuscleGroupSlugs: z.array(categorySlugSchema).max(8),
+  equipmentSlugs: z.array(categorySlugSchema).max(8),
+});
+export type SetExerciseCategoriesInput = z.infer<typeof setExerciseCategoriesSchema>;

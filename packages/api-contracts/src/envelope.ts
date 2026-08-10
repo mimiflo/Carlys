@@ -50,6 +50,14 @@ export interface ApiSuccessEnvelope<TData, TMeta extends object = Record<string,
 export const cursorPaginationMetaSchema = z.object({
   nextCursor: z.string().nullable(),
   hasMore: z.boolean(),
+  /**
+   * Nombre total d'éléments que les filtres retiennent, toutes pages
+   * confondues. FACULTATIF : seules les listes qui savent le calculer sans
+   * frais déraisonnables le renseignent. Sans lui, un écran ne peut annoncer
+   * que « 12+ » — ce que faisait la bibliothèque, qui en affichait « 12+ »
+   * pour un groupe de trente-huit mouvements.
+   */
+  total: z.number().int().nonnegative().optional(),
 });
 
 export type CursorPaginationMeta = z.infer<typeof cursorPaginationMetaSchema>;

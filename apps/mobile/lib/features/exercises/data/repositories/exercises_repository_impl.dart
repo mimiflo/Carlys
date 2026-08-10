@@ -42,6 +42,7 @@ class ExercisesRepositoryImpl implements ExercisesRepository {
         items: items,
         nextCursor: meta['nextCursor'] as String?,
         hasMore: meta['hasMore'] as bool? ?? false,
+        total: (meta['total'] as num?)?.toInt(),
       );
     });
   }

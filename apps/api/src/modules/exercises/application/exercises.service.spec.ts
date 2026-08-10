@@ -22,6 +22,7 @@ function exerciseRow(id: string, name: string): ExerciseWithRelations {
     type: ExerciseType.STRENGTH,
     isPremium: false,
     isPublished: true,
+    deletedAt: null,
     tags: ['test'],
     imageId: null,
     meshId: null,
@@ -51,6 +52,7 @@ function exerciseRow(id: string, name: string): ExerciseWithRelations {
 interface Stubs {
   repository: {
     listPage: jest.Mock;
+    countMatching: jest.Mock;
     findPublishedByIdOrSlug: jest.Mock;
     listMuscleGroups: jest.Mock;
     listEquipment: jest.Mock;
@@ -63,6 +65,7 @@ function buildStubs(): Stubs {
   return {
     repository: {
       listPage: jest.fn().mockResolvedValue([]),
+      countMatching: jest.fn().mockResolvedValue(0),
       findPublishedByIdOrSlug: jest.fn().mockResolvedValue(null),
       listMuscleGroups: jest.fn().mockResolvedValue([]),
       listEquipment: jest.fn().mockResolvedValue([]),
@@ -105,6 +108,10 @@ describe('ExercisesService', () => {
     expect(page.hasMore).toBe(true);
     expect(page.nextCursor).toBe('id-2');
     expect(stubs.repository.listPage).toHaveBeenCalledWith({}, 2, undefined);
+
+    // Le total accompagne la page : sans lui, la bibliothèque ne pouvait
+    // annoncer que « N+ » — elle affichait « 12+ » pour trente-huit mouvements.
+    expect(stubs.repository.countMatching).toHaveBeenCalledWith({});
   });
 
   it('dernière page : pas de nextCursor', async () => {

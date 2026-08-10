@@ -4,6 +4,8 @@ import { type AdminExerciseSummary } from '@carlys/api-contracts';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { AdminShell } from '@/components/admin-shell';
+import { ExerciseCategoriesCell } from '@/components/exercise-categories-cell';
+import { ExerciseDeleteCell } from '@/components/exercise-delete-cell';
 import { ExercisePhotoCell } from '@/components/exercise-photo-cell';
 import { adminApi } from '@/lib/admin-api';
 
@@ -13,6 +15,10 @@ function PublicationToggle({ exercise }: { exercise: AdminExerciseSummary }) {
     mutationFn: () => adminApi.setExercisePublication(exercise.id, !exercise.isPublished),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['admin', 'exercises'] }),
   });
+
+  if (exercise.deletedAt !== null) {
+    return <span className="text-xs text-muted">Supprimé</span>;
+  }
 
   return (
     <button
@@ -41,9 +47,11 @@ function PublicationToggle({ exercise }: { exercise: AdminExerciseSummary }) {
 export default function ExercisesPage() {
   const [search, setSearch] = useState('');
   const [submitted, setSubmitted] = useState('');
+  const [includeDeleted, setIncludeDeleted] = useState(false);
   const { data, isPending, isError } = useQuery({
-    queryKey: ['admin', 'exercises', submitted],
-    queryFn: () => adminApi.listExercises(submitted === '' ? undefined : submitted),
+    queryKey: ['admin', 'exercises', submitted, includeDeleted],
+    queryFn: () =>
+      adminApi.listExercises(submitted === '' ? undefined : submitted, undefined, includeDeleted),
   });
 
   return (
@@ -74,6 +82,14 @@ export default function ExercisesPage() {
         >
           Rechercher
         </button>
+        <label className="flex items-center gap-2 text-sm text-muted">
+          <input
+            type="checkbox"
+            checked={includeDeleted}
+            onChange={(event) => setIncludeDeleted(event.target.checked)}
+          />
+          Voir les supprimés
+        </label>
       </form>
 
       {isPending && <p className="mt-6 text-sm text-muted">Chargement…</p>}
@@ -88,14 +104,20 @@ export default function ExercisesPage() {
             <thead className="border-b border-black/5 text-xs uppercase tracking-wide text-muted">
               <tr>
                 <th className="px-4 py-3">Exercice</th>
-                <th className="px-4 py-3">Muscle</th>
+                <th className="px-4 py-3">Catégories</th>
                 <th className="px-4 py-3">Photo</th>
                 <th className="px-4 py-3">Catalogue</th>
+                <th className="px-4 py-3">Retrait</th>
               </tr>
             </thead>
             <tbody>
               {data.items.map((exercise) => (
-                <tr key={exercise.id} className="border-b border-black/5 last:border-0">
+                <tr
+                  key={exercise.id}
+                  className={`border-b border-black/5 last:border-0 ${
+                    exercise.deletedAt === null ? '' : 'opacity-60'
+                  }`}
+                >
                   <td className="px-4 py-3">
                     <span className="font-medium">{exercise.name}</span>
                     {exercise.isPremium && (
@@ -105,18 +127,23 @@ export default function ExercisesPage() {
                     )}
                     <span className="block text-xs text-muted">{exercise.slug}</span>
                   </td>
-                  <td className="px-4 py-3">{exercise.primaryMuscleGroupName ?? '—'}</td>
+                  <td className="px-4 py-3">
+                    <ExerciseCategoriesCell exercise={exercise} />
+                  </td>
                   <td className="px-4 py-3">
                     <ExercisePhotoCell exercise={exercise} />
                   </td>
                   <td className="px-4 py-3">
                     <PublicationToggle exercise={exercise} />
                   </td>
+                  <td className="px-4 py-3">
+                    <ExerciseDeleteCell exercise={exercise} />
+                  </td>
                 </tr>
               ))}
               {data.items.length === 0 && (
                 <tr>
-                  <td colSpan={4} className="px-4 py-6 text-center text-muted">
+                  <td colSpan={5} className="px-4 py-6 text-center text-muted">
                     Aucun exercice trouvé.
                   </td>
                 </tr>

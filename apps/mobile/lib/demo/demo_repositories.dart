@@ -134,6 +134,7 @@ class DemoExercisesRepository implements ExercisesRepository {
       items: page,
       nextCursor: hasMore ? page.last.id : null,
       hasMore: hasMore,
+      total: filtered.length,
     );
   }
 

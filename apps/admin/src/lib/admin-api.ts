@@ -3,15 +3,20 @@ import {
   adminExerciseSummarySchema,
   adminLoginResultSchema,
   adminMeSchema,
+  adminMuscleGroupSchema,
   adminOverviewSchema,
   managedUserDetailSchema,
   managedUserSummarySchema,
+  equipmentSchema,
   mediaAssetSchema,
   type AdminAuditLog,
   type AdminExerciseSummary,
   type AdminLoginResult,
   type AdminMe,
+  type AdminMuscleGroup,
   type AdminOverview,
+  type Equipment,
+  type SetExerciseCategoriesInput,
   type EntitlementKey,
   type ManagedUserDetail,
   type ManagedUserSummary,
@@ -198,9 +203,66 @@ export const adminApi = {
 
   // ── Catalogue et médias ────────────────────────────────────────────────
 
-  async listExercises(search?: string, cursor?: string): Promise<Page<AdminExerciseSummary>> {
-    const body = await call(`/admin/exercises${query({ search, cursor })}`);
+  async listExercises(
+    search?: string,
+    cursor?: string,
+    includeDeleted = false,
+  ): Promise<Page<AdminExerciseSummary>> {
+    const body = await call(
+      `/admin/exercises${query({ search, cursor, includeDeleted: includeDeleted ? 'true' : undefined })}`,
+    );
     return parsePage(body, adminExerciseSummarySchema);
+  },
+
+  /** Retire l'exercice du catalogue — suppression douce, réversible. */
+  async deleteExercise(id: string): Promise<void> {
+    await call(`/admin/exercises/${id}`, { method: 'DELETE' });
+  },
+
+  async restoreExercise(id: string): Promise<void> {
+    await call(`/admin/exercises/${id}/restore`, { method: 'POST' });
+  },
+
+  async setExerciseCategories(
+    id: string,
+    input: SetExerciseCategoriesInput,
+  ): Promise<AdminExerciseSummary> {
+    const body = await call(`/admin/exercises/${id}/categories`, {
+      method: 'PATCH',
+      body: JSON.stringify(input),
+    });
+    return parseData(body, adminExerciseSummarySchema);
+  },
+
+  // ── Catégories (groupes musculaires) ───────────────────────────────────
+
+  async listMuscleGroups(): Promise<AdminMuscleGroup[]> {
+    return parseData(await call('/admin/muscle-groups'), z.array(adminMuscleGroupSchema));
+  },
+
+  async createMuscleGroup(input: {
+    slug: string;
+    name: string;
+    sortOrder?: number;
+  }): Promise<AdminMuscleGroup> {
+    const body = await call('/admin/muscle-groups', {
+      method: 'POST',
+      body: JSON.stringify(input),
+    });
+    return parseData(body, adminMuscleGroupSchema);
+  },
+
+  async updateMuscleGroup(id: string, input: { name?: string; sortOrder?: number }): Promise<void> {
+    await call(`/admin/muscle-groups/${id}`, { method: 'PATCH', body: JSON.stringify(input) });
+  },
+
+  async deleteMuscleGroup(id: string): Promise<void> {
+    await call(`/admin/muscle-groups/${id}`, { method: 'DELETE' });
+  },
+
+  /** Référentiel des matériels — l'éditeur de catégories en a besoin. */
+  async listEquipment(): Promise<Equipment[]> {
+    return parseData(await call('/admin/equipment'), z.array(equipmentSchema));
   },
 
   async setExercisePublication(id: string, isPublished: boolean): Promise<void> {

@@ -142,9 +142,14 @@ class ExercisesPage {
     required this.items,
     required this.nextCursor,
     required this.hasMore,
+    this.total,
   });
 
   final List<ExerciseSummary> items;
   final String? nextCursor;
   final bool hasMore;
+
+  /// Nombre total de mouvements retenus par les filtres, `null` si le serveur
+  /// ne le donne pas. Sans lui, l'écran ne peut annoncer que « N+ ».
+  final int? total;
 }

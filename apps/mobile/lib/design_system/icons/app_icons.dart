@@ -27,6 +27,10 @@ abstract final class AppIcons {
   static const IconData history = Icons.history_rounded;
   static const IconData record = Icons.emoji_events_rounded;
   static const IconData bodyMetrics = Icons.monitor_weight_rounded;
+
+  /// Protéines — et non la BALANCE de `bodyMetrics`, qui parlait de pesée
+  /// corporelle au milieu d'un résumé nutritionnel.
+  static const IconData protein = Icons.egg_alt_rounded;
   static const IconData premium = Icons.workspace_premium_rounded;
 
   static const IconData exercises = Icons.sports_gymnastics_rounded;

@@ -329,6 +329,15 @@ model Exercise {
   isPremium    Boolean            @default(false)
   /// Un exercice non publié n'apparaît jamais dans le catalogue.
   isPublished  Boolean            @default(true)
+  /// Retiré du catalogue depuis l'administration.
+  ///
+  /// SUPPRESSION DOUCE, et non `DELETE` : un exercice est cité par des séries
+  /// déjà réalisées, des records et des modèles de séance. Le supprimer
+  /// vraiment effacerait — ou trouerait — l'historique de gens qui n'ont rien
+  /// demandé. La suppression force aussi `isPublished` à faux : tout le reste
+  /// du code filtre déjà sur ce drapeau, l'exercice disparaît donc partout
+  /// sans qu'aucune autre requête n'ait à connaître ce champ.
+  deletedAt    DateTime?
   tags         String[]
   /// Photographie du mouvement, déposée depuis l'administration.
   imageId      String?            @db.Uuid
@@ -350,6 +359,7 @@ model Exercise {
   coachProposalItems CoachSessionProposalItem[]
 
   @@index([isPublished, name])
+  @@index([deletedAt])
 }
 
 /// Groupes musculaires travaillés — exactement un rôle PRIMARY par exercice

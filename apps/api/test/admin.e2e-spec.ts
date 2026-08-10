@@ -58,6 +58,8 @@ describe('Administration (e2e)', () => {
     get: (url: string) => server().get(url).set('Authorization', `Bearer ${token}`),
     patch: (url: string) => server().patch(url).set('Authorization', `Bearer ${token}`),
     put: (url: string) => server().put(url).set('Authorization', `Bearer ${token}`),
+    post: (url: string) => server().post(url).set('Authorization', `Bearer ${token}`),
+    delete: (url: string) => server().delete(url).set('Authorization', `Bearer ${token}`),
   });
 
   beforeAll(async () => {
@@ -282,6 +284,122 @@ describe('Administration (e2e)', () => {
       .get(`/api/v1/exercises/${freeExerciseSlug}`)
       .set('Authorization', `Bearer ${witnessToken}`)
       .expect(200);
+  });
+
+  it('suppression d’un exercice : il quitte le catalogue, l’historique reste, la restauration le rend', async () => {
+    // Suppression DOUCE : les séries déjà réalisées et les records citent
+    // l'exercice. La route le fait disparaître de partout — y compris de la
+    // liste d'administration — sans effacer une ligne d'historique.
+    await asAdmin(superToken).delete(`/api/v1/admin/exercises/${freeExerciseId}`).expect(204);
+
+    await server()
+      .get(`/api/v1/exercises/${freeExerciseSlug}`)
+      .set('Authorization', `Bearer ${witnessToken}`)
+      .expect(404);
+
+    const absent = data<AdminExerciseSummary[]>(
+      (
+        await asAdmin(superToken)
+          .get(`/api/v1/admin/exercises?search=${encodeURIComponent(freeExerciseSlug)}`)
+          .expect(200)
+      ).body,
+    );
+    expect(absent).toHaveLength(0);
+
+    // Sauf si on les demande — sinon on ne pourrait plus jamais les restaurer.
+    const shown = data<AdminExerciseSummary[]>(
+      (
+        await asAdmin(superToken)
+          .get(
+            `/api/v1/admin/exercises?includeDeleted=true&search=${encodeURIComponent(freeExerciseSlug)}`,
+          )
+          .expect(200)
+      ).body,
+    );
+    expect(shown).toHaveLength(1);
+    expect(shown[0]?.deletedAt).not.toBeNull();
+    expect(shown[0]?.isPublished).toBe(false);
+
+    // Deux suppressions de suite : la seconde n'a plus rien à supprimer.
+    await asAdmin(superToken).delete(`/api/v1/admin/exercises/${freeExerciseId}`).expect(404);
+
+    await asAdmin(superToken).post(`/api/v1/admin/exercises/${freeExerciseId}/restore`).expect(204);
+    // Restauré DÉPUBLIÉ : la remise en ligne se décide.
+    await asAdmin(superToken)
+      .patch(`/api/v1/admin/exercises/${freeExerciseId}/publication`)
+      .send({ isPublished: true })
+      .expect(204);
+    await server()
+      .get(`/api/v1/exercises/${freeExerciseSlug}`)
+      .set('Authorization', `Bearer ${witnessToken}`)
+      .expect(200);
+  });
+
+  it('reclassement d’un exercice : les catégories remplacent les anciennes', async () => {
+    const groups = await prisma.muscleGroup.findMany({ orderBy: { slug: 'asc' }, take: 2 });
+    const [first, second] = groups;
+    expect(first && second).toBeTruthy();
+
+    const updated = data<AdminExerciseSummary>(
+      (
+        await asAdmin(superToken)
+          .patch(`/api/v1/admin/exercises/${freeExerciseId}/categories`)
+          .send({
+            primaryMuscleGroupSlug: first!.slug,
+            secondaryMuscleGroupSlugs: [second!.slug, first!.slug],
+            equipmentSlugs: [],
+          })
+          .expect(200)
+      ).body,
+    );
+    // Le principal repris en secondaire est écarté, sans erreur.
+    expect(updated.primaryMuscleGroupSlug).toBe(first!.slug);
+    expect(updated.muscleGroupSlugs.sort()).toEqual([first!.slug, second!.slug].sort());
+    expect(updated.equipmentSlugs).toEqual([]);
+
+    await asAdmin(superToken)
+      .patch(`/api/v1/admin/exercises/${freeExerciseId}/categories`)
+      .send({
+        primaryMuscleGroupSlug: 'groupe-qui-nexiste-pas',
+        secondaryMuscleGroupSlugs: [],
+        equipmentSlugs: [],
+      })
+      .expect(400);
+  });
+
+  it('catégories : création, renommage, et refus de supprimer une catégorie encore principale', async () => {
+    const slug = `e2e-categorie-${randomUUID().slice(0, 8)}`;
+    const created = await asAdmin(superToken)
+      .post('/api/v1/admin/muscle-groups')
+      .send({ slug, name: 'Catégorie de test', sortOrder: 42 })
+      .expect(201);
+    const groupId = (created.body as { id: string }).id;
+
+    // Slug déjà pris : refusé, pas de doublon silencieux.
+    await asAdmin(superToken)
+      .post('/api/v1/admin/muscle-groups')
+      .send({ slug, name: 'Doublon' })
+      .expect(409);
+
+    await asAdmin(superToken)
+      .patch(`/api/v1/admin/muscle-groups/${groupId}`)
+      .send({ name: 'Catégorie renommée' })
+      .expect(204);
+
+    const listed = (await asAdmin(superToken).get('/api/v1/admin/muscle-groups').expect(200))
+      .body as { id: string; name: string; primaryExercisesCount: number }[];
+    const mine = listed.find((group) => group.id === groupId);
+    expect(mine?.name).toBe('Catégorie renommée');
+    expect(mine?.primaryExercisesCount).toBe(0);
+
+    // Une catégorie encore principale ne se supprime pas : la contrainte de
+    // base est en cascade, les exercices resteraient sans muscle principal.
+    const populated = listed.find((group) => group.primaryExercisesCount > 0);
+    expect(populated).toBeDefined();
+    await asAdmin(superToken).delete(`/api/v1/admin/muscle-groups/${populated!.id}`).expect(409);
+
+    await asAdmin(superToken).delete(`/api/v1/admin/muscle-groups/${groupId}`).expect(204);
+    await asAdmin(superToken).delete(`/api/v1/admin/muscle-groups/${groupId}`).expect(404);
   });
 
   it('suspension : sessions révoquées immédiatement, reconnexion refusée, audit tracé', async () => {

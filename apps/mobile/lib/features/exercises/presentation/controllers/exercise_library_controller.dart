@@ -16,6 +16,7 @@ class ExerciseLibraryState {
     required this.hasMore,
     required this.nextCursor,
     required this.isLoadingMore,
+    this.total,
   });
 
   const ExerciseLibraryState.initial()
@@ -23,7 +24,8 @@ class ExerciseLibraryState {
         filters = const ExercisesFilters(),
         hasMore = false,
         nextCursor = null,
-        isLoadingMore = false;
+        isLoadingMore = false,
+        total = null;
 
   final List<ExerciseSummary> items;
   final ExercisesFilters filters;
@@ -31,12 +33,16 @@ class ExerciseLibraryState {
   final String? nextCursor;
   final bool isLoadingMore;
 
+  /// Total annoncé par le serveur, `null` s'il ne le donne pas.
+  final int? total;
+
   ExerciseLibraryState copyWith({
     List<ExerciseSummary>? items,
     ExercisesFilters? filters,
     bool? hasMore,
     String? Function()? nextCursor,
     bool? isLoadingMore,
+    int? total,
   }) {
     return ExerciseLibraryState(
       items: items ?? this.items,
@@ -44,6 +50,7 @@ class ExerciseLibraryState {
       hasMore: hasMore ?? this.hasMore,
       nextCursor: nextCursor == null ? this.nextCursor : nextCursor(),
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+      total: total ?? this.total,
     );
   }
 }
@@ -72,6 +79,7 @@ class ExerciseLibraryController
       hasMore: page.hasMore,
       nextCursor: page.nextCursor,
       isLoadingMore: false,
+      total: page.total,
     );
   }
 
@@ -119,6 +127,7 @@ class ExerciseLibraryController
         current.copyWith(
           items: [...current.items, ...page.items],
           hasMore: page.hasMore,
+          total: page.total,
           nextCursor: () => page.nextCursor,
           isLoadingMore: false,
         ),

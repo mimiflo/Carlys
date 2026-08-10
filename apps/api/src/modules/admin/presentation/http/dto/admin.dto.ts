@@ -1,6 +1,6 @@
 import { ENTITLEMENT_KEYS, type EntitlementKey } from '@carlys/api-contracts';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   IsBoolean,
   IsDate,
@@ -55,6 +55,15 @@ export class ListAdminExercisesQuery {
   @IsString()
   @MaxLength(120)
   search?: string;
+
+  @ApiPropertyOptional({
+    default: false,
+    description: 'Inclure les exercices supprimés — la seule façon de les restaurer',
+  })
+  @IsOptional()
+  @Transform(({ value }) => value === true || value === 'true')
+  @IsBoolean()
+  includeDeleted: boolean = false;
 
   @ApiPropertyOptional({ description: 'Curseur : id du dernier élément servi' })
   @IsOptional()
