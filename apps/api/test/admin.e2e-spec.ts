@@ -8,6 +8,7 @@ import {
   ADMIN_PERMISSIONS,
   type AdminAuditLog,
   type AdminExerciseSummary,
+  type AdminMuscleGroup,
   type AdminLoginResult,
   type AdminMe,
   type AdminOverview,
@@ -336,25 +337,42 @@ describe('Administration (e2e)', () => {
   });
 
   it('reclassement d’un exercice : les catégories remplacent les anciennes', async () => {
-    const groups = await prisma.muscleGroup.findMany({ orderBy: { slug: 'asc' }, take: 2 });
-    const [first, second] = groups;
-    expect(first && second).toBeTruthy();
+    // La base e2e est VIERGE — le seed n'y tourne jamais. La suite crée donc
+    // les catégories dont elle a besoin, par la route même qu'elle teste,
+    // plutôt que d'espérer trouver des groupes déjà là.
+    const first = data<AdminMuscleGroup>(
+      (
+        await asAdmin(superToken)
+          .post('/api/v1/admin/muscle-groups')
+          .send({ slug: `e2e-groupe-a-${randomUUID().slice(0, 8)}`, name: 'Groupe A' })
+          .expect(201)
+      ).body,
+    );
+    const second = data<AdminMuscleGroup>(
+      (
+        await asAdmin(superToken)
+          .post('/api/v1/admin/muscle-groups')
+          .send({ slug: `e2e-groupe-b-${randomUUID().slice(0, 8)}`, name: 'Groupe B' })
+          .expect(201)
+      ).body,
+    );
 
     const updated = data<AdminExerciseSummary>(
       (
         await asAdmin(superToken)
           .patch(`/api/v1/admin/exercises/${freeExerciseId}/categories`)
           .send({
-            primaryMuscleGroupSlug: first!.slug,
-            secondaryMuscleGroupSlugs: [second!.slug, first!.slug],
+            primaryMuscleGroupSlug: first.slug,
+            secondaryMuscleGroupSlugs: [second.slug, first.slug],
             equipmentSlugs: [],
           })
           .expect(200)
       ).body,
     );
-    // Le principal repris en secondaire est écarté, sans erreur.
-    expect(updated.primaryMuscleGroupSlug).toBe(first!.slug);
-    expect(updated.muscleGroupSlugs.sort()).toEqual([first!.slug, second!.slug].sort());
+    // Le principal repris en secondaire est écarté, sans erreur : la clé
+    // primaire composite l'aurait refusé.
+    expect(updated.primaryMuscleGroupSlug).toBe(first.slug);
+    expect([...updated.muscleGroupSlugs].sort()).toEqual([first.slug, second.slug].sort());
     expect(updated.equipmentSlugs).toEqual([]);
 
     await asAdmin(superToken)
@@ -365,15 +383,28 @@ describe('Administration (e2e)', () => {
         equipmentSlugs: [],
       })
       .expect(400);
+
+    // Le groupe PRINCIPAL d'un exercice ne se supprime pas ; le secondaire si.
+    await asAdmin(superToken).delete(`/api/v1/admin/muscle-groups/${first.id}`).expect(409);
+    await asAdmin(superToken).delete(`/api/v1/admin/muscle-groups/${second.id}`).expect(204);
   });
 
-  it('catégories : création, renommage, et refus de supprimer une catégorie encore principale', async () => {
+  it('catégories : création, renommage, suppression', async () => {
     const slug = `e2e-categorie-${randomUUID().slice(0, 8)}`;
-    const created = await asAdmin(superToken)
-      .post('/api/v1/admin/muscle-groups')
-      .send({ slug, name: 'Catégorie de test', sortOrder: 42 })
-      .expect(201);
-    const groupId = (created.body as { id: string }).id;
+    // `data<T>()` et non `body` : toute réponse de succès est ENVELOPPÉE
+    // (`{ data, meta, requestId }`). Lire `body.id` donnait `undefined`, et
+    // c'est `ParseUUIDPipe` qui refusait l'URL suivante — un 400 sans rapport
+    // avec la route testée.
+    const created = data<AdminMuscleGroup>(
+      (
+        await asAdmin(superToken)
+          .post('/api/v1/admin/muscle-groups')
+          .send({ slug, name: 'Catégorie de test', sortOrder: 42 })
+          .expect(201)
+      ).body,
+    );
+    expect(created.sortOrder).toBe(42);
+    expect(created.primaryExercisesCount).toBe(0);
 
     // Slug déjà pris : refusé, pas de doublon silencieux.
     await asAdmin(superToken)
@@ -382,24 +413,17 @@ describe('Administration (e2e)', () => {
       .expect(409);
 
     await asAdmin(superToken)
-      .patch(`/api/v1/admin/muscle-groups/${groupId}`)
+      .patch(`/api/v1/admin/muscle-groups/${created.id}`)
       .send({ name: 'Catégorie renommée' })
       .expect(204);
 
-    const listed = (await asAdmin(superToken).get('/api/v1/admin/muscle-groups').expect(200))
-      .body as { id: string; name: string; primaryExercisesCount: number }[];
-    const mine = listed.find((group) => group.id === groupId);
-    expect(mine?.name).toBe('Catégorie renommée');
-    expect(mine?.primaryExercisesCount).toBe(0);
+    const listed = data<AdminMuscleGroup[]>(
+      (await asAdmin(superToken).get('/api/v1/admin/muscle-groups').expect(200)).body,
+    );
+    expect(listed.find((group) => group.id === created.id)?.name).toBe('Catégorie renommée');
 
-    // Une catégorie encore principale ne se supprime pas : la contrainte de
-    // base est en cascade, les exercices resteraient sans muscle principal.
-    const populated = listed.find((group) => group.primaryExercisesCount > 0);
-    expect(populated).toBeDefined();
-    await asAdmin(superToken).delete(`/api/v1/admin/muscle-groups/${populated!.id}`).expect(409);
-
-    await asAdmin(superToken).delete(`/api/v1/admin/muscle-groups/${groupId}`).expect(204);
-    await asAdmin(superToken).delete(`/api/v1/admin/muscle-groups/${groupId}`).expect(404);
+    await asAdmin(superToken).delete(`/api/v1/admin/muscle-groups/${created.id}`).expect(204);
+    await asAdmin(superToken).delete(`/api/v1/admin/muscle-groups/${created.id}`).expect(404);
   });
 
   it('suspension : sessions révoquées immédiatement, reconnexion refusée, audit tracé', async () => {
