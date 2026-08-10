@@ -1,5 +1,5 @@
 {
-  "exercisesCount": 111,
+  "exercisesCount": 146,
   "muscleGroups": [
     {
       "slug": "pectoraux",
@@ -90,6 +90,10 @@
     {
       "slug": "barre-ez",
       "name": "Barre EZ"
+    },
+    {
+      "slug": "disque",
+      "name": "Disque"
     },
     {
       "slug": "tapis",
@@ -1551,7 +1555,7 @@
       "equipment": [
         "barre"
       ],
-      "hasPhoto": false
+      "hasPhoto": true
     },
     {
       "slug": "elevations-laterales",
@@ -1574,7 +1578,7 @@
       "equipment": [
         "halteres"
       ],
-      "hasPhoto": false
+      "hasPhoto": true
     },
     {
       "slug": "oiseau-halteres",
@@ -1600,7 +1604,911 @@
       "equipment": [
         "halteres"
       ],
-      "hasPhoto": false
+      "hasPhoto": true
+    },
+    {
+      "slug": "developpe-militaire-halteres",
+      "name": "Développé militaire haltères",
+      "description": "Deux haltères plutôt qu’une barre : chaque épaule trouve sa propre trajectoire.",
+      "instructions": [
+        "Debout ou assis dossier haut, haltères au niveau des oreilles.",
+        "Poussez à la verticale jusqu’à l’extension, sans cambrer.",
+        "Redescendez jusqu’à ce que les coudes passent sous les épaules."
+      ],
+      "difficulty": "BEGINNER",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "halteres",
+        "polyarticulaire",
+        "deltoide-anterieur"
+      ],
+      "primary": "epaules",
+      "secondary": [
+        "triceps",
+        "abdominaux"
+      ],
+      "equipment": [
+        "halteres"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "arnold-press",
+      "name": "Arnold Press",
+      "description": "La rotation des poignets pendant la poussée fait travailler l’épaule sur tout son arc.",
+      "instructions": [
+        "Assis, haltères devant la poitrine, paumes vers soi.",
+        "Poussez en tournant les paumes vers l’avant.",
+        "Terminez bras tendus, paumes face à face ou vers l’avant.",
+        "Redescendez en inversant la rotation, lentement."
+      ],
+      "difficulty": "INTERMEDIATE",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "halteres",
+        "polyarticulaire",
+        "deltoide-anterieur"
+      ],
+      "primary": "epaules",
+      "secondary": [
+        "triceps"
+      ],
+      "equipment": [
+        "halteres",
+        "banc"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "push-press",
+      "name": "Push Press",
+      "description": "Une impulsion des jambes lance la barre : on passe des charges impossibles au strict.",
+      "instructions": [
+        "Barre aux clavicules, pieds sous les hanches.",
+        "Fléchissez légèrement les genoux, puis détendez-les d’un coup.",
+        "Enchaînez avec les bras pour verrouiller la barre au-dessus de la tête.",
+        "Redescendez la barre aux clavicules en amortissant avec les jambes."
+      ],
+      "difficulty": "ADVANCED",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "barre",
+        "polyarticulaire",
+        "explosif"
+      ],
+      "primary": "epaules",
+      "secondary": [
+        "triceps",
+        "quadriceps"
+      ],
+      "equipment": [
+        "barre"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "developpe-epaules-machine",
+      "name": "Développé épaules à la machine",
+      "description": "La poussée verticale guidée : rien à stabiliser, tout à pousser.",
+      "instructions": [
+        "Réglez le siège pour que les poignées soient au niveau des épaules.",
+        "Dos plaqué contre le dossier, poussez jusqu’à l’extension.",
+        "Redescendez jusqu’à l’angle droit du coude."
+      ],
+      "difficulty": "BEGINNER",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "machine",
+        "polyarticulaire",
+        "debutant"
+      ],
+      "primary": "epaules",
+      "secondary": [
+        "triceps"
+      ],
+      "equipment": [
+        "machine"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "developpe-epaules-debout-machine",
+      "name": "Développé épaules debout à la machine",
+      "description": "Debout dans la machine : le gainage travaille, la trajectoire reste guidée.",
+      "instructions": [
+        "Debout, poignées à hauteur d’épaules, pieds sous les hanches.",
+        "Gainez le tronc et poussez à la verticale.",
+        "Revenez sans laisser la charge tirer les épaules vers le haut."
+      ],
+      "difficulty": "BEGINNER",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "machine",
+        "polyarticulaire"
+      ],
+      "primary": "epaules",
+      "secondary": [
+        "triceps",
+        "abdominaux"
+      ],
+      "equipment": [
+        "machine"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "developpe-epaules-incline-barre",
+      "name": "Développé épaules au banc incliné (barre)",
+      "description": "Banc très incliné : à mi-chemin entre le développé militaire et le développé incliné.",
+      "instructions": [
+        "Banc réglé à ~60°, barre au niveau du haut des pectoraux.",
+        "Poussez à la verticale jusqu’à l’extension complète.",
+        "Redescendez la barre en gardant les coudes sous les poignets."
+      ],
+      "difficulty": "INTERMEDIATE",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "barre",
+        "banc",
+        "deltoide-anterieur"
+      ],
+      "primary": "epaules",
+      "secondary": [
+        "pectoraux",
+        "triceps"
+      ],
+      "equipment": [
+        "barre",
+        "banc"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "developpe-epaules-incline-halteres",
+      "name": "Développé épaules au banc incliné (haltères)",
+      "description": "La même inclinaison aux haltères : plus d’amplitude, moins de charge.",
+      "instructions": [
+        "Banc à ~60°, haltères au niveau des oreilles, paumes vers l’avant.",
+        "Poussez jusqu’à rapprocher les haltères sans les cogner.",
+        "Redescendez lentement jusqu’à l’étirement."
+      ],
+      "difficulty": "BEGINNER",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "halteres",
+        "banc",
+        "deltoide-anterieur"
+      ],
+      "primary": "epaules",
+      "secondary": [
+        "pectoraux",
+        "triceps"
+      ],
+      "equipment": [
+        "halteres",
+        "banc"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "developpe-epaules-unilateral",
+      "name": "Développé épaules unilatéral",
+      "description": "Un seul haltère : le tronc doit résister à la rotation autant que l’épaule pousse.",
+      "instructions": [
+        "Assis ou debout, un haltère à hauteur d’épaule.",
+        "Poussez à la verticale sans pencher le buste du côté opposé.",
+        "Redescendez lentement, puis changez de côté."
+      ],
+      "difficulty": "INTERMEDIATE",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "halteres",
+        "unilateral",
+        "gainage"
+      ],
+      "primary": "epaules",
+      "secondary": [
+        "triceps",
+        "abdominaux"
+      ],
+      "equipment": [
+        "halteres"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "landmine-press",
+      "name": "Landmine Press",
+      "description": "Barre ancrée au sol : la poussée est oblique, l’épaule y est bien plus à l’aise.",
+      "instructions": [
+        "Une extrémité de la barre ancrée au sol, l’autre en main à l’épaule.",
+        "Poussez vers l’avant et le haut, sans tourner les hanches.",
+        "Revenez à l’épaule en contrôlant, puis changez de côté."
+      ],
+      "difficulty": "BEGINNER",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "barre",
+        "unilateral",
+        "deltoide-anterieur"
+      ],
+      "primary": "epaules",
+      "secondary": [
+        "triceps",
+        "abdominaux"
+      ],
+      "equipment": [
+        "barre"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "z-press",
+      "name": "Z-Press",
+      "description": "Assis au sol jambes tendues : impossible de tricher avec les jambes ou le dos.",
+      "instructions": [
+        "Assis au sol, jambes tendues, barre aux clavicules.",
+        "Gainez fort et poussez à la verticale.",
+        "Redescendez sans laisser le buste partir en arrière.",
+        "Commencez léger : la position demande de la mobilité de hanche."
+      ],
+      "difficulty": "ADVANCED",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "barre",
+        "gainage",
+        "technique"
+      ],
+      "primary": "epaules",
+      "secondary": [
+        "abdominaux",
+        "triceps"
+      ],
+      "equipment": [
+        "barre"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "elevations-frontales-barre",
+      "name": "Élévations frontales à la barre",
+      "description": "La barre montée devant soi bras tendus : l’avant de l’épaule, en isolation.",
+      "instructions": [
+        "Debout, barre en pronation contre les cuisses.",
+        "Montez la barre bras tendus jusqu’à hauteur d’yeux.",
+        "Redescendez lentement, sans balancer le buste."
+      ],
+      "difficulty": "BEGINNER",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "barre",
+        "isolation",
+        "deltoide-anterieur"
+      ],
+      "primary": "epaules",
+      "secondary": [],
+      "equipment": [
+        "barre"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "elevations-frontales-halteres",
+      "name": "Élévations frontales haltères",
+      "description": "Un bras après l’autre ou les deux ensemble : la version la plus simple à doser.",
+      "instructions": [
+        "Debout, haltères devant les cuisses, paumes vers le corps.",
+        "Montez un bras tendu jusqu’à l’horizontale.",
+        "Redescendez lentement et alternez."
+      ],
+      "difficulty": "BEGINNER",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "halteres",
+        "isolation",
+        "deltoide-anterieur"
+      ],
+      "primary": "epaules",
+      "secondary": [],
+      "equipment": [
+        "halteres"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "elevations-frontales-poulie",
+      "name": "Élévations frontales à la poulie",
+      "description": "La poulie basse garde la tension en bas du mouvement, là où l’haltère la perd.",
+      "instructions": [
+        "Dos à la poulie basse, poignée devant les cuisses.",
+        "Montez le bras tendu jusqu’à l’horizontale.",
+        "Revenez sans laisser la charge tirer l’épaule vers l’arrière."
+      ],
+      "difficulty": "BEGINNER",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "poulie",
+        "isolation",
+        "tension-continue"
+      ],
+      "primary": "epaules",
+      "secondary": [],
+      "equipment": [
+        "poulie"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "elevations-frontales-disque",
+      "name": "Élévations frontales au disque",
+      "description": "Un disque tenu à deux mains : la prise neutre soulage les poignets et les coudes.",
+      "instructions": [
+        "Debout, un disque tenu à deux mains devant les cuisses.",
+        "Montez bras tendus jusqu’à hauteur d’yeux.",
+        "Redescendez lentement, buste immobile."
+      ],
+      "difficulty": "BEGINNER",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "disque",
+        "isolation",
+        "deltoide-anterieur"
+      ],
+      "primary": "epaules",
+      "secondary": [],
+      "equipment": [
+        "disque"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "elevations-laterales-poulie",
+      "name": "Élévations latérales à la poulie",
+      "description": "Le câble tire dès le départ : le deltoïde moyen n’a jamais de répit.",
+      "instructions": [
+        "De côté par rapport à la poulie basse, poignée dans la main extérieure.",
+        "Montez le bras tendu jusqu’à l’horizontale, coude souple.",
+        "Redescendez lentement, sans laisser l’épaule remonter."
+      ],
+      "difficulty": "BEGINNER",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "poulie",
+        "isolation",
+        "tension-continue"
+      ],
+      "primary": "epaules",
+      "secondary": [],
+      "equipment": [
+        "poulie"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "elevations-laterales-machine",
+      "name": "Élévations latérales à la machine",
+      "description": "Assis, coudes contre les coussins : la trajectoire est imposée, la fatigue arrive vite.",
+      "instructions": [
+        "Réglez le siège pour que les coudes soient à hauteur d’épaules.",
+        "Poussez les coussins vers l’extérieur jusqu’à l’horizontale.",
+        "Revenez lentement sans relâcher d’un coup."
+      ],
+      "difficulty": "BEGINNER",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "machine",
+        "isolation",
+        "debutant"
+      ],
+      "primary": "epaules",
+      "secondary": [],
+      "equipment": [
+        "machine"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "elevations-laterales-machine-unilateral",
+      "name": "Élévations latérales machine unilatérales",
+      "description": "Un côté à la fois sur machine : la main libre stabilise, l’épaule travaille seule.",
+      "instructions": [
+        "Placez-vous de côté, un seul coude contre le coussin.",
+        "Montez jusqu’à l’horizontale sans pencher le buste.",
+        "Revenez lentement, puis changez de côté."
+      ],
+      "difficulty": "INTERMEDIATE",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "machine",
+        "isolation",
+        "unilateral"
+      ],
+      "primary": "epaules",
+      "secondary": [],
+      "equipment": [
+        "machine"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "elevations-laterales-banc-incline",
+      "name": "Élévations latérales au banc incliné",
+      "description": "Allongé sur le côté : l’épaule est chargée là où l’exercice debout ne charge rien.",
+      "instructions": [
+        "Allongé sur le flanc sur un banc incliné, un haltère dans la main libre.",
+        "Montez le bras jusqu’à la verticale, coude souple.",
+        "Redescendez lentement jusqu’à l’étirement."
+      ],
+      "difficulty": "INTERMEDIATE",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "halteres",
+        "banc",
+        "isolation"
+      ],
+      "primary": "epaules",
+      "secondary": [],
+      "equipment": [
+        "halteres",
+        "banc"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "elevations-laterales-unilateral",
+      "name": "Élévations latérales unilatérales",
+      "description": "Une main tient un appui, l’autre travaille : plus d’amplitude, moins de triche.",
+      "instructions": [
+        "Debout, une main sur un montant, un haltère dans l’autre.",
+        "Montez le bras sur le côté jusqu’à l’horizontale.",
+        "Redescendez lentement, puis changez de côté."
+      ],
+      "difficulty": "BEGINNER",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "halteres",
+        "isolation",
+        "unilateral"
+      ],
+      "primary": "epaules",
+      "secondary": [],
+      "equipment": [
+        "halteres"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "elevations-laterales-coude-flechi",
+      "name": "Élévations latérales coude fléchi",
+      "description": "Coudes pliés : le bras de levier raccourcit, la charge peut monter.",
+      "instructions": [
+        "Debout, haltères le long du corps, coudes fléchis à ~90°.",
+        "Montez les coudes sur les côtés jusqu’à hauteur d’épaules.",
+        "Redescendez lentement en gardant l’angle du coude."
+      ],
+      "difficulty": "BEGINNER",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "halteres",
+        "isolation"
+      ],
+      "primary": "epaules",
+      "secondary": [],
+      "equipment": [
+        "halteres"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "elevations-laterales-elastique",
+      "name": "Élévations latérales à l’élastique",
+      "description": "L’élastique durcit à mesure qu’on monte : la fin du mouvement devient la plus dure.",
+      "instructions": [
+        "Debout sur l’élastique, une poignée dans chaque main.",
+        "Montez les bras sur les côtés jusqu’à l’horizontale.",
+        "Retenez la descente : l’élastique cherche à la précipiter."
+      ],
+      "difficulty": "BEGINNER",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "elastique",
+        "maison",
+        "isolation"
+      ],
+      "primary": "epaules",
+      "secondary": [],
+      "equipment": [
+        "elastique"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "elevations-laterales-penche",
+      "name": "Élévations latérales penché (Leaning Raise)",
+      "description": "Penché sur un montant : l’épaule part plus bas, l’amplitude utile s’allonge.",
+      "instructions": [
+        "Une main agrippée à un montant, corps incliné sur le côté.",
+        "Montez l’haltère du bras extérieur jusqu’à l’horizontale.",
+        "Redescendez lentement jusqu’au croisement devant les cuisses."
+      ],
+      "difficulty": "INTERMEDIATE",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "halteres",
+        "isolation",
+        "unilateral"
+      ],
+      "primary": "epaules",
+      "secondary": [],
+      "equipment": [
+        "halteres"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "elevations-laterales-poulie-penche",
+      "name": "Élévations latérales à la poulie, penché",
+      "description": "La version poulie du même penché : tension continue sur toute l’amplitude gagnée.",
+      "instructions": [
+        "Une main sur le montant, corps incliné, poignée basse dans l’autre.",
+        "Montez le bras tendu jusqu’à l’horizontale.",
+        "Revenez lentement en laissant l’épaule s’étirer."
+      ],
+      "difficulty": "INTERMEDIATE",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "poulie",
+        "isolation",
+        "tension-continue"
+      ],
+      "primary": "epaules",
+      "secondary": [],
+      "equipment": [
+        "poulie"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "cable-y-raise",
+      "name": "Cable Y-Raise",
+      "description": "Deux poulies croisées, bras montés en Y : latéral et postérieur ensemble.",
+      "instructions": [
+        "Poignées croisées, une dans chaque main, bras devant les cuisses.",
+        "Montez les bras en diagonale, jusqu’à former un Y au-dessus des épaules.",
+        "Revenez lentement en croisant devant soi."
+      ],
+      "difficulty": "INTERMEDIATE",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "poulie",
+        "isolation",
+        "posture"
+      ],
+      "primary": "epaules",
+      "secondary": [
+        "dos"
+      ],
+      "equipment": [
+        "poulie"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "tirage-menton-barre",
+      "name": "Tirage menton à la barre",
+      "description": "Barre tirée le long du corps, coudes hauts : deltoïdes et trapèzes ensemble.",
+      "instructions": [
+        "Debout, barre en pronation à largeur d’épaules.",
+        "Tirez les coudes vers le haut, barre près du corps.",
+        "Arrêtez quand les coudes atteignent la hauteur des épaules.",
+        "Redescendez lentement : plus haut, l’épaule se pince."
+      ],
+      "difficulty": "INTERMEDIATE",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "barre",
+        "polyarticulaire",
+        "trapezes"
+      ],
+      "primary": "epaules",
+      "secondary": [
+        "dos",
+        "biceps"
+      ],
+      "equipment": [
+        "barre"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "tirage-menton-halteres",
+      "name": "Tirage menton haltères",
+      "description": "Aux haltères, les poignets suivent leur propre chemin — souvent plus confortable.",
+      "instructions": [
+        "Debout, un haltère dans chaque main devant les cuisses.",
+        "Tirez les coudes vers le haut et l’extérieur.",
+        "Arrêtez à hauteur d’épaules, puis redescendez lentement."
+      ],
+      "difficulty": "BEGINNER",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "halteres",
+        "polyarticulaire",
+        "trapezes"
+      ],
+      "primary": "epaules",
+      "secondary": [
+        "dos",
+        "biceps"
+      ],
+      "equipment": [
+        "halteres"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "tirage-menton-prise-large",
+      "name": "Tirage menton prise large",
+      "description": "Mains écartées : le mouvement glisse vers l’arrière de l’épaule et ménage le poignet.",
+      "instructions": [
+        "Barre en pronation, mains bien plus larges que les épaules.",
+        "Tirez les coudes vers le haut et l’extérieur, buste droit.",
+        "Arrêtez coudes à hauteur d’épaules, puis redescendez."
+      ],
+      "difficulty": "BEGINNER",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "barre",
+        "deltoide-posterieur",
+        "posture"
+      ],
+      "primary": "epaules",
+      "secondary": [
+        "dos"
+      ],
+      "equipment": [
+        "barre"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "elevations-arriere-banc-incline",
+      "name": "Élévations arrière au banc incliné",
+      "description": "La poitrine posée sur le banc : impossible de lancer la charge avec le dos.",
+      "instructions": [
+        "À plat ventre sur un banc incliné, haltères pendants.",
+        "Écartez les bras sur les côtés jusqu’à l’horizontale.",
+        "Serrez les omoplates en fin de course, sans hausser les épaules.",
+        "Redescendez lentement jusqu’à l’étirement."
+      ],
+      "difficulty": "BEGINNER",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "halteres",
+        "banc",
+        "deltoide-posterieur"
+      ],
+      "primary": "epaules",
+      "secondary": [
+        "dos"
+      ],
+      "equipment": [
+        "halteres",
+        "banc"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "elevations-arriere-poulie",
+      "name": "Élévations arrière à la poulie",
+      "description": "À la poulie, l’arrière d’épaule reste sous tension jusqu’au bout du geste.",
+      "instructions": [
+        "Buste penché, poignée basse tenue en main croisée.",
+        "Écartez le bras vers l’arrière jusqu’à l’horizontale.",
+        "Revenez lentement sans tourner le buste."
+      ],
+      "difficulty": "INTERMEDIATE",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "poulie",
+        "deltoide-posterieur",
+        "tension-continue"
+      ],
+      "primary": "epaules",
+      "secondary": [
+        "dos"
+      ],
+      "equipment": [
+        "poulie"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "elevations-arriere-unilateral",
+      "name": "Élévations arrière unilatérales",
+      "description": "Un bras à la fois, buste penché : le côté faible ne peut plus suivre l’autre.",
+      "instructions": [
+        "Buste penché, une main en appui, un haltère dans l’autre.",
+        "Montez le bras sur le côté jusqu’à l’horizontale.",
+        "Redescendez lentement, puis changez de côté."
+      ],
+      "difficulty": "BEGINNER",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "halteres",
+        "deltoide-posterieur",
+        "unilateral"
+      ],
+      "primary": "epaules",
+      "secondary": [
+        "dos"
+      ],
+      "equipment": [
+        "halteres"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "reverse-fly-poulie-croisee",
+      "name": "Reverse Fly à la poulie croisée",
+      "description": "Deux poulies hautes croisées : l’ouverture se fait dans l’axe exact du deltoïde arrière.",
+      "instructions": [
+        "Debout entre deux poulies hautes, poignées croisées devant soi.",
+        "Écartez les bras vers l’arrière en formant un grand arc.",
+        "Serrez les omoplates sans cambrer le bas du dos.",
+        "Revenez lentement jusqu’au croisement."
+      ],
+      "difficulty": "INTERMEDIATE",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "poulie",
+        "deltoide-posterieur",
+        "posture"
+      ],
+      "primary": "epaules",
+      "secondary": [
+        "dos"
+      ],
+      "equipment": [
+        "poulie"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "reverse-fly-elastique",
+      "name": "Reverse Fly à l’élastique",
+      "description": "De quoi entretenir l’arrière d’épaule partout, sans une once de matériel lourd.",
+      "instructions": [
+        "Élastique tendu devant soi, bras tendus à hauteur d’épaules.",
+        "Écartez les bras vers l’extérieur en ouvrant la poitrine.",
+        "Revenez lentement, sans laisser l’élastique claquer."
+      ],
+      "difficulty": "BEGINNER",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "elastique",
+        "maison",
+        "posture"
+      ],
+      "primary": "epaules",
+      "secondary": [
+        "dos"
+      ],
+      "equipment": [
+        "elastique"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "rear-delt-row",
+      "name": "Rear Delt Row",
+      "description": "Un rowing coudes hauts et écartés : le tirage qui vise l’arrière d’épaule, pas les dorsaux.",
+      "instructions": [
+        "Buste penché à ~45°, haltères bras tendus.",
+        "Tirez les coudes vers le haut et l’extérieur, à hauteur d’épaules.",
+        "Marquez la contraction, puis redescendez lentement."
+      ],
+      "difficulty": "INTERMEDIATE",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "halteres",
+        "deltoide-posterieur",
+        "polyarticulaire"
+      ],
+      "primary": "epaules",
+      "secondary": [
+        "dos",
+        "biceps"
+      ],
+      "equipment": [
+        "halteres"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "tirage-horizontal-buste-penche",
+      "name": "Tirage horizontal buste penché",
+      "description": "Barre tirée vers la poitrine coudes ouverts : arrière d’épaule et haut du dos.",
+      "instructions": [
+        "Buste penché, barre tenue large en pronation.",
+        "Tirez vers le haut de la poitrine, coudes vers l’extérieur.",
+        "Serrez les omoplates, puis revenez sans arrondir le dos."
+      ],
+      "difficulty": "INTERMEDIATE",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "poulie",
+        "deltoide-posterieur"
+      ],
+      "primary": "epaules",
+      "secondary": [
+        "dos"
+      ],
+      "equipment": [
+        "poulie"
+      ],
+      "hasPhoto": true
+    },
+    {
+      "slug": "face-pull-barre",
+      "name": "Face Pull à la barre",
+      "description": "Le face pull avec une barre droite : même trajectoire, prise plus ferme.",
+      "instructions": [
+        "Poulie à hauteur de visage, barre en pronation large.",
+        "Tirez la barre vers le front, coudes hauts.",
+        "Serrez les omoplates, épaules basses.",
+        "Revenez lentement bras tendus."
+      ],
+      "difficulty": "BEGINNER",
+      "type": "STRENGTH",
+      "isPremium": false,
+      "tags": [
+        "poulie",
+        "posture",
+        "deltoide-posterieur"
+      ],
+      "primary": "epaules",
+      "secondary": [
+        "dos"
+      ],
+      "equipment": [
+        "poulie"
+      ],
+      "hasPhoto": true
     },
     {
       "slug": "curl-biceps-halteres",
