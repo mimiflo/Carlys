@@ -578,6 +578,15 @@ void main() {
     );
   });
 
+  testWidgets('bibliothèque illustrée — le groupe Abdominaux', (tester) async {
+    await captureGroup(
+      tester,
+      group: 'Abdominaux',
+      exercise: 'Planche',
+      prefix: '26-abdominaux',
+    );
+  });
+
   testWidgets('séance active', (tester) async {
     final workouts = FakeWorkoutRepository()..active = activeWorkoutOf();
     await pumpApp(tester, workouts: workouts);
