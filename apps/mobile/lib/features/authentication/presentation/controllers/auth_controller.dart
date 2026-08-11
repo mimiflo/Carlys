@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/dio_client.dart';
 import '../../../../core/logging/app_logger.dart';
+import '../../../notifications/presentation/controllers/push_registration.dart';
 import '../../data/repositories/auth_repository_impl.dart';
 import '../../domain/entities/auth_user.dart';
 
@@ -82,6 +83,9 @@ class AuthController extends Notifier<AuthState> {
   }
 
   Future<void> logout() async {
+    // Le jeton push est oublié AVANT la session : l'appel au serveur est
+    // encore authentifié. Un échec n'empêche jamais la déconnexion.
+    await ref.read(pushRegistrationProvider).forgetDevice();
     await ref.read(authRepositoryProvider).logout();
     state = const AuthUnauthenticated();
   }

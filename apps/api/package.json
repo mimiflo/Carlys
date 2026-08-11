@@ -1,7 +1,7 @@
 {
   "name": "@carlys/api",
   "version": "0.1.0",
-  "description": "Carlys API \u2014 backend NestJS (monolithe modulaire)",
+  "description": "Carlys API — backend NestJS (monolithe modulaire)",
   "private": true,
   "license": "UNLICENSED",
   "scripts": {
@@ -40,6 +40,7 @@
     "class-transformer": "^0.5.1",
     "class-validator": "^0.14.1",
     "express": "^5.2.1",
+    "firebase-admin": "^14.2.0",
     "helmet": "^8.0.0",
     "ioredis": "^5.4.2",
     "nestjs-pino": "^4.3.0",

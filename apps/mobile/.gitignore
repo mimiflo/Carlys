@@ -25,4 +25,11 @@ linux/flutter/ephemeral/
 *.env
 .env*
 !.env.example
+
+# Configuration Firebase locale (voir config/firebase.example.json). Les
+# valeurs client ne sont pas des secrets au sens strict, mais elles restent
+# hors du dépôt publié — chacun fournit celles de son projet Firebase.
+config/firebase.json
+google-services.json
+GoogleService-Info.plist
 tool/screenshots/goldens/

@@ -6,6 +6,7 @@ export * from './envelope';
 export * from './exercises';
 export * from './health';
 export * from './media';
+export * from './notifications';
 export * from './nutrition';
 export * from './programs';
 export * from './progress';

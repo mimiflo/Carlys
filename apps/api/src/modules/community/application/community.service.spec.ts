@@ -1,6 +1,7 @@
 import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { FriendRequestStatus } from '@prisma/client';
 import { type PinoLogger } from 'nestjs-pino';
+import { type NotificationsService } from '../../notifications/application/notifications.service';
 import { type CommunityRepository } from '../infrastructure/community.repository';
 import { CommunityService } from './community.service';
 
@@ -8,6 +9,7 @@ const ME = 'utilisateur-moi';
 const FRIEND = 'utilisateur-ami';
 
 interface Stubs {
+  displayNameOf: jest.Mock;
   createQuizAnswer: jest.Mock;
   incrementCultureContributions: jest.Mock;
   findFriendshipBetween: jest.Mock;
@@ -33,6 +35,7 @@ interface Stubs {
 
 function buildStubs(): Stubs {
   return {
+    displayNameOf: jest.fn().mockResolvedValue('Alice'),
     findFriendshipBetween: jest.fn().mockResolvedValue(null),
     createRequest: jest.fn().mockResolvedValue({}),
     findRequestById: jest.fn().mockResolvedValue(null),
@@ -59,9 +62,22 @@ function buildStubs(): Stubs {
 
 const loggerStub = { error: jest.fn() };
 
-function buildService(stubs: Stubs): CommunityService {
+interface NotificationsStub {
+  pushEnabled: boolean;
+  sendToUser: jest.Mock;
+}
+
+function buildNotifications(pushEnabled = true): NotificationsStub {
+  return { pushEnabled, sendToUser: jest.fn().mockResolvedValue(undefined) };
+}
+
+function buildService(
+  stubs: Stubs,
+  notifications: NotificationsStub = buildNotifications(),
+): CommunityService {
   return new CommunityService(
     stubs as unknown as CommunityRepository,
+    notifications as unknown as NotificationsService,
     loggerStub as unknown as PinoLogger,
   );
 }
@@ -314,5 +330,94 @@ describe('CommunityService — réponses de quiz (défis CULTURE)', () => {
 
     expect(stubs.createQuizAnswer).toHaveBeenCalled();
     expect(stubs.incrementCultureContributions).not.toHaveBeenCalled();
+  });
+});
+
+describe('CommunityService — notifications push', () => {
+  it('une nouvelle demande d’ami notifie le DESTINATAIRE, au nom du demandeur', async () => {
+    const stubs = buildStubs();
+    stubs.findUserIdByEmail.mockResolvedValue({ id: FRIEND });
+    const notifications = buildNotifications();
+    const service = buildService(stubs, notifications);
+
+    await service.requestFriend(ME, 'ami@carlys.test');
+
+    expect(stubs.displayNameOf).toHaveBeenCalledWith(ME);
+    expect(notifications.sendToUser).toHaveBeenCalledWith(FRIEND, {
+      title: 'Nouvelle demande d’ami',
+      body: 'Alice souhaite devenir ton ami.',
+    });
+  });
+
+  it('accepter une demande notifie le demandeur ; refuser reste silencieux', async () => {
+    const stubs = buildStubs();
+    stubs.findRequestById.mockResolvedValue({
+      id: 'demande-1',
+      requesterId: FRIEND,
+      addresseeId: ME,
+      status: FriendRequestStatus.PENDING,
+    });
+    const notifications = buildNotifications();
+    const service = buildService(stubs, notifications);
+
+    await service.respondToRequest(ME, 'demande-1', false);
+    expect(notifications.sendToUser).not.toHaveBeenCalled();
+
+    await service.respondToRequest(ME, 'demande-1', true);
+    expect(notifications.sendToUser).toHaveBeenCalledWith(FRIEND, {
+      title: 'Demande acceptée',
+      body: 'Alice a accepté ta demande d’ami.',
+    });
+  });
+
+  it('un encouragement pousse le message chez l’ami', async () => {
+    const stubs = buildStubs();
+    stubs.findFriendshipBetween.mockResolvedValue({
+      id: 'amitié-1',
+      requesterId: FRIEND,
+      addresseeId: ME,
+      status: FriendRequestStatus.ACCEPTED,
+    });
+    const notifications = buildNotifications();
+    const service = buildService(stubs, notifications);
+
+    await service.encourage(ME, FRIEND, 'Bravo pour ta série !');
+
+    expect(notifications.sendToUser).toHaveBeenCalledWith(FRIEND, {
+      title: 'Encouragement de Alice',
+      body: 'Bravo pour ta série !',
+    });
+  });
+
+  it('push désactivé : aucun nom n’est lu, aucun envoi tenté', async () => {
+    const stubs = buildStubs();
+    stubs.findFriendshipBetween.mockResolvedValue({
+      id: 'amitié-1',
+      requesterId: FRIEND,
+      addresseeId: ME,
+      status: FriendRequestStatus.ACCEPTED,
+    });
+    const notifications = buildNotifications(false);
+    const service = buildService(stubs, notifications);
+
+    await service.encourage(ME, FRIEND, 'Bravo !');
+
+    expect(stubs.displayNameOf).not.toHaveBeenCalled();
+    expect(notifications.sendToUser).not.toHaveBeenCalled();
+  });
+
+  it('un échec de notification ne fait JAMAIS échouer le flux métier', async () => {
+    const stubs = buildStubs();
+    stubs.displayNameOf.mockRejectedValue(new Error('base indisponible'));
+    stubs.findFriendshipBetween.mockResolvedValue({
+      id: 'amitié-1',
+      requesterId: FRIEND,
+      addresseeId: ME,
+      status: FriendRequestStatus.ACCEPTED,
+    });
+    const service = buildService(stubs);
+
+    await expect(service.encourage(ME, FRIEND, 'Bravo !')).resolves.toBeUndefined();
+    expect(loggerStub.error).toHaveBeenCalled();
   });
 });

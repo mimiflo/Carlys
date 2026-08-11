@@ -85,7 +85,7 @@ src/modules/
 ├── body_metrics/         # Étape 5
 ├── subscriptions/        # Étape 6 — Stripe web, RevenueCat possible
 ├── entitlements/         # Étape 6 — autorité côté serveur
-├── notifications/        # avec l'intégration FCM réelle (au plus tôt Étape 4)
+├── notifications/        # LIVRÉ — jetons d'appareil + envoi FCM (docs/product/notifications.md)
 ├── health_integrations/  # post-MVP
 ├── coaches/              # post-MVP
 ├── social/               # post-MVP

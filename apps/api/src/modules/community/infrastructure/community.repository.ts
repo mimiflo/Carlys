@@ -110,6 +110,15 @@ export class CommunityRepository {
     }));
   }
 
+  /** Nom d'affichage pour les notifications — jamais l'e-mail. */
+  async displayNameOf(userId: string): Promise<string> {
+    const profile = await this.prisma.userProfile.findUnique({
+      where: { userId },
+      select: { displayName: true },
+    });
+    return profile?.displayName ?? 'Membre Carlys';
+  }
+
   findUserIdByEmail(email: string): Promise<{ id: string } | null> {
     return this.prisma.user.findFirst({
       where: { email, status: 'ACTIVE', deletedAt: null },

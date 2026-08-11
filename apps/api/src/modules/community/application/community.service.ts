@@ -8,6 +8,8 @@ import {
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { FriendRequestStatus } from '@prisma/client';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
+import { NotificationsService } from '../../notifications/application/notifications.service';
+import { type PushMessage } from '../../notifications/domain/push-sender.port';
 import {
   type ChallengeWithStats,
   CommunityRepository,
@@ -38,9 +40,44 @@ function presentChallenge(challenge: ChallengeWithStats, userId: string): Challe
 export class CommunityService {
   constructor(
     private readonly community: CommunityRepository,
+    private readonly notifications: NotificationsService,
     @InjectPinoLogger(CommunityService.name)
     private readonly logger: PinoLogger,
   ) {}
+
+  /**
+   * Notification poussée au nom de `fromUserId`. N'échoue JAMAIS un flux
+   * métier : l'échec est journalisé, l'appel métier aboutit quand même.
+   */
+  private async notify(
+    recipientId: string,
+    fromUserId: string,
+    compose: (fromName: string) => PushMessage,
+  ): Promise<void> {
+    if (!this.notifications.pushEnabled) {
+      return;
+    }
+    try {
+      const fromName = await this.community.displayNameOf(fromUserId);
+      await this.notifications.sendToUser(recipientId, compose(fromName));
+    } catch (error) {
+      this.logger.error({ err: error, recipientId }, 'Notification communauté non envoyée');
+    }
+  }
+
+  private notifyNewRequest(requesterId: string, addresseeId: string): Promise<void> {
+    return this.notify(addresseeId, requesterId, (fromName) => ({
+      title: 'Nouvelle demande d’ami',
+      body: `${fromName} souhaite devenir ton ami.`,
+    }));
+  }
+
+  private notifyRequestAccepted(accepterId: string, requesterId: string): Promise<void> {
+    return this.notify(requesterId, accepterId, (fromName) => ({
+      title: 'Demande acceptée',
+      body: `${fromName} a accepté ta demande d’ami.`,
+    }));
+  }
 
   // ── Demandes d'ami ──────────────────────────────────────────────────────
 
@@ -59,16 +96,19 @@ export class CommunityService {
     const existing = await this.community.findFriendshipBetween(userId, target.id);
     if (existing === null) {
       await this.community.createRequest(userId, target.id);
+      await this.notifyNewRequest(userId, target.id);
       return;
     }
     if (existing.status === FriendRequestStatus.PENDING && existing.requesterId === target.id) {
       // Demandes croisées = amitié voulue des deux côtés.
       await this.community.setRequestStatus(existing.id, FriendRequestStatus.ACCEPTED);
+      await this.notifyRequestAccepted(userId, target.id);
       return;
     }
     if (existing.status === FriendRequestStatus.DECLINED && existing.requesterId === userId) {
       // Redemander après un refus : la demande redevient visible chez l'autre.
       await this.community.setRequestStatus(existing.id, FriendRequestStatus.PENDING);
+      await this.notifyNewRequest(userId, target.id);
     }
   }
 
@@ -95,6 +135,10 @@ export class CommunityService {
       requestId,
       accept ? FriendRequestStatus.ACCEPTED : FriendRequestStatus.DECLINED,
     );
+    if (accept) {
+      // Le refus, lui, reste SILENCIEUX : personne n'est notifié d'un non.
+      await this.notifyRequestAccepted(userId, request.requesterId);
+    }
   }
 
   /** Idempotent : retirer un ami déjà retiré aboutit sans bruit. */
@@ -167,6 +211,10 @@ export class CommunityService {
       throw new ForbiddenException('Vous ne pouvez encourager que vos amis.');
     }
     await this.community.createEncouragement(userId, recipientUserId, message);
+    await this.notify(recipientUserId, userId, (fromName) => ({
+      title: `Encouragement de ${fromName}`,
+      body: message,
+    }));
   }
 
   // ── Défis collectifs ────────────────────────────────────────────────────

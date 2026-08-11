@@ -1,0 +1,7 @@
+{
+  "_": "Options Firebase (Android) — valeurs FACTICES. Copier vers config/firebase.json (ignoré par git) avec les valeurs de google-services.json : current_key, mobilesdk_app_id, project_number, project_id. Puis lancer flutter avec --dart-define-from-file=config/firebase.json.",
+  "CARLYS_FIREBASE_API_KEY": "AIza-valeur-factice-de-developpement",
+  "CARLYS_FIREBASE_APP_ID": "1:000000000000:android:0000000000000000000000",
+  "CARLYS_FIREBASE_SENDER_ID": "000000000000",
+  "CARLYS_FIREBASE_PROJECT_ID": "exemple-factice"
+}

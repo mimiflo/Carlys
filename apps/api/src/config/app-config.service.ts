@@ -122,6 +122,12 @@ export class AppConfigService {
     return this.config.get('REVENUECAT_WEBHOOK_SECRET', { infer: true });
   }
 
+  // ── Notifications push ─────────────────────────────────────────────────
+
+  get firebaseServiceAccountJson(): string | undefined {
+    return this.config.get('FIREBASE_SERVICE_ACCOUNT_JSON', { infer: true });
+  }
+
   // ── Coach IA ───────────────────────────────────────────────────────────
 
   get anthropicApiKey(): string | undefined {

@@ -20,6 +20,7 @@ import { CommunityModule } from '../modules/community/community.module';
 import { ExercisesModule } from '../modules/exercises/exercises.module';
 import { HealthModule } from '../modules/health/health.module';
 import { MetricsModule } from '../modules/metrics/metrics.module';
+import { NotificationsModule } from '../modules/notifications/notifications.module';
 import { NutritionModule } from '../modules/nutrition/nutrition.module';
 import { ProgressModule } from '../modules/progress/progress.module';
 import { SubscriptionsModule } from '../modules/subscriptions/subscriptions.module';
@@ -90,6 +91,7 @@ function generateRequestId(request: IncomingMessage, response: ServerResponse): 
     WorkoutsModule,
     ProgressModule,
     NutritionModule,
+    NotificationsModule,
     SubscriptionsModule,
     CoachModule,
     CommunityModule,

@@ -80,6 +80,16 @@ export const envSchema = z.object({
   STRIPE_WEBHOOK_SECRET: z.string().min(16).optional(),
   REVENUECAT_WEBHOOK_SECRET: z.string().min(16).optional(),
 
+  // ── Notifications push (FCM) ───────────────────────────────────────────
+  /**
+   * Compte de service Firebase, JSON complet (téléchargé depuis la console
+   * Firebase → Paramètres → Comptes de service). **Optionnel** : sans lui,
+   * l'ENVOI de notifications est désactivé — l'enregistrement des jetons
+   * d'appareil, lui, fonctionne toujours (les envois reprennent dès que la
+   * clé est fournie, sans redéploiement mobile).
+   */
+  FIREBASE_SERVICE_ACCOUNT_JSON: z.string().min(2).optional(),
+
   // ── Coach IA ────────────────────────────────────────────────────────────
   /**
    * Clé du fournisseur de modèle. **Optionnelle** : sans elle, le module se

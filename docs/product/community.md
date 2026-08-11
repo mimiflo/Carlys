@@ -90,6 +90,9 @@ simplement perdue (la barre est collective, pas comptable).
   depuis un onglet, elle passerait sinon sous la bottom bar flottante.
 - L'accueil relaie le dernier encouragement (« X t'encourage ») quand il y en
   a un.
+- Demandes d'ami, acceptations et encouragements déclenchent une notification
+  push chez la personne concernée (jamais bloquante, jamais sur un refus) —
+  voir [notifications.md](notifications.md).
 
 ## Couverture
 

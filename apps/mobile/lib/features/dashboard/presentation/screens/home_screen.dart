@@ -10,6 +10,7 @@ import '../../../academy/presentation/controllers/academy_controllers.dart';
 import '../../../academy/presentation/widgets/quiz_card.dart';
 import '../../../authentication/presentation/controllers/auth_controller.dart';
 import '../../../community/presentation/controllers/community_controllers.dart';
+import '../../../notifications/presentation/controllers/push_registration.dart';
 import '../../../nutrition/presentation/controllers/nutrition_controllers.dart';
 import '../../../workout_session/presentation/controllers/workout_controllers.dart';
 import '../controllers/dashboard_controllers.dart';
@@ -38,6 +39,8 @@ class HomeScreen extends ConsumerWidget {
     // neuf, où la base locale est vide.
     ref.watch(syncLifecycleProvider).ensureStarted();
     ref.watch(appRestoreProvider).ensureRestored();
+    // Notifications push : no-op sans configuration Firebase (démo, tests).
+    ref.watch(pushRegistrationProvider).ensureStarted();
 
     final authState = ref.watch(authControllerProvider);
     final user = switch (authState) {
