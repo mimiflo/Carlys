@@ -27,6 +27,7 @@ export 'components/app_search_field.dart';
 export 'components/app_section_header.dart';
 export 'components/app_section_label.dart';
 export 'components/app_settings_group.dart';
+export 'components/app_sheet.dart';
 export 'components/app_stat_tile.dart';
 export 'components/app_summary_tile.dart';
 export 'components/app_text_field.dart';

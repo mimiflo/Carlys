@@ -8,23 +8,7 @@ import '../../../../design_system/design_system.dart';
 /// est volontairement opaque (« si ce compte existe… ») : le serveur ne
 /// révèle jamais qu'une adresse a un compte, l'interface non plus.
 Future<String?> showAddFriendSheet(BuildContext context) {
-  return showModalBottomSheet<String>(
-    context: context,
-    // Navigateur RACINE : ouverte depuis un onglet, la feuille passerait
-    // sinon SOUS la bottom bar flottante — qui masquerait son bouton.
-    useRootNavigator: true,
-    isScrollControlled: true,
-    backgroundColor: AppColors.darkSurface,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
-    ),
-    builder: (sheetContext) => Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.viewInsetsOf(sheetContext).bottom,
-      ),
-      child: const _AddFriendForm(),
-    ),
-  );
+  return showAppSheet<String>(context, builder: (_) => const _AddFriendForm());
 }
 
 class _AddFriendForm extends StatefulWidget {

@@ -41,16 +41,10 @@ class ProgressHeader extends ConsumerWidget {
     WidgetRef ref,
     ProgressPeriod current,
   ) async {
-    final chosen = await showModalBottomSheet<ProgressPeriod>(
-      context: context,
-      backgroundColor: AppColors.darkSurfaceAlt,
-      isScrollControlled: true,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(AppRadius.cardMain),
-        ),
-      ),
-      builder: (sheetContext) => _PeriodSheet(current: current),
+    final chosen = await showAppSheet<ProgressPeriod>(
+      context,
+      style: AppSheetStyle.picker,
+      builder: (_) => _PeriodSheet(current: current),
     );
     if (chosen != null && chosen != current) {
       ref.read(progressPeriodProvider.notifier).state = chosen;

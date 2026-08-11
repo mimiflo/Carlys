@@ -62,13 +62,17 @@ class _AppAnimatedBorderCardState extends State<AppAnimatedBorderCard>
         foregroundPainter: _DashBorderPainter(progress: _controller.value),
         child: child,
       ),
-      child: Container(
-        padding: widget.padding,
-        decoration: const BoxDecoration(
-          color: AppColors.darkSurface,
-          borderRadius: AppRadius.cardSecondaryAll,
+      // Le contenu de la carte a sa propre couche : la bordure repeint à
+      // chaque image, le contenu (textes, prix) n'est composé qu'une fois.
+      child: RepaintBoundary(
+        child: Container(
+          padding: widget.padding,
+          decoration: const BoxDecoration(
+            color: AppColors.darkSurface,
+            borderRadius: AppRadius.cardSecondaryAll,
+          ),
+          child: widget.child,
         ),
-        child: widget.child,
       ),
     );
   }

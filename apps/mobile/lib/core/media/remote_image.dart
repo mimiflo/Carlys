@@ -27,6 +27,7 @@ class RemoteImage extends ConsumerWidget {
     required this.placeholder,
     this.fit = BoxFit.cover,
     this.semanticLabel,
+    this.decodeWidth,
     super.key,
   });
 
@@ -35,9 +36,16 @@ class RemoteImage extends ConsumerWidget {
   final BoxFit fit;
   final String? semanticLabel;
 
+  /// Largeur LOGIQUE à laquelle décoder l'image, quand la taille affichée est
+  /// connue (vignette de liste, en-tête plein écran). Une photo servie en
+  /// haute définition et décodée entière pour un rond de 58 px coûte de la
+  /// mémoire et des à-coups au défilement — le décodage suit donc l'affichage.
+  final int? decodeWidth;
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final bytes = ref.watch(remoteImageProvider(url));
+    final logicalWidth = decodeWidth;
     return bytes.maybeWhen(
       data: (data) => data == null
           ? placeholder
@@ -45,6 +53,10 @@ class RemoteImage extends ConsumerWidget {
               data,
               fit: fit,
               semanticLabel: semanticLabel,
+              cacheWidth: logicalWidth == null
+                  ? null
+                  : (logicalWidth * MediaQuery.devicePixelRatioOf(context))
+                      .round(),
               // Une image illisible (fichier tronqué) retombe sur le repli
               // plutôt que d'afficher l'icône d'erreur du framework.
               errorBuilder: (_, __, ___) => placeholder,

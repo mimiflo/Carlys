@@ -91,16 +91,10 @@ Future<void> showAllRecordsSheet(
   BuildContext context,
   List<PersonalRecordEntry> records,
 ) {
-  return showModalBottomSheet<void>(
-    context: context,
-    backgroundColor: AppColors.darkSurfaceAlt,
-    isScrollControlled: true,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(
-        top: Radius.circular(AppRadius.cardMain),
-      ),
-    ),
-    builder: (sheetContext) => _AllRecordsSheet(records: records),
+  return showAppSheet<void>(
+    context,
+    style: AppSheetStyle.picker,
+    builder: (_) => _AllRecordsSheet(records: records),
   );
 }
 
@@ -111,33 +105,32 @@ class _AllRecordsSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.sizeOf(context).height * 0.8,
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.gutter),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const AppSectionHeader(title: 'Tous mes records'),
-              const SizedBox(height: AppSpacing.sm),
-              Flexible(
-                child: ListView.separated(
-                  shrinkWrap: true,
-                  itemCount: records.length,
-                  separatorBuilder: (_, __) =>
-                      const SizedBox(height: AppSpacing.sm),
-                  itemBuilder: (_, index) => RecordRow(
-                    record: records[index],
-                    isLatest: index == 0,
-                  ),
+    // Les marges système (haut ET bas) sont déjà prises par `showAppSheet`.
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.sizeOf(context).height * 0.8,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.gutter),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const AppSectionHeader(title: 'Tous mes records'),
+            const SizedBox(height: AppSpacing.sm),
+            Flexible(
+              child: ListView.separated(
+                shrinkWrap: true,
+                itemCount: records.length,
+                separatorBuilder: (_, __) =>
+                    const SizedBox(height: AppSpacing.sm),
+                itemBuilder: (_, index) => RecordRow(
+                  record: records[index],
+                  isLatest: index == 0,
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

@@ -12,16 +12,10 @@ Future<DateTime?> showHistoryMonthSheet(
   required List<DateTime> months,
   required DateTime selected,
 }) {
-  return showModalBottomSheet<DateTime>(
-    context: context,
-    backgroundColor: AppColors.darkSurfaceAlt,
-    isScrollControlled: true,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(
-        top: Radius.circular(AppRadius.cardMain),
-      ),
-    ),
-    builder: (sheetContext) => _MonthSheet(months: months, selected: selected),
+  return showAppSheet<DateTime>(
+    context,
+    style: AppSheetStyle.picker,
+    builder: (_) => _MonthSheet(months: months, selected: selected),
   );
 }
 
@@ -33,50 +27,48 @@ class _MonthSheet extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: ConstrainedBox(
-        constraints: BoxConstraints(
-          maxHeight: MediaQuery.sizeOf(context).height * 0.7,
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(AppSpacing.gutter),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const AppSectionHeader(title: 'Mois affiché'),
-              const SizedBox(height: AppSpacing.sm),
-              Flexible(
-                child: ListView.separated(
-                  shrinkWrap: true,
-                  itemCount: months.length,
-                  separatorBuilder: (_, __) =>
-                      const SizedBox(height: AppSpacing.xs),
-                  itemBuilder: (context, index) {
-                    final month = months[index];
-                    final isSelected = month.year == selected.year &&
-                        month.month == selected.month;
+    // Les marges système (haut ET bas) sont déjà prises par `showAppSheet`.
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.sizeOf(context).height * 0.7,
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(AppSpacing.gutter),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            const AppSectionHeader(title: 'Mois affiché'),
+            const SizedBox(height: AppSpacing.sm),
+            Flexible(
+              child: ListView.separated(
+                shrinkWrap: true,
+                itemCount: months.length,
+                separatorBuilder: (_, __) =>
+                    const SizedBox(height: AppSpacing.xs),
+                itemBuilder: (context, index) {
+                  final month = months[index];
+                  final isSelected = month.year == selected.year &&
+                      month.month == selected.month;
 
-                    return AppListRow(
-                      title: formatMonthYearCapitalized(month),
-                      leading: AppIcons.calendar,
-                      leadingTint: isSelected
-                          ? AppColors.accent
-                          : AppColors.primaryLight,
-                      trailing: isSelected
-                          ? const Icon(
-                              AppIcons.check,
-                              size: 20,
-                              color: AppColors.accent,
-                            )
-                          : null,
-                      onTap: () => Navigator.of(context).pop(month),
-                    );
-                  },
-                ),
+                  return AppListRow(
+                    title: formatMonthYearCapitalized(month),
+                    leading: AppIcons.calendar,
+                    leadingTint:
+                        isSelected ? AppColors.accent : AppColors.primaryLight,
+                    trailing: isSelected
+                        ? const Icon(
+                            AppIcons.check,
+                            size: 20,
+                            color: AppColors.accent,
+                          )
+                        : null,
+                    onTap: () => Navigator.of(context).pop(month),
+                  );
+                },
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );

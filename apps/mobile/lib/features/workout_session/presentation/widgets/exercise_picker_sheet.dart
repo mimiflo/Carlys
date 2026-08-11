@@ -16,10 +16,9 @@ class PickedExercise {
 
 /// Feuille de sélection d'exercice depuis le catalogue (avec recherche).
 Future<PickedExercise?> showExercisePickerSheet(BuildContext context) {
-  return showModalBottomSheet<PickedExercise>(
-    context: context,
-    isScrollControlled: true,
-    builder: (sheetContext) => const FractionallySizedBox(
+  return showAppSheet<PickedExercise>(
+    context,
+    builder: (_) => const FractionallySizedBox(
       heightFactor: 0.85,
       child: _ExercisePicker(),
     ),

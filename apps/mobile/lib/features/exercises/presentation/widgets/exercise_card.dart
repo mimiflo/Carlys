@@ -181,6 +181,7 @@ class _Thumbnail extends StatelessWidget {
                 // JAMAIS `cover` : les images sont détourées sur fond
                 // transparent, les rogner couperait bras et barres.
                 fit: BoxFit.contain,
+                decodeWidth: ExerciseCard._thumbSize.round(),
               ),
             ),
     );

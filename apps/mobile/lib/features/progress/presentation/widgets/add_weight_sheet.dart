@@ -4,15 +4,9 @@ import '../../../../design_system/design_system.dart';
 
 /// Feuille de saisie du poids corporel (pas de 0,5 kg).
 Future<double?> showAddWeightSheet(BuildContext context, {double? initialKg}) {
-  return showModalBottomSheet<double>(
-    context: context,
-    isScrollControlled: true,
-    builder: (sheetContext) => Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.viewInsetsOf(sheetContext).bottom,
-      ),
-      child: _AddWeightForm(initialKg: initialKg),
-    ),
+  return showAppSheet<double>(
+    context,
+    builder: (_) => _AddWeightForm(initialKg: initialKg),
   );
 }
 

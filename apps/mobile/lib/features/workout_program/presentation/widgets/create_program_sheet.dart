@@ -12,21 +12,9 @@ class ProgramCreationDraft {
 
 /// Feuille « Nouveau programme » : nom + nombre de semaines (1 à 52).
 Future<ProgramCreationDraft?> showCreateProgramSheet(BuildContext context) {
-  return showModalBottomSheet<ProgramCreationDraft>(
-    context: context,
-    // Navigateur RACINE, comme toutes les feuilles de l'application.
-    useRootNavigator: true,
-    isScrollControlled: true,
-    backgroundColor: AppColors.darkSurface,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
-    ),
-    builder: (sheetContext) => Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.viewInsetsOf(sheetContext).bottom,
-      ),
-      child: const _CreateProgramForm(),
-    ),
+  return showAppSheet<ProgramCreationDraft>(
+    context,
+    builder: (_) => const _CreateProgramForm(),
   );
 }
 

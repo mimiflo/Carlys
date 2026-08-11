@@ -12,16 +12,10 @@ Future<void> showExerciseRecordsSheet(
   required String exerciseId,
   required String exerciseName,
 }) {
-  return showModalBottomSheet<void>(
-    context: context,
-    backgroundColor: AppColors.darkSurfaceAlt,
-    isScrollControlled: true,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(
-        top: Radius.circular(AppRadius.cardMain),
-      ),
-    ),
-    builder: (sheetContext) => _ExerciseRecordsSheet(
+  return showAppSheet<void>(
+    context,
+    style: AppSheetStyle.picker,
+    builder: (_) => _ExerciseRecordsSheet(
       exerciseId: exerciseId,
       exerciseName: exerciseName,
     ),

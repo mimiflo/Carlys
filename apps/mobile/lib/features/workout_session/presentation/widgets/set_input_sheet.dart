@@ -24,15 +24,10 @@ Future<SetInputResult?> showSetInputSheet(
   required String exerciseName,
   SetInputResult? previous,
 }) {
-  return showModalBottomSheet<SetInputResult>(
-    context: context,
-    isScrollControlled: true,
-    builder: (sheetContext) => Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.viewInsetsOf(sheetContext).bottom,
-      ),
-      child: _SetInputForm(exerciseName: exerciseName, previous: previous),
-    ),
+  return showAppSheet<SetInputResult>(
+    context,
+    builder: (_) =>
+        _SetInputForm(exerciseName: exerciseName, previous: previous),
   );
 }
 

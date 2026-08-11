@@ -51,6 +51,7 @@ class ExerciseMediaHeader extends StatelessWidget {
                 // rognerait pour remplir le cadre.
                 fit: BoxFit.contain,
                 semanticLabel: 'Photo du mouvement',
+                decodeWidth: MediaQuery.sizeOf(context).width.round(),
               ),
             ),
           // Voile : le bas de l'image se fond dans le fond de l'écran.

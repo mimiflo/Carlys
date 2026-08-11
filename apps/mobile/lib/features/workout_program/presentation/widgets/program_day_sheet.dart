@@ -36,17 +36,9 @@ Future<ProgramDayChoice?> showProgramDaySheet(
   BuildContext context, {
   required bool hasExisting,
 }) {
-  return showModalBottomSheet<ProgramDayChoice>(
-    context: context,
-    useRootNavigator: true,
-    isScrollControlled: true,
-    backgroundColor: AppColors.darkSurface,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
-    ),
-    builder: (sheetContext) => SafeArea(
-      child: _DaySheet(hasExisting: hasExisting),
-    ),
+  return showAppSheet<ProgramDayChoice>(
+    context,
+    builder: (_) => _DaySheet(hasExisting: hasExisting),
   );
 }
 

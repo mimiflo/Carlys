@@ -14,23 +14,7 @@ class MealDraft {
 /// Feuille « Ajouter un repas » : nom, calories, protéines (facultatif).
 /// Rend `null` si la personne renonce.
 Future<MealDraft?> showAddMealSheet(BuildContext context) {
-  return showModalBottomSheet<MealDraft>(
-    context: context,
-    // Navigateur RACINE : ouverte depuis un onglet, la feuille passerait
-    // sinon SOUS la bottom bar flottante (même leçon que l'ajout d'ami).
-    useRootNavigator: true,
-    isScrollControlled: true,
-    backgroundColor: AppColors.darkSurface,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(top: Radius.circular(AppRadius.lg)),
-    ),
-    builder: (sheetContext) => Padding(
-      padding: EdgeInsets.only(
-        bottom: MediaQuery.viewInsetsOf(sheetContext).bottom,
-      ),
-      child: const _AddMealForm(),
-    ),
-  );
+  return showAppSheet<MealDraft>(context, builder: (_) => const _AddMealForm());
 }
 
 class _AddMealForm extends StatefulWidget {

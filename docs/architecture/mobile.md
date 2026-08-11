@@ -273,6 +273,17 @@ trois tailles, état de chargement anti-double-soumission, `isExpanded`,
 `Semantics` intégré), `AppLoadingIndicator` (libellé accessible),
 `AppErrorState` (icône, titre, message, réessai), `AppEmptyState`.
 
+**Feuilles modales** : toute feuille passe par `showAppSheet`
+(`design_system/components/app_sheet.dart`) — jamais `showModalBottomSheet`
+directement. Le composant garantit ce que chaque feuille réinventait ou
+oubliait : navigateur racine (jamais sous la bottom bar flottante), remontée
+au-dessus du clavier, et contenu qui s'arrête **au-dessus de la barre système
+du téléphone** (SafeArea bas) — le bouton de validation reste atteignable sur
+les appareils à navigation 3 boutons comme à geste. Deux styles :
+`AppSheetStyle.form` (surface standard, angles `lg`) et `AppSheetStyle.picker`
+(surface alternative, angles `cardMain`). Garanti par
+`test/design_system/app_sheet_test.dart`, qui simule barre système et clavier.
+
 Composants cibles (créés avec la tranche qui en a besoin) :
 
 | Composant              | Rôle                                                | Étape |

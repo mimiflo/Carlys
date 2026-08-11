@@ -10,16 +10,10 @@ import '../controllers/exercise_library_controller.dart';
 /// Seule la difficulté y figure : c'est le seul filtre supplémentaire
 /// réellement accepté par l'API (les groupes musculaires sont en pastilles).
 Future<void> showExerciseDifficultySheet(BuildContext context) {
-  return showModalBottomSheet<void>(
-    context: context,
-    backgroundColor: AppColors.darkSurfaceAlt,
-    isScrollControlled: true,
-    shape: const RoundedRectangleBorder(
-      borderRadius: BorderRadius.vertical(
-        top: Radius.circular(AppRadius.cardMain),
-      ),
-    ),
-    builder: (sheetContext) => const _DifficultySheet(),
+  return showAppSheet<void>(
+    context,
+    style: AppSheetStyle.picker,
+    builder: (_) => const _DifficultySheet(),
   );
 }
 

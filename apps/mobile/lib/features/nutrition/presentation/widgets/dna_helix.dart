@@ -34,6 +34,11 @@ class _DnaHelixState extends State<DnaHelix>
     microseconds: (DnaAnimation.cycleSeconds * 1000000).round(),
   );
 
+  /// Cadence de rendu de la scène, comme le cœur (30 i/s) : au-delà, la
+  /// rotation ne gagne rien de perceptible et chaque image coûte une hélice
+  /// entière — sur un écran 120 Hz, c'est quatre fois moins de travail.
+  static const double _framesPerSecond = 30;
+
   late final AnimationController _controller;
 
   @override
@@ -71,11 +76,16 @@ class _DnaHelixState extends State<DnaHelix>
             width: double.infinity,
             child: AnimatedBuilder(
               animation: _controller,
-              builder: (context, _) => CustomPaint(
-                painter: DnaScenePainter(
-                  time: _controller.value * DnaAnimation.cycleSeconds,
-                ),
-              ),
+              builder: (context, _) {
+                // Quantifié : le peintre ne repeint que quand le pas de
+                // 1/30 s change (`shouldRepaint` compare le temps).
+                final time = _controller.value * DnaAnimation.cycleSeconds;
+                final quantized =
+                    (time * _framesPerSecond).floor() / _framesPerSecond;
+                return CustomPaint(
+                  painter: DnaScenePainter(time: quantized),
+                );
+              },
             ),
           ),
         ),
