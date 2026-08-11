@@ -6,19 +6,21 @@ import 'package:carlys_mobile/features/academy/domain/entities/academy.dart';
 import 'package:carlys_mobile/features/academy/presentation/widgets/lesson_card.dart';
 import 'package:carlys_mobile/features/academy/presentation/widgets/quiz_card.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
+import 'package:carlys_mobile/features/community/data/repositories/community_repository_impl.dart';
 import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/fake_auth_repository.dart';
+import '../../support/fake_community_repository.dart';
 import '../../support/fake_workout_repository.dart';
 import '../../support/first_run_prefs.dart';
 import '../../support/navigation.dart';
 
 /// L'Academy dans l'application : leçons par domaine, question du jour,
 /// quiz qui enseigne (l'explication s'affiche juste ou faux).
-Widget app() => ProviderScope(
+Widget app({FakeCommunityRepository? community}) => ProviderScope(
       overrides: [
         appEnvironmentProvider.overrideWithValue(
           const AppEnvironment(
@@ -29,6 +31,8 @@ Widget app() => ProviderScope(
         authRepositoryProvider
             .overrideWithValue(FakeAuthRepository(storedSession: true)),
         workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
+        communityRepositoryProvider
+            .overrideWithValue(community ?? FakeCommunityRepository()),
         syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
         appRestoreProvider.overrideWithValue(NoopAppRestore()),
       ],
@@ -133,6 +137,48 @@ void main() {
       find.descendant(of: quiz, matching: find.text(question.explanation)),
       findsOneWidget,
     );
+  });
+
+  testWidgets('répondre rapporte la réponse aux défis culturels — une fois',
+      (tester) async {
+    final community = FakeCommunityRepository();
+    await tester.pumpWidget(app(community: community));
+    await tester.pumpAndSettle();
+    await tapTab(tester, 'Academy');
+
+    final quiz = find.byType(QuizCard).first;
+    final question = tester.widget<QuizCard>(quiz).question;
+    final wrongIndex = question.answerIndex == 0 ? 1 : 0;
+
+    await tester.tap(
+      find
+          .descendant(
+            of: quiz,
+            matching: find.text(question.choices[wrongIndex]),
+          )
+          .first,
+    );
+    await tester.pumpAndSettle();
+
+    // La réponse (fausse) est rapportée, avec le jour local.
+    expect(community.quizReports, hasLength(1));
+    final (lessonId, answeredOn, correct) = community.quizReports.single;
+    expect(lessonId, isNotEmpty);
+    expect(RegExp(r'^\d{4}-\d{2}-\d{2}$').hasMatch(answeredOn), isTrue);
+    expect(correct, isFalse);
+
+    // Un second tap ne compte pas : la carte est verrouillée après réponse.
+    await tester.tap(
+      find
+          .descendant(
+            of: quiz,
+            matching: find.text(question.choices[question.answerIndex]),
+          )
+          .first,
+      warnIfMissed: false,
+    );
+    await tester.pumpAndSettle();
+    expect(community.quizReports, hasLength(1));
   });
 
   testWidgets('l’accueil pose la même question du jour', (tester) async {

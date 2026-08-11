@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import {
   type ChallengeParticipation,
+  Prisma,
   type CommunityChallenge,
   type Encouragement,
   type Friendship,
@@ -196,6 +197,38 @@ export class CommunityRepository {
       where: {
         userId,
         challenge: { kind: 'SPORT', startsAt: { lte: at }, endsAt: { gte: at } },
+      },
+      data: { contribution: { increment: 1 } },
+    });
+  }
+
+  // ── Réponses de quiz (défis CULTURE) ────────────────────────────────────
+
+  /** Création idempotente : `false` si cette réponse existait déjà. */
+  async createQuizAnswer(input: {
+    userId: string;
+    lessonId: string;
+    answeredOn: string;
+    correct: boolean;
+  }): Promise<boolean> {
+    try {
+      await this.prisma.quizAnswer.create({ data: input });
+      return true;
+    } catch (error) {
+      // P2002 : réponse déjà comptée (utilisateur, leçon, jour local).
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        return false;
+      }
+      throw error;
+    }
+  }
+
+  /** +1 sur tous les défis CULTURE rejoints dont la fenêtre couvre `at`. */
+  async incrementCultureContributions(userId: string, at: Date): Promise<void> {
+    await this.prisma.challengeParticipation.updateMany({
+      where: {
+        userId,
+        challenge: { kind: 'CULTURE', startsAt: { lte: at }, endsAt: { gte: at } },
       },
       data: { contribution: { increment: 1 } },
     });

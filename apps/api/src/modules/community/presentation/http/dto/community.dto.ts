@@ -1,5 +1,13 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { IsBoolean, IsEmail, IsString, IsUUID, MaxLength, MinLength } from 'class-validator';
+import {
+  IsBoolean,
+  IsEmail,
+  IsString,
+  IsUUID,
+  Matches,
+  MaxLength,
+  MinLength,
+} from 'class-validator';
 
 export class FriendRequestDto {
   @ApiProperty({
@@ -32,4 +40,25 @@ export class UpdateCommunityProfileDto {
   })
   @IsBoolean()
   sharesProgress!: boolean;
+}
+
+export class QuizAnswerDto {
+  @ApiProperty({ description: 'Identifiant de la leçon du pack embarqué' })
+  @IsString()
+  @MinLength(1)
+  @MaxLength(120)
+  lessonId!: string;
+
+  @ApiProperty({
+    description:
+      'Jour LOCAL de l’appareil (YYYY-MM-DD) — le serveur ne découpe pas ' +
+      'les journées. Une seule réponse comptée par leçon et par jour.',
+    example: '2026-08-11',
+  })
+  @Matches(/^\d{4}-\d{2}-\d{2}$/)
+  answeredOn!: string;
+
+  @ApiProperty()
+  @IsBoolean()
+  correct!: boolean;
 }

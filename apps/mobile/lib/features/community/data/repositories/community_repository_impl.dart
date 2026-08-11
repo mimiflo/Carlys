@@ -129,6 +129,24 @@ class CommunityRepositoryImpl implements CommunityRepository {
   }
 
   @override
+  Future<void> reportQuizAnswer({
+    required String lessonId,
+    required String answeredOn,
+    required bool correct,
+  }) {
+    return _guard(() async {
+      await _dio.post<Map<String, dynamic>>(
+        '/community/quiz-answers',
+        data: {
+          'lessonId': lessonId,
+          'answeredOn': answeredOn,
+          'correct': correct,
+        },
+      );
+    });
+  }
+
+  @override
   Future<bool> sharesProgress() {
     return _guard(() async {
       final response =

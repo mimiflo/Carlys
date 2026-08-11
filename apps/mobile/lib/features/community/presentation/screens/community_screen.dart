@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../design_system/design_system.dart';
+import '../../../../shared/widgets/connection_aware_error.dart';
 import '../controllers/community_controllers.dart';
 import '../widgets/add_friend_sheet.dart';
 import '../widgets/challenge_card.dart';
@@ -59,11 +60,10 @@ class CommunityScreen extends ConsumerWidget {
         !requests.isLoading &&
         !challenges.isLoading;
     // Une erreur n'est PAS un écran vide : « personne ici » serait un
-    // mensonge si le serveur a simplement refusé de répondre.
-    final hasError = feed.hasError ||
-        friends.hasError ||
-        requests.hasError ||
-        challenges.hasError;
+    // mensonge si le serveur a simplement refusé de répondre. La PREMIÈRE
+    // erreur porte la cause — hors ligne ou panne, l'état affiché le dit.
+    final error =
+        feed.error ?? friends.error ?? requests.error ?? challenges.error;
     // PREMIER chargement seulement : pendant un rafraîchissement, Riverpod
     // conserve la valeur précédente (`valueOrNull` reste peuplé) et l'écran
     // continue de la montrer — remplacer la liste par un indicateur ferait
@@ -110,10 +110,13 @@ class CommunityScreen extends ConsumerWidget {
                 AppTypography.body.copyWith(color: AppColors.darkTextSecondary),
           ),
           const SizedBox(height: AppSpacing.gapRow),
-          if (hasError)
-            AppErrorState(
+          if (error != null)
+            ConnectionAwareError(
+              error: error,
               title: 'Communauté indisponible',
               message: 'Impossible de charger le fil pour le moment.',
+              offlineMessage: 'Les amis, les encouragements et les défis '
+                  'vivent sur le serveur. Reviens quand le réseau est là.',
               onRetry: () {
                 ref
                   ..invalidate(encouragementsProvider)

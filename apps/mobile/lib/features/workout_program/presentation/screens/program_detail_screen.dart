@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../design_system/design_system.dart';
+import '../../../../shared/widgets/connection_aware_error.dart';
 import '../../domain/entities/program.dart';
 import '../controllers/program_controllers.dart';
 import '../widgets/program_day_sheet.dart';
@@ -108,9 +109,12 @@ class ProgramDetailScreen extends ConsumerWidget {
         child: detail.when(
           loading: () =>
               const AppLoadingIndicator(label: 'Chargement du programme'),
-          error: (_, __) => AppErrorState(
+          error: (error, _) => ConnectionAwareError(
+            error: error,
             title: 'Programme introuvable',
             message: 'Il a peut-être été supprimé.',
+            offlineMessage: 'Le calendrier vit sur le serveur : il revient '
+                'avec le réseau.',
             onRetry: () => ref.invalidate(programDetailProvider(programId)),
           ),
           data: (program) => ListView(

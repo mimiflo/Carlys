@@ -67,20 +67,25 @@ incrémente de 1 la contribution de chaque défi **SPORT** rejoint dont la
 fenêtre couvre la clôture. Comme le recalcul des records : l'échec est
 journalisé et ne fait JAMAIS échouer la clôture.
 
-Les défis **CULTURE** n'ont pas encore de source de contribution : les
-réponses aux quiz de l'Academy vivent sur l'appareil et ne remontent pas.
-Leur barre reste à zéro tant que cette remontée n'existe pas — c'est assumé,
-et documenté ici plutôt qu'inventé.
+Les défis **CULTURE** sont alimentés par les quiz de l'Academy :
+`POST /community/quiz-answers` enregistre chaque réponse — idempotente par
+(utilisateur, leçon, jour LOCAL de l'appareil, table `QuizAnswer`) — et seule
+une PREMIÈRE réponse juste contribue aux défis culturels rejoints. Rejouer
+l'envoi ne compte jamais deux fois ; une réponse fausse est enregistrée mais
+ne contribue pas. Côté mobile, l'envoi ne gêne JAMAIS le quiz : l'Academy
+fonctionne hors ligne, un échec réseau est journalisé et la contribution est
+simplement perdue (la barre est collective, pas comptable).
 
 ## Mobile
 
 - `CommunityRepositoryImpl` (Dio) transporte ce que le serveur a accepté de
   dire ; le dépôt de démonstration (`lib/demo/demo_community.dart`) fait
   vivre l'écran sans réseau.
-- L'écran distingue erreur (« Réessayer » réessaie vraiment), premier
-  chargement, vide (avec l'action « Ajouter un ami ») et données. Pendant un
-  rafraîchissement, la liste reste en place (Riverpod conserve la valeur
-  précédente).
+- L'écran distingue HORS CONNEXION (statut dédié, comme le coach —
+  `ConnectionAwareError`), panne serveur (« Réessayer » réessaie vraiment),
+  premier chargement, vide (avec l'action « Ajouter un ami ») et données.
+  Pendant un rafraîchissement, la liste reste en place (Riverpod conserve la
+  valeur précédente).
 - La feuille « Ajouter un ami » s'ouvre sur le navigateur RACINE : ouverte
   depuis un onglet, elle passerait sinon sous la bottom bar flottante.
 - L'accueil relaie le dernier encouragement (« X t'encourage ») quand il y en

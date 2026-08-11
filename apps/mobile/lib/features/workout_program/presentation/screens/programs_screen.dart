@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/app_routes.dart';
 import '../../../../core/errors/app_exception.dart';
 import '../../../../design_system/design_system.dart';
+import '../../../../shared/widgets/connection_aware_error.dart';
 import '../controllers/program_controllers.dart';
 import '../widgets/create_program_sheet.dart';
 import '../widgets/program_card.dart';
@@ -73,9 +74,12 @@ class ProgramsScreen extends ConsumerWidget {
                 padding: EdgeInsets.only(top: AppSpacing.xl),
                 child: AppLoadingIndicator(label: 'Chargement des programmes'),
               ),
-              error: (_, __) => AppErrorState(
+              error: (error, _) => ConnectionAwareError(
+                error: error,
                 title: 'Programmes indisponibles',
                 message: 'Tes programmes n’ont pas pu être chargés.',
+                offlineMessage: 'Tes programmes vivent sur le serveur : ils '
+                    'reviendront avec le réseau.',
                 onRetry: () => ref.invalidate(programsProvider),
               ),
               data: (entries) => entries.isEmpty

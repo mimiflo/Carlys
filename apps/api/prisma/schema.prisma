@@ -51,6 +51,7 @@ model User {
   coachConversations CoachConversation[]
 
   mealEntries              MealEntry[]
+  quizAnswers              QuizAnswer[]
   communityPreference      CommunityPreference?
   friendshipsSent          Friendship[]             @relation("FriendshipsSent")
   friendshipsReceived      Friendship[]             @relation("FriendshipsReceived")
@@ -1022,6 +1023,27 @@ model CommunityChallenge {
   participations ChallengeParticipation[]
 
   @@index([endsAt])
+}
+
+/// Réponse à une question de l'Academy — la source des défis CULTURE.
+///
+/// Une ligne par (utilisateur, leçon, jour local) : la création est
+/// idempotente, rejouer la même réponse ne compte jamais deux fois.
+/// `answeredOn` est le jour LOCAL de l'appareil (YYYY-MM-DD) — le serveur ne
+/// découpe pas les journées, même principe que le journal alimentaire.
+model QuizAnswer {
+  id         String   @id @default(uuid()) @db.Uuid
+  userId     String   @db.Uuid
+  /// Identifiant de la leçon du pack embarqué (contenu éditorial).
+  lessonId   String
+  answeredOn String
+  correct    Boolean
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, lessonId, answeredOn])
+  @@index([userId, createdAt])
 }
 
 model ChallengeParticipation {

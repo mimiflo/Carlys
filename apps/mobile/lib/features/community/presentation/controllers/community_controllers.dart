@@ -1,5 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/logging/app_logger.dart';
+import '../../../../core/utilities/formatting.dart';
+
 import '../../data/repositories/community_repository_impl.dart';
 import '../../domain/entities/community.dart';
 
@@ -49,7 +52,28 @@ final communityActionsProvider = Provider<CommunityActions>((ref) {
 class CommunityActions {
   const CommunityActions(this._ref);
 
+  static const _logger = AppLogger('CommunityActions');
+
   final Ref _ref;
+
+  /// Rapporte une réponse de quiz aux défis culturels — SANS jamais gêner le
+  /// quiz : l'Academy fonctionne hors ligne, l'échec est journalisé et la
+  /// contribution est simplement perdue (la barre est collective, pas
+  /// comptable).
+  Future<void> reportQuizAnswer({
+    required String lessonId,
+    required bool correct,
+  }) async {
+    try {
+      await _ref.read(communityRepositoryProvider).reportQuizAnswer(
+            lessonId: lessonId,
+            answeredOn: formatDayKey(DateTime.now()),
+            correct: correct,
+          );
+    } on Exception catch (exception) {
+      _logger.warning('Réponse de quiz non rapportée : $exception');
+    }
+  }
 
   /// Rejoint ou quitte selon l'état COURANT de la carte.
   Future<void> toggleChallenge(CommunityChallenge challenge) async {

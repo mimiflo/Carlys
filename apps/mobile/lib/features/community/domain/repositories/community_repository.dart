@@ -34,6 +34,15 @@ abstract interface class CommunityRepository {
   /// Envoie un encouragement à un ami accepté.
   Future<void> encourage(String friendId, String message);
 
+  /// Enregistre une réponse de quiz de l'Academy. Idempotent par
+  /// (leçon, jour local) : seule une PREMIÈRE réponse juste contribue aux
+  /// défis culturels rejoints.
+  Future<void> reportQuizAnswer({
+    required String lessonId,
+    required String answeredOn,
+    required bool correct,
+  });
+
   /// Ma préférence : partager (ou non) ma progression avec mes amis.
   Future<bool> sharesProgress();
 

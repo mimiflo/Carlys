@@ -97,6 +97,11 @@ class HomeScreen extends ConsumerWidget {
               child: QuizCard(
                 question: dailyLesson.question,
                 title: 'Question du jour',
+                onAnswered: (correct) =>
+                    ref.read(communityActionsProvider).reportQuizAnswer(
+                          lessonId: dailyLesson.id,
+                          correct: correct,
+                        ),
               ),
             ),
           _Section(

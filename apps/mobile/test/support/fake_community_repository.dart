@@ -1,3 +1,4 @@
+import 'package:carlys_mobile/core/errors/app_exception.dart';
 import 'package:carlys_mobile/features/community/domain/entities/community.dart';
 import 'package:carlys_mobile/features/community/domain/repositories/community_repository.dart';
 
@@ -5,6 +6,7 @@ import 'package:carlys_mobile/features/community/domain/repositories/community_r
 class FakeCommunityRepository implements CommunityRepository {
   FakeCommunityRepository({
     this.failReads = false,
+    this.offline = false,
     List<Encouragement>? feed,
     List<CommunityFriend>? friends,
     List<FriendRequest>? requests,
@@ -15,8 +17,11 @@ class FakeCommunityRepository implements CommunityRepository {
         _requests = requests ?? [],
         _challenges = challenges ?? [];
 
-  /// À activer pour simuler un serveur injoignable.
+  /// À activer pour simuler une PANNE serveur (erreur générique).
   bool failReads;
+
+  /// À activer pour simuler l'ABSENCE de réseau (état hors connexion).
+  bool offline;
 
   final List<Encouragement> _feed;
   final List<CommunityFriend> _friends;
@@ -28,6 +33,9 @@ class FakeCommunityRepository implements CommunityRepository {
   final List<String> sentRequests = [];
 
   void _guard() {
+    if (offline) {
+      throw const NetworkException('hors ligne (voulu par le test)');
+    }
     if (failReads) {
       throw StateError('communauté injoignable (voulu par le test)');
     }
@@ -119,6 +127,19 @@ class FakeCommunityRepository implements CommunityRepository {
   @override
   Future<void> encourage(String friendId, String message) async {
     _guard();
+  }
+
+  /// Réponses de quiz reçues, dans l'ordre : (leçon, jour, juste ?).
+  final List<(String, String, bool)> quizReports = [];
+
+  @override
+  Future<void> reportQuizAnswer({
+    required String lessonId,
+    required String answeredOn,
+    required bool correct,
+  }) async {
+    _guard();
+    quizReports.add((lessonId, answeredOn, correct));
   }
 
   @override

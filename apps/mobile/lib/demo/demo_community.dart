@@ -197,6 +197,16 @@ class DemoCommunityRepository implements CommunityRepository {
   }
 
   @override
+  Future<void> reportQuizAnswer({
+    required String lessonId,
+    required String answeredOn,
+    required bool correct,
+  }) async {
+    // La démo n'a pas d'objectif chiffré derrière ses barres : la réponse
+    // est acceptée et c'est tout — le vrai comptage est serveur.
+  }
+
+  @override
   Future<bool> sharesProgress() async => _sharesProgress;
 
   @override

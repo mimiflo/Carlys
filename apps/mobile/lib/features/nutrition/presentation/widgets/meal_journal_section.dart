@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
+import '../../../../shared/widgets/connection_aware_error.dart';
 import '../../domain/entities/nutrition.dart';
 import '../controllers/nutrition_controllers.dart';
 import 'add_meal_sheet.dart';
@@ -49,9 +50,12 @@ class MealJournalSection extends ConsumerWidget {
         const SizedBox(height: AppSpacing.sm),
         meals.when(
           loading: () => const AppLoadingIndicator(),
-          error: (_, __) => AppErrorState(
+          error: (error, _) => ConnectionAwareError(
+            error: error,
             title: 'Journal indisponible',
             message: 'Tes repas n’ont pas pu être chargés.',
+            offlineMessage: 'Le journal vit sur le serveur : tes repas '
+                'reviendront avec le réseau.',
             onRetry: () => ref.invalidate(todayMealsProvider),
           ),
           data: (entries) => Column(

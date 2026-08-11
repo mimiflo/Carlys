@@ -7,12 +7,21 @@ import '../../domain/entities/academy.dart';
 /// réponse et son explication. L'explication s'affiche TOUJOURS — juste ou
 /// faux, c'est elle qui enseigne.
 class QuizCard extends StatefulWidget {
-  const QuizCard({required this.question, this.title, super.key});
+  const QuizCard({
+    required this.question,
+    this.title,
+    this.onAnswered,
+    super.key,
+  });
 
   final QuizQuestion question;
 
   /// Sur-titre optionnel (« Question du jour », catégorie…).
   final String? title;
+
+  /// Appelé UNE fois, à la première réponse (juste ou fausse) — c'est par lui
+  /// que la réponse rejoint les défis culturels de la communauté.
+  final ValueChanged<bool>? onAnswered;
 
   @override
   State<QuizCard> createState() => _QuizCardState();
@@ -58,7 +67,12 @@ class _QuizCardState extends State<QuizCard> {
                       : index == _picked
                           ? _ChoiceState.wrong
                           : _ChoiceState.dimmed,
-              onTap: answered ? null : () => setState(() => _picked = index),
+              onTap: answered
+                  ? null
+                  : () {
+                      setState(() => _picked = index);
+                      widget.onAnswered?.call(index == question.answerIndex);
+                    },
             ),
           if (answered) ...[
             const SizedBox(height: AppSpacing.xs),

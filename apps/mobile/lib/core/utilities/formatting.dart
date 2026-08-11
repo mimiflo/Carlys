@@ -189,3 +189,13 @@ String formatRelativeTime(DateTime date, {DateTime? now}) {
   }
   return formatShortDateMono(date).toLowerCase();
 }
+
+/// « 2026-08-11 » — clé de JOUR LOCAL (réponses de quiz, bornes de journée).
+/// Le serveur ne découpe jamais les journées : c'est l'appareil qui sait où
+/// commence « aujourd'hui ».
+String formatDayKey(DateTime date) {
+  final local = date.toLocal();
+  final month = local.month.toString().padLeft(2, '0');
+  final day = local.day.toString().padLeft(2, '0');
+  return '${local.year}-$month-$day';
+}

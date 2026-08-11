@@ -219,6 +219,23 @@ export class CommunityService {
     }
   }
 
+  // ── Réponses de quiz (défis CULTURE) ────────────────────────────────────
+
+  /**
+   * Enregistre une réponse de quiz. Seule une réponse JUSTE et NOUVELLE
+   * (première fois pour cette leçon ce jour-là) contribue aux défis CULTURE
+   * rejoints — rejouer l'envoi ne compte jamais deux fois.
+   */
+  async recordQuizAnswer(
+    userId: string,
+    input: { lessonId: string; answeredOn: string; correct: boolean },
+  ): Promise<void> {
+    const created = await this.community.createQuizAnswer({ userId, ...input });
+    if (created && input.correct) {
+      await this.community.incrementCultureContributions(userId, new Date());
+    }
+  }
+
   // ── Préférence de partage ───────────────────────────────────────────────
 
   async profile(userId: string): Promise<CommunityProfile> {

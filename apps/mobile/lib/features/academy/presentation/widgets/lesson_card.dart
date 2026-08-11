@@ -10,10 +10,14 @@ class LessonCard extends StatefulWidget {
   const LessonCard({
     required this.lesson,
     this.showCategory = true,
+    this.onAnswered,
     super.key,
   });
 
   final Lesson lesson;
+
+  /// Relais de la réponse au quiz de CETTE leçon (défis culturels).
+  final ValueChanged<bool>? onAnswered;
 
   /// À désactiver quand la carte est déjà rangée sous l'en-tête de sa
   /// catégorie : répéter « ANATOMIE » sous « ANATOMIE » n'apprend rien.
@@ -77,7 +81,7 @@ class _LessonCardState extends State<LessonCard> {
                   .copyWith(color: AppColors.darkTextSecondary),
             ),
             const SizedBox(height: AppSpacing.sm),
-            QuizCard(question: lesson.question),
+            QuizCard(question: lesson.question, onAnswered: widget.onAnswered),
           ],
         ],
       ),

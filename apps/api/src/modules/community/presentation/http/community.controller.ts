@@ -20,7 +20,12 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../../../common/decorators/current-user.decorator';
 import { type AuthenticatedPrincipal } from '../../../../common/types/authenticated-request';
 import { CommunityService } from '../../application/community.service';
-import { EncourageDto, FriendRequestDto, UpdateCommunityProfileDto } from './dto/community.dto';
+import {
+  EncourageDto,
+  FriendRequestDto,
+  QuizAnswerDto,
+  UpdateCommunityProfileDto,
+} from './dto/community.dto';
 
 @ApiTags('community')
 @ApiBearerAuth()
@@ -130,6 +135,20 @@ export class CommunityController {
     @Param('id', new ParseUUIDPipe()) id: string,
   ): Promise<CommunityChallenge> {
     return this.community.leaveChallenge(user.userId, id);
+  }
+
+  @Post('quiz-answers')
+  @HttpCode(204)
+  @ApiOperation({
+    summary:
+      'Réponse à un quiz de l’Academy. Idempotent par (leçon, jour local) ; ' +
+      'une première réponse juste contribue aux défis CULTURE rejoints.',
+  })
+  async quizAnswer(
+    @CurrentUser() user: AuthenticatedPrincipal,
+    @Body() dto: QuizAnswerDto,
+  ): Promise<void> {
+    await this.community.recordQuizAnswer(user.userId, dto);
   }
 
   // ── Préférence de partage ───────────────────────────────────────────────

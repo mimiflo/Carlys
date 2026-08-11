@@ -140,6 +140,26 @@ void main() {
     expect(find.text('Personne ici pour l’instant'), findsOneWidget);
   });
 
+  testWidgets('hors connexion : le statut le DIT, comme le coach',
+      (tester) async {
+    final community = FakeCommunityRepository(offline: true);
+    await tester.pumpWidget(appWith(community));
+    await tester.pumpAndSettle();
+    await tapTab(tester, 'Communauté');
+
+    // Pas « indisponible », pas « personne ici » : hors connexion.
+    expect(find.text('Hors connexion'), findsOneWidget);
+    expect(find.text('Communauté indisponible'), findsNothing);
+    expect(find.text('Personne ici pour l’instant'), findsNothing);
+
+    // Le réseau revient : « Réessayer » ranime l'écran.
+    community.offline = false;
+    await tester.tap(find.text('Réessayer'));
+    await tester.pumpAndSettle();
+    expect(find.text('Hors connexion'), findsNothing);
+    expect(find.text('Personne ici pour l’instant'), findsOneWidget);
+  });
+
   testWidgets('accepter une demande : elle disparaît, l’ami apparaît',
       (tester) async {
     final community = FakeCommunityRepository(

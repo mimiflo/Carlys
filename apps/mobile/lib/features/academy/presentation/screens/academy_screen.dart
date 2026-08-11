@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_routes.dart';
 import '../../../../design_system/design_system.dart';
+import '../../../community/presentation/controllers/community_controllers.dart';
 import '../../domain/entities/academy.dart';
 import '../controllers/academy_controllers.dart';
 import '../widgets/lesson_card.dart';
@@ -22,6 +23,7 @@ class AcademyScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final pack = ref.watch(academyPackProvider);
     final daily = ref.watch(dailyLessonProvider);
+    final actions = ref.read(communityActionsProvider);
     final bottomInset =
         AppBottomBar.height + MediaQuery.paddingOf(context).bottom;
 
@@ -54,7 +56,16 @@ class AcademyScreen extends ConsumerWidget {
             ),
             const SizedBox(height: AppSpacing.gapRow),
             if (daily != null) ...[
-              QuizCard(question: daily.question, title: 'Question du jour'),
+              QuizCard(
+                question: daily.question,
+                title: 'Question du jour',
+                // La réponse rejoint les défis culturels — sans jamais gêner
+                // le quiz, qui fonctionne hors ligne.
+                onAnswered: (correct) => actions.reportQuizAnswer(
+                  lessonId: daily.id,
+                  correct: correct,
+                ),
+              ),
               const SizedBox(height: AppSpacing.gapRow),
             ],
             _NutritionEntry(
@@ -66,7 +77,14 @@ class AcademyScreen extends ConsumerWidget {
               const SizedBox(height: AppSpacing.xs),
               for (final lesson in lessons
                   .where((lesson) => lesson.category == category)) ...[
-                LessonCard(lesson: lesson, showCategory: false),
+                LessonCard(
+                  lesson: lesson,
+                  showCategory: false,
+                  onAnswered: (correct) => actions.reportQuizAnswer(
+                    lessonId: lesson.id,
+                    correct: correct,
+                  ),
+                ),
                 const SizedBox(height: AppSpacing.gapRow),
               ],
             ],

@@ -8,6 +8,8 @@ const ME = 'utilisateur-moi';
 const FRIEND = 'utilisateur-ami';
 
 interface Stubs {
+  createQuizAnswer: jest.Mock;
+  incrementCultureContributions: jest.Mock;
   findFriendshipBetween: jest.Mock;
   createRequest: jest.Mock;
   findRequestById: jest.Mock;
@@ -48,6 +50,8 @@ function buildStubs(): Stubs {
     leaveChallenge: jest.fn().mockResolvedValue(undefined),
     challengeStats: jest.fn().mockResolvedValue(null),
     incrementSportContributions: jest.fn().mockResolvedValue(undefined),
+    createQuizAnswer: jest.fn().mockResolvedValue(true),
+    incrementCultureContributions: jest.fn().mockResolvedValue(undefined),
     sharesProgress: jest.fn().mockResolvedValue(true),
     setSharesProgress: jest.fn().mockResolvedValue(undefined),
   };
@@ -276,5 +280,39 @@ describe('CommunityService — défis collectifs', () => {
 
     await expect(service.recordWorkoutCompleted(ME, new Date())).resolves.toBeUndefined();
     expect(loggerStub.error).toHaveBeenCalled();
+  });
+});
+
+describe('CommunityService — réponses de quiz (défis CULTURE)', () => {
+  const answer = { lessonId: 'lecon-dos', answeredOn: '2026-08-11', correct: true };
+
+  it('une première réponse JUSTE contribue aux défis culturels', async () => {
+    const stubs = buildStubs();
+    const service = buildService(stubs);
+
+    await service.recordQuizAnswer(ME, answer);
+
+    expect(stubs.createQuizAnswer).toHaveBeenCalledWith({ userId: ME, ...answer });
+    expect(stubs.incrementCultureContributions).toHaveBeenCalledTimes(1);
+  });
+
+  it('un rejeu (réponse déjà comptée) ne contribue pas deux fois', async () => {
+    const stubs = buildStubs();
+    stubs.createQuizAnswer.mockResolvedValue(false);
+    const service = buildService(stubs);
+
+    await service.recordQuizAnswer(ME, answer);
+
+    expect(stubs.incrementCultureContributions).not.toHaveBeenCalled();
+  });
+
+  it('une réponse fausse est enregistrée mais ne contribue pas', async () => {
+    const stubs = buildStubs();
+    const service = buildService(stubs);
+
+    await service.recordQuizAnswer(ME, { ...answer, correct: false });
+
+    expect(stubs.createQuizAnswer).toHaveBeenCalled();
+    expect(stubs.incrementCultureContributions).not.toHaveBeenCalled();
   });
 });

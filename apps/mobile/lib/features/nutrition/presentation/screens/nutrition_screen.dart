@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
+import '../../../../shared/widgets/connection_aware_error.dart';
 import '../../domain/entities/nutrition.dart';
 import '../controllers/nutrition_controllers.dart';
 import '../widgets/meal_journal_section.dart';
@@ -28,10 +29,13 @@ class NutritionScreen extends ConsumerWidget {
         loading: () => const SafeArea(
           child: AppLoadingIndicator(label: 'Analyse du métabolisme'),
         ),
-        error: (_, __) => SafeArea(
-          child: AppErrorState(
+        error: (error, _) => SafeArea(
+          child: ConnectionAwareError(
+            error: error,
             title: 'Métabolisme indisponible',
-            message: 'Vérifiez votre connexion puis réessayez.',
+            message: 'Le rapport n’a pas pu être calculé. Réessaie.',
+            offlineMessage: 'Le métabolisme se calcule sur le serveur : '
+                'il revient avec le réseau.',
             onRetry: () => ref.invalidate(metabolismReportProvider),
           ),
         ),

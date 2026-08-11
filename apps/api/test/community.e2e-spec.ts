@@ -234,6 +234,40 @@ describe('Communauté (e2e)', () => {
     expect(challenge.participants).toBe(0);
   });
 
+  it('défi CULTURE : une première réponse juste contribue, le rejeu non', async () => {
+    // Défi culturel fixture, rejoint par Alice.
+    const cultureSlug = `e2e-defi-culture-${randomUUID()}`;
+    const culture = await prisma.communityChallenge.create({
+      data: {
+        slug: cultureSlug,
+        kind: 'CULTURE',
+        title: 'Défi culturel e2e',
+        description: 'Cinq questions par jour.',
+        target: 2,
+        endsAt: new Date(Date.now() + 7 * 24 * 3_600_000),
+      },
+    });
+    await authed(tokenA).post(`/api/v1/community/challenges/${culture.id}/join`).expect(201);
+
+    const answer = { lessonId: 'lecon-dos', answeredOn: '2026-08-11', correct: true };
+    await authed(tokenA).post('/api/v1/community/quiz-answers').send(answer).expect(204);
+    // REJOUER la même réponse : aucune contribution supplémentaire.
+    await authed(tokenA).post('/api/v1/community/quiz-answers').send(answer).expect(204);
+    // Une réponse FAUSSE le lendemain : enregistrée, pas comptée.
+    await authed(tokenA)
+      .post('/api/v1/community/quiz-answers')
+      .send({ lessonId: 'lecon-dos', answeredOn: '2026-08-12', correct: false })
+      .expect(204);
+
+    const challenges = data<CommunityChallenge[]>(
+      (await authed(tokenA).get('/api/v1/community/challenges').expect(200)).body,
+    );
+    const mine = challenges.find((entry) => entry.id === culture.id);
+    expect(mine?.progress).toBe(0.5); // 1 bonne réponse / objectif 2.
+
+    await prisma.communityChallenge.deleteMany({ where: { slug: cultureSlug } });
+  });
+
   it('retirer un ami est idempotent, et coupe les encouragements', async () => {
     await authed(tokenA).delete(`/api/v1/community/friends/${userIdB}`).expect(204);
     await authed(tokenA).delete(`/api/v1/community/friends/${userIdB}`).expect(204);
