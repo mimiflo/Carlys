@@ -49,6 +49,13 @@ model User {
   subscriptions      Subscription[]
   entitlements       UserEntitlement[]
   coachConversations CoachConversation[]
+
+  communityPreference      CommunityPreference?
+  friendshipsSent          Friendship[]             @relation("FriendshipsSent")
+  friendshipsReceived      Friendship[]             @relation("FriendshipsReceived")
+  encouragementsSent       Encouragement[]          @relation("EncouragementsSent")
+  encouragementsReceived   Encouragement[]          @relation("EncouragementsReceived")
+  challengeParticipations  ChallengeParticipation[]
 }
 
 /// Sexe biologique — nécessaire aux formules métaboliques (Mifflin-St Jeor).
@@ -904,6 +911,107 @@ model CoachSessionProposalItem {
   @@unique([proposalId, exercisePosition, setPosition])
   @@index([proposalId])
   @@index([exerciseId])
+}
+
+// ────────────────────────────── Communauté ────────────────────────────────
+//
+// La séparation public/privé est une décision SERVEUR : ce que voit un ami
+// est décidé ici, jamais par le client. Le nom d'affichage est la seule
+// donnée toujours visible ; la progression (série, séances de la semaine)
+// n'est servie que si son propriétaire la partage.
+
+enum FriendRequestStatus {
+  PENDING
+  ACCEPTED
+  DECLINED
+}
+
+/// Préférence communautaire de l'utilisateur. Table à part de UserProfile :
+/// le partage de progression est un choix communautaire, pas une donnée
+/// d'identité — et son absence vaut « partagé » (défaut confirmé au premier
+/// passage sur l'écran Communauté).
+model CommunityPreference {
+  userId         String   @id @db.Uuid
+  sharesProgress Boolean  @default(true)
+  updatedAt      DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/// Lien d'amitié. UNE ligne par paire, créée PENDING par la demande ; la
+/// direction (qui a demandé) est conservée pour l'affichage des demandes.
+/// L'unicité de la paire dans LES DEUX SENS est imposée par le service :
+/// une contrainte symétrique n'est pas exprimable en Prisma.
+model Friendship {
+  id          String              @id @default(uuid()) @db.Uuid
+  requesterId String              @db.Uuid
+  addresseeId String              @db.Uuid
+  status      FriendRequestStatus @default(PENDING)
+  createdAt   DateTime            @default(now())
+  respondedAt DateTime?
+
+  requester User @relation("FriendshipsSent", fields: [requesterId], references: [id], onDelete: Cascade)
+  addressee User @relation("FriendshipsReceived", fields: [addresseeId], references: [id], onDelete: Cascade)
+
+  @@unique([requesterId, addresseeId])
+  @@index([addresseeId, status])
+  @@index([requesterId, status])
+}
+
+/// Mot envoyé à un ami. Le nom de l'expéditeur est lu au moment de servir le
+/// fil (pas dénormalisé) : un fil social montre le nom COURANT des gens.
+model Encouragement {
+  id          String   @id @default(uuid()) @db.Uuid
+  senderId    String   @db.Uuid
+  recipientId String   @db.Uuid
+  message     String
+  createdAt   DateTime @default(now())
+
+  sender    User @relation("EncouragementsSent", fields: [senderId], references: [id], onDelete: Cascade)
+  recipient User @relation("EncouragementsReceived", fields: [recipientId], references: [id], onDelete: Cascade)
+
+  @@index([recipientId, createdAt(sort: Desc)])
+}
+
+enum ChallengeKind {
+  SPORT
+  CULTURE
+}
+
+/// Défi COLLECTIF, créé par l'équipe (seed puis admin) — jamais par un
+/// utilisateur. La progression est la somme des contributions rapportée à
+/// l'objectif : la barre raconte l'effort commun.
+model CommunityChallenge {
+  id          String        @id @default(uuid()) @db.Uuid
+  slug        String        @unique
+  kind        ChallengeKind
+  title       String
+  description String
+  /// Objectif collectif (séances, répétitions, bonnes réponses…).
+  target      Int
+  startsAt    DateTime      @default(now())
+  endsAt      DateTime
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  participations ChallengeParticipation[]
+
+  @@index([endsAt])
+}
+
+model ChallengeParticipation {
+  challengeId  String   @db.Uuid
+  userId       String   @db.Uuid
+  /// Contribution individuelle à l'objectif collectif. Pour les défis SPORT,
+  /// incrémentée à la clôture de chaque séance pendant la fenêtre du défi.
+  contribution Int      @default(0)
+  joinedAt     DateTime @default(now())
+
+  challenge CommunityChallenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([challengeId, userId])
+  @@index([userId])
 }
 
 /// Programme multi-semaines : un plan d'entraînement dans le temps.

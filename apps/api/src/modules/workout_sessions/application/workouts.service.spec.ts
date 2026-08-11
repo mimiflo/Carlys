@@ -1,5 +1,6 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { WorkoutSessionStatus, WorkoutSetKind } from '@prisma/client';
+import { type CommunityService } from '../../community/application/community.service';
 import { type ProgressService } from '../../progress/application/progress.service';
 import { type WorkoutTemplatesService } from '../../workout_templates/application/workout-templates.service';
 import {
@@ -82,10 +83,14 @@ function buildService(
     templateId: null,
     templateName: null,
   }),
+  community: { recordWorkoutCompleted: jest.Mock } = {
+    recordWorkoutCompleted: jest.fn().mockResolvedValue(undefined),
+  },
 ): WorkoutsService {
   return new WorkoutsService(
     stubs as unknown as WorkoutsRepository,
     progress as unknown as ProgressService,
+    community as unknown as CommunityService,
     templates as unknown as WorkoutTemplatesService,
   );
 }

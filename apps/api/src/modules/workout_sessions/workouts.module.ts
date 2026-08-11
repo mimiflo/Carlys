@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { CommunityModule } from '../community/community.module';
 import { ProgressModule } from '../progress/progress.module';
 import { WorkoutTemplatesModule } from '../workout_templates/workout-templates.module';
 import { WorkoutsService } from './application/workouts.service';
@@ -7,7 +8,7 @@ import { WorkoutSessionsController } from './presentation/http/workout-sessions.
 import { WorkoutSetsController } from './presentation/http/workout-sets.controller';
 
 @Module({
-  imports: [ProgressModule, WorkoutTemplatesModule],
+  imports: [CommunityModule, ProgressModule, WorkoutTemplatesModule],
   controllers: [WorkoutSessionsController, WorkoutSetsController],
   providers: [WorkoutsService, WorkoutsRepository],
   exports: [WorkoutsService],

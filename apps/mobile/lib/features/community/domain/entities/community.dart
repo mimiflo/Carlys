@@ -1,8 +1,9 @@
-/// La communauté : amis, encouragements, défis.
+/// La communauté : amis, demandes, encouragements, défis.
 ///
 /// Les entités séparent nettement le PUBLIC du PRIVÉ : un profil d'ami
 /// n'expose que ce que son propriétaire a choisi de montrer — le reste
-/// n'existe tout simplement pas dans l'entité.
+/// n'existe tout simplement pas dans l'entité. Et c'est le SERVEUR qui
+/// décide : quand la progression n'est pas partagée, elle arrive `null`.
 library;
 
 /// Un ami, vu à travers son PROFIL PUBLIC uniquement.
@@ -21,15 +22,33 @@ class CommunityFriend {
   final String id;
   final String displayName;
 
-  /// Jours de série en cours — la statistique sociale par excellence.
-  final int streakDays;
+  /// Jours de série en cours — `null` quand l'ami garde sa progression
+  /// privée : la donnée n'a jamais quitté le serveur.
+  final int? streakDays;
 
-  /// Séances de la semaine, si l'ami partage sa progression.
-  final int weeklySessions;
+  /// Séances de la semaine — `null` si la progression est privée.
+  final int? weeklySessions;
 
-  /// L'ami a choisi de rendre sa progression visible. À faux, les compteurs
-  /// valent zéro et l'interface n'affiche QUE le nom.
+  /// L'ami a choisi de rendre sa progression visible. À faux, l'interface
+  /// n'affiche QUE le nom.
   final bool sharesProgress;
+}
+
+/// Une demande d'ami REÇUE, en attente de réponse.
+///
+/// Les demandes ENVOYÉES ne sont volontairement pas exposées : c'est ce qui
+/// rend l'ajout par e-mail non énumérable (impossible de déduire qu'une
+/// adresse a un compte).
+class FriendRequest {
+  const FriendRequest({
+    required this.id,
+    required this.fromDisplayName,
+    required this.createdAt,
+  });
+
+  final String id;
+  final String fromDisplayName;
+  final DateTime createdAt;
 }
 
 /// Un encouragement reçu — le petit mot qui fait tenir la série.
@@ -57,7 +76,7 @@ enum ChallengeKind {
   final String label;
 }
 
-/// Un défi de la communauté, individuel ou collectif.
+/// Un défi de la communauté, à progression COLLECTIVE.
 class CommunityChallenge {
   const CommunityChallenge({
     required this.id,

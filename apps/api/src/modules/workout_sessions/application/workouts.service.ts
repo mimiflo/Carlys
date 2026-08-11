@@ -10,6 +10,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { type Prisma, WorkoutSessionStatus, WorkoutSetKind } from '@prisma/client';
+import { CommunityService } from '../../community/application/community.service';
 import { ProgressService } from '../../progress/application/progress.service';
 import { WorkoutTemplatesService } from '../../workout_templates/application/workout-templates.service';
 import { type SessionWithSets, WorkoutsRepository } from '../infrastructure/workouts.repository';
@@ -82,6 +83,7 @@ export class WorkoutsService {
   constructor(
     private readonly workouts: WorkoutsRepository,
     private readonly progress: ProgressService,
+    private readonly community: CommunityService,
     private readonly templates: WorkoutTemplatesService,
   ) {}
 
@@ -352,8 +354,10 @@ export class WorkoutsService {
     }
     const closed = await this.ownedSession(userId, sessionId);
     if (to === WorkoutSessionStatus.COMPLETED) {
-      // Ne fait jamais échouer la clôture : le service journalise ses erreurs.
+      // Aucun des deux ne fait échouer la clôture : chacun journalise
+      // ses erreurs et se rattrape à la séance suivante.
       await this.progress.updateRecordsForSession(userId, sessionId, closed.sets);
+      await this.community.recordWorkoutCompleted(userId, endedAt);
     }
     return presentSessionDetail(closed);
   }

@@ -1,0 +1,151 @@
+import {
+  type CommunityChallenge,
+  type CommunityFriend,
+  type CommunityProfile,
+  type Encouragement,
+  type FriendRequest,
+} from '@carlys/api-contracts';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  HttpCode,
+  Param,
+  ParseUUIDPipe,
+  Patch,
+  Post,
+} from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { CurrentUser } from '../../../../common/decorators/current-user.decorator';
+import { type AuthenticatedPrincipal } from '../../../../common/types/authenticated-request';
+import { CommunityService } from '../../application/community.service';
+import { EncourageDto, FriendRequestDto, UpdateCommunityProfileDto } from './dto/community.dto';
+
+@ApiTags('community')
+@ApiBearerAuth()
+@Controller('community')
+export class CommunityController {
+  constructor(private readonly community: CommunityService) {}
+
+  // ── Fil ─────────────────────────────────────────────────────────────────
+
+  @Get('feed')
+  @ApiOperation({ summary: 'Encouragements reçus, du plus récent au plus ancien' })
+  feed(@CurrentUser() user: AuthenticatedPrincipal): Promise<Encouragement[]> {
+    return this.community.feed(user.userId);
+  }
+
+  @Post('encouragements')
+  @HttpCode(201)
+  @ApiOperation({ summary: 'Encourager un ami (amitié acceptée obligatoire)' })
+  async encourage(
+    @CurrentUser() user: AuthenticatedPrincipal,
+    @Body() dto: EncourageDto,
+  ): Promise<void> {
+    await this.community.encourage(user.userId, dto.recipientUserId, dto.message);
+  }
+
+  // ── Amis ────────────────────────────────────────────────────────────────
+
+  @Get('friends')
+  @ApiOperation({
+    summary: 'Amis acceptés — la progression n’apparaît que si elle est partagée',
+  })
+  friends(@CurrentUser() user: AuthenticatedPrincipal): Promise<CommunityFriend[]> {
+    return this.community.listFriends(user.userId);
+  }
+
+  @Delete('friends/:userId')
+  @HttpCode(204)
+  @ApiOperation({ summary: 'Retirer un ami (idempotent)' })
+  removeFriend(
+    @CurrentUser() user: AuthenticatedPrincipal,
+    @Param('userId', new ParseUUIDPipe()) friendUserId: string,
+  ): Promise<void> {
+    return this.community.removeFriend(user.userId, friendUserId);
+  }
+
+  @Get('requests')
+  @ApiOperation({ summary: 'Demandes d’ami REÇUES en attente' })
+  requests(@CurrentUser() user: AuthenticatedPrincipal): Promise<FriendRequest[]> {
+    return this.community.listReceivedRequests(user.userId);
+  }
+
+  @Post('requests')
+  @HttpCode(202)
+  @ApiOperation({
+    summary:
+      'Demander un ami par e-mail exact. Réponse opaque : 202 dans tous les ' +
+      'cas, qu’un compte existe ou non (pas d’énumération d’adresses).',
+  })
+  async request(
+    @CurrentUser() user: AuthenticatedPrincipal,
+    @Body() dto: FriendRequestDto,
+  ): Promise<void> {
+    await this.community.requestFriend(user.userId, dto.email);
+  }
+
+  @Post('requests/:id/accept')
+  @HttpCode(204)
+  @ApiOperation({ summary: 'Accepter une demande reçue' })
+  async accept(
+    @CurrentUser() user: AuthenticatedPrincipal,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ): Promise<void> {
+    await this.community.respondToRequest(user.userId, id, true);
+  }
+
+  @Post('requests/:id/decline')
+  @HttpCode(204)
+  @ApiOperation({ summary: 'Refuser une demande reçue' })
+  async decline(
+    @CurrentUser() user: AuthenticatedPrincipal,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ): Promise<void> {
+    await this.community.respondToRequest(user.userId, id, false);
+  }
+
+  // ── Défis collectifs ────────────────────────────────────────────────────
+
+  @Get('challenges')
+  @ApiOperation({ summary: 'Défis ouverts, progression collective incluse' })
+  challenges(@CurrentUser() user: AuthenticatedPrincipal): Promise<CommunityChallenge[]> {
+    return this.community.listChallenges(user.userId);
+  }
+
+  @Post('challenges/:id/join')
+  @ApiOperation({ summary: 'Rejoindre un défi (idempotent)' })
+  join(
+    @CurrentUser() user: AuthenticatedPrincipal,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ): Promise<CommunityChallenge> {
+    return this.community.joinChallenge(user.userId, id);
+  }
+
+  @Delete('challenges/:id/join')
+  @ApiOperation({ summary: 'Quitter un défi (idempotent)' })
+  leave(
+    @CurrentUser() user: AuthenticatedPrincipal,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ): Promise<CommunityChallenge> {
+    return this.community.leaveChallenge(user.userId, id);
+  }
+
+  // ── Préférence de partage ───────────────────────────────────────────────
+
+  @Get('profile')
+  @ApiOperation({ summary: 'Ma préférence communautaire' })
+  profile(@CurrentUser() user: AuthenticatedPrincipal): Promise<CommunityProfile> {
+    return this.community.profile(user.userId);
+  }
+
+  @Patch('profile')
+  @ApiOperation({ summary: 'Partager (ou non) ma progression avec mes amis' })
+  updateProfile(
+    @CurrentUser() user: AuthenticatedPrincipal,
+    @Body() dto: UpdateCommunityProfileDto,
+  ): Promise<CommunityProfile> {
+    return this.community.updateProfile(user.userId, dto.sharesProgress);
+  }
+}

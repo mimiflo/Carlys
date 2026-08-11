@@ -14,9 +14,19 @@ final communityFriendsProvider =
   return ref.watch(communityRepositoryProvider).friends();
 });
 
+final friendRequestsProvider =
+    FutureProvider.autoDispose<List<FriendRequest>>((ref) {
+  return ref.watch(communityRepositoryProvider).receivedRequests();
+});
+
 final communityChallengesProvider =
     FutureProvider.autoDispose<List<CommunityChallenge>>((ref) {
   return ref.watch(communityRepositoryProvider).challenges();
+});
+
+/// Ma préférence de partage — pilotée par le serveur, comme le reste.
+final sharesProgressProvider = FutureProvider.autoDispose<bool>((ref) {
+  return ref.watch(communityRepositoryProvider).sharesProgress();
 });
 
 /// Le dernier encouragement reçu — la « petite notif » de l'accueil.
@@ -41,13 +51,45 @@ class CommunityActions {
 
   final Ref _ref;
 
-  Future<void> toggleChallenge(String challengeId) async {
-    await _ref.read(communityRepositoryProvider).toggleChallenge(challengeId);
+  /// Rejoint ou quitte selon l'état COURANT de la carte.
+  Future<void> toggleChallenge(CommunityChallenge challenge) async {
+    final repository = _ref.read(communityRepositoryProvider);
+    if (challenge.joined) {
+      await repository.leaveChallenge(challenge.id);
+    } else {
+      await repository.joinChallenge(challenge.id);
+    }
     _ref.invalidate(communityChallengesProvider);
   }
 
   Future<void> encourage(String friendId, String message) async {
     await _ref.read(communityRepositoryProvider).encourage(friendId, message);
     _ref.invalidate(encouragementsProvider);
+  }
+
+  /// Réponse opaque côté serveur : rien à lire, rien à invalider — les
+  /// demandes ENVOYÉES ne sont jamais listées.
+  Future<void> sendFriendRequest(String email) {
+    return _ref.read(communityRepositoryProvider).sendFriendRequest(email);
+  }
+
+  Future<void> respondToRequest(
+    String requestId, {
+    required bool accept,
+  }) async {
+    await _ref
+        .read(communityRepositoryProvider)
+        .respondToRequest(requestId, accept: accept);
+    _ref.invalidate(friendRequestsProvider);
+    if (accept) {
+      _ref.invalidate(communityFriendsProvider);
+    }
+  }
+
+  Future<void> setSharesProgress({required bool value}) async {
+    await _ref
+        .read(communityRepositoryProvider)
+        .setSharesProgress(value: value);
+    _ref.invalidate(sharesProgressProvider);
   }
 }

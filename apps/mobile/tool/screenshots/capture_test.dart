@@ -19,6 +19,7 @@ import 'package:carlys_mobile/core/errors/app_exception.dart';
 import 'package:carlys_mobile/core/media/remote_image.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
 import 'package:carlys_mobile/demo/demo_catalog.dart';
+import 'package:carlys_mobile/demo/demo_community.dart';
 import 'package:carlys_mobile/demo/demo_overrides.dart';
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/academy/presentation/screens/academy_screen.dart';
@@ -28,6 +29,7 @@ import 'package:carlys_mobile/features/coaching/data/repositories/coach_reposito
 import 'package:carlys_mobile/features/coaching/domain/entities/coach.dart';
 import 'package:carlys_mobile/features/coaching/presentation/controllers/coach_controllers.dart';
 import 'package:carlys_mobile/features/coaching/presentation/screens/coach_screen.dart';
+import 'package:carlys_mobile/features/community/data/repositories/community_repository_impl.dart';
 import 'package:carlys_mobile/features/community/presentation/screens/community_screen.dart';
 import 'package:carlys_mobile/features/dashboard/presentation/screens/home_screen.dart';
 import 'package:carlys_mobile/features/exercises/data/repositories/exercises_repository_impl.dart';
@@ -376,6 +378,13 @@ void main() {
           ),
           coachRepositoryProvider.overrideWithValue(
             coach ?? FakeCoachRepository(),
+          ),
+          // Communauté de démonstration : sans doublure, le dépôt Dio réel
+          // lancerait des requêtes (bloquées) dont les minuteurs de timeout
+          // survivraient au test — et l'accueil perdrait sa carte « X
+          // t'encourage », qui fait partie de la galerie.
+          communityRepositoryProvider.overrideWithValue(
+            DemoCommunityRepository(),
           ),
           // Les puces se calculent depuis les modèles de séance, qui vivent
           // dans Drift : la galerie n'ouvre pas de base locale, elle fige donc

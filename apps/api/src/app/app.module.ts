@@ -16,6 +16,7 @@ import { MediaModule } from '../modules/media/media.module';
 import { AuditModule } from '../modules/audit/audit.module';
 import { AuthModule } from '../modules/auth/auth.module';
 import { CoachModule } from '../modules/coach/coach.module';
+import { CommunityModule } from '../modules/community/community.module';
 import { ExercisesModule } from '../modules/exercises/exercises.module';
 import { HealthModule } from '../modules/health/health.module';
 import { MetricsModule } from '../modules/metrics/metrics.module';
@@ -91,6 +92,7 @@ function generateRequestId(request: IncomingMessage, response: ServerResponse): 
     NutritionModule,
     SubscriptionsModule,
     CoachModule,
+    CommunityModule,
     WebhooksModule,
     AdminModule,
     MediaModule,

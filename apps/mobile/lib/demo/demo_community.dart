@@ -1,8 +1,8 @@
 /// Communauté du MODE DÉMO : des amis, des mots, des défis — en mémoire.
 ///
 /// Même règle que les autres dépôts de démonstration : l'état vit le temps du
-/// processus, rejoindre un défi ou envoyer un encouragement se voit
-/// immédiatement, rien ne touche le réseau.
+/// processus, rejoindre un défi, répondre à une demande ou envoyer un
+/// encouragement se voit immédiatement, rien ne touche le réseau.
 library;
 
 import '../features/community/domain/entities/community.dart';
@@ -30,36 +30,44 @@ class DemoCommunityRepository implements CommunityRepository {
     ),
   ];
 
-  final List<CommunityFriend> _friends = const [
-    CommunityFriend(
+  final List<CommunityFriend> _friends = [
+    const CommunityFriend(
       id: 'demo-friend-sarah',
       displayName: 'Sarah',
       streakDays: 11,
       weeklySessions: 4,
       sharesProgress: true,
     ),
-    CommunityFriend(
+    const CommunityFriend(
       id: 'demo-friend-mehdi',
       displayName: 'Mehdi',
       streakDays: 6,
       weeklySessions: 3,
       sharesProgress: true,
     ),
-    CommunityFriend(
+    const CommunityFriend(
       id: 'demo-friend-lea',
       displayName: 'Léa',
       streakDays: 4,
       weeklySessions: 5,
       sharesProgress: true,
     ),
-    // Profil privé : la progression n'est PAS partagée — l'écran ne montre
-    // que le nom, c'est la séparation public/privé rendue visible.
-    CommunityFriend(
+    // Profil privé : la progression n'a JAMAIS quitté le serveur — null,
+    // pas zéro. L'écran ne montre que le nom.
+    const CommunityFriend(
       id: 'demo-friend-tom',
       displayName: 'Tom',
-      streakDays: 0,
-      weeklySessions: 0,
+      streakDays: null,
+      weeklySessions: null,
       sharesProgress: false,
+    ),
+  ];
+
+  final List<FriendRequest> _requests = [
+    FriendRequest(
+      id: 'demo-request-nina',
+      fromDisplayName: 'Nina',
+      createdAt: DateTime.now().subtract(const Duration(hours: 5)),
     ),
   ];
 
@@ -99,6 +107,7 @@ class DemoCommunityRepository implements CommunityRepository {
     ),
   };
 
+  bool _sharesProgress = true;
   int _nextId = 0;
 
   @override
@@ -106,22 +115,66 @@ class DemoCommunityRepository implements CommunityRepository {
       [..._received]..sort((a, b) => b.sentAt.compareTo(a.sentAt));
 
   @override
-  Future<List<CommunityFriend>> friends() async =>
-      [..._friends]..sort((a, b) => b.streakDays.compareTo(a.streakDays));
+  Future<List<CommunityFriend>> friends() async => [..._friends]
+    ..sort((a, b) => (b.streakDays ?? -1).compareTo(a.streakDays ?? -1));
+
+  @override
+  Future<List<FriendRequest>> receivedRequests() async => [..._requests];
+
+  @override
+  Future<void> sendFriendRequest(String email) async {
+    // Réponse opaque, comme le vrai serveur : rien ne se passe de visible.
+  }
+
+  @override
+  Future<void> respondToRequest(
+    String requestId, {
+    required bool accept,
+  }) async {
+    final index = _requests.indexWhere((request) => request.id == requestId);
+    if (index < 0) {
+      return;
+    }
+    final request = _requests.removeAt(index);
+    if (accept) {
+      _friends.add(
+        CommunityFriend(
+          id: 'demo-friend-${_nextId++}',
+          displayName: request.fromDisplayName,
+          streakDays: 2,
+          weeklySessions: 1,
+          sharesProgress: true,
+        ),
+      );
+    }
+  }
 
   @override
   Future<List<CommunityChallenge>> challenges() async =>
       _challenges.values.toList()..sort((a, b) => a.endsAt.compareTo(b.endsAt));
 
   @override
-  Future<CommunityChallenge> toggleChallenge(String challengeId) async {
+  Future<CommunityChallenge> joinChallenge(String challengeId) =>
+      _setJoined(challengeId, joined: true);
+
+  @override
+  Future<CommunityChallenge> leaveChallenge(String challengeId) =>
+      _setJoined(challengeId, joined: false);
+
+  Future<CommunityChallenge> _setJoined(
+    String challengeId, {
+    required bool joined,
+  }) async {
     final challenge = _challenges[challengeId];
     if (challenge == null) {
       throw ArgumentError.value(challengeId, 'challengeId', 'défi inconnu');
     }
+    if (challenge.joined == joined) {
+      return challenge; // Idempotent, comme le serveur.
+    }
     final updated = challenge.copyWith(
-      joined: !challenge.joined,
-      participants: challenge.participants + (challenge.joined ? -1 : 1),
+      joined: joined,
+      participants: challenge.participants + (joined ? 1 : -1),
     );
     _challenges[challengeId] = updated;
     return updated;
@@ -141,5 +194,13 @@ class DemoCommunityRepository implements CommunityRepository {
         sentAt: DateTime.now(),
       ),
     );
+  }
+
+  @override
+  Future<bool> sharesProgress() async => _sharesProgress;
+
+  @override
+  Future<void> setSharesProgress({required bool value}) async {
+    _sharesProgress = value;
   }
 }

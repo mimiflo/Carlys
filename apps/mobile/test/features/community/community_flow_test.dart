@@ -5,6 +5,7 @@ import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
 import 'package:carlys_mobile/demo/demo_overrides.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
 import 'package:carlys_mobile/features/community/data/repositories/community_repository_impl.dart';
+import 'package:carlys_mobile/features/community/domain/entities/community.dart';
 import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,9 +17,9 @@ import '../../support/fake_workout_repository.dart';
 import '../../support/first_run_prefs.dart';
 import '../../support/navigation.dart';
 
-/// L'écran Communauté sur le dépôt de DÉMONSTRATION : c'est le seul qui a des
-/// données tant que le serveur communautaire n'existe pas, et donc le seul
-/// endroit où les ACTIONS (rejoindre un défi, encourager) s'exercent vraiment.
+/// L'écran Communauté sur le dépôt de DÉMONSTRATION (données embarquées,
+/// actions en mémoire) puis sur un dépôt piloté : états, demandes d'ami,
+/// défis, encouragements et confidentialité.
 Widget demoApp() => ProviderScope(
       overrides: [
         appEnvironmentProvider.overrideWithValue(
@@ -107,15 +108,16 @@ void main() {
     expect(find.text('23 participants'), findsNothing);
   });
 
-  testWidgets('sans serveur : l’état vide, jamais un mensonge d’erreur',
+  testWidgets('compte neuf : l’état vide invite à ajouter un premier ami',
       (tester) async {
-    // Le dépôt « non branché » rend des listes vides : l'écran doit le dire
-    // honnêtement (bientôt du monde), pas montrer une erreur.
+    // Toutes les listes vides : l'écran doit le dire honnêtement — et donner
+    // le geste qui débloque tout (ajouter un ami), pas montrer une erreur.
     await tester.pumpWidget(appWith(FakeCommunityRepository()));
     await tester.pumpAndSettle();
     await tapTab(tester, 'Communauté');
 
-    expect(find.text('Bientôt du monde ici'), findsOneWidget);
+    expect(find.text('Personne ici pour l’instant'), findsOneWidget);
+    expect(find.text('Ajouter un ami'), findsWidgets);
   });
 
   testWidgets('serveur en panne : état d’erreur, et « Réessayer » réessaie',
@@ -125,9 +127,9 @@ void main() {
     await tester.pumpAndSettle();
     await tapTab(tester, 'Communauté');
 
-    // Une panne n'est PAS « bientôt du monde ici ».
+    // Une panne n'est PAS « personne ici ».
     expect(find.text('Communauté indisponible'), findsOneWidget);
-    expect(find.text('Bientôt du monde ici'), findsNothing);
+    expect(find.text('Personne ici pour l’instant'), findsNothing);
 
     // Le serveur revient : « Réessayer » recharge vraiment.
     community.failReads = false;
@@ -135,7 +137,88 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Communauté indisponible'), findsNothing);
-    expect(find.text('Bientôt du monde ici'), findsOneWidget);
+    expect(find.text('Personne ici pour l’instant'), findsOneWidget);
+  });
+
+  testWidgets('accepter une demande : elle disparaît, l’ami apparaît',
+      (tester) async {
+    final community = FakeCommunityRepository(
+      requests: [
+        FriendRequest(
+          id: 'demande-nina',
+          fromDisplayName: 'Nina',
+          createdAt: DateTime.now().subtract(const Duration(hours: 1)),
+        ),
+      ],
+    );
+    await tester.pumpWidget(appWith(community));
+    await tester.pumpAndSettle();
+    await tapTab(tester, 'Communauté');
+
+    expect(find.text('DEMANDES REÇUES'), findsOneWidget);
+    expect(find.text('Nina'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Accepter'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('DEMANDES REÇUES'), findsNothing);
+    // Nina est désormais dans la section AMIS.
+    expect(find.text('AMIS'), findsOneWidget);
+    expect(find.text('Nina'), findsOneWidget);
+  });
+
+  testWidgets('ajouter un ami : la confirmation reste opaque', (tester) async {
+    final community = FakeCommunityRepository();
+    await tester.pumpWidget(appWith(community));
+    await tester.pumpAndSettle();
+    await tapTab(tester, 'Communauté');
+
+    await tester.tap(find.byTooltip('Ajouter un ami'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextFormField), 'amie@carlys.test');
+    await tester.pump();
+    await tester.ensureVisible(find.text('Envoyer la demande'));
+    await tester.tap(find.text('Envoyer la demande'));
+    await tester.pumpAndSettle();
+
+    expect(community.sentRequests, ['amie@carlys.test']);
+    // Jamais « demande envoyée à X » : on ne confirme pas qu'un compte existe.
+    expect(
+      find.text('Si ce compte existe, il recevra ta demande.'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('le réglage de partage écrit bien la préférence', (tester) async {
+    final community = FakeCommunityRepository(
+      friends: const [
+        CommunityFriend(
+          id: 'amie-1',
+          displayName: 'Sarah',
+          streakDays: 3,
+          weeklySessions: 2,
+          sharesProgress: true,
+        ),
+      ],
+    );
+    await tester.pumpWidget(appWith(community));
+    await tester.pumpAndSettle();
+    await tapTab(tester, 'Communauté');
+
+    final scrollable = find.byType(Scrollable).last;
+    await tester.scrollUntilVisible(
+      find.byType(Switch),
+      240,
+      scrollable: scrollable,
+    );
+    await tester.pumpAndSettle();
+    expect(tester.widget<Switch>(find.byType(Switch)).value, isTrue);
+
+    await tester.tap(find.byType(Switch));
+    await tester.pumpAndSettle();
+
+    expect(community.shares, isFalse);
+    expect(tester.widget<Switch>(find.byType(Switch)).value, isFalse);
   });
 
   testWidgets('encourager un ami fait revenir un merci dans le fil',
