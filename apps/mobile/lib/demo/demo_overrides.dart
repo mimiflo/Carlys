@@ -19,10 +19,12 @@ import '../features/exercises/data/repositories/exercises_repository_impl.dart';
 import '../features/nutrition/data/repositories/nutrition_repository_impl.dart';
 import '../features/progress/data/repositories/progress_repository_impl.dart';
 import '../features/subscription/data/repositories/subscription_repository_impl.dart';
+import '../features/workout_program/data/repositories/program_repository_impl.dart';
 import '../features/workout_session/data/repositories/workout_repository_impl.dart';
 import '../features/workout_template/data/repositories/workout_template_repository_impl.dart';
 import 'demo_coach.dart';
 import 'demo_community.dart';
+import 'demo_programs.dart';
 import 'demo_repositories.dart';
 import 'demo_templates.dart';
 import 'demo_workouts.dart';
@@ -43,6 +45,7 @@ List<Override> demoOverrides() {
     subscriptionRepositoryProvider
         .overrideWithValue(DemoSubscriptionRepository()),
     nutritionRepositoryProvider.overrideWithValue(DemoNutritionRepository()),
+    programRepositoryProvider.overrideWithValue(DemoProgramRepository()),
     communityRepositoryProvider.overrideWithValue(DemoCommunityRepository()),
     workoutRepositoryProvider.overrideWithValue(workouts),
     workoutTemplateRepositoryProvider

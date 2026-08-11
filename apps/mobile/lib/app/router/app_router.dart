@@ -26,6 +26,8 @@ import '../../features/subscription/presentation/screens/subscription_screen.dar
 import '../../features/training/presentation/screens/training_hub_screen.dart';
 import '../../features/workout_history/presentation/screens/workout_detail_screen.dart';
 import '../../features/workout_history/presentation/screens/workout_history_screen.dart';
+import '../../features/workout_program/presentation/screens/program_detail_screen.dart';
+import '../../features/workout_program/presentation/screens/programs_screen.dart';
 import '../../features/workout_session/presentation/screens/active_workout_screen.dart';
 import '../../features/workout_template/presentation/screens/template_editor_screen.dart';
 import '../../features/workout_template/presentation/screens/templates_screen.dart';
@@ -252,6 +254,24 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             parentNavigatorKey: _rootNavigatorKey,
             builder: (context, state) => TemplateEditorScreen(
               templateId: state.pathParameters['templateId'] ?? '',
+            ),
+          ),
+        ],
+      ),
+      // Les programmes : liste puis calendrier. Pas de `/programs/new` — un
+      // nouveau programme naît d'un UUID généré sur l'appareil.
+      GoRoute(
+        path: AppRoutes.programs,
+        name: 'programs',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const ProgramsScreen(),
+        routes: [
+          GoRoute(
+            path: ':programId',
+            name: 'program-detail',
+            parentNavigatorKey: _rootNavigatorKey,
+            builder: (context, state) => ProgramDetailScreen(
+              programId: state.pathParameters['programId'] ?? '',
             ),
           ),
         ],

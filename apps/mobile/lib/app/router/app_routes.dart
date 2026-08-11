@@ -16,6 +16,7 @@ abstract final class AppRoutes {
   // Plein écran, hors coquille (pas de bottom bar)
   static const String activeWorkout = '/workout';
   static const String templates = '/templates';
+  static const String programs = '/programs';
   static const String history = '/history';
   static const String sessions = '/sessions';
   static const String subscription = '/subscription';
@@ -39,4 +40,8 @@ abstract final class AppRoutes {
   /// directe du principe « identifiants générés hors ligne », et ça évite la
   /// collision de chemins entre `new` et `:templateId`.
   static String templateEditor(String templateId) => '/templates/$templateId';
+
+  /// Comme les modèles : l'identifiant d'un nouveau programme est un UUID
+  /// généré sur l'appareil, jamais une route `/programs/new`.
+  static String programDetail(String programId) => '/programs/$programId';
 }

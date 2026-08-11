@@ -88,6 +88,13 @@ class TrainingHubScreen extends ConsumerWidget {
             onTap: () => context.push(AppRoutes.templates),
           ),
           _Entry(
+            icon: Icons.calendar_month_outlined,
+            color: AppColors.primaryLight,
+            title: 'Programmes',
+            subtitle: 'Des semaines planifiées, jour par jour.',
+            onTap: () => context.push(AppRoutes.programs),
+          ),
+          _Entry(
             icon: AppIcons.workout,
             color: AppColors.primaryLight,
             title: 'Exercices',

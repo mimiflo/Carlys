@@ -29,6 +29,7 @@ feature/
 | ------------------ | ----------------- | --------------------------------------------------------------- |
 | `workout_session`  | —                 | Séances **réalisées** offline-first (Drift → file de sync → API) |
 | `workout_template` | `workout_session` | Modèles de séance **prescriptifs** : composer, enregistrer, puis lancer une vraie séance pré-remplie |
+| `workout_program`  | `workout_template` | Programmes multi-semaines : le calendrier (quand) relié aux modèles (quoi). Une seule écriture — PUT de l'état complet, id né sur l'appareil |
 | `coaching`         | `workout_session`, `workout_template`, `progress` | Le coach lit l'état réel (modèles, records, poids) pour ses amorces, et lance la séance qu'il propose |
 | `training`         | `workout_session` | Hub de l'onglet Training : carte de reprise de la séance active, portes vers modèles, exercices, coach et historique |
 | `academy`          | —                 | Contenu ÉDITORIAL embarqué (leçons + questions, `assets/academy/pack.json`) : fonctionne hors ligne ; la nutrition s'ouvre depuis ce hub |

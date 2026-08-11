@@ -169,6 +169,8 @@ l'accueil (plein écran).
 | `/workout`              | `active-workout`  | Séance active (plein écran)        |
 | `/templates`            | `templates`       | Mes modèles de séance (plein écran)|
 | `/templates/:templateId`| `template-editor` | Éditeur de modèle (plein écran)    |
+| `/programs`             | `programs`        | Programmes multi-semaines (plein écran) |
+| `/programs/:programId`  | `program-detail`  | Calendrier d'un programme (plein écran) |
 | `/history`              | `history`         | Historique (plein écran)           |
 | `/history/:sessionId`   | `workout-detail`  | Détail d'une séance                |
 | `/bienvenue`            | `welcome`         | Page de marque, première ouverture |
