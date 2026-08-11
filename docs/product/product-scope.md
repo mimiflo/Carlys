@@ -37,7 +37,7 @@ l'autre :
 | **Connaissance** | Comprendre ce qu'on fait, et pourquoi | Fiches d'exercice, mesures et statistiques |
 | **Maîtrise** | La qualité du mouvement avant la charge | Séries prévues (tempo, repos), consignes de la fiche |
 | **Constance** | Ce qu'on répète devient ce qu'on est | Série de constance de l'accueil, « Ta semaine » |
-| **Équilibre** | Le repos et la nutrition font partie de l'entraînement | Récupération, métabolisme, onglet Nutrition |
+| **Équilibre** | Le repos et la nutrition font partie de l'entraînement | Récupération, métabolisme, nutrition (intégrée à l'Academy) |
 
 Elles ordonnent aussi la **maxime du jour** de l'accueil : le recueil
 (`apps/mobile/lib/features/dashboard/data/daily_quotes.dart`) est entrelacé par
@@ -231,7 +231,7 @@ client ne fait qu'afficher. Clés prévues :
 | `premium_exercises` | Exercices premium du catalogue |
 | `health_sync` | Synchronisation Apple Health / Health Connect (futur) |
 | `cloud_backup` | Sauvegarde cloud |
-| `ai_coaching` | Coach IA (onglet Coach) |
+| `ai_coaching` | Coach IA (carte du hub Training) |
 | `coach_dashboard` | Espace coach (futur) |
 | `custom_animations` | Animations Rive avancées (futur) |
 | `priority_support` | Support prioritaire |

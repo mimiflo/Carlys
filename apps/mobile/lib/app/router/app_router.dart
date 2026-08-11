@@ -2,12 +2,14 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../features/academy/presentation/screens/academy_screen.dart';
 import '../../features/authentication/presentation/controllers/auth_controller.dart';
 import '../../features/authentication/presentation/screens/forgot_password_screen.dart';
 import '../../features/authentication/presentation/screens/login_screen.dart';
 import '../../features/authentication/presentation/screens/register_screen.dart';
 import '../../features/authentication/presentation/screens/sessions_screen.dart';
 import '../../features/coaching/presentation/screens/coach_page.dart';
+import '../../features/community/presentation/screens/community_screen.dart';
 import '../../features/dashboard/presentation/screens/home_screen.dart';
 import '../../features/exercises/presentation/screens/exercise_detail_screen.dart';
 import '../../features/exercises/presentation/screens/exercise_library_screen.dart';
@@ -21,6 +23,7 @@ import '../../features/profile/presentation/screens/profile_screen.dart';
 import '../../features/progress/presentation/screens/progress_screen.dart';
 import '../../features/settings/presentation/screens/settings_screen.dart';
 import '../../features/subscription/presentation/screens/subscription_screen.dart';
+import '../../features/training/presentation/screens/training_hub_screen.dart';
 import '../../features/workout_history/presentation/screens/workout_detail_screen.dart';
 import '../../features/workout_history/presentation/screens/workout_history_screen.dart';
 import '../../features/workout_session/presentation/screens/active_workout_screen.dart';
@@ -133,9 +136,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const ForgotPasswordScreen(),
       ),
 
-      // ── Coquille : 6 onglets avec bottom bar ──────────────────────
+      // ── Coquille : 5 onglets avec bottom bar ──────────────────────
       // L'ordre des branches EST celui de `appBottomBarItems` : la barre
       // rend un index, la coquille ouvre la branche du même rang.
+      //
+      // Une branche peut porter PLUSIEURS routes racines : les écrans
+      // regroupés sous un onglet (exercices et coach sous Training, la
+      // nutrition sous Academy) se poussent dans la pile de leur branche —
+      // la bottom bar reste visible, et « retour » ramène au hub.
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
             AppShell(navigationShell: navigationShell),
@@ -152,6 +160,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           StatefulShellBranch(
             routes: [
               GoRoute(
+                path: AppRoutes.training,
+                name: 'training',
+                builder: (context, state) => const TrainingHubScreen(),
+              ),
+              GoRoute(
                 path: AppRoutes.exercises,
                 name: 'exercises',
                 builder: (context, state) => const ExerciseLibraryScreen(),
@@ -166,10 +179,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                   ),
                 ],
               ),
-            ],
-          ),
-          StatefulShellBranch(
-            routes: [
               GoRoute(
                 path: AppRoutes.coach,
                 name: 'coach',
@@ -189,6 +198,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           StatefulShellBranch(
             routes: [
               GoRoute(
+                path: AppRoutes.academy,
+                name: 'academy',
+                builder: (context, state) => const AcademyScreen(),
+              ),
+              GoRoute(
                 path: AppRoutes.nutrition,
                 name: 'nutrition',
                 builder: (context, state) => const NutritionScreen(),
@@ -198,13 +212,23 @@ final appRouterProvider = Provider<GoRouter>((ref) {
           StatefulShellBranch(
             routes: [
               GoRoute(
-                path: AppRoutes.profile,
-                name: 'profile',
-                builder: (context, state) => const ProfileScreen(),
+                path: AppRoutes.community,
+                name: 'community',
+                builder: (context, state) => const CommunityScreen(),
               ),
             ],
           ),
         ],
+      ),
+
+      // Le profil n'est plus un onglet : il s'ouvre depuis l'avatar de
+      // l'accueil, en plein écran — les réglages sont un aparté, pas une
+      // destination quotidienne.
+      GoRoute(
+        path: AppRoutes.profile,
+        name: 'profile',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const ProfileScreen(),
       ),
 
       // ── Plein écran, hors coquille (pas de bottom bar) ────────────

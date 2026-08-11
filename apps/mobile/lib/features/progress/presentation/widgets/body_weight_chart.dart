@@ -78,12 +78,15 @@ class BodyWeightChart extends StatelessWidget {
                             FlSpot(i.toDouble(), entries[i].value),
                         ],
                         isCurved: true,
-                        color: AppColors.primaryLight,
+                        // ROSE, à dessein : tout l'écran vit en violet et
+                        // orange, la courbe est LA donnée — le magenta la
+                        // détache de son décor d'un seul coup d'œil.
+                        color: AppColors.magenta,
                         barWidth: 2,
                         dotData: const FlDotData(show: false),
                         belowBarData: BarAreaData(
                           show: true,
-                          color: AppColors.primaryCardSoft,
+                          color: AppColors.magentaCardSoft,
                         ),
                       ),
                     ],

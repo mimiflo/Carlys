@@ -2,7 +2,6 @@ import 'package:carlys_mobile/app/app.dart';
 import 'package:carlys_mobile/app/environment/app_environment.dart';
 import 'package:carlys_mobile/app/restore/app_restore.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
-import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
 import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';
 import 'package:flutter/material.dart';
@@ -12,6 +11,7 @@ import 'package:flutter_test/flutter_test.dart';
 import '../support/fake_auth_repository.dart';
 import '../support/fake_workout_repository.dart';
 import '../support/first_run_prefs.dart';
+import '../support/navigation.dart';
 
 void main() {
   setUp(() {
@@ -114,13 +114,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // La déconnexion vit désormais dans l'onglet Profil.
-    await tester.tap(
-      find.descendant(
-        of: find.byType(AppBottomBar),
-        matching: find.text('Profil'),
-      ),
-    );
-    await tester.pumpAndSettle();
+    await openProfile(tester);
     await tester.scrollUntilVisible(find.text('Se déconnecter'), 150);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Se déconnecter'), warnIfMissed: false);

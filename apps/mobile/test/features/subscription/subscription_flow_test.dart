@@ -3,7 +3,6 @@ import 'package:carlys_mobile/app/environment/app_environment.dart';
 import 'package:carlys_mobile/app/restore/app_restore.dart';
 import 'package:carlys_mobile/core/errors/app_exception.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
-import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
 import 'package:carlys_mobile/features/exercises/data/repositories/exercises_repository_impl.dart';
 import 'package:carlys_mobile/features/exercises/domain/entities/exercise.dart';
@@ -20,6 +19,7 @@ import '../../support/fake_exercises_repository.dart';
 import '../../support/fake_subscription_repository.dart';
 import '../../support/fake_workout_repository.dart';
 import '../../support/first_run_prefs.dart';
+import '../../support/navigation.dart';
 
 Widget appWith({
   required FakeSubscriptionRepository subscription,
@@ -80,13 +80,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(
-      find.descendant(
-        of: find.byType(AppBottomBar),
-        matching: find.text('Profil'),
-      ),
-    );
-    await tester.pumpAndSettle();
+    await openProfile(tester);
     // L'abonnement s'ouvre depuis la bannière de plan du profil.
     await reveal(tester, find.byType(ProfilePlanCard));
     await tester.tap(find.byType(ProfilePlanCard));
@@ -114,13 +108,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(
-      find.descendant(
-        of: find.byType(AppBottomBar),
-        matching: find.text('Profil'),
-      ),
-    );
-    await tester.pumpAndSettle();
+    await openProfile(tester);
     // L'abonnement s'ouvre depuis la bannière de plan du profil.
     await reveal(tester, find.byType(ProfilePlanCard));
     await tester.tap(find.byType(ProfilePlanCard));
@@ -150,13 +138,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(
-      find.descendant(
-        of: find.byType(AppBottomBar),
-        matching: find.text('Exercices'),
-      ),
-    );
-    await tester.pumpAndSettle();
+    await openExerciseLibrary(tester);
     await tester.pumpAndSettle();
 
     // La bibliothèque s'ouvre sur la grille des groupes : on passe par

@@ -139,22 +139,33 @@ mais sépare toujours interface / logique / données.
 Le routeur est exposé par `appRouterProvider` (`lib/app/router/app_router.dart`)
 et consommé par `MaterialApp.router`. Les chemins vivent dans `AppRoutes`.
 
-Deux familles de routes : la **coquille à six onglets**
+Deux familles de routes : la **coquille à cinq onglets**
 (`StatefulShellRoute.indexedStack`, barre basse visible) et le **plein écran**
 (hors coquille), pour tout ce qui demande de la concentration ou une sortie
 explicite.
+
+Les cinq onglets — Accueil, Training, Progrès, Academy, Communauté — sont des
+**hubs** : une branche peut porter plusieurs routes racines, et un `push` vers
+une route sœur de la même branche garde la barre basse visible (le retour
+ramène au hub). C'est ainsi que les anciens onglets ont été rangés : la
+bibliothèque d'exercices et le Coach IA vivent dans la branche Training, la
+nutrition dans la branche Academy, et le profil s'ouvre depuis l'avatar de
+l'accueil (plein écran).
 
 | Chemin                  | Nom               | Écran                              |
 | ----------------------- | ----------------- | ---------------------------------- |
 | `/`                     | `splash`          | `SplashScreen`                     |
 | `/login` · `/register` · `/forgot-password` | —  | Authentification    |
 | `/home`                 | `home`            | Accueil (onglet)                   |
-| `/exercises`            | `exercises`       | Bibliothèque (onglet)              |
+| `/training`             | `training`        | Hub Training (onglet)              |
+| `/exercises`            | `exercises`       | Bibliothèque (branche Training)    |
 | `/exercises/:idOrSlug`  | `exercise-detail` | Fiche d'exercice (plein écran)     |
-| `/coach`                | `coach`           | Coach IA (onglet)                  |
+| `/coach`                | `coach`           | Coach IA (branche Training)        |
 | `/progress`             | `progress`        | Progression (onglet)               |
-| `/nutrition`            | `nutrition`       | Nutrition (onglet)                 |
-| `/profile`              | `profile`         | Profil & réglages (onglet)         |
+| `/academy`              | `academy`         | Academy (onglet)                   |
+| `/nutrition`            | `nutrition`       | Nutrition (branche Academy)        |
+| `/community`            | `community`       | Communauté (onglet)                |
+| `/profile`              | `profile`         | Profil & réglages (plein écran, via l'avatar de l'accueil) |
 | `/workout`              | `active-workout`  | Séance active (plein écran)        |
 | `/templates`            | `templates`       | Mes modèles de séance (plein écran)|
 | `/templates/:templateId`| `template-editor` | Éditeur de modèle (plein écran)    |

@@ -25,6 +25,7 @@ import '../support/fake_progress_repository.dart';
 import '../support/fake_subscription_repository.dart';
 import '../support/fake_workout_repository.dart';
 import '../support/first_run_prefs.dart';
+import '../support/navigation.dart';
 
 /// L'onglet Coach dans la coquille.
 ///
@@ -77,29 +78,18 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  Future<void> tapTab(WidgetTester tester, String label) async {
-    await tester.tap(
-      find.descendant(
-        of: find.byType(AppBottomBar),
-        matching: find.text(label),
-      ),
-    );
-    await tester.pumpAndSettle();
-  }
-
-  testWidgets('la barre porte six onglets, dont Coach au centre',
+  testWidgets('la barre porte cinq onglets — le coach vit dans Training',
       (tester) async {
     await pumpApp(tester, FakeCoachRepository());
 
-    expect(appBottomBarItems, hasLength(6));
-    expect(appBottomBarItems[2].label, 'Coach');
+    expect(appBottomBarItems, hasLength(5));
     expect(
-      find.descendant(
-        of: find.byType(AppBottomBar),
-        matching: find.text('Coach'),
-      ),
-      findsOneWidget,
+      appBottomBarItems.map((item) => item.label),
+      ['Accueil', 'Training', 'Progrès', 'Academy', 'Communauté'],
     );
+    // Le coach n'est plus un onglet : il s'ouvre depuis le hub Training.
+    await tapTab(tester, 'Training');
+    expect(find.text('Coach IA'), findsOneWidget);
   });
 
   testWidgets('chaque onglet ouvre le sien — aucun décalage d’index',
@@ -124,20 +114,19 @@ void main() {
       ),
     );
 
-    await tapTab(tester, 'Coach');
+    await openCoach(tester);
     expect(find.byType(CoachPage), findsOneWidget);
-    expect(find.text('Coach IA'), findsOneWidget);
     expect(find.text('On reprend où on s’est arrêtés.'), findsOneWidget);
 
-    // Les onglets qui SUIVENT le nouveau venu sont ceux qui risquaient le
-    // décalage : ce sont eux qu'on vérifie, un par un.
+    // Chaque onglet ouvre le sien — c'est l'appariement barre/branche qu'on
+    // éprouve, l'erreur classique après une réorganisation.
     await tapTab(tester, 'Progrès');
     expect(find.byType(ProgressScreen), findsOneWidget);
 
-    await tapTab(tester, 'Nutrition');
+    await openNutrition(tester);
     expect(find.byType(NutritionScreen), findsOneWidget);
 
-    await tapTab(tester, 'Profil');
+    await openProfile(tester);
     expect(find.byType(ProfileScreen), findsOneWidget);
   });
 
@@ -146,7 +135,7 @@ void main() {
     final coach = FakeCoachRepository();
     await pumpApp(tester, coach);
 
-    await tapTab(tester, 'Coach');
+    await openCoach(tester);
 
     expect(find.text('Ton coach est là'), findsOneWidget);
     expect(coach.createdConversations, isEmpty);

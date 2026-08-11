@@ -13,6 +13,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../support/fake_auth_repository.dart';
 import '../../support/fake_workout_repository.dart';
 import '../../support/first_run_prefs.dart';
+import '../../support/navigation.dart';
 
 Widget app() => ProviderScope(
       overrides: [
@@ -42,14 +43,9 @@ Future<void> reveal(WidgetTester tester, Finder item) async {
 
 Future<void> openSettings(WidgetTester tester) async {
   await tester.pumpAndSettle();
-  // L'apparence se règle depuis l'onglet Profil.
-  await tester.tap(
-    find.descendant(
-      of: find.byType(AppBottomBar),
-      matching: find.text('Profil'),
-    ),
-  );
-  await tester.pumpAndSettle();
+  // L'apparence se règle depuis le profil — ouvert par l'avatar de
+  // l'accueil depuis la réorganisation en cinq onglets.
+  await openProfile(tester);
   // La ligne « Thème sombre » ouvre l'écran d'apparence (l'interrupteur ne
   // bascule que clair ↔ sombre).
   await reveal(tester, find.text('Thème sombre'));

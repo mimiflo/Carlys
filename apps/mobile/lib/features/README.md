@@ -30,6 +30,9 @@ feature/
 | `workout_session`  | —                 | Séances **réalisées** offline-first (Drift → file de sync → API) |
 | `workout_template` | `workout_session` | Modèles de séance **prescriptifs** : composer, enregistrer, puis lancer une vraie séance pré-remplie |
 | `coaching`         | `workout_session`, `workout_template`, `progress` | Le coach lit l'état réel (modèles, records, poids) pour ses amorces, et lance la séance qu'il propose |
+| `training`         | `workout_session` | Hub de l'onglet Training : carte de reprise de la séance active, portes vers modèles, exercices, coach et historique |
+| `academy`          | —                 | Contenu ÉDITORIAL embarqué (leçons + questions, `assets/academy/pack.json`) : fonctionne hors ligne ; la nutrition s'ouvre depuis ce hub |
+| `community`        | —                 | Amis, encouragements, défis. Pas encore de serveur : `UnbackedCommunityRepository` (états vides) en développement, dépôt de démonstration dans `lib/demo/` |
 
 `workout_template` réutilise les entités `SetKind` / `LocalSyncState`, les
 écritures de séance (`WorkoutSessionWriter`) et le sélecteur d'exercice

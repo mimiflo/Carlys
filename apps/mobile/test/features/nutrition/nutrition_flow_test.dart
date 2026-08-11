@@ -2,7 +2,6 @@ import 'package:carlys_mobile/app/app.dart';
 import 'package:carlys_mobile/app/environment/app_environment.dart';
 import 'package:carlys_mobile/app/restore/app_restore.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
-import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
 import 'package:carlys_mobile/features/nutrition/data/repositories/nutrition_repository_impl.dart';
 import 'package:carlys_mobile/features/nutrition/domain/entities/nutrition.dart';
@@ -16,6 +15,7 @@ import '../../support/fake_auth_repository.dart';
 import '../../support/fake_nutrition_repository.dart';
 import '../../support/fake_workout_repository.dart';
 import '../../support/first_run_prefs.dart';
+import '../../support/navigation.dart' as navigation;
 
 Widget appWith(FakeNutritionRepository nutrition) => ProviderScope(
       overrides: [
@@ -44,15 +44,9 @@ Future<void> reveal(WidgetTester tester, Finder item) async {
   await tester.pumpAndSettle();
 }
 
-Future<void> openNutrition(WidgetTester tester) async {
+Future<void> openNutritionTab(WidgetTester tester) async {
   await tester.pumpAndSettle();
-  await tester.tap(
-    find.descendant(
-      of: find.byType(AppBottomBar),
-      matching: find.text('Nutrition'),
-    ),
-  );
-  await tester.pumpAndSettle();
+  await navigation.openNutrition(tester);
 }
 
 void main() {
@@ -75,7 +69,7 @@ void main() {
     testWidgets('profil incomplet : manquants listés et formulaire affiché',
         (tester) async {
       await tester.pumpWidget(appWith(FakeNutritionRepository()));
-      await openNutrition(tester);
+      await openNutritionTab(tester);
 
       expect(find.text('Informations manquantes'), findsOneWidget);
       expect(find.text('Sexe biologique'), findsWidgets);
@@ -90,7 +84,7 @@ void main() {
         (tester) async {
       final nutrition = FakeNutritionRepository(weightKg: 80);
       await tester.pumpWidget(appWith(nutrition));
-      await openNutrition(tester);
+      await openNutritionTab(tester);
 
       await reveal(tester, find.text('Homme'));
       await tester.tap(find.text('Homme'));
@@ -142,7 +136,7 @@ void main() {
           ),
         ),
       );
-      await openNutrition(tester);
+      await openNutritionTab(tester);
 
       expect(find.textContaining('OBJECTIF'), findsOneWidget);
       expect(find.text('24,7'), findsOneWidget);

@@ -345,7 +345,7 @@ entre une capture et la référence n'est donc pas, en soi, un défaut de l'appl
 | Écran | Écart | Raison |
 | ----- | ----- | ------ |
 | Tous | Barre de statut simulée (9:41, batterie) absente | Fournie par l'OS |
-| Tous | **Six onglets au lieu de cinq** : Coach s'insère entre Exercices et Progrès | Écart VOULU, hors maquette : demandé au produit. Position centrale — la plus atteignable au pouce, et la fonctionnalité qu'on veut voir. L'ordre des branches du routeur EST celui de `appBottomBarItems` ; `coach_tab_test.dart` tape chaque onglet pour interdire un décalage d'index |
+| Tous | **Six onglets au lieu de cinq** : Coach s'insère entre Exercices et Progrès | Écart VOULU à l'époque, hors maquette. **Caduc depuis la réorganisation d'août 2026** : la barre est repassée à cinq onglets (Accueil, Training, Progrès, Academy, Communauté) et le coach vit dans le hub Training — voir `docs/architecture/mobile.md`. `coach_tab_test.dart` continue de taper chaque onglet pour interdire un décalage d'index |
 | Bienvenue | Écran entier absent de la maquette | Écart VOULU : planche de marque fournie par le produit, montrée avant l'onboarding |
 | Accueil | Pastilles « 57 BPM » et « 7H20 » remplacées par des faits d'entraînement | Aucune donnée de santé dans le domaine |
 | Accueil, Abonnement, Onboarding | **Particules blanches** dérivant autour du cœur et devant lui | Écart VOULU, hors maquette : demandé au produit ; réglé pour rester un accent (quatre ou cinq à la fois, 2 à 5 points de diamètre) |

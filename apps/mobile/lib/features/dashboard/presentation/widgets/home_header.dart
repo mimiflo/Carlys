@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 
+import 'package:go_router/go_router.dart';
+
+import '../../../../app/router/app_routes.dart';
 import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
 
@@ -74,34 +77,37 @@ class HomeHeader extends StatelessWidget {
           ),
           Semantics(
             label: firstName == null ? 'Profil' : 'Profil de $firstName',
-            child: Container(
-              width: _avatarSize,
-              height: _avatarSize,
-              decoration: BoxDecoration(
-                borderRadius: AppRadius.avatarAll,
-                gradient: LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: [
-                    AppColors.primary,
-                    // Violet éteint de la maquette, dérivé des tokens.
-                    Color.lerp(
+            button: true,
+            child: _AvatarButton(
+              child: Container(
+                width: _avatarSize,
+                height: _avatarSize,
+                decoration: BoxDecoration(
+                  borderRadius: AppRadius.avatarAll,
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
                       AppColors.primary,
-                      AppColors.darkBackground,
-                      0.55,
-                    )!,
-                  ],
+                      // Violet éteint de la maquette, dérivé des tokens.
+                      Color.lerp(
+                        AppColors.primary,
+                        AppColors.darkBackground,
+                        0.55,
+                      )!,
+                    ],
+                  ),
+                  border: const Border.fromBorderSide(
+                    BorderSide(color: AppColors.darkBorderStrong),
+                  ),
                 ),
-                border: const Border.fromBorderSide(
-                  BorderSide(color: AppColors.darkBorderStrong),
-                ),
-              ),
-              child: Center(
-                child: Text(
-                  initial,
-                  style: AppTypography.subheading.copyWith(
-                    fontWeight: FontWeight.w700,
-                    color: AppColors.neutral0,
+                child: Center(
+                  child: Text(
+                    initial,
+                    style: AppTypography.subheading.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: AppColors.neutral0,
+                    ),
                   ),
                 ),
               ),
@@ -109,6 +115,23 @@ class HomeHeader extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+/// L'avatar est LA porte du profil depuis la réorganisation en cinq onglets :
+/// l'onglet Profil n'existe plus, ce geste le remplace.
+class _AvatarButton extends StatelessWidget {
+  const _AvatarButton({required this.child});
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: () => context.push(AppRoutes.profile),
+      borderRadius: AppRadius.avatarAll,
+      child: child,
     );
   }
 }

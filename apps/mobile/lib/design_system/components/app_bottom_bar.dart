@@ -22,10 +22,11 @@ class AppBottomBarItem {
 
 /// Les 6 onglets de l'application.
 ///
-/// La maquette en montrait cinq (home, exercices, insights, nutrition,
-/// profil) ; le coach s'est ajouté au **centre** de la barre — c'est la
-/// position la plus atteignable au pouce, et la fonctionnalité qu'on veut
-/// voir. Écart assumé, consigné dans `docs/product/design-conformity.md`.
+/// Réorganisation d'août 2026 : cinq destinations, chacune un VERBE du
+/// parcours — arriver (Accueil), s'entraîner (Training), mesurer (Progrès),
+/// comprendre (Academy), s'encourager (Communauté). L'exercice, le coach et
+/// la nutrition vivent DANS ces destinations ; le profil s'ouvre depuis
+/// l'avatar de l'accueil.
 const List<AppBottomBarItem> appBottomBarItems = [
   AppBottomBarItem(
     icon: Icons.home_outlined,
@@ -35,12 +36,7 @@ const List<AppBottomBarItem> appBottomBarItems = [
   AppBottomBarItem(
     icon: Icons.fitness_center_outlined,
     activeIcon: AppIcons.workout,
-    label: 'Exercices',
-  ),
-  AppBottomBarItem(
-    icon: AppIcons.coachOutline,
-    activeIcon: AppIcons.coach,
-    label: 'Coach',
+    label: 'Training',
   ),
   AppBottomBarItem(
     icon: Icons.insights_outlined,
@@ -48,14 +44,14 @@ const List<AppBottomBarItem> appBottomBarItems = [
     label: 'Progrès',
   ),
   AppBottomBarItem(
-    icon: Icons.restaurant_outlined,
-    activeIcon: AppIcons.nutrition,
-    label: 'Nutrition',
+    icon: Icons.school_outlined,
+    activeIcon: Icons.school_rounded,
+    label: 'Academy',
   ),
   AppBottomBarItem(
-    icon: Icons.person_outline_rounded,
-    activeIcon: AppIcons.profile,
-    label: 'Profil',
+    icon: Icons.group_outlined,
+    activeIcon: Icons.group_rounded,
+    label: 'Communauté',
   ),
 ];
 

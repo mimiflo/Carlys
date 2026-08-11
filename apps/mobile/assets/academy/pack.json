@@ -1,0 +1,213 @@
+{
+  "version": 1,
+  "lessons": [
+    {
+      "id": "anatomie-pectoraux",
+      "category": "anatomie",
+      "title": "Les pectoraux, un éventail",
+      "body": "Le grand pectoral n'est pas un bloc : ses fibres partent de la clavicule, du sternum et des côtes pour converger vers l'humérus, en éventail. C'est pourquoi l'inclinaison du banc déplace le travail — incliné vers les fibres claviculaires (haut des pecs), décliné vers les fibres basses. Aucune variante n'isole totalement une zone : elle déplace l'accent.",
+      "question": {
+        "prompt": "Pourquoi le développé incliné cible-t-il davantage le haut des pectoraux ?",
+        "choices": [
+          "Parce que la charge est plus légère",
+          "Parce qu'il oriente l'effort vers les fibres claviculaires",
+          "Parce que les triceps travaillent moins"
+        ],
+        "answerIndex": 1,
+        "explanation": "Les fibres du grand pectoral partent de trois origines ; incliner le banc aligne la poussée avec les fibres hautes, dites claviculaires."
+      }
+    },
+    {
+      "id": "anatomie-dos",
+      "category": "anatomie",
+      "title": "Le dos : largeur et épaisseur",
+      "body": "Le grand dorsal donne la largeur — il tire le bras vers le bas et l'arrière, d'où les tractions et tirages verticaux. Les trapèzes et rhomboïdes donnent l'épaisseur — ils rapprochent les omoplates, d'où les rowings. Un programme de dos complet combine un tirage vertical et un tirage horizontal.",
+      "question": {
+        "prompt": "Quel mouvement développe surtout l'ÉPAISSEUR du dos ?",
+        "choices": [
+          "Les tractions",
+          "Le tirage vertical poulie",
+          "Le rowing barre"
+        ],
+        "answerIndex": 2,
+        "explanation": "Les tirages horizontaux (rowings) rapprochent les omoplates et chargent trapèzes et rhomboïdes — l'épaisseur. Les tirages verticaux construisent la largeur."
+      }
+    },
+    {
+      "id": "anatomie-jambes",
+      "category": "anatomie",
+      "title": "Quadriceps et ischios, l'équilibre",
+      "body": "Le quadriceps étend le genou ; les ischio-jambiers le fléchissent et étendent la hanche. Les mouvements dominants de genou (squat, presse) chargent surtout les quadriceps ; les dominants de hanche (soulevé de terre roumain, hip thrust) chargent ischios et fessiers. Négliger l'un des deux camps crée un déséquilibre qui se paie au genou.",
+      "question": {
+        "prompt": "Le soulevé de terre roumain travaille principalement…",
+        "choices": [
+          "Les quadriceps",
+          "Les ischio-jambiers et les fessiers",
+          "Les mollets"
+        ],
+        "answerIndex": 1,
+        "explanation": "C'est un mouvement dominant de hanche : le genou plie peu, la hanche s'étend — le travail va aux ischios et aux fessiers."
+      }
+    },
+    {
+      "id": "technique-progression",
+      "category": "technique",
+      "title": "La surcharge progressive",
+      "body": "Le muscle s'adapte à ce qu'on lui demande — puis s'arrête dès que la demande stagne. Progresser, c'est augmenter QUELQUE CHOSE au fil des semaines : la charge, les répétitions, les séries, ou la qualité d'exécution. Ajouter 2,5 kg ou une répétition par semaine suffit ; l'important est que la demande monte.",
+      "question": {
+        "prompt": "Qu'est-ce que la surcharge progressive ?",
+        "choices": [
+          "S'entraîner jusqu'à l'échec à chaque série",
+          "Augmenter progressivement la demande imposée au muscle",
+          "Changer d'exercices à chaque séance"
+        ],
+        "answerIndex": 1,
+        "explanation": "C'est le principe moteur de la progression : charge, répétitions ou volume doivent augmenter au fil du temps pour que l'adaptation continue."
+      }
+    },
+    {
+      "id": "technique-amplitude",
+      "category": "technique",
+      "title": "L'amplitude complète",
+      "body": "Une répétition complète étire le muscle puis le contracte sur toute sa course. Les demi-répétitions permettent de charger plus lourd, mais la recherche récente est nette : le travail en position ÉTIRÉE est un puissant stimulus de croissance. Réduire l'amplitude pour gonfler la barre, c'est échanger du muscle contre de l'ego.",
+      "question": {
+        "prompt": "Quelle portion de l'amplitude est particulièrement efficace pour l'hypertrophie ?",
+        "choices": [
+          "La position étirée",
+          "Le verrouillage final",
+          "Le quart supérieur du mouvement"
+        ],
+        "answerIndex": 0,
+        "explanation": "Travailler le muscle en position allongée (étirée) produit un stimulus de croissance supérieur — d'où l'intérêt des amplitudes complètes."
+      }
+    },
+    {
+      "id": "technique-repos",
+      "category": "technique",
+      "title": "Le repos entre les séries",
+      "body": "Le repos n'est pas du temps perdu : c'est ce qui permet de reproduire un effort de qualité. Pour la force (charges lourdes, 1 à 5 répétitions), 3 à 5 minutes. Pour l'hypertrophie, 1 min 30 à 3 min. Écourter le repos fatigue, mais réduit la charge totale soulevée — et c'est elle qui fait progresser.",
+      "question": {
+        "prompt": "Pour un travail de force sur charges lourdes, le repos conseillé entre les séries est…",
+        "choices": [
+          "30 secondes",
+          "1 minute",
+          "3 à 5 minutes"
+        ],
+        "answerIndex": 2,
+        "explanation": "La filière énergétique des efforts lourds (ATP-PC) met plusieurs minutes à se recharger : un repos court ferait chuter les performances des séries suivantes."
+      }
+    },
+    {
+      "id": "nutrition-proteines",
+      "category": "nutrition",
+      "title": "Les protéines, brique du muscle",
+      "body": "Le muscle se construit avec des acides aminés. La fourchette efficace pour la prise de muscle se situe autour de 1,6 à 2,2 g de protéines par kilo de poids de corps et par jour, réparties sur la journée. Au-delà, le bénéfice supplémentaire est faible. Sources : viandes, poissons, œufs, laitages, légumineuses.",
+      "question": {
+        "prompt": "Quel apport quotidien en protéines vise-t-on généralement en prise de muscle ?",
+        "choices": [
+          "0,5 g par kilo de poids de corps",
+          "1,6 à 2,2 g par kilo de poids de corps",
+          "5 g par kilo de poids de corps"
+        ],
+        "answerIndex": 1,
+        "explanation": "C'est la fourchette où la synthèse protéique musculaire est maximisée ; au-delà, le surplus n'apporte presque rien de plus."
+      }
+    },
+    {
+      "id": "nutrition-calories",
+      "category": "nutrition",
+      "title": "Le bilan calorique",
+      "body": "Le poids suit le bilan : manger plus que sa dépense fait prendre du poids, manger moins en fait perdre. La dépense quotidienne (TDEE) se calcule à partir du métabolisme de base et de l'activité — c'est ce que fait l'onglet Nutrition. Un surplus modéré (+200 à 300 kcal) suffit pour construire du muscle en limitant le gras.",
+      "question": {
+        "prompt": "Pour prendre du muscle en limitant la prise de gras, on vise…",
+        "choices": [
+          "Un surplus calorique modéré (+200 à 300 kcal)",
+          "Un surplus massif (+1000 kcal)",
+          "Un déficit sévère"
+        ],
+        "answerIndex": 0,
+        "explanation": "La construction musculaire a un rythme plafonné : au-delà d'un léger surplus, l'excédent part en réserves adipeuses."
+      }
+    },
+    {
+      "id": "nutrition-hydratation",
+      "category": "nutrition",
+      "title": "L'eau, nutriment oublié",
+      "body": "Le muscle est composé aux trois quarts d'eau. Une déshydratation de 2 % du poids de corps suffit à faire chuter la force et la concentration. Boire régulièrement dans la journée — pas seulement pendant la séance — et davantage par temps chaud. L'urine claire est le repère le plus simple.",
+      "question": {
+        "prompt": "À partir de quel niveau de déshydratation la performance chute-t-elle nettement ?",
+        "choices": [
+          "Environ 2 % du poids de corps",
+          "Environ 10 % du poids de corps",
+          "La déshydratation n'affecte pas la force"
+        ],
+        "answerIndex": 0,
+        "explanation": "Dès ~2 % de perte hydrique, force, endurance et concentration déclinent de façon mesurable."
+      }
+    },
+    {
+      "id": "recuperation-sommeil",
+      "category": "recuperation",
+      "title": "Le sommeil, l'entraînement invisible",
+      "body": "C'est pendant le sommeil que l'hormone de croissance est sécrétée et que le muscle se répare. Moins de 7 heures par nuit de façon chronique : récupération amputée, faim déréglée, progression freinée. Se coucher et se lever à heures régulières compte autant que la durée.",
+      "question": {
+        "prompt": "Pourquoi le sommeil est-il déterminant pour la progression ?",
+        "choices": [
+          "Parce qu'il augmente la motivation uniquement",
+          "Parce que la réparation musculaire et la sécrétion d'hormone de croissance y sont maximales",
+          "Il n'a pas d'effet mesurable sur la progression"
+        ],
+        "answerIndex": 1,
+        "explanation": "Le sommeil profond concentre la sécrétion d'hormone de croissance et la synthèse des tissus : c'est là que la séance se transforme en muscle."
+      }
+    },
+    {
+      "id": "recuperation-courbatures",
+      "category": "recuperation",
+      "title": "Les courbatures, mal comprises",
+      "body": "Les courbatures ne sont pas de l'acide lactique (éliminé en moins d'une heure) : ce sont des micro-dommages musculaires, surtout après un travail excentrique ou nouveau. Elles ne mesurent PAS la qualité d'une séance — on peut progresser sans courbatures, et être courbaturé sans progresser. Bouger légèrement les atténue.",
+      "question": {
+        "prompt": "Que révèlent les courbatures du lendemain ?",
+        "choices": [
+          "Une accumulation d'acide lactique",
+          "Des micro-dommages musculaires, souvent après un effort inhabituel",
+          "Que la séance a forcément été efficace"
+        ],
+        "answerIndex": 1,
+        "explanation": "L'acide lactique disparaît en moins d'une heure. Les courbatures viennent de micro-lésions des fibres — fréquentes après du nouveau, sans lien direct avec l'efficacité."
+      }
+    },
+    {
+      "id": "recuperation-frequence",
+      "category": "recuperation",
+      "title": "Fréquence : laisser le muscle se reconstruire",
+      "body": "Un muscle travaillé dur a besoin de 48 à 72 heures avant d'être re-sollicité lourdement. Entraîner chaque groupe deux fois par semaine est un excellent compromis volume/récupération pour la plupart des pratiquants. S'entraîner tous les jours est possible — à condition d'alterner les groupes.",
+      "question": {
+        "prompt": "Combien de temps un groupe musculaire travaillé intensément met-il à récupérer ?",
+        "choices": [
+          "6 heures",
+          "48 à 72 heures",
+          "Une semaine entière au minimum"
+        ],
+        "answerIndex": 1,
+        "explanation": "La reconstruction des fibres demande 2 à 3 jours ; c'est ce qui justifie l'alternance des groupes musculaires dans la semaine."
+      }
+    },
+    {
+      "id": "technique-echauffement",
+      "category": "technique",
+      "title": "L'échauffement utile",
+      "body": "Un bon échauffement élève la température musculaire et prépare le mouvement du jour : 5 minutes d'activation générale, puis des séries montantes de l'exercice lui-même — légères, peu nombreuses, sans fatigue. Les étirements statiques longs AVANT l'effort réduisent temporairement la force ; gardez-les pour après.",
+      "question": {
+        "prompt": "Quelle est la meilleure préparation juste avant une série lourde ?",
+        "choices": [
+          "Des étirements statiques prolongés",
+          "Des séries montantes légères du même exercice",
+          "Aucune préparation n'est nécessaire"
+        ],
+        "answerIndex": 1,
+        "explanation": "Les séries d'approche répètent le geste exact en montant la charge — elles préparent muscles et système nerveux sans entamer la réserve de force."
+      }
+    }
+  ]
+}

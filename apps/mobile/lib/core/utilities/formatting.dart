@@ -164,3 +164,28 @@ String formatRelativeDayMono(DateTime date, {DateTime? now}) {
   final months = days ~/ 30;
   return 'IL Y A $months MOIS';
 }
+
+/// Heure relative courte d'un fil social : « il y a 2 h », « hier »…
+///
+/// Volontairement grossière — un fil d'encouragements n'a pas besoin de la
+/// minute près, et une précision fausse (l'horloge de l'appareil) se
+/// remarquerait plus qu'une échelle honnête.
+String formatRelativeTime(DateTime date, {DateTime? now}) {
+  final difference = (now ?? DateTime.now()).difference(date);
+  if (difference.inMinutes < 1) {
+    return 'à l’instant';
+  }
+  if (difference.inHours < 1) {
+    return 'il y a ${difference.inMinutes} min';
+  }
+  if (difference.inHours < 24) {
+    return 'il y a ${difference.inHours} h';
+  }
+  if (difference.inDays == 1) {
+    return 'hier';
+  }
+  if (difference.inDays < 7) {
+    return 'il y a ${difference.inDays} jours';
+  }
+  return formatShortDateMono(date).toLowerCase();
+}

@@ -319,10 +319,12 @@ apps/mobile/lib/features/coaching/
   presentation/{controllers,screens,widgets}
 ```
 
-**Le coach a son onglet.** Sixième entrée de la barre basse, insérée au
-**centre** (entre Exercices et Progrès) : la position la plus atteignable au
-pouce, et la fonctionnalité qu'on veut voir. La question ouverte n° 4 est donc
-tranchée — onglet, pas carte sur l'accueil.
+**Le coach vit dans le hub Training** *(réorganisation d'août 2026 — il a
+d'abord été un sixième onglet, au centre de la barre)*. La barre basse est
+repassée à cinq entrées (Accueil, Training, Progrès, Academy, Communauté) et
+le coach s'ouvre en un geste depuis la carte « Coach IA » du hub Training :
+sa route `/coach` est une **route sœur de la branche Training**, la barre
+reste donc visible et le retour ramène au hub.
 
 L'ordre des branches du routeur EST celui de `appBottomBarItems` : la barre
 rend un rang, la coquille ouvre la branche du même rang. Insérer un onglet au
@@ -456,6 +458,8 @@ Le streaming, s'il est retenu, s'insère entre 2 et 3.
    `primary`.
 3. **Quota quotidien** — 30 messages par jour est une valeur de départ, à caler
    sur le prix de l'abonnement.
-4. ~~**Point d'entrée**~~ — **tranché : un sixième onglet**, au centre de la
-   barre. La carte sur l'accueil et le lien depuis le débrief de séance restent
-   possibles en complément ; ils ne remplacent pas l'onglet.
+4. ~~**Point d'entrée**~~ — tranché une première fois comme sixième onglet au
+   centre de la barre, puis **re-tranché en août 2026** avec la réorganisation
+   en cinq onglets : le coach s'ouvre depuis la carte « Coach IA » du hub
+   Training (route sœur de la branche, barre visible). La carte sur l'accueil
+   et le lien depuis le débrief de séance restent possibles en complément.

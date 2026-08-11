@@ -21,12 +21,14 @@ import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
 import 'package:carlys_mobile/demo/demo_catalog.dart';
 import 'package:carlys_mobile/demo/demo_overrides.dart';
 import 'package:carlys_mobile/design_system/design_system.dart';
+import 'package:carlys_mobile/features/academy/presentation/screens/academy_screen.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
 import 'package:carlys_mobile/features/authentication/presentation/screens/login_screen.dart';
 import 'package:carlys_mobile/features/coaching/data/repositories/coach_repository_impl.dart';
 import 'package:carlys_mobile/features/coaching/domain/entities/coach.dart';
 import 'package:carlys_mobile/features/coaching/presentation/controllers/coach_controllers.dart';
 import 'package:carlys_mobile/features/coaching/presentation/screens/coach_screen.dart';
+import 'package:carlys_mobile/features/community/presentation/screens/community_screen.dart';
 import 'package:carlys_mobile/features/dashboard/presentation/screens/home_screen.dart';
 import 'package:carlys_mobile/features/exercises/data/repositories/exercises_repository_impl.dart';
 import 'package:carlys_mobile/features/exercises/domain/entities/exercise.dart';
@@ -50,6 +52,7 @@ import 'package:carlys_mobile/features/progress/presentation/screens/progress_sc
 import 'package:carlys_mobile/features/progress/presentation/widgets/body_weight_section.dart';
 import 'package:carlys_mobile/features/subscription/data/repositories/subscription_repository_impl.dart';
 import 'package:carlys_mobile/features/subscription/presentation/screens/subscription_screen.dart';
+import 'package:carlys_mobile/features/training/presentation/screens/training_hub_screen.dart';
 import 'package:carlys_mobile/features/workout_history/presentation/screens/workout_history_screen.dart';
 import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';
 import 'package:carlys_mobile/features/workout_session/domain/entities/workout.dart';
@@ -460,6 +463,42 @@ void main() {
     await settle(tester);
   }
 
+  // Depuis la réorganisation en CINQ onglets, les anciens onglets — exercices,
+  // coach, nutrition, profil — se joignent en deux gestes : l'onglet porteur,
+  // puis la carte du hub (ou l'avatar de l'accueil pour le profil).
+
+  Future<void> openExercises(WidgetTester tester) async {
+    await goTab(tester, 'Training');
+    await tester.tap(find.text('Exercices'));
+    await settle(tester);
+  }
+
+  Future<void> openCoach(WidgetTester tester) async {
+    await goTab(tester, 'Training');
+    await tester.tap(find.text('Coach IA'));
+    await settle(tester);
+  }
+
+  Future<void> openNutrition(WidgetTester tester) async {
+    await goTab(tester, 'Academy');
+    await tester.tap(find.text('Nutrition'));
+    await settle(tester);
+  }
+
+  /// L'avatar se repère par l'étiquette de son `Semantics`, côté widget :
+  /// aucun `SemanticsHandle` n'est posé, l'arbre de sémantique n'existe pas.
+  Future<void> openProfile(WidgetTester tester) async {
+    await goTab(tester, 'Accueil');
+    await tester.tap(
+      find.byWidgetPredicate(
+        (widget) =>
+            widget is Semantics &&
+            (widget.properties.label ?? '').startsWith('Profil'),
+      ),
+    );
+    await settle(tester);
+  }
+
   testWidgets('bienvenue', (tester) async {
     // Parcours de première ouverture NON franchi : la page de marque est la
     // toute première chose que voit un nouvel arrivant.
@@ -486,7 +525,7 @@ void main() {
 
   testWidgets('bibliothèque + fiche exercice', (tester) async {
     await pumpApp(tester);
-    await goTab(tester, 'Exercices');
+    await openExercises(tester);
     await precacheMuscleImages(tester);
     // Premier étage : la grille des groupes musculaires.
     await capture(
@@ -521,7 +560,7 @@ void main() {
     required String prefix,
   }) async {
     await pumpDemoApp(tester);
-    await goTab(tester, 'Exercices');
+    await openExercises(tester);
     await precacheMuscleImages(tester);
     // La grille est PARESSEUSE : les groupes du bas ne sont pas construits
     // tant qu'on n'a pas défilé jusqu'à eux. Sans ça, « Triceps » restait
@@ -587,6 +626,34 @@ void main() {
     );
   });
 
+  testWidgets('hub Training', (tester) async {
+    await pumpApp(tester);
+    await goTab(tester, 'Training');
+    await capture(
+      tester,
+      '27-training-hub',
+      shows: find.byType(TrainingHubScreen),
+    );
+  });
+
+  testWidgets('Academy — leçons et question du jour', (tester) async {
+    await pumpApp(tester);
+    await goTab(tester, 'Academy');
+    await capture(tester, '28-academy', shows: find.byType(AcademyScreen));
+  });
+
+  testWidgets('Communauté — amis, encouragements, défis', (tester) async {
+    // Sur le CATALOGUE DÉMO : la communauté n'a pas encore de serveur, seul
+    // le dépôt de démonstration a des amis et des défis à montrer.
+    await pumpDemoApp(tester);
+    await goTab(tester, 'Communauté');
+    await capture(
+      tester,
+      '29-communaute',
+      shows: find.byType(CommunityScreen),
+    );
+  });
+
   testWidgets('séance active', (tester) async {
     final workouts = FakeWorkoutRepository()..active = activeWorkoutOf();
     await pumpApp(tester, workouts: workouts);
@@ -616,10 +683,10 @@ void main() {
     await tester.pump(const Duration(milliseconds: 10));
   });
 
-  testWidgets('onglet coach', (tester) async {
+  testWidgets('coach — depuis le hub Training', (tester) async {
     await pumpApp(tester, coach: coachOf(), premium: true);
-    await goTab(tester, 'Coach');
-    await capture(tester, '18-coach-onglet', shows: find.byType(CoachScreen));
+    await openCoach(tester);
+    await capture(tester, '18-coach', shows: find.byType(CoachScreen));
   });
 
   testWidgets('progression', (tester) async {
@@ -642,7 +709,7 @@ void main() {
 
   testWidgets('abonnement premium', (tester) async {
     await pumpApp(tester, premium: true);
-    await goTab(tester, 'Profil');
+    await openProfile(tester);
     await tester.tap(find.byType(ProfilePlanCard));
     await settle(tester);
     await capture(
@@ -654,7 +721,7 @@ void main() {
 
   testWidgets('nutrition — métabolisme complet', (tester) async {
     await pumpApp(tester);
-    await goTab(tester, 'Nutrition');
+    await openNutrition(tester);
     await capture(
       tester,
       '10-nutrition-metabolisme',
@@ -672,7 +739,7 @@ void main() {
 
   testWidgets('nutrition — profil à compléter', (tester) async {
     await pumpApp(tester, nutrition: nutritionOf(complete: false));
-    await goTab(tester, 'Nutrition');
+    await openNutrition(tester);
     await capture(
       tester,
       '12-nutrition-profil',
@@ -682,10 +749,16 @@ void main() {
 
   testWidgets('profil + réglages + thème clair', (tester) async {
     await pumpApp(tester, premium: true);
-    await goTab(tester, 'Profil');
+    await openProfile(tester);
     await capture(tester, '13-profil', shows: find.byType(ProfileScreen));
 
-    await tester.scrollUntilVisible(find.text('Thème sombre'), 150);
+    // Le profil est désormais POUSSÉ par-dessus l'accueil : plusieurs
+    // Scrollable cohabitent dans l'arbre, on vise celui de l'écran visible.
+    await tester.scrollUntilVisible(
+      find.text('Thème sombre'),
+      150,
+      scrollable: find.byType(Scrollable).last,
+    );
     await settle(tester);
     await tester.tap(find.text('Thème sombre'));
     await settle(tester);
@@ -720,7 +793,7 @@ void main() {
   testWidgets('paywall exercice premium', (tester) async {
     final gated = _PremiumGated([summary('id-1', 'Balancier kettlebell')]);
     await pumpApp(tester, exercises: gated);
-    await goTab(tester, 'Exercices');
+    await openExercises(tester);
     // La bibliothèque s'ouvre sur la grille des groupes musculaires.
     await tester.tap(
       find.widgetWithText(MuscleGroupCard, 'Tous les mouvements'),

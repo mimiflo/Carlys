@@ -74,6 +74,9 @@ flutter:
     # applications reliées à l'API, elles, ne les lisent JAMAIS.
     - assets/demo/catalog.json
     - assets/demo/exercises/
+    # Pack d'apprentissage de l'Academy : contenu ÉDITORIAL embarqué (leçons
+    # et questions), pas une donnée serveur — l'Academy fonctionne hors ligne.
+    - assets/academy/pack.json
 
   # Polices de la refonte (licences OFL dans assets/fonts/) :
   # Inter pour le texte, JetBrains Mono pour TOUS les chiffres (tabulaires).

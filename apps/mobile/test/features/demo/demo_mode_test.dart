@@ -12,6 +12,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/fake_workout_repository.dart';
 import '../../support/first_run_prefs.dart';
+import '../../support/navigation.dart';
 
 /// Le mode démo doit ouvrir l'application SANS serveur : session déjà
 /// ouverte, catalogue, progression et nutrition servis en mémoire.
@@ -103,13 +104,7 @@ void main() {
     await tester.pumpWidget(demoApp());
     await tester.pumpAndSettle();
 
-    await tester.tap(
-      find.descendant(
-        of: find.byType(AppBottomBar),
-        matching: find.text('Exercices'),
-      ),
-    );
-    await tester.pumpAndSettle();
+    await openExerciseLibrary(tester);
 
     // La bibliothèque s'ouvre désormais sur la GRILLE des groupes musculaires :
     // « Tous les mouvements » est la porte vers le catalogue entier. On vise
@@ -159,13 +154,7 @@ void main() {
     await tester.pumpWidget(demoApp());
     await tester.pumpAndSettle();
 
-    await tester.tap(
-      find.descendant(
-        of: find.byType(AppBottomBar),
-        matching: find.text('Nutrition'),
-      ),
-    );
-    await tester.pumpAndSettle();
+    await openNutrition(tester);
 
     // L'objectif calorique est annoncé par l'en-tête « Macros » ; les
     // milliers sont séparés par une espace fine insécable.
@@ -191,13 +180,7 @@ void main() {
     expect(find.text('SÉANCES'), findsOneWidget);
 
     // L'abonnement se rejoint depuis l'onglet Profil.
-    await tester.tap(
-      find.descendant(
-        of: find.byType(AppBottomBar),
-        matching: find.text('Profil'),
-      ),
-    );
-    await tester.pumpAndSettle();
+    await openProfile(tester);
     // L'abonnement s'ouvre depuis la bannière de plan du profil.
     await reveal(tester, find.byType(ProfilePlanCard));
     await tester.tap(find.byType(ProfilePlanCard));

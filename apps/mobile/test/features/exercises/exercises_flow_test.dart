@@ -2,7 +2,6 @@ import 'package:carlys_mobile/app/app.dart';
 import 'package:carlys_mobile/app/environment/app_environment.dart';
 import 'package:carlys_mobile/app/restore/app_restore.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
-import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
 import 'package:carlys_mobile/features/exercises/data/repositories/exercises_repository_impl.dart';
 import 'package:carlys_mobile/features/exercises/presentation/widgets/exercise_card.dart';
@@ -16,6 +15,7 @@ import '../../support/fake_auth_repository.dart';
 import '../../support/fake_exercises_repository.dart';
 import '../../support/fake_workout_repository.dart';
 import '../../support/first_run_prefs.dart';
+import '../../support/navigation.dart';
 
 void main() {
   setUp(() {
@@ -66,13 +66,7 @@ void main() {
     await tester.pumpAndSettle();
 
     // Accueil authentifié → bibliothèque.
-    await tester.tap(
-      find.descendant(
-        of: find.byType(AppBottomBar),
-        matching: find.text('Exercices'),
-      ),
-    );
-    await tester.pumpAndSettle();
+    await openExerciseLibrary(tester);
 
     // La bibliothèque s'ouvre désormais sur la GRILLE des groupes musculaires :
     // « Tous les mouvements » est la porte vers le catalogue entier. On vise
@@ -144,13 +138,7 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await tester.tap(
-      find.descendant(
-        of: find.byType(AppBottomBar),
-        matching: find.text('Exercices'),
-      ),
-    );
-    await tester.pumpAndSettle();
+    await openExerciseLibrary(tester);
 
     // La bibliothèque s'ouvre désormais sur la GRILLE des groupes musculaires :
     // « Tous les mouvements » est la porte vers le catalogue entier. On vise

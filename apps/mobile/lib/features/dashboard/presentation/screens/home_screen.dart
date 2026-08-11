@@ -6,10 +6,14 @@ import '../../../../app/restore/app_restore.dart';
 import '../../../../app/router/app_routes.dart';
 import '../../../../core/synchronization/sync_lifecycle.dart';
 import '../../../../design_system/design_system.dart';
+import '../../../academy/presentation/controllers/academy_controllers.dart';
+import '../../../academy/presentation/widgets/quiz_card.dart';
 import '../../../authentication/presentation/controllers/auth_controller.dart';
+import '../../../community/presentation/controllers/community_controllers.dart';
 import '../../../nutrition/presentation/controllers/nutrition_controllers.dart';
 import '../../../workout_session/presentation/controllers/workout_controllers.dart';
 import '../controllers/dashboard_controllers.dart';
+import '../widgets/community_nudge_card.dart';
 import '../widgets/consistency_streak.dart';
 import '../widgets/day_summary_grid.dart';
 import '../widgets/fitness_index_block.dart';
@@ -17,12 +21,13 @@ import '../widgets/home_hero.dart';
 import '../widgets/today_workout_card.dart';
 import '../widgets/week_bars.dart';
 
-/// Accueil — un tableau de bord en cartes, ouvert par le cœur.
+/// Accueil — le parcours quotidien, ouvert par le cœur.
 ///
-/// Ordre de lecture : le **cœur** (signature de l'app) avec l'état du jour et
-/// la citation à sa gauche, la série de constance, le résumé du jour, puis la
-/// séance du jour (unique CTA accent) — l'action vient APRÈS le constat — et
-/// enfin l'indice de forme adossé à « Ta semaine ».
+/// Ordre de lecture : le **cœur** (signature de l'app) avec la citation à sa
+/// gauche, la série de constance, le résumé du jour (entraînement, objectif
+/// calorique), la séance du jour (unique CTA accent) — l'action vient APRÈS
+/// le constat —, le mot de la communauté quand il y en a un, la question du
+/// jour de l'Academy, et l'indice de forme adossé à « Ta semaine ».
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
@@ -80,6 +85,21 @@ class HomeScreen extends ConsumerWidget {
               },
             ),
           ),
+          // Le mot de la communauté — une petite notif, pas une rubrique :
+          // absente tant que personne n'a rien envoyé.
+          if (ref.watch(latestEncouragementProvider) != null)
+            _Section(
+              child: CommunityNudgeCard(
+                encouragement: ref.watch(latestEncouragementProvider)!,
+              ),
+            ),
+          if (ref.watch(dailyLessonProvider) != null)
+            _Section(
+              child: QuizCard(
+                question: ref.watch(dailyLessonProvider)!.question,
+                title: 'Question du jour',
+              ),
+            ),
           _Section(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

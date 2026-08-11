@@ -10,8 +10,9 @@ import 'package:flutter/material.dart';
 ///  - l'accent orange ne sert qu'à UNE action ou métrique clé par écran ;
 ///  - le violet porte l'atmosphère (halos, gradients, scènes 3D), pas les
 ///    boutons ;
-///  - le magenta n'existe QUE comme transition de dégradé, jamais à plat :
-///    posé seul, c'est lui qui fait basculer l'écran du côté « rose » ;
+///  - le magenta vit dans les dégradés et sur les COURBES DE DONNÉES des
+///    graphiques (choix produit d'août 2026 : la donnée doit trancher sur le
+///    décor violet/orange) — jamais sur les surfaces ni le texte ;
 ///  - aucune ombre portée sur les cartes.
 abstract final class AppColors {
   // Marque — violet électrique
@@ -125,6 +126,9 @@ abstract final class AppColors {
   static const Color primaryHalo = Color(0x4D9B30FF); // primary .30
   static const Color primaryCardStrong = Color(0x479B30FF); // primary .28
   static const Color primaryCardSoft = Color(0x0D9B30FF); // primary .05
+
+  /// Voile sous la courbe rose des graphiques (magenta .05).
+  static const Color magentaCardSoft = Color(0x0DED35A9);
   static const Color primaryFill = Color(0x739B30FF); // primary .45
   static const Color accentBadgeBg = Color(0x1FFF7A45); // accent .12
   static const Color accentBadgeBorder = Color(0x47FF7A45); // accent .28
