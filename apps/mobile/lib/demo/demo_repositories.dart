@@ -293,6 +293,49 @@ class DemoNutritionRepository implements NutritionRepository {
     _activityLevel = update.activityLevel ?? _activityLevel;
     _goal = update.goal ?? _goal;
   }
+
+  // Journal du jour : deux repas déjà saisis, pour que « consommé /
+  // objectif » vive dès l'ouverture de la démo.
+  final List<MealEntry> _meals = [
+    MealEntry(
+      id: 'demo-meal-1',
+      name: 'Skyr, granola, myrtilles',
+      kcal: 380,
+      proteinG: 28,
+      eatenAt: DateTime.now().subtract(const Duration(hours: 5)),
+    ),
+    MealEntry(
+      id: 'demo-meal-2',
+      name: 'Poulet, riz, brocoli',
+      kcal: 640,
+      proteinG: 46,
+      eatenAt: DateTime.now().subtract(const Duration(hours: 1)),
+    ),
+  ];
+
+  @override
+  Future<List<MealEntry>> mealsBetween(DateTime from, DateTime to) async {
+    return _meals
+        .where(
+          (meal) => !meal.eatenAt.isBefore(from) && meal.eatenAt.isBefore(to),
+        )
+        .toList()
+      ..sort((a, b) => a.eatenAt.compareTo(b.eatenAt));
+  }
+
+  @override
+  Future<MealEntry> addMeal(MealEntry meal) async {
+    // Idempotent, comme le serveur : rejouer le même id ne double rien.
+    if (_meals.every((entry) => entry.id != meal.id)) {
+      _meals.add(meal);
+    }
+    return meal;
+  }
+
+  @override
+  Future<void> deleteMeal(String id) async {
+    _meals.removeWhere((meal) => meal.id == id);
+  }
 }
 
 /// Aucune synchronisation en démo : rien à pousser, aucun serveur à joindre.

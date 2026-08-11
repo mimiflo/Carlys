@@ -75,6 +75,59 @@ class NutritionRepositoryImpl implements NutritionRepository {
     });
   }
 
+  @override
+  Future<List<MealEntry>> mealsBetween(DateTime from, DateTime to) {
+    return _guard(() async {
+      final response = await _dio.get<Map<String, dynamic>>(
+        '/nutrition/meals',
+        queryParameters: {
+          'from': from.toUtc().toIso8601String(),
+          'to': to.toUtc().toIso8601String(),
+        },
+      );
+      final rows = response.data?['data'] as List<dynamic>? ?? const [];
+      return rows
+          .cast<Map<String, dynamic>>()
+          .map(_meal)
+          .toList(growable: false);
+    });
+  }
+
+  @override
+  Future<MealEntry> addMeal(MealEntry meal) {
+    return _guard(() async {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/nutrition/meals',
+        data: {
+          'id': meal.id,
+          'name': meal.name,
+          'kcal': meal.kcal,
+          if (meal.proteinG != null) 'proteinG': meal.proteinG,
+          'eatenAt': meal.eatenAt.toUtc().toIso8601String(),
+        },
+      );
+      final body = response.data?['data'] as Map<String, dynamic>? ?? const {};
+      return _meal(body);
+    });
+  }
+
+  @override
+  Future<void> deleteMeal(String id) {
+    return _guard(() async {
+      await _dio.delete<Map<String, dynamic>>('/nutrition/meals/$id');
+    });
+  }
+
+  MealEntry _meal(Map<String, dynamic> row) {
+    return MealEntry(
+      id: row['id'] as String,
+      name: row['name'] as String,
+      kcal: (row['kcal'] as num).toInt(),
+      proteinG: (row['proteinG'] as num?)?.toInt(),
+      eatenAt: DateTime.parse(row['eatenAt'] as String),
+    );
+  }
+
   Future<T> _guard<T>(Future<T> Function() action) async {
     try {
       return await action();

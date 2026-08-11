@@ -50,6 +50,7 @@ model User {
   entitlements       UserEntitlement[]
   coachConversations CoachConversation[]
 
+  mealEntries              MealEntry[]
   communityPreference      CommunityPreference?
   friendshipsSent          Friendship[]             @relation("FriendshipsSent")
   friendshipsReceived      Friendship[]             @relation("FriendshipsReceived")
@@ -911,6 +912,30 @@ model CoachSessionProposalItem {
   @@unique([proposalId, exercisePosition, setPosition])
   @@index([proposalId])
   @@index([exerciseId])
+}
+
+// ─────────────────────────── Journal alimentaire ──────────────────────────
+
+/// Entrée du journal alimentaire : ce que l'utilisateur dit avoir mangé.
+///
+/// C'est la moitié RÉELLE du « 654 / 2 100 » de l'accueil : le consommé vient
+/// d'ici, l'objectif du profil métabolique. Id généré SUR L'APPAREIL
+/// (création idempotente, rejouable) ; `eatenAt` est un INSTANT UTC — le
+/// découpage en journées appartient au client, qui connaît son fuseau.
+model MealEntry {
+  id        String    @id @db.Uuid
+  userId    String    @db.Uuid
+  name      String
+  kcal      Int
+  proteinG  Int?
+  eatenAt   DateTime
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  deletedAt DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, eatenAt])
 }
 
 // ────────────────────────────── Communauté ────────────────────────────────

@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../data/repositories/nutrition_repository_impl.dart';
 import '../../domain/entities/nutrition.dart';
@@ -10,19 +11,70 @@ final metabolismReportProvider =
   return ref.watch(nutritionRepositoryProvider).metabolismReport();
 });
 
-/// Actions nutrition : enregistrer le profil puis rafraîchir le rapport.
-class NutritionActions {
-  NutritionActions(this._repository, this._ref);
+/// Repas d'AUJOURD'HUI, au sens de la journée locale de l'appareil : c'est
+/// le client qui connaît son fuseau, il envoie les bornes au serveur.
+final todayMealsProvider = FutureProvider.autoDispose<List<MealEntry>>((ref) {
+  final now = DateTime.now();
+  final dayStart = DateTime(now.year, now.month, now.day);
+  final dayEnd = dayStart.add(const Duration(days: 1));
+  return ref
+      .watch(nutritionRepositoryProvider)
+      .mealsBetween(dayStart.toUtc(), dayEnd.toUtc());
+});
 
-  final NutritionRepository _repository;
+/// Calories consommées aujourd'hui — la moitié RÉELLE du « 654 / 2 100 » de
+/// l'accueil. `null` tant que le journal n'est pas chargé (ou indisponible) :
+/// l'accueil retombe alors sur l'objectif seul, jamais sur un zéro inventé.
+final consumedKcalTodayProvider = Provider.autoDispose<int?>((ref) {
+  final meals = ref.watch(todayMealsProvider).valueOrNull;
+  if (meals == null) {
+    return null;
+  }
+  return meals.fold(0, (sum, meal) => sum! + meal.kcal);
+});
+
+/// Actions nutrition : chaque écriture invalide les lectures concernées.
+///
+/// PAS d'autoDispose : l'objet est lu au build puis rappelé dans des
+/// callbacks bien plus tard — la durée de vie du `Ref` capturé doit être
+/// garantie, pas fortuite (même règle que les actions de la communauté).
+final nutritionActionsProvider = Provider<NutritionActions>((ref) {
+  return NutritionActions(ref);
+});
+
+class NutritionActions {
+  NutritionActions(this._ref);
+
   final Ref _ref;
+  static const _uuid = Uuid();
+
+  NutritionRepository get _repository => _ref.read(nutritionRepositoryProvider);
 
   Future<void> saveProfile(MetabolicProfileUpdate update) async {
     await _repository.updateProfile(update);
     _ref.invalidate(metabolismReportProvider);
   }
-}
 
-final nutritionActionsProvider = Provider.autoDispose<NutritionActions>((ref) {
-  return NutritionActions(ref.watch(nutritionRepositoryProvider), ref);
-});
+  /// L'identifiant naît ICI, sur l'appareil : l'écriture est rejouable.
+  Future<void> addMeal({
+    required String name,
+    required int kcal,
+    int? proteinG,
+  }) async {
+    await _repository.addMeal(
+      MealEntry(
+        id: _uuid.v4(),
+        name: name,
+        kcal: kcal,
+        proteinG: proteinG,
+        eatenAt: DateTime.now().toUtc(),
+      ),
+    );
+    _ref.invalidate(todayMealsProvider);
+  }
+
+  Future<void> deleteMeal(String id) async {
+    await _repository.deleteMeal(id);
+    _ref.invalidate(todayMealsProvider);
+  }
+}

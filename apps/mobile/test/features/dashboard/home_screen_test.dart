@@ -55,6 +55,7 @@ void main() {
   Future<void> pumpHome(
     WidgetTester tester, {
     FakeWorkoutRepository? workouts,
+    FakeNutritionRepository? nutrition,
   }) async {
     tester.view.physicalSize = const Size(1179, 2556);
     tester.view.devicePixelRatio = 3;
@@ -75,7 +76,8 @@ void main() {
               .overrideWithValue(workouts ?? FakeWorkoutRepository()),
           progressRepositoryProvider
               .overrideWithValue(FakeProgressRepository()),
-          nutritionRepositoryProvider.overrideWithValue(completeNutrition()),
+          nutritionRepositoryProvider
+              .overrideWithValue(nutrition ?? completeNutrition()),
           syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
           appRestoreProvider.overrideWithValue(NoopAppRestore()),
         ],
@@ -140,11 +142,12 @@ void main() {
     expect(find.text('PROTÉINES'), findsOneWidget);
     expect(find.text('VOLUME'), findsOneWidget);
 
-    // Objectifs CALCULÉS, jamais un consommé : le domaine ne suit pas les
-    // repas. Le libellé le dit, et rien n'affiche « x / y ».
-    expect(find.text('2\u202F759 kcal'), findsOneWidget);
+    // Journal vide : un VRAI zéro face à l'objectif — « 0 / 2 759 », pas
+    // un objectif déguisé en consommé. Les protéines restent un objectif.
+    expect(find.text('0 / 2\u202F759'), findsOneWidget);
+    expect(find.text('kcal aujourd’hui'), findsOneWidget);
     expect(find.text('128 g'), findsOneWidget);
-    expect(find.text('objectif du jour'), findsNWidgets(2));
+    expect(find.text('objectif du jour'), findsOneWidget);
     expect(find.text('1,5 t'), findsOneWidget);
     expect(find.text('cette semaine'), findsOneWidget);
 
@@ -154,6 +157,31 @@ void main() {
     // Ce que la maquette de référence montre mais que le domaine ignore.
     expect(find.text('SOMMEIL'), findsNothing);
     expect(find.text('HYDRATATION'), findsNothing);
+  });
+
+  testWidgets('le consommé du journal s’affiche face à l’objectif',
+      (tester) async {
+    final nutrition = completeNutrition()
+      ..meals.addAll([
+        MealEntry(
+          id: 'repas-1',
+          name: 'Skyr',
+          kcal: 380,
+          eatenAt: DateTime.now().subtract(const Duration(hours: 3)),
+        ),
+        MealEntry(
+          id: 'repas-2',
+          name: 'Poulet riz',
+          kcal: 274,
+          eatenAt: DateTime.now().subtract(const Duration(hours: 1)),
+        ),
+      ]);
+    await pumpHome(tester, nutrition: nutrition);
+
+    await scrollTo(tester, find.text('RÉSUMÉ DU JOUR'));
+    // 380 + 274 = 654 : le « 654 / 2 759 » est un fait, pas une invention.
+    expect(find.text('654 / 2\u202F759'), findsOneWidget);
+    expect(find.text('kcal aujourd’hui'), findsOneWidget);
   });
 
   testWidgets('sans séance en cours : entraînement libre et tuiles',

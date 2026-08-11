@@ -71,3 +71,14 @@ export const metabolismReportSchema = z.object({
   metabolism: metabolismResultSchema.nullable(),
 });
 export type MetabolismReport = z.infer<typeof metabolismReportSchema>;
+
+/** Entrée du journal alimentaire (/api/v1/nutrition/meals). */
+export const mealEntrySchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  kcal: z.number(),
+  proteinG: z.number().nullable(),
+  /** Instant UTC (ISO 8601) — le découpage en journées appartient au client. */
+  eatenAt: z.string(),
+});
+export type MealEntry = z.infer<typeof mealEntrySchema>;

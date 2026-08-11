@@ -71,6 +71,7 @@ class HomeScreen extends ConsumerWidget {
               training: ref.watch(todayTrainingProvider),
               report: report,
               week: week,
+              consumedKcal: ref.watch(consumedKcalTodayProvider),
             ),
           ),
           _Section(

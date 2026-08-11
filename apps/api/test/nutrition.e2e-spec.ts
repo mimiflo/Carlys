@@ -6,6 +6,7 @@ process.env.JWT_ACCESS_SECRET ??= 'secret-e2e-uniquement-32-caracteres-minimum';
 
 import {
   type ApiSuccessEnvelope,
+  type MealEntry,
   type AuthResult,
   type MetabolismReport,
 } from '@carlys/api-contracts';
@@ -38,6 +39,8 @@ describe('Nutrition (e2e)', () => {
       request(app.getHttpServer()).patch(url).set('Authorization', `Bearer ${accessToken}`),
     post: (url: string) =>
       request(app.getHttpServer()).post(url).set('Authorization', `Bearer ${accessToken}`),
+    delete: (url: string) =>
+      request(app.getHttpServer()).delete(url).set('Authorization', `Bearer ${accessToken}`),
   });
 
   beforeAll(async () => {
@@ -139,5 +142,52 @@ describe('Nutrition (e2e)', () => {
 
     expect(report.profile.weightKg).toBe(76);
     expect(report.metabolism?.waterMl).toBe(Math.round(35 * 76));
+  });
+
+  it('journal alimentaire : ajout idempotent, journée bornée par le client, retrait', async () => {
+    const mealId = randomUUID();
+    const noon = new Date();
+    const dayStart = new Date(noon.getTime() - 12 * 3_600_000);
+    const dayEnd = new Date(noon.getTime() + 12 * 3_600_000);
+    const payload = {
+      id: mealId,
+      name: 'Poulet riz',
+      kcal: 650,
+      proteinG: 45,
+      eatenAt: noon.toISOString(),
+    };
+
+    // Créer, puis REJOUER : une seule entrée.
+    await authed().post('/api/v1/nutrition/meals').send(payload).expect(201);
+    await authed().post('/api/v1/nutrition/meals').send(payload).expect(201);
+
+    const window = `from=${dayStart.toISOString()}&to=${dayEnd.toISOString()}`;
+    let meals = data<MealEntry[]>(
+      (await authed().get(`/api/v1/nutrition/meals?${window}`).expect(200)).body,
+    );
+    expect(meals).toHaveLength(1);
+    expect(meals[0]?.kcal).toBe(650);
+
+    // Hors fenêtre : la même liste, interrogée sur la veille, est vide.
+    const previousWindow = `from=${new Date(dayStart.getTime() - 24 * 3_600_000).toISOString()}&to=${dayStart.toISOString()}`;
+    const yesterday = data<MealEntry[]>(
+      (await authed().get(`/api/v1/nutrition/meals?${previousWindow}`).expect(200)).body,
+    );
+    expect(yesterday).toHaveLength(0);
+
+    // Retrait doux, idempotent.
+    await authed().delete(`/api/v1/nutrition/meals/${mealId}`).expect(204);
+    await authed().delete(`/api/v1/nutrition/meals/${mealId}`).expect(204);
+    meals = data<MealEntry[]>(
+      (await authed().get(`/api/v1/nutrition/meals?${window}`).expect(200)).body,
+    );
+    expect(meals).toHaveLength(0);
+  });
+
+  it('refuse un repas sans calories positives', async () => {
+    await authed()
+      .post('/api/v1/nutrition/meals')
+      .send({ id: randomUUID(), name: 'Rien', kcal: 0, eatenAt: new Date().toISOString() })
+      .expect(400);
   });
 });

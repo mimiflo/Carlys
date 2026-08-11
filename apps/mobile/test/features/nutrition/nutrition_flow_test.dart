@@ -110,16 +110,18 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(nutrition.updateCount, 1);
-      // Dépense totale du hero et objectif de l'en-tête « Macros » : les
-      // milliers sont séparés par une espace fine insécable.
+      // La page s'est ALLONGÉE (journal du jour) et la ListView est
+      // paresseuse : chaque zone s'atteste une fois rendue visible.
+      // 1. Le hero, en tête : dépense totale et corpulence.
+      await reveal(tester, find.text('CORPULENCE NORMALE'));
       expect(
         find.textContaining('2\u202F759', findRichText: true),
         findsWidgets,
       );
-      expect(find.text('Macros'), findsOneWidget);
+      // 2. Les macros, plus bas.
+      await reveal(tester, find.text('Macros'));
       expect(find.textContaining('OBJECTIF'), findsOneWidget);
       expect(find.text('128 g'), findsOneWidget);
-      expect(find.text('CORPULENCE NORMALE'), findsOneWidget);
     });
 
     testWidgets('profil complet : résultats, IMC et hydratation affichés',
@@ -148,6 +150,61 @@ void main() {
       // Le profil reste modifiable sous les résultats.
       await reveal(tester, find.text('Enregistrer mon profil'));
       expect(find.text('Enregistrer mon profil'), findsOneWidget);
+    });
+  });
+
+  group('journal du jour', () {
+    setUp(() {
+      TestWidgetsFlutterBinding.instance.platformDispatcher
+          .accessibilityFeaturesTestValue = FakeAccessibilityFeatures.allOn;
+    });
+
+    tearDown(() {
+      TestWidgetsFlutterBinding.instance.platformDispatcher
+          .clearAccessibilityFeaturesTestValue();
+    });
+
+    testWidgets('ajout par la feuille : le repas et le total apparaissent',
+        (tester) async {
+      final nutrition = FakeNutritionRepository(
+        weightKg: 80,
+        sex: BiologicalSex.male,
+        birthDate: DateTime.utc(1996, 3, 12),
+        heightCm: 180,
+        activityLevel: ActivityLevel.moderate,
+        goal: NutritionGoal.maintain,
+      );
+      await tester.pumpWidget(appWith(nutrition));
+      await openNutritionTab(tester);
+
+      await reveal(tester, find.text('Journal du jour'));
+      expect(find.textContaining('Rien au journal'), findsOneWidget);
+
+      await tester.tap(find.text('Ajouter un repas'));
+      await tester.pumpAndSettle();
+      // Les champs DE LA FEUILLE, dans l'ordre : repas, kcal, protéines —
+      // bornés à la feuille : le formulaire de profil, derrière, a les
+      // siens.
+      final fields = find.descendant(
+        of: find.byType(BottomSheet),
+        matching: find.byType(TextFormField),
+      );
+      await tester.enterText(fields.at(0), 'Skyr, granola');
+      await tester.enterText(fields.at(1), '654');
+      await tester.tap(find.text('Ajouter au journal'));
+      await tester.pumpAndSettle();
+
+      // Le repas est écrit dans le dépôt ET rendu à l'écran, total en tête.
+      expect(nutrition.meals, hasLength(1));
+      await reveal(tester, find.text('Skyr, granola'));
+      // L'en-tête de section rend son texte de droite en MAJUSCULES mono.
+      expect(find.text('654 / 2 759 KCAL'), findsOneWidget);
+
+      // Suppression : le journal se vide.
+      await tester.tap(find.byTooltip('Retirer ce repas'));
+      await tester.pumpAndSettle();
+      expect(nutrition.meals, isEmpty);
+      expect(find.textContaining('Rien au journal'), findsOneWidget);
     });
   });
 

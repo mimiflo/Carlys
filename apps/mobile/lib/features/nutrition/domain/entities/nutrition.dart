@@ -194,3 +194,25 @@ class MetabolicProfileUpdate {
       activityLevel == null &&
       goal == null;
 }
+
+/// Une entrée du journal alimentaire — ce que l'utilisateur dit avoir mangé.
+///
+/// C'est la moitié RÉELLE du « consommé / objectif » de l'accueil.
+/// L'identifiant est un UUID généré sur l'appareil (création idempotente).
+class MealEntry {
+  const MealEntry({
+    required this.id,
+    required this.name,
+    required this.kcal,
+    required this.eatenAt,
+    this.proteinG,
+  });
+
+  final String id;
+  final String name;
+  final int kcal;
+  final int? proteinG;
+
+  /// Instant de consommation, UTC — l'affichage est localisé.
+  final DateTime eatenAt;
+}

@@ -75,4 +75,29 @@ class FakeNutritionRepository implements NutritionRepository {
     _activityLevel = update.activityLevel ?? _activityLevel;
     _goal = update.goal ?? _goal;
   }
+
+  /// Journal en mémoire, pilotable par les tests.
+  final List<MealEntry> meals = [];
+
+  @override
+  Future<List<MealEntry>> mealsBetween(DateTime from, DateTime to) async =>
+      meals
+          .where(
+            (meal) => !meal.eatenAt.isBefore(from) && meal.eatenAt.isBefore(to),
+          )
+          .toList()
+        ..sort((a, b) => a.eatenAt.compareTo(b.eatenAt));
+
+  @override
+  Future<MealEntry> addMeal(MealEntry meal) async {
+    if (meals.every((entry) => entry.id != meal.id)) {
+      meals.add(meal);
+    }
+    return meal;
+  }
+
+  @override
+  Future<void> deleteMeal(String id) async {
+    meals.removeWhere((meal) => meal.id == id);
+  }
 }

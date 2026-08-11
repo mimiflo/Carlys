@@ -5,16 +5,16 @@ import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/nutrition.dart';
 import '../controllers/nutrition_controllers.dart';
+import '../widgets/meal_journal_section.dart';
 import '../widgets/metabolic_profile_form.dart';
 import '../widgets/metabolism_hero.dart';
 import '../widgets/metabolism_view.dart';
 import '../widgets/missing_profile_card.dart';
 
 /// Nutrition (maquette 2g) : hero métabolisme sur hélice ADN, macros en
-/// jauges, profil complété sur place — calculs côté serveur uniquement.
-///
-/// La section « Repas » de la maquette est absente : le domaine ne suit aucun
-/// apport alimentaire, et l'app n'affiche jamais de donnée inventée.
+/// jauges, journal du jour, profil complété sur place — calculs côté serveur
+/// uniquement. Le journal est la moitié RÉELLE du « consommé / objectif »
+/// de l'accueil : rien n'y est inventé, tout vient de la saisie.
 class NutritionScreen extends ConsumerWidget {
   const NutritionScreen({super.key});
 
@@ -61,6 +61,10 @@ class _NutritionContent extends StatelessWidget {
           _Section(child: MetabolismView(metabolism: metabolism))
         else
           _Section(child: _MissingSection(missing: report.missing)),
+        const SizedBox(height: AppSpacing.gapSection),
+        _Section(
+          child: MealJournalSection(targetKcal: metabolism?.targetKcal),
+        ),
         const SizedBox(height: AppSpacing.gapSection),
         const _Section(child: AppSectionHeader(title: 'Mon profil')),
         const SizedBox(height: AppSpacing.sm),
