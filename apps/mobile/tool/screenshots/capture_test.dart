@@ -21,6 +21,7 @@ import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
 import 'package:carlys_mobile/demo/demo_catalog.dart';
 import 'package:carlys_mobile/demo/demo_community.dart';
 import 'package:carlys_mobile/demo/demo_overrides.dart';
+import 'package:carlys_mobile/demo/demo_programs.dart';
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/academy/presentation/screens/academy_screen.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
@@ -56,6 +57,9 @@ import 'package:carlys_mobile/features/subscription/data/repositories/subscripti
 import 'package:carlys_mobile/features/subscription/presentation/screens/subscription_screen.dart';
 import 'package:carlys_mobile/features/training/presentation/screens/training_hub_screen.dart';
 import 'package:carlys_mobile/features/workout_history/presentation/screens/workout_history_screen.dart';
+import 'package:carlys_mobile/features/workout_program/data/repositories/program_repository_impl.dart';
+import 'package:carlys_mobile/features/workout_program/presentation/screens/program_detail_screen.dart';
+import 'package:carlys_mobile/features/workout_program/presentation/screens/programs_screen.dart';
 import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';
 import 'package:carlys_mobile/features/workout_session/domain/entities/workout.dart';
 import 'package:carlys_mobile/features/workout_session/presentation/screens/active_workout_screen.dart';
@@ -386,6 +390,7 @@ void main() {
           communityRepositoryProvider.overrideWithValue(
             DemoCommunityRepository(),
           ),
+          programRepositoryProvider.overrideWithValue(DemoProgramRepository()),
           // Les puces se calculent depuis les modèles de séance, qui vivent
           // dans Drift : la galerie n'ouvre pas de base locale, elle fige donc
           // le résultat que la règle donnerait pour ce jeu d'exemple.
@@ -525,11 +530,76 @@ void main() {
   testWidgets('accueil', (tester) async {
     // Un historique est nécessaire : sans lui, la série de constance
     // s'afficherait vide et la capture ne montrerait pas la fonctionnalité.
+    // Et un journal entamé : la tuile Nutrition montre un VRAI consommé.
     await pumpApp(
       tester,
       workouts: FakeWorkoutRepository()..history = historyOf(),
+      nutrition: nutritionOf()
+        ..meals.addAll([
+          MealEntry(
+            id: 'capture-repas-1',
+            name: 'Skyr, granola',
+            kcal: 380,
+            eatenAt: DateTime.now().subtract(const Duration(hours: 4)),
+          ),
+          MealEntry(
+            id: 'capture-repas-2',
+            name: 'Poulet, riz',
+            kcal: 274,
+            eatenAt: DateTime.now().subtract(const Duration(hours: 1)),
+          ),
+        ]),
     );
     await capture(tester, '02-accueil', shows: find.byType(HomeScreen));
+  });
+
+  testWidgets('journal alimentaire', (tester) async {
+    final nutrition = nutritionOf()
+      ..meals.addAll([
+        MealEntry(
+          id: 'capture-repas-1',
+          name: 'Skyr, granola, myrtilles',
+          kcal: 380,
+          proteinG: 28,
+          eatenAt: DateTime.now().subtract(const Duration(hours: 4)),
+        ),
+        MealEntry(
+          id: 'capture-repas-2',
+          name: 'Poulet, riz, brocoli',
+          kcal: 274,
+          proteinG: 46,
+          eatenAt: DateTime.now().subtract(const Duration(hours: 1)),
+        ),
+      ]);
+    await pumpApp(tester, nutrition: nutrition);
+    await openNutrition(tester);
+    await tester.scrollUntilVisible(
+      find.text('Journal du jour'),
+      240,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await settle(tester);
+    await capture(
+      tester,
+      '30-nutrition-journal',
+      shows: find.text('Journal du jour'),
+    );
+  });
+
+  testWidgets('programmes — liste et calendrier', (tester) async {
+    await pumpApp(tester);
+    await goTab(tester, 'Training');
+    await tester.tap(find.text('Programmes'));
+    await settle(tester);
+    await capture(tester, '32-programmes', shows: find.byType(ProgramsScreen));
+
+    await tester.tap(find.text('Force — 2 semaines'));
+    await settle(tester);
+    await capture(
+      tester,
+      '33-programme-calendrier',
+      shows: find.byType(ProgramDetailScreen),
+    );
   });
 
   testWidgets('bibliothèque + fiche exercice', (tester) async {
