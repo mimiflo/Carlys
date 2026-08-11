@@ -20,7 +20,7 @@ class AppBottomBarItem {
   final String label;
 }
 
-/// Les 6 onglets de l'application.
+/// Les 5 onglets de l'application.
 ///
 /// Réorganisation d'août 2026 : cinq destinations, chacune un VERBE du
 /// parcours — arriver (Accueil), s'entraîner (Training), mesurer (Progrès),

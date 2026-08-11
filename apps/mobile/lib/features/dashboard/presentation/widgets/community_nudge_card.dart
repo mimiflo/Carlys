@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_routes.dart';
@@ -9,13 +8,13 @@ import '../../../community/domain/entities/community.dart';
 /// La « petite notif » communautaire de l'accueil : le dernier mot reçu,
 /// en une ligne, qui mène à l'onglet Communauté. Elle n'existe que s'il y a
 /// réellement quelque chose à dire — jamais de carte vide.
-class CommunityNudgeCard extends ConsumerWidget {
+class CommunityNudgeCard extends StatelessWidget {
   const CommunityNudgeCard({required this.encouragement, super.key});
 
   final Encouragement encouragement;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  Widget build(BuildContext context) {
     return AppCard(
       onTap: () => context.go(AppRoutes.community),
       child: Row(

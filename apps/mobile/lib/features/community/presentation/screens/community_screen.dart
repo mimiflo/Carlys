@@ -32,6 +32,14 @@ class CommunityScreen extends ConsumerWidget {
         (challenges.valueOrNull?.isEmpty ?? true);
     final loaded =
         !feed.isLoading && !friends.isLoading && !challenges.isLoading;
+    // Une erreur n'est PAS un écran vide : « bientôt du monde ici » serait un
+    // mensonge si le serveur a simplement refusé de répondre.
+    final hasError = feed.hasError || friends.hasError || challenges.hasError;
+    // PREMIER chargement seulement : pendant un rafraîchissement, Riverpod
+    // conserve la valeur précédente (`valueOrNull` reste peuplé) et l'écran
+    // continue de la montrer — remplacer la liste par un indicateur ferait
+    // sauter la position de lecture à chaque écriture.
+    final hasData = feed.hasValue || friends.hasValue || challenges.hasValue;
 
     return Scaffold(
       backgroundColor: AppColors.darkBackground,
@@ -55,7 +63,19 @@ class CommunityScreen extends ConsumerWidget {
                 AppTypography.body.copyWith(color: AppColors.darkTextSecondary),
           ),
           const SizedBox(height: AppSpacing.gapRow),
-          if (loaded && isEmpty)
+          if (hasError)
+            AppErrorState(
+              title: 'Communauté indisponible',
+              message: 'Impossible de charger le fil pour le moment.',
+              onRetry: () {
+                ref.invalidate(encouragementsProvider);
+                ref.invalidate(communityFriendsProvider);
+                ref.invalidate(communityChallengesProvider);
+              },
+            )
+          else if (!hasData)
+            const AppLoadingIndicator()
+          else if (loaded && isEmpty)
             const AppEmptyState(
               icon: Icons.group_outlined,
               title: 'Bientôt du monde ici',

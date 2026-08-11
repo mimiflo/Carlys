@@ -47,6 +47,8 @@ class HomeScreen extends ConsumerWidget {
     final activeWorkout = ref.watch(activeWorkoutProvider).valueOrNull;
     final week = ref.watch(weekOverviewProvider).valueOrNull;
     final report = ref.watch(metabolismReportProvider).valueOrNull;
+    final nudge = ref.watch(latestEncouragementProvider);
+    final dailyLesson = ref.watch(dailyLessonProvider);
     final bottomInset =
         AppBottomBar.height + MediaQuery.paddingOf(context).bottom;
 
@@ -87,16 +89,12 @@ class HomeScreen extends ConsumerWidget {
           ),
           // Le mot de la communauté — une petite notif, pas une rubrique :
           // absente tant que personne n'a rien envoyé.
-          if (ref.watch(latestEncouragementProvider) != null)
-            _Section(
-              child: CommunityNudgeCard(
-                encouragement: ref.watch(latestEncouragementProvider)!,
-              ),
-            ),
-          if (ref.watch(dailyLessonProvider) != null)
+          if (nudge != null)
+            _Section(child: CommunityNudgeCard(encouragement: nudge)),
+          if (dailyLesson != null)
             _Section(
               child: QuizCard(
-                question: ref.watch(dailyLessonProvider)!.question,
+                question: dailyLesson.question,
                 title: 'Question du jour',
               ),
             ),

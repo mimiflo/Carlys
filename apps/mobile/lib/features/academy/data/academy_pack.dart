@@ -19,10 +19,16 @@ Future<List<Lesson>> loadAcademyPack() async {
   if (cached != null) {
     return cached;
   }
-  final lessons = await (_loading ??= _read());
-  _lessons = lessons;
-  _loading = null;
-  return lessons;
+  try {
+    final lessons = await (_loading ??= _read());
+    _lessons = lessons;
+    return lessons;
+  } finally {
+    // Succès : le résultat est dans `_lessons`. Échec : on ne mémoïse JAMAIS
+    // la future en erreur — sans ce nettoyage, toute tentative de
+    // rechargement (invalidation du provider) rejouerait l'échec à jamais.
+    _loading = null;
+  }
 }
 
 Future<List<Lesson>> _read() async {

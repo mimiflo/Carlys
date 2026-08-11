@@ -35,8 +35,9 @@ class ProfileScreen extends ConsumerWidget {
     final weights = ref.watch(bodyWeightMetricsProvider).valueOrNull;
     final profile = ref.watch(metabolismReportProvider).valueOrNull?.profile;
     final overview = ref.watch(profileSessionsOverviewProvider).valueOrNull;
-    final bottomInset =
-        AppBottomBar.height + MediaQuery.paddingOf(context).bottom;
+    // Plein écran depuis la réorganisation en cinq onglets : la bottom bar ne
+    // recouvre plus cet écran, seul l'encart système compte.
+    final bottomInset = MediaQuery.paddingOf(context).bottom;
 
     return Scaffold(
       backgroundColor: AppColors.darkBackground,

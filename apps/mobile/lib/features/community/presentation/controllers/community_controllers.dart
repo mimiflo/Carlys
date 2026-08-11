@@ -27,7 +27,12 @@ final latestEncouragementProvider = Provider.autoDispose<Encouragement?>((ref) {
 });
 
 /// Actions de la communauté : chaque écriture invalide les lectures.
-final communityActionsProvider = Provider.autoDispose<CommunityActions>((ref) {
+///
+/// PAS d'autoDispose ici : l'objet est lu (`ref.read`) au build puis rappelé
+/// dans des callbacks bien plus tard. Un élément autoDispose jamais écouté
+/// survit AUJOURD'HUI par accident d'implémentation Riverpod — un provider
+/// permanent rend la durée de vie du `Ref` capturé garantie, pas fortuite.
+final communityActionsProvider = Provider<CommunityActions>((ref) {
   return CommunityActions(ref);
 });
 

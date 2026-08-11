@@ -75,7 +75,7 @@ String? _firstRunRedirect(
 ///  - parcours ou session inconnus → splash (restauration en cours) ;
 ///  - parcours en cours → tunnel de première ouverture ;
 ///  - parcours terminé, non authentifié → écrans d'authentification ;
-///  - parcours terminé, authentifié → coquille 6 onglets et plein écran.
+///  - parcours terminé, authentifié → coquille 5 onglets et plein écran.
 final appRouterProvider = Provider<GoRouter>((ref) {
   final refreshListenable = ValueNotifier(0);
   ref.onDispose(refreshListenable.dispose);
