@@ -35,15 +35,37 @@ class SyncEngine {
   /// Horloge injectable (déterminisme des tests de backoff).
   final DateTime Function() _now;
   Future<void>? _inFlight;
+  bool _pokedDuringDrain = false;
 
   /// Délai d'attente avant nouvel essai : 5 s, 10 s, 20 s… plafonné à 5 min.
+  ///
+  /// L'exposant est BORNÉ avant `pow` : le plafond est atteint dès la 7e
+  /// tentative, et `pow(2, n)` déborde en infini vers n = 1024 — soit trois
+  /// jours de replis à 5 minutes, après quoi `toInt()` jetterait et tuerait
+  /// la synchronisation pour de bon.
   static Duration backoff(int attemptCount) {
-    final seconds = 5 * math.pow(2, math.max(0, attemptCount - 1)).toInt();
+    final exponent = (attemptCount - 1).clamp(0, 6);
+    final seconds = 5 * math.pow(2, exponent).toInt();
     return Duration(seconds: math.min(seconds, 300));
   }
 
+  /// Draine la file. Un appel pendant un drainage en cours ne double rien —
+  /// il NOTE qu'il faudra recommencer : l'opération qui vient d'être écrite
+  /// n'est pas dans l'instantané que le drainage en cours a déjà lu, et sans
+  /// cette note elle attendrait le prochain réveil périodique (3 minutes).
   Future<void> syncNow() {
-    return _inFlight ??= _drain().whenComplete(() => _inFlight = null);
+    final running = _inFlight;
+    if (running != null) {
+      _pokedDuringDrain = true;
+      return running;
+    }
+    final drain = () async {
+      do {
+        _pokedDuringDrain = false;
+        await _drain();
+      } while (_pokedDuringDrain);
+    }();
+    return _inFlight = drain.whenComplete(() => _inFlight = null);
   }
 
   Future<void> _drain() async {
@@ -73,7 +95,13 @@ class SyncEngine {
         // Réseau, 401 (session à renouveler) ou 5xx : on retentera plus tard.
         await _onRetryLater(operation);
         return;
-      } on Exception catch (exception) {
+      } catch (exception) {
+        // Attrape TOUT, pas seulement `Exception` : un type d'opération
+        // inconnu jette une `StateError` et une charge utile malformée une
+        // `TypeError` — deux `Error`, qu'un `on Exception` laisse passer.
+        // Non attrapées, elles bloqueraient la tête de file pour toujours,
+        // avec une erreur non gérée à chaque réveil. Aucune de ces causes ne
+        // guérit en réessayant : on marque l'opération en échec et on passe.
         _logger.error(
           'Opération de sync inattendue en échec',
           error: exception,

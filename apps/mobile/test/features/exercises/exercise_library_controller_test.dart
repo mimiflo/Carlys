@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:carlys_mobile/features/exercises/data/repositories/exercises_repository_impl.dart';
 import 'package:carlys_mobile/features/exercises/domain/entities/exercise.dart';
 import 'package:carlys_mobile/features/exercises/presentation/controllers/exercise_library_controller.dart';
@@ -101,5 +103,33 @@ void main() {
 
     await controller.setDifficulty(null);
     expect(repository.receivedFilters.last.difficulty, isNull);
+  });
+
+  test('une page en vol n’écrase pas un filtre appliqué entre-temps', () async {
+    // La course : l'utilisateur fait défiler (page 2 demandée), puis change
+    // de filtre pendant que la page est en vol. La réponse périmée doit être
+    // ABANDONNÉE — la fusionner recollerait les résultats de l'ancien filtre
+    // sous les puces du nouveau.
+    await container.read(exerciseLibraryControllerProvider.future);
+    final controller =
+        container.read(exerciseLibraryControllerProvider.notifier);
+
+    final gate = Completer<void>();
+    repository.beforeList = () {
+      repository.beforeList = null; // ne retient QUE la page 2
+      return gate.future;
+    };
+    final stalePage = controller.loadMore();
+
+    await controller.setMuscleGroup('dos');
+    final afterFilter = container.read(exerciseLibraryControllerProvider);
+    expect(afterFilter.value!.items.map((item) => item.id), ['id-5']);
+
+    gate.complete();
+    await stalePage;
+
+    final state = container.read(exerciseLibraryControllerProvider).value!;
+    expect(state.items.map((item) => item.id), ['id-5']);
+    expect(state.isLoadingMore, isFalse);
   });
 }

@@ -63,10 +63,17 @@ class ExerciseLibraryController
 
   Timer? _debounce;
   ExercisesFilters _filters = const ExercisesFilters();
+  bool _disposed = false;
 
   @override
   Future<ExerciseLibraryState> build() async {
-    ref.onDispose(() => _debounce?.cancel());
+    _disposed = false;
+    ref.onDispose(() {
+      _debounce?.cancel();
+      // Poser `state` après la destruction jette : les réponses encore en
+      // vol quand l'écran se ferme doivent se laisser tomber sans bruit.
+      _disposed = true;
+    });
     return _loadFirstPage();
   }
 
@@ -84,8 +91,18 @@ class ExerciseLibraryController
   }
 
   Future<void> _reload() async {
+    // Génération de la demande : `_filters` est remplacé (jamais muté) à
+    // chaque changement, son identité date donc chaque réponse. Une réponse
+    // dont la génération n'est plus la bonne est simplement abandonnée —
+    // sans cette garde, recharger pendant qu'une autre requête est en vol
+    // laissait la PREMIÈRE arrivée écraser la seconde.
+    final requested = _filters;
     state = const AsyncLoading();
-    state = await AsyncValue.guard(_loadFirstPage);
+    final next = await AsyncValue.guard(_loadFirstPage);
+    if (_disposed || !identical(requested, _filters)) {
+      return;
+    }
+    state = next;
   }
 
   void setSearch(String search) {
@@ -118,11 +135,19 @@ class ExerciseLibraryController
       return;
     }
 
+    // Même garde de génération que `_reload` : si un filtre change pendant
+    // que cette page est en vol, la réponse appartient à une liste qui
+    // n'existe plus — la fusionner recollerait les résultats de l'ANCIEN
+    // filtre sous les puces du nouveau.
+    final requested = _filters;
     state = AsyncData(current.copyWith(isLoadingMore: true));
     try {
       final page = await ref
           .read(exercisesRepositoryProvider)
-          .list(filters: _filters, cursor: current.nextCursor);
+          .list(filters: requested, cursor: current.nextCursor);
+      if (_disposed || !identical(requested, _filters)) {
+        return;
+      }
       state = AsyncData(
         current.copyWith(
           items: [...current.items, ...page.items],
@@ -133,6 +158,9 @@ class ExerciseLibraryController
         ),
       );
     } on Exception {
+      if (_disposed || !identical(requested, _filters)) {
+        return;
+      }
       // La page suivante a échoué : on garde la liste actuelle utilisable.
       state = AsyncData(current.copyWith(isLoadingMore: false));
     }

@@ -47,6 +47,7 @@ Widget _harness(RemoteImageCache cache, {required String url}) {
 }
 
 void main() {
+  evictionTests();
   testWidgets('photo disponible : elle remplace le repli', (tester) async {
     final cache = _FakeCache(_png);
 
@@ -103,6 +104,48 @@ void main() {
           await cache.bytesOf('${assetImageScheme}assets/muscles/néant.webp');
 
       expect(bytes, isNull);
+    });
+  });
+}
+
+/// L'éviction du cache mémoire, observée depuis ses compteurs de test :
+/// une image évincée se recharge sans bruit, l'éviction est donc invisible
+/// du dehors.
+void evictionTests() {
+  group('éviction mémoire', () {
+    test('le budget est tenu, les plus anciennes partent d’abord', () async {
+      // Budget de 40 octets : aucune vignette réelle n'y tient, ce qui force
+      // l'éviction à chaque insertion — exactement ce qu'on veut observer.
+      final cache = DiskRemoteImageCache(memoryBudgetBytes: 40);
+      Future<Object?> putAsset(String name) =>
+          cache.bytesOf('$assetImageScheme$name');
+
+      await putAsset('assets/muscles/dos.webp');
+      final afterFirst = cache.memoryEntryCount;
+      await putAsset('assets/muscles/biceps.webp');
+
+      // L'éviction ne vide JAMAIS tout : la dernière consultée reste posée,
+      // même hors budget — un cache qui refuse la seule image affichée à
+      // l'écran ne servirait à rien.
+      expect(afterFirst, 1);
+      expect(cache.memoryEntryCount, 1);
+      expect(await putAsset('assets/muscles/dos.webp'), isNotNull);
+    });
+
+    test('une image consultée revient en queue d’éviction', () async {
+      final cache = DiskRemoteImageCache(memoryBudgetBytes: 1024 * 1024);
+      final a =
+          await cache.bytesOf('${assetImageScheme}assets/muscles/dos.webp');
+      final b =
+          await cache.bytesOf('${assetImageScheme}assets/muscles/biceps.webp');
+      expect(a, isNotNull);
+      expect(b, isNotNull);
+      expect(cache.memoryEntryCount, 2);
+      final bytes = cache.memoryBytes;
+      // Reconsulter ne doit ni doubler l'occupation ni perdre d'entrée.
+      await cache.bytesOf('${assetImageScheme}assets/muscles/dos.webp');
+      expect(cache.memoryBytes, bytes);
+      expect(cache.memoryEntryCount, 2);
     });
   });
 }

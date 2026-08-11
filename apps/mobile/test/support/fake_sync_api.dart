@@ -6,13 +6,18 @@ import 'package:dio/dio.dart';
 class FakeSyncApi implements SyncApi {
   bool networkDown = false;
 
+  /// Crochet d'attente appelé avant chaque envoi — permet à un test de tenir
+  /// une opération « en vol » pendant qu'il agit à côté.
+  Future<void> Function()? beforeCall;
+
   /// Ids d'entités à refuser avec un statut 400 (une fois atteints).
   final Set<String> rejectedIds = {};
 
   /// Journal des appels réussis, dans l'ordre : `type:id`.
   final List<String> log = [];
 
-  void _guard(String entityId) {
+  Future<void> _guard(String entityId) async {
+    await beforeCall?.call();
     if (networkDown) {
       throw DioException(
         requestOptions: RequestOptions(path: '/sync'),
@@ -34,7 +39,7 @@ class FakeSyncApi implements SyncApi {
   @override
   Future<void> createSession(Map<String, dynamic> body) async {
     final id = body['id'] as String;
-    _guard(id);
+    await _guard(id);
     log.add('session.create:$id');
     createdSessions.add(body);
   }
@@ -44,7 +49,7 @@ class FakeSyncApi implements SyncApi {
     String sessionId,
     Map<String, dynamic> body,
   ) async {
-    _guard(sessionId);
+    await _guard(sessionId);
     log.add('session.complete:$sessionId');
   }
 
@@ -53,21 +58,21 @@ class FakeSyncApi implements SyncApi {
     String sessionId,
     Map<String, dynamic> body,
   ) async {
-    _guard(sessionId);
+    await _guard(sessionId);
     log.add('session.abandon:$sessionId');
   }
 
   @override
   Future<void> upsertSet(String sessionId, Map<String, dynamic> body) async {
     final id = body['id'] as String;
-    _guard(id);
+    await _guard(id);
     log.add('set.upsert:$id');
     upsertedSets.add(body);
   }
 
   @override
   Future<void> deleteSet(String setId) async {
-    _guard(setId);
+    await _guard(setId);
     log.add('set.delete:$setId');
   }
 
@@ -76,7 +81,7 @@ class FakeSyncApi implements SyncApi {
     String sessionId,
     Map<String, dynamic> body,
   ) async {
-    _guard(sessionId);
+    await _guard(sessionId);
     log.add('plan.skip:$sessionId');
     skippedPlanItems.addAll(
       (body['planItemIds'] as List<dynamic>).cast<String>(),
@@ -88,14 +93,14 @@ class FakeSyncApi implements SyncApi {
     String templateId,
     Map<String, dynamic> body,
   ) async {
-    _guard(templateId);
+    await _guard(templateId);
     log.add('template.save:$templateId');
     savedTemplates.add(body);
   }
 
   @override
   Future<void> deleteTemplate(String templateId) async {
-    _guard(templateId);
+    await _guard(templateId);
     log.add('template.delete:$templateId');
   }
 

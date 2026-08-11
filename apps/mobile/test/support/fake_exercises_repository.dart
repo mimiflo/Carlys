@@ -65,11 +65,16 @@ class FakeExercisesRepository implements ExercisesRepository {
   final List<ExercisesFilters> receivedFilters = [];
   int listCalls = 0;
 
+  /// Crochet d'attente appelé avant de répondre — permet à un test de tenir
+  /// une requête « en vol » pendant qu'il agit à côté (courses de filtres).
+  Future<void> Function()? beforeList;
+
   @override
   Future<ExercisesPage> list({
     ExercisesFilters filters = const ExercisesFilters(),
     String? cursor,
   }) async {
+    await beforeList?.call();
     listCalls++;
     receivedFilters.add(filters);
 

@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:typed_data';
 
+import 'package:flutter/foundation.dart' show visibleForTesting;
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:path_provider/path_provider.dart';
 
@@ -33,7 +34,10 @@ abstract interface class RemoteImageCache {
 const String assetImageScheme = 'asset:';
 
 class DiskRemoteImageCache implements RemoteImageCache {
-  DiskRemoteImageCache({HttpClient? client}) : _injected = client;
+  DiskRemoteImageCache({
+    HttpClient? client,
+    this.memoryBudgetBytes = defaultMemoryBudgetBytes,
+  }) : _injected = client;
 
   final HttpClient? _injected;
 
@@ -44,7 +48,43 @@ class DiskRemoteImageCache implements RemoteImageCache {
   HttpClient get _client => _injected ?? (_opened ??= HttpClient());
 
   /// Mémoire vive : évite de relire le disque à chaque défilement.
+  ///
+  /// BORNÉE, et par OCTETS plutôt qu'en nombre d'entrées : les photos vont de
+  /// quelques Ko à quelques centaines. Sans plafond, chaque photo jamais vue
+  /// resterait en RAM à vie — un long défilement du catalogue coûterait des
+  /// dizaines de Mo. L'éviction retire les plus anciennement consultées :
+  /// un `LinkedHashMap` garde l'ordre d'insertion, retirer puis reposer une
+  /// clé la remet en queue.
+  static const int defaultMemoryBudgetBytes = 24 * 1024 * 1024;
+
+  /// Injectable : les tests d'éviction n'ont pas 24 Mo d'images sous la main.
+  final int memoryBudgetBytes;
+
   final Map<String, Uint8List> _memory = {};
+  int _memoryBytes = 0;
+
+  /// Occupation courante de la mémoire vive — observable par les tests,
+  /// puisque l'éviction est par ailleurs invisible de l'extérieur : une image
+  /// évincée se recharge sans bruit.
+  @visibleForTesting
+  int get memoryBytes => _memoryBytes;
+
+  @visibleForTesting
+  int get memoryEntryCount => _memory.length;
+
+  Uint8List _remember(String url, Uint8List bytes) {
+    final previous = _memory.remove(url);
+    if (previous != null) {
+      _memoryBytes -= previous.length;
+    }
+    _memory[url] = bytes;
+    _memoryBytes += bytes.length;
+    while (_memoryBytes > memoryBudgetBytes && _memory.length > 1) {
+      final oldest = _memory.keys.first;
+      _memoryBytes -= _memory.remove(oldest)!.length;
+    }
+    return bytes;
+  }
 
   /// Téléchargements en cours, partagés — une grille affiche la même photo
   /// plusieurs fois, et rien ne justifie de la chercher deux fois.
@@ -55,7 +95,11 @@ class DiskRemoteImageCache implements RemoteImageCache {
   @override
   Future<Uint8List?> bytesOf(String url) {
     final cached = _memory[url];
-    if (cached != null) return Future.value(cached);
+    if (cached != null) {
+      // Consultation = remise en queue d'éviction : une vignette encore à
+      // l'écran ne doit pas partir avant une photo vue une fois puis quittée.
+      return Future.value(_remember(url, cached));
+    }
     // Une image du paquet ne passe PAS par la file des téléchargements : elle
     // est locale, donc rien à mutualiser — et `rootBundle` peut répondre par
     // une future déjà résolue, qui achèverait `_fetch` avant même que la file
@@ -68,9 +112,14 @@ class DiskRemoteImageCache implements RemoteImageCache {
     try {
       final data =
           await rootBundle.load(url.substring(assetImageScheme.length));
-      final bytes = data.buffer.asUint8List();
-      _memory[url] = bytes;
-      return bytes;
+      // Les BORNES sont obligatoires : `buffer.asUint8List()` sans arguments
+      // rend une vue sur le tampon ENTIER, qui peut déborder la tranche
+      // réellement chargée quand le moteur mutualise ses allocations.
+      final bytes = data.buffer.asUint8List(
+        data.offsetInBytes,
+        data.lengthInBytes,
+      );
+      return _remember(url, bytes);
     } on Object {
       // Vignette absente du paquet : repli, comme une photo hors d'atteinte.
       return null;
@@ -81,14 +130,12 @@ class DiskRemoteImageCache implements RemoteImageCache {
     try {
       final file = await _fileFor(url);
       if (file != null && file.existsSync()) {
-        final bytes = await file.readAsBytes();
-        _memory[url] = bytes;
-        return bytes;
+        return _remember(url, await file.readAsBytes());
       }
 
       final bytes = await _download(url);
       if (bytes == null) return null;
-      _memory[url] = bytes;
+      _remember(url, bytes);
       // L'écriture ne conditionne pas l'affichage : un disque plein ou un
       // dossier inaccessible dégrade le cache, il ne casse pas l'écran.
       if (file != null) {
@@ -119,11 +166,13 @@ class DiskRemoteImageCache implements RemoteImageCache {
       await response.drain<void>();
       return null;
     }
-    final chunks = <int>[];
+    // `copy: false` : chaque tranche reçue est adoptée telle quelle plutôt
+    // que recopiée deux fois (dans la liste, puis dans le tableau final).
+    final builder = BytesBuilder(copy: false);
     await for (final chunk in response) {
-      chunks.addAll(chunk);
+      builder.add(chunk);
     }
-    return Uint8List.fromList(chunks);
+    return builder.takeBytes();
   }
 
   /// Fichier local d'une URL.
