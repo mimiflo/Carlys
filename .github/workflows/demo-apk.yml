@@ -30,6 +30,9 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
+          # Version ÉPINGLÉE, identique à mobile-ci et au développement —
+          # voir mobile-ci.yml pour l'incident du « stable » flottant.
+          flutter-version: 3.44.9
           channel: stable
           cache: true
 

@@ -35,6 +35,13 @@ jobs:
 
       - uses: subosito/flutter-action@v2
         with:
+          # Version ÉPINGLÉE, la même qu'en développement — jamais « stable »
+          # au fil de l'eau : la 3.47.0 (Dart 3.13) sortie le 12/08 faisait
+          # crasher l'analyzer de drift_dev (« Missing implementation of
+          # visitDotShorthandPropertyAccess ») et build_runner gelait jusqu'au
+          # timeout. Monter de version reste possible — mais par un commit
+          # délibéré, testé en local d'abord.
+          flutter-version: 3.44.9
           channel: stable
           cache: true
 
