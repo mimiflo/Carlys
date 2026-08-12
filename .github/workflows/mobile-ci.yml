@@ -10,6 +10,9 @@ on:
     paths:
       - 'apps/mobile/**'
       - '.github/workflows/mobile-ci.yml'
+  # Relance MANUELLE : un runner qui gèle (build_runner suspendu, coupé par
+  # timeout-minutes) ne doit pas exiger un commit pour rejouer le workflow.
+  workflow_dispatch:
 
 concurrency:
   group: mobile-ci-${{ github.ref }}
