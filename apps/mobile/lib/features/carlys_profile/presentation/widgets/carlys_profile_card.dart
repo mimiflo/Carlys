@@ -135,8 +135,11 @@ class _CardBody extends StatelessWidget {
           child: Row(
             children: [
               ClipRRect(
+                // Le rayon de la CARTE (moins le liseré) : l'illustration
+                // épouse les angles jusqu'au bord — sans quoi un croissant
+                // sombre restait entre le coin et l'image.
                 borderRadius: const BorderRadius.horizontal(
-                  left: Radius.circular(AppRadius.lg),
+                  left: Radius.circular(AppRadius.cardSecondary - 1),
                 ),
                 child: SizedBox(
                   width: CarlysProfileCard._imageWidth,
