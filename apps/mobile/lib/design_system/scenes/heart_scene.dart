@@ -7,6 +7,7 @@ import 'package:flutter/scheduler.dart';
 
 import 'heart_specks.dart';
 import 'scene3d.dart';
+import 'scene_cadence.dart';
 
 /// Cœur battant de la refonte — portage fidèle de `pulse-heart.js`.
 ///
@@ -28,8 +29,11 @@ class HeartScene extends StatefulWidget {
 
 class _HeartSceneState extends State<HeartScene>
     with SingleTickerProviderStateMixin {
-  /// Cadence de rendu de la scène, indépendante de celle de l'écran.
-  static const double _framesPerSecond = 30;
+  /// Cadence de rendu de la scène, indépendante de celle de l'écran :
+  /// 30 i/s quand l'appareil suit, 20 puis 15 quand il peine — mesuré sur
+  /// le coût réel de peinture, pour que le cœur ne fasse jamais saccader
+  /// la page sur un téléphone modeste.
+  final SceneCadence _cadence = SceneCadence();
 
   /// Temps ÉCOULÉ, jamais ramené à zéro.
   ///
@@ -57,11 +61,11 @@ class _HeartSceneState extends State<HeartScene>
   }
 
   void _onTick(Duration elapsed) {
-    // Quantifié à 1/30 s : au-delà, le battement ne gagne rien de perceptible
-    // et chaque image coûte un maillage entier.
-    final seconds =
-        (elapsed.inMicroseconds * _framesPerSecond / 1000000).floor() /
-            _framesPerSecond;
+    // Quantifié au pas de la cadence courante : au-delà de 30 i/s le
+    // battement ne gagne rien de perceptible, et chaque image coûte un
+    // maillage entier.
+    final fps = _cadence.framesPerSecond;
+    final seconds = (elapsed.inMicroseconds * fps / 1000000).floor() / fps;
     if (seconds != _seconds) {
       setState(() => _seconds = seconds);
     }
@@ -82,6 +86,7 @@ class _HeartSceneState extends State<HeartScene>
         seconds: still ? 0 : _seconds,
         hero: widget.hero,
         still: still,
+        cadence: _cadence,
       ),
       size: Size.infinite,
     );
@@ -214,6 +219,7 @@ class HeartScenePainter extends CustomPainter {
     required this.seconds,
     required this.hero,
     this.still = false,
+    this.cadence,
   });
 
   final double seconds;
@@ -221,6 +227,10 @@ class HeartScenePainter extends CustomPainter {
 
   /// Pose figée (réduction d'animations) : diastole franche, sans contraction.
   final bool still;
+
+  /// Reçoit le coût de chaque image peinte — c'est lui qui décide de la
+  /// cadence. Absent sur la planche de contrôle (instants choisis à la main).
+  final SceneCadence? cadence;
 
   static final LinearRgb _violet = LinearRgb.fromHex(0x9B30FF);
   static final LinearRgb _accent = LinearRgb.fromHex(0xFF7A45);
@@ -241,7 +251,17 @@ class HeartScenePainter extends CustomPainter {
     if (size.width <= 0 || size.height <= 0) {
       return;
     }
+    final reporter = cadence;
+    if (reporter == null) {
+      _paintScene(canvas, size);
+      return;
+    }
+    final stopwatch = Stopwatch()..start();
+    _paintScene(canvas, size);
+    reporter.reportPaintCost(stopwatch.elapsed);
+  }
 
+  void _paintScene(Canvas canvas, Size size) {
     final period = 60 / 57;
     final phase = (seconds % period) / period;
     final beat = still ? 0.0 : _cardiac(phase);
@@ -348,10 +368,18 @@ class HeartScenePainter extends CustomPainter {
       final rny = rotation.rotY(nx, ny, nz);
       final rnz = rotation.rotZ(nx, ny, nz);
 
-      final p = camera.project(wx, wy, wz, size.width, size.height);
-      screen[v * 2] = p.sx;
-      screen[v * 2 + 1] = p.sy;
-      viewDepth[v] = p.viewZ;
+      // Projection SANS allocation : à douze mille sommets par image, la
+      // version à enregistrement nourrissait le ramasse-miettes pour rien.
+      camera.projectInto(
+        screen,
+        viewDepth,
+        v,
+        wx,
+        wy,
+        wz,
+        size.width,
+        size.height,
+      );
       colors[v] = shader.shade(rnx, rny, rnz, wx, wy, wz, material);
     }
 

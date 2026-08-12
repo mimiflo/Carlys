@@ -404,9 +404,17 @@ class SceneCamera {
     final yy = zz * xx - zx * xz;
     final yz = zx * xy - zy * xx;
 
-    _rx = [xx, xy, xz];
-    _ry = [yx, yy, yz];
-    _rz = [zx, zy, zz];
+    // Champs PLATS (pas de listes) : la projection tourne dans la boucle de
+    // sommets, chaque indirection s'y paie des milliers de fois par image.
+    _r00 = xx;
+    _r01 = xy;
+    _r02 = xz;
+    _r10 = yx;
+    _r11 = yy;
+    _r12 = yz;
+    _r20 = zx;
+    _r21 = zy;
+    _r22 = zz;
     _tanHalfFov = math.tan(fovDegrees * math.pi / 360);
   }
 
@@ -414,9 +422,7 @@ class SceneCamera {
   final double x;
   final double y;
   final double z;
-  late final List<double> _rx;
-  late final List<double> _ry;
-  late final List<double> _rz;
+  late final double _r00, _r01, _r02, _r10, _r11, _r12, _r20, _r21, _r22;
   late final double _tanHalfFov;
 
   /// Projette un point monde en coordonnées écran (pixels), avec la
@@ -429,9 +435,9 @@ class SceneCamera {
     double height,
   ) {
     final dx = px - x, dy = py - y, dz = pz - z;
-    final vx = _rx[0] * dx + _rx[1] * dy + _rx[2] * dz;
-    final vy = _ry[0] * dx + _ry[1] * dy + _ry[2] * dz;
-    final vz = _rz[0] * dx + _rz[1] * dy + _rz[2] * dz;
+    final vx = _r00 * dx + _r01 * dy + _r02 * dz;
+    final vy = _r10 * dx + _r11 * dy + _r12 * dz;
+    final vz = _r20 * dx + _r21 * dy + _r22 * dz;
 
     final depth = vz < -1e-4 ? -vz : 1e-4;
     final ndcY = vy / (depth * _tanHalfFov);
@@ -441,6 +447,37 @@ class SceneCamera {
       sy: height * 0.5 * (1 - ndcY),
       viewZ: vz,
     );
+  }
+
+  /// Variante SANS ALLOCATION de [project], pour les boucles de sommets.
+  ///
+  /// L'enregistrement rendu par [project] est un objet : à douze mille
+  /// sommets par image et trente images par seconde, cela fait des centaines
+  /// de milliers d'allocations par seconde — autant de travail offert au
+  /// ramasse-miettes, donc des à-coups sur les téléphones modestes. Ici, x et
+  /// y écran s'écrivent dans [screen] (2 cases par sommet) et la profondeur
+  /// de vue dans [depth], des tampons déjà alloués par le maillage.
+  void projectInto(
+    Float32List screen,
+    Float32List depth,
+    int index,
+    double px,
+    double py,
+    double pz,
+    double width,
+    double height,
+  ) {
+    final dx = px - x, dy = py - y, dz = pz - z;
+    final vx = _r00 * dx + _r01 * dy + _r02 * dz;
+    final vy = _r10 * dx + _r11 * dy + _r12 * dz;
+    final vz = _r20 * dx + _r21 * dy + _r22 * dz;
+
+    final d = vz < -1e-4 ? -vz : 1e-4;
+    final ndcY = vy / (d * _tanHalfFov);
+    final ndcX = vx / (d * _tanHalfFov * (width / height));
+    screen[index * 2] = width * 0.5 * (1 + ndcX);
+    screen[index * 2 + 1] = height * 0.5 * (1 - ndcY);
+    depth[index] = vz;
   }
 
   /// Facteur pixels-par-unité-monde à une profondeur donnée (taille des points).

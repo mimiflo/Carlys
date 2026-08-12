@@ -96,6 +96,17 @@ du cœur. Un test de non-régression garde le sens du temps.
 c'est le seul moyen de voir ce qu'une capture d'écran cache — la dérive des
 particules, leur apparition en fondu, la continuité au rebouclage.
 
+**Cadence adaptative** (`SceneCadence`) : la scène vise 30 i/s — au-delà, le
+battement ne gagne rien de perceptible — mais sur un téléphone modeste, tenir
+30 i/s faisait saccader toute la page. Le peintre rapporte le coût de chaque
+image ; si la scène déborde de son budget de temps (un quart du fil
+d'interface), la cadence descend à 20 puis 15 i/s, et remonte — avec marge —
+quand l'appareil respire. Sur un téléphone à l'aise, rien ne change jamais.
+La boucle de sommets projette par ailleurs **sans allocation**
+(`SceneCamera.projectInto`) : la version précédente créait un objet par sommet,
+soit des centaines de milliers d'allocations par seconde offertes au
+ramasse-miettes.
+
 **Corrigé depuis** : l'hélice d'ADN (`DnaHelix`, écran Nutrition) avait le même
 défaut en plus discret. Son cycle vaut un tour de rotation (0,22 rad/s, soit
 28,56 s), mais la respiration (`sin(t × 0,65)`) et la pulsation des barreaux
