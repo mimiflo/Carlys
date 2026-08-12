@@ -12,6 +12,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../app/restore/app_restore.dart';
 import '../core/synchronization/sync_lifecycle.dart';
 import '../features/authentication/data/repositories/auth_repository_impl.dart';
+import '../features/carlys_profile/data/repositories/carlys_profile_repository_impl.dart';
 import '../features/coaching/data/repositories/coach_repository_impl.dart';
 import '../features/coaching/data/repositories/coach_session_launcher.dart';
 import '../features/community/data/repositories/community_repository_impl.dart';
@@ -34,9 +35,14 @@ List<Override> demoOverrides() {
   // partagent donc la même instance, comme en production ils partagent la
   // même base locale.
   final workouts = DemoWorkoutRepository();
+  // Le choix de profil Carlys écrit chez le dépôt d'authentification, que
+  // `me()` reflète : même instance, même flux qu'en production.
+  final auth = DemoAuthRepository();
 
   return [
-    authRepositoryProvider.overrideWithValue(DemoAuthRepository()),
+    authRepositoryProvider.overrideWithValue(auth),
+    carlysProfileRepositoryProvider
+        .overrideWithValue(DemoCarlysProfileRepository(auth)),
     coachRepositoryProvider.overrideWithValue(DemoCoachRepository()),
     coachSessionLauncherProvider
         .overrideWithValue(DemoCoachSessionLauncher(workouts)),

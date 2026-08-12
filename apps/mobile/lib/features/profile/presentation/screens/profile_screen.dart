@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/app_routes.dart';
 import '../../../../design_system/design_system.dart';
 import '../../../authentication/presentation/controllers/auth_controller.dart';
+import '../../../carlys_profile/presentation/widgets/carlys_profile_content.dart';
 import '../../../nutrition/presentation/controllers/nutrition_controllers.dart';
 import '../../../progress/presentation/controllers/progress_controllers.dart';
 import '../../../subscription/presentation/controllers/subscription_controllers.dart';
@@ -66,6 +67,13 @@ class ProfileScreen extends ConsumerWidget {
                   : weights.last.value,
               heightCm: profile?.heightCm,
               sessionsCount: overview?.sessionsCount,
+            ),
+            const SizedBox(height: AppSpacing.md),
+            ProfileIdentitySettings(
+              currentLabel: user?.carlysProfile == null
+                  ? null
+                  : carlysProfileContentOf(user!.carlysProfile!).title,
+              onOpen: () => context.push(AppRoutes.carlysProfiles),
             ),
             const SizedBox(height: AppSpacing.md),
             ProfileTrainingSettings(

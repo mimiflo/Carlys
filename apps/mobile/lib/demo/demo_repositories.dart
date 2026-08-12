@@ -10,6 +10,8 @@ import '../core/synchronization/sync_lifecycle.dart';
 import '../features/authentication/domain/entities/auth_session_device.dart';
 import '../features/authentication/domain/entities/auth_user.dart';
 import '../features/authentication/domain/repositories/auth_repository.dart';
+import '../features/carlys_profile/domain/entities/carlys_profile.dart';
+import '../features/carlys_profile/domain/repositories/carlys_profile_repository.dart';
 import '../features/exercises/domain/entities/exercise.dart';
 import '../features/exercises/domain/repositories/exercises_repository.dart';
 import '../features/nutrition/domain/entities/nutrition.dart';
@@ -25,6 +27,25 @@ import 'demo_data.dart';
 /// identifiants pour laisser explorer les écrans d'authentification.
 class DemoAuthRepository implements AuthRepository {
   bool _connected = true;
+
+  /// Le choix de profil Carlys vit ici, comme il vivrait sur le serveur :
+  /// `me()` le reflète, donc le rafraîchissement du profil suffit à l'UI —
+  /// exactement le flux de production.
+  CarlysProfile? _carlysProfile = demoUser.carlysProfile;
+
+  AuthUser get _user => AuthUser(
+        id: demoUser.id,
+        email: demoUser.email,
+        displayName: demoUser.displayName,
+        emailVerified: demoUser.emailVerified,
+        locale: demoUser.locale,
+        timezone: demoUser.timezone,
+        carlysProfile: _carlysProfile,
+      );
+
+  void chooseCarlysProfile(CarlysProfile profile) {
+    _carlysProfile = profile;
+  }
 
   List<AuthSessionDevice> _devices = [
     AuthSessionDevice(
@@ -54,7 +75,7 @@ class DemoAuthRepository implements AuthRepository {
     required String password,
   }) async {
     _connected = true;
-    return demoUser;
+    return _user;
   }
 
   @override
@@ -64,7 +85,7 @@ class DemoAuthRepository implements AuthRepository {
     required String displayName,
   }) async {
     _connected = true;
-    return demoUser;
+    return _user;
   }
 
   @override
@@ -74,7 +95,7 @@ class DemoAuthRepository implements AuthRepository {
   Future<void> forgotPassword(String email) async {}
 
   @override
-  Future<AuthUser> me() async => demoUser;
+  Future<AuthUser> me() async => _user;
 
   @override
   Future<List<AuthSessionDevice>> sessions() async => _devices;
@@ -88,6 +109,18 @@ class DemoAuthRepository implements AuthRepository {
   Future<void> revokeOtherSessions() async {
     _devices = _devices.where((device) => device.current).toList();
   }
+}
+
+/// Choix du profil Carlys en mémoire : écrit chez [DemoAuthRepository], que
+/// `me()` reflète — le rafraîchissement du profil suffit, comme en ligne.
+class DemoCarlysProfileRepository implements CarlysProfileRepository {
+  DemoCarlysProfileRepository(this._auth);
+
+  final DemoAuthRepository _auth;
+
+  @override
+  Future<void> choose(CarlysProfile profile) async =>
+      _auth.chooseCarlysProfile(profile);
 }
 
 /// Catalogue embarqué : recherche, filtres et pagination réels.

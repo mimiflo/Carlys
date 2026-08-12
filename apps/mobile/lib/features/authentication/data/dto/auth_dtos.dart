@@ -2,6 +2,7 @@
 /// (enveloppe { data, meta, requestId } déjà déballée par le datasource).
 library;
 
+import '../../../carlys_profile/domain/entities/carlys_profile.dart';
 import '../../domain/entities/auth_session_device.dart';
 import '../../domain/entities/auth_user.dart';
 
@@ -13,6 +14,7 @@ class AuthUserDto {
     required this.emailVerified,
     required this.locale,
     required this.timezone,
+    this.carlysProfile,
   });
 
   factory AuthUserDto.fromJson(Map<String, dynamic> json) => AuthUserDto(
@@ -22,6 +24,7 @@ class AuthUserDto {
         emailVerified: json['emailVerified'] as bool,
         locale: json['locale'] as String,
         timezone: json['timezone'] as String,
+        carlysProfile: json['carlysProfile'] as String?,
       );
 
   final String id;
@@ -30,6 +33,7 @@ class AuthUserDto {
   final bool emailVerified;
   final String locale;
   final String timezone;
+  final String? carlysProfile;
 
   AuthUser toEntity() => AuthUser(
         id: id,
@@ -38,6 +42,7 @@ class AuthUserDto {
         emailVerified: emailVerified,
         locale: locale,
         timezone: timezone,
+        carlysProfile: CarlysProfile.fromWire(carlysProfile),
       );
 }
 

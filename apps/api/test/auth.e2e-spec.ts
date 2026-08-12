@@ -105,6 +105,32 @@ describe('Authentification (e2e)', () => {
       .set('Authorization', `Bearer ${firstSession.accessToken}`)
       .expect(200);
     expect(data<AuthUser>(response.body).email).toBe(email);
+    // Pas encore d'identité choisie : null, jamais un défaut imposé.
+    expect(data<AuthUser>(response.body).carlysProfile).toBeNull();
+  });
+
+  it('choisit un profil Carlys — modifiable, jamais un niveau imposé', async () => {
+    const chosen = await api()
+      .patch('/api/v1/users/me')
+      .set('Authorization', `Bearer ${firstSession.accessToken}`)
+      .send({ carlysProfile: 'STRATEGE' })
+      .expect(200);
+    expect(data<AuthUser>(chosen.body).carlysProfile).toBe('STRATEGE');
+
+    // On peut évoluer d'un profil à l'autre à tout moment.
+    const changed = await api()
+      .patch('/api/v1/users/me')
+      .set('Authorization', `Bearer ${firstSession.accessToken}`)
+      .send({ carlysProfile: 'CHALLENGER' })
+      .expect(200);
+    expect(data<AuthUser>(changed.body).carlysProfile).toBe('CHALLENGER');
+
+    // Une valeur hors des quatre profils est refusée.
+    await api()
+      .patch('/api/v1/users/me')
+      .set('Authorization', `Bearer ${firstSession.accessToken}`)
+      .send({ carlysProfile: 'GUERRIER' })
+      .expect(400);
   });
 
   it('refuse un mot de passe erroné avec un message générique', async () => {

@@ -1,6 +1,11 @@
 import { type AuthUser } from '@carlys/api-contracts';
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { type ActivityLevel, type BiologicalSex, type NutritionGoal } from '@prisma/client';
+import {
+  type ActivityLevel,
+  type BiologicalSex,
+  type CarlysProfile,
+  type NutritionGoal,
+} from '@prisma/client';
 import { presentUser } from '../../auth/application/user.presenter';
 import { UsersRepository } from '../infrastructure/users.repository';
 
@@ -8,6 +13,8 @@ export interface UpdateProfileInput {
   displayName?: string;
   locale?: string;
   timezone?: string;
+  /** Identité Carlys — pas un niveau, modifiable à tout moment. */
+  carlysProfile?: CarlysProfile;
   sex?: BiologicalSex;
   birthDate?: Date;
   heightCm?: number;
@@ -45,6 +52,7 @@ export class UsersService {
       ...(data.displayName === undefined ? {} : { displayName: data.displayName.trim() }),
       ...(data.locale === undefined ? {} : { locale: data.locale }),
       ...(data.timezone === undefined ? {} : { timezone: data.timezone }),
+      ...(data.carlysProfile === undefined ? {} : { carlysProfile: data.carlysProfile }),
       ...(data.sex === undefined ? {} : { sex: data.sex }),
       ...(data.birthDate === undefined ? {} : { birthDate: data.birthDate }),
       ...(data.heightCm === undefined ? {} : { heightCm: data.heightCm }),

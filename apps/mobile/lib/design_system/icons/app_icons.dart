@@ -70,6 +70,14 @@ abstract final class AppIcons {
   /// Précision neutre — jamais une erreur, jamais une alerte.
   static const IconData info = Icons.info_outline_rounded;
 
+  // Profils Carlys : l'entrée du réglage, et les replis tant que les
+  // illustrations ne sont pas fournies.
+  static const IconData carlysProfile = Icons.badge_rounded;
+  static const IconData profileConstructeur = Icons.architecture_rounded;
+  static const IconData profileChallenger = Icons.trending_up_rounded;
+  static const IconData profileAthlete = Icons.fitness_center_rounded;
+  static const IconData profileStratege = Icons.psychology_rounded;
+
   // États
   static const IconData error = Icons.error_outline_rounded;
   static const IconData empty = Icons.inbox_rounded;

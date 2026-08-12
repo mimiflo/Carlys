@@ -2,6 +2,10 @@ import { z } from 'zod';
 
 /** Contrats du domaine authentification (/api/v1/auth, /api/v1/users/me). */
 
+/** Les 4 profils Carlys — des identités d'usage, jamais des niveaux. */
+export const carlysProfileSchema = z.enum(['CONSTRUCTEUR', 'CHALLENGER', 'ATHLETE', 'STRATEGE']);
+export type CarlysProfile = z.infer<typeof carlysProfileSchema>;
+
 export const authUserSchema = z.object({
   id: z.string(),
   email: z.string(),
@@ -9,6 +13,8 @@ export const authUserSchema = z.object({
   emailVerified: z.boolean(),
   locale: z.string(),
   timezone: z.string(),
+  /** `null` tant que la personne n'a pas choisi ; modifiable à tout moment. */
+  carlysProfile: carlysProfileSchema.nullable(),
   createdAt: z.string(),
 });
 

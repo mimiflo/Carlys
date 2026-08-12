@@ -97,7 +97,20 @@ model UserProfile {
   activityLevel ActivityLevel?
   nutritionGoal NutritionGoal?
 
+  /// Profil Carlys choisi — une IDENTITÉ d'usage, jamais un niveau.
+  /// Nullable tant que la personne n'a pas choisi ; modifiable à tout moment.
+  carlysProfile CarlysProfile?
+
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+/// Les 4 profils Carlys. Ce ne sont PAS des niveaux : un débutant peut être
+/// Stratège, un sportif avancé Challenger — et l'on évolue de l'un à l'autre.
+enum CarlysProfile {
+  CONSTRUCTEUR
+  CHALLENGER
+  ATHLETE
+  STRATEGE
 }
 
 model UserCredential {

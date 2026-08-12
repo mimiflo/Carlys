@@ -8,6 +8,7 @@ import '../../features/authentication/presentation/screens/forgot_password_scree
 import '../../features/authentication/presentation/screens/login_screen.dart';
 import '../../features/authentication/presentation/screens/register_screen.dart';
 import '../../features/authentication/presentation/screens/sessions_screen.dart';
+import '../../features/carlys_profile/presentation/screens/carlys_profiles_screen.dart';
 import '../../features/coaching/presentation/screens/coach_page.dart';
 import '../../features/community/presentation/screens/community_screen.dart';
 import '../../features/dashboard/presentation/screens/home_screen.dart';
@@ -309,6 +310,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         name: 'settings',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const SettingsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.carlysProfiles,
+        name: 'carlys-profiles',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const CarlysProfilesScreen(),
       ),
       GoRoute(
         path: AppRoutes.welcome,

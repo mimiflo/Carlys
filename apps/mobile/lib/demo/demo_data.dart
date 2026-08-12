@@ -11,6 +11,7 @@
 library;
 
 import '../features/authentication/domain/entities/auth_user.dart';
+import '../features/carlys_profile/domain/entities/carlys_profile.dart';
 import '../features/progress/domain/entities/progress.dart';
 
 const demoUser = AuthUser(
@@ -20,6 +21,9 @@ const demoUser = AuthUser(
   emailVerified: true,
   locale: 'fr',
   timezone: 'Europe/Paris',
+  // Le visiteur a déjà choisi : la visite montre l'état « profil choisi »,
+  // et l'écran des profils permet d'en changer, comme en production.
+  carlysProfile: CarlysProfile.challenger,
 );
 
 List<PersonalRecordEntry> get demoRecords => [

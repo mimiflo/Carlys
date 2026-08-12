@@ -5,6 +5,34 @@ import '../../../../design_system/design_system.dart';
 import '../../../settings/domain/app_theme_setting.dart';
 import '../../../settings/presentation/controllers/theme_setting_controller.dart';
 
+/// Groupe « PROFIL CARLYS » : l'identité choisie — jamais un niveau.
+class ProfileIdentitySettings extends StatelessWidget {
+  const ProfileIdentitySettings({
+    required this.currentLabel,
+    required this.onOpen,
+    super.key,
+  });
+
+  /// Titre du profil choisi (« Le Stratège »), `null` tant qu'aucun ne l'est.
+  final String? currentLabel;
+  final VoidCallback onOpen;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppSettingsGroup(
+      label: 'Profil Carlys',
+      rows: [
+        AppSettingsRow(
+          icon: AppIcons.carlysProfile,
+          label: 'Mon profil',
+          value: currentLabel ?? 'À choisir',
+          onTap: onOpen,
+        ),
+      ],
+    );
+  }
+}
+
 /// Groupe « ENTRAÎNEMENT ».
 ///
 /// Les lignes « temps de repos par défaut » et « unités » de la maquette sont

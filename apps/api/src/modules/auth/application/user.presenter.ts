@@ -11,6 +11,7 @@ export function presentUser(user: UserWithProfile): AuthUser {
     emailVerified: user.emailVerifiedAt !== null,
     locale: user.profile?.locale ?? 'fr',
     timezone: user.profile?.timezone ?? 'Europe/Paris',
+    carlysProfile: user.profile?.carlysProfile ?? null,
     createdAt: user.createdAt.toISOString(),
   };
 }

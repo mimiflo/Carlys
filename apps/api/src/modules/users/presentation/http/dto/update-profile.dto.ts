@@ -1,5 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { ActivityLevel, BiologicalSex, NutritionGoal } from '@prisma/client';
+import { ActivityLevel, BiologicalSex, CarlysProfile, NutritionGoal } from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
   IsDate,
@@ -32,6 +32,14 @@ export class UpdateProfileDto {
   @IsString()
   @Length(1, 60)
   timezone?: string;
+
+  @ApiPropertyOptional({
+    enum: CarlysProfile,
+    description: 'Profil Carlys — une identité d’usage, jamais un niveau',
+  })
+  @IsOptional()
+  @IsEnum(CarlysProfile)
+  carlysProfile?: CarlysProfile;
 
   // ── Profil métabolique (nutrition) ──────────────────────────────────────
 
