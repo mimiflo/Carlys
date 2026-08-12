@@ -26,7 +26,9 @@ import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/academy/presentation/screens/academy_screen.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
 import 'package:carlys_mobile/features/authentication/presentation/screens/login_screen.dart';
+import 'package:carlys_mobile/features/carlys_profile/domain/entities/carlys_profile.dart';
 import 'package:carlys_mobile/features/carlys_profile/presentation/screens/carlys_profiles_screen.dart';
+import 'package:carlys_mobile/features/carlys_profile/presentation/widgets/carlys_profile_content.dart';
 import 'package:carlys_mobile/features/coaching/data/repositories/coach_repository_impl.dart';
 import 'package:carlys_mobile/features/coaching/domain/entities/coach.dart';
 import 'package:carlys_mobile/features/coaching/presentation/controllers/coach_controllers.dart';
@@ -872,6 +874,14 @@ void main() {
 
   testWidgets('profils Carlys', (tester) async {
     await pumpDemoApp(tester);
+    // Illustrations des profils : décodage en temps réel avant capture,
+    // comme toute image du bundle.
+    final context = tester.element(find.byType(MaterialApp));
+    for (final profile in CarlysProfile.values) {
+      final asset = carlysProfileContentOf(profile).assetPath;
+      await tester.runAsync(() => precacheImage(AssetImage(asset), context));
+    }
+    await settle(tester);
     await openProfile(tester);
     await tester.scrollUntilVisible(
       find.text('Mon profil'),
