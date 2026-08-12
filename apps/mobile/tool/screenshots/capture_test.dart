@@ -26,6 +26,7 @@ import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/academy/presentation/screens/academy_screen.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
 import 'package:carlys_mobile/features/authentication/presentation/screens/login_screen.dart';
+import 'package:carlys_mobile/features/carlys_profile/presentation/screens/carlys_profiles_screen.dart';
 import 'package:carlys_mobile/features/coaching/data/repositories/coach_repository_impl.dart';
 import 'package:carlys_mobile/features/coaching/domain/entities/coach.dart';
 import 'package:carlys_mobile/features/coaching/presentation/controllers/coach_controllers.dart';
@@ -866,6 +867,38 @@ void main() {
       tester,
       '16-onboarding',
       shows: find.byType(OnboardingScreen),
+    );
+  });
+
+  testWidgets('profils Carlys', (tester) async {
+    await pumpDemoApp(tester);
+    await openProfile(tester);
+    await tester.scrollUntilVisible(
+      find.text('Mon profil'),
+      150,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await settle(tester);
+    await tester.tap(find.text('Mon profil'));
+    await settle(tester);
+    await capture(
+      tester,
+      '34-profils-carlys',
+      shows: find.byType(CarlysProfilesScreen),
+    );
+
+    await tester.scrollUntilVisible(
+      find.text('LE STRATÈGE'),
+      240,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await settle(tester);
+    await tester.tap(find.text('LE STRATÈGE'));
+    await settle(tester);
+    await capture(
+      tester,
+      '35-profil-fiche',
+      shows: find.text('« Je veux comprendre avant d’agir. »'),
     );
   });
 
