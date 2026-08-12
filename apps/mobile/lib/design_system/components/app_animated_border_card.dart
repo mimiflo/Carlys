@@ -30,7 +30,7 @@ class _AppAnimatedBorderCardState extends State<AppAnimatedBorderCard>
     super.initState();
     _controller = AnimationController(
       vsync: this,
-      duration: const Duration(milliseconds: 3400),
+      duration: AppDashBorderPainter.travelDuration,
     );
   }
 
@@ -38,11 +38,11 @@ class _AppAnimatedBorderCardState extends State<AppAnimatedBorderCard>
   void didChangeDependencies() {
     super.didChangeDependencies();
     final reduced =
-        AppMotion.resolve(context, const Duration(milliseconds: 3400)) ==
+        AppMotion.resolve(context, AppDashBorderPainter.travelDuration) ==
             Duration.zero;
     if (reduced) {
       _controller.stop();
-      _controller.value = 0.15;
+      _controller.value = AppDashBorderPainter.restProgress;
     } else if (!_controller.isAnimating) {
       _controller.repeat();
     }
@@ -59,7 +59,7 @@ class _AppAnimatedBorderCardState extends State<AppAnimatedBorderCard>
     return AnimatedBuilder(
       animation: _controller,
       builder: (context, child) => CustomPaint(
-        foregroundPainter: _DashBorderPainter(progress: _controller.value),
+        foregroundPainter: AppDashBorderPainter(progress: _controller.value),
         child: child,
       ),
       // Le contenu de la carte a sa propre couche : la bordure repeint à
@@ -78,18 +78,37 @@ class _AppAnimatedBorderCardState extends State<AppAnimatedBorderCard>
   }
 }
 
-class _DashBorderPainter extends CustomPainter {
-  const _DashBorderPainter({required this.progress});
+/// Bordure au segment voyageur : le contour violet léger EST le tracé, un
+/// segment accent de 84 px en fait le tour. Public pour être partagé — la
+/// carte d'abonnement populaire et le profil Carlys ACTUEL parlent la même
+/// langue visuelle.
+class AppDashBorderPainter extends CustomPainter {
+  const AppDashBorderPainter({
+    required this.progress,
+    this.cornerRadius = 24,
+  });
+
+  /// Un tour complet du périmètre.
+  static const Duration travelDuration = Duration(milliseconds: 3400);
+
+  /// Position de repos (réduction d'animations) : le segment reste visible,
+  /// posé sur le flanc, sans jamais bouger.
+  static const double restProgress = 0.15;
 
   final double progress;
+
+  /// Rayon d'angle du CADRE entouré (le trait se centre dessus).
+  final double cornerRadius;
+
   static const double _dashLength = 84;
+  static const double _strokeWidth = 1.5;
 
   @override
   void paint(Canvas canvas, Size size) {
     final rrect = RRect.fromRectAndRadius(
       Offset.zero & size,
-      const Radius.circular(23.25),
-    ).deflate(0.75);
+      Radius.circular(cornerRadius - _strokeWidth / 2),
+    ).deflate(_strokeWidth / 2);
     final path = Path()..addRRect(rrect);
 
     // Contour continu en primaryLight.
@@ -97,7 +116,7 @@ class _DashBorderPainter extends CustomPainter {
       path,
       Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5
+        ..strokeWidth = _strokeWidth
         ..color = AppColors.primaryLightBorder,
     );
 
@@ -108,7 +127,7 @@ class _DashBorderPainter extends CustomPainter {
       final segment = metric.extractPath(start, end.clamp(0, metric.length));
       final paint = Paint()
         ..style = PaintingStyle.stroke
-        ..strokeWidth = 1.5
+        ..strokeWidth = _strokeWidth
         ..strokeCap = StrokeCap.round
         ..color = AppColors.accent;
       canvas.drawPath(segment, paint);
@@ -123,6 +142,7 @@ class _DashBorderPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(_DashBorderPainter oldDelegate) =>
-      oldDelegate.progress != progress;
+  bool shouldRepaint(AppDashBorderPainter oldDelegate) =>
+      oldDelegate.progress != progress ||
+      oldDelegate.cornerRadius != cornerRadius;
 }

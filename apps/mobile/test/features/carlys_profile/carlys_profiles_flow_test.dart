@@ -3,6 +3,7 @@ import 'package:carlys_mobile/app/environment/app_environment.dart';
 import 'package:carlys_mobile/app/restore/app_restore.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
 import 'package:carlys_mobile/demo/demo_overrides.dart';
+import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
 import 'package:carlys_mobile/features/carlys_profile/data/repositories/carlys_profile_repository_impl.dart';
 import 'package:carlys_mobile/features/community/data/repositories/community_repository_impl.dart';
@@ -64,6 +65,12 @@ Future<void> openCarlysProfiles(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
+/// L'anneau au segment voyageur — la marque du profil ACTUEL.
+final Finder travelingRing = find.byWidgetPredicate(
+  (widget) =>
+      widget is CustomPaint && widget.foregroundPainter is AppDashBorderPainter,
+);
+
 void main() {
   setUp(() {
     seedCompletedFirstRun();
@@ -89,8 +96,14 @@ void main() {
     expect(find.text('L’ATHLÈTE'), findsOneWidget);
     expect(find.text('LE STRATÈGE'), findsOneWidget);
 
-    // Le visiteur de démonstration est Challenger : un seul badge.
+    // Le visiteur de démonstration est Challenger : un seul badge, et
+    // l'anneau animé n'entoure que SA carte.
     expect(find.text('Ton profil'), findsOneWidget);
+    expect(travelingRing, findsOneWidget);
+    expect(
+      find.descendant(of: travelingRing, matching: find.text('LE CHALLENGER')),
+      findsOneWidget,
+    );
   });
 
   testWidgets('la fiche montre la devise et les publics, puis on choisit',
@@ -127,8 +140,13 @@ void main() {
       ),
       findsOneWidget,
     );
-    // …et il n'y en a toujours qu'un.
+    // …et il n'y en a toujours qu'un — l'anneau animé a suivi lui aussi.
     expect(find.text('Ton profil'), findsOneWidget);
+    expect(travelingRing, findsOneWidget);
+    expect(
+      find.descendant(of: travelingRing, matching: find.text('LE STRATÈGE')),
+      findsOneWidget,
+    );
 
     // Sa fiche le dit, et ne propose plus de le choisir.
     await tester.tap(find.text('LE STRATÈGE'));
