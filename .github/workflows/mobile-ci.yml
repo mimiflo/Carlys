@@ -49,14 +49,11 @@ jobs:
         run: flutter pub get
 
       # Le cache de build_runner évite de tout régénérer à chaque exécution.
-      - name: Cache de génération de code
-        uses: actions/cache@v4
-        with:
-          path: apps/mobile/.dart_tool/build
-          key: buildrunner-${{ runner.os }}-${{ hashFiles('apps/mobile/pubspec.lock') }}-${{ hashFiles('apps/mobile/lib/**/*.dart') }}
-          restore-keys: |
-            buildrunner-${{ runner.os }}-${{ hashFiles('apps/mobile/pubspec.lock') }}-
-            buildrunner-${{ runner.os }}-
+      # PAS de cache de .dart_tool/build : restauré, il mettait build_runner
+      # dans un état où le processus ne se TERMINAIT jamais (drift_dev
+      # concluait « no-op » puis le job gelait jusqu'au timeout — processus
+      # dart:build_runner orphelin tué au nettoyage). La génération à froid
+      # coûte ~1 min ; le cache en a coûté 40. Le cache pub, lui, reste.
 
       - name: Génération de code (Drift, …)
         run: dart run build_runner build --delete-conflicting-outputs
