@@ -60,6 +60,9 @@ jobs:
         run: |
           flutter create --org com.carlys --project-name carlys_mobile \
             --platforms android .
+          # Identité Carlys : nom affiché, icône (sceau), permission de
+          # notification — même script que le poste de développement.
+          ../../scripts/android_branding.sh
           # Build Gradle parallèle et réutilisation du cache de tâches.
           {
             echo 'org.gradle.parallel=true'

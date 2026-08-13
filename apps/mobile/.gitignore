@@ -11,7 +11,13 @@ build/
 **/*.freezed.dart
 **/*.drift.dart
 
-# Plateformes (générées via scripts/bootstrap_mobile.sh)
+# Plateformes (générées via scripts/bootstrap_mobile.sh) : JAMAIS
+# versionnées — l'identité (nom, icône) vit dans launcher/ et
+# scripts/android_branding.sh. Les fichiers .iml viennent aussi de
+# flutter create.
+/android/
+/ios/
+*.iml
 android/local.properties
 android/.gradle/
 ios/Pods/

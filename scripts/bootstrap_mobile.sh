@@ -2,7 +2,11 @@
 # Prépare l'application Flutter : dossiers de plateformes + dépendances.
 set -euo pipefail
 
-cd "$(dirname "$0")/../apps/mobile"
+# Chemin ABSOLU des scripts, résolu AVANT le cd : "$0" est relatif à
+# l'endroit d'où l'on a lancé le script, plus valable ensuite.
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+cd "$SCRIPT_DIR/../apps/mobile"
 
 command -v flutter >/dev/null || {
   echo "Le SDK Flutter est requis : https://docs.flutter.dev/get-started/install"
@@ -13,15 +17,8 @@ echo "── Génération des dossiers de plateformes (android/, ios/) ───
 flutter create --org com.carlys --project-name carlys_mobile \
   --platforms android,ios .
 
-# Notifications push : Android 13+ exige que la permission soit DÉCLARÉE dans
-# le manifeste (la demande à l'exécution, elle, passe par Firebase Messaging).
-# Le dossier android/ étant généré, on répare le manifeste à chaque bootstrap.
-MANIFEST="android/app/src/main/AndroidManifest.xml"
-if ! grep -q "android.permission.POST_NOTIFICATIONS" "$MANIFEST"; then
-  sed -i.bak 's|<application|<uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>\n    <application|' "$MANIFEST"
-  rm -f "$MANIFEST.bak"
-  echo "Permission POST_NOTIFICATIONS ajoutée à $MANIFEST"
-fi
+echo "── Identité Carlys (nom, icône, permission de notification) ───────"
+"$SCRIPT_DIR/android_branding.sh"
 
 echo "── Dépendances ─────────────────────────────────────────────────────"
 flutter pub get
