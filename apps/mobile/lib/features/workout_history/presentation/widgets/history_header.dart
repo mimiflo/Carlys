@@ -16,6 +16,8 @@ class HistoryHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
+        const AppBackButton(),
+        const SizedBox(width: AppSpacing.xxs),
         Expanded(
           child: Text(
             'Historique',

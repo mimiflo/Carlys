@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 
 import '../../../../design_system/design_system.dart';
 
@@ -12,28 +11,12 @@ class TemplatesHeader extends StatelessWidget {
 
   final VoidCallback onCreate;
 
-  /// Géométrie de la maquette : icônes 23, boîte tactile 44.
-  static const double _iconSize = 23;
-  static const double _tapSize = 44;
-
   @override
   Widget build(BuildContext context) {
     return Row(
       children: [
-        IconButton(
-          tooltip: 'Retour',
-          padding: EdgeInsets.zero,
-          constraints: const BoxConstraints.tightFor(
-            width: _tapSize,
-            height: _tapSize,
-          ),
-          onPressed: () => context.pop(),
-          icon: const Icon(
-            AppIcons.back,
-            size: _iconSize,
-            color: AppColors.darkTextSecondary,
-          ),
-        ),
+        // La flèche commune à toutes les pages poussées.
+        const AppBackButton(),
         const SizedBox(width: AppSpacing.xxs),
         Expanded(
           child: Text(

@@ -127,6 +127,8 @@ class ProgramDetailScreen extends ConsumerWidget {
             children: [
               Row(
                 children: [
+                  const AppBackButton(),
+                  const SizedBox(width: AppSpacing.xxs),
                   Expanded(
                     child: Text(
                       program.name,

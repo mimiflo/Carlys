@@ -25,6 +25,9 @@ class ExerciseLibraryHeader extends ConsumerWidget {
 
     return Row(
       children: [
+        // Retour vers le hub Training — la bibliothèque est une sous-page.
+        const AppBackButton(),
+        const SizedBox(width: AppSpacing.xxs),
         Expanded(
           child: Text(
             'Exercices',

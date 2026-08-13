@@ -52,6 +52,11 @@ class ProfileScreen extends ConsumerWidget {
             bottomInset + AppSpacing.gapSection,
           ),
           children: [
+            const Align(
+              alignment: Alignment.centerLeft,
+              child: AppBackButton(),
+            ),
+            const SizedBox(height: AppSpacing.xs),
             ProfileHeader(user: user),
             const SizedBox(height: AppSpacing.md),
             if (plan != null) ...[

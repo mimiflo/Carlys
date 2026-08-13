@@ -55,12 +55,20 @@ class ProgramsScreen extends ConsumerWidget {
             AppSpacing.gutter + bottomInset,
           ),
           children: [
-            AppSectionHeader(
-              title: 'Programmes',
-              trailing: 'Nouveau',
-              trailingIcon: Icons.add_rounded,
-              trailingTone: AppSectionTrailingTone.accent,
-              onTrailingTap: () => _create(context, ref),
+            Row(
+              children: [
+                const AppBackButton(),
+                const SizedBox(width: AppSpacing.xxs),
+                Expanded(
+                  child: AppSectionHeader(
+                    title: 'Programmes',
+                    trailing: 'Nouveau',
+                    trailingIcon: Icons.add_rounded,
+                    trailingTone: AppSectionTrailingTone.accent,
+                    onTrailingTap: () => _create(context, ref),
+                  ),
+                ),
+              ],
             ),
             const SizedBox(height: AppSpacing.xxs),
             Text(
