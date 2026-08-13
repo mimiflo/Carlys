@@ -1,14 +1,8 @@
 # Icône de lanceur Carlys
 
-Déclinaisons de l'icône d'application, générées depuis le sceau de la marque
-(`assets/brand/carlys-mark.png`) sur le fond sombre de l'application
-(`#08050E`, `AppColors.darkBackground`).
-
-Le sceau est rendu en **gris anthracite** (demande produit) : luminance du
-sceau d'origine conservée — le modelé et les reflets restent — puis remappée
-sur une rampe graphite (ombres `#171B20`, corps `#4A525B`, reflets `#C6CDD4`,
-autocontraste masqué sur la zone opaque). Pour revenir au sceau coloré, il
-suffit de régénérer les PNG sans ce remappage.
+Déclinaisons de l'icône d'application : le sceau de la marque
+(`assets/brand/carlys-mark.png`), dans ses couleurs d'origine, sur un fond
+**gris anthracite** (`#2C3136`, demande produit — le fond, pas le sceau).
 
 Contenu :
 
