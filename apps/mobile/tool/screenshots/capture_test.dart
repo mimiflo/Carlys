@@ -863,6 +863,12 @@ void main() {
   testWidgets('onboarding', (tester) async {
     await pumpApp(tester);
     final context = tester.element(find.byType(AppBottomBar));
+    // La première question montre les cartes d'identité illustrées :
+    // décodage en temps réel avant capture, comme toute image du bundle.
+    for (final profile in CarlysProfile.values) {
+      final asset = carlysProfileContentOf(profile).assetPath;
+      await tester.runAsync(() => precacheImage(AssetImage(asset), context));
+    }
     GoRouter.of(context).go(AppRoutes.onboarding);
     await settle(tester);
     await capture(

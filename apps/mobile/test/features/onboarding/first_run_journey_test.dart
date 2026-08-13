@@ -113,13 +113,16 @@ void main() {
   }
 
   Future<void> tapText(WidgetTester tester, String label) async {
+    // Les cartes d'identité allongent la première étape : on défile jusqu'à
+    // la cible quand elle est sous le pli (sans effet hors d'un défilement).
+    await tester.ensureVisible(find.text(label));
     await tester.tap(find.text(label));
     await tester.pumpAndSettle();
   }
 
   /// Répond aux 5 étapes de l'onboarding (l'identité d'abord) puis valide.
   Future<void> answerOnboarding(WidgetTester tester) async {
-    await tapText(tester, 'Le Constructeur');
+    await tapText(tester, 'LE CONSTRUCTEUR');
     await tapText(tester, 'Continuer');
 
     await tapText(tester, 'Prendre du muscle');

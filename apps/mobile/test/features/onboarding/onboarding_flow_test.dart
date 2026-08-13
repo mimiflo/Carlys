@@ -77,7 +77,15 @@ void main() {
   }
 
   Future<void> tapContinue(WidgetTester tester) async {
+    // Les cartes d'identité sont hautes : le CTA peut être sous le pli.
+    await tester.ensureVisible(find.text('Continuer'));
     await tester.tap(find.text('Continuer'));
+    await tester.pumpAndSettle();
+  }
+
+  Future<void> tapCard(WidgetTester tester, String title) async {
+    await tester.ensureVisible(find.text(title));
+    await tester.tap(find.text(title));
     await tester.pumpAndSettle();
   }
 
@@ -87,24 +95,28 @@ void main() {
 
     expect(find.text('1/5'), findsOneWidget);
     expect(find.byIcon(AppIcons.back), findsNothing);
-    // Se reconnaître d'abord : l'identité ouvre le parcours.
+    // Se reconnaître d'abord : l'identité ouvre le parcours, avec les MÊMES
+    // cartes illustrées que l'écran Profil Carlys.
     expect(find.text('TON IDENTITÉ'), findsOneWidget);
-    expect(find.text('Le Constructeur'), findsOneWidget);
-    expect(find.text('« Je commence à construire. »'), findsOneWidget);
+    expect(find.text('LE CONSTRUCTEUR'), findsOneWidget);
+    expect(
+      find.textContaining('construire les bases'),
+      findsOneWidget,
+    );
 
     // Aucune réponse choisie : le CTA ne fait rien.
     await tapContinue(tester);
     expect(find.text('1/5'), findsOneWidget);
   });
 
-  testWidgets('choisir une réponse marque la carte et débloque le CTA',
+  testWidgets('choisir une identité pose le badge et débloque le CTA',
       (tester) async {
     await openOnboarding(tester);
 
-    expect(find.byIcon(AppIcons.checkCircle), findsNothing);
-    await tester.tap(find.text('Le Constructeur'));
-    await tester.pumpAndSettle();
-    expect(find.byIcon(AppIcons.checkCircle), findsOneWidget);
+    expect(find.text('Ton profil'), findsNothing);
+    await tapCard(tester, 'LE CONSTRUCTEUR');
+    // Le même marquage que l'écran Profil Carlys : badge sur la sélection.
+    expect(find.text('Ton profil'), findsOneWidget);
 
     await tapContinue(tester);
     expect(find.text('2/5'), findsOneWidget);
@@ -114,23 +126,21 @@ void main() {
   testWidgets('le retour ramène à l’étape précédente', (tester) async {
     await openOnboarding(tester);
 
-    await tester.tap(find.text('Le Constructeur'));
-    await tester.pumpAndSettle();
+    await tapCard(tester, 'LE CONSTRUCTEUR');
     await tapContinue(tester);
 
     await tester.tap(find.byIcon(AppIcons.back));
     await tester.pumpAndSettle();
     expect(find.text('1/5'), findsOneWidget);
     // La réponse déjà donnée reste sélectionnée.
-    expect(find.byIcon(AppIcons.checkCircle), findsOneWidget);
+    expect(find.text('Ton profil'), findsOneWidget);
   });
 
   testWidgets('les 5 étapes enregistrent identité ET profil métabolique',
       (tester) async {
     final nutrition = await openOnboarding(tester);
 
-    await tester.tap(find.text('Le Challenger'));
-    await tester.pumpAndSettle();
+    await tapCard(tester, 'LE CHALLENGER');
     await tapContinue(tester);
 
     await tester.tap(find.text('Prendre du muscle'));
@@ -182,6 +192,8 @@ void main() {
       (tester) async {
     final nutrition = await openOnboarding(tester);
 
+    // Les cartes d'identité poussent le pied de page sous le pli.
+    await tester.ensureVisible(find.text('Passer'));
     await tester.tap(find.text('Passer'));
     await tester.pumpAndSettle();
 

@@ -84,6 +84,8 @@ void main() {
     // 1. Onboarding — la session démo étant déjà ouverte, l'étape « compte »
     // est satisfaite : « Passer » enchaîne directement sur Premium.
     expect(find.text('1/5'), findsOneWidget);
+    // Les cartes d'identité poussent le pied de page sous le pli.
+    await tester.ensureVisible(find.text('Passer'));
     await tester.tap(find.text('Passer'));
     await tester.pumpAndSettle();
 

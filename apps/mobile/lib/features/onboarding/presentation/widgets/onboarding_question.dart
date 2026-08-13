@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../carlys_profile/domain/entities/carlys_profile.dart';
-import '../../../carlys_profile/presentation/widgets/carlys_profile_content.dart';
+import '../../../carlys_profile/presentation/widgets/carlys_profile_card.dart';
 import '../../../nutrition/domain/entities/nutrition.dart';
 import 'onboarding_birth_date_card.dart';
 import 'onboarding_choices.dart';
@@ -57,7 +57,10 @@ class OnboardingQuestion extends StatelessWidget {
   Widget build(BuildContext context) {
     return switch (step) {
       // L'identité OUVRE le parcours : se reconnaître avant de mesurer —
-      // c'est l'accroche, et le reste des questions s'y adosse.
+      // c'est l'accroche, et le reste des questions s'y adosse. Les cartes
+      // sont CELLES de l'écran Profil Carlys (illustration, titre,
+      // description, anneau animé sur la sélection) : même langage visuel
+      // du premier écran au dernier.
       0 => OnboardingStepBody(
           label: 'Ton identité',
           question: 'Quel Carlys\nes-tu ?',
@@ -65,11 +68,9 @@ class OnboardingQuestion extends StatelessWidget {
               'à tout moment.',
           options: [
             for (final value in CarlysProfile.values)
-              OnboardingOptionCard(
-                title: carlysProfileContentOf(value).title,
-                subtitle: carlysProfileContentOf(value).quote,
-                icon: carlysProfileContentOf(value).icon,
-                selected: carlysProfile == value,
+              CarlysProfileCard(
+                profile: value,
+                isCurrent: carlysProfile == value,
                 onTap: () => onCarlysProfile(value),
               ),
           ],

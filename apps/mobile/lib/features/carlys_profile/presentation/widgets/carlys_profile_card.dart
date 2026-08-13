@@ -167,13 +167,23 @@ class _CardBody extends StatelessWidget {
                       ),
                       const SizedBox(height: AppSpacing.xxs),
                     ],
+                    // Bornés : la hauteur de carte est FIXE — sur un écran
+                    // étroit (ou avec les glyphes carrés du harnais de test),
+                    // un texte libre déborderait sous le badge.
                     Text(
                       content.title.toUpperCase(),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
                       style: AppTypography.subheading,
                     ),
                     const SizedBox(height: AppSpacing.xxs),
                     Text(
                       content.tagline,
+                      // Quatre lignes : les quatre descriptions s'affichent
+                      // ENTIÈRES à la largeur d'un téléphone — la borne ne
+                      // joue que sur les écrans hors norme.
+                      maxLines: 4,
+                      overflow: TextOverflow.ellipsis,
                       style: AppTypography.label.copyWith(
                         color: AppColors.darkTextSecondary,
                       ),
