@@ -25,7 +25,7 @@ import {
   type MessageWithProposal,
 } from '../infrastructure/coach.repository';
 import { COACH_TOOLS, CoachTools } from './coach.tools';
-import { COACH_SYSTEM_PROMPT, volatileContext } from './coach.prompt';
+import { COACH_SYSTEM_PROMPT, carlysProfileBriefing, volatileContext } from './coach.prompt';
 import { CoachQuota } from './coach.quota';
 import { validateProposal } from './proposal.validator';
 
@@ -110,6 +110,11 @@ export class CoachService {
     await this.repository.ensureConversation(userId, conversationId);
     const conversation = await this.requireConversation(userId, conversationId);
 
+    // Le profil Carlys aiguille le ton du coach. Chargé AVANT le compteur, et
+    // dégradé en silence : un incident sur cette lecture ne doit ni brûler un
+    // tour de quota, ni empêcher le coach de répondre.
+    const carlysProfile = await this.repository.carlysProfileOf(userId).catch(() => null);
+
     // Le compteur passe AVANT l'appel : un échec du fournisseur ne doit pas
     // offrir un tour gratuit à qui insiste.
     const remaining = await this.quota.consume(userId);
@@ -122,6 +127,9 @@ export class CoachService {
     const history = buildHistory(conversation, content);
     const output = await this.model.reply({
       system: COACH_SYSTEM_PROMPT,
+      // Après la césure de cache : le préfixe partagé reste identique pour
+      // tous les utilisateurs, briefing ou pas.
+      systemPerUser: carlysProfileBriefing(carlysProfile),
       tools: COACH_TOOLS,
       history,
       runTools: (calls) => this.tools.run(userId, calls),

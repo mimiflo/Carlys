@@ -1,4 +1,10 @@
-import { COACH_SYSTEM_PROMPT, looksVolatile, volatileContext } from './coach.prompt';
+import { CarlysProfile } from '@prisma/client';
+import {
+  COACH_SYSTEM_PROMPT,
+  carlysProfileBriefing,
+  looksVolatile,
+  volatileContext,
+} from './coach.prompt';
 import { COACH_TOOLS, PROPOSE_SESSION_TOOL } from './coach.tools';
 
 /**
@@ -58,5 +64,47 @@ describe('Prompt du coach', () => {
     expect(looksVolatile('il est 14:32')).toBe(true);
     expect(looksVolatile('requête 3f2504e0-4f89-41d3-9a0c-0305e82c3301')).toBe(true);
     expect(looksVolatile('Tu es le coach de Carlys.')).toBe(false);
+  });
+});
+
+/**
+ * Briefing de profil Carlys — le bloc système PAR UTILISATEUR.
+ *
+ * Le piège gardé ici est le même que pour la date : un nom de profil glissé
+ * dans le préfixe partagé le fragmenterait en quatre variantes de cache,
+ * sans qu'aucun test ne rougisse — `looksVolatile` ne voit que dates, heures
+ * et UUID.
+ */
+describe('Briefing de profil Carlys', () => {
+  it('le préfixe partagé ne cite AUCUN profil : il resterait identique pour tous', () => {
+    for (const profile of Object.values(CarlysProfile)) {
+      expect(COACH_SYSTEM_PROMPT).not.toContain(profile);
+    }
+  });
+
+  it('chaque profil a un briefing court, nommé, et sans donnée volatile', () => {
+    for (const profile of Object.values(CarlysProfile)) {
+      const briefing = carlysProfileBriefing(profile);
+
+      expect(briefing).not.toBe('');
+      // Le modèle doit savoir DE QUELLE identité on parle.
+      expect(briefing).toContain('profil Carlys');
+      // La même discipline que le reste du prompt : court.
+      expect(briefing.length).toBeLessThan(400);
+      // Sûr à placer n'importe où par rapport à la césure.
+      expect(looksVolatile(briefing)).toBe(false);
+    }
+  });
+
+  it('sans profil choisi, aucun briefing — jamais un profil deviné', () => {
+    expect(carlysProfileBriefing(null)).toBe('');
+  });
+
+  it('le briefing parle d’angle, pas de chiffres', () => {
+    // Les chiffres viennent des outils : un briefing qui prescrirait des
+    // charges ou des pourcentages contournerait toute la doctrine du prompt.
+    for (const profile of Object.values(CarlysProfile)) {
+      expect(carlysProfileBriefing(profile)).not.toMatch(/\d/);
+    }
   });
 });

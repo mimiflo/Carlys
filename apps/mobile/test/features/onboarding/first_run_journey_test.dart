@@ -4,6 +4,8 @@ import 'package:carlys_mobile/app/restore/app_restore.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
+import 'package:carlys_mobile/features/carlys_profile/data/repositories/carlys_profile_repository_impl.dart';
+import 'package:carlys_mobile/features/carlys_profile/domain/entities/carlys_profile.dart';
 import 'package:carlys_mobile/features/nutrition/data/repositories/nutrition_repository_impl.dart';
 import 'package:carlys_mobile/features/nutrition/domain/entities/nutrition.dart';
 import 'package:carlys_mobile/features/onboarding/domain/first_run_step.dart';
@@ -18,6 +20,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/fake_auth_repository.dart';
+import '../../support/fake_carlys_profile_repository.dart';
 import '../../support/fake_nutrition_repository.dart';
 import '../../support/fake_progress_repository.dart';
 import '../../support/fake_subscription_repository.dart';
@@ -35,6 +38,7 @@ void main() {
 
   late FakeAuthRepository auth;
   late FakeNutritionRepository nutrition;
+  late FakeCarlysProfileRepository carlysRepo;
 
   setUp(() {
     seedFirstOpen();
@@ -44,6 +48,7 @@ void main() {
         const FakeAccessibilityFeatures(disableAnimations: true);
     auth = FakeAuthRepository();
     nutrition = FakeNutritionRepository();
+    carlysRepo = FakeCarlysProfileRepository();
   });
 
   tearDown(() {
@@ -59,6 +64,7 @@ void main() {
             ),
           ),
           authRepositoryProvider.overrideWithValue(auth),
+          carlysProfileRepositoryProvider.overrideWithValue(carlysRepo),
           nutritionRepositoryProvider.overrideWithValue(nutrition),
           subscriptionRepositoryProvider
               .overrideWithValue(FakeSubscriptionRepository()),
@@ -111,8 +117,11 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  /// Répond aux 4 étapes de l'onboarding puis valide.
+  /// Répond aux 5 étapes de l'onboarding (l'identité d'abord) puis valide.
   Future<void> answerOnboarding(WidgetTester tester) async {
+    await tapText(tester, 'Le Constructeur');
+    await tapText(tester, 'Continuer');
+
     await tapText(tester, 'Prendre du muscle');
     await tapText(tester, 'Continuer');
 
@@ -158,14 +167,14 @@ void main() {
     expect(find.text('L’ART DE DEVENIR'), findsOneWidget);
     // Les quatre univers sont annoncés, sans prétendre être navigables.
     expect(find.byType(BrandPillars), findsOneWidget);
-    expect(find.text('1/4'), findsNothing);
+    expect(find.text('1/5'), findsNothing);
     expect(find.byType(AppBottomBar), findsNothing);
 
     // Rien d'autre n'en sort : pas d'échappatoire vers la connexion.
     expect(find.text('J’ai déjà un compte'), findsNothing);
 
     await passWelcomePage(tester);
-    expect(find.text('1/4'), findsOneWidget);
+    expect(find.text('1/5'), findsOneWidget);
   });
 
   testWidgets(
@@ -174,15 +183,16 @@ void main() {
     await launch(tester);
 
     // 1. L'application s'ouvre sur l'onboarding, pas sur l'accueil.
-    expect(find.text('1/4'), findsOneWidget);
+    expect(find.text('1/5'), findsOneWidget);
     expect(find.byType(AppBottomBar), findsNothing);
 
     await answerOnboarding(tester);
 
     // 2. Création de compte. Sans session, rien n'a encore été envoyé au
-    // serveur : les réponses attendent le compte.
+    // serveur : les réponses attendent le compte — l'identité Carlys aussi.
     expect(find.text('Créer un compte'), findsOneWidget);
     expect(nutrition.updateCount, 0);
+    expect(carlysRepo.chosen, isEmpty);
 
     await fillRegisterForm(tester);
 
@@ -194,13 +204,14 @@ void main() {
     expect(find.text('Passer à Premium'), findsOneWidget);
 
     // Les réponses d'onboarding sont reportées sur le profil dès que le
-    // compte existe.
+    // compte existe — l'identité Carlys par son propre endpoint.
     expect(nutrition.updateCount, 1);
     final report = await nutrition.metabolismReport();
     expect(report.profile.goal, NutritionGoal.gainMuscle);
     expect(report.profile.sex, BiologicalSex.male);
     expect(report.profile.heightCm, 176);
     expect(report.profile.activityLevel, ActivityLevel.active);
+    expect(carlysRepo.chosen, [CarlysProfile.constructeur]);
 
     // 4. Refus : la version gratuite est proposée explicitement, puis
     // l'application s'ouvre.
@@ -214,7 +225,7 @@ void main() {
     await tester.pumpWidget(app());
     await tester.pumpAndSettle();
     expect(find.byType(AppBottomBar), findsOneWidget);
-    expect(find.text('1/4'), findsNothing);
+    expect(find.text('1/5'), findsNothing);
   });
 
   testWidgets('le refus mène à Premium puis revient : aucune impasse',
@@ -269,7 +280,7 @@ void main() {
     await tapText(tester, 'Se connecter');
 
     expect(auth.loginCalls, 1);
-    expect(find.text('1/4'), findsOneWidget);
+    expect(find.text('1/5'), findsOneWidget);
     // Session ouverte : le lien de connexion n'a plus lieu d'être.
     expect(find.text('J’ai déjà un compte'), findsNothing);
   });
@@ -280,7 +291,7 @@ void main() {
     await launch(tester, passWelcome: false);
 
     expect(find.text('Créer un compte'), findsOneWidget);
-    expect(find.text('1/4'), findsNothing);
+    expect(find.text('1/5'), findsNothing);
 
     // Qui a déjà un compte rejoint la connexion depuis l'inscription.
     await tapText(tester, 'Se connecter');
@@ -295,7 +306,7 @@ void main() {
     await launch(tester, passWelcome: false);
 
     expect(find.byType(AppBottomBar), findsOneWidget);
-    expect(find.text('1/4'), findsNothing);
+    expect(find.text('1/5'), findsNothing);
     expect(find.text('CARLYS PREMIUM'), findsNothing);
   });
 }

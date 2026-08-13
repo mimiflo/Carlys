@@ -229,19 +229,29 @@ dégrade en réponse purement textuelle.
 
 ## Prompt et mise en cache
 
-Ordre de rendu : outils → système → messages. Le point de césure de cache se
-pose **sur le dernier bloc système**, donc après le prompt et les définitions
-d'outils, et avant l'historique de la conversation.
+Ordre de rendu : outils → système partagé (césure) → bloc par utilisateur →
+messages. Le point de césure de cache se pose **sur le bloc système
+partagé**, donc après le prompt et les définitions d'outils — identiques pour
+tous les utilisateurs — et avant tout ce qui varie.
 
 Interdits absolus dans le préfixe : date du jour, identifiant de requête, nom
-de l'utilisateur, toute donnée qui change d'un appel à l'autre. Ils vivent dans
-le premier message utilisateur, après la césure. Un `new Date()` dans le prompt
-système annulerait la totalité du bénéfice — c'est le piège classique, et il
-est silencieux : rien n'échoue, la facture double.
+de l'utilisateur, toute donnée qui change d'un appel à l'autre — ou d'un
+utilisateur à l'autre. Ils vivent après la césure. Un `new Date()` dans le
+prompt système annulerait la totalité du bénéfice — c'est le piège classique,
+et il est silencieux : rien n'échoue, la facture double.
+
+**Profil Carlys** : quand l'utilisateur a choisi son identité
+(Constructeur/Challenger/Athlète/Stratège), un briefing d'angle
+(`carlysProfileBriefing`, fonction pure de l'énumération — jamais de texte
+libre) part en second bloc système, **après** la césure via
+`CoachTurnInput.systemPerUser`. Il oriente le ton, jamais les chiffres — les
+chiffres viennent des outils. Un nom de profil dans le préfixe partagé le
+fragmenterait en quatre variantes de cache : un test l'interdit explicitement.
 
 Vérification : `usage.cache_read_input_tokens` doit être non nul dès le
 deuxième tour. Un test d'assemblage vérifie qu'aucune donnée volatile
-n'apparaît avant la césure.
+n'apparaît avant la césure, et l'e2e vérifie que le préfixe reste identique
+octet pour octet, briefing ou pas.
 
 ## Modèle, latence, coût
 

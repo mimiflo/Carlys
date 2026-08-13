@@ -83,7 +83,7 @@ void main() {
 
     // 1. Onboarding — la session démo étant déjà ouverte, l'étape « compte »
     // est satisfaite : « Passer » enchaîne directement sur Premium.
-    expect(find.text('1/4'), findsOneWidget);
+    expect(find.text('1/5'), findsOneWidget);
     await tester.tap(find.text('Passer'));
     await tester.pumpAndSettle();
 

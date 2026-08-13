@@ -35,6 +35,21 @@ export class AnthropicCoachClient implements CoachModelPort {
       content: turn.content,
     }));
 
+    // Le préfixe partagé porte la césure de cache ; le bloc par utilisateur
+    // (profil Carlys) vient APRÈS, sans cache_control — sinon le préfixe se
+    // fragmenterait en une variante par profil.
+    const system: Anthropic.TextBlockParam[] = [
+      {
+        type: 'text',
+        text: input.system,
+        // Césure : outils + prompt système sont relus depuis le cache.
+        cache_control: { type: 'ephemeral' },
+      },
+    ];
+    if (input.systemPerUser !== undefined && input.systemPerUser !== '') {
+      system.push({ type: 'text', text: input.systemPerUser });
+    }
+
     let proposal: Record<string, unknown> | null = null;
     let inputTokens = 0;
     let outputTokens = 0;
@@ -44,14 +59,7 @@ export class AnthropicCoachClient implements CoachModelPort {
       const response = await client.messages.create({
         model: this.config.coachModel,
         max_tokens: AnthropicCoachClient.maxTokens,
-        system: [
-          {
-            type: 'text',
-            text: input.system,
-            // Césure : outils + prompt système sont relus depuis le cache.
-            cache_control: { type: 'ephemeral' },
-          },
-        ],
+        system,
         tools: input.tools.map((tool) => ({
           name: tool.name,
           description: tool.description,

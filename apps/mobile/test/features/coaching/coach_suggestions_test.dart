@@ -1,3 +1,4 @@
+import 'package:carlys_mobile/features/carlys_profile/domain/entities/carlys_profile.dart';
 import 'package:carlys_mobile/features/coaching/domain/services/coach_suggestions.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -66,6 +67,34 @@ void main() {
     final down = coachSuggestions(const CoachContext(weightTrendKg: -1.2));
 
     expect(up.single, isNot(down.single));
+  });
+
+  test('l’identité Carlys ajoute son amorce, différente pour chaque profil',
+      () {
+    final byProfile = {
+      for (final profile in CarlysProfile.values)
+        profile: coachSuggestions(CoachContext(carlysProfile: profile)),
+    };
+
+    // Chaque profil a la sienne, et elles ne se ressemblent pas.
+    final chips = byProfile.values.map((s) => s.first).toSet();
+    expect(chips, hasLength(CarlysProfile.values.length));
+
+    // Sans profil : rien n'apparaît — null n'est jamais un défaut.
+    final none = coachSuggestions(const CoachContext());
+    expect(none.single, 'Par où je commence ?');
+  });
+
+  test('l’amorce du profil vient après la plus actionnable', () {
+    final suggestions = coachSuggestions(
+      const CoachContext(
+        carlysProfile: CarlysProfile.challenger,
+        templateName: 'Push A',
+      ),
+    );
+
+    expect(suggestions.first, contains('Push A'));
+    expect(suggestions[1], 'Rends ma prochaine séance plus exigeante');
   });
 
   test('la bande ne dépasse jamais trois puces', () {

@@ -24,3 +24,14 @@ class CarlysProfileActions {
 final carlysProfileActionsProvider = Provider<CarlysProfileActions>(
   CarlysProfileActions.new,
 );
+
+/// Identité Carlys de l'utilisateur courant, ou `null` tant qu'elle n'est
+/// pas choisie (ou que la session n'est pas restaurée) : `null` signifie
+/// « pas de personnalisation », jamais un profil par défaut.
+final currentCarlysProfileProvider = Provider<CarlysProfile?>((ref) {
+  final auth = ref.watch(authControllerProvider);
+  return switch (auth) {
+    AuthAuthenticated(:final user) => user?.carlysProfile,
+    _ => null,
+  };
+});

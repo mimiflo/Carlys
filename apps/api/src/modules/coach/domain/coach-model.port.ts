@@ -39,6 +39,12 @@ export interface CoachToolResult {
 export interface CoachTurnInput {
   /** Prompt système — stable, donc mis en cache par le fournisseur. */
   system: string;
+  /**
+   * Bloc système PAR UTILISATEUR (profil Carlys), placé APRÈS la césure de
+   * cache : le préfixe partagé reste identique pour tous. Absent ou vide,
+   * rien n'est ajouté.
+   */
+  systemPerUser?: string;
   tools: CoachToolDefinition[];
   history: CoachTurn[];
   /**

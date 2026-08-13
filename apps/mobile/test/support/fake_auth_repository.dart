@@ -14,12 +14,16 @@ const fakeUser = AuthUser(
 
 /// Implémentation de test du contrat AuthRepository.
 class FakeAuthRepository implements AuthRepository {
-  FakeAuthRepository({this.storedSession = false});
+  FakeAuthRepository({this.storedSession = false, this.user = fakeUser});
 
   bool storedSession;
   bool failLogin = false;
   int loginCalls = 0;
   int logoutCalls = 0;
+
+  /// Utilisateur rendu par `login`/`register`/`me` — remplaçable pour les
+  /// tests qui ont besoin d'un profil Carlys choisi.
+  AuthUser user;
   List<AuthSessionDevice> devices = const [];
 
   @override
@@ -35,7 +39,7 @@ class FakeAuthRepository implements AuthRepository {
       throw const UnauthorizedException('E-mail ou mot de passe incorrect.');
     }
     storedSession = true;
-    return fakeUser;
+    return user;
   }
 
   @override
@@ -45,7 +49,7 @@ class FakeAuthRepository implements AuthRepository {
     required String displayName,
   }) async {
     storedSession = true;
-    return fakeUser;
+    return user;
   }
 
   @override
@@ -58,7 +62,7 @@ class FakeAuthRepository implements AuthRepository {
   Future<void> forgotPassword(String email) async {}
 
   @override
-  Future<AuthUser> me() async => fakeUser;
+  Future<AuthUser> me() async => user;
 
   @override
   Future<List<AuthSessionDevice>> sessions() async => devices;

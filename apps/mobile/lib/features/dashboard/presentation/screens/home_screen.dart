@@ -10,6 +10,7 @@ import '../../../../design_system/scenes/scene_scroll_activity.dart';
 import '../../../academy/presentation/controllers/academy_controllers.dart';
 import '../../../academy/presentation/widgets/quiz_card.dart';
 import '../../../authentication/presentation/controllers/auth_controller.dart';
+import '../../../carlys_profile/presentation/controllers/carlys_profile_controllers.dart';
 import '../../../community/presentation/controllers/community_controllers.dart';
 import '../../../notifications/presentation/controllers/push_registration.dart';
 import '../../../nutrition/presentation/controllers/nutrition_controllers.dart';
@@ -20,6 +21,7 @@ import '../widgets/consistency_streak.dart';
 import '../widgets/day_summary_grid.dart';
 import '../widgets/fitness_index_block.dart';
 import '../widgets/home_hero.dart';
+import '../widgets/profile_focus_card.dart';
 import '../widgets/today_workout_card.dart';
 import '../widgets/week_bars.dart';
 
@@ -48,6 +50,7 @@ class HomeScreen extends ConsumerWidget {
       AuthAuthenticated(:final user) => user,
       _ => null,
     };
+    final carlysProfile = ref.watch(currentCarlysProfileProvider);
     final activeWorkout = ref.watch(activeWorkoutProvider).valueOrNull;
     final week = ref.watch(weekOverviewProvider).valueOrNull;
     final report = ref.watch(metabolismReportProvider).valueOrNull;
@@ -98,6 +101,10 @@ class HomeScreen extends ConsumerWidget {
                 },
               ),
             ),
+            // Le cap du profil Carlys : l'accueil change avec l'identité
+            // choisie — absent tant qu'elle ne l'est pas.
+            if (carlysProfile != null)
+              _Section(child: ProfileFocusCard(profile: carlysProfile)),
             // Le mot de la communauté — une petite notif, pas une rubrique :
             // absente tant que personne n'a rien envoyé.
             if (nudge != null)

@@ -5,6 +5,8 @@ import 'package:carlys_mobile/app/router/app_routes.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
+import 'package:carlys_mobile/features/carlys_profile/data/repositories/carlys_profile_repository_impl.dart';
+import 'package:carlys_mobile/features/carlys_profile/domain/entities/carlys_profile.dart';
 import 'package:carlys_mobile/features/nutrition/data/repositories/nutrition_repository_impl.dart';
 import 'package:carlys_mobile/features/nutrition/domain/entities/nutrition.dart';
 import 'package:carlys_mobile/features/onboarding/presentation/widgets/onboarding_height_card.dart';
@@ -15,6 +17,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../support/fake_auth_repository.dart';
+import '../../support/fake_carlys_profile_repository.dart';
 import '../../support/fake_nutrition_repository.dart';
 import '../../support/fake_workout_repository.dart';
 import '../../support/first_run_prefs.dart';
@@ -22,7 +25,10 @@ import '../../support/first_run_prefs.dart';
 void main() {
   final binding = TestWidgetsFlutterBinding.ensureInitialized();
 
+  late FakeCarlysProfileRepository carlysRepo;
+
   setUp(() {
+    carlysRepo = FakeCarlysProfileRepository();
     // Écran ouvert hors tunnel : le parcours de première ouverture est
     // déjà terminé (il est couvert par first_run_journey_test.dart).
     seedCompletedFirstRun();
@@ -53,6 +59,7 @@ void main() {
           ),
           authRepositoryProvider
               .overrideWithValue(FakeAuthRepository(storedSession: true)),
+          carlysProfileRepositoryProvider.overrideWithValue(carlysRepo),
           workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
           nutritionRepositoryProvider.overrideWithValue(nutrition),
           syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
@@ -74,19 +81,20 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('la première étape masque le retour et bloque le CTA',
+  testWidgets('la première étape est l’IDENTITÉ : retour masqué, CTA bloqué',
       (tester) async {
     await openOnboarding(tester);
 
-    expect(find.text('1/4'), findsOneWidget);
+    expect(find.text('1/5'), findsOneWidget);
     expect(find.byIcon(AppIcons.back), findsNothing);
-    expect(find.text('TON OBJECTIF'), findsOneWidget);
-    expect(find.text('Prendre du muscle'), findsOneWidget);
-    expect(find.text('Surplus léger · volume élevé'), findsOneWidget);
+    // Se reconnaître d'abord : l'identité ouvre le parcours.
+    expect(find.text('TON IDENTITÉ'), findsOneWidget);
+    expect(find.text('Le Constructeur'), findsOneWidget);
+    expect(find.text('« Je commence à construire. »'), findsOneWidget);
 
     // Aucune réponse choisie : le CTA ne fait rien.
     await tapContinue(tester);
-    expect(find.text('1/4'), findsOneWidget);
+    expect(find.text('1/5'), findsOneWidget);
   });
 
   testWidgets('choisir une réponse marque la carte et débloque le CTA',
@@ -94,32 +102,36 @@ void main() {
     await openOnboarding(tester);
 
     expect(find.byIcon(AppIcons.checkCircle), findsNothing);
-    await tester.tap(find.text('Prendre du muscle'));
+    await tester.tap(find.text('Le Constructeur'));
     await tester.pumpAndSettle();
     expect(find.byIcon(AppIcons.checkCircle), findsOneWidget);
 
     await tapContinue(tester);
-    expect(find.text('2/4'), findsOneWidget);
-    expect(find.text('TON PROFIL'), findsOneWidget);
+    expect(find.text('2/5'), findsOneWidget);
+    expect(find.text('TON OBJECTIF'), findsOneWidget);
   });
 
   testWidgets('le retour ramène à l’étape précédente', (tester) async {
     await openOnboarding(tester);
 
-    await tester.tap(find.text('Prendre du muscle'));
+    await tester.tap(find.text('Le Constructeur'));
     await tester.pumpAndSettle();
     await tapContinue(tester);
 
     await tester.tap(find.byIcon(AppIcons.back));
     await tester.pumpAndSettle();
-    expect(find.text('1/4'), findsOneWidget);
+    expect(find.text('1/5'), findsOneWidget);
     // La réponse déjà donnée reste sélectionnée.
     expect(find.byIcon(AppIcons.checkCircle), findsOneWidget);
   });
 
-  testWidgets('les 4 étapes enregistrent le profil métabolique réel',
+  testWidgets('les 5 étapes enregistrent identité ET profil métabolique',
       (tester) async {
     final nutrition = await openOnboarding(tester);
+
+    await tester.tap(find.text('Le Challenger'));
+    await tester.pumpAndSettle();
+    await tapContinue(tester);
 
     await tester.tap(find.text('Prendre du muscle'));
     await tester.pumpAndSettle();
@@ -160,6 +172,8 @@ void main() {
     expect(report.profile.sex, BiologicalSex.male);
     expect(report.profile.heightCm, 176);
     expect(report.profile.activityLevel, ActivityLevel.active);
+    // L'identité choisie part vers SON endpoint, pas le profil métabolique.
+    expect(carlysRepo.chosen, [CarlysProfile.challenger]);
     // Retour à l'accueil une fois le profil enregistré.
     expect(find.byType(AppBottomBar), findsOneWidget);
   });
@@ -172,6 +186,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(nutrition.updateCount, 0);
+    expect(carlysRepo.chosen, isEmpty);
     expect(find.byType(AppBottomBar), findsOneWidget);
   });
 }

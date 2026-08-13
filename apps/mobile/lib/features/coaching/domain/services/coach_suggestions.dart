@@ -7,6 +7,8 @@
 /// données, il n'en reste qu'une, générique et honnête.
 library;
 
+import '../../../carlys_profile/domain/entities/carlys_profile.dart';
+
 /// Ce que l'application sait de l'utilisateur au moment d'ouvrir le coach.
 ///
 /// Volontairement réduit à des valeurs simples plutôt qu'aux entités des
@@ -14,12 +16,17 @@ library;
 /// dépend pas de la forme interne de `progress` ou `workout_template`.
 class CoachContext {
   const CoachContext({
+    this.carlysProfile,
     this.templateName,
     this.recordExerciseName,
     this.recordAgeDays,
     this.weightTrendKg,
     this.hasHistory = false,
   });
+
+  /// Identité Carlys choisie — une préférence déclarée, donc une donnée
+  /// aussi réelle que les autres. `null` tant qu'elle ne l'est pas.
+  final CarlysProfile? carlysProfile;
 
   /// Nom d'un modèle de séance disponible, s'il y en a un.
   final String? templateName;
@@ -57,6 +64,20 @@ List<String> coachSuggestions(CoachContext context) {
     suggestions.add('Adapte « ${context.templateName} » à 30 minutes');
   } else if (context.hasHistory) {
     suggestions.add('Propose-moi une séance courte');
+  }
+
+  // L'identité choisie oriente l'angle : c'est la promesse des profils.
+  final profile = context.carlysProfile;
+  if (profile != null) {
+    suggestions.add(
+      switch (profile) {
+        CarlysProfile.constructeur =>
+          'Explique-moi les bases d’une séance efficace',
+        CarlysProfile.challenger => 'Rends ma prochaine séance plus exigeante',
+        CarlysProfile.athlete => 'Aide-moi à tenir mon objectif cette semaine',
+        CarlysProfile.stratege => 'Explique-moi le pourquoi de mes séances',
+      },
+    );
   }
 
   final record = context.recordExerciseName;

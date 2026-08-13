@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { CoachMessageRole, type Prisma } from '@prisma/client';
+import { type CarlysProfile, CoachMessageRole, type Prisma } from '@prisma/client';
 import { PrismaService } from '../../../database/prisma/prisma.service';
 import { type ValidatedProposal } from '../application/proposal.validator';
 
@@ -144,6 +144,21 @@ export class CoachRepository {
         include: { proposal: { include: { items: true } } },
       });
     });
+  }
+
+  /**
+   * Profil Carlys de l'utilisateur — une colonne indexée, rien d'autre.
+   *
+   * Lecture Prisma directe plutôt que par le module users : même précédent
+   * que `NutritionRepository.findProfile`, pour une préférence déclarée qui
+   * aiguille le ton du coach à chaque tour.
+   */
+  async carlysProfileOf(userId: string): Promise<CarlysProfile | null> {
+    const row = await this.prisma.userProfile.findUnique({
+      where: { userId },
+      select: { carlysProfile: true },
+    });
+    return row?.carlysProfile ?? null;
   }
 
   /**

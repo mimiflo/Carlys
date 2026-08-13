@@ -4,6 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/logging/app_logger.dart';
 import '../../../authentication/presentation/controllers/auth_controller.dart';
+import '../../../carlys_profile/domain/entities/carlys_profile.dart';
+import '../../../carlys_profile/presentation/controllers/carlys_profile_controllers.dart';
 import '../../../nutrition/presentation/controllers/nutrition_controllers.dart';
 import '../../data/first_run_store.dart';
 import '../../domain/first_run_step.dart';
@@ -53,10 +55,18 @@ class FirstRunController extends Notifier<FirstRunState> {
   /// Fin de l'onboarding : les réponses sont enregistrées tout de suite si
   /// un compte existe déjà, mises de côté sinon. L'échec d'enregistrement
   /// remonte à l'écran (qui l'affiche) ; l'étape n'avance alors pas.
+  ///
+  /// L'identité Carlys et le profil métabolique partent chacun vers leur
+  /// endpoint : on n'écrit que ce qui a réellement été répondu.
   Future<void> submitOnboarding(OnboardingAnswers answers) async {
     if (!answers.isEmpty) {
       if (ref.read(authControllerProvider) is AuthAuthenticated) {
-        await _saveProfile(answers);
+        if (answers.hasMetabolicAnswers) {
+          await _saveProfile(answers);
+        }
+        if (answers.carlysProfile != null) {
+          await _saveCarlysProfile(answers.carlysProfile!);
+        }
       } else {
         await _rememberAnswers(answers);
       }
@@ -126,7 +136,12 @@ class FirstRunController extends Notifier<FirstRunState> {
       if (answers == null || answers.isEmpty) {
         return;
       }
-      await _saveProfile(answers);
+      if (answers.hasMetabolicAnswers) {
+        await _saveProfile(answers);
+      }
+      if (answers.carlysProfile != null) {
+        await _saveCarlysProfile(answers.carlysProfile!);
+      }
       await _store.clearAnswers();
       _logger.info('Réponses d’onboarding reportées sur le profil');
     } on Exception catch (error) {
@@ -149,6 +164,12 @@ class FirstRunController extends Notifier<FirstRunState> {
       subscription.close();
     }
   }
+
+  /// L'identité Carlys suit le chemin normal du choix de profil
+  /// (`PATCH /users/me` puis rafraîchissement de la session) ; le provider
+  /// n'est pas auto-disposé, un simple `read` suffit.
+  Future<void> _saveCarlysProfile(CarlysProfile profile) =>
+      ref.read(carlysProfileActionsProvider).choose(profile);
 }
 
 final firstRunControllerProvider =

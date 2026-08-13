@@ -29,8 +29,10 @@ import { type Env } from '../src/config/env.schema';
 import {
   COACH_MODEL_PORT,
   type CoachModelPort,
+  type CoachTurnInput,
   type CoachTurnOutput,
 } from '../src/modules/coach/domain/coach-model.port';
+import { COACH_SYSTEM_PROMPT } from '../src/modules/coach/application/coach.prompt';
 import { ensureExerciseFixture } from './support/exercise-fixture';
 
 /**
@@ -56,6 +58,9 @@ describe('Coach IA (e2e)', () => {
   /** Réponse que le faux modèle rendra au prochain tour. */
   let nextOutput: CoachTurnOutput;
 
+  /** Dernière entrée reçue par le faux : c'est là que se lit le prompt réel. */
+  let lastInput: CoachTurnInput | undefined;
+
   const textOnly = (text: string): CoachTurnOutput => ({
     text,
     proposal: null,
@@ -65,6 +70,7 @@ describe('Coach IA (e2e)', () => {
 
   const fakeModel: CoachModelPort = {
     reply: async (input) => {
+      lastInput = input;
       // Le faux appelle un outil de lecture : on vérifie ainsi que la chaîne
       // complète fonctionne, pas seulement l'écriture en base.
       await input.runTools([{ id: 'call-1', name: 'get_personal_records', input: {} }]);
@@ -175,6 +181,43 @@ describe('Coach IA (e2e)', () => {
     expect(conversation.messages).toHaveLength(2);
     // Le titre du fil vient de la première question.
     expect(conversation.title).toContain('développé');
+  });
+
+  it('le profil Carlys aiguille le coach APRÈS la césure, préfixe intact', async () => {
+    await grantCoaching();
+    await resetQuota();
+    const conversationId = randomUUID();
+    await authed(accessToken)
+      .post('/api/v1/coach/conversations')
+      .send({ id: conversationId })
+      .expect(201);
+
+    // Sans profil choisi : aucun bloc par utilisateur.
+    nextOutput = textOnly('Réponse neutre.');
+    await authed(accessToken)
+      .post(`/api/v1/coach/conversations/${conversationId}/messages`)
+      .send({ id: randomUUID(), content: 'Salut coach.' })
+      .expect(201);
+    expect(lastInput?.systemPerUser).toBe('');
+
+    // Profil choisi : le briefing part avec le tour…
+    await prisma.userProfile.upsert({
+      where: { userId },
+      create: { userId, displayName: 'Coach e2e', carlysProfile: 'STRATEGE' },
+      update: { carlysProfile: 'STRATEGE' },
+    });
+    nextOutput = textOnly('Voici le pourquoi.');
+    await authed(accessToken)
+      .post(`/api/v1/coach/conversations/${conversationId}/messages`)
+      .send({ id: randomUUID(), content: 'Pourquoi ce programme ?' })
+      .expect(201);
+    expect(lastInput?.systemPerUser).toContain('Stratège');
+
+    // …et le préfixe partagé reste IDENTIQUE, octet pour octet : c'est lui
+    // qui est en cache, le même pour tous les utilisateurs. La vraie
+    // régression à guetter est ici — elle ne ferait échouer aucun appel,
+    // elle doublerait la facture en silence.
+    expect(lastInput?.system).toBe(COACH_SYSTEM_PROMPT);
   });
 
   it('une séance proposée n’existe que si chaque exercice existe', async () => {

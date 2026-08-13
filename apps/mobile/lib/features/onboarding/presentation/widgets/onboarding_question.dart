@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../../../carlys_profile/domain/entities/carlys_profile.dart';
+import '../../../carlys_profile/presentation/widgets/carlys_profile_content.dart';
 import '../../../nutrition/domain/entities/nutrition.dart';
 import 'onboarding_birth_date_card.dart';
 import 'onboarding_choices.dart';
@@ -14,12 +16,14 @@ import 'onboarding_step_body.dart';
 class OnboardingQuestion extends StatelessWidget {
   const OnboardingQuestion({
     required this.step,
+    required this.carlysProfile,
     required this.goal,
     required this.sex,
     required this.birthDate,
     required this.heightCm,
     required this.heightTouched,
     required this.activityLevel,
+    required this.onCarlysProfile,
     required this.onGoal,
     required this.onSex,
     required this.onPickBirthDate,
@@ -28,9 +32,10 @@ class OnboardingQuestion extends StatelessWidget {
     super.key,
   });
 
-  /// Index de l'étape courante (0 = objectif, 3 = rythme).
+  /// Index de l'étape courante (0 = identité Carlys, 4 = rythme).
   final int step;
 
+  final CarlysProfile? carlysProfile;
   final NutritionGoal? goal;
   final BiologicalSex? sex;
   final DateTime? birthDate;
@@ -41,6 +46,7 @@ class OnboardingQuestion extends StatelessWidget {
   final bool heightTouched;
   final ActivityLevel? activityLevel;
 
+  final ValueChanged<CarlysProfile> onCarlysProfile;
   final ValueChanged<NutritionGoal> onGoal;
   final ValueChanged<BiologicalSex> onSex;
   final VoidCallback onPickBirthDate;
@@ -50,7 +56,25 @@ class OnboardingQuestion extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return switch (step) {
+      // L'identité OUVRE le parcours : se reconnaître avant de mesurer —
+      // c'est l'accroche, et le reste des questions s'y adosse.
       0 => OnboardingStepBody(
+          label: 'Ton identité',
+          question: 'Quel Carlys\nes-tu ?',
+          subtitle: 'Une identité, pas un niveau — tu pourras en changer '
+              'à tout moment.',
+          options: [
+            for (final value in CarlysProfile.values)
+              OnboardingOptionCard(
+                title: carlysProfileContentOf(value).title,
+                subtitle: carlysProfileContentOf(value).quote,
+                icon: carlysProfileContentOf(value).icon,
+                selected: carlysProfile == value,
+                onTap: () => onCarlysProfile(value),
+              ),
+          ],
+        ),
+      1 => OnboardingStepBody(
           label: 'Ton objectif',
           question: 'Qu’est-ce qu’on\nconstruit ensemble ?',
           subtitle: 'On calibre tes charges, ton volume et tes macros '
@@ -66,7 +90,7 @@ class OnboardingQuestion extends StatelessWidget {
               ),
           ],
         ),
-      1 => OnboardingStepBody(
+      2 => OnboardingStepBody(
           label: 'Ton profil',
           question: 'Pour calibrer\nton métabolisme',
           subtitle: 'La formule de Mifflin-St Jeor dépend du sexe biologique.',
@@ -80,7 +104,7 @@ class OnboardingQuestion extends StatelessWidget {
               ),
           ],
         ),
-      2 => OnboardingStepBody(
+      3 => OnboardingStepBody(
           label: 'Tes mesures',
           question: 'Naissance\net taille',
           subtitle: 'L’âge et la taille entrent dans le calcul quotidien.',

@@ -6,6 +6,7 @@ import '../../../../app/router/app_routes.dart';
 import '../../../../core/errors/app_exception.dart';
 import '../../../../design_system/design_system.dart';
 import '../../../authentication/presentation/controllers/auth_controller.dart';
+import '../../../carlys_profile/domain/entities/carlys_profile.dart';
 import '../../../nutrition/domain/entities/nutrition.dart';
 import '../../domain/onboarding_answers.dart';
 import '../controllers/first_run_controller.dart';
@@ -14,12 +15,14 @@ import '../widgets/onboarding_cta.dart';
 import '../widgets/onboarding_header.dart';
 import '../widgets/onboarding_question.dart';
 
-/// Onboarding (maquette 2a) : 4 étapes qui remplissent le profil
-/// métabolique réel (objectif, sexe, naissance/taille, activité).
+/// Onboarding (maquette 2a) : 5 étapes — l'identité Carlys d'abord (se
+/// reconnaître est l'accroche du parcours), puis le profil métabolique réel
+/// (objectif, sexe, naissance/taille, activité).
 ///
 /// Première marche du parcours de première ouverture : les réponses sont
 /// enregistrées tout de suite si un compte existe, conservées localement
-/// sinon puis reportées sur le profil dès la création du compte.
+/// sinon puis reportées sur le profil dès la création du compte — l'identité
+/// Carlys suit exactement le même chemin.
 ///
 /// Le contenu vit en bas de l'écran, sous le cœur ambient ; « Passer » reste
 /// toujours possible — le profil se complète aussi depuis l'onglet Nutrition.
@@ -31,10 +34,11 @@ class OnboardingScreen extends ConsumerStatefulWidget {
 }
 
 class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
-  static const int _stepCount = 4;
+  static const int _stepCount = 5;
   static const double _defaultHeightCm = 175;
 
   int _step = 0;
+  CarlysProfile? _carlysProfile;
   NutritionGoal? _goal;
   BiologicalSex? _sex;
   DateTime? _birthDate;
@@ -44,15 +48,17 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   bool _saving = false;
 
   bool get _stepComplete => switch (_step) {
-        0 => _goal != null,
-        1 => _sex != null,
-        2 => _birthDate != null && _heightTouched,
+        0 => _carlysProfile != null,
+        1 => _goal != null,
+        2 => _sex != null,
+        3 => _birthDate != null && _heightTouched,
         _ => _activity != null,
       };
 
   bool get _isLastStep => _step == _stepCount - 1;
 
   OnboardingAnswers get _answers => OnboardingAnswers(
+        carlysProfile: _carlysProfile,
         goal: _goal,
         sex: _sex,
         birthDate: _birthDate,
@@ -198,12 +204,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   Widget _buildStep() {
     return OnboardingQuestion(
       step: _step,
+      carlysProfile: _carlysProfile,
       goal: _goal,
       sex: _sex,
       birthDate: _birthDate,
       heightCm: _heightCm,
       heightTouched: _heightTouched,
       activityLevel: _activity,
+      onCarlysProfile: (value) => setState(() => _carlysProfile = value),
       onGoal: (value) => setState(() => _goal = value),
       onSex: (value) => setState(() => _sex = value),
       onPickBirthDate: _pickBirthDate,

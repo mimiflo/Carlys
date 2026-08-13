@@ -7,6 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../../core/errors/app_exception.dart';
+import '../../../carlys_profile/presentation/controllers/carlys_profile_controllers.dart';
 import '../../../progress/domain/entities/progress.dart';
 import '../../../progress/presentation/controllers/progress_controllers.dart';
 import '../../../workout_session/presentation/controllers/workout_controllers.dart';
@@ -218,6 +219,7 @@ final coachSuggestionsProvider = Provider.autoDispose<List<String>>((ref) {
 
   return coachSuggestions(
     CoachContext(
+      carlysProfile: ref.watch(currentCarlysProfileProvider),
       templateName: (templates == null || templates.isEmpty)
           ? null
           : templates.first.name,

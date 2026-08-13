@@ -29,10 +29,32 @@ et l'on évolue d'un profil à l'autre à tout moment.
   chevron) fidèles à la maquette ; le profil actuel porte un badge « Ton
   profil ». Chaque carte ouvre sa fiche (`showAppSheet`) : devise, publics
   (« Pour »), bouton « Choisir ce profil ».
-- Entrée : onglet Profil → groupe « Profil Carlys » (« À choisir » tant que
-  rien ne l'est).
+- Entrées : la **première question de l'onboarding** (« Quel Carlys es-tu ? »,
+  étape 1/5 — se reconnaître est l'accroche du parcours, avant les questions
+  métaboliques), puis l'onglet Profil → groupe « Profil Carlys » (« À
+  choisir » tant que rien ne l'est) pour changer à tout moment.
+- À l'onboarding, le choix suit le même chemin différé que les réponses
+  métaboliques : enregistré immédiatement si une session existe, sinon
+  conservé localement (`profilCarlys` dans les réponses stockées) et reporté
+  dès la création du compte.
 - Un échec de choix s'affiche (SnackBar) et ne change rien — jamais un état
   silencieusement faux.
+
+## Ce que le profil change dans l'application
+
+`null` signifie « pas de personnalisation », jamais un profil par défaut.
+
+- **Accueil** : la carte « Ton cap » (sous la séance du jour) oriente chaque
+  identité vers la partie de l'application qui sert sa devise — Constructeur
+  → Académie, Challenger → défis de la communauté, Athlète → programmes,
+  Stratège → progression. Copie et destinations vivent dans
+  `dashboard/presentation/widgets/profile_focus_card.dart` (le contenu
+  éditorial des profils, lui, ignore la navigation).
+- **Amorces du coach** (côté client) : une puce par identité s'ajoute aux
+  amorces calculées depuis l'état réel (`coach_suggestions.dart`).
+- **Coach IA** (côté serveur) : le tour envoyé au modèle porte un briefing
+  d'angle par profil — voir `docs/product/coach-ia.md`, section « Prompt et
+  mise en cache ».
 
 ## Illustrations
 
@@ -44,8 +66,14 @@ changement de code.
 
 ## Couverture
 
-- e2e API (`test/auth.e2e-spec.ts`) : cycle complet du champ.
+- e2e API (`test/auth.e2e-spec.ts`) : cycle complet du champ ;
+  (`test/coach.e2e-spec.ts`) : le briefing part avec le tour, le préfixe de
+  cache reste identique pour tous.
 - Widgets mobile (`test/features/carlys_profile/`) : les 4 cartes et le badge
   du profil actuel, la fiche et le choix (badge qui suit, fiche « profil
   actuel »), l'échec hors ligne visible, la remontée du choix dans l'onglet
   Profil.
+- Onboarding (`test/features/onboarding/`) : l'identité en première étape,
+  le report différé du choix à la création du compte, l'aller-retour de
+  stockage. Accueil (`test/features/dashboard/profile_focus_card_test.dart`) :
+  la carte par profil, sa navigation, et son absence sans profil.
