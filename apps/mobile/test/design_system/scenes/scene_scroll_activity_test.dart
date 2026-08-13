@@ -56,6 +56,38 @@ void main() {
     expect(resumed, greaterThan(frozen));
   });
 
+  testWidgets('après une pichenette, la reprise attend la quiétude',
+      (tester) async {
+    // Réveiller la scène à l'instant EXACT où l'inertie s'arrête tombait
+    // pile quand l'œil suit encore le mouvement : le réveil se lisait comme
+    // un accroc de fin de glissade. La reprise attend donc un court délai.
+    await tester.pumpWidget(host());
+    await tester.pump(const Duration(milliseconds: 400));
+
+    await tester.fling(find.byType(ListView), const Offset(0, -100), 900);
+    final frozen = painterOf(tester).seconds;
+
+    // Pendant TOUTE l'inertie, la scène reste figée.
+    final position =
+        tester.state<ScrollableState>(find.byType(Scrollable).first).position;
+    var guard = 0;
+    while (position.isScrollingNotifier.value && guard < 100) {
+      await tester.pump(const Duration(milliseconds: 50));
+      expect(painterOf(tester).seconds, frozen, reason: 'pendant l\'inertie');
+      guard += 1;
+    }
+    expect(guard, lessThan(100), reason: 'l\'inertie doit se terminer');
+
+    // L'inertie est finie, mais le délai de quiétude retient encore la scène.
+    await tester.pump(const Duration(milliseconds: 100));
+    expect(painterOf(tester).seconds, frozen, reason: 'pendant la quiétude');
+
+    // Quiétude écoulée : ça repart, jamais en arrière.
+    await tester.pump(SceneScrollActivity.resumeGrace);
+    await tester.pump(const Duration(milliseconds: 400));
+    expect(painterOf(tester).seconds, greaterThan(frozen));
+  });
+
   testWidgets('hors de toute portée SceneScrollActivity, rien ne change',
       (tester) async {
     await tester.pumpWidget(
