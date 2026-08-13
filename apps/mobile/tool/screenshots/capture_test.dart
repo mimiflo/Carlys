@@ -726,11 +726,11 @@ void main() {
 
   testWidgets('Academy — fiche d’anatomie dépliée', (tester) async {
     await pumpApp(tester);
-    // Vignette du muscle : décodage en temps réel avant capture.
+    // Illustration de la leçon : décodage en temps réel avant capture.
     final context = tester.element(find.byType(AppBottomBar));
     await tester.runAsync(
       () => precacheImage(
-        const AssetImage('assets/muscles/pectoraux.webp'),
+        const AssetImage('assets/academy/anatomie-pectoraux.webp'),
         context,
       ),
     );
