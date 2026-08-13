@@ -107,6 +107,17 @@ La boucle de sommets projette par ailleurs **sans allocation**
 soit des centaines de milliers d'allocations par seconde offertes au
 ramasse-miettes.
 
+**Pause au défilement** (`SceneScrollActivity`) : même à cadence réduite,
+chaque image de scène vole quelques millisecondes au fil d'interface — juste
+assez pour faire accrocher un défilement sur un téléphone modeste, exactement
+là où la scène est visible. Les écrans à scène (accueil, nutrition,
+abonnement) posent donc ce coordinateur autour de leur vue défilante : pendant
+qu'on fait défiler, cœur et hélice se figent ; à l'arrêt, ils reprennent — et
+le temps de scène reste monotone à travers les pauses (testé). L'**éclairage
+différé** complète : seuls les sommets d'une face réellement dessinée sont
+éclairés — la moitié arrière du maillage, toujours éliminée, était éclairée
+pour rien à chaque image.
+
 **Corrigé depuis** : l'hélice d'ADN (`DnaHelix`, écran Nutrition) avait le même
 défaut en plus discret. Son cycle vaut un tour de rotation (0,22 rad/s, soit
 28,56 s), mais la respiration (`sin(t × 0,65)`) et la pulsation des barreaux

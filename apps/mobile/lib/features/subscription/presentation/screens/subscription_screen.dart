@@ -6,6 +6,7 @@ import '../../../../app/router/app_routes.dart';
 import '../../../../design_system/design_system.dart';
 import '../../../../design_system/scenes/app_scene_container.dart';
 import '../../../../design_system/scenes/heart_scene.dart';
+import '../../../../design_system/scenes/scene_scroll_activity.dart';
 import '../../../onboarding/domain/first_run_step.dart';
 import '../../../onboarding/presentation/controllers/first_run_controller.dart';
 import '../controllers/subscription_controllers.dart';
@@ -38,89 +39,92 @@ class SubscriptionScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.darkBackground,
-      body: Stack(
-        children: [
-          // Cœur ambiant haut-droite, débordant du cadre (2i).
-          const Positioned(
-            top: 14,
-            right: -118,
-            child: AppSceneContainer(
-              size: 300,
-              opacity: 0.55,
-              verticalFadeStops: [0.0, 0.22, 0.58, 0.90],
-              child: HeartScene(),
+      // Le cœur ambiant se fige pendant le défilement de l'écran.
+      body: SceneScrollActivity(
+        child: Stack(
+          children: [
+            // Cœur ambiant haut-droite, débordant du cadre (2i).
+            const Positioned(
+              top: 14,
+              right: -118,
+              child: AppSceneContainer(
+                size: 300,
+                opacity: 0.55,
+                verticalFadeStops: [0.0, 0.22, 0.58, 0.90],
+                child: HeartScene(),
+              ),
             ),
-          ),
-          // Ordre de la maquette : assombrissement latéral puis halo violet
-          // par-dessus, sans quoi le coin haut-droit vire au gris.
-          const Positioned.fill(child: AppSceneScrim.lateral()),
-          const Positioned.fill(
-            child: AppSceneGlow(
-              center: Alignment(0.64, -0.72),
-              radius: 0.62,
-              alpha: 0.30,
+            // Ordre de la maquette : assombrissement latéral puis halo violet
+            // par-dessus, sans quoi le coin haut-droit vire au gris.
+            const Positioned.fill(child: AppSceneScrim.lateral()),
+            const Positioned.fill(
+              child: AppSceneGlow(
+                center: Alignment(0.64, -0.72),
+                radius: 0.62,
+                alpha: 0.30,
+              ),
             ),
-          ),
-          SafeArea(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                // Pendant le parcours, l'écran ne se referme pas : la sortie
-                // passe par le bas d'écran (Premium ou version gratuite).
-                if (firstRun)
-                  const SizedBox(height: AppSpacing.lg)
-                else
-                  const _CloseButton(),
-                Expanded(
-                  child: ListView(
-                    padding: const EdgeInsets.only(
-                      top: AppSpacing.lg,
-                      bottom: AppSpacing.gapSection,
-                    ),
-                    children: [
-                      const SubscriptionHero(),
-                      const SizedBox(height: AppSpacing.gapSection),
-                      entitlements.when(
-                        loading: () => const AppLoadingIndicator(
-                          label: 'Chargement des droits',
-                        ),
-                        error: (_, __) => AppErrorState(
-                          title: 'Droits indisponibles',
-                          onRetry: () => ref.invalidate(entitlementsProvider),
-                        ),
-                        data: (entries) => SubscriptionBenefits(
-                          entries: entries,
-                        ),
+            SafeArea(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // Pendant le parcours, l'écran ne se referme pas : la sortie
+                  // passe par le bas d'écran (Premium ou version gratuite).
+                  if (firstRun)
+                    const SizedBox(height: AppSpacing.lg)
+                  else
+                    const _CloseButton(),
+                  Expanded(
+                    child: ListView(
+                      padding: const EdgeInsets.only(
+                        top: AppSpacing.lg,
+                        bottom: AppSpacing.gapSection,
                       ),
-                      const SizedBox(height: AppSpacing.gapSection),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: AppSpacing.gutter,
-                        ),
-                        child: plan.when(
+                      children: [
+                        const SubscriptionHero(),
+                        const SizedBox(height: AppSpacing.gapSection),
+                        entitlements.when(
                           loading: () => const AppLoadingIndicator(
-                            label: 'Chargement du plan',
+                            label: 'Chargement des droits',
                           ),
                           error: (_, __) => AppErrorState(
-                            title: 'Plan indisponible',
-                            onRetry: () => ref.invalidate(planStatusProvider),
+                            title: 'Droits indisponibles',
+                            onRetry: () => ref.invalidate(entitlementsProvider),
                           ),
-                          data: (status) => SubscriptionPlanCard(
-                            status: status,
+                          data: (entries) => SubscriptionBenefits(
+                            entries: entries,
                           ),
                         ),
-                      ),
-                    ],
+                        const SizedBox(height: AppSpacing.gapSection),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: AppSpacing.gutter,
+                          ),
+                          child: plan.when(
+                            loading: () => const AppLoadingIndicator(
+                              label: 'Chargement du plan',
+                            ),
+                            error: (_, __) => AppErrorState(
+                              title: 'Plan indisponible',
+                              onRetry: () => ref.invalidate(planStatusProvider),
+                            ),
+                            data: (status) => SubscriptionPlanCard(
+                              status: status,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ),
-                if (firstRun)
-                  const FirstRunPremiumFooter()
-                else
-                  const _PurchaseNote(),
-              ],
+                  if (firstRun)
+                    const FirstRunPremiumFooter()
+                  else
+                    const _PurchaseNote(),
+                ],
+              ),
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }

@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../../../../design_system/scenes/dna_animation.dart';
 import '../../../../design_system/scenes/dna_scene.dart';
+import '../../../../design_system/scenes/scene_scroll_activity.dart';
 
 /// Double hélice d'ADN — portage fidèle de `dna-helix.js` (mode « hero »).
 ///
@@ -40,6 +42,8 @@ class _DnaHelixState extends State<DnaHelix>
   static const double _framesPerSecond = 30;
 
   late final AnimationController _controller;
+  bool _reduced = false;
+  ValueListenable<bool>? _scrolling;
 
   @override
   void initState() {
@@ -51,9 +55,30 @@ class _DnaHelixState extends State<DnaHelix>
   void didChangeDependencies() {
     super.didChangeDependencies();
     // Préférence système : animation en boucle, ou pose figée à t = 0.
-    if (MediaQuery.disableAnimationsOf(context)) {
+    _reduced = MediaQuery.disableAnimationsOf(context);
+    // Et pause pendant le défilement de l'écran, comme le cœur : la scène
+    // rend son budget au fil d'interface quand ça bouge.
+    final scrolling = SceneScrollActivity.of(context);
+    if (!identical(scrolling, _scrolling)) {
+      _scrolling?.removeListener(_syncAnimation);
+      _scrolling = scrolling;
+      _scrolling?.addListener(_syncAnimation);
+    }
+    _syncAnimation();
+  }
+
+  void _syncAnimation() {
+    if (!mounted) {
+      return;
+    }
+    if (_reduced) {
       _controller.stop();
       _controller.value = 0;
+      return;
+    }
+    if (_scrolling?.value ?? false) {
+      // stop() conserve la phase ; repeat() repart d'où l'on s'était arrêté.
+      _controller.stop();
     } else if (!_controller.isAnimating) {
       _controller.repeat();
     }
@@ -61,6 +86,7 @@ class _DnaHelixState extends State<DnaHelix>
 
   @override
   void dispose() {
+    _scrolling?.removeListener(_syncAnimation);
     _controller.dispose();
     super.dispose();
   }

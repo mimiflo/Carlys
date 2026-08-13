@@ -6,6 +6,7 @@ import '../../../../app/restore/app_restore.dart';
 import '../../../../app/router/app_routes.dart';
 import '../../../../core/synchronization/sync_lifecycle.dart';
 import '../../../../design_system/design_system.dart';
+import '../../../../design_system/scenes/scene_scroll_activity.dart';
 import '../../../academy/presentation/controllers/academy_controllers.dart';
 import '../../../academy/presentation/widgets/quiz_card.dart';
 import '../../../authentication/presentation/controllers/auth_controller.dart';
@@ -57,70 +58,77 @@ class HomeScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.darkBackground,
-      body: ListView(
-        // La zone haute est à fond perdu : les cartes posent leur gouttière.
-        padding: EdgeInsets.only(bottom: bottomInset + AppSpacing.gapSection),
-        children: [
-          HomeHero(
-            displayName: user?.displayName,
-            subtitle: ref.watch(homeSubtitleProvider),
-            quote: ref.watch(dailyQuoteProvider),
-          ),
-          _Section(
-            child: ConsistencyStreak(week: ref.watch(consistencyWeekProvider)),
-          ),
-          _Section(
-            child: DaySummaryGrid(
-              training: ref.watch(todayTrainingProvider),
-              report: report,
-              week: week,
-              consumedKcal: ref.watch(consumedKcalTodayProvider),
+      // Pendant le défilement, le cœur se fige et rend son budget au fil
+      // d'interface — c'est lui qui faisait accrocher le haut de l'écran
+      // sur les téléphones modestes.
+      body: SceneScrollActivity(
+        child: ListView(
+          // La zone haute est à fond perdu : les cartes posent leur
+          // gouttière.
+          padding: EdgeInsets.only(bottom: bottomInset + AppSpacing.gapSection),
+          children: [
+            HomeHero(
+              displayName: user?.displayName,
+              subtitle: ref.watch(homeSubtitleProvider),
+              quote: ref.watch(dailyQuoteProvider),
             ),
-          ),
-          _Section(
-            child: TodayWorkoutCard(
-              activeWorkout: activeWorkout,
-              onOpenTemplates: () => context.push(AppRoutes.templates),
-              onStart: () async {
-                if (activeWorkout == null) {
-                  await ref.read(workoutActionsProvider).start();
-                }
-                if (context.mounted) {
-                  await context.push(AppRoutes.activeWorkout);
-                }
-              },
-            ),
-          ),
-          // Le mot de la communauté — une petite notif, pas une rubrique :
-          // absente tant que personne n'a rien envoyé.
-          if (nudge != null)
-            _Section(child: CommunityNudgeCard(encouragement: nudge)),
-          if (dailyLesson != null)
             _Section(
-              child: QuizCard(
-                question: dailyLesson.question,
-                title: 'Question du jour',
-                onAnswered: (correct) =>
-                    ref.read(communityActionsProvider).reportQuizAnswer(
-                          lessonId: dailyLesson.id,
-                          correct: correct,
-                        ),
+              child:
+                  ConsistencyStreak(week: ref.watch(consistencyWeekProvider)),
+            ),
+            _Section(
+              child: DaySummaryGrid(
+                training: ref.watch(todayTrainingProvider),
+                report: report,
+                week: week,
+                consumedKcal: ref.watch(consumedKcalTodayProvider),
               ),
             ),
-          _Section(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // L'indice de forme EST le taux d'accomplissement de
-                // l'objectif hebdomadaire : sa place est contre les barres
-                // qui le détaillent, pas seul en haut d'écran.
-                FitnessIndexBlock(score: ref.watch(fitnessIndexProvider)),
-                const SizedBox(height: AppSpacing.gapRow),
-                WeekBars(week: week),
-              ],
+            _Section(
+              child: TodayWorkoutCard(
+                activeWorkout: activeWorkout,
+                onOpenTemplates: () => context.push(AppRoutes.templates),
+                onStart: () async {
+                  if (activeWorkout == null) {
+                    await ref.read(workoutActionsProvider).start();
+                  }
+                  if (context.mounted) {
+                    await context.push(AppRoutes.activeWorkout);
+                  }
+                },
+              ),
             ),
-          ),
-        ],
+            // Le mot de la communauté — une petite notif, pas une rubrique :
+            // absente tant que personne n'a rien envoyé.
+            if (nudge != null)
+              _Section(child: CommunityNudgeCard(encouragement: nudge)),
+            if (dailyLesson != null)
+              _Section(
+                child: QuizCard(
+                  question: dailyLesson.question,
+                  title: 'Question du jour',
+                  onAnswered: (correct) =>
+                      ref.read(communityActionsProvider).reportQuizAnswer(
+                            lessonId: dailyLesson.id,
+                            correct: correct,
+                          ),
+                ),
+              ),
+            _Section(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // L'indice de forme EST le taux d'accomplissement de
+                  // l'objectif hebdomadaire : sa place est contre les barres
+                  // qui le détaillent, pas seul en haut d'écran.
+                  FitnessIndexBlock(score: ref.watch(fitnessIndexProvider)),
+                  const SizedBox(height: AppSpacing.gapRow),
+                  WeekBars(week: week),
+                ],
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }

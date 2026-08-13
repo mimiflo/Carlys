@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
+import '../../../../design_system/scenes/scene_scroll_activity.dart';
 import '../../../../shared/widgets/connection_aware_error.dart';
 import '../../domain/entities/nutrition.dart';
 import '../controllers/nutrition_controllers.dart';
@@ -39,7 +40,10 @@ class NutritionScreen extends ConsumerWidget {
             onRetry: () => ref.invalidate(metabolismReportProvider),
           ),
         ),
-        data: (data) => _NutritionContent(report: data),
+        // L'hélice se fige pendant le défilement, comme le cœur à l'accueil.
+        data: (data) => SceneScrollActivity(
+          child: _NutritionContent(report: data),
+        ),
       ),
     );
   }

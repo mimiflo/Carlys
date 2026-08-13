@@ -2,12 +2,14 @@ import 'dart:math' as math;
 import 'dart:typed_data';
 import 'dart:ui' as ui;
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 
 import 'heart_specks.dart';
 import 'scene3d.dart';
 import 'scene_cadence.dart';
+import 'scene_scroll_activity.dart';
 
 /// Cœur battant de la refonte — portage fidèle de `pulse-heart.js`.
 ///
@@ -48,13 +50,40 @@ class _HeartSceneState extends State<HeartScene>
   late final Ticker _ticker = createTicker(_onTick);
   double _seconds = 0;
 
+  /// Temps accumulé AVANT la pause en cours : le Ticker repart de zéro à
+  /// chaque start(), le temps de scène, lui, ne revient jamais en arrière.
+  double _accumulated = 0;
+  bool _reduced = false;
+  ValueListenable<bool>? _scrolling;
+
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
     // La boucle ne doit JAMAIS tourner sous réduction d'animations : sinon la
     // scène empêche toute stabilisation (accessibilité, et tests de widgets).
-    if (MediaQuery.disableAnimationsOf(context)) {
-      _ticker.stop();
+    _reduced = MediaQuery.disableAnimationsOf(context);
+    // Et elle se FIGE pendant le défilement de l'écran englobant : chaque
+    // image coûte des millisecondes de fil d'interface, exactement le budget
+    // qui manque à un téléphone modeste pour défiler sans accroc.
+    final scrolling = SceneScrollActivity.of(context);
+    if (!identical(scrolling, _scrolling)) {
+      _scrolling?.removeListener(_syncTicker);
+      _scrolling = scrolling;
+      _scrolling?.addListener(_syncTicker);
+    }
+    _syncTicker();
+  }
+
+  void _syncTicker() {
+    if (!mounted) {
+      return;
+    }
+    final paused = _reduced || (_scrolling?.value ?? false);
+    if (paused) {
+      if (_ticker.isActive) {
+        _accumulated = _seconds;
+        _ticker.stop();
+      }
     } else if (!_ticker.isActive) {
       _ticker.start();
     }
@@ -65,7 +94,8 @@ class _HeartSceneState extends State<HeartScene>
     // battement ne gagne rien de perceptible, et chaque image coûte un
     // maillage entier.
     final fps = _cadence.framesPerSecond;
-    final seconds = (elapsed.inMicroseconds * fps / 1000000).floor() / fps;
+    final seconds =
+        _accumulated + (elapsed.inMicroseconds * fps / 1000000).floor() / fps;
     if (seconds != _seconds) {
       setState(() => _seconds = seconds);
     }
@@ -73,6 +103,7 @@ class _HeartSceneState extends State<HeartScene>
 
   @override
   void dispose() {
+    _scrolling?.removeListener(_syncTicker);
     _ticker.dispose();
     super.dispose();
   }
@@ -159,6 +190,15 @@ class _HeartMesh {
   late final Float32List depth = Float32List(positions.length ~/ 3);
   late final Uint16List faces = Uint16List(rings * segments * 6);
   late final Uint16List coreFaces = Uint16List(rings * segments * 6);
+
+  /// Position et normale monde par sommet — retenues pour n'ÉCLAIRER que
+  /// les sommets des faces réellement dessinées (voir `used`).
+  late final Float32List world = Float32List(positions.length);
+  late final Float32List worldNormals = Float32List(positions.length);
+
+  /// 1 si le sommet appartient à une face émise : la moitié arrière du
+  /// maillage est éliminée AVANT l'éclairage, le poste le plus cher.
+  late final Uint8List used = Uint8List(positions.length ~/ 3);
 
   /// Normales moyennées par sommet, comme `computeVertexNormals`.
   void _computeNormals(int row) {
@@ -331,10 +371,15 @@ class HeartScenePainter extends CustomPainter {
       ],
     );
 
-    // --- Sommets : déformation, transformation, éclairage ---
+    // --- Sommets : déformation, transformation, projection ---
+    // L'ÉCLAIRAGE, lui, attend l'émission des faces : la moitié arrière du
+    // maillage n'est jamais dessinée, l'éclairer était le poste le plus cher
+    // de toute la scène.
     final screen = mesh.screen;
     final colors = mesh.colors;
     final viewDepth = mesh.depth;
+    final world = mesh.world;
+    final worldNormals = mesh.worldNormals;
 
     final squeezeY = 1 - beat * 0.055;
     for (var v = 0; v < vertexCount; v++) {
@@ -364,9 +409,12 @@ class HeartScenePainter extends CustomPainter {
       final wy = rotation.rotY(dx, dy, dz) + bob;
       final wz = rotation.rotZ(dx, dy, dz);
 
-      final rnx = rotation.rotX(nx, ny, nz);
-      final rny = rotation.rotY(nx, ny, nz);
-      final rnz = rotation.rotZ(nx, ny, nz);
+      world[i3] = wx;
+      world[i3 + 1] = wy;
+      world[i3 + 2] = wz;
+      worldNormals[i3] = rotation.rotX(nx, ny, nz);
+      worldNormals[i3 + 1] = rotation.rotY(nx, ny, nz);
+      worldNormals[i3 + 2] = rotation.rotZ(nx, ny, nz);
 
       // Projection SANS allocation : à douze mille sommets par image, la
       // version à enregistrement nourrissait le ramasse-miettes pour rien.
@@ -380,25 +428,7 @@ class HeartScenePainter extends CustomPainter {
         size.width,
         size.height,
       );
-      colors[v] = shader.shade(rnx, rny, rnz, wx, wy, wz, material);
     }
-
-    // --- Particules passant DERRIÈRE la masse ---
-    HeartSpecks.paint(
-      canvas,
-      size,
-      camera,
-      seconds: seconds,
-      hero: hero,
-      front: false,
-    );
-
-    // --- Halo interne, sous le maillage ---
-    _paintHalo(canvas, size, camera, bob, beat);
-
-    // --- Voile interne : silhouette additive qui donne sa densité au volume
-    // (le maillage `core` en BackSide de la maquette). ---
-    _paintCore(canvas, screen, mesh, row);
 
     // --- Faces avant, des plus lointaines aux plus proches ---
     final ringOrder = List<int>.generate(mesh.rings, (i) => i);
@@ -420,6 +450,45 @@ class HeartScenePainter extends CustomPainter {
         n = _emit(indices, n, screen, b, c, d);
       }
     }
+
+    // --- Éclairage : seulement les sommets d'une face émise ---
+    final used = mesh.used;
+    used.fillRange(0, used.length, 0);
+    for (var i = 0; i < n; i++) {
+      used[indices[i]] = 1;
+    }
+    for (var v = 0; v < vertexCount; v++) {
+      if (used[v] == 0) {
+        continue;
+      }
+      final i3 = v * 3;
+      colors[v] = shader.shade(
+        worldNormals[i3],
+        worldNormals[i3 + 1],
+        worldNormals[i3 + 2],
+        world[i3],
+        world[i3 + 1],
+        world[i3 + 2],
+        material,
+      );
+    }
+
+    // --- Particules passant DERRIÈRE la masse ---
+    HeartSpecks.paint(
+      canvas,
+      size,
+      camera,
+      seconds: seconds,
+      hero: hero,
+      front: false,
+    );
+
+    // --- Halo interne, sous le maillage ---
+    _paintHalo(canvas, size, camera, bob, beat);
+
+    // --- Voile interne : silhouette additive qui donne sa densité au volume
+    // (le maillage `core` en BackSide de la maquette). ---
+    _paintCore(canvas, screen, mesh, row);
 
     if (n > 0) {
       canvas.drawVertices(
