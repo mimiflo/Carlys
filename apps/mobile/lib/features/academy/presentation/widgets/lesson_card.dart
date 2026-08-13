@@ -1,11 +1,16 @@
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/app_routes.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/academy.dart';
+import 'lesson_illustration.dart';
 import 'quiz_card.dart';
 
-/// Une leçon dépliable : titre + catégorie repliés, corps et question une
-/// fois ouverte. La question vit DANS la leçon — on lit, puis on se teste.
+/// Une leçon dépliable : titre + catégorie repliés ; ouverte, elle déroule
+/// l'illustration, le corps, l'essentiel à retenir, la question — et, pour
+/// l'anatomie, le pont vers les exercices du muscle. La question vit DANS
+/// la leçon : on lit, puis on se teste, puis on pratique.
 class LessonCard extends StatefulWidget {
   const LessonCard({
     required this.lesson,
@@ -72,16 +77,64 @@ class _LessonCardState extends State<LessonCard> {
           ),
           // Le contenu est RETIRÉ de l'arbre quand la leçon est repliée —
           // pas simplement masqué : une liste de leçons repliées ne paie
-          // ni leurs textes ni leurs questions.
+          // ni leurs textes, ni leurs images, ni leurs questions.
           if (_open) ...[
+            const SizedBox(height: AppSpacing.sm),
+            LessonIllustration(lesson: lesson),
             const SizedBox(height: AppSpacing.sm),
             Text(
               lesson.body,
               style: AppTypography.body
                   .copyWith(color: AppColors.darkTextSecondary),
             ),
+            if (lesson.points.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.sm),
+              const AppSectionLabel('À retenir'),
+              const SizedBox(height: AppSpacing.xxs),
+              for (final point in lesson.points)
+                Padding(
+                  padding: const EdgeInsets.only(bottom: AppSpacing.xxs),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Padding(
+                        padding: EdgeInsets.only(top: 2),
+                        child: Icon(
+                          Icons.arrow_forward_rounded,
+                          size: 14,
+                          color: AppColors.accent,
+                        ),
+                      ),
+                      const SizedBox(width: AppSpacing.xs),
+                      Expanded(
+                        child: Text(
+                          point,
+                          style: AppTypography.label.copyWith(
+                            color: AppColors.darkTextSecondary,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
             const SizedBox(height: AppSpacing.sm),
             QuizCard(question: lesson.question, onAnswered: widget.onAnswered),
+            // Le pont vers la pratique : la bibliothèque, déjà filtrée sur
+            // le muscle qu'on vient d'apprendre.
+            if (lesson.muscleGroupSlugs.isNotEmpty) ...[
+              const SizedBox(height: AppSpacing.sm),
+              Align(
+                alignment: Alignment.centerLeft,
+                child: AppPill(
+                  label: 'Voir les exercices de ce muscle',
+                  tone: AppPillTone.accent,
+                  onTap: () => context.push(
+                    AppRoutes.exercisesForGroup(lesson.muscleGroupSlugs.first),
+                  ),
+                ),
+              ),
+            ],
           ],
         ],
       ),

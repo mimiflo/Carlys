@@ -62,6 +62,15 @@ Lesson _lesson(Map<String, dynamic> json) {
     category: AcademyCategory.values.byName(json['category'] as String),
     title: json['title'] as String,
     body: json['body'] as String,
+    // Champs optionnels : une leçon minimale (titre, corps, question) reste
+    // valide — points, groupes et illustration l'enrichissent.
+    points: (json['points'] as List<dynamic>? ?? const [])
+        .cast<String>()
+        .toList(growable: false),
+    muscleGroupSlugs: (json['muscleGroups'] as List<dynamic>? ?? const [])
+        .cast<String>()
+        .toList(growable: false),
+    image: json['image'] as String?,
     question: QuizQuestion(
       prompt: question['prompt'] as String,
       choices: choices,

@@ -33,7 +33,8 @@ class QuizQuestion {
   final String explanation;
 }
 
-/// Une leçon : un titre, un corps court, une question pour l'ancrer.
+/// Une leçon : un titre, un corps court, l'essentiel à retenir, une
+/// question pour l'ancrer — et, pour l'anatomie, le pont vers la pratique.
 class Lesson {
   const Lesson({
     required this.id,
@@ -41,6 +42,9 @@ class Lesson {
     required this.title,
     required this.body,
     required this.question,
+    this.points = const [],
+    this.muscleGroupSlugs = const [],
+    this.image,
   });
 
   final String id;
@@ -48,4 +52,17 @@ class Lesson {
   final String title;
   final String body;
   final QuizQuestion question;
+
+  /// « À retenir » : trois idées maximum, actionnables — c'est ce qui reste
+  /// quand le corps de la leçon est oublié.
+  final List<String> points;
+
+  /// Groupes musculaires enseignés (slugs du catalogue) : la leçon propose
+  /// alors d'ouvrir la bibliothèque d'exercices filtrée dessus — apprendre,
+  /// puis pratiquer, en un geste.
+  final List<String> muscleGroupSlugs;
+
+  /// Illustration embarquée (`assets/academy/<id>.webp`). Tant que le
+  /// fichier n'existe pas, la carte pose un repli — jamais un trou.
+  final String? image;
 }

@@ -16,7 +16,12 @@ import '../widgets/selected_group_bar.dart';
 /// choisi. La recherche, elle, court-circuite les deux étages : chercher un
 /// nom ne suppose pas de savoir quel muscle il travaille.
 class ExerciseLibraryScreen extends ConsumerStatefulWidget {
-  const ExerciseLibraryScreen({super.key});
+  const ExerciseLibraryScreen({this.initialMuscleGroupSlug, super.key});
+
+  /// Groupe pré-sélectionné à l'ouverture (`/exercises?groupe=<slug>`) —
+  /// c'est ainsi qu'une fiche d'anatomie ouvre la bibliothèque directement
+  /// sur les exercices du muscle qu'elle enseigne.
+  final String? initialMuscleGroupSlug;
 
   @override
   ConsumerState<ExerciseLibraryScreen> createState() =>
@@ -25,6 +30,25 @@ class ExerciseLibraryScreen extends ConsumerStatefulWidget {
 
 class _ExerciseLibraryScreenState extends ConsumerState<ExerciseLibraryScreen> {
   final _searchController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    // Appliqué DEPUIS l'écran, jamais avant la navigation : le contrôleur
+    // est auto-disposé — un filtre posé sans écouteur serait jeté avant que
+    // l'écran ne monte. Une seule fois : le retour vers la grille (barre de
+    // groupe) ne doit pas se voir re-forcer le filtre.
+    final slug = widget.initialMuscleGroupSlug;
+    if (slug != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ref
+              .read(exerciseLibraryControllerProvider.notifier)
+              .setMuscleGroup(slug);
+        }
+      });
+    }
+  }
 
   @override
   void dispose() {

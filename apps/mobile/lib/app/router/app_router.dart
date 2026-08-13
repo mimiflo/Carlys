@@ -170,7 +170,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: AppRoutes.exercises,
                 name: 'exercises',
-                builder: (context, state) => const ExerciseLibraryScreen(),
+                // `?groupe=<slug>` ouvre la bibliothèque déjà filtrée sur un
+                // muscle (fiches d'anatomie de l'Academy).
+                builder: (context, state) => ExerciseLibraryScreen(
+                  initialMuscleGroupSlug: state.uri.queryParameters['groupe'],
+                ),
                 routes: [
                   GoRoute(
                     path: ':idOrSlug',

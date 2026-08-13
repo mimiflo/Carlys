@@ -32,6 +32,10 @@ abstract final class AppRoutes {
 
   static String exerciseDetail(String idOrSlug) => '/exercises/$idOrSlug';
 
+  /// Bibliothèque ouverte directement sur un groupe musculaire — le pont
+  /// « apprendre → pratiquer » des fiches d'anatomie de l'Academy.
+  static String exercisesForGroup(String slug) => '/exercises?groupe=$slug';
+
   static String workoutDetail(String sessionId) => '/history/$sessionId';
 
   /// Éditeur d'un modèle de séance.

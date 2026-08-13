@@ -724,6 +724,32 @@ void main() {
     await capture(tester, '28-academy', shows: find.byType(AcademyScreen));
   });
 
+  testWidgets('Academy — fiche d’anatomie dépliée', (tester) async {
+    await pumpApp(tester);
+    // Vignette du muscle : décodage en temps réel avant capture.
+    final context = tester.element(find.byType(AppBottomBar));
+    await tester.runAsync(
+      () => precacheImage(
+        const AssetImage('assets/muscles/pectoraux.webp'),
+        context,
+      ),
+    );
+    await goTab(tester, 'Academy');
+    await tester.scrollUntilVisible(
+      find.text('Les pectoraux, un éventail'),
+      150,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await settle(tester);
+    await tester.tap(find.text('Les pectoraux, un éventail'));
+    await settle(tester);
+    await capture(
+      tester,
+      '36-academy-anatomie',
+      shows: find.text('À RETENIR'),
+    );
+  });
+
   testWidgets('Communauté — amis, encouragements, défis', (tester) async {
     // Sur le CATALOGUE DÉMO : la communauté n'a pas encore de serveur, seul
     // le dépôt de démonstration a des amis et des défis à montrer.

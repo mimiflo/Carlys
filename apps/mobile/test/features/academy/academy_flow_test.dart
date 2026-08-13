@@ -7,6 +7,8 @@ import 'package:carlys_mobile/features/academy/presentation/widgets/lesson_card.
 import 'package:carlys_mobile/features/academy/presentation/widgets/quiz_card.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
 import 'package:carlys_mobile/features/community/data/repositories/community_repository_impl.dart';
+import 'package:carlys_mobile/features/exercises/data/repositories/exercises_repository_impl.dart';
+import 'package:carlys_mobile/features/exercises/presentation/widgets/selected_group_bar.dart';
 import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -14,6 +16,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/fake_auth_repository.dart';
 import '../../support/fake_community_repository.dart';
+import '../../support/fake_exercises_repository.dart';
 import '../../support/fake_workout_repository.dart';
 import '../../support/first_run_prefs.dart';
 import '../../support/navigation.dart';
@@ -31,6 +34,12 @@ Widget app({FakeCommunityRepository? community}) => ProviderScope(
         authRepositoryProvider
             .overrideWithValue(FakeAuthRepository(storedSession: true)),
         workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
+        exercisesRepositoryProvider.overrideWithValue(
+          FakeExercisesRepository([
+            summary('e1', 'Développé couché', group: 'pectoraux'),
+            summary('e2', 'Écarté haltères', group: 'pectoraux'),
+          ]),
+        ),
         communityRepositoryProvider
             .overrideWithValue(community ?? FakeCommunityRepository()),
         syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
@@ -65,9 +74,11 @@ void main() {
 
     expect(find.text('QUESTION DU JOUR'), findsOneWidget);
     expect(find.text('Nutrition'), findsOneWidget);
-    // Les quatre domaines, en-têtes de section.
+    // Les quatre domaines, en-têtes de section. Chaque libellé est unique et
+    // la liste est PARESSEUSE : le viseur doit tolérer zéro correspondance
+    // tant qu'on n'a pas défilé jusqu'à la section (`.first` planterait).
     for (final category in AcademyCategory.values) {
-      await reveal(tester, find.text(category.label.toUpperCase()).first);
+      await reveal(tester, find.text(category.label.toUpperCase()));
     }
   });
 
@@ -179,6 +190,30 @@ void main() {
     );
     await tester.pumpAndSettle();
     expect(community.quizReports, hasLength(1));
+  });
+
+  testWidgets('une fiche d’anatomie mène aux exercices du muscle enseigné',
+      (tester) async {
+    await tester.pumpWidget(app());
+    await tester.pumpAndSettle();
+    await tapTab(tester, 'Academy');
+
+    // Ouvre la première fiche d'anatomie (les pectoraux).
+    await reveal(tester, find.byType(LessonCard).first);
+    await tester.tap(find.byType(LessonCard).first);
+    await tester.pumpAndSettle();
+
+    // L'essentiel à retenir est là, puis le pont vers la pratique.
+    expect(find.text('À RETENIR'), findsOneWidget);
+    final cta = find.text('Voir les exercices de ce muscle');
+    await reveal(tester, cta);
+    await tester.tap(cta);
+    await tester.pumpAndSettle();
+
+    // La bibliothèque s'ouvre DÉJÀ filtrée sur le muscle de la fiche.
+    expect(find.byType(SelectedGroupBar), findsOneWidget);
+    expect(find.text('Pectoraux'), findsWidgets);
+    expect(find.text('Développé couché'), findsOneWidget);
   });
 
   testWidgets('l’accueil pose la même question du jour', (tester) async {

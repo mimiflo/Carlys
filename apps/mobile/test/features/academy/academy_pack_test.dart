@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:io';
+
 import 'package:carlys_mobile/features/academy/data/academy_pack.dart';
 import 'package:carlys_mobile/features/academy/domain/entities/academy.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -41,6 +44,55 @@ void main() {
     final lessons = await loadAcademyPack();
     final ids = lessons.map((lesson) => lesson.id).toSet();
     expect(ids.length, lessons.length);
+  });
+
+  test('chaque leçon porte son essentiel : points, illustration déclarée',
+      () async {
+    final lessons = await loadAcademyPack();
+    for (final lesson in lessons) {
+      expect(lesson.points, isNotEmpty, reason: lesson.id);
+      expect(lesson.points.length, lessThanOrEqualTo(4), reason: lesson.id);
+      expect(
+        lesson.image,
+        startsWith('assets/academy/'),
+        reason: lesson.id,
+      );
+    }
+  });
+
+  test('l’anatomie couvre les 12 groupes du catalogue, sans slug inventé',
+      () async {
+    // Les slugs de référence viennent du catalogue de démonstration —
+    // généré depuis le seed de l'API : la même vérité que la bibliothèque.
+    final catalog = jsonDecode(
+      File('assets/demo/catalog.json').readAsStringSync(),
+    ) as Map<String, dynamic>;
+    final knownSlugs = (catalog['muscleGroups'] as List<dynamic>)
+        .cast<Map<String, dynamic>>()
+        .map((group) => group['slug'] as String)
+        .toSet();
+
+    final lessons = await loadAcademyPack();
+    final taughtSlugs = <String>{};
+    for (final lesson in lessons) {
+      for (final slug in lesson.muscleGroupSlugs) {
+        expect(
+          knownSlugs,
+          contains(slug),
+          reason: '${lesson.id} enseigne un groupe inconnu : $slug',
+        );
+        taughtSlugs.add(slug);
+      }
+    }
+
+    // Chaque muscle du catalogue a sa fiche : personne n'apprend « presque
+    // tout » le corps.
+    final anatomy =
+        lessons.where((lesson) => lesson.category == AcademyCategory.anatomie);
+    expect(taughtSlugs, knownSlugs);
+    for (final lesson in anatomy) {
+      expect(lesson.muscleGroupSlugs, isNotEmpty, reason: lesson.id);
+    }
   });
 
   test('un échec de lecture ne condamne pas les rechargements suivants',
