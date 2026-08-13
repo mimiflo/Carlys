@@ -118,6 +118,19 @@ différé** complète : seuls les sommets d'une face réellement dessinée sont
 éclairés — la moitié arrière du maillage, toujours éliminée, était éclairée
 pour rien à chaque image.
 
+**Calcul en isolate** (`heart_frame.dart` + `heart_engine.dart`) : la moitié
+chère du cœur — déformation, projection, tri et éclairage de ~12 000 sommets —
+est une fonction **pure** (`computeHeartFrame`) exécutée dans un isolate
+dédié, sur un autre cœur du processeur. Le fil d'interface ne fait plus que
+dessiner des tampons prêts (`drawVertices`), soit une fraction du coût
+d'avant : le défilement ne partage plus son budget avec la scène. Les demandes
+se coalescent (seule la plus récente attend) : un appareil lent met le
+maillage à jour moins souvent, sans jamais accumuler de retard. Le peintre
+garde un **repli synchrone** — la même fonction, appelée sur place — pour la
+toute première image, les tests et la planche de contrôle : mêmes
+mathématiques, mêmes pixels, quel que soit le fil (testé, déterminisme
+compris).
+
 **Corrigé depuis** : l'hélice d'ADN (`DnaHelix`, écran Nutrition) avait le même
 défaut en plus discret. Son cycle vaut un tour de rotation (0,22 rad/s, soit
 28,56 s), mais la respiration (`sin(t × 0,65)`) et la pulsation des barreaux
