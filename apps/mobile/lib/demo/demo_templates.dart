@@ -22,7 +22,7 @@ import '../features/workout_template/domain/services/template_normalizer.dart';
 const List<(String, int, List<(String, List<(int, double, int)>)>)>
     _demoTemplates = [
   (
-    'Push — Force',
+    'Push force',
     55,
     [
       (
@@ -34,7 +34,7 @@ const List<(String, int, List<(String, List<(int, double, int)>)>)>
     ],
   ),
   (
-    'Pull — Hypertrophie',
+    'Pull hypertrophie',
     60,
     [
       ('Rowing barre', [(12, 40, 60), (10, 70, 120), (10, 72.5, 120)]),

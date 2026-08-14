@@ -94,7 +94,7 @@ class FirstRunController extends Notifier<FirstRunState> {
       await _store.writeStep(step);
     } on Exception catch (error) {
       _logger.warning(
-        'Étape du parcours non enregistrée — elle sera reproposée',
+        'Étape du parcours non enregistrée : elle sera reproposée',
         error: error,
       );
     }

@@ -224,7 +224,7 @@ FakeProgressRepository progressOf() => FakeProgressRepository(
 FakeCoachRepository coachOf() {
   const proposal = CoachSessionProposal(
     id: 'p1',
-    name: 'Haut du corps — format court',
+    name: 'Haut du corps, format court',
     estimatedMinutes: 28,
     exercises: [
       CoachProposedExercise(
@@ -596,7 +596,7 @@ void main() {
     await settle(tester);
     await capture(tester, '32-programmes', shows: find.byType(ProgramsScreen));
 
-    await tester.tap(find.text('Force — 2 semaines'));
+    await tester.tap(find.text('Force en 2 semaines'));
     await settle(tester);
     await capture(
       tester,

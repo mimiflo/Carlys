@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'dart:io';
+import 'dart:ui' as ui;
 
 import 'package:carlys_mobile/features/academy/data/academy_pack.dart';
 import 'package:carlys_mobile/features/academy/domain/entities/academy.dart';
@@ -92,6 +93,58 @@ void main() {
     expect(taughtSlugs, knownSlugs);
     for (final lesson in anatomy) {
       expect(lesson.muscleGroupSlugs, isNotEmpty, reason: lesson.id);
+    }
+  });
+
+  testWidgets('le ratio déclaré de chaque illustration correspond aux pixels',
+      (tester) async {
+    // La carte réserve la boîte EXACTE de l'image (`imageRatio`) pour
+    // l'afficher entière : un ratio faux ramènerait le rognage que ce champ
+    // supprime. Ici, chaque fichier livré est décodé et comparé au pack —
+    // remplacer une image sans ajuster son ratio se voit immédiatement.
+    final lessons = await loadAcademyPack();
+    await tester.runAsync(() async {
+      for (final lesson in lessons) {
+        final image = lesson.image;
+        if (image == null) {
+          continue;
+        }
+        final bytes = await File(image).readAsBytes();
+        final codec = await ui.instantiateImageCodec(bytes);
+        final frame = await codec.getNextFrame();
+        final real = frame.image.width / frame.image.height;
+        frame.image.dispose();
+        codec.dispose();
+        expect(
+          (real - lesson.imageRatio).abs(),
+          lessThan(0.02),
+          reason: '${lesson.id} : fichier $real, pack ${lesson.imageRatio}',
+        );
+      }
+    });
+  });
+
+  test('aucun texte de leçon ne porte de tiret de ponctuation', () async {
+    // Les tirets cadratins font « machine » : la ligne éditoriale les
+    // proscrit de tout texte visible. Les mots composés (avant-bras,
+    // ischio-jambiers) gardent bien sûr leur trait d'union.
+    final lessons = await loadAcademyPack();
+    for (final lesson in lessons) {
+      final texts = [
+        lesson.title,
+        lesson.body,
+        ...lesson.points,
+        lesson.question.prompt,
+        ...lesson.question.choices,
+        lesson.question.explanation,
+      ];
+      for (final text in texts) {
+        expect(
+          text.contains('—') || text.contains('–') || text.contains(' - '),
+          isFalse,
+          reason: '${lesson.id} : « $text »',
+        );
+      }
     }
   });
 

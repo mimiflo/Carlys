@@ -49,7 +49,7 @@ class SubscriptionBenefitRow extends StatelessWidget {
     final active = entry.isActive;
 
     return Semantics(
-      label: '${entry.label} — ${active ? 'inclus' : 'verrouillé'}',
+      label: '${entry.label}, ${active ? 'inclus' : 'verrouillé'}',
       excludeSemantics: true,
       child: Row(
         children: [

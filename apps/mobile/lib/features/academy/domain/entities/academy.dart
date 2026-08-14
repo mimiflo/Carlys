@@ -45,7 +45,12 @@ class Lesson {
     this.points = const [],
     this.muscleGroupSlugs = const [],
     this.image,
+    this.imageRatio = defaultImageRatio,
   });
+
+  /// Ratio des illustrations d'anatomie livrées (800 × 450) : c'est la
+  /// valeur par défaut, les scènes en 3:2 déclarent la leur dans le pack.
+  static const double defaultImageRatio = 16 / 9;
 
   final String id;
   final AcademyCategory category;
@@ -65,4 +70,10 @@ class Lesson {
   /// Illustration embarquée (`assets/academy/<id>.webp`). Tant que le
   /// fichier n'existe pas, la carte pose un repli — jamais un trou.
   final String? image;
+
+  /// Ratio largeur/hauteur RÉEL de l'illustration : la carte réserve la
+  /// boîte exacte de l'image, qui s'affiche donc entière. Une hauteur fixe
+  /// rognait le haut et le bas des figures ; un ratio faux recommencerait —
+  /// un test d'intégrité compare cette valeur aux pixels du fichier.
+  final double imageRatio;
 }

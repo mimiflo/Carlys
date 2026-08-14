@@ -51,7 +51,7 @@ class PushRegistration {
     final options = _environment.push;
     if (_environment.isDemo || options == null) {
       _logger.info(
-        'Notifications push inactives — pas de configuration Firebase',
+        'Notifications push inactives : pas de configuration Firebase',
       );
       return;
     }
@@ -62,7 +62,7 @@ class PushRegistration {
     try {
       final token = await _messenger.obtainToken(options);
       if (token == null) {
-        _logger.info('Notifications refusées — choix respecté, rien envoyé');
+        _logger.info('Notifications refusées : choix respecté, rien envoyé');
         return;
       }
       await _register(token);

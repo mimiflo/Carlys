@@ -323,7 +323,7 @@ void main() {
       ..active = WorkoutWithSets(
         session: WorkoutInfo(
           id: 'w-2',
-          name: 'Push — Force',
+          name: 'Push force',
           status: WorkoutStatus.inProgress,
           startedAt: startedAt,
           syncState: LocalSyncState.pending,
@@ -356,7 +356,7 @@ void main() {
 
     // Deux fois : la carte « séance du jour » ET la tuile ENTRAÎNEMENT du
     // résumé, qui reflète la séance en cours.
-    expect(find.text('Push — Force'), findsNWidgets(2));
+    expect(find.text('Push force'), findsNWidgets(2));
     expect(find.text('en cours'), findsOneWidget);
     expect(find.text('52 MIN'), findsOneWidget);
     expect(find.text('1 exercice'), findsOneWidget);

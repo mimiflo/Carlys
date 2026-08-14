@@ -131,8 +131,8 @@ void main() {
     expect(saveButton(tester).onPressed, isNull);
 
     await tester.enterText(
-      find.widgetWithText(TextFormField, 'Push — Force'),
-      'Push — Force',
+      find.widgetWithText(TextFormField, 'Push force'),
+      'Push force',
     );
     await tester.pumpAndSettle();
 
@@ -157,7 +157,7 @@ void main() {
 
     // Retour à la liste : le modèle enregistré y figure avec ses faits.
     expect(find.text('Mes modèles'), findsOneWidget);
-    expect(find.text('Push — Force'), findsOneWidget);
+    expect(find.text('Push force'), findsOneWidget);
     expect(find.text('1 EXERCICE'), findsOneWidget);
     expect(find.text('2 SÉRIES'), findsOneWidget);
   });
@@ -169,7 +169,7 @@ void main() {
       seed: [
         const SaveTemplateInput(
           id: 'tpl-1',
-          name: 'Push — Force',
+          name: 'Push force',
           exercises: [
             TemplateExerciseInput(
               exerciseName: 'Développé couché',
@@ -191,14 +191,14 @@ void main() {
       ],
     );
 
-    expect(find.text('Push — Force'), findsOneWidget);
+    expect(find.text('Push force'), findsOneWidget);
 
     await tester.tap(find.text('Lancer'));
     await tester.pumpAndSettle();
 
     // Une vraie séance a démarré, avec la provenance du modèle.
     expect(workouts.active, isNotNull);
-    expect(workouts.active!.session.templateName, 'Push — Force');
+    expect(workouts.active!.session.templateName, 'Push force');
     expect(workouts.active!.session.templateId, 'tpl-1');
 
     // Et l'écran de séance active s'ouvre sur le programme.

@@ -66,7 +66,7 @@ class FriendCard extends StatelessWidget {
             tooltip: 'Encourager',
             icon: const Icon(
               Icons.volunteer_activism_outlined,
-              color: AppColors.accent,
+              color: AppColors.affection,
             ),
           ),
         ],

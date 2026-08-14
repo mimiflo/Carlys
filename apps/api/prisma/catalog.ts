@@ -136,7 +136,7 @@ export const EXERCISES: SeedExercise[] = [
     description:
       'La version barre du développé incliné : plus lourd que les haltères, cible le haut des pectoraux.',
     instructions: [
-      'Réglez le banc entre 30 et 45 degrés — au-delà, ce sont les épaules qui travaillent.',
+      'Réglez le banc entre 30 et 45 degrés : au-delà, ce sont les épaules qui travaillent.',
       'Prise légèrement plus large que les épaules, omoplates serrées.',
       'Descendez la barre vers le haut de la poitrine, coudes à 45 degrés du buste.',
       'Poussez jusqu’à l’extension sans verrouiller brutalement les coudes.',
@@ -206,7 +206,7 @@ export const EXERCISES: SeedExercise[] = [
     slug: 'chest-press-machine',
     name: 'Chest press machine',
     description:
-      'La poussée guidée : trajectoire imposée, donc peu de technique à maîtriser — idéale pour débuter.',
+      'La poussée guidée : trajectoire imposée, donc peu de technique à maîtriser, idéale pour débuter.',
     instructions: [
       'Réglez le siège pour que les poignées arrivent à mi-poitrine.',
       'Dos plaqué au dossier, pieds au sol.',
@@ -1439,8 +1439,7 @@ export const EXERCISES: SeedExercise[] = [
   {
     slug: 'tirage-menton-halteres',
     name: 'Tirage menton haltères',
-    description:
-      'Aux haltères, les poignets suivent leur propre chemin — souvent plus confortable.',
+    description: 'Aux haltères, les poignets suivent leur propre chemin, souvent plus confortable.',
     instructions: [
       'Debout, un haltère dans chaque main devant les cuisses.',
       'Tirez les coudes vers le haut et l’extérieur.',
@@ -1680,7 +1679,7 @@ export const EXERCISES: SeedExercise[] = [
     instructions: [
       'Réglez le banc autour de 45 à 60 degrés et calez le dos.',
       'Laissez les bras pendre à la verticale, paumes vers l’avant.',
-      'Fléchissez sans avancer les coudes — c’est ce qui garde l’étirement.',
+      'Fléchissez sans avancer les coudes : c’est ce qui garde l’étirement.',
       'Redescendez jusqu’à l’extension complète.',
     ],
     difficulty: INTERMEDIATE,
@@ -1771,7 +1770,7 @@ export const EXERCISES: SeedExercise[] = [
       'Barre en pronation (paumes vers le bas), mains à largeur d’épaules.',
       'Coudes au corps, fléchissez sans casser les poignets.',
       'Montez jusqu’à hauteur de poitrine.',
-      'Redescendez lentement — la charge sera plus légère qu’en supination, c’est normal.',
+      'Redescendez lentement : la charge sera plus légère qu’en supination, c’est normal.',
     ],
     difficulty: INTERMEDIATE,
     type: STRENGTH,
@@ -1784,7 +1783,7 @@ export const EXERCISES: SeedExercise[] = [
     slug: 'curl-poulie-barre-droite',
     name: 'Curl à la poulie barre droite',
     description:
-      'À la poulie basse, la tension reste constante du début à la fin — ce que la barre libre ne fait pas.',
+      'À la poulie basse, la tension reste constante du début à la fin, ce que la barre libre ne fait pas.',
     instructions: [
       'Accrochez une barre droite à la poulie basse, un pas en arrière.',
       'Coudes au corps, fléchissez en gardant le buste droit.',
@@ -1820,7 +1819,7 @@ export const EXERCISES: SeedExercise[] = [
     slug: 'tractions-supinees',
     name: 'Tractions supinées',
     description:
-      'Le seul exercice de biceps au poids du corps qui charge lourd — le dos travaille avec.',
+      'Le seul exercice de biceps au poids du corps qui charge lourd : le dos travaille avec.',
     instructions: [
       'Suspendez-vous en supination, mains à largeur d’épaules.',
       'Tirez en amenant la poitrine vers la barre, coudes vers le bas.',
@@ -2273,7 +2272,7 @@ export const EXERCISES: SeedExercise[] = [
   {
     slug: 'squat-gobelet',
     name: 'Squat gobelet',
-    description: 'Squat avec un haltère contre la poitrine — parfait pour apprendre le mouvement.',
+    description: 'Squat avec un haltère contre la poitrine, parfait pour apprendre le mouvement.',
     instructions: [
       'Tenez un haltère verticalement contre la poitrine.',
       'Descendez entre vos jambes, buste droit.',
@@ -2372,7 +2371,7 @@ export const EXERCISES: SeedExercise[] = [
   {
     slug: 'hip-thrust',
     name: 'Hip thrust',
-    description: 'Extension de hanche dos sur banc — l’exercice le plus direct pour les fessiers.',
+    description: 'Extension de hanche dos sur banc : l’exercice le plus direct pour les fessiers.',
     instructions: [
       'Haut du dos sur le banc, barre sur les hanches.',
       'Poussez les hanches vers le plafond jusqu’à l’alignement épaules-genoux.',
@@ -2423,7 +2422,7 @@ export const EXERCISES: SeedExercise[] = [
     description: 'Gainage isométrique de référence pour un tronc solide.',
     instructions: [
       'Appui sur les avant-bras et les pointes de pieds.',
-      'Alignez tête, dos et bassin — ni cambré ni voûté.',
+      'Alignez tête, dos et bassin, ni cambré ni voûté.',
       'Respirez normalement en maintenant la position.',
     ],
     difficulty: BEGINNER,
@@ -2688,7 +2687,7 @@ export const EXERCISES: SeedExercise[] = [
     instructions: [
       'Allongé, mains aux tempes, jambes décollées.',
       'Amenez un coude vers le genou opposé en tendant l’autre jambe.',
-      'Alternez lentement — la vitesse ne fait pas le travail.',
+      'Alternez lentement : la vitesse ne fait pas le travail.',
     ],
     difficulty: BEGINNER,
     type: STRENGTH,
@@ -2899,7 +2898,7 @@ export const EXERCISES: SeedExercise[] = [
   {
     slug: 'balancier-kettlebell',
     name: 'Balancier kettlebell (swing)',
-    description: 'Extension de hanche explosive — puissance, cardio et chaîne postérieure.',
+    description: 'Extension de hanche explosive : puissance, cardio et chaîne postérieure.',
     instructions: [
       'Kettlebell à deux mains, charnière de hanche marquée.',
       'Projetez la cloche vers l’avant en claquant l’extension de hanches.',

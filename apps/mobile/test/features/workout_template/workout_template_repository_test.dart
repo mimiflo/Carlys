@@ -30,7 +30,7 @@ void main() {
 
   tearDown(() => db.close());
 
-  SaveTemplateInput pushInput({String? id, String name = 'Push — Force'}) {
+  SaveTemplateInput pushInput({String? id, String name = 'Push force'}) {
     return SaveTemplateInput(
       id: id,
       name: name,
@@ -79,7 +79,7 @@ void main() {
 
     final detail = await repository.templateDetail(templateId);
     expect(detail, isNotNull);
-    expect(detail!.name, 'Push — Force');
+    expect(detail!.name, 'Push force');
     expect(detail.notes, 'Focus haut du pectoral');
     expect(detail.exercises, hasLength(2));
     // Les positions sont dérivées de l'ordre des listes, jamais fournies.
@@ -115,7 +115,7 @@ void main() {
     await repository.saveTemplate(
       SaveTemplateInput(
         id: templateId,
-        name: 'Push — Volume',
+        name: 'Push volume',
         exercises: const [
           TemplateExerciseInput(
             exerciseName: 'Développé incliné',
@@ -126,7 +126,7 @@ void main() {
     );
 
     final second = await repository.templateDetail(templateId);
-    expect(second!.name, 'Push — Volume');
+    expect(second!.name, 'Push volume');
     expect(second.exercises, hasLength(1));
     expect(second.exercises.single.exerciseName, 'Développé incliné');
     expect(second.notes, isNull);
@@ -182,7 +182,7 @@ void main() {
 
     expect(api.log, ['template.save:$templateId']);
     final body = api.savedTemplates.single;
-    expect(body['name'], 'Push — Force');
+    expect(body['name'], 'Push force');
     expect(body['estimatedDurationMinutes'], 55);
 
     final exercises = body['exercises']! as List<dynamic>;

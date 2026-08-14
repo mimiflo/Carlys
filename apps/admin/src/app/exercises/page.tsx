@@ -95,7 +95,7 @@ export default function ExercisesPage() {
       {isPending && <p className="mt-6 text-sm text-muted">Chargement…</p>}
       {isError && (
         <p className="mt-6 text-sm text-danger" role="alert">
-          Catalogue indisponible — reconnectez-vous si le problème persiste.
+          Catalogue indisponible : reconnectez-vous si le problème persiste.
         </p>
       )}
       {data !== undefined && (
@@ -154,7 +154,7 @@ export default function ExercisesPage() {
       )}
       {data?.hasMore === true && (
         <p className="mt-3 text-xs text-muted">
-          Seuls les {data.items.length} premiers exercices sont affichés — affinez la recherche.
+          Seuls les {data.items.length} premiers exercices sont affichés : affinez la recherche.
         </p>
       )}
     </AdminShell>

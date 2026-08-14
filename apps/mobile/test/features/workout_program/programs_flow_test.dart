@@ -49,7 +49,7 @@ void main() {
           authRepositoryProvider
               .overrideWithValue(FakeAuthRepository(storedSession: true)),
           workoutRepositoryProvider.overrideWithValue(workouts),
-          // Les modèles de la feuille d'affectation (Push — Force, Pull —
+          // Les modèles de la feuille d'affectation (Push force, Pull,
           // Hypertrophie) viennent du seed de démonstration.
           workoutTemplateRepositoryProvider.overrideWithValue(
             DemoWorkoutTemplateRepository(workouts),
@@ -72,7 +72,7 @@ void main() {
 
   ProgramDetail programOf({bool isActive = false}) => ProgramDetail(
         id: 'programme-1',
-        name: 'Force — 2 semaines',
+        name: 'Force en 2 semaines',
         weeksCount: 2,
         isActive: isActive,
         days: const [
@@ -99,7 +99,7 @@ void main() {
       of: find.byType(BottomSheet),
       matching: find.byType(TextFormField),
     );
-    await tester.enterText(fields.at(0), 'Force — 2 semaines');
+    await tester.enterText(fields.at(0), 'Force en 2 semaines');
     await tester.enterText(fields.at(1), '2');
     await tester.tap(find.text('Créer'));
     await tester.pumpAndSettle();
@@ -119,13 +119,13 @@ void main() {
     await pumpApp(tester, programs);
     await openPrograms(tester);
 
-    await tester.tap(find.text('Force — 2 semaines'));
+    await tester.tap(find.text('Force en 2 semaines'));
     await tester.pumpAndSettle();
 
     // LUN de la semaine 1 est vide : la feuille propose repos et modèles.
     await tester.tap(find.text('À planifier').first);
     await tester.pumpAndSettle();
-    expect(find.text('Push — Force'), findsOneWidget);
+    expect(find.text('Push force'), findsOneWidget);
 
     await tester.tap(find.text('Repos').last);
     await tester.pumpAndSettle();
@@ -141,18 +141,18 @@ void main() {
     await pumpApp(tester, programs);
     await openPrograms(tester);
 
-    await tester.tap(find.text('Force — 2 semaines'));
+    await tester.tap(find.text('Force en 2 semaines'));
     await tester.pumpAndSettle();
 
     await tester.tap(find.text('À planifier').first);
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Push — Force'));
+    await tester.tap(find.text('Push force'));
     await tester.pumpAndSettle();
 
     final saved = await programs.byId('programme-1');
     expect(saved.dayAt(1, 1)?.templateId, isNotNull);
-    expect(saved.dayAt(1, 1)?.label, 'Push — Force');
-    expect(find.text('Push — Force'), findsOneWidget);
+    expect(saved.dayAt(1, 1)?.label, 'Push force');
+    expect(find.text('Push force'), findsOneWidget);
   });
 
   testWidgets('« Programme suivi » écrit l’activation ; badge sur la liste',
@@ -162,7 +162,7 @@ void main() {
     await openPrograms(tester);
 
     expect(find.text('SUIVI'), findsNothing);
-    await tester.tap(find.text('Force — 2 semaines'));
+    await tester.tap(find.text('Force en 2 semaines'));
     await tester.pumpAndSettle();
 
     await tester.tap(find.byType(Switch));
@@ -180,7 +180,7 @@ void main() {
     await pumpApp(tester, programs);
     await openPrograms(tester);
 
-    await tester.tap(find.text('Force — 2 semaines'));
+    await tester.tap(find.text('Force en 2 semaines'));
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Supprimer le programme'));
     await tester.pumpAndSettle();

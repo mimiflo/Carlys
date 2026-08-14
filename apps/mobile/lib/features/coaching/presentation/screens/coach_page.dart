@@ -127,7 +127,7 @@ class _CoachPremiumState extends ConsumerWidget {
       icon: AppIcons.premium,
       title: 'Le coach est réservé à Premium',
       message: 'Il lit tes séances, tes records et tes mesures pour adapter '
-          'ton entraînement — et te propose une séance prête à lancer.',
+          'ton entraînement, et te propose une séance prête à lancer.',
       actionLabel: 'Voir Premium',
       onAction: () => GoRouter.of(context).go(AppRoutes.subscription),
     );

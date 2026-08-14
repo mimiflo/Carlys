@@ -43,6 +43,16 @@ describe('Prompt du coach', () => {
     expect(COACH_SYSTEM_PROMPT).toContain('exerciseId');
   });
 
+  it('le prompt proscrit le tiret long, et prêche par l’exemple', () => {
+    // Le tic d'écriture qui trahit la machine : la consigne doit exister,
+    // et le prompt lui-même ne doit pas contenir ce qu'il interdit.
+    expect(COACH_SYSTEM_PROMPT).toContain('tiret long');
+    expect(COACH_SYSTEM_PROMPT).not.toContain('—');
+    for (const profile of Object.values(CarlysProfile)) {
+      expect(carlysProfileBriefing(profile)).not.toContain('—');
+    }
+  });
+
   it('chaque outil dit QUAND l’appeler, pas seulement ce qu’il fait', () => {
     for (const tool of COACH_TOOLS) {
       expect(tool.description.length).toBeGreaterThan(60);

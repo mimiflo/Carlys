@@ -64,7 +64,7 @@ class OnboardingQuestion extends StatelessWidget {
       0 => OnboardingStepBody(
           label: 'Ton identité',
           question: 'Quel Carlys\nes-tu ?',
-          subtitle: 'Une identité, pas un niveau — tu pourras en changer '
+          subtitle: 'Une identité, pas un niveau : tu pourras en changer '
               'à tout moment.',
           options: [
             for (final value in CarlysProfile.values)

@@ -16,7 +16,7 @@ class SubscriptionPurchaseNote extends StatelessWidget {
   Widget build(BuildContext context) {
     return Text(
       'La souscription se fait via l’App Store, Google Play ou le site web. '
-      'Vos droits sont toujours validés par le serveur — la restauration '
+      'Vos droits sont toujours validés par le serveur. La restauration '
       'd’achat les réactive automatiquement.',
       textAlign: TextAlign.center,
       style: AppTypography.label.copyWith(

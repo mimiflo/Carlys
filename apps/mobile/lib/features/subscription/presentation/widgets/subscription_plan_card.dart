@@ -98,5 +98,5 @@ String _planDetail(PlanStatus status) {
   if (subscription.state == SubscriptionState.active) {
     return endsAccess ? 'Accès jusqu’au $date' : 'Renouvellement le $date';
   }
-  return '${subscription.state.label} — jusqu’au $date';
+  return '${subscription.state.label} jusqu’au $date';
 }

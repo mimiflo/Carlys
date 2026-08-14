@@ -2,16 +2,38 @@
 
 `pack.json` est le contenu ÉDITORIAL de l'Academy (leçons, points à retenir,
 questions). Les illustrations des leçons sont attendues ici, en `.webp`
-paysage (~800 × 450, qualité 80), nommées par identifiant de leçon :
+paysage (~800 px de large, qualité 80), nommées par identifiant de leçon :
 
 ```
 assets/academy/<id-de-leçon>.webp     ex. anatomie-pectoraux.webp
 ```
 
-Tant qu'un fichier manque, la carte pose un repli en cascade — jamais un
+Tant qu'un fichier manque, la carte pose un repli en cascade, jamais un
 trou : l'illustration dédiée, sinon la vignette du muscle enseigné
 (`assets/muscles/`), sinon le dégradé de marque et l'icône du domaine.
 Déposer les fichiers suffit : aucun changement de code.
+
+## Ratio : l'image s'affiche ENTIÈRE
+
+La carte réserve la boîte au ratio exact de l'illustration, qui n'est donc
+jamais rognée. Le défaut est le 16:9 des fiches d'anatomie (800 × 450) ;
+toute autre proportion se déclare dans `pack.json`, à côté de `image` :
+
+```json
+"image": "assets/academy/nutrition-calories.webp",
+"imageRatio": 1.5
+```
+
+Remplacer une image par une autre proportion SANS ajuster `imageRatio`
+ramènerait le rognage — un test compare le ratio déclaré aux pixels réels
+de chaque fichier livré, et échoue sur l'oubli.
+
+## Ligne éditoriale
+
+Pas de tiret cadratin (`—`) dans les textes des leçons : ils font
+« machine ». On ponctue avec des deux-points, des virgules ou des points.
+Les mots composés (avant-bras, ischio-jambiers) gardent bien sûr leur trait
+d'union. Un test du pack le vérifie.
 
 ## Direction artistique commune (à coller en tête de chaque prompt)
 

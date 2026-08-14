@@ -37,7 +37,7 @@ void main() {
   /// Modèle « 4 × 8 à 60 kg » sur un seul exercice.
   const pushTemplate = SaveTemplateInput(
     id: 'tpl-1',
-    name: 'Push — Force',
+    name: 'Push force',
     exercises: [
       TemplateExerciseInput(
         exerciseName: 'Développé couché',
@@ -100,7 +100,7 @@ void main() {
     await pumpActiveWorkout(tester, seed: pushTemplate);
 
     // Provenance de la séance, puis consigne : « série 1 sur 3, 8 reps à 60 kg ».
-    expect(find.text('Push — Force'), findsOneWidget);
+    expect(find.text('Push force'), findsOneWidget);
     expect(find.text('SÉRIE 1 SUR 3 · DÉVELOPPÉ COUCHÉ'), findsOneWidget);
     expect(find.text('PRÉVU 8 × 60 KG'), findsOneWidget);
 

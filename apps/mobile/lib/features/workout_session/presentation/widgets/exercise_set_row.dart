@@ -86,7 +86,7 @@ class ExerciseSetRow extends StatelessWidget {
           if (entry != null && entry.syncState != LocalSyncState.synced) ...[
             Tooltip(
               message: entry.syncState == LocalSyncState.failed
-                  ? 'Synchronisation en échec — sera réessayée'
+                  ? 'Synchronisation en échec, elle sera réessayée'
                   : 'En attente de synchronisation',
               child: const Icon(
                 AppIcons.offline,

@@ -167,7 +167,7 @@ maquette posait un indigo `#5B5BF6` et un accent lime `#C6F432` ; l'application
 est passée au violet électrique `#9B30FF` et à l'orange `#FF7A45`. Le reste de
 la maquette — géométrie, typographie, espacements — est inchangé.
 
-Trois règles rendent la palette tenable, et elles sont écrites en tête de
+Quatre règles rendent la palette tenable, et elles sont écrites en tête de
 `AppColors` :
 
 - **l'orange est l'accent unique** — une action ou une métrique clé par écran ;
@@ -176,7 +176,11 @@ Trois règles rendent la palette tenable, et elles sont écrites en tête de
   du côté « rose » : c'est la leçon d'une première tentative où la couleur
   d'accent avait été remplacée à l'identique partout ;
 - **`primaryFlash #B44DFF` ne porte jamais de texte** — mesuré à 3,86 sous du
-  blanc, sous le seuil AA. Il est réservé à ce qui se remplit.
+  blanc, sous le seuil AA. Il est réservé à ce qui se remplit ;
+- **le rose `affection #FF5C9D` porte les CŒURS de la communauté** — mots
+  d'encouragement, demandes d'amis, réactions. Un lien humain n'est pas une
+  métrique : il sort de l'accent orange, qui reste l'action clé de l'écran.
+  Réservé aux icônes d'affection, jamais aux surfaces ni au texte.
 
 Contrastes mesurés sur le fond `#08050E` : orange 7,82 (et 8,12 sous du texte
 noir), violet clair 8,28, violet primaire 4,10, texte principal 18,11.

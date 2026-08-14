@@ -24,7 +24,7 @@ export default function AuditPage() {
     <AdminShell title="Journal d’audit">
       {isError && (
         <p className="text-sm text-danger" role="alert">
-          Journal indisponible — la permission audit:read est requise.
+          Journal indisponible : la permission audit:read est requise.
         </p>
       )}
       <div className="overflow-x-auto rounded-xl bg-surface ring-1 ring-black/5">

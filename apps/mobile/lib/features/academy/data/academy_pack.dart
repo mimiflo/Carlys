@@ -71,6 +71,8 @@ Lesson _lesson(Map<String, dynamic> json) {
         .cast<String>()
         .toList(growable: false),
     image: json['image'] as String?,
+    imageRatio:
+        (json['imageRatio'] as num?)?.toDouble() ?? Lesson.defaultImageRatio,
     question: QuizQuestion(
       prompt: question['prompt'] as String,
       choices: choices,

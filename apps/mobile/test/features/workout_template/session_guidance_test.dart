@@ -33,7 +33,7 @@ void main() {
   /// Deux exercices : « Développé couché » 3 × 8 à 60 kg, puis « Dips » 2 × 10.
   SessionPlan planOf({String? doneSetId}) => SessionPlan(
         sessionId: 's-1',
-        templateName: 'Push — Force',
+        templateName: 'Push force',
         items: [
           item(
             'p-1',
@@ -76,7 +76,7 @@ void main() {
   test('sans choix manuel : la consigne suit le programme', () {
     final guidance = guidanceFor(planOf());
 
-    expect(guidance.templateName, 'Push — Force');
+    expect(guidance.templateName, 'Push force');
     expect(guidance.planItemId, 'p-1');
     expect(guidance.overline, 'Série 1 sur 3 · Développé couché');
     expect(guidance.targetReps, 8);
@@ -137,7 +137,7 @@ void main() {
   test('programme terminé : la séance continue librement', () {
     final plan = SessionPlan(
       sessionId: 's-1',
-      templateName: 'Push — Force',
+      templateName: 'Push force',
       items: [
         item(
           'p-1',

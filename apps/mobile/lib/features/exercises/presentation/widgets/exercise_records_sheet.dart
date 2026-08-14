@@ -53,7 +53,7 @@ class _ExerciseRecordsSheet extends ConsumerWidget {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               AppSectionHeader(
-                title: 'Records — $exerciseName',
+                title: 'Records · $exerciseName',
                 trailing: records.isEmpty ? null : '${records.length}',
               ),
               const SizedBox(height: AppSpacing.sm),

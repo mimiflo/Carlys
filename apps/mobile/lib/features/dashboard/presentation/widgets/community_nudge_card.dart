@@ -19,7 +19,7 @@ class CommunityNudgeCard extends StatelessWidget {
       onTap: () => context.go(AppRoutes.community),
       child: Row(
         children: [
-          const Icon(Icons.favorite_rounded, color: AppColors.accent),
+          const Icon(Icons.favorite_rounded, color: AppColors.affection),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Column(

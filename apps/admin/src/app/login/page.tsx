@@ -29,7 +29,7 @@ export default function LoginPage() {
       setError(
         cause instanceof AdminApiError && cause.status === 401
           ? 'E-mail ou mot de passe incorrect.'
-          : 'Connexion impossible — vérifiez que l’API est démarrée.',
+          : 'Connexion impossible : vérifiez que l’API est démarrée.',
       );
       setSubmitting(false);
     }

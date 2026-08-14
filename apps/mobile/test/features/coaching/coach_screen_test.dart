@@ -13,7 +13,7 @@ import 'package:flutter_test/flutter_test.dart';
 void main() {
   const proposal = CoachSessionProposal(
     id: 'p1',
-    name: 'Haut du corps — format court',
+    name: 'Haut du corps, format court',
     estimatedMinutes: 25,
     exercises: [
       CoachProposedExercise(
@@ -103,7 +103,7 @@ void main() {
     CoachSessionProposal? opened;
     await pumpCoach(tester, onOpenProposal: (value) => opened = value);
 
-    expect(find.text('Haut du corps — format court'), findsOneWidget);
+    expect(find.text('Haut du corps, format court'), findsOneWidget);
     expect(find.text('3 exercices · 25 min'), findsNothing);
     expect(find.text('1 exercice · 25 min'), findsOneWidget);
 

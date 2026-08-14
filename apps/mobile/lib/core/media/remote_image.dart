@@ -25,7 +25,10 @@ class RemoteImage extends ConsumerWidget {
   const RemoteImage({
     required this.url,
     required this.placeholder,
-    this.fit = BoxFit.cover,
+    // `contain` par défaut : les photos d'exercices sont des détourages —
+    // un appel qui oublierait `fit` doit montrer la figure ENTIÈRE, jamais
+    // en rogner un morceau avec un `cover` silencieux.
+    this.fit = BoxFit.contain,
     this.semanticLabel,
     this.decodeWidth,
     super.key,

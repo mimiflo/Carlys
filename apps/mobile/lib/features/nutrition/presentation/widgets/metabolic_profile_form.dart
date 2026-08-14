@@ -105,7 +105,7 @@ class _MetabolicProfileFormState extends ConsumerState<MetabolicProfileForm> {
           SnackBar(
             content: Text(
               exception is NetworkException
-                  ? 'Serveur injoignable — réessayez une fois connecté.'
+                  ? 'Serveur injoignable : réessayez une fois connecté.'
                   : 'Enregistrement impossible. Vérifiez les valeurs saisies.',
             ),
           ),
@@ -185,7 +185,7 @@ class _MetabolicProfileFormState extends ConsumerState<MetabolicProfileForm> {
                 DropdownMenuItem(
                   value: level,
                   child: Text(
-                    '${level.label} — ${level.description}',
+                    '${level.label} : ${level.description}',
                     overflow: TextOverflow.ellipsis,
                   ),
                 ),

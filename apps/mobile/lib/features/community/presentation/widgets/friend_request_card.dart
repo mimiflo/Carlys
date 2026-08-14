@@ -22,7 +22,10 @@ class FriendRequestCard extends StatelessWidget {
     return AppCard(
       child: Row(
         children: [
-          const Icon(Icons.person_add_alt_1_outlined, color: AppColors.accent),
+          const Icon(
+            Icons.person_add_alt_1_outlined,
+            color: AppColors.affection,
+          ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Column(

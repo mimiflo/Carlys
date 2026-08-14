@@ -54,7 +54,7 @@ class TokenRefresher {
       final status = exception.response?.statusCode;
       if (status == 401) {
         // Session révoquée, expirée ou réutilisation détectée côté serveur.
-        _logger.info('Session invalide — reconnexion nécessaire');
+        _logger.info('Session invalide : reconnexion nécessaire');
         await _storage.clear();
         onSessionExpired?.call();
       } else {

@@ -66,7 +66,7 @@ export default function UsersPage() {
       {isPending && <p className="mt-6 text-sm text-muted">Chargement…</p>}
       {isError && (
         <p className="mt-6 text-sm text-danger" role="alert">
-          Liste indisponible — reconnectez-vous si le problème persiste.
+          Liste indisponible : reconnectez-vous si le problème persiste.
         </p>
       )}
       {data !== undefined && (

@@ -21,7 +21,7 @@ class EncouragementTile extends StatelessWidget {
               const Icon(
                 Icons.favorite_rounded,
                 size: 16,
-                color: AppColors.accent,
+                color: AppColors.affection,
               ),
               const SizedBox(width: AppSpacing.xs),
               Text(

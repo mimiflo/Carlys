@@ -33,6 +33,12 @@ abstract final class AppColors {
   /// la règle d'usage en tête de classe.
   static const Color magenta = Color(0xFFED35A9);
 
+  /// Rose des CŒURS de la communauté : encouragements, demandes d'amis,
+  /// réactions. Un lien humain n'est pas une métrique — il sort donc de
+  /// l'accent orange, réservé à l'action clé de l'écran. Réservé aux icônes
+  /// d'affection, jamais aux surfaces ni au texte.
+  static const Color affection = Color(0xFFFF5C9D);
+
   /// Dégradé d'ambiance : ce qui remplit (jauges, halos) plutôt que ce qui
   /// se lit. Il s'éclaircit dans le sens de la progression.
   static const LinearGradient violetRamp = LinearGradient(

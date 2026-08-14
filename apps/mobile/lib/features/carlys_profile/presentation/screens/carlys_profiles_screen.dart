@@ -41,7 +41,7 @@ class CarlysProfilesScreen extends ConsumerWidget {
           children: [
             Text(
               'Quatre identités, pas des niveaux : un débutant peut être '
-              'Stratège, un sportif avancé Challenger — et tu peux changer '
+              'Stratège, un sportif avancé Challenger, et tu peux changer '
               'à tout moment.',
               style: AppTypography.body.copyWith(
                 color: AppColors.darkTextTertiary,

@@ -88,7 +88,7 @@ class DemoCommunityRepository implements CommunityRepository {
       kind: ChallengeKind.culture,
       title: 'Qui connaît le mieux le haut du corps ?',
       description:
-          'Cinq questions d’anatomie par jour pendant une semaine — le meilleur score gagne.',
+          'Cinq questions d’anatomie par jour pendant une semaine. Le meilleur score gagne.',
       participants: 23,
       progress: 0.4,
       joined: false,

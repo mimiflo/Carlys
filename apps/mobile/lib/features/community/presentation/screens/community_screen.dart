@@ -98,7 +98,7 @@ class CommunityScreen extends ConsumerWidget {
                 tooltip: 'Ajouter un ami',
                 icon: const Icon(
                   Icons.person_add_alt_1_outlined,
-                  color: AppColors.accent,
+                  color: AppColors.affection,
                 ),
               ),
             ],

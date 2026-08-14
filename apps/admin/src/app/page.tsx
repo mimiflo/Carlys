@@ -9,7 +9,7 @@ export default function Home() {
         <h1 className="mt-2 text-3xl font-bold tracking-tight">Tableau de bord d’administration</h1>
         <p className="mt-4 text-muted">
           Gestion des utilisateurs, des droits premium et du catalogue, journal d’audit (Étape 7).
-          Connectez-vous avec un compte administrateur — les comptes admin sont séparés des comptes
+          Connectez-vous avec un compte administrateur. Les comptes admin sont séparés des comptes
           mobiles.
         </p>
 

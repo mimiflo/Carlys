@@ -29,7 +29,7 @@ class AppSummaryTile extends StatelessWidget {
   /// Label court en MAJUSCULES mono (ex. « NUTRITION »).
   final String label;
 
-  /// Valeur mise en avant (ex. « 2 100 kcal », « Push — Force »).
+  /// Valeur mise en avant (ex. « 2 100 kcal », « Push force »).
   final String value;
 
   /// Précision sous la valeur (ex. « objectif du jour »).

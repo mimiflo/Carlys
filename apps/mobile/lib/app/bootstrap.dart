@@ -20,7 +20,7 @@ Future<void> bootstrap() async {
 
       final environment = AppEnvironment.fromDartDefine();
       logger.info(
-        'Démarrage Carlys — flavor: ${environment.flavor.name}, '
+        'Démarrage Carlys, flavor: ${environment.flavor.name}, '
         'API: ${environment.apiBaseUrl}',
       );
 

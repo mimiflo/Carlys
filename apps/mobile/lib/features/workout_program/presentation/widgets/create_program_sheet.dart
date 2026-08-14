@@ -68,7 +68,7 @@ class _CreateProgramFormState extends State<_CreateProgramForm> {
             AppTextField(
               label: 'Nom',
               controller: _name,
-              hint: 'Force — 4 semaines',
+              hint: 'Force en 4 semaines',
               textInputAction: TextInputAction.next,
               maxLength: 120,
               validator: (value) => (value?.trim().isEmpty ?? true)

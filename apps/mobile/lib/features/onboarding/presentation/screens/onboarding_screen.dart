@@ -100,7 +100,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         SnackBar(
           content: Text(
             exception is NetworkException
-                ? 'Serveur injoignable — réessaie une fois connecté.'
+                ? 'Serveur injoignable : réessaie une fois connecté.'
                 : 'Enregistrement impossible. Réessaie dans un instant.',
           ),
         ),

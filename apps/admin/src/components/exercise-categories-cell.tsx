@@ -94,7 +94,7 @@ export function ExerciseCategoriesCell({ exercise }: { exercise: AdminExerciseSu
           {exercise.primaryMuscleGroupName ?? 'Sans groupe'}
         </span>
         <span className="block">
-          {exercise.muscleGroupSlugs.length + exercise.equipmentSlugs.length} rattachement(s) —
+          {exercise.muscleGroupSlugs.length + exercise.equipmentSlugs.length} rattachement(s) ·
           modifier
         </span>
       </button>

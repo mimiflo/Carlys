@@ -55,11 +55,11 @@ RemoteWorkoutSession _pushSession({
 }) {
   return RemoteWorkoutSession(
     id: 'session-1',
-    name: 'Push — Force',
+    name: 'Push force',
     status: status,
     startedAt: DateTime.utc(2026, 8, 8, 17),
     templateId: 'modele-1',
-    templateName: 'Push — Force',
+    templateName: 'Push force',
     sets: sets,
     plan: [
       RemoteSessionPlanItem(
@@ -147,7 +147,7 @@ void main() {
     final active = await workouts.watchActiveWorkout().first;
     expect(active, isNotNull);
     expect(active!.session.id, 'session-1');
-    expect(active.session.templateName, 'Push — Force');
+    expect(active.session.templateName, 'Push force');
     expect(active.session.syncState, LocalSyncState.synced);
     expect(active.sets, hasLength(1));
     // La déviation reste lisible : 7 faites pour 8 prévues.

@@ -148,8 +148,8 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Mes modèles'), findsOneWidget);
-    expect(find.text('Push — Force'), findsOneWidget);
-    expect(find.text('Pull — Hypertrophie'), findsOneWidget);
+    expect(find.text('Push force'), findsOneWidget);
+    expect(find.text('Pull hypertrophie'), findsOneWidget);
   });
 
   testWidgets('nutrition complète servie en mémoire', (tester) async {

@@ -87,7 +87,7 @@ void main() {
       history: [
         entryOf(
           id: 'h-3',
-          name: 'Push — Force',
+          name: 'Push force',
           startedAt: thirdDay,
           setsCount: 22,
           volumeKg: 5200,
@@ -118,7 +118,7 @@ void main() {
     expect(find.text('2 SÉANCES'), findsOneWidget);
     expect(find.text('CE MOIS-CI'), findsOneWidget);
 
-    expect(find.text('Push — Force'), findsOneWidget);
+    expect(find.text('Push force'), findsOneWidget);
     expect(
       find.text('${formatShortDateMono(thirdDay)} · 54 MIN'),
       findsOneWidget,

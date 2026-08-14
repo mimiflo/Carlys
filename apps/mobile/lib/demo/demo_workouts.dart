@@ -34,7 +34,7 @@ class _DemoSession {
 const List<_DemoSession> _sessions = [
   _DemoSession(
     daysAgo: 1,
-    name: 'Push — Force',
+    name: 'Push force',
     durationMinutes: 54,
     sets: [
       ('Développé couché', SetKind.warmup, 12, 40),
@@ -49,7 +49,7 @@ const List<_DemoSession> _sessions = [
   ),
   _DemoSession(
     daysAgo: 3,
-    name: 'Pull — Hypertrophie',
+    name: 'Pull hypertrophie',
     durationMinutes: 61,
     sets: [
       ('Rowing barre', SetKind.warmup, 12, 40),
@@ -76,7 +76,7 @@ const List<_DemoSession> _sessions = [
   ),
   _DemoSession(
     daysAgo: 8,
-    name: 'Push — Volume',
+    name: 'Push volume',
     durationMinutes: 57,
     sets: [
       ('Développé couché', SetKind.normal, 10, 65),
@@ -99,7 +99,7 @@ const List<_DemoSession> _sessions = [
   ),
   _DemoSession(
     daysAgo: 13,
-    name: 'Pull — Force',
+    name: 'Pull force',
     durationMinutes: 52,
     sets: [
       ('Soulevé de terre', SetKind.normal, 5, 125),

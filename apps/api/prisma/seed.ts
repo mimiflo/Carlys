@@ -292,7 +292,7 @@ async function seedCommunityChallenges(): Promise<void> {
       kind: ChallengeKind.CULTURE,
       title: 'Qui connaît le mieux le haut du corps ?',
       description:
-        'Cinq questions d’anatomie par jour pendant une semaine — le meilleur score gagne.',
+        'Cinq questions d’anatomie par jour pendant une semaine. Le meilleur score gagne.',
       target: 35,
       endsAt: inDays(7),
     },

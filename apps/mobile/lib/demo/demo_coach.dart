@@ -64,7 +64,7 @@ CoachSessionProposal _demoProposal() {
 
   return const CoachSessionProposal(
     id: 'demo-proposal',
-    name: 'Haut du corps — format court',
+    name: 'Haut du corps, format court',
     estimatedMinutes: 28,
     exercises: [
       CoachProposedExercise(

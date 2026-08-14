@@ -32,7 +32,7 @@ class SyncLifecycle {
         Connectivity().onConnectivityChanged.listen((results) {
       final online = results.any((result) => result != ConnectivityResult.none);
       if (online) {
-        _logger.info('Connectivité retrouvée — synchronisation');
+        _logger.info('Connectivité retrouvée : synchronisation');
         _poke();
       }
     });

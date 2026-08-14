@@ -78,7 +78,7 @@ _ProfileFocus _focusOf(CarlysProfile profile) {
     CarlysProfile.constructeur => _ProfileFocus(
         title: 'Pose tes fondations',
         body: 'L’Académie t’explique les mouvements, la nutrition et les '
-            'bases — apprends en t’entraînant.',
+            'bases. Apprends en t’entraînant.',
         open: (context) => context.go(AppRoutes.academy),
       ),
     CarlysProfile.challenger => _ProfileFocus(

@@ -102,7 +102,7 @@ export default function CategoriesPage() {
       {isPending && <p className="mt-6 text-sm text-muted">Chargement…</p>}
       {isError && (
         <p className="mt-6 text-sm text-danger" role="alert">
-          Catégories indisponibles — reconnectez-vous si le problème persiste.
+          Catégories indisponibles : reconnectez-vous si le problème persiste.
         </p>
       )}
       {data !== undefined && (

@@ -15,17 +15,17 @@ class LessonIllustration extends StatelessWidget {
 
   final Lesson lesson;
 
-  static const double _height = 132;
-
   @override
   Widget build(BuildContext context) {
     final image = lesson.image;
 
+    // La boîte épouse le ratio RÉEL de l'illustration (déclaré par la
+    // leçon) : l'image s'affiche entière — une hauteur fixe en rognait
+    // le haut et le bas.
     return ClipRRect(
       borderRadius: BorderRadius.circular(AppRadius.sm),
-      child: SizedBox(
-        height: _height,
-        width: double.infinity,
+      child: AspectRatio(
+        aspectRatio: lesson.imageRatio,
         child: image == null
             ? _Fallback(lesson: lesson)
             : Image.asset(

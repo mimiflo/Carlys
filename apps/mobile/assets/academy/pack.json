@@ -5,13 +5,15 @@
       "id": "anatomie-pectoraux",
       "category": "anatomie",
       "title": "Les pectoraux, un éventail",
-      "body": "Le grand pectoral n'est pas un bloc : ses fibres partent de la clavicule, du sternum et des côtes pour converger vers l'humérus, en éventail. C'est pourquoi l'inclinaison du banc déplace le travail — incliné vers les fibres claviculaires (haut des pecs), décliné vers les fibres basses. Aucune variante n'isole totalement une zone : elle déplace l'accent.",
+      "body": "Le grand pectoral n'est pas un bloc : ses fibres partent de la clavicule, du sternum et des côtes pour converger vers l'humérus, en éventail. C'est pourquoi l'inclinaison du banc déplace le travail : incliné, il oriente l'effort vers les fibres claviculaires (le haut des pecs) ; décliné, vers les fibres basses. Aucune variante n'isole totalement une zone : elle déplace l'accent.",
       "points": [
         "Trois faisceaux : claviculaire (haut), sternal (milieu), costal (bas).",
         "Incliner le banc déplace l'accent vers le haut des pectoraux.",
         "Les écartés ajoutent l'étirement que le développé ne donne pas."
       ],
-      "muscleGroups": ["pectoraux"],
+      "muscleGroups": [
+        "pectoraux"
+      ],
       "image": "assets/academy/anatomie-pectoraux.webp",
       "question": {
         "prompt": "Pourquoi le développé incliné cible-t-il davantage le haut des pectoraux ?",
@@ -28,13 +30,15 @@
       "id": "anatomie-dos",
       "category": "anatomie",
       "title": "Le dos : largeur et épaisseur",
-      "body": "Le grand dorsal donne la largeur — il tire le bras vers le bas et l'arrière, d'où les tractions et tirages verticaux. Les trapèzes et rhomboïdes donnent l'épaisseur — ils rapprochent les omoplates, d'où les rowings. Un programme de dos complet combine un tirage vertical et un tirage horizontal.",
+      "body": "Le grand dorsal donne la largeur : il tire le bras vers le bas et l'arrière, d'où les tractions et tirages verticaux. Les trapèzes et rhomboïdes donnent l'épaisseur : ils rapprochent les omoplates, d'où les rowings. Un programme de dos complet combine un tirage vertical et un tirage horizontal.",
       "points": [
         "Tirages verticaux (tractions) : le grand dorsal, la LARGEUR.",
         "Tirages horizontaux (rowings) : trapèzes et rhomboïdes, l'ÉPAISSEUR.",
         "Un dos complet combine les deux chaque semaine."
       ],
-      "muscleGroups": ["dos"],
+      "muscleGroups": [
+        "dos"
+      ],
       "image": "assets/academy/anatomie-dos.webp",
       "question": {
         "prompt": "Quel mouvement développe surtout l'ÉPAISSEUR du dos ?",
@@ -44,20 +48,22 @@
           "Le rowing barre"
         ],
         "answerIndex": 2,
-        "explanation": "Les tirages horizontaux (rowings) rapprochent les omoplates et chargent trapèzes et rhomboïdes — l'épaisseur. Les tirages verticaux construisent la largeur."
+        "explanation": "Les tirages horizontaux (rowings) rapprochent les omoplates et chargent trapèzes et rhomboïdes : c'est l'épaisseur. Les tirages verticaux construisent la largeur."
       }
     },
     {
       "id": "anatomie-epaules",
       "category": "anatomie",
       "title": "L'épaule, trois faisceaux",
-      "body": "Le deltoïde a trois faisceaux. L'antérieur pousse — il travaille déjà dans tous les développés. Le latéral écarte le bras : c'est lui qui donne la largeur d'épaules, et il ne répond vraiment qu'aux élévations latérales. Le postérieur tire vers l'arrière : oiseau et face pull, indispensables à l'équilibre de l'épaule et à la posture.",
+      "body": "Le deltoïde a trois faisceaux. L'antérieur pousse : il travaille déjà dans tous les développés. Le latéral écarte le bras : c'est lui qui donne la largeur d'épaules, et il ne répond vraiment qu'aux élévations latérales. Le postérieur tire vers l'arrière : oiseau et face pull, indispensables à l'équilibre de l'épaule et à la posture.",
       "points": [
         "L'antérieur est déjà servi par tous les développés.",
         "La largeur vient du faisceau latéral : élévations latérales.",
         "Le postérieur, souvent oublié, protège l'épaule et la posture."
       ],
-      "muscleGroups": ["epaules"],
+      "muscleGroups": [
+        "epaules"
+      ],
       "image": "assets/academy/anatomie-epaules.webp",
       "question": {
         "prompt": "Quel faisceau du deltoïde donne la largeur d'épaules ?",
@@ -67,20 +73,22 @@
           "Le faisceau postérieur"
         ],
         "answerIndex": 1,
-        "explanation": "Le faisceau latéral écarte le bras du corps ; les développés le touchent peu — les élévations latérales sont son exercice."
+        "explanation": "Le faisceau latéral écarte le bras du corps ; les développés le touchent peu. Les élévations latérales sont son exercice."
       }
     },
     {
       "id": "anatomie-biceps",
       "category": "anatomie",
       "title": "Le biceps, plieur et tourneur",
-      "body": "Le biceps fléchit le coude, mais pas seulement : il SUPINE l'avant-bras — il tourne la paume vers le ciel. Ses deux chefs travaillent sur toute flexion, et la prise change l'accent : supination pleine pour le biceps, prise neutre pour le brachial et le long supinateur, qui épaississent le bras.",
+      "body": "Le biceps fléchit le coude, mais pas seulement : il SUPINE l'avant-bras, c'est-à-dire qu'il tourne la paume vers le ciel. Ses deux chefs travaillent sur toute flexion, et la prise change l'accent : supination pleine pour le biceps, prise neutre pour le brachial et le long supinateur, qui épaississent le bras.",
       "points": [
         "Fléchir le coude ET tourner la paume : ses deux rôles.",
         "Curl incliné : la longue portion travaille étirée, stimulus précieux.",
         "Prise neutre (marteau) : brachial et avant-bras prennent le relais."
       ],
-      "muscleGroups": ["biceps"],
+      "muscleGroups": [
+        "biceps"
+      ],
       "image": "assets/academy/anatomie-biceps.webp",
       "question": {
         "prompt": "En plus de fléchir le coude, que fait le biceps ?",
@@ -103,7 +111,9 @@
         "Extensions au-dessus de la tête : la longue portion travaille étirée.",
         "Les développés serrés le chargent lourd, les extensions le finissent."
       ],
-      "muscleGroups": ["triceps"],
+      "muscleGroups": [
+        "triceps"
+      ],
       "image": "assets/academy/anatomie-triceps.webp",
       "question": {
         "prompt": "Quelle part du volume du bras le triceps représente-t-il environ ?",
@@ -120,13 +130,15 @@
       "id": "anatomie-avant-bras",
       "category": "anatomie",
       "title": "Les avant-bras, la poigne",
-      "body": "Les avant-bras ferment la main et tiennent la barre : fléchisseurs côté paume, extenseurs côté dos de la main. Ils travaillent déjà sur chaque tirage — et c'est souvent la poigne qui lâche avant le dos. Les renforcer, c'est débloquer les tirages lourds : portés de charge, suspensions, curls inversés.",
+      "body": "Les avant-bras ferment la main et tiennent la barre : fléchisseurs côté paume, extenseurs côté dos de la main. Ils travaillent déjà sur chaque tirage, et c'est souvent la poigne qui lâche avant le dos. Les renforcer, c'est débloquer les tirages lourds : portés de charge, suspensions, curls inversés.",
       "points": [
         "La poigne lâche souvent AVANT le dos sur les tirages lourds.",
         "Portés de charge et suspensions : le grip se construit là.",
         "Le curl inversé travaille les extenseurs, grands oubliés."
       ],
-      "muscleGroups": ["avant-bras"],
+      "muscleGroups": [
+        "avant-bras"
+      ],
       "image": "assets/academy/anatomie-avant-bras.webp",
       "question": {
         "prompt": "Pourquoi renforcer sa poigne aide-t-il le dos ?",
@@ -136,20 +148,22 @@
           "Ça n'a aucun lien"
         ],
         "answerIndex": 0,
-        "explanation": "Sur un rowing ou un soulevé, la main est le maillon faible : quand la poigne cède, la série s'arrête — avant que le dos ait tout donné."
+        "explanation": "Sur un rowing ou un soulevé, la main est le maillon faible : quand la poigne cède, la série s'arrête avant que le dos ait tout donné."
       }
     },
     {
       "id": "anatomie-abdominaux",
       "category": "anatomie",
       "title": "Les abdominaux, en trois couches",
-      "body": "Le grand droit fléchit le buste (les « tablettes »), les obliques le tournent et l'inclinent, le transverse — le plus profond — ceinture le ventre et stabilise la colonne. Le gainage travaille l'anti-mouvement : résister plutôt que bouger. Et leur visibilité dépend d'abord du taux de masse grasse, pas du nombre de crunchs.",
+      "body": "Le grand droit fléchit le buste (les « tablettes »), les obliques le tournent et l'inclinent, le transverse, le plus profond, ceinture le ventre et stabilise la colonne. Le gainage travaille l'anti-mouvement : résister plutôt que bouger. Et leur visibilité dépend d'abord du taux de masse grasse, pas du nombre de crunchs.",
       "points": [
         "Grand droit : flexion. Obliques : rotation. Transverse : ceinture profonde.",
         "Le gainage entraîne l'ANTI-mouvement : résister, pas s'enrouler.",
         "Les rendre visibles est une affaire de nutrition plus que de crunchs."
       ],
-      "muscleGroups": ["abdominaux"],
+      "muscleGroups": [
+        "abdominaux"
+      ],
       "image": "assets/academy/anatomie-abdominaux.webp",
       "question": {
         "prompt": "Quel muscle profond agit comme une ceinture naturelle du tronc ?",
@@ -166,13 +180,15 @@
       "id": "anatomie-lombaires",
       "category": "anatomie",
       "title": "Les lombaires, gardiens de la colonne",
-      "body": "Les érecteurs du rachis longent la colonne et la tiennent droite sous la charge. Sur un squat ou un soulevé de terre, leur rôle est isométrique : garder le dos NEUTRE pendant que hanches et jambes produisent la force. Des lombaires endurants sont la meilleure assurance du dos — extensions au banc, good mornings légers, gainage dorsal.",
+      "body": "Les érecteurs du rachis longent la colonne et la tiennent droite sous la charge. Sur un squat ou un soulevé de terre, leur rôle est isométrique : garder le dos NEUTRE pendant que hanches et jambes produisent la force. Des lombaires endurants sont la meilleure assurance du dos : extensions au banc, good mornings légers, gainage dorsal.",
       "points": [
         "Leur travail sous la barre est isométrique : tenir le dos neutre.",
         "Les renforcer directement : extensions au banc, bird-dog.",
         "Dos rond sous charge lourde : leur demander l'impossible."
       ],
-      "muscleGroups": ["lombaires"],
+      "muscleGroups": [
+        "lombaires"
+      ],
       "image": "assets/academy/anatomie-lombaires.webp",
       "question": {
         "prompt": "Quel est le rôle des lombaires pendant un soulevé de terre ?",
@@ -182,20 +198,22 @@
           "Fléchir la colonne à chaque répétition"
         ],
         "answerIndex": 1,
-        "explanation": "La force vient des hanches et des jambes ; les érecteurs, eux, verrouillent la colonne — un travail de statue, pas de moteur."
+        "explanation": "La force vient des hanches et des jambes ; les érecteurs, eux, verrouillent la colonne : un travail de statue, pas de moteur."
       }
     },
     {
       "id": "anatomie-fessiers",
       "category": "anatomie",
       "title": "Les fessiers, le moteur des hanches",
-      "body": "Le grand fessier est le muscle le plus puissant du corps : il étend la hanche — se lever, sprinter, monter. Le moyen fessier, sur le côté, stabilise le bassin à chaque appui. Hip thrust, fentes et squats profonds les construisent ; des fessiers forts soulagent lombaires et genoux.",
+      "body": "Le grand fessier est le muscle le plus puissant du corps : il étend la hanche : se lever, sprinter, monter. Le moyen fessier, sur le côté, stabilise le bassin à chaque appui. Hip thrust, fentes et squats profonds les construisent ; des fessiers forts soulagent lombaires et genoux.",
       "points": [
         "Grand fessier : extension de hanche, le moteur des mouvements lourds.",
         "Moyen fessier : stabilité du bassin sur un appui (course, fentes).",
         "Hanches d'abord : hip thrust, fentes, squat profond."
       ],
-      "muscleGroups": ["fessiers"],
+      "muscleGroups": [
+        "fessiers"
+      ],
       "image": "assets/academy/anatomie-fessiers.webp",
       "question": {
         "prompt": "Quel mouvement cible le plus directement les fessiers ?",
@@ -212,13 +230,15 @@
       "id": "anatomie-quadriceps",
       "category": "anatomie",
       "title": "Les quadriceps, quatre chefs",
-      "body": "Quatre chefs à l'avant de la cuisse, une mission commune : étendre le genou. Le droit fémoral croise aussi la hanche, d'où sa participation aux relevés de jambe. Squats, presses et fentes les chargent — et plus la flexion de genou est profonde, plus ils travaillent.",
+      "body": "Quatre chefs à l'avant de la cuisse, une mission commune : étendre le genou. Le droit fémoral croise aussi la hanche, d'où sa participation aux relevés de jambe. Squats, presses et fentes les chargent, et plus la flexion de genou est profonde, plus ils travaillent.",
       "points": [
-        "Leur fonction : étendre le genou — squat, presse, fentes.",
+        "Leur fonction : étendre le genou (squat, presse, fentes).",
         "Plus la descente est profonde, plus les quadriceps travaillent.",
         "Le droit fémoral croise la hanche : il participe aussi aux relevés."
       ],
-      "muscleGroups": ["quadriceps"],
+      "muscleGroups": [
+        "quadriceps"
+      ],
       "image": "assets/academy/anatomie-quadriceps.webp",
       "question": {
         "prompt": "Quelle est la fonction principale des quadriceps ?",
@@ -237,11 +257,13 @@
       "title": "Les ischio-jambiers, biarticulaires",
       "body": "Trois muscles à l'arrière de la cuisse, presque tous BIARTICULAIRES : ils croisent deux articulations, fléchissent le genou ET étendent la hanche. Le soulevé de terre roumain les étire hanche pliée, le leg curl les contracte genou plié : les deux angles comptent. Des ischios solides protègent genoux et sprints.",
       "points": [
-        "Biarticulaires : genou ET hanche — deux angles de travail.",
+        "Biarticulaires : genou ET hanche, deux angles de travail.",
         "Soulevé roumain : l'étirement. Leg curl : la contraction.",
         "L'équilibre quadriceps/ischios protège le genou."
       ],
-      "muscleGroups": ["ischio-jambiers"],
+      "muscleGroups": [
+        "ischio-jambiers"
+      ],
       "image": "assets/academy/anatomie-ischio-jambiers.webp",
       "question": {
         "prompt": "Pourquoi dit-on que les ischio-jambiers sont biarticulaires ?",
@@ -251,20 +273,22 @@
           "Parce qu'ils travaillent deux fois par semaine"
         ],
         "answerIndex": 1,
-        "explanation": "Ils franchissent deux articulations : ils plient le genou et étendent la hanche — c'est pourquoi soulevé roumain et leg curl se complètent."
+        "explanation": "Ils franchissent deux articulations : ils plient le genou et étendent la hanche. C'est pourquoi soulevé roumain et leg curl se complètent."
       }
     },
     {
       "id": "anatomie-mollets",
       "category": "anatomie",
       "title": "Les mollets, debout et assis",
-      "body": "Deux muscles se partagent le mollet : le gastrocnémien, qui croise le genou et travaille jambe TENDUE, et le soléaire, dessous, qui travaille genou PLIÉ. D'où la règle : extensions debout pour l'un, assises pour l'autre. Amplitude complète — étirement profond en bas, pause en haut — sinon ce sont les rebonds du tendon qui font le travail.",
+      "body": "Deux muscles se partagent le mollet : le gastrocnémien, qui croise le genou et travaille jambe TENDUE, et le soléaire, dessous, qui travaille genou PLIÉ. D'où la règle : extensions debout pour l'un, assises pour l'autre. Amplitude complète, avec un étirement profond en bas et une pause en haut : sinon ce sont les rebonds du tendon qui font le travail.",
       "points": [
         "Debout (jambe tendue) : gastrocnémien. Assis (genou plié) : soléaire.",
         "Étirement profond en bas de chaque répétition, sans rebond.",
         "Ils encaissent chaque pas : ils tolèrent volume et fréquence."
       ],
-      "muscleGroups": ["mollets"],
+      "muscleGroups": [
+        "mollets"
+      ],
       "image": "assets/academy/anatomie-mollets.webp",
       "question": {
         "prompt": "Pourquoi faire des extensions de mollets assis ET debout ?",
@@ -274,17 +298,17 @@
           "Assis et debout travaillent exactement pareil"
         ],
         "answerIndex": 0,
-        "explanation": "Genou plié, le gastrocnémien est détendu et laisse le soléaire travailler ; jambe tendue, c'est l'inverse — deux exercices, deux muscles."
+        "explanation": "Genou plié, le gastrocnémien est détendu et laisse le soléaire travailler ; jambe tendue, c'est l'inverse. Deux exercices, deux muscles."
       }
     },
     {
       "id": "technique-progression",
       "category": "technique",
       "title": "La surcharge progressive",
-      "body": "Le muscle s'adapte à ce qu'on lui demande — puis s'arrête dès que la demande stagne. Progresser, c'est augmenter QUELQUE CHOSE au fil des semaines : la charge, les répétitions, les séries, ou la qualité d'exécution. Ajouter 2,5 kg ou une répétition par semaine suffit ; l'important est que la demande monte.",
+      "body": "Le muscle s'adapte à ce qu'on lui demande, puis s'arrête dès que la demande stagne. Progresser, c'est augmenter QUELQUE CHOSE au fil des semaines : la charge, les répétitions, les séries, ou la qualité d'exécution. Ajouter 2,5 kg ou une répétition par semaine suffit ; l'important est que la demande monte.",
       "points": [
         "Augmenter quelque chose chaque semaine : charge, répétitions ou séries.",
-        "+2,5 kg ou +1 répétition suffisent — la constance fait le reste.",
+        "+2,5 kg ou +1 répétition suffisent : la constance fait le reste.",
         "Noter ses séances : on ne progresse que sur ce qu'on mesure."
       ],
       "image": "assets/academy/technique-progression.webp",
@@ -310,6 +334,7 @@
         "Contrôler la descente vaut mieux que précipiter la montée."
       ],
       "image": "assets/academy/technique-amplitude.webp",
+      "imageRatio": 1.5,
       "question": {
         "prompt": "Quelle portion de l'amplitude est particulièrement efficace pour l'hypertrophie ?",
         "choices": [
@@ -318,20 +343,21 @@
           "Le quart supérieur du mouvement"
         ],
         "answerIndex": 0,
-        "explanation": "Travailler le muscle en position allongée (étirée) produit un stimulus de croissance supérieur — d'où l'intérêt des amplitudes complètes."
+        "explanation": "Travailler le muscle en position allongée (étirée) produit un stimulus de croissance supérieur, d'où l'intérêt des amplitudes complètes."
       }
     },
     {
       "id": "technique-repos",
       "category": "technique",
       "title": "Le repos entre les séries",
-      "body": "Le repos n'est pas du temps perdu : c'est ce qui permet de reproduire un effort de qualité. Pour la force (charges lourdes, 1 à 5 répétitions), 3 à 5 minutes. Pour l'hypertrophie, 1 min 30 à 3 min. Écourter le repos fatigue, mais réduit la charge totale soulevée — et c'est elle qui fait progresser.",
+      "body": "Le repos n'est pas du temps perdu : c'est ce qui permet de reproduire un effort de qualité. Pour la force (charges lourdes, 1 à 5 répétitions), 3 à 5 minutes. Pour l'hypertrophie, 1 min 30 à 3 min. Écourter le repos fatigue, mais réduit la charge totale soulevée, et c'est elle qui fait progresser.",
       "points": [
         "Force (1 à 5 répétitions) : 3 à 5 minutes entre les séries.",
         "Hypertrophie : 1 min 30 à 3 min.",
-        "Un repos écourté fait chuter la charge totale — donc la progression."
+        "Un repos écourté fait chuter la charge totale, donc la progression."
       ],
       "image": "assets/academy/technique-repos.webp",
+      "imageRatio": 1.5,
       "question": {
         "prompt": "Pour un travail de force sur charges lourdes, le repos conseillé entre les séries est…",
         "choices": [
@@ -347,13 +373,14 @@
       "id": "technique-echauffement",
       "category": "technique",
       "title": "L'échauffement utile",
-      "body": "Un bon échauffement élève la température musculaire et prépare le mouvement du jour : 5 minutes d'activation générale, puis des séries montantes de l'exercice lui-même — légères, peu nombreuses, sans fatigue. Les étirements statiques longs AVANT l'effort réduisent temporairement la force ; gardez-les pour après.",
+      "body": "Un bon échauffement élève la température musculaire et prépare le mouvement du jour : 5 minutes d'activation générale, puis des séries montantes de l'exercice lui-même : légères, peu nombreuses, sans fatigue. Les étirements statiques longs AVANT l'effort réduisent temporairement la force ; gardez-les pour après.",
       "points": [
         "5 minutes d'activation générale, puis des séries montantes.",
         "Les séries d'approche préparent le geste exact, sans fatigue.",
         "Étirements statiques longs : APRÈS la séance, pas avant."
       ],
       "image": "assets/academy/technique-echauffement.webp",
+      "imageRatio": 1.5,
       "question": {
         "prompt": "Quelle est la meilleure préparation juste avant une série lourde ?",
         "choices": [
@@ -362,7 +389,7 @@
           "Aucune préparation n'est nécessaire"
         ],
         "answerIndex": 1,
-        "explanation": "Les séries d'approche répètent le geste exact en montant la charge — elles préparent muscles et système nerveux sans entamer la réserve de force."
+        "explanation": "Les séries d'approche répètent le geste exact en montant la charge : elles préparent muscles et système nerveux sans entamer la réserve de force."
       }
     },
     {
@@ -376,6 +403,7 @@
         "Sources variées : œufs, poissons, viandes, laitages, légumineuses."
       ],
       "image": "assets/academy/nutrition-proteines.webp",
+      "imageRatio": 1.5,
       "question": {
         "prompt": "Quel apport quotidien en protéines vise-t-on généralement en prise de muscle ?",
         "choices": [
@@ -391,13 +419,14 @@
       "id": "nutrition-calories",
       "category": "nutrition",
       "title": "Le bilan calorique",
-      "body": "Le poids suit le bilan : manger plus que sa dépense fait prendre du poids, manger moins en fait perdre. La dépense quotidienne (TDEE) se calcule à partir du métabolisme de base et de l'activité — c'est ce que fait l'onglet Nutrition. Un surplus modéré (+200 à 300 kcal) suffit pour construire du muscle en limitant le gras.",
+      "body": "Le poids suit le bilan : manger plus que sa dépense fait prendre du poids, manger moins en fait perdre. La dépense quotidienne (TDEE) se calcule à partir du métabolisme de base et de l'activité ; c'est ce que fait l'onglet Nutrition. Un surplus modéré (+200 à 300 kcal) suffit pour construire du muscle en limitant le gras.",
       "points": [
         "Le poids suit le bilan : entrées moins dépenses.",
         "Prise de muscle propre : +200 à 300 kcal au-dessus de la dépense.",
         "L'onglet Nutrition calcule ta dépense depuis ton profil réel."
       ],
       "image": "assets/academy/nutrition-calories.webp",
+      "imageRatio": 1.5,
       "question": {
         "prompt": "Pour prendre du muscle en limitant la prise de gras, on vise…",
         "choices": [
@@ -413,13 +442,14 @@
       "id": "nutrition-hydratation",
       "category": "nutrition",
       "title": "L'eau, nutriment oublié",
-      "body": "Le muscle est composé aux trois quarts d'eau. Une déshydratation de 2 % du poids de corps suffit à faire chuter la force et la concentration. Boire régulièrement dans la journée — pas seulement pendant la séance — et davantage par temps chaud. L'urine claire est le repère le plus simple.",
+      "body": "Le muscle est composé aux trois quarts d'eau. Une déshydratation de 2 % du poids de corps suffit à faire chuter la force et la concentration. Boire régulièrement dans la journée, pas seulement pendant la séance, et davantage par temps chaud. L'urine claire est le repère le plus simple.",
       "points": [
-        "−2 % d'eau corporelle : force et concentration chutent déjà.",
+        "Perdre 2 % d'eau corporelle suffit à faire chuter force et concentration.",
         "Boire toute la journée, pas seulement à la séance.",
         "Repère simple : des urines claires."
       ],
       "image": "assets/academy/nutrition-hydratation.webp",
+      "imageRatio": 1.5,
       "question": {
         "prompt": "À partir de quel niveau de déshydratation la performance chute-t-elle nettement ?",
         "choices": [
@@ -442,6 +472,7 @@
         "Dette de sommeil : récupération amputée et faim déréglée."
       ],
       "image": "assets/academy/recuperation-sommeil.webp",
+      "imageRatio": 1.5,
       "question": {
         "prompt": "Pourquoi le sommeil est-il déterminant pour la progression ?",
         "choices": [
@@ -457,13 +488,14 @@
       "id": "recuperation-courbatures",
       "category": "recuperation",
       "title": "Les courbatures, mal comprises",
-      "body": "Les courbatures ne sont pas de l'acide lactique (éliminé en moins d'une heure) : ce sont des micro-dommages musculaires, surtout après un travail excentrique ou nouveau. Elles ne mesurent PAS la qualité d'une séance — on peut progresser sans courbatures, et être courbaturé sans progresser. Bouger légèrement les atténue.",
+      "body": "Les courbatures ne sont pas de l'acide lactique (éliminé en moins d'une heure) : ce sont des micro-dommages musculaires, surtout après un travail excentrique ou nouveau. Elles ne mesurent PAS la qualité d'une séance : on peut progresser sans courbatures, et être courbaturé sans progresser. Bouger légèrement les atténue.",
       "points": [
         "Ce sont des micro-dommages, pas de l'acide lactique.",
         "Elles ne mesurent pas la qualité d'une séance.",
-        "Bouger légèrement les atténue — l'immobilité les entretient."
+        "Bouger légèrement les atténue ; l'immobilité les entretient."
       ],
       "image": "assets/academy/recuperation-courbatures.webp",
+      "imageRatio": 1.5,
       "question": {
         "prompt": "Que révèlent les courbatures du lendemain ?",
         "choices": [
@@ -472,20 +504,21 @@
           "Que la séance a forcément été efficace"
         ],
         "answerIndex": 1,
-        "explanation": "L'acide lactique disparaît en moins d'une heure. Les courbatures viennent de micro-lésions des fibres — fréquentes après du nouveau, sans lien direct avec l'efficacité."
+        "explanation": "L'acide lactique disparaît en moins d'une heure. Les courbatures viennent de micro-lésions des fibres, fréquentes après un effort nouveau, sans lien direct avec l'efficacité."
       }
     },
     {
       "id": "recuperation-frequence",
       "category": "recuperation",
       "title": "Fréquence : laisser le muscle se reconstruire",
-      "body": "Un muscle travaillé dur a besoin de 48 à 72 heures avant d'être re-sollicité lourdement. Entraîner chaque groupe deux fois par semaine est un excellent compromis volume/récupération pour la plupart des pratiquants. S'entraîner tous les jours est possible — à condition d'alterner les groupes.",
+      "body": "Un muscle travaillé dur a besoin de 48 à 72 heures avant d'être re-sollicité lourdement. Entraîner chaque groupe deux fois par semaine est un excellent compromis volume/récupération pour la plupart des pratiquants. S'entraîner tous les jours est possible, à condition d'alterner les groupes.",
       "points": [
         "48 à 72 h avant de recharger lourdement un même groupe.",
         "Chaque groupe deux fois par semaine : l'équilibre qui marche.",
-        "S'entraîner souvent, oui — en alternant les groupes."
+        "S'entraîner souvent, oui, mais en alternant les groupes."
       ],
       "image": "assets/academy/recuperation-frequence.webp",
+      "imageRatio": 1.5,
       "question": {
         "prompt": "Combien de temps un groupe musculaire travaillé intensément met-il à récupérer ?",
         "choices": [

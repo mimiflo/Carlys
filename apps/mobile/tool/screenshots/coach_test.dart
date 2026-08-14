@@ -33,7 +33,7 @@ const List<CoachMessage> _conversation = [
         'les accessoires et je resserre les repos.',
     proposal: CoachSessionProposal(
       id: 'p1',
-      name: 'Haut du corps — format court',
+      name: 'Haut du corps, format court',
       estimatedMinutes: 25,
       exercises: [
         CoachProposedExercise(

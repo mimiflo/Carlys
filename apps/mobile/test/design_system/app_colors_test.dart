@@ -110,4 +110,24 @@ void main() {
       expect(AppColors.violetRampUp.colors, AppColors.violetRamp.colors);
     });
   });
+
+  group('rose des cœurs', () {
+    test('il se distingue franchement de l’accent orange', () {
+      // Le rose porte le lien humain, l'orange porte l'action clé : deux
+      // rôles, deux couleurs. Trop proches, la distinction ne se verrait
+      // pas — la teinte les sépare de plus d'un quart de tour.
+      final rose = HSLColor.fromColor(AppColors.affection).hue;
+      final orange = HSLColor.fromColor(AppColors.accent).hue;
+      expect((rose - orange).abs(), greaterThan(90));
+    });
+
+    test('il se lit sur le fond sombre', () {
+      // Une icône n'est pas du texte : le seuil est celui des éléments
+      // graphiques (AA non textuel, 3:1).
+      expect(
+        contrast(AppColors.affection, AppColors.darkBackground),
+        greaterThan(3),
+      );
+    });
+  });
 }

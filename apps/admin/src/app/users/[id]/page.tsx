@@ -99,7 +99,7 @@ export default function UserDetailPage() {
                   <span className="text-muted">
                     {entitlement.isActive ? 'actif' : 'inactif'}
                     {entitlement.expiresAt !== null &&
-                      ` — expire le ${new Date(entitlement.expiresAt).toLocaleDateString('fr-FR')}`}
+                      ` · expire le ${new Date(entitlement.expiresAt).toLocaleDateString('fr-FR')}`}
                   </span>
                 </li>
               ))}
@@ -145,7 +145,7 @@ export default function UserDetailPage() {
               <p className="mt-3 text-sm text-danger" role="alert">
                 {actionError instanceof AdminApiError && actionError.status === 403
                   ? 'Permission manquante pour cette action.'
-                  : 'Action impossible — réessayez.'}
+                  : 'Action impossible, réessayez.'}
               </p>
             )}
           </section>

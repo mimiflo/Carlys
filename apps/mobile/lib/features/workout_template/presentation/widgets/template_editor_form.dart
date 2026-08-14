@@ -170,7 +170,7 @@ class _Identity extends StatelessWidget {
         AppTextField(
           label: 'Nom de la séance',
           controller: name,
-          hint: 'Push — Force',
+          hint: 'Push force',
           textInputAction: TextInputAction.next,
           maxLength: WorkoutTemplateLimits.nameMax,
           onChanged: onName,

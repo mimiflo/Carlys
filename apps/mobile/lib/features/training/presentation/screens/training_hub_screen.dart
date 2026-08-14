@@ -38,7 +38,7 @@ class TrainingHubScreen extends ConsumerWidget {
           ),
           const SizedBox(height: AppSpacing.xxs),
           Text(
-            'Séances, exercices, coach — tout l’entraînement.',
+            'Séances, exercices, coach : tout l’entraînement.',
             style:
                 AppTypography.body.copyWith(color: AppColors.darkTextSecondary),
           ),

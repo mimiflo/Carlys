@@ -35,7 +35,7 @@ void main() {
   Future<String> savePushTemplate() {
     return templates.saveTemplate(
       const SaveTemplateInput(
-        name: 'Push — Force',
+        name: 'Push force',
         exercises: [
           TemplateExerciseInput(
             exerciseId: 'exo-dc',
@@ -80,14 +80,14 @@ void main() {
     expect(active!.session.id, sessionId);
     expect(active.session.status, WorkoutStatus.inProgress);
     expect(active.session.templateId, templateId);
-    expect(active.session.templateName, 'Push — Force');
+    expect(active.session.templateName, 'Push force');
     expect(active.session.isFromTemplate, isTrue);
     expect(active.sets, isEmpty); // rien n'est fait tant que rien n'est validé
 
     // 2. Le plan, aplati dans l'ordre (exercice, série).
     final plan = await templates.watchSessionPlan(sessionId).first;
     expect(plan, isNotNull);
-    expect(plan!.templateName, 'Push — Force');
+    expect(plan!.templateName, 'Push force');
     expect(plan.totalCount, 4);
     expect(plan.doneCount, 0);
     expect(
@@ -113,7 +113,7 @@ void main() {
     final payload = jsonDecode(operations.last.payload) as Map<String, dynamic>;
     expect(payload['id'], sessionId);
     expect(payload['templateId'], templateId);
-    expect(payload['templateName'], 'Push — Force');
+    expect(payload['templateName'], 'Push force');
 
     // 4. Le plan voyage AVEC la séance — c'est ce qui rend la reprise
     // possible sur un autre appareil. Aucune opération supplémentaire.

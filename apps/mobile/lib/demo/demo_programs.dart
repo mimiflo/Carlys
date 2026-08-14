@@ -29,22 +29,22 @@ class DemoProgramRepository implements ProgramRepository {
   final Map<String, ProgramDetail> _programs = {
     'demo-program-force': ProgramDetail(
       id: 'demo-program-force',
-      name: 'Force — 2 semaines',
-      description: 'Push, pull, jambes — et du vrai repos.',
+      name: 'Force en 2 semaines',
+      description: 'Push, pull, jambes, et du vrai repos.',
       weeksCount: 2,
       isActive: true,
       days: [
         for (final week in const [1, 2]) ...[
-          _day(week, 1, 'Push — Force', templateId: 'demo-template-push'),
+          _day(week, 1, 'Push force', templateId: 'demo-template-push'),
           _day(week, 2, 'Repos', isRest: true),
           _day(
             week,
             3,
-            'Pull — Hypertrophie',
+            'Pull hypertrophie',
             templateId: 'demo-template-pull',
           ),
           _day(week, 4, 'Course'),
-          _day(week, 5, 'Push — Force', templateId: 'demo-template-push'),
+          _day(week, 5, 'Push force', templateId: 'demo-template-push'),
           _day(week, 6, 'Repos', isRest: true),
         ],
       ],
