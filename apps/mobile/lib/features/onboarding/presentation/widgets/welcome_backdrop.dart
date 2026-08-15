@@ -271,11 +271,29 @@ abstract final class AthletePhotoFraming {
   ///
   /// ÉCART ASSUMÉ : la planche les met à 0,38 et 0,566. Sur un écran étroit,
   /// la même tranche de cliché occupe 29 % de largeur en plus, et l'avant-bras
-  /// venait toucher la fin des lignes. Le fondu est donc décalé — juste assez
+  /// venait toucher la fin des lignes. Le fondu est donc décalé, juste assez
   /// pour que le bras s'efface là où le texte s'écrit, pas au point de faire
-  /// disparaître la personne, qui reste pleinement présente dès 0,64.
-  static const double fadeFrom = 0.46;
-  static const double fadeTo = 0.64;
+  /// disparaître la personne, qui reste pleinement présente dès [fadeTo].
+  ///
+  /// [fadeFrom] est la SEULE garantie que l'écriture ne se pose pas sur le
+  /// bras : la photographie y est encore entièrement transparente, donc la
+  /// silhouette ne peut rien montrer avant. Mesurées sur les vraies fontes à
+  /// 393 pt de large, les lignes les plus longues s'arrêtent à 0,521 (« Ton
+  /// parcours est TON histoire. ») et 0,509 (« TON PARCOURS. ») ; le bord de
+  /// l'avant-bras tombait, lui, à 0,545. Douze points d'écart, que la lueur
+  /// du cliché comblait à l'œil : les mots s'écrivaient sur le bras. Porté à
+  /// 0,58, le fondu tient la personne à une vingtaine de points des mots,
+  /// sans la reléguer à droite. [clearance] mesure cette marge et
+  /// `welcome_text_clearance_test.dart` échoue si une retouche la referme.
+  static const double fadeFrom = 0.58;
+  static const double fadeTo = 0.74;
+
+  /// Marge, en fraction de largeur d'écran, entre la fin de la ligne la plus
+  /// longue et le premier pixel possible de la photographie.
+  ///
+  /// Négative, l'écriture se pose sur la personne.
+  static double clearance(double longestLineRight) =>
+      fadeFrom - longestLineRight;
 
   /// Part de la hauteur d'écran occupée par le cadre.
   ///
