@@ -22,6 +22,12 @@ abstract final class AppRoutes {
   static const String subscription = '/subscription';
   static const String settings = '/settings';
   static const String carlysProfiles = '/profil-carlys';
+
+  /// Le profil de progression : cinq axes, des points, un titre.
+  static const String progression = '/progression';
+
+  /// Le manifeste de marque, qui explique ces cinq axes.
+  static const String manifesto = '/manifeste';
   static const String welcome = '/bienvenue';
   static const String onboarding = '/onboarding';
 

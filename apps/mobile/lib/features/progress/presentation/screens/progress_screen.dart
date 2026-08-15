@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../design_system/design_system.dart';
+import '../../../progression/presentation/widgets/progression_entry_card.dart';
 import '../../domain/entities/progress.dart';
 import '../controllers/progress_controllers.dart';
 import '../widgets/body_weight_section.dart';
@@ -47,6 +48,11 @@ class ProgressScreen extends ConsumerWidget {
               data: (data) => _OverviewBlock(overview: data),
             ),
             const SizedBox(height: AppSpacing.md),
+            // Le profil de progression tient sur les faits LOCAUX : il
+            // s'affiche donc même quand les statistiques du serveur, juste
+            // au-dessus, sont en erreur ou hors ligne.
+            const ProgressionEntryCard(),
+            const SizedBox(height: AppSpacing.gapSection),
             const RecordsSection(),
             const SizedBox(height: AppSpacing.gapSection),
             const BodyWeightSection(),

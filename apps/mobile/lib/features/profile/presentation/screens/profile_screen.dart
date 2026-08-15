@@ -8,6 +8,7 @@ import '../../../authentication/presentation/controllers/auth_controller.dart';
 import '../../../carlys_profile/presentation/widgets/carlys_profile_content.dart';
 import '../../../nutrition/presentation/controllers/nutrition_controllers.dart';
 import '../../../progress/presentation/controllers/progress_controllers.dart';
+import '../../../progression/presentation/controllers/progression_controllers.dart';
 import '../../../subscription/presentation/controllers/subscription_controllers.dart';
 import '../controllers/profile_controllers.dart';
 import '../widgets/profile_header.dart';
@@ -36,6 +37,7 @@ class ProfileScreen extends ConsumerWidget {
     final weights = ref.watch(bodyWeightMetricsProvider).valueOrNull;
     final profile = ref.watch(metabolismReportProvider).valueOrNull?.profile;
     final overview = ref.watch(profileSessionsOverviewProvider).valueOrNull;
+    final progression = ref.watch(progressionProfileProvider);
     // Plein écran depuis la réorganisation en cinq onglets : la bottom bar ne
     // recouvre plus cet écran, seul l'encart système compte.
     final bottomInset = MediaQuery.paddingOf(context).bottom;
@@ -78,7 +80,10 @@ class ProfileScreen extends ConsumerWidget {
               currentLabel: user?.carlysProfile == null
                   ? null
                   : carlysProfileContentOf(user!.carlysProfile!).title,
+              titleLabel: progression?.title.label,
               onOpen: () => context.push(AppRoutes.carlysProfiles),
+              onProgression: () => context.push(AppRoutes.progression),
+              onManifesto: () => context.push(AppRoutes.manifesto),
             ),
             const SizedBox(height: AppSpacing.md),
             ProfileTrainingSettings(

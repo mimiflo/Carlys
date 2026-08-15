@@ -10,23 +10,46 @@ class ProfileIdentitySettings extends StatelessWidget {
   const ProfileIdentitySettings({
     required this.currentLabel,
     required this.onOpen,
+    required this.onProgression,
+    required this.onManifesto,
+    this.titleLabel,
     super.key,
   });
 
   /// Titre du profil choisi (« Le Stratège »), `null` tant qu'aucun ne l'est.
   final String? currentLabel;
+
+  /// Titre de progression atteint (« Artisan »), `null` tant que
+  /// l'historique local n'est pas lu.
+  final String? titleLabel;
+
   final VoidCallback onOpen;
+  final VoidCallback onProgression;
+  final VoidCallback onManifesto;
 
   @override
   Widget build(BuildContext context) {
     return AppSettingsGroup(
-      label: 'Profil Carlys',
+      label: 'Identité Carlys',
       rows: [
         AppSettingsRow(
           icon: AppIcons.carlysProfile,
           label: 'Mon profil',
           value: currentLabel ?? 'À choisir',
           onTap: onOpen,
+        ),
+        AppSettingsRow(
+          icon: AppIcons.progress,
+          label: 'Ma progression',
+          // Aucune valeur tant que l'historique n'est pas lu : un tiret
+          // vaut mieux qu'un titre provisoire qui changerait sous les yeux.
+          value: titleLabel ?? '—',
+          onTap: onProgression,
+        ),
+        AppSettingsRow(
+          icon: AppIcons.brandAcademy,
+          label: 'Le manifeste',
+          onTap: onManifesto,
         ),
       ],
     );

@@ -23,6 +23,8 @@ import '../../features/onboarding/presentation/screens/splash_screen.dart';
 import '../../features/onboarding/presentation/screens/welcome_screen.dart';
 import '../../features/profile/presentation/screens/profile_screen.dart';
 import '../../features/progress/presentation/screens/progress_screen.dart';
+import '../../features/progression/presentation/screens/manifesto_screen.dart';
+import '../../features/progression/presentation/screens/progression_screen.dart';
 import '../../features/settings/presentation/screens/settings_screen.dart';
 import '../../features/subscription/presentation/screens/subscription_screen.dart';
 import '../../features/training/presentation/screens/training_hub_screen.dart';
@@ -319,6 +321,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         name: 'settings',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const SettingsScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.progression,
+        name: 'progression',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const ProgressionScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.manifesto,
+        name: 'manifesto',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const ManifestoScreen(),
       ),
       GoRoute(
         path: AppRoutes.carlysProfiles,

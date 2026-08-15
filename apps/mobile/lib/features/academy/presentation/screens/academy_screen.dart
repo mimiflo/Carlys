@@ -4,7 +4,6 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_routes.dart';
 import '../../../../design_system/design_system.dart';
-import '../../../community/presentation/controllers/community_controllers.dart';
 import '../../domain/entities/academy.dart';
 import '../controllers/academy_controllers.dart';
 import '../widgets/lesson_card.dart';
@@ -23,7 +22,7 @@ class AcademyScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final pack = ref.watch(academyPackProvider);
     final daily = ref.watch(dailyLessonProvider);
-    final actions = ref.read(communityActionsProvider);
+    final actions = ref.read(academyActionsProvider);
     final bottomInset =
         AppBottomBar.height + MediaQuery.paddingOf(context).bottom;
 
@@ -59,9 +58,10 @@ class AcademyScreen extends ConsumerWidget {
               QuizCard(
                 question: daily.question,
                 title: 'Question du jour',
-                // La réponse rejoint les défis culturels — sans jamais gêner
-                // le quiz, qui fonctionne hors ligne.
-                onAnswered: (correct) => actions.reportQuizAnswer(
+                // La réponse est notée sur l'appareil (axe « Maîtrise » du
+                // profil de progression) puis rejoint les défis culturels,
+                // sans jamais gêner le quiz, qui fonctionne hors ligne.
+                onAnswered: (correct) => actions.answer(
                   lessonId: daily.id,
                   correct: correct,
                 ),
@@ -80,7 +80,7 @@ class AcademyScreen extends ConsumerWidget {
                 LessonCard(
                   lesson: lesson,
                   showCategory: false,
-                  onAnswered: (correct) => actions.reportQuizAnswer(
+                  onAnswered: (correct) => actions.answer(
                     lessonId: lesson.id,
                     correct: correct,
                   ),
