@@ -57,6 +57,7 @@ import 'package:carlys_mobile/features/profile/presentation/widgets/profile_plan
 import 'package:carlys_mobile/features/progress/data/repositories/progress_repository_impl.dart';
 import 'package:carlys_mobile/features/progress/domain/entities/progress.dart';
 import 'package:carlys_mobile/features/progress/presentation/screens/progress_screen.dart';
+import 'package:carlys_mobile/features/progression/presentation/widgets/progression_entry_card.dart';
 import 'package:carlys_mobile/features/progress/presentation/widgets/body_weight_section.dart';
 import 'package:carlys_mobile/features/subscription/data/repositories/subscription_repository_impl.dart';
 import 'package:carlys_mobile/features/subscription/presentation/screens/subscription_screen.dart';
@@ -548,6 +549,39 @@ void main() {
     await pumpApp(tester, authenticated: false, holdOnSplash: true);
     await precacheBrandImages(tester);
     await capture(tester, '00a-chargement', shows: find.byType(SplashScreen));
+  });
+
+  testWidgets('progression', (tester) async {
+    await pumpApp(tester);
+    await goTab(tester, 'Progrès');
+    // La carte de titre vit sous le pli, et son libellé est mis en
+    // capitales par `AppSectionLabel` : on vise le widget, pas son texte.
+    await tester.scrollUntilVisible(find.byType(ProgressionEntryCard), 200);
+    await settle(tester);
+    await tester.tap(find.byType(ProgressionEntryCard));
+    await settle(tester);
+    await capture(tester, '37-progression', shows: find.text('Ta progression'));
+  });
+
+  testWidgets('manifeste', (tester) async {
+    await pumpApp(tester);
+    await goTab(tester, 'Progrès');
+    await tester.scrollUntilVisible(find.byType(ProgressionEntryCard), 200);
+    await settle(tester);
+    await tester.tap(find.byType(ProgressionEntryCard));
+    await settle(tester);
+    // La page de progression a sa PROPRE liste : viser explicitement la
+    // dernière, sinon le défilement s'applique à celle de l'onglet Progrès
+    // restée dessous, et la cible n'est jamais construite.
+    await tester.scrollUntilVisible(
+      find.text('Relire le manifeste Carlys.'),
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await settle(tester);
+    await tester.tap(find.text('Relire le manifeste Carlys.'));
+    await settle(tester);
+    await capture(tester, '38-manifeste', shows: find.text('Manifeste Carlys'));
   });
 
   testWidgets('bienvenue', (tester) async {
