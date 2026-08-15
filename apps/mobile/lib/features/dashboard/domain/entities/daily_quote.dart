@@ -1,32 +1,9 @@
-/// Les cinq valeurs de Carlys, et la maxime du jour qui en porte une.
+/// La maxime du jour, et la valeur Carlys qu'elle porte.
 library;
 
-/// Ce que Carlys défend, dans l'ordre où l'app le fait vivre.
-///
-/// Ces valeurs ne sont pas décoratives : elles ordonnent la rotation des
-/// maximes (une valeur différente chaque jour) et donnent au produit un
-/// discours cohérent d'un écran à l'autre.
-enum CarlysValue {
-  /// Aller chercher la répétition d'après.
-  depassement('Dépassement'),
+import '../../../../core/brand/carlys_value.dart';
 
-  /// Comprendre ce qu'on fait, et pourquoi.
-  connaissance('Connaissance'),
-
-  /// La qualité du mouvement avant la charge.
-  maitrise('Maîtrise'),
-
-  /// Ce qu'on répète devient ce qu'on est.
-  constance('Constance'),
-
-  /// Le repos et la nutrition font partie de l'entraînement.
-  equilibre('Équilibre');
-
-  const CarlysValue(this.label);
-
-  /// Libellé affiché, accentué.
-  final String label;
-}
+export '../../../../core/brand/carlys_value.dart' show CarlysValue;
 
 /// Maxime du jour : une phrase, la valeur qu'elle sert.
 class DailyQuote {

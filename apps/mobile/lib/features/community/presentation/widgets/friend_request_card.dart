@@ -24,7 +24,7 @@ class FriendRequestCard extends StatelessWidget {
         children: [
           const Icon(
             Icons.person_add_alt_1_outlined,
-            color: AppColors.affection,
+            color: AppColors.accent,
           ),
           const SizedBox(width: AppSpacing.sm),
           Expanded(

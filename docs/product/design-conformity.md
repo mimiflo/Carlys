@@ -177,10 +177,11 @@ Quatre règles rendent la palette tenable, et elles sont écrites en tête de
   d'accent avait été remplacée à l'identique partout ;
 - **`primaryFlash #B44DFF` ne porte jamais de texte** — mesuré à 3,86 sous du
   blanc, sous le seuil AA. Il est réservé à ce qui se remplit ;
-- **le rose `affection #FF5C9D` porte les CŒURS de la communauté** — mots
-  d'encouragement, demandes d'amis, réactions. Un lien humain n'est pas une
-  métrique : il sort de l'accent orange, qui reste l'action clé de l'écran.
-  Réservé aux icônes d'affection, jamais aux surfaces ni au texte.
+- **le rose `affection #FF5C9D` porte les CŒURS, et eux seuls** — l'icône
+  qui signe un encouragement reçu. Un cœur n'est pas une action à faire : il
+  sort de l'accent orange, qui reste la couleur des gestes de la communauté
+  (ajouter un ami, encourager) comme partout ailleurs. Jamais sur une
+  surface, un texte, ni un autre motif.
 
 Contrastes mesurés sur le fond `#08050E` : orange 7,82 (et 8,12 sous du texte
 noir), violet clair 8,28, violet primaire 4,10, texte principal 18,11.

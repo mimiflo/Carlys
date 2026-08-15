@@ -53,4 +53,71 @@ void main() {
     final texts = carlysQuotes.map((quote) => quote.text).toSet();
     expect(texts, hasLength(carlysQuotes.length));
   });
+
+  group('le ton de la marque', () {
+    /// Les registres proscrits, et le mot qui les trahit.
+    ///
+    /// Carlys est exigeante, jamais culpabilisante : elle accompagne sans
+    /// juger, et « essayer » y vaut mieux que « réussir parfaitement ». Une
+    /// première série de maximes avait glissé dans tous ces registres à la
+    /// fois sans qu'aucun test ne bronche, parce qu'aucun ne parlait du TON.
+    const forbidden = <String, List<String>>{
+      'la culpabilité': [
+        'compte double',
+        'aucune excuse',
+        'pas d’excuse',
+        'ne romps pas',
+        'tu n’as pas le droit',
+        'honte',
+        'paresse',
+        'faible',
+      ],
+      'le culte de la douleur': [
+        'souffre',
+        'souffrir',
+        'la douleur a raison',
+        'écoute la douleur',
+        'no pain',
+        'jusqu’à l’échec',
+      ],
+      'le perfectionnisme': [
+        'parfaitement',
+        'sans faute',
+        'irréprochable',
+      ],
+      'le jugement du corps': [
+        'ne ment pas',
+        'gros',
+        'maigre',
+        'ton reflet',
+      ],
+    };
+
+    for (final entry in forbidden.entries) {
+      test('aucune maxime ne verse dans ${entry.key}', () {
+        for (final quote in carlysQuotes) {
+          final text = quote.text.toLowerCase();
+          for (final word in entry.value) {
+            expect(
+              text.contains(word),
+              isFalse,
+              reason: '« ${quote.text} » contient « $word »',
+            );
+          }
+        }
+      });
+    }
+
+    test('chaque valeur promet quelque chose, sans donner d’ordre', () {
+      // Le libellé et la promesse s'affichent tels quels dans le profil de
+      // progression : ils doivent tenir sur une ligne et rester une
+      // invitation, pas une injonction.
+      for (final value in CarlysValue.values) {
+        expect(value.label.trim(), isNotEmpty);
+        expect(value.promise.trim(), isNotEmpty);
+        expect(value.promise.length, lessThan(60));
+        expect(value.promise, isNot(contains('!')));
+      }
+    });
+  });
 }

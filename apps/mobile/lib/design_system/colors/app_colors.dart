@@ -33,10 +33,12 @@ abstract final class AppColors {
   /// la règle d'usage en tête de classe.
   static const Color magenta = Color(0xFFED35A9);
 
-  /// Rose des CŒURS de la communauté : encouragements, demandes d'amis,
-  /// réactions. Un lien humain n'est pas une métrique — il sort donc de
-  /// l'accent orange, réservé à l'action clé de l'écran. Réservé aux icônes
-  /// d'affection, jamais aux surfaces ni au texte.
+  /// Rose des CŒURS, et d'eux seuls.
+  ///
+  /// Un cœur reçu n'est pas une action à faire : il sort donc de l'accent
+  /// orange, qui reste la couleur des gestes (ajouter un ami, encourager)
+  /// comme partout ailleurs dans l'application. Réservé à l'icône du cœur,
+  /// jamais aux surfaces, au texte ni aux autres motifs de la communauté.
   static const Color affection = Color(0xFFFF5C9D);
 
   /// Dégradé d'ambiance : ce qui remplit (jauges, halos) plutôt que ce qui
