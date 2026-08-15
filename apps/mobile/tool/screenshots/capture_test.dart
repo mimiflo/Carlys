@@ -57,8 +57,8 @@ import 'package:carlys_mobile/features/profile/presentation/widgets/profile_plan
 import 'package:carlys_mobile/features/progress/data/repositories/progress_repository_impl.dart';
 import 'package:carlys_mobile/features/progress/domain/entities/progress.dart';
 import 'package:carlys_mobile/features/progress/presentation/screens/progress_screen.dart';
-import 'package:carlys_mobile/features/progression/presentation/widgets/progression_entry_card.dart';
 import 'package:carlys_mobile/features/progress/presentation/widgets/body_weight_section.dart';
+import 'package:carlys_mobile/features/progression/presentation/widgets/progression_entry_card.dart';
 import 'package:carlys_mobile/features/subscription/data/repositories/subscription_repository_impl.dart';
 import 'package:carlys_mobile/features/subscription/presentation/screens/subscription_screen.dart';
 import 'package:carlys_mobile/features/training/presentation/screens/training_hub_screen.dart';
