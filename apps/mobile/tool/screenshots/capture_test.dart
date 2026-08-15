@@ -46,7 +46,9 @@ import 'package:carlys_mobile/features/nutrition/data/repositories/nutrition_rep
 import 'package:carlys_mobile/features/nutrition/domain/entities/nutrition.dart';
 import 'package:carlys_mobile/features/nutrition/presentation/screens/nutrition_screen.dart';
 import 'package:carlys_mobile/features/onboarding/domain/first_run_step.dart';
+import 'package:carlys_mobile/features/onboarding/presentation/controllers/splash_gate.dart';
 import 'package:carlys_mobile/features/onboarding/presentation/screens/onboarding_screen.dart';
+import 'package:carlys_mobile/features/onboarding/presentation/screens/splash_screen.dart';
 import 'package:carlys_mobile/features/onboarding/presentation/screens/welcome_screen.dart';
 import 'package:carlys_mobile/features/onboarding/presentation/widgets/brand_signature.dart';
 import 'package:carlys_mobile/features/onboarding/presentation/widgets/welcome_backdrop.dart';
@@ -296,6 +298,19 @@ void main() {
     await tester.pump(const Duration(milliseconds: 80));
   }
 
+  /// Laisse passer l'ÉCRAN DE DÉMARRAGE, qui tient l'affiche un temps
+  /// minimum au lancement (voir `splashHold`).
+  ///
+  /// Sans cette attente, chaque capture photographierait le logo : la
+  /// galerie n'a pas de session « déjà lancée », elle démarre l'application
+  /// à neuf à chaque cadre.
+  Future<void> passSplash(WidgetTester tester) async {
+    await settle(tester);
+    await tester.pump(splashHold);
+    await settle(tester);
+    await settle(tester);
+  }
+
   /// Décode les images du bundle AVANT la capture.
   ///
   /// Le harnais de test fait tourner un temps FICTIF : le décodage d'une image,
@@ -354,6 +369,9 @@ void main() {
     FakeNutritionRepository? nutrition,
     FakeCoachRepository? coach,
     bool premium = false,
+
+    /// Arrête le temps PENDANT l'écran de démarrage, pour le photographier.
+    bool holdOnSplash = false,
   }) async {
     tester.view.physicalSize = const Size(1179, 2556);
     tester.view.devicePixelRatio = 3.0;
@@ -415,8 +433,14 @@ void main() {
         child: const CarlysApp(),
       ),
     );
-    await settle(tester);
-    await settle(tester);
+    if (holdOnSplash) {
+      // Aux trois quarts de la scène : le sceau est posé, le fil de lumière
+      // est engagé — l'instant qui montre le mieux l'écran.
+      await settle(tester);
+      await tester.pump(splashHold * 0.35);
+      return;
+    }
+    await passSplash(tester);
   }
 
   /// L'application sur le CATALOGUE RÉEL, celui du mode démonstration.
@@ -447,8 +471,7 @@ void main() {
         child: const CarlysApp(),
       ),
     );
-    await settle(tester);
-    await settle(tester);
+    await passSplash(tester);
   }
 
   /// Prend la capture — après avoir vérifié qu'on est bien sur le bon écran.
@@ -515,6 +538,17 @@ void main() {
     );
     await settle(tester);
   }
+
+  testWidgets('chargement', (tester) async {
+    // L'écran de démarrage se photographie EN COURS : c'est un passage, pas
+    // une destination, et `pumpApp` le franchit par défaut.
+    seedFirstRunStep(FirstRunStep.welcome);
+    // Le décodage du sceau consomme lui aussi du temps fictif : viser tôt
+    // dans la scène, sinon la capture tombe pendant la transition de sortie.
+    await pumpApp(tester, authenticated: false, holdOnSplash: true);
+    await precacheBrandImages(tester);
+    await capture(tester, '00a-chargement', shows: find.byType(SplashScreen));
+  });
 
   testWidgets('bienvenue', (tester) async {
     // Parcours de première ouverture NON franchi : la page de marque est la

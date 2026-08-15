@@ -17,6 +17,7 @@ import '../../features/exercises/presentation/screens/exercise_library_screen.da
 import '../../features/nutrition/presentation/screens/nutrition_screen.dart';
 import '../../features/onboarding/domain/first_run_step.dart';
 import '../../features/onboarding/presentation/controllers/first_run_controller.dart';
+import '../../features/onboarding/presentation/controllers/splash_gate.dart';
 import '../../features/onboarding/presentation/screens/onboarding_screen.dart';
 import '../../features/onboarding/presentation/screens/splash_screen.dart';
 import '../../features/onboarding/presentation/screens/welcome_screen.dart';
@@ -84,6 +85,7 @@ final appRouterProvider = Provider<GoRouter>((ref) {
   ref.onDispose(refreshListenable.dispose);
   ref.listen(authControllerProvider, (_, __) => refreshListenable.value++);
   ref.listen(firstRunStepProvider, (_, __) => refreshListenable.value++);
+  ref.listen(splashGateProvider, (_, __) => refreshListenable.value++);
 
   final router = GoRouter(
     navigatorKey: _rootNavigatorKey,
@@ -94,8 +96,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
       final location = state.matchedLocation;
       final firstRunStep = ref.read(firstRunStepProvider);
 
-      // Étape du parcours ou session encore inconnue : on patiente.
-      if (firstRunStep == null) {
+      // Étape du parcours ou session encore inconnue : on patiente. Le
+      // plancher de l'écran de démarrage retient de la même façon — c'est
+      // un MINIMUM d'affichage, pas une addition : la restauration court
+      // pendant ce temps et la plus longue des deux commande.
+      if (firstRunStep == null || !ref.read(splashGateProvider)) {
         return location == AppRoutes.splash ? null : AppRoutes.splash;
       }
 

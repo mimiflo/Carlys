@@ -3,6 +3,7 @@ import 'package:carlys_mobile/app/environment/app_environment.dart';
 import 'package:carlys_mobile/app/restore/app_restore.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
+import 'package:carlys_mobile/features/onboarding/presentation/screens/splash_screen.dart';
 import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -51,7 +52,9 @@ void main() {
       (tester) async {
     await tester.pumpWidget(buildApp(FakeAuthRepository()));
 
-    expect(find.text('Votre entraînement, partout.'), findsOneWidget);
+    // L'application s'ouvre sur la marque, pas sur un écran vide.
+    expect(find.byType(SplashScreen), findsOneWidget);
+    expect(find.text('L’ART DE DEVENIR'), findsOneWidget);
 
     await tester.pumpAndSettle();
 

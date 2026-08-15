@@ -10,10 +10,22 @@ import 'brand_glow_image.dart';
 /// redessine pas. Il porte sa propre lueur ; le mot et la devise, eux, restent
 /// sobres.
 class BrandSignature extends StatelessWidget {
-  const BrandSignature({this.scale = 1, super.key});
+  const BrandSignature({
+    this.scale = 1,
+    this.centered = false,
+    super.key,
+  });
 
   /// Échelle du bloc, voir [WelcomeScreen.scaleFor].
   final double scale;
+
+  /// Bloc centré plutôt qu'aligné à gauche.
+  ///
+  /// La page de marque l'aligne sur sa colonne de texte ; l'écran de
+  /// démarrage, lui, n'a que lui à montrer et le pose au milieu. Un
+  /// paramètre plutôt qu'une copie : le verrouillage de la marque (sceau,
+  /// mot, devise, proportions) ne se redessine pas à deux endroits.
+  final bool centered;
 
   static const String markAsset = 'assets/brand/carlys-mark.png';
 
@@ -39,7 +51,8 @@ class BrandSignature extends StatelessWidget {
       label: 'Carlys, l’art de devenir',
       child: ExcludeSemantics(
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+          crossAxisAlignment:
+              centered ? CrossAxisAlignment.center : CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
             BrandGlowImage(
