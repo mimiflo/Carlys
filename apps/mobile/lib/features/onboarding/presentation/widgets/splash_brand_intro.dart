@@ -109,45 +109,141 @@ class _SplashBrandIntroState extends State<SplashBrandIntro>
   }
 }
 
-/// Fil de lumière : une ligne fine qui se remplit du dégradé de marque.
+/// Fil de lumière : un rail fin que le dégradé de marque parcourt, mené par
+/// une tête lumineuse.
 ///
 /// Pas un indicateur circulaire : celui-ci tourne sans fin et dit « ça
 /// travaille » ; un fil qui se remplit dit « ça arrive », ce qui est la
 /// vérité ici, la durée étant connue.
+///
+/// Le dégradé est peint sur TOUTE la longueur puis dévoilé, au lieu d'être
+/// étiré à la largeur remplie : les couleurs restent à leur place et c'est la
+/// lumière qui avance, pas la palette qui se comprime.
 class _LoadingThread extends StatelessWidget {
   const _LoadingThread({required this.progress});
 
   final Animation<double> progress;
 
-  static const double _width = 132;
-  static const double _height = 3;
+  static const double _width = 160;
+  static const double _rail = 4;
+
+  /// La boîte est plus haute que le rail : la lueur de la tête a besoin de
+  /// place, sinon elle serait coupée net en haut et en bas.
+  static const double _box = 22;
+  static const double _headSize = 7;
 
   @override
   Widget build(BuildContext context) {
     return Semantics(
       label: 'Chargement de Carlys',
       child: ExcludeSemantics(
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(_height),
-          child: SizedBox(
-            width: _width,
-            height: _height,
-            child: DecoratedBox(
-              decoration: const BoxDecoration(color: AppColors.darkBorder),
-              child: AnimatedBuilder(
-                animation: progress,
-                builder: (context, _) => Align(
-                  alignment: Alignment.centerLeft,
-                  child: FractionallySizedBox(
-                    widthFactor: SplashBrandIntro.threadInterval
-                        .transform(progress.value.clamp(0.0, 1.0)),
-                    child: const DecoratedBox(
-                      decoration: BoxDecoration(gradient: AppColors.signature),
-                    ),
-                  ),
-                ),
+        child: SizedBox(
+          width: _width,
+          height: _box,
+          child: AnimatedBuilder(
+            animation: progress,
+            builder: (context, _) {
+              final filled = SplashBrandIntro.threadInterval
+                  .transform(progress.value.clamp(0.0, 1.0));
+              return Stack(
+                alignment: Alignment.center,
+                children: [
+                  const _Rail(),
+                  _Fill(filled: filled),
+                  _Head(at: filled),
+                ],
+              );
+            },
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Le rail vide : discret, mais présent — sans lui, la barre n'aurait pas de
+/// longueur annoncée et l'attente paraîtrait sans fin.
+class _Rail extends StatelessWidget {
+  const _Rail();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: _LoadingThread._rail,
+      decoration: BoxDecoration(
+        color: AppColors.darkBorderStrong,
+        borderRadius: BorderRadius.circular(_LoadingThread._rail),
+      ),
+    );
+  }
+}
+
+/// La part parcourue, découpée dans un dégradé peint sur toute la longueur.
+class _Fill extends StatelessWidget {
+  const _Fill({required this.filled});
+
+  final double filled;
+
+  @override
+  Widget build(BuildContext context) {
+    // L'`Align` EXTÉRIEUR est indispensable : le découpage ne fait que la
+    // largeur parcourue, et la pile, qui centre ses enfants, le poserait au
+    // milieu du rail. La barre se remplissait alors depuis son centre.
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(_LoadingThread._rail),
+        child: Align(
+          alignment: Alignment.centerLeft,
+          // Cet `Align`-ci se dimensionne à une FRACTION de son enfant, et
+          // c'est ce découpage qui dévoile le dégradé. Jamais tout à fait
+          // zéro : une largeur nulle escamoterait la boîte.
+          widthFactor: filled.clamp(0.001, 1),
+          child: Container(
+            width: _LoadingThread._width,
+            height: _LoadingThread._rail,
+            decoration: const BoxDecoration(gradient: AppColors.signature),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+/// La tête : le point vif qui mène la course, avec son halo.
+class _Head extends StatelessWidget {
+  const _Head({required this.at});
+
+  final double at;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      // De −1 (bord gauche) à +1 (bord droit).
+      alignment: Alignment(2 * at - 1, 0),
+      child: Opacity(
+        // Elle s'allume avec le départ et s'éteint à l'arrivée : une tête
+        // immobile au bout du rail donnerait une course inachevée.
+        opacity: (at.clamp(0.0, 1.0) * 6).clamp(0.0, 1.0) *
+            ((1 - at) * 8).clamp(0.0, 1.0),
+        child: Container(
+          width: _LoadingThread._headSize,
+          height: _LoadingThread._headSize,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            color: AppColors.neutral0,
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primaryFlash.withValues(alpha: 0.75),
+                blurRadius: 12,
+                spreadRadius: 1,
               ),
-            ),
+              BoxShadow(
+                color: AppColors.accent.withValues(alpha: 0.35),
+                blurRadius: 20,
+                spreadRadius: 2,
+              ),
+            ],
           ),
         ),
       ),

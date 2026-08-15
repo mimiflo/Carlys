@@ -437,7 +437,7 @@ void main() {
       // Aux trois quarts de la scène : le sceau est posé, le fil de lumière
       // est engagé — l'instant qui montre le mieux l'écran.
       await settle(tester);
-      await tester.pump(splashHold * 0.35);
+      await tester.pump(splashHold * 0.15);
       return;
     }
     await passSplash(tester);

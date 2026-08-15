@@ -2,6 +2,7 @@ import 'package:carlys_mobile/app/app.dart';
 import 'package:carlys_mobile/app/environment/app_environment.dart';
 import 'package:carlys_mobile/app/restore/app_restore.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
+import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
 import 'package:carlys_mobile/features/dashboard/presentation/screens/home_screen.dart';
 import 'package:carlys_mobile/features/onboarding/presentation/controllers/splash_gate.dart';
@@ -107,6 +108,46 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
 
     expect(find.byType(SplashScreen), findsNothing);
+  });
+
+  testWidgets('la barre se remplit depuis la gauche, et elle se voit',
+      (tester) async {
+    // DEUX PANNES SILENCIEUSES sont gardées ici, toutes deux invisibles au
+    // compilateur comme aux autres tests.
+    //
+    // La première : le remplissage n'avait aucune hauteur. Sous contraintes
+    // lâches, une boîte décorée sans enfant se réduit à rien, et la barre
+    // restait vide du début à la fin.
+    //
+    // La seconde : le découpage ne fait que la largeur parcourue, et la pile
+    // centre ses enfants. La barre se remplissait donc depuis son MILIEU,
+    // avec la tête lumineuse détachée du dégradé.
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(body: SplashBrandIntro(onFinished: () {})),
+      ),
+    );
+    await tester.pump(splashHold * 0.5);
+
+    RenderBox boxOf(bool Function(BoxDecoration) match) =>
+        tester.renderObject<RenderBox>(
+          find.byWidgetPredicate(
+            (widget) =>
+                widget is Container &&
+                widget.decoration is BoxDecoration &&
+                match(widget.decoration! as BoxDecoration),
+          ),
+        );
+
+    final rail = boxOf((d) => d.color == AppColors.darkBorderStrong);
+    final fill = boxOf((d) => d.gradient == AppColors.signature);
+
+    expect(fill.size.height, greaterThan(0));
+    expect(
+      fill.localToGlobal(Offset.zero).dx,
+      rail.localToGlobal(Offset.zero).dx,
+      reason: 'le dégradé doit partir du bord gauche du rail',
+    );
   });
 
   testWidgets('la scène ne boucle pas et annonce sa fin', (tester) async {
