@@ -101,20 +101,27 @@ class _SplashBrandIntroState extends State<SplashBrandIntro>
           },
           child: const BrandSignature(centered: true),
         ),
-        const Spacer(flex: 4),
+        // Le filet se pose SOUS la devise, à portée de regard : rejeté en
+        // bas d'écran, il vivait sa vie de son côté et la marque restait
+        // seule au milieu.
+        const SizedBox(height: AppSpacing.xl),
         _LoadingThread(progress: _controller),
-        const SizedBox(height: AppSpacing.xxl),
+        const Spacer(flex: 6),
       ],
     );
   }
 }
 
-/// Fil de lumière : un rail fin que le dégradé de marque parcourt, mené par
-/// une tête lumineuse.
+/// Fil de lumière : un filet que le dégradé de marque parcourt, sa lueur
+/// avec lui.
 ///
 /// Pas un indicateur circulaire : celui-ci tourne sans fin et dit « ça
 /// travaille » ; un fil qui se remplit dit « ça arrive », ce qui est la
 /// vérité ici, la durée étant connue.
+///
+/// Pas de pastille en tête non plus : elle donnait un curseur de réglage,
+/// gros et matériel, au milieu d'une page qui ne vit que de lumière. Ce qui
+/// avance est une lueur, pas une pièce.
 ///
 /// Le dégradé est peint sur TOUTE la longueur puis dévoilé, au lieu d'être
 /// étiré à la largeur remplie : les couleurs restent à leur place et c'est la
@@ -124,13 +131,12 @@ class _LoadingThread extends StatelessWidget {
 
   final Animation<double> progress;
 
-  static const double _width = 160;
-  static const double _rail = 4;
+  static const double _width = 116;
+  static const double _rail = 2;
 
-  /// La boîte est plus haute que le rail : la lueur de la tête a besoin de
-  /// place, sinon elle serait coupée net en haut et en bas.
-  static const double _box = 22;
-  static const double _headSize = 7;
+  /// La boîte respire au-delà du filet : la lueur a besoin de place, sinon
+  /// elle serait coupée net en haut et en bas.
+  static const double _box = 16;
 
   @override
   Widget build(BuildContext context) {
@@ -149,8 +155,8 @@ class _LoadingThread extends StatelessWidget {
                 alignment: Alignment.center,
                 children: [
                   const _Rail(),
+                  _Glow(filled: filled),
                   _Fill(filled: filled),
-                  _Head(at: filled),
                 ],
               );
             },
@@ -161,8 +167,8 @@ class _LoadingThread extends StatelessWidget {
   }
 }
 
-/// Le rail vide : discret, mais présent — sans lui, la barre n'aurait pas de
-/// longueur annoncée et l'attente paraîtrait sans fin.
+/// Le filet vide : à peine là, mais présent — sans lui, la barre n'aurait
+/// pas de longueur annoncée et l'attente paraîtrait sans fin.
 class _Rail extends StatelessWidget {
   const _Rail();
 
@@ -178,6 +184,44 @@ class _Rail extends StatelessWidget {
   }
 }
 
+/// La lueur sous la part parcourue.
+///
+/// Posée AVANT le dégradé et hors du découpage : une ombre portée peinte à
+/// l'intérieur du clip serait rognée avec lui, et ne déborderait donc jamais
+/// — or c'est tout ce qu'on lui demande.
+class _Glow extends StatelessWidget {
+  const _Glow({required this.filled});
+
+  final double filled;
+
+  @override
+  Widget build(BuildContext context) {
+    return Align(
+      alignment: Alignment.centerLeft,
+      child: SizedBox(
+        width: (_LoadingThread._width * filled).clamp(1.0, double.infinity),
+        height: _LoadingThread._rail,
+        child: DecoratedBox(
+          // Aucune couleur de fond : seules les ombres se peignent, et le
+          // dégradé passera par-dessus.
+          decoration: BoxDecoration(
+            boxShadow: [
+              BoxShadow(
+                color: AppColors.primaryFlash.withValues(alpha: 0.40),
+                blurRadius: 10,
+              ),
+              BoxShadow(
+                color: AppColors.accent.withValues(alpha: 0.20),
+                blurRadius: 18,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 /// La part parcourue, découpée dans un dégradé peint sur toute la longueur.
 class _Fill extends StatelessWidget {
   const _Fill({required this.filled});
@@ -188,7 +232,7 @@ class _Fill extends StatelessWidget {
   Widget build(BuildContext context) {
     // L'`Align` EXTÉRIEUR est indispensable : le découpage ne fait que la
     // largeur parcourue, et la pile, qui centre ses enfants, le poserait au
-    // milieu du rail. La barre se remplissait alors depuis son centre.
+    // milieu du filet. La barre se remplissait alors depuis son centre.
     return Align(
       alignment: Alignment.centerLeft,
       child: ClipRRect(
@@ -203,47 +247,6 @@ class _Fill extends StatelessWidget {
             width: _LoadingThread._width,
             height: _LoadingThread._rail,
             decoration: const BoxDecoration(gradient: AppColors.signature),
-          ),
-        ),
-      ),
-    );
-  }
-}
-
-/// La tête : le point vif qui mène la course, avec son halo.
-class _Head extends StatelessWidget {
-  const _Head({required this.at});
-
-  final double at;
-
-  @override
-  Widget build(BuildContext context) {
-    return Align(
-      // De −1 (bord gauche) à +1 (bord droit).
-      alignment: Alignment(2 * at - 1, 0),
-      child: Opacity(
-        // Elle s'allume avec le départ et s'éteint à l'arrivée : une tête
-        // immobile au bout du rail donnerait une course inachevée.
-        opacity: (at.clamp(0.0, 1.0) * 6).clamp(0.0, 1.0) *
-            ((1 - at) * 8).clamp(0.0, 1.0),
-        child: Container(
-          width: _LoadingThread._headSize,
-          height: _LoadingThread._headSize,
-          decoration: BoxDecoration(
-            shape: BoxShape.circle,
-            color: AppColors.neutral0,
-            boxShadow: [
-              BoxShadow(
-                color: AppColors.primaryFlash.withValues(alpha: 0.75),
-                blurRadius: 12,
-                spreadRadius: 1,
-              ),
-              BoxShadow(
-                color: AppColors.accent.withValues(alpha: 0.35),
-                blurRadius: 20,
-                spreadRadius: 2,
-              ),
-            ],
           ),
         ),
       ),
