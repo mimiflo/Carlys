@@ -31,12 +31,25 @@ class _FirstRunPremiumFooterState extends ConsumerState<FirstRunPremiumFooter> {
 
   /// Repli gratuit accepté : le parcours est terminé une fois pour toutes,
   /// puis l'application s'ouvre.
+  ///
+  /// Le routeur est saisi AVANT l'attente, et non `context` après. Terminer
+  /// le parcours fait disparaître ce pied de page : l'écran d'abonnement
+  /// observe l'étape et rebascule aussitôt sur sa version refermable. Sur un
+  /// téléphone, cette frame est dessinée bien avant que l'écriture des
+  /// préférences ne rende la main — l'état est alors démonté, un `if
+  /// (mounted)` échoue et la navigation est perdue : l'utilisateur reste
+  /// bloqué sur l'écran d'abonnement, sans plus aucune sortie. Le routeur,
+  /// lui, vit avec le conteneur de providers, pas avec ce widget.
+  ///
+  /// Les étapes précédentes n'ont pas ce problème : leur redirection est
+  /// imposée par le tunnel (`_firstRunRedirect`), qui déplace l'utilisateur
+  /// tout seul. `done` est la seule étape terminale, donc sans destination
+  /// imposée : ici, la navigation doit vraiment aboutir.
   Future<void> _continueForFree() async {
     setState(() => _finishing = true);
+    final router = GoRouter.of(context);
     await ref.read(firstRunControllerProvider.notifier).completeJourney();
-    if (mounted) {
-      context.go(AppRoutes.home);
-    }
+    router.go(AppRoutes.home);
   }
 
   @override

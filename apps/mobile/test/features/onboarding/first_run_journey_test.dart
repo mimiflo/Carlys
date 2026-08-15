@@ -6,8 +6,10 @@ import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
 import 'package:carlys_mobile/features/carlys_profile/data/repositories/carlys_profile_repository_impl.dart';
 import 'package:carlys_mobile/features/carlys_profile/domain/entities/carlys_profile.dart';
+import 'package:carlys_mobile/features/dashboard/presentation/screens/home_screen.dart';
 import 'package:carlys_mobile/features/nutrition/data/repositories/nutrition_repository_impl.dart';
 import 'package:carlys_mobile/features/nutrition/domain/entities/nutrition.dart';
+import 'package:carlys_mobile/features/onboarding/data/first_run_store.dart';
 import 'package:carlys_mobile/features/onboarding/domain/first_run_step.dart';
 import 'package:carlys_mobile/features/onboarding/presentation/widgets/brand_pillars.dart';
 import 'package:carlys_mobile/features/onboarding/presentation/widgets/brand_signature.dart';
@@ -33,6 +35,23 @@ import '../../support/first_run_prefs.dart';
 ///
 /// Le tunnel est entièrement piloté par la redirection du routeur : ces
 /// tests montent l'application complète et ne naviguent qu'au doigt.
+/// Écriture des préférences à la vitesse d'un vrai téléphone.
+///
+/// Le mock de `shared_preferences` répond dans la même micro-tâche, donc
+/// aucune frame ne s'intercale : c'est précisément ce qui rendait le bug
+/// invisible en test alors qu'il se produisait à chaque fois à l'usage.
+class SlowFirstRunStore extends FirstRunStore {
+  const SlowFirstRunStore();
+
+  static const Duration delay = Duration(milliseconds: 120);
+
+  @override
+  Future<void> writeStep(FirstRunStep step) async {
+    await Future<void>.delayed(delay);
+    return super.writeStep(step);
+  }
+}
+
 void main() {
   final binding = TestWidgetsFlutterBinding.ensureInitialized();
 
@@ -55,7 +74,7 @@ void main() {
     binding.platformDispatcher.clearAccessibilityFeaturesTestValue();
   });
 
-  Widget app() => ProviderScope(
+  Widget app({List<Override> extra = const []}) => ProviderScope(
         overrides: [
           appEnvironmentProvider.overrideWithValue(
             const AppEnvironment(
@@ -73,6 +92,7 @@ void main() {
           workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
           syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
           appRestoreProvider.overrideWithValue(NoopAppRestore()),
+          ...extra,
         ],
         child: const CarlysApp(),
       );
@@ -98,12 +118,16 @@ void main() {
   /// Le tunnel s'ouvre désormais sur la PAGE DE MARQUE : sauf demande
   /// contraire, on la franchit, les tests qui suivent portant sur les étapes
   /// d'après.
-  Future<void> launch(WidgetTester tester, {bool passWelcome = true}) async {
+  Future<void> launch(
+    WidgetTester tester, {
+    bool passWelcome = true,
+    List<Override> extra = const [],
+  }) async {
     tester.view.physicalSize = const Size(1179, 2556);
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
 
-    await tester.pumpWidget(app());
+    await tester.pumpWidget(app(extra: extra));
     await tester.pumpAndSettle();
 
     if (passWelcome &&
@@ -229,6 +253,41 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.byType(AppBottomBar), findsOneWidget);
     expect(find.text('1/5'), findsNothing);
+  });
+
+  testWidgets(
+      'version gratuite : l’accueil s’ouvre même quand l’écriture disque '
+      'traîne d’une frame', (tester) async {
+    // LE BUG RÉEL, invisible avec un `pumpAndSettle` ordinaire.
+    //
+    // Terminer le parcours fait disparaître le pied de page : l'écran
+    // d'abonnement observe l'étape et rebascule sur sa version refermable.
+    // Sur un téléphone, cette frame est dessinée AVANT que les préférences
+    // ne rendent la main, donc l'état est démonté quand l'attente se
+    // termine. Une navigation gardée par `if (mounted)` était alors
+    // silencieusement abandonnée : l'utilisateur restait bloqué sur
+    // l'abonnement. `pumpAndSettle` avance l'horloge avant de dessiner et
+    // inverse cet ordre, ce qui masquait le défaut.
+    seedFirstRunStep(FirstRunStep.subscription);
+    auth.storedSession = true;
+    await launch(
+      tester,
+      extra: [
+        firstRunStoreProvider.overrideWithValue(const SlowFirstRunStore()),
+      ],
+    );
+
+    await tapText(tester, 'Continuer sans Premium');
+    await tester.tap(find.text('Continuer en version gratuite'));
+
+    // L'ordre du vrai téléphone : la frame d'abord, l'écriture ensuite.
+    await tester.pump();
+    await tester.pump(SlowFirstRunStore.delay);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(AppBottomBar), findsOneWidget);
+    expect(find.text('CARLYS PREMIUM'), findsNothing);
+    expect(find.byType(HomeScreen), findsOneWidget);
   });
 
   testWidgets('le refus mène à Premium puis revient : aucune impasse',
