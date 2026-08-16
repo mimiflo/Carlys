@@ -60,8 +60,9 @@ import 'package:carlys_mobile/features/progress/data/repositories/progress_repos
 import 'package:carlys_mobile/features/progress/domain/entities/progress.dart';
 import 'package:carlys_mobile/features/progress/presentation/screens/progress_screen.dart';
 import 'package:carlys_mobile/features/progress/presentation/widgets/body_weight_section.dart';
+import 'package:carlys_mobile/features/progression/presentation/widgets/manifesto_tile.dart';
 import 'package:carlys_mobile/features/progression/presentation/widgets/progression_entry_card.dart';
-import 'package:carlys_mobile/features/progression/presentation/widgets/reward_medal.dart';
+import 'package:carlys_mobile/features/progression/presentation/widgets/seal_engraving.dart';
 import 'package:carlys_mobile/features/subscription/data/repositories/subscription_repository_impl.dart';
 import 'package:carlys_mobile/features/subscription/presentation/screens/subscription_screen.dart';
 import 'package:carlys_mobile/features/training/presentation/screens/training_hub_screen.dart';
@@ -307,7 +308,7 @@ void main() {
   /// le milieu — un sceau à moitié tracé, qui n'existe qu'un instant.
   Future<void> settleEngraving(WidgetTester tester) async {
     await settle(tester);
-    await tester.pump(RewardMedal.engraveDuration);
+    await tester.pump(EngravedSeal.engraveDuration);
     await tester.pump();
   }
 
@@ -602,7 +603,7 @@ void main() {
     await settle(tester);
     await tester.tap(find.byType(ProgressionEntryCard));
     await settleEngraving(tester);
-    await capture(tester, '37-progression', shows: find.text('Ta progression'));
+    await capture(tester, '37-progression', shows: find.text('Progression'));
   });
 
   testWidgets('accueil — la progression en place', (tester) async {
@@ -652,7 +653,32 @@ void main() {
     await capture(
       tester,
       '37b-progression-nourrie',
-      shows: find.text('Ta progression'),
+      shows: find.text('Progression'),
+    );
+  });
+
+  testWidgets('progression — les cinq axes', (tester) async {
+    // Le bas du profil : la carte des cinq axes et l'entrée du manifeste.
+    // Sans cette vue, la galerie ne montrerait jamais la moitié de l'écran.
+    await pumpApp(
+      tester,
+      workouts: FakeWorkoutRepository()..history = trainedHistory(),
+    );
+    await goTab(tester, 'Progrès');
+    await tester.scrollUntilVisible(find.byType(ProgressionEntryCard), 200);
+    await settle(tester);
+    await tester.tap(find.byType(ProgressionEntryCard));
+    await settleEngraving(tester);
+    await tester.scrollUntilVisible(
+      find.byType(ManifestoTile),
+      200,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await settle(tester);
+    await capture(
+      tester,
+      '37c-progression-axes',
+      shows: find.byType(ManifestoTile),
     );
   });
 
@@ -667,12 +693,12 @@ void main() {
     // dernière, sinon le défilement s'applique à celle de l'onglet Progrès
     // restée dessous, et la cible n'est jamais construite.
     await tester.scrollUntilVisible(
-      find.text('Relire le manifeste Carlys.'),
+      find.text('Pourquoi essayer compte plus que réussir.'),
       200,
       scrollable: find.byType(Scrollable).last,
     );
     await settle(tester);
-    await tester.tap(find.text('Relire le manifeste Carlys.'));
+    await tester.tap(find.text('Pourquoi essayer compte plus que réussir.'));
     await settle(tester);
     await capture(tester, '38-manifeste', shows: find.text('Manifeste Carlys'));
   });

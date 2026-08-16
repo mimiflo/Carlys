@@ -1,53 +1,77 @@
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/progression/domain/progression.dart';
 import 'package:carlys_mobile/features/progression/domain/reward.dart';
-import 'package:carlys_mobile/features/progression/presentation/widgets/reward_medal.dart';
-import 'package:carlys_mobile/features/progression/presentation/widgets/title_regalia.dart';
+import 'package:carlys_mobile/features/progression/presentation/widgets/award_seal.dart';
+import 'package:carlys_mobile/features/progression/presentation/widgets/majesty.dart';
+import 'package:carlys_mobile/features/progression/presentation/widgets/seal_engraving.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// LA MISE EN SCÈNE : ce qui doit se RESSENTIR.
 ///
-/// Deux promesses tenues ici. La majesté monte réellement d'un titre à
-/// l'autre — sans quoi « plus ça évolue, plus c'est majestueux » n'est
-/// qu'une phrase. Et la gravure ne joue qu'une fois : elle marque un
-/// instant, pas un état.
+/// Trois promesses tenues ici. La majesté monte réellement d'un titre à
+/// l'autre, et par la FABRICATION plutôt que par la couleur — sans quoi
+/// « plus ça évolue, plus c'est majestueux » n'est qu'une phrase. Les cinq
+/// sceaux se distinguent par leur silhouette, et non par leur teinte. Et la
+/// gravure ne joue qu'une fois : elle marque un instant, pas un état.
 void main() {
   group('majesté', () {
-    test('chaque palier ajoute quelque chose de VISIBLE', () {
-      final regalias = CarlysTitle.values.map(TitleRegalia.of).toList();
+    test('chaque cran ajoute un élément de FABRICATION', () {
+      final crans = CarlysTitle.values.map(Majesty.of).toList();
 
-      // Le liseré ne recule jamais, et le halo non plus.
-      for (var i = 1; i < regalias.length; i++) {
+      // Le décompte des éléments de fabrication ne recule jamais.
+      var previous = -1;
+      for (final (index, majesty) in crans.indexed) {
+        final built = [
+          majesty.border != null || majesty.gradientEdge,
+          majesty.surface != Majesty.plainSurface,
+          majesty.guilloche != null,
+          majesty.corners > 0,
+          majesty.halo,
+        ].where((present) => present).length;
         expect(
-          regalias[i].borderWidth,
-          greaterThanOrEqualTo(regalias[i - 1].borderWidth),
-          reason: CarlysTitle.values[i].label,
+          built,
+          greaterThan(previous),
+          reason: '${CarlysTitle.values[index].label} n’ajoute rien',
         );
-        expect(
-          regalias[i].glow,
-          greaterThanOrEqualTo(regalias[i - 1].glow),
-          reason: CarlysTitle.values[i].label,
-        );
+        previous = built;
       }
 
-      // Le premier palier ne brille pas : sinon il ne resterait rien à
-      // gagner. Le dernier est le seul couronné.
-      expect(TitleRegalia.of(CarlysTitle.apprenti).glow, 0);
-      expect(TitleRegalia.of(CarlysTitle.apprenti).crowned, isFalse);
-      expect(TitleRegalia.of(CarlysTitle.icone).crowned, isTrue);
+      // Le premier cran est nu : sinon il ne resterait rien à gagner. Le
+      // dernier est le seul à porter la plaque bordée de dégradé.
+      final apprenti = Majesty.of(CarlysTitle.apprenti);
+      expect(apprenti.border, isNull);
+      expect(apprenti.gradientEdge, isFalse);
+      expect(apprenti.gaugeFill, isNull, reason: 'compteur pas ouvert');
       expect(
-        CarlysTitle.values.where((t) => TitleRegalia.of(t).crowned).length,
+        CarlysTitle.values.where((t) => Majesty.of(t).gradientEdge).length,
         1,
       );
     });
 
-    test('le halo passe par une OMBRE, jamais par un fond', () {
-      // Posé en fond, il grisaillerait la carte au lieu de la faire rayonner.
-      final decoration = TitleRegalia.of(CarlysTitle.icone).decoration;
+    test('le rang se lit en clair, jamais comme un score', () {
+      expect(Majesty.of(CarlysTitle.maitre).rank, '4 / 5');
+      expect(Majesty.of(CarlysTitle.maitre).roman, 'IV');
+      expect(CarlysTitle.icone.roman, 'V');
+    });
+  });
 
-      expect(decoration.boxShadow, isNotNull);
-      expect(decoration.color, AppColors.darkSurface);
+  group('sceaux', () {
+    test('cinq SILHOUETTES distinctes, pas cinq teintes', () {
+      // La version précédente distinguait les récompenses par leur couleur de
+      // remplissage : cinq ronds identiques qu'on ne pouvait pas nommer.
+      const box = Size.square(AwardSeal.large);
+      final shapes = <RewardKind, Rect>{};
+      for (final kind in RewardKind.values) {
+        final painter = SealPainter(kind: kind, size: AwardSeal.large);
+        shapes[kind] = painter.outline(box).getBounds();
+      }
+
+      // Deux formes au moins doivent différer d'emprise : un disque, une
+      // plaque paysage et une feuille portrait ne peuvent pas coïncider.
+      expect(shapes[RewardKind.record]!.height, lessThan(box.height));
+      expect(shapes[RewardKind.medaille]!.width, lessThan(box.width));
+      expect(shapes[RewardKind.certificat]!.height, box.height);
     });
   });
 
@@ -59,18 +83,23 @@ void main() {
       story: 'Quatre semaines consécutives.',
     );
 
-    Widget host(Widget child) => MaterialApp(
+    Widget host({required bool isNew}) => MaterialApp(
           theme: AppTheme.dark(),
-          home: Scaffold(body: Center(child: child)),
+          home: Scaffold(
+            body: Center(
+              child: EngravedSeal(
+                engrave: isNew,
+                child: AwardSeal(kind: reward.kind),
+              ),
+            ),
+          ),
         );
 
     testWidgets('une récompense NOUVELLE se grave sous les yeux',
         (tester) async {
-      await tester.pumpWidget(
-        host(const RewardMedal(reward: reward, isNew: true)),
-      );
+      await tester.pumpWidget(host(isNew: true));
 
-      // À la première image, le sceau n'est pas encore fermé.
+      // À la première image, la frappe n'est pas encore posée.
       final start = _progressOf(tester);
       expect(start, lessThan(1));
 
@@ -85,10 +114,17 @@ void main() {
         (tester) async {
       // Rejouer la gravure à chaque ouverture lui ferait perdre exactement
       // ce qui en fait le prix.
-      await tester.pumpWidget(host(const RewardMedal(reward: reward)));
+      await tester.pumpWidget(host(isNew: false));
       await tester.pump();
 
-      expect(_progressOf(tester), 1);
+      // Aucune couche d'animation : le sceau est rendu tel quel.
+      expect(
+        find.descendant(
+          of: find.byType(EngravedSeal),
+          matching: find.byType(Transform),
+        ),
+        findsNothing,
+      );
     });
 
     testWidgets('réduction d’animations : le sceau est entier, sans mouvement',
@@ -99,9 +135,7 @@ void main() {
         tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
       );
 
-      await tester.pumpWidget(
-        host(const RewardMedal(reward: reward, isNew: true)),
-      );
+      await tester.pumpWidget(host(isNew: true));
       await tester.pump();
 
       expect(_progressOf(tester), 1);
@@ -115,10 +149,10 @@ double _progressOf(WidgetTester tester) {
   final paint = tester.widget<CustomPaint>(
     find
         .descendant(
-          of: find.byType(RewardMedal),
+          of: find.byType(EngravedSeal),
           matching: find.byType(CustomPaint),
         )
         .first,
   );
-  return (paint.painter! as MedalPainter).progress;
+  return (paint.painter! as StrikeWave).progress;
 }

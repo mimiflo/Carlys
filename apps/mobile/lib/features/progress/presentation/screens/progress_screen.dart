@@ -54,11 +54,9 @@ class ProgressScreen extends ConsumerWidget {
             // au-dessus, sont en erreur ou hors ligne.
             const ProgressionEntryCard(),
             const SizedBox(height: AppSpacing.gapSection),
-            const AppSectionLabel('Tes récompenses'),
-            const SizedBox(height: AppSpacing.xs),
-            // Les trois dernières seulement : l'écran Progrès raconte la
-            // période, le profil raconte l'histoire entière.
-            const RewardShowcase(limit: 3),
+            // La vitrine, sans « ce qui vient » : l'écran Progrès raconte la
+            // période, le profil raconte l'histoire entière et la direction.
+            const RewardShowcase(showUpcoming: false),
             const SizedBox(height: AppSpacing.gapSection),
             const RecordsSection(),
             const SizedBox(height: AppSpacing.gapSection),

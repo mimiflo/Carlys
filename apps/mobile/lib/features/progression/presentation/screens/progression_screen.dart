@@ -1,25 +1,28 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
-import '../../../../app/router/app_routes.dart';
 import '../../../../design_system/design_system.dart';
 import '../../../workout_session/presentation/controllers/workout_controllers.dart';
+import '../../domain/progression.dart';
 import '../controllers/progression_controllers.dart';
 import '../controllers/reward_controllers.dart';
-import '../widgets/progression_axis_card.dart';
-import '../widgets/progression_title_card.dart';
-import '../widgets/reward_showcase.dart';
-import '../widgets/title_crossing_banner.dart';
+import '../widgets/first_steps_body.dart';
+import '../widgets/progression_body.dart';
 
-/// PROFIL DE PROGRESSION : le titre, les cinq axes, et le renvoi au
-/// manifeste qui les explique.
+/// PROFIL DE PROGRESSION : un atelier, pas un jeu.
 ///
-/// L'écran ne calcule rien : tout vient du moteur, qui est une fonction pure
-/// de faits locaux. Il se contente d'être lisible, et de ne jamais faire
-/// honte — c'est la seule chose qu'on lui demande en plus d'afficher.
+/// Il montre ce que le travail a déposé — un titre porté, des récompenses
+/// gagnées, cinq axes qui mesurent la pratique. L'écran ne calcule rien :
+/// tout vient du moteur, qui est une fonction pure de faits locaux.
+///
+/// Il a DEUX visages, et c'est la seule décision qu'il prend : sans aucune
+/// récompense au journal, il rend l'atelier du premier jour, plus court d'une
+/// moitié. Un compte neuf ne doit jamais voir une vitrine vide.
 class ProgressionScreen extends ConsumerWidget {
   const ProgressionScreen({super.key});
+
+  /// Retrait haut : aucun contenu sous la Dynamic Island.
+  static const double _topInset = AppSpacing.gapSection;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -33,7 +36,7 @@ class ProgressionScreen extends ConsumerWidget {
         child: ListView(
           padding: EdgeInsets.fromLTRB(
             AppSpacing.gutter,
-            AppSpacing.gutter,
+            AppSpacing.sm,
             AppSpacing.gutter,
             bottomInset + AppSpacing.gapSection,
           ),
@@ -42,19 +45,7 @@ class ProgressionScreen extends ConsumerWidget {
               alignment: Alignment.centerLeft,
               child: AppBackButton(),
             ),
-            const SizedBox(height: AppSpacing.sm),
-            Text(
-              'Ta progression',
-              style: AppTypography.display
-                  .copyWith(color: AppColors.darkTextPrimary),
-            ),
-            const SizedBox(height: AppSpacing.xxs),
-            Text(
-              'Cinq axes, tenus par ce que tu fais vraiment.',
-              style: AppTypography.body
-                  .copyWith(color: AppColors.darkTextSecondary),
-            ),
-            const SizedBox(height: AppSpacing.gapSection),
+            const SizedBox(height: _topInset),
             if (ref.watch(progressionUnreadableProvider))
               AppErrorState(
                 icon: AppIcons.retry,
@@ -66,70 +57,29 @@ class ProgressionScreen extends ConsumerWidget {
               )
             else if (profile == null)
               const AppLoadingIndicator(label: 'Lecture de ton historique')
-            else ...[
-              const TitleCrossingBanner(),
-              ProgressionTitleCard(
+            else if (_isFirstDay(ref, profile))
+              FirstStepsBody(
                 profile: profile,
-                // La majesté suit le titre le plus haut JAMAIS atteint : une
-                // interruption fait redescendre les points, jamais l'écrin.
-                regaliaTitle: ref.watch(highestTitleProvider),
+                initial: ref.watch(progressionInitialProvider),
+              )
+            else
+              ProgressionBody(
+                profile: profile,
+                initial: ref.watch(progressionInitialProvider),
               ),
-              const SizedBox(height: AppSpacing.gapSection),
-              const AppSectionLabel('Tes récompenses'),
-              const SizedBox(height: AppSpacing.xs),
-              const RewardShowcase(),
-              const SizedBox(height: AppSpacing.gapSection),
-              const AppSectionLabel('Les cinq axes'),
-              const SizedBox(height: AppSpacing.xs),
-              for (final axis in profile.axes) ...[
-                ProgressionAxisCard(axis: axis),
-                const SizedBox(height: AppSpacing.gapRow),
-              ],
-              const SizedBox(height: AppSpacing.xs),
-              _ManifestoEntry(
-                onOpen: () => context.push(AppRoutes.manifesto),
-              ),
-            ],
           ],
         ),
       ),
     );
   }
-}
 
-/// Le renvoi au manifeste : les points disent OÙ tu en es, le manifeste dit
-/// POURQUOI ces cinq axes-là.
-class _ManifestoEntry extends StatelessWidget {
-  const _ManifestoEntry({required this.onOpen});
-
-  final VoidCallback onOpen;
-
-  @override
-  Widget build(BuildContext context) {
-    return AppCard(
-      onTap: onOpen,
-      child: Row(
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const AppSectionLabel('Pourquoi ces cinq axes'),
-                const SizedBox(height: AppSpacing.xxs),
-                Text(
-                  'Relire le manifeste Carlys.',
-                  style: AppTypography.body
-                      .copyWith(color: AppColors.darkTextSecondary),
-                ),
-              ],
-            ),
-          ),
-          const Icon(
-            Icons.chevron_right_rounded,
-            color: AppColors.darkTextTertiary,
-          ),
-        ],
-      ),
-    );
-  }
+  /// L'atelier ouvre-t-il aujourd'hui ?
+  ///
+  /// Les DEUX conditions comptent. Sans récompense, on n'a rien à montrer ;
+  /// mais un compte qui s'est arrêté trois mois retombe à zéro point tout en
+  /// gardant son journal, et lui servir l'écran du premier jour effacerait
+  /// son histoire. Le total seul, à l'inverse, ferait clignoter l'écran le
+  /// temps que le journal se lise.
+  static bool _isFirstDay(WidgetRef ref, ProgressionProfile profile) =>
+      profile.points == 0 && ref.watch(showcaseRewardsProvider).isEmpty;
 }

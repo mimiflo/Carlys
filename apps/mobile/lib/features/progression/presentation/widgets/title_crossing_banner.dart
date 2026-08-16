@@ -4,7 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/reward.dart';
 import '../controllers/reward_controllers.dart';
-import 'reward_medal.dart';
+import 'award_seal.dart';
+import 'seal_engraving.dart';
 
 /// LE FRANCHISSEMENT D'UN CAP.
 ///
@@ -55,7 +56,10 @@ class TitleCrossingBanner extends ConsumerWidget {
           padding: const EdgeInsets.all(AppSpacing.md),
           child: Row(
             children: [
-              RewardMedal(reward: reward, isNew: true, size: 48),
+              EngravedSeal(
+                engrave: true,
+                child: AwardSeal(kind: reward.kind, figure: reward.figure),
+              ),
               const SizedBox(width: AppSpacing.gapRow),
               Expanded(
                 child: Column(

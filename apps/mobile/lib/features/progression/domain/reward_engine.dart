@@ -240,6 +240,7 @@ final List<RewardRule> rewardCatalog = [
             kind: RewardKind.titre,
             label: title.label,
             story: 'Titre atteint à ${title.threshold} points.',
+            figure: title.roman,
           ),
           (facts) => facts.reachedTitle.index >= title.index,
         ),

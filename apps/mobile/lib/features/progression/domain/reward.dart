@@ -63,6 +63,7 @@ class Reward {
     required this.label,
     required this.story,
     this.value,
+    this.figure,
   });
 
   /// Identifiant STABLE : c'est la clé du journal. Le renommer ferait
@@ -81,6 +82,11 @@ class Reward {
   /// La valeur de marque à laquelle elle se rattache. `null` pour les titres,
   /// qui tiennent aux cinq à la fois.
   final CarlysValue? value;
+
+  /// Ce qui est FRAPPÉ au centre du sceau : « 80 » pour un record, « IV »
+  /// pour un titre. `null` quand la forme parle d'elle-même et porte son
+  /// glyphe — un badge n'a pas de chiffre à montrer.
+  final String? figure;
 }
 
 /// Une récompense OBTENUE, avec la date de son obtention.

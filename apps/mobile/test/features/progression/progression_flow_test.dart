@@ -7,7 +7,8 @@ import 'package:carlys_mobile/features/progression/domain/progression_engine.dar
 import 'package:carlys_mobile/features/progression/presentation/controllers/progression_controllers.dart';
 import 'package:carlys_mobile/features/progression/presentation/screens/manifesto_screen.dart';
 import 'package:carlys_mobile/features/progression/presentation/screens/progression_screen.dart';
-import 'package:carlys_mobile/features/progression/presentation/widgets/progression_axis_card.dart';
+import 'package:carlys_mobile/features/progression/presentation/widgets/axes_card.dart';
+import 'package:carlys_mobile/features/progression/presentation/widgets/progression_gauge.dart';
 import 'package:carlys_mobile/features/workout_session/domain/entities/workout.dart';
 import 'package:carlys_mobile/features/workout_session/presentation/controllers/workout_controllers.dart';
 import 'package:flutter/material.dart';
@@ -38,6 +39,9 @@ void main() {
         overrides: [
           progressionProfileProvider.overrideWithValue(profile),
           progressionUnreadableProvider.overrideWithValue(unreadable),
+          // L'avatar est la SEULE chose que l'écran tire de la session : on
+          // le fournit ici pour que le reste se vérifie sans amorçage.
+          progressionInitialProvider.overrideWithValue('M'),
         ],
         child: MaterialApp(home: child),
       );
@@ -55,15 +59,16 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.text('En attente'), findsNWidgets(CarlysValue.values.length));
-      // Une seule jauge : celle du TITRE, qui dit le chemin vers le suivant.
-      // Aucun axe n'en montre, et aucun n'affiche de points.
-      expect(find.byType(LinearProgressIndicator), findsOneWidget);
+      expect(find.text('EN ATTENTE'), findsNWidgets(CarlysValue.values.length));
+      // AUCUNE jauge remplie, titre compris : rien n'est encore acquis. Les
+      // pistes existent, en tirets — jamais une piste vide.
+      final gauges = tester.widgetList<ProgressionGauge>(
+        find.byType(ProgressionGauge),
+      );
+      expect(gauges, hasLength(CarlysValue.values.length + 1));
+      expect(gauges.every((gauge) => gauge.fill == null), isTrue);
       expect(
-        find.descendant(
-          of: find.byType(ProgressionAxisCard),
-          matching: find.text('0'),
-        ),
+        find.descendant(of: find.byType(AxisRow), matching: find.text('0')),
         findsNothing,
       );
     });

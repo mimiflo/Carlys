@@ -70,6 +70,11 @@ enum CarlysTitle {
     final index = CarlysTitle.values.indexOf(this) + 1;
     return index < CarlysTitle.values.length ? CarlysTitle.values[index] : null;
   }
+
+  /// Le rang du titre en chiffres romains, tel qu'il est frappé sur son
+  /// sceau. Cinq paliers : une table suffit, un convertisseur général serait
+  /// du code mort.
+  String get roman => const ['I', 'II', 'III', 'IV', 'V'][index];
 }
 
 /// Un axe évalué : sa valeur, ses points, et la phrase qui l'explique.
@@ -118,6 +123,14 @@ class ProgressionProfile {
     final next = title.next;
     return next == null ? null : next.threshold - points;
   }
+
+  /// Part du CHEMIN ENTIER parcourue, de 0 à 1.
+  ///
+  /// C'est elle que porte la jauge de la carte de titre, et non l'avancement
+  /// vers le palier suivant : une jauge qui repartirait de zéro à chaque
+  /// palier effacerait tout ce qui a été fait avant lui. Ici, la barre ne
+  /// recule jamais d'un palier à l'autre — elle raconte l'histoire complète.
+  double get totalProgress => (points / maxTotal).clamp(0.0, 1.0);
 
   /// Part du chemin parcouru vers le titre suivant, de 0 à 1.
   ///

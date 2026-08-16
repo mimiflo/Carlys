@@ -44,6 +44,9 @@ abstract final class AppIcons {
   static const IconData filter = Icons.tune_rounded;
   static const IconData bookmark = Icons.bookmark_border_rounded;
   static const IconData chevronRight = Icons.chevron_right_rounded;
+
+  /// Renvoi vers une lecture, là où le chevron dirait « déplier ».
+  static const IconData arrowForward = Icons.arrow_forward_rounded;
   static const IconData minus = Icons.remove_rounded;
   static const IconData recovery = Icons.battery_charging_full_rounded;
 

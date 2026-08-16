@@ -1,8 +1,18 @@
 import 'package:flutter/material.dart';
 
+import '../colors/app_colors.dart';
 import '../spacing/app_spacing.dart';
 
-enum AppButtonVariant { primary, secondary, ghost, destructive }
+enum AppButtonVariant {
+  primary,
+  secondary,
+  ghost,
+
+  /// Plein ACCENT. Réservé à l'amorce d'un écran qui n'a encore rien à
+  /// montrer : une seule occurrence d'orange par écran, jamais deux.
+  accent,
+  destructive,
+}
 
 enum AppButtonSize { small, medium, large }
 
@@ -71,6 +81,16 @@ class AppButton extends StatelessWidget {
       AppButtonVariant.ghost => TextButton(
           onPressed: onPressedOrNull,
           style: _sizeStyle(),
+          child: child,
+        ),
+      AppButtonVariant.accent => FilledButton(
+          onPressed: onPressedOrNull,
+          style: _sizeStyle().merge(
+            FilledButton.styleFrom(
+              backgroundColor: AppColors.accent,
+              foregroundColor: AppColors.onAccent,
+            ),
+          ),
           child: child,
         ),
       AppButtonVariant.destructive => FilledButton(

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../academy/presentation/controllers/academy_controllers.dart';
+import '../../../authentication/presentation/controllers/auth_controller.dart';
 import '../../../workout_session/presentation/controllers/workout_controllers.dart';
 import '../../domain/progression.dart';
 import '../../domain/progression_engine.dart';
@@ -27,6 +28,26 @@ import '../../domain/progression_facts_builder.dart';
 final progressionUnreadableProvider = Provider<bool>((ref) {
   final history = ref.watch(workoutHistoryProvider);
   return history.hasError && !history.hasValue;
+});
+
+/// L'initiale portée par l'avatar du profil.
+///
+/// Isolée dans son propre fournisseur pour une raison précise : le profil de
+/// progression se dérive de faits LOCAUX et doit s'afficher entier sans
+/// session lue. Brancher l'écran directement sur la session le rendrait
+/// dépendant d'une chaîne qu'il n'utilise que pour une lettre.
+///
+/// Une lettre par défaut plutôt qu'un trou : un avatar vide se lirait comme
+/// un chargement qui n'aboutit pas.
+final progressionInitialProvider = Provider<String>((ref) {
+  final user = switch (ref.watch(authControllerProvider)) {
+    AuthAuthenticated(:final user) => user,
+    _ => null,
+  };
+  final name = user?.displayName.trim() ?? '';
+  return name.isEmpty
+      ? 'C'
+      : String.fromCharCode(name.runes.first).toUpperCase();
 });
 
 final progressionProfileProvider = Provider<ProgressionProfile?>((ref) {

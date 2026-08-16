@@ -112,6 +112,11 @@ les essais n'entrent dans le calcul : se tromper fait apprendre, et compter les
 | `domain/progression_engine.dart` | Le barème, fonction PURE (le jour entre par paramètre) |
 | `domain/progression_facts_builder.dart` | Historique local vers faits, fonction pure |
 | `presentation/controllers/` | Le seul endroit qui lit l'horloge et les providers |
+| `presentation/widgets/majesty.dart` | Les cinq crans de fabrication, sans leur contenu |
+| `presentation/widgets/majesty_plate.dart` | La plaque : surface, filet, grain, équerres |
+| `presentation/widgets/award_seal.dart` | Un peintre paramétré pour les cinq silhouettes |
+| `presentation/widgets/progression_body.dart` | L'écran d'un compte qui a déjà travaillé |
+| `presentation/widgets/first_steps_body.dart` | L'écran du premier jour |
 
 Cette coupure permet de tester le barème sans base de données, et la lecture
 sans barème.
@@ -168,19 +173,62 @@ récompense déjà obtenue, ce qui est interdit.
 
 ## La mise en scène
 
-**La majesté monte avec le titre** (`TitleRegalia`) : liseré, dégradé de
-marque, halo, puis couronne au dernier palier. Le premier palier ne brille
-pas — sinon il ne resterait rien à gagner.
+L'écran est **un atelier, pas un jeu**. Il montre ce que le travail a déposé :
+un titre porté, des récompenses gagnées, cinq axes qui mesurent la pratique.
+Pas de confettis, pas de « niveau 12 », pas de barre d'XP, pas de coffre.
 
-Elle suit le titre le plus haut **jamais atteint**, pas le titre courant :
+### Les cinq crans de majesté
+
+**La majesté monte avec le titre** (`Majesty`), et chaque cran ajoute un
+élément de **fabrication**, jamais seulement une couleur :
+
+| Cran | Titre | Fabrication ajoutée |
+| ---- | ----- | ------------------- |
+| I | Apprenti | Surface **nue**, aucune bordure. Total `—`, jauge en tirets |
+| II | Architecte | **+ filet** : bordure blanc 7 %, jauge pleine |
+| III | Artisan | **+ cadre gravé** : la surface passe en `surfaceAlt`, le nom prend le Display |
+| IV | Maître | **+ coins et guillochage** : fond radial, équerres, jauge en dégradé |
+| V | Icône | **+ plaque bordée** : bordure d'un pixel en dégradé, halo, quatre équerres |
+
+La montée doit se lire d'un coup d'œil sur cinq plaques vides — d'où la
+coupure entre `MajestyPlate` (la fabrication) et `TitleCard` (ce qu'on lit
+dessus). Le premier cran ne brille pas : sinon il ne resterait rien à gagner.
+
+Le cran suit le titre le plus haut **jamais atteint**, pas le titre courant :
 personne ne doit voir son écran se ternir parce qu'il a été malade deux
 semaines.
+
+### Les cinq sceaux
+
+Un sceau (`AwardSeal`) est une **silhouette**, pas une pastille colorée :
+écu pour un badge, disque à ruban pour une médaille, feuille cachetée pour un
+certificat, plaque pour un record, cartouche octogonale pour un titre. La
+forme porte le sens ; distinguer les récompenses par leur teinte donnerait
+cinq ronds qu'on ne saurait pas nommer.
+
+Construction constante : la silhouette est remplie du dégradé, puis la MÊME
+silhouette, insérée de deux points, est remplie de la surface — le filet naît
+de la différence, comme sur un sceau frappé. Deux tailles seulement (56 et
+34) ; à 34 les ornements internes disparaissent.
+
+### Jamais une jauge vide, jamais un « 0 »
+
+Un total nul s'écrit `—`, une piste sans remplissage passe en **tirets**, et
+un axe sans donnée dit `EN ATTENTE` avec la phrase qui explique comment
+l'ouvrir. Un zéro et une barre vide se lisent comme un échec là où il n'y a
+que du temps devant soi.
+
+### Une seule couleur d'accent par écran
+
+L'orange n'apparaît **qu'une fois** : la pastille `NOUVEAU` sur un compte
+avancé, le bouton d'amorce sur un compte neuf. Jamais les deux. Le magenta ne
+sert qu'en fin de dégradé et comme cachet de certificat.
 
 ### Les quatre micro-animations
 
 | Animation | Où | Règle |
 | --------- | -- | ----- |
-| **La gravure** | Une récompense nouvelle | Le trait se trace, le sceau se remplit. Ne rejoue JAMAIS : c'est le journal qui en décide |
+| **La frappe** | Une récompense nouvelle | Le sceau arrive trop grand, se resserre d'un coup sec, l'onde s'échappe (`EngravedSeal`). Ne rejoue JAMAIS : c'est le journal qui en décide |
 | **La flamme** | Série de constance, accueil | Respire tant que la série tient, immobile sinon |
 | **Le tracé** | Graphiques (`AppRevealSweep`) | La courbe se découvre du plus ancien vers aujourd'hui, par un clip et non une reconstruction |
 | **Le cap franchi** | Nouveau titre | Un bandeau se déplie, une fois, le jour de l'inscription |
@@ -192,9 +240,34 @@ les rend immobiles, sans rien retirer de l'information.
 
 | Écran | Ce qu'il montre |
 | ----- | --------------- |
-| **Accueil** | Le titre porté, les points, la dernière récompense — dans son écrin |
-| **Progrès** | La même carte, puis les trois dernières récompenses et les records |
-| **Profil de progression** | Le cap franchi, le titre, la vitrine entière, les cinq axes |
+| **Accueil** | Le bloc compact : titre, points, jauge, sceau de la dernière récompense |
+| **Progrès** | Le même bloc, puis la vitrine et les records |
+| **Profil de progression** | Le cap franchi, la carte de titre, la vitrine, les cinq axes, le manifeste |
+
+### La vitrine, en trois densités
+
+Neuf lignes identiques devenaient un mur : personne ne lisait après la
+troisième, et la neuvième médaille dévaluait la première. La plus récente
+passe donc en **vedette** (`FeaturedAwardCard`, sceau 56), les deux suivantes
+en **lignes** (`AwardRow`, sceau 34), et le reste se compte dans l'en-tête
+(« Voir les 13 », qui ouvre une feuille).
+
+Elle mélange **deux sources** : le journal local (`earnedRewardsProvider`) et
+les **records du serveur**, réunis par `showcaseRewardsProvider`. Le journal
+raconte les caps, les records racontent les gestes — un profil qui n'afficherait
+que les caps dirait « cinq records battus » sans jamais dire lesquels. Hors
+ligne, la vitrine se replie sur le journal seul et rien de gagné ne disparaît.
+
+### Deux visages, une seule décision
+
+Sans aucune récompense **et** sans le moindre point, l'écran rend l'atelier du
+premier jour (`FirstStepsBody`) : trois blocs au lieu de cinq, une seule
+action, aucune vitrine. Un compte neuf n'a rien à montrer, il a une porte à
+ouvrir — l'écran du débutant doit donc être plus court, pas plus bavard.
+
+Les **deux** conditions comptent : un compte arrêté trois mois retombe à zéro
+point tout en gardant son journal, et lui servir l'écran du premier jour
+effacerait son histoire.
 
 ## Le manifeste
 
@@ -204,4 +277,5 @@ expliquées, elles sont mesurées ailleurs. Un manifeste qui afficherait un scor
 cesserait d'être un manifeste.
 
 Entrées : le profil (« Le manifeste ») et le bas du profil de progression
-(« Pourquoi ces cinq axes »).
+(`ManifestoTile` — « Le manifeste Carlys »). L'écran ferme ainsi sur la
+question plutôt que sur un score.

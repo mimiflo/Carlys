@@ -15,4 +15,9 @@ abstract final class AppSpacing {
   static const double gapSection = 26;
   static const double touchTarget = 48;
   static const double xxxl = 64;
+
+  /// Padding intérieur d'une carte secondaire (récompense vedette, axes,
+  /// manifeste). Entre [md] et [lg] : à 16 la carte serre, à 24 elle se
+  /// confond avec la carte de titre.
+  static const double padCard = 18;
 }

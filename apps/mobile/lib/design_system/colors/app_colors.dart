@@ -176,6 +176,101 @@ abstract final class AppColors {
   /// colore rien, il ouvre et ferme l'opacité).
   static const Color neutral0Clear = Color(0x00FFFFFF); // blanc .00
 
+  // ── Profil de progression (refonte, handoff d'août 2026) ───────────────
+  //
+  // L'écran est un ATELIER, pas un jeu. Sa matière est la fabrication :
+  // surfaces gravées, filets, cachets. Ces teintes n'existent que là, et
+  // elles dérivent toutes de la palette de marque.
+
+  /// Haut du dégradé d'une carte gravée (cran « Maître »).
+  static const Color surfaceEngraved = Color(0xFF241533);
+
+  /// Haut du dégradé de la plaque du dernier cran (« Icône »).
+  static const Color surfaceIcon = Color(0xFF2E1A40);
+
+  /// Fond profond des sceaux : c'est lui qui creuse la silhouette.
+  static const Color primaryDeep = Color(0xFF4A1580);
+
+  /// Texte posé SUR l'accent orange. Un blanc y passerait sous le seuil.
+  static const Color onAccent = Color(0xFF1A0A02);
+
+  /// Dénominateur d'un total (« /1000 ») : présent, jamais lu en premier.
+  static const Color textMuted = Color(0xFF55556A);
+
+  /// Liseré des surfaces qui ont gagné leur majesté.
+  static const Color majestyBorder = Color(0x59C88BFF); // primaryLight .35
+
+  /// Filet gravé à l'intérieur d'un sceau ou d'un cadre.
+  static const Color engravedRule = Color(0x8CC88BFF); // primaryLight .55
+
+  /// Piste EN ATTENTE : des tirets, jamais une piste vide. Une jauge à zéro
+  /// se lit comme un échec ; des tirets se lisent comme « pas encore ».
+  static const Color pendingTrack = Color(0x4DC88BFF); // primaryLight .30
+
+  /// Guillochage : le grain diagonal des surfaces gravées.
+  static const Color guilloche = Color(0x0DFFFFFF); // blanc .05
+
+  /// Jauge de progression du titre. Le dégradé est RÉSERVÉ à la carte de
+  /// titre : les jauges d'axes sont pleines, sinon plus rien ne hiérarchise.
+  static const LinearGradient gauge = LinearGradient(
+    colors: [primaryDark, primary, magenta],
+    stops: [0, 0.46, 1],
+  );
+
+  /// Fond du bloc compact de l'accueil : la lumière vient d'un coin, comme
+  /// sur une plaque tenue en main. Un aplat y serait une tuile de plus.
+  static const RadialGradient compactPlate = RadialGradient(
+    center: Alignment(0.76, -1),
+    radius: 1.3,
+    colors: [surfaceEngraved, darkSurface],
+    stops: [0, 0.62],
+  );
+
+  /// Avatar d'un compte qui a commencé son histoire. Un compte neuf porte la
+  /// surface nue : le dégradé se gagne, comme le reste de l'écran.
+  static const LinearGradient avatarMajestic = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [primary, primaryDeep],
+  );
+
+  /// Jauge d'axe : violet PLEIN. Un dégradé y ferait cinq petites cartes de
+  /// titre, et l'écran n'aurait plus de hiérarchie.
+  static const LinearGradient axisFill = LinearGradient(
+    colors: [primary, primary],
+  );
+
+  /// Bordure en dégradé des deux derniers crans de majesté.
+  static const LinearGradient majestyEdge = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0xD9ED35A9), Color(0x739B30FF), Color(0x249B30FF)],
+    stops: [0, 0.52, 1],
+  );
+
+  /// Remplissage d'un sceau : le violet part clair et s'enfonce.
+  static const LinearGradient sealFill = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [primaryLight, primaryDark, primaryDeep],
+    stops: [0, 0.60, 1],
+  );
+
+  /// Dégradé du cartouche d'un titre : le seul sceau qui porte le magenta.
+  static const LinearGradient sealTitleFill = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [magenta, primary, primaryDeep],
+    stops: [0, 0.55, 1],
+  );
+
+  /// Fond de la tuile du manifeste.
+  static const LinearGradient manifestoTile = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [Color(0x299B30FF), Color(0x1AED35A9)],
+  );
+
   /// Remplissage d'un jour du calendrier selon l'intensité 0..1 (violet).
   static Color heatFill(double intensity) => Color.lerp(
         const Color(0x809B30FF),
