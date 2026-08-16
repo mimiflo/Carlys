@@ -63,33 +63,38 @@ class BodyWeightChart extends StatelessWidget {
             child: RepaintBoundary(
               child: SizedBox(
                 height: _chartHeight,
-                child: LineChart(
-                  LineChartData(
-                    minY: minValue - 1,
-                    maxY: maxValue + 1,
-                    lineTouchData: const LineTouchData(enabled: false),
-                    titlesData: const FlTitlesData(show: false),
-                    gridData: const FlGridData(show: false),
-                    borderData: FlBorderData(show: false),
-                    lineBarsData: [
-                      LineChartBarData(
-                        spots: [
-                          for (var i = 0; i < entries.length; i++)
-                            FlSpot(i.toDouble(), entries[i].value),
-                        ],
-                        isCurved: true,
-                        // ROSE, à dessein : tout l'écran vit en violet et
-                        // orange, la courbe est LA donnée — le magenta la
-                        // détache de son décor d'un seul coup d'œil.
-                        color: AppColors.magenta,
-                        barWidth: 2,
-                        dotData: const FlDotData(show: false),
-                        belowBarData: BarAreaData(
-                          show: true,
-                          color: AppColors.magentaCardSoft,
+                // La courbe SE DESSINE, du plus ancien vers aujourd'hui :
+                // c'est le sens du temps, et une courbe déjà tracée à
+                // l'arrivée ne raconte pas le trajet.
+                child: AppRevealSweep(
+                  child: LineChart(
+                    LineChartData(
+                      minY: minValue - 1,
+                      maxY: maxValue + 1,
+                      lineTouchData: const LineTouchData(enabled: false),
+                      titlesData: const FlTitlesData(show: false),
+                      gridData: const FlGridData(show: false),
+                      borderData: FlBorderData(show: false),
+                      lineBarsData: [
+                        LineChartBarData(
+                          spots: [
+                            for (var i = 0; i < entries.length; i++)
+                              FlSpot(i.toDouble(), entries[i].value),
+                          ],
+                          isCurved: true,
+                          // ROSE, à dessein : tout l'écran vit en violet et
+                          // orange, la courbe est LA donnée — le magenta la
+                          // détache de son décor d'un seul coup d'œil.
+                          color: AppColors.magenta,
+                          barWidth: 2,
+                          dotData: const FlDotData(show: false),
+                          belowBarData: BarAreaData(
+                            show: true,
+                            color: AppColors.magentaCardSoft,
+                          ),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
               ),

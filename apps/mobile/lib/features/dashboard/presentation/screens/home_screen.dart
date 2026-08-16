@@ -14,6 +14,7 @@ import '../../../carlys_profile/presentation/controllers/carlys_profile_controll
 import '../../../community/presentation/controllers/community_controllers.dart';
 import '../../../notifications/presentation/controllers/push_registration.dart';
 import '../../../nutrition/presentation/controllers/nutrition_controllers.dart';
+import '../../../progression/presentation/widgets/progression_entry_card.dart';
 import '../../../workout_session/presentation/controllers/workout_controllers.dart';
 import '../controllers/dashboard_controllers.dart';
 import '../widgets/community_nudge_card.dart';
@@ -101,6 +102,11 @@ class HomeScreen extends ConsumerWidget {
                 },
               ),
             ),
+            // LA PROGRESSION, en haut de la page : le titre porté, les
+            // points, la dernière récompense. Son écrin monte en majesté
+            // avec le titre le plus haut jamais atteint, et c'est ici que ça
+            // doit se ressentir sans ouvrir quoi que ce soit.
+            const _Section(child: ProgressionEntryCard()),
             // Le cap du profil Carlys : l'accueil change avec l'identité
             // choisie — absent tant qu'elle ne l'est pas.
             if (carlysProfile != null)

@@ -6,8 +6,11 @@ import '../../../../app/router/app_routes.dart';
 import '../../../../design_system/design_system.dart';
 import '../../../workout_session/presentation/controllers/workout_controllers.dart';
 import '../controllers/progression_controllers.dart';
+import '../controllers/reward_controllers.dart';
 import '../widgets/progression_axis_card.dart';
 import '../widgets/progression_title_card.dart';
+import '../widgets/reward_showcase.dart';
+import '../widgets/title_crossing_banner.dart';
 
 /// PROFIL DE PROGRESSION : le titre, les cinq axes, et le renvoi au
 /// manifeste qui les explique.
@@ -64,7 +67,17 @@ class ProgressionScreen extends ConsumerWidget {
             else if (profile == null)
               const AppLoadingIndicator(label: 'Lecture de ton historique')
             else ...[
-              ProgressionTitleCard(profile: profile),
+              const TitleCrossingBanner(),
+              ProgressionTitleCard(
+                profile: profile,
+                // La majesté suit le titre le plus haut JAMAIS atteint : une
+                // interruption fait redescendre les points, jamais l'écrin.
+                regaliaTitle: ref.watch(highestTitleProvider),
+              ),
+              const SizedBox(height: AppSpacing.gapSection),
+              const AppSectionLabel('Tes récompenses'),
+              const SizedBox(height: AppSpacing.xs),
+              const RewardShowcase(),
               const SizedBox(height: AppSpacing.gapSection),
               const AppSectionLabel('Les cinq axes'),
               const SizedBox(height: AppSpacing.xs),

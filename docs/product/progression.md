@@ -116,6 +116,83 @@ les essais n'entrent dans le calcul : se tromper fait apprendre, et compter les
 Cette coupure permet de tester le barème sans base de données, et la lecture
 sans barème.
 
+## Les récompenses : la deuxième mémoire
+
+Le profil est dérivé et **fluctue** : il monte quand on s'entraîne, il
+redescend quand on s'arrête. C'est l'état du moment, et il doit rester
+honnête.
+
+Les récompenses, elles, forment un **journal**. Une médaille obtenue le reste
+pour toujours, même après trois mois d'arrêt, même si le fait qui l'a value
+est sorti de la fenêtre d'observation. La dérivation ne fait qu'**ajouter** :
+elle ne retire jamais rien.
+
+C'est la réponse exacte à la règle de marque « la progression doit rester
+positive après une interruption ». Ce qui bouge est le présent ; ce qui est
+gagné est l'histoire, et l'histoire ne se reprend pas.
+
+| Forme | Ce qu'elle marque | Exemples |
+| ----- | ----------------- | -------- |
+| **Badge** | Un premier pas | Cinq leçons, dix séances, premier record |
+| **Médaille** | Un cap tenu | Un mois sans lâcher, cinquante séances |
+| **Certificat** | Un engagement long | Une saison entière, Academy terminée |
+| **Record personnel** | Une charge jamais atteinte | Servis par l'API, affichés dans Progrès |
+| **Titre** | Un palier du profil | Architecte, Artisan, Maître, Icône |
+| **Citation** | Le mot du jour | Une par jour, adossée à une des cinq valeurs |
+
+Vingt règles composent le catalogue (`domain/reward_engine.dart`), quatre à
+cinq par valeur de marque. Chaque récompense porte son **histoire** : une
+récompense sans phrase n'est qu'une pastille.
+
+### Deux garde-fous du catalogue
+
+**La meilleure série est un RECORD, pas la série en cours.** Une série cassée
+reste gagnée — c'est ce qui distingue une récompense d'un score.
+
+**Un pack d'Academy vide n'accorde pas le certificat.** Zéro leçon sur zéro
+vaut « tout fait » en arithmétique, et c'est faux : le pack n'est simplement
+pas chargé.
+
+### Le journal
+
+`RewardLedger` (préférences locales, clé `progression.recompenses`) associe
+chaque identifiant à sa date de **première** obtention. Il ne s'écrit qu'en
+ajout. La date ne se réécrit jamais : regagner un cap ne réécrit pas
+l'histoire.
+
+Les identifiants sont **stables** : les renommer ferait disparaître une
+récompense déjà obtenue, ce qui est interdit.
+
+## La mise en scène
+
+**La majesté monte avec le titre** (`TitleRegalia`) : liseré, dégradé de
+marque, halo, puis couronne au dernier palier. Le premier palier ne brille
+pas — sinon il ne resterait rien à gagner.
+
+Elle suit le titre le plus haut **jamais atteint**, pas le titre courant :
+personne ne doit voir son écran se ternir parce qu'il a été malade deux
+semaines.
+
+### Les quatre micro-animations
+
+| Animation | Où | Règle |
+| --------- | -- | ----- |
+| **La gravure** | Une récompense nouvelle | Le trait se trace, le sceau se remplit. Ne rejoue JAMAIS : c'est le journal qui en décide |
+| **La flamme** | Série de constance, accueil | Respire tant que la série tient, immobile sinon |
+| **Le tracé** | Graphiques (`AppRevealSweep`) | La courbe se découvre du plus ancien vers aujourd'hui, par un clip et non une reconstruction |
+| **Le cap franchi** | Nouveau titre | Un bandeau se déplie, une fois, le jour de l'inscription |
+
+Toutes passent par `AppMotion.resolve` : la réduction d'animations système
+les rend immobiles, sans rien retirer de l'information.
+
+### Où le système se voit
+
+| Écran | Ce qu'il montre |
+| ----- | --------------- |
+| **Accueil** | Le titre porté, les points, la dernière récompense — dans son écrin |
+| **Progrès** | La même carte, puis les trois dernières récompenses et les records |
+| **Profil de progression** | Le cap franchi, le titre, la vitrine entière, les cinq axes |
+
 ## Le manifeste
 
 `ManifestoScreen` (route `/manifeste`) affiche le texte de marque et les cinq

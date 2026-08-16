@@ -50,6 +50,14 @@ abstract final class AppIcons {
   /// Jour tenu dans la série de constance.
   static const IconData streak = Icons.local_fire_department_rounded;
 
+  // Récompenses du profil de progression — une forme par famille : le badge
+  // marque un premier pas, la médaille un cap tenu, le certificat un
+  // engagement long, la couronne un titre.
+  static const IconData badge = Icons.military_tech_rounded;
+  static const IconData medal = Icons.emoji_events_rounded;
+  static const IconData certificate = Icons.workspace_premium_rounded;
+  static const IconData crown = Icons.auto_awesome_rounded;
+
   // Univers de marque (page de bienvenue)
   static const IconData brandApp = Icons.smartphone_rounded;
   static const IconData brandAcademy = Icons.school_rounded;

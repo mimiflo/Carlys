@@ -55,8 +55,10 @@ class ConsistencyStreak extends StatelessWidget {
                   ),
                 ),
                 if (streak > 0) ...[
-                  const Icon(
-                    AppIcons.streak,
+                  // La flamme de tête RESPIRE tant que la série tient : le
+                  // seul mouvement permanent de l'accueil, et il dit
+                  // quelque chose.
+                  const AppLivingFlame(
                     size: _headlineFlameSize,
                     color: AppColors.accent,
                   ),

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../design_system/design_system.dart';
 import '../../../progression/presentation/widgets/progression_entry_card.dart';
+import '../../../progression/presentation/widgets/reward_showcase.dart';
 import '../../domain/entities/progress.dart';
 import '../controllers/progress_controllers.dart';
 import '../widgets/body_weight_section.dart';
@@ -52,6 +53,12 @@ class ProgressScreen extends ConsumerWidget {
             // s'affiche donc même quand les statistiques du serveur, juste
             // au-dessus, sont en erreur ou hors ligne.
             const ProgressionEntryCard(),
+            const SizedBox(height: AppSpacing.gapSection),
+            const AppSectionLabel('Tes récompenses'),
+            const SizedBox(height: AppSpacing.xs),
+            // Les trois dernières seulement : l'écran Progrès raconte la
+            // période, le profil raconte l'histoire entière.
+            const RewardShowcase(limit: 3),
             const SizedBox(height: AppSpacing.gapSection),
             const RecordsSection(),
             const SizedBox(height: AppSpacing.gapSection),
