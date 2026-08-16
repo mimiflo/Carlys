@@ -15,14 +15,20 @@ class LessonCard extends StatefulWidget {
   const LessonCard({
     required this.lesson,
     this.showCategory = true,
+    this.answeredChoice,
     this.onAnswered,
     super.key,
   });
 
   final Lesson lesson;
 
-  /// Relais de la réponse au quiz de CETTE leçon (défis culturels).
-  final ValueChanged<bool>? onAnswered;
+  /// Choix déjà retenu pour cette leçon, s'il y en a un : c'est ce qui
+  /// remplit la carte quand on a répondu depuis l'accueil.
+  final int? answeredChoice;
+
+  /// Relais de la réponse au quiz de CETTE leçon : l'index choisi et s'il
+  /// est juste.
+  final void Function(int choiceIndex, bool correct)? onAnswered;
 
   /// À désactiver quand la carte est déjà rangée sous l'en-tête de sa
   /// catégorie : répéter « ANATOMIE » sous « ANATOMIE » n'apprend rien.
@@ -119,7 +125,11 @@ class _LessonCardState extends State<LessonCard> {
                 ),
             ],
             const SizedBox(height: AppSpacing.sm),
-            QuizCard(question: lesson.question, onAnswered: widget.onAnswered),
+            QuizCard(
+              question: lesson.question,
+              answeredChoice: widget.answeredChoice,
+              onAnswered: widget.onAnswered,
+            ),
             // Le pont vers la pratique : la bibliothèque, déjà filtrée sur
             // le muscle qu'on vient d'apprendre.
             if (lesson.muscleGroupSlugs.isNotEmpty) ...[

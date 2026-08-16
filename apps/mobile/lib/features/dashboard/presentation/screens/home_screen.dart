@@ -114,9 +114,15 @@ class HomeScreen extends ConsumerWidget {
                 child: QuizCard(
                   question: dailyLesson.question,
                   title: 'Question du jour',
-                  onAnswered: (correct) =>
-                      ref.read(communityActionsProvider).reportQuizAnswer(
+                  // La MÊME question vit dans l'Academy : la réponse est
+                  // partagée, dans les deux sens.
+                  answeredChoice: ref
+                      .watch(answeredLessonsProvider)
+                      .valueOrNull?[dailyLesson.id],
+                  onAnswered: (choice, correct) =>
+                      ref.read(academyActionsProvider).answer(
                             lessonId: dailyLesson.id,
+                            choiceIndex: choice,
                             correct: correct,
                           ),
                 ),

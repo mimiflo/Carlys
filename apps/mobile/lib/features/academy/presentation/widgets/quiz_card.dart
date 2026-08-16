@@ -6,10 +6,16 @@ import '../../domain/entities/academy.dart';
 /// Une question à choix : on répond d'un geste, la carte révèle la bonne
 /// réponse et son explication. L'explication s'affiche TOUJOURS — juste ou
 /// faux, c'est elle qui enseigne.
+///
+/// La même question vit à DEUX endroits : la « question du jour » de
+/// l'accueil, et sa leçon dans l'Academy. [answeredChoice] est ce qui les
+/// relie : y répondre d'un côté remplit la carte de l'autre, au lieu de
+/// reposer la question comme si de rien n'était.
 class QuizCard extends StatefulWidget {
   const QuizCard({
     required this.question,
     this.title,
+    this.answeredChoice,
     this.onAnswered,
     super.key,
   });
@@ -19,9 +25,17 @@ class QuizCard extends StatefulWidget {
   /// Sur-titre optionnel (« Question du jour », catégorie…).
   final String? title;
 
-  /// Appelé UNE fois, à la première réponse (juste ou fausse) — c'est par lui
-  /// que la réponse rejoint les défis culturels de la communauté.
-  final ValueChanged<bool>? onAnswered;
+  /// Choix DÉJÀ retenu pour cette question, s'il y en a un.
+  ///
+  /// C'est le choix réellement fait, pas seulement « répondu » : afficher la
+  /// bonne réponse sans montrer celle qui a été donnée laisserait croire à
+  /// une réussite même après une erreur.
+  final int? answeredChoice;
+
+  /// Appelé UNE fois, à la première réponse : l'index choisi et s'il est
+  /// juste. C'est par lui que la réponse est notée sur l'appareil puis
+  /// rejoint les défis culturels de la communauté.
+  final void Function(int choiceIndex, bool correct)? onAnswered;
 
   @override
   State<QuizCard> createState() => _QuizCardState();
@@ -31,10 +45,24 @@ class _QuizCardState extends State<QuizCard> {
   int? _picked;
 
   @override
+  void initState() {
+    super.initState();
+    _picked = widget.answeredChoice;
+  }
+
+  @override
   void didUpdateWidget(QuizCard oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (!identical(oldWidget.question, widget.question)) {
-      _picked = null;
+      // Question changée : on repart de ce qu'on sait d'ELLE.
+      _picked = widget.answeredChoice;
+      return;
+    }
+    // Réponse arrivée d'ailleurs (l'autre écran, ou la lecture du stockage
+    // local qui vient de finir). Le choix LOCAL reste prioritaire : il est
+    // déjà affiché, et le remplacer ferait clignoter la carte.
+    if (_picked == null && widget.answeredChoice != null) {
+      _picked = widget.answeredChoice;
     }
   }
 
@@ -71,7 +99,8 @@ class _QuizCardState extends State<QuizCard> {
                   ? null
                   : () {
                       setState(() => _picked = index);
-                      widget.onAnswered?.call(index == question.answerIndex);
+                      widget.onAnswered
+                          ?.call(index, index == question.answerIndex);
                     },
             ),
           if (answered) ...[

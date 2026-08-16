@@ -23,12 +23,14 @@ final dailyLessonProvider = Provider<Lesson?>((ref) {
   return lessons[dayOfYear % lessons.length];
 });
 
-/// Les leçons déjà abordées, lues sur l'appareil.
+/// Les questions déjà abordées, et le choix retenu pour chacune.
 ///
-/// Non auto-disposé : le profil de progression et l'Academy le lisent tous
-/// les deux, et le relire à chaque navigation ferait clignoter l'axe
-/// « Maîtrise » à chaque aller-retour.
-final answeredLessonsProvider = FutureProvider<Set<String>>((ref) {
+/// Non auto-disposé, et c'est ce qui fait tenir la fonctionnalité : l'accueil
+/// et l'Academy montrent la MÊME question du jour, et ils lisent tous deux
+/// cette carte-là. Répondre d'un côté la remplit de l'autre. Le profil de
+/// progression s'en sert aussi, et le relire à chaque navigation ferait
+/// clignoter l'axe « Maîtrise » à chaque aller-retour.
+final answeredLessonsProvider = FutureProvider<Map<String, int>>((ref) {
   return ref.read(answeredLessonsStoreProvider).read();
 });
 
@@ -41,19 +43,23 @@ class AcademyActions {
   /// Enregistre une réponse à une question.
   ///
   /// Deux destinations, dans cet ordre volontaire. La marque LOCALE d'abord :
-  /// elle est la source de l'axe « Maîtrise » et doit tenir hors ligne. Le
-  /// rapport au serveur ensuite, pour les défis culturels, en meilleur effort
-  /// — il avale déjà ses propres erreurs, une panne de réseau ne doit pas
-  /// faire perdre la trace d'une leçon apprise.
+  /// c'est elle qui remplit la carte à l'autre endroit où la question
+  /// apparaît, et qui nourrit l'axe « Maîtrise » ; elle doit tenir hors
+  /// ligne. Le rapport au serveur ensuite, pour les défis culturels, en
+  /// meilleur effort : il avale déjà ses propres erreurs, et une panne de
+  /// réseau ne doit pas faire perdre la trace d'une question abordée.
   ///
   /// La bonne comme la mauvaise réponse comptent : se tromper fait
   /// apprendre, et n'ouvrir l'axe qu'aux bonnes réponses transformerait
   /// l'Academy en examen.
   Future<void> answer({
     required String lessonId,
+    required int choiceIndex,
     required bool correct,
   }) async {
-    await _ref.read(answeredLessonsStoreProvider).markAnswered(lessonId);
+    await _ref
+        .read(answeredLessonsStoreProvider)
+        .markAnswered(lessonId, choiceIndex);
     _ref.invalidate(answeredLessonsProvider);
     await _ref
         .read(communityActionsProvider)

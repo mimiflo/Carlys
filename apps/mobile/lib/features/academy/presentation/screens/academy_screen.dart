@@ -23,6 +23,9 @@ class AcademyScreen extends ConsumerWidget {
     final pack = ref.watch(academyPackProvider);
     final daily = ref.watch(dailyLessonProvider);
     final actions = ref.read(academyActionsProvider);
+    // Les réponses déjà données, d'où qu'elles viennent : la question du
+    // jour répondue sur l'accueil arrive ici déjà remplie.
+    final answered = ref.watch(answeredLessonsProvider).valueOrNull ?? const {};
     final bottomInset =
         AppBottomBar.height + MediaQuery.paddingOf(context).bottom;
 
@@ -61,8 +64,10 @@ class AcademyScreen extends ConsumerWidget {
                 // La réponse est notée sur l'appareil (axe « Maîtrise » du
                 // profil de progression) puis rejoint les défis culturels,
                 // sans jamais gêner le quiz, qui fonctionne hors ligne.
-                onAnswered: (correct) => actions.answer(
+                answeredChoice: answered[daily.id],
+                onAnswered: (choice, correct) => actions.answer(
                   lessonId: daily.id,
+                  choiceIndex: choice,
                   correct: correct,
                 ),
               ),
@@ -80,8 +85,10 @@ class AcademyScreen extends ConsumerWidget {
                 LessonCard(
                   lesson: lesson,
                   showCategory: false,
-                  onAnswered: (correct) => actions.answer(
+                  answeredChoice: answered[lesson.id],
+                  onAnswered: (choice, correct) => actions.answer(
                     lessonId: lesson.id,
+                    choiceIndex: choice,
                     correct: correct,
                   ),
                 ),
