@@ -72,6 +72,26 @@ class PlateOrnaments extends CustomPainter {
   /// Longueur d'une équerre.
   static const double _cornerLength = 12;
 
+  /// Jeu voulu entre le sommet d'une équerre et l'ARRONDI de la plaque.
+  ///
+  /// C'est bien l'arrondi qu'il faut viser, et non le bord : dans un coin, la
+  /// bordure s'éloigne du bord de `r − r/√2`, soit huit points pour un rayon
+  /// de 28. Une équerre posée à dix points du bord tombait donc DERRIÈRE la
+  /// courbe et se lisait comme collée à elle.
+  static const double _cornerClearance = 9;
+
+  /// Retrait d'une équerre depuis le bord, déduit du jeu ci-dessus.
+  ///
+  /// Le sommet est sur la diagonale du coin, à `(r − i)·√2` du centre de
+  /// l'arrondi : lui laisser [_cornerClearance] revient à poser
+  /// `i = r − (r − jeu)/√2`. Écrit ainsi, le jeu reste tenu si le rayon de la
+  /// plaque change — une valeur en dur, elle, redeviendrait fausse en silence.
+  static const double _cornerInset =
+      MajestyPlate.radius - (MajestyPlate.radius - _cornerClearance) / _sqrt2;
+
+  /// `math.sqrt2` n'est pas une constante de compilation.
+  static const double _sqrt2 = 1.4142135623730951;
+
   /// Inclinaison du guillochage, en degrés. Franchement oblique : à 45° on
   /// lirait un motif de sécurité, ici on veut un grain de métal brossé.
   static const double _guillocheAngle = 126;
@@ -136,10 +156,10 @@ class PlateOrnaments extends CustomPainter {
           ? AppColors.primaryLight
           : AppColors.majestyBorder;
 
-    const inset = 10.0;
     // Deux équerres en diagonale, quatre au dernier cran : le cadre se ferme
     // progressivement, il ne s'allume pas d'un coup.
-    _corner(canvas, paint, Offset(inset, inset), 1, 1);
+    const inset = _cornerInset;
+    _corner(canvas, paint, const Offset(inset, inset), 1, 1);
     _corner(
       canvas,
       paint,
