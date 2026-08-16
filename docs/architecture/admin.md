@@ -91,8 +91,11 @@ surfaces d'attaque différents. Cible de l'Étape 7 :
 - protection des routes du tableau de bord côté serveur (middleware/layouts),
   jamais par simple masquage côté client.
 
-Jusque-là, `/login` reste un emplacement documenté et aucune page ne prétend
-être protégée.
+Depuis l'Étape 7, `/login` authentifie réellement (`adminApi.login`, puis
+redirection vers `/users`) et le tableau de bord porte sept pages : accueil,
+connexion, utilisateurs, fiche utilisateur, audit, exercices, catégories. La
+protection reste à durcir côté serveur : elle passe aujourd'hui par le jeton
+d'administration porté par les appels, pas par un middleware de route.
 
 ## Fonctionnalités cibles par domaine
 

@@ -394,9 +394,7 @@ entre une capture et la référence n'est donc pas, en soi, un défaut de l'appl
 | Accueil | **Résumé du jour** en grille 2×2 : entraînement, nutrition, protéines, volume | Écart VOULU : la référence y met aussi sommeil et hydratation, que le domaine ignore — on garde la forme, jamais des chiffres inventés |
 | Accueil | Maxime du jour en **Oswald SemiBold** (troisième famille, usage unique) | Écart VOULU : Inter est neutre par vocation ; la grotesque condensée des affiches de salle porte une phrase courte avec l'autorité attendue, et loge plus de signes par ligne — donc s'affiche plus grande à surface égale |
 | Accueil | Pas de « prochaine séance » planifiée à une heure donnée | Aucune planification côté serveur : la carte annonce la séance du jour, pas un rendez-vous |
-| Accueil | Carte « séance du jour » sans pastilles descriptives ni durée prévue | Pas de module programmes |
-| Nutrition | Macros affichées en objectif, sans « consommé / objectif » | Pas de suivi des apports |
-| Nutrition | Section « Repas » absente | Pas de journal alimentaire |
+| Accueil | Carte « séance du jour » sans pastilles descriptives ni durée prévue | ÉCART FERMÉ côté serveur (module programmes livré) ; la carte reste à enrichir |
 | Progression | Tuile « Assiduité » remplacée si la période ne permet pas le calcul | Historique insuffisant |
 | Historique | Colonne « KCAL » des cartes de séance absente | Pas de dépense estimée par séance |
 | Fiche exercice | Tuiles séries/répétitions/repos remplacées par les records réels | Pas de prescription par exercice |
@@ -407,10 +405,10 @@ entre une capture et la référence n'est donc pas, en soi, un défaut de l'appl
 
 ## Ce qu'il faudrait côté serveur pour fermer les écarts
 
-- **Programmes** : séance planifiée (nom, durée estimée, exercices, groupes
-  musculaires ciblés) — débloque la carte « séance du jour » complète.
-- **Journal alimentaire** : repas et aliments consommés — débloque la section
-  « Repas » et les macros « consommé / objectif ».
+- ~~**Programmes**~~ — **livré** : `/api/v1/programs` et les écrans mobiles ;
+  reste à enrichir la carte « séance du jour » de l'accueil.
+- ~~**Journal alimentaire**~~ — **livré** : `/api/v1/nutrition/meals`, section
+  « Repas » de l'écran Nutrition et kcal consommées réelles sur l'accueil.
 - **Catalogue d'offres** : identifiants produits store, libellés, prix et devise
   localisés, mention d'économie — débloque les cartes d'offre et l'essai gratuit.
 - **Données de santé** : import HealthKit / Health Connect (fréquence au repos,

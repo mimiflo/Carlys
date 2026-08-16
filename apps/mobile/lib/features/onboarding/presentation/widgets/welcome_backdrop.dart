@@ -37,9 +37,9 @@ class WelcomeBackdrop extends StatelessWidget {
                 child: const _Halo(
                   sigma: 14,
                   colors: [
-                    Color(0x33C42EE0),
-                    Color(0x1F7B1FFF),
-                    Color(0x0008050E),
+                    AppColors.backdropHaloMagenta,
+                    AppColors.backdropHaloIndigo,
+                    AppColors.backdropClear,
                   ],
                   stops: [0, 0.46, 0.78],
                 ),
@@ -65,8 +65,8 @@ class WelcomeBackdrop extends StatelessWidget {
                       end: Alignment.centerRight,
                       colors: [
                         AppColors.darkBackground,
-                        Color(0xC708050E),
-                        Color(0x0008050E),
+                        AppColors.backdropVeil,
+                        AppColors.backdropClear,
                       ],
                       stops: [0, 0.34, 0.66],
                     ),
@@ -87,8 +87,8 @@ class WelcomeBackdrop extends StatelessWidget {
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
                       colors: [
-                        Color(0x0008050E),
-                        Color(0xCC08050E),
+                        AppColors.backdropClear,
+                        AppColors.backdropVeilStrong,
                         AppColors.darkBackground,
                       ],
                       stops: [0.56, 0.76, 0.88],
@@ -106,9 +106,9 @@ class WelcomeBackdrop extends StatelessWidget {
                 child: const _Halo(
                   sigma: 18,
                   colors: [
-                    Color(0x339B30FF),
-                    Color(0x129B30FF),
-                    Color(0x0008050E),
+                    AppColors.backdropGlow,
+                    AppColors.backdropGlowSoft,
+                    AppColors.backdropClear,
                   ],
                   stops: [0, 0.52, 0.80],
                 ),
@@ -128,10 +128,10 @@ class WelcomeBackdrop extends StatelessWidget {
                       radius: 0.5,
                       transform: EllipticGradient(0.78, 0.46),
                       colors: [
-                        Color(0xEB000000),
-                        Color(0xC7030308),
-                        Color(0x6B08050E),
-                        Color(0x0008050E),
+                        AppColors.backdropPlate,
+                        AppColors.backdropPlateEdge,
+                        AppColors.backdropVeilSoft,
+                        AppColors.backdropClear,
                       ],
                       stops: [0, 0.42, 0.72, 1],
                     ),
@@ -379,9 +379,9 @@ class _AthletePhoto extends StatelessWidget {
   /// référence sont des `blur-radius` CSS : l'écart-type gaussien en vaut la
   /// moitié.
   static const List<(Color, double)> _glows = [
-    (Color(0x47FF7A45), 18 / 2),
-    (Color(0x3DC42EE0), 46 / 2),
-    (Color(0x337B1FFF), 96 / 2),
+    (AppColors.backdropBokehAccent, 18 / 2),
+    (AppColors.backdropBokehMagenta, 46 / 2),
+    (AppColors.backdropBokehIndigo, 96 / 2),
   ];
 
   @override
@@ -405,7 +405,7 @@ class _AthletePhoto extends StatelessWidget {
         shaderCallback: (rect) => const LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [Color(0xFFFFFFFF), Color(0x00FFFFFF)],
+          colors: [AppColors.neutral0, AppColors.neutral0Clear],
           stops: AthletePhotoFraming.bottomFade,
         ).createShader(rect),
         child: ShaderMask(
@@ -413,7 +413,7 @@ class _AthletePhoto extends StatelessWidget {
           shaderCallback: (rect) => LinearGradient(
             begin: Alignment.centerLeft,
             end: Alignment.centerRight,
-            colors: const [Color(0x00FFFFFF), Color(0xFFFFFFFF)],
+            colors: const [AppColors.neutral0Clear, AppColors.neutral0],
             stops: stops,
           ).createShader(rect),
           child: BrandGlowImage(

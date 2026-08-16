@@ -48,6 +48,11 @@ class _AppBrandButtonState extends State<AppBrandButton> {
     return Semantics(
       button: true,
       label: widget.label,
+      // L'action vit ICI. Sans elle, le nœud s'annonce comme un bouton mais
+      // ne publie rien, et l'activer depuis un lecteur d'écran ne fait rien :
+      // le geste ci-dessous ne répond qu'au toucher direct, la couche
+      // d'accessibilité ne l'atteint pas.
+      onTap: widget.onPressed,
       child: ExcludeSemantics(
         child: GestureDetector(
           onTapDown: (_) => _setPressed(true),

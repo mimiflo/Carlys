@@ -43,8 +43,34 @@ dédiée, sinon la vignette du muscle enseigné (déjà embarquée), sinon le
 dégradé de marque et l'icône du domaine. La direction artistique et les
 prompts de génération vivent dans `apps/mobile/assets/academy/README.md`.
 
+## Une question, deux endroits
+
+La question du jour paraît sur l'**accueil** et dans sa catégorie de
+l'Academy. C'est la même : y répondre une fois se voit des deux côtés,
+sinon elle semblerait revenir, et on la reposerait à quelqu'un qui vient
+d'y répondre.
+
+Ce qui le permet est `AnsweredLessonsStore` (préférences locales, clé
+`academy.lecons_repondues`) : identifiant de leçon vers l'index du choix
+retenu, lu par `answeredLessonsProvider`, que les deux écrans observent.
+Le **choix** est conservé, pas seulement le fait d'avoir répondu — afficher
+la bonne réponse sans montrer celle qui a été donnée laisserait croire à
+une réussite après une erreur.
+
+La **première réponse gagne** : rouvrir une leçon ne réécrit rien, sans quoi
+le score dérivé du profil de progression compterait deux fois la même
+question. Des préférences illisibles rendent une ardoise vierge plutôt
+qu'une erreur : le pire d'une lecture ratée est de reposer une question.
+
+L'envoi aux défis culturels part **ensuite**, en meilleur effort : la marque
+locale doit tenir hors ligne, une panne de réseau ne fait pas perdre la
+trace d'une question abordée.
+
 ## Couverture
 
+- `test/features/academy/answered_lessons_test.dart` : idempotence de la
+  marque locale, résistance aux préférences abîmées, carte de quiz rouverte
+  déjà remplie avec le choix RÉELLEMENT fait.
 - `test/features/academy/academy_pack_test.dart` : validité de chaque
   leçon, unicité des identifiants, points/illustrations déclarés, anatomie
   couvrant exactement les 12 groupes du catalogue, reprise après échec de

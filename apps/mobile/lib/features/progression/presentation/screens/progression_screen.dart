@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_routes.dart';
 import '../../../../design_system/design_system.dart';
+import '../../../workout_session/presentation/controllers/workout_controllers.dart';
 import '../controllers/progression_controllers.dart';
 import '../widgets/progression_axis_card.dart';
 import '../widgets/progression_title_card.dart';
@@ -51,7 +52,16 @@ class ProgressionScreen extends ConsumerWidget {
                   .copyWith(color: AppColors.darkTextSecondary),
             ),
             const SizedBox(height: AppSpacing.gapSection),
-            if (profile == null)
+            if (ref.watch(progressionUnreadableProvider))
+              AppErrorState(
+                icon: AppIcons.retry,
+                title: 'Ton historique n’a pas pu être lu',
+                message: 'Ta progression se recalcule depuis tes séances : '
+                    'elle réapparaîtra entière dès que la lecture repart. '
+                    'Rien n’est perdu.',
+                onRetry: () => ref.invalidate(workoutHistoryProvider),
+              )
+            else if (profile == null)
               const AppLoadingIndicator(label: 'Lecture de ton historique')
             else ...[
               ProgressionTitleCard(profile: profile),

@@ -76,6 +76,37 @@ void main() {
       expect(background, AppColors.danger);
     });
   });
+
+  group('AppBrandButton', () {
+    testWidgets('s’active depuis un lecteur d’écran, pas seulement au doigt',
+        (tester) async {
+      // Le bouton est peint et touché par un GestureDetector, invisible à la
+      // couche d'accessibilité : c'est le nœud Semantics au-dessus qui doit
+      // porter l'action. S'annoncer « bouton » sans publier de tap est pire
+      // que de ne rien annoncer — on promet une commande qui ne répond pas.
+      final handle = tester.ensureSemantics();
+      var pressed = 0;
+
+      await tester.pumpWidget(
+        _wrap(AppBrandButton(label: 'Commencer', onPressed: () => pressed++)),
+      );
+
+      expect(
+        tester.getSemantics(find.bySemanticsLabel('Commencer')),
+        isSemantics(
+          label: 'Commencer',
+          isButton: true,
+          hasTapAction: true,
+        ),
+      );
+
+      tester.semantics.tap(find.semantics.byLabel('Commencer'));
+      await tester.pump();
+
+      expect(pressed, 1);
+      handle.dispose();
+    });
+  });
 }
 
 void _noop() {}

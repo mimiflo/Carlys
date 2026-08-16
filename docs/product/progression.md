@@ -94,9 +94,15 @@ n'est donc pas un confort, c'est la seule source lisible. Le jour où l'API
 exposera la lecture, ce dépôt deviendra un cache sans que le moteur de calcul
 bouge, puisqu'il ne connaît qu'un nombre.
 
-On ne garde que l'identifiant des leçons abordées : ni la réponse donnée, ni le
-nombre d'essais. Se tromper fait apprendre, et conserver les échecs pour les
-compter serait un carnet de mauvaises notes.
+Le dépôt local retient l'identifiant de la leçon **et le choix retenu**, mais
+jamais le nombre d'essais. Le choix ne sert QU'À L'AFFICHAGE : la même question
+paraît sur l'accueil et dans sa catégorie de l'Academy, et rouvrir la carte doit
+montrer la réponse qui a été donnée, pas la bonne — laisser croire à une
+réussite après une erreur serait réécrire l'histoire du côté flatteur.
+
+Le score, lui, ne connaît que le NOMBRE de leçons abordées. Ni la justesse, ni
+les essais n'entrent dans le calcul : se tromper fait apprendre, et compter les
+échecs transformerait l'Academy en carnet de mauvaises notes.
 
 ## Découpage
 

@@ -30,7 +30,7 @@ export class EmailService implements OnModuleDestroy {
     const url = `${this.config.publicAppUrl}/verify-email?token=${token}`;
     this.send(
       to,
-      'Confirmez votre adresse e-mail — Carlys',
+      'Carlys : confirmez votre adresse e-mail',
       [
         'Bienvenue sur Carlys !',
         '',
@@ -47,7 +47,7 @@ export class EmailService implements OnModuleDestroy {
     const url = `${this.config.publicAppUrl}/reset-password?token=${token}`;
     this.send(
       to,
-      'Réinitialisation de votre mot de passe — Carlys',
+      'Carlys : réinitialisation de votre mot de passe',
       [
         'Une réinitialisation de mot de passe a été demandée pour votre compte.',
         '',

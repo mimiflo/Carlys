@@ -162,9 +162,6 @@ class _Header extends StatelessWidget {
 
   final String title;
 
-  static const double _iconSize = 23;
-  static const double _tapSize = 44;
-
   @override
   Widget build(BuildContext context) {
     return Padding(
@@ -176,20 +173,10 @@ class _Header extends StatelessWidget {
       ),
       child: Row(
         children: [
-          IconButton(
-            tooltip: 'Retour',
-            padding: EdgeInsets.zero,
-            constraints: const BoxConstraints.tightFor(
-              width: _tapSize,
-              height: _tapSize,
-            ),
-            onPressed: () => Navigator.of(context).maybePop(),
-            icon: const Icon(
-              AppIcons.back,
-              size: _iconSize,
-              color: AppColors.darkTextSecondary,
-            ),
-          ),
+          // La flèche commune, et non sa copie : cet en-tête en redessinait
+          // une à l'identique, géométrie comprise, mais sans la garde qui
+          // l'efface quand il n'y a rien à dépiler.
+          const AppBackButton(),
           const SizedBox(width: AppSpacing.xxs),
           Expanded(
             child: Text(

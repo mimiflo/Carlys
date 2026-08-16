@@ -210,19 +210,34 @@ class _CoachNotice extends StatelessWidget {
 
 /// Première ouverture : le coach dit ce qu'il sait faire plutôt que d'ouvrir
 /// un champ vide sur lequel on ne sait pas quoi écrire.
+///
+/// Elle DÉFILE, et c'est ce qui la sauve : c'est le seul bloc de la colonne
+/// sans défilement propre (la conversation, elle, est une liste). Ouvrir le
+/// clavier sur cette invitation, geste exactement attendu d'un nouvel
+/// utilisateur, ne lui laisse qu'une centaine de pixels — et sur un écran
+/// court, ou avec le texte système agrandi, l'invitation était rognée.
+/// Centrée tant qu'il y a la place, elle glisse au lieu d'être coupée.
 class _CoachIntro extends StatelessWidget {
   const _CoachIntro();
 
   @override
   Widget build(BuildContext context) {
-    return const Center(
-      child: Padding(
-        padding: EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
-        child: AppEmptyState(
-          icon: AppIcons.coach,
-          title: 'Ton coach est là',
-          message: 'Pose-lui une question sur ta progression, ou demande-lui '
-              'd’adapter ta séance à ton temps du jour.',
+    return LayoutBuilder(
+      builder: (context, constraints) => SingleChildScrollView(
+        child: ConstrainedBox(
+          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+          child: const Center(
+            child: Padding(
+              padding: EdgeInsets.symmetric(horizontal: AppSpacing.gutter),
+              child: AppEmptyState(
+                icon: AppIcons.coach,
+                title: 'Ton coach est là',
+                message:
+                    'Pose-lui une question sur ta progression, ou demande-lui '
+                    'd’adapter ta séance à ton temps du jour.',
+              ),
+            ),
+          ),
         ),
       ),
     );

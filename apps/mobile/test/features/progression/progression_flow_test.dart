@@ -1,10 +1,15 @@
+import 'dart:async';
+
 import 'package:carlys_mobile/core/brand/carlys_manifesto.dart';
+import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/progression/domain/progression.dart';
 import 'package:carlys_mobile/features/progression/domain/progression_engine.dart';
 import 'package:carlys_mobile/features/progression/presentation/controllers/progression_controllers.dart';
 import 'package:carlys_mobile/features/progression/presentation/screens/manifesto_screen.dart';
 import 'package:carlys_mobile/features/progression/presentation/screens/progression_screen.dart';
 import 'package:carlys_mobile/features/progression/presentation/widgets/progression_axis_card.dart';
+import 'package:carlys_mobile/features/workout_session/domain/entities/workout.dart';
+import 'package:carlys_mobile/features/workout_session/presentation/controllers/workout_controllers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -24,9 +29,15 @@ void main() {
     addTearDown(view.reset);
   });
 
-  Widget host(Widget child, {ProgressionProfile? profile}) => ProviderScope(
+  Widget host(
+    Widget child, {
+    ProgressionProfile? profile,
+    bool unreadable = false,
+  }) =>
+      ProviderScope(
         overrides: [
           progressionProfileProvider.overrideWithValue(profile),
+          progressionUnreadableProvider.overrideWithValue(unreadable),
         ],
         child: MaterialApp(home: child),
       );
@@ -100,6 +111,64 @@ void main() {
 
       expect(find.text('Apprenti'), findsNothing);
       expect(find.byType(ProgressionScreen), findsOneWidget);
+    });
+
+    testWidgets('un historique illisible se DIT, au lieu de tourner sans fin',
+        (tester) async {
+      // Le profil se dérive de l'historique local : s'il ne se lit pas, le
+      // patienter éternellement ressemble à un calcul sans fin. On le dit,
+      // et on propose de reprendre.
+      await tester.pumpWidget(
+        host(const ProgressionScreen(), unreadable: true),
+      );
+      await tester.pumpAndSettle();
+
+      expect(find.text('Ton historique n’a pas pu être lu'), findsOneWidget);
+      expect(find.text('Réessayer'), findsOneWidget);
+      expect(find.byType(AppLoadingIndicator), findsNothing);
+      // Et surtout aucun titre inventé pour meubler.
+      expect(find.text('Apprenti'), findsNothing);
+    });
+  });
+
+  group('lecture de l’historique', () {
+    test('une base illisible se signale', () async {
+      final container = ProviderContainer(
+        overrides: [
+          workoutHistoryProvider.overrideWith(
+            (ref) => Stream<List<WorkoutHistoryEntry>>.error(
+              StateError('base illisible'),
+            ),
+          ),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final sub = container.listen(progressionUnreadableProvider, (_, __) {});
+      await pumpEventQueue();
+
+      expect(sub.read(), isTrue);
+    });
+
+    test('une émission perdue APRÈS coup ne cache pas le profil', () async {
+      // Un flux qui échoue une fois garde sa dernière valeur : afficher une
+      // erreur par-dessus des données réelles serait mentir dans l'autre sens.
+      final source = StreamController<List<WorkoutHistoryEntry>>();
+      addTearDown(source.close);
+      final container = ProviderContainer(
+        overrides: [
+          workoutHistoryProvider.overrideWith((ref) => source.stream),
+        ],
+      );
+      addTearDown(container.dispose);
+
+      final sub = container.listen(progressionUnreadableProvider, (_, __) {});
+      source.add(const []);
+      await pumpEventQueue();
+      source.addError(StateError('lecture perdue'));
+      await pumpEventQueue();
+
+      expect(sub.read(), isFalse);
     });
   });
 

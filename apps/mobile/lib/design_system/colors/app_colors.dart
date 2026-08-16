@@ -150,6 +150,32 @@ abstract final class AppColors {
   static const Color heatEmpty = Color(0x0DFFFFFF); // blanc .05
   static const Color heatOutOfMonth = Color(0x08FFFFFF); // blanc .03
 
+  // Voiles, halos et bokeh du décor de la page de bienvenue — posés SUR la
+  // photographie. Nommés ICI plutôt qu'écrits dans l'écran : ils dérivent
+  // tous d'un jeton, et doivent suivre la palette si elle change. Le
+  // précédent est documenté : les scènes 3D codaient leur vert en dur, et
+  // l'hélice serait restée verte après le changement de palette.
+  static const Color backdropClear = Color(0x0008050E); // fond .00
+  static const Color backdropVeil = Color(0xC708050E); // fond .78
+  static const Color backdropVeilStrong = Color(0xCC08050E); // fond .80
+  static const Color backdropVeilSoft = Color(0x6B08050E); // fond .42
+
+  /// Cœur de la plaque sombre qui rend le texte lisible : un noir franc, et
+  /// non le fond violacé, pour ne pas teinter la personne photographiée.
+  static const Color backdropPlate = Color(0xEB000000); // noir .92
+  static const Color backdropPlateEdge = Color(0xC7030308); // noir violacé .78
+  static const Color backdropHaloMagenta = Color(0x33C42EE0); // signature .20
+  static const Color backdropHaloIndigo = Color(0x1F7B1FFF); // primaryDark .12
+  static const Color backdropGlow = Color(0x339B30FF); // primary .20
+  static const Color backdropGlowSoft = Color(0x129B30FF); // primary .07
+  static const Color backdropBokehAccent = Color(0x47FF7A45); // accent .28
+  static const Color backdropBokehMagenta = Color(0x3DC42EE0); // signature .24
+  static const Color backdropBokehIndigo = Color(0x337B1FFF); // primaryDark .20
+
+  /// Blanc transparent : extrémité des masques de dégradé (le masque ne
+  /// colore rien, il ouvre et ferme l'opacité).
+  static const Color neutral0Clear = Color(0x00FFFFFF); // blanc .00
+
   /// Remplissage d'un jour du calendrier selon l'intensité 0..1 (violet).
   static Color heatFill(double intensity) => Color.lerp(
         const Color(0x809B30FF),

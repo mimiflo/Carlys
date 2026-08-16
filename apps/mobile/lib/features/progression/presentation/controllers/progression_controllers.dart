@@ -14,6 +14,21 @@ import '../../domain/progression_facts_builder.dart';
 ///
 /// Le jour de référence est pris ICI, une fois, et passé au calcul. Le moteur
 /// reste ainsi une fonction pure de ses entrées, testable au cas par cas.
+/// L'historique local n'a pas pu être lu DU TOUT.
+///
+/// Le flux vient de Drift : ce n'est pas une panne de réseau mais une base
+/// illisible, donc rare. Il faut néanmoins le dire, sinon l'écran tourne
+/// indéfiniment sur son indicateur de chargement et laisse croire à un calcul
+/// interminable.
+///
+/// La condition porte les DEUX termes : un flux qui échoue après avoir déjà
+/// émis conserve sa dernière valeur, et un profil réel vaut mieux qu'un écran
+/// d'erreur pour une émission perdue en route.
+final progressionUnreadableProvider = Provider<bool>((ref) {
+  final history = ref.watch(workoutHistoryProvider);
+  return history.hasError && !history.hasValue;
+});
+
 final progressionProfileProvider = Provider<ProgressionProfile?>((ref) {
   final history = ref.watch(workoutHistoryProvider).valueOrNull;
   if (history == null) {

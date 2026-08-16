@@ -100,6 +100,12 @@ class _SendButton extends StatelessWidget {
     return Semantics(
       button: true,
       label: 'Envoyer',
+      // `enabled` ET `onTap` : sans le second, le nœud s'annonce comme un
+      // bouton mais ne publie aucune action, et l'activer depuis un lecteur
+      // d'écran ne fait rien. `enabled` dit en plus que l'envoi est en cours,
+      // au lieu de laisser réessayer dans le vide.
+      enabled: enabled,
+      onTap: onPressed,
       child: ExcludeSemantics(
         child: GestureDetector(
           onTap: onPressed,

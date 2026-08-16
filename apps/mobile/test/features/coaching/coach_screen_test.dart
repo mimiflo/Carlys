@@ -170,6 +170,67 @@ void main() {
     );
   });
 
+  testWidgets('le bouton d’envoi répond aussi au lecteur d’écran',
+      (tester) async {
+    // Il est dessiné et touché par un GestureDetector, que la couche
+    // d'accessibilité ne voit pas : l'action doit vivre sur le nœud
+    // Semantics. Sans elle, le bouton s'annonce sans pouvoir être activé.
+    final handle = tester.ensureSemantics();
+    var sent = 0;
+    await pumpCoach(tester, onSend: (_) => sent++);
+
+    expect(
+      tester.getSemantics(find.bySemanticsLabel('Envoyer')),
+      isSemantics(
+        label: 'Envoyer',
+        isButton: true,
+        hasTapAction: true,
+        isEnabled: true,
+      ),
+    );
+
+    tester.semantics.tap(find.semantics.byLabel('Envoyer'));
+    await tester.pump();
+
+    expect(sent, 1);
+    handle.dispose();
+  });
+
+  testWidgets('pendant l’envoi, il se déclare désactivé', (tester) async {
+    // Réessayer dans le vide pendant qu'une question part est le pire des
+    // silences : l'état doit être ANNONCÉ, pas seulement grisé.
+    final handle = tester.ensureSemantics();
+    await pumpCoach(tester, isSending: true);
+
+    expect(
+      tester.getSemantics(find.bySemanticsLabel('Envoyer')),
+      isSemantics(
+        label: 'Envoyer',
+        hasEnabledState: true,
+        isEnabled: false,
+      ),
+    );
+    handle.dispose();
+  });
+
+  testWidgets('première ouverture + clavier : l’invitation ne déborde pas',
+      (tester) async {
+    // Le tout premier geste d'un nouvel utilisateur : ouvrir le coach, qui
+    // n'a encore aucun message, et toucher le champ pour poser sa question.
+    // L'invitation est alors le seul bloc sans défilement de la colonne : sur
+    // un écran court, ou avec le texte système agrandi, elle est rognée.
+    tester.view.physicalSize = const Size(1080, 1920);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+
+    await pumpCoach(tester, messages: const []);
+    tester.view.viewInsets = const FakeViewPadding(bottom: 900);
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
+    expect(find.text('Ton coach est là'), findsOneWidget);
+  });
+
   testWidgets('le champ de saisie est une pilule, pas un rectangle',
       (tester) async {
     await pumpCoach(tester);
