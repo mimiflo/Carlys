@@ -140,9 +140,12 @@ gagné est l'histoire, et l'histoire ne se reprend pas.
 | **Titre** | Un palier du profil | Architecte, Artisan, Maître, Icône |
 | **Citation** | Le mot du jour | Une par jour, adossée à une des cinq valeurs |
 
-Vingt règles composent le catalogue (`domain/reward_engine.dart`), quatre à
-cinq par valeur de marque. Chaque récompense porte son **histoire** : une
-récompense sans phrase n'est qu'une pastille.
+Le catalogue (`domain/reward_engine.dart`) compte **quinze paliers** — deux à
+quatre par valeur de marque — auxquels s'ajoutent les **quatre titres**, qui
+s'inscrivent au journal le jour où ils sont atteints.
+
+Chaque récompense porte son **histoire** : une récompense sans phrase n'est
+qu'une pastille.
 
 ### Deux garde-fous du catalogue
 
