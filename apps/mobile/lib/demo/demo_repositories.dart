@@ -14,6 +14,7 @@ import '../features/carlys_profile/domain/entities/carlys_profile.dart';
 import '../features/carlys_profile/domain/repositories/carlys_profile_repository.dart';
 import '../features/exercises/domain/entities/exercise.dart';
 import '../features/exercises/domain/repositories/exercises_repository.dart';
+import '../features/notifications/domain/repositories/device_token_repository.dart';
 import '../features/nutrition/domain/entities/nutrition.dart';
 import '../features/nutrition/domain/repositories/nutrition_repository.dart';
 import '../features/progress/domain/entities/progress.dart';
@@ -247,6 +248,34 @@ class DemoProgressRepository implements ProgressRepository {
   @override
   Future<void> deleteBodyMetric(String id) async {
     _metrics.removeWhere((metric) => metric.id == id);
+  }
+}
+
+/// Notifications de démonstration : les préférences vivent en mémoire.
+///
+/// Sans elle, l'écran Profil de la démonstration appellerait une API qui
+/// n'existe pas — un appel voué à l'échec, et un délai d'attente pour rien.
+class DemoDeviceTokenRepository implements DeviceTokenRepository {
+  final Map<NotificationCategory, bool> _preferences = {};
+
+  @override
+  Future<void> register({
+    required String token,
+    required DevicePlatform platform,
+  }) async {}
+
+  @override
+  Future<void> unregister(String token) async {}
+
+  @override
+  Future<Map<NotificationCategory, bool>> preferences() async => _preferences;
+
+  @override
+  Future<void> setPreference(
+    NotificationCategory category, {
+    required bool enabled,
+  }) async {
+    _preferences[category] = enabled;
   }
 }
 

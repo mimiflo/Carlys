@@ -201,6 +201,32 @@ void main() {
       expect(second, {'constance-2'});
     });
 
+    test('la PREMIÈRE lecture ouvre le journal sans rien célébrer', () async {
+      // Un compte qui s'entraîne depuis des mois mérite quinze récompenses
+      // d'un coup à la première ouverture. Les graver ensemble ne
+      // célébrerait rien : c'est une histoire qu'on inscrit, pas un cap
+      // qu'on franchit.
+      const ledger = RewardLedger();
+
+      expect(await ledger.hasStarted(), isFalse);
+      await ledger.start();
+      expect(await ledger.hasStarted(), isTrue);
+
+      // Et le journal ouvert reste lisible, simplement vide.
+      expect(await ledger.read(), isEmpty);
+    });
+
+    test('après l’ouverture, la récompense suivante est bien NOUVELLE',
+        () async {
+      const ledger = RewardLedger();
+      await ledger.start();
+
+      final fresh = await ledger.record(['constance-2'], DateTime(2026, 6, 1));
+
+      expect(fresh, {'constance-2'});
+      expect(await ledger.hasStarted(), isTrue);
+    });
+
     test('un journal abîmé ne fait pas échouer l’écran', () async {
       SharedPreferences.setMockInitialValues({
         RewardLedger.key: 'ceci n’est pas du JSON',

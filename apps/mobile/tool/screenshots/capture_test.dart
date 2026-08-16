@@ -22,6 +22,7 @@ import 'package:carlys_mobile/demo/demo_catalog.dart';
 import 'package:carlys_mobile/demo/demo_community.dart';
 import 'package:carlys_mobile/demo/demo_overrides.dart';
 import 'package:carlys_mobile/demo/demo_programs.dart';
+import 'package:carlys_mobile/demo/demo_repositories.dart';
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/academy/presentation/screens/academy_screen.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
@@ -42,6 +43,7 @@ import 'package:carlys_mobile/features/exercises/presentation/screens/exercise_d
 import 'package:carlys_mobile/features/exercises/presentation/widgets/exercise_card.dart';
 import 'package:carlys_mobile/features/exercises/presentation/widgets/muscle_group_card.dart';
 import 'package:carlys_mobile/features/exercises/presentation/widgets/muscle_group_grid.dart';
+import 'package:carlys_mobile/features/notifications/data/repositories/device_token_repository_impl.dart';
 import 'package:carlys_mobile/features/nutrition/data/repositories/nutrition_repository_impl.dart';
 import 'package:carlys_mobile/features/nutrition/domain/entities/nutrition.dart';
 import 'package:carlys_mobile/features/nutrition/presentation/screens/nutrition_screen.dart';
@@ -59,6 +61,7 @@ import 'package:carlys_mobile/features/progress/domain/entities/progress.dart';
 import 'package:carlys_mobile/features/progress/presentation/screens/progress_screen.dart';
 import 'package:carlys_mobile/features/progress/presentation/widgets/body_weight_section.dart';
 import 'package:carlys_mobile/features/progression/presentation/widgets/progression_entry_card.dart';
+import 'package:carlys_mobile/features/progression/presentation/widgets/reward_medal.dart';
 import 'package:carlys_mobile/features/subscription/data/repositories/subscription_repository_impl.dart';
 import 'package:carlys_mobile/features/subscription/presentation/screens/subscription_screen.dart';
 import 'package:carlys_mobile/features/training/presentation/screens/training_hub_screen.dart';
@@ -299,6 +302,40 @@ void main() {
     await tester.pump(const Duration(milliseconds: 80));
   }
 
+  /// Attente supplémentaire pour les scènes qui se DESSINENT : la gravure
+  /// d'une récompense dure près d'une seconde, et `settle` en photographierait
+  /// le milieu — un sceau à moitié tracé, qui n'existe qu'un instant.
+  Future<void> settleEngraving(WidgetTester tester) async {
+    await settle(tester);
+    await tester.pump(RewardMedal.engraveDuration);
+    await tester.pump();
+  }
+
+  /// Un historique d'entraînement RÉEL pour la galerie : dix semaines
+  /// consécutives à trois séances, le rythme d'une personne qui s'y tient.
+  ///
+  /// Sans lui, la galerie montrerait un compte vide — cinq axes « en
+  /// attente » et zéro point, ce qui ne dit rien du système.
+  List<WorkoutHistoryEntry> trainedHistory() {
+    final start = DateTime.now().subtract(const Duration(days: 70));
+    return [
+      for (var week = 0; week < 10; week++)
+        for (final day in [0, 2, 4])
+          WorkoutHistoryEntry(
+            session: WorkoutInfo(
+              id: 'seance-$week-$day',
+              startedAt: start.add(Duration(days: week * 7 + day)),
+              status: WorkoutStatus.completed,
+              syncState: LocalSyncState.synced,
+            ),
+            setsCount: 18,
+            // Volume croissant : l'axe « Performance » compare les quatre
+            // dernières semaines aux quatre précédentes.
+            totalVolumeKg: 5200 + week * 240,
+          ),
+    ];
+  }
+
   /// Laisse passer l'ÉCRAN DE DÉMARRAGE, qui tient l'affiche un temps
   /// minimum au lancement (voir `splashHold`).
   ///
@@ -413,6 +450,11 @@ void main() {
             DemoCommunityRepository(),
           ),
           programRepositoryProvider.overrideWithValue(DemoProgramRepository()),
+          // Même raison que la communauté ci-dessus : sans doublure, l'écran
+          // Profil demande ses préférences de notification au dépôt Dio réel,
+          // et le minuteur de timeout survit au test.
+          deviceTokenRepositoryProvider
+              .overrideWithValue(DemoDeviceTokenRepository()),
           // Les puces se calculent depuis les modèles de séance, qui vivent
           // dans Drift : la galerie n'ouvre pas de base locale, elle fige donc
           // le résultat que la règle donnerait pour ce jeu d'exemple.
@@ -559,8 +601,59 @@ void main() {
     await tester.scrollUntilVisible(find.byType(ProgressionEntryCard), 200);
     await settle(tester);
     await tester.tap(find.byType(ProgressionEntryCard));
-    await settle(tester);
+    await settleEngraving(tester);
     await capture(tester, '37-progression', shows: find.text('Ta progression'));
+  });
+
+  testWidgets('accueil — la progression en place', (tester) async {
+    // La carte de progression vit sous le pli de l'accueil : la galerie la
+    // photographie là où elle se lit, pas en haut d'un écran qu'elle
+    // n'occupe pas.
+    await pumpApp(
+      tester,
+      workouts: FakeWorkoutRepository()..history = trainedHistory(),
+    );
+    await tester.scrollUntilVisible(find.byType(ProgressionEntryCard), 200);
+    await settleEngraving(tester);
+    await capture(
+      tester,
+      '02b-accueil-progression',
+      shows: find.byType(ProgressionEntryCard),
+    );
+  });
+
+  testWidgets('progrès — récompenses et records', (tester) async {
+    await pumpApp(
+      tester,
+      workouts: FakeWorkoutRepository()..history = trainedHistory(),
+    );
+    await goTab(tester, 'Progrès');
+    await tester.scrollUntilVisible(find.byType(ProgressionEntryCard), 200);
+    await settleEngraving(tester);
+    await capture(
+      tester,
+      '06b-progres-recompenses',
+      shows: find.byType(ProgressScreen),
+    );
+  });
+
+  testWidgets('progression nourrie', (tester) async {
+    // Le même écran, pour quelqu'un qui s'entraîne depuis dix semaines :
+    // titre gagné, écrin plus riche, récompenses au journal.
+    await pumpApp(
+      tester,
+      workouts: FakeWorkoutRepository()..history = trainedHistory(),
+    );
+    await goTab(tester, 'Progrès');
+    await tester.scrollUntilVisible(find.byType(ProgressionEntryCard), 200);
+    await settle(tester);
+    await tester.tap(find.byType(ProgressionEntryCard));
+    await settleEngraving(tester);
+    await capture(
+      tester,
+      '37b-progression-nourrie',
+      shows: find.text('Ta progression'),
+    );
   });
 
   testWidgets('manifeste', (tester) async {

@@ -17,6 +17,7 @@ import '../features/coaching/data/repositories/coach_repository_impl.dart';
 import '../features/coaching/data/repositories/coach_session_launcher.dart';
 import '../features/community/data/repositories/community_repository_impl.dart';
 import '../features/exercises/data/repositories/exercises_repository_impl.dart';
+import '../features/notifications/data/repositories/device_token_repository_impl.dart';
 import '../features/nutrition/data/repositories/nutrition_repository_impl.dart';
 import '../features/progress/data/repositories/progress_repository_impl.dart';
 import '../features/subscription/data/repositories/subscription_repository_impl.dart';
@@ -56,6 +57,10 @@ List<Override> demoOverrides() {
     workoutRepositoryProvider.overrideWithValue(workouts),
     workoutTemplateRepositoryProvider
         .overrideWithValue(DemoWorkoutTemplateRepository(workouts)),
+    // Sans lui, l'écran Profil de la démonstration appellerait une API
+    // absente : un échec certain, et une attente pour rien.
+    deviceTokenRepositoryProvider
+        .overrideWithValue(DemoDeviceTokenRepository()),
     syncLifecycleProvider.overrideWithValue(DemoSyncLifecycle()),
     appRestoreProvider.overrideWithValue(DemoAppRestore()),
   ];

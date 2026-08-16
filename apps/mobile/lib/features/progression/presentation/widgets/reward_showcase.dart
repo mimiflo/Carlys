@@ -40,13 +40,16 @@ class RewardShowcase extends ConsumerWidget {
           const SizedBox(height: AppSpacing.gapRow),
         ],
         if (limit != null && earned.length > limit!)
-          Text(
-            '${earned.length - limit!} de plus dans ton profil.',
-            style:
-                AppTypography.label.copyWith(color: AppColors.darkTextTertiary),
+          Padding(
+            padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+            child: Text(
+              '${earned.length - limit!} de plus dans ton profil.',
+              style: AppTypography.label
+                  .copyWith(color: AppColors.darkTextTertiary),
+            ),
           ),
         if (next.isNotEmpty) ...[
-          const SizedBox(height: AppSpacing.xs),
+          const SizedBox(height: AppSpacing.sm),
           _Upcoming(rewards: next, isFirst: false),
         ],
       ],

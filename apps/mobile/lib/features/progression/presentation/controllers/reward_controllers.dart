@@ -53,12 +53,19 @@ final earnedRewardsProvider = FutureProvider<List<EarnedReward>>((ref) async {
   final journal = await ledger.read();
   final deserved = earnedRewards(facts);
 
+  // La toute première lecture RECONSTRUIT l'histoire déjà vécue : sur un
+  // compte qui s'entraîne depuis des mois, elle inscrit quinze médailles
+  // d'un coup. Les graver ensemble ne célébrerait rien — les célébrations
+  // commencent à la récompense suivante.
+  final started = await ledger.hasStarted();
+
   // Les nouvelles s'inscrivent maintenant, à la date du jour. La date
   // retenue est celle de l'INSCRIPTION, pas celle du fait : l'application ne
   // sait pas quand exactement un cap a été franchi, et inventer une date
   // serait pire qu'en assumer une approximative.
   final now = DateTime.now();
   final fresh = await ledger.record(deserved.map((r) => r.id), now);
+  await ledger.start();
 
   final earned = <EarnedReward>[];
   for (final reward in deserved) {
@@ -66,7 +73,7 @@ final earnedRewardsProvider = FutureProvider<List<EarnedReward>>((ref) async {
       EarnedReward(
         reward: reward,
         earnedAt: journal[reward.id] ?? now,
-        isNew: fresh.contains(reward.id),
+        isNew: started && fresh.contains(reward.id),
       ),
     );
   }

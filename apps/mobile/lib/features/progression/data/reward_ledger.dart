@@ -54,6 +54,26 @@ class RewardLedger {
     }
   }
 
+  /// Ce journal a-t-il DÉJÀ servi sur cet appareil ?
+  ///
+  /// La toute première lecture inscrit d'un coup tout ce qui est mérité : sur
+  /// un compte qui s'entraîne depuis des mois, ce sont quinze médailles à la
+  /// fois. Les graver ensemble n'est pas une célébration, c'est une
+  /// reconstruction — l'histoire s'inscrit en silence, et les célébrations
+  /// commencent après.
+  Future<bool> hasStarted() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.containsKey(key);
+  }
+
+  /// Ouvre le journal, même vide, pour que la prochaine récompense sache
+  /// qu'elle est bien la première À ÊTRE GAGNÉE, et non la première lue.
+  Future<void> start() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (prefs.containsKey(key)) return;
+    await prefs.setString(key, '{}');
+  }
+
   /// Inscrit les récompenses ABSENTES du journal, à la date fournie.
   ///
   /// Rend les identifiants réellement inscrits : ce sont eux, et eux seuls,
