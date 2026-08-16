@@ -29,6 +29,7 @@ class FakePushMessenger implements PushMessenger {
   int obtainCalls = 0;
   int deleteCalls = 0;
   final StreamController<String> refreshes = StreamController.broadcast();
+  final StreamController<PushNotice> notices = StreamController.broadcast();
 
   @override
   Future<String?> obtainToken(FirebasePushOptions options) async {
@@ -38,6 +39,9 @@ class FakePushMessenger implements PushMessenger {
 
   @override
   Stream<String> get onTokenRefresh => refreshes.stream;
+
+  @override
+  Stream<PushNotice> get onForegroundMessage => notices.stream;
 
   @override
   Future<void> deleteToken() async {
@@ -64,6 +68,20 @@ class FakeDeviceTokenRepository implements DeviceTokenRepository {
   @override
   Future<void> unregister(String token) async {
     unregistered.add(token);
+  }
+
+  /// Préférences en mémoire : absence de clé = accepté, comme le serveur.
+  final Map<NotificationCategory, bool> prefs = {};
+
+  @override
+  Future<Map<NotificationCategory, bool>> preferences() async => prefs;
+
+  @override
+  Future<void> setPreference(
+    NotificationCategory category, {
+    required bool enabled,
+  }) async {
+    prefs[category] = enabled;
   }
 }
 

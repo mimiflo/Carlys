@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { NotificationsService } from './application/notifications.service';
 import { PUSH_SENDER_PORT } from './domain/push-sender.port';
 import { DeviceTokensRepository } from './infrastructure/device-tokens.repository';
+import { NotificationPreferencesRepository } from './infrastructure/notification-preferences.repository';
 import { FcmPushSender } from './infrastructure/fcm.sender';
 import { NotificationsController } from './presentation/http/notifications.controller';
 
@@ -18,6 +19,7 @@ import { NotificationsController } from './presentation/http/notifications.contr
   providers: [
     NotificationsService,
     DeviceTokensRepository,
+    NotificationPreferencesRepository,
     { provide: PUSH_SENDER_PORT, useClass: FcmPushSender },
   ],
   // Exporté pour les domaines qui notifient (communauté).

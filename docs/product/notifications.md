@@ -13,6 +13,43 @@ communautaires :
 Un **refus** de demande d'ami ne notifie jamais personne : refuser reste
 silencieux, comme le veut la logique anti-énumération de la communauté.
 
+## Ce que la personne accepte de recevoir
+
+Deux familles se règlent séparément — **demandes d'ami** et
+**encouragements** : on ne refuse pas les deux pour les mêmes raisons, et une
+bascule unique couperait le lien social avec tout le reste.
+
+**Absence de réglage = accepté.** La table `NotificationPreference` ne retient
+que les REFUS : personne n'a besoin d'ouvrir les réglages pour que
+l'application se comporte normalement, et une famille ajoutée plus tard
+n'arrive pas coupée pour tout le monde.
+
+**Le refus est respecté à l'ENVOI, côté serveur** (`sendToUser` consulte la
+préférence avant d'appeler FCM). Une préférence que seul le téléphone
+connaîtrait laisserait la notification arriver quand même : elle ne servirait
+à rien.
+
+| Route | Effet |
+| ----- | ----- |
+| `GET /api/v1/notifications/preferences` | Toutes les familles, celles jamais réglées valant `true` |
+| `PATCH /api/v1/notifications/preferences` | Accepte ou refuse une famille (idempotent) |
+
+Côté mobile, la section « Notifications » du profil porte les bascules. Elle
+disparaît si le serveur ne répond pas : une bascule qui ne refléterait rien
+vaut moins que pas de bascule.
+
+## Application ouverte
+
+Le système n'affiche RIEN de lui-même quand l'application est au premier
+plan. Sans traitement, un encouragement envoyé au moment précis où l'on
+utilise Carlys n'existerait pas.
+
+`PushForegroundHost` enveloppe la coquille des cinq onglets, écoute
+`FirebaseMessaging.onMessage` et pose un bandeau. Une seule à la fois : deux
+notifications coup sur coup empileraient deux bandeaux devant le contenu.
+C'est le seul endroit où l'application MONTRE une notification, et elle n'en
+fabrique jamais le contenu.
+
 ## Principes
 
 - **Jamais bloquant** : une notification est un à-côté. L'envoi (nom lu,
@@ -29,8 +66,10 @@ silencieux, comme le veut la logique anti-énumération de la communauté.
 
 ## Côté serveur (`apps/api`)
 
-- Modèle Prisma `DeviceToken` (jeton unique, plateforme, cascade à la
-  suppression du compte) — migration `20260811210000_device_tokens`.
+- Modèles Prisma `DeviceToken` (jeton unique, plateforme, cascade à la
+  suppression du compte) — migration `20260811210000_device_tokens` — et
+  `NotificationPreference` (clé composite utilisateur + famille) — migration
+  `20260816120000_notification_preferences`.
 - Module `notifications` :
   - `POST /api/v1/notifications/device-tokens` — enregistrement idempotent ;
   - `DELETE /api/v1/notifications/device-tokens` — oubli à la déconnexion,

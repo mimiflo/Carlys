@@ -4,6 +4,7 @@ import {
   type CommunityProfile,
   type Encouragement as EncouragementContract,
   type FriendRequest,
+  type NotificationCategory,
 } from '@carlys/api-contracts';
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { FriendRequestStatus } from '@prisma/client';
@@ -52,6 +53,7 @@ export class CommunityService {
   private async notify(
     recipientId: string,
     fromUserId: string,
+    category: NotificationCategory,
     compose: (fromName: string) => PushMessage,
   ): Promise<void> {
     if (!this.notifications.pushEnabled) {
@@ -59,21 +61,21 @@ export class CommunityService {
     }
     try {
       const fromName = await this.community.displayNameOf(fromUserId);
-      await this.notifications.sendToUser(recipientId, compose(fromName));
+      await this.notifications.sendToUser(recipientId, compose(fromName), category);
     } catch (error) {
       this.logger.error({ err: error, recipientId }, 'Notification communauté non envoyée');
     }
   }
 
   private notifyNewRequest(requesterId: string, addresseeId: string): Promise<void> {
-    return this.notify(addresseeId, requesterId, (fromName) => ({
+    return this.notify(addresseeId, requesterId, 'FRIEND_REQUESTS', (fromName) => ({
       title: 'Nouvelle demande d’ami',
       body: `${fromName} souhaite devenir ton ami.`,
     }));
   }
 
   private notifyRequestAccepted(accepterId: string, requesterId: string): Promise<void> {
-    return this.notify(requesterId, accepterId, (fromName) => ({
+    return this.notify(requesterId, accepterId, 'FRIEND_REQUESTS', (fromName) => ({
       title: 'Demande acceptée',
       body: `${fromName} a accepté ta demande d’ami.`,
     }));
@@ -211,7 +213,7 @@ export class CommunityService {
       throw new ForbiddenException('Vous ne pouvez encourager que vos amis.');
     }
     await this.community.createEncouragement(userId, recipientUserId, message);
-    await this.notify(recipientUserId, userId, (fromName) => ({
+    await this.notify(recipientUserId, userId, 'ENCOURAGEMENTS', (fromName) => ({
       title: `Encouragement de ${fromName}`,
       body: message,
     }));

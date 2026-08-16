@@ -100,6 +100,8 @@ class ProfileScreen extends ConsumerWidget {
               onAppearance: () => context.push(AppRoutes.settings),
               onDevices: () => context.push(AppRoutes.sessions),
             ),
+            const SizedBox(height: AppSpacing.md),
+            const NotificationSettingsSection(),
             const SizedBox(height: AppSpacing.gapSection),
             Center(
               child: TextButton(

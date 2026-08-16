@@ -59,6 +59,7 @@ model User {
   encouragementsReceived   Encouragement[]          @relation("EncouragementsReceived")
   challengeParticipations  ChallengeParticipation[]
   deviceTokens             DeviceToken[]
+  notificationPreferences  NotificationPreference[]
 }
 
 /// Sexe biologique — nécessaire aux formules métaboliques (Mifflin-St Jeor).
@@ -1075,6 +1076,14 @@ model ChallengeParticipation {
   @@index([userId])
 }
 
+/// Familles de notifications réglables séparément. Une seule bascule pour
+/// tout couperait le lien social avec le rappel d'entraînement, qui n'ont
+/// rien à voir.
+enum NotificationCategory {
+  FRIEND_REQUESTS
+  ENCOURAGEMENTS
+}
+
 enum DevicePlatform {
   ANDROID
   IOS
@@ -1096,6 +1105,27 @@ model DeviceToken {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+}
+
+/// Ce qu'une personne accepte de recevoir, par CATÉGORIE.
+///
+/// Absence de ligne = accepté. Le réglage n'existe donc que pour ce qui a été
+/// explicitement refusé : personne n'a besoin d'ouvrir les réglages pour que
+/// l'application se comporte normalement, et une catégorie ajoutée plus tard
+/// n'arrive pas coupée pour tout le monde.
+///
+/// La coupure est respectée CÔTÉ SERVEUR, à l'envoi : une préférence que
+/// seul le téléphone connaîtrait laisserait la notification arriver quand
+/// même, et ne servirait à rien.
+model NotificationPreference {
+  userId    String               @db.Uuid
+  category  NotificationCategory
+  enabled   Boolean              @default(true)
+  updatedAt DateTime             @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([userId, category])
 }
 
 /// Programme multi-semaines : un plan d'entraînement dans le temps.

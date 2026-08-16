@@ -343,10 +343,16 @@ describe('CommunityService — notifications push', () => {
     await service.requestFriend(ME, 'ami@carlys.test');
 
     expect(stubs.displayNameOf).toHaveBeenCalledWith(ME);
-    expect(notifications.sendToUser).toHaveBeenCalledWith(FRIEND, {
-      title: 'Nouvelle demande d’ami',
-      body: 'Alice souhaite devenir ton ami.',
-    });
+    // La CATÉGORIE voyage jusqu'à l'envoi : c'est elle qui permet de
+    // couper les demandes d'ami sans couper les encouragements.
+    expect(notifications.sendToUser).toHaveBeenCalledWith(
+      FRIEND,
+      {
+        title: 'Nouvelle demande d’ami',
+        body: 'Alice souhaite devenir ton ami.',
+      },
+      'FRIEND_REQUESTS',
+    );
   });
 
   it('accepter une demande notifie le demandeur ; refuser reste silencieux', async () => {
@@ -364,10 +370,14 @@ describe('CommunityService — notifications push', () => {
     expect(notifications.sendToUser).not.toHaveBeenCalled();
 
     await service.respondToRequest(ME, 'demande-1', true);
-    expect(notifications.sendToUser).toHaveBeenCalledWith(FRIEND, {
-      title: 'Demande acceptée',
-      body: 'Alice a accepté ta demande d’ami.',
-    });
+    expect(notifications.sendToUser).toHaveBeenCalledWith(
+      FRIEND,
+      {
+        title: 'Demande acceptée',
+        body: 'Alice a accepté ta demande d’ami.',
+      },
+      'FRIEND_REQUESTS',
+    );
   });
 
   it('un encouragement pousse le message chez l’ami', async () => {
@@ -383,10 +393,14 @@ describe('CommunityService — notifications push', () => {
 
     await service.encourage(ME, FRIEND, 'Bravo pour ta série !');
 
-    expect(notifications.sendToUser).toHaveBeenCalledWith(FRIEND, {
-      title: 'Encouragement de Alice',
-      body: 'Bravo pour ta série !',
-    });
+    expect(notifications.sendToUser).toHaveBeenCalledWith(
+      FRIEND,
+      {
+        title: 'Encouragement de Alice',
+        body: 'Bravo pour ta série !',
+      },
+      'ENCOURAGEMENTS',
+    );
   });
 
   it('push désactivé : aucun nom n’est lu, aucun envoi tenté', async () => {

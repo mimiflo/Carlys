@@ -6,6 +6,18 @@ import '../../../../app/environment/app_environment.dart';
 /// au serveur, rafraîchissement, oubli à la déconnexion) se teste contre un
 /// faux qui implémente ce port : aucun test ne touche un plugin de
 /// plateforme, et changer de fournisseur ne toucherait qu'un fichier.
+/// Une notification reçue APPLICATION OUVERTE.
+///
+/// Le système ne l'affiche pas lui-même dans ce cas : sans traitement, elle
+/// n'existe simplement pas pour qui utilisait l'application au moment où
+/// elle est arrivée.
+class PushNotice {
+  const PushNotice({required this.title, required this.body});
+
+  final String title;
+  final String body;
+}
+
 abstract class PushMessenger {
   /// Initialise le SDK avec [options] puis demande la permission de notifier.
   ///
@@ -17,6 +29,9 @@ abstract class PushMessenger {
   /// Jetons régénérés par FCM au fil de la vie de l'application : chacun
   /// doit être ré-enregistré côté serveur pour rester joignable.
   Stream<String> get onTokenRefresh;
+
+  /// Notifications reçues pendant que l'application est au premier plan.
+  Stream<PushNotice> get onForegroundMessage;
 
   /// Invalide le jeton local (déconnexion) : l'appareil ne recevra plus rien
   /// même si une ligne serveur survivait quelque part.

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../design_system/design_system.dart';
+import '../../../notifications/domain/repositories/device_token_repository.dart';
+import '../../../notifications/presentation/controllers/notification_preferences.dart';
 import '../../../settings/domain/app_theme_setting.dart';
 import '../../../settings/presentation/controllers/theme_setting_controller.dart';
 
@@ -154,6 +156,39 @@ class ProfileAppSettings extends ConsumerWidget {
           label: 'Appareils connectés',
           onTap: onDevices,
         ),
+      ],
+    );
+  }
+}
+
+/// Ce qu'on accepte de recevoir. Les bascules parlent au SERVEUR : c'est lui
+/// qui coupe réellement l'envoi, une préférence gardée sur le téléphone
+/// laisserait la notification arriver quand même.
+///
+/// La section disparaît quand le serveur ne répond pas : une bascule qui ne
+/// refléterait rien vaut moins que pas de bascule du tout.
+class NotificationSettingsSection extends ConsumerWidget {
+  const NotificationSettingsSection({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final preferences = ref.watch(notificationPreferencesProvider).valueOrNull;
+    if (preferences == null) return const SizedBox.shrink();
+
+    return AppSettingsGroup(
+      label: 'Notifications',
+      rows: [
+        for (final category in NotificationCategory.values)
+          AppSettingsRow(
+            icon: AppIcons.notifications,
+            label: category.label,
+            // Une catégorie jamais réglée vaut « acceptée » : même règle que
+            // le serveur, sinon la bascule clignoterait à l'ouverture.
+            toggleValue: preferences[category] ?? true,
+            onToggle: (value) => ref
+                .read(notificationPreferenceActionsProvider)
+                .set(category, enabled: value),
+          ),
       ],
     );
   }

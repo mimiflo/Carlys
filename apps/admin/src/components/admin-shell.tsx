@@ -9,6 +9,7 @@ const NAV_ITEMS = [
   { href: '/users', label: 'Utilisateurs' },
   { href: '/exercises', label: 'Exercices' },
   { href: '/categories', label: 'Catégories' },
+  { href: '/media', label: 'Médias' },
   { href: '/audit', label: 'Journal d’audit' },
 ] as const;
 
