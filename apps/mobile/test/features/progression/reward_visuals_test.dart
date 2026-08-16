@@ -1,8 +1,11 @@
+import 'dart:math' as math;
+
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/progression/domain/progression.dart';
 import 'package:carlys_mobile/features/progression/domain/reward.dart';
 import 'package:carlys_mobile/features/progression/presentation/widgets/award_seal.dart';
 import 'package:carlys_mobile/features/progression/presentation/widgets/majesty.dart';
+import 'package:carlys_mobile/features/progression/presentation/widgets/majesty_plate.dart';
 import 'package:carlys_mobile/features/progression/presentation/widgets/seal_engraving.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -47,6 +50,32 @@ void main() {
         CarlysTitle.values.where((t) => Majesty.of(t).gradientEdge).length,
         1,
       );
+    });
+
+    test('les équerres gardent leur jeu avec l’arrondi, aux DEUX crans', () {
+      // Elles n'existent qu'aux deux derniers crans, et sur des plaques de
+      // rayons différents : Maître est peint sur la carte elle-même, Icône
+      // sur la plaque INTÉRIEURE, d'un point plus petite puisqu'elle vit
+      // dans sa bordure en dégradé. Le jeu doit tenir sur les deux.
+      final crans =
+          CarlysTitle.values.map(Majesty.of).where((m) => m.corners > 0);
+      expect(crans, hasLength(2));
+
+      for (final majesty in crans) {
+        final radius = majesty.gradientEdge
+            ? MajestyPlate.radius - 1
+            : MajestyPlate.radius;
+        final ornaments = PlateOrnaments(majesty: majesty, radius: radius);
+
+        // Le sommet de l'équerre est sur la diagonale du coin : sa distance
+        // au centre de l'arrondi vaut (r − i)·√2, et le jeu ce qu'il reste.
+        final toArcCentre = (radius - ornaments.cornerInset) * math.sqrt2;
+        expect(
+          radius - toArcCentre,
+          closeTo(PlateOrnaments.cornerClearance, 0.01),
+          reason: majesty.tier.label,
+        );
+      }
     });
 
     test('le rang se lit en clair, jamais comme un score', () {

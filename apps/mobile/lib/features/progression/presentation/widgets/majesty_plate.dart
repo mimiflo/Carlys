@@ -30,18 +30,21 @@ class MajestyPlate extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // La plaque du dernier cran vit DANS sa bordure en dégradé : elle est
+    // d'un point plus petite, et son arrondi avec elle. Le décor doit suivre,
+    // sinon le grain déborde d'un point et les équerres perdent leur jeu.
+    final plateRadius = majesty.gradientEdge ? radius - 1 : radius;
+
     final plate = DecoratedBox(
       decoration: BoxDecoration(
         gradient: majesty.surface,
-        borderRadius: BorderRadius.circular(
-          majesty.gradientEdge ? radius - 1 : radius,
-        ),
+        borderRadius: BorderRadius.circular(plateRadius),
         border: majesty.border == null
             ? null
             : Border.all(color: majesty.border!, width: majesty.borderWidth),
       ),
       child: CustomPaint(
-        painter: PlateOrnaments(majesty: majesty),
+        painter: PlateOrnaments(majesty: majesty, radius: plateRadius),
         child: Padding(padding: padding, child: child),
       ),
     );
@@ -65,9 +68,12 @@ class MajestyPlate extends StatelessWidget {
 /// échelle, quelques lignes coûtent moins qu'une texture.
 @visibleForTesting
 class PlateOrnaments extends CustomPainter {
-  const PlateOrnaments({required this.majesty});
+  const PlateOrnaments({required this.majesty, required this.radius});
 
   final Majesty majesty;
+
+  /// Rayon de la plaque RÉELLEMENT peinte — 27 au dernier cran, 28 ailleurs.
+  final double radius;
 
   /// Longueur d'une équerre.
   static const double _cornerLength = 12;
@@ -76,21 +82,18 @@ class PlateOrnaments extends CustomPainter {
   ///
   /// C'est bien l'arrondi qu'il faut viser, et non le bord : dans un coin, la
   /// bordure s'éloigne du bord de `r − r/√2`, soit huit points pour un rayon
-  /// de 28. Une équerre posée à dix points du bord tombait donc DERRIÈRE la
-  /// courbe et se lisait comme collée à elle.
-  static const double _cornerClearance = 9;
+  /// de 28. Une équerre posée à dix points du bord ne gardait donc que deux
+  /// points et demi de jeu avec la courbe, et s'y lisait comme collée.
+  static const double cornerClearance = 9;
 
   /// Retrait d'une équerre depuis le bord, déduit du jeu ci-dessus.
   ///
   /// Le sommet est sur la diagonale du coin, à `(r − i)·√2` du centre de
-  /// l'arrondi : lui laisser [_cornerClearance] revient à poser
-  /// `i = r − (r − jeu)/√2`. Écrit ainsi, le jeu reste tenu si le rayon de la
-  /// plaque change — une valeur en dur, elle, redeviendrait fausse en silence.
-  static const double _cornerInset =
-      MajestyPlate.radius - (MajestyPlate.radius - _cornerClearance) / _sqrt2;
-
-  /// `math.sqrt2` n'est pas une constante de compilation.
-  static const double _sqrt2 = 1.4142135623730951;
+  /// l'arrondi : lui laisser [cornerClearance] revient à poser
+  /// `i = r − (r − jeu)/√2`. Calculé plutôt qu'écrit en dur, le jeu vaut pour
+  /// les DEUX rayons — celui de la plaque et celui, plus petit d'un point, du
+  /// dernier cran — et resterait juste si le rayon de la carte changeait.
+  double get cornerInset => radius - (radius - cornerClearance) / math.sqrt2;
 
   /// Inclinaison du guillochage, en degrés. Franchement oblique : à 45° on
   /// lirait un motif de sécurité, ici on veut un grain de métal brossé.
@@ -125,10 +128,7 @@ class PlateOrnaments extends CustomPainter {
       canvas
         ..save()
         ..clipRRect(
-          RRect.fromRectAndRadius(
-            rect,
-            const Radius.circular(MajestyPlate.radius),
-          ),
+          RRect.fromRectAndRadius(rect, Radius.circular(radius)),
         );
       final paint = Paint()
         ..strokeWidth = 1
@@ -158,8 +158,8 @@ class PlateOrnaments extends CustomPainter {
 
     // Deux équerres en diagonale, quatre au dernier cran : le cadre se ferme
     // progressivement, il ne s'allume pas d'un coup.
-    const inset = _cornerInset;
-    _corner(canvas, paint, const Offset(inset, inset), 1, 1);
+    final inset = cornerInset;
+    _corner(canvas, paint, Offset(inset, inset), 1, 1);
     _corner(
       canvas,
       paint,
@@ -185,5 +185,6 @@ class PlateOrnaments extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(PlateOrnaments old) => old.majesty.tier != majesty.tier;
+  bool shouldRepaint(PlateOrnaments old) =>
+      old.majesty.tier != majesty.tier || old.radius != radius;
 }
