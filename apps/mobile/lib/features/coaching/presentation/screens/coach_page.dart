@@ -7,6 +7,7 @@ import '../../../../core/errors/app_exception.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/coach.dart';
 import '../controllers/coach_controllers.dart';
+import '../widgets/coach_header.dart';
 import 'coach_screen.dart';
 
 /// Onglet Coach : branche l'écran sur ses données.
@@ -62,7 +63,6 @@ class _CoachPageState extends ConsumerState<CoachPage> {
   @override
   Widget build(BuildContext context) {
     final thread = ref.watch(coachThreadProvider);
-    final bottomInset = AppBottomBar.height;
 
     return thread.when(
       loading: () => const _CoachShell(
@@ -78,8 +78,6 @@ class _CoachPageState extends ConsumerState<CoachPage> {
         isOffline: state.isOffline,
         isSending: state.isSending,
         notice: state.notice,
-        showBackButton: false,
-        bottomInset: bottomInset,
       ),
     );
   }
@@ -134,8 +132,13 @@ class _CoachPremiumState extends ConsumerWidget {
   }
 }
 
-/// Cadre commun des états non conversationnels : même fond, même en-tête,
+/// Cadre commun des états non conversationnels : même fond, même en-tête et
 /// même réserve sous la barre d'onglets que l'écran plein.
+///
+/// L'en-tête en fait partie, et ce n'est pas décoratif : un coach qui n'a pas
+/// pu s'ouvrir est le moment où l'on veut repartir. Sans sa flèche, il
+/// faudrait ressortir par la barre d'onglets, donc quitter Training pour y
+/// revenir.
 class _CoachShell extends StatelessWidget {
   const _CoachShell({required this.child});
 
@@ -146,9 +149,11 @@ class _CoachShell extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppColors.darkBackground,
       body: SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.only(bottom: AppBottomBar.height),
-          child: child,
+        child: Column(
+          children: [
+            const CoachHeader(),
+            Expanded(child: child),
+          ],
         ),
       ),
     );

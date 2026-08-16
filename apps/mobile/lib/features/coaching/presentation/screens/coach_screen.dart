@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/coach.dart';
 import '../widgets/coach_composer.dart';
+import '../widgets/coach_header.dart';
 import '../widgets/coach_message_bubble.dart';
 import '../widgets/coach_proposal_card.dart';
 import '../widgets/coach_suggestions.dart';
@@ -22,8 +23,6 @@ class CoachScreen extends StatelessWidget {
     this.isOffline = false,
     this.isSending = false,
     this.notice,
-    this.showBackButton = true,
-    this.bottomInset = 0,
     super.key,
   });
 
@@ -39,14 +38,6 @@ class CoachScreen extends StatelessWidget {
   /// message d'ambiance : s'il est là, c'est qu'un envoi a été refusé.
   final String? notice;
 
-  /// L'écran est atteint par un onglet : il n'y a alors nulle part où
-  /// revenir, et une flèche de retour promettrait un écran précédent.
-  final bool showBackButton;
-
-  /// Hauteur réservée sous le composeur. Dans la coquille, la barre d'onglets
-  /// flotte au-dessus du contenu : sans cette réserve, on écrirait derrière.
-  final double bottomInset;
-
   /// Part de la colonne qu'une bulle peut occuper. Au-delà, on ne lit plus une
   /// conversation mais un document : il faut voir que le bord est libre en
   /// face pour comprendre qui parle.
@@ -56,10 +47,23 @@ class CoachScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.darkBackground,
+      // La barre de saisie reste EN BAS, et passe au-dessus du clavier quand
+      // il s'ouvre. Rien à calculer ici pour cela, et surtout aucune réserve
+      // à ajouter sous le composeur :
+      //
+      //  - la coquille relève déjà le corps au-dessus du clavier, et RETIRE
+      //    l'encart de son `MediaQuery` (`removeBottomInset`), si bien que ce
+      //    `Scaffold`-ci ne le soustrait pas une seconde fois ; hors coquille,
+      //    c'est lui qui s'en charge, et l'écran reste juste ;
+      //  - le `SafeArea` ci-dessous porte la réserve de la barre d'onglets :
+      //    elle vaut sa hauteur clavier fermé, et zéro clavier ouvert,
+      //    puisque le clavier la recouvre. Ajouter cette hauteur à la main
+      //    la compterait deux fois, et la barre de saisie flotterait à
+      //    quatre-vingts pixels au-dessus du bas.
       body: SafeArea(
         child: Column(
           children: [
-            _CoachHeader(showBackButton: showBackButton),
+            const CoachHeader(),
             Expanded(
               child: messages.isEmpty
                   ? const _CoachIntro()
@@ -89,11 +93,11 @@ class CoachScreen extends StatelessWidget {
               ),
             ],
             Padding(
-              padding: EdgeInsets.fromLTRB(
+              padding: const EdgeInsets.fromLTRB(
                 AppSpacing.gutter,
                 0,
                 AppSpacing.gutter,
-                AppSpacing.md + bottomInset,
+                AppSpacing.md,
               ),
               child: CoachComposer(
                 controller: composerController,
@@ -198,64 +202,6 @@ class _CoachNotice extends StatelessWidget {
               ),
             ),
           ),
-        ],
-      ),
-    );
-  }
-}
-
-class _CoachHeader extends StatelessWidget {
-  const _CoachHeader({required this.showBackButton});
-
-  final bool showBackButton;
-
-  /// Le bouton de retour et son symétrique à droite : sans le second, le titre
-  /// n'est pas centré sur la page mais sur ce qui reste.
-  static const double _sideWidth = AppSpacing.touchTarget;
-  static const double _markSize = 18;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.xs,
-        AppSpacing.xs,
-        AppSpacing.xs,
-        AppSpacing.sm,
-      ),
-      child: Row(
-        children: [
-          SizedBox(
-            width: _sideWidth,
-            child: showBackButton
-                ? IconButton(
-                    onPressed: () => Navigator.of(context).maybePop(),
-                    icon: const Icon(AppIcons.back),
-                    color: AppColors.darkTextSecondary,
-                    tooltip: 'Retour',
-                  )
-                : null,
-          ),
-          Expanded(
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(
-                  AppIcons.coach,
-                  size: _markSize,
-                  color: AppColors.primaryLight,
-                ),
-                const SizedBox(width: AppSpacing.xs),
-                Text(
-                  'Coach IA',
-                  style: AppTypography.heading.copyWith(
-                    color: AppColors.darkTextPrimary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(width: _sideWidth),
         ],
       ),
     );

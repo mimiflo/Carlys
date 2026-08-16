@@ -352,8 +352,25 @@ Deux écrans, deux rôles :
   états) et que couvre `coach_screen_test.dart` ; le jeu d'exemple vit dans le
   harnais, jamais dans `lib/`.
 
-Widgets : `CoachMessageBubble`, `CoachSuggestions`, `CoachProposalCard`,
-`CoachComposer` — chacun sous 250 lignes.
+Widgets : `CoachHeader`, `CoachMessageBubble`, `CoachSuggestions`,
+`CoachProposalCard`, `CoachComposer` — chacun sous 250 lignes.
+
+**L'en-tête et la barre de saisie tiennent les deux bords de l'écran.**
+L'en-tête porte `AppBackButton`, la flèche commune du design system : elle
+dépile la branche Training et s'efface seule s'il n'y a rien derrière. Les
+états d'attente et d'erreur la portent aussi (`_CoachShell`), et ce n'est pas
+un détail : un coach qui n'a pas pu s'ouvrir est précisément le moment où
+l'on veut repartir.
+
+La barre de saisie reste en bas, et passe au-dessus du clavier quand il
+s'ouvre. Rien n'est calculé pour cela, et c'est ce qu'il ne faut pas défaire :
+la coquille relève déjà le corps au-dessus du clavier et **retire** l'encart
+du `MediaQuery` (`removeBottomInset`), pendant que le `SafeArea` de l'écran
+porte la réserve de la barre d'onglets — sa hauteur clavier fermé, zéro
+clavier ouvert puisque le clavier la recouvre. Ajouter cette réserve à la main
+la comptait deux fois, et la barre de saisie flottait 84 px au-dessus du bas.
+`coach_tab_test.dart` mesure les deux positions, dans la coquille et avec un
+clavier simulé.
 
 **Le fil n'est créé qu'au premier message.** Ouvrir l'onglet pour regarder ne
 laisse derrière soi aucune conversation vide : l'identifiant est généré sur

@@ -1,6 +1,7 @@
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/coaching/domain/entities/coach.dart';
 import 'package:carlys_mobile/features/coaching/presentation/screens/coach_screen.dart';
+import 'package:carlys_mobile/features/coaching/presentation/widgets/coach_composer.dart';
 import 'package:carlys_mobile/features/coaching/presentation/widgets/coach_message_bubble.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -144,6 +145,29 @@ void main() {
 
     expect(find.text('Ton coach est là'), findsOneWidget);
     expect(find.byType(CoachMessageBubble), findsNothing);
+  });
+
+  testWidgets('le clavier pousse la barre de saisie au-dessus de lui',
+      (tester) async {
+    // Hors coquille, personne d'autre ne relève le corps : c'est le
+    // `Scaffold` de cet écran qui doit le faire. Le neutraliser mettrait la
+    // barre de saisie DERRIÈRE le clavier, là où l'on écrit sans se voir
+    // écrire.
+    tester.view.physicalSize = const Size(1179, 2556);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+
+    await pumpCoach(tester);
+    final full = tester.getRect(find.byType(CoachComposer)).bottom;
+
+    const keyboard = 320.0;
+    tester.view.viewInsets = const FakeViewPadding(bottom: keyboard * 3);
+    await tester.pumpAndSettle();
+
+    expect(
+      tester.getRect(find.byType(CoachComposer)).bottom,
+      closeTo(full - keyboard, 1),
+    );
   });
 
   testWidgets('le champ de saisie est une pilule, pas un rectangle',

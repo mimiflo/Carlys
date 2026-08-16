@@ -1,3 +1,5 @@
+import 'dart:ui' show Size;
+
 import 'package:carlys_mobile/app/app.dart';
 import 'package:carlys_mobile/app/environment/app_environment.dart';
 import 'package:carlys_mobile/app/restore/app_restore.dart';
@@ -8,12 +10,14 @@ import 'package:carlys_mobile/features/coaching/data/repositories/coach_reposito
 import 'package:carlys_mobile/features/coaching/domain/entities/coach.dart';
 import 'package:carlys_mobile/features/coaching/presentation/controllers/coach_controllers.dart';
 import 'package:carlys_mobile/features/coaching/presentation/screens/coach_page.dart';
+import 'package:carlys_mobile/features/coaching/presentation/widgets/coach_composer.dart';
 import 'package:carlys_mobile/features/nutrition/data/repositories/nutrition_repository_impl.dart';
 import 'package:carlys_mobile/features/nutrition/presentation/screens/nutrition_screen.dart';
 import 'package:carlys_mobile/features/profile/presentation/screens/profile_screen.dart';
 import 'package:carlys_mobile/features/progress/data/repositories/progress_repository_impl.dart';
 import 'package:carlys_mobile/features/progress/presentation/screens/progress_screen.dart';
 import 'package:carlys_mobile/features/subscription/data/repositories/subscription_repository_impl.dart';
+import 'package:carlys_mobile/features/training/presentation/screens/training_hub_screen.dart';
 import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -27,12 +31,17 @@ import '../support/fake_workout_repository.dart';
 import '../support/first_run_prefs.dart';
 import '../support/navigation.dart';
 
-/// L'onglet Coach dans la coquille.
+/// Le coach DANS la coquille.
 ///
 /// Le piège d'une barre à index : la barre rend un rang, la coquille ouvre la
 /// branche du même rang. Insérer un onglet au milieu décale tout ce qui suit,
 /// et un décalage d'un cran est invisible à la lecture du code. Ce test tape
 /// chaque onglet et vérifie qu'il ouvre bien le sien.
+///
+/// Deux propriétés du coach n'existent QUE dans la coquille, et ne peuvent
+/// donc se vérifier qu'ici : la flèche qui ramène au hub Training, et la
+/// place de la barre de saisie, qui se règle sur la barre d'onglets puis sur
+/// le clavier.
 void main() {
   setUp(() {
     seedCompletedFirstRun();
@@ -139,5 +148,53 @@ void main() {
 
     expect(find.text('Ton coach est là'), findsOneWidget);
     expect(coach.createdConversations, isEmpty);
+  });
+
+  testWidgets('la flèche de retour ramène au hub Training', (tester) async {
+    // Le coach se pousse depuis une carte du hub : il y a un écran derrière,
+    // donc une flèche pour y revenir. Sans elle, il faudrait ressortir par la
+    // barre d'onglets, c'est-à-dire quitter Training pour y retourner.
+    await pumpApp(tester, FakeCoachRepository());
+    await openCoach(tester);
+
+    expect(find.byTooltip('Retour'), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Retour'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(TrainingHubScreen), findsOneWidget);
+    expect(find.byType(CoachPage), findsNothing);
+  });
+
+  testWidgets(
+      'la barre de saisie reste en bas, puis passe AU-DESSUS du '
+      'clavier', (tester) async {
+    tester.view.physicalSize = const Size(1179, 2556);
+    tester.view.devicePixelRatio = 3;
+    addTearDown(tester.view.reset);
+
+    await pumpApp(tester, FakeCoachRepository());
+    await openCoach(tester);
+
+    final composer = find.byType(CoachComposer);
+    final barTop = tester.getRect(find.byType(AppBottomBar)).top;
+
+    // Clavier fermé : posée juste au-dessus de la barre d'onglets, à un
+    // écart de respiration près. Ni derrière elle, ni flottant plus haut.
+    expect(barTop - tester.getRect(composer).bottom, closeTo(AppSpacing.md, 1));
+
+    const keyboard = 320.0;
+    tester.view.viewInsets = const FakeViewPadding(bottom: keyboard * 3);
+    await tester.pumpAndSettle();
+
+    // Clavier ouvert : elle passe juste au-dessus de lui, et la réserve de
+    // la barre d'onglets s'efface — le clavier la recouvre déjà. La compter
+    // à la main la laisserait en trop, et la saisie flotterait.
+    final screenHeight =
+        tester.view.physicalSize.height / tester.view.devicePixelRatio;
+    expect(
+      tester.getRect(composer).bottom,
+      closeTo(screenHeight - keyboard - AppSpacing.md, 1),
+    );
   });
 }
