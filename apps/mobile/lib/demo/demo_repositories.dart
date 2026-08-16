@@ -272,6 +272,44 @@ class DemoSubscriptionRepository implements SubscriptionRepository {
         EntitlementEntry(key: 'cloud_backup', isActive: true),
         EntitlementEntry(key: 'priority_support', isActive: true),
       ];
+
+  /// Le catalogue est visitable en démonstration ; l'achat, non. Ouvrir une
+  /// vraie page de paiement depuis une démonstration serait un piège.
+  @override
+  Future<OfferCatalog> offers() async => const OfferCatalog(
+        checkoutAvailable: false,
+        offers: [
+          SubscriptionOffer(
+            id: 'premium-mensuel',
+            name: 'Premium mensuel',
+            period: OfferPeriod.month,
+            amountCents: 999,
+            currency: 'EUR',
+            monthlyEquivalentCents: 999,
+            trialDays: 7,
+            isRecommended: false,
+          ),
+          SubscriptionOffer(
+            id: 'premium-annuel',
+            name: 'Premium annuel',
+            period: OfferPeriod.year,
+            amountCents: 7990,
+            currency: 'EUR',
+            monthlyEquivalentCents: 666,
+            trialDays: 7,
+            isRecommended: true,
+            savingPercent: 33,
+          ),
+        ],
+      );
+
+  @override
+  Future<String> startCheckout({
+    required String offerId,
+    required String id,
+  }) async {
+    throw StateError('Le paiement n’existe pas en démonstration.');
+  }
 }
 
 /// Profil complet modifiable ; résultats métaboliques figés et cohérents

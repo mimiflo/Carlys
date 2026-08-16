@@ -122,6 +122,34 @@ export class AppConfigService {
     return this.config.get('REVENUECAT_WEBHOOK_SECRET', { infer: true });
   }
 
+  get subscriptionCurrency(): string {
+    return this.config.get('SUBSCRIPTION_CURRENCY', { infer: true });
+  }
+
+  get subscriptionMonthlyCents(): number {
+    return this.config.get('SUBSCRIPTION_MONTHLY_CENTS', { infer: true });
+  }
+
+  get subscriptionYearlyCents(): number {
+    return this.config.get('SUBSCRIPTION_YEARLY_CENTS', { infer: true });
+  }
+
+  get subscriptionTrialDays(): number {
+    return this.config.get('SUBSCRIPTION_TRIAL_DAYS', { infer: true });
+  }
+
+  get stripeSecretKey(): string | undefined {
+    return this.config.get('STRIPE_SECRET_KEY', { infer: true });
+  }
+
+  get stripePriceMonthly(): string | undefined {
+    return this.config.get('STRIPE_PRICE_MONTHLY', { infer: true });
+  }
+
+  get stripePriceYearly(): string | undefined {
+    return this.config.get('STRIPE_PRICE_YEARLY', { infer: true });
+  }
+
   // ── Notifications push ─────────────────────────────────────────────────
 
   get firebaseServiceAccountJson(): string | undefined {

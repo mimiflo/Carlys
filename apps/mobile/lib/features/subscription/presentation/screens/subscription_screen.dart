@@ -15,14 +15,16 @@ import '../widgets/subscription_benefits.dart';
 import '../widgets/subscription_hero.dart';
 import '../widgets/subscription_plan_card.dart';
 import '../widgets/subscription_purchase_note.dart';
+import '../widgets/subscription_purchase_panel.dart';
 
 /// Abonnement (maquette 2i) : plein écran sans barre de titre, cœur ambiant
 /// débordant en haut à droite, accroche premium, avantages issus des droits
 /// réels puis carte du plan.
 ///
-/// La maquette montre deux cartes d'offre chiffrées et un bouton d'achat :
-/// l'API ne sert aucun catalogue de prix ni action d'achat, ces blocs sont
-/// donc omis plutôt qu'inventés.
+/// Les deux cartes d'offre de la maquette et le bouton d'achat sont là : les
+/// prix viennent du serveur (`GET /subscriptions/offers`) et le bouton ouvre
+/// une page de paiement. Rien n'est chiffré côté application, et aucun droit
+/// n'est accordé au retour : c'est le webhook signé qui l'accorde.
 ///
 /// Le même écran sert de temps d'arrêt au parcours de première ouverture :
 /// il n'est alors pas refermable, et son bas d'écran propose Premium puis,
@@ -113,6 +115,18 @@ class SubscriptionScreen extends ConsumerWidget {
                             ),
                           ),
                         ),
+                        // Les offres vivent DANS la page : mises en pied
+                        // fixe, elles écraseraient la partie qui explique
+                        // Premium, juste au-dessus.
+                        if (!firstRun) ...[
+                          const SizedBox(height: AppSpacing.gapSection),
+                          const Padding(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: AppSpacing.gutter,
+                            ),
+                            child: SubscriptionPurchasePanel(),
+                          ),
+                        ],
                       ],
                     ),
                   ),
@@ -167,8 +181,7 @@ class _CloseButton extends StatelessWidget {
   }
 }
 
-/// Bas d'écran de la maquette : la mention légale reste, le bouton d'achat
-/// attend un catalogue de prix et une action de paiement côté serveur.
+/// Bas d'écran : la mention légale. Les offres, elles, sont dans la page.
 class _PurchaseNote extends StatelessWidget {
   const _PurchaseNote();
 

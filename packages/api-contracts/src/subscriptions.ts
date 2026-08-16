@@ -39,6 +39,59 @@ export const subscriptionMeSchema = z.object({
 });
 export type SubscriptionMe = z.infer<typeof subscriptionMeSchema>;
 
+/** Rythme de facturation d'une offre. */
+export const offerPeriodSchema = z.enum(['month', 'year']);
+export type OfferPeriod = z.infer<typeof offerPeriodSchema>;
+
+/**
+ * Une offre du catalogue. Les prix viennent du SERVEUR : une application qui
+ * afficherait ses propres tarifs mentirait le jour où ils changent, et il
+ * faudrait une mise à jour de l'app pour corriger un prix.
+ */
+export const subscriptionOfferSchema = z.object({
+  id: z.string().min(1),
+  planSlug: subscriptionPlanSlugSchema,
+  name: z.string().min(1),
+  period: offerPeriodSchema,
+  amountCents: z.number().int().nonnegative(),
+  currency: z.string().length(3),
+  /** Prix ramené au mois, pour comparer deux rythmes sans calcul mental. */
+  monthlyEquivalentCents: z.number().int().nonnegative(),
+  /** Économie face au mensuel, en pourcentage entier. `null` si sans objet. */
+  savingPercent: z.number().int().min(0).max(100).nullable(),
+  trialDays: z.number().int().min(0).max(90),
+  /** L'offre mise en avant. Une seule au plus. */
+  isRecommended: z.boolean(),
+});
+export type SubscriptionOffer = z.infer<typeof subscriptionOfferSchema>;
+
+/** GET /subscriptions/offers — le catalogue et l'état du paiement. */
+export const subscriptionOffersResponseSchema = z.object({
+  offers: z.array(subscriptionOfferSchema),
+  /**
+   * `false` tant que le paiement n'est pas configuré côté serveur. Le
+   * catalogue reste lisible : on montre ce que Premium apporte, on ne
+   * promet simplement pas un achat qui échouerait.
+   */
+  checkoutAvailable: z.boolean(),
+});
+export type SubscriptionOffersResponse = z.infer<typeof subscriptionOffersResponseSchema>;
+
+/** POST /subscriptions/checkout — ouvre une session de paiement. */
+export const createCheckoutSessionSchema = z.object({
+  /** Identifiant fourni par l'appareil : rejouer n'ouvre pas deux paiements. */
+  id: z.string().uuid(),
+  offerId: z.string().min(1),
+});
+export type CreateCheckoutSession = z.infer<typeof createCheckoutSessionSchema>;
+
+export const checkoutSessionSchema = z.object({
+  /** Page de paiement à ouvrir dans le navigateur. */
+  url: z.string().url(),
+  provider: paymentProviderSchema,
+});
+export type CheckoutSession = z.infer<typeof checkoutSessionSchema>;
+
 /**
  * Clés d'entitlements réservées (source de vérité : docs/product).
  * Le serveur DÉCIDE, le client ne fait qu'afficher.

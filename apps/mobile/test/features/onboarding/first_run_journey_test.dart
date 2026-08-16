@@ -298,10 +298,12 @@ void main() {
 
     expect(find.text('CARLYS PREMIUM'), findsOneWidget);
 
-    // « Passer à Premium » explique où souscrire — aucun tarif inventé.
+    // « Passer à Premium » montre les offres du SERVEUR : les prix ne sont
+    // écrits nulle part dans l'application.
     await tapText(tester, 'Passer à Premium');
+    expect(find.text('Premium annuel'), findsOneWidget);
     expect(find.textContaining('App Store'), findsOneWidget);
-    await tapText(tester, 'J’ai compris');
+    await tapText(tester, 'Revenir');
 
     // Le repli gratuit se rétracte aussi.
     await tapText(tester, 'Continuer sans Premium');

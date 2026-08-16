@@ -80,6 +80,28 @@ export const envSchema = z.object({
   STRIPE_WEBHOOK_SECRET: z.string().min(16).optional(),
   REVENUECAT_WEBHOOK_SECRET: z.string().min(16).optional(),
 
+  /**
+   * Catalogue d'offres. Les prix sont servis par l'API et JAMAIS écrits dans
+   * l'application : un tarif codé dans le mobile deviendrait faux le jour où
+   * il change, et il faudrait une mise à jour de l'app pour le corriger.
+   *
+   * Ils doivent refléter les prix Stripe correspondants — c'est Stripe qui
+   * encaisse, ceci n'est que l'affichage.
+   */
+  SUBSCRIPTION_CURRENCY: z.string().length(3).default('EUR'),
+  SUBSCRIPTION_MONTHLY_CENTS: z.coerce.number().int().min(0).default(999),
+  SUBSCRIPTION_YEARLY_CENTS: z.coerce.number().int().min(0).default(7990),
+  SUBSCRIPTION_TRIAL_DAYS: z.coerce.number().int().min(0).max(90).default(7),
+
+  /**
+   * Paiement Stripe. **Optionnels** : sans eux le catalogue reste lisible et
+   * l'achat se déclare simplement indisponible — on ne promet pas un
+   * paiement qui échouerait, et l'API démarre sans clé payante.
+   */
+  STRIPE_SECRET_KEY: z.string().min(20).optional(),
+  STRIPE_PRICE_MONTHLY: z.string().min(1).optional(),
+  STRIPE_PRICE_YEARLY: z.string().min(1).optional(),
+
   // ── Notifications push (FCM) ───────────────────────────────────────────
   /**
    * Compte de service Firebase, JSON complet (téléchargé depuis la console

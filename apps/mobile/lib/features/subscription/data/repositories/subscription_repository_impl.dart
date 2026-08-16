@@ -59,6 +59,46 @@ class SubscriptionRepositoryImpl implements SubscriptionRepository {
     });
   }
 
+  @override
+  Future<OfferCatalog> offers() {
+    return _guard(() async {
+      final response =
+          await _dio.get<Map<String, dynamic>>('/subscriptions/offers');
+      final body = response.data?['data'] as Map<String, dynamic>? ?? const {};
+      return OfferCatalog(
+        checkoutAvailable: body['checkoutAvailable'] as bool? ?? false,
+        offers: (body['offers'] as List<dynamic>? ?? const [])
+            .whereType<Map<String, dynamic>>()
+            .map(
+              (json) => SubscriptionOffer(
+                id: json['id'] as String,
+                name: json['name'] as String,
+                period: OfferPeriod.fromApi(json['period'] as String),
+                amountCents: json['amountCents'] as int,
+                currency: json['currency'] as String,
+                monthlyEquivalentCents: json['monthlyEquivalentCents'] as int,
+                trialDays: json['trialDays'] as int? ?? 0,
+                isRecommended: json['isRecommended'] as bool? ?? false,
+                savingPercent: json['savingPercent'] as int?,
+              ),
+            )
+            .toList(),
+      );
+    });
+  }
+
+  @override
+  Future<String> startCheckout({required String offerId, required String id}) {
+    return _guard(() async {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/subscriptions/checkout',
+        data: {'id': id, 'offerId': offerId},
+      );
+      final body = response.data?['data'] as Map<String, dynamic>? ?? const {};
+      return body['url'] as String;
+    });
+  }
+
   Future<T> _guard<T>(Future<T> Function() action) async {
     try {
       return await action();

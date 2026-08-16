@@ -6,6 +6,7 @@ import '../../../../app/router/app_routes.dart';
 import '../../../../design_system/design_system.dart';
 import '../../../onboarding/presentation/controllers/first_run_controller.dart';
 import 'subscription_purchase_note.dart';
+import 'subscription_purchase_panel.dart';
 
 /// Temps d'arrêt du parcours de première ouverture, en bas de l'écran
 /// d'abonnement : Premium est proposé franchement, et le refus mène à une
@@ -91,11 +92,13 @@ class _FirstRunPremiumFooterState extends ConsumerState<FirstRunPremiumFooter> {
       ];
 
   List<Widget> _howTo() => [
-        const _Title('Où activer Premium'),
+        const _Title('Choisis ton rythme'),
+        const SubscriptionPurchasePanel(),
+        const SizedBox(height: AppSpacing.md),
         const SubscriptionPurchaseNote(),
         const SizedBox(height: AppSpacing.md),
         AppButton(
-          label: 'J’ai compris',
+          label: 'Revenir',
           variant: AppButtonVariant.secondary,
           onPressed: () => _goTo(_Stage.pitch),
           isExpanded: true,
