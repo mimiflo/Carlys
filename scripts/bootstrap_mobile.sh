@@ -23,6 +23,12 @@ echo "── Identité Carlys (nom, icône, permission de notification) ──�
 echo "── Dépendances ─────────────────────────────────────────────────────"
 flutter pub get
 
+# Le code engendré (Drift) n'est PAS versionné : sur un clone frais il n'existe
+# pas, et `app_database.dart` le déclare en `part`. Sans cette étape, l'analyse
+# qui suit échoue sur deux cents erreurs dont la cause tient en une ligne.
+echo "── Génération de code (Drift) ──────────────────────────────────────"
+dart run build_runner build --delete-conflicting-outputs
+
 echo "── Analyse statique ────────────────────────────────────────────────"
 flutter analyze
 

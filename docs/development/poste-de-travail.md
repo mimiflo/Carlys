@@ -151,14 +151,19 @@ donc une dérogation dans le jeu de sources `debug/` — elle n'entre jamais
 dans une release. Si l'erreur apparaît quand même, c'est que `android/` a été
 engendré sans passer par le script : relancer `./scripts/bootstrap_mobile.sh`.
 
-**Le code engendré par Drift.** Après toute modification d'une table locale :
+**Le code engendré par Drift.** Il n'est pas versionné : sur un clone frais il
+n'existe pas, et `app_database.dart` le déclare en `part`. `bootstrap_mobile.sh`
+le produit désormais lui-même ; il reste à le refaire à la main après **toute
+modification d'une table locale** :
 
 ```bash
 cd apps/mobile
 dart run build_runner build --delete-conflicting-outputs
 ```
 
-Sans ça, l'erreur parle d'un `part` introuvable, ce qui n'oriente vers rien.
+Sans ça, l'analyse tombe sur deux cents erreurs — `undefined_identifier` sur
+chaque table — dont la cause tient en une ligne, la première, qui parle d'un
+`part` non engendré.
 
 **Le premier build Gradle est long.** Cinq à dix minutes, le temps de
 télécharger la chaîne. Les suivants durent quelques secondes. Ne pas
