@@ -29,6 +29,38 @@ if ! grep -q "android.permission.POST_NOTIFICATIONS" "$MANIFEST"; then
   rm -f "$MANIFEST.bak"
 fi
 
+# ── HTTP en clair, en DEBUG uniquement ──────────────────────────────────────
+#
+# Au-delà d'API 28, Android refuse le trafic en clair : une API locale servie
+# en `http://10.0.2.2:3000` (l'hôte, vu depuis l'émulateur) est rejetée avec
+# « CLEARTEXT communication not permitted by network security policy ». Le
+# manifeste de debug engendré par `flutter create` ne déclare que la
+# permission INTERNET, donc rien ne l'autorise.
+#
+# La dérogation vit dans le jeu de sources `debug/` : elle N'ENTRE JAMAIS
+# dans un APK de release, où le trafic en clair reste interdit.
+mkdir -p android/app/src/debug/res/xml
+cat > android/app/src/debug/res/xml/network_security_config.xml <<'XML'
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  DÉVELOPPEMENT UNIQUEMENT. Ce fichier appartient au jeu de sources `debug`
+  et n'est pas embarqué dans une release : le trafic en clair y demeure
+  interdit. Il autorise l'API locale — 10.0.2.2 depuis l'émulateur, l'IP du
+  poste depuis un téléphone du même réseau — servie sans TLS.
+-->
+<network-security-config>
+  <base-config cleartextTrafficPermitted="true" />
+</network-security-config>
+XML
+
+DEBUG_MANIFEST="android/app/src/debug/AndroidManifest.xml"
+if ! grep -q "networkSecurityConfig" "$DEBUG_MANIFEST"; then
+  # Fusion de manifeste : l'attribut rejoint le <application> du manifeste
+  # principal, qui n'en déclare aucun — donc aucun conflit à arbitrer.
+  sed -i.bak 's|</manifest>|    <application\n        android:networkSecurityConfig="@xml/network_security_config" />\n</manifest>|' "$DEBUG_MANIFEST"
+  rm -f "$DEBUG_MANIFEST.bak"
+fi
+
 # iOS, si le dossier a été généré : même nom sous l'icône.
 PLIST="ios/Runner/Info.plist"
 if [ -f "$PLIST" ]; then

@@ -92,6 +92,12 @@ Le design system Flutter (`AppColors`, `AppTypography`, `AppSpacing`, `AppRadius
 | pnpm | 10 | `corepack enable` suffit (`packageManager: pnpm@10.x`) |
 | Docker + Docker Compose | récent | infrastructure locale (PostgreSQL, Redis, Mailpit, MinIO) |
 | Flutter SDK | stable (Dart >= 3.6) | uniquement pour `apps/mobile` |
+| Android Studio | récent | uniquement pour le SDK Android et l'émulateur ; on code dans VS Code |
+
+> Premier poste, ou premier émulateur Android ?
+> [`docs/development/poste-de-travail.md`](./docs/development/poste-de-travail.md)
+> déroule tout : chaîne Android, création d'un appareil virtuel, les trois
+> façons de lancer l'application et les pièges qui coûtent une soirée.
 
 ## Installation
 
@@ -403,4 +409,6 @@ Politique complète et signalement de vulnérabilités : [SECURITY.md](./SECURIT
 - [`docs/synchronization/`](./docs/synchronization/) — synchronisation offline-first ;
 - [`docs/security/`](./docs/security/) — sécurité ;
 - [`docs/decisions/`](./docs/decisions/) — décisions d'architecture (ADR) ;
+- [`docs/development/`](./docs/development/) — poste de développement, dont
+  [monter VS Code et l'émulateur Android](./docs/development/poste-de-travail.md) ;
 - READMEs locaux : [`apps/api`](./apps/api/README.md), [`apps/admin`](./apps/admin/README.md), [`apps/mobile`](./apps/mobile/README.md), [`infrastructure/docker`](./infrastructure/docker/README.md).

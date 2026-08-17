@@ -1,0 +1,78 @@
+{
+  // Lancements Flutter de Carlys. Chaque configuration porte son flavor et
+  // l'adresse d'API qui va avec : lancer l'application sans `--dart-define`
+  // la ferait démarrer sur un flavor inconnu.
+  "version": "0.2.0",
+  "configurations": [
+    {
+      // À ESSAYER EN PREMIER : aucun serveur, aucune base, données intégrées.
+      // C'est le mode qui prouve que le poste est bien monté.
+      "name": "Carlys — démo (sans serveur)",
+      "request": "launch",
+      "type": "dart",
+      "program": "apps/mobile/lib/main.dart",
+      "cwd": "apps/mobile",
+      "args": ["--dart-define=CARLYS_FLAVOR=demo"]
+    },
+    {
+      // Émulateur Android : 10.0.2.2 est l'alias de la MACHINE HÔTE vu de
+      // l'émulateur. `localhost` y désignerait l'émulateur lui-même, et
+      // l'API resterait injoignable.
+      "name": "Carlys — émulateur Android + API locale",
+      "request": "launch",
+      "type": "dart",
+      "program": "apps/mobile/lib/main.dart",
+      "cwd": "apps/mobile",
+      "args": [
+        "--dart-define=CARLYS_FLAVOR=development",
+        "--dart-define=CARLYS_API_BASE_URL=http://10.0.2.2:3000"
+      ]
+    },
+    {
+      // Simulateur iOS ou navigateur : ils partagent le réseau de l'hôte,
+      // donc `localhost` suffit.
+      "name": "Carlys — simulateur iOS ou web + API locale",
+      "request": "launch",
+      "type": "dart",
+      "program": "apps/mobile/lib/main.dart",
+      "cwd": "apps/mobile",
+      "args": [
+        "--dart-define=CARLYS_FLAVOR=development",
+        "--dart-define=CARLYS_API_BASE_URL=http://localhost:3000"
+      ]
+    },
+    {
+      // Téléphone branché en USB : il ne connaît ni `localhost` ni 10.0.2.2.
+      // Remplacer l'adresse par l'IP du poste sur le réseau local
+      // (`ipconfig` sous Windows, `ip a` sous Linux, `ipconfig getifaddr en0`
+      // sous macOS), les deux appareils étant sur le MÊME réseau.
+      "name": "Carlys — téléphone réel + API locale",
+      "request": "launch",
+      "type": "dart",
+      "program": "apps/mobile/lib/main.dart",
+      "cwd": "apps/mobile",
+      "args": [
+        "--dart-define=CARLYS_FLAVOR=development",
+        "--dart-define=CARLYS_API_BASE_URL=http://192.168.1.10:3000"
+      ]
+    },
+    {
+      "name": "API NestJS",
+      "request": "launch",
+      "type": "node",
+      "cwd": "${workspaceFolder}/apps/api",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["dev"],
+      "console": "integratedTerminal",
+      "skipFiles": ["<node_internals>/**"]
+    }
+  ],
+  "compounds": [
+    {
+      // L'API et l'application ensemble : le mode de travail quotidien une
+      // fois l'infrastructure Docker démarrée.
+      "name": "Carlys — API + émulateur Android",
+      "configurations": ["API NestJS", "Carlys — émulateur Android + API locale"]
+    }
+  ]
+}

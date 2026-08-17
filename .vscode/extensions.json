@@ -1,0 +1,21 @@
+{
+  // Extensions proposées à l'ouverture du dépôt. VSCode les suggère, il ne
+  // les impose pas.
+  "recommendations": [
+    // Flutter tire Dart avec lui : les deux sont indispensables pour le
+    // rechargement à chaud, le sélecteur d'appareil et le débogueur.
+    "dart-code.flutter",
+    "dart-code.dart-code",
+
+    // API NestJS et admin Next.js : formatage et règles du dépôt.
+    "dbaeumer.vscode-eslint",
+    "esbenp.prettier-vscode",
+
+    // Schéma Prisma : coloration, complétion, formatage des migrations.
+    "prisma.prisma",
+
+    // Docker : voir l'état de postgres, redis, mailpit et minio sans quitter
+    // l'éditeur.
+    "ms-azuretools.vscode-docker"
+  ]
+}

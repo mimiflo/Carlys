@@ -24,8 +24,14 @@ pnpm-debug.log*
 .DS_Store
 Thumbs.db
 .idea/
-.vscode/
+# `.vscode/*` et NON `.vscode/` : git ne descend pas dans un dossier exclu,
+# les exceptions qui suivent seraient donc sans effet.
+.vscode/*
 !.vscode/extensions.json
+# Les lancements sont du savoir de PROJET, pas des préférences : ils portent
+# les flavors et l'adresse de l'API selon l'appareil (10.0.2.2 sur émulateur).
+# Les redécouvrir sur chaque poste coûterait une demi-journée.
+!.vscode/launch.json
 
 # Prisma
 apps/api/prisma/generated/
