@@ -217,6 +217,28 @@ abstract final class AppColors {
     stops: [0, 0.46, 1],
   );
 
+  /// Réponse de quiz au repos : une surface à peine posée sur le fond, et
+  /// son filet. Assez pour se lire comme un bouton, assez peu pour que le
+  /// choix fait ressorte d'un coup.
+  static const Color quizChoiceFill = Color(0x08FFFFFF); // blanc .03
+  static const Color quizChoiceBorder = Color(0x14FFFFFF); // blanc .08
+  static const Color quizLetterBorder = Color(0x2EFFFFFF); // blanc .18
+
+  /// Cran déjà franchi d'une échelle graduée : l'accent, en retrait, pour
+  /// que le cran COURANT reste le seul point chaud.
+  static const Color accentSoft = Color(0x8CFF7A45); // accent .55
+
+  /// Filet INTERNE d'une grille : il naît d'un espacement sur ce fond, pas
+  /// d'une bordure. Un point plus clair que la bordure extérieure, sinon la
+  /// croix disparaît au milieu de la surface.
+  static const Color gridRule = Color(0x0FFFFFFF); // blanc .06
+
+  /// Trait d'un jour à venir, dans la série de constance : présent, sourd.
+  static const Color pendingBar = Color(0x14FFFFFF); // blanc .08
+
+  /// Creux du pointillé de la journée en cours.
+  static const Color pendingBarSoft = Color(0x38C88BFF); // primaryLight .22
+
   /// Fond du bloc compact de l'accueil : la lumière vient d'un coin, comme
   /// sur une plaque tenue en main. Un aplat y serait une tuile de plus.
   static const RadialGradient compactPlate = RadialGradient(

@@ -2,6 +2,7 @@ import 'package:carlys_mobile/app/app.dart';
 import 'package:carlys_mobile/app/environment/app_environment.dart';
 import 'package:carlys_mobile/app/restore/app_restore.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
+import 'package:carlys_mobile/demo/demo_templates.dart';
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
 import 'package:carlys_mobile/features/dashboard/presentation/screens/home_screen.dart';
@@ -9,12 +10,15 @@ import 'package:carlys_mobile/features/onboarding/presentation/controllers/splas
 import 'package:carlys_mobile/features/onboarding/presentation/screens/splash_screen.dart';
 import 'package:carlys_mobile/features/onboarding/presentation/widgets/brand_signature.dart';
 import 'package:carlys_mobile/features/onboarding/presentation/widgets/splash_brand_intro.dart';
+import 'package:carlys_mobile/features/progress/data/repositories/progress_repository_impl.dart';
 import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';
+import 'package:carlys_mobile/features/workout_template/data/repositories/workout_template_repository_impl.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/fake_auth_repository.dart';
+import '../../support/fake_progress_repository.dart';
 import '../../support/fake_workout_repository.dart';
 import '../../support/first_run_prefs.dart';
 
@@ -44,6 +48,16 @@ void main() {
             FakeAuthRepository(storedSession: storedSession),
           ),
           workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
+          // L'accueil lit les modèles enregistrés et les records personnels.
+          // Sans dépôts factices, ces lectures partent au réseau et laissent
+          // un minuteur en vol après la fin du test — l'écran est plus dense
+          // qu'avant, donc la liste paresseuse les atteint désormais.
+          workoutTemplateRepositoryProvider.overrideWithValue(
+            DemoWorkoutTemplateRepository(FakeWorkoutRepository()),
+          ),
+          progressRepositoryProvider.overrideWithValue(
+            FakeProgressRepository(),
+          ),
           syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
           appRestoreProvider.overrideWithValue(NoopAppRestore()),
         ],

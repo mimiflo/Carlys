@@ -95,20 +95,20 @@ class AppSceneScrim extends StatelessWidget {
                   end: Alignment.centerRight,
                   colors: [
                     AppColors.darkBackground,
-                    Color(0xB308050E),
+                    Color(0xC208050E),
                     Colors.transparent,
                   ],
-                  stops: [0.0, 0.34, 0.72],
+                  stops: [0.0, 0.44, 0.82],
                 )
               : const LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
                     Colors.transparent,
-                    Color(0x8008050E),
+                    Color(0xA808050E),
                     AppColors.darkBackground,
                   ],
-                  stops: [0.3, 0.75, 1.0],
+                  stops: [0.4, 0.82, 1.0],
                 ),
         ),
         child: const SizedBox.expand(),

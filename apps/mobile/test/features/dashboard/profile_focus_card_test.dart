@@ -20,9 +20,9 @@ import '../../support/fake_progress_repository.dart';
 import '../../support/fake_workout_repository.dart';
 import '../../support/first_run_prefs.dart';
 
-/// Le cap du profil sur l'accueil : la carte change avec l'identité Carlys,
-/// mène à la partie de l'application qui sert sa devise, et n'existe pas
-/// tant qu'aucun profil n'est choisi — `null` n'est jamais un défaut.
+/// Le cap du profil dans « Pour toi » : la ligne change avec l'identité
+/// Carlys, mène à la partie de l'application qui sert sa devise, et n'existe
+/// pas tant qu'aucun profil n'est choisi — `null` n'est jamais un défaut.
 void main() {
   setUp(() {
     seedCompletedFirstRun();
@@ -96,10 +96,12 @@ void main() {
       (tester) async {
     await pumpHome(tester, profile: CarlysProfile.challenger);
 
-    await scrollTo(tester, find.text('Va chercher un défi'));
+    const cap = 'Va chercher un défi — la communauté en lance à ta hauteur '
+        'cette semaine.';
+    await scrollTo(tester, find.text(cap));
     expect(find.text('TON CAP LE CHALLENGER'), findsOneWidget);
 
-    await tester.tap(find.text('Va chercher un défi'));
+    await tester.tap(find.text(cap));
     // Pas de pumpAndSettle : sans dépôt communauté, l'écran garde son
     // indicateur de chargement animé — la navigation, elle, est immédiate.
     await tester.pump();
@@ -111,10 +113,12 @@ void main() {
       (tester) async {
     await pumpHome(tester, profile: CarlysProfile.stratege);
 
-    await scrollTo(tester, find.text('Comprends tes chiffres'));
+    const cap = 'Comprends tes chiffres — records et tendances disent ce que '
+        'ton corps répond.';
+    await scrollTo(tester, find.text(cap));
     expect(find.text('TON CAP LE STRATÈGE'), findsOneWidget);
 
-    await tester.tap(find.text('Comprends tes chiffres'));
+    await tester.tap(find.text(cap));
     await tester.pumpAndSettle();
     expect(find.byType(ProgressScreen), findsOneWidget);
   });

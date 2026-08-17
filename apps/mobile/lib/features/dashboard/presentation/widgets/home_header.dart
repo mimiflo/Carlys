@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/app_routes.dart';
 import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
+import '../../../onboarding/presentation/widgets/brand_signature.dart';
 
 /// En-tête de l'accueil : date du jour en mono, salutation, phrase d'état,
 /// avatar 44×44 en dégradé violet portant l'initiale.
@@ -29,11 +30,15 @@ class HomeHeader extends StatelessWidget {
 
   /// Hauteur FIXE de l'en-tête.
   ///
-  /// Elle vaut le pire cas de la colonne de texte — date (10) + 8 + salutation
-  /// (24,2) + 4 + phrase d'état sur DEUX lignes (37,7) ≈ 84 — donc au-delà de
-  /// l'avatar. La fixer permet à la zone haute de calculer exactement la place
-  /// qui reste à la citation, plutôt que de la mesurer après coup.
-  static const double height = 84;
+  /// Elle vaut le pire cas de la colonne de texte — rangée marque et date
+  /// (15) + 8 + salutation (24,2) + 4 + phrase d'état sur DEUX lignes
+  /// (37,7) ≈ 89 — donc au-delà de l'avatar. La fixer permet à la zone haute
+  /// de calculer exactement la place qui reste à la citation, plutôt que de
+  /// la mesurer après coup.
+  ///
+  /// C'est le sceau de marque qui commande : sans lui, la première rangée
+  /// tenait dans les 10 points du libellé mono.
+  static const double height = 89;
 
   /// La phrase d'état ne dépasse jamais deux lignes : au-delà elle pousserait
   /// la citation hors de sa bande.
@@ -55,7 +60,19 @@ class HomeHeader extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                AppSectionLabel(formatLongDateMono(DateTime.now())),
+                Row(
+                  children: [
+                    // Le sceau de marque, à hauteur de la date : l'accueil
+                    // est le seul écran où Carlys signe son nom.
+                    const _BrandMark(),
+                    const SizedBox(width: AppSpacing.xs),
+                    Flexible(
+                      child: AppSectionLabel(
+                        formatLongDateMono(DateTime.now()),
+                      ),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
                   firstName == null ? 'Bonjour' : 'Bonjour, $firstName.',
@@ -114,6 +131,39 @@ class HomeHeader extends StatelessWidget {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+/// Le sceau de marque de l'en-tête, halo violet compris.
+///
+/// Il reprend l'image de la page de bienvenue — la même signature du premier
+/// jour au centième, sans deuxième fichier à tenir à jour.
+class _BrandMark extends StatelessWidget {
+  const _BrandMark();
+
+  static const double _height = 15;
+
+  @override
+  Widget build(BuildContext context) {
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.primary.withValues(alpha: 0.45),
+            blurRadius: 10,
+          ),
+        ],
+      ),
+      child: Image.asset(
+        BrandSignature.markAsset,
+        height: _height,
+        fit: BoxFit.contain,
+        excludeFromSemantics: true,
+        // La marque est décorative ici : elle ne doit pas retarder la
+        // première image de l'écran le plus ouvert de l'application.
+        gaplessPlayback: true,
       ),
     );
   }

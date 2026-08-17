@@ -33,6 +33,19 @@ final consumedKcalTodayProvider = Provider.autoDispose<int?>((ref) {
   return meals.fold(0, (sum, meal) => sum! + meal.kcal);
 });
 
+/// Protéines consommées aujourd'hui, d'après le journal.
+///
+/// Toutes les entrées n'en portent pas : celles qui n'en déclarent pas
+/// comptent zéro. Le total est donc un PLANCHER, jamais une estimation — et
+/// il vaut mieux sous-compter que gonfler un chiffre que personne n'a saisi.
+final consumedProteinTodayProvider = Provider.autoDispose<int?>((ref) {
+  final meals = ref.watch(todayMealsProvider).valueOrNull;
+  if (meals == null) {
+    return null;
+  }
+  return meals.fold(0, (sum, meal) => sum! + (meal.proteinG ?? 0));
+});
+
 /// Actions nutrition : chaque écriture invalide les lectures concernées.
 ///
 /// PAS d'autoDispose : l'objet est lu au build puis rappelé dans des

@@ -17,6 +17,7 @@ class QuizCard extends StatefulWidget {
     this.title,
     this.answeredChoice,
     this.onAnswered,
+    this.framed = true,
     super.key,
   });
 
@@ -36,6 +37,11 @@ class QuizCard extends StatefulWidget {
   /// juste. C'est par lui que la réponse est notée sur l'appareil puis
   /// rejoint les défis culturels de la communauté.
   final void Function(int choiceIndex, bool correct)? onAnswered;
+
+  /// Posée dans une carte (Academy, au milieu d'une liste) ou à même le fond
+  /// (accueil, sous sa barre de titre de section). La question ne change pas,
+  /// seul son écrin s'adapte à ce qui l'entoure.
+  final bool framed;
 
   @override
   State<QuizCard> createState() => _QuizCardState();
@@ -69,90 +75,227 @@ class _QuizCardState extends State<QuizCard> {
   @override
   Widget build(BuildContext context) {
     final question = widget.question;
-    final answered = _picked != null;
+    final picked = _picked;
+    final answered = picked != null;
 
-    return AppCard(
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          if (widget.title != null) ...[
-            AppSectionLabel(widget.title!),
-            const SizedBox(height: AppSpacing.xs),
-          ],
-          Text(
-            question.prompt,
-            style: AppTypography.subheading
-                .copyWith(color: AppColors.darkTextPrimary),
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          for (var index = 0; index < question.choices.length; index++)
-            _Choice(
-              label: question.choices[index],
-              state: !answered
-                  ? _ChoiceState.idle
-                  : index == question.answerIndex
-                      ? _ChoiceState.correct
-                      : index == _picked
-                          ? _ChoiceState.wrong
-                          : _ChoiceState.dimmed,
-              onTap: answered
-                  ? null
-                  : () {
-                      setState(() => _picked = index);
-                      widget.onAnswered
-                          ?.call(index, index == question.answerIndex);
-                    },
-            ),
-          if (answered) ...[
-            const SizedBox(height: AppSpacing.xs),
-            Text(
-              question.explanation,
-              style: AppTypography.body
-                  .copyWith(color: AppColors.darkTextSecondary),
-            ),
-          ],
+    final content = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (widget.title != null) ...[
+          AppSectionLabel(widget.title!),
+          const SizedBox(height: AppSpacing.xs),
         ],
+        Text(
+          question.prompt,
+          style: AppTypography.subheading.copyWith(
+            height: 1.35,
+            color: AppColors.darkTextPrimary,
+          ),
+        ),
+        const SizedBox(height: AppSpacing.gapRow),
+        for (var index = 0; index < question.choices.length; index++)
+          _Choice(
+            letter: _letters[index],
+            label: question.choices[index],
+            picked: picked == index,
+            correct: index == question.answerIndex,
+            answered: answered,
+            // Une seule tentative : la réponse part au stockage local et
+            // nourrit les défis de la communauté. La reprendre voudrait dire
+            // la retirer de partout, ce qui n'aurait plus rien d'un quiz.
+            onTap: answered
+                ? null
+                : () {
+                    setState(() => _picked = index);
+                    widget.onAnswered
+                        ?.call(index, index == question.answerIndex);
+                  },
+          ),
+        const SizedBox(height: AppSpacing.xxs),
+        _Hint(
+          answered: answered,
+          correct: answered && picked == question.answerIndex,
+        ),
+        if (answered) ...[
+          const SizedBox(height: AppSpacing.sm),
+          // L'explication s'affiche TOUJOURS, juste ou faux : c'est elle qui
+          // enseigne, pas le verdict.
+          Text(
+            question.explanation,
+            style:
+                AppTypography.body.copyWith(color: AppColors.darkTextSecondary),
+          ),
+        ],
+      ],
+    );
+
+    return widget.framed ? AppCard(child: content) : content;
+  }
+
+  /// Trois choix au plus dans le pack : la table suffit.
+  static const List<String> _letters = ['A', 'B', 'C', 'D'];
+}
+
+/// Une réponse : sa lettre, son texte, et l'état qu'elle a pris.
+///
+/// Le rond à lettre est ce qui la fait lire comme un BOUTON plutôt que comme
+/// une ligne de liste — sans lui, trois rectangles bordés ressemblaient à un
+/// tableau qu'on ne pense pas à toucher.
+class _Choice extends StatelessWidget {
+  const _Choice({
+    required this.letter,
+    required this.label,
+    required this.picked,
+    required this.correct,
+    required this.answered,
+    this.onTap,
+  });
+
+  final String letter;
+  final String label;
+
+  /// C'est CE choix qui a été fait.
+  final bool picked;
+
+  /// C'est la bonne réponse.
+  final bool correct;
+
+  /// Une réponse a été donnée, quelle qu'elle soit.
+  final bool answered;
+
+  final VoidCallback? onTap;
+
+  static const double _chipSize = 24;
+
+  @override
+  Widget build(BuildContext context) {
+    // Deux choses se colorent une fois répondu : ce qui a été CHOISI, et ce
+    // qui était JUSTE. Montrer la bonne réponse sans montrer celle qui a été
+    // donnée laisserait croire à une réussite après une erreur ; ne montrer
+    // que l'erreur n'apprendrait rien. La coche, elle, ne va qu'au choix
+    // fait — c'est elle qui dit « c'est toi qui as répondu ça ».
+    final tone = correct && answered
+        ? AppColors.success
+        : picked
+            ? AppColors.danger
+            : null;
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: AppSpacing.xs),
+      child: Semantics(
+        button: onTap != null,
+        selected: picked,
+        label: '$letter. $label',
+        onTap: onTap,
+        child: ExcludeSemantics(
+          child: GestureDetector(
+            onTap: onTap,
+            behavior: HitTestBehavior.opaque,
+            child: AnimatedContainer(
+              duration: const Duration(milliseconds: 120),
+              curve: AppMotion.standard,
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(
+                horizontal: AppSpacing.gapRow,
+                vertical: AppSpacing.sm + 1,
+              ),
+              decoration: BoxDecoration(
+                color: tone == null
+                    ? AppColors.quizChoiceFill
+                    : tone.withValues(alpha: 0.10),
+                borderRadius: AppRadius.lgAll,
+                border: Border.all(
+                  color: tone ?? AppColors.quizChoiceBorder,
+                ),
+              ),
+              child: Row(
+                children: [
+                  Container(
+                    width: _chipSize,
+                    height: _chipSize,
+                    alignment: Alignment.center,
+                    decoration: BoxDecoration(
+                      color: tone,
+                      shape: BoxShape.circle,
+                      border: tone == null
+                          ? Border.all(color: AppColors.quizLetterBorder)
+                          : null,
+                    ),
+                    child: Text(
+                      letter,
+                      style: AppTypography.labelMono.copyWith(
+                        fontWeight: FontWeight.w700,
+                        letterSpacing: 0,
+                        color: tone == null
+                            ? AppColors.darkTextTertiary
+                            : AppColors.darkBackground,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Text(
+                      label,
+                      style: AppTypography.body.copyWith(
+                        fontSize: 14,
+                        fontWeight: picked ? FontWeight.w600 : FontWeight.w400,
+                        color: answered && !picked
+                            ? AppColors.darkTextTertiary
+                            : AppColors.darkTextPrimary,
+                      ),
+                    ),
+                  ),
+                  if (picked) ...[
+                    const SizedBox(width: AppSpacing.xs),
+                    Icon(AppIcons.checkCircle, size: 18, color: tone),
+                  ],
+                ],
+              ),
+            ),
+          ),
+        ),
       ),
     );
   }
 }
 
-enum _ChoiceState { idle, correct, wrong, dimmed }
+/// La ligne d'invite, sous les réponses : elle dit quoi faire, puis ce qui
+/// vient d'être fait. Jamais un reproche.
+class _Hint extends StatelessWidget {
+  const _Hint({required this.answered, required this.correct});
 
-class _Choice extends StatelessWidget {
-  const _Choice({required this.label, required this.state, this.onTap});
-
-  final String label;
-  final _ChoiceState state;
-  final VoidCallback? onTap;
+  final bool answered;
+  final bool correct;
 
   @override
   Widget build(BuildContext context) {
-    final (Color border, Color text) = switch (state) {
-      _ChoiceState.idle => (AppColors.darkBorder, AppColors.darkTextPrimary),
-      _ChoiceState.correct => (AppColors.success, AppColors.success),
-      _ChoiceState.wrong => (AppColors.danger, AppColors.danger),
-      _ChoiceState.dimmed => (AppColors.darkBorder, AppColors.darkTextTertiary),
+    final (text, color) = switch ((answered, correct)) {
+      (false, _) => (
+          'Touche une réponse — une seule tentative par jour.',
+          AppColors.darkTextTertiary,
+        ),
+      (true, true) => ('Bonne réponse.', AppColors.success),
+      (true, false) => (
+          'Raté, mais l’explication vaut le détour.',
+          AppColors.darkTextTertiary
+        ),
     };
 
-    return Padding(
-      padding: const EdgeInsets.only(bottom: AppSpacing.xs),
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(AppRadius.md),
-        child: Container(
-          width: double.infinity,
-          padding: const EdgeInsets.symmetric(
-            horizontal: AppSpacing.sm,
-            vertical: AppSpacing.xs + 2,
-          ),
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(AppRadius.md),
-            border: Border.fromBorderSide(BorderSide(color: border)),
-          ),
-          child: Text(label, style: AppTypography.body.copyWith(color: text)),
+    return Row(
+      children: [
+        Icon(
+          answered ? AppIcons.checkCircle : AppIcons.touch,
+          size: 14,
+          color: answered ? color : AppColors.textMuted,
         ),
-      ),
+        const SizedBox(width: AppSpacing.xs - 1),
+        Expanded(
+          child: Text(
+            text,
+            style: AppTypography.label.copyWith(fontSize: 12, color: color),
+          ),
+        ),
+      ],
     );
   }
 }

@@ -23,6 +23,7 @@ import 'package:carlys_mobile/demo/demo_community.dart';
 import 'package:carlys_mobile/demo/demo_overrides.dart';
 import 'package:carlys_mobile/demo/demo_programs.dart';
 import 'package:carlys_mobile/demo/demo_repositories.dart';
+import 'package:carlys_mobile/demo/demo_templates.dart';
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/academy/presentation/screens/academy_screen.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
@@ -37,6 +38,7 @@ import 'package:carlys_mobile/features/coaching/presentation/screens/coach_scree
 import 'package:carlys_mobile/features/community/data/repositories/community_repository_impl.dart';
 import 'package:carlys_mobile/features/community/presentation/screens/community_screen.dart';
 import 'package:carlys_mobile/features/dashboard/presentation/screens/home_screen.dart';
+import 'package:carlys_mobile/features/dashboard/presentation/widgets/title_summary.dart';
 import 'package:carlys_mobile/features/exercises/data/repositories/exercises_repository_impl.dart';
 import 'package:carlys_mobile/features/exercises/domain/entities/exercise.dart';
 import 'package:carlys_mobile/features/exercises/presentation/screens/exercise_detail_screen.dart';
@@ -73,6 +75,7 @@ import 'package:carlys_mobile/features/workout_program/presentation/screens/prog
 import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';
 import 'package:carlys_mobile/features/workout_session/domain/entities/workout.dart';
 import 'package:carlys_mobile/features/workout_session/presentation/screens/active_workout_screen.dart';
+import 'package:carlys_mobile/features/workout_template/data/repositories/workout_template_repository_impl.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -88,6 +91,16 @@ import '../../test/support/fake_progress_repository.dart';
 import '../../test/support/fake_subscription_repository.dart';
 import '../../test/support/fake_workout_repository.dart';
 import '../../test/support/first_run_prefs.dart';
+
+/// Minuit de la journée en cours.
+///
+/// Les repas de la galerie s'y ancrent : « il y a N heures » bascule la
+/// veille quand la capture tourne après minuit, et le total du jour change
+/// d'une exécution à l'autre.
+DateTime startOfToday() {
+  final now = DateTime.now();
+  return DateTime(now.year, now.month, now.day);
+}
 
 Future<void> loadRealFonts() async {
   // Polices du bundle (MaterialIcons…).
@@ -451,6 +464,11 @@ void main() {
             DemoCommunityRepository(),
           ),
           programRepositoryProvider.overrideWithValue(DemoProgramRepository()),
+          // L'accueil compte les modèles enregistrés : sans dépôt local, le
+          // compte partirait au réseau et laisserait un minuteur en vol.
+          workoutTemplateRepositoryProvider.overrideWithValue(
+            DemoWorkoutTemplateRepository(workouts ?? FakeWorkoutRepository()),
+          ),
           // Même raison que la communauté ci-dessus : sans doublure, l'écran
           // Profil demande ses préférences de notification au dépôt Dio réel,
           // et le minuteur de timeout survit au test.
@@ -614,12 +632,12 @@ void main() {
       tester,
       workouts: FakeWorkoutRepository()..history = trainedHistory(),
     );
-    await tester.scrollUntilVisible(find.byType(ProgressionEntryCard), 200);
+    await tester.scrollUntilVisible(find.byType(TitleSummary), 200);
     await settleEngraving(tester);
     await capture(
       tester,
       '02b-accueil-progression',
-      shows: find.byType(ProgressionEntryCard),
+      shows: find.byType(TitleSummary),
     );
   });
 
@@ -730,13 +748,13 @@ void main() {
             id: 'capture-repas-1',
             name: 'Skyr, granola',
             kcal: 380,
-            eatenAt: DateTime.now().subtract(const Duration(hours: 4)),
+            eatenAt: startOfToday().add(const Duration(hours: 8)),
           ),
           MealEntry(
             id: 'capture-repas-2',
             name: 'Poulet, riz',
             kcal: 274,
-            eatenAt: DateTime.now().subtract(const Duration(hours: 1)),
+            eatenAt: startOfToday().add(const Duration(hours: 12)),
           ),
         ]),
     );

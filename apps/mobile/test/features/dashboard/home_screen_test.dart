@@ -25,8 +25,8 @@ import '../../support/fake_workout_repository.dart';
 import '../../support/first_run_prefs.dart';
 
 /// Accueil : l'écran ne montre que des faits réels — maxime du jour et série
-/// de constance sous le cœur, séance du jour, tuiles, puis l'indice de forme
-/// adossé à « Ta semaine ».
+/// de constance sous le cœur, les quatre mesures d'aujourd'hui, la séance à
+/// lancer, puis la forme du jour adossée aux séances de la semaine.
 void main() {
   setUp(() {
     // Parcours de première ouverture déjà terminé : l'application démarre
@@ -98,8 +98,7 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('en-tête, indice de forme et faits de la semaine',
-      (tester) async {
+  testWidgets('en-tête et forme du jour', (tester) async {
     final workouts = FakeWorkoutRepository()
       ..history = [
         WorkoutHistoryEntry(
@@ -124,82 +123,97 @@ void main() {
       findsOneWidget,
     );
 
-    await scrollTo(tester, find.text('INDICE DE FORME'));
-    expect(find.text('INDICE DE FORME'), findsOneWidget);
-    // 2 séances sur les 5 visées.
-    expect(find.text('40'), findsOneWidget);
+    await scrollTo(tester, find.text('FORME DU JOUR'));
+    expect(find.text('FORME DU JOUR'), findsOneWidget);
+    // 2 séances sur les 5 visées : le score et la bande où il tombe.
+    expect(find.text('40 / 100'), findsOneWidget);
     expect(find.text('Prêt pour du lourd'), findsOneWidget);
+    expect(find.text('CHARGE JUSTE'), findsOneWidget);
+    expect(find.text('séances / 5 cette semaine'), findsOneWidget);
   });
 
-  testWidgets('résumé du jour : quatre faits réels, aucun inventé',
-      (tester) async {
+  testWidgets('aujourd’hui : chaque mesure face à sa cible', (tester) async {
     await pumpHome(tester);
 
-    await scrollTo(tester, find.text('RÉSUMÉ DU JOUR'));
-    expect(find.text('RÉSUMÉ DU JOUR'), findsOneWidget);
-    expect(find.text('ENTRAÎNEMENT'), findsOneWidget);
-    expect(find.text('NUTRITION'), findsOneWidget);
+    await scrollTo(tester, find.text('AUJOURD’HUI'));
+    expect(find.text('CALORIES'), findsOneWidget);
     expect(find.text('PROTÉINES'), findsOneWidget);
+    expect(find.text('HYDRATATION'), findsOneWidget);
     expect(find.text('VOLUME'), findsOneWidget);
 
-    // Journal vide : un VRAI zéro face à l'objectif — « 0 / 2 759 », pas
-    // un objectif déguisé en consommé. Les protéines restent un objectif.
-    expect(find.text('0 / 2\u202F759'), findsOneWidget);
-    expect(find.text('kcal aujourd’hui'), findsOneWidget);
-    expect(find.text('128 g'), findsOneWidget);
-    expect(find.text('objectif du jour'), findsOneWidget);
-    expect(find.text('1,5 t'), findsOneWidget);
+    // Journal vide : un VRAI zéro face à l'objectif, et le reste qui en
+    // découle — jamais un objectif déguisé en consommé.
+    expect(find.text('/ 2\u202F759 kcal'), findsOneWidget);
+    expect(find.text('reste 2\u202F759 kcal'), findsOneWidget);
+    expect(find.text('/ 128 g'), findsOneWidget);
+    expect(find.text('reste 128 g'), findsOneWidget);
+
+    // L'eau bue n'est pas suivie : la cible est réelle, la valeur reste en
+    // attente plutôt qu'inventée.
+    expect(find.text('à noter dans Nutrition'), findsOneWidget);
+
+    // Aucune semaine précédente ici : pas de cible de volume, donc pas de
+    // « reste » — la portée de la mesure prend sa place.
     expect(find.text('cette semaine'), findsOneWidget);
-
-    // Aucune séance faite aujourd'hui dans ce cas.
-    expect(find.text('À faire'), findsOneWidget);
-
-    // Ce que la maquette de référence montre mais que le domaine ignore.
-    expect(find.text('SOMMEIL'), findsNothing);
-    expect(find.text('HYDRATATION'), findsNothing);
   });
 
   testWidgets('le consommé du journal s’affiche face à l’objectif',
       (tester) async {
+    // Les repas sont ancrés sur la JOURNÉE en cours, jamais sur « il y a
+    // N heures » : passé minuit, un décalage relatif bascule la veille et le
+    // total du jour change sous les pieds du test.
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
     final nutrition = completeNutrition()
       ..meals.addAll([
         MealEntry(
           id: 'repas-1',
           name: 'Skyr',
           kcal: 380,
-          eatenAt: DateTime.now().subtract(const Duration(hours: 3)),
+          eatenAt: today.add(const Duration(hours: 8)),
         ),
         MealEntry(
           id: 'repas-2',
           name: 'Poulet riz',
           kcal: 274,
-          eatenAt: DateTime.now().subtract(const Duration(hours: 1)),
+          eatenAt: today.add(const Duration(hours: 12)),
         ),
       ]);
     await pumpHome(tester, nutrition: nutrition);
 
-    await scrollTo(tester, find.text('RÉSUMÉ DU JOUR'));
-    // 380 + 274 = 654 : le « 654 / 2 759 » est un fait, pas une invention.
-    expect(find.text('654 / 2\u202F759'), findsOneWidget);
-    expect(find.text('kcal aujourd’hui'), findsOneWidget);
+    await scrollTo(tester, find.text('AUJOURD’HUI'));
+    // 380 + 274 = 654 : le consommé et le reste sont des faits, pas des
+    // inventions.
+    expect(find.text('654'), findsOneWidget);
+    expect(find.text('/ 2\u202F759 kcal'), findsOneWidget);
+    expect(find.text('reste 2\u202F105 kcal'), findsOneWidget);
   });
 
-  testWidgets('sans séance en cours : entraînement libre et tuiles',
-      (tester) async {
-    await pumpHome(tester);
+  testWidgets(
+    'sans séance en cours : entraînement libre et tuiles',
+    (tester) async {
+      await pumpHome(tester);
 
-    await scrollTo(tester, find.text('Entraînement libre'));
-    expect(find.text('SÉANCE DU JOUR'), findsOneWidget);
-    expect(find.text('Entraînement libre'), findsOneWidget);
-    expect(find.text('Démarrer la séance'), findsOneWidget);
+      await scrollTo(tester, find.text('Entraînement libre'));
+      expect(find.text('SÉANCE DU JOUR'), findsOneWidget);
+      expect(find.text('Entraînement libre'), findsOneWidget);
+      expect(
+        find.text('Tu choisis les exercices en cours de route.'),
+        findsOneWidget,
+      );
+      // Le disque n'a pas de libellé écrit : c'est la sémantique qui le porte.
+      expect(
+        find.semantics.byLabel('Démarrer la séance'),
+        findsOneWidget,
+        reason: 'le disque doit rester atteignable au lecteur d’écran',
+      );
+      // La seconde porte, hors séance seulement.
+      expect(find.text('Lancer un modèle'), findsOneWidget);
+    },
+    semanticsEnabled: true,
+  );
 
-    await scrollTo(tester, find.text('Ta semaine'));
-    expect(find.text('Ta semaine'), findsOneWidget);
-    expect(find.text('2 / 5 SÉANCES'), findsOneWidget);
-  });
-
-  testWidgets('la citation du jour est en carte, à gauche du cœur',
-      (tester) async {
+  testWidgets('la citation du jour vit à gauche du cœur', (tester) async {
     await pumpHome(tester);
 
     expect(find.text('CITATION DU JOUR'), findsOneWidget);
@@ -227,31 +241,30 @@ void main() {
     final scene = tester.getRect(find.byType(HeartScene));
     expect(quote.right, lessThan(scene.center.dx));
 
-    // L'indice de forme, lui, est bien descendu hors de la zone haute.
+    // La forme du jour, elle, est bien descendue hors de la zone haute.
     expect(
-      find.descendant(of: hero, matching: find.text('INDICE DE FORME')),
+      find.descendant(of: hero, matching: find.text('FORME DU JOUR')),
       findsNothing,
     );
   });
 
-  testWidgets('la carte de citation descend jusqu’à la série de constance',
+  testWidgets('la citation descend jusqu’à la série de constance',
       (tester) async {
     await pumpHome(tester);
 
     final quote = tester.getRect(find.byType(DailyQuoteCard));
     final streak = tester.getRect(find.byType(ConsistencyStreak));
 
-    // Elle s'arrête juste au-dessus, à une gouttière près : ni carte
-    // riquiqui flottant en haut, ni chevauchement.
+    // Elle s'arrête juste au-dessus, à une gouttière près : ni bloc riquiqui
+    // flottant en haut, ni chevauchement.
     expect(quote.bottom, lessThan(streak.top));
     expect(streak.top - quote.bottom, lessThan(AppSpacing.gapSection));
 
-    // Et elle occupe vraiment la bande : plus haute que large.
-    expect(quote.height, greaterThan(quote.width));
+    // Et elle occupe vraiment la bande laissée par le cœur.
+    expect(quote.height, greaterThan(100));
   });
 
-  testWidgets('série de constance : sept jours en ronds, L M M J V S D',
-      (tester) async {
+  testWidgets('série de constance : sept jours, L M M J V S D', (tester) async {
     await pumpHome(tester);
 
     // Elle vit SOUS la zone haute, la colonne de gauche revenant à la
@@ -301,66 +314,72 @@ void main() {
 
     await pumpHome(tester, workouts: workouts);
 
-    expect(find.text('Jour 2'), findsOneWidget);
-    // Une flamme par jour tenu de la semaine affichée, PLUS celle qui
-    // accompagne « Jour N ». Les deux jours ne débordent sur la semaine
-    // précédente que le lundi et le mardi.
-    final expectedFlames = 1 +
-        [yesterday, before].where((day) => day.weekday <= today.weekday).length;
+    // La série s'annonce dans la barre de titre, en capitales.
+    expect(find.text('2 JOURS'), findsOneWidget);
+    // DEUX flammes exactement : celle de la barre de titre, et la flamme
+    // vivante qui ne brûle que tant que la série tient. Les jours tenus, eux,
+    // sont des traits — pas une rangée de petits feux.
     expect(
       find.descendant(
         of: find.byType(ConsistencyStreak),
         matching: find.byIcon(AppIcons.streak),
       ),
-      findsNWidgets(expectedFlames),
+      findsNWidgets(2),
     );
   });
 
-  testWidgets('séance en cours : titre, durée écoulée et reprise',
-      (tester) async {
-    final startedAt = DateTime.now().subtract(const Duration(minutes: 52));
-    final workouts = FakeWorkoutRepository()
-      ..active = WorkoutWithSets(
-        session: WorkoutInfo(
-          id: 'w-2',
-          name: 'Push force',
-          status: WorkoutStatus.inProgress,
-          startedAt: startedAt,
-          syncState: LocalSyncState.pending,
-        ),
-        sets: [
-          WorkoutSetEntry(
-            id: 's-1',
-            exerciseName: 'Développé couché',
-            position: 1,
-            kind: SetKind.normal,
-            reps: 8,
-            weightKg: 80,
-            completedAt: startedAt,
+  testWidgets(
+    'séance en cours : titre, durée écoulée et reprise',
+    (tester) async {
+      final startedAt = DateTime.now().subtract(const Duration(minutes: 52));
+      final workouts = FakeWorkoutRepository()
+        ..active = WorkoutWithSets(
+          session: WorkoutInfo(
+            id: 'w-2',
+            name: 'Push force',
+            status: WorkoutStatus.inProgress,
+            startedAt: startedAt,
             syncState: LocalSyncState.pending,
           ),
-          WorkoutSetEntry(
-            id: 's-2',
-            exerciseName: 'Développé couché',
-            position: 2,
-            kind: SetKind.normal,
-            reps: 8,
-            weightKg: 80,
-            completedAt: startedAt,
-            syncState: LocalSyncState.pending,
-          ),
-        ],
+          sets: [
+            WorkoutSetEntry(
+              id: 's-1',
+              exerciseName: 'Développé couché',
+              position: 1,
+              kind: SetKind.normal,
+              reps: 8,
+              weightKg: 80,
+              completedAt: startedAt,
+              syncState: LocalSyncState.pending,
+            ),
+            WorkoutSetEntry(
+              id: 's-2',
+              exerciseName: 'Développé couché',
+              position: 2,
+              kind: SetKind.normal,
+              reps: 8,
+              weightKg: 80,
+              completedAt: startedAt,
+              syncState: LocalSyncState.pending,
+            ),
+          ],
+        );
+
+      await pumpHome(tester, workouts: workouts);
+      await scrollTo(tester, find.text('Push force'));
+
+      // Le nom de la séance ne s'écrit plus qu'à UN endroit : la grille du
+      // jour mesure, elle ne redit pas ce que la carte au-dessus annonce.
+      expect(find.text('Push force'), findsOneWidget);
+      // Durée écoulée et faits mesurés tiennent dans une seule phrase.
+      expect(
+        find.text('En cours depuis 52 min — 1 exercice, 2 séries.'),
+        findsOneWidget,
       );
-
-    await pumpHome(tester, workouts: workouts);
-
-    // Deux fois : la carte « séance du jour » ET la tuile ENTRAÎNEMENT du
-    // résumé, qui reflète la séance en cours.
-    expect(find.text('Push force'), findsNWidgets(2));
-    expect(find.text('en cours'), findsOneWidget);
-    expect(find.text('52 MIN'), findsOneWidget);
-    expect(find.text('1 exercice'), findsOneWidget);
-    expect(find.text('2 séries'), findsOneWidget);
-    expect(find.text('Reprendre la séance'), findsOneWidget);
-  });
+      expect(find.semantics.byLabel('Reprendre la séance'), findsOneWidget);
+      // On ne lance pas une séance quand une autre est ouverte.
+      expect(find.text('Lancer un modèle'), findsNothing);
+    },
+    semanticsEnabled: true,
+  );
 }

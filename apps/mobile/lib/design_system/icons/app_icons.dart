@@ -47,6 +47,34 @@ abstract final class AppIcons {
 
   /// Renvoi vers une lecture, là où le chevron dirait « déplier ».
   static const IconData arrowForward = Icons.arrow_forward_rounded;
+
+  // ── Barres de titre de section (accueil) ──────────────────────────
+  /// L'état du jour, par opposition à la semaine ou à l'histoire.
+  static const IconData today = Icons.today_rounded;
+
+  /// L'eau bue dans la journée.
+  static const IconData water = Icons.water_drop_rounded;
+
+  /// La séance à lancer : ce qui met en marche, pas ce qui s'entraîne.
+  static const IconData spark = Icons.bolt_rounded;
+
+  /// Le titre porté sur le profil de progression.
+  static const IconData rank = Icons.military_tech_rounded;
+
+  /// Ce que Carlys a retenu pour toi, sans que tu l'aies demandé.
+  static const IconData forYou = Icons.auto_awesome_rounded;
+
+  /// La question du jour.
+  static const IconData question = Icons.help_rounded;
+
+  /// La forme du jour, lue sur les séances de la semaine.
+  static const IconData form = Icons.monitor_heart_rounded;
+
+  /// L'invite à toucher une réponse.
+  static const IconData touch = Icons.touch_app_rounded;
+
+  /// Le cap d'une identité Carlys : ce sur quoi on bâtit.
+  static const IconData foundation = Icons.foundation_rounded;
   static const IconData minus = Icons.remove_rounded;
   static const IconData recovery = Icons.battery_charging_full_rounded;
 

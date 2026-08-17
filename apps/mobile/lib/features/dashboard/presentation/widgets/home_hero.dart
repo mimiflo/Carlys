@@ -34,6 +34,9 @@ class HomeHero extends StatelessWidget {
   static const double _sceneTop = 64;
   static const double _sceneRight = -126;
 
+  /// Retrait haut du contenu : aucun texte sous la Dynamic Island.
+  static const double _topInset = 88;
+
   /// Fondu vertical de la scène (transparent → plein → transparent).
   static const List<double> _sceneFade = [0.0, 0.16, 0.46, 0.76];
 
@@ -60,13 +63,14 @@ class HomeHero extends StatelessWidget {
     // est connu — l'encoche, la gouttière, la hauteur FIXE de l'en-tête —
     // donc la carte descend exactement jusqu'à la série, quel que soit
     // l'appareil, et la zone haute garde la même hauteur tous les jours.
+    // Retrait haut FERME : la maquette pose le contenu à 88 du bord, quelle
+    // que soit l'encoche. Sur un appareil à grande encoche, c'est elle qui
+    // commande — jamais moins que la marge système.
+    final top = math.max(_topInset, topInset + AppSpacing.xs);
     final quoteHeight = math.max(
       0.0,
       _minHeight -
-          (topInset +
-              AppSpacing.gutter +
-              HomeHeader.height +
-              AppSpacing.gapRow) -
+          (top + HomeHeader.height + AppSpacing.gapRow) -
           AppSpacing.gapRow,
     );
 
@@ -99,7 +103,7 @@ class HomeHero extends StatelessWidget {
           ),
           Padding(
             padding: EdgeInsets.only(
-              top: topInset + AppSpacing.gutter,
+              top: top,
               left: AppSpacing.gutter,
               right: AppSpacing.gutter,
               bottom: AppSpacing.gapRow,

@@ -33,6 +33,90 @@ final fitnessIndexProvider = Provider.autoDispose<int?>((ref) {
   return (done / weeklySessionsTarget * 100).round();
 });
 
+/// LA LECTURE DE LA FORME, en trois bandes.
+///
+/// L'échelle graduée du bas de l'accueil n'est pas un score de santé : c'est
+/// la part de l'objectif hebdomadaire déjà faite, dite en français. Les trois
+/// bandes valent chacune un tiers — repos, charge juste, surcharge — et c'est
+/// celle où tombe le score qui s'allume.
+enum FormBand {
+  repos('Repos'),
+  chargeJuste('Charge juste'),
+  surcharge('Surcharge');
+
+  const FormBand(this.label);
+
+  final String label;
+
+  /// La bande où tombe un score de 0 à 100.
+  static FormBand forScore(int score) {
+    if (score < 34) return FormBand.repos;
+    if (score < 67) return FormBand.chargeJuste;
+    return FormBand.surcharge;
+  }
+}
+
+/// Ce que l'échelle de forme raconte : une lecture courte et son pourquoi.
+class FormReading {
+  const FormReading({
+    required this.score,
+    required this.headline,
+    required this.explanation,
+  });
+
+  final int score;
+
+  /// Trois mots, lus d'un coup d'œil.
+  final String headline;
+
+  /// La phrase qui dit d'où vient la lecture — jamais un conseil médical,
+  /// toujours un fait de la semaine.
+  final String explanation;
+
+  FormBand get band => FormBand.forScore(score);
+}
+
+/// La forme du jour, adossée aux séances RÉELLEMENT terminées de la semaine.
+///
+/// `null` tant que la semaine n'est pas lue : l'écran patiente au lieu
+/// d'inventer une lecture.
+final formReadingProvider = Provider.autoDispose<FormReading?>((ref) {
+  final score = ref.watch(fitnessIndexProvider);
+  final week = ref.watch(weekOverviewProvider).valueOrNull;
+  if (score == null || week == null) {
+    return null;
+  }
+
+  final sessions = week.sessionsCount;
+  final remaining = weeklySessionsTarget - sessions;
+  return switch (FormBand.forScore(score)) {
+    FormBand.repos => FormReading(
+        score: score,
+        headline: sessions == 0 ? 'La semaine commence' : 'De la marge',
+        explanation: sessions == 0
+            ? 'Rien encore cette semaine. La première séance ouvre tout le '
+                'reste.'
+            : 'Une séance derrière toi. Le corps est frais, la place est '
+                'large.',
+      ),
+    FormBand.chargeJuste => FormReading(
+        score: score,
+        headline: 'Prêt pour du lourd',
+        explanation: '$sessions séances derrière toi, la récupération suit. '
+            'Tu peux charger sans réserve aujourd’hui.',
+      ),
+    FormBand.surcharge => FormReading(
+        score: score,
+        headline: remaining <= 0 ? 'Objectif atteint' : 'Semaine chargée',
+        explanation: remaining <= 0
+            ? 'Les $weeklySessionsTarget séances sont faites. Ce qui vient en '
+                'plus est du bonus, pas une dette.'
+            : 'Le rythme est haut. Garde une journée pour récupérer, elle '
+                'fait partie du travail.',
+      ),
+  };
+});
+
 /// Maxime du jour, tirée du recueil Carlys. Déterministe : même phrase toute
 /// la journée, et sur tous les appareils de l'utilisateur.
 final dailyQuoteProvider = Provider.autoDispose<DailyQuote>((ref) {

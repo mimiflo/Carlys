@@ -13,26 +13,30 @@ import '../../../authentication/presentation/controllers/auth_controller.dart';
 import '../../../carlys_profile/presentation/controllers/carlys_profile_controllers.dart';
 import '../../../community/presentation/controllers/community_controllers.dart';
 import '../../../notifications/presentation/controllers/push_registration.dart';
-import '../../../nutrition/presentation/controllers/nutrition_controllers.dart';
-import '../../../progression/presentation/widgets/progression_entry_card.dart';
 import '../../../workout_session/presentation/controllers/workout_controllers.dart';
+import '../../../workout_template/presentation/controllers/workout_template_controllers.dart';
 import '../controllers/dashboard_controllers.dart';
-import '../widgets/community_nudge_card.dart';
+import '../controllers/today_metrics.dart';
 import '../widgets/consistency_streak.dart';
-import '../widgets/day_summary_grid.dart';
-import '../widgets/fitness_index_block.dart';
+import '../widgets/daily_form_block.dart';
+import '../widgets/for_you_card.dart';
 import '../widgets/home_hero.dart';
-import '../widgets/profile_focus_card.dart';
+import '../widgets/section_title_bar.dart';
+import '../widgets/title_summary.dart';
+import '../widgets/today_grid.dart';
 import '../widgets/today_workout_card.dart';
-import '../widgets/week_bars.dart';
 
-/// Accueil — le parcours quotidien, ouvert par le cœur.
+/// ACCUEIL — ce que je fais aujourd'hui, et où j'en suis.
 ///
-/// Ordre de lecture : le **cœur** (signature de l'app) avec la citation à sa
-/// gauche, la série de constance, le résumé du jour (entraînement, objectif
-/// calorique), la séance du jour (unique CTA accent) — l'action vient APRÈS
-/// le constat —, le mot de la communauté quand il y en a un, la question du
-/// jour de l'Academy, et l'indice de forme adossé à « Ta semaine ».
+/// L'écran ne garde que TROIS surfaces : l'état du jour, la séance à lancer,
+/// et ce que Carlys a retenu pour toi. Tout le reste vit à même le fond,
+/// ouvert par une barre de titre dont le filet court jusqu'au bord. Neuf
+/// cartes de densité égale ne hiérarchisaient rien ; trois surfaces posées
+/// dans un rythme régulier se lisent d'un regard.
+///
+/// Un seul aplat orange : le disque de lecture de la séance. Les autres
+/// signes d'accent (la flamme de la série, le cran de forme) restent des
+/// points, jamais des surfaces.
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
 
@@ -51,11 +55,7 @@ class HomeScreen extends ConsumerWidget {
       AuthAuthenticated(:final user) => user,
       _ => null,
     };
-    final carlysProfile = ref.watch(currentCarlysProfileProvider);
     final activeWorkout = ref.watch(activeWorkoutProvider).valueOrNull;
-    final week = ref.watch(weekOverviewProvider).valueOrNull;
-    final report = ref.watch(metabolismReportProvider).valueOrNull;
-    final nudge = ref.watch(latestEncouragementProvider);
     final dailyLesson = ref.watch(dailyLessonProvider);
     final bottomInset =
         AppBottomBar.height + MediaQuery.paddingOf(context).bottom;
@@ -67,7 +67,7 @@ class HomeScreen extends ConsumerWidget {
       // sur les téléphones modestes.
       body: SceneScrollActivity(
         child: ListView(
-          // La zone haute est à fond perdu : les cartes posent leur
+          // La zone haute est à fond perdu : les sections posent leur
           // gouttière.
           padding: EdgeInsets.only(bottom: bottomInset + AppSpacing.gapSection),
           children: [
@@ -81,16 +81,17 @@ class HomeScreen extends ConsumerWidget {
                   ConsistencyStreak(week: ref.watch(consistencyWeekProvider)),
             ),
             _Section(
-              child: DaySummaryGrid(
-                training: ref.watch(todayTrainingProvider),
-                report: report,
-                week: week,
-                consumedKcal: ref.watch(consumedKcalTodayProvider),
+              child: _Titled(
+                icon: AppIcons.today,
+                label: 'Aujourd’hui',
+                child: TodayGrid(metrics: ref.watch(todayMetricsProvider)),
               ),
             ),
             _Section(
               child: TodayWorkoutCard(
                 activeWorkout: activeWorkout,
+                templateCount:
+                    ref.watch(workoutTemplatesProvider).valueOrNull?.length,
                 onOpenTemplates: () => context.push(AppRoutes.templates),
                 onStart: () async {
                   if (activeWorkout == null) {
@@ -102,48 +103,36 @@ class HomeScreen extends ConsumerWidget {
                 },
               ),
             ),
-            // LA PROGRESSION, en haut de la page : le titre porté, les
-            // points, la dernière récompense. Son écrin monte en majesté
-            // avec le titre le plus haut jamais atteint, et c'est ici que ça
-            // doit se ressentir sans ouvrir quoi que ce soit.
-            const _Section(child: ProgressionEntryCard()),
-            // Le cap du profil Carlys : l'accueil change avec l'identité
-            // choisie — absent tant qu'elle ne l'est pas.
-            if (carlysProfile != null)
-              _Section(child: ProfileFocusCard(profile: carlysProfile)),
-            // Le mot de la communauté — une petite notif, pas une rubrique :
-            // absente tant que personne n'a rien envoyé.
-            if (nudge != null)
-              _Section(child: CommunityNudgeCard(encouragement: nudge)),
+            const _Section(child: TitleSummary()),
+            _ForYouSection(),
             if (dailyLesson != null)
               _Section(
-                child: QuizCard(
-                  question: dailyLesson.question,
-                  title: 'Question du jour',
+                child: _Titled(
+                  icon: AppIcons.question,
+                  label: 'Question du jour',
+                  gap: AppSpacing.md,
                   // La MÊME question vit dans l'Academy : la réponse est
                   // partagée, dans les deux sens.
-                  answeredChoice: ref
-                      .watch(answeredLessonsProvider)
-                      .valueOrNull?[dailyLesson.id],
-                  onAnswered: (choice, correct) =>
-                      ref.read(academyActionsProvider).answer(
-                            lessonId: dailyLesson.id,
-                            choiceIndex: choice,
-                            correct: correct,
-                          ),
+                  child: QuizCard(
+                    question: dailyLesson.question,
+                    answeredChoice: ref
+                        .watch(answeredLessonsProvider)
+                        .valueOrNull?[dailyLesson.id],
+                    onAnswered: (choice, correct) =>
+                        ref.read(academyActionsProvider).answer(
+                              lessonId: dailyLesson.id,
+                              choiceIndex: choice,
+                              correct: correct,
+                            ),
+                  ),
                 ),
               ),
             _Section(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // L'indice de forme EST le taux d'accomplissement de
-                  // l'objectif hebdomadaire : sa place est contre les barres
-                  // qui le détaillent, pas seul en haut d'écran.
-                  FitnessIndexBlock(score: ref.watch(fitnessIndexProvider)),
-                  const SizedBox(height: AppSpacing.gapRow),
-                  WeekBars(week: week),
-                ],
+              last: true,
+              child: DailyFormBlock(
+                reading: ref.watch(formReadingProvider),
+                sessions:
+                    ref.watch(weekOverviewProvider).valueOrNull?.sessionsCount,
               ),
             ),
           ],
@@ -153,20 +142,77 @@ class HomeScreen extends ConsumerWidget {
   }
 }
 
-/// Gouttière et espacement communs à toutes les sections de l'accueil.
+/// « Pour toi » : le cap de l'identité et le mot reçu. La section disparaît
+/// quand il n'y a ni l'un ni l'autre — jamais une surface vide.
+class _ForYouSection extends ConsumerWidget {
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final profile = ref.watch(currentCarlysProfileProvider);
+    final nudge = ref.watch(latestEncouragementProvider);
+    final entries = [
+      if (profile != null) ForYouEntry.focus(context, profile),
+      if (nudge != null) ForYouEntry.encouragement(context, nudge),
+    ];
+    if (entries.isEmpty) return const SizedBox.shrink();
+
+    return _Section(
+      child: _Titled(
+        icon: AppIcons.forYou,
+        label: 'Pour toi',
+        child: ForYouCard(entries: entries),
+      ),
+    );
+  }
+}
+
+/// Une section ouverte par sa barre de titre.
+class _Titled extends StatelessWidget {
+  const _Titled({
+    required this.icon,
+    required this.label,
+    required this.child,
+    this.gap = AppSpacing.gapRow,
+  });
+
+  final IconData icon;
+  final String label;
+  final Widget child;
+
+  /// 14 avant une surface, 16 avant du contenu nu : une surface porte déjà
+  /// son propre padding, un texte n'a que cet écart pour respirer.
+  final double gap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SectionTitleBar(icon: icon, label: label),
+        SizedBox(height: gap),
+        child,
+      ],
+    );
+  }
+}
+
+/// Gouttière et rythme communs à toutes les sections de l'accueil.
 class _Section extends StatelessWidget {
-  const _Section({required this.child});
+  const _Section({required this.child, this.last = false});
 
   final Widget child;
+
+  /// La dernière section ne pose pas d'écart : le padding de la liste s'en
+  /// charge, et l'ajouter creuserait le bas de l'écran.
+  final bool last;
 
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.fromLTRB(
+      padding: EdgeInsets.fromLTRB(
         AppSpacing.gutter,
         0,
         AppSpacing.gutter,
-        AppSpacing.gapRow,
+        last ? 0 : AppSpacing.gapSection,
       ),
       child: child,
     );
