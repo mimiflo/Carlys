@@ -147,8 +147,12 @@ class _Summary extends StatelessWidget {
               children: [
                 const TextSpan(text: 'Dernière : '),
                 TextSpan(
+                  // Le style part du design system, jamais d'un `TextStyle`
+                  // nu : un fragment reconstruit à la main perdrait les
+                  // polices de repli, et le premier emoji d'un nom sortirait
+                  // en tofu.
                   text: name,
-                  style: const TextStyle(
+                  style: AppTypography.label.copyWith(
                     fontWeight: FontWeight.w600,
                     color: AppColors.darkTextPrimary,
                   ),

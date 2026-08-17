@@ -1,3 +1,5 @@
+import 'dart:ui' show ImageFilter;
+
 import 'package:flutter/material.dart';
 
 import 'package:go_router/go_router.dart';
@@ -140,31 +142,52 @@ class HomeHeader extends StatelessWidget {
 ///
 /// Il reprend l'image de la page de bienvenue — la même signature du premier
 /// jour au centième, sans deuxième fichier à tenir à jour.
+///
+/// Le halo suit la SILHOUETTE, pas la boîte. Une ombre portée classique
+/// (`BoxShadow`) dessine le rectangle du conteneur : sous un sceau détouré,
+/// elle posait un bloc violet qui donnait l'image pour opaque. Ici la marque
+/// est recopiée en aplat violet, floutée, puis l'originale se pose dessus —
+/// l'équivalent exact du `drop-shadow` de la maquette.
 class _BrandMark extends StatelessWidget {
   const _BrandMark();
 
   static const double _height = 15;
 
+  /// Le flou d'un `drop-shadow` CSS de rayon r vaut un sigma de r / 2.
+  static const double _glowSigma = 5;
+
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.45),
-            blurRadius: 10,
+    const mark = Image(
+      image: AssetImage(BrandSignature.markAsset),
+      height: _height,
+      fit: BoxFit.contain,
+      excludeFromSemantics: true,
+      // La marque est décorative ici : elle ne doit pas retarder la première
+      // image de l'écran le plus ouvert de l'application.
+      gaplessPlayback: true,
+    );
+
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        ImageFiltered(
+          imageFilter: ImageFilter.blur(
+            sigmaX: _glowSigma,
+            sigmaY: _glowSigma,
           ),
-        ],
-      ),
-      child: Image.asset(
-        BrandSignature.markAsset,
-        height: _height,
-        fit: BoxFit.contain,
-        excludeFromSemantics: true,
-        // La marque est décorative ici : elle ne doit pas retarder la
-        // première image de l'écran le plus ouvert de l'application.
-        gaplessPlayback: true,
-      ),
+          child: ColorFiltered(
+            // `srcIn` garde l'alpha du sceau et n'en remplace que la
+            // couleur : c'est ce qui fait une silhouette, et non un carré.
+            colorFilter: ColorFilter.mode(
+              AppColors.primary.withValues(alpha: 0.45),
+              BlendMode.srcIn,
+            ),
+            child: mark,
+          ),
+        ),
+        mark,
+      ],
     );
   }
 }

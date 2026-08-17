@@ -171,8 +171,11 @@ class _Latest extends StatelessWidget {
         children: [
           const TextSpan(text: 'Dernière récompense : '),
           TextSpan(
+            // Le style part du design system, jamais d'un `TextStyle` nu :
+            // un fragment reconstruit à la main perdrait les polices de
+            // repli, et le premier emoji d'un nom sortirait en tofu.
             text: reward,
-            style: const TextStyle(
+            style: label.copyWith(
               fontWeight: FontWeight.w600,
               color: AppColors.darkTextPrimary,
             ),

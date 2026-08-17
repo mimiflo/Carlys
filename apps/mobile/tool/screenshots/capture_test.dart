@@ -39,6 +39,7 @@ import 'package:carlys_mobile/features/community/data/repositories/community_rep
 import 'package:carlys_mobile/features/community/presentation/screens/community_screen.dart';
 import 'package:carlys_mobile/features/dashboard/presentation/screens/home_screen.dart';
 import 'package:carlys_mobile/features/dashboard/presentation/widgets/title_summary.dart';
+import 'package:carlys_mobile/features/dashboard/presentation/widgets/today_workout_card.dart';
 import 'package:carlys_mobile/features/exercises/data/repositories/exercises_repository_impl.dart';
 import 'package:carlys_mobile/features/exercises/domain/entities/exercise.dart';
 import 'package:carlys_mobile/features/exercises/presentation/screens/exercise_detail_screen.dart';
@@ -150,6 +151,47 @@ Future<void> loadRealFonts() async {
       await loader.load();
     }
   }
+
+  await _loadEmojiFont();
+}
+
+/// Police EMOJI du système, pour que la galerie ne mente pas.
+///
+/// L'application déclare trois familles emoji en repli (`AppTypography`), et
+/// l'appareil fournit la sienne. Le harnais, lui, ne charge que les polices
+/// du bundle : un message de la communauté qui finit par un emoji sortait
+/// donc en tofu sur les captures, ce qui se lit comme un bug de
+/// l'application alors que le rendu est juste sur un vrai téléphone.
+///
+/// Faute de police trouvée, on le DIT plutôt que de laisser croire à un
+/// défaut : les captures montreront des tofus et l'opérateur saura pourquoi.
+Future<void> _loadEmojiFont() async {
+  const candidates = [
+    '/usr/share/fonts/truetype/noto/NotoColorEmoji.ttf',
+    '/usr/share/fonts/noto/NotoColorEmoji.ttf',
+    '/System/Library/Fonts/Apple Color Emoji.ttc',
+  ];
+
+  for (final path in candidates) {
+    final file = File(path);
+    if (!file.existsSync()) continue;
+    // Les trois familles déclarées en repli pointent vers le MÊME fichier :
+    // le moteur prend la première qui répond, les autres sont ignorées.
+    for (final family in AppTypography.emojiFallback) {
+      final loader = FontLoader(family)
+        ..addFont(
+          file.readAsBytes().then((bytes) => ByteData.sublistView(bytes)),
+        );
+      await loader.load();
+    }
+    return;
+  }
+
+  // ignore: avoid_print
+  print(
+    'Aucune police emoji sur cette machine : les captures afficheront des '
+    'tofus là où un appareil rendrait un emoji.',
+  );
 }
 
 FakeExercisesRepository catalogOf() => FakeExercisesRepository(
@@ -970,16 +1012,23 @@ void main() {
   testWidgets('séance active', (tester) async {
     final workouts = FakeWorkoutRepository()..active = activeWorkoutOf();
     await pumpApp(tester, workouts: workouts);
-    // Le bouton naît SOUS la barre flottante (mesuré : y 824-839, barre
-    // 768-852). Taper sans faire défiler atteint la barre, pas le bouton —
-    // c'est ainsi que cette capture montrait la Progression.
+    // Le disque de reprise naît SOUS la barre flottante. Taper sans faire
+    // défiler atteint la barre, pas le disque — c'est ainsi que cette
+    // capture montrait la Progression.
+    //
+    // Il ne porte aucun texte depuis la refonte de l'accueil : on vise son
+    // icône, dans la carte de séance et nulle part ailleurs.
+    final resume = find.descendant(
+      of: find.byType(TodayWorkoutCard),
+      matching: find.byIcon(AppIcons.play),
+    );
     await tester.scrollUntilVisible(
-      find.text('Reprendre la séance'),
+      resume,
       200,
       scrollable: find.byType(Scrollable).last,
     );
     await settle(tester);
-    await tester.tap(find.text('Reprendre la séance'));
+    await tester.tap(resume);
     await settle(tester);
     await capture(
       tester,
