@@ -45,6 +45,21 @@ aucune version antérieure ne reçoit de correctif.
   06:00 UTC (`--results=verified,unknown`).
 - **Audit de dépendances en CI** : `pnpm audit --audit-level high` dans le même
   workflow (vulnérabilités `high` et `critical` bloquantes).
+- **Forçages de versions transitives** : quand une dépendance vulnérable est
+  imposée par un paquet intermédiaire qui l'épingle, la correction passe par
+  `pnpm.overrides` dans le `package.json` racine, avec la borne d'origine
+  conservée dans la clé (`"paquet@<version-corrigée>": "version-corrigée"`) —
+  ainsi l'entrée devient sans effet le jour où l'amont met à jour, et elle
+  n'est pas silencieusement oubliée. Un forçage n'est légitime qu'après avoir
+  vérifié que le paquet consommateur continue de fonctionner : les notes de
+  version majeures sont lues, et le chemin d'appel réel est exécuté.
+
+  | Paquet | Forcé à | Pourquoi |
+  | ------ | ------- | -------- |
+  | `deepmerge-ts` | `8.0.1` | GHSA-ggr8-5vv4-36mx (épuisement de pile, aucune détection de cycle). Imposé par `prisma > @prisma/config`, qui épingle `7.1.5` **jusque dans sa dernière version** : monter Prisma ne corrige rien. |
+  | `js-yaml` | `5.2.3` | Exécution de code à l'analyse (branche 5). |
+  | `nanoid` | `3.3.18` | Boucle infinie sur une taille non entière. |
+  | `uuid` | `11.1.1` | Correctifs de la chaîne amont. |
 - **Configuration validée au démarrage** : le schéma Zod
   `apps/api/src/config/env.schema.ts` vérifie toutes les variables d'environnement ;
   le serveur **refuse de démarrer** si une variable essentielle est absente ou
