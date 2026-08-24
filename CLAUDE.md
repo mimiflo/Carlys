@@ -63,7 +63,13 @@ vérifications : ne pousse jamais un commit qui ne passe pas localement.
 
 Le dépôt se cartographie en graphe de connaissances interrogeable
 (paquet PyPI `graphifyy`, CLI `graphify`) — extraction 100 % locale par
-tree-sitter, aucun appel LLM, rien ne quitte la machine :
+tree-sitter, aucun appel LLM, rien ne quitte la machine.
+
+**Aucune commande à taper en session web** : le hook
+`.claude/hooks/session-start.sh` installe le CLI, enregistre le skill
+`/graphify` et (re)construit le graphe à l'ouverture de chaque session
+Claude Code sur le web. Sur un poste local, l'installation reste manuelle
+et facultative :
 
 ```bash
 uv tool install "graphifyy[sql]"   # ou : pipx install "graphifyy[sql]"

@@ -199,7 +199,12 @@ commandes, dans cet ordre :
 
 Pour poser des questions au dépôt au lieu de le parcourir — et pour que
 l'assistant IA dépense ses tokens sur le problème plutôt que sur la lecture
-de fichiers :
+de fichiers.
+
+**En session Claude Code sur le web, il n'y a rien à faire** : le hook
+`.claude/hooks/session-start.sh` installe le CLI et reconstruit le graphe à
+l'ouverture de la session. Ce qui suit ne concerne qu'un poste local, et
+reste facultatif :
 
 ```bash
 # Une fois par machine (Python requis ; sous Windows : pip install pipx d'abord)
