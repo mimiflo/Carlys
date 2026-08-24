@@ -62,3 +62,6 @@ ds-bundle/
 
 # Artefact Redis local (jamais versionné)
 dump.rdb
+
+# Graphe de code Graphify (engendré localement : `graphify update .`)
+graphify-out/

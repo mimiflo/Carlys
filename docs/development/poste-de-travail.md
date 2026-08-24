@@ -195,7 +195,26 @@ commandes, dans cet ordre :
   débogage) est le seul moyen honnête de comprendre un débordement de mise en
   page — plus rapide que de lire les contraintes à la main.
 
-## 7. Ce que la galerie de captures peut faire pour toi
+## 7. Le graphe de code (Graphify)
+
+Pour poser des questions au dépôt au lieu de le parcourir — et pour que
+l'assistant IA dépense ses tokens sur le problème plutôt que sur la lecture
+de fichiers :
+
+```bash
+# Une fois par machine (Python requis ; sous Windows : pip install pipx d'abord)
+pipx install "graphifyy[sql]"    # ou : uv tool install "graphifyy[sql]"
+graphify install                 # enregistre le skill /graphify de l'assistant
+
+# Dans le dépôt, après tout gros changement
+graphify update .                # extraction locale tree-sitter, ~1 min, aucun LLM
+```
+
+Le résultat vit dans `graphify-out/` (ignoré par git, 100 % reconstructible).
+Ensuite : `graphify query "…"`, `graphify god-nodes`, `graphify affected "…"` —
+ou taper `/graphify` dans l'assistant.
+
+## 8. Ce que la galerie de captures peut faire pour toi
 
 ```bash
 cd apps/mobile

@@ -59,6 +59,29 @@ Les dossiers `android/` et `ios/` ne sont pas versionnés : ils se génèrent vi
 `./scripts/bootstrap_mobile.sh`. La CI (`.github/workflows/`) rejoue ces mêmes
 vérifications : ne pousse jamais un commit qui ne passe pas localement.
 
+## Graphe de code (Graphify)
+
+Le dépôt se cartographie en graphe de connaissances interrogeable
+(paquet PyPI `graphifyy`, CLI `graphify`) — extraction 100 % locale par
+tree-sitter, aucun appel LLM, rien ne quitte la machine :
+
+```bash
+uv tool install "graphifyy[sql]"   # ou : pipx install "graphifyy[sql]"
+graphify install                   # enregistre le skill /graphify (une fois par machine)
+graphify update .                  # (re)construit graphify-out/ — à refaire après gros changements
+```
+
+`graphify-out/` est **engendré, jamais versionné** (comme `android/` et les
+`.g.dart`). Pour une question d'architecture ou de dépendances, interroger le
+graphe AVANT de parcourir les fichiers coûte beaucoup moins de tokens :
+
+```bash
+graphify query "<question>" --budget 2000   # BFS sur le graphe
+graphify god-nodes                          # les plaques tournantes du code
+graphify affected "<symbole>"               # qui casse si ce nœud change
+graphify explain "<nœud>"                   # un nœud et ses voisins
+```
+
 ## Règles générales (spécification produit — à respecter intégralement)
 
 **Interdits :**
