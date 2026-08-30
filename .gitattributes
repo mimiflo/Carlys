@@ -1,0 +1,19 @@
+# Fins de ligne : normalisées en LF dans le dépôt, quel que soit le poste.
+* text=auto eol=lf
+
+# Sauf les fichiers batch Windows : cmd.exe se comporte mal avec des fins
+# de ligne LF (une étiquette ou un `goto` peut être mal lu). Ils DOIVENT
+# arriver en CRLF sur le disque.
+*.cmd text eol=crlf
+*.bat text eol=crlf
+
+# Fichiers binaires : jamais de conversion de fins de ligne, jamais de
+# tentative de fusion textuelle.
+*.png binary
+*.jpg binary
+*.webp binary
+*.ttf binary
+*.otf binary
+*.ico binary
+*.pdf binary
+*.apk binary

@@ -8,11 +8,16 @@
     {
       "label": "Préparer Carlys",
       "type": "shell",
-      // `bash` explicitement : sous Windows le terminal par défaut est
-      // PowerShell, qui ne sait pas exécuter un script shell. Git Bash est
-      // installé avec Git et se trouve dans le PATH.
       "command": "bash",
       "args": ["scripts/dev_up.sh"],
+      // Sous Windows, surtout PAS `bash` : PowerShell le résout vers celui
+      // de WSL (C:\Windows\System32\bash.exe), qui échoue sur
+      // « execvpe(/bin/bash) failed » faute de distribution Linux. La
+      // passerelle .cmd va chercher le bash de Git, nommément.
+      "windows": {
+        "command": ".\\scripts\\dev_up.cmd",
+        "args": []
+      },
       "options": { "cwd": "${workspaceFolder}" },
       "presentation": {
         "reveal": "silent",

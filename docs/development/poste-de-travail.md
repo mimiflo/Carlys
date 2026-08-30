@@ -204,6 +204,15 @@ CARLYS_AVD=Pixel_7 bash scripts/dev_up.sh
 **Le port 3000 déjà pris.** L'API refuse de démarrer sans dire par qui :
 `lsof -i :3000` (macOS, Linux) ou `netstat -ano | findstr :3000` (Windows).
 
+**`bash` sous Windows n'est pas celui qu'on croit.** PowerShell résout
+`bash` vers `C:\Windows\System32\bash.exe` — celui de **WSL**. Sans
+distribution Linux installée, il échoue sur *« execvpe(/bin/bash) failed:
+No such file or directory »*, une erreur qui n'a rien à voir avec le script
+appelé. C'est pourquoi la tâche de préparation passe par
+`scripts/dev_up.cmd`, qui va chercher le bash de Git nommément. Même piège
+si tu lances un `./scripts/*.sh` toi-même depuis PowerShell : utilise
+**Git Bash**.
+
 **Les vérifications avant de commiter.** La CI rejoue exactement ces deux
 commandes, dans cet ordre :
 
