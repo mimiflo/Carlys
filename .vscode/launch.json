@@ -1,23 +1,16 @@
 {
-  // Lancements Flutter de Carlys — volontairement DEUX choix dans le menu F5 :
-  //   1. « Carlys — démo (sans serveur) »  : données intégrées, rien à démarrer.
-  //   2. « Carlys — API + émulateur Android » : le vrai mode, API + app ensemble.
-  // Les deux configurations marquées hidden sont les briques du composé ; les
-  // masquer évite de lancer l'app en mode development SANS l'API, ou l'API
-  // sans l'app. Pour un téléphone réel ou le web, voir
+  // Un SEUL lancement dans le menu F5 : Carlys, l'application connectée à
+  // son API — la version qu'on développe et qu'on livre. Le mode démo
+  // (données intégrées) existe toujours dans l'application : il sert aux
+  // tests, à la galerie de captures et à l'APK de démonstration, mais il
+  // n'a plus sa place dans le menu de lancement quotidien.
+  //
+  // Les deux configurations masquées sont les briques du composé — un
+  // composé ne sait pas les inventer. Les cacher évite de lancer l'app en
+  // mode development SANS l'API. Pour un téléphone réel ou le web, voir
   // docs/development/poste-de-travail.md (l'adresse d'API change à chaque cas).
   "version": "0.2.0",
   "configurations": [
-    {
-      // À ESSAYER EN PREMIER : aucun serveur, aucune base, données intégrées.
-      // C'est le mode qui prouve que le poste est bien monté.
-      "name": "Carlys — démo (sans serveur)",
-      "request": "launch",
-      "type": "dart",
-      "program": "lib/main.dart",
-      "cwd": "apps/mobile",
-      "args": ["--dart-define=CARLYS_FLAVOR=demo"]
-    },
     {
       // Brique du composé. 10.0.2.2 est l'alias de la MACHINE HÔTE vu depuis
       // l'émulateur : `localhost` y désignerait l'émulateur lui-même.
@@ -48,8 +41,8 @@
   ],
   "compounds": [
     {
-      // LE mode de travail réel : l'API et l'app ensemble, déjà câblées.
-      "name": "Carlys — API + émulateur Android",
+      // LE mode de travail : l'API et l'app ensemble, déjà câblées.
+      "name": "Carlys",
       "configurations": [
         "API NestJS (brique du composé)",
         "Carlys — app (émulateur, brique du composé)"

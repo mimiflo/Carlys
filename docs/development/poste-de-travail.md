@@ -91,7 +91,10 @@ Aucun serveur, aucune base : l'application tourne sur des données intégrées.
 C'est le test qui prouve que la chaîne Flutter + Android est bonne, **avant**
 d'ajouter l'API dans l'équation. Si ça marche, le poste est monté.
 
-Dans VS Code : `F5` puis **« Carlys — démo (sans serveur) »**.
+Ce mode ne figure volontairement PAS dans les menus de lancement des IDE :
+ils ne proposent que la version connectée à l'API, celle qu'on développe et
+qu'on livre. La démo garde son utilité ailleurs — tests, galerie de
+captures, APK de démonstration.
 
 ### b. Avec l'API locale, sur émulateur
 
@@ -222,12 +225,19 @@ sélecteur d'appareil, le rechargement à chaud et l'inspecteur. L'API et
 l'admin restent dans VS Code ou dans un terminal — c'est le fonctionnement
 normal d'un monorepo, chaque outil sur sa partie.
 
-Les lancements sont versionnés (`apps/mobile/.run/`) et apparaissent
-directement dans le menu déroulant en haut :
+Le lancement est versionné (`apps/mobile/.run/carlys.run.xml`) et apparaît
+dans le menu déroulant en haut : **Carlys**, l'application connectée à son
+API. Démarrer d'abord, à la racine du dépôt :
+`docker compose up -d && pnpm dev:api`.
 
-- **Carlys — démo (sans serveur)** : rien à démarrer ;
-- **Carlys — API locale (émulateur)** : lancer d'abord, à la racine du
-  dépôt, `docker compose up -d && pnpm dev:api`.
+Un seul lancement, à dessein : c'est la version qu'on développe et qu'on
+livre. Le mode démo reste disponible en ligne de commande (§4a) pour
+éprouver la chaîne sans serveur.
+
+> **Le greffon Flutter est obligatoire** : `Settings` → `Plugins` →
+> Marketplace → **Flutter** → Install → redémarrer. Sans lui, Android
+> Studio lit le fichier mais affiche « Broken configuration due to
+> unavailable plugin » — le type de lancement vient du greffon.
 
 Au quotidien : ⚡ (ou `Ctrl+\`) recharge à chaud, ↻ redémarre à chaud, et
 « Flutter Inspector » dans le panneau de droite ouvre l'arbre des widgets.
