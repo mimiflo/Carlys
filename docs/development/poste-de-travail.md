@@ -119,8 +119,8 @@ désigne l'émulateur lui-même : l'API tourne sur la machine hôte, que
 l'émulateur joint par l'alias `10.0.2.2`. C'est l'erreur numéro un, et elle
 se manifeste par un simple « connexion refusée » qui n'explique rien.
 
-Dans VS Code : **« Carlys — API + émulateur Android »** lance les deux d'un
-coup.
+Dans VS Code : `F5` puis **« Carlys »** — l'unique entrée du menu, qui
+démarre l'API et l'application ensemble, déjà câblées sur `10.0.2.2`.
 
 ### c. Sur un vrai téléphone
 
@@ -172,6 +172,13 @@ chaque table — dont la cause tient en une ligne, la première, qui parle d'un
 télécharger la chaîne. Les suivants durent quelques secondes. Ne pas
 l'interrompre en croyant à un blocage.
 
+**L'appareil sélectionné, pas celui qu'on croit.** Un lancement ne choisit
+jamais l'appareil : c'est le **sélecteur en bas à droite** de VS Code qui
+décide. S'il est resté sur `Windows` ou `Edge`, le build part sur une cible
+de bureau et échoue sur *« No Windows desktop project configured »* — le
+projet ne déclare que `android` et `ios`. Le réflexe : vérifier que le
+sélecteur affiche bien l'émulateur AVANT `F5`.
+
 **Le port 3000 déjà pris.** L'API refuse de démarrer sans dire par qui :
 `lsof -i :3000` (macOS, Linux) ou `netstat -ano | findstr :3000` (Windows).
 
@@ -214,35 +221,7 @@ la mise à jour se termine quand même. À lancer à la main au besoin :
 pnpm refresh
 ```
 
-## 7. Développer l'app mobile dans Android Studio
-
-VS Code convient très bien, mais Android Studio a l'avantage de tout
-embarquer : émulateur, inspecteur, profileur, aucun réglage de PATH.
-
-**Ouvre `apps/mobile`, PAS la racine du dépôt.** Le greffon Flutter veut
-un `pubspec.yaml` à la racine du projet ouvert : sans lui, tu perds le
-sélecteur d'appareil, le rechargement à chaud et l'inspecteur. L'API et
-l'admin restent dans VS Code ou dans un terminal — c'est le fonctionnement
-normal d'un monorepo, chaque outil sur sa partie.
-
-Le lancement est versionné (`apps/mobile/.run/carlys.run.xml`) et apparaît
-dans le menu déroulant en haut : **Carlys**, l'application connectée à son
-API. Démarrer d'abord, à la racine du dépôt :
-`docker compose up -d && pnpm dev:api`.
-
-Un seul lancement, à dessein : c'est la version qu'on développe et qu'on
-livre. Le mode démo reste disponible en ligne de commande (§4a) pour
-éprouver la chaîne sans serveur.
-
-> **Le greffon Flutter est obligatoire** : `Settings` → `Plugins` →
-> Marketplace → **Flutter** → Install → redémarrer. Sans lui, Android
-> Studio lit le fichier mais affiche « Broken configuration due to
-> unavailable plugin » — le type de lancement vient du greffon.
-
-Au quotidien : ⚡ (ou `Ctrl+\`) recharge à chaud, ↻ redémarre à chaud, et
-« Flutter Inspector » dans le panneau de droite ouvre l'arbre des widgets.
-
-## 8. Travailler au quotidien dans VS Code
+## 7. Travailler au quotidien dans VS Code
 
 - **`r`** dans le terminal de `flutter run` — rechargement à chaud, l'état de
   l'application est conservé. Dans VS Code, l'éclair de la barre de débogage.
@@ -254,7 +233,7 @@ Au quotidien : ⚡ (ou `Ctrl+\`) recharge à chaud, ↻ redémarre à chaud, et
   débogage) est le seul moyen honnête de comprendre un débordement de mise en
   page — plus rapide que de lire les contraintes à la main.
 
-## 9. Le graphe de code (Graphify)
+## 8. Le graphe de code (Graphify)
 
 Pour poser des questions au dépôt au lieu de le parcourir — et pour que
 l'assistant IA dépense ses tokens sur le problème plutôt que sur la lecture
@@ -278,7 +257,7 @@ Le résultat vit dans `graphify-out/` (ignoré par git, 100 % reconstructible).
 Ensuite : `graphify query "…"`, `graphify god-nodes`, `graphify affected "…"` —
 ou taper `/graphify` dans l'assistant.
 
-## 10. Ce que la galerie de captures peut faire pour toi
+## 9. Ce que la galerie de captures peut faire pour toi
 
 ```bash
 cd apps/mobile
