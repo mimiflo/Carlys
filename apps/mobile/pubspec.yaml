@@ -57,8 +57,6 @@ dependencies:
 
   # Utilitaires
   uuid: ^4.5.1
-  # Version imposée par flutter_localizations.
-  intl: any
 
 dev_dependencies:
   flutter_test:
