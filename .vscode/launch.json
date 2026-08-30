@@ -17,6 +17,10 @@
       "name": "Carlys — app (émulateur, brique du composé)",
       "request": "launch",
       "type": "dart",
+      // Démarre l'émulateur et ATTEND qu'il accepte une installation. Sans
+      // cette attente, le lancement échouerait sur « no devices found »
+      // pendant que la fenêtre de l'émulateur finit de s'ouvrir.
+      "preLaunchTask": "Émulateur Android",
       "program": "lib/main.dart",
       "cwd": "apps/mobile",
       "args": [

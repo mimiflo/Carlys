@@ -1,0 +1,24 @@
+{
+  // Tâche accrochée au lancement (`preLaunchTask`) : l'émulateur démarre
+  // tout seul avant l'application. Idempotente — si un appareil Android
+  // répond déjà, elle rend la main immédiatement.
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "Émulateur Android",
+      "type": "shell",
+      // `bash` explicitement : sous Windows le terminal par défaut est
+      // PowerShell, qui ne sait pas exécuter un script shell. Git Bash est
+      // installé avec Git et se trouve dans le PATH.
+      "command": "bash",
+      "args": ["scripts/start_emulator.sh"],
+      "options": { "cwd": "${workspaceFolder}" },
+      "presentation": {
+        "reveal": "silent",
+        "panel": "shared",
+        "clear": true
+      },
+      "problemMatcher": []
+    }
+  ]
+}

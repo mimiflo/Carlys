@@ -176,8 +176,17 @@ l'interrompre en croyant à un blocage.
 jamais l'appareil : c'est le **sélecteur en bas à droite** de VS Code qui
 décide. S'il est resté sur `Windows` ou `Edge`, le build part sur une cible
 de bureau et échoue sur *« No Windows desktop project configured »* — le
-projet ne déclare que `android` et `ios`. Le réflexe : vérifier que le
-sélecteur affiche bien l'émulateur AVANT `F5`.
+projet ne déclare que `android` et `ios`.
+
+C'est pour ça que `F5` démarre d'abord l'émulateur (tâche « Émulateur
+Android », `scripts/start_emulator.sh`) : un appareil Android prêt avant le
+build, et VS Code le choisit de lui-même. Le script est idempotent — un
+émulateur déjà lancé ou un téléphone branché lui suffisent, il n'en ouvre
+jamais un second. Pour viser un autre appareil virtuel :
+
+```bash
+CARLYS_AVD=Pixel_7 bash scripts/start_emulator.sh
+```
 
 **Le port 3000 déjà pris.** L'API refuse de démarrer sans dire par qui :
 `lsof -i :3000` (macOS, Linux) ou `netstat -ano | findstr :3000` (Windows).

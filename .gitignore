@@ -32,6 +32,8 @@ Thumbs.db
 # les flavors et l'adresse de l'API selon l'appareil (10.0.2.2 sur émulateur).
 # Les redécouvrir sur chaque poste coûterait une demi-journée.
 !.vscode/launch.json
+# Idem pour les tâches : le lancement en dépend (preLaunchTask).
+!.vscode/tasks.json
 
 # Prisma
 apps/api/prisma/generated/
