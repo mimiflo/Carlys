@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Après un changement de branche (pas un checkout de fichier : $3 vaut 0).
+[ "${3:-0}" = "1" ] || exit 0
+exec bash "$(git rev-parse --show-toplevel)/scripts/after_update.sh" "$1" "$2"

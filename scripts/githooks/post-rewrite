@@ -1,0 +1,3 @@
+#!/usr/bin/env bash
+# Après un rebase : même remise à niveau qu'après un merge.
+exec bash "$(git rev-parse --show-toplevel)/scripts/after_update.sh" ORIG_HEAD HEAD

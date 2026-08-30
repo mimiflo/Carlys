@@ -183,7 +183,56 @@ commandes, dans cet ordre :
 `flutter analyze && flutter test` ne suffit pas : `check_mobile.sh` ajoute
 `dart format --set-exit-if-changed`, que la CI applique aussi.
 
-## 6. Travailler au quotidien dans VS Code
+## 6. Le poste se remet à niveau tout seul
+
+`./scripts/setup.sh` installe des hooks git (`scripts/githooks/`, activés
+par `core.hooksPath` — donc **local à ton clone**, rien n'est imposé à qui
+ne lance pas le script). Après chaque `git pull`, changement de branche ou
+rebase, `scripts/after_update.sh` regarde ce qui a bougé et ne relance que
+ce qu'il faut :
+
+| Ce qui a changé dans le dépôt | Ce qui se relance |
+| --- | --- |
+| `package.json`, `pnpm-lock.yaml` | `pnpm install` |
+| `packages/**` | build des packages partagés |
+| `schema.prisma` | `prisma generate` |
+| `prisma/migrations/**` | `prisma migrate` |
+| `apps/mobile/pubspec.yaml` | `flutter pub get` |
+| `apps/mobile/lib/core/database/**` | `build_runner` |
+
+Le cas le plus sournois est le deuxième : l'API et l'admin consomment les
+packages partagés **compilés**. Un pull qui les modifie sans rebuild donne
+des `has no exported member` qui n'orientent vers rien.
+
+Le script ne bloque JAMAIS : une base éteinte affiche un avertissement et
+la mise à jour se termine quand même. À lancer à la main au besoin :
+
+```bash
+pnpm refresh
+```
+
+## 7. Développer l'app mobile dans Android Studio
+
+VS Code convient très bien, mais Android Studio a l'avantage de tout
+embarquer : émulateur, inspecteur, profileur, aucun réglage de PATH.
+
+**Ouvre `apps/mobile`, PAS la racine du dépôt.** Le greffon Flutter veut
+un `pubspec.yaml` à la racine du projet ouvert : sans lui, tu perds le
+sélecteur d'appareil, le rechargement à chaud et l'inspecteur. L'API et
+l'admin restent dans VS Code ou dans un terminal — c'est le fonctionnement
+normal d'un monorepo, chaque outil sur sa partie.
+
+Les lancements sont versionnés (`apps/mobile/.run/`) et apparaissent
+directement dans le menu déroulant en haut :
+
+- **Carlys — démo (sans serveur)** : rien à démarrer ;
+- **Carlys — API locale (émulateur)** : lancer d'abord, à la racine du
+  dépôt, `docker compose up -d && pnpm dev:api`.
+
+Au quotidien : ⚡ (ou `Ctrl+\`) recharge à chaud, ↻ redémarre à chaud, et
+« Flutter Inspector » dans le panneau de droite ouvre l'arbre des widgets.
+
+## 8. Travailler au quotidien dans VS Code
 
 - **`r`** dans le terminal de `flutter run` — rechargement à chaud, l'état de
   l'application est conservé. Dans VS Code, l'éclair de la barre de débogage.
@@ -195,7 +244,7 @@ commandes, dans cet ordre :
   débogage) est le seul moyen honnête de comprendre un débordement de mise en
   page — plus rapide que de lire les contraintes à la main.
 
-## 7. Le graphe de code (Graphify)
+## 9. Le graphe de code (Graphify)
 
 Pour poser des questions au dépôt au lieu de le parcourir — et pour que
 l'assistant IA dépense ses tokens sur le problème plutôt que sur la lecture
@@ -219,7 +268,7 @@ Le résultat vit dans `graphify-out/` (ignoré par git, 100 % reconstructible).
 Ensuite : `graphify query "…"`, `graphify god-nodes`, `graphify affected "…"` —
 ou taper `/graphify` dans l'assistant.
 
-## 8. Ce que la galerie de captures peut faire pour toi
+## 10. Ce que la galerie de captures peut faire pour toi
 
 ```bash
 cd apps/mobile

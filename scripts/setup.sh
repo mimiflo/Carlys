@@ -14,6 +14,13 @@ echo "── Fichiers d'environnement ──────────────
 [ -f apps/api/.env ] || { cp apps/api/.env.example apps/api/.env; echo "  apps/api/.env créé"; }
 [ -f apps/admin/.env.local ] || { cp apps/admin/.env.example apps/admin/.env.local; echo "  apps/admin/.env.local créé"; }
 
+echo "── Hooks git (remise à niveau automatique après pull) ──────────────"
+# core.hooksPath est LOCAL au clone : rien n'est imposé à qui ne lance pas
+# ce script. Les hooks eux-mêmes sont versionnés dans scripts/githooks/.
+git config core.hooksPath scripts/githooks
+chmod +x scripts/githooks/* scripts/after_update.sh 2>/dev/null || true
+echo "  après chaque pull, le poste se remet à niveau tout seul"
+
 echo "── Installation des dépendances ────────────────────────────────────"
 pnpm install
 

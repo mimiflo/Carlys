@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+# Après un pull/merge : remettre le poste à niveau selon ce qui a changé.
+# Activé par ./scripts/setup.sh (git config core.hooksPath scripts/githooks).
+exec bash "$(git rev-parse --show-toplevel)/scripts/after_update.sh" ORIG_HEAD HEAD

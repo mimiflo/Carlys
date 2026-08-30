@@ -1,0 +1,14 @@
+<component name="ProjectRunConfigurationManager">
+  <!--
+    Lancement Android Studio : mode DÉMO — aucun serveur, aucune base,
+    données intégrées. C'est celui à essayer en premier sur un poste neuf.
+    Ce fichier est VERSIONNÉ (contrairement au reste de .idea/) : les
+    flavors et l'adresse d'API sont du savoir de projet, pas des
+    préférences personnelles.
+  -->
+  <configuration default="false" name="Carlys — démo (sans serveur)" type="FlutterRunConfigurationType" factoryName="Flutter">
+    <option name="additionalArgs" value="--dart-define=CARLYS_FLAVOR=demo" />
+    <option name="filePath" value="$PROJECT_DIR$/lib/main.dart" />
+    <method v="2" />
+  </configuration>
+</component>
