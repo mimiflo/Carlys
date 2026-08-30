@@ -16,9 +16,20 @@ l'application ne dépend d'elle.
    **envoyées** ne sont jamais listées. Personne ne peut se servir de l'ajout
    d'amis pour découvrir qu'une adresse est inscrite. L'interface joue le même
    jeu : « Si ce compte existe, il recevra ta demande. »
-3. **On n'écrit que chez ses amis.** Un encouragement vers quiconque n'est pas
+3. **Le code ami est une identité qui se partage, pas qui se devine.**
+   Chaque compte reçoit à vie un code de 8 caractères (alphabet sans
+   ambiguïté visuelle — ni 0/O ni 1/I/L —, affiché `XXXX-XXXX`, porté par le
+   QR du profil : charge utile `carlys:friend:<code>`). À la Snapchat : on
+   l'affiche, on le fait scanner, on le dicte. Contrairement à l'e-mail, un
+   code SE CONFIRME par le prénom de son porteur (« Demande envoyée à
+   Sarah ») : donner son code, c'est déjà dire « ajoute-moi » — et 26⁸
+   combinaisons derrière le throttler rendent l'essai en rafale vain. La
+   demande reste une demande : jamais de lien automatique, même scanné.
+   Règles canoniques : `modules/users/domain/friend-code.ts` côté serveur,
+   miroir Dart `features/community/domain/friend_code.dart` côté mobile.
+4. **On n'écrit que chez ses amis.** Un encouragement vers quiconque n'est pas
    un ami ACCEPTÉ est refusé (`403`). Le fil de chacun est privé.
-4. **La progression des défis est collective.** La barre montre
+5. **La progression des défis est collective.** La barre montre
    `somme des contributions / objectif`, bornée à 1 — l'effort du groupe,
    jamais un classement individuel.
 
@@ -41,12 +52,13 @@ l'application ne dépend d'elle.
 | GET | `/friends` | Amis acceptés, stats `null` si progression privée |
 | DELETE | `/friends/:userId` | Retirer un ami (idempotent) |
 | GET | `/requests` | Demandes REÇUES en attente |
-| POST | `/requests` | Demander par e-mail exact — `202` opaque |
+| POST | `/requests` | Demander par e-mail exact OU `friendCode` (exactement un des deux) — `202` opaque |
+| GET | `/friend-codes/:code` | Nom du porteur d'un code (toutes formes humaines acceptées) — `404` sinon |
 | POST | `/requests/:id/accept` · `/decline` | Répondre (destinataire uniquement) |
 | GET | `/challenges` | Défis ouverts, progression collective incluse |
 | POST | `/challenges/:id/join` | Rejoindre (idempotent) |
 | DELETE | `/challenges/:id/join` | Quitter (idempotent) |
-| GET · PATCH | `/profile` | Ma préférence `sharesProgress` |
+| GET · PATCH | `/profile` | Ma préférence `sharesProgress` + mon `friendCode` |
 
 Cas particuliers du service :
 
@@ -88,6 +100,13 @@ simplement perdue (la barre est collective, pas comptable).
   valeur précédente).
 - La feuille « Ajouter un ami » s'ouvre sur le navigateur RACINE : ouverte
   depuis un onglet, elle passerait sinon sous la bottom bar flottante.
+- Elle montre MON code (QR sur aplat blanc — un lecteur veut du contraste,
+  pas de l'ambiance) et un champ UNIQUE : l'arobase départage une adresse
+  d'un code. Le scan (`mobile_scanner`) vit dans son propre écran — seul
+  endroit de la fonctionnalité à toucher du natif : une caméra refusée
+  n'enlève que le scan, et l'écran le dit avec un état d'erreur du design
+  system. Un e-mail est confirmé opaque ; un code, par le prénom — ou
+  « Ce code ne mène à personne ».
 - L'accueil relaie le dernier encouragement (« X t'encourage ») quand il y en
   a un.
 - Demandes d'ami, acceptations et encouragements déclenchent une notification
@@ -105,3 +124,8 @@ simplement perdue (la barre est collective, pas comptable).
 - Widgets mobile (`test/features/community/`) : démo complète, états
   erreur/vide/chargement, acceptation de demande, ajout opaque, réglage de
   partage.
+- Code ami : normalisation éprouvée des DEUX côtés (spec Jest et test Dart
+  miroirs — formes affichée/minuscule/QR, refus des caractères ambigus) ;
+  service (silence sur code inconnu ou soi-même, aperçu 404) ; e2e du tour
+  complet profil → aperçu → demande → amis ; feuille d'ajout (QR affiché,
+  champ unique, saisie invalide retenue au bord).

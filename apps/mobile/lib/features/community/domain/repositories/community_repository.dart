@@ -19,6 +19,18 @@ abstract interface class CommunityRepository {
   /// elle aboutit toujours, qu'un compte existe ou non.
   Future<void> sendFriendRequest(String email);
 
+  /// Mon code ami, sous forme CANONIQUE (8 caractères) — l'affichage
+  /// XXXX-XXXX et le QR se dérivent avec `friend_code.dart`.
+  Future<String> myFriendCode();
+
+  /// Nom du porteur d'un code (tapé ou scanné), ou `null` si personne ne
+  /// le porte. Un code se partage volontairement : le confirmer par un nom
+  /// n'énumère rien.
+  Future<String?> lookupFriendCode(String code);
+
+  /// Demande quelqu'un en ami par son code. Même opacité que par e-mail.
+  Future<void> sendFriendRequestByCode(String code);
+
   /// Accepte ou refuse une demande reçue.
   Future<void> respondToRequest(String requestId, {required bool accept});
 

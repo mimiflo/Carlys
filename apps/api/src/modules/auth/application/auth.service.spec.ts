@@ -155,6 +155,7 @@ function storedToken(
       user: {
         id: 'user-1',
         email: 'a@b.fr',
+        friendCode: 'AC23DEF4',
         status: UserStatus.ACTIVE,
         emailVerifiedAt: null,
         createdAt: new Date(),

@@ -27,6 +27,10 @@ model User {
   id              String     @id @default(uuid()) @db.Uuid
   /// Normalisé en minuscules par la couche application avant écriture.
   email           String     @unique
+  /// Code ami : identité PARTAGEABLE (8 caractères, alphabet sans
+  /// ambiguïté visuelle — voir modules/users/domain/friend-code.ts).
+  /// Affiché en XXXX-XXXX, porté par le QR de profil, unique à vie.
+  friendCode      String     @unique
   status          UserStatus @default(ACTIVE)
   emailVerifiedAt DateTime?
   createdAt       DateTime   @default(now())

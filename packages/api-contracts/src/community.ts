@@ -55,7 +55,22 @@ export const communityChallengeSchema = z.object({
 });
 export type CommunityChallenge = z.infer<typeof communityChallengeSchema>;
 
+/** Forme canonique d'un code ami : 8 caractères d'un alphabet sans
+ *  ambiguïté visuelle (ni 0/O, ni 1/I/L…) — la normalisation des saisies
+ *  (casse, tirets, préfixe QR) est faite AVANT validation. */
+export const friendCodeSchema = z.string().regex(/^[23456789ACDEFHJKMNPRTUVWXY]{8}$/);
+export type FriendCode = z.infer<typeof friendCodeSchema>;
+
+/** Aperçu renvoyé par la résolution d'un code ami : juste de quoi
+ *  confirmer « c'est bien elle/lui » avant d'envoyer la demande. */
+export const friendCodePreviewSchema = z.object({
+  displayName: z.string(),
+});
+export type FriendCodePreview = z.infer<typeof friendCodePreviewSchema>;
+
 export const communityProfileSchema = z.object({
   sharesProgress: z.boolean(),
+  /** Mon code ami — affiché en XXXX-XXXX et porté par le QR de profil. */
+  friendCode: friendCodeSchema,
 });
 export type CommunityProfile = z.infer<typeof communityProfileSchema>;

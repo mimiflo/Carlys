@@ -3,9 +3,11 @@ import {
   type CommunityFriend,
   type CommunityProfile,
   type Encouragement,
+  type FriendCodePreview,
   type FriendRequest,
 } from '@carlys/api-contracts';
 import {
+  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -81,14 +83,32 @@ export class CommunityController {
   @HttpCode(202)
   @ApiOperation({
     summary:
-      'Demander un ami par e-mail exact. Réponse opaque : 202 dans tous les ' +
-      'cas, qu’un compte existe ou non (pas d’énumération d’adresses).',
+      'Demander un ami par e-mail exact OU par code ami (tapé ou scanné). ' +
+      'Réponse opaque : 202 dans tous les cas, qu’un compte existe ou non ' +
+      '(pas d’énumération d’adresses).',
   })
   async request(
     @CurrentUser() user: AuthenticatedPrincipal,
     @Body() dto: FriendRequestDto,
   ): Promise<void> {
-    await this.community.requestFriend(user.userId, dto.email);
+    if ((dto.email === undefined) === (dto.friendCode === undefined)) {
+      throw new BadRequestException('Fournir email OU friendCode, exactement un des deux.');
+    }
+    if (dto.friendCode !== undefined) {
+      await this.community.requestFriendByCode(user.userId, dto.friendCode);
+      return;
+    }
+    await this.community.requestFriend(user.userId, dto.email as string);
+  }
+
+  @Get('friend-codes/:code')
+  @ApiOperation({
+    summary:
+      'Résoudre un code ami vers son porteur — juste le nom, pour confirmer ' +
+      'avant d’envoyer la demande. 404 si aucun compte actif ne le porte.',
+  })
+  lookupFriendCode(@Param('code') code: string): Promise<FriendCodePreview> {
+    return this.community.lookupFriendCode(code);
   }
 
   @Post('requests/:id/accept')

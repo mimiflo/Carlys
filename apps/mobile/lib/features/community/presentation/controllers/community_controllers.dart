@@ -32,6 +32,12 @@ final sharesProgressProvider = FutureProvider.autoDispose<bool>((ref) {
   return ref.watch(communityRepositoryProvider).sharesProgress();
 });
 
+/// Mon code ami (forme canonique). Un code est attribué à VIE : pas
+/// d'auto-dispose, il ne changera pas sous les pieds de la feuille d'ajout.
+final myFriendCodeProvider = FutureProvider<String>((ref) {
+  return ref.watch(communityRepositoryProvider).myFriendCode();
+});
+
 /// Le dernier encouragement reçu — la « petite notif » de l'accueil.
 /// `null` tant qu'il n'y a rien à montrer : l'accueil masque alors sa carte.
 final latestEncouragementProvider = Provider.autoDispose<Encouragement?>((ref) {
@@ -95,6 +101,20 @@ class CommunityActions {
   /// demandes ENVOYÉES ne sont jamais listées.
   Future<void> sendFriendRequest(String email) {
     return _ref.read(communityRepositoryProvider).sendFriendRequest(email);
+  }
+
+  /// Demande d'ami par code (tapé ou scanné). Rend le NOM du porteur quand
+  /// le code correspond à un compte, `null` sinon — donner un code, c'est
+  /// se désigner : le confirmer par un nom n'énumère rien, et « Demande
+  /// envoyée à Sarah » vaut mieux qu'un message évasif.
+  Future<String?> sendFriendRequestByCode(String code) async {
+    final repository = _ref.read(communityRepositoryProvider);
+    final displayName = await repository.lookupFriendCode(code);
+    if (displayName == null) {
+      return null;
+    }
+    await repository.sendFriendRequestByCode(code);
+    return displayName;
   }
 
   Future<void> respondToRequest(

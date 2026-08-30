@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { type Prisma, type User, type UserProfile, UserStatus } from '@prisma/client';
+import { Prisma, type User, type UserProfile, UserStatus } from '@prisma/client';
 import { PrismaService } from '../../../database/prisma/prisma.service';
+import { generateFriendCode } from '../domain/friend-code';
 
 export type UserWithProfile = User & { profile: UserProfile | null };
 
@@ -36,23 +37,38 @@ export class UsersRepository {
   }
 
   /** Crée l'utilisateur, son profil et sa crédential en une transaction. */
-  create(input: CreateUserInput): Promise<UserWithProfile> {
-    return this.prisma.user.create({
-      data: {
-        email: input.email,
-        profile: {
-          create: {
-            displayName: input.displayName,
-            locale: input.locale ?? 'fr',
-            timezone: input.timezone ?? 'Europe/Paris',
+  async create(input: CreateUserInput): Promise<UserWithProfile> {
+    // Le code ami est tiré ici, pas en base : l'alphabet est une règle du
+    // domaine. Une collision sur 2×10¹¹ combinaisons est invraisemblable ;
+    // si elle arrive, on retire — l'e-mail unique, lui, a déjà été vérifié
+    // par l'appelant, donc un P2002 ne peut venir que du code.
+    for (let attempt = 0; ; attempt += 1) {
+      try {
+        return await this.prisma.user.create({
+          data: {
+            email: input.email,
+            friendCode: generateFriendCode(),
+            profile: {
+              create: {
+                displayName: input.displayName,
+                locale: input.locale ?? 'fr',
+                timezone: input.timezone ?? 'Europe/Paris',
+              },
+            },
+            credential: {
+              create: { passwordHash: input.passwordHash },
+            },
           },
-        },
-        credential: {
-          create: { passwordHash: input.passwordHash },
-        },
-      },
-      include: { profile: true },
-    });
+          include: { profile: true },
+        });
+      } catch (error) {
+        const collision =
+          error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002';
+        if (!collision || attempt >= 2) {
+          throw error;
+        }
+      }
+    }
   }
 
   findPasswordHash(userId: string): Promise<string | null> {

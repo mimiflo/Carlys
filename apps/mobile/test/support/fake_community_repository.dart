@@ -32,6 +32,12 @@ class FakeCommunityRepository implements CommunityRepository {
   /// Adresses reçues par [sendFriendRequest], dans l'ordre.
   final List<String> sentRequests = [];
 
+  /// Codes reçus par [sendFriendRequestByCode], dans l'ordre.
+  final List<String> sentCodeRequests = [];
+
+  /// Ce que [lookupFriendCode] répond — nom du porteur, ou `null`.
+  String? lookupAnswer = 'Sarah';
+
   void _guard() {
     if (offline) {
       throw const NetworkException('hors ligne (voulu par le test)');
@@ -39,6 +45,24 @@ class FakeCommunityRepository implements CommunityRepository {
     if (failReads) {
       throw StateError('communauté injoignable (voulu par le test)');
     }
+  }
+
+  @override
+  Future<String> myFriendCode() async {
+    _guard();
+    return 'AC23DEF4';
+  }
+
+  @override
+  Future<String?> lookupFriendCode(String code) async {
+    _guard();
+    return lookupAnswer;
+  }
+
+  @override
+  Future<void> sendFriendRequestByCode(String code) async {
+    _guard();
+    sentCodeRequests.add(code);
   }
 
   @override

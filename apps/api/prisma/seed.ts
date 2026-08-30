@@ -28,8 +28,8 @@ import * as argon2 from 'argon2';
 const prisma = new PrismaClient();
 
 const DEV_USERS = [
-  { email: 'dev.gratuit@carlys.local', displayName: 'Dev Gratuit' },
-  { email: 'dev.premium@carlys.local', displayName: 'Dev Premium' },
+  { email: 'dev.gratuit@carlys.local', displayName: 'Dev Gratuit', friendCode: 'DEVFREE2' },
+  { email: 'dev.premium@carlys.local', displayName: 'Dev Premium', friendCode: 'DEVPREM2' },
 ];
 const DEV_PASSWORD = 'Carlys-Dev-2026!';
 
@@ -250,6 +250,9 @@ async function seedDevUsers(): Promise<void> {
       update: {},
       create: {
         email: user.email,
+        // Codes FIXES (alphabet officiel) : un seed re-joué doit rester
+        // idempotent, et un code stable se partage entre postes de dev.
+        friendCode: user.friendCode,
         emailVerifiedAt: new Date(),
         profile: { create: { displayName: user.displayName } },
         credential: { create: { passwordHash } },

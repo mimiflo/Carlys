@@ -20,6 +20,8 @@ interface Stubs {
   listReceivedRequests: jest.Mock;
   listFriends: jest.Mock;
   findUserIdByEmail: jest.Mock;
+  findUserByFriendCode: jest.Mock;
+  friendCodeOf: jest.Mock;
   completedSessionStarts: jest.Mock;
   listEncouragements: jest.Mock;
   createEncouragement: jest.Mock;
@@ -44,6 +46,8 @@ function buildStubs(): Stubs {
     listReceivedRequests: jest.fn().mockResolvedValue([]),
     listFriends: jest.fn().mockResolvedValue([]),
     findUserIdByEmail: jest.fn().mockResolvedValue(null),
+    findUserByFriendCode: jest.fn().mockResolvedValue(null),
+    friendCodeOf: jest.fn().mockResolvedValue('AC23DEF4'),
     completedSessionStarts: jest.fn().mockResolvedValue([]),
     listEncouragements: jest.fn().mockResolvedValue([]),
     createEncouragement: jest.fn().mockResolvedValue({}),
@@ -156,6 +160,71 @@ describe('CommunityService — demandes d’ami', () => {
     await expect(service.respondToRequest(ME, 'demande-1', true)).rejects.toBeInstanceOf(
       NotFoundException,
     );
+  });
+});
+
+describe('CommunityService — code ami', () => {
+  it('toutes les formes humaines d’un code mènent au même compte', async () => {
+    const stubs = buildStubs();
+    stubs.findUserByFriendCode.mockResolvedValue({
+      id: FRIEND,
+      profile: { displayName: 'Alice' },
+    });
+    const service = buildService(stubs);
+
+    // Forme affichée, casse relâchée, charge utile de QR : même canonique.
+    for (const forme of ['AC23-DEF4', 'ac23def4', 'carlys:friend:AC23DEF4']) {
+      await service.requestFriendByCode(ME, forme);
+      expect(stubs.findUserByFriendCode).toHaveBeenLastCalledWith('AC23DEF4');
+    }
+    expect(stubs.createRequest).toHaveBeenCalledTimes(3);
+  });
+
+  it('un code mal formé ou inconnu reste aussi muet qu’un e-mail inconnu', async () => {
+    const stubs = buildStubs();
+    const service = buildService(stubs);
+
+    await service.requestFriendByCode(ME, 'pas-un-code');
+    await service.requestFriendByCode(ME, 'AC23DEF4'); // bien formé, inconnu
+    expect(stubs.createRequest).not.toHaveBeenCalled();
+
+    // Le code mal formé n'atteint jamais la base : rien à y chercher.
+    expect(stubs.findUserByFriendCode).toHaveBeenCalledTimes(1);
+  });
+
+  it('scanner son propre QR est ignoré en silence', async () => {
+    const stubs = buildStubs();
+    stubs.findUserByFriendCode.mockResolvedValue({ id: ME, profile: null });
+    const service = buildService(stubs);
+
+    await service.requestFriendByCode(ME, 'AC23DEF4');
+    expect(stubs.createRequest).not.toHaveBeenCalled();
+  });
+
+  it('l’aperçu d’un code donne le nom — et 404 si personne ne le porte', async () => {
+    const stubs = buildStubs();
+    stubs.findUserByFriendCode.mockResolvedValue({
+      id: FRIEND,
+      profile: { displayName: 'Alice' },
+    });
+    const service = buildService(stubs);
+
+    await expect(service.lookupFriendCode('ac23-def4')).resolves.toEqual({
+      displayName: 'Alice',
+    });
+
+    stubs.findUserByFriendCode.mockResolvedValue(null);
+    await expect(service.lookupFriendCode('AC23DEF4')).rejects.toBeInstanceOf(NotFoundException);
+  });
+
+  it('mon profil communautaire porte mon code ami', async () => {
+    const stubs = buildStubs();
+    const service = buildService(stubs);
+
+    await expect(service.profile(ME)).resolves.toEqual({
+      sharesProgress: true,
+      friendCode: 'AC23DEF4',
+    });
   });
 });
 

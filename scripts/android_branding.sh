@@ -66,6 +66,26 @@ PLIST="ios/Runner/Info.plist"
 if [ -f "$PLIST" ]; then
   sed -i.bak '/<key>CFBundleDisplayName<\/key>/{n;s|<string>.*</string>|<string>Carlys</string>|;}' "$PLIST"
   rm -f "$PLIST.bak"
+
+  # Scanner de code ami : iOS refuse d'ouvrir la caméra sans motif déclaré
+  # (l'app crasherait au premier scan). Android n'a rien à déclarer ici, le
+  # manifeste de mobile_scanner s'en charge par fusion. L'ancre est le
+  # DERNIER </dict> du plist — awk, parce que sed ne sait pas dire
+  # « dernier » et que Git Bash sous Windows n'a pas python.
+  if ! grep -q "NSCameraUsageDescription" "$PLIST"; then
+    awk '
+      { lines[NR] = $0 }
+      /<\/dict>/ { last = NR }
+      END {
+        for (i = 1; i <= NR; i++) {
+          if (i == last) {
+            print "\t<key>NSCameraUsageDescription</key>"
+            print "\t<string>La caméra sert à scanner le code ami d’un profil Carlys.</string>"
+          }
+          print lines[i]
+        }
+      }' "$PLIST" > "$PLIST.tmp" && mv "$PLIST.tmp" "$PLIST"
+  fi
 fi
 
 echo "Identité Carlys appliquée : nom, icône, permission de notification."

@@ -243,6 +243,26 @@ export class CommunityRepository {
     });
   }
 
+  // ── Code ami ────────────────────────────────────────────────────────────
+
+  /** Résout un code ami (forme canonique) vers son porteur actif. */
+  findUserByFriendCode(
+    friendCode: string,
+  ): Promise<{ id: string; profile: { displayName: string } | null } | null> {
+    return this.prisma.user.findFirst({
+      where: { friendCode, status: 'ACTIVE', deletedAt: null },
+      select: { id: true, profile: { select: { displayName: true } } },
+    });
+  }
+
+  async friendCodeOf(userId: string): Promise<string> {
+    const user = await this.prisma.user.findUniqueOrThrow({
+      where: { id: userId },
+      select: { friendCode: true },
+    });
+    return user.friendCode;
+  }
+
   // ── Préférence de partage ───────────────────────────────────────────────
 
   async sharesProgress(userId: string): Promise<boolean> {

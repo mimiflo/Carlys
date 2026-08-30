@@ -109,6 +109,52 @@ describe('Communauté (e2e)', () => {
       .expect(202);
   });
 
+  it('le code ami fait le tour complet : profil → aperçu → demande → amis', async () => {
+    // Mon profil communautaire porte mon code, sous forme canonique.
+    const profileB = data<{ friendCode: string }>(
+      (await authed(tokenB).get('/api/v1/community/profile').expect(200)).body,
+    );
+    expect(profileB.friendCode).toMatch(/^[23456789ACDEFHJKMNPRTUVWXY]{8}$/);
+
+    // L'aperçu confirme le porteur avant l'envoi — forme affichée acceptée.
+    const displayed = `${profileB.friendCode.slice(0, 4)}-${profileB.friendCode.slice(4)}`;
+    const preview = data<{ displayName: string }>(
+      (
+        await authed(tokenA)
+          .get(`/api/v1/community/friend-codes/${encodeURIComponent(displayed)}`)
+          .expect(200)
+      ).body,
+    );
+    expect(preview.displayName).toBe('Boris');
+
+    // Demande par code (charge utile de QR), acceptation, amitié.
+    await authed(tokenA)
+      .post('/api/v1/community/requests')
+      .send({ friendCode: `carlys:friend:${profileB.friendCode}` })
+      .expect(202);
+    const received = data<FriendRequest[]>(
+      (await authed(tokenB).get('/api/v1/community/requests').expect(200)).body,
+    );
+    expect(received).toHaveLength(1);
+    await authed(tokenB).post(`/api/v1/community/requests/${received[0]?.id}/accept`).expect(204);
+  });
+
+  it('un code inconnu : aperçu en 404, demande muette en 202', async () => {
+    await authed(tokenA).get('/api/v1/community/friend-codes/AC23DEF4').expect(404);
+    await authed(tokenA)
+      .post('/api/v1/community/requests')
+      .send({ friendCode: 'AC23DEF4' })
+      .expect(202);
+  });
+
+  it('e-mail ET code à la fois : requête refusée, il faut choisir', async () => {
+    await authed(tokenA)
+      .post('/api/v1/community/requests')
+      .send({ email: emailB, friendCode: 'AC23DEF4' })
+      .expect(400);
+    await authed(tokenA).post('/api/v1/community/requests').send({}).expect(400);
+  });
+
   it('demande, réception, acceptation : les deux deviennent amis', async () => {
     await authed(tokenA).post('/api/v1/community/requests').send({ email: emailB }).expect(202);
 

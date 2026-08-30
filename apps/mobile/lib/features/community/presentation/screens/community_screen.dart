@@ -24,18 +24,28 @@ class CommunityScreen extends ConsumerWidget {
     BuildContext context,
     CommunityActions actions,
   ) async {
-    final email = await showAddFriendSheet(context);
-    if (email == null) {
+    final input = await showAddFriendSheet(context);
+    if (input == null) {
       return;
     }
-    await actions.sendFriendRequest(email);
+    // Deux registres de confirmation, à dessein : une ADRESSE reste opaque
+    // (le serveur ne révèle jamais qu'elle a un compte) ; un CODE se partage
+    // volontairement, on confirme donc par le prénom — ou l'on dit
+    // franchement qu'il ne mène nulle part.
+    final message = switch (input) {
+      AddFriendByEmail(:final email) => await () async {
+          await actions.sendFriendRequest(email);
+          return 'Si ce compte existe, il recevra ta demande.';
+        }(),
+      AddFriendByCode(:final code) => switch (
+            await actions.sendFriendRequestByCode(code)) {
+          final String name => 'Demande envoyée à $name.',
+          null => 'Ce code ne mène à personne. Vérifie-le avec ton ami.',
+        },
+    };
     if (context.mounted) {
-      // Volontairement opaque, comme le serveur : on ne confirme jamais
-      // qu'une adresse a un compte.
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Si ce compte existe, il recevra ta demande.'),
-        ),
+        SnackBar(content: Text(message)),
       );
     }
   }

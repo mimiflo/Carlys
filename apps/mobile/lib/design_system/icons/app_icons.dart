@@ -117,6 +117,10 @@ abstract final class AppIcons {
   static const IconData profileAthlete = Icons.fitness_center_rounded;
   static const IconData profileStratege = Icons.psychology_rounded;
 
+  // Code ami : le QR que l'on montre, la caméra qui le lit
+  static const IconData qrCode = Icons.qr_code_2_rounded;
+  static const IconData qrScan = Icons.qr_code_scanner_rounded;
+
   // États
   static const IconData error = Icons.error_outline_rounded;
   static const IconData empty = Icons.inbox_rounded;

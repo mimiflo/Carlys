@@ -1,4 +1,4 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsBoolean,
   IsEmail,
@@ -7,17 +7,30 @@ import {
   Matches,
   MaxLength,
   MinLength,
+  ValidateIf,
 } from 'class-validator';
 
 export class FriendRequestDto {
-  @ApiProperty({
+  @ApiPropertyOptional({
     description:
       'Adresse e-mail EXACTE de la personne à ajouter. La réponse est ' +
-      'volontairement opaque : elle ne révèle jamais si un compte existe.',
+      'volontairement opaque : elle ne révèle jamais si un compte existe. ' +
+      'Fournir email OU friendCode, jamais les deux.',
   })
+  @ValidateIf((dto: FriendRequestDto) => dto.friendCode === undefined)
   @IsEmail()
   @MaxLength(254)
-  email!: string;
+  email?: string;
+
+  @ApiPropertyOptional({
+    description:
+      'Code ami de la personne (tapé ou scanné). Toutes les formes ' +
+      'humaines sont acceptées : XXXX-XXXX, minuscules, charge utile de QR.',
+  })
+  @ValidateIf((dto: FriendRequestDto) => dto.email === undefined)
+  @IsString()
+  @MaxLength(64)
+  friendCode?: string;
 }
 
 export class EncourageDto {

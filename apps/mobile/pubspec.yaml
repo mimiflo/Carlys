@@ -37,6 +37,12 @@ dependencies:
   # Visualisation
   fl_chart: ^0.69.0
 
+  # Code ami : rendu du QR de profil (pur Dart, aucun natif)…
+  qr_flutter: ^4.1.0
+  # …et lecture du QR d'un ami par la caméra (le natif est ici, isolé
+  # dans l'écran de scan — tout le reste de la fonctionnalité vit sans lui).
+  mobile_scanner: ^6.0.10
+
   # Notifications push (projet Firebase carlys — options injectées au
   # lancement via --dart-define-from-file, jamais commitées ; sans elles,
   # le push est simplement inactif). Voir config/firebase.example.json.

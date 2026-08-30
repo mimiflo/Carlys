@@ -3,6 +3,7 @@ import {
   type CommunityFriend,
   type CommunityProfile,
   type Encouragement as EncouragementContract,
+  type FriendCodePreview,
   type FriendRequest,
   type NotificationCategory,
 } from '@carlys/api-contracts';
@@ -16,6 +17,7 @@ import {
   CommunityRepository,
   type FriendRow,
 } from '../infrastructure/community.repository';
+import { normalizeFriendCode } from '../../users/domain/friend-code';
 import { computeStreakDays } from './streak.calculator';
 
 const FEED_LIMIT = 50;
@@ -95,22 +97,60 @@ export class CommunityService {
     if (target === null || target.id === userId) {
       return; // Réponse identique dans tous les cas.
     }
-    const existing = await this.community.findFriendshipBetween(userId, target.id);
-    if (existing === null) {
-      await this.community.createRequest(userId, target.id);
-      await this.notifyNewRequest(userId, target.id);
+    await this.requestFriendTo(userId, target.id);
+  }
+
+  /**
+   * Demande d'ami par code — le chemin du QR et de l'identifiant partagé.
+   * Même réponse opaque que par e-mail : donner un code, c'est déjà dire
+   * « ajoute-moi », mais la demande reste une demande, jamais un lien
+   * automatique.
+   */
+  async requestFriendByCode(userId: string, code: string): Promise<void> {
+    const normalized = normalizeFriendCode(code);
+    if (normalized === null) {
+      return; // Un code mal formé ne mérite pas plus de détail qu'un inconnu.
+    }
+    const target = await this.community.findUserByFriendCode(normalized);
+    if (target === null || target.id === userId) {
       return;
     }
-    if (existing.status === FriendRequestStatus.PENDING && existing.requesterId === target.id) {
+    await this.requestFriendTo(userId, target.id);
+  }
+
+  /**
+   * Aperçu d'un code AVANT d'envoyer la demande : juste le nom, pour que
+   * la personne qui scanne ou tape confirme « c'est bien lui ». Un code se
+   * partage volontairement et l'espace de recherche (26⁸) rend l'essai en
+   * rafale vain — le throttler global coupe court de toute façon.
+   */
+  async lookupFriendCode(code: string): Promise<FriendCodePreview> {
+    const normalized = normalizeFriendCode(code);
+    const target =
+      normalized === null ? null : await this.community.findUserByFriendCode(normalized);
+    if (target === null) {
+      throw new NotFoundException('Aucun compte ne porte ce code ami.');
+    }
+    return { displayName: target.profile?.displayName ?? 'Membre Carlys' };
+  }
+
+  private async requestFriendTo(userId: string, targetId: string): Promise<void> {
+    const existing = await this.community.findFriendshipBetween(userId, targetId);
+    if (existing === null) {
+      await this.community.createRequest(userId, targetId);
+      await this.notifyNewRequest(userId, targetId);
+      return;
+    }
+    if (existing.status === FriendRequestStatus.PENDING && existing.requesterId === targetId) {
       // Demandes croisées = amitié voulue des deux côtés.
       await this.community.setRequestStatus(existing.id, FriendRequestStatus.ACCEPTED);
-      await this.notifyRequestAccepted(userId, target.id);
+      await this.notifyRequestAccepted(userId, targetId);
       return;
     }
     if (existing.status === FriendRequestStatus.DECLINED && existing.requesterId === userId) {
       // Redemander après un refus : la demande redevient visible chez l'autre.
       await this.community.setRequestStatus(existing.id, FriendRequestStatus.PENDING);
-      await this.notifyNewRequest(userId, target.id);
+      await this.notifyNewRequest(userId, targetId);
     }
   }
 
@@ -289,11 +329,14 @@ export class CommunityService {
   // ── Préférence de partage ───────────────────────────────────────────────
 
   async profile(userId: string): Promise<CommunityProfile> {
-    return { sharesProgress: await this.community.sharesProgress(userId) };
+    return {
+      sharesProgress: await this.community.sharesProgress(userId),
+      friendCode: await this.community.friendCodeOf(userId),
+    };
   }
 
   async updateProfile(userId: string, sharesProgress: boolean): Promise<CommunityProfile> {
     await this.community.setSharesProgress(userId, sharesProgress);
-    return { sharesProgress };
+    return { sharesProgress, friendCode: await this.community.friendCodeOf(userId) };
   }
 }

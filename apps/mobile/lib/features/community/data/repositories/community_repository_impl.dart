@@ -82,6 +82,44 @@ class CommunityRepositoryImpl implements CommunityRepository {
   }
 
   @override
+  Future<String> myFriendCode() {
+    return _guard(() async {
+      final response =
+          await _dio.get<Map<String, dynamic>>('/community/profile');
+      return _data(response)['friendCode'] as String;
+    });
+  }
+
+  @override
+  Future<String?> lookupFriendCode(String code) {
+    return _guard(() async {
+      try {
+        final response = await _dio.get<Map<String, dynamic>>(
+          '/community/friend-codes/${Uri.encodeComponent(code)}',
+        );
+        return _data(response)['displayName'] as String;
+      } on DioException catch (exception) {
+        // 404 est une RÉPONSE ici — personne ne porte ce code — pas une
+        // panne : la feuille d'ajout doit la distinguer d'un réseau mort.
+        if (exception.response?.statusCode == 404) {
+          return null;
+        }
+        rethrow;
+      }
+    });
+  }
+
+  @override
+  Future<void> sendFriendRequestByCode(String code) {
+    return _guard(() async {
+      await _dio.post<Map<String, dynamic>>(
+        '/community/requests',
+        data: {'friendCode': code},
+      );
+    });
+  }
+
+  @override
   Future<void> respondToRequest(String requestId, {required bool accept}) {
     return _guard(() async {
       final action = accept ? 'accept' : 'decline';

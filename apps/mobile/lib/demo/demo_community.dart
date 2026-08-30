@@ -6,6 +6,7 @@
 library;
 
 import '../features/community/domain/entities/community.dart';
+import '../features/community/domain/friend_code.dart';
 import '../features/community/domain/repositories/community_repository.dart';
 
 class DemoCommunityRepository implements CommunityRepository {
@@ -124,6 +125,28 @@ class DemoCommunityRepository implements CommunityRepository {
   @override
   Future<void> sendFriendRequest(String email) async {
     // Réponse opaque, comme le vrai serveur : rien ne se passe de visible.
+  }
+
+  /// Codes amis du monde de démonstration — mêmes règles que le serveur
+  /// (8 caractères de l'alphabet sans ambiguïté).
+  static const String _myCode = 'CWDEM742';
+  static const Map<String, String> _knownCodes = {
+    'AC23DEF4': 'Sarah',
+    'MK78WXY2': 'Mehdi',
+  };
+
+  @override
+  Future<String> myFriendCode() async => _myCode;
+
+  @override
+  Future<String?> lookupFriendCode(String code) async {
+    final normalized = normalizeFriendCode(code);
+    return normalized == null ? null : _knownCodes[normalized];
+  }
+
+  @override
+  Future<void> sendFriendRequestByCode(String code) async {
+    // Opaque, comme par e-mail : la demande part, rien d'autre à montrer.
   }
 
   @override
