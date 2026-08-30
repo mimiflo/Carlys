@@ -17,6 +17,16 @@ echo "── Génération des dossiers de plateformes (android/, ios/) ───
 flutter create --org com.carlys --project-name carlys_mobile \
   --platforms android,ios .
 
+# Les Flutter récents recréent le test du GABARIT (test/widget_test.dart,
+# qui référence un MyApp inexistant ici) dès qu'il manque — deux erreurs
+# d'analyse garanties. On ne retire que lui, et seulement s'il n'est pas
+# suivi par git : un fichier du même nom qui serait un jour versionné
+# resterait intouché.
+if [ -f test/widget_test.dart ] &&
+  ! git ls-files --error-unmatch test/widget_test.dart >/dev/null 2>&1; then
+  rm test/widget_test.dart
+fi
+
 echo "── Identité Carlys (nom, icône, permission de notification) ───────"
 "$SCRIPT_DIR/android_branding.sh"
 
