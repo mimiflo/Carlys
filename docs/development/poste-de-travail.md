@@ -178,14 +178,27 @@ décide. S'il est resté sur `Windows` ou `Edge`, le build part sur une cible
 de bureau et échoue sur *« No Windows desktop project configured »* — le
 projet ne déclare que `android` et `ios`.
 
-C'est pour ça que `F5` démarre d'abord l'émulateur (tâche « Émulateur
-Android », `scripts/start_emulator.sh`) : un appareil Android prêt avant le
-build, et VS Code le choisit de lui-même. Le script est idempotent — un
-émulateur déjà lancé ou un téléphone branché lui suffisent, il n'en ouvre
-jamais un second. Pour viser un autre appareil virtuel :
+C'est pour ça que `F5` prépare le terrain d'abord (tâche « Préparer
+Carlys », `scripts/dev_up.sh`) : un appareil Android prêt avant le build,
+et VS Code le choisit de lui-même.
+
+Ce script fait tout le préalable, **et seulement ce qui manque** :
+
+| Étape | Sautée si… |
+| --- | --- |
+| Remise à niveau du poste | le dépôt n'a pas bougé depuis la dernière fois |
+| `docker compose up -d` + attente de PostgreSQL | les conteneurs tournent déjà |
+| Migrations | `prisma migrate status` n'en signale aucune en attente |
+| Émulateur | un appareil Android répond déjà |
+
+Quand tout est debout, il coûte quelques secondes. Et il ne bloque jamais :
+Docker éteint, pas d'AVD, base injoignable — il explique et laisse le
+lancement suivre son cours.
+
+Pour viser un autre appareil virtuel :
 
 ```bash
-CARLYS_AVD=Pixel_7 bash scripts/start_emulator.sh
+CARLYS_AVD=Pixel_7 bash scripts/dev_up.sh
 ```
 
 **Le port 3000 déjà pris.** L'API refuse de démarrer sans dire par qui :
