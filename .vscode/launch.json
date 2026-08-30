@@ -10,7 +10,7 @@
       "name": "Carlys — démo (sans serveur)",
       "request": "launch",
       "type": "dart",
-      "program": "apps/mobile/lib/main.dart",
+      "program": "lib/main.dart",
       "cwd": "apps/mobile",
       "args": ["--dart-define=CARLYS_FLAVOR=demo"]
     },
@@ -21,7 +21,7 @@
       "name": "Carlys — émulateur Android + API locale",
       "request": "launch",
       "type": "dart",
-      "program": "apps/mobile/lib/main.dart",
+      "program": "lib/main.dart",
       "cwd": "apps/mobile",
       "args": [
         "--dart-define=CARLYS_FLAVOR=development",
@@ -34,7 +34,7 @@
       "name": "Carlys — simulateur iOS ou web + API locale",
       "request": "launch",
       "type": "dart",
-      "program": "apps/mobile/lib/main.dart",
+      "program": "lib/main.dart",
       "cwd": "apps/mobile",
       "args": [
         "--dart-define=CARLYS_FLAVOR=development",
@@ -49,7 +49,7 @@
       "name": "Carlys — téléphone réel + API locale",
       "request": "launch",
       "type": "dart",
-      "program": "apps/mobile/lib/main.dart",
+      "program": "lib/main.dart",
       "cwd": "apps/mobile",
       "args": [
         "--dart-define=CARLYS_FLAVOR=development",
