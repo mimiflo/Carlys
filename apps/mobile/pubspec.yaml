@@ -23,7 +23,7 @@ dependencies:
   connectivity_plus: ^6.1.1
 
   # Base locale (offline-first)
-  drift: ^2.23.0
+  drift: ^2.34.3
   sqlite3_flutter_libs: ^0.5.28
   path_provider: ^2.1.5
   path: ^1.9.0
@@ -70,7 +70,7 @@ dev_dependencies:
   # tout en tournant à chaque `build_runner` et à chaque exécution de la CI.
   # Le seul fichier engendré du projet est `app_database.g.dart`.
   build_runner: ^2.4.13
-  drift_dev: ^2.23.0
+  drift_dev: ^2.34.5
 
 flutter:
   uses-material-design: true
