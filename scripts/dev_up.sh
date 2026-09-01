@@ -33,7 +33,19 @@ if [ "$HEAD_NOW" != "$LAST" ]; then
   echo "$HEAD_NOW" > "$STAMP"
 fi
 
-# ── 2. Infrastructure Docker ────────────────────────────────────────────
+# ── 2. Code engendré par Drift ──────────────────────────────────────────
+# Vérifié à CHAQUE lancement, indépendamment de l'étape précédente : le
+# fichier peut manquer sans que HEAD ait bougé (clone frais, `flutter
+# clean` un peu large, fichier supprimé à la main). Sans lui, l'analyseur
+# noie l'éditeur sous deux cents erreurs dont la cause tient en une ligne.
+GENERATED="apps/mobile/lib/core/database/app_database.g.dart"
+if [ ! -f "$GENERATED" ] && command -v flutter >/dev/null 2>&1; then
+  say "Code engendré manquant (Drift)"
+  (cd apps/mobile && dart run build_runner build --delete-conflicting-outputs) 2>&1 |
+    tail -3 || warn "build_runner a échoué"
+fi
+
+# ── 3. Infrastructure Docker ────────────────────────────────────────────
 if command -v docker >/dev/null 2>&1; then
   RUNNING="$(docker compose ps --services --status running 2>/dev/null | wc -l)"
   EXPECTED="$(docker compose config --services 2>/dev/null | wc -l)"
@@ -61,7 +73,7 @@ else
   warn "Docker introuvable — l'API n'aura ni base ni cache."
 fi
 
-# ── 3. Migrations en attente ────────────────────────────────────────────
+# ── 4. Migrations en attente ────────────────────────────────────────────
 # `migrate status` sort non-zéro quand il en reste à appliquer : c'est
 # exactement le test qu'on veut, sans jamais migrer pour rien.
 if command -v pnpm >/dev/null 2>&1 && [ -d node_modules ]; then
@@ -72,10 +84,10 @@ if command -v pnpm >/dev/null 2>&1 && [ -d node_modules ]; then
   fi
 fi
 
-# ── 4. Émulateur ────────────────────────────────────────────────────────
+# ── 5. Émulateur ────────────────────────────────────────────────────────
 bash scripts/start_emulator.sh
 
-# ── 5. Le port de l'API est-il déjà pris ? ──────────────────────────────
+# ── 6. Le port de l'API est-il déjà pris ? ──────────────────────────────
 # Le lancement démarre l'API lui-même. Si une autre instance occupe déjà le
 # port, la session de débogage échouerait sur EADDRINUSE sans dire pourquoi.
 if command -v node >/dev/null 2>&1; then

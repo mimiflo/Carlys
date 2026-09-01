@@ -58,9 +58,12 @@ if command -v flutter >/dev/null 2>&1 && [ -f apps/mobile/pubspec.yaml ]; then
     say "Dépendances Flutter"
     (cd apps/mobile && flutter pub get) || echo "⚠ flutter pub get a échoué"
   fi
-  # Le code engendré par Drift ne se régénère que si ses sources bougent :
-  # build_runner est trop lent pour tourner « au cas où ».
-  if touched '^apps/mobile/lib/core/database/'; then
+  # Le code engendré par Drift se régénère si ses sources ont bougé — ou
+  # s'il manque tout simplement, ce qui arrive sur un clone frais et après
+  # un `flutter clean`. Hors ces deux cas, build_runner est trop lent pour
+  # tourner « au cas où ».
+  if touched '^apps/mobile/lib/core/database/' ||
+    [ ! -f apps/mobile/lib/core/database/app_database.g.dart ]; then
     say "Code engendré (Drift)"
     (cd apps/mobile && dart run build_runner build --delete-conflicting-outputs) ||
       echo "⚠ build_runner a échoué"
