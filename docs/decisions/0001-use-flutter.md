@@ -72,7 +72,7 @@ propre CI (`mobile-ci.yml`).
   (`flutter create`) et l'environnement est injecté via `--dart-define`
   (`CARLYS_FLAVOR`, `CARLYS_API_BASE_URL`).
 - La génération de code (Riverpod, Freezed, json_serializable, Drift) devient un
-  passage obligé : `dart run build_runner build --delete-conflicting-outputs`.
+  passage obligé : `dart run build_runner build`.
 - FCM et Sentry ne seront ajoutés qu'avec leur configuration réelle (pas de
   dépendance morte), conformément au `pubspec.yaml`.
 - Tout partage de logique avec le backend passe par le contrat HTTP documenté,

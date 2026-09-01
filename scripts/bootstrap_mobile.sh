@@ -37,7 +37,7 @@ flutter pub get
 # pas, et `app_database.dart` le déclare en `part`. Sans cette étape, l'analyse
 # qui suit échoue sur deux cents erreurs dont la cause tient en une ligne.
 echo "── Génération de code (Drift) ──────────────────────────────────────"
-dart run build_runner build --delete-conflicting-outputs
+dart run build_runner build
 
 echo "── Analyse statique ────────────────────────────────────────────────"
 flutter analyze

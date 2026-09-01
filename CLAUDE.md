@@ -48,7 +48,7 @@ pnpm build && pnpm format:check && pnpm lint && pnpm typecheck && pnpm test
 
 ```bash
 flutter pub get
-dart run build_runner build --delete-conflicting-outputs   # Drift uniquement
+dart run build_runner build   # Drift uniquement
 flutter analyze         # bloquant, comme en CI
 flutter test
 ./scripts/check_mobile.sh   # tout ce que fait la CI, dans le même ordre

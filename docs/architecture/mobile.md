@@ -474,7 +474,7 @@ flutter run \
   --dart-define=CARLYS_API_BASE_URL=http://localhost:3000
 
 # Génération de code (Riverpod, Freezed, Drift, JSON) — dès qu'elle sera utilisée :
-dart run build_runner build --delete-conflicting-outputs
+dart run build_runner build
 
 # Builds de distribution (mêmes --dart-define, valeurs de l'environnement visé)
 flutter build apk

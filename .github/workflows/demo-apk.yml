@@ -74,7 +74,7 @@ jobs:
         run: flutter pub get
 
       - name: Génération de code (Drift, …)
-        run: dart run build_runner build --delete-conflicting-outputs
+        run: dart run build_runner build
 
       # `--target-platform android-arm64` : une seule architecture au lieu de
       # trois. Le moteur Flutter pèse plusieurs mégaoctets par architecture,

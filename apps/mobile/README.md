@@ -29,8 +29,8 @@ flutter run \
   --dart-define=CARLYS_API_BASE_URL=http://localhost:3000
 
 # Génération de code — Drift uniquement (un seul fichier engendré) :
-dart run build_runner build --delete-conflicting-outputs
-dart run build_runner watch --delete-conflicting-outputs
+dart run build_runner build
+dart run build_runner watch
 
 # Builds de distribution
 flutter build apk

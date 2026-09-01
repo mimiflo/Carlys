@@ -41,7 +41,7 @@ fi
 GENERATED="apps/mobile/lib/core/database/app_database.g.dart"
 if [ ! -f "$GENERATED" ] && command -v flutter >/dev/null 2>&1; then
   say "Code engendré manquant (Drift)"
-  (cd apps/mobile && dart run build_runner build --delete-conflicting-outputs) 2>&1 |
+  (cd apps/mobile && dart run build_runner build) 2>&1 |
     tail -3 || warn "build_runner a échoué"
 fi
 

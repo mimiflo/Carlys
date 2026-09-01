@@ -290,9 +290,9 @@ des classes immuables ordinaires.
 
 ```bash
 cd apps/mobile
-dart run build_runner build --delete-conflicting-outputs
+dart run build_runner build
 # ou en continu :
-dart run build_runner watch --delete-conflicting-outputs
+dart run build_runner watch
 ```
 
 ## Docker
@@ -365,7 +365,7 @@ Politique complète et signalement de vulnérabilités : [SECURITY.md](./SECURIT
 | `./scripts/check.sh` | Vérifications complètes (build inclus) |
 | `./scripts/bootstrap_mobile.sh` | Prépare l'app Flutter (plateformes + deps) |
 | `flutter pub get` | Dépendances Flutter |
-| `dart run build_runner build --delete-conflicting-outputs` | Génération de code Flutter |
+| `dart run build_runner build` | Génération de code Flutter |
 | `flutter analyze` / `flutter test` | Qualité Flutter |
 | `flutter run --dart-define=…` | Lancement mobile |
 | `flutter build apk` / `appbundle` / `ios` | Builds de distribution |

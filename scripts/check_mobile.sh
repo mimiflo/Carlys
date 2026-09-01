@@ -18,7 +18,7 @@ echo "── Dépendances ──────────────────
 flutter pub get
 
 echo "── Génération de code (Freezed, Riverpod, Drift, json) ─────────────"
-dart run build_runner build --delete-conflicting-outputs
+dart run build_runner build
 
 echo "── Formatage ───────────────────────────────────────────────────────"
 # Les fichiers générés sont exclus : ce n'est pas nous qui les écrivons.

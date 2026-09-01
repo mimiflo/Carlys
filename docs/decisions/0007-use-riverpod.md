@@ -65,8 +65,7 @@ d'injection de dépendances de l'application mobile.
 ## Inconvénients
 
 - **Dépendance à `build_runner`** : toute modification d'un provider annoté
-  exige `dart run build_runner build --delete-conflicting-outputs` — friction
-  réelle au quotidien et en CI.
+  exige `dart run build_runner build` — friction réelle au quotidien et en CI.
 - Courbe d'apprentissage : `ref.watch` vs `ref.read` vs `ref.listen`,
   invalidation, `keepAlive`, familles de providers — des erreurs subtiles sont
   possibles (rebuilds excessifs, providers recréés par inadvertance).

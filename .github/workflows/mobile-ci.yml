@@ -71,7 +71,7 @@ jobs:
       # coûte ~1 min ; le cache en a coûté 40. Le cache pub, lui, reste.
 
       - name: Génération de code (Drift, …)
-        run: dart run build_runner build --delete-conflicting-outputs
+        run: dart run build_runner build
 
       - name: Formatage
         run: |

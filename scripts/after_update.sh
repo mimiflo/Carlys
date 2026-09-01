@@ -65,7 +65,7 @@ if command -v flutter >/dev/null 2>&1 && [ -f apps/mobile/pubspec.yaml ]; then
   if touched '^apps/mobile/lib/core/database/' ||
     [ ! -f apps/mobile/lib/core/database/app_database.g.dart ]; then
     say "Code engendré (Drift)"
-    (cd apps/mobile && dart run build_runner build --delete-conflicting-outputs) ||
+    (cd apps/mobile && dart run build_runner build) ||
       echo "⚠ build_runner a échoué"
   fi
 fi
