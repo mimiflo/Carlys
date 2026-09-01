@@ -19,6 +19,7 @@ import '../features/community/data/repositories/community_repository_impl.dart';
 import '../features/exercises/data/repositories/exercises_repository_impl.dart';
 import '../features/notifications/data/repositories/device_token_repository_impl.dart';
 import '../features/nutrition/data/repositories/nutrition_repository_impl.dart';
+import '../features/nutrition/presentation/controllers/water_controllers.dart';
 import '../features/progress/data/repositories/progress_repository_impl.dart';
 import '../features/subscription/data/repositories/subscription_repository_impl.dart';
 import '../features/workout_program/data/repositories/program_repository_impl.dart';
@@ -52,6 +53,9 @@ List<Override> demoOverrides() {
     subscriptionRepositoryProvider
         .overrideWithValue(DemoSubscriptionRepository()),
     nutritionRepositoryProvider.overrideWithValue(DemoNutritionRepository()),
+    // L'hydratation vit dans Drift : sans cette substitution, la
+    // démonstration ouvrirait une base pour un simple compteur.
+    waterStoreProvider.overrideWithValue(DemoWaterStore()),
     programRepositoryProvider.overrideWithValue(DemoProgramRepository()),
     communityRepositoryProvider.overrideWithValue(DemoCommunityRepository()),
     workoutRepositoryProvider.overrideWithValue(workouts),

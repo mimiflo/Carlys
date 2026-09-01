@@ -8,6 +8,29 @@ import 'package:path_provider/path_provider.dart';
 
 part 'app_database.g.dart';
 
+/// Hydratation du jour — UNE ligne par journée vécue.
+///
+/// Volontairement LOCALE et non synchronisée, contrairement au journal
+/// alimentaire ou aux mesures corporelles. Trois raisons : le compteur se
+/// remet à zéro chaque nuit et ne porte aucun historique qu'on voudrait
+/// consulter ailleurs ; le geste est un tapotement répété qu'un aller-retour
+/// réseau rendrait poussif ; et boire relève de la journée en cours, pas d'un
+/// dossier. Le jour où l'on voudra l'historiser côté serveur, cette table
+/// deviendra le cache local d'une ressource, sans rien changer à l'écran.
+class LocalWaterIntakes extends Table {
+  /// Minuit LOCAL du jour concerné — l'hydratation se compte par journée
+  /// vécue, pas en UTC : boire à 23 h compte pour aujourd'hui.
+  DateTimeColumn get day => dateTime()();
+
+  /// Total bu, en millilitres. Jamais négatif (le dépôt le borne).
+  IntColumn get milliliters => integer().withDefault(const Constant(0))();
+
+  DateTimeColumn get updatedAt => dateTime()();
+
+  @override
+  Set<Column<Object>> get primaryKey => {day};
+}
+
 /// Séance locale — source de vérité immédiate de l'application.
 class LocalWorkoutSessions extends Table {
   /// UUID généré sur l'appareil, partagé avec le serveur.
@@ -194,6 +217,7 @@ class SyncOperations extends Table {
     LocalTemplateExercises,
     LocalTemplateSets,
     LocalSessionPlanItems,
+    LocalWaterIntakes,
     SyncOperations,
   ],
 )
@@ -206,9 +230,10 @@ class AppDatabase extends _$AppDatabase {
   ///    `templateName` sur les séances, `plannedReps` / `plannedWeightKg` sur
   ///    les séries ;
   ///  - **3** — reprise multi-appareil : `syncStatus` sur les items de plan,
-  ///    qui deviennent synchronisables.
+  ///    qui deviennent synchronisables ;
+  ///  - **4** — hydratation : une table locale du total quotidien.
   @override
-  int get schemaVersion => 3;
+  int get schemaVersion => 4;
 
   /// Migration locale : les colonnes ajoutées sont toutes **nullables**, donc
   /// la montée de version ne réécrit ni ne perd aucune donnée déjà saisie —
@@ -250,6 +275,11 @@ class AppDatabase extends _$AppDatabase {
             // `pending` (valeur par défaut de la colonne), ce qui met le
             // rapatriement en retrait sur cette séance — le bon réflexe, la
             // saisie de l'appareil ne peut pas être écrasée.
+          }
+          if (from < 4) {
+            // Table neuve : rien à reprendre, l'hydratation commence
+            // aujourd'hui. Aucune donnée existante n'est touchée.
+            await migrator.createTable(localWaterIntakes);
           }
         },
       );

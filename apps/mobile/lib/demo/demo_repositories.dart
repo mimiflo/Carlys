@@ -5,6 +5,8 @@
 /// côté serveur, hors de portée d'une démo hors ligne).
 library;
 
+import 'dart:async';
+
 import '../app/restore/app_restore.dart';
 import '../core/synchronization/sync_lifecycle.dart';
 import '../features/authentication/domain/entities/auth_session_device.dart';
@@ -17,6 +19,7 @@ import '../features/exercises/domain/repositories/exercises_repository.dart';
 import '../features/notifications/domain/repositories/device_token_repository.dart';
 import '../features/nutrition/domain/entities/nutrition.dart';
 import '../features/nutrition/domain/repositories/nutrition_repository.dart';
+import '../features/nutrition/presentation/controllers/water_controllers.dart';
 import '../features/progress/domain/entities/progress.dart';
 import '../features/progress/domain/repositories/progress_repository.dart';
 import '../features/subscription/domain/entities/subscription.dart';
@@ -338,6 +341,27 @@ class DemoSubscriptionRepository implements SubscriptionRepository {
     required String id,
   }) async {
     throw StateError('Le paiement n’existe pas en démonstration.');
+  }
+}
+
+/// Hydratation de la DÉMONSTRATION : un compteur en mémoire, qui démarre à
+/// mi-parcours pour que la cellule montre une jauge vivante plutôt qu'un
+/// départ à zéro — c'est une vitrine, pas une journée réelle.
+class DemoWaterStore implements WaterStore {
+  final StreamController<int> _controller = StreamController<int>.broadcast();
+  int _milliliters = 1250;
+
+  @override
+  Stream<int> watchToday() async* {
+    yield _milliliters;
+    yield* _controller.stream;
+  }
+
+  @override
+  Future<int> addToday(int milliliters) async {
+    _milliliters = (_milliliters + milliliters).clamp(0, 20000);
+    _controller.add(_milliliters);
+    return _milliliters;
   }
 }
 

@@ -13,6 +13,8 @@ import '../../../authentication/presentation/controllers/auth_controller.dart';
 import '../../../carlys_profile/presentation/controllers/carlys_profile_controllers.dart';
 import '../../../community/presentation/controllers/community_controllers.dart';
 import '../../../notifications/presentation/controllers/push_registration.dart';
+import '../../../nutrition/presentation/controllers/water_controllers.dart';
+import '../../../nutrition/presentation/widgets/water_sheet.dart';
 import '../../../workout_session/presentation/controllers/workout_controllers.dart';
 import '../../../workout_template/presentation/controllers/workout_template_controllers.dart';
 import '../controllers/dashboard_controllers.dart';
@@ -24,6 +26,7 @@ import '../widgets/home_hero.dart';
 import '../widgets/section_title_bar.dart';
 import '../widgets/title_summary.dart';
 import '../widgets/today_grid.dart';
+import '../widgets/today_primer.dart';
 import '../widgets/today_workout_card.dart';
 
 /// ACCUEIL — ce que je fais aujourd'hui, et où j'en suis.
@@ -80,13 +83,25 @@ class HomeScreen extends ConsumerWidget {
               child:
                   ConsistencyStreak(week: ref.watch(consistencyWeekProvider)),
             ),
-            _Section(
-              child: _Titled(
-                icon: AppIcons.today,
-                label: 'Aujourd’hui',
-                child: TodayGrid(metrics: ref.watch(todayMetricsProvider)),
+            // Sans cible connue, la grille n'aurait que des tirets à montrer :
+            // l'amorçage prend sa place, et lui seul porte alors son titre.
+            if (ref.watch(metabolismTargetWaterMlProvider).valueOrNull == null)
+              _Section(
+                child: TodayPrimer(
+                  onStart: () => context.push(AppRoutes.nutrition),
+                ),
+              )
+            else
+              _Section(
+                child: _Titled(
+                  icon: AppIcons.today,
+                  label: 'Aujourd’hui',
+                  child: TodayGrid(
+                    metrics: ref.watch(todayMetricsProvider),
+                    onOpenHydration: () => showWaterSheet(context),
+                  ),
+                ),
               ),
-            ),
             _Section(
               child: TodayWorkoutCard(
                 activeWorkout: activeWorkout,

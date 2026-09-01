@@ -1,10 +1,12 @@
 import 'package:carlys_mobile/core/database/app_database.dart';
 import 'package:carlys_mobile/features/workout_session/domain/entities/workout.dart';
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// Migrations locales 1 → 2 (modèles de séance) puis 2 → 3 (plan
-/// synchronisable, pour la reprise multi-appareil).
+/// Migrations locales 1 → 2 (modèles de séance), 2 → 3 (plan
+/// synchronisable, pour la reprise multi-appareil) puis 3 → 4
+/// (hydratation du jour).
 ///
 /// Première migration Drift du projet : elle doit être **non destructive**.
 /// Une séance en cours au moment de la mise à jour de l'application ne doit
@@ -126,7 +128,20 @@ void main() {
     expect(operations, hasLength(1));
     expect(operations.single.operationType, 'session.create');
 
-    expect(db.schemaVersion, 3);
+    // La table d'hydratation, arrivée en version 4, est là et utilisable :
+    // une migration qui crée une table sans qu'on puisse y écrire ne vaut
+    // rien, et le compteur du jour serait muet au premier verre.
+    await db.into(db.localWaterIntakes).insert(
+          LocalWaterIntakesCompanion.insert(
+            day: DateTime(2026, 9, 1),
+            milliliters: const Value(750),
+            updatedAt: DateTime(2026, 9, 1, 10),
+          ),
+        );
+    final water = await db.select(db.localWaterIntakes).getSingle();
+    expect(water.milliliters, 750);
+
+    expect(db.schemaVersion, 4);
   });
 
   test('les quatre tables des modèles de séance sont créées et utilisables',

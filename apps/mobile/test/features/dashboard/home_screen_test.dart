@@ -9,8 +9,11 @@ import 'package:carlys_mobile/features/dashboard/data/daily_quotes.dart';
 import 'package:carlys_mobile/features/dashboard/presentation/widgets/consistency_streak.dart';
 import 'package:carlys_mobile/features/dashboard/presentation/widgets/daily_quote_card.dart';
 import 'package:carlys_mobile/features/dashboard/presentation/widgets/home_hero.dart';
+import 'package:carlys_mobile/features/dashboard/presentation/widgets/today_grid.dart';
+import 'package:carlys_mobile/features/dashboard/presentation/widgets/today_primer.dart';
 import 'package:carlys_mobile/features/nutrition/data/repositories/nutrition_repository_impl.dart';
 import 'package:carlys_mobile/features/nutrition/domain/entities/nutrition.dart';
+import 'package:carlys_mobile/features/nutrition/presentation/controllers/water_controllers.dart';
 import 'package:carlys_mobile/features/progress/data/repositories/progress_repository_impl.dart';
 import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';
 import 'package:carlys_mobile/features/workout_session/domain/entities/workout.dart';
@@ -19,6 +22,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/fake_auth_repository.dart';
+import '../../support/fake_community_repository.dart';
 import '../../support/fake_nutrition_repository.dart';
 import '../../support/fake_progress_repository.dart';
 import '../../support/fake_workout_repository.dart';
@@ -56,6 +60,7 @@ void main() {
     WidgetTester tester, {
     FakeWorkoutRepository? workouts,
     FakeNutritionRepository? nutrition,
+    FakeWaterStore? water,
   }) async {
     tester.view.physicalSize = const Size(1179, 2556);
     tester.view.devicePixelRatio = 3;
@@ -78,6 +83,7 @@ void main() {
               .overrideWithValue(FakeProgressRepository()),
           nutritionRepositoryProvider
               .overrideWithValue(nutrition ?? completeNutrition()),
+          waterStoreProvider.overrideWithValue(water ?? FakeWaterStore()),
           syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
           appRestoreProvider.overrideWithValue(NoopAppRestore()),
         ],
@@ -141,20 +147,68 @@ void main() {
     expect(find.text('HYDRATATION'), findsOneWidget);
     expect(find.text('VOLUME'), findsOneWidget);
 
-    // Journal vide : un VRAI zéro face à l'objectif, et le reste qui en
-    // découle — jamais un objectif déguisé en consommé.
+    // Journée qui commence : un VRAI zéro face à l'objectif, jamais un
+    // objectif déguisé en consommé. Les trois cibles nutritionnelles sont là,
+    // hydratation comprise : elle se compte désormais sur l'appareil, elle
+    // n'est plus « à noter ailleurs ».
     expect(find.text('/ 2\u202F759 kcal'), findsOneWidget);
-    expect(find.text('reste 2\u202F759 kcal'), findsOneWidget);
     expect(find.text('/ 128 g'), findsOneWidget);
-    expect(find.text('reste 128 g'), findsOneWidget);
+    expect(find.text('/ 2,8 L'), findsOneWidget);
 
-    // L'eau bue n'est pas suivie : la cible est réelle, la valeur reste en
-    // attente plutôt qu'inventée.
-    expect(find.text('à noter dans Nutrition'), findsOneWidget);
+    // Et la note n'annonce PAS ce qu'il « reste » : à zéro le reste vaut la
+    // cible entière, et le répéter sous la jauge sonnerait comme un reproche
+    // avant l'effort.
+    expect(find.text('reste 2\u202F759 kcal'), findsNothing);
+    expect(find.text('reste 128 g'), findsNothing);
+    expect(find.text('reste 2,8 L'), findsNothing);
+    expect(find.text('à toi de jouer'), findsNWidgets(3));
 
     // Aucune semaine précédente ici : pas de cible de volume, donc pas de
     // « reste » — la portée de la mesure prend sa place.
     expect(find.text('cette semaine'), findsOneWidget);
+  });
+
+  testWidgets('l’eau bue vient du compteur local', (tester) async {
+    await pumpHome(tester, water: FakeWaterStore(milliliters: 1500));
+
+    await scrollTo(tester, find.text('AUJOURD’HUI'));
+    // 1,5 L sur 2,8 : la mesure se lit exactement comme les trois autres.
+    expect(find.text('1,5'), findsOneWidget);
+    expect(find.text('/ 2,8 L'), findsOneWidget);
+    expect(find.text('reste 1,3 L'), findsOneWidget);
+  });
+
+  testWidgets('la cellule hydratation ouvre la feuille et compte l’eau',
+      (tester) async {
+    final water = FakeWaterStore(milliliters: 1000);
+    await pumpHome(tester, water: water);
+
+    await scrollTo(tester, find.text('AUJOURD’HUI'));
+    await tester.tap(find.text('HYDRATATION'));
+    await tester.pumpAndSettle();
+
+    // La feuille rappelle l'objectif du jour avant de proposer les gestes.
+    expect(find.text('Objectif du jour : 2,8 L.'), findsOneWidget);
+
+    await tester.tap(find.text('+ 50 cl'));
+    await tester.pumpAndSettle();
+
+    // Le geste est ÉCRIT, pas seulement affiché : c'est le magasin qui fait
+    // foi, l'accueil n'a pas de total à lui.
+    expect(water.milliliters, 1500);
+    expect(find.text('1,5'), findsWidgets);
+  });
+
+  testWidgets('sans profil : l’amorçage remplace la grille', (tester) async {
+    // Profil vide : aucune cible calculable. Quatre cellules à « — »
+    // montreraient quatre fois la même absence sans jamais dire comment en
+    // sortir ; une invitation unique le dit une fois, et bien.
+    await pumpHome(tester, nutrition: FakeNutritionRepository());
+
+    await scrollTo(tester, find.byType(TodayPrimer));
+    expect(find.byType(TodayGrid), findsNothing);
+    expect(find.text('Carlys ne sait pas encore quoi viser'), findsOneWidget);
+    expect(find.text('Calculer mes objectifs'), findsOneWidget);
   });
 
   testWidgets('le consommé du journal s’affiche face à l’objectif',

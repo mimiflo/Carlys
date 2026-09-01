@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/utilities/formatting.dart';
 import '../../../nutrition/presentation/controllers/nutrition_controllers.dart';
+import '../../../nutrition/presentation/controllers/water_controllers.dart';
 import '../../../workout_session/domain/entities/workout.dart';
 import '../../../workout_session/presentation/controllers/workout_controllers.dart';
 
@@ -51,6 +52,7 @@ final todayMetricsProvider = Provider.autoDispose<List<TodayMetric>>((ref) {
       ref.watch(metabolismReportProvider).valueOrNull?.metabolism;
   final kcal = ref.watch(consumedKcalTodayProvider);
   final protein = ref.watch(consumedProteinTodayProvider);
+  final water = ref.watch(consumedWaterTodayProvider).valueOrNull;
   final volume = ref.watch(weeklyVolumeProvider);
 
   return [
@@ -68,18 +70,15 @@ final todayMetricsProvider = Provider.autoDispose<List<TodayMetric>>((ref) {
       target: metabolism?.proteinG.toDouble(),
       unit: 'g',
     ),
-    // L'eau bue n'est PAS suivie par l'application : seule la cible est
-    // connue. On l'affiche donc en attente, avec le geste qui l'ouvrirait,
-    // plutôt qu'un chiffre inventé.
-    TodayMetric(
+    _counted(
       kind: TodayMetricKind.hydratation,
       label: 'Hydratation',
-      value: '—',
-      target: metabolism == null
-          ? ''
-          : '/ ${formatDecimal(metabolism.waterMl / 1000)} L',
-      note:
-          metabolism == null ? 'objectif à calculer' : 'à noter dans Nutrition',
+      done: water?.toDouble(),
+      target: metabolism?.waterMl.toDouble(),
+      unit: 'L',
+      // Les litres se lisent en dixièmes : « 1,2 / 2,4 L » plutôt que
+      // « 1 200 / 2 400 ml », qui ne se retient pas.
+      scale: 1000,
     ),
     _counted(
       kind: TodayMetricKind.volume,
@@ -129,6 +128,20 @@ TodayMetric _counted({
       value: show(done),
       target: unit,
       note: fallbackNote ?? 'objectif à calculer',
+    );
+  }
+
+  // Une journée qui commence n'est pas une journée en retard : à zéro, on
+  // n'annonce pas ce qu'il « reste » — le reste, c'est la cible entière, et
+  // la répéter sous la jauge sonne comme un reproche avant l'effort.
+  if (done == 0) {
+    return TodayMetric(
+      kind: kind,
+      label: label,
+      value: show(0),
+      target: '/ ${show(target)} $unit',
+      note: fallbackNote ?? 'à toi de jouer',
+      ratio: 0,
     );
   }
 

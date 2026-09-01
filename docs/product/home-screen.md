@@ -18,7 +18,7 @@ fond**, ouvert par une barre de titre dont le filet court jusqu'au bord droit.
 | ----- | ------- | ------- | --------- |
 | 1 | Zone haute : cœur, en-tête, citation | non | `HomeHero` |
 | 2 | Série de constance | non | `ConsistencyStreak` |
-| 3 | Aujourd'hui | **oui** | `TodayGrid` |
+| 3 | Aujourd'hui, ou son amorçage | **oui** | `TodayGrid` / `TodayPrimer` |
 | 4 | Séance du jour | **oui** | `TodayWorkoutCard` |
 | 5 | Ton titre | non | `TitleSummary` |
 | 6 | Pour toi | **oui** | `ForYouCard` |
@@ -60,23 +60,43 @@ Elle passe en tirets, comme un axe de progression sans fait.
 | ------ | ---- | ----- | ---------- |
 | Calories | journal du jour | métabolisme | serveur |
 | Protéines | journal du jour | métabolisme | serveur |
-| Hydratation | **non suivi** | métabolisme | serveur |
+| Hydratation | compteur du jour | métabolisme | **local** (Drift) |
 | Volume | historique local | **semaine précédente** | local |
 
-Deux arbitrages méritent leur explication.
+Trois arbitrages méritent leur explication.
 
-**L'eau bue n'est pas suivie par l'application.** La cible existe
-(`MetabolismTargets.waterMl`), le consommé non : aucun écran ne permet de
-noter un verre d'eau. La cellule affiche donc la cible réelle, une valeur en
-attente et le geste qui l'ouvrirait, plutôt qu'un chiffre inventé. Ouvrir le
-suivi demanderait une tranche verticale complète (schéma, API, écran de
-saisie) : c'est une décision produit, pas un détail de mise en page.
+**Une journée qui commence n'est pas une journée en retard.** À zéro, la note
+n'annonce pas ce qu'il « reste » : le reste vaut alors la cible entière, et le
+répéter sous la jauge sonne comme un reproche avant l'effort. La cellule
+montre « 0 / 2 759 kcal » et dit « à toi de jouer ». Ce n'est pas une nuance
+de copie : c'est la différence entre un tableau de bord qui accuse et un
+tableau de bord qui attend.
+
+**L'eau bue se compte sur l'appareil, et nulle part ailleurs.** La cible vient
+du serveur (`MetabolismTargets.waterMl`), le consommé d'une table Drift à une
+ligne par jour (`LocalWaterIntakes`, schéma 4). Aucune synchronisation : un
+verre d'eau n'a pas d'histoire à raconter à un autre appareil, et une file de
+synchronisation pour un entier remis à zéro chaque nuit coûterait plus qu'elle
+ne rapporte. La cellule est la seule de la grille à être **tapotable** : elle
+ouvre une feuille (`+ 25 cl`, `+ 50 cl`, retrait d'un verre) plutôt que
+d'incrémenter sous le doigt — ajouter de l'eau par mégarde depuis l'accueil
+serait pénible à défaire, et le retour arrière doit être aussi accessible que
+l'ajout.
 
 **La cible de volume est la semaine précédente.** Aucun objectif de tonnage
 n'existe dans le domaine, et il n'y a pas de barème universel. La seule
 référence que l'application possède — et la seule qui ait un sens — est
 soi-même la semaine d'avant. Sans semaine précédente, la cellule montre le
 volume et sa portée, sans jauge remplie.
+
+### Sans profil, la grille cède la place
+
+Tant qu'aucun métabolisme n'est calculé, trois cellules sur quatre n'ont pas
+de cible : la grille ne montrerait que des tirets — quatre fois la même
+absence, sans jamais dire comment en sortir. `TodayPrimer` prend alors sa
+place : une invitation unique, qui nomme ce qui manque et mène au profil
+nutritionnel. Le bloc disparaît de lui-même dès que le profil est rempli ;
+c'est un état de départ, pas une carte de plus.
 
 ## La forme du jour n'est pas une mesure de santé
 
@@ -130,5 +150,8 @@ n'atteignait pas — et réveille des lectures qui dormaient.
 | `presentation/widgets/section_title_bar.dart` | La barre de titre mesurée |
 | `presentation/controllers/dashboard_controllers.dart` | Constance, sous-titre, lecture de forme |
 | `presentation/controllers/today_metrics.dart` | Les quatre mesures, prêtes à afficher |
+| `presentation/widgets/today_grid.dart` | La grille 2×2 et ses cellules |
+| `presentation/widgets/today_gauge.dart` | La jauge d'une cellule (pleine, ou en tirets) |
+| `presentation/widgets/today_primer.dart` | L'amorçage, tant qu'aucune cible n'existe |
 
 Les contrôleurs formatent : l'écran ne calcule ni n'arrondit rien.
