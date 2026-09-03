@@ -11,7 +11,15 @@ final remoteImageCacheProvider = Provider<RemoteImageCache>(
 );
 
 /// Octets d'une photo, par URL. `null` = hors d'atteinte, pas une erreur.
-final remoteImageProvider = FutureProvider.family<Uint8List?, String>(
+///
+/// `autoDispose` : une fois la vignette démontée, l'entrée s'efface avec sa
+/// référence aux octets. Sans quoi chaque URL vue restait en mémoire pour la
+/// vie de l'application, et le budget de 24 Mo du cache en dessous ne
+/// bornait plus rien : un long défilement du catalogue coûtait ce que le
+/// cache s'était donné tant de mal à éviter. La conservation est le travail
+/// du cache (mémoire bornée, puis disque) : rien n'est retéléchargé.
+final remoteImageProvider =
+    FutureProvider.autoDispose.family<Uint8List?, String>(
   (ref, url) => ref.watch(remoteImageCacheProvider).bytesOf(url),
 );
 

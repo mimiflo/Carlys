@@ -80,6 +80,36 @@ void main() {
     expect(find.byType(Image), findsOneWidget);
   });
 
+  testWidgets('démontée, la vignette libère son entrée de provider',
+      (tester) async {
+    // Le cache en dessous borne sa mémoire ; la couche provider ne doit pas
+    // garder une référence forte aux octets de chaque URL vue. Après
+    // démontage, l'entrée disparaît et le budget du cache redevient réel.
+    final container = ProviderContainer(
+      overrides: [remoteImageCacheProvider.overrideWithValue(_FakeCache(_png))],
+    );
+    addTearDown(container.dispose);
+    Widget app(Widget home) => UncontrolledProviderScope(
+          container: container,
+          child: MaterialApp(home: home),
+        );
+    bool held() => container.getAllProviderElements().any(
+          (element) => element.origin.from == remoteImageProvider,
+        );
+
+    await tester.pumpWidget(
+      app(
+        const RemoteImage(url: 'http://s/a.png', placeholder: Text('repli')),
+      ),
+    );
+    await tester.pumpAndSettle();
+    expect(held(), isTrue);
+
+    await tester.pumpWidget(app(const SizedBox.shrink()));
+    await tester.pumpAndSettle();
+    expect(held(), isFalse);
+  });
+
   group('cache réel', () {
     // Le mode démo n'a ni serveur ni stockage objet : ses vignettes voyagent
     // dans le paquet et portent le schéma `asset:`. Le cache doit donc savoir
