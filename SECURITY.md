@@ -64,6 +64,15 @@ aucune version antérieure ne reçoit de correctif.
   `apps/api/src/config/env.schema.ts` vérifie toutes les variables d'environnement ;
   le serveur **refuse de démarrer** si une variable essentielle est absente ou
   invalide (message d'erreur explicite, sans valeur sensible).
+- **Valeurs de développement refusées en production**
+  (`apps/api/src/config/env.production.ts`) : avec `NODE_ENV=production`,
+  `S3_ENDPOINT`, `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`,
+  `S3_PUBLIC_BASE_URL`, `SMTP_HOST`, `EMAIL_FROM`, `PUBLIC_APP_URL` et
+  `CORS_ORIGINS` doivent être fournis explicitement ; une URL publique vers
+  `localhost` ou `127.0.0.1`, un identifiant `carlys-dev*` ou une URL publique
+  en `http://` font échouer le démarrage. Sans cela, l'API démarrait « avec
+  succès » en envoyant ses e-mails à un Mailpit inexistant et en servant des
+  médias depuis `localhost`.
 
 ### Surface HTTP de l'API (`apps/api`)
 

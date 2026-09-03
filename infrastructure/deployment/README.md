@@ -18,7 +18,10 @@ avec la première release.
 - `prisma migrate deploy` exécuté comme étape distincte AVANT le basculement
   du trafic — jamais automatiquement au démarrage du conteneur ;
 - configuration exclusivement par variables d'environnement, validée au
-  démarrage (le serveur refuse de démarrer sinon) ;
+  démarrage (le serveur refuse de démarrer sinon) ; en production, les
+  valeurs de développement de `S3_*`, `SMTP_HOST`, `EMAIL_FROM`,
+  `PUBLIC_APP_URL` et `CORS_ORIGINS` sont refusées elles aussi
+  (`docs/security/reverse-proxy.md`, section 2) ;
 - l'API tourne derrière un reverse proxy : `TRUST_PROXY_HOPS` doit valoir le
   nombre exact de proxys devant elle (`1` pour un Nginx unique, voir
   `infrastructure/nginx/carlys.conf.example`), sinon rate limiting,

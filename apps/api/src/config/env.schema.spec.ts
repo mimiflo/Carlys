@@ -73,3 +73,95 @@ describe('validateEnv', () => {
     ).toBe('un-token-suffisamment-long');
   });
 });
+
+/**
+ * En production, une valeur de développement oubliée ne doit JAMAIS passer :
+ * l'API démarrerait « avec succès » en envoyant ses e-mails dans le vide et
+ * en servant des URL de médias vers localhost.
+ */
+describe('validateEnv en production', () => {
+  // Toutes les valeurs sont factices : aucune n'ouvre quoi que ce soit.
+  const productionEnv = {
+    ...validEnv,
+    NODE_ENV: 'production',
+    CORS_ORIGINS: 'https://admin.carlys.example',
+    S3_ENDPOINT: 'https://s3.exemple.invalid',
+    S3_ACCESS_KEY_ID: 'cle-factice-production',
+    S3_SECRET_ACCESS_KEY: 'secret-factice-production',
+    S3_PUBLIC_BASE_URL: 'https://media.carlys.example',
+    SMTP_HOST: 'smtp.exemple.invalid',
+    EMAIL_FROM: 'Carlys <no-reply@carlys.example>',
+    PUBLIC_APP_URL: 'https://app.carlys.example',
+  };
+
+  it('production sans S3 : démarrage refusé, chaque variable manquante nommée', () => {
+    const {
+      S3_ENDPOINT: _endpoint,
+      S3_ACCESS_KEY_ID: _key,
+      S3_SECRET_ACCESS_KEY: _secret,
+      S3_PUBLIC_BASE_URL: _publicUrl,
+      ...withoutS3
+    } = productionEnv;
+
+    expect(() => validateEnv(withoutS3)).toThrow(/Configuration invalide/);
+    expect(() => validateEnv(withoutS3)).toThrow(/S3_ENDPOINT/);
+    expect(() => validateEnv(withoutS3)).toThrow(/S3_ACCESS_KEY_ID/);
+    expect(() => validateEnv(withoutS3)).toThrow(/S3_SECRET_ACCESS_KEY/);
+    expect(() => validateEnv(withoutS3)).toThrow(/S3_PUBLIC_BASE_URL/);
+  });
+
+  it('production sans SMTP, sans URL publique ou sans CORS : refusé', () => {
+    for (const key of ['SMTP_HOST', 'EMAIL_FROM', 'PUBLIC_APP_URL', 'CORS_ORIGINS'] as const) {
+      const { [key]: _omitted, ...incomplete } = productionEnv;
+      expect(() => validateEnv(incomplete)).toThrow(new RegExp(key));
+    }
+  });
+
+  it('production complète : acceptée', () => {
+    const env = validateEnv({ ...productionEnv });
+
+    expect(env.NODE_ENV).toBe('production');
+    expect(env.S3_PUBLIC_BASE_URL).toBe('https://media.carlys.example');
+  });
+
+  it('refuse localhost et 127.0.0.1 dans les URL publiques', () => {
+    expect(() =>
+      validateEnv({ ...productionEnv, PUBLIC_APP_URL: 'https://localhost:3000' }),
+    ).toThrow(/PUBLIC_APP_URL.*localhost/);
+    expect(() =>
+      validateEnv({ ...productionEnv, S3_PUBLIC_BASE_URL: 'https://127.0.0.1/carlys-media' }),
+    ).toThrow(/S3_PUBLIC_BASE_URL.*localhost/);
+    expect(() =>
+      validateEnv({
+        ...productionEnv,
+        CORS_ORIGINS: 'https://admin.carlys.example,http://localhost:3001',
+      }),
+    ).toThrow(/CORS_ORIGINS.*localhost/);
+  });
+
+  it('exige https:// pour S3_PUBLIC_BASE_URL et PUBLIC_APP_URL', () => {
+    expect(() =>
+      validateEnv({ ...productionEnv, PUBLIC_APP_URL: 'http://app.carlys.example' }),
+    ).toThrow(/PUBLIC_APP_URL.*https/);
+    expect(() =>
+      validateEnv({ ...productionEnv, S3_PUBLIC_BASE_URL: 'http://media.carlys.example' }),
+    ).toThrow(/S3_PUBLIC_BASE_URL.*https/);
+  });
+
+  it('refuse les identifiants de développement carlys-dev*', () => {
+    expect(() => validateEnv({ ...productionEnv, S3_ACCESS_KEY_ID: 'carlys-dev-autre' })).toThrow(
+      /S3_ACCESS_KEY_ID.*carlys-dev/,
+    );
+    expect(() =>
+      validateEnv({ ...productionEnv, S3_SECRET_ACCESS_KEY: 'carlys-dev-secret-2' }),
+    ).toThrow(/S3_SECRET_ACCESS_KEY.*carlys-dev/);
+  });
+
+  it('hors production, les défauts de développement restent acceptés', () => {
+    for (const nodeEnv of ['development', 'test', 'staging']) {
+      const env = validateEnv({ ...validEnv, NODE_ENV: nodeEnv });
+      expect(env.S3_ENDPOINT).toBe('http://localhost:9000');
+      expect(env.SMTP_HOST).toBe('localhost');
+    }
+  });
+});

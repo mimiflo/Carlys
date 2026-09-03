@@ -62,3 +62,21 @@ Le test e2e vérifie les deux cas : avec un saut, une inscription envoyée
 avec `X-Forwarded-For: 203.0.113.9` ouvre une session dont l'adresse est
 `203.0.113.9` ; avec zéro saut, l'en-tête est ignoré et l'adresse retenue est
 celle de la socket.
+
+## 2. Environnement de production : ce que le schéma exige
+
+Toutes les variables d'infrastructure portent un défaut de développement
+(MinIO local, Mailpit, `http://localhost:…`) pour que l'API démarre sur un
+poste sans configuration. Avec `NODE_ENV=production`, ces défauts deviennent
+des **erreurs de démarrage** (`apps/api/src/config/env.production.ts`) :
+
+| Variable                                     | Exigence en production                                 |
+| -------------------------------------------- | ------------------------------------------------------ |
+| `S3_ENDPOINT`, `SMTP_HOST`, `EMAIL_FROM`     | fournis explicitement (valeur de développement refusée) |
+| `S3_ACCESS_KEY_ID`, `S3_SECRET_ACCESS_KEY`   | fournis, et jamais `carlys-dev*`                       |
+| `S3_PUBLIC_BASE_URL`, `PUBLIC_APP_URL`       | fournis, en `https://`, sans `localhost` ni `127.0.0.1` |
+| `CORS_ORIGINS`                               | fourni, sans `localhost` ni `127.0.0.1`                |
+
+Le message d'erreur nomme chaque variable en défaut. Les autres
+environnements (`development`, `test`, `staging`) gardent leurs défauts : le
+poste de développement et la CI ne changent pas de comportement.
