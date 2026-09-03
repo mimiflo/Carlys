@@ -149,6 +149,9 @@ class MuscleGroupCard extends StatelessWidget {
 
 /// Lueur violette derrière le sujet : sans elle, un détourage sombre posé sur
 /// une surface sombre n'a plus de contour.
+///
+/// Le halo s'éteint vers le MÊME violet à alpha zéro, jamais vers du noir :
+/// sinon il vire au gris à mi-course au lieu de garder sa teinte.
 class _Halo extends StatelessWidget {
   const _Halo();
 
@@ -159,7 +162,7 @@ class _Halo extends StatelessWidget {
         gradient: RadialGradient(
           center: Alignment(0, 0.15),
           radius: 0.85,
-          colors: [AppColors.primaryCardStrong, Color(0x00000000)],
+          colors: [AppColors.primaryCardStrong, AppColors.primaryCardClear],
         ),
       ),
     );

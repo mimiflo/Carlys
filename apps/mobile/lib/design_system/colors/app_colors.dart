@@ -141,6 +141,13 @@ abstract final class AppColors {
   static const Color primaryCardStrong = Color(0x479B30FF); // primary .28
   static const Color primaryCardSoft = Color(0x0D9B30FF); // primary .05
 
+  /// Violet transparent : extrémité d'un halo violet qui s'éteint. Un
+  /// dégradé vers du NOIR transparent traverse un violet assombri et
+  /// désaturé avant de disparaître (l'interpolation se fait canal par canal,
+  /// alpha compris) ; vers le même violet à alpha zéro, il garde sa teinte
+  /// jusqu'au bout.
+  static const Color primaryCardClear = Color(0x009B30FF); // primary .00
+
   /// Voile sous la courbe rose des graphiques (magenta .05).
   static const Color magentaCardSoft = Color(0x0DED35A9);
   static const Color primaryFill = Color(0x739B30FF); // primary .45

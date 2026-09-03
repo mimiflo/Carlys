@@ -167,6 +167,25 @@ void main() {
     });
   });
 
+  group('extrémités transparentes', () {
+    test('le halo violet s’éteint vers le même violet, pas vers du noir', () {
+      // Interpolé canal par canal vers du noir transparent, un halo passe
+      // par un violet assombri et désaturé ; vers sa propre teinte à alpha
+      // zéro, il garde sa couleur jusqu'à disparaître.
+      expect(AppColors.primaryCardClear.a, 0);
+      expect(AppColors.primaryCardClear.r, AppColors.primary.r);
+      expect(AppColors.primaryCardClear.g, AppColors.primary.g);
+      expect(AppColors.primaryCardClear.b, AppColors.primary.b);
+      final midway = Color.lerp(
+        AppColors.primaryCardStrong,
+        AppColors.primaryCardClear,
+        0.5,
+      )!;
+      expect(midway.r, AppColors.primary.r);
+      expect(midway.b, AppColors.primary.b);
+    });
+  });
+
   group('rose des cœurs', () {
     test('il se distingue franchement de l’accent orange', () {
       // Le rose porte le lien humain, l'orange porte l'action clé : deux
