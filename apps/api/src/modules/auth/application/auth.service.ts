@@ -14,7 +14,7 @@ import { AuditService } from '../../audit/audit.service';
 import { UsersRepository } from '../../users/infrastructure/users.repository';
 import { SessionsRepository } from '../infrastructure/sessions.repository';
 import { VerificationRepository } from '../infrastructure/verification.repository';
-import { LockoutService } from './lockout.service';
+import { LockoutService, lockoutMessage } from './lockout.service';
 import { PasswordService } from './password.service';
 import { type DeviceInfo, SessionsService } from './sessions.service';
 import { TokenService } from './token.service';
@@ -73,10 +73,7 @@ export class AuthService {
     const lock = await this.lockout.status(email);
     if (lock.locked) {
       this.audit.record({ action: 'auth.login_blocked_lockout', ...client, metadata: { email } });
-      throw new HttpException(
-        `Trop de tentatives. Réessayez dans ${Math.ceil((lock.retryAfterSeconds ?? 60) / 60)} minute(s).`,
-        HttpStatus.TOO_MANY_REQUESTS,
-      );
+      throw new HttpException(lockoutMessage(lock), HttpStatus.TOO_MANY_REQUESTS);
     }
 
     const user = await this.users.findActiveByEmail(email);

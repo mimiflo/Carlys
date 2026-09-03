@@ -21,7 +21,12 @@
 >   session invalide ses access tokens sans attendre leur expiration.
 > - **Verrouillage** : compteur Redis par e-mail normalisé, fenêtre reposée à
 >   chaque échec ; si Redis est indisponible, fail-open journalisé (le rate
->   limiting HTTP global reste actif).
+>   limiting HTTP global reste actif). La connexion du **back-office**
+>   (`POST /admin/auth/login`) applique le même `LockoutService` avec un
+>   compteur distinct (`admin:<e-mail>`) : au-delà de
+>   `AUTH_MAX_LOGIN_ATTEMPTS`, réponse `429 RATE_LIMITED` avant toute lecture
+>   du compte, sans rien révéler de son existence ni de son état
+>   (`admin.login_blocked_lockout` dans l'audit).
 > - **Restent à venir** : OAuth Apple/Google (modèle `ExternalIdentity` et
 >   contrainte d'unicité déjà en place), 2FA, purge/anonymisation différée des
 >   comptes supprimés.

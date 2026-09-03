@@ -1,8 +1,9 @@
 import { type AdminLoginResult, type AdminMe, adminPermissionSchema } from '@carlys/api-contracts';
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { HttpException, HttpStatus, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { AdminUserStatus } from '@prisma/client';
 import { AuditService } from '../../audit/audit.service';
+import { LockoutService, lockoutMessage } from '../../auth/application/lockout.service';
 import { PasswordService } from '../../auth/application/password.service';
 import { AppConfigService } from '../../../config/app-config.service';
 import {
@@ -18,6 +19,15 @@ export const ADMIN_JWT_AUDIENCE = 'carlys-admin';
 export const ADMIN_TOKEN_TTL_SECONDS = 12 * 3_600;
 
 const INVALID_CREDENTIALS_MESSAGE = 'E-mail ou mot de passe incorrect.';
+
+/**
+ * Compteur de verrouillage propre au back-office : même politique que le
+ * mobile (LockoutService), mais un compte admin et un compte mobile de même
+ * adresse ne partagent jamais leurs échecs.
+ */
+export function adminLockoutIdentifier(email: string): string {
+  return `admin:${email}`;
+}
 
 export function presentAdmin(admin: AdminWithAccess): AdminMe {
   return {
@@ -40,6 +50,7 @@ export class AdminAuthService {
     private readonly jwt: JwtService,
     private readonly config: AppConfigService,
     private readonly audit: AuditService,
+    private readonly lockout: LockoutService,
   ) {}
 
   async login(
@@ -47,6 +58,20 @@ export class AdminAuthService {
     client: { ipAddress?: string; userAgent?: string },
   ): Promise<AdminLoginResult> {
     const email = input.email.trim().toLowerCase();
+    const lockoutId = adminLockoutIdentifier(email);
+
+    // Verrouillé : refus AVANT toute lecture du compte, sans révéler s'il existe.
+    const lock = await this.lockout.status(lockoutId);
+    if (lock.locked) {
+      this.audit.record({
+        action: 'admin.login_blocked_lockout',
+        actorType: 'ADMIN',
+        ...client,
+        metadata: { email },
+      });
+      throw new HttpException(lockoutMessage(lock), HttpStatus.TOO_MANY_REQUESTS);
+    }
+
     const admin = await this.admins.findAdminByEmail(email);
 
     // Vérification systématique (hash factice sinon) : temps de réponse
@@ -57,6 +82,7 @@ export class AdminAuthService {
         : (await this.passwords.hash(input.password), false);
 
     if (!valid || admin === null || admin.status !== AdminUserStatus.ACTIVE) {
+      await this.lockout.recordFailure(lockoutId);
       this.audit.record({
         action: 'admin.login_failed',
         actorType: 'ADMIN',
@@ -67,6 +93,7 @@ export class AdminAuthService {
       throw new UnauthorizedException(INVALID_CREDENTIALS_MESSAGE);
     }
 
+    await this.lockout.reset(lockoutId);
     await this.admins.markLogin(admin.id);
     this.audit.record({
       action: 'admin.login',

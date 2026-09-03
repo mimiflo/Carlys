@@ -31,6 +31,8 @@ import { SessionsController } from './presentation/http/sessions.controller';
     // Guard global : toute route est authentifiée sauf @Public().
     { provide: APP_GUARD, useClass: JwtAuthGuard },
   ],
-  exports: [SessionsService, PasswordService],
+  // LockoutService : la connexion du back-office applique la même politique
+  // de verrouillage, avec son propre compteur.
+  exports: [SessionsService, PasswordService, LockoutService],
 })
 export class AuthModule {}

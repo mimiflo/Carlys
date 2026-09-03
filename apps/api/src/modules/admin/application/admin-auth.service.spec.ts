@@ -1,7 +1,8 @@
-import { UnauthorizedException } from '@nestjs/common';
+import { HttpException, HttpStatus, UnauthorizedException } from '@nestjs/common';
 import { type JwtService } from '@nestjs/jwt';
 import { AdminUserStatus } from '@prisma/client';
 import { type AuditService } from '../../audit/audit.service';
+import { type LockoutService } from '../../auth/application/lockout.service';
 import { type PasswordService } from '../../auth/application/password.service';
 import { type AppConfigService } from '../../../config/app-config.service';
 import { type AdminRepository } from '../infrastructure/admin.repository';
@@ -12,6 +13,7 @@ interface Stubs {
   passwords: { verify: jest.Mock; hash: jest.Mock };
   jwt: { signAsync: jest.Mock };
   audit: { record: jest.Mock };
+  lockout: { status: jest.Mock; recordFailure: jest.Mock; reset: jest.Mock };
 }
 
 function adminRow(overrides: Record<string, unknown> = {}): unknown {
@@ -65,6 +67,11 @@ function buildStubs(): Stubs {
     },
     jwt: { signAsync: jest.fn().mockResolvedValue('jeton-admin') },
     audit: { record: jest.fn() },
+    lockout: {
+      status: jest.fn().mockResolvedValue({ locked: false }),
+      recordFailure: jest.fn().mockResolvedValue(undefined),
+      reset: jest.fn().mockResolvedValue(undefined),
+    },
   };
 }
 
@@ -79,13 +86,14 @@ function buildService(stubs: Stubs): AdminAuthService {
     stubs.jwt as unknown as JwtService,
     config as unknown as AppConfigService,
     stubs.audit as unknown as AuditService,
+    stubs.lockout as unknown as LockoutService,
   );
 }
 
 const CLIENT = { ipAddress: '127.0.0.1' };
 
 describe('AdminAuthService', () => {
-  it('connexion réussie : jeton à audience dédiée, rôles et permissions', async () => {
+  it('connexion réussie : jeton à audience dédiée, rôles et permissions, compteur remis à zéro', async () => {
     const stubs = buildStubs();
     const service = buildService(stubs);
 
@@ -102,6 +110,9 @@ describe('AdminAuthService', () => {
       { adm: true },
       expect.objectContaining({ audience: 'carlys-admin', subject: 'admin-1' }),
     );
+    // Compteur PROPRE au back-office : jamais celui d'un compte mobile de même adresse.
+    expect(stubs.lockout.reset).toHaveBeenCalledWith('admin:admin@carlys.local');
+    expect(stubs.lockout.recordFailure).not.toHaveBeenCalled();
   });
 
   it('compte inconnu : hachage factice quand même (anti-énumération), message uniforme', async () => {
@@ -116,6 +127,8 @@ describe('AdminAuthService', () => {
     expect(stubs.audit.record).toHaveBeenCalledWith(
       expect.objectContaining({ action: 'admin.login_failed', actorType: 'ADMIN' }),
     );
+    // Un compte inconnu compte AUSSI comme échec : le compteur ne trahit pas son absence.
+    expect(stubs.lockout.recordFailure).toHaveBeenCalledWith('admin:inconnu@carlys.local');
   });
 
   it('compte désactivé : refusé même avec le bon mot de passe', async () => {
@@ -128,7 +141,7 @@ describe('AdminAuthService', () => {
     ).rejects.toThrow(UnauthorizedException);
   });
 
-  it('mauvais mot de passe : refus + audit', async () => {
+  it('mauvais mot de passe : refus + audit + échec comptabilisé', async () => {
     const stubs = buildStubs();
     stubs.passwords.verify.mockResolvedValue(false);
     const service = buildService(stubs);
@@ -137,5 +150,31 @@ describe('AdminAuthService', () => {
       service.login({ email: 'admin@carlys.local', password: 'mauvais-mdp!' }, CLIENT),
     ).rejects.toThrow(UnauthorizedException);
     expect(stubs.admins.markLogin).not.toHaveBeenCalled();
+    expect(stubs.lockout.recordFailure).toHaveBeenCalledWith('admin:admin@carlys.local');
+    expect(stubs.lockout.reset).not.toHaveBeenCalled();
+  });
+
+  it('au-delà du seuil : 429 sans lire le compte ni révéler son état, même avec le bon mot de passe', async () => {
+    const stubs = buildStubs();
+    stubs.lockout.status.mockResolvedValue({ locked: true, retryAfterSeconds: 300 });
+    const service = buildService(stubs);
+
+    const attempt = service.login(
+      { email: 'admin@carlys.local', password: 'MotDePasseSolide42' },
+      CLIENT,
+    );
+
+    await expect(attempt).rejects.toThrow(HttpException);
+    await expect(attempt).rejects.toMatchObject({ status: HttpStatus.TOO_MANY_REQUESTS });
+    // Le refus précède toute lecture : ni la base ni le hash ne sont sollicités.
+    expect(stubs.admins.findAdminByEmail).not.toHaveBeenCalled();
+    expect(stubs.passwords.verify).not.toHaveBeenCalled();
+    expect(stubs.jwt.signAsync).not.toHaveBeenCalled();
+    expect(stubs.audit.record).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'admin.login_blocked_lockout', actorType: 'ADMIN' }),
+    );
+    // Le message ne dit ni que le compte existe, ni qu'il est verrouillé.
+    await expect(attempt).rejects.toThrow(/Trop de tentatives/);
+    await expect(attempt).rejects.not.toThrow(/verrouill|compte/i);
   });
 });

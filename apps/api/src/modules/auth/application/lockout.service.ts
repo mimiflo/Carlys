@@ -10,8 +10,19 @@ export interface LockoutStatus {
 }
 
 /**
+ * Message renvoyé quand le compte est verrouillé. Le même pour le mobile et
+ * le back-office, et sans rien dire de l'état du compte : ni s'il existe,
+ * ni pourquoi il est fermé.
+ */
+export function lockoutMessage(status: LockoutStatus): string {
+  const minutes = Math.ceil((status.retryAfterSeconds ?? 60) / 60);
+  return `Trop de tentatives. Réessaie dans ${minutes} minute(s).`;
+}
+
+/**
  * Limitation des tentatives de connexion : compteur Redis par identifiant
- * (e-mail normalisé) avec verrouillage temporaire au-delà du seuil.
+ * (e-mail normalisé, préfixé par l'appelant s'il veut son propre compteur)
+ * avec verrouillage temporaire au-delà du seuil.
  *
  * Si Redis est indisponible, le service laisse passer (fail-open) en le
  * journalisant : la disponibilité de la connexion prime, le rate limiting
