@@ -15,6 +15,10 @@ ENV NEXT_PUBLIC_API_BASE_URL=$NEXT_PUBLIC_API_BASE_URL
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml .npmrc ./
 COPY packages ./packages
 COPY apps/admin ./apps/admin
+# Les pages /privacy et /terms lisent ces deux fichiers Markdown AU BUILD
+# (pages statiques) : le contexte doit les contenir, le conteneur final non.
+# Le .dockerignore racine ré-inclut docs/legal pour cette raison.
+COPY docs/legal ./docs/legal
 RUN pnpm install --frozen-lockfile --filter "@carlys/admin..."
 RUN pnpm --filter "@carlys/admin..." run build
 

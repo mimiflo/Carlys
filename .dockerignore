@@ -5,7 +5,9 @@
 **/build
 .git
 apps/mobile
-docs
+# docs/ reste hors du contexte, sauf les textes légaux que l'image admin lit au build.
+docs/*
+!docs/legal
 infrastructure/monitoring
 infrastructure/deployment
 **/.env
