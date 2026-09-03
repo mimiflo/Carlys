@@ -15,25 +15,32 @@ export const REQUIRED_PERMISSIONS_KEY = 'admin:requiredPermissions';
 export const RequirePermissions = (...permissions: string[]) =>
   SetMetadata(REQUIRED_PERMISSIONS_KEY, permissions);
 
-/** RBAC : vérifie les permissions du principal posé par AdminAuthGuard. */
+/**
+ * RBAC : vérifie les permissions du principal posé par AdminAuthGuard.
+ *
+ * La garde échoue FERMÉ. Une route sans `@RequirePermissions` n'est pas une
+ * route « ouverte à tout admin » : c'est un oubli, et un oubli refuse. Le test
+ * de couverture des routes (admin-permissions.guard.spec.ts) le signale avant
+ * la production.
+ */
 @Injectable()
 export class AdminPermissionsGuard implements CanActivate {
   constructor(private readonly reflector: Reflector) {}
 
   canActivate(context: ExecutionContext): boolean {
-    const required = this.reflector.getAllAndOverride<string[] | undefined>(
-      REQUIRED_PERMISSIONS_KEY,
-      [context.getHandler(), context.getClass()],
-    );
-    if (required === undefined || required.length === 0) {
-      return true;
-    }
-
     const request = context.switchToHttp().getRequest<AdminRequest>();
     const principal = request.adminPrincipal;
     if (principal === undefined) {
       // AdminAuthGuard doit précéder ce guard — refus sûr sinon.
       throw new UnauthorizedException('Authentification administrateur requise.');
+    }
+
+    const required = this.reflector.getAllAndOverride<string[] | undefined>(
+      REQUIRED_PERMISSIONS_KEY,
+      [context.getHandler(), context.getClass()],
+    );
+    if (required === undefined || required.length === 0) {
+      throw new ForbiddenException('Aucune permission déclarée pour cette route.');
     }
 
     const granted = new Set(principal.permissions);

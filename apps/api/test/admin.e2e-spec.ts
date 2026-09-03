@@ -25,7 +25,7 @@ import {
 import { type INestApplication } from '@nestjs/common';
 import { type NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
-import { PrismaClient } from '@prisma/client';
+import { AdminUserStatus, PrismaClient } from '@prisma/client';
 import * as argon2 from 'argon2';
 import { Redis } from 'ioredis';
 import { randomUUID } from 'node:crypto';
@@ -151,7 +151,7 @@ describe('Administration (e2e)', () => {
     });
     // Le compteur de verrouillage vit dans Redis : on ne laisse pas de clé derrière soi.
     const redis = new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379');
-    await redis.del(`auth:lockout:admin:${lockedEmail}`);
+    await redis.del(`auth:lockout:admin:${lockedEmail}`, `auth:lockout:admin:${supportEmail}`);
     await redis.quit();
     await prisma.user.deleteMany({ where: { email: { in: [memberEmail, witnessEmail] } } });
     await prisma.exercise.deleteMany({ where: { slug: 'e2e-admin-moderation' } });
@@ -508,5 +508,25 @@ describe('Administration (e2e)', () => {
       .post('/api/v1/auth/login')
       .send({ email: memberEmail, password: 'MotDePasseSolide42' })
       .expect(200);
+  });
+
+  it('désactiver un admin tue ses jetons aussitôt : 401 sur un jeton encore valide', async () => {
+    // Avant : le support lit encore.
+    await asAdmin(supportToken).get('/api/v1/admin/users').expect(200);
+
+    // Le compte est relu en base à CHAQUE requête : pas d'attente d'expiration.
+    await prisma.adminUser.update({
+      where: { email: supportEmail },
+      data: { status: AdminUserStatus.DISABLED },
+    });
+
+    await asAdmin(supportToken).get('/api/v1/admin/users').expect(401);
+    await asAdmin(supportToken).get('/api/v1/admin/auth/me').expect(401);
+    // Et la reconnexion est refusée avec le même message générique que
+    // n'importe quel échec : rien sur l'état du compte.
+    await server()
+      .post('/api/v1/admin/auth/login')
+      .send({ email: supportEmail, password: ADMIN_PASSWORD })
+      .expect(401);
   });
 });

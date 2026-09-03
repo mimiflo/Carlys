@@ -97,6 +97,13 @@ connexion, utilisateurs, fiche utilisateur, audit, exercices, catégories. La
 protection reste à durcir côté serveur : elle passe aujourd'hui par le jeton
 d'administration porté par les appels, pas par un middleware de route.
 
+Côté API, la connexion admin est verrouillée comme la connexion mobile
+(`LockoutService`, compteur `admin:<e-mail>` distinct) : au-delà de
+`AUTH_MAX_LOGIN_ATTEMPTS` échecs, `429` pendant `AUTH_LOCKOUT_MINUTES`, sans
+rien révéler du compte. Les gardes du back-office échouent **fermé** :
+jeton absent ou invalide, compte désactivé, route sans `@RequirePermissions`
+ou permission manquante, tout est refusé.
+
 ## Fonctionnalités cibles par domaine
 
 Aucune de ces fonctionnalités n'existe à l'Étape 1 ; elles arrivent avec les
