@@ -1,5 +1,11 @@
 import { Injectable } from '@nestjs/common';
-import { type RefreshToken, RefreshTokenStatus, type User, type UserSession } from '@prisma/client';
+import {
+  type Prisma,
+  type RefreshToken,
+  RefreshTokenStatus,
+  type User,
+  type UserSession,
+} from '@prisma/client';
 import { PrismaService } from '../../../database/prisma/prisma.service';
 
 export interface CreateSessionInput {
@@ -89,23 +95,38 @@ export class SessionsRepository {
     ]);
   }
 
-  /** Révoque toutes les sessions actives d'un utilisateur (sauf exclusion). */
-  async revokeAllSessions(userId: string, reason: string, exceptSessionId?: string): Promise<void> {
+  /**
+   * Révoque toutes les sessions actives d'un utilisateur (sauf exclusion).
+   *
+   * Avec `tx`, la révocation s'inscrit dans une transaction ouverte par
+   * l'appelant (la suppression de compte) ; sans, elle ouvre la sienne.
+   */
+  async revokeAllSessions(
+    userId: string,
+    reason: string,
+    exceptSessionId?: string,
+    tx?: Prisma.TransactionClient,
+  ): Promise<void> {
     const where = {
       userId,
       revokedAt: null,
       ...(exceptSessionId === undefined ? {} : { id: { not: exceptSessionId } }),
     };
-    await this.prisma.$transaction([
-      this.prisma.refreshToken.updateMany({
+    const revoke = async (client: Prisma.TransactionClient): Promise<void> => {
+      await client.refreshToken.updateMany({
         where: { session: where, status: RefreshTokenStatus.ACTIVE },
         data: { status: RefreshTokenStatus.REVOKED },
-      }),
-      this.prisma.userSession.updateMany({
+      });
+      await client.userSession.updateMany({
         where,
         data: { revokedAt: new Date(), revokedReason: reason },
-      }),
-    ]);
+      });
+    };
+    if (tx !== undefined) {
+      await revoke(tx);
+      return;
+    }
+    await this.prisma.$transaction(revoke);
   }
 
   findSessionById(sessionId: string): Promise<UserSession | null> {

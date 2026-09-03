@@ -49,9 +49,12 @@ describe('Authentification (e2e)', () => {
     await app.init();
   });
 
+  /** Comptes créés par la suite : le supprimé ne porte plus `email`, on le retrouve par id. */
+  const createdUserIds: string[] = [];
+
   afterAll(async () => {
     // Nettoyage strictement limité à cette suite (les e2e partagent la base).
-    await prisma.user.deleteMany({ where: { email } });
+    await prisma.user.deleteMany({ where: { OR: [{ email }, { id: { in: createdUserIds } }] } });
     await prisma.$disconnect();
     await app.close();
   });
@@ -271,24 +274,69 @@ describe('Authentification (e2e)', () => {
       .expect(204);
   });
 
-  it('supprime le compte avec confirmation par mot de passe', async () => {
+  let deletedUserId: string;
+
+  it('supprime le compte avec confirmation par mot de passe, et libère l’identité', async () => {
     const login = await api().post('/api/v1/auth/login').send({ email, password }).expect(200);
     const tokens = data<AuthResult>(login.body).tokens;
+    const auth = `Bearer ${tokens.accessToken}`;
+
+    const before = await prisma.user.findUniqueOrThrow({ where: { email } });
+    deletedUserId = before.id;
+    createdUserIds.push(before.id);
+    // Un jeton d'appareil et des données de profil personnelles : tout doit partir avec le compte.
+    await api()
+      .post('/api/v1/notifications/device-tokens')
+      .set('Authorization', auth)
+      .send({ token: `e2e-jeton-${randomUUID()}`, platform: 'ANDROID' })
+      .expect(204);
+    await prisma.userProfile.update({
+      where: { userId: before.id },
+      data: { heightCm: 180, sex: 'MALE', birthDate: new Date('1990-01-01T00:00:00Z') },
+    });
 
     await api()
       .delete('/api/v1/users/me')
-      .set('Authorization', `Bearer ${tokens.accessToken}`)
+      .set('Authorization', auth)
       .send({ password: 'MauvaisMotDePasse1' })
       .expect(401);
 
     await api()
       .delete('/api/v1/users/me')
-      .set('Authorization', `Bearer ${tokens.accessToken}`)
+      .set('Authorization', auth)
       .send({ password })
       .expect(204);
 
     await api().post('/api/v1/auth/login').send({ email, password }).expect(401);
-    const deleted = await prisma.user.findUniqueOrThrow({ where: { email } });
+
+    // La ligne supprimée ne porte plus l'adresse d'origine, ni rien qui identifie la personne.
+    expect(await prisma.user.findUnique({ where: { email } })).toBeNull();
+    const deleted = await prisma.user.findUniqueOrThrow({
+      where: { id: before.id },
+      include: { profile: true, deviceTokens: true, sessions: true },
+    });
+    expect(deleted.status).toBe('DELETED');
     expect(deleted.deletedAt).not.toBeNull();
+    expect(deleted.email).toBe(`supprime+${before.id}@carlys.invalid`);
+    expect(deleted.friendCode).not.toBe(before.friendCode);
+    expect(deleted.profile?.displayName).toBe('');
+    expect(deleted.profile?.heightCm).toBeNull();
+    expect(deleted.profile?.sex).toBeNull();
+    expect(deleted.profile?.birthDate).toBeNull();
+    expect(deleted.deviceTokens).toHaveLength(0);
+    expect(deleted.sessions.length).toBeGreaterThan(0);
+    expect(deleted.sessions.every((session) => session.revokedAt !== null)).toBe(true);
+  });
+
+  it('après suppression, la même adresse se réinscrit (201) : un compte neuf, pas l’ancien', async () => {
+    const response = await api()
+      .post('/api/v1/auth/register')
+      .send({ email, password, displayName: 'E2E bis' })
+      .expect(201);
+
+    const result = data<AuthResult>(response.body);
+    expect(result.user.email).toBe(email);
+    expect(result.user.id).not.toBe(deletedUserId);
+    createdUserIds.push(result.user.id);
   });
 });

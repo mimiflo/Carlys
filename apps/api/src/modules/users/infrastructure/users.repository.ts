@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { Prisma, type User, type UserProfile, UserStatus } from '@prisma/client';
 import { PrismaService } from '../../../database/prisma/prisma.service';
 import { generateFriendCode } from '../domain/friend-code';
+import { tombstoneEmail, tombstoneFriendCode } from '../domain/tombstone';
 
 export type UserWithProfile = User & { profile: UserProfile | null };
 
@@ -100,13 +101,38 @@ export class UsersRepository {
     });
   }
 
-  /** Suppression logique : le compte est désactivé, la purge est différée. */
-  softDelete(userId: string): Promise<void> {
-    return this.prisma.user
-      .update({
+  /**
+   * Suppression de compte, en UNE transaction : le compte passe DELETED et
+   * son identité est libérée (adresse et code ami tombaux, nom et profil
+   * personnel effacés), ses jetons d'appareil disparaissent. `within` tourne
+   * dans la même transaction : c'est la place de ce qui appartient à un autre
+   * domaine (la révocation des sessions), pour qu'aucun état intermédiaire ne
+   * survive à un échec.
+   *
+   * La ligne reste : l'identifiant est cité par l'audit et par l'historique
+   * agrégé (séances, records, journal alimentaire), qui ne portent plus rien
+   * qui identifie la personne une fois ces colonnes effacées.
+   */
+  async deleteAccount(
+    userId: string,
+    within: (tx: Prisma.TransactionClient) => Promise<void>,
+  ): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      await within(tx);
+      await tx.deviceToken.deleteMany({ where: { userId } });
+      await tx.userProfile.updateMany({
+        where: { userId },
+        data: { displayName: '', birthDate: null, sex: null, heightCm: null },
+      });
+      await tx.user.update({
         where: { id: userId },
-        data: { status: UserStatus.DELETED, deletedAt: new Date() },
-      })
-      .then(() => undefined);
+        data: {
+          status: UserStatus.DELETED,
+          deletedAt: new Date(),
+          email: tombstoneEmail(userId),
+          friendCode: tombstoneFriendCode(userId),
+        },
+      });
+    });
   }
 }

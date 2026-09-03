@@ -27,9 +27,14 @@
 >   `AUTH_MAX_LOGIN_ATTEMPTS`, réponse `429 RATE_LIMITED` avant toute lecture
 >   du compte, sans rien révéler de son existence ni de son état
 >   (`admin.login_blocked_lockout` dans l'audit).
+> - **Suppression de compte** (`DELETE /users/me`) : en une transaction,
+>   sessions révoquées, compte `DELETED`, adresse et code ami réécrits en
+>   valeurs tombales, profil personnel effacé, jetons d'appareil supprimés ;
+>   l'adresse d'origine est de nouveau disponible pour une inscription
+>   (détail et données conservées : `SECURITY.md`).
 > - **Restent à venir** : OAuth Apple/Google (modèle `ExternalIdentity` et
->   contrainte d'unicité déjà en place), 2FA, purge/anonymisation différée des
->   comptes supprimés.
+>   contrainte d'unicité déjà en place), 2FA, purge différée de l'historique
+>   d'activité des comptes supprimés.
 
 Ce document s'appuie sur les fondations déjà en place (Étape 1) : enveloppes de
 réponse `{ data, meta, requestId }` / `{ error: { code, message, details, requestId } }`

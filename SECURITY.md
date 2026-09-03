@@ -189,7 +189,20 @@ vérifier.
 
 - **Consentement** explicite recueilli et tracé.
 - **Export** des données personnelles à la demande de l'utilisateur.
-- **Suppression ou anonymisation** du compte à la demande.
+- **Suppression du compte à la demande — en place** (`DELETE /api/v1/users/me`,
+  mot de passe exigé, `AccountService`). En **une transaction** : sessions
+  révoquées, compte passé `DELETED`, adresse réécrite en
+  `supprime+<id>@carlys.invalid` (l'adresse d'origine redevient disponible
+  pour une nouvelle inscription), code ami réécrit hors alphabet (plus aucun
+  scan ni saisie ne le résout), `displayName`, `birthDate`, `sex` et
+  `heightCm` effacés, jetons d'appareil supprimés. **Conservé, et pourquoi** :
+  la ligne `User` avec son identifiant (cité par le journal d'audit, qui
+  doit rester lisible), la crédential (un lien de réinitialisation encore
+  valide ne doit pas produire une erreur serveur), et l'historique
+  d'activité (séances, séries, records, mesures, journal alimentaire,
+  conversations coach) rattaché à cet identifiant, qui ne porte plus rien
+  qui identifie la personne. **Non fait** : aucune purge différée de cet
+  historique n'existe encore (pas de travail de fond dans l'API).
 - **Rétention limitée des logs** applicatifs.
 - **Chiffrement en transit** (TLS) sur tous les environnements distants.
 - **Audit des accès administrateurs** (Étape 7 : rôles, permissions, journal
@@ -213,7 +226,8 @@ vérifier.
 | Upload signé, bucket privé, URL signées courtes | Cible (premier usage médias) |
 | Webhooks signés idempotents, entitlements côté serveur | Cible (Étape 6) |
 | Rôles/permissions/audit admin | Cible (Étape 7) |
-| Consentement, export, suppression/anonymisation | Cible (transversal) |
+| Suppression de compte : identité libérée en une transaction, réinscription possible | En place |
+| Consentement, export, purge différée de l'historique d'activité | Cible (transversal) |
 
 ---
 
