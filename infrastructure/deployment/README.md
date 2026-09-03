@@ -19,6 +19,11 @@ avec la première release.
   du trafic — jamais automatiquement au démarrage du conteneur ;
 - configuration exclusivement par variables d'environnement, validée au
   démarrage (le serveur refuse de démarrer sinon) ;
+- l'API tourne derrière un reverse proxy : `TRUST_PROXY_HOPS` doit valoir le
+  nombre exact de proxys devant elle (`1` pour un Nginx unique, voir
+  `infrastructure/nginx/carlys.conf.example`), sinon rate limiting,
+  verrouillage et audit ne voient que l'adresse du proxy
+  (`docs/security/reverse-proxy.md`) ;
 - Redis managé et stockage objet (S3/Cloudflare R2) par environnement ;
 - sauvegardes PostgreSQL automatiques + test de restauration régulier ;
 - health checks (`/health/ready`) branchés sur l'orchestrateur ;

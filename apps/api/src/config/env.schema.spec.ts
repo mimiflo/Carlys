@@ -52,6 +52,18 @@ describe('validateEnv', () => {
     );
   });
 
+  it('TRUST_PROXY_HOPS : 0 par défaut, entier positif ou nul, jamais « tout »', () => {
+    expect(validateEnv({ ...validEnv }).TRUST_PROXY_HOPS).toBe(0);
+    expect(validateEnv({ ...validEnv, TRUST_PROXY_HOPS: '1' }).TRUST_PROXY_HOPS).toBe(1);
+    expect(() => validateEnv({ ...validEnv, TRUST_PROXY_HOPS: '-1' })).toThrow(
+      /Configuration invalide/,
+    );
+    // `true` accepterait un X-Forwarded-For forgé : refusé dès la configuration.
+    expect(() => validateEnv({ ...validEnv, TRUST_PROXY_HOPS: 'true' })).toThrow(
+      /Configuration invalide/,
+    );
+  });
+
   it('exige un METRICS_TOKEN suffisamment long', () => {
     expect(() => validateEnv({ ...validEnv, METRICS_TOKEN: 'court' })).toThrow(
       /Configuration invalide/,

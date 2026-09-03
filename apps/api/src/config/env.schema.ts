@@ -32,6 +32,15 @@ export const envSchema = z.object({
   CORS_ORIGINS: z.string().default('http://localhost:3001'),
   LOG_LEVEL: z.enum(['fatal', 'error', 'warn', 'info', 'debug', 'trace', 'silent']).default('info'),
 
+  /**
+   * Nombre de proxys de CONFIANCE devant l'API (terminateur TLS, ingress,
+   * équilibreur de charge). 0 en développement : l'adresse de la socket fait
+   * foi. 1 derrière un Nginx unique : la dernière adresse de X-Forwarded-For
+   * fait foi. Jamais « tout le monde » : un client forgerait son adresse et
+   * contournerait la limitation de débit, le verrouillage et l'audit.
+   */
+  TRUST_PROXY_HOPS: z.coerce.number().int().min(0).default(0),
+
   RATE_LIMIT_TTL_SECONDS: z.coerce
     .number()
     .int()

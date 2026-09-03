@@ -12,6 +12,13 @@ import { AppConfigService } from '../config/app-config.service';
 export function configureApp(app: NestExpressApplication): void {
   const config = app.get(AppConfigService);
 
+  // Derrière un reverse proxy, `req.ip` vaudrait l'adresse du proxy pour TOUT
+  // le trafic : la limitation de débit, le verrouillage et l'audit ne
+  // verraient plus qu'une seule adresse. On fait confiance à exactement
+  // TRUST_PROXY_HOPS sauts — jamais `true`, qui accepterait un
+  // X-Forwarded-For entièrement forgé par le client.
+  app.set('trust proxy', config.trustProxyHops);
+
   app.use(helmet());
   app.enableCors({
     origin: config.corsOrigins,
