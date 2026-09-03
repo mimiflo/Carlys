@@ -80,3 +80,32 @@ des **erreurs de démarrage** (`apps/api/src/config/env.production.ts`) :
 Le message d'erreur nomme chaque variable en défaut. Les autres
 environnements (`development`, `test`, `staging`) gardent leurs défauts : le
 poste de développement et la CI ne changent pas de comportement.
+
+## 3. L'exemple Nginx : TLS, HSTS et limites de taille
+
+`infrastructure/nginx/carlys.conf.example` se charge tel quel dès que les
+certificats existent aux chemins indiqués. Ce qu'il garantit, et pourquoi :
+
+- **Rien en clair** : un bloc `listen 80` redirige tout en `301` vers HTTPS ;
+  seul le chemin de renouvellement certbot (`/.well-known/acme-challenge/`)
+  est servi en HTTP.
+- **TLS 1.2 et 1.3 seulement**, certificats certbot explicites sur les deux
+  hôtes (API et admin).
+- **HSTS posé par Nginx** (`Strict-Transport-Security`, un an,
+  `includeSubDomains`) : helmet le pose aussi, mais seulement sur les
+  réponses qui atteignent l'API, jamais sur une requête en clair interceptée
+  en amont.
+- **Limites de corps alignées sur l'API**, et documentées comme telles dans
+  le fichier :
+  - `client_max_body_size 1m` au niveau du serveur, soit `MAX_JSON_BODY_SIZE`
+    (`'1mb'`, `packages/shared-config`) ;
+  - `client_max_body_size 64m` sur `/api/v1/admin/media`, soit
+    `MEDIA_TRANSPORT_HARD_CAP_BYTES` (`packages/api-contracts/src/media.ts`),
+    le plafond de transport appliqué par le `FileInterceptor` du contrôleur
+    de médias. Le plafond **métier** (`MEDIA_MAX_UPLOAD_BYTES`, 20 Mio par
+    défaut) est appliqué par l'API, qui répond alors `413` **avec** l'enveloppe
+    `{ error: { code, message, … } }` : Nginx ne doit jamais couper avant
+    elle, sinon l'admin reçoit un `413` brut, non interprétable.
+- **`X-Forwarded-For`, `X-Forwarded-Proto`, `X-Real-IP`** transmis, pour
+  `TRUST_PROXY_HOPS=1` (section 1).
+- **`/metrics` refusé** publiquement.
