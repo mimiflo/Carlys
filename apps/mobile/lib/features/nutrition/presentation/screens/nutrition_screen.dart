@@ -65,34 +65,116 @@ class NutritionScreen extends ConsumerWidget {
   }
 }
 
-class _NutritionContent extends StatelessWidget {
+/// L'ordre des sections dépend d'UNE chose : le profil est-il complet ?
+///
+/// Complet, le journal vient avant le formulaire, qu'on ne retouche plus
+/// guère. Incomplet, le formulaire REMONTE au-dessus du journal : le seul
+/// geste utile du premier jour ne doit pas être le dernier bloc de la page,
+/// et le bouton du hero doit pouvoir y mener d'un coup.
+class _NutritionContent extends StatefulWidget {
   const _NutritionContent({required this.report});
 
   final MetabolismReport report;
 
   @override
+  State<_NutritionContent> createState() => _NutritionContentState();
+}
+
+class _NutritionContentState extends State<_NutritionContent> {
+  final _profileKey = GlobalKey();
+  final _scrollController = ScrollController();
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
+
+  /// Amène le formulaire en haut de l'écran.
+  ///
+  /// La liste est paresseuse : si le bloc n'est pas encore construit, on
+  /// descend d'abord, puis on cale — jamais un bouton qui ne fait rien.
+  Future<void> _revealProfile() async {
+    final duration = AppMotion.resolve(context, AppMotion.slow);
+    final target = _profileKey.currentContext;
+    if (target != null) {
+      await Scrollable.ensureVisible(
+        target,
+        duration: duration,
+        curve: AppMotion.standard,
+      );
+      return;
+    }
+    await _scrollController.animateTo(
+      _scrollController.position.maxScrollExtent,
+      duration: duration,
+      curve: AppMotion.standard,
+    );
+    final built = _profileKey.currentContext;
+    if (built != null && built.mounted) {
+      await Scrollable.ensureVisible(
+        built,
+        duration: duration,
+        curve: AppMotion.standard,
+      );
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final report = widget.report;
     final metabolism = report.metabolism;
     final bottomInset =
         AppBottomBar.height + MediaQuery.paddingOf(context).bottom;
+    final profile = KeyedSubtree(
+      key: _profileKey,
+      child: _ProfileBlock(profile: report.profile),
+    );
+    final journal = _Section(
+      child: MealJournalSection(targetKcal: metabolism?.targetKcal),
+    );
 
     return ListView(
+      controller: _scrollController,
       // Le hero est à fond perdu : chaque section pose sa propre gouttière.
       padding: EdgeInsets.only(bottom: bottomInset + AppSpacing.gapSection),
       children: [
-        MetabolismHero(metabolism: metabolism),
-        if (metabolism != null)
-          _Section(child: MetabolismView(metabolism: metabolism))
-        else
-          _Section(child: _MissingSection(missing: report.missing)),
-        const SizedBox(height: AppSpacing.gapSection),
-        _Section(
-          child: MealJournalSection(targetKcal: metabolism?.targetKcal),
+        MetabolismHero(
+          metabolism: metabolism,
+          onCompleteProfile: _revealProfile,
         ),
-        const SizedBox(height: AppSpacing.gapSection),
+        if (metabolism != null) ...[
+          _Section(child: MetabolismView(metabolism: metabolism)),
+          const SizedBox(height: AppSpacing.gapSection),
+          journal,
+          const SizedBox(height: AppSpacing.gapSection),
+          profile,
+        ] else ...[
+          _Section(child: _MissingSection(missing: report.missing)),
+          const SizedBox(height: AppSpacing.gapSection),
+          profile,
+          const SizedBox(height: AppSpacing.gapSection),
+          journal,
+        ],
+      ],
+    );
+  }
+}
+
+/// « Mon profil » : l'en-tête et le formulaire, toujours ensemble.
+class _ProfileBlock extends StatelessWidget {
+  const _ProfileBlock({required this.profile});
+
+  final MetabolicProfile profile;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
         const _Section(child: AppSectionHeader(title: 'Mon profil')),
         const SizedBox(height: AppSpacing.sm),
-        _Section(child: MetabolicProfileForm(profile: report.profile)),
+        _Section(child: MetabolicProfileForm(profile: profile)),
       ],
     );
   }

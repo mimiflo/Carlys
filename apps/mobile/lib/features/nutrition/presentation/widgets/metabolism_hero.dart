@@ -9,12 +9,24 @@ import '../../domain/entities/nutrition.dart';
 import 'dna_helix.dart';
 
 /// Hero « métabolisme » (maquette 2g) : hélice ADN plein cadre décalée à
-/// droite, halo violet, dégradés de lisibilité pour la colonne de gauche,
-/// dépense totale en très grand.
+/// droite, halo violet, dégradés de lisibilité pour la colonne de gauche.
+///
+/// Il a DEUX états, et c'est la seule décision qu'il prend. Avec un
+/// métabolisme, la dépense totale en très grand. Sans, une phrase et la porte
+/// vers le formulaire : un tiret géant en accent servait l'absence comme si
+/// c'était le fait principal, sans jamais dire comment en sortir — la
+/// maladie que l'accueil vient de soigner avec son amorçage.
 class MetabolismHero extends StatelessWidget {
-  const MetabolismHero({required this.metabolism, super.key});
+  const MetabolismHero({
+    required this.metabolism,
+    required this.onCompleteProfile,
+    super.key,
+  });
 
   final MetabolismResult? metabolism;
+
+  /// Mène au formulaire de profil ; ne sert que sans métabolisme.
+  final VoidCallback onCompleteProfile;
 
   /// Géométrie relevée sur la maquette : hero de 378, scène centrée en
   /// largeur (c'est `root.position.x = 0.9` qui décale l'hélice vers la
@@ -31,16 +43,9 @@ class MetabolismHero extends StatelessWidget {
   /// Halo violet de la maquette (.22) obtenu depuis le halo du design system.
   static const double _haloOpacity = 0.85;
 
-  /// Valeur absente tant que le serveur n'a pas pu calculer le métabolisme.
-  static const String _placeholder = '—';
-
   @override
   Widget build(BuildContext context) {
     final result = metabolism;
-    final tdee = result?.tdeeKcal;
-    final bmr = result?.bmrKcal;
-    // Activité = dépense totale − métabolisme de base : aucune valeur inventée.
-    final activity = tdee == null || bmr == null ? null : tdee - bmr;
     final topInset = MediaQuery.paddingOf(context).top;
 
     return SizedBox(
@@ -89,7 +94,10 @@ class MetabolismHero extends StatelessWidget {
                         .copyWith(color: AppColors.darkTextPrimary),
                   ),
                   const Spacer(),
-                  _ExpenditureRow(tdee: tdee, bmr: bmr, activity: activity),
+                  if (result != null)
+                    _ExpenditureRow(metabolism: result)
+                  else
+                    _ProfilePrompt(onCompleteProfile: onCompleteProfile),
                 ],
               ),
             ),
@@ -98,34 +106,25 @@ class MetabolismHero extends StatelessWidget {
       ),
     );
   }
-
-  /// « 2 759 » — séparateur de milliers commun à toute l'app.
-  static String _kcal(int? value) =>
-      value == null ? _placeholder : formatThousands(value);
 }
 
 /// Bas du hero : dépense totale à gauche, décomposition MB / activité à droite.
 class _ExpenditureRow extends StatelessWidget {
-  const _ExpenditureRow({
-    required this.tdee,
-    required this.bmr,
-    required this.activity,
-  });
+  const _ExpenditureRow({required this.metabolism});
 
-  final int? tdee;
-  final int? bmr;
-  final int? activity;
+  final MetabolismResult metabolism;
 
   @override
   Widget build(BuildContext context) {
-    final total = MetabolismHero._kcal(tdee);
+    // « 2 759 » — séparateur de milliers commun à toute l'app.
+    final total = formatThousands(metabolism.tdeeKcal);
+    final bmr = formatThousands(metabolism.bmrKcal);
+    // Activité = dépense totale − métabolisme de base : aucune valeur inventée.
+    final activity = formatThousands(metabolism.tdeeKcal - metabolism.bmrKcal);
 
     return Semantics(
-      label: tdee == null
-          ? 'Dépense totale indisponible : profil incomplet'
-          : 'Dépense totale $total kilocalories, dont '
-              '${MetabolismHero._kcal(bmr)} de métabolisme de base et '
-              '${MetabolismHero._kcal(activity)} d’activité',
+      label: 'Dépense totale $total kilocalories, dont $bmr de métabolisme '
+          'de base et $activity d’activité',
       excludeSemantics: true,
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.end,
@@ -144,23 +143,52 @@ class _ExpenditureRow extends StatelessWidget {
               ],
             ),
           ),
-          if (bmr != null && activity != null)
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.end,
-              children: [
-                AppSectionLabel(
-                  'MB ${MetabolismHero._kcal(bmr)}',
-                  color: AppColors.darkTextTertiary,
-                ),
-                const SizedBox(height: AppSpacing.xxs),
-                AppSectionLabel(
-                  'Activité ${MetabolismHero._kcal(activity)}',
-                  color: AppColors.darkTextTertiary,
-                ),
-              ],
-            ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              AppSectionLabel('MB $bmr', color: AppColors.darkTextTertiary),
+              const SizedBox(height: AppSpacing.xxs),
+              AppSectionLabel(
+                'Activité $activity',
+                color: AppColors.darkTextTertiary,
+              ),
+            ],
+          ),
         ],
       ),
+    );
+  }
+}
+
+/// Bas du hero SANS métabolisme : ce qui manque, dit une fois, et la porte.
+///
+/// Le hero garde son hélice et son titre — il ne prétend plus donner un
+/// chiffre. Le bouton mène au formulaire, qui est le seul geste utile du
+/// premier jour.
+class _ProfilePrompt extends StatelessWidget {
+  const _ProfilePrompt({required this.onCompleteProfile});
+
+  final VoidCallback onCompleteProfile;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Text(
+          'Carlys ne connaît pas encore ton moteur. Ta dépense du jour '
+          'apparaîtra ici dès que ton profil sera complet.',
+          style:
+              AppTypography.body.copyWith(color: AppColors.darkTextSecondary),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        AppButton(
+          label: 'Compléter mon profil',
+          icon: AppIcons.arrowForward,
+          onPressed: onCompleteProfile,
+        ),
+      ],
     );
   }
 }

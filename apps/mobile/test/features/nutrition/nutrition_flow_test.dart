@@ -5,7 +5,9 @@ import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
 import 'package:carlys_mobile/features/nutrition/data/repositories/nutrition_repository_impl.dart';
 import 'package:carlys_mobile/features/nutrition/domain/entities/nutrition.dart';
+import 'package:carlys_mobile/features/nutrition/presentation/screens/nutrition_screen.dart';
 import 'package:carlys_mobile/features/nutrition/presentation/widgets/dna_helix.dart';
+import 'package:carlys_mobile/features/nutrition/presentation/widgets/metabolic_profile_form.dart';
 import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -75,9 +77,47 @@ void main() {
       expect(find.text('Sexe biologique'), findsWidgets);
       expect(find.text('Poids (mesure corporelle)'), findsOneWidget);
       expect(find.byType(DnaHelix), findsOneWidget);
+
+      // Le hero ne sert pas l'absence comme un chiffre : ni tiret géant en
+      // accent, ni libellé de dépense sous un vide — une phrase, et la porte.
+      expect(find.text('—'), findsNothing);
+      expect(find.text('KCAL / DÉPENSE TOTALE'), findsNothing);
+      expect(find.text('Compléter mon profil'), findsOneWidget);
+
       // Le poids manque : l'app renvoie vers les mesures corporelles.
       await reveal(tester, find.textContaining('mesures corporelles'));
       expect(find.textContaining('mesures corporelles'), findsOneWidget);
+
+      // Tant que le profil est incomplet, le formulaire vient AVANT le
+      // journal : le seul geste utile du premier jour n'est pas en bas de
+      // page.
+      await reveal(tester, find.text('Journal du jour'));
+      expect(
+        tester.getTopLeft(find.byType(MetabolicProfileForm)).dy,
+        lessThan(tester.getTopLeft(find.text('Journal du jour')).dy),
+      );
+    });
+
+    testWidgets('profil incomplet : le bouton du hero mène au formulaire',
+        (tester) async {
+      await tester.pumpWidget(appWith(FakeNutritionRepository()));
+      await openNutritionTab(tester);
+
+      // Avant : le formulaire est sous le pli (construit d'avance par la
+      // liste paresseuse, mais pas un pixel n'en est visible).
+      final screen = tester.getSize(find.byType(NutritionScreen));
+      expect(
+        tester.getTopLeft(find.byType(MetabolicProfileForm)).dy,
+        greaterThanOrEqualTo(screen.height),
+      );
+
+      await tester.tap(find.text('Compléter mon profil'));
+      await tester.pumpAndSettle();
+
+      // Après : son en-tête est en haut de l'écran, le formulaire visible.
+      final formTop = tester.getTopLeft(find.byType(MetabolicProfileForm)).dy;
+      expect(formTop, greaterThanOrEqualTo(0));
+      expect(formTop, lessThan(screen.height / 2));
     });
 
     testWidgets('formulaire complété : le rapport métabolique apparaît',
@@ -142,8 +182,16 @@ void main() {
 
       expect(find.textContaining('OBJECTIF'), findsOneWidget);
       expect(find.text('24,7'), findsOneWidget);
+      // Le hero donne le chiffre, pas une invitation.
+      expect(find.text('Compléter mon profil'), findsNothing);
       await reveal(tester, find.textContaining('2,8'));
       expect(find.textContaining('2,8'), findsWidgets);
+      // Profil complet : le journal garde sa place AVANT le formulaire.
+      await reveal(tester, find.text('Journal du jour'));
+      expect(
+        tester.getTopLeft(find.byType(MetabolicProfileForm)).dy,
+        greaterThan(tester.getTopLeft(find.text('Journal du jour')).dy),
+      );
       // L'objectif nutritionnel reste lisible dans le formulaire de profil.
       await reveal(tester, find.text('Maintenir'));
       expect(find.text('Maintenir'), findsWidgets);
