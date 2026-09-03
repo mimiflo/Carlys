@@ -70,18 +70,37 @@ export class CoachRepository {
     });
   }
 
-  /** Message de l'utilisateur — rejouable : le même identifiant ne double pas. */
+  /**
+   * À quel fil appartient déjà cet identifiant de message ? `null` s'il est
+   * libre. L'identifiant vient de l'appareil et n'est unique que GLOBALEMENT
+   * (clé primaire), pas par fil : c'est ce qui rend ce contrôle nécessaire.
+   */
+  async conversationIdOfMessage(id: string): Promise<string | null> {
+    const row = await this.prisma.coachMessage.findUnique({
+      where: { id },
+      select: { conversationId: true },
+    });
+    return row?.conversationId ?? null;
+  }
+
+  /**
+   * Message de l'utilisateur, adressé par (fil, identifiant) : rejouer le même
+   * identifiant dans le même fil ne double pas. Un identifiant déjà porté par
+   * un AUTRE fil n'est ni réécrit ni relu : `null`, et rien n'a été écrit
+   * (la branche `update` est vide).
+   */
   async saveUserMessage(
     conversationId: string,
     id: string,
     content: string,
-  ): Promise<MessageWithProposal> {
-    return this.prisma.coachMessage.upsert({
+  ): Promise<MessageWithProposal | null> {
+    const message = await this.prisma.coachMessage.upsert({
       where: { id },
       create: { id, conversationId, role: CoachMessageRole.USER, content },
       update: {},
       include: { proposal: { include: { items: true } } },
     });
+    return message.conversationId === conversationId ? message : null;
   }
 
   /**

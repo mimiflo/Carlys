@@ -48,6 +48,7 @@ describe('Coach IA (e2e)', () => {
   let accessToken: string;
   let otherAccessToken: string;
   let userId: string;
+  let otherUserId: string;
   let exerciseId: string;
 
   const userEmail = `e2e-coach-${randomUUID()}@carlys.test`;
@@ -97,7 +98,9 @@ describe('Coach IA (e2e)', () => {
     const first = data<AuthResult>((await register(userEmail)).body);
     accessToken = first.tokens.accessToken;
     userId = first.user.id;
-    otherAccessToken = data<AuthResult>((await register(otherEmail)).body).tokens.accessToken;
+    const other = data<AuthResult>((await register(otherEmail)).body);
+    otherAccessToken = other.tokens.accessToken;
+    otherUserId = other.user.id;
 
     const exercise = await ensureExerciseFixture(prisma, 'e2e-coach-developpe');
     exerciseId = exercise.id;
@@ -118,10 +121,10 @@ describe('Coach IA (e2e)', () => {
   });
 
   /** Accorde le droit directement : les webhooks sont testés ailleurs. */
-  const grantCoaching = () =>
+  const grantCoaching = (to: string = userId) =>
     prisma.userEntitlement.upsert({
-      where: { userId_entitlementKey: { userId, entitlementKey: 'ai_coaching' } },
-      create: { userId, entitlementKey: 'ai_coaching', isActive: true },
+      where: { userId_entitlementKey: { userId: to, entitlementKey: 'ai_coaching' } },
+      create: { userId: to, entitlementKey: 'ai_coaching', isActive: true },
       update: { isActive: true, expiresAt: null },
     });
 
@@ -131,12 +134,21 @@ describe('Coach IA (e2e)', () => {
       data: { isActive: false },
     });
 
-  const resetQuota = async () => {
-    // Le quota vit dans Redis : chaque scénario repart d'un compteur propre.
-    const key = `coach:quota:${userId}:${new Date().toISOString().slice(0, 10)}`;
+  /** Le quota vit dans Redis, un compteur par utilisateur et par jour. */
+  const quotaKeyOf = (of: string) => `coach:quota:${of}:${new Date().toISOString().slice(0, 10)}`;
+
+  const resetQuota = async (of: string = userId) => {
+    // Chaque scénario repart d'un compteur propre.
     const client = new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379');
-    await client.del(key);
+    await client.del(quotaKeyOf(of));
     await client.quit();
+  };
+
+  const consumedToday = async (of: string): Promise<number> => {
+    const client = new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379');
+    const value = await client.get(quotaKeyOf(of));
+    await client.quit();
+    return value === null ? 0 : Number(value);
   };
 
   it('sans le droit ai_coaching, le coach est refusé (403) avant toute dépense', async () => {
@@ -322,6 +334,53 @@ describe('Coach IA (e2e)', () => {
 
     // L'autre compte n'a pas le droit : 403 avant même la question de propriété.
     await authed(otherAccessToken).get(`/api/v1/coach/conversations/${conversationId}`).expect(403);
+  });
+
+  it('un message est adressé par (fil, identifiant) : l’identifiant d’autrui ne s’écrit ni ne se lit', async () => {
+    await grantCoaching();
+    await resetQuota();
+    nextOutput = textOnly('Vu, on vise 100 kg.');
+    const conversationId = randomUUID();
+    await authed(accessToken)
+      .post('/api/v1/coach/conversations')
+      .send({ id: conversationId })
+      .expect(201);
+    const messageId = randomUUID();
+    await authed(accessToken)
+      .post(`/api/v1/coach/conversations/${conversationId}/messages`)
+      .send({ id: messageId, content: 'Mon objectif secret : 100 kg au développé.' })
+      .expect(201);
+
+    // L'autre compte a le droit, écrit dans SON fil, mais rejoue l'identifiant du premier.
+    await grantCoaching(otherUserId);
+    await resetQuota(otherUserId);
+    const otherConversationId = randomUUID();
+    await authed(otherAccessToken)
+      .post('/api/v1/coach/conversations')
+      .send({ id: otherConversationId })
+      .expect(201);
+    const refused = await authed(otherAccessToken)
+      .post(`/api/v1/coach/conversations/${otherConversationId}/messages`)
+      .send({ id: messageId, content: 'Tentative.' })
+      .expect(404);
+    // Ni le contenu du premier, ni un tour de quota consommé pour l'intrus.
+    expect(JSON.stringify(refused.body)).not.toContain('100 kg');
+    expect(await consumedToday(otherUserId)).toBe(0);
+
+    // Écrire directement dans le fil d'autrui : même 404 opaque, même avec le droit.
+    await authed(otherAccessToken)
+      .post(`/api/v1/coach/conversations/${conversationId}/messages`)
+      .send({ id: randomUUID(), content: 'Intrusion.' })
+      .expect(404);
+    expect(await consumedToday(otherUserId)).toBe(0);
+
+    // Le message du premier est intact, dans son fil, et lui seul le lit.
+    const conversation = data<CoachConversation>(
+      (await authed(accessToken).get(`/api/v1/coach/conversations/${conversationId}`).expect(200))
+        .body,
+    );
+    expect(conversation.messages[0]?.content).toContain('100 kg');
+    expect(conversation.messages).toHaveLength(2);
   });
 
   it('au-delà du plafond quotidien, l’envoi est refusé (429)', async () => {

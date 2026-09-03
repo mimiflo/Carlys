@@ -1,9 +1,7 @@
 import {
   type CoachConversation,
   type CoachConversationSummary,
-  type CoachMessage,
   type CoachReply,
-  type CoachSessionProposal,
 } from '@carlys/api-contracts';
 import {
   ForbiddenException,
@@ -19,11 +17,8 @@ import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { AppConfigService } from '../../../config/app-config.service';
 import { EntitlementsService } from '../../subscriptions/application/entitlements.service';
 import { COACH_MODEL_PORT, type CoachModelPort, type CoachTurn } from '../domain/coach-model.port';
-import {
-  type ConversationWithMessages,
-  CoachRepository,
-  type MessageWithProposal,
-} from '../infrastructure/coach.repository';
+import { type ConversationWithMessages, CoachRepository } from '../infrastructure/coach.repository';
+import { presentMessage } from './coach.presenter';
 import { COACH_TOOLS, CoachTools } from './coach.tools';
 import { COACH_SYSTEM_PROMPT, carlysProfileBriefing, volatileContext } from './coach.prompt';
 import { CoachQuota } from './coach.quota';
@@ -44,6 +39,8 @@ const CONVERSATIONS_LIMIT = 30;
 /** Tours renvoyés au modèle. Au-delà, la compaction serait nécessaire. */
 const HISTORY_LIMIT = 20;
 const TITLE_MAX_LENGTH = 60;
+/** Même réponse qu'un fil inconnu : ne pas révéler l'existence d'autrui. */
+const CONVERSATION_NOT_FOUND = 'Conversation introuvable.';
 
 /**
  * Orchestration d'un tour de conversation.
@@ -109,6 +106,11 @@ export class CoachService {
     await this.assertAvailable(userId);
     await this.repository.ensureConversation(userId, conversationId);
     const conversation = await this.requireConversation(userId, conversationId);
+    // L'identifiant du message vient de l'appareil et n'est unique que
+    // globalement : s'il désigne déjà un message d'un AUTRE fil, il n'a rien
+    // à faire ici. Vérifié AVANT le compteur, pour qu'un rejeu invalide ne
+    // coûte pas un tour, et refusé comme un fil d'autrui : 404 opaque.
+    await this.assertMessageAddressable(conversationId, messageId);
 
     // Le profil Carlys aiguille le ton du coach. Chargé AVANT le compteur, et
     // dégradé en silence : un incident sur cette lecture ne doit ni brûler un
@@ -123,6 +125,10 @@ export class CoachService {
     }
 
     const userMessage = await this.repository.saveUserMessage(conversationId, messageId, content);
+    if (userMessage === null) {
+      // Course entre la vérification et l'écriture : même refus, rien n'a été écrit.
+      throw new NotFoundException(CONVERSATION_NOT_FOUND);
+    }
 
     const history = buildHistory(conversation, content);
     const output = await this.model.reply({
@@ -227,9 +233,17 @@ export class CoachService {
   private async requireConversation(userId: string, id: string): Promise<ConversationWithMessages> {
     const conversation = await this.repository.findConversation(userId, id);
     if (conversation === null) {
-      throw new NotFoundException('Conversation introuvable.');
+      throw new NotFoundException(CONVERSATION_NOT_FOUND);
     }
     return conversation;
+  }
+
+  /** Libre, ou déjà à CE fil (rejeu) : oui. Porté par un autre fil : 404 opaque. */
+  private async assertMessageAddressable(conversationId: string, messageId: string): Promise<void> {
+    const owner = await this.repository.conversationIdOfMessage(messageId);
+    if (owner !== null && owner !== conversationId) {
+      throw new NotFoundException(CONVERSATION_NOT_FOUND);
+    }
   }
 }
 
@@ -272,37 +286,4 @@ function titleFrom(content: string): string {
   return trimmed.length <= TITLE_MAX_LENGTH
     ? trimmed
     : `${trimmed.slice(0, TITLE_MAX_LENGTH - 1)}…`;
-}
-
-function presentMessage(message: MessageWithProposal): CoachMessage {
-  return {
-    id: message.id,
-    role: message.role,
-    content: message.content,
-    proposal: message.proposal === null ? null : presentProposal(message.proposal),
-    createdAt: message.createdAt.toISOString(),
-  };
-}
-
-function presentProposal(
-  proposal: NonNullable<MessageWithProposal['proposal']>,
-): CoachSessionProposal {
-  return {
-    id: proposal.id,
-    name: proposal.name,
-    estimatedMinutes: proposal.estimatedMinutes,
-    sourceTemplateId: proposal.sourceTemplateId,
-    acceptedSessionId: proposal.acceptedSessionId,
-    items: proposal.items.map((item) => ({
-      id: item.id,
-      exercisePosition: item.exercisePosition,
-      exerciseId: item.exerciseId,
-      exerciseName: item.exerciseName,
-      setPosition: item.setPosition,
-      kind: item.kind,
-      targetReps: item.targetReps,
-      targetWeightKg: item.targetWeightKg === null ? null : Number(item.targetWeightKg),
-      restSeconds: item.restSeconds,
-    })),
-  };
 }
