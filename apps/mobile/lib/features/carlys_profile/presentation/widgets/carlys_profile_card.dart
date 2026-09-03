@@ -23,7 +23,10 @@ class CarlysProfileCard extends StatefulWidget {
   final bool isCurrent;
   final VoidCallback onTap;
 
-  static const double _imageWidth = 116;
+  /// Largeur de la case d'illustration : c'est aussi la largeur LOGIQUE à
+  /// laquelle l'image se décode, quel que soit l'appelant (l'onboarding pose
+  /// les mêmes cartes dans la même case).
+  static const double imageWidth = 116;
   static const double _height = 132;
 
   @override
@@ -144,7 +147,7 @@ class _CardBody extends StatelessWidget {
                   left: Radius.circular(AppRadius.cardSecondary - 1),
                 ),
                 child: SizedBox(
-                  width: CarlysProfileCard._imageWidth,
+                  width: CarlysProfileCard.imageWidth,
                   height: double.infinity,
                   child: _ProfileIllustration(content: content),
                 ),
@@ -228,6 +231,14 @@ class _ProfileIllustration extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Décodée à la taille de sa CASE, pas à celle du fichier (800 × 598) :
+    // sur un écran ×3, 348 pixels de large suffisent — cinq fois moins de
+    // mémoire par carte, et l'écran en pose quatre. Le fond flouté et le
+    // premier plan partagent le même décodage.
+    final decodeWidth =
+        (CarlysProfileCard.imageWidth * MediaQuery.devicePixelRatioOf(context))
+            .round();
+
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -239,6 +250,7 @@ class _ProfileIllustration extends StatelessWidget {
           child: Image.asset(
             content.assetPath,
             fit: BoxFit.cover,
+            cacheWidth: decodeWidth,
             // Le fond n'a pas de repli propre : celui du premier plan suffit.
             errorBuilder: (_, __, ___) => const SizedBox.shrink(),
           ),
@@ -246,6 +258,7 @@ class _ProfileIllustration extends StatelessWidget {
         Image.asset(
           content.assetPath,
           fit: BoxFit.contain,
+          cacheWidth: decodeWidth,
           // L'illustration manque : repli de marque, jamais un trou ni une
           // icône d'erreur.
           errorBuilder: (_, __, ___) => _Placeholder(icon: content.icon),
