@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../colors/app_colors.dart';
+import '../motion/app_motion.dart';
 import '../radius/app_radius.dart';
 import '../spacing/app_spacing.dart';
 import '../typography/app_typography.dart';
 import 'app_color_schemes.dart';
+import 'app_page_transitions.dart';
 
 /// Thèmes Carlys : clair, sombre et sombre OLED.
 /// Toute valeur visuelle provient des tokens du design system.
@@ -47,6 +49,11 @@ abstract final class AppTheme {
 
     return base.copyWith(
       scaffoldBackgroundColor: background,
+      // Les transitions de page gardent le GESTE de chaque plateforme
+      // (retour prédictif Android, glissement iOS) mais prennent la durée
+      // du token `route` : c'est ici, et non dans le routeur, que le design
+      // system fixe le rythme d'une navigation.
+      pageTransitionsTheme: AppPageTransitions.theme(AppMotion.route),
       appBarTheme: AppBarTheme(
         backgroundColor: background,
         foregroundColor: colorScheme.onSurface,

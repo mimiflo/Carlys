@@ -29,7 +29,8 @@ class ProgressionGauge extends StatefulWidget {
 
   final bool animate;
 
-  static const Duration fillDuration = Duration(milliseconds: 900);
+  /// Le remplissage suit le token des anneaux et des jauges.
+  static const Duration fillDuration = AppMotion.ring;
 
   /// Longueur d'un tiret, et de l'espace qui le suit.
   static const double dash = 5;

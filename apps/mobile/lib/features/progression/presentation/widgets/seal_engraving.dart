@@ -27,7 +27,9 @@ class EngravedSeal extends StatefulWidget {
   /// Obtenue à l'instant : elle se grave. Sinon elle est simplement là.
   final bool engrave;
 
-  static const Duration engraveDuration = Duration(milliseconds: 900);
+  /// La gravure dure ce que dure le remplissage d'un anneau : un seul tempo
+  /// pour tout ce qui « apparaît » à l'ouverture.
+  static const Duration engraveDuration = AppMotion.ring;
 
   /// Part de l'animation consacrée au RESSERREMENT. Le reste laisse l'onde
   /// finir de s'échapper.

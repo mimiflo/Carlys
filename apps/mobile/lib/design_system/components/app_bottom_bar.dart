@@ -57,7 +57,7 @@ const List<AppBottomBarItem> appBottomBarItems = [
 
 /// Bottom bar de la refonte : hauteur 84 + safe area, fond assombri +
 /// blur 20, bordure haute 1px. Actif en accent (icône remplie), inactif
-/// en `iconInactive`, transition 180 ms.
+/// en `iconInactive`, transition [AppMotion.tab].
 class AppBottomBar extends StatelessWidget {
   const AppBottomBar({
     required this.currentIndex,
@@ -117,8 +117,7 @@ class _BarItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = active ? AppColors.accent : AppColors.darkIconInactive;
-    final duration =
-        AppMotion.resolve(context, const Duration(milliseconds: 180));
+    final duration = AppMotion.resolve(context, AppMotion.tab);
 
     return Semantics(
       button: true,

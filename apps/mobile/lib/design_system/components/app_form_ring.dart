@@ -7,8 +7,8 @@ import '../motion/app_motion.dart';
 import '../typography/app_typography.dart';
 
 /// Anneau de forme (score) : arc accent sur piste sombre, valeur mono au
-/// centre. Anime 0 → valeur en 900 ms `easeOutCubic` au premier build
-/// (respect de la réduction d'animations système).
+/// centre. Anime 0 → valeur en [AppMotion.ring] `easeOutCubic` au premier
+/// build (respect de la réduction d'animations système).
 class AppFormRing extends StatefulWidget {
   const AppFormRing({
     required this.value,
@@ -37,10 +37,7 @@ class _AppFormRingState extends State<AppFormRing>
   @override
   void initState() {
     super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 900),
-    );
+    _controller = AnimationController(vsync: this, duration: AppMotion.ring);
     _curve = CurvedAnimation(parent: _controller, curve: Curves.easeOutCubic);
   }
 
@@ -49,8 +46,7 @@ class _AppFormRingState extends State<AppFormRing>
     super.didChangeDependencies();
     // Résolue ici (MediaQuery indisponible en initState).
     if (_controller.status == AnimationStatus.dismissed) {
-      if (AppMotion.resolve(context, const Duration(milliseconds: 900)) ==
-          Duration.zero) {
+      if (AppMotion.resolve(context, AppMotion.ring) == Duration.zero) {
         _controller.value = 1;
       } else {
         _controller.forward();

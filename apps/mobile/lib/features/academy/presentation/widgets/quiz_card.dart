@@ -192,7 +192,7 @@ class _Choice extends StatelessWidget {
             onTap: onTap,
             behavior: HitTestBehavior.opaque,
             child: AnimatedContainer(
-              duration: const Duration(milliseconds: 120),
+              duration: AppMotion.tap,
               curve: AppMotion.standard,
               width: double.infinity,
               padding: const EdgeInsets.symmetric(

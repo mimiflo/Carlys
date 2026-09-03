@@ -6,7 +6,8 @@ import '../radius/app_radius.dart';
 
 /// Carte à bordure animée (offre populaire) : le contour violet EST le
 /// tracé, avec un segment accent de 84 px qui parcourt le périmètre en
-/// 3,4 s. Statique si la réduction d'animations système est active.
+/// [AppMotion.dashLoop]. Statique si la réduction d'animations système est
+/// active.
 class AppAnimatedBorderCard extends StatefulWidget {
   const AppAnimatedBorderCard({
     required this.child,
@@ -89,7 +90,7 @@ class AppDashBorderPainter extends CustomPainter {
   });
 
   /// Un tour complet du périmètre.
-  static const Duration travelDuration = Duration(milliseconds: 3400);
+  static const Duration travelDuration = AppMotion.dashLoop;
 
   /// Position de repos (réduction d'animations) : le segment reste visible,
   /// posé sur le flanc, sans jamais bouger.
