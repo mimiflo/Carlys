@@ -48,6 +48,7 @@ class FakeProgressRepository implements ProgressRepository {
   FakeProgressRepository({
     List<PersonalRecordEntry>? records,
     List<BodyMetricEntry>? bodyMetrics,
+    this.overviewFor,
   })  : _records = records ?? const [],
         _bodyMetrics = [...?bodyMetrics];
 
@@ -56,10 +57,14 @@ class FakeProgressRepository implements ProgressRepository {
   final List<ProgressPeriod> requestedPeriods = [];
   int _nextId = 0;
 
+  /// La synthèse renvoyée pour une période ; par défaut deux séances réelles
+  /// (`overviewOf`). Un test du premier jour la remplace par des zéros.
+  final ProgressOverviewEntity Function(ProgressPeriod period)? overviewFor;
+
   @override
   Future<ProgressOverviewEntity> overview(ProgressPeriod period) async {
     requestedPeriods.add(period);
-    return overviewOf(period);
+    return overviewFor?.call(period) ?? overviewOf(period);
   }
 
   @override

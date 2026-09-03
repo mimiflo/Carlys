@@ -4,15 +4,24 @@ import 'package:flutter/material.dart';
 import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/progress.dart';
+import 'body_weight_latest.dart';
 
 /// Hauteur du tracé (géométrie du graphe, comme la carte de volume).
 const double _chartHeight = 104;
 
 /// Carte d'évolution du poids : dernière mesure en grand, puis la courbe.
 class BodyWeightChart extends StatelessWidget {
-  const BodyWeightChart({required this.entries, super.key});
+  const BodyWeightChart({required this.entries, super.key})
+      : assert(
+          entries.length >= minimumEntries,
+          'une courbe demande au moins deux mesures',
+        );
 
-  /// Du plus ancien au plus récent, au moins une mesure.
+  /// Une courbe se trace entre deux points : en dessous, l'appelant montre
+  /// la mesure seule ([BodyWeightFirstMeasure]).
+  static const int minimumEntries = 2;
+
+  /// Du plus ancien au plus récent, au moins [minimumEntries] mesures.
   final List<BodyMetricEntry> entries;
 
   @override
@@ -20,42 +29,12 @@ class BodyWeightChart extends StatelessWidget {
     final values = entries.map((entry) => entry.value);
     final minValue = values.reduce((a, b) => a < b ? a : b);
     final maxValue = values.reduce((a, b) => a > b ? a : b);
-    final latest = entries.last;
 
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: const BoxDecoration(
-        color: AppColors.darkSurface,
-        borderRadius: AppRadius.cardMainAll,
-        border: Border.fromBorderSide(BorderSide(color: AppColors.darkBorder)),
-      ),
+    return BodyWeightCard(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const AppSectionLabel(
-            'Dernière mesure',
-            color: AppColors.darkTextTertiary,
-          ),
-          const SizedBox(height: 6),
-          Text.rich(
-            TextSpan(
-              text: formatDecimal(latest.value),
-              style: AppTypography.metricL.copyWith(
-                fontSize: 30,
-                letterSpacing: -1.2,
-                color: AppColors.darkTextPrimary,
-              ),
-              children: [
-                TextSpan(
-                  text: ' kg',
-                  style: AppTypography.metricS.copyWith(
-                    fontSize: 15,
-                    color: AppColors.darkTextTertiary,
-                  ),
-                ),
-              ],
-            ),
-          ),
+          BodyWeightLatest(entry: entries.last),
           const SizedBox(height: AppSpacing.md),
           Semantics(
             label: 'Évolution du poids corporel',
