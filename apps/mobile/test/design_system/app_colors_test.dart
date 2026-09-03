@@ -29,6 +29,16 @@ void main() {
     return (light + 0.05) / (dark + 0.05);
   }
 
+  /// Les cinq surfaces sombres sur lesquelles du texte peut se poser, de la
+  /// plus profonde à la plus claire.
+  const darkSurfaces = <String, Color>{
+    'darkBackground': AppColors.darkBackground,
+    'darkSurface': AppColors.darkSurface,
+    'darkSurfaceAlt': AppColors.darkSurfaceAlt,
+    'surfaceEngraved': AppColors.surfaceEngraved,
+    'surfaceIcon': AppColors.surfaceIcon,
+  };
+
   group('lisibilité sur le fond sombre', () {
     test('le texte principal dépasse largement AAA', () {
       expect(
@@ -54,6 +64,52 @@ void main() {
       expect(
         contrast(AppColors.accent, AppColors.neutral950),
         greaterThanOrEqualTo(4.5),
+      );
+    });
+
+    test('les gris de texte tiennent AA sur TOUTES les surfaces sombres', () {
+      // Le dénominateur d'un total et les libellés de 9 points se posent
+      // aussi sur les plaques gravées, plus claires que le fond : c'est donc
+      // sur chacune des cinq surfaces que le seuil doit tenir — la boucle
+      // est le garde-fou, pas une assertion de plus.
+      const textRoles = <String, Color>{
+        'textMuted': AppColors.textMuted,
+        'darkTextTertiary': AppColors.darkTextTertiary,
+      };
+      for (final role in textRoles.entries) {
+        for (final surface in darkSurfaces.entries) {
+          expect(
+            contrast(role.value, surface.value),
+            greaterThanOrEqualTo(4.5),
+            reason: '${role.key} sur ${surface.key}',
+          );
+        }
+      }
+    });
+
+    test('l’icône inactive tient le seuil graphique (3:1) partout', () {
+      for (final surface in darkSurfaces.entries) {
+        expect(
+          contrast(AppColors.darkIconInactive, surface.value),
+          greaterThanOrEqualTo(3),
+          reason: 'darkIconInactive sur ${surface.key}',
+        );
+      }
+    });
+
+    test(
+        'la hiérarchie des gris reste lisible : éteint < tertiaire < secondaire',
+        () {
+      // Remonter un gris pour le contraste ne doit pas écraser l'échelle :
+      // le dénominateur reste en retrait du libellé, qui reste en retrait
+      // du texte secondaire.
+      expect(
+        luminance(AppColors.textMuted),
+        lessThan(luminance(AppColors.darkTextTertiary)),
+      );
+      expect(
+        luminance(AppColors.darkTextTertiary),
+        lessThan(luminance(AppColors.darkTextSecondary)),
       );
     });
 

@@ -114,10 +114,16 @@ abstract final class AppColors {
   static const Color darkGlass = Color(0xB815101F);
 
   // Rôles de texte et traits du thème sombre
+  //
+  // Les trois gris de texte et le gris d'icône se MESURENT, pas seulement à
+  // l'œil : chaque rôle de texte tient AA (4,5:1) et l'icône tient le seuil
+  // graphique (3:1) sur la plus claire des surfaces sombres, `surfaceIcon`,
+  // parce que le dénominateur d'un total et les libellés se posent aussi sur
+  // les plaques gravées. Le test `app_colors_test.dart` le vérifie.
   static const Color darkTextPrimary = Color(0xFFF2F2F6);
   static const Color darkTextSecondary = Color(0xFF9A9AAE);
-  static const Color darkTextTertiary = Color(0xFF7A7A8C);
-  static const Color darkIconInactive = Color(0xFF6A6A7E);
+  static const Color darkTextTertiary = Color(0xFF9191A5);
+  static const Color darkIconInactive = Color(0xFF6D6D81);
   static const Color darkBorder = Color(0x12FFFFFF);
   static const Color darkBorderStrong = Color(0x24FFFFFF);
 
@@ -195,7 +201,12 @@ abstract final class AppColors {
   static const Color onAccent = Color(0xFF1A0A02);
 
   /// Dénominateur d'un total (« /1000 ») : présent, jamais lu en premier.
-  static const Color textMuted = Color(0xFF55556A);
+  ///
+  /// En retrait de [darkTextTertiary], mais LISIBLE : 4,58:1 sur la plaque
+  /// la plus claire ([surfaceIcon]), là où l'ancienne valeur tombait à 2,16.
+  /// Un texte de 9 points qui échoue au seuil AA n'est pas « discret », il
+  /// est illisible.
+  static const Color textMuted = Color(0xFF89899D);
 
   /// Liseré des surfaces qui ont gagné leur majesté.
   static const Color majestyBorder = Color(0x59C88BFF); // primaryLight .35
