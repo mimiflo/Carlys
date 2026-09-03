@@ -244,6 +244,16 @@ les rend immobiles, sans rien retirer de l'information.
 | **Progrès** | Le même bloc, puis la vitrine et les records |
 | **Profil de progression** | Le cap franchi, la carte de titre, la vitrine, les cinq axes, le manifeste |
 
+L'écran **Progrès** a lui aussi deux visages. Quand ses trois sources ont
+répondu sans rien (aucune séance sur la période, aucun record, aucune
+mesure), il rend un seul bloc d'amorçage (`ProgressFirstSteps`, sur le
+modèle de `FirstStepsBody`) à la place de trois états vides empilés et de
+deux tuiles à zéro : une séance à lancer, ou son poids à noter sans quitter
+l'écran. Une période vide sur un compte actif garde son état vide, avec
+« Lancer une séance » et sans tuiles dessous. Une seule mesure de poids
+s'affiche comme un fait (« Une mesure de plus et la courbe apparaît. ») :
+la courbe demande deux points, et le dit.
+
 ### La vitrine, en trois densités
 
 Neuf lignes identiques devenaient un mur : personne ne lisait après la

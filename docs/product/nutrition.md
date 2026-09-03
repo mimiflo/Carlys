@@ -56,6 +56,16 @@ rien quand on le presse est pire qu'un bouton éteint.
 - Écran Nutrition : section « Journal du jour » (liste, total en en-tête
   face à l'objectif, feuille d'ajout nom/kcal/protéines, retrait) entre le
   rapport métabolique et le profil.
+- **Le hero a deux états**, comme la grille et l'amorçage de l'accueil. Avec
+  un métabolisme, la dépense totale en très grand. Sans, il garde son hélice
+  et son titre mais ne prétend plus donner un chiffre : une phrase et le
+  bouton « Compléter mon profil », qui fait défiler jusqu'au formulaire. Un
+  tiret géant en accent servait l'absence comme le fait principal, sans dire
+  comment en sortir ; c'est aussi là qu'arrive le bouton « Calculer mes
+  objectifs » de l'accueil.
+- **L'ordre des sections dépend du profil.** Complet : rapport, journal,
+  profil. Incomplet : champs manquants, **profil**, journal. Le seul geste
+  utile du premier jour n'est jamais le dernier bloc de la page.
 - Accueil : la tuile Nutrition du « Résumé du jour » montre le consommé réel
   face à l'objectif (`consumedKcalTodayProvider`), et la cellule Hydratation
   ouvre la feuille d'eau (`waterStoreProvider`).
@@ -69,7 +79,10 @@ rien quand on le presse est pire qu'un bouton éteint.
 - e2e API (`nutrition.e2e-spec.ts`) : ajout rejoué sans doublon, fenêtre de
   journée bornée par le client, retrait doux, validation des calories.
 - Widgets mobile : ajout par la feuille (total mis à jour), suppression,
-  « 0 / objectif » sur journal vide et « 654 / objectif » avec repas.
+  « 0 / objectif » sur journal vide et « 654 / objectif » avec repas ;
+  premier jour (aucun tiret, bouton présent, formulaire avant le journal, le
+  bouton du hero amène le formulaire à l'écran) et profil complet (chiffre,
+  journal avant le formulaire).
 - Hydratation : migration 3 → 4 non destructive (`app_database_migration_test`),
   lecture du compteur sur l'accueil, feuille ouverte au tapotement de la
   cellule et écriture réellement enregistrée dans le magasin.

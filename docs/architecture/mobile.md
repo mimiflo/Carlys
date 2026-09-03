@@ -243,7 +243,10 @@ Cibles planifiées (branchées tranche par tranche) :
 multiplateforme** (primaire `#9B30FF`, accent `#FF7A45`, espacements 4→64,
 radius, typo, ombres, motion, breakpoints). Le design system Flutter
 (`lib/design_system/`) reflète ces valeurs à la main ; un générateur de code
-pourra automatiser la synchronisation plus tard (cible).
+pourra automatiser la synchronisation plus tard (cible). En attendant, le
+test `test/design_system/design_tokens_test.dart` lit `tokens.json` et le
+compare au design system (durées, espacements, rôles de texte) : un token
+sans reflet, ou un reflet sans token, fait échouer la CI.
 
 Fondations actuelles :
 
@@ -251,10 +254,10 @@ Fondations actuelles :
 | ----------------- | -------------------------------------------------------------------- |
 | `AppColors`       | Palette (marque, neutres, sémantiques, surfaces clair/sombre/OLED)   |
 | `AppTypography`   | Échelle typographique ; fonte système tant que les fontes ne sont pas embarquées dans `assets/fonts` |
-| `AppSpacing`      | Espacements `xxs` 4 → `xxxl` 64                                       |
+| `AppSpacing`      | Espacements `xxs` 4 → `xxxl` 64, gouttières ; `touchTarget` 48, la SEULE cible tactile |
 | `AppRadius`       | Rayons 4 → 24 + `full`                                                |
 | `AppShadows`      | Ombres sm/md/lg                                                       |
-| `AppMotion`       | Durées (100→600 ms) et courbes ; `AppMotion.resolve`                  |
+| `AppMotion`       | Les onze durées de `motion.duration` (100 ms → 6 s, `route` branchée sur les transitions de page par `AppTheme`) et courbes ; `AppMotion.resolve` |
 | `AppIcons`        | Icônes sémantiques métier — jamais `Icons.*` dans les écrans          |
 | `AppBreakpoints`  | Window size classes M3 (`WindowSize` + extension `context.windowSize`) |
 | `AppTheme`        | `light()`, `dark()`, `oledDark()` construits depuis les tokens        |

@@ -98,6 +98,12 @@ place : une invitation unique, qui nomme ce qui manque et mène au profil
 nutritionnel. Le bloc disparaît de lui-même dès que le profil est rempli ;
 c'est un état de départ, pas une carte de plus.
 
+La destination tient la même promesse : l'écran Nutrition, sans profil,
+n'accueille pas d'un tiret géant mais d'une invitation et d'un bouton qui
+mène droit au formulaire (voir `nutrition.md`). L'écran Progrès fait de même
+au premier jour, avec un seul bloc d'amorçage à la place de trois états
+vides (voir `progression.md`).
+
 ## La forme du jour n'est pas une mesure de santé
 
 C'est la part de l'objectif hebdomadaire déjà faite, dite en français. Un
