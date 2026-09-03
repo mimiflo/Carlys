@@ -24,12 +24,19 @@ import {
   type MediaKind,
 } from '@carlys/api-contracts';
 import { z } from 'zod';
-import { publicEnv } from './env';
+import { ApiError, apiUrl, requestJson, unwrapResponse } from './api-transport';
 
 /**
  * Client de l'API d'administration : réponses VALIDÉES par les contrats Zod
  * partagés — un contrat cassé se voit immédiatement, jamais silencieusement.
+ *
+ * Le transport (URL, en-têtes, enveloppe d'erreur) vit dans `api-transport`,
+ * partagé avec les pages publiques ; ici ne reste que ce qui est propre au
+ * back-office : le jeton d'administration et les contrats.
  */
+
+/** Nom historique du back-office pour l'erreur commune du transport. */
+export { ApiError as AdminApiError };
 
 const TOKEN_KEY = 'carlys-admin-token';
 
@@ -45,19 +52,7 @@ export const adminToken = {
   },
 };
 
-export class AdminApiError extends Error {
-  constructor(
-    message: string,
-    readonly status: number,
-  ) {
-    super(message);
-  }
-}
-
 const successEnvelopeSchema = z.object({ data: z.unknown() });
-const errorEnvelopeSchema = z.object({
-  error: z.object({ message: z.string() }),
-});
 const pageMetaSchema = z.object({
   nextCursor: z.string().nullable(),
   hasMore: z.boolean(),
@@ -73,11 +68,11 @@ export interface Page<T> {
 export function parseData<T>(body: unknown, schema: z.ZodType<T>): T {
   const envelope = successEnvelopeSchema.safeParse(body);
   if (!envelope.success) {
-    throw new AdminApiError('Réponse inattendue du serveur.', 0);
+    throw new ApiError('Réponse inattendue du serveur.', 0);
   }
   const parsed = schema.safeParse(envelope.data.data);
   if (!parsed.success) {
-    throw new AdminApiError('Réponse inattendue du serveur.', 0);
+    throw new ApiError('Réponse inattendue du serveur.', 0);
   }
   return parsed.data;
 }
@@ -95,27 +90,9 @@ export function parsePage<T>(body: unknown, itemSchema: z.ZodType<T>): Page<T> {
   };
 }
 
-function errorMessageOf(body: unknown, status: number): string {
-  const envelope = errorEnvelopeSchema.safeParse(body);
-  return envelope.success ? envelope.data.error.message : `Erreur ${status}`;
-}
-
-async function call(path: string, init: RequestInit = {}): Promise<unknown> {
-  const token = adminToken.get();
-  const response = await fetch(`${publicEnv.apiBaseUrl}/api/v1${path}`, {
-    ...init,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token === null ? {} : { Authorization: `Bearer ${token}` }),
-      ...init.headers,
-    },
-    cache: 'no-store',
-  });
-  const body: unknown = response.status === 204 ? null : await response.json().catch(() => null);
-  if (!response.ok) {
-    throw new AdminApiError(errorMessageOf(body, response.status), response.status);
-  }
-  return body;
+/** Requête JSON du back-office : le jeton d'administration, s'il existe, part avec. */
+function call(path: string, init: RequestInit = {}): Promise<unknown> {
+  return requestJson(path, init, adminToken.get());
 }
 
 /**
@@ -126,17 +103,13 @@ async function call(path: string, init: RequestInit = {}): Promise<unknown> {
  */
 async function callUpload(path: string, form: FormData): Promise<unknown> {
   const token = adminToken.get();
-  const response = await fetch(`${publicEnv.apiBaseUrl}/api/v1${path}`, {
+  const response = await fetch(apiUrl(path), {
     method: 'POST',
     body: form,
     headers: token === null ? {} : { Authorization: `Bearer ${token}` },
     cache: 'no-store',
   });
-  const body: unknown = response.status === 204 ? null : await response.json().catch(() => null);
-  if (!response.ok) {
-    throw new AdminApiError(errorMessageOf(body, response.status), response.status);
-  }
-  return body;
+  return unwrapResponse(response);
 }
 
 function query(params: Record<string, string | undefined>): string {
