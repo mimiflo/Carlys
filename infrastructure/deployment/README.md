@@ -32,6 +32,35 @@ avec la première release.
 - health checks (`/health/ready`) branchés sur l'orchestrateur ;
 - pas de déploiement automatique en production sans validation humaine.
 
+## Migrations : avant la bascule, jamais au démarrage
+
+L'image d'exécution de l'API ne contient pas le CLI Prisma (dépendance de
+développement, élaguée). Le `Dockerfile` de l'API expose donc une seconde
+cible, `migrate`, construite AVANT l'élagage : CLI Prisma, `schema.prisma`
+et `prisma/migrations/` y sont présents, et son point d'entrée est
+`prisma migrate deploy`. Elle tourne en utilisateur `node`, sans télémétrie
+(`CHECKPOINT_DISABLE=1`).
+
+Ordre d'un déploiement, pour chaque environnement :
+
+```bash
+# 1. Construire les deux images depuis le même commit (racine du monorepo).
+docker build -f apps/api/Dockerfile -t carlys-api:$SHA .
+docker build -f apps/api/Dockerfile --target migrate -t carlys-api-migrate:$SHA .
+
+# 2. Appliquer les migrations. Un code de sortie non nul ARRÊTE le déploiement.
+docker run --rm -e DATABASE_URL="$DATABASE_URL" carlys-api-migrate:$SHA
+
+# 3. Seulement ensuite : démarrer / recharger l'API et basculer le trafic
+#    (health check /health/ready).
+```
+
+Le conteneur d'exécution ne joue jamais de migration : un redémarrage ou une
+mise à l'échelle ne doit pas modifier le schéma. Avec un orchestrateur, la
+même image `migrate` se déclare en tâche ponctuelle (job, `initContainer`,
+service Compose à profil dédié) dont le succès conditionne le déploiement de
+l'API.
+
 Les manifestes concrets (Terraform, fichiers de plateforme, workflows de
 déploiement) seront ajoutés ici lors de la mise en place du staging.
 
