@@ -43,6 +43,10 @@ server {
     http2 on;
     server_name admin.carlys.example;
 
+    # Cet hôte sert AUSSI les pages publiques du produit (/verify-email,
+    # /reset-password, /abonnement, /privacy, /terms) : PUBLIC_APP_URL et
+    # CORS_ORIGINS de l'API doivent le désigner (https://admin.carlys.example).
+    # Un hôte dédié (app.carlys.example) peut proxier le même upstream.
     location / {
         proxy_pass http://carlys_admin;
         proxy_set_header Host $host;

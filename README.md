@@ -182,7 +182,7 @@ Toutes les valeurs des `.env.example` sont **factices** et adaptées au dévelop
 | `ARGON2_MEMORY_KIB` / `ARGON2_TIME_COST` / `ARGON2_PARALLELISM` | Paramètres Argon2id (défauts OWASP) | `19456` / `2` / `1` |
 | `EMAIL_VERIFICATION_TTL_HOURS` / `PASSWORD_RESET_TTL_MINUTES` | Durée des jetons envoyés par e-mail | `24` / `60` |
 | `SMTP_HOST` / `SMTP_PORT` / `EMAIL_FROM` | SMTP (Mailpit en local) | `localhost` / `1025` / `Carlys <no-reply@carlys.local>` |
-| `PUBLIC_APP_URL` | Base des liens contenus dans les e-mails | `http://localhost:3000` |
+| `PUBLIC_APP_URL` | URL **publique** de l'application web Next.js (`apps/admin`), qui sert les pages ouvertes depuis les e-mails (`/verify-email`, `/reset-password`) et les retours Stripe (`/abonnement/merci`, `/abonnement`) : jamais l'URL de l'API | `http://localhost:3001` |
 | `S3_ENDPOINT` / `S3_REGION` / `S3_BUCKET` | Stockage objet des médias (MinIO en local, S3 ou compatible en production) | `http://localhost:9000` / `us-east-1` / `carlys-media` |
 | `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` | Identifiants du stockage objet | `carlys-dev` / `carlys-dev-secret` |
 | `S3_PUBLIC_BASE_URL` | Base des URLs **servies aux applications** — doit être joignable depuis le téléphone, pas seulement depuis l'API | `http://localhost:9000/carlys-media` |

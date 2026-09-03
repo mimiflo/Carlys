@@ -140,6 +140,12 @@ Endpoints cibles, tous sous `/api/v1/auth`, réponses conformes aux enveloppes
 | `/auth/sessions/:id` | DELETE | Déconnexion ciblée d'un appareil |
 | `/auth/sessions` | DELETE | Déconnexion globale (tous les appareils) |
 
+Les jetons de `/auth/verify-email` et `/auth/reset-password` sont consommés
+par les **pages web publiques** `/verify-email` et `/reset-password` de
+l'application Next.js (`apps/admin`, sous `PUBLIC_APP_URL`), ouvertes depuis
+le lien reçu par e-mail : dans le diagramme 7.1, l'acteur qui poste le jeton
+est donc le navigateur, pas l'application mobile.
+
 ### 4.1 Inscription et validation d'e-mail
 
 - E-mail normalisé (citext), mot de passe soumis à une politique de robustesse

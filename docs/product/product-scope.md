@@ -68,7 +68,7 @@ Liste complète du périmètre MVP, avec la tranche verticale qui la livre :
 
 | Fonctionnalité | Description | Étape |
 |---|---|---|
-| Inscription / connexion | E-mail + mot de passe (Argon2id), validation d'e-mail, mot de passe oublié ; JWT access court + refresh rotatif hashé, sessions par appareil, détection de réutilisation de refresh token | 2 |
+| Inscription / connexion | E-mail + mot de passe (Argon2id), validation d'e-mail, mot de passe oublié (les liens reçus par e-mail ouvrent les pages web publiques `/verify-email` et `/reset-password` de l'application Next.js, sous `PUBLIC_APP_URL`) ; JWT access court + refresh rotatif hashé, sessions par appareil, détection de réutilisation de refresh token | 2 |
 | Profil utilisateur | Informations de base, objectifs, unités (kg/lb) | 2 |
 | Onboarding | Premier parcours guidé après inscription (objectifs, niveau, préférences) | 2 |
 | Bibliothèque d'exercices + recherche | Catalogue seedé (30+ exercices), recherche et filtres (groupe musculaire, équipement), cache Redis côté API | 3 |

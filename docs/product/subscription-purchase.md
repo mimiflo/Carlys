@@ -53,7 +53,12 @@ Montrer un bouton d'achat qui échouerait est pire que de ne pas en montrer.
 4. Stripe encaisse, puis appelle `POST /api/v1/webhooks/stripe` — **signé**,
    **idempotent** (journal `SubscriptionEvent`).
 5. Le webhook crée l'abonnement et le droit. `/entitlements` change.
-6. Au retour dans l'app, `planStatusProvider` et `entitlementsProvider` sont
+6. Stripe renvoie le navigateur vers `${PUBLIC_APP_URL}/abonnement/merci`
+   (ou `/abonnement` si le paiement est abandonné) : deux pages publiques
+   statiques de l'application Next.js (`apps/admin`, groupe de routes
+   `(public)`) qui invitent à retourner dans l'application. Elles
+   n'accordent rien : le droit vient du webhook, jamais de la page.
+7. Au retour dans l'app, `planStatusProvider` et `entitlementsProvider` sont
    relus. S'ils n'ont pas encore changé, l'utilisateur voit toujours son plan
    réel, jamais un Premium supposé.
 

@@ -211,17 +211,28 @@ sensibles à l'abus (`register`, `login`, `verify-email`, `forgot-password`,
 `reset-password`) portent un throttle renforcé (10 requêtes / 60 s) en plus du
 rate limiting global.
 
+**Où mènent les liens des e-mails.** `register` et `resend-verification`
+envoient un lien `${PUBLIC_APP_URL}/verify-email?token=…`, `forgot-password`
+un lien `${PUBLIC_APP_URL}/reset-password?token=…`. Ces deux pages sont des
+**pages web publiques** servies par l'application Next.js (`apps/admin`,
+groupe de routes `src/app/(public)`, sans coquille d'administration) : la
+première poste le jeton sur `POST /auth/verify-email` dès son ouverture, la
+seconde affiche le formulaire de nouveau mot de passe et poste sur
+`POST /auth/reset-password`. `PUBLIC_APP_URL` doit donc désigner l'URL
+publique de cette application web (en local `http://localhost:3001`), jamais
+celle de l'API. Voir [`docs/architecture/admin.md`](../architecture/admin.md).
+
 | Endpoint | Statuts | Notes |
 | --- | --- | --- |
 | `POST /api/v1/auth/register` (public) | 201, 400, 409 | Ouvre une session ; envoie l'e-mail de vérification |
 | `POST /api/v1/auth/login` (public) | 200, 401, 429 | 401 générique (anti-énumération) ; 429 en cas de verrouillage |
 | `POST /api/v1/auth/refresh` (public) | 200, 401 | Rotation ; réutilisation détectée → session révoquée |
 | `POST /api/v1/auth/logout` | 204, 401 | Révoque la session courante |
-| `POST /api/v1/auth/verify-email` (public) | 204, 401 | Jeton à usage unique |
-| `POST /api/v1/auth/resend-verification` | 204 | Sans effet si déjà vérifié |
+| `POST /api/v1/auth/verify-email` (public) | 204, 401 | Jeton à usage unique ; **consommateur : page web `/verify-email`** (aucun écran mobile) |
+| `POST /api/v1/auth/resend-verification` | 204 | Sans effet si déjà vérifié ; **aucun appelant** au 3 septembre 2026 (ni mobile ni web) |
 | `POST /api/v1/auth/forgot-password` (public) | 202 | Réponse identique que le compte existe ou non |
-| `POST /api/v1/auth/reset-password` (public) | 204, 401 | Révoque **toutes** les sessions |
-| `POST /api/v1/auth/change-password` | 204, 401 | Révoque les autres sessions |
+| `POST /api/v1/auth/reset-password` (public) | 204, 401 | Révoque **toutes** les sessions ; **consommateur : page web `/reset-password`** (aucun écran mobile) |
+| `POST /api/v1/auth/change-password` | 204, 401 | Révoque les autres sessions ; **aucun appelant** au 3 septembre 2026 (ni mobile ni web) |
 | `GET /api/v1/auth/sessions` | 200 | Appareils connectés (`current` sur la session appelante) |
 | `DELETE /api/v1/auth/sessions/:id` | 204, 404 | Déconnexion d'un appareil |
 | `DELETE /api/v1/auth/sessions` | 204 | Déconnexion de tous les autres appareils |

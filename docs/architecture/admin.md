@@ -115,6 +115,46 @@ livré à l'Étape 7.
 | Statistiques | tableaux de bord d'usage : inscriptions, rétention, séances, revenus |
 | Modération (future) | signalements et contenus sociaux, une fois les fonctionnalités sociales livrées |
 
+## Pages publiques du produit (`src/app/(public)`)
+
+L'application héberge aussi les **pages web publiques** du produit, dans un
+groupe de routes Next.js `(public)` doté de sa propre mise en page
+(`layout.tsx` : en-tête sobre, pied de page avec les liens légaux, aucun lien
+vers `/login`, aucune coquille d'administration) :
+
+| Route | Contenu | Appel API |
+| --- | --- | --- |
+| `/reset-password?token=…` | formulaire nouveau mot de passe + confirmation, bornes du DTO (`PASSWORD_MIN_LENGTH` / `PASSWORD_MAX_LENGTH` de `@carlys/api-contracts`), états succès / lien expiré / saisie invalide / réseau | `POST /auth/reset-password` |
+| `/verify-email?token=…` | vérification lancée à l'ouverture, états vérifié / lien invalide / réseau (avec « Réessayer ») | `POST /auth/verify-email` |
+| `/abonnement/merci`, `/abonnement` | retours Stripe (succès / annulation), statiques | aucun |
+| `/privacy`, `/terms` | `docs/legal/privacy.md` et `terms.md` rendus au build (`force-static`) | aucun |
+
+Décisions :
+
+- **Transport partagé** : `lib/api-transport.ts` (URL `/api/v1`, en-têtes,
+  lecture du corps, enveloppe d'erreur → `ApiError`) sert au back-office
+  (`lib/admin-api.ts`, avec le jeton ; il ré-exporte `ApiError` sous son nom
+  historique `AdminApiError`) et aux pages publiques (`lib/public-api.ts`, qui
+  n'envoie **jamais** le jeton d'administration, même présent dans l'onglet).
+  Toujours aucun `fetch` dans un composant.
+- **Lecture de l'URL** (`useSearchParams`) dans un composant client sous
+  `Suspense` ; la page reste un composant serveur porteur des métadonnées.
+- **Vérification d'adresse par `useQuery`** (clé = jeton, `retry: false`,
+  `staleTime` infini) plutôt qu'un effet : un jeton est à usage unique et ne
+  doit être posté qu'une fois, même quand React monte deux fois le composant.
+- **Markdown sans dépendance** : `lib/markdown.ts` lit le sous-ensemble employé
+  par `docs/legal` (titres, paragraphes, listes, gras, liens) vers un arbre que
+  `components/markdown-document.tsx` rend en éléments React, jamais en HTML
+  injecté. Aucune bibliothèque Markdown n'existait dans le lockfile et le
+  besoin tient en une centaine de lignes testées.
+- **Fichiers légaux lus au build** depuis `docs/legal/`
+  (`lib/legal-documents.ts`, chemin relatif à `process.cwd()` = `apps/admin`) :
+  `.dockerignore` ré-inclut `docs/legal` et le `Dockerfile` le copie dans le
+  contexte de build ; le conteneur final n'en a pas besoin.
+- **Ton** : français, tutoiement, sans tiret cadratin dans les textes visibles
+  (vérifié par les tests des pages légales).
+- `PUBLIC_APP_URL` (API) désigne cette application, jamais l'API.
+
 ## Tests
 
 - `vitest.config.ts` : environnement `jsdom`, globals activés, alias `@ → src`,
