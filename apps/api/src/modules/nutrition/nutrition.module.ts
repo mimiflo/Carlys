@@ -9,7 +9,8 @@ import { NutritionController } from './presentation/http/nutrition.controller';
 @Module({
   controllers: [NutritionController, MealsController],
   providers: [NutritionService, NutritionRepository, MealsService, MealsRepository],
-  // Le coach lit les cibles métaboliques par ce service, jamais par Prisma.
-  exports: [NutritionService],
+  // Le coach lit les cibles métaboliques et le journal alimentaire par ces
+  // services, jamais par Prisma.
+  exports: [NutritionService, MealsService],
 })
 export class NutritionModule {}

@@ -34,6 +34,10 @@ describe('Prompt du coach', () => {
   it('le prompt énonce ce que le coach IGNORE', () => {
     // Sans ces bornes, le modèle comble les vides avec du plausible.
     expect(COACH_SYSTEM_PROMPT).toContain('journal alimentaire');
+    // Le journal alimentaire EXISTE (module nutrition) : le prompt ne doit
+    // plus affirmer le contraire, et doit nommer l'outil qui le lit.
+    expect(COACH_SYSTEM_PROMPT).not.toContain("n'a pas de journal alimentaire");
+    expect(COACH_SYSTEM_PROMPT).toContain('get_recent_meals');
     expect(COACH_SYSTEM_PROMPT).toContain('sommeil');
     expect(COACH_SYSTEM_PROMPT).toContain('professionnel de santé');
     expect(COACH_SYSTEM_PROMPT).toContain("N'invente jamais");

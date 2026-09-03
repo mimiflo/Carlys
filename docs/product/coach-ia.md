@@ -214,7 +214,8 @@ Prisma direct depuis le module coach pour les domaines voisins.
 | `get_personal_records` | Les records recalculés à la clôture |
 | `get_progress_overview` | Volume, assiduité, tendance sur une période |
 | `get_body_weight_trend` | Mesures corporelles |
-| `get_nutrition_targets` | Cibles du module métabolisme |
+| `get_nutrition_targets` | Cibles du module métabolisme (des objectifs, jamais le consommé) |
+| `get_recent_meals` | Le journal alimentaire : repas notés sur les N derniers jours (1 par défaut, 7 au plus), en instants UTC |
 | `propose_session` | **Seul outil « d'écriture »** — n'écrit rien, produit une proposition |
 
 Chaque description dit **quand** appeler l'outil, pas seulement ce qu'il fait :

@@ -2,6 +2,7 @@ import { type ProgressPeriod } from '@carlys/api-contracts';
 import { Injectable } from '@nestjs/common';
 import { BodyMetricType } from '@prisma/client';
 import { ExercisesService } from '../../exercises/application/exercises.service';
+import { MealsService } from '../../nutrition/application/meals.service';
 import { NutritionService } from '../../nutrition/application/nutrition.service';
 import { ProgressService } from '../../progress/application/progress.service';
 import { WorkoutsService } from '../../workout_sessions/application/workouts.service';
@@ -25,6 +26,11 @@ import {
 export const PROPOSE_SESSION_TOOL = 'propose_session';
 
 const DEFAULT_LIMIT = 10;
+const MAX_LIMIT = 30;
+/** Fenêtre du journal alimentaire : la veille par défaut, une semaine au plus. */
+const DEFAULT_MEAL_DAYS = 1;
+const MAX_MEAL_DAYS = 7;
+const DAY_MS = 86_400_000;
 
 export const COACH_TOOLS: CoachToolDefinition[] = [
   {
@@ -103,9 +109,26 @@ export const COACH_TOOLS: CoachToolDefinition[] = [
     name: 'get_nutrition_targets',
     description:
       'Les cibles caloriques et de macros calculées par l’application. ATTENTION : ' +
-      'ce sont des OBJECTIFS, pas ce qui a été mangé — l’application n’a pas de ' +
-      'journal alimentaire, ne prétends jamais connaître les apports réels.',
+      'ce sont des OBJECTIFS, pas ce qui a été mangé. Pour les apports réels, ' +
+      'appelle get_recent_meals : tu ne connais que ce qui y est noté.',
     inputSchema: { type: 'object', properties: {} },
+  },
+  {
+    name: 'get_recent_meals',
+    description:
+      'Le journal alimentaire : les repas notés par l’utilisateur sur les derniers ' +
+      'jours (nom, kcal, protéines, instant UTC). Appelle-le quand la question ' +
+      'touche à ce qu’il mange réellement. Un journal vide ne prouve pas qu’il ' +
+      'n’a rien mangé : seulement qu’il n’a rien noté.',
+    inputSchema: {
+      type: 'object',
+      properties: {
+        days: {
+          type: 'integer',
+          description: 'Nombre de jours en arrière (défaut 1, maximum 7).',
+        },
+      },
+    },
   },
   {
     name: PROPOSE_SESSION_TOOL,
@@ -151,6 +174,7 @@ export class CoachTools {
     private readonly workouts: WorkoutsService,
     private readonly progress: ProgressService,
     private readonly nutrition: NutritionService,
+    private readonly meals: MealsService,
   ) {}
 
   async run(userId: string, calls: CoachToolCall[]): Promise<CoachToolResult[]> {
@@ -190,7 +214,10 @@ export class CoachTools {
         return this.templates.templateDetail(userId, asString(input.templateId) ?? '');
 
       case 'get_recent_sessions':
-        return this.workouts.listSessions(userId, asLimit(input.limit));
+        return this.workouts.listSessions(
+          userId,
+          asBoundedInteger(input.limit, DEFAULT_LIMIT, MAX_LIMIT),
+        );
 
       case 'get_personal_records':
         return this.progress.records(userId);
@@ -204,6 +231,14 @@ export class CoachTools {
       case 'get_nutrition_targets':
         return this.nutrition.metabolismReport(userId);
 
+      case 'get_recent_meals': {
+        // Des INSTANTS UTC : le découpage en journées appartient au client,
+        // le coach reçoit une fenêtre glissante qui se termine maintenant.
+        const to = new Date();
+        const days = asBoundedInteger(input.days, DEFAULT_MEAL_DAYS, MAX_MEAL_DAYS);
+        return this.meals.list(userId, new Date(to.getTime() - days * DAY_MS), to);
+      }
+
       default:
         throw new Error(`Outil inconnu : ${call.name}`);
     }
@@ -214,11 +249,12 @@ function asString(value: unknown): string | undefined {
   return typeof value === 'string' && value.trim().length > 0 ? value.trim() : undefined;
 }
 
-function asLimit(value: unknown): number {
+/** Entier borné à [1, max] ; tout ce qui n'en est pas un retombe sur le défaut. */
+function asBoundedInteger(value: unknown, fallback: number, max: number): number {
   if (typeof value !== 'number' || !Number.isInteger(value)) {
-    return DEFAULT_LIMIT;
+    return fallback;
   }
-  return Math.min(Math.max(value, 1), 30);
+  return Math.min(Math.max(value, 1), max);
 }
 
 const PERIODS = ['week', 'month', 'year'] as const;
