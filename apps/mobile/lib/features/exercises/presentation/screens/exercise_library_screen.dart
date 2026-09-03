@@ -124,7 +124,7 @@ class _ExerciseLibraryScreenState extends ConsumerState<ExerciseLibraryScreen> {
                       ),
                       error: (error, _) => AppErrorState(
                         title: 'Impossible de charger la bibliothèque',
-                        message: 'Vérifiez votre connexion puis réessayez.',
+                        message: AppErrorState.retryConnectionMessage,
                         onRetry: () =>
                             ref.invalidate(exerciseLibraryControllerProvider),
                       ),

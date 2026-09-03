@@ -129,7 +129,7 @@ class _MonthView extends StatelessWidget {
         if (stats.entries.isEmpty)
           const AppEmptyState(
             title: 'Aucune séance ce mois-ci',
-            message: 'Choisissez un autre mois avec l’icône calendrier.',
+            message: 'Choisis un autre mois avec l’icône calendrier.',
             icon: AppIcons.history,
           )
         else

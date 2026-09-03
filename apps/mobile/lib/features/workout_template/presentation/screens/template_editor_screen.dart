@@ -138,7 +138,7 @@ class _TemplateEditorScreenState extends ConsumerState<TemplateEditorScreen> {
       builder: (dialogContext) => AlertDialog(
         title: const Text('Abandonner les modifications ?'),
         content: const Text(
-          'Ce modèle n’a pas été enregistré : vos réglages seront perdus.',
+          'Ce modèle n’a pas été enregistré : tes réglages seront perdus.',
         ),
         actions: [
           TextButton(

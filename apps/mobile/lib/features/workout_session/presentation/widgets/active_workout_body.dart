@@ -81,8 +81,8 @@ class _ActiveWorkoutBodyState extends ConsumerState<ActiveWorkoutBody> {
           child: exercise == null
               ? AppEmptyState(
                   title: 'Aucun exercice',
-                  message: 'Choisissez un exercice pour saisir '
-                      'votre première série.',
+                  message: 'Choisis un exercice pour saisir '
+                      'ta première série.',
                   icon: AppIcons.workout,
                   actionLabel: 'Choisir un exercice',
                   onAction: _pickExercise,

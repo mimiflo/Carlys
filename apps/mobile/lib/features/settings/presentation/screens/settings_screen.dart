@@ -52,7 +52,7 @@ class SettingsScreen extends ConsumerWidget {
             const SizedBox(height: AppSpacing.gapTile),
             Text(
               'Carlys respecte la préférence système de réduction des '
-              'animations : activez-la dans les réglages de votre appareil '
+              'animations : active-la dans les réglages de ton appareil '
               'pour figer les animations décoratives.',
               style: AppTypography.body.copyWith(
                 color: AppColors.darkTextTertiary,

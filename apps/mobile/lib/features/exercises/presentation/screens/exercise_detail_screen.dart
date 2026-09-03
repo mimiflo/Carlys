@@ -38,7 +38,7 @@ class ExerciseDetailScreen extends ConsumerWidget {
                 ? const _PremiumRequiredState()
                 : AppErrorState(
                     title: 'Exercice indisponible',
-                    message: 'Vérifiez votre connexion puis réessayez.',
+                    message: AppErrorState.retryConnectionMessage,
                     onRetry: () =>
                         ref.invalidate(exerciseDetailProvider(idOrSlug)),
                   ),

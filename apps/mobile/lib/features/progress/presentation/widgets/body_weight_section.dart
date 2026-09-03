@@ -40,7 +40,7 @@ class BodyWeightSection extends ConsumerWidget {
           loading: () => const AppLoadingIndicator(label: 'Chargement'),
           error: (_, __) => AppErrorState(
             title: 'Mesures indisponibles',
-            message: 'Vérifiez votre connexion puis réessayez.',
+            message: AppErrorState.retryConnectionMessage,
             onRetry: () => ref.invalidate(bodyWeightMetricsProvider),
           ),
           data: (entries) => _BodyWeightContent(entries: entries),
@@ -84,7 +84,7 @@ class _BodyWeightContent extends StatelessWidget {
     if (entries.isEmpty) {
       return const AppEmptyState(
         title: 'Aucune mesure enregistrée',
-        message: 'Ajoutez votre poids pour suivre son évolution.',
+        message: 'Ajoute ton poids pour suivre son évolution.',
         icon: AppIcons.bodyMetrics,
       );
     }

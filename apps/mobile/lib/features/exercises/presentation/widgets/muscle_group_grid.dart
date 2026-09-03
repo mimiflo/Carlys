@@ -29,7 +29,7 @@ class MuscleGroupGrid extends ConsumerWidget {
       loading: () => const AppLoadingIndicator(label: 'Chargement des groupes'),
       error: (error, _) => AppErrorState(
         title: 'Impossible de charger les groupes',
-        message: 'Vérifiez votre connexion puis réessayez.',
+        message: AppErrorState.retryConnectionMessage,
         onRetry: () => ref.invalidate(muscleGroupsProvider),
       ),
       data: (data) => GridView.count(

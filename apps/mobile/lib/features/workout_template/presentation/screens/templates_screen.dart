@@ -45,7 +45,7 @@ class TemplatesScreen extends ConsumerWidget {
                     const AppLoadingIndicator(label: 'Chargement des modèles'),
                 error: (_, __) => AppErrorState(
                   title: 'Modèles indisponibles',
-                  message: 'Vos modèles n’ont pas pu être lus sur l’appareil.',
+                  message: 'Tes modèles n’ont pas pu être lus sur l’appareil.',
                   onRetry: () => ref.invalidate(workoutTemplatesProvider),
                 ),
                 data: (list) => RefreshIndicator(
@@ -133,7 +133,7 @@ class TemplatesScreen extends ConsumerWidget {
       builder: (dialogContext) => AlertDialog(
         title: const Text('Une séance est en cours'),
         content: const Text(
-          'Terminez-la avant d’en lancer une autre.',
+          'Termine-la avant d’en lancer une autre.',
         ),
         actions: [
           TextButton(
@@ -168,8 +168,8 @@ class _EmptyList extends StatelessWidget {
             height: constraints.maxHeight,
             child: AppEmptyState(
               title: 'Aucun modèle',
-              message: 'Composez votre séance type une fois, '
-                  'relancez-la en un geste.',
+              message: 'Compose ta séance type une fois, '
+                  'relance-la en un geste.',
               icon: AppIcons.workout,
               actionLabel: 'Créer un modèle',
               onAction: onCreate,

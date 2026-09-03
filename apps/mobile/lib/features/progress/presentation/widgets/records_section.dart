@@ -33,7 +33,7 @@ class RecordsSection extends ConsumerWidget {
           const SizedBox(height: AppSpacing.sm),
           AppErrorState(
             title: 'Records indisponibles',
-            message: 'Vérifiez votre connexion puis réessayez.',
+            message: AppErrorState.retryConnectionMessage,
             onRetry: () => ref.invalidate(personalRecordsProvider),
           ),
         ],
@@ -73,7 +73,7 @@ class _RecordsList extends StatelessWidget {
         if (records.isEmpty)
           const AppEmptyState(
             title: 'Aucun record pour l’instant',
-            message: 'Terminez une séance pour décrocher vos premiers records.',
+            message: 'Termine une séance pour décrocher tes premiers records.',
             icon: AppIcons.record,
           )
         else

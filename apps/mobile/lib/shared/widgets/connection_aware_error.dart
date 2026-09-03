@@ -13,8 +13,8 @@ class ConnectionAwareError extends StatelessWidget {
   const ConnectionAwareError({
     required this.error,
     required this.title,
-    required this.message,
     required this.onRetry,
+    this.message = AppErrorState.retryConnectionMessage,
     this.offlineMessage,
     super.key,
   });
@@ -22,8 +22,12 @@ class ConnectionAwareError extends StatelessWidget {
   /// L'erreur reçue — un `NetworkException` bascule sur l'état hors ligne.
   final Object error;
 
-  /// Titre et message de l'échec GÉNÉRIQUE (serveur en panne, contrat…).
+  /// Titre de l'échec GÉNÉRIQUE (serveur en panne, contrat…).
   final String title;
+
+  /// Message de l'échec générique. Par défaut la phrase partagée du design
+  /// system, au même tutoiement que la branche hors ligne : un écran ne
+  /// change pas de registre selon la panne.
   final String message;
 
   /// Message hors ligne propre à la fonctionnalité (un défaut sinon).

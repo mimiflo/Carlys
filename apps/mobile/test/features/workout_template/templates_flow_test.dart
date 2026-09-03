@@ -110,7 +110,7 @@ void main() {
     expect(find.text('Aucun modèle'), findsOneWidget);
     expect(
       find.text(
-        'Composez votre séance type une fois, relancez-la en un geste.',
+        'Compose ta séance type une fois, relance-la en un geste.',
       ),
       findsOneWidget,
     );

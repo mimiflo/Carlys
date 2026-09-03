@@ -43,7 +43,7 @@ class ProgressScreen extends ConsumerWidget {
               ),
               error: (_, __) => AppErrorState(
                 title: 'Statistiques indisponibles',
-                message: 'Vérifiez votre connexion puis réessayez.',
+                message: AppErrorState.retryConnectionMessage,
                 onRetry: () => ref.invalidate(progressOverviewProvider),
               ),
               data: (data) => _OverviewBlock(overview: data),
@@ -83,7 +83,7 @@ class _OverviewBlock extends StatelessWidget {
         if (overview.points.isEmpty)
           const AppEmptyState(
             title: 'Aucune séance sur la période',
-            message: 'Terminez une séance pour voir votre volume ici.',
+            message: 'Termine une séance pour voir ton volume ici.',
             icon: AppIcons.progress,
           )
         else

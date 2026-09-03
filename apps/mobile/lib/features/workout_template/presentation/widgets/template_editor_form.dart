@@ -205,8 +205,8 @@ class _Identity extends StatelessWidget {
           Padding(
             padding: const EdgeInsets.only(bottom: AppSpacing.sm),
             child: Text(
-              'Aucun exercice pour l’instant. Ajoutez-en depuis le catalogue, '
-              'puis réglez les séries prévues.',
+              'Aucun exercice pour l’instant. Ajoutes-en depuis le catalogue, '
+              'puis règle les séries prévues.',
               style: AppTypography.body
                   .copyWith(color: AppColors.darkTextSecondary),
             ),

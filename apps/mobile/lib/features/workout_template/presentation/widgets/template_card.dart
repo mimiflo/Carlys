@@ -133,7 +133,7 @@ class TemplateCard extends StatelessWidget {
       builder: (dialogContext) => AlertDialog(
         title: Text('Supprimer « ${template.name} » ?'),
         content: const Text(
-          'Le modèle disparaît de vos programmes. Les séances déjà '
+          'Le modèle disparaît de tes programmes. Les séances déjà '
           'réalisées avec lui ne bougent pas.',
         ),
         actions: [

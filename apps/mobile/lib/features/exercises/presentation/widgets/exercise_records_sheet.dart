@@ -60,8 +60,8 @@ class _ExerciseRecordsSheet extends ConsumerWidget {
               if (records.isEmpty)
                 const AppEmptyState(
                   title: 'Aucun record sur ce mouvement',
-                  message: 'Terminez une série pour enregistrer '
-                      'votre premier record.',
+                  message: 'Termine une série pour enregistrer '
+                      'ton premier record.',
                   icon: AppIcons.record,
                 )
               else

@@ -15,6 +15,14 @@ class AppErrorState extends StatelessWidget {
     super.key,
   });
 
+  /// LA phrase d'un échec réseau ou serveur, partagée par tous les écrans
+  /// qui n'ont rien de plus précis à dire. Elle vit ici, une fois, au
+  /// tutoiement de l'application : recopiée dans sept écrans, elle avait
+  /// dérivé vers le vouvoiement pendant que le composant hors ligne, lui,
+  /// tutoyait.
+  static const String retryConnectionMessage =
+      'Vérifie ta connexion puis réessaie.';
+
   final String title;
   final String? message;
   final VoidCallback? onRetry;

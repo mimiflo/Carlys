@@ -105,8 +105,8 @@ class _MetabolicProfileFormState extends ConsumerState<MetabolicProfileForm> {
           SnackBar(
             content: Text(
               exception is NetworkException
-                  ? 'Serveur injoignable : réessayez une fois connecté.'
-                  : 'Enregistrement impossible. Vérifiez les valeurs saisies.',
+                  ? 'Serveur injoignable : réessaie une fois connecté.'
+                  : 'Enregistrement impossible. Vérifie les valeurs saisies.',
             ),
           ),
         );
@@ -210,7 +210,7 @@ class _MetabolicProfileFormState extends ConsumerState<MetabolicProfileForm> {
             AppCard(
               onTap: () => context.push(AppRoutes.progress),
               semanticLabel:
-                  'Poids manquant : ajoutez une mesure depuis Progression',
+                  'Poids manquant : ajoute une mesure depuis Progression',
               child: Row(
                 children: [
                   Icon(
@@ -220,8 +220,8 @@ class _MetabolicProfileFormState extends ConsumerState<MetabolicProfileForm> {
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: Text(
-                      'Votre poids vient de vos mesures corporelles : '
-                      'ajoutez-le depuis l’écran Progression.',
+                      'Ton poids vient de tes mesures corporelles : '
+                      'ajoute-le depuis l’écran Progression.',
                       style: theme.textTheme.bodySmall,
                     ),
                   ),

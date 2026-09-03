@@ -24,7 +24,7 @@ class ExerciseCatalogList extends ConsumerWidget {
     if (state.items.isEmpty) {
       return const AppEmptyState(
         title: 'Aucun exercice trouvé',
-        message: 'Essayez d’élargir votre recherche ou de retirer un filtre.',
+        message: 'Essaie d’élargir ta recherche ou de retirer un filtre.',
         icon: AppIcons.search,
       );
     }
