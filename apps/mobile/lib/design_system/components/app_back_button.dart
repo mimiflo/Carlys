@@ -2,10 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../colors/app_colors.dart';
 import '../icons/app_icons.dart';
+import '../spacing/app_spacing.dart';
 
 /// Flèche de retour d'en-tête de page — LA même sur toutes les pages
-/// poussées (historique, profil, programmes, nutrition…), avec la géométrie
-/// de la maquette : icône 23, boîte tactile 44.
+/// poussées (historique, profil, programmes, nutrition…), avec l'icône de
+/// la maquette (23) dans la boîte tactile du design system.
 ///
 /// Elle dépile la navigation la plus proche (pile racine ou branche
 /// d'onglet) et DISPARAÎT quand il n'y a rien à dépiler — jamais de flèche
@@ -15,9 +16,9 @@ class AppBackButton extends StatelessWidget {
 
   final Color color;
 
-  /// Géométrie de la maquette : icônes 23, boîte tactile 44.
+  /// Icône de la maquette. La boîte tactile est [AppSpacing.touchTarget],
+  /// pas une taille propre à ce bouton.
   static const double _iconSize = 23;
-  static const double _tapSize = 44;
 
   @override
   Widget build(BuildContext context) {
@@ -28,8 +29,8 @@ class AppBackButton extends StatelessWidget {
       tooltip: 'Retour',
       padding: EdgeInsets.zero,
       constraints: const BoxConstraints.tightFor(
-        width: _tapSize,
-        height: _tapSize,
+        width: AppSpacing.touchTarget,
+        height: AppSpacing.touchTarget,
       ),
       onPressed: () => Navigator.of(context).maybePop(),
       icon: Icon(AppIcons.back, size: _iconSize, color: color),

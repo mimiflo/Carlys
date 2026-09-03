@@ -22,9 +22,10 @@ class OnboardingHeightCard extends StatelessWidget {
   static const double minHeightCm = 80;
   static const double maxHeightCm = 250;
 
-  /// Géométrie de la maquette : icône 24, boutons de réglage 28.
+  /// Géométrie de la maquette : icône 24. Les flèches de réglage, elles,
+  /// vivent dans la boîte tactile du design system : à 28 points, elles
+  /// tenaient tout juste au-dessus du plancher WCAG.
   static const double _iconSize = 24;
-  static const double _stepSize = 28;
   static const double _selectedBorderWidth = 1.5;
 
   void _shift(double delta) {
@@ -77,7 +78,6 @@ class OnboardingHeightCard extends StatelessWidget {
           _StepButton(
             icon: AppIcons.minus,
             label: 'Diminuer la taille',
-            size: _stepSize,
             onTap: () => _shift(-1),
           ),
           Semantics(
@@ -92,7 +92,6 @@ class OnboardingHeightCard extends StatelessWidget {
           _StepButton(
             icon: AppIcons.add,
             label: 'Augmenter la taille',
-            size: _stepSize,
             onTap: () => _shift(1),
           ),
         ],
@@ -101,17 +100,16 @@ class OnboardingHeightCard extends StatelessWidget {
   }
 }
 
+/// Flèche de réglage : un glyphe de 16 au centre de la boîte tactile.
 class _StepButton extends StatelessWidget {
   const _StepButton({
     required this.icon,
     required this.label,
-    required this.size,
     required this.onTap,
   });
 
   final IconData icon;
   final String label;
-  final double size;
   final VoidCallback onTap;
 
   @override
@@ -122,13 +120,14 @@ class _StepButton extends StatelessWidget {
       child: GestureDetector(
         behavior: HitTestBehavior.opaque,
         onTap: onTap,
-        child: SizedBox(
-          width: size,
-          height: size,
-          child: Icon(
-            icon,
-            size: AppSpacing.md,
-            color: AppColors.darkTextSecondary,
+        child: SizedBox.square(
+          dimension: AppSpacing.touchTarget,
+          child: Center(
+            child: Icon(
+              icon,
+              size: AppSpacing.md,
+              color: AppColors.darkTextSecondary,
+            ),
           ),
         ),
       ),

@@ -24,9 +24,12 @@ class SetStepperField extends StatelessWidget {
   /// `null` quand la borne basse est atteinte.
   final VoidCallback? onDecrement;
 
-  /// Géométrie de la maquette : icônes 20, boîte tactile 32, champ ~48.
+  /// Géométrie de la maquette : icônes 20, boîte VISUELLE 32, champ ~48.
+  /// La boîte n'est pas la cible : l'`IconButton` élargit sa zone tactile à
+  /// [AppSpacing.touchTarget] (`MaterialTapTargetSize.padded`), sans rien
+  /// changer au rendu.
   static const double _iconSize = 20;
-  static const double _tapSize = 32;
+  static const double _boxSize = 32;
 
   @override
   Widget build(BuildContext context) {
@@ -111,9 +114,10 @@ class _StepButton extends StatelessWidget {
       tooltip: tooltip,
       padding: EdgeInsets.zero,
       constraints: const BoxConstraints.tightFor(
-        width: SetStepperField._tapSize,
-        height: SetStepperField._tapSize,
+        width: SetStepperField._boxSize,
+        height: SetStepperField._boxSize,
       ),
+      style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.padded),
       onPressed: onPressed,
       icon: Icon(
         icon,

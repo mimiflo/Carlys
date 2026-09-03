@@ -25,8 +25,6 @@ class CoachComposer extends StatelessWidget {
   /// deux questions partent avant la première réponse.
   final bool isSending;
 
-  static const double _sendSize = 40;
-
   @override
   Widget build(BuildContext context) {
     if (isOffline) {
@@ -93,6 +91,10 @@ class _SendButton extends StatelessWidget {
 
   final VoidCallback? onPressed;
 
+  /// Diamètre du DISQUE, ce qui se voit. La zone qui répond au doigt est
+  /// [AppSpacing.touchTarget], centrée dessus.
+  static const double _discDiameter = 40;
+
   @override
   Widget build(BuildContext context) {
     final enabled = onPressed != null;
@@ -108,20 +110,26 @@ class _SendButton extends StatelessWidget {
       onTap: onPressed,
       child: ExcludeSemantics(
         child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
           onTap: onPressed,
-          child: Container(
-            width: CoachComposer._sendSize,
-            height: CoachComposer._sendSize,
-            decoration: BoxDecoration(
-              color: enabled
-                  ? AppColors.primary
-                  : AppColors.primary.withValues(alpha: 0.35),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(
-              AppIcons.send,
-              size: 20,
-              color: AppColors.neutral0,
+          child: SizedBox.square(
+            dimension: AppSpacing.touchTarget,
+            child: Center(
+              child: Container(
+                width: _discDiameter,
+                height: _discDiameter,
+                decoration: BoxDecoration(
+                  color: enabled
+                      ? AppColors.primary
+                      : AppColors.primary.withValues(alpha: 0.35),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(
+                  AppIcons.send,
+                  size: 20,
+                  color: AppColors.neutral0,
+                ),
+              ),
             ),
           ),
         ),

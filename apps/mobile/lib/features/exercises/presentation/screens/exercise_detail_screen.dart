@@ -45,9 +45,13 @@ class ExerciseDetailScreen extends ConsumerWidget {
             data: (exercise) => _ExerciseDetailBody(exercise: exercise),
           ),
           // Le retour reste accessible quel que soit l'état de la fiche.
+          // Sa boîte tactile déborde de l'ornement : on la recule d'autant
+          // pour que l'ornement tombe exactement sur la marge de la maquette.
           Positioned(
-            top: MediaQuery.paddingOf(context).top + _backButtonTop,
-            left: AppSpacing.gutter,
+            top: MediaQuery.paddingOf(context).top +
+                _backButtonTop -
+                ExerciseGlassButton.inset,
+            left: AppSpacing.gutter - ExerciseGlassButton.inset,
             child: ExerciseGlassButton(
               icon: AppIcons.back,
               semanticLabel: 'Revenir à la bibliothèque',

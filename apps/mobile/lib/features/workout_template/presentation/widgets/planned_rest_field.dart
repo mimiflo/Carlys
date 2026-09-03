@@ -80,9 +80,11 @@ class _StepButton extends StatelessWidget {
   final String tooltip;
   final VoidCallback? onPressed;
 
-  /// Géométrie : icône 18, boîte tactile 36.
+  /// Géométrie : icône 18, boîte VISUELLE 36. La boîte n'est pas la cible :
+  /// l'`IconButton` élargit sa zone tactile à [AppSpacing.touchTarget]
+  /// (`MaterialTapTargetSize.padded`), sans rien changer au rendu.
   static const double _iconSize = 18;
-  static const double _tapSize = 36;
+  static const double _boxSize = 36;
 
   @override
   Widget build(BuildContext context) {
@@ -90,9 +92,10 @@ class _StepButton extends StatelessWidget {
       tooltip: tooltip,
       padding: EdgeInsets.zero,
       constraints: const BoxConstraints.tightFor(
-        width: _tapSize,
-        height: _tapSize,
+        width: _boxSize,
+        height: _boxSize,
       ),
+      style: IconButton.styleFrom(tapTargetSize: MaterialTapTargetSize.padded),
       onPressed: onPressed,
       icon: Icon(
         icon,

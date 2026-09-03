@@ -98,6 +98,7 @@ void main() {
       'gapRow': AppSpacing.gapRow,
       'gapSection': AppSpacing.gapSection,
       'padCard': AppSpacing.padCard,
+      'touchTarget': AppSpacing.touchTarget,
     };
 
     test('chaque token a son reflet, au point près', () {
