@@ -5,8 +5,14 @@ import { useSearchParams } from 'next/navigation';
 import { PublicNotice } from '@/components/public-page';
 import { isNetworkFailure, publicApi, publicFailureMessage } from '@/lib/public-api';
 
+/**
+ * Un 401 vient d'un jeton inconnu, déjà consommé ou expiré. Aucune surface ne
+ * permet aujourd'hui de redemander un e-mail de vérification : la page ne
+ * promet donc que ce qui existe, et rassure sur le cas le plus fréquent (le
+ * même lien ouvert deux fois).
+ */
 const FAILURE_BY_STATUS = {
-  401: 'Ce lien n’est plus valable : il a déjà servi ou il a expiré. Demande un nouvel e-mail de vérification depuis l’application.',
+  401: 'Ce lien n’est plus valable : il a déjà servi ou il a expiré. Si tu avais déjà cliqué dessus, ton adresse est déjà vérifiée et tu n’as rien d’autre à faire.',
 } as const;
 
 /**
@@ -33,8 +39,7 @@ export function VerifyEmailStatus() {
   if (!hasToken) {
     return (
       <PublicNotice tone="error">
-        Ce lien est incomplet. Ouvre l’e-mail que tu as reçu et clique de nouveau sur son lien, ou
-        demande un nouvel e-mail depuis l’application.
+        Ce lien est incomplet. Ouvre l’e-mail que tu as reçu et clique de nouveau sur son lien.
       </PublicNotice>
     );
   }

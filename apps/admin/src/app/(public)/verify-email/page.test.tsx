@@ -55,7 +55,11 @@ describe('Page « Vérification de ton adresse e-mail »', () => {
 
     renderPage();
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(/ce lien n’est plus valable/i);
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(/ce lien n’est plus valable/i);
+    expect(alert).toHaveTextContent(/ton adresse est déjà vérifiée/i);
+    // Rien ne permet de redemander un e-mail de vérification : la page ne doit pas le promettre.
+    expect(alert).not.toHaveTextContent(/nouvel e-mail/i);
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole('button', { name: /réessayer/i })).toBeNull();
   });
@@ -85,7 +89,10 @@ describe('Page « Vérification de ton adresse e-mail »', () => {
 
     renderPage();
 
-    expect(screen.getByRole('alert')).toHaveTextContent(/ce lien est incomplet/i);
+    const alert = screen.getByRole('alert');
+    expect(alert).toHaveTextContent(/ce lien est incomplet/i);
+    expect(alert).toHaveTextContent(/clique de nouveau sur son lien/i);
+    expect(alert).not.toHaveTextContent(/nouvel e-mail/i);
     expect(fetchMock).not.toHaveBeenCalled();
   });
 });
