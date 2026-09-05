@@ -1,6 +1,7 @@
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/carlys_profile/domain/entities/carlys_profile.dart';
 import 'package:carlys_mobile/features/carlys_profile/presentation/widgets/carlys_profile_card.dart';
+import 'package:carlys_mobile/features/carlys_profile/presentation/widgets/profile_illustration.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -41,7 +42,7 @@ void main() {
       expect(provider, isA<ResizeImage>());
       expect(
         (provider as ResizeImage).width,
-        (CarlysProfileCard.imageWidth * 3).round(),
+        (ProfileIllustration.imageWidth * 3).round(),
       );
     }
   });
