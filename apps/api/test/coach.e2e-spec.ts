@@ -383,6 +383,49 @@ describe('Coach IA (e2e)', () => {
     expect(conversation.messages).toHaveLength(2);
   });
 
+  it('rejouer le même message dans SON fil rend la même réponse : ni tour de quota, ni appel au modèle', async () => {
+    await grantCoaching();
+    await resetQuota();
+    nextOutput = textOnly('Première réponse.');
+    const conversationId = randomUUID();
+    await authed(accessToken)
+      .post('/api/v1/coach/conversations')
+      .send({ id: conversationId })
+      .expect(201);
+    const messageId = randomUUID();
+    const send = (content: string) =>
+      authed(accessToken)
+        .post(`/api/v1/coach/conversations/${conversationId}/messages`)
+        .send({ id: messageId, content });
+
+    const first = data<CoachReply>(
+      (await send('Combien de séances cette semaine ?').expect(201)).body,
+    );
+
+    // Si le modèle était rappelé, c'est CETTE réponse-ci qui partirait.
+    nextOutput = textOnly('Seconde réponse, qui ne doit jamais exister.');
+    lastInput = undefined;
+    const replayed = data<CoachReply>(
+      (await send('Combien de séances cette semaine ?').expect(201)).body,
+    );
+
+    expect(replayed.userMessage.id).toBe(messageId);
+    expect(replayed.assistantMessage.id).toBe(first.assistantMessage.id);
+    expect(replayed.assistantMessage.content).toBe('Première réponse.');
+    expect(lastInput).toBeUndefined();
+    expect(await consumedToday(userId)).toBe(1);
+    const conversation = data<CoachConversation>(
+      (await authed(accessToken).get(`/api/v1/coach/conversations/${conversationId}`).expect(200))
+        .body,
+    );
+    expect(conversation.messages).toHaveLength(2);
+
+    // Même identifiant, autre contenu : collision, refusée sans tour ni appel.
+    await send('Une autre question.').expect(409);
+    expect(await consumedToday(userId)).toBe(1);
+    expect(lastInput).toBeUndefined();
+  });
+
   it('au-delà du plafond quotidien, l’envoi est refusé (429)', async () => {
     await grantCoaching();
     await resetQuota();

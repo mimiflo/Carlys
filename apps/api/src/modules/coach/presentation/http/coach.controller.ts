@@ -55,7 +55,14 @@ export class CoachController {
   }
 
   @Post('conversations/:id/messages')
-  @ApiOperation({ summary: 'Envoie un message et renvoie la réponse du coach' })
+  @ApiOperation({
+    summary: 'Envoie un message et renvoie la réponse du coach',
+    description:
+      'Identifiant de message fourni par l’appareil, rejouable dans SON fil : ' +
+      'un message déjà répondu rend la même réponse, sans tour de quota ni ' +
+      'appel au modèle. Le même identifiant avec un autre contenu → 409 ; ' +
+      'un identifiant déjà porté par un autre fil, ou un fil d’autrui → 404.',
+  })
   send(
     @CurrentUser() user: AuthenticatedPrincipal,
     @Param('id', ParseUUIDPipe) id: string,

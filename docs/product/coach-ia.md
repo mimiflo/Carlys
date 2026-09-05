@@ -189,7 +189,7 @@ modèle ne touche qu'un fichier.
 | `GET` | `/api/v1/coach/conversations` | Liste des fils |
 | `POST` | `/api/v1/coach/conversations` | Création (UUID client, idempotent) |
 | `GET` | `/api/v1/coach/conversations/:id` | Fil + messages + propositions |
-| `POST` | `/api/v1/coach/conversations/:id/messages` | Envoi, renvoie la réponse |
+| `POST` | `/api/v1/coach/conversations/:id/messages` | Envoi, renvoie la réponse ; rejouable (même identifiant, même contenu → même réponse, sans tour ni appel au modèle) |
 | `POST` | `/api/v1/coach/proposals/:id/accepted` | Marque la proposition acceptée |
 
 L'acceptation **ne crée pas** la séance : l'app la crée par la route de séance
@@ -197,8 +197,10 @@ existante, puis signale l'acceptation. Un seul chemin d'écriture pour les
 séances, déjà idempotent et déjà testé.
 
 Enveloppes standard (`{ data, meta, requestId }`). Codes d'erreur utilisés :
-`FORBIDDEN` (droit absent), `RATE_LIMITED` (quota), `SERVICE_UNAVAILABLE`
-(fournisseur indisponible ou coach désactivé).
+`FORBIDDEN` (droit absent), `RATE_LIMITED` (quota), `CONFLICT` (même
+identifiant de message avec un autre contenu), `NOT_FOUND` (fil d'autrui, ou
+identifiant déjà porté par un autre fil), `SERVICE_UNAVAILABLE` (fournisseur
+indisponible ou coach désactivé).
 
 ## Les outils de lecture
 
