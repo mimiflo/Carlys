@@ -295,6 +295,13 @@ describe('Authentification (e2e)', () => {
       data: { heightCm: 180, sex: 'MALE', birthDate: new Date('1990-01-01T00:00:00Z') },
     });
 
+    // Les sessions portent ipAddress, userAgent et nom d'appareil : elles
+    // doivent partir avec le compte, refresh tokens compris (cascade).
+    const sessionIdsBefore = (
+      await prisma.userSession.findMany({ where: { userId: before.id }, select: { id: true } })
+    ).map((session) => session.id);
+    expect(sessionIdsBefore.length).toBeGreaterThan(0);
+
     await api()
       .delete('/api/v1/users/me')
       .set('Authorization', auth)
@@ -308,6 +315,8 @@ describe('Authentification (e2e)', () => {
       .expect(204);
 
     await api().post('/api/v1/auth/login').send({ email, password }).expect(401);
+    // Le jeton d'accès encore valide meurt avec sa session.
+    await api().get('/api/v1/users/me').set('Authorization', auth).expect(401);
 
     // La ligne supprimée ne porte plus l'adresse d'origine, ni rien qui identifie la personne.
     expect(await prisma.user.findUnique({ where: { email } })).toBeNull();
@@ -324,8 +333,25 @@ describe('Authentification (e2e)', () => {
     expect(deleted.profile?.sex).toBeNull();
     expect(deleted.profile?.birthDate).toBeNull();
     expect(deleted.deviceTokens).toHaveLength(0);
-    expect(deleted.sessions.length).toBeGreaterThan(0);
-    expect(deleted.sessions.every((session) => session.revokedAt !== null)).toBe(true);
+    // Plus une session, plus un refresh token : rien qui trace l'appareil.
+    expect(deleted.sessions).toHaveLength(0);
+    expect(
+      await prisma.refreshToken.count({ where: { sessionId: { in: sessionIdsBefore } } }),
+    ).toBe(0);
+
+    // L'audit, lui, reste : il porte sa PROPRE adresse pour l'enquête.
+    // L'écriture d'audit est volontairement non bloquante : on sonde.
+    let audited = null;
+    for (let attempt = 0; attempt < 20 && audited === null; attempt += 1) {
+      audited = await prisma.auditLog.findFirst({
+        where: { action: 'account.deleted', userId: before.id },
+      });
+      if (audited === null) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+    }
+    expect(audited).not.toBeNull();
+    expect(audited?.ipAddress).toBeTruthy();
   });
 
   it('après suppression, la même adresse se réinscrit (201) : un compte neuf, pas l’ancien', async () => {

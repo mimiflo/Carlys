@@ -95,38 +95,35 @@ export class SessionsRepository {
     ]);
   }
 
-  /**
-   * Révoque toutes les sessions actives d'un utilisateur (sauf exclusion).
-   *
-   * Avec `tx`, la révocation s'inscrit dans une transaction ouverte par
-   * l'appelant (la suppression de compte) ; sans, elle ouvre la sienne.
-   */
-  async revokeAllSessions(
-    userId: string,
-    reason: string,
-    exceptSessionId?: string,
-    tx?: Prisma.TransactionClient,
-  ): Promise<void> {
+  /** Révoque toutes les sessions actives d'un utilisateur (sauf exclusion). */
+  async revokeAllSessions(userId: string, reason: string, exceptSessionId?: string): Promise<void> {
     const where = {
       userId,
       revokedAt: null,
       ...(exceptSessionId === undefined ? {} : { id: { not: exceptSessionId } }),
     };
-    const revoke = async (client: Prisma.TransactionClient): Promise<void> => {
-      await client.refreshToken.updateMany({
+    await this.prisma.$transaction([
+      this.prisma.refreshToken.updateMany({
         where: { session: where, status: RefreshTokenStatus.ACTIVE },
         data: { status: RefreshTokenStatus.REVOKED },
-      });
-      await client.userSession.updateMany({
+      }),
+      this.prisma.userSession.updateMany({
         where,
         data: { revokedAt: new Date(), revokedReason: reason },
-      });
-    };
-    if (tx !== undefined) {
-      await revoke(tx);
-      return;
-    }
-    await this.prisma.$transaction(revoke);
+      }),
+    ]);
+  }
+
+  /**
+   * Supprime toutes les sessions d'un utilisateur — et, par cascade, leurs
+   * refresh tokens. Réservé à la suppression de compte : ipAddress,
+   * userAgent, deviceName et devicePlatform sont des données personnelles
+   * qui ne doivent pas survivre au compte sans échéance (le journal d'audit
+   * garde sa propre ipAddress pour l'enquête). `tx` : la suppression
+   * s'inscrit dans la transaction du compte, jamais seule.
+   */
+  async deleteAllSessions(userId: string, tx: Prisma.TransactionClient): Promise<void> {
+    await tx.userSession.deleteMany({ where: { userId } });
   }
 
   findSessionById(sessionId: string): Promise<UserSession | null> {

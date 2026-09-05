@@ -8,10 +8,13 @@ import { PasswordService } from './password.service';
 /**
  * Suppression de compte : action irréversible côté utilisateur.
  *
- * Exige le mot de passe, puis, dans UNE transaction : révoque toutes les
- * sessions, passe le compte DELETED, libère l'identité (adresse et code ami
- * tombaux, nom et profil personnel effacés) et supprime les jetons
- * d'appareil. L'adresse redevient disponible pour une nouvelle inscription.
+ * Exige le mot de passe, puis, dans UNE transaction : supprime les sessions
+ * et leurs refresh tokens (leurs ipAddress, userAgent et noms d'appareil
+ * sont des données personnelles qui ne doivent pas survivre au compte —
+ * l'audit garde sa propre ipAddress), passe le compte DELETED, libère
+ * l'identité (adresse et code ami tombaux, nom et profil personnel effacés)
+ * et supprime les jetons d'appareil. L'adresse redevient disponible pour
+ * une nouvelle inscription.
  *
  * La ligne User et l'historique d'activité (séances, records, journal
  * alimentaire, conversations coach) restent, sans plus rien qui identifie la
@@ -37,9 +40,7 @@ export class AccountService {
       throw new UnauthorizedException('Mot de passe incorrect.');
     }
 
-    await this.users.deleteAccount(userId, (tx) =>
-      this.sessions.revokeAllSessions(userId, 'account_deleted', undefined, tx),
-    );
+    await this.users.deleteAccount(userId, (tx) => this.sessions.deleteAllSessions(userId, tx));
     this.audit.record({ action: 'account.deleted', userId, ...client });
   }
 }

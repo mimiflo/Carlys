@@ -8,7 +8,7 @@ import { type PasswordService } from './password.service';
 
 interface Stubs {
   users: { findPasswordHash: jest.Mock; deleteAccount: jest.Mock };
-  sessions: { revokeAllSessions: jest.Mock };
+  sessions: { deleteAllSessions: jest.Mock };
   passwords: { verify: jest.Mock };
   audit: { record: jest.Mock };
 }
@@ -19,7 +19,7 @@ function buildStubs(): Stubs {
       findPasswordHash: jest.fn().mockResolvedValue('$argon2id$reel'),
       deleteAccount: jest.fn().mockResolvedValue(undefined),
     },
-    sessions: { revokeAllSessions: jest.fn().mockResolvedValue(undefined) },
+    sessions: { deleteAllSessions: jest.fn().mockResolvedValue(undefined) },
     passwords: { verify: jest.fn().mockResolvedValue(true) },
     audit: { record: jest.fn() },
   };
@@ -46,7 +46,7 @@ describe('AccountService', () => {
       UnauthorizedException,
     );
     expect(stubs.users.deleteAccount).not.toHaveBeenCalled();
-    expect(stubs.sessions.revokeAllSessions).not.toHaveBeenCalled();
+    expect(stubs.sessions.deleteAllSessions).not.toHaveBeenCalled();
     expect(stubs.audit.record).toHaveBeenCalledWith(
       expect.objectContaining({ action: 'account.delete_failed', userId: 'user-1' }),
     );
@@ -64,10 +64,10 @@ describe('AccountService', () => {
     expect(stubs.users.deleteAccount).not.toHaveBeenCalled();
   });
 
-  it('nominal : la révocation des sessions s’exécute DANS la transaction de suppression', async () => {
+  it('nominal : la suppression des sessions s’exécute DANS la transaction de suppression', async () => {
     const stubs = buildStubs();
     // Le dépôt des utilisateurs ouvre la transaction et confie son client à
-    // la révocation : c'est ce qui rend l'ensemble atomique.
+    // la suppression des sessions : c'est ce qui rend l'ensemble atomique.
     let within: ((tx: Prisma.TransactionClient) => Promise<void>) | undefined;
     stubs.users.deleteAccount.mockImplementation(
       (_userId: string, callback: (tx: Prisma.TransactionClient) => Promise<void>) => {
@@ -85,12 +85,7 @@ describe('AccountService', () => {
     }
     const tx = { marqueur: 'transaction' } as unknown as Prisma.TransactionClient;
     await within(tx);
-    expect(stubs.sessions.revokeAllSessions).toHaveBeenCalledWith(
-      'user-1',
-      'account_deleted',
-      undefined,
-      tx,
-    );
+    expect(stubs.sessions.deleteAllSessions).toHaveBeenCalledWith('user-1', tx);
     expect(stubs.audit.record).toHaveBeenCalledWith(
       expect.objectContaining({ action: 'account.deleted', userId: 'user-1' }),
     );

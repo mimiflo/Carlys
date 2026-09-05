@@ -191,18 +191,22 @@ vérifier.
 - **Export** des données personnelles à la demande de l'utilisateur.
 - **Suppression du compte à la demande — en place** (`DELETE /api/v1/users/me`,
   mot de passe exigé, `AccountService`). En **une transaction** : sessions
-  révoquées, compte passé `DELETED`, adresse réécrite en
-  `supprime+<id>@carlys.invalid` (l'adresse d'origine redevient disponible
+  **supprimées** avec leurs refresh tokens (elles portaient `ipAddress`,
+  `userAgent`, `deviceName` et `devicePlatform` — des données personnelles
+  qui ne survivent pas au compte), compte passé `DELETED`, adresse réécrite
+  en `supprime+<id>@carlys.invalid` (l'adresse d'origine redevient disponible
   pour une nouvelle inscription), code ami réécrit hors alphabet (plus aucun
   scan ni saisie ne le résout), `displayName`, `birthDate`, `sex` et
   `heightCm` effacés, jetons d'appareil supprimés. **Conservé, et pourquoi** :
   la ligne `User` avec son identifiant (cité par le journal d'audit, qui
-  doit rester lisible), la crédential (un lien de réinitialisation encore
-  valide ne doit pas produire une erreur serveur), et l'historique
-  d'activité (séances, séries, records, mesures, journal alimentaire,
-  conversations coach) rattaché à cet identifiant, qui ne porte plus rien
-  qui identifie la personne. **Non fait** : aucune purge différée de cet
-  historique n'existe encore (pas de travail de fond dans l'API).
+  doit rester lisible — l'audit garde sa **propre** `ipAddress` par
+  événement, y compris celui de la suppression, pour l'enquête), la
+  crédential (un lien de réinitialisation encore valide ne doit pas produire
+  une erreur serveur), et l'historique d'activité (séances, séries, records,
+  mesures, journal alimentaire, conversations coach) rattaché à cet
+  identifiant, qui ne porte plus rien qui identifie la personne. **Non
+  fait** : aucune purge différée de cet historique n'existe encore (pas de
+  travail de fond dans l'API).
 - **Rétention limitée des logs** applicatifs.
 - **Chiffrement en transit** (TLS) sur tous les environnements distants.
 - **Audit des accès administrateurs** (Étape 7 : rôles, permissions, journal

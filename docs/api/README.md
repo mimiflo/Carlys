@@ -238,7 +238,7 @@ celle de l'API. Voir [`docs/architecture/admin.md`](../architecture/admin.md).
 | `DELETE /api/v1/auth/sessions` | 204 | Déconnexion de tous les autres appareils |
 | `GET /api/v1/users/me` | 200, 401 | Profil de l'utilisateur connecté |
 | `PATCH /api/v1/users/me` | 200, 400 | `displayName`, `locale`, `timezone` |
-| `DELETE /api/v1/users/me` | 204, 401 | Mot de passe requis ; en une transaction : révocation totale, compte `DELETED`, adresse et code ami réécrits en valeurs tombales, profil personnel effacé, jetons d'appareil supprimés. L'adresse redevient disponible pour une nouvelle inscription |
+| `DELETE /api/v1/users/me` | 204, 401 | Mot de passe requis ; en une transaction : sessions supprimées avec leurs refresh tokens (adresse IP, user-agent et nom d'appareil partent avec le compte), compte `DELETED`, adresse et code ami réécrits en valeurs tombales, profil personnel effacé, jetons d'appareil supprimés. L'adresse redevient disponible pour une nouvelle inscription |
 
 ### Endpoints livrés — modèles de séance (Étape 4)
 

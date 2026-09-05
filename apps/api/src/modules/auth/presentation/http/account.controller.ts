@@ -26,7 +26,16 @@ export class AccountController {
 
   @Delete('me')
   @HttpCode(HttpStatus.NO_CONTENT)
-  @ApiOperation({ summary: 'Suppression du compte (mot de passe requis, sessions révoquées)' })
+  @ApiOperation({
+    summary: 'Suppression du compte (mot de passe requis, identité libérée)',
+    description:
+      'En une transaction : sessions révoquées et supprimées avec leurs ' +
+      'refresh tokens, compte passé DELETED, adresse et code ami réécrits en ' +
+      'valeurs tombales, profil personnel effacé (nom, naissance, sexe, ' +
+      'taille), jetons d’appareil supprimés. L’adresse redevient disponible ' +
+      'pour une nouvelle inscription. L’historique d’activité anonyme reste ' +
+      '(détail dans SECURITY.md).',
+  })
   async deleteAccount(
     @CurrentUser() user: AuthenticatedPrincipal,
     @Body() dto: DeleteAccountDto,

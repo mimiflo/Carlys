@@ -106,8 +106,8 @@ export class UsersRepository {
    * son identité est libérée (adresse et code ami tombaux, nom et profil
    * personnel effacés), ses jetons d'appareil disparaissent. `within` tourne
    * dans la même transaction : c'est la place de ce qui appartient à un autre
-   * domaine (la révocation des sessions), pour qu'aucun état intermédiaire ne
-   * survive à un échec.
+   * domaine (la suppression des sessions et de leurs refresh tokens), pour
+   * qu'aucun état intermédiaire ne survive à un échec.
    *
    * La ligne reste : l'identifiant est cité par l'audit et par l'historique
    * agrégé (séances, records, journal alimentaire), qui ne portent plus rien

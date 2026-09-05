@@ -28,10 +28,12 @@
 >   du compte, sans rien révéler de son existence ni de son état
 >   (`admin.login_blocked_lockout` dans l'audit).
 > - **Suppression de compte** (`DELETE /users/me`) : en une transaction,
->   sessions révoquées, compte `DELETED`, adresse et code ami réécrits en
->   valeurs tombales, profil personnel effacé, jetons d'appareil supprimés ;
->   l'adresse d'origine est de nouveau disponible pour une inscription
->   (détail et données conservées : `SECURITY.md`).
+>   sessions supprimées avec leurs refresh tokens (leurs adresse IP,
+>   user-agent et nom d'appareil partent avec le compte), compte `DELETED`,
+>   adresse et code ami réécrits en valeurs tombales, profil personnel
+>   effacé, jetons d'appareil supprimés ; l'adresse d'origine est de nouveau
+>   disponible pour une inscription (détail et données conservées :
+>   `SECURITY.md`).
 > - **Restent à venir** : OAuth Apple/Google (modèle `ExternalIdentity` et
 >   contrainte d'unicité déjà en place), 2FA, purge différée de l'historique
 >   d'activité des comptes supprimés.
