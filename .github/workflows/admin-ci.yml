@@ -5,6 +5,8 @@ on:
     paths:
       - 'apps/admin/**'
       - 'packages/**'
+      # Les pages /privacy et /terms rendent ces fichiers au build et les tests les lisent.
+      - 'docs/legal/**'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
       - '.github/workflows/admin-ci.yml'
@@ -13,6 +15,7 @@ on:
     paths:
       - 'apps/admin/**'
       - 'packages/**'
+      - 'docs/legal/**'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
       - '.github/workflows/admin-ci.yml'
