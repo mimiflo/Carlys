@@ -3,9 +3,6 @@ process.env.LOG_LEVEL = 'silent';
 process.env.DATABASE_URL ??= 'postgresql://carlys:carlys@localhost:5432/carlys_test';
 process.env.REDIS_URL ??= 'redis://localhost:6379';
 process.env.JWT_ACCESS_SECRET ??= 'secret-e2e-uniquement-32-caracteres-minimum';
-// Seuil minimal du schéma : le verrouillage se prouve en peu de requêtes, sous
-// le throttle strict (10 / 60 s) de la route de connexion admin.
-process.env.AUTH_MAX_LOGIN_ATTEMPTS ??= '3';
 
 import {
   ADMIN_PERMISSIONS,
@@ -15,7 +12,6 @@ import {
   type AdminLoginResult,
   type AdminMe,
   type AdminOverview,
-  type ApiErrorEnvelope,
   type ApiSuccessEnvelope,
   type AuthResult,
   type EntitlementsResponse,
@@ -41,6 +37,12 @@ const ADMIN_PASSWORD = 'MotDePasseAdmin42!';
  * Administration : comptes SÉPARÉS, RBAC par permission, audit systématique.
  * La suspension révoque les sessions ; les jetons admin et mobiles ne sont
  * jamais interchangeables.
+ *
+ * Budget de connexions : POST /admin/auth/login porte un throttle strict de
+ * 10 requêtes / 60 s par adresse, et cette suite en fait 4 (1 échec,
+ * 2 succès, 1 refus après désactivation). Le scénario de verrouillage, qui
+ * consomme AUTH_MAX_LOGIN_ATTEMPTS + 2 connexions à lui seul, vit dans sa
+ * propre application : admin-lockout.e2e-spec.ts.
  */
 describe('Administration (e2e)', () => {
   let app: INestApplication<App>;
@@ -51,7 +53,6 @@ describe('Administration (e2e)', () => {
   let memberId: string;
   const superEmail = `e2e-admin-super-${randomUUID()}@carlys.test`;
   const supportEmail = `e2e-admin-support-${randomUUID()}@carlys.test`;
-  const lockedEmail = `e2e-admin-verrou-${randomUUID()}@carlys.test`;
   const memberEmail = `e2e-admin-membre-${randomUUID()}@carlys.test`;
   const witnessEmail = `e2e-admin-temoin-${randomUUID()}@carlys.test`;
   let witnessToken: string;
@@ -59,7 +60,6 @@ describe('Administration (e2e)', () => {
   let freeExerciseId: string;
 
   const data = <T>(body: unknown): T => (body as ApiSuccessEnvelope<T>).data;
-  const errorOf = (body: unknown): ApiErrorEnvelope['error'] => (body as ApiErrorEnvelope).error;
 
   const server = () => request(app.getHttpServer());
   const asAdmin = (token: string) => ({
@@ -118,11 +118,6 @@ describe('Administration (e2e)', () => {
         data: { adminUserId: admin.id, roleId: role.id },
       });
     }
-    // Compte sacrifié au verrouillage : ses échecs ne doivent gêner personne d'autre.
-    await prisma.adminUser.create({
-      data: { email: lockedEmail, displayName: 'Admin verrouillé E2E', passwordHash },
-    });
-
     const register = async (email: string) => {
       const response = await server()
         .post('/api/v1/auth/register')
@@ -144,14 +139,14 @@ describe('Administration (e2e)', () => {
   afterAll(async () => {
     // Nettoyage strictement limité à cette suite (les e2e partagent la base).
     await prisma.auditLog.deleteMany({
-      where: { adminUser: { email: { in: [superEmail, supportEmail, lockedEmail] } } },
+      where: { adminUser: { email: { in: [superEmail, supportEmail] } } },
     });
     await prisma.adminUser.deleteMany({
-      where: { email: { in: [superEmail, supportEmail, lockedEmail] } },
+      where: { email: { in: [superEmail, supportEmail] } },
     });
     // Le compteur de verrouillage vit dans Redis : on ne laisse pas de clé derrière soi.
     const redis = new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379');
-    await redis.del(`auth:lockout:admin:${lockedEmail}`, `auth:lockout:admin:${supportEmail}`);
+    await redis.del(`auth:lockout:admin:${supportEmail}`);
     await redis.quit();
     await prisma.user.deleteMany({ where: { email: { in: [memberEmail, witnessEmail] } } });
     await prisma.exercise.deleteMany({ where: { slug: 'e2e-admin-moderation' } });
@@ -190,31 +185,6 @@ describe('Administration (e2e)', () => {
       (await asAdmin(superToken).get('/api/v1/admin/auth/me').expect(200)).body,
     );
     expect(me.email).toBe(superEmail);
-  });
-
-  it('verrouillage : après N échecs, la connexion admin est refusée (429) même avec le bon mot de passe', async () => {
-    // Même politique que la connexion mobile (LockoutService), compteur distinct.
-    const attempts = Number.parseInt(process.env.AUTH_MAX_LOGIN_ATTEMPTS ?? '5', 10);
-    for (let failed = 0; failed < attempts; failed += 1) {
-      await server()
-        .post('/api/v1/admin/auth/login')
-        .send({ email: lockedEmail, password: 'MauvaisMotDePasse1!' })
-        .expect(401);
-    }
-
-    const blocked = await server()
-      .post('/api/v1/admin/auth/login')
-      .send({ email: lockedEmail, password: ADMIN_PASSWORD })
-      .expect(429);
-    // Même code que la limitation de débit, et rien sur l'état du compte.
-    expect(errorOf(blocked.body).code).toBe('RATE_LIMITED');
-    expect(errorOf(blocked.body).message).not.toMatch(/verrouill|compte/i);
-
-    // Le compteur est PROPRE au back-office : les autres comptes admin se connectent toujours.
-    await server()
-      .post('/api/v1/admin/auth/login')
-      .send({ email: supportEmail, password: ADMIN_PASSWORD })
-      .expect(200);
   });
 
   it('les jetons mobiles et admin ne sont JAMAIS interchangeables', async () => {
