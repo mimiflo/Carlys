@@ -18,6 +18,15 @@ l'app.
 
 ## Décision
 
+> **Mise à jour (5 septembre 2026)** — `sqlite3_flutter_libs` a été retiré des
+> dépendances. Depuis drift 2.32 (paquet `sqlite3` 3.x), la bibliothèque
+> SQLite native est fournie par le hook de build de `package:sqlite3` lui-même
+> (Android, iOS, tests) ; le paquet amont est en fin de vie (dernière version
+> `0.6.0+eol`, vide) et faisait doublon dans l'APK. `drift_flutter` n'a pas été
+> adopté : il dépend encore de ce paquet vide et ne ferait que ce que
+> `app_database.dart` fait déjà (`path_provider` +
+> `NativeDatabase.createInBackground`). La décision Drift reste entière.
+
 La persistance locale de l'application Flutter repose sur **Drift**
 (`drift` + `drift_dev` + `sqlite3_flutter_libs`), une couche typée et réactive
 au-dessus de **SQLite**.

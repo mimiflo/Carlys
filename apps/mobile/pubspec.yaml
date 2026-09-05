@@ -22,9 +22,18 @@ dependencies:
   dio: ^5.7.0
   connectivity_plus: ^6.1.1
 
-  # Base locale (offline-first)
+  # Base locale (offline-first).
+  #
+  # Pas de `sqlite3_flutter_libs` : depuis drift 2.32 (paquet `sqlite3` 3.x),
+  # la bibliothèque SQLite native est fournie par le hook de build de
+  # `package:sqlite3` lui-même, sur Android, iOS et en tests (bibliothèque
+  # précompilée, téléchargée et vérifiée par empreinte). Le paquet
+  # `sqlite3_flutter_libs` est en fin de vie (sa dernière version, 0.6.0+eol,
+  # est vide) et, gardé, il livrait une SECONDE copie de SQLite dans l'APK.
+  # `drift_flutter` n'est pas adopté non plus : il dépend encore de ce paquet
+  # vide et n'apporte que `driftDatabase()`, ce que `app_database.dart` fait
+  # déjà avec `path_provider` et `NativeDatabase.createInBackground`.
   drift: ^2.34.3
-  sqlite3_flutter_libs: ^0.5.28
   path_provider: ^2.1.5
   path: ^1.9.0
 

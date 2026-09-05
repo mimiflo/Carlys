@@ -29,9 +29,9 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      # SQLite natif requis par les tests Drift (NativeDatabase).
-      - name: Dépendances système
-        run: sudo apt-get update && sudo apt-get install -y libsqlite3-dev
+      # Aucune libsqlite3 système à installer : depuis sqlite3 3.x (drift
+      # 2.32+), le hook de build de `package:sqlite3` télécharge sa propre
+      # bibliothèque et la préfère à celle de l'OS — tests compris.
 
       - uses: subosito/flutter-action@v2
         with:
