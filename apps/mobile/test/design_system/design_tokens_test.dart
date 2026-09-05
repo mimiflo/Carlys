@@ -81,6 +81,16 @@ void main() {
         expect(builder.reverseTransitionDuration, AppMotion.route);
       }
     });
+
+    test('deux thèmes identiques portent le même thème de transitions', () {
+      // Sans égalité de valeur sur les bâtisseurs, deux AppTheme.dark() ne
+      // sont jamais égaux et MaterialApp anime une transition de thème à
+      // chaque reconstruction, entre deux thèmes pourtant identiques.
+      expect(
+        AppTheme.dark().pageTransitionsTheme,
+        AppTheme.dark().pageTransitionsTheme,
+      );
+    });
   });
 
   group('spacing ↔ AppSpacing', () {
