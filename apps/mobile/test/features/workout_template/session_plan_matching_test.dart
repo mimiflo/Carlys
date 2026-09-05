@@ -61,60 +61,64 @@ void main() {
     return templates.startFromTemplate(templateId);
   }
 
-  test('faire moins de répétitions que prévu honore quand même la série',
-      () async {
-    final sessionId = await startPush();
+  test(
+    'faire moins de répétitions que prévu honore quand même la série',
+    () async {
+      final sessionId = await startPush();
 
-    final recorded = await recordSet(
-      AddSetInput(
-        sessionId: sessionId,
-        exerciseId: 'exo-dc',
-        exerciseName: 'Développé couché',
-        reps: 7, // 7 au lieu de 8 : une bonne séance reste une bonne séance
-        weightKg: 60,
-      ),
-    );
-
-    expect(recorded.fulfilled, isNotNull);
-    final plan = await templates.sessionPlan(sessionId);
-    expect(plan!.doneCount, 1);
-    expect(plan.items.first.doneSetId, recorded.setId);
-    expect(plan.current!.setPosition, 1); // la 2ᵉ série devient la suivante
-
-    // La série enregistre le RÉEL et conserve la cible affichée.
-    final detail = await workouts.workoutDetail(sessionId);
-    final set = detail!.sets.single;
-    expect(set.reps, 7);
-    expect(set.weightKg, 60);
-    expect(set.plannedReps, 8);
-    expect(set.plannedWeightKg, 60);
-    expect(set.deviatesFromPlan, isTrue);
-  });
-
-  test('une série supplémentaire n’honore aucun item : jamais plus de 100 %',
-      () async {
-    final sessionId = await startPush();
-    for (var index = 0; index < 3; index++) {
-      await recordSet(
+      final recorded = await recordSet(
         AddSetInput(
           sessionId: sessionId,
           exerciseId: 'exo-dc',
           exerciseName: 'Développé couché',
-          reps: 8,
+          reps: 7, // 7 au lieu de 8 : une bonne séance reste une bonne séance
           weightKg: 60,
         ),
       );
-    }
 
-    final plan = await templates.sessionPlan(sessionId);
-    expect(plan!.totalCount, 3);
-    expect(plan.doneCount, 2); // la 3ᵉ série de développé est en trop
-    final detail = await workouts.workoutDetail(sessionId);
-    expect(detail!.sets, hasLength(3));
-    // La série en trop est enregistrée normalement, sans cible.
-    expect(detail.sets.last.plannedReps, isNull);
-    expect(detail.sets.last.plannedWeightKg, isNull);
-  });
+      expect(recorded.fulfilled, isNotNull);
+      final plan = await templates.sessionPlan(sessionId);
+      expect(plan!.doneCount, 1);
+      expect(plan.items.first.doneSetId, recorded.setId);
+      expect(plan.current!.setPosition, 1); // la 2ᵉ série devient la suivante
+
+      // La série enregistre le RÉEL et conserve la cible affichée.
+      final detail = await workouts.workoutDetail(sessionId);
+      final set = detail!.sets.single;
+      expect(set.reps, 7);
+      expect(set.weightKg, 60);
+      expect(set.plannedReps, 8);
+      expect(set.plannedWeightKg, 60);
+      expect(set.deviatesFromPlan, isTrue);
+    },
+  );
+
+  test(
+    'une série supplémentaire n’honore aucun item : jamais plus de 100 %',
+    () async {
+      final sessionId = await startPush();
+      for (var index = 0; index < 3; index++) {
+        await recordSet(
+          AddSetInput(
+            sessionId: sessionId,
+            exerciseId: 'exo-dc',
+            exerciseName: 'Développé couché',
+            reps: 8,
+            weightKg: 60,
+          ),
+        );
+      }
+
+      final plan = await templates.sessionPlan(sessionId);
+      expect(plan!.totalCount, 3);
+      expect(plan.doneCount, 2); // la 3ᵉ série de développé est en trop
+      final detail = await workouts.workoutDetail(sessionId);
+      expect(detail!.sets, hasLength(3));
+      // La série en trop est enregistrée normalement, sans cible.
+      expect(detail.sets.last.plannedReps, isNull);
+      expect(detail.sets.last.plannedWeightKg, isNull);
+    },
+  );
 
   test('un exercice hors programme ne bouge pas le dénominateur', () async {
     final sessionId = await startPush();
@@ -135,72 +139,73 @@ void main() {
     expect(plan.current!.exerciseName, 'Développé couché');
   });
 
-  test('l’ordre libre est autorisé : l’appariement suit l’exercice choisi',
-      () async {
-    final sessionId = await startPush();
+  test(
+    'l’ordre libre est autorisé : l’appariement suit l’exercice choisi',
+    () async {
+      final sessionId = await startPush();
 
-    final recorded = await recordSet(
-      AddSetInput(
-        sessionId: sessionId,
-        exerciseName: 'Dips', // on commence par la fin du programme
-        reps: 12,
-      ),
-    );
+      final recorded = await recordSet(
+        AddSetInput(
+          sessionId: sessionId,
+          exerciseName: 'Dips', // on commence par la fin du programme
+          reps: 12,
+        ),
+      );
 
-    expect(recorded.fulfilled!.exercisePosition, 1);
-    final plan = await templates.sessionPlan(sessionId);
-    expect(plan!.doneCount, 1);
-    // Le premier item du programme reste à faire.
-    expect(plan.current!.exerciseName, 'Développé couché');
-    expect(plan.progressOfExercise(1), (1, 1));
-  });
+      expect(recorded.fulfilled!.exercisePosition, 1);
+      final plan = await templates.sessionPlan(sessionId);
+      expect(plan!.doneCount, 1);
+      // Le premier item du programme reste à faire.
+      expect(plan.current!.exerciseName, 'Développé couché');
+      expect(plan.progressOfExercise(1), (1, 1));
+    },
+  );
 
-  test('passer une série : marquée localement ET propagée au serveur',
-      () async {
-    final sessionId = await startPush();
-    final plan = await templates.sessionPlan(sessionId);
-    final before = (await db.select(db.syncOperations).get()).length;
+  test(
+    'passer une série : marquée localement ET propagée au serveur',
+    () async {
+      final sessionId = await startPush();
+      final plan = await templates.sessionPlan(sessionId);
+      final before = (await db.select(db.syncOperations).get()).length;
 
-    await templates.skipPlanItem(plan!.items.first.id);
+      await templates.skipPlanItem(plan!.items.first.id);
 
-    final after = await templates.sessionPlan(sessionId);
-    expect(after!.items.first.skipped, isTrue);
-    expect(after.doneCount, 0);
-    expect(after.remainingCount, 2);
-    expect(after.current!.setPosition, 1);
+      final after = await templates.sessionPlan(sessionId);
+      expect(after!.items.first.skipped, isTrue);
+      expect(after.doneCount, 0);
+      expect(after.remainingCount, 2);
+      expect(after.current!.setPosition, 1);
 
-    // Une SEULE opération, décrivant la liste complète des séries passées :
-    // sans elle, reprendre la séance sur un autre appareil la reproposerait.
-    final operations = await db.select(db.syncOperations).get();
-    expect(operations.length, before + 1);
-    expect(operations.last.operationType, 'plan.skip');
-    expect(operations.last.entityId, sessionId);
-    expect(
-      jsonDecode(operations.last.payload),
-      {
+      // Une SEULE opération, décrivant la liste complète des séries passées :
+      // sans elle, reprendre la séance sur un autre appareil la reproposerait.
+      final operations = await db.select(db.syncOperations).get();
+      expect(operations.length, before + 1);
+      expect(operations.last.operationType, 'plan.skip');
+      expect(operations.last.entityId, sessionId);
+      expect(jsonDecode(operations.last.payload), {
         'sessionId': sessionId,
         'body': {
           'planItemIds': [plan.items.first.id],
         },
-      },
-    );
+      });
 
-    // Rejeu : la série est déjà passée, aucune opération de plus.
-    await templates.skipPlanItem(plan.items.first.id);
-    expect(await db.select(db.syncOperations).get(), hasLength(before + 1));
+      // Rejeu : la série est déjà passée, aucune opération de plus.
+      await templates.skipPlanItem(plan.items.first.id);
+      expect(await db.select(db.syncOperations).get(), hasLength(before + 1));
 
-    // La série suivante du même exercice honore l'item suivant, pas le sauté.
-    final recorded = await recordSet(
-      AddSetInput(
-        sessionId: sessionId,
-        exerciseId: 'exo-dc',
-        exerciseName: 'Développé couché',
-        reps: 8,
-        weightKg: 60,
-      ),
-    );
-    expect(recorded.fulfilled!.setPosition, 1);
-  });
+      // La série suivante du même exercice honore l'item suivant, pas le sauté.
+      final recorded = await recordSet(
+        AddSetInput(
+          sessionId: sessionId,
+          exerciseId: 'exo-dc',
+          exerciseName: 'Développé couché',
+          reps: 8,
+          weightKg: 60,
+        ),
+      );
+      expect(recorded.fulfilled!.setPosition, 1);
+    },
+  );
 
   test('passer un exercice marque toutes ses séries restantes', () async {
     final sessionId = await startPush();
@@ -222,8 +227,7 @@ void main() {
     expect(plan.current!.exerciseName, 'Dips');
   });
 
-  test(
-      'l’appariement voyage AVEC la série, et l’acquittement suit son '
+  test('l’appariement voyage AVEC la série, et l’acquittement suit son '
       'transporteur — condition de la reprise multi-appareil', () async {
     final sessionId = await startPush();
     final plan = await templates.sessionPlan(sessionId);
@@ -241,12 +245,14 @@ void main() {
     // 1. Aucune opération supplémentaire : le corps de la série porte
     //    l'identifiant de la prévision honorée.
     final operations = await db.select(db.syncOperations).get();
-    expect(
-      operations.map((op) => op.operationType),
-      ['template.save', 'session.create', 'set.upsert'],
-    );
-    final body = (jsonDecode(operations.last.payload)
-        as Map<String, dynamic>)['body'] as Map<String, dynamic>;
+    expect(operations.map((op) => op.operationType), [
+      'template.save',
+      'session.create',
+      'set.upsert',
+    ]);
+    final body =
+        (jsonDecode(operations.last.payload) as Map<String, dynamic>)['body']
+            as Map<String, dynamic>;
     expect(body['planItemId'], plan!.items.first.id);
     expect(body['plannedReps'], 8);
 
@@ -270,17 +276,19 @@ void main() {
     );
   });
 
-  test('séance libre : le cas d’usage ne change rien au comportement existant',
-      () async {
-    final sessionId = await workouts.startWorkout(name: 'Séance libre');
+  test(
+    'séance libre : le cas d’usage ne change rien au comportement existant',
+    () async {
+      final sessionId = await workouts.startWorkout(name: 'Séance libre');
 
-    final recorded = await recordSet(
-      AddSetInput(sessionId: sessionId, exerciseName: 'Squat', reps: 5),
-    );
+      final recorded = await recordSet(
+        AddSetInput(sessionId: sessionId, exerciseName: 'Squat', reps: 5),
+      );
 
-    expect(recorded.fulfilled, isNull);
-    expect(await templates.sessionPlan(sessionId), isNull);
-    final detail = await workouts.workoutDetail(sessionId);
-    expect(detail!.sets.single.plannedReps, isNull);
-  });
+      expect(recorded.fulfilled, isNull);
+      expect(await templates.sessionPlan(sessionId), isNull);
+      final detail = await workouts.workoutDetail(sessionId);
+      expect(detail!.sets.single.plannedReps, isNull);
+    },
+  );
 }

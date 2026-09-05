@@ -41,10 +41,9 @@ class AuthFormError extends StatelessWidget {
             Expanded(
               child: Text(
                 authErrorMessage(error),
-                style: Theme.of(context)
-                    .textTheme
-                    .bodySmall
-                    ?.copyWith(color: colorScheme.error),
+                style: Theme.of(
+                  context,
+                ).textTheme.bodySmall?.copyWith(color: colorScheme.error),
               ),
             ),
           ],

@@ -50,9 +50,9 @@ Future<List<Lesson>> _read() async {
 
 Lesson _lesson(Map<String, dynamic> json) {
   final question = json['question'] as Map<String, dynamic>;
-  final choices = (question['choices'] as List<dynamic>)
-      .cast<String>()
-      .toList(growable: false);
+  final choices = (question['choices'] as List<dynamic>).cast<String>().toList(
+    growable: false,
+  );
   final answerIndex = question['answerIndex'] as int;
   if (answerIndex < 0 || answerIndex >= choices.length) {
     throw FormatException('réponse hors bornes pour ${json['id']}');

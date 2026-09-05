@@ -74,8 +74,9 @@ class TitleCrossingBanner extends ConsumerWidget {
                     const SizedBox(height: AppSpacing.xxs),
                     Text(
                       reward.label,
-                      style: AppTypography.title
-                          .copyWith(color: AppColors.neutral0),
+                      style: AppTypography.title.copyWith(
+                        color: AppColors.neutral0,
+                      ),
                     ),
                   ],
                 ),

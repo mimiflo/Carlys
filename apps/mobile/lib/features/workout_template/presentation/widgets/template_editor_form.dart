@@ -29,10 +29,12 @@ class TemplateEditorForm extends ConsumerStatefulWidget {
 }
 
 class _TemplateEditorFormState extends ConsumerState<TemplateEditorForm> {
-  late final TextEditingController _name =
-      TextEditingController(text: widget.draft.name);
-  late final TextEditingController _notes =
-      TextEditingController(text: widget.draft.notes ?? '');
+  late final TextEditingController _name = TextEditingController(
+    text: widget.draft.name,
+  );
+  late final TextEditingController _notes = TextEditingController(
+    text: widget.draft.notes ?? '',
+  );
   late final TextEditingController _duration = TextEditingController(
     text: widget.draft.estimatedDurationMinutes?.toString() ?? '',
   );
@@ -95,8 +97,9 @@ class _TemplateEditorFormState extends ConsumerState<TemplateEditorForm> {
             position: index + 1,
             expanded: _expanded == exercise.localId,
             onToggle: () => setState(
-              () => _expanded =
-                  _expanded == exercise.localId ? null : exercise.localId,
+              () => _expanded = _expanded == exercise.localId
+                  ? null
+                  : exercise.localId,
             ),
             onRemove: () => _controller.removeExercise(index),
             onAddSet: () => _controller.addSet(index),
@@ -207,8 +210,9 @@ class _Identity extends StatelessWidget {
             child: Text(
               'Aucun exercice pour l’instant. Ajoutes-en depuis le catalogue, '
               'puis règle les séries prévues.',
-              style: AppTypography.body
-                  .copyWith(color: AppColors.darkTextSecondary),
+              style: AppTypography.body.copyWith(
+                color: AppColors.darkTextSecondary,
+              ),
             ),
           ),
       ],

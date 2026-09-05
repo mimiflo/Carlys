@@ -29,8 +29,9 @@ class ProgramCard extends StatelessWidget {
               children: [
                 Text(
                   program.name,
-                  style: AppTypography.subheading
-                      .copyWith(color: AppColors.darkTextPrimary),
+                  style: AppTypography.subheading.copyWith(
+                    color: AppColors.darkTextPrimary,
+                  ),
                 ),
                 Text(
                   '${program.weeksCount} semaine'
@@ -38,8 +39,9 @@ class ProgramCard extends StatelessWidget {
                   '${formatThousands(program.daysCount)} jour'
                   '${program.daysCount > 1 ? 's' : ''} planifié'
                   '${program.daysCount > 1 ? 's' : ''}',
-                  style: AppTypography.label
-                      .copyWith(color: AppColors.darkTextTertiary),
+                  style: AppTypography.label.copyWith(
+                    color: AppColors.darkTextTertiary,
+                  ),
                 ),
               ],
             ),

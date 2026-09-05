@@ -35,11 +35,13 @@ Widget appWith(FakeProgressRepository progress) {
           apiBaseUrl: 'http://localhost:3000',
         ),
       ),
-      authRepositoryProvider
-          .overrideWithValue(FakeAuthRepository(storedSession: true)),
+      authRepositoryProvider.overrideWithValue(
+        FakeAuthRepository(storedSession: true),
+      ),
       workoutRepositoryProvider.overrideWithValue(workouts),
-      workoutTemplateRepositoryProvider
-          .overrideWithValue(DemoWorkoutTemplateRepository(workouts)),
+      workoutTemplateRepositoryProvider.overrideWithValue(
+        DemoWorkoutTemplateRepository(workouts),
+      ),
       syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
       appRestoreProvider.overrideWithValue(NoopAppRestore()),
       progressRepositoryProvider.overrideWithValue(progress),
@@ -76,8 +78,11 @@ void main() {
     seedCompletedFirstRun();
     // Les scènes 3D (cœur, hélice) bouclent en continu : réduction
     // d'animations pour que pumpAndSettle converge.
-    TestWidgetsFlutterBinding.instance.platformDispatcher
-        .accessibilityFeaturesTestValue = FakeAccessibilityFeatures.allOn;
+    TestWidgetsFlutterBinding
+            .instance
+            .platformDispatcher
+            .accessibilityFeaturesTestValue =
+        FakeAccessibilityFeatures.allOn;
   });
 
   tearDown(() {
@@ -85,8 +90,9 @@ void main() {
         .clearAccessibilityFeaturesTestValue();
   });
 
-  testWidgets('parcours : accueil → progression (stats, records, poids)',
-      (tester) async {
+  testWidgets('parcours : accueil → progression (stats, records, poids)', (
+    tester,
+  ) async {
     final progress = FakeProgressRepository(
       records: [
         recordOf('Développé couché', PersonalRecordType.maxWeight, 80),
@@ -199,8 +205,9 @@ void main() {
     expect(find.text('Aucune mesure enregistrée'), findsOneWidget);
   });
 
-  testWidgets('deux mesures : la courbe apparaît, la promesse disparaît',
-      (tester) async {
+  testWidgets('deux mesures : la courbe apparaît, la promesse disparaît', (
+    tester,
+  ) async {
     final progress = FakeProgressRepository(
       bodyMetrics: [
         BodyMetricEntry(
@@ -227,8 +234,9 @@ void main() {
     expect(find.text(BodyWeightFirstMeasure.note), findsNothing);
   });
 
-  testWidgets('premier jour : un seul bloc d’amorçage, ni zéros ni vides',
-      (tester) async {
+  testWidgets('premier jour : un seul bloc d’amorçage, ni zéros ni vides', (
+    tester,
+  ) async {
     // Aucune séance, aucun record, aucune mesure : trois états vides
     // empilés et deux tuiles à zéro disaient cinq fois la même absence.
     final progress = FakeProgressRepository(overviewFor: _emptyOverview);
@@ -257,8 +265,9 @@ void main() {
     expect(find.text(BodyWeightFirstMeasure.note), findsOneWidget);
   });
 
-  testWidgets('premier jour : « Lancer une séance » ouvre les modèles',
-      (tester) async {
+  testWidgets('premier jour : « Lancer une séance » ouvre les modèles', (
+    tester,
+  ) async {
     final progress = FakeProgressRepository(overviewFor: _emptyOverview);
 
     await tester.pumpWidget(appWith(progress));
@@ -271,8 +280,9 @@ void main() {
     expect(find.text('Mes modèles'), findsOneWidget);
   });
 
-  testWidgets('période vide, compte actif : un état vide avec sa sortie',
-      (tester) async {
+  testWidgets('période vide, compte actif : un état vide avec sa sortie', (
+    tester,
+  ) async {
     // Des records, mais rien sur la période : ce n'est pas un compte neuf.
     // L'état vide reste, avec une issue, et sans tuiles à zéro dessous.
     final progress = FakeProgressRepository(
@@ -291,8 +301,9 @@ void main() {
     expect(find.text('0 MIN'), findsNothing);
   });
 
-  testWidgets('statistiques indisponibles : état d’erreur avec réessai',
-      (tester) async {
+  testWidgets('statistiques indisponibles : état d’erreur avec réessai', (
+    tester,
+  ) async {
     final progress = _FailingOverviewRepository();
 
     await tester.pumpWidget(appWith(progress));
@@ -312,13 +323,13 @@ void main() {
 
 /// Le serveur répond, avec des zéros : aucune séance sur la période.
 ProgressOverviewEntity _emptyOverview(ProgressPeriod period) => overviewOf(
-      period,
-      sessionsCount: 0,
-      setsCount: 0,
-      totalVolumeKg: 0,
-      totalDurationSeconds: 0,
-      points: const [],
-    );
+  period,
+  sessionsCount: 0,
+  setsCount: 0,
+  totalVolumeKg: 0,
+  totalDurationSeconds: 0,
+  points: const [],
+);
 
 class _FailingOverviewRepository extends FakeProgressRepository {
   bool failOverview = true;

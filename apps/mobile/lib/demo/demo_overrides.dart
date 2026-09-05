@@ -43,15 +43,18 @@ List<Override> demoOverrides() {
 
   return [
     authRepositoryProvider.overrideWithValue(auth),
-    carlysProfileRepositoryProvider
-        .overrideWithValue(DemoCarlysProfileRepository(auth)),
+    carlysProfileRepositoryProvider.overrideWithValue(
+      DemoCarlysProfileRepository(auth),
+    ),
     coachRepositoryProvider.overrideWithValue(DemoCoachRepository()),
-    coachSessionLauncherProvider
-        .overrideWithValue(DemoCoachSessionLauncher(workouts)),
+    coachSessionLauncherProvider.overrideWithValue(
+      DemoCoachSessionLauncher(workouts),
+    ),
     exercisesRepositoryProvider.overrideWithValue(DemoExercisesRepository()),
     progressRepositoryProvider.overrideWithValue(DemoProgressRepository()),
-    subscriptionRepositoryProvider
-        .overrideWithValue(DemoSubscriptionRepository()),
+    subscriptionRepositoryProvider.overrideWithValue(
+      DemoSubscriptionRepository(),
+    ),
     nutritionRepositoryProvider.overrideWithValue(DemoNutritionRepository()),
     // L'hydratation vit dans Drift : sans cette substitution, la
     // démonstration ouvrirait une base pour un simple compteur.
@@ -59,12 +62,14 @@ List<Override> demoOverrides() {
     programRepositoryProvider.overrideWithValue(DemoProgramRepository()),
     communityRepositoryProvider.overrideWithValue(DemoCommunityRepository()),
     workoutRepositoryProvider.overrideWithValue(workouts),
-    workoutTemplateRepositoryProvider
-        .overrideWithValue(DemoWorkoutTemplateRepository(workouts)),
+    workoutTemplateRepositoryProvider.overrideWithValue(
+      DemoWorkoutTemplateRepository(workouts),
+    ),
     // Sans lui, l'écran Profil de la démonstration appellerait une API
     // absente : un échec certain, et une attente pour rien.
-    deviceTokenRepositoryProvider
-        .overrideWithValue(DemoDeviceTokenRepository()),
+    deviceTokenRepositoryProvider.overrideWithValue(
+      DemoDeviceTokenRepository(),
+    ),
     syncLifecycleProvider.overrideWithValue(DemoSyncLifecycle()),
     appRestoreProvider.overrideWithValue(DemoAppRestore()),
   ];

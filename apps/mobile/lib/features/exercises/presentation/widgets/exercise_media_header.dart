@@ -82,8 +82,9 @@ class ExerciseMediaHeader extends StatelessWidget {
                 const SizedBox(height: AppSpacing.xs),
                 Text(
                   exercise.name,
-                  style: AppTypography.display
-                      .copyWith(color: AppColors.darkTextPrimary),
+                  style: AppTypography.display.copyWith(
+                    color: AppColors.darkTextPrimary,
+                  ),
                 ),
               ],
             ),

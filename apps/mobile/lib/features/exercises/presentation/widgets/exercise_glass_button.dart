@@ -55,8 +55,9 @@ class ExerciseGlassButton extends StatelessWidget {
                     width: ornamentSize,
                     height: ornamentSize,
                     decoration: BoxDecoration(
-                      color: AppColors.darkSurface
-                          .withValues(alpha: _backgroundAlpha),
+                      color: AppColors.darkSurface.withValues(
+                        alpha: _backgroundAlpha,
+                      ),
                       borderRadius: _radius,
                       border: Border.all(color: AppColors.darkBorderStrong),
                     ),

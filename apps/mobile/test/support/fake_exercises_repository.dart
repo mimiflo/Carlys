@@ -6,8 +6,11 @@ import 'package:carlys_mobile/features/exercises/domain/repositories/exercises_r
 const _barbell = EquipmentRef(id: 'eq-barre', slug: 'barre', name: 'Barre');
 
 /// Muscle secondaire par défaut des fiches de test (rôle SECONDARY côté API).
-const _secondaryMuscle =
-    MuscleGroupRef(id: 'mg-triceps', slug: 'triceps', name: 'Triceps');
+const _secondaryMuscle = MuscleGroupRef(
+  id: 'mg-triceps',
+  slug: 'triceps',
+  name: 'Triceps',
+);
 
 ExerciseSummary summary(
   String id,
@@ -15,46 +18,42 @@ ExerciseSummary summary(
   String? group,
   List<EquipmentRef> equipment = const [_barbell],
   String? imageUrl,
-}) =>
-    ExerciseSummary(
-      id: id,
-      slug: name.toLowerCase().replaceAll(' ', '-'),
-      name: name,
-      difficulty: ExerciseDifficulty.beginner,
-      kind: ExerciseKind.strength,
-      isPremium: false,
-      primaryMuscleGroup: group == null
-          ? null
-          : MuscleGroupRef(id: 'mg-$group', slug: group, name: group),
-      equipment: equipment,
-      imageUrl: imageUrl,
-    );
+}) => ExerciseSummary(
+  id: id,
+  slug: name.toLowerCase().replaceAll(' ', '-'),
+  name: name,
+  difficulty: ExerciseDifficulty.beginner,
+  kind: ExerciseKind.strength,
+  isPremium: false,
+  primaryMuscleGroup: group == null
+      ? null
+      : MuscleGroupRef(id: 'mg-$group', slug: group, name: group),
+  equipment: equipment,
+  imageUrl: imageUrl,
+);
 
 ExerciseDetail detailOf(ExerciseSummary base) => ExerciseDetail(
-      id: base.id,
-      slug: base.slug,
-      name: base.name,
-      difficulty: base.difficulty,
-      kind: base.kind,
-      isPremium: base.isPremium,
-      primaryMuscleGroup: base.primaryMuscleGroup,
-      equipment: base.equipment,
-      imageUrl: base.imageUrl,
-      description: 'Description de ${base.name}',
-      instructions: const ['Première étape', 'Deuxième étape'],
-      tags: const ['test'],
-      muscles: [
-        if (base.primaryMuscleGroup != null)
-          ExerciseMuscleLink(
-            muscleGroup: base.primaryMuscleGroup!,
-            isPrimary: true,
-          ),
-        const ExerciseMuscleLink(
-          muscleGroup: _secondaryMuscle,
-          isPrimary: false,
-        ),
-      ],
-    );
+  id: base.id,
+  slug: base.slug,
+  name: base.name,
+  difficulty: base.difficulty,
+  kind: base.kind,
+  isPremium: base.isPremium,
+  primaryMuscleGroup: base.primaryMuscleGroup,
+  equipment: base.equipment,
+  imageUrl: base.imageUrl,
+  description: 'Description de ${base.name}',
+  instructions: const ['Première étape', 'Deuxième étape'],
+  tags: const ['test'],
+  muscles: [
+    if (base.primaryMuscleGroup != null)
+      ExerciseMuscleLink(
+        muscleGroup: base.primaryMuscleGroup!,
+        isPrimary: true,
+      ),
+    const ExerciseMuscleLink(muscleGroup: _secondaryMuscle, isPrimary: false),
+  ],
+);
 
 /// Implémentation de test : pages de 2 éléments, filtres appliqués en mémoire.
 class FakeExercisesRepository implements ExercisesRepository {

@@ -15,63 +15,62 @@ void main() {
     int? restSeconds,
     String? doneSetId,
     bool skipped = false,
-  }) =>
-      SessionPlanItem(
-        id: id,
-        sessionId: 's-1',
-        exercisePosition: exercisePosition,
-        exerciseId: 'ex-$exercisePosition',
-        exerciseName: exerciseName,
-        setPosition: setPosition,
-        targetReps: targetReps,
-        targetWeightKg: targetWeightKg,
-        restSeconds: restSeconds,
-        doneSetId: doneSetId,
-        skipped: skipped,
-      );
+  }) => SessionPlanItem(
+    id: id,
+    sessionId: 's-1',
+    exercisePosition: exercisePosition,
+    exerciseId: 'ex-$exercisePosition',
+    exerciseName: exerciseName,
+    setPosition: setPosition,
+    targetReps: targetReps,
+    targetWeightKg: targetWeightKg,
+    restSeconds: restSeconds,
+    doneSetId: doneSetId,
+    skipped: skipped,
+  );
 
   /// Deux exercices : « Développé couché » 3 × 8 à 60 kg, puis « Dips » 2 × 10.
   SessionPlan planOf({String? doneSetId}) => SessionPlan(
-        sessionId: 's-1',
-        templateName: 'Push force',
-        items: [
-          item(
-            'p-1',
-            exercisePosition: 0,
-            exerciseName: 'Développé couché',
-            setPosition: 0,
-            targetReps: 8,
-            targetWeightKg: 60,
-            restSeconds: 120,
-            doneSetId: doneSetId,
-          ),
-          item(
-            'p-2',
-            exercisePosition: 0,
-            exerciseName: 'Développé couché',
-            setPosition: 1,
-            targetReps: 8,
-            targetWeightKg: 60,
-            restSeconds: 120,
-          ),
-          item(
-            'p-3',
-            exercisePosition: 0,
-            exerciseName: 'Développé couché',
-            setPosition: 2,
-            targetReps: 6,
-            targetWeightKg: 70,
-            restSeconds: 150,
-          ),
-          item(
-            'p-4',
-            exercisePosition: 1,
-            exerciseName: 'Dips',
-            setPosition: 0,
-            targetReps: 10,
-          ),
-        ],
-      );
+    sessionId: 's-1',
+    templateName: 'Push force',
+    items: [
+      item(
+        'p-1',
+        exercisePosition: 0,
+        exerciseName: 'Développé couché',
+        setPosition: 0,
+        targetReps: 8,
+        targetWeightKg: 60,
+        restSeconds: 120,
+        doneSetId: doneSetId,
+      ),
+      item(
+        'p-2',
+        exercisePosition: 0,
+        exerciseName: 'Développé couché',
+        setPosition: 1,
+        targetReps: 8,
+        targetWeightKg: 60,
+        restSeconds: 120,
+      ),
+      item(
+        'p-3',
+        exercisePosition: 0,
+        exerciseName: 'Développé couché',
+        setPosition: 2,
+        targetReps: 6,
+        targetWeightKg: 70,
+        restSeconds: 150,
+      ),
+      item(
+        'p-4',
+        exercisePosition: 1,
+        exerciseName: 'Dips',
+        setPosition: 0,
+        targetReps: 10,
+      ),
+    ],
+  );
 
   test('sans choix manuel : la consigne suit le programme', () {
     final guidance = guidanceFor(planOf());

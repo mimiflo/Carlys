@@ -38,22 +38,25 @@ class ChallengeCard extends StatelessWidget {
               const Spacer(),
               Text(
                 daysLeft <= 0 ? 'dernier jour' : 'J−$daysLeft',
-                style: AppTypography.labelMono
-                    .copyWith(color: AppColors.darkTextTertiary),
+                style: AppTypography.labelMono.copyWith(
+                  color: AppColors.darkTextTertiary,
+                ),
               ),
             ],
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
             challenge.title,
-            style: AppTypography.subheading
-                .copyWith(color: AppColors.darkTextPrimary),
+            style: AppTypography.subheading.copyWith(
+              color: AppColors.darkTextPrimary,
+            ),
           ),
           const SizedBox(height: AppSpacing.xxs),
           Text(
             challenge.description,
-            style:
-                AppTypography.body.copyWith(color: AppColors.darkTextSecondary),
+            style: AppTypography.body.copyWith(
+              color: AppColors.darkTextSecondary,
+            ),
           ),
           const SizedBox(height: AppSpacing.sm),
           // La progression est celle du GROUPE : la barre raconte l'effort
@@ -72,8 +75,9 @@ class ChallengeCard extends StatelessWidget {
             children: [
               Text(
                 '${challenge.participants} participants',
-                style: AppTypography.label
-                    .copyWith(color: AppColors.darkTextTertiary),
+                style: AppTypography.label.copyWith(
+                  color: AppColors.darkTextTertiary,
+                ),
               ),
               const Spacer(),
               AppButton(

@@ -90,8 +90,9 @@ class MetabolismHero extends StatelessWidget {
                   const SizedBox(height: AppSpacing.xs),
                   Text(
                     'Ton moteur\naujourd’hui',
-                    style: AppTypography.display
-                        .copyWith(color: AppColors.darkTextPrimary),
+                    style: AppTypography.display.copyWith(
+                      color: AppColors.darkTextPrimary,
+                    ),
                   ),
                   const Spacer(),
                   if (result != null)
@@ -123,7 +124,8 @@ class _ExpenditureRow extends StatelessWidget {
     final activity = formatThousands(metabolism.tdeeKcal - metabolism.bmrKcal);
 
     return Semantics(
-      label: 'Dépense totale $total kilocalories, dont $bmr de métabolisme '
+      label:
+          'Dépense totale $total kilocalories, dont $bmr de métabolisme '
           'de base et $activity d’activité',
       excludeSemantics: true,
       child: Row(
@@ -135,8 +137,9 @@ class _ExpenditureRow extends StatelessWidget {
               children: [
                 Text(
                   total,
-                  style:
-                      AppTypography.metricXL.copyWith(color: AppColors.accent),
+                  style: AppTypography.metricXL.copyWith(
+                    color: AppColors.accent,
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 const AppSectionLabel('Kcal / dépense totale'),
@@ -179,8 +182,9 @@ class _ProfilePrompt extends StatelessWidget {
         Text(
           'Carlys ne connaît pas encore ton moteur. Ta dépense du jour '
           'apparaîtra ici dès que ton profil sera complet.',
-          style:
-              AppTypography.body.copyWith(color: AppColors.darkTextSecondary),
+          style: AppTypography.body.copyWith(
+            color: AppColors.darkTextSecondary,
+          ),
         ),
         const SizedBox(height: AppSpacing.md),
         AppButton(

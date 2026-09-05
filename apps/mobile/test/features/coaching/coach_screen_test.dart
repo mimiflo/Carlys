@@ -31,11 +31,7 @@ void main() {
       role: CoachRole.assistant,
       content: 'Comment puis-je t’aider ?',
     ),
-    CoachMessage(
-      id: 'm2',
-      role: CoachRole.user,
-      content: 'J’ai peu de temps.',
-    ),
+    CoachMessage(id: 'm2', role: CoachRole.user, content: 'J’ai peu de temps.'),
     CoachMessage(
       id: 'm3',
       role: CoachRole.assistant,
@@ -127,8 +123,9 @@ void main() {
     expect(find.text('Ajuster ma séance'), findsNothing);
   });
 
-  testWidgets('pendant la rédaction, on ne peut pas doubler la question',
-      (tester) async {
+  testWidgets('pendant la rédaction, on ne peut pas doubler la question', (
+    tester,
+  ) async {
     var sent = 0;
     await pumpCoach(tester, isSending: true, onSend: (_) => sent++);
 
@@ -147,8 +144,9 @@ void main() {
     expect(find.byType(CoachMessageBubble), findsNothing);
   });
 
-  testWidgets('le clavier pousse la barre de saisie au-dessus de lui',
-      (tester) async {
+  testWidgets('le clavier pousse la barre de saisie au-dessus de lui', (
+    tester,
+  ) async {
     // Hors coquille, personne d'autre ne relève le corps : c'est le
     // `Scaffold` de cet écran qui doit le faire. Le neutraliser mettrait la
     // barre de saisie DERRIÈRE le clavier, là où l'on écrit sans se voir
@@ -170,8 +168,9 @@ void main() {
     );
   });
 
-  testWidgets('le bouton d’envoi répond aussi au lecteur d’écran',
-      (tester) async {
+  testWidgets('le bouton d’envoi répond aussi au lecteur d’écran', (
+    tester,
+  ) async {
     // Il est dessiné et touché par un GestureDetector, que la couche
     // d'accessibilité ne voit pas : l'action doit vivre sur le nœud
     // Semantics. Sans elle, le bouton s'annonce sans pouvoir être activé.
@@ -204,17 +203,14 @@ void main() {
 
     expect(
       tester.getSemantics(find.bySemanticsLabel('Envoyer')),
-      isSemantics(
-        label: 'Envoyer',
-        hasEnabledState: true,
-        isEnabled: false,
-      ),
+      isSemantics(label: 'Envoyer', hasEnabledState: true, isEnabled: false),
     );
     handle.dispose();
   });
 
-  testWidgets('première ouverture + clavier : l’invitation ne déborde pas',
-      (tester) async {
+  testWidgets('première ouverture + clavier : l’invitation ne déborde pas', (
+    tester,
+  ) async {
     // Le tout premier geste d'un nouvel utilisateur : ouvrir le coach, qui
     // n'a encore aucun message, et toucher le champ pour poser sa question.
     // L'invitation est alors le seul bloc sans défilement de la colonne : sur
@@ -231,8 +227,9 @@ void main() {
     expect(find.text('Ton coach est là'), findsOneWidget);
   });
 
-  testWidgets('le champ de saisie est une pilule, pas un rectangle',
-      (tester) async {
+  testWidgets('le champ de saisie est une pilule, pas un rectangle', (
+    tester,
+  ) async {
     await pumpCoach(tester);
 
     // Le thème remplit les champs de saisie. Ici la surface est celle du
@@ -250,8 +247,7 @@ void main() {
       matching: find.byType(Container),
     );
     final box = tester.widget<Container>(pill.first);
-    final radius = (box.decoration! as BoxDecoration)
-        .borderRadius!
+    final radius = (box.decoration! as BoxDecoration).borderRadius!
         .resolve(TextDirection.ltr)
         .topLeft
         .x;

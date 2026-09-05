@@ -45,8 +45,7 @@ class RecordsSection extends ConsumerWidget {
   /// Du record le plus récent au plus ancien — le premier porte l'accent.
   static List<PersonalRecordEntry> sortedByRecency(
     List<PersonalRecordEntry> entries,
-  ) =>
-      [...entries]..sort((a, b) => b.achievedAt.compareTo(a.achievedAt));
+  ) => [...entries]..sort((a, b) => b.achievedAt.compareTo(a.achievedAt));
 }
 
 class _RecordsList extends StatelessWidget {
@@ -124,10 +123,8 @@ class _AllRecordsSheet extends StatelessWidget {
                 itemCount: records.length,
                 separatorBuilder: (_, __) =>
                     const SizedBox(height: AppSpacing.sm),
-                itemBuilder: (_, index) => RecordRow(
-                  record: records[index],
-                  isLatest: index == 0,
-                ),
+                itemBuilder: (_, index) =>
+                    RecordRow(record: records[index], isLatest: index == 0),
               ),
             ),
           ],

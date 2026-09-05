@@ -51,8 +51,9 @@ class AppButton extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final button = _buildVariant(context);
-    final sized =
-        isExpanded ? SizedBox(width: double.infinity, child: button) : button;
+    final sized = isExpanded
+        ? SizedBox(width: double.infinity, child: button)
+        : button;
 
     return Semantics(
       button: true,
@@ -69,56 +70,56 @@ class AppButton extends StatelessWidget {
 
     return switch (variant) {
       AppButtonVariant.primary => FilledButton(
-          onPressed: onPressedOrNull,
-          style: _sizeStyle(),
-          child: child,
-        ),
+        onPressed: onPressedOrNull,
+        style: _sizeStyle(),
+        child: child,
+      ),
       AppButtonVariant.secondary => OutlinedButton(
-          onPressed: onPressedOrNull,
-          style: _sizeStyle(),
-          child: child,
-        ),
+        onPressed: onPressedOrNull,
+        style: _sizeStyle(),
+        child: child,
+      ),
       AppButtonVariant.ghost => TextButton(
-          onPressed: onPressedOrNull,
-          style: _sizeStyle(),
-          child: child,
-        ),
+        onPressed: onPressedOrNull,
+        style: _sizeStyle(),
+        child: child,
+      ),
       AppButtonVariant.accent => FilledButton(
-          onPressed: onPressedOrNull,
-          style: _sizeStyle().merge(
-            FilledButton.styleFrom(
-              backgroundColor: AppColors.accent,
-              foregroundColor: AppColors.onAccent,
-            ),
+        onPressed: onPressedOrNull,
+        style: _sizeStyle().merge(
+          FilledButton.styleFrom(
+            backgroundColor: AppColors.accent,
+            foregroundColor: AppColors.onAccent,
           ),
-          child: child,
         ),
+        child: child,
+      ),
       AppButtonVariant.destructive => FilledButton(
-          onPressed: onPressedOrNull,
-          style: _sizeStyle().merge(
-            FilledButton.styleFrom(
-              backgroundColor: colorScheme.error,
-              foregroundColor: colorScheme.onError,
-            ),
+        onPressed: onPressedOrNull,
+        style: _sizeStyle().merge(
+          FilledButton.styleFrom(
+            backgroundColor: colorScheme.error,
+            foregroundColor: colorScheme.onError,
           ),
-          child: child,
         ),
+        child: child,
+      ),
     };
   }
 
   ButtonStyle _sizeStyle() {
     return switch (size) {
       AppButtonSize.small => FilledButton.styleFrom(
-          minimumSize: const Size(48, 36),
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
-        ),
+        minimumSize: const Size(48, 36),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.sm),
+      ),
       AppButtonSize.medium => FilledButton.styleFrom(
-          minimumSize: const Size(64, 48),
-        ),
+        minimumSize: const Size(64, 48),
+      ),
       AppButtonSize.large => FilledButton.styleFrom(
-          minimumSize: const Size(64, 56),
-          padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
-        ),
+        minimumSize: const Size(64, 56),
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xl),
+      ),
     };
   }
 

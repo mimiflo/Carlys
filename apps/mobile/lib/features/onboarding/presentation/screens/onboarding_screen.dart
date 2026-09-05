@@ -48,23 +48,23 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   bool _saving = false;
 
   bool get _stepComplete => switch (_step) {
-        0 => _carlysProfile != null,
-        1 => _goal != null,
-        2 => _sex != null,
-        3 => _birthDate != null && _heightTouched,
-        _ => _activity != null,
-      };
+    0 => _carlysProfile != null,
+    1 => _goal != null,
+    2 => _sex != null,
+    3 => _birthDate != null && _heightTouched,
+    _ => _activity != null,
+  };
 
   bool get _isLastStep => _step == _stepCount - 1;
 
   OnboardingAnswers get _answers => OnboardingAnswers(
-        carlysProfile: _carlysProfile,
-        goal: _goal,
-        sex: _sex,
-        birthDate: _birthDate,
-        heightCm: _heightTouched ? _heightCm : null,
-        activityLevel: _activity,
-      );
+    carlysProfile: _carlysProfile,
+    goal: _goal,
+    sex: _sex,
+    birthDate: _birthDate,
+    heightCm: _heightTouched ? _heightCm : null,
+    activityLevel: _activity,
+  );
 
   void _back() {
     if (_step > 0) {
@@ -191,8 +191,9 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
                 loading: _saving,
                 onPressed: _stepComplete ? _next : null,
                 onSkip: _skip,
-                onLogin:
-                    authenticated ? null : () => context.go(AppRoutes.login),
+                onLogin: authenticated
+                    ? null
+                    : () => context.go(AppRoutes.login),
               ),
             ],
           ),

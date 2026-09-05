@@ -33,7 +33,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   void _submit() {
     if (_formKey.currentState?.validate() != true) return;
     // Le contrôleur ignore les doubles soumissions via l'état loading.
-    ref.read(loginControllerProvider.notifier).submit(
+    ref
+        .read(loginControllerProvider.notifier)
+        .submit(
           email: _emailController.text,
           password: _passwordController.text,
         );
@@ -83,8 +85,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         Align(
           alignment: Alignment.centerRight,
           child: TextButton(
-            onPressed:
-                isLoading ? null : () => context.push(AppRoutes.forgotPassword),
+            onPressed: isLoading
+                ? null
+                : () => context.push(AppRoutes.forgotPassword),
             child: const Text('Mot de passe oublié ?'),
           ),
         ),
@@ -110,8 +113,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               style: Theme.of(context).textTheme.bodySmall,
             ),
             TextButton(
-              onPressed:
-                  isLoading ? null : () => context.push(AppRoutes.register),
+              onPressed: isLoading
+                  ? null
+                  : () => context.push(AppRoutes.register),
               child: const Text('Créer un compte'),
             ),
           ],

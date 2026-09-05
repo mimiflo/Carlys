@@ -37,32 +37,30 @@ void main() {
   setUp(seedCompletedFirstRun);
 
   Widget app({bool storedSession = true}) => ProviderScope(
-        overrides: [
-          appEnvironmentProvider.overrideWithValue(
-            const AppEnvironment(
-              flavor: AppFlavor.development,
-              apiBaseUrl: 'http://localhost:3000',
-            ),
-          ),
-          authRepositoryProvider.overrideWithValue(
-            FakeAuthRepository(storedSession: storedSession),
-          ),
-          workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
-          // L'accueil lit les modèles enregistrés et les records personnels.
-          // Sans dépôts factices, ces lectures partent au réseau et laissent
-          // un minuteur en vol après la fin du test — l'écran est plus dense
-          // qu'avant, donc la liste paresseuse les atteint désormais.
-          workoutTemplateRepositoryProvider.overrideWithValue(
-            DemoWorkoutTemplateRepository(FakeWorkoutRepository()),
-          ),
-          progressRepositoryProvider.overrideWithValue(
-            FakeProgressRepository(),
-          ),
-          syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
-          appRestoreProvider.overrideWithValue(NoopAppRestore()),
-        ],
-        child: const CarlysApp(),
-      );
+    overrides: [
+      appEnvironmentProvider.overrideWithValue(
+        const AppEnvironment(
+          flavor: AppFlavor.development,
+          apiBaseUrl: 'http://localhost:3000',
+        ),
+      ),
+      authRepositoryProvider.overrideWithValue(
+        FakeAuthRepository(storedSession: storedSession),
+      ),
+      workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
+      // L'accueil lit les modèles enregistrés et les records personnels.
+      // Sans dépôts factices, ces lectures partent au réseau et laissent
+      // un minuteur en vol après la fin du test — l'écran est plus dense
+      // qu'avant, donc la liste paresseuse les atteint désormais.
+      workoutTemplateRepositoryProvider.overrideWithValue(
+        DemoWorkoutTemplateRepository(FakeWorkoutRepository()),
+      ),
+      progressRepositoryProvider.overrideWithValue(FakeProgressRepository()),
+      syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
+      appRestoreProvider.overrideWithValue(NoopAppRestore()),
+    ],
+    child: const CarlysApp(),
+  );
 
   /// Laisse passer le plancher, la frame de redirection, puis la transition
   /// de page — l'écran sortant reste monté tant qu'elle dure, et le chercher
@@ -73,8 +71,9 @@ void main() {
     await tester.pump(const Duration(milliseconds: 500));
   }
 
-  testWidgets('le logo tient l’écran, puis l’application s’ouvre seule',
-      (tester) async {
+  testWidgets('le logo tient l’écran, puis l’application s’ouvre seule', (
+    tester,
+  ) async {
     await tester.pumpWidget(app());
     await tester.pump();
 
@@ -107,8 +106,9 @@ void main() {
     expect(find.text('Se connecter'), findsOneWidget);
   });
 
-  testWidgets('réduction d’animations : aucun temps mort imposé',
-      (tester) async {
+  testWidgets('réduction d’animations : aucun temps mort imposé', (
+    tester,
+  ) async {
     // Qui demande moins d'animations ne demande pas d'attendre plus
     // longtemps devant un logo.
     tester.binding.platformDispatcher.accessibilityFeaturesTestValue =
@@ -124,8 +124,9 @@ void main() {
     expect(find.byType(SplashScreen), findsNothing);
   });
 
-  testWidgets('la barre se remplit depuis la gauche, et elle se voit',
-      (tester) async {
+  testWidgets('la barre se remplit depuis la gauche, et elle se voit', (
+    tester,
+  ) async {
     // DEUX PANNES SILENCIEUSES sont gardées ici, toutes deux invisibles au
     // compilateur comme aux autres tests.
     //
@@ -173,9 +174,7 @@ void main() {
     var finished = 0;
     await tester.pumpWidget(
       MaterialApp(
-        home: Scaffold(
-          body: SplashBrandIntro(onFinished: () => finished++),
-        ),
+        home: Scaffold(body: SplashBrandIntro(onFinished: () => finished++)),
       ),
     );
 

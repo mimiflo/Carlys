@@ -91,7 +91,8 @@ class _CoachPageState extends ConsumerState<CoachPage> {
       return AppErrorState(
         icon: AppIcons.offline,
         title: 'Le coach a besoin d’une connexion',
-        message: 'Reviens quand le réseau est là : la conversation reprendra '
+        message:
+            'Reviens quand le réseau est là : la conversation reprendra '
             'où tu l’as laissée.',
         onRetry: () => ref.invalidate(coachThreadProvider),
       );
@@ -124,7 +125,8 @@ class _CoachPremiumState extends ConsumerWidget {
     return AppEmptyState(
       icon: AppIcons.premium,
       title: 'Le coach est réservé à Premium',
-      message: 'Il lit tes séances, tes records et tes mesures pour adapter '
+      message:
+          'Il lit tes séances, tes records et tes mesures pour adapter '
           'ton entraînement, et te propose une séance prête à lancer.',
       actionLabel: 'Voir Premium',
       onAction: () => GoRouter.of(context).go(AppRoutes.subscription),

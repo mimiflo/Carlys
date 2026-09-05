@@ -174,11 +174,7 @@ class AppSceneHalo extends StatelessWidget {
     return const DecoratedBox(
       decoration: BoxDecoration(
         gradient: RadialGradient(
-          colors: [
-            Color(0x669B30FF),
-            Color(0x2E9B30FF),
-            Colors.transparent,
-          ],
+          colors: [Color(0x669B30FF), Color(0x2E9B30FF), Colors.transparent],
           stops: [0.0, 0.45, 0.85],
         ),
       ),

@@ -116,8 +116,9 @@ class DemoCommunityRepository implements CommunityRepository {
       [..._received]..sort((a, b) => b.sentAt.compareTo(a.sentAt));
 
   @override
-  Future<List<CommunityFriend>> friends() async => [..._friends]
-    ..sort((a, b) => (b.streakDays ?? -1).compareTo(a.streakDays ?? -1));
+  Future<List<CommunityFriend>> friends() async =>
+      [..._friends]
+        ..sort((a, b) => (b.streakDays ?? -1).compareTo(a.streakDays ?? -1));
 
   @override
   Future<List<FriendRequest>> receivedRequests() async => [..._requests];

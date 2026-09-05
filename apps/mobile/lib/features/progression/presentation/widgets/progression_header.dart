@@ -38,14 +38,16 @@ class ProgressionHeader extends StatelessWidget {
             children: [
               Text(
                 'Progression',
-                style: AppTypography.display
-                    .copyWith(color: AppColors.darkTextPrimary),
+                style: AppTypography.display.copyWith(
+                  color: AppColors.darkTextPrimary,
+                ),
               ),
               const SizedBox(height: AppSpacing.xxs + 2),
               Text(
                 subtitle,
-                style: AppTypography.body
-                    .copyWith(color: AppColors.darkTextSecondary),
+                style: AppTypography.body.copyWith(
+                  color: AppColors.darkTextSecondary,
+                ),
               ),
             ],
           ),

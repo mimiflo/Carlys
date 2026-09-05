@@ -31,14 +31,17 @@ void main() {
     container = buildContainer();
     // Le provider est autoDispose : sans écouteur il serait détruit entre
     // deux interactions (comme un écran fermé), annulant le debounce.
-    final subscription =
-        container.listen(exerciseLibraryControllerProvider, (_, __) {});
+    final subscription = container.listen(
+      exerciseLibraryControllerProvider,
+      (_, __) {},
+    );
     addTearDown(subscription.close);
   });
 
   test('charge la première page avec pagination', () async {
-    final state =
-        await container.read(exerciseLibraryControllerProvider.future);
+    final state = await container.read(
+      exerciseLibraryControllerProvider.future,
+    );
 
     expect(state.items.map((item) => item.id), ['id-1', 'id-2']);
     expect(state.hasMore, isTrue);
@@ -47,8 +50,9 @@ void main() {
 
   test('loadMore fusionne les pages sans doublon', () async {
     await container.read(exerciseLibraryControllerProvider.future);
-    final controller =
-        container.read(exerciseLibraryControllerProvider.notifier);
+    final controller = container.read(
+      exerciseLibraryControllerProvider.notifier,
+    );
 
     await controller.loadMore();
     await controller.loadMore();
@@ -69,41 +73,47 @@ void main() {
     expect(repository.listCalls, calls);
   });
 
-  test('la recherche est débouncée puis relance depuis la première page',
-      () async {
-    await container.read(exerciseLibraryControllerProvider.future);
-    final controller =
-        container.read(exerciseLibraryControllerProvider.notifier);
+  test(
+    'la recherche est débouncée puis relance depuis la première page',
+    () async {
+      await container.read(exerciseLibraryControllerProvider.future);
+      final controller = container.read(
+        exerciseLibraryControllerProvider.notifier,
+      );
 
-    controller.setSearch('S');
-    controller.setSearch('Sq');
-    controller.setSearch('Squat');
-    await Future<void>.delayed(
-      ExerciseLibraryController.searchDebounce +
-          const Duration(milliseconds: 50),
-    );
+      controller.setSearch('S');
+      controller.setSearch('Sq');
+      controller.setSearch('Squat');
+      await Future<void>.delayed(
+        ExerciseLibraryController.searchDebounce +
+            const Duration(milliseconds: 50),
+      );
 
-    final state = container.read(exerciseLibraryControllerProvider).value!;
-    expect(state.items.map((item) => item.name), ['Squat']);
-    // 1 chargement initial + 1 seul rechargement malgré 3 frappes.
-    expect(repository.listCalls, 2);
-  });
+      final state = container.read(exerciseLibraryControllerProvider).value!;
+      expect(state.items.map((item) => item.name), ['Squat']);
+      // 1 chargement initial + 1 seul rechargement malgré 3 frappes.
+      expect(repository.listCalls, 2);
+    },
+  );
 
-  test('filtre par difficulté transmis au repository puis réinitialisé',
-      () async {
-    await container.read(exerciseLibraryControllerProvider.future);
-    final controller =
-        container.read(exerciseLibraryControllerProvider.notifier);
+  test(
+    'filtre par difficulté transmis au repository puis réinitialisé',
+    () async {
+      await container.read(exerciseLibraryControllerProvider.future);
+      final controller = container.read(
+        exerciseLibraryControllerProvider.notifier,
+      );
 
-    await controller.setDifficulty(ExerciseDifficulty.advanced);
-    expect(
-      repository.receivedFilters.last.difficulty,
-      ExerciseDifficulty.advanced,
-    );
+      await controller.setDifficulty(ExerciseDifficulty.advanced);
+      expect(
+        repository.receivedFilters.last.difficulty,
+        ExerciseDifficulty.advanced,
+      );
 
-    await controller.setDifficulty(null);
-    expect(repository.receivedFilters.last.difficulty, isNull);
-  });
+      await controller.setDifficulty(null);
+      expect(repository.receivedFilters.last.difficulty, isNull);
+    },
+  );
 
   test('une page en vol n’écrase pas un filtre appliqué entre-temps', () async {
     // La course : l'utilisateur fait défiler (page 2 demandée), puis change
@@ -111,8 +121,9 @@ void main() {
     // ABANDONNÉE — la fusionner recollerait les résultats de l'ancien filtre
     // sous les puces du nouveau.
     await container.read(exerciseLibraryControllerProvider.future);
-    final controller =
-        container.read(exerciseLibraryControllerProvider.notifier);
+    final controller = container.read(
+      exerciseLibraryControllerProvider.notifier,
+    );
 
     final gate = Completer<void>();
     repository.beforeList = () {

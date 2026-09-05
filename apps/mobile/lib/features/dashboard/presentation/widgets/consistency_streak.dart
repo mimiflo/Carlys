@@ -38,8 +38,9 @@ class ConsistencyStreak extends StatelessWidget {
               iconColor: AppColors.accent,
               label: 'Série de constance',
               trailing: _headline(data),
-              trailingColor:
-                  streak > 0 ? AppColors.accent : AppColors.darkTextTertiary,
+              trailingColor: streak > 0
+                  ? AppColors.accent
+                  : AppColors.darkTextTertiary,
               // La flamme RESPIRE tant que la série tient : le seul mouvement
               // permanent de l'accueil, et il dit quelque chose.
               leading: streak > 0
@@ -94,7 +95,7 @@ class ConsistencyStreak extends StatelessWidget {
     final base = trained == 0
         ? 'Aucune séance cette semaine'
         : '$trained jour${trained > 1 ? 's' : ''} tenu'
-            '${trained > 1 ? 's' : ''} cette semaine';
+              '${trained > 1 ? 's' : ''} cette semaine';
     if (week.streakDays == 0) {
       return '$base. Série à relancer.';
     }

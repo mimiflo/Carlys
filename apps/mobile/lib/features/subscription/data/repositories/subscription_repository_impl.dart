@@ -14,8 +14,9 @@ class SubscriptionRepositoryImpl implements SubscriptionRepository {
   @override
   Future<PlanStatus> planStatus() {
     return _guard(() async {
-      final response =
-          await _dio.get<Map<String, dynamic>>('/subscriptions/me');
+      final response = await _dio.get<Map<String, dynamic>>(
+        '/subscriptions/me',
+      );
       final body = response.data?['data'] as Map<String, dynamic>? ?? const {};
       final subscription = body['subscription'] as Map<String, dynamic>?;
       return PlanStatus(
@@ -25,8 +26,9 @@ class SubscriptionRepositoryImpl implements SubscriptionRepository {
             ? null
             : SubscriptionInfo(
                 planName: subscription['planName'] as String,
-                state:
-                    SubscriptionState.fromApi(subscription['status'] as String),
+                state: SubscriptionState.fromApi(
+                  subscription['status'] as String,
+                ),
                 cancelAtPeriodEnd:
                     subscription['cancelAtPeriodEnd'] as bool? ?? false,
                 currentPeriodEnd: subscription['currentPeriodEnd'] == null
@@ -62,8 +64,9 @@ class SubscriptionRepositoryImpl implements SubscriptionRepository {
   @override
   Future<OfferCatalog> offers() {
     return _guard(() async {
-      final response =
-          await _dio.get<Map<String, dynamic>>('/subscriptions/offers');
+      final response = await _dio.get<Map<String, dynamic>>(
+        '/subscriptions/offers',
+      );
       final body = response.data?['data'] as Map<String, dynamic>? ?? const {};
       return OfferCatalog(
         checkoutAvailable: body['checkoutAvailable'] as bool? ?? false,

@@ -61,9 +61,11 @@ class TemplateExerciseTile extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  for (var index = 0;
-                      index < exercise.sets.length;
-                      index++) ...[
+                  for (
+                    var index = 0;
+                    index < exercise.sets.length;
+                    index++
+                  ) ...[
                     if (index > 0) const SizedBox(height: AppSpacing.xs),
                     PlannedSetRow(
                       position: index + 1,
@@ -123,7 +125,8 @@ class _Summary extends StatelessWidget {
     return Semantics(
       button: true,
       expanded: expanded,
-      label: 'Exercice ${formatThousands(position)} : ${exercise.name}, '
+      label:
+          'Exercice ${formatThousands(position)} : ${exercise.name}, '
           '${summarize(exercise)}',
       child: Material(
         color: Colors.transparent,
@@ -157,8 +160,9 @@ class _Summary extends StatelessWidget {
                         summarize(exercise).toUpperCase(),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: AppTypography.labelMono
-                            .copyWith(color: AppColors.darkTextTertiary),
+                        style: AppTypography.labelMono.copyWith(
+                          color: AppColors.darkTextTertiary,
+                        ),
                       ),
                     ],
                   ),

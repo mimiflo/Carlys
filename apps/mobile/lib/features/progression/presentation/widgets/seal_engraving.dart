@@ -16,11 +16,7 @@ import '../../../../design_system/design_system.dart';
 /// La réduction d'animations système est respectée : le sceau est alors
 /// simplement là, entier, sans mouvement.
 class EngravedSeal extends StatefulWidget {
-  const EngravedSeal({
-    required this.child,
-    required this.engrave,
-    super.key,
-  });
+  const EngravedSeal({required this.child, required this.engrave, super.key});
 
   final Widget child;
 
@@ -53,8 +49,10 @@ class _EngravedSealState extends State<EngravedSeal>
       _controller.value = 1;
       return;
     }
-    _controller.duration =
-        AppMotion.resolve(context, EngravedSeal.engraveDuration);
+    _controller.duration = AppMotion.resolve(
+      context,
+      EngravedSeal.engraveDuration,
+    );
     if (!_controller.isAnimating && _controller.value == 0) {
       _controller.forward();
     }

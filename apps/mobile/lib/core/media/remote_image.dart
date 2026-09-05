@@ -18,10 +18,10 @@ final remoteImageCacheProvider = Provider<RemoteImageCache>(
 /// bornait plus rien : un long défilement du catalogue coûtait ce que le
 /// cache s'était donné tant de mal à éviter. La conservation est le travail
 /// du cache (mémoire bornée, puis disque) : rien n'est retéléchargé.
-final remoteImageProvider =
-    FutureProvider.autoDispose.family<Uint8List?, String>(
-  (ref, url) => ref.watch(remoteImageCacheProvider).bytesOf(url),
-);
+final remoteImageProvider = FutureProvider.autoDispose
+    .family<Uint8List?, String>(
+      (ref, url) => ref.watch(remoteImageCacheProvider).bytesOf(url),
+    );
 
 /// Photo distante, avec son repli.
 ///
@@ -67,7 +67,7 @@ class RemoteImage extends ConsumerWidget {
               cacheWidth: logicalWidth == null
                   ? null
                   : (logicalWidth * MediaQuery.devicePixelRatioOf(context))
-                      .round(),
+                        .round(),
               // Une image illisible (fichier tronqué) retombe sur le repli
               // plutôt que d'afficher l'icône d'erreur du framework.
               errorBuilder: (_, __, ___) => placeholder,

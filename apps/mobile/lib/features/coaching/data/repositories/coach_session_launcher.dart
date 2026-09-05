@@ -39,11 +39,11 @@ class DriftCoachSessionLauncher implements CoachSessionLauncher {
     required AppDatabase database,
     required SyncEngine syncEngine,
     Uuid uuid = const Uuid(),
-  })  : _db = database,
-        _sync = syncEngine,
-        _uuid = uuid,
-        _plans = SessionPlanLocalDataSource(database),
-        _sessions = WorkoutSessionWriter(database: database, uuid: uuid);
+  }) : _db = database,
+       _sync = syncEngine,
+       _uuid = uuid,
+       _plans = SessionPlanLocalDataSource(database),
+       _sessions = WorkoutSessionWriter(database: database, uuid: uuid);
 
   final AppDatabase _db;
   final SyncEngine _sync;

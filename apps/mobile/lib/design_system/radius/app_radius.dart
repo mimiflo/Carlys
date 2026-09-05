@@ -26,16 +26,22 @@ abstract final class AppRadius {
   static const BorderRadius xlAll = BorderRadius.all(Radius.circular(xl));
   static const BorderRadius fullAll = BorderRadius.all(Radius.circular(full));
 
-  static const BorderRadius cardMainAll =
-      BorderRadius.all(Radius.circular(cardMain));
-  static const BorderRadius cardSecondaryAll =
-      BorderRadius.all(Radius.circular(cardSecondary));
-  static const BorderRadius listRowAll =
-      BorderRadius.all(Radius.circular(listRow));
-  static const BorderRadius statTileAll =
-      BorderRadius.all(Radius.circular(statTile));
-  static const BorderRadius buttonAll =
-      BorderRadius.all(Radius.circular(button));
-  static const BorderRadius avatarAll =
-      BorderRadius.all(Radius.circular(avatar));
+  static const BorderRadius cardMainAll = BorderRadius.all(
+    Radius.circular(cardMain),
+  );
+  static const BorderRadius cardSecondaryAll = BorderRadius.all(
+    Radius.circular(cardSecondary),
+  );
+  static const BorderRadius listRowAll = BorderRadius.all(
+    Radius.circular(listRow),
+  );
+  static const BorderRadius statTileAll = BorderRadius.all(
+    Radius.circular(statTile),
+  );
+  static const BorderRadius buttonAll = BorderRadius.all(
+    Radius.circular(button),
+  );
+  static const BorderRadius avatarAll = BorderRadius.all(
+    Radius.circular(avatar),
+  );
 }

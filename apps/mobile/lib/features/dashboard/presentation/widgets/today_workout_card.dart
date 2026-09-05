@@ -52,7 +52,9 @@ class TodayWorkoutCard extends StatelessWidget {
           children: [
             Row(
               children: [
-                Expanded(child: _Heading(title: title, active: active)),
+                Expanded(
+                  child: _Heading(title: title, active: active),
+                ),
                 const SizedBox(width: AppSpacing.md),
                 _PlayDisc(started: active != null, onPressed: onStart),
               ],
@@ -91,8 +93,9 @@ class _Heading extends StatelessWidget {
             const SizedBox(width: AppSpacing.xs - 1),
             Text(
               'SÉANCE DU JOUR',
-              style: AppTypography.labelMono
-                  .copyWith(color: AppColors.darkTextTertiary),
+              style: AppTypography.labelMono.copyWith(
+                color: AppColors.darkTextTertiary,
+              ),
             ),
           ],
         ),
@@ -110,8 +113,9 @@ class _Heading extends StatelessWidget {
         const SizedBox(height: AppSpacing.xs - 1),
         Text(
           _support(active),
-          style:
-              AppTypography.body.copyWith(color: AppColors.darkTextSecondary),
+          style: AppTypography.body.copyWith(
+            color: AppColors.darkTextSecondary,
+          ),
         ),
       ],
     );
@@ -132,8 +136,10 @@ class _Heading extends StatelessWidget {
         ? 'En cours'
         : 'En cours depuis ${formatDurationShort(elapsed.inSeconds).toLowerCase()}';
 
-    final exercises =
-        active.sets.map((entry) => entry.exerciseName).toSet().length;
+    final exercises = active.sets
+        .map((entry) => entry.exerciseName)
+        .toSet()
+        .length;
     final sets = active.setsCount;
     if (exercises == 0) {
       return '$since. Reprends où tu en étais.';
@@ -246,8 +252,9 @@ class _TemplateRow extends StatelessWidget {
               if (saved != null && saved > 0) ...[
                 Text(
                   '$saved ENREGISTRÉ${saved > 1 ? 'S' : ''}',
-                  style: AppTypography.labelMono
-                      .copyWith(color: AppColors.darkTextTertiary),
+                  style: AppTypography.labelMono.copyWith(
+                    color: AppColors.darkTextTertiary,
+                  ),
                 ),
                 const SizedBox(width: AppSpacing.xs),
               ],

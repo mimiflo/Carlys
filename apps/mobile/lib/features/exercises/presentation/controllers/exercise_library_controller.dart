@@ -20,12 +20,12 @@ class ExerciseLibraryState {
   });
 
   const ExerciseLibraryState.initial()
-      : items = const [],
-        filters = const ExercisesFilters(),
-        hasMore = false,
-        nextCursor = null,
-        isLoadingMore = false,
-        total = null;
+    : items = const [],
+      filters = const ExercisesFilters(),
+      hasMore = false,
+      nextCursor = null,
+      isLoadingMore = false,
+      total = null;
 
   final List<ExerciseSummary> items;
   final ExercisesFilters filters;
@@ -78,8 +78,9 @@ class ExerciseLibraryController
   }
 
   Future<ExerciseLibraryState> _loadFirstPage() async {
-    final page =
-        await ref.read(exercisesRepositoryProvider).list(filters: _filters);
+    final page = await ref
+        .read(exercisesRepositoryProvider)
+        .list(filters: _filters);
     return ExerciseLibraryState(
       items: page.items,
       filters: _filters,
@@ -167,30 +168,33 @@ class ExerciseLibraryController
   }
 }
 
-final exerciseLibraryControllerProvider = AsyncNotifierProvider.autoDispose<
-    ExerciseLibraryController, ExerciseLibraryState>(
-  ExerciseLibraryController.new,
-);
+final exerciseLibraryControllerProvider =
+    AsyncNotifierProvider.autoDispose<
+      ExerciseLibraryController,
+      ExerciseLibraryState
+    >(ExerciseLibraryController.new);
 
 /// L'utilisateur a demandé le catalogue ENTIER depuis la grille.
 ///
 /// État de navigation, pas de filtre : « aucun groupe » veut dire deux choses
 /// opposées — on n'a pas encore choisi (grille), ou on a choisi de tout voir
 /// (liste). Le domaine n'a pas à porter cette nuance, l'écran si.
-final exerciseCatalogueOpenProvider =
-    StateProvider.autoDispose<bool>((ref) => false);
+final exerciseCatalogueOpenProvider = StateProvider.autoDispose<bool>(
+  (ref) => false,
+);
 
 /// Référentiel des groupes musculaires (pour les filtres).
-final muscleGroupsProvider =
-    FutureProvider.autoDispose<List<MuscleGroupRef>>((ref) {
+final muscleGroupsProvider = FutureProvider.autoDispose<List<MuscleGroupRef>>((
+  ref,
+) {
   return ref.watch(exercisesRepositoryProvider).muscleGroups();
 });
 
 /// Fiche détaillée d'un exercice.
-final exerciseDetailProvider =
-    FutureProvider.autoDispose.family<ExerciseDetail, String>((ref, idOrSlug) {
-  return ref.watch(exercisesRepositoryProvider).byIdOrSlug(idOrSlug);
-});
+final exerciseDetailProvider = FutureProvider.autoDispose
+    .family<ExerciseDetail, String>((ref, idOrSlug) {
+      return ref.watch(exercisesRepositoryProvider).byIdOrSlug(idOrSlug);
+    });
 
 /// Clé d'un exercice pour la sélection de ses records : l'API historique
 /// rattache un record par identifiant quand il existe, par nom sinon.
@@ -200,12 +204,13 @@ typedef ExerciseRecordsKey = ({String id, String name});
 /// tant que les records ne sont pas chargés — jamais de valeur inventée).
 final exerciseRecordsProvider = Provider.autoDispose
     .family<List<PersonalRecordEntry>, ExerciseRecordsKey>((ref, key) {
-  final all = ref.watch(personalRecordsProvider).valueOrNull ??
-      const <PersonalRecordEntry>[];
-  return all
-      .where(
-        (record) =>
-            record.exerciseId == key.id || record.exerciseName == key.name,
-      )
-      .toList();
-});
+      final all =
+          ref.watch(personalRecordsProvider).valueOrNull ??
+          const <PersonalRecordEntry>[];
+      return all
+          .where(
+            (record) =>
+                record.exerciseId == key.id || record.exerciseName == key.name,
+          )
+          .toList();
+    });

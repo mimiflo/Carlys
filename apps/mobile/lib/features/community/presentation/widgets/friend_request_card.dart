@@ -22,10 +22,7 @@ class FriendRequestCard extends StatelessWidget {
     return AppCard(
       child: Row(
         children: [
-          const Icon(
-            Icons.person_add_alt_1_outlined,
-            color: AppColors.accent,
-          ),
+          const Icon(Icons.person_add_alt_1_outlined, color: AppColors.accent),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Column(
@@ -33,14 +30,16 @@ class FriendRequestCard extends StatelessWidget {
               children: [
                 Text(
                   request.fromDisplayName,
-                  style: AppTypography.subheading
-                      .copyWith(color: AppColors.darkTextPrimary),
+                  style: AppTypography.subheading.copyWith(
+                    color: AppColors.darkTextPrimary,
+                  ),
                 ),
                 Text(
                   'veut devenir ton ami · '
                   '${formatRelativeTime(request.createdAt)}',
-                  style: AppTypography.label
-                      .copyWith(color: AppColors.darkTextTertiary),
+                  style: AppTypography.label.copyWith(
+                    color: AppColors.darkTextTertiary,
+                  ),
                 ),
               ],
             ),

@@ -59,8 +59,9 @@ void main() {
     expect(cache.asked, ['http://s/image/a.png']);
   });
 
-  testWidgets('photo hors d’atteinte : le repli reste, sans erreur affichée',
-      (tester) async {
+  testWidgets('photo hors d’atteinte : le repli reste, sans erreur affichée', (
+    tester,
+  ) async {
     // Hors ligne, une illustration manquante ne doit ni trouer la page ni
     // afficher un message : c'est un ornement, pas une donnée.
     await tester.pumpWidget(_harness(_FakeCache(null), url: 'http://s/x.png'));
@@ -80,8 +81,9 @@ void main() {
     expect(find.byType(Image), findsOneWidget);
   });
 
-  testWidgets('démontée, la vignette libère son entrée de provider',
-      (tester) async {
+  testWidgets('démontée, la vignette libère son entrée de provider', (
+    tester,
+  ) async {
     // Le cache en dessous borne sa mémoire ; la couche provider ne doit pas
     // garder une référence forte aux octets de chaque URL vue. Après
     // démontage, l'entrée disparaît et le budget du cache redevient réel.
@@ -90,17 +92,15 @@ void main() {
     );
     addTearDown(container.dispose);
     Widget app(Widget home) => UncontrolledProviderScope(
-          container: container,
-          child: MaterialApp(home: home),
-        );
+      container: container,
+      child: MaterialApp(home: home),
+    );
     bool held() => container.getAllProviderElements().any(
-          (element) => element.origin.from == remoteImageProvider,
-        );
+      (element) => element.origin.from == remoteImageProvider,
+    );
 
     await tester.pumpWidget(
-      app(
-        const RemoteImage(url: 'http://s/a.png', placeholder: Text('repli')),
-      ),
+      app(const RemoteImage(url: 'http://s/a.png', placeholder: Text('repli'))),
     );
     await tester.pumpAndSettle();
     expect(held(), isTrue);
@@ -118,23 +118,27 @@ void main() {
       TestWidgetsFlutterBinding.ensureInitialized();
       final cache = DiskRemoteImageCache();
 
-      final bytes =
-          await cache.bytesOf('${assetImageScheme}assets/muscles/biceps.webp');
+      final bytes = await cache.bytesOf(
+        '${assetImageScheme}assets/muscles/biceps.webp',
+      );
 
       expect(bytes, isNotNull);
       expect(bytes!.length, greaterThan(0));
     });
 
-    test('asset absent : repli silencieux, comme une photo hors d’atteinte',
-        () async {
-      TestWidgetsFlutterBinding.ensureInitialized();
-      final cache = DiskRemoteImageCache();
+    test(
+      'asset absent : repli silencieux, comme une photo hors d’atteinte',
+      () async {
+        TestWidgetsFlutterBinding.ensureInitialized();
+        final cache = DiskRemoteImageCache();
 
-      final bytes =
-          await cache.bytesOf('${assetImageScheme}assets/muscles/néant.webp');
+        final bytes = await cache.bytesOf(
+          '${assetImageScheme}assets/muscles/néant.webp',
+        );
 
-      expect(bytes, isNull);
-    });
+        expect(bytes, isNull);
+      },
+    );
   });
 }
 
@@ -164,10 +168,12 @@ void evictionTests() {
 
     test('une image consultée revient en queue d’éviction', () async {
       final cache = DiskRemoteImageCache(memoryBudgetBytes: 1024 * 1024);
-      final a =
-          await cache.bytesOf('${assetImageScheme}assets/muscles/dos.webp');
-      final b =
-          await cache.bytesOf('${assetImageScheme}assets/muscles/biceps.webp');
+      final a = await cache.bytesOf(
+        '${assetImageScheme}assets/muscles/dos.webp',
+      );
+      final b = await cache.bytesOf(
+        '${assetImageScheme}assets/muscles/biceps.webp',
+      );
       expect(a, isNotNull);
       expect(b, isNotNull);
       expect(cache.memoryEntryCount, 2);

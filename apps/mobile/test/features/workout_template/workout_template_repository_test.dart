@@ -24,8 +24,10 @@ void main() {
     api = FakeSyncApi();
     clock = DateTime.utc(2026, 8, 8, 10);
     engine = SyncEngine(database: db, api: api, now: () => clock);
-    repository =
-        WorkoutTemplateRepositoryImpl(database: db, syncEngine: engine);
+    repository = WorkoutTemplateRepositoryImpl(
+      database: db,
+      syncEngine: engine,
+    );
   });
 
   tearDown(() => db.close());
@@ -70,8 +72,7 @@ void main() {
   Future<List<SyncOperation>> operations() =>
       db.select(db.syncOperations).get();
 
-  test(
-      'enregistrer un modèle hors ligne : contenu écrit en local et UNE seule '
+  test('enregistrer un modèle hors ligne : contenu écrit en local et UNE seule '
       'opération enfilée', () async {
     api.networkDown = true;
 
@@ -151,30 +152,32 @@ void main() {
     expect(exercises, hasLength(1));
   });
 
-  test('supprimer un modèle pose un tombstone local et une opération rejouable',
-      () async {
-    api.networkDown = true;
-    final templateId = await repository.saveTemplate(pushInput());
+  test(
+    'supprimer un modèle pose un tombstone local et une opération rejouable',
+    () async {
+      api.networkDown = true;
+      final templateId = await repository.saveTemplate(pushInput());
 
-    await repository.deleteTemplate(templateId);
+      await repository.deleteTemplate(templateId);
 
-    expect(await repository.watchTemplates().first, isEmpty);
-    expect(await repository.templateDetail(templateId), isNull);
+      expect(await repository.watchTemplates().first, isEmpty);
+      expect(await repository.templateDetail(templateId), isNull);
 
-    // La ligne locale survit jusqu'à l'acquittement (tombstone).
-    final row = await (db.select(db.localWorkoutTemplates)
-          ..where((template) => template.id.equals(templateId)))
-        .getSingleOrNull();
-    expect(row, isNotNull);
-    expect(row!.deleted, isTrue);
+      // La ligne locale survit jusqu'à l'acquittement (tombstone).
+      final row = await (db.select(
+        db.localWorkoutTemplates,
+      )..where((template) => template.id.equals(templateId))).getSingleOrNull();
+      expect(row, isNotNull);
+      expect(row!.deleted, isTrue);
 
-    final pending = await operations();
-    expect(pending.map((op) => op.operationType), ['template.delete']);
+      final pending = await operations();
+      expect(pending.map((op) => op.operationType), ['template.delete']);
 
-    // Rejeu : aucune opération supplémentaire.
-    await repository.deleteTemplate(templateId);
-    expect(await operations(), hasLength(1));
-  });
+      // Rejeu : aucune opération supplémentaire.
+      await repository.deleteTemplate(templateId);
+      expect(await operations(), hasLength(1));
+    },
+  );
 
   test('le corps PUT sérialisé respecte le contrat d’API', () async {
     final templateId = await repository.saveTemplate(pushInput());
@@ -208,36 +211,38 @@ void main() {
     expect(api.log, hasLength(1));
   });
 
-  test('une saisie hors bornes est refusée AVANT toute écriture locale',
-      () async {
-    await expectLater(
-      repository.saveTemplate(
-        const SaveTemplateInput(name: '   ', exercises: []),
-      ),
-      throwsA(isA<InvalidTemplateException>()),
-    );
-    await expectLater(
-      repository.saveTemplate(
-        const SaveTemplateInput(name: 'Sans exercice', exercises: []),
-      ),
-      throwsA(isA<InvalidTemplateException>()),
-    );
-    await expectLater(
-      repository.saveTemplate(
-        const SaveTemplateInput(
-          name: 'Charge absurde',
-          exercises: [
-            TemplateExerciseInput(
-              exerciseName: 'Squat',
-              sets: [PlannedSetInput(targetWeightKg: 5000)],
-            ),
-          ],
+  test(
+    'une saisie hors bornes est refusée AVANT toute écriture locale',
+    () async {
+      await expectLater(
+        repository.saveTemplate(
+          const SaveTemplateInput(name: '   ', exercises: []),
         ),
-      ),
-      throwsA(isA<InvalidTemplateException>()),
-    );
+        throwsA(isA<InvalidTemplateException>()),
+      );
+      await expectLater(
+        repository.saveTemplate(
+          const SaveTemplateInput(name: 'Sans exercice', exercises: []),
+        ),
+        throwsA(isA<InvalidTemplateException>()),
+      );
+      await expectLater(
+        repository.saveTemplate(
+          const SaveTemplateInput(
+            name: 'Charge absurde',
+            exercises: [
+              TemplateExerciseInput(
+                exerciseName: 'Squat',
+                sets: [PlannedSetInput(targetWeightKg: 5000)],
+              ),
+            ],
+          ),
+        ),
+        throwsA(isA<InvalidTemplateException>()),
+      );
 
-    expect(await db.select(db.localWorkoutTemplates).get(), isEmpty);
-    expect(await operations(), isEmpty);
-  });
+      expect(await db.select(db.localWorkoutTemplates).get(), isEmpty);
+      expect(await operations(), isEmpty);
+    },
+  );
 }

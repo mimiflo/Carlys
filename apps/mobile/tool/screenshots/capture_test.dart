@@ -118,13 +118,15 @@ Future<void> loadRealFonts() async {
     // ~211 sur un vrai appareil. On charge le 400 en tête, le plus proche de la
     // moyenne de l'interface — sans quoi une fonte fine déclarée en premier
     // amaigrirait toute la galerie.
-    final fonts = (entry['fonts'] as List<dynamic>)
-        .whereType<Map<String, dynamic>>()
-        .toList()
-      ..sort((a, b) {
-        int gap(Map<String, dynamic> f) => ((f['weight'] as int?) ?? 400) - 400;
-        return gap(a).abs().compareTo(gap(b).abs());
-      });
+    final fonts =
+        (entry['fonts'] as List<dynamic>)
+            .whereType<Map<String, dynamic>>()
+            .toList()
+          ..sort((a, b) {
+            int gap(Map<String, dynamic> f) =>
+                ((f['weight'] as int?) ?? 400) - 400;
+            return gap(a).abs().compareTo(gap(b).abs());
+          });
     for (final font in fonts) {
       loader.addFont(rootBundle.load(font['asset'] as String));
     }
@@ -135,8 +137,9 @@ Future<void> loadRealFonts() async {
   // test « blocs » fausse largeurs et lisibilité des captures).
   final flutterRoot = Platform.environment['FLUTTER_ROOT'];
   if (flutterRoot != null) {
-    final fontsDir =
-        Directory('$flutterRoot/bin/cache/artifacts/material_fonts');
+    final fontsDir = Directory(
+      '$flutterRoot/bin/cache/artifacts/material_fonts',
+    );
     // « FlutterTest » est la police par défaut du harnais (glyphes en blocs) :
     // la remplacer aussi rend les styles sans famille explicite lisibles.
     for (final family in const ['Roboto', 'FlutterTest']) {
@@ -194,22 +197,20 @@ Future<void> _loadEmojiFont() async {
   );
 }
 
-FakeExercisesRepository catalogOf() => FakeExercisesRepository(
-      [
-        summary('id-1', 'Développé couché', group: 'pectoraux'),
-        summary('id-2', 'Squat', group: 'quadriceps'),
-        summary('id-3', 'Tractions', group: 'dos'),
-        summary('id-4', 'Soulevé de terre', group: 'lombaires'),
-        summary('id-5', 'Pompes', group: 'pectoraux'),
-      ],
-      pageSize: 10,
-    );
+FakeExercisesRepository catalogOf() => FakeExercisesRepository([
+  summary('id-1', 'Développé couché', group: 'pectoraux'),
+  summary('id-2', 'Squat', group: 'quadriceps'),
+  summary('id-3', 'Tractions', group: 'dos'),
+  summary('id-4', 'Soulevé de terre', group: 'lombaires'),
+  summary('id-5', 'Pompes', group: 'pectoraux'),
+], pageSize: 10);
 
 WorkoutWithSets activeWorkoutOf() {
   // Départ RELATIF : une date fixe vieillit, et le chrono de la galerie
   // affichait « 54:37:39 » — une séance de deux jours et demi.
-  final startedAt =
-      DateTime.now().toUtc().subtract(const Duration(minutes: 47));
+  final startedAt = DateTime.now().toUtc().subtract(
+    const Duration(minutes: 47),
+  );
   WorkoutSetEntry set(int position, String name, int reps, double weight) =>
       WorkoutSetEntry(
         id: 'set-$position',
@@ -220,8 +221,9 @@ WorkoutWithSets activeWorkoutOf() {
         weightKg: weight,
         restSeconds: 90,
         completedAt: startedAt.add(Duration(minutes: 5 + position * 3)),
-        syncState:
-            position < 2 ? LocalSyncState.synced : LocalSyncState.pending,
+        syncState: position < 2
+            ? LocalSyncState.synced
+            : LocalSyncState.pending,
       );
   return WorkoutWithSets(
     session: WorkoutInfo(
@@ -262,24 +264,30 @@ List<WorkoutHistoryEntry> historyOf() {
 }
 
 FakeProgressRepository progressOf() => FakeProgressRepository(
-      records: [
-        recordOf('Développé couché', PersonalRecordType.maxWeight, 80),
-        recordOf('Développé couché', PersonalRecordType.maxReps, 12),
-        recordOf('Développé couché', PersonalRecordType.maxSetVolume, 700),
-        recordOf('Squat', PersonalRecordType.maxWeight, 120),
-      ],
-      bodyMetrics: [
-        for (final (index, value)
-            in [86.0, 85.2, 84.6, 84.9, 83.8, 83.1, 82.5].indexed)
-          BodyMetricEntry(
-            id: 'w-$index',
-            kind: BodyMetricKind.weightKg,
-            value: value,
-            measuredAt:
-                DateTime.utc(2026, 6, 25).add(Duration(days: index * 6)),
-          ),
-      ],
-    );
+  records: [
+    recordOf('Développé couché', PersonalRecordType.maxWeight, 80),
+    recordOf('Développé couché', PersonalRecordType.maxReps, 12),
+    recordOf('Développé couché', PersonalRecordType.maxSetVolume, 700),
+    recordOf('Squat', PersonalRecordType.maxWeight, 120),
+  ],
+  bodyMetrics: [
+    for (final (index, value) in [
+      86.0,
+      85.2,
+      84.6,
+      84.9,
+      83.8,
+      83.1,
+      82.5,
+    ].indexed)
+      BodyMetricEntry(
+        id: 'w-$index',
+        kind: BodyMetricKind.weightKg,
+        value: value,
+        measuredAt: DateTime.utc(2026, 6, 25).add(Duration(days: index * 6)),
+      ),
+  ],
+);
 
 /// Conversation d'exemple de la galerie : une question, une réponse, et la
 /// séance qui en découle — c'est l'enchaînement que l'écran doit montrer.
@@ -321,7 +329,8 @@ FakeCoachRepository coachOf() {
       CoachMessage(
         id: 'm2',
         role: CoachRole.assistant,
-        content: 'On garde les deux mouvements principaux et on resserre les '
+        content:
+            'On garde les deux mouvements principaux et on resserre les '
             'repos. Les charges ne bougent pas : c’est le volume qui tombe, '
             'pas l’intensité.',
         proposal: proposal,
@@ -448,9 +457,7 @@ void main() {
       BrandSignature.markAsset,
       WelcomeBackdrop.athleteAsset,
     ]) {
-      await tester.runAsync(
-        () => precacheImage(AssetImage(asset), context),
-      );
+      await tester.runAsync(() => precacheImage(AssetImage(asset), context));
     }
     await settle(tester);
   }
@@ -514,8 +521,9 @@ void main() {
           // Même raison que la communauté ci-dessus : sans doublure, l'écran
           // Profil demande ses préférences de notification au dépôt Dio réel,
           // et le minuteur de timeout survit au test.
-          deviceTokenRepositoryProvider
-              .overrideWithValue(DemoDeviceTokenRepository()),
+          deviceTokenRepositoryProvider.overrideWithValue(
+            DemoDeviceTokenRepository(),
+          ),
           // Les puces se calculent depuis les modèles de séance, qui vivent
           // dans Drift : la galerie n'ouvre pas de base locale, elle fige donc
           // le résultat que la règle donnerait pour ce jeu d'exemple.
@@ -990,11 +998,7 @@ void main() {
     await settle(tester);
     await tester.tap(find.text('Les pectoraux, un éventail'));
     await settle(tester);
-    await capture(
-      tester,
-      '36-academy-anatomie',
-      shows: find.text('À RETENIR'),
-    );
+    await capture(tester, '36-academy-anatomie', shows: find.text('À RETENIR'));
   });
 
   testWidgets('Communauté — amis, encouragements, défis', (tester) async {
@@ -1002,11 +1006,7 @@ void main() {
     // le dépôt de démonstration a des amis et des défis à montrer.
     await pumpDemoApp(tester);
     await goTab(tester, 'Communauté');
-    await capture(
-      tester,
-      '29-communaute',
-      shows: find.byType(CommunityScreen),
-    );
+    await capture(tester, '29-communaute', shows: find.byType(CommunityScreen));
   });
 
   testWidgets('séance active', (tester) async {

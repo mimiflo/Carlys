@@ -20,7 +20,7 @@ import '../features/workout_template/domain/services/template_normalizer.dart';
 
 /// (nom, exercices) — chaque exercice : (nom, séries prévues).
 const List<(String, int, List<(String, List<(int, double, int)>)>)>
-    _demoTemplates = [
+_demoTemplates = [
   (
     'Push force',
     55,
@@ -47,27 +47,27 @@ const List<(String, int, List<(String, List<(int, double, int)>)>)>
 /// Jeu de modèles de démonstration, sous la forme d'entrées d'écriture
 /// ordinaires : le dépôt les enregistre comme n'importe quelle saisie.
 List<SaveTemplateInput> demoTemplateSeed() => [
-      for (final (index, template) in _demoTemplates.indexed)
-        SaveTemplateInput(
-          id: 'demo-template-$index',
-          name: template.$1,
-          estimatedDurationMinutes: template.$2,
-          exercises: [
-            for (final (exerciseName, sets) in template.$3)
-              TemplateExerciseInput(
-                exerciseName: exerciseName,
-                sets: [
-                  for (final (reps, weight, rest) in sets)
-                    PlannedSetInput(
-                      targetReps: reps,
-                      targetWeightKg: weight == 0 ? null : weight,
-                      restSeconds: rest,
-                    ),
-                ],
-              ),
-          ],
-        ),
-    ];
+  for (final (index, template) in _demoTemplates.indexed)
+    SaveTemplateInput(
+      id: 'demo-template-$index',
+      name: template.$1,
+      estimatedDurationMinutes: template.$2,
+      exercises: [
+        for (final (exerciseName, sets) in template.$3)
+          TemplateExerciseInput(
+            exerciseName: exerciseName,
+            sets: [
+              for (final (reps, weight, rest) in sets)
+                PlannedSetInput(
+                  targetReps: reps,
+                  targetWeightKg: weight == 0 ? null : weight,
+                  restSeconds: rest,
+                ),
+            ],
+          ),
+      ],
+    ),
+];
 
 /// Dépôt de modèles en mémoire : liste pré-remplie, édition, suppression et
 /// lancement pleinement fonctionnels, sans base ni réseau.
@@ -203,18 +203,15 @@ class DemoWorkoutTemplateRepository implements WorkoutTemplateRepository {
     required String sessionId,
     required String exerciseName,
     String? exerciseId,
-  }) async =>
-      _planOf(sessionId)?.nextPendingFor(
-        exerciseName: exerciseName,
-        exerciseId: exerciseId,
-      );
+  }) async => _planOf(
+    sessionId,
+  )?.nextPendingFor(exerciseName: exerciseName, exerciseId: exerciseId);
 
   @override
   Future<void> fulfillPlanItem({
     required String planItemId,
     required String setId,
-  }) async =>
-      _replace(planItemId, (item) => _copy(item, doneSetId: setId));
+  }) async => _replace(planItemId, (item) => _copy(item, doneSetId: setId));
 
   @override
   Future<void> skipPlanItem(String planItemId) async =>

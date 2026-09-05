@@ -57,8 +57,9 @@ void main() {
               apiBaseUrl: 'http://localhost:3000',
             ),
           ),
-          authRepositoryProvider
-              .overrideWithValue(FakeAuthRepository(storedSession: true)),
+          authRepositoryProvider.overrideWithValue(
+            FakeAuthRepository(storedSession: true),
+          ),
           carlysProfileRepositoryProvider.overrideWithValue(carlysRepo),
           workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
           nutritionRepositoryProvider.overrideWithValue(nutrition),
@@ -70,8 +71,9 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    GoRouter.of(tester.element(find.byType(AppBottomBar)))
-        .go(AppRoutes.onboarding);
+    GoRouter.of(
+      tester.element(find.byType(AppBottomBar)),
+    ).go(AppRoutes.onboarding);
     await tester.pumpAndSettle();
     return nutrition;
   }
@@ -89,8 +91,9 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('la première étape est l’IDENTITÉ : retour masqué, CTA bloqué',
-      (tester) async {
+  testWidgets('la première étape est l’IDENTITÉ : retour masqué, CTA bloqué', (
+    tester,
+  ) async {
     await openOnboarding(tester);
 
     expect(find.text('1/5'), findsOneWidget);
@@ -99,18 +102,16 @@ void main() {
     // cartes illustrées que l'écran Profil Carlys.
     expect(find.text('TON IDENTITÉ'), findsOneWidget);
     expect(find.text('LE CONSTRUCTEUR'), findsOneWidget);
-    expect(
-      find.textContaining('construire les bases'),
-      findsOneWidget,
-    );
+    expect(find.textContaining('construire les bases'), findsOneWidget);
 
     // Aucune réponse choisie : le CTA ne fait rien.
     await tapContinue(tester);
     expect(find.text('1/5'), findsOneWidget);
   });
 
-  testWidgets('choisir une identité pose le badge et débloque le CTA',
-      (tester) async {
+  testWidgets('choisir une identité pose le badge et débloque le CTA', (
+    tester,
+  ) async {
     await openOnboarding(tester);
 
     expect(find.text('Ton profil'), findsNothing);
@@ -136,8 +137,9 @@ void main() {
     expect(find.text('Ton profil'), findsOneWidget);
   });
 
-  testWidgets('les 5 étapes enregistrent identité ET profil métabolique',
-      (tester) async {
+  testWidgets('les 5 étapes enregistrent identité ET profil métabolique', (
+    tester,
+  ) async {
     final nutrition = await openOnboarding(tester);
 
     await tapCard(tester, 'LE CHALLENGER');
@@ -188,8 +190,9 @@ void main() {
     expect(find.byType(AppBottomBar), findsOneWidget);
   });
 
-  testWidgets('« Passer » revient à l’accueil sans rien enregistrer',
-      (tester) async {
+  testWidgets('« Passer » revient à l’accueil sans rien enregistrer', (
+    tester,
+  ) async {
     final nutrition = await openOnboarding(tester);
 
     // Les cartes d'identité poussent le pied de page sous le pli.

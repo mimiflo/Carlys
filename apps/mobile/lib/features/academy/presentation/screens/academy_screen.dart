@@ -47,14 +47,16 @@ class AcademyScreen extends ConsumerWidget {
           children: [
             Text(
               'Academy',
-              style: AppTypography.display
-                  .copyWith(color: AppColors.darkTextPrimary),
+              style: AppTypography.display.copyWith(
+                color: AppColors.darkTextPrimary,
+              ),
             ),
             const SizedBox(height: AppSpacing.xxs),
             Text(
               'Comprendre, c’est progresser deux fois.',
-              style: AppTypography.body
-                  .copyWith(color: AppColors.darkTextSecondary),
+              style: AppTypography.body.copyWith(
+                color: AppColors.darkTextSecondary,
+              ),
             ),
             const SizedBox(height: AppSpacing.gapRow),
             if (daily != null) ...[
@@ -73,15 +75,14 @@ class AcademyScreen extends ConsumerWidget {
               ),
               const SizedBox(height: AppSpacing.gapRow),
             ],
-            _NutritionEntry(
-              onOpen: () => context.push(AppRoutes.nutrition),
-            ),
+            _NutritionEntry(onOpen: () => context.push(AppRoutes.nutrition)),
             const SizedBox(height: AppSpacing.gapSection),
             for (final category in AcademyCategory.values) ...[
               AppSectionLabel(category.label),
               const SizedBox(height: AppSpacing.xs),
-              for (final lesson in lessons
-                  .where((lesson) => lesson.category == category)) ...[
+              for (final lesson in lessons.where(
+                (lesson) => lesson.category == category,
+              )) ...[
                 LessonCard(
                   lesson: lesson,
                   showCategory: false,
@@ -122,13 +123,15 @@ class _NutritionEntry extends StatelessWidget {
               children: [
                 Text(
                   'Nutrition',
-                  style: AppTypography.subheading
-                      .copyWith(color: AppColors.darkTextPrimary),
+                  style: AppTypography.subheading.copyWith(
+                    color: AppColors.darkTextPrimary,
+                  ),
                 ),
                 Text(
                   'Métabolisme, objectifs caloriques et macros.',
-                  style: AppTypography.body
-                      .copyWith(color: AppColors.darkTextSecondary),
+                  style: AppTypography.body.copyWith(
+                    color: AppColors.darkTextSecondary,
+                  ),
                 ),
               ],
             ),

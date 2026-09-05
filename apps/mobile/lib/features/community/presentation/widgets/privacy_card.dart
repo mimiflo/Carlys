@@ -28,14 +28,16 @@ class PrivacyCard extends StatelessWidget {
               children: [
                 Text(
                   'Partager ma progression',
-                  style: AppTypography.subheading
-                      .copyWith(color: AppColors.darkTextPrimary),
+                  style: AppTypography.subheading.copyWith(
+                    color: AppColors.darkTextPrimary,
+                  ),
                 ),
                 Text(
                   'Ta série et tes séances de la semaine, visibles par tes '
                   'amis. Désactivé : ils ne voient que ton nom.',
-                  style: AppTypography.label
-                      .copyWith(color: AppColors.darkTextTertiary),
+                  style: AppTypography.label.copyWith(
+                    color: AppColors.darkTextTertiary,
+                  ),
                 ),
               ],
             ),

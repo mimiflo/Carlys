@@ -5,8 +5,9 @@ import 'package:flutter_test/flutter_test.dart';
 /// La flèche de retour commune : elle dépile la page, et n'existe pas quand
 /// il n'y a rien à dépiler — jamais de flèche morte.
 void main() {
-  testWidgets('sur une page poussée, la flèche apparaît et dépile',
-      (tester) async {
+  testWidgets('sur une page poussée, la flèche apparaît et dépile', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       MaterialApp(
         home: Builder(

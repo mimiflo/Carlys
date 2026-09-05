@@ -34,8 +34,9 @@ void main() {
     );
   }
 
-  testWidgets('aucune maxime du recueil ne déborde de son cadre',
-      (tester) async {
+  testWidgets('aucune maxime du recueil ne déborde de son cadre', (
+    tester,
+  ) async {
     for (final quote in carlysQuotes) {
       await pumpCard(tester, quote);
 
@@ -46,18 +47,23 @@ void main() {
     }
   });
 
-  testWidgets('la plus longue prend un corps plus petit que la plus courte',
-      (tester) async {
+  testWidgets('la plus longue prend un corps plus petit que la plus courte', (
+    tester,
+  ) async {
     final byLength = [...carlysQuotes]
       ..sort((a, b) => a.text.length.compareTo(b.text.length));
 
     await pumpCard(tester, byLength.first);
-    final shortest =
-        tester.widget<Text>(find.text(byLength.first.text)).style!.fontSize!;
+    final shortest = tester
+        .widget<Text>(find.text(byLength.first.text))
+        .style!
+        .fontSize!;
 
     await pumpCard(tester, byLength.last);
-    final longest =
-        tester.widget<Text>(find.text(byLength.last.text)).style!.fontSize!;
+    final longest = tester
+        .widget<Text>(find.text(byLength.last.text))
+        .style!
+        .fontSize!;
 
     expect(shortest, greaterThan(longest));
   });

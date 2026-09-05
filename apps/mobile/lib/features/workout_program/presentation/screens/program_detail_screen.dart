@@ -38,27 +38,27 @@ class ProgramDetailScreen extends ConsumerWidget {
     final day = switch (choice) {
       ClearDayChoice() => null,
       RestDayChoice() => ProgramDayEntry(
-          id: existing?.id ?? actions.newDayId(),
-          weekNumber: weekNumber,
-          dayOfWeek: dayOfWeek,
-          label: 'Repos',
-          isRest: true,
-        ),
+        id: existing?.id ?? actions.newDayId(),
+        weekNumber: weekNumber,
+        dayOfWeek: dayOfWeek,
+        label: 'Repos',
+        isRest: true,
+      ),
       TemplateDayChoice(:final templateId, :final name) => ProgramDayEntry(
-          id: existing?.id ?? actions.newDayId(),
-          weekNumber: weekNumber,
-          dayOfWeek: dayOfWeek,
-          templateId: templateId,
-          label: name,
-          isRest: false,
-        ),
+        id: existing?.id ?? actions.newDayId(),
+        weekNumber: weekNumber,
+        dayOfWeek: dayOfWeek,
+        templateId: templateId,
+        label: name,
+        isRest: false,
+      ),
       FreeDayChoice(:final label) => ProgramDayEntry(
-          id: existing?.id ?? actions.newDayId(),
-          weekNumber: weekNumber,
-          dayOfWeek: dayOfWeek,
-          label: label,
-          isRest: false,
-        ),
+        id: existing?.id ?? actions.newDayId(),
+        weekNumber: weekNumber,
+        dayOfWeek: dayOfWeek,
+        label: label,
+        isRest: false,
+      ),
     };
     await actions.setDay(
       program,
@@ -113,7 +113,8 @@ class ProgramDetailScreen extends ConsumerWidget {
             error: error,
             title: 'Programme introuvable',
             message: 'Il a peut-être été supprimé.',
-            offlineMessage: 'Le calendrier vit sur le serveur : il revient '
+            offlineMessage:
+                'Le calendrier vit sur le serveur : il revient '
                 'avec le réseau.',
             onRetry: () => ref.invalidate(programDetailProvider(programId)),
           ),
@@ -155,8 +156,9 @@ class ProgramDetailScreen extends ConsumerWidget {
                     Expanded(
                       child: Text(
                         'Programme suivi',
-                        style: AppTypography.subheading
-                            .copyWith(color: AppColors.darkTextPrimary),
+                        style: AppTypography.subheading.copyWith(
+                          color: AppColors.darkTextPrimary,
+                        ),
                       ),
                     ),
                     Switch(

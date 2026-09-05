@@ -56,6 +56,9 @@ class SplashGate extends Notifier<bool> {
 }
 
 bool get _animationsDisabled => WidgetsBinding
-    .instance.platformDispatcher.accessibilityFeatures.disableAnimations;
+    .instance
+    .platformDispatcher
+    .accessibilityFeatures
+    .disableAnimations;
 
 final splashGateProvider = NotifierProvider<SplashGate, bool>(SplashGate.new);

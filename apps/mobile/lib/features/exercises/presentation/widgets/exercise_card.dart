@@ -21,18 +21,19 @@ class ExerciseCard extends StatelessWidget {
 
   /// Nombre de tirets allumés pour un niveau de difficulté.
   static int levelOf(ExerciseDifficulty difficulty) => switch (difficulty) {
-        ExerciseDifficulty.beginner => 1,
-        ExerciseDifficulty.intermediate => 2,
-        ExerciseDifficulty.advanced => 3,
-      };
+    ExerciseDifficulty.beginner => 1,
+    ExerciseDifficulty.intermediate => 2,
+    ExerciseDifficulty.advanced => 3,
+  };
 
   @override
   Widget build(BuildContext context) {
     // Le orange signale les mouvements Premium (décision serveur) ; tous les
     // autres portent le violet de marque.
     final tint = exercise.isPremium ? AppColors.accent : AppColors.primary;
-    final iconTint =
-        exercise.isPremium ? AppColors.accent : AppColors.primaryLight;
+    final iconTint = exercise.isPremium
+        ? AppColors.accent
+        : AppColors.primaryLight;
     final subtitle = [
       if (exercise.primaryMuscleGroup != null)
         exercise.primaryMuscleGroup!.name,
@@ -41,7 +42,8 @@ class ExerciseCard extends StatelessWidget {
 
     return Semantics(
       button: true,
-      label: 'Exercice ${exercise.name}'
+      label:
+          'Exercice ${exercise.name}'
           '${subtitle.isEmpty ? '' : ', $subtitle'}'
           '${exercise.isPremium ? ', Premium' : ''}',
       child: Material(
@@ -76,8 +78,9 @@ class ExerciseCard extends StatelessWidget {
                         exercise.name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: AppTypography.subheading
-                            .copyWith(color: AppColors.darkTextPrimary),
+                        style: AppTypography.subheading.copyWith(
+                          color: AppColors.darkTextPrimary,
+                        ),
                       ),
                       if (subtitle.isNotEmpty) ...[
                         const SizedBox(height: AppSpacing.xxs),

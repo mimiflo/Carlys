@@ -131,7 +131,8 @@ final List<RewardRule> rewardCatalog = [
       id: 'maitrise-pack',
       kind: RewardKind.certificat,
       label: 'Academy terminée',
-      story: 'Toutes les leçons du pack abordées, bonnes ou mauvaises '
+      story:
+          'Toutes les leçons du pack abordées, bonnes ou mauvaises '
           'réponses confondues.',
       value: CarlysValue.maitrise,
     ),
@@ -197,7 +198,8 @@ final List<RewardRule> rewardCatalog = [
       id: 'discipline-150',
       kind: RewardKind.certificat,
       label: 'Cent cinquante séances',
-      story: 'Cent cinquante séances terminées. Ce n’est plus une habitude, '
+      story:
+          'Cent cinquante séances terminées. Ce n’est plus une habitude, '
           'c’est un métier.',
       value: CarlysValue.discipline,
     ),
@@ -210,7 +212,8 @@ final List<RewardRule> rewardCatalog = [
       id: 'equilibre-4',
       kind: RewardKind.medaille,
       label: 'Quatre semaines à bon rythme',
-      story: 'Quatre semaines entre deux et quatre séances : assez pour '
+      story:
+          'Quatre semaines entre deux et quatre séances : assez pour '
           'progresser, assez peu pour récupérer.',
       value: CarlysValue.equilibre,
     ),
@@ -221,7 +224,8 @@ final List<RewardRule> rewardCatalog = [
       id: 'equilibre-12',
       kind: RewardKind.certificat,
       label: 'Trois mois d’équilibre',
-      story: 'Douze semaines au rythme tenable. La récupération fait partie '
+      story:
+          'Douze semaines au rythme tenable. La récupération fait partie '
           'du travail.',
       value: CarlysValue.equilibre,
     ),
@@ -233,7 +237,9 @@ final List<RewardRule> rewardCatalog = [
   // Les inscrire au journal est ce qui rend la promesse tenable : le titre
   // AFFICHÉ suit les points et peut redescendre, le titre ATTEINT ne se
   // reprend pas.
-  ...CarlysTitle.values.where((title) => title != CarlysTitle.apprenti).map(
+  ...CarlysTitle.values
+      .where((title) => title != CarlysTitle.apprenti)
+      .map(
         (title) => RewardRule(
           Reward(
             id: 'titre-${title.name}',

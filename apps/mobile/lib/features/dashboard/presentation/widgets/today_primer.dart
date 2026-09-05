@@ -55,15 +55,17 @@ class TodayPrimer extends StatelessWidget {
               const SizedBox(height: AppSpacing.sm),
               Text(
                 'Carlys ne sait pas encore quoi viser',
-                style: AppTypography.subheading
-                    .copyWith(color: AppColors.darkTextPrimary),
+                style: AppTypography.subheading.copyWith(
+                  color: AppColors.darkTextPrimary,
+                ),
               ),
               const SizedBox(height: AppSpacing.xxs),
               Text(
                 'Ta taille, ton âge, ton objectif : trois minutes, et les '
                 'calories, protéines et eau du jour apparaissent ici.',
-                style: AppTypography.body
-                    .copyWith(color: AppColors.darkTextSecondary),
+                style: AppTypography.body.copyWith(
+                  color: AppColors.darkTextSecondary,
+                ),
               ),
               const SizedBox(height: AppSpacing.md),
               SizedBox(

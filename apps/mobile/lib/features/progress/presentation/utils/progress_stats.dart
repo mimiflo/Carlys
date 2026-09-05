@@ -14,24 +14,24 @@ import '../../domain/entities/progress.dart';
 enum ProgressBucket { day, week, month }
 
 ProgressBucket bucketOf(ProgressPeriod period) => switch (period) {
-      ProgressPeriod.week => ProgressBucket.day,
-      ProgressPeriod.month => ProgressBucket.week,
-      ProgressPeriod.year => ProgressBucket.month,
-    };
+  ProgressPeriod.week => ProgressBucket.day,
+  ProgressPeriod.month => ProgressBucket.week,
+  ProgressPeriod.year => ProgressBucket.month,
+};
 
 /// Libellé de la carte de volume, accordé à la période analysée.
 String volumeLabel(ProgressPeriod period) => switch (period) {
-      ProgressPeriod.week => 'Volume hebdo',
-      ProgressPeriod.month => 'Volume mensuel',
-      ProgressPeriod.year => 'Volume annuel',
-    };
+  ProgressPeriod.week => 'Volume hebdo',
+  ProgressPeriod.month => 'Volume mensuel',
+  ProgressPeriod.year => 'Volume annuel',
+};
 
 /// Sous-ligne des tuiles : décrit la fenêtre analysée, sans chiffre supposé.
 String periodCaption(ProgressPeriod period) => switch (period) {
-      ProgressPeriod.week => 'sur la semaine',
-      ProgressPeriod.month => 'sur le mois',
-      ProgressPeriod.year => 'sur l’année',
-    };
+  ProgressPeriod.week => 'sur la semaine',
+  ProgressPeriod.month => 'sur le mois',
+  ProgressPeriod.year => 'sur l’année',
+};
 
 /// Évolution du volume entre le dernier intervalle et le précédent, en %.
 ///
@@ -125,9 +125,11 @@ List<String> volumeAxisLabels(
 /// aux changements d'heure, contrairement à un décalage de `Duration`.
 int _weekIndex(DateTime date) {
   final local = date.toLocal();
-  final days = DateTime.utc(local.year, local.month, local.day)
-      .difference(DateTime.utc(1970))
-      .inDays;
+  final days = DateTime.utc(
+    local.year,
+    local.month,
+    local.day,
+  ).difference(DateTime.utc(1970)).inDays;
   // 1970-01-01 tombe un jeudi : +3 pour caler l'origine sur un lundi.
   return (days + 3) ~/ 7;
 }

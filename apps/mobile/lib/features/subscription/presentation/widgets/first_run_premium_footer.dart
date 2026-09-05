@@ -74,56 +74,56 @@ class _FirstRunPremiumFooterState extends ConsumerState<FirstRunPremiumFooter> {
   }
 
   List<Widget> _pitch() => [
-        const _Title('Commence avec Premium.'),
-        const _Paragraph(
-          'Tous les droits verrouillés ci-dessus s’ouvrent d’un coup. '
-          'Sans Premium, une partie de Carlys reste fermée.',
-        ),
-        const SizedBox(height: AppSpacing.md),
-        AppButton(
-          label: 'Passer à Premium',
-          onPressed: () => _goTo(_Stage.howTo),
-          isExpanded: true,
-        ),
-        TextButton(
-          onPressed: () => _goTo(_Stage.freeFallback),
-          child: const Text('Continuer sans Premium'),
-        ),
-      ];
+    const _Title('Commence avec Premium.'),
+    const _Paragraph(
+      'Tous les droits verrouillés ci-dessus s’ouvrent d’un coup. '
+      'Sans Premium, une partie de Carlys reste fermée.',
+    ),
+    const SizedBox(height: AppSpacing.md),
+    AppButton(
+      label: 'Passer à Premium',
+      onPressed: () => _goTo(_Stage.howTo),
+      isExpanded: true,
+    ),
+    TextButton(
+      onPressed: () => _goTo(_Stage.freeFallback),
+      child: const Text('Continuer sans Premium'),
+    ),
+  ];
 
   List<Widget> _howTo() => [
-        const _Title('Choisis ton rythme'),
-        const SubscriptionPurchasePanel(),
-        const SizedBox(height: AppSpacing.md),
-        const SubscriptionPurchaseNote(),
-        const SizedBox(height: AppSpacing.md),
-        AppButton(
-          label: 'Revenir',
-          variant: AppButtonVariant.secondary,
-          onPressed: () => _goTo(_Stage.pitch),
-          isExpanded: true,
-        ),
-      ];
+    const _Title('Choisis ton rythme'),
+    const SubscriptionPurchasePanel(),
+    const SizedBox(height: AppSpacing.md),
+    const SubscriptionPurchaseNote(),
+    const SizedBox(height: AppSpacing.md),
+    AppButton(
+      label: 'Revenir',
+      variant: AppButtonVariant.secondary,
+      onPressed: () => _goTo(_Stage.pitch),
+      isExpanded: true,
+    ),
+  ];
 
   List<Widget> _freeFallback() => [
-        const _Title('Continuer en version gratuite ?'),
-        const _Paragraph(
-          'Tu gardes les séances, le catalogue et le suivi de base. Les '
-          'droits verrouillés le restent, et Premium t’attend à tout moment '
-          'depuis ton profil.',
-        ),
-        const SizedBox(height: AppSpacing.md),
-        AppButton(
-          label: 'Continuer en version gratuite',
-          onPressed: _continueForFree,
-          isLoading: _finishing,
-          isExpanded: true,
-        ),
-        TextButton(
-          onPressed: _finishing ? null : () => _goTo(_Stage.pitch),
-          child: const Text('Revenir à Premium'),
-        ),
-      ];
+    const _Title('Continuer en version gratuite ?'),
+    const _Paragraph(
+      'Tu gardes les séances, le catalogue et le suivi de base. Les '
+      'droits verrouillés le restent, et Premium t’attend à tout moment '
+      'depuis ton profil.',
+    ),
+    const SizedBox(height: AppSpacing.md),
+    AppButton(
+      label: 'Continuer en version gratuite',
+      onPressed: _continueForFree,
+      isLoading: _finishing,
+      isExpanded: true,
+    ),
+    TextButton(
+      onPressed: _finishing ? null : () => _goTo(_Stage.pitch),
+      child: const Text('Revenir à Premium'),
+    ),
+  ];
 }
 
 class _Title extends StatelessWidget {

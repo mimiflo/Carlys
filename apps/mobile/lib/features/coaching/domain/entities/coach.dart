@@ -12,9 +12,9 @@ enum CoachRole {
   final String apiValue;
 
   static CoachRole fromApi(String value) => CoachRole.values.firstWhere(
-        (role) => role.apiValue == value,
-        orElse: () => CoachRole.assistant,
-      );
+    (role) => role.apiValue == value,
+    orElse: () => CoachRole.assistant,
+  );
 }
 
 /// Série d'une séance proposée, **telle que le serveur la renvoie** : à plat,

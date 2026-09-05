@@ -75,27 +75,27 @@ void main() {
   });
 
   Widget app({List<Override> extra = const []}) => ProviderScope(
-        overrides: [
-          appEnvironmentProvider.overrideWithValue(
-            const AppEnvironment(
-              flavor: AppFlavor.development,
-              apiBaseUrl: 'http://localhost:3000',
-            ),
-          ),
-          authRepositoryProvider.overrideWithValue(auth),
-          carlysProfileRepositoryProvider.overrideWithValue(carlysRepo),
-          nutritionRepositoryProvider.overrideWithValue(nutrition),
-          subscriptionRepositoryProvider
-              .overrideWithValue(FakeSubscriptionRepository()),
-          progressRepositoryProvider
-              .overrideWithValue(FakeProgressRepository()),
-          workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
-          syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
-          appRestoreProvider.overrideWithValue(NoopAppRestore()),
-          ...extra,
-        ],
-        child: const CarlysApp(),
-      );
+    overrides: [
+      appEnvironmentProvider.overrideWithValue(
+        const AppEnvironment(
+          flavor: AppFlavor.development,
+          apiBaseUrl: 'http://localhost:3000',
+        ),
+      ),
+      authRepositoryProvider.overrideWithValue(auth),
+      carlysProfileRepositoryProvider.overrideWithValue(carlysRepo),
+      nutritionRepositoryProvider.overrideWithValue(nutrition),
+      subscriptionRepositoryProvider.overrideWithValue(
+        FakeSubscriptionRepository(),
+      ),
+      progressRepositoryProvider.overrideWithValue(FakeProgressRepository()),
+      workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
+      syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
+      appRestoreProvider.overrideWithValue(NoopAppRestore()),
+      ...extra,
+    ],
+    child: const CarlysApp(),
+  );
 
   /// Franchit la page de marque.
   ///
@@ -179,119 +179,125 @@ void main() {
   }
 
   testWidgets(
-      'tout premier lancement : la page de marque, avant toute question',
-      (tester) async {
-    await launch(tester, passWelcome: false);
+    'tout premier lancement : la page de marque, avant toute question',
+    (tester) async {
+      await launch(tester, passWelcome: false);
 
-    // Qui est Carlys se dit AVANT de demander quoi que ce soit.
-    expect(
-      find.descendant(
-        of: find.byType(BrandSignature),
-        matching: find.text('CARLYS'),
-      ),
-      findsOneWidget,
-    );
-    expect(find.text('L’ART DE DEVENIR'), findsOneWidget);
-    // Les quatre univers sont annoncés, sans prétendre être navigables.
-    expect(find.byType(BrandPillars), findsOneWidget);
-    expect(find.text('1/5'), findsNothing);
-    expect(find.byType(AppBottomBar), findsNothing);
+      // Qui est Carlys se dit AVANT de demander quoi que ce soit.
+      expect(
+        find.descendant(
+          of: find.byType(BrandSignature),
+          matching: find.text('CARLYS'),
+        ),
+        findsOneWidget,
+      );
+      expect(find.text('L’ART DE DEVENIR'), findsOneWidget);
+      // Les quatre univers sont annoncés, sans prétendre être navigables.
+      expect(find.byType(BrandPillars), findsOneWidget);
+      expect(find.text('1/5'), findsNothing);
+      expect(find.byType(AppBottomBar), findsNothing);
 
-    // Rien d'autre n'en sort : pas d'échappatoire vers la connexion.
-    expect(find.text('J’ai déjà un compte'), findsNothing);
+      // Rien d'autre n'en sort : pas d'échappatoire vers la connexion.
+      expect(find.text('J’ai déjà un compte'), findsNothing);
 
-    await passWelcomePage(tester);
-    expect(find.text('1/5'), findsOneWidget);
-  });
-
-  testWidgets(
-      'première ouverture : marque → onboarding → inscription → Premium → '
-      'gratuit → accueil', (tester) async {
-    await launch(tester);
-
-    // 1. L'application s'ouvre sur l'onboarding, pas sur l'accueil.
-    expect(find.text('1/5'), findsOneWidget);
-    expect(find.byType(AppBottomBar), findsNothing);
-
-    await answerOnboarding(tester);
-
-    // 2. Création de compte. Sans session, rien n'a encore été envoyé au
-    // serveur : les réponses attendent le compte — l'identité Carlys aussi.
-    expect(find.text('Créer un compte'), findsOneWidget);
-    expect(nutrition.updateCount, 0);
-    expect(carlysRepo.chosen, isEmpty);
-
-    await fillRegisterForm(tester);
-
-    // 3. Proposition Premium : vrai temps d'arrêt, sans croix de fermeture,
-    // avec les droits réels du serveur.
-    expect(find.text('CARLYS PREMIUM'), findsOneWidget);
-    expect(find.byIcon(AppIcons.close), findsNothing);
-    expect(find.text('Programmes illimités'), findsOneWidget);
-    expect(find.text('Passer à Premium'), findsOneWidget);
-
-    // Les réponses d'onboarding sont reportées sur le profil dès que le
-    // compte existe — l'identité Carlys par son propre endpoint.
-    expect(nutrition.updateCount, 1);
-    final report = await nutrition.metabolismReport();
-    expect(report.profile.goal, NutritionGoal.gainMuscle);
-    expect(report.profile.sex, BiologicalSex.male);
-    expect(report.profile.heightCm, 176);
-    expect(report.profile.activityLevel, ActivityLevel.active);
-    expect(carlysRepo.chosen, [CarlysProfile.constructeur]);
-
-    // 4. Refus : la version gratuite est proposée explicitement, puis
-    // l'application s'ouvre.
-    await tapText(tester, 'Continuer sans Premium');
-    expect(find.text('Continuer en version gratuite ?'), findsOneWidget);
-
-    await tapText(tester, 'Continuer en version gratuite');
-    expect(find.byType(AppBottomBar), findsOneWidget);
-
-    // 5. Réouverture : le tunnel ne se rejoue pas.
-    await tester.pumpWidget(app());
-    await tester.pumpAndSettle();
-    expect(find.byType(AppBottomBar), findsOneWidget);
-    expect(find.text('1/5'), findsNothing);
-  });
+      await passWelcomePage(tester);
+      expect(find.text('1/5'), findsOneWidget);
+    },
+  );
 
   testWidgets(
-      'version gratuite : l’accueil s’ouvre même quand l’écriture disque '
-      'traîne d’une frame', (tester) async {
-    // LE BUG RÉEL, invisible avec un `pumpAndSettle` ordinaire.
-    //
-    // Terminer le parcours fait disparaître le pied de page : l'écran
-    // d'abonnement observe l'étape et rebascule sur sa version refermable.
-    // Sur un téléphone, cette frame est dessinée AVANT que les préférences
-    // ne rendent la main, donc l'état est démonté quand l'attente se
-    // termine. Une navigation gardée par `if (mounted)` était alors
-    // silencieusement abandonnée : l'utilisateur restait bloqué sur
-    // l'abonnement. `pumpAndSettle` avance l'horloge avant de dessiner et
-    // inverse cet ordre, ce qui masquait le défaut.
-    seedFirstRunStep(FirstRunStep.subscription);
-    auth.storedSession = true;
-    await launch(
-      tester,
-      extra: [
-        firstRunStoreProvider.overrideWithValue(const SlowFirstRunStore()),
-      ],
-    );
+    'première ouverture : marque → onboarding → inscription → Premium → '
+    'gratuit → accueil',
+    (tester) async {
+      await launch(tester);
 
-    await tapText(tester, 'Continuer sans Premium');
-    await tester.tap(find.text('Continuer en version gratuite'));
+      // 1. L'application s'ouvre sur l'onboarding, pas sur l'accueil.
+      expect(find.text('1/5'), findsOneWidget);
+      expect(find.byType(AppBottomBar), findsNothing);
 
-    // L'ordre du vrai téléphone : la frame d'abord, l'écriture ensuite.
-    await tester.pump();
-    await tester.pump(SlowFirstRunStore.delay);
-    await tester.pumpAndSettle();
+      await answerOnboarding(tester);
 
-    expect(find.byType(AppBottomBar), findsOneWidget);
-    expect(find.text('CARLYS PREMIUM'), findsNothing);
-    expect(find.byType(HomeScreen), findsOneWidget);
-  });
+      // 2. Création de compte. Sans session, rien n'a encore été envoyé au
+      // serveur : les réponses attendent le compte — l'identité Carlys aussi.
+      expect(find.text('Créer un compte'), findsOneWidget);
+      expect(nutrition.updateCount, 0);
+      expect(carlysRepo.chosen, isEmpty);
 
-  testWidgets('le refus mène à Premium puis revient : aucune impasse',
-      (tester) async {
+      await fillRegisterForm(tester);
+
+      // 3. Proposition Premium : vrai temps d'arrêt, sans croix de fermeture,
+      // avec les droits réels du serveur.
+      expect(find.text('CARLYS PREMIUM'), findsOneWidget);
+      expect(find.byIcon(AppIcons.close), findsNothing);
+      expect(find.text('Programmes illimités'), findsOneWidget);
+      expect(find.text('Passer à Premium'), findsOneWidget);
+
+      // Les réponses d'onboarding sont reportées sur le profil dès que le
+      // compte existe — l'identité Carlys par son propre endpoint.
+      expect(nutrition.updateCount, 1);
+      final report = await nutrition.metabolismReport();
+      expect(report.profile.goal, NutritionGoal.gainMuscle);
+      expect(report.profile.sex, BiologicalSex.male);
+      expect(report.profile.heightCm, 176);
+      expect(report.profile.activityLevel, ActivityLevel.active);
+      expect(carlysRepo.chosen, [CarlysProfile.constructeur]);
+
+      // 4. Refus : la version gratuite est proposée explicitement, puis
+      // l'application s'ouvre.
+      await tapText(tester, 'Continuer sans Premium');
+      expect(find.text('Continuer en version gratuite ?'), findsOneWidget);
+
+      await tapText(tester, 'Continuer en version gratuite');
+      expect(find.byType(AppBottomBar), findsOneWidget);
+
+      // 5. Réouverture : le tunnel ne se rejoue pas.
+      await tester.pumpWidget(app());
+      await tester.pumpAndSettle();
+      expect(find.byType(AppBottomBar), findsOneWidget);
+      expect(find.text('1/5'), findsNothing);
+    },
+  );
+
+  testWidgets(
+    'version gratuite : l’accueil s’ouvre même quand l’écriture disque '
+    'traîne d’une frame',
+    (tester) async {
+      // LE BUG RÉEL, invisible avec un `pumpAndSettle` ordinaire.
+      //
+      // Terminer le parcours fait disparaître le pied de page : l'écran
+      // d'abonnement observe l'étape et rebascule sur sa version refermable.
+      // Sur un téléphone, cette frame est dessinée AVANT que les préférences
+      // ne rendent la main, donc l'état est démonté quand l'attente se
+      // termine. Une navigation gardée par `if (mounted)` était alors
+      // silencieusement abandonnée : l'utilisateur restait bloqué sur
+      // l'abonnement. `pumpAndSettle` avance l'horloge avant de dessiner et
+      // inverse cet ordre, ce qui masquait le défaut.
+      seedFirstRunStep(FirstRunStep.subscription);
+      auth.storedSession = true;
+      await launch(
+        tester,
+        extra: [
+          firstRunStoreProvider.overrideWithValue(const SlowFirstRunStore()),
+        ],
+      );
+
+      await tapText(tester, 'Continuer sans Premium');
+      await tester.tap(find.text('Continuer en version gratuite'));
+
+      // L'ordre du vrai téléphone : la frame d'abord, l'écriture ensuite.
+      await tester.pump();
+      await tester.pump(SlowFirstRunStore.delay);
+      await tester.pumpAndSettle();
+
+      expect(find.byType(AppBottomBar), findsOneWidget);
+      expect(find.text('CARLYS PREMIUM'), findsNothing);
+      expect(find.byType(HomeScreen), findsOneWidget);
+    },
+  );
+
+  testWidgets('le refus mène à Premium puis revient : aucune impasse', (
+    tester,
+  ) async {
     seedFirstRunStep(FirstRunStep.subscription);
     auth.storedSession = true;
     await launch(tester);
@@ -315,8 +321,9 @@ void main() {
     expect(find.byType(AppBottomBar), findsOneWidget);
   });
 
-  testWidgets('« Passer » franchit l’onboarding sans rien enregistrer',
-      (tester) async {
+  testWidgets('« Passer » franchit l’onboarding sans rien enregistrer', (
+    tester,
+  ) async {
     await launch(tester);
 
     await tapText(tester, 'Passer');
@@ -325,8 +332,9 @@ void main() {
     expect(find.text('Créer un compte'), findsOneWidget);
   });
 
-  testWidgets('depuis l’onboarding, la connexion reste accessible',
-      (tester) async {
+  testWidgets('depuis l’onboarding, la connexion reste accessible', (
+    tester,
+  ) async {
     await launch(tester);
 
     await tapText(tester, 'J’ai déjà un compte');
@@ -349,8 +357,9 @@ void main() {
     expect(find.text('J’ai déjà un compte'), findsNothing);
   });
 
-  testWidgets('réouverture au milieu du tunnel : reprise à l’étape atteinte',
-      (tester) async {
+  testWidgets('réouverture au milieu du tunnel : reprise à l’étape atteinte', (
+    tester,
+  ) async {
     seedFirstRunStep(FirstRunStep.account);
     await launch(tester, passWelcome: false);
 
@@ -363,14 +372,15 @@ void main() {
   });
 
   testWidgets(
-      'parcours terminé et session ouverte : jamais renvoyé dans le tunnel',
-      (tester) async {
-    seedCompletedFirstRun();
-    auth.storedSession = true;
-    await launch(tester, passWelcome: false);
+    'parcours terminé et session ouverte : jamais renvoyé dans le tunnel',
+    (tester) async {
+      seedCompletedFirstRun();
+      auth.storedSession = true;
+      await launch(tester, passWelcome: false);
 
-    expect(find.byType(AppBottomBar), findsOneWidget);
-    expect(find.text('1/5'), findsNothing);
-    expect(find.text('CARLYS PREMIUM'), findsNothing);
-  });
+      expect(find.byType(AppBottomBar), findsOneWidget);
+      expect(find.text('1/5'), findsNothing);
+      expect(find.text('CARLYS PREMIUM'), findsNothing);
+    },
+  );
 }

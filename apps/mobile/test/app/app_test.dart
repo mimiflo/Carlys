@@ -21,8 +21,11 @@ void main() {
     seedCompletedFirstRun();
     // Les scènes 3D (cœur, hélice) bouclent en continu : réduction
     // d'animations pour que pumpAndSettle converge.
-    TestWidgetsFlutterBinding.instance.platformDispatcher
-        .accessibilityFeaturesTestValue = FakeAccessibilityFeatures.allOn;
+    TestWidgetsFlutterBinding
+            .instance
+            .platformDispatcher
+            .accessibilityFeaturesTestValue =
+        FakeAccessibilityFeatures.allOn;
   });
 
   tearDown(() {
@@ -48,8 +51,9 @@ void main() {
     );
   }
 
-  testWidgets('sans session locale : splash puis écran de connexion',
-      (tester) async {
+  testWidgets('sans session locale : splash puis écran de connexion', (
+    tester,
+  ) async {
     await tester.pumpWidget(buildApp(FakeAuthRepository()));
 
     // L'application s'ouvre sur la marque, pas sur un écran vide.
@@ -62,8 +66,9 @@ void main() {
     expect(find.text('Se connecter'), findsOneWidget);
   });
 
-  testWidgets('avec session locale : restauration directe vers l’accueil',
-      (tester) async {
+  testWidgets('avec session locale : restauration directe vers l’accueil', (
+    tester,
+  ) async {
     await tester.pumpWidget(buildApp(FakeAuthRepository(storedSession: true)));
     await tester.pumpAndSettle();
 
@@ -90,8 +95,9 @@ void main() {
     expect(find.text('Bonjour, Camille.'), findsOneWidget);
   });
 
-  testWidgets('erreur de connexion affichée sans quitter l’écran',
-      (tester) async {
+  testWidgets('erreur de connexion affichée sans quitter l’écran', (
+    tester,
+  ) async {
     final repository = FakeAuthRepository()..failLogin = true;
     await tester.pumpWidget(buildApp(repository));
     await tester.pumpAndSettle();
@@ -127,8 +133,9 @@ void main() {
     expect(find.text('Se connecter'), findsOneWidget);
   });
 
-  testWidgets('e-mail invalide bloqué par la validation locale',
-      (tester) async {
+  testWidgets('e-mail invalide bloqué par la validation locale', (
+    tester,
+  ) async {
     final repository = FakeAuthRepository();
     await tester.pumpWidget(buildApp(repository));
     await tester.pumpAndSettle();

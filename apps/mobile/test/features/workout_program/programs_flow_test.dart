@@ -23,8 +23,11 @@ import '../../support/navigation.dart';
 void main() {
   setUp(() {
     seedCompletedFirstRun();
-    TestWidgetsFlutterBinding.instance.platformDispatcher
-        .accessibilityFeaturesTestValue = FakeAccessibilityFeatures.allOn;
+    TestWidgetsFlutterBinding
+            .instance
+            .platformDispatcher
+            .accessibilityFeaturesTestValue =
+        FakeAccessibilityFeatures.allOn;
   });
 
   tearDown(() {
@@ -46,8 +49,9 @@ void main() {
               apiBaseUrl: 'http://localhost:3000',
             ),
           ),
-          authRepositoryProvider
-              .overrideWithValue(FakeAuthRepository(storedSession: true)),
+          authRepositoryProvider.overrideWithValue(
+            FakeAuthRepository(storedSession: true),
+          ),
           workoutRepositoryProvider.overrideWithValue(workouts),
           // Les modèles de la feuille d'affectation (Push force, Pull,
           // Hypertrophie) viennent du seed de démonstration.
@@ -71,20 +75,20 @@ void main() {
   }
 
   ProgramDetail programOf({bool isActive = false}) => ProgramDetail(
-        id: 'programme-1',
-        name: 'Force en 2 semaines',
-        weeksCount: 2,
-        isActive: isActive,
-        days: const [
-          ProgramDayEntry(
-            id: 'jour-1',
-            weekNumber: 1,
-            dayOfWeek: 2,
-            label: 'Repos',
-            isRest: true,
-          ),
-        ],
-      );
+    id: 'programme-1',
+    name: 'Force en 2 semaines',
+    weeksCount: 2,
+    isActive: isActive,
+    days: const [
+      ProgramDayEntry(
+        id: 'jour-1',
+        weekNumber: 1,
+        dayOfWeek: 2,
+        label: 'Repos',
+        isRest: true,
+      ),
+    ],
+  );
 
   testWidgets('créer un programme ouvre son calendrier vide', (tester) async {
     final programs = FakeProgramRepository();
@@ -135,8 +139,9 @@ void main() {
     expect(find.text('Repos'), findsNWidgets(2));
   });
 
-  testWidgets('affecter un modèle : le nom du modèle remplit la case',
-      (tester) async {
+  testWidgets('affecter un modèle : le nom du modèle remplit la case', (
+    tester,
+  ) async {
     final programs = FakeProgramRepository(programs: [programOf()]);
     await pumpApp(tester, programs);
     await openPrograms(tester);
@@ -155,8 +160,9 @@ void main() {
     expect(find.text('Push force'), findsOneWidget);
   });
 
-  testWidgets('« Programme suivi » écrit l’activation ; badge sur la liste',
-      (tester) async {
+  testWidgets('« Programme suivi » écrit l’activation ; badge sur la liste', (
+    tester,
+  ) async {
     final programs = FakeProgramRepository(programs: [programOf()]);
     await pumpApp(tester, programs);
     await openPrograms(tester);

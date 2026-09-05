@@ -36,8 +36,9 @@ class FriendCard extends StatelessWidget {
             ),
             child: Text(
               initial,
-              style:
-                  AppTypography.subheading.copyWith(color: AppColors.neutral0),
+              style: AppTypography.subheading.copyWith(
+                color: AppColors.neutral0,
+              ),
             ),
           ),
           const SizedBox(width: AppSpacing.sm),
@@ -47,16 +48,18 @@ class FriendCard extends StatelessWidget {
               children: [
                 Text(
                   friend.displayName,
-                  style: AppTypography.subheading
-                      .copyWith(color: AppColors.darkTextPrimary),
+                  style: AppTypography.subheading.copyWith(
+                    color: AppColors.darkTextPrimary,
+                  ),
                 ),
                 Text(
                   friend.sharesProgress
                       ? '${friend.streakDays} j de série · '
-                          '${friend.weeklySessions} séances cette semaine'
+                            '${friend.weeklySessions} séances cette semaine'
                       : 'Profil privé',
-                  style: AppTypography.label
-                      .copyWith(color: AppColors.darkTextTertiary),
+                  style: AppTypography.label.copyWith(
+                    color: AppColors.darkTextTertiary,
+                  ),
                 ),
               ],
             ),

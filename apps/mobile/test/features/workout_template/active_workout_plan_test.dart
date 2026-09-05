@@ -25,8 +25,11 @@ void main() {
   setUp(() {
     TestWidgetsFlutterBinding.ensureInitialized();
     TestWidgetsFlutterBinding
-            .instance.platformDispatcher.accessibilityFeaturesTestValue =
-        const FakeAccessibilityFeatures(disableAnimations: true);
+        .instance
+        .platformDispatcher
+        .accessibilityFeaturesTestValue = const FakeAccessibilityFeatures(
+      disableAnimations: true,
+    );
   });
 
   tearDown(() {
@@ -78,10 +81,9 @@ void main() {
           workoutRepositoryProvider.overrideWithValue(workouts),
           workoutTemplateRepositoryProvider.overrideWithValue(templates),
           exercisesRepositoryProvider.overrideWithValue(
-            FakeExercisesRepository(
-              [summary('id-1', 'Développé couché', group: 'pectoraux')],
-              pageSize: 10,
-            ),
+            FakeExercisesRepository([
+              summary('id-1', 'Développé couché', group: 'pectoraux'),
+            ], pageSize: 10),
           ),
           syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
           appRestoreProvider.overrideWithValue(NoopAppRestore()),
@@ -110,41 +112,45 @@ void main() {
   });
 
   testWidgets(
-      'valider une série : le réalisé est enregistré, le programme avance',
-      (tester) async {
-    final (workouts, templates) =
-        await pumpActiveWorkout(tester, seed: pushTemplate);
+    'valider une série : le réalisé est enregistré, le programme avance',
+    (tester) async {
+      final (workouts, templates) = await pumpActiveWorkout(
+        tester,
+        seed: pushTemplate,
+      );
 
-    // Une répétition de moins que prévu : déviation NORMALE, jamais bloquée.
-    await tester.tap(
-      find.byTooltip('Diminuer : Répétitions'),
+      // Une répétition de moins que prévu : déviation NORMALE, jamais bloquée.
+      await tester.tap(find.byTooltip('Diminuer : Répétitions'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Valider la série'));
+      await tester.pumpAndSettle();
+
+      // La série enregistre le réalisé, en conservant la cible affichée.
+      expect(workouts.addedSets, hasLength(1));
+      final recorded = workouts.addedSets.single;
+      expect(recorded.reps, 7);
+      expect(recorded.weightKg, 60);
+      expect(recorded.plannedReps, 8);
+      expect(recorded.plannedWeightKg, 60);
+      // Le repos prescrit par le modèle prime sur le repos par défaut.
+      expect(recorded.restSeconds, 120);
+
+      // L'item de plan est honoré : faire 7 au lieu de 8 reste une série faite.
+      final plan = await templates.sessionPlan(workouts.active!.session.id);
+      expect(plan!.doneCount, 1);
+
+      // Et l'écran affiche la consigne suivante.
+      expect(find.text('SÉRIE 2 SUR 3 · DÉVELOPPÉ COUCHÉ'), findsOneWidget);
+    },
+  );
+
+  testWidgets('passer une série : rien n’est envoyé, le programme avance', (
+    tester,
+  ) async {
+    final (workouts, templates) = await pumpActiveWorkout(
+      tester,
+      seed: pushTemplate,
     );
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Valider la série'));
-    await tester.pumpAndSettle();
-
-    // La série enregistre le réalisé, en conservant la cible affichée.
-    expect(workouts.addedSets, hasLength(1));
-    final recorded = workouts.addedSets.single;
-    expect(recorded.reps, 7);
-    expect(recorded.weightKg, 60);
-    expect(recorded.plannedReps, 8);
-    expect(recorded.plannedWeightKg, 60);
-    // Le repos prescrit par le modèle prime sur le repos par défaut.
-    expect(recorded.restSeconds, 120);
-
-    // L'item de plan est honoré : faire 7 au lieu de 8 reste une série faite.
-    final plan = await templates.sessionPlan(workouts.active!.session.id);
-    expect(plan!.doneCount, 1);
-
-    // Et l'écran affiche la consigne suivante.
-    expect(find.text('SÉRIE 2 SUR 3 · DÉVELOPPÉ COUCHÉ'), findsOneWidget);
-  });
-
-  testWidgets('passer une série : rien n’est envoyé, le programme avance',
-      (tester) async {
-    final (workouts, templates) =
-        await pumpActiveWorkout(tester, seed: pushTemplate);
 
     await tester.tap(find.text('Passer cette série'));
     await tester.pumpAndSettle();
@@ -161,8 +167,9 @@ void main() {
     expect(find.text('PRÉVU 8 × 60 KG'), findsOneWidget);
   });
 
-  testWidgets('séance libre : aucun objectif, comportement inchangé',
-      (tester) async {
+  testWidgets('séance libre : aucun objectif, comportement inchangé', (
+    tester,
+  ) async {
     final (workouts, _) = await pumpActiveWorkout(tester);
 
     expect(find.textContaining('SUR'), findsNothing);

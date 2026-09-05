@@ -71,8 +71,10 @@ class AppListRow extends StatelessWidget {
                   title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: AppTypography.subheading
-                      .copyWith(fontSize: 14, color: AppColors.darkTextPrimary),
+                  style: AppTypography.subheading.copyWith(
+                    fontSize: 14,
+                    color: AppColors.darkTextPrimary,
+                  ),
                 ),
                 if (subtitle != null) ...[
                   const SizedBox(height: 5),
@@ -80,8 +82,9 @@ class AppListRow extends StatelessWidget {
                     subtitle!.toUpperCase(),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: AppTypography.labelMono
-                        .copyWith(color: AppColors.darkTextTertiary),
+                    style: AppTypography.labelMono.copyWith(
+                      color: AppColors.darkTextTertiary,
+                    ),
                   ),
                 ],
               ],
@@ -93,8 +96,9 @@ class AppListRow extends StatelessWidget {
           else if (trailingText != null)
             Text(
               trailingText!,
-              style: AppTypography.metricS
-                  .copyWith(color: AppColors.darkTextPrimary),
+              style: AppTypography.metricS.copyWith(
+                color: AppColors.darkTextPrimary,
+              ),
             )
           else if (onTap != null)
             const Icon(

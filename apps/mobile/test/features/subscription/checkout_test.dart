@@ -50,8 +50,9 @@ void main() {
     final opened = <Uri>[];
     final container = containerFor(repository, opened: opened);
 
-    final outcome =
-        await container.read(subscriptionActionsProvider).buy(offer);
+    final outcome = await container
+        .read(subscriptionActionsProvider)
+        .buy(offer);
 
     expect(outcome, CheckoutOutcome.opened);
     expect(opened.single.toString(), 'https://paiement.exemple/session');
@@ -60,16 +61,18 @@ void main() {
     expect(plan.isPremium, isFalse);
   });
 
-  test('l’identifiant d’appareil voyage : rejouer n’ouvre pas deux paiements',
-      () async {
-    final repository = FakeSubscriptionRepository(checkoutAvailable: true);
-    final container = containerFor(repository);
+  test(
+    'l’identifiant d’appareil voyage : rejouer n’ouvre pas deux paiements',
+    () async {
+      final repository = FakeSubscriptionRepository(checkoutAvailable: true);
+      final container = containerFor(repository);
 
-    await container.read(subscriptionActionsProvider).buy(offer);
+      await container.read(subscriptionActionsProvider).buy(offer);
 
-    expect(repository.checkouts.single.offerId, 'premium-annuel');
-    expect(repository.checkouts.single.id, isNotEmpty);
-  });
+      expect(repository.checkouts.single.offerId, 'premium-annuel');
+      expect(repository.checkouts.single.id, isNotEmpty);
+    },
+  );
 
   test('un serveur qui refuse le paiement ne fait pas semblant', () async {
     final repository = FakeSubscriptionRepository(
@@ -79,8 +82,9 @@ void main() {
     final opened = <Uri>[];
     final container = containerFor(repository, opened: opened);
 
-    final outcome =
-        await container.read(subscriptionActionsProvider).buy(offer);
+    final outcome = await container
+        .read(subscriptionActionsProvider)
+        .buy(offer);
 
     expect(outcome, CheckoutOutcome.unavailable);
     expect(opened, isEmpty);

@@ -43,8 +43,9 @@ class TitleCard extends StatelessWidget {
         children: [
           Text(
             'TON TITRE',
-            style:
-                AppTypography.labelMono.copyWith(color: AppColors.primaryLight),
+            style: AppTypography.labelMono.copyWith(
+              color: AppColors.primaryLight,
+            ),
           ),
           const SizedBox(height: AppSpacing.sm),
           Row(
@@ -58,8 +59,9 @@ class TitleCard extends StatelessWidget {
                     const SizedBox(height: AppSpacing.xxs),
                     Text(
                       '${majesty.rank} PALIERS',
-                      style: AppTypography.labelMono
-                          .copyWith(color: AppColors.darkTextTertiary),
+                      style: AppTypography.labelMono.copyWith(
+                        color: AppColors.darkTextTertiary,
+                      ),
                     ),
                   ],
                 ),
@@ -134,8 +136,9 @@ class _Footer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final body =
-        AppTypography.body.copyWith(color: AppColors.darkTextSecondary);
+    final body = AppTypography.body.copyWith(
+      color: AppColors.darkTextSecondary,
+    );
 
     if (!opened) {
       return Text(
@@ -160,8 +163,9 @@ class _Footer extends StatelessWidget {
                 const TextSpan(text: 'Encore '),
                 TextSpan(
                   text: '$remaining',
-                  style: AppTypography.metricS
-                      .copyWith(color: AppColors.darkTextPrimary),
+                  style: AppTypography.metricS.copyWith(
+                    color: AppColors.darkTextPrimary,
+                  ),
                 ),
                 TextSpan(text: ' points avant ${next!.label}.'),
               ],
@@ -172,8 +176,9 @@ class _Footer extends StatelessWidget {
         const SizedBox(width: AppSpacing.xs),
         Text(
           '${next!.label.toUpperCase()} ${next!.threshold}',
-          style: AppTypography.labelMono
-              .copyWith(color: AppColors.darkTextTertiary),
+          style: AppTypography.labelMono.copyWith(
+            color: AppColors.darkTextTertiary,
+          ),
         ),
       ],
     );

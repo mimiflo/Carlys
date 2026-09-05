@@ -52,8 +52,9 @@ class DailyFormBlock extends StatelessWidget {
           const SizedBox(height: AppSpacing.xs),
           Text(
             form.explanation,
-            style:
-                AppTypography.body.copyWith(color: AppColors.darkTextSecondary),
+            style: AppTypography.body.copyWith(
+              color: AppColors.darkTextSecondary,
+            ),
           ),
           const SizedBox(height: AppSpacing.padCard),
           FormScale(score: form.score),
@@ -107,8 +108,8 @@ class FormScale extends StatelessWidget {
                   color: index == current
                       ? AppColors.accent
                       : index < current
-                          ? AppColors.accentSoft
-                          : AppColors.pendingBar,
+                      ? AppColors.accentSoft
+                      : AppColors.pendingBar,
                   borderRadius: AppRadius.fullAll,
                 ),
               ),
@@ -166,7 +167,8 @@ class _SessionsFooter extends StatelessWidget {
     final done = sessions ?? 0;
 
     return Semantics(
-      label: '$done séance${done > 1 ? 's' : ''} '
+      label:
+          '$done séance${done > 1 ? 's' : ''} '
           'sur $weeklySessionsTarget cette semaine',
       child: ExcludeSemantics(
         child: Row(

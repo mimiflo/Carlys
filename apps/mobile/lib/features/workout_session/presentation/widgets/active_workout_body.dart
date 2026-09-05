@@ -81,7 +81,8 @@ class _ActiveWorkoutBodyState extends ConsumerState<ActiveWorkoutBody> {
           child: exercise == null
               ? AppEmptyState(
                   title: 'Aucun exercice',
-                  message: 'Choisis un exercice pour saisir '
+                  message:
+                      'Choisis un exercice pour saisir '
                       'ta première série.',
                   icon: AppIcons.workout,
                   actionLabel: 'Choisir un exercice',
@@ -100,15 +101,16 @@ class _ActiveWorkoutBodyState extends ConsumerState<ActiveWorkoutBody> {
                   onSkipSet: guidance?.planItemId == null
                       ? null
                       : () => ref
-                          .read(workoutTemplateActionsProvider)
-                          .skipSet(guidance!.planItemId!),
+                            .read(workoutTemplateActionsProvider)
+                            .skipSet(guidance!.planItemId!),
                   onSkipExercise: guidance?.exercisePosition == null
                       ? null
-                      : () =>
-                          ref.read(workoutTemplateActionsProvider).skipExercise(
-                                sessionId: _sessionId,
-                                exercisePosition: guidance!.exercisePosition!,
-                              ),
+                      : () => ref
+                            .read(workoutTemplateActionsProvider)
+                            .skipExercise(
+                              sessionId: _sessionId,
+                              exercisePosition: guidance!.exercisePosition!,
+                            ),
                   onValidate: (weightKg, reps) => _validate(
                     exercise,
                     exerciseSets,
@@ -185,7 +187,9 @@ class _ActiveWorkoutBodyState extends ConsumerState<ActiveWorkoutBody> {
   ) async {
     final restSeconds = guidance?.restSeconds ?? _lastRestSeconds(exerciseSets);
 
-    await ref.read(workoutTemplateActionsProvider).recordSet(
+    await ref
+        .read(workoutTemplateActionsProvider)
+        .recordSet(
           AddSetInput(
             sessionId: _sessionId,
             exerciseId: exercise.exerciseId,

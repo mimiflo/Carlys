@@ -50,8 +50,9 @@ class FeaturedAwardCard extends StatelessWidget {
                       Expanded(
                         child: Text(
                           entry.reward.label,
-                          style: AppTypography.heading
-                              .copyWith(color: AppColors.darkTextPrimary),
+                          style: AppTypography.heading.copyWith(
+                            color: AppColors.darkTextPrimary,
+                          ),
                         ),
                       ),
                       if (entry.isNew) const _NewPill(),
@@ -62,8 +63,9 @@ class FeaturedAwardCard extends StatelessWidget {
                     entry.reward.story,
                     maxLines: 2,
                     overflow: TextOverflow.ellipsis,
-                    style: AppTypography.body
-                        .copyWith(color: AppColors.darkTextSecondary),
+                    style: AppTypography.body.copyWith(
+                      color: AppColors.darkTextSecondary,
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.xs),
                   _Meta(entry: entry),
@@ -116,16 +118,18 @@ class AwardRow extends StatelessWidget {
                     entry.reward.label,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: AppTypography.subheading
-                        .copyWith(color: AppColors.darkTextPrimary),
+                    style: AppTypography.subheading.copyWith(
+                      color: AppColors.darkTextPrimary,
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.xxs),
                   Text(
                     entry.reward.story,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: AppTypography.body
-                        .copyWith(color: AppColors.darkTextSecondary),
+                    style: AppTypography.body.copyWith(
+                      color: AppColors.darkTextSecondary,
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.xxs),
                   _Meta(entry: entry),
@@ -151,8 +155,9 @@ class _Meta extends StatelessWidget {
     return Text(
       '${entry.reward.kind.label} · ${formatMonthYear(entry.earnedAt)}'
           .toUpperCase(),
-      style:
-          AppTypography.labelMono.copyWith(color: AppColors.darkTextTertiary),
+      style: AppTypography.labelMono.copyWith(
+        color: AppColors.darkTextTertiary,
+      ),
     );
   }
 }
@@ -227,14 +232,16 @@ class UpcomingAwardRow extends StatelessWidget {
                 children: [
                   Text(
                     reward.label,
-                    style: AppTypography.subheading
-                        .copyWith(color: AppColors.darkTextPrimary),
+                    style: AppTypography.subheading.copyWith(
+                      color: AppColors.darkTextPrimary,
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.xxs),
                   Text(
                     reward.story,
-                    style: AppTypography.body
-                        .copyWith(color: AppColors.darkTextSecondary),
+                    style: AppTypography.body.copyWith(
+                      color: AppColors.darkTextSecondary,
+                    ),
                   ),
                 ],
               ),

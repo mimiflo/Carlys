@@ -106,98 +106,104 @@ class Majesty {
   );
 
   static Majesty of(CarlysTitle tier) => switch (tier) {
-        // I — la surface nue. C'est un point de départ, il doit en avoir
-        // l'air : rien à retirer, tout à gagner.
-        CarlysTitle.apprenti => Majesty(
-            tier: tier,
-            surface: plainSurface,
-            border: null,
-            borderWidth: 0,
-            gradientEdge: false,
-            guilloche: null,
-            corners: 0,
-            halo: false,
-            nameStyle:
-                AppTypography.title.copyWith(color: AppColors.darkTextPrimary),
-            totalStyle: AppTypography.metricS
-                .copyWith(color: AppColors.darkTextSecondary),
-            gaugeHeight: 6,
-            gaugeFill: null,
-            sealEarned: false,
-          ),
-        // II — le filet.
-        CarlysTitle.architecte => Majesty(
-            tier: tier,
-            surface: plainSurface,
-            border: AppColors.darkBorder,
-            borderWidth: 1,
-            gradientEdge: false,
-            guilloche: null,
-            corners: 0,
-            halo: false,
-            nameStyle:
-                AppTypography.title.copyWith(color: AppColors.darkTextPrimary),
-            totalStyle: AppTypography.metricM
-                .copyWith(color: AppColors.darkTextPrimary),
-            gaugeHeight: 6,
-            gaugeFill: _flat,
-            sealEarned: true,
-          ),
-        // III — le cadre gravé : la surface change, le nom prend le Display.
-        CarlysTitle.artisan => Majesty(
-            tier: tier,
-            surface: _engraved,
-            border: AppColors.darkBorderStrong,
-            borderWidth: 1,
-            gradientEdge: false,
-            guilloche: null,
-            corners: 0,
-            halo: false,
-            nameStyle: AppTypography.display
-                .copyWith(color: AppColors.darkTextPrimary),
-            totalStyle: AppTypography.metricL
-                .copyWith(color: AppColors.darkTextPrimary),
-            gaugeHeight: 6,
-            gaugeFill: _rising,
-            sealEarned: true,
-          ),
-        // IV — les coins et le guillochage.
-        CarlysTitle.maitre => Majesty(
-            tier: tier,
-            surface: _master,
-            border: AppColors.majestyBorder,
-            borderWidth: 1,
-            gradientEdge: false,
-            guilloche: 9,
-            corners: 2,
-            halo: false,
-            nameStyle: AppTypography.display
-                .copyWith(color: AppColors.darkTextPrimary),
-            totalStyle: AppTypography.metricXL
-                .copyWith(color: AppColors.darkTextPrimary),
-            gaugeHeight: 8,
-            gaugeFill: AppColors.gauge,
-            sealEarned: true,
-          ),
-        // V — la plaque bordée de dégradé, quatre équerres, un halo.
-        CarlysTitle.icone => Majesty(
-            tier: tier,
-            surface: _icon,
-            border: null,
-            borderWidth: 0,
-            gradientEdge: true,
-            guilloche: 7,
-            corners: 4,
-            halo: true,
-            nameStyle: AppTypography.display
-                .copyWith(color: AppColors.darkTextPrimary),
-            totalStyle: AppTypography.metricXL
-                .copyWith(color: AppColors.darkTextPrimary),
-            gaugeHeight: 8,
-            gaugeFill: AppColors.gauge,
-            sealEarned: true,
-          ),
-      };
+    // I — la surface nue. C'est un point de départ, il doit en avoir
+    // l'air : rien à retirer, tout à gagner.
+    CarlysTitle.apprenti => Majesty(
+      tier: tier,
+      surface: plainSurface,
+      border: null,
+      borderWidth: 0,
+      gradientEdge: false,
+      guilloche: null,
+      corners: 0,
+      halo: false,
+      nameStyle: AppTypography.title.copyWith(color: AppColors.darkTextPrimary),
+      totalStyle: AppTypography.metricS.copyWith(
+        color: AppColors.darkTextSecondary,
+      ),
+      gaugeHeight: 6,
+      gaugeFill: null,
+      sealEarned: false,
+    ),
+    // II — le filet.
+    CarlysTitle.architecte => Majesty(
+      tier: tier,
+      surface: plainSurface,
+      border: AppColors.darkBorder,
+      borderWidth: 1,
+      gradientEdge: false,
+      guilloche: null,
+      corners: 0,
+      halo: false,
+      nameStyle: AppTypography.title.copyWith(color: AppColors.darkTextPrimary),
+      totalStyle: AppTypography.metricM.copyWith(
+        color: AppColors.darkTextPrimary,
+      ),
+      gaugeHeight: 6,
+      gaugeFill: _flat,
+      sealEarned: true,
+    ),
+    // III — le cadre gravé : la surface change, le nom prend le Display.
+    CarlysTitle.artisan => Majesty(
+      tier: tier,
+      surface: _engraved,
+      border: AppColors.darkBorderStrong,
+      borderWidth: 1,
+      gradientEdge: false,
+      guilloche: null,
+      corners: 0,
+      halo: false,
+      nameStyle: AppTypography.display.copyWith(
+        color: AppColors.darkTextPrimary,
+      ),
+      totalStyle: AppTypography.metricL.copyWith(
+        color: AppColors.darkTextPrimary,
+      ),
+      gaugeHeight: 6,
+      gaugeFill: _rising,
+      sealEarned: true,
+    ),
+    // IV — les coins et le guillochage.
+    CarlysTitle.maitre => Majesty(
+      tier: tier,
+      surface: _master,
+      border: AppColors.majestyBorder,
+      borderWidth: 1,
+      gradientEdge: false,
+      guilloche: 9,
+      corners: 2,
+      halo: false,
+      nameStyle: AppTypography.display.copyWith(
+        color: AppColors.darkTextPrimary,
+      ),
+      totalStyle: AppTypography.metricXL.copyWith(
+        color: AppColors.darkTextPrimary,
+      ),
+      gaugeHeight: 8,
+      gaugeFill: AppColors.gauge,
+      sealEarned: true,
+    ),
+    // V — la plaque bordée de dégradé, quatre équerres, un halo.
+    CarlysTitle.icone => Majesty(
+      tier: tier,
+      surface: _icon,
+      border: null,
+      borderWidth: 0,
+      gradientEdge: true,
+      guilloche: 7,
+      corners: 4,
+      halo: true,
+      nameStyle: AppTypography.display.copyWith(
+        color: AppColors.darkTextPrimary,
+      ),
+      totalStyle: AppTypography.metricXL.copyWith(
+        color: AppColors.darkTextPrimary,
+      ),
+      gaugeHeight: 8,
+      gaugeFill: AppColors.gauge,
+      sealEarned: true,
+    ),
+  };
 
   /// Le rang du cran, en chiffres romains. Il vient du domaine : c'est le
   /// même chiffre que celui frappé sur le sceau du titre, et deux tables

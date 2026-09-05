@@ -33,10 +33,7 @@ class RecordedSet {
 /// Une séance libre (sans plan) traverse ce cas d'usage sans rien changer au
 /// comportement existant.
 class RecordPlannedSet {
-  const RecordPlannedSet({
-    required this._workouts,
-    required this._templates,
-  });
+  const RecordPlannedSet({required this._workouts, required this._templates});
 
   final WorkoutRepository _workouts;
   final WorkoutTemplateRepository _templates;

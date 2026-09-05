@@ -10,8 +10,9 @@ import 'package:flutter_test/flutter_test.dart';
 /// Le décodage suit la case et la densité de l'écran, comme les photos
 /// d'exercices le font déjà.
 void main() {
-  testWidgets('l’illustration se décode à la taille de sa case',
-      (tester) async {
+  testWidgets('l’illustration se décode à la taille de sa case', (
+    tester,
+  ) async {
     tester.view.devicePixelRatio = 3;
     addTearDown(tester.view.reset);
 

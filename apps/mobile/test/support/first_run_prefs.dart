@@ -21,8 +21,7 @@ void seedFirstOpen([Map<String, Object> extra = const {}]) =>
 void seedFirstRunStep(
   FirstRunStep step, [
   Map<String, Object> extra = const {},
-]) =>
-    SharedPreferences.setMockInitialValues({
-      FirstRunStore.stepKey: step.storageValue,
-      ...extra,
-    });
+]) => SharedPreferences.setMockInitialValues({
+  FirstRunStore.stepKey: step.storageValue,
+  ...extra,
+});

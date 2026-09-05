@@ -28,26 +28,28 @@ void main() {
   }
 
   group('faits de récompense', () {
-    test('la meilleure série de semaines est un RECORD, pas la série en cours',
-        () {
-      // Une série cassée reste gagnée : c'est exactement ce qui distingue
-      // une récompense d'un score. Trois semaines de suite, un trou, puis
-      // une reprise — le record vaut trois, pas un.
-      final start = DateTime(2026, 1, 5);
-      final facts = buildRewardFacts(
-        history: [
-          session(start),
-          session(start.add(const Duration(days: 7))),
-          session(start.add(const Duration(days: 14))),
-          // Trou de deux semaines, puis reprise.
-          session(start.add(const Duration(days: 35))),
-        ],
-        reachedTitle: CarlysTitle.apprenti,
-      );
+    test(
+      'la meilleure série de semaines est un RECORD, pas la série en cours',
+      () {
+        // Une série cassée reste gagnée : c'est exactement ce qui distingue
+        // une récompense d'un score. Trois semaines de suite, un trou, puis
+        // une reprise — le record vaut trois, pas un.
+        final start = DateTime(2026, 1, 5);
+        final facts = buildRewardFacts(
+          history: [
+            session(start),
+            session(start.add(const Duration(days: 7))),
+            session(start.add(const Duration(days: 14))),
+            // Trou de deux semaines, puis reprise.
+            session(start.add(const Duration(days: 35))),
+          ],
+          reachedTitle: CarlysTitle.apprenti,
+        );
 
-      expect(facts.bestWeekStreak, 3);
-      expect(facts.completedSessions, 4);
-    });
+        expect(facts.bestWeekStreak, 3);
+        expect(facts.completedSessions, 4);
+      },
+    );
 
     test('les séances abandonnées ne comptent pas dans les caps', () {
       final abandoned = WorkoutHistoryEntry(
@@ -70,26 +72,28 @@ void main() {
       expect(facts.bestWeekStreak, 0);
     });
 
-    test('les semaines à bon rythme se comptent entre deux et quatre séances',
-        () {
-      final monday = DateTime(2026, 3, 2);
-      final facts = buildRewardFacts(
-        history: [
-          // Semaine à 3 séances : dans la fourchette.
-          session(monday),
-          session(monday.add(const Duration(days: 2))),
-          session(monday.add(const Duration(days: 4))),
-          // Semaine à 1 séance : trop peu pour progresser.
-          session(monday.add(const Duration(days: 7))),
-          // Semaine à 6 séances : trop pour récupérer.
-          for (var day = 14; day < 20; day++)
-            session(monday.add(Duration(days: day))),
-        ],
-        reachedTitle: CarlysTitle.apprenti,
-      );
+    test(
+      'les semaines à bon rythme se comptent entre deux et quatre séances',
+      () {
+        final monday = DateTime(2026, 3, 2);
+        final facts = buildRewardFacts(
+          history: [
+            // Semaine à 3 séances : dans la fourchette.
+            session(monday),
+            session(monday.add(const Duration(days: 2))),
+            session(monday.add(const Duration(days: 4))),
+            // Semaine à 1 séance : trop peu pour progresser.
+            session(monday.add(const Duration(days: 7))),
+            // Semaine à 6 séances : trop pour récupérer.
+            for (var day = 14; day < 20; day++)
+              session(monday.add(Duration(days: day))),
+          ],
+          reachedTitle: CarlysTitle.apprenti,
+        );
 
-      expect(facts.balancedWeeks, 1);
-    });
+        expect(facts.balancedWeeks, 1);
+      },
+    );
   });
 
   group('catalogue', () {
@@ -99,15 +103,14 @@ void main() {
       int lessons = 0,
       int records = 0,
       CarlysTitle title = CarlysTitle.apprenti,
-    }) =>
-        RewardFacts(
-          reachedTitle: title,
-          completedSessions: sessions,
-          bestWeekStreak: streak,
-          lessonsAnswered: lessons,
-          lessonsTotal: 22,
-          personalRecords: records,
-        );
+    }) => RewardFacts(
+      reachedTitle: title,
+      completedSessions: sessions,
+      bestWeekStreak: streak,
+      lessonsAnswered: lessons,
+      lessonsTotal: 22,
+      personalRecords: records,
+    );
 
     test('les seuils s’ouvrent dans l’ordre, jamais à l’envers', () {
       final ten = earnedRewards(factsWith(sessions: 10)).map((r) => r.id);
@@ -134,8 +137,9 @@ void main() {
     });
 
     test('les titres atteints sont des récompenses, cumulées', () {
-      final ids =
-          earnedRewards(factsWith(title: CarlysTitle.artisan)).map((r) => r.id);
+      final ids = earnedRewards(
+        factsWith(title: CarlysTitle.artisan),
+      ).map((r) => r.id);
 
       // Tous les titres franchis, pas seulement le dernier.
       expect(ids, containsAll(['titre-architecte', 'titre-artisan']));
@@ -192,10 +196,11 @@ void main() {
       final day = DateTime(2026, 5, 1);
 
       final first = await ledger.record(['maitrise-5', 'discipline-10'], day);
-      final second = await ledger.record(
-        ['maitrise-5', 'discipline-10', 'constance-2'],
-        day,
-      );
+      final second = await ledger.record([
+        'maitrise-5',
+        'discipline-10',
+        'constance-2',
+      ], day);
 
       expect(first, {'maitrise-5', 'discipline-10'});
       expect(second, {'constance-2'});
@@ -216,16 +221,20 @@ void main() {
       expect(await ledger.read(), isEmpty);
     });
 
-    test('après l’ouverture, la récompense suivante est bien NOUVELLE',
-        () async {
-      const ledger = RewardLedger();
-      await ledger.start();
+    test(
+      'après l’ouverture, la récompense suivante est bien NOUVELLE',
+      () async {
+        const ledger = RewardLedger();
+        await ledger.start();
 
-      final fresh = await ledger.record(['constance-2'], DateTime(2026, 6, 1));
+        final fresh = await ledger.record([
+          'constance-2',
+        ], DateTime(2026, 6, 1));
 
-      expect(fresh, {'constance-2'});
-      expect(await ledger.hasStarted(), isTrue);
-    });
+        expect(fresh, {'constance-2'});
+        expect(await ledger.hasStarted(), isTrue);
+      },
+    );
 
     test('un journal abîmé ne fait pas échouer l’écran', () async {
       SharedPreferences.setMockInitialValues({

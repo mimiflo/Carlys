@@ -102,15 +102,15 @@ void main() {
 
   group('performance', () {
     ProgressionAxis performance(double recent, double previous) => axisOf(
-          computeProgression(
-            ProgressionFacts(
-              today: today,
-              recentVolumeKg: recent,
-              previousVolumeKg: previous,
-            ),
-          ),
-          CarlysValue.performance,
-        );
+      computeProgression(
+        ProgressionFacts(
+          today: today,
+          recentVolumeKg: recent,
+          previousVolumeKg: previous,
+        ),
+      ),
+      CarlysValue.performance,
+    );
 
     test('le maintien vaut déjà la moitié des points', () {
       // Tenir son niveau n'est pas un échec : une sèche ou une blessure ne
@@ -157,11 +157,11 @@ void main() {
 
   group('équilibre', () {
     double ratioFor(List<int> ages) => axisOf(
-          computeProgression(
-            ProgressionFacts(today: today, completedSessionDays: daysAgo(ages)),
-          ),
-          CarlysValue.equilibre,
-        ).ratio;
+      computeProgression(
+        ProgressionFacts(today: today, completedSessionDays: daysAgo(ages)),
+      ),
+      CarlysValue.equilibre,
+    ).ratio;
 
     test('deux à quatre séances par semaine remplissent l’axe', () {
       // 12 séances sur 28 jours = 3 par semaine.
@@ -220,9 +220,7 @@ void main() {
     final profile = computeProgression(
       ProgressionFacts(
         today: today,
-        completedSessionDays: daysAgo(
-          List<int>.generate(56, (index) => index),
-        ),
+        completedSessionDays: daysAgo(List<int>.generate(56, (index) => index)),
         startedSessions: 40,
         completedSessions: 40,
         recentVolumeKg: 100000,

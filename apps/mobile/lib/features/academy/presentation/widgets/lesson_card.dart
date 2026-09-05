@@ -64,8 +64,9 @@ class _LessonCardState extends State<LessonCard> {
                       ],
                       Text(
                         lesson.title,
-                        style: AppTypography.subheading
-                            .copyWith(color: AppColors.darkTextPrimary),
+                        style: AppTypography.subheading.copyWith(
+                          color: AppColors.darkTextPrimary,
+                        ),
                       ),
                     ],
                   ),
@@ -90,8 +91,9 @@ class _LessonCardState extends State<LessonCard> {
             const SizedBox(height: AppSpacing.sm),
             Text(
               lesson.body,
-              style: AppTypography.body
-                  .copyWith(color: AppColors.darkTextSecondary),
+              style: AppTypography.body.copyWith(
+                color: AppColors.darkTextSecondary,
+              ),
             ),
             if (lesson.points.isNotEmpty) ...[
               const SizedBox(height: AppSpacing.sm),

@@ -59,8 +59,9 @@ class _DaySheet extends ConsumerWidget {
         children: [
           Text(
             'Ce jour-là',
-            style: AppTypography.subheading
-                .copyWith(color: AppColors.darkTextPrimary),
+            style: AppTypography.subheading.copyWith(
+              color: AppColors.darkTextPrimary,
+            ),
           ),
           const SizedBox(height: AppSpacing.sm),
           ListTile(

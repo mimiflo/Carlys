@@ -24,29 +24,31 @@ import '../../support/navigation.dart';
 /// L'Academy dans l'application : leçons par domaine, question du jour,
 /// quiz qui enseigne (l'explication s'affiche juste ou faux).
 Widget app({FakeCommunityRepository? community}) => ProviderScope(
-      overrides: [
-        appEnvironmentProvider.overrideWithValue(
-          const AppEnvironment(
-            flavor: AppFlavor.development,
-            apiBaseUrl: 'http://localhost:3000',
-          ),
-        ),
-        authRepositoryProvider
-            .overrideWithValue(FakeAuthRepository(storedSession: true)),
-        workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
-        exercisesRepositoryProvider.overrideWithValue(
-          FakeExercisesRepository([
-            summary('e1', 'Développé couché', group: 'pectoraux'),
-            summary('e2', 'Écarté haltères', group: 'pectoraux'),
-          ]),
-        ),
-        communityRepositoryProvider
-            .overrideWithValue(community ?? FakeCommunityRepository()),
-        syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
-        appRestoreProvider.overrideWithValue(NoopAppRestore()),
-      ],
-      child: const CarlysApp(),
-    );
+  overrides: [
+    appEnvironmentProvider.overrideWithValue(
+      const AppEnvironment(
+        flavor: AppFlavor.development,
+        apiBaseUrl: 'http://localhost:3000',
+      ),
+    ),
+    authRepositoryProvider.overrideWithValue(
+      FakeAuthRepository(storedSession: true),
+    ),
+    workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
+    exercisesRepositoryProvider.overrideWithValue(
+      FakeExercisesRepository([
+        summary('e1', 'Développé couché', group: 'pectoraux'),
+        summary('e2', 'Écarté haltères', group: 'pectoraux'),
+      ]),
+    ),
+    communityRepositoryProvider.overrideWithValue(
+      community ?? FakeCommunityRepository(),
+    ),
+    syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
+    appRestoreProvider.overrideWithValue(NoopAppRestore()),
+  ],
+  child: const CarlysApp(),
+);
 
 Future<void> reveal(WidgetTester tester, Finder item) async {
   final scrollable = find.byType(Scrollable).last;
@@ -57,8 +59,11 @@ Future<void> reveal(WidgetTester tester, Finder item) async {
 void main() {
   setUp(() {
     seedCompletedFirstRun();
-    TestWidgetsFlutterBinding.instance.platformDispatcher
-        .accessibilityFeaturesTestValue = FakeAccessibilityFeatures.allOn;
+    TestWidgetsFlutterBinding
+            .instance
+            .platformDispatcher
+            .accessibilityFeaturesTestValue =
+        FakeAccessibilityFeatures.allOn;
   });
 
   tearDown(() {
@@ -66,8 +71,9 @@ void main() {
         .clearAccessibilityFeaturesTestValue();
   });
 
-  testWidgets('question du jour, entrée nutrition et leçons par domaine',
-      (tester) async {
+  testWidgets('question du jour, entrée nutrition et leçons par domaine', (
+    tester,
+  ) async {
     await tester.pumpWidget(app());
     await tester.pumpAndSettle();
     await tapTab(tester, 'Academy');
@@ -82,8 +88,9 @@ void main() {
     }
   });
 
-  testWidgets('une leçon se déplie : corps puis quiz, repliée par défaut',
-      (tester) async {
+  testWidgets('une leçon se déplie : corps puis quiz, repliée par défaut', (
+    tester,
+  ) async {
     await tester.pumpWidget(app());
     await tester.pumpAndSettle();
     await tapTab(tester, 'Academy');
@@ -104,8 +111,9 @@ void main() {
     );
   });
 
-  testWidgets('répondre au quiz révèle l’explication — juste ou faux',
-      (tester) async {
+  testWidgets('répondre au quiz révèle l’explication — juste ou faux', (
+    tester,
+  ) async {
     await tester.pumpWidget(app());
     await tester.pumpAndSettle();
     await tapTab(tester, 'Academy');
@@ -150,8 +158,9 @@ void main() {
     );
   });
 
-  testWidgets('répondre rapporte la réponse aux défis culturels — une fois',
-      (tester) async {
+  testWidgets('répondre rapporte la réponse aux défis culturels — une fois', (
+    tester,
+  ) async {
     final community = FakeCommunityRepository();
     await tester.pumpWidget(app(community: community));
     await tester.pumpAndSettle();
@@ -192,8 +201,9 @@ void main() {
     expect(community.quizReports, hasLength(1));
   });
 
-  testWidgets('une fiche d’anatomie mène aux exercices du muscle enseigné',
-      (tester) async {
+  testWidgets('une fiche d’anatomie mène aux exercices du muscle enseigné', (
+    tester,
+  ) async {
     await tester.pumpWidget(app());
     await tester.pumpAndSettle();
     await tapTab(tester, 'Academy');

@@ -178,11 +178,7 @@ class EllipticGradient extends GradientTransform {
 
 /// Halo flouté : dégradé radial elliptique passé à un flou gaussien.
 class _Halo extends StatelessWidget {
-  const _Halo({
-    required this.sigma,
-    required this.colors,
-    required this.stops,
-  });
+  const _Halo({required this.sigma, required this.colors, required this.stops});
 
   final double sigma;
   final List<Color> colors;
@@ -356,8 +352,10 @@ abstract final class AthletePhotoFraming {
   }
 
   static double _windowWidth(Size box) {
-    final scale =
-        math.max(box.width / source.width, box.height / source.height);
+    final scale = math.max(
+      box.width / source.width,
+      box.height / source.height,
+    );
     return box.width / scale;
   }
 }

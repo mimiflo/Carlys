@@ -17,8 +17,8 @@ final workoutHistoryProvider = StreamProvider<List<WorkoutHistoryEntry>>((ref) {
 
 final workoutDetailProvider = FutureProvider.autoDispose
     .family<WorkoutWithSets?, String>((ref, sessionId) {
-  return ref.watch(workoutRepositoryProvider).workoutDetail(sessionId);
-});
+      return ref.watch(workoutRepositoryProvider).workoutDetail(sessionId);
+    });
 
 /// Nombre de séances passées inspectées pour retrouver une performance :
 /// au-delà, le rappel « PRÉCÉDENT … » n'a plus de valeur d'entraînement.
@@ -28,28 +28,28 @@ const int _inspectedPastSessions = 8;
 /// comprises. `null` quand l'exercice n'a jamais été chargé/répété.
 final previousPerformanceProvider = FutureProvider.autoDispose
     .family<WorkoutSetEntry?, String>((ref, exerciseName) async {
-  final repository = ref.watch(workoutRepositoryProvider);
-  final history = await ref.watch(workoutHistoryProvider.future);
+      final repository = ref.watch(workoutRepositoryProvider);
+      final history = await ref.watch(workoutHistoryProvider.future);
 
-  for (final entry in history.take(_inspectedPastSessions)) {
-    final detail = await repository.workoutDetail(entry.session.id);
-    if (detail == null) {
-      continue;
-    }
-    final matches = detail.sets
-        .where(
-          (set) =>
-              set.exerciseName == exerciseName &&
-              set.reps != null &&
-              set.weightKg != null,
-        )
-        .toList();
-    if (matches.isNotEmpty) {
-      return matches.last;
-    }
-  }
-  return null;
-});
+      for (final entry in history.take(_inspectedPastSessions)) {
+        final detail = await repository.workoutDetail(entry.session.id);
+        if (detail == null) {
+          continue;
+        }
+        final matches = detail.sets
+            .where(
+              (set) =>
+                  set.exerciseName == exerciseName &&
+                  set.reps != null &&
+                  set.weightKg != null,
+            )
+            .toList();
+        if (matches.isNotEmpty) {
+          return matches.last;
+        }
+      }
+      return null;
+    });
 
 /// Actions de séance — unique point d'entrée des écrans vers le domaine.
 class WorkoutActions {
@@ -123,5 +123,5 @@ class RestTimerController extends Notifier<RestTimerState?> {
 
 final restTimerProvider =
     NotifierProvider<RestTimerController, RestTimerState?>(
-  RestTimerController.new,
-);
+      RestTimerController.new,
+    );

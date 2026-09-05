@@ -57,8 +57,9 @@ void main() {
       // rayons différents : Maître est peint sur la carte elle-même, Icône
       // sur la plaque INTÉRIEURE, d'un point plus petite puisqu'elle vit
       // dans sa bordure en dégradé. Le jeu doit tenir sur les deux.
-      final crans =
-          CarlysTitle.values.map(Majesty.of).where((m) => m.corners > 0);
+      final crans = CarlysTitle.values
+          .map(Majesty.of)
+          .where((m) => m.corners > 0);
       expect(crans, hasLength(2));
 
       for (final majesty in crans) {
@@ -113,19 +114,20 @@ void main() {
     );
 
     Widget host({required bool isNew}) => MaterialApp(
-          theme: AppTheme.dark(),
-          home: Scaffold(
-            body: Center(
-              child: EngravedSeal(
-                engrave: isNew,
-                child: AwardSeal(kind: reward.kind),
-              ),
-            ),
+      theme: AppTheme.dark(),
+      home: Scaffold(
+        body: Center(
+          child: EngravedSeal(
+            engrave: isNew,
+            child: AwardSeal(kind: reward.kind),
           ),
-        );
+        ),
+      ),
+    );
 
-    testWidgets('une récompense NOUVELLE se grave sous les yeux',
-        (tester) async {
+    testWidgets('une récompense NOUVELLE se grave sous les yeux', (
+      tester,
+    ) async {
       await tester.pumpWidget(host(isNew: true));
 
       // À la première image, la frappe n'est pas encore posée.
@@ -139,8 +141,9 @@ void main() {
       expect(_progressOf(tester), 1);
     });
 
-    testWidgets('une récompense DÉJÀ obtenue est simplement là',
-        (tester) async {
+    testWidgets('une récompense DÉJÀ obtenue est simplement là', (
+      tester,
+    ) async {
       // Rejouer la gravure à chaque ouverture lui ferait perdre exactement
       // ce qui en fait le prix.
       await tester.pumpWidget(host(isNew: false));
@@ -156,19 +159,21 @@ void main() {
       );
     });
 
-    testWidgets('réduction d’animations : le sceau est entier, sans mouvement',
-        (tester) async {
-      tester.platformDispatcher.accessibilityFeaturesTestValue =
-          FakeAccessibilityFeatures.allOn;
-      addTearDown(
-        tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
-      );
+    testWidgets(
+      'réduction d’animations : le sceau est entier, sans mouvement',
+      (tester) async {
+        tester.platformDispatcher.accessibilityFeaturesTestValue =
+            FakeAccessibilityFeatures.allOn;
+        addTearDown(
+          tester.platformDispatcher.clearAccessibilityFeaturesTestValue,
+        );
 
-      await tester.pumpWidget(host(isNew: true));
-      await tester.pump();
+        await tester.pumpWidget(host(isNew: true));
+        await tester.pump();
 
-      expect(_progressOf(tester), 1);
-    });
+        expect(_progressOf(tester), 1);
+      },
+    );
   });
 }
 

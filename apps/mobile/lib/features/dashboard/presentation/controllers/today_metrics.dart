@@ -48,8 +48,10 @@ class TodayMetric {
 
 /// Les quatre mesures, dans l'ordre de lecture de la grille.
 final todayMetricsProvider = Provider.autoDispose<List<TodayMetric>>((ref) {
-  final metabolism =
-      ref.watch(metabolismReportProvider).valueOrNull?.metabolism;
+  final metabolism = ref
+      .watch(metabolismReportProvider)
+      .valueOrNull
+      ?.metabolism;
   final kcal = ref.watch(consumedKcalTodayProvider);
   final protein = ref.watch(consumedProteinTodayProvider);
   final water = ref.watch(consumedWaterTodayProvider).valueOrNull;
@@ -164,30 +166,33 @@ TodayMetric _counted({
 /// rester juste hors ligne, et le serveur ne sert pas la semaine passée.
 final weeklyVolumeProvider =
     Provider.autoDispose<({double? thisWeek, double? lastWeek})>((ref) {
-  final history = ref.watch(workoutHistoryProvider).valueOrNull;
-  if (history == null) {
-    return (thisWeek: null, lastWeek: null);
-  }
+      final history = ref.watch(workoutHistoryProvider).valueOrNull;
+      if (history == null) {
+        return (thisWeek: null, lastWeek: null);
+      }
 
-  final now = DateTime.now();
-  final monday = DateTime(now.year, now.month, now.day)
-      .subtract(Duration(days: now.weekday - 1));
-  final previousMonday = monday.subtract(const Duration(days: 7));
+      final now = DateTime.now();
+      final monday = DateTime(
+        now.year,
+        now.month,
+        now.day,
+      ).subtract(Duration(days: now.weekday - 1));
+      final previousMonday = monday.subtract(const Duration(days: 7));
 
-  var current = 0.0;
-  var previous = 0.0;
-  for (final entry in history) {
-    if (entry.session.status != WorkoutStatus.completed) continue;
-    final local = entry.session.startedAt.toLocal();
-    final day = DateTime(local.year, local.month, local.day);
-    if (!day.isBefore(monday)) {
-      current += entry.totalVolumeKg;
-    } else if (!day.isBefore(previousMonday)) {
-      previous += entry.totalVolumeKg;
-    }
-  }
+      var current = 0.0;
+      var previous = 0.0;
+      for (final entry in history) {
+        if (entry.session.status != WorkoutStatus.completed) continue;
+        final local = entry.session.startedAt.toLocal();
+        final day = DateTime(local.year, local.month, local.day);
+        if (!day.isBefore(monday)) {
+          current += entry.totalVolumeKg;
+        } else if (!day.isBefore(previousMonday)) {
+          previous += entry.totalVolumeKg;
+        }
+      }
 
-  // Une semaine passée à zéro n'est pas une cible : elle rendrait la jauge
-  // pleine au premier kilo soulevé.
-  return (thisWeek: current, lastWeek: previous > 0 ? previous : null);
-});
+      // Une semaine passée à zéro n'est pas une cible : elle rendrait la jauge
+      // pleine au premier kilo soulevé.
+      return (thisWeek: current, lastWeek: previous > 0 ? previous : null);
+    });

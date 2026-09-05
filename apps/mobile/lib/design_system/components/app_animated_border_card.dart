@@ -40,7 +40,7 @@ class _AppAnimatedBorderCardState extends State<AppAnimatedBorderCard>
     super.didChangeDependencies();
     final reduced =
         AppMotion.resolve(context, AppDashBorderPainter.travelDuration) ==
-            Duration.zero;
+        Duration.zero;
     if (reduced) {
       _controller.stop();
       _controller.value = AppDashBorderPainter.restProgress;
@@ -84,10 +84,7 @@ class _AppAnimatedBorderCardState extends State<AppAnimatedBorderCard>
 /// carte d'abonnement populaire et le profil Carlys ACTUEL parlent la même
 /// langue visuelle.
 class AppDashBorderPainter extends CustomPainter {
-  const AppDashBorderPainter({
-    required this.progress,
-    this.cornerRadius = 24,
-  });
+  const AppDashBorderPainter({required this.progress, this.cornerRadius = 24});
 
   /// Un tour complet du périmètre.
   static const Duration travelDuration = AppMotion.dashLoop;
@@ -134,10 +131,7 @@ class AppDashBorderPainter extends CustomPainter {
       canvas.drawPath(segment, paint);
       if (end > metric.length) {
         // Le segment boucle sur le début du tracé.
-        canvas.drawPath(
-          metric.extractPath(0, end - metric.length),
-          paint,
-        );
+        canvas.drawPath(metric.extractPath(0, end - metric.length), paint);
       }
     }
   }

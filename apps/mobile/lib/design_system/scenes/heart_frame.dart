@@ -86,14 +86,14 @@ double heartBeatAt(double phase) {
 /// La caméra de la maquette — le peintre la reconstruit pour halo et
 /// particules, le calcul d'image pour la projection : même objet.
 SceneCamera heartCamera() => SceneCamera(
-      fovDegrees: 32,
-      x: 0.1,
-      y: 0.15,
-      z: 7.4,
-      targetX: 0,
-      targetY: -0.05,
-      targetZ: 0,
-    );
+  fovDegrees: 32,
+  x: 0.1,
+  y: 0.15,
+  z: 7.4,
+  targetX: 0,
+  targetY: -0.05,
+  targetZ: 0,
+);
 
 final LinearRgb heartViolet = LinearRgb.fromHex(0x9B30FF);
 final LinearRgb heartAccent = LinearRgb.fromHex(0xFF7A45);
@@ -361,7 +361,8 @@ class _HeartMesh {
         final t = (i / segments) * math.pi * 2;
         final sinT = math.sin(t);
         final hx = sinT * sinT * sinT;
-        final hy = (13 * math.cos(t) -
+        final hy =
+            (13 * math.cos(t) -
                 5 * math.cos(2 * t) -
                 2 * math.cos(3 * t) -
                 math.cos(4 * t)) /
@@ -389,8 +390,8 @@ class _HeartMesh {
     final rings = side < 240
         ? 56
         : side < 420
-            ? 96
-            : 120;
+        ? 96
+        : 120;
     return _cache.putIfAbsent(
       rings,
       () => _HeartMesh._(rings, (rings * 4 ~/ 3)),

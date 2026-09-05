@@ -12,20 +12,20 @@ import 'app_page_transitions.dart';
 /// Toute valeur visuelle provient des tokens du design system.
 abstract final class AppTheme {
   static ThemeData light() => _build(
-        colorScheme: AppColorSchemes.light,
-        background: AppColors.lightBackground,
-      );
+    colorScheme: AppColorSchemes.light,
+    background: AppColors.lightBackground,
+  );
 
   static ThemeData dark() => _build(
-        colorScheme: AppColorSchemes.dark,
-        background: AppColors.darkBackground,
-      );
+    colorScheme: AppColorSchemes.dark,
+    background: AppColors.darkBackground,
+  );
 
   /// Variante sombre pour écrans OLED : fond noir pur, économie d'énergie.
   static ThemeData oledDark() => _build(
-        colorScheme: AppColorSchemes.dark,
-        background: AppColors.oledBackground,
-      );
+    colorScheme: AppColorSchemes.dark,
+    background: AppColors.oledBackground,
+  );
 
   static ThemeData _build({
     required ColorScheme colorScheme,
@@ -44,8 +44,9 @@ abstract final class AppTheme {
     // Les styles explicites (AppBar, boutons) dérivent du thème RÉSOLU :
     // même famille de police que le reste de l'app sur chaque plateforme.
     final textTheme = base.textTheme;
-    final buttonTextStyle =
-        textTheme.bodyLarge?.copyWith(fontWeight: FontWeight.w600);
+    final buttonTextStyle = textTheme.bodyLarge?.copyWith(
+      fontWeight: FontWeight.w600,
+    );
 
     return base.copyWith(
       scaffoldBackgroundColor: background,
@@ -65,8 +66,9 @@ abstract final class AppTheme {
         style: FilledButton.styleFrom(
           minimumSize: const Size(64, AppSpacing.touchTarget),
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          shape:
-              const RoundedRectangleBorder(borderRadius: AppRadius.buttonAll),
+          shape: const RoundedRectangleBorder(
+            borderRadius: AppRadius.buttonAll,
+          ),
           textStyle: buttonTextStyle,
         ),
       ),
@@ -74,8 +76,9 @@ abstract final class AppTheme {
         style: OutlinedButton.styleFrom(
           minimumSize: const Size(64, AppSpacing.touchTarget),
           padding: const EdgeInsets.symmetric(horizontal: AppSpacing.lg),
-          shape:
-              const RoundedRectangleBorder(borderRadius: AppRadius.buttonAll),
+          shape: const RoundedRectangleBorder(
+            borderRadius: AppRadius.buttonAll,
+          ),
           textStyle: buttonTextStyle,
         ),
       ),

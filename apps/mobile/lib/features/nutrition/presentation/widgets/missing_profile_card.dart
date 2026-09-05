@@ -44,8 +44,9 @@ class MissingProfileCard extends StatelessWidget {
                   Expanded(
                     child: Text(
                       missing[index].label,
-                      style: AppTypography.label
-                          .copyWith(color: AppColors.darkTextSecondary),
+                      style: AppTypography.label.copyWith(
+                        color: AppColors.darkTextSecondary,
+                      ),
                     ),
                   ),
                 ],

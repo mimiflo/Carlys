@@ -22,8 +22,9 @@ class CoachRepositoryImpl implements CoachRepository {
   @override
   Future<List<CoachConversationSummary>> conversations() {
     return _guard(() async {
-      final response =
-          await _dio.get<Map<String, dynamic>>('/coach/conversations');
+      final response = await _dio.get<Map<String, dynamic>>(
+        '/coach/conversations',
+      );
       return (response.data?['data'] as List<dynamic>? ?? const [])
           .whereType<Map<String, dynamic>>()
           .map(coachSummaryFromJson)
@@ -47,8 +48,9 @@ class CoachRepositoryImpl implements CoachRepository {
   @override
   Future<CoachConversation> conversation(String id) {
     return _guard(() async {
-      final response =
-          await _dio.get<Map<String, dynamic>>('/coach/conversations/$id');
+      final response = await _dio.get<Map<String, dynamic>>(
+        '/coach/conversations/$id',
+      );
       return coachConversationFromJson(
         response.data?['data'] as Map<String, dynamic>? ?? const {},
       );

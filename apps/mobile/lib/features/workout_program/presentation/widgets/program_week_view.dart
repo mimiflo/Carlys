@@ -60,20 +60,20 @@ class _DayRow extends StatelessWidget {
     final (String label, Color color, IconData icon) = switch (entry) {
       null => ('À planifier', AppColors.darkTextTertiary, Icons.add_rounded),
       ProgramDayEntry(isRest: true) => (
-          entry.label,
-          AppColors.darkTextSecondary,
-          Icons.bedtime_outlined,
-        ),
+        entry.label,
+        AppColors.darkTextSecondary,
+        Icons.bedtime_outlined,
+      ),
       ProgramDayEntry(templateId: final id?) when id.isNotEmpty => (
-          entry.label,
-          AppColors.darkTextPrimary,
-          AppIcons.workout,
-        ),
+        entry.label,
+        AppColors.darkTextPrimary,
+        AppIcons.workout,
+      ),
       _ => (
-          entry.label,
-          AppColors.darkTextPrimary,
-          Icons.directions_run_rounded,
-        ),
+        entry.label,
+        AppColors.darkTextPrimary,
+        Icons.directions_run_rounded,
+      ),
     };
 
     return InkWell(
@@ -87,8 +87,9 @@ class _DayRow extends StatelessWidget {
               width: 44,
               child: Text(
                 programDayLabels[dayOfWeek - 1],
-                style: AppTypography.labelMono
-                    .copyWith(color: AppColors.darkTextTertiary),
+                style: AppTypography.labelMono.copyWith(
+                  color: AppColors.darkTextTertiary,
+                ),
               ),
             ),
             Icon(icon, size: 18, color: color),

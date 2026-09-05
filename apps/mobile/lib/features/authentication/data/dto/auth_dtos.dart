@@ -18,14 +18,14 @@ class AuthUserDto {
   });
 
   factory AuthUserDto.fromJson(Map<String, dynamic> json) => AuthUserDto(
-        id: json['id'] as String,
-        email: json['email'] as String,
-        displayName: json['displayName'] as String,
-        emailVerified: json['emailVerified'] as bool,
-        locale: json['locale'] as String,
-        timezone: json['timezone'] as String,
-        carlysProfile: json['carlysProfile'] as String?,
-      );
+    id: json['id'] as String,
+    email: json['email'] as String,
+    displayName: json['displayName'] as String,
+    emailVerified: json['emailVerified'] as bool,
+    locale: json['locale'] as String,
+    timezone: json['timezone'] as String,
+    carlysProfile: json['carlysProfile'] as String?,
+  );
 
   final String id;
   final String email;
@@ -36,23 +36,23 @@ class AuthUserDto {
   final String? carlysProfile;
 
   AuthUser toEntity() => AuthUser(
-        id: id,
-        email: email,
-        displayName: displayName,
-        emailVerified: emailVerified,
-        locale: locale,
-        timezone: timezone,
-        carlysProfile: CarlysProfile.fromWire(carlysProfile),
-      );
+    id: id,
+    email: email,
+    displayName: displayName,
+    emailVerified: emailVerified,
+    locale: locale,
+    timezone: timezone,
+    carlysProfile: CarlysProfile.fromWire(carlysProfile),
+  );
 }
 
 class AuthTokensDto {
   const AuthTokensDto({required this.accessToken, required this.refreshToken});
 
   factory AuthTokensDto.fromJson(Map<String, dynamic> json) => AuthTokensDto(
-        accessToken: json['accessToken'] as String,
-        refreshToken: json['refreshToken'] as String,
-      );
+    accessToken: json['accessToken'] as String,
+    refreshToken: json['refreshToken'] as String,
+  );
 
   final String accessToken;
   final String refreshToken;
@@ -62,9 +62,9 @@ class AuthResultDto {
   const AuthResultDto({required this.user, required this.tokens});
 
   factory AuthResultDto.fromJson(Map<String, dynamic> json) => AuthResultDto(
-        user: AuthUserDto.fromJson(json['user'] as Map<String, dynamic>),
-        tokens: AuthTokensDto.fromJson(json['tokens'] as Map<String, dynamic>),
-      );
+    user: AuthUserDto.fromJson(json['user'] as Map<String, dynamic>),
+    tokens: AuthTokensDto.fromJson(json['tokens'] as Map<String, dynamic>),
+  );
 
   final AuthUserDto user;
   final AuthTokensDto tokens;
@@ -81,13 +81,13 @@ class AuthSessionDto {
   });
 
   factory AuthSessionDto.fromJson(Map<String, dynamic> json) => AuthSessionDto(
-        id: json['id'] as String,
-        current: json['current'] as bool,
-        createdAt: DateTime.parse(json['createdAt'] as String),
-        lastUsedAt: DateTime.parse(json['lastUsedAt'] as String),
-        deviceName: json['deviceName'] as String?,
-        devicePlatform: json['devicePlatform'] as String?,
-      );
+    id: json['id'] as String,
+    current: json['current'] as bool,
+    createdAt: DateTime.parse(json['createdAt'] as String),
+    lastUsedAt: DateTime.parse(json['lastUsedAt'] as String),
+    deviceName: json['deviceName'] as String?,
+    devicePlatform: json['devicePlatform'] as String?,
+  );
 
   final String id;
   final bool current;
@@ -97,11 +97,11 @@ class AuthSessionDto {
   final String? devicePlatform;
 
   AuthSessionDevice toEntity() => AuthSessionDevice(
-        id: id,
-        current: current,
-        createdAt: createdAt,
-        lastUsedAt: lastUsedAt,
-        deviceName: deviceName,
-        devicePlatform: devicePlatform,
-      );
+    id: id,
+    current: current,
+    createdAt: createdAt,
+    lastUsedAt: lastUsedAt,
+    deviceName: deviceName,
+    devicePlatform: devicePlatform,
+  );
 }

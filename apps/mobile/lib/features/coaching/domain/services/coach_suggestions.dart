@@ -69,15 +69,13 @@ List<String> coachSuggestions(CoachContext context) {
   // L'identité choisie oriente l'angle : c'est la promesse des profils.
   final profile = context.carlysProfile;
   if (profile != null) {
-    suggestions.add(
-      switch (profile) {
-        CarlysProfile.constructeur =>
-          'Explique-moi les bases d’une séance efficace',
-        CarlysProfile.challenger => 'Rends ma prochaine séance plus exigeante',
-        CarlysProfile.athlete => 'Aide-moi à tenir mon objectif cette semaine',
-        CarlysProfile.stratege => 'Explique-moi le pourquoi de mes séances',
-      },
-    );
+    suggestions.add(switch (profile) {
+      CarlysProfile.constructeur =>
+        'Explique-moi les bases d’une séance efficace',
+      CarlysProfile.challenger => 'Rends ma prochaine séance plus exigeante',
+      CarlysProfile.athlete => 'Aide-moi à tenir mon objectif cette semaine',
+      CarlysProfile.stratege => 'Explique-moi le pourquoi de mes séances',
+    });
   }
 
   final record = context.recordExerciseName;

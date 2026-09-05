@@ -39,8 +39,10 @@ class AppMetricColumn extends StatelessWidget {
           Text.rich(
             TextSpan(
               text: value,
-              style: AppTypography.metricS
-                  .copyWith(fontSize: 14, color: AppColors.darkTextPrimary),
+              style: AppTypography.metricS.copyWith(
+                fontSize: 14,
+                color: AppColors.darkTextPrimary,
+              ),
               children: [
                 if (unit != null)
                   TextSpan(

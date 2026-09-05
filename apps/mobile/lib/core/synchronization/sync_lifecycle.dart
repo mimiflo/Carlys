@@ -28,8 +28,9 @@ class SyncLifecycle {
     _started = true;
 
     _poke();
-    _connectivitySubscription =
-        Connectivity().onConnectivityChanged.listen((results) {
+    _connectivitySubscription = Connectivity().onConnectivityChanged.listen((
+      results,
+    ) {
       final online = results.any((result) => result != ConnectivityResult.none);
       if (online) {
         _logger.info('Connectivité retrouvée : synchronisation');

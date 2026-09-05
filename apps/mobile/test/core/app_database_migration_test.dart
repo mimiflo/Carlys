@@ -103,70 +103,80 @@ void main() {
 
   tearDown(() => db.close());
 
-  test('la montée de version préserve les données de séance déjà saisies',
-      () async {
-    // La première requête déclenche `onUpgrade`.
-    final sessions = await db.select(db.localWorkoutSessions).get();
-    expect(sessions, hasLength(1));
-    expect(sessions.single.id, 'session-v1');
-    expect(sessions.single.name, 'Push A');
-    expect(sessions.single.status, WorkoutStatus.inProgress.apiValue);
-    // Les colonnes ajoutées sont nulles : la séance existante est libre.
-    expect(sessions.single.templateId, isNull);
-    expect(sessions.single.templateName, isNull);
+  test(
+    'la montée de version préserve les données de séance déjà saisies',
+    () async {
+      // La première requête déclenche `onUpgrade`.
+      final sessions = await db.select(db.localWorkoutSessions).get();
+      expect(sessions, hasLength(1));
+      expect(sessions.single.id, 'session-v1');
+      expect(sessions.single.name, 'Push A');
+      expect(sessions.single.status, WorkoutStatus.inProgress.apiValue);
+      // Les colonnes ajoutées sont nulles : la séance existante est libre.
+      expect(sessions.single.templateId, isNull);
+      expect(sessions.single.templateName, isNull);
 
-    final sets = await db.select(db.localWorkoutSets).get();
-    expect(sets, hasLength(1));
-    expect(sets.single.exerciseName, 'Développé couché');
-    expect(sets.single.reps, 8);
-    expect(sets.single.weightKg, 70);
-    expect(sets.single.plannedReps, isNull);
-    expect(sets.single.plannedWeightKg, isNull);
+      final sets = await db.select(db.localWorkoutSets).get();
+      expect(sets, hasLength(1));
+      expect(sets.single.exerciseName, 'Développé couché');
+      expect(sets.single.reps, 8);
+      expect(sets.single.weightKg, 70);
+      expect(sets.single.plannedReps, isNull);
+      expect(sets.single.plannedWeightKg, isNull);
 
-    // La file en attente survit : rien n'est perdu ni renvoyé en double.
-    final operations = await db.select(db.syncOperations).get();
-    expect(operations, hasLength(1));
-    expect(operations.single.operationType, 'session.create');
+      // La file en attente survit : rien n'est perdu ni renvoyé en double.
+      final operations = await db.select(db.syncOperations).get();
+      expect(operations, hasLength(1));
+      expect(operations.single.operationType, 'session.create');
 
-    // La table d'hydratation, arrivée en version 4, est là et utilisable :
-    // une migration qui crée une table sans qu'on puisse y écrire ne vaut
-    // rien, et le compteur du jour serait muet au premier verre.
-    await db.into(db.localWaterIntakes).insert(
-          LocalWaterIntakesCompanion.insert(
-            day: DateTime(2026, 9, 1),
-            milliliters: const Value(750),
-            updatedAt: DateTime(2026, 9, 1, 10),
-          ),
-        );
-    final water = await db.select(db.localWaterIntakes).getSingle();
-    expect(water.milliliters, 750);
+      // La table d'hydratation, arrivée en version 4, est là et utilisable :
+      // une migration qui crée une table sans qu'on puisse y écrire ne vaut
+      // rien, et le compteur du jour serait muet au premier verre.
+      await db
+          .into(db.localWaterIntakes)
+          .insert(
+            LocalWaterIntakesCompanion.insert(
+              day: DateTime(2026, 9, 1),
+              milliliters: const Value(750),
+              updatedAt: DateTime(2026, 9, 1, 10),
+            ),
+          );
+      final water = await db.select(db.localWaterIntakes).getSingle();
+      expect(water.milliliters, 750);
 
-    expect(db.schemaVersion, 4);
-  });
+      expect(db.schemaVersion, 4);
+    },
+  );
 
-  test('les quatre tables des modèles de séance sont créées et utilisables',
-      () async {
-    expect(await db.select(db.localWorkoutTemplates).get(), isEmpty);
-    expect(await db.select(db.localTemplateExercises).get(), isEmpty);
-    expect(await db.select(db.localTemplateSets).get(), isEmpty);
-    expect(await db.select(db.localSessionPlanItems).get(), isEmpty);
-  });
+  test(
+    'les quatre tables des modèles de séance sont créées et utilisables',
+    () async {
+      expect(await db.select(db.localWorkoutTemplates).get(), isEmpty);
+      expect(await db.select(db.localTemplateExercises).get(), isEmpty);
+      expect(await db.select(db.localTemplateSets).get(), isEmpty);
+      expect(await db.select(db.localSessionPlanItems).get(), isEmpty);
+    },
+  );
 
-  test('un plan hérité de la version 2 reste « pending », donc protégé',
-      () async {
-    // Une base v2 a des items de plan sans colonne `sync_status` : la valeur
-    // par défaut les met en attente, ce qui interdit au rapatriement de les
-    // écraser — la saisie de l'appareil prime toujours.
-    await db.into(db.localSessionPlanItems).insert(
-          LocalSessionPlanItemsCompanion.insert(
-            id: 'plan-1',
-            sessionId: 'session-v1',
-            exercisePosition: 0,
-            exerciseName: 'Développé couché',
-            setPosition: 0,
-          ),
-        );
-    final items = await db.select(db.localSessionPlanItems).get();
-    expect(items.single.syncStatus, 'pending');
-  });
+  test(
+    'un plan hérité de la version 2 reste « pending », donc protégé',
+    () async {
+      // Une base v2 a des items de plan sans colonne `sync_status` : la valeur
+      // par défaut les met en attente, ce qui interdit au rapatriement de les
+      // écraser — la saisie de l'appareil prime toujours.
+      await db
+          .into(db.localSessionPlanItems)
+          .insert(
+            LocalSessionPlanItemsCompanion.insert(
+              id: 'plan-1',
+              sessionId: 'session-v1',
+              exercisePosition: 0,
+              exerciseName: 'Développé couché',
+              setPosition: 0,
+            ),
+          );
+      final items = await db.select(db.localSessionPlanItems).get();
+      expect(items.single.syncStatus, 'pending');
+    },
+  );
 }

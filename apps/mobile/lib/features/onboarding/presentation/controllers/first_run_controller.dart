@@ -16,9 +16,7 @@ class FirstRunState {
   const FirstRunState({required this.step, required this.restored});
 
   /// Avant lecture des préférences : l'étape réelle n'est pas encore connue.
-  const FirstRunState.unknown()
-      : step = FirstRunStep.welcome,
-        restored = false;
+  const FirstRunState.unknown() : step = FirstRunStep.welcome, restored = false;
 
   final FirstRunStep step;
 
@@ -173,9 +171,7 @@ class FirstRunController extends Notifier<FirstRunState> {
 }
 
 final firstRunControllerProvider =
-    NotifierProvider<FirstRunController, FirstRunState>(
-  FirstRunController.new,
-);
+    NotifierProvider<FirstRunController, FirstRunState>(FirstRunController.new);
 
 /// Étape EFFECTIVE du parcours, croisée avec l'état de session, ou `null`
 /// tant qu'elle n'est pas connue (préférences en cours de lecture ou session

@@ -80,16 +80,18 @@ class HomeHeader extends StatelessWidget {
                   firstName == null ? 'Bonjour' : 'Bonjour, $firstName.',
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: AppTypography.title
-                      .copyWith(color: AppColors.darkTextPrimary),
+                  style: AppTypography.title.copyWith(
+                    color: AppColors.darkTextPrimary,
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.xxs),
                 Text(
                   subtitle,
                   maxLines: _subtitleMaxLines,
                   overflow: TextOverflow.ellipsis,
-                  style: AppTypography.body
-                      .copyWith(color: AppColors.darkTextSecondary),
+                  style: AppTypography.body.copyWith(
+                    color: AppColors.darkTextSecondary,
+                  ),
                 ),
               ],
             ),
@@ -172,10 +174,7 @@ class _BrandMark extends StatelessWidget {
       alignment: Alignment.center,
       children: [
         ImageFiltered(
-          imageFilter: ImageFilter.blur(
-            sigmaX: _glowSigma,
-            sigmaY: _glowSigma,
-          ),
+          imageFilter: ImageFilter.blur(sigmaX: _glowSigma, sigmaY: _glowSigma),
           child: ColorFiltered(
             // `srcIn` garde l'alpha du sceau et n'en remplace que la
             // couleur : c'est ce qui fait une silhouette, et non un carré.

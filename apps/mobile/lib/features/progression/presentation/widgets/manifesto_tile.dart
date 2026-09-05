@@ -60,14 +60,16 @@ class _Wording extends StatelessWidget {
       children: [
         Text(
           'Le manifeste Carlys',
-          style: AppTypography.subheading
-              .copyWith(color: AppColors.darkTextPrimary),
+          style: AppTypography.subheading.copyWith(
+            color: AppColors.darkTextPrimary,
+          ),
         ),
         const SizedBox(height: AppSpacing.xxs),
         Text(
           'Pourquoi essayer compte plus que réussir.',
-          style:
-              AppTypography.body.copyWith(color: AppColors.darkTextSecondary),
+          style: AppTypography.body.copyWith(
+            color: AppColors.darkTextSecondary,
+          ),
         ),
       ],
     );

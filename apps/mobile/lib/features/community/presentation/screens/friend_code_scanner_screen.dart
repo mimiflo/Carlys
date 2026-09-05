@@ -58,8 +58,9 @@ class _FriendCodeScannerScreenState extends State<FriendCodeScannerScreen> {
         ),
         title: Text(
           'Scanner un code ami',
-          style: AppTypography.subheading
-              .copyWith(color: AppColors.darkTextPrimary),
+          style: AppTypography.subheading.copyWith(
+            color: AppColors.darkTextPrimary,
+          ),
         ),
       ),
       body: Column(
@@ -72,7 +73,8 @@ class _FriendCodeScannerScreenState extends State<FriendCodeScannerScreen> {
               // system, pas un écran noir muet.
               errorBuilder: (context, error, child) => AppErrorState(
                 title: 'Caméra indisponible',
-                message: 'Autorise-la dans les réglages du téléphone, '
+                message:
+                    'Autorise-la dans les réglages du téléphone, '
                     'ou tape le code à la main.',
                 onRetry: () => _controller.start(),
               ),
@@ -82,8 +84,9 @@ class _FriendCodeScannerScreenState extends State<FriendCodeScannerScreen> {
             padding: const EdgeInsets.all(AppSpacing.gutter),
             child: Text(
               'Vise le QR du profil de ton ami.',
-              style: AppTypography.body
-                  .copyWith(color: AppColors.darkTextSecondary),
+              style: AppTypography.body.copyWith(
+                color: AppColors.darkTextSecondary,
+              ),
               textAlign: TextAlign.center,
             ),
           ),

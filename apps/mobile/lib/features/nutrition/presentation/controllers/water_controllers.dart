@@ -43,13 +43,13 @@ final consumedWaterTodayProvider = StreamProvider.autoDispose<int>((ref) {
 
 /// Objectif d'eau du jour, en millilitres — calculé côté serveur avec le
 /// reste du métabolisme. `null` tant qu'aucun profil n'est rempli.
-final metabolismTargetWaterMlProvider = Provider.autoDispose<AsyncValue<int?>>(
-  (ref) {
-    return ref.watch(metabolismReportProvider).whenData(
-          (report) => report.metabolism?.waterMl,
-        );
-  },
-);
+final metabolismTargetWaterMlProvider = Provider.autoDispose<AsyncValue<int?>>((
+  ref,
+) {
+  return ref
+      .watch(metabolismReportProvider)
+      .whenData((report) => report.metabolism?.waterMl);
+});
 
 /// Ajoute (ou retire, si négatif) de l'eau au total du jour.
 final waterActionsProvider = Provider<WaterActions>((ref) {

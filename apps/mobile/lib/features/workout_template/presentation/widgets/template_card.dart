@@ -60,8 +60,9 @@ class TemplateCard extends StatelessWidget {
                         template.previewExerciseNames.join(' · '),
                         maxLines: 2,
                         overflow: TextOverflow.ellipsis,
-                        style: AppTypography.body
-                            .copyWith(color: AppColors.darkTextSecondary),
+                        style: AppTypography.body.copyWith(
+                          color: AppColors.darkTextSecondary,
+                        ),
                       ),
                     ],
                     const SizedBox(height: AppSpacing.sm),
@@ -110,11 +111,11 @@ class TemplateCard extends StatelessWidget {
     return switch (template.syncState) {
       LocalSyncState.synced => const [],
       LocalSyncState.pending => const [
-          AppPill(label: 'En attente', tone: AppPillTone.primary),
-        ],
+        AppPill(label: 'En attente', tone: AppPillTone.primary),
+      ],
       LocalSyncState.failed => const [
-          AppPill(label: 'Non synchronisé', tone: AppPillTone.primary),
-        ],
+        AppPill(label: 'Non synchronisé', tone: AppPillTone.primary),
+      ],
     };
   }
 
@@ -169,8 +170,9 @@ class _Title extends StatelessWidget {
             template.name,
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: AppTypography.heading
-                .copyWith(color: AppColors.darkTextPrimary),
+            style: AppTypography.heading.copyWith(
+              color: AppColors.darkTextPrimary,
+            ),
           ),
         ),
         const SizedBox(width: AppSpacing.xs),
@@ -218,8 +220,9 @@ class _StartButton extends StatelessWidget {
           style: FilledButton.styleFrom(
             backgroundColor: AppColors.accent,
             foregroundColor: AppColors.darkBackground,
-            textStyle:
-                AppTypography.subheading.copyWith(fontWeight: FontWeight.w700),
+            textStyle: AppTypography.subheading.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
           ),
           onPressed: onPressed,
           child: const Row(

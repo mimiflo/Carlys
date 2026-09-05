@@ -86,5 +86,5 @@ class DioWorkoutTemplateRemoteDataSource
 
 final workoutTemplateRemoteDataSourceProvider =
     Provider<WorkoutTemplateRemoteDataSource>((ref) {
-  return DioWorkoutTemplateRemoteDataSource(ref.watch(dioProvider));
-});
+      return DioWorkoutTemplateRemoteDataSource(ref.watch(dioProvider));
+    });

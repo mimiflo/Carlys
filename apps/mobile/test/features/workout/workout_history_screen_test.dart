@@ -18,8 +18,11 @@ void main() {
   setUp(() {
     TestWidgetsFlutterBinding.ensureInitialized();
     TestWidgetsFlutterBinding
-            .instance.platformDispatcher.accessibilityFeaturesTestValue =
-        const FakeAccessibilityFeatures(disableAnimations: true);
+        .instance
+        .platformDispatcher
+        .accessibilityFeaturesTestValue = const FakeAccessibilityFeatures(
+      disableAnimations: true,
+    );
   });
 
   tearDown(() {
@@ -40,19 +43,18 @@ void main() {
     required double volumeKg,
     int? durationSeconds,
     LocalSyncState syncState = LocalSyncState.synced,
-  }) =>
-      WorkoutHistoryEntry(
-        session: WorkoutInfo(
-          id: id,
-          name: name,
-          status: WorkoutStatus.completed,
-          startedAt: startedAt,
-          durationSeconds: durationSeconds,
-          syncState: syncState,
-        ),
-        setsCount: setsCount,
-        totalVolumeKg: volumeKg,
-      );
+  }) => WorkoutHistoryEntry(
+    session: WorkoutInfo(
+      id: id,
+      name: name,
+      status: WorkoutStatus.completed,
+      startedAt: startedAt,
+      durationSeconds: durationSeconds,
+      syncState: syncState,
+    ),
+    setsCount: setsCount,
+    totalVolumeKg: volumeKg,
+  );
 
   Future<void> pumpHistory(
     WidgetTester tester, {
@@ -66,10 +68,12 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          workoutRepositoryProvider
-              .overrideWithValue(FakeWorkoutRepository()..history = history),
-          progressRepositoryProvider
-              .overrideWithValue(FakeProgressRepository(records: records)),
+          workoutRepositoryProvider.overrideWithValue(
+            FakeWorkoutRepository()..history = history,
+          ),
+          progressRepositoryProvider.overrideWithValue(
+            FakeProgressRepository(records: records),
+          ),
         ],
         child: MaterialApp(
           theme: AppTheme.dark(),
@@ -80,8 +84,9 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('carte calendaire et cartes de séance du mois courant',
-      (tester) async {
+  testWidgets('carte calendaire et cartes de séance du mois courant', (
+    tester,
+  ) async {
     await pumpHistory(
       tester,
       history: [
@@ -139,8 +144,9 @@ void main() {
     expect(find.byIcon(AppIcons.offline), findsOneWidget);
   });
 
-  testWidgets('sélecteur de mois ouvert par l’icône calendrier',
-      (tester) async {
+  testWidgets('sélecteur de mois ouvert par l’icône calendrier', (
+    tester,
+  ) async {
     await pumpHistory(
       tester,
       history: [
@@ -158,10 +164,7 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Mois affiché'), findsOneWidget);
-    expect(
-      find.text(formatMonthYearCapitalized(month)),
-      findsNWidgets(2),
-    );
+    expect(find.text(formatMonthYearCapitalized(month)), findsNWidgets(2));
   });
 
   testWidgets('sans séance : état vide', (tester) async {

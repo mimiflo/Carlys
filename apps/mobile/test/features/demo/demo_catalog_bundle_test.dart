@@ -18,8 +18,9 @@ import 'package:flutter_test/flutter_test.dart';
 /// autres, ce test tomberait sur un catalogue déjà chargé et ne vérifierait
 /// plus rien.
 void main() {
-  testWidgets('le catalogue se charge sans échapper au temps simulé',
-      (tester) async {
+  testWidgets('le catalogue se charge sans échapper au temps simulé', (
+    tester,
+  ) async {
     DemoCatalog? loaded;
     unawaited(loadDemoCatalog().then((catalog) => loaded = catalog));
 
@@ -30,7 +31,8 @@ void main() {
     expect(
       loaded,
       isNotNull,
-      reason: 'lecture bloquée — un isolat ou une minuterie s’est glissé '
+      reason:
+          'lecture bloquée — un isolat ou une minuterie s’est glissé '
           'dans le chargement du catalogue',
     );
     expect(loaded!.exercises, isNotEmpty);

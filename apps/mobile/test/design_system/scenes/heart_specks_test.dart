@@ -12,14 +12,14 @@ import 'package:flutter_test/flutter_test.dart';
 /// toutes apparaître ensemble, ce qui n'est plus un accent mais une nuée.
 void main() {
   SceneCamera cameraOf() => SceneCamera(
-        fovDegrees: 32,
-        x: 0.1,
-        y: 0.15,
-        z: 7.4,
-        targetX: 0,
-        targetY: -0.05,
-        targetZ: 0,
-      );
+    fovDegrees: 32,
+    x: 0.1,
+    y: 0.15,
+    z: 7.4,
+    targetX: 0,
+    targetY: -0.05,
+    targetZ: 0,
+  );
 
   /// Particules effectivement visibles à un instant donné.
   int visibleAt(double seconds) {
@@ -78,21 +78,23 @@ void main() {
     expect(HeartSpecks.stateAt(3, 12.5), HeartSpecks.stateAt(3, 12.5));
   });
 
-  test('de temps en temps : jamais toutes ensemble, jamais le vide complet',
-      () {
-    var least = HeartSpecks.count;
-    var most = 0;
-    for (var step = 0; step < 600; step++) {
-      final visible = visibleAt(step * HeartSpecks.cycle / 600);
-      least = least < visible ? least : visible;
-      most = most > visible ? most : visible;
-    }
+  test(
+    'de temps en temps : jamais toutes ensemble, jamais le vide complet',
+    () {
+      var least = HeartSpecks.count;
+      var most = 0;
+      for (var step = 0; step < 600; step++) {
+        final visible = visibleAt(step * HeartSpecks.cycle / 600);
+        least = least < visible ? least : visible;
+        most = most > visible ? most : visible;
+      }
 
-    // Un accent : quelques particules, jamais la moitié du vivier.
-    expect(most, lessThanOrEqualTo(HeartSpecks.count ~/ 2));
-    // Mais jamais rien non plus : la page ne doit pas paraître morte.
-    expect(least, greaterThanOrEqualTo(1));
-  });
+      // Un accent : quelques particules, jamais la moitié du vivier.
+      expect(most, lessThanOrEqualTo(HeartSpecks.count ~/ 2));
+      // Mais jamais rien non plus : la page ne doit pas paraître morte.
+      expect(least, greaterThanOrEqualTo(1));
+    },
+  );
 
   test('une particule naît et meurt en fondu', () {
     expect(HeartSpecks.envelope(0), 0);
@@ -117,9 +119,10 @@ void main() {
   });
 
   test('la moitié du vivier passe devant, l\'autre derrière', () {
-    final front = List.generate(HeartSpecks.count, HeartSpecks.isInFront)
-        .where((f) => f)
-        .length;
+    final front = List.generate(
+      HeartSpecks.count,
+      HeartSpecks.isInFront,
+    ).where((f) => f).length;
     expect(front, HeartSpecks.count ~/ 2);
   });
 

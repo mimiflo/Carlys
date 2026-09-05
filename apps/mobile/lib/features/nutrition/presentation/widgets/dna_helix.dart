@@ -108,9 +108,7 @@ class _DnaHelixState extends State<DnaHelix>
                 final time = _controller.value * DnaAnimation.cycleSeconds;
                 final quantized =
                     (time * _framesPerSecond).floor() / _framesPerSecond;
-                return CustomPaint(
-                  painter: DnaScenePainter(time: quantized),
-                );
+                return CustomPaint(painter: DnaScenePainter(time: quantized));
               },
             ),
           ),

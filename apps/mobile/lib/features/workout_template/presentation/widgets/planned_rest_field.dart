@@ -41,8 +41,9 @@ class PlannedRestField extends StatelessWidget {
             Expanded(
               child: Text(
                 'REPOS',
-                style: AppTypography.labelMono
-                    .copyWith(color: AppColors.darkTextTertiary),
+                style: AppTypography.labelMono.copyWith(
+                  color: AppColors.darkTextTertiary,
+                ),
               ),
             ),
             _StepButton(
@@ -52,8 +53,9 @@ class PlannedRestField extends StatelessWidget {
             ),
             Text(
               '${formatThousands(value)} s',
-              style: AppTypography.metricS
-                  .copyWith(color: AppColors.darkTextPrimary),
+              style: AppTypography.metricS.copyWith(
+                color: AppColors.darkTextPrimary,
+              ),
             ),
             _StepButton(
               icon: AppIcons.add,

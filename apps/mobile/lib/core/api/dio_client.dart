@@ -39,10 +39,12 @@ class AuthInterceptor extends Interceptor {
     ErrorInterceptorHandler handler,
   ) async {
     final options = err.requestOptions;
-    final isAuthRoute = options.path.contains('/auth/refresh') ||
+    final isAuthRoute =
+        options.path.contains('/auth/refresh') ||
         options.path.contains('/auth/login') ||
         options.path.contains('/auth/register');
-    final shouldRetry = err.response?.statusCode == 401 &&
+    final shouldRetry =
+        err.response?.statusCode == 401 &&
         !isAuthRoute &&
         options.extra[_retriedKey] != true;
 
@@ -64,11 +66,11 @@ class AuthInterceptor extends Interceptor {
 }
 
 BaseOptions _baseOptions(AppEnvironment environment) => BaseOptions(
-      baseUrl: environment.apiV1Url,
-      connectTimeout: const Duration(seconds: 10),
-      receiveTimeout: const Duration(seconds: 20),
-      contentType: 'application/json',
-    );
+  baseUrl: environment.apiV1Url,
+  connectTimeout: const Duration(seconds: 10),
+  receiveTimeout: const Duration(seconds: 20),
+  contentType: 'application/json',
+);
 
 /// Dio nu réservé au rafraîchissement de session (aucun interceptor).
 final bareDioProvider = Provider<Dio>((ref) {

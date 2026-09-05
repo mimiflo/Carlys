@@ -93,7 +93,8 @@ class DemoCoachRepository implements CoachRepository {
     CoachMessage(
       id: 'demo-coach-2',
       role: CoachRole.assistant,
-      content: 'On garde les deux mouvements principaux et on resserre les '
+      content:
+          'On garde les deux mouvements principaux et on resserre les '
           'repos. Les charges ne bougent pas : c’est le volume qui tombe, '
           'pas l’intensité.',
       proposal: _demoProposal(),
@@ -104,13 +105,13 @@ class DemoCoachRepository implements CoachRepository {
 
   @override
   Future<List<CoachConversationSummary>> conversations() async => [
-        CoachConversationSummary(
-          id: _threadId,
-          title: 'Séance courte',
-          messagesCount: _messages.length,
-          updatedAt: DateTime.now().toUtc(),
-        ),
-      ];
+    CoachConversationSummary(
+      id: _threadId,
+      title: 'Séance courte',
+      messagesCount: _messages.length,
+      updatedAt: DateTime.now().toUtc(),
+    ),
+  ];
 
   @override
   Future<CoachConversationSummary> createConversation(String id) async =>
@@ -122,10 +123,10 @@ class DemoCoachRepository implements CoachRepository {
 
   @override
   Future<CoachConversation> conversation(String id) async => CoachConversation(
-        id: id,
-        title: 'Séance courte',
-        messages: List.unmodifiable(_messages),
-      );
+    id: id,
+    title: 'Séance courte',
+    messages: List.unmodifiable(_messages),
+  );
 
   @override
   Future<CoachReply> sendMessage({
@@ -145,7 +146,8 @@ class DemoCoachRepository implements CoachRepository {
     final answer = CoachMessage(
       id: 'demo-answer-$_sent',
       role: CoachRole.assistant,
-      content: 'Mode démonstration : je réponds sans serveur et sans lire tes '
+      content:
+          'Mode démonstration : je réponds sans serveur et sans lire tes '
           'données. Voici tout de même à quoi ressemble une séance adaptée.',
       proposal: _demoProposal(),
     );

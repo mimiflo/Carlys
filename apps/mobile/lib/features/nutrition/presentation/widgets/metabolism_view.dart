@@ -41,11 +41,7 @@ class MetabolismView extends StatelessWidget {
             ),
             const SizedBox(width: AppSpacing.gapTile),
             Expanded(
-              child: AppStatTile(
-                label: 'Eau',
-                value: waterLitres,
-                unit: ' L',
-              ),
+              child: AppStatTile(label: 'Eau', value: waterLitres, unit: ' L'),
             ),
           ],
         ),

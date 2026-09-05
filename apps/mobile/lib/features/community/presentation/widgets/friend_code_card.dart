@@ -31,8 +31,9 @@ class FriendCodeCard extends ConsumerWidget {
         padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
         child: Text(
           'Ton code arrivera avec la connexion.',
-          style:
-              AppTypography.label.copyWith(color: AppColors.darkTextSecondary),
+          style: AppTypography.label.copyWith(
+            color: AppColors.darkTextSecondary,
+          ),
         ),
       ),
       data: (value) => Row(
@@ -68,20 +69,23 @@ class FriendCodeCard extends ConsumerWidget {
               children: [
                 Text(
                   'MON CODE',
-                  style: AppTypography.label
-                      .copyWith(color: AppColors.darkTextSecondary),
+                  style: AppTypography.label.copyWith(
+                    color: AppColors.darkTextSecondary,
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.xxs),
                 Text(
                   formatFriendCode(value),
-                  style: AppTypography.metricM
-                      .copyWith(color: AppColors.darkTextPrimary),
+                  style: AppTypography.metricM.copyWith(
+                    color: AppColors.darkTextPrimary,
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.xs),
                 Text(
                   'Fais-le scanner, ou dicte-le : il ne changera jamais.',
-                  style: AppTypography.label
-                      .copyWith(color: AppColors.darkTextSecondary),
+                  style: AppTypography.label.copyWith(
+                    color: AppColors.darkTextSecondary,
+                  ),
                 ),
               ],
             ),

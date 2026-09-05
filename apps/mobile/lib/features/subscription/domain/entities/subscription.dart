@@ -61,9 +61,9 @@ enum OfferPeriod {
   final String suffix;
 
   static OfferPeriod fromApi(String value) => OfferPeriod.values.firstWhere(
-        (period) => period.apiValue == value,
-        orElse: () => OfferPeriod.month,
-      );
+    (period) => period.apiValue == value,
+    orElse: () => OfferPeriod.month,
+  );
 }
 
 /// Une offre du catalogue.

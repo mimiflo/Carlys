@@ -33,16 +33,18 @@ class _WaterForm extends ConsumerWidget {
         children: [
           Text(
             'Hydratation',
-            style: AppTypography.subheading
-                .copyWith(color: AppColors.darkTextPrimary),
+            style: AppTypography.subheading.copyWith(
+              color: AppColors.darkTextPrimary,
+            ),
           ),
           const SizedBox(height: AppSpacing.xxs),
           Text(
             target == null
                 ? 'Compté sur cet appareil, remis à zéro chaque nuit.'
                 : 'Objectif du jour : ${formatDecimal(target / 1000)} L.',
-            style:
-                AppTypography.body.copyWith(color: AppColors.darkTextSecondary),
+            style: AppTypography.body.copyWith(
+              color: AppColors.darkTextSecondary,
+            ),
           ),
           const SizedBox(height: AppSpacing.md),
           Row(
@@ -51,14 +53,16 @@ class _WaterForm extends ConsumerWidget {
             children: [
               Text(
                 formatDecimal(consumed / 1000),
-                style: AppTypography.metricXL
-                    .copyWith(color: AppColors.darkTextPrimary),
+                style: AppTypography.metricXL.copyWith(
+                  color: AppColors.darkTextPrimary,
+                ),
               ),
               const SizedBox(width: AppSpacing.xs),
               Text(
                 'L',
-                style: AppTypography.labelMono
-                    .copyWith(color: AppColors.textMuted),
+                style: AppTypography.labelMono.copyWith(
+                  color: AppColors.textMuted,
+                ),
               ),
             ],
           ),
@@ -90,8 +94,9 @@ class _WaterForm extends ConsumerWidget {
               variant: AppButtonVariant.ghost,
               // Désactivé à zéro plutôt que borné en silence : un bouton qui
               // ne fait rien quand on le presse est pire qu'un bouton éteint.
-              onPressed:
-                  consumed == 0 ? null : () => actions.add(-waterGlassMl),
+              onPressed: consumed == 0
+                  ? null
+                  : () => actions.add(-waterGlassMl),
             ),
           ),
           const SizedBox(height: AppSpacing.sm),

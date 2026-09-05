@@ -110,8 +110,9 @@ class DiskRemoteImageCache implements RemoteImageCache {
 
   Future<Uint8List?> _fromBundle(String url) async {
     try {
-      final data =
-          await rootBundle.load(url.substring(assetImageScheme.length));
+      final data = await rootBundle.load(
+        url.substring(assetImageScheme.length),
+      );
       // Les BORNES sont obligatoires : `buffer.asUint8List()` sans arguments
       // rend une vue sur le tampon ENTIER, qui peut déborder la tranche
       // réellement chargée quand le moteur mutualise ses allocations.

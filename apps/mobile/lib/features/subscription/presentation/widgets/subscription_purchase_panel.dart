@@ -41,8 +41,9 @@ class _SubscriptionPurchasePanelState
       CheckoutOutcome.failed => 'La page de paiement n’a pas pu s’ouvrir.',
     };
     if (message != null) {
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text(message)));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
     }
   }
 

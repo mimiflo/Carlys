@@ -10,7 +10,7 @@ import 'token_storage.dart';
 /// Utilise un Dio nu (sans interceptors) pour éviter toute récursion.
 class TokenRefresher {
   TokenRefresher({required Dio bareDio, required this._storage})
-      : _dio = bareDio;
+    : _dio = bareDio;
 
   static const _logger = AppLogger('TokenRefresher');
 

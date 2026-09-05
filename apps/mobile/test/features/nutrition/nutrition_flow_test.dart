@@ -21,35 +21,31 @@ import '../../support/first_run_prefs.dart';
 import '../../support/navigation.dart' as navigation;
 
 Widget appWith(FakeNutritionRepository nutrition) => ProviderScope(
-      overrides: [
-        appEnvironmentProvider.overrideWithValue(
-          const AppEnvironment(
-            flavor: AppFlavor.development,
-            apiBaseUrl: 'http://localhost:3000',
-          ),
-        ),
-        authRepositoryProvider
-            .overrideWithValue(FakeAuthRepository(storedSession: true)),
-        workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
-        syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
-        appRestoreProvider.overrideWithValue(NoopAppRestore()),
-        nutritionRepositoryProvider.overrideWithValue(nutrition),
-      ],
-      child: const CarlysApp(),
-    );
+  overrides: [
+    appEnvironmentProvider.overrideWithValue(
+      const AppEnvironment(
+        flavor: AppFlavor.development,
+        apiBaseUrl: 'http://localhost:3000',
+      ),
+    ),
+    authRepositoryProvider.overrideWithValue(
+      FakeAuthRepository(storedSession: true),
+    ),
+    workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
+    syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
+    appRestoreProvider.overrideWithValue(NoopAppRestore()),
+    nutritionRepositoryProvider.overrideWithValue(nutrition),
+  ],
+  child: const CarlysApp(),
+);
 
 /// L'écran nutrition SEUL, sur sa route : le harnais resserré des tests de
 /// défilement, où la taille de fenêtre décide de ce que la liste paresseuse
 /// a déjà construit.
 Widget screenWith(FakeNutritionRepository nutrition) => ProviderScope(
-      overrides: [
-        nutritionRepositoryProvider.overrideWithValue(nutrition),
-      ],
-      child: MaterialApp(
-        theme: AppTheme.dark(),
-        home: const NutritionScreen(),
-      ),
-    );
+  overrides: [nutritionRepositoryProvider.overrideWithValue(nutrition)],
+  child: MaterialApp(theme: AppTheme.dark(), home: const NutritionScreen()),
+);
 
 /// Rend visible un élément de l'écran courant (dernier Scrollable de la pile).
 Future<void> reveal(WidgetTester tester, Finder item) async {
@@ -73,8 +69,11 @@ void main() {
 
   group('réduction d’animations active (hélice statique)', () {
     setUp(() {
-      TestWidgetsFlutterBinding.instance.platformDispatcher
-          .accessibilityFeaturesTestValue = FakeAccessibilityFeatures.allOn;
+      TestWidgetsFlutterBinding
+              .instance
+              .platformDispatcher
+              .accessibilityFeaturesTestValue =
+          FakeAccessibilityFeatures.allOn;
     });
 
     tearDown(() {
@@ -82,8 +81,9 @@ void main() {
           .clearAccessibilityFeaturesTestValue();
     });
 
-    testWidgets('profil incomplet : manquants listés et formulaire affiché',
-        (tester) async {
+    testWidgets('profil incomplet : manquants listés et formulaire affiché', (
+      tester,
+    ) async {
       await tester.pumpWidget(appWith(FakeNutritionRepository()));
       await openNutritionTab(tester);
 
@@ -112,8 +112,9 @@ void main() {
       );
     });
 
-    testWidgets('profil incomplet : le bouton du hero mène au formulaire',
-        (tester) async {
+    testWidgets('profil incomplet : le bouton du hero mène au formulaire', (
+      tester,
+    ) async {
       await tester.pumpWidget(appWith(FakeNutritionRepository()));
       await openNutritionTab(tester);
 
@@ -135,41 +136,44 @@ void main() {
     });
 
     testWidgets(
-        'fenêtre courte : le bouton du hero descend jusqu’au formulaire '
-        'pas encore construit', (tester) async {
-      // 393 × 400 points : la liste paresseuse n'a pas construit le
-      // formulaire quand le bouton est pressé — c'est la branche de repli
-      // de _revealProfile (descendre d'abord, caler ensuite) qui répond.
-      tester.view.physicalSize = const Size(1179, 1200);
-      tester.view.devicePixelRatio = 3;
-      addTearDown(tester.view.reset);
+      'fenêtre courte : le bouton du hero descend jusqu’au formulaire '
+      'pas encore construit',
+      (tester) async {
+        // 393 × 400 points : la liste paresseuse n'a pas construit le
+        // formulaire quand le bouton est pressé — c'est la branche de repli
+        // de _revealProfile (descendre d'abord, caler ensuite) qui répond.
+        tester.view.physicalSize = const Size(1179, 1200);
+        tester.view.devicePixelRatio = 3;
+        addTearDown(tester.view.reset);
 
-      await tester.pumpWidget(screenWith(FakeNutritionRepository()));
-      await tester.pumpAndSettle();
+        await tester.pumpWidget(screenWith(FakeNutritionRepository()));
+        await tester.pumpAndSettle();
 
-      expect(find.byType(MetabolicProfileForm), findsNothing);
+        expect(find.byType(MetabolicProfileForm), findsNothing);
 
-      // La liste est attachée au contrôleur PRIMAIRE de la route : c'est
-      // lui que le tap sur la barre d'état iOS pilote — un contrôleur
-      // privé retirait l'écran de ce geste.
-      final primary = PrimaryScrollController.of(
-        tester.element(find.byType(NutritionScreen)),
-      );
-      expect(primary.hasClients, isTrue);
+        // La liste est attachée au contrôleur PRIMAIRE de la route : c'est
+        // lui que le tap sur la barre d'état iOS pilote — un contrôleur
+        // privé retirait l'écran de ce geste.
+        final primary = PrimaryScrollController.of(
+          tester.element(find.byType(NutritionScreen)),
+        );
+        expect(primary.hasClients, isTrue);
 
-      await tester.tap(find.text('Compléter mon profil'));
-      await tester.pumpAndSettle();
+        await tester.tap(find.text('Compléter mon profil'));
+        await tester.pumpAndSettle();
 
-      // Le formulaire est construit et visible dans la fenêtre.
-      final screenHeight =
-          tester.view.physicalSize.height / tester.view.devicePixelRatio;
-      final formTop = tester.getTopLeft(find.byType(MetabolicProfileForm)).dy;
-      expect(formTop, greaterThanOrEqualTo(0));
-      expect(formTop, lessThan(screenHeight));
-    });
+        // Le formulaire est construit et visible dans la fenêtre.
+        final screenHeight =
+            tester.view.physicalSize.height / tester.view.devicePixelRatio;
+        final formTop = tester.getTopLeft(find.byType(MetabolicProfileForm)).dy;
+        expect(formTop, greaterThanOrEqualTo(0));
+        expect(formTop, lessThan(screenHeight));
+      },
+    );
 
-    testWidgets('formulaire complété : le rapport métabolique apparaît',
-        (tester) async {
+    testWidgets('formulaire complété : le rapport métabolique apparaît', (
+      tester,
+    ) async {
       final nutrition = FakeNutritionRepository(weightKg: 80);
       await tester.pumpWidget(appWith(nutrition));
       await openNutritionTab(tester);
@@ -212,8 +216,9 @@ void main() {
       expect(find.text('128 g'), findsOneWidget);
     });
 
-    testWidgets('profil complet : résultats, IMC et hydratation affichés',
-        (tester) async {
+    testWidgets('profil complet : résultats, IMC et hydratation affichés', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         appWith(
           FakeNutritionRepository(
@@ -251,8 +256,11 @@ void main() {
 
   group('journal du jour', () {
     setUp(() {
-      TestWidgetsFlutterBinding.instance.platformDispatcher
-          .accessibilityFeaturesTestValue = FakeAccessibilityFeatures.allOn;
+      TestWidgetsFlutterBinding
+              .instance
+              .platformDispatcher
+              .accessibilityFeaturesTestValue =
+          FakeAccessibilityFeatures.allOn;
     });
 
     tearDown(() {
@@ -260,8 +268,9 @@ void main() {
           .clearAccessibilityFeaturesTestValue();
     });
 
-    testWidgets('ajout par la feuille : le repas et le total apparaissent',
-        (tester) async {
+    testWidgets('ajout par la feuille : le repas et le total apparaissent', (
+      tester,
+    ) async {
       final nutrition = FakeNutritionRepository(
         weightKg: 80,
         sex: BiologicalSex.male,
@@ -316,13 +325,19 @@ void main() {
     await tester.pump(const Duration(seconds: 2));
   });
 
-  testWidgets('hélice ADN : statique quand les animations sont réduites',
-      (tester) async {
-    TestWidgetsFlutterBinding.instance.platformDispatcher
-        .accessibilityFeaturesTestValue = FakeAccessibilityFeatures.allOn;
+  testWidgets('hélice ADN : statique quand les animations sont réduites', (
+    tester,
+  ) async {
+    TestWidgetsFlutterBinding
+            .instance
+            .platformDispatcher
+            .accessibilityFeaturesTestValue =
+        FakeAccessibilityFeatures.allOn;
     addTearDown(
       TestWidgetsFlutterBinding
-          .instance.platformDispatcher.clearAccessibilityFeaturesTestValue,
+          .instance
+          .platformDispatcher
+          .clearAccessibilityFeaturesTestValue,
     );
 
     await tester.pumpWidget(

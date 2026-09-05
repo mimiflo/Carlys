@@ -15,10 +15,10 @@ class FakeCommunityRepository implements CommunityRepository {
     List<FriendRequest>? requests,
     List<CommunityChallenge>? challenges,
     this.shares = true,
-  })  : _feed = feed ?? [],
-        _friends = friends ?? [],
-        _requests = requests ?? [],
-        _challenges = challenges ?? [];
+  }) : _feed = feed ?? [],
+       _friends = friends ?? [],
+       _requests = requests ?? [],
+       _challenges = challenges ?? [];
 
   /// À activer pour simuler une PANNE serveur (erreur générique).
   bool failReads;

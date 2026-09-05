@@ -58,7 +58,7 @@ class _CarlysProfileCardState extends State<CarlysProfileCard>
     }
     final reduced =
         AppMotion.resolve(context, AppDashBorderPainter.travelDuration) ==
-            Duration.zero;
+        Duration.zero;
     if (reduced) {
       _controller.stop();
       _controller.value = AppDashBorderPainter.restProgress;
@@ -83,14 +83,16 @@ class _CarlysProfileCardState extends State<CarlysProfileCard>
 
     return Semantics(
       button: true,
-      label: '${carlysProfileContentOf(widget.profile).title}'
+      label:
+          '${carlysProfileContentOf(widget.profile).title}'
           '${widget.isCurrent ? ', ton profil actuel' : ''}',
       child: widget.isCurrent
           ? AnimatedBuilder(
               animation: _controller,
               builder: (context, child) => CustomPaint(
-                foregroundPainter:
-                    AppDashBorderPainter(progress: _controller.value),
+                foregroundPainter: AppDashBorderPainter(
+                  progress: _controller.value,
+                ),
                 child: child,
               ),
               // Le contenu a sa propre couche : seul l'anneau repeint.
@@ -185,9 +187,7 @@ class _CardBody extends StatelessWidget {
                 ),
               ),
               Padding(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: AppSpacing.md,
-                ),
+                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
                 child: Container(
                   width: 36,
                   height: 36,

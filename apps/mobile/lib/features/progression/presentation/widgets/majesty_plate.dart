@@ -110,26 +110,25 @@ class PlateOrnaments extends CustomPainter {
         Offset(0, size.height / 2),
         size.height,
         Paint()
-          ..shader = RadialGradient(
-            colors: [
-              AppColors.magenta.withValues(alpha: 0.20),
-              AppColors.magenta.withValues(alpha: 0),
-            ],
-          ).createShader(
-            Rect.fromCircle(
-              center: Offset(0, size.height / 2),
-              radius: size.height,
-            ),
-          ),
+          ..shader =
+              RadialGradient(
+                colors: [
+                  AppColors.magenta.withValues(alpha: 0.20),
+                  AppColors.magenta.withValues(alpha: 0),
+                ],
+              ).createShader(
+                Rect.fromCircle(
+                  center: Offset(0, size.height / 2),
+                  radius: size.height,
+                ),
+              ),
       );
     }
 
     if (majesty.guilloche case final spacing?) {
       canvas
         ..save()
-        ..clipRRect(
-          RRect.fromRectAndRadius(rect, Radius.circular(radius)),
-        );
+        ..clipRRect(RRect.fromRectAndRadius(rect, Radius.circular(radius)));
       final paint = Paint()
         ..strokeWidth = 1
         ..color = AppColors.guilloche;

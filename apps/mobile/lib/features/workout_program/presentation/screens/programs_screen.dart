@@ -32,8 +32,9 @@ class ProgramsScreen extends ConsumerWidget {
     } on AppException catch (exception) {
       if (context.mounted) {
         // Typiquement la limite gratuite : le message vient du serveur.
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(exception.message)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(exception.message)));
       }
     }
   }
@@ -73,8 +74,9 @@ class ProgramsScreen extends ConsumerWidget {
             const SizedBox(height: AppSpacing.xxs),
             Text(
               'Des semaines planifiées, chaque jour relié à un modèle.',
-              style: AppTypography.body
-                  .copyWith(color: AppColors.darkTextSecondary),
+              style: AppTypography.body.copyWith(
+                color: AppColors.darkTextSecondary,
+              ),
             ),
             const SizedBox(height: AppSpacing.gapRow),
             programs.when(
@@ -86,7 +88,8 @@ class ProgramsScreen extends ConsumerWidget {
                 error: error,
                 title: 'Programmes indisponibles',
                 message: 'Tes programmes n’ont pas pu être chargés.',
-                offlineMessage: 'Tes programmes vivent sur le serveur : ils '
+                offlineMessage:
+                    'Tes programmes vivent sur le serveur : ils '
                     'reviendront avec le réseau.',
                 onRetry: () => ref.invalidate(programsProvider),
               ),
@@ -106,8 +109,9 @@ class ProgramsScreen extends ConsumerWidget {
                         for (final program in entries) ...[
                           ProgramCard(
                             program: program,
-                            onOpen: () => context
-                                .push(AppRoutes.programDetail(program.id)),
+                            onOpen: () => context.push(
+                              AppRoutes.programDetail(program.id),
+                            ),
                           ),
                           const SizedBox(height: AppSpacing.gapRow),
                         ],

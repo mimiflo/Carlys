@@ -37,8 +37,9 @@ class AppStatTile extends StatelessWidget {
         decoration: const BoxDecoration(
           color: AppColors.darkSurface,
           borderRadius: AppRadius.statTileAll,
-          border:
-              Border.fromBorderSide(BorderSide(color: AppColors.darkBorder)),
+          border: Border.fromBorderSide(
+            BorderSide(color: AppColors.darkBorder),
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -48,21 +49,25 @@ class AppStatTile extends StatelessWidget {
               label.toUpperCase(),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: AppTypography.labelMono
-                  .copyWith(fontSize: 9, color: AppColors.darkTextTertiary),
+              style: AppTypography.labelMono.copyWith(
+                fontSize: 9,
+                color: AppColors.darkTextTertiary,
+              ),
             ),
             const SizedBox(height: 7),
             Text.rich(
               TextSpan(
                 text: value,
-                style: AppTypography.metricM
-                    .copyWith(color: AppColors.darkTextPrimary),
+                style: AppTypography.metricM.copyWith(
+                  color: AppColors.darkTextPrimary,
+                ),
                 children: [
                   if (unit != null)
                     TextSpan(
                       text: unit,
-                      style: AppTypography.label
-                          .copyWith(color: AppColors.darkTextTertiary),
+                      style: AppTypography.label.copyWith(
+                        color: AppColors.darkTextTertiary,
+                      ),
                     ),
                 ],
               ),

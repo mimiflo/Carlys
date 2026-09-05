@@ -82,9 +82,11 @@ int _pointsFor(double ratio) => (ratio.clamp(0.0, 1.0) * maxAxisPoints).round();
 /// Numéro de jour civil, pour comparer des dates sans se soucier de l'heure.
 int _dayNumber(DateTime date) {
   final local = date.toLocal();
-  return DateTime.utc(local.year, local.month, local.day)
-      .difference(DateTime.utc(1970))
-      .inDays;
+  return DateTime.utc(
+    local.year,
+    local.month,
+    local.day,
+  ).difference(DateTime.utc(1970)).inDays;
 }
 
 /// CONSTANCE — reviens-tu ?
@@ -117,7 +119,8 @@ ProgressionAxis _constance(ProgressionFacts facts) {
     value: CarlysValue.constance,
     ratio: ratio,
     points: _pointsFor(ratio),
-    reason: '${weeks.length} semaine$plural avec séance '
+    reason:
+        '${weeks.length} semaine$plural avec séance '
         'sur les $constancyWeeks dernières.',
   );
 }
@@ -142,7 +145,8 @@ ProgressionAxis _maitrise(ProgressionFacts facts) {
     value: CarlysValue.maitrise,
     ratio: ratio,
     points: _pointsFor(ratio),
-    reason: '${facts.lessonsAnswered} leçons abordées '
+    reason:
+        '${facts.lessonsAnswered} leçons abordées '
         'sur ${facts.lessonsTotal}.',
   );
 }
@@ -170,7 +174,8 @@ ProgressionAxis _performance(ProgressionFacts facts) {
       value: CarlysValue.performance,
       ratio: 0.5,
       points: _pointsFor(0.5),
-      reason: 'Premier bloc enregistré : la comparaison arrive '
+      reason:
+          'Premier bloc enregistré : la comparaison arrive '
           'dans quatre semaines.',
     );
   }
@@ -183,9 +188,9 @@ ProgressionAxis _performance(ProgressionFacts facts) {
   final wording = percent > 0
       ? 'Volume en hausse de $percent % sur quatre semaines.'
       : percent < 0
-          ? 'Volume en baisse de ${percent.abs()} % : un bloc plus léger '
-              'fait partie du chemin.'
-          : 'Volume stable sur quatre semaines.';
+      ? 'Volume en baisse de ${percent.abs()} % : un bloc plus léger '
+            'fait partie du chemin.'
+      : 'Volume stable sur quatre semaines.';
 
   return ProgressionAxis(
     value: CarlysValue.performance,
@@ -208,13 +213,16 @@ ProgressionAxis _discipline(ProgressionFacts facts) {
     );
   }
 
-  final ratio =
-      (facts.completedSessions / facts.startedSessions).clamp(0.0, 1.0);
+  final ratio = (facts.completedSessions / facts.startedSessions).clamp(
+    0.0,
+    1.0,
+  );
   return ProgressionAxis(
     value: CarlysValue.discipline,
     ratio: ratio,
     points: _pointsFor(ratio),
-    reason: '${facts.completedSessions} séances terminées '
+    reason:
+        '${facts.completedSessions} séances terminées '
         'sur ${facts.startedSessions} commencées.',
   );
 }
@@ -258,8 +266,8 @@ ProgressionAxis _equilibre(ProgressionFacts facts) {
   final wording = perWeek > 4
       ? '$rounded séances par semaine : pense à intercaler du repos.'
       : perWeek < 2
-          ? '$rounded séance par semaine : une de plus ouvrirait l’axe.'
-          : '$rounded séances par semaine, et du repos entre les deux.';
+      ? '$rounded séance par semaine : une de plus ouvrirait l’axe.'
+      : '$rounded séances par semaine, et du repos entre les deux.';
 
   return ProgressionAxis(
     value: CarlysValue.equilibre,

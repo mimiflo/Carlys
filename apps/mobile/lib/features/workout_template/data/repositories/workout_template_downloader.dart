@@ -14,7 +14,7 @@ class WorkoutTemplateDownloader {
     required AppDatabase database,
     required this._local,
     required this._remote,
-  })  : _db = database;
+  }) : _db = database;
 
   final AppDatabase _db;
   final WorkoutTemplateLocalDataSource _local;

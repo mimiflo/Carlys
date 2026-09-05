@@ -11,8 +11,9 @@ String formatOfferPrice(int amountCents, String currency) {
   final symbol = currency == 'EUR' ? '€' : currency;
   final units = amountCents ~/ 100;
   final cents = amountCents % 100;
-  final amount =
-      cents == 0 ? '$units' : '$units,${cents.toString().padLeft(2, '0')}';
+  final amount = cents == 0
+      ? '$units'
+      : '$units,${cents.toString().padLeft(2, '0')}';
   return '$amount $symbol';
 }
 
@@ -62,8 +63,9 @@ class _OfferCard extends StatelessWidget {
   final bool isSelected;
   final VoidCallback onTap;
 
-  static const EdgeInsets _padding =
-      EdgeInsets.all(AppSpacing.md + AppSpacing.xxs);
+  static const EdgeInsets _padding = EdgeInsets.all(
+    AppSpacing.md + AppSpacing.xxs,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -144,8 +146,10 @@ class _OfferCard extends StatelessWidget {
   /// honnête entre deux rythmes, et elle évite un calcul mental.
   static String _detail(SubscriptionOffer offer) {
     if (offer.period == OfferPeriod.year) {
-      final monthly =
-          formatOfferPrice(offer.monthlyEquivalentCents, offer.currency);
+      final monthly = formatOfferPrice(
+        offer.monthlyEquivalentCents,
+        offer.currency,
+      );
       return 'Soit $monthly par mois';
     }
     if (offer.trialDays > 0) {

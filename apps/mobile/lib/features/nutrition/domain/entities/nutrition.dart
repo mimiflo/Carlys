@@ -82,9 +82,9 @@ enum BmiCategory {
   final String label;
 
   static BmiCategory fromApi(String value) => BmiCategory.values.firstWhere(
-        (category) => category.apiValue == value,
-        orElse: () => BmiCategory.normal,
-      );
+    (category) => category.apiValue == value,
+    orElse: () => BmiCategory.normal,
+  );
 }
 
 /// Champ manquant pour calculer le métabolisme.

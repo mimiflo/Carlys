@@ -66,10 +66,7 @@ class _ProgressionGaugeState extends State<ProgressionGauge> {
     if (fill == null) {
       return SizedBox(
         height: widget.height,
-        child: CustomPaint(
-          painter: const DashedTrack(),
-          size: Size.infinite,
-        ),
+        child: CustomPaint(painter: const DashedTrack(), size: Size.infinite),
       );
     }
 
@@ -81,10 +78,7 @@ class _ProgressionGaugeState extends State<ProgressionGauge> {
           decoration: const BoxDecoration(color: AppColors.gaugeTrack),
           child: TweenAnimationBuilder<double>(
             tween: Tween(begin: 0, end: _shown),
-            duration: AppMotion.resolve(
-              context,
-              ProgressionGauge.fillDuration,
-            ),
+            duration: AppMotion.resolve(context, ProgressionGauge.fillDuration),
             curve: AppMotion.standard,
             builder: (context, value, _) => Align(
               alignment: Alignment.centerLeft,

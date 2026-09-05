@@ -19,18 +19,18 @@ import '../../support/navigation.dart';
 /// (Le dépôt de séances reste réel — Drift — donc doublé ici comme dans
 /// tous les tests de widgets.)
 Widget demoApp() => ProviderScope(
-      overrides: [
-        appEnvironmentProvider.overrideWithValue(
-          const AppEnvironment(
-            flavor: AppFlavor.demo,
-            apiBaseUrl: 'http://localhost:3000',
-          ),
-        ),
-        ...demoOverrides(),
-        workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
-      ],
-      child: const CarlysApp(),
-    );
+  overrides: [
+    appEnvironmentProvider.overrideWithValue(
+      const AppEnvironment(
+        flavor: AppFlavor.demo,
+        apiBaseUrl: 'http://localhost:3000',
+      ),
+    ),
+    ...demoOverrides(),
+    workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
+  ],
+  child: const CarlysApp(),
+);
 
 Future<void> reveal(WidgetTester tester, Finder item) async {
   final scrollable = find.byType(Scrollable).last;
@@ -45,8 +45,11 @@ void main() {
     // Par défaut : appareil dont le parcours de première ouverture est
     // terminé. Le premier lancement a son propre test ci-dessous.
     seedCompletedFirstRun();
-    TestWidgetsFlutterBinding.instance.platformDispatcher
-        .accessibilityFeaturesTestValue = FakeAccessibilityFeatures.allOn;
+    TestWidgetsFlutterBinding
+            .instance
+            .platformDispatcher
+            .accessibilityFeaturesTestValue =
+        FakeAccessibilityFeatures.allOn;
   });
 
   tearDown(() {
@@ -61,46 +64,48 @@ void main() {
     expect(find.textContaining('Visiteur'), findsWidgets);
   });
 
-  testWidgets('premier lancement : le parcours est présenté puis laisse entrer',
-      (tester) async {
-    seedFirstOpen();
-    tester.view.physicalSize = const Size(1179, 2556);
-    tester.view.devicePixelRatio = 3;
-    addTearDown(tester.view.reset);
+  testWidgets(
+    'premier lancement : le parcours est présenté puis laisse entrer',
+    (tester) async {
+      seedFirstOpen();
+      tester.view.physicalSize = const Size(1179, 2556);
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
 
-    await tester.pumpWidget(demoApp());
-    await tester.pumpAndSettle();
+      await tester.pumpWidget(demoApp());
+      await tester.pumpAndSettle();
 
-    // 0. La page de marque ouvre le parcours, en démo comme ailleurs. Son
-    // bouton est en pied de page : on défile jusqu'à lui — le harnais de test
-    // dessine des glyphes carrés, bien plus larges que les vraies fontes, et
-    // la page s'allonge d'autant.
-    final start = find.text('COMMENCER MON PARCOURS');
-    await tester.ensureVisible(start);
-    await tester.pumpAndSettle();
-    await tester.tap(start);
-    await tester.pumpAndSettle();
+      // 0. La page de marque ouvre le parcours, en démo comme ailleurs. Son
+      // bouton est en pied de page : on défile jusqu'à lui — le harnais de test
+      // dessine des glyphes carrés, bien plus larges que les vraies fontes, et
+      // la page s'allonge d'autant.
+      final start = find.text('COMMENCER MON PARCOURS');
+      await tester.ensureVisible(start);
+      await tester.pumpAndSettle();
+      await tester.tap(start);
+      await tester.pumpAndSettle();
 
-    // 1. Onboarding — la session démo étant déjà ouverte, l'étape « compte »
-    // est satisfaite : « Passer » enchaîne directement sur Premium.
-    expect(find.text('1/5'), findsOneWidget);
-    // Les cartes d'identité poussent le pied de page sous le pli.
-    await tester.ensureVisible(find.text('Passer'));
-    await tester.tap(find.text('Passer'));
-    await tester.pumpAndSettle();
+      // 1. Onboarding — la session démo étant déjà ouverte, l'étape « compte »
+      // est satisfaite : « Passer » enchaîne directement sur Premium.
+      expect(find.text('1/5'), findsOneWidget);
+      // Les cartes d'identité poussent le pied de page sous le pli.
+      await tester.ensureVisible(find.text('Passer'));
+      await tester.tap(find.text('Passer'));
+      await tester.pumpAndSettle();
 
-    // 2. Temps d'arrêt Premium, sans croix de fermeture.
-    expect(find.text('CARLYS PREMIUM'), findsOneWidget);
-    expect(find.byIcon(AppIcons.close), findsNothing);
+      // 2. Temps d'arrêt Premium, sans croix de fermeture.
+      expect(find.text('CARLYS PREMIUM'), findsOneWidget);
+      expect(find.byIcon(AppIcons.close), findsNothing);
 
-    // 3. Repli gratuit explicite, puis l'application s'ouvre.
-    await tester.tap(find.text('Continuer sans Premium'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Continuer en version gratuite'));
-    await tester.pumpAndSettle();
+      // 3. Repli gratuit explicite, puis l'application s'ouvre.
+      await tester.tap(find.text('Continuer sans Premium'));
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Continuer en version gratuite'));
+      await tester.pumpAndSettle();
 
-    expect(find.byType(AppBottomBar), findsOneWidget);
-  });
+      expect(find.byType(AppBottomBar), findsOneWidget);
+    },
+  );
 
   testWidgets('bibliothèque servie en mémoire', (tester) async {
     await tester.pumpWidget(demoApp());
@@ -161,14 +166,12 @@ void main() {
     // L'objectif calorique est annoncé par l'en-tête « Macros » ; les
     // milliers sont séparés par une espace fine insécable.
     expect(find.text('Macros'), findsOneWidget);
-    expect(
-      find.textContaining('3\u202F040', findRichText: true),
-      findsWidgets,
-    );
+    expect(find.textContaining('3\u202F040', findRichText: true), findsWidgets);
   });
 
-  testWidgets('progression et abonnement premium servis en mémoire',
-      (tester) async {
+  testWidgets('progression et abonnement premium servis en mémoire', (
+    tester,
+  ) async {
     await tester.pumpWidget(demoApp());
     await tester.pumpAndSettle();
 

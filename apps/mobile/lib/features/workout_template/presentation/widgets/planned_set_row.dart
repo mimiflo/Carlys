@@ -63,8 +63,9 @@ class PlannedSetRow extends StatelessWidget {
                   onIncrement: _incrementWeight,
                   // Descendre sous zéro rend la série « sans charge prévue » :
                   // poids du corps, ou charge décidée le jour même.
-                  onDecrement:
-                      set.targetWeightKg == null ? null : _decrementWeight,
+                  onDecrement: set.targetWeightKg == null
+                      ? null
+                      : _decrementWeight,
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
@@ -76,8 +77,9 @@ class PlannedSetRow extends StatelessWidget {
                       ? '—'
                       : formatThousands(set.targetReps!),
                   onIncrement: _incrementReps,
-                  onDecrement:
-                      (set.targetReps ?? 0) > 1 ? _decrementReps : null,
+                  onDecrement: (set.targetReps ?? 0) > 1
+                      ? _decrementReps
+                      : null,
                 ),
               ),
             ],
@@ -85,9 +87,8 @@ class PlannedSetRow extends StatelessWidget {
           const SizedBox(height: AppSpacing.xs),
           PlannedRestField(
             seconds: set.restSeconds,
-            onChanged: (seconds) => onChanged(
-              set.copyWith(restSeconds: seconds),
-            ),
+            onChanged: (seconds) =>
+                onChanged(set.copyWith(restSeconds: seconds)),
           ),
         ],
       ),
@@ -95,28 +96,29 @@ class PlannedSetRow extends StatelessWidget {
   }
 
   void _incrementWeight() => onChanged(
-        set.copyWith(
-          targetWeightKg: () => _clampWeight(
-            (set.targetWeightKg ?? 0) + weightStep,
-          ),
-        ),
-      );
+    set.copyWith(
+      targetWeightKg: () =>
+          _clampWeight((set.targetWeightKg ?? 0) + weightStep),
+    ),
+  );
 
   /// En dessous de zéro, la série redevient « sans charge prévue » (`null`).
   void _decrementWeight() => onChanged(
-        set.copyWith(
-          targetWeightKg: () => set.targetWeightKg! <= 0
-              ? null
-              : _clampWeight(set.targetWeightKg! - weightStep),
-        ),
-      );
+    set.copyWith(
+      targetWeightKg: () => set.targetWeightKg! <= 0
+          ? null
+          : _clampWeight(set.targetWeightKg! - weightStep),
+    ),
+  );
 
   void _incrementReps() => onChanged(
-        set.copyWith(
-          targetReps: ((set.targetReps ?? 0) + 1)
-              .clamp(1, WorkoutTemplateLimits.repsMax),
-        ),
-      );
+    set.copyWith(
+      targetReps: ((set.targetReps ?? 0) + 1).clamp(
+        1,
+        WorkoutTemplateLimits.repsMax,
+      ),
+    ),
+  );
 
   void _decrementReps() =>
       onChanged(set.copyWith(targetReps: set.targetReps! - 1));
@@ -149,8 +151,9 @@ class _Header extends StatelessWidget {
             Expanded(
               child: Text(
                 'SÉRIE ${formatThousands(position)}',
-                style: AppTypography.labelMono
-                    .copyWith(color: AppColors.darkTextTertiary),
+                style: AppTypography.labelMono.copyWith(
+                  color: AppColors.darkTextTertiary,
+                ),
               ),
             ),
             IconButton(

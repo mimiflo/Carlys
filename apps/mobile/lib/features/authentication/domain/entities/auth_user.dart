@@ -38,12 +38,12 @@ class AuthUser {
 
   @override
   int get hashCode => Object.hash(
-        id,
-        email,
-        displayName,
-        emailVerified,
-        locale,
-        timezone,
-        carlysProfile,
-      );
+    id,
+    email,
+    displayName,
+    emailVerified,
+    locale,
+    timezone,
+    carlysProfile,
+  );
 }

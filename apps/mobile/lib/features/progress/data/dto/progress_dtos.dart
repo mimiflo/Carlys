@@ -4,10 +4,10 @@ library;
 import '../../domain/entities/progress.dart';
 
 ProgressPoint progressPointFromJson(Map<String, dynamic> json) => ProgressPoint(
-      bucketStart: DateTime.parse(json['bucketStart'] as String),
-      sessionsCount: (json['sessionsCount'] as num).toInt(),
-      volumeKg: (json['volumeKg'] as num).toDouble(),
-    );
+  bucketStart: DateTime.parse(json['bucketStart'] as String),
+  sessionsCount: (json['sessionsCount'] as num).toInt(),
+  volumeKg: (json['volumeKg'] as num).toDouble(),
+);
 
 ProgressOverviewEntity progressOverviewFromJson(Map<String, dynamic> json) =>
     ProgressOverviewEntity(

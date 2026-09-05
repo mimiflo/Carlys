@@ -12,17 +12,17 @@ enum ExerciseDifficulty {
   final String label;
 
   static ExerciseDifficulty fromApi(String value) => switch (value) {
-        'BEGINNER' => ExerciseDifficulty.beginner,
-        'INTERMEDIATE' => ExerciseDifficulty.intermediate,
-        'ADVANCED' => ExerciseDifficulty.advanced,
-        _ => ExerciseDifficulty.beginner,
-      };
+    'BEGINNER' => ExerciseDifficulty.beginner,
+    'INTERMEDIATE' => ExerciseDifficulty.intermediate,
+    'ADVANCED' => ExerciseDifficulty.advanced,
+    _ => ExerciseDifficulty.beginner,
+  };
 
   String get apiValue => switch (this) {
-        ExerciseDifficulty.beginner => 'BEGINNER',
-        ExerciseDifficulty.intermediate => 'INTERMEDIATE',
-        ExerciseDifficulty.advanced => 'ADVANCED',
-      };
+    ExerciseDifficulty.beginner => 'BEGINNER',
+    ExerciseDifficulty.intermediate => 'INTERMEDIATE',
+    ExerciseDifficulty.advanced => 'ADVANCED',
+  };
 }
 
 enum ExerciseKind {
@@ -36,12 +36,12 @@ enum ExerciseKind {
   final String label;
 
   static ExerciseKind fromApi(String value) => switch (value) {
-        'STRENGTH' => ExerciseKind.strength,
-        'CARDIO' => ExerciseKind.cardio,
-        'MOBILITY' => ExerciseKind.mobility,
-        'STRETCHING' => ExerciseKind.stretching,
-        _ => ExerciseKind.strength,
-      };
+    'STRENGTH' => ExerciseKind.strength,
+    'CARDIO' => ExerciseKind.cardio,
+    'MOBILITY' => ExerciseKind.mobility,
+    'STRETCHING' => ExerciseKind.stretching,
+    _ => ExerciseKind.strength,
+  };
 }
 
 class MuscleGroupRef {

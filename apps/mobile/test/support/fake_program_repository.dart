@@ -4,10 +4,10 @@ import 'package:carlys_mobile/features/workout_program/domain/repositories/progr
 /// Dépôt de programmes pilotable : état en mémoire, pannes à la demande.
 class FakeProgramRepository implements ProgramRepository {
   FakeProgramRepository({List<ProgramDetail>? programs, this.failReads = false})
-      : _programs = {
-          for (final program in programs ?? const <ProgramDetail>[])
-            program.id: program,
-        };
+    : _programs = {
+        for (final program in programs ?? const <ProgramDetail>[])
+          program.id: program,
+      };
 
   final Map<String, ProgramDetail> _programs;
   bool failReads;

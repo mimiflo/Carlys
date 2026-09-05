@@ -64,8 +64,9 @@ class OnboardingHeader extends StatelessWidget {
         const SizedBox(width: AppSpacing.gapRow),
         Text(
           position,
-          style: AppTypography.labelMono
-              .copyWith(color: AppColors.darkTextTertiary),
+          style: AppTypography.labelMono.copyWith(
+            color: AppColors.darkTextTertiary,
+          ),
         ),
       ],
     );

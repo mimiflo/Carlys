@@ -26,8 +26,11 @@ import '../../support/first_run_prefs.dart';
 void main() {
   setUp(() {
     seedCompletedFirstRun();
-    TestWidgetsFlutterBinding.instance.platformDispatcher
-        .accessibilityFeaturesTestValue = FakeAccessibilityFeatures.allOn;
+    TestWidgetsFlutterBinding
+            .instance
+            .platformDispatcher
+            .accessibilityFeaturesTestValue =
+        FakeAccessibilityFeatures.allOn;
   });
 
   tearDown(() {
@@ -36,14 +39,14 @@ void main() {
   });
 
   AuthUser userWith(CarlysProfile? profile) => AuthUser(
-        id: fakeUser.id,
-        email: fakeUser.email,
-        displayName: fakeUser.displayName,
-        emailVerified: fakeUser.emailVerified,
-        locale: fakeUser.locale,
-        timezone: fakeUser.timezone,
-        carlysProfile: profile,
-      );
+    id: fakeUser.id,
+    email: fakeUser.email,
+    displayName: fakeUser.displayName,
+    emailVerified: fakeUser.emailVerified,
+    locale: fakeUser.locale,
+    timezone: fakeUser.timezone,
+    carlysProfile: profile,
+  );
 
   Future<void> pumpHome(WidgetTester tester, {CarlysProfile? profile}) async {
     tester.view.physicalSize = const Size(1179, 2556);
@@ -63,10 +66,12 @@ void main() {
             FakeAuthRepository(storedSession: true, user: userWith(profile)),
           ),
           workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
-          progressRepositoryProvider
-              .overrideWithValue(FakeProgressRepository()),
-          nutritionRepositoryProvider
-              .overrideWithValue(FakeNutritionRepository()),
+          progressRepositoryProvider.overrideWithValue(
+            FakeProgressRepository(),
+          ),
+          nutritionRepositoryProvider.overrideWithValue(
+            FakeNutritionRepository(),
+          ),
           syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
           appRestoreProvider.overrideWithValue(NoopAppRestore()),
         ],
@@ -85,18 +90,21 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('sans profil choisi, l’accueil ne montre aucun cap',
-      (tester) async {
+  testWidgets('sans profil choisi, l’accueil ne montre aucun cap', (
+    tester,
+  ) async {
     await pumpHome(tester);
 
     expect(find.textContaining('TON CAP'), findsNothing);
   });
 
-  testWidgets('le Challenger est envoyé vers les défis de la communauté',
-      (tester) async {
+  testWidgets('le Challenger est envoyé vers les défis de la communauté', (
+    tester,
+  ) async {
     await pumpHome(tester, profile: CarlysProfile.challenger);
 
-    const cap = 'Va chercher un défi — la communauté en lance à ta hauteur '
+    const cap =
+        'Va chercher un défi — la communauté en lance à ta hauteur '
         'cette semaine.';
     await scrollTo(tester, find.text(cap));
     expect(find.text('TON CAP LE CHALLENGER'), findsOneWidget);
@@ -109,11 +117,13 @@ void main() {
     expect(find.byType(CommunityScreen), findsOneWidget);
   });
 
-  testWidgets('le Stratège est envoyé vers ses chiffres de progression',
-      (tester) async {
+  testWidgets('le Stratège est envoyé vers ses chiffres de progression', (
+    tester,
+  ) async {
     await pumpHome(tester, profile: CarlysProfile.stratege);
 
-    const cap = 'Comprends tes chiffres — records et tendances disent ce que '
+    const cap =
+        'Comprends tes chiffres — records et tendances disent ce que '
         'ton corps répond.';
     await scrollTo(tester, find.text(cap));
     expect(find.text('TON CAP LE STRATÈGE'), findsOneWidget);

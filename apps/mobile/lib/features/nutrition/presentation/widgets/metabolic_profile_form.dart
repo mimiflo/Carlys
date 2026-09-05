@@ -73,11 +73,7 @@ class _MetabolicProfileFormState extends ConsumerState<MetabolicProfileForm> {
     );
     if (picked != null) {
       setState(
-        () => _birthDate = DateTime.utc(
-          picked.year,
-          picked.month,
-          picked.day,
-        ),
+        () => _birthDate = DateTime.utc(picked.year, picked.month, picked.day),
       );
     }
   }
@@ -213,10 +209,7 @@ class _MetabolicProfileFormState extends ConsumerState<MetabolicProfileForm> {
                   'Poids manquant : ajoute une mesure depuis Progression',
               child: Row(
                 children: [
-                  Icon(
-                    AppIcons.bodyMetrics,
-                    color: theme.colorScheme.primary,
-                  ),
+                  Icon(AppIcons.bodyMetrics, color: theme.colorScheme.primary),
                   const SizedBox(width: AppSpacing.sm),
                   Expanded(
                     child: Text(

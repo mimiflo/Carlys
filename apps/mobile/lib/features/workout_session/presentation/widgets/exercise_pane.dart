@@ -104,10 +104,7 @@ class ExercisePane extends StatelessWidget {
           ),
           if (onSkipSet != null || onSkipExercise != null) ...[
             const SizedBox(height: AppSpacing.xs),
-            _SkipActions(
-              onSkipSet: onSkipSet,
-              onSkipExercise: onSkipExercise,
-            ),
+            _SkipActions(onSkipSet: onSkipSet, onSkipExercise: onSkipExercise),
           ],
           const SizedBox(height: AppSpacing.md),
           for (var index = 0; index < exerciseSets.length; index++) ...[

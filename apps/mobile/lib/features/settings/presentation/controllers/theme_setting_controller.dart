@@ -46,5 +46,5 @@ class ThemeSettingController extends Notifier<AppThemeSetting> {
 
 final themeSettingProvider =
     NotifierProvider<ThemeSettingController, AppThemeSetting>(
-  ThemeSettingController.new,
-);
+      ThemeSettingController.new,
+    );

@@ -40,10 +40,7 @@ class ProfileStatTiles extends StatelessWidget {
           unit: 'cm',
         ),
       if (sessionsCount != null)
-        AppStatTile(
-          label: 'Séances',
-          value: formatThousands(sessionsCount!),
-        ),
+        AppStatTile(label: 'Séances', value: formatThousands(sessionsCount!)),
     ];
 
     if (tiles.isEmpty) {

@@ -27,11 +27,13 @@ Future<PickedExercise?> showExercisePickerSheet(BuildContext context) {
 
 final _pickerResultsProvider = FutureProvider.autoDispose
     .family<List<catalog.ExerciseSummary>, String>((ref, search) {
-  return ref
-      .watch(exercisesRepositoryProvider)
-      .list(filters: ExercisesFilters(search: search.isEmpty ? null : search))
-      .then((page) => page.items);
-});
+      return ref
+          .watch(exercisesRepositoryProvider)
+          .list(
+            filters: ExercisesFilters(search: search.isEmpty ? null : search),
+          )
+          .then((page) => page.items);
+    });
 
 class _ExercisePicker extends ConsumerStatefulWidget {
   const _ExercisePicker();

@@ -41,16 +41,18 @@ void main() {
 
   test('chaque vignette annoncée existe dans le paquet', () async {
     final catalog = await loadDemoCatalog();
-    final illustrated =
-        catalog.exercises.where((exercise) => exercise.imageUrl != null);
+    final illustrated = catalog.exercises.where(
+      (exercise) => exercise.imageUrl != null,
+    );
 
     expect(illustrated, isNotEmpty, reason: 'la démo doit rester illustrée');
     for (final exercise in illustrated) {
       final url = exercise.imageUrl!;
       expect(url, startsWith(assetImageScheme));
       // Lève si l'image manque : c'est exactement le défaut qu'on traque.
-      final bytes =
-          await rootBundle.load(url.substring(assetImageScheme.length));
+      final bytes = await rootBundle.load(
+        url.substring(assetImageScheme.length),
+      );
       expect(bytes.lengthInBytes, greaterThan(0), reason: url);
     }
   });

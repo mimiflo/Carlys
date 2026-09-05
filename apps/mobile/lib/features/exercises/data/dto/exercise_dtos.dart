@@ -4,16 +4,16 @@ library;
 import '../../domain/entities/exercise.dart';
 
 MuscleGroupRef muscleGroupFromJson(Map<String, dynamic> json) => MuscleGroupRef(
-      id: json['id'] as String,
-      slug: json['slug'] as String,
-      name: json['name'] as String,
-    );
+  id: json['id'] as String,
+  slug: json['slug'] as String,
+  name: json['name'] as String,
+);
 
 EquipmentRef equipmentFromJson(Map<String, dynamic> json) => EquipmentRef(
-      id: json['id'] as String,
-      slug: json['slug'] as String,
-      name: json['name'] as String,
-    );
+  id: json['id'] as String,
+  slug: json['slug'] as String,
+  name: json['name'] as String,
+);
 
 ExerciseSummary exerciseSummaryFromJson(Map<String, dynamic> json) =>
     ExerciseSummary(
@@ -48,8 +48,9 @@ ExerciseDetail exerciseDetailFromJson(Map<String, dynamic> json) {
     equipment: summary.equipment,
     imageUrl: summary.imageUrl,
     description: json['description'] as String,
-    instructions:
-        (json['instructions'] as List<dynamic>).whereType<String>().toList(),
+    instructions: (json['instructions'] as List<dynamic>)
+        .whereType<String>()
+        .toList(),
     tags: (json['tags'] as List<dynamic>).whereType<String>().toList(),
     muscles: (json['muscles'] as List<dynamic>)
         .whereType<Map<String, dynamic>>()

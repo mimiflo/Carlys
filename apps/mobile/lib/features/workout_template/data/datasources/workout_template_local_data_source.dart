@@ -23,9 +23,10 @@ class WorkoutTemplateLocalDataSource {
       _contentQuery().watch().map(_groupTemplates);
 
   Future<WorkoutTemplateDetail?> detail(String templateId) async {
-    final rows = await (_contentQuery()
-          ..where(_db.localWorkoutTemplates.id.equals(templateId)))
-        .get();
+    final rows =
+        await (_contentQuery()
+              ..where(_db.localWorkoutTemplates.id.equals(templateId)))
+            .get();
     final templates = _groupTemplates(rows);
     return templates.isEmpty ? null : templates.first;
   }
@@ -34,16 +35,17 @@ class WorkoutTemplateLocalDataSource {
     return _db.select(_db.localWorkoutTemplates).join([
       leftOuterJoin(
         _db.localTemplateExercises,
-        _db.localTemplateExercises.templateId
-            .equalsExp(_db.localWorkoutTemplates.id),
+        _db.localTemplateExercises.templateId.equalsExp(
+          _db.localWorkoutTemplates.id,
+        ),
       ),
       leftOuterJoin(
         _db.localTemplateSets,
-        _db.localTemplateSets.templateExerciseId
-            .equalsExp(_db.localTemplateExercises.id),
+        _db.localTemplateSets.templateExerciseId.equalsExp(
+          _db.localTemplateExercises.id,
+        ),
       ),
-    ])
-      ..where(_db.localWorkoutTemplates.deleted.equals(false));
+    ])..where(_db.localWorkoutTemplates.deleted.equals(false));
   }
 
   /// Reconstitue les modèles depuis le produit cartésien du join.
@@ -66,42 +68,44 @@ class WorkoutTemplateLocalDataSource {
       }
     }
 
-    final details = templates.values.map((template) {
-      final lines = (exercises[template.id]?.values.toList() ?? [])
-        ..sort((a, b) => a.position.compareTo(b.position));
-      final entries = [
-        for (final line in lines)
-          TemplateExerciseEntry(
-            id: line.id,
-            exerciseId: line.exerciseId,
-            exerciseName: line.exerciseName,
-            position: line.position,
-            notes: line.notes,
-            sets: ((sets[line.id]?.values.toList() ?? [])
-                  ..sort((a, b) => a.position.compareTo(b.position)))
-                .map(_mapPlannedSet)
-                .toList(),
-          ),
-      ];
-      return WorkoutTemplateDetail(
-        info: _mapInfo(template, entries),
-        notes: template.notes,
-        exercises: entries,
-      );
-    }).toList()
-      // Le modèle qu'on vient de retoucher remonte en tête, comme côté API.
-      ..sort((a, b) => b.info.updatedAt.compareTo(a.info.updatedAt));
+    final details =
+        templates.values.map((template) {
+            final lines = (exercises[template.id]?.values.toList() ?? [])
+              ..sort((a, b) => a.position.compareTo(b.position));
+            final entries = [
+              for (final line in lines)
+                TemplateExerciseEntry(
+                  id: line.id,
+                  exerciseId: line.exerciseId,
+                  exerciseName: line.exerciseName,
+                  position: line.position,
+                  notes: line.notes,
+                  sets:
+                      ((sets[line.id]?.values.toList() ?? [])
+                            ..sort((a, b) => a.position.compareTo(b.position)))
+                          .map(_mapPlannedSet)
+                          .toList(),
+                ),
+            ];
+            return WorkoutTemplateDetail(
+              info: _mapInfo(template, entries),
+              notes: template.notes,
+              exercises: entries,
+            );
+          }).toList()
+          // Le modèle qu'on vient de retoucher remonte en tête, comme côté API.
+          ..sort((a, b) => b.info.updatedAt.compareTo(a.info.updatedAt));
     return details;
   }
 
   PlannedSet _mapPlannedSet(LocalTemplateSet row) => PlannedSet(
-        id: row.id,
-        position: row.position,
-        kind: SetKind.fromApi(row.kind),
-        targetReps: row.targetReps,
-        targetWeightKg: row.targetWeightKg,
-        restSeconds: row.restSeconds,
-      );
+    id: row.id,
+    position: row.position,
+    kind: SetKind.fromApi(row.kind),
+    targetReps: row.targetReps,
+    targetWeightKg: row.targetWeightKg,
+    restSeconds: row.restSeconds,
+  );
 
   WorkoutTemplateInfo _mapInfo(
     LocalWorkoutTemplate row,
@@ -111,8 +115,10 @@ class WorkoutTemplateLocalDataSource {
       id: row.id,
       name: row.name,
       exercisesCount: exercises.length,
-      plannedSetsCount:
-          exercises.fold(0, (total, exercise) => total + exercise.sets.length),
+      plannedSetsCount: exercises.fold(
+        0,
+        (total, exercise) => total + exercise.sets.length,
+      ),
       estimatedDurationMinutes: row.estimatedDurationMinutes,
       previewExerciseNames: exercises
           .take(3)
@@ -130,21 +136,23 @@ class WorkoutTemplateLocalDataSource {
   /// serveur : le contenu d'un modèle n'est pas de l'historique, il n'est
   /// référencé par rien, le conserver n'aurait aucun usage.
   Future<void> replaceContent(WorkoutTemplateDetail template) async {
-    final existing = await (_db.select(_db.localTemplateExercises)
-          ..where((line) => line.templateId.equals(template.id)))
-        .get();
+    final existing = await (_db.select(
+      _db.localTemplateExercises,
+    )..where((line) => line.templateId.equals(template.id))).get();
     final exerciseIds = existing.map((line) => line.id).toList();
     if (exerciseIds.isNotEmpty) {
-      await (_db.delete(_db.localTemplateSets)
-            ..where((set) => set.templateExerciseId.isIn(exerciseIds)))
-          .go();
+      await (_db.delete(
+        _db.localTemplateSets,
+      )..where((set) => set.templateExerciseId.isIn(exerciseIds))).go();
     }
-    await (_db.delete(_db.localTemplateExercises)
-          ..where((line) => line.templateId.equals(template.id)))
-        .go();
+    await (_db.delete(
+      _db.localTemplateExercises,
+    )..where((line) => line.templateId.equals(template.id))).go();
 
     for (final exercise in template.exercises) {
-      await _db.into(_db.localTemplateExercises).insert(
+      await _db
+          .into(_db.localTemplateExercises)
+          .insert(
             LocalTemplateExercisesCompanion.insert(
               id: exercise.id,
               templateId: template.id,
@@ -155,7 +163,9 @@ class WorkoutTemplateLocalDataSource {
             ),
           );
       for (final set in exercise.sets) {
-        await _db.into(_db.localTemplateSets).insert(
+        await _db
+            .into(_db.localTemplateSets)
+            .insert(
               LocalTemplateSetsCompanion.insert(
                 id: set.id,
                 templateExerciseId: exercise.id,
@@ -178,13 +188,16 @@ class WorkoutTemplateLocalDataSource {
     required String syncStatus,
     DateTime? lastUsedAt,
   }) {
-    return _db.into(_db.localWorkoutTemplates).insertOnConflictUpdate(
+    return _db
+        .into(_db.localWorkoutTemplates)
+        .insertOnConflictUpdate(
           LocalWorkoutTemplatesCompanion.insert(
             id: template.id,
             name: template.name,
             notes: Value(template.notes),
-            estimatedDurationMinutes:
-                Value(template.info.estimatedDurationMinutes),
+            estimatedDurationMinutes: Value(
+              template.info.estimatedDurationMinutes,
+            ),
             lastUsedAt: Value(lastUsedAt),
             updatedAt: updatedAt,
             deleted: const Value(false),
@@ -194,17 +207,17 @@ class WorkoutTemplateLocalDataSource {
   }
 
   Future<LocalWorkoutTemplate?> headerOf(String templateId) {
-    return (_db.select(_db.localWorkoutTemplates)
-          ..where((template) => template.id.equals(templateId)))
-        .getSingleOrNull();
+    return (_db.select(
+      _db.localWorkoutTemplates,
+    )..where((template) => template.id.equals(templateId))).getSingleOrNull();
   }
 
   /// Pose le tombstone : la ligne reste jusqu'à l'acquittement serveur, mais
   /// le modèle disparaît immédiatement de toutes les lectures.
   Future<void> markDeleted(String templateId) {
-    return (_db.update(_db.localWorkoutTemplates)
-          ..where((template) => template.id.equals(templateId)))
-        .write(
+    return (_db.update(
+      _db.localWorkoutTemplates,
+    )..where((template) => template.id.equals(templateId))).write(
       const LocalWorkoutTemplatesCompanion(
         deleted: Value(true),
         syncStatus: Value('pending'),

@@ -60,10 +60,9 @@ class AuthController extends Notifier<AuthState> {
     required String email,
     required String password,
   }) async {
-    final user = await ref.read(authRepositoryProvider).login(
-          email: email,
-          password: password,
-        );
+    final user = await ref
+        .read(authRepositoryProvider)
+        .login(email: email, password: password);
     state = AuthAuthenticated(user: user);
     return user;
   }
@@ -73,11 +72,9 @@ class AuthController extends Notifier<AuthState> {
     required String password,
     required String displayName,
   }) async {
-    final user = await ref.read(authRepositoryProvider).register(
-          email: email,
-          password: password,
-          displayName: displayName,
-        );
+    final user = await ref
+        .read(authRepositoryProvider)
+        .register(email: email, password: password, displayName: displayName);
     state = AuthAuthenticated(user: user);
     return user;
   }
@@ -93,8 +90,9 @@ class AuthController extends Notifier<AuthState> {
   /// Recharge le profil (après une modification par exemple).
   Future<void> refreshProfile() async {
     if (state is! AuthAuthenticated) return;
-    state =
-        AuthAuthenticated(user: await ref.read(authRepositoryProvider).me());
+    state = AuthAuthenticated(
+      user: await ref.read(authRepositoryProvider).me(),
+    );
   }
 
   void _onSessionExpired() {

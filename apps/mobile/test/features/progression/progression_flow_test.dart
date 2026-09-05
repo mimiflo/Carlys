@@ -34,17 +34,16 @@ void main() {
     Widget child, {
     ProgressionProfile? profile,
     bool unreadable = false,
-  }) =>
-      ProviderScope(
-        overrides: [
-          progressionProfileProvider.overrideWithValue(profile),
-          progressionUnreadableProvider.overrideWithValue(unreadable),
-          // L'avatar est la SEULE chose que l'écran tire de la session : on
-          // le fournit ici pour que le reste se vérifie sans amorçage.
-          progressionInitialProvider.overrideWithValue('M'),
-        ],
-        child: MaterialApp(home: child),
-      );
+  }) => ProviderScope(
+    overrides: [
+      progressionProfileProvider.overrideWithValue(profile),
+      progressionUnreadableProvider.overrideWithValue(unreadable),
+      // L'avatar est la SEULE chose que l'écran tire de la session : on
+      // le fournit ici pour que le reste se vérifie sans amorçage.
+      progressionInitialProvider.overrideWithValue('M'),
+    ],
+    child: MaterialApp(home: child),
+  );
 
   group('profil de progression', () {
     testWidgets('un axe en attente n’affiche NI jauge NI zéro', (tester) async {
@@ -54,9 +53,7 @@ void main() {
         ProgressionFacts(today: DateTime(2026, 8, 15)),
       );
 
-      await tester.pumpWidget(
-        host(const ProgressionScreen(), profile: blank),
-      );
+      await tester.pumpWidget(host(const ProgressionScreen(), profile: blank));
       await tester.pumpAndSettle();
 
       expect(find.text('EN ATTENTE'), findsNWidgets(CarlysValue.values.length));
@@ -73,8 +70,9 @@ void main() {
       );
     });
 
-    testWidgets('un profil nourri montre son titre et ses points',
-        (tester) async {
+    testWidgets('un profil nourri montre son titre et ses points', (
+      tester,
+    ) async {
       final today = DateTime(2026, 8, 15);
       final profile = computeProgression(
         ProgressionFacts(
@@ -109,8 +107,9 @@ void main() {
       }
     });
 
-    testWidgets('sans historique lu, on patiente au lieu d’inventer',
-        (tester) async {
+    testWidgets('sans historique lu, on patiente au lieu d’inventer', (
+      tester,
+    ) async {
       await tester.pumpWidget(host(const ProgressionScreen()));
       await tester.pump();
 
@@ -118,8 +117,9 @@ void main() {
       expect(find.byType(ProgressionScreen), findsOneWidget);
     });
 
-    testWidgets('un historique illisible se DIT, au lieu de tourner sans fin',
-        (tester) async {
+    testWidgets('un historique illisible se DIT, au lieu de tourner sans fin', (
+      tester,
+    ) async {
       // Le profil se dérive de l'historique local : s'il ne se lit pas, le
       // patienter éternellement ressemble à un calcul sans fin. On le dit,
       // et on propose de reprendre.
@@ -178,8 +178,9 @@ void main() {
   });
 
   group('manifeste', () {
-    testWidgets('les quatre phrases et les cinq valeurs y sont',
-        (tester) async {
+    testWidgets('les quatre phrases et les cinq valeurs y sont', (
+      tester,
+    ) async {
       await tester.pumpWidget(host(const ManifestoScreen()));
       await tester.pumpAndSettle();
 
@@ -192,8 +193,9 @@ void main() {
       }
     });
 
-    testWidgets('il ne montre AUCUN point : un manifeste n’est pas un score',
-        (tester) async {
+    testWidgets('il ne montre AUCUN point : un manifeste n’est pas un score', (
+      tester,
+    ) async {
       await tester.pumpWidget(host(const ManifestoScreen()));
       await tester.pumpAndSettle();
 

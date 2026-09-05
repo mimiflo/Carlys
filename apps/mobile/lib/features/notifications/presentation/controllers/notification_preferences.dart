@@ -11,8 +11,8 @@ import '../../domain/repositories/device_token_repository.dart';
 /// ici éviterait une bascule qui clignote.
 final notificationPreferencesProvider =
     FutureProvider<Map<NotificationCategory, bool>>((ref) {
-  return ref.read(deviceTokenRepositoryProvider).preferences();
-});
+      return ref.read(deviceTokenRepositoryProvider).preferences();
+    });
 
 /// Régler une famille de notifications.
 class NotificationPreferenceActions {
@@ -34,6 +34,4 @@ class NotificationPreferenceActions {
 }
 
 final notificationPreferenceActionsProvider =
-    Provider<NotificationPreferenceActions>(
-  NotificationPreferenceActions.new,
-);
+    Provider<NotificationPreferenceActions>(NotificationPreferenceActions.new);

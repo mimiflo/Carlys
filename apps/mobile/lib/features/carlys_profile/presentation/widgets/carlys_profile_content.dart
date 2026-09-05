@@ -40,60 +40,64 @@ class CarlysProfileContent {
 CarlysProfileContent carlysProfileContentOf(CarlysProfile profile) {
   return switch (profile) {
     CarlysProfile.constructeur => const CarlysProfileContent(
-        title: 'Le Constructeur',
-        quote: '« Je commence à construire. »',
-        tagline: 'Découvrir, apprendre, construire les bases. '
-            'Santé et culture avant tout.',
-        audience: [
-          'Découvrir l’application.',
-          'Découvrir le sport.',
-          'Reprendre progressivement.',
-          'Se maintenir en bonne santé.',
-          'Développer sa culture sportive.',
-        ],
-        assetPath: 'assets/profiles/constructeur.webp',
-        icon: AppIcons.profileConstructeur,
-      ),
+      title: 'Le Constructeur',
+      quote: '« Je commence à construire. »',
+      tagline:
+          'Découvrir, apprendre, construire les bases. '
+          'Santé et culture avant tout.',
+      audience: [
+        'Découvrir l’application.',
+        'Découvrir le sport.',
+        'Reprendre progressivement.',
+        'Se maintenir en bonne santé.',
+        'Développer sa culture sportive.',
+      ],
+      assetPath: 'assets/profiles/constructeur.webp',
+      icon: AppIcons.profileConstructeur,
+    ),
     CarlysProfile.challenger => const CarlysProfileContent(
-        title: 'Le Challenger',
-        quote: '« Je veux aller plus loin. »',
-        tagline: 'Sortir de sa zone de confort et se dépasser '
-            'pour progresser.',
-        audience: [
-          'Se dépasser.',
-          'Sortir de sa zone de confort.',
-          'Progresser physiquement.',
-          'Progresser intellectuellement.',
-        ],
-        assetPath: 'assets/profiles/challenger.webp',
-        icon: AppIcons.profileChallenger,
-      ),
+      title: 'Le Challenger',
+      quote: '« Je veux aller plus loin. »',
+      tagline:
+          'Sortir de sa zone de confort et se dépasser '
+          'pour progresser.',
+      audience: [
+        'Se dépasser.',
+        'Sortir de sa zone de confort.',
+        'Progresser physiquement.',
+        'Progresser intellectuellement.',
+      ],
+      assetPath: 'assets/profiles/challenger.webp',
+      icon: AppIcons.profileChallenger,
+    ),
     CarlysProfile.athlete => const CarlysProfileContent(
-        title: 'L’Athlète',
-        quote: '« Je me prépare pour quelque chose. »',
-        tagline: 'Discipline et constance pour atteindre des '
-            'objectifs ambitieux.',
-        audience: [
-          'Les personnes pratiquant régulièrement.',
-          'Les personnes ayant un objectif précis.',
-          'Les objectifs nécessitant discipline et constance.',
-        ],
-        assetPath: 'assets/profiles/athlete.webp',
-        icon: AppIcons.profileAthlete,
-      ),
+      title: 'L’Athlète',
+      quote: '« Je me prépare pour quelque chose. »',
+      tagline:
+          'Discipline et constance pour atteindre des '
+          'objectifs ambitieux.',
+      audience: [
+        'Les personnes pratiquant régulièrement.',
+        'Les personnes ayant un objectif précis.',
+        'Les objectifs nécessitant discipline et constance.',
+      ],
+      assetPath: 'assets/profiles/athlete.webp',
+      icon: AppIcons.profileAthlete,
+    ),
     CarlysProfile.stratege => const CarlysProfileContent(
-        title: 'Le Stratège',
-        quote: '« Je veux comprendre avant d’agir. »',
-        tagline: 'Apprendre avant d’agir. Comprendre pour optimiser '
-            'chaque décision.',
-        audience: [
-          'Les personnes qui veulent apprendre.',
-          'Comprendre le fonctionnement du corps.',
-          'Comprendre l’entraînement et la nutrition.',
-          'Planifier avant d’agir.',
-        ],
-        assetPath: 'assets/profiles/stratege.webp',
-        icon: AppIcons.profileStratege,
-      ),
+      title: 'Le Stratège',
+      quote: '« Je veux comprendre avant d’agir. »',
+      tagline:
+          'Apprendre avant d’agir. Comprendre pour optimiser '
+          'chaque décision.',
+      audience: [
+        'Les personnes qui veulent apprendre.',
+        'Comprendre le fonctionnement du corps.',
+        'Comprendre l’entraînement et la nutrition.',
+        'Planifier avant d’agir.',
+      ],
+      assetPath: 'assets/profiles/stratege.webp',
+      icon: AppIcons.profileStratege,
+    ),
   };
 }

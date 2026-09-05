@@ -21,10 +21,10 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
     required SyncEngine syncEngine,
     this._remote,
     Uuid uuid = const Uuid(),
-  })  : _db = database,
-        _sync = syncEngine,
-        _uuid = uuid,
-        _writer = WorkoutSessionWriter(database: database, uuid: uuid);
+  }) : _db = database,
+       _sync = syncEngine,
+       _uuid = uuid,
+       _writer = WorkoutSessionWriter(database: database, uuid: uuid);
 
   final AppDatabase _db;
   final SyncEngine _sync;
@@ -36,17 +36,20 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
 
   @override
   Stream<WorkoutWithSets?> watchActiveWorkout() {
-    final query = _db.select(_db.localWorkoutSessions).join([
-      leftOuterJoin(
-        _db.localWorkoutSets,
-        _db.localWorkoutSets.sessionId.equalsExp(_db.localWorkoutSessions.id) &
-            _db.localWorkoutSets.deleted.equals(false),
-      ),
-    ])
-      ..where(
-        _db.localWorkoutSessions.status
-            .equals(WorkoutStatus.inProgress.apiValue),
-      );
+    final query =
+        _db.select(_db.localWorkoutSessions).join([
+          leftOuterJoin(
+            _db.localWorkoutSets,
+            _db.localWorkoutSets.sessionId.equalsExp(
+                  _db.localWorkoutSessions.id,
+                ) &
+                _db.localWorkoutSets.deleted.equals(false),
+          ),
+        ])..where(
+          _db.localWorkoutSessions.status.equals(
+            WorkoutStatus.inProgress.apiValue,
+          ),
+        );
 
     return query.watch().map((rows) {
       final workouts = _groupRows(rows);
@@ -62,17 +65,20 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
 
   @override
   Stream<List<WorkoutHistoryEntry>> watchHistory() {
-    final query = _db.select(_db.localWorkoutSessions).join([
-      leftOuterJoin(
-        _db.localWorkoutSets,
-        _db.localWorkoutSets.sessionId.equalsExp(_db.localWorkoutSessions.id) &
-            _db.localWorkoutSets.deleted.equals(false),
-      ),
-    ])
-      ..where(
-        _db.localWorkoutSessions.status
-            .isNotValue(WorkoutStatus.inProgress.apiValue),
-      );
+    final query =
+        _db.select(_db.localWorkoutSessions).join([
+          leftOuterJoin(
+            _db.localWorkoutSets,
+            _db.localWorkoutSets.sessionId.equalsExp(
+                  _db.localWorkoutSessions.id,
+                ) &
+                _db.localWorkoutSets.deleted.equals(false),
+          ),
+        ])..where(
+          _db.localWorkoutSessions.status.isNotValue(
+            WorkoutStatus.inProgress.apiValue,
+          ),
+        );
 
     return query.watch().map((rows) {
       final workouts = _groupRows(rows)
@@ -97,8 +103,7 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
         _db.localWorkoutSets.sessionId.equalsExp(_db.localWorkoutSessions.id) &
             _db.localWorkoutSets.deleted.equals(false),
       ),
-    ])
-      ..where(_db.localWorkoutSessions.id.equals(sessionId));
+    ])..where(_db.localWorkoutSessions.id.equals(sessionId));
 
     final workouts = _groupRows(await query.get());
     return workouts.isEmpty ? null : workouts.first;
@@ -135,9 +140,9 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
   Future<String> addSet(AddSetInput input) async {
     final id = _uuid.v4();
     final completedAt = DateTime.now().toUtc();
-    final existing = await (_db.select(_db.localWorkoutSets)
-          ..where((set) => set.sessionId.equals(input.sessionId)))
-        .get();
+    final existing = await (_db.select(
+      _db.localWorkoutSets,
+    )..where((set) => set.sessionId.equals(input.sessionId))).get();
     final position = existing.length;
 
     final body = <String, dynamic>{
@@ -161,7 +166,9 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
     };
 
     await _db.transaction(() async {
-      await _db.into(_db.localWorkoutSets).insert(
+      await _db
+          .into(_db.localWorkoutSets)
+          .insert(
             LocalWorkoutSetsCompanion.insert(
               id: id,
               sessionId: input.sessionId,
@@ -219,22 +226,23 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
     WorkoutStatus to,
     String operationType,
   ) async {
-    final session = await (_db.select(_db.localWorkoutSessions)
-          ..where((row) => row.id.equals(sessionId)))
-        .getSingleOrNull();
+    final session = await (_db.select(
+      _db.localWorkoutSessions,
+    )..where((row) => row.id.equals(sessionId))).getSingleOrNull();
     if (session == null ||
         session.status != WorkoutStatus.inProgress.apiValue) {
       return; // déjà clôturée : idempotent côté client aussi
     }
 
     final endedAt = DateTime.now().toUtc();
-    final durationSeconds =
-        endedAt.difference(session.startedAt.toUtc()).inSeconds;
+    final durationSeconds = endedAt
+        .difference(session.startedAt.toUtc())
+        .inSeconds;
 
     await _db.transaction(() async {
-      await (_db.update(_db.localWorkoutSessions)
-            ..where((row) => row.id.equals(sessionId)))
-          .write(
+      await (_db.update(
+        _db.localWorkoutSessions,
+      )..where((row) => row.id.equals(sessionId))).write(
         LocalWorkoutSessionsCompanion(
           status: Value(to.apiValue),
           endedAt: Value(endedAt),
@@ -302,32 +310,32 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
   }
 
   WorkoutInfo _mapSession(LocalWorkoutSession row) => WorkoutInfo(
-        id: row.id,
-        name: row.name,
-        status: WorkoutStatus.fromApi(row.status),
-        startedAt: row.startedAt,
-        endedAt: row.endedAt,
-        durationSeconds: row.durationSeconds,
-        templateId: row.templateId,
-        templateName: row.templateName,
-        syncState: LocalSyncState.fromDb(row.syncStatus),
-      );
+    id: row.id,
+    name: row.name,
+    status: WorkoutStatus.fromApi(row.status),
+    startedAt: row.startedAt,
+    endedAt: row.endedAt,
+    durationSeconds: row.durationSeconds,
+    templateId: row.templateId,
+    templateName: row.templateName,
+    syncState: LocalSyncState.fromDb(row.syncStatus),
+  );
 
   WorkoutSetEntry _mapSet(LocalWorkoutSet row) => WorkoutSetEntry(
-        id: row.id,
-        exerciseId: row.exerciseId,
-        exerciseName: row.exerciseName,
-        position: row.position,
-        kind: SetKind.fromApi(row.kind),
-        reps: row.reps,
-        weightKg: row.weightKg,
-        restSeconds: row.restSeconds,
-        rpe: row.rpe,
-        plannedReps: row.plannedReps,
-        plannedWeightKg: row.plannedWeightKg,
-        completedAt: row.completedAt,
-        syncState: LocalSyncState.fromDb(row.syncStatus),
-      );
+    id: row.id,
+    exerciseId: row.exerciseId,
+    exerciseName: row.exerciseName,
+    position: row.position,
+    kind: SetKind.fromApi(row.kind),
+    reps: row.reps,
+    weightKg: row.weightKg,
+    restSeconds: row.restSeconds,
+    rpe: row.rpe,
+    plannedReps: row.plannedReps,
+    plannedWeightKg: row.plannedWeightKg,
+    completedAt: row.completedAt,
+    syncState: LocalSyncState.fromDb(row.syncStatus),
+  );
 }
 
 final workoutRepositoryProvider = Provider<WorkoutRepository>((ref) {

@@ -13,10 +13,15 @@ void main() {
   test('les sept jours partent du lundi et portent les bonnes initiales', () {
     final week = buildConsistencyWeek(trainedDays: {}, today: wednesday);
 
-    expect(
-      week.days.map((d) => d.initial),
-      ['L', 'M', 'M', 'J', 'V', 'S', 'D'],
-    );
+    expect(week.days.map((d) => d.initial), [
+      'L',
+      'M',
+      'M',
+      'J',
+      'V',
+      'S',
+      'D',
+    ]);
     expect(week.days.first.date, day(10)); // lundi
     expect(week.days.last.date, day(16)); // dimanche
   });
@@ -88,11 +93,7 @@ void main() {
   test('la série traverse les mois et les années', () {
     final newYear = DateTime(2027);
     final week = buildConsistencyWeek(
-      trainedDays: {
-        DateTime(2026, 12, 30),
-        DateTime(2026, 12, 31),
-        newYear,
-      },
+      trainedDays: {DateTime(2026, 12, 30), DateTime(2026, 12, 31), newYear},
       today: newYear,
     );
 

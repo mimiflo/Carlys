@@ -4,15 +4,16 @@ import 'package:uuid/uuid.dart';
 import '../../data/repositories/program_repository_impl.dart';
 import '../../domain/entities/program.dart';
 
-final programsProvider =
-    FutureProvider.autoDispose<List<ProgramSummary>>((ref) {
+final programsProvider = FutureProvider.autoDispose<List<ProgramSummary>>((
+  ref,
+) {
   return ref.watch(programRepositoryProvider).list();
 });
 
-final programDetailProvider =
-    FutureProvider.autoDispose.family<ProgramDetail, String>((ref, programId) {
-  return ref.watch(programRepositoryProvider).byId(programId);
-});
+final programDetailProvider = FutureProvider.autoDispose
+    .family<ProgramDetail, String>((ref, programId) {
+      return ref.watch(programRepositoryProvider).byId(programId);
+    });
 
 /// Actions des programmes : une seule écriture (PUT de l'état complet),
 /// chaque écriture invalide les lectures.
@@ -32,7 +33,9 @@ class ProgramActions {
   /// Crée un programme vide et rend son identifiant, NÉ SUR L'APPAREIL.
   Future<String> create({required String name, required int weeksCount}) async {
     final id = _uuid.v4();
-    await _ref.read(programRepositoryProvider).save(
+    await _ref
+        .read(programRepositoryProvider)
+        .save(
           ProgramDetail(
             id: id,
             name: name,

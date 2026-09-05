@@ -33,9 +33,7 @@ class ExerciseActionBar extends ConsumerWidget {
         child: DecoratedBox(
           decoration: BoxDecoration(
             color: AppColors.darkBackground.withValues(alpha: _backgroundAlpha),
-            border: const Border(
-              top: BorderSide(color: AppColors.darkBorder),
-            ),
+            border: const Border(top: BorderSide(color: AppColors.darkBorder)),
           ),
           child: SafeArea(
             top: false,
@@ -56,8 +54,9 @@ class ExerciseActionBar extends ConsumerWidget {
                         minimumSize: const Size.fromHeight(_buttonSize),
                         backgroundColor: AppColors.accent,
                         foregroundColor: AppColors.darkBackground,
-                        textStyle: AppTypography.subheading
-                            .copyWith(fontWeight: FontWeight.w700),
+                        textStyle: AppTypography.subheading.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
                       ),
                       onPressed: () => _addToWorkout(context, ref),
                       child: const Row(

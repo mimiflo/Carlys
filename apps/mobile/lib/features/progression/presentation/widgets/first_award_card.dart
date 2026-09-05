@@ -55,14 +55,16 @@ class FirstAwardCard extends StatelessWidget {
                     children: [
                       Text(
                         reward.label,
-                        style: AppTypography.heading
-                            .copyWith(color: AppColors.darkTextPrimary),
+                        style: AppTypography.heading.copyWith(
+                          color: AppColors.darkTextPrimary,
+                        ),
                       ),
                       const SizedBox(height: AppSpacing.xs),
                       Text(
                         reward.story,
-                        style: AppTypography.body
-                            .copyWith(color: AppColors.darkTextSecondary),
+                        style: AppTypography.body.copyWith(
+                          color: AppColors.darkTextSecondary,
+                        ),
                       ),
                     ],
                   ),

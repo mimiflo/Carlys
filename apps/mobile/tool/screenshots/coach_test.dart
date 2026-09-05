@@ -56,10 +56,7 @@ const List<CoachMessage> _conversation = [
   ),
 ];
 
-const List<String> _suggestions = [
-  'Ajuster ma séance',
-  'Où j’en suis ?',
-];
+const List<String> _suggestions = ['Ajuster ma séance', 'Où j’en suis ?'];
 
 void main() {
   setUpAll(loadRealFonts);

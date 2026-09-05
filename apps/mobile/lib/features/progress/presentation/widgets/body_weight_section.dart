@@ -69,8 +69,9 @@ class _BodyWeightContent extends StatelessWidget {
       );
     }
 
-    final recent =
-        entries.reversed.take(BodyWeightSection.recentCount).toList();
+    final recent = entries.reversed
+        .take(BodyWeightSection.recentCount)
+        .toList();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -114,8 +115,9 @@ class _WeightRow extends ConsumerWidget {
         decoration: const BoxDecoration(
           color: AppColors.darkSurface,
           borderRadius: AppRadius.statTileAll,
-          border:
-              Border.fromBorderSide(BorderSide(color: AppColors.darkBorder)),
+          border: Border.fromBorderSide(
+            BorderSide(color: AppColors.darkBorder),
+          ),
         ),
         child: Row(
           children: [

@@ -63,14 +63,16 @@ class OnboardingHeightCard extends StatelessWidget {
               children: [
                 Text(
                   'Taille',
-                  style: AppTypography.subheading
-                      .copyWith(color: AppColors.darkTextPrimary),
+                  style: AppTypography.subheading.copyWith(
+                    color: AppColors.darkTextPrimary,
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.xxs),
                 Text(
                   'Utilisée pour l’IMC',
-                  style: AppTypography.label
-                      .copyWith(color: AppColors.darkTextSecondary),
+                  style: AppTypography.label.copyWith(
+                    color: AppColors.darkTextSecondary,
+                  ),
                 ),
               ],
             ),

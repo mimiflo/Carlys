@@ -89,9 +89,9 @@ class ProgressionAxis {
 
   /// Axe sans fait disponible : l'application le dit au lieu de l'inventer.
   const ProgressionAxis.unknown(this.value, this.reason)
-      : ratio = 0,
-        points = 0,
-        known = false;
+    : ratio = 0,
+      points = 0,
+      known = false;
 
   final CarlysValue value;
 

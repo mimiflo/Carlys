@@ -12,22 +12,22 @@ import 'package:flutter_test/flutter_test.dart';
 /// chargées et ajoutait « + ». Le groupe « Épaules », fort de trente-huit
 /// mouvements, s'annonçait donc « 12+ ».
 ExerciseSummary _exercise(String id) => ExerciseSummary(
-      id: id,
-      slug: id,
-      name: 'Mouvement $id',
-      difficulty: ExerciseDifficulty.beginner,
-      kind: ExerciseKind.strength,
-      isPremium: false,
-      primaryMuscleGroup: null,
-      equipment: const [],
-      imageUrl: null,
-    );
+  id: id,
+  slug: id,
+  name: 'Mouvement $id',
+  difficulty: ExerciseDifficulty.beginner,
+  kind: ExerciseKind.strength,
+  isPremium: false,
+  primaryMuscleGroup: null,
+  equipment: const [],
+  imageUrl: null,
+);
 
 Widget _harness(ExerciseLibraryState state) => ProviderScope(
-      child: MaterialApp(
-        home: Scaffold(body: ExerciseCatalogList(state: state)),
-      ),
-    );
+  child: MaterialApp(
+    home: Scaffold(body: ExerciseCatalogList(state: state)),
+  ),
+);
 
 void main() {
   final items = [for (var i = 0; i < 6; i++) _exercise('e$i')];

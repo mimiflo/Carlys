@@ -50,8 +50,8 @@ WorkoutTemplateInfo templateInfoFromJson(Map<String, dynamic> json) {
     name: json['name'] as String,
     exercisesCount: (json['exercisesCount'] as num?)?.toInt() ?? 0,
     plannedSetsCount: (json['plannedSetsCount'] as num?)?.toInt() ?? 0,
-    estimatedDurationMinutes:
-        (json['estimatedDurationMinutes'] as num?)?.toInt(),
+    estimatedDurationMinutes: (json['estimatedDurationMinutes'] as num?)
+        ?.toInt(),
     previewExerciseNames:
         (json['previewExerciseNames'] as List<dynamic>? ?? const [])
             .whereType<String>()
@@ -69,8 +69,9 @@ WorkoutTemplateDetail templateDetailFromJson(Map<String, dynamic> json) {
     info: templateInfoFromJson(json),
     notes: json['notes'] as String?,
     exercises: [
-      for (final exercise in (json['exercises'] as List<dynamic>? ?? const [])
-          .whereType<Map<String, dynamic>>())
+      for (final exercise
+          in (json['exercises'] as List<dynamic>? ?? const [])
+              .whereType<Map<String, dynamic>>())
         TemplateExerciseEntry(
           id: exercise['id'] as String,
           exerciseId: exercise['exerciseId'] as String?,
@@ -78,8 +79,9 @@ WorkoutTemplateDetail templateDetailFromJson(Map<String, dynamic> json) {
           position: (exercise['position'] as num?)?.toInt() ?? 0,
           notes: exercise['notes'] as String?,
           sets: [
-            for (final set in (exercise['sets'] as List<dynamic>? ?? const [])
-                .whereType<Map<String, dynamic>>())
+            for (final set
+                in (exercise['sets'] as List<dynamic>? ?? const [])
+                    .whereType<Map<String, dynamic>>())
               PlannedSet(
                 id: set['id'] as String,
                 position: (set['position'] as num?)?.toInt() ?? 0,

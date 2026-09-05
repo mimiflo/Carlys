@@ -14,8 +14,9 @@ class NutritionRepositoryImpl implements NutritionRepository {
   @override
   Future<MetabolismReport> metabolismReport() {
     return _guard(() async {
-      final response =
-          await _dio.get<Map<String, dynamic>>('/nutrition/metabolism');
+      final response = await _dio.get<Map<String, dynamic>>(
+        '/nutrition/metabolism',
+      );
       final body = response.data?['data'] as Map<String, dynamic>? ?? const {};
       final profile = body['profile'] as Map<String, dynamic>? ?? const {};
       final metabolism = body['metabolism'] as Map<String, dynamic>?;
@@ -29,8 +30,9 @@ class NutritionRepositoryImpl implements NutritionRepository {
           ageYears: (profile['ageYears'] as num?)?.toInt(),
           heightCm: (profile['heightCm'] as num?)?.toDouble(),
           weightKg: (profile['weightKg'] as num?)?.toDouble(),
-          activityLevel:
-              ActivityLevel.fromApi(profile['activityLevel'] as String?),
+          activityLevel: ActivityLevel.fromApi(
+            profile['activityLevel'] as String?,
+          ),
           goal: NutritionGoal.fromApi(profile['goal'] as String?),
         ),
         missing: (body['missing'] as List<dynamic>? ?? const [])
@@ -42,8 +44,9 @@ class NutritionRepositoryImpl implements NutritionRepository {
             ? null
             : MetabolismResult(
                 bmi: (metabolism['bmi'] as num).toDouble(),
-                bmiCategory:
-                    BmiCategory.fromApi(metabolism['bmiCategory'] as String),
+                bmiCategory: BmiCategory.fromApi(
+                  metabolism['bmiCategory'] as String,
+                ),
                 bmrKcal: (metabolism['bmrKcal'] as num).toInt(),
                 tdeeKcal: (metabolism['tdeeKcal'] as num).toInt(),
                 targetKcal: (metabolism['targetKcal'] as num).toInt(),

@@ -65,10 +65,9 @@ class TodayGrid extends StatelessWidget {
   }
 
   TodayCell _cell(TodayMetric metric) => TodayCell(
-        metric: metric,
-        onTap:
-            metric.kind == TodayMetricKind.hydratation ? onOpenHydration : null,
-      );
+    metric: metric,
+    onTap: metric.kind == TodayMetricKind.hydratation ? onOpenHydration : null,
+  );
 }
 
 /// Une mesure : son libellé, son chiffre face à sa cible, sa jauge, son reste.
@@ -87,7 +86,8 @@ class TodayCell extends StatelessWidget {
     final tint = _tint(metric.kind);
 
     return Semantics(
-      label: '${metric.label} : ${metric.value} ${metric.target}, '
+      label:
+          '${metric.label} : ${metric.value} ${metric.target}, '
           '${metric.note}',
       button: onTap != null,
       container: true,
@@ -141,8 +141,9 @@ class TodayCell extends StatelessWidget {
                             metric.target,
                             maxLines: 1,
                             overflow: TextOverflow.ellipsis,
-                            style: AppTypography.labelMono
-                                .copyWith(color: AppColors.textMuted),
+                            style: AppTypography.labelMono.copyWith(
+                              color: AppColors.textMuted,
+                            ),
                           ),
                         ),
                       ],
@@ -170,11 +171,11 @@ class TodayCell extends StatelessWidget {
   }
 
   static IconData _icon(TodayMetricKind kind) => switch (kind) {
-        TodayMetricKind.calories => AppIcons.nutrition,
-        TodayMetricKind.proteines => AppIcons.protein,
-        TodayMetricKind.hydratation => AppIcons.water,
-        TodayMetricKind.volume => AppIcons.workout,
-      };
+    TodayMetricKind.calories => AppIcons.nutrition,
+    TodayMetricKind.proteines => AppIcons.protein,
+    TodayMetricKind.hydratation => AppIcons.water,
+    TodayMetricKind.volume => AppIcons.workout,
+  };
 
   /// Le volume est le seul fait d'ENTRAÎNEMENT de la grille : il porte donc
   /// l'orange, les trois autres le violet de la nutrition.

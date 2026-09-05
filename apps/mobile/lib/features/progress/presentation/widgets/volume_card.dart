@@ -145,8 +145,9 @@ class _VolumeBars extends StatelessWidget {
               if (index > 0) const SizedBox(width: _barGap),
               Expanded(
                 child: _VolumeBar(
-                  fraction:
-                      maxVolume <= 0 ? 0 : points[index].volumeKg / maxVolume,
+                  fraction: maxVolume <= 0
+                      ? 0
+                      : points[index].volumeKg / maxVolume,
                   recency: points.length < 2
                       ? 1
                       : index / (points.length - 1).toDouble(),
@@ -176,7 +177,8 @@ class _VolumeBar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final height = _minBarHeight +
+    final height =
+        _minBarHeight +
         (_chartHeight - _minBarHeight) * fraction.clamp(0.0, 1.0);
 
     return Align(
@@ -187,8 +189,9 @@ class _VolumeBar extends StatelessWidget {
         decoration: BoxDecoration(
           color: isLatest
               ? AppColors.accent
-              : AppColors.primary
-                  .withValues(alpha: 0.35 + 0.55 * recency.clamp(0.0, 1.0)),
+              : AppColors.primary.withValues(
+                  alpha: 0.35 + 0.55 * recency.clamp(0.0, 1.0),
+                ),
           borderRadius: BorderRadius.circular(_barRadius),
         ),
       ),

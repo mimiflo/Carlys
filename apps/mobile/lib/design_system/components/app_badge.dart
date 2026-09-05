@@ -24,18 +24,18 @@ class AppBadge extends StatelessWidget {
     final colorScheme = Theme.of(context).colorScheme;
     final (background, foreground) = switch (variant) {
       AppBadgeVariant.neutral => (
-          colorScheme.surfaceContainerHighest,
-          colorScheme.onSurfaceVariant,
-        ),
+        colorScheme.surfaceContainerHighest,
+        colorScheme.onSurfaceVariant,
+      ),
       AppBadgeVariant.primary => (
-          colorScheme.primary.withValues(alpha: 0.14),
-          colorScheme.primary,
-        ),
+        colorScheme.primary.withValues(alpha: 0.14),
+        colorScheme.primary,
+      ),
       AppBadgeVariant.accent => (AppColors.accent, AppColors.neutral950),
       AppBadgeVariant.warning => (
-          AppColors.warning.withValues(alpha: 0.16),
-          AppColors.warning,
-        ),
+        AppColors.warning.withValues(alpha: 0.16),
+        AppColors.warning,
+      ),
     };
 
     return Container(
@@ -43,8 +43,10 @@ class AppBadge extends StatelessWidget {
         horizontal: AppSpacing.xs,
         vertical: AppSpacing.xxs,
       ),
-      decoration:
-          BoxDecoration(color: background, borderRadius: AppRadius.smAll),
+      decoration: BoxDecoration(
+        color: background,
+        borderRadius: AppRadius.smAll,
+      ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
@@ -54,10 +56,10 @@ class AppBadge extends StatelessWidget {
           ],
           Text(
             label,
-            style: Theme.of(context)
-                .textTheme
-                .labelMedium
-                ?.copyWith(color: foreground, fontWeight: FontWeight.w600),
+            style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              color: foreground,
+              fontWeight: FontWeight.w600,
+            ),
           ),
         ],
       ),

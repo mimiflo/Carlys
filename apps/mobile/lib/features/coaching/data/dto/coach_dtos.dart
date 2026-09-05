@@ -23,11 +23,12 @@ CoachProposalSet coachProposalSetFromJson(Map<String, dynamic> json) =>
     );
 
 CoachSessionProposal coachProposalFromJson(Map<String, dynamic> json) {
-  final sets = (json['items'] as List<dynamic>? ?? const [])
-      .whereType<Map<String, dynamic>>()
-      .map(coachProposalSetFromJson)
-      .toList()
-    ..sort(_byPosition);
+  final sets =
+      (json['items'] as List<dynamic>? ?? const [])
+          .whereType<Map<String, dynamic>>()
+          .map(coachProposalSetFromJson)
+          .toList()
+        ..sort(_byPosition);
 
   return CoachSessionProposal(
     id: json['id'] as String,
@@ -113,10 +114,11 @@ CoachConversation coachConversationFromJson(Map<String, dynamic> json) =>
     );
 
 CoachReply coachReplyFromJson(Map<String, dynamic> json) => CoachReply(
-      userMessage:
-          coachMessageFromJson(json['userMessage'] as Map<String, dynamic>),
-      assistantMessage: coachMessageFromJson(
-        json['assistantMessage'] as Map<String, dynamic>,
-      ),
-      remainingToday: (json['remainingToday'] as num).toInt(),
-    );
+  userMessage: coachMessageFromJson(
+    json['userMessage'] as Map<String, dynamic>,
+  ),
+  assistantMessage: coachMessageFromJson(
+    json['assistantMessage'] as Map<String, dynamic>,
+  ),
+  remainingToday: (json['remainingToday'] as num).toInt(),
+);

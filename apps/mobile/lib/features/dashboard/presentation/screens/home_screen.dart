@@ -80,8 +80,9 @@ class HomeScreen extends ConsumerWidget {
               quote: ref.watch(dailyQuoteProvider),
             ),
             _Section(
-              child:
-                  ConsistencyStreak(week: ref.watch(consistencyWeekProvider)),
+              child: ConsistencyStreak(
+                week: ref.watch(consistencyWeekProvider),
+              ),
             ),
             // Sans cible connue, la grille n'aurait que des tirets à montrer :
             // l'amorçage prend sa place, et lui seul porte alors son titre.
@@ -105,8 +106,10 @@ class HomeScreen extends ConsumerWidget {
             _Section(
               child: TodayWorkoutCard(
                 activeWorkout: activeWorkout,
-                templateCount:
-                    ref.watch(workoutTemplatesProvider).valueOrNull?.length,
+                templateCount: ref
+                    .watch(workoutTemplatesProvider)
+                    .valueOrNull
+                    ?.length,
                 onOpenTemplates: () => context.push(AppRoutes.templates),
                 onStart: () async {
                   if (activeWorkout == null) {
@@ -133,12 +136,13 @@ class HomeScreen extends ConsumerWidget {
                     answeredChoice: ref
                         .watch(answeredLessonsProvider)
                         .valueOrNull?[dailyLesson.id],
-                    onAnswered: (choice, correct) =>
-                        ref.read(academyActionsProvider).answer(
-                              lessonId: dailyLesson.id,
-                              choiceIndex: choice,
-                              correct: correct,
-                            ),
+                    onAnswered: (choice, correct) => ref
+                        .read(academyActionsProvider)
+                        .answer(
+                          lessonId: dailyLesson.id,
+                          choiceIndex: choice,
+                          correct: correct,
+                        ),
                   ),
                 ),
               ),
@@ -146,8 +150,10 @@ class HomeScreen extends ConsumerWidget {
               last: true,
               child: DailyFormBlock(
                 reading: ref.watch(formReadingProvider),
-                sessions:
-                    ref.watch(weekOverviewProvider).valueOrNull?.sessionsCount,
+                sessions: ref
+                    .watch(weekOverviewProvider)
+                    .valueOrNull
+                    ?.sessionsCount,
               ),
             ),
           ],

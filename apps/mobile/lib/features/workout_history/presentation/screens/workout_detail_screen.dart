@@ -51,10 +51,7 @@ class _DetailBody extends StatelessWidget {
         // Provenance de la séance : dénormalisée au lancement, donc lisible
         // pour toujours — même modèle renommé ou supprimé depuis.
         if (templateName != null) ...[
-          Text(
-            'Modèle · $templateName',
-            style: theme.textTheme.bodySmall,
-          ),
+          Text('Modèle · $templateName', style: theme.textTheme.bodySmall),
           const SizedBox(height: AppSpacing.xs),
         ],
         Row(

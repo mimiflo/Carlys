@@ -62,9 +62,9 @@ class AwardSeal extends StatelessWidget {
         text,
         style: (_isLarge ? AppTypography.metricS : AppTypography.labelMono)
             .copyWith(
-          fontSize: _isLarge ? (kind == RewardKind.titre ? 16 : 15) : 11,
-          color: AppColors.primaryLight,
-        ),
+              fontSize: _isLarge ? (kind == RewardKind.titre ? 16 : 15) : 11,
+              color: AppColors.primaryLight,
+            ),
       );
     }
     // Le certificat ne porte AUCUNE marque : ses filets de texte et son
@@ -78,12 +78,12 @@ class AwardSeal extends StatelessWidget {
   }
 
   static IconData _glyph(RewardKind kind) => switch (kind) {
-        RewardKind.badge => AppIcons.brandAcademy,
-        RewardKind.medaille => AppIcons.medal,
-        RewardKind.certificat => AppIcons.certificate,
-        RewardKind.record => AppIcons.record,
-        RewardKind.titre => AppIcons.crown,
-      };
+    RewardKind.badge => AppIcons.brandAcademy,
+    RewardKind.medaille => AppIcons.medal,
+    RewardKind.certificat => AppIcons.certificate,
+    RewardKind.record => AppIcons.record,
+    RewardKind.titre => AppIcons.crown,
+  };
 }
 
 /// Le peintre des cinq silhouettes.
@@ -173,16 +173,16 @@ class SealPainter extends CustomPainter {
     return switch (kind) {
       // Écu.
       RewardKind.badge => fromPoints(const [
-          Offset(.5, 0),
-          Offset(1, .20),
-          Offset(1, .62),
-          Offset(.5, 1),
-          Offset(0, .62),
-          Offset(0, .20),
-        ]),
+        Offset(.5, 0),
+        Offset(1, .20),
+        Offset(1, .62),
+        Offset(.5, 1),
+        Offset(0, .62),
+        Offset(0, .20),
+      ]),
       // Disque.
-      RewardKind.medaille => Path()
-        ..addOval(
+      RewardKind.medaille =>
+        Path()..addOval(
           Rect.fromCircle(
             center: Offset(w / 2, h * (_isLarge ? .56 : .5)),
             radius: w * (_isLarge ? .25 : .5),
@@ -190,34 +190,34 @@ class SealPainter extends CustomPainter {
         ),
       // Feuille dont le bas est déchiré en deux pointes.
       RewardKind.certificat => fromPoints(const [
-          Offset(.11, 0),
-          Offset(.89, 0),
-          Offset(.89, 1),
-          Offset(.70, .88),
-          Offset(.5, 1),
-          Offset(.30, .88),
-          Offset(.11, 1),
-        ]),
+        Offset(.11, 0),
+        Offset(.89, 0),
+        Offset(.89, 1),
+        Offset(.70, .88),
+        Offset(.5, 1),
+        Offset(.30, .88),
+        Offset(.11, 1),
+      ]),
       // Plaque à pointes latérales.
       RewardKind.record => fromPoints(const [
-          Offset(.12, .16),
-          Offset(.88, .16),
-          Offset(1, .5),
-          Offset(.88, .84),
-          Offset(.12, .84),
-          Offset(0, .5),
-        ]),
+        Offset(.12, .16),
+        Offset(.88, .16),
+        Offset(1, .5),
+        Offset(.88, .84),
+        Offset(.12, .84),
+        Offset(0, .5),
+      ]),
       // Cartouche octogonale.
       RewardKind.titre => fromPoints(const [
-          Offset(.30, 0),
-          Offset(.70, 0),
-          Offset(1, .30),
-          Offset(1, .70),
-          Offset(.70, 1),
-          Offset(.30, 1),
-          Offset(0, .70),
-          Offset(0, .30),
-        ]),
+        Offset(.30, 0),
+        Offset(.70, 0),
+        Offset(1, .30),
+        Offset(1, .70),
+        Offset(.70, 1),
+        Offset(.30, 1),
+        Offset(0, .70),
+        Offset(0, .30),
+      ]),
     };
   }
 

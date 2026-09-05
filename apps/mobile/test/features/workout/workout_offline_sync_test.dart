@@ -32,8 +32,7 @@ void main() {
           .where((op) => op.status == 'pending')
           .length;
 
-  test(
-      'séance complète hors ligne : rien n’est perdu, puis la synchronisation '
+  test('séance complète hors ligne : rien n’est perdu, puis la synchronisation '
       'rejoue tout dans l’ordre au retour du réseau', () async {
     api.networkDown = true;
 
@@ -122,81 +121,87 @@ void main() {
   });
 
   test(
-      'un refus serveur (4xx) marque l’opération en échec sans bloquer la file',
-      () async {
-    // Hors ligne pendant la préparation : la file s'accumule, la rejection
-    // est configurée AVANT toute livraison (déterministe face aux pokes).
-    api.networkDown = true;
-    final sessionId = await repository.startWorkout();
-    await repository.addSet(
-      AddSetInput(sessionId: sessionId, exerciseName: 'Rejetée', reps: 5),
-    );
-    await repository.addSet(
-      AddSetInput(sessionId: sessionId, exerciseName: 'Acceptée', reps: 5),
-    );
+    'un refus serveur (4xx) marque l’opération en échec sans bloquer la file',
+    () async {
+      // Hors ligne pendant la préparation : la file s'accumule, la rejection
+      // est configurée AVANT toute livraison (déterministe face aux pokes).
+      api.networkDown = true;
+      final sessionId = await repository.startWorkout();
+      await repository.addSet(
+        AddSetInput(sessionId: sessionId, exerciseName: 'Rejetée', reps: 5),
+      );
+      await repository.addSet(
+        AddSetInput(sessionId: sessionId, exerciseName: 'Acceptée', reps: 5),
+      );
 
-    final active = await repository.watchActiveWorkout().first;
-    final rejectedId = active!.sets.first.id;
-    api.rejectedIds.add(rejectedId);
+      final active = await repository.watchActiveWorkout().first;
+      final rejectedId = active!.sets.first.id;
+      api.rejectedIds.add(rejectedId);
 
-    api.networkDown = false;
-    clock = clock.add(const Duration(minutes: 10));
-    await engine.syncNow();
+      api.networkDown = false;
+      clock = clock.add(const Duration(minutes: 10));
+      await engine.syncNow();
 
-    // La série refusée est marquée failed, les suivantes sont passées.
-    expect(
-      api.log.where((entry) => entry.startsWith('set.upsert:')),
-      hasLength(1),
-    );
-    final operations = await db.select(db.syncOperations).get();
-    expect(operations.where((op) => op.status == 'failed'), hasLength(1));
-    expect(operations.where((op) => op.status == 'pending'), isEmpty);
+      // La série refusée est marquée failed, les suivantes sont passées.
+      expect(
+        api.log.where((entry) => entry.startsWith('set.upsert:')),
+        hasLength(1),
+      );
+      final operations = await db.select(db.syncOperations).get();
+      expect(operations.where((op) => op.status == 'failed'), hasLength(1));
+      expect(operations.where((op) => op.status == 'pending'), isEmpty);
 
-    final refreshed = await repository.workoutDetail(sessionId);
-    final rejectedSet =
-        refreshed!.sets.firstWhere((set) => set.id == rejectedId);
-    expect(rejectedSet.syncState, LocalSyncState.failed);
-  });
+      final refreshed = await repository.workoutDetail(sessionId);
+      final rejectedSet = refreshed!.sets.firstWhere(
+        (set) => set.id == rejectedId,
+      );
+      expect(rejectedSet.syncState, LocalSyncState.failed);
+    },
+  );
 
   test(
-      'suppression d’une série : disparition locale immédiate + opération de sync',
-      () async {
-    api.networkDown = true; // la file s'accumule, livraison contrôlée plus bas
-    final sessionId = await repository.startWorkout();
-    await repository.addSet(
-      AddSetInput(sessionId: sessionId, exerciseName: 'Pompes', reps: 10),
-    );
-    final active = await repository.watchActiveWorkout().first;
-    final setId = active!.sets.single.id;
+    'suppression d’une série : disparition locale immédiate + opération de sync',
+    () async {
+      api.networkDown =
+          true; // la file s'accumule, livraison contrôlée plus bas
+      final sessionId = await repository.startWorkout();
+      await repository.addSet(
+        AddSetInput(sessionId: sessionId, exerciseName: 'Pompes', reps: 10),
+      );
+      final active = await repository.watchActiveWorkout().first;
+      final setId = active!.sets.single.id;
 
-    await repository.deleteSet(setId);
+      await repository.deleteSet(setId);
 
-    final afterDelete = await repository.watchActiveWorkout().first;
-    expect(afterDelete!.sets, isEmpty);
+      final afterDelete = await repository.watchActiveWorkout().first;
+      expect(afterDelete!.sets, isEmpty);
 
-    api.networkDown = false;
-    clock = clock.add(const Duration(minutes: 10));
-    await engine.syncNow();
-    expect(api.log, contains('set.delete:$setId'));
-  });
+      api.networkDown = false;
+      clock = clock.add(const Duration(minutes: 10));
+      await engine.syncNow();
+      expect(api.log, contains('set.delete:$setId'));
+    },
+  );
 
-  test('une seule séance active à la fois ; clôture locale idempotente',
-      () async {
-    api.networkDown = true; // les opérations restent en file, comptables
-    final sessionId = await repository.startWorkout();
-    await expectLater(repository.startWorkout(), throwsStateError);
+  test(
+    'une seule séance active à la fois ; clôture locale idempotente',
+    () async {
+      api.networkDown = true; // les opérations restent en file, comptables
+      final sessionId = await repository.startWorkout();
+      await expectLater(repository.startWorkout(), throwsStateError);
 
-    await repository.completeWorkout(sessionId);
-    await repository.completeWorkout(sessionId); // rejeu sans effet
+      await repository.completeWorkout(sessionId);
+      await repository.completeWorkout(sessionId); // rejeu sans effet
 
-    final operations = await db.select(db.syncOperations).get();
-    expect(
-      operations.where((op) => op.operationType == 'session.complete'),
-      hasLength(1),
-    );
+      final operations = await db.select(db.syncOperations).get();
+      expect(
+        operations.where((op) => op.operationType == 'session.complete'),
+        hasLength(1),
+      );
 
-    // Une nouvelle séance peut démarrer après la clôture.
-    final secondId = await repository.startWorkout();
-    expect(secondId, isNot(sessionId));
-  });
+      // Une nouvelle séance peut démarrer après la clôture.
+      final secondId = await repository.startWorkout();
+      expect(secondId, isNot(sessionId));
+    },
+  );
 }

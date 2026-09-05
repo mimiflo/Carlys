@@ -39,7 +39,9 @@ class WaterLocalDataSource {
     return _db.transaction(() async {
       final current = await read(key);
       final next = (current + milliliters).clamp(0, _dailyCeiling);
-      await _db.into(_db.localWaterIntakes).insertOnConflictUpdate(
+      await _db
+          .into(_db.localWaterIntakes)
+          .insertOnConflictUpdate(
             LocalWaterIntakesCompanion.insert(
               day: key,
               milliliters: Value(next),

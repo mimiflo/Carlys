@@ -7,25 +7,27 @@ import '../../data/repositories/community_repository_impl.dart';
 import '../../domain/entities/community.dart';
 
 /// Encouragements reçus. Rafraîchis par invalidation après chaque action.
-final encouragementsProvider =
-    FutureProvider.autoDispose<List<Encouragement>>((ref) {
+final encouragementsProvider = FutureProvider.autoDispose<List<Encouragement>>((
+  ref,
+) {
   return ref.watch(communityRepositoryProvider).encouragements();
 });
 
 final communityFriendsProvider =
     FutureProvider.autoDispose<List<CommunityFriend>>((ref) {
-  return ref.watch(communityRepositoryProvider).friends();
-});
+      return ref.watch(communityRepositoryProvider).friends();
+    });
 
-final friendRequestsProvider =
-    FutureProvider.autoDispose<List<FriendRequest>>((ref) {
+final friendRequestsProvider = FutureProvider.autoDispose<List<FriendRequest>>((
+  ref,
+) {
   return ref.watch(communityRepositoryProvider).receivedRequests();
 });
 
 final communityChallengesProvider =
     FutureProvider.autoDispose<List<CommunityChallenge>>((ref) {
-  return ref.watch(communityRepositoryProvider).challenges();
-});
+      return ref.watch(communityRepositoryProvider).challenges();
+    });
 
 /// Ma préférence de partage — pilotée par le serveur, comme le reste.
 final sharesProgressProvider = FutureProvider.autoDispose<bool>((ref) {
@@ -71,7 +73,9 @@ class CommunityActions {
     required bool correct,
   }) async {
     try {
-      await _ref.read(communityRepositoryProvider).reportQuizAnswer(
+      await _ref
+          .read(communityRepositoryProvider)
+          .reportQuizAnswer(
             lessonId: lessonId,
             answeredOn: formatDayKey(DateTime.now()),
             correct: correct,

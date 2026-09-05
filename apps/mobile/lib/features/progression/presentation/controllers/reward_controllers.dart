@@ -123,13 +123,13 @@ final showcaseRewardsProvider = Provider<List<EarnedReward>>((ref) {
 });
 
 String _recordStory(PersonalRecordType type) => switch (type) {
-      PersonalRecordType.maxWeight =>
-        'Une charge que tu n’avais jamais tenue jusqu’ici.',
-      PersonalRecordType.maxReps =>
-        'Un nombre de répétitions jamais atteint sur ce mouvement.',
-      PersonalRecordType.maxSetVolume =>
-        'Le volume d’une série, jamais soulevé jusqu’ici.',
-    };
+  PersonalRecordType.maxWeight =>
+    'Une charge que tu n’avais jamais tenue jusqu’ici.',
+  PersonalRecordType.maxReps =>
+    'Un nombre de répétitions jamais atteint sur ce mouvement.',
+  PersonalRecordType.maxSetVolume =>
+    'Le volume d’une série, jamais soulevé jusqu’ici.',
+};
 
 /// Ce qui est à portée, pour dire quoi faire plutôt que d'afficher un vide.
 final nextRewardsProvider = Provider<List<Reward>>((ref) {

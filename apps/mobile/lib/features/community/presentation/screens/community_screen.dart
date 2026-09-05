@@ -34,19 +34,19 @@ class CommunityScreen extends ConsumerWidget {
     // franchement qu'il ne mène nulle part.
     final message = switch (input) {
       AddFriendByEmail(:final email) => await () async {
-          await actions.sendFriendRequest(email);
-          return 'Si ce compte existe, il recevra ta demande.';
-        }(),
-      AddFriendByCode(:final code) => switch (
-            await actions.sendFriendRequestByCode(code)) {
-          final String name => 'Demande envoyée à $name.',
-          null => 'Ce code ne mène à personne. Vérifie-le avec ton ami.',
-        },
+        await actions.sendFriendRequest(email);
+        return 'Si ce compte existe, il recevra ta demande.';
+      }(),
+      AddFriendByCode(:final code) => switch (await actions
+          .sendFriendRequestByCode(code)) {
+        final String name => 'Demande envoyée à $name.',
+        null => 'Ce code ne mène à personne. Vérifie-le avec ton ami.',
+      },
     };
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(message)),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(message)));
     }
   }
 
@@ -61,11 +61,13 @@ class CommunityScreen extends ConsumerWidget {
     final bottomInset =
         AppBottomBar.height + MediaQuery.paddingOf(context).bottom;
 
-    final isEmpty = (feed.valueOrNull?.isEmpty ?? true) &&
+    final isEmpty =
+        (feed.valueOrNull?.isEmpty ?? true) &&
         (friends.valueOrNull?.isEmpty ?? true) &&
         (requests.valueOrNull?.isEmpty ?? true) &&
         (challenges.valueOrNull?.isEmpty ?? true);
-    final loaded = !feed.isLoading &&
+    final loaded =
+        !feed.isLoading &&
         !friends.isLoading &&
         !requests.isLoading &&
         !challenges.isLoading;
@@ -78,7 +80,8 @@ class CommunityScreen extends ConsumerWidget {
     // conserve la valeur précédente (`valueOrNull` reste peuplé) et l'écran
     // continue de la montrer — remplacer la liste par un indicateur ferait
     // sauter la position de lecture à chaque écriture.
-    final hasData = feed.hasValue ||
+    final hasData =
+        feed.hasValue ||
         friends.hasValue ||
         requests.hasValue ||
         challenges.hasValue;
@@ -99,8 +102,9 @@ class CommunityScreen extends ConsumerWidget {
               Expanded(
                 child: Text(
                   'Communauté',
-                  style: AppTypography.display
-                      .copyWith(color: AppColors.darkTextPrimary),
+                  style: AppTypography.display.copyWith(
+                    color: AppColors.darkTextPrimary,
+                  ),
                 ),
               ),
               IconButton(
@@ -116,8 +120,9 @@ class CommunityScreen extends ConsumerWidget {
           const SizedBox(height: AppSpacing.xxs),
           Text(
             'On tient plus longtemps à plusieurs.',
-            style:
-                AppTypography.body.copyWith(color: AppColors.darkTextSecondary),
+            style: AppTypography.body.copyWith(
+              color: AppColors.darkTextSecondary,
+            ),
           ),
           const SizedBox(height: AppSpacing.gapRow),
           if (error != null)
@@ -125,7 +130,8 @@ class CommunityScreen extends ConsumerWidget {
               error: error,
               title: 'Communauté indisponible',
               message: 'Impossible de charger le fil pour le moment.',
-              offlineMessage: 'Les amis, les encouragements et les défis '
+              offlineMessage:
+                  'Les amis, les encouragements et les défis '
                   'vivent sur le serveur. Reviens quand le réseau est là.',
               onRetry: () {
                 ref
@@ -141,7 +147,8 @@ class CommunityScreen extends ConsumerWidget {
             AppEmptyState(
               icon: Icons.group_outlined,
               title: 'Personne ici pour l’instant',
-              message: 'Ajoute un premier ami par son adresse e-mail : vous '
+              message:
+                  'Ajoute un premier ami par son adresse e-mail : vous '
                   'verrez vos séries, et vous pourrez vous encourager.',
               actionLabel: 'Ajouter un ami',
               onAction: () => _addFriend(context, actions),
@@ -176,10 +183,8 @@ class CommunityScreen extends ConsumerWidget {
                   ?.map<Widget>(
                     (friend) => FriendCard(
                       friend: friend,
-                      onEncourage: () => actions.encourage(
-                        friend.id,
-                        'Continue, ça paie !',
-                      ),
+                      onEncourage: () =>
+                          actions.encourage(friend.id, 'Continue, ça paie !'),
                     ),
                   )
                   .toList(),

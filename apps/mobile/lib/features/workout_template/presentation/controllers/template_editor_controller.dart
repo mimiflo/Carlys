@@ -22,8 +22,9 @@ class TemplateEditorController
 
   @override
   Future<TemplateDraft> build(String templateId) async {
-    final detail =
-        await ref.watch(workoutTemplateDetailProvider(templateId).future);
+    final detail = await ref.watch(
+      workoutTemplateDetailProvider(templateId).future,
+    );
     // `null` est le cas normal d'une CRÉATION : l'éditeur part d'un brouillon
     // vide portant déjà l'identifiant du futur modèle.
     return detail == null
@@ -38,8 +39,8 @@ class TemplateEditorController
   void setName(String name) => _update(_draft.copyWith(name: name));
 
   void setNotes(String notes) => _update(
-        _draft.copyWith(notes: () => notes.trim().isEmpty ? null : notes),
-      );
+    _draft.copyWith(notes: () => notes.trim().isEmpty ? null : notes),
+  );
 
   /// Durée estimée en minutes ; une saisie vide ou illisible la retire.
   void setEstimatedDuration(String raw) {
@@ -127,5 +128,5 @@ class TemplateEditorController
 
 final templateEditorControllerProvider = AsyncNotifierProvider.autoDispose
     .family<TemplateEditorController, TemplateDraft, String>(
-  TemplateEditorController.new,
-);
+      TemplateEditorController.new,
+    );

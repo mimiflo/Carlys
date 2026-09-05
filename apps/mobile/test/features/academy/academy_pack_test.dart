@@ -47,57 +47,59 @@ void main() {
     expect(ids.length, lessons.length);
   });
 
-  test('chaque leçon porte son essentiel : points, illustration déclarée',
-      () async {
-    final lessons = await loadAcademyPack();
-    for (final lesson in lessons) {
-      expect(lesson.points, isNotEmpty, reason: lesson.id);
-      expect(lesson.points.length, lessThanOrEqualTo(4), reason: lesson.id);
-      expect(
-        lesson.image,
-        startsWith('assets/academy/'),
-        reason: lesson.id,
-      );
-    }
-  });
-
-  test('l’anatomie couvre les 12 groupes du catalogue, sans slug inventé',
-      () async {
-    // Les slugs de référence viennent du catalogue de démonstration —
-    // généré depuis le seed de l'API : la même vérité que la bibliothèque.
-    final catalog = jsonDecode(
-      File('assets/demo/catalog.json').readAsStringSync(),
-    ) as Map<String, dynamic>;
-    final knownSlugs = (catalog['muscleGroups'] as List<dynamic>)
-        .cast<Map<String, dynamic>>()
-        .map((group) => group['slug'] as String)
-        .toSet();
-
-    final lessons = await loadAcademyPack();
-    final taughtSlugs = <String>{};
-    for (final lesson in lessons) {
-      for (final slug in lesson.muscleGroupSlugs) {
-        expect(
-          knownSlugs,
-          contains(slug),
-          reason: '${lesson.id} enseigne un groupe inconnu : $slug',
-        );
-        taughtSlugs.add(slug);
+  test(
+    'chaque leçon porte son essentiel : points, illustration déclarée',
+    () async {
+      final lessons = await loadAcademyPack();
+      for (final lesson in lessons) {
+        expect(lesson.points, isNotEmpty, reason: lesson.id);
+        expect(lesson.points.length, lessThanOrEqualTo(4), reason: lesson.id);
+        expect(lesson.image, startsWith('assets/academy/'), reason: lesson.id);
       }
-    }
+    },
+  );
 
-    // Chaque muscle du catalogue a sa fiche : personne n'apprend « presque
-    // tout » le corps.
-    final anatomy =
-        lessons.where((lesson) => lesson.category == AcademyCategory.anatomie);
-    expect(taughtSlugs, knownSlugs);
-    for (final lesson in anatomy) {
-      expect(lesson.muscleGroupSlugs, isNotEmpty, reason: lesson.id);
-    }
-  });
+  test(
+    'l’anatomie couvre les 12 groupes du catalogue, sans slug inventé',
+    () async {
+      // Les slugs de référence viennent du catalogue de démonstration —
+      // généré depuis le seed de l'API : la même vérité que la bibliothèque.
+      final catalog =
+          jsonDecode(File('assets/demo/catalog.json').readAsStringSync())
+              as Map<String, dynamic>;
+      final knownSlugs = (catalog['muscleGroups'] as List<dynamic>)
+          .cast<Map<String, dynamic>>()
+          .map((group) => group['slug'] as String)
+          .toSet();
 
-  testWidgets('le ratio déclaré de chaque illustration correspond aux pixels',
-      (tester) async {
+      final lessons = await loadAcademyPack();
+      final taughtSlugs = <String>{};
+      for (final lesson in lessons) {
+        for (final slug in lesson.muscleGroupSlugs) {
+          expect(
+            knownSlugs,
+            contains(slug),
+            reason: '${lesson.id} enseigne un groupe inconnu : $slug',
+          );
+          taughtSlugs.add(slug);
+        }
+      }
+
+      // Chaque muscle du catalogue a sa fiche : personne n'apprend « presque
+      // tout » le corps.
+      final anatomy = lessons.where(
+        (lesson) => lesson.category == AcademyCategory.anatomie,
+      );
+      expect(taughtSlugs, knownSlugs);
+      for (final lesson in anatomy) {
+        expect(lesson.muscleGroupSlugs, isNotEmpty, reason: lesson.id);
+      }
+    },
+  );
+
+  testWidgets('le ratio déclaré de chaque illustration correspond aux pixels', (
+    tester,
+  ) async {
     // La carte réserve la boîte EXACTE de l'image (`imageRatio`) pour
     // l'afficher entière : un ratio faux ramènerait le rognage que ce champ
     // supprime. Ici, chaque fichier livré est décodé et comparé au pack —
@@ -148,18 +150,23 @@ void main() {
     }
   });
 
-  test('un échec de lecture ne condamne pas les rechargements suivants',
-      () async {
-    // Simule un bundle sans l'asset : le premier chargement échoue.
-    final messenger =
-        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
-    messenger.setMockMessageHandler('flutter/assets', (message) async => null);
-    await expectLater(loadAcademyPack(), throwsA(isA<Object>()));
+  test(
+    'un échec de lecture ne condamne pas les rechargements suivants',
+    () async {
+      // Simule un bundle sans l'asset : le premier chargement échoue.
+      final messenger =
+          TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+      messenger.setMockMessageHandler(
+        'flutter/assets',
+        (message) async => null,
+      );
+      await expectLater(loadAcademyPack(), throwsA(isA<Object>()));
 
-    // Le bundle redevient normal : le rechargement doit RÉESSAYER, pas
-    // resservir la future en échec restée mémoïsée.
-    messenger.setMockMessageHandler('flutter/assets', null);
-    final lessons = await loadAcademyPack();
-    expect(lessons, isNotEmpty);
-  });
+      // Le bundle redevient normal : le rechargement doit RÉESSAYER, pas
+      // resservir la future en échec restée mémoïsée.
+      messenger.setMockMessageHandler('flutter/assets', null);
+      final lessons = await loadAcademyPack();
+      expect(lessons, isNotEmpty);
+    },
+  );
 }

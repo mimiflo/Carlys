@@ -17,12 +17,14 @@ class RecordRow extends StatelessWidget {
     final tint = isLatest ? AppColors.accent : AppColors.primaryLight;
     final achievedAt = formatRelativeDayMono(record.achievedAt);
     final isReps = record.type == PersonalRecordType.maxReps;
-    final value =
-        isReps ? formatThousands(record.value) : formatDecimal(record.value);
+    final value = isReps
+        ? formatThousands(record.value)
+        : formatDecimal(record.value);
     final unit = isReps ? 'rép.' : 'kg';
 
     return Semantics(
-      label: '${record.exerciseName}, ${record.type.label} : '
+      label:
+          '${record.exerciseName}, ${record.type.label} : '
           '$value $unit, $achievedAt',
       child: Container(
         padding: const EdgeInsets.symmetric(
@@ -32,8 +34,9 @@ class RecordRow extends StatelessWidget {
         decoration: const BoxDecoration(
           color: AppColors.darkSurface,
           borderRadius: AppRadius.statTileAll,
-          border:
-              Border.fromBorderSide(BorderSide(color: AppColors.darkBorder)),
+          border: Border.fromBorderSide(
+            BorderSide(color: AppColors.darkBorder),
+          ),
         ),
         child: Row(
           children: [

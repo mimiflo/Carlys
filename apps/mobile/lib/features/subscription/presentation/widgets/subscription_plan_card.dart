@@ -16,8 +16,9 @@ class SubscriptionPlanCard extends StatelessWidget {
   final PlanStatus status;
 
   /// Rembourrage des cartes d'offre de la maquette.
-  static const EdgeInsets _padding =
-      EdgeInsets.all(AppSpacing.md + AppSpacing.xxs);
+  static const EdgeInsets _padding = EdgeInsets.all(
+    AppSpacing.md + AppSpacing.xxs,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -31,8 +32,9 @@ class SubscriptionPlanCard extends StatelessWidget {
             children: [
               Text(
                 status.planName,
-                style: AppTypography.subheading
-                    .copyWith(color: AppColors.darkTextPrimary),
+                style: AppTypography.subheading.copyWith(
+                  color: AppColors.darkTextPrimary,
+                ),
               ),
               const SizedBox(height: AppSpacing.xxs),
               Text(
@@ -68,7 +70,8 @@ class SubscriptionPlanCard extends StatelessWidget {
           );
 
     return Semantics(
-      label: 'Plan ${status.planName}, '
+      label:
+          'Plan ${status.planName}, '
           '${status.isPremium ? 'actif' : 'gratuit'}. $detail',
       excludeSemantics: true,
       child: card,
@@ -90,7 +93,8 @@ String _planDetail(PlanStatus status) {
   }
 
   final date = formatShortDateMono(end.toLocal());
-  final endsAccess = subscription.cancelAtPeriodEnd ||
+  final endsAccess =
+      subscription.cancelAtPeriodEnd ||
       subscription.state == SubscriptionState.canceled;
 
   // L'état « actif » est déjà porté par la pastille : ne pas le répéter,

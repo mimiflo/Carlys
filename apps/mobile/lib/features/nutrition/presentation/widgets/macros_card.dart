@@ -98,8 +98,9 @@ class MacroRow extends StatelessWidget {
               Expanded(
                 child: Text(
                   label,
-                  style: AppTypography.label
-                      .copyWith(color: AppColors.darkTextPrimary),
+                  style: AppTypography.label.copyWith(
+                    color: AppColors.darkTextPrimary,
+                  ),
                 ),
               ),
               Text(value, style: _valueStyle),

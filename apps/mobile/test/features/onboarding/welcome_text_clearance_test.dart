@@ -78,12 +78,7 @@ void main() {
     fontWeight: FontWeight.w700,
   );
 
-  const claimLines = [
-    'SCULPTE',
-    'TON PARCOURS.',
-    'SIGNE TON',
-    'CHEF-D’ŒUVRE.',
-  ];
+  const claimLines = ['SCULPTE', 'TON PARCOURS.', 'SIGNE TON', 'CHEF-D’ŒUVRE.'];
   const creedLines = [
     'Ton corps est TON œuvre.',
     'Ton parcours est TON histoire.',
@@ -102,7 +97,8 @@ void main() {
       expect(
         clearance,
         greaterThan(0),
-        reason: '« ${entry.key} » finit à ${entry.value.toStringAsFixed(3)} '
+        reason:
+            '« ${entry.key} » finit à ${entry.value.toStringAsFixed(3)} '
             'alors que la photographie peut apparaître dès '
             '${AthletePhotoFraming.fadeFrom} : les mots se poseraient sur '
             'la personne.',

@@ -15,35 +15,20 @@ library;
 /// qui rend la progression honnête plutôt que décorative.
 enum CarlysValue {
   /// Reviens-tu ? Le fait mesuré est la RÉGULARITÉ des séances.
-  constance(
-    'Constance',
-    'Revenir, semaine après semaine.',
-  ),
+  constance('Constance', 'Revenir, semaine après semaine.'),
 
   /// Comprends-tu ce que tu fais ? Le fait mesuré est l'ACADEMY.
-  maitrise(
-    'Maîtrise',
-    'Comprendre le pourquoi avant le combien.',
-  ),
+  maitrise('Maîtrise', 'Comprendre le pourquoi avant le combien.'),
 
   /// Progresses-tu ? Le fait mesuré est la CHARGE réellement soulevée.
-  performance(
-    'Performance',
-    'Demander un peu plus, régulièrement.',
-  ),
+  performance('Performance', 'Demander un peu plus, régulièrement.'),
 
   /// Tiens-tu ce que tu as prévu ? Le fait mesuré est le respect des
   /// SÉANCES PRÉVUES, terminées plutôt qu'abandonnées.
-  discipline(
-    'Discipline',
-    'Tenir le rendez-vous, même au format court.',
-  ),
+  discipline('Discipline', 'Tenir le rendez-vous, même au format court.'),
 
   /// Récupères-tu ? Le fait mesuré est le REPOS et le suivi du corps.
-  equilibre(
-    'Équilibre',
-    'Récupérer fait partie de l’entraînement.',
-  );
+  equilibre('Équilibre', 'Récupérer fait partie de l’entraînement.');
 
   const CarlysValue(this.label, this.promise);
 

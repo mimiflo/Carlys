@@ -67,14 +67,14 @@ class SectionTitleBar extends StatelessWidget {
   static const double _leadingWidth = 14 + AppSpacing.xxs + 1;
 
   TextStyle get _labelStyle => AppTypography.labelMono.copyWith(
-        letterSpacing: 1.4,
-        color: AppColors.darkTextTertiary,
-      );
+    letterSpacing: 1.4,
+    color: AppColors.darkTextTertiary,
+  );
 
   TextStyle get _trailingStyle => AppTypography.labelMono.copyWith(
-        fontWeight: FontWeight.w700,
-        color: trailingColor,
-      );
+    fontWeight: FontWeight.w700,
+    color: trailingColor,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -85,12 +85,13 @@ class SectionTitleBar extends StatelessWidget {
     final trailingWidth = value == null
         ? 0.0
         : _gap +
-            (leading == null ? 0.0 : _leadingWidth) +
-            _measure(value.toUpperCase(), _trailingStyle, scaler);
+              (leading == null ? 0.0 : _leadingWidth) +
+              _measure(value.toUpperCase(), _trailingStyle, scaler);
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        final free = constraints.maxWidth -
+        final free =
+            constraints.maxWidth -
             iconSize -
             _gap -
             _gap -

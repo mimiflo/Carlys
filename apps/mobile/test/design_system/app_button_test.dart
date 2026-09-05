@@ -15,12 +15,7 @@ void main() {
       var pressed = false;
 
       await tester.pumpWidget(
-        _wrap(
-          AppButton(
-            label: 'Valider',
-            onPressed: () => pressed = true,
-          ),
-        ),
+        _wrap(AppButton(label: 'Valider', onPressed: () => pressed = true)),
       );
 
       await tester.tap(find.text('Valider'));
@@ -36,8 +31,9 @@ void main() {
       expect(button.onPressed, isNull);
     });
 
-    testWidgets('en chargement : bouton désactivé et indicateur visible',
-        (tester) async {
+    testWidgets('en chargement : bouton désactivé et indicateur visible', (
+      tester,
+    ) async {
       var pressed = false;
 
       await tester.pumpWidget(
@@ -58,8 +54,9 @@ void main() {
       expect(pressed, isFalse);
     });
 
-    testWidgets('la variante destructive utilise la couleur d’erreur',
-        (tester) async {
+    testWidgets('la variante destructive utilise la couleur d’erreur', (
+      tester,
+    ) async {
       await tester.pumpWidget(
         _wrap(
           const AppButton(
@@ -71,15 +68,17 @@ void main() {
       );
 
       final button = tester.widget<FilledButton>(find.byType(FilledButton));
-      final background =
-          button.style?.backgroundColor?.resolve(<WidgetState>{});
+      final background = button.style?.backgroundColor?.resolve(
+        <WidgetState>{},
+      );
       expect(background, AppColors.danger);
     });
   });
 
   group('AppBrandButton', () {
-    testWidgets('s’active depuis un lecteur d’écran, pas seulement au doigt',
-        (tester) async {
+    testWidgets('s’active depuis un lecteur d’écran, pas seulement au doigt', (
+      tester,
+    ) async {
       // Le bouton est peint et touché par un GestureDetector, invisible à la
       // couche d'accessibilité : c'est le nœud Semantics au-dessus qui doit
       // porter l'action. S'annoncer « bouton » sans publier de tap est pire
@@ -93,11 +92,7 @@ void main() {
 
       expect(
         tester.getSemantics(find.bySemanticsLabel('Commencer')),
-        isSemantics(
-          label: 'Commencer',
-          isButton: true,
-          hasTapAction: true,
-        ),
+        isSemantics(label: 'Commencer', isButton: true, hasTapAction: true),
       );
 
       tester.semantics.tap(find.semantics.byLabel('Commencer'));

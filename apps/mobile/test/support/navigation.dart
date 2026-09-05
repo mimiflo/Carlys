@@ -12,10 +12,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 Future<void> tapTab(WidgetTester tester, String label) async {
   await tester.tap(
-    find.descendant(
-      of: find.byType(AppBottomBar),
-      matching: find.text(label),
-    ),
+    find.descendant(of: find.byType(AppBottomBar), matching: find.text(label)),
   );
   await tester.pumpAndSettle();
 }

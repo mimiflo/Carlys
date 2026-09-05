@@ -17,21 +17,22 @@ HeartScenePainter painterOf(WidgetTester tester) {
 }
 
 Widget host() => MaterialApp(
-      home: Scaffold(
-        body: SceneScrollActivity(
-          child: ListView(
-            children: [
-              const SizedBox(height: 320, child: HeartScene()),
-              for (var i = 0; i < 20; i++) const SizedBox(height: 100),
-            ],
-          ),
-        ),
+  home: Scaffold(
+    body: SceneScrollActivity(
+      child: ListView(
+        children: [
+          const SizedBox(height: 320, child: HeartScene()),
+          for (var i = 0; i < 20; i++) const SizedBox(height: 100),
+        ],
       ),
-    );
+    ),
+  ),
+);
 
 void main() {
-  testWidgets('le cœur se fige pendant le défilement, reprend sans reculer',
-      (tester) async {
+  testWidgets('le cœur se fige pendant le défilement, reprend sans reculer', (
+    tester,
+  ) async {
     await tester.pumpWidget(host());
     await tester.pump(const Duration(milliseconds: 400));
     expect(painterOf(tester).seconds, greaterThan(0));
@@ -56,8 +57,9 @@ void main() {
     expect(resumed, greaterThan(frozen));
   });
 
-  testWidgets('après une pichenette, la reprise attend la quiétude',
-      (tester) async {
+  testWidgets('après une pichenette, la reprise attend la quiétude', (
+    tester,
+  ) async {
     // Réveiller la scène à l'instant EXACT où l'inertie s'arrête tombait
     // pile quand l'œil suit encore le mouvement : le réveil se lisait comme
     // un accroc de fin de glissade. La reprise attend donc un court délai.
@@ -68,8 +70,9 @@ void main() {
     final frozen = painterOf(tester).seconds;
 
     // Pendant TOUTE l'inertie, la scène reste figée.
-    final position =
-        tester.state<ScrollableState>(find.byType(Scrollable).first).position;
+    final position = tester
+        .state<ScrollableState>(find.byType(Scrollable).first)
+        .position;
     var guard = 0;
     while (position.isScrollingNotifier.value && guard < 100) {
       await tester.pump(const Duration(milliseconds: 50));
@@ -88,8 +91,9 @@ void main() {
     expect(painterOf(tester).seconds, greaterThan(frozen));
   });
 
-  testWidgets('hors de toute portée SceneScrollActivity, rien ne change',
-      (tester) async {
+  testWidgets('hors de toute portée SceneScrollActivity, rien ne change', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       const MaterialApp(
         home: Scaffold(body: SizedBox(height: 320, child: HeartScene())),

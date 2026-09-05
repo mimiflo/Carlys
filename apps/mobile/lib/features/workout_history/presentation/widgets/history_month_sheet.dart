@@ -48,14 +48,16 @@ class _MonthSheet extends StatelessWidget {
                     const SizedBox(height: AppSpacing.xs),
                 itemBuilder: (context, index) {
                   final month = months[index];
-                  final isSelected = month.year == selected.year &&
+                  final isSelected =
+                      month.year == selected.year &&
                       month.month == selected.month;
 
                   return AppListRow(
                     title: formatMonthYearCapitalized(month),
                     leading: AppIcons.calendar,
-                    leadingTint:
-                        isSelected ? AppColors.accent : AppColors.primaryLight,
+                    leadingTint: isSelected
+                        ? AppColors.accent
+                        : AppColors.primaryLight,
                     trailing: isSelected
                         ? const Icon(
                             AppIcons.check,

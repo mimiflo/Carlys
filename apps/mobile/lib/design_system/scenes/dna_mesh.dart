@@ -115,8 +115,10 @@ class DnaMesh {
   late final Int32List colors = Int32List(vertexCount);
   late final Uint16List drawOrder = Uint16List(indices.length);
   late final Float64List partDepth = Float64List(parts.length);
-  late final List<int> partOrder =
-      List<int>.generate(parts.length, (index) => index);
+  late final List<int> partOrder = List<int>.generate(
+    parts.length,
+    (index) => index,
+  );
 
   /// Brin en tube : repère parallèle transporté le long de l'hélice, donc
   /// aucune vrille des anneaux d'un bout à l'autre.

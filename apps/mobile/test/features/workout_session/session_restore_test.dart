@@ -118,54 +118,56 @@ void main() {
   WorkoutRepositoryImpl repositoryOn(_FakeRemote remote) =>
       WorkoutRepositoryImpl(database: db, syncEngine: engine, remote: remote);
 
-  test('un appareil neuf retrouve la séance en cours AVEC ses cibles',
-      () async {
-    final remote = _FakeRemote([
-      _pushSession(
-        firstDoneSetId: 'set-1',
-        sets: [
-          RemoteWorkoutSet(
-            id: 'set-1',
-            exerciseId: 'exo-dc',
-            exerciseName: 'Développé couché',
-            position: 0,
-            kind: 'NORMAL',
-            reps: 7,
-            weightKg: 70,
-            plannedReps: 8,
-            plannedWeightKg: 70,
-            completedAt: DateTime.utc(2026, 8, 8, 17, 5),
-          ),
-        ],
-      ),
-    ]);
-    final workouts = repositoryOn(remote);
+  test(
+    'un appareil neuf retrouve la séance en cours AVEC ses cibles',
+    () async {
+      final remote = _FakeRemote([
+        _pushSession(
+          firstDoneSetId: 'set-1',
+          sets: [
+            RemoteWorkoutSet(
+              id: 'set-1',
+              exerciseId: 'exo-dc',
+              exerciseName: 'Développé couché',
+              position: 0,
+              kind: 'NORMAL',
+              reps: 7,
+              weightKg: 70,
+              plannedReps: 8,
+              plannedWeightKg: 70,
+              completedAt: DateTime.utc(2026, 8, 8, 17, 5),
+            ),
+          ],
+        ),
+      ]);
+      final workouts = repositoryOn(remote);
 
-    await workouts.restoreSessions();
+      await workouts.restoreSessions();
 
-    // 1. La séance revient telle quelle, marquée comme déjà synchronisée.
-    final active = await workouts.watchActiveWorkout().first;
-    expect(active, isNotNull);
-    expect(active!.session.id, 'session-1');
-    expect(active.session.templateName, 'Push force');
-    expect(active.session.syncState, LocalSyncState.synced);
-    expect(active.sets, hasLength(1));
-    // La déviation reste lisible : 7 faites pour 8 prévues.
-    expect(active.sets.single.reps, 7);
-    expect(active.sets.single.plannedReps, 8);
+      // 1. La séance revient telle quelle, marquée comme déjà synchronisée.
+      final active = await workouts.watchActiveWorkout().first;
+      expect(active, isNotNull);
+      expect(active!.session.id, 'session-1');
+      expect(active.session.templateName, 'Push force');
+      expect(active.session.syncState, LocalSyncState.synced);
+      expect(active.sets, hasLength(1));
+      // La déviation reste lisible : 7 faites pour 8 prévues.
+      expect(active.sets.single.reps, 7);
+      expect(active.sets.single.plannedReps, 8);
 
-    // 2. Le plan aussi — c'est précisément ce qui manquait.
-    final plan = await templates.sessionPlan('session-1');
-    expect(plan, isNotNull);
-    expect(plan!.totalCount, 3);
-    expect(plan.doneCount, 1);
-    expect(plan.items.first.doneSetId, 'set-1');
-    expect(plan.items.first.targetReps, 8);
-    expect(plan.items.first.targetWeightKg, 70);
-    // La séance reprend là où l'autre appareil l'a laissée.
-    expect(plan.current!.id, 'plan-2');
-    expect(plan.progressOfExercise(0), (1, 2));
-  });
+      // 2. Le plan aussi — c'est précisément ce qui manquait.
+      final plan = await templates.sessionPlan('session-1');
+      expect(plan, isNotNull);
+      expect(plan!.totalCount, 3);
+      expect(plan.doneCount, 1);
+      expect(plan.items.first.doneSetId, 'set-1');
+      expect(plan.items.first.targetReps, 8);
+      expect(plan.items.first.targetWeightKg, 70);
+      // La séance reprend là où l'autre appareil l'a laissée.
+      expect(plan.current!.id, 'plan-2');
+      expect(plan.progressOfExercise(0), (1, 2));
+    },
+  );
 
   test('une série passée ailleurs n’est pas reproposée', () async {
     final remote = _FakeRemote([_pushSession(secondSkipped: true)]);
@@ -177,16 +179,15 @@ void main() {
     // Deux séries restent : la 1re du développé couché et les Dips. La série
     // passée sur l'autre appareil n'est pas reproposée ici.
     expect(plan.remainingCount, 2);
-    expect(
-      plan.nextPendingFor(exerciseName: 'Développé couché')?.id,
-      'plan-1',
-    );
+    expect(plan.nextPendingFor(exerciseName: 'Développé couché')?.id, 'plan-1');
   });
 
   test('une saisie locale non acquittée n’est JAMAIS écrasée', () async {
     final remote = _FakeRemote([_pushSession()]);
     // L'appareil a sa propre version de la séance, pas encore poussée.
-    await db.into(db.localWorkoutSessions).insert(
+    await db
+        .into(db.localWorkoutSessions)
+        .insert(
           LocalWorkoutSessionsCompanion.insert(
             id: 'session-1',
             name: const Value('Saisie locale'),
@@ -202,22 +203,24 @@ void main() {
     expect(remote.detailCalls, isEmpty); // même pas téléchargée
   });
 
-  test('un « passer » encore en file protège la séance du rapatriement',
-      () async {
-    final remote = _FakeRemote([_pushSession()]);
-    // Séance et séries acquittées, mais un « passer » attend son tour :
-    // hors ligne, l'opération reste en file.
-    await repositoryOn(_FakeRemote([_pushSession()])).restoreSessions();
-    api.networkDown = true;
-    await templates.skipPlanItem('plan-2');
+  test(
+    'un « passer » encore en file protège la séance du rapatriement',
+    () async {
+      final remote = _FakeRemote([_pushSession()]);
+      // Séance et séries acquittées, mais un « passer » attend son tour :
+      // hors ligne, l'opération reste en file.
+      await repositoryOn(_FakeRemote([_pushSession()])).restoreSessions();
+      api.networkDown = true;
+      await templates.skipPlanItem('plan-2');
 
-    await repositoryOn(remote).restoreSessions();
+      await repositoryOn(remote).restoreSessions();
 
-    final plan = await templates.sessionPlan('session-1');
-    // Le serveur ne l'a pas remis à zéro.
-    expect(plan!.items[1].skipped, isTrue);
-    expect(remote.detailCalls, isEmpty);
-  });
+      final plan = await templates.sessionPlan('session-1');
+      // Le serveur ne l'a pas remis à zéro.
+      expect(plan!.items[1].skipped, isTrue);
+      expect(remote.detailCalls, isEmpty);
+    },
+  );
 
   test('une séance déjà acquittée est rafraîchie sans conflit', () async {
     await repositoryOn(_FakeRemote([_pushSession()])).restoreSessions();
@@ -258,27 +261,31 @@ void main() {
     expect(history.single.session.status, WorkoutStatus.completed);
   });
 
-  test('la séance en cours DE CET APPAREIL prime sur celle du serveur',
-      () async {
-    final remote = _FakeRemote([_pushSession()]);
-    // L'utilisateur a démarré une séance libre ici, déjà acquittée.
-    await db.into(db.localWorkoutSessions).insert(
-          LocalWorkoutSessionsCompanion.insert(
-            id: 'session-locale',
-            name: const Value('Séance libre'),
-            status: 'IN_PROGRESS',
-            startedAt: DateTime.utc(2026, 8, 8, 18),
-            syncStatus: const Value('synced'),
-          ),
-        );
+  test(
+    'la séance en cours DE CET APPAREIL prime sur celle du serveur',
+    () async {
+      final remote = _FakeRemote([_pushSession()]);
+      // L'utilisateur a démarré une séance libre ici, déjà acquittée.
+      await db
+          .into(db.localWorkoutSessions)
+          .insert(
+            LocalWorkoutSessionsCompanion.insert(
+              id: 'session-locale',
+              name: const Value('Séance libre'),
+              status: 'IN_PROGRESS',
+              startedAt: DateTime.utc(2026, 8, 8, 18),
+              syncStatus: const Value('synced'),
+            ),
+          );
 
-    await repositoryOn(remote).restoreSessions();
+      await repositoryOn(remote).restoreSessions();
 
-    // Au plus une séance en cours : la distante attend son tour sur le
-    // serveur, elle n'est pas perdue.
-    final active = await db.select(db.localWorkoutSessions).get();
-    expect(active.map((row) => row.id), ['session-locale']);
-  });
+      // Au plus une séance en cours : la distante attend son tour sur le
+      // serveur, elle n'est pas perdue.
+      final active = await db.select(db.localWorkoutSessions).get();
+      expect(active.map((row) => row.id), ['session-locale']);
+    },
+  );
 
   test('sans source distante, le rapatriement ne fait rien', () async {
     final workouts = WorkoutRepositoryImpl(database: db, syncEngine: engine);

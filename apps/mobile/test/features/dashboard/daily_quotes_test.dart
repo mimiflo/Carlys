@@ -80,17 +80,8 @@ void main() {
         'no pain',
         'jusqu’à l’échec',
       ],
-      'le perfectionnisme': [
-        'parfaitement',
-        'sans faute',
-        'irréprochable',
-      ],
-      'le jugement du corps': [
-        'ne ment pas',
-        'gros',
-        'maigre',
-        'ton reflet',
-      ],
+      'le perfectionnisme': ['parfaitement', 'sans faute', 'irréprochable'],
+      'le jugement du corps': ['ne ment pas', 'gros', 'maigre', 'ton reflet'],
     };
 
     for (final entry in forbidden.entries) {

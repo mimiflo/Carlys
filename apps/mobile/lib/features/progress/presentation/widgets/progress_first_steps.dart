@@ -38,16 +38,18 @@ class ProgressFirstSteps extends ConsumerWidget {
             const SizedBox(height: AppSpacing.sm),
             Text(
               'Rien à mesurer pour l’instant',
-              style: AppTypography.subheading
-                  .copyWith(color: AppColors.darkTextPrimary),
+              style: AppTypography.subheading.copyWith(
+                color: AppColors.darkTextPrimary,
+              ),
             ),
             const SizedBox(height: AppSpacing.xxs),
             Text(
               'Ta première séance terminée ouvre le volume, les tuiles de la '
               'période et tes records. Ton poids, lui, se note dès '
               'maintenant : le calcul de ta nutrition en a besoin.',
-              style: AppTypography.body
-                  .copyWith(color: AppColors.darkTextSecondary),
+              style: AppTypography.body.copyWith(
+                color: AppColors.darkTextSecondary,
+              ),
             ),
             const SizedBox(height: AppSpacing.md),
             AppButton(

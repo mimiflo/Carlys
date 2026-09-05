@@ -22,7 +22,8 @@ class SessionsController
   }
 }
 
-final sessionsControllerProvider = AsyncNotifierProvider.autoDispose<
-    SessionsController, List<AuthSessionDevice>>(
-  SessionsController.new,
-);
+final sessionsControllerProvider =
+    AsyncNotifierProvider.autoDispose<
+      SessionsController,
+      List<AuthSessionDevice>
+    >(SessionsController.new);

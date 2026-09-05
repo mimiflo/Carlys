@@ -62,7 +62,8 @@ class WorkoutProgressSegments extends StatelessWidget {
   }
 
   String _label(int upcoming) {
-    final done = '${formatThousands(completed)} série'
+    final done =
+        '${formatThousands(completed)} série'
         '${completed > 1 ? 's' : ''} enregistrée${completed > 1 ? 's' : ''}';
     if (upcoming == 0) {
       return 'Progression de la séance : $done';

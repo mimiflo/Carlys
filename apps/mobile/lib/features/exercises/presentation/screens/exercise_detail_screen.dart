@@ -48,7 +48,8 @@ class ExerciseDetailScreen extends ConsumerWidget {
           // Sa boîte tactile déborde de l'ornement : on la recule d'autant
           // pour que l'ornement tombe exactement sur la marge de la maquette.
           Positioned(
-            top: MediaQuery.paddingOf(context).top +
+            top:
+                MediaQuery.paddingOf(context).top +
                 _backButtonTop -
                 ExerciseGlassButton.inset,
             left: AppSpacing.gutter - ExerciseGlassButton.inset,
@@ -127,32 +128,29 @@ class _PremiumRequiredState extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(
-              AppIcons.premium,
-              size: 44,
-              color: AppColors.accent,
-            ),
+            const Icon(AppIcons.premium, size: 44, color: AppColors.accent),
             const SizedBox(height: AppSpacing.md),
             Text(
               'Exercice Premium',
-              style: AppTypography.title
-                  .copyWith(color: AppColors.darkTextPrimary),
+              style: AppTypography.title.copyWith(
+                color: AppColors.darkTextPrimary,
+              ),
             ),
             const SizedBox(height: AppSpacing.xs),
             Text(
               'Cet exercice fait partie du catalogue Premium. '
               'Votre abonnement donne accès à l’intégralité des mouvements.',
               textAlign: TextAlign.center,
-              style: AppTypography.body
-                  .copyWith(color: AppColors.darkTextSecondary),
+              style: AppTypography.body.copyWith(
+                color: AppColors.darkTextSecondary,
+              ),
             ),
             const SizedBox(height: AppSpacing.lg),
             AppButton(
               label: 'Voir mon abonnement',
               icon: AppIcons.premium,
-              onPressed: () => GoRouter.of(context).push(
-                AppRoutes.subscription,
-              ),
+              onPressed: () =>
+                  GoRouter.of(context).push(AppRoutes.subscription),
             ),
           ],
         ),

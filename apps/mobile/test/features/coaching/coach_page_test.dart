@@ -37,17 +37,15 @@ void main() {
           // poids : trois dépôts qui n'ont rien à faire dans ce test.
           coachSuggestionsProvider.overrideWithValue(suggestions),
         ],
-        child: MaterialApp(
-          theme: AppTheme.dark(),
-          home: const CoachPage(),
-        ),
+        child: MaterialApp(theme: AppTheme.dark(), home: const CoachPage()),
       ),
     );
     await tester.pumpAndSettle();
   }
 
-  testWidgets('sans le droit, l’écran mène à Premium — pas une erreur',
-      (tester) async {
+  testWidgets('sans le droit, l’écran mène à Premium — pas une erreur', (
+    tester,
+  ) async {
     await pumpPage(
       tester,
       FakeCoachRepository(
@@ -61,8 +59,9 @@ void main() {
     expect(find.text('Coach indisponible'), findsNothing);
   });
 
-  testWidgets('hors ligne, l’écran le dit et propose de réessayer',
-      (tester) async {
+  testWidgets('hors ligne, l’écran le dit et propose de réessayer', (
+    tester,
+  ) async {
     await pumpPage(
       tester,
       FakeCoachRepository(
@@ -74,8 +73,9 @@ void main() {
     expect(find.text('Réessayer'), findsOneWidget);
   });
 
-  testWidgets('coach coupé côté serveur : une pause, pas une erreur',
-      (tester) async {
+  testWidgets('coach coupé côté serveur : une pause, pas une erreur', (
+    tester,
+  ) async {
     await pumpPage(
       tester,
       FakeCoachRepository(
@@ -86,8 +86,9 @@ void main() {
     expect(find.text('Le coach est en pause'), findsOneWidget);
   });
 
-  testWidgets('un fil vide n’est PAS créé tant qu’on n’a rien écrit',
-      (tester) async {
+  testWidgets('un fil vide n’est PAS créé tant qu’on n’a rien écrit', (
+    tester,
+  ) async {
     final repository = FakeCoachRepository();
     await pumpPage(tester, repository);
 
@@ -103,8 +104,9 @@ void main() {
     expect(repository.sent, ['Par où je commence ?']);
   });
 
-  testWidgets('la question et la réponse s’affichent, le champ se vide',
-      (tester) async {
+  testWidgets('la question et la réponse s’affichent, le champ se vide', (
+    tester,
+  ) async {
     final repository = FakeCoachRepository(threads: [thread]);
     await pumpPage(tester, repository);
 
@@ -120,31 +122,31 @@ void main() {
     );
   });
 
-  testWidgets('au plafond du jour, le refus est expliqué et la question reste',
-      (tester) async {
-    final repository = FakeCoachRepository(
-      threads: [thread],
-      sendError: const ServerException('plafond', statusCode: 429),
-    );
-    await pumpPage(tester, repository);
+  testWidgets(
+    'au plafond du jour, le refus est expliqué et la question reste',
+    (tester) async {
+      final repository = FakeCoachRepository(
+        threads: [thread],
+        sendError: const ServerException('plafond', statusCode: 429),
+      );
+      await pumpPage(tester, repository);
 
-    await tester.enterText(find.byType(TextField), 'Encore une');
-    await tester.tap(find.bySemanticsLabel('Envoyer'));
-    await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), 'Encore une');
+      await tester.tap(find.bySemanticsLabel('Envoyer'));
+      await tester.pumpAndSettle();
 
-    expect(
-      find.textContaining('nombre de messages du jour'),
-      findsOneWidget,
-    );
-    // Rien n'est perdu : le texte est toujours là, prêt à repartir demain.
-    expect(
-      tester.widget<TextField>(find.byType(TextField)).controller?.text,
-      'Encore une',
-    );
-  });
+      expect(find.textContaining('nombre de messages du jour'), findsOneWidget);
+      // Rien n'est perdu : le texte est toujours là, prêt à repartir demain.
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).controller?.text,
+        'Encore une',
+      );
+    },
+  );
 
-  testWidgets('réseau perdu à l’envoi : le composeur bascule hors ligne',
-      (tester) async {
+  testWidgets('réseau perdu à l’envoi : le composeur bascule hors ligne', (
+    tester,
+  ) async {
     final repository = FakeCoachRepository(
       threads: [thread],
       sendError: const NetworkException('Serveur injoignable'),

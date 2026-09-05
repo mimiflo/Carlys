@@ -58,10 +58,10 @@ class LinearRgb {
   const LinearRgb(this.r, this.g, this.b);
 
   factory LinearRgb.fromHex(int hex) => LinearRgb(
-        srgbToLinear(((hex >> 16) & 0xFF) / 255),
-        srgbToLinear(((hex >> 8) & 0xFF) / 255),
-        srgbToLinear((hex & 0xFF) / 255),
-      );
+    srgbToLinear(((hex >> 16) & 0xFF) / 255),
+    srgbToLinear(((hex >> 8) & 0xFF) / 255),
+    srgbToLinear((hex & 0xFF) / 255),
+  );
 
   final double r;
   final double g;
@@ -70,10 +70,10 @@ class LinearRgb {
   LinearRgb scaled(double k) => LinearRgb(r * k, g * k, b * k);
 
   LinearRgb lerpTo(LinearRgb other, double t) => LinearRgb(
-        r + (other.r - r) * t,
-        g + (other.g - g) * t,
-        b + (other.b - b) * t,
-      );
+    r + (other.r - r) * t,
+    g + (other.g - g) * t,
+    b + (other.b - b) * t,
+  );
 }
 
 /// Nature d'une source lumineuse.
@@ -82,12 +82,12 @@ enum LightKind { ambient, point, directional }
 /// Source lumineuse en unités physiques (comme three.js sans `useLegacyLights`).
 class SceneLight {
   const SceneLight.ambient(this.color)
-      : kind = LightKind.ambient,
-        intensity = 1,
-        x = 0,
-        y = 0,
-        z = 0,
-        cutoff = 0;
+    : kind = LightKind.ambient,
+      intensity = 1,
+      x = 0,
+      y = 0,
+      z = 0,
+      cutoff = 0;
 
   /// Lampe ponctuelle : l'éclairement décroît en 1/d², borné par [cutoff].
   const SceneLight.point(
@@ -107,8 +107,8 @@ class SceneLight {
     required this.x,
     required this.y,
     required this.z,
-  })  : kind = LightKind.directional,
-        cutoff = 0;
+  }) : kind = LightKind.directional,
+       cutoff = 0;
 
   final LightKind kind;
   final LinearRgb color;

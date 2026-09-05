@@ -18,26 +18,26 @@ const List<NutritionGoal> onboardingGoals = [
 ];
 
 IconData goalIcon(NutritionGoal goal) => switch (goal) {
-      NutritionGoal.gainMuscle => AppIcons.workout,
-      NutritionGoal.loseWeight => Icons.local_fire_department_rounded,
-      NutritionGoal.maintain => Icons.self_improvement_rounded,
-    };
+  NutritionGoal.gainMuscle => AppIcons.workout,
+  NutritionGoal.loseWeight => Icons.local_fire_department_rounded,
+  NutritionGoal.maintain => Icons.self_improvement_rounded,
+};
 
 String goalSubtitle(NutritionGoal goal) => switch (goal) {
-      NutritionGoal.gainMuscle => 'Surplus léger · volume élevé',
-      NutritionGoal.loseWeight => 'Déficit maîtrisé · cardio',
-      NutritionGoal.maintain => 'Régularité avant tout',
-    };
+  NutritionGoal.gainMuscle => 'Surplus léger · volume élevé',
+  NutritionGoal.loseWeight => 'Déficit maîtrisé · cardio',
+  NutritionGoal.maintain => 'Régularité avant tout',
+};
 
 IconData sexIcon(BiologicalSex sex) => switch (sex) {
-      BiologicalSex.male => Icons.male_rounded,
-      BiologicalSex.female => Icons.female_rounded,
-    };
+  BiologicalSex.male => Icons.male_rounded,
+  BiologicalSex.female => Icons.female_rounded,
+};
 
 IconData activityIcon(ActivityLevel level) => switch (level) {
-      ActivityLevel.sedentary => Icons.weekend_rounded,
-      ActivityLevel.light => Icons.directions_walk_rounded,
-      ActivityLevel.moderate => Icons.directions_run_rounded,
-      ActivityLevel.active => AppIcons.workout,
-      ActivityLevel.veryActive => Icons.bolt_rounded,
-    };
+  ActivityLevel.sedentary => Icons.weekend_rounded,
+  ActivityLevel.light => Icons.directions_walk_rounded,
+  ActivityLevel.moderate => Icons.directions_run_rounded,
+  ActivityLevel.active => AppIcons.workout,
+  ActivityLevel.veryActive => Icons.bolt_rounded,
+};

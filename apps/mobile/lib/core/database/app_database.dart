@@ -240,49 +240,49 @@ class AppDatabase extends _$AppDatabase {
   /// une séance en cours au moment de la mise à jour reste intacte.
   @override
   MigrationStrategy get migration => MigrationStrategy(
-        onCreate: (migrator) => migrator.createAll(),
-        onUpgrade: (migrator, from, to) async {
-          if (from < 2) {
-            await migrator.createTable(localWorkoutTemplates);
-            await migrator.createTable(localTemplateExercises);
-            await migrator.createTable(localTemplateSets);
-            await migrator.createTable(localSessionPlanItems);
-            await migrator.addColumn(
-              localWorkoutSessions,
-              localWorkoutSessions.templateId,
-            );
-            await migrator.addColumn(
-              localWorkoutSessions,
-              localWorkoutSessions.templateName,
-            );
-            await migrator.addColumn(
-              localWorkoutSets,
-              localWorkoutSets.plannedReps,
-            );
-            await migrator.addColumn(
-              localWorkoutSets,
-              localWorkoutSets.plannedWeightKg,
-            );
-          }
-          // `from < 2` a créé la table avec sa définition ACTUELLE, colonne
-          // comprise : seule une base réellement en version 2 est à compléter.
-          if (from == 2) {
-            await migrator.addColumn(
-              localSessionPlanItems,
-              localSessionPlanItems.syncStatus,
-            );
-            // Un plan déjà local n'a jamais été transmis : il reste donc
-            // `pending` (valeur par défaut de la colonne), ce qui met le
-            // rapatriement en retrait sur cette séance — le bon réflexe, la
-            // saisie de l'appareil ne peut pas être écrasée.
-          }
-          if (from < 4) {
-            // Table neuve : rien à reprendre, l'hydratation commence
-            // aujourd'hui. Aucune donnée existante n'est touchée.
-            await migrator.createTable(localWaterIntakes);
-          }
-        },
-      );
+    onCreate: (migrator) => migrator.createAll(),
+    onUpgrade: (migrator, from, to) async {
+      if (from < 2) {
+        await migrator.createTable(localWorkoutTemplates);
+        await migrator.createTable(localTemplateExercises);
+        await migrator.createTable(localTemplateSets);
+        await migrator.createTable(localSessionPlanItems);
+        await migrator.addColumn(
+          localWorkoutSessions,
+          localWorkoutSessions.templateId,
+        );
+        await migrator.addColumn(
+          localWorkoutSessions,
+          localWorkoutSessions.templateName,
+        );
+        await migrator.addColumn(
+          localWorkoutSets,
+          localWorkoutSets.plannedReps,
+        );
+        await migrator.addColumn(
+          localWorkoutSets,
+          localWorkoutSets.plannedWeightKg,
+        );
+      }
+      // `from < 2` a créé la table avec sa définition ACTUELLE, colonne
+      // comprise : seule une base réellement en version 2 est à compléter.
+      if (from == 2) {
+        await migrator.addColumn(
+          localSessionPlanItems,
+          localSessionPlanItems.syncStatus,
+        );
+        // Un plan déjà local n'a jamais été transmis : il reste donc
+        // `pending` (valeur par défaut de la colonne), ce qui met le
+        // rapatriement en retrait sur cette séance — le bon réflexe, la
+        // saisie de l'appareil ne peut pas être écrasée.
+      }
+      if (from < 4) {
+        // Table neuve : rien à reprendre, l'hydratation commence
+        // aujourd'hui. Aucune donnée existante n'est touchée.
+        await migrator.createTable(localWaterIntakes);
+      }
+    },
+  );
 }
 
 /// Connexion sur fichier, ouverte paresseusement dans un isolate dédié.

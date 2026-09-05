@@ -321,8 +321,8 @@ abstract final class AppColors {
 
   /// Remplissage d'un jour du calendrier selon l'intensité 0..1 (violet).
   static Color heatFill(double intensity) => Color.lerp(
-        const Color(0x809B30FF),
-        const Color(0xE69B30FF),
-        intensity.clamp(0, 1),
-      )!;
+    const Color(0x809B30FF),
+    const Color(0xE69B30FF),
+    intensity.clamp(0, 1),
+  )!;
 }

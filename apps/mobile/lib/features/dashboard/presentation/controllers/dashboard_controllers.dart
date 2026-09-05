@@ -15,10 +15,11 @@ const int weeklySessionsTarget = 5;
 
 /// Vue « semaine » de l'accueil — indépendante de la période sélectionnée
 /// sur l'onglet Progression.
-final weekOverviewProvider =
-    FutureProvider.autoDispose<ProgressOverviewEntity>((ref) {
-  return ref.watch(progressRepositoryProvider).overview(ProgressPeriod.week);
-});
+final weekOverviewProvider = FutureProvider.autoDispose<ProgressOverviewEntity>(
+  (ref) {
+    return ref.watch(progressRepositoryProvider).overview(ProgressPeriod.week);
+  },
+);
 
 /// Indice de forme : part de l'objectif hebdomadaire déjà réalisée, sur 100.
 ///
@@ -91,29 +92,30 @@ final formReadingProvider = Provider.autoDispose<FormReading?>((ref) {
   final remaining = weeklySessionsTarget - sessions;
   return switch (FormBand.forScore(score)) {
     FormBand.repos => FormReading(
-        score: score,
-        headline: sessions == 0 ? 'La semaine commence' : 'De la marge',
-        explanation: sessions == 0
-            ? 'Rien encore cette semaine. La première séance ouvre tout le '
+      score: score,
+      headline: sessions == 0 ? 'La semaine commence' : 'De la marge',
+      explanation: sessions == 0
+          ? 'Rien encore cette semaine. La première séance ouvre tout le '
                 'reste.'
-            : 'Une séance derrière toi. Le corps est frais, la place est '
+          : 'Une séance derrière toi. Le corps est frais, la place est '
                 'large.',
-      ),
+    ),
     FormBand.chargeJuste => FormReading(
-        score: score,
-        headline: 'Prêt pour du lourd',
-        explanation: '$sessions séances derrière toi, la récupération suit. '
-            'Tu peux charger sans réserve aujourd’hui.',
-      ),
+      score: score,
+      headline: 'Prêt pour du lourd',
+      explanation:
+          '$sessions séances derrière toi, la récupération suit. '
+          'Tu peux charger sans réserve aujourd’hui.',
+    ),
     FormBand.surcharge => FormReading(
-        score: score,
-        headline: remaining <= 0 ? 'Objectif atteint' : 'Semaine chargée',
-        explanation: remaining <= 0
-            ? 'Les $weeklySessionsTarget séances sont faites. Ce qui vient en '
+      score: score,
+      headline: remaining <= 0 ? 'Objectif atteint' : 'Semaine chargée',
+      explanation: remaining <= 0
+          ? 'Les $weeklySessionsTarget séances sont faites. Ce qui vient en '
                 'plus est du bonus, pas une dette.'
-            : 'Le rythme est haut. Garde une journée pour récupérer, elle '
+          : 'Le rythme est haut. Garde une journée pour récupérer, elle '
                 'fait partie du travail.',
-      ),
+    ),
   };
 });
 

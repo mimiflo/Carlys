@@ -99,11 +99,11 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   Future<void> _saveTokens(AuthTokensDto tokens) => _storage.save(
-        StoredTokens(
-          accessToken: tokens.accessToken,
-          refreshToken: tokens.refreshToken,
-        ),
-      );
+    StoredTokens(
+      accessToken: tokens.accessToken,
+      refreshToken: tokens.refreshToken,
+    ),
+  );
 
   Future<T> _guard<T>(Future<T> Function() action) async {
     try {

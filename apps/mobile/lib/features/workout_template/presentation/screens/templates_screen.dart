@@ -132,9 +132,7 @@ class TemplatesScreen extends ConsumerWidget {
       context: context,
       builder: (dialogContext) => AlertDialog(
         title: const Text('Une séance est en cours'),
-        content: const Text(
-          'Termine-la avant d’en lancer une autre.',
-        ),
+        content: const Text('Termine-la avant d’en lancer une autre.'),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(dialogContext).pop(false),
@@ -168,7 +166,8 @@ class _EmptyList extends StatelessWidget {
             height: constraints.maxHeight,
             child: AppEmptyState(
               title: 'Aucun modèle',
-              message: 'Compose ta séance type une fois, '
+              message:
+                  'Compose ta séance type une fois, '
                   'relance-la en un geste.',
               icon: AppIcons.workout,
               actionLabel: 'Créer un modèle',

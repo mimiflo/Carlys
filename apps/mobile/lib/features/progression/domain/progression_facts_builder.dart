@@ -77,7 +77,9 @@ ProgressionFacts buildProgressionFacts({
 
 int _dayNumber(DateTime date) {
   final local = date.toLocal();
-  return DateTime.utc(local.year, local.month, local.day)
-      .difference(DateTime.utc(1970))
-      .inDays;
+  return DateTime.utc(
+    local.year,
+    local.month,
+    local.day,
+  ).difference(DateTime.utc(1970)).inDays;
 }

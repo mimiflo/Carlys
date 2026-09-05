@@ -24,8 +24,11 @@ void main() {
     seedCompletedFirstRun();
     // Les scènes 3D (cœur, hélice) bouclent en continu : réduction
     // d'animations pour que pumpAndSettle converge.
-    TestWidgetsFlutterBinding.instance.platformDispatcher
-        .accessibilityFeaturesTestValue = FakeAccessibilityFeatures.allOn;
+    TestWidgetsFlutterBinding
+            .instance
+            .platformDispatcher
+            .accessibilityFeaturesTestValue =
+        FakeAccessibilityFeatures.allOn;
   });
 
   tearDown(() {
@@ -34,86 +37,87 @@ void main() {
   });
 
   testWidgets(
-      'parcours : accueil → bibliothèque → recherche → fiche d’exercice',
-      (tester) async {
-    final exercises = FakeExercisesRepository(
-      [
+    'parcours : accueil → bibliothèque → recherche → fiche d’exercice',
+    (tester) async {
+      final exercises = FakeExercisesRepository([
         summary('id-1', 'Pompes', group: 'pectoraux'),
         summary('id-2', 'Squat', group: 'quadriceps'),
-      ],
-      pageSize: 10,
-    );
+      ], pageSize: 10);
 
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          appEnvironmentProvider.overrideWithValue(
-            const AppEnvironment(
-              flavor: AppFlavor.development,
-              apiBaseUrl: 'http://localhost:3000',
+      await tester.pumpWidget(
+        ProviderScope(
+          overrides: [
+            appEnvironmentProvider.overrideWithValue(
+              const AppEnvironment(
+                flavor: AppFlavor.development,
+                apiBaseUrl: 'http://localhost:3000',
+              ),
             ),
-          ),
-          authRepositoryProvider
-              .overrideWithValue(FakeAuthRepository(storedSession: true)),
-          exercisesRepositoryProvider.overrideWithValue(exercises),
-          workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
-          syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
-          appRestoreProvider.overrideWithValue(NoopAppRestore()),
-        ],
-        child: const CarlysApp(),
-      ),
-    );
-    await tester.pumpAndSettle();
+            authRepositoryProvider.overrideWithValue(
+              FakeAuthRepository(storedSession: true),
+            ),
+            exercisesRepositoryProvider.overrideWithValue(exercises),
+            workoutRepositoryProvider.overrideWithValue(
+              FakeWorkoutRepository(),
+            ),
+            syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
+            appRestoreProvider.overrideWithValue(NoopAppRestore()),
+          ],
+          child: const CarlysApp(),
+        ),
+      );
+      await tester.pumpAndSettle();
 
-    // Accueil authentifié → bibliothèque.
-    await openExerciseLibrary(tester);
+      // Accueil authentifié → bibliothèque.
+      await openExerciseLibrary(tester);
 
-    // La bibliothèque s'ouvre désormais sur la GRILLE des groupes musculaires :
-    // « Tous les mouvements » est la porte vers le catalogue entier. On vise
-    // la CARTE et non son libellé : sur la petite surface de test, le bas des
-    // cartes passe sous la barre d'onglets flottante.
-    await tester.tap(
-      find.widgetWithText(MuscleGroupCard, 'Tous les mouvements'),
-    );
-    await tester.pumpAndSettle();
+      // La bibliothèque s'ouvre désormais sur la GRILLE des groupes musculaires :
+      // « Tous les mouvements » est la porte vers le catalogue entier. On vise
+      // la CARTE et non son libellé : sur la petite surface de test, le bas des
+      // cartes passe sous la barre d'onglets flottante.
+      await tester.tap(
+        find.widgetWithText(MuscleGroupCard, 'Tous les mouvements'),
+      );
+      await tester.pumpAndSettle();
 
-    expect(find.text('Pompes'), findsOneWidget);
-    expect(find.text('Squat'), findsOneWidget);
-    // Compteur des pages chargées et sous-ligne « GROUPE · MATÉRIEL ».
-    expect(find.text('2 mouvements'), findsOneWidget);
-    expect(find.text('PECTORAUX · BARRE'), findsOneWidget);
+      expect(find.text('Pompes'), findsOneWidget);
+      expect(find.text('Squat'), findsOneWidget);
+      // Compteur des pages chargées et sous-ligne « GROUPE · MATÉRIEL ».
+      expect(find.text('2 mouvements'), findsOneWidget);
+      expect(find.text('PECTORAUX · BARRE'), findsOneWidget);
 
-    // Recherche débouncée.
-    await tester.enterText(find.byType(TextField), 'Squat');
-    await tester.pumpAndSettle(const Duration(milliseconds: 500));
+      // Recherche débouncée.
+      await tester.enterText(find.byType(TextField), 'Squat');
+      await tester.pumpAndSettle(const Duration(milliseconds: 500));
 
-    expect(find.text('Pompes'), findsNothing);
-    // « Squat » vit aussi dans le champ de recherche : cibler la carte.
-    final squatCard = find.widgetWithText(ExerciseCard, 'Squat');
-    expect(squatCard, findsOneWidget);
+      expect(find.text('Pompes'), findsNothing);
+      // « Squat » vit aussi dans le champ de recherche : cibler la carte.
+      final squatCard = find.widgetWithText(ExerciseCard, 'Squat');
+      expect(squatCard, findsOneWidget);
 
-    // Fiche détaillée.
-    await tester.tap(squatCard);
-    await tester.pumpAndSettle();
+      // Fiche détaillée.
+      await tester.tap(squatCard);
+      await tester.pumpAndSettle();
 
-    // La fiche ouvre sur son en-tête média : sur-titre « GROUPE · TYPE »
-    // puis le nom du mouvement.
-    expect(find.text('QUADRICEPS · RENFORCEMENT'), findsOneWidget);
-    await tester.scrollUntilVisible(
-      find.text('Muscles sollicités'),
-      150,
-      scrollable: find.byType(Scrollable).last,
-    );
-    expect(find.text('Muscles sollicités'), findsOneWidget);
-    await tester.scrollUntilVisible(
-      find.text('Première étape'),
-      150,
-      scrollable: find.byType(Scrollable).last,
-    );
-    expect(find.text('Première étape'), findsOneWidget);
-    expect(find.text('Exécution'), findsOneWidget);
-    expect(find.text('Ajouter à la séance'), findsOneWidget);
-  });
+      // La fiche ouvre sur son en-tête média : sur-titre « GROUPE · TYPE »
+      // puis le nom du mouvement.
+      expect(find.text('QUADRICEPS · RENFORCEMENT'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text('Muscles sollicités'),
+        150,
+        scrollable: find.byType(Scrollable).last,
+      );
+      expect(find.text('Muscles sollicités'), findsOneWidget);
+      await tester.scrollUntilVisible(
+        find.text('Première étape'),
+        150,
+        scrollable: find.byType(Scrollable).last,
+      );
+      expect(find.text('Première étape'), findsOneWidget);
+      expect(find.text('Exécution'), findsOneWidget);
+      expect(find.text('Ajouter à la séance'), findsOneWidget);
+    },
+  );
 
   testWidgets('bibliothèque vide : état dédié avec message', (tester) async {
     await tester.pumpWidget(
@@ -125,10 +129,12 @@ void main() {
               apiBaseUrl: 'http://localhost:3000',
             ),
           ),
-          authRepositoryProvider
-              .overrideWithValue(FakeAuthRepository(storedSession: true)),
-          exercisesRepositoryProvider
-              .overrideWithValue(FakeExercisesRepository(const [])),
+          authRepositoryProvider.overrideWithValue(
+            FakeAuthRepository(storedSession: true),
+          ),
+          exercisesRepositoryProvider.overrideWithValue(
+            FakeExercisesRepository(const []),
+          ),
           workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
           syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
           appRestoreProvider.overrideWithValue(NoopAppRestore()),

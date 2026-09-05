@@ -20,5 +20,5 @@ class LoginController extends AutoDisposeAsyncNotifier<void> {
 
 final loginControllerProvider =
     AsyncNotifierProvider.autoDispose<LoginController, void>(
-  LoginController.new,
-);
+      LoginController.new,
+    );

@@ -38,8 +38,11 @@ void main() {
     seedCompletedFirstRun();
     // La scène cœur boucle en continu : réduction d'animations pour que
     // pumpAndSettle converge.
-    TestWidgetsFlutterBinding.instance.platformDispatcher
-        .accessibilityFeaturesTestValue = FakeAccessibilityFeatures.allOn;
+    TestWidgetsFlutterBinding
+            .instance
+            .platformDispatcher
+            .accessibilityFeaturesTestValue =
+        FakeAccessibilityFeatures.allOn;
   });
 
   tearDown(() {
@@ -48,13 +51,13 @@ void main() {
   });
 
   FakeNutritionRepository completeNutrition() => FakeNutritionRepository(
-        weightKg: 80,
-        sex: BiologicalSex.male,
-        birthDate: DateTime.utc(1996, 3, 12),
-        heightCm: 180,
-        activityLevel: ActivityLevel.moderate,
-        goal: NutritionGoal.gainMuscle,
-      );
+    weightKg: 80,
+    sex: BiologicalSex.male,
+    birthDate: DateTime.utc(1996, 3, 12),
+    heightCm: 180,
+    activityLevel: ActivityLevel.moderate,
+    goal: NutritionGoal.gainMuscle,
+  );
 
   Future<void> pumpHome(
     WidgetTester tester, {
@@ -75,14 +78,18 @@ void main() {
               apiBaseUrl: 'http://localhost:3000',
             ),
           ),
-          authRepositoryProvider
-              .overrideWithValue(FakeAuthRepository(storedSession: true)),
-          workoutRepositoryProvider
-              .overrideWithValue(workouts ?? FakeWorkoutRepository()),
-          progressRepositoryProvider
-              .overrideWithValue(FakeProgressRepository()),
-          nutritionRepositoryProvider
-              .overrideWithValue(nutrition ?? completeNutrition()),
+          authRepositoryProvider.overrideWithValue(
+            FakeAuthRepository(storedSession: true),
+          ),
+          workoutRepositoryProvider.overrideWithValue(
+            workouts ?? FakeWorkoutRepository(),
+          ),
+          progressRepositoryProvider.overrideWithValue(
+            FakeProgressRepository(),
+          ),
+          nutritionRepositoryProvider.overrideWithValue(
+            nutrition ?? completeNutrition(),
+          ),
           waterStoreProvider.overrideWithValue(water ?? FakeWaterStore()),
           syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
           appRestoreProvider.overrideWithValue(NoopAppRestore()),
@@ -178,8 +185,9 @@ void main() {
     expect(find.text('reste 1,3 L'), findsOneWidget);
   });
 
-  testWidgets('la cellule hydratation ouvre la feuille et compte l’eau',
-      (tester) async {
+  testWidgets('la cellule hydratation ouvre la feuille et compte l’eau', (
+    tester,
+  ) async {
     final water = FakeWaterStore(milliliters: 1000);
     await pumpHome(tester, water: water);
 
@@ -211,8 +219,9 @@ void main() {
     expect(find.text('Calculer mes objectifs'), findsOneWidget);
   });
 
-  testWidgets('le consommé du journal s’affiche face à l’objectif',
-      (tester) async {
+  testWidgets('le consommé du journal s’affiche face à l’objectif', (
+    tester,
+  ) async {
     // Les repas sont ancrés sur la JOURNÉE en cours, jamais sur « il y a
     // N heures » : passé minuit, un décalage relatif bascule la veille et le
     // total du jour change sous les pieds du test.
@@ -243,29 +252,27 @@ void main() {
     expect(find.text('reste 2\u202F105 kcal'), findsOneWidget);
   });
 
-  testWidgets(
-    'sans séance en cours : entraînement libre et tuiles',
-    (tester) async {
-      await pumpHome(tester);
+  testWidgets('sans séance en cours : entraînement libre et tuiles', (
+    tester,
+  ) async {
+    await pumpHome(tester);
 
-      await scrollTo(tester, find.text('Entraînement libre'));
-      expect(find.text('SÉANCE DU JOUR'), findsOneWidget);
-      expect(find.text('Entraînement libre'), findsOneWidget);
-      expect(
-        find.text('Tu choisis les exercices en cours de route.'),
-        findsOneWidget,
-      );
-      // Le disque n'a pas de libellé écrit : c'est la sémantique qui le porte.
-      expect(
-        find.semantics.byLabel('Démarrer la séance'),
-        findsOneWidget,
-        reason: 'le disque doit rester atteignable au lecteur d’écran',
-      );
-      // La seconde porte, hors séance seulement.
-      expect(find.text('Lancer un modèle'), findsOneWidget);
-    },
-    semanticsEnabled: true,
-  );
+    await scrollTo(tester, find.text('Entraînement libre'));
+    expect(find.text('SÉANCE DU JOUR'), findsOneWidget);
+    expect(find.text('Entraînement libre'), findsOneWidget);
+    expect(
+      find.text('Tu choisis les exercices en cours de route.'),
+      findsOneWidget,
+    );
+    // Le disque n'a pas de libellé écrit : c'est la sémantique qui le porte.
+    expect(
+      find.semantics.byLabel('Démarrer la séance'),
+      findsOneWidget,
+      reason: 'le disque doit rester atteignable au lecteur d’écran',
+    );
+    // La seconde porte, hors séance seulement.
+    expect(find.text('Lancer un modèle'), findsOneWidget);
+  }, semanticsEnabled: true);
 
   testWidgets('la citation du jour vit à gauche du cœur', (tester) async {
     await pumpHome(tester);
@@ -302,8 +309,9 @@ void main() {
     );
   });
 
-  testWidgets('la citation descend jusqu’à la série de constance',
-      (tester) async {
+  testWidgets('la citation descend jusqu’à la série de constance', (
+    tester,
+  ) async {
     await pumpHome(tester);
 
     final quote = tester.getRect(find.byType(DailyQuoteCard));
@@ -382,58 +390,56 @@ void main() {
     );
   });
 
-  testWidgets(
-    'séance en cours : titre, durée écoulée et reprise',
-    (tester) async {
-      final startedAt = DateTime.now().subtract(const Duration(minutes: 52));
-      final workouts = FakeWorkoutRepository()
-        ..active = WorkoutWithSets(
-          session: WorkoutInfo(
-            id: 'w-2',
-            name: 'Push force',
-            status: WorkoutStatus.inProgress,
-            startedAt: startedAt,
+  testWidgets('séance en cours : titre, durée écoulée et reprise', (
+    tester,
+  ) async {
+    final startedAt = DateTime.now().subtract(const Duration(minutes: 52));
+    final workouts = FakeWorkoutRepository()
+      ..active = WorkoutWithSets(
+        session: WorkoutInfo(
+          id: 'w-2',
+          name: 'Push force',
+          status: WorkoutStatus.inProgress,
+          startedAt: startedAt,
+          syncState: LocalSyncState.pending,
+        ),
+        sets: [
+          WorkoutSetEntry(
+            id: 's-1',
+            exerciseName: 'Développé couché',
+            position: 1,
+            kind: SetKind.normal,
+            reps: 8,
+            weightKg: 80,
+            completedAt: startedAt,
             syncState: LocalSyncState.pending,
           ),
-          sets: [
-            WorkoutSetEntry(
-              id: 's-1',
-              exerciseName: 'Développé couché',
-              position: 1,
-              kind: SetKind.normal,
-              reps: 8,
-              weightKg: 80,
-              completedAt: startedAt,
-              syncState: LocalSyncState.pending,
-            ),
-            WorkoutSetEntry(
-              id: 's-2',
-              exerciseName: 'Développé couché',
-              position: 2,
-              kind: SetKind.normal,
-              reps: 8,
-              weightKg: 80,
-              completedAt: startedAt,
-              syncState: LocalSyncState.pending,
-            ),
-          ],
-        );
-
-      await pumpHome(tester, workouts: workouts);
-      await scrollTo(tester, find.text('Push force'));
-
-      // Le nom de la séance ne s'écrit plus qu'à UN endroit : la grille du
-      // jour mesure, elle ne redit pas ce que la carte au-dessus annonce.
-      expect(find.text('Push force'), findsOneWidget);
-      // Durée écoulée et faits mesurés tiennent dans une seule phrase.
-      expect(
-        find.text('En cours depuis 52 min — 1 exercice, 2 séries.'),
-        findsOneWidget,
+          WorkoutSetEntry(
+            id: 's-2',
+            exerciseName: 'Développé couché',
+            position: 2,
+            kind: SetKind.normal,
+            reps: 8,
+            weightKg: 80,
+            completedAt: startedAt,
+            syncState: LocalSyncState.pending,
+          ),
+        ],
       );
-      expect(find.semantics.byLabel('Reprendre la séance'), findsOneWidget);
-      // On ne lance pas une séance quand une autre est ouverte.
-      expect(find.text('Lancer un modèle'), findsNothing);
-    },
-    semanticsEnabled: true,
-  );
+
+    await pumpHome(tester, workouts: workouts);
+    await scrollTo(tester, find.text('Push force'));
+
+    // Le nom de la séance ne s'écrit plus qu'à UN endroit : la grille du
+    // jour mesure, elle ne redit pas ce que la carte au-dessus annonce.
+    expect(find.text('Push force'), findsOneWidget);
+    // Durée écoulée et faits mesurés tiennent dans une seule phrase.
+    expect(
+      find.text('En cours depuis 52 min — 1 exercice, 2 séries.'),
+      findsOneWidget,
+    );
+    expect(find.semantics.byLabel('Reprendre la séance'), findsOneWidget);
+    // On ne lance pas une séance quand une autre est ouverte.
+    expect(find.text('Lancer un modèle'), findsNothing);
+  }, semanticsEnabled: true);
 }

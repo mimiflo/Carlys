@@ -51,12 +51,14 @@ const List<DailyQuote> carlysQuotes = [
     value: CarlysValue.maitrise,
   ),
   DailyQuote(
-    text: 'Une répétition de plus qu’hier : la progression n’a pas besoin '
+    text:
+        'Une répétition de plus qu’hier : la progression n’a pas besoin '
         'd’être spectaculaire.',
     value: CarlysValue.performance,
   ),
   DailyQuote(
-    text: 'La discipline te donne rendez-vous. La motivation, elle, ne '
+    text:
+        'La discipline te donne rendez-vous. La motivation, elle, ne '
         'prévient pas.',
     value: CarlysValue.discipline,
   ),
@@ -67,7 +69,8 @@ const List<DailyQuote> carlysQuotes = [
 
   // — Cycle 2
   DailyQuote(
-    text: 'Une semaine ordinaire, répétée, vaut mieux qu’un mois parfait '
+    text:
+        'Une semaine ordinaire, répétée, vaut mieux qu’un mois parfait '
         'isolé.',
     value: CarlysValue.constance,
   ),
@@ -76,7 +79,8 @@ const List<DailyQuote> carlysQuotes = [
     value: CarlysValue.maitrise,
   ),
   DailyQuote(
-    text: 'Ce qui te semblait lourd il y a six mois est ton échauffement '
+    text:
+        'Ce qui te semblait lourd il y a six mois est ton échauffement '
         'd’aujourd’hui.',
     value: CarlysValue.performance,
   ),
@@ -99,7 +103,8 @@ const List<DailyQuote> carlysQuotes = [
     value: CarlysValue.maitrise,
   ),
   DailyQuote(
-    text: 'Le muscle s’adapte à ce qu’on lui demande. Demande-lui un peu '
+    text:
+        'Le muscle s’adapte à ce qu’on lui demande. Demande-lui un peu '
         'plus, régulièrement.',
     value: CarlysValue.performance,
   ),
@@ -144,12 +149,14 @@ const List<DailyQuote> carlysQuotes = [
     value: CarlysValue.maitrise,
   ),
   DailyQuote(
-    text: 'Une répétition propre construit plus qu’une répétition '
+    text:
+        'Une répétition propre construit plus qu’une répétition '
         'arrachée.',
     value: CarlysValue.performance,
   ),
   DailyQuote(
-    text: 'Le plan existe pour les jours sans. Les jours avec se débrouillent '
+    text:
+        'Le plan existe pour les jours sans. Les jours avec se débrouillent '
         'seuls.',
     value: CarlysValue.discipline,
   ),
@@ -160,7 +167,8 @@ const List<DailyQuote> carlysQuotes = [
 
   // — Cycle 6
   DailyQuote(
-    text: 'Ce que tu peux tenir six mois vaut mieux que ce que tu tiens six '
+    text:
+        'Ce que tu peux tenir six mois vaut mieux que ce que tu tiens six '
         'jours.',
     value: CarlysValue.constance,
   ),
@@ -169,7 +177,8 @@ const List<DailyQuote> carlysQuotes = [
     value: CarlysValue.maitrise,
   ),
   DailyQuote(
-    text: 'La barre monte quand la semaine est complète, pas quand la séance '
+    text:
+        'La barre monte quand la semaine est complète, pas quand la séance '
         'est héroïque.',
     value: CarlysValue.performance,
   ),
@@ -178,7 +187,8 @@ const List<DailyQuote> carlysQuotes = [
     value: CarlysValue.discipline,
   ),
   DailyQuote(
-    text: 'Une douleur qui s’installe n’est pas du courage. Va voir un '
+    text:
+        'Une douleur qui s’installe n’est pas du courage. Va voir un '
         'professionnel de santé.',
     value: CarlysValue.equilibre,
   ),
@@ -188,10 +198,7 @@ const List<DailyQuote> carlysQuotes = [
     text: 'Recommencer fait partie du plan : ce n’est pas repartir de zéro.',
     value: CarlysValue.constance,
   ),
-  DailyQuote(
-    text: 'Comprendre, puis charger.',
-    value: CarlysValue.maitrise,
-  ),
+  DailyQuote(text: 'Comprendre, puis charger.', value: CarlysValue.maitrise),
   DailyQuote(
     text: 'Ton record d’aujourd’hui sera ton échauffement de l’an prochain.',
     value: CarlysValue.performance,
@@ -201,7 +208,8 @@ const List<DailyQuote> carlysQuotes = [
     value: CarlysValue.discipline,
   ),
   DailyQuote(
-    text: 'Bois, mange, dors : trois leviers que l’entraînement seul ne '
+    text:
+        'Bois, mange, dors : trois leviers que l’entraînement seul ne '
         'remplace pas.',
     value: CarlysValue.equilibre,
   ),
@@ -222,7 +230,9 @@ DailyQuote quoteOfTheDay(DateTime day) {
 /// donc pas faire sauter — ou rejouer — une journée.
 int _daysSinceEpoch(DateTime day) {
   final local = day.toLocal();
-  return DateTime.utc(local.year, local.month, local.day)
-      .difference(DateTime.utc(1970))
-      .inDays;
+  return DateTime.utc(
+    local.year,
+    local.month,
+    local.day,
+  ).difference(DateTime.utc(1970)).inDays;
 }

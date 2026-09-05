@@ -18,21 +18,27 @@ void main() {
     expect(suggestions.single, isNot(contains('«')));
   });
 
-  test('un modèle disponible donne la puce la plus actionnable, en premier',
-      () {
-    final suggestions = coachSuggestions(
-      const CoachContext(templateName: 'Push A', hasHistory: true),
-    );
+  test(
+    'un modèle disponible donne la puce la plus actionnable, en premier',
+    () {
+      final suggestions = coachSuggestions(
+        const CoachContext(templateName: 'Push A', hasHistory: true),
+      );
 
-    expect(suggestions.first, contains('Push A'));
-  });
+      expect(suggestions.first, contains('Push A'));
+    },
+  );
 
-  test('sans modèle mais avec un historique, la séance courte prend le relais',
-      () {
-    final suggestions = coachSuggestions(const CoachContext(hasHistory: true));
+  test(
+    'sans modèle mais avec un historique, la séance courte prend le relais',
+    () {
+      final suggestions = coachSuggestions(
+        const CoachContext(hasHistory: true),
+      );
 
-    expect(suggestions.first, 'Propose-moi une séance courte');
-  });
+      expect(suggestions.first, 'Propose-moi une séance courte');
+    },
+  );
 
   test('un record récent invite à continuer, un record ancien à débloquer', () {
     final recent = coachSuggestions(
@@ -69,21 +75,23 @@ void main() {
     expect(up.single, isNot(down.single));
   });
 
-  test('l’identité Carlys ajoute son amorce, différente pour chaque profil',
-      () {
-    final byProfile = {
-      for (final profile in CarlysProfile.values)
-        profile: coachSuggestions(CoachContext(carlysProfile: profile)),
-    };
+  test(
+    'l’identité Carlys ajoute son amorce, différente pour chaque profil',
+    () {
+      final byProfile = {
+        for (final profile in CarlysProfile.values)
+          profile: coachSuggestions(CoachContext(carlysProfile: profile)),
+      };
 
-    // Chaque profil a la sienne, et elles ne se ressemblent pas.
-    final chips = byProfile.values.map((s) => s.first).toSet();
-    expect(chips, hasLength(CarlysProfile.values.length));
+      // Chaque profil a la sienne, et elles ne se ressemblent pas.
+      final chips = byProfile.values.map((s) => s.first).toSet();
+      expect(chips, hasLength(CarlysProfile.values.length));
 
-    // Sans profil : rien n'apparaît — null n'est jamais un défaut.
-    final none = coachSuggestions(const CoachContext());
-    expect(none.single, 'Par où je commence ?');
-  });
+      // Sans profil : rien n'apparaît — null n'est jamais un défaut.
+      final none = coachSuggestions(const CoachContext());
+      expect(none.single, 'Par où je commence ?');
+    },
+  );
 
   test('l’amorce du profil vient après la plus actionnable', () {
     final suggestions = coachSuggestions(

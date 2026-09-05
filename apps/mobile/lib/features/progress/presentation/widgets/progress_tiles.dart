@@ -74,8 +74,9 @@ class _ProgressTile extends StatelessWidget {
         decoration: const BoxDecoration(
           color: AppColors.darkSurface,
           borderRadius: AppRadius.listRowAll,
-          border:
-              Border.fromBorderSide(BorderSide(color: AppColors.darkBorder)),
+          border: Border.fromBorderSide(
+            BorderSide(color: AppColors.darkBorder),
+          ),
         ),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,

@@ -23,53 +23,53 @@ class FakeSubscriptionRepository implements SubscriptionRepository {
 
   @override
   Future<PlanStatus> planStatus() async => PlanStatus(
-        planName: isPremium ? 'Premium' : 'Gratuit',
-        isPremium: isPremium,
-        subscription: isPremium
-            ? SubscriptionInfo(
-                planName: 'Premium',
-                state: SubscriptionState.active,
-                cancelAtPeriodEnd: false,
-                currentPeriodEnd: DateTime.utc(2026, 9, 6),
-              )
-            : null,
-      );
+    planName: isPremium ? 'Premium' : 'Gratuit',
+    isPremium: isPremium,
+    subscription: isPremium
+        ? SubscriptionInfo(
+            planName: 'Premium',
+            state: SubscriptionState.active,
+            cancelAtPeriodEnd: false,
+            currentPeriodEnd: DateTime.utc(2026, 9, 6),
+          )
+        : null,
+  );
 
   @override
   Future<List<EntitlementEntry>> entitlements() async => [
-        EntitlementEntry(key: 'unlimited_programs', isActive: isPremium),
-        EntitlementEntry(key: 'advanced_statistics', isActive: isPremium),
-        EntitlementEntry(key: 'premium_exercises', isActive: isPremium),
-        const EntitlementEntry(key: 'ai_coaching', isActive: false),
-      ];
+    EntitlementEntry(key: 'unlimited_programs', isActive: isPremium),
+    EntitlementEntry(key: 'advanced_statistics', isActive: isPremium),
+    EntitlementEntry(key: 'premium_exercises', isActive: isPremium),
+    const EntitlementEntry(key: 'ai_coaching', isActive: false),
+  ];
 
   @override
   Future<OfferCatalog> offers() async => OfferCatalog(
-        checkoutAvailable: checkoutAvailable,
-        offers: const [
-          SubscriptionOffer(
-            id: 'premium-mensuel',
-            name: 'Premium mensuel',
-            period: OfferPeriod.month,
-            amountCents: 999,
-            currency: 'EUR',
-            monthlyEquivalentCents: 999,
-            trialDays: 7,
-            isRecommended: false,
-          ),
-          SubscriptionOffer(
-            id: 'premium-annuel',
-            name: 'Premium annuel',
-            period: OfferPeriod.year,
-            amountCents: 7990,
-            currency: 'EUR',
-            monthlyEquivalentCents: 666,
-            trialDays: 7,
-            isRecommended: true,
-            savingPercent: 33,
-          ),
-        ],
-      );
+    checkoutAvailable: checkoutAvailable,
+    offers: const [
+      SubscriptionOffer(
+        id: 'premium-mensuel',
+        name: 'Premium mensuel',
+        period: OfferPeriod.month,
+        amountCents: 999,
+        currency: 'EUR',
+        monthlyEquivalentCents: 999,
+        trialDays: 7,
+        isRecommended: false,
+      ),
+      SubscriptionOffer(
+        id: 'premium-annuel',
+        name: 'Premium annuel',
+        period: OfferPeriod.year,
+        amountCents: 7990,
+        currency: 'EUR',
+        monthlyEquivalentCents: 666,
+        trialDays: 7,
+        isRecommended: true,
+        savingPercent: 33,
+      ),
+    ],
+  );
 
   @override
   Future<String> startCheckout({

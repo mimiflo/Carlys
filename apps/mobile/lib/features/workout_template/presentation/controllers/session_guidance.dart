@@ -62,7 +62,8 @@ class SessionGuidance {
   final int? restSeconds;
 
   /// Constat de fin de séance, sans jugement : « 9 séries sur 12 prévues ».
-  String get summary => '${formatThousands(doneCount)} série'
+  String get summary =>
+      '${formatThousands(doneCount)} série'
       '${doneCount > 1 ? 's' : ''} sur ${formatThousands(totalCount)} prévue'
       '${totalCount > 1 ? 's' : ''}';
 }
@@ -79,8 +80,9 @@ SessionGuidance guidanceFor(
 }) {
   final current = plan.current;
   final focusName = pickedExerciseName ?? current?.exerciseName;
-  final focusId =
-      pickedExerciseName == null ? current?.exerciseId : pickedExerciseId;
+  final focusId = pickedExerciseName == null
+      ? current?.exerciseId
+      : pickedExerciseId;
 
   final item = focusName == null
       ? null
@@ -119,7 +121,8 @@ SessionGuidance guidanceFor(
     planItemId: item.id,
     // « Série 2 sur 4 » : le rang est celui de la série qu'on s'apprête à
     // faire, le total celui prévu par le modèle pour cet exercice.
-    overline: 'Série ${formatThousands(done + 1)} sur '
+    overline:
+        'Série ${formatThousands(done + 1)} sur '
         '${formatThousands(ofExercise.length)} · ${item.exerciseName}',
     targetReps: item.targetReps,
     targetWeightKg: item.targetWeightKg,

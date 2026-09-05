@@ -76,30 +76,34 @@ class AxisRow extends StatelessWidget {
                 Expanded(
                   child: Text(
                     axis.value.label,
-                    style: AppTypography.subheading
-                        .copyWith(color: AppColors.darkTextPrimary),
+                    style: AppTypography.subheading.copyWith(
+                      color: AppColors.darkTextPrimary,
+                    ),
                   ),
                 ),
                 const SizedBox(width: AppSpacing.sm),
                 if (axis.known)
                   Text(
                     '${axis.points}',
-                    style: AppTypography.metricS
-                        .copyWith(color: AppColors.darkTextPrimary),
+                    style: AppTypography.metricS.copyWith(
+                      color: AppColors.darkTextPrimary,
+                    ),
                   )
                 else
                   Text(
                     'EN ATTENTE',
-                    style: AppTypography.labelMono
-                        .copyWith(color: AppColors.primaryLight),
+                    style: AppTypography.labelMono.copyWith(
+                      color: AppColors.primaryLight,
+                    ),
                   ),
               ],
             ),
             const SizedBox(height: AppSpacing.xs),
             Text(
               axis.reason,
-              style: AppTypography.body
-                  .copyWith(color: AppColors.darkTextSecondary),
+              style: AppTypography.body.copyWith(
+                color: AppColors.darkTextSecondary,
+              ),
             ),
             const SizedBox(height: AppSpacing.gapTile),
             ProgressionGauge(

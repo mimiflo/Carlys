@@ -12,10 +12,10 @@ const double _chartHeight = 104;
 /// Carte d'évolution du poids : dernière mesure en grand, puis la courbe.
 class BodyWeightChart extends StatelessWidget {
   const BodyWeightChart({required this.entries, super.key})
-      : assert(
-          entries.length >= minimumEntries,
-          'une courbe demande au moins deux mesures',
-        );
+    : assert(
+        entries.length >= minimumEntries,
+        'une courbe demande au moins deux mesures',
+      );
 
   /// Une courbe se trace entre deux points : en dessous, l'appelant montre
   /// la mesure seule ([BodyWeightFirstMeasure]).

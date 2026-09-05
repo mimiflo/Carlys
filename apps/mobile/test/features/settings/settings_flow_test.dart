@@ -16,21 +16,22 @@ import '../../support/first_run_prefs.dart';
 import '../../support/navigation.dart';
 
 Widget app() => ProviderScope(
-      overrides: [
-        appEnvironmentProvider.overrideWithValue(
-          const AppEnvironment(
-            flavor: AppFlavor.development,
-            apiBaseUrl: 'http://localhost:3000',
-          ),
-        ),
-        authRepositoryProvider
-            .overrideWithValue(FakeAuthRepository(storedSession: true)),
-        workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
-        syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
-        appRestoreProvider.overrideWithValue(NoopAppRestore()),
-      ],
-      child: const CarlysApp(),
-    );
+  overrides: [
+    appEnvironmentProvider.overrideWithValue(
+      const AppEnvironment(
+        flavor: AppFlavor.development,
+        apiBaseUrl: 'http://localhost:3000',
+      ),
+    ),
+    authRepositoryProvider.overrideWithValue(
+      FakeAuthRepository(storedSession: true),
+    ),
+    workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
+    syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
+    appRestoreProvider.overrideWithValue(NoopAppRestore()),
+  ],
+  child: const CarlysApp(),
+);
 
 /// Rend visible un élément de l'écran courant (dernier Scrollable de la pile).
 Future<void> reveal(WidgetTester tester, Finder item) async {
@@ -60,8 +61,11 @@ void main() {
   setUp(() {
     // Les scènes 3D (cœur, hélice) bouclent en continu : réduction
     // d'animations pour que pumpAndSettle converge.
-    TestWidgetsFlutterBinding.instance.platformDispatcher
-        .accessibilityFeaturesTestValue = FakeAccessibilityFeatures.allOn;
+    TestWidgetsFlutterBinding
+            .instance
+            .platformDispatcher
+            .accessibilityFeaturesTestValue =
+        FakeAccessibilityFeatures.allOn;
   });
 
   tearDown(() {
@@ -74,8 +78,9 @@ void main() {
     seedCompletedFirstRun();
   });
 
-  testWidgets('thème sombre : appliqué immédiatement et persisté',
-      (tester) async {
+  testWidgets('thème sombre : appliqué immédiatement et persisté', (
+    tester,
+  ) async {
     await tester.pumpWidget(app());
     await openSettings(tester);
 

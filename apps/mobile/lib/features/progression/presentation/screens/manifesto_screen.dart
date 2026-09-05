@@ -50,8 +50,9 @@ class ManifestoScreen extends StatelessWidget {
                 const SizedBox(height: AppSpacing.sm),
                 Text(
                   carlysManifestoTitle,
-                  style: AppTypography.display
-                      .copyWith(color: AppColors.darkTextPrimary),
+                  style: AppTypography.display.copyWith(
+                    color: AppColors.darkTextPrimary,
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.gapSection),
                 for (final line in carlysManifesto) ...[
@@ -70,8 +71,9 @@ class ManifestoScreen extends StatelessWidget {
                 Text(
                   'Elles ne sont pas décoratives : ce sont les axes de ton '
                   'profil de progression.',
-                  style: AppTypography.body
-                      .copyWith(color: AppColors.darkTextSecondary),
+                  style: AppTypography.body.copyWith(
+                    color: AppColors.darkTextSecondary,
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.gapRow),
                 for (final value in CarlysValue.values) ...[
@@ -109,8 +111,9 @@ class _ValueRow extends StatelessWidget {
           const SizedBox(height: AppSpacing.xxs),
           Text(
             value.promise,
-            style:
-                AppTypography.body.copyWith(color: AppColors.darkTextSecondary),
+            style: AppTypography.body.copyWith(
+              color: AppColors.darkTextSecondary,
+            ),
           ),
         ],
       ),

@@ -27,8 +27,9 @@ class ProgramRepositoryImpl implements ProgramRepository {
   @override
   Future<ProgramDetail> byId(String programId) {
     return _guard(() async {
-      final response =
-          await _dio.get<Map<String, dynamic>>('/programs/$programId');
+      final response = await _dio.get<Map<String, dynamic>>(
+        '/programs/$programId',
+      );
       return _detail(_data(response));
     });
   }

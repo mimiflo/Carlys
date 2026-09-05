@@ -39,12 +39,10 @@ enum FirstRunStep {
   ///  - une session absente ramène de « abonnement » vers « compte », la
   ///    proposition Premium n'ayant de sens qu'avec un compte.
   FirstRunStep resolved({required bool authenticated}) => switch (this) {
-        FirstRunStep.account ||
-        FirstRunStep.subscription =>
-          authenticated ? FirstRunStep.subscription : FirstRunStep.account,
-        FirstRunStep.welcome ||
-        FirstRunStep.onboarding ||
-        FirstRunStep.done =>
-          this,
-      };
+    FirstRunStep.account || FirstRunStep.subscription =>
+      authenticated ? FirstRunStep.subscription : FirstRunStep.account,
+    FirstRunStep.welcome ||
+    FirstRunStep.onboarding ||
+    FirstRunStep.done => this,
+  };
 }

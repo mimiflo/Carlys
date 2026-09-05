@@ -145,14 +145,11 @@ void main() {
 
   group('dégradé de marque', () {
     test('les trois couleurs sont dans l’ordre du logo', () {
-      expect(
-        AppColors.signature.colors,
-        [
-          AppColors.signatureStart,
-          AppColors.signatureMid,
-          AppColors.signatureEnd,
-        ],
-      );
+      expect(AppColors.signature.colors, [
+        AppColors.signatureStart,
+        AppColors.signatureMid,
+        AppColors.signatureEnd,
+      ]);
     });
 
     test('l’orange final occupe une vraie part de la course', () {

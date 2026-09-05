@@ -14,8 +14,9 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          communityRepositoryProvider
-              .overrideWithValue(DemoCommunityRepository()),
+          communityRepositoryProvider.overrideWithValue(
+            DemoCommunityRepository(),
+          ),
         ],
         child: MaterialApp(
           home: Builder(
@@ -46,8 +47,9 @@ void main() {
     expect(find.byType(QrImageView), findsOneWidget);
   });
 
-  testWidgets('un code tapé — même mal fagoté — sort en forme canonique',
-      (tester) async {
+  testWidgets('un code tapé — même mal fagoté — sort en forme canonique', (
+    tester,
+  ) async {
     await pumpAndOpen(tester);
     await tester.enterText(find.byType(TextFormField), ' ac23-def4 ');
     await tester.tap(find.text('Envoyer la demande'));
@@ -66,8 +68,9 @@ void main() {
     expect(find.text('Envoyer la demande'), findsNothing);
   });
 
-  testWidgets('une saisie qui n’est ni l’un ni l’autre est retenue au bord',
-      (tester) async {
+  testWidgets('une saisie qui n’est ni l’un ni l’autre est retenue au bord', (
+    tester,
+  ) async {
     await pumpAndOpen(tester);
     await tester.enterText(
       find.byType(TextFormField),

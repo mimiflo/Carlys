@@ -53,7 +53,7 @@ class HistoryCalendar extends StatelessWidget {
               builder: (context, constraints) {
                 final cell =
                     (constraints.maxWidth - _cellGap * (_columns - 1)) /
-                        _columns;
+                    _columns;
 
                 return Wrap(
                   spacing: _cellGap,
@@ -102,10 +102,7 @@ class _DayCell extends StatelessWidget {
     return Container(
       width: size,
       height: size,
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: AppRadius.smAll,
-      ),
+      decoration: BoxDecoration(color: color, borderRadius: AppRadius.smAll),
     );
   }
 }

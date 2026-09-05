@@ -8,40 +8,39 @@ ProgressOverviewEntity overviewOf(
   double totalVolumeKg = 1540,
   int totalDurationSeconds = 5400,
   List<ProgressPoint>? points,
-}) =>
-    ProgressOverviewEntity(
-      period: period,
-      sessionsCount: sessionsCount,
-      setsCount: setsCount,
-      totalVolumeKg: totalVolumeKg,
-      totalDurationSeconds: totalDurationSeconds,
-      points: points ??
-          [
-            ProgressPoint(
-              bucketStart: DateTime.utc(2026, 8, 5),
-              sessionsCount: 1,
-              volumeKg: 840,
-            ),
-            ProgressPoint(
-              bucketStart: DateTime.utc(2026, 8, 6),
-              sessionsCount: 1,
-              volumeKg: 700,
-            ),
-          ],
-    );
+}) => ProgressOverviewEntity(
+  period: period,
+  sessionsCount: sessionsCount,
+  setsCount: setsCount,
+  totalVolumeKg: totalVolumeKg,
+  totalDurationSeconds: totalDurationSeconds,
+  points:
+      points ??
+      [
+        ProgressPoint(
+          bucketStart: DateTime.utc(2026, 8, 5),
+          sessionsCount: 1,
+          volumeKg: 840,
+        ),
+        ProgressPoint(
+          bucketStart: DateTime.utc(2026, 8, 6),
+          sessionsCount: 1,
+          volumeKg: 700,
+        ),
+      ],
+);
 
 PersonalRecordEntry recordOf(
   String exerciseName,
   PersonalRecordType type,
   double value,
-) =>
-    PersonalRecordEntry(
-      id: '$exerciseName-${type.apiValue}',
-      exerciseName: exerciseName,
-      type: type,
-      value: value,
-      achievedAt: DateTime.utc(2026, 8, 6, 10),
-    );
+) => PersonalRecordEntry(
+  id: '$exerciseName-${type.apiValue}',
+  exerciseName: exerciseName,
+  type: type,
+  value: value,
+  achievedAt: DateTime.utc(2026, 8, 6, 10),
+);
 
 /// ProgressRepository de test — données en mémoire, aucune requête réseau.
 class FakeProgressRepository implements ProgressRepository {
@@ -49,8 +48,8 @@ class FakeProgressRepository implements ProgressRepository {
     List<PersonalRecordEntry>? records,
     List<BodyMetricEntry>? bodyMetrics,
     this.overviewFor,
-  })  : _records = records ?? const [],
-        _bodyMetrics = [...?bodyMetrics];
+  }) : _records = records ?? const [],
+       _bodyMetrics = [...?bodyMetrics];
 
   final List<PersonalRecordEntry> _records;
   final List<BodyMetricEntry> _bodyMetrics;

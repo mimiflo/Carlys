@@ -11,10 +11,11 @@ final planStatusProvider = FutureProvider.autoDispose<PlanStatus>((ref) {
 });
 
 /// Droits effectifs, dans l'ordre servi par le serveur.
-final entitlementsProvider =
-    FutureProvider.autoDispose<List<EntitlementEntry>>((ref) {
-  return ref.watch(subscriptionRepositoryProvider).entitlements();
-});
+final entitlementsProvider = FutureProvider.autoDispose<List<EntitlementEntry>>(
+  (ref) {
+    return ref.watch(subscriptionRepositoryProvider).entitlements();
+  },
+);
 
 /// Le catalogue d'offres, prix compris.
 final offerCatalogProvider = FutureProvider.autoDispose<OfferCatalog>((ref) {
@@ -54,10 +55,7 @@ class SubscriptionActions {
     try {
       // L'identifiant est engendré ICI, hors ligne : rejouer la demande rend
       // la même page de paiement plutôt que d'en ouvrir une seconde.
-      url = await repository.startCheckout(
-        offerId: offer.id,
-        id: _uuid.v4(),
-      );
+      url = await repository.startCheckout(offerId: offer.id, id: _uuid.v4());
     } on StateError {
       return CheckoutOutcome.unavailable;
     } on Object {

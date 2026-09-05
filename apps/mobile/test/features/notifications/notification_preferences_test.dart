@@ -19,7 +19,7 @@ import 'package:flutter_test/flutter_test.dart';
 /// dans ce cas.
 class _Repository implements DeviceTokenRepository {
   _Repository({Map<NotificationCategory, bool>? initial})
-      : stored = {...?initial};
+    : stored = {...?initial};
 
   final Map<NotificationCategory, bool> stored;
   final List<(NotificationCategory, bool)> writes = [];
@@ -75,8 +75,9 @@ void main() {
       );
       addTearDown(container.dispose);
 
-      final preferences =
-          await container.read(notificationPreferencesProvider.future);
+      final preferences = await container.read(
+        notificationPreferencesProvider.future,
+      );
 
       expect(preferences[NotificationCategory.encouragements], isNull);
       expect(repository.writes, isEmpty);
@@ -98,12 +99,13 @@ void main() {
           .read(notificationPreferenceActionsProvider)
           .set(NotificationCategory.encouragements, enabled: false);
 
-      expect(
-        repository.writes.single,
-        (NotificationCategory.encouragements, false),
+      expect(repository.writes.single, (
+        NotificationCategory.encouragements,
+        false,
+      ));
+      final reread = await container.read(
+        notificationPreferencesProvider.future,
       );
-      final reread =
-          await container.read(notificationPreferencesProvider.future);
       expect(reread[NotificationCategory.encouragements], isFalse);
     });
   });

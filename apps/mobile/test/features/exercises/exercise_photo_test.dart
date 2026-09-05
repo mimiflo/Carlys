@@ -52,8 +52,9 @@ Future<void> _pump(WidgetTester tester, _Cache cache, Widget child) async {
 /// Les photos d'exercices viennent de l'administration, pas du bundle : elles
 /// manquent souvent, et leur absence est un cas NORMAL — jamais une erreur.
 void main() {
-  testWidgets('carte : la photo rattachée est chargée depuis son URL',
-      (tester) async {
+  testWidgets('carte : la photo rattachée est chargée depuis son URL', (
+    tester,
+  ) async {
     final cache = _Cache();
 
     await _pump(
@@ -76,8 +77,9 @@ void main() {
     expect(tester.widget<Image>(find.byType(Image)).fit, BoxFit.contain);
   });
 
-  testWidgets('une photo n’a pas de liseré teinté autour d’elle',
-      (tester) async {
+  testWidgets('une photo n’a pas de liseré teinté autour d’elle', (
+    tester,
+  ) async {
     // Le liseré violet (ou orange en premium) appartient à la pastille de
     // marque. Autour d'une photo, il lui fait un néon coloré.
     Color? borderOf(Finder finder) {
@@ -115,8 +117,9 @@ void main() {
     expect(borderOf(thumbnails.at(1)), isNot(AppColors.darkBorder));
   });
 
-  testWidgets('carte sans photo : vignette de marque, aucun appel réseau',
-      (tester) async {
+  testWidgets('carte sans photo : vignette de marque, aucun appel réseau', (
+    tester,
+  ) async {
     final cache = _Cache();
 
     await _pump(
@@ -129,8 +132,9 @@ void main() {
     expect(find.byIcon(AppIcons.workout), findsOneWidget);
   });
 
-  testWidgets('carte hors ligne : la vignette de marque reprend la main',
-      (tester) async {
+  testWidgets('carte hors ligne : la vignette de marque reprend la main', (
+    tester,
+  ) async {
     await _pump(
       tester,
       _Cache(available: false),
@@ -144,8 +148,9 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
-  testWidgets('fiche : l’en-tête affiche la photo, titre inchangé',
-      (tester) async {
+  testWidgets('fiche : l’en-tête affiche la photo, titre inchangé', (
+    tester,
+  ) async {
     final cache = _Cache();
     final exercise = detailOf(
       summary(
@@ -163,8 +168,9 @@ void main() {
     expect(tester.widget<Image>(find.byType(Image)).fit, BoxFit.contain);
   });
 
-  testWidgets('fiche sans photo : le placeholder garde la même forme',
-      (tester) async {
+  testWidgets('fiche sans photo : le placeholder garde la même forme', (
+    tester,
+  ) async {
     final exercise = detailOf(summary('id-1', 'Squat', group: 'quadriceps'));
 
     await _pump(tester, _Cache(), ExerciseMediaHeader(exercise: exercise));

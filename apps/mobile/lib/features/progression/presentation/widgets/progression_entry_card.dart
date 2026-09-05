@@ -44,7 +44,8 @@ class ProgressionEntryCard extends ConsumerWidget {
 
     return Semantics(
       button: true,
-      label: 'Ton titre : ${profile.title.label}, '
+      label:
+          'Ton titre : ${profile.title.label}, '
           '${profile.points} points sur $maxTotal',
       onTap: () => context.push(AppRoutes.progression),
       child: ExcludeSemantics(
@@ -104,8 +105,9 @@ class _Summary extends StatelessWidget {
       children: [
         Text(
           'TON TITRE',
-          style:
-              AppTypography.labelMono.copyWith(color: AppColors.primaryLight),
+          style: AppTypography.labelMono.copyWith(
+            color: AppColors.primaryLight,
+          ),
         ),
         const SizedBox(height: AppSpacing.xs),
         Row(
@@ -117,20 +119,23 @@ class _Summary extends StatelessWidget {
                 profile.title.label,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: AppTypography.title
-                    .copyWith(color: AppColors.darkTextPrimary),
+                style: AppTypography.title.copyWith(
+                  color: AppColors.darkTextPrimary,
+                ),
               ),
             ),
             const SizedBox(width: AppSpacing.xs),
             Text(
               opened ? '${profile.points}' : '—',
-              style: AppTypography.metricS
-                  .copyWith(color: AppColors.darkTextPrimary),
+              style: AppTypography.metricS.copyWith(
+                color: AppColors.darkTextPrimary,
+              ),
             ),
             Text(
               '/$maxTotal',
-              style: AppTypography.labelMono
-                  .copyWith(color: AppColors.darkTextTertiary),
+              style: AppTypography.labelMono.copyWith(
+                color: AppColors.darkTextTertiary,
+              ),
             ),
           ],
         ),
@@ -161,8 +166,9 @@ class _Summary extends StatelessWidget {
             ),
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
-            style: AppTypography.label
-                .copyWith(color: AppColors.darkTextSecondary),
+            style: AppTypography.label.copyWith(
+              color: AppColors.darkTextSecondary,
+            ),
           ),
         ],
       ],

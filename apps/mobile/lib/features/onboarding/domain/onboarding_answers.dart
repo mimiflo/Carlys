@@ -26,8 +26,9 @@ class OnboardingAnswers {
       carlysProfile: CarlysProfile.fromWire(json[_carlysProfileKey] as String?),
       goal: NutritionGoal.fromApi(json[_goalKey] as String?),
       sex: BiologicalSex.fromApi(json[_sexKey] as String?),
-      birthDate:
-          birthDate is String ? DateTime.tryParse(birthDate)?.toUtc() : null,
+      birthDate: birthDate is String
+          ? DateTime.tryParse(birthDate)?.toUtc()
+          : null,
       heightCm: heightCm is num ? heightCm.toDouble() : null,
       activityLevel: ActivityLevel.fromApi(json[_activityKey] as String?),
     );
@@ -64,20 +65,19 @@ class OnboardingAnswers {
   bool get isEmpty => !hasMetabolicAnswers && carlysProfile == null;
 
   MetabolicProfileUpdate toProfileUpdate() => MetabolicProfileUpdate(
-        goal: goal,
-        sex: sex,
-        birthDate: birthDate,
-        heightCm: heightCm,
-        activityLevel: activityLevel,
-      );
+    goal: goal,
+    sex: sex,
+    birthDate: birthDate,
+    heightCm: heightCm,
+    activityLevel: activityLevel,
+  );
 
   Map<String, Object?> toStorage() => {
-        if (carlysProfile != null) _carlysProfileKey: carlysProfile!.wire,
-        if (goal != null) _goalKey: goal!.apiValue,
-        if (sex != null) _sexKey: sex!.apiValue,
-        if (birthDate != null)
-          _birthDateKey: birthDate!.toUtc().toIso8601String(),
-        if (heightCm != null) _heightKey: heightCm,
-        if (activityLevel != null) _activityKey: activityLevel!.apiValue,
-      };
+    if (carlysProfile != null) _carlysProfileKey: carlysProfile!.wire,
+    if (goal != null) _goalKey: goal!.apiValue,
+    if (sex != null) _sexKey: sex!.apiValue,
+    if (birthDate != null) _birthDateKey: birthDate!.toUtc().toIso8601String(),
+    if (heightCm != null) _heightKey: heightCm,
+    if (activityLevel != null) _activityKey: activityLevel!.apiValue,
+  };
 }

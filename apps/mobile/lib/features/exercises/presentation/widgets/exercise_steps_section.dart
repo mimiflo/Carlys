@@ -37,16 +37,19 @@ class ExerciseStepsSection extends StatelessWidget {
                 ),
                 child: Text(
                   '${index + 1}',
-                  style: AppTypography.metricS
-                      .copyWith(fontSize: 11, color: AppColors.accent),
+                  style: AppTypography.metricS.copyWith(
+                    fontSize: 11,
+                    color: AppColors.accent,
+                  ),
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Text(
                   step,
-                  style: AppTypography.body
-                      .copyWith(color: AppColors.darkTextSecondary),
+                  style: AppTypography.body.copyWith(
+                    color: AppColors.darkTextSecondary,
+                  ),
                 ),
               ),
             ],

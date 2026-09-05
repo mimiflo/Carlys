@@ -31,8 +31,11 @@ void main() {
     // La scène cœur de l'accueil boucle en continu : réduction d'animations
     // pour que pumpAndSettle converge.
     TestWidgetsFlutterBinding
-            .instance.platformDispatcher.accessibilityFeaturesTestValue =
-        const FakeAccessibilityFeatures(disableAnimations: true);
+        .instance
+        .platformDispatcher
+        .accessibilityFeaturesTestValue = const FakeAccessibilityFeatures(
+      disableAnimations: true,
+    );
   });
 
   tearDown(() {
@@ -61,21 +64,21 @@ void main() {
               apiBaseUrl: 'http://localhost:3000',
             ),
           ),
-          authRepositoryProvider
-              .overrideWithValue(FakeAuthRepository(storedSession: true)),
-          exercisesRepositoryProvider.overrideWithValue(
-            FakeExercisesRepository(
-              [
-                summary('id-1', 'Développé couché', group: 'pectoraux'),
-                summary('id-2', 'Squat', group: 'quadriceps'),
-              ],
-              pageSize: 10,
-            ),
+          authRepositoryProvider.overrideWithValue(
+            FakeAuthRepository(storedSession: true),
           ),
-          progressRepositoryProvider
-              .overrideWithValue(FakeProgressRepository()),
-          nutritionRepositoryProvider
-              .overrideWithValue(FakeNutritionRepository()),
+          exercisesRepositoryProvider.overrideWithValue(
+            FakeExercisesRepository([
+              summary('id-1', 'Développé couché', group: 'pectoraux'),
+              summary('id-2', 'Squat', group: 'quadriceps'),
+            ], pageSize: 10),
+          ),
+          progressRepositoryProvider.overrideWithValue(
+            FakeProgressRepository(),
+          ),
+          nutritionRepositoryProvider.overrideWithValue(
+            FakeNutritionRepository(),
+          ),
           workoutRepositoryProvider.overrideWithValue(workouts),
           workoutTemplateRepositoryProvider.overrideWithValue(
             DemoWorkoutTemplateRepository(workouts, seed: seed),
@@ -102,23 +105,23 @@ void main() {
     return workouts;
   }
 
-  testWidgets('aucun modèle : l’état vide invite à composer sa séance type',
-      (tester) async {
+  testWidgets('aucun modèle : l’état vide invite à composer sa séance type', (
+    tester,
+  ) async {
     await openTemplates(tester);
 
     expect(find.text('Mes modèles'), findsOneWidget);
     expect(find.text('Aucun modèle'), findsOneWidget);
     expect(
-      find.text(
-        'Compose ta séance type une fois, relance-la en un geste.',
-      ),
+      find.text('Compose ta séance type une fois, relance-la en un geste.'),
       findsOneWidget,
     );
     expect(find.text('Créer un modèle'), findsOneWidget);
   });
 
-  testWidgets('création : nommer, ajouter un exercice puis enregistrer',
-      (tester) async {
+  testWidgets('création : nommer, ajouter un exercice puis enregistrer', (
+    tester,
+  ) async {
     await openTemplates(tester);
 
     await tester.tap(find.text('Créer un modèle'));
@@ -162,8 +165,9 @@ void main() {
     expect(find.text('2 SÉRIES'), findsOneWidget);
   });
 
-  testWidgets('lancement : la séance démarre pré-remplie par le modèle',
-      (tester) async {
+  testWidgets('lancement : la séance démarre pré-remplie par le modèle', (
+    tester,
+  ) async {
     final workouts = await openTemplates(
       tester,
       seed: [
@@ -208,5 +212,6 @@ void main() {
 }
 
 /// Le bouton « Enregistrer » de la barre basse de l'éditeur.
-FilledButton saveButton(WidgetTester tester) => tester
-    .widget<FilledButton>(find.widgetWithText(FilledButton, 'Enregistrer'));
+FilledButton saveButton(WidgetTester tester) => tester.widget<FilledButton>(
+  find.widgetWithText(FilledButton, 'Enregistrer'),
+);

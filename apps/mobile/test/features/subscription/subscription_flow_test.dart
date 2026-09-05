@@ -24,26 +24,26 @@ import '../../support/navigation.dart';
 Widget appWith({
   required FakeSubscriptionRepository subscription,
   FakeExercisesRepository? exercises,
-}) =>
-    ProviderScope(
-      overrides: [
-        appEnvironmentProvider.overrideWithValue(
-          const AppEnvironment(
-            flavor: AppFlavor.development,
-            apiBaseUrl: 'http://localhost:3000',
-          ),
-        ),
-        authRepositoryProvider
-            .overrideWithValue(FakeAuthRepository(storedSession: true)),
-        workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
-        syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
-        appRestoreProvider.overrideWithValue(NoopAppRestore()),
-        subscriptionRepositoryProvider.overrideWithValue(subscription),
-        if (exercises != null)
-          exercisesRepositoryProvider.overrideWithValue(exercises),
-      ],
-      child: const CarlysApp(),
-    );
+}) => ProviderScope(
+  overrides: [
+    appEnvironmentProvider.overrideWithValue(
+      const AppEnvironment(
+        flavor: AppFlavor.development,
+        apiBaseUrl: 'http://localhost:3000',
+      ),
+    ),
+    authRepositoryProvider.overrideWithValue(
+      FakeAuthRepository(storedSession: true),
+    ),
+    workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
+    syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
+    appRestoreProvider.overrideWithValue(NoopAppRestore()),
+    subscriptionRepositoryProvider.overrideWithValue(subscription),
+    if (exercises != null)
+      exercisesRepositoryProvider.overrideWithValue(exercises),
+  ],
+  child: const CarlysApp(),
+);
 
 /// Rend visible un élément de l'écran COURANT (dernier Scrollable de la
 /// pile) : remonte d'abord en haut, puis descend jusqu'à la cible —
@@ -65,8 +65,11 @@ void main() {
     // L'écran porte une scène 3D et une bordure animée en boucle :
     // animations réduites pour que pumpAndSettle converge.
     TestWidgetsFlutterBinding.ensureInitialized();
-    TestWidgetsFlutterBinding.instance.platformDispatcher
-        .accessibilityFeaturesTestValue = FakeAccessibilityFeatures.allOn;
+    TestWidgetsFlutterBinding
+            .instance
+            .platformDispatcher
+            .accessibilityFeaturesTestValue =
+        FakeAccessibilityFeatures.allOn;
   });
 
   tearDown(() {
@@ -101,8 +104,9 @@ void main() {
     expect(find.text('Aucun abonnement actif'), findsOneWidget);
   });
 
-  testWidgets('plan premium : droits actifs et état de l’abonnement',
-      (tester) async {
+  testWidgets('plan premium : droits actifs et état de l’abonnement', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       appWith(subscription: FakeSubscriptionRepository(isPremium: true)),
     );
@@ -124,40 +128,41 @@ void main() {
   });
 
   testWidgets(
-      'exercice premium refusé par le serveur : invitation vers l’abonnement',
-      (tester) async {
-    final exercises = _PremiumGatedExercises([
-      summary('id-1', 'Balancier kettlebell', group: 'dos'),
-    ]);
+    'exercice premium refusé par le serveur : invitation vers l’abonnement',
+    (tester) async {
+      final exercises = _PremiumGatedExercises([
+        summary('id-1', 'Balancier kettlebell', group: 'dos'),
+      ]);
 
-    await tester.pumpWidget(
-      appWith(
-        subscription: FakeSubscriptionRepository(),
-        exercises: exercises,
-      ),
-    );
-    await tester.pumpAndSettle();
+      await tester.pumpWidget(
+        appWith(
+          subscription: FakeSubscriptionRepository(),
+          exercises: exercises,
+        ),
+      );
+      await tester.pumpAndSettle();
 
-    await openExerciseLibrary(tester);
-    await tester.pumpAndSettle();
+      await openExerciseLibrary(tester);
+      await tester.pumpAndSettle();
 
-    // La bibliothèque s'ouvre sur la grille des groupes : on passe par
-    // « Tous les mouvements » pour atteindre le catalogue. On vise la CARTE,
-    // pas son libellé, qui passe sous la barre d'onglets en petite surface.
-    await tester.tap(
-      find.widgetWithText(MuscleGroupCard, 'Tous les mouvements'),
-    );
-    await tester.pumpAndSettle();
-    await tester.tap(find.text('Balancier kettlebell'));
-    await tester.pumpAndSettle();
+      // La bibliothèque s'ouvre sur la grille des groupes : on passe par
+      // « Tous les mouvements » pour atteindre le catalogue. On vise la CARTE,
+      // pas son libellé, qui passe sous la barre d'onglets en petite surface.
+      await tester.tap(
+        find.widgetWithText(MuscleGroupCard, 'Tous les mouvements'),
+      );
+      await tester.pumpAndSettle();
+      await tester.tap(find.text('Balancier kettlebell'));
+      await tester.pumpAndSettle();
 
-    expect(find.text('Exercice Premium'), findsOneWidget);
+      expect(find.text('Exercice Premium'), findsOneWidget);
 
-    await tester.tap(find.text('Voir mon abonnement'));
-    await tester.pumpAndSettle();
+      await tester.tap(find.text('Voir mon abonnement'));
+      await tester.pumpAndSettle();
 
-    expect(find.text('GRATUIT'), findsOneWidget);
-  });
+      expect(find.text('GRATUIT'), findsOneWidget);
+    },
+  );
 }
 
 /// Bibliothèque dont TOUTES les fiches sont refusées par le « serveur ».

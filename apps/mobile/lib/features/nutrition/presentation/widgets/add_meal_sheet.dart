@@ -63,8 +63,9 @@ class _AddMealFormState extends State<_AddMealForm> {
           children: [
             Text(
               'Ajouter un repas',
-              style: AppTypography.subheading
-                  .copyWith(color: AppColors.darkTextPrimary),
+              style: AppTypography.subheading.copyWith(
+                color: AppColors.darkTextPrimary,
+              ),
             ),
             const SizedBox(height: AppSpacing.md),
             AppTextField(

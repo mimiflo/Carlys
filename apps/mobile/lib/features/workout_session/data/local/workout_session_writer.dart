@@ -23,7 +23,7 @@ class WorkoutSessionWriter {
   const WorkoutSessionWriter({
     required AppDatabase database,
     required this._uuid,
-  })  : _db = database;
+  }) : _db = database;
 
   final AppDatabase _db;
   final Uuid _uuid;
@@ -34,12 +34,12 @@ class WorkoutSessionWriter {
   /// simultanées rendraient l'écran de séance et l'appariement au plan
   /// ambigus.
   Future<void> requireNoActiveSession() async {
-    final active = await (_db.select(_db.localWorkoutSessions)
-          ..where(
-            (session) =>
-                session.status.equals(WorkoutStatus.inProgress.apiValue),
-          ))
-        .get();
+    final active =
+        await (_db.select(_db.localWorkoutSessions)..where(
+              (session) =>
+                  session.status.equals(WorkoutStatus.inProgress.apiValue),
+            ))
+            .get();
     if (active.isNotEmpty) {
       throw StateError('Une séance est déjà en cours.');
     }
@@ -64,7 +64,9 @@ class WorkoutSessionWriter {
     String? templateName,
     List<Map<String, dynamic>> plan = const [],
   }) async {
-    await _db.into(_db.localWorkoutSessions).insert(
+    await _db
+        .into(_db.localWorkoutSessions)
+        .insert(
           LocalWorkoutSessionsCompanion.insert(
             id: id,
             name: Value(name),
@@ -99,7 +101,9 @@ class WorkoutSessionWriter {
     required String operationType,
     required Map<String, dynamic> payload,
   }) {
-    return _db.into(_db.syncOperations).insert(
+    return _db
+        .into(_db.syncOperations)
+        .insert(
           SyncOperationsCompanion.insert(
             id: _uuid.v4(),
             entityType: entityType,

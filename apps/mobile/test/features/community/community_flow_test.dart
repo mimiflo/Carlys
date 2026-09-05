@@ -21,38 +21,39 @@ import '../../support/navigation.dart';
 /// actions en mémoire) puis sur un dépôt piloté : états, demandes d'ami,
 /// défis, encouragements et confidentialité.
 Widget demoApp() => ProviderScope(
-      overrides: [
-        appEnvironmentProvider.overrideWithValue(
-          const AppEnvironment(
-            flavor: AppFlavor.demo,
-            apiBaseUrl: 'http://localhost:3000',
-          ),
-        ),
-        ...demoOverrides(),
-        workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
-      ],
-      child: const CarlysApp(),
-    );
+  overrides: [
+    appEnvironmentProvider.overrideWithValue(
+      const AppEnvironment(
+        flavor: AppFlavor.demo,
+        apiBaseUrl: 'http://localhost:3000',
+      ),
+    ),
+    ...demoOverrides(),
+    workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
+  ],
+  child: const CarlysApp(),
+);
 
 /// L'application CONNECTÉE (hors démo), avec un dépôt communauté pilotable :
 /// c'est elle qui doit distinguer erreur, chargement et vide.
 Widget appWith(FakeCommunityRepository community) => ProviderScope(
-      overrides: [
-        appEnvironmentProvider.overrideWithValue(
-          const AppEnvironment(
-            flavor: AppFlavor.development,
-            apiBaseUrl: 'http://localhost:3000',
-          ),
-        ),
-        authRepositoryProvider
-            .overrideWithValue(FakeAuthRepository(storedSession: true)),
-        workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
-        syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
-        appRestoreProvider.overrideWithValue(NoopAppRestore()),
-        communityRepositoryProvider.overrideWithValue(community),
-      ],
-      child: const CarlysApp(),
-    );
+  overrides: [
+    appEnvironmentProvider.overrideWithValue(
+      const AppEnvironment(
+        flavor: AppFlavor.development,
+        apiBaseUrl: 'http://localhost:3000',
+      ),
+    ),
+    authRepositoryProvider.overrideWithValue(
+      FakeAuthRepository(storedSession: true),
+    ),
+    workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
+    syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
+    appRestoreProvider.overrideWithValue(NoopAppRestore()),
+    communityRepositoryProvider.overrideWithValue(community),
+  ],
+  child: const CarlysApp(),
+);
 
 Future<void> reveal(WidgetTester tester, Finder item) async {
   final scrollable = find.byType(Scrollable).last;
@@ -63,8 +64,11 @@ Future<void> reveal(WidgetTester tester, Finder item) async {
 void main() {
   setUp(() {
     seedCompletedFirstRun();
-    TestWidgetsFlutterBinding.instance.platformDispatcher
-        .accessibilityFeaturesTestValue = FakeAccessibilityFeatures.allOn;
+    TestWidgetsFlutterBinding
+            .instance
+            .platformDispatcher
+            .accessibilityFeaturesTestValue =
+        FakeAccessibilityFeatures.allOn;
   });
 
   tearDown(() {
@@ -72,8 +76,9 @@ void main() {
         .clearAccessibilityFeaturesTestValue();
   });
 
-  testWidgets('fil, amis et défis servis en mémoire — privé compris',
-      (tester) async {
+  testWidgets('fil, amis et défis servis en mémoire — privé compris', (
+    tester,
+  ) async {
     await tester.pumpWidget(demoApp());
     await tester.pumpAndSettle();
     await tapTab(tester, 'Communauté');
@@ -90,8 +95,9 @@ void main() {
     expect(find.text('CULTUREL'), findsOneWidget);
   });
 
-  testWidgets('rejoindre un défi : participants +1 et bouton inversé',
-      (tester) async {
+  testWidgets('rejoindre un défi : participants +1 et bouton inversé', (
+    tester,
+  ) async {
     await tester.pumpWidget(demoApp());
     await tester.pumpAndSettle();
     await tapTab(tester, 'Communauté');
@@ -108,8 +114,9 @@ void main() {
     expect(find.text('23 participants'), findsNothing);
   });
 
-  testWidgets('compte neuf : l’état vide invite à ajouter un premier ami',
-      (tester) async {
+  testWidgets('compte neuf : l’état vide invite à ajouter un premier ami', (
+    tester,
+  ) async {
     // Toutes les listes vides : l'écran doit le dire honnêtement — et donner
     // le geste qui débloque tout (ajouter un ami), pas montrer une erreur.
     await tester.pumpWidget(appWith(FakeCommunityRepository()));
@@ -120,8 +127,9 @@ void main() {
     expect(find.text('Ajouter un ami'), findsWidgets);
   });
 
-  testWidgets('serveur en panne : état d’erreur, et « Réessayer » réessaie',
-      (tester) async {
+  testWidgets('serveur en panne : état d’erreur, et « Réessayer » réessaie', (
+    tester,
+  ) async {
     final community = FakeCommunityRepository(failReads: true);
     await tester.pumpWidget(appWith(community));
     await tester.pumpAndSettle();
@@ -140,8 +148,9 @@ void main() {
     expect(find.text('Personne ici pour l’instant'), findsOneWidget);
   });
 
-  testWidgets('hors connexion : le statut le DIT, comme le coach',
-      (tester) async {
+  testWidgets('hors connexion : le statut le DIT, comme le coach', (
+    tester,
+  ) async {
     final community = FakeCommunityRepository(offline: true);
     await tester.pumpWidget(appWith(community));
     await tester.pumpAndSettle();
@@ -160,8 +169,9 @@ void main() {
     expect(find.text('Personne ici pour l’instant'), findsOneWidget);
   });
 
-  testWidgets('accepter une demande : elle disparaît, l’ami apparaît',
-      (tester) async {
+  testWidgets('accepter une demande : elle disparaît, l’ami apparaît', (
+    tester,
+  ) async {
     final community = FakeCommunityRepository(
       requests: [
         FriendRequest(
@@ -241,8 +251,9 @@ void main() {
     expect(tester.widget<Switch>(find.byType(Switch)).value, isFalse);
   });
 
-  testWidgets('encourager un ami fait revenir un merci dans le fil',
-      (tester) async {
+  testWidgets('encourager un ami fait revenir un merci dans le fil', (
+    tester,
+  ) async {
     await tester.pumpWidget(demoApp());
     await tester.pumpAndSettle();
     await tapTab(tester, 'Communauté');

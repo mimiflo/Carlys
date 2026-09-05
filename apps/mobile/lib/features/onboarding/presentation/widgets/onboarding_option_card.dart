@@ -68,15 +68,17 @@ class OnboardingOptionCard extends StatelessWidget {
                   children: [
                     Text(
                       title,
-                      style: AppTypography.subheading
-                          .copyWith(color: AppColors.darkTextPrimary),
+                      style: AppTypography.subheading.copyWith(
+                        color: AppColors.darkTextPrimary,
+                      ),
                     ),
                     if (subtitle != null) ...[
                       const SizedBox(height: AppSpacing.xxs),
                       Text(
                         subtitle!,
-                        style: AppTypography.label
-                            .copyWith(color: AppColors.darkTextSecondary),
+                        style: AppTypography.label.copyWith(
+                          color: AppColors.darkTextSecondary,
+                        ),
                       ),
                     ],
                   ],

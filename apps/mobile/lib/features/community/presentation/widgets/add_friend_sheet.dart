@@ -88,8 +88,9 @@ class _AddFriendFormState extends State<_AddFriendForm> {
           children: [
             Text(
               'Ajouter un ami',
-              style: AppTypography.subheading
-                  .copyWith(color: AppColors.darkTextPrimary),
+              style: AppTypography.subheading.copyWith(
+                color: AppColors.darkTextPrimary,
+              ),
             ),
             const SizedBox(height: AppSpacing.sm),
             const FriendCodeCard(),

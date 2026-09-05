@@ -11,21 +11,21 @@ final progressPeriodProvider = StateProvider.autoDispose<ProgressPeriod>(
 /// Statistiques agrégées de la période sélectionnée.
 final progressOverviewProvider =
     FutureProvider.autoDispose<ProgressOverviewEntity>((ref) {
-  final period = ref.watch(progressPeriodProvider);
-  return ref.watch(progressRepositoryProvider).overview(period);
-});
+      final period = ref.watch(progressPeriodProvider);
+      return ref.watch(progressRepositoryProvider).overview(period);
+    });
 
 /// Records personnels, tous exercices confondus.
 final personalRecordsProvider =
     FutureProvider.autoDispose<List<PersonalRecordEntry>>((ref) {
-  return ref.watch(progressRepositoryProvider).records();
-});
+      return ref.watch(progressRepositoryProvider).records();
+    });
 
 /// Historique de poids corporel (du plus ancien au plus récent).
 final bodyWeightMetricsProvider =
     FutureProvider.autoDispose<List<BodyMetricEntry>>((ref) {
-  return ref.watch(progressRepositoryProvider).bodyMetrics();
-});
+      return ref.watch(progressRepositoryProvider).bodyMetrics();
+    });
 
 /// Actions sur les mesures corporelles, avec rafraîchissement de la liste.
 class BodyMetricActions {
@@ -34,7 +34,9 @@ class BodyMetricActions {
   final Ref _ref;
 
   Future<void> addWeight(double valueKg, {DateTime? measuredAt}) async {
-    await _ref.read(progressRepositoryProvider).addBodyMetric(
+    await _ref
+        .read(progressRepositoryProvider)
+        .addBodyMetric(
           kind: BodyMetricKind.weightKg,
           value: valueKg,
           measuredAt: measuredAt ?? DateTime.now().toUtc(),

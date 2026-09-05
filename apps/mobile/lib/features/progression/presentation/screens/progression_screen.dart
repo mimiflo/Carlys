@@ -50,7 +50,8 @@ class ProgressionScreen extends ConsumerWidget {
               AppErrorState(
                 icon: AppIcons.retry,
                 title: 'Ton historique n’a pas pu être lu',
-                message: 'Ta progression se recalcule depuis tes séances : '
+                message:
+                    'Ta progression se recalcule depuis tes séances : '
                     'elle réapparaîtra entière dès que la lecture repart. '
                     'Rien n’est perdu.',
                 onRetry: () => ref.invalidate(workoutHistoryProvider),

@@ -40,8 +40,9 @@ class SceneCadence {
     // Moyenne glissante exponentielle : lisse les pics sans traîner
     // des minutes de passé.
     _samples += 1;
-    _averageMicros =
-        _samples == 1 ? micros : _averageMicros * 0.9 + micros * 0.1;
+    _averageMicros = _samples == 1
+        ? micros
+        : _averageMicros * 0.9 + micros * 0.1;
     if (_samples < _minSamples) {
       return;
     }

@@ -28,12 +28,12 @@ class WorkoutTemplateRepositoryImpl implements WorkoutTemplateRepository {
     required SyncEngine syncEngine,
     this._remote,
     Uuid uuid = const Uuid(),
-  })  : _db = database,
-        _sync = syncEngine,
-        _uuid = uuid,
-        _local = WorkoutTemplateLocalDataSource(database),
-        _plans = SessionPlanLocalDataSource(database),
-        _sessions = WorkoutSessionWriter(database: database, uuid: uuid);
+  }) : _db = database,
+       _sync = syncEngine,
+       _uuid = uuid,
+       _local = WorkoutTemplateLocalDataSource(database),
+       _plans = SessionPlanLocalDataSource(database),
+       _sessions = WorkoutSessionWriter(database: database, uuid: uuid);
 
   final AppDatabase _db;
   final SyncEngine _sync;
@@ -50,9 +50,9 @@ class WorkoutTemplateRepositoryImpl implements WorkoutTemplateRepository {
   // ── Lectures ─────────────────────────────────────────────────────────────
 
   @override
-  Stream<List<WorkoutTemplateInfo>> watchTemplates() => _local
-      .watchAll()
-      .map((templates) => templates.map((it) => it.info).toList());
+  Stream<List<WorkoutTemplateInfo>> watchTemplates() => _local.watchAll().map(
+    (templates) => templates.map((it) => it.info).toList(),
+  );
 
   @override
   Future<WorkoutTemplateDetail?> templateDetail(String templateId) =>
@@ -250,8 +250,7 @@ class WorkoutTemplateRepositoryImpl implements WorkoutTemplateRepository {
   Future<void> fulfillPlanItem({
     required String planItemId,
     required String setId,
-  }) =>
-      _plans.fulfillItem(planItemId: planItemId, setId: setId);
+  }) => _plans.fulfillItem(planItemId: planItemId, setId: setId);
 
   @override
   Future<void> skipPlanItem(String planItemId) async {
@@ -320,13 +319,12 @@ class WorkoutTemplateRepositoryImpl implements WorkoutTemplateRepository {
   // ── Interne ──────────────────────────────────────────────────────────────
 
   Future<void> _dropPending(String templateId, String operationType) {
-    return (_db.delete(_db.syncOperations)
-          ..where(
-            (operation) =>
-                operation.entityId.equals(templateId) &
-                operation.operationType.equals(operationType) &
-                operation.status.equals('pending'),
-          ))
+    return (_db.delete(_db.syncOperations)..where(
+          (operation) =>
+              operation.entityId.equals(templateId) &
+              operation.operationType.equals(operationType) &
+              operation.status.equals('pending'),
+        ))
         .go();
   }
 
@@ -337,8 +335,9 @@ class WorkoutTemplateRepositoryImpl implements WorkoutTemplateRepository {
   }
 }
 
-final workoutTemplateRepositoryProvider =
-    Provider<WorkoutTemplateRepository>((ref) {
+final workoutTemplateRepositoryProvider = Provider<WorkoutTemplateRepository>((
+  ref,
+) {
   return WorkoutTemplateRepositoryImpl(
     database: ref.watch(appDatabaseProvider),
     syncEngine: ref.watch(syncEngineProvider),

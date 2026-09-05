@@ -41,7 +41,8 @@ class ConnectionAwareError extends StatelessWidget {
       return AppErrorState(
         icon: AppIcons.offline,
         title: 'Hors connexion',
-        message: offlineMessage ??
+        message:
+            offlineMessage ??
             'Cette partie de l’application a besoin du réseau. '
                 'Réessaie une fois connecté.',
         onRetry: onRetry,

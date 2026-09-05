@@ -24,9 +24,9 @@ class AppFittedText extends StatefulWidget {
     this.textAlign = TextAlign.start,
     super.key,
   }) : assert(
-          minFontSize > 0 && minFontSize <= maxFontSize,
-          'Bornes de taille incohérentes',
-        );
+         minFontSize > 0 && minFontSize <= maxFontSize,
+         'Bornes de taille incohérentes',
+       );
 
   final String text;
 
@@ -81,8 +81,9 @@ class _AppFittedTextState extends State<AppFittedText> {
           // L'abrègement n'a de sens QU'AVEC un nombre de lignes : demandé
           // sans lui, le moteur tronque dès la première ligne — le texte
           // ajusté n'aurait alors jamais l'occasion de remplir sa boîte.
-          overflow:
-              maxLines == null ? TextOverflow.clip : TextOverflow.ellipsis,
+          overflow: maxLines == null
+              ? TextOverflow.clip
+              : TextOverflow.ellipsis,
           style: widget.style.copyWith(fontSize: fontSize),
         );
       },

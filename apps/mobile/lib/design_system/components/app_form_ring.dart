@@ -84,8 +84,9 @@ class _AppFormRingState extends State<AppFormRing>
                   children: [
                     Text(
                       '$shown',
-                      style: AppTypography.metricL
-                          .copyWith(color: AppColors.accent),
+                      style: AppTypography.metricL.copyWith(
+                        color: AppColors.accent,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Text(

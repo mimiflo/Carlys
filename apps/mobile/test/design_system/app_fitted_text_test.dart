@@ -32,8 +32,9 @@ void main() {
     return tester.widget<Text>(find.text(text)).style!.fontSize!;
   }
 
-  testWidgets('une phrase courte prend un plus grand corps qu’une longue',
-      (tester) async {
+  testWidgets('une phrase courte prend un plus grand corps qu’une longue', (
+    tester,
+  ) async {
     final short = await sizeOf(tester, 'Le tempo est une charge invisible.');
     final long = await sizeOf(
       tester,
@@ -70,8 +71,9 @@ void main() {
     expect(size, greaterThanOrEqualTo(12));
   });
 
-  testWidgets('sans hauteur bornée, le corps maximal est retenu',
-      (tester) async {
+  testWidgets('sans hauteur bornée, le corps maximal est retenu', (
+    tester,
+  ) async {
     await tester.pumpWidget(
       const MaterialApp(
         home: Scaffold(

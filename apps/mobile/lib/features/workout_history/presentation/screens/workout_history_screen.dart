@@ -39,7 +39,8 @@ class _WorkoutHistoryScreenState extends ConsumerState<WorkoutHistoryScreen> {
   }
 
   Future<void> _pickMonth() async {
-    final history = ref.read(workoutHistoryProvider).valueOrNull ??
+    final history =
+        ref.read(workoutHistoryProvider).valueOrNull ??
         const <WorkoutHistoryEntry>[];
     final chosen = await showHistoryMonthSheet(
       context,
@@ -54,7 +55,8 @@ class _WorkoutHistoryScreenState extends ConsumerState<WorkoutHistoryScreen> {
   @override
   Widget build(BuildContext context) {
     final history = ref.watch(workoutHistoryProvider);
-    final records = ref.watch(personalRecordsProvider).valueOrNull ??
+    final records =
+        ref.watch(personalRecordsProvider).valueOrNull ??
         const <PersonalRecordEntry>[];
     final bottomInset = MediaQuery.paddingOf(context).bottom;
 

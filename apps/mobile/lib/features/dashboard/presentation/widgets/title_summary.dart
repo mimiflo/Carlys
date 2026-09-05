@@ -37,7 +37,8 @@ class TitleSummary extends ConsumerWidget {
 
     return Semantics(
       button: true,
-      label: 'Ton titre : ${profile.title.label}, '
+      label:
+          'Ton titre : ${profile.title.label}, '
           '${profile.points} points sur $maxTotal',
       onTap: () => context.push(AppRoutes.progression),
       child: ExcludeSemantics(

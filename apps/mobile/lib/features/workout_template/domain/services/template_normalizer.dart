@@ -70,8 +70,10 @@ WorkoutTemplateDetail normalizeTemplateInput({
       id: templateId,
       name: name,
       exercisesCount: exercises.length,
-      plannedSetsCount:
-          exercises.fold(0, (total, exercise) => total + exercise.sets.length),
+      plannedSetsCount: exercises.fold(
+        0,
+        (total, exercise) => total + exercise.sets.length,
+      ),
       estimatedDurationMinutes: duration,
       previewExerciseNames: exercises
           .take(3)

@@ -30,7 +30,7 @@ class AppRestore {
     required SyncEngine syncEngine,
     required this._workouts,
     required this._templates,
-  })  : _sync = syncEngine;
+  }) : _sync = syncEngine;
 
   static const _logger = AppLogger('AppRestore');
 

@@ -6,8 +6,9 @@ import '../../domain/entities/nutrition.dart';
 import '../../domain/repositories/nutrition_repository.dart';
 
 /// Rapport métabolique courant (calculé côté serveur).
-final metabolismReportProvider =
-    FutureProvider.autoDispose<MetabolismReport>((ref) {
+final metabolismReportProvider = FutureProvider.autoDispose<MetabolismReport>((
+  ref,
+) {
   return ref.watch(nutritionRepositoryProvider).metabolismReport();
 });
 

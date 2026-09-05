@@ -24,8 +24,11 @@ import '../../support/navigation.dart';
 void main() {
   setUp(() {
     seedCompletedFirstRun();
-    TestWidgetsFlutterBinding.instance.platformDispatcher
-        .accessibilityFeaturesTestValue = FakeAccessibilityFeatures.allOn;
+    TestWidgetsFlutterBinding
+            .instance
+            .platformDispatcher
+            .accessibilityFeaturesTestValue =
+        FakeAccessibilityFeatures.allOn;
   });
 
   tearDown(() {
@@ -50,16 +53,14 @@ void main() {
               apiBaseUrl: 'http://localhost:3000',
             ),
           ),
-          authRepositoryProvider
-              .overrideWithValue(FakeAuthRepository(storedSession: true)),
+          authRepositoryProvider.overrideWithValue(
+            FakeAuthRepository(storedSession: true),
+          ),
           exercisesRepositoryProvider.overrideWithValue(
-            FakeExercisesRepository(
-              [
-                summary('id-1', 'Pompes', group: 'pectoraux'),
-                summary('id-2', 'Squat', group: 'quadriceps'),
-              ],
-              pageSize: 10,
-            ),
+            FakeExercisesRepository([
+              summary('id-1', 'Pompes', group: 'pectoraux'),
+              summary('id-2', 'Squat', group: 'quadriceps'),
+            ], pageSize: 10),
           ),
           workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
           syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
@@ -72,8 +73,9 @@ void main() {
     await openExerciseLibrary(tester);
   }
 
-  testWidgets('l’onglet s’ouvre sur les groupes, pas sur la liste',
-      (tester) async {
+  testWidgets('l’onglet s’ouvre sur les groupes, pas sur la liste', (
+    tester,
+  ) async {
     await openLibrary(tester);
 
     // La grille se construit paresseusement : on vérifie ce qui est à
@@ -85,8 +87,9 @@ void main() {
     expect(find.text('Pompes'), findsNothing);
   });
 
-  testWidgets('choisir un groupe ouvre ses mouvements, et on peut revenir',
-      (tester) async {
+  testWidgets('choisir un groupe ouvre ses mouvements, et on peut revenir', (
+    tester,
+  ) async {
     await openLibrary(tester);
 
     await tester.tap(find.text('Pectoraux'));
@@ -104,8 +107,9 @@ void main() {
     expect(find.text('Pectoraux'), findsOneWidget);
   });
 
-  testWidgets('« Tous les mouvements » ouvre le catalogue entier',
-      (tester) async {
+  testWidgets('« Tous les mouvements » ouvre le catalogue entier', (
+    tester,
+  ) async {
     await openLibrary(tester);
 
     await tester.tap(find.text('Tous les mouvements'));
@@ -125,14 +129,12 @@ void main() {
     expect(find.byType(MuscleGroupCard), findsNothing);
     expect(find.text('Pompes'), findsNothing);
     // Pas de barre de retour : on n'est venu d'aucun groupe.
-    expect(
-      find.byTooltip('Revenir aux groupes musculaires'),
-      findsNothing,
-    );
+    expect(find.byTooltip('Revenir aux groupes musculaires'), findsNothing);
   });
 
-  testWidgets('un groupe sans détourage garde sa carte et son nom',
-      (tester) async {
+  testWidgets('un groupe sans détourage garde sa carte et son nom', (
+    tester,
+  ) async {
     await openLibrary(tester);
 
     // Les ischio-jambiers manquent à la planche fournie. La carte ne doit

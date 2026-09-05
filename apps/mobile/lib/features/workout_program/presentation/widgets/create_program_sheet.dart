@@ -61,8 +61,9 @@ class _CreateProgramFormState extends State<_CreateProgramForm> {
           children: [
             Text(
               'Nouveau programme',
-              style: AppTypography.subheading
-                  .copyWith(color: AppColors.darkTextPrimary),
+              style: AppTypography.subheading.copyWith(
+                color: AppColors.darkTextPrimary,
+              ),
             ),
             const SizedBox(height: AppSpacing.md),
             AppTextField(

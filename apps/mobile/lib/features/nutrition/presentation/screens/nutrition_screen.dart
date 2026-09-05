@@ -37,16 +37,16 @@ class NutritionScreen extends ConsumerWidget {
                 error: error,
                 title: 'Métabolisme indisponible',
                 message: 'Le rapport n’a pas pu être calculé. Réessaie.',
-                offlineMessage: 'Le métabolisme se calcule sur le serveur : '
+                offlineMessage:
+                    'Le métabolisme se calcule sur le serveur : '
                     'il revient avec le réseau.',
                 onRetry: () => ref.invalidate(metabolismReportProvider),
               ),
             ),
             // L'hélice se fige pendant le défilement, comme le cœur à
             // l'accueil.
-            data: (data) => SceneScrollActivity(
-              child: _NutritionContent(report: data),
-            ),
+            data: (data) =>
+                SceneScrollActivity(child: _NutritionContent(report: data)),
           ),
           // Le hero est à fond perdu : la flèche de retour se pose PAR-DESSUS,
           // dans la zone sûre, comme sur une fiche d'exercice.

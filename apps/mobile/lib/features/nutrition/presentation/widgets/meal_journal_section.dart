@@ -23,11 +23,9 @@ class MealJournalSection extends ConsumerWidget {
     if (draft == null) {
       return;
     }
-    await ref.read(nutritionActionsProvider).addMeal(
-          name: draft.name,
-          kcal: draft.kcal,
-          proteinG: draft.proteinG,
-        );
+    await ref
+        .read(nutritionActionsProvider)
+        .addMeal(name: draft.name, kcal: draft.kcal, proteinG: draft.proteinG);
   }
 
   @override
@@ -43,9 +41,9 @@ class MealJournalSection extends ConsumerWidget {
           trailing: consumed == null
               ? null
               : targetKcal == null
-                  ? '${formatThousands(consumed)} kcal'
-                  : '${formatThousands(consumed)} / '
-                      '${formatThousands(targetKcal!)} kcal',
+              ? '${formatThousands(consumed)} kcal'
+              : '${formatThousands(consumed)} / '
+                    '${formatThousands(targetKcal!)} kcal',
         ),
         const SizedBox(height: AppSpacing.sm),
         meals.when(
@@ -54,7 +52,8 @@ class MealJournalSection extends ConsumerWidget {
             error: error,
             title: 'Journal indisponible',
             message: 'Tes repas n’ont pas pu être chargés.',
-            offlineMessage: 'Le journal vit sur le serveur : tes repas '
+            offlineMessage:
+                'Le journal vit sur le serveur : tes repas '
                 'reviendront avec le réseau.',
             onRetry: () => ref.invalidate(todayMealsProvider),
           ),
@@ -66,8 +65,9 @@ class MealJournalSection extends ConsumerWidget {
                   child: Text(
                     'Rien au journal aujourd’hui. Ajoute ton premier repas '
                     'pour suivre ton objectif.',
-                    style: AppTypography.body
-                        .copyWith(color: AppColors.darkTextSecondary),
+                    style: AppTypography.body.copyWith(
+                      color: AppColors.darkTextSecondary,
+                    ),
                   ),
                 )
               else
@@ -112,14 +112,16 @@ class _MealTile extends StatelessWidget {
               children: [
                 Text(
                   meal.name,
-                  style: AppTypography.subheading
-                      .copyWith(color: AppColors.darkTextPrimary),
+                  style: AppTypography.subheading.copyWith(
+                    color: AppColors.darkTextPrimary,
+                  ),
                 ),
                 Text(
                   '${formatThousands(meal.kcal)} kcal'
                   '${protein == null ? '' : ' · $protein g de protéines'}',
-                  style: AppTypography.label
-                      .copyWith(color: AppColors.darkTextTertiary),
+                  style: AppTypography.label.copyWith(
+                    color: AppColors.darkTextTertiary,
+                  ),
                 ),
               ],
             ),

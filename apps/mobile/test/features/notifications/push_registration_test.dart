@@ -99,27 +99,30 @@ class FakeDeviceTokenRepository implements DeviceTokenRepository {
 }
 
 void main() {
-  test('sans configuration Firebase : no-op assumé, rien n’est touché',
-      () async {
-    final messenger = FakePushMessenger();
-    final repository = FakeDeviceTokenRepository();
-    PushRegistration(
-      environment: const AppEnvironment(
-        flavor: AppFlavor.development,
-        apiBaseUrl: 'http://localhost:3000',
-      ),
-      messenger: messenger,
-      repository: repository,
-    ).ensureStarted();
-    await pumpEventQueue();
+  test(
+    'sans configuration Firebase : no-op assumé, rien n’est touché',
+    () async {
+      final messenger = FakePushMessenger();
+      final repository = FakeDeviceTokenRepository();
+      PushRegistration(
+        environment: const AppEnvironment(
+          flavor: AppFlavor.development,
+          apiBaseUrl: 'http://localhost:3000',
+        ),
+        messenger: messenger,
+        repository: repository,
+      ).ensureStarted();
+      await pumpEventQueue();
 
-    expect(messenger.obtainCalls, 0);
-    expect(repository.registered, isEmpty);
-  });
+      expect(messenger.obtainCalls, 0);
+      expect(repository.registered, isEmpty);
+    },
+  );
 
   test('en démo : no-op même si la configuration est présente', () async {
-    final (registration, messenger, _) =
-        build(env: environment(flavor: AppFlavor.demo));
+    final (registration, messenger, _) = build(
+      env: environment(flavor: AppFlavor.demo),
+    );
     registration.ensureStarted();
     await pumpEventQueue();
 
@@ -161,15 +164,17 @@ void main() {
     expect(registration.registeredToken, 'jeton-2');
   });
 
-  test('serveur injoignable : rien ne casse, le jeton reste non enregistré',
-      () async {
-    final (registration, _, repository) = build();
-    repository.failRegister = true;
-    registration.ensureStarted();
-    await pumpEventQueue();
+  test(
+    'serveur injoignable : rien ne casse, le jeton reste non enregistré',
+    () async {
+      final (registration, _, repository) = build();
+      repository.failRegister = true;
+      registration.ensureStarted();
+      await pumpEventQueue();
 
-    expect(registration.registeredToken, isNull);
-  });
+      expect(registration.registeredToken, isNull);
+    },
+  );
 
   test('déconnexion : oubli côté serveur PUIS côté appareil', () async {
     final (registration, messenger, repository) = build();

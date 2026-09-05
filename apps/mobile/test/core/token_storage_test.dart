@@ -22,10 +22,7 @@ void main() {
     // ils sont bien dans le stockage sécurisé injecté.
     expect(
       secureStorage.values.keys,
-      containsAll(<String>[
-        'carlys_access_token',
-        'carlys_refresh_token',
-      ]),
+      containsAll(<String>['carlys_access_token', 'carlys_refresh_token']),
     );
 
     await storage.clear();

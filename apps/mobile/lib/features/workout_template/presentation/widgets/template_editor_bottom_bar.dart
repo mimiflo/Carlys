@@ -44,9 +44,7 @@ class TemplateEditorBottomBar extends StatelessWidget {
         child: DecoratedBox(
           decoration: BoxDecoration(
             color: AppColors.darkBackground.withValues(alpha: _veilAlpha),
-            border: const Border(
-              top: BorderSide(color: AppColors.darkBorder),
-            ),
+            border: const Border(top: BorderSide(color: AppColors.darkBorder)),
           ),
           child: Padding(
             padding: EdgeInsets.fromLTRB(
@@ -61,8 +59,9 @@ class TemplateEditorBottomBar extends StatelessWidget {
               children: [
                 Text(
                   _summary(),
-                  style: AppTypography.labelMono
-                      .copyWith(color: AppColors.darkTextTertiary),
+                  style: AppTypography.labelMono.copyWith(
+                    color: AppColors.darkTextTertiary,
+                  ),
                 ),
                 const SizedBox(height: AppSpacing.sm),
                 Row(
@@ -144,8 +143,9 @@ class _SaveButton extends StatelessWidget {
             foregroundColor: AppColors.darkBackground,
             disabledBackgroundColor: AppColors.darkSurface,
             disabledForegroundColor: AppColors.darkIconInactive,
-            textStyle:
-                AppTypography.subheading.copyWith(fontWeight: FontWeight.w700),
+            textStyle: AppTypography.subheading.copyWith(
+              fontWeight: FontWeight.w700,
+            ),
           ),
           onPressed: enabled ? onPressed : null,
           child: saving

@@ -34,7 +34,8 @@ class ExerciseCatalogList extends ConsumerWidget {
     // mouvements s'annonçait « 12+ » — le nombre de la première page.
     final count = state.total ?? state.items.length;
     final approximate = state.total == null && state.hasMore;
-    final title = '${formatThousands(count)}${approximate ? '+' : ''} '
+    final title =
+        '${formatThousands(count)}${approximate ? '+' : ''} '
         '${count > 1 ? 'mouvements' : 'mouvement'}';
 
     return Column(

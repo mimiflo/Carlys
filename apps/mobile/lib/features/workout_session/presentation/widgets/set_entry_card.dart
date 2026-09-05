@@ -125,12 +125,11 @@ class _SetEntryCardState extends State<SetEntryCard> {
                   value: formatDecimal(_weightKg),
                   onDecrement: _weightKg >= SetEntryCard._weightStep
                       ? () => setState(
-                            () => _weightKg -= SetEntryCard._weightStep,
-                          )
+                          () => _weightKg -= SetEntryCard._weightStep,
+                        )
                       : null,
-                  onIncrement: () => setState(
-                    () => _weightKg += SetEntryCard._weightStep,
-                  ),
+                  onIncrement: () =>
+                      setState(() => _weightKg += SetEntryCard._weightStep),
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
@@ -139,8 +138,9 @@ class _SetEntryCardState extends State<SetEntryCard> {
                   label: 'Répétitions',
                   unit: 'reps',
                   value: formatThousands(_reps),
-                  onDecrement:
-                      _reps > 1 ? () => setState(() => _reps -= 1) : null,
+                  onDecrement: _reps > 1
+                      ? () => setState(() => _reps -= 1)
+                      : null,
                   onIncrement: () => setState(() => _reps += 1),
                 ),
               ),
@@ -166,7 +166,8 @@ class _SetEntryCardState extends State<SetEntryCard> {
         AppPill(label: planned, tone: AppPillTone.accent, mono: true),
       if (hasPrevious)
         AppPill(
-          label: 'Précédent ${formatDecimal(previous.weightKg!)} kg '
+          label:
+              'Précédent ${formatDecimal(previous.weightKg!)} kg '
               '× ${formatThousands(previous.reps!)}',
           tone: planned == null ? AppPillTone.accent : AppPillTone.neutral,
           mono: true,
@@ -216,8 +217,9 @@ class _ValidateCta extends StatelessWidget {
         style: FilledButton.styleFrom(
           backgroundColor: AppColors.accent,
           foregroundColor: AppColors.darkBackground,
-          textStyle:
-              AppTypography.subheading.copyWith(fontWeight: FontWeight.w700),
+          textStyle: AppTypography.subheading.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
         ),
         onPressed: onPressed,
         child: const Row(

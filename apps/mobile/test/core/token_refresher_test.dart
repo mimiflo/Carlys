@@ -105,13 +105,13 @@ void main() {
     expect(await storage.hasSession, isFalse);
   });
 
-  test('single-flight : des rafraîchissements simultanés ne font qu’un appel',
-      () async {
-    await storage.save(
-      const StoredTokens(accessToken: 'old', refreshToken: 'refresh-1'),
-    );
-    final adapter = _FakeAdapter(
-      (_) async {
+  test(
+    'single-flight : des rafraîchissements simultanés ne font qu’un appel',
+    () async {
+      await storage.save(
+        const StoredTokens(accessToken: 'old', refreshToken: 'refresh-1'),
+      );
+      final adapter = _FakeAdapter((_) async {
         await Future<void>.delayed(const Duration(milliseconds: 20));
         return _json(200, {
           'data': {
@@ -123,18 +123,18 @@ void main() {
           'meta': <String, Object?>{},
           'requestId': 'test',
         });
-      },
-    );
-    dio.httpClientAdapter = adapter;
-    final refresher = TokenRefresher(bareDio: dio, storage: storage);
+      });
+      dio.httpClientAdapter = adapter;
+      final refresher = TokenRefresher(bareDio: dio, storage: storage);
 
-    final results = await Future.wait([
-      refresher.refresh(),
-      refresher.refresh(),
-      refresher.refresh(),
-    ]);
+      final results = await Future.wait([
+        refresher.refresh(),
+        refresher.refresh(),
+        refresher.refresh(),
+      ]);
 
-    expect(results, everyElement(isTrue));
-    expect(adapter.calls, 1);
-  });
+      expect(results, everyElement(isTrue));
+      expect(adapter.calls, 1);
+    },
+  );
 }

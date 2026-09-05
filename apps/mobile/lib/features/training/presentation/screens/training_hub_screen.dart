@@ -33,14 +33,16 @@ class TrainingHubScreen extends ConsumerWidget {
         children: [
           Text(
             'Training',
-            style: AppTypography.display
-                .copyWith(color: AppColors.darkTextPrimary),
+            style: AppTypography.display.copyWith(
+              color: AppColors.darkTextPrimary,
+            ),
           ),
           const SizedBox(height: AppSpacing.xxs),
           Text(
             'Séances, exercices, coach : tout l’entraînement.',
-            style:
-                AppTypography.body.copyWith(color: AppColors.darkTextSecondary),
+            style: AppTypography.body.copyWith(
+              color: AppColors.darkTextSecondary,
+            ),
           ),
           const SizedBox(height: AppSpacing.gapRow),
           if (active != null) ...[
@@ -60,13 +62,15 @@ class TrainingHubScreen extends ConsumerWidget {
                       children: [
                         Text(
                           'Séance en cours',
-                          style: AppTypography.subheading
-                              .copyWith(color: AppColors.darkTextPrimary),
+                          style: AppTypography.subheading.copyWith(
+                            color: AppColors.darkTextPrimary,
+                          ),
                         ),
                         Text(
                           'Reprendre là où tu t’es arrêté.',
-                          style: AppTypography.body
-                              .copyWith(color: AppColors.darkTextSecondary),
+                          style: AppTypography.body.copyWith(
+                            color: AppColors.darkTextSecondary,
+                          ),
                         ),
                       ],
                     ),
@@ -152,13 +156,15 @@ class _Entry extends StatelessWidget {
                 children: [
                   Text(
                     title,
-                    style: AppTypography.subheading
-                        .copyWith(color: AppColors.darkTextPrimary),
+                    style: AppTypography.subheading.copyWith(
+                      color: AppColors.darkTextPrimary,
+                    ),
                   ),
                   Text(
                     subtitle,
-                    style: AppTypography.body
-                        .copyWith(color: AppColors.darkTextSecondary),
+                    style: AppTypography.body.copyWith(
+                      color: AppColors.darkTextSecondary,
+                    ),
                   ),
                 ],
               ),

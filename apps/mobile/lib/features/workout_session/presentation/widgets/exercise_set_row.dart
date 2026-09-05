@@ -124,8 +124,9 @@ class ExerciseSetRow extends StatelessWidget {
   }
 
   String _detail(WorkoutSetEntry? entry) {
-    final weight =
-        entry?.weightKg == null ? '—' : formatDecimal(entry!.weightKg!);
+    final weight = entry?.weightKg == null
+        ? '—'
+        : formatDecimal(entry!.weightKg!);
     final reps = entry?.reps == null ? '—' : formatThousands(entry!.reps!);
     final kind = entry != null && entry.kind != SetKind.normal
         ? ' · ${entry.kind.label}'

@@ -66,22 +66,22 @@ class DnaScenePainter extends CustomPainter {
   ];
 
   static StandardMaterial _strand(int hex) => StandardMaterial(
-        base: LinearRgb.fromHex(hex),
-        emissive: LinearRgb.fromHex(hex),
-        emissiveIntensity: 0.6 * _emissiveGain,
-        roughness: 0.3,
-        metalness: 0.35,
-        opacity: _op(0.8),
-      );
+    base: LinearRgb.fromHex(hex),
+    emissive: LinearRgb.fromHex(hex),
+    emissiveIntensity: 0.6 * _emissiveGain,
+    roughness: 0.3,
+    metalness: 0.35,
+    opacity: _op(0.8),
+  );
 
   static StandardMaterial _node(int hex, int emissive) => StandardMaterial(
-        base: LinearRgb.fromHex(hex),
-        emissive: LinearRgb.fromHex(emissive),
-        emissiveIntensity: 0.6 * _emissiveGain,
-        roughness: 0.35,
-        metalness: 0,
-        opacity: _op(0.55),
-      );
+    base: LinearRgb.fromHex(hex),
+    emissive: LinearRgb.fromHex(emissive),
+    emissiveIntensity: 0.6 * _emissiveGain,
+    roughness: 0.35,
+    metalness: 0,
+    opacity: _op(0.55),
+  );
 
   static final SceneCamera _camera = SceneCamera(
     fovDegrees: 30,

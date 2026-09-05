@@ -32,8 +32,9 @@ class _TemplateEditorScreenState extends ConsumerState<TemplateEditorScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final editor =
-        ref.watch(templateEditorControllerProvider(widget.templateId));
+    final editor = ref.watch(
+      templateEditorControllerProvider(widget.templateId),
+    );
     final draft = editor.valueOrNull;
 
     return PopScope(
@@ -100,8 +101,9 @@ class _TemplateEditorScreenState extends ConsumerState<TemplateEditorScreen> {
     } on InvalidTemplateException catch (error) {
       if (mounted) {
         setState(() => _saving = false);
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text(error.message)));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error.message)));
       }
       return;
     }

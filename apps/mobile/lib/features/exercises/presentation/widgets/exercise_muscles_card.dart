@@ -43,8 +43,9 @@ class ExerciseMusclesCard extends StatelessWidget {
           (
             name: link.muscleGroup.name,
             isPrimary: false,
-            color:
-                secondaryRank == 0 ? AppColors.primary : AppColors.primaryLight,
+            color: secondaryRank == 0
+                ? AppColors.primary
+                : AppColors.primaryLight,
             factor: secondaryRank++ == 0
                 ? _firstSecondaryFactor
                 : _otherSecondaryFactor,
@@ -70,8 +71,9 @@ class ExerciseMusclesCard extends StatelessWidget {
         children: [
           Text(
             'Muscles sollicités',
-            style: AppTypography.subheading
-                .copyWith(color: AppColors.darkTextPrimary),
+            style: AppTypography.subheading.copyWith(
+              color: AppColors.darkTextPrimary,
+            ),
           ),
           const SizedBox(height: AppSpacing.sm),
           for (final (index, bar) in _bars().indexed) ...[
@@ -92,7 +94,8 @@ class _MuscleRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Semantics(
-      label: '${bar.name} : muscle '
+      label:
+          '${bar.name} : muscle '
           '${bar.isPrimary ? 'principal' : 'secondaire'}',
       child: ExcludeSemantics(
         child: Row(

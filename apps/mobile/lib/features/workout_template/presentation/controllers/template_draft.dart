@@ -45,19 +45,20 @@ class DraftSet {
       id: id,
       kind: kind ?? this.kind,
       targetReps: targetReps ?? this.targetReps,
-      targetWeightKg:
-          targetWeightKg == null ? this.targetWeightKg : targetWeightKg(),
+      targetWeightKg: targetWeightKg == null
+          ? this.targetWeightKg
+          : targetWeightKg(),
       restSeconds: restSeconds ?? this.restSeconds,
     );
   }
 
   PlannedSetInput toInput() => PlannedSetInput(
-        id: id,
-        kind: kind,
-        targetReps: targetReps,
-        targetWeightKg: targetWeightKg,
-        restSeconds: restSeconds,
-      );
+    id: id,
+    kind: kind,
+    targetReps: targetReps,
+    targetWeightKg: targetWeightKg,
+    restSeconds: restSeconds,
+  );
 }
 
 /// Une ligne d'exercice en cours d'édition.
@@ -83,19 +84,19 @@ class DraftExercise {
   final List<DraftSet> sets;
 
   DraftExercise copyWith({List<DraftSet>? sets}) => DraftExercise(
-        localId: localId,
-        id: id,
-        exerciseId: exerciseId,
-        name: name,
-        sets: sets ?? this.sets,
-      );
+    localId: localId,
+    id: id,
+    exerciseId: exerciseId,
+    name: name,
+    sets: sets ?? this.sets,
+  );
 
   TemplateExerciseInput toInput() => TemplateExerciseInput(
-        id: id,
-        exerciseId: exerciseId,
-        exerciseName: name,
-        sets: sets.map((set) => set.toInput()).toList(growable: false),
-      );
+    id: id,
+    exerciseId: exerciseId,
+    exerciseName: name,
+    sets: sets.map((set) => set.toInput()).toList(growable: false),
+  );
 }
 
 /// L'état complet de l'éditeur.
@@ -112,7 +113,7 @@ class TemplateDraft {
   /// Brouillon vide d'une **création** : l'UUID est déjà celui du futur
   /// modèle, généré sur l'appareil avant toute écriture.
   const TemplateDraft.empty(String id)
-      : this(id: id, name: '', exercises: const []);
+    : this(id: id, name: '', exercises: const []);
 
   /// Brouillon amorcé sur un modèle existant — c'est la seule différence
   /// entre créer et modifier.
@@ -181,10 +182,10 @@ class TemplateDraft {
   /// État final visé du modèle : le `PUT` est un **remplacement intégral**,
   /// les positions se déduisent de l'ordre des listes.
   SaveTemplateInput toInput() => SaveTemplateInput(
-        id: id,
-        name: name,
-        notes: notes,
-        estimatedDurationMinutes: estimatedDurationMinutes,
-        exercises: exercises.map((it) => it.toInput()).toList(growable: false),
-      );
+    id: id,
+    name: name,
+    notes: notes,
+    estimatedDurationMinutes: estimatedDurationMinutes,
+    exercises: exercises.map((it) => it.toInput()).toList(growable: false),
+  );
 }

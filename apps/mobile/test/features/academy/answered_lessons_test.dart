@@ -46,11 +46,12 @@ void main() {
 
   group('carte de quiz', () {
     Widget host(QuizCard card) => MaterialApp(
-          home: Scaffold(body: SingleChildScrollView(child: card)),
-        );
+      home: Scaffold(body: SingleChildScrollView(child: card)),
+    );
 
-    testWidgets('une réponse venue d’ailleurs remplit la carte',
-        (tester) async {
+    testWidgets('une réponse venue d’ailleurs remplit la carte', (
+      tester,
+    ) async {
       // Le cas exact du bug : répondu sur l'accueil, la carte de l'Academy
       // doit s'ouvrir déjà remplie.
       await tester.pumpWidget(
@@ -62,8 +63,9 @@ void main() {
       expect(find.text(question.explanation), findsOneWidget);
     });
 
-    testWidgets('elle montre le choix RÉELLEMENT fait, pas le bon',
-        (tester) async {
+    testWidgets('elle montre le choix RÉELLEMENT fait, pas le bon', (
+      tester,
+    ) async {
       // Afficher la bonne réponse sans montrer celle qui a été donnée
       // laisserait croire à une réussite après une erreur. Carlys ne
       // réécrit pas l'histoire du côté flatteur.
@@ -92,8 +94,9 @@ void main() {
       expect(find.text(question.explanation), findsNothing);
     });
 
-    testWidgets('répondre remonte l’index choisi ET sa justesse',
-        (tester) async {
+    testWidgets('répondre remonte l’index choisi ET sa justesse', (
+      tester,
+    ) async {
       // L'index est ce qui permet de rouvrir la carte à l'identique
       // ailleurs ; la justesse sert aux défis culturels.
       int? choice;

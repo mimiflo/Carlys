@@ -46,11 +46,14 @@ class AppEnvironment {
     // --dart-define-from-file) ou pas du tout — jamais à moitié.
     const firebaseApiKey = String.fromEnvironment('CARLYS_FIREBASE_API_KEY');
     const firebaseAppId = String.fromEnvironment('CARLYS_FIREBASE_APP_ID');
-    const firebaseSenderId =
-        String.fromEnvironment('CARLYS_FIREBASE_SENDER_ID');
-    const firebaseProjectId =
-        String.fromEnvironment('CARLYS_FIREBASE_PROJECT_ID');
-    const firebaseConfigured = firebaseApiKey != '' &&
+    const firebaseSenderId = String.fromEnvironment(
+      'CARLYS_FIREBASE_SENDER_ID',
+    );
+    const firebaseProjectId = String.fromEnvironment(
+      'CARLYS_FIREBASE_PROJECT_ID',
+    );
+    const firebaseConfigured =
+        firebaseApiKey != '' &&
         firebaseAppId != '' &&
         firebaseSenderId != '' &&
         firebaseProjectId != '';

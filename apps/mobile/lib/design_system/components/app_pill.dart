@@ -44,25 +44,25 @@ class AppPill extends StatelessWidget {
     final effectiveTone = selected ? selectedTone : tone;
     final (background, borderColor, textColor) = switch (effectiveTone) {
       AppPillTone.accent => (
-          AppColors.accentBadgeBg,
-          AppColors.accentBadgeBorder,
-          AppColors.accent,
-        ),
+        AppColors.accentBadgeBg,
+        AppColors.accentBadgeBorder,
+        AppColors.accent,
+      ),
       AppPillTone.accentSolid => (
-          AppColors.accent,
-          Colors.transparent,
-          AppColors.darkBackground,
-        ),
+        AppColors.accent,
+        Colors.transparent,
+        AppColors.darkBackground,
+      ),
       AppPillTone.primary => (
-          AppColors.primaryCardSoft,
-          AppColors.primaryLightBorder,
-          AppColors.primaryLight,
-        ),
+        AppColors.primaryCardSoft,
+        AppColors.primaryLightBorder,
+        AppColors.primaryLight,
+      ),
       AppPillTone.neutral => (
-          AppColors.neutralBadgeBg,
-          Colors.transparent,
-          AppColors.neutralBadgeText,
-        ),
+        AppColors.neutralBadgeBg,
+        Colors.transparent,
+        AppColors.neutralBadgeText,
+      ),
     };
 
     final style = mono

@@ -18,14 +18,18 @@ void main() {
     expect(restored.goal, NutritionGoal.gainMuscle);
   });
 
-  test('une identité seule n’est pas « vide » — elle mérite l’enregistrement',
-      () {
-    const answers = OnboardingAnswers(carlysProfile: CarlysProfile.challenger);
+  test(
+    'une identité seule n’est pas « vide » — elle mérite l’enregistrement',
+    () {
+      const answers = OnboardingAnswers(
+        carlysProfile: CarlysProfile.challenger,
+      );
 
-    expect(answers.isEmpty, isFalse);
-    // Mais elle ne justifie AUCUNE écriture sur le profil métabolique.
-    expect(answers.hasMetabolicAnswers, isFalse);
-  });
+      expect(answers.isEmpty, isFalse);
+      // Mais elle ne justifie AUCUNE écriture sur le profil métabolique.
+      expect(answers.hasMetabolicAnswers, isFalse);
+    },
+  );
 
   test('une valeur inconnue relue du stockage est ignorée, pas devinée', () {
     final restored = OnboardingAnswers.fromStorage(const {

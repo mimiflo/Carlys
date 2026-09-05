@@ -93,9 +93,8 @@ class SubscriptionScreen extends ConsumerWidget {
                             title: 'Droits indisponibles',
                             onRetry: () => ref.invalidate(entitlementsProvider),
                           ),
-                          data: (entries) => SubscriptionBenefits(
-                            entries: entries,
-                          ),
+                          data: (entries) =>
+                              SubscriptionBenefits(entries: entries),
                         ),
                         const SizedBox(height: AppSpacing.gapSection),
                         Padding(
@@ -110,9 +109,8 @@ class SubscriptionScreen extends ConsumerWidget {
                               title: 'Plan indisponible',
                               onRetry: () => ref.invalidate(planStatusProvider),
                             ),
-                            data: (status) => SubscriptionPlanCard(
-                              status: status,
-                            ),
+                            data: (status) =>
+                                SubscriptionPlanCard(status: status),
                           ),
                         ),
                         // Les offres vivent DANS la page : mises en pied
@@ -157,10 +155,7 @@ class _CloseButton extends StatelessWidget {
     return Align(
       alignment: Alignment.centerLeft,
       child: Padding(
-        padding: const EdgeInsets.only(
-          left: AppSpacing.sm,
-          top: AppSpacing.xs,
-        ),
+        padding: const EdgeInsets.only(left: AppSpacing.sm, top: AppSpacing.xs),
         child: IconButton(
           tooltip: 'Fermer',
           padding: EdgeInsets.zero,

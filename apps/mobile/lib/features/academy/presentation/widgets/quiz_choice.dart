@@ -44,8 +44,8 @@ class QuizChoice extends StatelessWidget {
     final tone = correct && answered
         ? AppColors.success
         : picked
-            ? AppColors.danger
-            : null;
+        ? AppColors.danger
+        : null;
 
     return Padding(
       padding: const EdgeInsets.only(bottom: AppSpacing.xs),
@@ -71,9 +71,7 @@ class QuizChoice extends StatelessWidget {
                     ? AppColors.quizChoiceFill
                     : tone.withValues(alpha: 0.10),
                 borderRadius: AppRadius.lgAll,
-                border: Border.all(
-                  color: tone ?? AppColors.quizChoiceBorder,
-                ),
+                border: Border.all(color: tone ?? AppColors.quizChoiceBorder),
               ),
               child: Row(
                 children: [

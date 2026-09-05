@@ -64,30 +64,33 @@ Future<DemoCatalog> _read() async {
   final json = jsonDecode(raw) as Map<String, dynamic>;
 
   MuscleGroupRef groupOf(Map<String, dynamic> entry) => MuscleGroupRef(
-        id: 'mg-${entry['slug']}',
-        slug: entry['slug'] as String,
-        name: entry['name'] as String,
-      );
+    id: 'mg-${entry['slug']}',
+    slug: entry['slug'] as String,
+    name: entry['name'] as String,
+  );
   EquipmentRef equipmentOf(Map<String, dynamic> entry) => EquipmentRef(
-        id: 'eq-${entry['slug']}',
-        slug: entry['slug'] as String,
-        name: entry['name'] as String,
-      );
+    id: 'eq-${entry['slug']}',
+    slug: entry['slug'] as String,
+    name: entry['name'] as String,
+  );
 
   final groups = <String, MuscleGroupRef>{
-    for (final entry in (json['muscleGroups'] as List<dynamic>)
-        .whereType<Map<String, dynamic>>())
+    for (final entry
+        in (json['muscleGroups'] as List<dynamic>)
+            .whereType<Map<String, dynamic>>())
       entry['slug'] as String: groupOf(entry),
   };
   final equipment = <String, EquipmentRef>{
-    for (final entry in (json['equipment'] as List<dynamic>)
-        .whereType<Map<String, dynamic>>())
+    for (final entry
+        in (json['equipment'] as List<dynamic>)
+            .whereType<Map<String, dynamic>>())
       entry['slug'] as String: equipmentOf(entry),
   };
 
   final exercises = <ExerciseDetail>[];
-  for (final entry in (json['exercises'] as List<dynamic>)
-      .whereType<Map<String, dynamic>>()) {
+  for (final entry
+      in (json['exercises'] as List<dynamic>)
+          .whereType<Map<String, dynamic>>()) {
     final slug = entry['slug'] as String;
     final primary = groups[entry['primary'] as String];
     final secondary = (entry['secondary'] as List<dynamic>)
@@ -129,12 +132,15 @@ Future<DemoCatalog> _read() async {
 
   // Les groupes SANS exercice ne sont pas montrés : une case vide dans la
   // grille des muscles n'apprend rien et donne l'impression d'un bug.
-  final used =
-      exercises.map((e) => e.primaryMuscleGroup?.slug).nonNulls.toSet();
+  final used = exercises
+      .map((e) => e.primaryMuscleGroup?.slug)
+      .nonNulls
+      .toSet();
   return DemoCatalog(
     exercises: exercises,
-    muscleGroups:
-        groups.values.where((group) => used.contains(group.slug)).toList(),
+    muscleGroups: groups.values
+        .where((group) => used.contains(group.slug))
+        .toList(),
     equipment: equipment.values.toList(),
   );
 }

@@ -62,80 +62,79 @@ class OnboardingQuestion extends StatelessWidget {
       // description, anneau animé sur la sélection) : même langage visuel
       // du premier écran au dernier.
       0 => OnboardingStepBody(
-          label: 'Ton identité',
-          question: 'Quel Carlys\nes-tu ?',
-          subtitle: 'Une identité, pas un niveau : tu pourras en changer '
-              'à tout moment.',
-          options: [
-            for (final value in CarlysProfile.values)
-              CarlysProfileCard(
-                profile: value,
-                isCurrent: carlysProfile == value,
-                onTap: () => onCarlysProfile(value),
-              ),
-          ],
-        ),
+        label: 'Ton identité',
+        question: 'Quel Carlys\nes-tu ?',
+        subtitle:
+            'Une identité, pas un niveau : tu pourras en changer '
+            'à tout moment.',
+        options: [
+          for (final value in CarlysProfile.values)
+            CarlysProfileCard(
+              profile: value,
+              isCurrent: carlysProfile == value,
+              onTap: () => onCarlysProfile(value),
+            ),
+        ],
+      ),
       1 => OnboardingStepBody(
-          label: 'Ton objectif',
-          question: 'Qu’est-ce qu’on\nconstruit ensemble ?',
-          subtitle: 'On calibre tes charges, ton volume et tes macros '
-              'à partir de ça.',
-          options: [
-            for (final value in onboardingGoals)
-              OnboardingOptionCard(
-                title: value.label,
-                subtitle: goalSubtitle(value),
-                icon: goalIcon(value),
-                selected: goal == value,
-                onTap: () => onGoal(value),
-              ),
-          ],
-        ),
+        label: 'Ton objectif',
+        question: 'Qu’est-ce qu’on\nconstruit ensemble ?',
+        subtitle:
+            'On calibre tes charges, ton volume et tes macros '
+            'à partir de ça.',
+        options: [
+          for (final value in onboardingGoals)
+            OnboardingOptionCard(
+              title: value.label,
+              subtitle: goalSubtitle(value),
+              icon: goalIcon(value),
+              selected: goal == value,
+              onTap: () => onGoal(value),
+            ),
+        ],
+      ),
       2 => OnboardingStepBody(
-          label: 'Ton profil',
-          question: 'Pour calibrer\nton métabolisme',
-          subtitle: 'La formule de Mifflin-St Jeor dépend du sexe biologique.',
-          options: [
-            for (final value in BiologicalSex.values)
-              OnboardingOptionCard(
-                title: value.label,
-                icon: sexIcon(value),
-                selected: sex == value,
-                onTap: () => onSex(value),
-              ),
-          ],
-        ),
+        label: 'Ton profil',
+        question: 'Pour calibrer\nton métabolisme',
+        subtitle: 'La formule de Mifflin-St Jeor dépend du sexe biologique.',
+        options: [
+          for (final value in BiologicalSex.values)
+            OnboardingOptionCard(
+              title: value.label,
+              icon: sexIcon(value),
+              selected: sex == value,
+              onTap: () => onSex(value),
+            ),
+        ],
+      ),
       3 => OnboardingStepBody(
-          label: 'Tes mesures',
-          question: 'Naissance\net taille',
-          subtitle: 'L’âge et la taille entrent dans le calcul quotidien.',
-          options: [
-            OnboardingBirthDateCard(
-              birthDate: birthDate,
-              onTap: onPickBirthDate,
-            ),
-            OnboardingHeightCard(
-              heightCm: heightCm,
-              touched: heightTouched,
-              onChanged: onHeight,
-            ),
-          ],
-        ),
+        label: 'Tes mesures',
+        question: 'Naissance\net taille',
+        subtitle: 'L’âge et la taille entrent dans le calcul quotidien.',
+        options: [
+          OnboardingBirthDateCard(birthDate: birthDate, onTap: onPickBirthDate),
+          OnboardingHeightCard(
+            heightCm: heightCm,
+            touched: heightTouched,
+            onChanged: onHeight,
+          ),
+        ],
+      ),
       _ => OnboardingStepBody(
-          label: 'Ton rythme',
-          question: 'À quelle fréquence\nbouges-tu ?',
-          subtitle: 'Ta dépense d’activité s’ajoute à ton métabolisme de base.',
-          options: [
-            for (final value in ActivityLevel.values)
-              OnboardingOptionCard(
-                title: value.label,
-                subtitle: value.description,
-                icon: activityIcon(value),
-                selected: activityLevel == value,
-                onTap: () => onActivity(value),
-              ),
-          ],
-        ),
+        label: 'Ton rythme',
+        question: 'À quelle fréquence\nbouges-tu ?',
+        subtitle: 'Ta dépense d’activité s’ajoute à ton métabolisme de base.',
+        options: [
+          for (final value in ActivityLevel.values)
+            OnboardingOptionCard(
+              title: value.label,
+              subtitle: value.description,
+              icon: activityIcon(value),
+              selected: activityLevel == value,
+              onTap: () => onActivity(value),
+            ),
+        ],
+      ),
     };
   }
 }

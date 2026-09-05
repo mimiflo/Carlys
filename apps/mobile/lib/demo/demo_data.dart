@@ -27,46 +27,46 @@ const demoUser = AuthUser(
 );
 
 List<PersonalRecordEntry> get demoRecords => [
-      _record('Développé couché', PersonalRecordType.maxWeight, 82.5, 2),
-      _record('Développé couché', PersonalRecordType.maxReps, 12, 9),
-      _record('Développé couché', PersonalRecordType.maxSetVolume, 720, 2),
-      _record('Squat', PersonalRecordType.maxWeight, 110, 4),
-      _record('Squat', PersonalRecordType.maxSetVolume, 880, 4),
-      _record('Soulevé de terre', PersonalRecordType.maxWeight, 140, 11),
-      _record('Tractions', PersonalRecordType.maxReps, 14, 6),
-    ];
+  _record('Développé couché', PersonalRecordType.maxWeight, 82.5, 2),
+  _record('Développé couché', PersonalRecordType.maxReps, 12, 9),
+  _record('Développé couché', PersonalRecordType.maxSetVolume, 720, 2),
+  _record('Squat', PersonalRecordType.maxWeight, 110, 4),
+  _record('Squat', PersonalRecordType.maxSetVolume, 880, 4),
+  _record('Soulevé de terre', PersonalRecordType.maxWeight, 140, 11),
+  _record('Tractions', PersonalRecordType.maxReps, 14, 6),
+];
 
 PersonalRecordEntry _record(
   String exercise,
   PersonalRecordType type,
   double value,
   int daysAgo,
-) =>
-    PersonalRecordEntry(
-      id: 'pr-$exercise-${type.apiValue}',
-      exerciseName: exercise,
-      type: type,
-      value: value,
-      achievedAt: DateTime.now().toUtc().subtract(Duration(days: daysAgo)),
-    );
+) => PersonalRecordEntry(
+  id: 'pr-$exercise-${type.apiValue}',
+  exerciseName: exercise,
+  type: type,
+  value: value,
+  achievedAt: DateTime.now().toUtc().subtract(Duration(days: daysAgo)),
+);
 
 /// Courbe de poids sur huit semaines — termine à 79,8 kg (IMC normal).
 List<BodyMetricEntry> get demoWeights => [
-      for (final (index, value) in const [
-        84.2,
-        83.6,
-        83.9,
-        82.8,
-        82.1,
-        81.4,
-        80.5,
-        79.8,
-      ].indexed)
-        BodyMetricEntry(
-          id: 'demo-w-$index',
-          kind: BodyMetricKind.weightKg,
-          value: value,
-          measuredAt:
-              DateTime.now().toUtc().subtract(Duration(days: (7 - index) * 8)),
-        ),
-    ];
+  for (final (index, value) in const [
+    84.2,
+    83.6,
+    83.9,
+    82.8,
+    82.1,
+    81.4,
+    80.5,
+    79.8,
+  ].indexed)
+    BodyMetricEntry(
+      id: 'demo-w-$index',
+      kind: BodyMetricKind.weightKg,
+      value: value,
+      measuredAt: DateTime.now().toUtc().subtract(
+        Duration(days: (7 - index) * 8),
+      ),
+    ),
+];

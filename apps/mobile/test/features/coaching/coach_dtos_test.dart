@@ -31,13 +31,13 @@ void main() {
   }
 
   Map<String, dynamic> proposal(List<Map<String, dynamic>> items) => {
-        'id': 'p1',
-        'name': 'Haut du corps',
-        'estimatedMinutes': 28,
-        'sourceTemplateId': null,
-        'acceptedSessionId': null,
-        'items': items,
-      };
+    'id': 'p1',
+    'name': 'Haut du corps',
+    'estimatedMinutes': 28,
+    'sourceTemplateId': null,
+    'acceptedSessionId': null,
+    'items': items,
+  };
 
   test('les séries se regroupent par exercice, dans l’ordre du plan', () {
     // Volontairement désordonné : le serveur n'a aucune obligation de trier.
@@ -134,8 +134,7 @@ void main() {
         setPosition: 0,
         targetReps: 5,
       ),
-    ])
-      ..['acceptedSessionId'] = 'session-42';
+    ])..['acceptedSessionId'] = 'session-42';
 
     final parsed = coachProposalFromJson(json);
 

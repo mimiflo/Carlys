@@ -30,7 +30,9 @@ class BrandPillars extends StatelessWidget {
             children: [
               for (final (index, pillar) in _pillars.indexed) ...[
                 if (index > 0) const SizedBox(width: _gap),
-                Expanded(child: _Pillar(icon: pillar.$1, name: pillar.$2)),
+                Expanded(
+                  child: _Pillar(icon: pillar.$1, name: pillar.$2),
+                ),
               ],
             ],
           ),

@@ -367,8 +367,9 @@ class HeartScenePainter extends CustomPainter {
       final cosTheta = math.sqrt(math.max(0.0, 1 - d * d));
       final fresnel = math.pow(1 - cosTheta, 2.6).toDouble();
       stops.add(d);
-      colors
-          .add(color.withValues(alpha: (fresnel * intensity).clamp(0.0, 1.0)));
+      colors.add(
+        color.withValues(alpha: (fresnel * intensity).clamp(0.0, 1.0)),
+      );
     }
 
     canvas.drawCircle(

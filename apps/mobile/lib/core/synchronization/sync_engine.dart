@@ -23,8 +23,8 @@ class SyncEngine {
     required AppDatabase database,
     required this._api,
     DateTime Function()? now,
-  })  : _db = database,
-        _now = now ?? DateTime.now;
+  }) : _db = database,
+       _now = now ?? DateTime.now;
 
   static const _logger = AppLogger('SyncEngine');
 
@@ -68,10 +68,11 @@ class SyncEngine {
   }
 
   Future<void> _drain() async {
-    final operations = await (_db.select(_db.syncOperations)
-          ..where((op) => op.status.equals('pending'))
-          ..orderBy([(op) => OrderingTerm.asc(op.createdAt)]))
-        .get();
+    final operations =
+        await (_db.select(_db.syncOperations)
+              ..where((op) => op.status.equals('pending'))
+              ..orderBy([(op) => OrderingTerm.asc(op.createdAt)]))
+            .get();
 
     for (final operation in operations) {
       if (!_isDue(operation)) {
@@ -159,17 +160,17 @@ class SyncEngine {
 
   Future<void> _onSuccess(SyncOperation operation) async {
     await _db.transaction(() async {
-      await (_db.delete(_db.syncOperations)
-            ..where((op) => op.id.equals(operation.id)))
-          .go();
+      await (_db.delete(
+        _db.syncOperations,
+      )..where((op) => op.id.equals(operation.id))).go();
       await _markEntity(operation, 'synced');
     });
   }
 
   Future<void> _onRetryLater(SyncOperation operation) async {
-    await (_db.update(_db.syncOperations)
-          ..where((op) => op.id.equals(operation.id)))
-        .write(
+    await (_db.update(
+      _db.syncOperations,
+    )..where((op) => op.id.equals(operation.id))).write(
       SyncOperationsCompanion(
         attemptCount: Value(operation.attemptCount + 1),
         lastAttemptAt: Value(_now()),
@@ -180,9 +181,9 @@ class SyncEngine {
   Future<void> _onRejected(SyncOperation operation, String error) async {
     _logger.warning('Opération rejetée par le serveur : $error');
     await _db.transaction(() async {
-      await (_db.update(_db.syncOperations)
-            ..where((op) => op.id.equals(operation.id)))
-          .write(
+      await (_db.update(
+        _db.syncOperations,
+      )..where((op) => op.id.equals(operation.id))).write(
         SyncOperationsCompanion(
           status: const Value('failed'),
           error: Value(error),
@@ -195,9 +196,9 @@ class SyncEngine {
   Future<void> _markEntity(SyncOperation operation, String syncStatus) async {
     switch (operation.entityType) {
       case 'session':
-        await (_db.update(_db.localWorkoutSessions)
-              ..where((session) => session.id.equals(operation.entityId)))
-            .write(
+        await (_db.update(
+          _db.localWorkoutSessions,
+        )..where((session) => session.id.equals(operation.entityId))).write(
           LocalWorkoutSessionsCompanion(syncStatus: Value(syncStatus)),
         );
       case 'set':
@@ -205,9 +206,9 @@ class SyncEngine {
               ..where((set) => set.id.equals(operation.entityId)))
             .write(LocalWorkoutSetsCompanion(syncStatus: Value(syncStatus)));
       case 'template':
-        await (_db.update(_db.localWorkoutTemplates)
-              ..where((template) => template.id.equals(operation.entityId)))
-            .write(
+        await (_db.update(
+          _db.localWorkoutTemplates,
+        )..where((template) => template.id.equals(operation.entityId))).write(
           LocalWorkoutTemplatesCompanion(syncStatus: Value(syncStatus)),
         );
     }
@@ -223,9 +224,7 @@ class SyncEngine {
     String syncStatus,
   ) async {
     final update = _db.update(_db.localSessionPlanItems);
-    final value = LocalSessionPlanItemsCompanion(
-      syncStatus: Value(syncStatus),
-    );
+    final value = LocalSessionPlanItemsCompanion(syncStatus: Value(syncStatus));
 
     switch (operation.operationType) {
       case 'session.create':
@@ -242,8 +241,9 @@ class SyncEngine {
         final body = payload['body'] as Map<String, dynamic>;
         final planItemId = body['planItemId'] as String?;
         if (planItemId != null) {
-          await (update..where((item) => item.id.equals(planItemId)))
-              .write(value);
+          await (update..where((item) => item.id.equals(planItemId))).write(
+            value,
+          );
         }
     }
   }

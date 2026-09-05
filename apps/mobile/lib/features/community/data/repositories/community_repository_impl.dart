@@ -84,8 +84,9 @@ class CommunityRepositoryImpl implements CommunityRepository {
   @override
   Future<String> myFriendCode() {
     return _guard(() async {
-      final response =
-          await _dio.get<Map<String, dynamic>>('/community/profile');
+      final response = await _dio.get<Map<String, dynamic>>(
+        '/community/profile',
+      );
       return _data(response)['friendCode'] as String;
     });
   }
@@ -123,8 +124,9 @@ class CommunityRepositoryImpl implements CommunityRepository {
   Future<void> respondToRequest(String requestId, {required bool accept}) {
     return _guard(() async {
       final action = accept ? 'accept' : 'decline';
-      await _dio
-          .post<Map<String, dynamic>>('/community/requests/$requestId/$action');
+      await _dio.post<Map<String, dynamic>>(
+        '/community/requests/$requestId/$action',
+      );
     });
   }
 
@@ -187,8 +189,9 @@ class CommunityRepositoryImpl implements CommunityRepository {
   @override
   Future<bool> sharesProgress() {
     return _guard(() async {
-      final response =
-          await _dio.get<Map<String, dynamic>>('/community/profile');
+      final response = await _dio.get<Map<String, dynamic>>(
+        '/community/profile',
+      );
       return _data(response)['sharesProgress'] as bool;
     });
   }

@@ -23,14 +23,20 @@ class SplashBrandIntro extends StatefulWidget {
   static const Interval markInterval = Interval(0, 0.42, curve: Curves.easeOut);
 
   /// La signature suit, à peine décalée : c'est le même geste, pas deux.
-  static const Interval wordInterval =
-      Interval(0.22, 0.62, curve: AppMotion.standard);
+  static const Interval wordInterval = Interval(
+    0.22,
+    0.62,
+    curve: AppMotion.standard,
+  );
 
   /// Le fil de lumière court sur toute la scène, moins la dernière respiration
   /// — il doit être PLEIN avant que l'écran ne s'efface, sinon il donne
   /// l'impression d'un chargement interrompu.
-  static const Interval threadInterval =
-      Interval(0.12, 0.9, curve: Curves.easeInOut);
+  static const Interval threadInterval = Interval(
+    0.12,
+    0.9,
+    curve: Curves.easeInOut,
+  );
 
   @override
   State<SplashBrandIntro> createState() => _SplashBrandIntroState();
@@ -82,20 +88,19 @@ class _SplashBrandIntroState extends State<SplashBrandIntro>
         AnimatedBuilder(
           animation: _controller,
           builder: (context, child) {
-            final mark = SplashBrandIntro.markInterval
-                .transform(_controller.value.clamp(0.0, 1.0));
-            final word = SplashBrandIntro.wordInterval
-                .transform(_controller.value.clamp(0.0, 1.0));
+            final mark = SplashBrandIntro.markInterval.transform(
+              _controller.value.clamp(0.0, 1.0),
+            );
+            final word = SplashBrandIntro.wordInterval.transform(
+              _controller.value.clamp(0.0, 1.0),
+            );
             return Opacity(
               opacity: mark,
               child: Transform.scale(
                 // Le sceau vient très légèrement de l'arrière : assez pour
                 // qu'il s'installe, pas assez pour qu'il « saute ».
                 scale: 0.94 + 0.06 * mark,
-                child: Opacity(
-                  opacity: 0.35 + 0.65 * word,
-                  child: child,
-                ),
+                child: Opacity(opacity: 0.35 + 0.65 * word, child: child),
               ),
             );
           },
@@ -149,8 +154,9 @@ class _LoadingThread extends StatelessWidget {
           child: AnimatedBuilder(
             animation: progress,
             builder: (context, _) {
-              final filled = SplashBrandIntro.threadInterval
-                  .transform(progress.value.clamp(0.0, 1.0));
+              final filled = SplashBrandIntro.threadInterval.transform(
+                progress.value.clamp(0.0, 1.0),
+              );
               return Stack(
                 alignment: Alignment.center,
                 children: [

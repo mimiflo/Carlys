@@ -32,11 +32,11 @@ class SessionPlanLocalDataSource {
     return _db.select(_db.localWorkoutSessions).join([
       leftOuterJoin(
         _db.localSessionPlanItems,
-        _db.localSessionPlanItems.sessionId
-            .equalsExp(_db.localWorkoutSessions.id),
+        _db.localSessionPlanItems.sessionId.equalsExp(
+          _db.localWorkoutSessions.id,
+        ),
       ),
-    ])
-      ..where(_db.localWorkoutSessions.id.equals(sessionId));
+    ])..where(_db.localWorkoutSessions.id.equals(sessionId));
   }
 
   SessionPlan? _toPlan(List<TypedResult> rows) {
@@ -44,17 +44,18 @@ class SessionPlanLocalDataSource {
       return null;
     }
     final session = rows.first.readTable(_db.localWorkoutSessions);
-    final items = rows
-        .map((row) => row.readTableOrNull(_db.localSessionPlanItems))
-        .whereType<LocalSessionPlanItem>()
-        .map(mapPlanItem)
-        .toList()
-      ..sort((a, b) {
-        final byExercise = a.exercisePosition.compareTo(b.exercisePosition);
-        return byExercise != 0
-            ? byExercise
-            : a.setPosition.compareTo(b.setPosition);
-      });
+    final items =
+        rows
+            .map((row) => row.readTableOrNull(_db.localSessionPlanItems))
+            .whereType<LocalSessionPlanItem>()
+            .map(mapPlanItem)
+            .toList()
+          ..sort((a, b) {
+            final byExercise = a.exercisePosition.compareTo(b.exercisePosition);
+            return byExercise != 0
+                ? byExercise
+                : a.setPosition.compareTo(b.setPosition);
+          });
 
     // Séance libre : pas de plan, l'écran de séance garde son comportement.
     if (items.isEmpty) {
@@ -91,9 +92,9 @@ class SessionPlanLocalDataSource {
   }
 
   Future<LocalSessionPlanItem?> itemOf(String planItemId) {
-    return (_db.select(_db.localSessionPlanItems)
-          ..where((item) => item.id.equals(planItemId)))
-        .getSingleOrNull();
+    return (_db.select(
+      _db.localSessionPlanItems,
+    )..where((item) => item.id.equals(planItemId))).getSingleOrNull();
   }
 
   /// Prévisions encore ouvertes d'un exercice : ni honorées, ni déjà passées.
@@ -101,15 +102,15 @@ class SessionPlanLocalDataSource {
     required String sessionId,
     required int exercisePosition,
   }) async {
-    final rows = await (_db.select(_db.localSessionPlanItems)
-          ..where(
-            (item) =>
-                item.sessionId.equals(sessionId) &
-                item.exercisePosition.equals(exercisePosition) &
-                item.doneSetId.isNull() &
-                item.skipped.equals(false),
-          ))
-        .get();
+    final rows =
+        await (_db.select(_db.localSessionPlanItems)..where(
+              (item) =>
+                  item.sessionId.equals(sessionId) &
+                  item.exercisePosition.equals(exercisePosition) &
+                  item.doneSetId.isNull() &
+                  item.skipped.equals(false),
+            ))
+            .get();
     return rows.map((row) => row.id).toList();
   }
 
@@ -119,9 +120,9 @@ class SessionPlanLocalDataSource {
     required String planItemId,
     required String setId,
   }) {
-    return (_db.update(_db.localSessionPlanItems)
-          ..where((item) => item.id.equals(planItemId)))
-        .write(
+    return (_db.update(
+      _db.localSessionPlanItems,
+    )..where((item) => item.id.equals(planItemId))).write(
       LocalSessionPlanItemsCompanion(
         doneSetId: Value(setId),
         syncStatus: const Value('pending'),
@@ -130,9 +131,9 @@ class SessionPlanLocalDataSource {
   }
 
   Future<void> markSkipped(List<String> planItemIds) {
-    return (_db.update(_db.localSessionPlanItems)
-          ..where((item) => item.id.isIn(planItemIds)))
-        .write(
+    return (_db.update(
+      _db.localSessionPlanItems,
+    )..where((item) => item.id.isIn(planItemIds))).write(
       const LocalSessionPlanItemsCompanion(
         skipped: Value(true),
         syncStatus: Value('pending'),
@@ -156,14 +157,15 @@ class SessionPlanLocalDataSource {
 
   /// Vrai si une modification locale du plan n'a pas encore été acquittée.
   Future<bool> hasUnacknowledgedItems(String sessionId) async {
-    final rows = await (_db.select(_db.localSessionPlanItems)
-          ..where(
-            (item) =>
-                item.sessionId.equals(sessionId) &
-                item.syncStatus.isNotValue('synced'),
-          )
-          ..limit(1))
-        .get();
+    final rows =
+        await (_db.select(_db.localSessionPlanItems)
+              ..where(
+                (item) =>
+                    item.sessionId.equals(sessionId) &
+                    item.syncStatus.isNotValue('synced'),
+              )
+              ..limit(1))
+            .get();
     return rows.isNotEmpty;
   }
 
@@ -179,8 +181,8 @@ class SessionPlanLocalDataSource {
   }
 
   Future<void> purgePlan(String sessionId) {
-    return (_db.delete(_db.localSessionPlanItems)
-          ..where((item) => item.sessionId.equals(sessionId)))
-        .go();
+    return (_db.delete(
+      _db.localSessionPlanItems,
+    )..where((item) => item.sessionId.equals(sessionId))).go();
   }
 }

@@ -16,8 +16,9 @@ import '../../domain/usecases/record_planned_set.dart';
 
 /// Liste des modèles, plus récemment modifiés d'abord, en temps réel depuis la
 /// base locale — donc disponible hors ligne, sans état d'erreur réseau.
-final workoutTemplatesProvider =
-    StreamProvider<List<WorkoutTemplateInfo>>((ref) {
+final workoutTemplatesProvider = StreamProvider<List<WorkoutTemplateInfo>>((
+  ref,
+) {
   return ref.watch(workoutTemplateRepositoryProvider).watchTemplates();
 });
 
@@ -25,19 +26,19 @@ final workoutTemplatesProvider =
 /// le cas normal d'une **création**, l'éditeur part alors d'un brouillon vide.
 final workoutTemplateDetailProvider = FutureProvider.autoDispose
     .family<WorkoutTemplateDetail?, String>((ref, templateId) {
-  return ref
-      .watch(workoutTemplateRepositoryProvider)
-      .templateDetail(templateId);
-});
+      return ref
+          .watch(workoutTemplateRepositoryProvider)
+          .templateDetail(templateId);
+    });
 
 /// Plan de la séance en cours, en temps réel. `null` = séance libre : l'écran
 /// de séance garde exactement son comportement actuel.
-final sessionPlanProvider =
-    StreamProvider.autoDispose.family<SessionPlan?, String>((ref, sessionId) {
-  return ref
-      .watch(workoutTemplateRepositoryProvider)
-      .watchSessionPlan(sessionId);
-});
+final sessionPlanProvider = StreamProvider.autoDispose
+    .family<SessionPlan?, String>((ref, sessionId) {
+      return ref
+          .watch(workoutTemplateRepositoryProvider)
+          .watchSessionPlan(sessionId);
+    });
 
 /// Cas d'usage « valider une série en l'appariant au plan ».
 final recordPlannedSetProvider = Provider<RecordPlannedSet>((ref) {
@@ -93,11 +94,10 @@ class WorkoutTemplateActions {
   Future<void> skipExercise({
     required String sessionId,
     required int exercisePosition,
-  }) =>
-      _repository.skipPlanExercise(
-        sessionId: sessionId,
-        exercisePosition: exercisePosition,
-      );
+  }) => _repository.skipPlanExercise(
+    sessionId: sessionId,
+    exercisePosition: exercisePosition,
+  );
 
   /// Purge le plan local d'une séance close (rien n'a jamais été envoyé).
   Future<void> purgePlan(String sessionId) =>
@@ -107,5 +107,6 @@ class WorkoutTemplateActions {
   Future<void> refresh() => _repository.refreshTemplates();
 }
 
-final workoutTemplateActionsProvider =
-    Provider<WorkoutTemplateActions>(WorkoutTemplateActions.new);
+final workoutTemplateActionsProvider = Provider<WorkoutTemplateActions>(
+  WorkoutTemplateActions.new,
+);

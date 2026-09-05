@@ -22,38 +22,38 @@ import '../../support/navigation.dart';
 /// Les 4 profils Carlys : des identités, pas des niveaux — on les découvre
 /// depuis le profil, on lit leur fiche, on choisit, on change d'avis.
 Widget demoApp() => ProviderScope(
-      overrides: [
-        appEnvironmentProvider.overrideWithValue(
-          const AppEnvironment(
-            flavor: AppFlavor.demo,
-            apiBaseUrl: 'http://localhost:3000',
-          ),
-        ),
-        ...demoOverrides(),
-        workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
-      ],
-      child: const CarlysApp(),
-    );
+  overrides: [
+    appEnvironmentProvider.overrideWithValue(
+      const AppEnvironment(
+        flavor: AppFlavor.demo,
+        apiBaseUrl: 'http://localhost:3000',
+      ),
+    ),
+    ...demoOverrides(),
+    workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
+  ],
+  child: const CarlysApp(),
+);
 
 Widget appWith(FakeCarlysProfileRepository repository) => ProviderScope(
-      overrides: [
-        appEnvironmentProvider.overrideWithValue(
-          const AppEnvironment(
-            flavor: AppFlavor.development,
-            apiBaseUrl: 'http://localhost:3000',
-          ),
-        ),
-        authRepositoryProvider
-            .overrideWithValue(FakeAuthRepository(storedSession: true)),
-        workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
-        communityRepositoryProvider
-            .overrideWithValue(FakeCommunityRepository()),
-        syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
-        appRestoreProvider.overrideWithValue(NoopAppRestore()),
-        carlysProfileRepositoryProvider.overrideWithValue(repository),
-      ],
-      child: const CarlysApp(),
-    );
+  overrides: [
+    appEnvironmentProvider.overrideWithValue(
+      const AppEnvironment(
+        flavor: AppFlavor.development,
+        apiBaseUrl: 'http://localhost:3000',
+      ),
+    ),
+    authRepositoryProvider.overrideWithValue(
+      FakeAuthRepository(storedSession: true),
+    ),
+    workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
+    communityRepositoryProvider.overrideWithValue(FakeCommunityRepository()),
+    syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
+    appRestoreProvider.overrideWithValue(NoopAppRestore()),
+    carlysProfileRepositoryProvider.overrideWithValue(repository),
+  ],
+  child: const CarlysApp(),
+);
 
 Future<void> openCarlysProfiles(WidgetTester tester) async {
   await openProfile(tester);
@@ -76,8 +76,11 @@ void main() {
     seedCompletedFirstRun();
     // Fige les scènes animées (cœur battant) : sans quoi `pumpAndSettle`
     // ne se stabilise jamais.
-    TestWidgetsFlutterBinding.instance.platformDispatcher
-        .accessibilityFeaturesTestValue = FakeAccessibilityFeatures.allOn;
+    TestWidgetsFlutterBinding
+            .instance
+            .platformDispatcher
+            .accessibilityFeaturesTestValue =
+        FakeAccessibilityFeatures.allOn;
   });
 
   tearDown(() {
@@ -85,8 +88,9 @@ void main() {
         .clearAccessibilityFeaturesTestValue();
   });
 
-  testWidgets('les 4 identités s’affichent, le profil ACTUEL est marqué',
-      (tester) async {
+  testWidgets('les 4 identités s’affichent, le profil ACTUEL est marqué', (
+    tester,
+  ) async {
     await tester.pumpWidget(demoApp());
     await tester.pumpAndSettle();
     await openCarlysProfiles(tester);
@@ -106,8 +110,9 @@ void main() {
     );
   });
 
-  testWidgets('la fiche montre la devise et les publics, puis on choisit',
-      (tester) async {
+  testWidgets('la fiche montre la devise et les publics, puis on choisit', (
+    tester,
+  ) async {
     await tester.pumpWidget(demoApp());
     await tester.pumpAndSettle();
     await openCarlysProfiles(tester);
@@ -155,8 +160,9 @@ void main() {
     expect(find.text('Choisir ce profil'), findsNothing);
   });
 
-  testWidgets('hors ligne : le choix échoue VISIBLEMENT, rien ne change',
-      (tester) async {
+  testWidgets('hors ligne : le choix échoue VISIBLEMENT, rien ne change', (
+    tester,
+  ) async {
     final repository = FakeCarlysProfileRepository(failChoose: true);
     await tester.pumpWidget(appWith(repository));
     await tester.pumpAndSettle();
@@ -175,8 +181,9 @@ void main() {
     expect(find.text('Ton profil'), findsNothing);
   });
 
-  testWidgets('le profil choisi remonte jusqu’à la ligne du profil',
-      (tester) async {
+  testWidgets('le profil choisi remonte jusqu’à la ligne du profil', (
+    tester,
+  ) async {
     await tester.pumpWidget(demoApp());
     await tester.pumpAndSettle();
     await openProfile(tester);

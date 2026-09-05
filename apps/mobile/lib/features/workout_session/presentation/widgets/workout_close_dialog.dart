@@ -27,11 +27,7 @@ Future<bool?> showWorkoutCloseDialog(
           ),
           if (planSummary != null) ...[
             const SizedBox(height: AppSpacing.sm),
-            AppPill(
-              label: planSummary,
-              tone: AppPillTone.primary,
-              mono: true,
-            ),
+            AppPill(label: planSummary, tone: AppPillTone.primary, mono: true),
           ],
         ],
       ),

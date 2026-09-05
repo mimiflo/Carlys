@@ -10,11 +10,7 @@ import 'brand_glow_image.dart';
 /// redessine pas. Il porte sa propre lueur ; le mot et la devise, eux, restent
 /// sobres.
 class BrandSignature extends StatelessWidget {
-  const BrandSignature({
-    this.scale = 1,
-    this.centered = false,
-    super.key,
-  });
+  const BrandSignature({this.scale = 1, this.centered = false, super.key});
 
   /// Échelle du bloc, voir [WelcomeScreen.scaleFor].
   final double scale;
@@ -51,8 +47,9 @@ class BrandSignature extends StatelessWidget {
       label: 'Carlys, l’art de devenir',
       child: ExcludeSemantics(
         child: Column(
-          crossAxisAlignment:
-              centered ? CrossAxisAlignment.center : CrossAxisAlignment.start,
+          crossAxisAlignment: centered
+              ? CrossAxisAlignment.center
+              : CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
             BrandGlowImage(

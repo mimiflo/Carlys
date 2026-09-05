@@ -84,40 +84,42 @@ void main() {
     engine.dispose();
   });
 
-  test('les demandes se coalescent : seule la plus récente est calculée',
-      () async {
-    final engine = HeartEngine();
-    final frames = <HeartFrame>[];
-    final done = Completer<void>();
-    engine.latest.addListener(() {
-      final frame = engine.latest.value;
-      if (frame == null) {
-        return;
+  test(
+    'les demandes se coalescent : seule la plus récente est calculée',
+    () async {
+      final engine = HeartEngine();
+      final frames = <HeartFrame>[];
+      final done = Completer<void>();
+      engine.latest.addListener(() {
+        final frame = engine.latest.value;
+        if (frame == null) {
+          return;
+        }
+        frames.add(frame);
+        if (frame.seconds == 20 && !done.isCompleted) {
+          done.complete();
+        }
+      });
+
+      // Vingt-et-une demandes avant même que l'isolate soit prêt : une seule
+      // image doit sortir, celle de la dernière demande.
+      for (var i = 0; i <= 20; i++) {
+        engine.request(
+          HeartFrameRequest(
+            seconds: i.toDouble(),
+            hero: false,
+            still: false,
+            width: 240,
+            height: 240,
+          ),
+        );
       }
-      frames.add(frame);
-      if (frame.seconds == 20 && !done.isCompleted) {
-        done.complete();
-      }
-    });
+      await done.future.timeout(const Duration(seconds: 30));
 
-    // Vingt-et-une demandes avant même que l'isolate soit prêt : une seule
-    // image doit sortir, celle de la dernière demande.
-    for (var i = 0; i <= 20; i++) {
-      engine.request(
-        HeartFrameRequest(
-          seconds: i.toDouble(),
-          hero: false,
-          still: false,
-          width: 240,
-          height: 240,
-        ),
-      );
-    }
-    await done.future.timeout(const Duration(seconds: 30));
+      expect(frames, hasLength(1));
+      expect(frames.single.seconds, 20);
 
-    expect(frames, hasLength(1));
-    expect(frames.single.seconds, 20);
-
-    engine.dispose();
-  });
+      engine.dispose();
+    },
+  );
 }

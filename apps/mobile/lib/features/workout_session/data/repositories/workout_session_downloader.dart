@@ -22,8 +22,8 @@ class WorkoutSessionDownloader {
   WorkoutSessionDownloader({
     required AppDatabase database,
     required this._remote,
-  })  : _db = database,
-        _plans = SessionPlanLocalDataSource(database);
+  }) : _db = database,
+       _plans = SessionPlanLocalDataSource(database);
 
   static const _logger = AppLogger('WorkoutSessionDownloader');
 
@@ -73,14 +73,15 @@ class WorkoutSessionDownloader {
     if (session.status != _inProgress) {
       return false;
     }
-    final active = await (_db.select(_db.localWorkoutSessions)
-          ..where(
-            (row) =>
-                row.status.equals(_inProgress) &
-                row.id.equals(session.id).not(),
-          )
-          ..limit(1))
-        .get();
+    final active =
+        await (_db.select(_db.localWorkoutSessions)
+              ..where(
+                (row) =>
+                    row.status.equals(_inProgress) &
+                    row.id.equals(session.id).not(),
+              )
+              ..limit(1))
+            .get();
     if (active.isEmpty) {
       return false;
     }
@@ -116,23 +117,24 @@ class WorkoutSessionDownloader {
   }
 
   Future<bool> _hasLocalChanges(String sessionId) async {
-    final session = await (_db.select(_db.localWorkoutSessions)
-          ..where((row) => row.id.equals(sessionId)))
-        .getSingleOrNull();
+    final session = await (_db.select(
+      _db.localWorkoutSessions,
+    )..where((row) => row.id.equals(sessionId))).getSingleOrNull();
     if (session == null) {
       return false; // inconnue en local : rien à protéger
     }
     if (session.syncStatus != 'synced') {
       return true;
     }
-    final sets = await (_db.select(_db.localWorkoutSets)
-          ..where(
-            (row) =>
-                row.sessionId.equals(sessionId) &
-                row.syncStatus.isNotValue('synced'),
-          )
-          ..limit(1))
-        .get();
+    final sets =
+        await (_db.select(_db.localWorkoutSets)
+              ..where(
+                (row) =>
+                    row.sessionId.equals(sessionId) &
+                    row.syncStatus.isNotValue('synced'),
+              )
+              ..limit(1))
+            .get();
     if (sets.isNotEmpty) {
       return true;
     }
@@ -143,7 +145,9 @@ class WorkoutSessionDownloader {
   /// cohérente, simplement incomplète — le prochain appel reprendra.
   Future<void> _write(RemoteWorkoutSession session) {
     return _db.transaction(() async {
-      await _db.into(_db.localWorkoutSessions).insertOnConflictUpdate(
+      await _db
+          .into(_db.localWorkoutSessions)
+          .insertOnConflictUpdate(
             LocalWorkoutSessionsCompanion.insert(
               id: session.id,
               name: Value(session.name),
@@ -160,9 +164,9 @@ class WorkoutSessionDownloader {
 
       // Le serveur ne sert que les séries vivantes : remplacer d'un bloc
       // reproduit donc exactement son état, suppressions comprises.
-      await (_db.delete(_db.localWorkoutSets)
-            ..where((row) => row.sessionId.equals(session.id)))
-          .go();
+      await (_db.delete(
+        _db.localWorkoutSets,
+      )..where((row) => row.sessionId.equals(session.id))).go();
       await _db.batch(
         (batch) => batch.insertAll(
           _db.localWorkoutSets,

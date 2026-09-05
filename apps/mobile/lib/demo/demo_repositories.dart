@@ -38,14 +38,14 @@ class DemoAuthRepository implements AuthRepository {
   CarlysProfile? _carlysProfile = demoUser.carlysProfile;
 
   AuthUser get _user => AuthUser(
-        id: demoUser.id,
-        email: demoUser.email,
-        displayName: demoUser.displayName,
-        emailVerified: demoUser.emailVerified,
-        locale: demoUser.locale,
-        timezone: demoUser.timezone,
-        carlysProfile: _carlysProfile,
-      );
+    id: demoUser.id,
+    email: demoUser.email,
+    displayName: demoUser.displayName,
+    emailVerified: demoUser.emailVerified,
+    locale: demoUser.locale,
+    timezone: demoUser.timezone,
+    carlysProfile: _carlysProfile,
+  );
 
   void chooseCarlysProfile(CarlysProfile profile) {
     _carlysProfile = profile;
@@ -210,8 +210,9 @@ class DemoProgressRepository implements ProgressRepository {
       points: [
         for (var i = 0; i < buckets; i++)
           ProgressPoint(
-            bucketStart:
-                DateTime.now().toUtc().subtract(Duration(days: buckets - i)),
+            bucketStart: DateTime.now().toUtc().subtract(
+              Duration(days: buckets - i),
+            ),
             sessionsCount: 1,
             // Variation déterministe autour de la moyenne (pas d'aléatoire).
             volumeKg: perBucket * (0.7 + 0.6 * ((i * 37) % 10) / 10),
@@ -286,54 +287,54 @@ class DemoDeviceTokenRepository implements DeviceTokenRepository {
 class DemoSubscriptionRepository implements SubscriptionRepository {
   @override
   Future<PlanStatus> planStatus() async => PlanStatus(
-        planName: 'Premium (démo)',
-        isPremium: true,
-        subscription: SubscriptionInfo(
-          planName: 'Premium (démo)',
-          state: SubscriptionState.active,
-          cancelAtPeriodEnd: false,
-          currentPeriodEnd: DateTime.utc(2026, 9, 7),
-        ),
-      );
+    planName: 'Premium (démo)',
+    isPremium: true,
+    subscription: SubscriptionInfo(
+      planName: 'Premium (démo)',
+      state: SubscriptionState.active,
+      cancelAtPeriodEnd: false,
+      currentPeriodEnd: DateTime.utc(2026, 9, 7),
+    ),
+  );
 
   @override
   Future<List<EntitlementEntry>> entitlements() async => const [
-        EntitlementEntry(key: 'unlimited_programs', isActive: true),
-        EntitlementEntry(key: 'advanced_statistics', isActive: true),
-        EntitlementEntry(key: 'premium_exercises', isActive: true),
-        EntitlementEntry(key: 'cloud_backup', isActive: true),
-        EntitlementEntry(key: 'priority_support', isActive: true),
-      ];
+    EntitlementEntry(key: 'unlimited_programs', isActive: true),
+    EntitlementEntry(key: 'advanced_statistics', isActive: true),
+    EntitlementEntry(key: 'premium_exercises', isActive: true),
+    EntitlementEntry(key: 'cloud_backup', isActive: true),
+    EntitlementEntry(key: 'priority_support', isActive: true),
+  ];
 
   /// Le catalogue est visitable en démonstration ; l'achat, non. Ouvrir une
   /// vraie page de paiement depuis une démonstration serait un piège.
   @override
   Future<OfferCatalog> offers() async => const OfferCatalog(
-        checkoutAvailable: false,
-        offers: [
-          SubscriptionOffer(
-            id: 'premium-mensuel',
-            name: 'Premium mensuel',
-            period: OfferPeriod.month,
-            amountCents: 999,
-            currency: 'EUR',
-            monthlyEquivalentCents: 999,
-            trialDays: 7,
-            isRecommended: false,
-          ),
-          SubscriptionOffer(
-            id: 'premium-annuel',
-            name: 'Premium annuel',
-            period: OfferPeriod.year,
-            amountCents: 7990,
-            currency: 'EUR',
-            monthlyEquivalentCents: 666,
-            trialDays: 7,
-            isRecommended: true,
-            savingPercent: 33,
-          ),
-        ],
-      );
+    checkoutAvailable: false,
+    offers: [
+      SubscriptionOffer(
+        id: 'premium-mensuel',
+        name: 'Premium mensuel',
+        period: OfferPeriod.month,
+        amountCents: 999,
+        currency: 'EUR',
+        monthlyEquivalentCents: 999,
+        trialDays: 7,
+        isRecommended: false,
+      ),
+      SubscriptionOffer(
+        id: 'premium-annuel',
+        name: 'Premium annuel',
+        period: OfferPeriod.year,
+        amountCents: 7990,
+        currency: 'EUR',
+        monthlyEquivalentCents: 666,
+        trialDays: 7,
+        isRecommended: true,
+        savingPercent: 33,
+      ),
+    ],
+  );
 
   @override
   Future<String> startCheckout({

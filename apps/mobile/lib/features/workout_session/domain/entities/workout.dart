@@ -12,9 +12,9 @@ enum WorkoutStatus {
   final String label;
 
   static WorkoutStatus fromApi(String value) => WorkoutStatus.values.firstWhere(
-        (status) => status.apiValue == value,
-        orElse: () => WorkoutStatus.inProgress,
-      );
+    (status) => status.apiValue == value,
+    orElse: () => WorkoutStatus.inProgress,
+  );
 }
 
 enum SetKind {
@@ -28,9 +28,9 @@ enum SetKind {
   final String label;
 
   static SetKind fromApi(String value) => SetKind.values.firstWhere(
-        (kind) => kind.apiValue == value,
-        orElse: () => SetKind.normal,
-      );
+    (kind) => kind.apiValue == value,
+    orElse: () => SetKind.normal,
+  );
 }
 
 /// État de synchronisation local d'une entité.
@@ -139,11 +139,11 @@ class WorkoutWithSets {
   int get setsCount => sets.length;
 
   double get totalVolumeKg => sets.fold(0, (total, set) {
-        if (set.reps == null || set.weightKg == null) {
-          return total;
-        }
-        return total + set.reps! * set.weightKg!;
-      });
+    if (set.reps == null || set.weightKg == null) {
+      return total;
+    }
+    return total + set.reps! * set.weightKg!;
+  });
 }
 
 class WorkoutHistoryEntry {

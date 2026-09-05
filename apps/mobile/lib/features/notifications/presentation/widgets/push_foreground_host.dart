@@ -30,8 +30,10 @@ class _PushForegroundHostState extends ConsumerState<PushForegroundHost> {
   @override
   void initState() {
     super.initState();
-    _subscription =
-        ref.read(pushMessengerProvider).onForegroundMessage.listen(_show);
+    _subscription = ref
+        .read(pushMessengerProvider)
+        .onForegroundMessage
+        .listen(_show);
   }
 
   @override

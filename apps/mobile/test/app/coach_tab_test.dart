@@ -47,8 +47,11 @@ void main() {
     seedCompletedFirstRun();
     // Les scènes 3D bouclent en continu : sans réduction d'animations,
     // pumpAndSettle ne converge jamais.
-    TestWidgetsFlutterBinding.instance.platformDispatcher
-        .accessibilityFeaturesTestValue = FakeAccessibilityFeatures.allOn;
+    TestWidgetsFlutterBinding
+            .instance
+            .platformDispatcher
+            .accessibilityFeaturesTestValue =
+        FakeAccessibilityFeatures.allOn;
   });
 
   tearDown(() {
@@ -66,18 +69,23 @@ void main() {
               apiBaseUrl: 'http://localhost:3000',
             ),
           ),
-          authRepositoryProvider
-              .overrideWithValue(FakeAuthRepository(storedSession: true)),
+          authRepositoryProvider.overrideWithValue(
+            FakeAuthRepository(storedSession: true),
+          ),
           workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
           coachRepositoryProvider.overrideWithValue(coach),
-          progressRepositoryProvider
-              .overrideWithValue(FakeProgressRepository()),
-          nutritionRepositoryProvider
-              .overrideWithValue(FakeNutritionRepository()),
-          subscriptionRepositoryProvider
-              .overrideWithValue(FakeSubscriptionRepository(isPremium: true)),
-          coachSuggestionsProvider
-              .overrideWithValue(const ['Par où je commence ?']),
+          progressRepositoryProvider.overrideWithValue(
+            FakeProgressRepository(),
+          ),
+          nutritionRepositoryProvider.overrideWithValue(
+            FakeNutritionRepository(),
+          ),
+          subscriptionRepositoryProvider.overrideWithValue(
+            FakeSubscriptionRepository(isPremium: true),
+          ),
+          coachSuggestionsProvider.overrideWithValue(const [
+            'Par où je commence ?',
+          ]),
           syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
           appRestoreProvider.overrideWithValue(NoopAppRestore()),
         ],
@@ -87,22 +95,27 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('la barre porte cinq onglets — le coach vit dans Training',
-      (tester) async {
+  testWidgets('la barre porte cinq onglets — le coach vit dans Training', (
+    tester,
+  ) async {
     await pumpApp(tester, FakeCoachRepository());
 
     expect(appBottomBarItems, hasLength(5));
-    expect(
-      appBottomBarItems.map((item) => item.label),
-      ['Accueil', 'Training', 'Progrès', 'Academy', 'Communauté'],
-    );
+    expect(appBottomBarItems.map((item) => item.label), [
+      'Accueil',
+      'Training',
+      'Progrès',
+      'Academy',
+      'Communauté',
+    ]);
     // Le coach n'est plus un onglet : il s'ouvre depuis le hub Training.
     await tapTab(tester, 'Training');
     expect(find.text('Coach IA'), findsOneWidget);
   });
 
-  testWidgets('chaque onglet ouvre le sien — aucun décalage d’index',
-      (tester) async {
+  testWidgets('chaque onglet ouvre le sien — aucun décalage d’index', (
+    tester,
+  ) async {
     await pumpApp(
       tester,
       FakeCoachRepository(
@@ -139,8 +152,9 @@ void main() {
     expect(find.byType(ProfileScreen), findsOneWidget);
   });
 
-  testWidgets('ouvrir l’onglet pour regarder ne crée pas de fil vide',
-      (tester) async {
+  testWidgets('ouvrir l’onglet pour regarder ne crée pas de fil vide', (
+    tester,
+  ) async {
     final coach = FakeCoachRepository();
     await pumpApp(tester, coach);
 
@@ -166,8 +180,7 @@ void main() {
     expect(find.byType(CoachPage), findsNothing);
   });
 
-  testWidgets(
-      'la barre de saisie reste en bas, puis passe AU-DESSUS du '
+  testWidgets('la barre de saisie reste en bas, puis passe AU-DESSUS du '
       'clavier', (tester) async {
     tester.view.physicalSize = const Size(1179, 2556);
     tester.view.devicePixelRatio = 3;

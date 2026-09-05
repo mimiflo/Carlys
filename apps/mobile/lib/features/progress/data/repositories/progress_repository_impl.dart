@@ -30,8 +30,9 @@ class ProgressRepositoryImpl implements ProgressRepository {
   @override
   Future<List<PersonalRecordEntry>> records() {
     return _guard(() async {
-      final response =
-          await _dio.get<Map<String, dynamic>>('/progress/records');
+      final response = await _dio.get<Map<String, dynamic>>(
+        '/progress/records',
+      );
       return (response.data?['data'] as List<dynamic>? ?? const [])
           .whereType<Map<String, dynamic>>()
           .map(personalRecordFromJson)

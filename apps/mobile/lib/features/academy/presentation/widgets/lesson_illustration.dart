@@ -80,8 +80,8 @@ class _Fallback extends StatelessWidget {
 }
 
 IconData _categoryIcon(AcademyCategory category) => switch (category) {
-      AcademyCategory.anatomie => AppIcons.workout,
-      AcademyCategory.technique => AppIcons.exercises,
-      AcademyCategory.nutrition => AppIcons.nutrition,
-      AcademyCategory.recuperation => AppIcons.recovery,
-    };
+  AcademyCategory.anatomie => AppIcons.workout,
+  AcademyCategory.technique => AppIcons.exercises,
+  AcademyCategory.nutrition => AppIcons.nutrition,
+  AcademyCategory.recuperation => AppIcons.recovery,
+};

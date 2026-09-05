@@ -38,7 +38,9 @@ void main() {
     DateTime? lastAttemptAt,
   }) async {
     final id = uuid.v4();
-    await db.into(db.syncOperations).insert(
+    await db
+        .into(db.syncOperations)
+        .insert(
           SyncOperationsCompanion.insert(
             id: id,
             entityType: entityType,
@@ -50,8 +52,9 @@ void main() {
           ),
         );
     if (attemptCount > 0) {
-      await (db.update(db.syncOperations)..where((op) => op.id.equals(id)))
-          .write(
+      await (db.update(
+        db.syncOperations,
+      )..where((op) => op.id.equals(id))).write(
         SyncOperationsCompanion(
           attemptCount: Value(attemptCount),
           lastAttemptAt: Value(lastAttemptAt ?? clock),
@@ -129,26 +132,28 @@ void main() {
   });
 
   group('réveil pendant un drainage', () {
-    test('une opération écrite pendant le drainage part sans attendre',
-        () async {
-      // Sans la note de re-drainage, l'opération écrite pendant l'envoi de la
-      // première attendait le réveil périodique — trois minutes plus tard.
-      final gate = Completer<void>();
-      api.beforeCall = () => gate.future;
-      await enqueue();
+    test(
+      'une opération écrite pendant le drainage part sans attendre',
+      () async {
+        // Sans la note de re-drainage, l'opération écrite pendant l'envoi de la
+        // première attendait le réveil périodique — trois minutes plus tard.
+        final gate = Completer<void>();
+        api.beforeCall = () => gate.future;
+        await enqueue();
 
-      final firstDrain = engine.syncNow();
-      // Pendant que la première opération est en vol, une seconde s'écrit.
-      final second = await enqueue();
-      final poke = engine.syncNow();
-      api.beforeCall = null;
-      gate.complete();
-      await firstDrain;
-      await poke;
+        final firstDrain = engine.syncNow();
+        // Pendant que la première opération est en vol, une seconde s'écrit.
+        final second = await enqueue();
+        final poke = engine.syncNow();
+        api.beforeCall = null;
+        gate.complete();
+        await firstDrain;
+        await poke;
 
-      expect(api.log, hasLength(2));
-      expect(api.log.last, 'session.create:$second');
-      expect(await allOperations(), isEmpty);
-    });
+        expect(api.log, hasLength(2));
+        expect(api.log.last, 'session.create:$second');
+        expect(await allOperations(), isEmpty);
+      },
+    );
   });
 }

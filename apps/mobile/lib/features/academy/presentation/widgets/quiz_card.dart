@@ -108,8 +108,10 @@ class _QuizCardState extends State<QuizCard> {
                 ? null
                 : () {
                     setState(() => _picked = index);
-                    widget.onAnswered
-                        ?.call(index, index == question.answerIndex);
+                    widget.onAnswered?.call(
+                      index,
+                      index == question.answerIndex,
+                    );
                   },
           ),
         const SizedBox(height: AppSpacing.xxs),
@@ -123,8 +125,9 @@ class _QuizCardState extends State<QuizCard> {
           // enseigne, pas le verdict.
           Text(
             question.explanation,
-            style:
-                AppTypography.body.copyWith(color: AppColors.darkTextSecondary),
+            style: AppTypography.body.copyWith(
+              color: AppColors.darkTextSecondary,
+            ),
           ),
         ],
       ],
@@ -149,14 +152,14 @@ class _Hint extends StatelessWidget {
   Widget build(BuildContext context) {
     final (text, color) = switch ((answered, correct)) {
       (false, _) => (
-          'Touche une réponse — une seule tentative par jour.',
-          AppColors.darkTextTertiary,
-        ),
+        'Touche une réponse — une seule tentative par jour.',
+        AppColors.darkTextTertiary,
+      ),
       (true, true) => ('Bonne réponse.', AppColors.success),
       (true, false) => (
-          'Raté, mais l’explication vaut le détour.',
-          AppColors.darkTextTertiary
-        ),
+        'Raté, mais l’explication vaut le détour.',
+        AppColors.darkTextTertiary,
+      ),
     };
 
     return Row(

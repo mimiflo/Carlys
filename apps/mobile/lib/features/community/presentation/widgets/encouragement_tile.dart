@@ -26,22 +26,25 @@ class EncouragementTile extends StatelessWidget {
               const SizedBox(width: AppSpacing.xs),
               Text(
                 encouragement.fromName,
-                style: AppTypography.subheading
-                    .copyWith(color: AppColors.darkTextPrimary),
+                style: AppTypography.subheading.copyWith(
+                  color: AppColors.darkTextPrimary,
+                ),
               ),
               const Spacer(),
               Text(
                 formatRelativeTime(encouragement.sentAt),
-                style: AppTypography.labelMono
-                    .copyWith(color: AppColors.darkTextTertiary),
+                style: AppTypography.labelMono.copyWith(
+                  color: AppColors.darkTextTertiary,
+                ),
               ),
             ],
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
             encouragement.message,
-            style:
-                AppTypography.body.copyWith(color: AppColors.darkTextSecondary),
+            style: AppTypography.body.copyWith(
+              color: AppColors.darkTextSecondary,
+            ),
           ),
         ],
       ),

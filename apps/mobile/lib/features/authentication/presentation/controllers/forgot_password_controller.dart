@@ -18,5 +18,5 @@ class ForgotPasswordController extends AutoDisposeAsyncNotifier<bool> {
 
 final forgotPasswordControllerProvider =
     AsyncNotifierProvider.autoDispose<ForgotPasswordController, bool>(
-  ForgotPasswordController.new,
-);
+      ForgotPasswordController.new,
+    );

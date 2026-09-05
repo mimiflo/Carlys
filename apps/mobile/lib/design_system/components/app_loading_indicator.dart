@@ -4,11 +4,7 @@ import '../spacing/app_spacing.dart';
 
 /// Indicateur de chargement standard, avec libellé accessible.
 class AppLoadingIndicator extends StatelessWidget {
-  const AppLoadingIndicator({
-    this.label,
-    this.size = 32,
-    super.key,
-  });
+  const AppLoadingIndicator({this.label, this.size = 32, super.key});
 
   /// Texte affiché sous l'indicateur (et lu par les lecteurs d'écran).
   final String? label;

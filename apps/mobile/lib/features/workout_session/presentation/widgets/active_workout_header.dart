@@ -57,10 +57,7 @@ class ActiveWorkoutHeader extends StatelessWidget {
                 _ElapsedTimer(startedAt: startedAt),
                 const SizedBox(height: AppSpacing.xxs),
                 if (templateName != null)
-                  AppPill(
-                    label: templateName!,
-                    tone: AppPillTone.primary,
-                  )
+                  AppPill(label: templateName!, tone: AppPillTone.primary)
                 else
                   Text(
                     name.toUpperCase(),

@@ -44,8 +44,9 @@ class DeviceTokenRepositoryImpl implements DeviceTokenRepository {
       final entries = <NotificationCategory, bool>{};
       for (final raw in body['preferences'] as List<dynamic>? ?? const []) {
         if (raw is! Map<String, dynamic>) continue;
-        final category =
-            NotificationCategory.fromWire(raw['category'] as String);
+        final category = NotificationCategory.fromWire(
+          raw['category'] as String,
+        );
         if (category == null) continue;
         entries[category] = raw['enabled'] as bool? ?? true;
       }

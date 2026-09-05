@@ -14,16 +14,14 @@ class RegisterController extends AutoDisposeAsyncNotifier<void> {
   }) async {
     state = const AsyncLoading();
     state = await AsyncValue.guard(() async {
-      await ref.read(authControllerProvider.notifier).register(
-            email: email,
-            password: password,
-            displayName: displayName,
-          );
+      await ref
+          .read(authControllerProvider.notifier)
+          .register(email: email, password: password, displayName: displayName);
     });
   }
 }
 
 final registerControllerProvider =
     AsyncNotifierProvider.autoDispose<RegisterController, void>(
-  RegisterController.new,
-);
+      RegisterController.new,
+    );

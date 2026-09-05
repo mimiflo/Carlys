@@ -13,11 +13,11 @@ import 'package:flutter/material.dart';
 abstract final class AppPageTransitions {
   /// Le thème de transitions, plateforme par plateforme, à la durée donnée.
   static PageTransitionsTheme theme(Duration duration) => PageTransitionsTheme(
-        builders: {
-          for (final entry in _platformBuilders.entries)
-            entry.key: _TimedPageTransitionsBuilder(entry.value, duration),
-        },
-      );
+    builders: {
+      for (final entry in _platformBuilders.entries)
+        entry.key: _TimedPageTransitionsBuilder(entry.value, duration),
+    },
+  );
 
   /// Les mêmes bâtisseurs que Flutter par défaut : seul le tempo change.
   static const Map<TargetPlatform, PageTransitionsBuilder> _platformBuilders = {
@@ -69,12 +69,11 @@ class _TimedPageTransitionsBuilder extends PageTransitionsBuilder {
     Animation<double> animation,
     Animation<double> secondaryAnimation,
     Widget child,
-  ) =>
-      inner.buildTransitions<T>(
-        route,
-        context,
-        animation,
-        secondaryAnimation,
-        child,
-      );
+  ) => inner.buildTransitions<T>(
+    route,
+    context,
+    animation,
+    secondaryAnimation,
+    child,
+  );
 }

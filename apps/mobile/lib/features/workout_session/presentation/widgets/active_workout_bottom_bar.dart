@@ -31,9 +31,7 @@ class ActiveWorkoutBottomBar extends ConsumerWidget {
         child: DecoratedBox(
           decoration: BoxDecoration(
             color: AppColors.darkBackground.withValues(alpha: _veilAlpha),
-            border: const Border(
-              top: BorderSide(color: AppColors.darkBorder),
-            ),
+            border: const Border(top: BorderSide(color: AppColors.darkBorder)),
           ),
           child: Padding(
             padding: EdgeInsets.fromLTRB(
@@ -99,8 +97,9 @@ class _FinishButton extends StatelessWidget {
         style: FilledButton.styleFrom(
           backgroundColor: AppColors.darkSurface,
           foregroundColor: AppColors.darkTextPrimary,
-          textStyle:
-              AppTypography.subheading.copyWith(fontWeight: FontWeight.w700),
+          textStyle: AppTypography.subheading.copyWith(
+            fontWeight: FontWeight.w700,
+          ),
           shape: const RoundedRectangleBorder(
             borderRadius: AppRadius.buttonAll,
             side: BorderSide(color: AppColors.darkBorderStrong),

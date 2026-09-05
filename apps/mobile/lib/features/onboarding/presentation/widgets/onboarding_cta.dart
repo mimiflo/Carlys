@@ -35,8 +35,9 @@ class OnboardingCta extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final foreground =
-        _enabled ? AppColors.darkBackground : AppColors.darkTextTertiary;
+    final foreground = _enabled
+        ? AppColors.darkBackground
+        : AppColors.darkTextTertiary;
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -112,8 +113,9 @@ class OnboardingCta extends StatelessWidget {
     );
   }
 
-  static final TextStyle _linkStyle =
-      AppTypography.label.copyWith(color: AppColors.darkTextTertiary);
+  static final TextStyle _linkStyle = AppTypography.label.copyWith(
+    color: AppColors.darkTextTertiary,
+  );
 
   /// Halo orange sous la pastille (ombre de la maquette).
   static final List<BoxShadow> _accentGlow = [

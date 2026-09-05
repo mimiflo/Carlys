@@ -15,9 +15,9 @@ import 'package:flutter_test/flutter_test.dart';
 /// la boîte, là où l'ornement n'est pas, et attend une réponse.
 void main() {
   Widget harness(Widget child) => MaterialApp(
-        theme: AppTheme.dark(),
-        home: Scaffold(body: Center(child: child)),
-      );
+    theme: AppTheme.dark(),
+    home: Scaffold(body: Center(child: child)),
+  );
 
   /// Un point de la boîte tactile hors de l'ornement centré.
   Offset corner(WidgetTester tester, Finder box) =>
@@ -30,8 +30,9 @@ void main() {
     expect(kMinInteractiveDimension, AppSpacing.touchTarget);
   });
 
-  testWidgets('les flèches de taille répondent sur toute la boîte',
-      (tester) async {
+  testWidgets('les flèches de taille répondent sur toute la boîte', (
+    tester,
+  ) async {
     final changes = <double>[];
     await tester.pumpWidget(
       harness(
@@ -98,10 +99,7 @@ void main() {
       tester.getSize(ornament),
       const Size.square(ExerciseGlassButton.ornamentSize),
     );
-    expect(
-      tester.getCenter(ornament),
-      tester.getCenter(button),
-    );
+    expect(tester.getCenter(ornament), tester.getCenter(button));
 
     await tester.tapAt(corner(tester, button));
     await tester.pump();

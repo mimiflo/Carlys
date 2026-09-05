@@ -8,11 +8,7 @@ import '../typography/app_typography.dart';
 /// Groupe de réglages de la maquette : libellé mono au-dessus, puis une carte
 /// unique dont les lignes sont séparées par un filet aligné sur le texte.
 class AppSettingsGroup extends StatelessWidget {
-  const AppSettingsGroup({
-    required this.label,
-    required this.rows,
-    super.key,
-  });
+  const AppSettingsGroup({required this.label, required this.rows, super.key});
 
   /// Libellé de section (« ENTRAÎNEMENT »), rendu en mono MAJUSCULES.
   final String label;
@@ -39,8 +35,9 @@ class AppSettingsGroup extends StatelessWidget {
           decoration: const BoxDecoration(
             color: AppColors.darkSurface,
             borderRadius: AppRadius.cardSecondaryAll,
-            border:
-                Border.fromBorderSide(BorderSide(color: AppColors.darkBorder)),
+            border: Border.fromBorderSide(
+              BorderSide(color: AppColors.darkBorder),
+            ),
           ),
           child: ClipRRect(
             borderRadius: AppRadius.cardSecondaryAll,
@@ -102,8 +99,9 @@ class AppSettingsRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final foreground =
-        destructive ? AppColors.logout : AppColors.darkTextPrimary;
+    final foreground = destructive
+        ? AppColors.logout
+        : AppColors.darkTextPrimary;
     final isToggle = toggleValue != null;
 
     final content = Padding(
@@ -129,10 +127,11 @@ class AppSettingsRow extends StatelessWidget {
           if (value != null) ...[
             Text(
               value!,
-              style: (valueIsMono
-                      ? AppTypography.labelMono.copyWith(fontSize: 12)
-                      : AppTypography.body.copyWith(fontSize: 12))
-                  .copyWith(color: AppColors.darkTextTertiary),
+              style:
+                  (valueIsMono
+                          ? AppTypography.labelMono.copyWith(fontSize: 12)
+                          : AppTypography.body.copyWith(fontSize: 12))
+                      .copyWith(color: AppColors.darkTextTertiary),
             ),
             const SizedBox(width: 10),
           ],

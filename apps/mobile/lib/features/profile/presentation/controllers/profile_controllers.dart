@@ -10,5 +10,7 @@ import '../../../progress/domain/entities/progress.dart';
 /// période sélectionnée dans l'onglet Progrès.
 final profileSessionsOverviewProvider =
     FutureProvider.autoDispose<ProgressOverviewEntity>((ref) {
-  return ref.watch(progressRepositoryProvider).overview(ProgressPeriod.year);
-});
+      return ref
+          .watch(progressRepositoryProvider)
+          .overview(ProgressPeriod.year);
+    });

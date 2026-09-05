@@ -155,8 +155,9 @@ class CoachThread extends AutoDisposeAsyncNotifier<CoachThreadState> {
     if (exception is NetworkException) return null;
     if (exception is ServerException) {
       return switch (exception.statusCode) {
-        429 => 'Tu as atteint le nombre de messages du jour. '
-            'Le coach revient demain.',
+        429 =>
+          'Tu as atteint le nombre de messages du jour. '
+              'Le coach revient demain.',
         503 => 'Le coach est momentanément indisponible.',
         _ => 'Le coach n’a pas pu répondre. Réessaie dans un instant.',
       };
@@ -167,8 +168,8 @@ class CoachThread extends AutoDisposeAsyncNotifier<CoachThreadState> {
 
 final coachThreadProvider =
     AsyncNotifierProvider.autoDispose<CoachThread, CoachThreadState>(
-  CoachThread.new,
-);
+      CoachThread.new,
+    );
 
 /// Lance la séance proposée et signale l'acceptation au serveur.
 ///
@@ -181,14 +182,14 @@ class CoachProposalActions {
   final Ref _ref;
 
   Future<String> start(CoachSessionProposal proposal) async {
-    final sessionId =
-        await _ref.read(coachSessionLauncherProvider).start(proposal);
+    final sessionId = await _ref
+        .read(coachSessionLauncherProvider)
+        .start(proposal);
 
     try {
-      await _ref.read(coachRepositoryProvider).markProposalAccepted(
-            proposalId: proposal.id,
-            sessionId: sessionId,
-          );
+      await _ref
+          .read(coachRepositoryProvider)
+          .markProposalAccepted(proposalId: proposal.id, sessionId: sessionId);
     } on AppException {
       // Volontairement avalé : la séance existe, elle est en file de
       // synchronisation, et l'écran de séance s'ouvre. Rien à dire ici.
@@ -224,8 +225,9 @@ final coachSuggestionsProvider = Provider.autoDispose<List<String>>((ref) {
           ? null
           : templates.first.name,
       recordExerciseName: freshest?.exerciseName,
-      recordAgeDays:
-          freshest == null ? null : now.difference(freshest.achievedAt).inDays,
+      recordAgeDays: freshest == null
+          ? null
+          : now.difference(freshest.achievedAt).inDays,
       weightTrendKg: _weightTrend(weights),
       hasHistory: history != null && history.isNotEmpty,
     ),

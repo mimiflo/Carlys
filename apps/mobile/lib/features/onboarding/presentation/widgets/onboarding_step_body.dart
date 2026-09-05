@@ -28,14 +28,16 @@ class OnboardingStepBody extends StatelessWidget {
         const SizedBox(height: AppSpacing.gapTile),
         Text(
           question,
-          style:
-              AppTypography.display.copyWith(color: AppColors.darkTextPrimary),
+          style: AppTypography.display.copyWith(
+            color: AppColors.darkTextPrimary,
+          ),
         ),
         const SizedBox(height: AppSpacing.gapTile),
         Text(
           subtitle,
-          style:
-              AppTypography.body.copyWith(color: AppColors.darkTextSecondary),
+          style: AppTypography.body.copyWith(
+            color: AppColors.darkTextSecondary,
+          ),
         ),
         const SizedBox(height: AppSpacing.lg),
         for (var i = 0; i < options.length; i++) ...[
