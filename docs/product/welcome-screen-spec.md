@@ -15,7 +15,10 @@
 > opacités, rayons, arrêts de dégradé — reste la référence ; seules les
 > couleurs sont périmées. Correspondance : `#7B4BF6` → `#7B1FFF`,
 > `#CD2EDA` → `#C42EE0`, `#F7708F` → `#FF7A45`, `#5B5BF6` → `#9B30FF`,
-> `#06060C` → `#08050E`, `#101019` → `#15101F`.
+> `#06060C` → `#08050E`, `#101019` → `#15101F`. Les gris de rôle aussi :
+> `textTertiary` `#7A7A8C` est le relevé du handoff — la valeur courante
+> vit dans `color.darkRoles` de `tokens.json` (remontée depuis pour tenir
+> AA sur toutes les surfaces sombres).
 
 Cible : `apps/mobile/lib/features/onboarding/presentation/screens/welcome_screen.dart`
 Référence visuelle : `Welcome.dc.html` (design validé). Reproduire **exactement** les valeurs ci-dessous.

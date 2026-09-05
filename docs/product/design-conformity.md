@@ -294,7 +294,9 @@ Trois particularités qui ne valent **que là** :
 Toutes les autres couleurs de la spécification existaient déjà à l'identique
 dans le design system (`darkBackground` `#08050E`, `darkSurface` `#15101F`,
 `darkBorder` `#12FFFFFF`, `darkTextSecondary` `#9A9AAE`, `darkTextTertiary`
-`#7A7A8C`, `primary` `#9B30FF`) : rien n'a été ajouté aux tokens.
+`#7A7A8C` à l'époque du handoff — remonté depuis pour tenir AA, la valeur
+courante vit dans `tokens.json`, `primary` `#9B30FF`) : rien n'a été ajouté
+aux tokens.
 
 Les quatre vignettes (App, Academy, Events, Wear) sont **une présentation, pas
 une navigation** : seule l'application existe aujourd'hui, et les rendre

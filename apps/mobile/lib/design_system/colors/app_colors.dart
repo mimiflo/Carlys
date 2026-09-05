@@ -115,14 +115,18 @@ abstract final class AppColors {
 
   // Rôles de texte et traits du thème sombre
   //
-  // Les trois gris de texte et le gris d'icône se MESURENT, pas seulement à
-  // l'œil : chaque rôle de texte tient AA (4,5:1) et l'icône tient le seuil
-  // graphique (3:1) sur la plus claire des surfaces sombres, `surfaceIcon`,
-  // parce que le dénominateur d'un total et les libellés se posent aussi sur
-  // les plaques gravées. Le test `app_colors_test.dart` le vérifie.
+  // Les gris se MESURENT, pas seulement à l'œil, et deux fois : chaque rôle
+  // de texte tient AA (4,5:1) et l'icône tient le seuil graphique (3:1) sur
+  // la plus claire des surfaces sombres, `surfaceIcon`, parce que les
+  // libellés se posent aussi sur les plaques gravées ; et deux gris voisins
+  // gardent un écart PERCEPTIBLE (luminance relative >= 1,2:1), sans quoi la
+  // hiérarchie n'existe que dans le code. Entre le gris minimal AA sur
+  // `surfaceIcon` et le secondaire, il n'y a la place que d'UN pas : un seul
+  // gris en retrait, donc, et non deux nuances indiscernables. Le test
+  // `app_colors_test.dart` vérifie les deux règles.
   static const Color darkTextPrimary = Color(0xFFF2F2F6);
   static const Color darkTextSecondary = Color(0xFF9A9AAE);
-  static const Color darkTextTertiary = Color(0xFF9191A5);
+  static const Color darkTextTertiary = Color(0xFF8A8A9E);
   static const Color darkIconInactive = Color(0xFF6D6D81);
   static const Color darkBorder = Color(0x12FFFFFF);
   static const Color darkBorderStrong = Color(0x24FFFFFF);
@@ -207,13 +211,17 @@ abstract final class AppColors {
   /// Texte posé SUR l'accent orange. Un blanc y passerait sous le seuil.
   static const Color onAccent = Color(0xFF1A0A02);
 
-  /// Dénominateur d'un total (« /1000 ») : présent, jamais lu en premier.
+  /// Dénominateur d'un total (« /1000 »), libellés de 9 points : le gris le
+  /// plus en retrait qui reste lisible.
   ///
-  /// En retrait de [darkTextTertiary], mais LISIBLE : 4,58:1 sur la plaque
-  /// la plus claire ([surfaceIcon]), là où l'ancienne valeur tombait à 2,16.
-  /// Un texte de 9 points qui échoue au seuil AA n'est pas « discret », il
-  /// est illisible.
-  static const Color textMuted = Color(0xFF89899D);
+  /// ALIAS de [darkTextTertiary], à dessein : entre le gris minimal AA sur
+  /// la plaque la plus claire ([surfaceIcon]) et [darkTextSecondary], il n'y
+  /// a pas la place de deux pas perceptibles — trois rôles y devenaient un
+  /// seul gris à l'œil. Il n'existe donc plus de troisième gris : un seul
+  /// gris en retrait, mesurable, plutôt que deux nuances indiscernables. Le
+  /// nom reste pour l'intention (« ce texte est le plus éteint possible »),
+  /// la valeur est UNE.
+  static const Color textMuted = darkTextTertiary;
 
   /// Liseré des surfaces qui ont gagné leur majesté.
   static const Color majestyBorder = Color(0x59C88BFF); // primaryLight .35

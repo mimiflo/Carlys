@@ -97,19 +97,34 @@ void main() {
       }
     });
 
-    test(
-        'la hiérarchie des gris reste lisible : éteint < tertiaire < secondaire',
-        () {
-      // Remonter un gris pour le contraste ne doit pas écraser l'échelle :
-      // le dénominateur reste en retrait du libellé, qui reste en retrait
-      // du texte secondaire.
+    test('deux gris voisins gardent un écart perceptible (>= 1,2:1)', () {
+      // Un ordre strict ne suffit pas : une unité de luminance le satisfait
+      // sans qu'aucun œil ne la voie. Entre deux rôles voisins on exige un
+      // vrai pas — le même rapport que le contraste WCAG, borné à 1,2:1
+      // (environ 5 L*).
+      double step(Color lighter, Color darker) =>
+          (luminance(lighter) + 0.05) / (luminance(darker) + 0.05);
       expect(
-        luminance(AppColors.textMuted),
-        lessThan(luminance(AppColors.darkTextTertiary)),
+        step(AppColors.darkTextSecondary, AppColors.darkTextTertiary),
+        greaterThanOrEqualTo(1.2),
+        reason: 'secondaire vs tertiaire',
       );
       expect(
-        luminance(AppColors.darkTextTertiary),
-        lessThan(luminance(AppColors.darkTextSecondary)),
+        step(AppColors.darkTextTertiary, AppColors.darkIconInactive),
+        greaterThanOrEqualTo(1.2),
+        reason: 'tertiaire vs icône inactive',
+      );
+    });
+
+    test('textMuted est l’alias du tertiaire, pas un troisième gris', () {
+      // Entre le gris minimal AA sur surfaceIcon et le secondaire, il n'y a
+      // pas la place de deux pas perceptibles : trois rôles y devenaient un
+      // seul gris à l'œil. La décision est UN gris en retrait — si cette
+      // égalité casse, c'est qu'un troisième gris revient : mesurer son
+      // écart avant de l'accepter.
+      expect(
+        identical(AppColors.textMuted, AppColors.darkTextTertiary),
+        isTrue,
       );
     });
 
