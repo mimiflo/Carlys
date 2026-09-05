@@ -42,6 +42,9 @@ function renderPage() {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  // restoreAllMocks ne touche pas aux vi.fn() : sans remise à zéro, un appel
+  // d'un cas précédent satisferait l'assertion du cas « sans jeton ».
+  routerReplace.mockClear();
   adminToken.clear();
 });
 
@@ -104,15 +107,30 @@ describe('Fiche utilisateur', () => {
     expect(await screen.findByRole('alert')).toHaveTextContent('Action impossible, réessayez.');
   });
 
+  // Le message du serveur diffère volontairement du texte de la page : c'est
+  // le STATUT qui doit décider de la phrase affichée, pas le message reçu.
   it('distingue un compte introuvable (404) d’une fiche indisponible', async () => {
     adminToken.set('jeton-admin');
+    vi.spyOn(adminApi, 'userDetail').mockRejectedValue(new AdminApiError('Not found', 404));
+
+    renderPage();
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Utilisateur introuvable.');
+    expect(alert).not.toHaveTextContent('Fiche indisponible.');
+  });
+
+  it('montre toute autre erreur de chargement comme une fiche indisponible', async () => {
+    adminToken.set('jeton-admin');
     vi.spyOn(adminApi, 'userDetail').mockRejectedValue(
-      new AdminApiError('Utilisateur introuvable.', 404),
+      new AdminApiError('Internal server error', 500),
     );
 
     renderPage();
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('Utilisateur introuvable.');
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('Fiche indisponible.');
+    expect(alert).not.toHaveTextContent('Utilisateur introuvable.');
   });
 
   it('sans jeton, ne rend rien et renvoie vers la connexion', () => {
@@ -122,5 +140,15 @@ describe('Fiche utilisateur', () => {
 
     expect(routerReplace).toHaveBeenCalledWith('/login');
     expect(screen.queryByRole('heading', { name: /fiche utilisateur/i })).not.toBeInTheDocument();
+  });
+
+  it('avec un jeton, ne renvoie jamais vers la connexion', async () => {
+    adminToken.set('jeton-admin');
+    vi.spyOn(adminApi, 'userDetail').mockResolvedValue(USER);
+
+    renderPage();
+
+    expect(await screen.findByRole('heading', { name: /fiche utilisateur/i })).toBeInTheDocument();
+    expect(routerReplace).not.toHaveBeenCalled();
   });
 });
