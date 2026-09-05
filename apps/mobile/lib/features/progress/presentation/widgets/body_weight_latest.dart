@@ -4,6 +4,17 @@ import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/progress.dart';
 
+// Grammaire de la carte maîtresse de Progrès, relevée sur la maquette et
+// partagée avec la carte de volume (volume_card.dart) : padding 20, libellé
+// à 6 de sa valeur, valeur mono à 30 resserrée, unité à 15. Nommées ICI
+// plutôt qu'écrites dans les widgets ; si un troisième usage apparaît,
+// elles montent en tokens.
+const EdgeInsets _cardPadding = EdgeInsets.all(20);
+const double _labelGap = 6;
+const double _valueFontSize = 30;
+const double _valueLetterSpacing = -1.2;
+const double _unitFontSize = 15;
+
 /// Carte de tête de la section poids : la même surface sous la courbe et
 /// sous la première mesure, pour que l'arrivée de la courbe ne change pas
 /// le décor.
@@ -15,7 +26,7 @@ class BodyWeightCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: _cardPadding,
       decoration: const BoxDecoration(
         color: AppColors.darkSurface,
         borderRadius: AppRadius.cardMainAll,
@@ -41,20 +52,20 @@ class BodyWeightLatest extends StatelessWidget {
           'Dernière mesure',
           color: AppColors.darkTextTertiary,
         ),
-        const SizedBox(height: 6),
+        const SizedBox(height: _labelGap),
         Text.rich(
           TextSpan(
             text: formatDecimal(entry.value),
             style: AppTypography.metricL.copyWith(
-              fontSize: 30,
-              letterSpacing: -1.2,
+              fontSize: _valueFontSize,
+              letterSpacing: _valueLetterSpacing,
               color: AppColors.darkTextPrimary,
             ),
             children: [
               TextSpan(
                 text: ' kg',
                 style: AppTypography.metricS.copyWith(
-                  fontSize: 15,
+                  fontSize: _unitFontSize,
                   color: AppColors.darkTextTertiary,
                 ),
               ),
