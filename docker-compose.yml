@@ -130,6 +130,8 @@ services:
       dockerfile: apps/admin/Dockerfile
       args:
         NEXT_PUBLIC_API_BASE_URL: http://localhost:3000
+        # Image locale : les textes légaux peuvent encore porter des [À COMPLÉTER : …].
+        LEGAL_PLACEHOLDERS: allow
     restart: unless-stopped
     ports:
       - '3001:3001'

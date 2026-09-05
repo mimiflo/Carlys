@@ -21,5 +21,6 @@ describe('Page /privacy', () => {
 
     expect(container.textContent).not.toContain('—');
     expect(container.textContent).toMatch(/\btes données\b/i);
+    expect(container.textContent).not.toMatch(/\b(vous|votre|vos)\b/i);
   });
 });

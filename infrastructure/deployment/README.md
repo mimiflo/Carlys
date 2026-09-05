@@ -57,4 +57,8 @@ En conséquence, pour chaque environnement déployé :
   confidentialité : c'est `${PUBLIC_APP_URL}/privacy`.
 - Les textes légaux portent des marqueurs `[À COMPLÉTER : …]` (raison
   sociale, adresse de contact, délais de conservation…) à renseigner avant
-  toute mise en production.
+  toute mise en production. Le `Dockerfile` de l'admin pose
+  `LEGAL_PLACEHOLDERS=forbid` : tant qu'un marqueur subsiste, le build de
+  l'image **échoue** en les listant. Une image locale ou de recette peut
+  passer outre avec `--build-arg LEGAL_PLACEHOLDERS=allow` (c'est ce que fait
+  le `docker-compose.yml` racine), jamais une image de production.

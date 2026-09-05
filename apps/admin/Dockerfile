@@ -19,6 +19,12 @@ COPY apps/admin ./apps/admin
 # (pages statiques) : le contexte doit les contenir, le conteneur final non.
 # Le .dockerignore racine ré-inclut docs/legal pour cette raison.
 COPY docs/legal ./docs/legal
+# Une image de production ne doit jamais servir un texte légal inachevé :
+# tant que docs/legal porte un marqueur [À COMPLÉTER : …], `next build`
+# échoue en listant les marqueurs (src/lib/legal-documents.ts). Pour une
+# image locale ou de recette : --build-arg LEGAL_PLACEHOLDERS=allow
+ARG LEGAL_PLACEHOLDERS=forbid
+ENV LEGAL_PLACEHOLDERS=$LEGAL_PLACEHOLDERS
 RUN pnpm install --frozen-lockfile --filter "@carlys/admin..."
 RUN pnpm --filter "@carlys/admin..." run build
 

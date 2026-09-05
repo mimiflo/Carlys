@@ -151,6 +151,15 @@ Décisions :
   (`lib/legal-documents.ts`, chemin relatif à `process.cwd()` = `apps/admin`) :
   `.dockerignore` ré-inclut `docs/legal` et le `Dockerfile` le copie dans le
   contexte de build ; le conteneur final n'en a pas besoin.
+- **Marqueurs `[À COMPLÉTER : …]`** : `next build` tourne toujours avec
+  `NODE_ENV=production` (en CI comme dans l'image), donc `NODE_ENV` seul ne
+  distingue pas une vérification d'un déploiement. L'image de production
+  (`Dockerfile`) pose `LEGAL_PLACEHOLDERS=forbid` : son build **échoue** en
+  listant les marqueurs restants ; un build de production ordinaire (CI,
+  `pnpm build`) les liste en avertissement sans bloquer ; `next dev` rend le
+  texte tel quel pour la relecture. Un test lit les deux vrais fichiers et
+  refuse toute syntaxe que le lecteur minimal ignorerait (code, tableau,
+  emphase à une étoile, lien mal fermé) ainsi que le vouvoiement.
 - **Ton** : français, tutoiement, sans tiret cadratin dans les textes visibles
   (vérifié par les tests des pages légales).
 - `PUBLIC_APP_URL` (API) désigne cette application, jamais l'API.

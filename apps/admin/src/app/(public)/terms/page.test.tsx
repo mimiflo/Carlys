@@ -19,5 +19,6 @@ describe('Page /terms', () => {
 
     expect(container.textContent).not.toContain('—');
     expect(container.textContent).toMatch(/\btu\b/i);
+    expect(container.textContent).not.toMatch(/\b(vous|votre|vos)\b/i);
   });
 });
