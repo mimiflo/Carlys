@@ -12,11 +12,9 @@ import '../datasources/workout_template_remote_data_source.dart';
 class WorkoutTemplateDownloader {
   const WorkoutTemplateDownloader({
     required AppDatabase database,
-    required WorkoutTemplateLocalDataSource local,
-    required WorkoutTemplateRemoteDataSource remote,
-  })  : _db = database,
-        _local = local,
-        _remote = remote;
+    required this._local,
+    required this._remote,
+  })  : _db = database;
 
   final AppDatabase _db;
   final WorkoutTemplateLocalDataSource _local;

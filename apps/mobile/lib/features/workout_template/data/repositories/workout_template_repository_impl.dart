@@ -26,11 +26,10 @@ class WorkoutTemplateRepositoryImpl implements WorkoutTemplateRepository {
   WorkoutTemplateRepositoryImpl({
     required AppDatabase database,
     required SyncEngine syncEngine,
-    WorkoutTemplateRemoteDataSource? remote,
+    this._remote,
     Uuid uuid = const Uuid(),
   })  : _db = database,
         _sync = syncEngine,
-        _remote = remote,
         _uuid = uuid,
         _local = WorkoutTemplateLocalDataSource(database),
         _plans = SessionPlanLocalDataSource(database),

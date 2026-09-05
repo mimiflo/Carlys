@@ -28,11 +28,9 @@ import '../../features/workout_template/domain/repositories/workout_template_rep
 class AppRestore {
   AppRestore({
     required SyncEngine syncEngine,
-    required WorkoutRepository workouts,
-    required WorkoutTemplateRepository templates,
-  })  : _sync = syncEngine,
-        _workouts = workouts,
-        _templates = templates;
+    required this._workouts,
+    required this._templates,
+  })  : _sync = syncEngine;
 
   static const _logger = AppLogger('AppRestore');
 

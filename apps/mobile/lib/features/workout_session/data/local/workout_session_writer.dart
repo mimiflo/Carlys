@@ -22,9 +22,8 @@ import '../../domain/entities/workout.dart';
 class WorkoutSessionWriter {
   const WorkoutSessionWriter({
     required AppDatabase database,
-    required Uuid uuid,
-  })  : _db = database,
-        _uuid = uuid;
+    required this._uuid,
+  })  : _db = database;
 
   final AppDatabase _db;
   final Uuid _uuid;

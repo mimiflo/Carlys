@@ -21,12 +21,10 @@ import '../../domain/services/push_messenger.dart';
 /// casse. Aucun échec ici n'atteint jamais un flux métier.
 class PushRegistration {
   PushRegistration({
-    required AppEnvironment environment,
-    required PushMessenger messenger,
-    required DeviceTokenRepository repository,
-  })  : _environment = environment,
-        _messenger = messenger,
-        _repository = repository;
+    required this._environment,
+    required this._messenger,
+    required this._repository,
+  });
 
   static const _logger = AppLogger('PushRegistration');
 

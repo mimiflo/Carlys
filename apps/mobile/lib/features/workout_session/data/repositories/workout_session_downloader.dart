@@ -21,9 +21,8 @@ import '../dto/workout_session_dtos.dart';
 class WorkoutSessionDownloader {
   WorkoutSessionDownloader({
     required AppDatabase database,
-    required WorkoutSessionRemoteDataSource remote,
+    required this._remote,
   })  : _db = database,
-        _remote = remote,
         _plans = SessionPlanLocalDataSource(database);
 
   static const _logger = AppLogger('WorkoutSessionDownloader');

@@ -13,9 +13,21 @@ façons de lancer l'application, et les pièges qui coûtent une soirée.
 | Node.js | ≥ 22 | API et admin |
 | pnpm | 10 | `corepack enable` suffit |
 | Docker Desktop | récent | PostgreSQL, Redis, Mailpit, MinIO |
-| Flutter SDK | stable, Dart ≥ 3.6 | l'application mobile |
+| Flutter SDK | Dart ≥ 3.12 (contrainte du `pubspec.yaml`) | l'application mobile |
 | Android Studio | récent | **le SDK et l'émulateur**, même si on code dans VS Code |
 | VS Code | récent | l'éditeur |
+
+**La contrainte Dart du `pubspec.yaml` suit la CI.** `environment: sdk:
+^3.12.0` dans `apps/mobile/pubspec.yaml` est le Dart livré avec le Flutter
+que la CI installe (Flutter 3.44.9 → Dart 3.12.2). Ce n'est pas une promesse
+de compatibilité vers le bas : c'est la borne qui fixe la **version de
+langage** de tout le code Dart — les fonctionnalités utilisables, et le style
+de `dart format` (« tall » depuis Dart 3.7). Une contrainte plus basse que la
+CI est un mensonge : l'arbre de dépendances résolu (`pubspec.lock`, bloc
+`sdks:`) ne tourne pas dessus, et `pub get` partirait en erreur transitive
+illisible au lieu de dire « SDK trop ancien ». Quand la version Flutter de
+la CI monte, la contrainte monte avec elle, dans le même commit, suivie d'un
+`dart format lib test` livré à part.
 
 Android Studio n'est pas un éditeur concurrent ici : on l'installe pour le
 **SDK Android**, le **gestionnaire d'appareils virtuels** et les **outils de

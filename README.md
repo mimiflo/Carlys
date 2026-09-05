@@ -91,7 +91,7 @@ Le design system Flutter (`AppColors`, `AppTypography`, `AppSpacing`, `AppRadius
 | Node.js | >= 22 | champ `engines` du `package.json` racine |
 | pnpm | 10 | `corepack enable` suffit (`packageManager: pnpm@10.x`) |
 | Docker + Docker Compose | récent | infrastructure locale (PostgreSQL, Redis, Mailpit, MinIO) |
-| Flutter SDK | stable (Dart >= 3.6) | uniquement pour `apps/mobile` |
+| Flutter SDK | Dart >= 3.12 (contrainte `sdk` de `apps/mobile/pubspec.yaml`) | uniquement pour `apps/mobile` |
 | Android Studio | récent | uniquement pour le SDK Android et l'émulateur ; on code dans VS Code |
 
 > Premier poste, ou premier émulateur Android ?

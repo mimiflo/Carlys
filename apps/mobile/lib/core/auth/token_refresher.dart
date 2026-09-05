@@ -9,9 +9,8 @@ import 'token_storage.dart';
 /// seul appel de rafraîchissement — les autres attendent le même futur.
 /// Utilise un Dio nu (sans interceptors) pour éviter toute récursion.
 class TokenRefresher {
-  TokenRefresher({required Dio bareDio, required TokenStorage storage})
-      : _dio = bareDio,
-        _storage = storage;
+  TokenRefresher({required Dio bareDio, required this._storage})
+      : _dio = bareDio;
 
   static const _logger = AppLogger('TokenRefresher');
 

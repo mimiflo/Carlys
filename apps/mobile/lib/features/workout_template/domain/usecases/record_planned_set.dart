@@ -34,10 +34,9 @@ class RecordedSet {
 /// comportement existant.
 class RecordPlannedSet {
   const RecordPlannedSet({
-    required WorkoutRepository workouts,
-    required WorkoutTemplateRepository templates,
-  })  : _workouts = workouts,
-        _templates = templates;
+    required this._workouts,
+    required this._templates,
+  });
 
   final WorkoutRepository _workouts;
   final WorkoutTemplateRepository _templates;

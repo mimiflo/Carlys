@@ -43,8 +43,7 @@ enum CheckoutOutcome {
 /// action, pas un rendu, et l'écran doit pouvoir être éprouvé sans ouvrir
 /// quoi que ce soit.
 class SubscriptionActions {
-  const SubscriptionActions(this._ref, {Uuid uuid = const Uuid()})
-      : _uuid = uuid;
+  const SubscriptionActions(this._ref, {this._uuid = const Uuid()});
 
   final Ref _ref;
   final Uuid _uuid;

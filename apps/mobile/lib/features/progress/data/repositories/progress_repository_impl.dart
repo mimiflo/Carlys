@@ -9,7 +9,7 @@ import '../../domain/repositories/progress_repository.dart';
 import '../dto/progress_dtos.dart';
 
 class ProgressRepositoryImpl implements ProgressRepository {
-  ProgressRepositoryImpl(this._dio, {Uuid uuid = const Uuid()}) : _uuid = uuid;
+  ProgressRepositoryImpl(this._dio, {this._uuid = const Uuid()});
 
   final Dio _dio;
   final Uuid _uuid;

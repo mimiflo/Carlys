@@ -188,7 +188,7 @@ class FakeCommunityRepository implements CommunityRepository {
 /// provider ouvrirait une VRAIE base Drift, et le test laisserait derrière
 /// lui un fichier et une connexion ouverte.
 class FakeWaterStore implements WaterStore {
-  FakeWaterStore({int milliliters = 0}) : _milliliters = milliliters;
+  FakeWaterStore({this._milliliters = 0});
 
   int _milliliters;
   final StreamController<int> _controller = StreamController<int>.broadcast();

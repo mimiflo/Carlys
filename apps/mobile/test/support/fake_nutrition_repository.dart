@@ -9,16 +9,12 @@ import 'package:carlys_mobile/features/nutrition/domain/repositories/nutrition_r
 class FakeNutritionRepository implements NutritionRepository {
   FakeNutritionRepository({
     this.weightKg,
-    BiologicalSex? sex,
-    DateTime? birthDate,
-    double? heightCm,
-    ActivityLevel? activityLevel,
-    NutritionGoal? goal,
-  })  : _sex = sex,
-        _birthDate = birthDate,
-        _heightCm = heightCm,
-        _activityLevel = activityLevel,
-        _goal = goal;
+    this._sex,
+    this._birthDate,
+    this._heightCm,
+    this._activityLevel,
+    this._goal,
+  });
 
   double? weightKg;
   BiologicalSex? _sex;

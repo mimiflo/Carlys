@@ -21,10 +21,9 @@ import 'sync_api.dart';
 class SyncEngine {
   SyncEngine({
     required AppDatabase database,
-    required SyncApi api,
+    required this._api,
     DateTime Function()? now,
   })  : _db = database,
-        _api = api,
         _now = now ?? DateTime.now;
 
   static const _logger = AppLogger('SyncEngine');

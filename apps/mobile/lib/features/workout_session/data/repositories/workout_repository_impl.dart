@@ -19,11 +19,10 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
   WorkoutRepositoryImpl({
     required AppDatabase database,
     required SyncEngine syncEngine,
-    WorkoutSessionRemoteDataSource? remote,
+    this._remote,
     Uuid uuid = const Uuid(),
   })  : _db = database,
         _sync = syncEngine,
-        _remote = remote,
         _uuid = uuid,
         _writer = WorkoutSessionWriter(database: database, uuid: uuid);
 

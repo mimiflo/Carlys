@@ -14,9 +14,7 @@ import '../datasources/auth_api.dart';
 import '../dto/auth_dtos.dart';
 
 class AuthRepositoryImpl implements AuthRepository {
-  AuthRepositoryImpl({required AuthApi api, required TokenStorage storage})
-      : _api = api,
-        _storage = storage;
+  AuthRepositoryImpl({required this._api, required this._storage});
 
   static const _logger = AppLogger('AuthRepository');
 

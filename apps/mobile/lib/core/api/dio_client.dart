@@ -10,12 +10,10 @@ import '../auth/token_storage.dart';
 /// si le rafraîchissement de session réussit.
 class AuthInterceptor extends Interceptor {
   AuthInterceptor({
-    required TokenStorage storage,
-    required TokenRefresher refresher,
-    required Dio dio,
-  })  : _storage = storage,
-        _refresher = refresher,
-        _dio = dio;
+    required this._storage,
+    required this._refresher,
+    required this._dio,
+  });
 
   static const _retriedKey = 'carlys_retried';
 
