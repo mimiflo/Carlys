@@ -28,11 +28,16 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      # Même source unique que mobile-ci et le poste de développement :
+      # apps/mobile/.flutter-version — voir mobile-ci.yml pour l'incident
+      # du « stable » flottant et le choix de l'étape shell.
+      - name: Version Flutter épinglée
+        id: pin
+        run: echo "version=$(cat .flutter-version)" >> "$GITHUB_OUTPUT"
+
       - uses: subosito/flutter-action@v2
         with:
-          # Version ÉPINGLÉE, identique à mobile-ci et au développement —
-          # voir mobile-ci.yml pour l'incident du « stable » flottant.
-          flutter-version: 3.44.9
+          flutter-version: ${{ steps.pin.outputs.version }}
           channel: stable
           cache: true
 
@@ -70,8 +75,10 @@ jobs:
             echo 'org.gradle.daemon=false'
           } >> android/gradle.properties
 
+      # --enforce-lockfile : même règle que mobile-ci, le lock versionné
+      # est contraignant — l'APK publié est construit sur l'arbre éprouvé.
       - name: Dépendances
-        run: flutter pub get
+        run: flutter pub get --enforce-lockfile
 
       - name: Génération de code (Drift, …)
         run: dart run build_runner build

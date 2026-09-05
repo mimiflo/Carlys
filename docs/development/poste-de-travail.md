@@ -13,9 +13,26 @@ façons de lancer l'application, et les pièges qui coûtent une soirée.
 | Node.js | ≥ 22 | API et admin |
 | pnpm | 10 | `corepack enable` suffit |
 | Docker Desktop | récent | PostgreSQL, Redis, Mailpit, MinIO |
-| Flutter SDK | Dart ≥ 3.12 (contrainte du `pubspec.yaml`) | l'application mobile |
+| Flutter SDK | **3.44.9** — celle de `apps/mobile/.flutter-version` | l'application mobile |
 | Android Studio | récent | **le SDK et l'émulateur**, même si on code dans VS Code |
 | VS Code | récent | l'éditeur |
+
+**La version Flutter est épinglée, pas « stable au fil de l'eau ».**
+`apps/mobile/.flutter-version` est la source unique : les deux workflows
+(`mobile-ci.yml`, `demo-apk.yml`) la lisent, `scripts/check_mobile.sh` avertit
+bruyamment si ton `flutter --version` en diffère, et ce tableau la cite. Un
+poste sur une autre version peut produire un `dart format` ou une analyse que
+la CI refuse (l'incident qui a mené à l'épinglage est raconté dans
+`mobile-ci.yml`). Pour installer précisément cette version : `git clone` du
+SDK Flutter puis `git checkout 3.44.9`, ou FVM (`fvm install 3.44.9`).
+
+**Monter la version Flutter : changer ce seul fichier.** La montée (par
+exemple vers 3.47) est une décision délibérée du propriétaire du dépôt, dans
+un commit dédié : mettre à jour `apps/mobile/.flutter-version`, aligner la
+contrainte `sdk:` du `pubspec.yaml` sur le Dart correspondant, relancer
+`./scripts/check_mobile.sh` sur un poste qui tourne vraiment sur la nouvelle
+version, et livrer à part le reformatage éventuel. Rien d'autre à toucher :
+workflows et scripts suivent le fichier.
 
 **La contrainte Dart du `pubspec.yaml` suit la CI.** `environment: sdk:
 ^3.12.0` dans `apps/mobile/pubspec.yaml` est le Dart livré avec le Flutter

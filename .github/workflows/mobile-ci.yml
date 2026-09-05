@@ -33,23 +33,34 @@ jobs:
       # 2.32+), le hook de build de `package:sqlite3` télécharge sa propre
       # bibliothèque et la préfère à celle de l'OS — tests compris.
 
+      # Version ÉPINGLÉE — jamais « stable » au fil de l'eau — et à SOURCE
+      # UNIQUE : apps/mobile/.flutter-version, lu ici, par demo-apk.yml et
+      # par scripts/check_mobile.sh. La monter = changer ce seul fichier
+      # (voir docs/development/poste-de-travail.md).
+      #
+      # Pas de `flutter-version-file` : en v2 de l'action, cette entrée ne
+      # sait lire qu'un pubspec.yaml (champ environment.flutter, via yq) ou
+      # une config FVM — pas un fichier texte nu comme .flutter-version.
+      #
+      # Historique de l'épinglage : la 3.47 (Dart 3.13) faisait crasher
+      # l'analyzer de drift_dev sur « Missing implementation of
+      # visitDotShorthandPropertyAccess », et build_runner gelait jusqu'au
+      # timeout. La cause tenait à drift_dev 2.28, qui épinglait analyzer
+      # 7.6 — un analyseur en langage 3.9, ignorant les raccourcis par
+      # point introduits en 3.13.
+      #
+      # drift_dev 2.34 exige analyzer ^13 : le verrou est levé. Cette
+      # version-ci reste épinglée parce qu'elle est celle sur laquelle la
+      # montée a été éprouvée ; la faire passer à 3.47 demande le même
+      # soin — un commit délibéré, après vérification sur un poste qui
+      # tourne vraiment en 3.47.
+      - name: Version Flutter épinglée
+        id: pin
+        run: echo "version=$(cat .flutter-version)" >> "$GITHUB_OUTPUT"
+
       - uses: subosito/flutter-action@v2
         with:
-          # Version ÉPINGLÉE — jamais « stable » au fil de l'eau.
-          #
-          # Historique : la 3.47 (Dart 3.13) faisait crasher l'analyzer de
-          # drift_dev sur « Missing implementation of
-          # visitDotShorthandPropertyAccess », et build_runner gelait jusqu'au
-          # timeout. La cause tenait à drift_dev 2.28, qui épinglait analyzer
-          # 7.6 — un analyseur en langage 3.9, ignorant les raccourcis par
-          # point introduits en 3.13.
-          #
-          # drift_dev 2.34 exige analyzer ^13 : le verrou est levé. Cette
-          # version-ci reste épinglée parce qu'elle est celle sur laquelle la
-          # montée a été éprouvée ; la faire passer à 3.47 demande le même
-          # soin — un commit délibéré, après vérification sur un poste qui
-          # tourne vraiment en 3.47.
-          flutter-version: 3.44.9
+          flutter-version: ${{ steps.pin.outputs.version }}
           channel: stable
           cache: true
 
@@ -60,8 +71,11 @@ jobs:
           key: pub-${{ runner.os }}-${{ hashFiles('apps/mobile/pubspec.lock') }}
           restore-keys: pub-${{ runner.os }}-
 
+      # --enforce-lockfile : le pubspec.lock versionné est contraignant en
+      # CI, pas consultatif — toute dérive fait échouer le job au lieu de
+      # résoudre en silence autre chose que ce qui a été éprouvé en local.
       - name: Dépendances
-        run: flutter pub get
+        run: flutter pub get --enforce-lockfile
 
       # Le cache de build_runner évite de tout régénérer à chaque exécution.
       # PAS de cache de .dart_tool/build : restauré, il mettait build_runner

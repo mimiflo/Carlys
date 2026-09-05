@@ -91,7 +91,7 @@ Le design system Flutter (`AppColors`, `AppTypography`, `AppSpacing`, `AppRadius
 | Node.js | >= 22 | champ `engines` du `package.json` racine |
 | pnpm | 10 | `corepack enable` suffit (`packageManager: pnpm@10.x`) |
 | Docker + Docker Compose | récent | infrastructure locale (PostgreSQL, Redis, Mailpit, MinIO) |
-| Flutter SDK | Dart >= 3.12 (contrainte `sdk` de `apps/mobile/pubspec.yaml`) | uniquement pour `apps/mobile` |
+| Flutter SDK | 3.44.9, épinglée par `apps/mobile/.flutter-version` (Dart 3.12) | uniquement pour `apps/mobile` |
 | Android Studio | récent | uniquement pour le SDK Android et l'émulateur ; on code dans VS Code |
 
 > Premier poste, ou premier émulateur Android ?
@@ -326,7 +326,7 @@ docker build -f apps/admin/Dockerfile -t carlys-admin .
 - **Tranches verticales** : chaque étape livre une fonctionnalité complète de bout en bout (schéma Prisma + API + admin + mobile + tests + docs). Pas de couche « en avance » sans consommateur, pas de dépendance morte.
 - **Commits** : [Conventional Commits](https://www.conventionalcommits.org/fr/) — `feat(api): …`, `fix(mobile): …`, `docs: …`, `chore: …`.
 - **Branches** : `main` protégée ; travail sur `feat/<sujet>`, `fix/<sujet>`, `docs/<sujet>` ; intégration par pull request avec CI verte.
-- **CI GitHub Actions** : `api-ci.yml` (services PostgreSQL + Redis ; format, lint, typecheck, tests, e2e, build, `prisma validate`, détection de migrations manquantes), `admin-ci.yml`, `mobile-ci.yml` (Flutter stable : format bloquant, analyze, test), `security-ci.yml` (TruffleHog + `pnpm audit` niveau high, plus une exécution hebdomadaire).
+- **CI GitHub Actions** : `api-ci.yml` (services PostgreSQL + Redis ; format, lint, typecheck, tests, e2e, build, `prisma validate`, détection de migrations manquantes), `admin-ci.yml`, `mobile-ci.yml` (Flutter épinglé par `apps/mobile/.flutter-version` : format bloquant, analyze, test), `security-ci.yml` (TruffleHog + `pnpm audit` niveau high, plus une exécution hebdomadaire).
 - **Documentation** : ne documenter que l'existant, ou du planifié explicitement marqué comme tel (« Étape N », « cible »).
 
 ## Déploiement

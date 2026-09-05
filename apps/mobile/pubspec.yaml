@@ -4,7 +4,7 @@ publish_to: 'none'
 version: 0.1.0+1
 
 environment:
-  # Le Dart du Flutter épinglé en CI (Flutter 3.44.9 → Dart 3.12) : cette
+  # Le Dart du Flutter épinglé par .flutter-version (3.44.9 → Dart 3.12) :
   # borne fixe la version de LANGAGE de tout le code (et le style de
   # `dart format`). Elle suit la CI, jamais l'inverse — voir
   # docs/development/poste-de-travail.md.

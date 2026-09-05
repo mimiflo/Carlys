@@ -5,6 +5,10 @@
 # C'est le point : `flutter analyze && flutter test` — longtemps la consigne —
 # laisse passer ce que la CI refuse. `dart format --set-exit-if-changed` a fait
 # tomber une CI verte en local ; cette liste ne doit donc pas diverger.
+# Seule différence assumée : la CI passe `--enforce-lockfile` à `pub get`
+# (le lock y est contraignant) ; en local, `pub get` doit pouvoir mettre le
+# lock à jour quand le pubspec change. L'avertissement de version ci-dessous
+# couvre l'autre écart possible avec la CI : le SDK lui-même.
 #
 # Note : `dart format` et la règle de lint `require_trailing_commas` peuvent se
 # contredire sur un appel qui tient de justesse sur deux lignes. La forme qui
@@ -13,6 +17,20 @@
 set -euo pipefail
 
 cd "$(dirname "$0")/../apps/mobile"
+
+echo "── Version Flutter ─────────────────────────────────────────────────"
+# La CI installe la version épinglée dans apps/mobile/.flutter-version
+# (source unique, lue aussi par mobile-ci.yml et demo-apk.yml). Un écart
+# n'arrête pas le script — mais il enlève au vert local sa valeur de preuve.
+PINNED="$(cat .flutter-version)"
+ACTUAL="$(flutter --version 2>/dev/null | sed -n 's/^Flutter \([^ ]*\).*/\1/p' || true)"
+if [ "$ACTUAL" = "$PINNED" ]; then
+  echo "Flutter $ACTUAL — la version épinglée."
+else
+  echo "⚠⚠⚠ Flutter local « ${ACTUAL:-introuvable} » ≠ « $PINNED » épinglé" \
+    "par apps/mobile/.flutter-version : un résultat vert ici ne prouve" \
+    "rien sur la CI (mobile-ci.yml)."
+fi
 
 echo "── Dépendances ─────────────────────────────────────────────────────"
 flutter pub get
