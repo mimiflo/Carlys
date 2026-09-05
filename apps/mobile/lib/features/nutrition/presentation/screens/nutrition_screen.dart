@@ -82,13 +82,6 @@ class _NutritionContent extends StatefulWidget {
 
 class _NutritionContentState extends State<_NutritionContent> {
   final _profileKey = GlobalKey();
-  final _scrollController = ScrollController();
-
-  @override
-  void dispose() {
-    _scrollController.dispose();
-    super.dispose();
-  }
 
   /// Amène le formulaire en haut de l'écran.
   ///
@@ -105,8 +98,13 @@ class _NutritionContentState extends State<_NutritionContent> {
       );
       return;
     }
-    await _scrollController.animateTo(
-      _scrollController.position.maxScrollExtent,
+    // Le défilement passe par le contrôleur PRIMAIRE de la route : celui
+    // auquel le ListView est attaché (voir build), donc celui que le tap
+    // sur la barre d'état iOS pilote aussi. `moveTo` saute sans animation
+    // quand la réduction d'animations donne une durée nulle.
+    final position = PrimaryScrollController.of(context).position;
+    await position.moveTo(
+      position.maxScrollExtent,
       duration: duration,
       curve: AppMotion.standard,
     );
@@ -135,7 +133,11 @@ class _NutritionContentState extends State<_NutritionContent> {
     );
 
     return ListView(
-      controller: _scrollController,
+      // LE scrollable de la page : attaché au contrôleur primaire de la
+      // route, pas à un contrôleur privé — un contrôleur propre retirait
+      // l'écran du PrimaryScrollController et le tap sur la barre d'état
+      // iOS ne remontait plus la liste.
+      primary: true,
       // Le hero est à fond perdu : chaque section pose sa propre gouttière.
       padding: EdgeInsets.only(bottom: bottomInset + AppSpacing.gapSection),
       children: [

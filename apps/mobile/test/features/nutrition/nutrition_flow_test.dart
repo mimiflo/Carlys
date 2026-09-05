@@ -2,6 +2,7 @@ import 'package:carlys_mobile/app/app.dart';
 import 'package:carlys_mobile/app/environment/app_environment.dart';
 import 'package:carlys_mobile/app/restore/app_restore.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
+import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
 import 'package:carlys_mobile/features/nutrition/data/repositories/nutrition_repository_impl.dart';
 import 'package:carlys_mobile/features/nutrition/domain/entities/nutrition.dart';
@@ -35,6 +36,19 @@ Widget appWith(FakeNutritionRepository nutrition) => ProviderScope(
         nutritionRepositoryProvider.overrideWithValue(nutrition),
       ],
       child: const CarlysApp(),
+    );
+
+/// L'écran nutrition SEUL, sur sa route : le harnais resserré des tests de
+/// défilement, où la taille de fenêtre décide de ce que la liste paresseuse
+/// a déjà construit.
+Widget screenWith(FakeNutritionRepository nutrition) => ProviderScope(
+      overrides: [
+        nutritionRepositoryProvider.overrideWithValue(nutrition),
+      ],
+      child: MaterialApp(
+        theme: AppTheme.dark(),
+        home: const NutritionScreen(),
+      ),
     );
 
 /// Rend visible un élément de l'écran courant (dernier Scrollable de la pile).
@@ -118,6 +132,40 @@ void main() {
       final formTop = tester.getTopLeft(find.byType(MetabolicProfileForm)).dy;
       expect(formTop, greaterThanOrEqualTo(0));
       expect(formTop, lessThan(screen.height / 2));
+    });
+
+    testWidgets(
+        'fenêtre courte : le bouton du hero descend jusqu’au formulaire '
+        'pas encore construit', (tester) async {
+      // 393 × 400 points : la liste paresseuse n'a pas construit le
+      // formulaire quand le bouton est pressé — c'est la branche de repli
+      // de _revealProfile (descendre d'abord, caler ensuite) qui répond.
+      tester.view.physicalSize = const Size(1179, 1200);
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
+
+      await tester.pumpWidget(screenWith(FakeNutritionRepository()));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(MetabolicProfileForm), findsNothing);
+
+      // La liste est attachée au contrôleur PRIMAIRE de la route : c'est
+      // lui que le tap sur la barre d'état iOS pilote — un contrôleur
+      // privé retirait l'écran de ce geste.
+      final primary = PrimaryScrollController.of(
+        tester.element(find.byType(NutritionScreen)),
+      );
+      expect(primary.hasClients, isTrue);
+
+      await tester.tap(find.text('Compléter mon profil'));
+      await tester.pumpAndSettle();
+
+      // Le formulaire est construit et visible dans la fenêtre.
+      final screenHeight =
+          tester.view.physicalSize.height / tester.view.devicePixelRatio;
+      final formTop = tester.getTopLeft(find.byType(MetabolicProfileForm)).dy;
+      expect(formTop, greaterThanOrEqualTo(0));
+      expect(formTop, lessThan(screenHeight));
     });
 
     testWidgets('formulaire complété : le rapport métabolique apparaît',
