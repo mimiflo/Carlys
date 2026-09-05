@@ -15,6 +15,10 @@ describe('validateEnv', () => {
     expect(env.LOG_LEVEL).toBe('info');
     expect(env.RATE_LIMIT_TTL_SECONDS).toBeGreaterThan(0);
     expect(env.SWAGGER_ENABLED).toBeUndefined();
+    // Les liens des e-mails ouvrent des pages servies par l'admin Next.js
+    // (3001), jamais par l'API (3000) — et cette origine est admise par CORS.
+    expect(env.PUBLIC_APP_URL).toBe('http://localhost:3001');
+    expect(env.CORS_ORIGINS.split(',')).toContain('http://localhost:3001');
   });
 
   it('refuse le démarrage sans DATABASE_URL', () => {

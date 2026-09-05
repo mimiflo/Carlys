@@ -8,7 +8,12 @@ import { type z } from 'zod';
  * configuration, et de liste de refus en production : en garder une ferait
  * démarrer l'API « avec succès » en envoyant ses e-mails à un Mailpit
  * inexistant, en servant des URL de médias vers localhost et en pointant les
- * liens des e-mails vers http://localhost:3000.
+ * liens des e-mails vers une machine locale.
+ *
+ * PUBLIC_APP_URL pointe vers l'application admin Next.js (3001) : c'est elle
+ * qui sert les pages web publiques ouvertes par ces liens (réinitialisation
+ * de mot de passe, vérification d'e-mail, confidentialité, conditions,
+ * abonnement) — jamais l'API elle-même.
  */
 export const DEVELOPMENT_DEFAULTS = {
   CORS_ORIGINS: 'http://localhost:3001',
@@ -18,7 +23,7 @@ export const DEVELOPMENT_DEFAULTS = {
   S3_PUBLIC_BASE_URL: 'http://localhost:9000/carlys-media',
   SMTP_HOST: 'localhost',
   EMAIL_FROM: 'Carlys <no-reply@carlys.local>',
-  PUBLIC_APP_URL: 'http://localhost:3000',
+  PUBLIC_APP_URL: 'http://localhost:3001',
 } as const;
 
 type ProductionKey = keyof typeof DEVELOPMENT_DEFAULTS;

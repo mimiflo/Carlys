@@ -169,7 +169,11 @@ export const envSchema = z
     SMTP_HOST: z.string().min(1).default(DEVELOPMENT_DEFAULTS.SMTP_HOST),
     SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(1025),
     EMAIL_FROM: z.string().min(3).default(DEVELOPMENT_DEFAULTS.EMAIL_FROM),
-    /** Base des liens contenus dans les e-mails (vérification, réinitialisation). */
+    /**
+     * Base des liens contenus dans les e-mails (vérification,
+     * réinitialisation). Les pages qu'ils ouvrent sont servies par
+     * l'application admin Next.js — d'où le défaut sur son port, 3001.
+     */
     PUBLIC_APP_URL: z.string().url().default(DEVELOPMENT_DEFAULTS.PUBLIC_APP_URL),
   })
   .superRefine(refineProductionEnv);
