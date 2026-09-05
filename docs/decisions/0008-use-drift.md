@@ -28,7 +28,7 @@ l'app.
 > `NativeDatabase.createInBackground`). La décision Drift reste entière.
 
 La persistance locale de l'application Flutter repose sur **Drift**
-(`drift` + `drift_dev` + `sqlite3_flutter_libs`), une couche typée et réactive
+(`drift` + `drift_dev`), une couche typée et réactive
 au-dessus de **SQLite**.
 
 ## Raisons
