@@ -129,9 +129,22 @@ void main() {
     await tester.tap(find.text('Ouvrir'));
     await tester.pumpAndSettle();
 
+    // Les CONTRAINTES du bouton, pas sa taille rendue : le rembourrage
+    // `MaterialTapTargetSize.padded` du thème portait déjà une boîte de 44
+    // à 48 à l'écran — la taille rendue passait donc AVANT le correctif et
+    // ne défendait rien. La boîte déclarée, elle, doit être le token.
+    final button = tester.widget<IconButton>(
+      find.descendant(
+        of: find.byType(AppBackButton),
+        matching: find.byType(IconButton),
+      ),
+    );
     expect(
-      tester.getSize(find.byType(AppBackButton)),
-      const Size.square(AppSpacing.touchTarget),
+      button.constraints,
+      const BoxConstraints.tightFor(
+        width: AppSpacing.touchTarget,
+        height: AppSpacing.touchTarget,
+      ),
     );
   });
 }
