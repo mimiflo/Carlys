@@ -80,7 +80,7 @@ jobs:
       - name: Dépendances
         run: flutter pub get --enforce-lockfile
 
-      - name: Génération de code (Drift, …)
+      - name: Génération de code (Drift)
         run: dart run build_runner build
 
       # `--target-platform android-arm64` : une seule architecture au lieu de

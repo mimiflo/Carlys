@@ -84,13 +84,13 @@ jobs:
       # dart:build_runner orphelin tué au nettoyage). La génération à froid
       # coûte ~1 min ; le cache en a coûté 40. Le cache pub, lui, reste.
 
-      - name: Génération de code (Drift, …)
+      - name: Génération de code (Drift)
         run: dart run build_runner build
 
       - name: Formatage
         run: |
           dart format --output=none --set-exit-if-changed \
-            $(find lib test -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart')
+            $(find lib test -name '*.dart' ! -name '*.g.dart')
 
       - name: Analyse statique
         run: flutter analyze

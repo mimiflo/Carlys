@@ -20,17 +20,18 @@ composer des états dérivés sans coupler les widgets aux implémentations.
 > aucun provider n'a porté d'annotation `@riverpod`. `riverpod_annotation` et
 > `riverpod_generator` ont été retirés des dépendances ; les providers sont
 > écrits à la main. Le choix de Riverpod lui-même, décrit ci-dessous, reste
-> entier.
+> entier. *(Le texte de la décision a été aligné le 5 septembre 2026 : il
+> prescrivait encore la variante avec génération de code.)*
 
-**Riverpod** (`flutter_riverpod` + `riverpod_annotation`, avec génération de
-code via `riverpod_generator`) est le mécanisme unique de gestion d'état et
-d'injection de dépendances de l'application mobile.
+**Riverpod** (`flutter_riverpod` seul, providers écrits à la main — `Provider`,
+`NotifierProvider`, `StreamProvider`…) est le mécanisme unique de gestion
+d'état et d'injection de dépendances de l'application mobile.
 
 ## Raisons
 
-- **Codegen typé** : les annotations génèrent des providers entièrement typés,
-  vérifiés à la compilation — pas de lookup par chaîne ni de cast, et le lint
-  Riverpod détecte les dépendances incorrectes.
+- **Providers typés** : chaque provider déclare son type et se compose avec
+  les autres sous le contrôle du compilateur — pas de lookup par chaîne ni de
+  cast à l'exécution.
 - **Testabilité par override** : n'importe quel provider se remplace dans un
   `ProviderContainer` ou un `ProviderScope` de test (API simulée, Drift en
   mémoire) sans toucher au code de production — essentiel pour tester la file
@@ -64,8 +65,9 @@ d'injection de dépendances de l'application mobile.
 
 ## Inconvénients
 
-- **Dépendance à `build_runner`** : toute modification d'un provider annoté
-  exige `dart run build_runner build` — friction réelle au quotidien et en CI.
+- **Providers écrits à la main** : un peu plus verbeux que la forme annotée
+  de `riverpod_generator`, et sans son lint dédié — la revue de code porte
+  seule la détection d'un provider mal composé.
 - Courbe d'apprentissage : `ref.watch` vs `ref.read` vs `ref.listen`,
   invalidation, `keepAlive`, familles de providers — des erreurs subtiles sont
   possibles (rebuilds excessifs, providers recréés par inadvertance).
@@ -79,8 +81,8 @@ d'injection de dépendances de l'application mobile.
   providers, jamais des singletons.
 - Les tests utilisent systématiquement les overrides de `ProviderScope` — aucun
   mock global ni variable statique.
-- Les fichiers générés (`*.g.dart`) accompagnent le code annoté ; la CI mobile
-  (`mobile-ci.yml` : format bloquant, analyze, test) suppose une génération à
-  jour.
+- Aucun code n'est engendré pour l'état : le seul fichier généré du projet
+  vient de Drift (ADR 0008), et la CI mobile (`mobile-ci.yml` : format
+  bloquant, analyze, test) n'a rien d'autre à générer.
 - Tout ajout d'une seconde solution d'état (Bloc, GetX…) est proscrit sans
   nouvel ADR.

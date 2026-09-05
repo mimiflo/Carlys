@@ -35,13 +35,13 @@ fi
 echo "── Dépendances ─────────────────────────────────────────────────────"
 flutter pub get
 
-echo "── Génération de code (Freezed, Riverpod, Drift, json) ─────────────"
+echo "── Génération de code (Drift) ──────────────────────────────────────"
 dart run build_runner build
 
 echo "── Formatage ───────────────────────────────────────────────────────"
 # Les fichiers générés sont exclus : ce n'est pas nous qui les écrivons.
 dart format --output=none --set-exit-if-changed \
-  $(find lib test -name '*.dart' ! -name '*.g.dart' ! -name '*.freezed.dart')
+  $(find lib test -name '*.dart' ! -name '*.g.dart')
 
 echo "── Analyse statique ────────────────────────────────────────────────"
 flutter analyze
