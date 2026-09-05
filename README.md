@@ -170,6 +170,7 @@ Toutes les valeurs des `.env.example` sont **factices** et adaptées au dévelop
 | `REDIS_URL` | Connexion Redis | `redis://localhost:6379` |
 | `CORS_ORIGINS` | Origines autorisées, séparées par des virgules | `http://localhost:3001` |
 | `LOG_LEVEL` | `fatal`…`trace` \| `silent` | `debug` |
+| `TRUST_PROXY_HOPS` | Nombre de proxys de confiance devant l'API (`0` en local, `1` derrière un Nginx unique) — sans lui, rate limiting, verrouillage et audit ne voient que l'adresse du proxy (`docs/security/reverse-proxy.md`) | `0` |
 | `RATE_LIMIT_TTL_SECONDS` | Fenêtre du rate limiting | `60` |
 | `RATE_LIMIT_MAX_REQUESTS` | Requêtes max par fenêtre | `100` |
 | `SWAGGER_ENABLED` | Optionnel — Swagger actif par défaut hors production | `true` |
