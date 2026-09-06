@@ -364,9 +364,10 @@ describe('CommunityService — encouragements', () => {
     const stubs = buildStubs();
     const service = buildService(stubs);
 
-    await expect(service.encourage(ME, FRIEND, 'Bravo !')).rejects.toBeInstanceOf(
-      ForbiddenException,
-    );
+    const refusal = service.encourage(ME, FRIEND, 'Bravo !');
+    await expect(refusal).rejects.toBeInstanceOf(ForbiddenException);
+    // Le mobile affiche ce message tel quel : il tutoie, comme toute l'application.
+    await expect(refusal).rejects.toThrow('Tu ne peux encourager que tes amis.');
     expect(stubs.createEncouragement).not.toHaveBeenCalled();
   });
 

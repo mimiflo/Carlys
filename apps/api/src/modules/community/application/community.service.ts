@@ -235,7 +235,7 @@ export class CommunityService {
       // On n'écrit pas chez quelqu'un qui n'est pas un ami. 403, pas 404 :
       // l'appelant connaît déjà cet identifiant (il vient de sa liste d'amis).
       // Un blocage répond pareil : rien ne distingue « bloqué » de « plus ami ».
-      throw new ForbiddenException('Vous ne pouvez encourager que vos amis.');
+      throw new ForbiddenException('Tu ne peux encourager que tes amis.');
     }
     await this.community.createEncouragement(userId, recipientUserId, message);
     await this.notifier.encouragement(recipientUserId, userId, message);
