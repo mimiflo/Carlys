@@ -27,6 +27,7 @@ migration manque par rapport au schéma.
 | Abonnements | `SubscriptionPlan`, `SubscriptionProduct`, `Subscription`, `SubscriptionEvent`, `UserEntitlement` — **implémenté** (migration `20260807064832_subscriptions`, conforme à la cible) | Étape 6 ✅ |
 | Notifications | `Notification`, `NotificationPreference`, `PushDevice` | Introduit avec l'intégration FCM réelle (au plus tôt Étape 4, `NotificationPreference` au plus tard Étape 6) |
 | Administration | `AdminUser`, `AdminRole`, `AdminPermission` (+ jointures), `AuditLog` enrichi (`actorType`, `resourceType`/`resourceId`, `requestId`) — **implémenté** (migration `20260807070624_administration` ; `AuditLog` introduit dès l'Étape 2) | Étape 7 ✅ |
+| Communauté | `Friendship`, `Encouragement`, `CommunityChallenge`, `ChallengeParticipation`, `CommunityPreference`, `QuizAnswer`, `CommunityBlock`, `CommunityReport` — **implémenté** (migrations `20260811120000_community`, `20260811190000_quiz_answers`, `20260830120000_friend_codes`, `20260906100000_community_moderation`, `20260906110000_community_monthly_challenges`, `20260906130000_community_report_snapshot`) — voir la section [Communauté](#communauté-implémenté) | Vague 1 ✅ |
 
 ## Conventions transverses
 
@@ -550,7 +551,11 @@ fournisseurs.
 - Champs clés : `userId`, `planId`, `provider`, `externalSubscriptionId`
   (unique `(provider, externalSubscriptionId)`), `status`
   (`trialing | active | past_due | canceled | expired`),
-  `currentPeriodStart`, `currentPeriodEnd`, `cancelAtPeriodEnd`, `trialEndsAt`.
+  `currentPeriodStart`, `currentPeriodEnd`, `cancelAtPeriodEnd`, `trialEndsAt`,
+  `externalCustomerId` nullable (client chez le fournisseur, Stripe `cus_…`,
+  appris par webhook — migration `20260906120000_subscription_stripe_customer` :
+  réutilisé au prochain paiement et requis par le portail de gestion
+  `POST /subscriptions/portal`).
 - Relations : n–1 `User`, n–1 `SubscriptionPlan` ; 1–n `SubscriptionEvent`.
 - Index : `(user_id, status)`.
 
@@ -659,6 +664,66 @@ manuelles d'entitlements.
   par `(resourceType, resourceId)`.
 - Index : `(resource_type, resource_id, created_at DESC)`,
   `(actor_type, actor_id, created_at DESC)`.
+
+---
+
+## Communauté (implémenté)
+
+> Amis, encouragements, défis collectifs et modération. Les règles métier
+> (réponses opaques, refus opposable 30 jours, blocages, signalements, jeu du
+> mois) sont décrites dans [`docs/product/community.md`](../product/community.md) ;
+> ici, seulement la forme des tables.
+
+### `Friendship`
+UNE ligne par paire, direction conservée (qui a demandé).
+- Champs clés : `requesterId`, `addresseeId`, `status`
+  (`PENDING | ACCEPTED | DECLINED`), `respondedAt`.
+  Unique `(requesterId, addresseeId)` ; la symétrie est imposée par le
+  service. Une ligne `DECLINED` survit au blocage : elle porte le délai.
+- Relations : n–1 `User` (deux fois, `Cascade`).
+
+### `Encouragement`
+Mot d'un ami ; le nom de l'expéditeur est lu au moment de servir.
+- Champs clés : `senderId`, `recipientId`, `message`.
+- Relations : n–1 `User` (deux fois, `Cascade`) ; référencé par
+  `CommunityReport` (`SetNull`).
+- Index : `(recipient_id, created_at DESC)`.
+
+### `CommunityChallenge`
+Défi collectif du MOIS, matérialisé paresseusement depuis le catalogue en
+code (jamais créé par un utilisateur).
+- Champs clés : `slug`, `month` (`YYYY-MM` en UTC, clé d'idempotence du jeu
+  du mois), `kind` (`SPORT | CULTURE`), `title`, `description`, `target`,
+  `startsAt`, `endsAt`. **Unique `(slug, month)`** : deux lectures
+  concurrentes d'un mois vierge ne créent jamais deux fois le même défi.
+- Index : `(month)`, `(ends_at)`.
+
+### `ChallengeParticipation`
+Participation et `contribution` individuelle à l'objectif collectif.
+- Clé primaire composée `(challengeId, userId)` ; `joinedAt`.
+- Relations : n–1 `CommunityChallenge`, n–1 `User` (`Cascade`).
+
+### `CommunityPreference` et `QuizAnswer`
+- `CommunityPreference` : `userId` (clé), `sharesProgress` (absence = partagé).
+- `QuizAnswer` : réponse de l'Academy, unique `(userId, lessonId, answeredOn)`
+  (jour LOCAL de l'appareil) — la source des défis `CULTURE`.
+
+### `CommunityBlock`
+Blocage unilatéral et opaque.
+- Champs clés : `blockerId`, `blockedId`. Unique `(blockerId, blockedId)` ;
+  consulté dans les DEUX sens partout où deux personnes se rencontrent.
+- Relations : n–1 `User` (deux fois, `Cascade`). Index : `(blocked_id)`.
+
+### `CommunityReport`
+Signalement lu et résolu par l'administration (permission
+`community:moderate`), jamais visible de la personne signalée.
+- Champs clés : `reporterId`, `reportedUserId`, `encouragementId` nullable
+  (`SetNull` si le message est retiré), `encouragementMessage` nullable
+  (cliché du texte visé, pris dans la même transaction que le signalement :
+  la preuve survit au retrait du message), `reason`
+  (`HARCELEMENT | SPAM | CONTENU_INAPPROPRIE | AUTRE`), `details`,
+  `status` (`OPEN | RESOLVED`), `resolvedAt`.
+- Index : `(status, created_at DESC)`, `(reported_user_id)`.
 
 ---
 
