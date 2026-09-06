@@ -119,40 +119,49 @@ class SyncEngine {
     return _now().isAfter(lastAttempt.add(backoff(operation.attemptCount)));
   }
 
+  /// Chaque envoi porte la clé d'idempotence de l'opération : le serveur
+  /// est idempotent par UUID client, l'en-tête sert à retrouver les rejeux
+  /// d'une même opération dans ses journaux.
   Future<void> _send(SyncOperation operation) async {
     final payload = jsonDecode(operation.payload) as Map<String, dynamic>;
+    final key = operation.idempotencyKey;
     switch (operation.operationType) {
       case 'session.create':
-        await _api.createSession(payload);
+        await _api.createSession(payload, idempotencyKey: key);
       case 'session.complete':
         await _api.completeSession(
           operation.entityId,
           payload['body'] as Map<String, dynamic>,
+          idempotencyKey: key,
         );
       case 'session.abandon':
         await _api.abandonSession(
           operation.entityId,
           payload['body'] as Map<String, dynamic>,
+          idempotencyKey: key,
         );
       case 'set.upsert':
         await _api.upsertSet(
           payload['sessionId'] as String,
           payload['body'] as Map<String, dynamic>,
+          idempotencyKey: key,
         );
       case 'set.delete':
-        await _api.deleteSet(operation.entityId);
+        await _api.deleteSet(operation.entityId, idempotencyKey: key);
       case 'plan.skip':
         await _api.skipPlanItems(
           operation.entityId,
           payload['body'] as Map<String, dynamic>,
+          idempotencyKey: key,
         );
       case 'template.save':
         await _api.saveTemplate(
           operation.entityId,
           payload['body'] as Map<String, dynamic>,
+          idempotencyKey: key,
         );
       case 'template.delete':
-        await _api.deleteTemplate(operation.entityId);
+        await _api.deleteTemplate(operation.entityId, idempotencyKey: key);
       default:
         throw StateError('Opération inconnue : ${operation.operationType}');
     }

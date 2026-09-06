@@ -95,6 +95,22 @@ void main() {
     });
   });
 
+  group('clé d’idempotence', () {
+    test('chaque envoi transmet la clé stockée dans la file', () async {
+      // La colonne existait, mais rien ne partait : la clé est justement ce
+      // qui permet au serveur de retrouver les rejeux d'une même opération.
+      final first = await enqueue();
+      final second = await enqueue(
+        operationType: 'set.delete',
+        entityType: 'set',
+      );
+
+      await engine.syncNow();
+
+      expect(api.idempotencyKeys, [first, second]);
+    });
+  });
+
   group('opération inconnue ou malformée', () {
     test('un type inconnu est marqué en échec, la file continue', () async {
       // Le cas n'est pas théorique : une version plus récente de

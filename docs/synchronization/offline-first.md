@@ -150,7 +150,7 @@ Table Drift (Étape 4), une ligne par mutation à propager :
 | `lastAttemptAt`  | INTEGER, nullable   | Date de la dernière tentative (calcul du backoff). |
 | `status`         | TEXT                | `pending` \| `synced` \| `failed`. |
 | `error`          | TEXT, nullable      | Dernier message d'erreur (diagnostic et affichage). |
-| `idempotencyKey` | TEXT (UUID v4)      | Clé d'idempotence transmise à l'API, stable pour toute la vie de l'opération. |
+| `idempotencyKey` | TEXT (UUID v4)      | Égale à `entityId` ; transmise en en-tête `Idempotency-Key` à chaque envoi (journalisation côté serveur), stable pour toute la vie de l'opération. |
 
 ### Cycle de vie d'une opération
 
@@ -236,16 +236,23 @@ délai = min(base × 2^attemptCount, plafond) ± gigue aléatoire
   (paquet `uuid`) au moment de la création locale : id de séance, id de série,
   id d'opération. Le serveur ne « rend » jamais d'identifiant que le client
   devrait attendre — condition indispensable au fonctionnement hors ligne.
-- Chaque opération porte une **clé d'idempotence** (`idempotencyKey`, UUID v4)
-  transmise à l'API. Le serveur enregistre les clés déjà traitées : si une clé
-  connue se représente, il **ne réapplique pas** la mutation et renvoie la
-  réponse initiale (réponse rejouable).
+- **L'idempotence est portée par les identifiants clients**, et par eux
+  seuls : recréer une séance ou une série déjà existante avec le même UUID
+  est traité comme un rejeu (le serveur renvoie l'état stocké), re-clôturer
+  une séance déjà close avec le même statut renvoie son état, supprimer deux
+  fois répond 204, et `template.save` / `plan.skip` décrivent un état
+  complet. Le serveur **ne tient aucun registre de clés** : il n'en a pas
+  besoin, l'identifiant de l'entité suffit.
+- Chaque opération porte néanmoins une **clé d'idempotence**
+  (`idempotencyKey`, égale à l'`entityId`) que le moteur transmet à chaque
+  envoi dans l'en-tête **`Idempotency-Key`** (`SyncApi`,
+  `core/synchronization/sync_api.dart`). Elle ne décide de rien côté
+  serveur : elle sert à retrouver, dans les journaux Pino, tous les rejeux
+  d'une même opération — un rejeu qui a échoué se lit à côté de celui qui a
+  réussi, sous la même clé et avec le `requestId` de chaque tentative.
 - Conséquence : **répéter une requête ne duplique jamais la donnée.** Un envoi
   dont l'acquittement s'est perdu (timeout après commit serveur) peut être
   rejoué sans risque.
-- Double filet : les créations sont aussi naturellement idempotentes par leur
-  identifiant client (`entityId`) — recréer une entité déjà existante avec le
-  même UUID est traité comme un rejeu, pas comme un doublon.
 
 ## Stratégie append-only pour les séries
 
@@ -389,14 +396,14 @@ Le module `workout_sessions` de l'API doit être conçu pour ce protocole :
 - **Endpoints idempotents** : toutes les mutations exposées à la file de
   synchronisation acceptent les rejeux. Les créations acceptent l'UUID fourni
   par le client comme identifiant définitif.
-- **Clé d'idempotence** : chaque mutation transporte `idempotencyKey`
-  (en-tête ou champ du corps — le choix précis sera fixé et documenté dans
-  `docs/api/` à l'Étape 4). Le serveur persiste les clés traitées avec la
-  réponse produite, avec une durée de rétention suffisante pour couvrir les
-  longues périodes hors ligne.
-- **Réponses rejouables** : une clé déjà connue renvoie la **réponse initiale**
-  (même enveloppe `{ data, meta, requestId }`), pas une erreur — le client ne
-  doit pas avoir à distinguer « premier envoi » et « rejeu ».
+- **Clé d'idempotence** : chaque mutation transporte l'en-tête
+  `Idempotency-Key` (la valeur est l'UUID de l'entité). Le serveur **ne
+  persiste pas** les clés : l'idempotence est décidée par l'identifiant de
+  l'entité, présent dans le corps ou le chemin. L'en-tête n'est qu'une aide
+  de journalisation.
+- **Réponses rejouables** : un rejeu renvoie l'**état stocké** de l'entité
+  (même enveloppe `{ data, meta, requestId }`), pas une erreur — le client
+  n'a pas à distinguer « premier envoi » et « rejeu ».
 - **Erreurs classées** : transitoires (5xx, `RATE_LIMITED`) → le client
   réessaie ; définitives (`VALIDATION_ERROR`, `FORBIDDEN`…) → `failed` ;
   `CONFLICT` → résolution (automatique ou utilisateur).
