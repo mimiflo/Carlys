@@ -62,14 +62,11 @@ class SubscriptionActions {
       return CheckoutOutcome.failed;
     }
 
+    // Rien n'est relu ici : `launchUrl` rend la main dès que le navigateur
+    // s'ouvre, l'utilisateur n'a pas encore payé. La relecture se fait au
+    // retour au premier plan (`SubscriptionResumeRefresh`).
     final opened = await _ref.read(urlOpenerProvider)(Uri.parse(url));
-    if (!opened) return CheckoutOutcome.cannotOpen;
-
-    // Le droit peut arriver pendant que l'utilisateur paie : on relit à son
-    // retour plutôt que de le supposer.
-    _ref.invalidate(planStatusProvider);
-    _ref.invalidate(entitlementsProvider);
-    return CheckoutOutcome.opened;
+    return opened ? CheckoutOutcome.opened : CheckoutOutcome.cannotOpen;
   }
 }
 

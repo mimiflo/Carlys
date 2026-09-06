@@ -49,6 +49,10 @@ void main() {
     final repository = FakeSubscriptionRepository(checkoutAvailable: true);
     final opened = <Uri>[];
     final container = containerFor(repository, opened: opened);
+    // Un écran regarde le plan, comme pendant un vrai achat.
+    final watching = container.listen(planStatusProvider, (_, __) {});
+    addTearDown(watching.close);
+    await container.read(planStatusProvider.future);
 
     final outcome = await container
         .read(subscriptionActionsProvider)
@@ -59,6 +63,9 @@ void main() {
     // Le plan reste celui du serveur : l'app n'a rien accordé.
     final plan = await container.read(planStatusProvider.future);
     expect(plan.isPremium, isFalse);
+    // Et rien n'a été relu : le navigateur vient à peine de s'ouvrir, la
+    // relecture appartient au retour dans l'application.
+    expect(repository.planStatusReads, 1);
   });
 
   test(

@@ -1,60 +1,14 @@
-import 'package:carlys_mobile/app/app.dart';
-import 'package:carlys_mobile/app/environment/app_environment.dart';
-import 'package:carlys_mobile/app/restore/app_restore.dart';
 import 'package:carlys_mobile/core/errors/app_exception.dart';
-import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
-import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
-import 'package:carlys_mobile/features/exercises/data/repositories/exercises_repository_impl.dart';
 import 'package:carlys_mobile/features/exercises/domain/entities/exercise.dart';
 import 'package:carlys_mobile/features/exercises/presentation/widgets/muscle_group_card.dart';
-import 'package:carlys_mobile/features/profile/presentation/widgets/profile_plan_card.dart';
-import 'package:carlys_mobile/features/subscription/data/repositories/subscription_repository_impl.dart';
-import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import '../../support/fake_auth_repository.dart';
 import '../../support/fake_exercises_repository.dart';
 import '../../support/fake_subscription_repository.dart';
-import '../../support/fake_workout_repository.dart';
 import '../../support/first_run_prefs.dart';
 import '../../support/navigation.dart';
-
-Widget appWith({
-  required FakeSubscriptionRepository subscription,
-  FakeExercisesRepository? exercises,
-}) => ProviderScope(
-  overrides: [
-    appEnvironmentProvider.overrideWithValue(
-      const AppEnvironment(
-        flavor: AppFlavor.development,
-        apiBaseUrl: 'http://localhost:3000',
-      ),
-    ),
-    authRepositoryProvider.overrideWithValue(
-      FakeAuthRepository(storedSession: true),
-    ),
-    workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
-    syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
-    appRestoreProvider.overrideWithValue(NoopAppRestore()),
-    subscriptionRepositoryProvider.overrideWithValue(subscription),
-    if (exercises != null)
-      exercisesRepositoryProvider.overrideWithValue(exercises),
-  ],
-  child: const CarlysApp(),
-);
-
-/// Rend visible un élément de l'écran COURANT (dernier Scrollable de la
-/// pile) : remonte d'abord en haut, puis descend jusqu'à la cible —
-/// déterministe quelle que soit la position de défilement précédente.
-Future<void> reveal(WidgetTester tester, Finder item) async {
-  final scrollable = find.byType(Scrollable).last;
-  await tester.drag(scrollable, const Offset(0, 2000), warnIfMissed: false);
-  await tester.pumpAndSettle();
-  await tester.scrollUntilVisible(item, 150, scrollable: scrollable);
-  await tester.pumpAndSettle();
-}
+import '../../support/subscription_app.dart';
 
 void main() {
   setUp(() {
@@ -83,11 +37,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await openProfile(tester);
     // L'abonnement s'ouvre depuis la bannière de plan du profil.
-    await reveal(tester, find.byType(ProfilePlanCard));
-    await tester.tap(find.byType(ProfilePlanCard));
-    await tester.pumpAndSettle();
+    await openSubscription(tester);
 
     // Accroche de la maquette 2i : label mono, titre display, croix de
     // fermeture — plus aucune barre de titre.
@@ -112,11 +63,8 @@ void main() {
     );
     await tester.pumpAndSettle();
 
-    await openProfile(tester);
     // L'abonnement s'ouvre depuis la bannière de plan du profil.
-    await reveal(tester, find.byType(ProfilePlanCard));
-    await tester.tap(find.byType(ProfilePlanCard));
-    await tester.pumpAndSettle();
+    await openSubscription(tester);
 
     expect(find.text('Premium'), findsWidgets);
     expect(find.text('ACTIF'), findsOneWidget);

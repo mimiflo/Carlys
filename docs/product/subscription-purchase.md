@@ -58,9 +58,37 @@ Montrer un bouton d'achat qui échouerait est pire que de ne pas en montrer.
    statiques de l'application Next.js (`apps/admin`, groupe de routes
    `(public)`) qui invitent à retourner dans l'application. Elles
    n'accordent rien : le droit vient du webhook, jamais de la page.
-7. Au retour dans l'app, `planStatusProvider` et `entitlementsProvider` sont
-   relus. S'ils n'ont pas encore changé, l'utilisateur voit toujours son plan
-   réel, jamais un Premium supposé.
+7. Au **retour dans l'application**, `planStatusProvider` et
+   `entitlementsProvider` sont relus, puis relus une seconde fois quelques
+   secondes plus tard (voir ci-dessous). S'ils n'ont pas encore changé,
+   l'utilisateur voit toujours son plan réel, jamais un Premium supposé.
+
+## Le retour dans l'application
+
+`launchUrl` rend la main dès que le navigateur **s'ouvre**, pas quand
+l'utilisateur revient. Relire le plan à ce moment-là, c'est relire l'état
+d'avant l'achat : l'écran restait sur « Gratuit » jusqu'à ce qu'on le quitte
+et qu'on y revienne. L'action d'achat ne relit donc **rien**.
+
+La relecture se fait au retour au premier plan :
+
+| Pièce | Rôle |
+| ----- | ---- |
+| `SubscriptionResumeListener` (widget, posé sur l'écran d'abonnement) | Un `AppLifecycleListener` dont `onResume` déclenche la relecture |
+| `SubscriptionResumeRefresh` (contrôleur, provider global) | Invalide `planStatusProvider` et `entitlementsProvider` tout de suite, puis **une seule fois** après `webhookGrace` |
+
+Pourquoi sur l'écran et non sur la coquille des onglets : le parcours de
+première ouverture montre l'abonnement **hors** coquille, et c'est là aussi
+que l'on paie. Pourquoi une relance différée : Stripe appelle le webhook de
+son côté, et il peut arriver quelques secondes **après** que l'utilisateur
+est revenu. La relance est unique, et un second retour avant qu'elle ne
+parte la remplace, jamais ne la double. Le contrôleur vit avec le conteneur
+de providers : fermer l'écran avant la relance ne l'annule pas, et le profil,
+qui affiche le même plan, en profite.
+
+Invalider un provider `autoDispose` compte comme un rafraîchissement pour
+Riverpod : l'écran garde la valeur précédente pendant la lecture, sans
+clignoter vers un état de chargement.
 
 ## Découpage
 
@@ -70,6 +98,8 @@ Montrer un bouton d'achat qui échouerait est pire que de ne pas en montrer.
 | `infrastructure/stripe-checkout.client.ts` | Le SEUL fichier qui connaisse l'API de Stripe |
 | `presentation/widgets/subscription_purchase_panel.dart` | Les offres et le bouton |
 | `presentation/controllers/subscription_controllers.dart` | L'action d'achat, testable sans navigateur |
+| `presentation/controllers/subscription_resume_refresh.dart` | La relecture au retour, et sa relance unique |
+| `presentation/widgets/subscription_resume_listener.dart` | L'écoute du retour au premier plan |
 
 L'ouverture d'URL passe par `urlOpenerProvider` : un test ne doit jamais
 lancer un navigateur.

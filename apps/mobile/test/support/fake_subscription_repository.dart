@@ -10,7 +10,9 @@ class FakeSubscriptionRepository implements SubscriptionRepository {
     this.checkoutError,
   });
 
-  final bool isPremium;
+  /// Mutable : un test simule le webhook qui accorde Premium PENDANT que
+  /// l'utilisateur est parti payer, puis vérifie que le retour le relit.
+  bool isPremium;
 
   /// Le serveur ouvre-t-il un paiement ? C'est LUI qui décide, l'écran suit.
   final bool checkoutAvailable;
@@ -21,19 +23,26 @@ class FakeSubscriptionRepository implements SubscriptionRepository {
   /// identifiant d'appareil.
   final List<({String offerId, String id})> checkouts = [];
 
+  /// Combien de fois le plan a été lu : c'est ce qui prouve qu'un retour
+  /// dans l'application relit le serveur, et qu'un achat ne le fait PAS.
+  int planStatusReads = 0;
+
   @override
-  Future<PlanStatus> planStatus() async => PlanStatus(
-    planName: isPremium ? 'Premium' : 'Gratuit',
-    isPremium: isPremium,
-    subscription: isPremium
-        ? SubscriptionInfo(
-            planName: 'Premium',
-            state: SubscriptionState.active,
-            cancelAtPeriodEnd: false,
-            currentPeriodEnd: DateTime.utc(2026, 9, 6),
-          )
-        : null,
-  );
+  Future<PlanStatus> planStatus() async {
+    planStatusReads += 1;
+    return PlanStatus(
+      planName: isPremium ? 'Premium' : 'Gratuit',
+      isPremium: isPremium,
+      subscription: isPremium
+          ? SubscriptionInfo(
+              planName: 'Premium',
+              state: SubscriptionState.active,
+              cancelAtPeriodEnd: false,
+              currentPeriodEnd: DateTime.utc(2026, 9, 6),
+            )
+          : null,
+    );
+  }
 
   @override
   Future<List<EntitlementEntry>> entitlements() async => [

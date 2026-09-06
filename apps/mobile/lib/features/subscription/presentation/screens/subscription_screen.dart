@@ -16,6 +16,7 @@ import '../widgets/subscription_hero.dart';
 import '../widgets/subscription_plan_card.dart';
 import '../widgets/subscription_purchase_note.dart';
 import '../widgets/subscription_purchase_panel.dart';
+import '../widgets/subscription_resume_listener.dart';
 
 /// Abonnement (maquette 2i) : plein écran sans barre de titre, cœur ambiant
 /// débordant en haut à droite, accroche premium, avantages issus des droits
@@ -24,7 +25,9 @@ import '../widgets/subscription_purchase_panel.dart';
 /// Les deux cartes d'offre de la maquette et le bouton d'achat sont là : les
 /// prix viennent du serveur (`GET /subscriptions/offers`) et le bouton ouvre
 /// une page de paiement. Rien n'est chiffré côté application, et aucun droit
-/// n'est accordé au retour : c'est le webhook signé qui l'accorde.
+/// n'est accordé au retour : c'est le webhook signé qui l'accorde. Au retour
+/// dans l'application, le plan et les droits sont RELUS
+/// (`SubscriptionResumeListener`), jamais supposés.
 ///
 /// Le même écran sert de temps d'arrêt au parcours de première ouverture :
 /// il n'est alors pas refermable, et son bas d'écran propose Premium puis,
@@ -39,116 +42,120 @@ class SubscriptionScreen extends ConsumerWidget {
     final firstRun =
         ref.watch(firstRunStepProvider) == FirstRunStep.subscription;
 
-    return Scaffold(
-      backgroundColor: AppColors.darkBackground,
-      // Le cœur ambiant se fige pendant le défilement de l'écran.
-      body: SceneScrollActivity(
-        child: Stack(
-          children: [
-            // Cœur ambiant haut-droite, débordant du cadre (2i).
-            const Positioned(
-              top: 14,
-              right: -118,
-              child: AppSceneContainer(
-                size: 300,
-                opacity: 0.55,
-                verticalFadeStops: [0.0, 0.22, 0.58, 0.90],
-                child: HeartScene(),
+    return SubscriptionResumeListener(
+      child: Scaffold(
+        backgroundColor: AppColors.darkBackground,
+        // Le cœur ambiant se fige pendant le défilement de l'écran.
+        body: SceneScrollActivity(
+          child: Stack(
+            children: [
+              // Cœur ambiant haut-droite, débordant du cadre (2i).
+              const Positioned(
+                top: 14,
+                right: -118,
+                child: AppSceneContainer(
+                  size: 300,
+                  opacity: 0.55,
+                  verticalFadeStops: [0.0, 0.22, 0.58, 0.90],
+                  child: HeartScene(),
+                ),
               ),
-            ),
-            // Ordre de la maquette : assombrissement latéral puis halo violet
-            // par-dessus, sans quoi le coin haut-droit vire au gris.
-            const Positioned.fill(child: AppSceneScrim.lateral()),
-            const Positioned.fill(
-              child: AppSceneGlow(
-                center: Alignment(0.64, -0.72),
-                radius: 0.62,
-                alpha: 0.30,
+              // Ordre de la maquette : assombrissement latéral puis halo violet
+              // par-dessus, sans quoi le coin haut-droit vire au gris.
+              const Positioned.fill(child: AppSceneScrim.lateral()),
+              const Positioned.fill(
+                child: AppSceneGlow(
+                  center: Alignment(0.64, -0.72),
+                  radius: 0.62,
+                  alpha: 0.30,
+                ),
               ),
-            ),
-            SafeArea(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  // Pendant le parcours, l'écran ne se referme pas : la sortie
-                  // passe par le bas d'écran (Premium ou version gratuite).
-                  if (firstRun)
-                    const SizedBox(height: AppSpacing.lg)
-                  else
-                    const _CloseButton(),
-                  Expanded(
-                    child: ListView(
-                      padding: const EdgeInsets.only(
-                        top: AppSpacing.lg,
-                        bottom: AppSpacing.gapSection,
-                      ),
-                      children: [
-                        const SubscriptionHero(),
-                        const SizedBox(height: AppSpacing.gapSection),
-                        entitlements.when(
-                          loading: () => const AppLoadingIndicator(
-                            label: 'Chargement des droits',
-                          ),
-                          error: (_, __) => AppErrorState(
-                            title: 'Droits indisponibles',
-                            onRetry: () => ref.invalidate(entitlementsProvider),
-                          ),
-                          data: (entries) =>
-                              SubscriptionBenefits(entries: entries),
+              SafeArea(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    // Pendant le parcours, l'écran ne se referme pas : la sortie
+                    // passe par le bas d'écran (Premium ou version gratuite).
+                    if (firstRun)
+                      const SizedBox(height: AppSpacing.lg)
+                    else
+                      const _CloseButton(),
+                    Expanded(
+                      child: ListView(
+                        padding: const EdgeInsets.only(
+                          top: AppSpacing.lg,
+                          bottom: AppSpacing.gapSection,
                         ),
-                        const SizedBox(height: AppSpacing.gapSection),
-                        Padding(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: AppSpacing.gutter,
-                          ),
-                          child: plan.when(
+                        children: [
+                          const SubscriptionHero(),
+                          const SizedBox(height: AppSpacing.gapSection),
+                          entitlements.when(
                             loading: () => const AppLoadingIndicator(
-                              label: 'Chargement du plan',
+                              label: 'Chargement des droits',
                             ),
                             error: (_, __) => AppErrorState(
-                              title: 'Plan indisponible',
-                              onRetry: () => ref.invalidate(planStatusProvider),
+                              title: 'Droits indisponibles',
+                              onRetry: () =>
+                                  ref.invalidate(entitlementsProvider),
                             ),
-                            data: (status) =>
-                                SubscriptionPlanCard(status: status),
+                            data: (entries) =>
+                                SubscriptionBenefits(entries: entries),
                           ),
-                        ),
-                        // Les offres vivent DANS la page : mises en pied
-                        // fixe, elles écraseraient la partie qui explique
-                        // Premium, juste au-dessus.
-                        if (!firstRun) ...[
                           const SizedBox(height: AppSpacing.gapSection),
-                          const Padding(
-                            padding: EdgeInsets.symmetric(
+                          Padding(
+                            padding: const EdgeInsets.symmetric(
                               horizontal: AppSpacing.gutter,
                             ),
-                            child: SubscriptionPurchasePanel(),
+                            child: plan.when(
+                              loading: () => const AppLoadingIndicator(
+                                label: 'Chargement du plan',
+                              ),
+                              error: (_, __) => AppErrorState(
+                                title: 'Plan indisponible',
+                                onRetry: () =>
+                                    ref.invalidate(planStatusProvider),
+                              ),
+                              data: (status) =>
+                                  SubscriptionPlanCard(status: status),
+                            ),
                           ),
+                          // Les offres vivent DANS la page : mises en pied
+                          // fixe, elles écraseraient la partie qui explique
+                          // Premium, juste au-dessus.
+                          if (!firstRun) ...[
+                            const SizedBox(height: AppSpacing.gapSection),
+                            const Padding(
+                              padding: EdgeInsets.symmetric(
+                                horizontal: AppSpacing.gutter,
+                              ),
+                              child: SubscriptionPurchasePanel(),
+                            ),
+                          ],
                         ],
-                      ],
+                      ),
                     ),
-                  ),
-                  if (firstRun)
-                    const FirstRunPremiumFooter()
-                  else
-                    const _PurchaseNote(),
-                ],
+                    if (firstRun)
+                      const FirstRunPremiumFooter()
+                    else
+                      const _PurchaseNote(),
+                  ],
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
       ),
     );
   }
 }
 
-/// Croix de fermeture de la maquette, calée sur la gouttière : la gouttière
-/// moins la demi-boîte tactile place l'icône exactement sur la marge.
+/// Croix de fermeture de la maquette, calée sur la gouttière. L'icône garde
+/// la taille de la maquette ; la boîte qui répond au doigt est
+/// [AppSpacing.touchTarget], la seule cible tactile de l'application.
 class _CloseButton extends StatelessWidget {
   const _CloseButton();
 
   static const double _iconSize = 23;
-  static const double _tapSize = 44;
 
   @override
   Widget build(BuildContext context) {
@@ -160,8 +167,8 @@ class _CloseButton extends StatelessWidget {
           tooltip: 'Fermer',
           padding: EdgeInsets.zero,
           constraints: const BoxConstraints.tightFor(
-            width: _tapSize,
-            height: _tapSize,
+            width: AppSpacing.touchTarget,
+            height: AppSpacing.touchTarget,
           ),
           onPressed: () =>
               context.canPop() ? context.pop() : context.go(AppRoutes.profile),
