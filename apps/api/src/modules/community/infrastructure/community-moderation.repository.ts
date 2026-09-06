@@ -3,6 +3,7 @@ import {
   type CommunityBlock,
   type CommunityReportReason,
   CommunityReportStatus,
+  FriendRequestStatus,
   type Prisma,
 } from '@prisma/client';
 import { PrismaService } from '../../../database/prisma/prisma.service';
@@ -67,9 +68,11 @@ export class CommunityModerationRepository {
   }
 
   /**
-   * Bloque (idempotent) et retire, d'un seul tenant, l'amitié et les
-   * demandes en attente dans les deux sens : une seule ligne par paire,
-   * quel que soit son statut.
+   * Bloque (idempotent) et retire, d'un seul tenant, l'amitié ou la demande
+   * en attente de la paire, dans les deux sens. Une ligne DECLINED, elle,
+   * RESTE : le blocage la rend déjà inopérante, et le délai de 30 jours
+   * qu'elle porte survit ainsi au déblocage — sinon bloquer puis débloquer
+   * suffirait à contourner un refus et à faire resonner une demande.
    */
   async block(blockerId: string, blockedId: string): Promise<void> {
     await this.prisma.$transaction([
@@ -80,6 +83,7 @@ export class CommunityModerationRepository {
       }),
       this.prisma.friendship.deleteMany({
         where: {
+          status: { in: [FriendRequestStatus.PENDING, FriendRequestStatus.ACCEPTED] },
           OR: [
             { requesterId: blockerId, addresseeId: blockedId },
             { requesterId: blockedId, addresseeId: blockerId },

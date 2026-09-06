@@ -115,9 +115,14 @@ Cas particuliers du service :
   par adresse, `429` au-delà), indépendant du plafond global.
 - **Blocages** : consultés par `requestFriendTo` (e-mail et code), l'aperçu
   de code, `encourage`, `listFriends` et le fil, toujours dans les deux sens
-  et toujours avec la réponse d'un compte inexistant. Bloquer supprime la
-  ligne `Friendship` de la paire, quel que soit son statut ; débloquer ne la
-  recrée pas.
+  et toujours avec la réponse d'un compte inexistant. Bloquer supprime
+  l'amitié ou la demande en attente de la paire (`ACCEPTED`, `PENDING`) ;
+  débloquer ne la recrée pas. Une ligne `DECLINED`, elle, reste en place : le
+  blocage la rend inopérante, et son délai de 30 jours survit au déblocage.
+  Bloquer puis débloquer n'est donc pas un moyen de contourner un refus, ni
+  pour la personne refusée (rien ne réapparaît, personne n'est notifié), ni
+  au détriment de celle qui a refusé (elle garde la main pour reprendre
+  contact).
 - **Statistiques partagées** : `weeklySessions` = séances TERMINÉES sur 7
   jours glissants ; `streakDays` = jours calendaires consécutifs avec séance,
   découpés dans le FUSEAU du propriétaire (`UserProfile.timezone`), série
@@ -203,8 +208,9 @@ simplement perdue (la barre est collective, pas comptable).
   défi rejoint/contribué/quitté, retrait d'ami idempotent ;
   `test/community-friend-requests.e2e-spec.ts` (application isolée, le seau
   du throttle vivant dans l'application) : refus opposable par e-mail et par
-  code, reprise de contact par la personne qui a refusé, `429` au-delà de
-  10 demandes par minute sans toucher les autres routes ;
+  code, bloquer puis débloquer (dans un sens comme dans l'autre) ne fait
+  rien réapparaître, reprise de contact par la personne qui a refusé, `429`
+  au-delà de 10 demandes par minute sans toucher les autres routes ;
   `test/community-moderation.e2e-spec.ts` (application isolée) : retrait
   d'un encouragement par l'auteur ou le destinataire (jamais un tiers, réponse
   opaque), signalement avec doublon ouvert et garde-fous, blocage (amitié

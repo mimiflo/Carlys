@@ -39,6 +39,8 @@ describe('Demandes d’ami : refus opposable et limite de débit (e2e)', () => {
   let prisma: PrismaClient;
   let tokenA: string;
   let tokenB: string;
+  let userIdA: string;
+  let userIdB: string;
   let requestsSent = 0;
 
   const emailA = `e2e-refus-a-${randomUUID()}@carlys.test`;
@@ -51,6 +53,8 @@ describe('Demandes d’ami : refus opposable et limite de débit (e2e)', () => {
       request(app.getHttpServer()).get(url).set('Authorization', `Bearer ${token}`),
     post: (url: string) =>
       request(app.getHttpServer()).post(url).set('Authorization', `Bearer ${token}`),
+    delete: (url: string) =>
+      request(app.getHttpServer()).delete(url).set('Authorization', `Bearer ${token}`),
   });
   /** Toute demande passe par ici : c'est le compteur du budget de la suite. */
   const sendRequest = (token: string, body: { email?: string; friendCode?: string }) => {
@@ -74,8 +78,12 @@ describe('Demandes d’ami : refus opposable et limite de débit (e2e)', () => {
         .expect(201);
       return data<AuthResult>(response.body);
     };
-    tokenA = (await register(emailA, 'Alice')).tokens.accessToken;
-    tokenB = (await register(emailB, 'Boris')).tokens.accessToken;
+    const a = await register(emailA, 'Alice');
+    const b = await register(emailB, 'Boris');
+    tokenA = a.tokens.accessToken;
+    tokenB = b.tokens.accessToken;
+    userIdA = a.user.id;
+    userIdB = b.user.id;
   });
 
   afterAll(async () => {
@@ -102,6 +110,23 @@ describe('Demandes d’ami : refus opposable et limite de débit (e2e)', () => {
     expect(await receivedBy(tokenB)).toHaveLength(0);
   });
 
+  it('bloquer puis débloquer ne contourne pas le refus : rien ne réapparaît', async () => {
+    // Alice, refusée, bloque Boris puis le débloque : si le blocage effaçait
+    // la ligne DECLINED, sa demande suivante repartirait comme une neuve.
+    await authed(tokenA).post(`/api/v1/community/blocks/${userIdB}`).expect(204);
+    await authed(tokenA).delete(`/api/v1/community/blocks/${userIdB}`).expect(204);
+    await sendRequest(tokenA, { email: emailB }).expect(202);
+    expect(await receivedBy(tokenB)).toHaveLength(0);
+
+    // Même chose quand c'est Boris, qui a refusé, qui bloque puis débloque.
+    await authed(tokenB).post(`/api/v1/community/blocks/${userIdA}`).expect(204);
+    await authed(tokenB).delete(`/api/v1/community/blocks/${userIdA}`).expect(204);
+    await sendRequest(tokenA, { email: emailB }).expect(202);
+    expect(await receivedBy(tokenB)).toHaveLength(0);
+  });
+
+  // Le scénario précédent laisse le refus en place : c'est lui qui prouve
+  // que la personne qui a refusé garde, elle, la main pour reprendre contact.
   it('celui qui a refusé peut prendre contact : la demande repart dans son sens', async () => {
     await sendRequest(tokenB, { email: emailA }).expect(202);
     const [received] = await receivedBy(tokenA);
