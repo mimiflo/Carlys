@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:carlys_mobile/features/subscription/domain/entities/subscription.dart';
 import 'package:carlys_mobile/features/subscription/domain/repositories/subscription_repository.dart';
 
@@ -8,6 +10,8 @@ class FakeSubscriptionRepository implements SubscriptionRepository {
     this.checkoutAvailable = false,
     this.checkoutUrl = 'https://paiement.exemple/session',
     this.checkoutError,
+    this.portalUrl = 'https://portail.exemple/session',
+    this.portalError,
   });
 
   /// Mutable : un test simule le webhook qui accorde Premium PENDANT que
@@ -26,6 +30,18 @@ class FakeSubscriptionRepository implements SubscriptionRepository {
   /// Combien de fois le plan a été lu : c'est ce qui prouve qu'un retour
   /// dans l'application relit le serveur, et qu'un achat ne le fait PAS.
   int planStatusReads = 0;
+
+  /// Le portail de facturation : son adresse, ou l'erreur que le serveur
+  /// oppose (hors ligne, compte sans client chez le prestataire).
+  final String portalUrl;
+  final Object? portalError;
+
+  /// Retient la réponse du portail tant qu'un test ne la libère pas : c'est
+  /// ainsi que l'attente se voit à l'écran.
+  Completer<String>? portalGate;
+
+  /// Combien de fois le portail a été demandé.
+  int portalOpenings = 0;
 
   @override
   Future<PlanStatus> planStatus() async {
@@ -89,5 +105,15 @@ class FakeSubscriptionRepository implements SubscriptionRepository {
     final error = checkoutError;
     if (error != null) throw error;
     return checkoutUrl;
+  }
+
+  @override
+  Future<String> startBillingPortal() async {
+    portalOpenings += 1;
+    final gate = portalGate;
+    if (gate != null) return gate.future;
+    final error = portalError;
+    if (error != null) throw error;
+    return portalUrl;
   }
 }

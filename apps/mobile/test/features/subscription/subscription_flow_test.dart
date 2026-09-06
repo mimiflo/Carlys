@@ -53,6 +53,8 @@ void main() {
     expect(find.byIcon(Icons.check_circle_rounded), findsNothing);
     expect(find.text('GRATUIT'), findsOneWidget);
     expect(find.text('Aucun abonnement actif'), findsOneWidget);
+    // Rien à gérer chez le prestataire tant qu'on n'a rien souscrit.
+    expect(find.text('Gérer mon abonnement'), findsNothing);
   });
 
   testWidgets('plan premium : droits actifs et état de l’abonnement', (
@@ -73,6 +75,8 @@ void main() {
     // le jour local dépend du fuseau de la machine de test).
     expect(find.textContaining('Renouvellement le '), findsOneWidget);
     expect(find.textContaining('SEPT.'), findsOneWidget);
+    // Une fois Premium, la porte vers le portail de facturation est là.
+    expect(find.text('Gérer mon abonnement'), findsOneWidget);
   });
 
   testWidgets(

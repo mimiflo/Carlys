@@ -102,6 +102,18 @@ class SubscriptionRepositoryImpl implements SubscriptionRepository {
     });
   }
 
+  @override
+  Future<String> startBillingPortal() {
+    return _guard(() async {
+      // Contrat : `{ data: { url } }`, comme le paiement.
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/subscriptions/portal',
+      );
+      final body = response.data?['data'] as Map<String, dynamic>? ?? const {};
+      return body['url'] as String;
+    });
+  }
+
   Future<T> _guard<T>(Future<T> Function() action) async {
     try {
       return await action();

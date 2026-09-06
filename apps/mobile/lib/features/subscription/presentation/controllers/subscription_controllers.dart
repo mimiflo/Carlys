@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../../core/errors/app_exception.dart';
 import '../../data/repositories/subscription_repository_impl.dart';
 import '../../domain/entities/subscription.dart';
 
@@ -38,6 +39,44 @@ enum CheckoutOutcome {
   failed,
 }
 
+/// Comment l'ouverture du portail de facturation se termine.
+///
+/// Scellé plutôt qu'énuméré : un refus du serveur porte SON message
+/// (« aucun client chez le prestataire », par exemple), et l'écran le
+/// montre tel quel plutôt qu'une phrase générique.
+sealed class PortalOutcome {
+  const PortalOutcome();
+}
+
+/// Le portail s'est ouvert dans le navigateur. Ce qui s'y fait revient par
+/// webhook : l'écran relit le plan au retour, comme pour l'achat.
+final class PortalOpened extends PortalOutcome {
+  const PortalOpened();
+}
+
+/// Pas de réseau : le portail vit chez le prestataire, hors ligne il
+/// n'existe pas.
+final class PortalOffline extends PortalOutcome {
+  const PortalOffline();
+}
+
+/// Le serveur refuse, et dit pourquoi.
+final class PortalRefused extends PortalOutcome {
+  const PortalRefused(this.message);
+
+  final String message;
+}
+
+/// L'appareil n'a pas pu ouvrir de navigateur.
+final class PortalCannotOpen extends PortalOutcome {
+  const PortalCannotOpen();
+}
+
+/// Panne, réponse invalide : l'écran le dit au lieu de rester muet.
+final class PortalFailed extends PortalOutcome {
+  const PortalFailed();
+}
+
 /// Ce que l'écran d'abonnement sait FAIRE.
 ///
 /// L'ouverture du navigateur vit ici et non dans un widget : c'est une
@@ -67,6 +106,28 @@ class SubscriptionActions {
     // retour au premier plan (`SubscriptionResumeRefresh`).
     final opened = await _ref.read(urlOpenerProvider)(Uri.parse(url));
     return opened ? CheckoutOutcome.opened : CheckoutOutcome.cannotOpen;
+  }
+
+  /// Ouvre le portail de facturation du prestataire : moyen de paiement,
+  /// factures, résiliation. Rien ne se décide ici non plus.
+  Future<PortalOutcome> manage() async {
+    final repository = _ref.read(subscriptionRepositoryProvider);
+    final String url;
+    try {
+      url = await repository.startBillingPortal();
+    } on NetworkException {
+      return const PortalOffline();
+    } on ValidationException catch (exception) {
+      // Refus MÉTIER (400, 409, 422) : le serveur explique, l'écran répète.
+      return PortalRefused(exception.message);
+    } on ForbiddenException catch (exception) {
+      return PortalRefused(exception.message);
+    } on Object {
+      return const PortalFailed();
+    }
+
+    final opened = await _ref.read(urlOpenerProvider)(Uri.parse(url));
+    return opened ? const PortalOpened() : const PortalCannotOpen();
   }
 }
 

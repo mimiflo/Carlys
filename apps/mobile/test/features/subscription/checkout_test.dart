@@ -1,3 +1,4 @@
+import 'package:carlys_mobile/core/errors/app_exception.dart';
 import 'package:carlys_mobile/features/subscription/data/repositories/subscription_repository_impl.dart';
 import 'package:carlys_mobile/features/subscription/domain/entities/subscription.dart';
 import 'package:carlys_mobile/features/subscription/presentation/controllers/subscription_controllers.dart';
@@ -107,6 +108,87 @@ void main() {
       await container.read(subscriptionActionsProvider).buy(offer),
       CheckoutOutcome.cannotOpen,
     );
+  });
+
+  group('gestion de l’abonnement', () {
+    // LE PORTAIL. Comme l'achat : l'application ouvre une porte chez le
+    // prestataire, et ne décide de rien. Résilier, changer de carte, lire
+    // ses factures se fait là-bas ; le serveur l'apprend par webhook.
+    test('ouvre le portail du prestataire, et rien d’autre', () async {
+      final repository = FakeSubscriptionRepository(isPremium: true);
+      final opened = <Uri>[];
+      final container = containerFor(repository, opened: opened);
+
+      final outcome = await container
+          .read(subscriptionActionsProvider)
+          .manage();
+
+      expect(outcome, isA<PortalOpened>());
+      expect(opened.single.toString(), 'https://portail.exemple/session');
+      expect(repository.portalOpenings, 1);
+    });
+
+    test('hors ligne : le portail n’existe pas, et on le dit', () async {
+      final repository = FakeSubscriptionRepository(
+        isPremium: true,
+        portalError: const NetworkException('Serveur injoignable'),
+      );
+      final opened = <Uri>[];
+      final container = containerFor(repository, opened: opened);
+
+      expect(
+        await container.read(subscriptionActionsProvider).manage(),
+        isA<PortalOffline>(),
+      );
+      expect(opened, isEmpty);
+    });
+
+    test('un refus métier du serveur porte SON message', () async {
+      // Un Premium accordé à la main ou par un magasin n'a pas de client
+      // chez le prestataire : le serveur refuse et explique.
+      final repository = FakeSubscriptionRepository(
+        isPremium: true,
+        portalError: const ValidationException(
+          'Aucun client Stripe pour ce compte.',
+        ),
+      );
+      final container = containerFor(repository);
+
+      final outcome = await container
+          .read(subscriptionActionsProvider)
+          .manage();
+
+      expect(outcome, isA<PortalRefused>());
+      expect(
+        (outcome as PortalRefused).message,
+        'Aucun client Stripe pour ce compte.',
+      );
+    });
+
+    test('une panne du serveur ne fait pas semblant', () async {
+      final repository = FakeSubscriptionRepository(
+        isPremium: true,
+        portalError: const ServerException('Bad Gateway', statusCode: 502),
+      );
+      final container = containerFor(repository);
+
+      expect(
+        await container.read(subscriptionActionsProvider).manage(),
+        isA<PortalFailed>(),
+      );
+    });
+
+    test('un appareil sans navigateur le DIT', () async {
+      final container = containerFor(
+        FakeSubscriptionRepository(isPremium: true),
+        canOpen: false,
+      );
+
+      expect(
+        await container.read(subscriptionActionsProvider).manage(),
+        isA<PortalCannotOpen>(),
+      );
+    });
   });
 
   group('affichage des prix', () {

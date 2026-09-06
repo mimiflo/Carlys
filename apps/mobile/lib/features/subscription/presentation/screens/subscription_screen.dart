@@ -13,6 +13,7 @@ import '../controllers/subscription_controllers.dart';
 import '../widgets/first_run_premium_footer.dart';
 import '../widgets/subscription_benefits.dart';
 import '../widgets/subscription_hero.dart';
+import '../widgets/subscription_manage_row.dart';
 import '../widgets/subscription_plan_card.dart';
 import '../widgets/subscription_purchase_note.dart';
 import '../widgets/subscription_purchase_panel.dart';
@@ -115,8 +116,19 @@ class SubscriptionScreen extends ConsumerWidget {
                                 onRetry: () =>
                                     ref.invalidate(planStatusProvider),
                               ),
-                              data: (status) =>
+                              data: (status) => Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
                                   SubscriptionPlanCard(status: status),
+                                  // Une fois Premium, ce qui se gère chez le
+                                  // prestataire : moyen de paiement,
+                                  // factures, résiliation.
+                                  if (status.isPremium) ...[
+                                    const SizedBox(height: AppSpacing.gapRow),
+                                    const SubscriptionManageRow(),
+                                  ],
+                                ],
+                              ),
                             ),
                           ),
                           // Les offres vivent DANS la page : mises en pied

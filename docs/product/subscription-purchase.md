@@ -90,6 +90,36 @@ Invalider un provider `autoDispose` compte comme un rafraîchissement pour
 Riverpod : l'écran garde la valeur précédente pendant la lecture, sans
 clignoter vers un état de chargement.
 
+## Gérer son abonnement
+
+Une fois Premium, l'écran montre la ligne **« Gérer mon abonnement »**
+(`SubscriptionManageRow`), sous la carte du plan. Elle appelle
+`POST /api/v1/subscriptions/portal`, qui répond `{ data: { url } }` : une
+session du **portail de facturation** Stripe
+(`return_url = ${PUBLIC_APP_URL}/abonnement`), ouverte dans le navigateur
+comme la page de paiement. Moyen de paiement, factures, résiliation : tout
+se fait là-bas, et le serveur l'apprend par webhook, comme pour l'achat. Au
+retour, l'écran relit le plan (section précédente) : une résiliation se lit
+alors « Accès jusqu'au … ».
+
+L'application n'a ni formulaire de carte ni bouton « résilier » à elle :
+elle ouvre la porte, c'est tout. Le serveur refuse quand le compte n'a pas de
+client Stripe (un Premium accordé à la main ou par un magasin d'applications)
+et l'erreur métier porte son message.
+
+| État | Écran |
+| ---- | ----- |
+| Ouverture en cours | Indicateur d'attente sur la ligne, ligne inactive : deux appuis n'ouvrent pas deux portails |
+| Hors ligne (`NetworkException`) | Message sous la ligne : le portail a besoin d'une connexion |
+| Refus métier du serveur (`ValidationException`, `ForbiddenException`) | Le message du serveur, tel quel |
+| Panne, navigateur absent | Message sous la ligne, et la ligne reste là pour réessayer |
+
+Le message est une région vive pour les lecteurs d'écran ; toucher la ligne
+à nouveau l'efface et réessaie. La mention de bas d'écran dit ces mécanismes
+réels (paiement chez Stripe, gestion depuis le portail) au lieu d'un
+catalogue de prix absent et d'une résiliation « depuis le compte Stripe »
+que rien ne reliait.
+
 ## Découpage
 
 | Fichier | Rôle |
@@ -100,6 +130,8 @@ clignoter vers un état de chargement.
 | `presentation/controllers/subscription_controllers.dart` | L'action d'achat, testable sans navigateur |
 | `presentation/controllers/subscription_resume_refresh.dart` | La relecture au retour, et sa relance unique |
 | `presentation/widgets/subscription_resume_listener.dart` | L'écoute du retour au premier plan |
+| `presentation/widgets/subscription_manage_row.dart` | La ligne « Gérer mon abonnement » et ses états |
+| `domain/repositories/subscription_repository.dart` | `startCheckout` et `startBillingPortal` : les deux portes vers le prestataire |
 
 L'ouverture d'URL passe par `urlOpenerProvider` : un test ne doit jamais
 lancer un navigateur.

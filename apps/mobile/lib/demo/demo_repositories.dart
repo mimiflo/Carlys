@@ -8,6 +8,7 @@ library;
 import 'dart:async';
 
 import '../app/restore/app_restore.dart';
+import '../core/errors/app_exception.dart';
 import '../core/synchronization/sync_lifecycle.dart';
 import '../features/authentication/domain/entities/auth_session_device.dart';
 import '../features/authentication/domain/entities/auth_user.dart';
@@ -342,6 +343,17 @@ class DemoSubscriptionRepository implements SubscriptionRepository {
     required String id,
   }) async {
     throw StateError('Le paiement n’existe pas en démonstration.');
+  }
+
+  /// Le plan de démonstration est Premium, la ligne « Gérer mon
+  /// abonnement » est donc là ; mais aucun client de facturation n'existe
+  /// derrière. Le dépôt refuse comme le ferait le serveur, avec le message
+  /// que l'écran affiche sous la ligne.
+  @override
+  Future<String> startBillingPortal() async {
+    throw const ForbiddenException(
+      'Le portail de facturation n’existe pas en démonstration.',
+    );
   }
 }
 

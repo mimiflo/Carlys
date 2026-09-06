@@ -305,10 +305,11 @@ void main() {
     expect(find.text('CARLYS PREMIUM'), findsOneWidget);
 
     // « Passer à Premium » montre les offres du SERVEUR : les prix ne sont
-    // écrits nulle part dans l'application.
+    // écrits nulle part dans l'application. La mention, elle, dit le
+    // mécanisme réel : le paiement se fait chez Stripe.
     await tapText(tester, 'Passer à Premium');
     expect(find.text('Premium annuel'), findsOneWidget);
-    expect(find.textContaining('App Store'), findsOneWidget);
+    expect(find.textContaining('Stripe'), findsOneWidget);
     await tapText(tester, 'Revenir');
 
     // Le repli gratuit se rétracte aussi.

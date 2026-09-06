@@ -9,7 +9,8 @@ import '../../domain/entities/subscription.dart';
 /// (là où la maquette pose son prix). Bordure animée quand le plan est actif,
 /// carte neutre sinon.
 ///
-/// Aucun tarif n'est affiché : l'API ne sert pas encore de catalogue de prix.
+/// Aucun tarif ici : les prix vivent dans les cartes d'offre, servis par
+/// `GET /subscriptions/offers`.
 class SubscriptionPlanCard extends StatelessWidget {
   const SubscriptionPlanCard({required this.status, super.key});
 
