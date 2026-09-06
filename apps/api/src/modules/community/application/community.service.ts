@@ -4,17 +4,14 @@ import {
   type Encouragement as EncouragementContract,
   type FriendCodePreview,
   type FriendRequest,
-  type NotificationCategory,
 } from '@carlys/api-contracts';
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { FriendRequestStatus } from '@prisma/client';
-import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
-import { NotificationsService } from '../../notifications/application/notifications.service';
-import { type PushMessage } from '../../notifications/domain/push-sender.port';
 import { CommunityModerationRepository } from '../infrastructure/community-moderation.repository';
 import { CommunityRepository, type FriendRow } from '../infrastructure/community.repository';
 import { normalizeFriendCode } from '../../users/domain/friend-code';
 import { CommunityChallengesService } from './community-challenges.service';
+import { CommunityNotifier } from './community-notifier';
 import { computeStreakDays } from './streak.calculator';
 
 const FEED_LIMIT = 50;
@@ -36,45 +33,9 @@ export class CommunityService {
     private readonly community: CommunityRepository,
     private readonly moderation: CommunityModerationRepository,
     private readonly challenges: CommunityChallengesService,
-    private readonly notifications: NotificationsService,
-    @InjectPinoLogger(CommunityService.name)
-    private readonly logger: PinoLogger,
+    /** Les envois n'échouent jamais un flux métier : voir CommunityNotifier. */
+    private readonly notifier: CommunityNotifier,
   ) {}
-
-  /**
-   * Notification poussée au nom de `fromUserId`. N'échoue JAMAIS un flux
-   * métier : l'échec est journalisé, l'appel métier aboutit quand même.
-   */
-  private async notify(
-    recipientId: string,
-    fromUserId: string,
-    category: NotificationCategory,
-    compose: (fromName: string) => PushMessage,
-  ): Promise<void> {
-    if (!this.notifications.pushEnabled) {
-      return;
-    }
-    try {
-      const fromName = await this.community.displayNameOf(fromUserId);
-      await this.notifications.sendToUser(recipientId, compose(fromName), category);
-    } catch (error) {
-      this.logger.error({ err: error, recipientId }, 'Notification communauté non envoyée');
-    }
-  }
-
-  private notifyNewRequest(requesterId: string, addresseeId: string): Promise<void> {
-    return this.notify(addresseeId, requesterId, 'FRIEND_REQUESTS', (fromName) => ({
-      title: 'Nouvelle demande d’ami',
-      body: `${fromName} souhaite devenir ton ami.`,
-    }));
-  }
-
-  private notifyRequestAccepted(accepterId: string, requesterId: string): Promise<void> {
-    return this.notify(requesterId, accepterId, 'FRIEND_REQUESTS', (fromName) => ({
-      title: 'Demande acceptée',
-      body: `${fromName} a accepté ta demande d’ami.`,
-    }));
-  }
 
   // ── Demandes d'ami ──────────────────────────────────────────────────────
 
@@ -142,14 +103,14 @@ export class CommunityService {
     const existing = await this.community.findFriendshipBetween(userId, targetId);
     if (existing === null) {
       await this.community.createRequest(userId, targetId);
-      await this.notifyNewRequest(userId, targetId);
+      await this.notifier.newRequest(userId, targetId);
       return;
     }
     if (existing.status === FriendRequestStatus.PENDING) {
       if (existing.requesterId === targetId) {
         // Demandes croisées = amitié voulue des deux côtés.
         await this.community.setRequestStatus(existing.id, FriendRequestStatus.ACCEPTED);
-        await this.notifyRequestAccepted(userId, targetId);
+        await this.notifier.requestAccepted(userId, targetId);
       }
       return; // Ma propre demande est déjà en attente : rien à refaire.
     }
@@ -162,7 +123,7 @@ export class CommunityService {
       return; // Refus opposable : même silence qu'un compte inexistant.
     }
     await this.community.reopenRequest(existing.id, userId, targetId);
-    await this.notifyNewRequest(userId, targetId);
+    await this.notifier.newRequest(userId, targetId);
   }
 
   async listReceivedRequests(userId: string): Promise<FriendRequest[]> {
@@ -190,7 +151,7 @@ export class CommunityService {
     );
     if (accept) {
       // Le refus, lui, reste SILENCIEUX : personne n'est notifié d'un non.
-      await this.notifyRequestAccepted(userId, request.requesterId);
+      await this.notifier.requestAccepted(userId, request.requesterId);
     }
   }
 
@@ -277,10 +238,7 @@ export class CommunityService {
       throw new ForbiddenException('Vous ne pouvez encourager que vos amis.');
     }
     await this.community.createEncouragement(userId, recipientUserId, message);
-    await this.notify(recipientUserId, userId, 'ENCOURAGEMENTS', (fromName) => ({
-      title: `Encouragement de ${fromName}`,
-      body: message,
-    }));
+    await this.notifier.encouragement(recipientUserId, userId, message);
   }
 
   // ── Défis (point d'entrée des autres modules) ───────────────────────────

@@ -4,6 +4,7 @@ import { AuditModule } from '../audit/audit.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { CommunityChallengesService } from './application/community-challenges.service';
 import { CommunityModerationService } from './application/community-moderation.service';
+import { CommunityNotifier } from './application/community-notifier';
 import { CommunityService } from './application/community.service';
 import { CommunityChallengesRepository } from './infrastructure/community-challenges.repository';
 import { CommunityModerationRepository } from './infrastructure/community-moderation.repository';
@@ -30,6 +31,7 @@ import { CommunityController } from './presentation/http/community.controller';
   ],
   providers: [
     CommunityService,
+    CommunityNotifier,
     CommunityChallengesService,
     CommunityModerationService,
     CommunityRepository,

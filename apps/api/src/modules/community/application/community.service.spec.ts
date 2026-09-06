@@ -5,6 +5,7 @@ import { type NotificationsService } from '../../notifications/application/notif
 import { type CommunityModerationRepository } from '../infrastructure/community-moderation.repository';
 import { type CommunityRepository } from '../infrastructure/community.repository';
 import { type CommunityChallengesService } from './community-challenges.service';
+import { CommunityNotifier } from './community-notifier';
 import { CommunityService } from './community.service';
 
 const ME = 'utilisateur-moi';
@@ -83,12 +84,18 @@ function buildService(
   notifications: NotificationsStub = buildNotifications(),
   moderation: ModerationStub = buildModeration(),
 ): CommunityService {
+  // Un VRAI notifier, branché sur les mêmes doublures : les assertions sur
+  // les envois restent celles du flux complet, pas d'un relais simulé.
+  const notifier = new CommunityNotifier(
+    stubs as unknown as CommunityRepository,
+    notifications as unknown as NotificationsService,
+    loggerStub as unknown as PinoLogger,
+  );
   return new CommunityService(
     stubs as unknown as CommunityRepository,
     moderation as unknown as CommunityModerationRepository,
     challengesStub as unknown as CommunityChallengesService,
-    notifications as unknown as NotificationsService,
-    loggerStub as unknown as PinoLogger,
+    notifier,
   );
 }
 
