@@ -1,5 +1,6 @@
 import {
   adminAuditLogSchema,
+  adminCommunityReportSchema,
   adminExerciseSummarySchema,
   adminLoginResultSchema,
   adminMeSchema,
@@ -10,11 +11,13 @@ import {
   equipmentSchema,
   mediaAssetSchema,
   type AdminAuditLog,
+  type AdminCommunityReport,
   type AdminExerciseSummary,
   type AdminLoginResult,
   type AdminMe,
   type AdminMuscleGroup,
   type AdminOverview,
+  type CommunityReportStatus,
   type Equipment,
   type SetExerciseCategoriesInput,
   type EntitlementKey,
@@ -172,6 +175,29 @@ export const adminApi = {
   async auditLogs(cursor?: string): Promise<Page<AdminAuditLog>> {
     const body = await call(`/admin/audit-logs${query({ cursor, limit: '50' })}`);
     return parsePage(body, adminAuditLogSchema);
+  },
+
+  // ── Signalements de la communauté ──────────────────────────────────────
+
+  /** Plus récents d'abord ; `status` absent = tous les statuts. Permission `community:moderate`. */
+  async listCommunityReports(
+    status?: CommunityReportStatus,
+    cursor?: string,
+  ): Promise<Page<AdminCommunityReport>> {
+    const body = await call(`/admin/community/reports${query({ status, cursor, limit: '50' })}`);
+    return parsePage(body, adminCommunityReportSchema);
+  },
+
+  /** Résoudre (`RESOLVED`) ou rouvrir (`OPEN`) : audité côté serveur, rejouable sur le même statut. */
+  async setCommunityReportStatus(
+    id: string,
+    status: CommunityReportStatus,
+  ): Promise<AdminCommunityReport> {
+    const body = await call(`/admin/community/reports/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ status }),
+    });
+    return parseData(body, adminCommunityReportSchema);
   },
 
   // ── Catalogue et médias ────────────────────────────────────────────────
