@@ -1,5 +1,4 @@
 import {
-  type CommunityChallenge as ChallengeContract,
   type CommunityFriend,
   type CommunityProfile,
   type Encouragement as EncouragementContract,
@@ -12,37 +11,21 @@ import { FriendRequestStatus } from '@prisma/client';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { NotificationsService } from '../../notifications/application/notifications.service';
 import { type PushMessage } from '../../notifications/domain/push-sender.port';
-import {
-  type ChallengeWithStats,
-  CommunityRepository,
-  type FriendRow,
-} from '../infrastructure/community.repository';
+import { CommunityRepository, type FriendRow } from '../infrastructure/community.repository';
 import { normalizeFriendCode } from '../../users/domain/friend-code';
+import { CommunityChallengesService } from './community-challenges.service';
 import { computeStreakDays } from './streak.calculator';
 
 const FEED_LIMIT = 50;
 /** Historique suffisant pour toute série plausible affichée (60 jours). */
 const STREAK_WINDOW_DAYS = 60;
 
-function presentChallenge(challenge: ChallengeWithStats, userId: string): ChallengeContract {
-  const total = challenge.participations.reduce((sum, p) => sum + p.contribution, 0);
-  return {
-    id: challenge.id,
-    kind: challenge.kind,
-    title: challenge.title,
-    description: challenge.description,
-    target: challenge.target,
-    progress: challenge.target <= 0 ? 0 : Math.min(1, total / challenge.target),
-    participants: challenge.participations.length,
-    joined: challenge.participations.some((p) => p.userId === userId),
-    endsAt: challenge.endsAt.toISOString(),
-  };
-}
-
+/** Amis, demandes, encouragements et préférence de partage. */
 @Injectable()
 export class CommunityService {
   constructor(
     private readonly community: CommunityRepository,
+    private readonly challenges: CommunityChallengesService,
     private readonly notifications: NotificationsService,
     @InjectPinoLogger(CommunityService.name)
     private readonly logger: PinoLogger,
@@ -259,71 +242,15 @@ export class CommunityService {
     }));
   }
 
-  // ── Défis collectifs ────────────────────────────────────────────────────
-
-  async listChallenges(userId: string): Promise<ChallengeContract[]> {
-    const challenges = await this.community.listOpenChallenges(new Date());
-    return challenges.map((challenge) => presentChallenge(challenge, userId));
-  }
-
-  async joinChallenge(userId: string, challengeId: string): Promise<ChallengeContract> {
-    await this.ensureChallengeOpen(challengeId);
-    await this.community.joinChallenge(challengeId, userId);
-    return this.challengeOf(userId, challengeId);
-  }
-
-  async leaveChallenge(userId: string, challengeId: string): Promise<ChallengeContract> {
-    await this.ensureChallengeOpen(challengeId);
-    await this.community.leaveChallenge(challengeId, userId);
-    return this.challengeOf(userId, challengeId);
-  }
-
-  private async ensureChallengeOpen(challengeId: string): Promise<void> {
-    const challenge = await this.community.findChallengeById(challengeId);
-    if (challenge === null || challenge.endsAt < new Date()) {
-      throw new NotFoundException('Défi introuvable ou terminé.');
-    }
-  }
-
-  private async challengeOf(userId: string, challengeId: string): Promise<ChallengeContract> {
-    const challenge = await this.community.challengeStats(challengeId);
-    if (challenge === null) {
-      throw new NotFoundException('Défi introuvable.');
-    }
-    return presentChallenge(challenge, userId);
-  }
+  // ── Défis (point d'entrée des autres modules) ───────────────────────────
 
   /**
-   * Contribution des défis SPORT à la clôture d'une séance. Ne fait JAMAIS
-   * échouer la clôture : un échec est journalisé, le compte se rattrape à la
-   * prochaine séance (la barre est collective, pas comptable).
+   * Contribution des défis SPORT à la clôture d'une séance. Le module des
+   * séances ne connaît que ce service : la logique vit dans
+   * `CommunityChallengesService`, ceci ne fait que déléguer.
    */
-  async recordWorkoutCompleted(userId: string, completedAt: Date): Promise<void> {
-    try {
-      await this.community.incrementSportContributions(userId, completedAt);
-    } catch (error) {
-      this.logger.error(
-        { err: error, userId },
-        'Contribution aux défis non enregistrée — rattrapage à la prochaine séance',
-      );
-    }
-  }
-
-  // ── Réponses de quiz (défis CULTURE) ────────────────────────────────────
-
-  /**
-   * Enregistre une réponse de quiz. Seule une réponse JUSTE et NOUVELLE
-   * (première fois pour cette leçon ce jour-là) contribue aux défis CULTURE
-   * rejoints — rejouer l'envoi ne compte jamais deux fois.
-   */
-  async recordQuizAnswer(
-    userId: string,
-    input: { lessonId: string; answeredOn: string; correct: boolean },
-  ): Promise<void> {
-    const created = await this.community.createQuizAnswer({ userId, ...input });
-    if (created && input.correct) {
-      await this.community.incrementCultureContributions(userId, new Date());
-    }
+  recordWorkoutCompleted(userId: string, completedAt: Date): Promise<void> {
+    return this.challenges.recordWorkoutCompleted(userId, completedAt);
   }
 
   // ── Préférence de partage ───────────────────────────────────────────────
