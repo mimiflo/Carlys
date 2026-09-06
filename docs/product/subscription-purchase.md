@@ -57,7 +57,9 @@ Montrer un bouton d'achat qui échouerait est pire que de ne pas en montrer.
    (ou `/abonnement` si le paiement est abandonné) : deux pages publiques
    statiques de l'application Next.js (`apps/admin`, groupe de routes
    `(public)`) qui invitent à retourner dans l'application. Elles
-   n'accordent rien : le droit vient du webhook, jamais de la page.
+   n'accordent rien : le droit vient du webhook, jamais de la page. Ces
+   adresses sont **figées par un test** (`stripe-checkout.client.spec.ts`) :
+   pas de schéma mobile, pas de page qui n'existe pas.
 7. Au **retour dans l'application**, `planStatusProvider` et
    `entitlementsProvider` sont relus, puis relus une seconde fois quelques
    secondes plus tard (voir ci-dessous). S'ils n'ont pas encore changé,

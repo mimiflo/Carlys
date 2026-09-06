@@ -74,6 +74,35 @@ describe('StripeCheckoutClient', () => {
     });
   });
 
+  it('les adresses de retour sont les pages RÉELLES de l’application web, jamais un schéma mobile', async () => {
+    // `${PUBLIC_APP_URL}/abonnement/merci` et `${PUBLIC_APP_URL}/abonnement`
+    // sont servies par apps/admin (groupe de routes `(public)`) : elles
+    // invitent à revenir dans l'application et n'accordent aucun droit. Une
+    // adresse qui changerait ici casserait le retour de paiement en silence.
+    const fetchMock = fetchReturning(200, { url: 'https://checkout.stripe.com/c/pay/cs_test' });
+    global.fetch = fetchMock;
+
+    await buildClient({ stripeSecretKey: 'sk_test_secret' }).createSession(REQUEST);
+
+    expect(sentForm(fetchMock).fields).toMatchObject({
+      success_url: 'https://app.carlys.test/abonnement/merci',
+      cancel_url: 'https://app.carlys.test/abonnement',
+    });
+  });
+
+  it('un client Stripe connu est passé à la session ; sinon aucun champ `customer`', async () => {
+    const fetchMock = fetchReturning(200, { url: 'https://checkout.stripe.com/c/pay/cs_test' });
+    global.fetch = fetchMock;
+    const client = buildClient({ stripeSecretKey: 'sk_test_secret' });
+
+    await client.createSession(REQUEST);
+    expect(sentForm(fetchMock).fields).not.toHaveProperty('customer');
+
+    fetchMock.mockClear();
+    await client.createSession({ ...REQUEST, customerId: 'cus_connu' });
+    expect(sentForm(fetchMock).fields).toMatchObject({ customer: 'cus_connu' });
+  });
+
   it('sans période d’essai, aucun champ d’essai n’est envoyé', async () => {
     const fetchMock = fetchReturning(200, { url: 'https://checkout.stripe.com/c/pay/cs_test' });
     global.fetch = fetchMock;
