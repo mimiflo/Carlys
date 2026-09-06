@@ -19,6 +19,9 @@ pnpm test       # vitest + Testing Library
 des comptes mobiles, jeton à audience dédiée en sessionStorage), gestion des
 utilisateurs (`/users` — recherche, fiche, suspension avec révocation des
 sessions, attribution manuelle du premium) et journal d'audit (`/audit`).
+S'y ajoutent les signalements de la communauté (`/reports` : ouverts par
+défaut, résolution ou réouverture, lien vers la fiche des deux personnes ;
+permission `community:moderate`, voir `docs/product/community.md`).
 Les réponses de l'API sont validées par les contrats Zod partagés
 (`@carlys/api-contracts`) ; le contrôle d'accès réel reste côté serveur (RBAC
 par permission), l'interface ne fait que refléter les refus (403).

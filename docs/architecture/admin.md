@@ -92,8 +92,9 @@ surfaces d'attaque différents. Cible de l'Étape 7 :
   jamais par simple masquage côté client.
 
 Depuis l'Étape 7, `/login` authentifie réellement (`adminApi.login`, puis
-redirection vers `/users`) et le tableau de bord porte sept pages : accueil,
-connexion, utilisateurs, fiche utilisateur, audit, exercices, catégories. La
+redirection vers `/users`) et le tableau de bord porte les pages accueil,
+connexion, utilisateurs, fiche utilisateur, signalements, audit, exercices,
+catégories et médias. La
 protection reste à durcir côté serveur : elle passe aujourd'hui par le jeton
 d'administration porté par les appels, pas par un middleware de route.
 
@@ -120,7 +121,7 @@ livré à l'Étape 7.
 | Notifications | campagnes push (après intégration FCM), modèles, ciblage, historique d'envoi |
 | Webhooks (Étape 6+) | journal des webhooks Stripe/RevenueCat signés, statut de traitement idempotent, rejeu |
 | Statistiques | tableaux de bord d'usage : inscriptions, rétention, séances, revenus |
-| Modération (future) | signalements et contenus sociaux, une fois les fonctionnalités sociales livrées |
+| Modération | **Livré (partiel)** — `/reports` : signalements de la communauté (ouverts par défaut, motif, auteur et personne visée liés à leur fiche, encouragement visé), résolution et réouverture auditées, permission `community:moderate`. Reste cible : retrait d'un contenu par l'administration |
 
 ## Pages publiques du produit (`src/app/(public)`)
 

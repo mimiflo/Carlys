@@ -84,6 +84,21 @@ Côté back-office (`/api/v1/admin/community`, jeton admin, permission
 | GET | `/reports?status=&limit=&cursor=` | Signalements, plus récents d'abord, avec les deux personnes (id, e-mail, nom) et le texte de l'encouragement visé s'il existe encore |
 | PATCH | `/reports/:id` | `{ status: "RESOLVED" }` résout (`resolvedAt` posé, audit `admin.community_report_resolved`) ; `{ status: "OPEN" }` rouvre (`admin.community_report_reopened`) ; rejouer le même statut ne réécrit rien |
 
+Ces deux routes ont leur écran : la page **Signalements** du back-office
+(`apps/admin`, `/reports`, entrée de navigation à côté d'Utilisateurs).
+Elle liste les signalements ouverts par défaut (résolus, ou tous, sur
+demande ; pages de 50 par curseur, « Charger la suite ») avec la date, le
+motif et ses précisions, l'auteur, la personne visée et le texte de
+l'encouragement visé s'il existe encore (« Message retiré depuis » sinon,
+« La personne en général » si le signalement ne vise pas un message). Un
+bouton résout chaque signalement, un autre le rouvre ; résoudre ne prévient
+personne et ne touche pas au compte visé : les deux personnes renvoient à
+leur fiche utilisateur, seul endroit où l'on suspend. Sans
+`community:moderate`, la page montre le refus du serveur tel quel (403),
+sans le déguiser en panne. Transport : `adminApi.listCommunityReports` et
+`adminApi.setCommunityReportStatus` (`apps/admin/src/lib/admin-api.ts`),
+réponses validées par `adminCommunityReportSchema`.
+
 Cas particuliers du service :
 
 - **Demandes croisées** : si B demande A alors que A → B est en attente, la
@@ -197,6 +212,13 @@ simplement perdue (la barre est collective, pas comptable).
   résolution auditée côté admin, `403` sans `community:moderate`.
 - Unitaires API, modération : garde-fous des blocages et signalements,
   doublon ouvert, nettoyage des précisions, audit de la résolution, pagination.
+- Vitest back-office (`apps/admin/src/app/reports/page.test.tsx`,
+  `apps/admin/src/lib/admin-api.test.ts`) : liste des ouverts par défaut
+  avec motif, personnes liées à leur fiche et texte visé ; résolution puis
+  rechargement ; réouverture ; filtres Résolus/Tous ; pagination par
+  curseur ; 403 distingué d'une panne, à la lecture comme à la résolution ;
+  redirection sans jeton ; URL, corps du PATCH et rejet d'une réponse hors
+  contrat côté transport.
 - Défis du mois : catalogue (fenêtre UTC, passage d'année, slugs uniques,
   textes visibles sans tiret cadratin), service (création AVANT la liste sur
   un mois vierge, rien sur un mois servi) ; e2e : cinq lectures concurrentes
