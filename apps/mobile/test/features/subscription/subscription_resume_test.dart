@@ -101,13 +101,23 @@ void main() {
     await tester.pump();
     expect(repository.planStatusReads, 2);
 
-    // Un second retour avant la relance la REMPLACE : pas de doublon.
+    // Un second retour, deux secondes plus tard, REMPLACE la relance armée
+    // par le premier : si elle n'était pas annulée, elle tomberait à sa
+    // propre échéance, avant celle du second retour.
+    const half = Duration(seconds: 2);
+    await tester.pump(half);
     refresh.onResume();
     await container.read(planStatusProvider.future);
     await tester.pump();
     expect(repository.planStatusReads, 3);
 
-    await tester.pump(SubscriptionResumeRefresh.webhookGrace);
+    // Échéance du PREMIER minuteur, s'il avait survécu : rien ne bouge.
+    await tester.pump(SubscriptionResumeRefresh.webhookGrace - half);
+    await container.read(planStatusProvider.future);
+    expect(repository.planStatusReads, 3);
+
+    // Échéance du second : la relance, une seule.
+    await tester.pump(half);
     await container.read(planStatusProvider.future);
     expect(repository.planStatusReads, 4);
 

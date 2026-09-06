@@ -163,18 +163,22 @@ class SubscriptionScreen extends ConsumerWidget {
 
 /// Croix de fermeture de la maquette, calée sur la gouttière. L'icône garde
 /// la taille de la maquette ; la boîte qui répond au doigt est
-/// [AppSpacing.touchTarget], la seule cible tactile de l'application.
+/// [AppSpacing.touchTarget], la seule cible tactile de l'application. Le
+/// retrait gauche se déduit des deux : quelle que soit la boîte, le bord de
+/// l'icône tombe sur la gouttière.
 class _CloseButton extends StatelessWidget {
   const _CloseButton();
 
   static const double _iconSize = 23;
+  static const double _leftInset =
+      AppSpacing.gutter - (AppSpacing.touchTarget - _iconSize) / 2;
 
   @override
   Widget build(BuildContext context) {
     return Align(
       alignment: Alignment.centerLeft,
       child: Padding(
-        padding: const EdgeInsets.only(left: AppSpacing.sm, top: AppSpacing.xs),
+        padding: const EdgeInsets.only(left: _leftInset, top: AppSpacing.xs),
         child: IconButton(
           tooltip: 'Fermer',
           padding: EdgeInsets.zero,

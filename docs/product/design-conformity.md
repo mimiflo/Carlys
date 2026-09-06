@@ -401,7 +401,7 @@ entre une capture et la référence n'est donc pas, en soi, un défaut de l'appl
 | Historique | Colonne « KCAL » des cartes de séance absente | Pas de dépense estimée par séance |
 | Fiche exercice | Tuiles séries/répétitions/repos remplacées par les records réels | Pas de prescription par exercice |
 | Fiche exercice | Jauges « muscles sollicités » = principal/secondaire | L'API expose `isPrimary`, pas un pourcentage |
-| Abonnement | Cartes d'offre (annuel/mensuel), badge « 2 mois offerts » et CTA d'achat absents | Aucun catalogue de prix côté serveur |
+| Abonnement | ÉCART FERMÉ : offres servies par `GET /subscriptions/offers`, achat par Stripe Checkout, gestion par le portail de facturation | Voir `subscription-purchase.md` |
 | Profil | Lignes repos par défaut, unités, rappels, export absentes | Réglages inexistants |
 | Onboarding | 3 objectifs au lieu de 4 | `NutritionGoal` n'a pas d'équivalent « gagner en force » |
 
