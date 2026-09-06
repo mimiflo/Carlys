@@ -63,36 +63,45 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
     });
   }
 
+  /// L'historique ne charge JAMAIS les séries : le nombre de séries et le
+  /// volume sont agrégés par SQLite (`COUNT`, `SUM(reps × poids)`), une
+  /// ligne par séance. Matérialiser chaque série pour n'en garder que deux
+  /// nombres faisait croître le coût de chaque émission avec l'historique
+  /// entier. Le calcul est le même que [WorkoutWithSets.totalVolumeKg] : une
+  /// série sans répétitions ou sans charge ne compte pas dans le volume
+  /// (`NULL × x` est `NULL`, que `SUM` ignore), mais compte comme série.
   @override
   Stream<List<WorkoutHistoryEntry>> watchHistory() {
-    final query =
-        _db.select(_db.localWorkoutSessions).join([
-          leftOuterJoin(
-            _db.localWorkoutSets,
-            _db.localWorkoutSets.sessionId.equalsExp(
-                  _db.localWorkoutSessions.id,
-                ) &
-                _db.localWorkoutSets.deleted.equals(false),
-          ),
-        ])..where(
-          _db.localWorkoutSessions.status.isNotValue(
-            WorkoutStatus.inProgress.apiValue,
-          ),
-        );
+    final sessions = _db.localWorkoutSessions;
+    final sets = _db.localWorkoutSets;
+    final setsCount = sets.id.count();
+    final totalVolumeKg = (sets.reps.cast<double>() * sets.weightKg).sum();
 
-    return query.watch().map((rows) {
-      final workouts = _groupRows(rows)
-        ..sort((a, b) => b.session.startedAt.compareTo(a.session.startedAt));
-      return workouts
+    final query =
+        sessions.select().join([
+            leftOuterJoin(
+              sets,
+              sets.sessionId.equalsExp(sessions.id) &
+                  sets.deleted.equals(false),
+              useColumns: false,
+            ),
+          ])
+          ..addColumns([setsCount, totalVolumeKg])
+          ..where(sessions.status.isNotValue(WorkoutStatus.inProgress.apiValue))
+          ..groupBy([sessions.id])
+          ..orderBy([OrderingTerm.desc(sessions.startedAt)]);
+
+    return query.watch().map(
+      (rows) => rows
           .map(
-            (workout) => WorkoutHistoryEntry(
-              session: workout.session,
-              setsCount: workout.setsCount,
-              totalVolumeKg: workout.totalVolumeKg,
+            (row) => WorkoutHistoryEntry(
+              session: _mapSession(row.readTable(sessions)),
+              setsCount: row.read(setsCount) ?? 0,
+              totalVolumeKg: row.read(totalVolumeKg) ?? 0,
             ),
           )
-          .toList();
-    });
+          .toList(),
+    );
   }
 
   @override
