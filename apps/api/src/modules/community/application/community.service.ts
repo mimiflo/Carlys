@@ -19,6 +19,8 @@ import { computeStreakDays } from './streak.calculator';
 const FEED_LIMIT = 50;
 /** Historique suffisant pour toute série plausible affichée (60 jours). */
 const STREAK_WINDOW_DAYS = 60;
+/** Après un refus, le même demandeur attend 30 jours avant de pouvoir redemander. */
+const DECLINE_COOLDOWN_MS = 30 * 24 * 3_600_000;
 
 /** Amis, demandes, encouragements et préférence de partage. */
 @Injectable()
@@ -117,6 +119,14 @@ export class CommunityService {
     return { displayName: target.profile?.displayName ?? 'Membre Carlys' };
   }
 
+  /**
+   * Cœur des demandes : une seule ligne par paire, et trois règles.
+   * Demandes croisées = amitié. Un refus est OPPOSABLE : le même demandeur
+   * reste muet pendant `DECLINE_COOLDOWN_MS`, sans notification, sinon
+   * connaître une adresse suffirait à harceler à coups de demandes. La
+   * personne qui a refusé peut, elle, prendre contact quand elle veut : la
+   * demande repart alors dans SON sens, comme une demande neuve.
+   */
   private async requestFriendTo(userId: string, targetId: string): Promise<void> {
     const existing = await this.community.findFriendshipBetween(userId, targetId);
     if (existing === null) {
@@ -124,17 +134,24 @@ export class CommunityService {
       await this.notifyNewRequest(userId, targetId);
       return;
     }
-    if (existing.status === FriendRequestStatus.PENDING && existing.requesterId === targetId) {
-      // Demandes croisées = amitié voulue des deux côtés.
-      await this.community.setRequestStatus(existing.id, FriendRequestStatus.ACCEPTED);
-      await this.notifyRequestAccepted(userId, targetId);
-      return;
+    if (existing.status === FriendRequestStatus.PENDING) {
+      if (existing.requesterId === targetId) {
+        // Demandes croisées = amitié voulue des deux côtés.
+        await this.community.setRequestStatus(existing.id, FriendRequestStatus.ACCEPTED);
+        await this.notifyRequestAccepted(userId, targetId);
+      }
+      return; // Ma propre demande est déjà en attente : rien à refaire.
     }
-    if (existing.status === FriendRequestStatus.DECLINED && existing.requesterId === userId) {
-      // Redemander après un refus : la demande redevient visible chez l'autre.
-      await this.community.setRequestStatus(existing.id, FriendRequestStatus.PENDING);
-      await this.notifyNewRequest(userId, targetId);
+    if (existing.status !== FriendRequestStatus.DECLINED) {
+      return; // Déjà amis.
     }
+    const declinedByMe = existing.requesterId === targetId;
+    const declinedAt = (existing.respondedAt ?? existing.createdAt).getTime();
+    if (!declinedByMe && Date.now() - declinedAt < DECLINE_COOLDOWN_MS) {
+      return; // Refus opposable : même silence qu'un compte inexistant.
+    }
+    await this.community.reopenRequest(existing.id, userId, targetId);
+    await this.notifyNewRequest(userId, targetId);
   }
 
   async listReceivedRequests(userId: string): Promise<FriendRequest[]> {

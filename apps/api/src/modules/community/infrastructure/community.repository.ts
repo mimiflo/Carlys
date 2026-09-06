@@ -54,6 +54,24 @@ export class CommunityRepository {
     });
   }
 
+  /**
+   * Rouvre une ligne refusée : elle repasse PENDING, datée de maintenant,
+   * dans le sens de la personne qui demande (qui peut être l'ancien
+   * destinataire, s'il prend contact après avoir refusé).
+   */
+  reopenRequest(id: string, requesterId: string, addresseeId: string): Promise<Friendship> {
+    return this.prisma.friendship.update({
+      where: { id },
+      data: {
+        requesterId,
+        addresseeId,
+        status: FriendRequestStatus.PENDING,
+        respondedAt: null,
+        createdAt: new Date(),
+      },
+    });
+  }
+
   deleteFriendship(id: string): Promise<void> {
     return this.prisma.friendship.delete({ where: { id } }).then(() => undefined);
   }

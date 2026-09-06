@@ -52,7 +52,7 @@ l'application ne dépend d'elle.
 | GET | `/friends` | Amis acceptés, stats `null` si progression privée |
 | DELETE | `/friends/:userId` | Retirer un ami (idempotent) |
 | GET | `/requests` | Demandes REÇUES en attente |
-| POST | `/requests` | Demander par e-mail exact OU `friendCode` (exactement un des deux) — `202` opaque |
+| POST | `/requests` | Demander par e-mail exact OU `friendCode` (exactement un des deux) — `202` opaque, refus opposable 30 jours, 10 demandes/min par adresse |
 | GET | `/friend-codes/:code` | Nom du porteur d'un code (toutes formes humaines acceptées) — `404` sinon |
 | POST | `/requests/:id/accept` · `/decline` | Répondre (destinataire uniquement) |
 | GET | `/challenges` | Défis ouverts, progression collective incluse |
@@ -64,8 +64,16 @@ Cas particuliers du service :
 
 - **Demandes croisées** : si B demande A alors que A → B est en attente, la
   demande existante est ACCEPTÉE (les deux se veulent amis).
-- **Redemande après refus** : seule une nouvelle demande du MÊME demandeur
-  rouvre une ligne `DECLINED` (elle repasse `PENDING`).
+- **Refus opposable** : après un refus, le MÊME demandeur reste muet pendant
+  30 jours : sa demande répond `202` comme toujours, mais rien ne réapparaît
+  chez l'autre et aucune notification ne part. La personne qui a refusé
+  peut, elle, prendre contact à tout moment : la ligne `DECLINED` repart
+  `PENDING` dans SON sens, comme une demande neuve. Sans cette règle, une
+  adresse ou un code ami connus suffisaient à harceler à coups de demandes,
+  avec une notification à chaque coup.
+- **Limite dédiée** : `POST /community/requests` porte son propre seau,
+  calqué sur celui des routes d'authentification (10 demandes par minute et
+  par adresse, `429` au-delà), indépendant du plafond global.
 - **Statistiques partagées** : `weeklySessions` = séances TERMINÉES sur 7
   jours glissants ; `streakDays` = jours calendaires consécutifs avec séance,
   découpés dans le FUSEAU du propriétaire (`UserProfile.timezone`), série
@@ -123,7 +131,11 @@ simplement perdue (la barre est collective, pas comptable).
   null-jamais-zéro, 403 hors amitié, division par zéro d'un objectif).
 - e2e API (`test/community.e2e-spec.ts`) : parcours complet à trois comptes —
   demande opaque, acceptation, bascule de confidentialité, encouragements,
-  défi rejoint/contribué/quitté, retrait d'ami idempotent.
+  défi rejoint/contribué/quitté, retrait d'ami idempotent ;
+  `test/community-friend-requests.e2e-spec.ts` (application isolée, le seau
+  du throttle vivant dans l'application) : refus opposable par e-mail et par
+  code, reprise de contact par la personne qui a refusé, `429` au-delà de
+  10 demandes par minute sans toucher les autres routes.
 - Widgets mobile (`test/features/community/`) : démo complète, états
   erreur/vide/chargement, acceptation de demande, ajout opaque, réglage de
   partage.

@@ -18,10 +18,18 @@ import {
   Post,
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Throttle } from '@nestjs/throttler';
 import { CurrentUser } from '../../../../common/decorators/current-user.decorator';
 import { type AuthenticatedPrincipal } from '../../../../common/types/authenticated-request';
 import { CommunityService } from '../../application/community.service';
 import { EncourageDto, FriendRequestDto, UpdateCommunityProfileDto } from './dto/community.dto';
+
+/**
+ * Limite dédiée aux demandes d'ami, calquée sur celle des routes
+ * d'authentification : connaître une adresse ou un code ami ne doit pas
+ * permettre de rejouer la demande à volonté.
+ */
+const FRIEND_REQUEST_THROTTLE = { default: { limit: 10, ttl: 60_000 } };
 
 @ApiTags('community')
 @ApiBearerAuth()
@@ -75,11 +83,13 @@ export class CommunityController {
 
   @Post('requests')
   @HttpCode(202)
+  @Throttle(FRIEND_REQUEST_THROTTLE)
   @ApiOperation({
     summary:
       'Demander un ami par e-mail exact OU par code ami (tapé ou scanné). ' +
       'Réponse opaque : 202 dans tous les cas, qu’un compte existe ou non ' +
-      '(pas d’énumération d’adresses).',
+      '(pas d’énumération d’adresses). Un refus est opposable 30 jours. ' +
+      'Limite dédiée : 10 demandes par minute et par adresse (429 au-delà).',
   })
   async request(
     @CurrentUser() user: AuthenticatedPrincipal,

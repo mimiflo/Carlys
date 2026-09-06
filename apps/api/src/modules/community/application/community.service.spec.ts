@@ -15,6 +15,7 @@ interface Stubs {
   createRequest: jest.Mock;
   findRequestById: jest.Mock;
   setRequestStatus: jest.Mock;
+  reopenRequest: jest.Mock;
   deleteFriendship: jest.Mock;
   listReceivedRequests: jest.Mock;
   listFriends: jest.Mock;
@@ -35,6 +36,7 @@ function buildStubs(): Stubs {
     createRequest: jest.fn().mockResolvedValue({}),
     findRequestById: jest.fn().mockResolvedValue(null),
     setRequestStatus: jest.fn().mockResolvedValue({}),
+    reopenRequest: jest.fn().mockResolvedValue({}),
     deleteFriendship: jest.fn().mockResolvedValue(undefined),
     listReceivedRequests: jest.fn().mockResolvedValue([]),
     listFriends: jest.fn().mockResolvedValue([]),
@@ -132,6 +134,73 @@ describe('CommunityService — demandes d’ami', () => {
 
     expect(stubs.createRequest).not.toHaveBeenCalled();
     expect(stubs.setRequestStatus).not.toHaveBeenCalled();
+  });
+
+  it('après un refus, le même demandeur reste muet pendant 30 jours', async () => {
+    const stubs = buildStubs();
+    stubs.findUserIdByEmail.mockResolvedValue({ id: FRIEND });
+    stubs.findFriendshipBetween.mockResolvedValue({
+      id: 'demande-1',
+      requesterId: ME,
+      addresseeId: FRIEND,
+      status: FriendRequestStatus.DECLINED,
+      createdAt: new Date(Date.now() - 3 * 24 * 3_600_000),
+      respondedAt: new Date(Date.now() - 24 * 3_600_000),
+    });
+    const notifications = buildNotifications();
+    const service = buildService(stubs, notifications);
+
+    // 202 opaque : rien ne bouge en base, rien ne sonne chez l'autre.
+    await expect(service.requestFriend(ME, 'ami@carlys.test')).resolves.toBeUndefined();
+    expect(stubs.reopenRequest).not.toHaveBeenCalled();
+    expect(stubs.setRequestStatus).not.toHaveBeenCalled();
+    expect(notifications.sendToUser).not.toHaveBeenCalled();
+  });
+
+  it('passé le délai, la demande peut repartir, et l’autre en est notifié', async () => {
+    const stubs = buildStubs();
+    stubs.findUserIdByEmail.mockResolvedValue({ id: FRIEND });
+    stubs.findFriendshipBetween.mockResolvedValue({
+      id: 'demande-1',
+      requesterId: ME,
+      addresseeId: FRIEND,
+      status: FriendRequestStatus.DECLINED,
+      createdAt: new Date(Date.now() - 40 * 24 * 3_600_000),
+      respondedAt: new Date(Date.now() - 31 * 24 * 3_600_000),
+    });
+    const notifications = buildNotifications();
+    const service = buildService(stubs, notifications);
+
+    await service.requestFriend(ME, 'ami@carlys.test');
+
+    expect(stubs.reopenRequest).toHaveBeenCalledWith('demande-1', ME, FRIEND);
+    expect(notifications.sendToUser).toHaveBeenCalledTimes(1);
+  });
+
+  it('celui qui a refusé peut prendre contact : la demande repart dans son sens', async () => {
+    const stubs = buildStubs();
+    stubs.findUserIdByEmail.mockResolvedValue({ id: FRIEND });
+    // FRIEND avait demandé, ME a refusé hier ; ME change d'avis.
+    stubs.findFriendshipBetween.mockResolvedValue({
+      id: 'demande-1',
+      requesterId: FRIEND,
+      addresseeId: ME,
+      status: FriendRequestStatus.DECLINED,
+      createdAt: new Date(Date.now() - 2 * 24 * 3_600_000),
+      respondedAt: new Date(Date.now() - 24 * 3_600_000),
+    });
+    const notifications = buildNotifications();
+    const service = buildService(stubs, notifications);
+
+    await service.requestFriend(ME, 'ami@carlys.test');
+
+    // Pas de délai pour lui, et c'est LUI qui demande désormais.
+    expect(stubs.reopenRequest).toHaveBeenCalledWith('demande-1', ME, FRIEND);
+    expect(notifications.sendToUser).toHaveBeenCalledWith(
+      FRIEND,
+      expect.objectContaining({ title: 'Nouvelle demande d’ami' }),
+      'FRIEND_REQUESTS',
+    );
   });
 
   it('seul le DESTINATAIRE peut répondre à une demande', async () => {
