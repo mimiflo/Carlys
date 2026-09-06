@@ -9,6 +9,7 @@ import '../../../../core/synchronization/sync_engine.dart';
 import '../../domain/entities/workout.dart';
 import '../../domain/repositories/workout_repository.dart';
 import '../datasources/workout_session_remote_data_source.dart';
+import '../local/workout_conflict_actions.dart';
 import '../local/workout_session_writer.dart';
 import 'workout_session_downloader.dart';
 
@@ -294,6 +295,21 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
       return; // aucune source distante (mode démo, tests hors ligne)
     }
     await WorkoutSessionDownloader(database: _db, remote: remote).run();
+  }
+
+  @override
+  Future<void> resolveCloseConflict(
+    String sessionId,
+    WorkoutConflictResolution resolution,
+  ) async {
+    final actions = WorkoutConflictActions(database: _db, remote: _remote);
+    switch (resolution) {
+      case WorkoutConflictResolution.takeServer:
+        await actions.takeServer(sessionId);
+      case WorkoutConflictResolution.keepLocal:
+        await actions.keepLocal(sessionId);
+        _poke();
+    }
   }
 
   // ── Interne ──────────────────────────────────────────────────────────────

@@ -34,7 +34,11 @@
 >   (vérifié par les tests e2e côté API et la suite
 >   `test/features/workout/workout_offline_sync_test.dart` côté mobile) ;
 > - un refus serveur 4xx marque l'opération et l'entité `failed` sans bloquer
->   le reste de la file ; 401/5xx/réseau ⇒ nouvel essai plus tard ;
+>   le reste de la file ; 401/429/5xx/réseau ⇒ nouvel essai plus tard ;
+> - un **409 à la clôture** d'une séance est tranché en lisant la version
+>   serveur : même issue ⇒ adoptée ; issue différente ⇒ séance en **conflit**,
+>   à trancher depuis son détail (« Prendre la version du serveur » /
+>   « Garder ma version »), voir « Gestion des conflits » ;
 > - la **récupération multi-appareils** est assurée par un rapatriement au
 >   démarrage (`AppRestore`), pendant en LECTURE de la file : il retire du
 >   serveur les modèles, puis les séances avec leurs séries et leur plan.
@@ -318,6 +322,40 @@ Côté API, un conflit non résoluble automatiquement est signalé par l'envelop
 d'erreur standard avec le code **`CONFLICT`** (déjà défini dans
 `packages/api-contracts`).
 
+### Le 409 de clôture, tel qu'il est réellement traité
+
+L'API ne répond `409` à `session.complete` / `session.abandon` que si la
+séance est déjà close **avec une autre issue** : re-clôturer avec la même
+issue est un rejeu, servi en `200` avec l'état stocké. Le moteur ne traite
+donc plus ce 409 comme un refus ordinaire ; il demande un verdict au
+`SyncConflictResolver` (`core/synchronization/sync_conflict_resolver.dart`,
+implémenté par `WorkoutCloseConflictResolver` côté séances), qui **lit la
+version serveur** :
+
+| Version serveur | Verdict | Effet |
+| --------------- | ------- | ----- |
+| Même issue que la copie locale (course entre le 409 et la lecture) | `adopted` | La version serveur (séance, séries, plan) remplace la copie locale, marquée `synced` ; l'opération est acquittée. Les séries encore non acquittées sont **conservées**. |
+| Issue différente (terminée ici, abandonnée là-bas, ou l'inverse) | `conflict` | L'opération passe `conflict`, la séance aussi (`LocalSyncState.conflict`) ; sa voie est retenue, le reste de la file part. |
+| Illisible pour l'instant (hors ligne, 5xx, session à renouveler) | `retryLater` | Backoff, puis nouvel essai ; le 409 reviendra et on tranchera. |
+| Séance inconnue de ce compte (404) | `rejected` | Refus définitif (`failed`), rien à arbitrer. |
+
+Une séance en conflit se signale dans l'historique et, dans son détail,
+propose **deux gestes** (`WorkoutConflictCard`, via
+`WorkoutRepository.resolveCloseConflict`) :
+
+- **Prendre la version du serveur** : lecture distante puis réécriture locale
+  (séance, séries connues du serveur, plan), opération supprimée, séance
+  `synced`. Hors ligne, rien n'est modifié et le choix reste proposé.
+- **Garder ma version** : la clôture locale est **rejouée telle quelle**,
+  marquée comme arbitrée (`resolution: keepLocal` dans la charge utile). Si
+  le serveur l'accepte (il a changé d'avis entre-temps), la séance passe
+  `synced`. S'il la refuse encore, la séance passe en **échec visible**
+  (`failed`, « Le serveur a gardé sa version ») au lieu de reposer la
+  question. **Limite connue** : l'API ne sait pas aujourd'hui accepter une
+  re-clôture avec une autre issue ; tant qu'elle n'évolue pas, ce geste
+  aboutit à cet échec visible dès que le serveur garde sa version. La copie
+  locale reste intacte dans tous les cas.
+
 ## Suppression différée (tombstones)
 
 Aucune suppression physique immédiate côté client :
@@ -411,9 +449,12 @@ sa tablette (en ligne) pour la même séance. À la synchronisation du télépho
   d'aucun appareil n'est perdue ;
 - un champ scalaire modifié des deux côtés (ex. note de séance) est résolu en
   last-write-wins ;
-- si la séance a été **clôturée** des deux côtés avec des données finales
-  divergentes, l'API répond `CONFLICT` et l'application demande à l'utilisateur
-  de choisir — seul cas nécessitant une décision réelle.
+- si la séance a été **clôturée** des deux côtés avec une issue différente
+  (terminée ici, abandonnée là-bas), l'API répond `CONFLICT` : le moteur lit
+  la version serveur, et si l'issue diffère vraiment, la séance passe en
+  conflit et l'utilisateur choisit depuis son détail — seul cas nécessitant
+  une décision réelle (voir « Le 409 de clôture, tel qu'il est réellement
+  traité »).
 
 ## Conséquences côté API (Étape 4)
 

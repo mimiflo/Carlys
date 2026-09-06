@@ -37,6 +37,15 @@ abstract interface class WorkoutRepository {
 
   Future<void> abandonWorkout(String sessionId);
 
+  /// Tranche un conflit de clôture ([LocalSyncState.conflict]) : rapatrie la
+  /// version du serveur, ou rejoue la version locale. Jette l'`AppException`
+  /// de la lecture distante quand le serveur est inaccessible ; rien n'est
+  /// alors modifié.
+  Future<void> resolveCloseConflict(
+    String sessionId,
+    WorkoutConflictResolution resolution,
+  );
+
   /// Rapatrie les séances du serveur dans la base locale, avec leurs séries
   /// **et leur plan**.
   ///

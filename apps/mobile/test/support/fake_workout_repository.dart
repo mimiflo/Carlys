@@ -23,6 +23,12 @@ class FakeWorkoutRepository implements WorkoutRepository {
   final List<String> completed = [];
   final List<String> abandoned = [];
 
+  /// Conflits tranchés, dans l'ordre : `(séance, choix)`.
+  final List<(String, WorkoutConflictResolution)> resolvedConflicts = [];
+
+  /// Exception à jeter au prochain `resolveCloseConflict` (hors ligne…).
+  Exception? conflictResolutionFailure;
+
   final _activeController = StreamController<WorkoutWithSets?>.broadcast();
 
   @override
@@ -122,6 +128,40 @@ class FakeWorkoutRepository implements WorkoutRepository {
 
   @override
   Future<void> restoreSessions() async {}
+
+  @override
+  Future<void> resolveCloseConflict(
+    String sessionId,
+    WorkoutConflictResolution resolution,
+  ) async {
+    final failure = conflictResolutionFailure;
+    if (failure != null) {
+      throw failure;
+    }
+    resolvedConflicts.add((sessionId, resolution));
+    final current = active;
+    if (current != null && current.session.id == sessionId) {
+      // Tranché : la séance n'est plus en conflit.
+      _publish(
+        WorkoutWithSets(
+          session: WorkoutInfo(
+            id: current.session.id,
+            name: current.session.name,
+            status: current.session.status,
+            startedAt: current.session.startedAt,
+            endedAt: current.session.endedAt,
+            durationSeconds: current.session.durationSeconds,
+            templateId: current.session.templateId,
+            templateName: current.session.templateName,
+            syncState: resolution == WorkoutConflictResolution.takeServer
+                ? LocalSyncState.synced
+                : LocalSyncState.pending,
+          ),
+          sets: current.sets,
+        ),
+      );
+    }
+  }
 
   void _publish(WorkoutWithSets? workout) {
     active = workout;

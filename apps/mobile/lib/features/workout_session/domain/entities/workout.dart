@@ -37,7 +37,12 @@ enum SetKind {
 enum LocalSyncState {
   pending('pending', 'En attente'),
   synced('synced', 'Synchronisé'),
-  failed('failed', 'Échec');
+  failed('failed', 'Échec'),
+
+  /// La clôture a été refusée : le serveur a clos la séance avec une autre
+  /// issue. La séance attend un choix de l'utilisateur
+  /// ([WorkoutConflictResolution]).
+  conflict('conflict', 'Conflit');
 
   const LocalSyncState(this.dbValue, this.label);
 
@@ -49,6 +54,16 @@ enum LocalSyncState {
         (state) => state.dbValue == value,
         orElse: () => LocalSyncState.pending,
       );
+}
+
+/// Choix de l'utilisateur devant une séance en conflit de clôture.
+enum WorkoutConflictResolution {
+  /// Rapatrier la version du serveur : elle remplace la copie locale.
+  takeServer,
+
+  /// Renvoyer la version locale telle quelle. Si le serveur la refuse
+  /// encore, la séance passe en échec visible, sans redemander.
+  keepLocal,
 }
 
 class WorkoutInfo {

@@ -5,6 +5,7 @@ import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
 import '../../../workout_session/domain/entities/workout.dart';
 import '../../../workout_session/presentation/controllers/workout_controllers.dart';
+import '../widgets/workout_conflict_card.dart';
 
 /// Détail (et résumé de fin) d'une séance.
 class WorkoutDetailScreen extends ConsumerWidget {
@@ -66,13 +67,22 @@ class _DetailBody extends StatelessWidget {
             if (session.syncState != LocalSyncState.synced)
               AppBadge(
                 label: session.syncState.label,
-                variant: session.syncState == LocalSyncState.failed
-                    ? AppBadgeVariant.warning
-                    : AppBadgeVariant.neutral,
+                variant: switch (session.syncState) {
+                  LocalSyncState.failed ||
+                  LocalSyncState.conflict => AppBadgeVariant.warning,
+                  LocalSyncState.pending ||
+                  LocalSyncState.synced => AppBadgeVariant.neutral,
+                },
               ),
           ],
         ),
         const SizedBox(height: AppSpacing.md),
+        // Le serveur a refusé la clôture : le choix est proposé ici, sur la
+        // séance elle-même, là où l'utilisateur voit ce qu'il tranche.
+        if (session.syncState == LocalSyncState.conflict) ...[
+          WorkoutConflictCard(session: session),
+          const SizedBox(height: AppSpacing.md),
+        ],
         Row(
           children: [
             _Metric(label: 'Séries', value: '${workout.setsCount}'),

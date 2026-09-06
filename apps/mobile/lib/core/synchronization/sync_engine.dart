@@ -4,11 +4,13 @@ import 'package:dio/dio.dart';
 import 'package:drift/drift.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../features/workout_session/data/repositories/workout_close_conflict_resolver.dart';
 import '../database/app_database.dart';
 import '../logging/app_logger.dart';
 import 'sync_api.dart';
+import 'sync_conflict_resolver.dart';
 import 'sync_dispatcher.dart';
-import 'sync_entity_marker.dart';
+import 'sync_operation_states.dart';
 
 /// Draine la file d'opérations vers l'API.
 ///
@@ -21,16 +23,24 @@ import 'sync_entity_marker.dart';
 ///  - au-delà de [serverAttemptsMax] réponses 5xx d'affilée, l'opération est
 ///    mise de côté (`exhausted`) : elle ne retient plus que les opérations
 ///    de SA voie (même séance) et repart à la prochaine ouverture ;
+///  - un 409 à la clôture d'une séance est tranché par le
+///    [SyncConflictResolver] : version serveur adoptée si l'issue est la
+///    même, sinon la séance passe en conflit et attend l'utilisateur ;
 ///  - une opération réussie est supprimée (résiste à une fermeture brutale :
 ///    au pire elle est rejouée, le serveur est idempotent).
 class SyncEngine {
   SyncEngine({
     required AppDatabase database,
     required SyncApi api,
+    SyncConflictResolver? conflictResolver,
     DateTime Function()? now,
   }) : _db = database,
        _dispatcher = SyncDispatcher(api),
-       _marker = SyncEntityMarker(database),
+       _conflicts = conflictResolver,
+       _states = SyncOperationStates(
+         database: database,
+         now: now ?? DateTime.now,
+       ),
        _now = now ?? DateTime.now;
 
   static const _logger = AppLogger('SyncEngine');
@@ -43,9 +53,12 @@ class SyncEngine {
   /// elles frappent toute la file, pas une opération.
   static const int serverAttemptsMax = 5;
 
+  static const _closingOperations = {'session.complete', 'session.abandon'};
+
   final AppDatabase _db;
   final SyncDispatcher _dispatcher;
-  final SyncEntityMarker _marker;
+  final SyncConflictResolver? _conflicts;
+  final SyncOperationStates _states;
 
   /// Horloge injectable (déterminisme des tests de backoff).
   final DateTime Function() _now;
@@ -84,43 +97,22 @@ class SyncEngine {
   }
 
   /// Redonne leur chance aux opérations mises de côté : à l'ouverture de
-  /// l'application, ou sur demande. Elles repartent en tête de leur voie,
-  /// compteurs à zéro, et l'entité redevient « en attente » à l'écran.
-  Future<void> retryExhausted() async {
-    final exhausted = await (_db.select(
-      _db.syncOperations,
-    )..where((op) => op.status.equals('exhausted'))).get();
-    if (exhausted.isEmpty) {
-      return;
-    }
-    _logger.info('${exhausted.length} opération(s) mise(s) de côté rejouée(s)');
-    await _db.transaction(() async {
-      for (final operation in exhausted) {
-        await (_db.update(
-          _db.syncOperations,
-        )..where((op) => op.id.equals(operation.id))).write(
-          const SyncOperationsCompanion(
-            status: Value('pending'),
-            error: Value(null),
-            attemptCount: Value(0),
-            serverErrorCount: Value(0),
-            lastAttemptAt: Value(null),
-          ),
-        );
-        await _marker.mark(operation, 'pending');
-      }
-    });
-  }
+  /// l'application, ou sur demande. Les conflits, eux, attendent toujours
+  /// la décision de l'utilisateur.
+  Future<void> retryExhausted() => _states.retryExhausted();
 
   Future<void> _drain() async {
     final operations =
         await (_db.select(_db.syncOperations)
-              ..where((op) => op.status.isIn(const ['pending', 'exhausted']))
+              ..where(
+                (op) =>
+                    op.status.isIn(const ['pending', 'exhausted', 'conflict']),
+              )
               ..orderBy([(op) => OrderingTerm.asc(op.createdAt)]))
             .get();
 
-    // Voies retenues par une opération mise de côté : ce qui les suit sur la
-    // même séance attend, tout le reste part.
+    // Voies retenues par une opération mise de côté ou en conflit : ce qui
+    // les suit sur la même séance attend, tout le reste part.
     final heldLanes = <String>{};
 
     for (final operation in operations) {
@@ -136,43 +128,89 @@ class SyncEngine {
         // FIFO strict : on ne double jamais une opération en attente.
         return;
       }
-      try {
-        await _dispatcher.send(operation);
-        await _onSuccess(operation);
-      } on DioException catch (exception) {
-        final statusCode = exception.response?.statusCode;
-        if (statusCode != null &&
-            statusCode >= 400 &&
-            statusCode < 500 &&
-            statusCode != 401 &&
-            statusCode != 429) {
-          // Refus définitif du serveur : on ne bloque pas la file.
-          await _onRejected(operation, 'HTTP $statusCode');
+      final outcome = await _attempt(operation);
+      switch (outcome) {
+        case _Outcome.proceed:
           continue;
-        }
-        if (statusCode != null && statusCode >= 500) {
-          if (await _onServerError(operation, statusCode)) {
-            heldLanes.add(lane);
-            continue;
-          }
+        case _Outcome.hold:
+          heldLanes.add(lane);
+          continue;
+        case _Outcome.stop:
           return;
-        }
-        // Réseau, 401 (session à renouveler) ou 429 (débit) : plus tard.
-        await _onRetryLater(operation);
-        return;
-      } catch (exception) {
-        // Attrape TOUT, pas seulement `Exception` : un type d'opération
-        // inconnu jette une `StateError` et une charge utile malformée une
-        // `TypeError` — deux `Error`, qu'un `on Exception` laisse passer.
-        // Non attrapées, elles bloqueraient la tête de file pour toujours,
-        // avec une erreur non gérée à chaque réveil. Aucune de ces causes ne
-        // guérit en réessayant : on marque l'opération en échec et on passe.
-        _logger.error(
-          'Opération de sync inattendue en échec',
-          error: exception,
-        );
-        await _onRejected(operation, exception.toString());
       }
+    }
+  }
+
+  Future<_Outcome> _attempt(SyncOperation operation) async {
+    try {
+      await _dispatcher.send(operation);
+      await _states.succeeded(operation);
+      return _Outcome.proceed;
+    } on DioException catch (exception) {
+      final statusCode = exception.response?.statusCode;
+      if (statusCode == 409 &&
+          _closingOperations.contains(operation.operationType)) {
+        return _onCloseConflict(operation);
+      }
+      if (statusCode != null &&
+          statusCode >= 400 &&
+          statusCode < 500 &&
+          statusCode != 401 &&
+          statusCode != 429) {
+        // Refus définitif du serveur : on ne bloque pas la file.
+        await _states.rejected(operation, 'HTTP $statusCode');
+        return _Outcome.proceed;
+      }
+      if (statusCode != null && statusCode >= 500) {
+        final exhausted = await _states.serverError(
+          operation,
+          statusCode,
+          serverAttemptsMax: serverAttemptsMax,
+        );
+        return exhausted ? _Outcome.hold : _Outcome.stop;
+      }
+      // Réseau, 401 (session à renouveler) ou 429 (débit) : plus tard.
+      await _states.retryLater(operation);
+      return _Outcome.stop;
+    } catch (exception) {
+      // Attrape TOUT, pas seulement `Exception` : un type d'opération
+      // inconnu jette une `StateError` et une charge utile malformée une
+      // `TypeError` — deux `Error`, qu'un `on Exception` laisse passer.
+      // Non attrapées, elles bloqueraient la tête de file pour toujours,
+      // avec une erreur non gérée à chaque réveil. Aucune de ces causes ne
+      // guérit en réessayant : on marque l'opération en échec et on passe.
+      _logger.error('Opération de sync inattendue en échec', error: exception);
+      await _states.rejected(operation, exception.toString());
+      return _Outcome.proceed;
+    }
+  }
+
+  /// Sans résolveur (tests, démonstration), un 409 met directement la séance
+  /// en conflit : l'utilisateur pourra encore prendre la version serveur.
+  Future<_Outcome> _onCloseConflict(SyncOperation operation) async {
+    final resolver = _conflicts;
+    final verdict = resolver == null
+        ? SyncConflictVerdict.conflict
+        : await resolver.resolveClose(operation);
+    switch (verdict) {
+      case SyncConflictVerdict.adopted:
+        await _states.succeeded(operation);
+        return _Outcome.proceed;
+      case SyncConflictVerdict.retryLater:
+        await _states.retryLater(operation);
+        return _Outcome.stop;
+      case SyncConflictVerdict.rejected:
+        await _states.rejected(operation, 'HTTP 409');
+        return _Outcome.proceed;
+      case SyncConflictVerdict.conflict:
+        if (isArbitratedKeepLocal(operation)) {
+          // L'utilisateur avait choisi sa version ; le serveur la refuse
+          // encore. On ne repose pas la question : échec visible.
+          await _states.rejected(operation, 'Le serveur a gardé sa version');
+          return _Outcome.proceed;
+        }
+        await _states.conflict(operation);
+        return _Outcome.hold;
     }
   }
 
@@ -183,77 +221,19 @@ class SyncEngine {
     }
     return _now().isAfter(lastAttempt.add(backoff(operation.attemptCount)));
   }
-
-  Future<void> _onSuccess(SyncOperation operation) async {
-    await _db.transaction(() async {
-      await (_db.delete(
-        _db.syncOperations,
-      )..where((op) => op.id.equals(operation.id))).go();
-      await _marker.mark(operation, 'synced');
-    });
-  }
-
-  Future<void> _onRetryLater(SyncOperation operation) async {
-    await (_db.update(
-      _db.syncOperations,
-    )..where((op) => op.id.equals(operation.id))).write(
-      SyncOperationsCompanion(
-        attemptCount: Value(operation.attemptCount + 1),
-        lastAttemptAt: Value(_now()),
-      ),
-    );
-  }
-
-  /// Compte la réponse 5xx ; rend `true` si l'opération vient d'être mise de
-  /// côté (plafond atteint), `false` si elle attend simplement son backoff.
-  Future<bool> _onServerError(SyncOperation operation, int statusCode) async {
-    final serverErrors = operation.serverErrorCount + 1;
-    final exhausted = serverErrors >= serverAttemptsMax;
-    if (exhausted) {
-      _logger.warning(
-        'Opération ${operation.operationType} mise de côté après '
-        '$serverErrors réponses HTTP $statusCode : elle repartira à la '
-        'prochaine ouverture',
-      );
-    }
-    await _db.transaction(() async {
-      await (_db.update(
-        _db.syncOperations,
-      )..where((op) => op.id.equals(operation.id))).write(
-        SyncOperationsCompanion(
-          attemptCount: Value(operation.attemptCount + 1),
-          lastAttemptAt: Value(_now()),
-          serverErrorCount: Value(serverErrors),
-          status: Value(exhausted ? 'exhausted' : 'pending'),
-          error: Value(exhausted ? 'HTTP $statusCode' : null),
-        ),
-      );
-      if (exhausted) {
-        await _marker.mark(operation, 'failed');
-      }
-    });
-    return exhausted;
-  }
-
-  Future<void> _onRejected(SyncOperation operation, String error) async {
-    _logger.warning('Opération rejetée par le serveur : $error');
-    await _db.transaction(() async {
-      await (_db.update(
-        _db.syncOperations,
-      )..where((op) => op.id.equals(operation.id))).write(
-        SyncOperationsCompanion(
-          status: const Value('failed'),
-          error: Value(error),
-        ),
-      );
-      await _marker.mark(operation, 'failed');
-    });
-  }
 }
 
+/// Suite du drainage après une tentative : passer à l'opération suivante,
+/// retenir la voie de celle-ci, ou s'arrêter là (FIFO strict).
+enum _Outcome { proceed, hold, stop }
+
+/// Le moteur vit dans `core` mais draine, de fait, la file des séances (voir
+/// `SyncApi`) : c'est le seul endroit où `core` connaît la fonctionnalité,
+/// pour brancher le résolveur qui sait lire et écrire une séance complète.
 final syncEngineProvider = Provider<SyncEngine>((ref) {
   return SyncEngine(
     database: ref.watch(appDatabaseProvider),
     api: ref.watch(syncApiProvider),
+    conflictResolver: ref.watch(workoutCloseConflictResolverProvider),
   );
 });

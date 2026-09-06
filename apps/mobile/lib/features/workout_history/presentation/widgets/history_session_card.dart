@@ -118,20 +118,34 @@ class HistorySessionCard extends StatelessWidget {
     );
   }
 
-  /// Séance encore en file de synchronisation (ou en échec).
+  /// Séance encore en file de synchronisation, en échec, ou en conflit de
+  /// clôture (à trancher depuis le détail).
   Widget? _syncIndicator(LocalSyncState state) {
-    if (state == LocalSyncState.synced) {
+    final (label, icon, color) = switch (state) {
+      LocalSyncState.synced => (null, null, null),
+      LocalSyncState.pending => (
+        'Synchronisation en attente',
+        AppIcons.offline,
+        AppColors.darkTextTertiary,
+      ),
+      LocalSyncState.failed => (
+        'Synchronisation en échec',
+        AppIcons.error,
+        AppColors.danger,
+      ),
+      LocalSyncState.conflict => (
+        'Conflit de synchronisation, à trancher',
+        AppIcons.error,
+        AppColors.warning,
+      ),
+    };
+    if (label == null) {
       return null;
     }
-    final failed = state == LocalSyncState.failed;
 
     return Semantics(
-      label: failed ? 'Synchronisation en échec' : 'Synchronisation en attente',
-      child: Icon(
-        failed ? AppIcons.error : AppIcons.offline,
-        size: 16,
-        color: failed ? AppColors.danger : AppColors.darkTextTertiary,
-      ),
+      label: label,
+      child: Icon(icon, size: 16, color: color),
     );
   }
 }

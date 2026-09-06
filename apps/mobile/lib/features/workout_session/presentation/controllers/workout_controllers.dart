@@ -71,6 +71,17 @@ class WorkoutActions {
 
   Future<void> abandon(String sessionId) =>
       _ref.read(workoutRepositoryProvider).abandonWorkout(sessionId);
+
+  /// Tranche une séance en conflit de clôture, puis recharge son détail.
+  Future<void> resolveConflict(
+    String sessionId,
+    WorkoutConflictResolution resolution,
+  ) async {
+    await _ref
+        .read(workoutRepositoryProvider)
+        .resolveCloseConflict(sessionId, resolution);
+    _ref.invalidate(workoutDetailProvider(sessionId));
+  }
 }
 
 final workoutActionsProvider = Provider<WorkoutActions>(WorkoutActions.new);

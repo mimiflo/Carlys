@@ -113,7 +113,9 @@ class TemplateCard extends StatelessWidget {
       LocalSyncState.pending => const [
         AppPill(label: 'En attente', tone: AppPillTone.primary),
       ],
-      LocalSyncState.failed => const [
+      // Un modèle ne se clôture pas : l'état de conflit ne le concerne pas,
+      // mais l'énumération est partagée avec les séances.
+      LocalSyncState.failed || LocalSyncState.conflict => const [
         AppPill(label: 'Non synchronisé', tone: AppPillTone.primary),
       ],
     };

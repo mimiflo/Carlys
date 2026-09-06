@@ -59,7 +59,7 @@ class WorkoutSessionDownloader {
       if (await _wouldBreakSingleActiveRule(detail)) {
         continue;
       }
-      await _write(detail);
+      await write(detail);
       restored++;
     }
     return restored;
@@ -141,9 +141,16 @@ class WorkoutSessionDownloader {
     return _plans.hasUnacknowledgedItems(sessionId);
   }
 
-  /// Une transaction par séance : une coupure au milieu laisse une base
-  /// cohérente, simplement incomplète — le prochain appel reprendra.
-  Future<void> _write(RemoteWorkoutSession session) {
+  /// Écrit la version serveur d'une séance (séance, séries, plan), marquée
+  /// `synced`. Une transaction par séance : une coupure au milieu laisse
+  /// une base cohérente, simplement incomplète — le prochain appel
+  /// reprendra.
+  ///
+  /// Sert au rapatriement (où la séance n'a aucune modification locale) et
+  /// à la résolution d'un conflit de clôture, où une série encore non
+  /// acquittée peut exister : elle est **conservée** — seules les séries
+  /// que le serveur connaît déjà sont remplacées par sa liste.
+  Future<void> write(RemoteWorkoutSession session) {
     return _db.transaction(() async {
       await _db
           .into(_db.localWorkoutSessions)
@@ -163,12 +170,16 @@ class WorkoutSessionDownloader {
           );
 
       // Le serveur ne sert que les séries vivantes : remplacer d'un bloc
-      // reproduit donc exactement son état, suppressions comprises.
-      await (_db.delete(
-        _db.localWorkoutSets,
-      )..where((row) => row.sessionId.equals(session.id))).go();
+      // celles qu'il connaît reproduit exactement son état, suppressions
+      // comprises. Une série jamais acquittée n'est pas à lui : elle reste.
+      await (_db.delete(_db.localWorkoutSets)..where(
+            (row) =>
+                row.sessionId.equals(session.id) &
+                row.syncStatus.equals('synced'),
+          ))
+          .go();
       await _db.batch(
-        (batch) => batch.insertAll(
+        (batch) => batch.insertAllOnConflictUpdate(
           _db.localWorkoutSets,
           session.sets.map((set) => _setRow(session.id, set)),
         ),
