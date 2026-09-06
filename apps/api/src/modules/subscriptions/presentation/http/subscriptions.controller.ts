@@ -1,4 +1,5 @@
 import {
+  type BillingPortalSession,
   type CheckoutSession,
   type EntitlementsResponse,
   type SubscriptionMe,
@@ -47,6 +48,20 @@ export class SubscriptionsController {
     @Body() body: CreateCheckoutDto,
   ): Promise<CheckoutSession> {
     return this.subscriptions.createCheckout(user.userId, body.offerId, body.id);
+  }
+
+  @Post('subscriptions/portal')
+  @ApiOperation({
+    summary: 'Ouvre le portail de gestion de l’abonnement (Stripe Billing Portal)',
+    description:
+      'Résiliation, moyen de paiement, factures. Réponse { url } à ouvrir dans ' +
+      'le navigateur, retour vers ${PUBLIC_APP_URL}/abonnement. 409 si aucun ' +
+      'client Stripe n’est connu pour le compte (plan gratuit, ou abonnement ' +
+      'passé par un magasin d’applications) ; 503 tant que le paiement n’est ' +
+      'pas configuré.',
+  })
+  portal(@CurrentUser() user: AuthenticatedPrincipal): Promise<BillingPortalSession> {
+    return this.subscriptions.createPortal(user.userId);
   }
 
   @Get('entitlements')

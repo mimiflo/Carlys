@@ -145,6 +145,7 @@ export class WebhooksService {
       currentPeriodEnd: secondsToDate(object.current_period_end),
       cancelAtPeriodEnd: object.cancel_at_period_end ?? false,
       trialEndsAt: secondsToDate(object.trial_end),
+      externalCustomerId: object.customer ?? null,
     });
     await this.entitlements.syncFromSubscription(subscription);
     return subscription.id;
@@ -182,6 +183,8 @@ export class WebhooksService {
       currentPeriodEnd: expiresAt,
       cancelAtPeriodEnd: status === 'CANCELED',
       trialEndsAt: event.period_type === 'TRIAL' ? expiresAt : null,
+      // Les magasins n'ont pas de portail Stripe : rien à retenir ici.
+      externalCustomerId: null,
     });
     await this.entitlements.syncFromSubscription(subscription);
     return subscription.id;

@@ -1,11 +1,17 @@
 import {
+  type BillingPortalSession,
   type CheckoutSession,
   type Subscription as SubscriptionContract,
   type SubscriptionMe,
   type SubscriptionOffersResponse,
   subscriptionPlanSlugSchema,
 } from '@carlys/api-contracts';
-import { BadRequestException, Injectable, ServiceUnavailableException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { EntitlementsService } from './entitlements.service';
 import { MONTHLY_OFFER_ID, YEARLY_OFFER_ID, buildOfferCatalog } from './subscription-offers';
 import { AppConfigService } from '../../../config/app-config.service';
@@ -13,6 +19,7 @@ import {
   SubscriptionsRepository,
   type SubscriptionWithPlan,
 } from '../infrastructure/subscriptions.repository';
+import { StripeBillingPortalClient } from '../infrastructure/stripe-billing-portal.client';
 import { StripeCheckoutClient } from '../infrastructure/stripe-checkout.client';
 
 function presentSubscription(subscription: SubscriptionWithPlan): SubscriptionContract {
@@ -37,6 +44,7 @@ export class SubscriptionsService {
     private readonly entitlements: EntitlementsService,
     private readonly config: AppConfigService,
     private readonly checkout: StripeCheckoutClient,
+    private readonly portal: StripeBillingPortalClient,
   ) {}
 
   /** Plan effectif — décidé côté serveur, le client ne fait qu'afficher. */
@@ -78,6 +86,9 @@ export class SubscriptionsService {
    * signé qui l'accorde, une fois le paiement réellement encaissé. Une
    * application qui s'octroierait Premium au retour de la page de paiement
    * suffirait à contourner la caisse.
+   *
+   * Un client Stripe déjà connu (abonnement passé, appris par webhook) est
+   * réutilisé : factures et portail de gestion restent sous un seul client.
    */
   async createCheckout(userId: string, offerId: string, id: string): Promise<CheckoutSession> {
     const priceId = this.priceFor(offerId);
@@ -88,13 +99,32 @@ export class SubscriptionsService {
       throw new ServiceUnavailableException('Le paiement n’est pas configuré.');
     }
 
+    const customerId = await this.subscriptions.stripeCustomerIdOf(userId);
     const url = await this.checkout.createSession({
       userId,
       priceId,
       trialDays: this.config.subscriptionTrialDays,
       idempotencyKey: id,
+      ...(customerId === null ? {} : { customerId }),
     });
     return { url, provider: 'STRIPE' };
+  }
+
+  /**
+   * Portail de gestion Stripe : résiliation, moyen de paiement, factures.
+   * Il faut un client Stripe, appris par webhook au premier paiement : sans
+   * lui il n'y a rien à gérer (compte gratuit, ou abonnement passé par un
+   * magasin d'applications), c'est un conflit d'état (409), pas une panne.
+   */
+  async createPortal(userId: string): Promise<BillingPortalSession> {
+    const customerId = await this.subscriptions.stripeCustomerIdOf(userId);
+    if (customerId === null) {
+      throw new ConflictException('Aucun abonnement Stripe à gérer.');
+    }
+    if (!this.portal.isConfigured) {
+      throw new ServiceUnavailableException('Le paiement n’est pas configuré.');
+    }
+    return { url: await this.portal.createSession({ customerId }) };
   }
 
   private priceFor(offerId: string): string | undefined {

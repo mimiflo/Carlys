@@ -93,6 +93,18 @@ export const checkoutSessionSchema = z.object({
 export type CheckoutSession = z.infer<typeof checkoutSessionSchema>;
 
 /**
+ * POST /subscriptions/portal — ouvre le portail de gestion de l'abonnement
+ * (Stripe Billing Portal : résiliation, moyen de paiement, factures).
+ * `409` si aucun client Stripe n'est connu pour le compte (plan gratuit, ou
+ * abonnement passé par un magasin d'applications).
+ */
+export const billingPortalSessionSchema = z.object({
+  /** Portail à ouvrir dans le navigateur ; retour vers la page Abonnement. */
+  url: z.string().url(),
+});
+export type BillingPortalSession = z.infer<typeof billingPortalSessionSchema>;
+
+/**
  * Clés d'entitlements réservées (source de vérité : docs/product).
  * Le serveur DÉCIDE, le client ne fait qu'afficher.
  */

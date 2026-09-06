@@ -1,8 +1,9 @@
 import { Module } from '@nestjs/common';
 import { EntitlementsService } from './application/entitlements.service';
 import { SubscriptionsService } from './application/subscriptions.service';
-import { SubscriptionsRepository } from './infrastructure/subscriptions.repository';
+import { StripeBillingPortalClient } from './infrastructure/stripe-billing-portal.client';
 import { StripeCheckoutClient } from './infrastructure/stripe-checkout.client';
+import { SubscriptionsRepository } from './infrastructure/subscriptions.repository';
 import { SubscriptionsController } from './presentation/http/subscriptions.controller';
 
 @Module({
@@ -12,6 +13,7 @@ import { SubscriptionsController } from './presentation/http/subscriptions.contr
     EntitlementsService,
     SubscriptionsRepository,
     StripeCheckoutClient,
+    StripeBillingPortalClient,
   ],
   exports: [EntitlementsService, SubscriptionsRepository],
 })

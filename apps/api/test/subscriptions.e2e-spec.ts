@@ -11,8 +11,10 @@ process.env.STRIPE_SECRET_KEY ??= 'sk_test_e2e_0123456789abcdef';
 process.env.STRIPE_PRICE_MONTHLY ??= 'price_carlys_premium_monthly';
 
 import {
+  type ApiErrorEnvelope,
   type ApiSuccessEnvelope,
   type AuthResult,
+  type BillingPortalSession,
   type CheckoutSession,
   type EntitlementsResponse,
   type SubscriptionMe,
@@ -28,6 +30,10 @@ import { type App } from 'supertest/types';
 import { AppModule } from '../src/app/app.module';
 import { configureApp } from '../src/app/configure-app';
 import { MONTHLY_OFFER_ID } from '../src/modules/subscriptions/application/subscription-offers';
+import {
+  type BillingPortalRequest,
+  StripeBillingPortalClient,
+} from '../src/modules/subscriptions/infrastructure/stripe-billing-portal.client';
 import {
   type CheckoutRequest,
   StripeCheckoutClient,
@@ -55,8 +61,11 @@ describe('Abonnements (e2e)', () => {
 
   const eventPrefix = `evt-e2e-${randomUUID()}`;
   const stripeSubscriptionId = `sub_e2e_${randomUUID()}`;
+  /** Le client Stripe que le webhook apporte : réutilisé au paiement, requis au portail. */
+  const stripeCustomerId = `cus_e2e_${randomUUID().slice(0, 8)}`;
 
   const data = <T>(body: unknown): T => (body as ApiSuccessEnvelope<T>).data;
+  const errorOf = (body: unknown): ApiErrorEnvelope['error'] => (body as ApiErrorEnvelope).error;
 
   const stripeSign = (payload: string): string => {
     const timestamp = Math.floor(Date.now() / 1_000);
@@ -80,6 +89,7 @@ describe('Abonnements (e2e)', () => {
       data: {
         object: {
           id: stripeSubscriptionId,
+          customer: stripeCustomerId,
           metadata: { userId },
           items: { data: [{ price: { id: 'price_carlys_premium_monthly' } }] },
           ...object,
@@ -104,6 +114,15 @@ describe('Abonnements (e2e)', () => {
     },
   };
 
+  const portalCalls: BillingPortalRequest[] = [];
+  const fakePortal: Pick<StripeBillingPortalClient, 'isConfigured' | 'createSession'> = {
+    isConfigured: true,
+    createSession: (portal) => {
+      portalCalls.push(portal);
+      return Promise.resolve(`https://billing.stripe.test/${portal.customerId}`);
+    },
+  };
+
   beforeAll(async () => {
     prisma = new PrismaClient({ datasourceUrl: process.env.DATABASE_URL });
     const moduleFixture = await Test.createTestingModule({
@@ -111,6 +130,8 @@ describe('Abonnements (e2e)', () => {
     })
       .overrideProvider(StripeCheckoutClient)
       .useValue(fakeCheckout)
+      .overrideProvider(StripeBillingPortalClient)
+      .useValue(fakePortal)
       .compile();
     app = moduleFixture.createNestApplication<NestExpressApplication>();
     configureApp(app as NestExpressApplication);
@@ -381,5 +402,35 @@ describe('Abonnements (e2e)', () => {
       (await authed(accessToken).get('/api/v1/subscriptions/me').expect(200)).body,
     );
     expect(me.isPremium).toBe(false);
+  });
+
+  it('checkout : le client Stripe appris par webhook est réutilisé ; sans lui, rien n’est passé', async () => {
+    // Le premier compte a reçu des webhooks Stripe porteurs de `customer`.
+    await authed(accessToken)
+      .post('/api/v1/subscriptions/checkout')
+      .send({ id: randomUUID(), offerId: MONTHLY_OFFER_ID })
+      .expect(201);
+    expect(checkoutCalls.at(-1)?.customerId).toBe(stripeCustomerId);
+
+    // Le second n'a connu que RevenueCat : premier achat Stripe, Stripe crée le client.
+    await authed(rcAccessToken)
+      .post('/api/v1/subscriptions/checkout')
+      .send({ id: randomUUID(), offerId: MONTHLY_OFFER_ID })
+      .expect(201);
+    expect(checkoutCalls.at(-1)).not.toHaveProperty('customerId');
+  });
+
+  it('portail : 409 sans client Stripe, { url } avec, jamais sans jeton', async () => {
+    await request(app.getHttpServer()).post('/api/v1/subscriptions/portal').expect(401);
+
+    const refused = await authed(rcAccessToken).post('/api/v1/subscriptions/portal').expect(409);
+    expect(errorOf(refused.body).code).toBe('CONFLICT');
+    expect(portalCalls).toHaveLength(0);
+
+    const session = data<BillingPortalSession>(
+      (await authed(accessToken).post('/api/v1/subscriptions/portal').expect(201)).body,
+    );
+    expect(session).toEqual({ url: `https://billing.stripe.test/${stripeCustomerId}` });
+    expect(portalCalls).toEqual([{ customerId: stripeCustomerId }]);
   });
 });

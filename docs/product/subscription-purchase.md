@@ -120,12 +120,45 @@ réels (paiement chez Stripe, gestion depuis le portail) au lieu d'un
 catalogue de prix absent et d'une résiliation « depuis le compte Stripe »
 que rien ne reliait.
 
+## Un seul client Stripe par compte
+
+Le webhook `customer.subscription.*` porte l'identifiant du client Stripe
+(`customer`, `cus_…`) : il est retenu sur l'abonnement
+(`Subscription.externalCustomerId`, jamais effacé par un événement qui ne le
+porterait pas). Au paiement suivant, `POST /subscriptions/checkout` le passe
+à Stripe (`customer`) au lieu d'en laisser créer un second : factures,
+moyens de paiement et portail restent sous un seul client. Au premier achat,
+rien n'est passé et Stripe le crée.
+
+## Gérer son abonnement : le portail
+
+`POST /api/v1/subscriptions/portal` ouvre une session du **Stripe Billing
+Portal** et répond `{ data: { url } }` : résilier, changer de carte, lire ses
+factures, tout se fait chez Stripe, qui renvoie ensuite vers
+`${PUBLIC_APP_URL}/abonnement`. Même patron que la page de paiement (un
+`POST` en formulaire, une adresse à ouvrir), même client HTTP
+(`stripe-form-request.ts`).
+
+| Cas | Réponse |
+| --- | ------- |
+| Client Stripe connu (un webhook l'a apporté) | `201` `{ url }` |
+| Aucun client Stripe (plan gratuit, abonnement passé par un magasin) | `409` : il n'y a rien à gérer ici, ce n'est pas une panne |
+| Paiement non configuré côté serveur | `503` |
+| Stripe refuse | `502`, message neutre : le détail reste chez le fournisseur |
+
+Le mobile appelle ce contrat tel quel (« Gérer mon abonnement », visible en
+Premium) et ouvre l'adresse dans le navigateur. Le portail ne modifie jamais
+un droit directement : ce qu'il change chez Stripe revient par webhook, comme
+un achat.
+
 ## Découpage
 
 | Fichier | Rôle |
 | ------- | ---- |
 | `application/subscription-offers.ts` | Le barème du catalogue, fonction PURE |
-| `infrastructure/stripe-checkout.client.ts` | Le SEUL fichier qui connaisse l'API de Stripe |
+| `infrastructure/stripe-form-request.ts` | Le SEUL appel HTTP vers l'API de Stripe : formulaire, adresse en retour, erreurs neutres |
+| `infrastructure/stripe-checkout.client.ts` | La page de paiement (Checkout), avec réutilisation du client |
+| `infrastructure/stripe-billing-portal.client.ts` | Le portail de gestion (Billing Portal) |
 | `presentation/widgets/subscription_purchase_panel.dart` | Les offres et le bouton |
 | `presentation/controllers/subscription_controllers.dart` | L'action d'achat, testable sans navigateur |
 | `presentation/controllers/subscription_resume_refresh.dart` | La relecture au retour, et sa relance unique |
@@ -139,9 +172,23 @@ lancer un navigateur.
 ## Pas de SDK Stripe
 
 Le dépôt vérifie déjà les signatures de webhook à la main
-(`stripe-signature.util.ts`), et une seule route de l'API Stripe est appelée.
-Ajouter la bibliothèque complète pour un `POST` en formulaire coûterait une
+(`stripe-signature.util.ts`), et deux routes de l'API Stripe sont appelées
+(page de paiement, portail), toutes deux sur le même schéma. Ajouter la
+bibliothèque complète pour deux `POST` en formulaire coûterait une
 dépendance de plus sans rien simplifier.
+
+## Couverture
+
+- Unitaires : `subscriptions.service.spec.ts` (offres vers leur prix, clé
+  d'idempotence, refus sans appel, 503, aucun droit accordé, client réutilisé
+  quand il est connu, portail : 409 sans client, 503 sans configuration,
+  adresse rendue), `stripe-checkout.client.spec.ts` et
+  `stripe-billing-portal.client.spec.ts` (formulaires exacts, en-têtes, adresses
+  de retour, 502 au message neutre).
+- E2e (`test/subscriptions.e2e-spec.ts`) : le client Stripe est remplacé par
+  un faux (override du provider, clé et prix factices) ; catalogue achetable,
+  refus des corps invalides, session ouverte sans que le plan change, client
+  réutilisé après un webhook, portail en 409 puis en `{ url }`.
 
 ## Ce qui reste à faire avant les magasins d'applications
 

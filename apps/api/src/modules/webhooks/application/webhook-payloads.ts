@@ -13,6 +13,8 @@ export const stripeEventSchema = z.object({
     object: z.object({
       id: z.string().min(1),
       status: z.string().optional(),
+      /** Client Stripe (`cus_…`) : réutilisé au paiement, requis par le portail. */
+      customer: z.string().optional(),
       cancel_at_period_end: z.boolean().optional(),
       current_period_start: z.number().optional(),
       current_period_end: z.number().optional(),

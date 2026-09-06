@@ -21,6 +21,8 @@ export interface UpsertSubscriptionInput {
   currentPeriodEnd: Date | null;
   cancelAtPeriodEnd: boolean;
   trialEndsAt: Date | null;
+  /** Client chez le fournisseur ; `null` quand l'événement ne le porte pas. */
+  externalCustomerId: string | null;
 }
 
 export interface RecordEventResult {
@@ -65,9 +67,24 @@ export class SubscriptionsRepository {
         currentPeriodEnd: data.currentPeriodEnd,
         cancelAtPeriodEnd: data.cancelAtPeriodEnd,
         trialEndsAt: data.trialEndsAt,
+        // Un client connu ne s'oublie pas : un événement sans `customer`
+        // ne doit pas effacer ce qu'un précédent a appris.
+        ...(data.externalCustomerId === null
+          ? {}
+          : { externalCustomerId: data.externalCustomerId }),
       },
       include: { plan: true },
     });
+  }
+
+  /** Client Stripe connu pour ce compte (le plus récent), ou `null`. */
+  async stripeCustomerIdOf(userId: string): Promise<string | null> {
+    const subscription = await this.prisma.subscription.findFirst({
+      where: { userId, provider: 'STRIPE', externalCustomerId: { not: null } },
+      orderBy: { updatedAt: 'desc' },
+      select: { externalCustomerId: true },
+    });
+    return subscription?.externalCustomerId ?? null;
   }
 
   // ── Journal des webhooks (append-only, idempotent) ──────────────────────

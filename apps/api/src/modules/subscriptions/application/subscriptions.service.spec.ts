@@ -1,5 +1,10 @@
-import { BadRequestException, ServiceUnavailableException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { type AppConfigService } from '../../../config/app-config.service';
+import { type StripeBillingPortalClient } from '../infrastructure/stripe-billing-portal.client';
 import { type StripeCheckoutClient } from '../infrastructure/stripe-checkout.client';
 import { type SubscriptionsRepository } from '../infrastructure/subscriptions.repository';
 import { type EntitlementsService } from './entitlements.service';
@@ -41,20 +46,42 @@ function buildCheckout(configured = true): CheckoutStub {
   return { isConfigured: configured, createSession: jest.fn().mockResolvedValue(SESSION_URL) };
 }
 
-const repositoryStub = { latestSubscription: jest.fn().mockResolvedValue(null) };
+const PORTAL_URL = 'https://billing.stripe.com/p/session/test_123';
+const CUSTOMER_ID = 'cus_connu';
+
+interface PortalStub {
+  isConfigured: boolean;
+  createSession: jest.Mock;
+}
+
+function buildPortal(configured = true): PortalStub {
+  return { isConfigured: configured, createSession: jest.fn().mockResolvedValue(PORTAL_URL) };
+}
+
+const repositoryStub = {
+  latestSubscription: jest.fn().mockResolvedValue(null),
+  // Par défaut, aucun client Stripe connu : premier achat.
+  stripeCustomerIdOf: jest.fn().mockResolvedValue(null),
+};
 const entitlementsStub = { hasEntitlement: jest.fn().mockResolvedValue(false) };
 
-function buildService(config: ConfigStub, checkout: CheckoutStub): SubscriptionsService {
+function buildService(
+  config: ConfigStub,
+  checkout: CheckoutStub,
+  portal: PortalStub = buildPortal(),
+): SubscriptionsService {
   return new SubscriptionsService(
     repositoryStub as unknown as SubscriptionsRepository,
     entitlementsStub as unknown as EntitlementsService,
     config as unknown as AppConfigService,
     checkout as unknown as StripeCheckoutClient,
+    portal as unknown as StripeBillingPortalClient,
   );
 }
 
 beforeEach(() => {
   repositoryStub.latestSubscription.mockClear();
+  repositoryStub.stripeCustomerIdOf.mockReset().mockResolvedValue(null);
   entitlementsStub.hasEntitlement.mockClear();
 });
 
@@ -121,6 +148,26 @@ describe('SubscriptionsService — chemin d’achat', () => {
     expect(entitlementsStub.hasEntitlement).not.toHaveBeenCalled();
   });
 
+  it('au premier achat, aucun client n’est passé : Stripe le crée', async () => {
+    const checkout = buildCheckout();
+    await buildService(buildConfig(), checkout).createCheckout(USER, MONTHLY_OFFER_ID, DEVICE_ID);
+
+    const [firstRequest] = checkout.createSession.mock.calls[0] as [Record<string, unknown>];
+    expect(firstRequest).not.toHaveProperty('customerId');
+  });
+
+  it('un client Stripe déjà connu (appris par webhook) est réutilisé, jamais recréé', async () => {
+    repositoryStub.stripeCustomerIdOf.mockResolvedValue(CUSTOMER_ID);
+    const checkout = buildCheckout();
+
+    await buildService(buildConfig(), checkout).createCheckout(USER, MONTHLY_OFFER_ID, DEVICE_ID);
+
+    expect(repositoryStub.stripeCustomerIdOf).toHaveBeenCalledWith(USER);
+    expect(checkout.createSession).toHaveBeenCalledWith(
+      expect.objectContaining({ customerId: CUSTOMER_ID }),
+    );
+  });
+
   it('une erreur du client Stripe remonte telle quelle : rien n’est masqué en succès', async () => {
     const checkout = buildCheckout();
     checkout.createSession.mockRejectedValue(new Error('Stripe indisponible'));
@@ -128,6 +175,43 @@ describe('SubscriptionsService — chemin d’achat', () => {
     await expect(
       buildService(buildConfig(), checkout).createCheckout(USER, MONTHLY_OFFER_ID, DEVICE_ID),
     ).rejects.toThrow('Stripe indisponible');
+  });
+});
+
+describe('SubscriptionsService — portail de gestion', () => {
+  it('sans client Stripe connu : 409, il n’y a rien à gérer, sans appel', async () => {
+    const portal = buildPortal();
+    await expect(
+      buildService(buildConfig(), buildCheckout(), portal).createPortal(USER),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(portal.createSession).not.toHaveBeenCalled();
+  });
+
+  it('le 409 prime sur la configuration : sans client, pas de 503 trompeur', async () => {
+    const portal = buildPortal(false);
+    await expect(
+      buildService(buildConfig(), buildCheckout(), portal).createPortal(USER),
+    ).rejects.toBeInstanceOf(ConflictException);
+  });
+
+  it('client connu mais paiement non configuré : 503', async () => {
+    repositoryStub.stripeCustomerIdOf.mockResolvedValue(CUSTOMER_ID);
+    const portal = buildPortal(false);
+
+    await expect(
+      buildService(buildConfig(), buildCheckout(), portal).createPortal(USER),
+    ).rejects.toBeInstanceOf(ServiceUnavailableException);
+    expect(portal.createSession).not.toHaveBeenCalled();
+  });
+
+  it('client connu : le portail s’ouvre pour LUI et la réponse ne porte que l’adresse', async () => {
+    repositoryStub.stripeCustomerIdOf.mockResolvedValue(CUSTOMER_ID);
+    const portal = buildPortal();
+
+    const session = await buildService(buildConfig(), buildCheckout(), portal).createPortal(USER);
+
+    expect(session).toEqual({ url: PORTAL_URL });
+    expect(portal.createSession).toHaveBeenCalledWith({ customerId: CUSTOMER_ID });
   });
 });
 

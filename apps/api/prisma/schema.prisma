@@ -721,6 +721,9 @@ model Subscription {
   currentPeriodEnd       DateTime?
   cancelAtPeriodEnd      Boolean            @default(false)
   trialEndsAt            DateTime?
+  /// Client chez le fournisseur (Stripe : `cus_…`), appris par webhook :
+  /// réutilisé au prochain paiement, requis pour le portail de gestion.
+  externalCustomerId     String?
   createdAt              DateTime           @default(now())
   updatedAt              DateTime           @updatedAt
 
