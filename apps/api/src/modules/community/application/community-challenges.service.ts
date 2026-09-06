@@ -1,6 +1,7 @@
 import { type CommunityChallenge as ChallengeContract } from '@carlys/api-contracts';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
+import { buildMonthlyChallenges } from '../domain/challenge-catalog';
 import {
   type ChallengeWithStats,
   CommunityChallengesRepository,
@@ -31,8 +32,34 @@ export class CommunityChallengesService {
   ) {}
 
   async listChallenges(userId: string): Promise<ChallengeContract[]> {
-    const challenges = await this.challenges.listOpenChallenges(new Date());
+    const now = new Date();
+    await this.ensureMonthlyChallenges(now);
+    const challenges = await this.challenges.listOpenChallenges(now);
     return challenges.map((challenge) => presentChallenge(challenge, userId));
+  }
+
+  /**
+   * Création PARESSEUSE et idempotente du jeu du mois : dès qu'une lecture
+   * trouve le catalogue incomplet pour le mois courant, ce qui manque est
+   * écrit (un mois vierge, ou un catalogue enrichi en cours de mois). Pas de
+   * tâche planifiée à surveiller ; l'unicité (slug, mois) et `skipDuplicates`
+   * absorbent les lectures concurrentes. Un mois déjà servi ne coûte qu'un
+   * comptage.
+   */
+  private async ensureMonthlyChallenges(now: Date): Promise<void> {
+    const seeds = buildMonthlyChallenges(now);
+    const month = seeds[0]?.month;
+    if (month === undefined) {
+      return; // Catalogue vide : rien à matérialiser.
+    }
+    const present = await this.challenges.countForMonth(
+      month,
+      seeds.map((seed) => seed.slug),
+    );
+    if (present >= seeds.length) {
+      return;
+    }
+    await this.challenges.createMonthlyChallenges(seeds);
   }
 
   async joinChallenge(userId: string, challengeId: string): Promise<ChallengeContract> {

@@ -1082,16 +1082,21 @@ enum ChallengeKind {
   CULTURE
 }
 
-/// Défi COLLECTIF, créé par l'équipe (seed puis admin) — jamais par un
-/// utilisateur. La progression est la somme des contributions rapportée à
+/// Défi COLLECTIF — jamais créé par un utilisateur. Le jeu du mois est
+/// matérialisé PARESSEUSEMENT à la première lecture d'un mois sans défi,
+/// depuis le catalogue en code (`community/domain/challenge-catalog.ts`) :
+/// pas de tâche planifiée, et l'unicité (slug, mois) absorbe les lectures
+/// concurrentes. La progression est la somme des contributions rapportée à
 /// l'objectif : la barre raconte l'effort commun.
 model CommunityChallenge {
   id          String        @id @default(uuid()) @db.Uuid
-  slug        String        @unique
+  slug        String
+  /// Mois du défi, `YYYY-MM` en UTC : la clé d'idempotence du jeu du mois.
+  month       String
   kind        ChallengeKind
   title       String
   description String
-  /// Objectif collectif (séances, répétitions, bonnes réponses…).
+  /// Objectif collectif (séances, bonnes réponses…).
   target      Int
   startsAt    DateTime      @default(now())
   endsAt      DateTime
@@ -1100,6 +1105,8 @@ model CommunityChallenge {
 
   participations ChallengeParticipation[]
 
+  @@unique([slug, month])
+  @@index([month])
   @@index([endsAt])
 }
 

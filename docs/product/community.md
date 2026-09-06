@@ -48,7 +48,7 @@ l'application ne dépend d'elle.
 | --- | --- |
 | `Friendship` | UNE ligne par paire ; `PENDING` → `ACCEPTED`/`DECLINED`, direction conservée (qui a demandé). La symétrie est imposée par le service. |
 | `Encouragement` | Mot d'un ami ; le nom de l'expéditeur est lu au moment de servir (nom COURANT, pas dénormalisé). |
-| `CommunityChallenge` | Défi collectif créé par l'équipe (seed puis admin), `SPORT` ou `CULTURE`, avec `target` et fenêtre `startsAt`/`endsAt`. |
+| `CommunityChallenge` | Défi collectif du MOIS (`month`, `YYYY-MM` UTC), `SPORT` ou `CULTURE`, avec `target` et fenêtre `startsAt`/`endsAt` ; unique par `(slug, month)`, matérialisé paresseusement depuis le catalogue en code, jamais créé par un utilisateur. |
 | `ChallengeParticipation` | Participation + `contribution` individuelle à l'objectif. |
 | `CommunityPreference` | `sharesProgress` (absence = partagé, défaut du modèle). |
 | `CommunityBlock` | Blocage unilatéral `(blockerId, blockedId)`, unique par paire orientée ; consulté dans les DEUX sens partout où deux personnes se rencontrent. |
@@ -66,7 +66,7 @@ l'application ne dépend d'elle.
 | POST | `/requests` | Demander par e-mail exact OU `friendCode` (exactement un des deux) — `202` opaque, refus opposable 30 jours, 10 demandes/min par adresse |
 | GET | `/friend-codes/:code` | Nom du porteur d'un code (toutes formes humaines acceptées) — `404` sinon |
 | POST | `/requests/:id/accept` · `/decline` | Répondre (destinataire uniquement) |
-| GET | `/challenges` | Défis ouverts, progression collective incluse |
+| GET | `/challenges` | Défis ouverts, progression collective incluse ; crée le jeu du mois à la première lecture (voir ci-dessous) |
 | POST | `/challenges/:id/join` | Rejoindre (idempotent) |
 | DELETE | `/challenges/:id/join` | Quitter (idempotent) |
 | GET · PATCH | `/profile` | Ma préférence `sharesProgress` + mon `friendCode` |
@@ -108,6 +108,31 @@ Cas particuliers du service :
   découpés dans le FUSEAU du propriétaire (`UserProfile.timezone`), série
   d'hier non brisée tant que la journée en cours n'est pas finie
   (`streak.calculator.ts`, testé fuseau par fuseau).
+
+## Les défis du mois
+
+Les défis étaient créés par le seed avec une date de fin fixe : un mois
+après, la liste restait vide pour toujours, sans écran d'administration ni
+tâche de fond pour la regarnir. Désormais le jeu du mois se crée **tout
+seul, à la lecture** :
+
+- Le catalogue vit dans le code (`modules/community/domain/challenge-catalog.ts`),
+  pas dans le seed : il est versionné, testé, et identique partout.
+- `GET /community/challenges` compte les défis du catalogue déjà présents
+  pour le mois courant (par slug : un défi posé à la main dans le même mois
+  ne compte pas) ; s'il en manque, il écrit le catalogue daté de ce mois
+  (`startsAt` = le 1er à minuit **UTC**, `endsAt` = le 1er du mois
+  suivant), puis liste. Un catalogue enrichi en cours de mois se complète
+  donc tout seul. Les dates du dépôt sont en UTC ; le calendrier collectif
+  l'est aussi, pour que tout le monde voie le même défi finir au même
+  instant.
+- L'unicité `(slug, month)` et `createMany({ skipDuplicates })` absorbent
+  les lectures concurrentes : deux premières lectures simultanées écrivent
+  chacune ce qui manque, jamais deux fois la même ligne. **Pas de cron**, rien
+  à surveiller : un mois déjà servi ne coûte qu'un comptage.
+- Les objectifs sont exprimés dans l'unité réellement comptée : une séance
+  terminée (`SPORT`), une première bonne réponse par leçon et par jour
+  (`CULTURE`).
 
 ## Contribution des séances aux défis
 
@@ -172,6 +197,10 @@ simplement perdue (la barre est collective, pas comptable).
   résolution auditée côté admin, `403` sans `community:moderate`.
 - Unitaires API, modération : garde-fous des blocages et signalements,
   doublon ouvert, nettoyage des précisions, audit de la résolution, pagination.
+- Défis du mois : catalogue (fenêtre UTC, passage d'année, slugs uniques,
+  textes visibles sans tiret cadratin), service (création AVANT la liste sur
+  un mois vierge, rien sur un mois servi) ; e2e : cinq lectures concurrentes
+  d'un mois vierge produisent un seul jeu, une lecture de plus ne recrée rien.
 - Widgets mobile (`test/features/community/`) : démo complète, états
   erreur/vide/chargement, acceptation de demande, ajout opaque, réglage de
   partage.

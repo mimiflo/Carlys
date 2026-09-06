@@ -16,7 +16,6 @@ import { EQUIPMENT, EXERCISES, MUSCLE_GROUPS } from './catalog';
 import { seedExerciseMedia } from './seed-media';
 import {
   BillingPeriod,
-  ChallengeKind,
   ExerciseDifficulty,
   ExerciseMuscleRole,
   ExerciseType,
@@ -278,53 +277,6 @@ async function seedDevUsers(): Promise<void> {
   }
 }
 
-/**
- * Défis communautaires de lancement — collectifs, fenêtres GLISSANTES depuis
- * le seed (un défi expiré au premier lancement ne montrerait rien).
- * Idempotent par slug ; `endsAt` est repoussé à chaque seed de développement.
- */
-async function seedCommunityChallenges(): Promise<void> {
-  const now = Date.now();
-  const inDays = (days: number): Date => new Date(now + days * 24 * 3_600_000);
-  const challenges = [
-    {
-      slug: 'squats-collectifs',
-      kind: ChallengeKind.SPORT,
-      title: '10 000 squats à plusieurs',
-      description:
-        'Le groupe additionne ses répétitions de squat jusqu’à 10 000 avant la fin du mois.',
-      target: 10_000,
-      endsAt: inDays(30),
-    },
-    {
-      slug: 'anatomie-haut-du-corps',
-      kind: ChallengeKind.CULTURE,
-      title: 'Qui connaît le mieux le haut du corps ?',
-      description:
-        'Cinq questions d’anatomie par jour pendant une semaine. Le meilleur score gagne.',
-      target: 35,
-      endsAt: inDays(7),
-    },
-    {
-      slug: 'constance-21-jours',
-      kind: ChallengeKind.SPORT,
-      title: '21 jours de constance',
-      description:
-        'Une activité par jour pendant trois semaines, quelle qu’elle soit. La série collective compte.',
-      target: 21,
-      endsAt: inDays(21),
-    },
-  ];
-  for (const challenge of challenges) {
-    const { slug, ...data } = challenge;
-    await prisma.communityChallenge.upsert({
-      where: { slug },
-      create: { slug, ...data },
-      update: data,
-    });
-  }
-}
-
 function mustGet(map: Map<string, string>, key: string): string {
   const value = map.get(key);
   if (value === undefined) {
@@ -339,7 +291,9 @@ async function main(): Promise<void> {
   await seedSubscriptionPlans();
   await seedAdministration();
   await seedDevUsers();
-  await seedCommunityChallenges();
+  // Pas de défis ici : le jeu du mois se crée tout seul à la première lecture
+  // de GET /community/challenges (catalogue en code, voir
+  // modules/community/domain/challenge-catalog.ts).
 
   const [exercises, groups, equipment] = await Promise.all([
     prisma.exercise.count(),

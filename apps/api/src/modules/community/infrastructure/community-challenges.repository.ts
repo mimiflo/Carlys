@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { type ChallengeParticipation, type CommunityChallenge, Prisma } from '@prisma/client';
 import { PrismaService } from '../../../database/prisma/prisma.service';
+import { type MonthlyChallengeSeed } from '../domain/challenge-catalog';
 
 export interface ChallengeWithStats extends CommunityChallenge {
   participations: Pick<ChallengeParticipation, 'userId' | 'contribution'>[];
@@ -12,6 +13,36 @@ export class CommunityChallengesRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   // ── Défis collectifs ────────────────────────────────────────────────────
+
+  /**
+   * Nombre de défis du CATALOGUE déjà matérialisés pour un mois (`YYYY-MM`).
+   * Filtré par slug : un défi posé à la main dans le même mois ne doit pas
+   * faire croire que le jeu du mois est là.
+   */
+  countForMonth(month: string, slugs: string[]): Promise<number> {
+    return this.prisma.communityChallenge.count({ where: { month, slug: { in: slugs } } });
+  }
+
+  /**
+   * Écrit le jeu du mois. `skipDuplicates` s'appuie sur l'unicité
+   * (slug, mois) : deux lectures concurrentes d'un mois vierge écrivent
+   * chacune ce qui manque, jamais deux fois la même ligne.
+   */
+  async createMonthlyChallenges(seeds: MonthlyChallengeSeed[]): Promise<void> {
+    await this.prisma.communityChallenge.createMany({
+      data: seeds.map((seed) => ({
+        slug: seed.slug,
+        month: seed.month,
+        kind: seed.kind,
+        title: seed.title,
+        description: seed.description,
+        target: seed.target,
+        startsAt: seed.startsAt,
+        endsAt: seed.endsAt,
+      })),
+      skipDuplicates: true,
+    });
+  }
 
   /** Défis dont la fenêtre n'est pas terminée, avec toutes les contributions. */
   listOpenChallenges(now: Date): Promise<ChallengeWithStats[]> {
