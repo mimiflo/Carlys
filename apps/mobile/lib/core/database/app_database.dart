@@ -32,6 +32,15 @@ class LocalWaterIntakes extends Table {
 }
 
 /// Séance locale — source de vérité immédiate de l'application.
+///
+/// Index `(status, started_at)` : la séance en cours, l'historique et la règle
+/// « au plus une séance active » filtrent toutes par statut, et l'historique
+/// se lit par date de début décroissante — sans lui, chaque émission du flux
+/// parcourait la table entière.
+@TableIndex(
+  name: 'idx_local_workout_sessions_status_started_at',
+  columns: {#status, #startedAt},
+)
 class LocalWorkoutSessions extends Table {
   /// UUID généré sur l'appareil, partagé avec le serveur.
   TextColumn get id => text()();
@@ -59,6 +68,11 @@ class LocalWorkoutSessions extends Table {
 }
 
 /// Série locale (append-only : jamais perdue, suppression logique).
+///
+/// Index `session_id` : toutes les lectures de séries partent d'une séance
+/// (jointures de l'historique et du détail, position de la prochaine série,
+/// garde-fou du rapatriement).
+@TableIndex(name: 'idx_local_workout_sets_session_id', columns: {#sessionId})
 class LocalWorkoutSets extends Table {
   TextColumn get id => text()();
   TextColumn get sessionId => text()();
@@ -148,6 +162,13 @@ class LocalTemplateSets extends Table {
 /// honore, et seuls les « passer » ont leur propre opération. C'est ce qui
 /// permet de reprendre sur un autre appareil une séance commencée ailleurs
 /// (docs/product/workout-templates.md, D5).
+///
+/// Index `session_id` : le plan se lit, s'acquitte et se purge toujours par
+/// séance, et la table grossit avec l'historique rapatrié.
+@TableIndex(
+  name: 'idx_local_session_plan_items_session_id',
+  columns: {#sessionId},
+)
 class LocalSessionPlanItems extends Table {
   TextColumn get id => text()();
   TextColumn get sessionId => text()();
@@ -178,6 +199,13 @@ class LocalSessionPlanItems extends Table {
 }
 
 /// File d'opérations de synchronisation (docs/synchronization/offline-first.md).
+///
+/// Index `(status, created_at)` : le drainage lit les opérations par statut,
+/// dans l'ordre d'écriture — exactement la forme de cet index.
+@TableIndex(
+  name: 'idx_sync_operations_status_created_at',
+  columns: {#status, #createdAt},
+)
 class SyncOperations extends Table {
   TextColumn get id => text()();
 
@@ -231,13 +259,17 @@ class AppDatabase extends _$AppDatabase {
   ///    les séries ;
   ///  - **3** — reprise multi-appareil : `syncStatus` sur les items de plan,
   ///    qui deviennent synchronisables ;
-  ///  - **4** — hydratation : une table locale du total quotidien.
+  ///  - **4** — hydratation : une table locale du total quotidien ;
+  ///  - **5** — index sur les colonnes que les requêtes réelles filtrent
+  ///    (statut + date des séances, séries et plan par séance, file par
+  ///    statut et ordre d'écriture).
   @override
-  int get schemaVersion => 4;
+  int get schemaVersion => 5;
 
-  /// Migration locale : les colonnes ajoutées sont toutes **nullables**, donc
-  /// la montée de version ne réécrit ni ne perd aucune donnée déjà saisie —
-  /// une séance en cours au moment de la mise à jour reste intacte.
+  /// Migration locale : les colonnes ajoutées sont toutes **nullables** et les
+  /// index se créent à côté des données, donc la montée de version ne réécrit
+  /// ni ne perd aucune donnée déjà saisie — une séance en cours au moment de
+  /// la mise à jour reste intacte.
   @override
   MigrationStrategy get migration => MigrationStrategy(
     onCreate: (migrator) => migrator.createAll(),
@@ -280,6 +312,14 @@ class AppDatabase extends _$AppDatabase {
         // Table neuve : rien à reprendre, l'hydratation commence
         // aujourd'hui. Aucune donnée existante n'est touchée.
         await migrator.createTable(localWaterIntakes);
+      }
+      if (from < 5) {
+        // Un index ne touche pas aux lignes : SQLite le construit à côté
+        // des données existantes, qui restent intactes.
+        await migrator.createIndex(idxLocalWorkoutSessionsStatusStartedAt);
+        await migrator.createIndex(idxLocalWorkoutSetsSessionId);
+        await migrator.createIndex(idxLocalSessionPlanItemsSessionId);
+        await migrator.createIndex(idxSyncOperationsStatusCreatedAt);
       }
     },
   );
