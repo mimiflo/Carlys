@@ -5,12 +5,18 @@ process.env.REDIS_URL ??= 'redis://localhost:6379';
 process.env.JWT_ACCESS_SECRET ??= 'secret-e2e-uniquement-32-caracteres-minimum';
 process.env.STRIPE_WEBHOOK_SECRET ??= 'whsec_e2e_stripe_0123456789';
 process.env.REVENUECAT_WEBHOOK_SECRET ??= 'rcsec_e2e_revenuecat_0123456789';
+// Clé et prix FACTICES : le client Stripe est remplacé par un faux dans le
+// module de test, aucun appel réseau ne part jamais.
+process.env.STRIPE_SECRET_KEY ??= 'sk_test_e2e_0123456789abcdef';
+process.env.STRIPE_PRICE_MONTHLY ??= 'price_carlys_premium_monthly';
 
 import {
   type ApiSuccessEnvelope,
   type AuthResult,
+  type CheckoutSession,
   type EntitlementsResponse,
   type SubscriptionMe,
+  type SubscriptionOffersResponse,
 } from '@carlys/api-contracts';
 import { type INestApplication } from '@nestjs/common';
 import { type NestExpressApplication } from '@nestjs/platform-express';
@@ -21,6 +27,11 @@ import request from 'supertest';
 import { type App } from 'supertest/types';
 import { AppModule } from '../src/app/app.module';
 import { configureApp } from '../src/app/configure-app';
+import { MONTHLY_OFFER_ID } from '../src/modules/subscriptions/application/subscription-offers';
+import {
+  type CheckoutRequest,
+  StripeCheckoutClient,
+} from '../src/modules/subscriptions/infrastructure/stripe-checkout.client';
 import { ensureExerciseFixture } from './support/exercise-fixture';
 
 const STRIPE_SECRET = process.env.STRIPE_WEBHOOK_SECRET;
@@ -28,7 +39,8 @@ const REVENUECAT_SECRET = process.env.REVENUECAT_WEBHOOK_SECRET;
 
 /**
  * Abonnements : webhooks SIGNÉS et IDEMPOTENTS, entitlements décidés côté
- * serveur, accès premium appliqué sur le catalogue.
+ * serveur, accès premium appliqué sur le catalogue, chemin d'achat avec un
+ * client Stripe FACTICE (aucune clé réelle, aucun appel réseau).
  */
 describe('Abonnements (e2e)', () => {
   let app: INestApplication<App>;
@@ -78,13 +90,28 @@ describe('Abonnements (e2e)', () => {
   const authed = (token: string) => ({
     get: (url: string) =>
       request(app.getHttpServer()).get(url).set('Authorization', `Bearer ${token}`),
+    post: (url: string) =>
+      request(app.getHttpServer()).post(url).set('Authorization', `Bearer ${token}`),
   });
+
+  /** Le faux client Stripe : il se souvient de chaque session demandée. */
+  const checkoutCalls: CheckoutRequest[] = [];
+  const fakeCheckout: Pick<StripeCheckoutClient, 'isConfigured' | 'createSession'> = {
+    isConfigured: true,
+    createSession: (checkout) => {
+      checkoutCalls.push(checkout);
+      return Promise.resolve(`https://checkout.stripe.test/${checkout.idempotencyKey}`);
+    },
+  };
 
   beforeAll(async () => {
     prisma = new PrismaClient({ datasourceUrl: process.env.DATABASE_URL });
     const moduleFixture = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(StripeCheckoutClient)
+      .useValue(fakeCheckout)
+      .compile();
     app = moduleFixture.createNestApplication<NestExpressApplication>();
     configureApp(app as NestExpressApplication);
     await app.init();
@@ -296,5 +323,63 @@ describe('Abonnements (e2e)', () => {
     );
     expect(me.isPremium).toBe(false);
     expect(me.subscription?.status).toBe('EXPIRED');
+  });
+
+  it('le catalogue annonce l’achat dès que clé et prix sont configurés côté serveur', async () => {
+    const offers = data<SubscriptionOffersResponse>(
+      (await authed(accessToken).get('/api/v1/subscriptions/offers').expect(200)).body,
+    );
+    expect(offers.checkoutAvailable).toBe(true);
+    expect(offers.offers.map((offer) => offer.id)).toContain(MONTHLY_OFFER_ID);
+  });
+
+  it('checkout : offre inconnue ou corps invalide refusés, aucune session ouverte', async () => {
+    const before = checkoutCalls.length;
+    await authed(accessToken)
+      .post('/api/v1/subscriptions/checkout')
+      .send({ id: randomUUID(), offerId: 'offre-fantome' })
+      .expect(400);
+    await authed(accessToken)
+      .post('/api/v1/subscriptions/checkout')
+      .send({ offerId: MONTHLY_OFFER_ID })
+      .expect(400);
+    await authed(accessToken)
+      .post('/api/v1/subscriptions/checkout')
+      .send({ id: 'pas-un-uuid', offerId: MONTHLY_OFFER_ID })
+      .expect(400);
+    await request(app.getHttpServer())
+      .post('/api/v1/subscriptions/checkout')
+      .send({ id: randomUUID(), offerId: MONTHLY_OFFER_ID })
+      .expect(401);
+    expect(checkoutCalls).toHaveLength(before);
+  });
+
+  it('checkout : une session s’ouvre pour l’offre mensuelle, sans accorder le moindre droit', async () => {
+    const deviceId = randomUUID();
+    const session = data<CheckoutSession>(
+      (
+        await authed(accessToken)
+          .post('/api/v1/subscriptions/checkout')
+          .send({ id: deviceId, offerId: MONTHLY_OFFER_ID })
+          .expect(201)
+      ).body,
+    );
+    expect(session).toEqual({
+      url: `https://checkout.stripe.test/${deviceId}`,
+      provider: 'STRIPE',
+    });
+    // Le serveur a bien demandé la session au fournisseur, avec le prix de
+    // l'offre et l'identifiant de l'appareil comme clé d'idempotence.
+    expect(checkoutCalls.at(-1)).toMatchObject({
+      userId,
+      priceId: 'price_carlys_premium_monthly',
+      idempotencyKey: deviceId,
+    });
+
+    // Rien n'a changé côté droits : seul le webhook signé accorde Premium.
+    const me = data<SubscriptionMe>(
+      (await authed(accessToken).get('/api/v1/subscriptions/me').expect(200)).body,
+    );
+    expect(me.isPremium).toBe(false);
   });
 });
