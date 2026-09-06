@@ -131,6 +131,14 @@ class CommunityRepositoryImpl implements CommunityRepository {
   }
 
   @override
+  Future<void> removeFriend(String userId) {
+    return _guard(() async {
+      // 204 sans corps, rejouable : un ami déjà retiré aboutit pareil.
+      await _dio.delete<void>('/community/friends/$userId');
+    });
+  }
+
+  @override
   Future<List<CommunityChallenge>> challenges() {
     return _guard(() async {
       final rows = await _list('/community/challenges');

@@ -2,20 +2,29 @@ import 'package:flutter/material.dart';
 
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/community.dart';
+import 'community_overflow_menu.dart';
 
 /// Un ami : nom, et — SEULEMENT s'il partage sa progression — sa série et
 /// ses séances de la semaine. Le profil privé ne montre que le nom : la
 /// séparation public/privé n'est pas un réglage d'affichage, les données
 /// privées ne sont même pas dans l'entité.
+///
+/// Le menu « plus d'options » porte les gestes de protection ; la carte ne
+/// fait que les proposer, l'enchaînement (confirmation, appel, retour) est
+/// à l'appelant.
 class FriendCard extends StatelessWidget {
   const FriendCard({
     required this.friend,
     required this.onEncourage,
+    required this.onRemove,
     super.key,
   });
 
   final CommunityFriend friend;
   final VoidCallback onEncourage;
+
+  /// « Retirer » : l'amitié cesse, l'autre pourra redemander.
+  final VoidCallback onRemove;
 
   @override
   Widget build(BuildContext context) {
@@ -71,6 +80,16 @@ class FriendCard extends StatelessWidget {
               Icons.volunteer_activism_outlined,
               color: AppColors.accent,
             ),
+          ),
+          CommunityOverflowMenu(
+            tooltip: 'Options pour ${friend.displayName}',
+            actions: [
+              CommunityMenuAction(
+                label: 'Retirer',
+                icon: Icons.person_remove_outlined,
+                onSelected: onRemove,
+              ),
+            ],
           ),
         ],
       ),

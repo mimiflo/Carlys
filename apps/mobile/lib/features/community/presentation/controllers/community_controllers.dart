@@ -134,6 +134,13 @@ class CommunityActions {
     }
   }
 
+  /// Retire un ami : la liste se rafraîchit, le fil ne bouge pas (les mots
+  /// déjà reçus restent lisibles, c'est le serveur qui décide du reste).
+  Future<void> removeFriend(String userId) async {
+    await _ref.read(communityRepositoryProvider).removeFriend(userId);
+    _ref.invalidate(communityFriendsProvider);
+  }
+
   Future<void> setSharesProgress({required bool value}) async {
     await _ref
         .read(communityRepositoryProvider)

@@ -174,6 +174,12 @@ class DemoCommunityRepository implements CommunityRepository {
   }
 
   @override
+  Future<void> removeFriend(String userId) async {
+    // Idempotent, comme le serveur : retirer deux fois ne se voit pas.
+    _friends.removeWhere((friend) => friend.id == userId);
+  }
+
+  @override
   Future<List<CommunityChallenge>> challenges() async =>
       _challenges.values.toList()..sort((a, b) => a.endsAt.compareTo(b.endsAt));
 

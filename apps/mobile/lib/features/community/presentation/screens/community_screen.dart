@@ -5,11 +5,8 @@ import '../../../../design_system/design_system.dart';
 import '../../../../shared/widgets/connection_aware_error.dart';
 import '../controllers/community_controllers.dart';
 import '../widgets/add_friend_sheet.dart';
-import '../widgets/challenge_card.dart';
-import '../widgets/encouragement_tile.dart';
-import '../widgets/friend_card.dart';
-import '../widgets/friend_request_card.dart';
-import '../widgets/privacy_card.dart';
+import '../widgets/community_feedback.dart';
+import '../widgets/community_sections.dart';
 
 /// Communauté — les autres, comme moteur.
 ///
@@ -17,6 +14,9 @@ import '../widgets/privacy_card.dart';
 /// amis (progression visible SEULEMENT si partagée — décision du serveur),
 /// les défis à progression COLLECTIVE. Et en pied d'écran, le réglage de
 /// confidentialité : partager sa progression, ou ne montrer que son nom.
+///
+/// L'écran ne fait que trancher entre erreur, premier chargement, vide et
+/// données ; les sections et leurs gestes vivent dans [CommunitySections].
 class CommunityScreen extends ConsumerWidget {
   const CommunityScreen({super.key});
 
@@ -25,29 +25,26 @@ class CommunityScreen extends ConsumerWidget {
     CommunityActions actions,
   ) async {
     final input = await showAddFriendSheet(context);
-    if (input == null) {
+    if (input == null || !context.mounted) {
       return;
     }
     // Deux registres de confirmation, à dessein : une ADRESSE reste opaque
     // (le serveur ne révèle jamais qu'elle a un compte) ; un CODE se partage
     // volontairement, on confirme donc par le prénom — ou l'on dit
     // franchement qu'il ne mène nulle part.
-    final message = switch (input) {
-      AddFriendByEmail(:final email) => await () async {
-        await actions.sendFriendRequest(email);
-        return 'Si ce compte existe, il recevra ta demande.';
-      }(),
-      AddFriendByCode(:final code) => switch (await actions
-          .sendFriendRequestByCode(code)) {
-        final String name => 'Demande envoyée à $name.',
-        null => 'Ce code ne mène à personne. Vérifie-le avec ton ami.',
-      },
-    };
-    if (context.mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(message)));
-    }
+    await runCommunityGesture(context, () async {
+      return switch (input) {
+        AddFriendByEmail(:final email) => await () async {
+          await actions.sendFriendRequest(email);
+          return 'Si ce compte existe, il recevra ta demande.';
+        }(),
+        AddFriendByCode(:final code) => switch (await actions
+            .sendFriendRequestByCode(code)) {
+          final String name => 'Demande envoyée à $name.',
+          null => 'Ce code ne mène à personne. Vérifie-le avec ton ami.',
+        },
+      };
+    });
   }
 
   @override
@@ -153,78 +150,16 @@ class CommunityScreen extends ConsumerWidget {
               actionLabel: 'Ajouter un ami',
               onAction: () => _addFriend(context, actions),
             )
-          else ...[
-            ..._section(
-              'Demandes reçues',
-              requests.valueOrNull
-                  ?.map<Widget>(
-                    (request) => FriendRequestCard(
-                      request: request,
-                      onAccept: () =>
-                          actions.respondToRequest(request.id, accept: true),
-                      onDecline: () =>
-                          actions.respondToRequest(request.id, accept: false),
-                    ),
-                  )
-                  .toList(),
+          else
+            CommunitySections(
+              requests: requests.valueOrNull,
+              feed: feed.valueOrNull,
+              friends: friends.valueOrNull,
+              challenges: challenges.valueOrNull,
+              sharesProgress: sharesProgress.valueOrNull,
             ),
-            ..._section(
-              'Encouragements',
-              feed.valueOrNull
-                  ?.map<Widget>(
-                    (encouragement) =>
-                        EncouragementTile(encouragement: encouragement),
-                  )
-                  .toList(),
-            ),
-            ..._section(
-              'Amis',
-              friends.valueOrNull
-                  ?.map<Widget>(
-                    (friend) => FriendCard(
-                      friend: friend,
-                      onEncourage: () =>
-                          actions.encourage(friend.id, 'Continue, ça paie !'),
-                    ),
-                  )
-                  .toList(),
-            ),
-            ..._section(
-              'Défis',
-              challenges.valueOrNull
-                  ?.map<Widget>(
-                    (challenge) => ChallengeCard(
-                      challenge: challenge,
-                      onToggle: () => actions.toggleChallenge(challenge),
-                    ),
-                  )
-                  .toList(),
-            ),
-            ..._section('Confidentialité', [
-              PrivacyCard(
-                sharesProgress: sharesProgress.valueOrNull,
-                onChanged: (value) => actions.setSharesProgress(value: value),
-              ),
-            ]),
-          ],
         ],
       ),
     );
-  }
-
-  /// Une section titrée, absente si sa liste est vide : pas de titre orphelin.
-  List<Widget> _section(String title, List<Widget>? children) {
-    if (children == null || children.isEmpty) {
-      return const [];
-    }
-    return [
-      AppSectionLabel(title),
-      const SizedBox(height: AppSpacing.xs),
-      for (final child in children) ...[
-        child,
-        const SizedBox(height: AppSpacing.gapRow),
-      ],
-      const SizedBox(height: AppSpacing.xs),
-    ];
   }
 }

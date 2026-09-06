@@ -190,6 +190,13 @@ simplement perdue (la barre est collective, pas comptable).
   n'enlève que le scan, et l'écran le dit avec un état d'erreur du design
   system. Un e-mail est confirmé opaque ; un code, par le prénom — ou
   « Ce code ne mène à personne ».
+- Chaque carte d'ami porte un menu « plus d'options » (cible tactile pleine,
+  infobulle « Options pour X » pour les lecteurs d'écran) avec « Retirer » :
+  une feuille du design system confirme d'abord, l'appel part ensuite, et la
+  liste se rafraîchit. Tous les gestes de l'écran passent par
+  `CommunityGestures` → `CommunityActions` → dépôt : le retour est un mot
+  sobre dans la barre de message, et l'échec dit VRAI (hors ligne n'est pas
+  une panne, `runCommunityGesture`), au lieu d'échouer en silence.
 - L'accueil relaie le dernier encouragement (« X t'encourage ») quand il y en
   a un.
 - Demandes d'ami, acceptations et encouragements déclenchent une notification
@@ -235,7 +242,9 @@ simplement perdue (la barre est collective, pas comptable).
   d'un mois vierge produisent un seul jeu, une lecture de plus ne recrée rien.
 - Widgets mobile (`test/features/community/`) : démo complète, états
   erreur/vide/chargement, acceptation de demande, ajout opaque, réglage de
-  partage.
+  partage ; gestes de protection (`community_moderation_test.dart`) : retrait
+  d'un ami (confirmation, annulation sans effet, échec hors ligne annoncé et
+  ami conservé).
 - Code ami : normalisation éprouvée des DEUX côtés (spec Jest et test Dart
   miroirs — formes affichée/minuscule/QR, refus des caractères ambigus) ;
   service (silence sur code inconnu ou soi-même, aperçu 404) ; e2e du tour

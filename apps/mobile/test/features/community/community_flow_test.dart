@@ -1,66 +1,16 @@
-import 'package:carlys_mobile/app/app.dart';
-import 'package:carlys_mobile/app/environment/app_environment.dart';
-import 'package:carlys_mobile/app/restore/app_restore.dart';
-import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
-import 'package:carlys_mobile/demo/demo_overrides.dart';
-import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
-import 'package:carlys_mobile/features/community/data/repositories/community_repository_impl.dart';
 import 'package:carlys_mobile/features/community/domain/entities/community.dart';
-import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import '../../support/fake_auth_repository.dart';
+import '../../support/community_app.dart';
 import '../../support/fake_community_repository.dart';
-import '../../support/fake_workout_repository.dart';
 import '../../support/first_run_prefs.dart';
 import '../../support/navigation.dart';
 
 /// L'écran Communauté sur le dépôt de DÉMONSTRATION (données embarquées,
 /// actions en mémoire) puis sur un dépôt piloté : états, demandes d'ami,
-/// défis, encouragements et confidentialité.
-Widget demoApp() => ProviderScope(
-  overrides: [
-    appEnvironmentProvider.overrideWithValue(
-      const AppEnvironment(
-        flavor: AppFlavor.demo,
-        apiBaseUrl: 'http://localhost:3000',
-      ),
-    ),
-    ...demoOverrides(),
-    workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
-  ],
-  child: const CarlysApp(),
-);
-
-/// L'application CONNECTÉE (hors démo), avec un dépôt communauté pilotable :
-/// c'est elle qui doit distinguer erreur, chargement et vide.
-Widget appWith(FakeCommunityRepository community) => ProviderScope(
-  overrides: [
-    appEnvironmentProvider.overrideWithValue(
-      const AppEnvironment(
-        flavor: AppFlavor.development,
-        apiBaseUrl: 'http://localhost:3000',
-      ),
-    ),
-    authRepositoryProvider.overrideWithValue(
-      FakeAuthRepository(storedSession: true),
-    ),
-    workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
-    syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
-    appRestoreProvider.overrideWithValue(NoopAppRestore()),
-    communityRepositoryProvider.overrideWithValue(community),
-  ],
-  child: const CarlysApp(),
-);
-
-Future<void> reveal(WidgetTester tester, Finder item) async {
-  final scrollable = find.byType(Scrollable).last;
-  await tester.scrollUntilVisible(item, 240, scrollable: scrollable);
-  await tester.pumpAndSettle();
-}
-
+/// défis, encouragements et confidentialité. Le harnais (`demoApp`,
+/// `appWith`, `reveal`) vit dans `support/community_app.dart`.
 void main() {
   setUp(() {
     seedCompletedFirstRun();

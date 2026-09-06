@@ -34,6 +34,11 @@ abstract interface class CommunityRepository {
   /// Accepte ou refuse une demande reçue.
   Future<void> respondToRequest(String requestId, {required bool accept});
 
+  /// Retire un ami (idempotent côté serveur). L'autre n'est pas prévenu et
+  /// pourra redemander : rien d'irréversible, mais rien de silencieux non
+  /// plus, l'écran confirme avant.
+  Future<void> removeFriend(String userId);
+
   /// Défis en cours, échéance la plus proche d'abord.
   Future<List<CommunityChallenge>> challenges();
 

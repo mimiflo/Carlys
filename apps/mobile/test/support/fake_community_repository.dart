@@ -116,6 +116,16 @@ class FakeCommunityRepository implements CommunityRepository {
     }
   }
 
+  /// Identifiants reçus par [removeFriend], dans l'ordre.
+  final List<String> removedFriends = [];
+
+  @override
+  Future<void> removeFriend(String userId) async {
+    _guard();
+    removedFriends.add(userId);
+    _friends.removeWhere((friend) => friend.id == userId);
+  }
+
   @override
   Future<List<CommunityChallenge>> challenges() async {
     _guard();
