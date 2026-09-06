@@ -7,6 +7,7 @@ import { adminToken } from '@/lib/admin-api';
 
 const NAV_ITEMS = [
   { href: '/users', label: 'Utilisateurs' },
+  { href: '/reports', label: 'Signalements' },
   { href: '/exercises', label: 'Exercices' },
   { href: '/categories', label: 'Catégories' },
   { href: '/media', label: 'Médias' },
