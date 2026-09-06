@@ -22,7 +22,6 @@ const reportPartySelect = {
 const reportInclude = {
   reporter: { select: reportPartySelect },
   reportedUser: { select: reportPartySelect },
-  encouragement: { select: { message: true } },
 } satisfies Prisma.CommunityReportInclude;
 
 export type CommunityReportRow = Prisma.CommunityReportGetPayload<{
@@ -125,19 +124,6 @@ export class CommunityModerationRepository {
     });
   }
 
-  /** L'encouragement `id` a-t-il bien été envoyé par `senderId` à `recipientId` ? */
-  async encouragementExistsBetween(
-    id: string,
-    senderId: string,
-    recipientId: string,
-  ): Promise<boolean> {
-    const row = await this.prisma.encouragement.findFirst({
-      where: { id, senderId, recipientId },
-      select: { id: true },
-    });
-    return row !== null;
-  }
-
   // ── Signalements ────────────────────────────────────────────────────────
 
   /** Signalement OUVERT du même auteur sur la même cible (et le même message). */
@@ -152,8 +138,35 @@ export class CommunityModerationRepository {
     });
   }
 
-  createReport(input: CreateReportInput): Promise<CommunityReportRow> {
-    return this.prisma.communityReport.create({ data: input, include: reportInclude });
+  /**
+   * Crée le signalement en FIGEANT le texte de l'encouragement visé, lu dans
+   * la même transaction : l'auteur pourra retirer son message, la preuve
+   * restera lisible par l'administration. Seul ce que le signalant a REÇU
+   * de la personne signalée peut être visé ; si l'encouragement n'est pas
+   * (ou plus) ce message-là, rien n'est écrit et `null` est rendu.
+   */
+  createReport(input: CreateReportInput): Promise<CommunityReportRow | null> {
+    return this.prisma.$transaction(async (tx) => {
+      let encouragementMessage: string | null = null;
+      if (input.encouragementId !== null) {
+        const encouragement = await tx.encouragement.findFirst({
+          where: {
+            id: input.encouragementId,
+            senderId: input.reportedUserId,
+            recipientId: input.reporterId,
+          },
+          select: { message: true },
+        });
+        if (encouragement === null) {
+          return null;
+        }
+        encouragementMessage = encouragement.message;
+      }
+      return tx.communityReport.create({
+        data: { ...input, encouragementMessage },
+        include: reportInclude,
+      });
+    });
   }
 
   findReportById(id: string): Promise<CommunityReportRow | null> {

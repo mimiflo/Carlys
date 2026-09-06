@@ -306,6 +306,25 @@ describe('Modération de la communauté (e2e)', () => {
     expect((await receivedBy(tokenB)).map((entry) => entry.fromDisplayName)).toEqual(['Alice']);
   });
 
+  it('la preuve d’un signalement survit au retrait du message par son auteur', async () => {
+    // Alice retire le message signalé : il quitte le fil de Boris (204 opaque)...
+    await authed(tokenA)
+      .delete(`/api/v1/community/encouragements/${reportedEncouragementId}`)
+      .expect(204);
+    expect(await feedOf(tokenB)).toHaveLength(0);
+
+    // ...mais l'administration lit encore ce qui a été signalé, référence ou pas.
+    const open = data<AdminCommunityReport[]>(
+      (await authed(superToken).get('/api/v1/admin/community/reports?status=OPEN').expect(200))
+        .body,
+    );
+    const mine = open.find((entry) => entry.id === reportId);
+    expect(mine).toMatchObject({
+      encouragementId: null,
+      encouragementMessage: 'Message à signaler',
+    });
+  });
+
   it('administration : lecture des signalements, résolution auditée, permission dédiée', async () => {
     // Sans la permission dédiée : 403 ; avec un jeton mobile : 401.
     await authed(readerToken).get('/api/v1/admin/community/reports').expect(403);

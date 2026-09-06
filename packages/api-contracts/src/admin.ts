@@ -184,8 +184,10 @@ export type AdminCommunityReportParty = z.infer<typeof adminCommunityReportParty
 
 /**
  * Signalement vu du back-office : l'accusé de réception du membre, plus les
- * deux personnes et le texte de l'encouragement visé (`null` s'il a été
- * supprimé depuis, ou si le signalement vise la personne en général).
+ * deux personnes et le texte de l'encouragement visé, FIGÉ au moment du
+ * signalement : l'auteur a beau retirer son message ensuite
+ * (`encouragementId` passe alors à `null`), la preuve reste lisible.
+ * `null` seulement quand le signalement vise la personne en général.
  */
 export const adminCommunityReportSchema = communityReportSchema.extend({
   reporter: adminCommunityReportPartySchema,

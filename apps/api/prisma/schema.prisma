@@ -1019,8 +1019,8 @@ model Encouragement {
   message     String
   createdAt   DateTime @default(now())
 
-  sender    User @relation("EncouragementsSent", fields: [senderId], references: [id], onDelete: Cascade)
-  recipient User @relation("EncouragementsReceived", fields: [recipientId], references: [id], onDelete: Cascade)
+  sender    User              @relation("EncouragementsSent", fields: [senderId], references: [id], onDelete: Cascade)
+  recipient User              @relation("EncouragementsReceived", fields: [recipientId], references: [id], onDelete: Cascade)
   reports   CommunityReport[]
 
   @@index([recipientId, createdAt(sort: Desc)])
@@ -1059,18 +1059,23 @@ enum CommunityReportStatus {
 /// Signalement d'une personne et, le cas échéant, d'un encouragement précis.
 /// Lu et résolu par l'administration (permission `community:moderate`),
 /// jamais visible de la personne signalée. Si l'encouragement est supprimé
-/// entre-temps, le signalement reste (référence mise à NULL).
+/// entre-temps, le signalement reste (référence mise à NULL) et son texte,
+/// figé dans `encouragementMessage` au moment du signalement, aussi : la
+/// preuve ne s'efface pas avec le message.
 model CommunityReport {
-  id              String                @id @default(uuid()) @db.Uuid
-  reporterId      String                @db.Uuid
-  reportedUserId  String                @db.Uuid
-  encouragementId String?               @db.Uuid
-  reason          CommunityReportReason
+  id                   String                @id @default(uuid()) @db.Uuid
+  reporterId           String                @db.Uuid
+  reportedUserId       String                @db.Uuid
+  encouragementId      String?               @db.Uuid
+  /// Cliché du texte visé, pris dans la même transaction que le signalement.
+  /// NULL quand le signalement vise la personne en général.
+  encouragementMessage String?
+  reason               CommunityReportReason
   /// Précisions libres (500 caractères au plus, validées à l'entrée).
-  details         String?
-  status          CommunityReportStatus @default(OPEN)
-  createdAt       DateTime              @default(now())
-  resolvedAt      DateTime?
+  details              String?
+  status               CommunityReportStatus @default(OPEN)
+  createdAt            DateTime              @default(now())
+  resolvedAt           DateTime?
 
   reporter      User           @relation("CommunityReportsFiled", fields: [reporterId], references: [id], onDelete: Cascade)
   reportedUser  User           @relation("CommunityReportsReceived", fields: [reportedUserId], references: [id], onDelete: Cascade)

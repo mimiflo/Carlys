@@ -18,7 +18,6 @@ interface Stubs {
   listBlocks: jest.Mock;
   userExists: jest.Mock;
   deleteEncouragementFor: jest.Mock;
-  encouragementExistsBetween: jest.Mock;
   findOpenReport: jest.Mock;
   createReport: jest.Mock;
   findReportById: jest.Mock;
@@ -32,6 +31,7 @@ function reportRow(overrides: Partial<CommunityReportRow> = {}): CommunityReport
     reporterId: ME,
     reportedUserId: OTHER,
     encouragementId: null,
+    encouragementMessage: null,
     reason: 'SPAM',
     details: null,
     status: 'OPEN',
@@ -39,7 +39,6 @@ function reportRow(overrides: Partial<CommunityReportRow> = {}): CommunityReport
     resolvedAt: null,
     reporter: { id: ME, email: 'moi@carlys.test', profile: { displayName: 'Moi' } },
     reportedUser: { id: OTHER, email: 'autre@carlys.test', profile: null },
-    encouragement: null,
     ...overrides,
   };
 }
@@ -53,7 +52,6 @@ function buildStubs(): Stubs {
     listBlocks: jest.fn().mockResolvedValue([]),
     userExists: jest.fn().mockResolvedValue(true),
     deleteEncouragementFor: jest.fn().mockResolvedValue(undefined),
-    encouragementExistsBetween: jest.fn().mockResolvedValue(true),
     findOpenReport: jest.fn().mockResolvedValue(null),
     createReport: jest
       .fn()
@@ -133,13 +131,38 @@ describe('CommunityModerationService — signalements', () => {
 
   it('seul un encouragement REÇU de la personne signalée peut être visé', async () => {
     const stubs = buildStubs();
-    stubs.encouragementExistsBetween.mockResolvedValue(false);
+    // Le dépôt ne trouve pas ce message entre ces deux personnes : rien n'est écrit.
+    stubs.createReport.mockResolvedValue(null);
 
     await expect(
       buildService(stubs).report(ME, { ...command, encouragementId: 'message-1' }),
     ).rejects.toBeInstanceOf(NotFoundException);
-    expect(stubs.encouragementExistsBetween).toHaveBeenCalledWith('message-1', OTHER, ME);
-    expect(stubs.createReport).not.toHaveBeenCalled();
+    expect(stubs.createReport).toHaveBeenCalledWith(
+      expect.objectContaining({
+        reporterId: ME,
+        reportedUserId: OTHER,
+        encouragementId: 'message-1',
+      }),
+    );
+  });
+
+  it('le signalement d’un encouragement transmet son identifiant au dépôt, qui fige le texte', async () => {
+    const stubs = buildStubs();
+    stubs.createReport.mockResolvedValue(
+      reportRow({ encouragementId: 'message-1', encouragementMessage: 'Texte figé' }),
+    );
+
+    const report = await buildService(stubs).report(ME, {
+      ...command,
+      encouragementId: 'message-1',
+    });
+
+    expect(stubs.createReport).toHaveBeenCalledWith(
+      expect.objectContaining({ encouragementId: 'message-1' }),
+    );
+    // L'accusé de réception du membre cite le message, jamais son cliché.
+    expect(report.encouragementId).toBe('message-1');
+    expect(report).not.toHaveProperty('encouragementMessage');
   });
 
   it('un signalement ouvert identique n’est pas dupliqué : le même est rendu', async () => {
@@ -253,5 +276,20 @@ describe('CommunityModerationService — administration', () => {
     expect(page.items.map((item) => item.id)).toEqual(['a', 'b']);
     expect(page).toMatchObject({ hasMore: true, nextCursor: 'b' });
     expect(page.items[0]?.encouragementMessage).toBeNull();
+  });
+
+  it('l’administration lit le cliché du texte, même une fois le message retiré', async () => {
+    const stubs = buildStubs();
+    // Message supprimé depuis (référence à NULL) : le cliché, lui, est resté.
+    stubs.listReports.mockResolvedValue([
+      reportRow({ encouragementId: null, encouragementMessage: 'Texte figé' }),
+    ]);
+
+    const page = await buildService(stubs).listReports(undefined, 10);
+
+    expect(page.items[0]).toMatchObject({
+      encouragementId: null,
+      encouragementMessage: 'Texte figé',
+    });
   });
 });

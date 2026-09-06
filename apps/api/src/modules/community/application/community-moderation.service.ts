@@ -57,7 +57,9 @@ function presentAdminReport(row: CommunityReportRow): AdminCommunityReport {
       email: row.reportedUser.email,
       displayName: row.reportedUser.profile?.displayName ?? null,
     },
-    encouragementMessage: row.encouragement?.message ?? null,
+    // Le cliché pris au signalement, jamais le message vivant : l'auteur a pu
+    // le retirer depuis, la preuve doit rester lisible.
+    encouragementMessage: row.encouragementMessage,
   };
 }
 
@@ -120,7 +122,7 @@ export class CommunityModerationService {
    * Signaler une personne, ou un encouragement précis qu'elle m'a envoyé.
    * Un signalement OUVERT identique n'est pas dupliqué : rejouer l'envoi
    * rend le même accusé de réception, l'administration ne reçoit pas de
-   * doublons.
+   * doublons. Le texte visé est figé à la création (voir le dépôt).
    */
   async report(userId: string, command: CreateReportCommand): Promise<ReportContract> {
     if (command.reportedUserId === userId) {
@@ -130,18 +132,6 @@ export class CommunityModerationService {
       throw new NotFoundException('Compte introuvable.');
     }
     const encouragementId = command.encouragementId ?? null;
-    if (
-      encouragementId !== null &&
-      !(await this.moderation.encouragementExistsBetween(
-        encouragementId,
-        command.reportedUserId,
-        userId,
-      ))
-    ) {
-      // Seul ce qu'on a REÇU de cette personne peut être signalé sous son nom.
-      throw new NotFoundException('Encouragement introuvable.');
-    }
-
     const existing = await this.moderation.findOpenReport(
       userId,
       command.reportedUserId,
@@ -158,6 +148,10 @@ export class CommunityModerationService {
       reason: command.reason,
       details: details === undefined || details === '' ? null : details,
     });
+    if (created === null) {
+      // Seul ce qu'on a REÇU de cette personne peut être signalé sous son nom.
+      throw new NotFoundException('Encouragement introuvable.');
+    }
     return presentReport(created);
   }
 

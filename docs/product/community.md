@@ -40,7 +40,8 @@ l'application ne dépend d'elle.
    « tu es bloqué ». Un encouragement se retire par son auteur OU son
    destinataire. Un signalement (personne, ou encouragement précis) part vers
    l'administration, qui le lit et le résout avec une permission dédiée ; la
-   personne signalée n'en sait rien.
+   personne signalée n'en sait rien, et retirer son message n'efface pas la
+   preuve : le texte est figé au moment du signalement.
 
 ## Modèle de données (Prisma)
 
@@ -52,7 +53,7 @@ l'application ne dépend d'elle.
 | `ChallengeParticipation` | Participation + `contribution` individuelle à l'objectif. |
 | `CommunityPreference` | `sharesProgress` (absence = partagé, défaut du modèle). |
 | `CommunityBlock` | Blocage unilatéral `(blockerId, blockedId)`, unique par paire orientée ; consulté dans les DEUX sens partout où deux personnes se rencontrent. |
-| `CommunityReport` | Signalement : `reporterId`, `reportedUserId`, `encouragementId?` (mis à `NULL` si le message est supprimé), `reason` (`HARCELEMENT`, `SPAM`, `CONTENU_INAPPROPRIE`, `AUTRE`), `details?` (500 caractères), `status` (`OPEN`, `RESOLVED`), `resolvedAt?`. |
+| `CommunityReport` | Signalement : `reporterId`, `reportedUserId`, `encouragementId?` (mis à `NULL` si le message est supprimé), `encouragementMessage?` (cliché du texte visé, pris dans la même transaction que le signalement : la preuve survit au retrait du message), `reason` (`HARCELEMENT`, `SPAM`, `CONTENU_INAPPROPRIE`, `AUTRE`), `details?` (500 caractères), `status` (`OPEN`, `RESOLVED`), `resolvedAt?`. |
 
 ## API (`/api/v1/community`)
 
@@ -81,7 +82,7 @@ Côté back-office (`/api/v1/admin/community`, jeton admin, permission
 
 | Méthode | Chemin | Rôle |
 | --- | --- | --- |
-| GET | `/reports?status=&limit=&cursor=` | Signalements, plus récents d'abord, avec les deux personnes (id, e-mail, nom) et le texte de l'encouragement visé s'il existe encore |
+| GET | `/reports?status=&limit=&cursor=` | Signalements, plus récents d'abord, avec les deux personnes (id, e-mail, nom) et le texte de l'encouragement visé, figé au moment du signalement (lisible même si l'auteur l'a retiré depuis) |
 | PATCH | `/reports/:id` | `{ status: "RESOLVED" }` résout (`resolvedAt` posé, audit `admin.community_report_resolved`) ; `{ status: "OPEN" }` rouvre (`admin.community_report_reopened`) ; rejouer le même statut ne réécrit rien |
 
 Ces deux routes ont leur écran : la page **Signalements** du back-office
@@ -214,10 +215,13 @@ simplement perdue (la barre est collective, pas comptable).
   `test/community-moderation.e2e-spec.ts` (application isolée) : retrait
   d'un encouragement par l'auteur ou le destinataire (jamais un tiers, réponse
   opaque), signalement avec doublon ouvert et garde-fous, blocage (amitié
-  retirée, réponses opaques dans les deux sens, liste, déblocage), lecture et
-  résolution auditée côté admin, `403` sans `community:moderate`.
+  retirée, réponses opaques dans les deux sens, liste, déblocage), preuve
+  d'un signalement lisible après le retrait du message par son auteur,
+  lecture et résolution auditée côté admin, `403` sans `community:moderate`.
 - Unitaires API, modération : garde-fous des blocages et signalements,
-  doublon ouvert, nettoyage des précisions, audit de la résolution, pagination.
+  doublon ouvert, nettoyage des précisions, cliché du texte signalé (lu et
+  écrit dans une même transaction, `null` si le message ne vient pas de la
+  personne visée), audit de la résolution, pagination.
 - Vitest back-office (`apps/admin/src/app/reports/page.test.tsx`,
   `apps/admin/src/lib/admin-api.test.ts`) : liste des ouverts par défaut
   avec motif, personnes liées à leur fiche et texte visé ; résolution puis
