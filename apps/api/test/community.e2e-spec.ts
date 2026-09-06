@@ -137,6 +137,15 @@ describe('Communauté (e2e)', () => {
     );
     expect(received).toHaveLength(1);
     await authed(tokenB).post(`/api/v1/community/requests/${received[0]?.id}/accept`).expect(204);
+    const friendsOfA = data<CommunityFriend[]>(
+      (await authed(tokenA).get('/api/v1/community/friends').expect(200)).body,
+    );
+    expect(friendsOfA.map((friend) => friend.displayName)).toEqual(['Boris']);
+
+    // Le scénario par e-mail, plus bas, repart d'une page blanche : sans ce
+    // retrait, la demande suivante ne créerait rien (déjà amis) et la liste
+    // des demandes reçues resterait vide.
+    await authed(tokenA).delete(`/api/v1/community/friends/${userIdB}`).expect(204);
   });
 
   it('un code inconnu : aperçu en 404, demande muette en 202', async () => {
