@@ -156,6 +156,175 @@ void main() {
     );
   });
 
+  /// Une séance lancée depuis un modèle, avec son plan aplati et le modèle
+  /// lui-même — ce qu'une base de version 2 ou 3 avait vraiment.
+  const seedTemplates = [
+    '''
+    INSERT INTO local_workout_sessions
+      (id, name, status, started_at, template_id, template_name, sync_status)
+    VALUES ('session-v2', 'Push force', 'IN_PROGRESS', 1786100000,
+            'modele-1', 'Push force', 'synced');
+    ''',
+    '''
+    INSERT INTO local_workout_sets
+      (id, session_id, exercise_name, position, kind, reps, weight_kg,
+       planned_reps, planned_weight_kg, completed_at, deleted, sync_status)
+    VALUES ('set-v2', 'session-v2', 'Développé couché', 0, 'NORMAL', 7, 70.0,
+            8, 70.0, 1786100600, 0, 'synced');
+    ''',
+    '''
+    INSERT INTO local_workout_templates
+      (id, name, updated_at, deleted, sync_status)
+    VALUES ('modele-1', 'Push force', 1786000000, 0, 'synced');
+    ''',
+    '''
+    INSERT INTO local_template_exercises
+      (id, template_id, exercise_name, position)
+    VALUES ('ligne-1', 'modele-1', 'Développé couché', 0);
+    ''',
+    '''
+    INSERT INTO local_template_sets
+      (id, template_exercise_id, position, kind, target_reps, target_weight_kg)
+    VALUES ('prevu-1', 'ligne-1', 0, 'NORMAL', 8, 70.0);
+    ''',
+  ];
+
+  group('depuis la version 2', () {
+    late AppDatabase db;
+
+    setUp(() {
+      db = openLegacyDatabase(
+        legacySchemaV2,
+        seed: [
+          ...seedTemplates,
+          // En version 2, le plan n'a pas de colonne `sync_status`.
+          '''
+          INSERT INTO local_session_plan_items
+            (id, session_id, exercise_position, exercise_name, set_position,
+             kind, target_reps, target_weight_kg, done_set_id, skipped)
+          VALUES ('plan-v2', 'session-v2', 0, 'Développé couché', 0,
+                  'NORMAL', 8, 70.0, 'set-v2', 0);
+          ''',
+        ],
+      );
+    });
+
+    tearDown(() => db.close());
+
+    test(
+      'le plan reçoit `sync_status` et reste protégé, le reste est intact',
+      () async {
+        // La première requête déclenche `onUpgrade` : la branche `from == 2`
+        // ajoute la colonne sur une table qui existe déjà.
+        final items = await db.select(db.localSessionPlanItems).get();
+        expect(items.single.id, 'plan-v2');
+        expect(items.single.doneSetId, 'set-v2');
+        expect(items.single.targetReps, 8);
+        // Jamais transmis au serveur : il reste « pending », donc le
+        // rapatriement ne l'écrasera pas.
+        expect(items.single.syncStatus, 'pending');
+
+        final session = await db.select(db.localWorkoutSessions).getSingle();
+        expect(session.templateName, 'Push force');
+        expect(session.syncStatus, 'synced');
+        final set = await db.select(db.localWorkoutSets).getSingle();
+        expect(set.plannedReps, 8);
+        expect(set.plannedWeightKg, 70);
+
+        final template = await db.select(db.localWorkoutTemplates).getSingle();
+        expect(template.name, 'Push force');
+        final line = await db.select(db.localTemplateExercises).getSingle();
+        expect(line.exerciseName, 'Développé couché');
+        final planned = await db.select(db.localTemplateSets).getSingle();
+        expect(planned.targetWeightKg, 70);
+      },
+    );
+
+    test('les apports des versions 4 et 5 arrivent aussi', () async {
+      await db
+          .into(db.localWaterIntakes)
+          .insert(
+            LocalWaterIntakesCompanion.insert(
+              day: DateTime(2026, 9, 1),
+              milliliters: const Value(250),
+              updatedAt: DateTime(2026, 9, 1, 8),
+            ),
+          );
+      expect(
+        (await db.select(db.localWaterIntakes).getSingle()).milliliters,
+        250,
+      );
+      expect(await indexNamesOf(db), containsAll(_expectedIndexes));
+      expect(db.schemaVersion, 5);
+    });
+  });
+
+  group('depuis la version 3', () {
+    late AppDatabase db;
+
+    setUp(() {
+      db = openLegacyDatabase(
+        legacySchemaV3,
+        seed: [
+          ...seedTemplates,
+          // Un plan DÉJÀ acquitté : la branche `from == 2` ne doit pas
+          // rejouer (la colonne existe, `addColumn` échouerait) et la valeur
+          // ne doit pas être remise en attente.
+          '''
+          INSERT INTO local_session_plan_items
+            (id, session_id, exercise_position, exercise_name, set_position,
+             kind, target_reps, done_set_id, skipped, sync_status)
+          VALUES ('plan-v3', 'session-v2', 0, 'Développé couché', 0,
+                  'NORMAL', 8, 'set-v2', 0, 'synced');
+          ''',
+          '''
+          INSERT INTO local_session_plan_items
+            (id, session_id, exercise_position, exercise_name, set_position,
+             kind, target_reps, skipped, sync_status)
+          VALUES ('plan-v3-b', 'session-v2', 0, 'Développé couché', 1,
+                  'NORMAL', 8, 1, 'pending');
+          ''',
+        ],
+      );
+    });
+
+    tearDown(() => db.close());
+
+    test(
+      'un plan déjà acquitté le reste ; un « passer » en attente aussi',
+      () async {
+        final items = await db.select(db.localSessionPlanItems).get();
+        final byId = {for (final item in items) item.id: item};
+        expect(byId['plan-v3']!.syncStatus, 'synced');
+        expect(byId['plan-v3']!.doneSetId, 'set-v2');
+        expect(byId['plan-v3-b']!.syncStatus, 'pending');
+        expect(byId['plan-v3-b']!.skipped, isTrue);
+
+        final session = await db.select(db.localWorkoutSessions).getSingle();
+        expect(session.templateId, 'modele-1');
+        expect(await db.select(db.localTemplateSets).get(), hasLength(1));
+      },
+    );
+
+    test('la table d’hydratation est créée, les index aussi', () async {
+      await db
+          .into(db.localWaterIntakes)
+          .insert(
+            LocalWaterIntakesCompanion.insert(
+              day: DateTime(2026, 9, 1),
+              milliliters: const Value(1000),
+              updatedAt: DateTime(2026, 9, 1, 12),
+            ),
+          );
+      expect(
+        (await db.select(db.localWaterIntakes).getSingle()).milliliters,
+        1000,
+      );
+      expect(await indexNamesOf(db), containsAll(_expectedIndexes));
+      expect(db.schemaVersion, 5);
+    });
+  });
+
   group('depuis la version 4', () {
     late AppDatabase db;
 
