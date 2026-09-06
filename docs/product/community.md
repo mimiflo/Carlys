@@ -115,7 +115,10 @@ simplement perdue (la barre est collective, pas comptable).
 
 ## Couverture
 
-- Unitaires API : calculateur de série (fuseaux, trous, hier/aujourd'hui),
+- Unitaires API : calculateur de série (fuseaux, y compris à l'ouest de
+  Greenwich : une séance du dimanche 19 h à `America/Montreal` compte pour le
+  dimanche, là où un découpage parisien la ferait glisser au lundi ; trous,
+  hier/aujourd'hui),
   règles du service (non-énumération, demandes croisées, confidentialité
   null-jamais-zéro, 403 hors amitié, division par zéro d'un objectif).
 - e2e API (`test/community.e2e-spec.ts`) : parcours complet à trois comptes —
