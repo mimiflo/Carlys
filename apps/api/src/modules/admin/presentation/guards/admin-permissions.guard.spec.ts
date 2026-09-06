@@ -1,6 +1,7 @@
 import { type ExecutionContext, ForbiddenException, UnauthorizedException } from '@nestjs/common';
 import { METHOD_METADATA, PATH_METADATA } from '@nestjs/common/constants';
 import { type Reflector } from '@nestjs/core';
+import { AdminCommunityController } from '../../../community/presentation/http/admin-community.controller';
 import {
   AdminExerciseMediaController,
   MediaController,
@@ -88,6 +89,7 @@ describe('Routes d’administration : toutes déclarent leurs permissions', () =
     AdminCategoriesController,
     MediaController,
     AdminExerciseMediaController,
+    AdminCommunityController,
   ];
 
   const prototypeOf = (controller: (typeof controllers)[number]): Record<string, unknown> =>
@@ -105,7 +107,7 @@ describe('Routes d’administration : toutes déclarent leurs permissions', () =
 
   it('parcourt réellement des routes (le test ne peut pas passer à vide)', () => {
     const total = controllers.reduce((count, controller) => count + routesOf(controller).length, 0);
-    expect(total).toBeGreaterThanOrEqual(21);
+    expect(total).toBeGreaterThanOrEqual(23);
   });
 
   it.each(controllers.map((controller) => [controller.name, controller] as const))(

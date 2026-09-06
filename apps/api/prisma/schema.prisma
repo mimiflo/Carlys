@@ -62,6 +62,10 @@ model User {
   encouragementsSent       Encouragement[]          @relation("EncouragementsSent")
   encouragementsReceived   Encouragement[]          @relation("EncouragementsReceived")
   challengeParticipations  ChallengeParticipation[]
+  communityBlocksIssued    CommunityBlock[]         @relation("CommunityBlocksIssued")
+  communityBlocksReceived  CommunityBlock[]         @relation("CommunityBlocksReceived")
+  communityReportsFiled    CommunityReport[]        @relation("CommunityReportsFiled")
+  communityReportsReceived CommunityReport[]        @relation("CommunityReportsReceived")
   deviceTokens             DeviceToken[]
   notificationPreferences  NotificationPreference[]
 }
@@ -1014,8 +1018,63 @@ model Encouragement {
 
   sender    User @relation("EncouragementsSent", fields: [senderId], references: [id], onDelete: Cascade)
   recipient User @relation("EncouragementsReceived", fields: [recipientId], references: [id], onDelete: Cascade)
+  reports   CommunityReport[]
 
   @@index([recipientId, createdAt(sort: Desc)])
+}
+
+/// Blocage : décision UNILATÉRALE et opaque. Bloquer retire l'amitié et les
+/// demandes en attente dans les deux sens ; ensuite, pour chacun des deux,
+/// l'autre n'existe plus (code ami muet, demande muette, encouragement
+/// refusé, absent des listes). Jamais de « tu es bloqué » : la réponse est
+/// celle d'un compte inexistant.
+model CommunityBlock {
+  id        String   @id @default(uuid()) @db.Uuid
+  blockerId String   @db.Uuid
+  blockedId String   @db.Uuid
+  createdAt DateTime @default(now())
+
+  blocker User @relation("CommunityBlocksIssued", fields: [blockerId], references: [id], onDelete: Cascade)
+  blocked User @relation("CommunityBlocksReceived", fields: [blockedId], references: [id], onDelete: Cascade)
+
+  @@unique([blockerId, blockedId])
+  @@index([blockedId])
+}
+
+enum CommunityReportReason {
+  HARCELEMENT
+  SPAM
+  CONTENU_INAPPROPRIE
+  AUTRE
+}
+
+enum CommunityReportStatus {
+  OPEN
+  RESOLVED
+}
+
+/// Signalement d'une personne et, le cas échéant, d'un encouragement précis.
+/// Lu et résolu par l'administration (permission `community:moderate`),
+/// jamais visible de la personne signalée. Si l'encouragement est supprimé
+/// entre-temps, le signalement reste (référence mise à NULL).
+model CommunityReport {
+  id              String                @id @default(uuid()) @db.Uuid
+  reporterId      String                @db.Uuid
+  reportedUserId  String                @db.Uuid
+  encouragementId String?               @db.Uuid
+  reason          CommunityReportReason
+  /// Précisions libres (500 caractères au plus, validées à l'entrée).
+  details         String?
+  status          CommunityReportStatus @default(OPEN)
+  createdAt       DateTime              @default(now())
+  resolvedAt      DateTime?
+
+  reporter      User           @relation("CommunityReportsFiled", fields: [reporterId], references: [id], onDelete: Cascade)
+  reportedUser  User           @relation("CommunityReportsReceived", fields: [reportedUserId], references: [id], onDelete: Cascade)
+  encouragement Encouragement? @relation(fields: [encouragementId], references: [id], onDelete: SetNull)
+
+  @@index([status, createdAt(sort: Desc)])
+  @@index([reportedUserId])
 }
 
 enum ChallengeKind {

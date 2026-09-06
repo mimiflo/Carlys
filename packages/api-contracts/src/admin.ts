@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { communityReportSchema, communityReportStatusSchema } from './community';
 import { mediaAssetSchema } from './media';
 import { entitlementSchema } from './subscriptions';
 
@@ -18,6 +19,8 @@ export const ADMIN_PERMISSIONS = [
   'media:read',
   'media:write',
   'audit:read',
+  /** Lire et résoudre les signalements de la communauté. */
+  'community:moderate',
 ] as const;
 
 export const adminPermissionSchema = z.enum(ADMIN_PERMISSIONS);
@@ -168,3 +171,31 @@ export const setExerciseCategoriesSchema = z.object({
   equipmentSlugs: z.array(categorySlugSchema).max(8),
 });
 export type SetExerciseCategoriesInput = z.infer<typeof setExerciseCategoriesSchema>;
+
+// ── Signalements de la communauté (/admin/community/reports) ──────────────
+
+/** Une des deux personnes d'un signalement, avec de quoi agir (fiche, e-mail). */
+export const adminCommunityReportPartySchema = z.object({
+  id: z.string(),
+  email: z.string(),
+  displayName: z.string().nullable(),
+});
+export type AdminCommunityReportParty = z.infer<typeof adminCommunityReportPartySchema>;
+
+/**
+ * Signalement vu du back-office : l'accusé de réception du membre, plus les
+ * deux personnes et le texte de l'encouragement visé (`null` s'il a été
+ * supprimé depuis, ou si le signalement vise la personne en général).
+ */
+export const adminCommunityReportSchema = communityReportSchema.extend({
+  reporter: adminCommunityReportPartySchema,
+  reportedUser: adminCommunityReportPartySchema,
+  encouragementMessage: z.string().nullable(),
+});
+export type AdminCommunityReport = z.infer<typeof adminCommunityReportSchema>;
+
+/** PATCH /admin/community/reports/:id — résoudre, ou rouvrir par erreur. */
+export const updateCommunityReportSchema = z.object({
+  status: communityReportStatusSchema,
+});
+export type UpdateCommunityReportInput = z.infer<typeof updateCommunityReportSchema>;

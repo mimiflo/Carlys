@@ -151,9 +151,17 @@ export class CommunityRepository {
 
   // ── Fil d'encouragements ────────────────────────────────────────────────
 
-  listEncouragements(userId: string, limit: number): Promise<EncouragementRow[]> {
+  /** Fil reçu, sans les expéditeurs à taire (personnes bloquées). */
+  listEncouragements(
+    userId: string,
+    limit: number,
+    excludedSenderIds: string[],
+  ): Promise<EncouragementRow[]> {
     return this.prisma.encouragement.findMany({
-      where: { recipientId: userId },
+      where: {
+        recipientId: userId,
+        ...(excludedSenderIds.length === 0 ? {} : { senderId: { notIn: excludedSenderIds } }),
+      },
       orderBy: { createdAt: 'desc' },
       take: limit,
       include: { sender: { select: { profile: { select: { displayName: true } } } } },

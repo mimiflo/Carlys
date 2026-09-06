@@ -175,7 +175,13 @@ async function seedSubscriptionPlans(): Promise<void> {
  */
 const ADMIN_ROLES: { slug: string; name: string; permissions: readonly string[] }[] = [
   { slug: 'superadmin', name: 'Super-administrateur', permissions: ADMIN_PERMISSIONS },
-  { slug: 'support', name: 'Support', permissions: ['user:read', 'audit:read'] },
+  {
+    // Les signalements de la communauté sont un travail de support : les lire
+    // et les résoudre va avec la lecture des comptes.
+    slug: 'support',
+    name: 'Support',
+    permissions: ['user:read', 'audit:read', 'community:moderate'],
+  },
   {
     // Le contenu, c'est aussi les médias : sans `media:write`, ce rôle ne
     // pourrait pas déposer la photo d'un exercice qu'il a le droit de publier.

@@ -11,6 +11,7 @@ import { FriendRequestStatus } from '@prisma/client';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { NotificationsService } from '../../notifications/application/notifications.service';
 import { type PushMessage } from '../../notifications/domain/push-sender.port';
+import { CommunityModerationRepository } from '../infrastructure/community-moderation.repository';
 import { CommunityRepository, type FriendRow } from '../infrastructure/community.repository';
 import { normalizeFriendCode } from '../../users/domain/friend-code';
 import { CommunityChallengesService } from './community-challenges.service';
@@ -22,11 +23,18 @@ const STREAK_WINDOW_DAYS = 60;
 /** Après un refus, le même demandeur attend 30 jours avant de pouvoir redemander. */
 const DECLINE_COOLDOWN_MS = 30 * 24 * 3_600_000;
 
-/** Amis, demandes, encouragements et préférence de partage. */
+/**
+ * Amis, demandes, encouragements et préférence de partage.
+ *
+ * Les blocages sont consultés PARTOUT où deux personnes se rencontrent
+ * (demande, aperçu de code, encouragement, listes) et la réponse est
+ * OPAQUE : celle d'un compte qui n'existe pas, jamais « tu es bloqué ».
+ */
 @Injectable()
 export class CommunityService {
   constructor(
     private readonly community: CommunityRepository,
+    private readonly moderation: CommunityModerationRepository,
     private readonly challenges: CommunityChallengesService,
     private readonly notifications: NotificationsService,
     @InjectPinoLogger(CommunityService.name)
@@ -109,11 +117,11 @@ export class CommunityService {
    * partage volontairement et l'espace de recherche (26⁸) rend l'essai en
    * rafale vain — le throttler global coupe court de toute façon.
    */
-  async lookupFriendCode(code: string): Promise<FriendCodePreview> {
+  async lookupFriendCode(userId: string, code: string): Promise<FriendCodePreview> {
     const normalized = normalizeFriendCode(code);
     const target =
       normalized === null ? null : await this.community.findUserByFriendCode(normalized);
-    if (target === null) {
+    if (target === null || (await this.moderation.isBlockedEitherWay(userId, target.id))) {
       throw new NotFoundException('Aucun compte ne porte ce code ami.');
     }
     return { displayName: target.profile?.displayName ?? 'Membre Carlys' };
@@ -128,6 +136,9 @@ export class CommunityService {
    * demande repart alors dans SON sens, comme une demande neuve.
    */
   private async requestFriendTo(userId: string, targetId: string): Promise<void> {
+    if (await this.moderation.isBlockedEitherWay(userId, targetId)) {
+      return; // Pour chacun des deux, l'autre n'existe plus.
+    }
     const existing = await this.community.findFriendshipBetween(userId, targetId);
     if (existing === null) {
       await this.community.createRequest(userId, targetId);
@@ -195,7 +206,13 @@ export class CommunityService {
   // ── Amis et statistiques partagées ──────────────────────────────────────
 
   async listFriends(userId: string): Promise<CommunityFriend[]> {
-    const friends = await this.community.listFriends(userId);
+    const [allFriends, hidden] = await Promise.all([
+      this.community.listFriends(userId),
+      this.moderation.blockedUserIdsEitherWay(userId),
+    ]);
+    // Bloquer retire déjà l'amitié ; le filtre garantit qu'aucune ligne
+    // résiduelle ne ressorte, dans un sens comme dans l'autre.
+    const friends = allFriends.filter((friend) => !hidden.has(friend.userId));
     const now = new Date();
     const from = new Date(now.getTime() - STREAK_WINDOW_DAYS * 24 * 3_600_000);
 
@@ -234,8 +251,10 @@ export class CommunityService {
 
   // ── Fil d'encouragements ────────────────────────────────────────────────
 
+  /** Le fil tait les personnes bloquées, dans un sens comme dans l'autre. */
   async feed(userId: string): Promise<EncouragementContract[]> {
-    const rows = await this.community.listEncouragements(userId, FEED_LIMIT);
+    const hidden = await this.moderation.blockedUserIdsEitherWay(userId);
+    const rows = await this.community.listEncouragements(userId, FEED_LIMIT, [...hidden]);
     return rows.map((row) => ({
       id: row.id,
       fromUserId: row.senderId,
@@ -247,9 +266,14 @@ export class CommunityService {
 
   async encourage(userId: string, recipientUserId: string, message: string): Promise<void> {
     const friendship = await this.community.findFriendshipBetween(userId, recipientUserId);
-    if (friendship === null || friendship.status !== FriendRequestStatus.ACCEPTED) {
+    if (
+      friendship === null ||
+      friendship.status !== FriendRequestStatus.ACCEPTED ||
+      (await this.moderation.isBlockedEitherWay(userId, recipientUserId))
+    ) {
       // On n'écrit pas chez quelqu'un qui n'est pas un ami. 403, pas 404 :
       // l'appelant connaît déjà cet identifiant (il vient de sa liste d'amis).
+      // Un blocage répond pareil : rien ne distingue « bloqué » de « plus ami ».
       throw new ForbiddenException('Vous ne pouvez encourager que vos amis.');
     }
     await this.community.createEncouragement(userId, recipientUserId, message);

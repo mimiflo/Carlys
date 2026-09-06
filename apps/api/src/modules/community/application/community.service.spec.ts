@@ -2,6 +2,7 @@ import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { FriendRequestStatus } from '@prisma/client';
 import { type PinoLogger } from 'nestjs-pino';
 import { type NotificationsService } from '../../notifications/application/notifications.service';
+import { type CommunityModerationRepository } from '../infrastructure/community-moderation.repository';
 import { type CommunityRepository } from '../infrastructure/community.repository';
 import { type CommunityChallengesService } from './community-challenges.service';
 import { CommunityService } from './community.service';
@@ -64,12 +65,27 @@ function buildNotifications(pushEnabled = true): NotificationsStub {
   return { pushEnabled, sendToUser: jest.fn().mockResolvedValue(undefined) };
 }
 
+interface ModerationStub {
+  isBlockedEitherWay: jest.Mock;
+  blockedUserIdsEitherWay: jest.Mock;
+}
+
+/** Par défaut, personne n'est bloqué. */
+function buildModeration(blocked = false): ModerationStub {
+  return {
+    isBlockedEitherWay: jest.fn().mockResolvedValue(blocked),
+    blockedUserIdsEitherWay: jest.fn().mockResolvedValue(new Set<string>(blocked ? [FRIEND] : [])),
+  };
+}
+
 function buildService(
   stubs: Stubs,
   notifications: NotificationsStub = buildNotifications(),
+  moderation: ModerationStub = buildModeration(),
 ): CommunityService {
   return new CommunityService(
     stubs as unknown as CommunityRepository,
+    moderation as unknown as CommunityModerationRepository,
     challengesStub as unknown as CommunityChallengesService,
     notifications as unknown as NotificationsService,
     loggerStub as unknown as PinoLogger,
@@ -266,12 +282,14 @@ describe('CommunityService — code ami', () => {
     });
     const service = buildService(stubs);
 
-    await expect(service.lookupFriendCode('ac23-def4')).resolves.toEqual({
+    await expect(service.lookupFriendCode(ME, 'ac23-def4')).resolves.toEqual({
       displayName: 'Alice',
     });
 
     stubs.findUserByFriendCode.mockResolvedValue(null);
-    await expect(service.lookupFriendCode('AC23DEF4')).rejects.toBeInstanceOf(NotFoundException);
+    await expect(service.lookupFriendCode(ME, 'AC23DEF4')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
   });
 
   it('mon profil communautaire porte mon code ami', async () => {
@@ -357,6 +375,67 @@ describe('CommunityService — encouragements', () => {
 
     await service.encourage(ME, FRIEND, 'Bravo !');
     expect(stubs.createEncouragement).toHaveBeenCalledWith(ME, FRIEND, 'Bravo !');
+  });
+});
+
+describe('CommunityService — blocages : réponses opaques partout', () => {
+  const accepted = {
+    id: 'amitié-1',
+    requesterId: FRIEND,
+    addresseeId: ME,
+    status: FriendRequestStatus.ACCEPTED,
+  };
+
+  it('une demande vers une personne bloquée (dans un sens ou l’autre) reste muette', async () => {
+    const stubs = buildStubs();
+    stubs.findUserIdByEmail.mockResolvedValue({ id: FRIEND });
+    stubs.findUserByFriendCode.mockResolvedValue({ id: FRIEND, profile: null });
+    const notifications = buildNotifications();
+    const service = buildService(stubs, notifications, buildModeration(true));
+
+    await expect(service.requestFriend(ME, 'ami@carlys.test')).resolves.toBeUndefined();
+    await expect(service.requestFriendByCode(ME, 'AC23DEF4')).resolves.toBeUndefined();
+
+    // Rien n'est même LU sur l'amitié : la réponse est celle d'un inconnu.
+    expect(stubs.findFriendshipBetween).not.toHaveBeenCalled();
+    expect(stubs.createRequest).not.toHaveBeenCalled();
+    expect(notifications.sendToUser).not.toHaveBeenCalled();
+  });
+
+  it('l’aperçu du code d’une personne bloquée répond comme un code inconnu', async () => {
+    const stubs = buildStubs();
+    stubs.findUserByFriendCode.mockResolvedValue({ id: FRIEND, profile: { displayName: 'Tom' } });
+    const service = buildService(stubs, buildNotifications(), buildModeration(true));
+
+    await expect(service.lookupFriendCode(ME, 'AC23DEF4')).rejects.toBeInstanceOf(
+      NotFoundException,
+    );
+  });
+
+  it('encourager une personne bloquée est refusé comme un non-ami (403, pas plus)', async () => {
+    const stubs = buildStubs();
+    stubs.findFriendshipBetween.mockResolvedValue(accepted);
+    const service = buildService(stubs, buildNotifications(), buildModeration(true));
+
+    await expect(service.encourage(ME, FRIEND, 'Bravo !')).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+    expect(stubs.createEncouragement).not.toHaveBeenCalled();
+  });
+
+  it('la liste d’amis et le fil taisent les personnes bloquées', async () => {
+    const stubs = buildStubs();
+    stubs.listFriends.mockResolvedValue([
+      { userId: FRIEND, displayName: 'Tom', timezone: 'UTC', sharesProgress: true },
+      { userId: 'utilisateur-tiers', displayName: 'Léa', timezone: 'UTC', sharesProgress: false },
+    ]);
+    const service = buildService(stubs, buildNotifications(), buildModeration(true));
+
+    const friends = await service.listFriends(ME);
+    expect(friends.map((friend) => friend.displayName)).toEqual(['Léa']);
+
+    await service.feed(ME);
+    expect(stubs.listEncouragements).toHaveBeenCalledWith(ME, expect.any(Number), [FRIEND]);
   });
 });
 

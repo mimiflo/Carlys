@@ -111,8 +111,11 @@ export class CommunityController {
       'Résoudre un code ami vers son porteur — juste le nom, pour confirmer ' +
       'avant d’envoyer la demande. 404 si aucun compte actif ne le porte.',
   })
-  lookupFriendCode(@Param('code') code: string): Promise<FriendCodePreview> {
-    return this.community.lookupFriendCode(code);
+  lookupFriendCode(
+    @CurrentUser() user: AuthenticatedPrincipal,
+    @Param('code') code: string,
+  ): Promise<FriendCodePreview> {
+    return this.community.lookupFriendCode(user.userId, code);
   }
 
   @Post('requests/:id/accept')

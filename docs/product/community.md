@@ -32,6 +32,15 @@ l'application ne dépend d'elle.
 5. **La progression des défis est collective.** La barre montre
    `somme des contributions / objectif`, bornée à 1 — l'effort du groupe,
    jamais un classement individuel.
+6. **Chacun peut se protéger, sans que l'autre le sache.** Bloquer quelqu'un
+   est unilatéral et OPAQUE : l'amitié et les demandes en attente sont
+   retirées dans les deux sens, puis, pour chacun des deux, l'autre répond
+   comme un compte qui n'existe pas (demande muette en `202`, code ami en
+   `404`, encouragement en `403`, absent des listes et du fil). Jamais de
+   « tu es bloqué ». Un encouragement se retire par son auteur OU son
+   destinataire. Un signalement (personne, ou encouragement précis) part vers
+   l'administration, qui le lit et le résout avec une permission dédiée ; la
+   personne signalée n'en sait rien.
 
 ## Modèle de données (Prisma)
 
@@ -42,6 +51,8 @@ l'application ne dépend d'elle.
 | `CommunityChallenge` | Défi collectif créé par l'équipe (seed puis admin), `SPORT` ou `CULTURE`, avec `target` et fenêtre `startsAt`/`endsAt`. |
 | `ChallengeParticipation` | Participation + `contribution` individuelle à l'objectif. |
 | `CommunityPreference` | `sharesProgress` (absence = partagé, défaut du modèle). |
+| `CommunityBlock` | Blocage unilatéral `(blockerId, blockedId)`, unique par paire orientée ; consulté dans les DEUX sens partout où deux personnes se rencontrent. |
+| `CommunityReport` | Signalement : `reporterId`, `reportedUserId`, `encouragementId?` (mis à `NULL` si le message est supprimé), `reason` (`HARCELEMENT`, `SPAM`, `CONTENU_INAPPROPRIE`, `AUTRE`), `details?` (500 caractères), `status` (`OPEN`, `RESOLVED`), `resolvedAt?`. |
 
 ## API (`/api/v1/community`)
 
@@ -59,6 +70,19 @@ l'application ne dépend d'elle.
 | POST | `/challenges/:id/join` | Rejoindre (idempotent) |
 | DELETE | `/challenges/:id/join` | Quitter (idempotent) |
 | GET · PATCH | `/profile` | Ma préférence `sharesProgress` + mon `friendCode` |
+| POST | `/blocks/:userId` | Bloquer (idempotent, `204`) : retire amitié et demandes dans les deux sens ; `400` soi-même, `404` compte inconnu |
+| DELETE | `/blocks/:userId` | Débloquer (idempotent, `204`) : ne rétablit rien |
+| GET | `/blocks` | Personnes que j'ai bloquées (`userId`, `displayName`, `blockedAt`) |
+| DELETE | `/encouragements/:id` | Retirer un encouragement (auteur OU destinataire) : `204` rejouable et opaque, un identifiant étranger n'a aucun effet |
+| POST | `/reports` | Signaler une personne, ou un encouragement qu'elle m'a envoyé (`201`) ; un signalement OUVERT identique n'est pas dupliqué (même accusé de réception) ; `404` si l'encouragement ne vient pas d'elle ou ne m'était pas adressé |
+
+Côté back-office (`/api/v1/admin/community`, jeton admin, permission
+`community:moderate`, actions auditées) :
+
+| Méthode | Chemin | Rôle |
+| --- | --- | --- |
+| GET | `/reports?status=&limit=&cursor=` | Signalements, plus récents d'abord, avec les deux personnes (id, e-mail, nom) et le texte de l'encouragement visé s'il existe encore |
+| PATCH | `/reports/:id` | `{ status: "RESOLVED" }` résout (`resolvedAt` posé, audit `admin.community_report_resolved`) ; `{ status: "OPEN" }` rouvre (`admin.community_report_reopened`) ; rejouer le même statut ne réécrit rien |
 
 Cas particuliers du service :
 
@@ -74,6 +98,11 @@ Cas particuliers du service :
 - **Limite dédiée** : `POST /community/requests` porte son propre seau,
   calqué sur celui des routes d'authentification (10 demandes par minute et
   par adresse, `429` au-delà), indépendant du plafond global.
+- **Blocages** : consultés par `requestFriendTo` (e-mail et code), l'aperçu
+  de code, `encourage`, `listFriends` et le fil, toujours dans les deux sens
+  et toujours avec la réponse d'un compte inexistant. Bloquer supprime la
+  ligne `Friendship` de la paire, quel que soit son statut ; débloquer ne la
+  recrée pas.
 - **Statistiques partagées** : `weeklySessions` = séances TERMINÉES sur 7
   jours glissants ; `streakDays` = jours calendaires consécutifs avec séance,
   découpés dans le FUSEAU du propriétaire (`UserProfile.timezone`), série
@@ -135,7 +164,14 @@ simplement perdue (la barre est collective, pas comptable).
   `test/community-friend-requests.e2e-spec.ts` (application isolée, le seau
   du throttle vivant dans l'application) : refus opposable par e-mail et par
   code, reprise de contact par la personne qui a refusé, `429` au-delà de
-  10 demandes par minute sans toucher les autres routes.
+  10 demandes par minute sans toucher les autres routes ;
+  `test/community-moderation.e2e-spec.ts` (application isolée) : retrait
+  d'un encouragement par l'auteur ou le destinataire (jamais un tiers, réponse
+  opaque), signalement avec doublon ouvert et garde-fous, blocage (amitié
+  retirée, réponses opaques dans les deux sens, liste, déblocage), lecture et
+  résolution auditée côté admin, `403` sans `community:moderate`.
+- Unitaires API, modération : garde-fous des blocages et signalements,
+  doublon ouvert, nettoyage des précisions, audit de la résolution, pagination.
 - Widgets mobile (`test/features/community/`) : démo complète, états
   erreur/vide/chargement, acceptation de demande, ajout opaque, réglage de
   partage.

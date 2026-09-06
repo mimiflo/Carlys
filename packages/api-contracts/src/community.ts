@@ -74,3 +74,60 @@ export const communityProfileSchema = z.object({
   friendCode: friendCodeSchema,
 });
 export type CommunityProfile = z.infer<typeof communityProfileSchema>;
+
+// ── Modération : blocages et signalements ─────────────────────────────────
+
+/**
+ * Personne que J'AI bloquée (GET /community/blocks). Un blocage est
+ * unilatéral et opaque : l'autre n'en est jamais informé, il ne voit qu'un
+ * compte qui n'existe plus (demande muette, code ami inconnu, encouragement
+ * refusé). Bloquer retire l'amitié et les demandes en attente dans les deux
+ * sens ; débloquer ne les rétablit pas.
+ */
+export const blockedUserSchema = z.object({
+  userId: z.string(),
+  displayName: z.string(),
+  blockedAt: z.string(),
+});
+export type BlockedUser = z.infer<typeof blockedUserSchema>;
+
+export const communityReportReasonSchema = z.enum([
+  'HARCELEMENT',
+  'SPAM',
+  'CONTENU_INAPPROPRIE',
+  'AUTRE',
+]);
+export type CommunityReportReason = z.infer<typeof communityReportReasonSchema>;
+
+export const communityReportStatusSchema = z.enum(['OPEN', 'RESOLVED']);
+export type CommunityReportStatus = z.infer<typeof communityReportStatusSchema>;
+
+/** Longueur maximale des précisions d'un signalement. */
+export const COMMUNITY_REPORT_DETAILS_MAX_LENGTH = 500;
+
+/** POST /community/reports — signaler une personne, ou un encouragement précis. */
+export const createCommunityReportSchema = z.object({
+  reportedUserId: z.string().uuid(),
+  /** Encouragement visé : doit avoir été envoyé PAR la personne signalée AU signalant. */
+  encouragementId: z.string().uuid().optional(),
+  reason: communityReportReasonSchema,
+  details: z.string().max(COMMUNITY_REPORT_DETAILS_MAX_LENGTH).optional(),
+});
+export type CreateCommunityReport = z.infer<typeof createCommunityReportSchema>;
+
+/**
+ * Signalement tel que le voit son AUTEUR : l'accusé de réception. Un
+ * signalement OUVERT identique (même personne, même encouragement) n'est pas
+ * dupliqué : le rejeu rend le même.
+ */
+export const communityReportSchema = z.object({
+  id: z.string(),
+  reportedUserId: z.string(),
+  encouragementId: z.string().nullable(),
+  reason: communityReportReasonSchema,
+  details: z.string().nullable(),
+  status: communityReportStatusSchema,
+  createdAt: z.string(),
+  resolvedAt: z.string().nullable(),
+});
+export type CommunityReport = z.infer<typeof communityReportSchema>;
