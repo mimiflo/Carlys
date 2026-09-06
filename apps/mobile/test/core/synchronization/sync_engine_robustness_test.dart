@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 
 import 'package:carlys_mobile/core/database/app_database.dart';
+import 'package:carlys_mobile/core/synchronization/sync_dispatcher.dart';
 import 'package:carlys_mobile/core/synchronization/sync_engine.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
@@ -92,6 +93,229 @@ void main() {
       await engine.syncNow();
       final operation = (await allOperations()).single;
       expect(operation.attemptCount, 2001);
+    });
+  });
+
+  group('plafond de tentatives', () {
+    /// Fait échouer [id] avec un 503 jusqu'à ce que le plafond soit atteint,
+    /// en laissant passer le backoff (plafonné à 5 min) entre deux essais.
+    Future<void> exhaust(String id) async {
+      api.statusByEntityId[id] = 503;
+      for (var i = 0; i < SyncEngine.serverAttemptsMax; i++) {
+        clock = clock.add(const Duration(minutes: 6));
+        await engine.syncNow();
+      }
+    }
+
+    test('une opération empoisonnée est mise de côté ; sa voie attend, '
+        'les autres partent', () async {
+      // Une séance dont la création répond 503 pour toujours.
+      final poisoned = await enqueue();
+      await db
+          .into(db.localWorkoutSessions)
+          .insert(
+            LocalWorkoutSessionsCompanion.insert(
+              id: poisoned,
+              status: 'IN_PROGRESS',
+              startedAt: clock,
+            ),
+          );
+      clock = clock.add(const Duration(seconds: 1));
+      // Une série de CETTE séance : elle ne doit jamais partir avant la
+      // création, sinon le serveur la refuserait pour de bon (404).
+      final dependent = await enqueue(
+        operationType: 'set.upsert',
+        entityType: 'set',
+        payload: {
+          'sessionId': poisoned,
+          'body': {'id': 'set-1'},
+        },
+      );
+      clock = clock.add(const Duration(seconds: 1));
+      // Un modèle : rien à voir avec cette séance.
+      final independent = await enqueue(
+        operationType: 'template.save',
+        entityType: 'template',
+        payload: {'body': <String, dynamic>{}},
+      );
+
+      await exhaust(poisoned);
+
+      final byId = {for (final op in await allOperations()) op.id: op};
+      final stalled = byId[poisoned]!;
+      expect(stalled.status, 'exhausted');
+      expect(stalled.serverErrorCount, SyncEngine.serverAttemptsMax);
+      expect(stalled.error, 'HTTP 503');
+      expect(api.attemptsByEntityId[poisoned], SyncEngine.serverAttemptsMax);
+      // La série attend sur sa voie, intacte : jamais envoyée.
+      expect(byId[dependent]!.status, 'pending');
+      expect(api.attemptsByEntityId.containsKey('set-1'), isFalse);
+      // Le modèle est passé (donc purgé) : la file n'est plus bloquée.
+      expect(byId.containsKey(independent), isFalse);
+      expect(api.log, ['template.save:$independent']);
+      // L'écran voit la séance en échec, pas en attente indéfinie.
+      final session = await db.select(db.localWorkoutSessions).getSingle();
+      expect(session.syncStatus, 'failed');
+    });
+
+    test(
+      'mise de côté, elle repart à l’ouverture suivante, en ordre',
+      () async {
+        final poisoned = await enqueue();
+        await db
+            .into(db.localWorkoutSessions)
+            .insert(
+              LocalWorkoutSessionsCompanion.insert(
+                id: poisoned,
+                status: 'IN_PROGRESS',
+                startedAt: clock,
+              ),
+            );
+        clock = clock.add(const Duration(seconds: 1));
+        await enqueue(
+          operationType: 'set.upsert',
+          entityType: 'set',
+          payload: {
+            'sessionId': poisoned,
+            'body': {'id': 'set-1'},
+          },
+        );
+        await exhaust(poisoned);
+        expect(api.log, isEmpty);
+
+        // Le serveur va mieux ; l'application est rouverte.
+        api.statusByEntityId.remove(poisoned);
+        await engine.retryExhausted();
+        final session = await db.select(db.localWorkoutSessions).getSingle();
+        expect(session.syncStatus, 'pending');
+        await engine.syncNow();
+
+        expect(api.log, ['session.create:$poisoned', 'set.upsert:set-1']);
+        expect(await allOperations(), isEmpty);
+      },
+    );
+
+    test('une coupure réseau ne compte jamais comme erreur serveur', () async {
+      // Hors ligne pendant une heure : la file ne doit pas se vider dans
+      // « mis de côté » opération par opération — c'est le réseau qui
+      // manque, pas l'opération qui est mauvaise.
+      api.networkDown = true;
+      final id = await enqueue();
+      for (var i = 0; i < 2 * SyncEngine.serverAttemptsMax; i++) {
+        clock = clock.add(const Duration(minutes: 6));
+        await engine.syncNow();
+      }
+      final operation = (await allOperations()).single;
+      expect(operation.status, 'pending');
+      expect(operation.serverErrorCount, 0);
+      expect(operation.attemptCount, 2 * SyncEngine.serverAttemptsMax);
+      expect(api.attemptsByEntityId[id], 2 * SyncEngine.serverAttemptsMax);
+    });
+
+    test(
+      'un 429 est transitoire : ni échec définitif, ni erreur serveur',
+      () async {
+        // La documentation le promettait ; le moteur le rangeait avec les 4xx
+        // définitifs, et une rafale de saisies aurait marqué en échec des
+        // séries parfaitement valides.
+        final id = await enqueue();
+        api.statusByEntityId[id] = 429;
+        await engine.syncNow();
+        api.statusByEntityId.remove(id);
+
+        final operation = (await allOperations()).single;
+        expect(operation.status, 'pending');
+        expect(operation.serverErrorCount, 0);
+        expect(operation.attemptCount, 1);
+      },
+    );
+
+    test('un 5xx isolé ne fait qu’attendre le backoff', () async {
+      final id = await enqueue();
+      api.statusByEntityId[id] = 502;
+      await engine.syncNow();
+      api.statusByEntityId.remove(id);
+
+      final operation = (await allOperations()).single;
+      expect(operation.status, 'pending');
+      expect(operation.serverErrorCount, 1);
+      // Trop tôt : le backoff de 5 s n'est pas écoulé.
+      await engine.syncNow();
+      expect(api.attemptsByEntityId[id], 1);
+      clock = clock.add(const Duration(seconds: 6));
+      await engine.syncNow();
+      expect(api.log, ['session.create:$id']);
+    });
+  });
+
+  group('voies', () {
+    SyncOperation operationOf({
+      required String entityType,
+      required String entityId,
+      required String payload,
+    }) => SyncOperation(
+      id: 'op',
+      entityType: entityType,
+      entityId: entityId,
+      operationType: 'x',
+      payload: payload,
+      createdAt: clock,
+      attemptCount: 0,
+      serverErrorCount: 0,
+      status: 'pending',
+      idempotencyKey: entityId,
+    );
+
+    test('les opérations d’une séance partagent une voie', () {
+      expect(
+        syncLaneOf(
+          operationOf(entityType: 'session', entityId: 's-1', payload: '{}'),
+        ),
+        'session:s-1',
+      );
+      expect(
+        syncLaneOf(
+          operationOf(entityType: 'plan', entityId: 's-1', payload: '{}'),
+        ),
+        'session:s-1',
+      );
+      expect(
+        syncLaneOf(
+          operationOf(
+            entityType: 'set',
+            entityId: 'set-1',
+            payload: '{"sessionId":"s-1","body":{}}',
+          ),
+        ),
+        'session:s-1',
+      );
+    });
+
+    test('un modèle et une série sans séance connue font voie à part', () {
+      expect(
+        syncLaneOf(
+          operationOf(entityType: 'template', entityId: 't-1', payload: '{}'),
+        ),
+        'template:t-1',
+      );
+      // Opération écrite avant que `set.delete` ne porte `sessionId`.
+      expect(
+        syncLaneOf(
+          operationOf(
+            entityType: 'set',
+            entityId: 'set-1',
+            payload: '{"id":"set-1"}',
+          ),
+        ),
+        'set:set-1',
+      );
+      // Charge illisible : ne fait surtout pas tomber le drainage.
+      expect(
+        syncLaneOf(
+          operationOf(entityType: 'set', entityId: 'set-1', payload: '{'),
+        ),
+        'set:set-1',
+      );
     });
   });
 

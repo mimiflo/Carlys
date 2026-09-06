@@ -19,6 +19,13 @@
 > - **FIFO strict** : la file est rejouée dans l'ordre d'écriture locale ; un
 >   échec réseau interrompt le drainage (aucune opération ne double une autre) ;
 > - **backoff exponentiel** par opération : 5 s, 10 s, 20 s… plafonné à 5 min ;
+> - **plafond de tentatives** (`SyncEngine.serverAttemptsMax` = 5 réponses
+>   5xx d'affilée, colonne `server_error_count`) : au-delà, l'opération est
+>   **mise de côté** (`exhausted`) et ne retient plus que les opérations de sa
+>   propre **voie** (même séance) ; les autres partent. Les coupures réseau
+>   ne comptent pas. Elle repart à l'ouverture suivante de l'application
+>   (`SyncLifecycle` appelle `retryExhausted()`), et l'entité reste visible en
+>   échec entre-temps ;
 > - déclencheurs : entrée dans l'application, retour de connectivité
 >   (`connectivity_plus`), périodique (3 min), et opportuniste après chaque
 >   écriture locale ;
@@ -158,21 +165,36 @@ Table Drift (Étape 4), une ligne par mutation à propager :
 stateDiagram-v2
   [*] --> pending : insertion (transaction locale)
   pending --> pending : échec transitoire\n(attemptCount++, backoff)
-  pending --> synced : acquittement API (2xx\nou rejeu idempotent reconnu)
-  pending --> failed : erreur définitive (4xx non récupérable)\nou plafond de tentatives atteint
-  failed --> pending : réessai manuel de l'utilisateur
-  synced --> [*] : purge différée
+  pending --> [*] : acquittement API (2xx ou rejeu\nidempotent reconnu) : opération supprimée,\nl'entité passe synced
+  pending --> failed : erreur définitive (4xx non récupérable)
+  pending --> exhausted : serverAttemptsMax réponses 5xx d'affilée
+  exhausted --> pending : ouverture suivante de l'application\n(retryExhausted)
 ```
 
 - `pending` : à envoyer (ou en cours d'envoi). Un échec **transitoire** (pas de
-  réseau, timeout, 5xx, `RATE_LIMITED`) laisse l'opération `pending` et
-  incrémente `attemptCount`.
-- `synced` : acquittée par l'API. Les lignes `synced` sont conservées un court
-  moment (journal, débogage) puis purgées.
-- `failed` : erreur **définitive** (ex. `VALIDATION_ERROR`, `FORBIDDEN`) ou
-  plafond de tentatives automatiques atteint. L'opération n'est plus rejouée
-  automatiquement ; `error` est affichable et un réessai manuel la repasse en
-  `pending`.
+  réseau, timeout, 401 à renouveler, 5xx, `429 RATE_LIMITED`) laisse
+  l'opération `pending` et incrémente `attemptCount` ; une réponse 5xx
+  incrémente aussi `serverErrorCount`.
+- **succès** : l'opération est **supprimée** et l'entité locale passe
+  `synced` — c'est sur l'entité, pas sur la file, que l'état s'affiche.
+- `failed` : erreur **définitive** (ex. `VALIDATION_ERROR`, `FORBIDDEN`).
+  L'opération n'est plus rejouée ; `error` est conservé et l'entité est
+  marquée `failed`.
+- `exhausted` : **mise de côté** après `serverAttemptsMax` réponses 5xx
+  d'affilée. L'entité est marquée `failed` (l'utilisateur voit l'échec), les
+  opérations qui la suivent **sur sa voie** attendent, celles des autres
+  voies partent. À l'ouverture suivante, `SyncEngine.retryExhausted()` la
+  repasse `pending`, compteurs à zéro, et l'entité redevient « en attente ».
+
+### Voies
+
+L'ordre n'importe qu'entre opérations d'une même entité racine : une série
+envoyée avant la création de sa séance serait refusée pour toujours (404),
+alors qu'un modèle et une séance n'ont rien à s'attendre. Chaque opération a
+donc une **voie** (`syncLaneOf`, `core/synchronization/sync_dispatcher.dart`) :
+`session:<id>` pour `session.*`, `plan.skip` et les `set.*` (dont le corps
+porte `sessionId`), `template:<id>` pour les modèles. Une opération mise de
+côté retient sa voie, et seulement elle.
 
 ## Propriétés des opérations
 
@@ -213,22 +235,26 @@ concurrents ne provoquent jamais deux envois parallèles de la même opération.
 ## Backoff exponentiel
 
 En cas d'échec transitoire, le prochain essai automatique attend un délai
-croissant, calculé à partir de `attemptCount` et `lastAttemptAt` :
+croissant, calculé à partir de `attemptCount` et `lastAttemptAt`
+(`SyncEngine.backoff`) :
 
 ```text
-délai = min(base × 2^attemptCount, plafond) ± gigue aléatoire
-# cible : base ≈ 2 s, plafond ≈ 5 min, gigue ±20 %
+délai = min(5 s × 2^(attemptCount − 1), 5 min)
+# 5 s, 10 s, 20 s, 40 s, 80 s, 160 s, puis 5 min à chaque essai
 ```
 
-- La gigue évite que tous les appareils resoumettent au même instant après une
-  panne côté serveur.
-- Un retour de connexion détecté par `connectivity_plus` **court-circuite** le
-  délai en cours : on retente immédiatement.
-- Au-delà d'un plafond de tentatives automatiques, l'opération passe `failed`
-  et attend un réessai manuel.
+- L'exposant est borné avant le calcul : le plafond est atteint dès la 7e
+  tentative, et rien ne déborde même après des milliers d'essais.
+- Un retour de connexion détecté par `connectivity_plus` réveille le moteur ;
+  une opération dont le délai n'est pas écoulé attend quand même son tour
+  (FIFO strict : rien ne double une opération en attente).
+- **Plafond de tentatives** : après `serverAttemptsMax` (5) réponses 5xx
+  d'affilée, l'opération est mise de côté (`exhausted`, voir le cycle de vie)
+  et ne bloque plus les autres voies ; elle repart à l'ouverture suivante.
+  Seules les réponses du serveur comptent : hors ligne, la file attend
+  simplement le réseau, aussi longtemps qu'il faut.
 - Une réponse `429 RATE_LIMITED` de l'API (limite par défaut : 100 requêtes /
-  60 s, cf. `packages/shared-config`) est traitée comme un échec transitoire ;
-  le moteur regroupe d'ailleurs les envois pour rester loin de cette limite.
+  60 s, cf. `packages/shared-config`) est traitée comme un échec transitoire.
 
 ## Identifiants UUID côté appareil et idempotence côté serveur
 

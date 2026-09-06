@@ -209,14 +209,23 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
   @override
   Future<void> deleteSet(String setId) async {
     await _db.transaction(() async {
+      final set = await (_db.select(
+        _db.localWorkoutSets,
+      )..where((row) => row.id.equals(setId))).getSingleOrNull();
+      if (set == null) {
+        return; // déjà purgée : rien à supprimer, rien à envoyer
+      }
       await (_db.update(_db.localWorkoutSets)
-            ..where((set) => set.id.equals(setId)))
+            ..where((row) => row.id.equals(setId)))
           .write(const LocalWorkoutSetsCompanion(deleted: Value(true)));
       await _writer.enqueue(
         entityType: 'set',
         entityId: setId,
         operationType: 'set.delete',
-        payload: {'id': setId},
+        // `sessionId` ne part pas au serveur : il range l'opération sur la
+        // voie de sa séance, derrière la création et les séries qui la
+        // précèdent (cf. `syncLaneOf`).
+        payload: {'id': setId, 'sessionId': set.sessionId},
       );
     });
     _poke();

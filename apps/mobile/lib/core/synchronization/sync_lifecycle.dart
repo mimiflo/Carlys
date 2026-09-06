@@ -7,7 +7,8 @@ import '../logging/app_logger.dart';
 import 'sync_engine.dart';
 
 /// Déclencheurs de synchronisation :
-///  - à l'entrée dans l'application authentifiée ;
+///  - à l'entrée dans l'application authentifiée — les opérations mises de
+///    côté (trop d'erreurs serveur) y retrouvent d'abord leur chance ;
 ///  - au retour de la connectivité ;
 ///  - périodiquement (3 min), en filet de sécurité.
 class SyncLifecycle {
@@ -27,7 +28,7 @@ class SyncLifecycle {
     }
     _started = true;
 
-    _poke();
+    unawaited(_engine.retryExhausted().then((_) => _engine.syncNow()));
     _connectivitySubscription = Connectivity().onConnectivityChanged.listen((
       results,
     ) {

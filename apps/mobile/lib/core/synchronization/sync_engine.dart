@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:dio/dio.dart';
@@ -8,28 +7,45 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../database/app_database.dart';
 import '../logging/app_logger.dart';
 import 'sync_api.dart';
+import 'sync_dispatcher.dart';
+import 'sync_entity_marker.dart';
 
 /// Draine la file d'opérations vers l'API.
 ///
 /// Propriétés :
 ///  - FIFO strict : l'ordre d'écriture local est préservé côté serveur ;
 ///  - single-flight : un seul drainage à la fois ;
-///  - backoff exponentiel par opération après un échec réseau ;
+///  - backoff exponentiel par opération après un échec réseau ou serveur,
+///    plafonné à 5 minutes ;
 ///  - une erreur 4xx marque l'opération `failed` sans bloquer la file ;
+///  - au-delà de [serverAttemptsMax] réponses 5xx d'affilée, l'opération est
+///    mise de côté (`exhausted`) : elle ne retient plus que les opérations
+///    de SA voie (même séance) et repart à la prochaine ouverture ;
 ///  - une opération réussie est supprimée (résiste à une fermeture brutale :
 ///    au pire elle est rejouée, le serveur est idempotent).
 class SyncEngine {
   SyncEngine({
     required AppDatabase database,
-    required this._api,
+    required SyncApi api,
     DateTime Function()? now,
   }) : _db = database,
+       _dispatcher = SyncDispatcher(api),
+       _marker = SyncEntityMarker(database),
        _now = now ?? DateTime.now;
 
   static const _logger = AppLogger('SyncEngine');
 
+  /// Réponses 5xx d'affilée tolérées pour UNE opération avant de la mettre
+  /// de côté. Cinq, c'est une dizaine de minutes de replis avec les réveils
+  /// périodiques : assez pour absorber un redémarrage du serveur, pas assez
+  /// pour qu'une opération empoisonnée bloque une séance entière jusqu'au
+  /// prochain redémarrage à froid. Les coupures réseau ne comptent pas :
+  /// elles frappent toute la file, pas une opération.
+  static const int serverAttemptsMax = 5;
+
   final AppDatabase _db;
-  final SyncApi _api;
+  final SyncDispatcher _dispatcher;
+  final SyncEntityMarker _marker;
 
   /// Horloge injectable (déterminisme des tests de backoff).
   final DateTime Function() _now;
@@ -67,32 +83,81 @@ class SyncEngine {
     return _inFlight = drain.whenComplete(() => _inFlight = null);
   }
 
+  /// Redonne leur chance aux opérations mises de côté : à l'ouverture de
+  /// l'application, ou sur demande. Elles repartent en tête de leur voie,
+  /// compteurs à zéro, et l'entité redevient « en attente » à l'écran.
+  Future<void> retryExhausted() async {
+    final exhausted = await (_db.select(
+      _db.syncOperations,
+    )..where((op) => op.status.equals('exhausted'))).get();
+    if (exhausted.isEmpty) {
+      return;
+    }
+    _logger.info('${exhausted.length} opération(s) mise(s) de côté rejouée(s)');
+    await _db.transaction(() async {
+      for (final operation in exhausted) {
+        await (_db.update(
+          _db.syncOperations,
+        )..where((op) => op.id.equals(operation.id))).write(
+          const SyncOperationsCompanion(
+            status: Value('pending'),
+            error: Value(null),
+            attemptCount: Value(0),
+            serverErrorCount: Value(0),
+            lastAttemptAt: Value(null),
+          ),
+        );
+        await _marker.mark(operation, 'pending');
+      }
+    });
+  }
+
   Future<void> _drain() async {
     final operations =
         await (_db.select(_db.syncOperations)
-              ..where((op) => op.status.equals('pending'))
+              ..where((op) => op.status.isIn(const ['pending', 'exhausted']))
               ..orderBy([(op) => OrderingTerm.asc(op.createdAt)]))
             .get();
 
+    // Voies retenues par une opération mise de côté : ce qui les suit sur la
+    // même séance attend, tout le reste part.
+    final heldLanes = <String>{};
+
     for (final operation in operations) {
+      final lane = syncLaneOf(operation);
+      if (operation.status != 'pending') {
+        heldLanes.add(lane);
+        continue;
+      }
+      if (heldLanes.contains(lane)) {
+        continue;
+      }
       if (!_isDue(operation)) {
         // FIFO strict : on ne double jamais une opération en attente.
         return;
       }
       try {
-        await _send(operation);
+        await _dispatcher.send(operation);
         await _onSuccess(operation);
       } on DioException catch (exception) {
         final statusCode = exception.response?.statusCode;
         if (statusCode != null &&
             statusCode >= 400 &&
             statusCode < 500 &&
-            statusCode != 401) {
+            statusCode != 401 &&
+            statusCode != 429) {
           // Refus définitif du serveur : on ne bloque pas la file.
           await _onRejected(operation, 'HTTP $statusCode');
           continue;
         }
-        // Réseau, 401 (session à renouveler) ou 5xx : on retentera plus tard.
+        if (statusCode != null && statusCode >= 500) {
+          if (await _onServerError(operation, statusCode)) {
+            heldLanes.add(lane);
+            continue;
+          }
+          return;
+        }
+        // Réseau, 401 (session à renouveler) ou 429 (débit) : plus tard.
         await _onRetryLater(operation);
         return;
       } catch (exception) {
@@ -119,60 +184,12 @@ class SyncEngine {
     return _now().isAfter(lastAttempt.add(backoff(operation.attemptCount)));
   }
 
-  /// Chaque envoi porte la clé d'idempotence de l'opération : le serveur
-  /// est idempotent par UUID client, l'en-tête sert à retrouver les rejeux
-  /// d'une même opération dans ses journaux.
-  Future<void> _send(SyncOperation operation) async {
-    final payload = jsonDecode(operation.payload) as Map<String, dynamic>;
-    final key = operation.idempotencyKey;
-    switch (operation.operationType) {
-      case 'session.create':
-        await _api.createSession(payload, idempotencyKey: key);
-      case 'session.complete':
-        await _api.completeSession(
-          operation.entityId,
-          payload['body'] as Map<String, dynamic>,
-          idempotencyKey: key,
-        );
-      case 'session.abandon':
-        await _api.abandonSession(
-          operation.entityId,
-          payload['body'] as Map<String, dynamic>,
-          idempotencyKey: key,
-        );
-      case 'set.upsert':
-        await _api.upsertSet(
-          payload['sessionId'] as String,
-          payload['body'] as Map<String, dynamic>,
-          idempotencyKey: key,
-        );
-      case 'set.delete':
-        await _api.deleteSet(operation.entityId, idempotencyKey: key);
-      case 'plan.skip':
-        await _api.skipPlanItems(
-          operation.entityId,
-          payload['body'] as Map<String, dynamic>,
-          idempotencyKey: key,
-        );
-      case 'template.save':
-        await _api.saveTemplate(
-          operation.entityId,
-          payload['body'] as Map<String, dynamic>,
-          idempotencyKey: key,
-        );
-      case 'template.delete':
-        await _api.deleteTemplate(operation.entityId, idempotencyKey: key);
-      default:
-        throw StateError('Opération inconnue : ${operation.operationType}');
-    }
-  }
-
   Future<void> _onSuccess(SyncOperation operation) async {
     await _db.transaction(() async {
       await (_db.delete(
         _db.syncOperations,
       )..where((op) => op.id.equals(operation.id))).go();
-      await _markEntity(operation, 'synced');
+      await _marker.mark(operation, 'synced');
     });
   }
 
@@ -187,6 +204,37 @@ class SyncEngine {
     );
   }
 
+  /// Compte la réponse 5xx ; rend `true` si l'opération vient d'être mise de
+  /// côté (plafond atteint), `false` si elle attend simplement son backoff.
+  Future<bool> _onServerError(SyncOperation operation, int statusCode) async {
+    final serverErrors = operation.serverErrorCount + 1;
+    final exhausted = serverErrors >= serverAttemptsMax;
+    if (exhausted) {
+      _logger.warning(
+        'Opération ${operation.operationType} mise de côté après '
+        '$serverErrors réponses HTTP $statusCode : elle repartira à la '
+        'prochaine ouverture',
+      );
+    }
+    await _db.transaction(() async {
+      await (_db.update(
+        _db.syncOperations,
+      )..where((op) => op.id.equals(operation.id))).write(
+        SyncOperationsCompanion(
+          attemptCount: Value(operation.attemptCount + 1),
+          lastAttemptAt: Value(_now()),
+          serverErrorCount: Value(serverErrors),
+          status: Value(exhausted ? 'exhausted' : 'pending'),
+          error: Value(exhausted ? 'HTTP $statusCode' : null),
+        ),
+      );
+      if (exhausted) {
+        await _marker.mark(operation, 'failed');
+      }
+    });
+    return exhausted;
+  }
+
   Future<void> _onRejected(SyncOperation operation, String error) async {
     _logger.warning('Opération rejetée par le serveur : $error');
     await _db.transaction(() async {
@@ -198,69 +246,8 @@ class SyncEngine {
           error: Value(error),
         ),
       );
-      await _markEntity(operation, 'failed');
+      await _marker.mark(operation, 'failed');
     });
-  }
-
-  Future<void> _markEntity(SyncOperation operation, String syncStatus) async {
-    switch (operation.entityType) {
-      case 'session':
-        await (_db.update(
-          _db.localWorkoutSessions,
-        )..where((session) => session.id.equals(operation.entityId))).write(
-          LocalWorkoutSessionsCompanion(syncStatus: Value(syncStatus)),
-        );
-      case 'set':
-        await (_db.update(_db.localWorkoutSets)
-              ..where((set) => set.id.equals(operation.entityId)))
-            .write(LocalWorkoutSetsCompanion(syncStatus: Value(syncStatus)));
-      case 'template':
-        await (_db.update(
-          _db.localWorkoutTemplates,
-        )..where((template) => template.id.equals(operation.entityId))).write(
-          LocalWorkoutTemplatesCompanion(syncStatus: Value(syncStatus)),
-        );
-    }
-    await _markPlanItems(operation, syncStatus);
-  }
-
-  /// Le plan n'a pas d'opération à lui seul : il voyage AVEC autre chose.
-  /// L'acquittement suit donc le transporteur — la création de séance pour le
-  /// plan entier, la série pour son appariement, et `plan.skip` pour les
-  /// prévisions passées.
-  Future<void> _markPlanItems(
-    SyncOperation operation,
-    String syncStatus,
-  ) async {
-    final update = _db.update(_db.localSessionPlanItems);
-    final value = LocalSessionPlanItemsCompanion(syncStatus: Value(syncStatus));
-
-    switch (operation.operationType) {
-      case 'session.create':
-        await (update
-              ..where((item) => item.sessionId.equals(operation.entityId)))
-            .write(value);
-      case 'plan.skip':
-        final ids = _planItemIdsOf(operation);
-        if (ids.isNotEmpty) {
-          await (update..where((item) => item.id.isIn(ids))).write(value);
-        }
-      case 'set.upsert':
-        final payload = jsonDecode(operation.payload) as Map<String, dynamic>;
-        final body = payload['body'] as Map<String, dynamic>;
-        final planItemId = body['planItemId'] as String?;
-        if (planItemId != null) {
-          await (update..where((item) => item.id.equals(planItemId))).write(
-            value,
-          );
-        }
-    }
-  }
-
-  List<String> _planItemIdsOf(SyncOperation operation) {
-    final payload = jsonDecode(operation.payload) as Map<String, dynamic>;
-    final body = payload['body'] as Map<String, dynamic>;
-    return (body['planItemIds'] as List<dynamic>).cast<String>();
   }
 }
 

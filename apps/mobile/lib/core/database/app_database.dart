@@ -223,10 +223,22 @@ class SyncOperations extends Table {
   /// Corps JSON de la requête à rejouer.
   TextColumn get payload => text()();
   DateTimeColumn get createdAt => dateTime()();
+
+  /// Toutes les tentatives, réseau compris : c'est le compteur du backoff.
   IntColumn get attemptCount => integer().withDefault(const Constant(0))();
   DateTimeColumn get lastAttemptAt => dateTime().nullable()();
 
-  /// pending | failed (une opération réussie est supprimée).
+  /// Réponses 5xx d'affilée pour CETTE opération. Une coupure réseau
+  /// n'y compte pas : elle frappe toute la file, pas une opération. Au-delà
+  /// de `SyncEngine.serverAttemptsMax`, l'opération est mise de côté
+  /// (`exhausted`) pour ne plus retenir les opérations indépendantes.
+  IntColumn get serverErrorCount => integer().withDefault(const Constant(0))();
+
+  /// pending | failed | exhausted (une opération réussie est supprimée).
+  ///
+  /// `failed` : refus définitif du serveur (4xx), jamais rejoué
+  /// automatiquement. `exhausted` : trop d'erreurs serveur d'affilée,
+  /// rejouée à la prochaine ouverture de l'application.
   TextColumn get status => text().withDefault(const Constant('pending'))();
   TextColumn get error => text().nullable()();
 
@@ -262,7 +274,8 @@ class AppDatabase extends _$AppDatabase {
   ///  - **4** — hydratation : une table locale du total quotidien ;
   ///  - **5** — index sur les colonnes que les requêtes réelles filtrent
   ///    (statut + date des séances, séries et plan par séance, file par
-  ///    statut et ordre d'écriture).
+  ///    statut et ordre d'écriture) ; `serverErrorCount` sur la file, pour le
+  ///    plafond de tentatives.
   @override
   int get schemaVersion => 5;
 
@@ -314,6 +327,12 @@ class AppDatabase extends _$AppDatabase {
         await migrator.createTable(localWaterIntakes);
       }
       if (from < 5) {
+        // Compteur à zéro pour les opérations déjà en file : elles repartent
+        // avec toutes leurs chances.
+        await migrator.addColumn(
+          syncOperations,
+          syncOperations.serverErrorCount,
+        );
         // Un index ne touche pas aux lignes : SQLite le construit à côté
         // des données existantes, qui restent intactes.
         await migrator.createIndex(idxLocalWorkoutSessionsStatusStartedAt);

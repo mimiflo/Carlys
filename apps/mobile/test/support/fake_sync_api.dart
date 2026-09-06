@@ -13,8 +13,15 @@ class FakeSyncApi implements SyncApi {
   /// Ids d'entités à refuser avec un statut 400 (une fois atteints).
   final Set<String> rejectedIds = {};
 
+  /// Statut HTTP à répondre pour une entité donnée (503 pour une opération
+  /// empoisonnée, 409 pour un conflit…) — tant que l'entrée est présente.
+  final Map<String, int> statusByEntityId = {};
+
   /// Journal des appels réussis, dans l'ordre : `type:id`.
   final List<String> log = [];
+
+  /// Nombre d'envois REÇUS (réussis ou non), par entité.
+  final Map<String, int> attemptsByEntityId = {};
 
   /// Clés d'idempotence reçues, dans l'ordre des envois (réussis ou non).
   final List<String> idempotencyKeys = [];
@@ -22,19 +29,23 @@ class FakeSyncApi implements SyncApi {
   Future<void> _guard(String entityId, String idempotencyKey) async {
     await beforeCall?.call();
     idempotencyKeys.add(idempotencyKey);
+    attemptsByEntityId.update(entityId, (n) => n + 1, ifAbsent: () => 1);
     if (networkDown) {
       throw DioException(
         requestOptions: RequestOptions(path: '/sync'),
         type: DioExceptionType.connectionError,
       );
     }
-    if (rejectedIds.contains(entityId)) {
+    final statusCode = rejectedIds.contains(entityId)
+        ? 400
+        : statusByEntityId[entityId];
+    if (statusCode != null) {
       throw DioException(
         requestOptions: RequestOptions(path: '/sync'),
         type: DioExceptionType.badResponse,
         response: Response(
           requestOptions: RequestOptions(path: '/sync'),
-          statusCode: 400,
+          statusCode: statusCode,
         ),
       );
     }

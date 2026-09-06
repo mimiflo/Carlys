@@ -98,6 +98,9 @@ void main() {
         final operations = await db.select(db.syncOperations).get();
         expect(operations, hasLength(1));
         expect(operations.single.operationType, 'session.create');
+        // Le compteur d'erreurs serveur (v5) démarre à zéro : l'opération
+        // héritée repart avec toutes ses chances.
+        expect(operations.single.serverErrorCount, 0);
 
         // La table d'hydratation, arrivée en version 4, est là et utilisable :
         // une migration qui crée une table sans qu'on puisse y écrire ne vaut
@@ -190,7 +193,9 @@ void main() {
       expect(plan.single.syncStatus, 'synced');
       final water = await db.select(db.localWaterIntakes).get();
       expect(water.single.milliliters, 500);
-      expect(await db.select(db.syncOperations).get(), hasLength(1));
+      final operation = await db.select(db.syncOperations).getSingle();
+      expect(operation.status, 'pending');
+      expect(operation.serverErrorCount, 0);
       expect(await db.select(db.localWorkoutSets).get(), hasLength(1));
       expect(db.schemaVersion, 5);
     });
