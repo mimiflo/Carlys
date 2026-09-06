@@ -190,13 +190,28 @@ simplement perdue (la barre est collective, pas comptable).
   n'enlève que le scan, et l'écran le dit avec un état d'erreur du design
   system. Un e-mail est confirmé opaque ; un code, par le prénom — ou
   « Ce code ne mène à personne ».
-- Chaque carte d'ami porte un menu « plus d'options » (cible tactile pleine,
-  infobulle « Options pour X » pour les lecteurs d'écran) avec « Retirer » :
-  une feuille du design system confirme d'abord, l'appel part ensuite, et la
-  liste se rafraîchit. Tous les gestes de l'écran passent par
-  `CommunityGestures` → `CommunityActions` → dépôt : le retour est un mot
-  sobre dans la barre de message, et l'échec dit VRAI (hors ligne n'est pas
-  une panne, `runCommunityGesture`), au lieu d'échouer en silence.
+- **Se protéger.** Chaque carte d'ami porte un menu « plus d'options »
+  (cible tactile pleine, infobulle « Options pour X » pour les lecteurs
+  d'écran) avec « Retirer », « Bloquer » et « Signaler » ; chaque mot du fil,
+  « Supprimer » (je suis toujours le destinataire de ce que montre le fil)
+  et « Signaler ». Retirer et bloquer se confirment dans une feuille du
+  design system qui dit ce qui va se passer ; bloquer fait disparaître la
+  personne des amis et du fil sans un mot accusateur (le retour dit seulement
+  où revenir dessus). Signaler ouvre une feuille avec le motif (les valeurs
+  de l'enum serveur, libellées en français : Harcèlement, Spam ou publicité,
+  Contenu inapproprié, Autre) et des précisions facultatives (500
+  caractères, blanc = absent) ; un mot est signalé sous le nom de son AUTEUR
+  (`fromUserId`, désormais porté par l'entité). La section « Personnes
+  bloquées », en pied d'écran, permet de débloquer, et rappelle que rien
+  n'est rétabli. Un compte qui n'a plus que des blocages n'est pas « vide ».
+- Tous les gestes de l'écran passent par `CommunityGestures` →
+  `CommunityActions` / `CommunityModerationActions` → dépôt : le retour est
+  un mot sobre dans la barre de message, et l'échec dit VRAI (hors ligne
+  n'est pas une panne, `runCommunityGesture`), au lieu d'échouer en silence.
+  Le dépôt (`CommunityRepository`) expose `removeFriend`, `blockUser`,
+  `unblockUser`, `listBlocked`, `reportUser`, `reportEncouragement`,
+  `deleteEncouragement` : impl Dio (204 sans corps, accusé de réception du
+  signalement non relu), dépôt factice de test, dépôt de démonstration.
 - L'accueil relaie le dernier encouragement (« X t'encourage ») quand il y en
   a un.
 - Demandes d'ami, acceptations et encouragements déclenchent une notification
@@ -244,7 +259,16 @@ simplement perdue (la barre est collective, pas comptable).
   erreur/vide/chargement, acceptation de demande, ajout opaque, réglage de
   partage ; gestes de protection (`community_moderation_test.dart`) : retrait
   d'un ami (confirmation, annulation sans effet, échec hors ligne annoncé et
-  ami conservé).
+  ami conservé, cible tactile), blocage (la personne quitte amis et fil,
+  rejoint « Personnes bloquées », retour non accusateur), déblocage (ligne
+  retirée, amitié non rétablie, compte « non vide »), signalement d'un ami
+  et d'un mot (motif serveur, précisions nettoyées, auteur du mot), retrait
+  d'un mot du fil. Feuille de signalement (`report_sheet_test.dart`) : quatre
+  motifs en français, envoi qui attend un motif, précisions nettoyées,
+  annulation. Contrat Dio (`community_repository_impl_test.dart`) : chemins,
+  verbes, 204 sans corps, charge utile des signalements (`encouragementId`
+  et `details` omis quand absents), `fromUserId` lu dans le fil, réseau mort
+  en `NetworkException`.
 - Code ami : normalisation éprouvée des DEUX côtés (spec Jest et test Dart
   miroirs — formes affichée/minuscule/QR, refus des caractères ambigus) ;
   service (silence sur code inconnu ou soi-même, aperçu 404) ; e2e du tour

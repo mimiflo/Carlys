@@ -3,7 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/community.dart';
+import '../../domain/entities/community_moderation.dart';
 import '../controllers/community_controllers.dart';
+import '../controllers/community_moderation_controllers.dart';
+import 'blocked_user_card.dart';
 import 'challenge_card.dart';
 import 'community_gestures.dart';
 import 'encouragement_tile.dart';
@@ -12,15 +15,17 @@ import 'friend_request_card.dart';
 import 'privacy_card.dart';
 
 /// Les étages de l'écran Communauté, une fois les données là : demandes
-/// reçues, fil, amis, défis, puis la confidentialité. Une section s'efface
-/// quand sa liste est vide (pas de titre orphelin) ; chaque geste passe par
-/// [CommunityGestures], qui confirme, appelle et rend compte.
+/// reçues, fil, amis, défis, puis la confidentialité et les personnes
+/// bloquées. Une section s'efface quand sa liste est vide (pas de titre
+/// orphelin) ; chaque geste passe par [CommunityGestures], qui confirme,
+/// appelle et rend compte.
 class CommunitySections extends ConsumerWidget {
   const CommunitySections({
     required this.requests,
     required this.feed,
     required this.friends,
     required this.challenges,
+    required this.blocked,
     required this.sharesProgress,
     super.key,
   });
@@ -29,13 +34,17 @@ class CommunitySections extends ConsumerWidget {
   final List<Encouragement>? feed;
   final List<CommunityFriend>? friends;
   final List<CommunityChallenge>? challenges;
+  final List<BlockedUser>? blocked;
 
   /// `null` tant que la préférence n'est pas chargée.
   final bool? sharesProgress;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final gestures = CommunityGestures(ref.read(communityActionsProvider));
+    final gestures = CommunityGestures(
+      ref.read(communityActionsProvider),
+      ref.read(communityModerationActionsProvider),
+    );
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -61,8 +70,13 @@ class CommunitySections extends ConsumerWidget {
           'Encouragements',
           feed
               ?.map<Widget>(
-                (encouragement) =>
-                    EncouragementTile(encouragement: encouragement),
+                (encouragement) => EncouragementTile(
+                  encouragement: encouragement,
+                  onDelete: () =>
+                      gestures.deleteEncouragement(context, encouragement),
+                  onReport: () =>
+                      gestures.reportEncouragement(context, encouragement),
+                ),
               )
               .toList(),
         ),
@@ -74,6 +88,8 @@ class CommunitySections extends ConsumerWidget {
                   friend: friend,
                   onEncourage: () => gestures.encourage(context, friend),
                   onRemove: () => gestures.removeFriend(context, friend),
+                  onBlock: () => gestures.blockFriend(context, friend),
+                  onReport: () => gestures.reportFriend(context, friend),
                 ),
               )
               .toList(),
@@ -96,6 +112,17 @@ class CommunitySections extends ConsumerWidget {
                 gestures.setSharesProgress(context, value: value),
           ),
         ]),
+        ..._section(
+          'Personnes bloquées',
+          blocked
+              ?.map<Widget>(
+                (user) => BlockedUserCard(
+                  user: user,
+                  onUnblock: () => gestures.unblock(context, user),
+                ),
+              )
+              .toList(),
+        ),
       ],
     );
   }

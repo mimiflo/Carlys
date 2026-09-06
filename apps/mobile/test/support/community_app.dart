@@ -72,17 +72,21 @@ Future<void> reveal(WidgetTester tester, Finder item) async {
   await tester.pumpAndSettle();
 }
 
-/// Le menu « plus d'options » de la carte de [name] (ami ou message).
+/// Le menu « plus d'options » de la carte d'AMI de [name].
 Finder optionsOf(String name) => find.byTooltip('Options pour $name');
 
-/// Ouvre le menu de [name] et choisit l'entrée [label].
+/// Le menu « plus d'options » du MESSAGE reçu de [name].
+Finder messageOptionsOf(String name) =>
+    find.byTooltip('Options du message de $name');
+
+/// Ouvre le [menu] (après l'avoir rendu visible) et choisit l'entrée [label].
 Future<void> chooseOption(
   WidgetTester tester,
-  String name,
+  Finder menu,
   String label,
 ) async {
-  await reveal(tester, optionsOf(name));
-  await tester.tap(optionsOf(name));
+  await reveal(tester, menu);
+  await tester.tap(menu);
   await tester.pumpAndSettle();
   await tester.tap(find.text(label));
   await tester.pumpAndSettle();

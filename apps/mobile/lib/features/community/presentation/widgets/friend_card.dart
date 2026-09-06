@@ -17,6 +17,8 @@ class FriendCard extends StatelessWidget {
     required this.friend,
     required this.onEncourage,
     required this.onRemove,
+    required this.onBlock,
+    required this.onReport,
     super.key,
   });
 
@@ -25,6 +27,12 @@ class FriendCard extends StatelessWidget {
 
   /// « Retirer » : l'amitié cesse, l'autre pourra redemander.
   final VoidCallback onRemove;
+
+  /// « Bloquer » : l'autre ne peut plus rien, et n'en saura rien.
+  final VoidCallback onBlock;
+
+  /// « Signaler » : un mot à l'équipe Carlys, à l'insu de l'autre.
+  final VoidCallback onReport;
 
   @override
   Widget build(BuildContext context) {
@@ -88,6 +96,17 @@ class FriendCard extends StatelessWidget {
                 label: 'Retirer',
                 icon: Icons.person_remove_outlined,
                 onSelected: onRemove,
+              ),
+              CommunityMenuAction(
+                label: 'Bloquer',
+                icon: Icons.block_rounded,
+                destructive: true,
+                onSelected: onBlock,
+              ),
+              CommunityMenuAction(
+                label: 'Signaler',
+                icon: Icons.flag_outlined,
+                onSelected: onReport,
               ),
             ],
           ),

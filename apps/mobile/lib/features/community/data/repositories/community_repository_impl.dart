@@ -4,7 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/api/api_error_mapper.dart';
 import '../../../../core/api/dio_client.dart';
 import '../../domain/entities/community.dart';
+import '../../domain/entities/community_moderation.dart';
 import '../../domain/repositories/community_repository.dart';
+import '../mappers/community_mappers.dart';
 
 /// Communauté servie par l'API (/api/v1/community).
 ///
@@ -20,16 +22,7 @@ class CommunityRepositoryImpl implements CommunityRepository {
   Future<List<Encouragement>> encouragements() {
     return _guard(() async {
       final rows = await _list('/community/feed');
-      return rows
-          .map(
-            (row) => Encouragement(
-              id: row['id'] as String,
-              fromName: row['fromDisplayName'] as String,
-              message: row['message'] as String,
-              sentAt: DateTime.parse(row['sentAt'] as String),
-            ),
-          )
-          .toList(growable: false);
+      return rows.map(encouragementFromJson).toList(growable: false);
     });
   }
 
@@ -37,17 +30,7 @@ class CommunityRepositoryImpl implements CommunityRepository {
   Future<List<CommunityFriend>> friends() {
     return _guard(() async {
       final rows = await _list('/community/friends');
-      final friends = rows
-          .map(
-            (row) => CommunityFriend(
-              id: row['userId'] as String,
-              displayName: row['displayName'] as String,
-              sharesProgress: row['sharesProgress'] as bool,
-              streakDays: (row['streakDays'] as num?)?.toInt(),
-              weeklySessions: (row['weeklySessions'] as num?)?.toInt(),
-            ),
-          )
-          .toList();
+      final friends = rows.map(friendFromJson).toList();
       friends.sort(
         (a, b) => (b.streakDays ?? -1).compareTo(a.streakDays ?? -1),
       );
@@ -59,15 +42,7 @@ class CommunityRepositoryImpl implements CommunityRepository {
   Future<List<FriendRequest>> receivedRequests() {
     return _guard(() async {
       final rows = await _list('/community/requests');
-      return rows
-          .map(
-            (row) => FriendRequest(
-              id: row['id'] as String,
-              fromDisplayName: row['fromDisplayName'] as String,
-              createdAt: DateTime.parse(row['createdAt'] as String),
-            ),
-          )
-          .toList(growable: false);
+      return rows.map(friendRequestFromJson).toList(growable: false);
     });
   }
 
@@ -142,7 +117,7 @@ class CommunityRepositoryImpl implements CommunityRepository {
   Future<List<CommunityChallenge>> challenges() {
     return _guard(() async {
       final rows = await _list('/community/challenges');
-      return rows.map(_challenge).toList(growable: false);
+      return rows.map(challengeFromJson).toList(growable: false);
     });
   }
 
@@ -152,7 +127,7 @@ class CommunityRepositoryImpl implements CommunityRepository {
       final response = await _dio.post<Map<String, dynamic>>(
         '/community/challenges/$challengeId/join',
       );
-      return _challenge(_data(response));
+      return challengeFromJson(_data(response));
     });
   }
 
@@ -162,7 +137,7 @@ class CommunityRepositoryImpl implements CommunityRepository {
       final response = await _dio.delete<Map<String, dynamic>>(
         '/community/challenges/$challengeId/join',
       );
-      return _challenge(_data(response));
+      return challengeFromJson(_data(response));
     });
   }
 
@@ -214,19 +189,78 @@ class CommunityRepositoryImpl implements CommunityRepository {
     });
   }
 
-  CommunityChallenge _challenge(Map<String, dynamic> row) {
-    return CommunityChallenge(
-      id: row['id'] as String,
-      kind: row['kind'] == 'CULTURE'
-          ? ChallengeKind.culture
-          : ChallengeKind.sport,
-      title: row['title'] as String,
-      description: row['description'] as String,
-      participants: (row['participants'] as num).toInt(),
-      progress: (row['progress'] as num).toDouble(),
-      joined: row['joined'] as bool,
-      endsAt: DateTime.parse(row['endsAt'] as String),
+  // ── Se protéger : blocages, retrait d'un mot, signalements ──────────────
+
+  @override
+  Future<void> blockUser(String userId) {
+    return _guard(() async {
+      // 204, idempotent : bloquer deux fois ne change rien.
+      await _dio.post<void>('/community/blocks/$userId');
+    });
+  }
+
+  @override
+  Future<void> unblockUser(String userId) {
+    return _guard(() async {
+      await _dio.delete<void>('/community/blocks/$userId');
+    });
+  }
+
+  @override
+  Future<List<BlockedUser>> listBlocked() {
+    return _guard(() async {
+      final rows = await _list('/community/blocks');
+      final blocked = rows.map(blockedUserFromJson).toList();
+      blocked.sort((a, b) => b.blockedAt.compareTo(a.blockedAt));
+      return blocked;
+    });
+  }
+
+  @override
+  Future<void> deleteEncouragement(String encouragementId) {
+    return _guard(() async {
+      // 204 rejouable et opaque : un identifiant inconnu aboutit pareil.
+      await _dio.delete<void>('/community/encouragements/$encouragementId');
+    });
+  }
+
+  @override
+  Future<void> reportUser(String userId, CommunityReportDraft report) {
+    return _report(reportedUserId: userId, report: report);
+  }
+
+  @override
+  Future<void> reportEncouragement(
+    Encouragement encouragement,
+    CommunityReportDraft report,
+  ) {
+    // Le serveur exige que le message vienne de la personne signalée : on
+    // signale donc SOUS le nom de son auteur, jamais d'un autre.
+    return _report(
+      reportedUserId: encouragement.fromUserId,
+      encouragementId: encouragement.id,
+      report: report,
     );
+  }
+
+  Future<void> _report({
+    required String reportedUserId,
+    required CommunityReportDraft report,
+    String? encouragementId,
+  }) {
+    return _guard(() async {
+      // L'accusé de réception (201) n'est pas relu : un signalement ouvert
+      // identique rend le même, et l'écran n'a rien à en montrer.
+      await _dio.post<Map<String, dynamic>>(
+        '/community/reports',
+        data: {
+          'reportedUserId': reportedUserId,
+          if (encouragementId != null) 'encouragementId': encouragementId,
+          'reason': report.reason.serverValue,
+          if (report.details != null) 'details': report.details,
+        },
+      );
+    });
   }
 
   Map<String, dynamic> _data(Response<Map<String, dynamic>> response) {

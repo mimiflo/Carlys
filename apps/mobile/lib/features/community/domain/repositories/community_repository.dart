@@ -1,4 +1,5 @@
 import '../entities/community.dart';
+import '../entities/community_moderation.dart';
 
 /// Contrat de la communauté.
 ///
@@ -64,4 +65,29 @@ abstract interface class CommunityRepository {
   Future<bool> sharesProgress();
 
   Future<void> setSharesProgress({required bool value});
+
+  // ── Se protéger ─────────────────────────────────────────────────────────
+
+  /// Bloque quelqu'un (idempotent). Le serveur retire l'amitié et les
+  /// demandes en attente dans les deux sens ; l'autre n'est jamais prévenu.
+  Future<void> blockUser(String userId);
+
+  /// Lève un blocage (idempotent). Ne rétablit ni amitié ni demande.
+  Future<void> unblockUser(String userId);
+
+  /// Personnes que j'ai bloquées, dernier blocage d'abord.
+  Future<List<BlockedUser>> listBlocked();
+
+  /// Signale une personne. Un signalement OUVERT identique n'est pas
+  /// dupliqué par le serveur : rejouer l'envoi est sans conséquence.
+  Future<void> reportUser(String userId, CommunityReportDraft report);
+
+  /// Signale un encouragement précis, sous le nom de son auteur.
+  Future<void> reportEncouragement(
+    Encouragement encouragement,
+    CommunityReportDraft report,
+  );
+
+  /// Retire un encouragement de mon fil (rejouable et opaque côté serveur).
+  Future<void> deleteEncouragement(String encouragementId);
 }

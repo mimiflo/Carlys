@@ -55,12 +55,16 @@ class FriendRequest {
 class Encouragement {
   const Encouragement({
     required this.id,
+    required this.fromUserId,
     required this.fromName,
     required this.message,
     required this.sentAt,
   });
 
   final String id;
+
+  /// Identifiant de l'auteur : c'est sous SON nom qu'un mot se signale.
+  final String fromUserId;
   final String fromName;
   final String message;
   final DateTime sentAt;

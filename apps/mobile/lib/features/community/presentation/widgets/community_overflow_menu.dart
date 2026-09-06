@@ -38,6 +38,9 @@ class CommunityOverflowMenu extends StatelessWidget {
   Widget build(BuildContext context) {
     return PopupMenuButton<CommunityMenuAction>(
       tooltip: tooltip,
+      // Navigateur RACINE, comme les feuilles : ouvert depuis un onglet, le
+      // menu passerait sinon sous la bottom bar flottante.
+      useRootNavigator: true,
       icon: const Icon(
         Icons.more_vert_rounded,
         color: AppColors.darkTextTertiary,

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../design_system/design_system.dart';
 import '../../../../shared/widgets/connection_aware_error.dart';
 import '../controllers/community_controllers.dart';
+import '../controllers/community_moderation_controllers.dart';
 import '../widgets/add_friend_sheet.dart';
 import '../widgets/community_feedback.dart';
 import '../widgets/community_sections.dart';
@@ -53,6 +54,9 @@ class CommunityScreen extends ConsumerWidget {
     final friends = ref.watch(communityFriendsProvider);
     final requests = ref.watch(friendRequestsProvider);
     final challenges = ref.watch(communityChallengesProvider);
+    // Les blocages comptent comme une donnée : un compte qui n'a plus que
+    // des personnes bloquées n'est pas « vide », il doit pouvoir débloquer.
+    final blocked = ref.watch(blockedUsersProvider);
     final sharesProgress = ref.watch(sharesProgressProvider);
     final actions = ref.read(communityActionsProvider);
     final bottomInset =
@@ -62,17 +66,23 @@ class CommunityScreen extends ConsumerWidget {
         (feed.valueOrNull?.isEmpty ?? true) &&
         (friends.valueOrNull?.isEmpty ?? true) &&
         (requests.valueOrNull?.isEmpty ?? true) &&
-        (challenges.valueOrNull?.isEmpty ?? true);
+        (challenges.valueOrNull?.isEmpty ?? true) &&
+        (blocked.valueOrNull?.isEmpty ?? true);
     final loaded =
         !feed.isLoading &&
         !friends.isLoading &&
         !requests.isLoading &&
-        !challenges.isLoading;
+        !challenges.isLoading &&
+        !blocked.isLoading;
     // Une erreur n'est PAS un écran vide : « personne ici » serait un
     // mensonge si le serveur a simplement refusé de répondre. La PREMIÈRE
     // erreur porte la cause — hors ligne ou panne, l'état affiché le dit.
     final error =
-        feed.error ?? friends.error ?? requests.error ?? challenges.error;
+        feed.error ??
+        friends.error ??
+        requests.error ??
+        challenges.error ??
+        blocked.error;
     // PREMIER chargement seulement : pendant un rafraîchissement, Riverpod
     // conserve la valeur précédente (`valueOrNull` reste peuplé) et l'écran
     // continue de la montrer — remplacer la liste par un indicateur ferait
@@ -81,7 +91,8 @@ class CommunityScreen extends ConsumerWidget {
         feed.hasValue ||
         friends.hasValue ||
         requests.hasValue ||
-        challenges.hasValue;
+        challenges.hasValue ||
+        blocked.hasValue;
 
     return Scaffold(
       backgroundColor: AppColors.darkBackground,
@@ -135,7 +146,8 @@ class CommunityScreen extends ConsumerWidget {
                   ..invalidate(encouragementsProvider)
                   ..invalidate(communityFriendsProvider)
                   ..invalidate(friendRequestsProvider)
-                  ..invalidate(communityChallengesProvider);
+                  ..invalidate(communityChallengesProvider)
+                  ..invalidate(blockedUsersProvider);
               },
             )
           else if (!hasData)
@@ -156,6 +168,7 @@ class CommunityScreen extends ConsumerWidget {
               feed: feed.valueOrNull,
               friends: friends.valueOrNull,
               challenges: challenges.valueOrNull,
+              blocked: blocked.valueOrNull,
               sharesProgress: sharesProgress.valueOrNull,
             ),
         ],

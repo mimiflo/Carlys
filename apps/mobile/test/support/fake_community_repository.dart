@@ -2,8 +2,18 @@ import 'dart:async';
 
 import 'package:carlys_mobile/core/errors/app_exception.dart';
 import 'package:carlys_mobile/features/community/domain/entities/community.dart';
+import 'package:carlys_mobile/features/community/domain/entities/community_moderation.dart';
 import 'package:carlys_mobile/features/community/domain/repositories/community_repository.dart';
 import 'package:carlys_mobile/features/nutrition/presentation/controllers/water_controllers.dart';
+
+/// Un signalement reçu par le dépôt factice : la personne, le message visé
+/// (ou `null`), le motif et les précisions nettoyées.
+typedef FakeCommunityReport = ({
+  String userId,
+  String? encouragementId,
+  CommunityReportReason reason,
+  String? details,
+});
 
 /// Dépôt communauté pilotable : listes en mémoire, pannes à la demande.
 class FakeCommunityRepository implements CommunityRepository {
@@ -14,11 +24,13 @@ class FakeCommunityRepository implements CommunityRepository {
     List<CommunityFriend>? friends,
     List<FriendRequest>? requests,
     List<CommunityChallenge>? challenges,
+    List<BlockedUser>? blocked,
     this.shares = true,
   }) : _feed = feed ?? [],
        _friends = friends ?? [],
        _requests = requests ?? [],
-       _challenges = challenges ?? [];
+       _challenges = challenges ?? [],
+       _blocked = blocked ?? [];
 
   /// À activer pour simuler une PANNE serveur (erreur générique).
   bool failReads;
@@ -30,6 +42,7 @@ class FakeCommunityRepository implements CommunityRepository {
   final List<CommunityFriend> _friends;
   final List<FriendRequest> _requests;
   final List<CommunityChallenge> _challenges;
+  final List<BlockedUser> _blocked;
   bool shares;
 
   /// Adresses reçues par [sendFriendRequest], dans l'ordre.
@@ -189,6 +202,84 @@ class FakeCommunityRepository implements CommunityRepository {
   Future<void> setSharesProgress({required bool value}) async {
     _guard();
     shares = value;
+  }
+
+  // ── Se protéger ─────────────────────────────────────────────────────────
+
+  /// Identifiants reçus par [blockUser] / [unblockUser], dans l'ordre.
+  final List<String> blockedIds = [];
+  final List<String> unblockedIds = [];
+
+  /// Signalements reçus, dans l'ordre.
+  final List<FakeCommunityReport> reports = [];
+
+  /// Identifiants reçus par [deleteEncouragement], dans l'ordre.
+  final List<String> deletedEncouragements = [];
+
+  /// Comme le serveur : l'ami disparaît, ses mots aussi, la personne rejoint
+  /// la liste des blocages.
+  @override
+  Future<void> blockUser(String userId) async {
+    _guard();
+    blockedIds.add(userId);
+    final index = _friends.indexWhere((friend) => friend.id == userId);
+    final displayName = index < 0 ? 'Membre' : _friends[index].displayName;
+    _friends.removeWhere((friend) => friend.id == userId);
+    _feed.removeWhere((word) => word.fromUserId == userId);
+    _blocked.insert(
+      0,
+      BlockedUser(
+        userId: userId,
+        displayName: displayName,
+        blockedAt: DateTime.now(),
+      ),
+    );
+  }
+
+  /// Débloquer ne rétablit rien : l'ami ne revient pas.
+  @override
+  Future<void> unblockUser(String userId) async {
+    _guard();
+    unblockedIds.add(userId);
+    _blocked.removeWhere((blocked) => blocked.userId == userId);
+  }
+
+  @override
+  Future<List<BlockedUser>> listBlocked() async {
+    _guard();
+    return List.unmodifiable(_blocked);
+  }
+
+  @override
+  Future<void> reportUser(String userId, CommunityReportDraft report) async {
+    _guard();
+    reports.add((
+      userId: userId,
+      encouragementId: null,
+      reason: report.reason,
+      details: report.details,
+    ));
+  }
+
+  @override
+  Future<void> reportEncouragement(
+    Encouragement encouragement,
+    CommunityReportDraft report,
+  ) async {
+    _guard();
+    reports.add((
+      userId: encouragement.fromUserId,
+      encouragementId: encouragement.id,
+      reason: report.reason,
+      details: report.details,
+    ));
+  }
+
+  @override
+  Future<void> deleteEncouragement(String encouragementId) async {
+    _guard();
+    deletedEncouragements.add(encouragementId);
+    _feed.removeWhere((word) => word.id == encouragementId);
   }
 }
 

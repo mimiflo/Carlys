@@ -1,11 +1,13 @@
 /// Communauté du MODE DÉMO : des amis, des mots, des défis — en mémoire.
 ///
 /// Même règle que les autres dépôts de démonstration : l'état vit le temps du
-/// processus, rejoindre un défi, répondre à une demande ou envoyer un
-/// encouragement se voit immédiatement, rien ne touche le réseau.
+/// processus, rejoindre un défi, répondre à une demande, envoyer un
+/// encouragement ou bloquer quelqu'un se voit immédiatement, rien ne touche
+/// le réseau.
 library;
 
 import '../features/community/domain/entities/community.dart';
+import '../features/community/domain/entities/community_moderation.dart';
 import '../features/community/domain/friend_code.dart';
 import '../features/community/domain/repositories/community_repository.dart';
 
@@ -13,18 +15,21 @@ class DemoCommunityRepository implements CommunityRepository {
   final List<Encouragement> _received = [
     Encouragement(
       id: 'demo-encouragement-1',
+      fromUserId: 'demo-friend-sarah',
       fromName: 'Sarah',
       message: 'Belle série de 6 jours, continue comme ça ! 💪',
       sentAt: DateTime.now().subtract(const Duration(hours: 2)),
     ),
     Encouragement(
       id: 'demo-encouragement-2',
+      fromUserId: 'demo-friend-mehdi',
       fromName: 'Mehdi',
       message: 'Ton volume de la semaine est impressionnant.',
       sentAt: DateTime.now().subtract(const Duration(days: 1, hours: 3)),
     ),
     Encouragement(
       id: 'demo-encouragement-3',
+      fromUserId: 'demo-friend-lea',
       fromName: 'Léa',
       message: 'On se fait le défi du haut du corps ensemble ?',
       sentAt: DateTime.now().subtract(const Duration(days: 2)),
@@ -107,6 +112,9 @@ class DemoCommunityRepository implements CommunityRepository {
       endsAt: DateTime.now().add(const Duration(days: 17)),
     ),
   };
+
+  /// Personne au départ : la liste se remplit par le geste « Bloquer ».
+  final List<BlockedUser> _blocked = [];
 
   bool _sharesProgress = true;
   int _nextId = 0;
@@ -219,6 +227,7 @@ class DemoCommunityRepository implements CommunityRepository {
       0,
       Encouragement(
         id: 'demo-sent-${_nextId++}',
+        fromUserId: friend.id,
         fromName: friend.displayName,
         message: 'Merci pour ton message ! 🙌',
         sentAt: DateTime.now(),
@@ -242,5 +251,55 @@ class DemoCommunityRepository implements CommunityRepository {
   @override
   Future<void> setSharesProgress({required bool value}) async {
     _sharesProgress = value;
+  }
+
+  // ── Se protéger ─────────────────────────────────────────────────────────
+
+  /// Comme le serveur : l'ami disparaît, ses mots aussi, sans un mot pour
+  /// lui ; la personne rejoint la liste des blocages.
+  @override
+  Future<void> blockUser(String userId) async {
+    final index = _friends.indexWhere((friend) => friend.id == userId);
+    if (index < 0) {
+      return; // Idempotent : déjà bloqué, ou inconnu de la démo.
+    }
+    final friend = _friends.removeAt(index);
+    _received.removeWhere((word) => word.fromUserId == userId);
+    _blocked.insert(
+      0,
+      BlockedUser(
+        userId: userId,
+        displayName: friend.displayName,
+        blockedAt: DateTime.now(),
+      ),
+    );
+  }
+
+  /// Débloquer ne rétablit rien : l'amitié se redemande.
+  @override
+  Future<void> unblockUser(String userId) async {
+    _blocked.removeWhere((blocked) => blocked.userId == userId);
+  }
+
+  @override
+  Future<List<BlockedUser>> listBlocked() async => [..._blocked];
+
+  @override
+  Future<void> reportUser(String userId, CommunityReportDraft report) async {
+    // Le signalement part vers l'équipe : en démo comme en vrai, rien à
+    // montrer à l'écran.
+  }
+
+  @override
+  Future<void> reportEncouragement(
+    Encouragement encouragement,
+    CommunityReportDraft report,
+  ) async {
+    // Même silence que pour une personne.
+  }
+
+  @override
+  Future<void> deleteEncouragement(String encouragementId) async {
+    _received.removeWhere((word) => word.id == encouragementId);
   }
 }
