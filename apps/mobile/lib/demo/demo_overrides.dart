@@ -1,8 +1,8 @@
 /// Surcharges Riverpod du MODE DÉMO (flavor `demo` uniquement).
 ///
 /// Branchées par `bootstrap()` quand `CARLYS_FLAVOR=demo` : l'application
-/// tourne alors entièrement hors ligne sur les dépôts en mémoire de
-/// `demo_repositories.dart` et `demo_workouts.dart` — y compris les séances,
+/// tourne alors entièrement hors ligne sur les dépôts en mémoire du dossier
+/// `lib/demo/`, un fichier par domaine — y compris les séances,
 /// dont l'historique est pré-rempli pour que l'accueil, le calendrier et la
 /// progression aient de quoi s'afficher sans compte ni serveur.
 library;
@@ -26,10 +26,16 @@ import '../features/subscription/data/repositories/subscription_repository_impl.
 import '../features/workout_program/data/repositories/program_repository_impl.dart';
 import '../features/workout_session/data/repositories/workout_repository_impl.dart';
 import '../features/workout_template/data/repositories/workout_template_repository_impl.dart';
+import 'demo_account.dart';
 import 'demo_coach.dart';
 import 'demo_community.dart';
+import 'demo_exercises.dart';
+import 'demo_lifecycle.dart';
+import 'demo_notifications.dart';
+import 'demo_nutrition.dart';
 import 'demo_programs.dart';
-import 'demo_repositories.dart';
+import 'demo_progress.dart';
+import 'demo_subscription.dart';
 import 'demo_templates.dart';
 import 'demo_workouts.dart';
 

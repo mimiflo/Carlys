@@ -1,6 +1,6 @@
 import 'package:carlys_mobile/core/media/remote_image_cache.dart';
 import 'package:carlys_mobile/demo/demo_catalog.dart';
-import 'package:carlys_mobile/demo/demo_repositories.dart';
+import 'package:carlys_mobile/demo/demo_exercises.dart';
 import 'package:carlys_mobile/features/exercises/domain/repositories/exercises_repository.dart';
 import 'package:flutter/services.dart' show rootBundle;
 import 'package:flutter_test/flutter_test.dart';
