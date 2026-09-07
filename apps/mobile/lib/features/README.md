@@ -1,14 +1,20 @@
 # Fonctionnalités (feature-first)
 
-Chaque fonctionnalité importante suit cette structure :
+Chaque fonctionnalité importante suit cette structure. C'est un **plan de
+rangement**, pas un inventaire : la mieux fournie n'en occupe que dix dossiers
+sur quinze, et le commentaire dit, pour ceux qui prêtent à confusion, ce qu'on
+y trouve **aujourd'hui**.
 
 ```
 feature/
 ├── data/
 │   ├── datasources/     # API distante (Dio) et base locale (Drift)
 │   ├── dto/             # Objets de transfert (sérialisation écrite à la main)
+│   ├── local/           # Écritures Drift partagées entre fonctionnalités,
+│   │                    #   transaction comprise (`workout_session`)
 │   ├── mappers/         # DTO/Drift ⇄ entités du domaine
-│   └── repositories/    # Implémentations des contrats du domaine
+│   ├── repositories/    # Implémentations des contrats du domaine
+│   └── services/        # Adaptateurs d'un SDK tiers (`notifications`)
 │
 ├── domain/
 │   ├── entities/        # Objets métier immuables (classes à champs `final`)
@@ -17,11 +23,24 @@ feature/
 │   └── usecases/        # Cas d'usage orchestrant les repositories
 │
 └── presentation/
-    ├── controllers/     # Contrôleurs Riverpod (état des écrans)
-    ├── providers/       # Providers de la fonctionnalité
+    ├── controllers/     # UN Notifier Riverpod par fichier, et rien d'autre
+    ├── providers/       # Providers dérivés (Provider, FutureProvider…) qui
+    │                    #   ne portent aucun état : la destination prévue
+    │                    #   par la règle de CLAUDE.md. N'existe ENCORE dans
+    │                    #   aucune fonctionnalité — les fichiers concernés
+    │                    #   sont pour l'instant dans `controllers/`
     ├── screens/         # Écrans
+    ├── utils/           # Calculs purs de l'écran, sans Riverpod : agrégats,
+    │                    #   formatage, seuils (`workout_history`, `progress`)
     └── widgets/         # Widgets propres à la fonctionnalité
 ```
+
+`controllers/` contre `providers/` — la couture est celle de l'**état**. Un
+`Notifier` détient un état et le fait évoluer : il va dans `controllers/`,
+seul dans son fichier. Un provider qui ne fait que **lire d'autres providers
+et calculer** ne détient rien : il va dans `providers/`. Un calcul qui n'a
+même pas besoin de `ref` n'est pas un provider du tout — c'est une fonction,
+et sa place est `utils/`.
 
 ## Dépendances entre fonctionnalités
 
