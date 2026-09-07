@@ -1,0 +1,165 @@
+# Images Docker — la porte qui manquait.
+#
+# Les `Dockerfile` d'apps/api et apps/admin sont le chemin de déploiement
+# documenté (infrastructure/deployment/README.md), mais AUCUN workflow ne les
+# construisait : trois régressions bloquantes ont pu s'installer sans qu'une
+# seule CI ne rougisse. Ce workflow construit les trois cibles publiées par ce
+# README, et va plus loin que le build — voir l'étape « fumée ».
+name: images-ci
+
+on:
+  pull_request:
+    paths:
+      - 'apps/api/**'
+      - 'apps/admin/**'
+      - 'packages/**'
+      # Le build de l'image admin rend /privacy et /terms depuis ces fichiers.
+      - 'docs/legal/**'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.dockerignore'
+      - '.github/workflows/images-ci.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'apps/api/**'
+      - 'apps/admin/**'
+      - 'packages/**'
+      - 'docs/legal/**'
+      - 'pnpm-lock.yaml'
+      - 'pnpm-workspace.yaml'
+      - '.dockerignore'
+      - '.github/workflows/images-ci.yml'
+
+# Construire une image coûte plusieurs minutes : comme api-ci et admin-ci, ce
+# workflow ne se déclenche QUE sur pull request et sur main — jamais à chaque
+# poussée d'une branche de travail — et les poussées successives d'une même
+# référence s'annulent entre elles.
+concurrency:
+  group: images-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Construction des images
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    # L'image de l'API est DÉMARRÉE en fin de job : il lui faut ses deux
+    # dépendances d'infrastructure, comme dans api-ci.
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: carlys
+          POSTGRES_PASSWORD: carlys
+          POSTGRES_DB: carlys_images
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U carlys -d carlys_images"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 5s
+          --health-timeout 3s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Les deux cibles de l'API partagent l'étage `build` (installation +
+      # compilation, l'essentiel du temps) : les construire dans le MÊME job
+      # le fait calculer une seule fois, le cache de couches local servant la
+      # seconde. C'est aussi l'ordre du déploiement réel.
+      - name: Image API — exécution
+        run: docker build -f apps/api/Dockerfile -t carlys-api:ci .
+
+      - name: Image API — migrations
+        run: docker build -f apps/api/Dockerfile --target migrate -t carlys-api-migrate:ci .
+
+      # Le conteneur de migration ne DOIT pas jouer de migration ici (aucune
+      # bascule de trafic à protéger) : on vérifie seulement que son point
+      # d'entrée est bien le CLI Prisma, présent et exécutable.
+      - name: Image migrations — le CLI Prisma répond
+        run: docker run --rm --entrypoint ./node_modules/.bin/prisma carlys-api-migrate:ci --version
+
+      # --build-arg LEGAL_PLACEHOLDERS=allow est DÉLIBÉRÉ : tant que
+      # docs/legal/*.md portent des marqueurs « [À COMPLÉTER : … ] », le build
+      # par défaut échoue exprès. La CI vérifie que l'image se construit, pas
+      # que les textes légaux sont finis — l'étape suivante s'en charge.
+      - name: Image admin
+        run: |
+          docker build -f apps/admin/Dockerfile \
+            --build-arg LEGAL_PLACEHOLDERS=allow -t carlys-admin:ci .
+
+      # La garde légale est une sécurité de production : tant qu'un marqueur
+      # subsiste, une image SANS `allow` doit refuser de se construire. Une
+      # garde que personne n'exerce finit par ne plus mordre — ici, un build
+      # qui RÉUSSIT est un échec du job.
+      - name: La garde légale mord toujours
+        run: |
+          if docker build -f apps/admin/Dockerfile -t carlys-admin:garde . > garde.log 2>&1; then
+            echo "::error::L'image admin s'est construite malgré les marqueurs [À COMPLÉTER] :"
+            echo "::error::la garde de docs/legal (src/lib/legal-documents.ts) ne protège plus la production."
+            exit 1
+          fi
+          grep -q 'marqueur(s) à compléter' garde.log \
+            || { echo "::error::Build échoué, mais pas pour la garde légale :"; tail -40 garde.log; exit 1; }
+          echo "Garde légale vérifiée : build refusé et marqueurs listés."
+
+      # LE test qui manquait. Le blocage le plus coûteux passait le BUILD et
+      # donnait une image morte (« Cannot find module '@carlys/shared-config' »,
+      # puis « Cannot find module 'zod' ») : seul un démarrage réel distingue
+      # une image qui se construit d'une image qui marche.
+      #
+      # NODE_ENV=production est volontaire : c'est le mode qui refuse les
+      # valeurs de développement (env.production.ts), donc celui qui est
+      # réellement déployé. Les valeurs ci-dessous sont factices et publiques.
+      - name: Fumée — l'image API démarre et répond
+        env:
+          SMOKE_ENV: >-
+            -e NODE_ENV=production
+            -e DATABASE_URL=postgresql://carlys:carlys@127.0.0.1:5432/carlys_images
+            -e REDIS_URL=redis://127.0.0.1:6379
+            -e JWT_ACCESS_SECRET=secret-ci-uniquement-32-caracteres-minimum-x
+            -e CORS_ORIGINS=https://admin.carlys.example
+            -e PUBLIC_APP_URL=https://admin.carlys.example
+            -e SMTP_HOST=smtp.carlys.example
+            -e EMAIL_FROM=no-reply@carlys.example
+            -e S3_ENDPOINT=https://s3.carlys.example
+            -e S3_BUCKET=carlys-media
+            -e S3_ACCESS_KEY_ID=carlys-ci
+            -e S3_SECRET_ACCESS_KEY=carlys-ci-secret
+            -e S3_PUBLIC_BASE_URL=https://media.carlys.example/carlys-media
+        run: |
+          docker run -d --name carlys-api-smoke --network host $SMOKE_ENV carlys-api:ci
+          for _ in $(seq 1 45); do
+            if [ "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3000/health/live)" = "200" ]; then
+              echo "/health/live répond."
+              curl -s http://127.0.0.1:3000/health/live; echo
+              # /health/ready touche PostgreSQL : il prouve en plus que le
+              # client Prisma engendré a survécu à la fabrication de l'arbre
+              # de production (`pnpm deploy` le perd si on ne le régénère pas).
+              curl -fsS http://127.0.0.1:3000/health/ready; echo
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::L'image API n'a pas répondu sur /health/live."
+          docker logs carlys-api-smoke
+          exit 1
+
+      - name: Journal du conteneur en cas d'échec
+        if: failure()
+        run: docker logs carlys-api-smoke || true
+
+      - name: Nettoyage
+        if: always()
+        run: docker rm -f carlys-api-smoke || true
