@@ -15,19 +15,32 @@ on:
       - 'packages/**'
       # Le build de l'image admin rend /privacy et /terms depuis ces fichiers.
       - 'docs/legal/**'
+      # Les quatre fichiers de la RACINE que les DEUX Dockerfile recopient
+      # explicitement : `COPY pnpm-workspace.yaml package.json pnpm-lock.yaml
+      # .npmrc ./`. Le package.json racine porte `packageManager` (donc la
+      # version de pnpm que corepack installe dans l'image) et `pnpm.overrides`
+      # (donc les versions réellement résolues) ; .npmrc porte le registre et
+      # `engine-strict`. Les omettre laissait passer une bosse de version ou un
+      # changement de registre : les images changeaient sans réveiller la porte.
+      - 'package.json'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
+      - '.npmrc'
       - '.dockerignore'
       - '.github/workflows/images-ci.yml'
   push:
     branches: [main]
+    # GitHub Actions ignore les ancres YAML : la liste ci-dessus est recopiée
+    # telle quelle. Toute entrée ajoutée ici doit l'être aux deux endroits.
     paths:
       - 'apps/api/**'
       - 'apps/admin/**'
       - 'packages/**'
       - 'docs/legal/**'
+      - 'package.json'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
+      - '.npmrc'
       - '.dockerignore'
       - '.github/workflows/images-ci.yml'
 
