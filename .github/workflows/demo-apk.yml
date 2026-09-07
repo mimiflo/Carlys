@@ -9,6 +9,15 @@ on:
     paths:
       - 'apps/mobile/**'
       - '.github/workflows/demo-apk.yml'
+      # Ce workflow est le SEUL de la CI à exécuter ces deux scripts.
+      # android_branding.sh porte à lui seul le nom affiché, l'icône et la
+      # permission de notification — android/ n'étant pas versionné, ce
+      # script EST l'identité de l'application. Sans ces deux lignes, le
+      # modifier ne déclenchait rien : la retouche restait sans preuve
+      # jusqu'au prochain commit sous apps/mobile/, et personne ne voyait
+      # qu'elle cassait le build.
+      - 'scripts/android_branding.sh'
+      - 'scripts/mobile_platforms.sh'
 
 permissions:
   contents: write
