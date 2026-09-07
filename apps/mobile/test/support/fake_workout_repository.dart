@@ -128,6 +128,41 @@ class FakeWorkoutRepository implements WorkoutRepository {
     _publish(null);
   }
 
+  /// Nombre de rejeux demandés par l'utilisateur.
+  int retryFailedSyncCalls = 0;
+
+  /// Ce que jette le prochain `retryFailedSync`, s'il doit échouer.
+  Object? retryFailedSyncFailure;
+
+  @override
+  Future<void> retryFailedSync() async {
+    retryFailedSyncCalls++;
+    final failure = retryFailedSyncFailure;
+    if (failure != null) {
+      throw failure;
+    }
+    final current = active;
+    if (current != null) {
+      // Rejeu accepté : la séance repasse « en attente ».
+      _publish(
+        WorkoutWithSets(
+          session: WorkoutInfo(
+            id: current.session.id,
+            name: current.session.name,
+            status: current.session.status,
+            startedAt: current.session.startedAt,
+            endedAt: current.session.endedAt,
+            durationSeconds: current.session.durationSeconds,
+            templateId: current.session.templateId,
+            templateName: current.session.templateName,
+            syncState: LocalSyncState.pending,
+          ),
+          sets: current.sets,
+        ),
+      );
+    }
+  }
+
   @override
   Future<void> restoreSessions() async {}
 

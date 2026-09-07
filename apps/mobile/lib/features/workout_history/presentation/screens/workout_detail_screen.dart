@@ -6,6 +6,7 @@ import '../../../../design_system/design_system.dart';
 import '../../../workout_session/domain/entities/workout.dart';
 import '../../../workout_session/presentation/controllers/workout_controllers.dart';
 import '../widgets/workout_conflict_card.dart';
+import '../widgets/workout_retry_sync_card.dart';
 
 /// Détail (et résumé de fin) d'une séance.
 class WorkoutDetailScreen extends ConsumerWidget {
@@ -81,6 +82,13 @@ class _DetailBody extends StatelessWidget {
         // séance elle-même, là où l'utilisateur voit ce qu'il tranche.
         if (session.syncState == LocalSyncState.conflict) ...[
           WorkoutConflictCard(session: session),
+          const SizedBox(height: AppSpacing.md),
+        ],
+        // Envoi mis de côté après trop d'erreurs serveur : le rejeu
+        // automatique n'a lieu qu'à la prochaine ouverture. Le geste est
+        // proposé ici, sur la séance concernée.
+        if (session.syncState == LocalSyncState.failed) ...[
+          WorkoutRetrySyncCard(session: session),
           const SizedBox(height: AppSpacing.md),
         ],
         Row(

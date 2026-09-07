@@ -46,6 +46,15 @@ abstract interface class WorkoutRepository {
     WorkoutConflictResolution resolution,
   );
 
+  /// Redonne sa chance, sur DEMANDE de l'utilisateur, à ce que la
+  /// synchronisation a mis de côté, puis relance un envoi.
+  ///
+  /// Une opération mise de côté (trop d'erreurs serveur d'affilée) reste
+  /// visible en échec, mais son seul rejeu automatique est l'ouverture
+  /// suivante de l'application : sans ce geste, l'utilisateur devrait tuer et
+  /// relancer l'application pour retenter dans la même session.
+  Future<void> retryFailedSync();
+
   /// Rapatrie les séances du serveur dans la base locale, avec leurs séries
   /// **et leur plan**.
   ///

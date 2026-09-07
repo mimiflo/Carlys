@@ -72,6 +72,13 @@ class WorkoutActions {
   Future<void> abandon(String sessionId) =>
       _ref.read(workoutRepositoryProvider).abandonWorkout(sessionId);
 
+  /// Rejoue ce que la synchronisation a mis de côté, puis recharge le détail
+  /// de la séance d'où le geste est parti.
+  Future<void> retryFailedSync(String sessionId) async {
+    await _ref.read(workoutRepositoryProvider).retryFailedSync();
+    _ref.invalidate(workoutDetailProvider(sessionId));
+  }
+
   /// Tranche une séance en conflit de clôture, puis recharge son détail.
   Future<void> resolveConflict(
     String sessionId,

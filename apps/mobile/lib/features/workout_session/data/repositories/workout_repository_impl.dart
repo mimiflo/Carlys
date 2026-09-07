@@ -295,6 +295,14 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
     _poke();
   }
 
+  @override
+  Future<void> retryFailedSync() async {
+    await _sync.retryExhausted();
+    // Attendu, contrairement au `_poke()` des écritures : c'est un geste de
+    // l'utilisateur, l'écran doit pouvoir montrer la fin de la tentative.
+    await _sync.syncNow();
+  }
+
   // ── Rapatriement depuis le serveur ───────────────────────────────────────
 
   @override

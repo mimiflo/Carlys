@@ -202,8 +202,10 @@ stateDiagram-v2
 - `exhausted` : **mise de côté** après `serverAttemptsMax` réponses 5xx
   d'affilée. L'entité est marquée `failed` (l'utilisateur voit l'échec), les
   opérations qui la suivent **sur sa voie** attendent, celles des autres
-  voies partent. À l'ouverture suivante, `SyncEngine.retryExhausted()` la
-  repasse `pending`, compteurs à zéro, et l'entité redevient « en attente ».
+  voies partent. `SyncEngine.retryExhausted()` la repasse `pending`,
+  compteurs à zéro, et l'entité redevient « en attente » : à l'ouverture
+  suivante de l'application, ou tout de suite si l'utilisateur touche
+  « Réessayer la synchronisation » sur le détail de la séance.
 - `conflict` : la clôture a été refusée en `409` et le serveur a clos la
   séance avec une **autre issue** (voir « Le 409 de clôture »). L'entité est
   marquée `conflict`, sa voie attend, et l'opération ne repart **jamais**
@@ -252,7 +254,7 @@ Le moteur draine la file dans les cas suivants (Étape 4) :
 | Retour de la connexion | Écoute de `connectivity_plus` (déjà en dépendance) : passage hors-ligne → en-ligne. |
 | Lancement de l'application | Drainage au démarrage si des opérations `pending` existent. |
 | Périodique raisonnable | Minuterie en avant-plan (ordre de grandeur : quelques minutes), uniquement s'il reste des opérations `pending` — pas de polling à vide. |
-| Réessai manuel | Action utilisateur sur une opération `failed` (ou « tout resynchroniser ») depuis l'interface. |
+| Réessai manuel | Bouton « Réessayer la synchronisation » sur le détail d'une séance en échec (`WorkoutRetrySyncCard`) : il rejoue les opérations mises de côté (`retryExhausted`) puis relance un envoi, **dans la session en cours**. Sans lui, une opération mise de côté n'avait qu'un seul rejeu, l'ouverture suivante de l'application. |
 
 Après une mutation locale, le moteur est aussi notifié immédiatement (best
 effort) pour que la synchronisation parte sans attendre quand le réseau est là.

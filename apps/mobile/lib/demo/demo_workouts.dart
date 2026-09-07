@@ -280,6 +280,9 @@ class DemoWorkoutRepository implements WorkoutRepository {
   Future<void> abandonWorkout(String sessionId) async => _publish(null);
 
   @override
+  Future<void> retryFailedSync() async {} // aucune file en démo
+
+  @override
   Future<void> restoreSessions() async {} // aucun serveur en démo
 
   @override
