@@ -206,8 +206,13 @@ simplement perdue (la barre est collective, pas comptable).
 - **Se protéger.** Chaque carte d'ami porte un menu « plus d'options »
   (cible tactile pleine, infobulle « Options pour X » pour les lecteurs
   d'écran) avec « Retirer », « Bloquer » et « Signaler » ; chaque mot du fil,
-  « Supprimer » (je suis toujours le destinataire de ce que montre le fil)
-  et « Signaler ». Retirer et bloquer se confirment dans une feuille du
+  « Supprimer » (je suis toujours le destinataire de ce que montre le fil),
+  « Bloquer » et « Signaler », ces deux derniers visant son AUTEUR.
+  « Bloquer » sur un mot n'est pas un doublon de la carte d'ami : retirer une
+  amitié laisse en place les mots déjà reçus, donc l'auteur d'un mot blessant
+  peut très bien n'avoir plus aucune carte à l'écran ; le menu du mot est
+  alors le seul chemin qui mène encore à son blocage. Retirer et bloquer se
+  confirment dans une feuille du
   design system qui dit ce qui va se passer ; bloquer fait disparaître la
   personne des amis et du fil sans un mot accusateur (le retour dit seulement
   où revenir dessus). Signaler ouvre une feuille avec le motif (les valeurs
@@ -276,7 +281,10 @@ simplement perdue (la barre est collective, pas comptable).
   suffit à retirer l'invitation) ; gestes de protection (`community_moderation_test.dart`) : retrait
   d'un ami (confirmation, annulation sans effet, échec hors ligne annoncé et
   ami conservé, cible tactile), blocage (la personne quitte amis et fil,
-  rejoint « Personnes bloquées », retour non accusateur), déblocage (ligne
+  rejoint « Personnes bloquées », retour non accusateur), blocage DEPUIS UN
+  MOT quand l'auteur n'est plus un ami (aucune carte à l'écran : le mot
+  disparaît, les autres restent, l'auteur rejoint « Personnes bloquées »
+  sous son nom ; annulation sans effet), déblocage (ligne
   retirée, amitié non rétablie, compte « non vide »), signalement d'un ami
   et d'un mot (motif serveur, précisions nettoyées, auteur du mot), retrait
   d'un mot du fil. Feuille de signalement (`report_sheet_test.dart`) : quatre

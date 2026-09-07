@@ -151,6 +151,53 @@ void main() {
       },
     );
 
+    testWidgets(
+      'depuis un MOT du fil : dernier recours quand l’auteur n’est plus '
+      'un ami',
+      (tester) async {
+        // L'amitié a été rompue, le mot blessant est resté : sans le menu du
+        // mot, plus aucun chemin ne mène à ce blocage.
+        final community = FakeCommunityRepository(
+          friends: [_sarah],
+          feed: [
+            _wordFrom(_tom, 'Tu n’y arriveras jamais.'),
+            _wordFrom(_sarah, 'Belle série !'),
+          ],
+        );
+        await openCommunity(tester, appWith(community));
+        expect(_friendNamed('Tom'), findsNothing);
+
+        await chooseOption(tester, messageOptionsOf('Tom'), 'Bloquer');
+        expect(find.text('Bloquer Tom ?'), findsOneWidget);
+        expect(community.blockedIds, isEmpty);
+
+        await tester.tap(_confirm('Bloquer'));
+        await tester.pumpAndSettle();
+
+        expect(community.blockedIds, ['ami-tom']);
+        expect(find.text('Tu n’y arriveras jamais.'), findsNothing);
+        expect(find.text('Belle série !'), findsOneWidget);
+        expect(find.textContaining('Tu ne verras plus Tom'), findsOneWidget);
+
+        await reveal(tester, find.text('PERSONNES BLOQUÉES'));
+        expect(_blockedNamed('Tom'), findsOneWidget);
+      },
+    );
+
+    testWidgets('depuis un mot : annuler ne bloque personne', (tester) async {
+      final community = FakeCommunityRepository(
+        feed: [_wordFrom(_tom, 'Tu n’y arriveras jamais.')],
+      );
+      await openCommunity(tester, appWith(community));
+
+      await chooseOption(tester, messageOptionsOf('Tom'), 'Bloquer');
+      await tester.tap(find.text('Annuler'));
+      await tester.pumpAndSettle();
+
+      expect(community.blockedIds, isEmpty);
+      expect(find.text('Tu n’y arriveras jamais.'), findsOneWidget);
+    });
+
     testWidgets('annuler ne bloque personne', (tester) async {
       final community = FakeCommunityRepository(friends: [_tom]);
       await openCommunity(tester, appWith(community));

@@ -257,22 +257,41 @@ class DemoCommunityRepository implements CommunityRepository {
 
   /// Comme le serveur : l'ami disparaît, ses mots aussi, sans un mot pour
   /// lui ; la personne rejoint la liste des blocages.
+  ///
+  /// Le blocage part aussi bien d'une carte d'ami que d'un mot du fil : le
+  /// nom se cherche donc des DEUX côtés, l'auteur d'un mot n'étant pas
+  /// forcément (ou plus) un ami.
   @override
   Future<void> blockUser(String userId) async {
-    final index = _friends.indexWhere((friend) => friend.id == userId);
-    if (index < 0) {
-      return; // Idempotent : déjà bloqué, ou inconnu de la démo.
+    if (_blocked.any((blocked) => blocked.userId == userId)) {
+      return; // Idempotent : bloquer deux fois ne se voit pas.
     }
-    final friend = _friends.removeAt(index);
+    final name = _displayNameOf(userId);
+    if (name == null) {
+      return; // Personne inconnue de la démo : rien à retirer.
+    }
+    _friends.removeWhere((friend) => friend.id == userId);
     _received.removeWhere((word) => word.fromUserId == userId);
     _blocked.insert(
       0,
-      BlockedUser(
-        userId: userId,
-        displayName: friend.displayName,
-        blockedAt: DateTime.now(),
-      ),
+      BlockedUser(userId: userId, displayName: name, blockedAt: DateTime.now()),
     );
+  }
+
+  /// Le nom affiché d'une personne connue de la démo : un ami, ou l'auteur
+  /// d'un mot du fil. `null` si la démo ne la connaît pas.
+  String? _displayNameOf(String userId) {
+    for (final friend in _friends) {
+      if (friend.id == userId) {
+        return friend.displayName;
+      }
+    }
+    for (final word in _received) {
+      if (word.fromUserId == userId) {
+        return word.fromName;
+      }
+    }
+    return null;
   }
 
   /// Débloquer ne rétablit rien : l'amitié se redemande.

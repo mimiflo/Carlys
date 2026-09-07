@@ -9,17 +9,30 @@ import 'community_overflow_menu.dart';
 ///
 /// Le fil ne contient que ce que J'AI reçu : « Supprimer » est donc
 /// toujours permis (le destinataire retire ce qu'il ne veut plus lire), et
-/// « Signaler » vise l'auteur du mot.
+/// « Bloquer » comme « Signaler » visent l'auteur du mot.
+///
+/// « Bloquer » compte double ici : retirer un ami ne retire pas les mots
+/// déjà reçus, donc l'auteur d'un mot blessant n'a plus de carte d'ami une
+/// fois l'amitié rompue. Sans cette entrée, il n'existerait plus aucun
+/// chemin pour le bloquer.
 class EncouragementTile extends StatelessWidget {
   const EncouragementTile({
     required this.encouragement,
     required this.onDelete,
+    required this.onBlock,
     required this.onReport,
     super.key,
   });
 
   final Encouragement encouragement;
+
+  /// « Supprimer » : le mot quitte MON fil, l'auteur n'en sait rien.
   final VoidCallback onDelete;
+
+  /// « Bloquer » : l'auteur du mot ne peut plus rien, et n'en saura rien.
+  final VoidCallback onBlock;
+
+  /// « Signaler » : un mot à l'équipe Carlys, à l'insu de l'auteur.
   final VoidCallback onReport;
 
   @override
@@ -60,6 +73,12 @@ class EncouragementTile extends StatelessWidget {
                     label: 'Supprimer',
                     icon: AppIcons.delete,
                     onSelected: onDelete,
+                  ),
+                  CommunityMenuAction(
+                    label: 'Bloquer',
+                    icon: Icons.block_rounded,
+                    destructive: true,
+                    onSelected: onBlock,
                   ),
                   CommunityMenuAction(
                     label: 'Signaler',

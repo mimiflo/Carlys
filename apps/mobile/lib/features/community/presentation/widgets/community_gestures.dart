@@ -85,8 +85,30 @@ class CommunityGestures {
 
   /// Bloquer se confirme, puis la personne disparaît sans un mot pour elle :
   /// le retour ne l'accuse de rien, il dit seulement où revenir dessus.
-  Future<void> blockFriend(BuildContext context, CommunityFriend friend) async {
-    final name = friend.displayName;
+  Future<void> blockFriend(BuildContext context, CommunityFriend friend) =>
+      _block(context, userId: friend.id, name: friend.displayName);
+
+  /// Bloquer depuis un MOT du fil, par son auteur.
+  ///
+  /// C'est le seul chemin qui reste quand l'auteur n'est plus un ami :
+  /// retirer une amitié laisse les mots déjà reçus en place, et une carte
+  /// d'ami disparue emporte son menu avec elle.
+  Future<void> blockEncouragementAuthor(
+    BuildContext context,
+    Encouragement encouragement,
+  ) => _block(
+    context,
+    userId: encouragement.fromUserId,
+    name: encouragement.fromName,
+  );
+
+  /// Le blocage lui-même, quel que soit l'endroit d'où il part : même
+  /// confirmation, même retour, un seul texte à maintenir.
+  Future<void> _block(
+    BuildContext context, {
+    required String userId,
+    required String name,
+  }) async {
     final confirmed = await showCommunityConfirmSheet(
       context,
       title: 'Bloquer $name ?',
@@ -100,7 +122,7 @@ class CommunityGestures {
       return;
     }
     await runCommunityGesture(context, () async {
-      await _moderation.blockUser(friend.id);
+      await _moderation.blockUser(userId);
       return 'Tu ne verras plus $name. Retour possible depuis '
           '« Personnes bloquées ».';
     });

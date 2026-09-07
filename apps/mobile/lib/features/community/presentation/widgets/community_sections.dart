@@ -85,6 +85,8 @@ class CommunitySections extends ConsumerWidget {
                   encouragement: encouragement,
                   onDelete: () =>
                       gestures.deleteEncouragement(context, encouragement),
+                  onBlock: () =>
+                      gestures.blockEncouragementAuthor(context, encouragement),
                   onReport: () =>
                       gestures.reportEncouragement(context, encouragement),
                 ),

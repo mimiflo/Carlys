@@ -216,14 +216,30 @@ class FakeCommunityRepository implements CommunityRepository {
   /// Identifiants reçus par [deleteEncouragement], dans l'ordre.
   final List<String> deletedEncouragements = [];
 
+  /// Le nom affiché d'une personne connue du dépôt : un ami, ou l'auteur
+  /// d'un mot du fil — qui peut ne plus être un ami du tout.
+  String _displayNameOf(String userId) {
+    for (final friend in _friends) {
+      if (friend.id == userId) {
+        return friend.displayName;
+      }
+    }
+    for (final word in _feed) {
+      if (word.fromUserId == userId) {
+        return word.fromName;
+      }
+    }
+    return 'Membre';
+  }
+
   /// Comme le serveur : l'ami disparaît, ses mots aussi, la personne rejoint
-  /// la liste des blocages.
+  /// la liste des blocages sous son nom — que le serveur lit sur le compte,
+  /// pas sur l'amitié.
   @override
   Future<void> blockUser(String userId) async {
     _guard();
     blockedIds.add(userId);
-    final index = _friends.indexWhere((friend) => friend.id == userId);
-    final displayName = index < 0 ? 'Membre' : _friends[index].displayName;
+    final displayName = _displayNameOf(userId);
     _friends.removeWhere((friend) => friend.id == userId);
     _feed.removeWhere((word) => word.fromUserId == userId);
     _blocked.insert(
