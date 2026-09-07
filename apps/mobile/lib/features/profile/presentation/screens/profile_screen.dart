@@ -13,6 +13,7 @@ import '../../../subscription/presentation/controllers/subscription_controllers.
 import '../controllers/profile_controllers.dart';
 import '../widgets/profile_email_verification.dart';
 import '../widgets/profile_header.dart';
+import '../widgets/profile_legal_section.dart';
 import '../widgets/profile_plan_card.dart';
 import '../widgets/profile_settings_sections.dart';
 import '../widgets/profile_stat_tiles.dart';
@@ -115,6 +116,8 @@ class ProfileScreen extends ConsumerWidget {
               onChangePassword: () => context.push(AppRoutes.changePassword),
               onDeleteAccount: () => context.push(AppRoutes.deleteAccount),
             ),
+            const SizedBox(height: AppSpacing.md),
+            const ProfileLegalSettings(),
             const SizedBox(height: AppSpacing.gapSection),
             Center(
               child: TextButton(

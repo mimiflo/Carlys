@@ -8,6 +8,7 @@ import '../../../../design_system/design_system.dart';
 import '../controllers/register_controller.dart';
 import '../widgets/auth_form_error.dart';
 import '../widgets/auth_scaffold.dart';
+import '../widgets/legal_consent_notice.dart';
 
 /// Création de compte. La validation d'e-mail est envoyée automatiquement ;
 /// la session s'ouvre immédiatement (redirection par le routeur).
@@ -105,6 +106,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           isLoading: isLoading,
           isExpanded: true,
         ),
+        const SizedBox(height: AppSpacing.sm),
+        // Sous le bouton, pas au-dessus : on lit ce à quoi on consent au
+        // moment où l'on s'apprête à appuyer.
+        const LegalConsentNotice(),
         const SizedBox(height: AppSpacing.md),
         // Sortie de secours : pendant le parcours de première ouverture,
         // cet écran s'impose — qui a déjà un compte doit pouvoir se

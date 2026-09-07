@@ -26,7 +26,12 @@
       "cwd": "apps/mobile",
       "args": [
         "--dart-define=CARLYS_FLAVOR=development",
-        "--dart-define=CARLYS_API_BASE_URL=http://10.0.2.2:3000"
+        "--dart-define=CARLYS_API_BASE_URL=http://10.0.2.2:3000",
+        // L'application WEB publique (Next.js d'apps/admin, port 3001) : elle
+        // sert /privacy et /terms, ouverts depuis les réglages et
+        // l'inscription. Même alias d'hôte que l'API — depuis l'émulateur,
+        // localhost désignerait l'émulateur lui-même.
+        "--dart-define=CARLYS_PUBLIC_WEB_BASE_URL=http://10.0.2.2:3001"
       ],
       "presentation": { "hidden": true }
     },

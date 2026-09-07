@@ -30,8 +30,14 @@ class AppEnvironment {
   const AppEnvironment({
     required this.flavor,
     required this.apiBaseUrl,
+    this.publicWebBaseUrl = defaultPublicWebBaseUrl,
     this.push,
   });
+
+  /// Application web publique en développement : le Next.js d'`apps/admin`
+  /// sert les pages ouvertes (vérification d'adresse, nouveau mot de passe,
+  /// confidentialité, conditions) sur le port 3001.
+  static const String defaultPublicWebBaseUrl = 'http://localhost:3001';
 
   factory AppEnvironment.fromDartDefine() {
     const flavorName = String.fromEnvironment(
@@ -41,6 +47,14 @@ class AppEnvironment {
     const apiBaseUrl = String.fromEnvironment(
       'CARLYS_API_BASE_URL',
       defaultValue: 'http://localhost:3000',
+    );
+    // Adresse publique du web, DISTINCTE de celle de l'API : c'est elle que
+    // portent les liens des e-mails (`PUBLIC_APP_URL` côté serveur) et c'est
+    // elle qu'ouvrent les lignes « Politique de confidentialité » et
+    // « Conditions d'utilisation » des réglages.
+    const publicWebBaseUrl = String.fromEnvironment(
+      'CARLYS_PUBLIC_WEB_BASE_URL',
+      defaultValue: defaultPublicWebBaseUrl,
     );
     // Notifications push : les quatre valeurs viennent ensemble (fichier
     // --dart-define-from-file) ou pas du tout — jamais à moitié.
@@ -66,6 +80,7 @@ class AppEnvironment {
     return AppEnvironment(
       flavor: flavor,
       apiBaseUrl: apiBaseUrl,
+      publicWebBaseUrl: publicWebBaseUrl,
       push: firebaseConfigured
           ? const FirebasePushOptions(
               apiKey: firebaseApiKey,
@@ -82,6 +97,10 @@ class AppEnvironment {
   /// Base de l'API sans préfixe de version (ex. http://localhost:3000).
   final String apiBaseUrl;
 
+  /// Base de l'application web publique, sans barre finale
+  /// (ex. https://carlys.app) : c'est elle qui sert `/privacy` et `/terms`.
+  final String publicWebBaseUrl;
+
   /// Null tant que la configuration Firebase n'est pas injectée : le push
   /// est alors inactif, le reste de l'application vit normalement.
   final FirebasePushOptions? push;
@@ -92,6 +111,12 @@ class AppEnvironment {
 
   /// Préfixe complet des routes métier.
   String get apiV1Url => '$apiBaseUrl/api/v1';
+
+  /// Politique de confidentialité, servie par l'application web.
+  Uri get privacyPolicyUrl => Uri.parse('$publicWebBaseUrl/privacy');
+
+  /// Conditions d'utilisation, servies par l'application web.
+  Uri get termsOfServiceUrl => Uri.parse('$publicWebBaseUrl/terms');
 }
 
 /// Renseigné au bootstrap via `overrideWithValue` — jamais utilisé sans override.

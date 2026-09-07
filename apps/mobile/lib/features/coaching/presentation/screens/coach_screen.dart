@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/coach.dart';
 import '../widgets/coach_composer.dart';
+import '../widgets/coach_data_notice.dart';
 import '../widgets/coach_header.dart';
 import '../widgets/coach_message_bubble.dart';
 import '../widgets/coach_proposal_card.dart';
@@ -139,9 +140,15 @@ class _Conversation extends StatelessWidget {
         horizontal: AppSpacing.gutter,
         vertical: AppSpacing.md,
       ),
-      itemCount: messages.length + pending,
+      // Un rang de plus, en tête du fil — donc en DERNIER dans une liste
+      // inversée : la mention de traitement, posée au-dessus du premier
+      // message. Elle remonte avec l'histoire au lieu de coller à l'écran.
+      itemCount: messages.length + pending + 1,
       separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
       itemBuilder: (context, index) {
+        if (index == messages.length + pending) {
+          return const CoachDataNotice();
+        }
         if (isSending && index == 0) {
           return const CoachTypingBubble();
         }
