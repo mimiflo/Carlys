@@ -44,12 +44,14 @@ et l'on évolue d'un profil à l'autre à tout moment.
 
 `null` signifie « pas de personnalisation », jamais un profil par défaut.
 
-- **Accueil** : la carte « Ton cap » (sous la séance du jour) oriente chaque
+- **Accueil** : la ligne « Ton cap » de la carte « Pour toi » oriente chaque
   identité vers la partie de l'application qui sert sa devise — Constructeur
   → Académie, Challenger → défis de la communauté, Athlète → programmes,
   Stratège → progression. Copie et destinations vivent dans
-  `dashboard/presentation/widgets/profile_focus_card.dart` (le contenu
-  éditorial des profils, lui, ignore la navigation).
+  `dashboard/presentation/widgets/for_you_card.dart` (fabrique
+  `ForYouEntry.focus`, contenu dans `_focusOf`) ; le contenu éditorial des
+  profils, lui, ignore la navigation. La ligne n'existe pas sans profil
+  choisi, et la carte entière disparaît si elle n'a rien à dire.
 - **Amorces du coach** (côté client) : une puce par identité s'ajoute aux
   amorces calculées depuis l'état réel (`coach_suggestions.dart`).
 - **Coach IA** (côté serveur) : le tour envoyé au modèle porte un briefing
@@ -75,5 +77,7 @@ changement de code.
   Profil.
 - Onboarding (`test/features/onboarding/`) : l'identité en première étape,
   le report différé du choix à la création du compte, l'aller-retour de
-  stockage. Accueil (`test/features/dashboard/profile_focus_card_test.dart`) :
-  la carte par profil, sa navigation, et son absence sans profil.
+  stockage. Accueil (`test/features/dashboard/profile_focus_card_test.dart`,
+  encore nommé d'après l'ancien `ProfileFocusCard` — à renommer
+  `for_you_card_test.dart`) : la ligne par profil, sa navigation, et son
+  absence sans profil.
