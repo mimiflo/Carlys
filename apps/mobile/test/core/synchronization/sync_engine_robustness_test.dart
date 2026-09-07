@@ -230,6 +230,47 @@ void main() {
       },
     );
 
+    test(
+      '« d’affilée » : toute autre issue remet le compteur à zéro',
+      () async {
+        // Le compteur cumulait sur toute la VIE de l'opération : une opération
+        // de longue vie croisant un 5xx isolé toutes les quelques semaines
+        // finissait mise de côté sans qu'aucune panne durable ne l'ait
+        // justifié — alors que le code et la doc promettent « d'affilée ».
+        final id = await enqueue();
+
+        Future<void> attempts(int count) async {
+          for (var i = 0; i < count; i++) {
+            clock = clock.add(const Duration(minutes: 6));
+            await engine.syncNow();
+          }
+        }
+
+        api.statusByEntityId[id] = 503;
+        await attempts(SyncEngine.serverAttemptsMax - 1);
+        expect(
+          (await allOperations()).single.serverErrorCount,
+          SyncEngine.serverAttemptsMax - 1,
+        );
+
+        // Une coupure réseau : ce n'est pas l'opération qui est mauvaise.
+        api.statusByEntityId.remove(id);
+        api.networkDown = true;
+        await attempts(1);
+        expect((await allOperations()).single.serverErrorCount, 0);
+
+        // Quatre 5xx de plus, des semaines plus tard : toujours pas de quoi
+        // mettre l'opération de côté.
+        api.networkDown = false;
+        api.statusByEntityId[id] = 503;
+        await attempts(SyncEngine.serverAttemptsMax - 1);
+
+        final operation = (await allOperations()).single;
+        expect(operation.status, 'pending');
+        expect(operation.serverErrorCount, SyncEngine.serverAttemptsMax - 1);
+      },
+    );
+
     test('un 5xx isolé ne fait qu’attendre le backoff', () async {
       final id = await enqueue();
       api.statusByEntityId[id] = 502;

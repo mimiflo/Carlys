@@ -228,8 +228,9 @@ class SyncOperations extends Table {
   IntColumn get attemptCount => integer().withDefault(const Constant(0))();
   DateTimeColumn get lastAttemptAt => dateTime().nullable()();
 
-  /// Réponses 5xx d'affilée pour CETTE opération. Une coupure réseau
-  /// n'y compte pas : elle frappe toute la file, pas une opération. Au-delà
+  /// Réponses 5xx d'affilée pour CETTE opération. Une coupure réseau n'y
+  /// compte pas — elle frappe toute la file, pas une opération — et remet
+  /// même le compteur à zéro : « d'affilée » veut dire ce qu'il dit. Au-delà
   /// de `SyncEngine.serverAttemptsMax`, l'opération est mise de côté
   /// (`exhausted`) pour ne plus retenir les opérations indépendantes.
   IntColumn get serverErrorCount => integer().withDefault(const Constant(0))();

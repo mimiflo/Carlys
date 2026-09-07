@@ -30,12 +30,21 @@ class SyncOperationStates {
     });
   }
 
+  /// Échec transitoire NON serveur (réseau, 401 à renouveler, 429, version
+  /// serveur illisible) : nouvel essai après le backoff.
+  ///
+  /// Le compteur d'erreurs serveur repart à zéro, et c'est ce qui rend le
+  /// mot « d'affilée » vrai : sans cela il cumulait sur toute la vie de
+  /// l'opération, et une opération de longue vie croisant un 5xx isolé
+  /// toutes les quelques semaines finissait mise de côté sans qu'aucune
+  /// panne durable ne l'ait jamais justifié.
   Future<void> retryLater(SyncOperation operation) async {
     await _write(
       operation,
       SyncOperationsCompanion(
         attemptCount: Value(operation.attemptCount + 1),
         lastAttemptAt: Value(_now()),
+        serverErrorCount: const Value(0),
       ),
     );
   }
