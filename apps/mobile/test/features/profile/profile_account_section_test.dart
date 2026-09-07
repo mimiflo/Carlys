@@ -6,6 +6,7 @@ import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
 import 'package:carlys_mobile/features/authentication/presentation/screens/change_password_screen.dart';
 import 'package:carlys_mobile/features/authentication/presentation/screens/delete_account_screen.dart';
+import 'package:carlys_mobile/features/profile/presentation/widgets/profile_legal_section.dart';
 import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -94,6 +95,20 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(ChangePasswordScreen), findsOneWidget);
+  });
+
+  testWidgets('le profil porte VRAIMENT la section « Légal »', (tester) async {
+    // Les deux lignes légales étaient testées isolées, montées à la main
+    // dans un Scaffold : retirer leur ligne d'appel du profil laissait ces
+    // tests-là au vert, alors que le constat porte précisément sur leur
+    // absence DANS l'application. On les cherche donc ici, au bout du
+    // parcours réel.
+    await openProfileScreen(tester);
+    await reveal(tester, find.text('Politique de confidentialité'));
+
+    expect(find.byType(ProfileLegalSettings), findsOneWidget);
+    expect(find.text('LÉGAL'), findsOneWidget);
+    expect(find.text('Conditions d’utilisation'), findsOneWidget);
   });
 
   testWidgets('« Supprimer mon compte » ouvre l’écran de suppression', (

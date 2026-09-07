@@ -1,6 +1,7 @@
 import 'package:carlys_mobile/app/environment/app_environment.dart';
 import 'package:carlys_mobile/core/utilities/external_links.dart';
 import 'package:carlys_mobile/design_system/design_system.dart';
+import 'package:carlys_mobile/features/authentication/presentation/screens/register_screen.dart';
 import 'package:carlys_mobile/features/authentication/presentation/widgets/legal_consent_notice.dart';
 import 'package:carlys_mobile/features/coaching/domain/entities/coach.dart';
 import 'package:carlys_mobile/features/coaching/presentation/screens/coach_screen.dart';
@@ -99,6 +100,25 @@ void main() {
   });
 
   group('phrase de consentement sous l’inscription', () {
+    testWidgets('l’écran d’inscription la porte VRAIMENT', (tester) async {
+      // Le constat porte sur l'ABSENCE de ces liens dans l'application :
+      // monter la phrase seule dans un Scaffold ne le défend pas — retirer
+      // la ligne d'appel de `RegisterScreen` laisserait tous les autres cas
+      // au vert. On monte donc l'écran réel, celui qu'on voit.
+      await tester.pumpWidget(host(const RegisterScreen(), []));
+      await tester.pumpAndSettle();
+
+      final notice = find.byType(LegalConsentNotice);
+      await tester.ensureVisible(notice);
+      await tester.pumpAndSettle();
+
+      expect(notice, findsOneWidget);
+      // Sous le bouton, pas au-dessus : on lit ce à quoi on consent au
+      // moment où l'on s'apprête à appuyer.
+      final button = tester.getTopLeft(find.text('Créer mon compte'));
+      expect(tester.getTopLeft(notice).dy, greaterThan(button.dy));
+    });
+
     testWidgets('la phrase est là, et tutoie', (tester) async {
       await tester.pumpWidget(host(const LegalConsentNotice(), []));
       await tester.pumpAndSettle();
