@@ -9,6 +9,7 @@ import '../../../workout_template/presentation/controllers/workout_template_cont
 import '../../domain/entities/workout.dart';
 import '../controllers/workout_controllers.dart';
 import 'active_workout_bottom_bar.dart';
+import 'active_workout_choices.dart';
 import 'active_workout_header.dart';
 import 'exercise_pane.dart';
 import 'exercise_picker_sheet.dart';
@@ -27,9 +28,6 @@ class ActiveWorkoutBody extends ConsumerStatefulWidget {
   const ActiveWorkoutBody({required this.workout, super.key});
 
   final WorkoutWithSets workout;
-
-  /// Repos appliqué quand ni le programme ni une série précédente n'en fixe un.
-  static const int _defaultRestSeconds = 90;
 
   @override
   ConsumerState<ActiveWorkoutBody> createState() => _ActiveWorkoutBodyState();
@@ -54,7 +52,11 @@ class _ActiveWorkoutBodyState extends ConsumerState<ActiveWorkoutBody> {
             pickedExerciseId: _picked?.exerciseId,
           );
 
-    final exercise = _currentExercise(sets, guidance);
+    final exercise = currentExercise(
+      sets: sets,
+      guidance: guidance,
+      picked: _picked,
+    );
     final exerciseSets = exercise == null
         ? const <WorkoutSetEntry>[]
         : sets.where((set) => set.exerciseName == exercise.name).toList();
@@ -129,26 +131,6 @@ class _ActiveWorkoutBodyState extends ConsumerState<ActiveWorkoutBody> {
     );
   }
 
-  /// Exercice en cours : celui explicitement choisi, sinon celui que le
-  /// programme propose, sinon celui de la dernière série enregistrée.
-  PickedExercise? _currentExercise(
-    List<WorkoutSetEntry> sets,
-    SessionGuidance? guidance,
-  ) {
-    if (_picked != null) {
-      return _picked;
-    }
-    final planned = guidance?.exerciseName;
-    if (planned != null) {
-      return PickedExercise(name: planned, exerciseId: guidance?.exerciseId);
-    }
-    if (sets.isEmpty) {
-      return null;
-    }
-    final last = sets.last;
-    return PickedExercise(name: last.exerciseName, exerciseId: last.exerciseId);
-  }
-
   /// Dernière performance connue : d'abord dans la séance en cours, sinon
   /// dans les séances passées.
   WorkoutSetEntry? _previous(
@@ -185,7 +167,7 @@ class _ActiveWorkoutBodyState extends ConsumerState<ActiveWorkoutBody> {
     double weightKg,
     int reps,
   ) async {
-    final restSeconds = guidance?.restSeconds ?? _lastRestSeconds(exerciseSets);
+    final restSeconds = guidance?.restSeconds ?? lastRestSeconds(exerciseSets);
 
     await ref
         .read(workoutTemplateActionsProvider)
@@ -200,16 +182,6 @@ class _ActiveWorkoutBodyState extends ConsumerState<ActiveWorkoutBody> {
           ),
         );
     ref.read(restTimerProvider.notifier).start(Duration(seconds: restSeconds));
-  }
-
-  /// Repos de la série précédente du même exercice, à défaut le repos type.
-  int _lastRestSeconds(List<WorkoutSetEntry> exerciseSets) {
-    for (final set in exerciseSets.reversed) {
-      if (set.restSeconds != null) {
-        return set.restSeconds!;
-      }
-    }
-    return ActiveWorkoutBody._defaultRestSeconds;
   }
 
   Future<void> _close({
