@@ -153,12 +153,18 @@ class CommunityScreen extends ConsumerWidget {
           else if (!hasData)
             const AppLoadingIndicator()
           else if (loaded && isEmpty)
+            // Le serveur crée les défis du mois à la lecture : en ligne, cet
+            // état ne se voit que si le serveur n'a VRAIMENT rien rendu. Hors
+            // ligne, c'est l'état d'erreur ci-dessus qui parle, jamais
+            // « personne ici ». Le premier ami, lui, s'invite dans la section
+            // « Amis » des sections (voir FriendsEmptyCard).
             AppEmptyState(
               icon: Icons.group_outlined,
               title: 'Personne ici pour l’instant',
               message:
-                  'Ajoute un premier ami par son adresse e-mail : vous '
-                  'verrez vos séries, et vous pourrez vous encourager.',
+                  'Ajoute un premier ami par son code ami ou son adresse '
+                  'e-mail : vous verrez vos séries, et vous pourrez vous '
+                  'encourager.',
               actionLabel: 'Ajouter un ami',
               onAction: () => _addFriend(context, actions),
             )
@@ -170,6 +176,7 @@ class CommunityScreen extends ConsumerWidget {
               challenges: challenges.valueOrNull,
               blocked: blocked.valueOrNull,
               sharesProgress: sharesProgress.valueOrNull,
+              onAddFriend: () => _addFriend(context, actions),
             ),
         ],
       ),

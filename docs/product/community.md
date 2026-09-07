@@ -181,6 +181,15 @@ simplement perdue (la barre est collective, pas comptable).
   premier chargement, vide (avec l'action « Ajouter un ami ») et données.
   Pendant un rafraîchissement, la liste reste en place (Riverpod conserve la
   valeur précédente).
+- **Les défis du mois changent l'état vide.** Depuis que le serveur crée le
+  jeu du mois à la lecture, un compte neuf en ligne voit toujours des défis :
+  l'écran n'est plus jamais « vide » et ne suppose plus une liste de défis
+  absente pour toujours. L'invitation à ajouter un premier ami vit donc dans
+  la section « Amis » (`FriendsEmptyCard`), affichée tant qu'il n'y a ni ami
+  ni demande en attente ; l'état vide global ne reste possible que si le
+  serveur ne renvoie vraiment rien (ni défis, ni blocages), et il dit alors
+  la vérité. Hors ligne au premier lancement, c'est « Hors connexion » qui
+  s'affiche, jamais « personne ici » : rien n'a pu être lu.
 - La feuille « Ajouter un ami » s'ouvre sur le navigateur RACINE : ouverte
   depuis un onglet, elle passerait sinon sous la bottom bar flottante.
 - Elle montre MON code (QR sur aplat blanc — un lecteur veut du contraste,
@@ -257,7 +266,9 @@ simplement perdue (la barre est collective, pas comptable).
   d'un mois vierge produisent un seul jeu, une lecture de plus ne recrée rien.
 - Widgets mobile (`test/features/community/`) : démo complète, états
   erreur/vide/chargement, acceptation de demande, ajout opaque, réglage de
-  partage ; gestes de protection (`community_moderation_test.dart`) : retrait
+  partage, défis présents sans ami (invitation dans la section « Amis »,
+  pas d'état vide global, la feuille d'ajout s'ouvre ; une demande reçue
+  suffit à retirer l'invitation) ; gestes de protection (`community_moderation_test.dart`) : retrait
   d'un ami (confirmation, annulation sans effet, échec hors ligne annoncé et
   ami conservé, cible tactile), blocage (la personne quitte amis et fil,
   rejoint « Personnes bloquées », retour non accusateur), déblocage (ligne

@@ -77,6 +77,59 @@ void main() {
     expect(find.text('Ajouter un ami'), findsWidgets);
   });
 
+  testWidgets('défis du mois là, pas encore d’ami : l’invitation vit dans '
+      'la section Amis', (tester) async {
+    // Le serveur crée les défis du mois à la lecture : un compte neuf voit
+    // des défis, jamais un écran vide. « Personne ici » serait donc faux, et
+    // le geste qui débloque tout (ajouter un ami) doit survivre à sa place.
+    final community = FakeCommunityRepository(
+      challenges: [
+        CommunityChallenge(
+          id: 'defi-constance',
+          kind: ChallengeKind.sport,
+          title: '21 jours de constance',
+          description: 'Une activité par jour pendant trois semaines.',
+          participants: 12,
+          progress: 0.3,
+          joined: false,
+          endsAt: DateTime.now().add(const Duration(days: 10)),
+        ),
+      ],
+    );
+    await openCommunity(tester, appWith(community));
+
+    expect(find.text('Personne ici pour l’instant'), findsNothing);
+    expect(find.text('DÉFIS'), findsOneWidget);
+    expect(find.text('21 jours de constance'), findsOneWidget);
+    expect(find.text('AMIS'), findsOneWidget);
+    expect(find.text('Pas encore d’ami'), findsOneWidget);
+
+    // L'invitation mène bien à la feuille d'ajout.
+    final invite = find.widgetWithText(FilledButton, 'Ajouter un ami');
+    await tester.ensureVisible(invite);
+    await tester.tap(invite);
+    await tester.pumpAndSettle();
+    expect(find.text('Envoyer la demande'), findsOneWidget);
+  });
+
+  testWidgets('une demande reçue suffit : plus d’invitation, la section '
+      'Amis attend la réponse', (tester) async {
+    final community = FakeCommunityRepository(
+      requests: [
+        FriendRequest(
+          id: 'demande-nina',
+          fromDisplayName: 'Nina',
+          createdAt: DateTime.now().subtract(const Duration(hours: 1)),
+        ),
+      ],
+    );
+    await openCommunity(tester, appWith(community));
+
+    expect(find.text('DEMANDES REÇUES'), findsOneWidget);
+    expect(find.text('Pas encore d’ami'), findsNothing);
+    expect(find.text('AMIS'), findsNothing);
+  });
+
   testWidgets('serveur en panne : état d’erreur, et « Réessayer » réessaie', (
     tester,
   ) async {

@@ -12,6 +12,7 @@ import 'community_gestures.dart';
 import 'encouragement_tile.dart';
 import 'friend_card.dart';
 import 'friend_request_card.dart';
+import 'friends_empty_card.dart';
 import 'privacy_card.dart';
 
 /// Les étages de l'écran Communauté, une fois les données là : demandes
@@ -27,6 +28,7 @@ class CommunitySections extends ConsumerWidget {
     required this.challenges,
     required this.blocked,
     required this.sharesProgress,
+    required this.onAddFriend,
     super.key,
   });
 
@@ -38,6 +40,15 @@ class CommunitySections extends ConsumerWidget {
 
   /// `null` tant que la préférence n'est pas chargée.
   final bool? sharesProgress;
+
+  /// Ouvre la feuille « Ajouter un ami » : le geste qui débloque tout, offert
+  /// dans la section « Amis » tant qu'elle est vide.
+  final VoidCallback onAddFriend;
+
+  /// Aucun ami ET aucune demande en attente : la section « Amis » invite au
+  /// premier ajout au lieu de disparaître.
+  bool get _invitesFirstFriend =>
+      (friends?.isEmpty ?? false) && (requests?.isEmpty ?? true);
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -82,17 +93,19 @@ class CommunitySections extends ConsumerWidget {
         ),
         ..._section(
           'Amis',
-          friends
-              ?.map<Widget>(
-                (friend) => FriendCard(
-                  friend: friend,
-                  onEncourage: () => gestures.encourage(context, friend),
-                  onRemove: () => gestures.removeFriend(context, friend),
-                  onBlock: () => gestures.blockFriend(context, friend),
-                  onReport: () => gestures.reportFriend(context, friend),
-                ),
-              )
-              .toList(),
+          _invitesFirstFriend
+              ? [FriendsEmptyCard(onAddFriend: onAddFriend)]
+              : friends
+                    ?.map<Widget>(
+                      (friend) => FriendCard(
+                        friend: friend,
+                        onEncourage: () => gestures.encourage(context, friend),
+                        onRemove: () => gestures.removeFriend(context, friend),
+                        onBlock: () => gestures.blockFriend(context, friend),
+                        onReport: () => gestures.reportFriend(context, friend),
+                      ),
+                    )
+                    .toList(),
         ),
         ..._section(
           'Défis',
