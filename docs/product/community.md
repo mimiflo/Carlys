@@ -178,8 +178,9 @@ simplement perdue (la barre est collective, pas comptable).
 ## Mobile
 
 - `CommunityRepositoryImpl` (Dio) transporte ce que le serveur a accepté de
-  dire ; le dépôt de démonstration (`lib/demo/demo_community.dart`) fait
-  vivre l'écran sans réseau.
+  dire ; le dépôt de démonstration (`lib/demo/demo_community.dart`, dont le
+  monde embarqué — amis, mots, demandes, défis, codes — vit dans
+  `lib/demo/demo_community_seed.dart`) fait vivre l'écran sans réseau.
 - L'écran distingue HORS CONNEXION (statut dédié, comme le coach —
   `ConnectionAwareError`), panne serveur (« Réessayer » réessaie vraiment),
   premier chargement, vide (avec l'action « Ajouter un ami ») et données.
