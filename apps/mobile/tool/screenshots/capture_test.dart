@@ -55,8 +55,8 @@ import 'package:carlys_mobile/features/onboarding/presentation/controllers/splas
 import 'package:carlys_mobile/features/onboarding/presentation/screens/onboarding_screen.dart';
 import 'package:carlys_mobile/features/onboarding/presentation/screens/splash_screen.dart';
 import 'package:carlys_mobile/features/onboarding/presentation/screens/welcome_screen.dart';
+import 'package:carlys_mobile/features/onboarding/presentation/widgets/athlete_photo.dart';
 import 'package:carlys_mobile/features/onboarding/presentation/widgets/brand_signature.dart';
-import 'package:carlys_mobile/features/onboarding/presentation/widgets/welcome_backdrop.dart';
 import 'package:carlys_mobile/features/profile/presentation/screens/profile_screen.dart';
 import 'package:carlys_mobile/features/profile/presentation/widgets/profile_plan_card.dart';
 import 'package:carlys_mobile/features/progress/data/repositories/progress_repository_impl.dart';
@@ -453,10 +453,7 @@ void main() {
 
   Future<void> precacheBrandImages(WidgetTester tester) async {
     final context = tester.element(find.byType(MaterialApp));
-    for (final asset in const [
-      BrandSignature.markAsset,
-      WelcomeBackdrop.athleteAsset,
-    ]) {
+    for (final asset in const [BrandSignature.markAsset, AthletePhoto.asset]) {
       await tester.runAsync(() => precacheImage(AssetImage(asset), context));
     }
     await settle(tester);

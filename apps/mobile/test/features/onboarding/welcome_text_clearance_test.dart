@@ -3,7 +3,7 @@ import 'dart:math' as math;
 
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/onboarding/presentation/screens/welcome_screen.dart';
-import 'package:carlys_mobile/features/onboarding/presentation/widgets/welcome_backdrop.dart';
+import 'package:carlys_mobile/features/onboarding/presentation/widgets/athlete_photo_framing.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
