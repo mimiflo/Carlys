@@ -3,7 +3,7 @@
 // particules, leur apparition en fondu, et la continuité au
 // rebouclage (le cycle dure 30 s : l'image à 30 s doit être celle à 0 s).
 //   flutter test tool/screenshots/heart_frames_test.dart --update-goldens
-import 'package:carlys_mobile/design_system/scenes/heart_scene.dart';
+import 'package:carlys_mobile/design_system/scenes/heart_scene_painter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
