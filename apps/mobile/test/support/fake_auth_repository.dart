@@ -132,6 +132,11 @@ class FakeAuthRepository implements AuthRepository {
   }
 
   @override
+  Future<void> clearLocalSession() async {
+    storedSession = false;
+  }
+
+  @override
   Future<void> resendEmailVerification() async {
     resendVerificationCalls++;
     final failure = accountFailure;

@@ -50,6 +50,12 @@ abstract interface class AuthRepository {
   /// l'appelant enchaîne sur la purge locale puis l'écran de connexion.
   Future<void> deleteAccount(String password);
 
+  /// Efface les jetons de l'appareil SANS rien demander au serveur — pour le
+  /// cas où la session n'existe déjà plus là-bas (compte supprimé). `logout`
+  /// ferait un aller-retour condamné au 401 et journaliserait un échec qui
+  /// n'en est pas un.
+  Future<void> clearLocalSession();
+
   /// Redemande l'e-mail de vérification d'adresse. Sans effet si l'adresse
   /// est déjà vérifiée — le serveur répond 204 dans les deux cas.
   Future<void> resendEmailVerification();

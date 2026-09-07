@@ -232,13 +232,13 @@ celle de l'API. Voir [`docs/architecture/admin.md`](../architecture/admin.md).
 | `POST /api/v1/auth/resend-verification` | 204 | Sans effet si déjà vérifié ; **aucun appelant** au 3 septembre 2026 (ni mobile ni web) |
 | `POST /api/v1/auth/forgot-password` (public) | 202 | Réponse identique que le compte existe ou non |
 | `POST /api/v1/auth/reset-password` (public) | 204, 401 | Révoque **toutes** les sessions ; **consommateur : page web `/reset-password`** (aucun écran mobile) |
-| `POST /api/v1/auth/change-password` | 204, 401 | Révoque les autres sessions ; **aucun appelant** au 3 septembre 2026 (ni mobile ni web) |
+| `POST /api/v1/auth/change-password` | 204, 401 | Révoque les autres sessions ; **consommateur : mobile** (réglages → Compte → « Changer mon mot de passe ») |
 | `GET /api/v1/auth/sessions` | 200 | Appareils connectés (`current` sur la session appelante) |
 | `DELETE /api/v1/auth/sessions/:id` | 204, 404 | Déconnexion d'un appareil |
 | `DELETE /api/v1/auth/sessions` | 204 | Déconnexion de tous les autres appareils |
 | `GET /api/v1/users/me` | 200, 401 | Profil de l'utilisateur connecté |
 | `PATCH /api/v1/users/me` | 200, 400 | `displayName`, `locale`, `timezone` |
-| `DELETE /api/v1/users/me` | 204, 401 | Mot de passe requis ; en une transaction : sessions supprimées avec leurs refresh tokens (adresse IP, user-agent et nom d'appareil partent avec le compte), compte `DELETED`, adresse et code ami réécrits en valeurs tombales, profil personnel effacé, jetons d'appareil supprimés. L'adresse redevient disponible pour une nouvelle inscription |
+| `DELETE /api/v1/users/me` | 204, 401 | **Consommateur : mobile** (réglages → Compte → « Supprimer mon compte », geste exigé par Google Play et l'App Store). Mot de passe requis ; en une transaction : sessions supprimées avec leurs refresh tokens (adresse IP, user-agent et nom d'appareil partent avec le compte), compte `DELETED`, adresse et code ami réécrits en valeurs tombales, profil personnel effacé, jetons d'appareil supprimés. L'adresse redevient disponible pour une nouvelle inscription |
 
 ### Endpoints livrés — modèles de séance (Étape 4)
 

@@ -118,6 +118,29 @@ class DemoAuthRepository implements AuthRepository {
   Future<void> revokeOtherSessions() async {
     _devices = _devices.where((device) => device.current).toList();
   }
+
+  @override
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    // Comme sur le serveur : les autres appareils tombent.
+    _devices = _devices.where((device) => device.current).toList();
+  }
+
+  @override
+  Future<void> deleteAccount(String password) async {
+    // La démo montre le parcours entier, jusqu'au retour à la connexion :
+    // elle n'a pas de compte à détruire, seulement une session à fermer.
+    _connected = false;
+    _devices = const [];
+  }
+
+  @override
+  Future<void> clearLocalSession() async => _connected = false;
+
+  @override
+  Future<void> resendEmailVerification() async {}
 }
 
 /// Choix du profil Carlys en mémoire : écrit chez [DemoAuthRepository], que

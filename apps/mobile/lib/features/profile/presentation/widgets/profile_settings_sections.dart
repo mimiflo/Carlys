@@ -161,6 +161,42 @@ class ProfileAppSettings extends ConsumerWidget {
   }
 }
 
+/// Groupe « COMPTE » : ce qu'on fait SUR son compte, pas dans l'application.
+///
+/// La suppression n'est pas une option de confort : Google Play et l'App
+/// Store l'exigent DANS l'application dès qu'un compte peut y être créé.
+/// Elle est en rouge et en dernier, mais elle est là.
+class ProfileAccountSettings extends StatelessWidget {
+  const ProfileAccountSettings({
+    required this.onChangePassword,
+    required this.onDeleteAccount,
+    super.key,
+  });
+
+  final VoidCallback onChangePassword;
+  final VoidCallback onDeleteAccount;
+
+  @override
+  Widget build(BuildContext context) {
+    return AppSettingsGroup(
+      label: 'Compte',
+      rows: [
+        AppSettingsRow(
+          icon: AppIcons.password,
+          label: 'Changer mon mot de passe',
+          onTap: onChangePassword,
+        ),
+        AppSettingsRow(
+          icon: AppIcons.deleteAccount,
+          label: 'Supprimer mon compte',
+          destructive: true,
+          onTap: onDeleteAccount,
+        ),
+      ],
+    );
+  }
+}
+
 /// Ce qu'on accepte de recevoir. Les bascules parlent au SERVEUR : c'est lui
 /// qui coupe réellement l'envoi, une préférence gardée sur le téléphone
 /// laisserait la notification arriver quand même.

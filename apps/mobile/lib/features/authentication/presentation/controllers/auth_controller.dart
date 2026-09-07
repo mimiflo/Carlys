@@ -107,6 +107,17 @@ class AuthController extends Notifier<AuthState> {
     await _leaveAccount();
   }
 
+  /// Le compte vient d'être supprimé côté serveur : l'appareil l'oublie.
+  ///
+  /// Rien n'est demandé au serveur ici — ni déconnexion ni oubli du jeton
+  /// push : la suppression a déjà retiré sessions, refresh tokens et jetons
+  /// d'appareil. Restent les jetons du trousseau, puis la purge de frontière
+  /// de compte, qui bascule l'interface vers l'écran de connexion.
+  Future<void> forgetDeletedAccount() async {
+    await ref.read(authRepositoryProvider).clearLocalSession();
+    await _leaveAccount();
+  }
+
   /// Recharge le profil (après une modification par exemple).
   Future<void> refreshProfile() async {
     if (state is! AuthAuthenticated) return;

@@ -4,6 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../features/academy/presentation/screens/academy_screen.dart';
 import '../../features/authentication/presentation/controllers/auth_controller.dart';
+import '../../features/authentication/presentation/screens/change_password_screen.dart';
+import '../../features/authentication/presentation/screens/delete_account_screen.dart';
 import '../../features/authentication/presentation/screens/forgot_password_screen.dart';
 import '../../features/authentication/presentation/screens/login_screen.dart';
 import '../../features/authentication/presentation/screens/register_screen.dart';
@@ -309,6 +311,21 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         name: 'sessions',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const SessionsScreen(),
+      ),
+      // Gestes de compte. Volontairement HORS `_authRoutes`, qui liste les
+      // écrans réservés aux visiteurs : ceux-ci se font connecté, et le garde
+      // les protège donc comme n'importe quel autre écran.
+      GoRoute(
+        path: AppRoutes.changePassword,
+        name: 'change-password',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const ChangePasswordScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.deleteAccount,
+        name: 'delete-account',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const DeleteAccountScreen(),
       ),
       GoRoute(
         path: AppRoutes.subscription,

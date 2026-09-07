@@ -5,6 +5,10 @@ abstract final class AppRoutes {
   static const String register = '/register';
   static const String forgotPassword = '/forgot-password';
 
+  /// Gestes de compte, joignables une fois connecté depuis les réglages.
+  static const String changePassword = '/change-password';
+  static const String deleteAccount = '/delete-account';
+
   // Onglets de la coquille (bottom bar)
   static const String home = '/home';
   static const String exercises = '/exercises';

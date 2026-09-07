@@ -101,6 +101,23 @@ abstract final class AppIcons {
   static const IconData devices = Icons.devices_rounded;
   static const IconData logout = Icons.logout_rounded;
 
+  // Compte : ce qu'on fait SUR son compte, pas dans l'application.
+  /// Changer son mot de passe — la clé qu'on remplace, pas le cadenas fermé.
+  static const IconData password = Icons.lock_reset_rounded;
+
+  /// Supprimer son compte : un geste irréversible sur une personne, pas la
+  /// suppression d'une ligne (qui, elle, porte `delete`).
+  static const IconData deleteAccount = Icons.person_remove_outlined;
+
+  /// Adresse e-mail pas encore vérifiée.
+  static const IconData emailUnverified = Icons.mark_email_unread_outlined;
+
+  // Textes légaux, servis sur le web : on SORT de l'application pour les
+  // lire, d'où le renvoi externe plutôt qu'un chevron.
+  static const IconData privacy = Icons.privacy_tip_outlined;
+  static const IconData terms = Icons.description_outlined;
+  static const IconData externalLink = Icons.open_in_new_rounded;
+
   // Coach IA
   static const IconData coach = Icons.auto_awesome_rounded;
   static const IconData coachOutline = Icons.auto_awesome_outlined;

@@ -133,6 +133,9 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<void> clearLocalSession() => _storage.clear();
+
+  @override
   Future<void> resendEmailVerification() {
     return _guard(() => _api.resendEmailVerification());
   }

@@ -102,6 +102,11 @@ class ProfileScreen extends ConsumerWidget {
             ),
             const SizedBox(height: AppSpacing.md),
             const NotificationSettingsSection(),
+            const SizedBox(height: AppSpacing.md),
+            ProfileAccountSettings(
+              onChangePassword: () => context.push(AppRoutes.changePassword),
+              onDeleteAccount: () => context.push(AppRoutes.deleteAccount),
+            ),
             const SizedBox(height: AppSpacing.gapSection),
             Center(
               child: TextButton(
