@@ -42,13 +42,16 @@
 > - la **récupération multi-appareils** est assurée par un rapatriement au
 >   démarrage (`AppRestore`), pendant en LECTURE de la file : il retire du
 >   serveur les modèles, puis les séances avec leurs séries et leur plan ;
-> - **frontière de compte** : à la déconnexion et à l'expiration de session,
->   `LocalAccountPurge` vide toute la base Drift (`AppDatabase.wipeAll()`,
->   une transaction), efface les préférences propriétaires du compte, puis
+> - **frontière de compte** : `LocalAccountPurge` vide toute la base Drift
+>   (`AppDatabase.wipeAll()`, une transaction), efface les préférences
+>   propriétaires du compte et les caches mémoire qui les tiennent, puis
 >   renouvelle `appDatabaseProvider`, `syncLifecycleProvider` et
 >   `appRestoreProvider` : le compte suivant repart de zéro et déclenche son
->   rapatriement. Chaque opération de la file porte son propriétaire
->   (`ownerUserId`) et ne part jamais sous un autre compte.
+>   rapatriement. Elle est appelée à la **déconnexion volontaire** et à la
+>   **connexion d'un compte différent** — jamais à l'expiration de session,
+>   qui frappe le même utilisateur (voir « Frontière de compte » plus bas).
+>   Chaque opération de la file porte son propriétaire (`ownerUserId`) et ne
+>   part jamais sous un autre compte.
 
 ## Opérations de la file
 
@@ -364,6 +367,37 @@ propose **deux gestes** (`WorkoutConflictCard`, via
   re-clôture avec une autre issue ; tant qu'elle n'évolue pas, ce geste
   aboutit à cet échec visible dès que le serveur garde sa version. La copie
   locale reste intacte dans tous les cas.
+
+## Frontière de compte
+
+Un même téléphone peut passer de main en main. Deux garde-fous, et un choix
+sur **quand** effacer.
+
+**Qui possède quoi.** Chaque opération de la file porte le compte sous lequel
+elle a été écrite (`sync_operations.ownerUserId`, claim `sub` du jeton
+d'accès, lisible hors ligne). Le moteur refuse de drainer une opération d'un
+autre compte que celui connecté : elle est supprimée sans envoi, jamais
+attribuée au mauvais compte. En parallèle, une préférence
+(`compte.proprietaire_local`) retient à qui appartiennent les données locales
+— la file, elle, se vide au fil des envois et ne peut donc pas servir de
+mémoire.
+
+**Quand la purge a lieu :**
+
+| Événement | Purge ? | Pourquoi |
+| --------- | ------- | -------- |
+| Déconnexion volontaire | **Oui, immédiate** | On quitte un compte en le disant ; rien ne doit rester lisible sur l'appareil. |
+| Suppression du compte | **Oui, immédiate** | Même raison. |
+| Connexion / inscription d'un compte **différent** | **Oui, avant tout** | `LocalAccountSwitch.claimDevice()` compare le compte qui arrive au propriétaire retenu, purge s'ils diffèrent, puis retient le nouveau — le tout **avant** que l'état passe authentifié, donc avant le moindre drainage ou rapatriement. |
+| Connexion du **même** compte | Non | Il retrouve ses séances, ses séries et sa file, qui repart. |
+| **Expiration de session** (401 au renouvellement) | **Non** | Ce n'est pas un changement de compte : c'est le même utilisateur, revenu après l'expiration du jeton de renouvellement (`REFRESH_TOKEN_TTL_DAYS`, 30 jours). Purger là détruisait **son** travail hors ligne, contre la garantie « aucune série saisie n'est jamais perdue ». L'interface bascule, rien n'est effacé. |
+
+Ce que la purge emporte : toutes les tables Drift (`AppDatabase.wipeAll()`,
+une transaction), les préférences propriétaires du compte (journal des
+récompenses, questions d'Academy abordées, réponses d'onboarding en attente
+d'envoi — un profil, pas un appareil) et les caches mémoire qui les tiennent
+(`DriftLocalAccountPurge.accountOwnedProviders`). Ce qui reste décrit
+l'appareil : le thème et l'étape atteinte du parcours de première ouverture.
 
 ## Suppression différée (tombstones)
 

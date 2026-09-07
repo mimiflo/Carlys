@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/dio_client.dart';
 import '../../../../core/database/local_account_purge.dart';
+import '../../../../core/database/local_account_switch.dart';
 import '../../../../core/logging/app_logger.dart';
 import '../../../notifications/presentation/controllers/push_registration.dart';
 import '../../data/repositories/auth_repository_impl.dart';
@@ -49,6 +50,20 @@ class AuthController extends Notifier<AuthState> {
       state = const AuthUnauthenticated();
       return;
     }
+    // La session restaurée est presque toujours celle du propriétaire déjà
+    // retenu : rien à purger. La seule exception est un démarrage juste
+    // après une connexion interrompue avant que l'appareil n'ait changé de
+    // mains ; ce démarrage-là tranche alors, comme la connexion l'aurait
+    // fait. Un échec ne peut pas remonter (l'écran de démarrage appelle
+    // sans attendre) : on refuse d'entrer plutôt que d'ouvrir l'application
+    // sur des données qui ne sont peut-être pas les siennes.
+    try {
+      await ref.read(localAccountSwitchProvider).claimDevice();
+    } catch (error) {
+      _logger.error('Entrée dans le compte refusée', error: error);
+      state = const AuthUnauthenticated();
+      return;
+    }
     state = const AuthAuthenticated();
     try {
       state = AuthAuthenticated(user: await repository.me());
@@ -66,6 +81,7 @@ class AuthController extends Notifier<AuthState> {
     final user = await ref
         .read(authRepositoryProvider)
         .login(email: email, password: password);
+    await _enterAccount();
     state = AuthAuthenticated(user: user);
     return user;
   }
@@ -78,6 +94,7 @@ class AuthController extends Notifier<AuthState> {
     final user = await ref
         .read(authRepositoryProvider)
         .register(email: email, password: password, displayName: displayName);
+    await _enterAccount();
     state = AuthAuthenticated(user: user);
     return user;
   }
@@ -98,12 +115,29 @@ class AuthController extends Notifier<AuthState> {
     );
   }
 
+  /// Session expirée côté serveur (401 au renouvellement) : l'interface
+  /// bascule, et RIEN n'est effacé.
+  ///
+  /// Ce n'est pas un changement de compte : c'est le même utilisateur, sur
+  /// son compte, revenu après l'expiration du jeton de renouvellement (trente
+  /// jours). Purger ici détruisait ses séances, ses séries et ses opérations
+  /// en file non synchronisées — les siennes. La purge est différée à la
+  /// connexion d'un compte différent (`LocalAccountSwitch`) : s'il se
+  /// reconnecte, il retrouve tout et la file repart ; si quelqu'un d'autre se
+  /// connecte, tout part avant qu'il ne voie quoi que ce soit.
   void _onSessionExpired() {
     if (state is AuthUnauthenticated) {
       return;
     }
-    unawaited(_leaveAccount());
+    state = const AuthUnauthenticated();
   }
+
+  /// Entrée dans un compte : l'appareil est réclamé avant que l'interface ne
+  /// bascule, donc avant que le moindre drainage ou rapatriement ne démarre.
+  /// L'échec remonte volontairement : la connexion échoue à l'écran plutôt
+  /// que d'ouvrir l'application sur les données d'un autre compte.
+  Future<void> _enterAccount() =>
+      ref.read(localAccountSwitchProvider).claimDevice();
 
   /// Frontière de compte : l'appareil ne garde rien du compte qui part,
   /// PUIS l'interface bascule — le compte suivant ne peut pas se connecter

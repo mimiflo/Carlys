@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/api_error_mapper.dart';
 import '../../../../core/api/dio_client.dart';
+import '../../../../core/auth/jwt.dart';
 import '../../../../core/auth/token_storage.dart';
 import '../../../../core/logging/app_logger.dart';
 import '../../domain/entities/auth_session_device.dart';
@@ -26,6 +27,18 @@ class AuthRepositoryImpl implements AuthRepository {
 
   @override
   Future<bool> hasStoredSession() => _storage.hasSession;
+
+  /// Le claim `sub` du jeton d'accès : exactement l'identité sous laquelle le
+  /// serveur attribuera ce que l'appareil enverra, et lisible sans réseau.
+  ///
+  /// Aucune vérification de signature ici : le jeton vient du trousseau, on
+  /// n'en lit qu'un identifiant pour un rangement local — c'est le serveur
+  /// qui le vérifie à l'envoi.
+  @override
+  Future<String?> currentAccountId() async {
+    final token = await _storage.readAccessToken();
+    return token == null ? null : jwtSubjectOf(token);
+  }
 
   @override
   Future<AuthUser> register({

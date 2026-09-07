@@ -76,6 +76,9 @@ class DemoAuthRepository implements AuthRepository {
   Future<bool> hasStoredSession() async => _connected;
 
   @override
+  Future<String?> currentAccountId() async => _connected ? demoUser.id : null;
+
+  @override
   Future<AuthUser> login({
     required String email,
     required String password,

@@ -9,6 +9,14 @@ abstract interface class AuthRepository {
   /// Vraie si un refresh token est présent localement.
   Future<bool> hasStoredSession();
 
+  /// Identifiant du compte dont l'appareil porte la session, `null` si
+  /// personne n'est connecté ou si la session est illisible.
+  ///
+  /// Répondu HORS LIGNE, sans appeler le serveur : c'est ce qui permet de
+  /// savoir, dès le démarrage et sans réseau, à qui appartiennent les
+  /// données locales (`LocalAccountSwitch`).
+  Future<String?> currentAccountId();
+
   Future<AuthUser> register({
     required String email,
     required String password,

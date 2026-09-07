@@ -30,6 +30,9 @@ class FakeAuthRepository implements AuthRepository {
   Future<bool> hasStoredSession() async => storedSession;
 
   @override
+  Future<String?> currentAccountId() async => storedSession ? user.id : null;
+
+  @override
   Future<AuthUser> login({
     required String email,
     required String password,

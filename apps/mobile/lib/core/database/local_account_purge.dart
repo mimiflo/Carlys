@@ -11,15 +11,20 @@ import '../../features/progression/presentation/controllers/reward_controllers.d
 import '../logging/app_logger.dart';
 import '../synchronization/sync_lifecycle.dart';
 import 'app_database.dart';
+import 'local_account_owner.dart';
 
-/// Efface tout ce que l'appareil garde POUR UN COMPTE, à la frontière de
-/// compte (déconnexion, expiration de session, et demain suppression du
-/// compte) : le compte suivant sur le même appareil repart de zéro et
-/// déclenche son propre rapatriement.
+/// Efface tout ce que l'appareil garde POUR UN COMPTE : le compte suivant
+/// sur le même appareil repart de zéro et déclenche son propre rapatriement.
 ///
 /// Sans elle, le compte suivant voyait l'historique, les modèles et
 /// l'hydratation du précédent, et la file de synchronisation partait avec
 /// son jeton — les séances de l'un atterrissaient chez l'autre.
+///
+/// Trois appelants, et seulement trois : la déconnexion volontaire
+/// (`AuthController.logout`, immédiate), la connexion d'un compte DIFFÉRENT
+/// (`LocalAccountSwitch`, différée jusque-là) et la suppression du compte.
+/// Pas l'expiration de session : elle frappe le même utilisateur, et purger
+/// à ce moment-là détruisait son propre travail hors ligne.
 abstract interface class LocalAccountPurge {
   Future<void> run();
 }
@@ -41,12 +46,16 @@ class DriftLocalAccountPurge implements LocalAccountPurge {
   /// Les laisser, c'était écrire le profil métabolique de celui qui part sur
   /// le compte de celui qui arrive.
   ///
+  /// Le marqueur de propriétaire part aussi : après la purge, l'appareil ne
+  /// porte plus les données de personne.
+  ///
   /// Le thème et l'ÉTAPE atteinte du parcours de première ouverture restent :
   /// eux décrivent bien l'appareil et son premier lancement.
   static const List<String> accountOwnedPreferenceKeys = [
     RewardLedger.key,
     AnsweredLessonsStore.key,
     FirstRunStore.answersKey,
+    LocalAccountOwner.key,
   ];
 
   /// Providers NON auto-disposés qui gardent en MÉMOIRE des données du

@@ -395,19 +395,34 @@ Points structurants :
 - Drift contient des données métier, pas des secrets.
 - Aucun token ni secret dans les logs (`AppLogger`) ; les erreurs remontées à
   Sentry (cible) seront filtrées de la même façon.
-- **Frontière de compte** : l'appareil ne garde rien du compte qui part.
-  `LocalAccountPurge` (`core/database/local_account_purge.dart`), appelée
-  par `AuthController` à la déconnexion et à l'expiration de session, vide
-  toute la base Drift dans une transaction (`AppDatabase.wipeAll()`), efface
-  les préférences propriétaires du compte (journal des récompenses, questions
-  d'Academy abordées ; le thème et le parcours de première ouverture
-  décrivent l'appareil et restent), puis renouvelle `appDatabaseProvider`,
+- **Frontière de compte** : aucun compte ne voit les données d'un autre, et
+  personne ne perd les siennes.
+  `LocalAccountPurge` (`core/database/local_account_purge.dart`) vide toute
+  la base Drift dans une transaction (`AppDatabase.wipeAll()`), efface les
+  préférences propriétaires du compte (journal des récompenses, questions
+  d'Academy abordées, réponses d'onboarding en attente d'envoi — un profil,
+  pas un appareil) et les caches mémoire qui les tiennent
+  (`accountOwnedProviders`), puis renouvelle `appDatabaseProvider`,
   `syncLifecycleProvider` et `appRestoreProvider` : le compte suivant repart
-  de zéro et déclenche son propre rapatriement. La routine est exposée par
-  `localAccountPurgeProvider` pour les écrans de compte à venir (suppression
-  du compte). En complément, chaque opération de la file de synchronisation
-  porte le compte sous lequel elle a été écrite (`ownerUserId`, claim `sub`
-  du jeton d'accès) et n'est jamais drainée sous un autre.
+  de zéro et déclenche son propre rapatriement. Le thème et l'étape atteinte
+  du parcours de première ouverture décrivent l'appareil et restent.
+  `AuthController` l'appelle à la **déconnexion volontaire** ; la routine est
+  aussi exposée par `localAccountPurgeProvider` pour la suppression du compte.
+- **Quand purger** : l'expiration de session (401 au renouvellement, soit
+  trente jours sans ouvrir l'application) n'est **pas** un changement de
+  compte, et ne purge rien : c'est le même utilisateur, et effacer là
+  détruisait ses séances et ses opérations en file non synchronisées. La
+  purge est différée à l'ENTRÉE dans un compte : `LocalAccountSwitch`
+  (`core/database/local_account_switch.dart`) compare l'identifiant du compte
+  qui arrive (`AuthRepository.currentAccountId()`, claim `sub` du jeton, lu
+  hors ligne) au propriétaire retenu dans les préférences
+  (`LocalAccountOwner`, `compte.proprietaire_local`) et ne purge que s'ils
+  diffèrent — avant que l'état passe authentifié, donc avant tout drainage.
+  Le propriétaire est retenu en préférence et non déduit de la file : celle-ci
+  se vide au fil des envois et ne peut pas servir de mémoire.
+- En complément, chaque opération de la file de synchronisation porte le
+  compte sous lequel elle a été écrite (`ownerUserId`, claim `sub` du jeton
+  d'accès) et n'est jamais drainée sous un autre.
 
 ## Adaptatif et préparation desktop
 
