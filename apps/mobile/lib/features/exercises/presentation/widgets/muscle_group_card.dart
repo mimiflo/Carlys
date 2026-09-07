@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/media/muscle_illustration.dart';
 import '../../../../design_system/design_system.dart';
 
 /// Carte d'un groupe musculaire dans la bibliothèque.
@@ -80,7 +81,6 @@ class MuscleGroupCard extends StatelessWidget {
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
-                      const _Halo(),
                       if (asset != null)
                         Padding(
                           padding: const EdgeInsets.fromLTRB(
@@ -89,13 +89,9 @@ class MuscleGroupCard extends StatelessWidget {
                             AppSpacing.xs,
                             0,
                           ),
-                          child: Image.asset(
-                            asset,
+                          child: MuscleIllustration(
+                            image: AssetImage(asset),
                             fit: BoxFit.contain,
-                            // Un fichier manquant ne casse pas l'écran : la
-                            // carte garde sa forme et son nom.
-                            errorBuilder: (_, __, ___) =>
-                                const SizedBox.shrink(),
                           ),
                         )
                       else
@@ -142,28 +138,6 @@ class MuscleGroupCard extends StatelessWidget {
               ],
             ),
           ),
-        ),
-      ),
-    );
-  }
-}
-
-/// Lueur violette derrière le sujet : sans elle, un détourage sombre posé sur
-/// une surface sombre n'a plus de contour.
-///
-/// Le halo s'éteint vers le MÊME violet à alpha zéro, jamais vers du noir :
-/// sinon il vire au gris à mi-course au lieu de garder sa teinte.
-class _Halo extends StatelessWidget {
-  const _Halo();
-
-  @override
-  Widget build(BuildContext context) {
-    return const DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: RadialGradient(
-          center: Alignment(0, 0.15),
-          radius: 0.85,
-          colors: [AppColors.primaryCardStrong, AppColors.primaryCardClear],
         ),
       ),
     );

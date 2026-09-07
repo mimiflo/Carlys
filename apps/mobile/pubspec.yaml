@@ -94,6 +94,8 @@ dev_dependencies:
   drift_dev: ^2.34.5
 
 flutter:
+  shaders:
+    - shaders/muscle_red.frag
   uses-material-design: true
 
   assets:

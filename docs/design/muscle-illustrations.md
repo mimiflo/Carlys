@@ -2,6 +2,26 @@
 
 Série Carlys du 7 septembre 2026, générée avec l’outil ImageGen intégré.
 
+## Rouge commun et transparence à l’affichage
+
+Les essais de régénération pour corriger le rouge produisaient parfois un
+damier opaque ou changeaient la forme des muscles. Ils ne sont pas intégrés.
+Les 13 détourages validés sont conservés ; `MuscleIllustration` applique
+`shaders/muscle_red.frag` aux cartes et aux replis anatomiques de l’Academy.
+Le cœur des régions rouges utilise la même valeur sRGB `#FF4D4D`, indépendamment
+de l’éclairage de l’image source. La transition aux frontières reste progressive,
+les pixels gris et violets sont préservés et le canal alpha reste identique.
+Les fichiers sources conservent leurs couleurs : l’uniformisation est un effet
+de rendu dans l’application. Le halo violet des cartes a également été retiré.
+
+Le programme est chargé une seule fois et chaque widget dispose de son propre
+sampler, libéré avec l’image au démontage. En cas d’indisponibilité du shader,
+le détourage original reste visible. Les tests vérifient des pixels rouges de
+plusieurs luminosités, le gris, le violet, les bords semi-transparents et l’alpha
+sur les 13 illustrations réelles.
+
+API utilisée : [fragment shaders Flutter](https://docs.flutter.dev/ui/design/graphics/fragment-shaders).
+
 Les 13 fichiers `apps/mobile/assets/muscles/*.webp` remplacent la série précédente et ajoutent les ischio-jambiers. Chaque image est indépendante : personnage gris mat, groupe ciblé rouge corail, éclairage de studio et fond transparent. Les libellés restent rendus par Flutter. Les PNG générés sont exportés en WebP 640 × 640, qualité 90, avec le canal alpha conservé.
 
 ## Prompt de référence (pectoraux)
@@ -69,4 +89,3 @@ Single full-body front-facing male mannequin from head to both feet entirely in 
 Lorsqu’un export produisait un damier opaque, effectuer une seconde passe de détourage :
 
 > Background extraction edit: ERASE the whole white and grey patterned background around and between the body parts. Deliver a true RGBA PNG cutout with an empty invisible transparent alpha background. Preserve this single grey anatomy mannequin with red muscle highlights exactly. Do not draw any new background pixels, white squares or grey squares. Transparent background.
-
