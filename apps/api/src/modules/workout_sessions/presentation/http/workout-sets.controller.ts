@@ -13,7 +13,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../../../common/decorators/current-user.decorator';
 import { type AuthenticatedPrincipal } from '../../../../common/types/authenticated-request';
 import { WorkoutSetsService } from '../../application/workout-sets.service';
-import { UpdateWorkoutSetDto } from './dto/workout.dto';
+import { UpdateWorkoutSetDto } from './dto/workout-set.dto';
 
 @ApiTags('workout-sessions')
 @ApiBearerAuth()

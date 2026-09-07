@@ -25,10 +25,10 @@ import { type RequestWithId } from '../../../../common/types/request-with-id';
 import { enveloped } from '../../../../common/utilities/enveloped';
 import { WorkoutSetsService } from '../../application/workout-sets.service';
 import { WorkoutsService } from '../../application/workouts.service';
+import { CreateWorkoutSetDto } from './dto/workout-set.dto';
 import {
   CloseWorkoutSessionDto,
   CreateWorkoutSessionDto,
-  CreateWorkoutSetDto,
   ListWorkoutSessionsQuery,
   SkipWorkoutSessionPlanItemsDto,
   UpdateWorkoutSessionDto,
