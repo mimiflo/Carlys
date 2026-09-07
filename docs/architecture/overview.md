@@ -64,10 +64,26 @@ ou conteneurisées derrière le profil Compose `app`.
   - `packages/ui` **génère** son CSS depuis les jetons
     (`scripts/build-css.mjs`) ; c'est la seule vraie génération du dépôt ;
   - `apps/mobile` **recopie** dans `AppColors`, `AppSpacing`, `AppMotion`… et
-    `test/design_system/design_tokens_test.dart` tient la copie ;
+    `test/design_system/design_tokens_test.dart` n'en tient qu'une **partie**,
+    qu'il faut connaître avant de s'y fier : **30 valeurs sur les 198** de
+    `tokens.json`, réparties sur trois sections. `motion.duration` (11 sur 11)
+    et `spacing` (14 sur 14) y sont tenues **dans les deux sens** — un token
+    sans reflet Flutter échoue autant qu'un reflet sans token ;
+    `color.darkRoles` ne l'est que dans un seul, et sur 5 rôles de texte sur
+    11. Rien ne tient `color.brand`, `color.gradient`, `color.neutral`,
+    `color.semantic`, `color.surface`, `radius`, `shadow`, `typography`,
+    `breakpoint` ni `motion.easing` : ces copies-là peuvent dériver sans
+    qu'aucun test ne le dise. Élargir le filet, c'est ajouter un
+    `section('…')` de plus dans ce fichier ;
   - `apps/admin` **recopie** aussi, dans `src/app/globals.css`, sans dépendre
-    du paquet ; `src/app/globals-tokens.test.ts` tient cette copie-là depuis
-    septembre 2026, après qu'elle eut dérivé sur deux fonds sombres.
+    du paquet ; `src/app/globals-tokens.test.ts` tient cette copie-là **en
+    entier** depuis septembre 2026, après qu'elle eut dérivé sur deux fonds
+    sombres. « En entier » a ici un sens vérifiable : le fichier ne déclare
+    que 13 variables de palette, le test les compare toutes au jeton qu'elles
+    recopient, refuse toute variable de plus, refuse une variable redéclarée
+    par un second bloc `:root`, et exige que `@theme inline` — ce que Tailwind
+    lit vraiment — se borne à republier ces variables au lieu de porter une
+    couleur en dur.
 
   Les **courbes** de `motion.easing` sont le seul jeton qui ne se recopie pas à
   l'identique : elles fixent un rôle, chaque plateforme l'exprime avec ce
