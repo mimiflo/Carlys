@@ -10,7 +10,7 @@ Voir le [README racine](../../README.md) et
 ```bash
 pnpm dev        # http://localhost:3001
 pnpm build      # build de production (standalone)
-pnpm lint       # ESLint (config Next)
+pnpm lint       # ESLint (config Next + base partagée @carlys/eslint-config)
 pnpm typecheck  # tsc --noEmit
 pnpm test       # vitest + Testing Library
 ```
