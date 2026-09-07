@@ -155,7 +155,12 @@ n'est pas réutilisable tel quel, il est *traduit*. Deux conséquences :
 
 - les valeurs visuelles passent toutes par le design system
   (`AppColors`, `AppTypography`, `AppRadius`, `AppSpacing`, `AppMotion`,
-  `AppIcons`) — jamais en dur dans un écran ;
+  `AppIcons`) — jamais en dur dans un écran. La règle n'est plus confiée à la
+  relecture : `apps/mobile/test/features/raw_colors_test.dart` balaie
+  `lib/features/**` et refuse tout `Color(0x…)`, `Color.fromARGB`,
+  `Color.fromRGBO` ou `Colors.<nom>`. Seul `Colors.transparent` est admis —
+  ce n'est pas une couleur, c'est son absence, et le design system ne nomme
+  pas le vide ;
 - les formats de nombres et de dates de la maquette (« 1 840 », « 6,4 t »,
   « 82,5 », « IL Y A 4 JOURS », « LUN. 11 NOV. · 54 MIN ») sont centralisés dans
   `lib/core/utilities/formatting.dart`.
