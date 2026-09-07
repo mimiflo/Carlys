@@ -14,7 +14,14 @@ class FakeNutritionRepository implements NutritionRepository {
     this._heightCm,
     this._activityLevel,
     this._goal,
+    this.failure,
   });
+
+  /// L'échec que le « serveur » oppose au rapport métabolique.
+  ///
+  /// Sans lui, aucun test ne pouvait distinguer « profil vide » de « serveur
+  /// muet » — et c'est exactement la confusion que l'accueil commettait.
+  final Object? failure;
 
   double? weightKg;
   BiologicalSex? _sex;
@@ -39,6 +46,10 @@ class FakeNutritionRepository implements NutritionRepository {
 
   @override
   Future<MetabolismReport> metabolismReport() async {
+    final refused = failure;
+    if (refused != null) {
+      throw refused;
+    }
     final missing = <MetabolismMissingField>[
       if (_sex == null) MetabolismMissingField.sex,
       if (_birthDate == null) MetabolismMissingField.birthDate,

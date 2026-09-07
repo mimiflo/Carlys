@@ -13,20 +13,17 @@ import '../../../authentication/presentation/controllers/auth_controller.dart';
 import '../../../carlys_profile/presentation/controllers/carlys_profile_controllers.dart';
 import '../../../community/presentation/controllers/community_controllers.dart';
 import '../../../notifications/presentation/controllers/push_registration.dart';
-import '../../../nutrition/presentation/controllers/water_controllers.dart';
 import '../../../nutrition/presentation/widgets/water_sheet.dart';
 import '../../../workout_session/presentation/controllers/workout_controllers.dart';
 import '../../../workout_template/presentation/controllers/workout_template_controllers.dart';
 import '../controllers/dashboard_controllers.dart';
-import '../controllers/today_metrics.dart';
 import '../widgets/consistency_streak.dart';
 import '../widgets/daily_form_block.dart';
 import '../widgets/for_you_card.dart';
 import '../widgets/home_hero.dart';
 import '../widgets/section_title_bar.dart';
 import '../widgets/title_summary.dart';
-import '../widgets/today_grid.dart';
-import '../widgets/today_primer.dart';
+import '../widgets/today_section.dart';
 import '../widgets/today_workout_card.dart';
 
 /// ACCUEIL — ce que je fais aujourd'hui, et où j'en suis.
@@ -84,25 +81,14 @@ class HomeScreen extends ConsumerWidget {
                 week: ref.watch(consistencyWeekProvider),
               ),
             ),
-            // Sans cible connue, la grille n'aurait que des tirets à montrer :
-            // l'amorçage prend sa place, et lui seul porte alors son titre.
-            if (ref.watch(metabolismTargetWaterMlProvider).valueOrNull == null)
-              _Section(
-                child: TodayPrimer(
-                  onStart: () => context.push(AppRoutes.nutrition),
-                ),
-              )
-            else
-              _Section(
-                child: _Titled(
-                  icon: AppIcons.today,
-                  label: 'Aujourd’hui',
-                  child: TodayGrid(
-                    metrics: ref.watch(todayMetricsProvider),
-                    onOpenHydration: () => showWaterSheet(context),
-                  ),
-                ),
+            // Attente, échec, ou cible connue : les trois se distinguent dans
+            // TodaySection, jamais dans un `null` commun.
+            _Section(
+              child: TodaySection(
+                onStartPrimer: () => context.push(AppRoutes.nutrition),
+                onOpenHydration: () => showWaterSheet(context),
               ),
+            ),
             _Section(
               child: TodayWorkoutCard(
                 activeWorkout: activeWorkout,
@@ -125,7 +111,7 @@ class HomeScreen extends ConsumerWidget {
             _ForYouSection(),
             if (dailyLesson != null)
               _Section(
-                child: _Titled(
+                child: TitledSection(
                   icon: AppIcons.question,
                   label: 'Question du jour',
                   gap: AppSpacing.md,
@@ -177,41 +163,11 @@ class _ForYouSection extends ConsumerWidget {
     if (entries.isEmpty) return const SizedBox.shrink();
 
     return _Section(
-      child: _Titled(
+      child: TitledSection(
         icon: AppIcons.forYou,
         label: 'Pour toi',
         child: ForYouCard(entries: entries),
       ),
-    );
-  }
-}
-
-/// Une section ouverte par sa barre de titre.
-class _Titled extends StatelessWidget {
-  const _Titled({
-    required this.icon,
-    required this.label,
-    required this.child,
-    this.gap = AppSpacing.gapRow,
-  });
-
-  final IconData icon;
-  final String label;
-  final Widget child;
-
-  /// 14 avant une surface, 16 avant du contenu nu : une surface porte déjà
-  /// son propre padding, un texte n'a que cet écart pour respirer.
-  final double gap;
-
-  @override
-  Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        SectionTitleBar(icon: icon, label: label),
-        SizedBox(height: gap),
-        child,
-      ],
     );
   }
 }

@@ -148,3 +148,38 @@ class SectionTitleBar extends StatelessWidget {
     return width;
   }
 }
+
+/// Une section ouverte par sa barre de titre.
+///
+/// Publique depuis que « Aujourd'hui » vit dans son propre widget : le titre
+/// doit coiffer l'attente et l'échec comme il coiffe la grille, sinon la
+/// section disparaît de la page dès que le serveur tarde.
+class TitledSection extends StatelessWidget {
+  const TitledSection({
+    required this.icon,
+    required this.label,
+    required this.child,
+    this.gap = AppSpacing.gapRow,
+    super.key,
+  });
+
+  final IconData icon;
+  final String label;
+  final Widget child;
+
+  /// 14 avant une surface, 16 avant du contenu nu : une surface porte déjà
+  /// son propre padding, un texte n'a que cet écart pour respirer.
+  final double gap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        SectionTitleBar(icon: icon, label: label),
+        SizedBox(height: gap),
+        child,
+      ],
+    );
+  }
+}

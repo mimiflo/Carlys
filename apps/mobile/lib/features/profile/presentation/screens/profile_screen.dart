@@ -7,16 +7,12 @@ import '../../../../design_system/design_system.dart';
 import '../../../authentication/presentation/controllers/auth_controller.dart';
 import '../../../carlys_profile/presentation/widgets/carlys_profile_content.dart';
 import '../../../nutrition/presentation/controllers/nutrition_controllers.dart';
-import '../../../progress/presentation/controllers/progress_controllers.dart';
 import '../../../progression/presentation/controllers/progression_controllers.dart';
-import '../../../subscription/presentation/controllers/subscription_controllers.dart';
-import '../controllers/profile_controllers.dart';
 import '../widgets/profile_email_verification.dart';
 import '../widgets/profile_header.dart';
 import '../widgets/profile_legal_section.dart';
-import '../widgets/profile_plan_card.dart';
 import '../widgets/profile_settings_sections.dart';
-import '../widgets/profile_stat_tiles.dart';
+import '../widgets/profile_summary.dart';
 
 /// Profil & réglages (maquette 2j) : identité, bannière d'abonnement, tuiles
 /// mono, groupes de réglages puis déconnexion.
@@ -35,10 +31,11 @@ class ProfileScreen extends ConsumerWidget {
       AuthAuthenticated(:final user) => user,
       _ => null,
     };
-    final plan = ref.watch(planStatusProvider).valueOrNull;
-    final weights = ref.watch(bodyWeightMetricsProvider).valueOrNull;
+    // L'objectif d'entraînement est le SEUL chiffre serveur resté ici : il
+    // ne s'affiche que sur une ligne de réglage, où l'absence de valeur
+    // n'affirme rien. Tout le reste passe par ProfileSummary, qui distingue
+    // « pas encore », « pas pu » et « rien à montrer ».
     final profile = ref.watch(metabolismReportProvider).valueOrNull?.profile;
-    final overview = ref.watch(profileSessionsOverviewProvider).valueOrNull;
     final progression = ref.watch(progressionProfileProvider);
     // Plein écran depuis la réorganisation en cinq onglets : la bottom bar ne
     // recouvre plus cet écran, seul l'encart système compte.
@@ -70,19 +67,8 @@ class ProfileScreen extends ConsumerWidget {
               ProfileEmailVerification(user: user),
               const SizedBox(height: AppSpacing.md),
             ],
-            if (plan != null) ...[
-              ProfilePlanCard(
-                plan: plan,
-                onTap: () => context.push(AppRoutes.subscription),
-              ),
-              const SizedBox(height: AppSpacing.md),
-            ],
-            ProfileStatTiles(
-              weightKg: weights == null || weights.isEmpty
-                  ? null
-                  : weights.last.value,
-              heightCm: profile?.heightCm,
-              sessionsCount: overview?.sessionsCount,
+            ProfileSummary(
+              onOpenPlan: () => context.push(AppRoutes.subscription),
             ),
             const SizedBox(height: AppSpacing.md),
             ProfileIdentitySettings(
