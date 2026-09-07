@@ -7,6 +7,7 @@ import 'package:carlys_mobile/features/progression/presentation/widgets/award_se
 import 'package:carlys_mobile/features/progression/presentation/widgets/majesty.dart';
 import 'package:carlys_mobile/features/progression/presentation/widgets/majesty_plate.dart';
 import 'package:carlys_mobile/features/progression/presentation/widgets/seal_engraving.dart';
+import 'package:carlys_mobile/features/progression/presentation/widgets/seal_painter.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
