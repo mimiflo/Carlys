@@ -37,6 +37,10 @@ WORKDIR /app
 
 COPY --from=build /repo/apps/admin/.next/standalone ./
 COPY --from=build /repo/apps/admin/.next/static ./apps/admin/.next/static
+# `output: 'standalone'` n'embarque NI .next/static NI public/ : les deux se
+# recopient à la main, c'est la marche à suivre documentée par Next.js.
+# apps/admin/public/ est donc versionné (un .gitkeep suffit) même vide : sans
+# lui, ce COPY échoue — « not found » — et l'image ne se construit pas.
 COPY --from=build /repo/apps/admin/public ./apps/admin/public
 
 USER node
