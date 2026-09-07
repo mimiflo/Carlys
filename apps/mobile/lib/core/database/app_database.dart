@@ -235,11 +235,15 @@ class SyncOperations extends Table {
   /// (`exhausted`) pour ne plus retenir les opérations indépendantes.
   IntColumn get serverErrorCount => integer().withDefault(const Constant(0))();
 
-  /// pending | failed | exhausted (une opération réussie est supprimée).
+  /// pending | failed | exhausted | conflict (une opération réussie est
+  /// supprimée).
   ///
   /// `failed` : refus définitif du serveur (4xx), jamais rejoué
   /// automatiquement. `exhausted` : trop d'erreurs serveur d'affilée,
-  /// rejouée à la prochaine ouverture de l'application.
+  /// rejouée à la prochaine ouverture de l'application. `conflict` : clôture
+  /// refusée par le serveur qui a clos la séance AUTREMENT — l'opération
+  /// attend la décision de l'utilisateur (prendre la version du serveur, ou
+  /// rejouer la sienne), et retient sa voie en attendant.
   TextColumn get status => text().withDefault(const Constant('pending'))();
   TextColumn get error => text().nullable()();
 

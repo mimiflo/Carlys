@@ -185,6 +185,9 @@ stateDiagram-v2
   pending --> failed : erreur définitive (4xx non récupérable)
   pending --> exhausted : serverAttemptsMax réponses 5xx d'affilée
   exhausted --> pending : ouverture suivante de l'application\n(retryExhausted)
+  pending --> conflict : 409 à la clôture, le serveur a clos\nla séance avec une AUTRE issue
+  conflict --> [*] : « Prendre la version du serveur » :\nversion serveur rapatriée, opération supprimée
+  conflict --> pending : « Garder ma version » : clôture locale\nrejouée, marquée arbitrée (resolution: keepLocal)
 ```
 
 - `pending` : à envoyer (ou en cours d'envoi). Un échec **transitoire** (pas de
@@ -201,6 +204,14 @@ stateDiagram-v2
   opérations qui la suivent **sur sa voie** attendent, celles des autres
   voies partent. À l'ouverture suivante, `SyncEngine.retryExhausted()` la
   repasse `pending`, compteurs à zéro, et l'entité redevient « en attente ».
+- `conflict` : la clôture a été refusée en `409` et le serveur a clos la
+  séance avec une **autre issue** (voir « Le 409 de clôture »). L'entité est
+  marquée `conflict`, sa voie attend, et l'opération ne repart **jamais**
+  toute seule : c'est l'utilisateur qui tranche depuis le détail de la
+  séance. « Prendre la version du serveur » rapatrie la version distante et
+  supprime l'opération ; « Garder ma version » la repasse `pending`,
+  compteurs à zéro et marquée arbitrée — un second refus la marque alors
+  `failed` au lieu de reposer la question.
 
 ### Voies
 
