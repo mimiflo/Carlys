@@ -45,14 +45,25 @@ fi
 echo "── Dépendances ─────────────────────────────────────────────────────"
 # Le message de pub est exact mais muet sur la suite : ici, la suite est de
 # COMMITER le lock, sans quoi la CI retombera sur le même 65.
+#
+# Le conseil ne vaut QUE pour le 65 (« Unable to satisfy `pubspec.yaml` using
+# `pubspec.lock` »). `pub get` échoue aussi pour de tout autres raisons —
+# mesuré sur un pubspec.yaml malformé : code 1, « Unexpected child "rxdart"
+# found under "flutter" ». Envoyer alors le développeur relancer `pub get` et
+# committer le lock, c'est le lancer sur une piste fausse pendant que la vraie
+# cause est déjà à l'écran. On conditionne donc le message au code rendu.
 flutter pub get --enforce-lockfile || {
   CODE=$?
   echo ""
-  echo "✗ pubspec.lock ne satisfait plus pubspec.yaml — la CI (mobile-ci.yml)"
-  echo "  échouera de la même façon, avec ce même code $CODE."
-  echo "  Résoudre, RELIRE le résultat, puis committer le lock :"
-  echo "      (cd apps/mobile && flutter pub get)"
-  echo "      git add apps/mobile/pubspec.lock"
+  if [ "$CODE" -eq 65 ]; then
+    echo "✗ pubspec.lock ne satisfait plus pubspec.yaml — la CI (mobile-ci.yml)"
+    echo "  échouera de la même façon, avec ce même code $CODE."
+    echo "  Résoudre, RELIRE le résultat, puis committer le lock :"
+    echo "      (cd apps/mobile && flutter pub get)"
+    echo "      git add apps/mobile/pubspec.lock"
+  else
+    echo "✗ flutter pub get a échoué (code $CODE), voir la sortie ci-dessus."
+  fi
   exit "$CODE"
 }
 
