@@ -1,6 +1,5 @@
 import {
   adminAuditLogSchema,
-  adminCommunityReportSchema,
   adminExerciseSummarySchema,
   adminLoginResultSchema,
   adminMeSchema,
@@ -11,13 +10,11 @@ import {
   equipmentSchema,
   mediaAssetSchema,
   type AdminAuditLog,
-  type AdminCommunityReport,
   type AdminExerciseSummary,
   type AdminLoginResult,
   type AdminMe,
   type AdminMuscleGroup,
   type AdminOverview,
-  type CommunityReportStatus,
   type Equipment,
   type SetExerciseCategoriesInput,
   type EntitlementKey,
@@ -27,106 +24,29 @@ import {
   type MediaKind,
 } from '@carlys/api-contracts';
 import { z } from 'zod';
-import { ApiError, apiUrl, requestJson, unwrapResponse } from './api-transport';
+import { call, callUpload, parseData, parsePage, query, type Page } from './admin-api-client';
+import { communityApi } from './admin-community-api';
+import { ApiError } from './api-transport';
 
 /**
  * Client de l'API d'administration : réponses VALIDÉES par les contrats Zod
  * partagés — un contrat cassé se voit immédiatement, jamais silencieusement.
  *
  * Le transport (URL, en-têtes, enveloppe d'erreur) vit dans `api-transport`,
- * partagé avec les pages publiques ; ici ne reste que ce qui est propre au
- * back-office : le jeton d'administration et les contrats.
+ * partagé avec les pages publiques ; le jeton et la lecture des enveloppes
+ * dans `admin-api-client` ; ici ne restent que les routes. La modération a
+ * son propre fichier (`admin-community-api`), étalé dans `adminApi` : les
+ * pages et leurs tests n'ont toujours qu'un seul objet à connaître.
  */
 
 /** Nom historique du back-office pour l'erreur commune du transport. */
 export { ApiError as AdminApiError };
-
-const TOKEN_KEY = 'carlys-admin-token';
-
-export const adminToken = {
-  get(): string | null {
-    return typeof window === 'undefined' ? null : window.sessionStorage.getItem(TOKEN_KEY);
-  },
-  set(token: string): void {
-    window.sessionStorage.setItem(TOKEN_KEY, token);
-  },
-  clear(): void {
-    window.sessionStorage.removeItem(TOKEN_KEY);
-  },
-};
-
-const successEnvelopeSchema = z.object({ data: z.unknown() });
-const pageMetaSchema = z.object({
-  nextCursor: z.string().nullable(),
-  hasMore: z.boolean(),
-});
-
-export interface Page<T> {
-  items: T[];
-  nextCursor: string | null;
-  hasMore: boolean;
-}
-
-/** Extrait `data` d'une enveloppe de succès et le valide. */
-export function parseData<T>(body: unknown, schema: z.ZodType<T>): T {
-  const envelope = successEnvelopeSchema.safeParse(body);
-  if (!envelope.success) {
-    throw new ApiError('Réponse inattendue du serveur.', 0);
-  }
-  const parsed = schema.safeParse(envelope.data.data);
-  if (!parsed.success) {
-    throw new ApiError('Réponse inattendue du serveur.', 0);
-  }
-  return parsed.data;
-}
-
-/** Variante paginée : `data` + `meta.nextCursor`/`meta.hasMore`. */
-export function parsePage<T>(body: unknown, itemSchema: z.ZodType<T>): Page<T> {
-  const items = parseData(body, z.array(itemSchema));
-  const meta = pageMetaSchema.safeParse(
-    (body as { meta?: unknown }).meta ?? { nextCursor: null, hasMore: false },
-  );
-  return {
-    items,
-    nextCursor: meta.success ? meta.data.nextCursor : null,
-    hasMore: meta.success ? meta.data.hasMore : false,
-  };
-}
-
-/** Requête JSON du back-office : le jeton d'administration, s'il existe, part avec. */
-function call(path: string, init: RequestInit = {}): Promise<unknown> {
-  return requestJson(path, init, adminToken.get());
-}
-
-/**
- * Dépôt de fichier — transport séparé, et pour une bonne raison : `call` pose
- * `Content-Type: application/json`, alors qu'un envoi multipart doit laisser
- * le navigateur écrire lui-même son en-tête avec la frontière (`boundary`).
- * L'imposer à la main casse le décodage côté serveur.
- */
-async function callUpload(path: string, form: FormData): Promise<unknown> {
-  const token = adminToken.get();
-  const response = await fetch(apiUrl(path), {
-    method: 'POST',
-    body: form,
-    headers: token === null ? {} : { Authorization: `Bearer ${token}` },
-    cache: 'no-store',
-  });
-  return unwrapResponse(response);
-}
-
-function query(params: Record<string, string | undefined>): string {
-  const search = new URLSearchParams();
-  for (const [key, value] of Object.entries(params)) {
-    if (value !== undefined && value !== '') {
-      search.set(key, value);
-    }
-  }
-  const encoded = search.toString();
-  return encoded === '' ? '' : `?${encoded}`;
-}
+export { adminToken, parseData, parsePage, type Page } from './admin-api-client';
 
 export const adminApi = {
+  // Signalements de la communauté — voir `admin-community-api.ts`.
+  ...communityApi,
+
   async login(email: string, password: string): Promise<AdminLoginResult> {
     const body = await call('/admin/auth/login', {
       method: 'POST',
@@ -175,29 +95,6 @@ export const adminApi = {
   async auditLogs(cursor?: string): Promise<Page<AdminAuditLog>> {
     const body = await call(`/admin/audit-logs${query({ cursor, limit: '50' })}`);
     return parsePage(body, adminAuditLogSchema);
-  },
-
-  // ── Signalements de la communauté ──────────────────────────────────────
-
-  /** Plus récents d'abord ; `status` absent = tous les statuts. Permission `community:moderate`. */
-  async listCommunityReports(
-    status?: CommunityReportStatus,
-    cursor?: string,
-  ): Promise<Page<AdminCommunityReport>> {
-    const body = await call(`/admin/community/reports${query({ status, cursor, limit: '50' })}`);
-    return parsePage(body, adminCommunityReportSchema);
-  },
-
-  /** Résoudre (`RESOLVED`) ou rouvrir (`OPEN`) : audité côté serveur, rejouable sur le même statut. */
-  async setCommunityReportStatus(
-    id: string,
-    status: CommunityReportStatus,
-  ): Promise<AdminCommunityReport> {
-    const body = await call(`/admin/community/reports/${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ status }),
-    });
-    return parseData(body, adminCommunityReportSchema);
   },
 
   // ── Catalogue et médias ────────────────────────────────────────────────

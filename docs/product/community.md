@@ -94,14 +94,15 @@ l'encouragement visé. Ce texte est le cliché figé au signalement, donc trois
 états seulement : le message seul (il est encore dans le fil) ; le message
 suivi de « Message retiré depuis » (`encouragementId` remis à `NULL` par la
 suppression, la preuve reste) ; « La personne en général » quand le
-signalement ne vise aucun message. Un
-bouton résout chaque signalement, un autre le rouvre ; résoudre ne prévient
-personne et ne touche pas au compte visé : les deux personnes renvoient à
-leur fiche utilisateur, seul endroit où l'on suspend. Sans
+signalement ne vise aucun message. Un bouton résout chaque signalement, un
+autre le rouvre ; résoudre ne prévient personne et ne touche pas au compte
+visé : les deux personnes renvoient à leur fiche utilisateur, seul endroit
+où l'on suspend. Sans
 `community:moderate`, la page montre le refus du serveur tel quel (403),
 sans le déguiser en panne. Transport : `adminApi.listCommunityReports` et
-`adminApi.setCommunityReportStatus` (`apps/admin/src/lib/admin-api.ts`),
-réponses validées par `adminCommunityReportSchema`.
+`adminApi.setCommunityReportStatus`, portés par
+`apps/admin/src/lib/admin-community-api.ts` et étalés dans `adminApi`
+(`admin-api.ts`), réponses validées par `adminCommunityReportSchema`.
 
 Cas particuliers du service :
 
@@ -257,7 +258,7 @@ simplement perdue (la barre est collective, pas comptable).
   écrit dans une même transaction, `null` si le message ne vient pas de la
   personne visée), audit de la résolution, pagination.
 - Vitest back-office (`apps/admin/src/app/reports/page.test.tsx`,
-  `apps/admin/src/lib/admin-api.test.ts`) : liste des ouverts par défaut
+  `apps/admin/src/lib/admin-community-api.test.ts`) : liste des ouverts par défaut
   avec motif, personnes liées à leur fiche et texte visé (message vivant,
   cliché d'un message retiré depuis, signalement visant la personne) ;
   résolution puis rechargement ; réouverture ; filtres Résolus/Tous ; pagination par

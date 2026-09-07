@@ -145,6 +145,14 @@ Décisions :
   historique `AdminApiError`) et aux pages publiques (`lib/public-api.ts`, qui
   n'envoie **jamais** le jeton d'administration, même présent dans l'onglet).
   Toujours aucun `fetch` dans un composant.
+- **Client d'administration en trois fichiers**, pour qu'aucun ne devienne le
+  fourre-tout de toutes les routes : `lib/admin-api-client.ts` (jeton,
+  `call`/`callUpload`, lecture des enveloppes `parseData`/`parsePage`,
+  `query`), `lib/admin-community-api.ts` (modération : les signalements ont
+  leur page et leur permission) et `lib/admin-api.ts`, qui porte le reste des
+  routes, **étale** la modération dans `adminApi` et ré-exporte le socle. Les
+  pages n'importent donc toujours que `@/lib/admin-api`, et un domaine
+  supplémentaire se pose à côté au lieu de faire grossir le même fichier.
 - **Lecture de l'URL** (`useSearchParams`) dans un composant client sous
   `Suspense` ; la page reste un composant serveur porteur des métadonnées.
 - **Vérification d'adresse par `useQuery`** (clé = jeton, `retry: false`,
