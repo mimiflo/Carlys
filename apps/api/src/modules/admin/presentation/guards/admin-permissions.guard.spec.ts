@@ -6,10 +6,8 @@ import {
   AdminExerciseMediaController,
   MediaController,
 } from '../../../media/presentation/http/media.controller';
-import {
-  AdminCatalogController,
-  AdminCategoriesController,
-} from '../http/admin-catalog.controller';
+import { AdminCatalogController } from '../http/admin-catalog.controller';
+import { AdminCategoriesController } from '../http/admin-categories.controller';
 import { AdminPlatformController } from '../http/admin-platform.controller';
 import { AdminUsersController } from '../http/admin-users.controller';
 import { type AdminRequest } from './admin-auth.guard';

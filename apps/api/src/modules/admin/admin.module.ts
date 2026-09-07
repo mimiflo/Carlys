@@ -9,10 +9,8 @@ import { AdminCategoriesService } from './application/admin-categories.service';
 import { AdminPlatformService } from './application/admin-platform.service';
 import { AdminUsersService } from './application/admin-users.service';
 import { AdminAuthController } from './presentation/http/admin-auth.controller';
-import {
-  AdminCatalogController,
-  AdminCategoriesController,
-} from './presentation/http/admin-catalog.controller';
+import { AdminCatalogController } from './presentation/http/admin-catalog.controller';
+import { AdminCategoriesController } from './presentation/http/admin-categories.controller';
 import { AdminPlatformController } from './presentation/http/admin-platform.controller';
 import { AdminUsersController } from './presentation/http/admin-users.controller';
 
