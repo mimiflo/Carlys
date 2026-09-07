@@ -4,7 +4,8 @@
 # documenté (infrastructure/deployment/README.md), mais AUCUN workflow ne les
 # construisait : trois régressions bloquantes ont pu s'installer sans qu'une
 # seule CI ne rougisse. Ce workflow construit les trois cibles publiées par ce
-# README, et va plus loin que le build — voir l'étape « fumée ».
+# README, puis DÉMARRE les images servies — voir les étapes « fumée » : une
+# image qui se construit n'est pas une image qui marche.
 name: images-ci
 
 on:
@@ -127,6 +128,35 @@ jobs:
             || { echo "::error::Build échoué, mais pas pour la garde légale :"; tail -40 garde.log; exit 1; }
           echo "Garde légale vérifiée : build refusé et marqueurs listés."
 
+      # L'image admin était CONSTRUITE mais jamais DÉMARRÉE — la moitié
+      # manquante, et exactement la classe de défaut qui justifie ce workflow :
+      # le blocage le plus coûteux passait le build et livrait une image morte.
+      # Un build Next.js `standalone` a en plus ses pièges propres : ni
+      # .next/static ni public/ ne sont embarqués par `next build`, les deux se
+      # recopient à la main dans le Dockerfile — un oubli ne se voit qu'à
+      # l'exécution. Aucun service ajouté : l'admin ne parle ni à PostgreSQL ni
+      # à Redis, ses pages publiques sont rendues au build. La fumée admin
+      # passe donc AVANT celle de l'API, la moins chère des deux d'abord.
+      - name: Fumée — l'image admin démarre et répond
+        run: |
+          docker run -d --name carlys-admin-smoke --network host carlys-admin:ci
+          for _ in $(seq 1 45); do
+            if [ "$(curl -s -o /dev/null -w '%{http_code}' http://127.0.0.1:3001/)" = "200" ]; then
+              echo "/ répond."
+              # Les deux pages engendrées à partir de docs/legal : elles
+              # prouvent que les textes ont bien été embarqués au build et que
+              # les recopies de .next/static ont suivi. `-f` fait échouer
+              # l'étape sur toute réponse hors 2xx.
+              curl -fsS -o /dev/null -w '/privacy → %{http_code}\n' http://127.0.0.1:3001/privacy
+              curl -fsS -o /dev/null -w '/terms → %{http_code}\n' http://127.0.0.1:3001/terms
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "::error::L'image admin n'a pas répondu sur /."
+          docker logs carlys-admin-smoke
+          exit 1
+
       # LE test qui manquait. Le blocage le plus coûteux passait le BUILD et
       # donnait une image morte (« Cannot find module '@carlys/shared-config' »,
       # puis « Cannot find module 'zod' ») : seul un démarrage réel distingue
@@ -169,10 +199,14 @@ jobs:
           docker logs carlys-api-smoke
           exit 1
 
-      - name: Journal du conteneur en cas d'échec
+      # `|| true` sur chaque ligne : le conteneur de l'étape non atteinte
+      # n'existe pas, son absence ne doit pas masquer le journal de l'autre.
+      - name: Journaux des conteneurs en cas d'échec
         if: failure()
-        run: docker logs carlys-api-smoke || true
+        run: |
+          docker logs carlys-admin-smoke || true
+          docker logs carlys-api-smoke || true
 
       - name: Nettoyage
         if: always()
-        run: docker rm -f carlys-api-smoke || true
+        run: docker rm -f carlys-admin-smoke carlys-api-smoke || true
