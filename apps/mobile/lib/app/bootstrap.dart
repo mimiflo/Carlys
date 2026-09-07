@@ -14,11 +14,17 @@ import 'observers/app_provider_observer.dart';
 Future<void> bootstrap() async {
   const logger = AppLogger('bootstrap');
 
+  // AVANT la capture d'erreurs, volontairement : une configuration qui ne
+  // peut pas fonctionner doit faire échouer le lancement au grand jour, pas
+  // finir en ligne de journal dans le gestionnaire de zone, où l'application
+  // se contenterait de ne jamais s'afficher.
+  final environment = AppEnvironment.fromDartDefine();
+  environment.assertUsable();
+
   await runZonedGuarded(
     () async {
       WidgetsFlutterBinding.ensureInitialized();
 
-      final environment = AppEnvironment.fromDartDefine();
       logger.info(
         'Démarrage Carlys, flavor: ${environment.flavor.name}, '
         'API: ${environment.apiBaseUrl}',

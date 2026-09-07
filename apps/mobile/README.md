@@ -24,7 +24,7 @@ Ou depuis la racine : `./scripts/bootstrap_mobile.sh`.
 | --- | --- | --- |
 | `CARLYS_FLAVOR` | `development` | `development`, `staging`, `production` ou `demo` (hors ligne, données intégrées). |
 | `CARLYS_API_BASE_URL` | `http://localhost:3000` | Base de l'API, **sans** le préfixe `/api/v1`. Depuis un émulateur Android, la machine hôte est `10.0.2.2`, jamais `localhost`. |
-| `CARLYS_PUBLIC_WEB_BASE_URL` | `http://localhost:3001` | Base de l'application **web publique** (le Next.js d'`apps/admin`), qui sert `/privacy` et `/terms` — les deux pages ouvertes par la section « Légal » des réglages et par la phrase de consentement de l'inscription. C'est la même adresse que le `PUBLIC_APP_URL` du serveur, celle que portent les liens des e-mails : jamais celle de l'API. |
+| `CARLYS_PUBLIC_WEB_BASE_URL` | `http://localhost:3001` | Base de l'application **web publique** (le Next.js d'`apps/admin`), qui sert `/privacy` et `/terms` — les deux pages ouvertes par la section « Légal » des réglages et par la phrase de consentement de l'inscription. C'est la même adresse que le `PUBLIC_APP_URL` du serveur, celle que portent les liens des e-mails : jamais celle de l'API. En `staging` et `production`, le lancement **échoue** si elle est restée au défaut ou pointe en local : livrer deux liens légaux morts est un motif de refus de soumission. |
 | `CARLYS_FIREBASE_*` | — | Options push (`API_KEY`, `APP_ID`, `SENDER_ID`, `PROJECT_ID`). Les quatre ensemble ou aucune : sans elles le push est simplement inactif. Voir `config/firebase.example.json`. |
 
 ## Commandes

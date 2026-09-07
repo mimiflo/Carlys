@@ -500,6 +500,15 @@ embarqué :
 | `CARLYS_API_BASE_URL` | Base de l'API sans préfixe de version     | `http://localhost:3000` |
 | `CARLYS_PUBLIC_WEB_BASE_URL` | Base de l'application **web publique** (le Next.js d'`apps/admin`), qui sert `/privacy` et `/terms` — les pages ouvertes par la section « Légal » des réglages et par la phrase de consentement de l'inscription. Même adresse que le `PUBLIC_APP_URL` du serveur, celle que portent les liens des e-mails ; **jamais** celle de l'API | `http://localhost:3001` |
 
+En `staging` et en `production`, `bootstrap()` REFUSE de démarrer si
+`CARLYS_PUBLIC_WEB_BASE_URL` est resté au défaut ou pointe en local
+(`AppEnvironment.assertUsable`, tenu par `test/app/app_environment_test.dart`).
+Le défaut est commode en développement, et c'est exactement ce qui le rend
+dangereux : un build livré sans ce `--dart-define` embarquerait deux liens
+légaux morts — ceux qu'un examinateur de magasin ouvre en premier — sans que
+rien n'échoue au build ni au lancement. `development` et `demo` gardent le
+défaut : c'est le bon réglage pour l'un, et la démo n'a pas de serveur.
+
 ```bash
 cd apps/mobile
 flutter run \

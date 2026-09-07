@@ -117,6 +117,40 @@ class AppEnvironment {
 
   /// Conditions d'utilisation, servies par l'application web.
   Uri get termsOfServiceUrl => Uri.parse('$publicWebBaseUrl/terms');
+
+  /// Refuse de démarrer sur une configuration qui ne peut pas fonctionner.
+  ///
+  /// `publicWebBaseUrl` a un défaut commode en développement, et c'est
+  /// exactement ce qui le rend dangereux : un build de `staging` ou de
+  /// `production` qui oublie le `--dart-define` embarque deux liens légaux
+  /// morts (`localhost:3001/privacy` et `/terms`) sans que rien n'échoue ni
+  /// au build ni au lancement. Ce sont précisément les liens qu'un
+  /// examinateur de magasin ouvre, et deux liens morts font refuser une
+  /// soumission. Un lancement bruyamment raté en interne coûte
+  /// incomparablement moins cher.
+  ///
+  /// `development` et `demo` sont épargnés : le défaut y est le bon réglage,
+  /// et la démo n'a pas de serveur du tout.
+  void assertUsable() {
+    if (flavor == AppFlavor.development || flavor == AppFlavor.demo) return;
+    if (!_isPublicWebAddress(publicWebBaseUrl)) {
+      throw StateError(
+        'CARLYS_PUBLIC_WEB_BASE_URL manque ou pointe en local pour le flavor '
+        '${flavor.name} : les liens légaux ouvriraient « $publicWebBaseUrl ». '
+        'Relance avec --dart-define=CARLYS_PUBLIC_WEB_BASE_URL=https://…',
+      );
+    }
+  }
+
+  /// Une adresse absolue dont l'hôte n'est ni vide ni celui de la machine de
+  /// développement. `10.0.2.2` est la boucle locale vue par l'émulateur
+  /// Android : elle est aussi morte qu'un `localhost` sur un vrai téléphone.
+  static bool _isPublicWebAddress(String url) {
+    const localHosts = {'localhost', '127.0.0.1', '::1', '0.0.0.0', '10.0.2.2'};
+    final uri = Uri.tryParse(url);
+    if (uri == null || !uri.hasScheme || uri.host.isEmpty) return false;
+    return !localHosts.contains(uri.host);
+  }
 }
 
 /// Renseigné au bootstrap via `overrideWithValue` — jamais utilisé sans override.
