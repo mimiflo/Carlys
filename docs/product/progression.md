@@ -114,7 +114,10 @@ les essais n'entrent dans le calcul : se tromper fait apprendre, et compter les
 | `presentation/controllers/` | Le seul endroit qui lit l'horloge et les providers |
 | `presentation/widgets/majesty.dart` | Les cinq crans de fabrication, sans leur contenu |
 | `presentation/widgets/majesty_plate.dart` | La plaque : surface, filet, grain, équerres |
-| `presentation/widgets/award_seal.dart` | Un peintre paramétré pour les cinq silhouettes |
+| `presentation/widgets/award_seal.dart` | Le sceau posé dans la page, à deux tailles |
+| `presentation/widgets/seal_painter.dart` | Un peintre paramétré pour les cinq silhouettes |
+| `presentation/widgets/award_cards.dart` | Les récompenses gagnées, en deux densités |
+| `presentation/widgets/upcoming_award_row.dart` | Celle qui reste à gagner : une invitation |
 | `presentation/widgets/progression_body.dart` | L'écran d'un compte qui a déjà travaillé |
 | `presentation/widgets/first_steps_body.dart` | L'écran du premier jour |
 

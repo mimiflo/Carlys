@@ -368,7 +368,8 @@ Filtre : `userId` + `deletedAt: null`.
 `WorkoutTemplateDetail` complet (exercices ordonnés, séries ordonnées). Modèle
 inexistant, supprimé, ou appartenant à quelqu'un d'autre → **404 `NOT_FOUND`
 dans les trois cas** : on ne révèle jamais l'existence des données d'autrui
-(règle déjà appliquée par `WorkoutsService.ownedSession`).
+(règle déjà appliquée par `ownedSession`, la garde partagée du module
+`workout_sessions`).
 
 ### 4.4 `PUT /api/v1/workout-templates/:id` — créer ou remplacer
 
@@ -436,7 +437,7 @@ Erreurs :
 ### 4.5 `DELETE /api/v1/workout-templates/:id`
 
 Suppression **logique** (`deletedAt = now()`), **204 No Content**. Rejouable,
-avec la même sémantique que `WorkoutsService.deleteSet` :
+avec la même sémantique que `WorkoutSetsService.deleteSet` :
 
 - modèle inconnu → **204** (le rejeu d'une suppression déjà propagée doit
   aboutir) ;

@@ -159,5 +159,7 @@ n'atteignait pas — et réveille des lectures qui dormaient.
 | `presentation/widgets/today_grid.dart` | La grille 2×2 et ses cellules |
 | `presentation/widgets/today_gauge.dart` | La jauge d'une cellule (pleine, ou en tirets) |
 | `presentation/widgets/today_primer.dart` | L'amorçage, tant qu'aucune cible n'existe |
+| `presentation/widgets/today_workout_card.dart` | La séance du jour : sa composition et ses deux gestes |
+| `presentation/widgets/today_workout_heading.dart` | Son en-tête, et la phrase qui dit où en est la séance |
 
 Les contrôleurs formatent : l'écran ne calcule ni n'arrondit rien.
