@@ -3,7 +3,12 @@ import 'package:carlys_mobile/core/database/app_database.dart';
 import 'package:carlys_mobile/core/database/local_account_purge.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
 import 'package:carlys_mobile/features/academy/data/answered_lessons_store.dart';
+import 'package:carlys_mobile/features/academy/presentation/controllers/academy_controllers.dart';
+import 'package:carlys_mobile/features/community/presentation/controllers/community_controllers.dart';
+import 'package:carlys_mobile/features/onboarding/data/first_run_store.dart';
 import 'package:carlys_mobile/features/progression/data/reward_ledger.dart';
+import 'package:carlys_mobile/features/progression/domain/reward.dart';
+import 'package:carlys_mobile/features/progression/presentation/controllers/reward_controllers.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -24,15 +29,24 @@ void main() {
   /// la fin du test pour pouvoir être inspectées.
   final opened = <AppDatabase>[];
 
+  /// Nombre de constructions de chaque cache de compte : la purge doit les
+  /// avoir renouvelés, sinon le compte suivant lit ceux du précédent.
+  late Map<String, int> builds;
+
+  int countBuild(String name) => builds[name] = (builds[name] ?? 0) + 1;
+
   setUp(() async {
     TestWidgetsFlutterBinding.ensureInitialized();
     SharedPreferences.setMockInitialValues({
       RewardLedger.key: '{"premiere-seance":"2026-09-01T10:00:00.000Z"}',
       AnsweredLessonsStore.key: '{"lecon-1":2}',
+      FirstRunStore.answersKey:
+          '{"poids":72.5,"taille":178,"objectif":"perte"}',
       'apparence.theme': 'sombre',
-      'parcours.premiere_ouverture.etape': 'termine',
+      FirstRunStore.stepKey: 'termine',
     });
     opened.clear();
+    builds = {};
     container = ProviderContainer(
       overrides: [
         appDatabaseProvider.overrideWith((ref) {
@@ -42,6 +56,20 @@ void main() {
         }),
         syncLifecycleProvider.overrideWith((ref) => NoopSyncLifecycle()),
         appRestoreProvider.overrideWith((ref) => NoopAppRestore()),
+        // Les trois caches de compte, remplacés par des sources qui se
+        // comptent : leur renouvellement est ce qu'on vérifie, pas leur
+        // contenu (le serveur et le disque sont testés ailleurs).
+        myFriendCodeProvider.overrideWith(
+          (ref) async => 'CARLYS-${countBuild('codeAmi')}',
+        ),
+        answeredLessonsProvider.overrideWith((ref) async {
+          countBuild('leconsRepondues');
+          return const <String, int>{};
+        }),
+        earnedRewardsProvider.overrideWith((ref) async {
+          countBuild('recompenses');
+          return const <EarnedReward>[];
+        }),
       ],
     );
     database = container.read(appDatabaseProvider);
@@ -106,13 +134,35 @@ void main() {
       final preferences = await SharedPreferences.getInstance();
       expect(preferences.containsKey(RewardLedger.key), isFalse);
       expect(preferences.containsKey(AnsweredLessonsStore.key), isFalse);
+      // Les réponses d'onboarding en attente décrivent une PERSONNE (poids,
+      // taille, objectif) et sont rejouées à la prochaine session
+      // authentifiée : les garder écrirait le profil de celui qui part sur
+      // le compte de celui qui arrive.
+      expect(preferences.containsKey(FirstRunStore.answersKey), isFalse);
+      // L'étape atteinte, elle, décrit bien l'appareil : le parcours de
+      // première ouverture ne se rejoue pas pour le compte suivant.
+      expect(preferences.getString(FirstRunStore.stepKey), 'termine');
       expect(preferences.getString('apparence.theme'), 'sombre');
-      expect(
-        preferences.getString('parcours.premiere_ouverture.etape'),
-        'termine',
-      );
     },
   );
+
+  test('les caches mémoire du compte sont renouvelés', () async {
+    // Ces trois providers ne sont pas auto-disposés : sans invalidation, ils
+    // survivent à la purge et rendent au compte suivant le code ami, les
+    // questions abordées et les récompenses du précédent — le journal des
+    // récompenses se réécrirait même sous le nouveau compte.
+    expect(await container.read(myFriendCodeProvider.future), 'CARLYS-1');
+    expect(await container.read(answeredLessonsProvider.future), isEmpty);
+    expect(await container.read(earnedRewardsProvider.future), isEmpty);
+    expect(builds, {'codeAmi': 1, 'leconsRepondues': 1, 'recompenses': 1});
+
+    await container.read(localAccountPurgeProvider).run();
+
+    expect(await container.read(myFriendCodeProvider.future), 'CARLYS-2');
+    expect(await container.read(answeredLessonsProvider.future), isEmpty);
+    expect(await container.read(earnedRewardsProvider.future), isEmpty);
+    expect(builds, {'codeAmi': 2, 'leconsRepondues': 2, 'recompenses': 2});
+  });
 }
 
 /// Une ligne dans CHAQUE table : la purge doit les connaître toutes, y
