@@ -5,10 +5,20 @@
 # C'est le point : `flutter analyze && flutter test` — longtemps la consigne —
 # laisse passer ce que la CI refuse. `dart format --set-exit-if-changed` a fait
 # tomber une CI verte en local ; cette liste ne doit donc pas diverger.
-# Seule différence assumée : la CI passe `--enforce-lockfile` à `pub get`
-# (le lock y est contraignant) ; en local, `pub get` doit pouvoir mettre le
-# lock à jour quand le pubspec change. L'avertissement de version ci-dessous
-# couvre l'autre écart possible avec la CI : le SDK lui-même.
+#
+# « EXACTEMENT » se relit bloc `run:` par bloc `run:` : dépendances, génération
+# de code, formatage, analyse, tests — les cinq commandes sont identiques au
+# caractère près. `--enforce-lockfile` a longtemps manqué ici, sous couvert de
+# « seule différence assumée » : une différence assumée reste un filet troué.
+# Mesuré sur un paquet au lock désynchronisé : la commande de la CI rend 65
+# (« Unable to satisfy `pubspec.yaml` using `pubspec.lock` ») là où un `pub get`
+# nu rend 0 EN RÉÉCRIVANT LE LOCK EN SILENCE. Le développeur voyait donc un vert
+# local complet, ne commitait pas le lock réécrit, et poussait un job rouge.
+# Mettre le lock à jour reste possible — c'est `flutter pub get` sans l'option,
+# suivi du commit du lock, ce que dit le message d'échec ci-dessous.
+#
+# Le seul écart restant avec la CI est le SDK lui-même : l'avertissement de
+# version ci-dessous le couvre.
 #
 # Note : `dart format` et la règle de lint `require_trailing_commas` peuvent se
 # contredire sur un appel qui tient de justesse sur deux lignes. La forme qui
@@ -33,7 +43,18 @@ else
 fi
 
 echo "── Dépendances ─────────────────────────────────────────────────────"
-flutter pub get
+# Le message de pub est exact mais muet sur la suite : ici, la suite est de
+# COMMITER le lock, sans quoi la CI retombera sur le même 65.
+flutter pub get --enforce-lockfile || {
+  CODE=$?
+  echo ""
+  echo "✗ pubspec.lock ne satisfait plus pubspec.yaml — la CI (mobile-ci.yml)"
+  echo "  échouera de la même façon, avec ce même code $CODE."
+  echo "  Résoudre, RELIRE le résultat, puis committer le lock :"
+  echo "      (cd apps/mobile && flutter pub get)"
+  echo "      git add apps/mobile/pubspec.lock"
+  exit "$CODE"
+}
 
 echo "── Génération de code (Drift) ──────────────────────────────────────"
 dart run build_runner build

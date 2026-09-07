@@ -251,7 +251,18 @@ commandes, dans cet ordre :
 ```
 
 `flutter analyze && flutter test` ne suffit pas : `check_mobile.sh` ajoute
-`dart format --set-exit-if-changed`, que la CI applique aussi.
+`dart format --set-exit-if-changed` **et** `flutter pub get
+--enforce-lockfile`, que la CI applique tous les deux. Le second refuse de
+résoudre autre chose que le `pubspec.lock` versionné : si le script s'arrête
+là (code 65), c'est que le lock est en retard sur `pubspec.yaml`. La suite est
+alors de le mettre à jour **et de le committer**, pas de contourner —
+
+```bash
+(cd apps/mobile && flutter pub get)   # sans l'option : met le lock à jour
+git add apps/mobile/pubspec.lock
+```
+
+— faute de quoi la CI échoue exactement pareil sur le lock resté en arrière.
 
 ## 6. Le poste se remet à niveau tout seul
 
