@@ -67,3 +67,9 @@ dump.rdb
 
 # Graphe de code Graphify (engendré localement : `graphify update .`)
 graphify-out/
+
+# Arbres de travail jetables créés par l'outillage d'agents. Le reste de
+# `.claude/` est versionné (le hook de session et les réglages partagés), donc
+# ce dossier-ci doit être exclu nommément : sans cette ligne, un `git add -A`
+# proposerait de commiter une copie complète du dépôt (près d'un gigaoctet).
+.claude/worktrees/
