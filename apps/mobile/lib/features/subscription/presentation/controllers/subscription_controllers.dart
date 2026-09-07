@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:url_launcher/url_launcher.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../../core/errors/app_exception.dart';
+import '../../../../core/utilities/external_links.dart';
 import '../../data/repositories/subscription_repository_impl.dart';
 import '../../domain/entities/subscription.dart';
 
@@ -104,7 +104,7 @@ class SubscriptionActions {
     // Rien n'est relu ici : `launchUrl` rend la main dès que le navigateur
     // s'ouvre, l'utilisateur n'a pas encore payé. La relecture se fait au
     // retour au premier plan (`SubscriptionResumeRefresh`).
-    final opened = await _ref.read(urlOpenerProvider)(Uri.parse(url));
+    final opened = await _ref.read(externalLinkOpenerProvider)(Uri.parse(url));
     return opened ? CheckoutOutcome.opened : CheckoutOutcome.cannotOpen;
   }
 
@@ -126,18 +126,10 @@ class SubscriptionActions {
       return const PortalFailed();
     }
 
-    final opened = await _ref.read(urlOpenerProvider)(Uri.parse(url));
+    final opened = await _ref.read(externalLinkOpenerProvider)(Uri.parse(url));
     return opened ? const PortalOpened() : const PortalCannotOpen();
   }
 }
-
-/// Ouverture d'une adresse externe, injectable pour les tests : ils ne
-/// doivent jamais lancer un navigateur.
-typedef UrlOpener = Future<bool> Function(Uri url);
-
-final urlOpenerProvider = Provider<UrlOpener>((ref) {
-  return (url) => launchUrl(url, mode: LaunchMode.externalApplication);
-});
 
 final subscriptionActionsProvider = Provider<SubscriptionActions>(
   SubscriptionActions.new,

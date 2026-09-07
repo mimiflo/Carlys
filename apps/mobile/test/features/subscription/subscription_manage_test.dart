@@ -1,9 +1,9 @@
 import 'dart:async';
 
 import 'package:carlys_mobile/core/errors/app_exception.dart';
+import 'package:carlys_mobile/core/utilities/external_links.dart';
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/subscription/data/repositories/subscription_repository_impl.dart';
-import 'package:carlys_mobile/features/subscription/presentation/controllers/subscription_controllers.dart';
 import 'package:carlys_mobile/features/subscription/presentation/widgets/subscription_manage_row.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -25,7 +25,7 @@ void main() {
   }) => ProviderScope(
     overrides: [
       subscriptionRepositoryProvider.overrideWithValue(repository),
-      urlOpenerProvider.overrideWithValue((url) async {
+      externalLinkOpenerProvider.overrideWithValue((url) async {
         opened?.add(url);
         return canOpen;
       }),

@@ -9,11 +9,11 @@ import 'package:carlys_mobile/app/app.dart';
 import 'package:carlys_mobile/app/environment/app_environment.dart';
 import 'package:carlys_mobile/app/restore/app_restore.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
+import 'package:carlys_mobile/core/utilities/external_links.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
 import 'package:carlys_mobile/features/exercises/data/repositories/exercises_repository_impl.dart';
 import 'package:carlys_mobile/features/profile/presentation/widgets/profile_plan_card.dart';
 import 'package:carlys_mobile/features/subscription/data/repositories/subscription_repository_impl.dart';
-import 'package:carlys_mobile/features/subscription/presentation/controllers/subscription_controllers.dart';
 import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -51,7 +51,7 @@ Widget appWith({
     if (exercises != null)
       exercisesRepositoryProvider.overrideWithValue(exercises),
     if (opened != null)
-      urlOpenerProvider.overrideWithValue((url) async {
+      externalLinkOpenerProvider.overrideWithValue((url) async {
         opened.add(url);
         return true;
       }),

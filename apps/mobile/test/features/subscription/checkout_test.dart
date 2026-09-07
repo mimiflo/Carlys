@@ -1,4 +1,5 @@
 import 'package:carlys_mobile/core/errors/app_exception.dart';
+import 'package:carlys_mobile/core/utilities/external_links.dart';
 import 'package:carlys_mobile/features/subscription/data/repositories/subscription_repository_impl.dart';
 import 'package:carlys_mobile/features/subscription/domain/entities/subscription.dart';
 import 'package:carlys_mobile/features/subscription/presentation/controllers/subscription_controllers.dart';
@@ -24,7 +25,7 @@ void main() {
     final container = ProviderContainer(
       overrides: [
         subscriptionRepositoryProvider.overrideWithValue(repository),
-        urlOpenerProvider.overrideWithValue((url) async {
+        externalLinkOpenerProvider.overrideWithValue((url) async {
           opened?.add(url);
           return canOpen;
         }),
