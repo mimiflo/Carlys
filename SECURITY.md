@@ -42,10 +42,17 @@ aucune version antérieure ne reçoit de correctif.
   `apps/api/.env.example`, `apps/admin/.env.example`).
 - **Détection de secrets en CI** : TruffleHog (`.github/workflows/security-ci.yml`)
   s'exécute sur chaque pull request, chaque poussée sur la branche de travail
-  comme sur `main`, et chaque lundi à 06:00 UTC (`--results=verified,unknown`).
-  La branche de travail est nommée explicitement parce que le dépôt avance par
-  poussées directes : s'en tenir à `main` ne signalait un jeton qu'après la
-  fusion, alors qu'il est compromis dès qu'il a quitté le poste.
+  comme sur `main`, et chaque lundi à 06:00 UTC. La branche de travail est
+  nommée explicitement parce que le dépôt avance par poussées directes :
+  s'en tenir à `main` ne signalait un jeton qu'après la fusion, alors qu'il est
+  compromis dès qu'il a quitté le poste.
+  Les arguments sont `--results=verified,unknown,unverified` : `unverified`
+  désigne les secrets que TruffleHog a confirmés **morts** auprès du
+  fournisseur. Ils font échouer la CI comme les autres, parce que la règle du
+  dépôt est « aucun secret commité », sans exception pour les jetons révoqués —
+  une clé révoquée reste une identité publiée, souvent réutilisée ailleurs.
+  Révoquer répare la fuite, cela n'efface pas le commit : la reprise
+  d'historique reste nécessaire.
 - **Audit de dépendances en CI** : `pnpm audit --audit-level high` dans le même
   workflow (vulnérabilités `high` et `critical` bloquantes).
 - **Forçages de versions transitives** : quand une dépendance vulnérable est

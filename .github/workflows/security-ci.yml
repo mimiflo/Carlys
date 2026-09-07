@@ -40,11 +40,29 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: TruffleHog (secrets vérifiés)
+      # Les trois classes de TruffleHog ne disent PAS la même chose :
+      #   verified   — le détecteur a joint le fournisseur, la clé est VIVANTE ;
+      #   unverified — le détecteur a joint le fournisseur, la clé est MORTE ;
+      #   unknown    — la vérification n'a pas pu aboutir (réseau, quota, pas
+      #                de vérificateur pour ce détecteur).
+      # S'en tenir à `verified,unknown` laissait passer exactement une classe :
+      # le secret confirmé mort. Or CLAUDE.md écrit « ne jamais commiter un
+      # secret », sans exception pour les jetons révoqués — et pour cause : une
+      # clé révoquée reste une identité publiée, souvent réutilisée ailleurs, et
+      # sa présence signale l'habitude qui produira la suivante. La révocation
+      # répare la fuite, elle n'efface pas le commit.
+      #
+      # Mesuré avant de durcir, sur un dépôt cobaye où un couple de clés AWS est
+      # commité puis retiré de l'arbre (il reste dans l'historique), la
+      # vérification aboutissant réellement :
+      #   --results=verified,unknown             → code 0, AUCUN résultat ;
+      #   --results=verified,unknown,unverified  → code 183, « Found unverified
+      #                                            result », détecteur AWS.
+      - name: TruffleHog (tout secret, même révoqué)
         uses: trufflesecurity/trufflehog@main
         with:
           path: ./
-          extra_args: --results=verified,unknown
+          extra_args: --results=verified,unknown,unverified
 
   dependencies:
     name: Audit des dépendances
