@@ -22,6 +22,16 @@ on:
   pull_request:
     paths:
       - 'apps/mobile/**'
+      # packages/design-tokens/src/tokens.json est la SOURCE DE VÉRITÉ du
+      # design system (CLAUDE.md : « toute évolution s'y fait d'abord »), et
+      # apps/mobile/test/design_system/design_tokens_test.dart vérifie que le
+      # design system Dart lui reste fidèle, token par token. Sans cette
+      # entrée, le geste même que la spécification prescrit — ne toucher que
+      # tokens.json — ne réveillait AUCUN workflow capable d'exécuter ce test,
+      # mobile-ci étant le seul du dépôt à faire tourner `flutter test`.
+      # admin-ci et api-ci listent `packages/**` depuis toujours ; c'est ici
+      # qu'il manquait.
+      - 'packages/**'
       - '.github/workflows/mobile-ci.yml'
   push:
     branches: [claude/carlys-fitness-foundation-lqv2hl, main]
@@ -29,6 +39,7 @@ on:
     # telle quelle. Toute entrée ajoutée ici doit l'être aux deux endroits.
     paths:
       - 'apps/mobile/**'
+      - 'packages/**'
       - '.github/workflows/mobile-ci.yml'
   # Relance MANUELLE : un runner qui gèle (build_runner suspendu, coupé par
   # timeout-minutes) ne doit pas exiger un commit pour rejouer le workflow.
