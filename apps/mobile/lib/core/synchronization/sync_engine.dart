@@ -115,7 +115,21 @@ class SyncEngine {
   /// Redonne leur chance aux opérations mises de côté : à l'ouverture de
   /// l'application, ou sur demande. Les conflits, eux, attendent toujours
   /// la décision de l'utilisateur.
-  Future<void> retryExhausted() => _states.retryExhausted();
+  ///
+  /// Protégé comme [syncNow] : `SyncLifecycle.ensureStarted()` l'appelle sans
+  /// attente, et l'interface peut reconstruire un cycle de vie sur l'ancienne
+  /// base pendant une purge à la frontière de compte. La base fermée sous lui
+  /// est celle du compte qui part : rien n'est perdu, on le journalise.
+  Future<void> retryExhausted() async {
+    try {
+      await _states.retryExhausted();
+    } on StateError catch (error) {
+      _logger.warning(
+        'Rejeu des mises de côté interrompu : base fermée',
+        error: error,
+      );
+    }
+  }
 
   Future<void> _drain() async {
     final operations =

@@ -271,6 +271,21 @@ void main() {
       },
     );
 
+    test('une base fermée sous le rejeu l’arrête sans erreur', () async {
+      // `SyncLifecycle.ensureStarted()` appelle `retryExhausted()` sans
+      // attente, et l'interface peut reconstruire un cycle de vie sur
+      // l'ancienne base pendant une purge à la frontière de compte : comme
+      // `syncNow()`, ce rejeu doit se taire au lieu de remonter une erreur
+      // non interceptée.
+      final poisoned = await enqueue();
+      await exhaust(poisoned);
+      expect((await allOperations()).single.status, 'exhausted');
+
+      await db.close();
+
+      await expectLater(engine.retryExhausted(), completes);
+    });
+
     test('un 5xx isolé ne fait qu’attendre le backoff', () async {
       final id = await enqueue();
       api.statusByEntityId[id] = 502;
