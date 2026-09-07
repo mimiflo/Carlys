@@ -105,6 +105,11 @@ mais sépare toujours interface / logique / données.
   le texte utilisateur localisé.
 - **`const` partout où c'est possible** (imposé par l'analyseur strict —
   `analysis_options.yaml` : strict-casts, strict-inference, strict-raw-types).
+- **`dynamic` toléré mais jamais gratuit.** Il reste légitime là où le typage
+  n'existe pas (`Map<String, dynamic>` de JSON, contraintes Drift, doublures de
+  test) ; `avoid_annotating_with_dynamic` et `avoid_dynamic_calls` interdisent
+  les deux usages qui perdent le typage sans rien apporter — l'annoter
+  explicitement, et appeler une méthode dessus sans cast.
 - **Reconstructions maîtrisées** : providers granulaires, `select` pour
   n'écouter qu'un fragment d'état, widgets découpés petit, jamais de
   `ref.watch` d'un gros état dans un widget racine.

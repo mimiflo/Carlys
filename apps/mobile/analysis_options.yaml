@@ -12,6 +12,13 @@ analyzer:
 linter:
   rules:
     - always_declare_return_types
+    # `dynamic` a sa place ici (JSON, contraintes Drift, doublures de test) —
+    # ces deux règles ne visent pas sa présence mais deux usages qui font perdre
+    # le typage sans rien apporter : l'ANNOTER explicitement, et APPELER une
+    # méthode dessus sans passer par un cast. Mesuré sur l'arbre complet,
+    # `.g.dart` engendrés compris : « No issues found! ».
+    - avoid_annotating_with_dynamic
+    - avoid_dynamic_calls
     - avoid_print
     - directives_ordering
     - prefer_final_locals
