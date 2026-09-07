@@ -32,6 +32,11 @@ abstract interface class AuthRepository {
 
   Future<AuthUser> me();
 
+  /// Déclare au serveur le fuseau IANA de l'appareil. C'est lui qui découpe
+  /// les jours (séries d'amis, statistiques) : sans cet envoi, le compte
+  /// reste au fuseau par défaut du serveur.
+  Future<AuthUser> updateTimezone(String timezone);
+
   Future<List<AuthSessionDevice>> sessions();
 
   Future<void> revokeSession(String sessionId);

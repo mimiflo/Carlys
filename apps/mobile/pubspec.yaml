@@ -68,6 +68,14 @@ dependencies:
   # qui encaisse, et le droit revient par webhook signé.
   url_launcher: ^6.3.1
 
+  # Fuseau horaire IANA de l'appareil (« America/Montreal »). Dart ne donne
+  # que l'ABRÉVIATION locale (`DateTime.timeZoneName` → « EST ») et un décalage
+  # ponctuel : ni l'une ni l'autre ne nomme un fuseau, et aucune ne survit au
+  # changement d'heure. Le serveur, lui, découpe les jours des séries d'amis
+  # dans le fuseau IANA du profil : sans ce paquet, tout le monde reste à
+  # Europe/Paris et une séance du dimanche soir à Montréal compte pour lundi.
+  flutter_timezone: ^5.1.0
+
   # Utilitaires
   uuid: ^4.5.1
 

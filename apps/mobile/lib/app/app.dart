@@ -29,7 +29,13 @@ class CarlysApp extends ConsumerWidget {
         AppThemeSetting.light => ThemeMode.light,
         AppThemeSetting.dark || AppThemeSetting.oledDark => ThemeMode.dark,
       },
-      supportedLocales: const [Locale('fr'), Locale('en')],
+      // UNE seule langue déclarée, le français : c'est la seule dans laquelle
+      // l'application est écrite. Déclarer `en` en plus ne traduisait rien —
+      // aucun fichier de traduction n'existe — mais suffisait à faire basculer
+      // les composants Material en anglais sur un téléphone réglé en anglais :
+      // le sélecteur de date s'ouvrait alors en anglais au milieu d'un écran
+      // français. Une langue s'ajoutera ici le jour où elle sera traduite.
+      supportedLocales: const [Locale('fr')],
       localizationsDelegates: const [
         GlobalMaterialLocalizations.delegate,
         GlobalWidgetsLocalizations.delegate,

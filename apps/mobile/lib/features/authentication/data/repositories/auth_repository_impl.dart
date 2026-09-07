@@ -94,6 +94,11 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<AuthUser> updateTimezone(String timezone) {
+    return _guard(() async => (await _api.updateTimezone(timezone)).toEntity());
+  }
+
+  @override
   Future<List<AuthSessionDevice>> sessions() {
     return _guard(() async {
       final sessions = await _api.sessions();

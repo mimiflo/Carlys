@@ -107,6 +107,13 @@ class DemoAuthRepository implements AuthRepository {
   Future<AuthUser> me() async => _user;
 
   @override
+  Future<AuthUser> updateTimezone(String timezone) async {
+    // La démo n'a pas de serveur à informer : le fuseau reste celui du
+    // personnage de démonstration, et l'écran ne montre rien de différent.
+    return _user;
+  }
+
+  @override
   Future<List<AuthSessionDevice>> sessions() async => _devices;
 
   @override

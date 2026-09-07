@@ -45,6 +45,12 @@ class FakeAuthRepository implements AuthRepository {
   /// Mots de passe reçus par `deleteAccount`.
   final List<String> deletionPasswords = <String>[];
 
+  /// Fuseaux reçus par `updateTimezone`, dans l'ordre.
+  final List<String> timezonesSent = <String>[];
+
+  /// Panne à faire subir à la déclaration de fuseau (hors ligne).
+  AppException? timezoneFailure;
+
   @override
   Future<bool> hasStoredSession() async => storedSession;
 
@@ -85,6 +91,23 @@ class FakeAuthRepository implements AuthRepository {
 
   @override
   Future<AuthUser> me() async => user;
+
+  @override
+  Future<AuthUser> updateTimezone(String timezone) async {
+    timezonesSent.add(timezone);
+    final failure = timezoneFailure;
+    if (failure != null) throw failure;
+    user = AuthUser(
+      id: user.id,
+      email: user.email,
+      displayName: user.displayName,
+      emailVerified: user.emailVerified,
+      locale: user.locale,
+      timezone: timezone,
+      carlysProfile: user.carlysProfile,
+    );
+    return user;
+  }
 
   @override
   Future<List<AuthSessionDevice>> sessions() async {

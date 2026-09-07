@@ -9,6 +9,7 @@ import '../../../../core/logging/app_logger.dart';
 import '../../../notifications/presentation/controllers/push_registration.dart';
 import '../../data/repositories/auth_repository_impl.dart';
 import '../../domain/entities/auth_user.dart';
+import 'device_timezone_controller.dart';
 
 /// État global de session.
 sealed class AuthState {
@@ -66,7 +67,9 @@ class AuthController extends Notifier<AuthState> {
     }
     state = const AuthAuthenticated();
     try {
-      state = AuthAuthenticated(user: await repository.me());
+      final user = await repository.me();
+      state = AuthAuthenticated(user: user);
+      unawaited(_declareDeviceTimezone(user));
     } on Exception catch (error) {
       // Hors ligne ou serveur indisponible : la session locale reste valable.
       // Une session réellement invalide déclenche onSessionExpired.
@@ -83,6 +86,7 @@ class AuthController extends Notifier<AuthState> {
         .login(email: email, password: password);
     await _enterAccount();
     state = AuthAuthenticated(user: user);
+    unawaited(_declareDeviceTimezone(user));
     return user;
   }
 
@@ -96,7 +100,33 @@ class AuthController extends Notifier<AuthState> {
         .register(email: email, password: password, displayName: displayName);
     await _enterAccount();
     state = AuthAuthenticated(user: user);
+    // Un compte tout neuf porte le fuseau PAR DÉFAUT du serveur : c'est le
+    // moment où l'écart est certain, et où le corriger coûte le moins.
+    unawaited(_declareDeviceTimezone(user));
     return user;
+  }
+
+  /// Aligne le fuseau du profil sur celui de l'appareil, si besoin.
+  ///
+  /// JAMAIS attendu par l'appelant : la lecture passe par un canal de
+  /// plateforme, et un canal qui ne répond pas (bureau, banc de test, greffon
+  /// absent) retiendrait sinon une restauration ou une connexion pour
+  /// toujours. Une session ne se joue pas sur un fuseau horaire.
+  Future<void> _declareDeviceTimezone(AuthUser user) async {
+    final updated = await ref.read(deviceTimezoneSyncProvider).reconcile(user);
+    if (updated == null) return;
+    try {
+      // La réponse revient après coup : si la session s'est fermée entre
+      // temps (déconnexion, expiration), on ne rallume rien.
+      if (state is AuthAuthenticated) {
+        state = AuthAuthenticated(user: updated);
+      }
+    } on Object catch (error) {
+      _logger.warning(
+        'Fuseau reçu après la fermeture de session',
+        error: error,
+      );
+    }
   }
 
   Future<void> logout() async {

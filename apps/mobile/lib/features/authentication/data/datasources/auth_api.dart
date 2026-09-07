@@ -57,6 +57,16 @@ class AuthApi {
     return AuthUserDto.fromJson(_data(response));
   }
 
+  /// PATCH /users/me — n'envoie QUE le fuseau : le corps décrit ce qui
+  /// change, et le serveur laisse le reste du profil intact.
+  Future<AuthUserDto> updateTimezone(String timezone) async {
+    final response = await _dio.patch<Map<String, dynamic>>(
+      '/users/me',
+      data: {'timezone': timezone},
+    );
+    return AuthUserDto.fromJson(_data(response));
+  }
+
   Future<List<AuthSessionDto>> sessions() async {
     final response = await _dio.get<Map<String, dynamic>>('/auth/sessions');
     final list = response.data?['data'];
