@@ -51,10 +51,10 @@ lib/
 │   ├── onboarding/presentation/screens/splash_screen.dart
 │   ├── dashboard/presentation/screens/home_screen.dart
 │   ├── workout_template/         # Modèles de séance (prescriptif) → workout_session
-│   └── authentication/ · exercises/ · workout_session/ · workout_builder/
-│       · workout_history/ · programs/ · progress/ · body_metrics/ · profile/
-│       · settings/ · subscriptions/ · notifications/ · coaching/ · health/
-│       · nutrition/ · social/    ∅  (réservés, remplis par tranche)
+│   └── academy/ · authentication/ · carlys_profile/ · coaching/ · community/
+│       · exercises/ · notifications/ · nutrition/ · profile/ · progress/
+│       · progression/ · settings/ · subscription/ · training/
+│       · workout_history/ · workout_program/ · workout_session/
 └── shared/                       # Transverse métier (≠ design system générique)
     ├── models/       ∅
     ├── providers/    ∅

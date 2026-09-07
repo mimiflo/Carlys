@@ -110,9 +110,9 @@ scaffoldés (`lib/features/*`).
 | Accueil | `dashboard` | 1 (squelette — fait), enrichi à chaque étape |
 | Bibliothèque d'exercices | `exercises` | 3 |
 | Détail d'un exercice | `exercises` | 3 |
-| Programmes | `programs` | 4 |
-| Détail d'un programme | `programs` | 4 |
-| Créateur de programme | `workout_builder` | 4 |
+| Programmes | `workout_program` | 4 |
+| Détail d'un programme | `workout_program` | 4 |
+| Créateur de programme | `workout_template` | 4 |
 | Préparation de séance | `workout_session` | 4 |
 | Séance active | `workout_session` | 4 |
 | Sélection d'exercice (en séance) | `workout_session` | 4 |
@@ -123,7 +123,7 @@ scaffoldés (`lib/features/*`).
 | Progression | `progress` | 5 |
 | Records personnels | `progress` | 5 |
 | Profil | `profile` | 2 (base), 5 |
-| Abonnement (paywall) | `subscriptions` | 6 |
+| Abonnement (paywall) | `subscription` | 6 |
 | Paramètres | `settings` | 2 (base), enrichi ensuite |
 | Gestion des appareils | `settings` / `authentication` | 2 |
 | Suppression du compte | `settings` | 2 |
@@ -159,9 +159,9 @@ ces portes :
 
 | Non construit maintenant | Ce que l'architecture prépare |
 |---|---|
-| Réseau social complet (fil, abonnés, partages) | Dossier `features/social/` scaffoldé ; monolithe modulaire extensible |
+| Réseau social complet (fil, abonnés, partages) | `features/community/` livre déjà amis, encouragements et défis ; monolithe modulaire extensible |
 | Messagerie | Rien de spécifique — s'appuiera sur les modules utilisateurs/notifications existants |
-| IA avancée / coaching intelligent | Dossier `features/coaching/` scaffoldé ; entitlement `ai_coaching` réservé ; données de séance structurées et exploitables |
+| IA avancée / coaching intelligent | `features/coaching/` livre le coach ; entitlement `ai_coaching` réservé ; données de séance structurées et exploitables |
 | Marketplace (programmes de coachs) | Modèles programmes/abonnements conçus pour être étendus ; entitlement `coach_dashboard` réservé |
 | Live / diffusion temps réel | Aucune contrainte d'architecture prise contre — hors sujet au stade actuel |
 | Microservices | **Refus explicite** : monolithe modulaire NestJS (`src/modules/*`) avec frontières nettes, extraction possible plus tard si un besoin réel apparaît |
@@ -170,10 +170,15 @@ ces portes :
 | 3D lourde (anatomie, avatars) | Médias d'exercices via `MediaAsset` + stockage S3 ; anatomie 2D/3D en extension future |
 | Coaching temps réel | Sessions par appareil et notifications (FCM, ajouté avec sa configuration réelle) posent les bases |
 
-Les dossiers `features/nutrition/`, `features/body_metrics/`,
-`features/health/` et `features/notifications/` sont également scaffoldés
-(vides, `.gitkeep`) : ils matérialisent l'intention sans code mort — aucune
-dépendance n'est installée avant son usage réel.
+`features/nutrition/` et `features/notifications/` sont désormais livrés ;
+les mesures corporelles vivent dans `features/progress/`. Les intentions non
+encore construites (Health Connect, par exemple) ne sont plus matérialisées
+par des dossiers vides : six d'entre eux ont été supprimés en septembre 2026
+parce qu'ils désignaient, sous un nom voisin, un dossier déjà plein
+(`programs/` face à `workout_program/`, `subscriptions/` face à
+`subscription/`, `social/` face à `community/`) et envoyaient le lecteur au
+mauvais endroit. Une intention se tient dans ce document et dans les
+entitlements réservés ; un dossier vide, lui, ne réserve rien.
 
 ## Extensions futures
 
@@ -187,7 +192,7 @@ Après le MVP, dans un ordre à arbitrer selon la traction :
 - **Défis, classements, groupes** (dimension sociale progressive) ;
 - **Coaching intelligent** (suggestions de charges, deload, périodisation) ;
 - **Apple Health / Health Connect** (entitlement `health_sync` réservé,
-  dossier `features/health/` scaffoldé) ;
+  aucun code à ce jour) ;
 - **Montres connectées** (Watch / Wear OS) ;
 - **Vidéos d'exercices** (le pipeline média S3 arrive dès l'Étape 3) ;
 - **Animations Rive avancées** (entitlement `custom_animations` réservé ;
