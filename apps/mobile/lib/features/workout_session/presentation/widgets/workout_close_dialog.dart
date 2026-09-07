@@ -23,7 +23,7 @@ Future<bool?> showWorkoutCloseDialog(
           Text(
             abandon
                 ? 'La séance sera marquée comme abandonnée.'
-                : 'Vos séries sont enregistrées et seront synchronisées.',
+                : 'Tes séries sont enregistrées et seront synchronisées.',
           ),
           if (planSummary != null) ...[
             const SizedBox(height: AppSpacing.sm),

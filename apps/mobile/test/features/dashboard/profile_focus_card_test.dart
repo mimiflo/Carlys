@@ -104,7 +104,7 @@ void main() {
     await pumpHome(tester, profile: CarlysProfile.challenger);
 
     const cap =
-        'Va chercher un défi — la communauté en lance à ta hauteur '
+        'Va chercher un défi : la communauté en lance à ta hauteur '
         'cette semaine.';
     await scrollTo(tester, find.text(cap));
     expect(find.text('TON CAP LE CHALLENGER'), findsOneWidget);
@@ -123,7 +123,7 @@ void main() {
     await pumpHome(tester, profile: CarlysProfile.stratege);
 
     const cap =
-        'Comprends tes chiffres — records et tendances disent ce que '
+        'Comprends tes chiffres : records et tendances disent ce que '
         'ton corps répond.';
     await scrollTo(tester, find.text(cap));
     expect(find.text('TON CAP LE STRATÈGE'), findsOneWidget);

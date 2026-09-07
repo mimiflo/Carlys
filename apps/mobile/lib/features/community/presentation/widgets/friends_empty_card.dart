@@ -12,6 +12,14 @@ import '../../../../design_system/design_system.dart';
 class FriendsEmptyCard extends StatelessWidget {
   const FriendsEmptyCard({required this.onAddFriend, super.key});
 
+  /// L'invitation au premier ami, écrite UNE fois.
+  ///
+  /// L'écran Communauté la redit dans son état vide global : deux copies du
+  /// même texte finissaient par diverger — l'une corrigée, l'autre oubliée.
+  static const String invitation =
+      'Ajoute un premier ami par son code ami ou son adresse e-mail : '
+      'chacun voit la série de l’autre, et peut l’encourager.';
+
   final VoidCallback onAddFriend;
 
   @override
@@ -36,8 +44,7 @@ class FriendsEmptyCard extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
-            'Ajoute un premier ami par son code ami ou son adresse e-mail : '
-            'vous verrez vos séries, et vous pourrez vous encourager.',
+            invitation,
             style: AppTypography.body.copyWith(
               color: AppColors.darkTextSecondary,
             ),

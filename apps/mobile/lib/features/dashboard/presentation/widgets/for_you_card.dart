@@ -179,25 +179,25 @@ _ProfileFocus _focusOf(CarlysProfile profile) {
   return switch (profile) {
     CarlysProfile.constructeur => _ProfileFocus(
       message:
-          'Pose tes fondations — l’Académie t’explique les mouvements '
+          'Pose tes fondations : l’Académie t’explique les mouvements '
           'et les bases.',
       open: (context) => context.go(AppRoutes.academy),
     ),
     CarlysProfile.challenger => _ProfileFocus(
       message:
-          'Va chercher un défi — la communauté en lance à ta hauteur '
+          'Va chercher un défi : la communauté en lance à ta hauteur '
           'cette semaine.',
       open: (context) => context.go(AppRoutes.community),
     ),
     CarlysProfile.athlete => _ProfileFocus(
       message:
-          'Tiens ton plan — un programme sur plusieurs semaines change '
+          'Tiens ton plan : un programme sur plusieurs semaines change '
           'la discipline en résultats.',
       open: (context) => context.push(AppRoutes.programs),
     ),
     CarlysProfile.stratege => _ProfileFocus(
       message:
-          'Comprends tes chiffres — records et tendances disent ce que '
+          'Comprends tes chiffres : records et tendances disent ce que '
           'ton corps répond.',
       open: (context) => context.go(AppRoutes.progress),
     ),

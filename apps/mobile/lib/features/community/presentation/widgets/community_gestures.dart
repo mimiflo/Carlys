@@ -68,8 +68,8 @@ class CommunityGestures {
       context,
       title: 'Retirer $name de tes amis ?',
       message:
-          'Vous ne verrez plus vos progressions ni vos encouragements. '
-          '$name pourra te redemander en ami.',
+          'Ta progression et la sienne ne se partagent plus, et les '
+          'encouragements s’arrêtent. $name pourra te redemander en ami.',
       confirmLabel: 'Retirer',
     );
     if (!confirmed || !context.mounted) {

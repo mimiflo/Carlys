@@ -139,7 +139,7 @@ class _PremiumRequiredState extends StatelessWidget {
             const SizedBox(height: AppSpacing.xs),
             Text(
               'Cet exercice fait partie du catalogue Premium. '
-              'Votre abonnement donne accès à l’intégralité des mouvements.',
+              'Ton abonnement donne accès à l’intégralité des mouvements.',
               textAlign: TextAlign.center,
               style: AppTypography.body.copyWith(
                 color: AppColors.darkTextSecondary,

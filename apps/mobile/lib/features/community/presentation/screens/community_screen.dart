@@ -8,6 +8,7 @@ import '../controllers/community_moderation_controllers.dart';
 import '../widgets/add_friend_sheet.dart';
 import '../widgets/community_feedback.dart';
 import '../widgets/community_sections.dart';
+import '../widgets/friends_empty_card.dart';
 
 /// Communauté — les autres, comme moteur.
 ///
@@ -161,10 +162,7 @@ class CommunityScreen extends ConsumerWidget {
             AppEmptyState(
               icon: Icons.group_outlined,
               title: 'Personne ici pour l’instant',
-              message:
-                  'Ajoute un premier ami par son code ami ou son adresse '
-                  'e-mail : vous verrez vos séries, et vous pourrez vous '
-                  'encourager.',
+              message: FriendsEmptyCard.invitation,
               actionLabel: 'Ajouter un ami',
               onAction: () => _addFriend(context, actions),
             )

@@ -435,7 +435,7 @@ void main() {
     expect(find.text('Push force'), findsOneWidget);
     // Durée écoulée et faits mesurés tiennent dans une seule phrase.
     expect(
-      find.text('En cours depuis 52 min — 1 exercice, 2 séries.'),
+      find.text('En cours depuis 52 min : 1 exercice, 2 séries.'),
       findsOneWidget,
     );
     expect(find.semantics.byLabel('Reprendre la séance'), findsOneWidget);

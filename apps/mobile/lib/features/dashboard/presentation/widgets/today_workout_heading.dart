@@ -87,7 +87,7 @@ class TodayWorkoutHeading extends StatelessWidget {
     if (exercises == 0) {
       return '$since. Reprends où tu en étais.';
     }
-    return '$since — $exercises exercice${exercises > 1 ? 's' : ''}, '
+    return '$since : $exercises exercice${exercises > 1 ? 's' : ''}, '
         '$sets série${sets > 1 ? 's' : ''}.';
   }
 

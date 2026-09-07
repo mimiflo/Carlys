@@ -81,14 +81,14 @@ class _WorkoutHistoryScreenState extends ConsumerState<WorkoutHistoryScreen> {
               ),
               error: (_, __) => AppErrorState(
                 title: 'Historique indisponible',
-                message: 'Vos séances n’ont pas pu être chargées.',
+                message: 'Tes séances n’ont pas pu être chargées.',
                 onRetry: () => ref.invalidate(workoutHistoryProvider),
               ),
               data: (entries) => entries.isEmpty
                   ? const AppEmptyState(
                       title: 'Aucune séance terminée',
                       message:
-                          'Vos séances apparaîtront ici une fois clôturées.',
+                          'Tes séances apparaîtront ici une fois clôturées.',
                       icon: AppIcons.history,
                     )
                   : _MonthView(

@@ -152,7 +152,7 @@ class _Hint extends StatelessWidget {
   Widget build(BuildContext context) {
     final (text, color) = switch ((answered, correct)) {
       (false, _) => (
-        'Touche une réponse — une seule tentative par jour.',
+        'Touche une réponse : une seule tentative par jour.',
         AppColors.darkTextTertiary,
       ),
       (true, true) => ('Bonne réponse.', AppColors.success),
