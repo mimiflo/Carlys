@@ -90,6 +90,43 @@ void main() {
     expect(repository.resolvedConflicts, isEmpty);
   });
 
+  testWidgets('une Error nue reste visible, le choix reste', (tester) async {
+    // Sans source distante câblée, `takeServer` jette une `StateError` :
+    // une `Error`, qu'un `on AppException` laissait passer. L'utilisateur
+    // ne voyait alors rien, devant un bouton qui ne faisait rien.
+    final repository = await pumpDetail(tester);
+    repository.conflictResolutionFailure = StateError(
+      'Aucune source distante : rien à rapatrier.',
+    );
+
+    await tester.tap(find.text('Prendre la version du serveur'));
+    await tester.pumpAndSettle();
+
+    expect(
+      find.textContaining('Impossible de trancher pour le moment'),
+      findsOneWidget,
+    );
+    expect(find.text('Prendre la version du serveur'), findsOneWidget);
+    expect(find.text('Garder ma version'), findsOneWidget);
+    expect(repository.resolvedConflicts, isEmpty);
+  });
+
+  testWidgets('la carte annonce l’échec possible du rejeu', (tester) async {
+    // L'API refuse aujourd'hui toute re-clôture avec une autre issue :
+    // proposer « Garder ma version » sans le dire, c'est promettre un geste
+    // qui ne peut pas aboutir.
+    await pumpDetail(tester);
+
+    expect(
+      find.textContaining('Le serveur peut garder sa version'),
+      findsOneWidget,
+    );
+    expect(
+      find.textContaining('restera alors marquée en échec'),
+      findsOneWidget,
+    );
+  });
+
   testWidgets('l’historique signale le conflit', (tester) async {
     await tester.pumpWidget(
       MaterialApp(

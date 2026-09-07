@@ -26,8 +26,10 @@ class FakeWorkoutRepository implements WorkoutRepository {
   /// Conflits tranchés, dans l'ordre : `(séance, choix)`.
   final List<(String, WorkoutConflictResolution)> resolvedConflicts = [];
 
-  /// Exception à jeter au prochain `resolveCloseConflict` (hors ligne…).
-  Exception? conflictResolutionFailure;
+  /// Ce que jette le prochain `resolveCloseConflict` : une `AppException`
+  /// (hors ligne…), mais aussi une `Error` — sans source distante câblée,
+  /// `WorkoutConflictActions.takeServer` jette une `StateError` nue.
+  Object? conflictResolutionFailure;
 
   final _activeController = StreamController<WorkoutWithSets?>.broadcast();
 

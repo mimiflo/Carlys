@@ -26,6 +26,11 @@ class WorkoutConflictCard extends ConsumerStatefulWidget {
 class _WorkoutConflictCardState extends ConsumerState<WorkoutConflictCard> {
   static const _logger = AppLogger('WorkoutConflictCard');
 
+  /// Message montré quand l'échec n'a pas de cause présentable : mieux vaut
+  /// une phrase honnête et vague qu'un silence devant un bouton inerte.
+  static const _genericFailure =
+      'Impossible de trancher pour le moment. Réessaie dans un instant.';
+
   WorkoutConflictResolution? _inFlight;
   String? _error;
 
@@ -44,6 +49,17 @@ class _WorkoutConflictCardState extends ConsumerState<WorkoutConflictCard> {
       _logger.warning('Conflit non résolu', error: exception);
       if (mounted) {
         setState(() => _error = exception.message);
+      }
+    } catch (error) {
+      // Attrape TOUT, pas seulement `AppException` : sans source distante
+      // câblée (mode démonstration), « Prendre la version du serveur » jette
+      // une `StateError` nue — une `Error`, qu'un `on AppException` laissait
+      // passer. L'utilisateur ne voyait alors rien du tout et le bouton
+      // restait en chargement. Rien n'a été modifié non plus ici : le choix
+      // reste proposé, avec un message générique.
+      _logger.error('Conflit non résolu', error: error);
+      if (mounted) {
+        setState(() => _error = _genericFailure);
       }
     } finally {
       if (mounted) {
@@ -83,6 +99,18 @@ class _WorkoutConflictCardState extends ConsumerState<WorkoutConflictCard> {
             'la tienne est renvoyée telle quelle. Tes séries sont conservées '
             'dans les deux cas.',
             style: theme.textTheme.bodyMedium,
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          // Dire ce qui va réellement se passer : l'API refuse aujourd'hui
+          // toute re-clôture avec une autre issue, donc « garder ma version »
+          // finit sur un échec visible tant qu'elle n'évolue pas. Proposer un
+          // geste sans annoncer qu'il peut ne pas aboutir, c'est promettre ce
+          // qu'on ne tient pas.
+          Text(
+            'Le serveur peut garder sa version malgré tout : la séance '
+            'restera alors marquée en échec sur cet appareil, sans rien '
+            'perdre de ce que tu as saisi.',
+            style: theme.textTheme.bodySmall,
           ),
           const SizedBox(height: AppSpacing.md),
           AppButton(
