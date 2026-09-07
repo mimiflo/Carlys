@@ -21,7 +21,9 @@ saut de version majeure) ; avec `--no-pub` il laisse à la place le lock du
 gabarit. Il recrée aussi `test/widget_test.dart`, qui référence un `MyApp`
 inexistant dans ce projet. `scripts/mobile_platforms.sh` — appelé par le
 bootstrap **et** par la CI `demo-apk` — fait la création et répare ces deux
-effets de bord ; il ne touche qu'aux dossiers de plateformes :
+effets de bord : il ne **laisse** derrière lui que les dossiers de plateformes,
+`pubspec.lock` étant restauré à l'identique (contenu et droits) et le test du
+gabarit retiré :
 
 ```bash
 ./scripts/mobile_platforms.sh android,ios   # android/ et ios/ seuls
