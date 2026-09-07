@@ -32,17 +32,26 @@ function PartyLink({ party }: { party: AdminCommunityReportParty }) {
 }
 
 /**
- * Le texte visé, s'il existe encore : un encouragement retiré depuis laisse
- * son identifiant, sans message ; un signalement sans encouragement vise la
- * personne elle-même.
+ * Le texte visé, tel qu'il était AU MOMENT du signalement : le serveur en
+ * fige un cliché (`encouragementMessage`) dans la transaction qui crée le
+ * signalement, donc la preuve reste lisible même après coup. D'où trois
+ * états, tous atteignables :
+ *
+ * - cliché + `encouragementId` : le message est toujours dans le fil ;
+ * - cliché seul (`encouragementId` remis à `NULL` par la suppression) : le
+ *   message a été retiré depuis, on montre quand même ce qui a été signalé ;
+ * - ni l'un ni l'autre : le signalement vise la personne, pas un message.
  */
 function EncouragementCell({ report }: { report: AdminCommunityReport }) {
-  if (report.encouragementMessage !== null) {
-    return <q className="italic">{report.encouragementMessage}</q>;
+  if (report.encouragementMessage === null) {
+    return <span className="text-xs text-muted">La personne en général</span>;
   }
   return (
-    <span className="text-xs text-muted">
-      {report.encouragementId !== null ? 'Message retiré depuis' : 'La personne en général'}
+    <span className="flex flex-col gap-1">
+      <q className="italic">{report.encouragementMessage}</q>
+      {report.encouragementId === null && (
+        <span className="text-xs text-muted">Message retiré depuis</span>
+      )}
     </span>
   );
 }

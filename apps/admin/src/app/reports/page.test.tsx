@@ -39,6 +39,14 @@ const REPORT_ABOUT_PERSON: AdminCommunityReport = {
   details: null,
 };
 
+/** Message retiré APRÈS le signalement : l'identifiant part, le cliché reste. */
+const REPORT_MESSAGE_REMOVED: AdminCommunityReport = {
+  ...REPORT,
+  id: '99999999-2222-4333-8444-555555555555',
+  encouragementId: null,
+  encouragementMessage: 'Tu ne vaux rien.',
+};
+
 function pageOf(
   items: AdminCommunityReport[],
   nextCursor: string | null = null,
@@ -91,9 +99,34 @@ describe('Page Signalements', () => {
     expect(first.getByText('Il insiste après mon refus.')).toBeInTheDocument();
     expect(first.getByText('Réponds-moi.')).toBeInTheDocument();
 
+    // Le message est toujours dans le fil : rien ne parle d'un retrait.
+    expect(first.queryByText('Message retiré depuis')).not.toBeInTheDocument();
+
     const second = within(rows[2] as HTMLElement);
     expect(second.getByText('Spam')).toBeInTheDocument();
     expect(second.getByText('La personne en général')).toBeInTheDocument();
+  });
+
+  it('montre le cliché d’un message retiré depuis, et le dit', async () => {
+    adminToken.set('jeton-admin');
+    vi.spyOn(adminApi, 'listCommunityReports').mockResolvedValue(pageOf([REPORT_MESSAGE_REMOVED]));
+
+    renderPage();
+
+    // La preuve figée au signalement survit à la suppression du message.
+    expect(await screen.findByText('Tu ne vaux rien.')).toBeInTheDocument();
+    expect(screen.getByText('Message retiré depuis')).toBeInTheDocument();
+    expect(screen.queryByText('La personne en général')).not.toBeInTheDocument();
+  });
+
+  it('dit « La personne en général » quand aucun message n’est visé', async () => {
+    adminToken.set('jeton-admin');
+    vi.spyOn(adminApi, 'listCommunityReports').mockResolvedValue(pageOf([REPORT_ABOUT_PERSON]));
+
+    renderPage();
+
+    expect(await screen.findByText('La personne en général')).toBeInTheDocument();
+    expect(screen.queryByText('Message retiré depuis')).not.toBeInTheDocument();
   });
 
   it('lie l’auteur et la personne visée à leur fiche, l’e-mail suppléant un nom absent', async () => {

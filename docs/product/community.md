@@ -90,8 +90,11 @@ Ces deux routes ont leur écran : la page **Signalements** du back-office
 Elle liste les signalements ouverts par défaut (résolus, ou tous, sur
 demande ; pages de 50 par curseur, « Charger la suite ») avec la date, le
 motif et ses précisions, l'auteur, la personne visée et le texte de
-l'encouragement visé s'il existe encore (« Message retiré depuis » sinon,
-« La personne en général » si le signalement ne vise pas un message). Un
+l'encouragement visé. Ce texte est le cliché figé au signalement, donc trois
+états seulement : le message seul (il est encore dans le fil) ; le message
+suivi de « Message retiré depuis » (`encouragementId` remis à `NULL` par la
+suppression, la preuve reste) ; « La personne en général » quand le
+signalement ne vise aucun message. Un
 bouton résout chaque signalement, un autre le rouvre ; résoudre ne prévient
 personne et ne touche pas au compte visé : les deux personnes renvoient à
 leur fiche utilisateur, seul endroit où l'on suspend. Sans
@@ -255,8 +258,9 @@ simplement perdue (la barre est collective, pas comptable).
   personne visée), audit de la résolution, pagination.
 - Vitest back-office (`apps/admin/src/app/reports/page.test.tsx`,
   `apps/admin/src/lib/admin-api.test.ts`) : liste des ouverts par défaut
-  avec motif, personnes liées à leur fiche et texte visé ; résolution puis
-  rechargement ; réouverture ; filtres Résolus/Tous ; pagination par
+  avec motif, personnes liées à leur fiche et texte visé (message vivant,
+  cliché d'un message retiré depuis, signalement visant la personne) ;
+  résolution puis rechargement ; réouverture ; filtres Résolus/Tous ; pagination par
   curseur ; 403 distingué d'une panne, à la lecture comme à la résolution ;
   redirection sans jeton ; URL, corps du PATCH et rejet d'une réponse hors
   contrat côté transport.
