@@ -7,6 +7,7 @@ import {
   type SessionWithSets,
   type WorkoutsRepository,
 } from '../infrastructure/workouts.repository';
+import { WorkoutSetsService } from './workout-sets.service';
 import { WorkoutsService } from './workouts.service';
 
 const USER = 'user-1';
@@ -93,6 +94,11 @@ function buildService(
     community as unknown as CommunityService,
     templates as unknown as WorkoutTemplatesService,
   );
+}
+
+/** Les séries ont leur propre service : mêmes doublures, même dépôt. */
+function buildSetsService(stubs: Stubs): WorkoutSetsService {
+  return new WorkoutSetsService(stubs as unknown as WorkoutsRepository);
 }
 
 const createInput = {
@@ -291,9 +297,9 @@ describe('WorkoutsService', () => {
     it('apparie la prévision honorée par la série qui vient d’être créée', async () => {
       const stubs = buildStubs();
       stubs.findSetById.mockResolvedValueOnce(null).mockResolvedValue(setRow());
-      const service = buildService(stubs);
+      const sets = buildSetsService(stubs);
 
-      await service.addSet(USER, 'session-1', { ...setInput, planItemId: 'plan-1' });
+      await sets.addSet(USER, 'session-1', { ...setInput, planItemId: 'plan-1' });
 
       expect(stubs.linkPlanItem).toHaveBeenCalledWith('session-1', 'plan-1', 'set-1');
     });
@@ -301,9 +307,9 @@ describe('WorkoutsService', () => {
     it('réapparie sur un rejeu : le premier envoi a pu s’interrompre entre les deux', async () => {
       const stubs = buildStubs();
       stubs.findSetById.mockResolvedValue(setRow()); // série déjà là
-      const service = buildService(stubs);
+      const sets = buildSetsService(stubs);
 
-      await service.addSet(USER, 'session-1', { ...setInput, planItemId: 'plan-1' });
+      await sets.addSet(USER, 'session-1', { ...setInput, planItemId: 'plan-1' });
 
       expect(stubs.createSet).not.toHaveBeenCalled();
       expect(stubs.linkPlanItem).toHaveBeenCalledWith('session-1', 'plan-1', 'set-1');
@@ -312,9 +318,9 @@ describe('WorkoutsService', () => {
     it('une série hors programme n’apparie rien', async () => {
       const stubs = buildStubs();
       stubs.findSetById.mockResolvedValueOnce(null).mockResolvedValue(setRow());
-      const service = buildService(stubs);
+      const sets = buildSetsService(stubs);
 
-      await service.addSet(USER, 'session-1', setInput);
+      await sets.addSet(USER, 'session-1', setInput);
 
       expect(stubs.linkPlanItem).not.toHaveBeenCalled();
     });
@@ -414,9 +420,9 @@ describe('WorkoutsService', () => {
     it('rejouer l’ajout d’une série renvoie la série existante', async () => {
       const stubs = buildStubs();
       stubs.findSetById.mockResolvedValue(setRow());
-      const service = buildService(stubs);
+      const sets = buildSetsService(stubs);
 
-      const set = await service.addSet(USER, 'session-1', setInput);
+      const set = await sets.addSet(USER, 'session-1', setInput);
 
       expect(set.id).toBe('set-1');
       expect(stubs.createSet).not.toHaveBeenCalled();
@@ -425,9 +431,9 @@ describe('WorkoutsService', () => {
     it('un id de série déjà pris par une autre séance est un conflit', async () => {
       const stubs = buildStubs();
       stubs.findSetById.mockResolvedValue(setRow({ sessionId: 'autre-session' }));
-      const service = buildService(stubs);
+      const sets = buildSetsService(stubs);
 
-      await expect(service.addSet(USER, 'session-1', setInput)).rejects.toThrow(ConflictException);
+      await expect(sets.addSet(USER, 'session-1', setInput)).rejects.toThrow(ConflictException);
     });
 
     it('le nom d’exercice est résolu depuis le catalogue quand exerciseId est connu', async () => {
@@ -435,9 +441,9 @@ describe('WorkoutsService', () => {
       stubs.findSetById
         .mockResolvedValueOnce(null) // pré-vérification
         .mockResolvedValue(setRow()); // relecture après création
-      const service = buildService(stubs);
+      const sets = buildSetsService(stubs);
 
-      await service.addSet(USER, 'session-1', setInput);
+      await sets.addSet(USER, 'session-1', setInput);
 
       expect(stubs.createSet).toHaveBeenCalledWith(
         expect.objectContaining({ exerciseName: 'Développé couché' }),
@@ -447,10 +453,10 @@ describe('WorkoutsService', () => {
     it('enregistre la cible affichée à côté de ce qui a été RÉELLEMENT fait', async () => {
       const stubs = buildStubs();
       stubs.findSetById.mockResolvedValueOnce(null).mockResolvedValue(setRow());
-      const service = buildService(stubs);
+      const sets = buildSetsService(stubs);
 
       // Déviation assumée : 7 reps faites pour 8 prévues — jamais une erreur.
-      await service.addSet(USER, 'session-1', {
+      await sets.addSet(USER, 'session-1', {
         ...setInput,
         reps: 7,
         plannedReps: 8,
@@ -468,9 +474,9 @@ describe('WorkoutsService', () => {
       const stubs = buildStubs();
       stubs.findSetById.mockResolvedValue(setRow());
       stubs.updateSet.mockResolvedValue(setRow({ reps: 12 }));
-      const service = buildService(stubs);
+      const sets = buildSetsService(stubs);
 
-      await service.updateSet(USER, 'set-1', { reps: 12 });
+      await sets.updateSet(USER, 'set-1', { reps: 12 });
 
       const [, patch] = stubs.updateSet.mock.calls[0] as [string, Record<string, unknown>];
       expect(patch).not.toHaveProperty('plannedReps');
@@ -482,21 +488,21 @@ describe('WorkoutsService', () => {
     it('supprimer une série déjà supprimée ou inconnue aboutit sans erreur', async () => {
       const stubs = buildStubs();
       stubs.findSetById.mockResolvedValue(null);
-      const service = buildService(stubs);
+      const sets = buildSetsService(stubs);
 
-      await expect(service.deleteSet(USER, 'set-1')).resolves.toBeUndefined();
+      await expect(sets.deleteSet(USER, 'set-1')).resolves.toBeUndefined();
 
       stubs.findSetById.mockResolvedValue(setRow({ deletedAt: new Date() }));
-      await expect(service.deleteSet(USER, 'set-1')).resolves.toBeUndefined();
+      await expect(sets.deleteSet(USER, 'set-1')).resolves.toBeUndefined();
       expect(stubs.softDeleteSet).not.toHaveBeenCalled();
     });
 
     it('la série d’un autre utilisateur reste invisible', async () => {
       const stubs = buildStubs();
       stubs.findSetById.mockResolvedValue(setRow({ session: sessionRow({ userId: OTHER_USER }) }));
-      const service = buildService(stubs);
+      const sets = buildSetsService(stubs);
 
-      await expect(service.deleteSet(USER, 'set-1')).rejects.toThrow(NotFoundException);
+      await expect(sets.deleteSet(USER, 'set-1')).rejects.toThrow(NotFoundException);
     });
   });
 

@@ -23,6 +23,7 @@ import { CurrentUser } from '../../../../common/decorators/current-user.decorato
 import { type AuthenticatedPrincipal } from '../../../../common/types/authenticated-request';
 import { type RequestWithId } from '../../../../common/types/request-with-id';
 import { enveloped } from '../../../../common/utilities/enveloped';
+import { WorkoutSetsService } from '../../application/workout-sets.service';
 import { WorkoutsService } from '../../application/workouts.service';
 import {
   CloseWorkoutSessionDto,
@@ -37,7 +38,10 @@ import {
 @ApiBearerAuth()
 @Controller('workout-sessions')
 export class WorkoutSessionsController {
-  constructor(private readonly workouts: WorkoutsService) {}
+  constructor(
+    private readonly workouts: WorkoutsService,
+    private readonly sets: WorkoutSetsService,
+  ) {}
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
@@ -120,6 +124,6 @@ export class WorkoutSessionsController {
     @Param('id', new ParseUUIDPipe()) sessionId: string,
     @Body() dto: CreateWorkoutSetDto,
   ): Promise<WorkoutSet> {
-    return this.workouts.addSet(user.userId, sessionId, dto);
+    return this.sets.addSet(user.userId, sessionId, dto);
   }
 }

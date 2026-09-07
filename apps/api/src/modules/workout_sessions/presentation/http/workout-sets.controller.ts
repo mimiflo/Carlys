@@ -12,14 +12,14 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../../../common/decorators/current-user.decorator';
 import { type AuthenticatedPrincipal } from '../../../../common/types/authenticated-request';
-import { WorkoutsService } from '../../application/workouts.service';
+import { WorkoutSetsService } from '../../application/workout-sets.service';
 import { UpdateWorkoutSetDto } from './dto/workout.dto';
 
 @ApiTags('workout-sessions')
 @ApiBearerAuth()
 @Controller('workout-sets')
 export class WorkoutSetsController {
-  constructor(private readonly workouts: WorkoutsService) {}
+  constructor(private readonly sets: WorkoutSetsService) {}
 
   @Patch(':id')
   @ApiOperation({ summary: 'Corriger une série' })
@@ -28,7 +28,7 @@ export class WorkoutSetsController {
     @Param('id', new ParseUUIDPipe()) setId: string,
     @Body() dto: UpdateWorkoutSetDto,
   ): Promise<WorkoutSet> {
-    return this.workouts.updateSet(user.userId, setId, dto);
+    return this.sets.updateSet(user.userId, setId, dto);
   }
 
   @Delete(':id')
@@ -38,6 +38,6 @@ export class WorkoutSetsController {
     @CurrentUser() user: AuthenticatedPrincipal,
     @Param('id', new ParseUUIDPipe()) setId: string,
   ): Promise<void> {
-    await this.workouts.deleteSet(user.userId, setId);
+    await this.sets.deleteSet(user.userId, setId);
   }
 }
