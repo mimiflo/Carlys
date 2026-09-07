@@ -4,7 +4,7 @@ import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/authentication/presentation/widgets/legal_consent_notice.dart';
 import 'package:carlys_mobile/features/coaching/domain/entities/coach.dart';
 import 'package:carlys_mobile/features/coaching/presentation/screens/coach_screen.dart';
-import 'package:carlys_mobile/features/coaching/presentation/widgets/coach_data_notice.dart';
+import 'package:carlys_mobile/features/coaching/presentation/widgets/coach_notices.dart';
 import 'package:carlys_mobile/features/profile/presentation/widgets/profile_legal_section.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';

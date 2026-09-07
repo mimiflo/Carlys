@@ -3,9 +3,9 @@ import 'package:flutter/material.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/coach.dart';
 import '../widgets/coach_composer.dart';
-import '../widgets/coach_data_notice.dart';
 import '../widgets/coach_header.dart';
 import '../widgets/coach_message_bubble.dart';
+import '../widgets/coach_notices.dart';
 import '../widgets/coach_proposal_card.dart';
 import '../widgets/coach_suggestions.dart';
 
@@ -78,7 +78,7 @@ class CoachScreen extends StatelessWidget {
                       ),
                     ),
             ),
-            if (notice case final text?) _CoachNotice(text: text),
+            if (notice case final text?) CoachNotice(text: text),
             if (suggestions.isNotEmpty && !isOffline) ...[
               Padding(
                 padding: const EdgeInsets.fromLTRB(
@@ -172,45 +172,6 @@ class _Conversation extends StatelessWidget {
           ],
         );
       },
-    );
-  }
-}
-
-/// Refus du serveur, posé juste au-dessus du composeur — là où l'on vient
-/// d'appuyer, et non en haut d'un écran qu'on ne regarde plus.
-class _CoachNotice extends StatelessWidget {
-  const _CoachNotice({required this.text});
-
-  final String text;
-
-  @override
-  Widget build(BuildContext context) {
-    return Padding(
-      padding: const EdgeInsets.fromLTRB(
-        AppSpacing.gutter,
-        0,
-        AppSpacing.gutter,
-        AppSpacing.sm,
-      ),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Icon(
-            AppIcons.info,
-            size: 16,
-            color: AppColors.darkTextTertiary,
-          ),
-          const SizedBox(width: AppSpacing.xs),
-          Expanded(
-            child: Text(
-              text,
-              style: AppTypography.label.copyWith(
-                color: AppColors.darkTextSecondary,
-              ),
-            ),
-          ),
-        ],
-      ),
     );
   }
 }

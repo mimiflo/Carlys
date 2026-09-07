@@ -1,3 +1,8 @@
+/// Les deux lignes discrètes de l'écran du coach : d'où vient la réponse
+/// (en tête de fil) et pourquoi un envoi vient d'être refusé (au-dessus du
+/// composeur). Même famille, même sobriété, même fichier.
+library;
+
 import 'package:flutter/material.dart';
 
 import '../../../../design_system/design_system.dart';
@@ -37,6 +42,45 @@ class CoachDataNotice extends StatelessWidget {
               message,
               style: AppTypography.label.copyWith(
                 color: AppColors.darkTextTertiary,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Refus du serveur, posé juste au-dessus du composeur — là où l'on vient
+/// d'appuyer, et non en haut d'un écran qu'on ne regarde plus.
+class CoachNotice extends StatelessWidget {
+  const CoachNotice({required this.text, super.key});
+
+  final String text;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(
+        AppSpacing.gutter,
+        0,
+        AppSpacing.gutter,
+        AppSpacing.sm,
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            AppIcons.info,
+            size: 16,
+            color: AppColors.darkTextTertiary,
+          ),
+          const SizedBox(width: AppSpacing.xs),
+          Expanded(
+            child: Text(
+              text,
+              style: AppTypography.label.copyWith(
+                color: AppColors.darkTextSecondary,
               ),
             ),
           ),

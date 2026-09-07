@@ -356,7 +356,10 @@ Deux écrans, deux rôles :
   harnais, jamais dans `lib/`.
 
 Widgets : `CoachHeader`, `CoachMessageBubble`, `CoachSuggestions`,
-`CoachProposalCard`, `CoachComposer` — chacun sous 250 lignes.
+`CoachProposalCard`, `CoachComposer`, `CoachDataNotice` et `CoachNotice`
+(`widgets/coach_notices.dart`) — chacun sous 250 lignes, l'écran compris : les
+deux lignes discrètes du coach ont quitté `coach_screen.dart` le jour où
+l'ajout de la mention de traitement l'a poussé au-delà de la limite.
 
 **L'en-tête et la barre de saisie tiennent les deux bords de l'écran.**
 L'en-tête porte `AppBackButton`, la flèche commune du design system : elle
