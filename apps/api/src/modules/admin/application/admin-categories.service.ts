@@ -7,14 +7,14 @@ import {
 } from '@nestjs/common';
 import { AuditService } from '../../audit/audit.service';
 import { ExercisesService } from '../../exercises/application/exercises.service';
-import { AdminRepository } from '../infrastructure/admin.repository';
+import { AdminCatalogRepository } from '../infrastructure/admin-catalog.repository';
 import { type CatalogActor } from './admin-catalog.service';
 
 /** Catégories du catalogue — les groupes musculaires, créés et retirés ici. */
 @Injectable()
 export class AdminCategoriesService {
   constructor(
-    private readonly admin: AdminRepository,
+    private readonly admin: AdminCatalogRepository,
     private readonly audit: AuditService,
     private readonly exercises: ExercisesService,
   ) {}

@@ -7,7 +7,10 @@ import {
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { UserStatus } from '@prisma/client';
 import { AuditService } from '../../audit/audit.service';
-import { AdminRepository, type ManagedUserRow } from '../infrastructure/admin.repository';
+import {
+  AdminUsersRepository,
+  type ManagedUserRow,
+} from '../infrastructure/admin-users.repository';
 
 export interface UsersPage {
   items: ManagedUserSummary[];
@@ -41,7 +44,7 @@ function presentSummary(row: ManagedUserRow): ManagedUserSummary {
 @Injectable()
 export class AdminUsersService {
   constructor(
-    private readonly admin: AdminRepository,
+    private readonly admin: AdminUsersRepository,
     private readonly audit: AuditService,
   ) {}
 

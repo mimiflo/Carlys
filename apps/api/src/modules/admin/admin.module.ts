@@ -8,6 +8,8 @@ import { AdminCatalogService } from './application/admin-catalog.service';
 import { AdminCategoriesService } from './application/admin-categories.service';
 import { AdminPlatformService } from './application/admin-platform.service';
 import { AdminUsersService } from './application/admin-users.service';
+import { AdminCatalogRepository } from './infrastructure/admin-catalog.repository';
+import { AdminUsersRepository } from './infrastructure/admin-users.repository';
 import { AdminAuthController } from './presentation/http/admin-auth.controller';
 import { AdminCatalogController } from './presentation/http/admin-catalog.controller';
 import { AdminCategoriesController } from './presentation/http/admin-categories.controller';
@@ -35,6 +37,8 @@ import { AdminUsersController } from './presentation/http/admin-users.controller
     AdminPlatformService,
     AdminCatalogService,
     AdminCategoriesService,
+    AdminUsersRepository,
+    AdminCatalogRepository,
   ],
 })
 export class AdminModule {}

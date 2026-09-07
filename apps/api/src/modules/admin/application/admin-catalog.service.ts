@@ -7,7 +7,10 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { AppConfigService } from '../../../config/app-config.service';
 import { AuditService } from '../../audit/audit.service';
 import { ExercisesService } from '../../exercises/application/exercises.service';
-import { type AdminExerciseRow, AdminRepository } from '../infrastructure/admin.repository';
+import {
+  type AdminExerciseRow,
+  AdminCatalogRepository,
+} from '../infrastructure/admin-catalog.repository';
 
 /** Auteur d'une action de catalogue, tel que le journal d'audit le retient. */
 export interface CatalogActor {
@@ -32,7 +35,7 @@ export interface AdminExercisePage {
 @Injectable()
 export class AdminCatalogService {
   constructor(
-    private readonly admin: AdminRepository,
+    private readonly admin: AdminCatalogRepository,
     private readonly audit: AuditService,
     private readonly exercises: ExercisesService,
     private readonly config: AppConfigService,

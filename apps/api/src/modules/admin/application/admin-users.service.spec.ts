@@ -1,7 +1,7 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { UserStatus } from '@prisma/client';
 import { type AuditService } from '../../audit/audit.service';
-import { type AdminRepository } from '../infrastructure/admin.repository';
+import { type AdminUsersRepository } from '../infrastructure/admin-users.repository';
 import { AdminUsersService } from './admin-users.service';
 
 const ACTOR = { adminUserId: 'admin-1', requestId: 'req-1' };
@@ -45,7 +45,7 @@ const auditStub = { record: jest.fn() };
 
 function buildService(stubs: Stubs): AdminUsersService {
   return new AdminUsersService(
-    stubs as unknown as AdminRepository,
+    stubs as unknown as AdminUsersRepository,
     auditStub as unknown as AuditService,
   );
 }
