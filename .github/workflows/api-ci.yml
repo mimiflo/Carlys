@@ -119,6 +119,24 @@ jobs:
       - name: Build des packages partagés
         run: pnpm --filter "./packages/**" build
 
+      # `build` compile, il ne juge pas : un fichier déposé dans
+      # packages/api-contracts/src avec `any` ET un `catch {}` vide — deux
+      # interdits explicites de CLAUDE.md — traversait l'étape ci-dessus en
+      # code 0. Mesuré : ce même fichier fait rendre code 1 à l'étape ci-dessous
+      # (« Unexpected any », « Empty block statement »). Les paquets partagés
+      # sont pourtant le code le plus exposé du dépôt, importé par l'API comme
+      # par l'admin, et aucune étape de la CI ne les lintait. `pnpm` saute sans
+      # broncher les paquets dépourvus de script `lint` (eslint-config et
+      # typescript-config n'en ont pas) : le filtre n'a pas à être restreint.
+      - name: Lint des packages partagés
+        run: pnpm --filter "./packages/**" lint
+
+      # Corollaire du même angle mort : les 8 tests vitest de packages/ui
+      # n'étaient exécutés par AUCUN workflow. Seul packages/ui porte un script
+      # `test` aujourd'hui, et pnpm ignore silencieusement les autres.
+      - name: Tests des packages partagés
+        run: pnpm --filter "./packages/**" test
+
       - name: Formatage
         run: pnpm format:check
 

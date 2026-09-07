@@ -326,7 +326,7 @@ docker build -f apps/admin/Dockerfile -t carlys-admin .
 - **Tranches verticales** : chaque étape livre une fonctionnalité complète de bout en bout (schéma Prisma + API + admin + mobile + tests + docs). Pas de couche « en avance » sans consommateur, pas de dépendance morte.
 - **Commits** : [Conventional Commits](https://www.conventionalcommits.org/fr/) — `feat(api): …`, `fix(mobile): …`, `docs: …`, `chore: …`.
 - **Branches** : `main` protégée ; travail sur `feat/<sujet>`, `fix/<sujet>`, `docs/<sujet>` ; intégration par pull request avec CI verte.
-- **CI GitHub Actions** : `api-ci.yml` (services PostgreSQL + Redis ; format, lint, typecheck, tests, e2e, build, `prisma validate`, détection de migrations manquantes), `admin-ci.yml`, `mobile-ci.yml` (Flutter épinglé par `apps/mobile/.flutter-version` : format bloquant, analyze, test), `security-ci.yml` (TruffleHog + `pnpm audit` niveau high, plus une exécution hebdomadaire).
+- **CI GitHub Actions** : `api-ci.yml` (services PostgreSQL + Redis ; format, lint, typecheck, tests, e2e, build, `prisma validate`, détection de migrations manquantes), `admin-ci.yml`, `mobile-ci.yml` (Flutter épinglé par `apps/mobile/.flutter-version` : format bloquant, analyze, test), `security-ci.yml` (TruffleHog + `pnpm audit` niveau high, plus une exécution hebdomadaire). `api-ci` et `admin-ci` lintent et testent en plus les paquets partagés (`pnpm --filter "./packages/**" lint` et `test`) : les compiler ne suffit pas à les juger. Les quatre workflows s'ouvrent sur les pull requests, sur `main` **et** sur les poussées directes de la branche de travail.
 - **Documentation** : ne documenter que l'existant, ou du planifié explicitement marqué comme tel (« Étape N », « cible »).
 
 ## Déploiement

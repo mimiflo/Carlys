@@ -188,7 +188,10 @@ Décisions :
 - Testing Library : on teste le comportement visible (rôles, textes,
   interactions), pas l'implémentation.
 - `pnpm test` (dans `apps/admin`) ou `pnpm -r test` à la racine ; exécuté par
-  le workflow `admin-ci` avec format, lint, typecheck et build.
+  le workflow `admin-ci` avec format, lint, typecheck et build — auxquels
+  s'ajoutent le lint et les tests des paquets partagés
+  (`pnpm --filter "./packages/**" lint` et `test`), dont les tests de
+  `packages/ui`, le design system que l'admin consomme.
 
 ## Build standalone et Docker
 

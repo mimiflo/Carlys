@@ -64,6 +64,17 @@ jobs:
       - name: Build des packages partagés
         run: pnpm --filter "./packages/**" build
 
+      # Voir api-ci.yml pour la mesure : `build` compile sans juger, et laissait
+      # passer en code 0 un fichier portant `any` et un `catch {}` vide dans
+      # packages/*/src. packages/ui est doublement concerné ici — c'est le
+      # design system que l'admin consomme, et ses 8 tests vitest n'étaient
+      # exécutés par aucun workflow. pnpm saute les paquets sans script.
+      - name: Lint des packages partagés
+        run: pnpm --filter "./packages/**" lint
+
+      - name: Tests des packages partagés
+        run: pnpm --filter "./packages/**" test
+
       - name: Formatage
         run: pnpm format:check
 
