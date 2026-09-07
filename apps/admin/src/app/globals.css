@@ -2,7 +2,9 @@
 
 /* Couleurs RECOPIÉES depuis packages/design-tokens/src/tokens.json.
    Elles ne sont pas importées : l'admin n'a pas de dépendance sur le paquet.
-   Toute évolution des jetons doit donc être reportée ici À LA MAIN. */
+   Toute évolution des jetons doit donc être reportée ici À LA MAIN.
+   src/app/globals-tokens.test.ts échoue tant que ce n'est pas fait, et nomme
+   la variable qui a dérivé et le jeton qu'elle recopie. */
 :root {
   --background: #fafafc;
   --foreground: #16162a;
@@ -27,11 +29,14 @@
   --color-success: var(--success);
 }
 
+/* Les surfaces sombres sont teintées de VIOLET, pas neutres (voir
+   $comment-dark dans tokens.json) : un gris sous le violet électrique le fait
+   paraître sale. C'est exactement là que la copie avait dérivé. */
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0e0e1a;
+    --background: #08050e;
     --foreground: #f4f4f6;
-    --surface: #171727;
+    --surface: #15101f;
     --muted: #a5a5b5;
   }
 }

@@ -60,7 +60,19 @@ ou conteneurisées derrière le profil Compose `app`.
   source de vérité (primaire `#9B30FF`, accent `#FF7A45`, espacements,
   radius, typographie, ombres, motion, breakpoints). Le design system Flutter
   (`apps/mobile/lib/design_system`) et le thème Tailwind de l'admin reflètent
-  ces valeurs.
+  ces valeurs — mais par des chemins différents, et il faut le savoir :
+  - `packages/ui` **génère** son CSS depuis les jetons
+    (`scripts/build-css.mjs`) ; c'est la seule vraie génération du dépôt ;
+  - `apps/mobile` **recopie** dans `AppColors`, `AppSpacing`, `AppMotion`… et
+    `test/design_system/design_tokens_test.dart` tient la copie ;
+  - `apps/admin` **recopie** aussi, dans `src/app/globals.css`, sans dépendre
+    du paquet ; `src/app/globals-tokens.test.ts` tient cette copie-là depuis
+    septembre 2026, après qu'elle eut dérivé sur deux fonds sombres.
+
+  Les **courbes** de `motion.easing` sont le seul jeton qui ne se recopie pas à
+  l'identique : elles fixent un rôle, chaque plateforme l'exprime avec ce
+  qu'elle a. La raison est écrite dans `tokens.json`, sous
+  `motion.easing.$comment-easing`.
 - **Tranches verticales.** Chaque étape livre une fonctionnalité complète de
   bout en bout (schéma → API → clients → tests → docs) plutôt que des couches
   horizontales : Étape 1 fondation (faite), 2 authentification, 3 exercices,

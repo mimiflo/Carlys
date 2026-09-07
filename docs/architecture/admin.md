@@ -62,6 +62,17 @@ couleurs Tailwind (`bg-primary`, `text-muted`, `bg-surface`…), et un bloc
 `@media (prefers-color-scheme: dark)` fournit le thème sombre. Toute nouvelle
 couleur passe par les tokens, jamais par une valeur en dur dans un composant.
 
+**Recopiées, donc tenues par un test.** Rien n'importe le paquet de jetons
+ici : `globals.css` est une copie manuelle, et elle avait déjà dérivé —
+`--background` sombre valait `#0e0e1a` là où `surface.darkBackground` dit
+`#08050E`, et `--surface` sombre `#171727` contre `#15101F`. Corrigé en
+septembre 2026, et gardé depuis par
+[`src/app/globals-tokens.test.ts`](../../apps/admin/src/app/globals-tokens.test.ts),
+qui lit `tokens.json`, compare les deux blocs `:root` et échoue dans les deux
+sens : une valeur qui s'écarte de son jeton, **et** une couleur ajoutée à la
+main sans jeton en face. Ajouter une variable à `globals.css` suppose donc
+d'ajouter sa correspondance dans le test — c'est voulu.
+
 ## Conventions (posées à l'Étape 1, appliquées ensuite)
 
 - **Server Components par défaut.** `"use client"` uniquement quand
