@@ -37,4 +37,20 @@ abstract interface class AuthRepository {
   Future<void> revokeSession(String sessionId);
 
   Future<void> revokeOtherSessions();
+
+  /// Change le mot de passe du compte connecté. Le serveur révoque au passage
+  /// TOUTES les autres sessions : c'est le geste qui reprend la main sur un
+  /// appareil perdu, et l'écran doit le dire avant.
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  });
+
+  /// Supprime le compte, mot de passe à l'appui. Irréversible côté serveur :
+  /// l'appelant enchaîne sur la purge locale puis l'écran de connexion.
+  Future<void> deleteAccount(String password);
+
+  /// Redemande l'e-mail de vérification d'adresse. Sans effet si l'adresse
+  /// est déjà vérifiée — le serveur répond 204 dans les deux cas.
+  Future<void> resendEmailVerification();
 }

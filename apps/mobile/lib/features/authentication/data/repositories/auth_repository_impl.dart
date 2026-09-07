@@ -111,6 +111,32 @@ class AuthRepositoryImpl implements AuthRepository {
     return _guard(() => _api.revokeOtherSessions());
   }
 
+  @override
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) {
+    // Les mots de passe ne sont NI trimés NI normalisés : un espace final
+    // fait partie du secret, le retirer changerait ce que l'utilisateur a
+    // tapé et ferait échouer la vérification côté serveur.
+    return _guard(
+      () => _api.changePassword(
+        currentPassword: currentPassword,
+        newPassword: newPassword,
+      ),
+    );
+  }
+
+  @override
+  Future<void> deleteAccount(String password) {
+    return _guard(() => _api.deleteAccount(password));
+  }
+
+  @override
+  Future<void> resendEmailVerification() {
+    return _guard(() => _api.resendEmailVerification());
+  }
+
   Future<void> _saveTokens(AuthTokensDto tokens) => _storage.save(
     StoredTokens(
       accessToken: tokens.accessToken,

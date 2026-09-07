@@ -26,6 +26,25 @@ class FakeAuthRepository implements AuthRepository {
   AuthUser user;
   List<AuthSessionDevice> devices = const [];
 
+  /// Panne à faire subir aux appels d'appareils : hors ligne
+  /// (`NetworkException`) ou serveur en vrac (`ServerException`). Null =
+  /// tout va bien.
+  AppException? sessionsFailure;
+
+  /// Erreur rendue par les gestes de compte (mot de passe, suppression) —
+  /// mauvais mot de passe, hors ligne. Null = geste accepté.
+  AppException? accountFailure;
+
+  int revokeCalls = 0;
+  int revokeOtherCalls = 0;
+  int resendVerificationCalls = 0;
+
+  /// Couples (ancien, nouveau) reçus par `changePassword`.
+  final List<(String, String)> passwordChanges = <(String, String)>[];
+
+  /// Mots de passe reçus par `deleteAccount`.
+  final List<String> deletionPasswords = <String>[];
+
   @override
   Future<bool> hasStoredSession() async => storedSession;
 
@@ -68,15 +87,54 @@ class FakeAuthRepository implements AuthRepository {
   Future<AuthUser> me() async => user;
 
   @override
-  Future<List<AuthSessionDevice>> sessions() async => devices;
+  Future<List<AuthSessionDevice>> sessions() async {
+    final failure = sessionsFailure;
+    if (failure != null) throw failure;
+    return devices;
+  }
 
   @override
   Future<void> revokeSession(String sessionId) async {
+    revokeCalls++;
+    final failure = sessionsFailure;
+    if (failure != null) throw failure;
     devices = devices.where((device) => device.id != sessionId).toList();
   }
 
   @override
   Future<void> revokeOtherSessions() async {
+    revokeOtherCalls++;
+    final failure = sessionsFailure;
+    if (failure != null) throw failure;
     devices = devices.where((device) => device.current).toList();
+  }
+
+  @override
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    passwordChanges.add((currentPassword, newPassword));
+    final failure = accountFailure;
+    if (failure != null) throw failure;
+    // Le serveur révoque les autres sessions : le faux en fait autant, pour
+    // que les tests qui regardent la liste voient la même chose.
+    devices = devices.where((device) => device.current).toList();
+  }
+
+  @override
+  Future<void> deleteAccount(String password) async {
+    deletionPasswords.add(password);
+    final failure = accountFailure;
+    if (failure != null) throw failure;
+    storedSession = false;
+    devices = const [];
+  }
+
+  @override
+  Future<void> resendEmailVerification() async {
+    resendVerificationCalls++;
+    final failure = accountFailure;
+    if (failure != null) throw failure;
   }
 }

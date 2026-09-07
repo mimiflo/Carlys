@@ -74,6 +74,26 @@ class AuthApi {
 
   Future<void> revokeOtherSessions() => _dio.delete<void>('/auth/sessions');
 
+  /// POST /auth/change-password — 204, et le serveur révoque les autres
+  /// sessions dans la foulée.
+  Future<void> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) => _dio.post<void>(
+    '/auth/change-password',
+    data: {'currentPassword': currentPassword, 'newPassword': newPassword},
+  );
+
+  /// DELETE /users/me — 204. Le mot de passe voyage dans le CORPS : c'est ce
+  /// que le contrôleur `DeleteAccountDto` exige.
+  Future<void> deleteAccount(String password) =>
+      _dio.delete<void>('/users/me', data: {'password': password});
+
+  /// POST /auth/resend-verification — 204, même réponse si l'adresse est
+  /// déjà vérifiée.
+  Future<void> resendEmailVerification() =>
+      _dio.post<void>('/auth/resend-verification');
+
   Map<String, dynamic> _data(Response<Map<String, dynamic>> response) {
     final data = response.data?['data'];
     if (data is! Map<String, dynamic>) {
