@@ -14,14 +14,19 @@
 #
 # ── Catégories volontairement NON contrôlées, et pourquoi ────────────────
 #
-# 1. `data/repositories/` (jusqu'à 353 lignes) et
-#    `presentation/controllers/` (jusqu'à 249). CLAUDE.md dit « Service
-#    < 300 » et « Contrôleur < 200 », mais un dépôt mobile n'est pas un
-#    service NestJS et un contrôleur Riverpod n'est pas un contrôleur HTTP :
-#    les rattacher d'autorité rendrait ce script rouge dès sa première
-#    exécution. Un garde-fou qui naît rouge est une dette, pas un filet. La
-#    formulation de ces deux lignes de CLAUDE.md est arbitrée ailleurs ;
-#    les motifs viendront ensuite, sur une base honnête.
+# 1. `data/repositories/` (jusqu'à 353 lignes). CLAUDE.md ne lui donne PAS
+#    de plafond de fichier : la longueur d'un dépôt suit le nombre de
+#    méthodes du contrat qu'il implémente, pas sa complexité. Ce qu'il
+#    plafonne, c'est la MÉTHODE (40 lignes) — une mesure que ce script ne
+#    sait pas faire, et que la section « Tailles de fichiers » de CLAUDE.md
+#    confie à une commande `awk` qu'elle embarque.
+#
+#    `presentation/controllers/` EST contrôlé, à 250 comme un widget :
+#    l'arbitrage de septembre 2026 range le Notifier Riverpod dans la couche
+#    présentation, dont il partage le budget. La marge est mince — le plus
+#    gros, `coach_controllers.dart`, est à 249 — donc ce seuil mordra tôt.
+#    C'est voulu : il n'y a pas de dette à rembourser, seulement une porte
+#    à ne pas franchir.
 #
 # 2. `design_system/scenes/` (jusqu'à 486 lignes). Ce n'est pas de l'écran :
 #    c'est un moteur de rendu 3D logiciel — le plus gros fichier n'y déclare
@@ -33,12 +38,15 @@ cd "$(dirname "$0")/../apps/mobile"
 
 # Seuils de CLAUDE.md, exprimés en « strictement inférieur à ».
 readonly WIDGET_LIMIT=250
+readonly CONTROLLER_LIMIT=250
 readonly USECASE_LIMIT=200
 readonly SERVICE_LIMIT=300
 
 violations=0
 widget_count=0
 widget_max=0
+controller_count=0
+controller_max=0
 usecase_count=0
 usecase_max=0
 service_count=0
@@ -51,6 +59,10 @@ while IFS= read -r file; do
       kind='Widget Flutter'
       limit=$WIDGET_LIMIT
       ;;
+    */presentation/controllers/*)
+      kind='Contrôleur'
+      limit=$CONTROLLER_LIMIT
+      ;;
     */usecases/*)
       kind='Use case'
       limit=$USECASE_LIMIT
@@ -62,12 +74,20 @@ while IFS= read -r file; do
     *) continue ;;
   esac
 
-  lines=$(wc -l <"$file")
+  # `grep -c ''` et non `wc -l` : wc compte les SAUTS de ligne, donc un
+  # fichier sans saut final est rapporté une ligne trop court et pourrait
+  # franchir le seuil sans être vu. `dart format` impose ce saut quelques
+  # étapes plus loin, mais un filet ne doit pas dépendre d'un autre.
+  lines=$(grep -c '' "$file")
 
   case "$kind" in
     'Widget Flutter')
       widget_count=$((widget_count + 1))
       if [ "$lines" -gt "$widget_max" ]; then widget_max=$lines; fi
+      ;;
+    'Contrôleur')
+      controller_count=$((controller_count + 1))
+      if [ "$lines" -gt "$controller_max" ]; then controller_max=$lines; fi
       ;;
     'Use case')
       usecase_count=$((usecase_count + 1))
@@ -103,6 +123,8 @@ fi
 
 printf 'Widgets : %d fichiers (max %d/%d) · ' \
   "$widget_count" "$widget_max" "$WIDGET_LIMIT"
+printf 'contrôleurs : %d (max %d/%d) · ' \
+  "$controller_count" "$controller_max" "$CONTROLLER_LIMIT"
 printf 'use cases : %d (max %d/%d) · ' \
   "$usecase_count" "$usecase_max" "$USECASE_LIMIT"
 printf 'services : %d (max %d/%d).\n' \

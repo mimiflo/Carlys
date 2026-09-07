@@ -127,5 +127,17 @@ jobs:
       - name: Analyse statique
         run: flutter analyze
 
+      # L'analyseur Dart n'a AUCUNE règle de longueur de fichier — mesuré,
+      # `max_lines_per_file` rend « isn't a recognized lint rule ». Les
+      # seuils du tableau de CLAUDE.md ne peuvent donc tenir que par ce
+      # script. Il vivait jusqu'ici dans check_mobile.sh seul, c'est-à-dire
+      # nulle part dès qu'un développeur ne le lançait pas à la main : une
+      # règle écrite que rien ne relit finit toujours par être franchie.
+      # Placé APRÈS l'analyse, parce qu'un fichier qui ne compile pas rend
+      # sa longueur sans intérêt.
+      - name: Tailles de fichiers
+        working-directory: .
+        run: ./scripts/check_mobile_file_sizes.sh
+
       - name: Tests
         run: flutter test
