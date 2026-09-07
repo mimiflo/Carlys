@@ -37,4 +37,35 @@ export default [
     files: ['src/**/*.controller.ts'],
     rules: { 'max-lines': ['error', { max: 200, skipBlankLines: false, skipComments: false }] },
   },
+  {
+    // « Ne jamais accéder à Prisma depuis un contrôleur NestJS » (CLAUDE.md).
+    // Aucun des 30 contrôleurs ne le faisait ; rien ne l'empêchait pour autant.
+    // Pas d'`allowTypeImports` : même en type seul, le modèle de persistance n'a
+    // pas à traverser la couche HTTP — les formes exposées viennent de
+    // packages/api-contracts. Si un contrôleur croit avoir besoin d'un type
+    // Prisma, la sortie est de le réexporter depuis le module, pas de désactiver
+    // la règle.
+    files: ['src/**/*.controller.ts'],
+    rules: {
+      '@typescript-eslint/no-restricted-imports': [
+        'error',
+        {
+          paths: [
+            {
+              name: '@prisma/client',
+              message:
+                'Un contrôleur ne touche pas Prisma : passe par le service ou le repository du module, et expose les formes de packages/api-contracts.',
+            },
+          ],
+          patterns: [
+            {
+              group: ['**/prisma.service', './prisma.service', '**/prisma/prisma.service'],
+              message:
+                "Un contrôleur n'injecte pas PrismaService : l'accès aux données passe par le service ou le repository du module.",
+            },
+          ],
+        },
+      ],
+    },
+  },
 ];
