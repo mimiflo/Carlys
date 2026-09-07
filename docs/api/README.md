@@ -8,6 +8,12 @@ et les clients TypeScript.
 
 Architecture de l'API : [`docs/architecture/backend.md`](../architecture/backend.md).
 
+**Qui appelle quoi** : chaque route livrée déclare son consommateur dans
+[`route-clients.md`](./route-clients.md), et un test e2e
+(`apps/api/test/route-clients.e2e-spec.ts`) refuse une route sans ligne comme
+une ligne sans route. Une route orpheline reste possible — mais elle devient
+une décision écrite et datée, plus un oubli.
+
 ## URL de base et versioning
 
 Toutes les routes métier sont versionnées par URI sous le préfixe :
