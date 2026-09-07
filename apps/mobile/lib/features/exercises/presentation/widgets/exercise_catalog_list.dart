@@ -67,7 +67,13 @@ class _PaginatedRows extends ConsumerWidget {
       shaderCallback: (bounds) => const LinearGradient(
         begin: Alignment.topCenter,
         end: Alignment.bottomCenter,
-        colors: [Colors.white, Colors.white, Colors.transparent],
+        // Masque d'OPACITÉ (dstIn) : ces extrémités n'apportent aucune
+        // couleur, elles ouvrent puis ferment le fondu.
+        colors: [
+          AppColors.neutral0,
+          AppColors.neutral0,
+          AppColors.neutral0Clear,
+        ],
         stops: [0.0, 0.86, 0.99],
       ).createShader(bounds),
       blendMode: BlendMode.dstIn,

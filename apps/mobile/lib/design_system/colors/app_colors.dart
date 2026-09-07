@@ -193,6 +193,15 @@ abstract final class AppColors {
   /// colore rien, il ouvre et ferme l'opacité).
   static const Color neutral0Clear = Color(0x00FFFFFF); // blanc .00
 
+  /// Encre de l'ombre portée du bloc de signature : le MÊME fond que les
+  /// voiles ci-dessus, à deux densités. Elle décolle le mot et la devise du
+  /// cliché quand la page de marque est vue en plein soleil.
+  static const Color brandInkShadow = Color(0xD908050E); // fond .85
+  static const Color brandInkShadowTight = Color(0x9908050E); // fond .60
+
+  /// Lueur du sceau de marque, dérivée du dégradé de signature.
+  static const Color brandMarkGlow = Color(0x59C42EE0); // signature .35
+
   // ── Profil de progression (refonte, handoff d'août 2026) ───────────────
   //
   // L'écran est un ATELIER, pas un jeu. Sa matière est la fabrication :

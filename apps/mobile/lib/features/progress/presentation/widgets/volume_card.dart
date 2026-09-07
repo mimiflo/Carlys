@@ -4,6 +4,7 @@ import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/progress.dart';
 import '../utils/progress_stats.dart';
+import 'progress_card_grammar.dart';
 
 /// Hauteur du graphe en barres et géométrie des barres (maquette).
 const double _chartHeight = 104;
@@ -29,7 +30,7 @@ class VolumeCard extends StatelessWidget {
     final labels = volumeAxisLabels(overview.points, overview.period);
 
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: progressCardPadding,
       decoration: const BoxDecoration(
         color: AppColors.darkSurface,
         borderRadius: AppRadius.cardMainAll,
@@ -49,20 +50,20 @@ class VolumeCard extends StatelessWidget {
                       volumeLabel(overview.period),
                       color: AppColors.darkTextTertiary,
                     ),
-                    const SizedBox(height: 6),
+                    const SizedBox(height: progressCardLabelGap),
                     Text.rich(
                       TextSpan(
                         text: volume.value,
                         style: AppTypography.metricL.copyWith(
-                          fontSize: 30,
-                          letterSpacing: -1.2,
+                          fontSize: progressCardValueFontSize,
+                          letterSpacing: progressCardValueLetterSpacing,
                           color: AppColors.darkTextPrimary,
                         ),
                         children: [
                           TextSpan(
                             text: ' ${volume.unit}',
                             style: AppTypography.metricS.copyWith(
-                              fontSize: 15,
+                              fontSize: progressCardUnitFontSize,
                               color: AppColors.darkTextTertiary,
                             ),
                           ),

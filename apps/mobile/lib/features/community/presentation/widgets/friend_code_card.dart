@@ -44,7 +44,7 @@ class FriendCodeCard extends ConsumerWidget {
             child: Container(
               padding: const EdgeInsets.all(AppSpacing.xs),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: AppColors.neutral0,
                 borderRadius: AppRadius.mdAll,
               ),
               child: QrImageView(

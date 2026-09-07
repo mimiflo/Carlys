@@ -34,13 +34,6 @@ class BrandSignature extends StatelessWidget {
   static const double _mottoSize = 13;
   static const double _mottoTracking = 5;
 
-  /// Ombre portée commune à tout le bloc de texte : elle le décolle du cliché
-  /// quand la page est vue sur un écran clair ou en plein soleil.
-  static const List<Shadow> blockShadows = [
-    Shadow(color: Color(0xD908050E), offset: Offset(0, 2), blurRadius: 18),
-    Shadow(color: Color(0x9908050E), offset: Offset(0, 1), blurRadius: 3),
-  ];
-
   @override
   Widget build(BuildContext context) {
     return Semantics(
@@ -53,7 +46,7 @@ class BrandSignature extends StatelessWidget {
           mainAxisSize: MainAxisSize.min,
           children: [
             BrandGlowImage(
-              glows: const [(Color(0x59C42EE0), _markGlowBlur / 2)],
+              glows: const [(AppColors.brandMarkGlow, _markGlowBlur / 2)],
               image: Image(
                 image: AssetImage(markAsset),
                 height: _markSize,
@@ -70,7 +63,7 @@ class BrandSignature extends StatelessWidget {
                 letterSpacing: _wordTracking * scale,
                 fontWeight: FontWeight.w300,
                 color: AppColors.neutral0,
-                shadows: blockShadows,
+                shadows: AppShadows.brandText,
               ),
             ),
             SizedBox(height: AppSpacing.sm * scale),
@@ -81,7 +74,7 @@ class BrandSignature extends StatelessWidget {
                 letterSpacing: _mottoTracking * scale,
                 fontWeight: FontWeight.w600,
                 color: AppColors.darkTextSecondary,
-                shadows: blockShadows,
+                shadows: AppShadows.brandText,
               ),
             ),
           ],
