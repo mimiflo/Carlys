@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/media/muscle_illustration.dart';
 import '../../../../design_system/design_system.dart';
 
 /// Carte d'un groupe musculaire dans la bibliothèque.
@@ -89,13 +90,10 @@ class MuscleGroupCard extends StatelessWidget {
                             AppSpacing.xs,
                             0,
                           ),
-                          child: Image.asset(
-                            asset,
+                          child: MuscleIllustration(
+                            image: AssetImage(asset),
+                            slug: slug ?? allSlug,
                             fit: BoxFit.contain,
-                            // Un fichier manquant ne casse pas l'écran : la
-                            // carte garde sa forme et son nom.
-                            errorBuilder: (_, __, ___) =>
-                                const SizedBox.shrink(),
                           ),
                         )
                       else

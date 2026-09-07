@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import 'muscle_illustration.dart';
 import 'remote_image_cache.dart';
 
 /// Cache des photos distantes — remplacé par un faux dans les tests.
@@ -57,6 +58,22 @@ class RemoteImage extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final bytes = ref.watch(remoteImageProvider(url));
     final logicalWidth = decodeWidth;
+    // Les replis anatomiques de l'Academy utilisent la même palette que
+    // les cartes de groupes. Les photos d'exercices ne sont pas recolorées.
+    if (url.startsWith('${assetImageScheme}assets/muscles/')) {
+      return bytes.maybeWhen(
+        data: (data) => data == null
+            ? placeholder
+            : MuscleIllustration(
+                image: MemoryImage(data),
+                slug: url.split('/').last.replaceFirst('.webp', ''),
+                fit: fit,
+                semanticLabel: semanticLabel,
+                placeholder: placeholder,
+              ),
+        orElse: () => placeholder,
+      );
+    }
     return bytes.maybeWhen(
       data: (data) => data == null
           ? placeholder

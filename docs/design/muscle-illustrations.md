@@ -2,6 +2,29 @@
 
 Série Carlys du 7 septembre 2026, générée avec l’outil ImageGen intégré.
 
+## Rouge commun et transparence à l’affichage
+
+Les 13 images présentes dans le projet sont conservées à l’identique.
+`MuscleIllustration` harmonise uniquement leur rouge à l’affichage, sur les
+cartes et les replis anatomiques de l’Academy. La référence est le rouge des
+fessiers existants : médiane sRGB `#EA4E45`. Cette image reste inchangée.
+
+Chaque image possède une couleur source de référence, mesurée sur les pixels
+opaques (alpha > 240, R > 100, R > 1,3 × G et R > 1,3 × B). Le shader applique
+le rapport entre la couleur cible et cette médiane, canal par canal, uniquement
+aux régions rouges. Les ombres, les fibres et les variations de lumière sont
+conservées ; les frontières sont progressives, les gris et violets inchangés.
+Le canal alpha reste identique : aucun fond n’est ajouté. La disposition et
+le halo des cartes restent ceux du projet. Aucun nouveau visuel n’est intégré.
+
+Le programme est partagé ; chaque widget possède un sampler libéré avec
+l’image. Si le shader est indisponible, l’image originale reste visible.
+Les tests vérifient la référence commune, la conservation des ombres, des
+couleurs neutres, des bords semi-transparents et de l’alpha des 13 fichiers,
+ainsi que l’identité du rendu des fessiers.
+
+API utilisée : [fragment shaders Flutter](https://docs.flutter.dev/ui/design/graphics/fragment-shaders).
+
 Les 13 fichiers `apps/mobile/assets/muscles/*.webp` remplacent la série précédente et ajoutent les ischio-jambiers. Chaque image est indépendante : personnage gris mat, groupe ciblé rouge corail, éclairage de studio et fond transparent. Les libellés restent rendus par Flutter. Les PNG générés sont exportés en WebP 640 × 640, qualité 90, avec le canal alpha conservé.
 
 ## Prompt de référence (pectoraux)
@@ -69,4 +92,3 @@ Single full-body front-facing male mannequin from head to both feet entirely in 
 Lorsqu’un export produisait un damier opaque, effectuer une seconde passe de détourage :
 
 > Background extraction edit: ERASE the whole white and grey patterned background around and between the body parts. Deliver a true RGBA PNG cutout with an empty invisible transparent alpha background. Preserve this single grey anatomy mannequin with red muscle highlights exactly. Do not draw any new background pixels, white squares or grey squares. Transparent background.
-
