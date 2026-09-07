@@ -32,7 +32,7 @@ class ActiveWorkoutScreen extends ConsumerWidget {
               data: (active) => active == null
                   ? const AppEmptyState(
                       title: 'Aucune séance en cours',
-                      message: 'Démarrez une séance depuis l’accueil.',
+                      message: 'Démarre une séance depuis l’accueil.',
                       icon: AppIcons.timer,
                     )
                   : ActiveWorkoutBody(workout: active),
