@@ -15,6 +15,16 @@ import '../support/legacy_schemas.dart';
 /// cours au moment de la mise à jour de l'application ne doit rien perdre —
 /// c'est la garantie « aucune série saisie n'est jamais perdue » appliquée à
 /// la montée de version.
+///
+/// Ce fichier ne dit plus rien du NUMÉRO de version. Il a longtemps porté
+/// quatre `expect(db.schemaVersion, 5)`, qui formaient un fil-piège
+/// INVERSÉ : muets sur le seul défaut qui compte — une table modifiée sans
+/// incrément, que ces quatre lignes laissaient passer, mesuré — ils
+/// protestaient quand quelqu'un incrémentait CORRECTEMENT
+/// (« Expected: <5> Actual: <6> », quatre fois). L'assertion utile — la
+/// version déclarée dépasse tout palier historique rejouable — vit
+/// désormais une seule fois, dans `app_database_shape_test.dart`, à côté de
+/// la comparaison de forme qui, elle, attrape vraiment l'oubli.
 
 /// Une séance, une série et une opération de synchronisation déjà en
 /// attente, dans la forme de la version 1.
@@ -120,7 +130,6 @@ void main() {
         expect(water.milliliters, 750);
 
         expect(await indexNamesOf(db), containsAll(_expectedIndexes));
-        expect(db.schemaVersion, 5);
       },
     );
 
@@ -257,7 +266,6 @@ void main() {
         250,
       );
       expect(await indexNamesOf(db), containsAll(_expectedIndexes));
-      expect(db.schemaVersion, 5);
     });
   });
 
@@ -323,7 +331,6 @@ void main() {
         1000,
       );
       expect(await indexNamesOf(db), containsAll(_expectedIndexes));
-      expect(db.schemaVersion, 5);
     });
   });
 
@@ -368,7 +375,6 @@ void main() {
       expect(operation.status, 'pending');
       expect(operation.serverErrorCount, 0);
       expect(await db.select(db.localWorkoutSets).get(), hasLength(1));
-      expect(db.schemaVersion, 5);
     });
 
     test('les index servent réellement aux requêtes du moteur', () async {

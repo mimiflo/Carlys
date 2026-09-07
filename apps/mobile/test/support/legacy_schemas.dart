@@ -266,3 +266,27 @@ const LegacySchema legacySchemaV4 = LegacySchema(4, [
   _planItemsV3,
   _waterIntakesV4,
 ]);
+
+/// Tous les paliers historiques rejouables, du plus ancien au plus récent.
+///
+/// C'est la liste sur laquelle boucle le test de forme
+/// (`app_database_shape_test.dart`) : chaque nouvelle version du schéma se
+/// figera ici en devenant « historique », et le palier alors courant
+/// deviendra à son tour un point de départ à rejouer.
+const List<LegacySchema> legacySchemas = [
+  legacySchemaV1,
+  legacySchemaV2,
+  legacySchemaV3,
+  legacySchemaV4,
+];
+
+/// Le plus haut palier historique couvert ici (aujourd'hui 4).
+///
+/// `AppDatabase.schemaVersion` doit lui être STRICTEMENT supérieur : un
+/// palier figé ci-dessus est par définition une version révolue. C'est la
+/// seule assertion sensée sur le numéro de version — le comparer à une
+/// constante écrite en dur ne dit rien de l'oubli d'incrément, et proteste
+/// quand on incrémente correctement.
+int get highestLegacyVersion => legacySchemas
+    .map((schema) => schema.version)
+    .reduce((a, b) => a > b ? a : b);
