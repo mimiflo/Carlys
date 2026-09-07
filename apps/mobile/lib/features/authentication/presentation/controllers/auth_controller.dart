@@ -148,8 +148,24 @@ class AuthController extends Notifier<AuthState> {
   /// push : la suppression a déjà retiré sessions, refresh tokens et jetons
   /// d'appareil. Restent les jetons du trousseau, puis la purge de frontière
   /// de compte, qui bascule l'interface vers l'écran de connexion.
+  ///
+  /// NE JETTE JAMAIS : l'écran appelle `submit()` sans l'attendre, donc une
+  /// exception d'ici deviendrait une erreur asynchrone non capturée.
   Future<void> forgetDeletedAccount() async {
-    await ref.read(authRepositoryProvider).clearLocalSession();
+    try {
+      await ref.read(authRepositoryProvider).clearLocalSession();
+    } catch (error) {
+      // Attrape TOUT, comme la purge plus bas : le trousseau descend jusqu'au
+      // stockage sécurisé de la plateforme, qui refuse par une
+      // `PlatformException` comme par une `Error` (matériel verrouillé,
+      // keystore en vrac, canal absent). Laisser filer coûtait cher : la
+      // bascule n'avait jamais lieu et l'écran restait tel quel — compte
+      // détruit côté serveur, jetons toujours sur l'appareil, pas un mot à
+      // l'utilisateur. Ces jetons ne valent d'ailleurs plus rien : le compte
+      // n'existe plus, aucun renouvellement ne passera. On journalise, et on
+      // va jusqu'à l'écran de connexion.
+      _logger.error('Jetons du compte supprimé non effacés', error: error);
+    }
     await _leaveAccount();
   }
 

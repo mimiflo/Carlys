@@ -33,16 +33,8 @@ class _LegalConsentNoticeState extends ConsumerState<LegalConsentNotice> {
     super.dispose();
   }
 
-  Future<void> _open(Uri url) async {
-    final messenger = ScaffoldMessenger.of(context);
-    final opened = await ref.read(externalLinkOpenerProvider)(url);
-    if (opened) return;
-    messenger.showSnackBar(
-      const SnackBar(
-        content: Text('Aucun navigateur n’a pu ouvrir cette page.'),
-      ),
-    );
-  }
+  Future<void> _open(Uri url) =>
+      openExternalLink(url, ref: ref, messenger: ScaffoldMessenger.of(context));
 
   @override
   Widget build(BuildContext context) {

@@ -61,7 +61,12 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
             autofillHints: const [AutofillHints.password],
             validator: (value) =>
                 (value ?? '').isEmpty ? 'Le mot de passe est requis.' : null,
-            onFieldSubmitted: (_) => _submit(),
+            // PAS d'`onFieldSubmitted` ici, contrairement au changement de
+            // mot de passe : la touche « Termine » du clavier détruirait le
+            // compte sans un seul appui délibéré sur le bouton rouge. La
+            // révocation d'un simple appareil demande déjà une confirmation
+            // explicite ; la suppression du compte ne peut pas en demander
+            // moins.
             enabled: !isLoading,
           ),
         ),

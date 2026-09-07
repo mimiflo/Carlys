@@ -24,16 +24,11 @@ class ProfileLegalSettings extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final environment = ref.watch(appEnvironmentProvider);
 
-    Future<void> open(Uri url) async {
-      final messenger = ScaffoldMessenger.of(context);
-      final opened = await ref.read(externalLinkOpenerProvider)(url);
-      if (opened) return;
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Aucun navigateur n’a pu ouvrir cette page.'),
-        ),
-      );
-    }
+    Future<void> open(Uri url) => openExternalLink(
+      url,
+      ref: ref,
+      messenger: ScaffoldMessenger.of(context),
+    );
 
     return AppSettingsGroup(
       label: 'Légal',
