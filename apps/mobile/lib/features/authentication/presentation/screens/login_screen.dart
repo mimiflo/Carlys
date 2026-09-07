@@ -48,7 +48,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
     return AuthScaffold(
       title: 'Connexion',
-      subtitle: 'Content de vous revoir !',
+      subtitle: 'Content de te revoir !',
       children: [
         Form(
           key: _formKey,

@@ -22,7 +22,7 @@ class SessionsScreen extends ConsumerWidget {
               const AppLoadingIndicator(label: 'Chargement des appareils'),
           error: (error, _) => AppErrorState(
             title: 'Impossible de charger les appareils',
-            message: 'Vérifiez votre connexion puis réessayez.',
+            message: AppErrorState.retryConnectionMessage,
             onRetry: () => ref.invalidate(sessionsControllerProvider),
           ),
           data: (devices) => _SessionsList(devices: devices),

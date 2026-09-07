@@ -6,8 +6,7 @@ import '../../../../design_system/design_system.dart';
 /// Traduit une erreur du domaine en message utilisateur.
 String authErrorMessage(Object error) {
   return switch (error) {
-    NetworkException() =>
-      'Connexion impossible. Vérifiez votre accès Internet.',
+    NetworkException() => 'Connexion impossible. Vérifie ton accès Internet.',
     UnauthorizedException(:final message) => message,
     ValidationException(:final message) => message,
     ServerException() => 'Le serveur est momentanément indisponible.',

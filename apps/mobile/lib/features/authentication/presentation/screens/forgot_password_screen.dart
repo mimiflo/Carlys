@@ -46,10 +46,13 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
         title: 'E-mail envoyé',
         children: [
           const AppEmptyState(
-            title: 'Vérifiez votre boîte de réception',
+            title: 'Va voir ta boîte de réception',
             message:
-                'Si un compte existe avec cette adresse, un e-mail de '
-                'réinitialisation vient de lui être envoyé.',
+                'Si un compte existe avec cette adresse, un lien vient de '
+                'partir. Ouvre-le sur ce téléphone ou sur un ordinateur : il '
+                'mène à une page web où tu choisis ton nouveau mot de passe. '
+                'Reviens ensuite te connecter ici. Le lien vaut une heure, et '
+                'une seule fois.',
             icon: Icons.mark_email_read_outlined,
           ),
           const SizedBox(height: AppSpacing.lg),
@@ -66,8 +69,9 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
     return AuthScaffold(
       title: 'Mot de passe oublié',
       subtitle:
-          'Indiquez votre adresse e-mail : nous vous enverrons un lien de '
-          'réinitialisation.',
+          'Indique ton adresse e-mail : on t’envoie un lien vers une page web '
+          'où choisir un nouveau mot de passe, puis tu reviens te connecter '
+          'ici.',
       children: [
         Form(
           key: _formKey,

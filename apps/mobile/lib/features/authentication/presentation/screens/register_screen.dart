@@ -53,7 +53,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
 
     return AuthScaffold(
       title: 'Créer un compte',
-      subtitle: 'Un e-mail de confirmation vous sera envoyé.',
+      subtitle: 'Un e-mail de confirmation te sera envoyé.',
       children: [
         Form(
           key: _formKey,
