@@ -12,7 +12,7 @@ pnpm dev                # démarrage en mode watch (nécessite docker compose up
 pnpm build              # prisma generate + nest build
 pnpm test               # tests unitaires
 pnpm test:e2e           # tests end-to-end
-pnpm lint               # ESLint
+pnpm lint               # ESLint (dont max-lines 300/200 et l'interdit Prisma en contrôleur)
 pnpm typecheck          # tsc --noEmit
 pnpm prisma:generate    # génération du client Prisma
 pnpm prisma:migrate     # migrations en développement

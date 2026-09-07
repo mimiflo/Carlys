@@ -170,6 +170,13 @@ apps/api/src/modules/coach/
 outils, la validation et le quota sont donc quatre fichiers, chacun testable
 seul.
 
+Ce plafond n'est plus une consigne écrite : `max-lines` l'applique dans
+`apps/api/eslint.config.mjs` (300 sur `src/**/*.service.ts`, 200 sur
+`src/**/*.controller.ts`, blancs et commentaires compris, comme `wc -l`).
+`coach.service.ts` est le plus proche du bord de tous les services — 296
+lignes, quatre de marge. La prochaine fonctionnalité du coach se découpe
+donc *avant* d'être écrite, pas après que le lint l'a refusée.
+
 ### Le port du modèle
 
 ```ts
