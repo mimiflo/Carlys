@@ -3,14 +3,18 @@ name: api-ci
 # Pourquoi `push:` nomme la branche de travail et pas seulement `main` : le
 # dépôt n'avance PAS par pull request, il avance par poussées directes sur
 # claude/carlys-fitness-foundation-lqv2hl. La mesure est sans appel, et elle se
-# rejoue en local : `git log --merges` compte ZÉRO fusion sur les 186 commits
-# de la branche, donc aucune poussée de développement n'a jamais ouvert cette
-# porte — pas même les 18 commits qui touchent prisma/schema.prisma, ceux-là
+# rejoue en local : `git log --merges --oneline | wc -l` rend ZÉRO fusion pour
+# TOUTE la branche, donc aucune poussée de développement n'a jamais ouvert
+# cette porte — pas même les commits qui touchent le schéma Prisma, ceux-là
 # mêmes que l'étape « Détection des migrations manquantes » plus bas existe
-# pour surveiller. Le job le plus riche du dépôt — PostgreSQL, Redis, MinIO,
-# migrations, e2e — ne regardait jamais le code au moment où il s'écrit, mais
-# seulement après la fusion, quand le corriger coûte le plus cher. On s'aligne
-# sur demo-apk.yml et images-ci.yml, qui nomment déjà les deux branches.
+# pour surveiller. Leur nombre se recompte d'une commande plutôt que de se
+# graver ici, où il périmerait au commit suivant :
+# `git log --oneline -- apps/api/prisma/schema.prisma | wc -l` (7 le jour où
+# ces lignes sont écrites ; ce chiffre monte, le zéro de fusions ne bouge pas).
+# Le job le plus riche du dépôt — PostgreSQL, Redis, MinIO, migrations, e2e —
+# ne regardait jamais le code au moment où il s'écrit, mais seulement après la
+# fusion, quand le corriger coûte le plus cher. On s'aligne sur demo-apk.yml et
+# images-ci.yml, qui nomment déjà les deux branches.
 #
 # L'arbitrage est assumé : ce workflow va tourner à chaque poussée qui touche
 # son périmètre, donc bien plus souvent et plus cher qu'avant (trois conteneurs
