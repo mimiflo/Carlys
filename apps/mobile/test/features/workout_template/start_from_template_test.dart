@@ -226,5 +226,8 @@ void main() {
       templates.startFromTemplate(templateId),
       throwsStateError,
     );
+    // Rejoint le drainage lancé par l'enregistrement (fire-and-forget) :
+    // sans cela, la base se ferme sous lui à la fin du test.
+    await engine.syncNow();
   });
 }

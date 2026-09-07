@@ -99,8 +99,10 @@ void main() {
         expect(operations, hasLength(1));
         expect(operations.single.operationType, 'session.create');
         // Le compteur d'erreurs serveur (v5) démarre à zéro : l'opération
-        // héritée repart avec toutes ses chances.
+        // héritée repart avec toutes ses chances ; son propriétaire est
+        // inconnu, elle partira sous le compte connecté, comme avant.
         expect(operations.single.serverErrorCount, 0);
+        expect(operations.single.ownerUserId, isNull);
 
         // La table d'hydratation, arrivée en version 4, est là et utilisable :
         // une migration qui crée une table sans qu'on puisse y écrire ne vaut

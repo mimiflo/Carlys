@@ -1,11 +1,22 @@
 import 'package:carlys_mobile/core/database/app_database.dart';
 import 'package:carlys_mobile/core/synchronization/sync_engine.dart';
+import 'package:carlys_mobile/core/synchronization/sync_owner.dart';
 import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';
 import 'package:carlys_mobile/features/workout_session/domain/entities/workout.dart';
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/fake_sync_api.dart';
+
+/// Compte connecté fixe, pour vérifier le propriétaire posé sur la file.
+class _FixedOwner implements SyncOwnerResolver {
+  const _FixedOwner(this.id);
+
+  final String id;
+
+  @override
+  Future<String?> currentOwnerId() async => id;
+}
 
 /// Parcours critiques offline-first :
 /// séance hors ligne → récupération de connexion → synchronisation ordonnée,
@@ -93,6 +104,25 @@ void main() {
     // Rejouer la synchronisation n'envoie rien de plus (opérations purgées).
     await engine.syncNow();
     expect(api.log, hasLength(4));
+  });
+
+  test('chaque opération est écrite sous le compte connecté', () async {
+    api.networkDown = true;
+    repository = WorkoutRepositoryImpl(
+      database: db,
+      syncEngine: engine,
+      owner: _FixedOwner('user-a'),
+    );
+
+    final sessionId = await repository.startWorkout();
+    await repository.addSet(
+      AddSetInput(sessionId: sessionId, exerciseName: 'Squat', reps: 5),
+    );
+    await repository.completeWorkout(sessionId);
+
+    final operations = await db.select(db.syncOperations).get();
+    expect(operations, hasLength(3));
+    expect(operations.every((op) => op.ownerUserId == 'user-a'), isTrue);
   });
 
   test('backoff exponentiel : pas de nouvel essai avant le délai', () async {

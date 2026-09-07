@@ -10,6 +10,7 @@ library;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../app/restore/app_restore.dart';
+import '../core/database/local_account_purge.dart';
 import '../core/synchronization/sync_lifecycle.dart';
 import '../features/authentication/data/repositories/auth_repository_impl.dart';
 import '../features/carlys_profile/data/repositories/carlys_profile_repository_impl.dart';
@@ -72,5 +73,6 @@ List<Override> demoOverrides() {
     ),
     syncLifecycleProvider.overrideWithValue(DemoSyncLifecycle()),
     appRestoreProvider.overrideWithValue(DemoAppRestore()),
+    localAccountPurgeProvider.overrideWithValue(DemoLocalAccountPurge()),
   ];
 }

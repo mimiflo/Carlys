@@ -6,6 +6,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../../../../core/synchronization/sync_engine.dart';
+import '../../../../core/synchronization/sync_owner.dart';
 import '../../../workout_session/data/local/workout_session_writer.dart';
 import '../../../workout_template/data/datasources/session_plan_local_data_source.dart';
 import '../../domain/entities/coach.dart';
@@ -38,12 +39,17 @@ class DriftCoachSessionLauncher implements CoachSessionLauncher {
   DriftCoachSessionLauncher({
     required AppDatabase database,
     required SyncEngine syncEngine,
+    SyncOwnerResolver? owner,
     Uuid uuid = const Uuid(),
   }) : _db = database,
        _sync = syncEngine,
        _uuid = uuid,
        _plans = SessionPlanLocalDataSource(database),
-       _sessions = WorkoutSessionWriter(database: database, uuid: uuid);
+       _sessions = WorkoutSessionWriter(
+         database: database,
+         uuid: uuid,
+         owner: owner,
+       );
 
   final AppDatabase _db;
   final SyncEngine _sync;
@@ -121,5 +127,6 @@ final coachSessionLauncherProvider = Provider<CoachSessionLauncher>((ref) {
   return DriftCoachSessionLauncher(
     database: ref.watch(appDatabaseProvider),
     syncEngine: ref.watch(syncEngineProvider),
+    owner: ref.watch(syncOwnerResolverProvider),
   );
 });

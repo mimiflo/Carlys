@@ -41,7 +41,14 @@
 >   « Garder ma version »), voir « Gestion des conflits » ;
 > - la **récupération multi-appareils** est assurée par un rapatriement au
 >   démarrage (`AppRestore`), pendant en LECTURE de la file : il retire du
->   serveur les modèles, puis les séances avec leurs séries et leur plan.
+>   serveur les modèles, puis les séances avec leurs séries et leur plan ;
+> - **frontière de compte** : à la déconnexion et à l'expiration de session,
+>   `LocalAccountPurge` vide toute la base Drift (`AppDatabase.wipeAll()`,
+>   une transaction), efface les préférences propriétaires du compte, puis
+>   renouvelle `appDatabaseProvider`, `syncLifecycleProvider` et
+>   `appRestoreProvider` : le compte suivant repart de zéro et déclenche son
+>   rapatriement. Chaque opération de la file porte son propriétaire
+>   (`ownerUserId`) et ne part jamais sous un autre compte.
 
 ## Opérations de la file
 
@@ -159,8 +166,10 @@ Table Drift (Étape 4), une ligne par mutation à propager :
 | `createdAt`      | INTEGER (epoch ms)  | Date de création locale — définit l'ordre de rejeu. |
 | `attemptCount`   | INTEGER             | Nombre de tentatives d'envoi déjà effectuées (0 au départ). |
 | `lastAttemptAt`  | INTEGER, nullable   | Date de la dernière tentative (calcul du backoff). |
-| `status`         | TEXT                | `pending` \| `synced` \| `failed`. |
+| `serverErrorCount` | INTEGER           | Réponses 5xx d'affilée pour cette opération (plafond de tentatives) ; les coupures réseau n'y comptent pas. |
+| `status`         | TEXT                | `pending` \| `failed` \| `exhausted` \| `conflict` (une opération réussie est supprimée). |
 | `error`          | TEXT, nullable      | Dernier message d'erreur (diagnostic et affichage). |
+| `ownerUserId`    | TEXT, nullable      | Compte sous lequel l'opération a été écrite (claim `sub` du jeton d'accès, lisible hors ligne). Le moteur ne draine jamais une opération d'un autre compte que celui connecté : elle est supprimée et journalisée. Nul pour les opérations écrites avant la colonne, qui partent sous le compte connecté. |
 | `idempotencyKey` | TEXT (UUID v4)      | Égale à `entityId` ; transmise en en-tête `Idempotency-Key` à chaque envoi (journalisation côté serveur), stable pour toute la vie de l'opération. |
 
 ### Cycle de vie d'une opération

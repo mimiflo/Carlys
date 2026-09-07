@@ -6,6 +6,7 @@ import 'package:uuid/uuid.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../../../../core/synchronization/sync_engine.dart';
+import '../../../../core/synchronization/sync_owner.dart';
 import '../../domain/entities/workout.dart';
 import '../../domain/repositories/workout_repository.dart';
 import '../datasources/workout_session_remote_data_source.dart';
@@ -21,11 +22,16 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
     required AppDatabase database,
     required SyncEngine syncEngine,
     this._remote,
+    SyncOwnerResolver? owner,
     Uuid uuid = const Uuid(),
   }) : _db = database,
        _sync = syncEngine,
        _uuid = uuid,
-       _writer = WorkoutSessionWriter(database: database, uuid: uuid);
+       _writer = WorkoutSessionWriter(
+         database: database,
+         uuid: uuid,
+         owner: owner,
+       );
 
   final AppDatabase _db;
   final SyncEngine _sync;
@@ -377,5 +383,6 @@ final workoutRepositoryProvider = Provider<WorkoutRepository>((ref) {
     database: ref.watch(appDatabaseProvider),
     syncEngine: ref.watch(syncEngineProvider),
     remote: ref.watch(workoutSessionRemoteDataSourceProvider),
+    owner: ref.watch(syncOwnerResolverProvider),
   );
 });

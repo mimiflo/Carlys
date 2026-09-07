@@ -8,6 +8,7 @@ library;
 import 'dart:async';
 
 import '../app/restore/app_restore.dart';
+import '../core/database/local_account_purge.dart';
 import '../core/errors/app_exception.dart';
 import '../core/synchronization/sync_lifecycle.dart';
 import '../features/authentication/domain/entities/auth_session_device.dart';
@@ -489,4 +490,11 @@ class DemoSyncLifecycle implements SyncLifecycle {
 class DemoAppRestore implements AppRestore {
   @override
   void ensureRestored() {}
+}
+
+/// Rien à purger en démo : tout vit en mémoire, et la vraie purge ouvrirait
+/// la base Drift dont le mode démo se passe.
+class DemoLocalAccountPurge implements LocalAccountPurge {
+  @override
+  Future<void> run() async {}
 }

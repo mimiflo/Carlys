@@ -245,6 +245,14 @@ class SyncOperations extends Table {
   /// L'id de l'entité EST la clé d'idempotence côté serveur.
   TextColumn get idempotencyKey => text()();
 
+  /// Compte sous lequel l'opération a été ÉCRITE (claim `sub` du jeton).
+  ///
+  /// Le moteur refuse de drainer une opération d'un autre compte que celui
+  /// connecté : sans ce garde-fou, la file d'un utilisateur partirait avec
+  /// le jeton du suivant, et ses séances atterriraient dans le mauvais
+  /// compte. Nul pour les opérations écrites avant cette colonne.
+  TextColumn get ownerUserId => text().nullable()();
+
   @override
   Set<Column<Object>> get primaryKey => {id};
 }
@@ -275,9 +283,21 @@ class AppDatabase extends _$AppDatabase {
   ///  - **5** — index sur les colonnes que les requêtes réelles filtrent
   ///    (statut + date des séances, séries et plan par séance, file par
   ///    statut et ordre d'écriture) ; `serverErrorCount` sur la file, pour le
-  ///    plafond de tentatives.
+  ///    plafond de tentatives ; `ownerUserId` sur la file, pour ne jamais
+  ///    drainer les opérations d'un autre compte.
   @override
   int get schemaVersion => 5;
+
+  /// Vide TOUTES les tables, dans une transaction : rien ne survit d'un
+  /// compte à l'autre sur le même appareil. Appelée à la frontière de compte
+  /// (déconnexion, expiration de session) par `LocalAccountPurge`.
+  Future<void> wipeAll() {
+    return transaction(() async {
+      for (final table in allTables) {
+        await delete(table).go();
+      }
+    });
+  }
 
   /// Migration locale : les colonnes ajoutées sont toutes **nullables** et les
   /// index se créent à côté des données, donc la montée de version ne réécrit
@@ -333,6 +353,10 @@ class AppDatabase extends _$AppDatabase {
           syncOperations,
           syncOperations.serverErrorCount,
         );
+        // Propriétaire inconnu pour les opérations héritées : elles partent
+        // sous le compte connecté, comme avant — la purge à la déconnexion
+        // empêche désormais qu'un autre compte en hérite.
+        await migrator.addColumn(syncOperations, syncOperations.ownerUserId);
         // Un index ne touche pas aux lignes : SQLite le construit à côté
         // des données existantes, qui restent intactes.
         await migrator.createIndex(idxLocalWorkoutSessionsStatusStartedAt);

@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/dio_client.dart';
+import '../../../../core/database/local_account_purge.dart';
 import '../../../../core/logging/app_logger.dart';
 import '../../../notifications/presentation/controllers/push_registration.dart';
 import '../../data/repositories/auth_repository_impl.dart';
@@ -84,7 +87,7 @@ class AuthController extends Notifier<AuthState> {
     // encore authentifié. Un échec n'empêche jamais la déconnexion.
     await ref.read(pushRegistrationProvider).forgetDevice();
     await ref.read(authRepositoryProvider).logout();
-    state = const AuthUnauthenticated();
+    await _leaveAccount();
   }
 
   /// Recharge le profil (après une modification par exemple).
@@ -96,9 +99,23 @@ class AuthController extends Notifier<AuthState> {
   }
 
   void _onSessionExpired() {
-    if (state is! AuthUnauthenticated) {
-      state = const AuthUnauthenticated();
+    if (state is AuthUnauthenticated) {
+      return;
     }
+    unawaited(_leaveAccount());
+  }
+
+  /// Frontière de compte : l'appareil ne garde rien du compte qui part,
+  /// PUIS l'interface bascule — le compte suivant ne peut pas se connecter
+  /// sur des données qui ne sont pas les siennes. Une purge qui échoue est
+  /// journalisée mais ne retient jamais la déconnexion.
+  Future<void> _leaveAccount() async {
+    try {
+      await ref.read(localAccountPurgeProvider).run();
+    } on Exception catch (error) {
+      _logger.error('Purge locale du compte impossible', error: error);
+    }
+    state = const AuthUnauthenticated();
   }
 }
 

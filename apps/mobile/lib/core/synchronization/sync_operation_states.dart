@@ -108,6 +108,17 @@ class SyncOperationStates {
     });
   }
 
+  /// Opération écrite sous un autre compte que celui connecté : supprimée,
+  /// jamais envoyée. L'entité locale, si elle existe encore, n'est pas
+  /// touchée — la purge à la frontière de compte s'en charge.
+  Future<void> purgeForeign(SyncOperation operation) async {
+    _logger.warning(
+      'Opération ${operation.operationType} ${operation.id} écrite sous un '
+      'autre compte : supprimée sans envoi',
+    );
+    await _delete(operation);
+  }
+
   /// Redonne leur chance aux opérations mises de côté : compteurs à zéro,
   /// et l'entité redevient « en attente » à l'écran.
   Future<void> retryExhausted() async {

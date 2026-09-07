@@ -11,6 +11,7 @@ import 'sync_api.dart';
 import 'sync_conflict_resolver.dart';
 import 'sync_dispatcher.dart';
 import 'sync_operation_states.dart';
+import 'sync_owner.dart';
 
 /// Draine la file d'opérations vers l'API.
 ///
@@ -33,6 +34,7 @@ class SyncEngine {
     required AppDatabase database,
     required SyncApi api,
     SyncConflictResolver? conflictResolver,
+    this._owner,
     DateTime Function()? now,
   }) : _db = database,
        _dispatcher = SyncDispatcher(api),
@@ -58,6 +60,10 @@ class SyncEngine {
   final AppDatabase _db;
   final SyncDispatcher _dispatcher;
   final SyncConflictResolver? _conflicts;
+
+  /// Sans résolveur de propriétaire (tests, démonstration), la file part
+  /// sous le compte connecté sans vérification.
+  final SyncOwnerResolver? _owner;
   final SyncOperationStates _states;
 
   /// Horloge injectable (déterminisme des tests de backoff).
@@ -81,6 +87,12 @@ class SyncEngine {
   /// il NOTE qu'il faudra recommencer : l'opération qui vient d'être écrite
   /// n'est pas dans l'instantané que le drainage en cours a déjà lu, et sans
   /// cette note elle attendrait le prochain réveil périodique (3 minutes).
+  ///
+  /// Un drainage est un travail de fond lancé sans attente : si la base est
+  /// fermée sous lui (purge à la frontière de compte pendant qu'un envoi est
+  /// en vol), il s'arrête et le journalise au lieu de remonter une erreur
+  /// non interceptée. Rien n'est perdu : la base fermée est celle du compte
+  /// qui part.
   Future<void> syncNow() {
     final running = _inFlight;
     if (running != null) {
@@ -88,10 +100,14 @@ class SyncEngine {
       return running;
     }
     final drain = () async {
-      do {
-        _pokedDuringDrain = false;
-        await _drain();
-      } while (_pokedDuringDrain);
+      try {
+        do {
+          _pokedDuringDrain = false;
+          await _drain();
+        } while (_pokedDuringDrain);
+      } on StateError catch (error) {
+        _logger.warning('Drainage interrompu : base fermée', error: error);
+      }
     }();
     return _inFlight = drain.whenComplete(() => _inFlight = null);
   }
@@ -110,12 +126,31 @@ class SyncEngine {
               )
               ..orderBy([(op) => OrderingTerm.asc(op.createdAt)]))
             .get();
+    if (operations.isEmpty) {
+      return;
+    }
+
+    final ownerResolver = _owner;
+    final owner = await ownerResolver?.currentOwnerId();
+    if (ownerResolver != null && owner == null) {
+      // Personne n'est connecté : rien ne peut partir, et surtout rien ne
+      // doit être attribué au prochain compte. La file attend.
+      return;
+    }
 
     // Voies retenues par une opération mise de côté ou en conflit : ce qui
     // les suit sur la même séance attend, tout le reste part.
     final heldLanes = <String>{};
 
     for (final operation in operations) {
+      final writtenBy = operation.ownerUserId;
+      if (owner != null && writtenBy != null && writtenBy != owner) {
+        // Écrite sous un autre compte : elle ne partira JAMAIS avec ce
+        // jeton. La purge à la déconnexion aurait dû l'emporter ; ici, elle
+        // est supprimée et journalisée.
+        await _states.purgeForeign(operation);
+        continue;
+      }
       final lane = syncLaneOf(operation);
       if (operation.status != 'pending') {
         heldLanes.add(lane);
@@ -235,5 +270,6 @@ final syncEngineProvider = Provider<SyncEngine>((ref) {
     database: ref.watch(appDatabaseProvider),
     api: ref.watch(syncApiProvider),
     conflictResolver: ref.watch(workoutCloseConflictResolverProvider),
+    owner: ref.watch(syncOwnerResolverProvider),
   );
 });

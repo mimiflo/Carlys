@@ -1,6 +1,7 @@
 import 'package:carlys_mobile/app/app.dart';
 import 'package:carlys_mobile/app/environment/app_environment.dart';
 import 'package:carlys_mobile/app/restore/app_restore.dart';
+import 'package:carlys_mobile/core/database/local_account_purge.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
 import 'package:carlys_mobile/features/onboarding/presentation/screens/splash_screen.dart';
@@ -13,6 +14,7 @@ import '../support/fake_auth_repository.dart';
 import '../support/fake_workout_repository.dart';
 import '../support/first_run_prefs.dart';
 import '../support/navigation.dart';
+import '../support/noop_local_account_purge.dart';
 
 void main() {
   setUp(() {
@@ -46,6 +48,9 @@ void main() {
         workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
         syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
         appRestoreProvider.overrideWithValue(NoopAppRestore()),
+        // La déconnexion purge l'état local du compte : inerte ici, sinon
+        // elle ouvrirait la vraie base Drift pour la vider.
+        localAccountPurgeProvider.overrideWithValue(NoopLocalAccountPurge()),
       ],
       child: const CarlysApp(),
     );
