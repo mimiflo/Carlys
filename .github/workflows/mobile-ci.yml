@@ -2,11 +2,12 @@ name: mobile-ci
 
 # Pourquoi `push:` nomme la branche de travail et pas seulement `main` : le
 # dépôt n'avance PAS par pull request, il avance par poussées directes sur
-# claude/carlys-fitness-foundation-lqv2hl. `git log --merges` y compte ZÉRO
-# fusion sur 186 commits : une porte limitée à `pull_request` + `main` ne s'est
-# donc JAMAIS ouverte pendant le développement. On s'aligne sur demo-apk.yml,
-# qui nomme déjà les deux branches — et qui construit l'APK depuis ce même
-# `apps/mobile` sans que rien n'ait vérifié `flutter analyze` avant lui.
+# claude/carlys-fitness-foundation-lqv2hl. `git log --merges --oneline | wc -l`
+# y rend ZÉRO fusion pour TOUTE la branche : une porte limitée à
+# `pull_request` + `main` ne s'est donc JAMAIS ouverte pendant le
+# développement. On s'aligne sur demo-apk.yml, qui nomme déjà les deux
+# branches — et qui construit l'APK depuis ce même `apps/mobile` sans que
+# rien n'ait vérifié `flutter analyze` avant lui.
 #
 # L'arbitrage est assumé : ce workflow va tourner à chaque poussée qui touche
 # son périmètre, et il est le plus lent du dépôt (installation du SDK Flutter

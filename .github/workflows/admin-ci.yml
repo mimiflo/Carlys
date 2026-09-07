@@ -2,11 +2,11 @@ name: admin-ci
 
 # Pourquoi `push:` nomme la branche de travail et pas seulement `main` : le
 # dépôt n'avance PAS par pull request, il avance par poussées directes sur
-# claude/carlys-fitness-foundation-lqv2hl. `git log --merges` y compte ZÉRO
-# fusion sur 186 commits : une porte limitée à `pull_request` + `main` ne s'est
-# donc JAMAIS ouverte pendant le développement, elle ne s'ouvrait qu'après
-# coup. On s'aligne sur demo-apk.yml et images-ci.yml, qui nomment déjà les
-# deux branches.
+# claude/carlys-fitness-foundation-lqv2hl. `git log --merges --oneline | wc -l`
+# y rend ZÉRO fusion pour TOUTE la branche : une porte limitée à
+# `pull_request` + `main` ne s'est donc JAMAIS ouverte pendant le
+# développement, elle ne s'ouvrait qu'après coup. On s'aligne sur demo-apk.yml
+# et images-ci.yml, qui nomment déjà les deux branches.
 #
 # L'arbitrage est assumé : ce workflow va tourner à chaque poussée qui touche
 # son périmètre, donc plus souvent et plus cher qu'avant. C'est le bon échange
@@ -153,9 +153,9 @@ jobs:
           NEXT_PUBLIC_API_BASE_URL: http://localhost:3000
           LEGAL_PLACEHOLDERS: forbid
         run: |
-          # Le build est ici relancé À CHAUD (~5 s mesurées, .next déjà peuplé
-          # par l'étape précédente) : on réutilise la VRAIE garde plutôt que de
-          # redire sa règle en shell, qui la dupliquerait et dériverait.
+          # Le build est ici relancé À CHAUD (quelques secondes, .next déjà
+          # peuplé par l'étape précédente) : on réutilise la VRAIE garde plutôt
+          # que de redire sa règle en shell, qui la dupliquerait et dériverait.
           pnpm --filter @carlys/admin build > legal.log 2>&1 && status=0 || status=$?
           if [ "$status" -eq 0 ]; then
             echo "Aucun marqueur : docs/legal est complet."
