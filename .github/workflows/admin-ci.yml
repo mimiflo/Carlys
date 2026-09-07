@@ -94,6 +94,12 @@ jobs:
 
       # Textes légaux — VISIBLE ici, BLOQUANT en production.
       #
+      # Choix RATIFIÉ, écrit noir sur blanc pour qu'on cesse de le rejuger :
+      # CETTE ÉTAPE EST UN INVENTAIRE, PAS UNE PORTE. La porte est l'image de
+      # production (apps/admin/Dockerfile, vérifiée par images-ci.yml). Ici, on
+      # ne cherche pas à faire échouer le job : on cherche à ce que la dette
+      # légale soit lisible dans le résumé du job, là où on relit la CI.
+      #
       # docs/legal/*.md portent encore 16 marqueurs « [À COMPLÉTER : … ] »
       # distincts (10 dans privacy.md, 6 dans terms.md) que /privacy et /terms
       # servent en clair. L'étape « Build » ci-dessus ne les voit pas : sans
@@ -126,9 +132,22 @@ jobs:
       # `::warning::` final par un `exit 1` pour la rendre bloquante, et de
       # déplacer `LEGAL_PLACEHOLDERS: forbid` sur l'étape « Build » elle-même.
       #
-      # Cette étape n'est PAS un tampon complaisant pour autant : si le build
-      # échoue pour une raison étrangère à la garde légale, elle rend 1 (cas
-      # éprouvé). Elle ne tolère que la dette qu'elle nomme.
+      # Ce que cette étape ne prétend PAS être, contre-mesure à l'appui : son
+      # « exit 1 » n'est pas une porte de secours contre un build cassé pour
+      # une autre raison. Un tel build fait DÉJÀ tomber l'étape « Build »
+      # ci-dessus et le job s'arrête là (mesuré : une erreur de type posée dans
+      # (public)/privacy/page.tsx fait rendre 1 à `pnpm --filter @carlys/admin
+      # build` même sans LEGAL_PLACEHOLDERS — cette branche-là est donc
+      # inatteignable en exécution réelle).
+      #
+      # Sa branche rouge n'est pas morte pour autant, elle sert autre chose :
+      # elle mord quand le build échoue SOUS `forbid` sans que le journal porte
+      # la phrase de la garde, c'est-à-dire quand le libellé de
+      # src/lib/legal-documents.ts dérive du `grep` ci-dessous (mesuré : en
+      # remplaçant « marqueur(s) à compléter » par une autre formule, le build
+      # rend 1, le `grep -q` ne mord plus, et l'étape rend 1). C'est un
+      # détecteur de découplage entre la garde et ce workflow — pas une porte
+      # produit. Elle ne tolère que la dette qu'elle nomme.
       - name: Textes légaux — inventaire des marqueurs (non bloquant)
         env:
           NEXT_PUBLIC_API_BASE_URL: http://localhost:3000
