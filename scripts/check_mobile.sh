@@ -20,13 +20,27 @@
 # Le seul écart restant avec la CI est le SDK lui-même : l'avertissement de
 # version ci-dessous le couvre.
 #
+# Un bloc, et un seul, ne vient PAS de la CI : les tailles de fichiers, en
+# tête. Ce n'est pas une divergence au sens ci-dessus — les cinq commandes de
+# la CI restent identiques, contiguës et dans le même ordre juste après —,
+# c'est un AJOUT local qui va dans le sens sûr : un vert ici reste un vert
+# là-bas. Il est en tête parce qu'il coûte quelques millisecondes et qu'il
+# n'a aucune raison de faire attendre le développeur derrière deux minutes de
+# tests. Et il est écrit en shell parce que l'analyseur Dart n'a pas de règle
+# de longueur de fichier : `max_lines_per_file` rend « isn't a recognized
+# lint rule ».
+#
 # Note : `dart format` et la règle de lint `require_trailing_commas` peuvent se
 # contredire sur un appel qui tient de justesse sur deux lignes. La forme qui
 # satisfait les deux est l'appel ÉCLATÉ, un argument par ligne, virgule finale
 # comprise — le formateur la conserve alors telle quelle.
 set -euo pipefail
 
-cd "$(dirname "$0")/../apps/mobile"
+# Retenu AVANT le `cd` : `$0` est souvent relatif au répertoire d'appel, et
+# ne désignerait plus rien une fois qu'on a changé de dossier.
+SCRIPTS_DIR="$(cd "$(dirname "$0")" && pwd)"
+
+cd "$SCRIPTS_DIR/../apps/mobile"
 
 echo "── Version Flutter ─────────────────────────────────────────────────"
 # La CI installe la version épinglée dans apps/mobile/.flutter-version
@@ -41,6 +55,9 @@ else
     "par apps/mobile/.flutter-version : un résultat vert ici ne prouve" \
     "rien sur la CI (mobile-ci.yml)."
 fi
+
+echo "── Tailles de fichiers (règle du dépôt, hors CI) ───────────────────"
+"$SCRIPTS_DIR/check_mobile_file_sizes.sh"
 
 echo "── Dépendances ─────────────────────────────────────────────────────"
 # Le message de pub est exact mais muet sur la suite : ici, la suite est de
