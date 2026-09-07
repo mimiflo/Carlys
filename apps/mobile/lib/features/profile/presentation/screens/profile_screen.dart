@@ -11,6 +11,7 @@ import '../../../progress/presentation/controllers/progress_controllers.dart';
 import '../../../progression/presentation/controllers/progression_controllers.dart';
 import '../../../subscription/presentation/controllers/subscription_controllers.dart';
 import '../controllers/profile_controllers.dart';
+import '../widgets/profile_email_verification.dart';
 import '../widgets/profile_header.dart';
 import '../widgets/profile_plan_card.dart';
 import '../widgets/profile_settings_sections.dart';
@@ -61,6 +62,13 @@ class ProfileScreen extends ConsumerWidget {
             const SizedBox(height: AppSpacing.xs),
             ProfileHeader(user: user),
             const SizedBox(height: AppSpacing.md),
+            // Juste sous l'identité, là où l'adresse se lit : le rappel ne
+            // s'affiche que si elle n'a jamais été vérifiée, et disparaît
+            // sans laisser d'espace sinon.
+            if (user != null && !user.emailVerified) ...[
+              ProfileEmailVerification(user: user),
+              const SizedBox(height: AppSpacing.md),
+            ],
             if (plan != null) ...[
               ProfilePlanCard(
                 plan: plan,

@@ -223,10 +223,11 @@ Tu peux, à tout moment :
   lisible, écris-nous.
 - **Les rectifier** : ton profil, tes mesures et tes séances se modifient
   directement dans l'application.
-- **Supprimer ton compte** : écris-nous à l'adresse de contact. La
-  désactivation est immédiate et irréversible. Dès que l'application
-  proposera la suppression directement dans tes réglages, elle produira
-  exactement le même effet.
+- **Supprimer ton compte** : depuis l'application, dans Profil → Compte →
+  « Supprimer mon compte ». Ton mot de passe t'est demandé pour confirmer, et
+  l'écran récapitule ce qui est effacé et ce qui reste. La désactivation est
+  immédiate et irréversible. Tu peux aussi nous écrire à l'adresse de contact,
+  l'effet est exactement le même.
 - **Retirer ton consentement** pour les données de santé : efface ton profil
   physique et tes mesures, ou cesse d'utiliser la nutrition et le coach.
 - **T'opposer** à un traitement fondé sur notre intérêt légitime, ou en

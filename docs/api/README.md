@@ -229,7 +229,7 @@ celle de l'API. Voir [`docs/architecture/admin.md`](../architecture/admin.md).
 | `POST /api/v1/auth/refresh` (public) | 200, 401 | Rotation ; réutilisation détectée → session révoquée |
 | `POST /api/v1/auth/logout` | 204, 401 | Révoque la session courante |
 | `POST /api/v1/auth/verify-email` (public) | 204, 401 | Jeton à usage unique ; **consommateur : page web `/verify-email`** (aucun écran mobile) |
-| `POST /api/v1/auth/resend-verification` | 204 | Sans effet si déjà vérifié ; **aucun appelant** au 3 septembre 2026 (ni mobile ni web) |
+| `POST /api/v1/auth/resend-verification` | 204 | Sans effet si déjà vérifié ; **consommateur : mobile** (rappel « Adresse e-mail non vérifiée » du profil) |
 | `POST /api/v1/auth/forgot-password` (public) | 202 | Réponse identique que le compte existe ou non |
 | `POST /api/v1/auth/reset-password` (public) | 204, 401 | Révoque **toutes** les sessions ; **consommateur : page web `/reset-password`** (aucun écran mobile) |
 | `POST /api/v1/auth/change-password` | 204, 401 | Révoque les autres sessions ; **consommateur : mobile** (réglages → Compte → « Changer mon mot de passe ») |
