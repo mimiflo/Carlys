@@ -101,10 +101,18 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  /// La page est plus longue que l'écran et la ListView est PARESSEUSE.
-  Future<void> scrollTo(WidgetTester tester, Finder target) async {
+  /// La page est plus longue que l'écran et la ListView est PARESSEUSE : on
+  /// défile jusqu'à la SECTION, jamais jusqu'au texte attendu.
+  ///
+  /// `TodaySection` existe dans les trois états (on attend, on n'a pas pu, on
+  /// sait) ; un texte, lui, n'existe que dans le sien. Viser le texte faisait
+  /// donc mourir `scrollUntilVisible` sur « Bad state: No element » — mesuré
+  /// en réinjectant le bogue — bien AVANT l'assertion qui aurait nommé le
+  /// défaut. Le test rougissait pour la bonne raison, avec un message qui
+  /// n'apprenait rien.
+  Future<void> scrollToToday(WidgetTester tester) async {
     await tester.scrollUntilVisible(
-      target,
+      find.byType(TodaySection),
       240,
       scrollable: find.byType(Scrollable).first,
     );
@@ -116,10 +124,11 @@ void main() {
   ) async {
     await pumpHome(tester, refusing(const ServerException('502')));
 
-    await scrollTo(tester, find.text('Objectifs indisponibles'));
+    await scrollToToday(tester);
 
     // Le mensonge exact qu'on interdit : proposer de calculer des objectifs
-    // qui existent déjà, parce que le serveur n'a pas répondu.
+    // qui existent déjà, parce que le serveur n'a pas répondu. L'interdit se
+    // dit EN PREMIER : c'est lui qui doit nommer l'échec.
     expect(find.byType(TodayPrimer), findsNothing);
     expect(find.text('Carlys ne sait pas encore quoi viser'), findsNothing);
     expect(find.text('Calculer mes objectifs'), findsNothing);
@@ -137,7 +146,7 @@ void main() {
   ) async {
     await pumpHome(tester, refusing(const NetworkException('socket')));
 
-    await scrollTo(tester, find.text('Hors connexion'));
+    await scrollToToday(tester);
 
     expect(find.byType(TodayPrimer), findsNothing);
     expect(find.text('Hors connexion'), findsOneWidget);
@@ -158,7 +167,7 @@ void main() {
     // c'est le seul cas où l'invitation est vraie.
     await pumpHome(tester, FakeNutritionRepository());
 
-    await scrollTo(tester, find.byType(TodayPrimer));
+    await scrollToToday(tester);
 
     expect(find.byType(TodayPrimer), findsOneWidget);
     expect(find.text('Calculer mes objectifs'), findsOneWidget);
