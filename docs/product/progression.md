@@ -116,6 +116,7 @@ les essais n'entrent dans le calcul : se tromper fait apprendre, et compter les
 | `presentation/widgets/majesty_plate.dart` | La plaque : surface, filet, grain, équerres |
 | `presentation/widgets/award_seal.dart` | Le sceau posé dans la page, à deux tailles |
 | `presentation/widgets/seal_painter.dart` | Un peintre paramétré pour les cinq silhouettes |
+| `presentation/widgets/seal_size.dart` | Les deux tailles et le seuil des ornements, tenus hors des deux |
 | `presentation/widgets/award_cards.dart` | Les récompenses gagnées, en deux densités |
 | `presentation/widgets/upcoming_award_row.dart` | Celle qui reste à gagner : une invitation |
 | `presentation/widgets/progression_body.dart` | L'écran d'un compte qui a déjà travaillé |

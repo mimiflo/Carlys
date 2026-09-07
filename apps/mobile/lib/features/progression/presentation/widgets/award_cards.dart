@@ -5,6 +5,7 @@ import '../../../../design_system/design_system.dart';
 import '../../domain/reward.dart';
 import 'award_seal.dart';
 import 'seal_engraving.dart';
+import 'seal_size.dart';
 
 /// LES RÉCOMPENSES GAGNÉES, EN DEUX DENSITÉS.
 ///
@@ -106,7 +107,7 @@ class AwardRow extends StatelessWidget {
               engrave: entry.isNew,
               child: AwardSeal(
                 kind: entry.reward.kind,
-                size: AwardSeal.small,
+                size: SealSize.small,
                 figure: entry.reward.figure,
               ),
             ),

@@ -2,12 +2,15 @@ import 'package:flutter/material.dart';
 
 import '../../../../design_system/design_system.dart';
 import '../../domain/reward.dart';
-import 'award_seal.dart';
+import 'seal_size.dart';
 
-/// Le peintre des cinq silhouettes de [AwardSeal].
+/// Le peintre des cinq silhouettes du sceau des récompenses.
 ///
 /// Un seul peintre paramétré, et non cinq : les cinq formes partagent leur
 /// construction (remplissage, insertion, filet), seule leur ligne diffère.
+///
+/// Il ne connaît PAS le widget qui le pose : sa seule attache est [SealSize],
+/// dont il tient le seuil des ornements.
 class SealPainter extends CustomPainter {
   const SealPainter({
     required this.kind,
@@ -19,7 +22,7 @@ class SealPainter extends CustomPainter {
   final double size;
   final bool earned;
 
-  bool get _isLarge => size >= AwardSeal.large;
+  bool get _isLarge => SealSize.isLarge(size);
 
   /// Épaisseur du filet : deux pixels à 56, un et demi à 34.
   double get _rule => _isLarge ? 2 : 1.5;

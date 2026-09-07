@@ -8,6 +8,7 @@ import 'package:carlys_mobile/features/progression/presentation/widgets/majesty.
 import 'package:carlys_mobile/features/progression/presentation/widgets/majesty_plate.dart';
 import 'package:carlys_mobile/features/progression/presentation/widgets/seal_engraving.dart';
 import 'package:carlys_mobile/features/progression/presentation/widgets/seal_painter.dart';
+import 'package:carlys_mobile/features/progression/presentation/widgets/seal_size.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -91,10 +92,10 @@ void main() {
     test('cinq SILHOUETTES distinctes, pas cinq teintes', () {
       // La version précédente distinguait les récompenses par leur couleur de
       // remplissage : cinq ronds identiques qu'on ne pouvait pas nommer.
-      const box = Size.square(AwardSeal.large);
+      const box = Size.square(SealSize.large);
       final shapes = <RewardKind, Rect>{};
       for (final kind in RewardKind.values) {
-        final painter = SealPainter(kind: kind, size: AwardSeal.large);
+        final painter = SealPainter(kind: kind, size: SealSize.large);
         shapes[kind] = painter.outline(box).getBounds();
       }
 

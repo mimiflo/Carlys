@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/reward.dart';
 import 'seal_painter.dart';
+import 'seal_size.dart';
 
 /// LE SCEAU : une SILHOUETTE, pas une pastille colorée.
 ///
@@ -16,22 +17,16 @@ import 'seal_painter.dart';
 /// remplie de la surface. Le filet naît de la différence, comme sur un sceau
 /// frappé — jamais d'un trait dessiné par-dessus.
 ///
-/// Deux tailles seulement. À 34, les ornements internes disparaissent : la
-/// silhouette suffit, et un détail de deux pixels n'est plus qu'une salissure.
+/// Deux tailles seulement, décrites par [SealSize] : le peintre s'y règle
+/// comme le widget, aucun des deux ne détient les chiffres de l'autre.
 class AwardSeal extends StatelessWidget {
   const AwardSeal({
     required this.kind,
-    this.size = large,
+    this.size = SealSize.large,
     this.figure,
     this.earned = true,
     super.key,
   });
-
-  /// Vitrine et bloc compact.
-  static const double large = 56;
-
-  /// Ligne de liste.
-  static const double small = 34;
 
   final RewardKind kind;
   final double size;
@@ -43,7 +38,7 @@ class AwardSeal extends StatelessWidget {
   /// Pas encore gagné : la silhouette est là, elle n'est pas frappée.
   final bool earned;
 
-  bool get _isLarge => size >= large;
+  bool get _isLarge => SealSize.isLarge(size);
 
   @override
   Widget build(BuildContext context) {
