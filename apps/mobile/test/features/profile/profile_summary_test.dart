@@ -34,6 +34,20 @@ void main() {
     missing: const [],
   );
 
+  // Ce que les quatre sources servent quand elles répondent. Les valeurs sont
+  // écrites UNE fois : le test du réessai les relit, et les chiffres attendus
+  // à l'écran restent les mêmes que partout ailleurs dans ce fichier.
+  final rapport = reportWith(180);
+  final apercuAnnee = overviewOf(ProgressPeriod.year, sessionsCount: 42);
+  final mesures = [
+    BodyMetricEntry(
+      id: 'm-1',
+      kind: BodyMetricKind.weightKg,
+      value: 78.4,
+      measuredAt: DateTime.utc(2026, 9, 1),
+    ),
+  ];
+
   /// Le bloc SEUL, avec ses quatre sources pilotées une à une. Aucun autre
   /// provider n'entre dans sa décision : rien d'autre n'est donc doublé, et
   /// aucune base Drift ne s'ouvre.
@@ -61,22 +75,13 @@ void main() {
   }) => [
     planSource ?? planStatusProvider.overrideWith((ref) async => plan),
     reportSource ??
-        metabolismReportProvider.overrideWith((ref) async => reportWith(180)),
+        metabolismReportProvider.overrideWith((ref) async => rapport),
     sessionsSource ??
         profileSessionsOverviewProvider.overrideWith(
-          (ref) async => overviewOf(ProgressPeriod.year, sessionsCount: 42),
+          (ref) async => apercuAnnee,
         ),
     weightsSource ??
-        bodyWeightMetricsProvider.overrideWith(
-          (ref) async => [
-            BodyMetricEntry(
-              id: 'm-1',
-              kind: BodyMetricKind.weightKg,
-              value: 78.4,
-              measuredAt: DateTime.utc(2026, 9, 1),
-            ),
-          ],
-        ),
+        bodyWeightMetricsProvider.overrideWith((ref) async => mesures),
   ];
 
   testWidgets('hors ligne : l’écran le DIT, il ne se contente pas de vider', (
@@ -172,29 +177,67 @@ void main() {
     tester,
   ) async {
     // Un bouton de réessai qui ne relit rien vaut moins qu'aucun bouton :
-    // l'utilisateur croit avoir agi. On compte donc les lectures.
-    var lectures = 0;
+    // l'utilisateur croit avoir agi. On compte donc les lectures — LES
+    // QUATRE, une par source. N'en compter qu'une ne prouvait rien des trois
+    // autres : mesuré, trois invalidations retirées du code de production
+    // laissaient ce test vert, alors que trois des quatre blocs seraient
+    // restés en échec sous les yeux de l'utilisateur.
+    final lectures = <String, int>{
+      'abonnement': 0,
+      'métabolisme': 0,
+      'séances': 0,
+      'poids': 0,
+    };
+
+    /// Une source qui ÉCHOUE au premier appel et sert au second : sans le
+    /// second appel, son compteur reste à 1 et le bloc reste en échec.
+    Future<T> premierEchec<T>(String source, T valeur) async {
+      final rang = (lectures[source] = lectures[source]! + 1);
+      if (rang == 1) {
+        throw const NetworkException('socket');
+      }
+      return valeur;
+    }
+
     await pumpSummary(
       tester,
-      sources: serving(
-        planSource: planStatusProvider.overrideWith((ref) async {
-          lectures++;
-          if (lectures == 1) {
-            throw const NetworkException('socket');
-          }
-          return plan;
-        }),
-      ),
+      sources: [
+        planStatusProvider.overrideWith(
+          (ref) => premierEchec('abonnement', plan),
+        ),
+        metabolismReportProvider.overrideWith(
+          (ref) => premierEchec('métabolisme', rapport),
+        ),
+        profileSessionsOverviewProvider.overrideWith(
+          (ref) => premierEchec('séances', apercuAnnee),
+        ),
+        bodyWeightMetricsProvider.overrideWith(
+          (ref) => premierEchec('poids', mesures),
+        ),
+      ],
     );
 
     expect(find.text('Hors connexion'), findsOneWidget);
+    expect(lectures.values, everyElement(1));
 
     await tester.tap(find.text('Réessayer'));
     await tester.pump();
     await tester.pump();
 
-    expect(lectures, 2);
+    // Le cœur du test : CHAQUE source a été relue, aucune n'est restée sur
+    // son échec.
+    expect(
+      lectures,
+      {'abonnement': 2, 'métabolisme': 2, 'séances': 2, 'poids': 2},
+      reason:
+          'Une source lue une seule fois n’a pas été invalidée : son bloc '
+          'reste en échec pendant que les autres reviennent.',
+    );
     expect(find.text('Hors connexion'), findsNothing);
     expect(find.byType(ProfilePlanCard), findsOneWidget);
+    // Et les trois chiffres sont bien revenus, pas seulement la bannière.
+    expect(find.text('78,4kg', findRichText: true), findsOneWidget);
+    expect(find.text('180cm', findRichText: true), findsOneWidget);
+    expect(find.text('42', findRichText: true), findsOneWidget);
   });
 }
