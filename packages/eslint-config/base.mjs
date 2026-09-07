@@ -13,6 +13,13 @@ export default tseslint.config(
   ...tseslint.configs.recommendedTypeChecked,
   {
     rules: {
+      // Les journaux passent par Pino côté API (corrélés au requestId) : un
+      // `console.log` nu sortait de ce circuit sans que rien ne l'arrête.
+      // `warn` reste ouvert — apps/admin/src/lib/legal-documents.ts s'en sert
+      // délibérément pour avertir au build qu'un document légal garde des
+      // marqueurs à compléter. Mesuré : `no-console` nu = 1 violation (celle-là),
+      // avec `allow: ['warn']` = zéro sur tout le monorepo.
+      'no-console': ['error', { allow: ['warn'] }],
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/no-floating-promises': 'error',
       '@typescript-eslint/no-misused-promises': 'error',

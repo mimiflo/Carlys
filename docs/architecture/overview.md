@@ -118,7 +118,7 @@ plateformes se génèrent via `scripts/bootstrap_mobile.sh`. Détails dans
 | `api-contracts` | Schémas Zod des enveloppes de réponse et du rapport `/health` ; types partagés API ⇄ clients TypeScript. |
 | `shared-config` | Constantes transverses : préfixe `api`, version `1`, en-tête `x-request-id`, pagination 20/100, rate limit 60 s / 100 req, corps 1 Mo. |
 | `typescript-config` | Bases `tsconfig` (`base`/`library`/`nestjs`/`nextjs`), `strict` + `noUncheckedIndexedAccess`. |
-| `eslint-config` | Flat config ESLint 9 + `typescript-eslint` strict, partagée. |
+| `eslint-config` | Flat config ESLint 9 + `typescript-eslint` strict, empilée par les six projets — admin compris depuis qu'elle y rend `no-empty` actif. Porte aussi `no-console` (`warn` toléré) : les journaux passent par Pino, corrélés au `requestId`. |
 
 ## Environnements et déploiement
 
