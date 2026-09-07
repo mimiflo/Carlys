@@ -11,7 +11,8 @@ cd "$(dirname "$0")/../apps/mobile"
 
 MANIFEST="android/app/src/main/AndroidManifest.xml"
 if [ ! -f "$MANIFEST" ]; then
-  echo "android/ absent — lancer d'abord flutter create (bootstrap_mobile.sh)"
+  echo "android/ absent — lancer d'abord scripts/mobile_platforms.sh android" \
+    "(ou scripts/bootstrap_mobile.sh, qui l'appelle)"
   exit 1
 fi
 

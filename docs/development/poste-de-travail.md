@@ -183,6 +183,15 @@ donc une dérogation dans le jeu de sources `debug/` — elle n'entre jamais
 dans une release. Si l'erreur apparaît quand même, c'est que `android/` a été
 engendré sans passer par le script : relancer `./scripts/bootstrap_mobile.sh`.
 
+**`flutter create` à la main.** Sur un projet existant, il écrase
+`pubspec.lock` (sans `--no-pub`, le `pub get` implicite résout tout à neuf —
+28 paquets déplacés ici, dont un saut de version majeure ; avec `--no-pub`, il
+laisse le lock du gabarit) et recrée `test/widget_test.dart`, qui référence un
+`MyApp` inexistant dans ce projet. Passer par `scripts/mobile_platforms.sh`
+(`android,ios` ou `android`), que `bootstrap_mobile.sh` et la CI `demo-apk`
+appellent tous les deux : il crée les dossiers puis remet le lock à l'octet
+près et retire le test du gabarit.
+
 **Le code engendré par Drift.** Il n'est pas versionné : sur un clone frais il
 n'existe pas, et `app_database.dart` le déclare en `part`. `bootstrap_mobile.sh`
 le produit désormais lui-même ; il reste à le refaire à la main après **toute

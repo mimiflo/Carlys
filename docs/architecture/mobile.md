@@ -436,8 +436,8 @@ L'app vise Windows/macOS à terme : **on ne portera pas un écran de téléphone
   layouts maître-détail en `expanded` et plus (liste d'exercices + détail,
   progression + graphique), largeurs de contenu bornées.
 - `scripts/bootstrap_mobile.sh` ne génère aujourd'hui que `android/` et
-  `ios/` ; les plateformes desktop seront ajoutées à `flutter create` quand
-  la cible sera activée.
+  `ios/` ; les plateformes desktop se déclareront dans l'argument de
+  `scripts/mobile_platforms.sh` quand la cible sera activée.
 
 ## Accessibilité
 
@@ -486,9 +486,19 @@ Stratégie cible, par tranche :
 ## Plateformes, environnement d'exécution et commandes
 
 Les dossiers de plateformes (`android/`, `ios/`) ne sont **pas versionnés** :
-ils se génèrent localement via `./scripts/bootstrap_mobile.sh`, qui exécute
-`flutter create --org com.carlys --project-name carlys_mobile
---platforms android,ios .`, puis `flutter pub get` et `flutter analyze`.
+ils se génèrent localement via `./scripts/bootstrap_mobile.sh`, qui délègue la
+création à `scripts/mobile_platforms.sh` (`flutter create --no-pub --org
+com.carlys --project-name carlys_mobile --platforms android,ios .`, puis
+restauration de `pubspec.lock` et retrait du `test/widget_test.dart` du
+gabarit), avant d'exécuter `flutter pub get` et `flutter analyze`.
+
+Ce détour n'est pas cosmétique : `flutter create` écrase `pubspec.lock`. La CI
+`demo-apk` construisait ainsi son APK sur un arbre de dépendances résolu à
+neuf — 28 paquets déplacés par rapport au lock versionné plus un ajouté, dont
+`drift`/`drift_dev` (le générateur lancé juste après) et `xml` 6.6.1 → 7.0.1,
+un saut de version majeure. Les deux appelants passent par le même script, et
+le job vérifie ensuite que `pubspec.lock` n'a pas bougé (`git diff
+--exit-code`) : la dérive ne peut plus repasser inaperçue.
 
 La configuration d'exécution est injectée **uniquement par `--dart-define`**
 (`lib/app/environment/app_environment.dart`) — aucun fichier d'environnement

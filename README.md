@@ -76,7 +76,7 @@ Carlys/
 │   ├── monitoring/           # observabilité : état actuel et cible
 │   └── deployment/           # stratégie de déploiement
 ├── docs/                     # documentation détaillée (voir fin de ce fichier)
-├── scripts/                  # setup.sh, check.sh, bootstrap_mobile.sh
+├── scripts/                  # setup.sh, check.sh, bootstrap_mobile.sh, check_mobile.sh
 ├── .github/workflows/        # api-ci, admin-ci, mobile-ci, security-ci
 ├── docker-compose.yml        # PostgreSQL, Redis, Mailpit, MinIO (+ profil "app")
 └── .env.example              # variables du docker-compose (valeurs factices)
@@ -141,7 +141,7 @@ pnpm prisma:generate
 > données intégrées) sur la release `demo-latest` du dépôt — à installer
 > directement sur un téléphone Android.
 
-Ce script génère les dossiers de plateformes `android/` et `ios/` via `flutter create` (org `com.carlys`, projet `carlys_mobile`), puis exécute `flutter pub get` et `flutter analyze`. Les dossiers de plateformes ne sont pas versionnés : ils se régénèrent à la demande.
+Ce script génère les dossiers de plateformes `android/` et `ios/` — via `scripts/mobile_platforms.sh`, qui appelle `flutter create` (org `com.carlys`, projet `carlys_mobile`) **sans laisser `pubspec.lock` bouger** — puis exécute `flutter pub get` et `flutter analyze`. Les dossiers de plateformes ne sont pas versionnés : ils se régénèrent à la demande. Ne pas appeler `flutter create` à la main : il écrase le lock et recrée un test de gabarit qui ne compile pas ici.
 
 ## Variables d'environnement
 
@@ -365,6 +365,8 @@ Politique complète et signalement de vulnérabilités : [SECURITY.md](./SECURIT
 | `./scripts/setup.sh` | Installation complète |
 | `./scripts/check.sh` | Vérifications complètes (build inclus) |
 | `./scripts/bootstrap_mobile.sh` | Prépare l'app Flutter (plateformes + deps) |
+| `./scripts/mobile_platforms.sh android,ios` | Régénère `android/`/`ios/` seuls, sans toucher au lock |
+| `./scripts/check_mobile.sh` | Vérifications Flutter — rejoue `mobile-ci` à l'identique |
 | `flutter pub get` | Dépendances Flutter |
 | `dart run build_runner build` | Génération de code Flutter |
 | `flutter analyze` / `flutter test` | Qualité Flutter |

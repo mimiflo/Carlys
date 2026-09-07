@@ -61,10 +61,21 @@ jobs:
           restore-keys: gradle-${{ runner.os }}-
 
       # android/ n'est pas versionné : il se régénère à la demande.
+      #
+      # `flutter create` appelé nu écrasait pubspec.lock — il se termine par un
+      # `pub get` implicite qui résout tout à neuf. L'étape `--enforce-lockfile`
+      # qui suit validait donc le lock que create venait d'écrire, et n'enforçait
+      # plus rien : 28 paquets déplacés par rapport au lock du dépôt plus un
+      # ajouté, dont drift 2.34.3→2.34.4 et drift_dev 2.34.5→2.34.6 (le
+      # générateur lancé deux étapes plus bas) et xml 6.6.1→7.0.1, un saut de
+      # MAJEURE. L'APK publié n'était pas construit sur l'arbre éprouvé par
+      # mobile-ci. mobile_platforms.sh crée les dossiers SANS toucher au lock
+      # (mesuré : md5 identique avant/après) et retire le test du gabarit —
+      # même script que le poste de développement, pour que les deux chemins
+      # ne puissent plus diverger.
       - name: Dossiers de plateformes
         run: |
-          flutter create --org com.carlys --project-name carlys_mobile \
-            --platforms android .
+          ../../scripts/mobile_platforms.sh android
           # Identité Carlys : nom affiché, icône (sceau), permission de
           # notification — même script que le poste de développement.
           ../../scripts/android_branding.sh
@@ -82,6 +93,22 @@ jobs:
 
       - name: Génération de code (Drift)
         run: dart run build_runner build
+
+      # Garde-fou. `--enforce-lockfile` ne protège que de ce qui arrive AVANT
+      # lui ; il n'a rien vu quand `flutter create` réécrivait le lock juste au-
+      # dessus. Ce contrôle-ci ferme le trou par l'autre bout : si une étape
+      # quelconque de ce job déplace pubspec.lock (ou pubspec.yaml), le job
+      # échoue au lieu de publier un APK construit sur autre chose que l'arbre
+      # versionné. Vérifié dans les deux sens : code 0 avec l'étape corrigée,
+      # code 1 avec l'ancienne.
+      - name: Garde-fou — l'arbre de dépendances est bien celui du dépôt
+        run: |
+          if ! git diff --exit-code -- pubspec.yaml pubspec.lock; then
+            echo "::error::pubspec.lock (ou pubspec.yaml) a été réécrit pendant" \
+              "le job : l'APK ne serait pas construit sur l'arbre de dépendances" \
+              "éprouvé par mobile-ci. Voir le diff ci-dessus."
+            exit 1
+          fi
 
       # `--target-platform android-arm64` : une seule architecture au lieu de
       # trois. Le moteur Flutter pèse plusieurs mégaoctets par architecture,

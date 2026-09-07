@@ -7,16 +7,25 @@ Voir le [README racine](../../README.md) et
 
 ## Première installation
 
-Les dossiers de plateformes (`android/`, `ios/`) ne sont pas versionnés à
-l'Étape 1 — ils se génèrent localement :
+Les dossiers de plateformes (`android/`, `ios/`) ne sont pas versionnés — ils
+se génèrent localement, depuis la racine du dépôt :
 
 ```bash
-cd apps/mobile
-flutter create --org com.carlys --project-name carlys_mobile --platforms android,ios .
-flutter pub get
+./scripts/bootstrap_mobile.sh
 ```
 
-Ou depuis la racine : `./scripts/bootstrap_mobile.sh`.
+**Ne pas appeler `flutter create` à la main.** Sur un projet existant, il
+écrase `pubspec.lock` : sans `--no-pub` il enchaîne un `pub get` qui résout
+tout à neuf (28 paquets déplacés ici par rapport au lock du dépôt, dont un
+saut de version majeure) ; avec `--no-pub` il laisse à la place le lock du
+gabarit. Il recrée aussi `test/widget_test.dart`, qui référence un `MyApp`
+inexistant dans ce projet. `scripts/mobile_platforms.sh` — appelé par le
+bootstrap **et** par la CI `demo-apk` — fait la création et répare ces deux
+effets de bord ; il ne touche qu'aux dossiers de plateformes :
+
+```bash
+./scripts/mobile_platforms.sh android,ios   # android/ et ios/ seuls
+```
 
 ## Configuration d'exécution (`--dart-define`)
 

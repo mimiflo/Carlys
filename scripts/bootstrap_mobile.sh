@@ -14,23 +14,22 @@ command -v flutter >/dev/null || {
 }
 
 echo "── Génération des dossiers de plateformes (android/, ios/) ─────────"
-flutter create --org com.carlys --project-name carlys_mobile \
-  --platforms android,ios .
-
-# Les Flutter récents recréent le test du GABARIT (test/widget_test.dart,
-# qui référence un MyApp inexistant ici) dès qu'il manque — deux erreurs
-# d'analyse garanties. On ne retire que lui, et seulement s'il n'est pas
-# suivi par git : un fichier du même nom qui serait un jour versionné
-# resterait intouché.
-if [ -f test/widget_test.dart ] &&
-  ! git ls-files --error-unmatch test/widget_test.dart >/dev/null 2>&1; then
-  rm test/widget_test.dart
-fi
+# `flutter create` écrase pubspec.lock et recrée le test du gabarit :
+# mobile_platforms.sh contient la création ET la réparation de ces deux
+# effets de bord — le même script que la CI demo-apk, pour que les deux
+# chemins ne puissent plus diverger.
+"$SCRIPT_DIR/mobile_platforms.sh" android,ios
 
 echo "── Identité Carlys (nom, icône, permission de notification) ───────"
 "$SCRIPT_DIR/android_branding.sh"
 
 echo "── Dépendances ─────────────────────────────────────────────────────"
+# `pub get` NU, volontairement : c'est le seul endroit où mettre le lock à
+# jour est légitime — un bootstrap prépare un poste, il ne juge pas l'arbre
+# versionné. Le contrôle, lui, est chez le gardien : check_mobile.sh et la CI
+# passent `--enforce-lockfile` et refusent un lock en retard. Si un lock
+# réécrit apparaît ici dans `git status`, c'est une information — à relire et
+# à committer, pas à effacer.
 flutter pub get
 
 # Le code engendré (Drift) n'est PAS versionné : sur un clone frais il n'existe
