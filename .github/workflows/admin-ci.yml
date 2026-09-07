@@ -163,7 +163,12 @@ jobs:
             echo "Le build s'arrêtant au premier document fautif, l'autre peut en porter aussi."
             echo
             echo '```'
-            grep -E '^Error: docs/legal/.*marqueur\(s\) à compléter|^ *- \[À COMPLÉTER' legal.log
+            # Le repli n'est pas décoratif : le shell d'une étape `run:` est
+            # `bash -e {0}`, et un `grep` qui ne trouve rien rend 1. Sans lui,
+            # l'étape mourait ICI — sans annotation, et avec un résumé tronqué
+            # en plein bloc de code (éprouvé dans les deux sens).
+            grep -E '^Error: docs/legal/.*marqueur\(s\) à compléter|^ *- \[À COMPLÉTER' legal.log \
+              || echo '(message de la garde introuvable dans le journal : format de sortie changé ? voir le journal brut du build.)'
             echo '```'
           } >> "$GITHUB_STEP_SUMMARY"
           echo "::warning::docs/legal porte encore des marqueurs [À COMPLÉTER] servis en clair sur /privacy et /terms."
