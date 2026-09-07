@@ -35,10 +35,17 @@ cd "$(dirname "$0")/../apps/mobile"
 # restaure une COPIE plutôt que `git checkout --` : un lock légitimement
 # modifié dans l'arbre de travail (montée de dépendance en cours) doit
 # survivre au bootstrap, pas être écrasé par la version du dépôt.
+#
+# `cp` vers la destination EXISTANTE, jamais `mv` : `mv` déplace l'inode de la
+# sauvegarde, ses droits compris, et `mktemp` crée en 0600. Le lock versionné
+# repartait donc en 0600 à CHAQUE exécution (mesuré : 644 → 600, md5 inchangé,
+# aussi bien après une création réussie qu'après un échec de `flutter create`),
+# un changement que git ne suit pas et que personne ne voyait. `cp` écrit dans
+# le fichier déjà là et lui laisse ses droits d'origine.
 LOCK_BACKUP=""
 restaurer_lock() {
   if [ -n "$LOCK_BACKUP" ] && [ -f "$LOCK_BACKUP" ]; then
-    mv -f "$LOCK_BACKUP" pubspec.lock
+    cp "$LOCK_BACKUP" pubspec.lock && rm -f "$LOCK_BACKUP"
   fi
 }
 if [ -f pubspec.lock ]; then
