@@ -175,6 +175,7 @@ l'accueil (plein écran).
 | `/history/:sessionId`   | `workout-detail`  | Détail d'une séance                |
 | `/bienvenue`            | `welcome`         | Page de marque, première ouverture |
 | `/sessions` · `/subscription` · `/settings` · `/onboarding` | — | Plein écran |
+| `/change-password` · `/delete-account` | `change-password` · `delete-account` | Gestes de compte (plein écran, depuis le groupe « Compte » des réglages). Volontairement HORS des routes d'authentification : ils se font connecté, et le garde les protège comme n'importe quel autre écran |
 
 Il n'existe **pas** de route `/templates/new` : créer un modèle, c'est
 générer un UUID sur l'appareil puis ouvrir `/templates/<uuid>`. C'est la
@@ -497,12 +498,14 @@ embarqué :
 | --------------------- | ----------------------------------------- | ----------------------- |
 | `CARLYS_FLAVOR`       | `development` \| `staging` \| `production` (alignés sur les environnements serveur) | `development` |
 | `CARLYS_API_BASE_URL` | Base de l'API sans préfixe de version     | `http://localhost:3000` |
+| `CARLYS_PUBLIC_WEB_BASE_URL` | Base de l'application **web publique** (le Next.js d'`apps/admin`), qui sert `/privacy` et `/terms` — les pages ouvertes par la section « Légal » des réglages et par la phrase de consentement de l'inscription. Même adresse que le `PUBLIC_APP_URL` du serveur, celle que portent les liens des e-mails ; **jamais** celle de l'API | `http://localhost:3001` |
 
 ```bash
 cd apps/mobile
 flutter run \
   --dart-define=CARLYS_FLAVOR=development \
-  --dart-define=CARLYS_API_BASE_URL=http://localhost:3000
+  --dart-define=CARLYS_API_BASE_URL=http://localhost:3000 \
+  --dart-define=CARLYS_PUBLIC_WEB_BASE_URL=http://localhost:3001
 
 # Génération de code (Riverpod, Freezed, Drift, JSON) — dès qu'elle sera utilisée :
 dart run build_runner build

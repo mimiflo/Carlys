@@ -416,6 +416,17 @@ travail de finition (étape 3 du découpage), pas une correction.
 erreur (`AppErrorState`), vide (`AppEmptyState` avec les suggestions de
 départ), hors ligne (état dédié sur le composeur).
 
+**La conversation dit d'où vient la réponse.** `CoachDataNotice` pose une
+ligne sobre en tête du fil, au-dessus du premier message : « Tes données
+d'entraînement citées ici sont traitées par un prestataire externe pour
+produire la réponse. » Elle n'est ni une alerte ni un consentement à recueillir
+— l'usage du coach relève du contrat, et la politique de confidentialité le
+détaille déjà. Elle est là parce qu'un fait pareil doit se lire au moment où
+l'on écrit, pas seulement dans un document que personne n'ouvre. Techniquement
+c'est un rang de plus dans la liste inversée, donc le DERNIER : la mention
+remonte avec l'histoire au lieu de coller à l'écran, et ne s'affiche qu'une
+fois quel que soit le nombre de messages.
+
 **Les puces de suggestion** se calculent depuis l'état réel — modèle de séance
 disponible, record récent, poids qui bouge — et jamais en dur. Sans données,
 une seule puce générique. La règle vit dans `domain/services/coach_suggestions.dart`
