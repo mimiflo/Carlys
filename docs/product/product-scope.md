@@ -112,7 +112,9 @@ scaffoldés (`lib/features/*`).
 | Détail d'un exercice | `exercises` | 3 |
 | Programmes | `workout_program` | 4 |
 | Détail d'un programme | `workout_program` | 4 |
-| Créateur de programme | `workout_template` | 4 |
+| Créateur de programme | `workout_program` | 4 |
+| Modèles de séance | `workout_template` | 4 |
+| Éditeur de modèle de séance | `workout_template` | 4 |
 | Préparation de séance | `workout_session` | 4 |
 | Séance active | `workout_session` | 4 |
 | Sélection d'exercice (en séance) | `workout_session` | 4 |
@@ -127,6 +129,15 @@ scaffoldés (`lib/features/*`).
 | Paramètres | `settings` | 2 (base), enrichi ensuite |
 | Gestion des appareils | `settings` / `authentication` | 2 |
 | Suppression du compte | `settings` | 2 |
+
+Deux dossiers voisins portent des écrans différents, et les confondre envoie
+le lecteur au mauvais endroit — ce tableau a longtemps rangé le créateur de
+programme dans `workout_template`. Dans l'application livrée,
+`workout_program` porte les programmes (liste, détail, et création : nom,
+semaines, jours), tandis que `workout_template` porte les **modèles de
+séance** et leur éditeur (`template_editor_screen.dart`). Les deux se
+rejoignent en un point : un jour de programme choisit un modèle de séance
+(`program_day_sheet.dart`).
 
 ### Contrat de qualité par écran
 
