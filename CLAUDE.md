@@ -134,11 +134,36 @@ seuil est dépassé — jamais de contournement :
 | Type de fichier | Limite |
 | --------------- | ------ |
 | Widget Flutter | < 250 lignes |
+| Contrôleur Riverpod (Notifier, providers d'écran) | < 250 lignes — même couche de présentation qu'un widget, donc même budget. Un seul Notifier par fichier ; les providers purement dérivés se rangent hors de `controllers/` |
 | Service | < 300 lignes |
-| Contrôleur | < 200 lignes |
+| Contrôleur HTTP (NestJS) | < 200 lignes |
 | Use case | < 200 lignes |
+| Repository (implémentation d'un contrat du domaine) | pas de plafond de fichier, sa longueur suit le nombre de méthodes du contrat ; en revanche **aucune méthode ne dépasse 40 lignes**, et toute logique dépassant la couture vit dans un collaborateur extrait |
 | Modèle | ciblé sur une seule responsabilité |
 | Module NestJS | un module par domaine métier |
+
+**Pourquoi ces deux lignes** (arbitrage de septembre 2026, mesuré avant d'être écrit) :
+
+- **Repository — borner la méthode, pas le fichier.** Un plafond de fichier classe
+  ensemble des cas opposés : `community_repository_impl.dart` (287 lignes) est une
+  façade Dio de 22 `@override` d'une dizaine de lignes sur un contrat de 93 ;
+  `workout_template_repository_impl.dart` (353) délègue déjà à six collaborateurs
+  extraits ; `workout_repository_impl.dart` (346) est le seul réellement dense, avec
+  une méthode `addSet` de 59 lignes. Un seuil à 300 acquitterait le plus risqué des
+  trois dès qu'il tomberait à 299 lignes, et condamnerait les deux autres sans rien
+  améliorer.
+- **Contrôleur Riverpod — 250, comme un widget.** Aucun ne dépasse 164 lignes de code
+  hors imports, commentaires et lignes vides : `coach_controllers` 249 lignes dont 163
+  de code, `dashboard_controllers` 241 dont 164, `auth_controller` 230 dont 116 (36 %
+  du fichier est de la documentation), `exercise_library_controller` 216 dont 159. Le
+  seuil de 200 n'est franchi que par les commentaires : l'appliquer reviendrait à taxer
+  la documentation. Un Notifier est de la présentation, pas un service — il a donc le
+  budget du widget.
+
+Deux écarts connus à la date où ces lignes sont posées, à traiter dans la couche
+concernée : `addSet` (`workout_repository_impl.dart`) dépasse le plafond de 40 lignes,
+et `dashboard_controllers.dart` ne contient **aucun** Notifier — c'est un fichier de
+sélecteurs (`FormReading`, `TodayTraining`) rangé par erreur dans `controllers/`.
 
 ## Qualité exigée par fonctionnalité
 
