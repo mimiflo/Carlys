@@ -112,7 +112,15 @@ class AuthController extends Notifier<AuthState> {
   Future<void> _leaveAccount() async {
     try {
       await ref.read(localAccountPurgeProvider).run();
-    } on Exception catch (error) {
+    } catch (error) {
+      // Attrape TOUT, pas seulement `Exception` : une base Drift déjà fermée
+      // et un conteneur Riverpod déjà disposé signalent par une `StateError`,
+      // qui est une `Error` — le moteur de synchronisation documente et teste
+      // déjà ce cas. Deux sorties concurrentes suffisent à le produire : un
+      // 401 du renouvellement de jeton pendant une déconnexion volontaire, et
+      // la seconde purge trouve la base fermée par la première. Non
+      // interceptée, l'erreur s'échapperait et l'état ne basculerait JAMAIS :
+      // l'utilisateur resterait « connecté » sur un compte qui n'existe plus.
       _logger.error('Purge locale du compte impossible', error: error);
     }
     state = const AuthUnauthenticated();

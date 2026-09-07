@@ -11,8 +11,12 @@ import '../../support/noop_local_account_purge.dart';
 
 /// Purge qui échoue : la déconnexion doit quand même aboutir.
 class _FailingPurge implements LocalAccountPurge {
+  _FailingPurge(this._failure);
+
+  final Object _failure;
+
   @override
-  Future<void> run() async => throw Exception('base verrouillée');
+  Future<void> run() async => throw _failure;
 }
 
 /// Le contrôleur de session purge l'état local du compte aux deux sorties
@@ -81,14 +85,47 @@ void main() {
     expect(container.read(authControllerProvider), isA<AuthAuthenticated>());
   });
 
-  test('une purge qui échoue ne retient pas la déconnexion', () async {
-    container.dispose();
-    container = build(_FailingPurge());
-    final controller = container.read(authControllerProvider.notifier);
-    await controller.restore();
+  /// Une purge en échec ne retient jamais la déconnexion, quelle que soit la
+  /// sortie et quel que soit le TYPE de l'échec. `StateError` n'est pas un
+  /// cas d'école : Drift et Riverpod signalent ainsi une base fermée ou un
+  /// conteneur disposé, et c'est exactement ce que deux sorties concurrentes
+  /// (un 401 du renouvellement pendant une déconnexion volontaire) produisent.
+  for (final failure in <Object>[
+    Exception('base verrouillée'),
+    StateError('Cannot operate on a closed database'),
+  ]) {
+    final kind = failure is Error ? 'Error' : 'Exception';
 
-    await controller.logout();
+    test(
+      'une purge qui jette une $kind ne retient pas la déconnexion',
+      () async {
+        container.dispose();
+        container = build(_FailingPurge(failure));
+        final controller = container.read(authControllerProvider.notifier);
+        await controller.restore();
 
-    expect(container.read(authControllerProvider), isA<AuthUnauthenticated>());
-  });
+        await controller.logout();
+
+        expect(
+          container.read(authControllerProvider),
+          isA<AuthUnauthenticated>(),
+        );
+      },
+    );
+
+    test('une purge qui jette une $kind ne retient pas l’expiration', () async {
+      container.dispose();
+      container = build(_FailingPurge(failure));
+      final controller = container.read(authControllerProvider.notifier);
+      await controller.restore();
+
+      container.read(tokenRefresherProvider).onSessionExpired!();
+      await pumpEventQueue();
+
+      expect(
+        container.read(authControllerProvider),
+        isA<AuthUnauthenticated>(),
+      );
+    });
+  }
 }
