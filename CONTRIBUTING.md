@@ -29,6 +29,12 @@ Installation : `./scripts/setup.sh` (ou suivre le [README](README.md)).
 4. Ouvrir une pull request vers `main`. La CI (`api-ci`, `admin-ci`,
    `mobile-ci`, `security-ci`) doit être verte.
 
+Ces quatre workflows s'ouvrent **aussi** sur les poussées directes vers la
+branche de travail, et pas seulement sur les pull requests et `main` : le dépôt
+avançant sans fusion, une porte limitée à `main` ne s'ouvrait qu'une fois le
+travail intégré. La vérification locale de l'étape 3 reste donc le premier
+filet, mais elle n'est plus le seul.
+
 ## Commits
 
 - Messages à l'impératif, concis, en français ou anglais cohérent :

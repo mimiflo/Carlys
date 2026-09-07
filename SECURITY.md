@@ -41,8 +41,11 @@ aucune version antérieure ne reçoit de correctif.
   contiennent **que des valeurs factices** (`.env.example` racine,
   `apps/api/.env.example`, `apps/admin/.env.example`).
 - **Détection de secrets en CI** : TruffleHog (`.github/workflows/security-ci.yml`)
-  s'exécute sur chaque pull request, chaque push sur `main` et chaque lundi à
-  06:00 UTC (`--results=verified,unknown`).
+  s'exécute sur chaque pull request, chaque poussée sur la branche de travail
+  comme sur `main`, et chaque lundi à 06:00 UTC (`--results=verified,unknown`).
+  La branche de travail est nommée explicitement parce que le dépôt avance par
+  poussées directes : s'en tenir à `main` ne signalait un jeton qu'après la
+  fusion, alors qu'il est compromis dès qu'il a quitté le poste.
 - **Audit de dépendances en CI** : `pnpm audit --audit-level high` dans le même
   workflow (vulnérabilités `high` et `critical` bloquantes).
 - **Forçages de versions transitives** : quand une dépendance vulnérable est

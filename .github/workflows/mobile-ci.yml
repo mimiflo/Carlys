@@ -1,12 +1,32 @@
 name: mobile-ci
 
+# Pourquoi `push:` nomme la branche de travail et pas seulement `main` : le
+# dépôt n'avance PAS par pull request, il avance par poussées directes sur
+# claude/carlys-fitness-foundation-lqv2hl. `git log --merges` y compte ZÉRO
+# fusion sur 186 commits : une porte limitée à `pull_request` + `main` ne s'est
+# donc JAMAIS ouverte pendant le développement. On s'aligne sur demo-apk.yml,
+# qui nomme déjà les deux branches — et qui construit l'APK depuis ce même
+# `apps/mobile` sans que rien n'ait vérifié `flutter analyze` avant lui.
+#
+# L'arbitrage est assumé : ce workflow va tourner à chaque poussée qui touche
+# son périmètre, et il est le plus lent du dépôt (installation du SDK Flutter
+# épinglé, `build_runner` à froid — voir plus bas pourquoi son cache est
+# proscrit). C'est malgré tout le bon échange : une analyse rouge se voit dans
+# la minute, alors qu'une régression mobile découverte après fusion se paie en
+# bissection sur une base où le code engendré n'est même pas versionné. Trois
+# garde-fous bornent la facture : les filtres `paths` ci-dessous (rien ne
+# tourne si aucune entrée du job n'a bougé), le `concurrency` plus bas dont le
+# `cancel-in-progress` ne garde qu'une exécution par rafale de poussées, et le
+# `timeout-minutes` qui coupe un runner gelé.
 on:
   pull_request:
     paths:
       - 'apps/mobile/**'
       - '.github/workflows/mobile-ci.yml'
   push:
-    branches: [main]
+    branches: [claude/carlys-fitness-foundation-lqv2hl, main]
+    # GitHub Actions ignore les ancres YAML : la liste ci-dessus est recopiée
+    # telle quelle. Toute entrée ajoutée ici doit l'être aux deux endroits.
     paths:
       - 'apps/mobile/**'
       - '.github/workflows/mobile-ci.yml'

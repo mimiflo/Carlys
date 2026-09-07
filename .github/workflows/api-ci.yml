@@ -1,5 +1,27 @@
 name: api-ci
 
+# Pourquoi `push:` nomme la branche de travail et pas seulement `main` : le
+# dépôt n'avance PAS par pull request, il avance par poussées directes sur
+# claude/carlys-fitness-foundation-lqv2hl. La mesure est sans appel, et elle se
+# rejoue en local : `git log --merges` compte ZÉRO fusion sur les 186 commits
+# de la branche, donc aucune poussée de développement n'a jamais ouvert cette
+# porte — pas même les 18 commits qui touchent prisma/schema.prisma, ceux-là
+# mêmes que l'étape « Détection des migrations manquantes » plus bas existe
+# pour surveiller. Le job le plus riche du dépôt — PostgreSQL, Redis, MinIO,
+# migrations, e2e — ne regardait jamais le code au moment où il s'écrit, mais
+# seulement après la fusion, quand le corriger coûte le plus cher. On s'aligne
+# sur demo-apk.yml et images-ci.yml, qui nomment déjà les deux branches.
+#
+# L'arbitrage est assumé : ce workflow va tourner à chaque poussée qui touche
+# son périmètre, donc bien plus souvent et plus cher qu'avant (trois conteneurs
+# de service à démarrer, une installation pnpm complète, la suite unitaire et
+# la suite e2e). Le prix d'un échec n'est pourtant pas symétrique : un test
+# rouge se voit dans la minute et se corrige dans le commit suivant, tandis
+# qu'une régression découverte après fusion se paie en bissection, en rollback
+# et en travail déjà construit par-dessus. Deux garde-fous bornent la facture —
+# les filtres `paths` ci-dessous (rien ne tourne si aucune entrée du job n'a
+# bougé) et le `concurrency` plus bas, dont le `cancel-in-progress` ne garde
+# qu'une exécution par rafale de poussées.
 on:
   pull_request:
     paths:
@@ -9,7 +31,9 @@ on:
       - 'pnpm-workspace.yaml'
       - '.github/workflows/api-ci.yml'
   push:
-    branches: [main]
+    branches: [claude/carlys-fitness-foundation-lqv2hl, main]
+    # GitHub Actions ignore les ancres YAML : la liste ci-dessus est recopiée
+    # telle quelle. Toute entrée ajoutée ici doit l'être aux deux endroits.
     paths:
       - 'apps/api/**'
       - 'packages/**'

@@ -1,9 +1,27 @@
 name: security-ci
 
+# Pourquoi `push:` nomme la branche de travail et pas seulement `main` : le
+# dépôt n'avance PAS par pull request, il avance par poussées directes sur
+# claude/carlys-fitness-foundation-lqv2hl. `git log --merges` y compte ZÉRO
+# fusion sur 186 commits : une porte limitée à `pull_request` + `main` ne s'est
+# donc JAMAIS ouverte pendant le développement. Pour une détection de secrets,
+# c'est le pire des retards possibles — un jeton poussé est compromis à la
+# seconde où il quitte le poste, et l'apprendre après la fusion ne change plus
+# rien à la fuite, seulement à la note. On s'aligne sur demo-apk.yml et
+# images-ci.yml, qui nomment déjà les deux branches.
+#
+# L'arbitrage coûte ici beaucoup moins cher qu'ailleurs : ce workflow n'a aucun
+# filtre `paths` (un secret peut apparaître dans n'importe quel fichier, la
+# porte doit donc s'ouvrir à chaque poussée), mais ses deux jobs sont légers —
+# le scan complet de l'historique se mesure à 2,4 s pour 6083 fragments et
+# 9,3 Mo, l'audit se résume à une installation pnpm. Le `concurrency` plus bas
+# borne le reste : son `cancel-in-progress` ne garde qu'une exécution par
+# rafale de poussées. Le `schedule` hebdomadaire, lui, sert autre chose que les
+# poussées : il rattrape les vulnérabilités publiées APRÈS le dernier commit.
 on:
   pull_request:
   push:
-    branches: [main]
+    branches: [claude/carlys-fitness-foundation-lqv2hl, main]
   schedule:
     # Chaque lundi à 06:00 UTC.
     - cron: '0 6 * * 1'
