@@ -1,7 +1,7 @@
 /**
  * Photos du catalogue livrées avec le seed.
  *
- * Les fichiers sont DÉTOURÉS (WebP à canal alpha) : la figure seule, sans
+ * Les fichiers sont DÉTOURÉS (PNG ou WebP à canal alpha) : la figure seule, sans
  * fond. C'est ce qui permet aux écrans de les poser sur leur propre fond
  * sombre — et c'est pourquoi ils s'affichent en `contain`, jamais en `cover`,
  * qui rognerait les bras et les barres.
@@ -31,9 +31,9 @@ const NAMESPACE = 'carlys.seed.media';
 /**
  * Identifiant DÉTERMINISTE d'un média de seed, dérivé de son slug.
  *
- * C'est ce qui rend l'étape rejouable : re-seeder ne crée pas un second média
- * ni un second objet, il retombe sur le même identifiant — donc sur la même
- * clé de stockage, puisque la clé EST l'identifiant.
+ * C'est ce qui rend l'étape rejouable : re-seeder ne crée pas un second
+ * média. La clé de stockage inclut le checksum pour renouveler les caches
+ * immuables lorsque l'illustration change.
  */
 function mediaIdFor(slug: string): string {
   const hash = createHash('sha256').update(`${NAMESPACE}:${slug}`).digest();
@@ -84,7 +84,7 @@ export async function seedExerciseMedia(prisma: PrismaClient): Promise<void> {
 
   let files: string[];
   try {
-    files = (await readdir(MEDIA_DIRECTORY)).filter((name) => name.endsWith('.webp'));
+    files = (await readdir(MEDIA_DIRECTORY)).filter((name) => /\.(png|webp)$/.test(name));
   } catch {
     console.warn('Aucun dossier de photos de seed : étape ignorée.');
     return;
@@ -93,7 +93,7 @@ export async function seedExerciseMedia(prisma: PrismaClient): Promise<void> {
   let attached = 0;
   let missing = 0;
   for (const file of files.sort()) {
-    const slug = file.replace(/\.webp$/, '');
+    const slug = file.replace(/\.(png|webp)$/, '');
     const exercise = await prisma.exercise.findUnique({ where: { slug }, select: { id: true } });
     if (exercise === null) {
       // Une photo sans exercice n'est pas une erreur : le catalogue et les
@@ -104,7 +104,10 @@ export async function seedExerciseMedia(prisma: PrismaClient): Promise<void> {
 
     const content = await readFile(join(MEDIA_DIRECTORY, file));
     const id = mediaIdFor(slug);
-    const storageKey = `image/${id}.webp`;
+    const extension = file.endsWith('.png') ? 'png' : 'webp';
+    const mimeType = `image/${extension}`;
+    const checksum = createHash('sha256').update(content).digest('hex');
+    const storageKey = `image/${id}-${checksum}.${extension}`;
     const size = readImageSize(content);
 
     try {
@@ -113,7 +116,7 @@ export async function seedExerciseMedia(prisma: PrismaClient): Promise<void> {
           Bucket: storage.bucket,
           Key: storageKey,
           Body: content,
-          ContentType: 'image/webp',
+          ContentType: mimeType,
           CacheControl: 'public, max-age=31536000, immutable',
         }),
       );
@@ -127,11 +130,11 @@ export async function seedExerciseMedia(prisma: PrismaClient): Promise<void> {
     const data = {
       kind: 'IMAGE' as const,
       storageKey,
-      mimeType: 'image/webp',
+      mimeType,
       byteSize: content.byteLength,
       width: size?.width ?? null,
       height: size?.height ?? null,
-      checksum: createHash('sha256').update(content).digest('hex'),
+      checksum,
       originalName: file,
       deletedAt: null,
     };
