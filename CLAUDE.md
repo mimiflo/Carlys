@@ -148,8 +148,9 @@ seuil est dépassé — jamais de contournement :
   ensemble des cas opposés : `community_repository_impl.dart` (287 lignes) est une
   façade Dio de 22 `@override` d'une dizaine de lignes sur un contrat de 93 ;
   `workout_template_repository_impl.dart` (353) délègue déjà à six collaborateurs
-  extraits ; `workout_repository_impl.dart` (346) est le seul réellement dense, avec
-  une méthode `addSet` de 59 lignes. Un seuil à 300 acquitterait le plus risqué des
+  extraits ; `workout_repository_impl.dart` (346) est le seul des trois réellement
+  dense — **deux** de ses méthodes dépassent le plafond, `addSet` (59 lignes) et
+  `_closeWorkout` (45). Un seuil à 300 acquitterait le plus risqué des
   trois dès qu'il tomberait à 299 lignes, et condamnerait les deux autres sans rien
   améliorer.
 - **Contrôleur Riverpod — 250, comme un widget.** Aucun ne dépasse 164 lignes de code
@@ -160,10 +161,38 @@ seuil est dépassé — jamais de contournement :
   la documentation. Un Notifier est de la présentation, pas un service — il a donc le
   budget du widget.
 
-Deux écarts connus à la date où ces lignes sont posées, à traiter dans la couche
-concernée : `addSet` (`workout_repository_impl.dart`) dépasse le plafond de 40 lignes,
-et `dashboard_controllers.dart` ne contient **aucun** Notifier — c'est un fichier de
-sélecteurs (`FormReading`, `TodayTraining`) rangé par erreur dans `controllers/`.
+**Les écarts se comptent, ils ne se recopient pas.** Une liste d'écarts écrite en
+dur périme au premier commit, et une règle posée à côté d'une dette fausse vaut
+moins qu'une règle sans dette annoncée. Ces deux commandes rendent l'état réel ;
+elles font foi contre toute liste, celle-ci comprise.
+
+```bash
+# Méthodes de repository au-dessus de 40 lignes — de la signature (annotation
+# exclue) à l'accolade fermante. La mise en forme est celle de `dart format`,
+# donc les membres sont à deux espaces d'indentation : c'est ce que le compte
+# d'accolades ci-dessous suit.
+awk 'FNR==1{s=0;d=0} /^  @/{next} !s && /^  [A-Za-z_]/{s=FNR;d=0}
+     s{ d += gsub(/\{/,"{") - gsub(/\}/,"}")
+        if (d==0 && /;$/) s=0
+        else if (d==0 && /\}$/) {
+          if (FNR-s+1 > 40) printf "%4d  %s:%d\n", FNR-s+1, FILENAME, s
+          s=0 } }' \
+  apps/mobile/lib/features/*/data/repositories/*_repository_impl.dart
+
+# Fichiers de `controllers/` qui ne portent pas EXACTEMENT un Notifier :
+# `2` et plus violent « un seul par fichier », `0` désigne un fichier de
+# providers dérivés à ranger dans `presentation/providers/`.
+grep -c 'extends [A-Za-z]*Notifier' \
+  apps/mobile/lib/features/*/presentation/controllers/*.dart | grep -v ':1$'
+```
+
+Ce qu'elles rendaient le 7 septembre 2026, pour donner l'ordre de grandeur —
+**relancer plutôt que croire** : trois méthodes au-dessus de 40 lignes, dans
+deux fichiers (`metabolismReport` 46 dans `nutrition_repository_impl.dart`,
+`addSet` 59 et `_closeWorkout` 45 dans `workout_repository_impl.dart`) ; et,
+sur les 34 fichiers de `controllers/`, un qui porte trois Notifier
+(`account_controllers.dart`) et **vingt et un** qui n'en portent aucun —
+`dashboard_controllers.dart` est l'un d'eux, pas le seul.
 
 ## Qualité exigée par fonctionnalité
 
