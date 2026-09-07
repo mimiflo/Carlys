@@ -89,6 +89,14 @@ jobs:
       # Tous les téléphones Android vendus depuis 2019 sont en arm64.
       # `--split-debug-info` sort les symboles de l'APK ; `--obfuscate` les
       # remplace par des noms courts.
+      #
+      # CARLYS_PUBLIC_WEB_BASE_URL est passée EXPLICITEMENT, même en démo :
+      # sans elle, la valeur par défaut du code (localhost:3001) part dans
+      # l'APK par accident, et les deux liens légaux des réglages ne mènent
+      # nulle part depuis un téléphone. Tant qu'aucune application web n'est
+      # déployée, la variable de dépôt du même nom n'existe pas et le repli
+      # vaut ce défaut : le choix est alors assumé, pas subi. Poser la
+      # variable dans les réglages du dépôt suffira à le corriger.
       - name: Build APK (mode démo, hors ligne)
         run: |
           flutter build apk --release \
@@ -97,7 +105,8 @@ jobs:
             --obfuscate \
             --split-debug-info=build/symbols \
             --dart-define=CARLYS_FLAVOR=demo \
-            --dart-define=CARLYS_API_BASE_URL=http://localhost:3000
+            --dart-define=CARLYS_API_BASE_URL=http://localhost:3000 \
+            --dart-define=CARLYS_PUBLIC_WEB_BASE_URL=${{ vars.CARLYS_PUBLIC_WEB_BASE_URL || 'http://localhost:3001' }}
           mv build/app/outputs/flutter-apk/app-release.apk \
              build/app/outputs/flutter-apk/carlys-demo.apk
           ls -lh build/app/outputs/flutter-apk/carlys-demo.apk
