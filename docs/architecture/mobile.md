@@ -478,6 +478,35 @@ Modèles de séance (interface) :
   affiché (« série 2 sur 4 · 8 reps à 60 kg »), validation d'une série avec
   déviation, saut d'une série, et **non-régression de la séance libre**.
 
+### Tests de structure
+
+Trois règles du dépôt ne portaient sur rien : chacune passait `flutter
+analyze` et la suite complète, et ne se serait vue qu'en production.
+
+- `test/core/app_database_shape_test.dart` — la forme (tables, colonnes,
+  index) d'une base **montée** depuis chaque palier historique doit être
+  celle d'une base **neuve**. Sans lui, une colonne ajoutée sans incrément de
+  `schemaVersion` donne une installation neuve impeccable et un crash à la
+  première écriture chez qui met à jour (`SqliteException(1): … has no column
+  named …`). Il n'attrape pas la migration destructive : forme migrée et
+  forme neuve concordent alors des deux côtés — le commentaire de tête dit ce
+  qu'il faudrait pour ce cas.
+- `test/architecture/feature_layers_test.dart` — la direction des
+  dépendances : `domain` n'importe ni `data` ni `presentation`, `data`
+  n'importe pas `presentation`, le transport HTTP reste dans `data/`, et
+  aucun écran ni widget ne tient un client Dio, la base Drift ou une source
+  de données distante. Hors du filet, volontairement : les arêtes entre
+  fonctionnalités (le code en a plus que le README de `lib/features/` n'en
+  documente), et l'arête `presentation` → `data` que le câblage Riverpod des
+  contrôleurs emprunte légitimement.
+- `scripts/check_mobile_file_sizes.sh` — les seuils du tableau « Tailles de
+  fichiers » de CLAUDE.md, par convention de chemin : widgets, use cases,
+  services. En shell parce que l'analyseur Dart n'a pas de règle de longueur
+  de fichier (`max_lines_per_file` rend « isn't a recognized lint rule »).
+  Les dépôts de `data/repositories/` et les contrôleurs Riverpod en sont
+  exclus tant que leur seuil n'est pas arbitré, et `design_system/scenes/`
+  aussi — c'est un moteur de rendu, pas de l'écran.
+
 Stratégie cible, par tranche :
 
 | Niveau                  | Portée                                                        |
