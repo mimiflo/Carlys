@@ -81,6 +81,7 @@ class MuscleGroupCard extends StatelessWidget {
                   child: Stack(
                     fit: StackFit.expand,
                     children: [
+                      const _Halo(),
                       if (asset != null)
                         Padding(
                           padding: const EdgeInsets.fromLTRB(
@@ -91,6 +92,7 @@ class MuscleGroupCard extends StatelessWidget {
                           ),
                           child: MuscleIllustration(
                             image: AssetImage(asset),
+                            slug: slug ?? allSlug,
                             fit: BoxFit.contain,
                           ),
                         )
@@ -138,6 +140,28 @@ class MuscleGroupCard extends StatelessWidget {
               ],
             ),
           ),
+        ),
+      ),
+    );
+  }
+}
+
+/// Lueur violette derrière le sujet : sans elle, un détourage sombre posé sur
+/// une surface sombre n'a plus de contour.
+///
+/// Le halo s'éteint vers le MÊME violet à alpha zéro, jamais vers du noir :
+/// sinon il vire au gris à mi-course au lieu de garder sa teinte.
+class _Halo extends StatelessWidget {
+  const _Halo();
+
+  @override
+  Widget build(BuildContext context) {
+    return const DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: RadialGradient(
+          center: Alignment(0, 0.15),
+          radius: 0.85,
+          colors: [AppColors.primaryCardStrong, AppColors.primaryCardClear],
         ),
       ),
     );

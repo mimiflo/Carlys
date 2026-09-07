@@ -66,6 +66,7 @@ class RemoteImage extends ConsumerWidget {
             ? placeholder
             : MuscleIllustration(
                 image: MemoryImage(data),
+                slug: url.split('/').last.replaceFirst('.webp', ''),
                 fit: fit,
                 semanticLabel: semanticLabel,
                 placeholder: placeholder,

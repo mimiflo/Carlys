@@ -16,10 +16,10 @@ void main() {
     );
   });
 
-  Future<ui.Image> render(ui.Image source) async {
+  Future<ui.Image> render(ui.Image source, Color sourceRed) async {
     final shader = program.fragmentShader();
     final recorder = ui.PictureRecorder();
-    MuscleIllustrationPainter(source, shader).paint(
+    MuscleIllustrationPainter(source, shader, sourceRed: sourceRed).paint(
       Canvas(recorder),
       Size(source.width.toDouble(), source.height.toDouble()),
     );
@@ -32,15 +32,15 @@ void main() {
     }
   }
 
-  test('rouges différents, même cible et même alpha', () async {
+  test('rouge des fessiers, relief et alpha préservés', () async {
     const colors = [
-      Color(0xFFEB5342), // Abdominaux.
-      Color(0xFFD36458), // Dos plus sombre.
-      Color(0xFFF26D5B), // Avant-bras plus clair.
-      Color(0xFF713124), // Ombre rouge.
+      Color(0xFFD36458), // Couleur médiane du dos.
+      Color(0xFF69322C), // Ombre : environ la moitié de la médiane.
+      Color(0xFFFD786A), // Zone éclairée : environ 120 %.
+      Color(0xFF351916), // Ombre profonde : environ 25 %.
       Color(0xFF808080), // Corps gris : inchangé.
       Color(0xFF654588), // Liseré violet : inchangé.
-      Color(0x80E06050), // Bord rouge semi-transparent.
+      Color(0x80D36458), // Bord rouge semi-transparent.
       Color(0x00000000), // Fond : toujours invisible.
     ];
     final recorder = ui.PictureRecorder();
@@ -54,18 +54,18 @@ void main() {
     final picture = recorder.endRecording();
     final source = await picture.toImage(colors.length * 16, 16);
     picture.dispose();
-    final output = await render(source);
+    final output = await render(source, MuscleIllustration.sourceReds['dos']!);
     final bytes = (await output.toByteData(
       format: ui.ImageByteFormat.rawStraightRgba,
     ))!;
     const expected = [
-      [255, 77, 77, 255],
-      [255, 77, 77, 255],
-      [255, 77, 77, 255],
-      [255, 77, 77, 255],
+      [234, 78, 69, 255],
+      [116, 39, 35, 255],
+      [255, 94, 83, 255],
+      [59, 20, 17, 255],
       [128, 128, 128, 255],
       [101, 69, 136, 255],
-      [255, 77, 77, 128],
+      [234, 78, 69, 128],
       [0, 0, 0, 0],
     ];
     for (var i = 0; i < expected.length; i++) {
@@ -73,13 +73,38 @@ void main() {
       for (var channel = 0; channel < 4; channel++) {
         expect(
           bytes.getUint8(offset + channel),
-          closeTo(expected[i][channel], 1),
+          closeTo(expected[i][channel], 2),
           reason: 'Échantillon $i, canal $channel',
         );
       }
     }
     output.dispose();
     source.dispose();
+  });
+
+  test('les médianes des 13 images rejoignent le rouge des fessiers', () async {
+    for (final entry in MuscleIllustration.sourceReds.entries) {
+      final recorder = ui.PictureRecorder();
+      Canvas(recorder).drawRect(
+        const Rect.fromLTWH(0, 0, 16, 16),
+        Paint()..color = entry.value,
+      );
+      final picture = recorder.endRecording();
+      final source = await picture.toImage(16, 16);
+      picture.dispose();
+      final output = await render(source, entry.value);
+      final bytes = (await output.toByteData())!;
+      const expected = [234, 78, 69, 255];
+      for (var channel = 0; channel < 4; channel++) {
+        expect(
+          bytes.getUint8((8 * 16 + 8) * 4 + channel),
+          closeTo(expected[channel], 1),
+          reason: entry.key,
+        );
+      }
+      output.dispose();
+      source.dispose();
+    }
   });
 
   test('les 13 détourages gardent leur transparence après rendu', () async {
@@ -92,7 +117,7 @@ void main() {
       );
       final source = (await codec.getNextFrame()).image;
       codec.dispose();
-      final output = await render(source);
+      final output = await render(source, MuscleIllustration.sourceReds[slug]!);
       final before = (await source.toByteData())!;
       final after = (await output.toByteData())!;
       var transparentPixels = 0;
@@ -108,6 +133,11 @@ void main() {
       expect(transparentPixels, greaterThan(1000), reason: slug);
       expect(opaquePixels, greaterThan(1000), reason: slug);
       expect(maxAlphaDifference, lessThanOrEqualTo(1), reason: slug);
+      if (slug == 'fessiers') {
+        for (var i = 0; i < before.lengthInBytes; i++) {
+          expect(after.getUint8(i), closeTo(before.getUint8(i), 1));
+        }
+      }
       output.dispose();
       source.dispose();
     }

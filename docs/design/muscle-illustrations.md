@@ -4,21 +4,24 @@ Série Carlys du 7 septembre 2026, générée avec l’outil ImageGen intégré.
 
 ## Rouge commun et transparence à l’affichage
 
-Les essais de régénération pour corriger le rouge produisaient parfois un
-damier opaque ou changeaient la forme des muscles. Ils ne sont pas intégrés.
-Les 13 détourages validés sont conservés ; `MuscleIllustration` applique
-`shaders/muscle_red.frag` aux cartes et aux replis anatomiques de l’Academy.
-Le cœur des régions rouges utilise la même valeur sRGB `#FF4D4D`, indépendamment
-de l’éclairage de l’image source. La transition aux frontières reste progressive,
-les pixels gris et violets sont préservés et le canal alpha reste identique.
-Les fichiers sources conservent leurs couleurs : l’uniformisation est un effet
-de rendu dans l’application. Le halo violet des cartes a également été retiré.
+Les 13 images présentes dans le projet sont conservées à l’identique.
+`MuscleIllustration` harmonise uniquement leur rouge à l’affichage, sur les
+cartes et les replis anatomiques de l’Academy. La référence est le rouge des
+fessiers existants : médiane sRGB `#EA4E45`. Cette image reste inchangée.
 
-Le programme est chargé une seule fois et chaque widget dispose de son propre
-sampler, libéré avec l’image au démontage. En cas d’indisponibilité du shader,
-le détourage original reste visible. Les tests vérifient des pixels rouges de
-plusieurs luminosités, le gris, le violet, les bords semi-transparents et l’alpha
-sur les 13 illustrations réelles.
+Chaque image possède une couleur source de référence, mesurée sur les pixels
+opaques (alpha > 240, R > 100, R > 1,3 × G et R > 1,3 × B). Le shader applique
+le rapport entre la couleur cible et cette médiane, canal par canal, uniquement
+aux régions rouges. Les ombres, les fibres et les variations de lumière sont
+conservées ; les frontières sont progressives, les gris et violets inchangés.
+Le canal alpha reste identique : aucun fond n’est ajouté. La disposition et
+le halo des cartes restent ceux du projet. Aucun nouveau visuel n’est intégré.
+
+Le programme est partagé ; chaque widget possède un sampler libéré avec
+l’image. Si le shader est indisponible, l’image originale reste visible.
+Les tests vérifient la référence commune, la conservation des ombres, des
+couleurs neutres, des bords semi-transparents et de l’alpha des 13 fichiers,
+ainsi que l’identité du rendu des fessiers.
 
 API utilisée : [fragment shaders Flutter](https://docs.flutter.dev/ui/design/graphics/fragment-shaders).
 

@@ -8,6 +8,7 @@ import 'package:flutter/material.dart';
 class MuscleIllustration extends StatefulWidget {
   const MuscleIllustration({
     required this.image,
+    required this.slug,
     this.fit = BoxFit.contain,
     this.semanticLabel,
     this.placeholder = const SizedBox.shrink(),
@@ -15,10 +16,31 @@ class MuscleIllustration extends StatefulWidget {
   });
 
   static const shaderAsset = 'shaders/muscle_red.frag';
+  static const referenceRed = Color(0xFFEA4E45);
+
+  // Médianes sRGB des régions rouges opaques des WebP existants.
+  // La correction des fessiers est l'identité : c'est l'image de référence.
+  static const sourceReds = <String, Color>{
+    'abdominaux': Color(0xFFEB5342),
+    'avant-bras': Color(0xFFF26D5B),
+    'biceps': Color(0xFFE47766),
+    'dos': Color(0xFFD36458),
+    'epaules': Color(0xFFE56D66),
+    'fessiers': referenceRed,
+    'ischio-jambiers': Color(0xFFE2574B),
+    'lombaires': Color(0xFFD76D61),
+    'mollets': Color(0xFFDB685E),
+    'pectoraux': Color(0xFFEA7568),
+    'quadriceps': Color(0xFFF16150),
+    'tous': Color(0xFFCF5E57),
+    'triceps': Color(0xFFE57465),
+  };
+
   static final Future<ui.FragmentProgram> _program =
       ui.FragmentProgram.fromAsset(shaderAsset);
 
   final ImageProvider<Object> image;
+  final String slug;
   final BoxFit fit;
   final String? semanticLabel;
   final Widget placeholder;
@@ -119,7 +141,13 @@ class _MuscleIllustrationState extends State<MuscleIllustration> {
           width: info.image.width / info.scale,
           height: info.image.height / info.scale,
           child: CustomPaint(
-            painter: MuscleIllustrationPainter(info.image, shader),
+            painter: MuscleIllustrationPainter(
+              info.image,
+              shader,
+              sourceRed:
+                  MuscleIllustration.sourceReds[widget.slug] ??
+                  MuscleIllustration.referenceRed,
+            ),
           ),
         ),
       );
@@ -135,10 +163,15 @@ class _MuscleIllustrationState extends State<MuscleIllustration> {
 
 /// Rendu partagé avec les tests de pixels : aucun fond n'est peint.
 class MuscleIllustrationPainter extends CustomPainter {
-  const MuscleIllustrationPainter(this.image, this.shader);
+  const MuscleIllustrationPainter(
+    this.image,
+    this.shader, {
+    required this.sourceRed,
+  });
 
   final ui.Image image;
   final ui.FragmentShader shader;
+  final Color sourceRed;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -146,11 +179,16 @@ class MuscleIllustrationPainter extends CustomPainter {
     shader
       ..setFloat(0, size.width)
       ..setFloat(1, size.height)
+      ..setFloat(2, sourceRed.r)
+      ..setFloat(3, sourceRed.g)
+      ..setFloat(4, sourceRed.b)
       ..setImageSampler(0, image);
     canvas.drawRect(Offset.zero & size, Paint()..shader = shader);
   }
 
   @override
   bool shouldRepaint(MuscleIllustrationPainter oldDelegate) =>
-      oldDelegate.image != image || oldDelegate.shader != shader;
+      oldDelegate.image != image ||
+      oldDelegate.shader != shader ||
+      oldDelegate.sourceRed != sourceRed;
 }
