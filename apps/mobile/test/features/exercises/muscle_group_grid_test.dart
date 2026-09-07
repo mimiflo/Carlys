@@ -132,14 +132,17 @@ void main() {
     expect(find.byTooltip('Revenir aux groupes musculaires'), findsNothing);
   });
 
-  testWidgets('un groupe sans détourage garde sa carte et son nom', (
+  testWidgets('les ischio-jambiers ont leur illustration dédiée', (
     tester,
   ) async {
     await openLibrary(tester);
 
-    // Les ischio-jambiers manquent à la planche fournie. La carte ne doit
-    // surtout pas emprunter l'image d'un autre muscle.
-    expect(MuscleGroupCard.assetFor('ischio-jambiers'), isNull);
+    expect(
+      MuscleGroupCard.assetFor('ischio-jambiers'),
+      'assets/muscles/ischio-jambiers.webp',
+    );
+    // Un groupe inconnu conserve le repli sans emprunter une autre anatomie.
+    expect(MuscleGroupCard.assetFor('groupe-inconnu'), isNull);
     expect(MuscleGroupCard.assetFor('quadriceps'), isNotNull);
 
     await tester.scrollUntilVisible(

@@ -39,6 +39,7 @@ class MuscleGroupCard extends StatelessWidget {
     'dos',
     'epaules',
     'fessiers',
+    'ischio-jambiers',
     'lombaires',
     'mollets',
     'pectoraux',
