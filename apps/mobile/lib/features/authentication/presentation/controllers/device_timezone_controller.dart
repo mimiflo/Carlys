@@ -1,7 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 
-import '../../../../core/errors/app_exception.dart';
 import '../../../../core/logging/app_logger.dart';
 import '../../data/repositories/auth_repository_impl.dart';
 import '../../domain/entities/auth_user.dart';
@@ -64,7 +63,14 @@ class DeviceTimezoneSync {
       final updated = await repository.updateTimezone(device);
       _logger.info('Fuseau déclaré au serveur : $device');
       return updated;
-    } on AppException catch (error) {
+    } on Object catch (error) {
+      // `on Object`, et non `on AppException` : le dépôt ne convertit que les
+      // `DioException`, et une enveloppe de réponse inattendue lève une
+      // `FormatException` qui n'est pas une `AppException`. Comme l'appel est
+      // lancé sans être attendu, une erreur non filtrée ici atterrirait dans
+      // le `runZonedGuarded` de `bootstrap()` — alors que la promesse tenue
+      // plus haut est qu'un échec ne remonte JAMAIS. Le prochain démarrage
+      // retentera, le serveur n'ayant toujours pas la bonne valeur.
       _logger.warning('Fuseau non déclaré', error: error);
       return null;
     }

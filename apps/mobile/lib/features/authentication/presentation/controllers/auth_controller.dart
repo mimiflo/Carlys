@@ -115,18 +115,23 @@ class AuthController extends Notifier<AuthState> {
   Future<void> _declareDeviceTimezone(AuthUser user) async {
     final updated = await ref.read(deviceTimezoneSyncProvider).reconcile(user);
     if (updated == null) return;
-    try {
-      // La réponse revient après coup : si la session s'est fermée entre
-      // temps (déconnexion, expiration), on ne rallume rien.
-      if (state is AuthAuthenticated) {
-        state = AuthAuthenticated(user: updated);
-      }
-    } on Object catch (error) {
-      _logger.warning(
-        'Fuseau reçu après la fermeture de session',
-        error: error,
-      );
+
+    // La réponse revient LONGTEMPS après le départ, et l'appareil a pu
+    // changer de mains entre les deux. Regarder seulement « y a-t-il une
+    // session ouverte ? » ne suffit pas : une déclaration partie pour le
+    // compte A, revenue après que A s'est déconnecté et que B s'est
+    // connecté, réinstallait A par-dessus B — le profil affichait le nom et
+    // l'adresse du compte précédent jusqu'au prochain `me()`. C'est
+    // exactement la frontière de compte que `LocalAccountSwitch` et la purge
+    // locale défendent partout ailleurs. On compare donc l'IDENTITÉ, ce qui
+    // couvre du même geste la session fermée entre-temps (déconnexion,
+    // expiration) : on ne rallume rien.
+    final current = state;
+    if (current is! AuthAuthenticated || current.user?.id != updated.id) {
+      _logger.info('Fuseau reçu hors de la session qui l’a demandé');
+      return;
     }
+    state = AuthAuthenticated(user: updated);
   }
 
   Future<void> logout() async {

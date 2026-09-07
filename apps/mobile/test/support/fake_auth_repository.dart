@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:carlys_mobile/core/errors/app_exception.dart';
 import 'package:carlys_mobile/features/authentication/domain/entities/auth_session_device.dart';
 import 'package:carlys_mobile/features/authentication/domain/entities/auth_user.dart';
@@ -48,8 +50,26 @@ class FakeAuthRepository implements AuthRepository {
   /// Fuseaux reçus par `updateTimezone`, dans l'ordre.
   final List<String> timezonesSent = <String>[];
 
-  /// Panne à faire subir à la déclaration de fuseau (hors ligne).
-  AppException? timezoneFailure;
+  /// Panne à faire subir à la déclaration de fuseau. `Object?`, et non
+  /// `AppException?` : le dépôt ne convertit que les `DioException`, donc une
+  /// enveloppe inattendue remonte en `FormatException` brute — le cas qui
+  /// s'échappait d'un `on AppException`.
+  Object? timezoneFailure;
+
+  /// Retient la RÉPONSE de `updateTimezone` jusqu'à ce que le test la
+  /// libère. C'est ce laps de temps, sur un vrai réseau, pendant lequel la
+  /// session peut se fermer ou l'appareil changer de compte : sans un moyen
+  /// de le reproduire, aucun test ne peut exercer la garde qui défend cette
+  /// frontière. Null = la réponse revient tout de suite.
+  Completer<void>? timezoneGate;
+
+  /// Appels à `clearLocalSession` : c'est la seule preuve que le trousseau a
+  /// bien été vidé — `storedSession` seul ne dit pas QUI l'a mis à `false`.
+  int clearLocalSessionCalls = 0;
+
+  /// Panne du trousseau (matériel verrouillé, keystore en vrac) : le vrai
+  /// `clearLocalSession` va jusqu'au stockage sécurisé, qui peut refuser.
+  Object? clearLocalSessionFailure;
 
   @override
   Future<bool> hasStoredSession() async => storedSession;
@@ -95,18 +115,23 @@ class FakeAuthRepository implements AuthRepository {
   @override
   Future<AuthUser> updateTimezone(String timezone) async {
     timezonesSent.add(timezone);
+    // La réponse du serveur décrit le compte qui a FAIT l'appel, pas celui
+    // qui sera connecté quand elle arrivera : on fige l'utilisateur ici.
+    final owner = user;
+    await timezoneGate?.future;
     final failure = timezoneFailure;
     if (failure != null) throw failure;
-    user = AuthUser(
-      id: user.id,
-      email: user.email,
-      displayName: user.displayName,
-      emailVerified: user.emailVerified,
-      locale: user.locale,
+    final updated = AuthUser(
+      id: owner.id,
+      email: owner.email,
+      displayName: owner.displayName,
+      emailVerified: owner.emailVerified,
+      locale: owner.locale,
       timezone: timezone,
-      carlysProfile: user.carlysProfile,
+      carlysProfile: owner.carlysProfile,
     );
-    return user;
+    if (user.id == owner.id) user = updated;
+    return updated;
   }
 
   @override
@@ -150,12 +175,19 @@ class FakeAuthRepository implements AuthRepository {
     deletionPasswords.add(password);
     final failure = accountFailure;
     if (failure != null) throw failure;
-    storedSession = false;
+    // Le serveur supprime les sessions ; il ne touche PAS au trousseau de
+    // l'appareil. Le faux ne doit donc pas le vider non plus, sinon
+    // `storedSession` passerait à `false` même si `clearLocalSession`
+    // n'était jamais appelé, et l'assertion qui le vérifie ne prouverait
+    // plus rien.
     devices = const [];
   }
 
   @override
   Future<void> clearLocalSession() async {
+    clearLocalSessionCalls++;
+    final failure = clearLocalSessionFailure;
+    if (failure != null) throw failure;
     storedSession = false;
   }
 
