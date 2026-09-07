@@ -106,16 +106,27 @@ jobs:
       # Garde-fou. `--enforce-lockfile` ne protège que de ce qui arrive AVANT
       # lui ; il n'a rien vu quand `flutter create` réécrivait le lock juste au-
       # dessus. Ce contrôle-ci ferme le trou par l'autre bout : si une étape
-      # quelconque de ce job déplace pubspec.lock (ou pubspec.yaml), le job
-      # échoue au lieu de publier un APK construit sur autre chose que l'arbre
-      # versionné. Vérifié dans les deux sens : code 0 avec l'étape corrigée,
-      # code 1 avec l'ancienne.
-      - name: Garde-fou — l'arbre de dépendances est bien celui du dépôt
+      # quelconque de ce job modifie un fichier VERSIONNÉ, le job échoue au lieu
+      # de publier un APK construit sur autre chose que l'arbre du dépôt.
+      #
+      # Sans restriction de chemins, volontairement. Aujourd'hui `flutter create
+      # --no-pub` ne touche qu'un seul fichier suivi (pubspec.lock, que
+      # mobile_platforms.sh restaure), mais rien ne garantit que la prochaine
+      # version du SDK s'en tiendra là : lister les chemins à surveiller, c'est
+      # promettre de deviner à l'avance ce qu'un outil tiers ira écrire. Sans
+      # chemin, `git diff` couvre tout le dépôt quel que soit le répertoire
+      # courant — la portée dépasse donc apps/mobile, ce qui est voulu. Le
+      # reste de ce que produit le job — android/, .dart_tool/, les .g.dart —
+      # n'est pas versionné, donc invisible pour `git diff` : le contrôle est
+      # large sans être bruyant. Vérifié dans les deux sens : code 0 sur un
+      # arbre propre après la séquence création → branding → pub get →
+      # build_runner, code 1 dès qu'un fichier suivi bouge.
+      - name: Garde-fou — l'arbre versionné est intact
         run: |
-          if ! git diff --exit-code -- pubspec.yaml pubspec.lock; then
-            echo "::error::pubspec.lock (ou pubspec.yaml) a été réécrit pendant" \
-              "le job : l'APK ne serait pas construit sur l'arbre de dépendances" \
-              "éprouvé par mobile-ci. Voir le diff ci-dessus."
+          if ! git diff --exit-code; then
+            echo "::error::une étape de ce job a modifié un fichier versionné :" \
+              "l'APK ne serait pas construit sur l'arbre de dépendances éprouvé" \
+              "par mobile-ci. Voir le diff ci-dessus."
             exit 1
           fi
 
