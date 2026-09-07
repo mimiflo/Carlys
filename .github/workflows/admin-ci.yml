@@ -91,3 +91,79 @@ jobs:
         run: pnpm --filter @carlys/admin build
         env:
           NEXT_PUBLIC_API_BASE_URL: http://localhost:3000
+
+      # Textes légaux — VISIBLE ici, BLOQUANT en production.
+      #
+      # docs/legal/*.md portent encore 16 marqueurs « [À COMPLÉTER : … ] »
+      # distincts (10 dans privacy.md, 6 dans terms.md) que /privacy et /terms
+      # servent en clair. L'étape « Build » ci-dessus ne les voit pas : sans
+      # LEGAL_PLACEHOLDERS=forbid, la garde de src/lib/legal-documents.ts se
+      # contente d'un avertissement noyé dans le journal, et le build rend 0.
+      #
+      # Pourquoi cette étape n'est PAS bloquante, alors qu'il serait tentant de
+      # poser `forbid` directement sur le Build ci-dessus. Mesuré : avec
+      # `LEGAL_PLACEHOLDERS=forbid`, `pnpm --filter @carlys/admin build` rend
+      # code 1 AUJOURD'HUI. Cette porte naîtrait donc rouge, et le resterait à
+      # chaque poussée touchant apps/admin, packages/** ou docs/legal, jusqu'à
+      # ce que quelqu'un rédige seize paragraphes juridiques — une décision de
+      # l'éditeur, pas un correctif de développement. Une CI rouge en
+      # permanence n'est pas un filet : elle apprend à ne plus regarder
+      # admin-ci, et masque au passage les cinq étapes utiles au-dessus (lint,
+      # types, tests admin, lint et tests des paquets).
+      #
+      # Surtout, le blocage EXISTE DÉJÀ là où il compte : apps/admin/Dockerfile
+      # pose `ARG LEGAL_PLACEHOLDERS=forbid`, donc l'image de production REFUSE
+      # de se construire tant qu'un marqueur subsiste — et images-ci.yml, qui
+      # tourne sur cette même branche, vérifie à chaque exécution que cette
+      # garde mord encore (étape « La garde légale mord toujours » : un build
+      # qui réussit y fait échouer le job). Rendre admin-ci rouge n'ajouterait
+      # donc aucune protection, seulement du bruit.
+      #
+      # Ce qui manquait n'était pas le blocage, c'était la VISIBILITÉ : l'état
+      # d'inachèvement remonte désormais dans le résumé du job et en annotation.
+      # Le jour où docs/legal sera terminé, cette étape le dira d'elle-même
+      # (annotation `::notice::`) ; il suffira alors de remplacer le
+      # `::warning::` final par un `exit 1` pour la rendre bloquante, et de
+      # déplacer `LEGAL_PLACEHOLDERS: forbid` sur l'étape « Build » elle-même.
+      #
+      # Cette étape n'est PAS un tampon complaisant pour autant : si le build
+      # échoue pour une raison étrangère à la garde légale, elle rend 1 (cas
+      # éprouvé). Elle ne tolère que la dette qu'elle nomme.
+      - name: Textes légaux — inventaire des marqueurs (non bloquant)
+        env:
+          NEXT_PUBLIC_API_BASE_URL: http://localhost:3000
+          LEGAL_PLACEHOLDERS: forbid
+        run: |
+          # Le build est ici relancé À CHAUD (~5 s mesurées, .next déjà peuplé
+          # par l'étape précédente) : on réutilise la VRAIE garde plutôt que de
+          # redire sa règle en shell, qui la dupliquerait et dériverait.
+          pnpm --filter @carlys/admin build > legal.log 2>&1 && status=0 || status=$?
+          if [ "$status" -eq 0 ]; then
+            echo "Aucun marqueur : docs/legal est complet."
+            echo "Aucun marqueur restant dans docs/legal." >> "$GITHUB_STEP_SUMMARY"
+            echo "::notice::docs/legal est complet — cette étape peut devenir bloquante (voir son commentaire)."
+            exit 0
+          fi
+          # Un build cassé pour une AUTRE raison que la garde légale n'a rien à
+          # voir avec cette dette-là : on ne l'avale pas.
+          if ! grep -q 'marqueur(s) à compléter' legal.log; then
+            echo "::error::Le build a échoué, mais pas sur la garde légale :"
+            tail -40 legal.log
+            exit 1
+          fi
+          # `next build` s'arrête au PREMIER document fautif : l'inventaire
+          # ci-dessous ne montre donc qu'un fichier à la fois, pas les deux.
+          # L'ancre `^Error:` évite au passage de ramasser la ligne de code
+          # source que Next réaffiche, qui contient les mêmes mots.
+          {
+            echo "### Textes légaux inachevés"
+            echo
+            echo "Les pages \`/privacy\` et \`/terms\` servent encore des marqueurs en clair."
+            echo "L'image de production, elle, refuse de se construire (voir images-ci)."
+            echo "Le build s'arrêtant au premier document fautif, l'autre peut en porter aussi."
+            echo
+            echo '```'
+            grep -E '^Error: docs/legal/.*marqueur\(s\) à compléter|^ *- \[À COMPLÉTER' legal.log
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+          echo "::warning::docs/legal porte encore des marqueurs [À COMPLÉTER] servis en clair sur /privacy et /terms."

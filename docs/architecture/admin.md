@@ -176,6 +176,15 @@ Décisions :
   texte tel quel pour la relecture. Un test lit les deux vrais fichiers et
   refuse toute syntaxe que le lecteur minimal ignorerait (code, tableau,
   emphase à une étoile, lien mal fermé) ainsi que le vouvoiement.
+  `admin-ci` relance le build avec `LEGAL_PLACEHOLDERS=forbid` dans une étape
+  dédiée, **non bloquante** : elle remonte l'inventaire des marqueurs restants
+  dans le résumé du job et en annotation, sans faire échouer la CI. Ce choix
+  est délibéré — la garde bloque déjà là où elle protège vraiment (l'image de
+  production, dont `images-ci` vérifie à chaque exécution qu'elle mord encore),
+  et une CI rouge en permanence, le temps que les textes soient rédigés,
+  n'apprendrait qu'à ne plus regarder `admin-ci`. L'étape échoue en revanche si
+  le build casse pour une autre raison que les marqueurs. Le jour où
+  `docs/legal` est complet, elle le signale et devient bloquante en une ligne.
 - **Ton** : français, tutoiement, sans tiret cadratin dans les textes visibles
   (vérifié par les tests des pages légales).
 - `PUBLIC_APP_URL` (API) désigne cette application, jamais l'API.
