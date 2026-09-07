@@ -1,5 +1,6 @@
 import 'package:carlys_mobile/app/environment/app_environment.dart';
 import 'package:carlys_mobile/core/database/local_account_purge.dart';
+import 'package:carlys_mobile/core/database/local_account_switch.dart';
 import 'package:carlys_mobile/core/errors/app_exception.dart';
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
@@ -11,6 +12,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/fake_auth_repository.dart';
+import '../../support/fake_local_account_switch.dart';
 import '../../support/noop_local_account_purge.dart';
 
 /// LES DEUX GESTES DE COMPTE, exigés par les magasins d'applications autant
@@ -41,6 +43,9 @@ void main() {
       ),
       authRepositoryProvider.overrideWithValue(auth),
       localAccountPurgeProvider.overrideWithValue(purge),
+      // Restaurer une session réclame l'appareil : inerte ici, ces écrans
+      // ne parlent pas de frontière de compte.
+      localAccountSwitchProvider.overrideWithValue(FakeLocalAccountSwitch()),
     ],
     child: MaterialApp(theme: AppTheme.dark(), home: screen),
   );

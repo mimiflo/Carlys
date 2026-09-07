@@ -1,5 +1,6 @@
 import 'package:carlys_mobile/app/environment/app_environment.dart';
 import 'package:carlys_mobile/core/database/local_account_purge.dart';
+import 'package:carlys_mobile/core/database/local_account_switch.dart';
 import 'package:carlys_mobile/core/errors/app_exception.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
 import 'package:carlys_mobile/features/authentication/domain/entities/auth_user.dart';
@@ -9,6 +10,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/fake_auth_repository.dart';
+import '../../support/fake_local_account_switch.dart';
 import '../../support/noop_local_account_purge.dart';
 
 /// LE FUSEAU DE L'APPAREIL DOIT ARRIVER AU SERVEUR.
@@ -49,6 +51,10 @@ void main() {
         ),
         authRepositoryProvider.overrideWithValue(auth),
         localAccountPurgeProvider.overrideWithValue(NoopLocalAccountPurge()),
+        // Entrer dans un compte réclame l'appareil : inerte ici, sinon la
+        // réclamation lirait les vraies préférences et la restauration
+        // s'arrêterait avant d'avoir déclaré quoi que ce soit.
+        localAccountSwitchProvider.overrideWithValue(FakeLocalAccountSwitch()),
         deviceTimezoneReaderProvider.overrideWithValue(reader),
       ],
     );
