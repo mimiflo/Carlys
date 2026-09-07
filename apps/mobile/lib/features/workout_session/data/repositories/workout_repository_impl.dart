@@ -12,6 +12,7 @@ import '../../domain/repositories/workout_repository.dart';
 import '../datasources/workout_session_remote_data_source.dart';
 import '../local/workout_conflict_actions.dart';
 import '../local/workout_session_writer.dart';
+import '../mappers/workout_mappers.dart';
 import 'workout_session_downloader.dart';
 
 /// Implémentation offline-first : Drift est écrit en premier, chaque mutation
@@ -27,6 +28,7 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
   }) : _db = database,
        _sync = syncEngine,
        _uuid = uuid,
+       _rows = WorkoutRowMapper(database),
        _writer = WorkoutSessionWriter(
          database: database,
          uuid: uuid,
@@ -37,6 +39,7 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
   final SyncEngine _sync;
   final WorkoutSessionRemoteDataSource? _remote;
   final Uuid _uuid;
+  final WorkoutRowMapper _rows;
   final WorkoutSessionWriter _writer;
 
   // ── Lectures ─────────────────────────────────────────────────────────────
@@ -59,7 +62,7 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
         );
 
     return query.watch().map((rows) {
-      final workouts = _groupRows(rows);
+      final workouts = _rows.groupRows(rows);
       if (workouts.isEmpty) {
         return null;
       }
@@ -102,7 +105,7 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
       (rows) => rows
           .map(
             (row) => WorkoutHistoryEntry(
-              session: _mapSession(row.readTable(sessions)),
+              session: _rows.mapSession(row.readTable(sessions)),
               setsCount: row.read(setsCount) ?? 0,
               totalVolumeKg: row.read(totalVolumeKg) ?? 0,
             ),
@@ -121,7 +124,7 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
       ),
     ])..where(_db.localWorkoutSessions.id.equals(sessionId));
 
-    final workouts = _groupRows(await query.get());
+    final workouts = _rows.groupRows(await query.get());
     return workouts.isEmpty ? null : workouts.first;
   }
 
@@ -323,59 +326,6 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
   void _poke() {
     unawaited(_sync.syncNow());
   }
-
-  List<WorkoutWithSets> _groupRows(List<TypedResult> rows) {
-    final sessions = <String, LocalWorkoutSession>{};
-    final setsBySession = <String, List<LocalWorkoutSet>>{};
-
-    for (final row in rows) {
-      final session = row.readTable(_db.localWorkoutSessions);
-      sessions[session.id] = session;
-      final set = row.readTableOrNull(_db.localWorkoutSets);
-      if (set != null) {
-        setsBySession.putIfAbsent(session.id, () => []).add(set);
-      }
-    }
-
-    return sessions.values.map((session) {
-      // Copie modifiable : une séance sans série retombait sur une liste
-      // constante, que le tri faisait planter.
-      final sets = [...setsBySession[session.id] ?? const <LocalWorkoutSet>[]]
-        ..sort((a, b) => a.position.compareTo(b.position));
-      return WorkoutWithSets(
-        session: _mapSession(session),
-        sets: sets.map(_mapSet).toList(),
-      );
-    }).toList();
-  }
-
-  WorkoutInfo _mapSession(LocalWorkoutSession row) => WorkoutInfo(
-    id: row.id,
-    name: row.name,
-    status: WorkoutStatus.fromApi(row.status),
-    startedAt: row.startedAt,
-    endedAt: row.endedAt,
-    durationSeconds: row.durationSeconds,
-    templateId: row.templateId,
-    templateName: row.templateName,
-    syncState: LocalSyncState.fromDb(row.syncStatus),
-  );
-
-  WorkoutSetEntry _mapSet(LocalWorkoutSet row) => WorkoutSetEntry(
-    id: row.id,
-    exerciseId: row.exerciseId,
-    exerciseName: row.exerciseName,
-    position: row.position,
-    kind: SetKind.fromApi(row.kind),
-    reps: row.reps,
-    weightKg: row.weightKg,
-    restSeconds: row.restSeconds,
-    rpe: row.rpe,
-    plannedReps: row.plannedReps,
-    plannedWeightKg: row.plannedWeightKg,
-    completedAt: row.completedAt,
-    syncState: LocalSyncState.fromDb(row.syncStatus),
-  );
 }
 
 final workoutRepositoryProvider = Provider<WorkoutRepository>((ref) {
