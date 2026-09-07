@@ -29,14 +29,14 @@ const MEDIA_DIRECTORY = join(__dirname, 'seed-media', 'exercises');
 const NAMESPACE = 'carlys.seed.media';
 
 /**
- * Identifiant DÉTERMINISTE d'un média de seed, dérivé de son slug.
+ * Identifiant déterministe d'une VERSION de photo, dérivé du slug et du contenu.
  *
- * C'est ce qui rend l'étape rejouable : re-seeder ne crée pas un second média
- * ni un second objet, il retombe sur le même identifiant — donc sur la même
- * clé de stockage, puisque la clé EST l'identifiant.
+ * Un contenu identique garde son URL. Remplacer la photo crée une nouvelle
+ * URL : l'ancienne peut rester dans le cache immutable du mobile ou du CDN.
+ * Les objets déjà publiés ne changent donc jamais de contenu.
  */
-function mediaIdFor(slug: string): string {
-  const hash = createHash('sha256').update(`${NAMESPACE}:${slug}`).digest();
+export function mediaIdFor(slug: string, checksum: string): string {
+  const hash = createHash('sha256').update(`${NAMESPACE}:${slug}:${checksum}`).digest();
   const bytes = Buffer.from(hash.subarray(0, 16));
   // Version 4 et variante RFC 4122 : un UUID valide, mais reproductible.
   bytes[6] = (bytes[6]! & 0x0f) | 0x40;
@@ -103,7 +103,8 @@ export async function seedExerciseMedia(prisma: PrismaClient): Promise<void> {
     }
 
     const content = await readFile(join(MEDIA_DIRECTORY, file));
-    const id = mediaIdFor(slug);
+    const checksum = createHash('sha256').update(content).digest('hex');
+    const id = mediaIdFor(slug, checksum);
     const storageKey = `image/${id}.webp`;
     const size = readImageSize(content);
 
@@ -131,7 +132,7 @@ export async function seedExerciseMedia(prisma: PrismaClient): Promise<void> {
       byteSize: content.byteLength,
       width: size?.width ?? null,
       height: size?.height ?? null,
-      checksum: createHash('sha256').update(content).digest('hex'),
+      checksum,
       originalName: file,
       deletedAt: null,
     };
