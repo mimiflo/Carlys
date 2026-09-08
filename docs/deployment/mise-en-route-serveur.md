@@ -50,8 +50,12 @@ Trois par environnement. Ajoutez les `AAAA` équivalents si le serveur a une
 IPv6 — les vhosts écoutent déjà en `[::]`.
 
 Le domaine nu (`carlys.example`) et `www` ne sont **pas** servis par ces
-vhosts : aucun des six `server_name` ne les couvre, une visite y tomberait sur
-le vhost par défaut de Nginx. Si vous voulez y mettre un site vitrine, c'est un
+vhosts : aucun des six `server_name` ne les couvre. Ce qu'ils reçoivent est
+décidé par le vhost **attrape-tout** posé à l'étape 6 — une connexion fermée
+sans réponse, derrière un certificat auto-signé. Sans lui, Nginx désignerait
+d'office comme défaut le premier bloc rencontré, c'est-à-dire l'**API de
+production** : un nom inconnu atteindrait la production avec un certificat au
+mauvais nom. Si vous voulez mettre un site vitrine sur le domaine nu, c'est un
 vhost de plus, hors de ce guide.
 
 **Vérification** — depuis n'importe quelle machine, une fois la propagation
@@ -78,6 +82,46 @@ git clone https://github.com/mimiflo/Carlys.git /srv/carlys/repo
 cd /srv/carlys/repo
 sudo ./scripts/server/setup.sh
 ```
+
+**Si le dépôt est privé**, ce `git clone` anonyme échoue sur
+`Authentication failed` (ou `repository not found`, GitHub ne distinguant pas
+un dépôt privé d'un dépôt inexistant). Il faut alors donner au serveur un
+accès en **lecture seule**, et le choix n'est pas neutre car l'étape 10 y
+revient à chaque déploiement — un `git pull` doit pouvoir se faire sans qu'un
+humain saisisse quoi que ce soit :
+
+```bash
+# Option A — clé de déploiement (recommandée : liée AU DÉPÔT, pas à un compte,
+# révocable seule, et sans autre droit que la lecture de ce dépôt).
+ssh-keygen -t ed25519 -N '' -C 'carlys-serveur' -f /root/.ssh/carlys_deploy
+cat /root/.ssh/carlys_deploy.pub
+# → à coller dans GitHub → le dépôt → Settings → Deploy keys → Add deploy key,
+#   SANS cocher « Allow write access ».
+printf '%s\n' \
+  'Host github.com' \
+  '  IdentityFile /root/.ssh/carlys_deploy' \
+  '  IdentitiesOnly yes' >> /root/.ssh/config
+git clone git@github.com:mimiflo/Carlys.git /srv/carlys/repo
+
+# Option B — jeton personnel, si les clés de déploiement vous sont fermées.
+# Portée `repo` (lecture) ; il expire, et le jour où il expire c'est `git pull`
+# qui casse, pas le déploiement — d'où la préférence pour l'option A.
+#
+# Le jeton ne va PAS dans l'URL du dépôt. Une URL porteuse d'identifiants se
+# recopie dans .git/config en clair, reste dans l'historique du shell, et
+# ressort de la moindre commande qui affiche le remote (`git remote -v`, un
+# message d'erreur de `git pull`, une trace de déploiement). On le range dans
+# le fichier d'identifiants de git, en 600 : `credential.helper store` le relit
+# tout seul, donc le `git pull` de l'étape 10 reste non interactif.
+install -m 600 /dev/null /root/.git-credentials
+printf 'https://%s:%s@github.com\n' 'VOTRE_LOGIN' 'LE_JETON' > /root/.git-credentials
+git config --global credential.helper store
+git clone https://github.com/mimiflo/Carlys.git /srv/carlys/repo
+```
+
+Ce jeton-là n'est **pas** celui de l'étape 3 : celui-ci lit le *dépôt Git*,
+celui de l'étape 3 lit les *images du registre*. Deux portées, deux fichiers,
+et aucune raison de les confondre.
 
 `setup.sh` installe Docker et le plugin Compose, Nginx, certbot, ouvre le
 pare-feu sur 22/80/443 seulement, crée l'arborescence `/srv/carlys/`, y dépose
@@ -147,6 +191,14 @@ ghcr.io/mimiflo/carlys-api:sha-<sha12>
 ghcr.io/mimiflo/carlys-api-migrate:sha-<sha12>
 ghcr.io/mimiflo/carlys-admin:sha-<sha12>
 ```
+
+**`images-publish` tourne à CHAQUE poussée, sans filtre de chemins**, et c'est
+délibéré : le déploiement se fait par SHA, donc **tout** commit de la branche
+doit avoir ses images. Un filtre qui n'aurait rien publié pour un commit ne
+touchant que `infrastructure/` ou `scripts/` ferait échouer `deploy.sh` sur ce
+SHA — image absente —, et la cause serait invisible depuis le serveur. La
+contrepartie est un peu de place dans GHCR : les vieux tags `sha-…` se purgent
+depuis l'onglet **Packages** du dépôt, ils ne disparaissent pas seuls.
 
 **Vérification** : le résumé de l'exécution affiche le `sha12` et la commande
 de déploiement à copier. Notez ce `sha12`, il sert à l'étape 7.
@@ -266,7 +318,17 @@ sudo rm /var/www/certbot/.well-known/acme-challenge/test
 
 ### Un certificat par hôte
 
-Les vhosts attendent un répertoire de certificat **par nom** :
+**Un certificat par nom, pas un certificat multi-noms**, et les vhosts ne
+laissent pas le choix : chacun des six blocs HTTPS pointe
+`ssl_certificate /etc/letsencrypt/live/<son-nom>/fullchain.pem`. Six
+`server_name`, six répertoires, six paires `fullchain.pem` / `privkey.pem`. Un
+seul certificat couvrant les six noms (`certbot -d a -d b …`) créerait **un**
+répertoire portant le nom du premier `-d`, et les cinq autres vhosts
+refuseraient de charger sur un fichier absent.
+
+`certonly` — sans `--nginx` — parce que le greffon Nginx de certbot réécrirait
+les vhosts versionnés de ce dépôt. Ici certbot ne touche qu'à
+`/etc/letsencrypt/`, la configuration Nginx reste celle du dépôt.
 
 ```bash
 for h in api app media api-staging app-staging media-staging; do
@@ -276,11 +338,71 @@ for h in api app media api-staging app-staging media-staging; do
 done
 ```
 
-**Vérification :**
+**Vérification** — six répertoires, et douze fichiers :
 
 ```bash
-sudo ls -d /etc/letsencrypt/live/*.carlys.example   # six répertoires
+sudo ls -d /etc/letsencrypt/live/*.carlys.example         # six répertoires
+sudo ls   /etc/letsencrypt/live/*.carlys.example/fullchain.pem \
+          /etc/letsencrypt/live/*.carlys.example/privkey.pem | wc -l   # 12
 ```
+
+Une différence entre cette liste et les six `server_name` des vhosts **est** la
+panne : `nginx -t` la nommera fichier par fichier à l'activation ci-dessous.
+
+### Le renouvellement doit recharger Nginx
+
+`certbot renew` renouvelle les fichiers ; il ne dit rien à Nginx, qui garde en
+mémoire le certificat chargé au démarrage. Sans le crochet ci-dessous, tout se
+passe bien pendant quatre-vingt-dix jours, puis les six hôtes servent un
+certificat expiré — alors que le nouveau est sur le disque. Le crochet est
+global (`renewal-hooks/deploy/`) : il vaut pour les six certificats, et pour
+tout certificat ajouté plus tard.
+
+```bash
+sudo mkdir -p /etc/letsencrypt/renewal-hooks/deploy
+printf '%s\n' '#!/bin/sh' 'systemctl reload nginx' \
+  | sudo tee /etc/letsencrypt/renewal-hooks/deploy/recharger-nginx.sh > /dev/null
+sudo chmod +x /etc/letsencrypt/renewal-hooks/deploy/recharger-nginx.sh
+```
+
+Il ne se déclenche qu'après un renouvellement **réel** — c'est pourquoi
+`certbot renew --dry-run` (étape 10) ne l'exécute pas.
+
+### L'attrape-tout : ce que reçoit un nom qu'on ne sert pas
+
+Le vhost par défaut de Nginx vient d'être retiré, et aucun des six vhosts ne
+porte `default_server`. En l'état, Nginx désignerait comme défaut le **premier
+bloc rencontré** pour chaque port : `sites-enabled/*` étant inclus par ordre
+alphabétique, ce serait le premier bloc 443 de `carlys-production.conf`,
+c'est-à-dire l'**API de production**. Une requête sur le domaine nu, sur `www`,
+sur l'IP brute ou sur un sous-domaine oublié y atterrirait, avec le certificat
+d'`api.carlys.example` — donc un avertissement de sécurité dans le navigateur,
+et une porte ouverte là où on n'en voulait pas.
+
+Le vhost attrape-tout reprend cette place et ferme la connexion. Il ne
+référence aucun certificat Let's Encrypt : celui qu'il présente est
+auto-signé, et c'est correct — il n'existe aucun certificat valide pour un nom
+qu'on n'héberge pas.
+
+```bash
+sudo mkdir -p /etc/nginx/ssl
+sudo openssl req -x509 -nodes -newkey rsa:2048 -days 3650 \
+  -subj '/CN=hote-inconnu' \
+  -keyout /etc/nginx/ssl/attrape-tout.key \
+  -out    /etc/nginx/ssl/attrape-tout.crt
+sudo chmod 600 /etc/nginx/ssl/attrape-tout.key
+
+sudo cp /srv/carlys/repo/infrastructure/nginx/carlys-attrape-tout.conf.example \
+        /etc/nginx/sites-available/carlys-attrape-tout.conf
+sudo ln -sf /etc/nginx/sites-available/carlys-attrape-tout.conf /etc/nginx/sites-enabled/
+```
+
+Aucun domaine à substituer : ce fichier ne nomme aucun hôte.
+
+**Ne rechargez pas encore.** Le vhost temporaire de l'ACME porte lui aussi
+`listen 80 default_server` : les deux ensemble feraient échouer `nginx -t` sur
+`a duplicate default server for 0.0.0.0:80`. Le retrait du temporaire et le
+rechargement se font en une seule fois, juste en dessous.
 
 ### Activer les vhosts définitifs
 
@@ -319,6 +441,12 @@ derrière. C'est normal.
 
 ```bash
 curl -sI https://api-staging.carlys.example/health/live | head -1   # 502 attendu
+
+# L'attrape-tout fait son travail : un nom inconnu n'atteint RIEN.
+curl -sk https://carlys.example/ ; echo "code curl = $?"   # 52 ou 92 : connexion fermée
+# …et il présente son certificat auto-signé, pas celui de l'API :
+echo | openssl s_client -connect 203.0.113.10:443 -servername carlys.example 2>/dev/null \
+  | grep -m1 'subject='            # → CN = hote-inconnu
 ```
 
 ---
@@ -548,9 +676,38 @@ aucun `[À COMPLÉTER]` ne doit y apparaître.
 ### Déployer une nouvelle version
 
 1. Poussez. `images-publish` publie les trois images du nouveau SHA.
-2. `sudo /srv/carlys/repo/scripts/server/deploy.sh staging <nouveau-sha12>`
-3. Éprouvez la recette.
-4. Lancez `images-publish-prod` sur ce SHA, puis `promote.sh`.
+2. **Mettez à jour le clone du serveur.** C'est la première chose à faire, et
+   la plus facile à oublier :
+
+   ```bash
+   sudo git -C /srv/carlys/repo pull --ff-only
+   ```
+
+3. `sudo /srv/carlys/repo/scripts/server/deploy.sh staging <nouveau-sha12>`
+4. Éprouvez la recette.
+5. Lancez `images-publish-prod` sur ce SHA, puis `promote.sh`.
+
+**Pourquoi l'étape 2 n'est pas une formalité.** Ce qui est déployé par SHA, ce
+sont les **images**, et elles viennent du registre. Tout le reste vient du
+clone `/srv/carlys/repo`, qui ne bouge que si on l'y invite :
+
+| Ce que lit le serveur | D'où ça vient | Ce que ça donne sans `git pull` |
+| --- | --- | --- |
+| `infrastructure/server/compose.yml` | le clone | les images du nouveau SHA démarrent sous l'ancienne définition de services : variable, volume, port ou service ajouté depuis, absent |
+| `scripts/server/deploy.sh`, `promote.sh`, `backup.sh` | le clone | on exploite avec les scripts d'il y a plusieurs semaines |
+| `infrastructure/server/env/*.env.example` | le clone | une variable devenue obligatoire n'apparaît nulle part, et l'API refuse de démarrer sans dire d'où sort le nom |
+| `infrastructure/nginx/*.conf.example` | le clone | un vhost corrigé n'est pas recopié (voir plus bas) |
+
+Le symptôme est trompeur : `deploy.sh` tire bien les bonnes images, la
+commande réussit à moitié, et la panne ressemble à un bug applicatif. Elle est
+seulement due à un fichier compose vieux de plusieurs semaines.
+
+**Les vhosts, eux, ne se rechargent pas tout seuls.** `git pull` met à jour les
+`*.conf.example` du dépôt, pas les fichiers actifs de `/etc/nginx/`. Si une
+version modifie un vhost, il faut rejouer la substitution de l'étape 6
+(section « Activer les vhosts définitifs »), puis
+`sudo nginx -t && sudo systemctl reload nginx`. Les notes de version le disent
+quand c'est le cas ; en son absence, ce `git pull` suffit.
 
 **Toujours par SHA, jamais par tag mouvant.** Le tag `staging` existe pour
 qu'on voie d'un coup d'œil ce qui est récent dans l'onglet Packages ; s'en
@@ -573,10 +730,14 @@ restauration sur la base de recette de temps en temps.
 
 ### Renouvellement des certificats
 
-certbot installe son propre minuteur. Vérifiez-le une fois :
+certbot installe son propre minuteur. Vérifiez-le une fois, ainsi que le
+crochet de rechargement posé à l'étape 6 — sans lui, les fichiers sont
+renouvelés mais Nginx continue de servir les anciens :
 
 ```bash
-sudo certbot renew --dry-run
+ls -l /etc/letsencrypt/renewal-hooks/deploy/   # recharger-nginx.sh, exécutable
+sudo certbot renew --dry-run                   # n'exécute PAS le crochet : un
+                                               # essai à blanc ne « déploie » rien
 systemctl list-timers | grep certbot
 ```
 
@@ -605,6 +766,9 @@ c'est ce champ qu'on suit d'une requête à l'autre.
 | L'app mobile plante au lancement | `CARLYS_PUBLIC_WEB_BASE_URL` oubliée au build (étape 8) |
 | `promote.sh` dit que le tag `-prod` manque | les marqueurs légaux subsistent (étape 9.1) |
 | L'IP du client est toujours la même dans l'audit | `TRUST_PROXY_HOPS` ≠ 1 |
+| Un service, un volume ou une variable manque après un déploiement pourtant réussi | le clone `/srv/carlys/repo` n'a pas été mis à jour : `deploy.sh` a tiré les bonnes images et les a démarrées sous un `compose.yml` périmé (étape 10) |
+| Un hôte inconnu (domaine nu, `www`, IP brute) atteint l'API de production | le vhost attrape-tout n'est pas activé (étape 6) |
+| Certificat expiré alors que `certbot renew` dit avoir renouvelé | le crochet de rechargement Nginx manque (étape 6) |
 
 ## À lire à côté
 
