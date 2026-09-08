@@ -50,7 +50,27 @@ on:
     branches: [claude/carlys-fitness-foundation-lqv2hl, main]
   # Rattrapage manuel : republier un commit dont la publication a été perdue
   # (annulation, panne de runner) sans avoir à pousser un commit vide.
+  #
+  # L'entrée `sha` n'est pas décorative : sans elle, ce déclencheur ne sait
+  # viser qu'une BRANCHE ou un TAG, donc la tête d'une référence — jamais le
+  # commit perdu. Or les commits perdus sont, par construction, ceux du MILIEU
+  # d'une rafale : GitHub annule l'exécution en attente d'un groupe de
+  # concurrence dès qu'une nouvelle arrive, et cela vaut même avec
+  # `cancel-in-progress: false` juste en dessous. La cause nommée par ce
+  # commentaire produisait donc exactement les commits que le remède promis ne
+  # pouvait pas atteindre. Le fichier jumeau images-publish-prod.yml portait
+  # déjà le motif ; il est repris ici à l'identique, en FACULTATIF pour ne rien
+  # changer au déclenchement par poussée.
   workflow_dispatch:
+    inputs:
+      sha:
+        description: >-
+          Commit à republier. Laisser VIDE pour la tête de la branche choisie
+          ci-dessus — le cas courant. Renseigner un SHA (12 ou 40 caractères)
+          pour rattraper un commit dont les images manquent, par exemple celui
+          que `deploy.sh` refuse avec « Image introuvable ».
+        required: false
+        type: string
 
 # `cancel-in-progress: false`, à REBOURS d'`images-ci`, et c'est délibéré.
 # `images-ci` donne un avis sur la tête d'une rafale : annuler les
@@ -80,16 +100,41 @@ jobs:
       packages: write
 
     steps:
+      # fetch-depth: 0 — l'action ne sait pas récupérer un SHA abrégé, et le
+      # rattrapage manuel en accepte un de 12 caractères (c'est la longueur que
+      # `deploy.sh` affiche quand il refuse un sha sans images). On rapatrie
+      # donc tout l'historique, puis on résout nous-mêmes.
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       # ── Le SHA court, une seule fois, pour les trois images ────────────────
       # 12 caractères : c'est la longueur que manipulent DEPLOYED, deploy.sh et
       # promote.sh. Le préfixe `sha-` est obligatoire, un tag Docker ne pouvant
       # pas être ambigu avec un digest.
+      #
+      # Le sha est dérivé du commit RÉELLEMENT SORTI, jamais de `github.sha` :
+      # sur un rattrapage, les deux diffèrent, et publier le code d'un commit
+      # sous le tag d'un autre est pire que ne rien publier — `deploy.sh`
+      # trouverait l'image et déploierait le mauvais code, sans rien signaler.
       - name: Étiquettes
         id: etiquettes
+        env:
+          SHA_DEMANDE: ${{ inputs.sha }}
         run: |
-          sha12="$(echo "${{ github.sha }}" | cut -c1-12)"
+          if [ -n "${SHA_DEMANDE:-}" ]; then
+            if ! full="$(git rev-parse --verify --quiet "${SHA_DEMANDE}^{commit}")"; then
+              echo "::error title=Commit inconnu::« ${SHA_DEMANDE} » n'est pas un commit de ce dépôt. Reprends le sha que deploy.sh a refusé, ou celui affiché par /srv/carlys/<env>/DEPLOYED."
+              exit 1
+            fi
+            git checkout --detach "$full"
+            echo "rattrapage=oui" >> "$GITHUB_OUTPUT"
+            echo "Rattrapage demandé sur $full"
+          else
+            full="${{ github.sha }}"
+            echo "rattrapage=non" >> "$GITHUB_OUTPUT"
+          fi
+          sha12="$(echo "$full" | cut -c1-12)"
           echo "sha12=$sha12" >> "$GITHUB_OUTPUT"
           # GHCR n'accepte que des chemins en minuscules ; le dépôt s'appelle
           # « Carlys ». On dérive le propriétaire plutôt que de l'écrire en
@@ -186,7 +231,15 @@ jobs:
       - name: Étiquette mouvante `staging` — seulement sur la branche de travail
         id: mouvant
         run: |
-          if [ "${{ github.ref }}" = "refs/heads/claude/carlys-fitness-foundation-lqv2hl" ]; then
+          if [ "${{ steps.etiquettes.outputs.rattrapage }}" = "oui" ]; then
+            # Un rattrapage republie un commit ANCIEN. Lui faire porter le tag
+            # mouvant ferait RECULER `staging` dans l'onglet Packages, et cet
+            # onglet est précisément ce qu'on regarde pour savoir ce qui est le
+            # plus récent. Republier ne doit rien réécrire d'autre que le tag
+            # par SHA du commit demandé.
+            echo "actif=non" >> "$GITHUB_OUTPUT"
+            echo "Rattrapage : le tag mouvant \`staging\` n'est PAS déplacé."
+          elif [ "${{ github.ref }}" = "refs/heads/claude/carlys-fitness-foundation-lqv2hl" ]; then
             echo "actif=oui" >> "$GITHUB_OUTPUT"
             echo "Le tag mouvant \`staging\` suivra ce commit."
           else

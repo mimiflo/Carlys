@@ -174,7 +174,7 @@ jobs:
             fi
           done
           if [ -n "$manquantes" ]; then
-            echo "::error title=Images d'API absentes du registre::Le commit ${{ steps.commit.outputs.sha12 }} n'a pas d'images d'API publiées, alors que la production redéploie les MÊMES octets que la recette (règle « build once » du contrat). Images attendues et introuvables :$manquantes. Lance d'abord le workflow images-publish sur ce commit, vérifie que la recette tourne dessus, puis reviens ici."
+            echo "::error title=Images d'API absentes du registre::Le commit ${{ steps.commit.outputs.sha12 }} n'a pas d'images d'API publiées, alors que la production redéploie les MÊMES octets que la recette (règle « build once » du contrat). Images attendues et introuvables :$manquantes. Marche à suivre : Actions → images-publish → Run workflow, et renseigner ${{ steps.commit.outputs.sha12 }} dans le champ « sha » (le laisser vide publierait la tête de la branche, pas ce commit). Vérifier ensuite que la recette tourne bien dessus, puis revenir ici."
             exit 1
           fi
 
