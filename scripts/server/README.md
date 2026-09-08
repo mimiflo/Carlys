@@ -11,12 +11,13 @@ la stratégie de déploiement — elle est écrite dans
 | `setup.sh` | une fois, puis à chaque fois qu'une brique est ajoutée | prépare la machine : docker + plugin compose, nginx, certbot, ufw (22/80/443), `/srv/carlys`, copie des `.env` d'exemple, cron de sauvegarde. **Idempotent.** |
 | `deploy.sh` | à chaque livraison en recette | `deploy.sh <staging\|production> <sha>` : pull des trois images, migration, bascule, santé, retour arrière si besoin |
 | `promote.sh` | pour une mise en production | rejoue en production **le sha déjà validé en recette**, après vérification du registre et confirmation humaine |
-| `backup.sh` | tous les jours, par cron | `pg_dump` des deux bases, horodaté, rétention 14 jours |
+| `backup.sh` | tous les jours, par cron | `pg_dump` de chaque base **déployée**, horodaté, rétention 14 jours |
 
 `_common.sh` n'est pas un script : c'est la bibliothèque partagée (chemins,
-lecture du journal `DEPLOYED`, appel de Compose, attente HTTP bornée). Elle
-existe pour que ces règles ne soient écrites qu'une fois — `promote.sh` lit le
-`DEPLOYED` que `deploy.sh` écrit.
+verrou d'environnement, lecture du journal `DEPLOYED`, appel de Compose,
+attente HTTP bornée). Elle existe pour que ces règles ne soient écrites qu'une
+fois — `promote.sh` lit le `DEPLOYED` que `deploy.sh` écrit, `backup.sh` s'en
+sert pour savoir si un environnement a déjà hébergé quelque chose.
 
 ## Ce qu'ils supposent
 
@@ -28,6 +29,7 @@ existe pour que ces règles ne soient écrites qu'une fois — `promote.sh` lit 
 /srv/carlys/
   staging/.env        production/.env        # secrets, mode 600
   staging/DEPLOYED    production/DEPLOYED    # journal tenu par deploy.sh
+  staging/.lock       production/.lock       # verrou flock d'un déploiement
   backups/                                   # dumps, mode 700
   ghcr.token                                 # PAT read:packages, mode 600
 ```
@@ -42,6 +44,12 @@ existe pour que ces règles ne soient écrites qu'une fois — `promote.sh` lit 
 scripts/server/deploy.sh staging 4f2a91c0be77
 ```
 
+0. **verrou de l'environnement** — `flock -n` sur `/srv/carlys/<env>/.lock`.
+   Un second déploiement du même environnement est refusé immédiatement, avant
+   même la connexion au registre : deux `compose up` concurrents s'entrelacent,
+   et surtout écrivent tous deux dans `DEPLOYED`, dont la dernière ligne cesse
+   alors de décrire ce qui tourne. Le verrou est **par environnement** — une
+   mise en production n'attend pas un déploiement de recette ;
 1. connexion au registre, **pull des trois images** — un sha inexistant échoue
    ici, pendant que l'ancienne version sert encore ;
 2. `postgres` et `redis` debout (ce n'est pas une bascule : rien de nouveau
@@ -52,6 +60,14 @@ scripts/server/deploy.sh staging 4f2a91c0be77
 5. attente **bornée** de `/health/ready` puis de l'admin ;
 6. santé absente ⇒ retour au sha précédent lu dans `DEPLOYED` ;
    santé obtenue ⇒ nouvelle ligne dans `DEPLOYED`.
+
+Le retour arrière applique **la même règle de santé que la montée : l'API *et*
+l'admin**. N'en contrôler qu'une permettrait de déclarer un environnement
+« restauré » avec l'admin en panne, donc les pages publiques avec elle
+(vérification d'adresse, réinitialisation de mot de passe, mentions légales).
+Si le sha de repli ne rend pas la main non plus, `DEPLOYED` **n'est pas
+écrit** : le journal continue de désigner le dernier état sain connu plutôt
+que d'affirmer une restauration qui n'a pas eu lieu.
 
 Le retour arrière restaure **le code, pas le schéma** : Prisma n'a pas de
 migration descendante. Toute migration doit donc rester compatible avec la
@@ -90,11 +106,27 @@ marqueurs `[À COMPLÉTER : …]`. Le message le dit et donne la marche à suivr
 `backup.sh` exécute `pg_dump --format=custom` **dans le conteneur** postgres :
 les bases ne publient aucun port sur l'hôte, et le `pg_dump` de l'image a par
 construction la version du serveur (un `pg_dump` 16 refuse un serveur 17). Le
-fichier est écrit en `.part` puis renommé après vérification de la signature
+mot de passe n'est **jamais** passé en argument : il est lu dans le conteneur,
+depuis le `POSTGRES_PASSWORD` que le compose y place déjà. Un
+`--env PGPASSWORD=…` l'écrirait dans `/proc/<pid>/cmdline`, lisible par tout
+utilisateur local pendant la durée du dump.
+
+Le fichier est écrit en `.part` puis renommé après vérification de la signature
 `PGDMP` — une sauvegarde interrompue ne laisse jamais un fichier d'apparence
-normale. La purge ne touche que les fichiers `staging-*.dump` et
-`production-*.dump` de plus de 14 jours : ce qu'un opérateur a déposé là ne
-disparaît pas.
+normale. La purge ne touche que nos propres fichiers : `staging-*.dump` et
+`production-*.dump` de plus de 14 jours, et les fragments `*.dump.part*` de
+plus d'un jour (ceux qu'une interruption brutale a laissés ; sans cette
+seconde passe ils s'accumuleraient indéfiniment, chacun de la taille d'une
+base). Ce qu'un opérateur a déposé là ne disparaît pas.
+
+**Le code de retour EST l'alerte.** La ligne de cron posée par `setup.sh`
+tourne sous `bash -o pipefail` : sans lui, le tube `backup.sh | logger`
+rendrait le code de `logger`, toujours nul, et cron n'enverrait jamais rien.
+Elle ne vaut donc que si elle ne crie pas pour rien : un environnement dont le
+`DEPLOYED` est vide n'a **jamais rien hébergé** — `setup.sh` crée pourtant les
+deux `.env` dès le premier jour — il est sauté sans compter d'échec. Un
+environnement **déployé** dont postgres ne tourne pas, lui, a des données qui
+ne sont pas sauvegardées : celui-là fait sortir en erreur.
 
 Restaurer (à faire régulièrement — une sauvegarde jamais restaurée n'en est
 pas une) :
@@ -135,12 +167,18 @@ Le suffixe `-prod` est **déduit de l'environnement visé**, pas lu dans le
 sinon l'image de recette, garde légale désarmée, sans que rien ne proteste.
 
 La migration passe par le service `migrate` du compose (profil dédié, donc
-absent de tout `up -d`), appelé en `run --rm --no-deps` : réseau,
-`DATABASE_URL` et fichier d'environnement y sont déjà décrits, et une seconde
-description finirait par diverger de la première.
+absent de tout `up -d`), appelé en `run --rm` : réseau, `DATABASE_URL` et
+fichier d'environnement y sont déjà décrits, et une seconde description
+finirait par diverger de la première. **Sans `--no-deps`** : le
+`depends_on: postgres, condition: service_healthy` du compose est la seule
+description de « la base est prête », et c'est elle qui fait foi — la couper
+ferait reposer la migration sur un second avis, plus faible, qui divergerait
+du compose au premier changement.
 
 ## Ce qu'ils n'automatisent pas
 
-DNS, achat du domaine, certificats certbot (le DNS doit résoudre d'abord),
-vraies valeurs des secrets, remplissage des marqueurs légaux, comptes des
-magasins d'applications. `setup.sh` termine en les listant.
+DNS, achat du domaine, certificats certbot (`certonly --webroot`, **un par
+hôte** — les six vhosts attendent six répertoires
+`/etc/letsencrypt/live/<hôte>/` — et le DNS doit résoudre d'abord), vraies
+valeurs des secrets, remplissage des marqueurs légaux, comptes des magasins
+d'applications. `setup.sh` termine en les listant.
