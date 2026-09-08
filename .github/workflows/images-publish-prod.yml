@@ -1,0 +1,185 @@
+# Image admin de PRODUCTION — le seul endroit où le tag `-prod` se gagne.
+#
+# Pourquoi un workflow séparé, et déclenché à la main :
+#
+# 1. La garde légale. `apps/admin/Dockerfile` pose `LEGAL_PLACEHOLDERS=forbid`
+#    par défaut : tant que docs/legal/*.md portent un marqueur
+#    « [À COMPLÉTER : … ] », le build ÉCHOUE en les listant. La publication
+#    automatique (images-publish.yml) desserre cette garde avec `allow`, parce
+#    qu'une image de recette doit exister avant que les textes soient rédigés.
+#    Ici, jamais : ce workflow échoue tant que les marqueurs subsistent, et
+#    c'est sa raison d'être. On ne le contourne pas — on complète les textes.
+#
+# 2. L'adresse de l'API est figée dans le bundle du navigateur.
+#    `NEXT_PUBLIC_API_BASE_URL` est inlinée AU BUILD par Next.js
+#    (apps/admin/src/lib/env.ts, lu par le composant `'use client'`
+#    api-status.tsx). L'image de recette vise api-staging.DOMAIN ; une image
+#    de production doit viser api.DOMAIN. Les deux ne peuvent donc PAS être le
+#    même binaire, et c'est pourquoi le contrat prévoit deux tags admin pour
+#    un même SHA.
+#
+# Ce que ce workflow ne fait PAS : reconstruire carlys-api ni
+# carlys-api-migrate. Ces deux-là ne portent aucune adresse ni aucun texte
+# légal — leur configuration est entièrement d'exécution. La règle du dépôt est
+# « build once » : la production redéploie EXACTEMENT les octets éprouvés en
+# recette. On vérifie d'ailleurs ci-dessous qu'ils existent déjà.
+name: images-publish-prod
+
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: >-
+          Commit à promouvoir — celui affiché par /srv/carlys/staging/DEPLOYED,
+          donc un SHA déjà éprouvé en recette. 12 caractères ou 40, les deux
+          fonctionnent.
+        required: true
+        type: string
+
+# Deux publications de production en parallèle n'auraient aucun sens : elles
+# écriraient le même dépôt d'images. La seconde attend, elle n'annule pas la
+# première (annuler un `docker push` à mi-course laisse un tag partiel).
+concurrency:
+  group: images-publish-prod
+  cancel-in-progress: false
+
+env:
+  REGISTRY: ghcr.io
+
+jobs:
+  publier-production:
+    name: Image admin de production (garde légale armée)
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      # fetch-depth: 0 — l'action ne sait pas récupérer un SHA abrégé, et
+      # DEPLOYED n'en garde que 12 caractères. On rapatrie donc tout
+      # l'historique de toutes les branches, puis on résout nous-mêmes.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Le commit demandé existe
+        id: commit
+        env:
+          SHA_DEMANDE: ${{ inputs.sha }}
+        run: |
+          if ! full="$(git rev-parse --verify --quiet "${SHA_DEMANDE}^{commit}")"; then
+            echo "::error title=Commit inconnu::« ${SHA_DEMANDE} » n'est pas un commit de ce dépôt. Reprends la valeur affichée par /srv/carlys/staging/DEPLOYED, ou le SHA indiqué par l'exécution d'images-publish qui a fabriqué les images de recette."
+            exit 1
+          fi
+          git checkout --detach "$full"
+          sha12="$(echo "$full" | cut -c1-12)"
+          echo "sha12=$sha12" >> "$GITHUB_OUTPUT"
+          echo "owner=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
+          echo "Promotion du commit $sha12 : $(git log -1 --format='%s')"
+
+      - name: Le domaine de déploiement est connu
+        env:
+          CARLYS_DOMAIN: ${{ vars.CARLYS_DOMAIN }}
+        run: |
+          if [ -z "$CARLYS_DOMAIN" ]; then
+            echo "::error title=Variable de dépôt CARLYS_DOMAIN absente::L'image admin fige l'adresse de l'API dans le JavaScript du navigateur. Sans CARLYS_DOMAIN, l'image de production pointerait vers http://localhost:3000. Pose-la dans Settings → Secrets and variables → Actions → Variables, nom CARLYS_DOMAIN, valeur le domaine nu (exemple : carlys.app)."
+            exit 1
+          fi
+          echo "API de production visée par l'image admin : https://api.$CARLYS_DOMAIN"
+
+      # ── La garde légale, expliquée AVANT d'échouer ─────────────────────────
+      #
+      # Le build est l'autorité : c'est lui qui refuse, et il refuserait même
+      # si cette étape-ci disparaissait. Mais un échec de `next build` au
+      # milieu de plusieurs minutes de sortie Docker n'apprend rien à qui
+      # découvre le problème. Cette étape lit les mêmes fichiers avec la même
+      # expression que src/lib/legal-documents.ts, échoue en quelques secondes,
+      # et DIT quoi faire. Elle double la garde, elle ne la remplace pas.
+      - name: Les textes légaux sont complets
+        run: |
+          marqueurs="$(grep -oP '\[À COMPLÉTER\s*:[^\]]*\]' docs/legal/*.md | sort -u || true)"
+          if [ -n "$marqueurs" ]; then
+            nombre="$(echo "$marqueurs" | wc -l)"
+            echo "::error title=Les textes légaux ne sont pas prêts pour la production::$nombre marqueur(s) « [À COMPLÉTER : … ] » subsistent dans docs/legal/. Une image de production ne peut pas servir une politique de confidentialité inachevée : c'est aussi ce que vérifient les magasins d'applications, qui ouvrent https://app.DOMAINE/privacy avant d'accepter une soumission. Renseigne les marqueurs listés ci-dessous dans docs/legal/privacy.md et docs/legal/terms.md, pousse, puis relance ce workflow sur le nouveau SHA. Il n'y a pas de contournement : --build-arg LEGAL_PLACEHOLDERS=allow ne produit que des images de RECETTE."
+            echo "Marqueurs restants, fichier par fichier :"
+            echo "$marqueurs" | sed 's/^/  - /'
+            exit 1
+          fi
+          echo "Aucun marqueur [À COMPLÉTER] dans docs/legal/ : la garde peut être armée."
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Connexion à GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # « Build once » : la production ne fabrique pas de nouvelles images
+      # d'API, elle redéploie celles de la recette. Si elles manquent, le
+      # commit n'a jamais été publié — promouvoir n'aurait aucun sens, et
+      # `deploy.sh production` échouerait plus tard, sur le serveur.
+      - name: Les images d'API de ce commit existent déjà
+        run: |
+          manquantes=""
+          for image in carlys-api carlys-api-migrate; do
+            reference="${{ env.REGISTRY }}/${{ steps.commit.outputs.owner }}/$image:sha-${{ steps.commit.outputs.sha12 }}"
+            if docker buildx imagetools inspect "$reference" > /dev/null 2>&1; then
+              echo "présente : $reference"
+            else
+              manquantes="$manquantes $reference"
+            fi
+          done
+          if [ -n "$manquantes" ]; then
+            echo "::error title=Images d'API absentes du registre::Le commit ${{ steps.commit.outputs.sha12 }} n'a pas d'images d'API publiées, alors que la production redéploie les MÊMES octets que la recette (règle « build once » du contrat). Images attendues et introuvables :$manquantes. Lance d'abord le workflow images-publish sur ce commit, vérifie que la recette tourne dessus, puis reviens ici."
+            exit 1
+          fi
+
+      # LEGAL_PLACEHOLDERS=forbid est passé EXPLICITEMENT alors que c'est déjà
+      # le défaut de l'ARG : la garde de la production ne doit pas dépendre
+      # d'une valeur par défaut qu'un jour quelqu'un desserrerait ailleurs.
+      - name: Image admin — production
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: apps/admin/Dockerfile
+          push: true
+          build-args: |
+            LEGAL_PLACEHOLDERS=forbid
+            NEXT_PUBLIC_API_BASE_URL=https://api.${{ vars.CARLYS_DOMAIN }}
+          tags: ${{ env.REGISTRY }}/${{ steps.commit.outputs.owner }}/carlys-admin:sha-${{ steps.commit.outputs.sha12 }}-prod
+          # Scope de cache DISTINCT de celui de la recette : les deux images
+          # diffèrent par leurs ARG, donc par les couches qui en dépendent.
+          cache-from: type=gha,scope=admin-prod
+          cache-to: type=gha,scope=admin-prod,mode=max
+          provenance: false
+
+      - name: Le tag de production se résout dans le registre
+        run: |
+          reference="${{ env.REGISTRY }}/${{ steps.commit.outputs.owner }}/carlys-admin:sha-${{ steps.commit.outputs.sha12 }}-prod"
+          docker buildx imagetools inspect "$reference" > /dev/null \
+            || { echo "::error::$reference est introuvable alors que la publication a été signalée réussie."; exit 1; }
+          echo "$reference est publiée."
+
+      - name: Récapitulatif
+        run: |
+          {
+            echo "## Production autorisée pour \`${{ steps.commit.outputs.sha12 }}\`"
+            echo
+            echo "L'image admin de production est publiée, garde légale armée :"
+            echo
+            echo "- \`${{ env.REGISTRY }}/${{ steps.commit.outputs.owner }}/carlys-admin:sha-${{ steps.commit.outputs.sha12 }}-prod\` → \`https://api.${{ vars.CARLYS_DOMAIN }}\`"
+            echo
+            echo "Les images d'API du même SHA sont celles déjà éprouvées en recette — elles ne sont pas reconstruites."
+            echo
+            echo "La bascule reste un geste HUMAIN, sur le serveur :"
+            echo
+            echo '```bash'
+            echo "sudo /srv/carlys/scripts/promote.sh"
+            echo '```'
+            echo
+            echo "\`promote.sh\` relit \`staging/DEPLOYED\`, vérifie la présence de ce tag \`-prod\`, demande confirmation, puis appelle \`deploy.sh production ${{ steps.commit.outputs.sha12 }}\`."
+          } >> "$GITHUB_STEP_SUMMARY"
