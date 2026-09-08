@@ -1,0 +1,271 @@
+# Carlys — pile serveur (staging ET production).
+#
+# UN SEUL fichier pour les deux environnements : ce qui les distingue tient
+# entièrement dans leur fichier `.env` (nom de projet, ports d'écoute sur la
+# boucle locale, domaines, secrets, tag d'image). Deux fichiers jumeaux
+# divergent au troisième correctif ; un seul ne le peut pas.
+#
+#   docker compose --env-file /srv/carlys/staging/.env \
+#                  -f infrastructure/server/compose.yml up -d
+#
+# Ce fichier n'est PAS docker-compose.yml à la racine du dépôt : celui-là est
+# l'environnement de DÉVELOPPEMENT local (ports ouverts sur l'hôte, secrets
+# factices, images construites sur place). Ici les images viennent du registre,
+# taguées par SHA, et rien n'écoute ailleurs que sur 127.0.0.1.
+#
+# Les migrations ne tournent JAMAIS au démarrage d'un conteneur : le service
+# `migrate` vit derrière un profil dédié et se lance en tâche ponctuelle AVANT
+# la bascule du trafic (infrastructure/deployment/README.md).
+
+# Isolation staging / production : COMPOSE_PROJECT_NAME (posé par le .env)
+# préfixe conteneurs, réseau et volumes. La variable d'environnement l'emporte
+# sur ce `name:` ; l'écrire ici sert de garde — sans elle, compose s'arrête au
+# lieu de retomber sur le nom du répertoire et de mélanger les deux piles.
+name: ${COMPOSE_PROJECT_NAME:?COMPOSE_PROJECT_NAME est obligatoire - carlys_staging ou carlys_production}
+
+# ── Réglages communs à tous les services ─────────────────────────────────────
+# Les journaux json non bornés sont le mode de panne le plus banal d'un serveur
+# dédié : ils remplissent le disque en silence, puis PostgreSQL ne peut plus
+# écrire. 10 Mo × 5 par conteneur plafonnent la casse à ~50 Mo chacun.
+x-logging: &logging
+  driver: json-file
+  options:
+    max-size: '10m'
+    max-file: '5'
+
+x-labels: &labels
+  com.carlys.environment: ${CARLYS_ENV:?CARLYS_ENV est obligatoire - staging ou production}
+
+# Services de longue durée : ils reviennent après un reboot de l'hôte, mais
+# jamais après un `docker compose stop` volontaire.
+x-service: &service
+  restart: unless-stopped
+  logging: *logging
+  labels: *labels
+
+# Tâches ponctuelles : elles se terminent, on ne les relance pas.
+x-task: &task
+  restart: 'no'
+  logging: *logging
+  labels: *labels
+
+# Le fichier .env de l'environnement, désigné par CHEMIN ABSOLU depuis
+# lui-même. `env_file` se résout sinon relativement au répertoire du projet
+# compose, donc au dépôt — alors que le .env vit dans /srv/carlys/<env>/.
+# Cette indirection rend l'appel indépendant du répertoire courant.
+x-env-file: &env-file
+  - ${CARLYS_ENV_FILE:?CARLYS_ENV_FILE doit contenir le chemin absolu du .env de cet environnement}
+
+services:
+  # ── PostgreSQL ─────────────────────────────────────────────────────────────
+  postgres:
+    <<: *service
+    image: ${CARLYS_POSTGRES_IMAGE:-postgres:17-alpine}
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER est obligatoire}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD est obligatoire}
+      POSTGRES_DB: ${POSTGRES_DB:?POSTGRES_DB est obligatoire}
+      # TZ ET PGTZ, les deux, et ce n'est pas décoratif : un audit du schéma a
+      # relevé que les 99 colonnes DateTime sont des TIMESTAMP(3) SANS fuseau.
+      # « Les dates sont stockées en UTC » (CLAUDE.md) ne tient donc qu'au
+      # fuseau du serveur et de la session : une image démarrée sur un hôte en
+      # Europe/Paris décalerait NOW() et les valeurs par défaut de deux heures,
+      # sans qu'aucune requête ne s'en plaigne. TZ règle l'horloge du
+      # conteneur, PGTZ le fuseau des sessions clientes ouvertes par le serveur.
+      TZ: UTC
+      PGTZ: UTC
+    # Aucun port publié : PostgreSQL n'est joignable que depuis le réseau
+    # compose de SON environnement. Une sauvegarde passe par
+    # `docker compose exec postgres pg_dump`, jamais par un port hôte.
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # ── Redis ──────────────────────────────────────────────────────────────────
+  redis:
+    <<: *service
+    image: ${CARLYS_REDIS_IMAGE:-redis:7-alpine}
+    # La persistance est un choix d'environnement, pas de fichier : staging est
+    # un cache jetable (`--save "" --appendonly no`), production journalise
+    # (`--appendonly yes`). CARLYS_REDIS_ARGS est découpé par compose comme une
+    # ligne de commande, guillemets compris.
+    command: redis-server ${CARLYS_REDIS_ARGS:?CARLYS_REDIS_ARGS est obligatoire - voir le .env}
+    environment:
+      TZ: UTC
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ['CMD', 'redis-cli', 'ping']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
+  # ── Stockage objet ─────────────────────────────────────────────────────────
+  # Publié sur la boucle locale parce que nginx sert media.DOMAIN devant lui :
+  # les applications chargent les photos directement, sans traverser l'API.
+  minio:
+    <<: *service
+    image: ${CARLYS_MINIO_IMAGE:-minio/minio:RELEASE.2025-09-07T16-13-09Z}
+    command: ['server', '/data', '--console-address', ':9001']
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER:?MINIO_ROOT_USER est obligatoire}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD:?MINIO_ROOT_PASSWORD est obligatoire}
+      TZ: UTC
+    ports:
+      # La console d'administration (9001) n'est PAS publiée : elle n'a rien à
+      # faire face à internet, et un tunnel SSH suffit pour l'atteindre.
+      - '127.0.0.1:${CARLYS_MINIO_HOST_PORT:?CARLYS_MINIO_HOST_PORT est obligatoire}:9000'
+    volumes:
+      - minio-data:/data
+    healthcheck:
+      test: ['CMD', 'mc', 'ready', 'local']
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 20s
+
+  # Crée le bucket au premier démarrage et le rend lisible en anonyme : les
+  # applications chargent les médias sans jeton, seul le DÉPÔT est protégé.
+  # Idempotent (`mb --ignore-existing`), donc rejouable à chaque déploiement.
+  minio-init:
+    <<: *task
+    image: ${CARLYS_MC_IMAGE:-minio/mc:RELEASE.2025-08-13T08-35-41Z}
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ROOT_USER}
+      MINIO_ROOT_PASSWORD: ${MINIO_ROOT_PASSWORD}
+      TZ: UTC
+    # `$$` échappe le `$` pour compose : la substitution est faite par le shell
+    # DU CONTENEUR, à partir de son environnement — les identifiants ne sont
+    # donc pas figés dans la ligne de commande du service.
+    entrypoint: >
+      /bin/sh -c "
+      set -e &&
+      mc alias set local http://minio:9000 \"$${MINIO_ROOT_USER}\" \"$${MINIO_ROOT_PASSWORD}\" &&
+      mc mb --ignore-existing local/${S3_BUCKET:?S3_BUCKET est obligatoire} &&
+      mc anonymous set download local/${S3_BUCKET}
+      "
+
+  # ── Mailpit (staging UNIQUEMENT) ───────────────────────────────────────────
+  # Profil « staging » : la production envoie ses e-mails par un vrai relais
+  # SMTP, et un `docker compose up -d` en production ne démarre pas ce service.
+  # Le port SMTP (1025) n'est pas publié — seule l'API le joint, par le réseau
+  # compose. Seule l'interface web l'est, sur la boucle locale.
+  mailpit:
+    <<: *service
+    profiles: ['staging']
+    image: ${CARLYS_MAILPIT_IMAGE:-axllent/mailpit:v1.31.1}
+    environment:
+      TZ: UTC
+    ports:
+      - '127.0.0.1:${CARLYS_MAILPIT_UI_HOST_PORT:-8025}:8025'
+    healthcheck:
+      test: ['CMD', 'wget', '-qO-', 'http://127.0.0.1:8025/livez']
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 10s
+
+  # ── API ────────────────────────────────────────────────────────────────────
+  api:
+    <<: *service
+    image: ${CARLYS_REGISTRY:?CARLYS_REGISTRY est obligatoire}/carlys-api:${CARLYS_TAG:?CARLYS_TAG est obligatoire - sha-xxxxxxxxxxxx}
+    # Le .env EST la configuration de l'API : ses 49 variables y figurent
+    # toutes. Les passer en bloc plutôt qu'une à une évite la dérive silencieuse
+    # du jour où le schéma Zod en gagne une de plus. Corollaire à connaître :
+    # une variable FACULTATIVE laissée VIDE dans le .env arrive comme chaîne
+    # vide et fait échouer la validation — elle doit rester COMMENTÉE.
+    env_file: *env-file
+    environment:
+      # Le processus Node date ses journaux et ses jetons : même exigence UTC
+      # que PostgreSQL.
+      TZ: UTC
+    ports:
+      # 127.0.0.1 uniquement : nginx, sur l'hôte, est le seul à parler à l'API.
+      # Sans ce préfixe, Docker ouvrirait le port sur TOUTES les interfaces en
+      # écrivant directement dans netfilter — ufw ne le verrait même pas.
+      - '127.0.0.1:${CARLYS_API_HOST_PORT:?CARLYS_API_HOST_PORT est obligatoire}:${PORT:?PORT est obligatoire}'
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      minio:
+        condition: service_healthy
+    healthcheck:
+      # /health/ready, pas /health/live : l'image embarque le second (le
+      # processus répond), on veut ici le premier (PostgreSQL et Redis sont
+      # réellement joignables). C'est ce que nginx et deploy.sh interrogent.
+      test:
+        [
+          'CMD-SHELL',
+          'wget -qO- http://127.0.0.1:${PORT:?PORT est obligatoire}/health/ready || exit 1',
+        ]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+      start_period: 40s
+
+  # ── Application web (back-office + pages publiques) ───────────────────────
+  admin:
+    <<: *service
+    # Deux images pour un même SHA : `sha-…` en recette, `sha-…-prod` en
+    # production, cette dernière construite garde légale ARMÉE
+    # (LEGAL_PLACEHOLDERS=forbid). Le suffixe est porté par le .env.
+    image: ${CARLYS_REGISTRY}/carlys-admin:${CARLYS_TAG:?CARLYS_TAG est obligatoire - sha-xxxxxxxxxxxx}${CARLYS_ADMIN_TAG_SUFFIX-}
+    # PAS d'env_file ici : le .env fixe PORT=3000 pour l'API, alors que l'image
+    # admin écoute sur 3001. Et elle n'a rien à lire au démarrage —
+    # NEXT_PUBLIC_API_BASE_URL est figé À LA CONSTRUCTION de l'image.
+    environment:
+      TZ: UTC
+    ports:
+      - '127.0.0.1:${CARLYS_ADMIN_HOST_PORT:?CARLYS_ADMIN_HOST_PORT est obligatoire}:3001'
+    # Aucun depends_on : ni PostgreSQL ni Redis (elle n'y touche pas), ni même
+    # l'API — les pages publiques l'appellent depuis le NAVIGATEUR. La faire
+    # attendre n'avancerait rien et retarderait /privacy et /terms, qui sont
+    # statiques.
+    healthcheck:
+      test: ['CMD-SHELL', 'wget -qO- http://127.0.0.1:3001/ || exit 1']
+      interval: 30s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
+
+  # ── Migrations : tâche ponctuelle, JAMAIS un service démarré ───────────────
+  # Sous profil `migrate`, donc absent de tout `docker compose up -d` : un
+  # redémarrage ou une montée en charge ne doit pas toucher au schéma.
+  # deploy.sh la lance AVANT la bascule, et un code de sortie non nul arrête
+  # le déploiement :
+  #
+  #   docker compose --env-file <.env> -f compose.yml \
+  #     run --rm --no-deps migrate       # (`run` active le profil tout seul)
+  #
+  # La déclarer ici plutôt que de laisser deploy.sh bricoler un `docker run`
+  # lui évite de recopier réseau, DATABASE_URL et attente de PostgreSQL — donc
+  # d'inventer une seconde vérité sur la façon de joindre la base.
+  migrate:
+    <<: *task
+    profiles: ['migrate']
+    image: ${CARLYS_REGISTRY}/carlys-api-migrate:${CARLYS_TAG:?CARLYS_TAG est obligatoire - sha-xxxxxxxxxxxx}
+    env_file: *env-file
+    environment:
+      TZ: UTC
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+# Compose préfixe chaque volume par COMPOSE_PROJECT_NAME : les deux
+# environnements cohabitent sur le serveur sans jamais se voir
+# (carlys_staging_postgres-data et carlys_production_postgres-data).
+volumes:
+  postgres-data:
+  redis-data:
+  minio-data:
