@@ -105,10 +105,24 @@ et cette liste-là bouge. Elle se compte, elle ne se recopie pas — sortie vide
 attendue, pour chaque environnement :
 
 ```bash
-comm -23 \
-  <(grep -oE '^    [A-Z][A-Z0-9_]*:' apps/api/src/config/env.schema.ts | tr -d ' :' | sort -u) \
-  <(grep -oE '^#? *[A-Z][A-Z0-9_]*=' infrastructure/server/env/staging.env.example \
-      | tr -d '# =' | sort -u)
+# L'assertion de comptage n'est pas un ornement. Le `comm` ci-dessous rend une
+# sortie vide dans DEUX cas qui se ressemblent : tout est documenté, ou
+# l'extraction du schéma n'a rien trouvé (indentation changée, fichier
+# déplacé, schéma découpé en plusieurs fichiers). Un filet dont l'échec
+# ressemble au succès n'est pas un filet ; le compte les sépare.
+schema=$(grep -oE '^    [A-Z][A-Z0-9_]*:' apps/api/src/config/env.schema.ts \
+           | tr -d ' :' | sort -u)
+n=$(printf '%s\n' "$schema" | grep -c .)
+[ "$n" -ge 40 ] || {
+  echo "EXTRACTION CASSÉE : $n variables lues dans env.schema.ts (49 le 8 septembre 2026)" >&2
+  false
+}
+
+for env in staging production; do
+  comm -23 <(printf '%s\n' "$schema") \
+           <(grep -oE '^#? *[A-Z][A-Z0-9_]*=' "infrastructure/server/env/$env.env.example" \
+               | tr -d '# =' | sort -u)
+done
 ```
 
 Le second `grep` compte aussi les lignes commentées : une variable facultative
