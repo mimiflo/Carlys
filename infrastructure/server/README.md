@@ -128,6 +128,37 @@ done
 Le second `grep` compte aussi les lignes commentées : une variable facultative
 laissée commentée EST documentée.
 
+## La base du serveur ne reçoit AUCUN script d'initialisation
+
+Le `docker-compose.yml` de développement monte
+`infrastructure/database/init/` dans `/docker-entrypoint-initdb.d` : PostgreSQL
+y joue `01-init.sql` au premier démarrage, qui pose l'extension `citext` et
+crée la base `carlys_test`. **Ce montage n'existe pas ici**, et c'est
+volontaire : sur le serveur, `prisma migrate deploy` est le SEUL à écrire dans
+le schéma.
+
+Rien ne manque pour autant, et cela se vérifie :
+
+- **`citext` n'est utilisée par aucune migration.** `grep -r 'CREATE EXTENSION'
+  apps/api/prisma/migrations/` ne rend rien, et la colonne des adresses est
+  `"email" TEXT NOT NULL` avec un index `UNIQUE` ordinaire
+  (`20260806180000_auth_foundation/migration.sql`). L'insensibilité à la casse
+  est obtenue **dans l'application**, par `normalizeEmail()`
+  (`apps/api/src/modules/auth/application/auth.service.ts`), et les recherches
+  du back-office passent par `mode: 'insensitive'`, c'est-à-dire `ILIKE` — qui
+  ne réclame aucune extension. Les UUID, eux, sont engendrés côté client par
+  Prisma (`@default(uuid())`), jamais par `gen_random_uuid()`.
+- **`carlys_test` ne sert qu'aux tests d'intégration**, qui ne tournent pas sur
+  le serveur.
+
+Une migration future qui aurait besoin d'une extension devra donc la poser
+elle-même (`CREATE EXTENSION IF NOT EXISTS …` dans son `migration.sql`) : sur
+le serveur, il n'y a pas de script d'amorçage pour la lui offrir.
+
+> `docs/database/schema.md` décrit encore les e-mails comme des colonnes
+> `citext` à index unique partiel. C'est une dérive de documentation par
+> rapport au schéma réellement migré, pas une dépendance de la pile serveur.
+
 ## Épingler une image d'infrastructure
 
 Les versions de PostgreSQL, Redis, MinIO, `mc` et Mailpit sont épinglées dans
