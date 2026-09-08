@@ -213,6 +213,22 @@ server {
     # S3 répond alors publiquement (liste des buckets, en-têtes d'
     # administration), et la console d'administration devient atteignable si
     # elle est activée. On n'expose donc QUE le préfixe du bucket public.
+    # La RACINE du bucket, et elle seule : c'est l'URL d'un ListObjects S3
+    # (`?list-type=2`), pas celle d'un média. Elle est fermée ici en plus de
+    # l'être dans la politique du bucket, parce que les deux gardes se perdent
+    # séparément : la politique est reposée à chaque `minio-init`, et une
+    # commande `mc anonymous set download` tapée à la main sur le serveur la
+    # rouvrirait sans que rien ne le signale. Mesuré avant d'écrire ce bloc :
+    # avec le raccourci `download` de mc, un `GET /carlys-media/?list-type=2`
+    # anonyme rendait 200 et l'inventaire complet des clés.
+    #
+    # `location =` : correspondance EXACTE, donc uniquement la racine — les
+    # objets, eux, portent une clé et passent par le bloc suivant.
+    location = /carlys-media/ {
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+        return 404;
+    }
+
     location /carlys-media/ {
         # Un objet n'est jamais réécrit : sa clé est
         # `<kind>/<uuid>.<extension>` (StorageService.keyFor, et le service

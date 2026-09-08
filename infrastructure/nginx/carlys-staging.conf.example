@@ -226,6 +226,20 @@ server {
 
     client_max_body_size 1m;
 
+    # La RACINE du bucket, et elle seule : c'est l'URL d'un ListObjects S3
+    # (`?list-type=2`), pas celle d'un média. Fermée ici EN PLUS de l'être
+    # dans la politique du bucket, parce que les deux gardes se perdent
+    # séparément : la politique est reposée à chaque `minio-init`, et une
+    # commande `mc anonymous set download` tapée à la main sur le serveur la
+    # rouvrirait sans que rien ne le signale. Mesuré : avec ce raccourci, un
+    # `GET /carlys-media/?list-type=2` anonyme rendait 200 et l'inventaire
+    # complet des clés.
+    location = /carlys-media/ {
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+        add_header X-Robots-Tag "noindex, nofollow, noarchive" always;
+        return 404;
+    }
+
     location /carlys-media/ {
         add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
         add_header X-Robots-Tag "noindex, nofollow, noarchive" always;

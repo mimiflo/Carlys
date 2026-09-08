@@ -146,12 +146,27 @@ services:
     # `$$` échappe le `$` pour compose : la substitution est faite par le shell
     # DU CONTENEUR, à partir de son environnement — les identifiants ne sont
     # donc pas figés dans la ligne de commande du service.
+    #
+    # POURQUOI UNE POLITIQUE ÉCRITE À LA MAIN, ET PAS `mc anonymous set download`.
+    # Le raccourci `download` n'accorde PAS que la lecture d'objet : mesuré, il
+    # pose aussi `s3:ListBucket` sur le bucket lui-même. Un tiers sans aucun
+    # jeton obtient alors 200 et l'inventaire complet des clés sur
+    #   GET https://media.<domaine>/<bucket>/?list-type=2
+    # — chaque média déposé par l'administration, y compris ceux préparés pour
+    # une fonctionnalité non encore publiée. Rien n'a besoin de cette
+    # permission : l'API parle à MinIO avec ses identifiants, et les clients
+    # ne chargent que des URL exactes. La politique ci-dessous n'accorde donc
+    # que `s3:GetObject` sur le CONTENU du bucket. Vérifié après changement :
+    # la liste rend 403 AccessDenied, un objet précis rend toujours 200.
     entrypoint: >
       /bin/sh -c "
       set -e &&
       mc alias set local http://minio:9000 \"$${MINIO_ROOT_USER}\" \"$${MINIO_ROOT_PASSWORD}\" &&
       mc mb --ignore-existing local/${S3_BUCKET:?S3_BUCKET est obligatoire} &&
-      mc anonymous set download local/${S3_BUCKET}
+      printf '%s'
+      '{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"AWS\":[\"*\"]},\"Action\":[\"s3:GetObject\"],\"Resource\":[\"arn:aws:s3:::${S3_BUCKET}/*\"]}]}'
+      > /tmp/politique.json &&
+      mc anonymous set-json /tmp/politique.json local/${S3_BUCKET}
       "
 
   # ── Mailpit (staging UNIQUEMENT) ───────────────────────────────────────────

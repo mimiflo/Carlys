@@ -79,12 +79,21 @@ services:
     depends_on:
       minio:
         condition: service_healthy
+    # `mc anonymous set download` n'accorde PAS que la lecture d'objet : mesuré,
+    # il pose aussi `s3:ListBucket`, et `GET /carlys-media/?list-type=2` rend
+    # alors 200 avec l'inventaire complet des clés, sans aucun jeton. Le
+    # développement tourne sur la boucle locale, mais il sert de modèle au
+    # serveur — et un modèle qui enseigne le mauvais geste finit recopié. La
+    # politique ci-dessous n'accorde que `s3:GetObject` sur le contenu.
     entrypoint: >
       /bin/sh -c "
+      set -e &&
       mc alias set local http://minio:9000 $${MINIO_ROOT_USER:-carlys-dev} $${MINIO_ROOT_PASSWORD:-carlys-dev-secret} &&
       mc mb --ignore-existing local/carlys-media &&
-      mc anonymous set download local/carlys-media &&
-      exit 0
+      printf '%s'
+      '{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"AWS\":[\"*\"]},\"Action\":[\"s3:GetObject\"],\"Resource\":[\"arn:aws:s3:::carlys-media/*\"]}]}'
+      > /tmp/politique.json &&
+      mc anonymous set-json /tmp/politique.json local/carlys-media
       "
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-carlys-dev}
