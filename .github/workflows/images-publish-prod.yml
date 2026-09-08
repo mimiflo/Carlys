@@ -178,7 +178,7 @@ jobs:
             echo "La bascule reste un geste HUMAIN, sur le serveur :"
             echo
             echo '```bash'
-            echo "sudo /srv/carlys/scripts/promote.sh"
+            echo "sudo /srv/carlys/repo/scripts/server/promote.sh"
             echo '```'
             echo
             echo "\`promote.sh\` relit \`staging/DEPLOYED\`, vérifie la présence de ce tag \`-prod\`, demande confirmation, puis appelle \`deploy.sh production ${{ steps.commit.outputs.sha12 }}\`."

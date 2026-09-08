@@ -5,19 +5,25 @@ avec la première release.
 
 ## Environnements
 
-| Environnement | Rôle                          | Base de données     | Déploiement            |
-| ------------- | ----------------------------- | ------------------- | ---------------------- |
-| development   | poste développeur             | Docker local        | manuel                 |
-| test          | CI                            | éphémère (services) | à chaque pipeline      |
-| staging       | recette proche production     | PostgreSQL managé   | automatique depuis main|
-| production    | utilisateurs réels            | PostgreSQL managé   | manuel après validation|
+| Environnement | Rôle                      | Base de données       | Déploiement                       |
+| ------------- | ------------------------- | --------------------- | --------------------------------- |
+| development   | poste développeur         | Docker local          | manuel (`docker-compose.yml`)     |
+| test          | CI                        | éphémère (services)   | à chaque pipeline                 |
+| staging       | recette proche production | PostgreSQL du serveur | `deploy.sh staging <sha12>`       |
+| production    | utilisateurs réels        | PostgreSQL du serveur | `promote.sh` (validation humaine) |
+
+`staging` et `production` cohabitent sur **un seul serveur dédié**, isolés par
+leur projet Compose et leurs volumes, derrière un Nginx d'hôte. Les six
+sous-domaines, les ports de boucle locale et l'arborescence `/srv/carlys/` sont
+décrits par le **[guide de mise en route](../../docs/deployment/mise-en-route-serveur.md)**,
+qui se suit d'un serveur nu jusqu'à l'application publiée.
 
 ## Principes
 
 - images Docker multi-stage vérifiées en CI par le workflow `images-ci`
   (construction des trois cibles, garde légale exercée, et DÉMARRAGE réel de
-  l'image de l'API sur `/health/live`) ; la publication d'images taguées par
-  SHA vers un registre reste à mettre en place avec le staging ;
+  l'image de l'API sur `/health/live`), puis **publiées** vers GHCR, taguées
+  par SHA, par `images-publish` (voir « Le registre » plus bas) ;
 - `prisma migrate deploy` exécuté comme étape distincte AVANT le basculement
   du trafic — jamais automatiquement au démarrage du conteneur ;
 - configuration exclusivement par variables d'environnement, validée au
@@ -26,13 +32,15 @@ avec la première release.
   `PUBLIC_APP_URL` et `CORS_ORIGINS` sont refusées elles aussi
   (`docs/security/reverse-proxy.md`, section 2) ;
 - l'API tourne derrière un reverse proxy : `TRUST_PROXY_HOPS` doit valoir le
-  nombre exact de proxys devant elle (`1` pour un Nginx unique, voir
-  `infrastructure/nginx/carlys.conf.example`), sinon rate limiting,
-  verrouillage et audit ne voient que l'adresse du proxy
-  (`docs/security/reverse-proxy.md`) ;
-- Redis managé et stockage objet (S3/Cloudflare R2) par environnement ;
+  nombre exact de proxys devant elle (`1` pour le Nginx unique décrit par
+  `infrastructure/nginx/`), sinon rate limiting, verrouillage et audit ne
+  voient que l'adresse du proxy (`docs/security/reverse-proxy.md`) ;
+- Redis et stockage objet par environnement — sur le serveur dédié, un Redis
+  et un MinIO par projet Compose ; un service managé (S3, Cloudflare R2)
+  s'y substitue sans changer autre chose que les variables `S3_*` ;
 - sauvegardes PostgreSQL automatiques + test de restauration régulier ;
-- health checks (`/health/ready`) branchés sur l'orchestrateur ;
+- health checks (`/health/ready`) : c'est sur cette route que `deploy.sh`
+  attend, en boucle bornée, avant de considérer une bascule réussie ;
 - pas de déploiement automatique en production sans validation humaine.
 
 ## Migrations : avant la bascule, jamais au démarrage
@@ -83,8 +91,56 @@ même image `migrate` se déclare en tâche ponctuelle (job, `initContainer`,
 service Compose à profil dédié) dont le succès conditionne le déploiement de
 l'API.
 
-Les manifestes concrets (Terraform, fichiers de plateforme, workflows de
-déploiement) seront ajoutés ici lors de la mise en place du staging.
+## Le registre : trois images, un SHA, deux tags admin
+
+Les images sont publiées dans GHCR. **On déploie un SHA, jamais un tag
+mouvant** : la promotion recette → production redéploie exactement les mêmes
+octets, faute de quoi « ce qui a été éprouvé » et « ce qui tourne » cesseraient
+d'être la même chose sans qu'on puisse dire quand.
+
+| Image | Tag | Produite par |
+| ----- | --- | ------------ |
+| `ghcr.io/mimiflo/carlys-api` | `sha-<sha12>` | `images-publish` (poussée) |
+| `ghcr.io/mimiflo/carlys-api-migrate` | `sha-<sha12>` | `images-publish` (poussée) |
+| `ghcr.io/mimiflo/carlys-admin` | `sha-<sha12>` | `images-publish` — garde légale desserrée, **recette seulement** |
+| `ghcr.io/mimiflo/carlys-admin` | `sha-<sha12>-prod` | `images-publish-prod` (`workflow_dispatch`) — garde légale **armée** |
+
+Un tag mouvant `staging` suit la branche de travail, pour lire d'un coup d'œil
+ce qui est récent dans l'onglet Packages. Aucun déploiement ne s'en sert.
+
+### Pourquoi l'admin a deux images pour un seul commit
+
+Ce n'est pas une commodité, c'est une nécessité, et pour deux raisons
+indépendantes :
+
+1. **La garde légale.** `apps/admin/Dockerfile` pose
+   `LEGAL_PLACEHOLDERS=forbid` : tant que `docs/legal/*.md` portent un marqueur
+   `[À COMPLÉTER : …]`, le build échoue en les listant. Une image de recette
+   doit pouvoir exister avant que ces textes soient rédigés, d'où le
+   desserrage — jamais pour la production.
+2. **L'adresse de l'API est figée dans le bundle du navigateur.**
+   `NEXT_PUBLIC_API_BASE_URL` n'est pas lue à l'exécution : Next.js la remplace
+   *au build* (`apps/admin/src/lib/env.ts`, lu par le composant `'use client'`
+   `api-status.tsx`). L'image de recette vise `api-staging.DOMAINE`, celle de
+   production `api.DOMAINE` — deux binaires différents, nécessairement. C'est
+   aussi pourquoi les workflows exigent la variable de dépôt `CARLYS_DOMAIN` et
+   échouent bruyamment sans elle : sans elle, l'image publiée enverrait le
+   navigateur vers `http://localhost:3000`, se construirait sans erreur,
+   démarrerait sans erreur, et serait muette.
+
+Les images `carlys-api` et `carlys-api-migrate`, elles, ne portent ni adresse
+ni texte : leur configuration est entièrement d'exécution. Elles sont donc
+construites **une seule fois** et servent aux deux environnements.
+
+### Exploitation
+
+Les scripts du serveur (`scripts/server/`) et le fichier Compose unique
+(`infrastructure/server/compose.yml`) enchaînent tout cela :
+`setup.sh` prépare la machine, `deploy.sh <env> <sha12>` migre puis bascule,
+`promote.sh` porte un SHA de la recette vers la production après confirmation,
+`backup.sh` sauvegarde. La marche à suivre complète, avec ce que chaque étape
+doit répondre pour être réussie, est dans le
+**[guide de mise en route](../../docs/deployment/mise-en-route-serveur.md)**.
 
 ## Pages web publiques et `PUBLIC_APP_URL`
 
@@ -103,10 +159,10 @@ avec leur propre mise en page (sans coquille d'administration ni lien vers
 En conséquence, pour chaque environnement déployé :
 
 - **`PUBLIC_APP_URL` (API)** doit désigner l'URL publique de cette
-  application web (par exemple `https://admin.carlys.example`, ou un hôte
-  dédié qui proxie le même conteneur), **jamais** l'URL de l'API : c'est la
-  base des liens envoyés par e-mail et des URL de retour Stripe. En local :
-  `http://localhost:3001`.
+  application web — `https://app.DOMAINE` en production,
+  `https://app-staging.DOMAINE` en recette —, **jamais** l'URL de l'API :
+  c'est la base des liens envoyés par e-mail et des URL de retour Stripe. En
+  local : `http://localhost:3001`.
 - **`CORS_ORIGINS` (API)** doit contenir cette même origine : les pages
   appellent l'API depuis le navigateur.
 - Le build de l'image admin lit `docs/legal/*.md` : le contexte Docker est la

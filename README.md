@@ -331,9 +331,11 @@ docker build -f apps/admin/Dockerfile -t carlys-admin .
 
 ## Déploiement
 
-Quatre environnements sont prévus : `development`, `test`, `staging`, `production`. Cibles de production : PostgreSQL et Redis managés, stockage objet S3/R2, images Docker de l'API et de l'admin derrière un reverse proxy Nginx. Les migrations s'exécutent via `prisma migrate deploy` avant la bascule du trafic.
+Quatre environnements : `development`, `test`, `staging`, `production`. La recette et la production cohabitent sur un serveur dédié, isolées par projet Compose, derrière un Nginx d'hôte ; les images sont publiées dans GHCR et **déployées par SHA**, les migrations s'exécutant via `prisma migrate deploy` avant la bascule du trafic.
 
-Détails : [infrastructure/deployment/README.md](./infrastructure/deployment/README.md) (ainsi que [nginx](./infrastructure/nginx/README.md) et [monitoring](./infrastructure/monitoring/README.md)).
+Pour mettre réellement Carlys en ligne, d'un serveur nu jusqu'aux builds déposés sur les magasins, la marche à suivre complète est le **[guide de mise en route](./docs/deployment/mise-en-route-serveur.md)** : DNS, préparation du serveur, jeton de registre, `.env`, certificats, premier déploiement de recette, builds mobiles, puis promotion en production.
+
+Détails de la stratégie : [infrastructure/deployment/README.md](./infrastructure/deployment/README.md) (ainsi que [nginx](./infrastructure/nginx/README.md) et [monitoring](./infrastructure/monitoring/README.md)).
 
 ## Sécurité
 
@@ -415,4 +417,6 @@ Politique complète et signalement de vulnérabilités : [SECURITY.md](./SECURIT
 - [`docs/decisions/`](./docs/decisions/) — décisions d'architecture (ADR) ;
 - [`docs/development/`](./docs/development/) — poste de développement, dont
   [monter VS Code et l'émulateur Android](./docs/development/poste-de-travail.md) ;
+- [`docs/deployment/`](./docs/deployment/) — mise en ligne, dont
+  [le guide de mise en route du serveur](./docs/deployment/mise-en-route-serveur.md) ;
 - READMEs locaux : [`apps/api`](./apps/api/README.md), [`apps/admin`](./apps/admin/README.md), [`apps/mobile`](./apps/mobile/README.md), [`infrastructure/docker`](./infrastructure/docker/README.md).

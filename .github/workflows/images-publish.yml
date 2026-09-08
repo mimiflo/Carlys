@@ -231,7 +231,7 @@ jobs:
             echo "Déploiement en recette, sur le serveur :"
             echo
             echo '```bash'
-            echo "sudo /srv/carlys/scripts/deploy.sh staging ${{ steps.etiquettes.outputs.sha12 }}"
+            echo "sudo /srv/carlys/repo/scripts/server/deploy.sh staging ${{ steps.etiquettes.outputs.sha12 }}"
             echo '```'
             echo
             echo "L'image admin de ce tag vise \`https://api-staging.${{ vars.CARLYS_DOMAIN }}\` et porte"
