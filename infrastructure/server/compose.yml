@@ -220,7 +220,18 @@ services:
     # Deux images pour un même SHA : `sha-…` en recette, `sha-…-prod` en
     # production, cette dernière construite garde légale ARMÉE
     # (LEGAL_PLACEHOLDERS=forbid). Le suffixe est porté par le .env.
-    image: ${CARLYS_REGISTRY}/carlys-admin:${CARLYS_TAG:?CARLYS_TAG est obligatoire - sha-xxxxxxxxxxxx}${CARLYS_ADMIN_TAG_SUFFIX-}
+    #
+    # `?` et non `-`, et la nuance décide de ce que voit un utilisateur de
+    # production. `${…-}` signifie « si la variable est absente, chaîne
+    # vide » : le jour où cette ligne disparaît du .env de production —
+    # édition à la main, copie partielle, faute de frappe sur le nom — compose
+    # résoudrait SANS BRUIT l'image de recette, celle dont la garde légale est
+    # desserrée, et la production servirait ses mentions légales à trous sans
+    # qu'aucune alarme ne sonne. `?` exige que la variable soit DÉCLARÉE tout
+    # en acceptant qu'elle soit VIDE : la recette garde sa ligne vide, la
+    # production son `-prod`, et une ligne manquante arrête le déploiement au
+    # lieu de le laisser réussir de travers.
+    image: ${CARLYS_REGISTRY}/carlys-admin:${CARLYS_TAG:?CARLYS_TAG est obligatoire - sha-xxxxxxxxxxxx}${CARLYS_ADMIN_TAG_SUFFIX?CARLYS_ADMIN_TAG_SUFFIX doit etre DECLAREE (vide en recette, -prod en production) - absente, la production perdrait sa garde legale en silence}
     # PAS d'env_file ici : le .env fixe PORT=3000 pour l'API, alors que l'image
     # admin écoute sur 3001. Et elle n'a rien à lire au démarrage —
     # NEXT_PUBLIC_API_BASE_URL est figé À LA CONSTRUCTION de l'image.

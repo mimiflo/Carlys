@@ -42,7 +42,7 @@ L'isolation entre les deux piles est portée par `COMPOSE_PROJECT_NAME`
 héritent le préfixe, et les deux tournent côte à côte sur le même hôte sans se
 voir.
 
-## Trois choses à savoir avant d'y toucher
+## Quatre choses à savoir avant d'y toucher
 
 **Les migrations ne sont pas un service.** Le service `migrate` est derrière le
 profil `migrate` : un `docker compose up -d` ne le démarre jamais. `deploy.sh`
@@ -62,6 +62,19 @@ qu'`.optional()` accepte.
 **`PGTZ` n'est pas décoratif.** Les 99 colonnes `DateTime` du schéma Prisma sont
 des `TIMESTAMP(3)` *sans* fuseau : « les dates sont stockées en UTC » ne tient
 qu'au fuseau du serveur et de la session. `TZ` et `PGTZ` le fixent, les deux.
+
+**`CARLYS_ADMIN_TAG_SUFFIX` doit être DÉCLARÉE, même vide.** Le compose écrit
+`${CARLYS_ADMIN_TAG_SUFFIX?…}` — point d'interrogation, pas tiret. La recette
+la pose vide, la production à `-prod` ; si la ligne DISPARAÎT d'un `.env`,
+compose refuse de résoudre au lieu de retomber sur la chaîne vide. C'est la
+différence entre un déploiement qui s'arrête et une production qui sert
+silencieusement l'image de recette, garde légale desserrée et mentions légales
+à trous. Le message d'erreur nomme la variable :
+
+```
+error while interpolating services.admin.image: required variable
+CARLYS_ADMIN_TAG_SUFFIX is missing a value: …
+```
 
 ## Vérifier que les `.env.example` sont complets
 
