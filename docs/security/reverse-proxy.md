@@ -2,8 +2,10 @@
 
 > **Statut : en place.** Variable `TRUST_PROXY_HOPS`
 > (`apps/api/src/config/env.schema.ts`), réglage appliqué dans
-> `apps/api/src/app/configure-app.ts`, exemple Nginx dans
-> `infrastructure/nginx/carlys.conf.example`, test e2e
+> `apps/api/src/app/configure-app.ts`, exemples Nginx dans
+> `infrastructure/nginx/` (`carlys-production.conf.example`,
+> `carlys-staging.conf.example`, et le snippet partagé
+> `snippets/carlys-proxy.conf`), test e2e
 > `apps/api/test/trust-proxy.e2e-spec.ts`.
 
 En production, l'API ne parle jamais directement au client : un terminateur
@@ -83,14 +85,17 @@ poste de développement et la CI ne changent pas de comportement.
 
 ## 3. L'exemple Nginx : TLS, HSTS et limites de taille
 
-`infrastructure/nginx/carlys.conf.example` se charge tel quel dès que les
-certificats existent aux chemins indiqués. Ce qu'il garantit, et pourquoi :
+`infrastructure/nginx/carlys-production.conf.example` et son jumeau de
+recette `carlys-staging.conf.example` se chargent tels quels dès que les
+certificats existent aux chemins indiqués — ils partagent leurs en-têtes de
+proxy par `snippets/carlys-proxy.conf`, pour que la section 1 ci-dessus reste
+vraie sur les six vhosts à la fois. Ce qu'ils garantissent, et pourquoi :
 
 - **Rien en clair** : un bloc `listen 80` redirige tout en `301` vers HTTPS ;
   seul le chemin de renouvellement certbot (`/.well-known/acme-challenge/`)
   est servi en HTTP.
-- **TLS 1.2 et 1.3 seulement**, certificats certbot explicites sur les deux
-  hôtes (API et admin).
+- **TLS 1.2 et 1.3 seulement**, certificats certbot explicites sur chacun des
+  trois hôtes d'un environnement (API, application web, médias).
 - **HSTS posé par Nginx** (`Strict-Transport-Security`, un an,
   `includeSubDomains`) : helmet le pose aussi, mais seulement sur les
   réponses qui atteignent l'API, jamais sur une requête en clair interceptée
@@ -109,3 +114,16 @@ certificats existent aux chemins indiqués. Ce qu'il garantit, et pourquoi :
 - **`X-Forwarded-For`, `X-Forwarded-Proto`, `X-Real-IP`** transmis, pour
   `TRUST_PROXY_HOPS=1` (section 1).
 - **`/metrics` refusé** publiquement.
+- **Le vhost des médias n'expose que le bucket public.** Proxifier `/` vers
+  MinIO rendrait publiques la racine de son API S3 et sa console
+  d'administration : seul le préfixe `/carlys-media/` est proxifié, le reste
+  répond `404`. Les méthodes autres que `GET` et `HEAD` y sont refusées
+  (`limit_except`) — les dépôts passent par l'API, jamais par cet hôte —, et
+  les cookies sont effacés dans les deux sens : un média public n'a pas
+  d'identité, et un `Set-Cookie` renvoyé par l'amont rendrait la réponse non
+  mutualisable par les caches.
+- **La recette n'est pas indexable** : `X-Robots-Tag: noindex, nofollow,
+  noarchive` sur chaque réponse et un `robots.txt` servi par Nginx. Sans cela,
+  un `/privacy` de recette peut être référencé à la place de celui de
+  production, et les données de test restent cherchables après leur
+  effacement.

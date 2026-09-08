@@ -1,0 +1,250 @@
+# Carlys — vhosts de RECETTE (api-staging, app-staging, media-staging).
+#
+# Jumeau de carlys-production.conf.example. Trois différences, et trois
+# seulement : les ports de boucle locale, les noms d'hôte, et le fait que cet
+# environnement doit rester HORS DES MOTEURS DE RECHERCHE.
+#
+# Installation :
+#   cp infrastructure/nginx/snippets/carlys-proxy.conf /etc/nginx/snippets/
+#   sed 's/carlys.example/VOTRE-DOMAINE/g' \
+#     infrastructure/nginx/carlys-staging.conf.example \
+#     > /etc/nginx/sites-available/carlys-staging.conf
+#   ln -sf /etc/nginx/sites-available/carlys-staging.conf /etc/nginx/sites-enabled/
+#   nginx -t && systemctl reload nginx
+
+upstream carlys_api_staging {
+    server 127.0.0.1:3100;
+}
+
+upstream carlys_admin_staging {
+    server 127.0.0.1:3101;
+}
+
+upstream carlys_minio_staging {
+    server 127.0.0.1:9200;
+}
+
+# Mailpit de recette écoute sur 127.0.0.1:8025 et n'est VOLONTAIREMENT proxyfié
+# par aucun vhost : c'est une boîte aux lettres qui affiche, en clair et sans
+# authentification, tous les liens de vérification d'adresse et de
+# réinitialisation de mot de passe de la recette. Pour la consulter, un tunnel
+# SSH depuis son poste, jamais un sous-domaine :
+#   ssh -L 8025:127.0.0.1:8025 <utilisateur>@<serveur>
+# puis http://localhost:8025 dans le navigateur local.
+
+# ── HTTP : rien n'est servi en clair ─────────────────────────────────────────
+server {
+    listen 80;
+    listen [::]:80;
+    server_name api-staging.carlys.example app-staging.carlys.example media-staging.carlys.example;
+
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+# ── API de recette — api-staging.carlys.example → 127.0.0.1:3100 ─────────────
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+    server_name api-staging.carlys.example;
+
+    ssl_certificate     /etc/letsencrypt/live/api-staging.carlys.example/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/api-staging.carlys.example/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers off;
+
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    # Une API ne s'indexe pas, mais l'en-tête ne coûte rien et vaut pour les
+    # réponses JSON qu'un moteur croiserait par un lien.
+    add_header X-Robots-Tag "noindex, nofollow" always;
+
+    client_max_body_size 1m;
+
+    include snippets/carlys-proxy.conf;
+
+    location /health {
+        proxy_pass http://carlys_api_staging;
+        access_log off;
+    }
+
+    # Voir carlys-production.conf.example pour le raisonnement des DEUX
+    # plafonds (transport 64 Mio dans le code, métier MEDIA_MAX_UPLOAD_BYTES
+    # réglable) : Nginx s'aligne sur le plus haut pour ne jamais couper avant
+    # l'API, qui seule sait répondre avec l'enveloppe d'erreur du dépôt.
+    location /api/v1/admin/media {
+        client_max_body_size 64m;
+        proxy_pass http://carlys_api_staging;
+    }
+
+    location /api/ {
+        proxy_pass http://carlys_api_staging;
+    }
+
+    location /metrics {
+        deny all;
+    }
+
+    location / {
+        return 404;
+    }
+}
+
+# ── Application web de recette — app-staging → 127.0.0.1:3101 ────────────────
+#
+# C'est CET hôte que doivent désigner, côté API de recette :
+#   PUBLIC_APP_URL = https://app-staging.carlys.example
+#   CORS_ORIGINS   contient https://app-staging.carlys.example
+# et c'est lui que les builds mobiles de recette reçoivent en
+# --dart-define=CARLYS_PUBLIC_WEB_BASE_URL (sans quoi `assertUsable()` refuse
+# de démarrer l'application : apps/mobile/lib/app/environment/).
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+    server_name app-staging.carlys.example;
+
+    ssl_certificate     /etc/letsencrypt/live/app-staging.carlys.example/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/app-staging.carlys.example/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers off;
+
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
+    # ── Ne pas se faire indexer, pour deux raisons ──────────────────────────
+    # La première est évidente : un /privacy de recette référencé à la place
+    # de celui de production enverrait des utilisateurs — et des examinateurs
+    # de magasin — sur un texte qui n'engage personne. La seconde l'est moins :
+    # la recette porte des données de test, et un moteur qui les indexe les
+    # rend cherchables bien après qu'on les a effacées.
+    #
+    # X-Robots-Tag ET robots.txt : le premier couvre chaque réponse, y compris
+    # les images et les JSON ; le second est ce que les robots lisent AVANT de
+    # demander quoi que ce soit. Aucun des deux ne remplace l'autre.
+    add_header X-Robots-Tag "noindex, nofollow, noarchive" always;
+
+    client_max_body_size 1m;
+
+    include snippets/carlys-proxy.conf;
+
+    location = /robots.txt {
+        add_header Content-Type text/plain always;
+        add_header X-Robots-Tag "noindex, nofollow, noarchive" always;
+        return 200 "User-agent: *\nDisallow: /\n";
+    }
+
+    location /_next/static/ {
+        proxy_pass http://carlys_admin_staging;
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+        add_header X-Robots-Tag "noindex, nofollow, noarchive" always;
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+        access_log off;
+    }
+
+    location / {
+        proxy_pass http://carlys_admin_staging;
+    }
+
+    # ── Fermer aussi la porte au public ? Possible, mais pas par défaut ──────
+    #
+    # La tentation est de poser un mot de passe HTTP sur toute la recette. Il
+    # faut savoir ce que ça casse AVANT de le faire, car deux usages légitimes
+    # traversent cet hôte sans jamais pouvoir présenter ce mot de passe :
+    #
+    #   - les liens des e-mails de recette (/verify-email, /reset-password),
+    #     ouverts par un testeur depuis son téléphone ;
+    #   - les liens légaux de l'application mobile de recette
+    #     (/privacy, /terms), et les retours Stripe (/abonnement…).
+    #
+    # Le back-office, lui, a déjà sa propre authentification : le mot de passe
+    # HTTP n'y ajoute qu'une couche de discrétion. C'est pourquoi le défaut
+    # de ce fichier est `noindex` seul — la protection qui n'empêche rien de
+    # fonctionner.
+    #
+    # Pour l'ajouter quand même, sur le back-office UNIQUEMENT :
+    #   apt-get install -y apache2-utils
+    #   htpasswd -c /etc/nginx/carlys-staging.htpasswd recette
+    #   chmod 640 /etc/nginx/carlys-staging.htpasswd
+    #   chown root:www-data /etc/nginx/carlys-staging.htpasswd
+    # puis décommenter les deux blocs ci-dessous.
+    #
+    # ATTENTION aux exemptions `/_next/` : sans elles, les pages publiques
+    # s'affichent SANS style ni interactivité, parce que leurs feuilles et
+    # leurs scripts se font, eux, réclamer le mot de passe.
+    #
+    # Et il en faut DEUX, pas une — la première rédaction de ce fichier n'en
+    # posait qu'une, et l'essai l'a prise en défaut : `/_next/static/x.js`
+    # répondait 401. Nginx retient le préfixe le PLUS LONG parmi les
+    # `location` ordinaires, et `/_next/static/` (déclarée plus haut pour le
+    # cache immuable) est plus longue que `/_next/` : c'est elle qui traite la
+    # requête, et elle hérite alors de l'`auth_basic` du bloc `server`. Le
+    # `auth_basic off;` doit donc être posé DANS la location qui gagne. Les
+    # pages publiques, elles, passent par une location `~ regex`, laquelle est
+    # évaluée après les préfixes et l'emporte sur eux : une seule suffit.
+    #
+    # 1) dans la location `/_next/static/` ci-dessus, ajouter :
+    #        auth_basic off;
+    # 2) puis décommenter tout ce qui suit :
+    #
+    # auth_basic           "Carlys — recette";
+    # auth_basic_user_file /etc/nginx/carlys-staging.htpasswd;
+    #
+    # location ~ ^/(privacy|terms|verify-email|reset-password|abonnement)(/|$) {
+    #     auth_basic off;
+    #     proxy_pass http://carlys_admin_staging;
+    # }
+    #
+    # # Le reste de /_next/ : /_next/image, /_next/data… tout ce qui n'est pas
+    # # servi par la location /_next/static/ ci-dessus.
+    # location /_next/ {
+    #     auth_basic off;
+    #     proxy_pass http://carlys_admin_staging;
+    # }
+}
+
+# ── Médias de recette — media-staging → MinIO 127.0.0.1:9200 ─────────────────
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+    server_name media-staging.carlys.example;
+
+    ssl_certificate     /etc/letsencrypt/live/media-staging.carlys.example/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/media-staging.carlys.example/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers off;
+
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+    add_header X-Robots-Tag "noindex, nofollow, noarchive" always;
+
+    client_max_body_size 1m;
+
+    location /carlys-media/ {
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+        add_header X-Robots-Tag "noindex, nofollow, noarchive" always;
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+
+        proxy_set_header  Cookie "";
+        proxy_hide_header Set-Cookie;
+        proxy_hide_header x-amz-id-2;
+        proxy_hide_header x-amz-request-id;
+
+        limit_except GET HEAD {
+            deny all;
+        }
+
+        include snippets/carlys-proxy.conf;
+        proxy_pass http://carlys_minio_staging;
+    }
+
+    # Comme en production : on n'expose que le préfixe du bucket public, jamais
+    # la racine de l'API S3 de MinIO.
+    location / {
+        return 404;
+    }
+}

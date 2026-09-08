@@ -1,0 +1,243 @@
+# Carlys — vhosts de PRODUCTION (api, app, media).
+#
+# Installation :
+#   cp infrastructure/nginx/snippets/carlys-proxy.conf /etc/nginx/snippets/
+#   sed 's/carlys.example/VOTRE-DOMAINE/g' \
+#     infrastructure/nginx/carlys-production.conf.example \
+#     > /etc/nginx/sites-available/carlys-production.conf
+#   ln -sf /etc/nginx/sites-available/carlys-production.conf /etc/nginx/sites-enabled/
+#   nginx -t && systemctl reload nginx
+#
+# `carlys.example` est le seul motif à remplacer : les trois sous-domaines et
+# les chemins de certificats en découlent.
+#
+# Ce fichier ne se charge qu'une fois les certificats en place. Premier
+# passage, dans l'ordre : poser les DNS, obtenir les certificats
+# (certbot --webroot, le bloc HTTP ci-dessous sert /.well-known), PUIS
+# activer ce fichier. Le guide de mise en route donne la séquence complète :
+# docs/deployment/mise-en-route-serveur.md.
+
+# ── Où écoutent les conteneurs ───────────────────────────────────────────────
+# Ports de BOUCLE LOCALE, fixés par le contrat de déploiement : rien de Carlys
+# n'écoute sur une interface publique, seul Nginx est exposé. postgres et redis
+# ne publient aucun port du tout — ils ne sont joignables que sur le réseau
+# Compose de leur environnement.
+upstream carlys_api_production {
+    server 127.0.0.1:3000;
+}
+
+upstream carlys_admin_production {
+    server 127.0.0.1:3001;
+}
+
+upstream carlys_minio_production {
+    server 127.0.0.1:9000;
+}
+
+# ── HTTP : rien n'est servi en clair ─────────────────────────────────────────
+server {
+    listen 80;
+    listen [::]:80;
+    server_name api.carlys.example app.carlys.example media.carlys.example;
+
+    # Renouvellement des certificats (certbot en mode webroot). Cette location
+    # doit rester AVANT la redirection : un défi ACME redirigé en HTTPS avant
+    # que le certificat existe ne peut jamais aboutir.
+    location /.well-known/acme-challenge/ {
+        root /var/www/certbot;
+    }
+
+    location / {
+        return 301 https://$host$request_uri;
+    }
+}
+
+# ── API — api.carlys.example → 127.0.0.1:3000 ────────────────────────────────
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+    server_name api.carlys.example;
+
+    ssl_certificate     /etc/letsencrypt/live/api.carlys.example/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/api.carlys.example/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers off;
+
+    # HSTS posé ICI : helmet ne le pose que sur les réponses qui atteignent
+    # l'API, jamais sur une requête en clair interceptée en amont.
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
+    # Corps JSON : même plafond que l'API (MAX_JSON_BODY_SIZE = '1mb' dans
+    # packages/shared-config). Les deux valeurs bougent ensemble ; au-delà,
+    # c'est Nginx qui répond 413, sans l'enveloppe d'erreur de l'API.
+    client_max_body_size 1m;
+
+    include snippets/carlys-proxy.conf;
+
+    location /health {
+        proxy_pass http://carlys_api_production;
+        # Le journal d'accès de /health/ready serait interrogé toutes les
+        # secondes par deploy.sh et par le HEALTHCHECK du conteneur.
+        access_log off;
+    }
+
+    # ── Dépôt de médias : le seul endroit où le plafond monte ────────────────
+    #
+    # DEUX plafonds, et ils ne disent pas la même chose :
+    #
+    # - MEDIA_TRANSPORT_HARD_CAP_BYTES = 64 Mio
+    #   (packages/api-contracts/src/media.ts), garde-fou MÉMOIRE du multipart,
+    #   appliqué par le FileInterceptor de media.controller.ts. C'est un
+    #   plafond de code, le même dans tous les environnements.
+    # - MEDIA_MAX_UPLOAD_BYTES, plafond MÉTIER, réglable par environnement
+    #   (apps/api/src/config/env.schema.ts, défaut 20 971 520 octets = 20 Mio).
+    #   C'est l'API qui l'applique, et elle répond avec l'enveloppe
+    #   { error: { code, message, … } } que l'admin sait afficher.
+    #
+    # Nginx s'aligne sur le PLUS HAUT des deux, volontairement : s'il coupait
+    # à 20 Mio, un environnement qui relève MEDIA_MAX_UPLOAD_BYTES verrait
+    # Nginx refuser avant l'API, et l'administrateur recevrait une page 413
+    # illisible au lieu du message métier. La règle est donc : Nginx ne coupe
+    # jamais avant l'API, il ne borne que ce que le code ne borne pas. Si
+    # MEDIA_TRANSPORT_HARD_CAP_BYTES change, cette valeur change avec lui.
+    location /api/v1/admin/media {
+        client_max_body_size 64m;
+        proxy_pass http://carlys_api_production;
+    }
+
+    location /api/ {
+        proxy_pass http://carlys_api_production;
+    }
+
+    # /metrics n'est jamais exposé publiquement : le collecteur Prometheus
+    # interroge l'API sur la boucle locale, directement.
+    location /metrics {
+        deny all;
+    }
+
+    # L'API ne sert rien d'autre — pas de page d'accueil, pas de fichier.
+    location / {
+        return 404;
+    }
+}
+
+# ── Application web — app.carlys.example → 127.0.0.1:3001 ────────────────────
+#
+# Un SEUL conteneur Next.js, deux publics : le back-office (/, /users,
+# /exercises, /media, /audit, /reports, /categories, /login) et les pages
+# PUBLIQUES du produit (/privacy, /terms, /verify-email, /reset-password,
+# /abonnement). Ces dernières sont ouvertes depuis un e-mail ou depuis
+# l'application mobile, sans aucun jeton.
+#
+# Conséquence de configuration, à ne pas manquer :
+#   PUBLIC_APP_URL = https://app.carlys.example   (côté API)
+#   CORS_ORIGINS   contient https://app.carlys.example
+# et c'est https://app.carlys.example/privacy que les magasins d'applications
+# ouvriront avant d'accepter une soumission.
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+    server_name app.carlys.example;
+
+    ssl_certificate     /etc/letsencrypt/live/app.carlys.example/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/app.carlys.example/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers off;
+
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
+    # Le navigateur parle à l'API DIRECTEMENT (api.carlys.example), pas au
+    # travers de Next : aucun dépôt de fichier ne transite par cet hôte.
+    client_max_body_size 1m;
+
+    include snippets/carlys-proxy.conf;
+
+    # Les fichiers bâtis par Next portent un condensat dans leur nom : ils sont
+    # immuables, et les laisser être revalidés à chaque visite est du gaspillage.
+    # `add_header` REMPLACE les en-têtes hérités du bloc `server` dès qu'on en
+    # ajoute un ici — d'où la répétition de HSTS, sans laquelle cette location
+    # perdrait silencieusement sa protection.
+    location /_next/static/ {
+        proxy_pass http://carlys_admin_production;
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+        access_log off;
+    }
+
+    location / {
+        proxy_pass http://carlys_admin_production;
+    }
+}
+
+# ── Médias — media.carlys.example → MinIO 127.0.0.1:9000 ─────────────────────
+#
+# Cet hôte sert les objets PUBLICS du bucket `carlys-media` (lecture anonyme
+# posée par minio-init). C'est la valeur de S3_PUBLIC_BASE_URL côté API :
+#   S3_PUBLIC_BASE_URL = https://media.carlys.example/carlys-media
+# (le segment `carlys-media` est dans le chemin parce que S3_FORCE_PATH_STYLE
+# vaut `true` : MinIO ne sert pas les buckets en sous-domaine.)
+#
+# L'API, elle, n'utilise JAMAIS cet hôte : elle écrit dans MinIO par le réseau
+# Compose (S3_ENDPOINT). Ce vhost est en LECTURE SEULE, pour les téléphones et
+# les navigateurs.
+server {
+    listen 443 ssl;
+    listen [::]:443 ssl;
+    http2 on;
+    server_name media.carlys.example;
+
+    ssl_certificate     /etc/letsencrypt/live/media.carlys.example/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/media.carlys.example/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_prefer_server_ciphers off;
+
+    add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+
+    # Lecture seule : aucun corps de requête n'a de raison d'arriver ici.
+    client_max_body_size 1m;
+
+    # ── Le bucket, et RIEN d'autre ──────────────────────────────────────────
+    #
+    # Le piège à éviter est de proxyfier `/` vers MinIO : la racine de son API
+    # S3 répond alors publiquement (liste des buckets, en-têtes d'
+    # administration), et la console d'administration devient atteignable si
+    # elle est activée. On n'expose donc QUE le préfixe du bucket public.
+    location /carlys-media/ {
+        # Un objet n'est jamais réécrit : sa clé est
+        # `<kind>/<uuid>.<extension>` (StorageService.keyFor, et le service
+        # court-circuite un identifiant déjà connu). `immutable` est donc
+        # exact, pas optimiste.
+        #
+        # Répétition de HSTS pour la même raison qu'au-dessus : le premier
+        # `add_header` de cette location fait oublier ceux du bloc `server`.
+        add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
+        add_header Cache-Control "public, max-age=31536000, immutable" always;
+
+        # Média public = média sans identité. Rien n'entre, rien ne sort :
+        # un cookie transmis à MinIO ne servirait à rien, et un `Set-Cookie`
+        # renvoyé par MinIO rendrait la réponse non mutualisable par les
+        # caches intermédiaires — ce qui viderait `public` de son sens.
+        proxy_set_header  Cookie "";
+        proxy_hide_header Set-Cookie;
+
+        # MinIO renvoie ses identifiants de requête S3 : sans intérêt pour un
+        # navigateur, ils ne font que décrire l'infrastructure.
+        proxy_hide_header x-amz-id-2;
+        proxy_hide_header x-amz-request-id;
+
+        # Les seules méthodes qui ont un sens sur un média public. Les dépôts
+        # passent par l'API (api.carlys.example/api/v1/admin/media), jamais ici.
+        limit_except GET HEAD {
+            deny all;
+        }
+
+        include snippets/carlys-proxy.conf;
+        proxy_pass http://carlys_minio_production;
+    }
+
+    location / {
+        return 404;
+    }
+}
