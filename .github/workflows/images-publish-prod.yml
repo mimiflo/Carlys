@@ -79,6 +79,20 @@ jobs:
           echo "owner=$(echo '${{ github.repository_owner }}' | tr '[:upper:]' '[:lower:]')" >> "$GITHUB_OUTPUT"
           echo "Promotion du commit $sha12 : $(git log -1 --format='%s')"
 
+      # ── Présence ET forme ──────────────────────────────────────────────────
+      #
+      # La valeur est concaténée telle quelle derrière un schéma et un
+      # sous-domaine : https://api.$CARLYS_DOMAIN. Le réflexe de qui pose la
+      # variable est de copier l'adresse du site, schéma compris — et
+      # « https://carlys.app » donne alors littéralement
+      # « https://api.https://carlys.app ». Next.js inline cette chaîne dans le
+      # JavaScript du navigateur : rien en aval ne la rattrape, le build
+      # réussit, l'image démarre, et le back-office DE PRODUCTION est muet.
+      # Vérifier la seule non-vacuité laissait passer exactement ça.
+      #
+      # Contrôle identique à celui d'images-publish.yml, mot pour mot : GitHub
+      # Actions ne partage rien entre deux workflows. Toute correction ici doit
+      # être reportée là-bas, et réciproquement.
       - name: Le domaine de déploiement est connu
         env:
           CARLYS_DOMAIN: ${{ vars.CARLYS_DOMAIN }}
@@ -87,6 +101,32 @@ jobs:
             echo "::error title=Variable de dépôt CARLYS_DOMAIN absente::L'image admin fige l'adresse de l'API dans le JavaScript du navigateur. Sans CARLYS_DOMAIN, l'image de production pointerait vers http://localhost:3000. Pose-la dans Settings → Secrets and variables → Actions → Variables, nom CARLYS_DOMAIN, valeur le domaine nu (exemple : carlys.app)."
             exit 1
           fi
+
+          domaine_bien_forme() {
+            # Jeu de caractères d'abord : ce filtre écarte le schéma (« : » et
+            # « / »), les espaces, un joker « * », un port, une adresse
+            # complète — et il tient sur une valeur multiligne, qu'une
+            # expression régulière ancrée ligne à ligne laisserait passer.
+            case "$1" in
+              ''|*[!A-Za-z0-9.-]*) return 1 ;;
+            esac
+            [ "${#1}" -le 253 ] || return 1
+            # Puis la structure : au moins deux étiquettes, aucune vide, ni
+            # commençant ni finissant par un tiret, 63 caractères au plus.
+            printf '%s' "$1" | grep -Eq '^[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$'
+          }
+
+          if ! domaine_bien_forme "$CARLYS_DOMAIN"; then
+            echo "::error title=CARLYS_DOMAIN mal formée::La valeur « $CARLYS_DOMAIN » n'est pas un nom de domaine nu. Attendu : uniquement le domaine, sans schéma, sans barre oblique, sans port, sans sous-domaine — par exemple « carlys.app ». Ce qui est refusé et pourquoi : « https://carlys.app » produirait l'adresse https://api.https://carlys.app, inlinée telle quelle dans le JavaScript du navigateur ; « carlys.app/ » et « carlys.app:443 » produiraient des variantes tout aussi mortes. Corrige la variable dans Settings → Secrets and variables → Actions → Variables, puis relance ce workflow."
+            exit 1
+          fi
+
+          case "$CARLYS_DOMAIN" in
+            api.*|app.*|media.*|api-staging.*|app-staging.*|media-staging.*)
+              echo "::warning title=CARLYS_DOMAIN commence par un sous-domaine réservé::« $CARLYS_DOMAIN » commence par un des six préfixes que ce dépôt ajoute lui-même. L'image admin visera https://api.$CARLYS_DOMAIN. Si ce n'est pas ce que tu veux, mets le domaine nu."
+              ;;
+          esac
+
           echo "API de production visée par l'image admin : https://api.$CARLYS_DOMAIN"
 
       # ── La garde légale, expliquée AVANT d'échouer ─────────────────────────

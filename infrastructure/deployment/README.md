@@ -108,6 +108,17 @@ d'être la même chose sans qu'on puisse dire quand.
 Un tag mouvant `staging` suit la branche de travail, pour lire d'un coup d'œil
 ce qui est récent dans l'onglet Packages. Aucun déploiement ne s'en sert.
 
+`images-publish` tourne à **chaque** poussée sur les deux branches, **sans
+filtre de chemins** — à rebours des CI de code, et par conséquence directe du
+déploiement par SHA : le SHA qu'un opérateur a sous la main est celui de la
+tête de branche, et il doit avoir ses images. Un filtre qui n'aurait rien
+publié pour un commit ne touchant que `infrastructure/` ou `scripts/` ferait
+échouer `deploy.sh` sur ce SHA — image absente —, sur le serveur, sur une
+cause qu'aucun message n'y nomme. Un filtre `paths` convient à une porte qui
+rend un avis sur un commit ; pas à un producteur d'artefacts adressés par
+commit. Le coût est borné par le cache de couches GHA et par le `concurrency`
+du workflow ; les vieux tags `sha-…` se purgent depuis l'onglet Packages.
+
 ### Pourquoi l'admin a deux images pour un seul commit
 
 Ce n'est pas une commodité, c'est une nécessité, et pour deux raisons

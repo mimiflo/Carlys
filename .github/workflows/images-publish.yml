@@ -10,44 +10,44 @@
 # PUBLICATION. Les deux tournent sur la même poussée, donc les images sont
 # bâties deux fois. On l'accepte : fusionner les rôles ferait dépendre la
 # vérification du droit d'écrire dans le registre, et un workflow qui publie
-# doit pouvoir rester simple et lisible. Le surcoût est borné par les mêmes
-# filtres `paths` et par le cache de couches GHA.
+# doit pouvoir rester simple et lisible. Le surcoût est borné par le cache de
+# couches GHA.
 name: images-publish
 
-# ── Où publier, et pourquoi pas seulement `main` ──────────────────────────────
+# ── Où publier, et pourquoi SANS filtre `paths` ───────────────────────────────
 #
-# La question est réelle : un build d'image coûte plusieurs minutes et chaque
-# SHA occupe de la place dans GHCR. Le réflexe serait de ne publier que depuis
-# `main`. On ne le fait pas, pour la même raison qui a fait nommer les deux
-# branches dans `images-ci` : CE DÉPÔT N'AVANCE PAS PAR `main`. Il avance par
-# poussées directes sur claude/carlys-fitness-foundation-lqv2hl. Publier depuis
-# `main` seulement, ici, reviendrait à ne jamais rien publier — donc à ne
-# jamais pouvoir déployer la recette, alors que la recette est précisément
-# l'environnement qui doit recevoir n'importe quel commit sans attendre une
-# fusion.
+# Deux décisions ici, et la seconde va à rebours du réflexe.
 #
-# La contrepartie est mesurée : les filtres `paths` ci-dessous (rien ne tourne
-# si aucune entrée de build n'a bougé) et la règle de rétention que rappelle
-# le guide de mise en route (les vieux tags `sha-…` se purgent depuis
-# l'onglet Packages ; ils ne s'accumulent pas d'eux-mêmes indéfiniment).
+# 1. Pas seulement `main`. CE DÉPÔT N'AVANCE PAS PAR `main` : il avance par
+#    poussées directes sur claude/carlys-fitness-foundation-lqv2hl. Ne publier
+#    que depuis `main` reviendrait à ne jamais rien publier — donc à ne jamais
+#    pouvoir déployer la recette, alors que la recette est précisément
+#    l'environnement qui doit recevoir n'importe quel commit sans attendre une
+#    fusion. C'est la même raison qui a fait nommer les deux branches dans
+#    `images-ci`.
+#
+# 2. AUCUN filtre `paths`, à REBOURS d'`images-ci` et des CI de code. La
+#    première rédaction de ce fichier en portait un, recopié d'`images-ci` ;
+#    c'était une erreur, et elle se voit dès qu'on suit le déploiement jusqu'au
+#    bout. LE DÉPLOIEMENT SE FAIT PAR SHA (contrat de déploiement) :
+#    `deploy.sh staging <sha>` va chercher `ghcr.io/…:sha-<sha>`, et le SHA
+#    qu'un opérateur a sous la main est celui de la TÊTE DE BRANCHE. Un commit
+#    qui ne touche que `infrastructure/**` ou `scripts/**` ne publierait rien
+#    sous un filtre : ce SHA n'aurait aucune image, et `deploy.sh` échouerait
+#    dessus — sur le serveur, au pire moment, sur une panne dont la cause
+#    (« ce commit n'a pas bougé les bons fichiers ») n'a rien d'évident. Un
+#    filtre `paths` a du sens pour une porte qui rend un AVIS sur un commit ;
+#    il n'en a aucun pour un producteur d'artefacts ADRESSÉS par commit.
+#
+#    Le contrat le dit d'ailleurs en toutes lettres : publication « à chaque
+#    poussée ». Le coût est borné deux fois — par le cache de couches GHA (un
+#    commit qui ne touche aucune entrée de build se rebâtit depuis le cache)
+#    et par le `concurrency` ci-dessous, qui sérialise les rafales au lieu de
+#    les paralléliser. La place occupée dans GHCR se purge depuis l'onglet
+#    Packages, comme le rappelle le guide de mise en route.
 on:
   push:
     branches: [claude/carlys-fitness-foundation-lqv2hl, main]
-    # Même liste que `images-ci` : ce sont les entrées réelles des deux
-    # Dockerfile. GitHub Actions ignore les ancres YAML — toute entrée ajoutée
-    # à `images-ci` doit l'être ici aussi, sans quoi une image publiée
-    # cesserait de correspondre à son SHA.
-    paths:
-      - 'apps/api/**'
-      - 'apps/admin/**'
-      - 'packages/**'
-      - 'docs/legal/**'
-      - 'package.json'
-      - 'pnpm-lock.yaml'
-      - 'pnpm-workspace.yaml'
-      - '.npmrc'
-      - '.dockerignore'
-      - '.github/workflows/images-publish.yml'
   # Rattrapage manuel : republier un commit dont la publication a été perdue
   # (annulation, panne de runner) sans avoir à pousser un commit vide.
   workflow_dispatch:
@@ -112,6 +112,10 @@ jobs:
       # CARLYS_DOMAIN (Settings → Secrets and variables → Actions → Variables)
       # doit exister avant la première publication. Une seule fois, et le
       # message ci-dessous dit quoi faire.
+      # La FORME de la variable est vérifiée, pas seulement sa présence : voir
+      # le commentaire jumeau d'images-publish-prod.yml. Les deux contrôles
+      # sont identiques et le resteront — GitHub Actions ne partage rien entre
+      # deux workflows, la duplication est le seul moyen de les garder alignés.
       - name: Le domaine de déploiement est connu
         env:
           CARLYS_DOMAIN: ${{ vars.CARLYS_DOMAIN }}
@@ -120,6 +124,46 @@ jobs:
             echo "::error title=Variable de dépôt CARLYS_DOMAIN absente::L'image admin fige l'adresse de l'API dans le JavaScript du navigateur (NEXT_PUBLIC_API_BASE_URL est inlinée au build). Sans CARLYS_DOMAIN, l'image publiée pointerait le navigateur vers http://localhost:3000 et le back-office serait muet. Pose-la dans Settings → Secrets and variables → Actions → Variables, nom CARLYS_DOMAIN, valeur le domaine nu (exemple : carlys.app), puis relance ce workflow."
             exit 1
           fi
+
+          # ── Pourquoi la non-vacuité ne suffit PAS ──────────────────────────
+          # La valeur est concaténée telle quelle derrière un schéma et un
+          # sous-domaine : https://api-staging.$CARLYS_DOMAIN. Le réflexe de
+          # qui pose la variable est de copier l'adresse du site, schéma
+          # compris — et « https://carlys.app » donne alors littéralement
+          # « https://api-staging.https://carlys.app ». Cette chaîne est
+          # inlinée dans le JavaScript du navigateur, donc RIEN en aval ne la
+          # rattrape : le build réussit, l'image démarre, le back-office est
+          # muet. Exactement la panne que cette étape existe pour empêcher.
+          # Le contrôle de forme est donc la moitié qui manquait.
+          domaine_bien_forme() {
+            # Jeu de caractères d'abord : ce filtre écarte le schéma (« : » et
+            # « / »), les espaces, un joker « * », un port, une adresse
+            # complète — et il tient sur une valeur multiligne, qu'une
+            # expression régulière ancrée ligne à ligne laisserait passer.
+            case "$1" in
+              ''|*[!A-Za-z0-9.-]*) return 1 ;;
+            esac
+            [ "${#1}" -le 253 ] || return 1
+            # Puis la structure : au moins deux étiquettes, aucune vide, ni
+            # commençant ni finissant par un tiret, 63 caractères au plus.
+            printf '%s' "$1" | grep -Eq '^[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$'
+          }
+
+          if ! domaine_bien_forme "$CARLYS_DOMAIN"; then
+            echo "::error title=CARLYS_DOMAIN mal formée::La valeur « $CARLYS_DOMAIN » n'est pas un nom de domaine nu. Attendu : uniquement le domaine, sans schéma, sans barre oblique, sans port, sans sous-domaine — par exemple « carlys.app ». Ce qui est refusé et pourquoi : « https://carlys.app » produirait l'adresse https://api-staging.https://carlys.app, inlinée telle quelle dans le JavaScript du navigateur ; « carlys.app/ » et « carlys.app:443 » produiraient des variantes tout aussi mortes. Corrige la variable dans Settings → Secrets and variables → Actions → Variables, puis relance ce workflow."
+            exit 1
+          fi
+
+          # Avertissement, pas refus : « api.exemple.fr » est un domaine
+          # parfaitement valide, mais s'il est donné ICI il produit
+          # api-staging.api.exemple.fr. C'est peut-être voulu — on le signale
+          # sans bloquer.
+          case "$CARLYS_DOMAIN" in
+            api.*|app.*|media.*|api-staging.*|app-staging.*|media-staging.*)
+              echo "::warning title=CARLYS_DOMAIN commence par un sous-domaine réservé::« $CARLYS_DOMAIN » commence par un des six préfixes que ce dépôt ajoute lui-même. L'image admin visera https://api-staging.$CARLYS_DOMAIN. Si ce n'est pas ce que tu veux, mets le domaine nu."
+              ;;
+          esac
+
           echo "Domaine : $CARLYS_DOMAIN"
           echo "API de recette visée par l'image admin : https://api-staging.$CARLYS_DOMAIN"
 
@@ -176,9 +220,18 @@ jobs:
           tags: |
             ${{ env.REGISTRY }}/${{ steps.etiquettes.outputs.owner }}/carlys-api-migrate:sha-${{ steps.etiquettes.outputs.sha12 }}
             ${{ steps.mouvant.outputs.actif == 'oui' && format('{0}/{1}/carlys-api-migrate:staging', env.REGISTRY, steps.etiquettes.outputs.owner) || '' }}
-          # Même scope de cache que l'image d'exécution : les deux cibles
-          # partagent l'étage `build`, l'essentiel du temps de construction.
-          cache-from: type=gha,scope=api
+          # Deux scopes en LECTURE, un seul en écriture, et c'est volontaire :
+          #   - `api` parce que les deux cibles partagent l'étage `build`
+          #     (apps/api/Dockerfile : `FROM build AS migrate`, `FROM build AS
+          #     deploy`), qui est l'essentiel du temps de construction ;
+          #   - `api-migrate` parce que c'est là qu'on écrit, et qu'un cache
+          #     jamais relu n'est pas un cache. La rédaction précédente lisait
+          #     `api` et écrivait `api-migrate` : les couches propres à la
+          #     cible `migrate` étaient donc republiées à chaque exécution et
+          #     rechargées jamais.
+          cache-from: |
+            type=gha,scope=api-migrate
+            type=gha,scope=api
           cache-to: type=gha,scope=api-migrate,mode=max
           provenance: false
 

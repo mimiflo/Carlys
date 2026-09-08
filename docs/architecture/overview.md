@@ -164,9 +164,9 @@ Flux de déploiement cible (cadre posé à l'Étape 1, mise en œuvre avec la
 première release — voir `infrastructure/deployment/README.md`) :
 
 1. CI verte sur la pull request — et déjà sur les poussées de la branche de
-   travail, que ces quatre workflows (`api-ci`, `admin-ci`, `mobile-ci`,
-   `security-ci`) nomment explicitement, faute de quoi ils ne s'ouvriraient
-   qu'après l'intégration dans un dépôt qui avance sans fusion ;
+   travail, que ces cinq portes (`api-ci`, `admin-ci`, `mobile-ci`,
+   `images-ci`, `security-ci`) nomment explicitement, faute de quoi elles ne
+   s'ouvriraient qu'après l'intégration dans un dépôt qui avance sans fusion ;
 2. construction des images Docker multi-stage, taguées par SHA ;
 3. `prisma migrate deploy` exécuté comme étape distincte **avant** la bascule
    du trafic — jamais au démarrage du conteneur ;

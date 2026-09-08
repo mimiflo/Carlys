@@ -77,7 +77,8 @@ Carlys/
 │   └── deployment/           # stratégie de déploiement
 ├── docs/                     # documentation détaillée (voir fin de ce fichier)
 ├── scripts/                  # setup.sh, check.sh, bootstrap_mobile.sh, check_mobile.sh (+ check_mobile_file_sizes.sh)
-├── .github/workflows/        # api-ci, admin-ci, mobile-ci, security-ci
+├── .github/workflows/        # 8 : api-ci, admin-ci, mobile-ci, security-ci, images-ci,
+│                             #     images-publish, images-publish-prod, demo-apk
 ├── docker-compose.yml        # PostgreSQL, Redis, Mailpit, MinIO (+ profil "app")
 └── .env.example              # variables du docker-compose (valeurs factices)
 ```
@@ -326,7 +327,7 @@ docker build -f apps/admin/Dockerfile -t carlys-admin .
 - **Tranches verticales** : chaque étape livre une fonctionnalité complète de bout en bout (schéma Prisma + API + admin + mobile + tests + docs). Pas de couche « en avance » sans consommateur, pas de dépendance morte.
 - **Commits** : [Conventional Commits](https://www.conventionalcommits.org/fr/) — `feat(api): …`, `fix(mobile): …`, `docs: …`, `chore: …`.
 - **Branches** : `main` protégée ; travail sur `feat/<sujet>`, `fix/<sujet>`, `docs/<sujet>` ; intégration par pull request avec CI verte.
-- **CI GitHub Actions** : `api-ci.yml` (services PostgreSQL + Redis ; format, lint, typecheck, tests, e2e, build, `prisma validate`, détection de migrations manquantes), `admin-ci.yml`, `mobile-ci.yml` (Flutter épinglé par `apps/mobile/.flutter-version` : format bloquant, analyze, test), `security-ci.yml` (TruffleHog + `pnpm audit` niveau high, plus une exécution hebdomadaire). `api-ci` et `admin-ci` lintent et testent en plus les paquets partagés (`pnpm --filter "./packages/**" lint` et `test`) : les compiler ne suffit pas à les juger. Les quatre workflows s'ouvrent sur les pull requests, sur `main` **et** sur les poussées directes de la branche de travail.
+- **CI GitHub Actions — huit workflows**, de deux natures. Cinq **portes**, qui rendent un avis sur un commit et s'ouvrent sur les pull requests, sur `main` **et** sur les poussées directes de la branche de travail : `api-ci.yml` (services PostgreSQL + Redis ; format, lint, typecheck, tests, e2e, build, `prisma validate`, détection de migrations manquantes), `admin-ci.yml`, `mobile-ci.yml` (Flutter épinglé par `apps/mobile/.flutter-version` : format bloquant, analyze, test), `images-ci.yml` (les trois images se construisent, démarrent et répondent ; la garde légale mord) et `security-ci.yml` (TruffleHog + `pnpm audit` niveau high, plus une exécution hebdomadaire). `api-ci` et `admin-ci` lintent et testent en plus les paquets partagés (`pnpm --filter "./packages/**" lint` et `test`) : les compiler ne suffit pas à les juger. Et trois **producteurs d'artefacts**, qui écrivent quelque part : `images-publish.yml` (publie les trois images dans GHCR à **chaque** poussée, délibérément sans filtre de chemins — le déploiement se fait par SHA, donc tout commit doit avoir ses images), `images-publish-prod.yml` (`workflow_dispatch` : l'image admin de production, garde légale **armée**) et `demo-apk.yml` (l'APK de démonstration de la release `demo-latest`).
 - **Documentation** : ne documenter que l'existant, ou du planifié explicitement marqué comme tel (« Étape N », « cible »).
 
 ## Déploiement
