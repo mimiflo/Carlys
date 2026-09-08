@@ -246,7 +246,11 @@ services:
   # le déploiement :
   #
   #   docker compose --env-file <.env> -f compose.yml \
-  #     run --rm --no-deps migrate       # (`run` active le profil tout seul)
+  #     run --rm migrate                 # (`run` active le profil tout seul)
+  #
+  # Sans --no-deps : le depends_on ci-dessous fait attendre que PostgreSQL soit
+  # SAIN avant d'appliquer quoi que ce soit, y compris sur une pile encore
+  # éteinte.
   #
   # La déclarer ici plutôt que de laisser deploy.sh bricoler un `docker run`
   # lui évite de recopier réseau, DATABASE_URL et attente de PostgreSQL — donc
