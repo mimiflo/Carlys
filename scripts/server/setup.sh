@@ -93,7 +93,12 @@ esac
 
 # ── 1. Paquets système ─────────────────────────────────────────────────────
 step "1/7 Paquets système"
-APT_BASE=(ca-certificates curl gnupg nginx certbot python3-certbot-nginx ufw cron)
+# Pas de python3-certbot-nginx : les certificats s'obtiennent en `certonly
+# --webroot`, un par hôte, sans que certbot ne touche à la configuration nginx
+# (le récapitulatif final et docs/deployment/mise-en-route-serveur.md § 6
+# décrivent cette méthode, et les vhosts du dépôt servent déjà le défi ACME).
+# Le greffon --nginx réécrirait des vhosts versionnés : rien à faire ici.
+APT_BASE=(ca-certificates curl gnupg nginx certbot ufw cron)
 missing=()
 for pkg in "${APT_BASE[@]}"; do
   if [ "$DRY_RUN" = "1" ]; then missing+=("$pkg"); continue; fi
@@ -207,10 +212,17 @@ cat > "$cron_tmp" <<FIN
 # Sauvegarde quotidienne des bases Carlys — posé par scripts/server/setup.sh.
 # La sortie part vers syslog : une sauvegarde qui échoue doit laisser une trace
 # ailleurs que dans un courriel que personne ne lit.
+#
+# -o pipefail N'EST PAS DÉCORATIF. Sans lui, le code de retour d'un tube est
+# celui de sa DERNIÈRE commande — ici « logger », qui réussit toujours. La
+# sortie en erreur de backup.sh serait donc avalée, cron ne verrait qu'un
+# succès, et le courriel d'alerte ne partirait jamais : la sauvegarde
+# échouerait toutes les nuits en silence. Avec pipefail, le tube rend le code
+# de backup.sh, et cron alerte.
 SHELL=/bin/bash
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 CARLYS_ROOT=$CARLYS_ROOT
-0 $BACKUP_HOUR * * * root $CARLYS_REPO_DIR/scripts/server/backup.sh 2>&1 | logger -t carlys-backup
+0 $BACKUP_HOUR * * * root /bin/bash -o pipefail -c '$CARLYS_REPO_DIR/scripts/server/backup.sh 2>&1 | logger -t carlys-backup'
 FIN
 if [ -f "$cron_file" ] && cmp -s "$cron_tmp" "$cron_file"; then
   ok "$cron_file déjà à jour"
@@ -237,10 +249,20 @@ $_c_bold── Ce que ce script n'a PAS fait, et qu'il faut faire à la main ─
      $CARLYS_REPO_DIR/infrastructure/nginx/
    puis : nginx -t && systemctl reload nginx
 
-3. Certificats TLS — SEULEMENT une fois le DNS en place (sinon Let's Encrypt
-   limite les tentatives ratées) :
-     certbot --nginx -d api.$DOMAIN_HINT -d app.$DOMAIN_HINT -d media.$DOMAIN_HINT
-     certbot --nginx -d api-staging.$DOMAIN_HINT -d app-staging.$DOMAIN_HINT -d media-staging.$DOMAIN_HINT
+3. Certificats TLS — UN CERTIFICAT PAR HÔTE, en mode webroot, et SEULEMENT une
+   fois le DNS en place (sinon Let's Encrypt limite les tentatives ratées).
+   Les vhosts du dépôt attendent /etc/letsencrypt/live/<hôte>/ pour CHACUN des
+   six noms, et servent le défi ACME depuis /var/www/certbot :
+     mkdir -p /var/www/certbot
+     for h in api app media api-staging app-staging media-staging; do
+       certbot certonly --webroot -w /var/www/certbot \\
+         -d "\$h.$DOMAIN_HINT" --agree-tos -m <votre adresse> --non-interactive
+     done
+     ls -d /etc/letsencrypt/live/*.$DOMAIN_HINT     # six répertoires attendus
+   L'ordre a un piège : nginx REFUSE de démarrer si les certificats n'existent
+   pas encore, et certbot en webroot a besoin d'un nginx qui tourne. On casse
+   la boucle avec un vhost ACME temporaire en HTTP seul — la marche à suivre
+   complète est dans docs/deployment/mise-en-route-serveur.md, section 6.
    Le renouvellement automatique est posé par le paquet certbot lui-même.
 
 4. Secrets — remplir les .env, toutes les valeurs CHANGE_MOI_… :
