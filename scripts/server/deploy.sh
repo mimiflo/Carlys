@@ -17,9 +17,12 @@
 #      (règle du dépôt, infrastructure/deployment/README.md) : un redémarrage
 #      ou une mise à l'échelle ne doit pas modifier le schéma ;
 #   3. échec de la migration ⇒ ARRÊT, api et admin n'ont pas été touchés ;
-#   4. bascule, puis attente BORNÉE de /health/ready — bornée, sinon un service
-#      mort bloque le script au lieu de déclencher le retour arrière ;
-#   5. santé absente ⇒ retour au sha précédent lu dans DEPLOYED ;
+#   4. bascule, puis attente BORNÉE de la santé — /health/ready de l'API ET la
+#      page d'accueil de l'admin — bornée, sinon un service mort bloque le
+#      script au lieu de déclencher le retour arrière ;
+#   5. santé absente ⇒ retour au sha précédent lu dans DEPLOYED, contrôlé par
+#      la MÊME règle : un retour arrière qui ne vérifie que l'API peut se
+#      déclarer réussi avec une admin en panne ;
 #   6. succès ⇒ le nouveau sha est inscrit dans DEPLOYED (sha, date, opérateur).
 #
 # CE QUE LE RETOUR ARRIÈRE NE FAIT PAS. Il restaure le CODE, jamais le SCHÉMA :
@@ -73,9 +76,13 @@ SHA="$(normalize_sha "${2-}")"
 [ "$SHA" = "$(printf '%s' "${2-}" | tr '[:upper:]' '[:lower:]')" ] \
   || info "Sha raccourci à 12 caractères : $SHA"
 
-require_commands docker curl
+require_commands docker curl flock
 require_compose_file
 ENV_FILE="$(require_env_file "$ENV_NAME")"
+# Verrou AVANT tout : un second déploiement doit repartir sans avoir touché au
+# registre, aux images ni au journal. Le répertoire de l'environnement existe,
+# require_env_file vient de le prouver.
+lock_env "$ENV_NAME"
 # Le .env de l'environnement fait foi sur le registre : c'est lui que le
 # compose versionné interpole. On ne lui impose pas la valeur du script.
 CARLYS_REGISTRY="$(env_value CARLYS_REGISTRY "$ENV_FILE" "$CARLYS_REGISTRY")"
@@ -169,18 +176,23 @@ ok "PostgreSQL accepte les connexions"
 # Le service `migrate` du compose versionné, sous profil dédié, donc absent de
 # tout `up -d`. On l'appelle plutôt que de bricoler un `docker run --network` :
 # réseau, DATABASE_URL et fichier d'environnement y sont déjà décrits, et une
-# seconde description finirait par diverger de la première. `--no-deps` parce
-# que le socle vient d'être démarré et attendu juste au-dessus ; `run` active
-# le profil `migrate` de lui-même.
+# seconde description finirait par diverger de la première.
+#
+# PAS de `--no-deps` : le `depends_on: postgres condition: service_healthy` du
+# compose est la seule description de « la base est prête », et c'est elle qui
+# doit faire foi. La couper reviendrait à faire reposer la migration sur
+# l'attente `pg_isready` de l'étape précédente — un second avis, plus faible
+# (`pg_isready` accepte une connexion, le healthcheck interroge la BASE), et
+# qui divergerait du compose au premier changement.
 step "4/6 Migrations Prisma (tâche ponctuelle)"
-if ! dc "$ENV_NAME" "$ENV_FILE" run --rm --no-deps migrate; then
+if ! dc "$ENV_NAME" "$ENV_FILE" run --rm migrate; then
   die "La migration a échoué — DÉPLOIEMENT INTERROMPU." \
     "RIEN n'a été basculé : api et admin tournent toujours sur ${PREVIOUS_SHA:-leur version précédente}." \
     "Le socle de données est debout, le schéma est resté dans l'état où la migration l'a laissé." \
     "Relire la sortie ci-dessus, corriger la migration, publier un nouveau sha." \
     "Pour rejouer la seule migration :" \
     "  CARLYS_TAG=sha-$SHA docker compose -p $PROJECT --env-file $ENV_FILE \\" \
-    "    -f $CARLYS_COMPOSE_FILE run --rm --no-deps migrate"
+    "    -f $CARLYS_COMPOSE_FILE run --rm migrate"
 fi
 ok "schéma à jour"
 
@@ -256,7 +268,19 @@ if ! dc "$ENV_NAME" "$ENV_FILE" up -d; then
     "Le dernier sha connu comme sain est $PREVIOUS_SHA."
 fi
 
-if wait_http_200 "$API_HEALTH_URL" "$ROLLBACK_TRIES" "$HEALTH_DELAY" "l'API restaurée"; then
+# EXACTEMENT la même règle qu'à la montée : API *et* admin. Ne contrôler que
+# l'API au retour, c'est pouvoir déclarer un environnement « restauré » alors
+# que l'admin est en panne — donc les pages publiques avec elle (vérification
+# d'adresse, réinitialisation de mot de passe, mentions légales). Un retour
+# arrière qui ment sur son résultat est pire qu'un déploiement raté : personne
+# ne va vérifier ce qu'un script vient de déclarer sain.
+restored=1
+wait_http_200 "$API_HEALTH_URL" "$ROLLBACK_TRIES" "$HEALTH_DELAY" "l'API restaurée" || restored=0
+if [ "$restored" -eq 1 ]; then
+  wait_http_200 "$ADMIN_URL" "$ROLLBACK_TRIES" "$HEALTH_DELAY" "l'admin restaurée (/)" || restored=0
+fi
+
+if [ "$restored" -eq 1 ]; then
   # On inscrit le retour arrière : la dernière ligne de DEPLOYED doit toujours
   # décrire CE QUI TOURNE. Elle porte de nouveau le sha précédent — le fichier
   # reste lisible par promote.sh, et l'historique garde la trace de la tentative.
@@ -266,8 +290,11 @@ if wait_http_200 "$API_HEALTH_URL" "$ROLLBACK_TRIES" "$HEALTH_DELAY" "l'API rest
   exit 1
 fi
 
-die "RETOUR ARRIÈRE ÉCHOUÉ : le sha précédent $PREVIOUS_SHA ne répond pas non plus." \
+# DEPLOYED n'est PAS écrit : le sha précédent ne sert pas non plus, l'affirmer
+# ferait mentir le journal.
+die "RETOUR ARRIÈRE ÉCHOUÉ : le sha précédent $PREVIOUS_SHA ne rend pas la main non plus (API ou admin)." \
   "L'environnement $ENV_NAME est probablement hors service — intervention manuelle." \
+  "DEPLOYED n'a pas été mis à jour : $(deployed_file "$ENV_NAME") décrit toujours le dernier état SAIN connu." \
   "Piste la plus fréquente : la migration qui vient d'être appliquée n'est pas" \
   "compatible avec le code précédent. Vérifier le schéma avant de redéployer." \
   "  docker compose -p $PROJECT --env-file $ENV_FILE -f $CARLYS_COMPOSE_FILE logs --tail 200"

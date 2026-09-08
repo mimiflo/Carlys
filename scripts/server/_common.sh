@@ -139,6 +139,30 @@ env_value() {
   printf '%s' "$line"
 }
 
+# ── Verrou d'environnement ──────────────────────────────────────────────────
+# Deux déploiements simultanés sur le MÊME environnement s'entrelaceraient :
+# deux `compose up` concurrents sur les mêmes conteneurs, et surtout deux
+# écritures dans DEPLOYED dont la dernière ligne cesserait de décrire ce qui
+# tourne — or c'est elle que lit promote.sh et que suit le retour arrière.
+#
+# `-n` : on REFUSE, on ne fait pas la queue. Attendre son tour derrière un
+# déploiement en cours, c'est repartir ensuite sur un sha choisi avant que
+# l'autre ne bascule ; refuser tout de suite laisse l'opérateur décider.
+# Le descripteur reste ouvert pour toute la vie du script : le verrou tombe
+# quand le processus se termine, y compris s'il est tué.
+lock_env() {
+  local env_name="$1" file
+  file="$(env_dir "$env_name")/.lock"
+  exec {CARLYS_LOCK_FD}>>"$file" || die "Verrou impossible à ouvrir : $file"
+  flock -n "$CARLYS_LOCK_FD" || die \
+    "Un déploiement de « $env_name » est DÉJÀ en cours sur cette machine." \
+    "Rien n'a été fait : deux déploiements simultanés se marcheraient dessus" \
+    "(conteneurs concurrents, et un journal DEPLOYED qui ne décrirait plus" \
+    "ce qui tourne)." \
+    "Attendre qu'il se termine, puis relancer. Pour voir qui tient le verrou :" \
+    "  fuser -v $file"
+}
+
 # ── Journal DEPLOYED ────────────────────────────────────────────────────────
 # Format : une ligne par événement, la DERNIÈRE fait foi.
 #   <sha12>  <date UTC ISO 8601>  <opérateur>  <événement>
