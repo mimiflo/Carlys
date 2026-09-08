@@ -200,6 +200,15 @@ services:
         condition: service_healthy
       minio:
         condition: service_healthy
+      # `service_completed_successfully`, et c'est ce qui rend l'échec de
+      # `minio-init` VISIBLE. Sans personne pour en dépendre, la tâche pouvait
+      # sortir en erreur — bucket au nom invalide, identifiants MinIO faux —
+      # sans que `up -d` rende autre chose que 0 : le déploiement se déclarait
+      # réussi, et l'API partait déposer ses médias dans un bucket qui
+      # n'existe pas. Ici l'API attend que le bucket soit créé ET la lecture
+      # anonyme posée ; si la tâche échoue, `up -d` échoue avec elle.
+      minio-init:
+        condition: service_completed_successfully
     healthcheck:
       # /health/ready, pas /health/live : l'image embarque le second (le
       # processus répond), on veut ici le premier (PostgreSQL et Redis sont

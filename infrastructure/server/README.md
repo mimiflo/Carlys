@@ -42,7 +42,7 @@ L'isolation entre les deux piles est portée par `COMPOSE_PROJECT_NAME`
 héritent le préfixe, et les deux tournent côte à côte sur le même hôte sans se
 voir.
 
-## Quatre choses à savoir avant d'y toucher
+## Cinq choses à savoir avant d'y toucher
 
 **Les migrations ne sont pas un service.** Le service `migrate` est derrière le
 profil `migrate` : un `docker compose up -d` ne le démarre jamais. `deploy.sh`
@@ -75,6 +75,21 @@ silencieusement l'image de recette, garde légale desserrée et mentions légale
 error while interpolating services.admin.image: required variable
 CARLYS_ADMIN_TAG_SUFFIX is missing a value: …
 ```
+
+**`up -d` échoue si le bucket n'a pas pu être créé.** L'API dépend de
+`minio-init` en `service_completed_successfully`. Sans cette dépendance,
+personne n'attendait la tâche : elle pouvait sortir en erreur — nom de bucket
+invalide, identifiants MinIO faux — pendant que `up -d` rendait 0 et que l'API
+partait déposer ses médias dans un bucket inexistant. Un déploiement s'arrête
+désormais dessus, et le message le dit :
+
+```
+service "minio-init" didn't complete successfully: exit 1
+```
+
+Corollaire d'exploitation : MinIO doit être joignable et ses identifiants
+justes pour que l'API démarre. C'est le bon ordre — un serveur de médias muet
+n'est pas un détail qu'on découvre au premier envoi de photo.
 
 ## Vérifier que les `.env.example` sont complets
 
