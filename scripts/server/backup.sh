@@ -18,7 +18,17 @@
 #
 # ÉCRITURE ATOMIQUE : le dump part dans un fichier .part, renommé seulement
 # après vérification. Une sauvegarde interrompue (disque plein, conteneur tué)
-# ne laisse donc jamais un fichier d'apparence normale mais inutilisable.
+# ne laisse donc jamais un fichier d'apparence normale mais inutilisable. Les
+# fragments qu'une interruption brutale laisse malgré tout sont purgés au
+# passage suivant (voir la section « Rétention »).
+#
+# CE QUI VAUT ÉCHEC, ET CE QUI N'EN EST PAS UN. Le code de retour de ce script
+# EST le mécanisme d'alerte : cron l'envoie à l'opérateur. Il ne vaut donc que
+# s'il ne se déclenche pas pour rien. Un environnement dont le DEPLOYED est
+# vide n'a JAMAIS rien hébergé — setup.sh crée pourtant son .env dès le
+# premier jour : on le saute sans compter d'échec. Un environnement DÉPLOYÉ
+# dont postgres ne tourne pas, en revanche, a des données qui ne sont pas
+# sauvegardées : celui-là fait sortir en erreur.
 #
 # RESTAURER (la sauvegarde qu'on n'a jamais restaurée n'en est pas une) :
 #   docker compose -p carlys_staging --env-file /srv/carlys/staging/.env \
@@ -35,9 +45,15 @@ usage() {
   cat >&2 <<'FIN'
 Usage : backup.sh [staging|production]
 
-  Sans argument : sauvegarde les deux environnements présents.
+  Sans argument : sauvegarde les deux environnements DÉPLOYÉS.
   Les dumps vont dans $CARLYS_ROOT/backups (défaut /srv/carlys/backups),
   nommés <environnement>-<horodatage UTC>.dump, rétention 14 jours.
+
+Codes de retour :
+  0   toutes les bases attendues sont sauvegardées (un environnement jamais
+      déployé est sauté, ce n'est pas un échec)
+  1   au moins un environnement déployé n'a PAS pu être sauvegardé
+  2   mauvaise utilisation
 
 Variables :
   CARLYS_ROOT                     racine des données (défaut /srv/carlys)
@@ -64,12 +80,34 @@ chmod 700 "$BACKUP_DIR" 2>/dev/null || true
 STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 failures=0
 made=0
+skipped=0
 
 for env_name in "${TARGETS[@]}"; do
   step "Sauvegarde — $env_name"
   file="$(env_file "$env_name")"
   if [ ! -f "$file" ]; then
     info "environnement absent ($file) — ignoré"
+    skipped=$((skipped + 1))
+    continue
+  fi
+
+  # « JAMAIS DÉPLOYÉ » N'EST PAS UNE PANNE, et c'est la distinction qui fait
+  # vivre l'alerte. setup.sh crée les DEUX .env dès la mise en place ; pendant
+  # toute la phase où seul staging tourne, la production existe sur le disque
+  # sans avoir jamais rien hébergé. Compter cela comme un échec, c'est envoyer
+  # un courriel d'alerte toutes les nuits pour une situation normale — et une
+  # alerte qui crie tous les jours ne se lit plus, y compris le soir où elle
+  # signale une vraie perte de sauvegarde.
+  #
+  # Le signal juste est DEPLOYED, tenu par deploy.sh : vide = rien n'a jamais
+  # été déployé ici, il n'y a AUCUNE donnée à perdre. Non vide = un sha sert
+  # (ou a servi) le trafic, donc une base existe : postgres à terre devient
+  # alors une anomalie qui doit réveiller quelqu'un.
+  deployed="$(deployed_current "$env_name")"
+  if [ -z "$deployed" ]; then
+    info "jamais déployé ($(deployed_file "$env_name") est vide) — aucune base à sauvegarder"
+    info "ce n'est pas un échec : rien n'a encore tourné dans cet environnement."
+    skipped=$((skipped + 1))
     continue
   fi
 
@@ -78,7 +116,9 @@ for env_name in "${TARGETS[@]}"; do
   db_name="$(env_value POSTGRES_DB "$file" "carlys_${env_name}")"
 
   if ! dc "$env_name" "$file" ps --status running --services 2>/dev/null | grep -qx postgres; then
-    warn "postgres ne tourne pas pour $env_name (projet $project) — RIEN n'a été sauvegardé"
+    warn "postgres ne tourne pas pour $env_name (projet $project, sha déployé $deployed) — RIEN n'a été sauvegardé"
+    warn "  cet environnement A été déployé : une base existe et n'est pas sauvegardée."
+    warn "  Diagnostic : docker compose -p $project --env-file $file ps"
     failures=$((failures + 1))
     continue
   fi
@@ -87,11 +127,16 @@ for env_name in "${TARGETS[@]}"; do
   partial="${target}.part"
 
   # PGPASSWORD n'est pas nécessaire par la socket locale du conteneur (auth
-  # « trust » pour les connexions locales dans l'image officielle), mais on le
-  # transmet s'il est connu : une image durcie pourrait l'exiger.
-  if ! dc "$env_name" "$file" exec -T \
-      --env "PGPASSWORD=$(env_value POSTGRES_PASSWORD "$file")" \
-      postgres pg_dump -U "$db_user" -d "$db_name" --format=custom --no-owner \
+  # « trust » pour les connexions locales dans l'image officielle), mais une
+  # image durcie pourrait l'exiger. Il est donc lu DANS LE CONTENEUR, depuis
+  # POSTGRES_PASSWORD que le compose y place déjà — jamais passé en argument
+  # de `docker compose exec`. Un `--env PGPASSWORD=…` mettrait le mot de passe
+  # de production dans /proc/<pid>/cmdline, lisible par n'importe quel
+  # utilisateur local pendant toute la durée du dump ; les guillemets simples
+  # ci-dessous garantissent que l'hôte ne développe pas la variable.
+  if ! dc "$env_name" "$file" exec -T postgres sh -c \
+      'PGPASSWORD="${POSTGRES_PASSWORD-}" exec pg_dump -U "$1" -d "$2" --format=custom --no-owner' \
+      pg_dump "$db_user" "$db_name" \
       > "$partial" 2>"${partial}.err"; then
     warn "pg_dump a échoué pour $env_name (base $db_name, rôle $db_user) :"
     sed 's/^/     /' < "${partial}.err" >&2 || true
@@ -118,23 +163,47 @@ for env_name in "${TARGETS[@]}"; do
 done
 
 # ── Rétention ──────────────────────────────────────────────────────────────
-# On ne purge QUE nos propres fichiers (motif <env>-*.dump) : un répertoire de
-# sauvegardes finit toujours par contenir autre chose, et un `find -delete`
-# large y ferait des dégâts silencieux.
-step "Rétention ($RETENTION_DAYS jours)"
+# On ne purge QUE nos propres fichiers (motif <env>-*) : un répertoire de
+# sauvegardes finit toujours par contenir autre chose — un dump manuel pris
+# avant une migration délicate, des notes d'exploitation — et un
+# `find -delete` large y ferait des dégâts silencieux.
 purged=0
-while IFS= read -r old; do
-  [ -n "$old" ] || continue
-  rm -f -- "$old"
-  info "purgé : $(basename -- "$old")"
-  purged=$((purged + 1))
-done < <(find "$BACKUP_DIR" -maxdepth 1 -type f \
-  \( -name 'staging-*.dump' -o -name 'production-*.dump' \) \
-  -mtime "+${RETENTION_DAYS}" -print 2>/dev/null | sort)
+purge_older_than() {
+  local days="$1" pattern_staging="$2" pattern_production="$3" old
+  while IFS= read -r old; do
+    [ -n "$old" ] || continue
+    rm -f -- "$old"
+    info "purgé : $(basename -- "$old")"
+    purged=$((purged + 1))
+  done < <(find "$BACKUP_DIR" -maxdepth 1 -type f \
+    \( -name "$pattern_staging" -o -name "$pattern_production" \) \
+    -mtime "+${days}" -print 2>/dev/null | sort)
+}
+
+step "Rétention ($RETENTION_DAYS jours)"
+purge_older_than "$RETENTION_DAYS" 'staging-*.dump' 'production-*.dump'
+
+# LES FRAGMENTS AUSSI. Un `.dump.part` est ce que laisse une sauvegarde
+# interrompue en plein vol : serveur redémarré, conteneur tué, disque plein.
+# Les chemins d'échec de ce script effacent le leur, mais celui qu'une
+# interruption BRUTALE laisse derrière n'a plus personne pour le nettoyer — et
+# la rétention ci-dessus ne le voit pas, puisqu'elle filtre sur `*.dump` et
+# qu'un `.dump.part` n'y répond pas. Sans cette seconde passe, un serveur qui
+# tue régulièrement ses sauvegardes accumule indéfiniment des fragments de la
+# taille d'une base, jusqu'à remplir la partition censée les accueillir.
+#
+# Un jour, et pas quatorze : un fragment ne se restaure jamais, il n'a donc
+# aucune valeur à conserver ; et ce délai met hors d'atteinte le `.part` de la
+# sauvegarde EN COURS, qu'une purge trop pressée détruirait sous ses pieds.
+# Le motif attrape aussi le `.part.err` qui l'accompagne.
+PART_RETENTION_DAYS=1
+purge_older_than "$PART_RETENTION_DAYS" 'staging-*.dump.part*' 'production-*.dump.part*'
+
 [ "$purged" -gt 0 ] || info "aucun fichier à purger"
 
 step "Bilan"
 info "sauvegardes créées : $made"
+info "environnements sautés : $skipped (absents ou jamais déployés)"
 info "fichiers purgés    : $purged"
 info "répertoire         : $BACKUP_DIR"
 
