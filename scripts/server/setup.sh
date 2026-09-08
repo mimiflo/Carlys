@@ -20,6 +20,13 @@
 #   6. cron quotidien de sauvegarde ;
 #   7. récapitulatif de ce qui reste MANUEL.
 #
+# UN SERVICE QUI NE DÉMARRE PAS NE L'ARRÊTE PAS. docker, cron et nginx sont
+# activés à l'étape 2 ; si l'un refuse de démarrer, le script le signale, VA
+# QUAND MÊME AU BOUT (arborescence, .env, jeton, cron, récapitulatif), redit
+# lesquels en défaut avec leur commande de diagnostic, puis sort en 1. Sans
+# cela, l'échec le plus banal — port 80 déjà pris, certificat expiré référencé
+# par un vhost — laissait la machine sans rien : le script mourait à 2/7.
+#
 # CE QU'IL NE FAIT PAS, ET N'A PAS À FAIRE
 #   - les vhosts nginx : ils vivent dans infrastructure/nginx/, versionnés ;
 #     ce script installe nginx et dit où les prendre, il ne les invente pas ;
@@ -135,9 +142,39 @@ else
     docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
   ok "docker installé"
 fi
-run systemctl enable --now docker
-run systemctl enable --now cron
-run systemctl enable --now nginx
+# UN SERVICE QUI NE DÉMARRE PAS N'ARRÊTE PAS LA MISE EN PLACE.
+#
+# Sous `set -e`, un `systemctl enable --now nginx` en échec tuait le script
+# ICI, à l'étape 2 sur 7 : ni l'arborescence /srv/carlys, ni les .env, ni le
+# jeton, ni la sauvegarde quotidienne, ni le récapitulatif de ce qui reste
+# manuel. Or ce script est annoncé idempotent et rejouable, et les deux
+# situations qui font échouer nginx sont précisément celles où on le rejoue :
+#
+#   - premier passage sur une machine dont le port 80 est déjà pris (Apache
+#     installé par l'image du fournisseur, un conteneur qui publie 80) ;
+#   - rejeu sur un serveur déjà en service, dont un certificat a expiré ou dont
+#     un vhost référence un fichier absent — nginx refuse alors de démarrer, et
+#     le rejeu, censé installer la brique que le dépôt vient d'ajouter, ne
+#     faisait rien du tout.
+#
+# Le bon comportement n'est pas d'ignorer l'échec, c'est de FINIR LE TRAVAIL
+# puis de le dire. Le récapitulatif final nomme les services en défaut avec
+# leur commande de diagnostic, et le script sort en 1 pour qu'aucune
+# automatisation ne prenne ça pour un succès.
+services_ko=''
+enable_service() {
+  local svc="$1"
+  if run systemctl enable --now "$svc"; then
+    return 0
+  fi
+  services_ko="$services_ko $svc"
+  warn "$svc n'a pas démarré — la mise en place CONTINUE, le bilan le rappellera."
+  return 0
+}
+
+enable_service docker
+enable_service cron
+enable_service nginx
 
 # ── 3. Pare-feu ────────────────────────────────────────────────────────────
 # 22, 80, 443 et RIEN d'autre. Les ports applicatifs (3000/3100, 3001/3101,
@@ -287,3 +324,21 @@ Ensuite seulement :
      $CARLYS_REPO_DIR/scripts/server/promote.sh          # production, geste humain
 
 FIN
+
+# ── Services en défaut ─────────────────────────────────────────────────────
+# Placé APRÈS le récapitulatif, et non à la place : l'exploitant a besoin des
+# deux. Le travail de mise en place a bien eu lieu — l'arborescence, les .env,
+# le jeton, le cron sont en place — mais la machine n'est pas prête tant qu'un
+# de ces services ne tourne pas, et le dire en dernier le met sous les yeux.
+if [ -n "$services_ko" ]; then
+  printf '%s── Services qui ne démarrent PAS ──%s\n' "$_c_red" "$_c_off"
+  for svc in $services_ko; do
+    printf '   %s✗%s %s\n' "$_c_red" "$_c_off" "$svc"
+    printf '     systemctl status %s   ·   journalctl -xeu %s\n' "$svc" "$svc"
+  done
+  printf '\n   Causes fréquentes : port 80 déjà pris (nginx), certificat absent\n'
+  printf '   ou expiré référencé par un vhost (nginx), noyau sans cgroup v2 (docker).\n'
+  printf '   Tout le reste de la mise en place a bien été fait : ce script se\n'
+  printf '   rejoue sans risque une fois la cause levée.\n\n'
+  exit 1
+fi
