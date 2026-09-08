@@ -52,11 +52,22 @@ server {
     }
 }
 
+# ── HTTP/2 : le paramètre de `listen`, pas la directive `http2` ──────────────
+#
+# `http2 on;` n'existe QUE depuis Nginx 1.25.1. Or le guide de mise en route
+# vise Debian 12 (Nginx 1.22.1) et Ubuntu 22.04 (1.18.0), et `setup.sh`
+# installe le Nginx de la distribution : sur ces machines, `http2 on;` fait
+# échouer `nginx -t` sur « unknown directive "http2" » — donc Nginx ne démarre
+# pas du tout, et pas seulement sans HTTP/2. Le paramètre `http2` de `listen`
+# ci-dessous, lui, fonctionne de 1.9.5 à aujourd'hui. Sur 1.25.1 et au-delà il
+# est déprécié : Nginx émet un AVERTISSEMENT et applique quand même HTTP/2.
+# Un avertissement sur les Nginx récents coûte moins qu'un refus de démarrage
+# sur les Nginx que ce dépôt dit installer. Éprouvé sur 1.18.0, 1.22.1 et 1.27.
+
 # ── API — api.carlys.example → 127.0.0.1:3000 ────────────────────────────────
 server {
-    listen 443 ssl;
-    listen [::]:443 ssl;
-    http2 on;
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
     server_name api.carlys.example;
 
     ssl_certificate     /etc/letsencrypt/live/api.carlys.example/fullchain.pem;
@@ -136,9 +147,8 @@ server {
 # et c'est https://app.carlys.example/privacy que les magasins d'applications
 # ouvriront avant d'accepter une soumission.
 server {
-    listen 443 ssl;
-    listen [::]:443 ssl;
-    http2 on;
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
     server_name app.carlys.example;
 
     ssl_certificate     /etc/letsencrypt/live/app.carlys.example/fullchain.pem;
@@ -183,9 +193,8 @@ server {
 # Compose (S3_ENDPOINT). Ce vhost est en LECTURE SEULE, pour les téléphones et
 # les navigateurs.
 server {
-    listen 443 ssl;
-    listen [::]:443 ssl;
-    http2 on;
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
     server_name media.carlys.example;
 
     ssl_certificate     /etc/letsencrypt/live/media.carlys.example/fullchain.pem;

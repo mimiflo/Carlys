@@ -48,10 +48,14 @@ server {
 }
 
 # ── API de recette — api-staging.carlys.example → 127.0.0.1:3100 ─────────────
+#
+# `listen … http2` et non `http2 on;` : l'explication complète est dans
+# carlys-production.conf.example. En deux mots : `http2 on;` date de 1.25.1 et
+# ferait échouer `nginx -t` sur le Nginx de Debian 12 (1.22.1) comme sur celui
+# d'Ubuntu 22.04 (1.18.0), que ce dépôt dit installer.
 server {
-    listen 443 ssl;
-    listen [::]:443 ssl;
-    http2 on;
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
     server_name api-staging.carlys.example;
 
     ssl_certificate     /etc/letsencrypt/live/api-staging.carlys.example/fullchain.pem;
@@ -104,9 +108,8 @@ server {
 # --dart-define=CARLYS_PUBLIC_WEB_BASE_URL (sans quoi `assertUsable()` refuse
 # de démarrer l'application : apps/mobile/lib/app/environment/).
 server {
-    listen 443 ssl;
-    listen [::]:443 ssl;
-    http2 on;
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
     server_name app-staging.carlys.example;
 
     ssl_certificate     /etc/letsencrypt/live/app-staging.carlys.example/fullchain.pem;
@@ -209,9 +212,8 @@ server {
 
 # ── Médias de recette — media-staging → MinIO 127.0.0.1:9200 ─────────────────
 server {
-    listen 443 ssl;
-    listen [::]:443 ssl;
-    http2 on;
+    listen 443 ssl http2;
+    listen [::]:443 ssl http2;
     server_name media-staging.carlys.example;
 
     ssl_certificate     /etc/letsencrypt/live/media-staging.carlys.example/fullchain.pem;

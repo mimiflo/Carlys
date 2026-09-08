@@ -4,7 +4,8 @@
 > (`apps/api/src/config/env.schema.ts`), réglage appliqué dans
 > `apps/api/src/app/configure-app.ts`, exemples Nginx dans
 > `infrastructure/nginx/` (`carlys-production.conf.example`,
-> `carlys-staging.conf.example`, et le snippet partagé
+> `carlys-staging.conf.example`, l'attrape-tout
+> `carlys-attrape-tout.conf.example` et le snippet partagé
 > `snippets/carlys-proxy.conf`), test e2e
 > `apps/api/test/trust-proxy.e2e-spec.ts`.
 
