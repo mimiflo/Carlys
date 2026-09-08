@@ -37,6 +37,15 @@ const PUBLIC_URL_KEYS: readonly ProductionKey[] = [
   'PUBLIC_APP_URL',
   'CORS_ORIGINS',
 ];
+/**
+ * Clés dont la valeur EST une URL, contrôlées telles quelles.
+ *
+ * CORS_ORIGINS n'y figure pas : ce n'est pas une URL mais une LISTE séparée par
+ * des virgules, et `startsWith('https://')` n'y verrait que la première entrée.
+ * Un contrôle qui n'inspecte qu'un élément sur trois est pire qu'aucun — il
+ * fait croire que la garde a regardé. La liste est donc traitée à part, entrée
+ * par entrée, plus bas.
+ */
 const HTTPS_KEYS: readonly ProductionKey[] = ['S3_PUBLIC_BASE_URL', 'PUBLIC_APP_URL'];
 const CREDENTIAL_KEYS: readonly ProductionKey[] = ['S3_ACCESS_KEY_ID', 'S3_SECRET_ACCESS_KEY'];
 
@@ -75,6 +84,26 @@ export function refineProductionEnv(env: ProductionSensitiveEnv, ctx: z.Refineme
       refuse(key, 'doit être une URL https:// en production');
     }
   }
+  // CORS_ORIGINS, entrée par entrée. Une origine en clair dans la liste de
+  // production est un oubli, pas un choix : le navigateur appelle l'API depuis
+  // une page servie en https, et une origine `http://` ne correspondra donc
+  // jamais — les requêtes tombent en erreur CORS, ce qui se diagnostique mal
+  // parce que rien ne casse au démarrage. La règle était déjà écrite dans
+  // docs/deployment/mise-en-route-serveur.md ; c'est le code qui ne la tenait
+  // pas. Le découpage est celui d'AppConfigService.corsOrigins, pour que la
+  // garde voie exactement les valeurs que l'application utilisera.
+  if (!refused.has('CORS_ORIGINS')) {
+    const enClair = env.CORS_ORIGINS.split(',')
+      .map((origine) => origine.trim())
+      .filter((origine) => origine.length > 0 && !origine.startsWith('https://'));
+    if (enClair.length > 0) {
+      refuse(
+        'CORS_ORIGINS',
+        `chaque origine doit être en https:// en production (en clair : ${enClair.join(', ')})`,
+      );
+    }
+  }
+
   for (const key of CREDENTIAL_KEYS) {
     if (!refused.has(key) && env[key].startsWith(DEVELOPMENT_CREDENTIAL_PREFIX)) {
       refuse(

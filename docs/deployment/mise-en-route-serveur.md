@@ -235,8 +235,13 @@ refus :
    développement *exacte* est refusée d'une part, le *préfixe* `carlys-dev*`
    de l'autre.
 3. **Les URL publiques doivent être en `https://` et ne jamais pointer en
-   local.** Cela concerne `PUBLIC_APP_URL`, `S3_PUBLIC_BASE_URL` et
-   `CORS_ORIGINS`.
+   local.** Les deux règles ne couvrent pas tout à fait le même ensemble, et
+   `apps/api/src/config/env.production.ts` en est la source de vérité :
+   « jamais en local » vaut pour `PUBLIC_APP_URL`, `S3_PUBLIC_BASE_URL` et
+   `CORS_ORIGINS` ; « en `https://` » vaut pour les mêmes trois, mais
+   `CORS_ORIGINS` étant une **liste séparée par des virgules**, c'est chaque
+   origine qui est contrôlée — une seule entrée en clair, fût-elle la
+   troisième, suffit à faire refuser le démarrage, et le message la nomme.
 
 En revanche, ce qui **reste interne au réseau Compose** n'est pas concerné :
 `S3_ENDPOINT=http://minio:9000` et `SMTP_HOST=mailpit` passent parfaitement,
@@ -443,7 +448,16 @@ derrière. C'est normal.
 curl -sI https://api-staging.carlys.example/health/live | head -1   # 502 attendu
 
 # L'attrape-tout fait son travail : un nom inconnu n'atteint RIEN.
-curl -sk https://carlys.example/ ; echo "code curl = $?"   # 52 ou 92 : connexion fermée
+#
+# `--resolve` et pas une résolution DNS : le §1 ne fait poser que les SIX
+# sous-domaines, et le domaine nu n'en fait délibérément pas partie. Sans
+# `--resolve`, curl sortirait donc en 6 (« Could not resolve host ») — un code
+# qui ne dit rien de l'attrape-tout, et qu'on prendrait à tort pour sa panne.
+# On force ici curl à joindre le serveur en présentant le nom inconnu, ce qui
+# est exactement ce que fait un visiteur venu d'un nom pointé chez vous à votre
+# insu, ou d'un scanner qui balaie l'IP.
+curl -sk --resolve carlys.example:443:203.0.113.10 \
+  https://carlys.example/ ; echo "code curl = $?"   # 52 ou 92 : connexion fermée
 # …et il présente son certificat auto-signé, pas celui de l'API :
 echo | openssl s_client -connect 203.0.113.10:443 -servername carlys.example 2>/dev/null \
   | grep -m1 'subject='            # → CN = hote-inconnu

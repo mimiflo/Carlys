@@ -152,6 +152,41 @@ describe('validateEnv en production', () => {
     ).toThrow(/S3_PUBLIC_BASE_URL.*https/);
   });
 
+  // CORS_ORIGINS est une LISTE : le contrôle doit voir chaque entrée, pas
+  // seulement la première. Une garde qui n'inspecte qu'un élément sur trois
+  // est pire qu'aucune — elle fait croire que quelqu'un a regardé.
+  it('exige https:// pour CHAQUE origine de CORS_ORIGINS', () => {
+    expect(() =>
+      validateEnv({ ...productionEnv, CORS_ORIGINS: 'http://app.carlys.example' }),
+    ).toThrow(/CORS_ORIGINS.*https/);
+
+    // L'entrée fautive est en DEUXIÈME position : c'est le cas qu'un
+    // `startsWith` sur la chaîne entière laisserait passer.
+    expect(() =>
+      validateEnv({
+        ...productionEnv,
+        CORS_ORIGINS: 'https://app.carlys.example,http://admin.carlys.example',
+      }),
+    ).toThrow(/CORS_ORIGINS.*https/);
+
+    // Le message nomme l'origine fautive, pas seulement la variable : sans
+    // cela, une liste de six origines laisse chercher laquelle est en cause.
+    expect(() =>
+      validateEnv({
+        ...productionEnv,
+        CORS_ORIGINS: 'https://app.carlys.example,http://admin.carlys.example',
+      }),
+    ).toThrow(/http:\/\/admin\.carlys\.example/);
+
+    // Plusieurs origines toutes en https, espaces compris : acceptées.
+    expect(
+      validateEnv({
+        ...productionEnv,
+        CORS_ORIGINS: 'https://app.carlys.example, https://admin.carlys.example',
+      }).CORS_ORIGINS,
+    ).toBe('https://app.carlys.example, https://admin.carlys.example');
+  });
+
   it('refuse les identifiants de développement carlys-dev*', () => {
     expect(() => validateEnv({ ...productionEnv, S3_ACCESS_KEY_ID: 'carlys-dev-autre' })).toThrow(
       /S3_ACCESS_KEY_ID.*carlys-dev/,
