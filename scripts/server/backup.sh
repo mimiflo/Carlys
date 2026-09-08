@@ -81,6 +81,9 @@ STAMP="$(date -u +%Y%m%dT%H%M%SZ)"
 failures=0
 made=0
 skipped=0
+# Environnements ayant produit un dump NEUF ET VALIDE pendant cette exécution.
+# Eux seuls verront leur rétention appliquée — voir la section « Rétention ».
+reussis=''
 
 for env_name in "${TARGETS[@]}"; do
   step "Sauvegarde — $env_name"
@@ -160,6 +163,7 @@ for env_name in "${TARGETS[@]}"; do
   chmod 600 "$target"
   ok "$(basename -- "$target") ($(du -h "$target" | cut -f1))"
   made=$((made + 1))
+  reussis="$reussis $env_name"
 done
 
 # ── Rétention ──────────────────────────────────────────────────────────────
@@ -169,19 +173,43 @@ done
 # `find -delete` large y ferait des dégâts silencieux.
 purged=0
 purge_older_than() {
-  local days="$1" pattern_staging="$2" pattern_production="$3" old
+  local days="$1" pattern="$2" old
   while IFS= read -r old; do
     [ -n "$old" ] || continue
     rm -f -- "$old"
     info "purgé : $(basename -- "$old")"
     purged=$((purged + 1))
-  done < <(find "$BACKUP_DIR" -maxdepth 1 -type f \
-    \( -name "$pattern_staging" -o -name "$pattern_production" \) \
+  done < <(find "$BACKUP_DIR" -maxdepth 1 -type f -name "$pattern" \
     -mtime "+${days}" -print 2>/dev/null | sort)
 }
 
+# LA PURGE EST CONDITIONNÉE À UNE SAUVEGARDE NEUVE, PAR ENVIRONNEMENT.
+#
+# Purger inconditionnellement transforme une panne discrète en perte de
+# données. Le scénario ne demande rien d'exotique : POSTGRES_USER modifié dans
+# le .env sans l'être dans la base, ou partition pleine. `pg_dump` échoue
+# chaque nuit, le script sort bien en 1 — mais le courriel de cron finit dans
+# un filtre, et personne ne regarde. Au quinzième jour, la dernière sauvegarde
+# VALABLE franchit `-mtime +14` et cette purge l'efface. L'environnement est
+# alors sans aucune sauvegarde restaurable, et rien ne l'a dit plus fort que
+# les quatorze nuits précédentes.
+#
+# La règle tenue ici : on ne jette une vieille sauvegarde que si l'on vient
+# d'en écrire une neuve et vérifiée à la place. Par environnement, parce que
+# la recette peut échouer pendant que la production réussit — gérer les deux
+# ensemble ferait payer à l'une la panne de l'autre.
 step "Rétention ($RETENTION_DAYS jours)"
-purge_older_than "$RETENTION_DAYS" 'staging-*.dump' 'production-*.dump'
+for env_name in "${TARGETS[@]}"; do
+  case " $reussis " in
+    *" $env_name "*)
+      purge_older_than "$RETENTION_DAYS" "${env_name}-*.dump"
+      ;;
+    *)
+      warn "$env_name : aucune sauvegarde neuve cette nuit — rétention NON appliquée"
+      warn "  les sauvegardes existantes sont conservées, même au-delà de $RETENTION_DAYS jours."
+      ;;
+  esac
+done
 
 # LES FRAGMENTS AUSSI. Un `.dump.part` est ce que laisse une sauvegarde
 # interrompue en plein vol : serveur redémarré, conteneur tué, disque plein.
@@ -196,8 +224,16 @@ purge_older_than "$RETENTION_DAYS" 'staging-*.dump' 'production-*.dump'
 # aucune valeur à conserver ; et ce délai met hors d'atteinte le `.part` de la
 # sauvegarde EN COURS, qu'une purge trop pressée détruirait sous ses pieds.
 # Le motif attrape aussi le `.part.err` qui l'accompagne.
+#
+# Celle-ci reste INCONDITIONNELLE, contrairement à la rétention ci-dessus, et
+# la raison est la même dans les deux cas : ne jamais détruire ce qui pourrait
+# se restaurer. Un fragment ne le peut pas — le purger ne libère que de la
+# place. C'est même sur un environnement EN PANNE qu'il faut le faire : le
+# disque plein, cause fréquente de l'échec, se soigne en partie ici.
 PART_RETENTION_DAYS=1
-purge_older_than "$PART_RETENTION_DAYS" 'staging-*.dump.part*' 'production-*.dump.part*'
+for env_name in "${TARGETS[@]}"; do
+  purge_older_than "$PART_RETENTION_DAYS" "${env_name}-*.dump.part*"
+done
 
 [ "$purged" -gt 0 ] || info "aucun fichier à purger"
 
