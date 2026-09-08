@@ -43,6 +43,11 @@ case "${1-}" in -h | --help | help) usage ;; esac
 
 require_commands docker curl
 require_compose_file
+# La production doit être préparée AVANT qu'on interroge le registre : mieux
+# vaut échouer sur un .env manquant maintenant que juste après la confirmation.
+# C'est aussi lui qui fait foi sur le préfixe des images.
+PRODUCTION_ENV_FILE="$(require_env_file production)"
+CARLYS_REGISTRY="$(env_value CARLYS_REGISTRY "$PRODUCTION_ENV_FILE" "$CARLYS_REGISTRY")"
 
 # ── 1. Quel sha ? ───────────────────────────────────────────────────────────
 if [ -n "${1-}" ]; then

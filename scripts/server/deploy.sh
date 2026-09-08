@@ -76,6 +76,9 @@ SHA="$(normalize_sha "${2-}")"
 require_commands docker curl
 require_compose_file
 ENV_FILE="$(require_env_file "$ENV_NAME")"
+# Le .env de l'environnement fait foi sur le registre : c'est lui que le
+# compose versionné interpole. On ne lui impose pas la valeur du script.
+CARLYS_REGISTRY="$(env_value CARLYS_REGISTRY "$ENV_FILE" "$CARLYS_REGISTRY")"
 PROJECT="$(compose_project "$ENV_NAME" "$ENV_FILE")"
 API_PORT="$(api_host_port "$ENV_NAME" "$ENV_FILE")"
 ADMIN_PORT="$(admin_host_port "$ENV_NAME" "$ENV_FILE")"
@@ -86,18 +89,24 @@ PREVIOUS_SHA="$(deployed_current "$ENV_NAME")"
 
 # Les variables que le fichier compose interpole. Elles sont EXPORTÉES : pour
 # Compose, l'environnement du shell l'emporte sur --env-file, ce qui permet de
-# déployer un sha sans réécrire le .env de l'environnement.
+# déployer un sha sans jamais réécrire le .env de l'environnement.
 #
-# CARLYS_ADMIN_TAG est distinct de CARLYS_TAG parce que l'admin de production
-# porte le suffixe -prod (garde légale armée) : un seul tag ne peut pas
-# décrire les deux images.
+# CARLYS_ADMIN_TAG_SUFFIX est posé ICI plutôt que laissé au .env : le suffixe
+# -prod n'est pas un réglage d'exploitation, c'est une conséquence de
+# l'environnement visé. Le déduire de l'argument de deploy.sh supprime la
+# faute la plus coûteuse — un .env de production dont le suffixe aurait été
+# effacé déploierait l'image de RECETTE, garde légale désarmée, sans que rien
+# ne proteste.
+#
+# CARLYS_ENV_FILE est exporté pour la même raison : le compose s'en sert comme
+# `env_file`, et la seule valeur juste est le chemin que deploy.sh vient
+# réellement d'ouvrir.
 export_tags() {
   local sha="$1"
-  export CARLYS_REGISTRY CARLYS_IMAGE_OWNER
+  export CARLYS_REGISTRY
+  export CARLYS_ENV_FILE="$ENV_FILE"
   export CARLYS_TAG="sha-${sha}"
-  export CARLYS_ADMIN_TAG; CARLYS_ADMIN_TAG="$(admin_tag "$sha" "$ENV_NAME")"
-  export CARLYS_API_IMAGE; CARLYS_API_IMAGE="$(image_api "$sha")"
-  export CARLYS_ADMIN_IMAGE; CARLYS_ADMIN_IMAGE="$(image_admin "$sha" "$ENV_NAME")"
+  export CARLYS_ADMIN_TAG_SUFFIX; CARLYS_ADMIN_TAG_SUFFIX="$(admin_tag_suffix "$ENV_NAME")"
 }
 
 printf '%s\n' "$_c_bold"
@@ -141,13 +150,6 @@ dc "$ENV_NAME" "$ENV_FILE" up -d $DATA_SERVICES || die \
   "Impossible de démarrer le socle de données ($DATA_SERVICES)." \
   "Rien n'a été basculé. Diagnostic : docker compose -p $PROJECT logs postgres redis"
 
-NETWORK="$(compose_network "$PROJECT")"
-[ -n "$NETWORK" ] || die \
-  "Réseau Compose du projet $PROJECT introuvable." \
-  "La migration doit joindre postgres par le réseau de l'environnement." \
-  "Vérifier : docker network ls --filter label=com.docker.compose.project=$PROJECT"
-info "réseau : $NETWORK"
-
 # Attendre que PostgreSQL ACCEPTE une connexion. Un conteneur démarré n'est pas
 # une base prête : la migration échouerait sur un refus de connexion et on
 # accuserait la migration.
@@ -164,26 +166,21 @@ done
 ok "PostgreSQL accepte les connexions"
 
 # ── 3. Migration — AVANT la bascule, en tâche ponctuelle ────────────────────
-# On ne passe PAS --env-file à `docker run` : il n'y déquote rien (un mot de
-# passe entre guillemets arriverait avec ses guillemets), et surtout la
-# migration n'a besoin que de DATABASE_URL. Un conteneur ponctuel ne reçoit que
-# ce dont il a besoin.
+# Le service `migrate` du compose versionné, sous profil dédié, donc absent de
+# tout `up -d`. On l'appelle plutôt que de bricoler un `docker run --network` :
+# réseau, DATABASE_URL et fichier d'environnement y sont déjà décrits, et une
+# seconde description finirait par diverger de la première. `--no-deps` parce
+# que le socle vient d'être démarré et attendu juste au-dessus ; `run` active
+# le profil `migrate` de lui-même.
 step "4/6 Migrations Prisma (tâche ponctuelle)"
-DATABASE_URL_VALUE="$(env_value DATABASE_URL "$ENV_FILE")"
-[ -n "$DATABASE_URL_VALUE" ] || die \
-  "DATABASE_URL absent de $ENV_FILE." \
-  "Rien n'a été basculé. Compléter le fichier .env de l'environnement."
-
-if ! docker run --rm --network "$NETWORK" \
-  -e DATABASE_URL="$DATABASE_URL_VALUE" \
-  -e CHECKPOINT_DISABLE=1 \
-  "$IMG_MIGRATE"; then
+if ! dc "$ENV_NAME" "$ENV_FILE" run --rm --no-deps migrate; then
   die "La migration a échoué — DÉPLOIEMENT INTERROMPU." \
     "RIEN n'a été basculé : api et admin tournent toujours sur ${PREVIOUS_SHA:-leur version précédente}." \
     "Le socle de données est debout, le schéma est resté dans l'état où la migration l'a laissé." \
     "Relire la sortie ci-dessus, corriger la migration, publier un nouveau sha." \
     "Pour rejouer la seule migration :" \
-    "  docker run --rm --network $NETWORK -e DATABASE_URL=… $IMG_MIGRATE"
+    "  CARLYS_TAG=sha-$SHA docker compose -p $PROJECT --env-file $ENV_FILE \\" \
+    "    -f $CARLYS_COMPOSE_FILE run --rm --no-deps migrate"
 fi
 ok "schéma à jour"
 

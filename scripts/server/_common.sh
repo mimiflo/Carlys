@@ -31,9 +31,18 @@ CARLYS_REPO_DIR="${CARLYS_REPO_DIR:-$(cd -- "$CARLYS_LIB_DIR/../.." && pwd -P)}"
 CARLYS_COMPOSE_FILE="${CARLYS_COMPOSE_FILE:-$CARLYS_REPO_DIR/infrastructure/server/compose.yml}"
 CARLYS_ENV_EXAMPLES_DIR="${CARLYS_ENV_EXAMPLES_DIR:-$CARLYS_REPO_DIR/infrastructure/server/env}"
 
-# ── Registre d'images (contrat de conception) ───────────────────────────────
-CARLYS_REGISTRY="${CARLYS_REGISTRY:-ghcr.io}"
-CARLYS_IMAGE_OWNER="${CARLYS_IMAGE_OWNER:-mimiflo}"
+# ── Registre d'images ───────────────────────────────────────────────────────
+# PRÉFIXE COMPLET des images, hôte ET propriétaire : c'est la forme qu'attend
+# le compose versionné (`${CARLYS_REGISTRY}/carlys-api:${CARLYS_TAG}`) et celle
+# que portent les .env d'environnement. La valeur ci-dessous n'est qu'un
+# défaut : les scripts la relisent dans le .env de l'environnement, qui fait
+# foi.
+CARLYS_REGISTRY="${CARLYS_REGISTRY:-ghcr.io/mimiflo}"
+
+# `docker login` prend un HÔTE, pas un préfixe d'images : ghcr.io, pas
+# ghcr.io/mimiflo. Le propriétaire sert d'identifiant de connexion.
+registry_host()      { printf '%s' "${CARLYS_REGISTRY%%/*}"; }
+registry_namespace() { printf '%s' "${CARLYS_REGISTRY#*/}"; }
 
 # ── Sortie ──────────────────────────────────────────────────────────────────
 # Les couleurs ne servent qu'un humain devant un terminal : sous cron ou dans
@@ -183,16 +192,6 @@ dc() {
     "$@"
 }
 
-# Réseau Compose de l'environnement, pour y attacher une tâche ponctuelle
-# (la migration). On l'interroge par le label que Compose pose lui-même
-# plutôt que de deviner « <projet>_default » : le fichier compose peut très
-# bien nommer son réseau autrement.
-compose_network() {
-  local project="$1"
-  docker network ls --filter "label=com.docker.compose.project=${project}" \
-    --format '{{.Name}}' 2>/dev/null | head -n 1
-}
-
 # ── Attente bornée d'un point HTTP ──────────────────────────────────────────
 # BORNÉE est le mot important : une boucle infinie sur un service qui ne
 # démarrera jamais bloque le déploiement au lieu de déclencher le retour
@@ -243,28 +242,23 @@ ghcr_login() {
     "Le fichier existe mais ne contient rien. Y coller le PAT read:packages :" \
     "  printf '%s' '<le jeton>' | sudo tee $file >/dev/null"
   printf '%s' "$token" \
-    | docker login "$CARLYS_REGISTRY" --username "${CARLYS_REGISTRY_USER:-$CARLYS_IMAGE_OWNER}" --password-stdin \
-    || die "Connexion à $CARLYS_REGISTRY refusée." \
+    | docker login "$(registry_host)" --username "${CARLYS_REGISTRY_USER:-$(registry_namespace)}" --password-stdin \
+    || die "Connexion à $(registry_host) refusée." \
       "Vérifier que le jeton de $file est valide et porte read:packages," \
-      "et que $CARLYS_IMAGE_OWNER est bien le propriétaire des paquets."
+      "et que $(registry_namespace) est bien le propriétaire des paquets."
 }
 
 # ── Noms d'images (contrat de conception) ───────────────────────────────────
-# Une seule fonction pour les trois images, et la règle du suffixe -prod ne
-# s'écrit qu'ICI : l'admin de production porte la garde légale armée, celui de
-# recette non. C'est la seule différence entre les deux environnements.
-image_api()     { printf '%s/%s/carlys-api:sha-%s' "$CARLYS_REGISTRY" "$CARLYS_IMAGE_OWNER" "$1"; }
-image_migrate() { printf '%s/%s/carlys-api-migrate:sha-%s' "$CARLYS_REGISTRY" "$CARLYS_IMAGE_OWNER" "$1"; }
-image_admin() {
-  local sha="$1" env_name="$2" suffix=''
-  [ "$env_name" = production ] && suffix='-prod'
-  printf '%s/%s/carlys-admin:sha-%s%s' "$CARLYS_REGISTRY" "$CARLYS_IMAGE_OWNER" "$sha" "$suffix"
+# La règle du suffixe -prod ne s'écrit qu'ICI : l'admin de production porte la
+# garde légale armée, celui de recette non. C'est la seule différence d'images
+# entre les deux environnements — et le compose versionné l'exprime par
+# CARLYS_ADMIN_TAG_SUFFIX, que deploy.sh exporte à partir de cette fonction.
+admin_tag_suffix() {
+  if [ "$1" = production ]; then printf '%s' '-prod'; else printf '%s' ''; fi
 }
-admin_tag() {
-  local sha="$1" env_name="$2" suffix=''
-  [ "$env_name" = production ] && suffix='-prod'
-  printf 'sha-%s%s' "$sha" "$suffix"
-}
+image_api()     { printf '%s/carlys-api:sha-%s' "$CARLYS_REGISTRY" "$1"; }
+image_migrate() { printf '%s/carlys-api-migrate:sha-%s' "$CARLYS_REGISTRY" "$1"; }
+image_admin()   { printf '%s/carlys-admin:sha-%s%s' "$CARLYS_REGISTRY" "$1" "$(admin_tag_suffix "$2")"; }
 
 # Ports publiés sur la boucle locale (contrat de conception). Le .env peut les
 # redéfinir ; les défauts ci-dessous sont ceux du contrat, pour que le script

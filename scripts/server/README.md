@@ -115,16 +115,29 @@ jouer ces scripts hors serveur, contre une arborescence jetable.
 | --- | --- | --- |
 | `CARLYS_ROOT` | `/srv/carlys` | racine des données |
 | `CARLYS_COMPOSE_FILE` | `infrastructure/server/compose.yml` | fichier compose |
-| `CARLYS_REGISTRY` / `CARLYS_IMAGE_OWNER` | `ghcr.io` / `mimiflo` | registre |
+| `CARLYS_REGISTRY` | `ghcr.io/mimiflo` | préfixe complet des images ; le `.env` de l'environnement fait foi |
 | `CARLYS_HEALTH_TRIES` / `CARLYS_HEALTH_DELAY` | `60` / `2` | attente de santé (bornée) |
 | `CARLYS_BACKUP_RETENTION_DAYS` | `14` | rétention des dumps |
 | `CARLYS_SETUP_DRY_RUN` | — | `1` : `setup.sh` affiche les commandes système au lieu de les jouer |
 
-`deploy.sh` **exporte** vers Compose : `CARLYS_TAG` (`sha-<sha>`),
-`CARLYS_ADMIN_TAG` (avec le suffixe `-prod` en production), `CARLYS_REGISTRY`,
-`CARLYS_IMAGE_OWNER`, `CARLYS_API_IMAGE`, `CARLYS_ADMIN_IMAGE`. L'environnement
-du shell l'emportant sur `--env-file`, un déploiement ne réécrit jamais le
-`.env` de l'environnement.
+`deploy.sh` **exporte** vers Compose quatre variables, et l'environnement du
+shell l'emportant sur `--env-file`, un déploiement ne réécrit jamais le `.env` :
+
+| Exportée | Valeur |
+| --- | --- |
+| `CARLYS_TAG` | `sha-<sha>` |
+| `CARLYS_ADMIN_TAG_SUFFIX` | `-prod` en production, vide en recette |
+| `CARLYS_ENV_FILE` | le chemin absolu du `.env` réellement ouvert |
+| `CARLYS_REGISTRY` | relu dans ce `.env` |
+
+Le suffixe `-prod` est **déduit de l'environnement visé**, pas lu dans le
+`.env` : un `.env` de production dont le suffixe aurait été effacé déploierait
+sinon l'image de recette, garde légale désarmée, sans que rien ne proteste.
+
+La migration passe par le service `migrate` du compose (profil dédié, donc
+absent de tout `up -d`), appelé en `run --rm --no-deps` : réseau,
+`DATABASE_URL` et fichier d'environnement y sont déjà décrits, et une seconde
+description finirait par diverger de la première.
 
 ## Ce qu'ils n'automatisent pas
 
