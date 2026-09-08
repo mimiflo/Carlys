@@ -16,8 +16,8 @@ Le **comment** l'y installer et l'y déployer vit dans `scripts/server/`.
   sur place. Ici les images viennent du registre, taguées par SHA, et rien
   n'écoute ailleurs que sur `127.0.0.1`.
 - **Pas des fichiers de configuration.** Les `*.env.example` sont des
-  **modèles versionnés** : ils ne contiennent que des valeurs factices
-  (`CHANGE_MOI_…`) et le jeton `DOMAIN`. Les vrais fichiers vivent sur le
+  **modèles versionnés** : chaque valeur y est factice et le dit
+  (`CHANGE_MOI_…`, `DOMAIN` compris). Les vrais fichiers vivent sur le
   serveur, hors du dépôt, en `chmod 600`.
 - **Pas un script de déploiement.** `compose.yml` ne sait ni migrer, ni
   attendre `/health/ready`, ni revenir en arrière : c'est le travail de
@@ -41,6 +41,13 @@ L'isolation entre les deux piles est portée par `COMPOSE_PROJECT_NAME`
 (`carlys_staging` / `carlys_production`) : conteneurs, réseau et volumes en
 héritent le préfixe, et les deux tournent côte à côte sur le même hôte sans se
 voir.
+
+Le **domaine** est la seule chose à saisir pour déplacer la pile : `DOMAIN`
+ouvre les deux `.env`, et `CORS_ORIGINS`, `S3_PUBLIC_BASE_URL`, `EMAIL_FROM` et
+`PUBLIC_APP_URL` en dérivent (`https://app-staging.${DOMAIN}`, …). Les
+sous-domaines eux-mêmes sont fixés par le contrat de conception et ne se
+paramètrent pas. `scripts/server/setup.sh` relit cette même variable pour
+énumérer les enregistrements DNS à poser : un seul endroit, une seule vérité.
 
 ## Cinq choses à savoir avant d'y toucher
 
