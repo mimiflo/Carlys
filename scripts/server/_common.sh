@@ -179,6 +179,42 @@ deployed_operator() {
   printf '%s@%s' "${CARLYS_OPERATOR:-${SUDO_USER:-${USER:-$(id -un)}}}" "$(hostname -s 2>/dev/null || echo inconnu)"
 }
 
+# ── CARLYS_TAG dans le .env ─────────────────────────────────────────────────
+# deploy.sh exporte CARLYS_TAG dans SON shell, ce qui suffit à ses propres
+# appels compose et à rien d'autre. Le .env, lui, gardait `sha-CHANGE_MOI_SHA12`
+# à vie — si bien que la commande écrite en tête de compose.yml et répétée dans
+# infrastructure/server/README.md,
+#   docker compose --env-file /srv/carlys/<env>/.env -f compose.yml up -d
+# échouait TOUJOURS sur une image inexistante. Le moment où ça coûte cher n'est
+# pas le déploiement, c'est l'arrêt volontaire : après un `docker compose stop`
+# (intervention disque, maintenance), l'exploitant relance avec la commande
+# documentée et n'obtient rien, alors que rien n'est cassé.
+#
+# On écrit donc le tag DANS le .env à chaque bascule réussie, et aussi après un
+# retour arrière : la seule valeur juste est celle qui tourne vraiment.
+#
+# Écriture par fichier temporaire puis `mv` : le .env porte tous les secrets de
+# l'environnement, et une écriture en place interrompue (disque plein, machine
+# qui redémarre) le laisserait tronqué — l'API ne redémarrerait plus, et la
+# cause serait invisible. Le temporaire naît dans le MÊME répertoire, sans quoi
+# `mv` cesserait d'être atomique en franchissant un système de fichiers. Les
+# permissions sont reprises de l'original plutôt que laissées au umask.
+env_set_tag() {
+  local file="$1" tag="$2" tmp
+  [ -f "$file" ] || die "Fichier .env introuvable : $file"
+  tmp="$(mktemp "${file}.XXXXXX")" || die "Écriture impossible à côté de $file"
+  chmod --reference="$file" "$tmp" 2>/dev/null || chmod 600 "$tmp"
+  # `awk` et non `sed -i` : on veut AJOUTER la clé si elle manque, ce que la
+  # substitution seule ne fait pas — un .env écrit à la main peut ne pas la
+  # porter du tout.
+  awk -v tag="$tag" '
+    /^[[:space:]]*CARLYS_TAG[[:space:]]*=/ { if (!vu) { print "CARLYS_TAG=" tag; vu = 1 } ; next }
+    { print }
+    END { if (!vu) print "CARLYS_TAG=" tag }
+  ' "$file" > "$tmp" || { rm -f "$tmp"; die "Réécriture de $file échouée"; }
+  mv -f "$tmp" "$file" || { rm -f "$tmp"; die "Remplacement de $file échoué"; }
+}
+
 deployed_append() {
   local env_name="$1" sha="$2" event="$3" file
   file="$(deployed_file "$env_name")"

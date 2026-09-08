@@ -206,6 +206,7 @@ if ! dc "$ENV_NAME" "$ENV_FILE" up -d; then
   if [ -n "$PREVIOUS_SHA" ]; then
     export_tags "$PREVIOUS_SHA"
     dc "$ENV_NAME" "$ENV_FILE" up -d || true
+    env_set_tag "$ENV_FILE" "sha-$PREVIOUS_SHA"
     deployed_append "$ENV_NAME" "$PREVIOUS_SHA" "retour-arrière-depuis-$SHA(compose)"
   fi
   die "Bascule impossible : docker compose n'a pas démarré la pile." \
@@ -226,6 +227,9 @@ if [ "$healthy" -eq 1 ]; then
 fi
 
 if [ "$healthy" -eq 1 ]; then
+  # Le .env apprend ce qui tourne : sans cela, le `docker compose up -d`
+  # documenté en tête de compose.yml relirait `sha-CHANGE_MOI_SHA12`.
+  env_set_tag "$ENV_FILE" "sha-$SHA"
   deployed_append "$ENV_NAME" "$SHA" "deploy"
   printf '\n%s✓ %s déployé sur sha-%s%s\n' "$_c_green" "$ENV_NAME" "$SHA" "$_c_off"
   info "journal : $(deployed_file "$ENV_NAME")"
@@ -284,6 +288,7 @@ if [ "$restored" -eq 1 ]; then
   # On inscrit le retour arrière : la dernière ligne de DEPLOYED doit toujours
   # décrire CE QUI TOURNE. Elle porte de nouveau le sha précédent — le fichier
   # reste lisible par promote.sh, et l'historique garde la trace de la tentative.
+  env_set_tag "$ENV_FILE" "sha-$PREVIOUS_SHA"
   deployed_append "$ENV_NAME" "$PREVIOUS_SHA" "retour-arrière-depuis-$SHA"
   printf '\n%s⚠ %s restauré sur sha-%s (le déploiement de %s a échoué)%s\n' \
     "$_c_yellow" "$ENV_NAME" "$PREVIOUS_SHA" "$SHA" "$_c_off" >&2
