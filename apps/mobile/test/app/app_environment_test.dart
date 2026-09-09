@@ -8,12 +8,84 @@ import 'package:flutter_test/flutter_test.dart';
 /// son `--dart-define` embarque deux liens légaux morts, ceux-là mêmes qu'un
 /// examinateur de magasin ouvre. Rien n'échouait ni au build ni au lancement.
 void main() {
-  AppEnvironment environmentOn(AppFlavor flavor, {String? publicWeb}) =>
-      AppEnvironment(
-        flavor: flavor,
-        apiBaseUrl: 'https://api.exemple.test',
-        publicWebBaseUrl: publicWeb ?? AppEnvironment.defaultPublicWebBaseUrl,
+  AppEnvironment environmentOn(
+    AppFlavor flavor, {
+    String? publicWeb,
+    String api = 'https://api.exemple.test',
+  }) => AppEnvironment(
+    flavor: flavor,
+    apiBaseUrl: api,
+    publicWebBaseUrl: publicWeb ?? AppEnvironment.defaultPublicWebBaseUrl,
+  );
+
+  // L'ADRESSE DE L'API EST LE CAS LE PLUS SILENCIEUX DES DEUX. Un lien légal
+  // mort se voit à l'œil dès qu'on ouvre l'écran ; une API restée sur
+  // localhost ne se voit qu'au support, sous la forme d'une application
+  // « lente » puis « hors ligne ». Elle est donc tenue à la même règle.
+  group('adresse de l’API', () {
+    test('production sans --dart-define : le lancement est refusé', () {
+      expect(
+        () => environmentOn(
+          AppFlavor.production,
+          publicWeb: 'https://app.exemple.test',
+          api: 'http://localhost:3000',
+        ).assertUsable(),
+        throwsA(
+          isA<StateError>().having(
+            (error) => error.message,
+            'message',
+            allOf(contains('CARLYS_API_BASE_URL'), contains('production')),
+          ),
+        ),
       );
+    });
+
+    test('staging est tenu à la même règle', () {
+      expect(
+        () => environmentOn(
+          AppFlavor.staging,
+          publicWeb: 'https://app-staging.exemple.test',
+          api: 'http://localhost:3000',
+        ).assertUsable(),
+        throwsStateError,
+      );
+    });
+
+    test('10.0.2.2, la boucle locale de l’émulateur, ne passe pas', () {
+      expect(
+        () => environmentOn(
+          AppFlavor.production,
+          publicWeb: 'https://app.exemple.test',
+          api: 'http://10.0.2.2:3000',
+        ).assertUsable(),
+        throwsStateError,
+      );
+    });
+
+    test('development et demo gardent leur défaut local', () {
+      for (final flavor in [AppFlavor.development, AppFlavor.demo]) {
+        expect(
+          () => environmentOn(
+            flavor,
+            api: 'http://localhost:3000',
+          ).assertUsable(),
+          returnsNormally,
+          reason: flavor.name,
+        );
+      }
+    });
+
+    test('les deux adresses publiques ensemble : le lancement passe', () {
+      expect(
+        () => environmentOn(
+          AppFlavor.production,
+          publicWeb: 'https://app.exemple.test',
+          api: 'https://api.exemple.test',
+        ).assertUsable(),
+        returnsNormally,
+      );
+    });
+  });
 
   group('adresse du web public', () {
     test('production sans --dart-define : le lancement est refusé', () {

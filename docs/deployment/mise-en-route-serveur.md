@@ -28,6 +28,14 @@ Dans tout ce qui suit, remplacez `carlys.example` par votre domaine réel.
   IPv4 publique (notée `203.0.113.10` dans les exemples).
 - Un nom de domaine dont vous contrôlez la zone DNS.
 - Un compte GitHub ayant accès au dépôt `mimiflo/Carlys`.
+- **Pour l'étape 8 seulement — sur VOTRE POSTE, pas sur le serveur** : un clone
+  du dépôt et le SDK Flutter **3.44.9** (la version est épinglée dans
+  `apps/mobile/.flutter-version`), plus l'Android SDK et ses licences.
+  `setup.sh` n'installe rien de tout cela sur le serveur, et n'a pas à le
+  faire. L'installation du poste est décrite dans
+  [`docs/development/poste-de-travail.md`](../development/poste-de-travail.md).
+  Pour les builds iOS, ajoutez un **macOS** avec Xcode et un compte Apple
+  Developer.
 
 ---
 
@@ -132,11 +140,22 @@ déjà configuré ne casse rien et ne réécrit aucun `.env` déjà rempli.
 **Vérification :**
 
 ```bash
+echo $?                                      # 0 : aucun service en défaut
 docker --version && docker compose version   # les deux répondent
-systemctl is-active nginx                    # active
+docker info > /dev/null && echo 'démon ok'   # le CLI peut répondre sans lui
+systemctl is-active docker nginx cron        # trois fois « active »
 ufw status | head -5                         # 22, 80, 443 seulement
 ls -la /srv/carlys/                          # staging/ production/ backups/
 ```
+
+**Le code de sortie compte autant que l'affichage.** Si un service refuse de
+démarrer, `setup.sh` va quand même au bout des sept étapes, affiche tout son
+récapitulatif — puis sort en **1** en nommant le service en défaut, tout à la
+fin. Sept `✓` à l'écran ne veulent donc pas dire que tout va bien : c'est
+`echo $?` qui tranche. `docker --version` en particulier répond très bien
+alors que le **démon** est à l'arrêt ; sans `docker info`, la panne ne se
+révélerait qu'à l'étape 3, sur un `docker login` qui rend « Cannot connect to
+the Docker daemon » sans que rien ne la relie à ici.
 
 ---
 
@@ -183,8 +202,11 @@ remplace *au build*. Une image construite sans elle contient littéralement
 back-office se charge, s'affiche, et ne joint aucune API. L'image se construit,
 elle démarre, et elle est morte. D'où l'échec bruyant en amont.
 
-Poussez ensuite sur la branche de travail (ou lancez le workflow
-`images-publish` à la main depuis l'onglet Actions). Il publie trois images :
+Poussez ensuite sur **`main` ou sur `claude/carlys-fitness-foundation-lqv2hl`**
+— ce sont les deux seules branches que `images-publish` écoute. Une poussée
+ailleurs ne déclenche **rien** : pas d'exécution, donc pas de message d'erreur,
+et rien à regarder pour la vérification ci-dessous. Vous pouvez aussi lancer le
+workflow à la main depuis l'onglet Actions. Il publie trois images :
 
 ```
 ghcr.io/mimiflo/carlys-api:sha-<sha12>
@@ -202,6 +224,19 @@ depuis l'onglet **Packages** du dépôt, ils ne disparaissent pas seuls.
 
 **Vérification** : le résumé de l'exécution affiche le `sha12` et la commande
 de déploiement à copier. Notez ce `sha12`, il sert à l'étape 7.
+
+**Puis rafraîchissez le clone du serveur**, avant de remplir quoi que ce soit :
+
+```bash
+sudo git -C /srv/carlys/repo pull --ff-only
+```
+
+Le commit que vous venez de pousser peut toucher `infrastructure/server/`,
+`scripts/server/` ou les `*.env.example` — c'est le cas d'une bonne part des
+correctifs. Sans ce `pull`, vous rempliriez à l'étape 5 un `.env` issu d'un
+modèle périmé, et l'étape 7 démarrerait les bonnes images sous une définition
+de services qui ne les connaît pas. L'étape 10 explique pourquoi ce geste
+revient à chaque déploiement.
 
 ---
 
@@ -373,6 +408,10 @@ sudo nginx -t && sudo systemctl reload nginx
 **Vérification** — depuis l'extérieur, le défi doit être servi en clair :
 
 ```bash
+# Le répertoire du défi, que `mkdir -p /var/www/certbot` ne crée PAS : sans
+# lui, le `tee` ci-dessous échoue sur « No such file or directory » et la
+# vérification paraît condamner un vhost qui est pourtant bon.
+sudo mkdir -p /var/www/certbot/.well-known/acme-challenge
 echo preuve | sudo tee /var/www/certbot/.well-known/acme-challenge/test > /dev/null
 curl http://api.carlys.example/.well-known/acme-challenge/test   # → preuve
 sudo rm /var/www/certbot/.well-known/acme-challenge/test
@@ -498,8 +537,17 @@ sudo nginx -t && sudo systemctl reload nginx
 ```
 
 **Vérification** — `nginx -t` doit dire `test is successful`. À ce stade les
-six noms répondent en HTTPS, mais avec des erreurs 502 : rien ne tourne encore
-derrière. C'est normal.
+six noms répondent en HTTPS, mais rien ne tourne derrière. **Attention, ils ne
+répondent pas tous la même chose**, et c'est voulu :
+
+| Ce que vous demandez | Réponse attendue | Pourquoi |
+| --- | --- | --- |
+| `api…/health/live`, `app…/` | **502** | le vhost proxifie, l'amont est absent |
+| la racine `/` de `api…` ou `media…` | **404** | aucune `location` ne couvre `/` : seuls des préfixes précis sont servis |
+| `media…/carlys-media/` | **404** | la racine du bucket est fermée exprès — c'est l'URL d'un `ListObjects` S3, pas celle d'un média |
+
+Ouvrir `https://media.carlys.example/` pour « contrôler ses six noms » rend
+donc 404, et ce 404 est le bon signe. Contrôlez avec les chemins ci-dessous.
 
 ```bash
 curl -sI https://api-staging.carlys.example/health/live | head -1   # 502 attendu
@@ -533,6 +581,14 @@ les images, **applique les migrations d'abord** (un échec arrête tout, sans
 rien basculer), démarre les services, attend que `/health/ready` réponde 200,
 et n'inscrit le SHA dans `DEPLOYED` qu'en cas de succès. Si la santé ne répond
 pas, il revient au SHA précédent.
+
+> **Sauf ici : au PREMIER déploiement, il n'y a pas de SHA précédent.** Le
+> filet dont parle le paragraphe ci-dessus n'existe donc pas encore. Si la
+> santé ne répond pas, la recette reste debout sur un sha malade, `DEPLOYED`
+> n'est pas écrit — et la vérification n°4 ci-dessous répondra « No such file
+> or directory », ce qui est normal à ce stade et ne doit pas vous surprendre.
+> Corrigez la cause (les journaux la nomment), puis relancez la même commande :
+> c'est le deuxième déploiement qui inaugure le retour arrière.
 
 **Vérifications** — les trois doivent passer :
 
@@ -570,6 +626,13 @@ ssh -L 8025:127.0.0.1:8025 utilisateur@203.0.113.10
 
 ## 8. Les builds mobiles
 
+> **Fermez la session SSH : tout ce §8 se fait sur VOTRE POSTE**, dans un clone
+> du dépôt, jamais sur le serveur. `setup.sh` n'y installe ni Flutter, ni JDK,
+> ni Android SDK, et n'a pas à le faire — `bootstrap_mobile.sh` s'y arrêterait
+> aussitôt sur « Le SDK Flutter est requis ». Les prérequis du poste (SDK
+> épinglé **3.44.9**, Android SDK, licences, `flutter doctor`) sont dans
+> [`docs/development/poste-de-travail.md`](../development/poste-de-travail.md).
+
 L'application mobile n'est pas déployée par le serveur : elle est **compilée
 puis déposée sur les magasins**. Ce qui la relie au serveur, ce sont trois
 `--dart-define`.
@@ -597,13 +660,25 @@ silencieusement sur `development`. Écrivez-les correctement.
 `CARLYS_API_BASE_URL` s'écrit **sans** le préfixe `/api/v1`, que l'application
 ajoute elle-même.
 
-**Le filet, et sa limite.** Un build `staging` ou `production` qui oublie
-`CARLYS_PUBLIC_WEB_BASE_URL` embarquerait deux liens légaux morts vers
-`localhost:3001` — précisément les liens qu'un examinateur de magasin ouvre.
-L'application refuse donc de démarrer dans ce cas. Mais attention : ce contrôle
-a lieu **au lancement, pas à la compilation**. Le build réussit, l'`.aab` ou
-l'`.ipa` se produit normalement, et c'est la première ouverture qui échoue.
-**Lancez toujours l'artefact une fois avant de le déposer.**
+**Le filet, et sa limite.** En `staging` comme en `production`, l'application
+refuse de démarrer si `CARLYS_API_BASE_URL` **ou** `CARLYS_PUBLIC_WEB_BASE_URL`
+manque ou pointe en local — `localhost`, `127.0.0.1` et `10.0.2.2`, la boucle
+locale de l'émulateur Android, sont traités pareil. Sans ce filet, l'oubli de
+l'adresse du web embarquerait deux liens légaux morts, ceux-là mêmes qu'un
+examinateur de magasin ouvre ; et l'oubli de l'adresse de l'API serait pire
+encore, puisqu'il ne se voit nulle part : l'application démarre, puis chaque
+appel réseau part sur `localhost:3000`, adresse qui n'existe pas sur un
+téléphone et qu'Android bloque de toute façon en release. Elle paraît
+« lente », puis « hors ligne ».
+
+`CARLYS_FLAVOR`, en revanche, n'est **pas** contrôlé : une valeur inconnue
+retombe silencieusement sur `development`. C'est la seule des trois qui exige
+votre attention plutôt que celle du programme.
+
+Attention enfin : ce contrôle a lieu **au lancement, pas à la compilation**.
+Le build réussit, l'`.aab` ou l'`.ipa` se produit normalement, et c'est la
+première ouverture qui échoue. **Lancez toujours l'artefact une fois avant de
+le déposer.**
 
 ### Recette — TestFlight et piste interne
 
@@ -614,6 +689,13 @@ flutter build appbundle --release \
   --dart-define=CARLYS_API_BASE_URL=https://api-staging.carlys.example \
   --dart-define=CARLYS_PUBLIC_WEB_BASE_URL=https://app-staging.carlys.example
 # → build/app/outputs/bundle/release/app-release.aab
+#
+# ATTENTION : ce bundle est signé avec la clé de DEBUG. Le dépôt ne versionne
+# pas `android/` (bootstrap_mobile.sh le régénère), donc aucun keystore ni
+# aucune `signingConfig` n'y survit. La Play Console refuse un bundle signé en
+# debug. Avant la première soumission : créer un keystore, le ranger HORS du
+# dépôt, déclarer sa signingConfig dans android/app/build.gradle — et savoir
+# que ce fichier sera écrasé au prochain bootstrap_mobile.sh.
 
 # iOS → TestFlight. macOS OBLIGATOIRE, avec Xcode et un compte Apple Developer.
 flutter build ipa --release \
@@ -652,6 +734,13 @@ n'importe laquelle des commandes ci-dessus :
 
 Sans elles, le push est simplement inactif ; le reste de l'application vit
 normalement.
+
+> **Ces quatre valeurs sont celles d'ANDROID.** `google-services.json` décrit
+> l'application Android ; l'équivalent iOS est `GoogleService-Info.plist`, et
+> son `appId` diffère. Injecter le fichier Android dans un build iOS ne laisse
+> pas le push « simplement inactif » : l'application se croit configurée,
+> tente l'enregistrement, et échoue dans un simple avertissement de journal.
+> Prévoyez **deux fichiers**, un par plateforme.
 
 ### Ce qui n'est pas automatisable
 
@@ -710,15 +799,49 @@ Contrairement à la recette, la production a besoin des vraies valeurs :
   la vérification d'adresse et la réinitialisation de mot de passe
   **silencieusement** inopérantes.
 
-### 9.3 Construire l'image de production, puis basculer
+### 9.3 Faire passer les textes légaux PAR la recette
 
-L'image admin de production est produite par un workflow **déclenché à la
-main** : Actions → `images-publish-prod` → *Run workflow* → renseignez le SHA
-affiché par `/srv/carlys/staging/DEPLOYED`.
+C'est le point où la première mise en production dérape si l'on va trop vite,
+et la raison tient en une phrase : **compléter les textes légaux crée un
+nouveau commit**. Appelons `A` le sha que la recette fait tourner depuis le
+§7, et `B` celui qui porte vos textes.
 
-Il vérifie que les images d'API de ce SHA existent déjà — la production
-redéploie **les octets éprouvés en recette**, elle ne reconstruit rien —, puis
-construit l'admin garde armée et publie
+`images-publish-prod` fait `git checkout --detach` sur le sha qu'on lui donne
+et lit `docs/legal/` **de ce commit**. Lancé sur `A`, il échoue donc à coup
+sûr : `A` contient encore tous les marqueurs. Et `promote.sh` sans argument
+relit `/srv/carlys/staging/DEPLOYED`, qui vaut toujours `A` : il chercherait
+une image `sha-A-prod` qui n'a jamais été construite.
+
+Autrement dit, `B` doit d'abord **passer par la recette**. Ce n'est pas une
+formalité administrative : c'est la règle « on construit une fois, on déploie
+deux fois » appliquée à la lettre — la production ne doit redéployer que des
+octets qu'on a vus tourner.
+
+```bash
+# 1. Sur votre poste : compléter docs/legal/*.md, commiter, POUSSER.
+#    images-publish publie alors les trois images du sha B.
+
+# 2. Sur le serveur : rafraîchir le clone, puis faire tourner B en recette.
+sudo git -C /srv/carlys/repo pull --ff-only
+sudo /srv/carlys/repo/scripts/server/deploy.sh staging <B>
+
+# 3. Vérifier que la page légale est bien complète EN RECETTE :
+#    https://app-staging.carlys.example/privacy — aucun [À COMPLÉTER].
+
+# 4. Actions → images-publish-prod → Run workflow, champ « sha » = B.
+#    Il refuse encore si un marqueur subsiste, et il vous les liste.
+
+# 5. Enfin, la bascule.
+```
+
+`/srv/carlys/staging/DEPLOYED` vaut désormais `B`, donc `promote.sh` sans
+argument promeut bien `B`. Il accepte aussi un sha explicite —
+`promote.sh <sha>` — mais s'en servir pour promouvoir autre chose que ce que
+la recette fait tourner contredit la règle ci-dessus.
+
+Le workflow vérifie au passage que les images d'API de ce sha existent déjà :
+la production **redéploie les octets éprouvés en recette, elle ne reconstruit
+rien**. Il construit ensuite l'admin garde armée et publie
 `ghcr.io/mimiflo/carlys-admin:sha-<sha12>-prod`.
 
 Puis, sur le serveur :
@@ -761,6 +884,16 @@ aucun `[À COMPLÉTER]` ne doit y apparaître.
 4. Éprouvez la recette.
 5. Lancez `images-publish-prod` sur ce SHA, puis `promote.sh`.
 
+**Si `deploy.sh` refuse avec « Image introuvable ».** Le sha n'a pas d'images :
+son exécution a été annulée — GitHub annule l'exécution en attente d'un groupe
+de concurrence dès qu'une nouvelle arrive, ce qui frappe les commits du
+*milieu* d'une rafale — ou le runner est tombé. La réparation n'est PAS de
+relancer `images-publish` sur la branche, qui publierait la tête et pas ce
+commit : Actions → `images-publish` → *Run workflow* → **renseignez le sha
+dans le champ prévu**. Le tag mouvant `staging` n'est pas déplacé dans ce cas.
+Rien n'a été déployé entre-temps : `deploy.sh` meurt avant de toucher
+l'environnement.
+
 **Pourquoi l'étape 2 n'est pas une formalité.** Ce qui est déployé par SHA, ce
 sont les **images**, et elles viennent du registre. Tout le reste vient du
 clone `/srv/carlys/repo`, qui ne bouge que si on l'y invite :
@@ -794,9 +927,26 @@ puisse dire quand.
 `pg_dump` des deux bases dans `/srv/carlys/backups/`, horodaté, rétention
 14 jours.
 
+**La rétention n'est appliquée QUE pour un environnement ayant produit un dump
+neuf et valide cette nuit-là.** Sans cette condition, une panne discrète —
+mot de passe changé dans le `.env` mais pas dans la base, disque plein — finit
+par effacer la dernière sauvegarde restaurable : quinze nuits d'échec, et le
+dernier dump valable franchit `-mtime +14`.
+
+> **Conséquence à connaître : des dumps qui s'accumulent au-delà de 14 jours
+> ne signalent PAS une purge en panne.** C'est le contraire — c'est le signe
+> que la sauvegarde nocturne échoue, et que le script protège ce qui reste.
+> Ne les supprimez surtout pas à la main : ce sont peut-être les derniers.
+> Cherchez la cause d'abord.
+
 ```bash
 ls -lh /srv/carlys/backups/ | tail -5
-sudo /srv/carlys/repo/scripts/server/backup.sh   # à la demande
+
+# Ce que la tâche de cette nuit a vraiment fait — c'est là que se lit un échec
+# silencieux, le courriel de cron finissant souvent dans un filtre :
+sudo journalctl -u cron --since yesterday | grep -i carlys
+
+sudo /srv/carlys/repo/scripts/server/backup.sh   # à la demande, sortie 1 si échec
 ```
 
 Une sauvegarde jamais restaurée n'est pas une sauvegarde : testez une
@@ -835,7 +985,7 @@ c'est ce champ qu'on suit d'une requête à l'autre.
 | `nginx -t` échoue sur un certificat | l'étape 6 a été faite avant que les DNS résolvent |
 | 502 sur tous les hôtes | aucun conteneur ne tourne : le déploiement a échoué ou n'a pas eu lieu |
 | 502 sur l'API seule | refus de démarrage sur une variable — `docker compose logs api` la nomme |
-| Le back-office s'affiche mais reste vide | image admin construite sans `CARLYS_DOMAIN` (étape 4) |
+| Le back-office s'affiche mais reste vide | l'image admin vise la mauvaise API. Trois causes, dans cet ordre : `CARLYS_DOMAIN` **mal formée** (avec `https://`, une barre finale ou un port — le workflow refuse les cas nets, pas tous) ; la variable posée APRÈS la construction de cette image, qui garde donc `localhost:3000` ; ou `CORS_ORIGINS` côté API qui ne couvre pas l'origine de l'admin, auquel cas la console du navigateur montre des erreurs CORS. Vérifiez la console avant tout : elle distingue les trois en une seconde |
 | Les liens des e-mails pointent en local | `PUBLIC_APP_URL` mal renseignée |
 | L'app mobile plante au lancement | `CARLYS_PUBLIC_WEB_BASE_URL` oubliée au build (étape 8) |
 | `promote.sh` dit que le tag `-prod` manque | les marqueurs légaux subsistent (étape 9.1) |

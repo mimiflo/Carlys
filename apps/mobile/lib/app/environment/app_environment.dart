@@ -131,8 +131,23 @@ class AppEnvironment {
   ///
   /// `development` et `demo` sont épargnés : le défaut y est le bon réglage,
   /// et la démo n'a pas de serveur du tout.
+  /// L'ADRESSE DE L'API EST CONTRÔLÉE PAR LA MÊME RÈGLE, et pour une raison
+  /// pire encore : son oubli ne se voit nulle part. Un build `production` sans
+  /// `CARLYS_API_BASE_URL` se compile, se lance, affiche son écran d'accueil —
+  /// puis chaque appel réseau part sur `http://localhost:3000`. Sur un
+  /// téléphone, cette adresse n'existe pas ; et Android bloque de toute façon
+  /// le trafic en clair en release. L'application paraît « lente », puis
+  /// « hors ligne », sans qu'aucun message ne nomme la cause. Le lien légal
+  /// mort, au moins, se voit à l'œil ; celui-ci ne se voit qu'au support.
   void assertUsable() {
     if (flavor == AppFlavor.development || flavor == AppFlavor.demo) return;
+    if (!_isPublicWebAddress(apiBaseUrl)) {
+      throw StateError(
+        'CARLYS_API_BASE_URL manque ou pointe en local pour le flavor '
+        '${flavor.name} : tous les appels réseau iraient sur « $apiBaseUrl ». '
+        'Relance avec --dart-define=CARLYS_API_BASE_URL=https://…',
+      );
+    }
     if (!_isPublicWebAddress(publicWebBaseUrl)) {
       throw StateError(
         'CARLYS_PUBLIC_WEB_BASE_URL manque ou pointe en local pour le flavor '
