@@ -243,12 +243,37 @@ refus :
    origine qui est contrôlée — une seule entrée en clair, fût-elle la
    troisième, suffit à faire refuser le démarrage, et le message la nomme.
 
-En revanche, ce qui **reste interne au réseau Compose** n'est pas concerné :
-`S3_ENDPOINT=http://minio:9000` et `SMTP_HOST=mailpit` passent parfaitement,
-en recette comme en production. Ce sont des adresses de conteneur, pas des
-adresses publiques.
+4. **Un `$` dans une valeur ouvre une substitution Compose.** C'est la règle
+   qui fait perdre une soirée, parce qu'elle échoue parfois *sans rien dire* :
+   `MDP=mot$de$passe` arrive dans le conteneur comme `mot`, et si le nom qui
+   suit le `$` existe côté hôte la substitution **réussit en silence** —
+   `mot$HOME/x` devient `mot/root/x`. Il faut **doubler chaque `$` en `$$`**.
+   Les recettes de ce guide (`openssl rand …`) n'en produisent jamais ; un mot
+   de passe fourni par un tiers, une empreinte `$2b$…` ou `$argon2id$…`, et
+   surtout `FIREBASE_SERVICE_ACCOUNT_JSON`, si.
 
-### Les valeurs qui doivent correspondre aux vhosts
+En revanche, ce qui **reste interne au réseau Compose** n'est pas concerné :
+`S3_ENDPOINT=http://minio:9000` passe parfaitement dans les deux
+environnements. C'est une adresse de conteneur, pas une adresse publique.
+
+`SMTP_HOST=mailpit`, en revanche, ne vaut **qu'en recette** : le service
+Mailpit est déclaré `profiles: ['staging']` dans `compose.yml`, et la
+production ne pose aucun profil — le conteneur n'y existe donc pas. Voir
+« Les e-mails de production » plus bas.
+
+### Une seule ligne commande les URL : `DOMAIN`
+
+Les deux modèles versionnés dérivent `PUBLIC_APP_URL`, `CORS_ORIGINS`,
+`S3_PUBLIC_BASE_URL` et `EMAIL_FROM` d'**une seule variable**, en tête de
+fichier :
+
+```bash
+DOMAIN=CHANGE_MOI_exemple.fr
+```
+
+N'écrivez donc pas les URL en dur : changez cette ligne, et les quatre autres
+suivent. Le tableau ci-dessous dit ce que le fichier doit **produire**, pour
+que vous puissiez le vérifier — pas ce qu'il faut recopier.
 
 | Variable | Recette | Production |
 | --- | --- | --- |
@@ -261,6 +286,14 @@ adresses publiques.
 des liens envoyés par e-mail et des retours Stripe. `TRUST_PROXY_HOPS=1` va de
 pair avec le Nginx unique de l'étape 6 — sans lui, la limitation de débit, le
 verrouillage de compte et l'audit ne voient que l'adresse du proxy.
+
+**Vérification, une fois les deux fichiers remplis** — aucune valeur d'exemple
+ne doit subsister :
+
+```bash
+grep -n 'CHANGE_MOI' /srv/carlys/staging/.env /srv/carlys/production/.env
+# → aucune ligne : les deux fichiers sont complets.
+```
 
 ### Les secrets, et ce qui se passe sans eux
 
@@ -282,8 +315,32 @@ d'empêcher le démarrage :
 | `ANTHROPIC_API_KEY` | le coach IA répond 503 |
 | `METRICS_TOKEN` | `/metrics` n'est pas exposé (il est de toute façon refusé par Nginx) |
 
+> **« Optionnel » veut dire ABSENT, pas vide.** Chacun de ces secrets est
+> déclaré `z.string().min(n).optional()` dans `env.schema.ts` : l'absence de
+> clé passe, mais `METRICS_TOKEN=` — la clé présente et vide — échoue sur
+> `min(16)` et **empêche l'API de démarrer**. Le réflexe naturel, laisser la
+> ligne en place en vidant sa valeur, est donc exactement le geste à ne pas
+> faire : **commentez la ligne ou supprimez-la**.
+
 Vous pouvez donc mettre la recette en ligne **sans aucun secret payant**, et
 les ajouter plus tard sans redéployer l'application mobile.
+
+### Les e-mails de production
+
+En recette, tout part dans Mailpit et rien ne sort de la machine. En
+production, il faut un vrai relais — et le schéma impose une contrainte qu'il
+vaut mieux découvrir maintenant que le jour de la bascule :
+
+> **Le schéma ne prévoit NI identifiant NI mot de passe SMTP.**
+> `env.schema.ts` ne déclare que `SMTP_HOST`, `SMTP_PORT` et `EMAIL_FROM` : il
+> n'existe pas de `SMTP_USER`, pas de `SMTP_PASSWORD`. Le relais doit donc
+> accepter ce serveur **sans authentification** — relais autorisé par adresse
+> IP, ou passerelle locale (Postfix en `relayhost`). Un fournisseur qui exige
+> `AUTH` sur le 587 ne fonctionnera pas en l'état.
+
+`EMAIL_FROM` doit par ailleurs appartenir au domaine, avec SPF et DKIM en
+place : sans quoi les messages de vérification d'adresse partent en
+indésirables, et l'inscription paraît cassée sans qu'aucun journal ne le dise.
 
 ---
 
@@ -646,9 +703,12 @@ Contrairement à la recette, la production a besoin des vraies valeurs :
   c'est Stripe qui encaisse, l'API ne fait qu'afficher.
 - **Firebase** : `FIREBASE_SERVICE_ACCOUNT_JSON`, le JSON complet du compte de
   service (console Firebase → Paramètres → Comptes de service).
-- **SMTP** : un vrai relais. Mailpit n'existe pas en production ; un
-  `SMTP_HOST` qui ne route nulle part rendrait la vérification d'adresse et la
-  réinitialisation de mot de passe silencieusement inopérantes.
+- **SMTP** : un vrai relais, **acceptant ce serveur sans authentification** —
+  la contrainte est détaillée au §5, « Les e-mails de production », et elle
+  écarte la plupart des fournisseurs grand public. Mailpit n'existe pas ici :
+  il est sous profil `staging`. Un `SMTP_HOST` qui ne route nulle part rendrait
+  la vérification d'adresse et la réinitialisation de mot de passe
+  **silencieusement** inopérantes.
 
 ### 9.3 Construire l'image de production, puis basculer
 
