@@ -140,7 +140,8 @@
         "barre",
         "banc"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "developpe-couche.png"
     },
     {
       "slug": "developpe-incline-halteres",
@@ -168,7 +169,8 @@
         "halteres",
         "banc"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "developpe-incline-halteres.png"
     },
     {
       "slug": "pompes",
@@ -197,7 +199,8 @@
       "equipment": [
         "poids-du-corps"
       ],
-      "hasPhoto": false
+      "hasPhoto": true,
+      "photoFile": "pompes.png"
     },
     {
       "slug": "ecarte-poulie-vis-a-vis",
@@ -223,7 +226,8 @@
       "equipment": [
         "poulie"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "ecarte-poulie-vis-a-vis.png"
     },
     {
       "slug": "developpe-incline",
@@ -253,7 +257,8 @@
         "barre",
         "banc"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "developpe-incline.png"
     },
     {
       "slug": "developpe-decline",
@@ -282,7 +287,8 @@
         "barre",
         "banc"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "developpe-decline.png"
     },
     {
       "slug": "developpe-couche-halteres",
@@ -311,7 +317,8 @@
         "halteres",
         "banc"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "developpe-couche-halteres.png"
     },
     {
       "slug": "developpe-decline-halteres",
@@ -338,7 +345,8 @@
         "halteres",
         "banc"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "developpe-decline-halteres.png"
     },
     {
       "slug": "chest-press-machine",
@@ -365,7 +373,8 @@
       "equipment": [
         "machine"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "chest-press-machine.png"
     },
     {
       "slug": "chest-press-incline-machine",
@@ -392,7 +401,8 @@
       "equipment": [
         "machine"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "chest-press-incline-machine.png"
     },
     {
       "slug": "ecarte-poulie-incline",
@@ -420,7 +430,8 @@
         "poulie",
         "banc"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "ecarte-poulie-incline.png"
     },
     {
       "slug": "ecarte-poulie-decline",
@@ -448,7 +459,8 @@
         "poulie",
         "banc"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "ecarte-poulie-decline.png"
     },
     {
       "slug": "pec-deck",
@@ -475,7 +487,8 @@
       "equipment": [
         "machine"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "pec-deck.png"
     },
     {
       "slug": "ecarte-couche-halteres",
@@ -502,7 +515,8 @@
         "halteres",
         "banc"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "ecarte-couche-halteres.png"
     },
     {
       "slug": "tractions",
@@ -529,7 +543,8 @@
       "equipment": [
         "barre-de-traction"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "tractions.webp"
     },
     {
       "slug": "rowing-barre",
@@ -556,7 +571,8 @@
       "equipment": [
         "barre"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "rowing-barre.webp"
     },
     {
       "slug": "tirage-vertical-poulie",
@@ -582,7 +598,8 @@
         "poulie",
         "machine"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "tirage-vertical-poulie.webp"
     },
     {
       "slug": "rowing-halteres-unilateral",
@@ -608,7 +625,8 @@
         "halteres",
         "banc"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "rowing-halteres-unilateral.webp"
     },
     {
       "slug": "tractions-prise-neutre",
@@ -635,7 +653,8 @@
       "equipment": [
         "barre-de-traction"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "tractions-prise-neutre.webp"
     },
     {
       "slug": "tractions-lestees",
@@ -663,7 +682,8 @@
       "equipment": [
         "barre-de-traction"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "tractions-lestees.webp"
     },
     {
       "slug": "tractions-assistees",
@@ -690,7 +710,8 @@
       "equipment": [
         "machine"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "tractions-assistees.webp"
     },
     {
       "slug": "tirage-vertical-prise-serree",
@@ -718,7 +739,8 @@
         "poulie",
         "machine"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "tirage-vertical-prise-serree.webp"
     },
     {
       "slug": "tirage-vertical-supination",
@@ -745,7 +767,8 @@
         "poulie",
         "machine"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "tirage-vertical-supination.webp"
     },
     {
       "slug": "tirage-vertical-prise-neutre",
@@ -772,7 +795,8 @@
         "poulie",
         "machine"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "tirage-vertical-prise-neutre.webp"
     },
     {
       "slug": "tirage-vertical-unilateral",
@@ -798,7 +822,8 @@
       "equipment": [
         "poulie"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "tirage-vertical-unilateral.webp"
     },
     {
       "slug": "rowing-barre-supination",
@@ -826,7 +851,8 @@
       "equipment": [
         "barre"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "rowing-barre-supination.webp"
     },
     {
       "slug": "pendlay-row",
@@ -854,7 +880,8 @@
       "equipment": [
         "barre"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "pendlay-row.webp"
     },
     {
       "slug": "rowing-t-bar",
@@ -883,7 +910,8 @@
         "barre",
         "machine"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "rowing-t-bar.webp"
     },
     {
       "slug": "meadows-row",
@@ -911,7 +939,8 @@
       "equipment": [
         "barre"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "meadows-row.webp"
     },
     {
       "slug": "rowing-halteres-banc-incline",
@@ -940,7 +969,8 @@
         "halteres",
         "banc"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "rowing-halteres-banc-incline.webp"
     },
     {
       "slug": "seal-row",
@@ -968,7 +998,8 @@
         "halteres",
         "banc"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "seal-row.webp"
     },
     {
       "slug": "rowing-assis-poulie-basse",
@@ -997,7 +1028,8 @@
         "poulie",
         "machine"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "rowing-assis-poulie-basse.webp"
     },
     {
       "slug": "rowing-poulie-basse-prise-neutre",
@@ -1023,7 +1055,8 @@
       "equipment": [
         "poulie"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "rowing-poulie-basse-prise-neutre.webp"
     },
     {
       "slug": "rowing-poulie-basse-prise-large",
@@ -1050,7 +1083,8 @@
       "equipment": [
         "poulie"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "rowing-poulie-basse-prise-large.webp"
     },
     {
       "slug": "rowing-poulie-basse-unilateral",
@@ -1076,7 +1110,8 @@
       "equipment": [
         "poulie"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "rowing-poulie-basse-unilateral.webp"
     },
     {
       "slug": "rowing-machine-appui-poitrine",
@@ -1104,7 +1139,8 @@
       "equipment": [
         "machine"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "rowing-machine-appui-poitrine.webp"
     },
     {
       "slug": "low-row-machine",
@@ -1130,7 +1166,8 @@
       "equipment": [
         "machine"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "low-row-machine.webp"
     },
     {
       "slug": "high-row-machine",
@@ -1156,7 +1193,8 @@
       "equipment": [
         "machine"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "high-row-machine.webp"
     },
     {
       "slug": "rowing-convergent-machine",
@@ -1182,7 +1220,8 @@
       "equipment": [
         "machine"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "rowing-convergent-machine.webp"
     },
     {
       "slug": "rowing-unilateral-machine",
@@ -1208,7 +1247,8 @@
       "equipment": [
         "machine"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "rowing-unilateral-machine.webp"
     },
     {
       "slug": "face-pull",
@@ -1235,7 +1275,8 @@
       "equipment": [
         "poulie"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "face-pull.webp"
     },
     {
       "slug": "reverse-pec-deck",
@@ -1262,7 +1303,8 @@
       "equipment": [
         "machine"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "reverse-pec-deck.webp"
     },
     {
       "slug": "pull-over-haltere",
@@ -1291,7 +1333,8 @@
         "halteres",
         "banc"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "pull-over-haltere.webp"
     },
     {
       "slug": "pull-over-poulie",
@@ -1318,7 +1361,8 @@
       "equipment": [
         "poulie"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "pull-over-poulie.webp"
     },
     {
       "slug": "pull-over-machine",
@@ -1344,7 +1388,8 @@
       "equipment": [
         "machine"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "pull-over-machine.webp"
     },
     {
       "slug": "shrugs-barre",
@@ -1371,7 +1416,8 @@
       "equipment": [
         "barre"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "shrugs-barre.webp"
     },
     {
       "slug": "shrugs-halteres",
@@ -1398,7 +1444,8 @@
       "equipment": [
         "halteres"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "shrugs-halteres.webp"
     },
     {
       "slug": "shrugs-machine",
@@ -1423,7 +1470,8 @@
       "equipment": [
         "machine"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "shrugs-machine.webp"
     },
     {
       "slug": "souleve-de-terre",
@@ -1453,7 +1501,8 @@
       "equipment": [
         "barre"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "souleve-de-terre.webp"
     },
     {
       "slug": "souleve-de-terre-sumo",
@@ -1482,7 +1531,8 @@
       "equipment": [
         "barre"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "souleve-de-terre-sumo.webp"
     },
     {
       "slug": "rack-pull",
@@ -1511,7 +1561,8 @@
       "equipment": [
         "barre"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "rack-pull.webp"
     },
     {
       "slug": "extensions-lombaires",
@@ -1540,7 +1591,8 @@
         "poids-du-corps",
         "banc"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "extensions-lombaires.webp"
     },
     {
       "slug": "developpe-militaire",
@@ -1567,7 +1619,8 @@
       "equipment": [
         "barre"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "developpe-militaire.webp"
     },
     {
       "slug": "elevations-laterales",
@@ -1590,7 +1643,8 @@
       "equipment": [
         "halteres"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "elevations-laterales.webp"
     },
     {
       "slug": "oiseau-halteres",
@@ -1616,7 +1670,8 @@
       "equipment": [
         "halteres"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "oiseau-halteres.webp"
     },
     {
       "slug": "developpe-militaire-halteres",
@@ -1643,7 +1698,8 @@
       "equipment": [
         "halteres"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "developpe-militaire-halteres.webp"
     },
     {
       "slug": "arnold-press",
@@ -1671,7 +1727,8 @@
         "halteres",
         "banc"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "arnold-press.webp"
     },
     {
       "slug": "push-press",
@@ -1699,7 +1756,8 @@
       "equipment": [
         "barre"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "push-press.webp"
     },
     {
       "slug": "developpe-epaules-machine",
@@ -1725,7 +1783,8 @@
       "equipment": [
         "machine"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "developpe-epaules-machine.webp"
     },
     {
       "slug": "developpe-epaules-debout-machine",
@@ -1751,7 +1810,8 @@
       "equipment": [
         "machine"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "developpe-epaules-debout-machine.webp"
     },
     {
       "slug": "developpe-epaules-incline-barre",
@@ -1779,7 +1839,8 @@
         "barre",
         "banc"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "developpe-epaules-incline-barre.webp"
     },
     {
       "slug": "developpe-epaules-incline-halteres",
@@ -1807,7 +1868,8 @@
         "halteres",
         "banc"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "developpe-epaules-incline-halteres.webp"
     },
     {
       "slug": "developpe-epaules-unilateral",
@@ -1834,7 +1896,8 @@
       "equipment": [
         "halteres"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "developpe-epaules-unilateral.webp"
     },
     {
       "slug": "landmine-press",
@@ -1861,7 +1924,8 @@
       "equipment": [
         "barre"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "landmine-press.webp"
     },
     {
       "slug": "z-press",
@@ -1889,7 +1953,8 @@
       "equipment": [
         "barre"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "z-press.webp"
     },
     {
       "slug": "elevations-frontales-barre",
@@ -1913,7 +1978,8 @@
       "equipment": [
         "barre"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "elevations-frontales-barre.webp"
     },
     {
       "slug": "elevations-frontales-halteres",
@@ -1937,7 +2003,8 @@
       "equipment": [
         "halteres"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "elevations-frontales-halteres.webp"
     },
     {
       "slug": "elevations-frontales-poulie",
@@ -1961,7 +2028,8 @@
       "equipment": [
         "poulie"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "elevations-frontales-poulie.webp"
     },
     {
       "slug": "elevations-frontales-disque",
@@ -1985,7 +2053,8 @@
       "equipment": [
         "disque"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "elevations-frontales-disque.webp"
     },
     {
       "slug": "elevations-laterales-poulie",
@@ -2009,7 +2078,8 @@
       "equipment": [
         "poulie"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "elevations-laterales-poulie.webp"
     },
     {
       "slug": "elevations-laterales-machine",
@@ -2033,7 +2103,8 @@
       "equipment": [
         "machine"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "elevations-laterales-machine.webp"
     },
     {
       "slug": "elevations-laterales-machine-unilateral",
@@ -2057,7 +2128,8 @@
       "equipment": [
         "machine"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "elevations-laterales-machine-unilateral.webp"
     },
     {
       "slug": "elevations-laterales-banc-incline",
@@ -2082,7 +2154,8 @@
         "halteres",
         "banc"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "elevations-laterales-banc-incline.webp"
     },
     {
       "slug": "elevations-laterales-unilateral",
@@ -2106,7 +2179,8 @@
       "equipment": [
         "halteres"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "elevations-laterales-unilateral.webp"
     },
     {
       "slug": "elevations-laterales-coude-flechi",
@@ -2129,7 +2203,8 @@
       "equipment": [
         "halteres"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "elevations-laterales-coude-flechi.webp"
     },
     {
       "slug": "elevations-laterales-elastique",
@@ -2153,7 +2228,8 @@
       "equipment": [
         "elastique"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "elevations-laterales-elastique.webp"
     },
     {
       "slug": "elevations-laterales-penche",
@@ -2177,7 +2253,8 @@
       "equipment": [
         "halteres"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "elevations-laterales-penche.webp"
     },
     {
       "slug": "elevations-laterales-poulie-penche",
@@ -2201,7 +2278,8 @@
       "equipment": [
         "poulie"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "elevations-laterales-poulie-penche.webp"
     },
     {
       "slug": "cable-y-raise",
@@ -2227,7 +2305,8 @@
       "equipment": [
         "poulie"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "cable-y-raise.webp"
     },
     {
       "slug": "tirage-menton-barre",
@@ -2255,7 +2334,8 @@
       "equipment": [
         "barre"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "tirage-menton-barre.webp"
     },
     {
       "slug": "tirage-menton-halteres",
@@ -2282,7 +2362,8 @@
       "equipment": [
         "halteres"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "tirage-menton-halteres.webp"
     },
     {
       "slug": "tirage-menton-prise-large",
@@ -2308,7 +2389,8 @@
       "equipment": [
         "barre"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "tirage-menton-prise-large.webp"
     },
     {
       "slug": "elevations-arriere-banc-incline",
@@ -2336,7 +2418,8 @@
         "halteres",
         "banc"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "elevations-arriere-banc-incline.webp"
     },
     {
       "slug": "elevations-arriere-poulie",
@@ -2362,7 +2445,8 @@
       "equipment": [
         "poulie"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "elevations-arriere-poulie.webp"
     },
     {
       "slug": "elevations-arriere-unilateral",
@@ -2388,7 +2472,8 @@
       "equipment": [
         "halteres"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "elevations-arriere-unilateral.webp"
     },
     {
       "slug": "reverse-fly-poulie-croisee",
@@ -2415,7 +2500,8 @@
       "equipment": [
         "poulie"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "reverse-fly-poulie-croisee.webp"
     },
     {
       "slug": "reverse-fly-elastique",
@@ -2441,7 +2527,8 @@
       "equipment": [
         "elastique"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "reverse-fly-elastique.webp"
     },
     {
       "slug": "rear-delt-row",
@@ -2468,7 +2555,8 @@
       "equipment": [
         "halteres"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "rear-delt-row.webp"
     },
     {
       "slug": "tirage-horizontal-buste-penche",
@@ -2493,7 +2581,8 @@
       "equipment": [
         "poulie"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "tirage-horizontal-buste-penche.webp"
     },
     {
       "slug": "face-pull-barre",
@@ -2520,7 +2609,8 @@
       "equipment": [
         "poulie"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "face-pull-barre.webp"
     },
     {
       "slug": "curl-biceps-halteres",
@@ -2545,7 +2635,8 @@
       "equipment": [
         "halteres"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "curl-biceps-halteres.webp"
     },
     {
       "slug": "curl-barre",
@@ -2571,7 +2662,8 @@
       "equipment": [
         "barre"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "curl-barre.webp"
     },
     {
       "slug": "curl-ez-barre",
@@ -2598,7 +2690,8 @@
       "equipment": [
         "barre-ez"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "curl-ez-barre.webp"
     },
     {
       "slug": "curl-alterne",
@@ -2625,7 +2718,8 @@
       "equipment": [
         "halteres"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "curl-alterne.webp"
     },
     {
       "slug": "curl-incline-halteres",
@@ -2653,7 +2747,8 @@
         "halteres",
         "banc"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "curl-incline-halteres.webp"
     },
     {
       "slug": "curl-concentration",
@@ -2679,7 +2774,8 @@
         "halteres",
         "banc"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "curl-concentration.webp"
     },
     {
       "slug": "curl-pupitre",
@@ -2707,7 +2803,8 @@
         "barre-ez",
         "banc"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "curl-pupitre.webp"
     },
     {
       "slug": "curl-pupitre-halteres",
@@ -2736,7 +2833,8 @@
         "halteres",
         "banc"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "curl-pupitre-halteres.webp"
     },
     {
       "slug": "curl-spider",
@@ -2762,7 +2860,8 @@
         "halteres",
         "banc"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "curl-spider.webp"
     },
     {
       "slug": "curl-inverse",
@@ -2788,7 +2887,8 @@
       "equipment": [
         "barre"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "curl-inverse.webp"
     },
     {
       "slug": "curl-poulie-barre-droite",
@@ -2815,7 +2915,8 @@
       "equipment": [
         "poulie"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "curl-poulie-barre-droite.webp"
     },
     {
       "slug": "curl-poulie-corde",
@@ -2842,7 +2943,8 @@
       "equipment": [
         "poulie"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "curl-poulie-corde.webp"
     },
     {
       "slug": "tractions-supinees",
@@ -2869,7 +2971,8 @@
       "equipment": [
         "barre-de-traction"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "tractions-supinees.webp"
     },
     {
       "slug": "curl-marteau",
@@ -2894,7 +2997,8 @@
       "equipment": [
         "halteres"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "curl-marteau.webp"
     },
     {
       "slug": "dips",
@@ -2920,7 +3024,8 @@
       "equipment": [
         "poids-du-corps"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "dips.webp"
     },
     {
       "slug": "extension-triceps-poulie",
@@ -2943,7 +3048,8 @@
       "equipment": [
         "poulie"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "extension-triceps-poulie.webp"
     },
     {
       "slug": "developpe-incline-prise-serree",
@@ -2970,7 +3076,8 @@
         "barre",
         "banc"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "developpe-incline-prise-serree.webp"
     },
     {
       "slug": "dips-buste-penche",
@@ -2997,7 +3104,8 @@
       "equipment": [
         "poids-du-corps"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "dips-buste-penche.webp"
     },
     {
       "slug": "dips-sur-banc",
@@ -3025,7 +3133,8 @@
         "poids-du-corps",
         "banc"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "dips-sur-banc.webp"
     },
     {
       "slug": "dips-machine",
@@ -3052,7 +3161,8 @@
       "equipment": [
         "machine"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "dips-machine.webp"
     },
     {
       "slug": "pompes-diamant",
@@ -3080,7 +3190,8 @@
       "equipment": [
         "poids-du-corps"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "pompes-diamant.webp"
     },
     {
       "slug": "pompes-prise-serree",
@@ -3106,7 +3217,8 @@
       "equipment": [
         "poids-du-corps"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "pompes-prise-serree.webp"
     },
     {
       "slug": "barre-au-front-barre-droite",
@@ -3132,7 +3244,8 @@
         "barre",
         "banc"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "barre-au-front-barre-droite.webp"
     },
     {
       "slug": "barre-au-front-ez",
@@ -3157,7 +3270,8 @@
         "barre-ez",
         "banc"
       ],
-      "hasPhoto": false
+      "hasPhoto": false,
+      "photoFile": null
     },
     {
       "slug": "extensions-allonge-halteres",
@@ -3182,7 +3296,8 @@
         "halteres",
         "banc"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "extensions-allonge-halteres.webp"
     },
     {
       "slug": "extension-allonge-unilaterale",
@@ -3207,7 +3322,8 @@
         "halteres",
         "banc"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "extension-allonge-unilaterale.webp"
     },
     {
       "slug": "extension-au-dessus-tete-haltere",
@@ -3231,7 +3347,8 @@
         "halteres",
         "banc"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "extension-au-dessus-tete-haltere.webp"
     },
     {
       "slug": "extension-au-dessus-tete-barre-ez",
@@ -3255,7 +3372,8 @@
         "barre-ez",
         "banc"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "extension-au-dessus-tete-barre-ez.webp"
     },
     {
       "slug": "extension-au-dessus-tete-poulie",
@@ -3279,7 +3397,8 @@
       "equipment": [
         "poulie"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "extension-au-dessus-tete-poulie.webp"
     },
     {
       "slug": "extension-corde-au-dessus-tete",
@@ -3303,7 +3422,8 @@
       "equipment": [
         "poulie"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "extension-corde-au-dessus-tete.webp"
     },
     {
       "slug": "pushdown-barre-droite",
@@ -3326,7 +3446,8 @@
       "equipment": [
         "poulie"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "pushdown-barre-droite.webp"
     },
     {
       "slug": "pushdown-barre-v",
@@ -3349,7 +3470,8 @@
       "equipment": [
         "poulie"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "pushdown-barre-v.webp"
     },
     {
       "slug": "pushdown-prise-inversee",
@@ -3374,7 +3496,8 @@
       "equipment": [
         "poulie"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "pushdown-prise-inversee.webp"
     },
     {
       "slug": "pushdown-unilateral",
@@ -3398,7 +3521,8 @@
       "equipment": [
         "poulie"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "pushdown-unilateral.webp"
     },
     {
       "slug": "kickback-haltere",
@@ -3422,7 +3546,8 @@
       "equipment": [
         "halteres"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "kickback-haltere.webp"
     },
     {
       "slug": "kickback-poulie",
@@ -3446,7 +3571,8 @@
       "equipment": [
         "poulie"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "kickback-poulie.webp"
     },
     {
       "slug": "tate-press",
@@ -3472,7 +3598,8 @@
         "halteres",
         "banc"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "tate-press.webp"
     },
     {
       "slug": "jm-press",
@@ -3500,7 +3627,8 @@
         "barre",
         "banc"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "jm-press.webp"
     },
     {
       "slug": "squat-barre",
@@ -3529,7 +3657,8 @@
       "equipment": [
         "barre"
       ],
-      "hasPhoto": false
+      "hasPhoto": false,
+      "photoFile": null
     },
     {
       "slug": "squat-gobelet",
@@ -3556,7 +3685,8 @@
       "equipment": [
         "halteres"
       ],
-      "hasPhoto": false
+      "hasPhoto": false,
+      "photoFile": null
     },
     {
       "slug": "fentes-marchees",
@@ -3584,7 +3714,8 @@
         "poids-du-corps",
         "halteres"
       ],
-      "hasPhoto": false
+      "hasPhoto": false,
+      "photoFile": null
     },
     {
       "slug": "presse-a-cuisses",
@@ -3608,7 +3739,8 @@
       "equipment": [
         "machine"
       ],
-      "hasPhoto": false
+      "hasPhoto": false,
+      "photoFile": null
     },
     {
       "slug": "souleve-de-terre-roumain",
@@ -3635,7 +3767,8 @@
       "equipment": [
         "barre"
       ],
-      "hasPhoto": false
+      "hasPhoto": false,
+      "photoFile": null
     },
     {
       "slug": "leg-curl-machine",
@@ -3658,7 +3791,8 @@
       "equipment": [
         "machine"
       ],
-      "hasPhoto": false
+      "hasPhoto": false,
+      "photoFile": null
     },
     {
       "slug": "good-morning",
@@ -3685,7 +3819,8 @@
       "equipment": [
         "barre"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "good-morning.webp"
     },
     {
       "slug": "hip-thrust",
@@ -3711,7 +3846,8 @@
         "barre",
         "banc"
       ],
-      "hasPhoto": false
+      "hasPhoto": false,
+      "photoFile": null
     },
     {
       "slug": "pont-fessier",
@@ -3738,7 +3874,8 @@
       "equipment": [
         "tapis"
       ],
-      "hasPhoto": false
+      "hasPhoto": false,
+      "photoFile": null
     },
     {
       "slug": "mollets-debout",
@@ -3762,7 +3899,8 @@
       "equipment": [
         "poids-du-corps"
       ],
-      "hasPhoto": false
+      "hasPhoto": false,
+      "photoFile": null
     },
     {
       "slug": "planche",
@@ -3789,7 +3927,8 @@
       "equipment": [
         "tapis"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "planche.webp"
     },
     {
       "slug": "crunch",
@@ -3812,7 +3951,8 @@
       "equipment": [
         "tapis"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "crunch.webp"
     },
     {
       "slug": "releve-de-jambes-suspendu",
@@ -3837,7 +3977,8 @@
       "equipment": [
         "barre-de-traction"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "releve-de-jambes-suspendu.webp"
     },
     {
       "slug": "burpees",
@@ -3865,7 +4006,8 @@
       "equipment": [
         "poids-du-corps"
       ],
-      "hasPhoto": false
+      "hasPhoto": false,
+      "photoFile": null
     },
     {
       "slug": "mountain-climbers",
@@ -3892,7 +4034,8 @@
       "equipment": [
         "poids-du-corps"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "mountain-climbers.webp"
     },
     {
       "slug": "crunch-incline",
@@ -3915,7 +4058,8 @@
       "equipment": [
         "banc"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "crunch-incline.webp"
     },
     {
       "slug": "crunch-decline",
@@ -3938,7 +4082,8 @@
       "equipment": [
         "banc"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "crunch-decline.webp"
     },
     {
       "slug": "crunch-poulie",
@@ -3962,7 +4107,8 @@
       "equipment": [
         "poulie"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "crunch-poulie.webp"
     },
     {
       "slug": "sit-up-decline",
@@ -3987,7 +4133,8 @@
       "equipment": [
         "banc"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "sit-up-decline.webp"
     },
     {
       "slug": "toe-touch",
@@ -4011,7 +4158,8 @@
       "equipment": [
         "tapis"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "toe-touch.webp"
     },
     {
       "slug": "v-up",
@@ -4037,7 +4185,8 @@
       "equipment": [
         "tapis"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "v-up.webp"
     },
     {
       "slug": "dragon-flag",
@@ -4064,7 +4213,8 @@
       "equipment": [
         "banc"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "dragon-flag.webp"
     },
     {
       "slug": "releves-de-jambes-au-sol",
@@ -4088,7 +4238,8 @@
       "equipment": [
         "tapis"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "releves-de-jambes-au-sol.webp"
     },
     {
       "slug": "reverse-crunch",
@@ -4112,7 +4263,8 @@
       "equipment": [
         "tapis"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "reverse-crunch.webp"
     },
     {
       "slug": "releves-de-genoux-suspendu",
@@ -4137,7 +4289,8 @@
       "equipment": [
         "barre-de-traction"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "releves-de-genoux-suspendu.webp"
     },
     {
       "slug": "flutter-kicks",
@@ -4163,7 +4316,8 @@
       "equipment": [
         "tapis"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "flutter-kicks.webp"
     },
     {
       "slug": "bicycle-crunch",
@@ -4187,7 +4341,8 @@
       "equipment": [
         "tapis"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "bicycle-crunch.webp"
     },
     {
       "slug": "cross-body-crunch",
@@ -4211,7 +4366,8 @@
       "equipment": [
         "tapis"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "cross-body-crunch.webp"
     },
     {
       "slug": "releves-de-genoux-lateraux",
@@ -4237,7 +4393,8 @@
       "equipment": [
         "barre-de-traction"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "releves-de-genoux-lateraux.webp"
     },
     {
       "slug": "russian-twist",
@@ -4262,7 +4419,8 @@
       "equipment": [
         "medecine-ball"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "russian-twist.webp"
     },
     {
       "slug": "woodchopper",
@@ -4289,7 +4447,8 @@
       "equipment": [
         "poulie"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "woodchopper.webp"
     },
     {
       "slug": "pallof-press",
@@ -4315,7 +4474,8 @@
       "equipment": [
         "poulie"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "pallof-press.webp"
     },
     {
       "slug": "gainage-lateral",
@@ -4343,7 +4503,8 @@
       "equipment": [
         "tapis"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "gainage-lateral.webp"
     },
     {
       "slug": "hollow-body-hold",
@@ -4369,7 +4530,8 @@
       "equipment": [
         "tapis"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "hollow-body-hold.webp"
     },
     {
       "slug": "gainage-sur-ballon",
@@ -4396,7 +4558,8 @@
       "equipment": [
         "ballon"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "gainage-sur-ballon.webp"
     },
     {
       "slug": "plank-shoulder-tap",
@@ -4422,7 +4585,8 @@
       "equipment": [
         "tapis"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "plank-shoulder-tap.webp"
     },
     {
       "slug": "plank-jack",
@@ -4449,7 +4613,8 @@
       "equipment": [
         "tapis"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "plank-jack.webp"
     },
     {
       "slug": "rouleau-abdominal",
@@ -4476,7 +4641,8 @@
       "equipment": [
         "rouleau"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "rouleau-abdominal.webp"
     },
     {
       "slug": "rouleau-abdominal-debout",
@@ -4503,7 +4669,8 @@
       "equipment": [
         "rouleau"
       ],
-      "hasPhoto": true
+      "hasPhoto": true,
+      "photoFile": "rouleau-abdominal-debout.webp"
     },
     {
       "slug": "balancier-kettlebell",
@@ -4531,7 +4698,8 @@
       "equipment": [
         "kettlebell"
       ],
-      "hasPhoto": false
+      "hasPhoto": false,
+      "photoFile": null
     },
     {
       "slug": "etirement-chat-vache",
@@ -4558,7 +4726,8 @@
       "equipment": [
         "tapis"
       ],
-      "hasPhoto": false
+      "hasPhoto": false,
+      "photoFile": null
     },
     {
       "slug": "etirement-ischio-debout",
@@ -4585,7 +4754,8 @@
       "equipment": [
         "poids-du-corps"
       ],
-      "hasPhoto": false
+      "hasPhoto": false,
+      "photoFile": null
     }
   ]
 }

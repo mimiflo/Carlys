@@ -92,6 +92,7 @@ Future<DemoCatalog> _read() async {
       in (json['exercises'] as List<dynamic>)
           .whereType<Map<String, dynamic>>()) {
     final slug = entry['slug'] as String;
+    final photoFile = entry['photoFile'] as String? ?? '$slug.webp';
     final primary = groups[entry['primary'] as String];
     final secondary = (entry['secondary'] as List<dynamic>)
         .whereType<String>()
@@ -113,7 +114,7 @@ Future<DemoCatalog> _read() async {
             .nonNulls
             .toList(),
         imageUrl: (entry['hasPhoto'] as bool? ?? false)
-            ? '${assetImageScheme}assets/demo/exercises/$slug.webp'
+            ? '${assetImageScheme}assets/demo/exercises/$photoFile'
             : null,
         description: entry['description'] as String,
         instructions: (entry['instructions'] as List<dynamic>)
