@@ -145,11 +145,34 @@ info "  $IMG_ADMIN_PROD"
 if [ -n "$CURRENT_PROD" ]; then
   info "En cas d'échec de santé, retour automatique sur $CURRENT_PROD."
 fi
-printf '\n   Recopier le sha pour confirmer (%s), ou Entrée pour annuler : ' "$SHA"
-read -r answer || answer=''
-if [ "$answer" != "$SHA" ]; then
-  printf '\n%s Promotion annulée — rien n'"'"'a été déployé.%s\n' "$_c_yellow" "$_c_off"
-  exit 1
+# ACCORD DONNÉ D'AVANCE, pour la mise à jour autonome. `carlysctl update
+# production` ne peut pas taper au clavier ; il pose alors
+# CARLYS_PROMOTE_ASSUME_YES au sha qu'il a lui-même calculé.
+#
+# La variable porte LE SHA, et pas « oui » ou « 1 », et ce n'est pas une
+# coquetterie : un accord général signerait n'importe quelle promotion, y
+# compris celle d'un sha que l'appelant n'a jamais examiné. Ici l'accord nomme
+# ce qu'il approuve, et une divergence entre les deux ARRÊTE tout — c'est
+# exactement le cas où quelque chose a changé entre la décision et l'exécution.
+#
+# L'accord humain, lui, n'est pas ici : c'est CARLYS_AUTO_UPDATE=oui, posé une
+# fois à la main dans le .env de production. Voir scripts/server/_update.sh.
+if [ -n "${CARLYS_PROMOTE_ASSUME_YES:-}" ]; then
+  [ "$CARLYS_PROMOTE_ASSUME_YES" = "$SHA" ] || die \
+    "L'accord fourni ne porte pas sur ce sha — promotion refusée." \
+    "  accord   : $CARLYS_PROMOTE_ASSUME_YES" \
+    "  à promouvoir : $SHA" \
+    "Rien n'a été déployé. Un accord donné d'avance doit nommer exactement le" \
+    "sha qu'il approuve ; s'ils diffèrent, c'est que l'état a changé entre la" \
+    "décision et son exécution."
+  ok "accord fourni par l'appelant pour $SHA — pas de saisie"
+else
+  printf '\n   Recopier le sha pour confirmer (%s), ou Entrée pour annuler : ' "$SHA"
+  read -r answer || answer=''
+  if [ "$answer" != "$SHA" ]; then
+    printf '\n%s Promotion annulée — rien n'"'"'a été déployé.%s\n' "$_c_yellow" "$_c_off"
+    exit 1
+  fi
 fi
 
 # ── 4. Déploiement ─────────────────────────────────────────────────────────

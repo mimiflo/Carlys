@@ -105,6 +105,36 @@ api_replica_ports() {
   fi
 }
 
+# Attente BORNÉE que les exemplaires attendus soient sains.
+#
+# POURQUOI ELLE EST INDISPENSABLE, et c'est un essai qui l'a montré : sans
+# elle, `up -d` rend la main dès que Docker a DÉMARRÉ les conteneurs, alors que
+# leur sonde est encore en « starting ». `api_replica_ports` — qui privilégie
+# à raison les exemplaires sains — ne voyait donc que les anciens, l'amont
+# Nginx était réécrit à l'identique (« déjà à jour »), et le nouvel exemplaire
+# ne recevait de trafic qu'au passage de supervision SUIVANT. Une montée en
+# charge décidée à l'instant T ne prenait effet qu'à T + un intervalle de
+# minuterie : exactement le retard qu'on cherchait à supprimer.
+#
+# Bornée, et non bloquante : si un exemplaire ne devient jamais sain, on pose
+# quand même l'amont avec ceux qui le sont. Servir avec moins d'exemplaires
+# que prévu vaut mieux que ne pas servir du tout, et `heal` verra l'écart.
+api_attendre_exemplaires_sains() {
+  local env_name="$1" file="$2" cible="$3" tentatives delai i sains
+  tentatives="${CARLYS_REPLICA_HEALTH_TRIES:-45}"
+  delai="${CARLYS_REPLICA_HEALTH_DELAY:-2}"
+  for ((i = 0; i < tentatives; i++)); do
+    sains="$(api_replica_ports "$env_name" "$file" | wc -l)"
+    if [ "$sains" -ge "$cible" ]; then
+      return 0
+    fi
+    sleep "$delai"
+  done
+  warn "seulement $(api_replica_ports "$env_name" "$file" | wc -l) exemplaire(s) sain(s) sur $cible après $((tentatives * delai)) s"
+  warn "  l'amont Nginx va être posé avec ceux qui répondent ; voir carlysctl status $env_name"
+  return 0
+}
+
 # ── L'amont Nginx ───────────────────────────────────────────────────────────
 nginx_upstream_name() { printf 'carlys_api_%s' "$1"; }
 nginx_upstream_file() { printf '%s/carlys-%s-api-upstream.conf' "$CARLYS_NGINX_CONF_DIR" "$1"; }

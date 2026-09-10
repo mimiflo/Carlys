@@ -1,0 +1,280 @@
+#!/usr/bin/env bash
+# carlysctl — l'orchestrateur de l'infrastructure Carlys.
+#
+#     carlysctl <commande> [environnement] [options]
+#
+# POURQUOI UN POINT D'ENTRÉE UNIQUE. Le serveur portait déjà quatre scripts
+# (setup, deploy, promote, backup), chacun juste, chacun à connaître. Ce qui
+# manquait n'était pas une cinquième commande : c'était UN endroit qui sache
+# répondre à « est-ce que ça va ? » et « fais ce qu'il faut ». Les quatre
+# scripts existants ne disparaissent pas — `carlysctl deploy` les appelle. On
+# ne les recopie pas non plus : la logique de déploiement, de promotion et de
+# sauvegarde reste chez eux, et ce fichier ne fait que router.
+#
+# CE FICHIER EST MINCE, ET DOIT LE RESTER. Il lit les arguments, vérifie
+# l'environnement, appelle une fonction. Tout ce qui décide vit à côté :
+#   _replicas.sh  exemplaires et amont Nginx
+#   _metrics.sh   lecture de /metrics
+#   _state.sh     mémoire entre deux passages
+#   _scale.sh     décision de mise à l'échelle
+#   _heal.sh      réparation, et son plafond
+#   _update.sh    mise à jour autonome, et ce qui l'autorise
+#   _status.sh    l'état des lieux
+set -euo pipefail
+
+# shellcheck source=scripts/server/_common.sh
+. "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd -P)/_common.sh"
+
+usage() {
+  cat >&2 <<'FIN'
+carlysctl — orchestrateur de l'infrastructure Carlys
+
+REGARDER
+  carlysctl status [staging|production]   état complet (défaut : les deux)
+  carlysctl doctor                        vérifie les préalables de la machine
+
+AGIR À LA MAIN
+  carlysctl deploy <env> <sha>            déploie un sha (appelle deploy.sh)
+  carlysctl promote [sha]                 promeut en production (promote.sh)
+  carlysctl backup                        sauvegarde (backup.sh)
+  carlysctl scale <env> <n>               fixe le nombre d'exemplaires d'API
+  carlysctl heal <env>                    répare ce qui est tombé
+  carlysctl update <env>                  applique la mise à jour, si activée
+
+LAISSER FAIRE
+  carlysctl autoscale <env> [--appliquer] décide la taille ; n'agit qu'avec
+                                          --appliquer
+  carlysctl supervise [env]               UN passage complet : réparation,
+                                          mise à l'échelle, mise à jour.
+                                          C'est ce que lance la minuterie
+                                          systemd.
+
+Toutes les commandes acceptent CARLYS_ROOT pour travailler contre une autre
+racine que /srv/carlys — c'est ce qui permet de les répéter hors serveur.
+FIN
+  exit 2
+}
+
+# ── Gardes communes ─────────────────────────────────────────────────────────
+environnement_requis() {
+  local nom
+  nom="$(require_env_name "${1-}")"
+  require_env_file "$nom" >/dev/null
+  printf '%s' "$nom"
+}
+
+# Les deux environnements, dans l'ordre où on veut les voir : la recette
+# d'abord, parce que c'est elle qu'on regarde avant de toucher la production.
+tous_les_environnements() {
+  local nom
+  for nom in staging production; do
+    [ -f "$(env_file "$nom")" ] && printf '%s\n' "$nom"
+  done
+}
+
+# ── Commandes ───────────────────────────────────────────────────────────────
+cmd_status() {
+  local nom
+  if [ -n "${1-}" ]; then
+    status_env "$(environnement_requis "$1")"
+  else
+    while read -r nom; do status_env "$nom"; done < <(tous_les_environnements)
+  fi
+  status_machine
+  printf '\n'
+}
+
+cmd_scale() {
+  local env_name cible
+  env_name="$(environnement_requis "${1-}")"
+  cible="${2-}"
+  case "$cible" in
+    '' | *[!0-9]*) die "Nombre d'exemplaires attendu : carlysctl scale $env_name <n>" ;;
+  esac
+  require_commands docker
+  require_compose_file
+  lock_env "$env_name"
+  scale_apply "$env_name" "$(env_file "$env_name")" "$cible"
+}
+
+cmd_autoscale() {
+  local env_name file appliquer=non
+  env_name="$(environnement_requis "${1-}")"
+  [ "${2-}" = '--appliquer' ] && appliquer=oui
+  file="$(env_file "$env_name")"
+  require_commands docker curl
+  require_compose_file
+  autoscale_passage "$env_name" "$file" "$appliquer"
+}
+
+# Le corps partagé par `autoscale` et par `supervise`. Il MESURE, DÉCIDE, puis
+# agit — ou se contente de dire ce qu'il ferait.
+#
+# L'échantillon est inscrit dans l'état À CHAQUE passage, y compris quand on
+# n'applique pas : c'est lui qui permettra de calculer un débit au passage
+# suivant. Ne l'écrire qu'en cas d'action rendrait le premier passage utile
+# éternellement inutile.
+autoscale_passage() {
+  local env_name="$1" file="$2" appliquer="$3"
+  local resume precedent taux debit latence actuel decision cible verdict raison votes
+
+  resume="$(metrics_summary "$env_name" "$file")"
+  precedent="$(state_get "$env_name" mesures '')"
+  taux="$(metrics_rate "$precedent" "$resume")"
+  debit="$(printf '%s' "$taux" | awk '{print $1}')"
+  latence="$(printf '%s' "$taux" | awk '{print $2}')"
+  state_set "$env_name" mesures "$resume"
+
+  actuel="$(api_replica_ports "$env_name" "$file" | wc -l)"
+  # Aucun exemplaire en vie : ce n'est pas un problème de taille, c'est une
+  # panne. La mise à l'échelle n'a rien à dire ici — `heal` si.
+  if [ "$actuel" -eq 0 ]; then
+    warn "aucun exemplaire d'API en vie : mise à l'échelle sans objet (voir carlysctl heal $env_name)"
+    return 0
+  fi
+
+  decision="$(scale_decide "$env_name" "$file" "$actuel" \
+    "$(metrics_field "$resume" utilisateurs)" "$debit" "$latence")"
+  cible="$(printf '%s' "$decision" | awk '{print $1}')"
+  verdict="$(printf '%s' "$decision" | awk '{print $2}')"
+  raison="$(printf '%s' "$decision" | awk '{print $3}')"
+  votes="$(printf '%s' "$decision" | awk '{print $4}')"
+  state_set "$env_name" votes_baisse "${votes:-0}"
+
+  info "exemplaires $actuel → $cible ($verdict, $raison)"
+  info "  utilisateurs=$(metrics_field "$resume" utilisateurs) débit=${debit:-?} req/s latence=${latence:-?} ms"
+
+  case "$verdict" in
+    monter | descendre)
+      if [ "$appliquer" = oui ]; then
+        lock_env "$env_name"
+        scale_apply "$env_name" "$file" "$cible"
+      else
+        info "  (--appliquer absent : rien n'a été changé)"
+      fi
+      ;;
+  esac
+}
+
+cmd_heal() {
+  local env_name file
+  env_name="$(environnement_requis "${1-}")"
+  file="$(env_file "$env_name")"
+  require_commands docker
+  require_compose_file
+  lock_env "$env_name"
+  heal_run "$env_name" "$file"
+}
+
+cmd_update() {
+  local env_name file
+  env_name="$(environnement_requis "${1-}")"
+  file="$(env_file "$env_name")"
+  require_compose_file
+  # Pas de `lock_env` ici : deploy.sh et promote.sh prennent le verrou
+  # eux-mêmes, et le prendre deux fois avec `flock` sur le même descripteur
+  # bloquerait le script sur son propre verrou.
+  update_run "$env_name" "$file"
+}
+
+# UN passage de supervision. L'ordre n'est pas négociable :
+#
+#   1. RÉPARER d'abord. Mesurer une pile à moitié tombée donne un débit et un
+#      nombre d'utilisateurs qui ne veulent rien dire, et la mise à l'échelle
+#      en tirerait la conclusion inverse de la bonne — moins de trafic reçu
+#      parce que moins d'exemplaires pour le recevoir, donc « réduisons ».
+#   2. METTRE À L'ÉCHELLE ensuite, sur une pile entière.
+#   3. METTRE À JOUR en dernier. Un déploiement recrée les conteneurs :
+#      le faire avant rendrait caduques les deux étapes précédentes.
+cmd_supervise() {
+  local env_name
+  if [ -n "${1-}" ]; then
+    supervise_un "$(environnement_requis "$1")"
+  else
+    while read -r env_name; do supervise_un "$env_name"; done < <(tous_les_environnements)
+  fi
+}
+
+supervise_un() {
+  local env_name="$1" file
+  file="$(env_file "$env_name")"
+  step "Supervision de « $env_name »"
+
+  # Chaque étape est isolée : un `heal` qui échoue (plafond atteint) ne doit
+  # pas empêcher la mise à jour de tourner, et inversement. Le code de retour
+  # global reste 0 — c'est une minuterie qui appelle, et un échec systemd
+  # répété ne dirait rien de plus que les avertissements déjà journalisés.
+  heal_run "$env_name" "$file" || true
+  autoscale_passage "$env_name" "$file" oui || true
+  update_run "$env_name" "$file" || true
+}
+
+# Vérifie que la machine a de quoi faire tourner tout ça. Volontairement
+# bavard sur ce qui MANQUE, muet sur ce qui va.
+cmd_doctor() {
+  local manque=0 outil env_name file
+  step "Outils"
+  for outil in docker curl git flock awk nginx; do
+    if command -v "$outil" >/dev/null 2>&1; then
+      ok "$outil"
+    else
+      warn "$outil ABSENT"; manque=1
+    fi
+  done
+  if docker compose version >/dev/null 2>&1; then ok 'plugin docker compose'
+  else warn 'plugin docker compose ABSENT'; manque=1; fi
+
+  step "Fichiers"
+  if [ -f "$CARLYS_COMPOSE_FILE" ]; then
+    ok "compose : $CARLYS_COMPOSE_FILE"
+  else
+    warn "compose introuvable : $CARLYS_COMPOSE_FILE"; manque=1
+  fi
+  if [ -f "$(ghcr_token_file)" ]; then
+    ok "jeton de registre : $(ghcr_token_file)"
+  else
+    warn "jeton de registre absent : $(ghcr_token_file)"; manque=1
+  fi
+
+  step "Environnements"
+  while read -r env_name; do
+    file="$(env_file "$env_name")"
+    ok "$env_name : $file"
+    if [ ! -f "$(nginx_upstream_file "$env_name")" ]; then
+      warn "  amont Nginx absent : $(nginx_upstream_file "$env_name")"
+      warn "  nginx refusera toute la configuration tant qu'il manque."
+      manque=1
+    fi
+    if [ "$(env_value CARLYS_API_HOST_PORT_LAST "$file" '')" = '' ]; then
+      warn "  CARLYS_API_HOST_PORT_LAST absent : la pile ne peut pas démarrer."
+      manque=1
+    fi
+  done < <(tous_les_environnements)
+
+  printf '\n'
+  if [ "$manque" -eq 0 ]; then
+    ok 'tout est en place'
+  else
+    warn 'il manque des choses — voir ci-dessus'
+  fi
+  return "$manque"
+}
+
+# ── Aiguillage ──────────────────────────────────────────────────────────────
+COMMANDE="${1-}"
+if [ "$#" -ge 1 ]; then shift; fi
+case "$COMMANDE" in
+  status)    cmd_status "${1-}" ;;
+  scale)     cmd_scale "${1-}" "${2-}" ;;
+  autoscale) cmd_autoscale "${1-}" "${2-}" ;;
+  heal)      cmd_heal "${1-}" ;;
+  update)    cmd_update "${1-}" ;;
+  supervise) cmd_supervise "${1-}" ;;
+  doctor)    cmd_doctor ;;
+  # Les trois scripts historiques gardent leur logique ; on ne fait que router.
+  deploy)    exec "$CARLYS_LIB_DIR/deploy.sh" "$@" ;;
+  promote)   exec "$CARLYS_LIB_DIR/promote.sh" "$@" ;;
+  backup)    exec "$CARLYS_LIB_DIR/backup.sh" "$@" ;;
+  -h | --help | help | '') usage ;;
+  *) printf 'Commande inconnue : %s\n\n' "$COMMANDE" >&2; usage ;;
+esac

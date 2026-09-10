@@ -199,21 +199,23 @@ deployed_operator() {
 # cause serait invisible. Le temporaire naît dans le MÊME répertoire, sans quoi
 # `mv` cesserait d'être atomique en franchissant un système de fichiers. Les
 # permissions sont reprises de l'original plutôt que laissées au umask.
-env_set_tag() {
-  local file="$1" tag="$2" tmp
+env_set_value() {
+  local file="$1" cle="$2" valeur="$3" tmp
   [ -f "$file" ] || die "Fichier .env introuvable : $file"
   tmp="$(mktemp "${file}.XXXXXX")" || die "Écriture impossible à côté de $file"
   chmod --reference="$file" "$tmp" 2>/dev/null || chmod 600 "$tmp"
   # `awk` et non `sed -i` : on veut AJOUTER la clé si elle manque, ce que la
   # substitution seule ne fait pas — un .env écrit à la main peut ne pas la
   # porter du tout.
-  awk -v tag="$tag" '
-    /^[[:space:]]*CARLYS_TAG[[:space:]]*=/ { if (!vu) { print "CARLYS_TAG=" tag; vu = 1 } ; next }
+  awk -v cle="$cle" -v valeur="$valeur" '
+    $0 ~ "^[[:space:]]*" cle "[[:space:]]*=" { if (!vu) { print cle "=" valeur; vu = 1 } ; next }
     { print }
-    END { if (!vu) print "CARLYS_TAG=" tag }
+    END { if (!vu) print cle "=" valeur }
   ' "$file" > "$tmp" || { rm -f "$tmp"; die "Réécriture de $file échouée"; }
   mv -f "$tmp" "$file" || { rm -f "$tmp"; die "Remplacement de $file échoué"; }
 }
+
+env_set_tag() { env_set_value "$1" CARLYS_TAG "$2"; }
 
 deployed_append() {
   local env_name="$1" sha="$2" event="$3" file
@@ -341,3 +343,22 @@ admin_host_port() {
 # n'en fait.
 # shellcheck source=scripts/server/_replicas.sh
 . "$CARLYS_LIB_DIR/_replicas.sh"
+
+# ── Modules de l'orchestrateur ──────────────────────────────────────────────
+# Chargés ici, et pas seulement par `carlysctl` : deploy.sh a besoin de
+# _replicas.sh, `status` a besoin de _heal.sh pour l'inventaire, _update.sh a
+# besoin de _state.sh. Les faire charger par chaque appelant reviendrait à
+# tenir sept listes de dépendances qui divergeraient. Aucun ne fait d'effet de
+# bord au chargement — le coût est une poignée de définitions de fonctions.
+# shellcheck source=scripts/server/_state.sh
+. "$CARLYS_LIB_DIR/_state.sh"
+# shellcheck source=scripts/server/_metrics.sh
+. "$CARLYS_LIB_DIR/_metrics.sh"
+# shellcheck source=scripts/server/_scale.sh
+. "$CARLYS_LIB_DIR/_scale.sh"
+# shellcheck source=scripts/server/_heal.sh
+. "$CARLYS_LIB_DIR/_heal.sh"
+# shellcheck source=scripts/server/_update.sh
+. "$CARLYS_LIB_DIR/_update.sh"
+# shellcheck source=scripts/server/_status.sh
+. "$CARLYS_LIB_DIR/_status.sh"
