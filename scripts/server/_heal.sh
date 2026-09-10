@@ -72,6 +72,30 @@ heal_run() {
   local nom service etat sante politique
   local absents=() malades=() recent plafond passes compteur cle
 
+  # ── « JAMAIS DÉPLOYÉ » N'EST PAS UNE PANNE ────────────────────────────────
+  #
+  # setup.sh dépose les DEUX .env dès la mise en place. Pendant toute la phase
+  # où seule la recette tourne — c'est-à-dire longtemps — la production existe
+  # sur le disque sans avoir jamais rien hébergé, avec un
+  # CARLYS_TAG=sha-CHANGE_MOI_SHA12 d'exemple.
+  #
+  # Sans ce garde, la supervision y trouvait 0 exemplaire pour 1 voulu,
+  # concluait à une panne, et lançait `docker compose up -d` sur un tag qui
+  # n'existe pas — toutes les deux minutes, avec à chaque fois une tentative
+  # de connexion au registre. Trois dégâts, tous mesurés dans le journal :
+  # le plafond de cinq réparations par heure était consommé par une pile qui
+  # n'avait rien à réparer, le journal devenait illisible, et `heal` se
+  # trouvait DÉSARMÉ pour la recette, qui elle sert le trafic.
+  #
+  # backup.sh tenait déjà ce raisonnement (« une alerte qui crie tous les
+  # jours ne se lit plus ») ; il manquait ici. Le signal juste est le même :
+  # DEPLOYED vide = rien n'a jamais tourné, donc rien à relever.
+  if [ -z "$(deployed_current "$env_name")" ]; then
+    info "« $env_name » n'a jamais été déployé — rien à réparer"
+    info "  pour le monter : carlysctl deploy $env_name <sha>"
+    return 0
+  fi
+
   local voulus actuels
   voulus="$(api_replicas_wanted "$env_name" "$file")"
   actuels="$(api_replica_ports "$env_name" "$file" | wc -l)"

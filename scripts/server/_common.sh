@@ -145,9 +145,6 @@ env_value() {
 # écritures dans DEPLOYED dont la dernière ligne cesserait de décrire ce qui
 # tourne — or c'est elle que lit promote.sh et que suit le retour arrière.
 #
-# `-n` : on REFUSE, on ne fait pas la queue. Attendre son tour derrière un
-# déploiement en cours, c'est repartir ensuite sur un sha choisi avant que
-# l'autre ne bascule ; refuser tout de suite laisse l'opérateur décider.
 # Le descripteur reste ouvert pour toute la vie du script : le verrou tombe
 # quand le processus se termine, y compris s'il est tué.
 #
@@ -414,3 +411,5 @@ admin_host_port() {
 . "$CARLYS_LIB_DIR/_update.sh"
 # shellcheck source=scripts/server/_status.sh
 . "$CARLYS_LIB_DIR/_status.sh"
+# shellcheck source=scripts/server/_prune.sh
+. "$CARLYS_LIB_DIR/_prune.sh"

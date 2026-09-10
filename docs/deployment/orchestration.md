@@ -24,6 +24,7 @@ carlysctl status            # ce qui tourne, et comment ça va
 carlysctl doctor            # ce qui manque sur la machine
 carlysctl scale staging 3   # trois exemplaires d'API
 carlysctl heal production   # relever ce qui est tombé
+carlysctl prune --essai     # ce qu'un élagage d'images supprimerait
 ```
 
 > Sur le serveur, le chemin complet est
@@ -249,6 +250,42 @@ déploierait du code que personne n'a vu tourner.
 La promotion passe par `promote.sh`, **jamais** par `deploy.sh` : c'est lui qui
 porte les vérifications propres à la production et le message qui explique quoi
 faire quand l'image `-prod` manque. Les recopier ailleurs les ferait diverger.
+
+### Un sha qui a échoué n'est jamais retenté
+
+C'est le garde-fou le plus important du module, et il a manqué. Sans lui, un
+sha dont le déploiement échoue est **retenté à chaque passe** — toutes les deux
+minutes, indéfiniment : la cible reste la tête de la branche, et `DEPLOYED` est
+resté au sha précédent, donc rien ne coupe le cycle.
+
+Deux conséquences, la seconde pire que la première :
+
+- une **migration cassée est rejouée sur la base** toutes les deux minutes.
+  `deploy.sh` meurt alors sans rien basculer et sans écrire `DEPLOYED`, donc le
+  cycle complet tient dans une seule passe et recommence aussitôt ;
+- à chaque tour, la bascule recrée les conteneurs **avant** la vérification de
+  santé, et l'amont Nginx n'est réécrit qu'après : le service rend 502 pendant
+  toute l'attente puis tout le retour arrière — plusieurs minutes par tour.
+
+Un sha qui a échoué est donc mis de côté, **définitivement pour ce sha**. Ce
+n'est pas un délai de garde : réessayer ne répare rien, le code est le même. La
+mise à jour repart d'elle-même au commit suivant, ou à la main :
+
+```bash
+carlysctl deploy staging <sha>     # forcer, en connaissance de cause
+```
+
+### La PREMIÈRE mise en production ne se fait jamais toute seule
+
+`deploy.sh` n'a de retour arrière que s'il existe un sha précédent. Une
+production qui n'a jamais rien hébergé n'en a pas : un échec de santé y
+laisserait la pile debout sur un sha malade, sans filet, et sans personne au
+clavier. C'est aussi le passage où les secrets, le domaine et les textes légaux
+s'éprouvent pour de bon.
+
+La mise à jour automatique s'abstient donc tant que `DEPLOYED` de la production
+est vide, et le dit. Une fois le premier `carlysctl promote` fait à la main,
+elle prend le relais.
 
 ### Ce que l'interrupteur décide, et ce qu'il ne décide pas
 

@@ -26,6 +26,52 @@
 #
 # Chargé par _common.sh. Aucun effet de bord au chargement.
 
+# ── MÉMOIRE DES SHAS QUI ONT ÉCHOUÉ ─────────────────────────────────────────
+#
+# LE DÉFAUT QUE CECI CORRIGE, et c'est le plus grave qu'un audit ait trouvé
+# dans cet orchestrateur. Sans mémoire, un sha dont le déploiement échoue est
+# RETENTÉ À CHAQUE PASSE, c'est-à-dire toutes les deux minutes, indéfiniment :
+# la cible recalculée reste la tête de la branche, et `deployed_current` est
+# resté au sha précédent (deploy.sh remet le journal à l'ancien après un
+# retour arrière réussi), donc la comparaison « déjà à jour » ne coupe rien.
+#
+# Deux conséquences, la seconde pire que la première :
+#
+#   - une MIGRATION cassée est rejouée sur la base toutes les deux minutes.
+#     deploy.sh meurt alors sans rien basculer et sans écrire DEPLOYED, donc
+#     le cycle complet tient dans une seule passe et recommence aussitôt ;
+#   - à chaque tour, la bascule recrée les conteneurs AVANT que la santé ne
+#     soit vérifiée, et l'amont Nginx n'est réécrit qu'après : le service rend
+#     502 pendant toute l'attente de santé puis tout le retour arrière —
+#     plusieurs minutes par tour, en boucle.
+#
+# Un sha qui a échoué ici ne sera donc plus retenté. Ce n'est pas un délai de
+# garde : c'est définitif pour CE sha. Le jour où un nouveau commit arrive, la
+# cible change et la mise à jour repart d'elle-même. C'est le bon compromis :
+# réessayer ne répare rien (le code est le même), et attendre le correctif est
+# exactement ce qu'un humain ferait.
+#
+# La liste est bornée à vingt entrées — assez pour couvrir toute rafale
+# plausible, assez peu pour qu'un fichier d'état reste lisible à la main.
+CARLYS_UPDATE_ECHECS_GARDES=20
+
+update_a_echoue() {
+  case " $(state_get "$1" maj_echecs '') " in
+    *" $2 "*) return 0 ;;
+  esac
+  return 1
+}
+
+update_marquer_echec() {
+  local env_name="$1" sha="$2" liste
+  liste="$(state_get "$env_name" maj_echecs '')"
+  # Dédoublonne en gardant l'ordre d'arrivée, puis ne conserve que les
+  # dernières : `tail` sur une liste où les nouvelles sont à la fin.
+  liste="$(printf '%s %s' "$liste" "$sha" | tr ' ' '\n' \
+    | awk 'NF && !vu[$0]++' | tail -n "$CARLYS_UPDATE_ECHECS_GARDES" | tr '\n' ' ')"
+  state_set "$env_name" maj_echecs "${liste% }"
+}
+
 update_actif() {
   local valeur
   valeur="$(env_value CARLYS_AUTO_UPDATE "$1" non | tr '[:upper:]' '[:lower:]')"
@@ -155,14 +201,52 @@ update_run() {
     return 0
   fi
 
+  # Un sha qui a déjà échoué ici ne sera pas retenté — voir le raisonnement en
+  # tête de fichier. Le message est court exprès : il se répétera à chaque
+  # passe tant qu'aucun nouveau commit n'arrive, et une ligne longue répétée
+  # toutes les deux minutes rend un journal illisible.
+  if update_a_echoue "$env_name" "$cible"; then
+    info "sha-$cible a déjà échoué sur « $env_name » — pas de nouvelle tentative"
+    info "  la mise à jour repartira au prochain commit ; pour forcer :"
+    info "    carlysctl deploy $env_name $cible"
+    return 0
+  fi
+
+  # PREMIÈRE MISE EN PRODUCTION : jamais toute seule.
+  #
+  # deploy.sh n'a de retour arrière que s'il existe un sha précédent. Une
+  # production qui n'a jamais rien hébergé n'en a pas : un échec de santé y
+  # laisserait la pile debout sur un sha malade, sans filet, et sans personne
+  # au clavier. Le premier passage en production est aussi celui où les
+  # secrets, le domaine et les textes légaux sont éprouvés pour de bon — c'est
+  # exactement le geste qui mérite un humain.
+  if [ "$env_name" = production ] && [ -z "$courant" ]; then
+    warn "La production n'a JAMAIS été déployée : la mise à jour automatique s'abstient."
+    warn "  Un premier déploiement n'a pas de retour arrière possible, et c'est"
+    warn "  celui où les secrets et les textes légaux s'éprouvent pour de bon."
+    warn "  À faire une fois, à la main :  carlysctl promote"
+    return 0
+  fi
+
   step "Mise à jour automatique de « $env_name » vers sha-$cible"
+  local sortie=0
   if [ "$env_name" = production ]; then
     # On passe par promote.sh, jamais par deploy.sh directement : c'est lui qui
     # porte les vérifications de la production — l'image admin -prod et sa
     # garde légale, et le message qui explique quoi faire quand elle manque.
     # Les recopier ici les ferait diverger.
-    CARLYS_PROMOTE_ASSUME_YES="$cible" "$CARLYS_LIB_DIR/promote.sh" "$cible"
+    CARLYS_PROMOTE_ASSUME_YES="$cible" "$CARLYS_LIB_DIR/promote.sh" "$cible" || sortie=$?
   else
-    "$CARLYS_LIB_DIR/deploy.sh" "$env_name" "$cible"
+    "$CARLYS_LIB_DIR/deploy.sh" "$env_name" "$cible" || sortie=$?
   fi
+
+  if [ "$sortie" -ne 0 ]; then
+    update_marquer_echec "$env_name" "$cible"
+    warn "sha-$cible a ÉCHOUÉ sur « $env_name » (code $sortie) — il est mis de côté."
+    warn "  Il ne sera plus retenté automatiquement : réessayer ne répare rien,"
+    warn "  le code est le même. La mise à jour repartira au prochain commit."
+    warn "  Les journaux du déploiement, juste au-dessus, nomment la cause."
+    return 1
+  fi
+  return 0
 }

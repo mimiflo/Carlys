@@ -39,6 +39,9 @@ AGIR À LA MAIN
   carlysctl backup                        sauvegarde (backup.sh)
   carlysctl scale <env> <n>               fixe le nombre d'exemplaires d'API
   carlysctl heal <env>                    répare ce qui est tombé
+  carlysctl prune [--essai]               supprime les images Carlys inutiles,
+                                          en gardant le sha déployé ET le
+                                          précédent (cible du retour arrière)
   carlysctl update <env>                  applique la mise à jour, si activée
 
 LAISSER FAIRE
@@ -172,6 +175,16 @@ cmd_heal() {
   heal_run "$env_name" "$file"
 }
 
+cmd_prune() {
+  local n
+  require_commands docker
+  step "Élagage des images Carlys"
+  info "disque : $(disque_pourcent) % de $CARLYS_ROOT"
+  n="$(prune_images "${1-}")"
+  ok "$n image(s) $([ "${1-}" = '--essai' ] && printf 'seraient supprimées' || printf 'supprimée(s)')"
+  info "disque après : $(disque_pourcent) %"
+}
+
 cmd_update() {
   local env_name file
   env_name="$(environnement_requis "${1-}")"
@@ -219,6 +232,9 @@ supervise_un() {
   # répété ne dirait rien de plus que les avertissements déjà journalisés.
   heal_run "$env_name" "$file" || true
   autoscale_passage "$env_name" "$file" oui || true
+  # Le disque est la panne qui tue un serveur dédié plus souvent que la
+  # charge : journaux, images, sauvegardes. N'agit qu'au-delà du seuil.
+  prune_si_necessaire "$file" || true
 
   unlock_env
   update_run "$env_name" "$file" || true
@@ -283,6 +299,7 @@ case "$COMMANDE" in
   scale)     cmd_scale "${1-}" "${2-}" ;;
   autoscale) cmd_autoscale "${1-}" "${2-}" ;;
   heal)      cmd_heal "${1-}" ;;
+  prune)     cmd_prune "${1-}" ;;
   update)    cmd_update "${1-}" ;;
   supervise) cmd_supervise "${1-}" ;;
   doctor)    cmd_doctor ;;

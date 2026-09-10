@@ -46,8 +46,23 @@ SyslogIdentifier=carlys-supervision
 # Durcissement — le strict nécessaire, et rien qui casse Docker. Un service
 # root qui parle au démon Docker a de fait les droits de la machine ; l'illusion
 # d'un bac à sable serait pire qu'une absence de bac à sable.
+#
+# PAS DE ProtectHome. Il y était, et il cassait la mise à jour automatique de
+# DEUX façons, toutes les deux SILENCIEUSES — c'est un audit qui les a levées,
+# aucune n'aurait produit d'erreur lisible :
+#
+#   - `ProtectHome=yes` remplace /root par un répertoire vide. Or c'est là que
+#     `docker login` écrit et relit /root/.docker/config.json. La connexion au
+#     registre écrivait donc dans le néant, et le `docker pull` suivant se
+#     faisait refuser sur un dépôt privé ;
+#   - c'est aussi là que vivent /root/.git-credentials et /root/.gitconfig,
+#     dont `git ls-remote` a besoin pour lire la tête de la branche. Sans eux
+#     il échoue, `update_cible_staging` ne rend rien, et la passe conclut
+#     « rien à déployer » — le message le plus rassurant possible pour une
+#     panne d'authentification.
+#
+# Le durcissement qui reste ne coûte rien et ne masque rien.
 NoNewPrivileges=yes
-ProtectHome=yes
 PrivateTmp=yes
 
 # PAS de section [Install], volontairement. Ce service n'est pas censé être
