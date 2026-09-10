@@ -1,7 +1,7 @@
 import { REQUEST_ID_HEADER } from '@carlys/shared-config';
 import { Module } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerGuard } from '@nestjs/throttler';
 import { randomUUID } from 'node:crypto';
 import { type IncomingMessage, type ServerResponse } from 'node:http';
 import { LoggerModule } from 'nestjs-pino';
@@ -11,6 +11,8 @@ import { AppConfigModule } from '../config/app-config.module';
 import { AppConfigService } from '../config/app-config.service';
 import { PrismaModule } from '../database/prisma/prisma.module';
 import { RedisModule } from '../infrastructure/cache/redis.module';
+import { PresenceModule } from '../infrastructure/presence/presence.module';
+import { ThrottlingModule } from '../infrastructure/throttling/throttling.module';
 import { AdminModule } from '../modules/admin/admin.module';
 import { MediaModule } from '../modules/media/media.module';
 import { AuditModule } from '../modules/audit/audit.module';
@@ -67,19 +69,12 @@ function generateRequestId(request: IncomingMessage, response: ServerResponse): 
         },
       }),
     }),
-    ThrottlerModule.forRootAsync({
-      inject: [AppConfigService],
-      useFactory: (config: AppConfigService) => ({
-        throttlers: [
-          {
-            ttl: config.rateLimitTtlSeconds * 1_000,
-            limit: config.rateLimitMaxRequests,
-          },
-        ],
-      }),
-    }),
+    // La limitation de débit est décrite dans son propre module : le compteur
+    // vit dans Redis, donc le même pour tous les réplicas de l'API.
+    ThrottlingModule,
     PrismaModule,
     RedisModule,
+    PresenceModule,
     AuditModule,
     HealthModule,
     MetricsModule,

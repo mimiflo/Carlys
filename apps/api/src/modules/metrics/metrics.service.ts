@@ -1,10 +1,20 @@
 import { Injectable } from '@nestjs/common';
 import { collectDefaultMetrics, Registry } from 'prom-client';
 
-/** Expose les métriques Prometheus du processus (préfixe carlys_api_). */
+/**
+ * Détient le registre Prometheus de l'API (préfixe carlys_api_) et le rend.
+ *
+ * Un registre PROPRE, et non le registre global de prom-client : deux
+ * applications Nest instanciées dans le même processus — ce que font les tests
+ * e2e — se disputeraient sinon les mêmes noms de séries, et la seconde
+ * échouerait au démarrage sur un doublon d'enregistrement.
+ *
+ * Les collecteurs (HTTP, présence) s'enregistrent sur `registry` ; ce service
+ * ne connaît pas leur contenu, il n'en tient que le catalogue.
+ */
 @Injectable()
 export class MetricsService {
-  private readonly registry: Registry;
+  readonly registry: Registry;
 
   constructor() {
     this.registry = new Registry();

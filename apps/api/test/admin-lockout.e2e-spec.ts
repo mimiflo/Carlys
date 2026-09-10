@@ -25,8 +25,11 @@ const ADMIN_PASSWORD = 'MotDePasseAdmin42!';
  * Verrouillage de la connexion admin — suite ISOLÉE, exprès.
  *
  * La route porte un throttle strict de 10 requêtes / 60 s par adresse, et le
- * seau vit dans l'application : ce fichier ouvre la sienne pour que son
- * budget de connexions ne se partage avec aucune autre suite. Budget ici :
+ * seau vit dans REDIS, partagé par tous les réplicas de l'API — donc aussi
+ * par tous les fichiers de cette suite, qui viennent tous de 127.0.0.1.
+ * Ouvrir sa propre application ne suffit plus à isoler le budget : c'est
+ * `setup-e2e.ts` qui remet les compteurs à zéro avant chaque fichier. Budget
+ * ici :
  * AUTH_MAX_LOGIN_ATTEMPTS échecs + 1 tentative bloquée + 1 connexion témoin,
  * soit N+2 requêtes — sous le seau de 10 tant que le seuil reste ≤ 8 (la CI
  * tourne à 3, donc 5 requêtes). Le scénario vivait dans admin.e2e-spec.ts et

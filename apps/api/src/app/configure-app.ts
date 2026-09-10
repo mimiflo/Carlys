@@ -4,6 +4,7 @@ import { type NestExpressApplication } from '@nestjs/platform-express';
 import express from 'express';
 import helmet from 'helmet';
 import { AppConfigService } from '../config/app-config.service';
+import { HttpMetricsMiddleware } from '../modules/metrics/http-metrics.middleware';
 
 /**
  * Configuration HTTP partagée entre le bootstrap réel (main.ts) et les tests
@@ -11,6 +12,32 @@ import { AppConfigService } from '../config/app-config.service';
  */
 export function configureApp(app: NestExpressApplication): void {
   const config = app.get(AppConfigService);
+
+  // ── Mesure du trafic, EN PREMIER ────────────────────────────────────────
+  //
+  // POURQUOI PAS `MiddlewareConsumer.forRoutes()`. C'était la première
+  // rédaction ; l'essai l'a prise en défaut sur les deux points qui comptent.
+  // Nest attache les intergiciels AU ROUTEUR, une fois par liaison, et le
+  // préfixe global de cette fonction (`setGlobalPrefix` avec ses exclusions)
+  // en crée deux. Mesuré sur trois requêtes, avec les quatre écritures de
+  // joker acceptées par Express 5 (`{*chemin}`, `*`, `/*chemin`, `(.*)`) —
+  // résultat identique pour les quatre :
+  //
+  //   GET /health/live      → l'intergiciel passe DEUX fois (route exclue du
+  //                           préfixe : elle correspond aux deux liaisons)
+  //   GET /api/v1/users/me  → une fois
+  //   GET /zzz-inconnu      → JAMAIS (aucune route, donc aucune liaison)
+  //
+  // Soit exactement les deux fautes qu'une métrique ne doit pas commettre :
+  // un débit doublé sur une partie des routes, et l'aveuglement complet sur
+  // les 404 — précisément le signal d'un balayage hostile ou d'un client
+  // désynchronisé. Posé ici, sur l'instance Express elle-même, l'intergiciel
+  // voit chaque requête une fois et une seule, routée ou non.
+  //
+  // Avant helmet et avant le parseur de corps brut : ce qu'ils rejettent est
+  // du trafic aussi, et leur latence fait partie de celle qu'on mesure.
+  const httpMetrics = app.get(HttpMetricsMiddleware);
+  app.use(httpMetrics.use.bind(httpMetrics));
 
   // Derrière un reverse proxy, `req.ip` vaudrait l'adresse du proxy pour TOUT
   // le trafic : la limitation de débit (ThrottlerGuard) et l'audit ne

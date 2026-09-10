@@ -67,6 +67,24 @@ export const envSchema = z
     /** Requis pour exposer /metrics en production (Bearer token). */
     METRICS_TOKEN: z.string().min(16).optional(),
 
+    /**
+     * Fenêtre du compte « utilisateurs en ligne » (métrique
+     * `carlys_api_online_users`), en secondes.
+     *
+     * C'est ce compte qui pilote la mise à l'échelle, et la fenêtre décide de
+     * son inertie. Trop courte, elle fait osciller la pile au rythme des
+     * requêtes ; trop longue, elle continue de compter des gens partis depuis
+     * un quart d'heure. Cinq minutes est le compromis retenu : plus long que
+     * l'intervalle de supervision, plus court que l'inactivité qui fait
+     * qu'on n'utilise plus l'application.
+     *
+     * Bornée à la minute basse parce que la présence est comptée par seaux
+     * d'une minute d'horloge : en dessous, la fenêtre ne voudrait plus rien
+     * dire. Bornée à une heure haute pour que les seaux gardés en mémoire
+     * dans Redis restent en nombre borné.
+     */
+    PRESENCE_WINDOW_SECONDS: z.coerce.number().int().min(60).max(3600).default(300),
+
     // ── Authentification ────────────────────────────────────────────────────
     /** Secret de signature des access tokens JWT — obligatoire, jamais par défaut. */
     JWT_ACCESS_SECRET: z.string().min(32, 'JWT_ACCESS_SECRET doit faire au moins 32 caractères'),

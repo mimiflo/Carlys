@@ -70,6 +70,10 @@ export class AppConfigService {
     return this.config.get('METRICS_TOKEN', { infer: true });
   }
 
+  get presenceWindowSeconds(): number {
+    return this.config.get('PRESENCE_WINDOW_SECONDS', { infer: true });
+  }
+
   // ── Authentification ────────────────────────────────────────────────────
 
   get jwtAccessSecret(): string {

@@ -29,10 +29,14 @@ const FRIEND_REQUEST_LIMIT = 10;
  * Demandes d'ami : refus OPPOSABLE et limite de débit dédiée.
  *
  * Suite ISOLÉE, exprès : POST /community/requests porte un throttle de
- * 10 requêtes / 60 s par adresse, et le seau vit dans l'application. Le
- * dernier scénario consomme tout le budget pour voir le 429 ; il ne doit
- * donc partager son application avec aucune autre suite, et les scénarios
- * qui le précèdent comptent leurs demandes.
+ * 10 requêtes / 60 s par adresse. Le dernier scénario consomme tout le budget
+ * pour voir le 429 ; les scénarios qui le précèdent comptent donc leurs
+ * demandes.
+ *
+ * Le seau vit dans REDIS, partagé par tous les réplicas de l'API — donc aussi
+ * par les autres fichiers de la suite, qui viennent tous de 127.0.0.1. Ouvrir
+ * sa propre application n'isole plus rien : l'isolation vient de
+ * `setup-e2e.ts`, qui remet les compteurs à zéro avant chaque fichier.
  */
 describe('Demandes d’ami : refus opposable et limite de débit (e2e)', () => {
   let app: INestApplication<App>;
