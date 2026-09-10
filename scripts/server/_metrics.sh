@@ -25,15 +25,22 @@ CARLYS_METRICS_TIMEOUT="${CARLYS_METRICS_TIMEOUT:-3}"
 # `--noproxy '*'` : sur une machine où http_proxy est posé pour les paquets,
 # curl enverrait une requête vers 127.0.0.1 AU PROXY. Sans cette option, la
 # supervision d'un serveur derrière un proxy sortant lit… le proxy.
+#
+# LE CODE HTTP EST RENDU AVEC LE CORPS, et ce n'est pas un détail. `/metrics`
+# est gardé : sur un environnement où NODE_ENV vaut « production » — ce qui
+# est le cas de la RECETTE aussi — il répond 404 sans METRICS_TOKEN, et 401
+# avec un mauvais. Ces deux réponses ont un corps NON VIDE (l'enveloppe
+# d'erreur de l'API). Sans le code, elles passaient pour des lectures
+# réussies : l'orchestrateur comptait un exemplaire « lu », n'y trouvait
+# évidemment aucune série, et concluait « Redis illisible » — en accusant
+# Redis d'un refus qui venait de l'API. Mesuré sur le premier serveur migré.
 metrics_scrape_one() {
-  local port="$1" jeton="${2-}"
-  if [ -n "$jeton" ]; then
-    curl -s --noproxy '*' -m "$CARLYS_METRICS_TIMEOUT" \
-      -H "Authorization: Bearer $jeton" "http://127.0.0.1:${port}/metrics" 2>/dev/null || true
-  else
-    curl -s --noproxy '*' -m "$CARLYS_METRICS_TIMEOUT" \
-      "http://127.0.0.1:${port}/metrics" 2>/dev/null || true
-  fi
+  local port="$1" jeton="${2-}" args=()
+  args=(-s --noproxy '*' -m "$CARLYS_METRICS_TIMEOUT" -w '\n#--code--%{http_code}')
+  [ -n "$jeton" ] && args+=(-H "Authorization: Bearer $jeton")
+  # `|| true` et pas de repli : même sur connexion refusée, `-w` imprime le
+  # code (000). En ajouter un second brouillerait le compte.
+  curl "${args[@]}" "http://127.0.0.1:${port}/metrics" 2>/dev/null || true
 }
 
 # `metrics_summary <env> <.env>` — une ligne de `clé=valeur`, séparées par des
@@ -54,7 +61,7 @@ metrics_summary() {
   mapfile -t ports < <(api_replica_ports "$env_name" "$file")
 
   if [ "${#ports[@]}" -eq 0 ]; then
-    printf 'horodatage=%s lus=0 utilisateurs=-1 requetes=0 latence_somme=0 latence_compte=0' "$(maintenant)"
+    printf 'horodatage=%s lus=0 refuses=0 code= utilisateurs=-1 requetes=0 latence_somme=0 latence_compte=0' "$(maintenant)"
     return 0
   fi
 
@@ -68,7 +75,24 @@ metrics_summary() {
       printf '\n#--exemplaire--\n'
     done
   } | awk -v horodatage="$(maintenant)" '
+    # Le code HTTP que curl imprime après le corps. Il ferme la lecture dun
+    # exemplaire ; le separateur qui suit la comptabilise.
+    # `sub` plutot que `substr($0, N)` : compter les caracteres du prefixe a
+    # la main donne « 04 » au lieu de « 404 » a un caractere pres, et le
+    # diagnostic tombe alors dans aucune branche. La substitution ne compte
+    # rien.
+    /^#--code--/ { code = $0; sub(/^#--code--/, "", code); next }
+
     /^#--exemplaire--$/ {
+      if (code != "200") {
+        # 404 : pas de METRICS_TOKEN alors que NODE_ENV=production.
+        # 401 : le jeton du .env ne correspond pas. 000 : rien na repondu.
+        # Dans les trois cas le corps est NON VIDE et ne contient aucune
+        # serie : le compter comme une lecture ferait accuser Redis.
+        if (code != "") { refuses++; dernier_code = code }
+        vu = 0; up = 0; u = -1; code = ""
+        next
+      }
       if (vu) {
         lus++
         # Presence : globale (comptee dans Redis), donc JAMAIS additionnee.
@@ -80,7 +104,7 @@ metrics_summary() {
         # awk, qui est delimite par des apostrophes simples.)
         if (up && !fige) { utilisateurs = u; fige = 1 }
       }
-      vu = 0; up = 0; u = -1
+      vu = 0; up = 0; u = -1; code = ""
       next
     }
     { vu = 1 }
@@ -94,8 +118,9 @@ metrics_summary() {
     /^carlys_api_http_request_duration_seconds_count\{/  { lat_compte += $2 }
 
     END {
-      printf "horodatage=%s lus=%d utilisateurs=%s requetes=%d latence_somme=%.6f latence_compte=%d",
-        horodatage, lus, (fige ? utilisateurs : -1), requetes, lat_somme, lat_compte
+      printf "horodatage=%s lus=%d refuses=%d code=%s utilisateurs=%s requetes=%d latence_somme=%.6f latence_compte=%d",
+        horodatage, lus, refuses, dernier_code, (fige ? utilisateurs : -1),
+        requetes, lat_somme, lat_compte
     }
   '
 }

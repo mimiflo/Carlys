@@ -106,6 +106,31 @@ describe('Observabilité (e2e)', () => {
       expect(valeurDe(expo, 'carlys_api_online_users')).toBeGreaterThanOrEqual(0);
     });
 
+    it('dit la vérité DÈS LA PREMIÈRE collecte, pas au tour suivant', async () => {
+      // LE PIÈGE QUE CE TEST GARDE. prom-client rend chaque métrique dès QUE
+      // SA PROPRE collecte a fini
+      // (`getMetricsAsString` fait `await metric.get()` puis rend, et les
+      // métriques partent en parallèle). `carlys_api_presence_up` n'avait pas
+      // de collecte à lui : il était donc rendu AVANT que celle de
+      // `carlys_api_online_users` n'ait eu le temps de le poser à 1. Résultat,
+      // il publiait le verdict du tour PRÉCÉDENT — et 0 au tout premier, ce qui
+      // se lit « je ne sais pas » alors que Redis répondait très bien.
+      //
+      // Le test ne vaut que sur une application NEUVE : sur celle du describe
+      // parent, des dizaines de collectes ont déjà eu lieu et l'erreur d'un
+      // tour ne se voit plus. D'où cette seconde application.
+      const neuve = await Test.createTestingModule({ imports: [AppModule] }).compile();
+      const seconde = neuve.createNestApplication<NestExpressApplication>();
+      configureApp(seconde);
+      await seconde.init();
+      try {
+        const premiere = (await request(seconde.getHttpServer()).get('/metrics').expect(200)).text;
+        expect(valeurDe(premiere, 'carlys_api_presence_up')).toBe(1);
+      } finally {
+        await seconde.close();
+      }
+    });
+
     it('compte les personnes distinctes, pas les requêtes', async () => {
       const presence = app.get(PresenceService);
       const avant = await presence.onlineUsers();

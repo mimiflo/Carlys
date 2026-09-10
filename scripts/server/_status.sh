@@ -110,14 +110,39 @@ status_exemplaires() {
 
 # Mesures lues sur les exemplaires.
 status_metriques() {
-  local env_name="$1" file="$2" resume precedent debit utilisateurs lus
+  local env_name="$1" file="$2" resume precedent debit utilisateurs lus refuses code
   resume="$(metrics_summary "$env_name" "$file")"
   lus="$(metrics_field "$resume" lus)"; lus="${lus:-0}"
+  refuses="$(metrics_field "$resume" refuses)"; refuses="${refuses:-0}"
+  code="$(metrics_field "$resume" code)"
   utilisateurs="$(metrics_field "$resume" utilisateurs)"; utilisateurs="${utilisateurs:--1}"
 
   if [ "$lus" -eq 0 ]; then
-    status_ligne 'mesures' 'aucun exemplaire ne rend /metrics'
-    status_ligne '' 'en production, vérifier METRICS_TOKEN dans le .env'
+    # DISTINGUER LE REFUS DU SILENCE. Un /metrics qui répond 404 et un
+    # exemplaire qui ne répond pas du tout demandent des gestes opposés, et
+    # les confondre envoie chercher la panne du mauvais côté — la première
+    # rédaction accusait Redis d'un refus qui venait de l'API.
+    if [ "$refuses" -gt 0 ]; then
+      status_ligne 'mesures' "/metrics REFUSE — code $code sur $refuses exemplaire(s)"
+      case "$code" in
+        404)
+          status_ligne '' 'METRICS_TOKEN absent du .env. Le garde répond 404 dès que'
+          status_ligne '' 'NODE_ENV=production — ce qui est le cas de la RECETTE aussi.'
+          status_ligne '' "  openssl rand -hex 32   puis METRICS_TOKEN=… dans $file"
+          status_ligne '' '  puis : carlysctl deploy '"$env_name"' <sha>'
+          ;;
+        401)
+          status_ligne '' "Le METRICS_TOKEN de $file ne correspond pas à celui que"
+          status_ligne '' "l'API a reçu au démarrage. Redéployer après l'avoir corrigé."
+          ;;
+        000)
+          status_ligne '' "Aucune réponse : l'exemplaire écoute-t-il vraiment ?"
+          ;;
+      esac
+    else
+      status_ligne 'mesures' 'aucun exemplaire ne rend /metrics'
+    fi
+    status_ligne '' "Sans elles, la mise à l'échelle reste figée (la santé, elle, est vue)."
     return 0
   fi
 

@@ -55,6 +55,12 @@ FIN
   exit 2
 }
 
+# Combien de temps une commande TAPÉE À LA MAIN attend le verrou. Plus long
+# qu'une passe de supervision (quelques secondes, jusqu'à une trentaine si
+# elle relève des conteneurs), assez court pour ne pas donner l'impression
+# d'un blocage. `deploy` et `promote` n'attendent pas — voir lock_env.
+CARLYS_LOCK_WAIT="${CARLYS_LOCK_WAIT:-90}"
+
 # ── Gardes communes ─────────────────────────────────────────────────────────
 environnement_requis() {
   local nom
@@ -93,7 +99,7 @@ cmd_scale() {
   esac
   require_commands docker
   require_compose_file
-  lock_env "$env_name"
+  lock_env "$env_name" "$CARLYS_LOCK_WAIT"
   scale_apply "$env_name" "$(env_file "$env_name")" "$cible"
 }
 
@@ -147,7 +153,7 @@ autoscale_passage() {
   case "$verdict" in
     monter | descendre)
       if [ "$appliquer" = oui ]; then
-        lock_env "$env_name"
+        lock_env "$env_name" "$CARLYS_LOCK_WAIT"
         scale_apply "$env_name" "$file" "$cible"
       else
         info "  (--appliquer absent : rien n'a été changé)"
@@ -162,7 +168,7 @@ cmd_heal() {
   file="$(env_file "$env_name")"
   require_commands docker
   require_compose_file
-  lock_env "$env_name"
+  lock_env "$env_name" "$CARLYS_LOCK_WAIT"
   heal_run "$env_name" "$file"
 }
 

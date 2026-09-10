@@ -292,11 +292,31 @@ Les compteurs HTTP, eux, sont par processus **volontairement** : la répartition
 entre exemplaires est une information — elle montre qu'un seul d'entre eux
 encaisse tout.
 
-### En production, `METRICS_TOKEN` est obligatoire
+### `METRICS_TOKEN` est obligatoire — en RECETTE aussi
 
-Sans lui, `/metrics` répond comme s'il n'existait pas — y compris à
-`carlysctl`. La supervision continuerait de voir la **santé** des conteneurs,
-mais la mise à l'échelle n'aurait plus aucune mesure et resterait figée.
+C'est contre-intuitif, donc la raison compte : le garde de `/metrics` ne
+regarde pas le *nom* de l'environnement, il regarde `NODE_ENV`. Or `NODE_ENV`
+vaut `production` **dans les deux** `.env` — c'est voulu, la recette doit
+échouer comme la production, sinon elle ne prouve rien.
+
+Sans jeton, `/metrics` répond donc **404**, y compris à `carlysctl`. La
+supervision continue de voir la **santé** des conteneurs, mais la mise à
+l'échelle n'a plus aucune mesure et reste figée.
+
+Le symptôme, tel qu'il est apparu sur le premier serveur migré :
+
+```
+   utilisateurs en ligne  inconnu (Redis illisible depuis l'API)
+```
+
+…alors que Redis répondait parfaitement. `carlysctl` comptait le corps de
+l'erreur 404 comme une lecture réussie et accusait Redis. Il dit maintenant :
+
+```
+   mesures                /metrics REFUSE — code 404 sur 1 exemplaire(s)
+                          METRICS_TOKEN absent du .env. Le garde répond 404 dès que
+                          NODE_ENV=production — ce qui est le cas de la RECETTE aussi.
+```
 
 Le port de l'API n'écoute que sur la boucle locale et Nginx refuse `/metrics`
 (`deny all`) : ce jeton protège l'accès **depuis la machine**, pas depuis

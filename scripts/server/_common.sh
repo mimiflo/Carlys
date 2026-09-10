@@ -157,20 +157,47 @@ env_value() {
 # descripteur sur le même fichier — et `flock` s'attache au descripteur, pas au
 # processus : le script se bloquerait sur son propre verrou, et le message
 # d'erreur accuserait « un déploiement déjà en cours » alors que c'est lui.
+# `lock_env <env> [secondes d'attente]`
+#
+# SANS ATTENTE (défaut), on REFUSE au lieu de faire la queue : c'est le bon
+# comportement pour `deploy` et `promote`, qui portent un sha CHOISI AVANT
+# d'attendre. Prendre son tour derrière un autre déploiement, c'est repartir
+# ensuite sur une décision périmée.
+#
+# AVEC ATTENTE, pour tout le reste. Depuis que la minuterie de supervision
+# passe toutes les deux minutes, une commande tapée à la main tombe
+# régulièrement pendant une passe — et se faisait refuser avec « un
+# déploiement est DÉJÀ en cours », ce qui est vrai mais inutilisable :
+# l'exploitant n'a rien lancé, et la passe dure quelques secondes. Arrivé dès
+# le premier `carlysctl heal` d'un serveur fraîchement migré. `heal`, `scale`
+# et `autoscale` ne portent aucune décision périmable : ils attendent.
 lock_env() {
-  local env_name="$1" file
+  local env_name="$1" attente="${2:-0}" file
   if [ "${CARLYS_LOCKED_ENV:-}" = "$env_name" ]; then
     return 0
   fi
   file="$(env_dir "$env_name")/.lock"
   exec {CARLYS_LOCK_FD}>>"$file" || die "Verrou impossible à ouvrir : $file"
   CARLYS_LOCKED_ENV="$env_name"
-  flock -n "$CARLYS_LOCK_FD" || die \
-    "Un déploiement de « $env_name » est DÉJÀ en cours sur cette machine." \
-    "Rien n'a été fait : deux déploiements simultanés se marcheraient dessus" \
+
+  if [ "$attente" -gt 0 ]; then
+    flock -w "$attente" "$CARLYS_LOCK_FD" && return 0
+  else
+    flock -n "$CARLYS_LOCK_FD" && return 0
+  fi
+
+  die \
+    "Une opération sur « $env_name » est DÉJÀ en cours sur cette machine." \
+    "Rien n'a été fait : deux opérations simultanées se marcheraient dessus" \
     "(conteneurs concurrents, et un journal DEPLOYED qui ne décrirait plus" \
     "ce qui tourne)." \
-    "Attendre qu'il se termine, puis relancer. Pour voir qui tient le verrou :" \
+    "" \
+    "Le plus souvent, c'est la MINUTERIE de supervision, qui passe toutes les" \
+    "deux minutes. Elle ne tient le verrou que quelques secondes :" \
+    "  systemctl list-timers carlys-supervision.timer" \
+    "  journalctl -u carlys-supervision.service -n 20" \
+    "" \
+    "Pour voir qui le tient à l'instant :" \
     "  fuser -v $file"
 }
 
