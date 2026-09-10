@@ -67,7 +67,7 @@ on:
       sha:
         description: >-
           Commit à promouvoir — OBLIGATOIRE, et il doit déjà avoir été
-          construit en recette par mobile-staging. 12 ou 40 caractères.
+          construit en recette par mobile-recette. 12 ou 40 caractères.
         required: true
         type: string
       build_number:
@@ -174,7 +174,7 @@ jobs:
         run: |
           set -euo pipefail
           if ! full="$(git rev-parse --verify --quiet "${SHA_DEMANDE}^{commit}")"; then
-            echo "::error title=Commit inconnu::« ${SHA_DEMANDE} » n'est pas un commit de ce dépôt. Reprends le sha affiché par l'exécution de mobile-staging qui a fabriqué l'APK de recette que tu viens d'éprouver — c'est lui, et lui seul, qu'on promeut."
+            echo "::error title=Commit inconnu::« ${SHA_DEMANDE} » n'est pas un commit de ce dépôt. Reprends le sha affiché par l'exécution de mobile-recette qui a fabriqué l'APK que tu viens d'éprouver sur un téléphone — c'est ce commit-là, et lui seul, qu'on promeut."
             exit 1
           fi
           git checkout --detach "$full"
@@ -196,14 +196,27 @@ jobs:
       # exact, et rend pour chacun un booléen `expired`. Un artefact dont le
       # NOM porte le sha est donc adressable comme un tag l'est.
       #
-      # LE CONTRAT AVEC mobile-staging.yml, ET SA FRAGILITÉ. Cette garde tient
+      # LE CONTRAT AVEC mobile-recette.yml, ET SA FRAGILITÉ. Cette garde tient
       # à une convention de NOMMAGE partagée : l'artefact de recette s'appelle
-      # `carlys-staging-<sha12>`. GitHub Actions ne partage rien entre deux
+      # `carlys-recette-apk-<sha12>`. GitHub Actions ne partage rien entre deux
       # workflows — c'est la même duplication assumée que le contrôle de forme
       # de CARLYS_DOMAIN, recopié mot pour mot entre images-publish.yml et
-      # images-publish-prod.yml. Par tolérance, le repli ci-dessous accepte
-      # aussi tout nom COMMENÇANT par `carlys-staging` et CONTENANT le sha12,
-      # en avertissant. Le préfixe n'est pas un détail : sans lui, l'artefact
+      # images-publish-prod.yml. Toute renommée là-bas doit être reportée ici.
+      #
+      # L'APK PLUTÔT QUE LE BUNDLE, et c'est un choix, pas un hasard :
+      # mobile-recette téléverse TOUJOURS son artefact `-apk`, alors que son
+      # artefact `-aab` est conditionné à la présence des secrets de signature
+      # (`if: steps.signature.outputs.actif == 'oui'`). Adosser la garde au
+      # bundle la rendrait rouge sur un dépôt dont la recette tourne pourtant
+      # dans son cas nominal — celui où la clé de production reste gardée
+      # derrière l'approbation, sans secret au niveau du dépôt. Et c'est bien
+      # l'APK qui porte la preuve qu'on veut : c'est LUI qu'on installe sur un
+      # téléphone pour éprouver la recette.
+      #
+      # Par tolérance, le repli ci-dessous accepte
+      # aussi tout nom COMMENÇANT par `carlys-recette` et CONTENANT le sha12,
+      # en avertissant — ce qui couvre l'artefact `-aab` comme une renommée
+      # future. Le préfixe n'est pas un détail : sans lui, l'artefact
       # `carlys-production-<sha12>` produit par ce workflow-ci satisferait sa
       # propre garde au deuxième passage — une garde qui se prouve elle-même ne
       # prouve rien.
@@ -227,7 +240,7 @@ jobs:
         run: |
           set -euo pipefail
           api="$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/artifacts"
-          nom_canonique="carlys-staging-$SHA12"
+          nom_canonique="carlys-recette-apk-$SHA12"
 
           interroger() {
             curl -sS \
@@ -242,7 +255,7 @@ jobs:
           trouves="$(interroger "$api?per_page=100&name=$nom_canonique" \
             | jq -c '[.artifacts[]? | {name, expired, created_at}]')"
 
-          # 2. Repli borné : mobile-staging a peut-être nommé son artefact
+          # 2. Repli borné : mobile-recette a peut-être nommé son artefact
           #    autrement (suffixe, variante). On balaie les 1 000 artefacts les
           #    plus récents — la liste est rendue du plus récent au plus
           #    ancien — en n'acceptant que le préfixe de recette.
@@ -252,10 +265,10 @@ jobs:
               lot="$(interroger "$api?per_page=100&page=$page")"
               [ "$(printf '%s' "$lot" | jq '.artifacts | length')" -gt 0 ] || break
               corr="$(printf '%s' "$lot" | jq -c --arg s "$SHA12" \
-                '[.artifacts[] | select((.name | startswith("carlys-staging")) and (.name | contains($s))) | {name, expired, created_at}]')"
+                '[.artifacts[] | select((.name | startswith("carlys-recette")) and (.name | contains($s))) | {name, expired, created_at}]')"
               if [ "$(printf '%s' "$corr" | jq 'length')" -gt 0 ]; then
                 trouves="$corr"
-                echo "::warning title=Artefact de recette hors convention::Aucun artefact nommé exactement « $nom_canonique », mais $(printf '%s' "$corr" | jq -r '.[0].name') correspond. La garde est satisfaite, la convention ne l'est pas : aligner le nom d'artefact de mobile-staging.yml sur carlys-staging-<sha12> évitera qu'un jour le repli, borné aux 1 000 artefacts les plus récents, ne trouve plus rien."
+                echo "::warning title=Artefact de recette hors convention::Aucun artefact nommé exactement « $nom_canonique », mais $(printf '%s' "$corr" | jq -r '.[0].name') correspond. La garde est satisfaite, la convention ne l'est pas : aligner le nom d'artefact de mobile-recette.yml sur carlys-recette-apk-<sha12> évitera qu'un jour le repli, borné aux 1 000 artefacts les plus récents, ne trouve plus rien."
                 break
               fi
               page=$((page + 1))
@@ -266,12 +279,12 @@ jobs:
           vivants="$(printf '%s' "$trouves" | jq '[.[] | select(.expired == false)] | length')"
 
           if [ "$total" -eq 0 ]; then
-            echo "::error title=Ce commit n'a pas été construit en recette::Aucun artefact de recette ne porte le sha $SHA12, alors que la règle « build once » du dépôt veut qu'on ne mette en production QUE ce qui a été éprouvé en recette. Marche à suivre : Actions → mobile-staging → Run workflow, en renseignant $SHA12 dans le champ « sha » (le laisser vide construirait la tête de la branche, pas ce commit) ; installer l'APK produit sur un téléphone et l'essayer VRAIMENT ; puis revenir ici. Artefact attendu et introuvable : $nom_canonique."
+            echo "::error title=Ce commit n'a pas été construit en recette::Aucun artefact de recette ne porte le sha $SHA12, alors que la règle « build once » du dépôt veut qu'on ne mette en production QUE ce qui a été éprouvé en recette. Marche à suivre : Actions → mobile-recette → Run workflow, en renseignant $SHA12 dans le champ « sha » (le laisser vide construirait la tête de la branche, pas ce commit) ; installer l'APK produit sur un téléphone et l'essayer VRAIMENT ; puis revenir ici. Artefact attendu et introuvable : $nom_canonique."
             exit 1
           fi
 
           if [ "$vivants" -eq 0 ]; then
-            echo "::error title=L'artefact de recette a expiré::Le sha $SHA12 a bien été construit en recette, mais son artefact est expiré — GitHub les supprime après la durée de rétention du dépôt (90 jours par défaut). La preuve n'existe plus, donc la garde refuse : elle se trompe du bon côté. Deux issues, au choix : relancer mobile-staging sur $SHA12 pour refabriquer l'artefact (et en profiter pour ré-essayer l'application, ce qui est de toute façon la bonne pratique sur un commit vieux de plusieurs mois), ou promouvoir un commit plus récent."
+            echo "::error title=L'artefact de recette a expiré::Le sha $SHA12 a bien été construit en recette, mais son artefact est expiré — GitHub les supprime après la durée de rétention du dépôt (90 jours par défaut). La preuve n'existe plus, donc la garde refuse : elle se trompe du bon côté. Deux issues, au choix : relancer mobile-recette sur $SHA12 pour refabriquer l'artefact (et en profiter pour ré-essayer l'application, ce qui est de toute façon la bonne pratique sur un commit vieux de plusieurs mois), ou promouvoir un commit plus récent."
             printf '%s' "$trouves" | jq -r '.[] | "  - \(.name) — créé le \(.created_at), expiré"'
             exit 1
           fi
@@ -300,7 +313,7 @@ jobs:
           marqueurs="$(grep -oP '\[À COMPLÉTER\s*:[^\]]*\]' docs/legal/*.md | sort -u || true)"
           if [ -n "$marqueurs" ]; then
             nombre="$(echo "$marqueurs" | wc -l)"
-            echo "::error title=Les textes légaux ne sont pas prêts pour la production::$nombre marqueur(s) « [À COMPLÉTER : … ] » subsistent dans docs/legal/. Un build de production ne peut pas renvoyer vers une politique de confidentialité inachevée : les réglages de l'application ouvrent https://app.DOMAINE/privacy et /terms, et c'est exactement ce que la Play Console ouvre avant d'accepter une soumission. Renseigne les marqueurs listés ci-dessous dans docs/legal/privacy.md et docs/legal/terms.md, pousse, fais construire le nouveau commit par mobile-staging, puis relance ce workflow sur ce nouveau SHA. Il n'y a pas de contournement : seul le flavor staging tolère des textes inachevés."
+            echo "::error title=Les textes légaux ne sont pas prêts pour la production::$nombre marqueur(s) « [À COMPLÉTER : … ] » subsistent dans docs/legal/. Un build de production ne peut pas renvoyer vers une politique de confidentialité inachevée : les réglages de l'application ouvrent https://app.DOMAINE/privacy et /terms, et c'est exactement ce que la Play Console ouvre avant d'accepter une soumission. Renseigne les marqueurs listés ci-dessous dans docs/legal/privacy.md et docs/legal/terms.md, pousse, fais construire le nouveau commit par mobile-recette, puis relance ce workflow sur ce nouveau SHA. Il n'y a pas de contournement : seul le flavor staging tolère des textes inachevés."
             echo "Marqueurs restants, fichier par fichier :"
             echo "$marqueurs" | sed 's/^/  - /'
             exit 1
@@ -458,10 +471,12 @@ jobs:
         working-directory: apps/mobile
 
     env:
-      # Hors de l'arbre du dépôt, sur le disque éphémère du runner : jamais
-      # sous apps/mobile/, où un `git status` distrait ou une commande
-      # d'archivage pourrait l'emporter.
-      KEYSTORE_PATH: ${{ runner.temp }}/carlys-upload.jks
+      # Le keystore vit hors de l'arbre du dépôt, sur le disque éphémère du
+      # runner : jamais sous apps/mobile/, où un `git status` distrait ou une
+      # commande d'archivage pourrait l'emporter. Seul le NOM est fixé ici —
+      # le contexte `runner` n'est pas disponible dans `jobs.<id>.env`, on
+      # compose donc le chemin dans chaque étape avec $RUNNER_TEMP.
+      KEYSTORE_NOM: carlys-upload.jks
 
     steps:
       # ── La signature est OBLIGATOIRE ici, et l'absence de secret ÉCHOUE ─────
@@ -481,6 +496,18 @@ jobs:
       # l'avance, l'échec arrive donc quelques secondes APRÈS l'approbation.
       # C'est le bon échange : mieux vaut un aller-retour qu'une clé de
       # signature accessible à n'importe quelle exécution du dépôt.
+      #
+      # LE CHOIX SE FAIT À DEUX, avec mobile-recette.yml, parce que la Play
+      # Console impose la MÊME clé de téléversement à toutes les pistes d'une
+      # application, piste interne comprise — il n'y a donc qu'une clé à
+      # placer. Les deux workflows lisent les quatre MÊMES noms de secrets :
+      #   - secrets sur l'ENVIRONNEMENT seulement : la clé ne sort jamais sans
+      #     approbation, et mobile-recette livre son APK seul (son cas
+      #     nominal, son bundle `-aab` étant conditionné à ces secrets) ;
+      #   - secrets au niveau du DÉPÔT : ce job les hérite aussi, donc tout
+      #     fonctionne ici — mais la recette peut alors produire un bundle
+      #     signé sans qu'aucun humain n'ait rien approuvé.
+      # Le premier réglage est celui que ce fichier recommande.
       #
       #   ANDROID_KEYSTORE_BASE64    le fichier .jks encodé :
       #                              base64 -w0 upload-keystore.jks
@@ -588,17 +615,20 @@ jobs:
         run: |
           set -euo pipefail
           umask 077
-          printf '%s' "$KEYSTORE_B64" | base64 -d > "$KEYSTORE_PATH"
-          if [ ! -s "$KEYSTORE_PATH" ]; then
+          keystore="$RUNNER_TEMP/$KEYSTORE_NOM"
+          printf '%s' "$KEYSTORE_B64" | base64 -d > "$keystore"
+          if [ ! -s "$keystore" ]; then
             echo "::error title=Keystore illisible::Le décodage base64 de ANDROID_KEYSTORE_BASE64 a produit un fichier vide. Le secret a probablement été collé avec des retours à la ligne ou tronqué : régénère-le avec « base64 -w0 upload-keystore.jks » (l'option -w0 est essentielle) et recolle la valeur entière."
             exit 1
           fi
-          cat > android/key.properties <<PROPS
-          storeFile=$KEYSTORE_PATH
-          storePassword=$KEYSTORE_PASSWORD
-          keyAlias=$KEY_ALIAS
-          keyPassword=$KEY_PASSWORD
-          PROPS
+          # `printf '%s'` plutôt qu'un heredoc : un heredoc non quoté
+          # interpréterait un « $ » ou un « \ » présent dans un mot de passe.
+          # (Réserve honnête : le format .properties de Java donne lui aussi un
+          # sens au « \ » dans une valeur. Un mot de passe de keystore sans
+          # antislash évite le sujet ; c'est le cas de ceux qu'engendre keytool.)
+          printf 'storeFile=%s\nstorePassword=%s\nkeyAlias=%s\nkeyPassword=%s\n' \
+            "$keystore" "$KEYSTORE_PASSWORD" "$KEY_ALIAS" "$KEY_PASSWORD" \
+            > android/key.properties
           echo "Keystore décodé hors de l'arbre du dépôt."
 
       # ── La configuration de signature, APPENDUE plutôt qu'insérée ───────────
@@ -789,16 +819,21 @@ jobs:
       # et elle part dans le récapitulatif pour être confrontée à celle que
       # Play attend de la clé de téléversement.
       - name: La signature du bundle est bien la nôtre
+        id: signature
         env:
           KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
         run: |
           set -euo pipefail
-          KEYTOOL="$(command -v keytool || echo "${JAVA_HOME:-}/bin/keytool")"
-          [ -x "$KEYTOOL" ] || {
+          keytool_bin="$(command -v keytool || echo "${JAVA_HOME:-}/bin/keytool")"
+          if [ ! -x "$keytool_bin" ]; then
             echo "::error title=keytool introuvable::La signature du bundle ne peut pas être vérifiée sans le JDK. Le runner GitHub en fournit un ; si cette étape échoue, ajouter actions/setup-java avant le build."
             exit 1
-          }
+          fi
+          # `|| true` sur chaque extraction : sans lui, `pipefail` ferait
+          # échouer l'étape sur le grep vide AVANT que les messages ci-dessous
+          # aient pu nommer la cause. Une garde qui échoue sans expliquer ne
+          # vaut guère mieux qu'une garde absente.
           empreinte() { grep -m1 -oE 'SHA256: [0-9A-Fa-f:]+' | cut -d' ' -f2; }
 
           aab=build/app/outputs/bundle/release/app-release.aab
@@ -809,13 +844,17 @@ jobs:
           fi
           unzip -p "$aab" "$bloc" > "$RUNNER_TEMP/signature.bin"
 
-          obtenue="$("$KEYTOOL" -printcert -file "$RUNNER_TEMP/signature.bin" | empreinte)"
-          attendue="$("$KEYTOOL" -list -v -keystore "$KEYSTORE_PATH" -alias "$KEY_ALIAS" \
-            -storepass "$KEYSTORE_PASSWORD" 2>/dev/null | empreinte)"
+          obtenue="$("$keytool_bin" -printcert -file "$RUNNER_TEMP/signature.bin" 2>/dev/null | empreinte || true)"
+          attendue="$("$keytool_bin" -list -v -keystore "$RUNNER_TEMP/$KEYSTORE_NOM" \
+            -alias "$KEY_ALIAS" -storepass "$KEYSTORE_PASSWORD" 2>/dev/null | empreinte || true)"
           rm -f "$RUNNER_TEMP/signature.bin"
 
           if [ -z "$attendue" ]; then
-            echo "::error title=Alias introuvable dans le keystore::Aucun certificat pour l'alias « $KEY_ALIAS » dans le keystore fourni. Vérifie ANDROID_KEY_ALIAS : « keytool -list -keystore upload-keystore.jks » en donne la liste exacte."
+            echo "::error title=Alias ou mot de passe de keystore invalide::Aucun certificat lisible pour l'alias « $KEY_ALIAS » dans le keystore fourni. Vérifie ANDROID_KEY_ALIAS et ANDROID_KEYSTORE_PASSWORD : « keytool -list -keystore upload-keystore.jks » donne la liste exacte des alias."
+            exit 1
+          fi
+          if [ -z "$obtenue" ]; then
+            echo "::error title=Certificat du bundle illisible::Le bloc $bloc extrait de $aab n'a pas pu être décodé par keytool. Le bundle est signé, mais pas d'une façon que cette garde sait vérifier : ne pas téléverser cet artefact sans avoir contrôlé sa signature à la main."
             exit 1
           fi
           if [ "$obtenue" != "$attendue" ]; then
@@ -824,7 +863,6 @@ jobs:
           fi
           echo "empreinte=$obtenue" >> "$GITHUB_OUTPUT"
           echo "Bundle signé avec la clé de production (SHA-256 : $obtenue)."
-        id: signature
 
       # ── Noms d'artefacts adressés par sha ───────────────────────────────────
       # Même principe que le tag `sha-<sha12>` du registre : le nom du fichier
@@ -834,15 +872,52 @@ jobs:
         env:
           SHA12: ${{ needs.controles.outputs.sha12 }}
           NUMERO: ${{ needs.controles.outputs.build_number }}
+          API: ${{ needs.controles.outputs.api_url }}
+          WEB: ${{ needs.controles.outputs.web_url }}
+          EMPREINTE: ${{ steps.signature.outputs.empreinte }}
         run: |
           set -euo pipefail
           dest="$RUNNER_TEMP/production"
           mkdir -p "$dest"
           cp build/app/outputs/bundle/release/app-release.aab \
-            "$dest/carlys-$SHA12-$NUMERO.aab"
+            "$dest/carlys-production-$SHA12-$NUMERO.aab"
           cp build/app/outputs/flutter-apk/app-release.apk \
-            "$dest/carlys-$SHA12-$NUMERO-verification.apk"
-          cp -r build/symbols "$dest/symbols"
+            "$dest/carlys-production-$SHA12-$NUMERO-verification.apk"
+          cp -r build/symbols "$dest/symboles"
+          # Même geste que mobile-recette.yml : l'artefact se télécharge des
+          # semaines plus tard, souvent par quelqu'un qui n'a pas l'exécution
+          # sous les yeux. Ce qu'il contient et ce qu'il ne faut PAS en faire
+          # voyagent donc AVEC lui, pas seulement dans le récapitulatif.
+          cat > "$dest/LISEZ-MOI.txt" <<FIN
+          Carlys — livraison de PRODUCTION
+          commit                      : $SHA12
+          versionCode Android         : $NUMERO
+          CARLYS_FLAVOR               : production
+          CARLYS_API_BASE_URL         : $API
+          CARLYS_PUBLIC_WEB_BASE_URL  : $WEB
+          empreinte SHA-256 de la clé : $EMPREINTE
+
+          carlys-production-$SHA12-$NUMERO.aab
+            Le bundle à téléverser dans la Play Console. Un .aab NE S'INSTALLE
+            PAS sur un téléphone. Signé avec le keystore des secrets protégés
+            par l'environnement mobile-production, et cette signature a été
+            VÉRIFIÉE (empreinte ci-dessus) avant d'être déposée ici.
+
+          carlys-production-$SHA12-$NUMERO-verification.apk
+            Même code, mêmes --dart-define, même clé. Il existe pour une seule
+            raison : LANCEZ-LE UNE FOIS avant de déposer le bundle. Le contrôle
+            des adresses (assertUsable) a lieu au démarrage, pas à la
+            compilation — c'est le seul moment où il s'exécute vraiment.
+
+          symboles/
+            À téléverser sur le magasin, ou à conserver : sans eux, une trace
+            d'exécution remontée par la production est illisible, le binaire
+            étant obscurci (--obfuscate).
+
+          Le versionCode ne se réutilise pas : la Play Console refuse deux
+          dépôts au même numéro. Un nouveau build du MÊME commit doit donc
+          porter un versionCode strictement supérieur (entrée « build_number »).
+          FIN
           ls -lh "$dest"
 
       # Le keystore et les deux mots de passe disparaissent du disque, que le
@@ -852,14 +927,16 @@ jobs:
       # contrôle est celle qu'on écrit.
       - name: Effacement du keystore
         if: always()
-        run: rm -f "$KEYSTORE_PATH" android/key.properties
+        run: rm -f "$RUNNER_TEMP/$KEYSTORE_NOM" android/key.properties
 
-      # ARTEFACT D'EXÉCUTION, jamais une release publique — à rebours de
-      # demo-apk.yml, qui publiait sur `demo-latest` pour donner une URL de
-      # téléchargement stable à une démo sans serveur. Un binaire de production
-      # signé n'a rien à faire sur une page publique : il se télécharge depuis
-      # l'onglet Actions, par quelqu'un qui a accès au dépôt, et il monte
-      # ensuite dans la Play Console.
+      # ARTEFACT D'EXÉCUTION, jamais une release publique. L'ancien workflow
+      # de démonstration publiait son APK sur la release `demo-latest` : une
+      # URL stable, ouverte à tous, ce qui était le bon choix pour une visite
+      # sans serveur et sur données intégrées. Ces binaires-ci visent un
+      # serveur RÉEL et sont signés de la clé de l'application : ils n'ont
+      # rien à faire sur une page publique. On les télécharge depuis l'onglet
+      # Actions, par quelqu'un qui a accès au dépôt, et ils montent ensuite
+      # dans la Play Console. Même raisonnement que mobile-recette.yml.
       - name: Artefact de production
         uses: actions/upload-artifact@v4
         with:
@@ -901,9 +978,9 @@ jobs:
             echo
             echo "| Fichier | À quoi il sert |"
             echo "| --- | --- |"
-            echo "| \`carlys-$SHA12-$NUMERO.aab\` | Le bundle à téléverser dans la Play Console. Ne s'installe PAS sur un téléphone. |"
-            echo "| \`carlys-$SHA12-$NUMERO-verification.apk\` | Même code, mêmes \`--dart-define\`, même clé — pour LANCER la production une fois avant de la déposer. |"
-            echo "| \`symbols/\` | Symboles de débogage : sans eux, une trace d'exception de production est illisible. |"
+            echo "| \`carlys-production-$SHA12-$NUMERO.aab\` | Le bundle à téléverser dans la Play Console. Ne s'installe PAS sur un téléphone. |"
+            echo "| \`carlys-production-$SHA12-$NUMERO-verification.apk\` | Même code, mêmes \`--dart-define\`, même clé — pour LANCER la production une fois avant de la déposer. |"
+            echo "| \`symboles/\` | Symboles de débogage : sans eux, une trace d'exception de production est illisible. |"
             echo
             echo "### Ce qui reste à faire À LA MAIN"
             echo
@@ -915,7 +992,7 @@ jobs:
             echo "   qu'AU LANCEMENT : cette étape est la seule qui l'exécute vraiment."
             echo "2. **Téléverser le bundle.** Play Console → Test → Test interne (ou"
             echo "   Production) → Créer une version → déposer le \`.aab\`."
-            echo "3. **Téléverser les symboles** de \`symbols/\` pour que les rapports de"
+            echo "3. **Téléverser les symboles** de \`symboles/\` pour que les rapports de"
             echo "   plantage soient lisibles."
             echo "4. **Compléter la fiche du magasin** si ce n'est pas déjà fait : description,"
             echo "   captures d'écran, icône 512×512, bannière 1024×500, classification du"
