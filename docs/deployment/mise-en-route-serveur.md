@@ -62,7 +62,8 @@ l'étape 6 les énonce, et elles ne se supposent pas remplies.
   faire. L'installation du poste est décrite dans
   [`docs/development/poste-de-travail.md`](../development/poste-de-travail.md).
   Pour les builds iOS, ajoutez un **macOS** avec Xcode et un compte Apple
-  Developer.
+  Developer — ou laissez le runner macOS de GitHub les faire, sur demande
+  (`docs/deployment/builds-mobiles.md`, §10).
 
 ---
 
@@ -1009,6 +1010,14 @@ flutter build ipa --release \
 # → build/ios/ipa/*.ipa, à téléverser avec Transporter ou `xcrun altool`
 ```
 
+**La CI fait ces deux gestes pour vous**, secrets posés : `mobile-recette`
+signe le bundle avec le keystore des secrets et le dépose sur la piste interne
+Play ; son job iOS, sur un runner macOS de GitHub et **à la demande**, signe
+l'`.ipa` et le dépose sur TestFlight. Ce que chaque chemin exige est dans
+[`builds-mobiles.md`](builds-mobiles.md), §4 pour Android, §10 pour iOS. Les
+commandes ci-dessus restent le pendant **local**, utile pour compiler sans
+attendre la CI.
+
 ### Production — App Store et Play Store
 
 Les mêmes commandes, avec les domaines nus et `CARLYS_FLAVOR=production` :
@@ -1048,11 +1057,15 @@ normalement.
 
 ### Ce qui n'est pas automatisable
 
-- **iOS exige un macOS.** Ni ce serveur ni la CI Linux ne peuvent produire un
-  `.ipa`. C'est une contrainte d'Apple, pas un manque du dépôt.
-- **La signature** (keystore Android, certificats et profils Apple) et le
-  dépôt sur les magasins restent manuels, comme la création des comptes
-  Apple Developer, Google Play Console et Samsung Seller.
+- **iOS exige un macOS.** Ce serveur ne produira jamais un `.ipa` ; c'est une
+  contrainte d'Apple, pas un manque du dépôt. Le runner macOS de GitHub, lui,
+  le peut — sur demande et à dix fois le prix d'une minute Linux
+  (`builds-mobiles.md`, §10.5).
+- **La création des pièces de signature** (keystore Android, certificat et
+  profil Apple, clés API des magasins) et celle des comptes Apple Developer,
+  Google Play Console et Samsung Seller restent manuelles. Leur **usage**, lui,
+  est automatisé : posées en secrets, la CI signe et dépose sur la piste
+  interne Play et sur TestFlight.
 - La politique de confidentialité que réclameront les magasins est
   `https://app.carlys.example/privacy` — servie par l'application web, donc
   **l'étape 9 doit être faite avant toute soumission en production**.

@@ -40,6 +40,7 @@ la même forme, avec le même vocabulaire.
   └──────────────────┬─────────────────────────┘
                      │  .apk installable, toujours
                      │  .aab seulement si signature posée
+                     │  .ipa sur demande (job macOS, §10)
                      ▼
         INSTALLER sur un téléphone, OUVRIR,
         essayer vraiment — puis noter le sha
@@ -90,6 +91,8 @@ Ce qui sépare les deux chemins, ligne à ligne :
 | Le commit doit déjà exister en recette | — | **oui** (règle « build once ») |
 | `.apk` produit | toujours, sans aucun secret | oui, mais **de vérification seulement** |
 | `.aab` produit | seulement si la signature est configurée | **toujours** — sinon le workflow échoue |
+| `.ipa` produit | **sur demande** (variable `CARLYS_IOS_BUILDS`, ou case « ios »), secrets Apple obligatoires — §10 | non : la production n'a pas de job iOS (§10.7) |
+| Dépôt sur le magasin | piste interne Play et TestFlight, **si** les secrets correspondants sont posés | à la main |
 | Où va l'artefact | onglet Actions de l'exécution | onglet Actions de l'exécution |
 
 **Pourquoi la production ne redéploie pas les octets de la recette.** Côté
@@ -113,8 +116,8 @@ mêmes exigences ni les mêmes délais, et les confondre coûte cher.
 | Cible | Format | Signature | Secret à créer | Faisable aujourd'hui ? |
 | --- | --- | --- | --- | --- |
 | **Téléphone de test** (le vôtre, celui d'un testeur) | `.apk` | clé de **debug**, et c'est sans conséquence | **aucun** | **oui, tout de suite** |
-| **Play Store, Galaxy Store** | `.aab` | **keystore obligatoire** | 4 secrets (§4) | oui, une fois le keystore créé |
-| **App Store (iOS)** | `.ipa` | certificat + profil Apple | compte Apple Developer | **non — un macOS est indispensable** |
+| **Play Store, Galaxy Store** | `.aab` | **keystore obligatoire** | 4 secrets (§4), + 1 pour la piste interne (§4.6) | oui, une fois le keystore créé |
+| **TestFlight, App Store (iOS)** | `.ipa` | **certificat Apple Distribution + profil App Store** | 3 secrets (§10), + 3 pour TestFlight | oui, **sur demande** — runner macOS de GitHub, dix fois le prix d'une minute Linux |
 
 Trois choses à ne jamais mélanger :
 
@@ -133,13 +136,14 @@ Trois choses à ne jamais mélanger :
   l'APK de vérification que produit le workflow de production, bâti sur le même
   code, les mêmes `--dart-define` et la **même clé**.
 
-**iOS n'est pas oublié, il est écarté sciemment.** Apple exige Xcode, donc
-macOS ; ni le serveur ni les runners Linux ne peuvent produire un `.ipa`. Ce
-qu'il faudrait pour l'ajouter — un runner `macos-latest`, un certificat Apple
-Distribution, un profil de provisionnement, une clé API App Store Connect, et
-l'équivalent iOS de la signature Gradle — est listé en tête de
-`.github/workflows/mobile-production.yml`. Le vrai arbitrage y est aussi : une
-minute de runner macOS est facturée **dix fois** une minute de runner Linux.
+**iOS se construit sur demande, jamais par défaut.** Apple exige Xcode, donc
+macOS : ni le serveur ni les runners Linux ne peuvent produire un `.ipa`. Le
+workflow de recette porte un **second job**, sur `macos-latest`, qui ne tourne
+que si on le lui demande — variable de dépôt `CARLYS_IOS_BUILDS=oui` pour
+chaque poussée, ou case « ios » de **Run workflow** pour une fois. La raison est
+le prix : une minute de runner macOS est facturée **dix fois** une minute de
+runner Linux sur un dépôt privé. Ce qu'il faut créer chez Apple, et comment le
+job vérifie chaque pièce avant de compiler, est au §10.
 
 ---
 
@@ -176,7 +180,8 @@ variantes `-staging`).
 
 1. **Pousser** sur `development` (ou `production`). Le workflow
    `mobile-recette` part tout seul dès qu'un fichier d'`apps/mobile/` bouge (ou
-   les deux scripts qui portent l'identité Android de l'application).
+   les deux scripts qui portent l'identité Android de l'application). Le job
+   iOS, lui, ne part qu'à la demande (§10.5).
 2. **Ouvrir l'onglet Actions**, l'exécution la plus récente. Compter une
    vingtaine de minutes à froid, moins ensuite grâce aux caches Dart et Gradle.
 3. **Télécharger l'artefact** en bas de la page d'exécution. Son nom porte les
@@ -335,6 +340,19 @@ Le prix du choix « environnement » est visible au moment de l'usage : le job d
 contrôles ne peut pas vérifier la présence des secrets à l'avance, l'échec arrive
 donc quelques secondes **après** l'approbation. C'est le bon échange — mieux vaut
 un aller-retour qu'une clé de signature accessible à n'importe quelle exécution.
+
+### 4.6 La piste interne Play, sans geste
+
+Un cinquième secret, facultatif, fait déposer le `.aab` de recette sur la
+**piste interne** de la Play Console par l'exécution elle-même :
+`PLAY_SERVICE_ACCOUNT_JSON`, le JSON d'un compte de service Google Cloud invité
+dans la Play Console (Utilisateurs et autorisations → Inviter → le compte de
+service, droit « Publier sur les pistes de test »). Il suppose les quatre secrets
+de signature au niveau du **dépôt** (§4.5) — la piste interne est un build de
+recette, elle ne passe par aucune approbation. Sans lui, le bundle reste un
+artefact à déposer à la main, et le récapitulatif le dit. Le `versionCode` est
+le numéro d'exécution du workflow : la Play Console refuse deux fois le même,
+et celui-ci ne recule jamais.
 
 ---
 
@@ -497,8 +515,14 @@ magasin, et ils engagent.
   sont **servis**. Un examinateur ouvrira `https://app.DOMAINE/privacy` — la page
   doit répondre. C'est l'application web qui la sert : **§9 du guide serveur doit
   être fait avant toute soumission en production**.
-- **iOS en entier** : `.ipa`, certificats, profils, TestFlight. Un macOS avec
-  Xcode est indispensable (§2).
+- **Les pièces Apple.** Le certificat Apple Distribution, le profil de
+  provisionnement et la clé API App Store Connect se créent sur
+  developer.apple.com et App Store Connect, à la main, et **se renouvellent**
+  (certificat et profil valent un an). Leur usage, lui, est automatisé : §10.
+- **Les testeurs.** Inscrire les testeurs internes (jusqu'à cent, membres de
+  l'équipe App Store Connect) et externes (jusqu'à dix mille, après un examen
+  Beta App Review) se fait dans App Store Connect → TestFlight ; côté Play,
+  la liste des testeurs de la piste interne se tient dans la Play Console.
 - **Le versionCode.** Play refuse un versionCode déjà téléversé. Le workflow
   utilise par défaut le numéro d'exécution, qui ne recule jamais ; si vous
   reprenez un dépôt existant dont la numérotation est plus haute, renseignez
@@ -526,6 +550,11 @@ Voici les quatre qu'on rencontre en pratique.
 | « Les textes légaux ne sont pas prêts » | un `[À COMPLÉTER : …]` subsiste dans `docs/legal/` | les compléter, pousser, reconstruire en recette, relancer sur le nouveau sha. Aucun contournement |
 | « L'approbation humaine n'est pas armée » | l'environnement `mobile-production` n'existe pas, ou n'a pas de reviewer | §6 |
 | « Secrets de signature absents » (après approbation) | les quatre secrets ne sont pas sur l'environnement | §4.4 et §4.5 |
+| « Signature iOS impossible — secret(s) absent(s) » | le job iOS a été demandé sans ses trois secrets | §10.3 — ou retirer `CARLYS_IOS_BUILDS` |
+| « Aucun certificat de DISTRIBUTION valide » | certificat de développement, expiré, ou `.p12` sans clé privée | §10.2 |
+| « Le profil n'embarque pas ce certificat » | profil engendré pour un autre certificat (renouvelé sans régénérer le profil) | §10.1, régénérer le profil |
+| « Le profil ne vise pas cette application » | l'App ID du profil n'est pas celui que `flutter create` engendre | enregistrer l'App ID que le message cite, refaire le profil |
+| « Profil Ad Hoc ou Development, pas App Store » | mauvais type de profil | §10.1 — type Distribution → App Store Connect |
 
 Deux limites à connaître, dites franchement plutôt que découvertes :
 
@@ -536,6 +565,173 @@ Deux limites à connaître, dites franchement plutôt que découvertes :
 - Elle peut refuser un commit ancien dont l'artefact a **expiré**, alors qu'il
   avait bel et bien été construit. C'est un faux refus, jamais un faux accord :
   elle se trompe du bon côté.
+
+---
+
+## 10. iOS — certificat, profil, TestFlight
+
+Le job « Application de recette (iOS) » de `mobile-recette` produit un `.ipa`
+signé pour App Store Connect et, si une clé API est posée, le dépose sur
+TestFlight. Il tourne sur un runner macOS de GitHub — le seul endroit du dépôt
+où Xcode existe — et **seulement sur demande** (§10.5).
+
+Une chose à savoir avant de commencer, dite franchement : ce job a été écrit et
+relu depuis un environnement **sans macOS ni SDK Flutter**. Sa syntaxe est
+validée, ses fragments de shell ont été exécutés un à un avec des entrées
+d'essai, ses vérifications de certificat et de profil sont celles de la
+documentation GitHub et Flutter — mais **sa première exécution complète sera la
+vôtre**. Si elle échoue, le journal de l'étape fautive dit quoi faire ; si le
+message ne suffit pas, c'est un défaut du workflow à corriger, pas à contourner.
+
+### 10.1 Ce qu'il faut chez Apple, dans l'ordre
+
+1. **Un compte Apple Developer** (abonnement annuel), sur developer.apple.com.
+   La vérification d'identité peut prendre plusieurs jours.
+2. **L'App ID** : Certificates, Identifiers & Profiles → Identifiers → « + » →
+   App IDs → type App → **Explicit** Bundle ID. La valeur est celle
+   qu'engendre `flutter create --org com.carlys --project-name carlys_mobile`,
+   qui met le nom du projet en camelCase sur iOS : `com.carlys.carlysMobile`
+   (Android, lui, reçoit `com.carlys.carlys_mobile`). **Le job l'affiche** à
+   l'étape « Identifiant de bundle », avant tout contrôle de secret, et le
+   cite dans son message d'échec : c'est lui qui fait foi. Aucune capacité
+   (Push, etc.) n'est requise pour la recette.
+3. **Le certificat** : Certificates → « + » → **Apple Distribution**. Il exige
+   une demande de signature (CSR) créée sur votre Mac avec Trousseaux d'accès
+   → Assistant de certification → Demander un certificat à une autorité de
+   certification → « Enregistrée sur le disque ». Téléchargez le `.cer` produit
+   et ouvrez-le : il rejoint le trousseau **à côté de la clé privée** que la
+   demande a créée. Un certificat **Apple Development** ne convient pas — il
+   ne signe ni pour TestFlight ni pour l'App Store, et le job le refuse.
+4. **Le profil** : Profiles → « + » → Distribution → **App Store Connect** →
+   l'App ID du point 2 → le certificat du point 3 → un nom (par exemple
+   « Carlys App Store ») → télécharger le `.mobileprovision`. Le profil
+   **embarque** le certificat : si vous renouvelez le certificat, régénérez le
+   profil, sinon le job refusera la paire.
+5. **La fiche App Store Connect** : appstoreconnect.apple.com → Apps → « + »
+   → même Bundle ID. Sans elle, le téléversement est accepté puis rejeté par
+   Apple avec un courriel « no suitable application records were found ».
+
+### 10.2 Exporter le certificat et sa clé en `.p12`
+
+Dans Trousseaux d'accès, catégorie **Mes certificats**, la ligne « Apple
+Distribution: … » se **déplie** sur une clé privée. Clic droit sur cette ligne
+(pas sur la clé seule, pas sur le certificat seul) → **Exporter** → format
+**.p12** → un mot de passe, que vous saisirez dans le secret
+`IOS_DISTRIBUTION_P12_PASSWORD`. Un `.p12` exporté depuis le certificat seul ne
+contient pas la clé : le job le détecte (« aucune identité de distribution
+valide ») et le dit.
+
+Puis, comme pour le keystore Android — et avec la syntaxe macOS, où `base64`
+ignore `-w` :
+
+```bash
+base64 -i carlys-distribution.p12 | tr -d '\n'
+base64 -i "Carlys App Store.mobileprovision" | tr -d '\n'
+```
+
+### 10.3 Les trois secrets de signature
+
+Ils vont **ensemble** ; sans l'un d'eux, le job **échoue** — à rebours du bundle
+Android, où l'APK est déjà livré et se suffit. Ici, il n'existe pas d'`.ipa`
+« signé en debug » qui s'installerait quand même : sans certificat ni profil,
+rien ne s'installe nulle part, et un job qu'on a demandé et qui ne livre rien
+doit le dire en rouge.
+
+| Secret | Rôle | Comment l'obtenir |
+| --- | --- | --- |
+| `IOS_DISTRIBUTION_P12_BASE64` | certificat Apple Distribution **et** sa clé privée | §10.2, première commande |
+| `IOS_DISTRIBUTION_P12_PASSWORD` | mot de passe donné à l'export | celui saisi dans Trousseaux d'accès |
+| `IOS_PROVISIONING_PROFILE_BASE64` | profil App Store Connect du bundle | §10.2, seconde commande |
+
+Pas d'identifiant d'équipe à saisir : le profil le porte, le job l'y lit.
+
+Comme les secrets Android, ils **ne sont pas une sauvegarde** : gardez le `.p12`
+et son mot de passe dans un gestionnaire de mots de passe. La perte est moins
+grave qu'un keystore Android — Apple laisse révoquer un certificat et en créer un
+autre — mais elle coûte une régénération complète : certificat, profil, secrets.
+
+### 10.4 TestFlight sans geste : la clé API App Store Connect
+
+Trois secrets de plus, facultatifs mais **ensemble** ; sans eux, l'`.ipa` est
+un artefact à déposer avec l'application **Transporter** (Mac App Store).
+
+> App Store Connect → Users and Access → **Integrations** → App Store Connect
+> API → Team Keys → « + » → nom libre, rôle **App Manager** → Generate.
+
+| Secret | Valeur |
+| --- | --- |
+| `APP_STORE_CONNECT_KEY_ID` | l'identifiant de la clé — dix lettres et chiffres, c'est le `<KEY_ID>` du nom de fichier `AuthKey_<KEY_ID>.p8` |
+| `APP_STORE_CONNECT_ISSUER_ID` | l'Issuer ID affiché en haut de la page (un UUID, commun à toutes les clés de l'équipe) |
+| `APP_STORE_CONNECT_API_KEY_BASE64` | le fichier `.p8`, encodé : `base64 -i AuthKey_<KEY_ID>.p8 \| tr -d '\n'` |
+
+**Le `.p8` ne se télécharge qu'une fois.** Apple ne le redonne jamais ; perdu, on
+révoque la clé et on en crée une autre. Rangez-le avec le `.p12`.
+
+### 10.5 Activer le job — et ce que ça coûte
+
+Le job iOS ne tourne **jamais** de lui-même. Deux façons de le demander :
+
+- **à chaque poussée**, comme l'APK : variable de dépôt `CARLYS_IOS_BUILDS`
+  valant `oui` (Settings → Secrets and variables → Actions → **Variables**) ;
+- **une fois** : Actions → `mobile-recette` → Run workflow → cocher **ios**.
+
+Le prix, c'est la raison de ce choix : sur un dépôt privé, GitHub facture une
+minute de runner macOS **dix fois** une minute Linux, et une archive Xcode d'une
+application Flutter avec Firebase prend vingt à trente minutes à froid. À chaque
+poussée sous `apps/mobile/`, cela se compte. Le cache CocoaPods du job réduit
+les exécutions suivantes ; il ne les rend pas gratuites. Une pratique raisonnable :
+laisser la variable absente, cocher la case quand un build iOS est utile, et ne
+la poser à `oui` que le temps d'une campagne de test.
+
+### 10.6 Ce que le job vérifie avant de compiler
+
+Chaque contrôle porte le message que `xcodebuild` ne donnerait pas, et se joue en
+quelques secondes plutôt qu'après vingt minutes d'archive :
+
+- les **trois secrets** présents, avec l'App ID à enregistrer dans le message
+  d'échec ;
+- le `.p12` **déballé et importé** dans un trousseau créé pour le job, détruit
+  à la fin quoi qu'il arrive — même règle que le keystore Android ;
+- une identité **Apple Distribution** (ou « iPhone Distribution », l'ancien
+  nom) **valide** : non expirée, chaîne complète jusqu'à Apple. Si le `.p12` a
+  été exporté sans l'intermédiaire WWDR, le job importe ceux qu'Apple publie
+  et revérifie ;
+- le profil : de type **App Store** (ni Ad Hoc, ni Development, ni
+  Enterprise), pour **ce** bundle, **non expiré**, et **embarquant le
+  certificat** importé — la paire dépareillée est l'erreur la plus fréquente
+  de toute la signature iOS ;
+- puis seulement : signature manuelle branchée par `ios/Flutter/Release.xcconfig`
+  (l'équivalent du second bloc `android { }` — rien n'est édité dans
+  `project.pbxproj`), `ExportOptions.plist` écrit, archive, export,
+  téléversement.
+
+Le job déclare `ITSAppUsesNonExemptEncryption = false` dans `Info.plist` :
+l'application ne chiffre rien elle-même, elle parle HTTPS, ce qui est exempt.
+Sans cette déclaration, chaque build attendrait dans App Store Connect qu'un
+humain réponde « Missing Compliance ».
+
+### 10.7 Après le téléversement, et les limites
+
+- **Apple traite le build** dix à trente minutes après le téléversement, puis
+  il apparaît dans App Store Connect → TestFlight. Les testeurs **internes**
+  (membres de l'équipe) le reçoivent dès qu'un groupe interne le contient ;
+  les testeurs **externes** exigent un examen (Beta App Review, un à deux
+  jours pour le premier build).
+- **Le numéro de build** (`CFBundleVersion`) est le numéro d'exécution du
+  workflow, comme le `versionCode` Android : TestFlight refuse deux fois le
+  même, et celui-ci ne recule jamais.
+- **Lancez le build une fois** depuis TestFlight avant de l'ouvrir aux testeurs
+  — §3.3 vaut pour iOS mot pour mot.
+- **La production n'a pas de job iOS.** `mobile-production` ne construit
+  qu'Android ; ajouter iOS signifierait recopier le job de recette avec
+  `CARLYS_FLAVOR=production`, des secrets d'**environnement** derrière
+  l'approbation, et accepter le coût macOS à chaque promotion. Le jour où une
+  publication App Store se prépare, c'est ce job de recette qui sert de
+  modèle, pas une page blanche.
+- **Les notifications push iOS** ne sont pas couvertes : elles demandent une
+  clé APNs chez Apple, la capacité Push sur l'App ID, et un
+  `GoogleService-Info.plist` distinct du fichier Android. Sans elles, le push
+  est simplement inactif sur iOS, le reste de l'application vit normalement.
 
 ---
 

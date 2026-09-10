@@ -40,22 +40,20 @@
 #    commits déjà construits et éprouvés en recette*. La garde n° 2 le
 #    vérifie.
 #
-# ── iOS : NON IMPLÉMENTÉ, DÉLIBÉRÉMENT ────────────────────────────────────────
+# ── iOS : PAS DANS CE WORKFLOW, DÉLIBÉRÉMENT ─────────────────────────────────
 #
-# Ce workflow ne produit rien pour iOS. Ce qu'il faudrait pour l'ajouter, pour
-# que le choix reste éclairé plutôt que oublié :
-#   - un runner `macos-latest` (les seuls capables de lancer Xcode) ;
-#   - un certificat de DISTRIBUTION Apple (Apple Distribution), importé dans un
-#     trousseau temporaire créé et détruit dans le job ;
-#   - un profil de provisionnement App Store correspondant au bundle id ;
-#   - une clé API App Store Connect (issuer id + key id + .p8) pour téléverser
-#     vers TestFlight sans mot de passe d'application ;
-#   - `ios/` n'étant pas versionné (comme `android/`), scripts/mobile_platforms.sh
-#     doit être appelé avec « android,ios », et l'équivalent iOS de la
-#     signature Gradle est à écrire.
-# LE COÛT EST LE VRAI ARBITRAGE : une minute de runner macOS est facturée DIX
-# fois une minute de runner Linux chez GitHub. Un build iOS à chaque promotion
-# n'est pas neutre. À décider sciemment, pas par inertie.
+# Ce workflow ne produit rien pour iOS. Le job qui sait le faire existe — le
+# job `ios` de mobile-recette.yml : runner macOS, trousseau temporaire,
+# certificat Apple Distribution, profil App Store vérifié pièce à pièce,
+# téléversement TestFlight par clé API. L'ajouter ici, c'est le recopier avec
+# CARLYS_FLAVOR=production, ses secrets posés sur l'ENVIRONNEMENT
+# mobile-production (donc derrière l'approbation, comme le keystore), et le
+# même récapitulatif. Ce n'est pas fait, et le choix doit rester éclairé :
+# LE COÛT EST LE VRAI ARBITRAGE — une minute de runner macOS est facturée DIX
+# fois une minute Linux sur un dépôt privé, et une archive Xcode prend vingt
+# à trente minutes. Un build iOS à chaque promotion n'est pas neutre. Le jour
+# où une publication App Store se prépare, on part de ce job-là, pas d'une
+# page blanche.
 name: mobile-production
 
 # workflow_dispatch UNIQUEMENT. Jamais sur poussée — c'est la moitié

@@ -10,11 +10,11 @@
 #
 # Le mobile est donc désormais le MIROIR du serveur, pas un chemin parallèle :
 #   - `mobile-recette` (ce fichier) suit le code sans rien faire, comme
-#     `images-publish.yml` — poussée sur la branche de travail ou sur `main` ;
+#     `images-publish.yml` — poussée sur `development` ou `production` ;
 #   - la mise en production, elle, se demande à la main et se confirme à la
 #     main, comme `images-publish-prod.yml` puis `scripts/server/promote.sh`.
 #
-# ── Deux artefacts, deux usages qu'il ne faut JAMAIS confondre ────────────────
+# ── Trois artefacts, trois usages qu'il ne faut JAMAIS confondre ──────────────
 #
 #   1. `.apk` arm64 — INSTALLABLE TOUT DE SUITE, par téléversement direct sur un
 #      téléphone. Il est signé avec la clé de DEBUG et c'est sans conséquence :
@@ -29,7 +29,16 @@
 #      dépôt. Tant qu'ils n'existent pas, ce workflow NE PRODUIT PAS d'`.aab`
 #      — plutôt rien qu'un binaire dont on ne découvrirait le vice qu'au
 #      moment du dépôt sur le magasin. Le récapitulatif dit lequel des deux
-#      cas s'applique et, le cas échéant, quels secrets créer.
+#      cas s'applique et, le cas échéant, quels secrets créer. Posé un
+#      secret de plus (compte de service Play), il part tout seul sur la
+#      piste interne.
+#
+#   3. `.ipa` — iOS, dans un SECOND JOB, sur un runner macOS, et SEULEMENT SI
+#      ON LE DEMANDE (variable de dépôt CARLYS_IOS_BUILDS=oui, ou case « ios »
+#      de Run workflow) : une minute macOS en coûte dix. Il n'existe pas
+#      d'`.ipa` « signé en debug » qui s'installerait quand même — sans
+#      certificat ni profil Apple, le job échoue au lieu de livrer du vide.
+#      Posée une clé API App Store Connect, il part tout seul sur TestFlight.
 #
 # ── Le filet d'`assertUsable()` a lieu AU LANCEMENT, pas à la compilation ─────
 #
@@ -71,6 +80,14 @@ on:
           (/srv/carlys/staging/DEPLOYED).
         required: false
         type: string
+      ios:
+        description: >-
+          Construire AUSSI l'application iOS (.ipa) sur un runner macOS, pour
+          cette exécution seulement. Sans effet si la variable de dépôt
+          CARLYS_IOS_BUILDS vaut déjà « oui » (elle l'active à chaque poussée).
+        required: false
+        type: boolean
+        default: false
 
 # `contents: read` et rien d'autre. `demo-apk` demandait `contents: write`
 # parce qu'il écrasait une release publique ; ce workflow publie via
@@ -309,14 +326,21 @@ jobs:
       # `--obfuscate` sans `--split-debug-info` rendrait les traces d'exécution
       # illisibles : les symboles sont donc extraits et livrés AVEC l'artefact,
       # dans le même dossier. Un plantage de recette reste ainsi déchiffrable.
+      # `--build-number` = numéro d'exécution du workflow, comme en production :
+      # la piste interne Play REFUSE un versionCode déjà téléversé, et le
+      # `+1` de pubspec.yaml ne bouge jamais tout seul. Le numéro d'exécution
+      # est monotone par construction. L'APK le porte aussi, pour que les deux
+      # artefacts d'une même exécution racontent la même version.
       - name: Build APK (recette, arm64)
         env:
           SHA12: ${{ steps.commit.outputs.sha12 }}
           API: ${{ steps.adresses.outputs.api }}
           WEB: ${{ steps.adresses.outputs.web }}
+          NUMERO: ${{ github.run_number }}
         run: |
           flutter build apk --release \
             --no-pub \
+            --build-number="$NUMERO" \
             --target-platform android-arm64 \
             --obfuscate \
             --split-debug-info=build/symboles-apk \
@@ -545,9 +569,11 @@ jobs:
           CARLYS_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           CARLYS_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           CARLYS_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          NUMERO: ${{ github.run_number }}
         run: |
           flutter build appbundle --release \
             --no-pub \
+            --build-number="$NUMERO" \
             --obfuscate \
             --split-debug-info=build/symboles-aab \
             --dart-define=CARLYS_FLAVOR=staging \
@@ -569,9 +595,9 @@ jobs:
           Un .aab ne s'installe pas sur un téléphone : pour cela, prendre
           l'artefact .apk de la même exécution.
 
-          Signé avec le keystore des secrets de dépôt. Le versionCode vient de
-          apps/mobile/pubspec.yaml : la Play Console refuse deux dépôts au même
-          numéro.
+          Signé avec le keystore des secrets de dépôt. versionCode = $NUMERO
+          (numéro d'exécution du workflow, jamais deux fois le même) : la Play
+          Console refuse deux dépôts au même numéro.
 
           LANCEZ L'APPLICATION UNE FOIS avant de la déposer : le contrôle des
           adresses (assertUsable) a lieu au démarrage, pas à la compilation.
@@ -589,6 +615,49 @@ jobs:
           path: apps/mobile/build/livraison/aab
           if-no-files-found: error
 
+      # ── 3. La piste interne Play, si un compte de service est posé ─────────
+      #
+      # UN SEUL secret, facultatif : PLAY_SERVICE_ACCOUNT_JSON — le JSON d'un
+      # compte de service Google Cloud invité dans la Play Console avec le droit
+      # « Publier sur les pistes de test ». Absent, le bundle reste un artefact
+      # à déposer à la main, et le récapitulatif le dit.
+      #
+      # Une action tierce, et c'est assumé : l'API Google Play Developer exige
+      # un jeton OAuth signé par la clé du compte de service, puis une session
+      # d'édition en trois appels. L'écrire en curl et openssl tiendrait en une
+      # centaine de lignes fragiles ; r0adkll/upload-google-play est l'action
+      # de référence pour ce geste, épinglée sur une version majeure.
+      - name: Compte de service Play
+        id: play
+        if: steps.signature.outputs.actif == 'oui'
+        env:
+          COMPTE: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+        run: |
+          if [ -n "$COMPTE" ]; then
+            echo "actif=oui" >> "$GITHUB_OUTPUT"
+            # L'identifiant d'application vient du projet engendré, jamais
+            # d'une constante ici : android/ n'est pas versionné, c'est
+            # mobile_platforms.sh qui fait foi.
+            id="$(grep -oE 'applicationId *= *"[^"]+"' android/app/build.gradle.kts 2>/dev/null | head -1 | sed 's/.*"\([^"]*\)"/\1/')"
+            [ -n "$id" ] || id="$(grep -oE "applicationId +['\"][^'\"]+['\"]" android/app/build.gradle 2>/dev/null | head -1 | sed "s/.*['\"]\([^'\"]*\)['\"]/\1/")"
+            [ -n "$id" ] || { echo "::error title=applicationId introuvable::Impossible de lire l'identifiant d'application dans android/app/build.gradle(.kts) — le téléversement Play ne sait pas quelle fiche viser."; exit 1; }
+            echo "package=$id" >> "$GITHUB_OUTPUT"
+            echo "Piste interne Play : téléversement prévu pour $id."
+          else
+            echo "actif=non" >> "$GITHUB_OUTPUT"
+            echo "PLAY_SERVICE_ACCOUNT_JSON absent : le bundle reste un artefact à déposer à la main."
+          fi
+
+      - name: Téléversement — piste interne Play
+        if: steps.play.outputs.actif == 'oui'
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: ${{ steps.play.outputs.package }}
+          releaseFiles: apps/mobile/build/livraison/aab/carlys-recette-${{ steps.commit.outputs.sha12 }}.aab
+          track: internal
+          status: completed
+
       - name: Récapitulatif
         env:
           SHA12: ${{ steps.commit.outputs.sha12 }}
@@ -596,6 +665,9 @@ jobs:
           WEB: ${{ steps.adresses.outputs.web }}
           SIGNATURE: ${{ steps.signature.outputs.actif }}
           MANQUANTS: ${{ steps.signature.outputs.manquants }}
+          NUMERO: ${{ github.run_number }}
+          PLAY: ${{ steps.play.outputs.actif }}
+          PAQUET: ${{ steps.play.outputs.package }}
         run: |
           {
             echo "## Application de recette — commit \`$SHA12\`"
@@ -618,7 +690,18 @@ jobs:
             if [ "$SIGNATURE" = "oui" ]; then
               echo "**\`carlys-recette-aab-$SHA12\`** — le bundle pour les **magasins**"
               echo "(piste interne Play, Galaxy Store), signé avec le keystore des secrets de"
-              echo "dépôt, toutes architectures. Un \`.aab\` ne s'installe pas sur un téléphone."
+              echo "dépôt, toutes architectures, versionCode \`$NUMERO\`. Un \`.aab\` ne"
+              echo "s'installe pas sur un téléphone."
+              if [ "$PLAY" = "oui" ]; then
+                echo
+                echo "**Téléversé sur la piste interne Play** (\`$PAQUET\`) : les testeurs"
+                echo "inscrits sur cette piste le reçoivent via le Play Store."
+              else
+                echo
+                echo "Non téléversé sur Play : poser le secret \`PLAY_SERVICE_ACCOUNT_JSON\`"
+                echo "(compte de service invité dans la Play Console) pour que cette exécution"
+                echo "le dépose elle-même sur la piste interne."
+              fi
             else
               echo "**Aucun bundle \`.aab\`** — et c'est délibéré."
               echo
@@ -678,3 +761,609 @@ jobs:
           else
             echo "Aucun keystore à effacer (signature inactive ou étape jamais atteinte)."
           fi
+
+  # ── iOS : le même geste, sur le seul runner qui sache le faire ───────────────
+  #
+  # OPT-IN, jamais par défaut, et le coût est toute la raison : sur un dépôt
+  # privé, une minute de runner macOS est facturée DIX fois une minute Linux.
+  # Un build iOS à chaque poussée sous apps/mobile/ n'est pas neutre — il se
+  # décide, de deux façons :
+  #   - la variable de dépôt CARLYS_IOS_BUILDS=oui (Settings → Secrets and
+  #     variables → Actions → Variables) : à chaque poussée, comme l'APK ;
+  #   - la case « ios » de Run workflow : pour cette exécution seulement.
+  #
+  # Contrairement à l'APK, il n'existe PAS d'.ipa « signé en debug » qui
+  # s'installerait quand même : sans certificat de distribution ni profil de
+  # provisionnement, rien ne s'installe nulle part, ni sur un téléphone ni sur
+  # TestFlight. Ce job EXIGE donc ses trois secrets et ÉCHOUE sans eux — un
+  # job qu'on a demandé et qui ne livre rien doit le dire en rouge, pas en
+  # gris. L'échec donne l'identifiant de bundle à enregistrer chez Apple :
+  # c'est la première chose dont on a besoin, et l'exécution est le seul
+  # endroit qui le sache de source sûre (`ios/` n'est pas versionné).
+  #
+  # Le téléversement vers TestFlight, lui, est facultatif — trois secrets de
+  # plus. Sans eux, l'.ipa est un artefact à déposer avec Transporter.
+  #
+  # Les étapes communes (commit construit, adresses, SDK, dépendances,
+  # garde-fou) sont recopiées du job Android MOT POUR MOT : GitHub Actions ne
+  # partage rien entre deux jobs, et les commentaires qui les justifient sont
+  # là-haut. Toute correction ici se reporte là-bas, et réciproquement.
+  ios:
+    name: Application de recette (iOS)
+    if: vars.CARLYS_IOS_BUILDS == 'oui' || inputs.ios == true
+    runs-on: macos-latest
+    # Le double de l'Android : l'archive Xcode d'une application Flutter avec
+    # Firebase compile une trentaine de pods à froid.
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: apps/mobile
+
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Commit construit
+        id: commit
+        env:
+          SHA_DEMANDE: ${{ inputs.sha }}
+        run: |
+          if [ -n "${SHA_DEMANDE:-}" ]; then
+            if ! full="$(git rev-parse --verify --quiet "${SHA_DEMANDE}^{commit}")"; then
+              echo "::error title=Commit inconnu::« ${SHA_DEMANDE} » n'est pas un commit de ce dépôt. Reprends le sha affiché par /srv/carlys/staging/DEPLOYED, ou celui de l'exécution d'images-publish qui a fabriqué les images de recette correspondantes."
+              exit 1
+            fi
+            git checkout --detach "$full"
+            echo "Rattrapage demandé sur $full"
+          else
+            full="${{ github.sha }}"
+          fi
+          echo "sha12=$(echo "$full" | cut -c1-12)" >> "$GITHUB_OUTPUT"
+          echo "Construction du commit $(echo "$full" | cut -c1-12) : $(git log -1 --format='%s')"
+
+      # Copie mot pour mot de l'étape du job Android — voir son commentaire.
+      - name: Adresses de recette dérivées de CARLYS_DOMAIN
+        id: adresses
+        env:
+          CARLYS_DOMAIN: ${{ vars.CARLYS_DOMAIN }}
+        run: |
+          if [ -z "$CARLYS_DOMAIN" ]; then
+            echo "::error title=Variable de dépôt CARLYS_DOMAIN absente::L'application mobile fige l'adresse du serveur dans le binaire (--dart-define, lu par app_environment.dart). Sans CARLYS_DOMAIN, il n'y a pas d'adresse de recette à viser et l'application refuserait de démarrer. Pose-la dans Settings → Secrets and variables → Actions → Variables, nom CARLYS_DOMAIN, valeur le domaine nu (exemple : carlys.app), puis relance ce workflow."
+            exit 1
+          fi
+
+          domaine_bien_forme() {
+            case "$1" in
+              ''|*[!A-Za-z0-9.-]*) return 1 ;;
+            esac
+            [ "${#1}" -le 253 ] || return 1
+            printf '%s' "$1" | grep -Eq '^[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$'
+          }
+
+          if ! domaine_bien_forme "$CARLYS_DOMAIN"; then
+            echo "::error title=CARLYS_DOMAIN mal formée::La valeur « $CARLYS_DOMAIN » n'est pas un nom de domaine nu. Attendu : uniquement le domaine, sans schéma, sans barre oblique, sans port, sans sous-domaine — par exemple « carlys.app ». Ce qui est refusé et pourquoi : « https://carlys.app » produirait l'adresse https://api-staging.https://carlys.app, figée dans le binaire de l'application ; « carlys.app/ » et « carlys.app:443 » produiraient des variantes tout aussi mortes. Corrige la variable dans Settings → Secrets and variables → Actions → Variables, puis relance ce workflow."
+            exit 1
+          fi
+
+          case "$CARLYS_DOMAIN" in
+            api.*|app.*|media.*|api-staging.*|app-staging.*|media-staging.*)
+              echo "::warning title=CARLYS_DOMAIN commence par un sous-domaine réservé::« $CARLYS_DOMAIN » commence par un des six préfixes que ce dépôt ajoute lui-même. L'application visera https://api-staging.$CARLYS_DOMAIN. Si ce n'est pas ce que tu veux, mets le domaine nu."
+              ;;
+          esac
+
+          echo "api=https://api-staging.$CARLYS_DOMAIN" >> "$GITHUB_OUTPUT"
+          echo "web=https://app-staging.$CARLYS_DOMAIN" >> "$GITHUB_OUTPUT"
+          echo "API visée   : https://api-staging.$CARLYS_DOMAIN"
+          echo "Web visé    : https://app-staging.$CARLYS_DOMAIN"
+
+      - name: Version Flutter épinglée
+        id: pin
+        run: echo "version=$(cat .flutter-version)" >> "$GITHUB_OUTPUT"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ steps.pin.outputs.version }}
+          channel: stable
+          cache: true
+
+      - name: Cache des paquets Dart
+        uses: actions/cache@v4
+        with:
+          path: ~/.pub-cache
+          key: pub-${{ runner.os }}-${{ hashFiles('apps/mobile/pubspec.lock') }}
+          restore-keys: pub-${{ runner.os }}-
+
+      # Le cache de TÉLÉCHARGEMENT de CocoaPods, pas le dossier Pods/ : ce
+      # dernier vit sous ios/, qui est régénéré à chaque exécution. Les SDK
+      # Firebase pèsent plusieurs centaines de mégaoctets — c'est le premier
+      # poste de durée d'un build iOS à froid, et chaque minute ici en vaut dix.
+      - name: Cache CocoaPods
+        uses: actions/cache@v4
+        with:
+          path: ~/Library/Caches/CocoaPods
+          key: pods-${{ runner.os }}-${{ hashFiles('apps/mobile/pubspec.lock') }}
+          restore-keys: pods-${{ runner.os }}-
+
+      # « android,ios » et non « ios » seul : android_branding.sh exige le
+      # manifeste Android pour tourner, et c'est LUI qui porte aussi l'identité
+      # iOS (nom affiché, motif d'usage de la caméra dans Info.plist). Le
+      # dossier android/ engendré ici n'est jamais compilé.
+      - name: Dossiers de plateformes
+        run: |
+          ../../scripts/mobile_platforms.sh android,ios
+          ../../scripts/android_branding.sh
+
+      - name: Dépendances
+        run: flutter pub get --enforce-lockfile
+
+      - name: Génération de code (Drift)
+        run: dart run build_runner build
+
+      - name: Garde-fou — l'arbre versionné est intact
+        run: |
+          if ! git diff --exit-code; then
+            echo "::error::une étape de ce job a modifié un fichier versionné :" \
+              "l'application ne serait pas construite sur l'arbre de dépendances" \
+              "éprouvé par mobile-ci. Voir le diff ci-dessus."
+            exit 1
+          fi
+
+      # ── L'identifiant de bundle, LU dans le projet engendré ────────────────
+      #
+      # `flutter create --org com.carlys --project-name carlys_mobile` décide
+      # de l'identifiant, et il n'est pas le même sur les deux plateformes :
+      # Android reçoit le nom tel quel (com.carlys.carlys_mobile), iOS le
+      # reçoit en camelCase (com.carlys.carlysMobile). On le LIT plutôt que de
+      # le recopier ici, et on l'affiche AVANT tout contrôle de secret : c'est
+      # l'App ID à enregistrer chez Apple, la toute première chose dont on a
+      # besoin — et l'échec « secrets absents » plus bas le cite.
+      - name: Identifiant de bundle
+        id: bundle
+        run: |
+          ids="$(sed -n 's/.*PRODUCT_BUNDLE_IDENTIFIER = \([^;]*\);.*/\1/p' ios/Runner.xcodeproj/project.pbxproj \
+                 | tr -d '"' | grep -v '\.RunnerTests$' | sort -u)"
+          if [ "$(printf '%s\n' "$ids" | grep -c .)" -ne 1 ]; then
+            echo "::error title=Identifiant de bundle introuvable::ios/Runner.xcodeproj/project.pbxproj ne porte pas exactement un PRODUCT_BUNDLE_IDENTIFIER hors tests (trouvé : ${ids:-rien}). Le gabarit de flutter create a changé ; adapte l'étape « Identifiant de bundle » de ce workflow."
+            exit 1
+          fi
+          echo "id=$ids" >> "$GITHUB_OUTPUT"
+          echo "Identifiant de bundle iOS : $ids"
+
+      # ── Trois secrets, ENSEMBLE ou ÉCHEC ───────────────────────────────────
+      #
+      # À créer dans Settings → Secrets and variables → Actions → Secrets :
+      #
+      #   IOS_DISTRIBUTION_P12_BASE64       le certificat « Apple Distribution »
+      #                                     ET sa clé privée, exportés de
+      #                                     Trousseaux d'accès en .p12, en base64
+      #                                     (`base64 -i carlys.p12 | tr -d '\n'`)
+      #   IOS_DISTRIBUTION_P12_PASSWORD     le mot de passe donné à l'export
+      #   IOS_PROVISIONING_PROFILE_BASE64   le profil App Store (.mobileprovision)
+      #                                     du bundle ci-dessus, en base64
+      #
+      # Pas d'APPLE_TEAM_ID à saisir : le profil le porte, on l'y lit. Moins un
+      # secret, moins une faute de frappe possible.
+      #
+      # ÉCHEC et non avertissement, à rebours du bundle Android : là-bas
+      # l'APK est déjà livré et se suffit ; ici il n'y a rien d'autre. Aucune
+      # valeur n'est affichée nulle part, seule leur PRÉSENCE est journalisée.
+      - name: Secrets de signature iOS
+        env:
+          P12_B64: ${{ secrets.IOS_DISTRIBUTION_P12_BASE64 }}
+          P12_PASSWORD: ${{ secrets.IOS_DISTRIBUTION_P12_PASSWORD }}
+          PROFIL_B64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+          BUNDLE: ${{ steps.bundle.outputs.id }}
+        run: |
+          manquants=""
+          [ -n "$P12_B64" ]      || manquants="$manquants IOS_DISTRIBUTION_P12_BASE64"
+          [ -n "$P12_PASSWORD" ] || manquants="$manquants IOS_DISTRIBUTION_P12_PASSWORD"
+          [ -n "$PROFIL_B64" ]   || manquants="$manquants IOS_PROVISIONING_PROFILE_BASE64"
+          if [ -n "$manquants" ]; then
+            echo "::error title=Signature iOS impossible — secret(s) absent(s) :$manquants::Un .ipa ne s'installe nulle part sans certificat de distribution ni profil : rien n'est produit. Marche à suivre (docs/deployment/builds-mobiles.md, section iOS) : (1) chez Apple, enregistrer l'App ID « $BUNDLE » et créer un certificat Apple Distribution puis un profil de provisionnement App Store pour cet App ID ; (2) exporter certificat + clé privée en .p12 depuis Trousseaux d'accès ; (3) poser les trois secrets IOS_DISTRIBUTION_P12_BASE64, IOS_DISTRIBUTION_P12_PASSWORD, IOS_PROVISIONING_PROFILE_BASE64. Pour ne plus lancer ce job d'ici là : retirer la variable CARLYS_IOS_BUILDS (ou la mettre à « non »)."
+            exit 1
+          fi
+          echo "Les trois secrets de signature iOS sont présents."
+
+      # ── Trousseau temporaire, certificat, chaîne de confiance ──────────────
+      #
+      # Le geste est celui de la documentation GitHub « Installing an Apple
+      # certificate on macOS runners » : un trousseau CRÉÉ POUR CE JOB, hors du
+      # trousseau de session, détruit par la dernière étape quoi qu'il arrive.
+      # Son mot de passe est tiré au sort, il ne sert qu'ici.
+      #
+      # `find-identity -v` ne liste que les identités VALIDES : non expirées ET
+      # dont la chaîne remonte à Apple. Si le .p12 a été exporté sans le
+      # certificat intermédiaire WWDR, l'identité est là mais invalide, et
+      # codesign échouerait vingt minutes plus tard avec « unable to build
+      # chain ». On importe alors les intermédiaires publiés par Apple et on
+      # revérifie — seulement dans ce cas, pour ne pas dépendre d'apple.com
+      # quand le .p12 se suffit.
+      - name: Trousseau temporaire et certificat de distribution
+        id: trousseau
+        env:
+          P12_B64: ${{ secrets.IOS_DISTRIBUTION_P12_BASE64 }}
+          P12_PASSWORD: ${{ secrets.IOS_DISTRIBUTION_P12_PASSWORD }}
+        run: |
+          trousseau="$RUNNER_TEMP/carlys-signature.keychain-db"
+          p12="$RUNNER_TEMP/carlys-distribution.p12"
+          mdp="$(openssl rand -hex 24)"
+
+          printf '%s' "$P12_B64" | base64 -d > "$p12" 2>/dev/null || {
+            echo "::error title=IOS_DISTRIBUTION_P12_BASE64 illisible::La valeur n'est pas du base64 valide. Régénère-la avec « base64 -i carlys.p12 | tr -d '\n' » et recolle-la entière dans le secret."
+            exit 1
+          }
+
+          security create-keychain -p "$mdp" "$trousseau"
+          security set-keychain-settings -lut 21600 "$trousseau"
+          security unlock-keychain -p "$mdp" "$trousseau"
+          if ! security import "$p12" -P "$P12_PASSWORD" -A -t cert -f pkcs12 -k "$trousseau" >/dev/null 2>&1; then
+            echo "::error title=Certificat illisible ou mot de passe invalide::Le .p12 déballé n'a pas pu être importé. Deux causes : (1) IOS_DISTRIBUTION_P12_BASE64 a été collé INCOMPLET — une base64 tronquée se décode sans erreur en un fichier inutilisable, régénère-la et recolle-la entière ; (2) IOS_DISTRIBUTION_P12_PASSWORD n'est pas le mot de passe donné à l'export. Vérifie sur ton Mac : « security import carlys.p12 -P '<mot de passe>' -k ~/Library/Keychains/login.keychain-db »."
+            exit 1
+          fi
+          security set-key-partition-list -S apple-tool:,apple: -k "$mdp" "$trousseau" >/dev/null
+          security list-keychains -d user -s "$trousseau"
+
+          # sed -E : le sed de macOS (BSD) ignore l'alternance « \| » en
+          # expression basique. Ne garde que le PRÉFIXE du nom — « Apple
+          # Distribution » — c'est ce que CODE_SIGN_IDENTITY attend.
+          identites() {
+            security find-identity -v -p codesigning "$trousseau" \
+              | sed -En 's/^ *[0-9]+\) ([0-9A-F]+) "((Apple|iPhone) Distribution)[^"]*"$/\1 \2/p'
+          }
+          if [ -z "$(identites)" ]; then
+            echo "Aucune identité de distribution valide ; import des intermédiaires WWDR d'Apple…"
+            for g in G2 G3 G4 G5 G6 G7 G8; do
+              if curl -fsSL "https://www.apple.com/certificateauthority/AppleWWDRCA$g.cer" -o "$RUNNER_TEMP/wwdr-$g.cer"; then
+                security import "$RUNNER_TEMP/wwdr-$g.cer" -k "$trousseau" -t cert >/dev/null 2>&1 || true
+              else
+                echo "::warning title=Intermédiaire WWDR $g non téléchargé::apple.com n'a pas répondu ; si la chaîne du certificat reste incomplète, l'échec ci-dessous le dira."
+              fi
+            done
+          fi
+          if [ -z "$(identites)" ]; then
+            echo "::error title=Aucun certificat de DISTRIBUTION valide::Le .p12 importé ne contient aucune identité « Apple Distribution » (ou « iPhone Distribution ») valide. Trois causes : (1) c'est un certificat de DÉVELOPPEMENT (« Apple Development ») — il ne peut signer ni pour TestFlight ni pour l'App Store, crée un certificat Apple Distribution sur developer.apple.com ; (2) il est EXPIRÉ (un an de validité) — renouvelle-le, puis régénère le profil de provisionnement, qui l'embarque ; (3) le .p12 ne contient que le certificat sans sa clé privée — exporte depuis Trousseaux d'accès en sélectionnant la ligne qui se DÉPLIE sur une clé privée. Identités présentes : $(security find-identity -p codesigning "$trousseau" | sed -n 's/^ *[0-9]*) [0-9A-F]* "\([^"]*\)"$/« \1 »/p' | tr '\n' ' ')"
+            exit 1
+          fi
+          # Une seule identité sert à signer : la première valide. Son
+          # empreinte est confrontée au profil à l'étape suivante.
+          empreinte="$(identites | head -n 1 | cut -d' ' -f1)"
+          identite="$(identites | head -n 1 | cut -d' ' -f2-)"
+          echo "empreinte=$empreinte" >> "$GITHUB_OUTPUT"
+          echo "identite=$identite" >> "$GITHUB_OUTPUT"
+          echo "Identité de signature : $identite (empreinte $empreinte)"
+
+      # ── Le profil : App Store, ce bundle, ce certificat, pas expiré ─────────
+      #
+      # Quatre vérifications AVANT le build, chacune avec le message que
+      # xcodebuild ne donnerait pas. Un profil Ad Hoc ou Development se
+      # reconnaît à sa liste d'appareils (ProvisionedDevices), un profil
+      # Enterprise à ProvisionsAllDevices ; un profil App Store n'a ni l'un ni
+      # l'autre. L'empreinte du certificat embarqué dans le profil doit être
+      # celle de l'identité importée : un profil régénéré pour un nouveau
+      # certificat, ou l'inverse, est l'erreur la plus fréquente de toute la
+      # signature iOS, et xcodebuild la rapporte par « no profile matching ».
+      #
+      # Deux dossiers d'installation : Xcode 16 lit
+      # ~/Library/Developer/Xcode/UserData/Provisioning Profiles, les versions
+      # antérieures ~/Library/MobileDevice/Provisioning Profiles. Une copie
+      # dans chacun coûte quatre kilooctets et ne dépend pas de l'image du
+      # runner.
+      - name: Profil de provisionnement
+        id: profil
+        env:
+          PROFIL_B64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
+          BUNDLE: ${{ steps.bundle.outputs.id }}
+          EMPREINTE: ${{ steps.trousseau.outputs.empreinte }}
+        run: |
+          profil="$RUNNER_TEMP/carlys.mobileprovision"
+          plist="$RUNNER_TEMP/carlys-profil.plist"
+          printf '%s' "$PROFIL_B64" | base64 -d > "$profil" 2>/dev/null || {
+            echo "::error title=IOS_PROVISIONING_PROFILE_BASE64 illisible::La valeur n'est pas du base64 valide. Régénère-la avec « base64 -i Carlys.mobileprovision | tr -d '\n' » et recolle-la entière."
+            exit 1
+          }
+          if ! security cms -D -i "$profil" > "$plist" 2>/dev/null; then
+            echo "::error title=Profil de provisionnement illisible::Le fichier déballé n'est pas un .mobileprovision signé par Apple — base64 tronquée, ou mauvais fichier. Télécharge-le à nouveau depuis developer.apple.com → Profiles, puis « base64 -i <fichier> | tr -d '\n' »."
+            exit 1
+          fi
+          lire() { plutil -extract "$1" raw -o - "$plist" 2>/dev/null || true; }
+          uuid="$(lire UUID)"; nom="$(lire Name)"; equipe="$(lire TeamIdentifier.0)"
+          appid="$(lire Entitlements.application-identifier)"; expire="$(lire ExpirationDate)"
+          if [ -z "$uuid" ] || [ -z "$nom" ] || [ -z "$equipe" ] || [ -z "$appid" ]; then
+            echo "::error title=Profil incomplet::Le profil ne porte pas UUID, Name, TeamIdentifier et application-identifier à la fois — ce n'est pas un profil iOS. Retélécharge-le depuis developer.apple.com → Profiles."
+            exit 1
+          fi
+
+          if plutil -extract ProvisionedDevices raw -o - "$plist" >/dev/null 2>&1; then
+            echo "::error title=Profil Ad Hoc ou Development, pas App Store::« $nom » porte une liste d'appareils : c'est un profil Ad Hoc ou Development, que TestFlight refuse et que l'export App Store Connect ne saurait produire. Crée sur developer.apple.com → Profiles un profil de type Distribution → App Store Connect pour l'App ID « $BUNDLE »."
+            exit 1
+          fi
+          if [ "$(lire ProvisionsAllDevices)" = "true" ]; then
+            echo "::error title=Profil Enterprise, pas App Store::« $nom » est un profil de distribution en entreprise (ProvisionsAllDevices). TestFlight le refuse. Crée un profil Distribution → App Store Connect."
+            exit 1
+          fi
+          case "$appid" in
+            "$equipe.$BUNDLE"|"$equipe.*") ;;
+            *)
+              echo "::error title=Le profil ne vise pas cette application::« $nom » est fait pour l'App ID « ${appid#"$equipe".} » ; l'application engendrée par flutter create s'appelle « $BUNDLE ». Enregistre cet App ID exact chez Apple (Identifiers), crée-lui un profil App Store Connect, et remplace le secret IOS_PROVISIONING_PROFILE_BASE64."
+              exit 1 ;;
+          esac
+          maintenant="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          if [ -n "$expire" ] && [[ "$expire" < "$maintenant" ]]; then
+            echo "::error title=Profil expiré::« $nom » a expiré le $expire. Régénère-le sur developer.apple.com → Profiles (un profil vaut un an) et remplace le secret."
+            exit 1
+          fi
+
+          trouve=non; i=0
+          while cert="$(plutil -extract "DeveloperCertificates.$i" raw -o - "$plist" 2>/dev/null)" && [ -n "$cert" ]; do
+            e="$(printf '%s' "$cert" | base64 -d | openssl x509 -inform DER -noout -fingerprint -sha1 | sed 's/.*=//; s/://g')"
+            [ "$e" = "$EMPREINTE" ] && trouve=oui
+            i=$((i + 1))
+          done
+          if [ "$trouve" != oui ]; then
+            echo "::error title=Le profil n'embarque pas ce certificat::« $nom » a été engendré pour un autre certificat que celui du .p12 (empreinte $EMPREINTE absente de ses $i certificat(s)). C'est l'erreur la plus fréquente : un certificat renouvelé sans régénérer le profil, ou l'inverse. Sur developer.apple.com → Profiles, ouvre le profil, coche le certificat Apple Distribution en cours, régénère, télécharge, remplace IOS_PROVISIONING_PROFILE_BASE64."
+            exit 1
+          fi
+
+          for dossier in "$HOME/Library/MobileDevice/Provisioning Profiles" \
+                         "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles"; do
+            mkdir -p "$dossier"
+            cp "$profil" "$dossier/$uuid.mobileprovision"
+          done
+          echo "uuid=$uuid" >> "$GITHUB_OUTPUT"
+          echo "nom=$nom" >> "$GITHUB_OUTPUT"
+          echo "equipe=$equipe" >> "$GITHUB_OUTPUT"
+          echo "Profil « $nom » (équipe $equipe) : App Store, $BUNDLE, certificat concordant${expire:+, expire le $expire}."
+
+      # ── Brancher la signature sur Xcode, sans toucher au projet ────────────
+      #
+      # L'équivalent iOS du second bloc `android { }` : on n'édite PAS
+      # project.pbxproj (une expression sur ce format opaque échouerait en
+      # silence à la prochaine version du gabarit). On AJOUTE à
+      # ios/Flutter/Release.xcconfig, que le gabarit fait lire à la
+      # configuration Release de la cible Runner, et qui prime sur les réglages
+      # du projet — dont le « iPhone Developer » qu'il y inscrit. Manuel, et
+      # pas automatique : le runner n'a pas de session Apple ID, Xcode n'a
+      # donc rien à « gérer ».
+      #
+      # ExportOptions.plist dit à l'export ce que le xcconfig a dit à
+      # l'archive : même équipe, même certificat, même profil, méthode
+      # App Store Connect. `manageAppVersionAndBuildNumber` à false : c'est
+      # NOUS qui posons le numéro de build (--build-number), Xcode ne doit
+      # pas le réécrire dans son coin.
+      #
+      # ITSAppUsesNonExemptEncryption = false est une DÉCLARATION, pas un
+      # réglage : l'application ne chiffre rien elle-même, elle parle HTTPS,
+      # ce qui est exempt. Sans cette ligne, chaque build téléversé attend
+      # dans App Store Connect qu'un humain réponde « Missing Compliance ».
+      - name: Signature manuelle (xcconfig, ExportOptions.plist, Info.plist)
+        env:
+          EQUIPE: ${{ steps.profil.outputs.equipe }}
+          PROFIL_NOM: ${{ steps.profil.outputs.nom }}
+          IDENTITE: ${{ steps.trousseau.outputs.identite }}
+          BUNDLE: ${{ steps.bundle.outputs.id }}
+        run: |
+          cat >> ios/Flutter/Release.xcconfig <<FIN
+
+          // Ajouté par .github/workflows/mobile-recette.yml — signature de
+          // distribution, manuelle. Le certificat est dans le trousseau
+          // temporaire du job, le profil dans le dossier des profils.
+          DEVELOPMENT_TEAM = $EQUIPE
+          CODE_SIGN_STYLE = Manual
+          CODE_SIGN_IDENTITY = $IDENTITE
+          CODE_SIGN_IDENTITY[sdk=iphoneos*] = $IDENTITE
+          PROVISIONING_PROFILE_SPECIFIER = $PROFIL_NOM
+          FIN
+
+          cat > ios/ExportOptions.plist <<FIN
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0">
+          <dict>
+            <key>method</key><string>app-store-connect</string>
+            <key>destination</key><string>export</string>
+            <key>teamID</key><string>$EQUIPE</string>
+            <key>signingStyle</key><string>manual</string>
+            <key>signingCertificate</key><string>$IDENTITE</string>
+            <key>provisioningProfiles</key>
+            <dict><key>$BUNDLE</key><string>$PROFIL_NOM</string></dict>
+            <key>uploadSymbols</key><true/>
+            <key>manageAppVersionAndBuildNumber</key><false/>
+          </dict>
+          </plist>
+          FIN
+          plutil -lint ios/ExportOptions.plist
+
+          plutil -replace ITSAppUsesNonExemptEncryption -bool false ios/Runner/Info.plist
+          echo "Signature branchée : équipe $EQUIPE, « $IDENTITE », profil « $PROFIL_NOM »."
+
+      # `flutter build ipa` archive (xcodebuild -archive) puis exporte
+      # (xcodebuild -exportArchive) avec le plist ci-dessus. Mêmes
+      # --dart-define, même --build-number et même --obfuscate que l'APK : les
+      # trois artefacts d'une exécution racontent la même version. Pour
+      # TestFlight le numéro de build (CFBundleVersion) doit croître d'un
+      # téléversement à l'autre — le numéro d'exécution s'en charge.
+      - name: Build IPA (recette, App Store Connect)
+        env:
+          SHA12: ${{ steps.commit.outputs.sha12 }}
+          API: ${{ steps.adresses.outputs.api }}
+          WEB: ${{ steps.adresses.outputs.web }}
+          NUMERO: ${{ github.run_number }}
+          BUNDLE: ${{ steps.bundle.outputs.id }}
+        run: |
+          flutter build ipa --release \
+            --no-pub \
+            --build-number="$NUMERO" \
+            --obfuscate \
+            --split-debug-info=build/symboles-ipa \
+            --export-options-plist=ios/ExportOptions.plist \
+            --dart-define=CARLYS_FLAVOR=staging \
+            --dart-define=CARLYS_API_BASE_URL="$API" \
+            --dart-define=CARLYS_PUBLIC_WEB_BASE_URL="$WEB"
+
+          set -- build/ios/ipa/*.ipa
+          if [ ! -f "$1" ]; then
+            echo "::error title=Aucun .ipa exporté::flutter build ipa s'est terminé sans écrire build/ios/ipa/*.ipa. Lire le journal de xcodebuild ci-dessus — l'export (ExportOptions.plist) est l'étape la plus probable."
+            exit 1
+          fi
+          mkdir -p build/livraison/ipa
+          mv "$1" "build/livraison/ipa/carlys-recette-$SHA12.ipa"
+          mv build/symboles-ipa build/livraison/ipa/symboles
+          cat > build/livraison/ipa/LISEZ-MOI.txt <<FIN
+          Carlys — application de RECETTE (iOS)
+          commit                      : $SHA12
+          bundle                      : $BUNDLE
+          CFBundleVersion             : $NUMERO (numéro d'exécution du workflow)
+          CARLYS_FLAVOR               : staging
+          CARLYS_API_BASE_URL         : $API
+          CARLYS_PUBLIC_WEB_BASE_URL  : $WEB
+
+          Signé pour l'App Store Connect : ne s'installe PAS par câble sur un
+          iPhone. Il passe par TestFlight — téléversé par l'exécution si la
+          clé API App Store Connect est posée, sinon avec l'application
+          Transporter (Mac App Store) ou « xcrun altool --upload-app ».
+
+          LANCEZ-LE UNE FOIS depuis TestFlight avant de l'ouvrir aux testeurs :
+          le contrôle des adresses (assertUsable) a lieu au démarrage, pas à la
+          compilation.
+
+          symboles/ : à conserver pour déchiffrer les traces d'exécution,
+          le binaire étant obscurci (--obfuscate).
+          FIN
+          ls -lh "build/livraison/ipa/carlys-recette-$SHA12.ipa"
+
+      - name: Artefact — IPA
+        uses: actions/upload-artifact@v4
+        with:
+          name: carlys-recette-ipa-${{ steps.commit.outputs.sha12 }}
+          path: apps/mobile/build/livraison/ipa
+          if-no-files-found: error
+
+      # ── TestFlight, si une clé API App Store Connect est posée ─────────────
+      #
+      # Trois secrets, facultatifs mais ENSEMBLE — un jeu à moitié posé est
+      # signalé, pas deviné. À créer sur App Store Connect → Users and Access
+      # → Integrations → App Store Connect API → clé de rôle « App Manager » :
+      #
+      #   APP_STORE_CONNECT_KEY_ID          l'identifiant de la clé (10 caractères)
+      #   APP_STORE_CONNECT_ISSUER_ID       l'Issuer ID de l'équipe (UUID)
+      #   APP_STORE_CONNECT_API_KEY_BASE64  le fichier AuthKey_<KEY_ID>.p8, en
+      #                                     base64 — il ne se retélécharge PAS,
+      #                                     Apple ne le donne qu'une fois
+      #
+      # Sans eux, l'.ipa est livré en artefact, à déposer avec Transporter.
+      - name: Clé API App Store Connect
+        id: asc
+        env:
+          KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+          P8_B64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
+        run: |
+          manquants=""
+          [ -n "$KEY_ID" ]    || manquants="$manquants APP_STORE_CONNECT_KEY_ID"
+          [ -n "$ISSUER_ID" ] || manquants="$manquants APP_STORE_CONNECT_ISSUER_ID"
+          [ -n "$P8_B64" ]    || manquants="$manquants APP_STORE_CONNECT_API_KEY_BASE64"
+          if [ -z "$manquants" ]; then
+            case "$KEY_ID" in
+              *[!A-Z0-9]*|'')
+                echo "::error title=APP_STORE_CONNECT_KEY_ID mal formé::L'identifiant d'une clé App Store Connect est fait de dix lettres majuscules et chiffres — c'est le KEY_ID du nom de fichier AuthKey_<KEY_ID>.p8, pas l'Issuer ID."
+                exit 1 ;;
+            esac
+            mkdir -p "$HOME/private_keys"
+            printf '%s' "$P8_B64" | base64 -d > "$HOME/private_keys/AuthKey_$KEY_ID.p8" 2>/dev/null || {
+              echo "::error title=APP_STORE_CONNECT_API_KEY_BASE64 illisible::La valeur n'est pas du base64 valide. Régénère-la avec « base64 -i AuthKey_<KEY_ID>.p8 | tr -d '\n' »."
+              exit 1
+            }
+            echo "actif=oui" >> "$GITHUB_OUTPUT"
+            echo "Clé API App Store Connect présente : téléversement TestFlight prévu."
+          elif set -- $manquants && [ "$#" -eq 3 ]; then
+            echo "actif=non" >> "$GITHUB_OUTPUT"
+            echo "Aucune clé API App Store Connect : l'.ipa reste un artefact à déposer avec Transporter."
+          else
+            echo "actif=non" >> "$GITHUB_OUTPUT"
+            echo "::warning title=Clé API App Store Connect à moitié posée::Secret(s) absent(s) :$manquants. Les trois vont ensemble ; tant qu'il en manque un, rien n'est téléversé et l'.ipa reste un artefact."
+          fi
+
+      # La commande de la documentation Flutter (docs.flutter.dev/deployment/ios).
+      # altool cherche la clé dans ~/private_keys/AuthKey_<KEY_ID>.p8 : c'est
+      # là que l'étape précédente l'a écrite. Le téléversement réussi n'est
+      # que le DÉBUT : Apple traite ensuite le build (dix à trente minutes),
+      # puis il apparaît dans App Store Connect → TestFlight.
+      - name: Téléversement — TestFlight
+        if: steps.asc.outputs.actif == 'oui'
+        env:
+          SHA12: ${{ steps.commit.outputs.sha12 }}
+          KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
+          ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
+        run: |
+          xcrun altool --upload-app --type ios \
+            --file "build/livraison/ipa/carlys-recette-$SHA12.ipa" \
+            --apiKey "$KEY_ID" --apiIssuer "$ISSUER_ID"
+
+      - name: Récapitulatif
+        env:
+          SHA12: ${{ steps.commit.outputs.sha12 }}
+          API: ${{ steps.adresses.outputs.api }}
+          WEB: ${{ steps.adresses.outputs.web }}
+          NUMERO: ${{ github.run_number }}
+          BUNDLE: ${{ steps.bundle.outputs.id }}
+          PROFIL_NOM: ${{ steps.profil.outputs.nom }}
+          EQUIPE: ${{ steps.profil.outputs.equipe }}
+          TESTFLIGHT: ${{ steps.asc.outputs.actif }}
+        run: |
+          {
+            echo "## Application de recette iOS — commit \`$SHA12\`"
+            echo
+            echo "| Variable de build | Valeur |"
+            echo "| ----------------- | ------ |"
+            echo "| bundle | \`$BUNDLE\` |"
+            echo "| équipe Apple | \`$EQUIPE\` |"
+            echo "| profil | \`$PROFIL_NOM\` |"
+            echo "| \`CFBundleVersion\` | \`$NUMERO\` |"
+            echo "| \`CARLYS_FLAVOR\` | \`staging\` |"
+            echo "| \`CARLYS_API_BASE_URL\` | \`$API\` |"
+            echo "| \`CARLYS_PUBLIC_WEB_BASE_URL\` | \`$WEB\` |"
+            echo
+            echo "**\`carlys-recette-ipa-$SHA12\`** — l'application signée pour App Store"
+            echo "Connect, avec \`symboles/\`. Un \`.ipa\` de distribution ne s'installe pas"
+            echo "par câble : il passe par TestFlight."
+            echo
+            if [ "$TESTFLIGHT" = "oui" ]; then
+              echo "**Téléversé sur App Store Connect.** Apple le traite (dix à trente"
+              echo "minutes), puis il apparaît dans TestFlight ; les testeurs internes"
+              echo "le reçoivent dès qu'il est ajouté à leur groupe."
+            else
+              echo "Non téléversé : poser les trois secrets \`APP_STORE_CONNECT_KEY_ID\`,"
+              echo "\`APP_STORE_CONNECT_ISSUER_ID\`, \`APP_STORE_CONNECT_API_KEY_BASE64\`"
+              echo "pour que l'exécution le dépose elle-même — ou télécharger l'artefact et"
+              echo "le déposer avec Transporter."
+            fi
+            echo
+            echo "> **Lancez l'application une fois** depuis TestFlight avant de l'ouvrir"
+            echo "> aux testeurs : le contrôle des adresses (\`assertUsable()\`) a lieu **au"
+            echo "> démarrage, pas à la compilation**."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      # RIEN NE SURVIT AU JOB : trousseau, .p12, profil, clé API. Même raison
+      # que le keystore Android — sur un runner auto-hébergé, le disque est
+      # partagé entre toutes les exécutions. L'étape ne doit jamais échouer
+      # elle-même, sans quoi elle masquerait la vraie cause d'un échec.
+      - name: Effacer le trousseau, le profil et la clé API
+        if: always()
+        env:
+          UUID: ${{ steps.profil.outputs.uuid }}
+        run: |
+          trousseau="$RUNNER_TEMP/carlys-signature.keychain-db"
+          if [ -f "$trousseau" ]; then
+            security list-keychains -d user -s login.keychain-db || true
+            security delete-keychain "$trousseau" || true
+            echo "Trousseau temporaire supprimé."
+          fi
+          rm -f "$RUNNER_TEMP/carlys-distribution.p12" "$RUNNER_TEMP/carlys.mobileprovision" \
+                "$RUNNER_TEMP/carlys-profil.plist" "$RUNNER_TEMP"/wwdr-*.cer
+          if [ -n "$UUID" ]; then
+            rm -f "$HOME/Library/MobileDevice/Provisioning Profiles/$UUID.mobileprovision" \
+                  "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles/$UUID.mobileprovision"
+          fi
+          rm -rf "$HOME/private_keys"
+          echo "Secrets iOS effacés du runner."
