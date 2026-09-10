@@ -153,8 +153,8 @@ proxy_set_header X-Forwarded-Proto https;
 ```
 
 Si gra6 **ajoute** au lieu d'**écraser**, n'importe quel client se fait passer
-pour n'importe quelle adresse : limitation de débit contournée, verrouillage de
-compte contourné par volume, journal d'audit empoisonné — et un journal
+pour n'importe quelle adresse : limitation de débit contournée et journal
+d'audit empoisonné — et un journal
 d'audit empoisonné est pire qu'un journal absent, parce qu'on le croit.
 
 Le Nginx Carlys, lui, garde volontairement `$proxy_add_x_forwarded_for`

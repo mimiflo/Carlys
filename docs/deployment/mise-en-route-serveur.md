@@ -550,8 +550,8 @@ par la droite, jamais nettoyer la gauche. **La protection ne vient donc pas du
 nombre de sauts, elle vient de gra6 qui écrase l'en-tête.**
 
 Si gra6 ajoute au lieu d'écraser, n'importe quel client se fait passer pour
-n'importe quelle adresse : limitation de débit contournée, verrouillage de
-compte contourné, journal d'audit empoisonné. Le risque est concret et daté du
+n'importe quelle adresse : limitation de débit contournée et journal
+d'audit empoisonné. Le risque est concret et daté du
 code d'aujourd'hui — `request.ip` est lu à **six endroits** de `apps/api/src`
 (`admin-users.controller.ts` deux fois, `admin-community.controller.ts`,
 `catalog-actor.ts`, `media.controller.ts`, `authenticated-request.ts` : toutes

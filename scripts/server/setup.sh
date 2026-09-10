@@ -441,7 +441,7 @@ $_c_bold── Ce que ce script n'a PAS fait, et qu'il faut faire à la main ─
      un client qui envoie lui-même « X-Forwarded-For: 1.2.3.4 » fait retenir
      1.2.3.4 à l'API. Un compteur de sauts ne retire des entrées QUE PAR LA
      DROITE : tout ce que le client PRÉFIXE survit. Conséquences : limitation
-     de débit contournée, verrouillage de compte contourné, audit empoisonné.
+     de débit contournée, audit empoisonné.
      Seul \$remote_addr, qui écrase, protège.
    - X-Forwarded-Proto https en dur, pour que les URL publiques restent en
      https:// alors que la liaison interne est en clair.

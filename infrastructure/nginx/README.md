@@ -84,8 +84,8 @@ proxy_set_header X-Forwarded-Proto https;
 ```
 
 Si gra6 **ajoute** au lieu d'**écraser**, n'importe quel client se fait passer
-pour n'importe quelle adresse : limitation de débit contournée, verrouillage de
-compte contourné, journal d'audit empoisonné. Le raisonnement complet, les
+pour n'importe quelle adresse : limitation de débit contournée et journal
+d'audit empoisonné. Le raisonnement complet, les
 mesures et le pourquoi (un compteur de sauts numérique ne retire des entrées
 que par la droite ; ce qu'un client préfixe survit) sont dans
 `snippets/carlys-proxy.conf` et dans `docs/security/reverse-proxy.md`.

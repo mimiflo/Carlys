@@ -75,7 +75,7 @@ proxy_set_header X-Forwarded-Proto https;
 montée pour de vrai (client → proxy réseau → nginx d'ici → Express), un client
 qui envoie lui-même `X-Forwarded-For: 1.2.3.4` fait retenir `1.2.3.4` à l'API
 dès que le proxy **ajoute** au lieu d'écraser — limitation de débit
-contournée, verrouillage de compte contourné, audit empoisonné. Un compteur de
+contournée, audit empoisonné. Un compteur de
 sauts ne retire des entrées que par la droite : ce que le client préfixe
 survit. Le nginx d'ici, lui, garde `$proxy_add_x_forwarded_for` et ajoute
 l'adresse du proxy réseau : c'est le second saut, d'où `TRUST_PROXY_HOPS=2`
