@@ -39,6 +39,12 @@ AGIR À LA MAIN
   carlysctl backup                        sauvegarde (backup.sh)
   carlysctl scale <env> <n>               fixe le nombre d'exemplaires d'API
   carlysctl heal <env>                    répare ce qui est tombé
+  carlysctl env-sync <env> [--appliquer]  ajoute au .env les réglages qui lui
+                                          manquent. N'écrase JAMAIS une ligne
+                                          existante. --tout engendre en plus
+                                          les secrets qui n'engagent aucun
+                                          état extérieur ; ce qui doit être
+                                          choisi par un humain reste refusé.
   carlysctl prune [--essai]               supprime les images Carlys inutiles,
                                           en gardant le sha déployé ET le
                                           précédent (cible du retour arrière)
@@ -185,6 +191,36 @@ cmd_prune() {
   info "disque après : $(disque_pourcent) %"
 }
 
+# `env-sync <env> [--appliquer] [--tout]` — ajoute au .env ce qui lui manque.
+#
+# ESSAI PAR DÉFAUT, comme `autoscale` : une commande qui écrit dans le fichier
+# qui porte les secrets ne le fait pas parce qu'on a tapé son nom.
+cmd_envsync() {
+  local env_name file mode=essai portee=sur arg
+  env_name="$(environnement_requis "${1-}")"
+  shift || true
+  for arg in "$@"; do
+    case "$arg" in
+      --appliquer) mode=ecrire ;;
+      --tout) portee=tout ;;
+      '') ;;
+      *) die "Option inconnue : $arg" "Attendu : --appliquer, --tout" ;;
+    esac
+  done
+  file="$(env_file "$env_name")"
+  require_commands docker
+  require_compose_file
+  [ "$portee" = tout ] && require_commands openssl
+  step "Complétion du .env de « $env_name »"
+  # Le verrou : un déploiement qui lit le .env pendant qu'on y écrit verrait un
+  # fichier tronqué. 90 s d'attente, comme heal et scale — la minuterie passe
+  # toutes les deux minutes et une commande tapée à la main ne doit pas perdre
+  # la course contre elle.
+  lock_env "$env_name" "$CARLYS_LOCK_WAIT"
+  envsync_appliquer "$env_name" "$file" "$mode" "$portee" || true
+  unlock_env
+}
+
 cmd_update() {
   local env_name file
   env_name="$(environnement_requis "${1-}")"
@@ -206,12 +242,28 @@ cmd_update() {
 #   3. METTRE À JOUR en dernier. Un déploiement recrée les conteneurs :
 #      le faire avant rendrait caduques les deux étapes précédentes.
 cmd_supervise() {
-  local env_name
+  local env_name suivi=non
   if [ -n "${1-}" ]; then
     supervise_un "$(environnement_requis "$1")"
   else
     while read -r env_name; do supervise_un "$env_name"; done < <(tous_les_environnements)
   fi
+
+  # LE CLONE, EN DERNIER — après toutes les passes, jamais avant. Un `git pull`
+  # remplace les scripts que cette passe est en train d'exécuter ; c'est sans
+  # danger (mesuré : l'inode change, le bash en cours garde le sien), mais il
+  # n'y a aucune raison de le faire pendant qu'ils travaillent.
+  #
+  # Sous la MÊME autorisation que le déploiement automatique, et pour la même
+  # raison : `CARLYS_AUTO_UPDATE=oui` veut dire « suivre main tout seul », et
+  # les scripts font partie de main. Tant qu'aucun environnement ne l'a
+  # demandé, le clone reste où l'exploitant l'a laissé.
+  while read -r env_name; do
+    [ "$(update_actif "$(env_file "$env_name")")" = oui ] && suivi=oui
+  done < <(tous_les_environnements)
+  [ "$suivi" = oui ] || return 0
+  step "Dépôt cloné"
+  repo_pull || true
 }
 
 supervise_un() {
@@ -225,6 +277,21 @@ supervise_un() {
   # dessus. Il est relâché AVANT la mise à jour, qui délègue à deploy.sh ou
   # promote.sh — deux scripts séparés qui prennent le verrou pour eux-mêmes.
   lock_env "$env_name"
+
+  # EN PREMIER, parce que tout ce qui suit lit ce fichier. Un réglage arrivé
+  # avec une nouvelle version du dépôt et absent du .env fait échouer la pile
+  # entière ; l'ajouter ici évite que la mise à jour, plus bas, ne déploie
+  # contre un fichier incomplet.
+  #
+  # Portée « sur » et pas « tout » : la supervision recopie les valeurs que
+  # l'exemple porte en clair, elle n'ENGENDRE aucun secret sans qu'on le lui
+  # demande. Les deux secrets engendrables produisent de toute façon un
+  # symptôme bruyant que `status` et `doctor` nomment déjà, avec la commande
+  # exacte — mieux vaut un humain averti qu'une valeur apparue toute seule
+  # dans un fichier qu'il croit connaître.
+  if [ "$(envsync_actif "$file")" = oui ]; then
+    envsync_appliquer "$env_name" "$file" ecrire sur || true
+  fi
 
   # Chaque étape est isolée : un `heal` qui échoue (plafond atteint) ne doit
   # pas empêcher la mise à jour de tourner, et inversement. Le code de retour
@@ -310,6 +377,7 @@ case "$COMMANDE" in
   scale)     cmd_scale "${1-}" "${2-}" ;;
   autoscale) cmd_autoscale "${1-}" "${2-}" ;;
   heal)      cmd_heal "${1-}" ;;
+  env-sync)  cmd_envsync "$@" ;;
   prune)     cmd_prune "${1-}" ;;
   update)    cmd_update "${1-}" ;;
   supervise) cmd_supervise "${1-}" ;;

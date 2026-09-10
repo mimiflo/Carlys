@@ -472,24 +472,100 @@ le message qui nommera la variable au moment du déploiement. Il a en plus la
 propriété qui compte pour un diagnostic — **il fonctionne démon Docker arrêté**,
 c'est-à-dire au moment où l'on en a le plus besoin.
 
-Trois verdicts, dans l'ordre où ils sortent :
+Cinq verdicts, dans l'ordre où ils sortent. Les quatre derniers sont là parce
+que l'oracle ne peut pas les voir : Compose n'interpole que ce que `compose.yml`
+nomme, et tout ce qui traverse `env_file` lui est opaque.
 
 | Ce que `doctor` dit | Gravité | Ce qu'il faut faire |
 | --- | --- | --- |
 | `Compose REFUSE ce .env` | **bloquant** — la pile ne démarrera pas | ajouter la variable que le message nomme |
-| `<CLÉ> est déclarée PLUSIEURS FOIS` | **bloquant** — panne silencieuse | supprimer les lignes en trop ; `env_value` prend la dernière |
-| `<CLÉ> absente — l'exemple propose : …` | informatif | rien, sauf si le réglage vous intéresse : tout ce qui est absent a un défaut |
+| `Compose accepte … mais PRÉVIENT` | **bloquant** — valeur tronquée | un `$` dans une valeur ouvre une substitution : le **doubler** en `$$` |
+| `<CLÉ> est déclarée PLUSIEURS FOIS` | **bloquant** — panne silencieuse | supprimer les lignes en trop ; c'est la **dernière** qui gagne |
+| `<CLÉ> est déclarée VIDE` | **bloquant** — l'API ne démarrera pas | la **commenter**, pas la vider : Zod refuse la chaîne vide même là où il a un défaut |
+| `<CLÉ> porte encore un CHANGE_MOI_` | **bloquant** — valeur factice publique | `carlysctl env-sync <env> --appliquer --tout`, ou la vraie valeur à la main |
+| `<CLÉ> absente` | **bloquant** | `carlysctl env-sync <env> --appliquer` (voir ci-dessous) |
 
-Le troisième cas est celui d'un `.env` créé avant qu'un réglage n'existe.
-`setup.sh` ne réécrit jamais un `.env` existant — c'est sa propriété la plus
-importante, sinon il écraserait les secrets à chaque exécution. Les nouveautés
-s'ajoutent donc à la main, et `doctor` dit lesquelles, avec la valeur proposée.
+Deux de ces verdicts méritent un mot, parce qu'ils viennent de pannes mesurées
+et non d'une précaution de principe.
+
+**`PRÉVIENT` n'est pas un détail.** `docker compose config -q` rend **0** en
+prévenant lorsqu'une valeur contient un `$` : `POSTGRES_PASSWORD=mot$de$passe`
+arrive dans le conteneur comme `mot`. L'oracle l'avait dit sur sa sortie
+d'erreur ; l'avaler parce que le code valait 0 aurait été l'échec silencieux que
+le dépôt s'interdit.
+
+**`CHANGE_MOI_` n'est pas une valeur inoffensive.** Les valeurs factices des
+exemples sont assez longues pour **passer** la validation Zod — 49 caractères
+pour `JWT_ACCESS_SECRET`, minimum exigé 32. Une API qui en hérite **démarre**,
+et signe tous ses jetons avec une chaîne publiée dans un dépôt Git. C'est
+pourquoi `doctor` n'affiche **jamais** la valeur d'exemple d'une clé factice :
+il donne la recette, pas la chaîne.
+
+### `carlysctl env-sync` — le `.env` se complète tout seul
+
+`setup.sh` ne réécrit jamais un `.env` existant : c'est sa propriété la plus
+importante, sinon il écraserait les secrets à chaque exécution. La conséquence
+est qu'un réglage introduit **après** la création du fichier n'y arrive jamais
+seul. Trois variables sont nées ainsi sur le premier serveur en service, et
+chacune a demandé une intervention à la main — deux après une panne.
+
+```bash
+carlysctl env-sync staging                      # essai : dit ce qu'il ferait
+carlysctl env-sync staging --appliquer          # écrit les valeurs recopiables
+carlysctl env-sync staging --appliquer --tout   # + engendre les secrets sûrs
+```
+
+Trois classements, et **ils ne sont écrits nulle part à la main** — ils se
+lisent dans le fichier d'exemple, qui porte déjà la convention `CHANGE_MOI_` et
+une directive `#carlysctl:engendrer` au-dessus des secrets qu'on sait fabriquer
+sans casser d'état extérieur :
+
+| Cas | Ce qui se passe | Pourquoi |
+| --- | --- | --- |
+| valeur en clair dans l'exemple | **recopiée** | `CARLYS_API_REPLICAS=1`, `SWAGGER_ENABLED=false` : la valeur que le script utilisait déjà comme défaut |
+| secret marqué `#carlysctl:engendrer` | **engendré** avec `--tout`, **jamais affiché** | `METRICS_TOKEN`, `JWT_ACCESS_SECRET` : rien d'extérieur n'en dépend, une valeur neuve ne casse rien |
+| tout le reste | **refusé**, avec la raison | `DOMAIN` casserait le site ; `POSTGRES_PASSWORD` engendré fermerait la base à double tour sur des données existantes |
+
+Le défaut, en l'absence de directive, est de **refuser** : une variable ajoutée
+sans qu'on y pense tombe donc du côté prudent.
+
+Quatre garanties, parce qu'un outil qui écrit dans le fichier des secrets doit
+les énoncer :
+
+- il **n'écrase jamais** une ligne existante — il n'ajoute que des clés absentes ;
+- il écrit **en fin de fichier**, pour qu'une valeur comme
+  `https://app-staging.${DOMAIN}` trouve au-dessus d'elle ce qu'elle référence ;
+- il **sauvegarde** avant d'écrire (`.env.avant-sync-<horodatage>`, en 600), et
+  **restaure** si Compose refuse le fichier après coup ;
+- il **n'affiche jamais** un secret engendré : ni sur le terminal, ni dans le
+  journal systemd.
+
+La supervision l'appelle à chaque passe, avant tout le reste, mais **sans**
+`--tout` : elle recopie, elle n'invente pas. `CARLYS_ENV_SYNC=non` la fait
+taire.
 
 > **Ne jamais faire `cat <exemple> >> .env`.** Les clés déjà présentes se
 > retrouveraient en double, et c'est la **dernière** qui gagne : un
 > `CARLYS_AUTO_UPDATE=oui` posé en haut serait annulé par le `=non` de
-> l'exemple recopié en bas, sans le moindre message. C'est exactement le
-> deuxième verdict du tableau.
+> l'exemple recopié en bas, sans le moindre message. `env-sync` fait le travail
+> correctement ; `doctor` signale le fichier abîmé si l'on a essayé autrement.
+
+### Le clone du serveur se met à jour aussi
+
+`update_run` déploie des **images** ; il ne touchait pas au dépôt cloné dans
+`/srv/carlys/repo`. Les scripts, le `compose.yml` et les fichiers d'exemple
+restaient donc figés au dernier `git pull` tapé à la main — et `env-sync`, qui
+compare à ces exemples, n'avait rien de neuf à comparer.
+
+La supervision termine désormais sa passe par un `git pull --ff-only` sur le
+clone, **sous la même autorisation que le déploiement** (`CARLYS_AUTO_UPDATE`,
+puisque « suivre `main` » inclut les scripts). Un clone qui porte des
+modifications locales ou qui a divergé est **signalé, jamais écrasé**.
+
+Remplacer un script pendant qu'il s'exécute est sans danger, et c'est mesuré :
+`git checkout` crée un nouveau fichier et le renomme par-dessus, l'inode change,
+et le `bash` en cours garde son descripteur sur l'ancien. La passe en cours
+finit sur les anciens scripts ; la suivante prend les nouveaux.
 
 ---
 

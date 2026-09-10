@@ -126,10 +126,17 @@ require_compose_file() {
 # du code. On lit, on ne l'interprète pas.
 env_value() {
   local key="$1" file="$2" default="${3-}" line
-  line="$(grep -E "^[[:space:]]*(export[[:space:]]+)?${key}=" "$file" 2>/dev/null | tail -n 1 || true)"
+  # `[[:space:]]*=` et non `=` : Compose rogne les espaces autour de la clé,
+  # donc `CARLYS_TAG =sha-abc` est une déclaration VALIDE pour lui. Un motif
+  # qui exige le `=` collé rendrait ici la valeur par défaut pendant que la
+  # pile tourne avec la vraie — deploy, promote et status décriraient un
+  # serveur qui n'existe pas. Mesuré : la divergence était réelle.
+  line="$(grep -E "^[[:space:]]*(export[[:space:]]+)?${key}[[:space:]]*=" "$file" 2>/dev/null | tail -n 1 || true)"
   if [ -z "$line" ]; then printf '%s' "$default"; return 0; fi
   line="${line#*=}"
   line="${line%$'\r'}"
+  # Espaces de tête, pour la même raison : Compose les rogne aussi.
+  line="${line#"${line%%[![:space:]]*}"}"
   # Guillemets d'encadrement éventuels (les .env en portent souvent).
   if [ "${line#\"}" != "$line" ] && [ "${line%\"}" != "$line" ]; then
     line="${line#\"}"; line="${line%\"}"
@@ -415,3 +422,9 @@ admin_host_port() {
 . "$CARLYS_LIB_DIR/_prune.sh"
 # shellcheck source=scripts/server/_envcheck.sh
 . "$CARLYS_LIB_DIR/_envcheck.sh"
+# _envsync.sh s'appuie sur envcheck_exemple et envcheck_nouveautes : chargé
+# après, même si bash ne l'exigerait pas (rien n'est appelé au chargement).
+# shellcheck source=scripts/server/_envsync.sh
+. "$CARLYS_LIB_DIR/_envsync.sh"
+# shellcheck source=scripts/server/_repo.sh
+. "$CARLYS_LIB_DIR/_repo.sh"
