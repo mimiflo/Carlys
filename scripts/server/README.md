@@ -16,7 +16,7 @@ Tout est décrit dans
 | Commande | Quand | Ce qu'elle fait |
 | --- | --- | --- |
 | `carlysctl status [env]` | quand on se demande si ça va | version déployée, conteneurs, exemplaires, ports servis par Nginx, utilisateurs en ligne, débit, latence, et ce que le superviseur s'apprête à faire |
-| `carlysctl doctor` | après une installation, ou quand rien ne marche | nomme ce qui manque sur la machine |
+| `carlysctl doctor` | après une installation, après un `git pull`, ou quand rien ne marche | nomme ce qui manque : outils, démon Docker, amonts Nginx, et — en le demandant à Compose lui-même — ce qui manque ou se contredit dans chaque `.env` |
 | `carlysctl scale <env> <n>` | à la main | fixe le nombre d'exemplaires d'API |
 | `carlysctl autoscale <env>` | pour comprendre une décision | dit ce qu'il ferait ; n'agit qu'avec `--appliquer` |
 | `carlysctl heal <env>` | quand quelque chose est tombé | relève ce qui manque, avec un plafond horaire |

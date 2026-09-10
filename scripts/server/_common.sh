@@ -413,3 +413,5 @@ admin_host_port() {
 . "$CARLYS_LIB_DIR/_status.sh"
 # shellcheck source=scripts/server/_prune.sh
 . "$CARLYS_LIB_DIR/_prune.sh"
+# shellcheck source=scripts/server/_envcheck.sh
+. "$CARLYS_LIB_DIR/_envcheck.sh"

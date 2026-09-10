@@ -21,7 +21,7 @@ passer **toutes les deux minutes**.
 
 ```bash
 carlysctl status            # ce qui tourne, et comment ça va
-carlysctl doctor            # ce qui manque sur la machine
+carlysctl doctor            # ce qui manque : machine, Nginx, et chaque .env
 carlysctl scale staging 3   # trois exemplaires d'API
 carlysctl heal production   # relever ce qui est tombé
 carlysctl prune --essai     # ce qu'un élagage d'images supprimerait
@@ -448,6 +448,48 @@ dit.
 | La pile ne grandit pas alors que la charge monte | `carlysctl autoscale <env>` dit pourquoi : `delai-de-garde`, ou plafond atteint |
 | `carlysctl` dit « un déploiement est déjà en cours » | une passe de supervision ou un `deploy.sh` tient le verrou — `fuser -v /srv/carlys/<env>/.lock` |
 | La mise à jour automatique ne part jamais | `CARLYS_AUTO_UPDATE`, ou en production la maturation pas encore écoulée — `carlysctl update <env>` dit lequel |
+| Un réglage écrit dans le `.env` reste sans effet | la clé y est **deux fois** — seule la dernière compte ; `carlysctl doctor` la nomme |
+
+### `carlysctl doctor` — et pourquoi il ne tient aucune liste
+
+`doctor` répond à « qu'est-ce qui manque ? » sur trois plans : les outils et le
+**démon** Docker (le binaire présent ne dit rien du démon), les amonts Nginx, et
+le contenu de chaque `.env`.
+
+Ce dernier point ne compare **pas** à une liste écrite à la main. Une liste de
+variables obligatoires périme au premier ajout dans `compose.yml`, sans que rien
+ne le signale — c'est la règle du dépôt (« les écarts se comptent, ils ne se
+recopient pas ») appliquée à l'orchestrateur. `doctor` pose donc la question à
+Docker Compose :
+
+```bash
+docker compose --env-file <.env> config -q
+```
+
+C'est l'oracle exact : il connaît les `${VAR:?message}`, tolère celles que `dc`
+fournit autrement (`COMPOSE_PROJECT_NAME` arrive par `--project-name`), et rend
+le message qui nommera la variable au moment du déploiement. Il a en plus la
+propriété qui compte pour un diagnostic — **il fonctionne démon Docker arrêté**,
+c'est-à-dire au moment où l'on en a le plus besoin.
+
+Trois verdicts, dans l'ordre où ils sortent :
+
+| Ce que `doctor` dit | Gravité | Ce qu'il faut faire |
+| --- | --- | --- |
+| `Compose REFUSE ce .env` | **bloquant** — la pile ne démarrera pas | ajouter la variable que le message nomme |
+| `<CLÉ> est déclarée PLUSIEURS FOIS` | **bloquant** — panne silencieuse | supprimer les lignes en trop ; `env_value` prend la dernière |
+| `<CLÉ> absente — l'exemple propose : …` | informatif | rien, sauf si le réglage vous intéresse : tout ce qui est absent a un défaut |
+
+Le troisième cas est celui d'un `.env` créé avant qu'un réglage n'existe.
+`setup.sh` ne réécrit jamais un `.env` existant — c'est sa propriété la plus
+importante, sinon il écraserait les secrets à chaque exécution. Les nouveautés
+s'ajoutent donc à la main, et `doctor` dit lesquelles, avec la valeur proposée.
+
+> **Ne jamais faire `cat <exemple> >> .env`.** Les clés déjà présentes se
+> retrouveraient en double, et c'est la **dernière** qui gagne : un
+> `CARLYS_AUTO_UPDATE=oui` posé en haut serait annulé par le `=non` de
+> l'exemple recopié en bas, sans le moindre message. C'est exactement le
+> deuxième verdict du tableau.
 
 ---
 
@@ -496,6 +538,9 @@ sudo nano /srv/carlys/staging/.env
 #  + CARLYS_API_REPLICAS=1              ← NOUVEAU
 #    Les réglages CARLYS_SCALE_*, CARLYS_HEAL_* et CARLYS_AUTO_UPDATE ont tous
 #    un défaut : rien à écrire tant qu'on ne veut pas les changer.
+#    Ne PAS recopier l'exemple en bloc : les clés en double s'annulent en
+#    silence (voir § 10). Pour savoir ce qui manque vraiment :
+#      sudo ./scripts/server/carlysctl doctor
 
 # 3. Le vhost, AVANT setup.sh (voir ci-dessus).
 DOMAINE=carlys.example        # ← ton domaine réel

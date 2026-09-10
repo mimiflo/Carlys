@@ -255,6 +255,17 @@ cmd_doctor() {
   if docker compose version >/dev/null 2>&1; then ok 'plugin docker compose'
   else warn 'plugin docker compose ABSENT'; manque=1; fi
 
+  # Le binaire présent ne dit RIEN du démon. `doctor` annonçait « tout est en
+  # place » et rendait 0 avec dockerd arrêté — c'est-à-dire au moment précis où
+  # plus rien ne peut tourner.
+  if timeout 10 docker info >/dev/null 2>&1; then
+    ok 'démon Docker joignable'
+  else
+    warn 'démon Docker INJOIGNABLE — rien ne peut démarrer'
+    warn '  systemctl status docker ; journalctl -u docker -n 50'
+    manque=1
+  fi
+
   step "Fichiers"
   if [ -f "$CARLYS_COMPOSE_FILE" ]; then
     ok "compose : $CARLYS_COMPOSE_FILE"
@@ -276,10 +287,10 @@ cmd_doctor() {
       warn "  nginx refusera toute la configuration tant qu'il manque."
       manque=1
     fi
-    if [ "$(env_value CARLYS_API_HOST_PORT_LAST "$file" '')" = '' ]; then
-      warn "  CARLYS_API_HOST_PORT_LAST absent : la pile ne peut pas démarrer."
-      manque=1
-    fi
+    # Le contenu du .env : demandé à Compose, jamais recopié ici. Voir
+    # _envcheck.sh — une liste de variables obligatoires écrite à la main
+    # périme au premier ajout dans compose.yml, sans que rien ne le dise.
+    envcheck_env "$env_name" "$file" || manque=1
   done < <(tous_les_environnements)
 
   printf '\n'
