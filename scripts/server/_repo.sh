@@ -57,3 +57,40 @@ repo_pull() {
   fi
   return 0
 }
+
+# La branche sur laquelle le clone est posé, ou rien s'il est détaché.
+repo_branche() {
+  local b
+  b="$(git -C "$CARLYS_REPO_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
+  [ "$b" = HEAD ] && b=''
+  printf '%s' "$b"
+}
+
+# `repo_avertir_branches <.env>` — l'incohérence qui a produit le recul
+# du 10 septembre 2026, signalée AVANT qu'elle ne coûte quelque chose.
+#
+# Deux branches entrent en jeu et personne ne les rapproche : celle dont
+# `update_run` tire les IMAGES (CARLYS_UPDATE_BRANCH, `main` par défaut) et
+# celle sur laquelle le clone est posé, d'où viennent les SCRIPTS et les
+# fichiers d'exemple. Tant qu'elles diffèrent, le serveur exécute le code d'une
+# branche contre les images d'une autre — et si la branche suivie est en
+# retard, la mise à jour automatique fait reculer la pile.
+#
+# Ne dit rien tant que la mise à jour automatique est éteinte : sans elle, la
+# branche suivie ne sert à rien et l'avertissement ne serait que du bruit.
+repo_avertir_branches() {
+  local file="$1" suivie clone
+  [ "$(update_actif "$file")" = oui ] || return 0
+  clone="$(repo_branche)"
+  [ -n "$clone" ] || return 0
+  suivie="$(update_branche "$file")"
+  [ "$suivie" != "$clone" ] || return 0
+  warn "  mise à jour auto ACTIVE, et les deux branches DIVERGENT :"
+  warn "        images suivies  : $suivie"
+  warn "        scripts du clone : $clone"
+  warn "  Le serveur exécuterait les scripts d'une branche contre les images"
+  warn "  d'une autre. Si « $suivie » est en retard, la pile RECULE."
+  warn "  Aligner l'une sur l'autre :"
+  warn "    echo 'CARLYS_UPDATE_BRANCH=$clone' | sudo tee -a $file"
+  return 1
+}

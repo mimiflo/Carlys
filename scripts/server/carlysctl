@@ -358,6 +358,9 @@ cmd_doctor() {
     # _envcheck.sh — une liste de variables obligatoires écrite à la main
     # périme au premier ajout dans compose.yml, sans que rien ne le dise.
     envcheck_env "$env_name" "$file" || manque=1
+    # La branche des IMAGES contre celle des SCRIPTS. Voir _repo.sh : c'est
+    # cette divergence-là qui a fait reculer une recette de 14 commits.
+    repo_avertir_branches "$file" || manque=1
   done < <(tous_les_environnements)
 
   printf '\n'

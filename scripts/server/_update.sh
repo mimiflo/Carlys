@@ -109,10 +109,15 @@ image_publiee() { docker manifest inspect "$1" >/dev/null 2>&1; }
 # `update_cible_staging <.env>` — le sha vers lequel la recette devrait aller,
 # ou rien.
 #
-# `git ls-remote` plutôt qu'un `git fetch` : on veut connaître la tête distante
-# sans toucher au dépôt local, qui est aussi celui d'où ces scripts
-# s'exécutent. Un `fetch` en pleine supervision changerait le code sous les
-# pieds du script en train de tourner.
+# `git ls-remote` suffit ICI : on ne veut qu'une tête, pas des objets.
+#
+# La version précédente de ce commentaire justifiait ce choix par « un fetch en
+# pleine supervision changerait le code sous les pieds du script en train de
+# tourner ». C'est FAUX, et il faut le dire parce que `update_est_un_recul`
+# fait désormais un `fetch` : `git fetch` n'écrit que dans .git/ et ne touche
+# PAS un seul fichier de l'arborescence. Seuls `pull` et `checkout` la
+# réécrivent — et même eux sont sans danger, mesuré : ils remplacent l'inode,
+# le bash qui tourne garde son descripteur sur l'ancien.
 update_cible_staging() {
   local file="$1" branche tete sha12
   branche="$(update_branche "$file")"
@@ -127,6 +132,33 @@ update_cible_staging() {
   image_publiee "$(image_admin "$sha12" staging)" || return 0
   image_publiee "$(image_migrate "$sha12")" || return 0
   printf '%s' "$sha12"
+}
+
+# `update_est_un_recul <env> <cible> <courant>` — vrai si la cible est un
+# ANCÊTRE STRICT de ce qui tourne.
+#
+# EN CAS DE DOUTE, ON REFUSE. Si le dépôt local ne connaît pas l'un des deux
+# commits, `merge-base` ne peut pas trancher — et un `git ls-remote` ne
+# rapatrie aucun objet, donc le cas est réel. On tente d'abord un `fetch` de la
+# seule référence utile ; s'il n'aboutit pas, l'ancêtre reste indécidable et la
+# fonction rend « recul » : mieux vaut une mise à jour qui attend et le dit
+# qu'un déploiement à l'aveugle. Le message renvoie de toute façon vers la
+# commande manuelle.
+update_est_un_recul() {
+  local env_name="$1" cible="$2" courant="$3"
+  # Rien de déployé, ou la même chose : il n'y a pas de recul possible.
+  [ -n "$courant" ] || return 1
+  [ "$cible" != "$(normalize_sha "$courant")" ] || return 1
+
+  git -C "$CARLYS_REPO_DIR" fetch --quiet origin 2>/dev/null || true
+
+  if ! git -C "$CARLYS_REPO_DIR" cat-file -e "${cible}^{commit}" 2>/dev/null \
+    || ! git -C "$CARLYS_REPO_DIR" cat-file -e "${courant}^{commit}" 2>/dev/null; then
+    warn "impossible de situer sha-$cible par rapport à sha-$courant (objet absent)"
+    return 0
+  fi
+
+  git -C "$CARLYS_REPO_DIR" merge-base --is-ancestor "$cible" "$courant" 2>/dev/null
 }
 
 # `update_cible_production <.env de production>` — le sha que la production
@@ -209,6 +241,32 @@ update_run() {
     info "sha-$cible a déjà échoué sur « $env_name » — pas de nouvelle tentative"
     info "  la mise à jour repartira au prochain commit ; pour forcer :"
     info "    carlysctl deploy $env_name $cible"
+    return 0
+  fi
+
+  # JAMAIS EN ARRIÈRE. Ce garde-fou n'est pas théorique : il a manqué, et le
+  # 10 septembre 2026 à 12:02:16Z une recette est repartie de 14 commits en
+  # arrière, toute seule, en deux minutes.
+  #
+  # LA CAUSE. CARLYS_UPDATE_BRANCH vaut `main` par défaut, et le serveur
+  # travaillait sur une branche de fonctionnalité que `main` n'avait pas
+  # encore reçue. La CI publie les images des DEUX branches
+  # (images-publish.yml) : la tête de `main` avait donc bien ses trois images,
+  # tous les contrôles existants passaient, et rien n'a fait obstacle. Ce qui
+  # tournait a été remplacé par plus ancien, sans un mot.
+  #
+  # POURQUOI L'ANCÊTRE EST LE BON CRITÈRE. Un `git revert` fabrique un commit
+  # NEUF, descendant de ce qui tourne : il n'est jamais un ancêtre, et un
+  # retour arrière voulu passe donc sans entrave. Seul le recul LITTÉRAL — la
+  # branche suivie pointe sur un commit déjà contenu dans le déployé — est
+  # refusé. C'est exactement le cas ci-dessus, et rien d'autre.
+  if update_est_un_recul "$env_name" "$cible" "$courant"; then
+    warn "RECUL REFUSÉ sur « $env_name » : sha-$cible est un ANCÊTRE de sha-$courant."
+    warn "  La branche suivie ($(update_branche "$file")) pointe sur du code PLUS ANCIEN"
+    warn "  que ce qui tourne. Le plus souvent, c'est la mauvaise branche :"
+    warn "    grep -n '^CARLYS_UPDATE_BRANCH=' $file"
+    warn "  Pour reculer volontairement, c'est une commande, pas un automatisme :"
+    warn "    carlysctl deploy $env_name $cible"
     return 0
   fi
 

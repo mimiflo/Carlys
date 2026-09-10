@@ -448,6 +448,7 @@ dit.
 | La pile ne grandit pas alors que la charge monte | `carlysctl autoscale <env>` dit pourquoi : `delai-de-garde`, ou plafond atteint |
 | `carlysctl` dit « un déploiement est déjà en cours » | une passe de supervision ou un `deploy.sh` tient le verrou — `fuser -v /srv/carlys/<env>/.lock` |
 | La mise à jour automatique ne part jamais | `CARLYS_AUTO_UPDATE`, ou en production la maturation pas encore écoulée — `carlysctl update <env>` dit lequel |
+| La recette est repartie sur une version PLUS ANCIENNE | `CARLYS_UPDATE_BRANCH` désigne une branche en retard sur le clone — `carlysctl doctor` nomme les deux |
 | Un réglage écrit dans le `.env` reste sans effet | la clé y est **deux fois** — seule la dernière compte ; `carlysctl doctor` la nomme |
 
 ### `carlysctl doctor` — et pourquoi il ne tient aucune liste
@@ -500,6 +501,52 @@ pour `JWT_ACCESS_SECRET`, minimum exigé 32. Une API qui en hérite **démarre**
 et signe tous ses jetons avec une chaîne publiée dans un dépôt Git. C'est
 pourquoi `doctor` n'affiche **jamais** la valeur d'exemple d'une clé factice :
 il donne la recette, pas la chaîne.
+
+### La branche suivie doit être celle du clone
+
+C'est arrivé, et ça n'a pris que deux minutes : le **10 septembre 2026 à
+12:02:16Z**, une recette est repartie de **14 commits en arrière**, toute
+seule.
+
+Deux branches entrent en jeu, et rien ne les rapprochait :
+
+| | D'où ça vient |
+| --- | --- |
+| les **images** déployées | `CARLYS_UPDATE_BRANCH`, **`main` par défaut** |
+| les **scripts** et les exemples | la branche sur laquelle le clone `/srv/carlys/repo` est posé |
+
+Le serveur travaillait sur une branche de fonctionnalité que `main` n'avait pas
+encore reçue. Or `images-publish.yml` publie les images des **deux** branches :
+la tête de `main` avait donc bien ses trois images, tous les contrôles
+existants passaient, et rien n'a fait obstacle. Ce qui tournait a été remplacé
+par plus ancien, sans un mot.
+
+Deux garde-fous en sont sortis.
+
+**`carlysctl doctor` nomme la divergence** dès que la mise à jour automatique
+est active :
+
+```
+⚠ mise à jour auto ACTIVE, et les deux branches DIVERGENT :
+      images suivies  : main
+      scripts du clone : claude/…
+  Si « main » est en retard, la pile RECULE.
+  Aligner l'une sur l'autre :
+    echo 'CARLYS_UPDATE_BRANCH=claude/…' | sudo tee -a /srv/carlys/staging/.env
+```
+
+**`carlysctl update` refuse un recul.** Le critère est l'**ancêtre**, et il est
+choisi précisément : un `git revert` fabrique un commit **neuf**, descendant de
+ce qui tourne — il n'est jamais un ancêtre, donc un retour arrière voulu passe
+sans entrave. Seul le recul littéral est refusé. En cas de doute — un objet que
+le dépôt local ne connaît pas — il refuse aussi : une mise à jour qui attend et
+le dit vaut mieux qu'un déploiement à l'aveugle.
+
+Reculer reste possible, mais c'est une **commande**, pas un automatisme :
+
+```bash
+carlysctl deploy staging <sha>
+```
 
 ### `carlysctl env-sync` — le `.env` se complète tout seul
 
