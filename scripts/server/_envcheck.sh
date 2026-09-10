@@ -27,8 +27,9 @@
 # chacun d'une panne mesurée, pas d'une précaution de principe :
 #
 #   - une clé DÉCLARÉE DEUX FOIS : c'est la dernière qui gagne, en silence ;
-#   - une clé ACTIVE MAIS VIDE (`CLE=`) : Zod refuse la chaîne vide même
-#     là où il a un `.default()`, et l'API ne démarre pas ;
+#   - une clé DE L'API active mais VIDE (`CLE=`) : Zod refuse la chaîne vide
+#     même là où il a un `.default()`, et l'API ne démarre pas. De l'API
+#     SEULEMENT : `COMPOSE_PROFILES=` est vide exprès en production ;
 #   - un `CHANGE_MOI_` resté en place : les exemples documentent ce contrôle
 #     depuis toujours, personne ne l'exécutait ;
 #   - une clé active de l'exemple ABSENTE du fichier réel.
@@ -88,16 +89,30 @@ envcheck_vides() {
   sed -n 's/^[[:space:]]*\(export[[:space:]][[:space:]]*\)\{0,1\}\([A-Za-z_][A-Za-z_0-9]*\)[[:space:]]*=[[:space:]]*$/\2/p' "$1"
 }
 
-# Les clés pour lesquelles une valeur vide est LÉGITIME.
+# Le fichier de schéma de l'API, qui décide de ce que « vide » veut dire.
+envcheck_schema_api() {
+  printf '%s/apps/api/src/config/env.schema.ts' "$CARLYS_REPO_DIR"
+}
+
+# Les variables que l'API VALIDE, tirées du schéma Zod lui-même.
 #
-# Tirées de compose.yml, jamais nommées ici : `${VAR?message}` (sans les deux
-# points) exige que la variable soit DÉCLARÉE et accepte qu'elle soit vide,
-# là où `${VAR:?message}` refuse les deux. CARLYS_ADMIN_TAG_SUFFIX est
-# aujourd'hui la seule dans ce cas — vide en recette, `-prod` en production —
-# mais la prochaine sera exemptée sans que personne ait à y penser.
-envcheck_vides_tolerees() {
-  grep -oE '\$\{[A-Za-z_][A-Za-z_0-9]*\?' "$CARLYS_COMPOSE_FILE" 2>/dev/null \
-    | sed 's/^\${//; s/?$//' | sort -u
+# POURQUOI CETTE LISTE EXISTE, alors qu'aucune autre n'existe ici. Le contrôle
+# des valeurs vides repose sur un fait qui n'est vrai QUE côté API : Zod refuse
+# la chaîne vide, même là où il a un `.default()`. Appliqué à une variable que
+# l'API ne lit pas, il n'affirme plus rien — et il s'est trompé, sur un vrai
+# serveur, à la première exécution : `COMPOSE_PROFILES=` est VIDE EXPRÈS en
+# production (« AUCUN profil : Mailpit ne démarre pas ici », production.env
+# .example:68), et l'annoncer comme « l'API refusera de démarrer » était
+# exactement le mensonge de diagnostic que ce fichier existe pour supprimer.
+#
+# La liste n'est donc pas tenue ici : elle est LUE dans le schéma, qui fait foi.
+# Mesuré : 50 clés extraites, dont les 8 absentes des exemples sont précisément
+# les 8 qui y sont commentées parce que facultatives. Aucun faux positif.
+envcheck_cles_api() {
+  local schema
+  schema="$(envcheck_schema_api)"
+  [ -r "$schema" ] || return 1
+  grep -oE '^[[:space:]]+[A-Z][A-Z_0-9]*:' "$schema" | tr -d ' :' | sort -u
 }
 
 # Les clés actives dont la valeur porte encore un CHANGE_MOI_.
@@ -136,7 +151,7 @@ envcheck_nouveautes() {
 # `envcheck_env <env> <.env>` — les cinq contrôles. Rend 1 si quelque chose
 # empêcherait la pile de démarrer ou trahirait silencieusement une intention.
 envcheck_env() {
-  local env_name="$1" file="$2" defaut=0 sortie cle tolerees
+  local env_name="$1" file="$2" defaut=0 sortie cle api
 
   # AVANT TOUT LE RESTE. Sans cette garde, un .env en 600 root lu sans sudo
   # fait échouer chaque `sed` ; le code de retour est perdu par les
@@ -181,15 +196,26 @@ envcheck_env() {
     defaut=1
   done < <(envcheck_doublons "$file")
 
-  # 3. Active mais vide.
-  tolerees=" $(envcheck_vides_tolerees | tr '\n' ' ') "
-  while read -r cle; do
-    [ -n "$cle" ] || continue
-    case "$tolerees" in *" $cle "*) continue ;; esac
-    warn "  $cle est déclarée VIDE — l'API refusera de démarrer"
-    warn "        une variable facultative se COMMENTE, elle ne se vide pas"
-    defaut=1
-  done < <(envcheck_vides "$file")
+  # 3. Active mais vide — POUR LES SEULES VARIABLES DE L'API.
+  #
+  # Restreint au schéma Zod, et pas par prudence : c'est le seul périmètre où
+  # « vide » veut dire quelque chose. Une variable de compose vide est jugée
+  # par le contrôle 1, qui refuse les `${VAR:?}` et laisse passer le reste —
+  # y compris les vides voulues, `COMPOSE_PROFILES=` en production en tête.
+  if api="$(envcheck_cles_api)"; then
+    api=" $(printf '%s' "$api" | tr '\n' ' ') "
+    while read -r cle; do
+      [ -n "$cle" ] || continue
+      case "$api" in *" $cle "*) ;; *) continue ;; esac
+      warn "  $cle est déclarée VIDE — l'API refusera de démarrer"
+      warn "        une variable facultative se COMMENTE, elle ne se vide pas"
+      warn "        (Zod refuse la chaîne vide même là où il a un défaut)"
+      defaut=1
+    done < <(envcheck_vides "$file")
+  else
+    info "  schéma de l'API illisible ($(envcheck_schema_api)) —"
+    info "    contrôle des valeurs vides NON EXÉCUTÉ"
+  fi
 
   # 4. Les valeurs factices restées en place.
   while read -r cle; do

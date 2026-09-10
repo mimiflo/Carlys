@@ -481,7 +481,7 @@ nomme, et tout ce qui traverse `env_file` lui est opaque.
 | `Compose REFUSE ce .env` | **bloquant** — la pile ne démarrera pas | ajouter la variable que le message nomme |
 | `Compose accepte … mais PRÉVIENT` | **bloquant** — valeur tronquée | un `$` dans une valeur ouvre une substitution : le **doubler** en `$$` |
 | `<CLÉ> est déclarée PLUSIEURS FOIS` | **bloquant** — panne silencieuse | supprimer les lignes en trop ; c'est la **dernière** qui gagne |
-| `<CLÉ> est déclarée VIDE` | **bloquant** — l'API ne démarrera pas | la **commenter**, pas la vider : Zod refuse la chaîne vide même là où il a un défaut |
+| `<CLÉ> est déclarée VIDE` | **bloquant** — l'API ne démarrera pas | la **commenter**, pas la vider : Zod refuse la chaîne vide même là où il a un défaut. Ne porte que sur les variables du schéma de l'API — `COMPOSE_PROFILES=` est vide **exprès** en production |
 | `<CLÉ> porte encore un CHANGE_MOI_` | **bloquant** — valeur factice publique | `carlysctl env-sync <env> --appliquer --tout`, ou la vraie valeur à la main |
 | `<CLÉ> absente` | **bloquant** | `carlysctl env-sync <env> --appliquer` (voir ci-dessous) |
 
