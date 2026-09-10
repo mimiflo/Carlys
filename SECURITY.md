@@ -96,10 +96,14 @@ aucune version antérieure ne reçoit de correctif.
 - **Rate limiting** global via `@nestjs/throttler` : 100 requêtes / 60 secondes
   par défaut (`RATE_LIMIT_TTL_SECONDS`, `RATE_LIMIT_MAX_REQUESTS`,
   constantes dans `packages/shared-config`).
-- **Adresse du client derrière un proxy** : `TRUST_PROXY_HOPS` (défaut `0`)
-  fixe le nombre de proxys de confiance ; sans lui, le rate limiting, le
-  verrouillage et l'audit ne verraient que l'adresse du reverse proxy. Jamais
-  « tout faire confiance » : voir `docs/security/reverse-proxy.md`.
+- **Adresse du client derrière un proxy** : `TRUST_PROXY_HOPS` (défaut `0`,
+  `2` en production — le proxy réseau puis le Nginx du serveur) fixe le nombre
+  de proxys de confiance ; sans lui, la limitation de débit et l'audit ne
+  verraient que l'adresse du reverse proxy. Le verrouillage de compte, lui,
+  n'est PAS concerné : il s'indexe sur l'identité (`lockout.status(email)`),
+  jamais sur l'adresse. Jamais « tout faire confiance » — et un compteur de
+  sauts ne protège d'un `X-Forwarded-For` forgé QUE si le proxy de tête écrase
+  l'en-tête au lieu d'y ajouter : voir `docs/security/reverse-proxy.md`.
 - **Taille des corps de requêtes limitée à 1 Mo** (`MAX_JSON_BODY_SIZE`,
   appliquée dans `apps/api/src/main.ts` pour JSON et urlencoded).
 - **Erreurs sans fuite d'informations** : le filtre global

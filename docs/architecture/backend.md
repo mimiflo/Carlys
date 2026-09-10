@@ -158,9 +158,12 @@ Ordre effectif des étapes pour une requête `/api/v1/…` :
 requête HTTP
   │
   1. trust proxy (réglage Express posé avant helmet, TRUST_PROXY_HOPS
-     sauts de confiance — 0 par défaut) : req.ip vaut l'adresse réelle du
-     client derrière le reverse proxy ; c'est elle que lisent le throttler,
-     le verrouillage et l'audit (docs/security/reverse-proxy.md)
+     sauts de confiance — 0 par défaut, 2 sur le serveur déployé : le proxy
+     réseau qui termine le TLS, puis le Nginx de l'hôte) : req.ip vaut
+     l'adresse réelle du client ; c'est elle que lisent le throttler, les
+     sessions et l'audit. Le compteur ne protège pas à lui seul — il ne
+     retire des entrées que par la droite —, c'est le proxy de tête qui doit
+     ÉCRASER X-Forwarded-For (docs/security/reverse-proxy.md)
   2. pino-http (nestjs-pino) : requestId — reprend l'en-tête x-request-id
      entrant s'il est valide ([\w-]{1,64}), sinon génère un UUID ;
      l'en-tête est renvoyé sur la réponse, le log est corrélé
@@ -205,7 +208,7 @@ Variables validées (Étape 1) :
 | `REDIS_URL` | URL `redis://` ou `rediss://` | **requis** |
 | `CORS_ORIGINS` | liste d'origines séparées par des virgules | `http://localhost:3001` |
 | `LOG_LEVEL` | niveau Pino | `info` |
-| `TRUST_PROXY_HOPS` | entier ≥ 0 — proxys de confiance devant l'API, jamais « tout » | `0` |
+| `TRUST_PROXY_HOPS` | entier ≥ 0 — proxys de confiance devant l'API, jamais « tout » ; `2` sur le serveur déployé (`docs/security/reverse-proxy.md`) | `0` |
 | `RATE_LIMIT_TTL_SECONDS` / `RATE_LIMIT_MAX_REQUESTS` | entiers positifs | `60` / `100` |
 | `SWAGGER_ENABLED` | `true \| false` | activé hors production |
 | `METRICS_TOKEN` | ≥ 16 caractères | optionnel (requis pour `/metrics` en production) |

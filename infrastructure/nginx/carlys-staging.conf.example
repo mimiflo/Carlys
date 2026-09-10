@@ -4,6 +4,16 @@
 # seulement : les ports de boucle locale, les noms d'hôte, et le fait que cet
 # environnement doit rester HORS DES MOTEURS DE RECHERCHE.
 #
+# Comme son jumeau, ce fichier n'écoute qu'en HTTP sur le port 80 : le TLS des
+# trois noms de recette est terminé par le reverse proxy réseau gra6.luuc.fr,
+# qui détient les certificats et relaie ici en clair. Aucun `listen 443`, aucun
+# certificat, aucun défi ACME, aucun certbot sur ce serveur. Les URL publiques,
+# elles, restent en `https://` : PUBLIC_APP_URL, CORS_ORIGINS,
+# S3_PUBLIC_BASE_URL, CARLYS_API_BASE_URL, CARLYS_PUBLIC_WEB_BASE_URL de la
+# recette ne doivent JAMAIS passer en http://. Le raisonnement complet — dont
+# le prérequis de pare-feu qui va avec — est en tête de
+# carlys-production.conf.example et dans snippets/carlys-proxy.conf.
+#
 # Installation :
 #   cp infrastructure/nginx/snippets/carlys-proxy.conf /etc/nginx/snippets/
 #   sed 's/carlys.example/VOTRE-DOMAINE/g' \
@@ -32,37 +42,20 @@ upstream carlys_minio_staging {
 #   ssh -L 8025:127.0.0.1:8025 <utilisateur>@<serveur>
 # puis http://localhost:8025 dans le navigateur local.
 
-# ── HTTP : rien n'est servi en clair ─────────────────────────────────────────
+# ── API de recette — api-staging.carlys.example → 127.0.0.1:3100 ─────────────
+#
+# Ni `ssl`, ni `http2` sur le `listen` : HTTP/2 se négocie dans la poignée de
+# main TLS, donc sur gra6. Ici, c'est du HTTP/1.1 en clair de bout en bout
+# (`proxy_http_version 1.1;` dans le snippet).
 server {
     listen 80;
     listen [::]:80;
-    server_name api-staging.carlys.example app-staging.carlys.example media-staging.carlys.example;
-
-    location /.well-known/acme-challenge/ {
-        root /var/www/certbot;
-    }
-
-    location / {
-        return 301 https://$host$request_uri;
-    }
-}
-
-# ── API de recette — api-staging.carlys.example → 127.0.0.1:3100 ─────────────
-#
-# `listen … http2` et non `http2 on;` : l'explication complète est dans
-# carlys-production.conf.example. En deux mots : `http2 on;` date de 1.25.1 et
-# ferait échouer `nginx -t` sur le Nginx de Debian 12 (1.22.1) comme sur celui
-# d'Ubuntu 22.04 (1.18.0), que ce dépôt dit installer.
-server {
-    listen 443 ssl http2;
-    listen [::]:443 ssl http2;
     server_name api-staging.carlys.example;
 
-    ssl_certificate     /etc/letsencrypt/live/api-staging.carlys.example/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/api-staging.carlys.example/privkey.pem;
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_prefer_server_ciphers off;
-
+    # HSTS conservé bien que ce bloc n'écoute qu'en clair : c'est un en-tête de
+    # RÉPONSE, il traverse gra6 jusqu'au navigateur, qui l'applique à l'origine
+    # https://api-staging.carlys.example qu'il a réellement contactée. Le garder
+    # protège si gra6 oublie de le poser.
     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
     # Une API ne s'indexe pas, mais l'en-tête ne coûte rien et vaut pour les
     # réponses JSON qu'un moteur croiserait par un lien.
@@ -106,16 +99,13 @@ server {
 #   CORS_ORIGINS   contient https://app-staging.carlys.example
 # et c'est lui que les builds mobiles de recette reçoivent en
 # --dart-define=CARLYS_PUBLIC_WEB_BASE_URL (sans quoi `assertUsable()` refuse
-# de démarrer l'application : apps/mobile/lib/app/environment/).
+# de démarrer l'application : apps/mobile/lib/app/environment/). Ces valeurs
+# restent en https:// : elles décrivent ce que voit le client, pas le saut
+# interne entre gra6 et cette machine.
 server {
-    listen 443 ssl http2;
-    listen [::]:443 ssl http2;
+    listen 80;
+    listen [::]:80;
     server_name app-staging.carlys.example;
-
-    ssl_certificate     /etc/letsencrypt/live/app-staging.carlys.example/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/app-staging.carlys.example/privkey.pem;
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_prefer_server_ciphers off;
 
     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
 
@@ -190,6 +180,11 @@ server {
     # pages publiques, elles, passent par une location `~ regex`, laquelle est
     # évaluée après les préfixes et l'emporte sur eux : une seule suffit.
     #
+    # Le mot de passe voyage en clair entre gra6 et cette machine — comme tout
+    # le reste depuis que le TLS se termine sur gra6. C'est acceptable parce
+    # que ce segment est un réseau interne fermé au pare-feu ; ce ne le serait
+    # pas si le port 80 était joignable d'ailleurs.
+    #
     # 1) dans la location `/_next/static/` ci-dessus, ajouter :
     #        auth_basic off;
     # 2) puis décommenter tout ce qui suit :
@@ -212,14 +207,9 @@ server {
 
 # ── Médias de recette — media-staging → MinIO 127.0.0.1:9200 ─────────────────
 server {
-    listen 443 ssl http2;
-    listen [::]:443 ssl http2;
+    listen 80;
+    listen [::]:80;
     server_name media-staging.carlys.example;
-
-    ssl_certificate     /etc/letsencrypt/live/media-staging.carlys.example/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/media-staging.carlys.example/privkey.pem;
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_prefer_server_ciphers off;
 
     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
     add_header X-Robots-Tag "noindex, nofollow, noarchive" always;

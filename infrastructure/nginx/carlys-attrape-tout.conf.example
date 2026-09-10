@@ -4,74 +4,78 @@
 #
 # Le guide de mise en route fait retirer /etc/nginx/sites-enabled/default. À
 # partir de là, plus AUCUN bloc ne porte `default_server` : Nginx désigne alors
-# d'office le PREMIER bloc rencontré pour chaque port. `sites-enabled/*` est
-# inclus par ordre alphabétique, donc `carlys-production.conf` passe avant
-# `carlys-staging.conf`, et le premier bloc 443 du fichier de production est
-# celui de l'API. Conséquence : une requête sur le domaine nu, sur `www`, sur
-# un sous-domaine oublié ou sur l'IP brute atteint l'API DE PRODUCTION, avec
-# un certificat au mauvais nom. Ce n'est ni ce que le guide décrit ni ce qu'on
-# veut : ce fichier reprend la place de défaut et ferme la porte.
+# d'office le PREMIER bloc rencontré pour le port. `sites-enabled/*` est inclus
+# par ordre alphabétique, donc `carlys-production.conf` passe avant
+# `carlys-staging.conf`, et le premier bloc du fichier de production est celui
+# de l'API. Conséquence : toute requête portant un en-tête `Host` qu'aucun des
+# six `server_name` ne reconnaît — le domaine nu, `www`, un sous-domaine
+# oublié, l'adresse IP brute — atteint l'API DE PRODUCTION. Ce fichier reprend
+# la place de défaut et ferme la porte.
 #
-# Il est INDÉPENDANT des deux autres et peut être activé seul, y compris sur un
-# serveur qui n'héberge encore que la recette : il ne référence aucun
-# certificat Let's Encrypt.
+# ── Son rôle a CHANGÉ avec l'architecture ────────────────────────────────────
 #
-# ── Le certificat auto-signé n'est pas un pis-aller, c'est le sujet ──────────
+# Avant, ce serveur terminait le TLS. L'attrape-tout portait alors un
+# certificat auto-signé, et toute sa vertu tenait là : faire échouer la
+# vérification du certificat chez le client, plutôt que de lui présenter celui
+# d'`api.` sous un nom qui n'était pas le sien.
 #
-# Un bloc `listen 443 ssl` exige un certificat, et il n'en existe évidemment
-# aucun de valide pour un nom qu'on ne sert pas. Le client DOIT donc voir une
-# erreur de certificat : c'est la réponse correcte à « donne-moi un site que tu
-# n'héberges pas ». Le certificat ci-dessous ne sert qu'à ouvrir la
-# poignée de main pour la refuser ensuite.
+# Il n'y a plus de TLS ici — il se termine sur gra6.luuc.fr, qui relaie en HTTP
+# clair vers 172.16.0.158:80. Donc plus de `listen 443`, plus de certificat à
+# présenter, ni vrai ni auto-signé, et plus rien à générer avant d'activer ce
+# fichier. Ce vhost ne protège plus d'un mauvais certificat.
 #
-# (`ssl_reject_handshake on;`, qui dirait la même chose sans certificat, n'est
-# apparu qu'en Nginx 1.25.5 — hors de portée du Nginx de Debian 12 et d'Ubuntu
-# 22.04 que ce dépôt installe. Voir la note HTTP/2 de
-# carlys-production.conf.example : même arbitrage, même raison.)
+# Ce qu'il protège désormais est ailleurs, et compte davantage. Le port 80 de
+# cette machine reçoit du HTTP en clair, sans aucun nom vérifié par une poignée
+# de main : le `Host` est du texte, rien de plus. Deux requêtes doivent tomber
+# ici plutôt que sur l'API de production :
+#
+#   1. un `Host` inconnu relayé par gra6 (sous-domaine oublié, `www`, IP) ;
+#   2. une requête arrivant EN DIRECT sur 172.16.0.158:80, sans passer par
+#      gra6 — donc sans avoir traversé l'écrasement de X-Forwarded-For que
+#      gra6 doit faire (voir snippets/carlys-proxy.conf), tout en se voyant
+#      quand même poser `X-Forwarded-Proto: https` par nos vhosts.
+#
+# À DIRE FRANCHEMENT : ce fichier ne rattrape le cas 2 que si la requête ne
+# devine pas l'un des six noms. Un client qui écrit `Host: api.carlys.example`
+# en tapant l'IP en direct passe par le vhost de l'API, pas par ici. La garde
+# principale du cas 2 est donc le PARE-FEU — le port 80 ne doit être joignable
+# que depuis gra6 —, et cet attrape-tout n'en est que la seconde couche, celle
+# qui reste debout quand la première est mal posée.
 #
 # ── Installation ─────────────────────────────────────────────────────────────
 #
-#   sudo mkdir -p /etc/nginx/ssl
-#   sudo openssl req -x509 -nodes -newkey rsa:2048 -days 3650 \
-#     -subj '/CN=hote-inconnu' \
-#     -keyout /etc/nginx/ssl/attrape-tout.key \
-#     -out    /etc/nginx/ssl/attrape-tout.crt
-#   sudo chmod 600 /etc/nginx/ssl/attrape-tout.key
 #   sudo cp infrastructure/nginx/carlys-attrape-tout.conf.example \
 #           /etc/nginx/sites-available/carlys-attrape-tout.conf
 #   sudo ln -sf /etc/nginx/sites-available/carlys-attrape-tout.conf /etc/nginx/sites-enabled/
 #   sudo nginx -t && sudo systemctl reload nginx
 #
+# Plus rien à préparer : la paire auto-signée qu'exigeait la version précédente
+# n'a plus d'objet. Si /etc/nginx/ssl/attrape-tout.{crt,key} traîne encore
+# d'une installation antérieure, plus aucun fichier ne la référence et elle
+# peut être supprimée.
+#
+# Il reste INDÉPENDANT des deux fichiers d'environnement et peut être activé
+# seul, y compris sur un serveur qui n'héberge encore que la recette.
+#
 # Aucun domaine à substituer ici : ce fichier ne nomme aucun hôte, c'est sa
 # raison d'être.
 
 server {
-    listen 80  default_server;
-    listen [::]:80  default_server;
-    listen 443 ssl http2 default_server;
-    listen [::]:443 ssl http2 default_server;
+    listen 80 default_server;
+    listen [::]:80 default_server;
 
     # `_` n'est pas un joker : c'est un nom qui ne peut correspondre à aucun
     # en-tête Host. Ce qui amène ici, c'est `default_server`, pas ce nom.
     server_name _;
 
-    ssl_certificate     /etc/nginx/ssl/attrape-tout.crt;
-    ssl_certificate_key /etc/nginx/ssl/attrape-tout.key;
-    ssl_protocols TLSv1.2 TLSv1.3;
-
-    # Le renouvellement certbot passe par les six vhosts nommés, qui servent
-    # eux-mêmes /.well-known/acme-challenge/. Mais tant qu'un nom N'A PAS
-    # encore son vhost — le jour où l'on ajoute un sous-domaine —, c'est ici
-    # que son défi ACME atterrit. Le servir coûte trois lignes et évite une
-    # émission impossible à diagnostiquer.
-    location /.well-known/acme-challenge/ {
-        root /var/www/certbot;
-    }
-
+    # `return` au niveau du bloc `server`, et non dans une `location /` : il
+    # n'y a plus la moindre exception à ménager. La version précédente en avait
+    # une, `/.well-known/acme-challenge/`, pour qu'un nom pas encore servi
+    # puisse quand même faire valider son défi ACME ; les certificats sont
+    # maintenant émis et renouvelés par gra6, cette machine n'en demande aucun.
+    #
     # 444 : Nginx ferme la connexion sans rien renvoyer. Pas de page d'erreur,
     # pas de numéro de version, aucune indication qu'il y a quelque chose à
     # cette adresse.
-    location / {
-        return 444;
-    }
+    return 444;
 }

@@ -14,19 +14,46 @@ projet Compose et leurs volumes :
 
 Dans tout ce qui suit, remplacez `carlys.example` par votre domaine réel.
 
+**Ce serveur ne termine pas le TLS**, et c'est la chose à avoir en tête d'un
+bout à l'autre de ce guide :
+
+```
+Internet / mobile / navigateur
+      │ HTTPS 443
+      ▼
+gra6.luuc.fr          ← reverse proxy réseau : détient les certificats,
+      │ HTTP interne     termine le TLS, ne fait pas partie de ce dépôt
+      ▼
+172.16.0.158:80       ← ce serveur, Nginx en HTTP SEUL
+      ▼
+services Docker sur 127.0.0.1
+```
+
+Les six noms publics restent en `https://` **pour le client** — c'est gra6 qui
+le lui sert. Aucun certificat, aucun certbot, aucun `listen 443` sur cette
+machine. En contrepartie, deux exigences pèsent sur gra6 et sur le pare-feu :
+l'étape 6 les énonce, et elles ne se supposent pas remplies.
+
 > **Ce que ce guide n'automatise pas, et n'automatisera pas.** L'achat du
-> domaine, les enregistrements DNS, les comptes Apple / Google Play / Samsung,
-> la rédaction des textes légaux, et les vraies valeurs des secrets (Stripe,
-> Firebase, Sentry, SMTP). La bascule en production reste un **geste humain** :
-> c'est une règle du dépôt, pas une limite technique.
+> domaine, les enregistrements DNS, **la configuration de gra6** — elle n'est
+> dans aucun dépôt et se pose à la main, là-bas —, les comptes Apple / Google
+> Play / Samsung, la rédaction des textes légaux, et les vraies valeurs des
+> secrets (Stripe, Firebase, Sentry, SMTP). La bascule en production reste un
+> **geste humain** : c'est une règle du dépôt, pas une limite technique.
 
 ---
 
 ## 0. Ce qu'il faut avoir sous la main
 
-- Un serveur Debian 12 ou Ubuntu 22.04+, accès `root` ou `sudo`, une adresse
-  IPv4 publique (notée `203.0.113.10` dans les exemples).
+- Un serveur Debian 12 ou Ubuntu 22.04+, accès `root` ou `sudo`, joignable sur
+  le réseau interne — son adresse est notée `172.16.0.158` dans tout ce guide.
+  Il n'a **pas besoin d'adresse publique** : rien venant d'Internet ne le
+  frappe directement.
 - Un nom de domaine dont vous contrôlez la zone DNS.
+- **Le reverse proxy réseau `gra6.luuc.fr`**, déjà en service, et un accès à sa
+  configuration — ou quelqu'un qui l'a. C'est lui qui détient les certificats
+  des six noms publics, termine le TLS et relaie ici en clair. Trois en-têtes
+  qu'il doit poser conditionnent l'adresse du client vue par l'API : §6.
 - Un compte GitHub ayant accès au dépôt `mimiflo/Carlys`.
 - **Pour l'étape 8 seulement — sur VOTRE POSTE, pas sur le serveur** : un clone
   du dépôt et le SDK Flutter **3.44.9** (la version est épinglée dans
@@ -39,44 +66,60 @@ Dans tout ce qui suit, remplacez `carlys.example` par votre domaine réel.
 
 ---
 
-## 1. DNS — six enregistrements, à poser en premier
+## 1. DNS — six enregistrements vers gra6, à poser en premier
 
-Rien d'autre ne peut avancer tant que les noms ne résolvent pas : certbot
-refuse d'émettre un certificat pour un nom qui ne pointe pas vers le serveur
-qu'il interroge.
+Rien d'autre ne peut avancer tant que les noms ne résolvent pas : c'est gra6
+qui reçoit les connexions publiques, et il ne peut rien recevoir pour un nom
+qu'aucune zone ne lui envoie.
 
 | Type | Nom | Valeur |
 | ---- | --- | ------ |
-| A | `api` | `203.0.113.10` |
-| A | `app` | `203.0.113.10` |
-| A | `media` | `203.0.113.10` |
-| A | `api-staging` | `203.0.113.10` |
-| A | `app-staging` | `203.0.113.10` |
-| A | `media-staging` | `203.0.113.10` |
+| CNAME | `api` | `gra6.luuc.fr.` |
+| CNAME | `app` | `gra6.luuc.fr.` |
+| CNAME | `media` | `gra6.luuc.fr.` |
+| CNAME | `api-staging` | `gra6.luuc.fr.` |
+| CNAME | `app-staging` | `gra6.luuc.fr.` |
+| CNAME | `media-staging` | `gra6.luuc.fr.` |
 
-Trois par environnement. Ajoutez les `AAAA` équivalents si le serveur a une
-IPv6 — les vhosts écoutent déjà en `[::]`.
+Trois par environnement, et **aucun ne pointe sur `172.16.0.158`** : ce serveur
+n'est pas joignable depuis Internet, et n'a pas à l'être.
+
+**`CNAME`, et pas `A`.** Un `A` figerait dans votre zone l'adresse d'une
+machine qui ne vous appartient pas : le jour où gra6 change d'adresse, les six
+enregistrements deviendraient faux, tous en même temps, et la panne se
+présenterait comme une indisponibilité totale sans rien pour la relier à un
+changement d'ailleurs. Le `CNAME` délègue cette adresse à la zone de gra6, qui
+est celle qui sait. Ces six noms sont des sous-domaines, donc le `CNAME` y est
+licite — ce qui ne serait pas le cas sur le domaine nu. Rien à ajouter côté
+`AAAA` : ce que gra6 publie en IPv6, le `CNAME` le suit tout seul.
 
 Le domaine nu (`carlys.example`) et `www` ne sont **pas** servis par ces
 vhosts : aucun des six `server_name` ne les couvre. Ce qu'ils reçoivent est
 décidé par le vhost **attrape-tout** posé à l'étape 6 — une connexion fermée
-sans réponse, derrière un certificat auto-signé. Sans lui, Nginx désignerait
-d'office comme défaut le premier bloc rencontré, c'est-à-dire l'**API de
-production** : un nom inconnu atteindrait la production avec un certificat au
-mauvais nom. Si vous voulez mettre un site vitrine sur le domaine nu, c'est un
-vhost de plus, hors de ce guide.
+sans réponse (`444`). Sans lui, Nginx désignerait d'office comme défaut le
+premier bloc rencontré, c'est-à-dire l'**API de production** : un `Host`
+inconnu relayé par gra6, ou une requête arrivant en direct sur le port 80,
+atteindrait la production. Si vous voulez mettre un site vitrine sur le domaine
+nu, c'est un vhost de plus — sur gra6, hors de ce guide.
 
 **Vérification** — depuis n'importe quelle machine, une fois la propagation
 faite (de quelques minutes à quelques heures) :
 
 ```bash
 for h in api app media api-staging app-staging media-staging; do
-  printf '%-22s %s\n' "$h" "$(dig +short "$h.carlys.example")"
+  printf '%-22s %s\n' "$h" "$(dig +short "$h.carlys.example" | paste -sd' ' -)"
 done
+dig +short gra6.luuc.fr        # l'adresse que les six lignes doivent finir par montrer
 ```
 
-Les six lignes doivent afficher l'IP du serveur. Une ligne vide = enregistrement
-absent ou pas encore propagé : **attendez**, ne passez pas à la suite.
+`dig +short` sur un `CNAME` affiche **d'abord la cible, puis l'adresse
+résolue** : chacune des six lignes doit donc commencer par `gra6.luuc.fr.` et
+se terminer par l'adresse rendue par la dernière commande. Une ligne vide =
+enregistrement absent ou pas encore propagé : **attendez**, ne passez pas à la
+suite. Une ligne qui montre `172.16.0.158` = un `A` a été posé au lieu du
+`CNAME` : corrigez-le maintenant, il n'y a rien derrière ce port pour un
+visiteur d'Internet, et le pare-feu de l'étape 2 le lui refusera de toute
+façon.
 
 ---
 
@@ -88,7 +131,13 @@ Sur le serveur, en `root` :
 apt-get update && apt-get install -y git
 git clone https://github.com/mimiflo/Carlys.git /srv/carlys/repo
 cd /srv/carlys/repo
-sudo ./scripts/server/setup.sh
+
+# L'adresse depuis laquelle le port 80 sera ouvert — celle de gra6, et elle
+# seule. Trouvez-la avant de lancer le script. `getent` plutôt que `dig` :
+# il est là sur un Debian nu, `dig` demande le paquet dnsutils.
+getent hosts gra6.luuc.fr        # → l'adresse, puis le nom
+
+sudo CARLYS_PROXY_CIDR=<adresse de gra6> ./scripts/server/setup.sh
 ```
 
 **Si le dépôt est privé**, ce `git clone` anonyme échoue sur
@@ -131,11 +180,28 @@ Ce jeton-là n'est **pas** celui de l'étape 3 : celui-ci lit le *dépôt Git*,
 celui de l'étape 3 lit les *images du registre*. Deux portées, deux fichiers,
 et aucune raison de les confondre.
 
-`setup.sh` installe Docker et le plugin Compose, Nginx, certbot, ouvre le
-pare-feu sur 22/80/443 seulement, crée l'arborescence `/srv/carlys/`, y dépose
-les `.env` à remplir depuis les exemples versionnés, et installe la tâche
-quotidienne de sauvegarde. **Il est idempotent** : le relancer sur un serveur
-déjà configuré ne casse rien et ne réécrit aucun `.env` déjà rempli.
+`setup.sh` installe Docker et le plugin Compose, Nginx, ufw et cron, ferme
+l'entrée sauf 22 (SSH) et 80 **depuis la seule adresse donnée en
+`CARLYS_PROXY_CIDR`**, crée l'arborescence `/srv/carlys/`, y dépose les `.env`
+à remplir depuis les exemples versionnés, et installe la tâche quotidienne de
+sauvegarde. **Il est idempotent** : le relancer sur un serveur déjà configuré
+ne casse rien et ne réécrit aucun `.env` déjà rempli.
+
+**Il n'installe PAS certbot, et il retire la règle 443 si elle traîne d'une
+installation antérieure** (`scripts/server/setup.sh`, étapes 1/7 et 3/7). C'est
+la conséquence directe de l'architecture : les certificats des six noms vivent
+sur gra6. Un certbot posé ici armerait une minuterie de renouvellement pour des
+certificats qui n'existent pas, et laisserait croire au prochain exploitant que
+le TLS se règle sur ce serveur.
+
+> **Sans `CARLYS_PROXY_CIDR`, le port 80 n'est PAS ouvert** — le script le dit
+> à l'écran et le redit dans son récapitulatif final. Ce n'est pas un oubli :
+> il refuse d'ouvrir 80 au monde en silence. Le raisonnement est le même que
+> pour l'attrape-tout, et l'étape 6 le développe — nos vhosts posent
+> `X-Forwarded-Proto: https` **en dur**, ce qui n'est honnête que si le seul
+> émetteur possible est un proxy ayant réellement terminé du TLS. Une machine
+> injoignable vaut mieux qu'une machine qui ment. Pour rattraper sans rejouer
+> le script : `ufw allow from <adresse de gra6> to any port 80 proto tcp`.
 
 **Vérification :**
 
@@ -144,9 +210,13 @@ echo $?                                      # 0 : aucun service en défaut
 docker --version && docker compose version   # les deux répondent
 docker info > /dev/null && echo 'démon ok'   # le CLI peut répondre sans lui
 systemctl is-active docker nginx cron        # trois fois « active »
-ufw status | head -5                         # 22, 80, 443 seulement
+ufw status | head -8                         # 22, et 80 DEPUIS gra6 ; pas de 443
 ls -la /srv/carlys/                          # staging/ production/ backups/
 ```
+
+La ligne du 80 doit nommer une source. `80/tcp ALLOW Anywhere` n'est **pas**
+l'état attendu : c'est la règle large d'une installation antérieure, à effacer
+(`ufw delete allow 80/tcp`) avant de reposer celle de gra6.
 
 **Le code de sortie compte autant que l'affichage.** Si un service refuse de
 démarrer, `setup.sh` va quand même au bout des sept étapes, affiche tout son
@@ -315,12 +385,41 @@ que vous puissiez le vérifier — pas ce qu'il faut recopier.
 | `PUBLIC_APP_URL` | `https://app-staging.carlys.example` | `https://app.carlys.example` |
 | `CORS_ORIGINS` | `https://app-staging.carlys.example` | `https://app.carlys.example` |
 | `S3_PUBLIC_BASE_URL` | `https://media-staging.carlys.example/carlys-media` | `https://media.carlys.example/carlys-media` |
-| `TRUST_PROXY_HOPS` | `1` | `1` |
+| `TRUST_PROXY_HOPS` | `2` | `2` |
 
 `PUBLIC_APP_URL` désigne l'**application web**, jamais l'API : c'est la base
-des liens envoyés par e-mail et des retours Stripe. `TRUST_PROXY_HOPS=1` va de
-pair avec le Nginx unique de l'étape 6 — sans lui, la limitation de débit, le
-verrouillage de compte et l'audit ne voient que l'adresse du proxy.
+des liens envoyés par e-mail et des retours Stripe.
+
+**Les URL publiques restent en `https://`, et ce n'est pas une inattention.**
+Le saut gra6 → ce serveur est en clair, mais il est *interne* : ce que
+décrivent ces quatre variables, c'est ce que voit le client, et le client a
+bien parlé HTTPS à gra6. Un `http://` glissé ici serait à la fois faux et
+refusé au démarrage (règle 3 ci-dessus).
+
+**`TRUST_PROXY_HOPS=2`, parce qu'il y a DEUX proxys.** La chaîne est
+`client → gra6 → ce Nginx → Express` : gra6 écrit dans `X-Forwarded-For`
+l'adresse du client, le Nginx d'ici y ajoute celle de gra6 — la liste compte
+donc deux entrées. Express (`app.set('trust proxy', n)`,
+`apps/api/src/app/configure-app.ts`) remonte cette liste par la droite et saute
+`n` entrées. Mesuré sur la chaîne montée pour de vrai — trois conteneurs, un
+client honnête, gra6 posant l'en-tête :
+
+| `TRUST_PROXY_HOPS` | `req.ip` vaut |
+| --- | --- |
+| `1` | l'adresse de **gra6** — tout Internet partage un seul seau de limitation de débit |
+| `2` | l'adresse du **client** ✓ |
+| `3` | identique à `2` : la liste est saturée, il n'y a rien de plus à sauter |
+
+La valeur `1` était juste tant qu'un seul Nginx se tenait devant l'API. Avec
+`1` aujourd'hui, la limitation de débit, le verrouillage de compte et l'audit
+ne voient plus qu'une adresse, celle de gra6 — et la panne est silencieuse :
+tout continue de fonctionner, seules les protections deviennent aveugles.
+
+> **Ce compteur ne protège pas contre un client qui forge son adresse ; c'est
+> gra6 qui le fait.** Un compteur de sauts numérique ne retire des entrées que
+> **par la droite** : tout ce qu'un client *préfixe* survit, quel que soit le
+> nombre de sauts. La garde est l'écrasement de `X-Forwarded-For` par gra6,
+> exigé et démontré au §6. Monter `TRUST_PROXY_HOPS` ne la remplacerait pas.
 
 **Vérification, une fois les deux fichiers remplis** — aucune valeur d'exemple
 ne doit subsister :
@@ -379,130 +478,243 @@ indésirables, et l'inscription paraît cassée sans qu'aucun journal ne le dise
 
 ---
 
-## 6. Certificats TLS et vhosts Nginx
+## 6. Le reverse proxy réseau, et les vhosts d'ici
 
-### L'ordre compte, et c'est le piège classique
+### La chaîne : qui termine quoi
 
-Les vhosts définitifs référencent des certificats. Nginx **refuse de démarrer**
-si ces fichiers n'existent pas. Or certbot, en mode webroot, a besoin d'un
-Nginx qui tourne pour répondre au défi ACME. On casse la boucle avec un vhost
-temporaire en HTTP seul.
+```
+client ──HTTPS 443──> gra6.luuc.fr ──HTTP──> 172.16.0.158:80 ──> 127.0.0.1:31xx
+                       ▲ certificats          ▲ Nginx d'ici       ▲ conteneurs
+                         + terminaison TLS      HTTP SEUL
+```
+
+Sur gra6, qui n'est **pas** cette machine et ne fait pas partie de ce dépôt :
+les certificats des six noms publics, leur renouvellement, la terminaison TLS,
+HTTP/2 (qui se négocie dans la poignée de main TLS, donc là-bas), et le routage
+vers `172.16.0.158:80` en HTTP interne.
+
+Sur ce serveur, ce qui **n'existe plus** — et qu'il ne faut donc pas chercher
+dans les vhosts versionnés, où c'est absent volontairement :
+
+- aucun certificat public `*.carlys.example`, aucun `/etc/letsencrypt/` ;
+- aucun certbot, ni paquet, ni greffon, ni minuterie, ni crochet de
+  rechargement ;
+- aucun `listen 443`, aucune redirection HTTP → HTTPS locale ;
+- aucun `/.well-known/acme-challenge/`, aucun vhost ACME temporaire.
+
+Ce qui **ne change pas** : les six `server_name`, à l'identique ; le routage
+vers l'API, l'admin et MinIO, à l'identique ; les protections qui restent
+applicables derrière un proxy (HSTS, en-têtes, refus de `/metrics`, fermeture
+de la racine du bucket, limites de taille de corps) ; et les URL publiques, qui
+restent en `https://`. HTTPS existe toujours pour le client — il est seulement
+terminé un cran plus haut.
+
+### Ce qu'on EXIGE de gra6 : trois en-têtes, à vérifier, pas à supposer
+
+Ces trois lignes sont à poser dans le vhost de gra6 qui sert les six noms
+Carlys. **Traitez-les comme un prérequis dont vous ne supposez pas qu'il est
+rempli** : la suite de cette section les éprouve pour de bon.
+
+```nginx
+proxy_pass         http://172.16.0.158:80;
+proxy_set_header   Host              $host;          # conserver le Host original
+proxy_set_header   X-Forwarded-For   $remote_addr;   # ÉCRASER, jamais ajouter
+proxy_set_header   X-Forwarded-Proto https;
+```
+
+**`Host` conservé** parce que c'est lui, et lui seul, qui choisit le service ici :
+les six vhosts se distinguent par `server_name`. Un `Host` réécrit — la valeur
+par défaut de certains proxys est l'adresse de l'amont — n'est reconnu par
+aucun des six, tombe sur l'attrape-tout, et rend une connexion fermée sur
+**tous** les noms à la fois. Le nom public sert par ailleurs à fabriquer les
+liens des e-mails.
+
+**`X-Forwarded-For` ÉCRASÉ** — c'est le point qui décide de la sécurité de
+toute la chaîne, et il ne se déduit pas, il se mesure. Chaîne montée pour de
+vrai en trois conteneurs (client → nginx « gra6 » → nginx « carlys » →
+Express 5.2.1 avec `app.set('trust proxy', n)`, soit exactement ce que fait
+`apps/api/src/app/configure-app.ts`), avec un client qui **forge** lui-même
+`X-Forwarded-For: 1.2.3.4` :
+
+| Ce que gra6 pose | Ce que l'API voit | Ce qu'elle retient |
+| --- | --- | --- |
+| `$proxy_add_x_forwarded_for` | `1.2.3.4, <client>, <gra6>` | `1.2.3.4` — **FORGÉ** |
+| `$http_x_forwarded_for` | `1.2.3.4, <gra6>` | `1.2.3.4` — **FORGÉ** |
+| `$remote_addr` | `<client>, <gra6>` | `<client>` — **SÛR** |
+
+(Revérifié avec un client envoyant `9.9.9.9, 8.8.8.8` : ignoré de la même
+façon.) **La raison** : un compteur de sauts numérique ne retire des entrées
+que **par la droite**. Tout ce qu'un client *préfixe* survit, quel que soit le
+nombre de sauts — augmenter `TRUST_PROXY_HOPS` ne fait qu'en sauter davantage
+par la droite, jamais nettoyer la gauche. **La protection ne vient donc pas du
+nombre de sauts, elle vient de gra6 qui écrase l'en-tête.**
+
+Si gra6 ajoute au lieu d'écraser, n'importe quel client se fait passer pour
+n'importe quelle adresse : limitation de débit contournée, verrouillage de
+compte contourné, journal d'audit empoisonné. Le risque est concret et daté du
+code d'aujourd'hui — `request.ip` est lu à **six endroits** de `apps/api/src`
+(`admin-users.controller.ts` deux fois, `admin-community.controller.ts`,
+`catalog-actor.ts`, `media.controller.ts`, `authenticated-request.ts` : toutes
+des écritures d'audit), plus le `ThrottlerGuard` posé en `APP_GUARD` global
+dans `app.module.ts`.
+
+**`X-Forwarded-Proto: https`** pour que le client soit décrit tel qu'il est.
+Le Nginx d'ici le repose de toute façon **en dur** (`snippets/carlys-proxy.conf`) :
+ni `$scheme`, qui vaudrait `http` puisque gra6 nous parle en clair, ni
+`$http_x_forwarded_proto`, dont on ne suppose rien. Mesuré sur la même chaîne :
+l'API voit alors `req.protocol = 'https'` et `req.secure = true` alors que tout
+le trajet interne est en clair — c'est ce qui garantit qu'une URL publique ne
+se fabriquera jamais en `http://`.
+
+> **Corollaire de pare-feu, à traiter comme une exigence et pas comme une
+> option** : `172.16.0.158:80` ne doit être joignable **que depuis gra6**
+> (`CARLYS_PROXY_CIDR`, étape 2). Sinon n'importe qui obtient de l'API ce
+> `req.secure = true` mensonger, et surtout s'adresse à elle sans être passé
+> par l'écrasement de `X-Forwarded-For` ci-dessus.
+>
+> Pour situer le risque à sa juste place : aujourd'hui, **aucun fichier de
+> `apps/api/src` ne lit `req.protocol` ni `req.secure`** (vérifié par
+> recherche). `X-Forwarded-Proto` est une garantie d'avenir ; c'est
+> `X-Forwarded-For` qui porte tout le risque du jour.
+
+### Éprouver la chaîne AVANT d'y mettre Carlys
+
+Rien de ce qui précède ne se vérifie en le lisant. On pose donc un **miroir
+temporaire** — un vhost qui répond n'importe quel `Host` et récite ce qu'il a
+reçu — et on l'interroge depuis l'extérieur, à travers gra6. C'est le seul
+moment du guide où l'on voit la chaîne complète sans qu'un conteneur puisse
+brouiller le diagnostic.
 
 ```bash
-sudo mkdir -p /var/www/certbot
-sudo tee /etc/nginx/sites-available/carlys-acme.conf > /dev/null <<'EOF'
+sudo tee /etc/nginx/sites-available/carlys-miroir.conf > /dev/null <<'EOF'
 server {
     listen 80 default_server;
-    server_name api.carlys.example app.carlys.example media.carlys.example
-                api-staging.carlys.example app-staging.carlys.example
-                media-staging.carlys.example;
-    location /.well-known/acme-challenge/ { root /var/www/certbot; }
+    listen [::]:80 default_server;
+    server_name _;
+    default_type text/plain;
+    location = /miroir {
+        return 200 "Host=$http_host\nXFF=$http_x_forwarded_for\nProto=$http_x_forwarded_proto\nvu-d-ici=$remote_addr\n";
+    }
     location / { return 404; }
 }
 EOF
-sudo ln -sf /etc/nginx/sites-available/carlys-acme.conf /etc/nginx/sites-enabled/
+sudo ln -sf /etc/nginx/sites-available/carlys-miroir.conf /etc/nginx/sites-enabled/
 sudo rm -f /etc/nginx/sites-enabled/default
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
-**Vérification** — depuis l'extérieur, le défi doit être servi en clair :
+**Test 1 — les six noms résolvent vers gra6.** C'est la vérification du §1 ;
+rejouez-la si vous avez sauté des étapes. Tant qu'un nom ne résout pas, les
+tests suivants échoueront pour une raison qui n'a rien à voir avec gra6.
 
-```bash
-# Le répertoire du défi, que `mkdir -p /var/www/certbot` ne crée PAS : sans
-# lui, le `tee` ci-dessous échoue sur « No such file or directory » et la
-# vérification paraît condamner un vhost qui est pourtant bon.
-sudo mkdir -p /var/www/certbot/.well-known/acme-challenge
-echo preuve | sudo tee /var/www/certbot/.well-known/acme-challenge/test > /dev/null
-curl http://api.carlys.example/.well-known/acme-challenge/test   # → preuve
-sudo rm /var/www/certbot/.well-known/acme-challenge/test
-```
-
-### Un certificat par hôte
-
-**Un certificat par nom, pas un certificat multi-noms**, et les vhosts ne
-laissent pas le choix : chacun des six blocs HTTPS pointe
-`ssl_certificate /etc/letsencrypt/live/<son-nom>/fullchain.pem`. Six
-`server_name`, six répertoires, six paires `fullchain.pem` / `privkey.pem`. Un
-seul certificat couvrant les six noms (`certbot -d a -d b …`) créerait **un**
-répertoire portant le nom du premier `-d`, et les cinq autres vhosts
-refuseraient de charger sur un fichier absent.
-
-`certonly` — sans `--nginx` — parce que le greffon Nginx de certbot réécrirait
-les vhosts versionnés de ce dépôt. Ici certbot ne touche qu'à
-`/etc/letsencrypt/`, la configuration Nginx reste celle du dépôt.
+**Test 2 — gra6 joint bien `172.16.0.158:80`.** Depuis votre poste, sur chacun
+des six noms :
 
 ```bash
 for h in api app media api-staging app-staging media-staging; do
-  sudo certbot certonly --webroot -w /var/www/certbot \
-    -d "$h.carlys.example" \
-    --agree-tos -m vous@exemple.fr --non-interactive
+  printf '%-22s %s\n' "$h" "$(curl -s -o /dev/null -w '%{http_code}' \
+    "https://$h.carlys.example/miroir")"
 done
 ```
 
-**Vérification** — six répertoires, et douze fichiers :
+Six fois `200`. Un `502` ici est celui de **gra6**, pas le nôtre, et il ne veut
+dire qu'une chose : gra6 n'a pas pu joindre le port 80. Le discriminateur, sur
+le serveur Carlys :
 
 ```bash
-sudo ls -d /etc/letsencrypt/live/*.carlys.example         # six répertoires
-sudo ls   /etc/letsencrypt/live/*.carlys.example/fullchain.pem \
-          /etc/letsencrypt/live/*.carlys.example/privkey.pem | wc -l   # 12
+sudo tail -n 20 /var/log/nginx/access.log
 ```
 
-Une différence entre cette liste et les six `server_name` des vhosts **est** la
-panne : `nginx -t` la nommera fichier par fichier à l'activation ci-dessous.
+Si la requête n'y figure pas, elle n'est jamais arrivée : pare-feu
+(`CARLYS_PROXY_CIDR` absent ou faux — étape 2), Nginx arrêté, ou mauvaise
+adresse dans le `proxy_pass` de gra6. Si elle y figure, le problème est en aval
+et ce n'est plus un problème de chaîne.
 
-### Le renouvellement doit recharger Nginx
-
-`certbot renew` renouvelle les fichiers ; il ne dit rien à Nginx, qui garde en
-mémoire le certificat chargé au démarrage. Sans le crochet ci-dessous, tout se
-passe bien pendant quatre-vingt-dix jours, puis les six hôtes servent un
-certificat expiré — alors que le nouveau est sur le disque. Le crochet est
-global (`renewal-hooks/deploy/`) : il vaut pour les six certificats, et pour
-tout certificat ajouté plus tard.
+**Test 3 — le `Host` arrive intact.** Le corps de la réponse le dit :
 
 ```bash
-sudo mkdir -p /etc/letsencrypt/renewal-hooks/deploy
-printf '%s\n' '#!/bin/sh' 'systemctl reload nginx' \
-  | sudo tee /etc/letsencrypt/renewal-hooks/deploy/recharger-nginx.sh > /dev/null
-sudo chmod +x /etc/letsencrypt/renewal-hooks/deploy/recharger-nginx.sh
+curl -s https://api-staging.carlys.example/miroir
 ```
 
-Il ne se déclenche qu'après un renouvellement **réel** — c'est pourquoi
-`certbot renew --dry-run` (étape 10) ne l'exécute pas.
+```
+Host=api-staging.carlys.example      ← le nom PUBLIC, pas 172.16.0.158
+XFF=<votre adresse publique>
+Proto=https
+vu-d-ici=<adresse de gra6>
+```
 
-### L'attrape-tout : ce que reçoit un nom qu'on ne sert pas
+`Host=172.16.0.158` ou `Host=<autre chose>` : gra6 réécrit le `Host`. Aucun des
+six vhosts ne le reconnaîtra, tout tombera sur l'attrape-tout, et le symptôme
+sera « les six noms sont morts » alors que le routage d'ici est bon. Notez au
+passage `vu-d-ici` : c'est l'adresse de gra6, celle qui doit figurer dans la
+règle `ufw` de l'étape 2.
 
-Le vhost par défaut de Nginx vient d'être retiré, et aucun des six vhosts ne
-porte `default_server`. En l'état, Nginx désignerait comme défaut le **premier
-bloc rencontré** pour chaque port : `sites-enabled/*` étant inclus par ordre
-alphabétique, ce serait le premier bloc 443 de `carlys-production.conf`,
-c'est-à-dire l'**API de production**. Une requête sur le domaine nu, sur `www`,
-sur l'IP brute ou sur un sous-domaine oublié y atterrirait, avec le certificat
-d'`api.carlys.example` — donc un avertissement de sécurité dans le navigateur,
-et une porte ouverte là où on n'en voulait pas.
-
-Le vhost attrape-tout reprend cette place et ferme la connexion. Il ne
-référence aucun certificat Let's Encrypt : celui qu'il présente est
-auto-signé, et c'est correct — il n'existe aucun certificat valide pour un nom
-qu'on n'héberge pas.
+**Test 4 — `X-Forwarded-For` porte l'adresse du client, et résiste à une
+forgerie.** Deux appels depuis la même machine :
 
 ```bash
-sudo mkdir -p /etc/nginx/ssl
-sudo openssl req -x509 -nodes -newkey rsa:2048 -days 3650 \
-  -subj '/CN=hote-inconnu' \
-  -keyout /etc/nginx/ssl/attrape-tout.key \
-  -out    /etc/nginx/ssl/attrape-tout.crt
-sudo chmod 600 /etc/nginx/ssl/attrape-tout.key
+curl -s https://api-staging.carlys.example/miroir | grep '^XFF='
+curl -s -H 'X-Forwarded-For: 1.2.3.4' \
+     https://api-staging.carlys.example/miroir | grep '^XFF='
+```
 
+Le premier appel doit rendre votre adresse publique. Le second, celui qui
+compte, se lit ainsi :
+
+| Ce que rend le second appel | Verdict |
+| --- | --- |
+| `XFF=<votre adresse>` | gra6 **écrase** (`$remote_addr`) ✓ — c'est le seul état acceptable |
+| `XFF=1.2.3.4` | gra6 relaie l'en-tête du client (`$http_x_forwarded_for`) ✗ |
+| `XFF=1.2.3.4, <votre adresse>` | gra6 **ajoute** (`$proxy_add_x_forwarded_for`) ✗ |
+| `XFF=` (vide, aux deux appels) | gra6 ne pose pas l'en-tête du tout : l'API ne verra jamais que l'adresse de gra6, quelle que soit la valeur de `TRUST_PROXY_HOPS` |
+
+Les trois dernières lignes sont la panne décrite plus haut ; les deux du milieu
+sont la plus grave, celle qui laisse un inconnu choisir l'adresse qu'on lui
+attribuera. À ce stade elle ne coûte rien à corriger, plus tard elle se paiera
+en audit empoisonné. **Ne passez pas à la suite tant que le second appel ne rend
+pas votre propre adresse.** Ce que le miroir affiche est ce que gra6 a écrit ;
+le Nginx d'ici y ajoutera ensuite l'adresse de gra6, et c'est ce second saut que
+compte `TRUST_PROXY_HOPS=2` (§5).
+
+Le miroir a fini son travail — il sera retiré juste en dessous, en même temps
+que le rechargement qui installe les vhosts définitifs.
+
+### L'attrape-tout : ce que reçoit un `Host` qu'on ne sert pas
+
+Le vhost par défaut de Nginx vient d'être retiré, et aucun des six vhosts
+Carlys ne porte `default_server`. En l'état, Nginx désignerait comme défaut le
+**premier bloc rencontré** pour le port 80 : `sites-enabled/*` étant inclus par
+ordre alphabétique, ce serait le premier bloc de `carlys-production.conf`,
+c'est-à-dire l'**API de production**.
+
+Deux requêtes doivent tomber sur l'attrape-tout plutôt que là : un `Host`
+inconnu relayé par gra6 (domaine nu, `www`, sous-domaine oublié), et une
+requête arrivant **en direct** sur `172.16.0.158:80` sans être passée par gra6
+— donc sans l'écrasement de `X-Forwarded-For`, tout en se voyant quand même
+poser `X-Forwarded-Proto: https` par nos vhosts.
+
+```bash
 sudo cp /srv/carlys/repo/infrastructure/nginx/carlys-attrape-tout.conf.example \
         /etc/nginx/sites-available/carlys-attrape-tout.conf
 sudo ln -sf /etc/nginx/sites-available/carlys-attrape-tout.conf /etc/nginx/sites-enabled/
 ```
 
-Aucun domaine à substituer : ce fichier ne nomme aucun hôte.
+Aucun domaine à substituer : ce fichier ne nomme aucun hôte, c'est sa raison
+d'être. **Rien à préparer non plus** : il ne présente plus de certificat
+auto-signé, puisqu'il ne termine plus de TLS — il ferme la connexion sans rien
+renvoyer (`return 444`). Si `/etc/nginx/ssl/attrape-tout.{crt,key}` traîne
+d'une installation antérieure, plus aucun fichier ne les référence et ils
+peuvent être supprimés.
 
-**Ne rechargez pas encore.** Le vhost temporaire de l'ACME porte lui aussi
-`listen 80 default_server` : les deux ensemble feraient échouer `nginx -t` sur
-`a duplicate default server for 0.0.0.0:80`. Le retrait du temporaire et le
+> **Sa portée a une limite, et il vaut mieux la connaître.** Un client qui
+> frappe `172.16.0.158:80` en direct **en écrivant `Host: api.carlys.example`**
+> passe par le vhost de l'API, pas par ici. La garde principale contre l'accès
+> direct est le **pare-feu** ; l'attrape-tout n'en est que la seconde couche,
+> celle qui reste debout quand la première est mal posée.
+
+**Ne rechargez pas encore.** Le miroir porte lui aussi `listen 80
+default_server` : les deux ensemble feraient échouer `nginx -t` sur
+`a duplicate default server for 0.0.0.0:80`. Le retrait du miroir et le
 rechargement se font en une seule fois, juste en dessous.
 
 ### Activer les vhosts définitifs
@@ -520,25 +732,31 @@ for env in staging production; do
 done
 ```
 
-`carlys.example` est le seul motif à remplacer : les trois sous-domaines et les
-chemins de certificats en découlent.
+`carlys.example` est le seul motif à remplacer : les trois sous-domaines de
+chaque fichier en découlent. Il n'y a plus de chemin de certificat à
+substituer, ces fichiers n'en nomment aucun.
 
-Retirez le vhost temporaire **avant de recharger**, puis rechargez une seule
-fois. L'ordre n'est pas cosmétique : les vhosts définitifs déclarent eux aussi
-un bloc `listen 80`, et laisser les deux jeux actifs ferait ignorer par Nginx
-les `server_name` en double (`conflicting server name … ignored`) — le défi
-ACME pourrait alors tomber sur le mauvais bloc. Les vhosts définitifs servent
-eux-mêmes `/.well-known/acme-challenge/`, le renouvellement continuera donc de
-fonctionner sans le fichier temporaire.
+Le snippet `carlys-proxy.conf` n'est pas un détail de rangement : c'est lui qui
+porte les en-têtes de proxy des six vhosts — dont `X-Forwarded-For` en mode
+**ajout** (`$proxy_add_x_forwarded_for`, le second saut) et `X-Forwarded-Proto:
+https` en dur. Oublier de le copier fait échouer `nginx -t` sur un `include`
+introuvable, ce qui est le bon comportement : mieux vaut un Nginx qui refuse de
+recharger qu'un Nginx qui sert sans l'adresse du client.
+
+Retirez le miroir **avant de recharger**, puis rechargez une seule fois.
+L'ordre n'est pas cosmétique : outre le `default_server` en double, laisser les
+deux jeux actifs ferait ignorer par Nginx les `server_name` en double
+(`conflicting server name … ignored`).
 
 ```bash
-sudo rm /etc/nginx/sites-enabled/carlys-acme.conf
+sudo rm /etc/nginx/sites-enabled/carlys-miroir.conf
 sudo nginx -t && sudo systemctl reload nginx
 ```
 
 **Vérification** — `nginx -t` doit dire `test is successful`. À ce stade les
-six noms répondent en HTTPS, mais rien ne tourne derrière. **Attention, ils ne
-répondent pas tous la même chose**, et c'est voulu :
+six noms répondent, toujours en `https://` puisque c'est gra6 qui sert le
+client, mais rien ne tourne encore derrière. **Attention, ils ne répondent pas
+tous la même chose**, et c'est voulu :
 
 | Ce que vous demandez | Réponse attendue | Pourquoi |
 | --- | --- | --- |
@@ -550,22 +768,32 @@ Ouvrir `https://media.carlys.example/` pour « contrôler ses six noms » rend
 donc 404, et ce 404 est le bon signe. Contrôlez avec les chemins ci-dessous.
 
 ```bash
+# Depuis votre poste, à travers gra6 : ce 502 est le NÔTRE (le vhost a bien
+# routé, l'amont manque). Le test 2 ci-dessus a déjà écarté celui de gra6.
 curl -sI https://api-staging.carlys.example/health/live | head -1   # 502 attendu
 
-# L'attrape-tout fait son travail : un nom inconnu n'atteint RIEN.
-#
-# `--resolve` et pas une résolution DNS : le §1 ne fait poser que les SIX
-# sous-domaines, et le domaine nu n'en fait délibérément pas partie. Sans
-# `--resolve`, curl sortirait donc en 6 (« Could not resolve host ») — un code
-# qui ne dit rien de l'attrape-tout, et qu'on prendrait à tort pour sa panne.
-# On force ici curl à joindre le serveur en présentant le nom inconnu, ce qui
-# est exactement ce que fait un visiteur venu d'un nom pointé chez vous à votre
-# insu, ou d'un scanner qui balaie l'IP.
-curl -sk --resolve carlys.example:443:203.0.113.10 \
-  https://carlys.example/ ; echo "code curl = $?"   # 52 ou 92 : connexion fermée
-# …et il présente son certificat auto-signé, pas celui de l'API :
-echo | openssl s_client -connect 203.0.113.10:443 -servername carlys.example 2>/dev/null \
-  | grep -m1 'subject='            # → CN = hote-inconnu
+# Le miroir a disparu avec le rechargement — c'est la preuve qu'on sert bien
+# les vhosts définitifs et plus le vhost temporaire :
+curl -s -o /dev/null -w '%{http_code}\n' \
+  https://api-staging.carlys.example/miroir                        # 404
+```
+
+L'attrape-tout se contrôle **sur le serveur**, en boucle locale : le domaine nu
+n'est délibérément pas dans le DNS du §1, et le pare-feu n'autorise que gra6 à
+frapper le port 80 depuis l'extérieur. `--resolve` évite la résolution DNS —
+sans lui, curl sortirait en 6 (« Could not resolve host »), un code qui ne dit
+rien de l'attrape-tout et qu'on prendrait à tort pour sa panne. C'est
+exactement le cas d'une requête arrivée en direct avec un `Host` qu'on ne sert
+pas :
+
+```bash
+curl -si --resolve carlys.example:80:127.0.0.1 \
+  http://carlys.example/ ; echo "code curl = $?"   # 52 : connexion fermée, rien renvoyé
+
+# …et le même appel sur un nom servi, lui, atteint bien son vhost :
+curl -s -o /dev/null -w '%{http_code}\n' \
+  --resolve api-staging.carlys.example:80:127.0.0.1 \
+  http://api-staging.carlys.example/health/live    # 502 : le vhost répond, l'amont manque
 ```
 
 ---
@@ -590,7 +818,12 @@ pas, il revient au SHA précédent.
 > Corrigez la cause (les journaux la nomment), puis relancez la même commande :
 > c'est le deuxième déploiement qui inaugure le retour arrière.
 
-**Vérifications** — les trois doivent passer :
+**Vérifications** — les trois doivent passer. Elles s'écrivent en `https://`
+comme avant la bascule du TLS, **et c'est bien la bonne adresse** : elles
+visent les noms publics, servis par gra6, qui relaie ensuite en clair jusqu'ici.
+Rien à changer ici, donc — et surtout pas à passer en `http://` sous prétexte
+que le dernier saut est en clair : on éprouve la chaîne telle qu'un client la
+parcourt, pas un maillon isolé.
 
 ```bash
 # 1. L'API est vivante ET joint sa base (c'est ce que /ready ajoute à /live).
@@ -610,6 +843,19 @@ cat /srv/carlys/staging/DEPLOYED
 Un `502` persistant sur l'API : `docker compose logs api` dans le projet
 `carlys_staging`. Le message de refus de démarrage nomme la variable fautive.
 
+Il y a maintenant **deux 502 possibles**, et ils ne se soignent pas au même
+endroit. Le nôtre — le vhost a routé, le conteneur ne répond pas — laisse une
+ligne dans `/var/log/nginx/access.log` de ce serveur. Celui de gra6 — gra6 n'a
+pas pu joindre `172.16.0.158:80` — n'en laisse aucune. C'est ce `tail` qui
+tranche, et le test 2 du §6 est exactement le même geste.
+
+**L'adresse du client, à contrôler une fois pour toutes.** Provoquez une entrée
+d'audit (une connexion au back-office de recette, par exemple) et lisez
+l'adresse enregistrée : elle doit être la vôtre, pas celle de gra6. Si c'est
+celle de gra6, `TRUST_PROXY_HOPS` ne vaut pas `2` (§5) ; si c'est une adresse
+qui n'a aucune raison d'exister, gra6 ajoute `X-Forwarded-For` au lieu de
+l'écraser (§6, test 4).
+
 ### La boîte aux lettres de la recette
 
 Les e-mails de recette ne partent nulle part : ils atterrissent dans Mailpit.
@@ -618,9 +864,13 @@ tous les liens de vérification et de réinitialisation. Pour le consulter,
 depuis votre poste :
 
 ```bash
-ssh -L 8025:127.0.0.1:8025 utilisateur@203.0.113.10
+ssh -L 8025:127.0.0.1:8025 utilisateur@172.16.0.158
 # puis http://localhost:8025 dans le navigateur local
 ```
+
+L'adresse est celle par laquelle vous administrez déjà ce serveur — gra6 n'y
+est pour rien : il ne relaie que le port 80, et Mailpit n'est proxifié par
+aucun vhost.
 
 ---
 
@@ -914,7 +1164,14 @@ seulement due à un fichier compose vieux de plusieurs semaines.
 version modifie un vhost, il faut rejouer la substitution de l'étape 6
 (section « Activer les vhosts définitifs »), puis
 `sudo nginx -t && sudo systemctl reload nginx`. Les notes de version le disent
-quand c'est le cas ; en son absence, ce `git pull` suffit.
+quand c'est le cas ; en son absence, ce `git pull` suffit. Le snippet partagé
+`snippets/carlys-proxy.conf` suit la même règle et se copie séparément : c'est
+lui qui porte les en-têtes dont dépend l'adresse du client.
+
+**Et la configuration de gra6 n'est dans aucun de ces dépôts.** Un changement
+qui touche les en-têtes attendus de lui — les trois du §6 — doit être porté
+là-bas à la main, par qui en a l'accès. Le §6 dit comment vérifier qu'il a bien
+été porté, et ces tests se rejouent à tout moment.
 
 **Toujours par SHA, jamais par tag mouvant.** Le tag `staging` existe pour
 qu'on voie d'un coup d'œil ce qui est récent dans l'onglet Packages ; s'en
@@ -952,18 +1209,13 @@ sudo /srv/carlys/repo/scripts/server/backup.sh   # à la demande, sortie 1 si é
 Une sauvegarde jamais restaurée n'est pas une sauvegarde : testez une
 restauration sur la base de recette de temps en temps.
 
-### Renouvellement des certificats
+### Certificats
 
-certbot installe son propre minuteur. Vérifiez-le une fois, ainsi que le
-crochet de rechargement posé à l'étape 6 — sans lui, les fichiers sont
-renouvelés mais Nginx continue de servir les anciens :
-
-```bash
-ls -l /etc/letsencrypt/renewal-hooks/deploy/   # recharger-nginx.sh, exécutable
-sudo certbot renew --dry-run                   # n'exécute PAS le crochet : un
-                                               # essai à blanc ne « déploie » rien
-systemctl list-timers | grep certbot
-```
+Rien à faire ici : les certificats des six noms vivent sur **gra6**, qui les
+émet, les renouvelle et recharge sa propre configuration. Ce serveur n'en
+détient aucun et n'a aucune minuterie à surveiller. Un certificat expiré se
+constate sur les six noms à la fois, depuis n'importe quel navigateur, et se
+répare sur gra6.
 
 ### Journaux
 
@@ -982,21 +1234,26 @@ c'est ce champ qu'on suit d'une requête à l'autre.
 
 | Symptôme | Cause la plus fréquente |
 | --- | --- |
-| `nginx -t` échoue sur un certificat | l'étape 6 a été faite avant que les DNS résolvent |
-| 502 sur tous les hôtes | aucun conteneur ne tourne : le déploiement a échoué ou n'a pas eu lieu |
+| `nginx -t` échoue sur un `ssl_certificate` ou `/etc/letsencrypt/…` | un vhost d'une installation antérieure traîne dans `sites-enabled/` : plus aucun fichier du dépôt ne nomme de certificat. Listez `/etc/nginx/sites-enabled/` et retirez l'intrus |
+| `nginx -t` échoue sur un `include` introuvable | `snippets/carlys-proxy.conf` n'a pas été copié (étape 6) — et il vaut mieux ce refus qu'un Nginx qui servirait sans l'adresse du client |
+| 502 **sans ligne dans `/var/log/nginx/access.log`** d'ici | c'est le 502 de gra6 : il ne joint pas `172.16.0.158:80`. Pare-feu (`CARLYS_PROXY_CIDR`, étape 2), Nginx arrêté, ou mauvaise adresse dans son `proxy_pass` |
+| 502 sur tous les hôtes, **avec** une ligne dans l'`access.log` | aucun conteneur ne tourne : le déploiement a échoué ou n'a pas eu lieu |
 | 502 sur l'API seule | refus de démarrage sur une variable — `docker compose logs api` la nomme |
+| Les six noms rendent une connexion fermée, alors que les conteneurs tournent | gra6 ne conserve pas le `Host` : aucun `server_name` ne correspond, tout tombe sur l'attrape-tout. `proxy_set_header Host $host;` sur gra6 (§6, test 3) |
 | Le back-office s'affiche mais reste vide | l'image admin vise la mauvaise API. Trois causes, dans cet ordre : `CARLYS_DOMAIN` **mal formée** (avec `https://`, une barre finale ou un port — le workflow refuse les cas nets, pas tous) ; la variable posée APRÈS la construction de cette image, qui garde donc `localhost:3000` ; ou `CORS_ORIGINS` côté API qui ne couvre pas l'origine de l'admin, auquel cas la console du navigateur montre des erreurs CORS. Vérifiez la console avant tout : elle distingue les trois en une seconde |
 | Les liens des e-mails pointent en local | `PUBLIC_APP_URL` mal renseignée |
 | L'app mobile plante au lancement | `CARLYS_PUBLIC_WEB_BASE_URL` oubliée au build (étape 8) |
 | `promote.sh` dit que le tag `-prod` manque | les marqueurs légaux subsistent (étape 9.1) |
-| L'IP du client est toujours la même dans l'audit | `TRUST_PROXY_HOPS` ≠ 1 |
+| L'IP du client est toujours la même dans l'audit, et c'est celle de gra6 | `TRUST_PROXY_HOPS` ≠ 2 (§5), ou gra6 ne pose pas `X-Forwarded-For` du tout |
+| Des adresses aberrantes dans l'audit, ou une limitation de débit qui ne freine personne | gra6 **ajoute** `X-Forwarded-For` au lieu de l'écraser : n'importe qui choisit l'adresse qu'on lui attribue. `proxy_set_header X-Forwarded-For $remote_addr;` sur gra6 (§6, test 4) |
 | Un service, un volume ou une variable manque après un déploiement pourtant réussi | le clone `/srv/carlys/repo` n'a pas été mis à jour : `deploy.sh` a tiré les bonnes images et les a démarrées sous un `compose.yml` périmé (étape 10) |
-| Un hôte inconnu (domaine nu, `www`, IP brute) atteint l'API de production | le vhost attrape-tout n'est pas activé (étape 6) |
-| Certificat expiré alors que `certbot renew` dit avoir renouvelé | le crochet de rechargement Nginx manque (étape 6) |
+| Un hôte inconnu (domaine nu, `www`, `Host` forgé en direct) atteint l'API de production | le vhost attrape-tout n'est pas activé (étape 6) — et, pour l'accès direct, le port 80 n'est pas restreint à gra6 (étape 2) |
+| Certificat expiré sur les six noms | rien à faire ici, ce serveur n'en détient aucun : c'est gra6 qui émet et renouvelle (étape 10, « Certificats ») |
 
 ## À lire à côté
 
 - [`infrastructure/deployment/README.md`](../../infrastructure/deployment/README.md) — pourquoi les migrations tournent avant la bascule, et comment l'arbre de production est fabriqué.
 - [`infrastructure/nginx/README.md`](../../infrastructure/nginx/README.md) — ce que garantissent les vhosts.
-- [`docs/security/reverse-proxy.md`](../security/reverse-proxy.md) — `TRUST_PROXY_HOPS`, TLS, limites de taille.
+- [`infrastructure/nginx/snippets/carlys-proxy.conf`](../../infrastructure/nginx/snippets/carlys-proxy.conf) — les en-têtes de proxy eux-mêmes, chacun commenté avec ce qui a été mesuré.
+- [`docs/security/reverse-proxy.md`](../security/reverse-proxy.md) — l'adresse du client, les en-têtes de proxy, les limites de taille.
 - [`apps/mobile/README.md`](../../apps/mobile/README.md) — configuration d'exécution de l'application.

@@ -8,7 +8,7 @@ la stratégie de déploiement — elle est écrite dans
 
 | Script | Quand | Ce qu'il fait |
 | --- | --- | --- |
-| `setup.sh` | une fois, puis à chaque fois qu'une brique est ajoutée | prépare la machine : docker + plugin compose, nginx, certbot, ufw (22/80/443), `/srv/carlys`, copie des `.env` d'exemple, cron de sauvegarde. **Idempotent.** |
+| `setup.sh` | une fois, puis à chaque fois qu'une brique est ajoutée | prépare la machine : docker + plugin compose, nginx, ufw (22, et 80 **depuis le seul reverse proxy**), `/srv/carlys`, copie des `.env` d'exemple, cron de sauvegarde. **Idempotent.** |
 | `deploy.sh` | à chaque livraison en recette | `deploy.sh <staging\|production> <sha>` : pull des trois images, migration, bascule, santé, retour arrière si besoin |
 | `promote.sh` | pour une mise en production | rejoue en production **le sha déjà validé en recette**, après vérification du registre et confirmation humaine |
 | `backup.sh` | tous les jours, par cron | `pg_dump` de chaque base **déployée**, horodaté, rétention 14 jours |
@@ -37,6 +37,50 @@ sert pour savoir si un environnement a déjà hébergé quelque chose.
 - les images publiées sous `ghcr.io/mimiflo/` et taguées `sha-<12 caractères>` ;
   l'admin de **production** porte en plus le suffixe `-prod` (garde légale
   armée), et c'est la seule différence entre les deux environnements.
+
+## Le TLS n'est pas sur cette machine
+
+Un reverse proxy réseau — `gra6.luuc.fr` — termine le TLS des six noms
+publics et relaie **en HTTP clair** vers le port 80 de ce serveur. Les six
+domaines pointent en DNS sur lui, par des CNAME ; rien de public ne frappe
+directement cette machine. Conséquences pour ces scripts :
+
+- `setup.sh` **n'installe pas certbot** et n'ouvre pas le 443 — il retire même
+  une règle 443 laissée par un passage antérieur. Les certificats, leur
+  renouvellement et la redirection HTTP → HTTPS vivent sur le proxy ;
+- les vhosts d'`infrastructure/nginx/` n'écoutent **qu'en HTTP sur 80** ;
+- les URL publiques restent en `https://` (`PUBLIC_APP_URL`, `CORS_ORIGINS`,
+  `S3_PUBLIC_BASE_URL`) : le nginx d'ici pose `X-Forwarded-Proto https` **en
+  dur**, il ne relaie ni `$scheme` (qui vaudrait `http`) ni un en-tête reçu.
+
+**Le port 80 n'est donc pas un port public**, et `setup.sh` refuse de faire
+semblant du contraire : il ouvre 80 depuis la seule adresse donnée par
+`CARLYS_PROXY_CIDR`. Sans cette variable, il **n'ouvre pas** le port et le dit
+— à l'étape 3 puis dans le récapitulatif final. C'est ce pare-feu qui rend
+honnête le `X-Forwarded-Proto https` posé en dur : l'API en déduit
+`req.secure=true` alors que la liaison interne est en clair, ce qui n'est vrai
+que si le seul émetteur possible est un proxy ayant réellement terminé du TLS.
+
+**Trois en-têtes sont exigés du proxy réseau**, et le récapitulatif de
+`setup.sh` les rappelle mot pour mot parce qu'on ne suppose pas qu'ils sont
+posés :
+
+```nginx
+proxy_set_header Host              $host;          # nom public conservé
+proxy_set_header X-Forwarded-For   $remote_addr;   # ÉCRASER, jamais ajouter
+proxy_set_header X-Forwarded-Proto https;
+```
+
+`$remote_addr` et non `$proxy_add_x_forwarded_for` : mesuré sur la chaîne
+montée pour de vrai (client → proxy réseau → nginx d'ici → Express), un client
+qui envoie lui-même `X-Forwarded-For: 1.2.3.4` fait retenir `1.2.3.4` à l'API
+dès que le proxy **ajoute** au lieu d'écraser — limitation de débit
+contournée, verrouillage de compte contourné, audit empoisonné. Un compteur de
+sauts ne retire des entrées que par la droite : ce que le client préfixe
+survit. Le nginx d'ici, lui, garde `$proxy_add_x_forwarded_for` et ajoute
+l'adresse du proxy réseau : c'est le second saut, d'où `TRUST_PROXY_HOPS=2`
+dans les deux `.env` (avec `1`, l'API voit l'adresse du proxy et toute la
+plateforme partage un seul seau de limitation).
 
 ## Le déploiement, dans l'ordre
 
@@ -151,6 +195,17 @@ jouer ces scripts hors serveur, contre une arborescence jetable.
 | `CARLYS_HEALTH_TRIES` / `CARLYS_HEALTH_DELAY` | `60` / `2` | attente de santé (bornée) |
 | `CARLYS_BACKUP_RETENTION_DAYS` | `14` | rétention des dumps |
 | `CARLYS_SETUP_DRY_RUN` | — | `1` : `setup.sh` affiche les commandes système au lieu de les jouer |
+| `CARLYS_PROXY_CIDR` | **aucun** | adresse ou réseau du reverse proxy réseau, seule source autorisée sur le port 80 |
+
+`CARLYS_PROXY_CIDR` est la seule qui compte sur un vrai serveur. **Pas de
+défaut** : un défaut inventé ouvrirait un port à des machines qu'on n'a pas
+choisies tout en donnant l'apparence d'une règle réfléchie. Vide, `setup.sh`
+n'ouvre pas le 80 — une machine injoignable se répare en une commande, un
+`req.secure=true` mensonger ne se voit pas.
+
+```bash
+CARLYS_PROXY_CIDR=<adresse du proxy> sudo scripts/server/setup.sh
+```
 
 `deploy.sh` **exporte** vers Compose quatre variables, et l'environnement du
 shell l'emportant sur `--env-file`, un déploiement ne réécrit jamais le `.env` :
@@ -177,8 +232,13 @@ du compose au premier changement.
 
 ## Ce qu'ils n'automatisent pas
 
-DNS, achat du domaine, certificats certbot (`certonly --webroot`, **un par
-hôte** — les six vhosts attendent six répertoires
-`/etc/letsencrypt/live/<hôte>/` — et le DNS doit résoudre d'abord), vraies
-valeurs des secrets, remplissage des marqueurs légaux, comptes des magasins
-d'applications. `setup.sh` termine en les listant.
+DNS (six CNAME vers `gra6.luuc.fr`), achat du domaine, **configuration du
+reverse proxy réseau** — il n'est pas sur cette machine : certificats des six
+noms, terminaison TLS, routage vers le port 80 d'ici et les trois
+`proxy_set_header` ci-dessus —, ouverture du 80 quand `CARLYS_PROXY_CIDR` n'a
+pas été donnée, vraies valeurs des secrets, remplissage des marqueurs légaux,
+comptes des magasins d'applications. `setup.sh` termine en les listant, avec
+pour chacun la commande exacte.
+
+Plus de certbot dans cette liste, et plus nulle part ailleurs : ce serveur ne
+génère, ne détient et ne renouvelle aucun certificat.

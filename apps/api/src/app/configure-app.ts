@@ -13,10 +13,16 @@ export function configureApp(app: NestExpressApplication): void {
   const config = app.get(AppConfigService);
 
   // Derrière un reverse proxy, `req.ip` vaudrait l'adresse du proxy pour TOUT
-  // le trafic : la limitation de débit, le verrouillage et l'audit ne
-  // verraient plus qu'une seule adresse. On fait confiance à exactement
-  // TRUST_PROXY_HOPS sauts — jamais `true`, qui accepterait un
-  // X-Forwarded-For entièrement forgé par le client.
+  // le trafic : la limitation de débit (ThrottlerGuard) et l'audit ne
+  // verraient plus qu'une seule adresse. Le verrouillage de compte, lui, n'en
+  // dépend pas — il s'indexe sur l'identité, `lockout.status(email)`.
+  //
+  // On fait confiance à exactement TRUST_PROXY_HOPS sauts — jamais `true`,
+  // qui accepterait un X-Forwarded-For entièrement forgé. Attention toutefois
+  // à ce qu'un compteur numérique NE fait PAS : il ne retire des entrées que
+  // par la DROITE, donc tout ce qu'un client PRÉFIXE à l'en-tête survit. La
+  // protection vient du proxy de tête, qui doit ÉCRASER X-Forwarded-For
+  // (`$remote_addr`) et non y ajouter. Mesuré : docs/security/reverse-proxy.md.
   app.set('trust proxy', config.trustProxyHops);
 
   app.use(helmet());

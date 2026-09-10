@@ -12,8 +12,9 @@
 # existant est conservé, toujours, sans option pour forcer.
 #
 # CE QU'IL FAIT
-#   1. paquets système : docker + plugin compose, nginx, certbot, ufw, cron ;
-#   2. pare-feu : tout refusé en entrée sauf 22 (SSH), 80 et 443 ;
+#   1. paquets système : docker + plugin compose, nginx, ufw, cron ;
+#   2. pare-feu : tout refusé en entrée sauf 22 (SSH), et 80 DEPUIS LE SEUL
+#      reverse proxy réseau (CARLYS_PROXY_CIDR) ;
 #   3. arborescence /srv/carlys (staging, production, backups) ;
 #   4. copie des .env d'exemple s'ils n'existent pas encore ;
 #   5. jeton de registre en 600, vide, à remplir ;
@@ -24,16 +25,21 @@
 # activés à l'étape 2 ; si l'un refuse de démarrer, le script le signale, VA
 # QUAND MÊME AU BOUT (arborescence, .env, jeton, cron, récapitulatif), redit
 # lesquels en défaut avec leur commande de diagnostic, puis sort en 1. Sans
-# cela, l'échec le plus banal — port 80 déjà pris, certificat expiré référencé
-# par un vhost — laissait la machine sans rien : le script mourait à 2/7.
+# cela, l'échec le plus banal — port 80 déjà pris par un Apache livré avec
+# l'image du fournisseur, snippet référencé par un vhost mais pas encore
+# installé — laissait la machine sans rien : le script mourait à 2/7.
 #
 # CE QU'IL NE FAIT PAS, ET N'A PAS À FAIRE
 #   - les vhosts nginx : ils vivent dans infrastructure/nginx/, versionnés ;
 #     ce script installe nginx et dit où les prendre, il ne les invente pas ;
-#   - certbot : obtenir un certificat exige que le DNS pointe DÉJÀ sur la
-#     machine. Lancer certbot avant les enregistrements A, c'est se faire
-#     limiter par Let's Encrypt pour rien ; les commandes exactes sont
-#     rappelées à la fin ;
+#   - les certificats TLS : CE SERVEUR N'EN A PLUS. Le TLS est terminé par le
+#     reverse proxy réseau (gra6.luuc.fr), qui relaie en HTTP clair vers le
+#     port 80 d'ici ; les six noms publics restent en https:// pour le client.
+#     Rien à installer, rien à renouveler, rien à surveiller ici — d'où
+#     l'absence de certbot dans les paquets et du 443 dans le pare-feu ;
+#   - configurer ce reverse proxy réseau : il n'est pas sur cette machine. Le
+#     récapitulatif final dit exactement ce qu'on attend de lui, y compris les
+#     trois en-têtes dont dépend l'adresse du client ;
 #   - remplir les secrets, acheter le domaine, poser les DNS.
 #
 # ESSAI À BLANC. CARLYS_SETUP_DRY_RUN=1 n'exécute AUCUNE commande système
@@ -42,6 +48,11 @@
 # qui permet d'éprouver l'idempotence pour de bon, hors serveur :
 #     CARLYS_SETUP_DRY_RUN=1 CARLYS_ROOT=/tmp/essai CARLYS_CRON_DIR=/tmp/cron \
 #       scripts/server/setup.sh
+#
+# CARLYS_PROXY_CIDR : adresse (ou réseau) du reverse proxy réseau, la SEULE
+# source autorisée à joindre le port 80. Sans valeur, le script n'ouvre pas le
+# 80 — il le DIT, et le rappelle dans le récapitulatif. Voir l'étape 3.
+#     CARLYS_PROXY_CIDR=172.16.0.1 sudo scripts/server/setup.sh
 set -euo pipefail
 
 # shellcheck source=scripts/server/_common.sh
@@ -50,6 +61,12 @@ set -euo pipefail
 DRY_RUN="${CARLYS_SETUP_DRY_RUN:-0}"
 CRON_DIR="${CARLYS_CRON_DIR:-/etc/cron.d}"
 BACKUP_HOUR="${CARLYS_BACKUP_HOUR:-3}"
+
+# Adresse ou réseau du reverse proxy qui termine le TLS et relaie vers le
+# port 80 de cette machine. PAS DE DÉFAUT : un défaut inventé (« 172.16.0.0/12
+# sans doute ») ouvrirait un port à des machines qu'on n'a pas choisies tout en
+# donnant l'impression d'une règle réfléchie. Vide, on n'ouvre rien et on le dit.
+PROXY_CIDR="${CARLYS_PROXY_CIDR:-}"
 
 # run : exécute une commande SYSTÈME, ou l'affiche en essai à blanc. Toutes les
 # commandes qui touchent la machine (paquets, services, pare-feu) passent par
@@ -93,19 +110,20 @@ case "$OS_ID" in
       die "Système non supporté : « ${OS_ID:-inconnu} »." \
         "Ce script cible Debian et Ubuntu (apt, systemd, ufw)." \
         "Sur une autre distribution, installer les mêmes briques à la main :" \
-        "docker + plugin compose, nginx, certbot, ufw, cron."
+        "docker + plugin compose, nginx, ufw, cron."
     fi
     ;;
 esac
 
 # ── 1. Paquets système ─────────────────────────────────────────────────────
 step "1/7 Paquets système"
-# Pas de python3-certbot-nginx : les certificats s'obtiennent en `certonly
-# --webroot`, un par hôte, sans que certbot ne touche à la configuration nginx
-# (le récapitulatif final et docs/deployment/mise-en-route-serveur.md § 6
-# décrivent cette méthode, et les vhosts du dépôt servent déjà le défi ACME).
-# Le greffon --nginx réécrirait des vhosts versionnés : rien à faire ici.
-APT_BASE=(ca-certificates curl gnupg nginx certbot ufw cron)
+# PAS DE CERTBOT, ni le paquet ni son greffon nginx. Le TLS des six noms
+# publics est terminé par le reverse proxy réseau, qui détient les certificats
+# et les renouvelle ; cette machine ne sert que du HTTP en interne. Installer
+# certbot ici poserait une minuterie de renouvellement pour des certificats
+# qui n'existent pas, et laisserait croire au prochain exploitant que le TLS
+# se règle sur ce serveur.
+APT_BASE=(ca-certificates curl gnupg nginx ufw cron)
 missing=()
 for pkg in "${APT_BASE[@]}"; do
   if [ "$DRY_RUN" = "1" ]; then missing+=("$pkg"); continue; fi
@@ -152,10 +170,10 @@ fi
 #
 #   - premier passage sur une machine dont le port 80 est déjà pris (Apache
 #     installé par l'image du fournisseur, un conteneur qui publie 80) ;
-#   - rejeu sur un serveur déjà en service, dont un certificat a expiré ou dont
-#     un vhost référence un fichier absent — nginx refuse alors de démarrer, et
-#     le rejeu, censé installer la brique que le dépôt vient d'ajouter, ne
-#     faisait rien du tout.
+#   - rejeu sur un serveur déjà en service dont un vhost référence un fichier
+#     absent — le snippet partagé pas encore copié, par exemple : nginx refuse
+#     alors de démarrer, et le rejeu, censé installer la brique que le dépôt
+#     vient d'ajouter, ne faisait rien du tout.
 #
 # Le bon comportement n'est pas d'ignorer l'échec, c'est de FINIR LE TRAVAIL
 # puis de le dire. Le récapitulatif final nomme les services en défaut avec
@@ -177,21 +195,99 @@ enable_service cron
 enable_service nginx
 
 # ── 3. Pare-feu ────────────────────────────────────────────────────────────
-# 22, 80, 443 et RIEN d'autre. Les ports applicatifs (3000/3100, 3001/3101,
-# 9000/9200) sont publiés sur 127.0.0.1 seulement (contrat de conception) :
-# nginx est le seul chemin depuis l'extérieur. `ufw allow` et `ufw --force
-# enable` sont idempotents par construction.
+# 22 (SSH), 80 DEPUIS LE SEUL REVERSE PROXY, et RIEN d'autre. Les ports
+# applicatifs (3000/3100, 3001/3101, 9000/9200) sont publiés sur 127.0.0.1
+# seulement (contrat de conception) : nginx est le seul chemin depuis
+# l'extérieur. `ufw allow` et `ufw --force enable` sont idempotents par
+# construction.
+#
+# PLUS DE 443 : aucun vhost Carlys n'écoute en TLS sur cette machine, le
+# terminateur est ailleurs. Un port ouvert que plus rien ne sert reste une
+# surface d'attaque, donc la règle d'un passage précédent est RETIRÉE.
+#
+# LE 80 N'EST PAS UN PORT PUBLIC. C'est cette règle-là qui rend honnête le
+# `X-Forwarded-Proto https` que le nginx d'ici pose EN DUR : l'API en déduit
+# req.secure=true alors que la liaison est en clair. Vrai tant que seul le
+# reverse proxy — qui, lui, a bien terminé du TLS — peut frapper ce port ;
+# mensonger dès que n'importe qui le peut. Même remarque pour l'adresse du
+# client : `X-Forwarded-For` n'a de valeur que si le premier maillon est
+# forcément le proxy.
 step "3/7 Pare-feu (ufw)"
+
+# `ufw delete` sort en 1 quand la règle n'existe pas — le cas nominal sur une
+# machine neuve. Ce n'est pas une erreur : on efface si ça traîne, sinon rien.
+ufw_forget() {
+  if [ "$DRY_RUN" = "1" ]; then
+    printf '   %s[essai]%s ufw delete %s   (si la règle existe)\n' \
+      "$_c_yellow" "$_c_off" "$*"
+    return 0
+  fi
+  ufw delete "$@" >/dev/null 2>&1 || true
+}
+
 run ufw default deny incoming
 run ufw default allow outgoing
 run ufw allow 22/tcp
-run ufw allow 80/tcp
-run ufw allow 443/tcp
+ufw_forget allow 443/tcp
+
+# LE RETRAIT DE LA RÈGLE MONDIALE EST INCONDITIONNEL, et c'est le point le plus
+# important de cette étape. C'est la version PRÉCÉDENTE de ce script qui a posé
+# `ufw allow 80/tcp` — ouvert à tous —, et ce fichier est fait pour être rejoué
+# sur un serveur déjà en service. Le laisser dans la seule branche « une adresse
+# de proxy a été fournie » donnait le pire des deux mondes : un rejeu sans la
+# variable — le cas par défaut — gardait le port 80 grand ouvert pendant que le
+# script imprimait « le 80 reste FERMÉ ». Un pare-feu qui ment sur son état est
+# pire qu'un pare-feu absent : on cesse de le vérifier.
+ufw_forget allow 80/tcp
+
+firewall_todo=0
+if [ -z "$PROXY_CIDR" ]; then
+  firewall_todo=1
+  warn "CARLYS_PROXY_CIDR n'est pas défini : le port 80 N'EST PAS ouvert."
+  info "  Le serveur reste injoignable depuis le reverse proxy — c'est le sens"
+  info "  fermé, pas le sens ouvert : ouvrir 80 au monde donnerait un"
+  info "  req.secure=true mensonger et un X-Forwarded-For forgeable."
+  info "  Rejouer avec l'adresse du proxy, par exemple :"
+  info "    CARLYS_PROXY_CIDR=172.16.0.1 sudo $0"
+  info "  Le récapitulatif final le redit."
+else
+  case "$PROXY_CIDR" in
+    0.0.0.0/0 | ::/0 | any)
+      warn "CARLYS_PROXY_CIDR=$PROXY_CIDR ouvre le port 80 AU MONDE ENTIER."
+      warn "  Le X-Forwarded-Proto https posé en dur par nginx devient un"
+      warn "  mensonge, et n'importe qui peut se présenter avec l'en-tête"
+      warn "  X-Forwarded-For de son choix. À ne garder que le temps d'un test."
+      ;;
+  esac
+  # LA FORME EST VALIDÉE AVANT D'ÊTRE PASSÉE À ufw, qui ne résout AUCUN nom
+  # d'hôte : `CARLYS_PROXY_CIDR=gra6.luuc.fr` lui fait rendre « ERROR: Bad
+  # source address » et sortir en 1. Sous `set -e`, cela tuerait ce script ici
+  # même, à l'étape 3 sur 7 — exactement le mode d'échec que l'en-tête de ce
+  # fichier revendique d'avoir supprimé, réintroduit un cran plus loin. Et la
+  # saisie fautive est probable : tout le reste de ce dépôt appelle le proxy par
+  # son nom. On meurt donc AVANT, avec un message qui dit quoi taper.
+  case "$PROXY_CIDR" in
+    *[!0-9./:a-fA-F]*)
+      die "CARLYS_PROXY_CIDR=« $PROXY_CIDR » n'est pas une adresse." \
+        "ufw ne résout aucun nom d'hôte : il lui faut une adresse IPv4 ou IPv6," \
+        "avec un préfixe facultatif. Résoudre le nom d'abord :" \
+        "  dig +short gra6.luuc.fr" \
+        "puis rejouer, par exemple :" \
+        "  CARLYS_PROXY_CIDR=172.16.0.1 sudo $0"
+      ;;
+  esac
+  run ufw allow from "$PROXY_CIDR" to any port 80 proto tcp
+fi
+
 run ufw --force enable
 if [ "$DRY_RUN" != "1" ]; then
   ufw status | sed 's/^/   /' || true
 fi
-ok "entrée : 22, 80, 443 — tout le reste refusé"
+if [ "$firewall_todo" = "1" ]; then
+  warn "entrée : 22 seulement — le 80 reste FERMÉ (voir le récapitulatif)"
+else
+  ok "entrée : 22 (SSH) et 80 depuis $PROXY_CIDR — tout le reste refusé"
+fi
 
 # ── 4. Arborescence ────────────────────────────────────────────────────────
 # mkdir -p et chmod sont idempotents ; c'est la partie du script qu'on peut
@@ -273,48 +369,103 @@ trap - EXIT
 
 # ── Récapitulatif : ce qui reste MANUEL ────────────────────────────────────
 DOMAIN_HINT="$(env_value DOMAIN "$(env_file production)" 'exemple.fr' 2>/dev/null || printf 'exemple.fr')"
+
+# Adresse de CETTE machine sur le réseau interne, celle que le reverse proxy
+# devra viser. Détectée plutôt qu'affirmée ; si la détection échoue, on le dit
+# et on donne la commande, on n'invente pas une adresse.
+SERVER_IP="$(ip -4 route get 1.1.1.1 2>/dev/null \
+  | awk '{ for (i = 1; i < NF; i++) if ($i == "src") { print $(i + 1); exit } }' \
+  || true)"
+SERVER_IP="${SERVER_IP:-<adresse interne de ce serveur : ip -4 addr>}"
+
+# Le pare-feu a-t-il ouvert le 80, et depuis où : le récapitulatif doit dire
+# l'état RÉEL de la machine, pas l'état souhaité.
+if [ "$firewall_todo" = "1" ]; then
+  FIREWALL_NOTE="4. PARE-FEU — LE PORT 80 EST FERMÉ, il reste à l'ouvrir pour le seul proxy.
+   CARLYS_PROXY_CIDR n'était pas défini : ce script n'ouvre pas 80 au monde en
+   silence, il préfère une machine injoignable à une machine qui ment. Rejouer
+   avec l'adresse (ou le réseau) du reverse proxy :
+     CARLYS_PROXY_CIDR=<adresse du proxy> sudo $0
+   ou, sans rejouer le script :
+     ufw allow from <adresse du proxy> to any port 80 proto tcp
+   POURQUOI cette restriction et pas un simple « allow 80 » : le nginx d'ici
+   pose X-Forwarded-Proto https EN DUR, sans quoi les URL publiques
+   retomberaient en http://. L'API en déduit req.secure=true alors que la
+   liaison est en clair. Cette déduction n'est vraie que si le seul émetteur
+   possible est un proxy qui, lui, a terminé du TLS. Même chose pour
+   l'adresse du client : X-Forwarded-For ne vaut que si le premier maillon
+   est forcément le proxy."
+else
+  FIREWALL_NOTE="4. PARE-FEU — fait : 22 (SSH) et 80 depuis $PROXY_CIDR uniquement, 443 retiré.
+   Rien à faire ici, mais à savoir avant d'y toucher : c'est cette règle qui
+   rend honnête le X-Forwarded-Proto https posé EN DUR par le nginx d'ici.
+   L'API en déduit req.secure=true alors que toute la liaison interne est en
+   clair — vrai tant que seul un proxy ayant terminé du TLS peut frapper ce
+   port, mensonger le jour où on ouvrira 80 plus largement. Même chose pour
+   X-Forwarded-For, qui ne vaut que si le premier maillon est forcément le
+   proxy. Si l'adresse du proxy change : ufw delete puis ufw allow from …"
+fi
+
 cat <<FIN
 
 $_c_bold── Ce que ce script n'a PAS fait, et qu'il faut faire à la main ──$_c_off
 
-1. DNS — 6 enregistrements A vers l'adresse publique de ce serveur :
+1. DNS — 6 enregistrements CNAME vers gra6.luuc.fr, le reverse proxy réseau
+   qui termine le TLS. Ils ne pointent PAS sur ce serveur : rien de public ne
+   frappe directement cette machine.
      api.$DOMAIN_HINT            app.$DOMAIN_HINT            media.$DOMAIN_HINT
      api-staging.$DOMAIN_HINT    app-staging.$DOMAIN_HINT    media-staging.$DOMAIN_HINT
    Rien d'autre ne peut avancer tant qu'ils ne résolvent pas.
 
 2. Vhosts nginx — les prendre dans le dépôt, ils y sont versionnés :
      $CARLYS_REPO_DIR/infrastructure/nginx/
+   Ils n'écoutent QU'EN HTTP sur le port 80 : ni 443, ni certificat, ni
+   redirection vers https, ni défi ACME — tout cela vit sur gra6.
    puis : nginx -t && systemctl reload nginx
 
-3. Certificats TLS — UN CERTIFICAT PAR HÔTE, en mode webroot, et SEULEMENT une
-   fois le DNS en place (sinon Let's Encrypt limite les tentatives ratées).
-   Les vhosts du dépôt attendent /etc/letsencrypt/live/<hôte>/ pour CHACUN des
-   six noms, et servent le défi ACME depuis /var/www/certbot :
-     mkdir -p /var/www/certbot
-     for h in api app media api-staging app-staging media-staging; do
-       certbot certonly --webroot -w /var/www/certbot \\
-         -d "\$h.$DOMAIN_HINT" --agree-tos -m <votre adresse> --non-interactive
-     done
-     ls -d /etc/letsencrypt/live/*.$DOMAIN_HINT     # six répertoires attendus
-   L'ordre a un piège : nginx REFUSE de démarrer si les certificats n'existent
-   pas encore, et certbot en webroot a besoin d'un nginx qui tourne. On casse
-   la boucle avec un vhost ACME temporaire en HTTP seul — la marche à suivre
-   complète est dans docs/deployment/mise-en-route-serveur.md, section 6.
-   Le renouvellement automatique est posé par le paquet certbot lui-même.
+3. REVERSE PROXY RÉSEAU (gra6.luuc.fr) — À CONFIGURER LÀ-BAS, PAS ICI.
+   C'est lui qui détient les certificats des six noms, termine le TLS et
+   relaie en HTTP clair vers cette machine :
+     proxy_pass         http://$SERVER_IP:80;
+     proxy_set_header   Host              \$host;          # nom public CONSERVÉ
+     proxy_set_header   X-Forwarded-For   \$remote_addr;   # ÉCRASER, jamais ajouter
+     proxy_set_header   X-Forwarded-Proto https;
+   Ces trois en-têtes sont une EXIGENCE, pas une supposition : les vérifier
+   sur gra6 avant de déclarer la mise en route terminée.
+   - Host : les vhosts d'ici choisissent le service par server_name, et les
+     liens des e-mails portent le nom public. Un Host réécrit, et on tombe
+     sur l'attrape-tout.
+   - X-Forwarded-For à \$remote_addr et NON \$proxy_add_x_forwarded_for.
+     Mesuré sur la chaîne montée pour de vrai (client → gra6 → nginx d'ici →
+     Express) : avec \$proxy_add_x_forwarded_for ou \$http_x_forwarded_for,
+     un client qui envoie lui-même « X-Forwarded-For: 1.2.3.4 » fait retenir
+     1.2.3.4 à l'API. Un compteur de sauts ne retire des entrées QUE PAR LA
+     DROITE : tout ce que le client PRÉFIXE survit. Conséquences : limitation
+     de débit contournée, verrouillage de compte contourné, audit empoisonné.
+     Seul \$remote_addr, qui écrase, protège.
+   - X-Forwarded-Proto https en dur, pour que les URL publiques restent en
+     https:// alors que la liaison interne est en clair.
+   Le nginx d'ici garde \$proxy_add_x_forwarded_for : il AJOUTE l'adresse de
+   gra6 derrière ce que gra6 a écrit — c'est le second saut, et c'est pourquoi
+   les deux .env portent TRUST_PROXY_HOPS=2. Mesuré : avec 1, l'API voit
+   l'adresse de gra6 et tout le monde partage un seul seau de limitation ;
+   avec 2, elle voit celle du client.
 
-4. Secrets — remplir les .env, toutes les valeurs CHANGE_MOI_… :
+$FIREWALL_NOTE
+
+5. Secrets — remplir les .env, toutes les valeurs CHANGE_MOI_… :
      $(env_file staging)
      $(env_file production)
    Attendus : mots de passe PostgreSQL et MinIO, JWT_ACCESS_SECRET (32
    caractères minimum), SMTP, Stripe, Firebase. L'API REFUSE de démarrer si une
    variable essentielle manque, et refuse en plus les valeurs de développement
-   en production (docs/security/reverse-proxy.md, section 2).
+   en production (docs/security/reverse-proxy.md, section 5).
 
-5. Jeton du registre — un PAT GitHub avec la portée read:packages :
+6. Jeton du registre — un PAT GitHub avec la portée read:packages :
      printf '%s' '<le jeton>' > $(ghcr_token_file)
      chmod 600 $(ghcr_token_file)
 
-6. Marqueurs légaux — tant que docs/legal/*.md portent des « [À COMPLÉTER : … ] »,
+7. Marqueurs légaux — tant que docs/legal/*.md portent des « [À COMPLÉTER : … ] »,
    l'image admin de PRODUCTION ne se construit pas, et promote.sh refusera de
    promouvoir. C'est voulu. Les lister :
      grep -rn 'À COMPLÉTER' $CARLYS_REPO_DIR/docs/legal/
@@ -336,8 +487,9 @@ if [ -n "$services_ko" ]; then
     printf '   %s✗%s %s\n' "$_c_red" "$_c_off" "$svc"
     printf '     systemctl status %s   ·   journalctl -xeu %s\n' "$svc" "$svc"
   done
-  printf '\n   Causes fréquentes : port 80 déjà pris (nginx), certificat absent\n'
-  printf '   ou expiré référencé par un vhost (nginx), noyau sans cgroup v2 (docker).\n'
+  printf '\n   Causes fréquentes : port 80 déjà pris par un autre serveur (nginx),\n'
+  printf '   fichier référencé par un vhost mais pas encore installé — le snippet\n'
+  printf '   partagé, par exemple (nginx), noyau sans cgroup v2 (docker).\n'
   printf '   Tout le reste de la mise en place a bien été fait : ce script se\n'
   printf '   rejoue sans risque une fois la cause levée.\n\n'
   exit 1

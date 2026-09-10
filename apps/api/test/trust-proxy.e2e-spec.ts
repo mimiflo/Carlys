@@ -21,7 +21,8 @@ import { type Env } from '../src/config/env.schema';
 /**
  * Adresse du client derrière un reverse proxy.
  *
- * Le throttler, le verrouillage et l'audit lisent tous `request.ip`. Sans
+ * Le throttler et l'audit lisent `request.ip` — le verrouillage de compte,
+ * non : il s'indexe sur l'identité (`lockout.status(email)`). Sans
  * saut de confiance, c'est l'adresse de la socket, quoi qu'annonce
  * X-Forwarded-For ; avec un saut, c'est la dernière adresse de
  * X-Forwarded-For — celle que le proxy ajoute lui-même, jamais celle que le

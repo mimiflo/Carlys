@@ -1,6 +1,37 @@
 # Carlys — vhosts de PRODUCTION (api, app, media).
 #
-# Installation :
+# ── Ce serveur ne termine PLUS le TLS ────────────────────────────────────────
+#
+#   Internet ──HTTPS 443──> gra6.luuc.fr ──HTTP──> 172.16.0.158:80 ──> ici
+#                            ^ termine le TLS, détient les certificats
+#
+# Les six noms publics (api./app./media. et leurs jumeaux de recette) pointent
+# en DNS vers gra6, jamais vers cette machine. Ce fichier n'a donc plus :
+# ni `listen 443`, ni `ssl_certificate`, ni redirection HTTP → HTTPS, ni
+# `/.well-known/acme-challenge/`. Il n'y a rien à obtenir, rien à renouveler,
+# aucun certbot à installer sur ce serveur — les certificats publics
+# *.carlys.example ne lui appartiennent pas.
+#
+# Ce qui NE change pas : les `server_name`, le routage vers l'API / l'admin /
+# MinIO, les limites de taille, le refus de `/metrics`, la fermeture de la
+# racine du bucket, les en-têtes de sécurité. Et surtout les URL PUBLIQUES,
+# qui restent en `https://` — PUBLIC_APP_URL, CORS_ORIGINS, S3_PUBLIC_BASE_URL,
+# CARLYS_API_BASE_URL, CARLYS_PUBLIC_WEB_BASE_URL. HTTPS existe toujours pour
+# le client ; il est seulement terminé un cran plus haut.
+#
+# ── Le port 80 de cette machine n'est PAS public ─────────────────────────────
+#
+# `snippets/carlys-proxy.conf` pose `X-Forwarded-Proto: https` en dur (mesuré :
+# l'API voit alors req.secure = true alors que tout le trajet interne est en
+# clair). C'est ce qui empêche une URL publique de se fabriquer en http://.
+# Le corollaire est un PRÉREQUIS de pare-feu, pas une option : 172.16.0.158:80
+# ne doit être joignable QUE depuis gra6. Sinon n'importe qui obtient ce
+# req.secure = true mensonger, et surtout s'adresse à l'API sans être passé par
+# l'écrasement de X-Forwarded-For que gra6 doit faire — voir le snippet, qui
+# détaille l'exigence et ce qu'elle coûte si elle est violée.
+#
+# ── Installation ─────────────────────────────────────────────────────────────
+#
 #   cp infrastructure/nginx/snippets/carlys-proxy.conf /etc/nginx/snippets/
 #   sed 's/carlys.example/VOTRE-DOMAINE/g' \
 #     infrastructure/nginx/carlys-production.conf.example \
@@ -8,13 +39,10 @@
 #   ln -sf /etc/nginx/sites-available/carlys-production.conf /etc/nginx/sites-enabled/
 #   nginx -t && systemctl reload nginx
 #
-# `carlys.example` est le seul motif à remplacer : les trois sous-domaines et
-# les chemins de certificats en découlent.
-#
-# Ce fichier ne se charge qu'une fois les certificats en place. Premier
-# passage, dans l'ordre : poser les DNS, obtenir les certificats
-# (certbot --webroot, le bloc HTTP ci-dessous sert /.well-known), PUIS
-# activer ce fichier. Le guide de mise en route donne la séquence complète :
+# `carlys.example` est le seul motif à remplacer : les trois sous-domaines en
+# découlent. Ce fichier n'attend plus aucun prérequis local — il se charge dès
+# que les conteneurs écoutent, sans étape de certificat préalable. Le guide de
+# mise en route donne la séquence complète :
 # docs/deployment/mise-en-route-serveur.md.
 
 # ── Où écoutent les conteneurs ───────────────────────────────────────────────
@@ -34,49 +62,30 @@ upstream carlys_minio_production {
     server 127.0.0.1:9000;
 }
 
-# ── HTTP : rien n'est servi en clair ─────────────────────────────────────────
-server {
-    listen 80;
-    listen [::]:80;
-    server_name api.carlys.example app.carlys.example media.carlys.example;
-
-    # Renouvellement des certificats (certbot en mode webroot). Cette location
-    # doit rester AVANT la redirection : un défi ACME redirigé en HTTPS avant
-    # que le certificat existe ne peut jamais aboutir.
-    location /.well-known/acme-challenge/ {
-        root /var/www/certbot;
-    }
-
-    location / {
-        return 301 https://$host$request_uri;
-    }
-}
-
-# ── HTTP/2 : le paramètre de `listen`, pas la directive `http2` ──────────────
+# ── HTTP/2 : plus rien à régler ici ──────────────────────────────────────────
 #
-# `http2 on;` n'existe QUE depuis Nginx 1.25.1. Or le guide de mise en route
-# vise Debian 12 (Nginx 1.22.1) et Ubuntu 22.04 (1.18.0), et `setup.sh`
-# installe le Nginx de la distribution : sur ces machines, `http2 on;` fait
-# échouer `nginx -t` sur « unknown directive "http2" » — donc Nginx ne démarre
-# pas du tout, et pas seulement sans HTTP/2. Le paramètre `http2` de `listen`
-# ci-dessous, lui, fonctionne de 1.9.5 à aujourd'hui. Sur 1.25.1 et au-delà il
-# est déprécié : Nginx émet un AVERTISSEMENT et applique quand même HTTP/2.
-# Un avertissement sur les Nginx récents coûte moins qu'un refus de démarrage
-# sur les Nginx que ce dépôt dit installer. Éprouvé sur 1.18.0, 1.22.1 et 1.27.
+# HTTP/2 se négocie dans la poignée de main TLS (ALPN) : il se termine donc sur
+# gra6, avec le TLS. Entre gra6 et cette machine, c'est du HTTP/1.1 en clair —
+# ce que fixe `proxy_http_version 1.1;` dans le snippet. Il n'y a plus ni
+# paramètre `http2` de `listen`, ni directive `http2 on;` dans ce fichier, et
+# l'arbitrage de compatibilité qu'ils imposaient (`http2 on;` n'existe que
+# depuis Nginx 1.25.1, alors que Debian 12 sert 1.22.1 et Ubuntu 22.04 1.18.0)
+# ne se pose plus du tout ici.
 
 # ── API — api.carlys.example → 127.0.0.1:3000 ────────────────────────────────
 server {
-    listen 443 ssl http2;
-    listen [::]:443 ssl http2;
+    listen 80;
+    listen [::]:80;
     server_name api.carlys.example;
 
-    ssl_certificate     /etc/letsencrypt/live/api.carlys.example/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/api.carlys.example/privkey.pem;
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_prefer_server_ciphers off;
-
-    # HSTS posé ICI : helmet ne le pose que sur les réponses qui atteignent
-    # l'API, jamais sur une requête en clair interceptée en amont.
+    # HSTS conservé, bien que ce bloc n'écoute qu'en clair : c'est un en-tête
+    # de RÉPONSE. Il remonte à travers gra6 jusqu'au navigateur, qui l'applique
+    # à l'origine qu'il a réellement contactée — https://api.carlys.example.
+    # Le garder ici protège si gra6 oublie de le poser, et ne coûte rien s'il
+    # le pose aussi. Deuxième raison de le garder ICI et non de compter sur
+    # l'API : helmet ne le pose que sur les réponses produites par l'API, et
+    # plusieurs réponses de ce fichier ne l'atteignent jamais (les 404 et 413
+    # de Nginx, tout ce que sert le vhost `media` depuis MinIO).
     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
 
     # Corps JSON : même plafond que l'API (MAX_JSON_BODY_SIZE = '1mb' dans
@@ -141,20 +150,16 @@ server {
 # /abonnement). Ces dernières sont ouvertes depuis un e-mail ou depuis
 # l'application mobile, sans aucun jeton.
 #
-# Conséquence de configuration, à ne pas manquer :
+# Conséquence de configuration, à ne pas manquer — et que le passage au HTTP
+# interne ne change PAS, puisque c'est l'adresse vue par le client qui compte :
 #   PUBLIC_APP_URL = https://app.carlys.example   (côté API)
 #   CORS_ORIGINS   contient https://app.carlys.example
 # et c'est https://app.carlys.example/privacy que les magasins d'applications
 # ouvriront avant d'accepter une soumission.
 server {
-    listen 443 ssl http2;
-    listen [::]:443 ssl http2;
+    listen 80;
+    listen [::]:80;
     server_name app.carlys.example;
-
-    ssl_certificate     /etc/letsencrypt/live/app.carlys.example/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/app.carlys.example/privkey.pem;
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_prefer_server_ciphers off;
 
     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
 
@@ -193,14 +198,9 @@ server {
 # Compose (S3_ENDPOINT). Ce vhost est en LECTURE SEULE, pour les téléphones et
 # les navigateurs.
 server {
-    listen 443 ssl http2;
-    listen [::]:443 ssl http2;
+    listen 80;
+    listen [::]:80;
     server_name media.carlys.example;
-
-    ssl_certificate     /etc/letsencrypt/live/media.carlys.example/fullchain.pem;
-    ssl_certificate_key /etc/letsencrypt/live/media.carlys.example/privkey.pem;
-    ssl_protocols TLSv1.2 TLSv1.3;
-    ssl_prefer_server_ciphers off;
 
     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
 
