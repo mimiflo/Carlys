@@ -880,6 +880,36 @@ celle de gra6, `TRUST_PROXY_HOPS` ne vaut pas `2` (§5) ; si c'est une adresse
 qui n'a aucune raison d'exister, gra6 ajoute `X-Forwarded-For` au lieu de
 l'écraser (§6, test 4).
 
+### Le premier administrateur
+
+Le back-office est servi sur `https://app-staging.<domaine>/login` — mais à ce
+stade **personne ne peut s'y connecter**, et ce n'est pas un oubli de
+configuration : un déploiement n'exécute que `prisma migrate deploy`, jamais le
+seed de développement, et l'API n'expose aucune route de création de compte
+(un administrateur ne se crée pas depuis l'interface qu'il administre). Rôles,
+permissions et comptes n'existent donc que si on les crée, par la commande
+embarquée dans l'image API :
+
+```bash
+sudo /srv/carlys/repo/scripts/server/carlysctl admin-create staging vous@exemple.fr
+```
+
+Le mot de passe est **saisi sans écho, puis confirmé** — il ne passe ni en
+argument (lisible dans `/proc/<pid>/cmdline` par tout utilisateur local) ni en
+variable d'environnement. Laissez la saisie vide pour qu'il soit engendré et
+affiché **une seule fois**, sur votre terminal et nulle part ailleurs.
+
+Le compte reçoit le rôle `superadmin` par défaut. Pour un collègue au
+périmètre plus étroit : `--role support` (comptes, audit, signalements) ou
+`--role content-manager` (catalogue et médias). Un mot de passe oublié se
+remplace avec `--reset-password` ; sans ce drapeau, la commande **refuse** de
+toucher un compte existant.
+
+C'est ce compte qui sert au contrôle de l'adresse du client ci-dessus, et à
+tout ce qui suit dans le back-office. La même commande vaut pour la production,
+le jour venu : `admin-create production …` — les rôles et permissions y sont
+projetés au premier appel, comme ici.
+
 ### La boîte aux lettres de la recette
 
 Les e-mails de recette ne partent nulle part : ils atterrissent dans Mailpit.

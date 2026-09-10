@@ -11,7 +11,8 @@
  * démonstration — le compte premium reçoit ses entitlements (droits
  * décidés côté serveur, Étape 6).
  */
-import { ADMIN_PERMISSIONS, PREMIUM_ENTITLEMENT_KEYS } from '@carlys/api-contracts';
+import { PREMIUM_ENTITLEMENT_KEYS } from '@carlys/api-contracts';
+import { syncAdminRbac } from '../src/modules/admin/application/admin-rbac';
 import { EQUIPMENT, EXERCISES, MUSCLE_GROUPS } from './catalog';
 import { seedExerciseMedia } from './seed-media';
 import {
@@ -168,68 +169,13 @@ async function seedSubscriptionPlans(): Promise<void> {
   }
 }
 
-/**
- * RBAC de l'administration. Le code est la SOURCE DE VÉRITÉ de la liste
- * des permissions (`ADMIN_PERMISSIONS` dans packages/api-contracts).
- */
-const ADMIN_ROLES: { slug: string; name: string; permissions: readonly string[] }[] = [
-  { slug: 'superadmin', name: 'Super-administrateur', permissions: ADMIN_PERMISSIONS },
-  {
-    // Les signalements de la communauté sont un travail de support : les lire
-    // et les résoudre va avec la lecture des comptes.
-    slug: 'support',
-    name: 'Support',
-    permissions: ['user:read', 'audit:read', 'community:moderate'],
-  },
-  {
-    // Le contenu, c'est aussi les médias : sans `media:write`, ce rôle ne
-    // pourrait pas déposer la photo d'un exercice qu'il a le droit de publier.
-    slug: 'content-manager',
-    name: 'Gestion du contenu',
-    permissions: [
-      'exercise:read',
-      'exercise:publish',
-      'exercise:write',
-      'media:read',
-      'media:write',
-    ],
-  },
-];
-
 const DEV_ADMIN = { email: 'dev.admin@carlys.local', displayName: 'Dev Admin' };
 const DEV_ADMIN_PASSWORD = 'Carlys-Admin-2026!';
 
 async function seedAdministration(): Promise<void> {
-  for (const permission of ADMIN_PERMISSIONS) {
-    const [resource, action] = permission.split(':') as [string, string];
-    await prisma.adminPermission.upsert({
-      where: { resource_action: { resource, action } },
-      update: {},
-      create: { resource, action },
-    });
-  }
-  const permissionIds = new Map(
-    (await prisma.adminPermission.findMany()).map((permission) => [
-      `${permission.resource}:${permission.action}`,
-      permission.id,
-    ]),
-  );
-
-  for (const role of ADMIN_ROLES) {
-    const { id } = await prisma.adminRole.upsert({
-      where: { slug: role.slug },
-      update: { name: role.name },
-      create: { slug: role.slug, name: role.name },
-    });
-    // Liens reconstruits à chaque seed (idempotent).
-    await prisma.adminRolePermission.deleteMany({ where: { roleId: id } });
-    await prisma.adminRolePermission.createMany({
-      data: role.permissions.map((permission) => ({
-        roleId: id,
-        permissionId: mustGet(permissionIds, permission),
-      })),
-    });
-  }
+  // Rôles et permissions : le même code que `admin-bootstrap` sur un
+  // serveur — le seed n'en est plus l'unique dépositaire.
+  await syncAdminRbac(prisma);
 
   const passwordHash = await argon2.hash(DEV_ADMIN_PASSWORD, { type: argon2.argon2id });
   const admin = await prisma.adminUser.upsert({

@@ -21,6 +21,7 @@
     "prisma:migrate:deploy": "prisma migrate deploy",
     "prisma:studio": "prisma studio",
     "prisma:seed": "ts-node prisma/seed.ts",
+    "admin:bootstrap": "node dist/cli/admin-bootstrap",
     "demo:catalog": "ts-node prisma/export-demo-catalog.ts"
   },
   "dependencies": {

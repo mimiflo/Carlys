@@ -38,6 +38,10 @@ AGIR À LA MAIN
   carlysctl deploy <env> <sha>            déploie un sha (appelle deploy.sh)
   carlysctl promote [sha]                 promeut en production (promote.sh)
   carlysctl backup                        sauvegarde (backup.sh)
+  carlysctl admin-create <env> <email>    crée un compte du back-office
+                                          (--role support|content-manager,
+                                          --reset-password) — mot de passe
+                                          saisi sans écho, jamais en argument
   carlysctl scale <env> <n>               fixe le nombre d'exemplaires d'API
   carlysctl heal <env>                    répare ce qui est tombé
   carlysctl env-sync <env> [--appliquer]  ajoute au .env les réglages qui lui
@@ -256,6 +260,71 @@ Si tu lis ce message, une vraie alerte te parviendra aussi."; then
   fi
 }
 
+# `admin-create <env> <email> [--role <slug>] [--reset-password]` — un compte
+# d'administration, par la seule voie qui existe : la commande embarquée dans
+# l'image API. L'API n'a pas de route de création (un administrateur ne se crée
+# pas depuis l'interface qu'il administre) et le seed ne s'exécute jamais en
+# déploiement : sans ceci, la page de connexion du back-office est une porte
+# sans clé.
+#
+# LE MOT DE PASSE NE PASSE NI EN ARGUMENT NI EN VARIABLE D'ENVIRONNEMENT : il
+# est saisi sans écho, confirmé, et transmis au conteneur par l'entrée
+# standard. Vide, la commande en engendre un et l'affiche une fois.
+cmd_admin_create() {
+  local env_name file email role=superadmin reset=non mdp='' mdp2='' hote
+  env_name="$(environnement_requis "${1-}")"
+  email="${2-}"
+  [ -n "$email" ] || die "Adresse attendue." \
+    "  carlysctl admin-create $env_name <email> [--role superadmin|support|content-manager] [--reset-password]"
+  shift 2 || true
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --role) role="${2-}"; shift 2 ;;
+      --reset-password) reset=oui; shift ;;
+      *) die "Option inconnue : $1" "Attendu : --role <slug>, --reset-password" ;;
+    esac
+  done
+  file="$(env_file "$env_name")"
+  require_commands docker
+  require_compose_file
+  [ -n "$(deployed_current "$env_name")" ] || die "« $env_name » n'a jamais été déployé." \
+    "La commande vit dans l'image API : déployer d'abord (carlysctl deploy $env_name <sha>)."
+
+  # L'image déployée doit porter la commande — une image d'avant ce commit ne
+  # l'a pas, et l'erreur de Node serait moins claire que celle-ci.
+  if ! dc "$env_name" "$file" run --rm --no-deps -T --entrypoint test api \
+      -f dist/cli/admin-bootstrap.js >/dev/null 2>&1; then
+    die "L'image API déployée sur « $env_name » ne porte pas encore admin-bootstrap." \
+      "Elle est antérieure à cette commande : déployer une version plus récente, puis relancer."
+  fi
+
+  step "Compte administrateur sur « $env_name »"
+  info "adresse : $email"
+  info "rôle    : $role"
+  if [ -t 0 ]; then
+    printf '   Mot de passe (vide = engendré et affiché une fois) : ' >&2
+    read -rs mdp; printf '\n' >&2
+    if [ -n "$mdp" ]; then
+      printf '   Confirmer : ' >&2
+      read -rs mdp2; printf '\n' >&2
+      [ "$mdp" = "$mdp2" ] || die "Les deux saisies diffèrent — rien n'a été créé."
+    fi
+  else
+    # Pas de terminal : le mot de passe est attendu sur NOTRE entrée standard,
+    # et relayé tel quel.
+    IFS= read -r mdp || true
+  fi
+
+  local -a opts=(--role "$role")
+  [ "$reset" = oui ] && opts+=(--reset-password)
+  printf '%s' "$mdp" | dc "$env_name" "$file" run --rm --no-deps -T api \
+    node dist/cli/admin-bootstrap "$email" "${opts[@]}" || die "La création a échoué — le message ci-dessus dit pourquoi."
+
+  hote="app"
+  [ "$env_name" = staging ] && hote="app-staging"
+  ok "connexion : https://${hote}.$(env_value DOMAIN "$file" '<domaine>')/login"
+}
+
 cmd_update() {
   local env_name file
   env_name="$(environnement_requis "${1-}")"
@@ -454,6 +523,7 @@ case "$COMMANDE" in
   heal)      cmd_heal "${1-}" ;;
   env-sync)  cmd_envsync "$@" ;;
   alert-test) cmd_alert_test ;;
+  admin-create) cmd_admin_create "$@" ;;
   prune)     cmd_prune "${1-}" ;;
   update)    cmd_update "${1-}" ;;
   supervise) cmd_supervise "${1-}" ;;

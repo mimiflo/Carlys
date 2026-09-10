@@ -20,6 +20,7 @@ Tout est décrit dans
 | `carlysctl scale <env> <n>` | à la main | fixe le nombre d'exemplaires d'API |
 | `carlysctl autoscale <env>` | pour comprendre une décision | dit ce qu'il ferait ; n'agit qu'avec `--appliquer` |
 | `carlysctl heal <env>` | quand quelque chose est tombé | relève ce qui manque, avec un plafond horaire |
+| `carlysctl admin-create <env> <email> [--role …] [--reset-password]` | après le premier déploiement, puis pour chaque collègue | crée un compte du back-office par la commande embarquée dans l'image API — la seule voie qui existe. Mot de passe saisi sans écho, jamais en argument |
 | `carlysctl env-sync <env> [--appliquer] [--tout]` | après un `git pull`, ou quand `doctor` signale une clé absente | ajoute au `.env` les réglages introduits depuis sa création. N'écrase jamais une ligne, engendre les secrets sûrs avec `--tout`, refuse ce qu'un humain seul peut choisir |
 | `carlysctl update <env>` | si `CARLYS_AUTO_UPDATE=oui` | recette : suit une branche ; production : promeut la recette après maturation |
 | `carlysctl supervise [env]` | par la minuterie | une passe complète : réparer, mettre à l'échelle, mettre à jour |
