@@ -150,10 +150,21 @@ env_value() {
 # l'autre ne bascule ; refuser tout de suite laisse l'opérateur décider.
 # Le descripteur reste ouvert pour toute la vie du script : le verrou tombe
 # quand le processus se termine, y compris s'il est tué.
+#
+# IDEMPOTENT, et ce n'est pas un confort : `carlysctl supervise` prend le
+# verrou pour toute sa passe, et appelle ensuite des fonctions qui le
+# demandent aussi. Sans cette garde, le second appel ouvrirait un SECOND
+# descripteur sur le même fichier — et `flock` s'attache au descripteur, pas au
+# processus : le script se bloquerait sur son propre verrou, et le message
+# d'erreur accuserait « un déploiement déjà en cours » alors que c'est lui.
 lock_env() {
   local env_name="$1" file
+  if [ "${CARLYS_LOCKED_ENV:-}" = "$env_name" ]; then
+    return 0
+  fi
   file="$(env_dir "$env_name")/.lock"
   exec {CARLYS_LOCK_FD}>>"$file" || die "Verrou impossible à ouvrir : $file"
+  CARLYS_LOCKED_ENV="$env_name"
   flock -n "$CARLYS_LOCK_FD" || die \
     "Un déploiement de « $env_name » est DÉJÀ en cours sur cette machine." \
     "Rien n'a été fait : deux déploiements simultanés se marcheraient dessus" \
@@ -161,6 +172,20 @@ lock_env() {
     "ce qui tourne)." \
     "Attendre qu'il se termine, puis relancer. Pour voir qui tient le verrou :" \
     "  fuser -v $file"
+}
+
+# Relâche le verrou AVANT la fin du script.
+#
+# Un seul appelant en a besoin : `carlysctl supervise`, qui tient le verrou
+# pendant qu'il répare et met à l'échelle, puis appelle deploy.sh ou
+# promote.sh — deux scripts SÉPARÉS, qui prennent le verrou pour eux-mêmes et
+# n'ont aucun moyen de savoir que leur parent le détient déjà. Sans cette
+# libération, la mise à jour automatique échouerait systématiquement sur
+# « un déploiement est déjà en cours », en accusant le superviseur lui-même.
+unlock_env() {
+  [ -n "${CARLYS_LOCKED_ENV:-}" ] || return 0
+  exec {CARLYS_LOCK_FD}>&-
+  CARLYS_LOCKED_ENV=''
 }
 
 # ── Journal DEPLOYED ────────────────────────────────────────────────────────

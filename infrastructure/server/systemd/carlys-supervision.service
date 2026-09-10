@@ -1,0 +1,61 @@
+# Carlys — une passe de supervision.
+#
+# Ce fichier est un GABARIT : `__DEPOT__` est remplacé par le chemin réel du
+# dépôt au moment de l'installation (scripts/server/setup.sh). Le fichier
+# installé vit dans /etc/systemd/system/, celui-ci reste versionné.
+#
+# Type=oneshot, et pas un service permanent : la supervision est une action qui
+# se termine, pas un processus qui veille. C'est la minuterie jumelle
+# (carlys-supervision.timer) qui décide du rythme, et systemd refuse de
+# relancer un `oneshot` déjà en cours — deux passes ne peuvent donc pas se
+# chevaucher, même si l'une prend plus de temps que l'intervalle.
+
+[Unit]
+Description=Carlys — supervision (réparation, mise à l'échelle, mise à jour)
+Documentation=file://__DEPOT__/docs/deployment/orchestration.md
+# La passe parle à Docker de bout en bout : sans lui, elle n'aurait rien à
+# regarder. `Requires` et non `Wants` : au démarrage de la machine, une passe
+# lancée avant que le démon Docker ne réponde verrait une pile vide et
+# conclurait à une panne générale.
+Requires=docker.service
+After=docker.service network-online.target
+# nginx n'est pas requis : une pile saine dont l'amont n'a pas pu être
+# rechargé vaut mieux que pas de supervision du tout, et l'échec du
+# rechargement est journalisé.
+After=nginx.service
+
+[Service]
+Type=oneshot
+# root : la passe pilote Docker, écrit dans /etc/nginx/conf.d et dans
+# /srv/carlys. Aucune de ces trois choses n'est accessible autrement.
+User=root
+ExecStart=__DEPOT__/scripts/server/carlysctl supervise
+
+# BORNÉE. Une mise à jour qui déploie peut durer plusieurs minutes ; une passe
+# qui dure vingt minutes est bloquée. Sans cette limite, un `docker` figé
+# retiendrait le verrou d'environnement indéfiniment et TOUTES les passes
+# suivantes seraient refusées — la supervision s'arrêterait en silence.
+TimeoutStartSec=20min
+
+# Pas de Restart : la minuterie repassera. Réessayer tout de suite après un
+# échec, c'est répéter la même erreur plus vite.
+Restart=no
+
+SyslogIdentifier=carlys-supervision
+
+# Durcissement — le strict nécessaire, et rien qui casse Docker. Un service
+# root qui parle au démon Docker a de fait les droits de la machine ; l'illusion
+# d'un bac à sable serait pire qu'une absence de bac à sable.
+NoNewPrivileges=yes
+ProtectHome=yes
+PrivateTmp=yes
+
+# PAS de section [Install], volontairement. Ce service n'est pas censé être
+# activé : c'est la minuterie qui l'est, et elle seule. Lui donner un
+# `WantedBy=multi-user.target` inviterait à faire `systemctl enable
+# carlys-supervision.service`, ce qui ajouterait une passe au démarrage EN PLUS
+# de celle de la minuterie — sans que rien ne le signale.
+#
+# Pour déclencher une passe à la main, sans attendre :
+#   systemctl start carlys-supervision.service
+#   journalctl -u carlys-supervision.service -f

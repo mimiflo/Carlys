@@ -12,24 +12,26 @@
 # existant est conservé, toujours, sans option pour forcer.
 #
 # CE QU'IL FAIT
-#   1. paquets système : docker + plugin compose, nginx, ufw, cron ;
-#   2. amonts Nginx de départ, sans lesquels nginx refuse de démarrer dès que
+#   1. paquets système : nginx, ufw, cron, et de quoi parler à un dépôt apt ;
+#   2. Docker et son plugin compose, depuis le dépôt officiel Docker ;
+#   3. amonts Nginx de départ, sans lesquels nginx refuse de démarrer dès que
 #      les vhosts du dépôt sont posés ;
-#   3. pare-feu : tout refusé en entrée sauf 22 (SSH), et 80 DEPUIS LE SEUL
+#   4. pare-feu : tout refusé en entrée sauf 22 (SSH), et 80 DEPUIS LE SEUL
 #      reverse proxy réseau (CARLYS_PROXY_CIDR) ;
-#   4. arborescence /srv/carlys (staging, production, backups) ;
-#   5. copie des .env d'exemple s'ils n'existent pas encore ;
-#   6. jeton de registre en 600, vide, à remplir ;
-#   7. cron quotidien de sauvegarde ;
-#   8. récapitulatif de ce qui reste MANUEL.
+#   5. arborescence /srv/carlys (staging, production, backups) ;
+#   6. copie des .env d'exemple s'ils n'existent pas encore ;
+#   7. jeton de registre en 600, vide, à remplir ;
+#   8. cron quotidien de sauvegarde ;
+#   9. minuterie systemd de supervision (réparation + mise à l'échelle) ;
+#  10. récapitulatif de ce qui reste MANUEL.
 #
 # UN SERVICE QUI NE DÉMARRE PAS NE L'ARRÊTE PAS. docker et cron sont activés à
 # l'étape 2, nginx à l'étape 3 ; si l'un refuse de démarrer, le script le
-# signale, VA QUAND MÊME AU BOUT (arborescence, .env, jeton, cron, récapitulatif), redit
-# lesquels en défaut avec leur commande de diagnostic, puis sort en 1. Sans
-# cela, l'échec le plus banal — port 80 déjà pris par un Apache livré avec
-# l'image du fournisseur, snippet référencé par un vhost mais pas encore
-# installé — laissait la machine sans rien : le script mourait à 2/8.
+# signale, VA QUAND MÊME AU BOUT (arborescence, .env, jeton, cron, supervision,
+# récapitulatif), redit lesquels en défaut avec leur commande de diagnostic,
+# puis sort en 1. Sans cela, l'échec le plus banal — port 80 déjà pris par un
+# Apache livré avec l'image du fournisseur, snippet référencé par un vhost mais
+# pas encore installé — laissait la machine sans rien : le script mourait à 2/9.
 #
 # CE QU'IL NE FAIT PAS, ET N'A PAS À FAIRE
 #   - les vhosts nginx : ils vivent dans infrastructure/nginx/, versionnés ;
@@ -92,7 +94,7 @@ info "racine des données : $CARLYS_ROOT"
 info "dépôt              : $CARLYS_REPO_DIR"
 
 # ── 0. Préalables ──────────────────────────────────────────────────────────
-step "0/8 Préalables"
+step "0/9 Préalables"
 if [ "$DRY_RUN" != "1" ] && [ "$(id -u)" -ne 0 ]; then
   die "Ce script doit être lancé en root." \
     "  sudo $0" \
@@ -119,7 +121,7 @@ case "$OS_ID" in
 esac
 
 # ── 1. Paquets système ─────────────────────────────────────────────────────
-step "1/8 Paquets système"
+step "1/9 Paquets système"
 # PAS DE CERTBOT, ni le paquet ni son greffon nginx. Le TLS des six noms
 # publics est terminé par le reverse proxy réseau, qui détient les certificats
 # et les renouvelle ; cette machine ne sert que du HTTP en interne. Installer
@@ -145,7 +147,7 @@ fi
 # Le dépôt officiel Docker, pas celui de la distribution : le plugin compose v2
 # (`docker compose`, sans tiret) n'existe que là, et c'est lui que les scripts
 # de déploiement appellent.
-step "2/8 Docker"
+step "2/9 Docker"
 if docker compose version >/dev/null 2>&1; then
   ok "docker $(docker --version 2>/dev/null | awk '{print $3}' | tr -d ,) avec plugin compose — rien à faire"
 else
@@ -166,7 +168,7 @@ fi
 # UN SERVICE QUI NE DÉMARRE PAS N'ARRÊTE PAS LA MISE EN PLACE.
 #
 # Sous `set -e`, un `systemctl enable --now nginx` en échec tuait le script
-# ICI, à l'étape 2 sur 8 : ni l'arborescence /srv/carlys, ni les .env, ni le
+# ICI, à l'étape 2 sur 9 : ni l'arborescence /srv/carlys, ni les .env, ni le
 # jeton, ni la sauvegarde quotidienne, ni le récapitulatif de ce qui reste
 # manuel. Or ce script est annoncé idempotent et rejouable, et les deux
 # situations qui font échouer nginx sont précisément celles où on le rejoue :
@@ -213,7 +215,7 @@ enable_service cron
 # valeurs que les .env.example). C'est exactement l'état de départ : un seul
 # exemplaire. `carlysctl` le réécrira au premier déploiement, avec les ports
 # que Docker aura réellement attribués.
-step "3/8 Amonts Nginx de départ"
+step "3/9 Amonts Nginx de départ"
 poser_amont_initial() {
   local env_name="$1" premier_port="$2" cible
   cible="/etc/nginx/conf.d/carlys-${env_name}-api-upstream.conf"
@@ -269,7 +271,7 @@ enable_service nginx
 # mensonger dès que n'importe qui le peut. Même remarque pour l'adresse du
 # client : `X-Forwarded-For` n'a de valeur que si le premier maillon est
 # forcément le proxy.
-step "4/8 Pare-feu (ufw)"
+step "4/9 Pare-feu (ufw)"
 
 # `ufw delete` sort en 1 quand la règle n'existe pas — le cas nominal sur une
 # machine neuve. Ce n'est pas une erreur : on efface si ça traîne, sinon rien.
@@ -319,7 +321,7 @@ else
   # LA FORME EST VALIDÉE AVANT D'ÊTRE PASSÉE À ufw, qui ne résout AUCUN nom
   # d'hôte : `CARLYS_PROXY_CIDR=gra6.luuc.fr` lui fait rendre « ERROR: Bad
   # source address » et sortir en 1. Sous `set -e`, cela tuerait ce script ici
-  # même, à l'étape 4 sur 8 — exactement le mode d'échec que l'en-tête de ce
+  # même, à l'étape 4 sur 9 — exactement le mode d'échec que l'en-tête de ce
   # fichier revendique d'avoir supprimé, réintroduit un cran plus loin. Et la
   # saisie fautive est probable : tout le reste de ce dépôt appelle le proxy par
   # son nom. On meurt donc AVANT, avec un message qui dit quoi taper.
@@ -349,7 +351,7 @@ fi
 # ── 4. Arborescence ────────────────────────────────────────────────────────
 # mkdir -p et chmod sont idempotents ; c'est la partie du script qu'on peut
 # rejouer les yeux fermés.
-step "5/8 Arborescence $CARLYS_ROOT"
+step "5/9 Arborescence $CARLYS_ROOT"
 mkdir -p "$CARLYS_ROOT/staging" "$CARLYS_ROOT/production" "$(backups_dir)"
 chmod 750 "$CARLYS_ROOT"
 chmod 750 "$CARLYS_ROOT/staging" "$CARLYS_ROOT/production"
@@ -359,7 +361,7 @@ ok "staging/ production/ backups/"
 # ── 5. Fichiers .env ───────────────────────────────────────────────────────
 # LE geste à ne jamais faire : recopier l'exemple par-dessus un .env rempli.
 # Il n'y a donc pas d'option --force ici, volontairement.
-step "6/8 Fichiers d'environnement"
+step "6/9 Fichiers d'environnement"
 for env_name in staging production; do
   target="$(env_file "$env_name")"
   example="$CARLYS_ENV_EXAMPLES_DIR/${env_name}.env.example"
@@ -379,7 +381,7 @@ done
 # ── 6. Jeton du registre ───────────────────────────────────────────────────
 # Créé VIDE avec les bons droits : l'opérateur n'a plus qu'à y coller le PAT,
 # sans avoir à penser au chmod. deploy.sh refuse explicitement un jeton vide.
-step "7/8 Jeton du registre"
+step "7/9 Jeton du registre"
 token="$(ghcr_token_file)"
 if [ -s "$token" ]; then
   chmod 600 "$token"
@@ -393,7 +395,7 @@ fi
 # ── 7. Cron de sauvegarde ──────────────────────────────────────────────────
 # Écrit seulement si le contenu change : rejouer setup.sh ne doit pas donner
 # l'impression d'avoir modifié quelque chose alors que rien n'a bougé.
-step "8/8 Sauvegarde quotidienne (cron)"
+step "8/9 Sauvegarde quotidienne (cron)"
 mkdir -p "$CRON_DIR"
 cron_file="$CRON_DIR/carlys-backup"
 cron_tmp="$(mktemp)"
@@ -423,6 +425,54 @@ else
 fi
 rm -f "$cron_tmp"
 trap - EXIT
+
+# ── 9. Supervision : la minuterie systemd ──────────────────────────────────
+#
+# CE QU'ELLE ALLUME, ET CE QU'ELLE N'ALLUME PAS. La minuterie fait passer
+# `carlysctl supervise` toutes les deux minutes : il répare ce qui est tombé et
+# ajuste le nombre d'exemplaires de l'API à la charge mesurée. Elle ne déploie
+# RIEN : la mise à jour automatique reste commandée par CARLYS_AUTO_UPDATE dans
+# le .env de chaque environnement, livré à « non ». Autrement dit, ce qui
+# s'allume ici garde la pile debout ; ce qui change la version qu'elle sert
+# reste un choix explicite.
+step "9/9 Supervision (systemd)"
+poser_unite_systemd() {
+  local nom="$1" src dst tmp
+  src="$CARLYS_REPO_DIR/infrastructure/server/systemd/$nom"
+  dst="/etc/systemd/system/$nom"
+  if [ ! -f "$src" ]; then
+    warn "gabarit absent : $src — supervision non installée"
+    return 1
+  fi
+  if [ "$DRY_RUN" = "1" ]; then
+    printf '   %s[essai]%s écriture de %s\n' "$_c_yellow" "$_c_off" "$dst"
+    return 0
+  fi
+  # `__DEPOT__` remplacé par le chemin réel : les unités doivent pouvoir
+  # désigner carlysctl sans supposer où le dépôt a été cloné.
+  tmp="$(mktemp)"
+  sed "s#__DEPOT__#$CARLYS_REPO_DIR#g" "$src" > "$tmp"
+  if [ -f "$dst" ] && cmp -s "$tmp" "$dst"; then
+    rm -f "$tmp"
+    info "$dst déjà à jour"
+    return 0
+  fi
+  install -m 644 "$tmp" "$dst"
+  rm -f "$tmp"
+  ok "$dst"
+  return 0
+}
+
+if poser_unite_systemd carlys-supervision.service && poser_unite_systemd carlys-supervision.timer; then
+  run systemctl daemon-reload
+  # Seule la MINUTERIE est activée : le service est un `oneshot` qu'elle
+  # déclenche. L'activer lui aussi ajouterait une passe au démarrage, en plus
+  # de celle de la minuterie, sans que rien ne le signale.
+  enable_service carlys-supervision.timer
+  info "prochaine passe : systemctl list-timers carlys-supervision.timer"
+  info "journal         : journalctl -u carlys-supervision.service -f"
+  info "passe immédiate : systemctl start carlys-supervision.service"
+fi
 
 # ── Récapitulatif : ce qui reste MANUEL ────────────────────────────────────
 DOMAIN_HINT="$(env_value DOMAIN "$(env_file production)" 'exemple.fr' 2>/dev/null || printf 'exemple.fr')"
@@ -528,8 +578,30 @@ $FIREWALL_NOTE
      grep -rn 'À COMPLÉTER' $CARLYS_REPO_DIR/docs/legal/
 
 Ensuite seulement :
-     $CARLYS_REPO_DIR/scripts/server/deploy.sh staging <sha>
-     $CARLYS_REPO_DIR/scripts/server/promote.sh          # production, geste humain
+     $CARLYS_REPO_DIR/scripts/server/carlysctl deploy staging <sha>
+     $CARLYS_REPO_DIR/scripts/server/carlysctl promote      # production, geste humain
+
+── CE QUI TOURNE DÉSORMAIS TOUT SEUL, ET CE QUI NE TOURNE PAS ──
+
+  OUI, sans rien demander (minuterie installée à l'étape 9, toutes les 2 min) :
+    · réparation — conteneur disparu, arrêté, ou « unhealthy » deux passages
+      de suite ; plafonnée à 5 réparations par heure, au-delà elle s'arrête et
+      le DIT plutôt que de masquer une panne qui revient ;
+    · mise à l'échelle de l'API sur la charge mesurée (utilisateurs en ligne,
+      débit, latence), avec délai de garde et patience à la baisse ;
+    · amont Nginx tenu à jour après chaque changement.
+
+  NON, tant que vous ne l'avez pas écrit vous-même :
+    · déployer une nouvelle version. CARLYS_AUTO_UPDATE=non dans les deux
+      .env. Passé à « oui », la RECETTE suit la branche configurée, et la
+      PRODUCTION promeut le sha qui tourne déjà en recette après une heure de
+      maturation saine — jamais une branche, jamais sans les vérifications de
+      promote.sh.
+
+  Pour regarder :   $CARLYS_REPO_DIR/scripts/server/carlysctl status
+  Pour diagnostiquer : $CARLYS_REPO_DIR/scripts/server/carlysctl doctor
+  Journal de la supervision : journalctl -u carlys-supervision.service -f
+  Pour tout arrêter :  systemctl disable --now carlys-supervision.timer
 
 FIN
 

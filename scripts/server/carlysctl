@@ -200,12 +200,21 @@ supervise_un() {
   file="$(env_file "$env_name")"
   step "Supervision de « $env_name »"
 
+  # Le VERROU couvre la réparation et la mise à l'échelle : sans lui, une
+  # passe de supervision pourrait lancer `docker compose up -d` en plein
+  # milieu d'un déploiement tapé à la main, et les deux se marcheraient
+  # dessus. Il est relâché AVANT la mise à jour, qui délègue à deploy.sh ou
+  # promote.sh — deux scripts séparés qui prennent le verrou pour eux-mêmes.
+  lock_env "$env_name"
+
   # Chaque étape est isolée : un `heal` qui échoue (plafond atteint) ne doit
   # pas empêcher la mise à jour de tourner, et inversement. Le code de retour
   # global reste 0 — c'est une minuterie qui appelle, et un échec systemd
   # répété ne dirait rien de plus que les avertissements déjà journalisés.
   heal_run "$env_name" "$file" || true
   autoscale_passage "$env_name" "$file" oui || true
+
+  unlock_env
   update_run "$env_name" "$file" || true
 }
 

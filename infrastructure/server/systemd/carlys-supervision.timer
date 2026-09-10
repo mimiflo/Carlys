@@ -1,0 +1,46 @@
+# Carlys — le rythme de la supervision.
+#
+# DEUX MINUTES, et le choix se défend des deux côtés.
+#
+# Plus court n'apporterait rien : les décisions que la passe prend sont toutes
+# amorties par leurs propres garde-fous — délai de garde de cinq minutes après
+# un changement d'échelle, patience de trois passages avant de réduire,
+# maturation d'une heure avant de promouvoir. Repasser toutes les trente
+# secondes ne ferait qu'ajouter des lectures de /metrics et des lignes de
+# journal, sans avancer une seule décision.
+#
+# Plus long coûterait cher : c'est le délai MAXIMAL entre le moment où un
+# conteneur tombe et celui où quelqu'un s'en aperçoit. Docker relance de
+# lui-même ce qui a `restart: unless-stopped`, mais rien ne recrée un conteneur
+# disparu, ne redémarre un conteneur « unhealthy » qui tourne toujours, ni ne
+# corrige un amont Nginx devenu faux — ces trois-là attendent la passe.
+#
+# La toute première passe est décalée de cinq minutes après le démarrage : au
+# boot, Docker démarre ses conteneurs, leurs sondes sont en « starting », et
+# une passe lancée trop tôt conclurait à une panne générale et déclencherait
+# une réparation dont personne n'a besoin.
+
+[Unit]
+Description=Carlys — supervision toutes les deux minutes
+Documentation=file://__DEPOT__/docs/deployment/orchestration.md
+
+[Timer]
+OnBootSec=5min
+OnUnitActiveSec=2min
+
+# `Persistent` n'a de sens que pour les minuteries de CALENDRIER : il rattrape
+# une occurrence manquée pendant que la machine était éteinte. Ici, rattraper
+# n'aurait aucun sens — on ne supervise pas rétroactivement l'état d'il y a
+# trois heures.
+Persistent=false
+
+# Dix secondes de tolérance : sans elles, systemd réveille le processeur à la
+# seconde près toutes les deux minutes, pour rien.
+AccuracySec=10s
+# Décale chaque déclenchement d'un peu de hasard, pour ne pas se retrouver à
+# lire /metrics exactement en même temps que la sauvegarde ou une autre
+# minuterie posée à la même heure ronde.
+RandomizedDelaySec=15s
+
+[Install]
+WantedBy=timers.target
