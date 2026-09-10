@@ -183,12 +183,25 @@ et aucune raison de les confondre.
 `setup.sh` installe Docker et le plugin Compose, Nginx, ufw et cron, ferme
 l'entrée sauf 22 (SSH) et 80 **depuis la seule adresse donnée en
 `CARLYS_PROXY_CIDR`**, crée l'arborescence `/srv/carlys/`, y dépose les `.env`
-à remplir depuis les exemples versionnés, et installe la tâche quotidienne de
-sauvegarde. **Il est idempotent** : le relancer sur un serveur déjà configuré
-ne casse rien et ne réécrit aucun `.env` déjà rempli.
+à remplir depuis les exemples versionnés, installe la tâche quotidienne de
+sauvegarde, et **arme la supervision** — une minuterie systemd qui passe toutes
+les deux minutes. **Il est idempotent** : le relancer sur un serveur déjà
+configuré ne casse rien et ne réécrit aucun `.env` déjà rempli.
+
+Deux choses qu'il pose et dont on ne se rend compte qu'en leur absence :
+
+- **les amonts Nginx de départ.** Les vhosts du dépôt ne déclarent pas l'amont
+  de l'API — elle tourne en plusieurs exemplaires sur des ports que Docker
+  attribue, et c'est `carlysctl` qui écrit la liste réelle. Tant que ce fichier
+  n'existe pas, `nginx -t` échoue sur *host not found in upstream*. `setup.sh`
+  en pose une version à un seul exemplaire **avant** de démarrer Nginx ;
+- **la minuterie de supervision.** Elle répare ce qui tombe et ajuste le nombre
+  d'exemplaires à la charge. Elle **ne déploie rien** : la mise à jour
+  automatique reste commandée par `CARLYS_AUTO_UPDATE`, livré à `non`. Tout est
+  dans [orchestration.md](orchestration.md).
 
 **Il n'installe PAS certbot, et il retire la règle 443 si elle traîne d'une
-installation antérieure** (`scripts/server/setup.sh`, étapes 1/7 et 3/7). C'est
+installation antérieure** (`scripts/server/setup.sh`, étapes 1/9 et 4/9). C'est
 la conséquence directe de l'architecture : les certificats des six noms vivent
 sur gra6. Un certbot posé ici armerait une minuterie de renouvellement pour des
 certificats qui n'existent pas, et laisserait croire au prochain exploitant que
@@ -736,6 +749,14 @@ done
 chaque fichier en découlent. Il n'y a plus de chemin de certificat à
 substituer, ces fichiers n'en nomment aucun.
 
+Ces vhosts déclarent l'amont de l'admin et celui de MinIO, mais **pas** celui de
+l'API : elle tourne en plusieurs exemplaires sur des ports que Docker attribue
+dans une plage, et c'est `carlysctl` qui écrit la liste réelle dans
+`/etc/nginx/conf.d/carlys-<env>-api-upstream.conf`. `setup.sh` en a posé une
+version à un exemplaire à l'étape 2, sans quoi `nginx -t` échouerait ici sur
+*host not found in upstream*. Le détail est dans
+[orchestration.md](orchestration.md#8-lamont-nginx-est-engendré).
+
 Le snippet `carlys-proxy.conf` n'est pas un détail de rangement : c'est lui qui
 porte les en-têtes de proxy des six vhosts — dont `X-Forwarded-For` en mode
 **ajout** (`$proxy_add_x_forwarded_for`, le second saut) et `X-Forwarded-Proto:
@@ -801,8 +822,11 @@ curl -s -o /dev/null -w '%{http_code}\n' \
 ## 7. Premier déploiement de la recette
 
 ```bash
-sudo /srv/carlys/repo/scripts/server/deploy.sh staging <sha12>
+sudo /srv/carlys/repo/scripts/server/carlysctl deploy staging <sha12>
 ```
+
+`carlysctl deploy` appelle `deploy.sh` sans rien y ajouter : les deux formes
+sont équivalentes, `carlysctl` est simplement le point d'entrée unique.
 
 Reprenez le `sha12` noté à l'étape 4. `deploy.sh` se connecte au registre, tire
 les images, **applique les migrations d'abord** (un échec arrête tout, sans
@@ -1120,6 +1144,29 @@ aucun `[À COMPLÉTER]` ne doit y apparaître.
 
 ## 10. Ensuite : exploitation courante
 
+### Ce que le serveur fait désormais sans vous
+
+Depuis l'étape 2, une minuterie systemd passe **toutes les deux minutes** et :
+
+- relève un conteneur disparu, arrêté, ou « unhealthy » deux passages de suite
+  — avec un plafond de cinq réparations par heure, au-delà duquel elle
+  **s'arrête et le dit** plutôt que de masquer une panne qui revient ;
+- ajuste le nombre d'exemplaires de l'API à la charge mesurée (utilisateurs en
+  ligne, débit, latence) ;
+- tient l'amont Nginx à jour après chaque changement.
+
+Elle **ne déploie rien**. Pour regarder ce qu'elle voit :
+
+```bash
+sudo /srv/carlys/repo/scripts/server/carlysctl status
+sudo journalctl -u carlys-supervision.service -f
+```
+
+Tout est détaillé dans **[orchestration.md](orchestration.md)** : la formule de
+mise à l'échelle et ses garde-fous, le plafond de réparations, et comment
+activer la mise à jour automatique — y compris en production, où elle promeut
+la recette après maturation plutôt que de suivre une branche.
+
 ### Déployer une nouvelle version
 
 1. Poussez. `images-publish` publie les trois images du nouveau SHA.
@@ -1130,9 +1177,9 @@ aucun `[À COMPLÉTER]` ne doit y apparaître.
    sudo git -C /srv/carlys/repo pull --ff-only
    ```
 
-3. `sudo /srv/carlys/repo/scripts/server/deploy.sh staging <nouveau-sha12>`
+3. `sudo /srv/carlys/repo/scripts/server/carlysctl deploy staging <nouveau-sha12>`
 4. Éprouvez la recette.
-5. Lancez `images-publish-prod` sur ce SHA, puis `promote.sh`.
+5. Lancez `images-publish-prod` sur ce SHA, puis `carlysctl promote`.
 
 **Si `deploy.sh` refuse avec « Image introuvable ».** Le sha n'a pas d'images :
 son exécution a été annulée — GitHub annule l'exécution en attente d'un groupe
@@ -1249,9 +1296,14 @@ c'est ce champ qu'on suit d'une requête à l'autre.
 | Un service, un volume ou une variable manque après un déploiement pourtant réussi | le clone `/srv/carlys/repo` n'a pas été mis à jour : `deploy.sh` a tiré les bonnes images et les a démarrées sous un `compose.yml` périmé (étape 10) |
 | Un hôte inconnu (domaine nu, `www`, `Host` forgé en direct) atteint l'API de production | le vhost attrape-tout n'est pas activé (étape 6) — et, pour l'accès direct, le port 80 n'est pas restreint à gra6 (étape 2) |
 | Certificat expiré sur les six noms | rien à faire ici, ce serveur n'en détient aucun : c'est gra6 qui émet et renouvelle (étape 10, « Certificats ») |
+| `nginx -t` échoue sur `host not found in upstream "carlys_api_…"` | l'amont engendré manque dans `/etc/nginx/conf.d/` : rejouez `setup.sh`, ou `carlysctl heal <env>` si la pile tourne déjà ([orchestration.md](orchestration.md#8-lamont-nginx-est-engendré)) |
+| 502 alors que `docker compose ps` montre l'API en bonne santé | Nginx sert d'anciens ports : `carlysctl status` affiche la ligne `⚠ ÉCART nginx ↔ réalité`, `carlysctl heal <env>` la corrige |
+| `carlysctl status` dit `aucun exemplaire ne rend /metrics` | en production, `METRICS_TOKEN` manque dans le `.env` — la supervision voit encore la santé, mais plus la charge |
 
 ## À lire à côté
 
+- [`docs/deployment/orchestration.md`](orchestration.md) — ce que le serveur fait tout seul : supervision, réparation, mise à l'échelle, mise à jour automatique.
+- [`docs/deployment/builds-mobiles.md`](builds-mobiles.md) — compiler l'application de recette et celle de production.
 - [`infrastructure/deployment/README.md`](../../infrastructure/deployment/README.md) — pourquoi les migrations tournent avant la bascule, et comment l'arbre de production est fabriqué.
 - [`infrastructure/nginx/README.md`](../../infrastructure/nginx/README.md) — ce que garantissent les vhosts.
 - [`infrastructure/nginx/snippets/carlys-proxy.conf`](../../infrastructure/nginx/snippets/carlys-proxy.conf) — les en-têtes de proxy eux-mêmes, chacun commenté avec ce qui a été mesuré.

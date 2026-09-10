@@ -176,6 +176,7 @@ Toutes les valeurs des `.env.example` sont **factices** et adaptées au dévelop
 | `RATE_LIMIT_MAX_REQUESTS` | Requêtes max par fenêtre | `100` |
 | `SWAGGER_ENABLED` | Optionnel — Swagger actif par défaut hors production | `true` |
 | `METRICS_TOKEN` | Requis en production pour exposer `/metrics` (min. 16 caractères) | `jeton-factice-a-remplacer` |
+| `PRESENCE_WINDOW_SECONDS` | Fenêtre du compte « utilisateurs en ligne » exposé dans `/metrics`, en secondes (60 à 3600). C'est l'entrée de la mise à l'échelle automatique du serveur | `300` |
 | `JWT_ACCESS_SECRET` | **Requis** (≥ 32 caractères) — signature des access tokens | `openssl rand -base64 48` |
 | `JWT_ACCESS_TTL_SECONDS` | Durée de vie de l'access token | `900` |
 | `JWT_ISSUER` / `JWT_AUDIENCE` | Claims vérifiés à chaque requête | `carlys-api` / `carlys-mobile` |

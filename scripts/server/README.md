@@ -1,23 +1,56 @@
 # Scripts d'exploitation du serveur dédié
 
-Quatre scripts, une machine Debian/Ubuntu, deux environnements (`staging` et
-`production`) isolés par projet Compose et par volumes. Ils ne remplacent pas
-la stratégie de déploiement — elle est écrite dans
+Une machine Debian/Ubuntu, deux environnements (`staging` et `production`)
+isolés par projet Compose et par volumes. Ces scripts ne remplacent pas la
+stratégie de déploiement — elle est écrite dans
 [`infrastructure/deployment/README.md`](../../infrastructure/deployment/README.md)
 — ils l'exécutent.
 
+**Un seul point d'entrée : `carlysctl`.** Il route vers les quatre scripts
+historiques sans rien leur recopier, et ajoute ce qu'aucun ne portait — l'état
+des lieux, la mise à l'échelle, la réparation, la mise à jour autonome. C'est
+lui que la minuterie systemd appelle toutes les deux minutes.
+Tout est décrit dans
+[`docs/deployment/orchestration.md`](../../docs/deployment/orchestration.md).
+
+| Commande | Quand | Ce qu'elle fait |
+| --- | --- | --- |
+| `carlysctl status [env]` | quand on se demande si ça va | version déployée, conteneurs, exemplaires, ports servis par Nginx, utilisateurs en ligne, débit, latence, et ce que le superviseur s'apprête à faire |
+| `carlysctl doctor` | après une installation, ou quand rien ne marche | nomme ce qui manque sur la machine |
+| `carlysctl scale <env> <n>` | à la main | fixe le nombre d'exemplaires d'API |
+| `carlysctl autoscale <env>` | pour comprendre une décision | dit ce qu'il ferait ; n'agit qu'avec `--appliquer` |
+| `carlysctl heal <env>` | quand quelque chose est tombé | relève ce qui manque, avec un plafond horaire |
+| `carlysctl update <env>` | si `CARLYS_AUTO_UPDATE=oui` | recette : suit une branche ; production : promeut la recette après maturation |
+| `carlysctl supervise [env]` | par la minuterie | une passe complète : réparer, mettre à l'échelle, mettre à jour |
+| `carlysctl deploy \| promote \| backup` | — | route vers les scripts ci-dessous, sans rien y ajouter |
+
 | Script | Quand | Ce qu'il fait |
 | --- | --- | --- |
-| `setup.sh` | une fois, puis à chaque fois qu'une brique est ajoutée | prépare la machine : docker + plugin compose, nginx, ufw (22, et 80 **depuis le seul reverse proxy**), `/srv/carlys`, copie des `.env` d'exemple, cron de sauvegarde. **Idempotent.** |
-| `deploy.sh` | à chaque livraison en recette | `deploy.sh <staging\|production> <sha>` : pull des trois images, migration, bascule, santé, retour arrière si besoin |
+| `setup.sh` | une fois, puis à chaque fois qu'une brique est ajoutée | prépare la machine : docker + plugin compose, nginx, ufw (22, et 80 **depuis le seul reverse proxy**), amonts Nginx de départ, `/srv/carlys`, copie des `.env` d'exemple, cron de sauvegarde, minuterie de supervision. **Idempotent.** |
+| `deploy.sh` | à chaque livraison en recette | `deploy.sh <staging\|production> <sha>` : pull des trois images, migration, bascule, santé de **chaque** exemplaire, retour arrière si besoin |
 | `promote.sh` | pour une mise en production | rejoue en production **le sha déjà validé en recette**, après vérification du registre et confirmation humaine |
 | `backup.sh` | tous les jours, par cron | `pg_dump` de chaque base **déployée**, horodaté, rétention 14 jours |
 
-`_common.sh` n'est pas un script : c'est la bibliothèque partagée (chemins,
-verrou d'environnement, lecture du journal `DEPLOYED`, appel de Compose,
-attente HTTP bornée). Elle existe pour que ces règles ne soient écrites qu'une
-fois — `promote.sh` lit le `DEPLOYED` que `deploy.sh` écrit, `backup.sh` s'en
-sert pour savoir si un environnement a déjà hébergé quelque chose.
+## Les bibliothèques
+
+Aucune ne s'exécute seule ; toutes sont chargées par `_common.sh`, et aucune ne
+fait d'effet de bord au chargement.
+
+| Fichier | Ce qu'il sait |
+| --- | --- |
+| `_common.sh` | chemins, verrou d'environnement, lecture du journal `DEPLOYED`, appel de Compose, attente HTTP bornée |
+| `_replicas.sh` | exemplaires de l'API, leurs ports réels, l'amont Nginx engendré |
+| `_state.sh` | la mémoire entre deux passages de supervision |
+| `_metrics.sh` | lecture de `/metrics` sur chaque exemplaire, et dérivation d'un débit |
+| `_scale.sh` | la décision de mise à l'échelle, et ses garde-fous |
+| `_heal.sh` | la réparation, et son plafond horaire |
+| `_update.sh` | la mise à jour autonome, et ce qui l'autorise |
+| `_status.sh` | l'état des lieux |
+
+Elles existent pour que chaque règle ne soit écrite qu'une fois — `promote.sh`
+lit le `DEPLOYED` que `deploy.sh` écrit, `backup.sh` s'en sert pour savoir si
+un environnement a déjà hébergé quelque chose, et `carlysctl` ne réinvente
+aucun des deux.
 
 ## Ce qu'ils supposent
 
@@ -30,9 +63,21 @@ sert pour savoir si un environnement a déjà hébergé quelque chose.
   staging/.env        production/.env        # secrets, mode 600
   staging/DEPLOYED    production/DEPLOYED    # journal tenu par deploy.sh
   staging/.lock       production/.lock       # verrou flock d'un déploiement
+  staging/orchestrateur.etat                 # mémoire du superviseur, mode 600
   backups/                                   # dumps, mode 700
   ghcr.token                                 # PAT read:packages, mode 600
 ```
+
+- et, hors de cette arborescence, les amonts Nginx engendrés :
+
+```
+/etc/nginx/conf.d/carlys-staging-api-upstream.conf
+/etc/nginx/conf.d/carlys-production-api-upstream.conf
+```
+
+  Ils sont **écrits par `carlysctl`**, jamais à la main : l'API tourne en
+  plusieurs exemplaires sur des ports que Docker attribue dans une plage, et
+  une liste écrite à la main serait fausse dès la première mise à l'échelle.
 
 - les images publiées sous `ghcr.io/mimiflo/` et taguées `sha-<12 caractères>` ;
   l'admin de **production** porte en plus le suffixe `-prod` (garde légale

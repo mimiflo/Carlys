@@ -58,8 +58,25 @@ seulement terminé un cran plus haut. Conséquences complètes et mesurées :
   s'y substitue sans changer autre chose que les variables `S3_*` ;
 - sauvegardes PostgreSQL automatiques + test de restauration régulier ;
 - health checks (`/health/ready`) : c'est sur cette route que `deploy.sh`
-  attend, en boucle bornée, avant de considérer une bascule réussie ;
-- pas de déploiement automatique en production sans validation humaine.
+  attend, en boucle bornée, avant de considérer une bascule réussie — et sur
+  **chaque exemplaire** de l'API, pas sur un seul : un déploiement où deux
+  exemplaires sur trois répondent est un déploiement raté, et le contrôler à
+  travers Nginx ne le verrait pas ;
+- **l'API est réplicable, et la pile s'adapte à la charge.** `CARLYS_API_REPLICAS`
+  dans le `.env` fixe le nombre d'exemplaires ; la supervision l'ajuste sur ce
+  qu'elle mesure (utilisateurs en ligne, débit, latence), avec un délai de garde
+  et une patience asymétrique à la baisse. Deux conséquences à connaître : le
+  compteur de limitation de débit vit dans **Redis** (en mémoire, N exemplaires
+  laisseraient passer N fois le quota annoncé), et l'amont Nginx de l'API est
+  **engendré** à partir des ports que Docker attribue réellement. Tout est dans
+  [`docs/deployment/orchestration.md`](../../docs/deployment/orchestration.md) ;
+- **pas de déploiement automatique en production sans validation humaine.**
+  Cette règle tient toujours, et la mise à jour autonome ne la contredit pas :
+  activée (`CARLYS_AUTO_UPDATE=oui`, écrit à la main dans le `.env` de
+  production), elle ne suit **aucune branche** — elle promeut le sha qui tourne
+  déjà en recette, après une maturation pendant laquelle il est resté sain, et
+  via `promote.sh`, dont aucune vérification n'est court-circuitée.
+  L'interrupteur décide qui appuie sur le bouton, pas si le filet est tendu.
 
 ## Migrations : avant la bascule, jamais au démarrage
 
@@ -167,9 +184,17 @@ Les scripts du serveur (`scripts/server/`) et le fichier Compose unique
 (`infrastructure/server/compose.yml`) enchaînent tout cela :
 `setup.sh` prépare la machine, `deploy.sh <env> <sha12>` migre puis bascule,
 `promote.sh` porte un SHA de la recette vers la production après confirmation,
-`backup.sh` sauvegarde. La marche à suivre complète, avec ce que chaque étape
-doit répondre pour être réussie, est dans le
-**[guide de mise en route](../../docs/deployment/mise-en-route-serveur.md)**.
+`backup.sh` sauvegarde.
+
+`carlysctl` est le point d'entrée qui les réunit — et qui porte en plus l'état
+des lieux, la mise à l'échelle, la réparation et la mise à jour autonome. Une
+minuterie systemd l'appelle toutes les deux minutes.
+
+La marche à suivre complète, avec ce que chaque étape doit répondre pour être
+réussie, est dans le
+**[guide de mise en route](../../docs/deployment/mise-en-route-serveur.md)** ;
+ce que le serveur fait ensuite tout seul est dans
+**[orchestration.md](../../docs/deployment/orchestration.md)**.
 
 ## Pages web publiques et `PUBLIC_APP_URL`
 

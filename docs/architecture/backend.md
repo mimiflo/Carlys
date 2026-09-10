@@ -212,6 +212,7 @@ Variables validées (Étape 1) :
 | `RATE_LIMIT_TTL_SECONDS` / `RATE_LIMIT_MAX_REQUESTS` | entiers positifs | `60` / `100` |
 | `SWAGGER_ENABLED` | `true \| false` | activé hors production |
 | `METRICS_TOKEN` | ≥ 16 caractères | optionnel (requis pour `/metrics` en production) |
+| `PRESENCE_WINDOW_SECONDS` | entier, 60 à 3600 | `300` |
 
 Les secrets d'étapes futures (JWT, Stripe, S3…) seront ajoutés **dans ce
 schéma** au moment où le code qui les consomme arrive — jamais avant.
