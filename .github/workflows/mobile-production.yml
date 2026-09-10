@@ -578,11 +578,11 @@ jobs:
           restore-keys: gradle-${{ runner.os }}-
 
       # android/ n'est pas versionné : il se régénère à la demande, par le MÊME
-      # script que le poste de développement et que demo-apk.yml — c'est ce qui
-      # empêche les chemins de diverger. mobile_platforms.sh crée les dossiers
-      # sans toucher à pubspec.lock (voir son en-tête : `flutter create` appelé
-      # nu le réécrivait, et l'artefact n'était alors plus construit sur l'arbre
-      # de dépendances éprouvé par mobile-ci).
+      # script que le poste de développement et que mobile-recette.yml — c'est
+      # ce qui empêche les chemins de diverger. mobile_platforms.sh crée les
+      # dossiers sans toucher à pubspec.lock (voir son en-tête : `flutter
+      # create` appelé nu le réécrivait, et l'artefact n'était alors plus
+      # construit sur l'arbre de dépendances éprouvé par mobile-ci).
       - name: Dossiers de plateformes
         run: |
           set -euo pipefail
@@ -717,8 +717,8 @@ jobs:
       - name: Génération de code (Drift)
         run: dart run build_runner build
 
-      # Garde-fou repris de demo-apk.yml. `--enforce-lockfile` ne protège que
-      # de ce qui arrive AVANT lui ; ce contrôle ferme le trou par l'autre
+      # Garde-fou repris de mobile-recette.yml. `--enforce-lockfile` ne protège
+      # que de ce qui arrive AVANT lui ; ce contrôle ferme le trou par l'autre
       # bout : si une étape quelconque de ce job modifie un fichier VERSIONNÉ,
       # le job échoue au lieu de publier un bundle construit sur autre chose
       # que l'arbre du dépôt. Sans restriction de chemins, volontairement — le
@@ -737,8 +737,9 @@ jobs:
 
       # ── Le bundle pour les magasins ─────────────────────────────────────────
       #
-      # Pas de `--target-platform` ici, à REBOURS de demo-apk.yml : un app
-      # bundle embarque les trois ABI et c'est Play qui découpe par appareil.
+      # Pas de `--target-platform` ici, à REBOURS de l'APK de vérification
+      # construit juste après : un app bundle embarque les trois ABI et c'est
+      # Play qui découpe par appareil.
       # Restreindre à arm64 économiserait quelques minutes et exclurait
       # silencieusement les appareils 32 bits encore en service.
       #
