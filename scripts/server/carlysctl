@@ -335,7 +335,8 @@ supervise_un() {
   heal_run "$env_name" "$file" || true
   autoscale_passage "$env_name" "$file" oui || true
   # Le disque est la panne qui tue un serveur dédié plus souvent que la
-  # charge : journaux, images, sauvegardes. N'agit qu'au-delà du seuil.
+  # charge. Élague à CHAQUE passe (seuls les deux shas du filet sont gardés) ;
+  # le seuil CARLYS_DISK_HIGH_PERCENT n'est plus que le niveau d'alerte.
   prune_si_necessaire "$file" || true
 
   unlock_env

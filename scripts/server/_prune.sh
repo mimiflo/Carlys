@@ -24,7 +24,9 @@
 #
 # Chargé par _common.sh. Aucun effet de bord au chargement.
 
-# Seuil d'occupation du disque au-delà duquel la supervision élague d'elle-même.
+# Seuil d'occupation du disque au-delà duquel on ALERTE. Ce n'est plus le
+# déclencheur de l'élagage — voir prune_si_necessaire : l'élagage est devenu
+# systématique, le seuil est devenu le niveau où un humain doit regarder.
 prune_seuil_pourcent() { env_value CARLYS_DISK_HIGH_PERCENT "$1" 80; }
 
 # Occupation de la partition qui porte les données, en pourcentage entier.
@@ -67,7 +69,14 @@ prune_images() {
   # relever.
   portees="$(docker ps -a --format '{{.Image}}' 2>/dev/null | tr '\n' ' ')"
 
-  info "shas protégés : ${proteges:-aucun}"
+  # TOUT L'INFORMATIF SUR STDERR, et ce n'est pas un détail : l'appelant fait
+  # `n="$(prune_images)"` pour lire le COMPTE. La première version imprimait
+  # ces lignes sur stdout — capturées avec le nombre, elles rendaient la
+  # comparaison `[ "$n" -gt 0 ]` invalide (« integer expression expected »),
+  # attrapé au banc d'essai avant d'atteindre le serveur.
+  # En mode --essai seulement : sous la supervision, cette ligne partirait au
+  # journal toutes les deux minutes — 720 fois par jour pour ne rien dire.
+  [ "$essai" = oui ] && info "shas protégés : ${proteges:-aucun}" >&2
 
   while read -r image; do
     [ -n "$image" ] || continue
@@ -80,14 +89,14 @@ prune_images() {
     case " $proteges " in *" $sha "*) continue ;; esac
 
     if [ "$essai" = oui ]; then
-      info "  [essai] supprimerait $image"
+      info "  [essai] supprimerait $image" >&2
     else
       if docker image rm "$image" >/dev/null 2>&1; then
-        info "  supprimé $image"
+        info "  supprimé $image" >&2
       else
         # Docker refuse une image encore référencée. Ce n'est pas une erreur :
         # c'est le second filet, et il vient de servir.
-        info "  conservé  $image (Docker le refuse — encore référencé)"
+        info "  conservé  $image (Docker le refuse — encore référencé)" >&2
         continue
       fi
     fi
@@ -98,14 +107,30 @@ prune_images() {
   printf '%d' "$supprimees"
 }
 
-# `prune_si_necessaire <.env>` — appelé par la supervision. N'agit QUE si le
-# disque dépasse le seuil.
+# `prune_si_necessaire <.env>` — appelé par la supervision À CHAQUE passe.
 #
-# Pourquoi pas à chaque passe : un élagage inutile n'est pas gratuit — il fait
-# perdre le cache d'images qui rend un retour arrière instantané. On ne paie ce
-# prix que lorsque la place manque vraiment.
+# L'ANCIENNE POLITIQUE ATTENDAIT LE SEUIL, et c'était un mauvais calcul, vu sur
+# le serveur réel : 12 à 15 Go d'images dormaient en permanence SOUS les 80 %,
+# et chaque déploiement automatique en ajoutait trois de plus. L'argument du
+# « cache qui rend le retour arrière instantané » ne tient que pour les DEUX
+# shas protégés — le déployé et le précédent, qui sont précisément ceux que
+# prune_images ne touche jamais. Tout le reste se re-télécharge du registre en
+# cas de besoin ; le garder ne payait rien et coûtait des gigaoctets.
+#
+# Désormais : on élague à CHAQUE passe (l'énumération coûte un docker image ls
+# quand il n'y a rien à faire), les couches pendantes partent aussi, et le
+# seuil devient ce qu'il aurait toujours dû être — le niveau où un humain doit
+# regarder, parce que si le disque est encore plein APRÈS l'élagage, ce ne
+# sont pas les images Carlys, et rien d'automatique n'y peut plus rien.
 prune_si_necessaire() {
   local file="$1" occupe seuil n
+  # shellcheck disable=SC2119  # sans --essai : on élague pour de vrai
+  n="$(prune_images)"
+  [ "$n" -gt 0 ] && ok "$n image(s) Carlys supprimée(s) (les deux shas du filet sont gardés)"
+  # Les couches PENDANTES : détaguées quand un tag mouvant avance, référencées
+  # par rien ni personne. `image prune` sans -a ne touche QUE celles-là.
+  docker image prune -f > /dev/null 2>&1 || true
+
   occupe="$(disque_pourcent)"
   seuil="$(prune_seuil_pourcent "$file")"
   [ -n "$occupe" ] || return 0
@@ -113,27 +138,16 @@ prune_si_necessaire() {
     alerte_resoudre machine disque "Disque plein, rien a elaguer"
     return 0
   fi
-  warn "disque à ${occupe} % (seuil ${seuil} %) — élagage des images Carlys"
-  # shellcheck disable=SC2119  # sans --essai : on élague pour de vrai
-  n="$(prune_images)"
-  occupe="$(disque_pourcent)"
-  if [ "$n" -eq 0 ]; then
-    # Le disque plein n'est pas une lenteur : PostgreSQL cesse d'écrire, les
-    # sauvegardes échouent, et l'état de l'orchestrateur ne peut plus être
-    # enregistré. Si l'élagage n'a rien trouvé, personne d'autre ne le fera.
-    alerte_signaler machine disque "Disque plein, rien a elaguer" \
-      "Occupation de $CARLYS_ROOT : ${occupe} % (seuil ${seuil} %)." \
-      "L'élagage des images Carlys n'a trouvé AUCUNE image à supprimer." \
-      "" \
-      "Un disque plein arrête PostgreSQL en écriture et fait échouer les" \
-      "sauvegardes. Regarder ailleurs :" \
-      "  docker system df" \
-      "  du -xh --max-depth=1 $CARLYS_ROOT"
-    warn "aucune image à élaguer, et le disque est toujours à ${occupe} %."
-    warn "  Regarder ailleurs : docker system df ; du -xh --max-depth=1 $CARLYS_ROOT"
-    warn "  Les volumes de données et les sauvegardes ne sont PAS élagués ici."
-    return 1
-  fi
-  ok "$n image(s) supprimée(s) — disque à ${occupe} %"
-  return 0
+  warn "disque à ${occupe} % (seuil ${seuil} %) APRÈS élagage — ce ne sont pas les images"
+  warn "  Regarder : docker system df ; du -xh --max-depth=1 $CARLYS_ROOT"
+  warn "  Les volumes de données et les sauvegardes ne sont PAS élagués ici."
+  alerte_signaler machine disque "Disque plein, rien a elaguer" \
+    "Occupation de $CARLYS_ROOT : ${occupe} % (seuil ${seuil} %)." \
+    "L'élagage des images Carlys vient de passer et n'a pas suffi." \
+    "" \
+    "Un disque plein arrête PostgreSQL en écriture et fait échouer les" \
+    "sauvegardes. Regarder ailleurs :" \
+    "  docker system df" \
+    "  du -xh --max-depth=1 $CARLYS_ROOT"
+  return 1
 }

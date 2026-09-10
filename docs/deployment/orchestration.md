@@ -40,6 +40,7 @@ carlysctl prune --essai     # ce qu'un élagage d'images supprimerait
 | Relever un conteneur disparu, arrêté, ou « unhealthy » | **oui** | minuterie |
 | Ajuster le nombre d'exemplaires d'API à la charge | **oui** | minuterie |
 | Tenir l'amont Nginx à jour | **oui** | minuterie |
+| Élaguer images et couches Docker à chaque passe (le filet de retour arrière est gardé) | **oui** | minuterie |
 | Sauvegarder les bases **et les médias MinIO** | **oui** | cron, 3 h du matin |
 | **Déployer une nouvelle version** | **non par défaut** | `CARLYS_AUTO_UPDATE` |
 
@@ -566,7 +567,7 @@ ajoutée.
 | sauvegarde d'une base **déployée** échouée | `backup.sh`, chaque nuit |
 | déploiement automatique échoué, sha mis de côté | `_update.sh` |
 | **plafond de réparations atteint** — l'orchestrateur a renoncé | `_heal.sh` |
-| disque au-delà du seuil et rien à élaguer | `_prune.sh` |
+| disque encore au-delà du seuil APRÈS élagage | `_prune.sh` |
 
 **On n'alerte que sur les transitions**, et c'est ce qui rend le système
 lisible. La supervision repasse toutes les deux minutes : signaler un *état*

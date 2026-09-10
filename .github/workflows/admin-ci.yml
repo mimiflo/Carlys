@@ -64,27 +64,13 @@ jobs:
       - name: Build des packages partagés
         run: pnpm --filter "./packages/**" build
 
-      # Voir api-ci.yml pour la mesure : `build` compile sans juger, et laissait
-      # passer en code 0 un fichier portant `any` et un `catch {}` vide dans
-      # packages/*/src. packages/ui est doublement concerné ici — c'est le
-      # design system que l'admin consomme, et ses tests vitest n'étaient
-      # exécutés par aucun workflow. pnpm saute les paquets sans script.
-      - name: Lint des packages partagés
-        run: pnpm --filter "./packages/**" lint
-
-      # Même garde qu'en api-ci.yml, et pour la même raison mesurée : `test`
-      # étant un nom de script BUILTIN pour pnpm, un filtre qui ne trouve aucun
-      # script `test` rend 0 en silence. Sans cette ligne, l'étape resterait
-      # verte en ne testant plus rien.
-      - name: Tests des packages partagés
-        run: |
-          node --eval '
-            if (!require("./packages/ui/package.json").scripts?.test) {
-              console.log("::error::packages/ui ne déclare plus de script test — les tests des paquets partagés ne testent plus rien.");
-              process.exit(1);
-            }
-          '
-          pnpm --filter "./packages/**" test
+      # Le LINT et les TESTS des paquets partagés ne sont PAS ici, et c'est
+      # une décision, pas un oubli : ils vivaient dans les DEUX workflows, et
+      # chaque poussée touchant packages/** les exécutait deux fois. api-ci
+      # les garde — avec la garde sur le script `test` de packages/ui — et
+      # ses déclencheurs couvrent exactement les mêmes chemins (packages/**
+      # en push comme en pull_request) : la porte est la même, payée une fois.
+      # Le BUILD, lui, reste ci-dessus : la compilation de l'admin en dépend.
 
       - name: Formatage
         run: pnpm format:check
