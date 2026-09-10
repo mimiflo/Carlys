@@ -1,0 +1,929 @@
+# Build mobile de PRODUCTION — le seul endroit où un artefact destiné aux
+# magasins se fabrique, et le seul du dépôt qui demande un OUI HUMAIN.
+#
+# Pourquoi ce fichier existe, et pourquoi il est séparé de la recette :
+#
+# 1. LE OUI HUMAIN N'EST PAS UNE CASE COCHÉE DANS UN FICHIER. Il est porté par
+#    un GitHub Environment à « required reviewers » : le job `construire` reste
+#    EN PAUSE, affiché « Waiting », jusqu'à ce qu'une personne clique Approve
+#    dans l'interface. C'est le mécanisme natif — donc le seul qu'on ne peut
+#    pas contourner en modifiant ce fichier. Le pendant côté serveur est
+#    `scripts/server/promote.sh`, qui fait recopier le sha à la main.
+#
+#    À CRÉER UNE FOIS, sans quoi la garde ne s'arme pas :
+#      Settings → Environments → New environment → nom : mobile-production
+#      → cocher « Required reviewers » → ajouter au moins une personne → Save.
+#
+#    UN ENVIRONNEMENT SANS REVIEWER LAISSE PASSER SANS RIEN DEMANDER : le job
+#    s'exécute, aucune pause, aucune notification. C'est le piège de ce
+#    mécanisme, et c'est pourquoi le job `controles` ci-dessous INTERROGE
+#    l'API pour vérifier que la règle existe vraiment, et échoue sinon. Le
+#    workflow le dit, il ne le suppose pas.
+#
+# 2. DEUX JOBS, ET L'ORDRE COMPTE. L'approbation d'un environnement met le job
+#    en pause AVANT sa première étape : mettre les gardes dans le job protégé
+#    obligerait à approuver d'abord, puis à découvrir que les textes légaux ne
+#    sont pas prêts. Les trois gardes vivent donc dans `controles`, non
+#    protégé ; l'humain n'est sollicité qu'une fois qu'elles sont vertes, et il
+#    approuve en connaissance de cause — le récapitulatif de `controles` lui
+#    dit le sha, son message de commit et les trois --dart-define exacts.
+#
+# 3. « BUILD ONCE » AU SENS DU CONTRAT. Côté serveur, la production redéploie
+#    les MÊMES octets que la recette. Ici c'est impossible et ce n'est pas une
+#    entorse : `--dart-define` est résolu À LA COMPILATION (les constantes de
+#    apps/mobile/lib/app/environment/app_environment.dart sont des
+#    `String.fromEnvironment` const), donc un binaire visant api-staging ne
+#    peut pas viser api. C'est exactement la raison pour laquelle
+#    images-publish-prod.yml RECONSTRUIT l'image admin — `NEXT_PUBLIC_*` y est
+#    inlinée au build — tout en refusant de reconstruire l'API. La règle
+#    dégradée, mais tenue, est donc : *on ne construit en production QUE des
+#    commits déjà construits et éprouvés en recette*. La garde n° 2 le
+#    vérifie.
+#
+# ── iOS : NON IMPLÉMENTÉ, DÉLIBÉRÉMENT ────────────────────────────────────────
+#
+# Ce workflow ne produit rien pour iOS. Ce qu'il faudrait pour l'ajouter, pour
+# que le choix reste éclairé plutôt que oublié :
+#   - un runner `macos-latest` (les seuls capables de lancer Xcode) ;
+#   - un certificat de DISTRIBUTION Apple (Apple Distribution), importé dans un
+#     trousseau temporaire créé et détruit dans le job ;
+#   - un profil de provisionnement App Store correspondant au bundle id ;
+#   - une clé API App Store Connect (issuer id + key id + .p8) pour téléverser
+#     vers TestFlight sans mot de passe d'application ;
+#   - `ios/` n'étant pas versionné (comme `android/`), scripts/mobile_platforms.sh
+#     doit être appelé avec « android,ios », et l'équivalent iOS de la
+#     signature Gradle est à écrire.
+# LE COÛT EST LE VRAI ARBITRAGE : une minute de runner macOS est facturée DIX
+# fois une minute de runner Linux chez GitHub. Un build iOS à chaque promotion
+# n'est pas neutre. À décider sciemment, pas par inertie.
+name: mobile-production
+
+# workflow_dispatch UNIQUEMENT. Jamais sur poussée — c'est la moitié
+# structurelle du « faudra dire oui » : aucun commit ne peut, à lui seul,
+# déclencher une fabrication d'artefact de production.
+on:
+  workflow_dispatch:
+    inputs:
+      sha:
+        description: >-
+          Commit à promouvoir — OBLIGATOIRE, et il doit déjà avoir été
+          construit en recette par mobile-staging. 12 ou 40 caractères.
+        required: true
+        type: string
+      build_number:
+        description: >-
+          versionCode Android (entier ≥ 1). Laisser VIDE pour utiliser le
+          numéro d'exécution de ce workflow, qui ne recule jamais. À renseigner
+          seulement pour reprendre la numérotation d'un dépôt Play existant.
+        required: false
+        type: string
+
+# `cancel-in-progress: false`, et ici la raison est plus forte qu'ailleurs :
+# une exécution en attente d'approbation est, par construction, longue. Une
+# seconde promotion lancée pendant qu'un humain réfléchit ne doit pas annuler
+# la première — annuler une exécution APPROUVÉE reviendrait à jeter le oui.
+concurrency:
+  group: mobile-production
+  cancel-in-progress: false
+
+jobs:
+  # ── Job 1 : les gardes, AVANT de déranger qui que ce soit ────────────────────
+  controles:
+    name: Gardes de promotion (sha, build once, textes légaux)
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    permissions:
+      contents: read
+      # Le seul droit ajouté : lire l'API Actions. La garde « build once »
+      # interroge la liste des artefacts du dépôt, comme images-publish-prod
+      # interroge le registre d'images. Aucun secret à créer, le GITHUB_TOKEN
+      # de l'exécution suffit.
+      actions: read
+
+    outputs:
+      sha40: ${{ steps.commit.outputs.sha40 }}
+      sha12: ${{ steps.commit.outputs.sha12 }}
+      sujet: ${{ steps.commit.outputs.sujet }}
+      api_url: ${{ steps.adresses.outputs.api_url }}
+      web_url: ${{ steps.adresses.outputs.web_url }}
+      build_number: ${{ steps.numero.outputs.valeur }}
+
+    steps:
+      # ── Garde de la garde : l'approbation est-elle réellement armée ? ────────
+      #
+      # Placée en PREMIER parce que si la réponse est non, tout le reste est
+      # sans objet : le job `construire` s'exécuterait sans que personne ne dise
+      # oui, et le « vrai système » demandé se réduirait à un nom de fichier.
+      # Deux états font échouer ici, et ce sont les deux où RIEN ne demanderait
+      # rien : l'environnement n'existe pas (404), ou il existe sans règle
+      # `required_reviewers`. Un troisième état — l'API illisible — n'est pas
+      # une preuve d'absence : on avertit bruyamment et on laisse la protection
+      # native, si elle est configurée, faire son office. On ne prétend pas
+      # savoir ce qu'on n'a pas pu lire.
+      - name: L'approbation humaine est réellement armée
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ENVIRONNEMENT: mobile-production
+        run: |
+          set -euo pipefail
+          corps="$(mktemp)"
+          code="$(curl -sS -o "$corps" -w '%{http_code}' \
+            -H 'Accept: application/vnd.github+json' \
+            -H "Authorization: Bearer $GH_TOKEN" \
+            "$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/environments/$ENVIRONNEMENT" \
+            || echo '000')"
+
+          creer="Settings → Environments → New environment → nom « $ENVIRONNEMENT » → cocher « Required reviewers » → ajouter au moins une personne → Save."
+
+          if [ "$code" = "404" ]; then
+            echo "::error title=Environnement « $ENVIRONNEMENT » inexistant::Le job de build déclare cet environnement pour se mettre EN PAUSE et attendre un clic humain sur Approve. Tant qu'il n'existe pas, GitHub ignore la clé et le build partirait sans que personne n'ait dit oui. Crée-le : $creer Puis relance ce workflow."
+            exit 1
+          fi
+
+          if [ "$code" != "200" ]; then
+            echo "::warning title=Impossible de vérifier l'environnement (HTTP $code)::Ce contrôle n'a pas pu lire $GITHUB_API_URL/repos/$GITHUB_REPOSITORY/environments/$ENVIRONNEMENT. Ce n'est PAS une preuve que la garde est absente : la protection native s'applique de toute façon si elle est configurée. Mais elle n'est plus vérifiée ici — va confirmer à la main que « Required reviewers » est bien coché sur $ENVIRONNEMENT."
+            exit 0
+          fi
+
+          if [ "$(jq -r 'any(.protection_rules[]?; .type == "required_reviewers")' "$corps")" != "true" ]; then
+            echo "::error title=Environnement « $ENVIRONNEMENT » sans reviewer::L'environnement existe mais ne porte AUCUNE règle « Required reviewers ». C'est le piège de ce mécanisme : le job ne se met pas en pause, il s'exécute, et la promotion en production se ferait sans qu'on demande rien à personne. Arme la garde : $creer Puis relance ce workflow."
+            exit 1
+          fi
+
+          nb="$(jq -r '[.protection_rules[] | select(.type == "required_reviewers") | (.reviewers // []) | length] | first // 0' "$corps")"
+          echo "Garde armée : l'environnement « $ENVIRONNEMENT » exige l'accord de $nb approbateur(s) déclaré(s)."
+
+      # fetch-depth: 0 — l'action ne sait pas récupérer un SHA abrégé, et
+      # l'entrée en accepte un de 12 caractères (la longueur que manipulent
+      # DEPLOYED, deploy.sh et promote.sh côté serveur, donc celle qu'un
+      # opérateur a sous la main). On rapatrie tout l'historique, puis on
+      # résout nous-mêmes.
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # ── Garde 1 : le sha demandé existe ─────────────────────────────────────
+      # Contrôle repris d'images-publish-prod.yml. Le `checkout --detach` n'est
+      # pas décoratif : les deux gardes suivantes lisent l'arbre DE CE COMMIT
+      # (docs/legal/ notamment), jamais la tête de branche.
+      - name: Le commit demandé existe
+        id: commit
+        env:
+          SHA_DEMANDE: ${{ inputs.sha }}
+        run: |
+          set -euo pipefail
+          if ! full="$(git rev-parse --verify --quiet "${SHA_DEMANDE}^{commit}")"; then
+            echo "::error title=Commit inconnu::« ${SHA_DEMANDE} » n'est pas un commit de ce dépôt. Reprends le sha affiché par l'exécution de mobile-staging qui a fabriqué l'APK de recette que tu viens d'éprouver — c'est lui, et lui seul, qu'on promeut."
+            exit 1
+          fi
+          git checkout --detach "$full"
+          {
+            echo "sha40=$full"
+            echo "sha12=$(echo "$full" | cut -c1-12)"
+            echo "sujet=$(git log -1 --format='%s' | tr -d '\r')"
+          } >> "$GITHUB_OUTPUT"
+          echo "Promotion demandée pour $(echo "$full" | cut -c1-12) : $(git log -1 --format='%s')"
+
+      # ── Garde 2 : règle « build once » ──────────────────────────────────────
+      #
+      # Transposition mobile du contrôle « les images d'API de ce commit
+      # existent déjà » d'images-publish-prod.yml. Là-bas, la preuve qu'un
+      # commit a été construit est un TAG adressé par sha qui se résout dans le
+      # registre. Ici, l'équivalent le plus proche qu'expose GitHub est
+      # l'artefact d'exécution : `GET /repos/{o}/{r}/actions/artifacts` liste
+      # les artefacts du DÉPÔT (pas d'une exécution), accepte un filtre `name`
+      # exact, et rend pour chacun un booléen `expired`. Un artefact dont le
+      # NOM porte le sha est donc adressable comme un tag l'est.
+      #
+      # LE CONTRAT AVEC mobile-staging.yml, ET SA FRAGILITÉ. Cette garde tient
+      # à une convention de NOMMAGE partagée : l'artefact de recette s'appelle
+      # `carlys-staging-<sha12>`. GitHub Actions ne partage rien entre deux
+      # workflows — c'est la même duplication assumée que le contrôle de forme
+      # de CARLYS_DOMAIN, recopié mot pour mot entre images-publish.yml et
+      # images-publish-prod.yml. Par tolérance, le repli ci-dessous accepte
+      # aussi tout nom COMMENÇANT par `carlys-staging` et CONTENANT le sha12,
+      # en avertissant. Le préfixe n'est pas un détail : sans lui, l'artefact
+      # `carlys-production-<sha12>` produit par ce workflow-ci satisferait sa
+      # propre garde au deuxième passage — une garde qui se prouve elle-même ne
+      # prouve rien.
+      #
+      # CE QUE CETTE GARDE NE PROUVE PAS, dit franchement :
+      #   - qu'un humain a INSTALLÉ et essayé l'APK de recette. Elle prouve
+      #     qu'il a été FABRIQUÉ, exactement comme `imagetools inspect` prouve
+      #     qu'une image existe sans prouver qu'on l'a fait tourner. C'est
+      #     l'approbation humaine du job suivant qui couvre ce trou, comme la
+      #     confirmation de promote.sh le fait côté serveur ;
+      #   - qu'un commit ancien reste promouvable. Les artefacts EXPIRENT (90
+      #     jours par défaut, réglable dans Settings → Actions → Artifact and
+      #     log retention) et peuvent être supprimés à la main, là où une image
+      #     de registre persiste. La garde échoue alors sur un commit qui avait
+      #     bel et bien été construit. C'est un faux refus, jamais un faux
+      #     accord : elle se trompe du bon côté, et le message dit quoi faire.
+      - name: Règle « build once » — ce commit a été construit en recette
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA12: ${{ steps.commit.outputs.sha12 }}
+        run: |
+          set -euo pipefail
+          api="$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/artifacts"
+          nom_canonique="carlys-staging-$SHA12"
+
+          interroger() {
+            curl -sS \
+              -H 'Accept: application/vnd.github+json' \
+              -H "Authorization: Bearer $GH_TOKEN" \
+              "$1"
+          }
+
+          # 1. Chemin nominal : filtre exact, côté serveur. Il ne dépend
+          #    d'aucune pagination, donc il trouve l'artefact aussi loin
+          #    soit-il dans l'historique du dépôt.
+          trouves="$(interroger "$api?per_page=100&name=$nom_canonique" \
+            | jq -c '[.artifacts[]? | {name, expired, created_at}]')"
+
+          # 2. Repli borné : mobile-staging a peut-être nommé son artefact
+          #    autrement (suffixe, variante). On balaie les 1 000 artefacts les
+          #    plus récents — la liste est rendue du plus récent au plus
+          #    ancien — en n'acceptant que le préfixe de recette.
+          if [ "$(printf '%s' "$trouves" | jq 'length')" -eq 0 ]; then
+            page=1
+            while [ "$page" -le 10 ]; do
+              lot="$(interroger "$api?per_page=100&page=$page")"
+              [ "$(printf '%s' "$lot" | jq '.artifacts | length')" -gt 0 ] || break
+              corr="$(printf '%s' "$lot" | jq -c --arg s "$SHA12" \
+                '[.artifacts[] | select((.name | startswith("carlys-staging")) and (.name | contains($s))) | {name, expired, created_at}]')"
+              if [ "$(printf '%s' "$corr" | jq 'length')" -gt 0 ]; then
+                trouves="$corr"
+                echo "::warning title=Artefact de recette hors convention::Aucun artefact nommé exactement « $nom_canonique », mais $(printf '%s' "$corr" | jq -r '.[0].name') correspond. La garde est satisfaite, la convention ne l'est pas : aligner le nom d'artefact de mobile-staging.yml sur carlys-staging-<sha12> évitera qu'un jour le repli, borné aux 1 000 artefacts les plus récents, ne trouve plus rien."
+                break
+              fi
+              page=$((page + 1))
+            done
+          fi
+
+          total="$(printf '%s' "$trouves" | jq 'length')"
+          vivants="$(printf '%s' "$trouves" | jq '[.[] | select(.expired == false)] | length')"
+
+          if [ "$total" -eq 0 ]; then
+            echo "::error title=Ce commit n'a pas été construit en recette::Aucun artefact de recette ne porte le sha $SHA12, alors que la règle « build once » du dépôt veut qu'on ne mette en production QUE ce qui a été éprouvé en recette. Marche à suivre : Actions → mobile-staging → Run workflow, en renseignant $SHA12 dans le champ « sha » (le laisser vide construirait la tête de la branche, pas ce commit) ; installer l'APK produit sur un téléphone et l'essayer VRAIMENT ; puis revenir ici. Artefact attendu et introuvable : $nom_canonique."
+            exit 1
+          fi
+
+          if [ "$vivants" -eq 0 ]; then
+            echo "::error title=L'artefact de recette a expiré::Le sha $SHA12 a bien été construit en recette, mais son artefact est expiré — GitHub les supprime après la durée de rétention du dépôt (90 jours par défaut). La preuve n'existe plus, donc la garde refuse : elle se trompe du bon côté. Deux issues, au choix : relancer mobile-staging sur $SHA12 pour refabriquer l'artefact (et en profiter pour ré-essayer l'application, ce qui est de toute façon la bonne pratique sur un commit vieux de plusieurs mois), ou promouvoir un commit plus récent."
+            printf '%s' "$trouves" | jq -r '.[] | "  - \(.name) — créé le \(.created_at), expiré"'
+            exit 1
+          fi
+
+          echo "Preuve de recette trouvée pour $SHA12 :"
+          printf '%s' "$trouves" | jq -r '.[] | select(.expired == false) | "  - \(.name) — créé le \(.created_at)"'
+
+      # ── Garde 3 : les textes légaux ─────────────────────────────────────────
+      #
+      # Même expression grep, à l'octet près, que la garde jumelle
+      # d'images-publish-prod.yml et que src/lib/legal-documents.ts. Toute
+      # correction ici doit être reportée là-bas, et réciproquement : GitHub
+      # Actions ne partage rien entre deux workflows.
+      #
+      # Le motif mobile est plus direct encore que le motif web :
+      # `AppEnvironment.privacyPolicyUrl` et `termsOfServiceUrl`
+      # (apps/mobile/lib/app/environment/app_environment.dart) construisent
+      # littéralement « <web>/privacy » et « <web>/terms », et les réglages de
+      # l'application y renvoient. Ce sont les deux pages qu'un examinateur de
+      # magasin ouvre avant d'accepter une soumission — une page portant
+      # « [À COMPLÉTER] » se paie en refus de publication, pas en
+      # avertissement.
+      - name: Les textes légaux sont complets
+        run: |
+          set -euo pipefail
+          marqueurs="$(grep -oP '\[À COMPLÉTER\s*:[^\]]*\]' docs/legal/*.md | sort -u || true)"
+          if [ -n "$marqueurs" ]; then
+            nombre="$(echo "$marqueurs" | wc -l)"
+            echo "::error title=Les textes légaux ne sont pas prêts pour la production::$nombre marqueur(s) « [À COMPLÉTER : … ] » subsistent dans docs/legal/. Un build de production ne peut pas renvoyer vers une politique de confidentialité inachevée : les réglages de l'application ouvrent https://app.DOMAINE/privacy et /terms, et c'est exactement ce que la Play Console ouvre avant d'accepter une soumission. Renseigne les marqueurs listés ci-dessous dans docs/legal/privacy.md et docs/legal/terms.md, pousse, fais construire le nouveau commit par mobile-staging, puis relance ce workflow sur ce nouveau SHA. Il n'y a pas de contournement : seul le flavor staging tolère des textes inachevés."
+            echo "Marqueurs restants, fichier par fichier :"
+            echo "$marqueurs" | sed 's/^/  - /'
+            exit 1
+          fi
+          echo "Aucun marqueur [À COMPLÉTER] dans docs/legal/ : la garde peut être armée."
+
+      # ── Le domaine, présence ET forme ───────────────────────────────────────
+      #
+      # Contrôle identique à celui d'images-publish-prod.yml, mot pour mot, à
+      # ceci près qu'ici les deux adresses dérivées partent dans un BINAIRE
+      # distribué par un magasin. Une valeur mal formée n'y est pas corrigible
+      # après coup : il faut republier une version.
+      #
+      # Le réflexe de qui pose la variable est de copier l'adresse du site,
+      # schéma compris — « https://carlys.app » donne alors littéralement
+      # « https://api.https://carlys.app ». Rien en aval ne rattrape ça :
+      # `--dart-define` accepte n'importe quelle chaîne, le build réussit, et
+      # `assertUsable()` elle-même laisserait passer (Uri.tryParse rend un hôte
+      # « api.https » non vide et non local). L'application se lance et
+      # n'atteint jamais l'API.
+      #
+      # Corollaire heureux du contrôle de forme : les deux adresses dérivées
+      # sont nécessairement en https et sur un hôte public, donc
+      # `assertUsable()` ne peut PAS échouer dessus au lancement. C'est un
+      # raisonnement, pas un lancement — et c'est pour ça que ce workflow
+      # produit aussi un APK de vérification (voir le job suivant).
+      - name: Le domaine de déploiement est connu
+        id: adresses
+        env:
+          CARLYS_DOMAIN: ${{ vars.CARLYS_DOMAIN }}
+        run: |
+          set -euo pipefail
+          if [ -z "$CARLYS_DOMAIN" ]; then
+            echo "::error title=Variable de dépôt CARLYS_DOMAIN absente::Le binaire mobile fige l'adresse de l'API et celle du web public AU MOMENT DE LA COMPILATION (--dart-define). Sans CARLYS_DOMAIN, l'application publiée appellerait http://localhost:3000 — une adresse qui n'existe pas sur un téléphone, et qu'Android refuse de toute façon en clair en release. Pose-la dans Settings → Secrets and variables → Actions → Variables, nom CARLYS_DOMAIN, valeur le domaine nu (exemple : carlys.app)."
+            exit 1
+          fi
+
+          domaine_bien_forme() {
+            # Jeu de caractères d'abord : ce filtre écarte le schéma (« : » et
+            # « / »), les espaces, un joker « * », un port, une adresse
+            # complète — et il tient sur une valeur multiligne, qu'une
+            # expression régulière ancrée ligne à ligne laisserait passer.
+            case "$1" in
+              ''|*[!A-Za-z0-9.-]*) return 1 ;;
+            esac
+            [ "${#1}" -le 253 ] || return 1
+            # Puis la structure : au moins deux étiquettes, aucune vide, ni
+            # commençant ni finissant par un tiret, 63 caractères au plus.
+            printf '%s' "$1" | grep -Eq '^[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?(\.[A-Za-z0-9]([A-Za-z0-9-]{0,61}[A-Za-z0-9])?)+$'
+          }
+
+          if ! domaine_bien_forme "$CARLYS_DOMAIN"; then
+            echo "::error title=CARLYS_DOMAIN mal formée::La valeur « $CARLYS_DOMAIN » n'est pas un nom de domaine nu. Attendu : uniquement le domaine, sans schéma, sans barre oblique, sans port, sans sous-domaine — par exemple « carlys.app ». Ce qui est refusé et pourquoi : « https://carlys.app » produirait l'adresse https://api.https://carlys.app, compilée telle quelle dans le binaire distribué ; « carlys.app/ » et « carlys.app:443 » produiraient des variantes tout aussi mortes. Corrige la variable dans Settings → Secrets and variables → Actions → Variables, puis relance ce workflow."
+            exit 1
+          fi
+
+          case "$CARLYS_DOMAIN" in
+            api.*|app.*|media.*|api-staging.*|app-staging.*|media-staging.*)
+              echo "::warning title=CARLYS_DOMAIN commence par un sous-domaine réservé::« $CARLYS_DOMAIN » commence par un des six préfixes que ce dépôt ajoute lui-même. L'application visera https://api.$CARLYS_DOMAIN. Si ce n'est pas ce que tu veux, mets le domaine nu."
+              ;;
+          esac
+
+          {
+            echo "api_url=https://api.$CARLYS_DOMAIN"
+            echo "web_url=https://app.$CARLYS_DOMAIN"
+          } >> "$GITHUB_OUTPUT"
+          echo "API de production   : https://api.$CARLYS_DOMAIN"
+          echo "Web public visé     : https://app.$CARLYS_DOMAIN"
+
+      # ── versionCode ─────────────────────────────────────────────────────────
+      #
+      # Piège silencieux de la Play Console : elle REFUSE un versionCode déjà
+      # téléversé. `apps/mobile/pubspec.yaml` porte `version: 0.1.0+1`, gelé —
+      # le premier .aab passerait, le deuxième serait rejeté au téléversement,
+      # après le build, après l'approbation, sans que rien dans ce workflow
+      # n'ait prévenu. On passe donc explicitement `--build-number`, et le
+      # défaut (`github.run_number`) est monotone par construction : il ne
+      # recule jamais, y compris quand on promeut un commit ancien.
+      - name: Numéro de build (versionCode Android)
+        id: numero
+        env:
+          DEMANDE: ${{ inputs.build_number }}
+          DEFAUT: ${{ github.run_number }}
+        run: |
+          set -euo pipefail
+          valeur="${DEMANDE:-$DEFAUT}"
+          case "$valeur" in
+            ''|*[!0-9]*)
+              echo "::error title=build_number invalide::« $DEMANDE » n'est pas un entier. Le versionCode Android est un entier positif ; laisse le champ VIDE pour utiliser le numéro d'exécution ($DEFAUT), ou renseigne un entier strictement supérieur au dernier versionCode accepté par la Play Console."
+              exit 1
+              ;;
+          esac
+          [ "$valeur" -ge 1 ] || {
+            echo "::error title=build_number invalide::Le versionCode doit valoir au moins 1 (reçu : $valeur)."
+            exit 1
+          }
+          echo "valeur=$valeur" >> "$GITHUB_OUTPUT"
+          echo "versionCode retenu : $valeur"
+
+      # Ce récapitulatif est ce que l'approbateur a sous les yeux quand il
+      # décide de cliquer Approve : le sha, ce qu'il contient, et les trois
+      # valeurs qui seront figées dans le binaire. C'est le pendant du bloc
+      # « Vont être déployés en production » que promote.sh affiche avant de
+      # faire recopier le sha.
+      - name: Ce qui est soumis à approbation
+        env:
+          SHA12: ${{ steps.commit.outputs.sha12 }}
+          SUJET: ${{ steps.commit.outputs.sujet }}
+          API_URL: ${{ steps.adresses.outputs.api_url }}
+          WEB_URL: ${{ steps.adresses.outputs.web_url }}
+          NUMERO: ${{ steps.numero.outputs.valeur }}
+        run: |
+          set -euo pipefail
+          {
+            echo "## À approuver — production mobile de \`$SHA12\`"
+            echo
+            echo "> $SUJET"
+            echo
+            echo "Les trois gardes sont vertes : le commit existe, il a été construit en"
+            echo "recette, et docs/legal/ ne porte plus aucun marqueur \`[À COMPLÉTER]\`."
+            echo
+            echo "Ce qui sera figé dans le binaire, à la compilation :"
+            echo
+            echo "| \`--dart-define\` | Valeur |"
+            echo "| --- | --- |"
+            echo "| \`CARLYS_FLAVOR\` | \`production\` |"
+            echo "| \`CARLYS_API_BASE_URL\` | \`$API_URL\` |"
+            echo "| \`CARLYS_PUBLIC_WEB_BASE_URL\` | \`$WEB_URL\` |"
+            echo
+            echo "versionCode Android : \`$NUMERO\`"
+            echo
+            echo "**Le build attend un OUI humain.** Onglet Summary de cette exécution →"
+            echo "« Review deployments » → cocher \`mobile-production\` → Approve and deploy."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+  # ── Job 2 : le build, DERRIÈRE l'approbation ────────────────────────────────
+  construire:
+    name: Bundle de production signé (attend un OUI humain)
+    needs: controles
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    # LA CLÉ QUI MET TOUT EN PAUSE. GitHub suspend ce job avant sa première
+    # étape et notifie les approbateurs déclarés sur l'environnement. Le nom
+    # est écrit en dur ici comme dans la garde du job 1 : GitHub Actions
+    # n'ayant pas d'ancre YAML utilisable, changer ce nom impose de le changer
+    # AUX TROIS ENDROITS — l'en-tête de ce fichier, la garde, cette ligne.
+    environment: mobile-production
+
+    permissions:
+      contents: read
+
+    defaults:
+      run:
+        working-directory: apps/mobile
+
+    env:
+      # Hors de l'arbre du dépôt, sur le disque éphémère du runner : jamais
+      # sous apps/mobile/, où un `git status` distrait ou une commande
+      # d'archivage pourrait l'emporter.
+      KEYSTORE_PATH: ${{ runner.temp }}/carlys-upload.jks
+
+    steps:
+      # ── La signature est OBLIGATOIRE ici, et l'absence de secret ÉCHOUE ─────
+      #
+      # Un .apk signé avec la clé de debug s'installe très bien par
+      # téléversement direct sur un téléphone : c'est ce qui rend la RECETTE
+      # possible aujourd'hui, sans créer le moindre secret. Un .aab signé en
+      # debug, lui, est REFUSÉ par la Play Console. Les deux besoins ne se
+      # mélangent pas, et on ne fait jamais passer l'un pour l'autre : ce
+      # workflow-ci ne produit que du signé pour de vrai, ou rien.
+      #
+      # LES QUATRE SECRETS À CRÉER, de préférence SUR L'ENVIRONNEMENT
+      # `mobile-production` (Settings → Environments → mobile-production →
+      # Environment secrets) plutôt qu'au niveau du dépôt : ainsi le keystore
+      # n'est lisible que par une exécution DÉJÀ APPROUVÉE. Le prix de ce choix
+      # est visible ici — le job 1 ne peut pas vérifier leur présence à
+      # l'avance, l'échec arrive donc quelques secondes APRÈS l'approbation.
+      # C'est le bon échange : mieux vaut un aller-retour qu'une clé de
+      # signature accessible à n'importe quelle exécution du dépôt.
+      #
+      #   ANDROID_KEYSTORE_BASE64    le fichier .jks encodé :
+      #                              base64 -w0 upload-keystore.jks
+      #   ANDROID_KEYSTORE_PASSWORD  mot de passe du magasin
+      #   ANDROID_KEY_ALIAS          alias de la clé (ex. « upload »)
+      #   ANDROID_KEY_PASSWORD       mot de passe de la clé
+      #
+      # Créer le keystore, une fois, sur un poste — et le SAUVEGARDER hors du
+      # dépôt : le perdre interdit toute mise à jour de l'application publiée.
+      #   keytool -genkeypair -v -keystore upload-keystore.jks \
+      #     -keyalg RSA -keysize 2048 -validity 10000 -alias upload
+      - name: Les quatre secrets de signature sont présents
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          manquants=""
+          [ -n "$KEYSTORE_B64" ]      || manquants="$manquants ANDROID_KEYSTORE_BASE64"
+          [ -n "$KEYSTORE_PASSWORD" ] || manquants="$manquants ANDROID_KEYSTORE_PASSWORD"
+          [ -n "$KEY_ALIAS" ]         || manquants="$manquants ANDROID_KEY_ALIAS"
+          [ -n "$KEY_PASSWORD" ]      || manquants="$manquants ANDROID_KEY_PASSWORD"
+          if [ -n "$manquants" ]; then
+            echo "::error title=Secrets de signature absents::Manque(nt) :$manquants. Un .aab de production non signé n'a aucun sens — la Play Console le refuse — donc ce workflow échoue plutôt que de produire un artefact inutilisable. Crée les secrets sur Settings → Environments → mobile-production → Environment secrets (voir le commentaire de cette étape pour la commande keytool qui fabrique le keystore). Aucune valeur n'apparaît jamais dans ces journaux."
+            exit 1
+          fi
+          echo "Les quatre secrets de signature sont présents."
+
+      # `ref` sur le sha40 résolu par le job 1 : on construit CE commit, pas la
+      # tête de la branche. Un artefact publié sous le nom d'un commit et bâti
+      # sur un autre serait pire que pas d'artefact du tout.
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.controles.outputs.sha40 }}
+
+      # Même source unique que mobile-ci et le poste de développement :
+      # apps/mobile/.flutter-version — voir mobile-ci.yml pour l'incident du
+      # « stable » flottant et le choix de l'étape shell.
+      - name: Version Flutter épinglée
+        id: pin
+        run: echo "version=$(cat .flutter-version)" >> "$GITHUB_OUTPUT"
+
+      - uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ steps.pin.outputs.version }}
+          channel: stable
+          cache: true
+
+      - name: Cache des paquets Dart
+        uses: actions/cache@v4
+        with:
+          path: ~/.pub-cache
+          key: pub-${{ runner.os }}-${{ hashFiles('apps/mobile/pubspec.lock') }}
+          restore-keys: pub-${{ runner.os }}-
+
+      # Scope de cache Gradle DISTINCT de celui de la démo et de la recette :
+      # les configurations de signature diffèrent, donc les tâches qui en
+      # dépendent aussi.
+      - name: Cache Gradle
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: gradle-${{ runner.os }}-mobile-production
+          restore-keys: gradle-${{ runner.os }}-
+
+      # android/ n'est pas versionné : il se régénère à la demande, par le MÊME
+      # script que le poste de développement et que demo-apk.yml — c'est ce qui
+      # empêche les chemins de diverger. mobile_platforms.sh crée les dossiers
+      # sans toucher à pubspec.lock (voir son en-tête : `flutter create` appelé
+      # nu le réécrivait, et l'artefact n'était alors plus construit sur l'arbre
+      # de dépendances éprouvé par mobile-ci).
+      - name: Dossiers de plateformes
+        run: |
+          set -euo pipefail
+          ../../scripts/mobile_platforms.sh android
+          # Identité Carlys : nom affiché, icône (sceau), permission de
+          # notification — même script que le poste de développement.
+          ../../scripts/android_branding.sh
+          {
+            echo 'org.gradle.parallel=true'
+            echo 'org.gradle.caching=true'
+            echo 'org.gradle.daemon=false'
+          } >> android/gradle.properties
+
+      # ── Le keystore, décodé hors de l'arbre ─────────────────────────────────
+      #
+      # Aucun `set -x`, aucun `echo` d'une valeur : les quatre secrets ne
+      # traversent que des variables d'environnement et un fichier. GitHub
+      # masque de toute façon les valeurs enregistrées, mais on ne s'appuie pas
+      # sur le masquage — on ne les imprime pas.
+      #
+      # `android/key.properties` contient deux mots de passe : il vit dans
+      # android/, qui n'est PAS versionné, et il est effacé par l'étape de
+      # nettoyage `if: always()` plus bas, y compris si le build échoue.
+      - name: Keystore de production
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          umask 077
+          printf '%s' "$KEYSTORE_B64" | base64 -d > "$KEYSTORE_PATH"
+          if [ ! -s "$KEYSTORE_PATH" ]; then
+            echo "::error title=Keystore illisible::Le décodage base64 de ANDROID_KEYSTORE_BASE64 a produit un fichier vide. Le secret a probablement été collé avec des retours à la ligne ou tronqué : régénère-le avec « base64 -w0 upload-keystore.jks » (l'option -w0 est essentielle) et recolle la valeur entière."
+            exit 1
+          fi
+          cat > android/key.properties <<PROPS
+          storeFile=$KEYSTORE_PATH
+          storePassword=$KEYSTORE_PASSWORD
+          keyAlias=$KEY_ALIAS
+          keyPassword=$KEY_PASSWORD
+          PROPS
+          echo "Keystore décodé hors de l'arbre du dépôt."
+
+      # ── La configuration de signature, APPENDUE plutôt qu'insérée ───────────
+      #
+      # Le gabarit `flutter create` signe la release avec la clé de DEBUG
+      # (« TODO: Add your own signing config »). Il faut donc la remplacer, et
+      # la façon de le faire décide de la robustesse de tout ce workflow.
+      #
+      # On n'insère RIEN par sed. Configurer deux fois l'extension `android`
+      # est légal en Gradle : on ajoute un bloc en FIN de fichier, qui crée la
+      # signingConfig « release » et réaffecte `buildTypes.release.signingConfig`.
+      # Un `sed` sur la ligne du gabarit dépendrait de sa mise en forme exacte
+      # et deviendrait silencieusement inopérant à la prochaine montée de SDK —
+      # produisant un .aab signé en debug que la Play Console rejetterait, sans
+      # que rien ici n'ait bronché. Un ajout, lui, ne dépend d'aucune ancre.
+      #
+      # Et surtout : la preuve ne repose PAS sur ce patch. L'étape « la
+      # signature est bien la nôtre », après le build, compare l'empreinte du
+      # certificat du .aab à celle du keystore. C'est elle qui fait foi.
+      #
+      # Les deux dialectes sont gérés : Flutter engendre du Kotlin DSL depuis
+      # la 3.29, mais un dépôt qui remonterait le SDK ne doit pas se casser en
+      # silence sur ce détail-là non plus.
+      - name: Signature de release injectée dans Gradle
+        run: |
+          set -euo pipefail
+          if [ -f android/app/build.gradle.kts ]; then
+            cat >> android/app/build.gradle.kts <<'KTS'
+
+          // ── Signature de RELEASE — ajoutée par .github/workflows/mobile-production.yml.
+          // android/ n'est pas versionné : ce bloc est réécrit à chaque exécution et ne
+          // laisse aucune trace dans le dépôt. Les mots de passe viennent de
+          // android/key.properties, écrit depuis les secrets et effacé en fin de job.
+          android {
+              signingConfigs {
+                  create("release") {
+                      val props = java.util.Properties()
+                      rootProject.file("key.properties").inputStream().use { props.load(it) }
+                      storeFile = java.io.File(props.getProperty("storeFile"))
+                      storePassword = props.getProperty("storePassword")
+                      keyAlias = props.getProperty("keyAlias")
+                      keyPassword = props.getProperty("keyPassword")
+                  }
+              }
+              buildTypes {
+                  getByName("release") {
+                      signingConfig = signingConfigs.getByName("release")
+                  }
+              }
+          }
+          KTS
+            echo "Signature injectée dans android/app/build.gradle.kts (Kotlin DSL)."
+          elif [ -f android/app/build.gradle ]; then
+            cat >> android/app/build.gradle <<'GRADLE'
+
+          // ── Signature de RELEASE — ajoutée par .github/workflows/mobile-production.yml.
+          android {
+              signingConfigs {
+                  release {
+                      def props = new Properties()
+                      file("${rootProject.projectDir}/key.properties").withInputStream { props.load(it) }
+                      storeFile file(props.getProperty('storeFile'))
+                      storePassword props.getProperty('storePassword')
+                      keyAlias props.getProperty('keyAlias')
+                      keyPassword props.getProperty('keyPassword')
+                  }
+              }
+              buildTypes {
+                  release {
+                      signingConfig signingConfigs.release
+                  }
+              }
+          }
+          GRADLE
+            echo "Signature injectée dans android/app/build.gradle (Groovy)."
+          else
+            echo "::error title=Fichier Gradle de l'application introuvable::Ni android/app/build.gradle.kts ni android/app/build.gradle après scripts/mobile_platforms.sh. Le gabarit « flutter create » a changé de structure : la signature de production ne peut pas être injectée, et construire sans elle produirait un .aab signé en debug que la Play Console refuserait. À corriger dans .github/workflows/mobile-production.yml avant toute promotion."
+            exit 1
+          fi
+
+      # --enforce-lockfile : même règle que mobile-ci, le lock versionné est
+      # contraignant — l'artefact publié est construit sur l'arbre éprouvé.
+      - name: Dépendances
+        run: flutter pub get --enforce-lockfile
+
+      - name: Génération de code (Drift)
+        run: dart run build_runner build
+
+      # Garde-fou repris de demo-apk.yml. `--enforce-lockfile` ne protège que
+      # de ce qui arrive AVANT lui ; ce contrôle ferme le trou par l'autre
+      # bout : si une étape quelconque de ce job modifie un fichier VERSIONNÉ,
+      # le job échoue au lieu de publier un bundle construit sur autre chose
+      # que l'arbre du dépôt. Sans restriction de chemins, volontairement — le
+      # reste de ce que produit le job (android/, .dart_tool/, les .g.dart,
+      # android/key.properties) n'est pas versionné, donc invisible pour
+      # `git diff`.
+      - name: Garde-fou — l'arbre versionné est intact
+        run: |
+          set -euo pipefail
+          if ! git diff --exit-code; then
+            echo "::error::une étape de ce job a modifié un fichier versionné :" \
+              "le bundle ne serait pas construit sur l'arbre de dépendances" \
+              "éprouvé par mobile-ci. Voir le diff ci-dessus."
+            exit 1
+          fi
+
+      # ── Le bundle pour les magasins ─────────────────────────────────────────
+      #
+      # Pas de `--target-platform` ici, à REBOURS de demo-apk.yml : un app
+      # bundle embarque les trois ABI et c'est Play qui découpe par appareil.
+      # Restreindre à arm64 économiserait quelques minutes et exclurait
+      # silencieusement les appareils 32 bits encore en service.
+      #
+      # `--obfuscate --split-debug-info` : les symboles sortent du binaire et
+      # partent dans l'artefact. Sans eux, une trace d'exception remontée par
+      # la production est illisible — c'est pour ça qu'ils sont conservés, pas
+      # jetés.
+      - name: Bundle de production (.aab)
+        env:
+          FLAVOR: production
+          API_URL: ${{ needs.controles.outputs.api_url }}
+          WEB_URL: ${{ needs.controles.outputs.web_url }}
+          NUMERO: ${{ needs.controles.outputs.build_number }}
+        run: |
+          set -euo pipefail
+          # Note : la configuration Firebase (CARLYS_FIREBASE_*) n'est pas
+          # injectée ici. app_environment.dart traite ses quatre valeurs comme
+          # un tout — elles viennent ensemble ou pas du tout — et leur absence
+          # désactive proprement les notifications push, le reste de
+          # l'application vivant normalement. Les ajouter est un geste
+          # délibéré, pas un oubli à combler à la va-vite avant une soumission.
+          flutter build appbundle --release \
+            --no-pub \
+            --build-number="$NUMERO" \
+            --obfuscate \
+            --split-debug-info=build/symbols \
+            --dart-define=CARLYS_FLAVOR="$FLAVOR" \
+            --dart-define=CARLYS_API_BASE_URL="$API_URL" \
+            --dart-define=CARLYS_PUBLIC_WEB_BASE_URL="$WEB_URL"
+          ls -lh build/app/outputs/bundle/release/app-release.aab
+
+      # ── L'APK de vérification, et pourquoi il n'est pas un doublon ──────────
+      #
+      # `assertUsable()` (app_environment.dart) refuse de démarrer si l'une des
+      # deux URL manque ou pointe en local — mais AU LANCEMENT, pas à la
+      # compilation. Or un .aab NE S'INSTALLE PAS sur un téléphone : sans cet
+      # APK, il n'existerait aucun moyen de LANCER une seule fois ce qu'on
+      # s'apprête à déposer, et le premier lancement réel serait celui d'un
+      # testeur — ou d'un utilisateur.
+      #
+      # Ce n'est pas l'APK que Play engendrera à partir du bundle : c'est le
+      # même code, les mêmes --dart-define et la même clé. Il prouve ce qu'il
+      # faut prouver — que l'application démarre et parle à l'API de
+      # production. arm64 seul, comme la démo : tous les téléphones vendus
+      # depuis 2019 le sont.
+      - name: APK de vérification (même code, même clé)
+        env:
+          FLAVOR: production
+          API_URL: ${{ needs.controles.outputs.api_url }}
+          WEB_URL: ${{ needs.controles.outputs.web_url }}
+          NUMERO: ${{ needs.controles.outputs.build_number }}
+        run: |
+          set -euo pipefail
+          flutter build apk --release \
+            --no-pub \
+            --target-platform android-arm64 \
+            --build-number="$NUMERO" \
+            --obfuscate \
+            --split-debug-info=build/symbols \
+            --dart-define=CARLYS_FLAVOR="$FLAVOR" \
+            --dart-define=CARLYS_API_BASE_URL="$API_URL" \
+            --dart-define=CARLYS_PUBLIC_WEB_BASE_URL="$WEB_URL"
+          ls -lh build/app/outputs/flutter-apk/app-release.apk
+
+      # ── La preuve que la signature est bien la nôtre ────────────────────────
+      #
+      # Pendant mobile de « le tag se résout dans le registre » : le build a
+      # réussi ne dit PAS que le bon certificat a été utilisé. Le mode d'échec
+      # qu'on refuse est précis et silencieux — le gabarit Flutter signe la
+      # release avec la clé de DEBUG, et un .aab ainsi signé se construit
+      # parfaitement, s'archive parfaitement, et n'est rejeté qu'au
+      # téléversement dans la Play Console, après l'approbation humaine.
+      #
+      # Un app bundle est signé au format JAR : son bloc de signature
+      # META-INF/*.RSA se lit avec `keytool -printcert`. On compare son
+      # empreinte SHA-256 à celle de l'alias du keystore. Égalité stricte, ou
+      # échec. L'empreinte n'est pas un secret — la Play Console l'affiche —
+      # et elle part dans le récapitulatif pour être confrontée à celle que
+      # Play attend de la clé de téléversement.
+      - name: La signature du bundle est bien la nôtre
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          KEYTOOL="$(command -v keytool || echo "${JAVA_HOME:-}/bin/keytool")"
+          [ -x "$KEYTOOL" ] || {
+            echo "::error title=keytool introuvable::La signature du bundle ne peut pas être vérifiée sans le JDK. Le runner GitHub en fournit un ; si cette étape échoue, ajouter actions/setup-java avant le build."
+            exit 1
+          }
+          empreinte() { grep -m1 -oE 'SHA256: [0-9A-Fa-f:]+' | cut -d' ' -f2; }
+
+          aab=build/app/outputs/bundle/release/app-release.aab
+          bloc="$(unzip -Z1 "$aab" | grep -m1 -E '^META-INF/.*\.(RSA|DSA|EC)$' || true)"
+          if [ -z "$bloc" ]; then
+            echo "::error title=Bundle non signé::Aucun bloc de signature META-INF/*.RSA dans $aab. La configuration de signature injectée dans Gradle n'a pas été prise en compte — la Play Console refuserait ce fichier."
+            exit 1
+          fi
+          unzip -p "$aab" "$bloc" > "$RUNNER_TEMP/signature.bin"
+
+          obtenue="$("$KEYTOOL" -printcert -file "$RUNNER_TEMP/signature.bin" | empreinte)"
+          attendue="$("$KEYTOOL" -list -v -keystore "$KEYSTORE_PATH" -alias "$KEY_ALIAS" \
+            -storepass "$KEYSTORE_PASSWORD" 2>/dev/null | empreinte)"
+          rm -f "$RUNNER_TEMP/signature.bin"
+
+          if [ -z "$attendue" ]; then
+            echo "::error title=Alias introuvable dans le keystore::Aucun certificat pour l'alias « $KEY_ALIAS » dans le keystore fourni. Vérifie ANDROID_KEY_ALIAS : « keytool -list -keystore upload-keystore.jks » en donne la liste exacte."
+            exit 1
+          fi
+          if [ "$obtenue" != "$attendue" ]; then
+            echo "::error title=Le bundle n'est PAS signé avec la clé de production::Empreinte du certificat trouvée dans le .aab : $obtenue — attendue (keystore, alias $KEY_ALIAS) : $attendue. C'est presque toujours la signature de DEBUG du gabarit Flutter : le bloc de signature ajouté à android/app/build.gradle.kts n'a pas pris. La Play Console rejetterait ce fichier. Ne pas téléverser cet artefact."
+            exit 1
+          fi
+          echo "empreinte=$obtenue" >> "$GITHUB_OUTPUT"
+          echo "Bundle signé avec la clé de production (SHA-256 : $obtenue)."
+        id: signature
+
+      # ── Noms d'artefacts adressés par sha ───────────────────────────────────
+      # Même principe que le tag `sha-<sha12>` du registre : le nom du fichier
+      # dit de quel commit il sort. Un .aab anonyme dans un dossier de
+      # téléchargements ne se rattache plus à rien.
+      - name: Rassemblement
+        env:
+          SHA12: ${{ needs.controles.outputs.sha12 }}
+          NUMERO: ${{ needs.controles.outputs.build_number }}
+        run: |
+          set -euo pipefail
+          dest="$RUNNER_TEMP/production"
+          mkdir -p "$dest"
+          cp build/app/outputs/bundle/release/app-release.aab \
+            "$dest/carlys-$SHA12-$NUMERO.aab"
+          cp build/app/outputs/flutter-apk/app-release.apk \
+            "$dest/carlys-$SHA12-$NUMERO-verification.apk"
+          cp -r build/symbols "$dest/symbols"
+          ls -lh "$dest"
+
+      # Le keystore et les deux mots de passe disparaissent du disque, que le
+      # build ait réussi ou non — `if: always()` est le point important, un
+      # échec de build ne doit pas les laisser derrière lui. Le runner est
+      # éphémère, mais on ne s'appuie pas là-dessus : la seule garantie qu'on
+      # contrôle est celle qu'on écrit.
+      - name: Effacement du keystore
+        if: always()
+        run: rm -f "$KEYSTORE_PATH" android/key.properties
+
+      # ARTEFACT D'EXÉCUTION, jamais une release publique — à rebours de
+      # demo-apk.yml, qui publiait sur `demo-latest` pour donner une URL de
+      # téléchargement stable à une démo sans serveur. Un binaire de production
+      # signé n'a rien à faire sur une page publique : il se télécharge depuis
+      # l'onglet Actions, par quelqu'un qui a accès au dépôt, et il monte
+      # ensuite dans la Play Console.
+      - name: Artefact de production
+        uses: actions/upload-artifact@v4
+        with:
+          name: carlys-production-${{ needs.controles.outputs.sha12 }}
+          path: ${{ runner.temp }}/production
+          # 90 jours : la durée maximale par défaut d'un dépôt. Les symboles de
+          # débogage doivent survivre aux premières remontées de crash.
+          retention-days: 90
+          if-no-files-found: error
+
+      - name: Récapitulatif
+        env:
+          SHA12: ${{ needs.controles.outputs.sha12 }}
+          SUJET: ${{ needs.controles.outputs.sujet }}
+          API_URL: ${{ needs.controles.outputs.api_url }}
+          WEB_URL: ${{ needs.controles.outputs.web_url }}
+          NUMERO: ${{ needs.controles.outputs.build_number }}
+          EMPREINTE: ${{ steps.signature.outputs.empreinte }}
+        run: |
+          set -euo pipefail
+          {
+            echo "## Production mobile approuvée et construite — \`$SHA12\`"
+            echo
+            echo "> $SUJET"
+            echo
+            echo "| \`--dart-define\` | Valeur figée dans le binaire |"
+            echo "| --- | --- |"
+            echo "| \`CARLYS_FLAVOR\` | \`production\` |"
+            echo "| \`CARLYS_API_BASE_URL\` | \`$API_URL\` |"
+            echo "| \`CARLYS_PUBLIC_WEB_BASE_URL\` | \`$WEB_URL\` |"
+            echo
+            echo "versionCode Android : \`$NUMERO\` — Play refuse un versionCode déjà"
+            echo "téléversé, le prochain build devra donc être strictement supérieur."
+            echo
+            echo "Empreinte SHA-256 de la clé de signature : \`$EMPREINTE\`"
+            echo "(à confronter à la clé de téléversement attendue par Play App Signing)."
+            echo
+            echo "### Dans l'artefact \`carlys-production-$SHA12\`"
+            echo
+            echo "| Fichier | À quoi il sert |"
+            echo "| --- | --- |"
+            echo "| \`carlys-$SHA12-$NUMERO.aab\` | Le bundle à téléverser dans la Play Console. Ne s'installe PAS sur un téléphone. |"
+            echo "| \`carlys-$SHA12-$NUMERO-verification.apk\` | Même code, mêmes \`--dart-define\`, même clé — pour LANCER la production une fois avant de la déposer. |"
+            echo "| \`symbols/\` | Symboles de débogage : sans eux, une trace d'exception de production est illisible. |"
+            echo
+            echo "### Ce qui reste à faire À LA MAIN"
+            echo
+            echo "Rien de tout cela n'est automatisable depuis ce dépôt — ce sont des gestes"
+            echo "de la Play Console, et ils engagent."
+            echo
+            echo "1. **Éprouver le binaire.** Installer l'APK de vérification sur un téléphone,"
+            echo "   l'ouvrir, se connecter. \`assertUsable()\` ne contrôle les deux adresses"
+            echo "   qu'AU LANCEMENT : cette étape est la seule qui l'exécute vraiment."
+            echo "2. **Téléverser le bundle.** Play Console → Test → Test interne (ou"
+            echo "   Production) → Créer une version → déposer le \`.aab\`."
+            echo "3. **Téléverser les symboles** de \`symbols/\` pour que les rapports de"
+            echo "   plantage soient lisibles."
+            echo "4. **Compléter la fiche du magasin** si ce n'est pas déjà fait : description,"
+            echo "   captures d'écran, icône 512×512, bannière 1024×500, classification du"
+            echo "   contenu, formulaire de sécurité des données, et l'URL de politique de"
+            echo "   confidentialité — \`$WEB_URL/privacy\` — qui doit être **en ligne et"
+            echo "   servie** au moment de l'examen. La garde des textes légaux vérifie"
+            echo "   qu'ils sont écrits ; elle ne peut pas vérifier qu'ils sont déployés."
+            echo "5. **Le serveur doit être en production sur le même commit.** Ce workflow"
+            echo "   ne bascule rien côté serveur : \`scripts/server/promote.sh\` s'en charge,"
+            echo "   et l'application publiée appelle \`$API_URL\`."
+          } >> "$GITHUB_STEP_SUMMARY"
