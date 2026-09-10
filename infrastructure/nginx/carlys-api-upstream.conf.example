@@ -1,0 +1,47 @@
+# Carlys — amont de l'API, ENGENDRÉ. Gabarit de référence.
+#
+# Le fichier réel vit dans /etc/nginx/conf.d/carlys-<env>-api-upstream.conf et
+# est réécrit par `carlysctl` à chaque déploiement et à chaque mise à
+# l'échelle. Celui-ci ne sert qu'à documenter sa forme et à poser l'état de
+# départ (setup.sh en installe une version à un seul exemplaire).
+#
+# ── Pourquoi engendré, et pas écrit à la main ────────────────────────────────
+#
+# L'API tourne en N exemplaires. Docker leur attribue des ports LIBRES pris
+# dans la plage réservée par le .env (CARLYS_API_HOST_PORT à
+# CARLYS_API_HOST_PORT_LAST), sans garantie d'ordre ni de contiguïté — mesuré :
+# à quatre exemplaires sur la plage 3400-3409, l'attribution était 3403, 3404,
+# 3406, 3407. Une liste écrite à la main serait fausse dès la première mise à
+# l'échelle, et fausse SILENCIEUSEMENT : nginx enverrait du trafic vers un port
+# que plus personne n'écoute.
+#
+# `carlysctl` lit donc la liste chez Docker (`docker compose ps`), écrit ce
+# fichier, vérifie par `nginx -t` et recharge. Il REFUSE d'écrire un amont vide
+# — un bloc `upstream` sans `server` est une configuration invalide, et
+# écraser un amont sain par du vide couperait le service au lieu de le
+# réparer.
+#
+# ── Pourquoi ces directives ──────────────────────────────────────────────────
+#
+# `least_conn` plutôt que le tourniquet par défaut : les requêtes de Carlys
+# n'ont pas toutes la même durée (une clôture de séance recalcule des records,
+# une lecture de catalogue sort du cache). Le tourniquet enverrait autant de
+# requêtes à un exemplaire déjà occupé qu'à un exemplaire libre.
+#
+# `max_fails` / `fail_timeout` : un exemplaire qui refuse la connexion est
+# écarté dix secondes au lieu de recevoir une requête sur N. C'est ce qui rend
+# la panne d'UN exemplaire invisible au client, sans rien attendre de la
+# supervision — qui, elle, le remplacera.
+#
+# `keepalive` : sans lui, nginx ouvre une connexion TCP par requête vers
+# l'API. Il EXIGE `proxy_http_version 1.1` et `proxy_set_header Connection ""`,
+# tous deux dans snippets/carlys-proxy.conf — sans le second, nginx annonce
+# `Connection: close` et le pool ne sert à rien.
+
+upstream carlys_api_production {
+    least_conn;
+
+    server 127.0.0.1:3000 max_fails=3 fail_timeout=10s;
+
+    keepalive 32;
+}

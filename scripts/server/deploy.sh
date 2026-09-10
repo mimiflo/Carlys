@@ -87,10 +87,53 @@ lock_env "$ENV_NAME"
 # compose versionné interpole. On ne lui impose pas la valeur du script.
 CARLYS_REGISTRY="$(env_value CARLYS_REGISTRY "$ENV_FILE" "$CARLYS_REGISTRY")"
 PROJECT="$(compose_project "$ENV_NAME" "$ENV_FILE")"
-API_PORT="$(api_host_port "$ENV_NAME" "$ENV_FILE")"
 ADMIN_PORT="$(admin_host_port "$ENV_NAME" "$ENV_FILE")"
-API_HEALTH_URL="http://127.0.0.1:${API_PORT}/health/ready"
 ADMIN_URL="http://127.0.0.1:${ADMIN_PORT}/"
+
+# L'API tourne en N exemplaires sur des ports attribués par Docker : il n'y a
+# plus « le » port de l'API, il y a la liste de ceux qui écoutent, et elle n'est
+# connue qu'APRÈS la bascule. La santé se vérifie donc exemplaire par
+# exemplaire (voir sante_api ci-dessous).
+API_REPLICAS="$(api_replicas_wanted "$ENV_NAME" "$ENV_FILE")"
+API_CAPACITY="$(api_port_capacity "$ENV_NAME" "$ENV_FILE")"
+
+# Refuser AVANT d'appeler Compose. Mesuré : au-delà de la plage, Docker échoue
+# en cours de route (« all ports are allocated ») après avoir démarré une
+# partie des exemplaires — la pile reste à moitié mise à l'échelle et
+# l'ancienne version ne sert plus seule.
+[ "$API_REPLICAS" -ge 1 ] || die \
+  "CARLYS_API_REPLICAS vaut « $API_REPLICAS » : il en faut au moins 1." \
+  "Fichier : $ENV_FILE"
+[ "$API_REPLICAS" -le "$API_CAPACITY" ] || die \
+  "CARLYS_API_REPLICAS=$API_REPLICAS dépasse la plage de ports réservée à l'API ($API_CAPACITY port(s))." \
+  "Rien n'a été déployé." \
+  "Soit réduire CARLYS_API_REPLICAS, soit élargir la plage dans $ENV_FILE :" \
+  "  CARLYS_API_HOST_PORT=$(api_host_port "$ENV_NAME" "$ENV_FILE")" \
+  "  CARLYS_API_HOST_PORT_LAST=$(api_host_port_last "$ENV_NAME" "$ENV_FILE")" \
+  "En élargissant, vérifier qu'aucun autre service n'occupe les ports ajoutés" \
+  "(l'admin est sur $ADMIN_PORT)."
+
+# `sante_api <tentatives>` — attend /health/ready sur CHAQUE exemplaire en vie.
+#
+# Sur chacun, pas sur un seul : un déploiement où deux exemplaires sur trois
+# répondent est un déploiement raté, et le contrôler à travers Nginx ne le
+# verrait pas — l'équilibrage masquerait l'exemplaire mort derrière ceux qui
+# répondent, jusqu'à ce que `max_fails` le sorte, c'est-à-dire après avoir servi
+# des erreurs à de vrais utilisateurs.
+sante_api() {
+  local tries="$1" ports=() port
+  mapfile -t ports < <(api_replica_ports "$ENV_NAME" "$ENV_FILE")
+  if [ "${#ports[@]}" -eq 0 ]; then
+    warn "aucun exemplaire d'API en marche"
+    return 1
+  fi
+  info "exemplaires d'API : ${#ports[@]} (ports ${ports[*]})"
+  for port in "${ports[@]}"; do
+    wait_http_200 "http://127.0.0.1:${port}/health/ready" "$tries" "$HEALTH_DELAY" \
+      "l'API sur $port (/health/ready)" || return 1
+  done
+  return 0
+}
 
 PREVIOUS_SHA="$(deployed_current "$ENV_NAME")"
 
@@ -123,7 +166,7 @@ info "sha             : $SHA"
 info "sha précédent   : ${PREVIOUS_SHA:-aucun (premier déploiement)}"
 info "projet compose  : $PROJECT"
 info "fichier .env    : $ENV_FILE"
-info "santé attendue  : $API_HEALTH_URL"
+info "exemplaires API : $API_REPLICAS (plage de $API_CAPACITY port(s))"
 
 # ── 1. Registre : connexion puis pull des trois images ──────────────────────
 # Rien n'a encore bougé : c'est le bon moment pour échouer.
@@ -218,7 +261,7 @@ ok "conteneurs démarrés sur sha-$SHA"
 # ── 5. Santé, en boucle BORNÉE ─────────────────────────────────────────────
 step "6/6 Vérification de santé"
 healthy=1
-wait_http_200 "$API_HEALTH_URL" "$HEALTH_TRIES" "$HEALTH_DELAY" "l'API (/health/ready)" || healthy=0
+sante_api "$HEALTH_TRIES" || healthy=0
 # L'admin sert AUSSI les pages publiques du produit (/verify-email,
 # /reset-password, /privacy…). Une admin morte, c'est le lien de vérification
 # d'adresse mort : elle fait partie de la bascule, pas d'un décor.
@@ -227,6 +270,15 @@ if [ "$healthy" -eq 1 ]; then
 fi
 
 if [ "$healthy" -eq 1 ]; then
+  # Nginx apprend où écoutent les exemplaires. AVANT d'inscrire le succès :
+  # tant que l'amont n'a pas été rechargé, le trafic va encore aux ports de la
+  # version précédente — c'est-à-dire à des ports que plus personne n'écoute
+  # dès que Compose a recréé les conteneurs. Un déploiement « réussi » qui
+  # laisserait Nginx sur l'ancienne liste rendrait 502 à tout le monde.
+  step "Amont Nginx"
+  nginx_apply_upstream "$ENV_NAME" "$ENV_FILE" || warn \
+    "l'amont Nginx n'a pas pu être mis à jour — les conteneurs sont sains, mais Nginx peut encore pointer ailleurs."
+
   # Le .env apprend ce qui tourne : sans cela, le `docker compose up -d`
   # documenté en tête de compose.yml relirait `sha-CHANGE_MOI_SHA12`.
   env_set_tag "$ENV_FILE" "sha-$SHA"
@@ -279,12 +331,18 @@ fi
 # arrière qui ment sur son résultat est pire qu'un déploiement raté : personne
 # ne va vérifier ce qu'un script vient de déclarer sain.
 restored=1
-wait_http_200 "$API_HEALTH_URL" "$ROLLBACK_TRIES" "$HEALTH_DELAY" "l'API restaurée" || restored=0
+sante_api "$ROLLBACK_TRIES" || restored=0
 if [ "$restored" -eq 1 ]; then
   wait_http_200 "$ADMIN_URL" "$ROLLBACK_TRIES" "$HEALTH_DELAY" "l'admin restaurée (/)" || restored=0
 fi
 
 if [ "$restored" -eq 1 ]; then
+  # Le retour arrière a recréé les conteneurs : leurs ports ont changé, donc
+  # l'amont Nginx aussi. Le régénérer fait partie de la restauration, sans quoi
+  # on aurait rétabli les conteneurs sans rétablir le service.
+  nginx_apply_upstream "$ENV_NAME" "$ENV_FILE" || warn \
+    "l'amont Nginx n'a pas pu être mis à jour après le retour arrière."
+
   # On inscrit le retour arrière : la dernière ligne de DEPLOYED doit toujours
   # décrire CE QUI TOURNE. Elle porte de nouveau le sha précédent — le fichier
   # reste lisible par promote.sh, et l'historique garde la trace de la tentative.

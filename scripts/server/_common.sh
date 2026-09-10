@@ -329,7 +329,15 @@ api_host_port() {
   env_value CARLYS_API_HOST_PORT "$file" "$fallback"
 }
 admin_host_port() {
-  local env_name="$1" file="$2" fallback=3001
-  [ "$env_name" = staging ] && fallback=3101
+  local env_name="$1" file="$2" fallback=3050
+  [ "$env_name" = staging ] && fallback=3150
   env_value CARLYS_ADMIN_HOST_PORT "$file" "$fallback"
 }
+
+# ── Exemplaires de l'API et amont Nginx ─────────────────────────────────────
+# Chargé EN DERNIER, une fois `dc`, `env_value` et `api_host_port` définis :
+# _replicas.sh les appelle. L'ordre de définition n'a pas d'importance en bash
+# tant qu'aucun appel n'a lieu au chargement — et aucun de ces deux fichiers
+# n'en fait.
+# shellcheck source=scripts/server/_replicas.sh
+. "$CARLYS_LIB_DIR/_replicas.sh"

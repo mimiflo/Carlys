@@ -50,12 +50,33 @@
 # n'écoute sur une interface publique, seul Nginx est exposé. postgres et redis
 # ne publient aucun port du tout — ils ne sont joignables que sur le réseau
 # Compose de leur environnement.
-upstream carlys_api_production {
-    server 127.0.0.1:3000;
-}
+#
+# `carlys_api_production` N'EST PAS DÉCLARÉ ICI, et c'est délibéré : l'API
+# tourne en plusieurs exemplaires, Docker attribue à chacun un port libre
+# d'une plage, et rien ne garantit lesquels. Écrire la liste à la main
+# reviendrait à la réécrire après chaque mise à l'échelle — donc à l'oublier
+# une fois, et à envoyer du trafic vers un port mort.
+#
+# L'amont est engendré par `carlysctl`, qui lit les ports RÉELS chez Docker,
+# dans :
+#     /etc/nginx/conf.d/carlys-production-api-upstream.conf
+# Ce répertoire est inclus par le nginx.conf du système AVANT sites-enabled,
+# donc l'amont existe quand ce fichier s'y réfère. Le gabarit et le
+# raisonnement complet sont dans carlys-api-upstream.conf.example.
+#
+# Conséquence à connaître, et VÉRIFIÉE : sans ce fichier engendré, `nginx -t`
+# échoue par
+#     [emerg] host not found in upstream "carlys_api_production"
+# — l'erreur est franche, jamais un démarrage à moitié. setup.sh pose donc une
+# version à un seul exemplaire dès l'installation, pour que la configuration
+# soit valide avant même le premier déploiement.
+#
+# Vérifié aussi, sur nginx 1.18, 1.22 et 1.27 (les versions de Ubuntu 22.04,
+# Debian 12 et les récentes) : avec l'amont engendré en place, « test is
+# successful » et aucun avertissement.
 
 upstream carlys_admin_production {
-    server 127.0.0.1:3001;
+    server 127.0.0.1:3050;
 }
 
 upstream carlys_minio_production {
@@ -72,7 +93,10 @@ upstream carlys_minio_production {
 # depuis Nginx 1.25.1, alors que Debian 12 sert 1.22.1 et Ubuntu 22.04 1.18.0)
 # ne se pose plus du tout ici.
 
-# ── API — api.carlys.example → 127.0.0.1:3000 ────────────────────────────────
+# ── API — api.carlys.example → 127.0.0.1:3000-3019 ───────────────────────────
+#
+# Une PLAGE, parce que l'API tourne en plusieurs exemplaires. La liste des
+# ports réellement occupés est dans l'amont engendré, pas ici.
 server {
     listen 80;
     listen [::]:80;
@@ -142,7 +166,7 @@ server {
     }
 }
 
-# ── Application web — app.carlys.example → 127.0.0.1:3001 ────────────────────
+# ── Application web — app.carlys.example → 127.0.0.1:3050 ────────────────────
 #
 # Un SEUL conteneur Next.js, deux publics : le back-office (/, /users,
 # /exercises, /media, /audit, /reports, /categories, /login) et les pages

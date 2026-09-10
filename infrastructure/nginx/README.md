@@ -49,9 +49,29 @@ doit jamais produire un `http://`.
 | Fichier | Rôle |
 | ------- | ---- |
 | `snippets/carlys-proxy.conf` | en-têtes de proxy, partagés par les six vhosts |
-| `carlys-production.conf.example` | `api.` / `app.` / `media.` → 3000 / 3001 / 9000 |
-| `carlys-staging.conf.example` | `api-staging.` / `app-staging.` / `media-staging.` → 3100 / 3101 / 9200 |
+| `carlys-api-upstream.conf.example` | gabarit de l'amont **engendré** de l'API — le fichier réel est écrit par `carlysctl` |
+| `carlys-production.conf.example` | `api.` / `app.` / `media.` → 3000-3019 / 3050 / 9000 |
+| `carlys-staging.conf.example` | `api-staging.` / `app-staging.` / `media-staging.` → 3100-3119 / 3150 / 9200 |
 | `carlys-attrape-tout.conf.example` | le `default_server` du port 80 : tout nom d'hôte qu'on ne sert pas |
+
+### L'amont de l'API n'est pas dans ces fichiers
+
+Les vhosts déclarent l'amont de l'admin et celui de MinIO, mais **pas** celui de
+l'API. L'API tourne en plusieurs exemplaires, Docker attribue à chacun un port
+libre pris dans une plage, et rien ne garantit lesquels — mesuré : à quatre
+exemplaires sur une plage de dix, l'attribution était 3403, 3404, 3406, 3407.
+Une liste écrite à la main serait fausse dès la première mise à l'échelle, et
+fausse **en silence** : Nginx enverrait du trafic vers un port que plus
+personne n'écoute.
+
+L'amont est donc engendré par `carlysctl`, qui lit les ports réels chez Docker,
+dans `/etc/nginx/conf.d/carlys-<env>-api-upstream.conf`. Ce répertoire est
+inclus par le `nginx.conf` du système **avant** `sites-enabled`.
+
+Conséquence à connaître : tant que ce fichier n'existe pas, `nginx -t` échoue
+par `[emerg] host not found in upstream "carlys_api_production"`.
+`scripts/server/setup.sh` en pose donc une version à un seul exemplaire dès
+l'installation, avant même de démarrer Nginx.
 
 Les deux fichiers d'environnement sont indépendants : on peut n'activer que la
 recette, puis ajouter la production quand ses DNS existent — il n'y a plus

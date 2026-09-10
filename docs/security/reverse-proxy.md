@@ -27,7 +27,8 @@ gra6.luuc.fr                    ← TERMINE LE TLS, détient les certificats
 Nginx Carlys (écoute en HTTP sur 80 uniquement)
       │
       ▼
-services Docker sur 127.0.0.1   (API 3000/3100, admin 3001/3101, MinIO 9000/9200)
+services Docker sur 127.0.0.1   (API 3000-3019/3100-3119, admin 3050/3150,
+                                 MinIO 9000/9200)
 ```
 
 Les six noms publics — `api.`, `app.`, `media.` en production, leurs jumeaux

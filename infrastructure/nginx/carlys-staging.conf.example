@@ -22,12 +22,15 @@
 #   ln -sf /etc/nginx/sites-available/carlys-staging.conf /etc/nginx/sites-enabled/
 #   nginx -t && systemctl reload nginx
 
-upstream carlys_api_staging {
-    server 127.0.0.1:3100;
-}
+# `carlys_api_staging` n'est pas déclaré ici : l'API tourne en plusieurs
+# exemplaires sur des ports attribués par Docker, et son amont est engendré
+# par `carlysctl` dans
+#     /etc/nginx/conf.d/carlys-staging-api-upstream.conf
+# Le raisonnement complet est en tête de carlys-production.conf.example, le
+# gabarit dans carlys-api-upstream.conf.example.
 
 upstream carlys_admin_staging {
-    server 127.0.0.1:3101;
+    server 127.0.0.1:3150;
 }
 
 upstream carlys_minio_staging {
@@ -42,7 +45,7 @@ upstream carlys_minio_staging {
 #   ssh -L 8025:127.0.0.1:8025 <utilisateur>@<serveur>
 # puis http://localhost:8025 dans le navigateur local.
 
-# ── API de recette — api-staging.carlys.example → 127.0.0.1:3100 ─────────────
+# ── API de recette — api-staging.carlys.example → 127.0.0.1:3100-3119 ────────
 #
 # Ni `ssl`, ni `http2` sur le `listen` : HTTP/2 se négocie dans la poignée de
 # main TLS, donc sur gra6. Ici, c'est du HTTP/1.1 en clair de bout en bout
@@ -92,7 +95,7 @@ server {
     }
 }
 
-# ── Application web de recette — app-staging → 127.0.0.1:3101 ────────────────
+# ── Application web de recette — app-staging → 127.0.0.1:3150 ────────────────
 #
 # C'est CET hôte que doivent désigner, côté API de recette :
 #   PUBLIC_APP_URL = https://app-staging.carlys.example

@@ -203,11 +203,36 @@ services:
       # Le processus Node date ses journaux et ses jetons : même exigence UTC
       # que PostgreSQL.
       TZ: UTC
+    # ── Plusieurs exemplaires de l'API ────────────────────────────────────
+    #
+    # `deploy.replicas` — et NON `docker compose up --scale` : le nombre doit
+    # survivre à un `up -d` ordinaire. Avec --scale, tout déploiement, tout
+    # redémarrage, toute commande tapée sans y penser ramènerait la pile à un
+    # seul exemplaire, sans rien dire. Ici le nombre vit dans le .env de
+    # l'environnement : c'est un état, pas un argument de ligne de commande.
+    #
+    # (Ce champ est bien lu par Compose v2 et suivants hors Swarm : mesuré,
+    # `up -d` crée, ajoute et retire les exemplaires en conséquence.)
+    deploy:
+      replicas: ${CARLYS_API_REPLICAS:-1}
     ports:
-      # 127.0.0.1 uniquement : nginx, sur l'hôte, est le seul à parler à l'API.
-      # Sans ce préfixe, Docker ouvrirait le port sur TOUTES les interfaces en
-      # écrivant directement dans netfilter — ufw ne le verrait même pas.
-      - '127.0.0.1:${CARLYS_API_HOST_PORT:?CARLYS_API_HOST_PORT est obligatoire}:${PORT:?PORT est obligatoire}'
+      # UNE PLAGE, pas un port. Docker ne peut pas publier N exemplaires sur
+      # le même port de l'hôte ; il attribue à chacun un port LIBRE de la
+      # plage, et rien ne garantit qu'ils soient contigus ni dans l'ordre
+      # (mesuré : à quatre exemplaires sur 3400-3409, l'attribution était
+      # 3403, 3404, 3406, 3407). Personne ne peut donc DEVINER où écoute un
+      # exemplaire : nginx apprend la liste de `carlysctl`, qui la lit chez
+      # Docker et régénère l'amont.
+      #
+      # Demander plus d'exemplaires que la plage n'a de ports échoue en cours
+      # de route — « all ports are allocated » — et laisse la pile à moitié
+      # mise à l'échelle. `carlysctl` refuse donc AVANT d'appeler Compose.
+      #
+      # 127.0.0.1 uniquement : nginx, sur l'hôte, est le seul à parler à
+      # l'API. Sans ce préfixe, Docker ouvrirait les ports sur TOUTES les
+      # interfaces en écrivant directement dans netfilter — ufw ne les verrait
+      # même pas.
+      - '127.0.0.1:${CARLYS_API_HOST_PORT:?CARLYS_API_HOST_PORT est obligatoire}-${CARLYS_API_HOST_PORT_LAST:?CARLYS_API_HOST_PORT_LAST est obligatoire - dernier port de la plage reservee a lAPI (ex 3019 pour un premier port a 3000). Ajouter la ligne au .env de lenvironnement}:${PORT:?PORT est obligatoire}'
     depends_on:
       postgres:
         condition: service_healthy
