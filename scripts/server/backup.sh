@@ -243,10 +243,22 @@ info "environnements sautés : $skipped (absents ou jamais déployés)"
 info "fichiers purgés    : $purged"
 info "répertoire         : $BACKUP_DIR"
 
+# L'ALERTE PART D'ICI, ET PAS DE CRON. Le commentaire qui occupait ces lignes
+# affirmait « sous cron, c'est ce qui déclenche l'alerte » : c'était faux. Cron
+# n'envoie un courriel que si le travail produit de la SORTIE, or la ligne de
+# cron redirige tout vers `logger` ; il n'y a ni MAILTO ni MTA sur la machine.
+# Le code de retour non nul reste juste et utile — il sert à qui appelle ce
+# script à la main — mais il ne réveille personne. Voir _alert.sh.
 if [ "$failures" -gt 0 ]; then
-  # Sortie non nulle : sous cron, c'est ce qui déclenche l'alerte. Une
-  # sauvegarde qui échoue en silence est une sauvegarde qu'on découvre absente
-  # le jour de la restauration.
+  alerte_signaler machine sauvegarde "Sauvegarde des bases: ECHEC" \
+    "$failures environnement(s) déployé(s) n'ont PAS été sauvegardés." \
+    "sauvegardes créées cette nuit : $made" \
+    "répertoire : $BACKUP_DIR" \
+    "" \
+    "Une base non sauvegardée ne se découvre pas : elle se découvre le jour" \
+    "de la restauration. Journal complet : journalctl -t carlys-backup -n 200"
   printf '\n%s✗ %s environnement(s) NON sauvegardé(s)%s\n' "$_c_red" "$failures" "$_c_off" >&2
   exit 1
 fi
+
+alerte_resoudre machine sauvegarde "Sauvegarde des bases: ECHEC"

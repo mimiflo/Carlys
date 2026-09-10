@@ -378,6 +378,23 @@ for env_name in staging production; do
   fi
 done
 
+# LE FICHIER D'ALERTES, même règle : jamais écrasé. Il vit à la racine et non
+# dans un environnement, parce qu'un disque plein ou une sauvegarde ratée
+# n'appartiennent ni à la recette ni à la production.
+alertes="$(printf '%s/alertes.env' "$CARLYS_ROOT")"
+alertes_ex="$CARLYS_ENV_EXAMPLES_DIR/alertes.env.example"
+if [ -f "$alertes" ]; then
+  ok "$alertes existe — CONSERVÉ (jamais écrasé)"
+  chmod 600 "$alertes"
+elif [ -f "$alertes_ex" ]; then
+  cp "$alertes_ex" "$alertes"
+  chmod 600 "$alertes"
+  ok "$alertes créé — TOUT EST COMMENTÉ, donc AUCUNE alerte ne sortira"
+  info "  décommenter UNE ligne de canal, puis : carlysctl alert-test"
+else
+  warn "modèle absent : $alertes_ex"
+fi
+
 # ── 6. Jeton du registre ───────────────────────────────────────────────────
 # Créé VIDE avec les bons droits : l'opérateur n'a plus qu'à y coller le PAT,
 # sans avoir à penser au chmod. deploy.sh refuse explicitement un jeton vide.
@@ -405,12 +422,16 @@ cat > "$cron_tmp" <<FIN
 # La sortie part vers syslog : une sauvegarde qui échoue doit laisser une trace
 # ailleurs que dans un courriel que personne ne lit.
 #
-# -o pipefail N'EST PAS DÉCORATIF. Sans lui, le code de retour d'un tube est
-# celui de sa DERNIÈRE commande — ici « logger », qui réussit toujours. La
-# sortie en erreur de backup.sh serait donc avalée, cron ne verrait qu'un
-# succès, et le courriel d'alerte ne partirait jamais : la sauvegarde
-# échouerait toutes les nuits en silence. Avec pipefail, le tube rend le code
-# de backup.sh, et cron alerte.
+# -o pipefail N'EST PAS DÉCORATIF : sans lui, le code de retour d'un tube est
+# celui de sa DERNIÈRE commande — ici « logger », qui réussit toujours — et
+# quiconque appelle ce script en attendant son code se ferait berner.
+#
+# EN REVANCHE, CRON N'ALERTE PAS, et ces lignes ont longtemps affirmé le
+# contraire. Cron n'envoie un courriel que si le travail produit de la SORTIE ;
+# tout part vers « logger », donc il n'a rien à poster, quel que soit le code de
+# retour. Il n'y a d'ailleurs ni MAILTO ici, ni MTA installé sur la machine.
+# L'alerte est envoyée par backup.sh lui-même — voir _alert.sh — à condition
+# qu'un canal soit configuré dans /srv/carlys/alertes.env.
 SHELL=/bin/bash
 PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin
 CARLYS_ROOT=$CARLYS_ROOT

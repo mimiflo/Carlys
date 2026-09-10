@@ -428,3 +428,6 @@ admin_host_port() {
 . "$CARLYS_LIB_DIR/_envsync.sh"
 # shellcheck source=scripts/server/_repo.sh
 . "$CARLYS_LIB_DIR/_repo.sh"
+# _alert.sh appelle state_* et status_duree : chargé après eux.
+# shellcheck source=scripts/server/_alert.sh
+. "$CARLYS_LIB_DIR/_alert.sh"

@@ -548,6 +548,71 @@ Reculer reste possible, mais c'est une **commande**, pas un automatisme :
 carlysctl deploy staging <sha>
 ```
 
+### Les alertes — ce qui sort de la machine, et ce qui n'en sortira jamais
+
+Le dépôt affirmait, à deux endroits, que le code de retour de la sauvegarde
+suffisait à alerter via cron. **C'était faux, pour trois raisons
+indépendantes** : cron n'envoie un courriel que si le travail produit de la
+**sortie**, or la ligne de cron redirige tout vers `logger` ; il n'y a pas de
+`MAILTO` ; et aucun MTA n'est installé. Une sauvegarde qui échouait toutes les
+nuits ne réveillait personne.
+
+L'alerte part désormais des scripts eux-mêmes, par `curl` — **déjà** un outil
+requis, et il sait parler SMTP. Aucun MTA à installer, aucune dépendance
+ajoutée.
+
+| Ce qui déclenche | Où |
+| --- | --- |
+| sauvegarde d'une base **déployée** échouée | `backup.sh`, chaque nuit |
+| déploiement automatique échoué, sha mis de côté | `_update.sh` |
+| **plafond de réparations atteint** — l'orchestrateur a renoncé | `_heal.sh` |
+| disque au-delà du seuil et rien à élaguer | `_prune.sh` |
+
+**On n'alerte que sur les transitions**, et c'est ce qui rend le système
+lisible. La supervision repasse toutes les deux minutes : signaler un *état*
+enverrait 720 messages par jour.
+
+```
+sain  → panne : on envoie, tout de suite
+panne → panne : silence, sauf rappel au bout de CARLYS_ALERT_RAPPEL_HEURES (24 h)
+panne → sain  : « RESOLU », avec la durée de la panne
+sain  → sain  : rien
+```
+
+Mesuré sur un vrai récepteur : **six appels → trois messages** (trois
+signalements identiques fondus en un, plus une panne distincte, plus une
+résolution issue de deux appels).
+
+Deux canaux, un seul suffit — dans `/srv/carlys/alertes.env` :
+
+```bash
+# le plus simple, et ça arrive sur le téléphone — aucun identifiant
+CARLYS_ALERT_WEBHOOK=https://ntfy.sh/<un-sujet-long-et-imprevisible>
+
+# ou par courriel, via un relais qui n'est PAS celui de l'application
+CARLYS_ALERT_TO=toi@exemple.fr
+CARLYS_ALERT_SMTP_URL=smtp://relais:587
+```
+
+Le relais de l'application ne convient pas : en recette, `SMTP_HOST` vaut
+`mailpit`, un attrapeur **local**. Une alerte qui y atterrirait ne sortirait
+jamais de la machine — exactement le défaut qu'on répare.
+
+Éprouver le canal **avant** d'en avoir besoin, parce qu'un système d'alerte
+qu'on n'a jamais vu fonctionner est une hypothèse, pas un système :
+
+```bash
+carlysctl alert-test
+```
+
+`carlysctl doctor` compte l'absence de canal comme un **défaut** et le dit.
+
+> **Ce qu'aucune alerte ne peut faire : prévenir que la machine est morte.**
+> Une alerte part *de* la machine ; si elle ne répond plus, rien ne part, et le
+> silence ressemble à « tout va bien ». Couvrir ce cas demande une surveillance
+> **extérieure** — un service qui interroge `/health/live` et crie quand il
+> n'obtient rien. Elle n'est pas dans ce dépôt, et rien ici ne la remplace.
+
 ### `carlysctl env-sync` — le `.env` se complète tout seul
 
 `setup.sh` ne réécrit jamais un `.env` existant : c'est sa propriété la plus

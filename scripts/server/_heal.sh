@@ -146,6 +146,7 @@ heal_run() {
   # pile stable, cet appel coûte un rendu de fichier et une comparaison, toutes
   # les deux minutes. C'est le bon prix pour la seule détection de cette panne.
   if [ "${#absents[@]}" -eq 0 ] && [ "${#malades[@]}" -eq 0 ] && [ "$actuels" -eq "$voulus" ]; then
+    alerte_resoudre "$env_name" reparation "Plafond de reparations atteint ($env_name)"
     ok "pile saine — aucun conteneur à relever"
     nginx_apply_upstream "$env_name" "$file" || return 1
     return 0
@@ -154,6 +155,16 @@ heal_run() {
   recent="$(heal_compte_recent "$env_name")"
   plafond="$(heal_max_par_heure "$file")"
   if [ "$recent" -ge "$plafond" ]; then
+    # Le plafond atteint est le signal le plus fort que produise cet
+    # orchestrateur : il veut dire qu'il a renoncé, et donc que PLUS RIEN ne
+    # relèvera la pile jusqu'à ce qu'un humain regarde.
+    alerte_signaler "$env_name" reparation "Plafond de reparations atteint ($env_name)" \
+      "$recent réparations tentées dans l'heure, maximum $plafond." \
+      "L'orchestrateur ne tentera PLUS RIEN sur « $env_name » tant que le" \
+      "compteur n'est pas retombé. La pile reste dans l'état où elle est." \
+      "" \
+      "  carlysctl status $env_name" \
+      "  docker compose -p $(compose_project "$env_name" "$file") logs --tail 200"
     warn "PLAFOND DE RÉPARATIONS ATTEINT : $recent dans l'heure (maximum $plafond)."
     warn "  Plus aucune réparation automatique ne sera tentée sur « $env_name »."
     warn "  Ce plafond existe pour qu'une panne qui revient à chaque redémarrage"

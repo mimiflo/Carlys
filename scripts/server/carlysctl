@@ -32,6 +32,7 @@ carlysctl — orchestrateur de l'infrastructure Carlys
 REGARDER
   carlysctl status [staging|production]   état complet (défaut : les deux)
   carlysctl doctor                        vérifie les préalables de la machine
+  carlysctl alert-test                    envoie une VRAIE alerte d'essai
 
 AGIR À LA MAIN
   carlysctl deploy <env> <sha>            déploie un sha (appelle deploy.sh)
@@ -221,6 +222,40 @@ cmd_envsync() {
   unlock_env
 }
 
+# `alert-test` — prouver que le canal marche AVANT d'en avoir besoin.
+#
+# Un système d'alerte qu'on n'a jamais vu fonctionner n'est pas un système
+# d'alerte : c'est une hypothèse. Cette commande envoie un vrai message par le
+# vrai canal, et dit ce qui s'est passé.
+cmd_alert_test() {
+  local canal
+  canal="$(alerte_canal)"
+  step "Essai du canal d'alerte"
+  info "configuration : $(alerte_config_file)"
+  if [ "$canal" = aucun ]; then
+    die "Aucun canal d'alerte configuré." \
+      "Rien ne sortira de cette machine en cas de panne — ni sauvegarde ratée," \
+      "ni déploiement échoué, ni disque plein." \
+      "" \
+      "Poser UNE des deux lignes dans $(alerte_config_file) :" \
+      "  CARLYS_ALERT_WEBHOOK=https://ntfy.sh/<un-sujet-a-toi>   (aucun identifiant)" \
+      "  CARLYS_ALERT_TO=toi@exemple.fr                          (+ CARLYS_ALERT_SMTP_URL)" \
+      "" \
+      "Modèle commenté : $CARLYS_REPO_DIR/infrastructure/server/env/alertes.env.example"
+  fi
+  info "canal        : $canal"
+  if alerte_envoyer "[Carlys] essai du canal d'alerte" \
+    "$(alerte_entete essai)
+Ceci est un ESSAI, déclenché à la main par carlysctl alert-test.
+Si tu lis ce message, une vraie alerte te parviendra aussi."; then
+    ok "message envoyé — va le vérifier là où tu l'attends"
+  else
+    die "L'envoi a ÉCHOUÉ." \
+      "Les avertissements ci-dessus disent pourquoi." \
+      "Relire $(alerte_config_file)."
+  fi
+}
+
 cmd_update() {
   local env_name file
   env_name="$(environnement_requis "${1-}")"
@@ -345,6 +380,20 @@ cmd_doctor() {
     warn "jeton de registre absent : $(ghcr_token_file)"; manque=1
   fi
 
+  # UN SYSTÈME D'ALERTE ÉTEINT EN SILENCE est le défaut que _alert.sh répare :
+  # `doctor` doit donc le dire fort, et pas seulement quand il est cassé.
+  step "Alertes"
+  case "$(alerte_canal)" in
+    aucun)
+      warn "AUCUN canal — rien ne sortira de cette machine en cas de panne"
+      warn "  ni sauvegarde ratée, ni déploiement échoué, ni disque plein."
+      warn "  Poser une ligne dans $(alerte_config_file) — modèle :"
+      warn "  $CARLYS_REPO_DIR/infrastructure/server/env/alertes.env.example"
+      manque=1
+      ;;
+    *) ok "canal : $(alerte_canal) — l'éprouver : carlysctl alert-test" ;;
+  esac
+
   step "Environnements"
   while read -r env_name; do
     file="$(env_file "$env_name")"
@@ -381,6 +430,7 @@ case "$COMMANDE" in
   autoscale) cmd_autoscale "${1-}" "${2-}" ;;
   heal)      cmd_heal "${1-}" ;;
   env-sync)  cmd_envsync "$@" ;;
+  alert-test) cmd_alert_test ;;
   prune)     cmd_prune "${1-}" ;;
   update)    cmd_update "${1-}" ;;
   supervise) cmd_supervise "${1-}" ;;

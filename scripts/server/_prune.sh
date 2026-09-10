@@ -110,6 +110,7 @@ prune_si_necessaire() {
   seuil="$(prune_seuil_pourcent "$file")"
   [ -n "$occupe" ] || return 0
   if [ "$occupe" -lt "$seuil" ]; then
+    alerte_resoudre machine disque "Disque plein, rien a elaguer"
     return 0
   fi
   warn "disque à ${occupe} % (seuil ${seuil} %) — élagage des images Carlys"
@@ -117,6 +118,17 @@ prune_si_necessaire() {
   n="$(prune_images)"
   occupe="$(disque_pourcent)"
   if [ "$n" -eq 0 ]; then
+    # Le disque plein n'est pas une lenteur : PostgreSQL cesse d'écrire, les
+    # sauvegardes échouent, et l'état de l'orchestrateur ne peut plus être
+    # enregistré. Si l'élagage n'a rien trouvé, personne d'autre ne le fera.
+    alerte_signaler machine disque "Disque plein, rien a elaguer" \
+      "Occupation de $CARLYS_ROOT : ${occupe} % (seuil ${seuil} %)." \
+      "L'élagage des images Carlys n'a trouvé AUCUNE image à supprimer." \
+      "" \
+      "Un disque plein arrête PostgreSQL en écriture et fait échouer les" \
+      "sauvegardes. Regarder ailleurs :" \
+      "  docker system df" \
+      "  du -xh --max-depth=1 $CARLYS_ROOT"
     warn "aucune image à élaguer, et le disque est toujours à ${occupe} %."
     warn "  Regarder ailleurs : docker system df ; du -xh --max-depth=1 $CARLYS_ROOT"
     warn "  Les volumes de données et les sauvegardes ne sont PAS élagués ici."

@@ -47,6 +47,10 @@ fait d'effet de bord au chargement.
 | `_heal.sh` | la réparation, et son plafond horaire |
 | `_update.sh` | la mise à jour autonome, et ce qui l'autorise |
 | `_status.sh` | l'état des lieux |
+| `_envcheck.sh` | ce que Compose pense d'un `.env`, et les quatre pièges qu'il ne voit pas |
+| `_envsync.sh` | compléter un `.env` sans jamais rien deviner |
+| `_repo.sh` | le clone du serveur, et la divergence de branches |
+| `_alert.sh` | faire SORTIR une alerte, et ne la crier qu'une fois |
 
 Elles existent pour que chaque règle ne soit écrite qu'une fois — `promote.sh`
 lit le `DEPLOYED` que `deploy.sh` écrit, `backup.sh` s'en sert pour savoir si
@@ -209,10 +213,16 @@ plus d'un jour (ceux qu'une interruption brutale a laissés ; sans cette
 seconde passe ils s'accumuleraient indéfiniment, chacun de la taille d'une
 base). Ce qu'un opérateur a déposé là ne disparaît pas.
 
-**Le code de retour EST l'alerte.** La ligne de cron posée par `setup.sh`
-tourne sous `bash -o pipefail` : sans lui, le tube `backup.sh | logger`
-rendrait le code de `logger`, toujours nul, et cron n'enverrait jamais rien.
-Elle ne vaut donc que si elle ne crie pas pour rien : un environnement dont le
+**L'alerte part de `backup.sh`, pas de cron.** Ces lignes ont longtemps dit
+« le code de retour EST l'alerte » : c'était faux. Le `-o pipefail` de la ligne
+de cron préserve bien le code de sortie — sans lui le tube `backup.sh | logger`
+rendrait celui de `logger`, toujours nul — mais **cron n'envoie un courriel que
+si le travail produit de la sortie**, or tout part vers `logger` ; il n'y a ni
+`MAILTO` ni MTA sur la machine. Une sauvegarde ratée ne réveillait donc
+personne. C'est `backup.sh` qui alerte désormais, par le canal configuré dans
+`/srv/carlys/alertes.env` (voir `_alert.sh`). Le code de retour reste juste et
+utile pour qui appelle le script à la main. L'alerte
+ne vaut que si elle ne crie pas pour rien : un environnement dont le
 `DEPLOYED` est vide n'a **jamais rien hébergé** — `setup.sh` crée pourtant les
 deux `.env` dès le premier jour — il est sauté sans compter d'échec. Un
 environnement **déployé** dont postgres ne tourne pas, lui, a des données qui

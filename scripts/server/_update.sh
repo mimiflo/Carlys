@@ -305,6 +305,12 @@ update_run() {
 
   if [ "$sortie" -ne 0 ]; then
     update_marquer_echec "$env_name" "$cible"
+    alerte_signaler "$env_name" deploiement "Deploiement automatique: ECHEC ($env_name)" \
+      "sha-$cible a échoué (code $sortie) et ne sera PLUS retenté automatiquement." \
+      "La pile est restée sur sha-${courant:-aucun}." \
+      "" \
+      "La mise à jour repartira au prochain commit. Pour forcer :" \
+      "  carlysctl deploy $env_name $cible"
     warn "sha-$cible a ÉCHOUÉ sur « $env_name » (code $sortie) — il est mis de côté."
     warn "  Il ne sera plus retenté automatiquement : réessayer ne répare rien,"
     warn "  le code est le même. La mise à jour repartira au prochain commit."
