@@ -25,8 +25,14 @@ cp -r launcher/res/. android/app/src/main/res/
 
 # Android 13+ : la permission de notification se DÉCLARE dans le manifeste
 # (la demande à l'exécution passe par Firebase Messaging).
+#
+# Le saut de ligne dans le remplacement est un VRAI saut de ligne précédé
+# d'un antislash, pas « \n » : le sed de macOS (BSD) n'interprète pas « \n »
+# dans la partie remplacement et écrivait un « n » littéral — manifeste
+# corrompu sur tout poste Mac, et sur le runner macOS de mobile-recette.
 if ! grep -q "android.permission.POST_NOTIFICATIONS" "$MANIFEST"; then
-  sed -i.bak 's|<application|<uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>\n    <application|' "$MANIFEST"
+  sed -i.bak 's|<application|<uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>\
+    <application|' "$MANIFEST"
   rm -f "$MANIFEST.bak"
 fi
 
@@ -58,7 +64,9 @@ DEBUG_MANIFEST="android/app/src/debug/AndroidManifest.xml"
 if ! grep -q "networkSecurityConfig" "$DEBUG_MANIFEST"; then
   # Fusion de manifeste : l'attribut rejoint le <application> du manifeste
   # principal, qui n'en déclare aucun — donc aucun conflit à arbitrer.
-  sed -i.bak 's|</manifest>|    <application\n        android:networkSecurityConfig="@xml/network_security_config" />\n</manifest>|' "$DEBUG_MANIFEST"
+  sed -i.bak 's|</manifest>|    <application\
+        android:networkSecurityConfig="@xml/network_security_config" />\
+</manifest>|' "$DEBUG_MANIFEST"
   rm -f "$DEBUG_MANIFEST.bak"
 fi
 

@@ -697,9 +697,11 @@ quelques secondes plutôt qu'après vingt minutes d'archive :
   été exporté sans l'intermédiaire WWDR, le job importe ceux qu'Apple publie
   et revérifie ;
 - le profil : de type **App Store** (ni Ad Hoc, ni Development, ni
-  Enterprise), pour **ce** bundle, **non expiré**, et **embarquant le
-  certificat** importé — la paire dépareillée est l'erreur la plus fréquente
-  de toute la signature iOS ;
+  Enterprise), pour **ce** bundle, **non expiré**, et **embarquant l'un des
+  certificats** importés — la paire dépareillée est l'erreur la plus
+  fréquente de toute la signature iOS. C'est ce certificat-là qui signe,
+  désigné par son empreinte SHA-1 : un `.p12` qui contient l'ancien et le
+  nouveau certificat ne crée aucune ambiguïté ;
 - puis seulement : signature manuelle branchée par `ios/Flutter/Release.xcconfig`
   (l'équivalent du second bloc `android { }` — rien n'est édité dans
   `project.pbxproj`), `ExportOptions.plist` écrit, archive, export,
@@ -729,9 +731,11 @@ humain réponde « Missing Compliance ».
   publication App Store se prépare, c'est ce job de recette qui sert de
   modèle, pas une page blanche.
 - **Les notifications push iOS** ne sont pas couvertes : elles demandent une
-  clé APNs chez Apple, la capacité Push sur l'App ID, et un
-  `GoogleService-Info.plist` distinct du fichier Android. Sans elles, le push
-  est simplement inactif sur iOS, le reste de l'application vit normalement.
+  clé APNs chez Apple, la capacité Push sur l'App ID (donc un profil
+  régénéré), un fichier `Runner.entitlements` portant `aps-environment` que
+  le gabarit Flutter n'a pas, et un `GoogleService-Info.plist` distinct du
+  fichier Android. Sans elles, le push est simplement inactif sur iOS, le
+  reste de l'application vit normalement.
 
 ---
 

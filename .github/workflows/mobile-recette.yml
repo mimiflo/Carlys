@@ -469,7 +469,7 @@ jobs:
           # fréquent qu'un mot de passe faux.
           if ! keytool -list -keystore "$keystore" \
               -storepass "$KEYSTORE_PASSWORD" -alias "$KEY_ALIAS" >/dev/null 2>&1; then
-            echo "::error title=Keystore illisible, mot de passe ou alias invalide::Le keystore déballé n'a pas pu être ouvert. Trois causes possibles, dans l'ordre de fréquence : (1) ANDROID_KEYSTORE_BASE64 a été collé INCOMPLET — une base64 tronquée se décode sans erreur en un fichier inutilisable, régénère-la avec « base64 -w0 carlys-release.jks » et recolle-la entière ; (2) ANDROID_KEYSTORE_PASSWORD ne correspond pas ; (3) ANDROID_KEY_ALIAS n'existe pas dans ce keystore. Vérifie sur ton poste : « keytool -list -keystore carlys-release.jks -alias <alias> ». Aucun mot de passe n'est affiché ici."
+            echo "::error title=Keystore illisible — mot de passe ou alias invalide::Le keystore déballé n'a pas pu être ouvert. Trois causes possibles, dans l'ordre de fréquence : (1) ANDROID_KEYSTORE_BASE64 a été collé INCOMPLET — une base64 tronquée se décode sans erreur en un fichier inutilisable, régénère-la avec « base64 -w0 carlys-release.jks » et recolle-la entière ; (2) ANDROID_KEYSTORE_PASSWORD ne correspond pas ; (3) ANDROID_KEY_ALIAS n'existe pas dans ce keystore. Vérifie sur ton poste : « keytool -list -keystore carlys-release.jks -alias <alias> ». Aucun mot de passe n'est affiché ici."
             exit 1
           fi
           echo "Keystore valide, alias trouvé."
@@ -1005,11 +1005,11 @@ jobs:
           security list-keychains -d user -s "$trousseau"
 
           # sed -E : le sed de macOS (BSD) ignore l'alternance « \| » en
-          # expression basique. Ne garde que le PRÉFIXE du nom — « Apple
-          # Distribution » — c'est ce que CODE_SIGN_IDENTITY attend.
+          # expression basique. Rend « <empreinte SHA-1> <nom complet> » par
+          # identité de distribution VALIDE.
           identites() {
             security find-identity -v -p codesigning "$trousseau" \
-              | sed -En 's/^ *[0-9]+\) ([0-9A-F]+) "((Apple|iPhone) Distribution)[^"]*"$/\1 \2/p'
+              | sed -En 's/^ *[0-9]+\) ([0-9A-F]+) "((Apple|iPhone) Distribution[^"]*)"$/\1 \2/p'
           }
           if [ -z "$(identites)" ]; then
             echo "Aucune identité de distribution valide ; import des intermédiaires WWDR d'Apple…"
@@ -1022,16 +1022,19 @@ jobs:
             done
           fi
           if [ -z "$(identites)" ]; then
-            echo "::error title=Aucun certificat de DISTRIBUTION valide::Le .p12 importé ne contient aucune identité « Apple Distribution » (ou « iPhone Distribution ») valide. Trois causes : (1) c'est un certificat de DÉVELOPPEMENT (« Apple Development ») — il ne peut signer ni pour TestFlight ni pour l'App Store, crée un certificat Apple Distribution sur developer.apple.com ; (2) il est EXPIRÉ (un an de validité) — renouvelle-le, puis régénère le profil de provisionnement, qui l'embarque ; (3) le .p12 ne contient que le certificat sans sa clé privée — exporte depuis Trousseaux d'accès en sélectionnant la ligne qui se DÉPLIE sur une clé privée. Identités présentes : $(security find-identity -p codesigning "$trousseau" | sed -n 's/^ *[0-9]*) [0-9A-F]* "\([^"]*\)"$/« \1 »/p' | tr '\n' ' ')"
+            # Sans -v, find-identity suffixe chaque identité INVALIDE de sa
+            # raison — (CSSMERR_TP_CERT_EXPIRED), (CSSMERR_TP_NOT_TRUSTED) —
+            # après la citation fermante : c'est exactement ce qu'il faut
+            # montrer, donc pas d'ancre de fin. sort -u : la commande liste
+            # deux fois les identités valides (« Matching » puis « Valid »).
+            echo "::error title=Aucun certificat de DISTRIBUTION valide::Le .p12 importé ne contient aucune identité « Apple Distribution » (ou « iPhone Distribution ») valide. Trois causes : (1) c'est un certificat de DÉVELOPPEMENT (« Apple Development ») — il ne peut signer ni pour TestFlight ni pour l'App Store, crée un certificat Apple Distribution sur developer.apple.com ; (2) il est EXPIRÉ (un an de validité) — renouvelle-le, puis régénère le profil de provisionnement, qui l'embarque ; (3) le .p12 ne contient que le certificat sans sa clé privée — exporte depuis Trousseaux d'accès en sélectionnant la ligne qui se DÉPLIE sur une clé privée. Identités présentes : $(security find-identity -p codesigning "$trousseau" | sed -n 's/^ *[0-9]*) [0-9A-F]* "\([^"]*\)"\(.*\)$/« \1 »\2/p' | sort -u | tr '\n' ' ')"
             exit 1
           fi
-          # Une seule identité sert à signer : la première valide. Son
-          # empreinte est confrontée au profil à l'étape suivante.
-          empreinte="$(identites | head -n 1 | cut -d' ' -f1)"
-          identite="$(identites | head -n 1 | cut -d' ' -f2-)"
-          echo "empreinte=$empreinte" >> "$GITHUB_OUTPUT"
-          echo "identite=$identite" >> "$GITHUB_OUTPUT"
-          echo "Identité de signature : $identite (empreinte $empreinte)"
+          # Laquelle signera se décide à l'étape suivante, contre le profil :
+          # un .p12 peut porter deux certificats de distribution valides
+          # (l'ancien et le renouvelé), et seul le profil sait lequel est bon.
+          echo "Identité(s) de distribution valide(s) :"
+          identites | sed 's/^/  /'
 
       # ── Le profil : App Store, ce bundle, ce certificat, pas expiré ─────────
       #
@@ -1039,10 +1042,16 @@ jobs:
       # xcodebuild ne donnerait pas. Un profil Ad Hoc ou Development se
       # reconnaît à sa liste d'appareils (ProvisionedDevices), un profil
       # Enterprise à ProvisionsAllDevices ; un profil App Store n'a ni l'un ni
-      # l'autre. L'empreinte du certificat embarqué dans le profil doit être
-      # celle de l'identité importée : un profil régénéré pour un nouveau
-      # certificat, ou l'inverse, est l'erreur la plus fréquente de toute la
-      # signature iOS, et xcodebuild la rapporte par « no profile matching ».
+      # l'autre. L'un des certificats embarqués dans le profil doit être une
+      # identité importée : un profil régénéré pour un nouveau certificat, ou
+      # l'inverse, est l'erreur la plus fréquente de toute la signature iOS,
+      # et xcodebuild la rapporte par « no profile matching ». L'identité
+      # ainsi trouvée est CELLE qui signera, désignée par son empreinte SHA-1
+      # — « Apple Distribution » seul serait ambigu s'il y en a deux.
+      #
+      # Le préfixe de l'App ID est ApplicationIdentifierPrefix, pas toujours
+      # égal au Team ID sur les comptes Apple anciens ; on compare avec le
+      # premier et on signe avec le second.
       #
       # Deux dossiers d'installation : Xcode 16 lit
       # ~/Library/Developer/Xcode/UserData/Provisioning Profiles, les versions
@@ -1054,7 +1063,6 @@ jobs:
         env:
           PROFIL_B64: ${{ secrets.IOS_PROVISIONING_PROFILE_BASE64 }}
           BUNDLE: ${{ steps.bundle.outputs.id }}
-          EMPREINTE: ${{ steps.trousseau.outputs.empreinte }}
         run: |
           profil="$RUNNER_TEMP/carlys.mobileprovision"
           plist="$RUNNER_TEMP/carlys-profil.plist"
@@ -1075,35 +1083,57 @@ jobs:
           fi
 
           if plutil -extract ProvisionedDevices raw -o - "$plist" >/dev/null 2>&1; then
-            echo "::error title=Profil Ad Hoc ou Development, pas App Store::« $nom » porte une liste d'appareils : c'est un profil Ad Hoc ou Development, que TestFlight refuse et que l'export App Store Connect ne saurait produire. Crée sur developer.apple.com → Profiles un profil de type Distribution → App Store Connect pour l'App ID « $BUNDLE »."
+            echo "::error title=Profil Ad Hoc ou Development — pas App Store::« $nom » porte une liste d'appareils : c'est un profil Ad Hoc ou Development, que TestFlight refuse et que l'export App Store Connect ne saurait produire. Crée sur developer.apple.com → Profiles un profil de type Distribution → App Store Connect pour l'App ID « $BUNDLE »."
             exit 1
           fi
           if [ "$(lire ProvisionsAllDevices)" = "true" ]; then
-            echo "::error title=Profil Enterprise, pas App Store::« $nom » est un profil de distribution en entreprise (ProvisionsAllDevices). TestFlight le refuse. Crée un profil Distribution → App Store Connect."
+            echo "::error title=Profil Enterprise — pas App Store::« $nom » est un profil de distribution en entreprise (ProvisionsAllDevices). TestFlight le refuse. Crée un profil Distribution → App Store Connect."
             exit 1
           fi
+          prefixe="$(lire ApplicationIdentifierPrefix.0)"; [ -n "$prefixe" ] || prefixe="$equipe"
           case "$appid" in
-            "$equipe.$BUNDLE"|"$equipe.*") ;;
+            "$prefixe.$BUNDLE"|"$prefixe.*") ;;
             *)
-              echo "::error title=Le profil ne vise pas cette application::« $nom » est fait pour l'App ID « ${appid#"$equipe".} » ; l'application engendrée par flutter create s'appelle « $BUNDLE ». Enregistre cet App ID exact chez Apple (Identifiers), crée-lui un profil App Store Connect, et remplace le secret IOS_PROVISIONING_PROFILE_BASE64."
+              echo "::error title=Le profil ne vise pas cette application::« $nom » est fait pour l'App ID « ${appid#"$prefixe".} » ; l'application engendrée par flutter create s'appelle « $BUNDLE ». Enregistre cet App ID exact chez Apple (Identifiers), crée-lui un profil App Store Connect, et remplace le secret IOS_PROVISIONING_PROFILE_BASE64."
               exit 1 ;;
           esac
-          maintenant="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
-          if [ -n "$expire" ] && [[ "$expire" < "$maintenant" ]]; then
-            echo "::error title=Profil expiré::« $nom » a expiré le $expire. Régénère-le sur developer.apple.com → Profiles (un profil vaut un an) et remplace le secret."
-            exit 1
-          fi
+          # plutil rend les dates en ISO 8601 UTC ; si la forme n'était pas
+          # celle-là, mieux vaut le dire que comparer deux chaînes au hasard.
+          case "$expire" in
+            [0-9][0-9][0-9][0-9]-[0-9][0-9]-[0-9][0-9]T*)
+              maintenant="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+              if [[ "$expire" < "$maintenant" ]]; then
+                echo "::error title=Profil expiré::« $nom » a expiré le $expire. Régénère-le sur developer.apple.com → Profiles (un profil vaut un an) et remplace le secret."
+                exit 1
+              fi ;;
+            '') ;;
+            *) echo "::warning title=Expiration du profil non vérifiée::plutil a rendu « $expire » pour ExpirationDate, qui n'est pas de la forme AAAA-MM-JJTHH:MM:SSZ attendue. Si l'archive échoue sur un profil expiré, c'est ici qu'il fallait le voir." ;;
+          esac
 
-          trouve=non; i=0
+          # Les empreintes SHA-1 des certificats embarqués (plutil raw rend
+          # une donnée en base64), puis la première identité importée qui en
+          # fait partie.
+          empreintes_profil=""; i=0
           while cert="$(plutil -extract "DeveloperCertificates.$i" raw -o - "$plist" 2>/dev/null)" && [ -n "$cert" ]; do
-            e="$(printf '%s' "$cert" | base64 -d | openssl x509 -inform DER -noout -fingerprint -sha1 | sed 's/.*=//; s/://g')"
-            [ "$e" = "$EMPREINTE" ] && trouve=oui
+            e="$(printf '%s' "$cert" | tr -d '\n' | base64 -d | openssl x509 -inform DER -noout -fingerprint -sha1 | sed 's/.*=//; s/://g')"
+            empreintes_profil="$empreintes_profil $e"
             i=$((i + 1))
           done
-          if [ "$trouve" != oui ]; then
-            echo "::error title=Le profil n'embarque pas ce certificat::« $nom » a été engendré pour un autre certificat que celui du .p12 (empreinte $EMPREINTE absente de ses $i certificat(s)). C'est l'erreur la plus fréquente : un certificat renouvelé sans régénérer le profil, ou l'inverse. Sur developer.apple.com → Profiles, ouvre le profil, coche le certificat Apple Distribution en cours, régénère, télécharge, remplace IOS_PROVISIONING_PROFILE_BASE64."
+          identites() {
+            security find-identity -v -p codesigning "$RUNNER_TEMP/carlys-signature.keychain-db" \
+              | sed -En 's/^ *[0-9]+\) ([0-9A-F]+) "((Apple|iPhone) Distribution[^"]*)"$/\1 \2/p'
+          }
+          empreinte=""
+          for e in $(identites | cut -d' ' -f1); do
+            case " $empreintes_profil " in
+              *" $e "*) empreinte="$e"; break ;;
+            esac
+          done
+          if [ -z "$empreinte" ]; then
+            echo "::error title=Le profil n'embarque aucun des certificats importés::« $nom » a été engendré pour un autre certificat que ceux du .p12 — empreintes du profil :$empreintes_profil ; identités importées : $(identites | cut -d' ' -f1 | tr '\n' ' '). C'est l'erreur la plus fréquente : un certificat renouvelé sans régénérer le profil, ou l'inverse. Sur developer.apple.com → Profiles, ouvre le profil, coche le certificat Apple Distribution en cours, régénère, télécharge, remplace IOS_PROVISIONING_PROFILE_BASE64."
             exit 1
           fi
+          identite="$(identites | sed -n "s/^$empreinte //p")"
 
           for dossier in "$HOME/Library/MobileDevice/Provisioning Profiles" \
                          "$HOME/Library/Developer/Xcode/UserData/Provisioning Profiles"; do
@@ -1113,7 +1143,10 @@ jobs:
           echo "uuid=$uuid" >> "$GITHUB_OUTPUT"
           echo "nom=$nom" >> "$GITHUB_OUTPUT"
           echo "equipe=$equipe" >> "$GITHUB_OUTPUT"
-          echo "Profil « $nom » (équipe $equipe) : App Store, $BUNDLE, certificat concordant${expire:+, expire le $expire}."
+          echo "empreinte=$empreinte" >> "$GITHUB_OUTPUT"
+          echo "identite=$identite" >> "$GITHUB_OUTPUT"
+          echo "Profil « $nom » (équipe $equipe) : App Store, $BUNDLE${expire:+, expire le $expire}."
+          echo "Signera : $identite (empreinte $empreinte)."
 
       # ── Brancher la signature sur Xcode, sans toucher au projet ────────────
       #
@@ -1125,6 +1158,11 @@ jobs:
       # du projet — dont le « iPhone Developer » qu'il y inscrit. Manuel, et
       # pas automatique : le runner n'a pas de session Apple ID, Xcode n'a
       # donc rien à « gérer ».
+      #
+      # Le certificat est désigné par son EMPREINTE SHA-1, que CODE_SIGN_IDENTITY
+      # et `signingCertificate` acceptent l'un et l'autre : un nom (« Apple
+      # Distribution ») est un sélecteur qui prend le plus récent, et le plus
+      # récent n'est pas forcément celui que le profil embarque.
       #
       # ExportOptions.plist dit à l'export ce que le xcconfig a dit à
       # l'archive : même équipe, même certificat, même profil, méthode
@@ -1140,7 +1178,8 @@ jobs:
         env:
           EQUIPE: ${{ steps.profil.outputs.equipe }}
           PROFIL_NOM: ${{ steps.profil.outputs.nom }}
-          IDENTITE: ${{ steps.trousseau.outputs.identite }}
+          EMPREINTE: ${{ steps.profil.outputs.empreinte }}
+          IDENTITE: ${{ steps.profil.outputs.identite }}
           BUNDLE: ${{ steps.bundle.outputs.id }}
         run: |
           cat >> ios/Flutter/Release.xcconfig <<FIN
@@ -1148,10 +1187,11 @@ jobs:
           // Ajouté par .github/workflows/mobile-recette.yml — signature de
           // distribution, manuelle. Le certificat est dans le trousseau
           // temporaire du job, le profil dans le dossier des profils.
+          // Certificat : $IDENTITE
           DEVELOPMENT_TEAM = $EQUIPE
           CODE_SIGN_STYLE = Manual
-          CODE_SIGN_IDENTITY = $IDENTITE
-          CODE_SIGN_IDENTITY[sdk=iphoneos*] = $IDENTITE
+          CODE_SIGN_IDENTITY = $EMPREINTE
+          CODE_SIGN_IDENTITY[sdk=iphoneos*] = $EMPREINTE
           PROVISIONING_PROFILE_SPECIFIER = $PROFIL_NOM
           FIN
 
@@ -1164,7 +1204,7 @@ jobs:
             <key>destination</key><string>export</string>
             <key>teamID</key><string>$EQUIPE</string>
             <key>signingStyle</key><string>manual</string>
-            <key>signingCertificate</key><string>$IDENTITE</string>
+            <key>signingCertificate</key><string>$EMPREINTE</string>
             <key>provisioningProfiles</key>
             <dict><key>$BUNDLE</key><string>$PROFIL_NOM</string></dict>
             <key>uploadSymbols</key><true/>
@@ -1175,7 +1215,7 @@ jobs:
           plutil -lint ios/ExportOptions.plist
 
           plutil -replace ITSAppUsesNonExemptEncryption -bool false ios/Runner/Info.plist
-          echo "Signature branchée : équipe $EQUIPE, « $IDENTITE », profil « $PROFIL_NOM »."
+          echo "Signature branchée : équipe $EQUIPE, « $IDENTITE » ($EMPREINTE), profil « $PROFIL_NOM »."
 
       # `flutter build ipa` archive (xcodebuild -archive) puis exporte
       # (xcodebuild -exportArchive) avec le plist ci-dessus. Mêmes
@@ -1309,6 +1349,7 @@ jobs:
           BUNDLE: ${{ steps.bundle.outputs.id }}
           PROFIL_NOM: ${{ steps.profil.outputs.nom }}
           EQUIPE: ${{ steps.profil.outputs.equipe }}
+          IDENTITE: ${{ steps.profil.outputs.identite }}
           TESTFLIGHT: ${{ steps.asc.outputs.actif }}
         run: |
           {
@@ -1318,6 +1359,7 @@ jobs:
             echo "| ----------------- | ------ |"
             echo "| bundle | \`$BUNDLE\` |"
             echo "| équipe Apple | \`$EQUIPE\` |"
+            echo "| certificat | \`$IDENTITE\` |"
             echo "| profil | \`$PROFIL_NOM\` |"
             echo "| \`CFBundleVersion\` | \`$NUMERO\` |"
             echo "| \`CARLYS_FLAVOR\` | \`staging\` |"
