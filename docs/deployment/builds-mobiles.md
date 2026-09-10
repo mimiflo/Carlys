@@ -174,7 +174,7 @@ variantes `-staging`).
 
 ### 3.2 La marche à suivre
 
-1. **Pousser** sur la branche de travail ou sur `main`. Le workflow
+1. **Pousser** sur `development` (ou `production`). Le workflow
    `mobile-recette` part tout seul dès qu'un fichier d'`apps/mobile/` bouge (ou
    les deux scripts qui portent l'identité Android de l'application).
 2. **Ouvrir l'onglet Actions**, l'exécution la plus récente. Compter une

@@ -78,7 +78,12 @@ update_actif() {
   case "$valeur" in oui | yes | true | 1) printf 'oui' ;; *) printf 'non' ;; esac
 }
 
-update_branche() { env_value CARLYS_UPDATE_BRANCH "$1" main; }
+# La branche suivie par la RECETTE. Défaut `development` : c'est la branche
+# permanente de travail depuis la refonte du modèle Git. Un défaut qui ne
+# correspond pas à la réalité du dépôt est exactement ce qui a produit le
+# recul du 10 septembre 2026 — celui-ci est aligné, et `doctor` signale de
+# toute façon toute divergence avec la branche du clone.
+update_branche() { env_value CARLYS_UPDATE_BRANCH "$1" development; }
 
 # Combien de temps un sha doit avoir tourné en recette avant d'aller en
 # production. Une heure par défaut : assez pour qu'une fuite de mémoire, une

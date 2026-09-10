@@ -70,7 +70,7 @@ repo_branche() {
 # du 10 septembre 2026, signalée AVANT qu'elle ne coûte quelque chose.
 #
 # Deux branches entrent en jeu et personne ne les rapproche : celle dont
-# `update_run` tire les IMAGES (CARLYS_UPDATE_BRANCH, `main` par défaut) et
+# `update_run` tire les IMAGES (CARLYS_UPDATE_BRANCH, `development` par défaut) et
 # celle sur laquelle le clone est posé, d'où viennent les SCRIPTS et les
 # fichiers d'exemple. Tant qu'elles diffèrent, le serveur exécute le code d'une
 # branche contre les images d'une autre — et si la branche suivie est en

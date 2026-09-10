@@ -225,7 +225,7 @@ le point le plus important de ce document.
 ### Recette — elle suit une branche
 
 `CARLYS_AUTO_UPDATE=oui` dans `/srv/carlys/staging/.env`. La recette suit alors
-la tête de `CARLYS_UPDATE_BRANCH` (défaut `main`), **dès que les trois images de
+la tête de `CARLYS_UPDATE_BRANCH` (défaut `development`), **dès que les trois images de
 ce commit existent dans le registre**.
 
 Un commit dont la construction a échoué ne déclenche donc rien : la recette
@@ -512,7 +512,7 @@ Deux branches entrent en jeu, et rien ne les rapprochait :
 
 | | D'où ça vient |
 | --- | --- |
-| les **images** déployées | `CARLYS_UPDATE_BRANCH`, **`main` par défaut** |
+| les **images** déployées | `CARLYS_UPDATE_BRANCH`, **`development` par défaut** |
 | les **scripts** et les exemples | la branche sur laquelle le clone `/srv/carlys/repo` est posé |
 
 Le serveur travaillait sur une branche de fonctionnalité que `main` n'avait pas
@@ -606,7 +606,7 @@ compare à ces exemples, n'avait rien de neuf à comparer.
 
 La supervision termine désormais sa passe par un `git pull --ff-only` sur le
 clone, **sous la même autorisation que le déploiement** (`CARLYS_AUTO_UPDATE`,
-puisque « suivre `main` » inclut les scripts). Un clone qui porte des
+puisque « suivre la branche » inclut les scripts). Un clone qui porte des
 modifications locales ou qui a divergé est **signalé, jamais écrasé**.
 
 Remplacer un script pendant qu'il s'exécute est sans danger, et c'est mesuré :

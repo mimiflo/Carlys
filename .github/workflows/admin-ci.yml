@@ -2,7 +2,7 @@ name: admin-ci
 
 # Pourquoi `push:` nomme la branche de travail et pas seulement `main` : le
 # dépôt n'avance PAS par pull request, il avance par poussées directes sur
-# claude/carlys-fitness-foundation-lqv2hl. `git log --merges --oneline | wc -l`
+# development. `git log --merges --oneline | wc -l`
 # y rend ZÉRO fusion pour TOUTE la branche : une porte limitée à
 # `pull_request` + `main` ne s'est donc JAMAIS ouverte pendant le
 # développement, elle ne s'ouvrait qu'après coup. On s'aligne sur demo-apk.yml
@@ -28,7 +28,7 @@ on:
       - 'pnpm-workspace.yaml'
       - '.github/workflows/admin-ci.yml'
   push:
-    branches: [claude/carlys-fitness-foundation-lqv2hl, main]
+    branches: [development, production]
     # GitHub Actions ignore les ancres YAML : la liste ci-dessus est recopiée
     # telle quelle. Toute entrée ajoutée ici doit l'être aux deux endroits.
     paths:

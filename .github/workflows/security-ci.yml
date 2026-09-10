@@ -2,7 +2,7 @@ name: security-ci
 
 # Pourquoi `push:` nomme la branche de travail et pas seulement `main` : le
 # dépôt n'avance PAS par pull request, il avance par poussées directes sur
-# claude/carlys-fitness-foundation-lqv2hl. `git log --merges --oneline | wc -l`
+# development. `git log --merges --oneline | wc -l`
 # y rend ZÉRO fusion pour TOUTE la branche : une porte limitée à
 # `pull_request` + `main` ne s'est donc JAMAIS ouverte pendant le
 # développement. Pour une détection de secrets, c'est le pire des retards
@@ -25,7 +25,7 @@ name: security-ci
 on:
   pull_request:
   push:
-    branches: [claude/carlys-fitness-foundation-lqv2hl, main]
+    branches: [development, production]
   schedule:
     # Chaque lundi à 06:00 UTC.
     - cron: '0 6 * * 1'

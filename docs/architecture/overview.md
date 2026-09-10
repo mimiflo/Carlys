@@ -171,7 +171,7 @@ première release — voir `infrastructure/deployment/README.md`) :
 3. `prisma migrate deploy` exécuté comme étape distincte **avant** la bascule
    du trafic — jamais au démarrage du conteneur ;
 4. bascule pilotée par les health checks (`/health/ready`) ;
-5. staging automatique depuis `main`, production **manuelle** après
+5. staging automatique depuis `development`, production **manuelle** après
    validation humaine.
 
 ## Documents liés

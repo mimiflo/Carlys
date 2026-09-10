@@ -50,7 +50,7 @@ on:
   # Sans ces deux lignes, le modifier ne déclencherait rien et l'on ne verrait
   # qu'il casse le build qu'au prochain commit sous `apps/mobile/`.
   push:
-    branches: [claude/carlys-fitness-foundation-lqv2hl, main]
+    branches: [development, production]
     paths:
       - 'apps/mobile/**'
       - '.github/workflows/mobile-recette.yml'

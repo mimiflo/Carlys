@@ -285,7 +285,7 @@ remplace *au build*. Une image construite sans elle contient littéralement
 back-office se charge, s'affiche, et ne joint aucune API. L'image se construit,
 elle démarre, et elle est morte. D'où l'échec bruyant en amont.
 
-Poussez ensuite sur **`main` ou sur `claude/carlys-fitness-foundation-lqv2hl`**
+Poussez ensuite sur **`development`**
 — ce sont les deux seules branches que `images-publish` écoute. Une poussée
 ailleurs ne déclenche **rien** : pas d'exécution, donc pas de message d'erreur,
 et rien à regarder pour la vérification ci-dessous. Vous pouvez aussi lancer le
