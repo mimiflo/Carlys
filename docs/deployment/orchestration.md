@@ -394,6 +394,122 @@ dit.
 
 ---
 
+## 11. Migrer un serveur DÉJÀ en service
+
+À lire si ta recette tournait **avant** l'orchestrateur — typiquement si tu
+t'es arrêté à l'étape 7 du guide de mise en route. Quatre choses ont bougé
+sous elle :
+
+1. **l'admin change de port** — 3101 → 3150 en recette, 3001 → 3050 en
+   production. Il fallait laisser la place à la plage de l'API ;
+2. **l'API réserve une plage** au lieu d'un port, et son `.env` réclame deux
+   lignes qu'il n'avait pas ;
+3. **les vhosts ne déclarent plus l'amont de l'API** — il est engendré dans
+   `/etc/nginx/conf.d/` ;
+4. **une minuterie systemd s'installe**, et se met à passer toutes les deux
+   minutes.
+
+### L'ordre n'est pas indifférent
+
+Tant que l'ancien vhost déclare `upstream carlys_api_staging` **et** que
+`setup.sh` en pose un dans `conf.d/`, Nginx refuse **toute** la configuration —
+pas seulement le doublon :
+
+```
+[emerg] duplicate upstream "carlys_api_staging"
+        in /etc/nginx/sites-enabled/carlys-staging.conf:1
+nginx: configuration file /etc/nginx/nginx.conf test failed
+```
+
+Mesuré. Le vhost doit donc être remplacé **avant** que `setup.sh` ne soit
+rejoué, jamais après.
+
+### La séquence
+
+```bash
+# 1. Le clone du serveur, d'abord. Tout le reste en dépend.
+sudo git -C /srv/carlys/repo pull --ff-only
+cd /srv/carlys/repo
+
+# 2. Le .env de la recette : deux lignes à ajouter, une à corriger.
+sudo nano /srv/carlys/staging/.env
+#    CARLYS_API_HOST_PORT=3100          (inchangé)
+#  + CARLYS_API_HOST_PORT_LAST=3119     ← NOUVEAU, obligatoire
+#  ~ CARLYS_ADMIN_HOST_PORT=3150        ← était 3101
+#  + CARLYS_API_REPLICAS=1              ← NOUVEAU
+#    Les réglages CARLYS_SCALE_*, CARLYS_HEAL_* et CARLYS_AUTO_UPDATE ont tous
+#    un défaut : rien à écrire tant qu'on ne veut pas les changer.
+
+# 3. Le vhost, AVANT setup.sh (voir ci-dessus).
+DOMAINE=carlys.example        # ← ton domaine réel
+sed "s/carlys\.example/$DOMAINE/g" infrastructure/nginx/carlys-staging.conf.example \
+  | sudo tee /etc/nginx/sites-available/carlys-staging.conf > /dev/null
+sudo ln -sf /etc/nginx/sites-available/carlys-staging.conf /etc/nginx/sites-enabled/
+# Le snippet a changé lui aussi (`proxy_set_header Connection ""`, sans quoi le
+# pool de connexions de l'amont existerait sans jamais servir).
+sudo cp infrastructure/nginx/snippets/carlys-proxy.conf /etc/nginx/snippets/
+
+# 4. setup.sh : il pose les amonts de départ et la minuterie. Il NE TOUCHE PAS
+#    aux .env déjà remplis — c'est sa propriété la plus importante.
+sudo CARLYS_PROXY_CIDR=<adresse de gra6> ./scripts/server/setup.sh
+
+# 5. Nginx doit accepter la configuration MAINTENANT.
+sudo nginx -t
+
+# 6. Déployer le sha qui porte l'orchestrateur. C'est ce déploiement qui
+#    recrée les conteneurs sur les nouveaux ports et qui réécrit l'amont.
+sudo ./scripts/server/carlysctl deploy staging <sha12>
+
+# 7. Regarder.
+sudo ./scripts/server/carlysctl status staging
+```
+
+### Ce qui est indisponible, et combien de temps
+
+Entre l'étape 3 et l'étape 6, le vhost pointe l'admin sur 3150 alors que le
+conteneur publie encore 3101 : **`app-staging` rend 502** pendant cet
+intervalle. C'est de la recette, et la fenêtre est celle d'un déploiement —
+quelques minutes. L'API, elle, ne bouge pas : l'amont de départ posé par
+`setup.sh` vise 3100, exactement là où l'ancien conteneur écoute encore.
+
+Déplacer le déploiement avant le vhost ne supprime pas la fenêtre, elle la
+déplace et l'aggrave : le nouveau `compose.yml` publierait l'admin sur 3150 —
+que l'ancien vhost cherche encore sur 3101 — **et** l'API sur un port de la
+plage que Docker choisit librement, pas nécessairement 3100. Les deux hôtes
+tomberaient au lieu d'un seul. Il n'y a pas d'ordre sans couture : autant
+prendre la version courte et annoncée.
+
+### Vérifier que la migration a pris
+
+```bash
+carlysctl status staging
+```
+
+Quatre lignes à lire, dans cet ordre :
+
+- `exemplaires API   1 en vie / 1 voulus (plafond …, plage de 20)` — la plage
+  est reconnue ;
+- `ports réels` et `ports servis par nginx` portent **la même valeur** ; s'il y
+  a un `⚠ ÉCART`, `carlysctl heal staging` ;
+- `utilisateurs en ligne` affiche un nombre (même 0) et non « inconnu » — la
+  présence Redis fonctionne, donc la mise à l'échelle a de quoi décider ;
+- `réparations (1 h)  0 / 5`.
+
+Puis la minuterie :
+
+```bash
+systemctl list-timers carlys-supervision.timer
+journalctl -u carlys-supervision.service -n 40
+```
+
+### Et la production ?
+
+Rien à faire tant que tu ne l'as pas montée : `setup.sh` a déposé un
+`/srv/carlys/production/.env` d'exemple, et la version du dépôt porte déjà les
+bons ports. Tu la traiteras à l'étape 9 du guide, sans migration.
+
+---
+
 ## À lire à côté
 
 - [mise-en-route-serveur.md](mise-en-route-serveur.md) — installer le serveur
