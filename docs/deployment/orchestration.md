@@ -479,6 +479,41 @@ plage que Docker choisit librement, pas nécessairement 3100. Les deux hôtes
 tomberaient au lieu d'un seul. Il n'y a pas d'ordre sans couture : autant
 prendre la version courte et annoncée.
 
+### Les DEUX vhosts, pas seulement celui de la recette
+
+Le guide de mise en route installe les vhosts des **deux** environnements
+(sa boucle `for env in staging production`), même quand la production n'est pas
+encore montée. Si tu ne remplaces que celui de la recette, `setup.sh` posera
+l'amont de départ de la production à côté d'un vhost qui le déclare encore —
+et Nginx refusera toute la configuration pour ce doublon-là. Remplace les deux
+en une fois :
+
+```bash
+for env in staging production; do
+  sed "s/carlys\.example/$DOMAINE/g" "infrastructure/nginx/carlys-$env.conf.example" \
+    | sudo tee "/etc/nginx/sites-available/carlys-$env.conf" > /dev/null
+  sudo ln -sf "/etc/nginx/sites-available/carlys-$env.conf" /etc/nginx/sites-enabled/
+done
+```
+
+### Si tu as déployé AVANT de remplacer le vhost
+
+C'est le cas le plus probable, et il se rattrape sans rien casser. Le
+déploiement a réussi, mais `carlysctl` n'a pas pu poser l'amont : il te l'a dit,
+avec le refus de Nginx recopié et sa cause nommée. Remplace les vhosts
+ci-dessus, puis :
+
+```bash
+sudo ./scripts/server/carlysctl heal staging
+```
+
+`heal` réconcilie l'amont même sur une pile parfaitement saine — c'est
+précisément la panne qu'aucun contrôle de conteneur ne montre.
+
+Entre le déploiement et ce rattrapage, `app-staging` rend 502 : le vhost
+cherche l'admin sur son ancien port. L'API, elle, continue de répondre tant que
+Docker lui a laissé le premier port de la plage.
+
 ### Vérifier que la migration a pris
 
 ```bash

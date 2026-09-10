@@ -103,8 +103,27 @@ heal_run() {
     state_set "$env_name" "$cle" 0
   done < <(heal_inventaire "$env_name" "$file")
 
+  # ── L'AMONT NGINX EST RÉCONCILIÉ DANS TOUS LES CAS ────────────────────────
+  #
+  # Y compris — surtout — sur une pile parfaitement saine. Un amont périmé
+  # n'est PAS un problème de conteneur : les conteneurs vont bien, ils sont au
+  # bon nombre, leurs sondes sont vertes, et Nginx envoie pourtant le trafic
+  # ailleurs. Cette panne-là ne se voit qu'ici.
+  #
+  # La première rédaction sortait avant, sur « pile saine — rien à réparer ».
+  # Conséquence trouvée lors de la PREMIÈRE migration d'un vrai serveur :
+  # `carlysctl heal` était incapable de réparer un amont manquant, alors que
+  # c'est exactement ce que `carlysctl status` conseille de lancer quand il
+  # affiche « ⚠ ÉCART nginx ↔ réalité », et ce que dit le tableau de
+  # diagnostic. Le conseil était faux, et la seule commande qui aurait remis
+  # l'amont en place était `scale`, qui n'a rien à voir.
+  #
+  # `nginx_apply_upstream` ne recharge que si le contenu a changé : sur une
+  # pile stable, cet appel coûte un rendu de fichier et une comparaison, toutes
+  # les deux minutes. C'est le bon prix pour la seule détection de cette panne.
   if [ "${#absents[@]}" -eq 0 ] && [ "${#malades[@]}" -eq 0 ] && [ "$actuels" -eq "$voulus" ]; then
-    ok "pile saine — rien à réparer"
+    ok "pile saine — aucun conteneur à relever"
+    nginx_apply_upstream "$env_name" "$file" || return 1
     return 0
   fi
 

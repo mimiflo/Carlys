@@ -209,14 +209,28 @@ nginx_apply_upstream() {
   mv "$nouveau" "$cible"
   chmod 644 "$cible"
 
-  if ! $CARLYS_NGINX_TEST >/dev/null 2>&1; then
+  local diagnostic
+  if ! diagnostic="$($CARLYS_NGINX_TEST 2>&1)"; then
     if [ -f "$sauvegarde" ]; then
       mv "$sauvegarde" "$cible"
     else
       rm -f "$cible"
     fi
     warn "Nginx REFUSE la configuration avec ce nouvel amont — l'ancien état est restauré."
-    warn "  Diagnostic : $CARLYS_NGINX_TEST"
+    # LE REFUS EST RECOPIÉ ICI, et ce n'est pas du confort. Une fois l'ancien
+    # état restauré, `nginx -t` RÉUSSIT : renvoyer l'exploitant vers cette
+    # commande lui ferait constater l'exact contraire de ce qu'on vient de lui
+    # annoncer, et chercher la cause partout sauf là où elle est. C'est arrivé
+    # en vrai, sur le premier serveur migré.
+    printf '%s\n' "$diagnostic" | sed 's/^/     | /' >&2
+    # Et de loin la cause la plus fréquente sur un serveur migré : le vhost
+    # installé date d'avant l'amont engendré, et déclare donc le même bloc.
+    if printf '%s' "$diagnostic" | grep -q 'duplicate upstream'; then
+      warn "  CAUSE : un vhost déclare ENCORE « $(nginx_upstream_name "$env_name") »."
+      warn "  Les vhosts du dépôt ne le déclarent plus — celui qui est installé est périmé."
+      warn "  Le remplacer par infrastructure/nginx/carlys-${env_name}.conf.example, puis"
+      warn "  relancer. La marche à suivre : docs/deployment/orchestration.md, § 11."
+    fi
     return 1
   fi
 
