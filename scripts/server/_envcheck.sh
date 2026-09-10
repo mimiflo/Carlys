@@ -232,5 +232,27 @@ envcheck_env() {
     defaut=1
   done < <(envcheck_nouveautes "$env_name" "$file")
 
+  # 6. Le pool Prisma non borné — la panne qui n'arrive QUE sous charge.
+  #
+  # Prisma ouvre par défaut (2 × cœurs + 1) connexions PAR PROCESSUS : 17 sur
+  # 8 cœurs. La mise à l'échelle automatique peut monter à un exemplaire par
+  # cœur, soit 136 connexions pour un PostgreSQL livré à max_connections=100.
+  # Personne ne le voit à un exemplaire ; tout le monde le voit le jour du pic
+  # — précisément le jour où la pile a grandi toute seule. Ce contrôle existe
+  # parce qu'aucun humain n'est dans la boucle entre « ça monte » et « ça
+  # refuse des connexions ».
+  cle="$(env_value DATABASE_URL "$file" '')"
+  if [ -n "$cle" ]; then
+    case "$cle" in
+      *connection_limit=*) ;;
+      *)
+        warn "  DATABASE_URL sans connection_limit — à 8 exemplaires, le pool"
+        warn "  Prisma dépasse le max_connections de PostgreSQL (8 × 17 > 100)."
+        warn "        ajouter à la fin de l'URL : ?connection_limit=10&pool_timeout=20"
+        defaut=1
+        ;;
+    esac
+  fi
+
   return "$defaut"
 }

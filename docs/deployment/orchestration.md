@@ -40,7 +40,7 @@ carlysctl prune --essai     # ce qu'un élagage d'images supprimerait
 | Relever un conteneur disparu, arrêté, ou « unhealthy » | **oui** | minuterie |
 | Ajuster le nombre d'exemplaires d'API à la charge | **oui** | minuterie |
 | Tenir l'amont Nginx à jour | **oui** | minuterie |
-| Sauvegarder les bases | **oui** | cron, 3 h du matin |
+| Sauvegarder les bases **et les médias MinIO** | **oui** | cron, 3 h du matin |
 | **Déployer une nouvelle version** | **non par défaut** | `CARLYS_AUTO_UPDATE` |
 
 La dernière ligne est la seule qui demande une décision. Tant que

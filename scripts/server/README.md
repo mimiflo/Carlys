@@ -30,7 +30,7 @@ Tout est décrit dans
 | `setup.sh` | une fois, puis à chaque fois qu'une brique est ajoutée | prépare la machine : docker + plugin compose, nginx, ufw (22, et 80 **depuis le seul reverse proxy**), amonts Nginx de départ, `/srv/carlys`, copie des `.env` d'exemple, cron de sauvegarde, minuterie de supervision. **Idempotent.** |
 | `deploy.sh` | à chaque livraison en recette | `deploy.sh <staging\|production> <sha>` : pull des trois images, migration, bascule, santé de **chaque** exemplaire, retour arrière si besoin |
 | `promote.sh` | pour une mise en production | rejoue en production **le sha déjà validé en recette**, après vérification du registre et confirmation humaine |
-| `backup.sh` | tous les jours, par cron | `pg_dump` de chaque base **déployée**, horodaté, rétention 14 jours |
+| `backup.sh` | tous les jours, par cron | `pg_dump` de chaque base **déployée** + miroir `mc` du bucket MinIO figé par instantanés à liens durs, rétention 14 jours, alerte en cas d'échec |
 
 ## Les bibliothèques
 
@@ -212,6 +212,17 @@ normale. La purge ne touche que nos propres fichiers : `staging-*.dump` et
 plus d'un jour (ceux qu'une interruption brutale a laissés ; sans cette
 seconde passe ils s'accumuleraient indéfiniment, chacun de la taille d'une
 base). Ce qu'un opérateur a déposé là ne disparaît pas.
+
+**Les médias aussi, et l'histoire est gardée par liens durs.** `mc mirror`
+recopie le bucket en fichiers ordinaires dans `backups/minio-<env>/courant`
+(l'API S3, jamais le format interne de MinIO), puis chaque nuit réussie est
+figée par `cp -al` en `instantane-<horodatage>` : quatorze nuits coûtent une
+seule taille de bucket plus les fichiers qui ont changé, et un objet supprimé
+du bucket reste vivant dans les instantanés antérieurs — mesuré, contenu
+intact. Restaurer un objet : le recopier depuis l'instantané voulu (`mc cp`,
+ou `mc mirror --overwrite /chemin/instantane-X local/<bucket>` pour tout
+remettre). La rétention des instantanés obéit à la même règle que les dumps :
+on ne jette que si l'on vient de figer un neuf.
 
 **L'alerte part de `backup.sh`, pas de cron.** Ces lignes ont longtemps dit
 « le code de retour EST l'alerte » : c'était faux. Le `-o pipefail` de la ligne

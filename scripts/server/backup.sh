@@ -166,6 +166,89 @@ for env_name in "${TARGETS[@]}"; do
   reussis="$reussis $env_name"
 done
 
+# ── Médias (MinIO) ─────────────────────────────────────────────────────────
+# LES MÉDIAS N'AVAIENT AUCUNE COPIE. Ce script ne faisait que pg_dump : les
+# photos d'exercices, avatars et fichiers déposés vivaient dans le seul volume
+# minio-data. Une base restaurée sans ses médias sert des URL mortes.
+#
+# LA FORME : un miroir logique par `mc mirror`, PAS un tar du volume. MinIO
+# range ses objets dans un format interne (xl.meta, métadonnées d'effacement) ;
+# le miroir passe par l'API S3 et rend des FICHIERS ORDINAIRES, restaurables
+# avec n'importe quoi — y compris à la main, un par un.
+#
+# L'HISTORIQUE PAR LIENS DURS. Un miroir seul ne protège pas d'une suppression :
+# l'objet effacé disparaît du miroir à la nuit suivante. Chaque nuit réussie
+# est donc figée par `cp -al` — des liens durs, pas des copies : quatorze
+# nuits d'historique coûtent UNE taille de bucket plus les seuls fichiers qui
+# ont changé. Un objet supprimé du miroir reste vivant dans les instantanés
+# qui le pointent.
+#
+# LES IDENTIFIANTS NE TOUCHENT PAS L'HÔTE. Le miroir tourne dans l'image `mc`
+# du service minio-init, dont l'environnement compose porte déjà
+# MINIO_ROOT_USER/PASSWORD — même raisonnement que PGPASSWORD plus haut :
+# rien dans /proc/<pid>/cmdline.
+step "Médias (MinIO)"
+reussis_minio=''
+for env_name in "${TARGETS[@]}"; do
+  file="$(env_file "$env_name")"
+  if [ ! -f "$file" ]; then
+    continue
+  fi
+  deployed="$(deployed_current "$env_name")"
+  if [ -z "$deployed" ]; then
+    info "$env_name : jamais déployé — aucun média à sauvegarder"
+    continue
+  fi
+  bucket="$(env_value S3_BUCKET "$file" '')"
+  if [ -z "$bucket" ]; then
+    warn "$env_name : S3_BUCKET absent du .env — médias NON sauvegardés"
+    failures=$((failures + 1))
+    continue
+  fi
+  if ! dc "$env_name" "$file" ps --status running --services 2>/dev/null | grep -qx minio; then
+    warn "minio ne tourne pas pour $env_name — médias NON sauvegardés"
+    failures=$((failures + 1))
+    continue
+  fi
+
+  miroir="$BACKUP_DIR/minio-${env_name}"
+  mkdir -p "$miroir/courant"
+  chmod 700 "$miroir"
+
+  # `--remove` : le miroir reflète EXACTEMENT le bucket — les suppressions
+  # légitimes s'y propagent, et ce sont les instantanés qui gardent l'histoire.
+  # `--no-deps` : minio tourne déjà (vérifié ci-dessus) ; laisser compose
+  # démarrer des dépendances pendant une sauvegarde serait une surprise.
+  if ! dc "$env_name" "$file" run --rm -T --no-deps \
+      -v "$miroir/courant:/sauvegarde" \
+      --entrypoint /bin/sh minio-init -c \
+      'mc alias set local http://minio:9000 "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD" >/dev/null && exec mc mirror --remove --quiet "local/$1" /sauvegarde' \
+      miroir "$bucket" > /dev/null 2>"$miroir/.erreur"; then
+    warn "mc mirror a échoué pour $env_name (bucket $bucket) :"
+    sed 's/^/     /' < "$miroir/.erreur" >&2 || true
+    rm -f "$miroir/.erreur"
+    failures=$((failures + 1))
+    continue
+  fi
+  rm -f "$miroir/.erreur"
+
+  instantane="$miroir/instantane-${STAMP}"
+  if ! cp -al "$miroir/courant" "$instantane"; then
+    warn "$env_name : l'instantané par liens durs a échoué — le miroir, lui, est à jour"
+    failures=$((failures + 1))
+    continue
+  fi
+  # `cp -a` PRÉSERVE la date du répertoire source. Une nuit sans aucun
+  # changement laisse à `courant` une vieille date — l'instantané tout neuf
+  # l'hériterait, et la rétention par -mtime le purgerait le soir même.
+  touch "$instantane"
+
+  nb="$(find "$instantane" -type f 2>/dev/null | wc -l)"
+  ok "minio-${env_name}/instantane-${STAMP} ($nb fichier(s), $(du -sh "$instantane" 2>/dev/null | cut -f1))"
+  made=$((made + 1))
+  reussis_minio="$reussis_minio $env_name"
+done
+
 # ── Rétention ──────────────────────────────────────────────────────────────
 # On ne purge QUE nos propres fichiers (motif <env>-*) : un répertoire de
 # sauvegardes finit toujours par contenir autre chose — un dump manuel pris
@@ -211,6 +294,28 @@ for env_name in "${TARGETS[@]}"; do
   esac
 done
 
+# LES INSTANTANÉS MINIO, même règle, même raison : on ne jette un vieil
+# instantané que si l'on vient d'en figer un neuf. Des RÉPERTOIRES cette
+# fois — `purge_older_than` ne voit que des fichiers, et c'est voulu :
+# élargir son motif aux répertoires lui ferait un jour avaler autre chose.
+for env_name in "${TARGETS[@]}"; do
+  [ -d "$BACKUP_DIR/minio-${env_name}" ] || continue
+  case " $reussis_minio " in
+    *" $env_name "*)
+      while IFS= read -r vieux; do
+        [ -n "$vieux" ] || continue
+        rm -rf -- "$vieux"
+        info "purgé : minio-${env_name}/$(basename -- "$vieux")"
+        purged=$((purged + 1))
+      done < <(find "$BACKUP_DIR/minio-${env_name}" -maxdepth 1 -type d \
+        -name 'instantane-*' -mtime "+${RETENTION_DAYS}" -print 2>/dev/null | sort)
+      ;;
+    *)
+      warn "minio-${env_name} : aucun instantané neuf cette nuit — rétention NON appliquée"
+      ;;
+  esac
+done
+
 # LES FRAGMENTS AUSSI. Un `.dump.part` est ce que laisse une sauvegarde
 # interrompue en plein vol : serveur redémarré, conteneur tué, disque plein.
 # Les chemins d'échec de ce script effacent le leur, mais celui qu'une
@@ -238,7 +343,7 @@ done
 [ "$purged" -gt 0 ] || info "aucun fichier à purger"
 
 step "Bilan"
-info "sauvegardes créées : $made"
+info "sauvegardes créées : $made (bases + instantanés de médias)"
 info "environnements sautés : $skipped (absents ou jamais déployés)"
 info "fichiers purgés    : $purged"
 info "répertoire         : $BACKUP_DIR"

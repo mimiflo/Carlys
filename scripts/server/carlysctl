@@ -368,6 +368,28 @@ cmd_doctor() {
     manque=1
   fi
 
+  # LES DEUX SERVICES SANS LESQUELS TOUT LE RESTE EST DÉCORATIF. nginx couché,
+  # et l'amont soigneusement engendré ne sert plus un octet ; la minuterie
+  # désarmée, et « auto-géré » redevient un mot — plus de réparation, plus de
+  # mise à l'échelle, plus de mise à jour, sans un seul message nulle part.
+  # `doctor` disait « tout est en place » dans les deux cas.
+  step "Services"
+  if pgrep -x nginx >/dev/null 2>&1; then
+    ok 'nginx en marche'
+  else
+    warn 'nginx NE TOURNE PAS — aucun trafic ne passe, quel que soit l'"'"'état de la pile'
+    warn '  systemctl status nginx ; nginx -t'
+    manque=1
+  fi
+  if systemctl is-active --quiet carlys-supervision.timer 2>/dev/null; then
+    ok 'minuterie de supervision armée'
+  else
+    warn 'minuterie carlys-supervision.timer NON armée — RIEN ne tourne tout seul'
+    warn '  ni réparation, ni mise à l'"'"'échelle, ni mise à jour.'
+    warn '  systemctl enable --now carlys-supervision.timer'
+    manque=1
+  fi
+
   step "Fichiers"
   if [ -f "$CARLYS_COMPOSE_FILE" ]; then
     ok "compose : $CARLYS_COMPOSE_FILE"
