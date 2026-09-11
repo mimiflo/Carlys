@@ -2,10 +2,10 @@
 # Engendre les dossiers de plateformes Flutter (android/, ios/) SANS abîmer
 # l'arbre versionné. Un seul endroit sait réparer les effets de bord de
 # `flutter create` : le poste de développement (bootstrap_mobile.sh) et la CI
-# (demo-apk.yml) passent tous les deux par ici.
+# (mobile-recette.yml, mobile-production.yml) passent tous par ici.
 #
 # Usage : scripts/mobile_platforms.sh <plateformes>
-#   ex. « android » (CI de l'APK de démo) ou « android,ios » (poste).
+#   ex. « android » (CI mobile) ou « android,ios » (poste).
 #
 # `flutter create` sur un projet EXISTANT a deux effets de bord, mesurés sur
 # ce dépôt en Flutter 3.44.9 :

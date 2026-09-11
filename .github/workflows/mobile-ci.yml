@@ -5,7 +5,7 @@ name: mobile-ci
 # development. `git log --merges --oneline | wc -l`
 # y rend ZÉRO fusion pour TOUTE la branche : une porte limitée à
 # `pull_request` + `main` ne s'est donc JAMAIS ouverte pendant le
-# développement. On s'aligne sur demo-apk.yml, qui nomme déjà les deux
+# développement. On s'aligne sur mobile-recette.yml, qui nomme déjà les deux
 # branches — et qui construit l'APK depuis ce même `apps/mobile` sans que
 # rien n'ait vérifié `flutter analyze` avant lui.
 #
@@ -50,6 +50,13 @@ concurrency:
   group: mobile-ci-${{ github.ref }}
   cancel-in-progress: true
 
+# Le GITHUB_TOKEN par défaut hérite du réglage du dépôt (Settings → Actions →
+# Workflow permissions), invisible depuis ce fichier. Lecture seule explicite :
+# ce workflow ne fait que vérifier, il n'écrit rien — et une action tierce
+# compromise n'y trouverait pas de jeton en écriture.
+permissions:
+  contents: read
+
 jobs:
   verify:
     runs-on: ubuntu-latest
@@ -59,15 +66,15 @@ jobs:
         working-directory: apps/mobile
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       # Aucune libsqlite3 système à installer : depuis sqlite3 3.x (drift
       # 2.32+), le hook de build de `package:sqlite3` télécharge sa propre
       # bibliothèque et la préfère à celle de l'OS — tests compris.
 
       # Version ÉPINGLÉE — jamais « stable » au fil de l'eau — et à SOURCE
-      # UNIQUE : apps/mobile/.flutter-version, lu ici, par demo-apk.yml et
-      # par scripts/check_mobile.sh. La monter = changer ce seul fichier
+      # UNIQUE : apps/mobile/.flutter-version, lu ici, par mobile-recette.yml,
+      # mobile-production.yml et scripts/check_mobile.sh. La monter = changer ce seul fichier
       # (voir docs/development/poste-de-travail.md).
       #
       # Pas de `flutter-version-file` : en v2 de l'action, cette entrée ne
@@ -90,14 +97,14 @@ jobs:
         id: pin
         run: echo "version=$(cat .flutter-version)" >> "$GITHUB_OUTPUT"
 
-      - uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
         with:
           flutter-version: ${{ steps.pin.outputs.version }}
           channel: stable
           cache: true
 
       - name: Cache des paquets Dart
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ~/.pub-cache
           key: pub-${{ runner.os }}-${{ hashFiles('apps/mobile/pubspec.lock') }}

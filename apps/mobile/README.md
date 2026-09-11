@@ -20,7 +20,7 @@ tout à neuf (28 paquets déplacés ici par rapport au lock du dépôt, dont un
 saut de version majeure) ; avec `--no-pub` il laisse à la place le lock du
 gabarit. Il recrée aussi `test/widget_test.dart`, qui référence un `MyApp`
 inexistant dans ce projet. `scripts/mobile_platforms.sh` — appelé par le
-bootstrap **et** par la CI `demo-apk` — fait la création et répare ces deux
+bootstrap **et** par la CI `mobile-recette` — fait la création et répare ces deux
 effets de bord : il ne **laisse** derrière lui que les dossiers de plateformes,
 `pubspec.lock` étant restauré à l'identique (contenu et droits) et le test du
 gabarit retiré :
@@ -102,8 +102,10 @@ le JSON au seed et fait échouer la CI si les deux divergent. C'est
 exactement la panne qu'il garde — la liste recopiée à la main n'affichait
 plus que 11 exercices sur 55, et aucune vignette.
 
-Le workflow `demo-apk` (`.github/workflows/demo-apk.yml`, déclenchement
-manuel) construit cet APK et le publie sur la release `demo-latest`.
+Plus aucun workflow ne construit cet APK : la CI mobile
+(`.github/workflows/mobile-recette.yml`) construit désormais la **vraie**
+application de recette, branchée sur le serveur de recette. Le mode démo
+reste compilable à la main : `flutter build apk --dart-define=CARLYS_FLAVOR=demo`.
 
 ## Structure
 

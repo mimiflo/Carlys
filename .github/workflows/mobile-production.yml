@@ -70,9 +70,11 @@ on:
         type: string
       build_number:
         description: >-
-          versionCode Android (entier ≥ 1). Laisser VIDE pour utiliser le
-          numéro d'exécution de ce workflow, qui ne recule jamais. À renseigner
-          seulement pour reprendre la numérotation d'un dépôt Play existant.
+          versionCode Android (entier ≥ 1). Laisser VIDE pour utiliser
+          100000 + le numéro d'exécution de ce workflow — le décalage garde la
+          production au-dessus des versionCode que la recette dépose sur la
+          piste interne avec SON compteur. À renseigner seulement pour
+          reprendre la numérotation d'un dépôt Play existant.
         required: false
         type: string
 
@@ -157,7 +159,7 @@ jobs:
       # DEPLOYED, deploy.sh et promote.sh côté serveur, donc celle qu'un
       # opérateur a sous la main). On rapatrie tout l'historique, puis on
       # résout nous-mêmes.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
 
@@ -384,23 +386,33 @@ jobs:
       # ── versionCode ─────────────────────────────────────────────────────────
       #
       # Piège silencieux de la Play Console : elle REFUSE un versionCode déjà
-      # téléversé. `apps/mobile/pubspec.yaml` porte `version: 0.1.0+1`, gelé —
-      # le premier .aab passerait, le deuxième serait rejeté au téléversement,
-      # après le build, après l'approbation, sans que rien dans ce workflow
-      # n'ait prévenu. On passe donc explicitement `--build-number`, et le
-      # défaut (`github.run_number`) est monotone par construction : il ne
-      # recule jamais, y compris quand on promeut un commit ancien.
+      # téléversé — pour l'application entière, TOUTES pistes confondues.
+      # `apps/mobile/pubspec.yaml` porte `version: 0.1.0+1`, gelé — le premier
+      # .aab passerait, le deuxième serait rejeté au téléversement, après le
+      # build, après l'approbation, sans que rien dans ce workflow n'ait
+      # prévenu. On passe donc explicitement `--build-number`.
+      #
+      # Le défaut est `100000 + github.run_number`, et le décalage n'est pas
+      # décoratif : mobile-recette dépose sur la piste INTERNE avec SON propre
+      # numéro d'exécution comme versionCode, et les deux workflows ne
+      # partagent pas leur compteur. Sans décalage, la production finirait
+      # presque sûrement sous un numéro déjà pris par la recette — refus Play
+      # découvert après l'approbation, le mode d'échec tardif que tout ce
+      # fichier existe pour fermer. 100000 exécutions de recette avant la
+      # collision : le jour où ce plafond approche, il se voit venir. Le champ
+      # build_number reste souverain pour les cas particuliers.
       - name: Numéro de build (versionCode Android)
         id: numero
         env:
           DEMANDE: ${{ inputs.build_number }}
-          DEFAUT: ${{ github.run_number }}
+          EXECUTION: ${{ github.run_number }}
         run: |
           set -euo pipefail
+          DEFAUT=$((EXECUTION + 100000))
           valeur="${DEMANDE:-$DEFAUT}"
           case "$valeur" in
             ''|*[!0-9]*)
-              echo "::error title=build_number invalide::« $DEMANDE » n'est pas un entier. Le versionCode Android est un entier positif ; laisse le champ VIDE pour utiliser le numéro d'exécution ($DEFAUT), ou renseigne un entier strictement supérieur au dernier versionCode accepté par la Play Console."
+              echo "::error title=build_number invalide::« $DEMANDE » n'est pas un entier. Le versionCode Android est un entier positif ; laisse le champ VIDE pour utiliser 100000 + le numéro d'exécution ($DEFAUT — le décalage garde la production au-dessus des versionCode que la recette dépose sur la piste interne), ou renseigne un entier strictement supérieur au dernier versionCode accepté par la Play Console."
               exit 1
               ;;
           esac
@@ -425,6 +437,9 @@ jobs:
           NUMERO: ${{ steps.numero.outputs.valeur }}
         run: |
           set -euo pipefail
+          # La version marketing vient du pubspec DU COMMIT PROMU (le checkout
+          # est déjà détaché dessus) : c'est ce que la fiche affichera.
+          VERSION="$(sed -n 's/^version: *\([^+]*\).*/\1/p' apps/mobile/pubspec.yaml)"
           {
             echo "## À approuver — production mobile de \`$SHA12\`"
             echo
@@ -441,7 +456,7 @@ jobs:
             echo "| \`CARLYS_API_BASE_URL\` | \`$API_URL\` |"
             echo "| \`CARLYS_PUBLIC_WEB_BASE_URL\` | \`$WEB_URL\` |"
             echo
-            echo "versionCode Android : \`$NUMERO\`"
+            echo "version affichée (pubspec) : \`$VERSION\` — versionCode Android : \`$NUMERO\`"
             echo
             echo "**Le build attend un OUI humain.** Onglet Summary de cette exécution →"
             echo "« Review deployments » → cocher \`mobile-production\` → Approve and deploy."
@@ -539,7 +554,7 @@ jobs:
       # `ref` sur le sha40 résolu par le job 1 : on construit CE commit, pas la
       # tête de la branche. Un artefact publié sous le nom d'un commit et bâti
       # sur un autre serait pire que pas d'artefact du tout.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           ref: ${{ needs.controles.outputs.sha40 }}
 
@@ -550,14 +565,14 @@ jobs:
         id: pin
         run: echo "version=$(cat .flutter-version)" >> "$GITHUB_OUTPUT"
 
-      - uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
         with:
           flutter-version: ${{ steps.pin.outputs.version }}
           channel: stable
           cache: true
 
       - name: Cache des paquets Dart
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ~/.pub-cache
           key: pub-${{ runner.os }}-${{ hashFiles('apps/mobile/pubspec.lock') }}
@@ -567,7 +582,7 @@ jobs:
       # les configurations de signature diffèrent, donc les tâches qui en
       # dépendent aussi.
       - name: Cache Gradle
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: |
             ~/.gradle/caches
@@ -926,7 +941,16 @@ jobs:
       # contrôle est celle qu'on écrit.
       - name: Effacement du keystore
         if: always()
-        run: rm -f "$RUNNER_TEMP/$KEYSTORE_NOM" android/key.properties
+        # `shred` écrase avant de délier — key.properties porte deux mots de
+        # passe en clair, le keystore la clé de l'application. `|| true`
+        # partout : cette étape ne doit jamais masquer la vraie cause d'un
+        # échec, et `rm -f` reste le filet si shred manque.
+        run: |
+          for f in "$RUNNER_TEMP/$KEYSTORE_NOM" android/key.properties; do
+            [ -f "$f" ] && command -v shred >/dev/null 2>&1 && shred -u "$f" 2>/dev/null || true
+            rm -f "$f"
+          done
+          echo "Keystore et key.properties effacés."
 
       # ARTEFACT D'EXÉCUTION, jamais une release publique. L'ancien workflow
       # de démonstration publiait son APK sur la release `demo-latest` : une
@@ -937,7 +961,7 @@ jobs:
       # Actions, par quelqu'un qui a accès au dépôt, et ils montent ensuite
       # dans la Play Console. Même raisonnement que mobile-recette.yml.
       - name: Artefact de production
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: carlys-production-${{ needs.controles.outputs.sha12 }}
           path: ${{ runner.temp }}/production
@@ -956,6 +980,7 @@ jobs:
           EMPREINTE: ${{ steps.signature.outputs.empreinte }}
         run: |
           set -euo pipefail
+          VERSION="$(sed -n 's/^version: *\([^+]*\).*/\1/p' pubspec.yaml)"
           {
             echo "## Production mobile approuvée et construite — \`$SHA12\`"
             echo
@@ -967,8 +992,9 @@ jobs:
             echo "| \`CARLYS_API_BASE_URL\` | \`$API_URL\` |"
             echo "| \`CARLYS_PUBLIC_WEB_BASE_URL\` | \`$WEB_URL\` |"
             echo
-            echo "versionCode Android : \`$NUMERO\` — Play refuse un versionCode déjà"
-            echo "téléversé, le prochain build devra donc être strictement supérieur."
+            echo "version affichée (pubspec) : \`$VERSION\` — versionCode Android : \`$NUMERO\`."
+            echo "Play refuse un versionCode déjà téléversé, le prochain build devra donc"
+            echo "être strictement supérieur."
             echo
             echo "Empreinte SHA-256 de la clé de signature : \`$EMPREINTE\`"
             echo "(à confronter à la clé de téléversement attendue par Play App Signing)."

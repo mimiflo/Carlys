@@ -29,16 +29,21 @@
 #      dépôt. Tant qu'ils n'existent pas, ce workflow NE PRODUIT PAS d'`.aab`
 #      — plutôt rien qu'un binaire dont on ne découvrirait le vice qu'au
 #      moment du dépôt sur le magasin. Le récapitulatif dit lequel des deux
-#      cas s'applique et, le cas échéant, quels secrets créer. Posé un
-#      secret de plus (compte de service Play), il part tout seul sur la
-#      piste interne.
+#      cas s'applique et, le cas échéant, quels secrets créer.
 #
 #   3. `.ipa` — iOS, dans un SECOND JOB, sur un runner macOS, et SEULEMENT SI
-#      ON LE DEMANDE (variable de dépôt CARLYS_IOS_BUILDS=oui, ou case « ios »
-#      de Run workflow) : une minute macOS en coûte dix. Il n'existe pas
-#      d'`.ipa` « signé en debug » qui s'installerait quand même — sans
+#      ON LE DEMANDE (variable de dépôt CARLYS_IOS_BUILDS=oui, ou case
+#      « ios » de Run workflow) : une minute macOS en coûte dix. Il n'existe
+#      pas d'`.ipa` « signé en debug » qui s'installerait quand même — sans
 #      certificat ni profil Apple, le job échoue au lieu de livrer du vide.
-#      Posée une clé API App Store Connect, il part tout seul sur TestFlight.
+#
+# ── AUCUNE POUSSÉE NE PUBLIE VERS UN MAGASIN ─────────────────────────────────
+#
+# Les téléversements (piste interne Play, TestFlight) n'ont lieu QUE sur une
+# exécution manuelle avec la case « publier » cochée — jamais sur push, même
+# quand tous les secrets existent. La présence d'un secret dit qu'on PEUT
+# publier, pas qu'on VEUT : décider, c'est cliquer. Sans la case, les
+# artefacts signés sont construits et archivés, prêts, et rien ne part.
 #
 # ── Le filet d'`assertUsable()` a lieu AU LANCEMENT, pas à la compilation ─────
 #
@@ -88,6 +93,18 @@ on:
         required: false
         type: boolean
         default: false
+      publier:
+        description: >-
+          PUBLIER Carlys Staging Beta — déposer ce qui est construit : le
+          bundle signé sur la piste interne Play, et l'.ipa sur TestFlight si
+          le job iOS tourne (variable CARLYS_IOS_BUILDS ou case « ios »
+          ci-dessus). Secrets requis, voir docs/deployment/builds-mobiles.md
+          §4.6 et §10 — il en manque un, l'exécution échoue en ROUGE plutôt
+          que de réussir sans rien déposer. Sans cette case, poussée comme
+          exécution manuelle CONSTRUISENT sans rien publier.
+        required: false
+        type: boolean
+        default: false
 
 # `contents: read` et rien d'autre. `demo-apk` demandait `contents: write`
 # parce qu'il écrasait une release publique ; ce workflow publie via
@@ -106,8 +123,16 @@ permissions:
 # vingt minutes de runner par commit que personne n'installera, et le besoin
 # résiduel — reconstruire un commit précis — est exactement ce que l'entrée
 # `sha` ci-dessus sert à couvrir.
+#
+# Une exécution « publier », elle, a son PROPRE groupe. Sans cela, une
+# poussée ordinaire sur la même branche annulerait le clic d'un humain en
+# plein vol — les téléversements sont les DERNIÈRES étapes de jobs de 40 et
+# 60 minutes, l'annulation les emporterait presque toujours, et il ne
+# resterait qu'une exécution « cancelled » que personne ne relit. Deux
+# « publier » d'affilée, en revanche, s'annulent entre eux : c'est le même
+# humain qui a changé d'avis, et le second porte un versionCode plus grand.
 concurrency:
-  group: mobile-recette-${{ github.ref }}
+  group: mobile-recette-${{ github.ref }}-${{ (github.event_name == 'workflow_dispatch' && inputs.publier == true) && 'publier' || 'ci' }}
   cancel-in-progress: true
 
 jobs:
@@ -126,7 +151,7 @@ jobs:
       # rattrapage manuel en accepte un de 12 caractères (c'est la longueur
       # qu'affichent DEPLOYED, deploy.sh et promote.sh). On rapatrie donc tout
       # l'historique, puis on résout nous-mêmes.
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
 
@@ -226,7 +251,7 @@ jobs:
         id: pin
         run: echo "version=$(cat .flutter-version)" >> "$GITHUB_OUTPUT"
 
-      - uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
         with:
           flutter-version: ${{ steps.pin.outputs.version }}
           channel: stable
@@ -236,14 +261,14 @@ jobs:
       # l'essentiel du temps d'un build à froid : on les garde d'une fois sur
       # l'autre, la clé suivant les fichiers de verrouillage.
       - name: Cache des paquets Dart
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ~/.pub-cache
           key: pub-${{ runner.os }}-${{ hashFiles('apps/mobile/pubspec.lock') }}
           restore-keys: pub-${{ runner.os }}-
 
       - name: Cache Gradle
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: |
             ~/.gradle/caches
@@ -326,7 +351,9 @@ jobs:
       # `--obfuscate` sans `--split-debug-info` rendrait les traces d'exécution
       # illisibles : les symboles sont donc extraits et livrés AVEC l'artefact,
       # dans le même dossier. Un plantage de recette reste ainsi déchiffrable.
-      # `--build-number` = numéro d'exécution du workflow, comme en production :
+      # `--build-number` = numéro d'exécution de CE workflow (la production,
+      # elle, compte à part : son défaut est décalé de +100000 pour rester
+      # au-dessus de ce que la recette dépose) :
       # la piste interne Play REFUSE un versionCode déjà téléversé, et le
       # `+1` de pubspec.yaml ne bouge jamais tout seul. Le numéro d'exécution
       # est monotone par construction. L'APK le porte aussi, pour que les deux
@@ -374,7 +401,7 @@ jobs:
           ls -lh "build/livraison/apk/carlys-recette-$SHA12.apk"
 
       - name: Artefact — APK installable
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: carlys-recette-apk-${{ steps.commit.outputs.sha12 }}
           # Chemin depuis la RACINE du dépôt : `defaults.run.working-directory`
@@ -421,6 +448,7 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          PUBLIER: ${{ github.event_name == 'workflow_dispatch' && inputs.publier == true }}
         run: |
           manquants=""
           [ -n "$KEYSTORE_B64" ]      || manquants="$manquants ANDROID_KEYSTORE_BASE64"
@@ -432,6 +460,14 @@ jobs:
             echo "actif=oui" >> "$GITHUB_OUTPUT"
             echo "Les quatre secrets de signature sont présents : le bundle sera produit."
             exit 0
+          fi
+
+          # La case « publier » demandait un dépôt : ne rien pouvoir déposer
+          # est alors un ÉCHEC, pas un avertissement — un « publier » qui
+          # réussit sans rien publier serait un mensonge de statut.
+          if [ "$PUBLIER" = "true" ]; then
+            echo "::error title=Publication demandée, signature impossible::La case « publier » demandait un dépôt sur la piste interne Play, mais il manque le(s) secret(s) de signature :$manquants. Sans keystore, aucun .aab ne peut être produit, donc rien ne peut partir. Poser les quatre secrets (docs/deployment/builds-mobiles.md §4), puis relancer avec la case publier."
+            exit 1
           fi
 
           echo "actif=non" >> "$GITHUB_OUTPUT"
@@ -456,6 +492,7 @@ jobs:
           KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
         run: |
+          umask 077
           keystore="$RUNNER_TEMP/carlys-release.jks"
           printf '%s' "$KEYSTORE_B64" | base64 -d > "$keystore" 2>/dev/null || {
             echo "::error title=ANDROID_KEYSTORE_BASE64 illisible::La valeur n'est pas du base64 valide. Régénère-la avec « base64 -w0 carlys-release.jks » (sans retour à la ligne) et recolle-la entière dans le secret."
@@ -554,11 +591,14 @@ jobs:
       # toutes les architectures, c'est le magasin qui découpe par appareil au
       # téléchargement. C'est la différence de fond avec l'APK arm64 ci-dessus.
       #
-      # Le versionCode vient de `version:` dans apps/mobile/pubspec.yaml. La
-      # Play Console REFUSE deux dépôts au même versionCode : avant un second
-      # téléversement, il faut incrémenter cette ligne et pousser. Ce workflow
-      # ne le fait pas à votre place — un numéro de version que la CI
-      # incrémenterait dans son coin ne correspondrait à rien de traçable.
+      # Le versionCode est `--build-number=$NUMERO`, le numéro d'exécution de
+      # CE workflow — la Play Console refuse deux dépôts au même versionCode,
+      # et le `+1` de pubspec.yaml ne bouge jamais tout seul. mobile-production
+      # compte de son côté : son défaut est décalé de +100000 précisément pour
+      # rester au-dessus de tout ce que la recette aura déposé ici. Le
+      # versionName visible en magasin, lui, reste le `version:` de
+      # pubspec.yaml (0.1.0 tant qu'on ne le monte pas) : la CI ne passe
+      # jamais --build-name, une version marketing se décide par un commit.
       - name: Build App Bundle (recette, signé)
         if: steps.signature.outputs.actif == 'oui'
         env:
@@ -609,29 +649,33 @@ jobs:
 
       - name: Artefact — bundle de magasin
         if: steps.signature.outputs.actif == 'oui'
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: carlys-recette-aab-${{ steps.commit.outputs.sha12 }}
           path: apps/mobile/build/livraison/aab
           if-no-files-found: error
 
-      # ── 3. La piste interne Play, si un compte de service est posé ─────────
+      # ── 3. La piste interne Play, sur la case « publier » seulement ────────
       #
       # UN SEUL secret, facultatif : PLAY_SERVICE_ACCOUNT_JSON — le JSON d'un
       # compte de service Google Cloud invité dans la Play Console avec le droit
       # « Publier sur les pistes de test ». Absent, le bundle reste un artefact
-      # à déposer à la main, et le récapitulatif le dit.
+      # à déposer à la main, et le récapitulatif le dit. Présent, il ne SUFFIT
+      # pas : le dépôt n'a lieu que sur une exécution manuelle avec la case
+      # « publier » — un push ne publie jamais, voir l'en-tête du fichier.
       #
       # Une action tierce, et c'est assumé : l'API Google Play Developer exige
       # un jeton OAuth signé par la clé du compte de service, puis une session
       # d'édition en trois appels. L'écrire en curl et openssl tiendrait en une
       # centaine de lignes fragiles ; r0adkll/upload-google-play est l'action
-      # de référence pour ce geste, épinglée sur une version majeure.
+      # de référence pour ce geste, épinglée par SHA de commit — elle reçoit
+      # le JSON du compte de service en clair, un tag mutable ne suffit pas.
       - name: Compte de service Play
         id: play
         if: steps.signature.outputs.actif == 'oui'
         env:
           COMPTE: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          PUBLIER: ${{ github.event_name == 'workflow_dispatch' && inputs.publier == true }}
         run: |
           if [ -n "$COMPTE" ]; then
             echo "actif=oui" >> "$GITHUB_OUTPUT"
@@ -642,15 +686,27 @@ jobs:
             [ -n "$id" ] || id="$(grep -oE "applicationId +['\"][^'\"]+['\"]" android/app/build.gradle 2>/dev/null | head -1 | sed "s/.*['\"]\([^'\"]*\)['\"]/\1/")"
             [ -n "$id" ] || { echo "::error title=applicationId introuvable::Impossible de lire l'identifiant d'application dans android/app/build.gradle(.kts) — le téléversement Play ne sait pas quelle fiche viser."; exit 1; }
             echo "package=$id" >> "$GITHUB_OUTPUT"
-            echo "Piste interne Play : téléversement prévu pour $id."
+            if [ "$PUBLIER" = "true" ]; then
+              echo "Piste interne Play : téléversement demandé (case publier) pour $id."
+            else
+              echo "Secrets Play en place pour $id — pas de téléversement : la case « publier » n'est pas cochée."
+            fi
           else
+            # Même principe que la signature : « publier » sans le compte de
+            # service est un échec dit en rouge, pas un vert qui n'a rien fait.
+            if [ "$PUBLIER" = "true" ]; then
+              echo "::error title=Publication demandée, compte de service Play absent::La case « publier » demandait un dépôt sur la piste interne, mais PLAY_SERVICE_ACCOUNT_JSON n'existe pas. Poser ce secret (docs/deployment/builds-mobiles.md §4.6), ou déposer à la main l'artefact .aab de cette exécution."
+              exit 1
+            fi
             echo "actif=non" >> "$GITHUB_OUTPUT"
             echo "PLAY_SERVICE_ACCOUNT_JSON absent : le bundle reste un artefact à déposer à la main."
           fi
 
       - name: Téléversement — piste interne Play
-        if: steps.play.outputs.actif == 'oui'
-        uses: r0adkll/upload-google-play@v1
+        if: >-
+          steps.play.outputs.actif == 'oui' &&
+          github.event_name == 'workflow_dispatch' && inputs.publier == true
+        uses: r0adkll/upload-google-play@e738b9dd8f2476ea806d921b64aacd24f34515a5 # v1.1.5
         with:
           serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
           packageName: ${{ steps.play.outputs.package }}
@@ -668,7 +724,12 @@ jobs:
           NUMERO: ${{ github.run_number }}
           PLAY: ${{ steps.play.outputs.actif }}
           PAQUET: ${{ steps.play.outputs.package }}
+          PUBLIER: ${{ github.event_name == 'workflow_dispatch' && inputs.publier == true }}
         run: |
+          # La version marketing (versionName) vient du pubspec : la CI ne
+          # passe jamais --build-name, ce que verront les magasins est cette
+          # ligne-là — le récapitulatif doit la montrer.
+          VERSION="$(sed -n 's/^version: *\([^+]*\).*/\1/p' pubspec.yaml)"
           {
             echo "## Application de recette — commit \`$SHA12\`"
             echo
@@ -677,6 +738,8 @@ jobs:
             echo "| \`CARLYS_FLAVOR\` | \`staging\` |"
             echo "| \`CARLYS_API_BASE_URL\` | \`$API\` |"
             echo "| \`CARLYS_PUBLIC_WEB_BASE_URL\` | \`$WEB\` |"
+            echo "| version (pubspec) | \`$VERSION\` |"
+            echo "| versionCode | \`$NUMERO\` |"
             echo
             echo "### Artefacts"
             echo
@@ -692,15 +755,21 @@ jobs:
               echo "(piste interne Play, Galaxy Store), signé avec le keystore des secrets de"
               echo "dépôt, toutes architectures, versionCode \`$NUMERO\`. Un \`.aab\` ne"
               echo "s'installe pas sur un téléphone."
-              if [ "$PLAY" = "oui" ]; then
+              if [ "$PLAY" = "oui" ] && [ "$PUBLIER" = "true" ]; then
                 echo
                 echo "**Téléversé sur la piste interne Play** (\`$PAQUET\`) : les testeurs"
                 echo "inscrits sur cette piste le reçoivent via le Play Store."
+              elif [ "$PLAY" = "oui" ]; then
+                echo
+                echo "**Prêt pour la piste interne, non téléversé** : rien ne part vers un"
+                echo "magasin sans la case **publier**. Pour déposer ce build : Actions →"
+                echo "mobile-recette → Run workflow → cocher \`publier\`."
               else
                 echo
                 echo "Non téléversé sur Play : poser le secret \`PLAY_SERVICE_ACCOUNT_JSON\`"
-                echo "(compte de service invité dans la Play Console) pour que cette exécution"
-                echo "le dépose elle-même sur la piste interne."
+                echo "(compte de service invité dans la Play Console), puis relancer avec la"
+                echo "case \`publier\` — le dépôt sur la piste interne n'a jamais lieu sur"
+                echo "une simple poussée."
               fi
             else
               echo "**Aucun bundle \`.aab\`** — et c'est délibéré."
@@ -790,6 +859,10 @@ jobs:
   # là-haut. Toute correction ici se reporte là-bas, et réciproquement.
   ios:
     name: Application de recette (iOS)
+    # La case « publier » ne suffit PAS à lancer ce job : sans compte Apple,
+    # une publication Android-seule doit pouvoir finir verte. Publier l'.ipa
+    # se demande donc explicitement — variable ou case « ios » — EN PLUS de
+    # la case « publier ».
     if: vars.CARLYS_IOS_BUILDS == 'oui' || inputs.ios == true
     runs-on: macos-latest
     # Le double de l'Android : l'archive Xcode d'une application Flutter avec
@@ -800,7 +873,7 @@ jobs:
         working-directory: apps/mobile
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
 
@@ -861,14 +934,14 @@ jobs:
         id: pin
         run: echo "version=$(cat .flutter-version)" >> "$GITHUB_OUTPUT"
 
-      - uses: subosito/flutter-action@v2
+      - uses: subosito/flutter-action@1a449444c387b1966244ae4d4f8c696479add0b2 # v2.23.0
         with:
           flutter-version: ${{ steps.pin.outputs.version }}
           channel: stable
           cache: true
 
       - name: Cache des paquets Dart
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ~/.pub-cache
           key: pub-${{ runner.os }}-${{ hashFiles('apps/mobile/pubspec.lock') }}
@@ -879,7 +952,7 @@ jobs:
       # Firebase pèsent plusieurs centaines de mégaoctets — c'est le premier
       # poste de durée d'un build iOS à froid, et chaque minute ici en vaut dix.
       - name: Cache CocoaPods
-        uses: actions/cache@v4
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
         with:
           path: ~/Library/Caches/CocoaPods
           key: pods-${{ runner.os }}-${{ hashFiles('apps/mobile/pubspec.lock') }}
@@ -1273,13 +1346,16 @@ jobs:
           ls -lh "build/livraison/ipa/carlys-recette-$SHA12.ipa"
 
       - name: Artefact — IPA
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: carlys-recette-ipa-${{ steps.commit.outputs.sha12 }}
           path: apps/mobile/build/livraison/ipa
           if-no-files-found: error
 
-      # ── TestFlight, si une clé API App Store Connect est posée ─────────────
+      # ── TestFlight, sur la case « publier » et avec une clé API posée ──────
+      #
+      # Le dépôt n'a lieu que sur une exécution manuelle avec la case
+      # « publier » — même règle que la piste interne Play, voir l'en-tête.
       #
       # Trois secrets, facultatifs mais ENSEMBLE — un jeu à moitié posé est
       # signalé, pas deviné. À créer sur App Store Connect → Users and Access
@@ -1298,6 +1374,7 @@ jobs:
           KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
           ISSUER_ID: ${{ secrets.APP_STORE_CONNECT_ISSUER_ID }}
           P8_B64: ${{ secrets.APP_STORE_CONNECT_API_KEY_BASE64 }}
+          PUBLIER: ${{ github.event_name == 'workflow_dispatch' && inputs.publier == true }}
         run: |
           manquants=""
           [ -n "$KEY_ID" ]    || manquants="$manquants APP_STORE_CONNECT_KEY_ID"
@@ -1315,7 +1392,16 @@ jobs:
               exit 1
             }
             echo "actif=oui" >> "$GITHUB_OUTPUT"
-            echo "Clé API App Store Connect présente : téléversement TestFlight prévu."
+            if [ "$PUBLIER" = "true" ]; then
+              echo "Clé API App Store Connect présente : téléversement TestFlight demandé (case publier)."
+            else
+              echo "Clé API App Store Connect présente — pas de téléversement : la case « publier » n'est pas cochée."
+            fi
+          elif [ "$PUBLIER" = "true" ]; then
+            # « publier » sans clé API : échec en rouge — sans Mac, la clé API
+            # est le SEUL chemin vers TestFlight, un vert sans dépôt mentirait.
+            echo "::error title=Publication demandée, clé API App Store Connect absente ou incomplète::La case « publier » demandait un dépôt TestFlight, mais il manque :$manquants. Les trois secrets vont ensemble (docs/deployment/builds-mobiles.md §10.4). Sans eux, rien ne peut partir — Transporter est une application macOS."
+            exit 1
           elif set -- $manquants && [ "$#" -eq 3 ]; then
             echo "actif=non" >> "$GITHUB_OUTPUT"
             echo "Aucune clé API App Store Connect : l'.ipa reste un artefact à déposer avec Transporter."
@@ -1330,7 +1416,9 @@ jobs:
       # que le DÉBUT : Apple traite ensuite le build (dix à trente minutes),
       # puis il apparaît dans App Store Connect → TestFlight.
       - name: Téléversement — TestFlight
-        if: steps.asc.outputs.actif == 'oui'
+        if: >-
+          steps.asc.outputs.actif == 'oui' &&
+          github.event_name == 'workflow_dispatch' && inputs.publier == true
         env:
           SHA12: ${{ steps.commit.outputs.sha12 }}
           KEY_ID: ${{ secrets.APP_STORE_CONNECT_KEY_ID }}
@@ -1351,13 +1439,16 @@ jobs:
           EQUIPE: ${{ steps.profil.outputs.equipe }}
           IDENTITE: ${{ steps.profil.outputs.identite }}
           TESTFLIGHT: ${{ steps.asc.outputs.actif }}
+          PUBLIER: ${{ github.event_name == 'workflow_dispatch' && inputs.publier == true }}
         run: |
+          VERSION="$(sed -n 's/^version: *\([^+]*\).*/\1/p' pubspec.yaml)"
           {
             echo "## Application de recette iOS — commit \`$SHA12\`"
             echo
             echo "| Variable de build | Valeur |"
             echo "| ----------------- | ------ |"
             echo "| bundle | \`$BUNDLE\` |"
+            echo "| version (pubspec) | \`$VERSION\` |"
             echo "| équipe Apple | \`$EQUIPE\` |"
             echo "| certificat | \`$IDENTITE\` |"
             echo "| profil | \`$PROFIL_NOM\` |"
@@ -1370,15 +1461,19 @@ jobs:
             echo "Connect, avec \`symboles/\`. Un \`.ipa\` de distribution ne s'installe pas"
             echo "par câble : il passe par TestFlight."
             echo
-            if [ "$TESTFLIGHT" = "oui" ]; then
+            if [ "$TESTFLIGHT" = "oui" ] && [ "$PUBLIER" = "true" ]; then
               echo "**Téléversé sur App Store Connect.** Apple le traite (dix à trente"
               echo "minutes), puis il apparaît dans TestFlight ; les testeurs internes"
               echo "le reçoivent dès qu'il est ajouté à leur groupe."
+            elif [ "$TESTFLIGHT" = "oui" ]; then
+              echo "**Prêt pour TestFlight, non téléversé** : rien ne part vers un magasin"
+              echo "sans la case **publier**. Pour déposer ce build : Actions →"
+              echo "mobile-recette → Run workflow → cocher \`ios\` ET \`publier\`."
             else
               echo "Non téléversé : poser les trois secrets \`APP_STORE_CONNECT_KEY_ID\`,"
-              echo "\`APP_STORE_CONNECT_ISSUER_ID\`, \`APP_STORE_CONNECT_API_KEY_BASE64\`"
-              echo "pour que l'exécution le dépose elle-même — ou télécharger l'artefact et"
-              echo "le déposer avec Transporter."
+              echo "\`APP_STORE_CONNECT_ISSUER_ID\`, \`APP_STORE_CONNECT_API_KEY_BASE64\`,"
+              echo "puis relancer avec les cases \`ios\` et \`publier\` — sans Mac, c'est le"
+              echo "seul chemin vers TestFlight (Transporter est une application macOS)."
             fi
             echo
             echo "> **Lancez l'application une fois** depuis TestFlight avant de l'ouvrir"

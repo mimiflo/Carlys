@@ -1,0 +1,22 @@
+# Tient à jour les ÉPINGLES par SHA des actions GitHub.
+#
+# Chaque `uses:` des workflows est fixé à un COMMIT précis (suffixé du numéro
+# de version en commentaire) : un tag `@v4` est mutable — un mainteneur
+# compromis peut le déplacer et faire exécuter son code à la prochaine
+# exécution, avec les secrets que l'action reçoit (l'incident
+# tj-actions/changed-files de 2025 est exactement cela). Un SHA, non.
+#
+# Le revers d'une épingle est qu'elle gèle : sans ce fichier, les actions ne
+# recevraient plus jamais ni correctif ni mise à jour de sécurité. Dependabot
+# ouvre donc une pull request par montée de version — le nouveau SHA s'y
+# relit avant fusion, et la CI passe dessus comme sur tout commit.
+#
+# Uniquement l'écosystème des actions : les dépendances JS ont `pnpm audit`
+# (security-ci.yml) et un lockfile, Dart a son pubspec.lock contraignant —
+# on ne double pas ces canaux ici.
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly

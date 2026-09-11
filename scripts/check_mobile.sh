@@ -44,7 +44,7 @@ cd "$SCRIPTS_DIR/../apps/mobile"
 
 echo "── Version Flutter ─────────────────────────────────────────────────"
 # La CI installe la version épinglée dans apps/mobile/.flutter-version
-# (source unique, lue aussi par mobile-ci.yml et demo-apk.yml). Un écart
+# (source unique, lue aussi par mobile-ci.yml, mobile-recette.yml et mobile-production.yml). Un écart
 # n'arrête pas le script — mais il enlève au vert local sa valeur de preuve.
 PINNED="$(cat .flutter-version)"
 ACTUAL="$(flutter --version 2>/dev/null | sed -n 's/^Flutter \([^ ]*\).*/\1/p' || true)"

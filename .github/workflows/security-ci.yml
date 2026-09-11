@@ -8,7 +8,7 @@ name: security-ci
 # développement. Pour une détection de secrets, c'est le pire des retards
 # possibles — un jeton poussé est compromis à la seconde où il quitte le
 # poste, et l'apprendre après la fusion ne change plus rien à la fuite,
-# seulement à la note. On s'aligne sur demo-apk.yml et
+# seulement à la note. On s'aligne sur mobile-recette.yml et
 # images-ci.yml, qui nomment déjà les deux branches.
 #
 # L'arbitrage coûte ici beaucoup moins cher qu'ailleurs : ce workflow n'a aucun
@@ -34,13 +34,20 @@ concurrency:
   group: security-ci-${{ github.ref }}
   cancel-in-progress: true
 
+# Le GITHUB_TOKEN par défaut hérite du réglage du dépôt (Settings → Actions →
+# Workflow permissions), invisible depuis ce fichier. Lecture seule explicite :
+# ce workflow ne fait que vérifier, il n'écrit rien — et une action tierce
+# compromise n'y trouverait pas de jeton en écriture.
+permissions:
+  contents: read
+
 jobs:
   secrets:
     name: Détection de secrets
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
 
@@ -62,8 +69,14 @@ jobs:
       #   --results=verified,unknown             → code 0, AUCUN résultat ;
       #   --results=verified,unknown,unverified  → code 183, « Found unverified
       #                                            result », détecteur AWS.
+      # Épinglé par SHA DE COMMIT, comme toute action tierce de ce dépôt — et
+      # ici plus qu'ailleurs : ce workflow lit TOUT l'historique du dépôt
+      # (fetch-depth: 0). Il a longtemps pointé `@main`, une branche mouvante :
+      # chaque exécution faisait tourner le dernier commit d'un dépôt tiers,
+      # quel qu'il soit. Un SHA est immuable ; .github/dependabot.yml propose
+      # les montées de version en pull request, où le nouveau SHA se relit.
       - name: TruffleHog (tout secret, même révoqué)
-        uses: trufflesecurity/trufflehog@main
+        uses: trufflesecurity/trufflehog@363923b901c911a9164f50b6c423f47c15372b1c # v3.97.4
         with:
           path: ./
           extra_args: --results=verified,unknown,unverified
@@ -73,11 +86,11 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
           cache: pnpm

@@ -4,7 +4,7 @@
 # dans apps/mobile/launcher/), permission de notification Android 13+.
 #
 # android/ et ios/ ne sont pas versionnés : l'identité vit ICI et dans
-# launcher/ — appelé par scripts/bootstrap_mobile.sh et par la CI demo-apk.
+# launcher/ — appelé par scripts/bootstrap_mobile.sh et par la CI mobile-recette.
 set -euo pipefail
 
 cd "$(dirname "$0")/../apps/mobile"

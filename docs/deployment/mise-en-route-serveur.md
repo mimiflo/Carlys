@@ -999,8 +999,10 @@ flutter build appbundle --release \
 # pas `android/` (bootstrap_mobile.sh le régénère), donc aucun keystore ni
 # aucune `signingConfig` n'y survit. La Play Console refuse un bundle signé en
 # debug. Avant la première soumission : créer un keystore, le ranger HORS du
-# dépôt, déclarer sa signingConfig dans android/app/build.gradle — et savoir
-# que ce fichier sera écrasé au prochain bootstrap_mobile.sh.
+# dépôt, déclarer sa signingConfig dans android/app/build.gradle.kts (le
+# gabarit de Flutter 3.44 est en Kotlin DSL) — et savoir que ce fichier sera
+# écrasé au prochain bootstrap_mobile.sh. La CI, elle, fait ce branchement
+# toute seule depuis les secrets : voir builds-mobiles.md §4.
 
 # iOS → TestFlight. macOS OBLIGATOIRE, avec Xcode et un compte Apple Developer.
 flutter build ipa --release \
@@ -1011,9 +1013,10 @@ flutter build ipa --release \
 ```
 
 **La CI fait ces deux gestes pour vous**, secrets posés : `mobile-recette`
-signe le bundle avec le keystore des secrets et le dépose sur la piste interne
-Play ; son job iOS, sur un runner macOS de GitHub et **à la demande**, signe
-l'`.ipa` et le dépose sur TestFlight. Ce que chaque chemin exige est dans
+signe le bundle avec le keystore des secrets, et son job iOS, sur un runner
+macOS de GitHub, signe l'`.ipa`. Le dépôt sur les magasins — piste interne
+Play, TestFlight — n'a lieu que sur une exécution manuelle avec la case
+**publier** : aucune poussée ne publie. Ce que chaque chemin exige est dans
 [`builds-mobiles.md`](builds-mobiles.md), §4 pour Android, §10 pour iOS. Les
 commandes ci-dessus restent le pendant **local**, utile pour compiler sans
 attendre la CI.

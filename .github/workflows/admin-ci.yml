@@ -5,7 +5,7 @@ name: admin-ci
 # development. `git log --merges --oneline | wc -l`
 # y rend ZÉRO fusion pour TOUTE la branche : une porte limitée à
 # `pull_request` + `main` ne s'est donc JAMAIS ouverte pendant le
-# développement, elle ne s'ouvrait qu'après coup. On s'aligne sur demo-apk.yml
+# développement, elle ne s'ouvrait qu'après coup. On s'aligne sur mobile-recette.yml
 # et images-ci.yml, qui nomment déjà les deux branches.
 #
 # L'arbitrage est assumé : ce workflow va tourner à chaque poussée qui touche
@@ -43,17 +43,24 @@ concurrency:
   group: admin-ci-${{ github.ref }}
   cancel-in-progress: true
 
+# Le GITHUB_TOKEN par défaut hérite du réglage du dépôt (Settings → Actions →
+# Workflow permissions), invisible depuis ce fichier. Lecture seule explicite :
+# ce workflow ne fait que vérifier, il n'écrit rien — et une action tierce
+# compromise n'y trouverait pas de jeton en écriture.
+permissions:
+  contents: read
+
 jobs:
   verify:
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
           cache: pnpm

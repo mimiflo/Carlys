@@ -18,8 +18,8 @@ façons de lancer l'application, et les pièges qui coûtent une soirée.
 | VS Code | récent | l'éditeur |
 
 **La version Flutter est épinglée, pas « stable au fil de l'eau ».**
-`apps/mobile/.flutter-version` est la source unique : les deux workflows
-(`mobile-ci.yml`, `demo-apk.yml`) la lisent, `scripts/check_mobile.sh` avertit
+`apps/mobile/.flutter-version` est la source unique : les workflows
+(`mobile-ci.yml`, `mobile-recette.yml`, `mobile-production.yml`) la lisent, `scripts/check_mobile.sh` avertit
 bruyamment si ton `flutter --version` en diffère, et ce tableau la cite. Un
 poste sur une autre version peut produire un `dart format` ou une analyse que
 la CI refuse (l'incident qui a mené à l'épinglage est raconté dans
@@ -188,7 +188,7 @@ engendré sans passer par le script : relancer `./scripts/bootstrap_mobile.sh`.
 28 paquets déplacés ici, dont un saut de version majeure ; avec `--no-pub`, il
 laisse le lock du gabarit) et recrée `test/widget_test.dart`, qui référence un
 `MyApp` inexistant dans ce projet. Passer par `scripts/mobile_platforms.sh`
-(`android,ios` ou `android`), que `bootstrap_mobile.sh` et la CI `demo-apk`
+(`android,ios` ou `android`), que `bootstrap_mobile.sh` et la CI `mobile-recette`
 appellent tous les deux : il crée les dossiers puis remet le lock à l'octet
 près et retire le test du gabarit.
 

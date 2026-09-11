@@ -77,8 +77,9 @@ Carlys/
 │   └── deployment/           # stratégie de déploiement
 ├── docs/                     # documentation détaillée (voir fin de ce fichier)
 ├── scripts/                  # setup.sh, check.sh, bootstrap_mobile.sh, check_mobile.sh (+ check_mobile_file_sizes.sh)
-├── .github/workflows/        # 8 : api-ci, admin-ci, mobile-ci, security-ci, images-ci,
-│                             #     images-publish, images-publish-prod, demo-apk
+├── .github/workflows/        # 9 : api-ci, admin-ci, mobile-ci, security-ci, images-ci,
+│                             #     images-publish, images-publish-prod,
+│                             #     mobile-recette, mobile-production
 ├── docker-compose.yml        # PostgreSQL, Redis, Mailpit, MinIO (+ profil "app")
 └── .env.example              # variables du docker-compose (valeurs factices)
 ```
@@ -137,10 +138,12 @@ pnpm prisma:generate
 ./scripts/bootstrap_mobile.sh
 ```
 
-> **Juste regarder l'app, sans rien installer ?** Le workflow GitHub
-> `demo-apk` publie un APK de démonstration **sans serveur** (flavor `demo`,
-> données intégrées) sur la release `demo-latest` du dépôt — à installer
-> directement sur un téléphone Android.
+> **Juste essayer l'app, sans rien installer ?** Le workflow GitHub
+> `mobile-recette` construit à chaque poussée un APK de **recette** (flavor
+> `staging`, branché sur le vrai serveur de recette), à télécharger dans
+> l'onglet Actions et à installer directement sur un téléphone Android —
+> voir `docs/deployment/builds-mobiles.md`. Le mode démo sans serveur
+> existe toujours dans le code, mais ne se construit plus automatiquement.
 
 Ce script génère les dossiers de plateformes `android/` et `ios/` — via `scripts/mobile_platforms.sh`, qui appelle `flutter create` (org `com.carlys`, projet `carlys_mobile`) **sans laisser `pubspec.lock` bouger** — puis exécute `flutter pub get` et `flutter analyze`. Les dossiers de plateformes ne sont pas versionnés : ils se régénèrent à la demande. Ne pas appeler `flutter create` à la main : il écrase le lock et recrée un test de gabarit qui ne compile pas ici.
 
@@ -328,7 +331,7 @@ docker build -f apps/admin/Dockerfile -t carlys-admin .
 - **Tranches verticales** : chaque étape livre une fonctionnalité complète de bout en bout (schéma Prisma + API + admin + mobile + tests + docs). Pas de couche « en avance » sans consommateur, pas de dépendance morte.
 - **Commits** : [Conventional Commits](https://www.conventionalcommits.org/fr/) — `feat(api): …`, `fix(mobile): …`, `docs: …`, `chore: …`.
 - **Branches** : deux permanentes, `development` (le travail, et ce que suit la recette) et `production` (ce qui est promu). Travail sur `feat/<sujet>`, `fix/<sujet>`, `docs/<sujet>` ; intégration dans `development` par pull request avec CI verte. Les branches `archive/*` conservent des lignes de travail abandonnées : elles ne se rouvrent pas, elles se consultent.
-- **CI GitHub Actions — huit workflows**, de deux natures. Cinq **portes**, qui rendent un avis sur un commit et s'ouvrent sur les pull requests et sur les poussées directes de `development` et `production` : `api-ci.yml` (services PostgreSQL + Redis ; format, lint, typecheck, tests, e2e, build, `prisma validate`, détection de migrations manquantes), `admin-ci.yml`, `mobile-ci.yml` (Flutter épinglé par `apps/mobile/.flutter-version` : format bloquant, analyze, test), `images-ci.yml` (les trois images se construisent, démarrent et répondent ; la garde légale mord) et `security-ci.yml` (TruffleHog + `pnpm audit` niveau high, plus une exécution hebdomadaire). `api-ci` et `admin-ci` lintent et testent en plus les paquets partagés (`pnpm --filter "./packages/**" lint` et `test`) : les compiler ne suffit pas à les juger. Et trois **producteurs d'artefacts**, qui écrivent quelque part : `images-publish.yml` (publie les trois images dans GHCR à **chaque** poussée, délibérément sans filtre de chemins — le déploiement se fait par SHA, donc tout commit doit avoir ses images), `images-publish-prod.yml` (`workflow_dispatch` : l'image admin de production, garde légale **armée**) et `demo-apk.yml` (l'APK de démonstration de la release `demo-latest`).
+- **CI GitHub Actions — neuf workflows**, de deux natures. Cinq **portes**, qui rendent un avis sur un commit et s'ouvrent sur les pull requests et sur les poussées directes de `development` et `production` : `api-ci.yml` (services PostgreSQL + Redis ; format, lint, typecheck, tests, e2e, build, `prisma validate`, détection de migrations manquantes), `admin-ci.yml`, `mobile-ci.yml` (Flutter épinglé par `apps/mobile/.flutter-version` : format bloquant, analyze, test), `images-ci.yml` (les trois images se construisent, démarrent et répondent ; la garde légale mord) et `security-ci.yml` (TruffleHog + `pnpm audit` niveau high, plus une exécution hebdomadaire). `api-ci` et `admin-ci` lintent et testent en plus les paquets partagés (`pnpm --filter "./packages/**" lint` et `test`) : les compiler ne suffit pas à les juger. Et quatre **producteurs d'artefacts**, qui écrivent quelque part : `images-publish.yml` (publie les trois images dans GHCR à **chaque** poussée, délibérément sans filtre de chemins — le déploiement se fait par SHA, donc tout commit doit avoir ses images), `images-publish-prod.yml` (`workflow_dispatch` : l'image admin de production, garde légale **armée**), `mobile-recette.yml` (APK de recette à chaque poussée mobile, bundle signé dès que le keystore existe, job iOS sur demande ; le **dépôt** sur la piste interne Play et TestFlight n'a lieu que sur la case « publier » d'une exécution manuelle) et `mobile-production.yml` (`workflow_dispatch` : le bundle de production, derrière une approbation humaine). Toutes les actions tierces y sont épinglées par **SHA de commit** (un tag est mutable), et `.github/dependabot.yml` tient ces épingles à jour.
 - **Documentation** : ne documenter que l'existant, ou du planifié explicitement marqué comme tel (« Étape N », « cible »).
 
 ## Déploiement

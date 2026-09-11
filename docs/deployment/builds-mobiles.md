@@ -83,6 +83,7 @@ Ce qui sépare les deux chemins, ligne à ligne :
 | | Recette | Production |
 | --- | --- | --- |
 | Déclenchement | poussée sur la branche, ou à la main | **à la main uniquement** — aucune poussée ne peut la déclencher |
+| Dépôt sur un magasin | **jamais sur poussée** — case « publier » d'une exécution manuelle, uniquement | jamais : l'artefact se dépose à la main |
 | Entrée `sha` | facultative (vide = tête de la branche) | **obligatoire** |
 | `CARLYS_FLAVOR` | `staging` | `production` |
 | Adresses visées | `api-staging.DOMAINE`, `app-staging.DOMAINE` | `api.DOMAINE`, `app.DOMAINE` |
@@ -92,7 +93,7 @@ Ce qui sépare les deux chemins, ligne à ligne :
 | `.apk` produit | toujours, sans aucun secret | oui, mais **de vérification seulement** |
 | `.aab` produit | seulement si la signature est configurée | **toujours** — sinon le workflow échoue |
 | `.ipa` produit | **sur demande** (variable `CARLYS_IOS_BUILDS`, ou case « ios »), secrets Apple obligatoires — §10 | non : la production n'a pas de job iOS (§10.7) |
-| Dépôt sur le magasin | piste interne Play et TestFlight, **si** les secrets correspondants sont posés | à la main |
+| Dépôt sur le magasin | piste interne Play et TestFlight — **case « publier » uniquement**, secrets posés | à la main |
 | Où va l'artefact | onglet Actions de l'exécution | onglet Actions de l'exécution |
 
 **Pourquoi la production ne redéploie pas les octets de la recette.** Côté
@@ -341,18 +342,44 @@ contrôles ne peut pas vérifier la présence des secrets à l'avance, l'échec 
 donc quelques secondes **après** l'approbation. C'est le bon échange — mieux vaut
 un aller-retour qu'une clé de signature accessible à n'importe quelle exécution.
 
-### 4.6 La piste interne Play, sans geste
+### 4.6 La piste interne Play : le bouton « Publier Carlys Staging Beta »
 
-Un cinquième secret, facultatif, fait déposer le `.aab` de recette sur la
-**piste interne** de la Play Console par l'exécution elle-même :
+Un cinquième secret, facultatif, permet à une exécution de déposer le `.aab`
+de recette sur la **piste interne** de la Play Console :
 `PLAY_SERVICE_ACCOUNT_JSON`, le JSON d'un compte de service Google Cloud invité
 dans la Play Console (Utilisateurs et autorisations → Inviter → le compte de
 service, droit « Publier sur les pistes de test »). Il suppose les quatre secrets
-de signature au niveau du **dépôt** (§4.5) — la piste interne est un build de
-recette, elle ne passe par aucune approbation. Sans lui, le bundle reste un
-artefact à déposer à la main, et le récapitulatif le dit. Le `versionCode` est
-le numéro d'exécution du workflow : la Play Console refuse deux fois le même,
-et celui-ci ne recule jamais.
+de signature au niveau du **dépôt** (§4.5).
+
+**Le secret ne suffit pas : rien ne part sur une poussée.** Le dépôt vers un
+magasin — piste interne Play comme TestFlight — n'a lieu que sur une exécution
+demandée à la main avec la case **publier** :
+
+> Actions → `mobile-recette` → **Run workflow** → cocher **publier** — et
+> aussi **ios** si le build TestFlight est du voyage (la case publier seule ne
+> lance pas le job iOS : sans compte Apple, une publication Android doit
+> pouvoir finir verte) → Run.
+
+La présence d'un secret dit qu'on *peut* publier, pas qu'on *veut* : décider,
+c'est cliquer. Une poussée ordinaire construit et archive les artefacts signés,
+prêts, et n'envoie rien nulle part. Et le contraire vaut aussi : une exécution
+**publier** à qui il manque un secret nécessaire au dépôt demandé **échoue en
+rouge** plutôt que de réussir sans avoir rien déposé.
+
+Trois choses encore, apprises avant qu'elles ne coûtent :
+
+- **Le `versionCode`** est le numéro d'exécution du workflow — jamais deux fois
+  le même, il ne recule pas. La production compte à part : son défaut est
+  décalé de +100000 pour rester toujours au-dessus de la recette, la Play
+  Console refusant tout `versionCode` déjà téléversé, toutes pistes confondues.
+- **Le tout premier dépôt** d'une application neuve peut être refusé par l'API
+  avant que la fiche ne soit complète : si l'exécution « publier » échoue au
+  téléversement sur une application jamais déposée, prendre l'artefact `.aab`
+  de cette même exécution et le déposer une fois à la main dans la Play
+  Console, puis relancer — les suivants passeront par l'API.
+- **Les testeurs ne trouvent pas la piste interne tout seuls** : la Play
+  Console (Test interne → Testeurs) donne un **lien d'adhésion** à leur
+  envoyer ; sans l'avoir ouvert, un testeur ne voit rien dans le Play Store.
 
 ---
 
@@ -470,8 +497,11 @@ Une fois `CARLYS_DOMAIN`, les quatre secrets et l'environnement en place :
    des deux côtés, et elle ne se contourne pas.
 6. **Lancer la production** : Actions → `mobile-production` → **Run workflow** →
    renseigner le **sha** (obligatoire). Laisser `build_number` vide sauf pour
-   reprendre la numérotation d'un dépôt Play existant : par défaut, le numéro
-   d'exécution du workflow est utilisé, et il ne recule jamais.
+   reprendre la numérotation d'un dépôt Play existant : par défaut, le workflow
+   utilise `100000 + son numéro d'exécution` — le décalage garde la production
+   au-dessus des `versionCode` que la recette dépose sur la piste interne avec
+   son propre compteur, la Play Console refusant tout numéro déjà téléversé,
+   toutes pistes confondues.
 7. **Le job de contrôles s'exécute** en quelques minutes. S'il échoue, il dit
    quoi faire — voir §9 ci-dessous.
 8. **Approuver.** L'exécution est affichée « Waiting » ; le reviewer reçoit une
@@ -523,10 +553,17 @@ magasin, et ils engagent.
   l'équipe App Store Connect) et externes (jusqu'à dix mille, après un examen
   Beta App Review) se fait dans App Store Connect → TestFlight ; côté Play,
   la liste des testeurs de la piste interne se tient dans la Play Console.
-- **Le versionCode.** Play refuse un versionCode déjà téléversé. Le workflow
-  utilise par défaut le numéro d'exécution, qui ne recule jamais ; si vous
-  reprenez un dépôt existant dont la numérotation est plus haute, renseignez
-  `build_number` au premier passage.
+- **Le versionCode.** Play refuse un versionCode déjà téléversé, toutes pistes
+  confondues. La recette utilise son numéro d'exécution, la production
+  `100000 +` le sien — deux plages qui ne se croisent pas. Si vous reprenez un
+  dépôt existant dont la numérotation est plus haute, renseignez `build_number`
+  au premier passage.
+- **La version affichée (versionName).** C'est le `version:` de
+  `apps/mobile/pubspec.yaml` (aujourd'hui `0.1.0`) : la CI ne passe jamais
+  `--build-name`, une version marketing se décide par un commit qui monte
+  cette ligne. Les récapitulatifs d'exécution l'affichent ; tant qu'elle ne
+  bouge pas, tous les builds — recette comme production — se présentent en
+  `0.1.0` et seuls leurs numéros de build les distinguent.
 - **Les notifications push.** Les quatre valeurs Firebase ne sont pas injectées
   par les workflows. Leur absence désactive proprement le push, le reste de
   l'application vivant normalement — les ajouter est un geste délibéré, décrit au
@@ -538,8 +575,11 @@ magasin, et ils engagent.
 
 ## 9. Quand ça ne marche pas
 
-Les messages d'erreur des workflows sont écrits pour être suffisants à eux seuls.
-Voici les quatre qu'on rencontre en pratique.
+Les messages d'erreur des workflows sont écrits pour être suffisants à eux
+seuls. Voici ceux qu'on rencontre en pratique — et un cas qui n'est pas une
+erreur : un bundle ou un `.ipa` construit mais **non téléversé** signifie
+presque toujours que l'exécution n'avait pas la case « publier » (§4.6), et le
+récapitulatif le dit.
 
 | Ce que dit l'exécution | Ce qui se passe | Quoi faire |
 | --- | --- | --- |
@@ -547,14 +587,14 @@ Voici les quatre qu'on rencontre en pratique.
 | « Bundle de magasin NON produit » (avertissement, recette) | les quatre secrets de signature ne sont pas visibles par ce workflow | c'est le **cas nominal** si vous les avez posés sur l'environnement (§4.5). L'`.apk` est livré normalement |
 | « Ce commit n'a pas été construit en recette » | la règle « build once » : aucun artefact de recette ne porte ce sha | relancer la recette **sur ce sha** (champ « sha » du Run workflow), l'installer, l'essayer, revenir |
 | « L'artefact de recette a expiré » | GitHub supprime les artefacts après la rétention du dépôt (90 jours par défaut) | relancer la recette sur ce sha — et en profiter pour ré-essayer un commit vieux de plusieurs mois — ou promouvoir un commit plus récent |
-| « Les textes légaux ne sont pas prêts » | un `[À COMPLÉTER : …]` subsiste dans `docs/legal/` | les compléter, pousser, reconstruire en recette, relancer sur le nouveau sha. Aucun contournement |
-| « L'approbation humaine n'est pas armée » | l'environnement `mobile-production` n'existe pas, ou n'a pas de reviewer | §6 |
+| « Les textes légaux ne sont pas prêts pour la production » | un `[À COMPLÉTER : …]` subsiste dans `docs/legal/` | les compléter, pousser, reconstruire en recette, relancer sur le nouveau sha. Aucun contournement |
+| « Environnement mobile-production inexistant » ou « … sans reviewer » | l'approbation humaine n'est pas armée | §6 |
 | « Secrets de signature absents » (après approbation) | les quatre secrets ne sont pas sur l'environnement | §4.4 et §4.5 |
 | « Signature iOS impossible — secret(s) absent(s) » | le job iOS a été demandé sans ses trois secrets | §10.3 — ou retirer `CARLYS_IOS_BUILDS` |
 | « Aucun certificat de DISTRIBUTION valide » | certificat de développement, expiré, ou `.p12` sans clé privée | §10.2 |
-| « Le profil n'embarque pas ce certificat » | profil engendré pour un autre certificat (renouvelé sans régénérer le profil) | §10.1, régénérer le profil |
+| « Le profil n'embarque aucun des certificats importés » | profil engendré pour un autre certificat (renouvelé sans régénérer le profil) | §10.1, régénérer le profil |
 | « Le profil ne vise pas cette application » | l'App ID du profil n'est pas celui que `flutter create` engendre | enregistrer l'App ID que le message cite, refaire le profil |
-| « Profil Ad Hoc ou Development, pas App Store » | mauvais type de profil | §10.1 — type Distribution → App Store Connect |
+| « Profil Ad Hoc ou Development — pas App Store » | mauvais type de profil | §10.1 — type Distribution → App Store Connect |
 
 Deux limites à connaître, dites franchement plutôt que découvertes :
 
@@ -611,23 +651,44 @@ message ne suffit pas, c'est un défaut du workflow à corriger, pas à contourn
    → même Bundle ID. Sans elle, le téléversement est accepté puis rejeté par
    Apple avec un courriel « no suitable application records were found ».
 
-### 10.2 Exporter le certificat et sa clé en `.p12`
+### 10.2 Créer le certificat et le `.p12` — sans Mac
 
-Dans Trousseaux d'accès, catégorie **Mes certificats**, la ligne « Apple
-Distribution: … » se **déplie** sur une clé privée. Clic droit sur cette ligne
-(pas sur la clé seule, pas sur le certificat seul) → **Exporter** → format
-**.p12** → un mot de passe, que vous saisirez dans le secret
-`IOS_DISTRIBUTION_P12_PASSWORD`. Un `.p12` exporté depuis le certificat seul ne
-contient pas la clé : le job le détecte (« aucune identité de distribution
-valide ») et le dit.
-
-Puis, comme pour le keystore Android — et avec la syntaxe macOS, où `base64`
-ignore `-w` :
+Tout le parcours Apple se fait **sans posséder de Mac** : la demande de
+signature (CSR) et l'assemblage du `.p12` sont des gestes openssl, sur
+n'importe quelle machine Linux ou Windows (Git Bash). C'est le chemin
+recommandé ici, puisque le job iOS existe précisément pour bâtir sans Mac.
 
 ```bash
-base64 -i carlys-distribution.p12 | tr -d '\n'
-base64 -i "Carlys App Store.mobileprovision" | tr -d '\n'
+# 1. La clé privée et la demande de signature (CSR) — la clé reste chez vous,
+#    elle est LA moitié secrète du futur certificat : à sauvegarder comme un
+#    keystore (§5), la perdre = tout refaire.
+openssl req -new -newkey rsa:2048 -nodes \
+  -keyout carlys-distribution.key \
+  -out carlys-distribution.csr \
+  -subj "/emailAddress=vous@exemple.fr/CN=Carlys Distribution/C=FR"
+
+# 2. Sur developer.apple.com → Certificates → « + » → Apple Distribution :
+#    téléverser carlys-distribution.csr, télécharger distribution.cer.
+
+# 3. Assembler le .p12 (certificat + clé). Le mot de passe demandé à l'export
+#    devient le secret IOS_DISTRIBUTION_P12_PASSWORD.
+openssl x509 -inform DER -in distribution.cer -out distribution.pem
+openssl pkcs12 -export \
+  -inkey carlys-distribution.key -in distribution.pem \
+  -out carlys-distribution.p12
+
+# 4. Encoder pour les secrets GitHub (syntaxe GNU ; sur macOS : base64 -i X | tr -d '\n')
+base64 -w0 carlys-distribution.p12
+base64 -w0 "Carlys App Store.mobileprovision"
 ```
+
+**Avec un Mac**, l'équivalent passe par Trousseaux d'accès : Assistant de
+certification → Demander un certificat (CSR), puis, une fois le `.cer` ouvert,
+catégorie **Mes certificats**, clic droit sur la ligne « Apple Distribution: … »
+qui se **déplie** sur une clé privée (pas la clé seule, pas le certificat seul)
+→ Exporter → `.p12`. Un `.p12` exporté depuis le certificat seul ne contient
+pas la clé : le job le détecte (« Aucun certificat de DISTRIBUTION valide »)
+et le dit.
 
 ### 10.3 Les trois secrets de signature
 
@@ -650,10 +711,13 @@ et son mot de passe dans un gestionnaire de mots de passe. La perte est moins
 grave qu'un keystore Android — Apple laisse révoquer un certificat et en créer un
 autre — mais elle coûte une régénération complète : certificat, profil, secrets.
 
-### 10.4 TestFlight sans geste : la clé API App Store Connect
+### 10.4 TestFlight : la clé API App Store Connect
 
-Trois secrets de plus, facultatifs mais **ensemble** ; sans eux, l'`.ipa` est
-un artefact à déposer avec l'application **Transporter** (Mac App Store).
+Trois secrets de plus, facultatifs mais **ensemble**. Sans eux, l'`.ipa` est un
+artefact à déposer avec l'application **Transporter** — qui est une application
+macOS : **sans Mac, la clé API est donc le seul chemin vers TestFlight**, et
+ces trois secrets sont obligatoires en pratique. Le dépôt lui-même n'a lieu que
+sur une exécution avec la case **publier** (§4.6) — jamais sur une poussée.
 
 > App Store Connect → Users and Access → **Integrations** → App Store Connect
 > API → Team Keys → « + » → nom libre, rôle **App Manager** → Generate.
@@ -669,11 +733,15 @@ révoque la clé et on en crée une autre. Rangez-le avec le `.p12`.
 
 ### 10.5 Activer le job — et ce que ça coûte
 
-Le job iOS ne tourne **jamais** de lui-même. Deux façons de le demander :
+Le job iOS ne tourne **jamais** de lui-même. Trois façons de le demander :
 
 - **à chaque poussée**, comme l'APK : variable de dépôt `CARLYS_IOS_BUILDS`
-  valant `oui` (Settings → Secrets and variables → Actions → **Variables**) ;
-- **une fois** : Actions → `mobile-recette` → Run workflow → cocher **ios**.
+  valant `oui` (Settings → Secrets and variables → Actions → **Variables**) —
+  il construit alors, mais ne dépose jamais rien sur TestFlight ;
+- **une fois, pour construire** : Actions → `mobile-recette` → Run workflow →
+  cocher **ios** ;
+- **pour publier sur TestFlight** : les cases **ios** ET **publier** ensemble
+  (§4.6) — publier seule dépose le bundle Android mais ne lance pas ce job.
 
 Le prix, c'est la raison de ce choix : sur un dépôt privé, GitHub facture une
 minute de runner macOS **dix fois** une minute Linux, et une archive Xcode d'une

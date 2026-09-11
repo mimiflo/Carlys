@@ -14,7 +14,7 @@ name: images-ci
 # Un déclencheur limité à `pull_request` + `main` ne s'ouvre donc jamais avant
 # une fusion — c'est exactement ce qui a laissé les trois régressions ci-dessus
 # vivre si longtemps sans qu'une seule CI ne rougisse. On s'aligne sur
-# demo-apk.yml, qui nomme lui aussi les deux branches.
+# mobile-recette.yml, qui nomme lui aussi les deux branches.
 #
 # L'arbitrage est assumé, car il va contre le réflexe : un build d'image coûte
 # bien plus cher qu'un job de tests (installation complète des dépendances puis
@@ -68,6 +68,13 @@ concurrency:
   group: images-ci-${{ github.ref }}
   cancel-in-progress: true
 
+# Le GITHUB_TOKEN par défaut hérite du réglage du dépôt (Settings → Actions →
+# Workflow permissions), invisible depuis ce fichier. Lecture seule explicite :
+# ce workflow ne fait que vérifier, il n'écrit rien — et une action tierce
+# compromise n'y trouverait pas de jeton en écriture.
+permissions:
+  contents: read
+
 jobs:
   build:
     name: Construction des images
@@ -101,7 +108,7 @@ jobs:
           --health-retries 10
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       # Les deux cibles de l'API partagent l'étage `build` (installation +
       # compilation, l'essentiel du temps) : les construire dans le MÊME job

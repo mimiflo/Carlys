@@ -16,7 +16,7 @@ command -v flutter >/dev/null || {
 echo "── Génération des dossiers de plateformes (android/, ios/) ─────────"
 # `flutter create` écrase pubspec.lock et recrée le test du gabarit :
 # mobile_platforms.sh contient la création ET la réparation de ces deux
-# effets de bord — le même script que la CI demo-apk, pour que les deux
+# effets de bord — le même script que la CI mobile-recette, pour que les deux
 # chemins ne puissent plus diverger.
 "$SCRIPT_DIR/mobile_platforms.sh" android,ios
 

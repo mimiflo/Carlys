@@ -13,7 +13,7 @@ name: api-ci
 # ces lignes sont écrites ; ce chiffre monte, le zéro de fusions ne bouge pas).
 # Le job le plus riche du dépôt — PostgreSQL, Redis, MinIO, migrations, e2e —
 # ne regardait jamais le code au moment où il s'écrit, mais seulement après la
-# fusion, quand le corriger coûte le plus cher. On s'aligne sur demo-apk.yml et
+# fusion, quand le corriger coûte le plus cher. On s'aligne sur mobile-recette.yml et
 # images-ci.yml, qui nomment déjà les deux branches.
 #
 # L'arbitrage est assumé : ce workflow va tourner à chaque poussée qui touche
@@ -48,6 +48,13 @@ on:
 concurrency:
   group: api-ci-${{ github.ref }}
   cancel-in-progress: true
+
+# Le GITHUB_TOKEN par défaut hérite du réglage du dépôt (Settings → Actions →
+# Workflow permissions), invisible depuis ce fichier. Lecture seule explicite :
+# ce workflow ne fait que vérifier, il n'écrit rien — et une action tierce
+# compromise n'y trouverait pas de jeton en écriture.
+permissions:
+  contents: read
 
 jobs:
   verify:
@@ -89,7 +96,7 @@ jobs:
       S3_PUBLIC_BASE_URL: http://localhost:9000/carlys-media
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       # MinIO n'est pas déclaré en `services` : un conteneur de service ne peut
       # pas recevoir la commande `server /data`, et le bucket doit exister —
@@ -110,9 +117,9 @@ jobs:
             mc anonymous set download ci/carlys-media
           "
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
         with:
           node-version: 22
           cache: pnpm
