@@ -390,10 +390,11 @@ entre une capture et la référence n'est donc pas, en soi, un défaut de l'appl
 ## Les écrans d'entrée, refondus sur maquette (septembre 2026)
 
 La connexion et l'inscription suivent une maquette dédiée, postérieure à la
-refonte complète : photographie d'athlète en bandeau haut de la connexion,
-signature de marque compacte en tête, champs à icône intégrée et texte
-d'aide, bouton violet à flèche (dégradé `cta`), entrées sociales sous un séparateur
-« OU ». Les deux écrans sont des **surfaces de marque** : `AuthScaffold`
+refonte complète, et partagent la MÊME composition : le cœur de la marque en
+décor haut-droite (`AuthBackdrop`), signature de marque compacte à gauche,
+champs à icône intégrée et texte d'aide, bouton violet à flèche (dégradé
+`cta`), entrées sociales sous un séparateur « OU ». Les deux écrans sont des
+**surfaces de marque** : `AuthScaffold`
 leur impose le thème sombre ENTIER — fond et textes ensemble — quel que
 soit le réglage de thème ; les écrans utilitaires du même gabarit (mot de
 passe oublié, changement, suppression de compte) suivent, eux, le thème
@@ -412,11 +413,6 @@ Deux ajouts aux tokens pour cette maquette, gardés par
   « Se connecter » et « Créer mon compte » ; la page de bienvenue garde,
   elle, le dégradé de signature — `AppBrandButton` prend le dégradé en
   paramètre plutôt que d'en imposer un.
-
-La photographie réutilise `AthletePhoto`, mais dans un **cadrage propre**
-(`AuthBackdrop`) : celui de la page de marque suppose son cadre étroit ancré
-à droite, pas le bandeau pleine largeur de la connexion — le reprendre tel
-quel lierait silencieusement la connexion aux re-réglages de la bienvenue.
 
 ## Écarts assumés
 
@@ -440,7 +436,7 @@ quel lierait silencieusement la connexion aux re-réglages de la bienvenue.
 | Abonnement | ÉCART FERMÉ : offres servies par `GET /subscriptions/offers`, achat par Stripe Checkout, gestion par le portail de facturation | Voir `subscription-purchase.md` |
 | Profil | Lignes repos par défaut, unités, rappels, export absentes | Réglages inexistants |
 | Onboarding | 3 objectifs au lieu de 4 | `NutritionGoal` n'a pas d'équivalent « gagner en force » |
-| Inscription | Le **cœur de la marque** remplace la sphère de la maquette ; devise « L'ART DE DEVENIR » conservée | Demandé (le cœur) ; l'identité de marque établie prime sur les éléments génériques de la planche |
+| Connexion, Inscription | Le **cœur de la marque** en décor des deux écrans : à la place de la sphère de la maquette (inscription) et de la photographie d'athlète (connexion) ; devise « L'ART DE DEVENIR » conservée | Demandé (le cœur partout, même composition sur les deux écrans) ; l'identité de marque établie prime sur les éléments génériques de la planche |
 | Connexion, Inscription | **Apple et Google seulement**, sans Discord — et leur toucher annonce que le fournisseur « arrive bientôt » | Demandé (deux fournisseurs) ; l'API ne propose que l'e-mail (Étape 2) : un bouton qui simulerait une connexion sociale mentirait |
 
 ## Ce qu'il faudrait côté serveur pour fermer les écarts

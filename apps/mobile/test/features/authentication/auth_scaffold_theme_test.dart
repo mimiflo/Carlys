@@ -16,6 +16,23 @@ import 'package:flutter_test/flutter_test.dart';
 /// utilitaire suit le thème ambiant — fond ET textes ensemble. Jamais l'un
 /// sans l'autre.
 void main() {
+  setUp(() {
+    // La connexion porte le cœur de la marque en décor — une scène ambiante
+    // qui ne s'arrête jamais d'elle-même. La réduction d'animations la met
+    // en pause (comportement réel d'accessibilité), et pumpAndSettle
+    // converge.
+    TestWidgetsFlutterBinding
+            .instance
+            .platformDispatcher
+            .accessibilityFeaturesTestValue =
+        FakeAccessibilityFeatures.allOn;
+  });
+
+  tearDown(() {
+    TestWidgetsFlutterBinding.instance.platformDispatcher
+        .clearAccessibilityFeaturesTestValue();
+  });
+
   Future<void> pump(
     WidgetTester tester, {
     required ThemeData theme,

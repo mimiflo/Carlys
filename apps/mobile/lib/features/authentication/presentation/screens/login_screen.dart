@@ -55,11 +55,11 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     return AuthScaffold(
       title: 'Content de te revoir !',
       subtitle: 'Reconnecte-toi et continue ton parcours.',
-      backdrop: const AuthBackdrop.athlete(),
+      backdrop: const AuthBackdrop.heart(),
       brand: true,
-      // Le décor respire entre la signature et le titre : c'est la part de
-      // l'écran où la photographie se voit entière.
-      heroSpaceFactor: 0.22,
+      // Même composition que l'inscription : le cœur déborde du bord droit,
+      // la signature reste seule à gauche, le titre vient juste dessous.
+      heroSpaceFactor: 0.06,
       children: [
         Form(
           key: _formKey,

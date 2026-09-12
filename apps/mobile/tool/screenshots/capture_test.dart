@@ -753,9 +753,9 @@ void main() {
 
   testWidgets('connexion', (tester) async {
     await pumpApp(tester, authenticated: false);
-    // La photographie et le sceau sont des assets : sans préchargement, la
-    // capture montrerait leurs emplacements vides — sur téléphone, l'écran
-    // de démarrage les a déjà décodés.
+    // Le sceau de la signature est un asset : sans préchargement, la
+    // capture montrerait son emplacement vide — sur téléphone, l'écran
+    // de démarrage l'a déjà décodé.
     await precacheBrandImages(tester);
     await capture(tester, '01-connexion', shows: find.byType(LoginScreen));
   });
