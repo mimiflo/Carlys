@@ -460,12 +460,19 @@ describe('Administration (e2e)', () => {
       .send({ email: memberEmail, password: 'MotDePasseSolide42' })
       .expect(401);
 
-    const logs = data<AdminAuditLog[]>(
-      (await asAdmin(superToken).get('/api/v1/admin/audit-logs?limit=50').expect(200)).body,
-    );
-    const suspension = logs.find(
-      (log) => log.action === 'admin.user_suspended' && log.userId === memberId,
-    );
+    // L'écriture d'audit est volontairement non bloquante : on sonde.
+    let suspension: AdminAuditLog | undefined;
+    for (let attempt = 0; attempt < 20 && suspension === undefined; attempt += 1) {
+      const logs = data<AdminAuditLog[]>(
+        (await asAdmin(superToken).get('/api/v1/admin/audit-logs?limit=50').expect(200)).body,
+      );
+      suspension = logs.find(
+        (log) => log.action === 'admin.user_suspended' && log.userId === memberId,
+      );
+      if (suspension === undefined) {
+        await new Promise((resolve) => setTimeout(resolve, 100));
+      }
+    }
     expect(suspension).toBeDefined();
     expect(suspension?.actorType).toBe('ADMIN');
 

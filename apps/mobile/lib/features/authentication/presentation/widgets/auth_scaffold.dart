@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../../design_system/design_system.dart';
 import 'auth_brand_header.dart';
@@ -8,9 +9,12 @@ import 'auth_brand_header.dart';
 /// de marque compacte, titre porté haut, contenu en colonne bornée.
 ///
 /// Les écrans d'ENTRÉE (connexion, inscription) passent un [backdrop] et
-/// `brand: true` — ce sont des surfaces de marque. Les écrans UTILITAIRES
+/// `brand: true` — ce sont des surfaces de marque, sombres quel que soit le
+/// réglage de thème, comme la page de bienvenue. Les écrans UTILITAIRES
 /// (mot de passe oublié, changement, suppression) ne passent rien : même
-/// squelette, fond sobre.
+/// squelette, fond au thème AMBIANT — atteints connecté, là où le réglage
+/// clair s'applique, un fond sombre forcé sous des textes au thème rendrait
+/// le titre illisible.
 class AuthScaffold extends StatelessWidget {
   const AuthScaffold({
     required this.title,
@@ -29,7 +33,8 @@ class AuthScaffold extends StatelessWidget {
   /// Décor pleine page derrière le contenu ([AuthBackdrop], typiquement).
   final Widget? backdrop;
 
-  /// Affiche la signature de marque compacte sous le chevron de retour.
+  /// Surface de marque : signature compacte sous le chevron, et thème sombre
+  /// IMPOSÉ à tout l'écran — champs, liens et titre compris.
   final bool brand;
 
   /// Part de la hauteur d'écran laissée au décor entre la signature et le
@@ -37,12 +42,16 @@ class AuthScaffold extends StatelessWidget {
   /// les écrans sobres.
   final double heroSpaceFactor;
 
+  /// Le thème des surfaces de marque, construit une fois : celui que
+  /// l'application applique en mode sombre — les captures validées.
+  static final ThemeData _brandTheme = AppTheme.dark();
+
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    final theme = brand ? _brandTheme : Theme.of(context);
 
-    return Scaffold(
-      backgroundColor: AppColors.darkBackground,
+    final scaffold = Scaffold(
+      backgroundColor: theme.scaffoldBackgroundColor,
       body: Stack(
         children: [
           if (backdrop != null) Positioned.fill(child: backdrop!),
@@ -62,9 +71,11 @@ class AuthScaffold extends StatelessWidget {
                         // Le chevron dépile quand il y a quelque chose à
                         // dépiler, et disparaît sinon (AppBackButton) — la
                         // connexion, premier écran, n'affiche rien.
-                        const Align(
+                        Align(
                           alignment: Alignment.centerLeft,
-                          child: AppBackButton(),
+                          child: AppBackButton(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
                         ),
                         if (brand) ...[
                           const SizedBox(height: AppSpacing.xs),
@@ -85,7 +96,7 @@ class AuthScaffold extends StatelessWidget {
                           Text(
                             subtitle!,
                             style: theme.textTheme.bodyMedium?.copyWith(
-                              color: AppColors.darkTextSecondary,
+                              color: theme.colorScheme.onSurfaceVariant,
                             ),
                           ),
                         ],
@@ -100,6 +111,15 @@ class AuthScaffold extends StatelessWidget {
           ),
         ],
       ),
+    );
+
+    // L'AppBar posait l'habillage de la barre de statut ; sans elle, on le
+    // pose nous-mêmes, d'après la luminosité du thème EFFECTIF de l'écran.
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: theme.brightness == Brightness.dark
+          ? SystemUiOverlayStyle.light
+          : SystemUiOverlayStyle.dark,
+      child: brand ? Theme(data: theme, child: scaffold) : scaffold,
     );
   }
 }

@@ -80,6 +80,15 @@ abstract final class AppColors {
     stops: [0, 0.45, 0.9],
   );
 
+  // Bouton des écrans d'ENTRÉE (tokens.json → color.brand.cta*) : violet
+  // clair vers violet profond, sans l'orange de la signature. Relevé au
+  // pixel sur la maquette de septembre 2026. Réservé à ces boutons.
+  static const Color ctaStart = Color(0xFFA355FC);
+  static const Color ctaEnd = Color(0xFF7029D2);
+
+  /// Dégradé du bouton d'entrée, de gauche à droite.
+  static const LinearGradient cta = LinearGradient(colors: [ctaStart, ctaEnd]);
+
   // Neutres
   static const Color neutral0 = Color(0xFFFFFFFF);
   static const Color neutral50 = Color(0xFFFAFAFB);

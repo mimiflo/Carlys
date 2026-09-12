@@ -5,12 +5,13 @@ import '../radius/app_radius.dart';
 import '../spacing/app_spacing.dart';
 import '../typography/app_typography.dart';
 
-/// Bouton pleine largeur au **dégradé de marque**.
+/// Bouton pleine largeur à **dégradé du design system**.
 ///
 /// Réservé aux surfaces de marque, où l'orange de l'application n'a pas encore
-/// de sens : sur la page de bienvenue comme sur les écrans d'entrée (connexion,
-/// inscription), c'est l'identité qu'on montre, pas l'interface. Ailleurs,
-/// l'action principale reste [AppButton] en accent — deux boutons
+/// de sens : la page de bienvenue porte la signature (par défaut), les écrans
+/// d'entrée (connexion, inscription) le violet de leur maquette
+/// ([AppColors.cta]) — c'est l'identité qu'on montre, pas l'interface.
+/// Ailleurs, l'action principale reste [AppButton] en accent — deux boutons
 /// « principaux » de couleurs différentes dans un même écran annuleraient la
 /// hiérarchie.
 class AppBrandButton extends StatefulWidget {
@@ -20,10 +21,16 @@ class AppBrandButton extends StatefulWidget {
     this.uppercase = true,
     this.trailingIcon,
     this.isLoading = false,
+    this.gradient = AppColors.signature,
     super.key,
   });
 
   final String label;
+
+  /// Fond du bouton. La signature par défaut (page de bienvenue) ; les
+  /// écrans d'entrée passent [AppColors.cta], le violet de leur maquette.
+  /// Toujours un dégradé du design system, jamais une valeur locale.
+  final LinearGradient gradient;
 
   /// `null` désactive le bouton. Le dégradé s'éteint alors À MOITIÉ, texte
   /// COMPRIS : un fond vif sous un libellé grisé se lit comme un bug
@@ -95,6 +102,7 @@ class _AppBrandButtonState extends State<AppBrandButton> {
                 // un filtre de luminosité coûterait une couche de composition
                 // pour un résultat identique à l'œil.
                 highlight: _pressed ? AppBrandButton._pressedBrightness - 1 : 0,
+                gradient: widget.gradient,
                 label: widget.uppercase
                     ? widget.label.toUpperCase()
                     : widget.label,
@@ -112,6 +120,7 @@ class _AppBrandButtonState extends State<AppBrandButton> {
 class _Surface extends StatelessWidget {
   const _Surface({
     required this.highlight,
+    required this.gradient,
     required this.label,
     required this.trailingIcon,
     required this.isLoading,
@@ -119,6 +128,7 @@ class _Surface extends StatelessWidget {
 
   /// Part de blanc ajoutée par-dessus le dégradé, à l'appui.
   final double highlight;
+  final LinearGradient gradient;
   final String label;
   final IconData? trailingIcon;
   final bool isLoading;
@@ -131,7 +141,7 @@ class _Surface extends StatelessWidget {
       alignment: Alignment.center,
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
       decoration: BoxDecoration(
-        gradient: AppColors.signature,
+        gradient: gradient,
         borderRadius: AppRadius.fullAll,
       ),
       foregroundDecoration: BoxDecoration(
@@ -148,13 +158,15 @@ class _Spinner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // Pas de libellé sémantique : tout ce qui vit sous l'ExcludeSemantics du
+    // bouton est muet — le lecteur d'écran entend le bouton lui-même,
+    // désactivé pendant la soumission.
     return const SizedBox(
       height: 20,
       width: 20,
       child: CircularProgressIndicator(
         strokeWidth: 2.5,
         color: AppColors.neutral0,
-        semanticsLabel: 'Chargement',
       ),
     );
   }

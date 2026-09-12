@@ -151,6 +151,70 @@ void main() {
       }
     });
   });
+
+  group('color.brand (dégradés) ↔ AppColors', () {
+    // Les bornes des deux dégradés de marque : la signature (bienvenue) et
+    // le bouton des écrans d'entrée, relevé au pixel sur sa maquette.
+    const gradients = <String, Color>{
+      'signatureStart': AppColors.signatureStart,
+      'signatureMid': AppColors.signatureMid,
+      'signatureEnd': AppColors.signatureEnd,
+      'ctaStart': AppColors.ctaStart,
+      'ctaEnd': AppColors.ctaEnd,
+    };
+
+    test('chaque borne reflète son hexadécimal', () {
+      final declared = section('color.brand');
+      for (final entry in gradients.entries) {
+        final hex = declared[entry.key];
+        expect(hex, isA<String>(), reason: 'color.brand.${entry.key}');
+        expect(
+          entry.value.toARGB32().toRadixString(16).toUpperCase(),
+          'FF${(hex! as String).substring(1).toUpperCase()}',
+          reason: 'color.brand.${entry.key}',
+        );
+      }
+    });
+
+    test('le bouton d’entrée court du clair au profond, sans autre arrêt', () {
+      expect(AppColors.cta.colors, const [
+        AppColors.ctaStart,
+        AppColors.ctaEnd,
+      ]);
+    });
+  });
+
+  group('color.vendor ↔ AppColors', () {
+    // Les couleurs de marques TIERCES (le « G » de Google) : des constantes
+    // de charte externes — une dérive d'un côté du pont trahirait le logo.
+    const vendor = <String, Color>{
+      'googleBlue': AppColors.googleBlue,
+      'googleRed': AppColors.googleRed,
+      'googleYellow': AppColors.googleYellow,
+      'googleGreen': AppColors.googleGreen,
+    };
+
+    test(
+      'chaque couleur tierce reflète son hexadécimal, et rien ne manque',
+      () {
+        final declared = section('color.vendor');
+        expect(
+          declared.keys.toSet(),
+          vendor.keys.toSet(),
+          reason: 'un token sans reflet, ou un reflet sans token',
+        );
+        for (final entry in vendor.entries) {
+          final hex = declared[entry.key];
+          expect(hex, isA<String>(), reason: 'color.vendor.${entry.key}');
+          expect(
+            entry.value.toARGB32().toRadixString(16).toUpperCase(),
+            'FF${(hex! as String).substring(1).toUpperCase()}',
+            reason: 'color.vendor.${entry.key}',
+          );
+        }
+      },
+    );
+  });
 }
 
 /// Le fichier de tokens, cherché en remontant depuis le dossier courant :

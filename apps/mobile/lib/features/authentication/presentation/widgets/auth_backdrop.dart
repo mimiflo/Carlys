@@ -11,9 +11,12 @@ import '../../../onboarding/presentation/widgets/athlete_photo.dart';
 /// mettait une sphère anonyme.
 ///
 /// La photographie et le cœur ne se redessinent pas ici : [AthletePhoto]
-/// (cadrage et fondus réglés pour la page de marque) et [HeartScene] (la scène
-/// du design system) sont réutilisés tels quels. Aucune couche n'intercepte
-/// le toucher.
+/// et [HeartScene] (la scène du design system) sont réutilisés. Le CADRAGE
+/// de la photographie, lui, est propre à cet écran ([_photoFade],
+/// [_photoAlignment]) : celui de la page de marque suppose son cadre étroit
+/// ancré à droite, pas le bandeau pleine largeur d'ici — le réutiliser
+/// lierait silencieusement la connexion aux re-réglages de la bienvenue.
+/// Aucune couche n'intercepte le toucher.
 class AuthBackdrop extends StatelessWidget {
   const AuthBackdrop.athlete({super.key}) : _heart = false;
 
@@ -33,6 +36,14 @@ class AuthBackdrop extends StatelessWidget {
   /// Le formulaire commence vers 55 % de la hauteur : le fond doit être
   /// redevenu opaque là, sinon les champs se posent sur la photographie.
   static const List<double> _fadeStops = [0.0, 0.18, 0.42, 0.58];
+
+  /// Cadrage de la photographie dans SON cadre d'ici (pleine largeur,
+  /// 62 % de hauteur) — relevé sur les captures validées de la maquette.
+  /// Le fondu gauche entre à 34 % de la largeur et devient plein à 59 % ;
+  /// pleine largeur, le cliché n'est pas rogné horizontalement, le cadrage
+  /// est donc neutre.
+  static const List<double> _photoFade = [0.34, 0.59];
+  static const double _photoAlignment = 0;
 
   @override
   Widget build(BuildContext context) {
@@ -59,7 +70,11 @@ class AuthBackdrop extends StatelessWidget {
                   right: 0,
                   width: screen.width,
                   height: screen.height * 0.62,
-                  child: AthletePhoto(screen: screen),
+                  child: AthletePhoto(
+                    screen: screen,
+                    leftFadeStops: _photoFade,
+                    alignmentX: _photoAlignment,
+                  ),
                 ),
               // Extinction verticale : le décor vit en haut, le formulaire
               // au calme sur le fond — même logique que l'onboarding.

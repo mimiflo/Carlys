@@ -387,6 +387,37 @@ sont simulées. Les captures **sous-rendent le gras** — « TON PARCOURS. » en
 24/w700 y mesure 192 px contre ~211 sur un appareil réel. Un écart de graisse
 entre une capture et la référence n'est donc pas, en soi, un défaut de l'appli.
 
+## Les écrans d'entrée, refondus sur maquette (septembre 2026)
+
+La connexion et l'inscription suivent une maquette dédiée, postérieure à la
+refonte complète : photographie d'athlète en bandeau haut de la connexion,
+signature de marque compacte en tête, champs à icône intégrée et texte
+d'aide, bouton signature à flèche, entrées sociales sous un séparateur
+« OU ». Les deux écrans sont des **surfaces de marque** : `AuthScaffold`
+leur impose le thème sombre ENTIER — fond et textes ensemble — quel que
+soit le réglage de thème ; les écrans utilitaires du même gabarit (mot de
+passe oublié, changement, suppression de compte) suivent, eux, le thème
+ambiant (`auth_scaffold_theme_test.dart` garde les deux règles).
+
+Deux ajouts aux tokens pour cette maquette, gardés par
+`design_tokens_test.dart` :
+
+- le groupe **`color.vendor`** (`googleBlue/Red/Yellow/Green`), les couleurs
+  officielles du « G » de Google, dessiné par `GoogleGlyph` aux angles du
+  logotype — des constantes de charte TIERCE, qui ne peignent rien d'autre
+  dans l'application ;
+- **`color.brand.ctaStart/ctaEnd`** (`#A355FC → #7029D2`), le dégradé du
+  bouton des écrans d'entrée, relevé AU PIXEL sur la maquette (bornes gauche
+  et droite du bouton). C'est le violet demandé par le produit pour
+  « Se connecter » et « Créer mon compte » ; la page de bienvenue garde,
+  elle, le dégradé de signature — `AppBrandButton` prend le dégradé en
+  paramètre plutôt que d'en imposer un.
+
+La photographie réutilise `AthletePhoto`, mais dans un **cadrage propre**
+(`AuthBackdrop`) : celui de la page de marque suppose son cadre étroit ancré
+à droite, pas le bandeau pleine largeur de la connexion — le reprendre tel
+quel lierait silencieusement la connexion aux re-réglages de la bienvenue.
+
 ## Écarts assumés
 
 | Écran | Écart | Raison |
@@ -409,6 +440,8 @@ entre une capture et la référence n'est donc pas, en soi, un défaut de l'appl
 | Abonnement | ÉCART FERMÉ : offres servies par `GET /subscriptions/offers`, achat par Stripe Checkout, gestion par le portail de facturation | Voir `subscription-purchase.md` |
 | Profil | Lignes repos par défaut, unités, rappels, export absentes | Réglages inexistants |
 | Onboarding | 3 objectifs au lieu de 4 | `NutritionGoal` n'a pas d'équivalent « gagner en force » |
+| Inscription | Le **cœur de la marque** remplace la sphère de la maquette ; devise « L'ART DE DEVENIR » conservée | Demandé (le cœur) ; l'identité de marque établie prime sur les éléments génériques de la planche |
+| Connexion, Inscription | **Apple et Google seulement**, sans Discord — et leur toucher annonce que le fournisseur « arrive bientôt » | Demandé (deux fournisseurs) ; l'API ne propose que l'e-mail (Étape 2) : un bouton qui simulerait une connexion sociale mentirait |
 
 ## Ce qu'il faudrait côté serveur pour fermer les écarts
 

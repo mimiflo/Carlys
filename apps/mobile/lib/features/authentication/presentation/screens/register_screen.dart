@@ -124,6 +124,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           label: 'Créer mon compte',
           uppercase: false,
           trailingIcon: AppIcons.arrowForward,
+          // Le violet de la maquette des écrans d'entrée, pas la signature.
+          gradient: AppColors.cta,
           onPressed: _submit,
           isLoading: isLoading,
         ),

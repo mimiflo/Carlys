@@ -11,7 +11,12 @@ import 'brand_glow_image.dart';
 /// cliché se voit — un trait vertical au milieu de la page, un trait horizontal
 /// en travers des cuisses.
 class AthletePhoto extends StatelessWidget {
-  const AthletePhoto({required this.screen, super.key});
+  const AthletePhoto({
+    required this.screen,
+    this.leftFadeStops,
+    this.alignmentX,
+    super.key,
+  });
 
   /// Le fichier détouré, seul cliché de la page de marque.
   static const String asset = 'assets/brand/carlys-athlete.png';
@@ -19,6 +24,21 @@ class AthletePhoto extends StatelessWidget {
   /// Taille de l'ÉCRAN, pas du cadre : le cadrage et le fondu sont exprimés
   /// en fractions d'écran, seul repère qui se transpose d'un format à l'autre.
   final Size screen;
+
+  /// Bornes du fondu gauche, en fractions du CADRE où le widget est posé.
+  ///
+  /// Par défaut, celles de la page de marque — qui n'ont de sens QUE dans son
+  /// cadre ([AthletePhotoFraming.boxFor], étroit et ancré à droite). Un écran
+  /// qui pose le cliché dans un autre cadre (la connexion : pleine largeur)
+  /// passe les siennes, sinon les bornes calculées pour l'un s'appliquent à
+  /// l'autre et le fondu tombe où personne ne l'a réglé.
+  final List<double>? leftFadeStops;
+
+  /// Cadrage horizontal (`Alignment.x`) dans le cadre.
+  ///
+  /// Par défaut, celui qui pose le logo dorsal à sa place sur la page de
+  /// marque — même réserve : il suppose le cadre de cette page.
+  final double? alignmentX;
 
   /// Trois lueurs, de la plus serrée à la plus large. Les rayons de la
   /// référence sont des `blur-radius` CSS : l'écart-type gaussien en vaut la
@@ -31,11 +51,14 @@ class AthletePhoto extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final stops = AthletePhotoFraming.fadeStopsFor(screen);
+    final stops = leftFadeStops ?? AthletePhotoFraming.fadeStopsFor(screen);
     final image = Image(
       image: const AssetImage(asset),
       fit: BoxFit.cover,
-      alignment: Alignment(AthletePhotoFraming.alignmentFor(screen), -1),
+      alignment: Alignment(
+        alignmentX ?? AthletePhotoFraming.alignmentFor(screen),
+        -1,
+      ),
       // Le cliché est AGRANDI à l'affichage : le filtrage par défaut
       // (bilinéaire sur mipmaps) le rendrait mou, la bicubique garde le grain
       // de la peau et le trait des cheveux. Le fichier, lui, n'est PAS
