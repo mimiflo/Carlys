@@ -146,6 +146,10 @@ jobs:
       # rattrapage par « sha », github.sha serait la tête de branche, pas lui.
       sha12: ${{ steps.commit.outputs.sha12 }}
       sha40: ${{ steps.commit.outputs.sha40 }}
+      # « oui » quand l'APK porte la clé du dépôt, donc quand il s'installe
+      # par-dessus le précédent. Les notes de la release bêta le disent à qui
+      # va le télécharger : c'est sur le téléphone, sinon, qu'on l'apprend.
+      signature: ${{ steps.signature.outputs.actif }}
     runs-on: ubuntu-latest
     # 40 minutes plutôt que les 30 de `demo-apk` : deux builds Gradle au lieu
     # d'un quand la signature est configurée.
@@ -345,80 +349,20 @@ jobs:
             exit 1
           fi
 
-      # ── 1. L'APK, le livrable du jour ──────────────────────────────────────
+      # ── 1. La signature — AVANT les builds, car elle conditionne les DEUX ──
       #
-      # Construit EN PREMIER et SANS CONDITION : il ne dépend d'aucun secret,
-      # et il ne doit jamais être la victime collatérale d'une signature mal
-      # configurée. Il est signé avec la clé de debug engendrée par Gradle, ce
-      # qui suffit très bien à un téléversement direct sur un téléphone.
-      #
-      # `--target-platform android-arm64` : une seule architecture au lieu de
-      # trois. Le moteur Flutter pèse plusieurs mégaoctets par architecture,
-      # c'est de loin le premier poste de poids ET de durée de compilation.
-      # Tous les téléphones Android vendus depuis 2019 sont en arm64.
-      #
-      # `--obfuscate` sans `--split-debug-info` rendrait les traces d'exécution
-      # illisibles : les symboles sont donc extraits et livrés AVEC l'artefact,
-      # dans le même dossier. Un plantage de recette reste ainsi déchiffrable.
-      # `--build-number` = numéro d'exécution de CE workflow (la production,
-      # elle, compte à part : son défaut est décalé de +100000 pour rester
-      # au-dessus de ce que la recette dépose) :
-      # la piste interne Play REFUSE un versionCode déjà téléversé, et le
-      # `+1` de pubspec.yaml ne bouge jamais tout seul. Le numéro d'exécution
-      # est monotone par construction. L'APK le porte aussi, pour que les deux
-      # artefacts d'une même exécution racontent la même version.
-      - name: Build APK (recette, arm64)
-        env:
-          SHA12: ${{ steps.commit.outputs.sha12 }}
-          API: ${{ steps.adresses.outputs.api }}
-          WEB: ${{ steps.adresses.outputs.web }}
-          NUMERO: ${{ github.run_number }}
-        run: |
-          flutter build apk --release \
-            --no-pub \
-            --build-number="$NUMERO" \
-            --target-platform android-arm64 \
-            --obfuscate \
-            --split-debug-info=build/symboles-apk \
-            --dart-define=CARLYS_FLAVOR=staging \
-            --dart-define=CARLYS_API_BASE_URL="$API" \
-            --dart-define=CARLYS_PUBLIC_WEB_BASE_URL="$WEB"
-
-          mkdir -p build/livraison/apk
-          mv build/app/outputs/flutter-apk/app-release.apk \
-             "build/livraison/apk/carlys-recette-$SHA12.apk"
-          mv build/symboles-apk build/livraison/apk/symboles
-          # Le récapitulatif de l'exécution finit par disparaître ; l'archive
-          # téléchargée, non. Elle dit donc elle-même ce qu'elle vise.
-          cat > build/livraison/apk/LISEZ-MOI.txt <<FIN
-          Carlys — application de RECETTE (Android, arm64)
-          commit                      : $SHA12
-          CARLYS_FLAVOR               : staging
-          CARLYS_API_BASE_URL         : $API
-          CARLYS_PUBLIC_WEB_BASE_URL  : $WEB
-
-          Installation : téléverser le .apk sur le téléphone et l'ouvrir
-          (autoriser les sources inconnues). Signé avec la clé de DEBUG :
-          normal pour une installation directe, refusé par les magasins.
-
-          LANCEZ-LE UNE FOIS avant de le distribuer : le contrôle des adresses
-          (assertUsable) a lieu au démarrage, pas à la compilation.
-
-          symboles/ : à conserver pour déchiffrer les traces d'exécution,
-          le binaire étant obscurci (--obfuscate).
-          FIN
-          ls -lh "build/livraison/apk/carlys-recette-$SHA12.apk"
-
-      - name: Artefact — APK installable
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
-        with:
-          name: carlys-recette-apk-${{ steps.commit.outputs.sha12 }}
-          # Chemin depuis la RACINE du dépôt : `defaults.run.working-directory`
-          # ne s'applique qu'aux étapes `run`, jamais aux actions.
-          path: apps/mobile/build/livraison/apk
-          if-no-files-found: error
-
-      # ── 2. Le bundle de magasin, seulement s'il peut être vrai ─────────────
+      # POURQUOI CE BLOC EST ICI ET PLUS APRÈS L'APK. Sans keystore, Gradle
+      # signe la release avec une clé de DEBUG qu'il engendre lui-même. Or
+      # `android/` n'est pas versionné : `mobile_platforms.sh` le régénère à
+      # chaque exécution, donc cette clé est NEUVE à chaque build. Android
+      # refuse alors la mise à jour d'une installation par un APK signé
+      # autrement — « App not installed as package conflicts with an existing
+      # package » —, et il faut désinstaller pour réinstaller, en perdant les
+      # données locales. Constaté le 12 septembre 2026 en essayant de mettre à
+      # jour la bêta. Le bloc est donc joué avant l'APK : quand les secrets
+      # existent, l'APK du lien bêta porte LA MÊME clé d'une exécution à
+      # l'autre et se met à jour normalement. C'est l'ordre que
+      # mobile-production.yml suivait déjà.
       #
       # Quatre secrets, ENSEMBLE ou pas du tout — même règle que les quatre
       # valeurs Firebase d'app_environment.dart, et pour la même raison : une
@@ -446,7 +390,8 @@ jobs:
       # d'une application, piste interne comprise. Si vous n'avez qu'une clé et
       # que vous la voulez gardée derrière l'approbation de production, ne
       # posez PAS ces quatre secrets au niveau du dépôt — ce workflow livrera
-      # alors l'APK seul, ce qui est très exactement son cas nominal.
+      # alors l'APK seul, signé en debug, donc NON MIS À JOUR d'une exécution à
+      # l'autre (voir l'en-tête de ce bloc).
       #
       # Aucune valeur n'est affichée nulle part : pas de `set -x`, pas d'`echo`
       # d'une variable de secret. Seule leur PRÉSENCE est journalisée.
@@ -467,7 +412,8 @@ jobs:
 
           if [ -z "$manquants" ]; then
             echo "actif=oui" >> "$GITHUB_OUTPUT"
-            echo "Les quatre secrets de signature sont présents : le bundle sera produit."
+            echo "Les quatre secrets de signature sont présents : l'APK ET le bundle"
+            echo "porteront cette clé — donc l'APK du lien bêta se met à jour en place."
             exit 0
           fi
 
@@ -481,11 +427,16 @@ jobs:
 
           echo "actif=non" >> "$GITHUB_OUTPUT"
           echo "manquants=$manquants" >> "$GITHUB_OUTPUT"
-          # Avertissement et non échec : l'APK ci-dessus est déjà livré et se
-          # suffit à lui-même. Produire un .aab signé en debug serait pire que
-          # n'en produire aucun — la Play Console le refuserait, mais seulement
-          # au dépôt, après coup.
-          echo "::warning title=Bundle de magasin NON produit::Secret(s) de signature absent(s) :$manquants. Un .aab signé avec la clé de debug est refusé par la Play Console ; aucun n'est donc produit. L'APK installable, lui, est publié normalement — il n'a besoin d'aucun secret. Voir le récapitulatif pour la marche à suivre."
+          # Avertissement et non échec : l'APK est livré quand même, il reste
+          # installable. Produire un .aab signé en debug serait pire que n'en
+          # produire aucun — la Play Console le refuserait, mais seulement au
+          # dépôt, après coup.
+          #
+          # L'avertissement dit maintenant les DEUX conséquences. La seconde
+          # est celle qu'on découvrait sur le téléphone, jamais ici : un APK
+          # signé par une clé de debug régénérée à chaque exécution est, pour
+          # Android, une application DIFFÉRENTE à chaque fois.
+          echo "::warning title=Signature absente — bundle non produit et APK non mettable à jour::Secret(s) manquant(s) :$manquants. Deux conséquences. (1) Aucun .aab : signé en debug, la Play Console le refuserait. (2) L'APK est signé avec une clé de debug REGÉNÉRÉE à chaque exécution — Android refusera d'installer cette version par-dessus la précédente (« package conflicts with an existing package ») et il faudra désinstaller d'abord, en perdant les données locales. Poser les quatre secrets (docs/deployment/builds-mobiles.md §4) règle les deux."
 
       # Le keystore est écrit dans RUNNER_TEMP, hors de l'arbre du dépôt, et
       # disparaît avec le runner. `keytool -list` échoue si la base64 est
@@ -595,6 +546,103 @@ jobs:
             exit 1
           fi
           echo "Signature de release branchée sur le keystore fourni."
+
+      # ── 2. L'APK, le livrable du jour ──────────────────────────────────────
+      #
+      # Construit SANS CONDITION : il ne doit jamais être la victime
+      # collatérale d'une signature mal configurée — secrets absents, il sort
+      # quand même, simplement signé en debug.
+      #
+      # Sa SIGNATURE, elle, dépend du bloc ci-dessus. Avec les secrets, la clé
+      # du dépôt : l'APK d'aujourd'hui s'installe par-dessus celui d'hier, les
+      # données locales restent. Sans les secrets, une clé de debug neuve à
+      # chaque exécution : chaque APK est une application différente pour
+      # Android, et la mise à jour est refusée. Les variables CARLYS_* ne sont
+      # lues que par le bloc `signingConfigs` ajouté plus haut, absent quand la
+      # signature ne l'est pas — les passer inconditionnellement est donc sans
+      # effet dans ce cas.
+      #
+      # `--target-platform android-arm64` : une seule architecture au lieu de
+      # trois. Le moteur Flutter pèse plusieurs mégaoctets par architecture,
+      # c'est de loin le premier poste de poids ET de durée de compilation.
+      # Tous les téléphones Android vendus depuis 2019 sont en arm64.
+      #
+      # `--obfuscate` sans `--split-debug-info` rendrait les traces d'exécution
+      # illisibles : les symboles sont donc extraits et livrés AVEC l'artefact,
+      # dans le même dossier. Un plantage de recette reste ainsi déchiffrable.
+      # `--build-number` = numéro d'exécution de CE workflow (la production,
+      # elle, compte à part : son défaut est décalé de +100000 pour rester
+      # au-dessus de ce que la recette dépose) :
+      # la piste interne Play REFUSE un versionCode déjà téléversé, et le
+      # `+1` de pubspec.yaml ne bouge jamais tout seul. Le numéro d'exécution
+      # est monotone par construction. L'APK le porte aussi, pour que les deux
+      # artefacts d'une même exécution racontent la même version.
+      - name: Build APK (recette, arm64)
+        env:
+          SHA12: ${{ steps.commit.outputs.sha12 }}
+          API: ${{ steps.adresses.outputs.api }}
+          WEB: ${{ steps.adresses.outputs.web }}
+          CARLYS_KEYSTORE: ${{ runner.temp }}/carlys-release.jks
+          CARLYS_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          CARLYS_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          CARLYS_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+          SIGNATURE: ${{ steps.signature.outputs.actif }}
+          NUMERO: ${{ github.run_number }}
+        run: |
+          flutter build apk --release \
+            --no-pub \
+            --build-number="$NUMERO" \
+            --target-platform android-arm64 \
+            --obfuscate \
+            --split-debug-info=build/symboles-apk \
+            --dart-define=CARLYS_FLAVOR=staging \
+            --dart-define=CARLYS_API_BASE_URL="$API" \
+            --dart-define=CARLYS_PUBLIC_WEB_BASE_URL="$WEB"
+
+          mkdir -p build/livraison/apk
+          mv build/app/outputs/flutter-apk/app-release.apk \
+             "build/livraison/apk/carlys-recette-$SHA12.apk"
+          mv build/symboles-apk build/livraison/apk/symboles
+
+          if [ "$SIGNATURE" = "oui" ]; then
+            ETAT_SIGNATURE="clé du dépôt — s'installe PAR-DESSUS la version précédente,
+                                        données locales conservées."
+          else
+            ETAT_SIGNATURE="clé de debug, régénérée à CHAQUE exécution — Android refuse
+                                        de l'installer par-dessus la version précédente
+                                        (« package conflicts with an existing package »).
+                                        Désinstaller d'abord, et perdre les données locales."
+          fi
+          # Le récapitulatif de l'exécution finit par disparaître ; l'archive
+          # téléchargée, non. Elle dit donc elle-même ce qu'elle vise.
+          cat > build/livraison/apk/LISEZ-MOI.txt <<FIN
+          Carlys — application de RECETTE (Android, arm64)
+          commit                      : $SHA12
+          CARLYS_FLAVOR               : staging
+          CARLYS_API_BASE_URL         : $API
+          CARLYS_PUBLIC_WEB_BASE_URL  : $WEB
+
+          Installation : téléverser le .apk sur le téléphone et l'ouvrir
+          (autoriser les sources inconnues).
+
+          Signature                   : $ETAT_SIGNATURE
+
+          LANCEZ-LE UNE FOIS avant de le distribuer : le contrôle des adresses
+          (assertUsable) a lieu au démarrage, pas à la compilation.
+
+          symboles/ : à conserver pour déchiffrer les traces d'exécution,
+          le binaire étant obscurci (--obfuscate).
+          FIN
+          ls -lh "build/livraison/apk/carlys-recette-$SHA12.apk"
+
+      - name: Artefact — APK installable
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: carlys-recette-apk-${{ steps.commit.outputs.sha12 }}
+          # Chemin depuis la RACINE du dépôt : `defaults.run.working-directory`
+          # ne s'applique qu'aux étapes `run`, jamais aux actions.
+          path: apps/mobile/build/livraison/apk
+          if-no-files-found: error
 
       # `flutter build appbundle` sans `--target-platform` : un bundle contient
       # toutes les architectures, c'est le magasin qui découpe par appareil au
@@ -755,9 +803,17 @@ jobs:
             echo "**\`carlys-recette-apk-$SHA12\`** — l'application, **installable tout de suite**."
             echo "Téléverser le \`.apk\` sur le téléphone et l'ouvrir (autoriser les sources"
             echo "inconnues). Compilé pour arm64 : tous les téléphones vendus depuis 2019."
-            echo "Signé avec la clé de debug, ce qu'Android accepte parfaitement pour une"
-            echo "installation directe. Contient aussi \`symboles/\`, à garder pour déchiffrer"
-            echo "les traces d'exécution."
+            if [ "$SIGNATURE" = "oui" ]; then
+              echo "Signé avec **la clé du dépôt** : il s'installe par-dessus la version"
+              echo "précédente, les données locales sont conservées."
+            else
+              echo "Signé avec une **clé de debug régénérée à chaque exécution** : Android le"
+              echo "voit comme une autre application et REFUSE de l'installer par-dessus la"
+              echo "version précédente. Il faut désinstaller d'abord, en perdant les données"
+              echo "locales de l'appareil. Poser les quatre secrets de signature y met fin."
+            fi
+            echo "Contient aussi \`symboles/\`, à garder pour déchiffrer les traces"
+            echo "d'exécution."
             echo
             if [ "$SIGNATURE" = "oui" ]; then
               echo "**\`carlys-recette-aab-$SHA12\`** — le bundle pour les **magasins**"
@@ -884,15 +940,35 @@ jobs:
           NUMERO: ${{ github.run_number }}
           DEPOT: ${{ github.repository }}
           SHA_COMPLET: ${{ needs.recette.outputs.sha40 }}
+          SIGNATURE: ${{ needs.recette.outputs.signature }}
         run: |
           set -euo pipefail
           cp "livraison/carlys-recette-$SHA12.apk" carlys-beta.apk
 
+          # Ce que les notes disent de la MISE À JOUR dépend de la clé qui a
+          # signé cet APK. L'écrire ici évite que la question se pose sur le
+          # téléphone, au moment où Android refuse l'installation sans
+          # expliquer pourquoi.
+          if [ "$SIGNATURE" = "oui" ]; then
+            signature_notes="**Mise à jour** : installez par-dessus la version précédente, vos données
+          locales sont conservées — tous les APK de ce lien portent la même clé de
+          signature."
+          else
+            signature_notes="**Mise à jour impossible sans désinstaller.** Cet APK est signé avec une clé
+          de debug que la CI régénère à chaque exécution : pour Android, chaque version
+          est une application différente, et l'installation par-dessus la précédente
+          échoue sur « package conflicts with an existing package ». Désinstallez
+          Carlys, puis installez — les données locales de l'appareil sont perdues.
+          Pour que cela cesse : poser les quatre secrets de signature du dépôt
+          (docs/deployment/builds-mobiles.md §4)."
+          fi
+
           notes="Dernière bêta Android (recette, \`staging\`) — commit \`$SHA12\`, versionCode \`$NUMERO\`.
 
           **Installer** : télécharger \`carlys-beta.apk\` ci-dessous, l'ouvrir sur le
-          téléphone, autoriser les sources inconnues. Signé en debug : normal pour
-          une installation directe, et sans conséquence.
+          téléphone, autoriser les sources inconnues.
+
+          $signature_notes
 
           **Lien stable** (comptes ayant accès à ce dépôt) :
           https://github.com/$DEPOT/releases/download/beta/carlys-beta.apk

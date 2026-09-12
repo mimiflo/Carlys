@@ -117,16 +117,18 @@ mêmes exigences ni les mêmes délais, et les confondre coûte cher.
 
 | Cible | Format | Signature | Secret à créer | Faisable aujourd'hui ? |
 | --- | --- | --- | --- | --- |
-| **Téléphone de test** (le vôtre, celui d'un testeur) | `.apk` | clé de **debug**, et c'est sans conséquence | **aucun** | **oui, tout de suite** |
+| **Téléphone de test** (le vôtre, celui d'un testeur) | `.apk` | clé de **debug** — installable, mais **non mettable à jour** (§3.4) | **aucun** pour installer ; les 4 du §4 pour mettre à jour en place | **oui, tout de suite** |
 | **Play Store, Galaxy Store** | `.aab` | **keystore obligatoire** | 4 secrets (§4), + 1 pour la piste interne (§4.6) | oui, une fois le keystore créé |
 | **TestFlight, App Store (iOS)** | `.ipa` | **certificat Apple Distribution + profil App Store** | 3 secrets (§10), + 3 pour TestFlight | oui, **sur demande** — runner macOS de GitHub, dix fois le prix d'une minute Linux |
 
 Trois choses à ne jamais mélanger :
 
 - **Un `.apk` signé en debug s'installe parfaitement** sur un téléphone par
-  téléversement direct. Android l'accepte hors magasin ; la clé de debug ne le
-  gêne en rien. C'est ce qui rend la recette possible **aujourd'hui**, sans
-  qu'aucun secret n'existe.
+  téléversement direct. Android l'accepte hors magasin. C'est ce qui rend la
+  recette possible **aujourd'hui**, sans qu'aucun secret n'existe. Ce qu'il ne
+  permet PAS, en revanche, c'est de **mettre à jour** une installation
+  précédente : la clé de debug est régénérée à chaque exécution de CI, et
+  Android refuse un APK signé autrement que celui déjà installé (§3.4).
 - **Un `.aab` signé en debug est refusé par la Play Console.** Et il est refusé
   au *téléversement*, c'est-à-dire à la toute fin, après le build et après
   l'approbation. C'est pourquoi le workflow de recette préfère **ne produire
@@ -256,12 +258,48 @@ testeur extérieur tombera sur une page 404. Pour lui, deux chemins :
   Servir ce fichier publiquement depuis le serveur de recette est faisable
   proprement si le besoin se confirme ; il n'est pas construit aujourd'hui.
 
+#### Mettre à jour une bêta déjà installée : c'est la SIGNATURE qui décide
+
+Android n'autorise une installation par-dessus une autre que si les deux APK
+portent **la même clé de signature**. Sinon il refuse, avec un message qui ne
+dit pas la vraie cause :
+
+> App not installed as package conflicts with an existing package.
+
+Or `android/` n'est pas versionné : il est régénéré à chaque exécution de CI.
+**Sans keystore de dépôt, Gradle signe donc avec une clé de debug NEUVE à
+chaque build** — chaque bêta est une application différente pour Android, et
+aucune ne peut mettre à jour la précédente. Il faut désinstaller, donc perdre
+les données locales de l'appareil.
+
+**Poser les quatre secrets du §4 règle définitivement le problème** : l'APK du
+lien bêta est alors signé avec la clé du dépôt, identique d'une exécution à
+l'autre, et les mises à jour se font en place. C'est pour cela que le §4 n'est
+plus réservé aux magasins.
+
+Deux conséquences à connaître :
+
+- **une dernière désinstallation est inévitable** au passage. L'application
+  déjà installée porte une clé de debug perdue avec le runner qui l'a produite ;
+  rien ne peut la mettre à jour, pas même l'APK correctement signé. On
+  désinstalle une fois, on réinstalle, et c'est fini ;
+- **l'APK direct et la version Play resteront distincts.** La Play Console
+  resigne les applications avec sa propre clé (Play App Signing) : une
+  installation venue du Play Store et une installation venue de ce lien ne
+  peuvent pas se mettre à jour l'une l'autre. Choisir un canal par appareil.
+
+Le récapitulatif de chaque exécution, le `LISEZ-MOI.txt` de l'artefact et les
+notes de la release `beta` disent tous les trois laquelle des deux signatures
+a été employée.
+
 ---
 
 ## 4. Créer le keystore Android
 
-Le keystore n'est nécessaire que pour les **magasins**. Tant que vous installez
-des `.apk` sur des téléphones de test, cette section peut attendre.
+Le keystore sert à **deux** choses : les magasins, et la mise à jour en place
+des bêtas installées à la main (§3.4). Tant que vous réinstallez à chaque fois
+en désinstallant d'abord, cette section peut attendre — mais elle cesse d'être
+facultative dès qu'on veut garder ses données d'un build à l'autre.
 
 ### 4.1 Pourquoi il ne peut pas vivre dans le dépôt
 
@@ -614,7 +652,8 @@ récapitulatif le dit.
 | Ce que dit l'exécution | Ce qui se passe | Quoi faire |
 | --- | --- | --- |
 | « Variable de dépôt `CARLYS_DOMAIN` absente » ou « mal formée » | la variable manque, ou porte un schéma / une barre / un port | §3.1 — le domaine **nu**, rien d'autre |
-| « Bundle de magasin NON produit » (avertissement, recette) | les quatre secrets de signature ne sont pas visibles par ce workflow | c'est le **cas nominal** si vous les avez posés sur l'environnement (§4.5). L'`.apk` est livré normalement |
+| **Sur le téléphone** : « App not installed as package conflicts with an existing package » | l'APK installé et le nouveau portent des signatures différentes — sans secrets, la clé de debug est régénérée à chaque exécution | désinstaller Carlys puis installer (les données locales de l'appareil sont perdues). Pour que cela ne se reproduise plus : poser les quatre secrets du §4, l'APK du lien bêta est alors signé avec la clé du dépôt (§3.4) |
+| « Signature absente — bundle non produit et APK non mettable à jour » (avertissement, recette) | les quatre secrets de signature ne sont pas visibles par ce workflow | l'`.apk` est livré normalement, mais il ne pourra pas mettre à jour une installation existante (§3.4). Si les secrets sont posés sur l'environnement seulement, c'est le compromis assumé du §4.5 |
 | « Ce commit n'a pas été construit en recette » | la règle « build once » : aucun artefact de recette ne porte ce sha | relancer la recette **sur ce sha** (champ « sha » du Run workflow), l'installer, l'essayer, revenir |
 | « L'artefact de recette a expiré » | GitHub supprime les artefacts après la rétention du dépôt (90 jours par défaut) | relancer la recette sur ce sha — et en profiter pour ré-essayer un commit vieux de plusieurs mois — ou promouvoir un commit plus récent |
 | « Les textes légaux ne sont pas prêts pour la production » | un `[À COMPLÉTER : …]` subsiste dans `docs/legal/` | les compléter, pousser, reconstruire en recette, relancer sur le nouveau sha. Aucun contournement |
