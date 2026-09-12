@@ -9,6 +9,7 @@ import '../controllers/login_controller.dart';
 import '../widgets/auth_backdrop.dart';
 import '../widgets/auth_form_error.dart';
 import '../widgets/auth_scaffold.dart';
+import '../widgets/auth_switch_prompt.dart';
 import '../widgets/social_auth_buttons.dart';
 
 /// Connexion par e-mail. La redirection vers l'accueil est assurée par le
@@ -121,23 +122,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         const SizedBox(height: AppSpacing.lg),
         SocialAuthButtons(enabled: !isLoading),
         const SizedBox(height: AppSpacing.md),
-        // Wrap : passe à la ligne sur les écrans étroits ou avec une grande
-        // taille de police système, au lieu de déborder.
-        Wrap(
-          alignment: WrapAlignment.center,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            Text(
-              'Pas encore de compte ?',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            TextButton(
-              onPressed: isLoading
-                  ? null
-                  : () => context.push(AppRoutes.register),
-              child: const Text('Créer un compte'),
-            ),
-          ],
+        AuthSwitchPrompt(
+          prompt: 'Pas encore de compte ?',
+          actionLabel: 'Créer un compte',
+          onPressed: isLoading ? null : () => context.push(AppRoutes.register),
         ),
       ],
     );

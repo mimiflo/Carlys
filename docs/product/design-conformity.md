@@ -392,7 +392,7 @@ entre une capture et la référence n'est donc pas, en soi, un défaut de l'appl
 La connexion et l'inscription suivent une maquette dédiée, postérieure à la
 refonte complète : photographie d'athlète en bandeau haut de la connexion,
 signature de marque compacte en tête, champs à icône intégrée et texte
-d'aide, bouton signature à flèche, entrées sociales sous un séparateur
+d'aide, bouton violet à flèche (dégradé `cta`), entrées sociales sous un séparateur
 « OU ». Les deux écrans sont des **surfaces de marque** : `AuthScaffold`
 leur impose le thème sombre ENTIER — fond et textes ensemble — quel que
 soit le réglage de thème ; les écrans utilitaires du même gabarit (mot de

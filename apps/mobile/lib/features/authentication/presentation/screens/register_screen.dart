@@ -9,6 +9,7 @@ import '../controllers/register_controller.dart';
 import '../widgets/auth_backdrop.dart';
 import '../widgets/auth_form_error.dart';
 import '../widgets/auth_scaffold.dart';
+import '../widgets/auth_switch_prompt.dart';
 import '../widgets/legal_consent_notice.dart';
 import '../widgets/social_auth_buttons.dart';
 
@@ -139,19 +140,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         // Sortie de secours : pendant le parcours de première ouverture,
         // cet écran s'impose — qui a déjà un compte doit pouvoir se
         // connecter d'ici.
-        Wrap(
-          alignment: WrapAlignment.center,
-          crossAxisAlignment: WrapCrossAlignment.center,
-          children: [
-            Text(
-              'Déjà un compte ?',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            TextButton(
-              onPressed: isLoading ? null : () => context.go(AppRoutes.login),
-              child: const Text('Se connecter'),
-            ),
-          ],
+        AuthSwitchPrompt(
+          prompt: 'Déjà un compte ?',
+          actionLabel: 'Se connecter',
+          onPressed: isLoading ? null : () => context.go(AppRoutes.login),
         ),
       ],
     );
