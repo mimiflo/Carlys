@@ -168,3 +168,10 @@ Les versions de PostgreSQL, Redis, MinIO, `mc` et Mailpit sont épinglées dans
 mêmes pour les deux environnements, donc leur place est dans le fichier
 versionné. Pour tester une montée de version sur la seule recette, poser la
 variable dans le `.env` de recette suffit à couvrir le défaut.
+
+MinIO et `mc` viennent de **quay.io**, épinglés par empreinte en plus du tag :
+MinIO a cessé de distribuer ses images en octobre 2025 et les dépôts
+`minio/minio` et `minio/mc` ont disparu de Docker Hub — même tag épinglé, plus
+rien à tirer. Le projet étant gelé, ces deux versions sont définitives ; si
+quay.io les retirait à son tour, `CARLYS_MINIO_IMAGE` et `CARLYS_MC_IMAGE`
+pointent vers n'importe quel miroir sans modifier `compose.yml`.

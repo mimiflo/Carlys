@@ -313,8 +313,8 @@ docker compose down                  # arrêt (ajouter -v pour purger les volume
 | `postgres` | `postgres:17-alpine` | 5432 | Base de données (init : extension `citext` + base `carlys_test`) |
 | `redis` | `redis:7-alpine` | 6379 | Cache, rate limiting |
 | `mailpit` | `axllent/mailpit` | 1025 (SMTP), 8025 (UI) | Réception des e-mails de dev |
-| `minio` | `minio/minio` | 9000 (S3), 9001 (console) | Stockage compatible S3 |
-| `minio-init` | `minio/mc` | — | Crée le bucket `carlys-media` au premier démarrage et l'ouvre en lecture anonyme (les applications chargent les photos directement) |
+| `minio` | `quay.io/minio/minio` (épinglé par empreinte — MinIO a retiré ses images de Docker Hub) | 9000 (S3), 9001 (console) | Stockage compatible S3 |
+| `minio-init` | `quay.io/minio/mc` (épinglé par empreinte) | — | Crée le bucket `carlys-media` au premier démarrage et l'ouvre en lecture anonyme (les applications chargent les photos directement) |
 | `api` (profil `app`) | build `apps/api/Dockerfile` | 3000 | API conteneurisée |
 | `admin` (profil `app`) | build `apps/admin/Dockerfile` | 3001 | Admin conteneurisé (output standalone) |
 

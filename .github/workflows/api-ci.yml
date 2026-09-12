@@ -101,17 +101,31 @@ jobs:
       # MinIO n'est pas déclaré en `services` : un conteneur de service ne peut
       # pas recevoir la commande `server /data`, et le bucket doit exister —
       # lisible en anonyme — avant les tests, comme en développement.
+      #
+      # POURQUOI quay.io, ÉPINGLÉ PAR EMPREINTE. Le 12 septembre 2026, ce job
+      # est tombé sur « pull access denied for minio/minio » : les dépôts
+      # minio/minio et minio/mc ont DISPARU de Docker Hub (MinIO a cessé de
+      # distribuer ses images en octobre 2025 et archivé son dépôt en février
+      # 2026 ; dl.min.io rend 410 jusqu'aux binaires signés). Mesuré depuis un
+      # runner : quay.io — le registre historique de MinIO — sert encore tous
+      # les tags. Le projet est gelé, ces images ne bougeront plus : le digest
+      # fige exactement ce que la CI exécute, comme le SHA fige chaque action
+      # de ce dépôt, et fera échouer FRANCHEMENT toute disparition future au
+      # lieu de tirer autre chose. Mêmes versions que le serveur
+      # (infrastructure/server/compose.yml) : on teste ce qu'on exploite.
       - name: Stockage objet (MinIO + bucket public)
         run: |
           docker run -d --name minio -p 9000:9000 \
             -e MINIO_ROOT_USER=carlys-ci \
             -e MINIO_ROOT_PASSWORD=carlys-ci-secret \
-            minio/minio:latest server /data
+            quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e \
+            server /data
           for _ in $(seq 1 30); do
             curl -fs http://localhost:9000/minio/health/live && break
             sleep 2
           done
-          docker run --rm --network host --entrypoint sh minio/mc:latest -c "
+          docker run --rm --network host --entrypoint sh \
+            quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727 -c "
             mc alias set ci http://localhost:9000 carlys-ci carlys-ci-secret &&
             mc mb --ignore-existing ci/carlys-media &&
             mc anonymous set download ci/carlys-media

@@ -53,8 +53,17 @@ services:
       timeout: 3s
       retries: 5
 
+  # POURQUOI quay.io, ÉPINGLÉ PAR EMPREINTE : minio/minio et minio/mc ont
+  # DISPARU de Docker Hub (MinIO a cessé de distribuer ses images en octobre
+  # 2025, archivé son dépôt en février 2026 — dl.min.io rend 410 jusqu'aux
+  # binaires signés) ; un poste neuf n'aurait plus rien à tirer. quay.io, le
+  # registre historique de MinIO, sert encore tous les tags. Le projet est
+  # gelé : « latest » ne voudra plus jamais rien dire, le digest fige ce qui
+  # tourne et fait échouer franchement toute disparition future. Mêmes
+  # versions que la CI (api-ci.yml) et que le serveur
+  # (infrastructure/server/compose.yml) : un seul MinIO, partout.
   minio:
-    image: minio/minio:latest
+    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
     restart: unless-stopped
     command: ['server', '/data', '--console-address', ':9001']
     environment:
@@ -75,7 +84,7 @@ services:
   # anonyme : les applications chargent les photos directement depuis son URL,
   # sans passer par l'API ni présenter de jeton. Seul le DÉPÔT est protégé.
   minio-init:
-    image: minio/mc:latest
+    image: quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727
     depends_on:
       minio:
         condition: service_healthy
