@@ -1,6 +1,9 @@
+import 'dart:async';
+
 import 'package:carlys_mobile/app/environment/app_environment.dart';
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/authentication/presentation/screens/login_screen.dart';
+import 'package:carlys_mobile/features/authentication/presentation/widgets/auth_brand_header.dart';
 import 'package:carlys_mobile/features/authentication/presentation/widgets/auth_scaffold.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -115,6 +118,62 @@ void main() {
     );
 
     expect(seen, Brightness.dark);
+  });
+
+  testWidgets('le bloc court se centre verticalement dans l’écran', (
+    tester,
+  ) async {
+    // Demande produit : rien de collé en haut — un contenu plus court que
+    // l'écran se centre, à marges hautes et basses égales.
+    await pump(tester, theme: AppTheme.dark(), brand: true);
+
+    final bloc = tester.getRect(
+      find.byWidgetPredicate(
+        (w) =>
+            w is Column && w.crossAxisAlignment == CrossAxisAlignment.stretch,
+      ),
+    );
+    final ecran = tester.view.physicalSize / tester.view.devicePixelRatio;
+    final haut = bloc.top - AppSpacing.md;
+    final bas = ecran.height - AppSpacing.md - bloc.bottom;
+
+    expect(haut, greaterThan(0), reason: 'le bloc ne colle pas en haut');
+    expect(
+      (haut - bas).abs(),
+      lessThan(1.0),
+      reason: 'marges haute et basse égales : le bloc est centré',
+    );
+  });
+
+  testWidgets('la signature se pose au même niveau, avec ou sans retour', (
+    tester,
+  ) async {
+    // Le chevron n'existe que sur les écrans dépilables : sans réservation
+    // de sa place, la signature de la connexion (premier écran) montait
+    // d'une ligne par rapport à celle de l'inscription.
+    final screen = AuthScaffold(
+      title: 'Titre témoin',
+      brand: true,
+      children: const [SizedBox.shrink()],
+    );
+
+    await tester.pumpWidget(MaterialApp(theme: AppTheme.dark(), home: screen));
+    expect(find.byIcon(AppIcons.back), findsNothing);
+    final sansRetour = tester.getTopLeft(find.byType(AuthBrandHeader)).dy;
+
+    await tester.pumpWidget(
+      MaterialApp(theme: AppTheme.dark(), home: const Scaffold()),
+    );
+    unawaited(
+      tester
+          .state<NavigatorState>(find.byType(Navigator))
+          .push(MaterialPageRoute<void>(builder: (_) => screen)),
+    );
+    await tester.pumpAndSettle();
+    expect(find.byIcon(AppIcons.back), findsOneWidget);
+    final avecRetour = tester.getTopLeft(find.byType(AuthBrandHeader)).dy;
+
+    expect(sansRetour, avecRetour);
   });
 
   testWidgets('connexion RÉELLE en clair : la ligne de bascule reste claire', (

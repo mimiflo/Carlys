@@ -6,7 +6,8 @@ import 'auth_brand_header.dart';
 
 /// Gabarit commun des écrans d'authentification, dans la disposition de la
 /// maquette : décor en couche de fond, chevron de retour flottant, signature
-/// de marque compacte, titre porté haut, contenu en colonne bornée.
+/// de marque compacte, contenu en colonne bornée — CENTRÉE verticalement
+/// quand elle est plus courte que l'écran, défilante sinon.
 ///
 /// Les écrans d'ENTRÉE (connexion, inscription) passent un [backdrop] et
 /// `brand: true` — ce sont des surfaces de marque, sombres quel que soit le
@@ -62,47 +63,62 @@ class AuthScaffold extends StatelessWidget {
                   horizontal: AppSpacing.gutter,
                   vertical: AppSpacing.md,
                 ),
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 420),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        // Le chevron dépile quand il y a quelque chose à
-                        // dépiler, et disparaît sinon (AppBackButton) — la
-                        // connexion, premier écran, n'affiche rien.
-                        Align(
-                          alignment: Alignment.centerLeft,
-                          child: AppBackButton(
-                            color: theme.colorScheme.onSurfaceVariant,
-                          ),
-                        ),
-                        if (brand) ...[
-                          const SizedBox(height: AppSpacing.xs),
-                          const Align(
-                            alignment: Alignment.centerLeft,
-                            child: AuthBrandHeader(),
-                          ),
-                        ],
-                        if (heroSpaceFactor > 0)
+                // Le bloc se CENTRE verticalement quand il est plus court
+                // que l'écran (demande produit : rien de collé en haut) et
+                // redevient simplement défilant dès qu'il dépasse — petits
+                // écrans, grande police, clavier ouvert.
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(
+                    minHeight: constraints.maxHeight - 2 * AppSpacing.md,
+                  ),
+                  child: Center(
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: 420),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          // Le chevron dépile quand il y a quelque chose à
+                          // dépiler, et disparaît sinon (AppBackButton) — mais
+                          // sa PLACE reste réservée : la signature se pose au
+                          // même niveau sur la connexion (sans retour) et
+                          // l'inscription (avec).
                           SizedBox(
-                            height: constraints.maxHeight * heroSpaceFactor,
-                          )
-                        else
-                          const SizedBox(height: AppSpacing.lg),
-                        Text(title, style: theme.textTheme.headlineMedium),
-                        if (subtitle != null) ...[
-                          const SizedBox(height: AppSpacing.xs),
-                          Text(
-                            subtitle!,
-                            style: theme.textTheme.bodyMedium?.copyWith(
-                              color: theme.colorScheme.onSurfaceVariant,
+                            height: AppSpacing.touchTarget,
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: AppBackButton(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
                             ),
                           ),
+                          if (brand) ...[
+                            const SizedBox(height: AppSpacing.xs),
+                            const Align(
+                              alignment: Alignment.centerLeft,
+                              child: AuthBrandHeader(),
+                            ),
+                          ],
+                          if (heroSpaceFactor > 0)
+                            SizedBox(
+                              height: constraints.maxHeight * heroSpaceFactor,
+                            )
+                          else
+                            const SizedBox(height: AppSpacing.lg),
+                          Text(title, style: theme.textTheme.headlineMedium),
+                          if (subtitle != null) ...[
+                            const SizedBox(height: AppSpacing.xs),
+                            Text(
+                              subtitle!,
+                              style: theme.textTheme.bodyMedium?.copyWith(
+                                color: theme.colorScheme.onSurfaceVariant,
+                              ),
+                            ),
+                          ],
+                          const SizedBox(height: AppSpacing.lg),
+                          ...children,
                         ],
-                        const SizedBox(height: AppSpacing.lg),
-                        ...children,
-                      ],
+                      ),
                     ),
                   ),
                 ),
