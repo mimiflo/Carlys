@@ -1,0 +1,59 @@
+name: sonde-registres
+
+# SONDE TEMPORAIRE — à supprimer une fois le correctif MinIO décidé.
+#
+# Le 12 septembre 2026, api-ci est tombée : `minio/minio` et `minio/mc` ont
+# DISPARU de Docker Hub (l'API du Hub rend « object not found » sur les deux
+# dépôts ; MinIO a cessé de distribuer ses images en octobre 2025 et archivé
+# son dépôt en février 2026). Le poste de travail de la session ne peut pas
+# joindre quay.io ni dl.min.io (proxy) : ce job interroge, DEPUIS le réseau
+# d'un runner, chaque source de remplacement candidate, sans rien tirer —
+# `docker manifest inspect` et des requêtes HEAD suffisent.
+on:
+  push:
+    branches: [development]
+    paths:
+      - '.github/workflows/sonde-registres.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  sonder:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Images candidates (manifest inspect, sans pull)
+        run: |
+          sonde_image() {
+            if docker manifest inspect "$1" > /dev/null 2>&1; then
+              echo "OK      $1"
+            else
+              echo "ABSENT  $1"
+            fi
+          }
+          sonde_image "minio/minio:latest"
+          sonde_image "minio/minio:RELEASE.2025-09-07T16-13-09Z"
+          sonde_image "minio/mc:RELEASE.2025-08-13T08-35-41Z"
+          sonde_image "quay.io/minio/minio:latest"
+          sonde_image "quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z"
+          sonde_image "quay.io/minio/minio:RELEASE.2025-04-22T22-12-26Z"
+          sonde_image "quay.io/minio/mc:latest"
+          sonde_image "quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z"
+          sonde_image "quay.io/minio/mc:RELEASE.2025-04-16T18-13-26Z"
+          sonde_image "bitnamilegacy/minio:latest"
+
+      - name: Binaires officiels signés (dl.min.io, HEAD)
+        run: |
+          sonde_url() {
+            code=$(curl -s -o /dev/null -w '%{http_code}' -I --max-time 15 "$1" || echo 'ERREUR')
+            echo "HTTP $code  $1"
+          }
+          BASE_SRV="https://dl.min.io/server/minio/release/linux-amd64/archive"
+          BASE_MC="https://dl.min.io/client/mc/release/linux-amd64/archive"
+          sonde_url "$BASE_SRV/minio.RELEASE.2025-09-07T16-13-09Z"
+          sonde_url "$BASE_SRV/minio.RELEASE.2025-09-07T16-13-09Z.sha256sum"
+          sonde_url "$BASE_SRV/minio.RELEASE.2025-09-07T16-13-09Z.minisig"
+          sonde_url "$BASE_MC/mc.RELEASE.2025-08-13T08-35-41Z"
+          sonde_url "$BASE_MC/mc.RELEASE.2025-08-13T08-35-41Z.sha256sum"
+          sonde_url "$BASE_MC/mc.RELEASE.2025-08-13T08-35-41Z.minisig"
