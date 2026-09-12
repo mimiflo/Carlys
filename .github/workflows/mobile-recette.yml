@@ -106,11 +106,13 @@ on:
         type: boolean
         default: false
 
-# `contents: read` et rien d'autre. `demo-apk` demandait `contents: write`
-# parce qu'il écrasait une release publique ; ce workflow publie via
-# `actions/upload-artifact`, qui n'utilise pas le GITHUB_TOKEN. Ces binaires
-# visent un serveur RÉEL : ils n'ont rien à faire sur une page de
-# téléchargement ouverte à tous.
+# `contents: read` AU NIVEAU DU WORKFLOW : les jobs de build publient via
+# `actions/upload-artifact`, qui n'utilise pas le GITHUB_TOKEN. Un seul job
+# élève ce droit, localement : `lien-beta`, qui entretient la release `beta`
+# (contents: write posé sur LUI, pas ici) pour offrir un lien de
+# téléchargement stable de l'APK. Le dépôt étant PRIVÉ, cette release n'est
+# lisible que par les comptes ayant accès au dépôt — ce n'est pas une page
+# ouverte à tous, et les binaires de recette visent un serveur réel.
 permissions:
   contents: read
 
@@ -138,6 +140,12 @@ concurrency:
 jobs:
   recette:
     name: Application de recette (Android)
+    outputs:
+      # Consommés par le job `lien-beta` : le nom de l'artefact porte sha12,
+      # et le tag `beta` doit viser le commit RÉELLEMENT construit — sur un
+      # rattrapage par « sha », github.sha serait la tête de branche, pas lui.
+      sha12: ${{ steps.commit.outputs.sha12 }}
+      sha40: ${{ steps.commit.outputs.sha40 }}
     runs-on: ubuntu-latest
     # 40 minutes plutôt que les 30 de `demo-apk` : deux builds Gradle au lieu
     # d'un quand la signature est configurée.
@@ -175,6 +183,7 @@ jobs:
             full="${{ github.sha }}"
           fi
           echo "sha12=$(echo "$full" | cut -c1-12)" >> "$GITHUB_OUTPUT"
+          echo "sha40=$full" >> "$GITHUB_OUTPUT"
           echo "Construction du commit $(echo "$full" | cut -c1-12) : $(git log -1 --format='%s')"
 
       # ── Les adresses visées par l'application ──────────────────────────────
@@ -831,6 +840,82 @@ jobs:
             echo "Aucun keystore à effacer (signature inactive ou étape jamais atteinte)."
           fi
 
+  # ── Le lien bêta permanent : la release « beta » suit le dernier APK ────────
+  #
+  # L'artefact d'exécution exige de naviguer jusqu'à la bonne exécution, en
+  # étant connecté, puis de décompresser un zip : impraticable à envoyer à un
+  # testeur. Ce job entretient donc une RELEASE au tag mouvant `beta` — même
+  # geste que l'ancienne `demo-latest` — dont l'unique APK garde un nom
+  # stable. Le lien ne change jamais :
+  #
+  #   https://github.com/<dépôt>/releases/download/beta/carlys-beta.apk
+  #
+  # LIMITE À CONNAÎTRE : sur un dépôt privé, ce lien n'est servi qu'aux
+  # comptes GitHub ayant accès au dépôt. Pour un lien ouvert à n'importe quel
+  # testeur, le chemin est le serveur de recette (voir builds-mobiles.md §3.4).
+  #
+  # Seule la tête de `development` alimente le lien : la branche production a
+  # ses propres artefacts, et un rattrapage `sha` d'un vieux commit sur
+  # development écrase sciemment — le récapitulatif de l'exécution fait foi.
+  #
+  # C'est LE SEUL job du workflow avec un droit d'écriture, et il ne s'en
+  # sert que pour la release et son tag. Il n'a même pas besoin de checkout.
+  lien-beta:
+    name: Lien bêta (release « beta »)
+    needs: recette
+    if: github.ref == 'refs/heads/development'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: write
+
+    steps:
+      # Téléchargement DANS la même exécution : aucun jeton supplémentaire,
+      # l'artefact vient du job `recette` ci-dessus.
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: carlys-recette-apk-${{ needs.recette.outputs.sha12 }}
+          path: livraison
+
+      - name: Mettre à jour la release beta
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA12: ${{ needs.recette.outputs.sha12 }}
+          NUMERO: ${{ github.run_number }}
+          DEPOT: ${{ github.repository }}
+          SHA_COMPLET: ${{ needs.recette.outputs.sha40 }}
+        run: |
+          set -euo pipefail
+          cp "livraison/carlys-recette-$SHA12.apk" carlys-beta.apk
+
+          notes="Dernière bêta Android (recette, \`staging\`) — commit \`$SHA12\`, versionCode \`$NUMERO\`.
+
+          **Installer** : télécharger \`carlys-beta.apk\` ci-dessous, l'ouvrir sur le
+          téléphone, autoriser les sources inconnues. Signé en debug : normal pour
+          une installation directe, et sans conséquence.
+
+          **Lien stable** (comptes ayant accès à ce dépôt) :
+          https://github.com/$DEPOT/releases/download/beta/carlys-beta.apk
+
+          Lancez-la une fois avant de la faire circuler : le contrôle des adresses
+          a lieu au démarrage, pas à la compilation. Les symboles de débogage sont
+          dans l'artefact de l'exécution, pas ici."
+
+          if gh release view beta --repo "$DEPOT" >/dev/null 2>&1; then
+            gh release upload beta carlys-beta.apk --clobber --repo "$DEPOT"
+            gh release edit beta --title "Carlys bêta — $SHA12" --notes "$notes" \
+              --prerelease --repo "$DEPOT"
+            # Le tag suit le commit réellement construit — sans quoi il
+            # resterait planté sur le commit de la première release.
+            gh api -X PATCH "repos/$DEPOT/git/refs/tags/beta" \
+              -f sha="$SHA_COMPLET" -F force=true > /dev/null
+          else
+            gh release create beta carlys-beta.apk --prerelease \
+              --title "Carlys bêta — $SHA12" --notes "$notes" \
+              --target "$SHA_COMPLET" --repo "$DEPOT"
+          fi
+          echo "Release beta mise à jour : $SHA12 (versionCode $NUMERO)."
+
   # ── iOS : le même geste, sur le seul runner qui sache le faire ───────────────
   #
   # OPT-IN, jamais par défaut, et le coût est toute la raison : sur un dépôt
@@ -893,6 +978,7 @@ jobs:
             full="${{ github.sha }}"
           fi
           echo "sha12=$(echo "$full" | cut -c1-12)" >> "$GITHUB_OUTPUT"
+          echo "sha40=$full" >> "$GITHUB_OUTPUT"
           echo "Construction du commit $(echo "$full" | cut -c1-12) : $(git log -1 --format='%s')"
 
       # Copie mot pour mot de l'étape du job Android — voir son commentaire.

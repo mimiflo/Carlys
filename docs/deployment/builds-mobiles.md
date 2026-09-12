@@ -185,10 +185,12 @@ variantes `-staging`).
    iOS, lui, ne part qu'à la demande (§10.5).
 2. **Ouvrir l'onglet Actions**, l'exécution la plus récente. Compter une
    vingtaine de minutes à froid, moins ensuite grâce aux caches Dart et Gradle.
-3. **Télécharger l'artefact** en bas de la page d'exécution. Son nom porte les
-   douze premiers caractères du sha construit — ce n'est pas décoratif : c'est ce
-   sha qu'il faudra renseigner plus tard pour la production. Le récapitulatif de
-   l'exécution (onglet Summary) fait foi sur le contenu exact de l'artefact.
+3. **Télécharger l'artefact** en bas de la page d'exécution — ou passer par le
+   **lien bêta permanent** (§3.4), plus simple pour un téléphone. Le nom de
+   l'artefact porte les douze premiers caractères du sha construit — ce n'est
+   pas décoratif : c'est ce sha qu'il faudra renseigner plus tard pour la
+   production. Le récapitulatif de l'exécution (onglet Summary) fait foi sur
+   le contenu exact de l'artefact.
 4. **Décompresser** le `.zip` que GitHub enveloppe autour de tout artefact, et
    transférer le `.apk` sur le téléphone — câble, messagerie, stockage en ligne,
    peu importe.
@@ -225,6 +227,32 @@ Une dernière remarque, qui compte : `CARLYS_FLAVOR` n'est **pas** contrôlé. U
 valeur inconnue ne casse rien, elle retombe silencieusement sur `development`.
 Les workflows l'écrivent correctement ; c'est un point d'attention si vous
 compilez à la main.
+
+### 3.4 Le lien bêta permanent
+
+Chaque build Android de la tête de `development` met aussi à jour la release
+**`beta`** du dépôt, dont l'unique APK garde un nom stable. Le lien ne change
+donc jamais :
+
+```
+https://github.com/mimiflo/Carlys/releases/download/beta/carlys-beta.apk
+```
+
+C'est le chemin le plus court vers un téléphone : ouvrir ce lien, installer,
+c'est tout — pas d'onglet Actions, pas de zip. La page de la release dit quel
+commit et quel versionCode il porte ; le tag `beta` suit le commit construit.
+
+**La limite, dite franchement : le dépôt est privé.** Ce lien n'est servi
+qu'aux comptes GitHub ayant accès au dépôt — collaborateurs et vous-même. Un
+testeur extérieur tombera sur une page 404. Pour lui, deux chemins :
+
+- **le bon, à terme** : la piste interne Play (§4.6) — le lien d'adhésion
+  Play s'envoie à n'importe qui, sans compte GitHub, et les mises à jour
+  arrivent toutes seules par le Play Store ;
+- **en attendant** : télécharger l'APK vous-même via le lien ci-dessus et le
+  transmettre (messagerie, stockage partagé) — l'APK s'installe tel quel.
+  Servir ce fichier publiquement depuis le serveur de recette est faisable
+  proprement si le besoin se confirme ; il n'est pas construit aujourd'hui.
 
 ---
 
