@@ -20,6 +20,8 @@ class AppTextField extends StatelessWidget {
     this.prefixIcon,
     this.maxLines = 1,
     this.maxLength,
+    this.helper,
+    this.inlineLabel = false,
     super.key,
   });
 
@@ -45,31 +47,47 @@ class AppTextField extends StatelessWidget {
   /// Longueur maximale acceptée — reprend la borne partagée avec l'API.
   final int? maxLength;
 
+  /// Ligne d'aide sous le champ (contrainte, précision), dans le style du
+  /// thème — jamais un second libellé.
+  final String? helper;
+
+  /// Étiquette DANS le champ (texte fantôme) plutôt qu'au-dessus — le style
+  /// des écrans d'entrée. Le libellé reste la référence : il devient le texte
+  /// fantôme quand aucun [hint] n'est fourni, et reste annoncé aux lecteurs
+  /// d'écran.
+  final bool inlineLabel;
+
   @override
   Widget build(BuildContext context) {
+    final field = TextFormField(
+      controller: controller,
+      enabled: enabled,
+      keyboardType: keyboardType,
+      textInputAction: textInputAction,
+      autofillHints: autofillHints,
+      validator: validator,
+      onChanged: onChanged,
+      onFieldSubmitted: onFieldSubmitted,
+      autocorrect: autocorrect,
+      maxLines: maxLines,
+      maxLength: maxLength,
+      decoration: InputDecoration(
+        hintText: inlineLabel ? (hint ?? label) : hint,
+        helperText: helper,
+        errorText: errorText,
+        prefixIcon: prefixIcon == null ? null : Icon(prefixIcon),
+      ),
+    );
+
+    if (inlineLabel) {
+      return Semantics(label: label, child: field);
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(label, style: Theme.of(context).textTheme.labelLarge),
         const SizedBox(height: AppSpacing.xxs),
-        TextFormField(
-          controller: controller,
-          enabled: enabled,
-          keyboardType: keyboardType,
-          textInputAction: textInputAction,
-          autofillHints: autofillHints,
-          validator: validator,
-          onChanged: onChanged,
-          onFieldSubmitted: onFieldSubmitted,
-          autocorrect: autocorrect,
-          maxLines: maxLines,
-          maxLength: maxLength,
-          decoration: InputDecoration(
-            hintText: hint,
-            errorText: errorText,
-            prefixIcon: prefixIcon == null ? null : Icon(prefixIcon),
-          ),
-        ),
+        field,
       ],
     );
   }

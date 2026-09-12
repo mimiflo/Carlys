@@ -13,6 +13,9 @@ class AppPasswordField extends StatefulWidget {
     this.validator,
     this.onFieldSubmitted,
     this.enabled = true,
+    this.prefixIcon,
+    this.helper,
+    this.inlineLabel = false,
     super.key,
   });
 
@@ -24,6 +27,15 @@ class AppPasswordField extends StatefulWidget {
   final String? Function(String?)? validator;
   final ValueChanged<String>? onFieldSubmitted;
   final bool enabled;
+  final IconData? prefixIcon;
+
+  /// Ligne d'aide sous le champ — la contrainte de longueur, typiquement.
+  final String? helper;
+
+  /// Étiquette DANS le champ plutôt qu'au-dessus, comme [AppTextField] :
+  /// le libellé devient le texte fantôme et reste annoncé aux lecteurs
+  /// d'écran.
+  final bool inlineLabel;
 
   @override
   State<AppPasswordField> createState() => _AppPasswordFieldState();
@@ -34,37 +46,45 @@ class _AppPasswordFieldState extends State<AppPasswordField> {
 
   @override
   Widget build(BuildContext context) {
+    final field = TextFormField(
+      controller: widget.controller,
+      enabled: widget.enabled,
+      obscureText: _obscured,
+      autocorrect: false,
+      enableSuggestions: false,
+      keyboardType: TextInputType.visiblePassword,
+      textInputAction: widget.textInputAction,
+      autofillHints: widget.autofillHints,
+      validator: widget.validator,
+      onFieldSubmitted: widget.onFieldSubmitted,
+      decoration: InputDecoration(
+        hintText: widget.inlineLabel ? widget.label : null,
+        helperText: widget.helper,
+        errorText: widget.errorText,
+        prefixIcon: widget.prefixIcon == null ? null : Icon(widget.prefixIcon),
+        suffixIcon: IconButton(
+          onPressed: () => setState(() => _obscured = !_obscured),
+          tooltip: _obscured
+              ? 'Afficher le mot de passe'
+              : 'Masquer le mot de passe',
+          icon: Icon(
+            _obscured
+                ? Icons.visibility_outlined
+                : Icons.visibility_off_outlined,
+          ),
+        ),
+      ),
+    );
+
+    if (widget.inlineLabel) {
+      return Semantics(label: widget.label, child: field);
+    }
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(widget.label, style: Theme.of(context).textTheme.labelLarge),
         const SizedBox(height: AppSpacing.xxs),
-        TextFormField(
-          controller: widget.controller,
-          enabled: widget.enabled,
-          obscureText: _obscured,
-          autocorrect: false,
-          enableSuggestions: false,
-          keyboardType: TextInputType.visiblePassword,
-          textInputAction: widget.textInputAction,
-          autofillHints: widget.autofillHints,
-          validator: widget.validator,
-          onFieldSubmitted: widget.onFieldSubmitted,
-          decoration: InputDecoration(
-            errorText: widget.errorText,
-            suffixIcon: IconButton(
-              onPressed: () => setState(() => _obscured = !_obscured),
-              tooltip: _obscured
-                  ? 'Afficher le mot de passe'
-                  : 'Masquer le mot de passe',
-              icon: Icon(
-                _obscured
-                    ? Icons.visibility_outlined
-                    : Icons.visibility_off_outlined,
-              ),
-            ),
-          ),
-        ),
+        field,
       ],
     );
   }

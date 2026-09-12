@@ -12,6 +12,14 @@ abstract final class AppIcons {
   static const IconData progress = Icons.insights_rounded;
   static const IconData profile = Icons.person_rounded;
 
+  // Champs et entrées de compte
+  static const IconData mail = Icons.mail_outline_rounded;
+  static const IconData personOutline = Icons.person_outline_rounded;
+
+  /// Le logotype Apple de la banque Material — pour l'entrée « Continuer
+  /// avec Apple », le seul cas où une marque tierce s'affiche en icône.
+  static const IconData apple = Icons.apple;
+
   // Actions
   static const IconData add = Icons.add_rounded;
   static const IconData back = Icons.arrow_back_rounded;

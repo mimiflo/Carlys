@@ -67,7 +67,7 @@ void main() {
 
     await tester.pumpAndSettle();
 
-    expect(find.text('Connexion'), findsOneWidget);
+    expect(find.text('Content de te revoir !'), findsOneWidget);
     expect(find.text('Se connecter'), findsOneWidget);
   });
 

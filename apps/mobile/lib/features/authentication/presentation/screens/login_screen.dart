@@ -6,11 +6,16 @@ import '../../../../app/router/app_routes.dart';
 import '../../../../core/validators/form_validators.dart';
 import '../../../../design_system/design_system.dart';
 import '../controllers/login_controller.dart';
+import '../widgets/auth_backdrop.dart';
 import '../widgets/auth_form_error.dart';
 import '../widgets/auth_scaffold.dart';
+import '../widgets/social_auth_buttons.dart';
 
 /// Connexion par e-mail. La redirection vers l'accueil est assurée par le
 /// routeur dès que l'état de session devient authentifié.
+///
+/// Surface de MARQUE, pas d'interface : la photographie d'athlète en fond,
+/// la signature compacte en tête — la disposition de la maquette validée.
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
@@ -47,8 +52,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     final isLoading = state.isLoading;
 
     return AuthScaffold(
-      title: 'Connexion',
-      subtitle: 'Content de te revoir !',
+      title: 'Content de te revoir !',
+      subtitle: 'Reconnecte-toi et continue ton parcours.',
+      backdrop: const AuthBackdrop.athlete(),
+      brand: true,
+      // Le décor respire entre la signature et le titre : c'est la part de
+      // l'écran où la photographie se voit entière.
+      heroSpaceFactor: 0.22,
       children: [
         Form(
           key: _formKey,
@@ -58,6 +68,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
               children: [
                 AppTextField(
                   label: 'Adresse e-mail',
+                  inlineLabel: true,
+                  prefixIcon: AppIcons.mail,
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.next,
@@ -69,6 +81,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                 const SizedBox(height: AppSpacing.md),
                 AppPasswordField(
                   label: 'Mot de passe',
+                  inlineLabel: true,
+                  prefixIcon: AppIcons.lock,
                   controller: _passwordController,
                   textInputAction: TextInputAction.done,
                   autofillHints: const [AutofillHints.password],
@@ -95,12 +109,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           AuthFormError(error: state.error!),
           const SizedBox(height: AppSpacing.sm),
         ],
-        AppButton(
+        AppBrandButton(
           label: 'Se connecter',
+          uppercase: false,
+          trailingIcon: AppIcons.arrowForward,
           onPressed: _submit,
           isLoading: isLoading,
-          isExpanded: true,
         ),
+        const SizedBox(height: AppSpacing.lg),
+        SocialAuthButtons(enabled: !isLoading),
         const SizedBox(height: AppSpacing.md),
         // Wrap : passe à la ligne sur les écrans étroits ou avec une grande
         // taille de police système, au lieu de déborder.

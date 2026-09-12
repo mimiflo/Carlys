@@ -6,12 +6,17 @@ import '../../../../app/router/app_routes.dart';
 import '../../../../core/validators/form_validators.dart';
 import '../../../../design_system/design_system.dart';
 import '../controllers/register_controller.dart';
+import '../widgets/auth_backdrop.dart';
 import '../widgets/auth_form_error.dart';
 import '../widgets/auth_scaffold.dart';
 import '../widgets/legal_consent_notice.dart';
+import '../widgets/social_auth_buttons.dart';
 
 /// Création de compte. La validation d'e-mail est envoyée automatiquement ;
 /// la session s'ouvre immédiatement (redirection par le routeur).
+///
+/// Surface de MARQUE : le cœur de Carlys en décor haut-droit — là où la
+/// maquette posait une sphère anonyme, c'est l'identité qui respire.
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
 
@@ -53,8 +58,13 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
     final isLoading = state.isLoading;
 
     return AuthScaffold(
-      title: 'Créer un compte',
-      subtitle: 'Un e-mail de confirmation te sera envoyé.',
+      title: 'Crée ton compte',
+      subtitle:
+          'Commence dès maintenant ton parcours vers une meilleure '
+          'version de toi.',
+      backdrop: const AuthBackdrop.heart(),
+      brand: true,
+      heroSpaceFactor: 0.06,
       children: [
         Form(
           key: _formKey,
@@ -64,6 +74,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
               children: [
                 AppTextField(
                   label: 'Nom affiché',
+                  inlineLabel: true,
+                  prefixIcon: AppIcons.personOutline,
                   controller: _nameController,
                   textInputAction: TextInputAction.next,
                   autofillHints: const [AutofillHints.name],
@@ -73,6 +85,11 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 const SizedBox(height: AppSpacing.md),
                 AppTextField(
                   label: 'Adresse e-mail',
+                  inlineLabel: true,
+                  prefixIcon: AppIcons.mail,
+                  // La vérité utile au moment utile : c'est à cette adresse
+                  // que la confirmation partira.
+                  helper: 'Un e-mail de confirmation te sera envoyé.',
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.next,
@@ -83,7 +100,10 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                 ),
                 const SizedBox(height: AppSpacing.md),
                 AppPasswordField(
-                  label: 'Mot de passe ($passwordMinLength caractères minimum)',
+                  label: 'Mot de passe',
+                  inlineLabel: true,
+                  prefixIcon: AppIcons.lock,
+                  helper: 'Minimum $passwordMinLength caractères.',
                   controller: _passwordController,
                   textInputAction: TextInputAction.done,
                   autofillHints: const [AutofillHints.newPassword],
@@ -100,14 +120,17 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           AuthFormError(error: state.error!),
           const SizedBox(height: AppSpacing.sm),
         ],
-        AppButton(
+        AppBrandButton(
           label: 'Créer mon compte',
+          uppercase: false,
+          trailingIcon: AppIcons.arrowForward,
           onPressed: _submit,
           isLoading: isLoading,
-          isExpanded: true,
         ),
-        const SizedBox(height: AppSpacing.sm),
-        // Sous le bouton, pas au-dessus : on lit ce à quoi on consent au
+        const SizedBox(height: AppSpacing.lg),
+        SocialAuthButtons(enabled: !isLoading),
+        const SizedBox(height: AppSpacing.md),
+        // Sous les boutons, pas au-dessus : on lit ce à quoi on consent au
         // moment où l'on s'apprête à appuyer.
         const LegalConsentNotice(),
         const SizedBox(height: AppSpacing.md),

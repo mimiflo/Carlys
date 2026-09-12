@@ -25,6 +25,23 @@ import 'package:flutter_test/flutter_test.dart';
 /// (une chaîne en dur pointerait sur localhost en production) et qu'aucun
 /// texte n'est recopié dans l'application, où il serait périmé.
 void main() {
+  setUp(() {
+    // L'écran d'inscription porte désormais le cœur de la marque en décor —
+    // une scène ambiante qui ne s'arrête jamais d'elle-même. La réduction
+    // d'animations la met en pause (comportement réel d'accessibilité),
+    // et pumpAndSettle converge.
+    TestWidgetsFlutterBinding
+            .instance
+            .platformDispatcher
+            .accessibilityFeaturesTestValue =
+        FakeAccessibilityFeatures.allOn;
+  });
+
+  tearDown(() {
+    TestWidgetsFlutterBinding.instance.platformDispatcher
+        .clearAccessibilityFeaturesTestValue();
+  });
+
   const environment = AppEnvironment(
     flavor: AppFlavor.production,
     apiBaseUrl: 'https://api.exemple.test',

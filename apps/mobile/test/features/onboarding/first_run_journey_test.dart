@@ -219,7 +219,7 @@ void main() {
 
       // 2. Création de compte. Sans session, rien n'a encore été envoyé au
       // serveur : les réponses attendent le compte — l'identité Carlys aussi.
-      expect(find.text('Créer un compte'), findsOneWidget);
+      expect(find.text('Crée ton compte'), findsOneWidget);
       expect(nutrition.updateCount, 0);
       expect(carlysRepo.chosen, isEmpty);
 
@@ -330,7 +330,7 @@ void main() {
     await tapText(tester, 'Passer');
 
     expect(nutrition.updateCount, 0);
-    expect(find.text('Créer un compte'), findsOneWidget);
+    expect(find.text('Crée ton compte'), findsOneWidget);
   });
 
   testWidgets('depuis l’onboarding, la connexion reste accessible', (
@@ -339,7 +339,7 @@ void main() {
     await launch(tester);
 
     await tapText(tester, 'J’ai déjà un compte');
-    expect(find.text('Connexion'), findsOneWidget);
+    expect(find.text('Content de te revoir !'), findsOneWidget);
 
     // Connexion réussie : le parcours reprend là où il en était.
     await tester.enterText(
@@ -364,12 +364,12 @@ void main() {
     seedFirstRunStep(FirstRunStep.account);
     await launch(tester, passWelcome: false);
 
-    expect(find.text('Créer un compte'), findsOneWidget);
+    expect(find.text('Crée ton compte'), findsOneWidget);
     expect(find.text('1/5'), findsNothing);
 
     // Qui a déjà un compte rejoint la connexion depuis l'inscription.
     await tapText(tester, 'Se connecter');
-    expect(find.text('Connexion'), findsOneWidget);
+    expect(find.text('Content de te revoir !'), findsOneWidget);
   });
 
   testWidgets(

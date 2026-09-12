@@ -753,6 +753,10 @@ void main() {
 
   testWidgets('connexion', (tester) async {
     await pumpApp(tester, authenticated: false);
+    // La photographie et le sceau sont des assets : sans préchargement, la
+    // capture montrerait leurs emplacements vides — sur téléphone, l'écran
+    // de démarrage les a déjà décodés.
+    await precacheBrandImages(tester);
     await capture(tester, '01-connexion', shows: find.byType(LoginScreen));
   });
 
@@ -763,6 +767,7 @@ void main() {
     await pumpApp(tester, authenticated: false);
     await tester.tap(find.text('Créer un compte'));
     await settle(tester);
+    await precacheBrandImages(tester);
     await capture(
       tester,
       '01b-inscription',

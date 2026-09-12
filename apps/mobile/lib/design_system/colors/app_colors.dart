@@ -334,4 +334,16 @@ abstract final class AppColors {
     const Color(0xE69B30FF),
     intensity.clamp(0, 1),
   )!;
+
+  // ── Marques tierces (tokens.json → color.vendor) ──────────────────────────
+  //
+  // Le G de Google du bouton « Continuer avec Google » — et rien d'autre.
+  // Ce ne sont PAS des couleurs Carlys : elles ne participent à aucune
+  // palette et ne s'emploient dans aucun autre contexte. Un logo tiers ne se
+  // recolore pas, pas plus que notre sceau ne se redessine ; les valeurs sont
+  // celles des règles d'usage de la marque Google.
+  static const Color googleBlue = Color(0xFF4285F4);
+  static const Color googleRed = Color(0xFFEA4335);
+  static const Color googleYellow = Color(0xFFFBBC05);
+  static const Color googleGreen = Color(0xFF34A853);
 }
