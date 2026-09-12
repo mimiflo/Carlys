@@ -230,8 +230,9 @@ compilez à la main.
 
 ### 3.4 Le lien bêta permanent
 
-Chaque build Android de la tête de `development` met aussi à jour la release
-**`beta`** du dépôt, dont l'unique APK garde un nom stable. Le lien ne change
+Chaque build Android sur `development` met aussi à jour la release **`beta`**
+du dépôt — y compris un rattrapage manuel par « sha », qui écrase sciemment
+avec le commit demandé. L'unique APK garde un nom stable, le lien ne change
 donc jamais :
 
 ```

@@ -851,8 +851,8 @@ jobs:
   #   https://github.com/<dépôt>/releases/download/beta/carlys-beta.apk
   #
   # LIMITE À CONNAÎTRE : sur un dépôt privé, ce lien n'est servi qu'aux
-  # comptes GitHub ayant accès au dépôt. Pour un lien ouvert à n'importe quel
-  # testeur, le chemin est le serveur de recette (voir builds-mobiles.md §3.4).
+  # comptes GitHub ayant accès au dépôt. Pour un testeur extérieur : la piste
+  # interne Play, ou transmettre le fichier soi-même (builds-mobiles.md §3.4).
   #
   # Seule la tête de `development` alimente le lien : la branche production a
   # ses propres artefacts, et un rattrapage `sha` d'un vieux commit sur
@@ -902,18 +902,42 @@ jobs:
           dans l'artefact de l'exécution, pas ici."
 
           if gh release view beta --repo "$DEPOT" >/dev/null 2>&1; then
-            gh release upload beta carlys-beta.apk --clobber --repo "$DEPOT"
+            # PAS de `upload --clobber` : il SUPPRIME l'ancien asset avant de
+            # téléverser le nouveau — pendant tout le téléversement (et pour
+            # toujours, s'il échoue ou si l'exécution est annulée), le lien
+            # stable rendrait 404. Ordre inverse, fenêtre réduite à deux
+            # appels d'API : téléverser sous un nom provisoire pendant que
+            # l'ancien continue d'être servi, puis supprimer l'ancien, puis
+            # renommer le nouveau. Un échec en plein milieu laisse au pire un
+            # provisoire orphelin, que le début de ce bloc ramasse.
+            ids() { gh api "repos/$DEPOT/releases/tags/beta" \
+              --jq ".assets[] | select(.name==\"$1\") | .id"; }
+            for reste in $(ids carlys-beta-nouveau.apk); do
+              gh api -X DELETE "repos/$DEPOT/releases/assets/$reste"
+            done
+            cp carlys-beta.apk carlys-beta-nouveau.apk
+            gh release upload beta carlys-beta-nouveau.apk --repo "$DEPOT"
+            for ancien in $(ids carlys-beta.apk); do
+              gh api -X DELETE "repos/$DEPOT/releases/assets/$ancien"
+            done
+            nouveau="$(ids carlys-beta-nouveau.apk)"
+            gh api -X PATCH "repos/$DEPOT/releases/assets/$nouveau" \
+              -f name=carlys-beta.apk > /dev/null
             gh release edit beta --title "Carlys bêta — $SHA12" --notes "$notes" \
               --prerelease --repo "$DEPOT"
-            # Le tag suit le commit réellement construit — sans quoi il
-            # resterait planté sur le commit de la première release.
-            gh api -X PATCH "repos/$DEPOT/git/refs/tags/beta" \
-              -f sha="$SHA_COMPLET" -F force=true > /dev/null
           else
+            # `--target` n'est honoré que si le tag n'existe pas encore ; s'il
+            # traîne (release supprimée à la main, tag conservé), c'est le
+            # PATCH ci-dessous qui le remet sur le bon commit.
             gh release create beta carlys-beta.apk --prerelease \
               --title "Carlys bêta — $SHA12" --notes "$notes" \
               --target "$SHA_COMPLET" --repo "$DEPOT"
           fi
+          # Le tag suit TOUJOURS le commit réellement construit — après
+          # `create` comme après une mise à jour, y compris quand le tag
+          # préexistait à la release (cas où `--target` est ignoré).
+          gh api -X PATCH "repos/$DEPOT/git/refs/tags/beta" \
+            -f sha="$SHA_COMPLET" -F force=true > /dev/null
           echo "Release beta mise à jour : $SHA12 (versionCode $NUMERO)."
 
   # ── iOS : le même geste, sur le seul runner qui sache le faire ───────────────
