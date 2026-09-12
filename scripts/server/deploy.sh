@@ -17,13 +17,22 @@
 #      (règle du dépôt, infrastructure/deployment/README.md) : un redémarrage
 #      ou une mise à l'échelle ne doit pas modifier le schéma ;
 #   3. échec de la migration ⇒ ARRÊT, api et admin n'ont pas été touchés ;
-#   4. bascule, puis attente BORNÉE de la santé — /health/ready de l'API ET la
+#   4. CATALOGUE D'EXERCICES chargé juste après, toujours avant la bascule, et
+#      pour la même raison que la migration : il est LIVRÉ AVEC LE CODE (il vit
+#      dans l'image de l'API), donc la version qui prend le trafic doit trouver
+#      le contenu de sa propre livraison, pas celui de la précédente. Échec
+#      ⇒ ARRÊT au même titre : une bibliothèque d'exercices vide ou périmée est
+#      un produit cassé, et l'ancienne version sert encore, elle, un catalogue
+#      cohérent. C'est aussi ce qui rend l'opération AUTOMATIQUE : les trois
+#      chemins de déploiement — mise à jour automatique, promote.sh, carlysctl
+#      deploy — passent tous par ici, personne n'a plus rien à taper ;
+#   5. bascule, puis attente BORNÉE de la santé — /health/ready de l'API ET la
 #      page d'accueil de l'admin — bornée, sinon un service mort bloque le
 #      script au lieu de déclencher le retour arrière ;
-#   5. santé absente ⇒ retour au sha précédent lu dans DEPLOYED, contrôlé par
+#   6. santé absente ⇒ retour au sha précédent lu dans DEPLOYED, contrôlé par
 #      la MÊME règle : un retour arrière qui ne vérifie que l'API peut se
 #      déclarer réussi avec une admin en panne ;
-#   6. succès ⇒ le nouveau sha est inscrit dans DEPLOYED (sha, date, opérateur).
+#   7. succès ⇒ le nouveau sha est inscrit dans DEPLOYED (sha, date, opérateur).
 #
 # CE QUE LE RETOUR ARRIÈRE NE FAIT PAS. Il restaure le CODE, jamais le SCHÉMA :
 # Prisma n'a pas de migration descendante, et rejouer une migration à l'envers
@@ -31,6 +40,20 @@
 # soigne. Corollaire à tenir : toute migration doit être compatible avec la
 # version précédente du code (ajout de colonne nullable, jamais de suppression
 # dans le même déploiement que le code qui cesse de l'utiliser).
+#
+# Le CATALOGUE tombe sous LA MÊME CONTRAINTE, et il faut la dire en toutes
+# lettres : un retour arrière ne le rembobine pas, et il est chargé pendant que
+# la version PRÉCÉDENTE sert encore le trafic. Le cas ordinaire est sans
+# danger — le chargement ajoute et met à jour des lignes, il n'en supprime
+# aucune, et un exercice de plus reste un exercice pour le code d'avant. Le cas
+# qui casse est précis : un exercice qui utiliserait une valeur d'énumération
+# introduite par la migration du même déploiement ; le client Prisma précédent
+# ne sait pas la lire. La discipline est donc celle du schéma, transposée — la
+# valeur d'énumération à un déploiement, le contenu qui s'en sert au suivant.
+#
+# Une interruption en cours de chargement laisse, elle, un catalogue plus
+# COURT, jamais incohérent : chaque exercice est écrit entier, et la relance
+# complète le reste.
 #
 # PREMIER DÉPLOIEMENT. Si DEPLOYED est vide, il n'y a pas de sha précédent :
 # aucun retour arrière n'est possible, et il n'y a rien à restaurer puisque
@@ -49,6 +72,12 @@ ROLLBACK_TRIES="${CARLYS_ROLLBACK_TRIES:-45}"  # le sha précédent a déjà dé
 # font pas partie de la bascule (les démarrer n'expose aucune nouvelle version
 # au trafic).
 DATA_SERVICES="${CARLYS_DATA_SERVICES:-postgres redis}"
+# Chargement du catalogue : « oui » par défaut, c'est-à-dire à chaque
+# déploiement. La porte de sortie existe pour un cas précis — rétablir le
+# service au plus court quand on sait le catalogue déjà à jour — et pas pour
+# s'habituer à la pousser : la laisser à « non » ramènerait la bibliothèque
+# d'exercices périmée que cette étape existe pour empêcher.
+DEPLOY_CATALOG="${CARLYS_DEPLOY_CATALOG:-oui}"
 
 usage() {
   cat >&2 <<'FIN'
@@ -65,6 +94,7 @@ Variables utiles :
   CARLYS_ROOT           racine des données (défaut /srv/carlys)
   CARLYS_HEALTH_TRIES   tentatives d'attente de /health/ready (défaut 60)
   CARLYS_HEALTH_DELAY   secondes entre deux tentatives (défaut 2)
+  CARLYS_DEPLOY_CATALOG « non » saute le chargement du catalogue (défaut oui)
 FIN
   exit 2
 }
@@ -170,11 +200,11 @@ info "exemplaires API : $API_REPLICAS (plage de $API_CAPACITY port(s))"
 
 # ── 1. Registre : connexion puis pull des trois images ──────────────────────
 # Rien n'a encore bougé : c'est le bon moment pour échouer.
-step "1/6 Connexion au registre"
+step "1/7 Connexion au registre"
 ghcr_login
 ok "connecté à $CARLYS_REGISTRY"
 
-step "2/6 Récupération des images (sha-$SHA)"
+step "2/7 Récupération des images (sha-$SHA)"
 IMG_API="$(image_api "$SHA")"
 IMG_MIGRATE="$(image_migrate "$SHA")"
 IMG_ADMIN="$(image_admin "$SHA" "$ENV_NAME")"
@@ -193,7 +223,7 @@ ok "trois images présentes localement"
 # n'est exposée au trafic. En régime établi ils tournent déjà et cette étape ne
 # coûte rien ; au premier déploiement elle crée le réseau et le volume dont la
 # migration a besoin.
-step "3/6 Socle de données (postgres, redis)"
+step "3/7 Socle de données (postgres, redis)"
 export_tags "$SHA"
 # shellcheck disable=SC2086 # DATA_SERVICES est une liste de services, volontairement découpée
 dc "$ENV_NAME" "$ENV_FILE" up -d $DATA_SERVICES || die \
@@ -227,7 +257,7 @@ ok "PostgreSQL accepte les connexions"
 # l'attente `pg_isready` de l'étape précédente — un second avis, plus faible
 # (`pg_isready` accepte une connexion, le healthcheck interroge la BASE), et
 # qui divergerait du compose au premier changement.
-step "4/6 Migrations Prisma (tâche ponctuelle)"
+step "4/7 Migrations Prisma (tâche ponctuelle)"
 if ! dc "$ENV_NAME" "$ENV_FILE" run --rm migrate; then
   die "La migration a échoué — DÉPLOIEMENT INTERROMPU." \
     "RIEN n'a été basculé : api et admin tournent toujours sur ${PREVIOUS_SHA:-leur version précédente}." \
@@ -239,8 +269,49 @@ if ! dc "$ENV_NAME" "$ENV_FILE" run --rm migrate; then
 fi
 ok "schéma à jour"
 
-# ── 4. Bascule ─────────────────────────────────────────────────────────────
-step "5/6 Bascule (compose up -d)"
+# ── 4. Catalogue d'exercices — AVANT la bascule aussi ──────────────────────
+# Le schéma vient d'être migré ; le CONTENU livré avec ce sha se charge
+# maintenant, pour que la version qui prend le trafic à l'étape suivante
+# trouve son propre catalogue, pas celui de la précédente.
+#
+# La commande vit dans l'IMAGE de ce sha (voir catalogue_charger dans
+# _common.sh) : c'est donc bien la description du catalogue publiée avec ce
+# commit qui est projetée, jamais une copie côté serveur.
+#
+# Rejoué à CHAQUE déploiement, y compris quand le catalogue n'a pas bougé —
+# l'opération est idempotente (mise à jour par slug, identifiants de médias
+# déterministes) et se compte en secondes, quand le déploiement se compte en
+# minutes. Le test « le catalogue a-t-il changé ? » coûterait plus cher en
+# complexité qu'il ne ferait gagner, et se tromperait un jour.
+step "5/7 Catalogue d'exercices"
+if [ "$DEPLOY_CATALOG" != oui ]; then
+  warn "étape sautée : CARLYS_DEPLOY_CATALOG=$DEPLOY_CATALOG"
+  info "La bibliothèque d'exercices reste telle qu'elle est en base."
+  info "Pour la charger plus tard : carlysctl catalog-seed $ENV_NAME"
+elif ! catalogue_commande_presente "$ENV_NAME" "$ENV_FILE"; then
+  # Le cas normal d'un retour arrière ou d'une promotion de vieux sha : cette
+  # image est antérieure à la commande. Ce n'est pas une panne — le catalogue
+  # déjà en base reste servi — et faire échouer le déploiement pour autant
+  # empêcherait précisément de revenir à une version saine.
+  warn "l'image sha-$SHA ne porte pas dist/cli/catalog-seed : catalogue laissé en l'état."
+  info "Image antérieure à cette commande (retour arrière, promotion d'un ancien sha)."
+elif ! catalogue_charger "$ENV_NAME" "$ENV_FILE"; then
+  die "Le chargement du catalogue a échoué — DÉPLOIEMENT INTERROMPU." \
+    "RIEN n'a été basculé : api et admin tournent toujours sur ${PREVIOUS_SHA:-leur version précédente}," \
+    "et servent le catalogue qu'ils servaient déjà." \
+    "Le message ci-dessus dit lequel des deux étages a lâché : les textes" \
+    "(PostgreSQL) ou les photos (MinIO, le plus fréquent)." \
+    "Une fois la cause corrigée, redéployer suffit — l'étape est idempotente." \
+    "Pour la rejouer seule, sans redéployer :" \
+    "  carlysctl catalog-seed $ENV_NAME" \
+    "Pour basculer SANS le catalogue (il reste alors celui d'avant) :" \
+    "  CARLYS_DEPLOY_CATALOG=non carlysctl deploy $ENV_NAME $SHA"
+else
+  ok "catalogue à jour"
+fi
+
+# ── 5. Bascule ─────────────────────────────────────────────────────────────
+step "6/7 Bascule (compose up -d)"
 if ! dc "$ENV_NAME" "$ENV_FILE" up -d; then
   # Compose a refusé de démarrer la pile. Le schéma est déjà migré (migration
   # compatible avec la version précédente : c'est la contrainte annoncée en
@@ -258,8 +329,8 @@ if ! dc "$ENV_NAME" "$ENV_FILE" up -d; then
 fi
 ok "conteneurs démarrés sur sha-$SHA"
 
-# ── 5. Santé, en boucle BORNÉE ─────────────────────────────────────────────
-step "6/6 Vérification de santé"
+# ── 6. Santé, en boucle BORNÉE ─────────────────────────────────────────────
+step "7/7 Vérification de santé"
 healthy=1
 sante_api "$HEALTH_TRIES" || healthy=0
 # L'admin sert AUSSI les pages publiques du produit (/verify-email,
@@ -289,7 +360,7 @@ if [ "$healthy" -eq 1 ]; then
   exit 0
 fi
 
-# ── 6. Retour arrière ──────────────────────────────────────────────────────
+# ── 7. Retour arrière ──────────────────────────────────────────────────────
 printf '\n%s✗ Santé jamais obtenue sur sha-%s%s\n' "$_c_red" "$SHA" "$_c_off" >&2
 info "journaux du sha fautif (100 dernières lignes) :"
 dc "$ENV_NAME" "$ENV_FILE" logs --tail 100 api admin 2>&1 | sed 's/^/   | /' || true

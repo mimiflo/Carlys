@@ -170,8 +170,11 @@ première release — voir `infrastructure/deployment/README.md`) :
 2. construction des images Docker multi-stage, taguées par SHA ;
 3. `prisma migrate deploy` exécuté comme étape distincte **avant** la bascule
    du trafic — jamais au démarrage du conteneur ;
-4. bascule pilotée par les health checks (`/health/ready`) ;
-5. staging automatique depuis `development`, production **manuelle** après
+4. catalogue d'exercices chargé dans la foulée, toujours avant la bascule : il
+   est livré avec le code (il vit dans l'image de l'API), donc la version qui
+   prend le trafic sert le catalogue de sa propre livraison ;
+5. bascule pilotée par les health checks (`/health/ready`) ;
+6. staging automatique depuis `development`, production **manuelle** après
    validation humaine.
 
 ## Documents liés

@@ -292,8 +292,9 @@ elle prend le relais.
 
 `CARLYS_AUTO_UPDATE` décide **qui appuie sur le bouton**, pas si le filet est
 tendu. Les vérifications de `deploy.sh` (images présentes, migration avant
-bascule, attente de santé bornée, retour arrière automatique) et celles de
-`promote.sh` ne sont jamais court-circuitées.
+bascule, catalogue d'exercices chargé avant bascule lui aussi, attente de santé
+bornée, retour arrière automatique) et celles de `promote.sh` ne sont jamais
+court-circuitées.
 
 L'accord donné d'avance par l'orchestrateur nomme **le sha**, pas « oui » : un
 accord général signerait n'importe quelle promotion, y compris celle d'un sha

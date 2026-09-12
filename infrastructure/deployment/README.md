@@ -35,6 +35,10 @@ seulement terminé un cran plus haut. Conséquences complètes et mesurées :
   par SHA, par `images-publish` (voir « Le registre » plus bas) ;
 - `prisma migrate deploy` exécuté comme étape distincte AVANT le basculement
   du trafic — jamais automatiquement au démarrage du conteneur ;
+- catalogue d'exercices chargé par la même occasion, juste après la migration
+  et toujours avant le basculement : c'est du contenu livré avec le code, pas
+  une donnée d'exploitation, et un échec interrompt le déploiement comme celui
+  d'une migration (`scripts/server/deploy.sh`, étape 5/7) ;
 - configuration exclusivement par variables d'environnement, validée au
   démarrage (le serveur refuse de démarrer sinon) ; en production, les
   valeurs de développement de `S3_*`, `SMTP_HOST`, `EMAIL_FROM`,

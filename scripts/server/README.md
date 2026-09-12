@@ -21,7 +21,7 @@ Tout est décrit dans
 | `carlysctl autoscale <env>` | pour comprendre une décision | dit ce qu'il ferait ; n'agit qu'avec `--appliquer` |
 | `carlysctl heal <env>` | quand quelque chose est tombé | relève ce qui manque, avec un plafond horaire |
 | `carlysctl admin-create <env> <email> [--role …] [--reset-password]` | après le premier déploiement, puis pour chaque collègue | crée un compte du back-office par la commande embarquée dans l'image API — la seule voie qui existe. Mot de passe saisi sans écho, jamais en argument |
-| `carlysctl catalog-seed <env> [--sans-photos]` | après le premier déploiement, puis à chaque évolution du catalogue | charge groupes musculaires, matériels, exercices et photos (MinIO) — idempotent par slug, purge le cache Redis du catalogue. Sans lui, la bibliothèque d'exercices est vide |
+| `carlysctl catalog-seed <env> [--sans-photos]` | **rarement** : le déploiement le fait déjà (étape 5/7). Pour recharger sans redéployer — après un `CARLYS_DEPLOY_CATALOG=non`, après avoir réparé MinIO, ou pour les seuls textes | charge groupes musculaires, matériels, exercices et photos (MinIO) — idempotent par slug, purge le cache Redis du catalogue. Même code que l'étape du déploiement |
 | `carlysctl env-sync <env> [--appliquer] [--tout]` | après un `git pull`, ou quand `doctor` signale une clé absente | ajoute au `.env` les réglages introduits depuis sa création. N'écrase jamais une ligne, engendre les secrets sûrs avec `--tout`, refuse ce qu'un humain seul peut choisir |
 | `carlysctl update <env>` | si `CARLYS_AUTO_UPDATE=oui` | recette : suit une branche ; production : promeut la recette après maturation |
 | `carlysctl supervise [env]` | par la minuterie | une passe complète : réparer, mettre à l'échelle, mettre à jour |

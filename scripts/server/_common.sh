@@ -310,6 +310,43 @@ dc() {
     "$@"
 }
 
+# ── Catalogue d'exercices ───────────────────────────────────────────────────
+#
+# Le catalogue — groupes musculaires, matériels, exercices publiés et leurs
+# photos — est du CONTENU LIVRÉ AVEC LE CODE, pas une donnée d'exploitation :
+# il vit dans l'image de l'API, et `dist/cli/catalog-seed` le projette en base
+# et dans le stockage objet. Il se charge donc à chaque déploiement, comme le
+# schéma se migre à chaque déploiement.
+#
+# Deux appelants, UNE SEULE description de l'invocation : deploy.sh (à chaque
+# déploiement, automatiquement) et `carlysctl catalog-seed` (rattrapage à la
+# main, ou rechargement sans redéployer). Les recopier les ferait diverger.
+
+# Vrai si l'image API du tag courant porte la commande. Une image antérieure à
+# son introduction ne l'a pas : le savoir AVANT évite une erreur de Node
+# illisible, et permet à un retour arrière vers un vieux sha de passer son
+# chemin au lieu d'échouer.
+catalogue_commande_presente() {
+  local env_name="$1" file="$2"
+  dc "$env_name" "$file" run --rm --no-deps -T --entrypoint test api \
+    -f dist/cli/catalog-seed.js >/dev/null 2>&1
+}
+
+# Charge (ou met à jour) le catalogue. Rend le code de sortie du CLI.
+#
+# PAS `--no-deps`, contrairement à la sonde ci-dessus : les photos partent dans
+# MinIO, qui doit être debout. Compose démarre alors postgres, redis, minio et
+# minio-init (création du bucket) s'ils ne le sont pas déjà — exactement les
+# services dont l'API dépend, donc rien de plus que ce que la bascule exigera
+# de toute façon.
+#
+# `run` NE PUBLIE PAS les ports du service : le conteneur éphémère ne dispute
+# donc aucun port aux exemplaires d'API en cours d'exécution.
+catalogue_charger() {
+  local env_name="$1" file="$2"; shift 2
+  dc "$env_name" "$file" run --rm -T api node dist/cli/catalog-seed "$@"
+}
+
 # ── Attente bornée d'un point HTTP ──────────────────────────────────────────
 # BORNÉE est le mot important : une boucle infinie sur un service qui ne
 # démarrera jamais bloque le déploiement au lieu de déclencher le retour

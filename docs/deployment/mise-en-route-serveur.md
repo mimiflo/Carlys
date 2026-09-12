@@ -831,9 +831,10 @@ sont équivalentes, `carlysctl` est simplement le point d'entrée unique.
 
 Reprenez le `sha12` noté à l'étape 4. `deploy.sh` se connecte au registre, tire
 les images, **applique les migrations d'abord** (un échec arrête tout, sans
-rien basculer), démarre les services, attend que `/health/ready` réponde 200,
-et n'inscrit le SHA dans `DEPLOYED` qu'en cas de succès. Si la santé ne répond
-pas, il revient au SHA précédent.
+rien basculer), **charge le catalogue d'exercices** livré avec ce sha (même
+règle : un échec arrête tout avant la bascule), démarre les services, attend
+que `/health/ready` réponde 200, et n'inscrit le SHA dans `DEPLOYED` qu'en cas
+de succès. Si la santé ne répond pas, il revient au SHA précédent.
 
 > **Sauf ici : au PREMIER déploiement, il n'y a pas de SHA précédent.** Le
 > filet dont parle le paragraphe ci-dessus n'existe donc pas encore. Si la
@@ -913,29 +914,43 @@ projetés au premier appel, comme ici.
 
 ### Le catalogue d'exercices
 
-Même cause, même remède : un déploiement n'exécute que les migrations, donc la
-**bibliothèque d'exercices est vide** — l'application mobile affiche l'écran,
-et rien dedans. Le catalogue (groupes musculaires, matériels, 170 exercices
-publiés et leurs photos, déposées dans MinIO) se charge par la commande
-embarquée dans l'image API :
+**Rien à faire : le déploiement s'en charge.** Contrairement au premier
+administrateur ci-dessus, le catalogue (groupes musculaires, matériels, 170
+exercices publiés et leurs photos, déposées dans MinIO) n'est pas une donnée
+d'exploitation à créer une fois — c'est du **contenu livré avec le code**, au
+même titre que le schéma. `deploy.sh` le charge donc à chaque déploiement,
+étape 5/7, juste après les migrations et **avant** la bascule : la version qui
+prend le trafic trouve le catalogue de sa propre livraison. Les trois chemins
+de déploiement passent par là — mise à jour automatique, `promote`, `carlysctl
+deploy` —, il n'y a donc aucune commande à retenir après un `git push`.
+
+L'opération est **idempotente** : les exercices sont mis à jour par slug,
+jamais dupliqués, et les photos re-déposées sous le même identifiant. Elle
+purge elle-même le cache Redis du catalogue, de sorte que l'application voit
+le résultat immédiatement, pas dans une heure.
+
+Un échec **arrête le déploiement**, exactement comme un échec de migration :
+rien n'est basculé, l'ancienne version continue de servir le catalogue qu'elle
+servait déjà. C'est presque toujours MinIO qui manque à l'appel — et dans ce
+cas la bascule aurait de toute façon échoué, l'API en dépend (`depends_on`).
+Le message nomme la cause ; une fois corrigée, redéployer suffit.
+
+Deux échappatoires, pour les cas où l'on veut agir autrement :
 
 ```bash
+# recharger le catalogue SANS redéployer (après réparation de MinIO, par ex.)
 sudo /srv/carlys/repo/scripts/server/carlysctl catalog-seed staging
+
+# ne charger que les textes, sans le stockage objet
+sudo /srv/carlys/repo/scripts/server/carlysctl catalog-seed staging --sans-photos
+
+# basculer sans toucher au catalogue (il reste celui d'avant)
+sudo CARLYS_DEPLOY_CATALOG=non /srv/carlys/repo/scripts/server/carlysctl deploy staging <sha12>
 ```
 
-**Idempotente** : rejouable à volonté, y compris après une mise à jour du
-catalogue dans le code — les exercices sont mis à jour par slug, jamais
-dupliqués, et les photos re-déposées sous le même identifiant. La commande
-purge elle-même le cache Redis du catalogue : l'application voit le résultat
-immédiatement, pas dans une heure. `--sans-photos` saute le stockage objet si
-MinIO n'est pas prêt — les textes se chargent, les illustrations viendront au
-passage suivant. Et l'inverse vaut aussi : des photos demandées qui ne
-peuvent pas partir (S3 mal configuré, stockage muet) font **échouer la
-commande en rouge** — les textes sont chargés, le message dit quoi corriger.
-Strictement le catalogue : aucun compte, aucun plan d'abonnement n'est créé.
-
-La même commande vaut pour la production, le jour venu :
-`catalog-seed production`.
+Strictement le catalogue, dans tous les cas : aucun compte, aucun plan
+d'abonnement n'est créé. Et tout ceci vaut pour la production sans changement,
+le jour venu.
 
 ### La boîte aux lettres de la recette
 
