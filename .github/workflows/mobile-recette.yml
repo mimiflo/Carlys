@@ -270,14 +270,14 @@ jobs:
       # l'essentiel du temps d'un build à froid : on les garde d'une fois sur
       # l'autre, la clé suivant les fichiers de verrouillage.
       - name: Cache des paquets Dart
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.pub-cache
           key: pub-${{ runner.os }}-${{ hashFiles('apps/mobile/pubspec.lock') }}
           restore-keys: pub-${{ runner.os }}-
 
       - name: Cache Gradle
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             ~/.gradle/caches
@@ -1027,7 +1027,7 @@ jobs:
           cache: true
 
       - name: Cache des paquets Dart
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.pub-cache
           key: pub-${{ runner.os }}-${{ hashFiles('apps/mobile/pubspec.lock') }}
@@ -1038,7 +1038,7 @@ jobs:
       # Firebase pèsent plusieurs centaines de mégaoctets — c'est le premier
       # poste de durée d'un build iOS à froid, et chaque minute ici en vaut dix.
       - name: Cache CocoaPods
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/Library/Caches/CocoaPods
           key: pods-${{ runner.os }}-${{ hashFiles('apps/mobile/pubspec.lock') }}
