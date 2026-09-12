@@ -22,10 +22,10 @@
 #      dans l'image de l'API), donc la version qui prend le trafic doit trouver
 #      le contenu de sa propre livraison, pas celui de la précédente. Échec
 #      ⇒ ARRÊT au même titre : une bibliothèque d'exercices vide ou périmée est
-#      un produit cassé, et l'ancienne version sert encore, elle, un catalogue
-#      cohérent. C'est aussi ce qui rend l'opération AUTOMATIQUE : les trois
-#      chemins de déploiement — mise à jour automatique, promote.sh, carlysctl
-#      deploy — passent tous par ici, personne n'a plus rien à taper ;
+#      un produit cassé, et l'ancienne version, elle, sert toujours. C'est
+#      aussi ce qui rend l'opération AUTOMATIQUE : les trois chemins de
+#      déploiement — mise à jour automatique, promote.sh, carlysctl deploy —
+#      passent tous par ici, personne n'a plus rien à taper ;
 #   5. bascule, puis attente BORNÉE de la santé — /health/ready de l'API ET la
 #      page d'accueil de l'admin — bornée, sinon un service mort bloque le
 #      script au lieu de déclencher le retour arrière ;
@@ -44,16 +44,25 @@
 # Le CATALOGUE tombe sous LA MÊME CONTRAINTE, et il faut la dire en toutes
 # lettres : un retour arrière ne le rembobine pas, et il est chargé pendant que
 # la version PRÉCÉDENTE sert encore le trafic. Le cas ordinaire est sans
-# danger — le chargement ajoute et met à jour des lignes, il n'en supprime
-# aucune, et un exercice de plus reste un exercice pour le code d'avant. Le cas
-# qui casse est précis : un exercice qui utiliserait une valeur d'énumération
-# introduite par la migration du même déploiement ; le client Prisma précédent
-# ne sait pas la lire. La discipline est donc celle du schéma, transposée — la
-# valeur d'énumération à un déploiement, le contenu qui s'en sert au suivant.
+# danger — un exercice ajouté ou modifié reste un exercice pour le code
+# d'avant. Le cas qui casse est précis : un exercice qui utiliserait une valeur
+# d'énumération introduite par la migration du même déploiement ; le client
+# Prisma précédent ne sait pas la lire. La discipline est donc celle du schéma,
+# transposée — la valeur d'énumération à un déploiement, le contenu qui s'en
+# sert au suivant.
 #
-# Une interruption en cours de chargement laisse, elle, un catalogue plus
-# COURT, jamais incohérent : chaque exercice est écrit entier, et la relance
-# complète le reste.
+# Le chargement N'EST PAS purement additif, et le croire serait se rassurer à
+# bon compte : les liaisons muscles/équipements de chaque exercice sont
+# SUPPRIMÉES puis recréées, pour qu'un muscle retiré du code disparaisse
+# vraiment (catalog-sync.ts). Ces cinq écritures sont faites dans UNE
+# transaction par exercice : une interruption laisse donc chaque exercice
+# entier — soit à jour, soit inchangé — et les exercices non encore traités sur
+# leur version précédente. Cohérent, simplement incomplet ; la relance termine.
+#
+# Ce que le chargement ne fait PAS : dépublier. Un exercice retiré du code
+# reste publié en base — rien ne le repasse à `isPublished: false`. La
+# dépublication est un geste d'administration, pas un effet de bord du
+# déploiement.
 #
 # PREMIER DÉPLOIEMENT. Si DEPLOYED est vide, il n'y a pas de sha précédent :
 # aucun retour arrière n'est possible, et il n'y a rien à restaurer puisque
@@ -72,11 +81,16 @@ ROLLBACK_TRIES="${CARLYS_ROLLBACK_TRIES:-45}"  # le sha précédent a déjà dé
 # font pas partie de la bascule (les démarrer n'expose aucune nouvelle version
 # au trafic).
 DATA_SERVICES="${CARLYS_DATA_SERVICES:-postgres redis}"
-# Chargement du catalogue : « oui » par défaut, c'est-à-dire à chaque
+# Chargement du catalogue : actif par défaut, c'est-à-dire à chaque
 # déploiement. La porte de sortie existe pour un cas précis — rétablir le
 # service au plus court quand on sait le catalogue déjà à jour — et pas pour
-# s'habituer à la pousser : la laisser à « non » ramènerait la bibliothèque
+# s'habituer à la pousser : la laisser fermée ramènerait la bibliothèque
 # d'exercices périmée que cette étape existe pour empêcher.
+#
+# Lu en FAILLE FERMÉE : seule une valeur qui dit franchement NON saute
+# l'étape. Tester l'inverse (« vaut-il exactement oui ? ») ferait désarmer le
+# chargement par une majuscule ou un `true`, en silence — exactement la panne
+# qu'on refuse.
 DEPLOY_CATALOG="${CARLYS_DEPLOY_CATALOG:-oui}"
 
 usage() {
@@ -284,10 +298,10 @@ ok "schéma à jour"
 # minutes. Le test « le catalogue a-t-il changé ? » coûterait plus cher en
 # complexité qu'il ne ferait gagner, et se tromperait un jour.
 step "5/7 Catalogue d'exercices"
-if [ "$DEPLOY_CATALOG" != oui ]; then
+if vaut_non "$DEPLOY_CATALOG"; then
   warn "étape sautée : CARLYS_DEPLOY_CATALOG=$DEPLOY_CATALOG"
   info "La bibliothèque d'exercices reste telle qu'elle est en base."
-  info "Pour la charger plus tard : carlysctl catalog-seed $ENV_NAME"
+  info "Pour la charger une fois ce sha en place : carlysctl catalog-seed $ENV_NAME"
 elif ! catalogue_commande_presente "$ENV_NAME" "$ENV_FILE"; then
   # Le cas normal d'un retour arrière ou d'une promotion de vieux sha : cette
   # image est antérieure à la commande. Ce n'est pas une panne — le catalogue
@@ -296,16 +310,32 @@ elif ! catalogue_commande_presente "$ENV_NAME" "$ENV_FILE"; then
   warn "l'image sha-$SHA ne porte pas dist/cli/catalog-seed : catalogue laissé en l'état."
   info "Image antérieure à cette commande (retour arrière, promotion d'un ancien sha)."
 elif ! catalogue_charger "$ENV_NAME" "$ENV_FILE"; then
+  # Le message doit dire l'état RÉEL, pas l'état rassurant. Le CLI écrit les
+  # TEXTES avant les PHOTOS et purge le cache en partant : un échec du
+  # stockage objet — le plus fréquent — laisse donc le catalogue du NOUVEAU
+  # sha en base, servi par l'ancienne version avec les anciennes photos.
+  # Annoncer « rien n'a changé » enverrait chercher la panne au mauvais
+  # endroit.
   die "Le chargement du catalogue a échoué — DÉPLOIEMENT INTERROMPU." \
-    "RIEN n'a été basculé : api et admin tournent toujours sur ${PREVIOUS_SHA:-leur version précédente}," \
-    "et servent le catalogue qu'ils servaient déjà." \
-    "Le message ci-dessus dit lequel des deux étages a lâché : les textes" \
-    "(PostgreSQL) ou les photos (MinIO, le plus fréquent)." \
-    "Une fois la cause corrigée, redéployer suffit — l'étape est idempotente." \
-    "Pour la rejouer seule, sans redéployer :" \
-    "  carlysctl catalog-seed $ENV_NAME" \
-    "Pour basculer SANS le catalogue (il reste alors celui d'avant) :" \
-    "  CARLYS_DEPLOY_CATALOG=non carlysctl deploy $ENV_NAME $SHA"
+    "RIEN n'a été basculé : api et admin tournent toujours sur ${PREVIOUS_SHA:-leur version précédente}." \
+    "" \
+    "CE QUE LA BASE PORTE MAINTENANT dépend de l'endroit où ça a lâché, et la" \
+    "sortie ci-dessus le dit. Les textes sont écrits AVANT les photos : si le" \
+    "stockage objet a lâché (MinIO absent, S3_* fausses), les textes du sha" \
+    "$SHA sont déjà en base et le cache est purgé. Rien d'incohérent — chaque" \
+    "exercice est écrit d'un bloc — mais ce n'est pas l'état d'avant." \
+    "Si c'est Compose qui a échoué avant même la commande (minio-init en" \
+    "erreur, MinIO jamais sain), alors rien n'a été écrit." \
+    "" \
+    "Corriger la cause, puis REDÉPLOYER : l'étape est idempotente et reprend" \
+    "tout, photos comprises." \
+    "  carlysctl deploy $ENV_NAME $SHA" \
+    "Pour basculer sans réessayer le catalogue (il reste dans l'état ci-dessus) :" \
+    "  CARLYS_DEPLOY_CATALOG=non carlysctl deploy $ENV_NAME $SHA" \
+    "" \
+    "NE PAS utiliser « carlysctl catalog-seed » ici : tant que ce déploiement" \
+    "n'a pas abouti, il rechargerait le catalogue du sha PRÉCÉDENT, celui que" \
+    "le .env désigne encore."
 else
   ok "catalogue à jour"
 fi

@@ -358,6 +358,17 @@ cmd_catalog_seed() {
   [ -n "$(deployed_current "$env_name")" ] || die "« $env_name » n'a jamais été déployé." \
     "La commande vit dans l'image API : déployer d'abord (carlysctl deploy $env_name <sha>)."
 
+  # LE VERROU, depuis que le déploiement charge lui aussi le catalogue. Deux
+  # projections simultanées se marcheraient dessus pour de bon : les liaisons
+  # de chaque exercice sont reconstruites par suppression puis recréation, et
+  # la table porte une clé primaire composite — le second à écrire violerait la
+  # contrainte, et comme l'autre écrivain est le DÉPLOIEMENT, c'est lui qui
+  # échouerait. La minuterie de supervision passe toutes les deux minutes : la
+  # fenêtre n'a rien de théorique. On ATTEND plutôt que de refuser d'emblée,
+  # ce rechargement-ci n'étant pas pressé — même attente que scale, heal et
+  # env-sync.
+  lock_env "$env_name" "$CARLYS_LOCK_WAIT"
+
   # L'image déployée doit porter la commande — une image d'avant son
   # introduction ne l'a pas, et l'erreur de Node serait moins claire que
   # celle-ci.

@@ -886,8 +886,9 @@ l'écraser (§6, test 4).
 
 Le back-office est servi sur `https://app-staging.<domaine>/login` — mais à ce
 stade **personne ne peut s'y connecter**, et ce n'est pas un oubli de
-configuration : un déploiement n'exécute que `prisma migrate deploy`, jamais le
-seed de développement, et l'API n'expose aucune route de création de compte
+configuration : un déploiement applique le schéma et charge le catalogue
+d'exercices, mais il n'exécute jamais le seed de développement — celui qui
+crée des comptes —, et l'API n'expose aucune route de création de compte
 (un administrateur ne se crée pas depuis l'interface qu'il administre). Rôles,
 permissions et comptes n'existent donc que si on les crée, par la commande
 embarquée dans l'image API :
@@ -925,15 +926,30 @@ de déploiement passent par là — mise à jour automatique, `promote`, `carlys
 deploy` —, il n'y a donc aucune commande à retenir après un `git push`.
 
 L'opération est **idempotente** : les exercices sont mis à jour par slug,
-jamais dupliqués, et les photos re-déposées sous le même identifiant. Elle
-purge elle-même le cache Redis du catalogue, de sorte que l'application voit
-le résultat immédiatement, pas dans une heure.
+jamais dupliqués, et les photos re-déposées sous le même identifiant. Chaque
+exercice et ses liaisons sont écrits dans une **transaction** — une
+interruption laisse donc des exercices entiers, jamais un exercice publié sans
+groupe musculaire. La commande purge elle-même le cache Redis du catalogue, de
+sorte que l'application voit le résultat immédiatement, pas dans une heure.
 
 Un échec **arrête le déploiement**, exactement comme un échec de migration :
-rien n'est basculé, l'ancienne version continue de servir le catalogue qu'elle
-servait déjà. C'est presque toujours MinIO qui manque à l'appel — et dans ce
-cas la bascule aurait de toute façon échoué, l'API en dépend (`depends_on`).
-Le message nomme la cause ; une fois corrigée, redéployer suffit.
+rien n'est basculé, l'ancienne version continue de servir. Attention toutefois
+à ce que « rien n'est basculé » veut dire ici : les textes sont chargés
+**avant** les photos, donc un échec du stockage objet laisse en base le
+catalogue du nouveau sha, servi avec les anciennes photos. Le message d'erreur
+le dit, et la marche à suivre est la même dans tous les cas — corriger, puis
+redéployer.
+
+Deux causes possibles, de conséquences différentes : MinIO **tombé**, et le
+déploiement aurait de toute façon échoué à la bascule puisque l'API en dépend
+(`depends_on`) ; ou des variables `S3_*` **fausses** alors que MinIO va bien —
+ce cas-là ne bloquait rien auparavant et bloque désormais le déploiement,
+puisque les photos ne peuvent pas partir. C'est voulu : une bibliothèque
+d'exercices sans illustrations n'est pas une livraison réussie.
+
+Une limite à connaître, enfin : le chargement **ne dépublie pas**. Un exercice
+retiré du code reste publié en base ; l'effacer est un geste d'administration,
+pas un effet de bord du déploiement.
 
 Deux échappatoires, pour les cas où l'on veut agir autrement :
 

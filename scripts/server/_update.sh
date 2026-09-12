@@ -73,9 +73,9 @@ update_marquer_echec() {
 }
 
 update_actif() {
-  local valeur
-  valeur="$(env_value CARLYS_AUTO_UPDATE "$1" non | tr '[:upper:]' '[:lower:]')"
-  case "$valeur" in oui | yes | true | 1) printf 'oui' ;; *) printf 'non' ;; esac
+  # Les orthographes acceptées vivent dans `vaut_oui` (_common.sh), partagées
+  # avec les autres interrupteurs du serveur.
+  if vaut_oui "$(env_value CARLYS_AUTO_UPDATE "$1" non)"; then printf 'oui'; else printf 'non'; fi
 }
 
 # La branche suivie par la RECETTE. Défaut `development` : c'est la branche
