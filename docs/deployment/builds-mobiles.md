@@ -347,13 +347,19 @@ keytool -genkeypair -v \
 `keytool` fait partie du JDK ; si la commande est introuvable, elle est dans
 `$JAVA_HOME/bin/`.
 
-Ce que la commande demande ensuite :
+Ce que la commande demande ensuite, dans l'ordre (mesuré avec un JDK 21) :
 
-- **un mot de passe de magasin** (le keystore lui-même) ;
-- votre nom, votre organisation, votre ville, votre pays — ces valeurs
-  apparaissent dans le certificat, elles ne sont ni vérifiées ni sensibles ;
-- **un mot de passe de clé**. Le proposer identique à celui du magasin est
-  courant et accepté ; les deux secrets sont alors simplement égaux.
+- **un mot de passe de magasin**, saisi deux fois et jamais affiché ;
+- votre nom, votre unité, votre organisation, votre ville, votre région, votre
+  code pays — ces valeurs apparaissent dans le certificat, elles ne sont ni
+  vérifiées ni sensibles ;
+- une **confirmation** du récapitulatif. Elle attend `yes` : `oui` n'est pas
+  reconnu et la série de questions recommence.
+
+**Aucun mot de passe de CLÉ n'est demandé**, et ce n'est pas un oubli : les JDK
+récents produisent un magasin **PKCS #12**, format dans lequel la clé partage
+le mot de passe du magasin. Le secret `ANDROID_KEY_PASSWORD` vaut donc la même
+valeur que `ANDROID_KEYSTORE_PASSWORD`.
 
 `-validity 10000` fait environ 27 ans. Ce n'est pas de la superstition : Google
 Play exige un certificat valide **au moins jusqu'au 22 octobre 2033**, et une clé
@@ -362,8 +368,8 @@ expirée interdit toute mise à jour aussi sûrement qu'une clé perdue.
 `-alias upload` nomme la clé **à l'intérieur** du magasin. Un keystore peut en
 contenir plusieurs ; c'est cet alias que le secret `ANDROID_KEY_ALIAS` désigne.
 
-Un JDK récent produit un magasin au format PKCS #12 même si le fichier porte
-l'extension `.jks`, et le signale parfois par un avertissement de migration.
+Le magasin porte l'extension `.jks` mais son format est PKCS #12 (voir
+ci-dessus), et certains JDK le signalent par un avertissement de migration.
 **C'est sans conséquence** : Gradle lit les deux formats, et les workflows n'en
 supposent aucun. Ne relancez pas la commande à cause de ce message.
 
@@ -394,7 +400,7 @@ coup et disent lequel manque, sans jamais afficher la moindre valeur.
 | `ANDROID_KEYSTORE_BASE64` | le fichier `.jks` lui-même, encodé | `base64 -w0 carlys-release.jks` |
 | `ANDROID_KEYSTORE_PASSWORD` | mot de passe du **magasin** | celui saisi en premier à la création |
 | `ANDROID_KEY_ALIAS` | nom de la clé dans le magasin | `upload` avec la commande ci-dessus |
-| `ANDROID_KEY_PASSWORD` | mot de passe de la **clé** | celui saisi en second |
+| `ANDROID_KEY_PASSWORD` | mot de passe de la **clé** | **le même** que ci-dessus : en PKCS #12, la clé n'en a pas d'autre (§4.2) |
 
 ### 4.5 Où les poser — et le compromis à faire en connaissance de cause
 
