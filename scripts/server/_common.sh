@@ -312,29 +312,39 @@ dc() {
 
 # ── Lecture d'un « oui / non » écrit par un humain ──────────────────────────
 #
-# `vaut_oui <valeur>` — vrai pour oui, yes, true, 1, quelle que soit la casse
-# et les espaces autour. Extrait de `update_actif` (_update.sh), qui l'utilise
-# désormais : un second jeu d'orthographes acceptées finirait par diverger du
-# premier, et un interrupteur d'exploitation qui n'obéit pas à `OUI` est un
-# piège, pas une rigueur.
+# `vaut_oui <valeur>` — vrai pour oui, yes, true, 1, quelle que soit la casse.
+# Extrait de `update_actif` (_update.sh), qui l'utilise désormais : un second
+# jeu d'orthographes acceptées finirait par diverger du premier, et un
+# interrupteur d'exploitation qui n'obéit pas à `OUI` est un piège, pas une
+# rigueur.
+#
+# EXTRACTION STRICTEMENT ISO-SÉMANTIQUE, et la tentation d'en profiter pour
+# « améliorer » a été écartée exprès. Rogner les espaces ferait passer
+# `CARLYS_AUTO_UPDATE=oui ` — écrit à la main sur un serveur, l'espace est
+# invisible — de « non » à « oui » : sur une machine où l'exploitant a posé
+# cette valeur et constaté que rien ne partait jamais tout seul, une simple
+# mise à jour des scripts armerait le déploiement automatique de la production
+# à la passe suivante, sans un mot. Une correction d'ergonomie ne s'introduit
+# pas par la porte de service d'une refactorisation.
 #
 # À employer en FAILLE FERMÉE : tester « est-ce que l'opérateur a dit NON »
 # plutôt que « a-t-il bien dit oui », pour qu'une valeur mal orthographiée
 # garde le comportement sûr au lieu de désarmer une étape en silence.
 vaut_oui() {
   local valeur
-  valeur="$(printf '%s' "${1-}" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')"
+  valeur="$(printf '%s' "${1-}" | tr '[:upper:]' '[:lower:]')"
   case "$valeur" in oui | yes | true | 1) return 0 ;; *) return 1 ;; esac
 }
 
 # `vaut_non <valeur>` — le pendant, pour les interrupteurs dont le défaut est
 # ACTIF. Ce n'est PAS la négation de `vaut_oui` : une valeur incomprise
-# (« oiu », vide, « peut-être ») n'est ni un oui ni un non, et les deux
-# fonctions la refusent. L'appelant garde donc son comportement par défaut au
-# lieu de basculer sur une faute de frappe.
+# (« oiu », vide, « peut-être », `non ` avec une espace) n'est ni un oui ni un
+# non, et les deux fonctions la refusent. L'appelant garde donc son
+# comportement par défaut au lieu de basculer sur une faute de frappe — pour
+# un défaut ACTIF, c'est la direction sûre.
 vaut_non() {
   local valeur
-  valeur="$(printf '%s' "${1-}" | tr '[:upper:]' '[:lower:]' | tr -d '[:space:]')"
+  valeur="$(printf '%s' "${1-}" | tr '[:upper:]' '[:lower:]')"
   case "$valeur" in non | no | false | 0) return 0 ;; *) return 1 ;; esac
 }
 

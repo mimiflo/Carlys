@@ -108,7 +108,8 @@ Variables utiles :
   CARLYS_ROOT           racine des données (défaut /srv/carlys)
   CARLYS_HEALTH_TRIES   tentatives d'attente de /health/ready (défaut 60)
   CARLYS_HEALTH_DELAY   secondes entre deux tentatives (défaut 2)
-  CARLYS_DEPLOY_CATALOG « non » saute le chargement du catalogue (défaut oui)
+  CARLYS_DEPLOY_CATALOG non|no|false|0 saute le chargement du catalogue
+                        (défaut : chargé ; toute autre valeur le charge aussi)
 FIN
   exit 2
 }
@@ -320,12 +321,15 @@ elif ! catalogue_charger "$ENV_NAME" "$ENV_FILE"; then
     "RIEN n'a été basculé : api et admin tournent toujours sur ${PREVIOUS_SHA:-leur version précédente}." \
     "" \
     "CE QUE LA BASE PORTE MAINTENANT dépend de l'endroit où ça a lâché, et la" \
-    "sortie ci-dessus le dit. Les textes sont écrits AVANT les photos : si le" \
-    "stockage objet a lâché (MinIO absent, S3_* fausses), les textes du sha" \
-    "$SHA sont déjà en base et le cache est purgé. Rien d'incohérent — chaque" \
-    "exercice est écrit d'un bloc — mais ce n'est pas l'état d'avant." \
-    "Si c'est Compose qui a échoué avant même la commande (minio-init en" \
-    "erreur, MinIO jamais sain), alors rien n'a été écrit." \
+    "sortie ci-dessus le dit. Deux cas, à ne pas confondre :" \
+    "  • le stockage objet a REFUSÉ L'ÉCRITURE (S3_* fausses, bucket absent," \
+    "    disque plein) — MinIO répondait, la commande a donc tourné. Les textes" \
+    "    étant écrits AVANT les photos, le catalogue du sha $SHA est déjà en" \
+    "    base et le cache est purgé : l'ancienne version sert ces textes-là," \
+    "    avec les anciennes photos. Cohérent, mais pas l'état d'avant ;" \
+    "  • MinIO était ABSENT ou jamais sain, ou minio-init en erreur — Compose" \
+    "    n'a alors même pas lancé la commande (l'API en dépend), et RIEN n'a" \
+    "    été écrit. C'est le cas où la bascule aurait de toute façon échoué." \
     "" \
     "Corriger la cause, puis REDÉPLOYER : l'étape est idempotente et reprend" \
     "tout, photos comprises." \
@@ -334,8 +338,11 @@ elif ! catalogue_charger "$ENV_NAME" "$ENV_FILE"; then
     "  CARLYS_DEPLOY_CATALOG=non carlysctl deploy $ENV_NAME $SHA" \
     "" \
     "NE PAS utiliser « carlysctl catalog-seed » ici : tant que ce déploiement" \
-    "n'a pas abouti, il rechargerait le catalogue du sha PRÉCÉDENT, celui que" \
-    "le .env désigne encore."
+    "n'a pas abouti, le .env désigne encore le sha PRÉCÉDENT — la commande" \
+    "rechargerait donc SON catalogue (ou refuserait tout net, si c'était le" \
+    "premier déploiement). Elle reprend tout son sens une fois la bascule" \
+    "réussie, par exemple pour rattraper des photos après réparation du" \
+    "stockage."
 else
   ok "catalogue à jour"
 fi

@@ -948,13 +948,13 @@ puisque les photos ne peuvent pas partir. C'est voulu : une bibliothèque
 d'exercices sans illustrations n'est pas une livraison réussie.
 
 Une limite à connaître, enfin : le chargement **ne dépublie pas**. Un exercice
-retiré du code reste publié en base ; l'effacer est un geste d'administration,
-pas un effet de bord du déploiement.
+ou un matériel retiré du code reste visible en base ; l'effacer est un geste
+d'administration, pas un effet de bord du déploiement.
 
-Deux échappatoires, pour les cas où l'on veut agir autrement :
+Trois échappatoires, pour les cas où l'on veut agir autrement :
 
 ```bash
-# recharger le catalogue SANS redéployer (après réparation de MinIO, par ex.)
+# recharger le catalogue SANS redéployer — voir l'avertissement ci-dessous
 sudo /srv/carlys/repo/scripts/server/carlysctl catalog-seed staging
 
 # ne charger que les textes, sans le stockage objet
@@ -963,6 +963,15 @@ sudo /srv/carlys/repo/scripts/server/carlysctl catalog-seed staging --sans-photo
 # basculer sans toucher au catalogue (il reste celui d'avant)
 sudo CARLYS_DEPLOY_CATALOG=non /srv/carlys/repo/scripts/server/carlysctl deploy staging <sha12>
 ```
+
+> **`catalog-seed` charge le catalogue de la version DÉPLOYÉE**, celle que le
+> `.env` désigne — et `deploy.sh` n'y écrit le nouveau sha qu'au **succès**.
+> Après un déploiement interrompu à l'étape du catalogue, cette commande
+> rechargerait donc le catalogue du sha **précédent**, en donnant l'illusion
+> d'avoir réparé quelque chose. Dans ce cas précis : corriger la cause et
+> **redéployer**. Une fois la bascule réussie, la commande reprend tout son
+> sens — c'est le bon outil pour rattraper des photos après avoir réparé le
+> stockage objet.
 
 Strictement le catalogue, dans tous les cas : aucun compte, aucun plan
 d'abonnement n'est créé. Et tout ceci vaut pour la production sans changement,

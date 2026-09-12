@@ -44,9 +44,9 @@
 # empêche la pile de démarrer. Elle n'écrase rien, n'engendre rien, et ne
 # devine rien. La refuser laisse le serveur tomber en panne sur un oubli.
 envsync_actif() {
-  local valeur
-  valeur="$(env_value CARLYS_ENV_SYNC "$1" oui | tr '[:upper:]' '[:lower:]')"
-  case "$valeur" in non | no | false | 0) printf 'non' ;; *) printf 'oui' ;; esac
+  # Les orthographes refusées vivent dans `vaut_non` (_common.sh), partagées
+  # avec l'interrupteur du catalogue : deux listes finiraient par diverger.
+  if vaut_non "$(env_value CARLYS_ENV_SYNC "$1" oui)"; then printf 'non'; else printf 'oui'; fi
 }
 
 # Les recettes autorisées, par NOM. Pas de commande arbitraire tirée d'un

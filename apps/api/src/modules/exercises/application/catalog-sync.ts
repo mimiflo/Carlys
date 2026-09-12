@@ -72,12 +72,13 @@ export async function syncCatalog(prisma: PrismaClient): Promise<CatalogSyncSumm
     // Les liaisons sont reconstruites par SUPPRESSION puis recréation (voir
     // plus bas) : entre les deux, l'exercice est publié et n'a AUCUN groupe
     // musculaire. Hors transaction, une interruption dans cette fenêtre — un
-    // déploiement arrêté, un conteneur tué — fige cet état : l'API sert un
-    // exercice sans muscle primaire, et le groupe concerné disparaît des
-    // filtres, qui n'exposent que les groupes non vides. Depuis que le
-    // chargement est une étape automatique de CHAQUE déploiement
-    // (scripts/server/deploy.sh), cette fenêtre s'ouvre bien plus souvent
-    // qu'au temps d'une commande tapée à la main.
+    // déploiement arrêté, un conteneur tué — fige cet état : l'API sert alors
+    // un exercice sans muscle primaire, et le groupe concerné sort même des
+    // filtres si cet exercice en était l'unique membre publié (la liste des
+    // groupes n'expose que les non vides). Depuis que le chargement est une
+    // étape automatique de CHAQUE déploiement (scripts/server/deploy.sh),
+    // cette fenêtre s'ouvre bien plus souvent qu'au temps d'une commande
+    // tapée à la main.
     //
     // La transaction rend donc chaque exercice ENTIER ou INCHANGÉ. Elle ne
     // couvre volontairement pas tout le catalogue : une interruption laisse
@@ -85,40 +86,50 @@ export async function syncCatalog(prisma: PrismaClient): Promise<CatalogSyncSumm
     // état cohérent que la relance complète — là où une transaction unique
     // sur 170 exercices tiendrait une connexion et un verrou bien plus
     // longtemps, pour un gain nul.
-    await prisma.$transaction(async (tx: Prisma.TransactionClient) => {
-      const { id } = await tx.exercise.upsert({
-        where: { slug: exercise.slug },
-        update: data,
-        create: { slug: exercise.slug, ...data },
-      });
+    //
+    // `timeout` EXPLICITE : une transaction interactive expire au bout de 5 s
+    // par défaut, plafond qui n'existait pas avant et qu'on ne veut pas
+    // hériter en silence. Ces cinq écritures se comptent en millisecondes ;
+    // les quinze secondes ne servent qu'à absorber une contention passagère
+    // avec le back-office, plutôt que d'interrompre un déploiement pour une
+    // attente de verrou.
+    await prisma.$transaction(
+      async (tx: Prisma.TransactionClient) => {
+        const { id } = await tx.exercise.upsert({
+          where: { slug: exercise.slug },
+          update: data,
+          create: { slug: exercise.slug, ...data },
+        });
 
-      // Liens muscles/équipements reconstruits à chaque passage (idempotent
-      // par remplacement) : un muscle retiré d'un exercice dans le code
-      // disparaît de la base, il ne survit pas par oubli.
-      await tx.exerciseMuscle.deleteMany({ where: { exerciseId: id } });
-      await tx.exerciseMuscle.createMany({
-        data: [
-          {
+        // Liens muscles/équipements reconstruits à chaque passage (idempotent
+        // par remplacement) : un muscle retiré d'un exercice dans le code
+        // disparaît de la base, il ne survit pas par oubli.
+        await tx.exerciseMuscle.deleteMany({ where: { exerciseId: id } });
+        await tx.exerciseMuscle.createMany({
+          data: [
+            {
+              exerciseId: id,
+              muscleGroupId: mustGet(groups, exercise.primary),
+              role: ExerciseMuscleRole.PRIMARY,
+            },
+            ...exercise.secondary.map((slug) => ({
+              exerciseId: id,
+              muscleGroupId: mustGet(groups, slug),
+              role: ExerciseMuscleRole.SECONDARY,
+            })),
+          ],
+        });
+
+        await tx.exerciseEquipment.deleteMany({ where: { exerciseId: id } });
+        await tx.exerciseEquipment.createMany({
+          data: exercise.equipment.map((slug) => ({
             exerciseId: id,
-            muscleGroupId: mustGet(groups, exercise.primary),
-            role: ExerciseMuscleRole.PRIMARY,
-          },
-          ...exercise.secondary.map((slug) => ({
-            exerciseId: id,
-            muscleGroupId: mustGet(groups, slug),
-            role: ExerciseMuscleRole.SECONDARY,
+            equipmentId: mustGet(equipmentIds, slug),
           })),
-        ],
-      });
-
-      await tx.exerciseEquipment.deleteMany({ where: { exerciseId: id } });
-      await tx.exerciseEquipment.createMany({
-        data: exercise.equipment.map((slug) => ({
-          exerciseId: id,
-          equipmentId: mustGet(equipmentIds, slug),
-        })),
-      });
-    });
+        });
+      },
+      { timeout: 15_000 },
+    );
   }
 
   return {

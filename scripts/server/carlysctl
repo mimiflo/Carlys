@@ -338,9 +338,14 @@ cmd_admin_create() {
 # catalogue à chaque déploiement (étape 5/7), donc la mise à jour automatique
 # comme `promote` le font déjà. Elle reste pour les trois cas où l'on veut
 # agir SANS redéployer : rattraper un déploiement passé avec
-# CARLYS_DEPLOY_CATALOG=non, rejouer un chargement après avoir réparé MinIO,
-# ou charger les seuls textes (--sans-photos). Idempotente, comme l'étape du
-# déploiement dont elle partage le code.
+# CARLYS_DEPLOY_CATALOG=non, rejouer un chargement après avoir réparé le
+# stockage objet, ou charger les seuls textes (--sans-photos). Idempotente,
+# comme l'étape du déploiement dont elle partage le code.
+#
+# ELLE CHARGE LE CATALOGUE DE LA VERSION DÉPLOYÉE, pas d'une autre : le tag
+# vient du `.env`, que deploy.sh n'écrit qu'au SUCCÈS. Après un déploiement
+# INTERROMPU, elle rechargerait donc le catalogue du sha précédent — c'est
+# pourquoi le message d'échec de deploy.sh dit de redéployer, pas de l'appeler.
 cmd_catalog_seed() {
   local env_name file
   env_name="$(environnement_requis "${1-}")"
