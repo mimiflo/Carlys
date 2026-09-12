@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -5,6 +7,7 @@ import '../../../../design_system/design_system.dart';
 import '../../../../design_system/scenes/app_scene_container.dart';
 import '../../../authentication/presentation/controllers/auth_controller.dart';
 import '../controllers/splash_gate.dart';
+import '../widgets/athlete_photo.dart';
 import '../widgets/splash_brand_intro.dart';
 
 /// Écran de démarrage : la marque s'installe pendant que l'application se
@@ -27,12 +30,35 @@ class SplashScreen extends ConsumerStatefulWidget {
 }
 
 class _SplashScreenState extends ConsumerState<SplashScreen> {
+  bool _athletePrecached = false;
+
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(authControllerProvider.notifier).restore();
     });
+  }
+
+  /// Décode la photographie de la page de bienvenue PENDANT le plancher.
+  ///
+  /// La page qui suit s'ouvre sur un cliché de 1,4 Mo : décodé au moment où
+  /// la route se pousse, il apparaissait en retard, au milieu de la
+  /// transition — l'à-coup se voyait à chaque première ouverture. Le plancher
+  /// de cet écran offre 2,6 s de calme : le décodage s'y glisse et la
+  /// transition trouve l'image déjà en cache. Le sceau de la signature, lui,
+  /// n'a pas besoin de ce geste : cet écran-ci l'affiche déjà, il est donc
+  /// en cache bien avant la bascule.
+  ///
+  /// `didChangeDependencies` et non `initState` : le préchargement lit le
+  /// `MediaQuery` (densité d'écran) par le contexte, indisponible avant.
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    if (!_athletePrecached) {
+      _athletePrecached = true;
+      unawaited(precacheImage(const AssetImage(AthletePhoto.asset), context));
+    }
   }
 
   @override

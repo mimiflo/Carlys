@@ -8,6 +8,7 @@ import 'package:carlys_mobile/features/authentication/data/repositories/auth_rep
 import 'package:carlys_mobile/features/dashboard/presentation/screens/home_screen.dart';
 import 'package:carlys_mobile/features/onboarding/presentation/controllers/splash_gate.dart';
 import 'package:carlys_mobile/features/onboarding/presentation/screens/splash_screen.dart';
+import 'package:carlys_mobile/features/onboarding/presentation/widgets/athlete_photo.dart';
 import 'package:carlys_mobile/features/onboarding/presentation/widgets/brand_signature.dart';
 import 'package:carlys_mobile/features/onboarding/presentation/widgets/splash_brand_intro.dart';
 import 'package:carlys_mobile/features/progress/data/repositories/progress_repository_impl.dart';
@@ -92,6 +93,36 @@ void main() {
     await letHoldElapse(tester);
     expect(find.byType(SplashScreen), findsNothing);
     expect(find.byType(HomeScreen), findsOneWidget);
+  });
+
+  testWidgets('la photographie de bienvenue se précharge pendant le plancher', (
+    tester,
+  ) async {
+    // LA PANNE GARDÉE : le cliché de la page de bienvenue (1,4 Mo) se
+    // décodait au moment où la route se poussait — il apparaissait en
+    // retard, au milieu de la transition. Le décodage doit être LANCÉ dès
+    // l'écran de démarrage, pour aboutir pendant le plancher.
+    await tester.pumpWidget(app());
+    await tester.pump();
+
+    // `runAsync` : la résolution d'un AssetImage et son décodage passent par
+    // du vrai asynchrone, que l'horloge factice des tests ne fait pas
+    // avancer. `containsKey` est vrai dès l'entrée EN COURS de chargement —
+    // c'est le lancement pendant le splash qui est gardé, pas la durée du
+    // décodage.
+    await tester.runAsync(() async {
+      final key = await const AssetImage(
+        AthletePhoto.asset,
+      ).obtainKey(ImageConfiguration.empty);
+      expect(
+        imageCache.containsKey(key),
+        isTrue,
+        reason:
+            'le cliché de la page de bienvenue doit se précharger '
+            'dès l’écran de démarrage',
+      );
+    });
+    expect(find.byType(SplashScreen), findsOneWidget);
   });
 
   testWidgets('le plancher est un minimum, pas une addition', (tester) async {
