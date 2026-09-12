@@ -21,6 +21,7 @@ import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/academy/presentation/screens/academy_screen.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
 import 'package:carlys_mobile/features/authentication/presentation/screens/login_screen.dart';
+import 'package:carlys_mobile/features/authentication/presentation/screens/register_screen.dart';
 import 'package:carlys_mobile/features/carlys_profile/domain/entities/carlys_profile.dart';
 import 'package:carlys_mobile/features/carlys_profile/presentation/screens/carlys_profiles_screen.dart';
 import 'package:carlys_mobile/features/carlys_profile/presentation/widgets/carlys_profile_content.dart';
@@ -505,11 +506,15 @@ void main() {
           communityRepositoryProvider.overrideWithValue(
             InMemoryCommunityRepository(),
           ),
-          programRepositoryProvider.overrideWithValue(InMemoryProgramRepository()),
+          programRepositoryProvider.overrideWithValue(
+            InMemoryProgramRepository(),
+          ),
           // L'accueil compte les modèles enregistrés : sans dépôt local, le
           // compte partirait au réseau et laisserait un minuteur en vol.
           workoutTemplateRepositoryProvider.overrideWithValue(
-            InMemoryWorkoutTemplateRepository(workouts ?? FakeWorkoutRepository()),
+            InMemoryWorkoutTemplateRepository(
+              workouts ?? FakeWorkoutRepository(),
+            ),
           ),
           // Même raison que la communauté ci-dessus : sans doublure, l'écran
           // Profil demande ses préférences de notification au dépôt Dio réel,
@@ -551,7 +556,6 @@ void main() {
     }
     await passSplash(tester);
   }
-
 
   /// Prend la capture — après avoir vérifié qu'on est bien sur le bon écran.
   ///
@@ -750,6 +754,20 @@ void main() {
   testWidgets('connexion', (tester) async {
     await pumpApp(tester, authenticated: false);
     await capture(tester, '01-connexion', shows: find.byType(LoginScreen));
+  });
+
+  testWidgets('inscription', (tester) async {
+    // On y arrive comme un utilisateur : par le lien du bas de l'écran de
+    // connexion. Capturer l'écran en le poussant directement masquerait une
+    // rupture de navigation entre les deux.
+    await pumpApp(tester, authenticated: false);
+    await tester.tap(find.text('Créer un compte'));
+    await settle(tester);
+    await capture(
+      tester,
+      '01b-inscription',
+      shows: find.byType(RegisterScreen),
+    );
   });
 
   testWidgets('accueil', (tester) async {
