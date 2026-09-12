@@ -65,7 +65,6 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           'version de toi.',
       backdrop: const AuthBackdrop.heart(),
       brand: true,
-      heroSpaceFactor: 0.06,
       children: [
         Form(
           key: _formKey,

@@ -120,29 +120,56 @@ void main() {
     expect(seen, Brightness.dark);
   });
 
-  testWidgets('le bloc court se centre verticalement dans l’écran', (
+  testWidgets('sous la signature, le bloc court se centre verticalement', (
     tester,
   ) async {
-    // Demande produit : rien de collé en haut — un contenu plus court que
-    // l'écran se centre, à marges hautes et basses égales.
+    // Demande produit : rien de collé en haut — le titre et le formulaire
+    // se centrent dans l'espace RESTANT, à marges hautes et basses égales.
     await pump(tester, theme: AppTheme.dark(), brand: true);
 
+    final zone = tester.getRect(find.byType(SingleChildScrollView));
     final bloc = tester.getRect(
-      find.byWidgetPredicate(
-        (w) =>
-            w is Column && w.crossAxisAlignment == CrossAxisAlignment.stretch,
+      find.descendant(
+        of: find.byType(SingleChildScrollView),
+        matching: find.byWidgetPredicate(
+          (w) => w is Column && w.mainAxisSize == MainAxisSize.min,
+        ),
       ),
     );
-    final ecran = tester.view.physicalSize / tester.view.devicePixelRatio;
-    final haut = bloc.top - AppSpacing.md;
-    final bas = ecran.height - AppSpacing.md - bloc.bottom;
+    final haut = bloc.top - zone.top - AppSpacing.md;
+    final bas = zone.bottom - AppSpacing.md - bloc.bottom;
 
-    expect(haut, greaterThan(0), reason: 'le bloc ne colle pas en haut');
+    expect(haut, greaterThan(0), reason: 'le bloc ne colle pas à la signature');
     expect(
       (haut - bas).abs(),
       lessThan(1.0),
       reason: 'marges haute et basse égales : le bloc est centré',
     );
+  });
+
+  testWidgets('la signature ne bouge pas quand le contenu s’allonge', (
+    tester,
+  ) async {
+    // La cohérence demandée : le logo au même niveau sur la connexion
+    // (contenu court) et l'inscription (contenu long) — le centrage ne
+    // concerne que ce qui vit SOUS la signature, jamais elle.
+    Future<double> niveau(double hauteurContenu) async {
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.dark(),
+          home: AuthScaffold(
+            title: 'Titre témoin',
+            brand: true,
+            children: [SizedBox(height: hauteurContenu)],
+          ),
+        ),
+      );
+      return tester.getTopLeft(find.byType(AuthBrandHeader)).dy;
+    }
+
+    final court = await niveau(10);
+    final long = await niveau(2000);
+    expect(court, long);
   });
 
   testWidgets('la signature se pose au même niveau, avec ou sans retour', (

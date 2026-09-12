@@ -57,9 +57,6 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       subtitle: 'Reconnecte-toi et continue ton parcours.',
       backdrop: const AuthBackdrop.heart(),
       brand: true,
-      // Même composition que l'inscription : le cœur déborde du bord droit,
-      // la signature reste seule à gauche, le titre vient juste dessous.
-      heroSpaceFactor: 0.06,
       children: [
         Form(
           key: _formKey,
