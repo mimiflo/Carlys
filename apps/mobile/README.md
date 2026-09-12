@@ -33,7 +33,7 @@ gabarit retiré :
 
 | Variable | Défaut | À quoi elle sert |
 | --- | --- | --- |
-| `CARLYS_FLAVOR` | `development` | `development`, `staging`, `production` ou `demo` (hors ligne, données intégrées). |
+| `CARLYS_FLAVOR` | `development` | `development`, `staging` ou `production`. |
 | `CARLYS_API_BASE_URL` | `http://localhost:3000` | Base de l'API, **sans** le préfixe `/api/v1`. Depuis un émulateur Android, la machine hôte est `10.0.2.2`, jamais `localhost`. |
 | `CARLYS_PUBLIC_WEB_BASE_URL` | `http://localhost:3001` | Base de l'application **web publique** (le Next.js d'`apps/admin`), qui sert `/privacy` et `/terms` — les deux pages ouvertes par la section « Légal » des réglages et par la phrase de consentement de l'inscription. C'est la même adresse que le `PUBLIC_APP_URL` du serveur, celle que portent les liens des e-mails : jamais celle de l'API. En `staging` et `production`, le lancement **échoue** si elle est restée au défaut ou pointe en local : livrer deux liens légaux morts est un motif de refus de soumission. |
 | `CARLYS_FIREBASE_*` | — | Options push (`API_KEY`, `APP_ID`, `SENDER_ID`, `PROJECT_ID`). Les quatre ensemble ou aucune : sans elles le push est simplement inactif. Voir `config/firebase.example.json`. |
@@ -59,53 +59,17 @@ flutter build appbundle
 flutter build ios
 ```
 
-## Mode démo (sans serveur)
+## Le mode démo a été retiré
 
-Le flavor `demo` fait tourner l'application entièrement hors ligne :
-session déjà ouverte, catalogue/progression/nutrition servis par les dépôts
-en mémoire de `lib/demo/` (exception documentée à la règle « pas de données
-codées en dur » — jamais chargés dans les autres flavors ; le catalogue
-d'exercices, lui, est engendré depuis le seed, voir plus bas). Les séances
-restent réelles (Drift local), seule la synchronisation est désactivée.
-
-```bash
-flutter run --dart-define=CARLYS_FLAVOR=demo
-```
-
-Au premier lancement, la démo présente le parcours de première ouverture
-(onboarding, puis proposition Premium et repli gratuit) avant de laisser
-entrer : la session démo étant déjà ouverte, l'étape de création de compte
-est considérée comme satisfaite. Le parcours ne se rejoue pas ensuite —
-pour le revoir, désinstalle l'APK (les préférences locales sont effacées).
-
-### Catalogue de la démo : engendré, jamais recopié
-
-Le catalogue d'exercices **n'est pas écrit à la main** : il est engendré
-depuis le seed de l'API, unique source de vérité.
-
-```bash
-pnpm --filter @carlys/api demo:catalog
-```
-
-La commande écrit deux choses dans `assets/demo/`, versionnées pour que
-l'APK se construise sans lancer l'API :
-
-- `catalog.json` — exercices, groupes musculaires et matériels ;
-- `exercises/<slug>.webp` — les photos du seed, copiées telles quelles. La
-  démo n'a aucun stockage objet : ses images voyagent dans l'APK et portent
-  le schéma `asset:`, que `DiskRemoteImageCache` sait résoudre — les écrans
-  gardent ainsi un seul chemin de code, réseau ou paquet.
-
-Relance la commande après toute modification du seed. Un fichier engendré
-et versionné dérive : `apps/api/prisma/export-demo-catalog.spec.ts` compare
-le JSON au seed et fait échouer la CI si les deux divergent. C'est
-exactement la panne qu'il garde — la liste recopiée à la main n'affichait
-plus que 11 exercices sur 55, et aucune vignette.
-
-Plus aucun workflow ne construit cet APK : la CI mobile
-(`.github/workflows/mobile-recette.yml`) construit désormais la **vraie**
-application de recette, branchée sur le serveur de recette. Le mode démo
-reste compilable à la main : `flutter build apk --dart-define=CARLYS_FLAVOR=demo`.
+Un flavor `demo` (hors ligne, données intégrées, 16 Mo d'images embarquées)
+a existé jusqu'en septembre 2026 : il faisait visiter l'interface sans
+serveur. Il a été retiré quand la vraie application de recette est devenue
+installable en un lien (release `beta`, voir
+`docs/deployment/builds-mobiles.md` §3.4) : montrer l'application, c'est
+désormais montrer la vraie, branchée sur le serveur de recette — et l'APK a
+maigri d'autant. Ses dépôts en mémoire n'ont pas disparu : ils vivent dans
+`test/support/` (`in_memory_*.dart`), où ils servent de doublures aux tests
+et à la galerie de captures.
 
 ## Structure
 

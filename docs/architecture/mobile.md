@@ -215,15 +215,14 @@ du routeur (aucun `push` impératif dispersé dans les écrans).
   métabolique dès qu'une session est ouverte (`FirstRunController`).
 - L'étape effective croise l'étape stockée et l'état de session
   (`FirstRunStep.resolved`) : une session déjà ouverte satisfait l'étape
-  « compte » — c'est ce qui permet au **mode démo**, dont le dépôt d'auth
-  est toujours connecté, de présenter le tunnel puis de laisser entrer.
+  « compte » — un appareil qui a déjà un jeton valide présente le tunnel
+  puis laisse entrer sans redemander de compte.
 - L'écran d'abonnement sert de temps d'arrêt : pendant le tunnel il n'a pas
   de croix de fermeture, met en avant les **droits réels** renvoyés par le
   serveur (aucun tarif : l'API n'en expose pas) et propose explicitement de
   continuer en version gratuite en cas de refus.
 
-Couverture : `test/features/onboarding/first_run_journey_test.dart` et
-`test/features/demo/demo_mode_test.dart`.
+Couverture : `test/features/onboarding/first_run_journey_test.dart`.
 
 Cibles planifiées (branchées tranche par tranche) :
 
@@ -550,8 +549,8 @@ En `staging` et en `production`, `bootstrap()` REFUSE de démarrer si
 Le défaut est commode en développement, et c'est exactement ce qui le rend
 dangereux : un build livré sans ce `--dart-define` embarquerait deux liens
 légaux morts — ceux qu'un examinateur de magasin ouvre en premier — sans que
-rien n'échoue au build ni au lancement. `development` et `demo` gardent le
-défaut : c'est le bon réglage pour l'un, et la démo n'a pas de serveur.
+rien n'échoue au build ni au lancement. `development` garde le
+défaut : c'est là que le bon réglage EST le défaut.
 
 ```bash
 cd apps/mobile

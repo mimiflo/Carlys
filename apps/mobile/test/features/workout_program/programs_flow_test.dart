@@ -2,7 +2,7 @@ import 'package:carlys_mobile/app/app.dart';
 import 'package:carlys_mobile/app/environment/app_environment.dart';
 import 'package:carlys_mobile/app/restore/app_restore.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
-import 'package:carlys_mobile/demo/demo_templates.dart';
+
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
 import 'package:carlys_mobile/features/workout_program/data/repositories/program_repository_impl.dart';
 import 'package:carlys_mobile/features/workout_program/domain/entities/program.dart';
@@ -16,6 +16,7 @@ import '../../support/fake_auth_repository.dart';
 import '../../support/fake_program_repository.dart';
 import '../../support/fake_workout_repository.dart';
 import '../../support/first_run_prefs.dart';
+import '../../support/in_memory_workout_template_repository.dart';
 import '../../support/navigation.dart';
 
 /// Les programmes multi-semaines dans l'application : liste, création,
@@ -56,7 +57,7 @@ void main() {
           // Les modèles de la feuille d'affectation (Push force, Pull,
           // Hypertrophie) viennent du seed de démonstration.
           workoutTemplateRepositoryProvider.overrideWithValue(
-            DemoWorkoutTemplateRepository(workouts),
+            InMemoryWorkoutTemplateRepository(workouts),
           ),
           programRepositoryProvider.overrideWithValue(programs),
           syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),

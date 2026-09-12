@@ -21,8 +21,9 @@ la même forme, avec le même vocabulaire.
 > une release `demo-latest` : `CARLYS_FLAVOR=demo`, API sur `localhost`, données
 > intégrées. Il faisait visiter l'interface et ne prouvait rien du système réel —
 > il ne parlait à aucun serveur. Il est remplacé par la vraie application de
-> recette, qui vise le vrai serveur de recette. Le mode démo existe toujours dans
-> le code ; ce qui a cessé, c'est sa construction automatique.
+> recette, qui vise le vrai serveur de recette. Le mode démo lui-même a été
+> retiré du code depuis : la vraie application s'installe en un lien (§3.4),
+> montrer Carlys c'est la montrer elle.
 
 ---
 

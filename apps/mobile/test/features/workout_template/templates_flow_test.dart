@@ -2,7 +2,7 @@ import 'package:carlys_mobile/app/app.dart';
 import 'package:carlys_mobile/app/environment/app_environment.dart';
 import 'package:carlys_mobile/app/restore/app_restore.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
-import 'package:carlys_mobile/demo/demo_templates.dart';
+
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
 import 'package:carlys_mobile/features/exercises/data/repositories/exercises_repository_impl.dart';
 import 'package:carlys_mobile/features/nutrition/data/repositories/nutrition_repository_impl.dart';
@@ -20,6 +20,7 @@ import '../../support/fake_nutrition_repository.dart';
 import '../../support/fake_progress_repository.dart';
 import '../../support/fake_workout_repository.dart';
 import '../../support/first_run_prefs.dart';
+import '../../support/in_memory_workout_template_repository.dart';
 
 /// Modèles de séance, côté interface : état vide, composition d'un modèle,
 /// puis lancement d'une vraie séance pré-remplie.
@@ -81,7 +82,7 @@ void main() {
           ),
           workoutRepositoryProvider.overrideWithValue(workouts),
           workoutTemplateRepositoryProvider.overrideWithValue(
-            DemoWorkoutTemplateRepository(workouts, seed: seed),
+            InMemoryWorkoutTemplateRepository(workouts, seed: seed),
           ),
           syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
           appRestoreProvider.overrideWithValue(NoopAppRestore()),

@@ -10,9 +10,9 @@ const int waterBottleMl = 500;
 
 /// Source des données d'hydratation.
 ///
-/// Une INTERFACE, et non le data source directement : le mode démo la
-/// remplace par une version en mémoire, comme tous les autres dépôts — sans
-/// elle, la démonstration devrait ouvrir une base pour un compteur.
+/// Une INTERFACE, et non le data source directement : les tests la
+/// remplacent par une version en mémoire, comme tous les autres dépôts —
+/// sans elle, un harnais devrait ouvrir une base pour un compteur.
 abstract interface class WaterStore {
   Stream<int> watchToday();
   Future<int> addToday(int milliliters);

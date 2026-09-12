@@ -1,10 +1,11 @@
-import 'package:carlys_mobile/demo/demo_community.dart';
 import 'package:carlys_mobile/features/community/data/repositories/community_repository_impl.dart';
 import 'package:carlys_mobile/features/community/presentation/widgets/add_friend_sheet.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+
+import '../../support/in_memory_community_repository.dart';
 
 /// La feuille « Ajouter un ami » : un champ pour deux identités (e-mail ou
 /// code), et mon propre code en tête, prêt à être scanné.
@@ -15,7 +16,7 @@ void main() {
       ProviderScope(
         overrides: [
           communityRepositoryProvider.overrideWithValue(
-            DemoCommunityRepository(),
+            InMemoryCommunityRepository(),
           ),
         ],
         child: MaterialApp(
@@ -42,7 +43,7 @@ void main() {
   testWidgets('mon code s’affiche en XXXX-XXXX avec son QR', (tester) async {
     await pumpAndOpen(tester);
 
-    // Le dépôt démo répond CWDEM742 : la feuille l'affiche coupé en deux.
+    // Le dépôt d'exemple répond CWDEM742 : la feuille l'affiche coupé en deux.
     expect(find.text('CWDE-M742'), findsOneWidget);
     expect(find.byType(QrImageView), findsOneWidget);
   });

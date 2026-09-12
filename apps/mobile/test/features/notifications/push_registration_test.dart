@@ -119,16 +119,6 @@ void main() {
     },
   );
 
-  test('en démo : no-op même si la configuration est présente', () async {
-    final (registration, messenger, _) = build(
-      env: environment(flavor: AppFlavor.demo),
-    );
-    registration.ensureStarted();
-    await pumpEventQueue();
-
-    expect(messenger.obtainCalls, 0);
-  });
-
   test('configuré : le jeton est obtenu puis enregistré au serveur', () async {
     final (registration, _, repository) = build();
     registration

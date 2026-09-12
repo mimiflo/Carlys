@@ -109,21 +109,20 @@ Ouvrir le dossier dans VS Code : il proposera les extensions du dépôt
 
 ## 4. Trois façons de lancer, dans cet ordre
 
-### a. Le mode démo — commence par là
+### a. Le lancement sec — commence par là
 
 ```bash
 cd apps/mobile
-flutter run --dart-define=CARLYS_FLAVOR=demo
+flutter run
 ```
 
-Aucun serveur, aucune base : l'application tourne sur des données intégrées.
-C'est le test qui prouve que la chaîne Flutter + Android est bonne, **avant**
-d'ajouter l'API dans l'équation. Si ça marche, le poste est monté.
-
-Ce mode ne figure volontairement PAS dans les menus de lancement des IDE :
-ils ne proposent que la version connectée à l'API, celle qu'on développe et
-qu'on livre. La démo garde son utilité ailleurs — tests, galerie de
-captures, APK de démonstration.
+Sans aucun `--dart-define`, l'application part en `development` sur
+`http://localhost:3000` : elle compile, s'installe et s'ouvre même si l'API
+ne tourne pas encore. C'est le test qui prouve que la chaîne
+Flutter + Android est bonne, **avant** d'ajouter l'API dans l'équation. Sur
+un poste neuf, elle s'ouvre sur la **page de marque** (le parcours de
+première ouverture) ; si cette page s'affiche, le poste est monté — la
+suite du parcours, elle, attendra l'API.
 
 ### b. Avec l'API locale, sur émulateur
 

@@ -99,7 +99,7 @@ fabrique jamais le contenu.
 - Cycle : permission → jeton → `POST device-tokens` ; ré-enregistrement à
   chaque rafraîchissement de jeton FCM ; à la déconnexion, oubli côté serveur
   (pendant que l'appel est encore authentifié) puis invalidation locale.
-- Sans configuration (tests, CI, démo) : no-op journalisé, aucun plugin
+- Sans configuration (tests, CI) : no-op journalisé, aucun plugin
   touché — c'est ce que vérifient les tests de `PushRegistration`.
 - `scripts/bootstrap_mobile.sh` déclare `POST_NOTIFICATIONS` dans le
   manifeste Android généré (obligatoire depuis Android 13).

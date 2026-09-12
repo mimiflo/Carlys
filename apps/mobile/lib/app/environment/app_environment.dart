@@ -1,8 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 /// Flavors de l'application, alignés sur les environnements serveur.
-/// `demo` : visite hors ligne sur données intégrées, aucun serveur requis.
-enum AppFlavor { development, staging, production, demo }
+enum AppFlavor { development, staging, production }
 
 /// Options du projet Firebase (notifications push), reprises de
 /// `google-services.json` et injectées au lancement — voir
@@ -107,7 +106,6 @@ class AppEnvironment {
 
   bool get isDevelopment => flavor == AppFlavor.development;
   bool get isProduction => flavor == AppFlavor.production;
-  bool get isDemo => flavor == AppFlavor.demo;
 
   /// Préfixe complet des routes métier.
   String get apiV1Url => '$apiBaseUrl/api/v1';
@@ -129,8 +127,7 @@ class AppEnvironment {
   /// soumission. Un lancement bruyamment raté en interne coûte
   /// incomparablement moins cher.
   ///
-  /// `development` et `demo` sont épargnés : le défaut y est le bon réglage,
-  /// et la démo n'a pas de serveur du tout.
+  /// `development` est épargné : le défaut y est le bon réglage.
   /// L'ADRESSE DE L'API EST CONTRÔLÉE PAR LA MÊME RÈGLE, et pour une raison
   /// pire encore : son oubli ne se voit nulle part. Un build `production` sans
   /// `CARLYS_API_BASE_URL` se compile, se lance, affiche son écran d'accueil —
@@ -140,7 +137,7 @@ class AppEnvironment {
   /// « hors ligne », sans qu'aucun message ne nomme la cause. Le lien légal
   /// mort, au moins, se voit à l'œil ; celui-ci ne se voit qu'au support.
   void assertUsable() {
-    if (flavor == AppFlavor.development || flavor == AppFlavor.demo) return;
+    if (flavor == AppFlavor.development) return;
     if (!_isPublicWebAddress(apiBaseUrl)) {
       throw StateError(
         'CARLYS_API_BASE_URL manque ou pointe en local pour le flavor '

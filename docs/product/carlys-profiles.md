@@ -23,8 +23,7 @@ et l'on évolue d'un profil à l'autre à tout moment.
 
 - Feature `lib/features/carlys_profile/` : enum + dépôt (`PATCH /users/me`),
   actions (choisir **puis** rafraîchir l'utilisateur — la sélection affichée
-  vient toujours de `AuthUser.carlysProfile`, une seule source de vérité,
-  démo comprise).
+  vient toujours de `AuthUser.carlysProfile`, une seule source de vérité).
 - Écran `/profil-carlys` : quatre cartes (illustration, titre, description,
   chevron) fidèles à la maquette ; le profil actuel porte un badge « Ton
   profil ». Chaque carte ouvre sa fiche (`showAppSheet`) : devise, publics

@@ -25,9 +25,9 @@ abstract interface class RemoteImageCache {
   Future<Uint8List?> bytesOf(String url);
 }
 
-/// Préfixe des images EMBARQUÉES, servies au mode démonstration.
+/// Préfixe des images EMBARQUÉES dans le paquet (vignettes des groupes
+/// musculaires, notamment) : elles doivent s'afficher hors ligne.
 ///
-/// La démo tourne sans serveur : ses vignettes voyagent dans l'application.
 /// Leur donner ce schéma plutôt qu'un chemin nu évite toute ambiguïté — et
 /// permet aux écrans de garder un seul et même chemin de code, qu'une image
 /// vienne du réseau ou du paquet.
@@ -41,8 +41,8 @@ class DiskRemoteImageCache implements RemoteImageCache {
 
   final HttpClient? _injected;
 
-  /// Ouvert à la PREMIÈRE image réseau seulement : la démonstration ne sert
-  /// que des images du paquet et n'a aucune raison d'ouvrir un client HTTP.
+  /// Ouvert à la PREMIÈRE image réseau seulement : un écran qui ne sert que
+  /// des images du paquet n'a aucune raison d'ouvrir un client HTTP.
   HttpClient? _opened;
 
   HttpClient get _client => _injected ?? (_opened ??= HttpClient());

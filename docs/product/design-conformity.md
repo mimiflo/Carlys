@@ -269,9 +269,9 @@ avec celle d'un autre muscle : une anatomie fausse enseignerait une erreur.
 
 La maquette est peuplée de données d'exemple. L'application n'affiche que des
 **données réelles** : un bloc dont la donnée n'existe pas dans le domaine est
-**omis**, jamais rempli d'une valeur inventée. Le mode démo (`CARLYS_FLAVOR=demo`)
-fait exception, et lui seul : ses dépôts en mémoire (`lib/demo/`) servent un jeu
-d'exemple pour visiter l'app sans serveur.
+**omis**, jamais rempli d'une valeur inventée. Aucune exception : depuis le
+retrait du mode démo, les seuls jeux d'exemple vivent dans les doublures de
+test (`test/support/`), qui n'entrent jamais dans un binaire livré.
 
 ## La page de marque, hors maquette
 

@@ -178,9 +178,11 @@ simplement perdue (la barre est collective, pas comptable).
 ## Mobile
 
 - `CommunityRepositoryImpl` (Dio) transporte ce que le serveur a accepté de
-  dire ; le dépôt de démonstration (`lib/demo/demo_community.dart`, dont le
-  monde embarqué — amis, mots, demandes, défis, codes — vit dans
-  `lib/demo/demo_community_seed.dart`) fait vivre l'écran sans réseau.
+  dire ; la doublure en mémoire des tests
+  (`test/support/in_memory_community_repository.dart`, dont le monde
+  d'exemple — amis, mots, demandes, défis, codes — vit dans
+  `test/support/community_sample_world.dart`) fait vivre l'écran sans
+  réseau.
 - L'écran distingue HORS CONNEXION (statut dédié, comme le coach —
   `ConnectionAwareError`), panne serveur (« Réessayer » réessaie vraiment),
   premier chargement, vide (avec l'action « Ajouter un ami ») et données.
@@ -230,7 +232,7 @@ simplement perdue (la barre est collective, pas comptable).
   Le dépôt (`CommunityRepository`) expose `removeFriend`, `blockUser`,
   `unblockUser`, `listBlocked`, `reportUser`, `reportEncouragement`,
   `deleteEncouragement` : impl Dio (204 sans corps, accusé de réception du
-  signalement non relu), dépôt factice de test, dépôt de démonstration.
+  signalement non relu), doublures de test (pilotée et monde en mémoire).
 - L'accueil relaie le dernier encouragement (« X t'encourage ») quand il y en
   a un.
 - Demandes d'ami, acceptations et encouragements déclenchent une notification
@@ -275,7 +277,7 @@ simplement perdue (la barre est collective, pas comptable).
   textes visibles sans tiret cadratin), service (création AVANT la liste sur
   un mois vierge, rien sur un mois servi) ; e2e : cinq lectures concurrentes
   d'un mois vierge produisent un seul jeu, une lecture de plus ne recrée rien.
-- Widgets mobile (`test/features/community/`) : démo complète, états
+- Widgets mobile (`test/features/community/`) : monde d'exemple complet, états
   erreur/vide/chargement, acceptation de demande, ajout opaque, réglage de
   partage, défis présents sans ami (invitation dans la section « Amis »,
   pas d'état vide global, la feuille d'ajout s'ouvre ; une demande reçue

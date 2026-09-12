@@ -1,6 +1,6 @@
-/// L'application montée pour les tests de la COMMUNAUTÉ : sur le dépôt de
-/// démonstration (données embarquées, actions en mémoire) ou sur un dépôt
-/// piloté, celui qui doit distinguer erreur, chargement et vide.
+/// L'application montée pour les tests de la COMMUNAUTÉ : sur le dépôt en
+/// mémoire (monde d'exemple, actions fonctionnelles) ou sur un dépôt piloté,
+/// celui qui doit distinguer erreur, chargement et vide.
 ///
 /// Le harnais est encodé UNE fois : si l'écran change d'onglet ou de
 /// dépendances, c'est ici que ça change.
@@ -10,7 +10,6 @@ import 'package:carlys_mobile/app/app.dart';
 import 'package:carlys_mobile/app/environment/app_environment.dart';
 import 'package:carlys_mobile/app/restore/app_restore.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
-import 'package:carlys_mobile/demo/demo_overrides.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
 import 'package:carlys_mobile/features/community/data/repositories/community_repository_impl.dart';
 import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';
@@ -21,24 +20,33 @@ import 'package:flutter_test/flutter_test.dart';
 import 'fake_auth_repository.dart';
 import 'fake_community_repository.dart';
 import 'fake_workout_repository.dart';
+import 'in_memory_community_repository.dart';
 import 'navigation.dart';
 
-/// L'écran Communauté sur le dépôt de DÉMONSTRATION.
-Widget demoApp() => ProviderScope(
+/// L'écran Communauté sur le MONDE D'EXEMPLE en mémoire (amis, défis,
+/// encouragements — actions fonctionnelles, aucun réseau).
+Widget sampleWorldApp() => ProviderScope(
   overrides: [
     appEnvironmentProvider.overrideWithValue(
       const AppEnvironment(
-        flavor: AppFlavor.demo,
+        flavor: AppFlavor.development,
         apiBaseUrl: 'http://localhost:3000',
       ),
     ),
-    ...demoOverrides(),
+    authRepositoryProvider.overrideWithValue(
+      FakeAuthRepository(storedSession: true),
+    ),
     workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
+    syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
+    appRestoreProvider.overrideWithValue(NoopAppRestore()),
+    communityRepositoryProvider.overrideWithValue(
+      InMemoryCommunityRepository(),
+    ),
   ],
   child: const CarlysApp(),
 );
 
-/// L'application CONNECTÉE (hors démo), avec un dépôt communauté pilotable.
+/// L'application connectée sur un dépôt communauté PILOTABLE (erreur, vide…).
 Widget appWith(FakeCommunityRepository community) => ProviderScope(
   overrides: [
     appEnvironmentProvider.overrideWithValue(

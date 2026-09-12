@@ -28,7 +28,9 @@ export interface ExercisesPage {
 }
 
 /** Préfixe commun : l'invalidation du catalogue purge tout d'un coup. */
-const CACHE_PREFIX = 'catalog:';
+// Exporté : dist/cli/catalog-seed purge ce préfixe après un chargement direct
+// en base — une seule définition, jamais de littéral recopié.
+export const CATALOG_CACHE_PREFIX = 'catalog:';
 const LIST_TTL_SECONDS = 300;
 const DETAIL_TTL_SECONDS = 3_600;
 const REFERENCE_TTL_SECONDS = 3_600;
@@ -80,7 +82,7 @@ export class ExercisesService {
    * APRÈS la lecture du cache, jamais mise en cache.
    */
   async detail(idOrSlug: string, userId: string): Promise<ExerciseDetail> {
-    const cacheKey = `${CACHE_PREFIX}exercise:${idOrSlug.toLowerCase()}`;
+    const cacheKey = `${CATALOG_CACHE_PREFIX}exercise:${idOrSlug.toLowerCase()}`;
     let detail = await this.cache.getJson<ExerciseDetail>(cacheKey);
 
     if (detail === null) {
@@ -102,7 +104,7 @@ export class ExercisesService {
   }
 
   async muscleGroups(): Promise<MuscleGroup[]> {
-    const cacheKey = `${CACHE_PREFIX}muscle-groups`;
+    const cacheKey = `${CATALOG_CACHE_PREFIX}muscle-groups`;
     const cached = await this.cache.getJson<MuscleGroup[]>(cacheKey);
     if (cached !== null) {
       return cached;
@@ -113,7 +115,7 @@ export class ExercisesService {
   }
 
   async equipment(): Promise<Equipment[]> {
-    const cacheKey = `${CACHE_PREFIX}equipment`;
+    const cacheKey = `${CATALOG_CACHE_PREFIX}equipment`;
     const cached = await this.cache.getJson<Equipment[]>(cacheKey);
     if (cached !== null) {
       return cached;
@@ -125,7 +127,7 @@ export class ExercisesService {
 
   /** À appeler après toute mutation du catalogue (seed, admin — Étape 7). */
   invalidateCache(): Promise<void> {
-    return this.cache.invalidatePrefix(CACHE_PREFIX);
+    return this.cache.invalidatePrefix(CATALOG_CACHE_PREFIX);
   }
 
   private listCacheKey(filters: ListExercisesFilters, limit: number, cursor?: string): string {
@@ -138,6 +140,6 @@ export class ExercisesService {
       limit,
       cursor: cursor ?? null,
     });
-    return `${CACHE_PREFIX}exercises:${Buffer.from(normalized).toString('base64url')}`;
+    return `${CATALOG_CACHE_PREFIX}exercises:${Buffer.from(normalized).toString('base64url')}`;
   }
 }

@@ -15,5 +15,5 @@ Contenu :
 
 `android/` n'étant pas versionné, ces fichiers sont copiés dans
 `android/app/src/main/res/` par `scripts/android_branding.sh` (appelé par
-`scripts/bootstrap_mobile.sh` et la CI `demo-apk`), qui règle aussi le nom
+`scripts/bootstrap_mobile.sh` et la CI `mobile-recette`), qui règle aussi le nom
 affiché (« Carlys ») et la permission de notification.

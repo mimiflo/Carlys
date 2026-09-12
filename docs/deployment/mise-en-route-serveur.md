@@ -911,6 +911,32 @@ tout ce qui suit dans le back-office. La même commande vaut pour la production,
 le jour venu : `admin-create production …` — les rôles et permissions y sont
 projetés au premier appel, comme ici.
 
+### Le catalogue d'exercices
+
+Même cause, même remède : un déploiement n'exécute que les migrations, donc la
+**bibliothèque d'exercices est vide** — l'application mobile affiche l'écran,
+et rien dedans. Le catalogue (groupes musculaires, matériels, 170 exercices
+publiés et leurs photos, déposées dans MinIO) se charge par la commande
+embarquée dans l'image API :
+
+```bash
+sudo /srv/carlys/repo/scripts/server/carlysctl catalog-seed staging
+```
+
+**Idempotente** : rejouable à volonté, y compris après une mise à jour du
+catalogue dans le code — les exercices sont mis à jour par slug, jamais
+dupliqués, et les photos re-déposées sous le même identifiant. La commande
+purge elle-même le cache Redis du catalogue : l'application voit le résultat
+immédiatement, pas dans une heure. `--sans-photos` saute le stockage objet si
+MinIO n'est pas prêt — les textes se chargent, les illustrations viendront au
+passage suivant. Et l'inverse vaut aussi : des photos demandées qui ne
+peuvent pas partir (S3 mal configuré, stockage muet) font **échouer la
+commande en rouge** — les textes sont chargés, le message dit quoi corriger.
+Strictement le catalogue : aucun compte, aucun plan d'abonnement n'est créé.
+
+La même commande vaut pour la production, le jour venu :
+`catalog-seed production`.
+
 ### La boîte aux lettres de la recette
 
 Les e-mails de recette ne partent nulle part : ils atterrissent dans Mailpit.
@@ -958,8 +984,8 @@ flutter pub get
 | `CARLYS_API_BASE_URL` | `https://api-staging.carlys.example` | `https://api.carlys.example` |
 | `CARLYS_PUBLIC_WEB_BASE_URL` | `https://app-staging.carlys.example` | `https://app.carlys.example` |
 
-Les flavors acceptés sont exactement `development`, `staging`, `production` et
-`demo`. Une valeur inconnue **ne casse pas le build** : elle retombe
+Les flavors acceptés sont exactement `development`, `staging` et
+`production`. Une valeur inconnue **ne casse pas le build** : elle retombe
 silencieusement sur `development`. Écrivez-les correctement.
 
 `CARLYS_API_BASE_URL` s'écrit **sans** le préfixe `/api/v1`, que l'application

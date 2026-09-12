@@ -4,25 +4,19 @@
  * ⚠️  Les identifiants créés ici sont STRICTEMENT réservés au développement
  *     et ne doivent JAMAIS exister en production.
  *
- * Contenu : groupes musculaires, équipements, 43 exercices publiés avec les
- * photos qui les illustrent (déposées dans le stockage objet, jamais
- * embarquées dans l'application),
+ * Contenu : le catalogue complet (groupes musculaires, équipements,
+ * exercices publiés — projeté par `syncCatalog`, le MÊME code que
+ * `dist/cli/catalog-seed` sur un serveur) avec les photos qui l'illustrent
+ * (déposées dans le stockage objet, jamais embarquées dans l'application),
  * plans d'abonnement (gratuit, premium) et deux utilisateurs de
  * démonstration — le compte premium reçoit ses entitlements (droits
  * décidés côté serveur, Étape 6).
  */
 import { PREMIUM_ENTITLEMENT_KEYS } from '@carlys/api-contracts';
 import { syncAdminRbac } from '../src/modules/admin/application/admin-rbac';
-import { EQUIPMENT, EXERCISES, MUSCLE_GROUPS } from './catalog';
-import { seedExerciseMedia } from './seed-media';
-import {
-  BillingPeriod,
-  ExerciseDifficulty,
-  ExerciseMuscleRole,
-  ExerciseType,
-  PaymentProvider,
-  PrismaClient,
-} from '@prisma/client';
+import { mustGet, syncCatalog } from '../src/modules/exercises/application/catalog-sync';
+import { syncExerciseMedia } from '../src/modules/media/application/catalog-media-sync';
+import { BillingPeriod, PaymentProvider, PrismaClient } from '@prisma/client';
 import * as argon2 from 'argon2';
 
 const prisma = new PrismaClient();
@@ -32,74 +26,6 @@ const DEV_USERS = [
   { email: 'dev.premium@carlys.local', displayName: 'Dev Premium', friendCode: 'DEVPREM2' },
 ];
 const DEV_PASSWORD = 'Carlys-Dev-2026!';
-
-async function seedCatalog(): Promise<void> {
-  for (const [index, group] of MUSCLE_GROUPS.entries()) {
-    await prisma.muscleGroup.upsert({
-      where: { slug: group.slug },
-      update: { name: group.name, sortOrder: index },
-      create: { slug: group.slug, name: group.name, sortOrder: index },
-    });
-  }
-
-  for (const equipment of EQUIPMENT) {
-    await prisma.equipment.upsert({
-      where: { slug: equipment.slug },
-      update: { name: equipment.name },
-      create: equipment,
-    });
-  }
-
-  const groups = new Map(
-    (await prisma.muscleGroup.findMany()).map((group) => [group.slug, group.id]),
-  );
-  const equipmentIds = new Map(
-    (await prisma.equipment.findMany()).map((equipment) => [equipment.slug, equipment.id]),
-  );
-
-  for (const exercise of EXERCISES) {
-    const data = {
-      name: exercise.name,
-      description: exercise.description,
-      instructions: exercise.instructions,
-      difficulty: exercise.difficulty,
-      type: exercise.type,
-      isPremium: exercise.isPremium ?? false,
-      isPublished: true,
-      tags: exercise.tags,
-    };
-    const { id } = await prisma.exercise.upsert({
-      where: { slug: exercise.slug },
-      update: data,
-      create: { slug: exercise.slug, ...data },
-    });
-
-    // Liens muscles/équipements reconstruits à chaque seed (idempotent).
-    await prisma.exerciseMuscle.deleteMany({ where: { exerciseId: id } });
-    await prisma.exerciseMuscle.createMany({
-      data: [
-        {
-          exerciseId: id,
-          muscleGroupId: mustGet(groups, exercise.primary),
-          role: ExerciseMuscleRole.PRIMARY,
-        },
-        ...exercise.secondary.map((slug) => ({
-          exerciseId: id,
-          muscleGroupId: mustGet(groups, slug),
-          role: ExerciseMuscleRole.SECONDARY,
-        })),
-      ],
-    });
-
-    await prisma.exerciseEquipment.deleteMany({ where: { exerciseId: id } });
-    await prisma.exerciseEquipment.createMany({
-      data: exercise.equipment.map((slug) => ({
-        exerciseId: id,
-        equipmentId: mustGet(equipmentIds, slug),
-      })),
-    });
-  }
-}
 
 /**
  * Plans d'abonnement et correspondances produit chez les fournisseurs.
@@ -223,17 +149,9 @@ async function seedDevUsers(): Promise<void> {
   }
 }
 
-function mustGet(map: Map<string, string>, key: string): string {
-  const value = map.get(key);
-  if (value === undefined) {
-    throw new Error(`Seed incohérent : slug inconnu « ${key} »`);
-  }
-  return value;
-}
-
 async function main(): Promise<void> {
-  await seedCatalog();
-  await seedExerciseMedia(prisma);
+  await syncCatalog(prisma);
+  await syncExerciseMedia(prisma);
   await seedSubscriptionPlans();
   await seedAdministration();
   await seedDevUsers();

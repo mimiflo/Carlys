@@ -2,7 +2,7 @@ import 'package:carlys_mobile/app/app.dart';
 import 'package:carlys_mobile/app/environment/app_environment.dart';
 import 'package:carlys_mobile/app/restore/app_restore.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
-import 'package:carlys_mobile/demo/demo_templates.dart';
+
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
 import 'package:carlys_mobile/features/progress/data/repositories/progress_repository_impl.dart';
@@ -21,6 +21,7 @@ import '../../support/fake_auth_repository.dart';
 import '../../support/fake_progress_repository.dart';
 import '../../support/fake_workout_repository.dart';
 import '../../support/first_run_prefs.dart';
+import '../../support/in_memory_workout_template_repository.dart';
 
 /// Monte l'application avec TOUS ses dépôts en mémoire : l'amorçage du
 /// premier jour pousse l'écran des modèles, qui lit le dépôt de modèles —
@@ -40,7 +41,7 @@ Widget appWith(FakeProgressRepository progress) {
       ),
       workoutRepositoryProvider.overrideWithValue(workouts),
       workoutTemplateRepositoryProvider.overrideWithValue(
-        DemoWorkoutTemplateRepository(workouts),
+        InMemoryWorkoutTemplateRepository(workouts),
       ),
       syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
       appRestoreProvider.overrideWithValue(NoopAppRestore()),

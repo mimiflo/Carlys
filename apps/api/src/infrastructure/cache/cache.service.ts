@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
+import { purgePrefix } from './purge-prefix';
 import { RedisService } from './redis.service';
 
 /**
@@ -33,18 +34,13 @@ export class CacheService {
     }
   }
 
-  /** Invalidation explicite par préfixe (SCAN, jamais KEYS). */
+  /**
+   * Invalidation explicite par préfixe — le parcours vit dans
+   * `purge-prefix.ts`, partagé avec `dist/cli/catalog-seed`.
+   */
   async invalidatePrefix(prefix: string): Promise<void> {
     try {
-      const client = this.redis.getClient();
-      let cursor = '0';
-      do {
-        const [nextCursor, keys] = await client.scan(cursor, 'MATCH', `${prefix}*`, 'COUNT', 100);
-        cursor = nextCursor;
-        if (keys.length > 0) {
-          await client.del(...keys);
-        }
-      } while (cursor !== '0');
+      await purgePrefix(this.redis.getClient(), prefix);
     } catch (error) {
       this.logger.warn({ err: error, prefix }, "Cache indisponible pour l'invalidation");
     }

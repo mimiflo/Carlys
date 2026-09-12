@@ -138,12 +138,11 @@ pnpm prisma:generate
 ./scripts/bootstrap_mobile.sh
 ```
 
-> **Juste essayer l'app, sans rien installer ?** Le workflow GitHub
-> `mobile-recette` construit à chaque poussée un APK de **recette** (flavor
-> `staging`, branché sur le vrai serveur de recette), à télécharger dans
-> l'onglet Actions et à installer directement sur un téléphone Android —
-> voir `docs/deployment/builds-mobiles.md`. Le mode démo sans serveur
-> existe toujours dans le code, mais ne se construit plus automatiquement.
+> **Juste essayer l'app, sans rien installer ?** Le dernier APK de
+> **recette** (flavor `staging`, branché sur le vrai serveur de recette)
+> s'installe depuis le lien stable de la release `beta` du dépôt — voir
+> `docs/deployment/builds-mobiles.md`, §3.4. L'ancien mode démo sans
+> serveur a été retiré : montrer Carlys, c'est montrer la vraie.
 
 Ce script génère les dossiers de plateformes `android/` et `ios/` — via `scripts/mobile_platforms.sh`, qui appelle `flutter create` (org `com.carlys`, projet `carlys_mobile`) **sans laisser `pubspec.lock` bouger** — puis exécute `flutter pub get` et `flutter analyze`. Les dossiers de plateformes ne sont pas versionnés : ils se régénèrent à la demande. Ne pas appeler `flutter create` à la main : il écrase le lock et recrée un test de gabarit qui ne compile pas ici.
 

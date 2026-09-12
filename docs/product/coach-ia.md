@@ -446,15 +446,6 @@ et ne prend qu'un `CoachContext` de valeurs simples : elle se teste seule, et
 semaines n'invite plus à « continuer » mais à débloquer, et une variation de
 poids sous 400 g est du bruit de balance — elle ne dit rien.
 
-**Mode démo.** `lib/demo/demo_coach.dart` sert une conversation d'exemple —
-sans lui, l'onglet Coach de l'APK de démonstration serait un écran mort. Il
-**dit ce qu'il est** : la réponse annonce qu'elle vient d'un mode démonstration
-plutôt que de se faire passer pour un raisonnement. La séance proposée s'appuie
-sur de vrais exercices du catalogue de démonstration, donc elle se lance
-vraiment ; son plan, en revanche, n'est pas matérialisé (le dépôt de
-démonstration ne stocke pas de plan) et la séance s'ouvre comme une séance
-libre. Limite écrite dans le code.
-
 ### Couleurs — une décision à prendre
 
 La maquette montre des bulles utilisateur en dégradé violet → magenta, qui
@@ -493,7 +484,7 @@ un exercice inconnu — la réponse doit rester utilisable.
    lecture, validateur, quota, droit `ai_coaching`, tests unitaires et e2e.
    Livrable vérifiable sans une seule ligne de Flutter.
 2. ~~**Écran mobile**~~ — **fait** : dépôt, contrôleur, onglet, quatre états,
-   mode démo, tests widget. Les puces de suggestion sont calculées depuis
+   tests widget (le mode démo, construit à cette étape, a été retiré depuis). Les puces de suggestion sont calculées depuis
    l'état réel dès cette étape (elles n'ont pas d'endpoint : la règle vit sur
    l'appareil, dans `CoachContext`).
 3. **Finitions** — suggestions calculées depuis l'état réel, acceptation de

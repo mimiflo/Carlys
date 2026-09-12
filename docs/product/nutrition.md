@@ -69,8 +69,6 @@ rien quand on le presse est pire qu'un bouton éteint.
 - Accueil : la tuile Nutrition du « Résumé du jour » montre le consommé réel
   face à l'objectif (`consumedKcalTodayProvider`), et la cellule Hydratation
   ouvre la feuille d'eau (`waterStoreProvider`).
-- Démo : deux repas pré-saisis et un compteur d'eau à mi-parcours, pour que
-  « consommé / objectif » vive dès l'ouverture.
 
 ## Couverture
 

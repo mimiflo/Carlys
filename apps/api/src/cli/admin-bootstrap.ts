@@ -239,7 +239,14 @@ async function main(argv: readonly string[]): Promise<number> {
 }
 
 if (require.main === module) {
-  void main(process.argv.slice(2)).then((code) => {
-    process.exitCode = code;
-  });
+  main(process.argv.slice(2))
+    .then((code) => {
+      process.exitCode = code;
+    })
+    .catch((error: unknown) => {
+      // Une configuration invalide (validateEnv) sort en message lisible et
+      // code maîtrisé, jamais en rejet non géré à pile brute.
+      process.stderr.write(`Échec : ${(error as Error).message}\n`);
+      process.exitCode = 1;
+    });
 }

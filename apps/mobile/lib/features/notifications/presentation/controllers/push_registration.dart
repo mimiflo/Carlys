@@ -16,7 +16,7 @@ import '../../domain/services/push_messenger.dart';
 ///  - à chaque rafraîchissement de jeton par FCM : ré-enregistrement ;
 ///  - à la déconnexion : oubli côté serveur PUIS côté appareil.
 ///
-/// Sans configuration Firebase (tests, CI, démo) c'est un no-op assumé :
+/// Sans configuration Firebase (tests, CI) c'est un no-op assumé :
 /// l'application vit exactement pareil, personne n'est joignable, rien ne
 /// casse. Aucun échec ici n'atteint jamais un flux métier.
 class PushRegistration {
@@ -47,7 +47,7 @@ class PushRegistration {
     _started = true;
 
     final options = _environment.push;
-    if (_environment.isDemo || options == null) {
+    if (options == null) {
       _logger.info(
         'Notifications push inactives : pas de configuration Firebase',
       );

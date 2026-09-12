@@ -9,7 +9,7 @@ import '../../support/navigation.dart';
 
 /// L'écran Communauté sur le dépôt de DÉMONSTRATION (données embarquées,
 /// actions en mémoire) puis sur un dépôt piloté : états, demandes d'ami,
-/// défis, encouragements et confidentialité. Le harnais (`demoApp`,
+/// défis, encouragements et confidentialité. Le harnais (`sampleWorldApp`,
 /// `appWith`, `reveal`) vit dans `support/community_app.dart`.
 void main() {
   setUp(() {
@@ -29,7 +29,7 @@ void main() {
   testWidgets('fil, amis et défis servis en mémoire — privé compris', (
     tester,
   ) async {
-    await tester.pumpWidget(demoApp());
+    await tester.pumpWidget(sampleWorldApp());
     await tester.pumpAndSettle();
     await tapTab(tester, 'Communauté');
 
@@ -48,7 +48,7 @@ void main() {
   testWidgets('rejoindre un défi : participants +1 et bouton inversé', (
     tester,
   ) async {
-    await tester.pumpWidget(demoApp());
+    await tester.pumpWidget(sampleWorldApp());
     await tester.pumpAndSettle();
     await tapTab(tester, 'Communauté');
 
@@ -257,7 +257,7 @@ void main() {
   testWidgets('encourager un ami fait revenir un merci dans le fil', (
     tester,
   ) async {
-    await tester.pumpWidget(demoApp());
+    await tester.pumpWidget(sampleWorldApp());
     await tester.pumpAndSettle();
     await tapTab(tester, 'Communauté');
 

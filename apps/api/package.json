@@ -22,7 +22,7 @@
     "prisma:studio": "prisma studio",
     "prisma:seed": "ts-node prisma/seed.ts",
     "admin:bootstrap": "node dist/cli/admin-bootstrap",
-    "demo:catalog": "ts-node prisma/export-demo-catalog.ts"
+    "catalog:seed": "node dist/cli/catalog-seed"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",
@@ -83,8 +83,7 @@
     ],
     "rootDir": "src",
     "roots": [
-      "<rootDir>",
-      "<rootDir>/../prisma"
+      "<rootDir>"
     ],
     "testRegex": ".*\\.spec\\.ts$",
     "transform": {

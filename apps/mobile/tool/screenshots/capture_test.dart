@@ -16,14 +16,7 @@ import 'package:carlys_mobile/app/restore/app_restore.dart';
 import 'package:carlys_mobile/app/router/app_routes.dart';
 import 'package:carlys_mobile/core/database/app_database.dart';
 import 'package:carlys_mobile/core/errors/app_exception.dart';
-import 'package:carlys_mobile/core/media/remote_image.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
-import 'package:carlys_mobile/demo/demo_catalog.dart';
-import 'package:carlys_mobile/demo/demo_community.dart';
-import 'package:carlys_mobile/demo/demo_notifications.dart';
-import 'package:carlys_mobile/demo/demo_overrides.dart';
-import 'package:carlys_mobile/demo/demo_programs.dart';
-import 'package:carlys_mobile/demo/demo_templates.dart';
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/academy/presentation/screens/academy_screen.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
@@ -49,6 +42,7 @@ import 'package:carlys_mobile/features/exercises/presentation/widgets/muscle_gro
 import 'package:carlys_mobile/features/notifications/data/repositories/device_token_repository_impl.dart';
 import 'package:carlys_mobile/features/nutrition/data/repositories/nutrition_repository_impl.dart';
 import 'package:carlys_mobile/features/nutrition/domain/entities/nutrition.dart';
+import 'package:carlys_mobile/features/nutrition/presentation/controllers/water_controllers.dart';
 import 'package:carlys_mobile/features/nutrition/presentation/screens/nutrition_screen.dart';
 import 'package:carlys_mobile/features/onboarding/domain/first_run_step.dart';
 import 'package:carlys_mobile/features/onboarding/presentation/controllers/splash_gate.dart';
@@ -92,6 +86,11 @@ import '../../test/support/fake_progress_repository.dart';
 import '../../test/support/fake_subscription_repository.dart';
 import '../../test/support/fake_workout_repository.dart';
 import '../../test/support/first_run_prefs.dart';
+import '../../test/support/in_memory_community_repository.dart';
+import '../../test/support/in_memory_device_token_repository.dart';
+import '../../test/support/in_memory_program_repository.dart';
+import '../../test/support/in_memory_water_store.dart';
+import '../../test/support/in_memory_workout_template_repository.dart';
 
 /// Minuit de la journée en cours.
 ///
@@ -204,6 +203,22 @@ FakeExercisesRepository catalogOf() => FakeExercisesRepository([
   summary('id-4', 'Soulevé de terre', group: 'lombaires'),
   summary('id-5', 'Pompes', group: 'pectoraux'),
 ], pageSize: 10);
+
+/// La bibliothèque GARNIE des captures par groupe : un jeu réaliste pour
+/// chacun des groupes visités. Les vignettes, elles, viennent du serveur
+/// depuis le retrait du mode démo — la galerie montre donc les cartes sans
+/// photo, ce qui EST l'état d'une bibliothèque hors connexion.
+FakeExercisesRepository furnishedCatalogOf() => FakeExercisesRepository([
+  summary('dos-1', 'Tractions lestées', group: 'dos'),
+  summary('dos-2', 'Rowing barre', group: 'dos'),
+  summary('dos-3', 'Tirage horizontal', group: 'dos'),
+  summary('tri-1', 'Dips', group: 'triceps'),
+  summary('tri-2', 'Barre au front', group: 'triceps'),
+  summary('epa-1', 'Développé militaire', group: 'epaules'),
+  summary('epa-2', 'Élévations latérales', group: 'epaules'),
+  summary('abd-1', 'Planche', group: 'abdominaux'),
+  summary('abd-2', 'Crunch', group: 'abdominaux'),
+], pageSize: 20);
 
 WorkoutWithSets activeWorkoutOf() {
   // Départ RELATIF : une date fixe vieillit, et le chrono de la galerie
@@ -432,25 +447,6 @@ void main() {
     await settle(tester);
   }
 
-  /// Les PHOTOS d'exercices, pour les captures qui tournent sur le catalogue
-  /// réel : elles passent par `RemoteImage`, donc par le cache d'images, et
-  /// leur décodage demande — comme les autres — une fenêtre de temps réel.
-  Future<void> precacheExercisePhotos(WidgetTester tester) async {
-    final context = tester.element(find.byType(MaterialApp));
-    final container = ProviderScope.containerOf(context);
-    final cache = container.read(remoteImageCacheProvider);
-    final catalog = await tester.runAsync(loadDemoCatalog);
-    for (final exercise in catalog!.exercises) {
-      final url = exercise.imageUrl;
-      if (url == null) continue;
-      await tester.runAsync(() async {
-        final bytes = await cache.bytesOf(url);
-        if (bytes != null) await precacheImage(MemoryImage(bytes), context);
-      });
-    }
-    await settle(tester);
-  }
-
   Future<void> precacheBrandImages(WidgetTester tester) async {
     final context = tester.element(find.byType(MaterialApp));
     for (final asset in const [BrandSignature.markAsset, AthletePhoto.asset]) {
@@ -502,25 +498,29 @@ void main() {
           coachRepositoryProvider.overrideWithValue(
             coach ?? FakeCoachRepository(),
           ),
-          // Communauté de démonstration : sans doublure, le dépôt Dio réel
+          // Communauté en mémoire : sans doublure, le dépôt Dio réel
           // lancerait des requêtes (bloquées) dont les minuteurs de timeout
           // survivraient au test — et l'accueil perdrait sa carte « X
           // t'encourage », qui fait partie de la galerie.
           communityRepositoryProvider.overrideWithValue(
-            DemoCommunityRepository(),
+            InMemoryCommunityRepository(),
           ),
-          programRepositoryProvider.overrideWithValue(DemoProgramRepository()),
+          programRepositoryProvider.overrideWithValue(InMemoryProgramRepository()),
           // L'accueil compte les modèles enregistrés : sans dépôt local, le
           // compte partirait au réseau et laisserait un minuteur en vol.
           workoutTemplateRepositoryProvider.overrideWithValue(
-            DemoWorkoutTemplateRepository(workouts ?? FakeWorkoutRepository()),
+            InMemoryWorkoutTemplateRepository(workouts ?? FakeWorkoutRepository()),
           ),
           // Même raison que la communauté ci-dessus : sans doublure, l'écran
           // Profil demande ses préférences de notification au dépôt Dio réel,
           // et le minuteur de timeout survit au test.
           deviceTokenRepositoryProvider.overrideWithValue(
-            DemoDeviceTokenRepository(),
+            InMemoryDeviceTokenRepository(),
           ),
+          // Sans cette doublure, l'accueil ouvre un vrai flux Drift pour la
+          // jauge d'eau, et sa fermeture au démontage laisse un minuteur en
+          // vol — toute la galerie échouait sur « A Timer is still pending ».
+          waterStoreProvider.overrideWithValue(InMemoryWaterStore()),
           // Les puces se calculent depuis les modèles de séance, qui vivent
           // dans Drift : la galerie n'ouvre pas de base locale, elle fige donc
           // le résultat que la règle donnerait pour ce jeu d'exemple.
@@ -552,36 +552,6 @@ void main() {
     await passSplash(tester);
   }
 
-  /// L'application sur le CATALOGUE RÉEL, celui du mode démonstration.
-  ///
-  /// Les autres captures tournent sur un faux dépôt de cinq exercices sans
-  /// photo : pratique pour figer un écran, inutile pour montrer la
-  /// bibliothèque telle qu'elle est vraiment servie.
-  Future<void> pumpDemoApp(WidgetTester tester) async {
-    tester.view.physicalSize = const Size(1179, 2556);
-    tester.view.devicePixelRatio = 3.0;
-    addTearDown(tester.view.reset);
-    await tester.pumpWidget(
-      ProviderScope(
-        overrides: [
-          appEnvironmentProvider.overrideWithValue(
-            const AppEnvironment(
-              flavor: AppFlavor.demo,
-              apiBaseUrl: 'http://localhost:3000',
-            ),
-          ),
-          ...demoOverrides(),
-          appDatabaseProvider.overrideWith((ref) {
-            final database = AppDatabase(NativeDatabase.memory());
-            ref.onDispose(database.close);
-            return database;
-          }),
-        ],
-        child: const CarlysApp(),
-      ),
-    );
-    await passSplash(tester);
-  }
 
   /// Prend la capture — après avoir vérifié qu'on est bien sur le bon écran.
   ///
@@ -886,14 +856,14 @@ void main() {
     );
   });
 
-  /// Un groupe musculaire illustré : sa liste, puis la fiche d'un mouvement.
+  /// Un groupe musculaire garni : sa liste, puis la fiche d'un mouvement.
   Future<void> captureGroup(
     WidgetTester tester, {
     required String group,
     required String exercise,
     required String prefix,
   }) async {
-    await pumpDemoApp(tester);
+    await pumpApp(tester, exercises: furnishedCatalogOf());
     await openExercises(tester);
     await precacheMuscleImages(tester);
     // La grille est PARESSEUSE : les groupes du bas ne sont pas construits
@@ -911,12 +881,10 @@ void main() {
     await settle(tester);
     await tester.tap(find.widgetWithText(MuscleGroupCard, group));
     await settle(tester);
-    await precacheExercisePhotos(tester);
     await capture(tester, '$prefix-liste', shows: find.byType(ExerciseCard));
 
     await tester.tap(find.widgetWithText(ExerciseCard, exercise));
     await settle(tester);
-    await precacheExercisePhotos(tester);
     await capture(
       tester,
       '$prefix-fiche',
@@ -924,7 +892,7 @@ void main() {
     );
   }
 
-  testWidgets('bibliothèque illustrée — le groupe Dos', (tester) async {
+  testWidgets('bibliothèque garnie — le groupe Dos', (tester) async {
     await captureGroup(
       tester,
       group: 'Dos',
@@ -933,7 +901,7 @@ void main() {
     );
   });
 
-  testWidgets('bibliothèque illustrée — le groupe Triceps', (tester) async {
+  testWidgets('bibliothèque garnie — le groupe Triceps', (tester) async {
     await captureGroup(
       tester,
       group: 'Triceps',
@@ -942,7 +910,7 @@ void main() {
     );
   });
 
-  testWidgets('bibliothèque illustrée — le groupe Épaules', (tester) async {
+  testWidgets('bibliothèque garnie — le groupe Épaules', (tester) async {
     await captureGroup(
       tester,
       group: 'Épaules',
@@ -951,7 +919,7 @@ void main() {
     );
   });
 
-  testWidgets('bibliothèque illustrée — le groupe Abdominaux', (tester) async {
+  testWidgets('bibliothèque garnie — le groupe Abdominaux', (tester) async {
     await captureGroup(
       tester,
       group: 'Abdominaux',
@@ -999,9 +967,9 @@ void main() {
   });
 
   testWidgets('Communauté — amis, encouragements, défis', (tester) async {
-    // Sur le CATALOGUE DÉMO : la communauté n'a pas encore de serveur, seul
-    // le dépôt de démonstration a des amis et des défis à montrer.
-    await pumpDemoApp(tester);
+    // Le harnais monte déjà le monde communauté en mémoire : amis,
+    // encouragements et défis à montrer, sans réseau.
+    await pumpApp(tester);
     await goTab(tester, 'Communauté');
     await capture(tester, '29-communaute', shows: find.byType(CommunityScreen));
   });
@@ -1119,9 +1087,17 @@ void main() {
       scrollable: find.byType(Scrollable).last,
     );
     await settle(tester);
+    // Taper la LIGNE (pas l'interrupteur) ouvre l'écran d'apparence — seul
+    // endroit où choisir « Système » ou « Sombre OLED ». On y bascule sur
+    // « Clair » pour que la capture montre les réglages en thème clair,
+    // fidèle au titre du test.
     await tester.tap(find.text('Thème sombre'));
     await settle(tester);
-    await capture(tester, '14-reglages', shows: find.text('Thème sombre'));
+    await tester.tap(find.text('Clair'));
+    await settle(tester);
+    // « Sombre OLED » n'existe que sur cet écran-là ; l'étiquette de section,
+    // elle, est rendue en capitales et se cherche mal au texte exact.
+    await capture(tester, '14-reglages', shows: find.text('Sombre OLED'));
   });
 
   testWidgets('historique', (tester) async {
@@ -1156,7 +1132,7 @@ void main() {
   });
 
   testWidgets('profils Carlys', (tester) async {
-    await pumpDemoApp(tester);
+    await pumpApp(tester);
     // Illustrations des profils : décodage en temps réel avant capture,
     // comme toute image du bundle.
     final context = tester.element(find.byType(MaterialApp));

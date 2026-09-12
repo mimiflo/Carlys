@@ -2,7 +2,7 @@ import 'package:carlys_mobile/app/app.dart';
 import 'package:carlys_mobile/app/environment/app_environment.dart';
 import 'package:carlys_mobile/app/restore/app_restore.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
-import 'package:carlys_mobile/demo/demo_templates.dart';
+
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
 import 'package:carlys_mobile/features/dashboard/presentation/screens/home_screen.dart';
@@ -22,6 +22,7 @@ import '../../support/fake_auth_repository.dart';
 import '../../support/fake_progress_repository.dart';
 import '../../support/fake_workout_repository.dart';
 import '../../support/first_run_prefs.dart';
+import '../../support/in_memory_workout_template_repository.dart';
 
 /// PAGE DE CHARGEMENT : la marque s'installe, puis s'efface d'elle-même.
 ///
@@ -54,7 +55,7 @@ void main() {
       // un minuteur en vol après la fin du test — l'écran est plus dense
       // qu'avant, donc la liste paresseuse les atteint désormais.
       workoutTemplateRepositoryProvider.overrideWithValue(
-        DemoWorkoutTemplateRepository(FakeWorkoutRepository()),
+        InMemoryWorkoutTemplateRepository(FakeWorkoutRepository()),
       ),
       progressRepositoryProvider.overrideWithValue(FakeProgressRepository()),
       syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),

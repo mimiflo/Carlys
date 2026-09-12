@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'dart:io';
 import 'dart:ui' as ui;
 
@@ -62,15 +61,26 @@ void main() {
   test(
     'l’anatomie couvre les 12 groupes du catalogue, sans slug inventé',
     () async {
-      // Les slugs de référence viennent du catalogue de démonstration —
-      // généré depuis le seed de l'API : la même vérité que la bibliothèque.
-      final catalog =
-          jsonDecode(File('assets/demo/catalog.json').readAsStringSync())
-              as Map<String, dynamic>;
-      final knownSlugs = (catalog['muscleGroups'] as List<dynamic>)
-          .cast<Map<String, dynamic>>()
-          .map((group) => group['slug'] as String)
-          .toSet();
+      // Les slugs de référence sont les 12 groupes de la source de vérité
+      // du catalogue : apps/api/src/modules/exercises/application/
+      // catalog-data.ts (MUSCLE_GROUPS). Recopiés ici parce qu'un test Dart
+      // ne lit pas du TypeScript — la liste est stable, et un slug ajouté
+      // là-bas sans leçon d'anatomie ici DOIT de toute façon se décider à la
+      // main.
+      const knownSlugs = {
+        'pectoraux',
+        'dos',
+        'epaules',
+        'biceps',
+        'triceps',
+        'avant-bras',
+        'abdominaux',
+        'lombaires',
+        'fessiers',
+        'quadriceps',
+        'ischio-jambiers',
+        'mollets',
+      };
 
       final lessons = await loadAcademyPack();
       final taughtSlugs = <String>{};

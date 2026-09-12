@@ -166,8 +166,8 @@ Drift**, parce que dupliquer l'écriture serait pire :
   contrôleur de communauté pour ses défis.
 - `community` : amis (demandes par e-mail, non énumérables), encouragements,
   défis collectifs, partage de progression. Servie par `/api/v1/community`
-  (confidentialité décidée **côté serveur**) ; dépôt de démonstration dans
-  `lib/demo/` — contrat dans
+  (confidentialité décidée **côté serveur**) ; doublure en mémoire dans
+  `test/support/` — contrat dans
   [`docs/product/community.md`](../../../../docs/product/community.md).
 
 ### Le plan de séance, côté `workout_session`

@@ -25,8 +25,8 @@ une leçon minimale reste valide.
 ## Le chapitre Anatomie
 
 **Une fiche par groupe musculaire du catalogue — les 12, sans exception**
-(un test d'intégrité le garantit, contre les slugs du catalogue de
-démonstration, généré depuis le seed de l'API). Chaque fiche déroule :
+(un test d'intégrité le garantit, contre les 12 slugs de la source de
+vérité du catalogue, `catalog-data.ts` côté API). Chaque fiche déroule :
 l'illustration, le rôle du muscle, l'essentiel à retenir, la question —
 puis **« Voir les exercices de ce muscle »**, qui ouvre la bibliothèque
 déjà filtrée (`/exercises?groupe=<slug>` ; le filtre s'applique DANS

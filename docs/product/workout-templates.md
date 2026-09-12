@@ -745,12 +745,13 @@ Conséquences directes, toutes voulues :
 - l'appariement n'est jamais recalculé après coup — une correction de série via
   `PATCH` ne le remet pas en cause.
 
-### 5.7 Mode démo
+### 5.7 La doublure en mémoire
 
-Le flavor `demo` doit rester complet : `lib/demo/demo_templates.dart` fournit
-un `DemoWorkoutTemplateRepository` en mémoire (2 modèles, cohérents avec les
-exercices de `demo_workouts.dart`), branché dans `demoOverrides()`. Exception
-documentée à « pas de données codées en dur », déjà en vigueur pour ce dossier.
+Les tests (et la galerie de captures) montent l'écran sur
+`test/support/in_memory_workout_template_repository.dart` : la seule
+implémentation complète du contrat sans Drift ni réseau, lancement de séance
+compris. C'est l'ancien dépôt du mode démo, déménagé dans les tests quand ce
+mode a été retiré.
 
 ---
 
@@ -1153,7 +1154,7 @@ deux équipes s'y tiennent, elles n'ont pas besoin de se parler.
 | `apps/api/src/app/app.module.ts` (enregistrement du module)                | `lib/core/synchronization/sync_api.dart` + `sync_engine.dart` (2 opérations) |
 | `workout_sessions` : `templateId`/`templateName`, `planned*`, `lastUsedAt` | `lib/features/workout_template/presentation/**` (2 écrans + widgets) |
 | `apps/api/test/workout-templates.e2e-spec.ts`, `workouts.e2e-spec.ts`  | `lib/features/workout_session/**` (plan, en-tête, segments, pastille) |
-| Swagger + `docs/api/README.md`                                        | `lib/app/router/{app_routes,app_router}.dart`, `lib/demo/demo_templates.dart` |
+| Swagger + `docs/api/README.md`                                        | `lib/app/router/{app_routes,app_router}.dart` |
 
 **Contact unique entre les deux** : le fichier `workout-templates.ts` des
 contrats partagés. Il se livre **en premier**, avant tout le reste.

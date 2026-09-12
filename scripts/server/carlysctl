@@ -42,6 +42,9 @@ AGIR À LA MAIN
                                           (--role support|content-manager,
                                           --reset-password) — mot de passe
                                           saisi sans écho, jamais en argument
+  carlysctl catalog-seed <env>            charge le catalogue d'exercices —
+                                          idempotent (--sans-photos : textes
+                                          seuls, sans le stockage objet)
   carlysctl scale <env> <n>               fixe le nombre d'exemplaires d'API
   carlysctl heal <env>                    répare ce qui est tombé
   carlysctl env-sync <env> [--appliquer]  ajoute au .env les réglages qui lui
@@ -325,6 +328,45 @@ cmd_admin_create() {
   ok "connexion : https://${hote}.$(env_value DOMAIN "$file" '<domaine>')/login"
 }
 
+# Charge (ou met à jour) le catalogue d'exercices — groupes musculaires,
+# matériels, exercices, photos dans MinIO — via dist/cli/catalog-seed de
+# l'image API. Le seed de développement ne s'exécute jamais en déploiement :
+# sans ceci, la bibliothèque d'exercices d'un serveur fraîchement déployé est
+# VIDE. Idempotent : rejouable après chaque mise à jour du catalogue.
+cmd_catalog_seed() {
+  local env_name file
+  env_name="$(environnement_requis "${1-}")"
+  shift || true
+  local sans_photos=''
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --sans-photos) sans_photos='--sans-photos'; shift ;;
+      *) die "Option inconnue : $1" "Attendu : --sans-photos" ;;
+    esac
+  done
+  file="$(env_file "$env_name")"
+  require_commands docker
+  require_compose_file
+  [ -n "$(deployed_current "$env_name")" ] || die "« $env_name » n'a jamais été déployé." \
+    "La commande vit dans l'image API : déployer d'abord (carlysctl deploy $env_name <sha>)."
+
+  # L'image déployée doit porter la commande — une image d'avant ce commit ne
+  # l'a pas, et l'erreur de Node serait moins claire que celle-ci.
+  if ! dc "$env_name" "$file" run --rm --no-deps -T --entrypoint test api \
+      -f dist/cli/catalog-seed.js >/dev/null 2>&1; then
+    die "L'image API déployée sur « $env_name » ne porte pas encore catalog-seed." \
+      "Elle est antérieure à cette commande : déployer une version plus récente, puis relancer."
+  fi
+
+  step "Catalogue d'exercices sur « $env_name »"
+  # PAS --no-deps : les photos partent dans MinIO, qui doit être debout —
+  # compose démarre postgres/redis/minio s'ils ne le sont pas déjà.
+  # shellcheck disable=SC2086
+  dc "$env_name" "$file" run --rm -T api \
+    node dist/cli/catalog-seed $sans_photos || die "Le chargement a échoué — le message ci-dessus dit pourquoi."
+  ok "catalogue en place — l'application mobile le voit immédiatement."
+}
+
 cmd_update() {
   local env_name file
   env_name="$(environnement_requis "${1-}")"
@@ -524,6 +566,7 @@ case "$COMMANDE" in
   env-sync)  cmd_envsync "$@" ;;
   alert-test) cmd_alert_test ;;
   admin-create) cmd_admin_create "$@" ;;
+  catalog-seed) cmd_catalog_seed "$@" ;;
   prune)     cmd_prune "${1-}" ;;
   update)    cmd_update "${1-}" ;;
   supervise) cmd_supervise "${1-}" ;;

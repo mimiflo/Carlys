@@ -107,12 +107,6 @@ flutter:
     # ligne. Les images PAR EXERCICE, elles, viendront du serveur — il y en
     # aura des centaines et elles seront modifiables depuis l'admin.
     - assets/muscles/
-    # Catalogue et vignettes de la DÉMONSTRATION uniquement, engendrés depuis
-    # le seed (`pnpm --filter @carlys/api demo:catalog`). La démo tourne sans
-    # serveur : sans ces fichiers elle n'aurait ni exercices ni images. Les
-    # applications reliées à l'API, elles, ne les lisent JAMAIS.
-    - assets/demo/catalog.json
-    - assets/demo/exercises/
     # Pack d'apprentissage de l'Academy : contenu ÉDITORIAL embarqué (leçons
     # et questions), pas une donnée serveur — l'Academy fonctionne hors ligne.
     - assets/academy/

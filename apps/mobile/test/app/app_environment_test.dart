@@ -62,8 +62,8 @@ void main() {
       );
     });
 
-    test('development et demo gardent leur défaut local', () {
-      for (final flavor in [AppFlavor.development, AppFlavor.demo]) {
+    test('development garde son défaut local', () {
+      for (final flavor in [AppFlavor.development]) {
         expect(
           () => environmentOn(
             flavor,
@@ -153,15 +153,11 @@ void main() {
       );
     });
 
-    test('développement et démo gardent leur défaut', () {
+    test('développement garde son défaut', () {
       // Le défaut y est le bon réglage : le Next.js d'apps/admin sert les
-      // pages publiques sur le port 3001, et la démo n'a pas de serveur.
+      // pages publiques sur le port 3001.
       expect(
         () => environmentOn(AppFlavor.development).assertUsable(),
-        returnsNormally,
-      );
-      expect(
-        () => environmentOn(AppFlavor.demo).assertUsable(),
         returnsNormally,
       );
     });

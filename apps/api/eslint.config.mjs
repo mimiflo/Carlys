@@ -28,8 +28,9 @@ export default [
     // Quand le plafond tombe, la réponse attendue par CLAUDE.md est de DÉCOUPER,
     // jamais de contourner.
     //
-    // Le `files:` s'arrête à src/** : apps/api/prisma/catalog.ts fait 2949 lignes
-    // de données déclaratives et n'a rien à faire sous ce plafond.
+    // Le motif vise les *.service.ts : catalog-data.ts (près de 3000 lignes
+    // de données déclaratives, sous src/ pour être compilé dans l'image)
+    // n'a rien à faire sous ce plafond, et n'y est pas.
     files: ['src/**/*.service.ts'],
     rules: { 'max-lines': ['error', { max: 300, skipBlankLines: false, skipComments: false }] },
   },

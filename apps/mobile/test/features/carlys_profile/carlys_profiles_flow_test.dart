@@ -2,7 +2,6 @@ import 'package:carlys_mobile/app/app.dart';
 import 'package:carlys_mobile/app/environment/app_environment.dart';
 import 'package:carlys_mobile/app/restore/app_restore.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
-import 'package:carlys_mobile/demo/demo_overrides.dart';
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
 import 'package:carlys_mobile/features/carlys_profile/data/repositories/carlys_profile_repository_impl.dart';
@@ -17,23 +16,36 @@ import '../../support/fake_carlys_profile_repository.dart';
 import '../../support/fake_community_repository.dart';
 import '../../support/fake_workout_repository.dart';
 import '../../support/first_run_prefs.dart';
+import '../../support/in_memory_account_repositories.dart';
 import '../../support/navigation.dart';
 
 /// Les 4 profils Carlys : des identités, pas des niveaux — on les découvre
 /// depuis le profil, on lit leur fiche, on choisit, on change d'avis.
-Widget demoApp() => ProviderScope(
-  overrides: [
-    appEnvironmentProvider.overrideWithValue(
-      const AppEnvironment(
-        flavor: AppFlavor.demo,
-        apiBaseUrl: 'http://localhost:3000',
+/// L'application sur les dépôts de compte EN MÉMOIRE : le choix de profil
+/// est réellement écrit chez le dépôt d'auth, `me()` le reflète — le flux de
+/// production, sans réseau.
+Widget worldApp() {
+  final auth = InMemoryAuthRepository();
+  return ProviderScope(
+    overrides: [
+      appEnvironmentProvider.overrideWithValue(
+        const AppEnvironment(
+          flavor: AppFlavor.development,
+          apiBaseUrl: 'http://localhost:3000',
+        ),
       ),
-    ),
-    ...demoOverrides(),
-    workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
-  ],
-  child: const CarlysApp(),
-);
+      authRepositoryProvider.overrideWithValue(auth),
+      carlysProfileRepositoryProvider.overrideWithValue(
+        InMemoryCarlysProfileRepository(auth),
+      ),
+      workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
+      communityRepositoryProvider.overrideWithValue(FakeCommunityRepository()),
+      syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
+      appRestoreProvider.overrideWithValue(NoopAppRestore()),
+    ],
+    child: const CarlysApp(),
+  );
+}
 
 Widget appWith(FakeCarlysProfileRepository repository) => ProviderScope(
   overrides: [
@@ -91,7 +103,7 @@ void main() {
   testWidgets('les 4 identités s’affichent, le profil ACTUEL est marqué', (
     tester,
   ) async {
-    await tester.pumpWidget(demoApp());
+    await tester.pumpWidget(worldApp());
     await tester.pumpAndSettle();
     await openCarlysProfiles(tester);
 
@@ -113,7 +125,7 @@ void main() {
   testWidgets('la fiche montre la devise et les publics, puis on choisit', (
     tester,
   ) async {
-    await tester.pumpWidget(demoApp());
+    await tester.pumpWidget(worldApp());
     await tester.pumpAndSettle();
     await openCarlysProfiles(tester);
 
@@ -184,7 +196,7 @@ void main() {
   testWidgets('le profil choisi remonte jusqu’à la ligne du profil', (
     tester,
   ) async {
-    await tester.pumpWidget(demoApp());
+    await tester.pumpWidget(worldApp());
     await tester.pumpAndSettle();
     await openProfile(tester);
 
