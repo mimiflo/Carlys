@@ -17,10 +17,17 @@
 # ── Trois artefacts, trois usages qu'il ne faut JAMAIS confondre ──────────────
 #
 #   1. `.apk` arm64 — INSTALLABLE TOUT DE SUITE, par téléversement direct sur un
-#      téléphone. Il est signé avec la clé de DEBUG et c'est sans conséquence :
-#      Android accepte parfaitement un APK signé en debug installé hors magasin.
-#      Aucun secret n'est requis pour le produire, il est donc TOUJOURS là.
-#      C'est le livrable du jour, celui qui sert à éprouver la recette.
+#      téléphone. Aucun secret n'est requis pour le produire, il est donc
+#      TOUJOURS là : c'est le livrable du jour, celui qui sert à éprouver la
+#      recette.
+#
+#      SA SIGNATURE, ELLE, N'EST PAS SANS CONSÉQUENCE — cette ligne a longtemps
+#      affirmé le contraire. Sans les quatre secrets, Gradle signe avec une clé
+#      de debug qu'il engendre lui-même, et comme `android/` est régénéré à
+#      chaque exécution, cette clé est NEUVE à chaque build : Android installe
+#      l'APK, mais REFUSE de le poser par-dessus la version précédente. Avec les
+#      secrets, la clé du dépôt rend les mises à jour possibles en place. Voir
+#      le bloc « La signature » plus bas, et builds-mobiles.md §3.4.
 #
 #   2. `.aab` — le format des MAGASINS, et lui seul. La Play Console REFUSE un
 #      bundle signé en debug. Le dépôt ne versionne pas `android/`
@@ -549,9 +556,19 @@ jobs:
 
       # ── 2. L'APK, le livrable du jour ──────────────────────────────────────
       #
-      # Construit SANS CONDITION : il ne doit jamais être la victime
-      # collatérale d'une signature mal configurée — secrets absents, il sort
-      # quand même, simplement signé en debug.
+      # Construit sans condition d'ABSENCE : secrets non posés, il sort quand
+      # même, simplement signé en debug. C'était la garantie d'origine, et elle
+      # tient.
+      #
+      # CE QUI A CHANGÉ, ET QUI S'ASSUME : des secrets PRÉSENTS MAIS FAUX
+      # (base64 tronquée, mot de passe ou alias erroné) font désormais échouer
+      # le job AVANT ce build — donc pas d'APK du tout, et le lien bêta continue
+      # de servir le précédent. C'est délibéré. Poursuivre produirait un APK
+      # signé en debug pendant que les récapitulatifs, le LISEZ-MOI et les notes
+      # de release annoncent la clé du dépôt : un artefact qui ment sur sa
+      # propre signature est pire qu'un artefact manquant, parce qu'on ne le
+      # découvre que sur le téléphone. L'échec, lui, tombe en deux secondes avec
+      # les trois causes possibles nommées.
       #
       # Sa SIGNATURE, elle, dépend du bloc ci-dessus. Avec les secrets, la clé
       # du dépôt : l'APK d'aujourd'hui s'installe par-dessus celui d'hier, les
@@ -605,8 +622,11 @@ jobs:
           mv build/symboles-apk build/livraison/apk/symboles
 
           if [ "$SIGNATURE" = "oui" ]; then
-            ETAT_SIGNATURE="clé du dépôt — s'installe PAR-DESSUS la version précédente,
-                                        données locales conservées."
+            ETAT_SIGNATURE="clé du dépôt — s'installe PAR-DESSUS toute version portant
+                                        DÉJÀ cette clé, données locales conservées. Si
+                                        celle qui est installée vient d'un build signé en
+                                        debug (avant la pose des secrets), il reste UNE
+                                        désinstallation à faire, la dernière."
           else
             ETAT_SIGNATURE="clé de debug, régénérée à CHAQUE exécution — Android refuse
                                         de l'installer par-dessus la version précédente
@@ -634,6 +654,61 @@ jobs:
           le binaire étant obscurci (--obfuscate).
           FIN
           ls -lh "build/livraison/apk/carlys-recette-$SHA12.apk"
+
+      # VÉRIFIER, PAS AFFIRMER. Les messages de ce workflow promettent au
+      # testeur que l'APK se met à jour en place ; cette promesse ne vaut que
+      # si l'APK porte VRAIMENT le certificat du keystore. Or « les quatre
+      # secrets sont présents » ne le prouve pas : le mode d'échec réaliste de
+      # la technique employée plus haut — ajouter un bloc `signingConfigs` à la
+      # fin du script Gradle — est le NO-OP SILENCIEUX, un bloc que Gradle
+      # n'applique pas et qui laisse la signature de debug du gabarit Flutter.
+      # On compare donc l'empreinte du certificat trouvé DANS l'apk à celle de
+      # l'alias du keystore, exactement comme mobile-production.yml le fait
+      # pour son bundle. Sans ce contrôle, le pire cas est une promesse
+      # imprimée à quelqu'un qui la découvrira fausse sur son téléphone.
+      - name: La signature de l'APK est bien la nôtre
+        if: steps.signature.outputs.actif == 'oui'
+        env:
+          SHA12: ${{ steps.commit.outputs.sha12 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          keytool_bin="$(command -v keytool || echo "${JAVA_HOME:-}/bin/keytool")"
+          if [ ! -x "$keytool_bin" ]; then
+            echo "::error title=keytool introuvable::La signature de l'APK ne peut pas être vérifiée sans le JDK. Le runner GitHub en fournit un ; si cette étape échoue, ajouter actions/setup-java avant le build."
+            exit 1
+          fi
+          # `|| true` sur chaque extraction : sans lui, `pipefail` ferait
+          # échouer l'étape sur un grep vide AVANT que les messages ci-dessous
+          # aient pu nommer la cause.
+          empreinte() { grep -m1 -oE 'SHA256: [0-9A-Fa-f:]+' | cut -d' ' -f2; }
+
+          apk="build/livraison/apk/carlys-recette-$SHA12.apk"
+          bloc="$(unzip -Z1 "$apk" | grep -m1 -E '^META-INF/.*\.(RSA|DSA|EC)$' || true)"
+          if [ -z "$bloc" ]; then
+            # v2/v3 seulement (pas de bloc v1) : l'APK est signé, mais cette
+            # garde ne sait pas le lire. On ne fait pas échouer un artefact
+            # valide — on retire la promesse, qui n'est plus démontrée.
+            echo "::warning title=Signature de l'APK non vérifiable::Aucun bloc META-INF/*.RSA (signature v1) dans l'APK : impossible de comparer son certificat à celui du keystore avec keytool seul. L'APK est livré, mais ce workflow ne peut pas garantir qu'il porte la clé du dépôt."
+            exit 0
+          fi
+          unzip -p "$apk" "$bloc" > "$RUNNER_TEMP/signature-apk.bin"
+
+          obtenue="$("$keytool_bin" -printcert -file "$RUNNER_TEMP/signature-apk.bin" 2>/dev/null | empreinte || true)"
+          attendue="$("$keytool_bin" -list -v -keystore "$RUNNER_TEMP/carlys-release.jks" \
+            -alias "$KEY_ALIAS" -storepass "$KEYSTORE_PASSWORD" 2>/dev/null | empreinte || true)"
+          rm -f "$RUNNER_TEMP/signature-apk.bin"
+
+          if [ -z "$attendue" ] || [ -z "$obtenue" ]; then
+            echo "::error title=Certificat illisible::Impossible de lire l'empreinte du certificat de l'APK ou celle de l'alias « $KEY_ALIAS » dans le keystore. Vérifie ANDROID_KEY_ALIAS et ANDROID_KEYSTORE_PASSWORD — « keytool -list -keystore carlys-release.jks » donne la liste exacte des alias. Aucun mot de passe n'est affiché ici."
+            exit 1
+          fi
+          if [ "$obtenue" != "$attendue" ]; then
+            echo "::error title=L'APK n'est PAS signé avec la clé du dépôt::Empreinte trouvée dans l'APK : $obtenue — attendue (keystore, alias $KEY_ALIAS) : $attendue. C'est presque toujours la signature de DEBUG du gabarit Flutter : le bloc ajouté à android/app/build.gradle.kts n'a pas pris. Livrer cet APK en annonçant qu'il se met à jour en place serait faux."
+            exit 1
+          fi
+          echo "APK signé avec la clé du dépôt (SHA-256 : $obtenue)."
 
       - name: Artefact — APK installable
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
@@ -804,8 +879,11 @@ jobs:
             echo "Téléverser le \`.apk\` sur le téléphone et l'ouvrir (autoriser les sources"
             echo "inconnues). Compilé pour arm64 : tous les téléphones vendus depuis 2019."
             if [ "$SIGNATURE" = "oui" ]; then
-              echo "Signé avec **la clé du dépôt** : il s'installe par-dessus la version"
-              echo "précédente, les données locales sont conservées."
+              echo "Signé avec **la clé du dépôt**, et l'étape suivante l'a vérifié en"
+              echo "comparant les empreintes. Il s'installe par-dessus toute version"
+              echo "portant déjà cette clé, sans perdre les données locales. Si la version"
+              echo "installée date d'avant la pose des secrets, elle porte une clé de debug :"
+              echo "il reste **une** désinstallation à faire, la dernière."
             else
               echo "Signé avec une **clé de debug régénérée à chaque exécution** : Android le"
               echo "voit comme une autre application et REFUSE de l'installer par-dessus la"
@@ -950,9 +1028,14 @@ jobs:
           # téléphone, au moment où Android refuse l'installation sans
           # expliquer pourquoi.
           if [ "$SIGNATURE" = "oui" ]; then
-            signature_notes="**Mise à jour** : installez par-dessus la version précédente, vos données
-          locales sont conservées — tous les APK de ce lien portent la même clé de
-          signature."
+            signature_notes="**Mise à jour** : cet APK est signé avec la clé du dépôt — vérifiée par
+          comparaison d'empreintes à la construction. Installez-le par-dessus toute
+          version portant déjà cette clé, vos données locales sont conservées.
+
+          Une exception, une seule fois : si la version installée sur le téléphone date
+          d'avant la mise en place de cette clé, elle porte une signature de debug, et
+          Android refusera encore (« package conflicts with an existing package »).
+          Désinstallez Carlys, installez celui-ci, et c'est la dernière fois."
           else
             signature_notes="**Mise à jour impossible sans désinstaller.** Cet APK est signé avec une clé
           de debug que la CI régénère à chaque exécution : pour Android, chaque version

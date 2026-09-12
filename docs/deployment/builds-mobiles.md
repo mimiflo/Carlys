@@ -199,7 +199,9 @@ variantes `-staging`).
    peu importe.
 5. **Installer.** Android demandera d'autoriser l'installation depuis
    l'application qui ouvre le fichier (« Installer des applications inconnues »).
-   C'est normal et sans rapport avec la signature.
+   C'est normal et sans rapport avec la signature. Si l'installation est
+   **refusée** avec « package conflicts with an existing package », c'est
+   l'autre sujet — la signature, précisément : voir §3.4.
 6. **Ouvrir l'application, et s'en servir.** Se connecter, faire une séance,
    synchroniser. Cette étape n'est pas une formalité : voir §3.3.
 
@@ -272,10 +274,14 @@ chaque build** — chaque bêta est une application différente pour Android, et
 aucune ne peut mettre à jour la précédente. Il faut désinstaller, donc perdre
 les données locales de l'appareil.
 
-**Poser les quatre secrets du §4 règle définitivement le problème** : l'APK du
-lien bêta est alors signé avec la clé du dépôt, identique d'une exécution à
-l'autre, et les mises à jour se font en place. C'est pour cela que le §4 n'est
-plus réservé aux magasins.
+**Poser les quatre secrets du §4 au niveau du DÉPÔT règle définitivement le
+problème** : l'APK du lien bêta est alors signé avec la clé du dépôt, identique
+d'une exécution à l'autre, et les mises à jour se font en place. Le workflow ne
+se contente pas de l'affirmer, il le **vérifie** — il compare l'empreinte du
+certificat trouvé dans l'APK à celle de l'alias du keystore, et échoue plutôt
+que de livrer un artefact qui mentirait sur sa signature. C'est pour cela que
+le §4 n'est plus réservé aux magasins — et attention au §4.5 : posés sur le
+seul environnement `mobile-production`, ces secrets ne changent rien ici.
 
 Deux conséquences à connaître :
 
@@ -283,10 +289,19 @@ Deux conséquences à connaître :
   déjà installée porte une clé de debug perdue avec le runner qui l'a produite ;
   rien ne peut la mettre à jour, pas même l'APK correctement signé. On
   désinstalle une fois, on réinstalle, et c'est fini ;
-- **l'APK direct et la version Play resteront distincts.** La Play Console
-  resigne les applications avec sa propre clé (Play App Signing) : une
-  installation venue du Play Store et une installation venue de ce lien ne
-  peuvent pas se mettre à jour l'une l'autre. Choisir un canal par appareil.
+- **l'APK direct et la version Play resteront distincts**, sauf choix
+  contraire au moment d'activer Play App Signing. Par défaut, Google engendre
+  sa propre clé de signature et resigne l'application : une installation venue
+  du Play Store et une venue de ce lien ne peuvent alors pas se mettre à jour
+  l'une l'autre — choisir un canal par appareil. (Téléverser votre propre clé
+  comme clé de signature Play les réunirait, au prix d'en assumer seul la
+  garde : voir §5.)
+- **un APK de PRODUCTION ne se laisse pas remplacer par une bêta.** Le
+  `versionCode` de production commence à 100 000 quand celui de la recette suit
+  le numéro d'exécution : Android refuse l'installation d'un `versionCode`
+  inférieur, même avec la bonne clé. C'est voulu — on ne redescend pas une
+  production vers une bêta par mégarde — mais autant le savoir avant de se
+  demander pourquoi.
 
 Le récapitulatif de chaque exécution, le `LISEZ-MOI.txt` de l'artefact et les
 notes de la release `beta` disent tous les trois laquelle des deux signatures
@@ -393,10 +408,23 @@ GitHub offre deux emplacements, et ils n'ont pas la même portée.
   environnement — donc, ici, seulement par une exécution **déjà approuvée par un
   humain**.
 
-La clé de signature a sa place dans le second cas. Le revers se dit franchement :
-le workflow de recette, lui, ne les verra pas, et ne produira donc **pas** de
-`.aab`. C'est son cas nominal, pas une panne — la recette livre l'`.apk`, qui
-suffit à éprouver l'application.
+La clé de signature a sa place dans le second cas, **sauf si vous voulez des
+bêtas qui se mettent à jour**. Le revers se dit franchement, et il a deux
+volets :
+
+- le workflow de recette ne verra pas les secrets, et ne produira donc **pas**
+  de `.aab`. Ça, c'est son cas nominal, pas une panne — la recette livre
+  l'`.apk`, qui suffit à éprouver l'application ;
+- mais l'`.apk` sera alors signé avec une clé de debug **régénérée à chaque
+  exécution**, donc **aucune bêta ne pourra en mettre à jour une autre** (§3.4).
+  Chaque nouvelle version demandera une désinstallation, et les données locales
+  de l'appareil avec.
+
+Autrement dit : le §3.4 promet la mise à jour en place **à condition que les
+quatre secrets soient posés au niveau du DÉPÔT**. Les poser uniquement sur
+l'environnement `mobile-production` protège mieux la clé et laisse la bêta
+exactement aussi impossible à mettre à jour qu'avant. Les deux choix sont
+défendables ; ce qui ne l'est pas, c'est de croire avoir les deux.
 
 Le point qui décide, si vous hésitez : **la Play Console impose la même clé de
 téléversement à toutes les pistes** d'une application, piste interne comprise. Si

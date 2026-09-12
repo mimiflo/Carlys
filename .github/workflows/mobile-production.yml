@@ -496,10 +496,12 @@ jobs:
       #
       # Un .apk signé avec la clé de debug s'installe très bien par
       # téléversement direct sur un téléphone : c'est ce qui rend la RECETTE
-      # possible aujourd'hui, sans créer le moindre secret. Un .aab signé en
-      # debug, lui, est REFUSÉ par la Play Console. Les deux besoins ne se
-      # mélangent pas, et on ne fait jamais passer l'un pour l'autre : ce
-      # workflow-ci ne produit que du signé pour de vrai, ou rien.
+      # possible sans créer le moindre secret — au prix, là-bas, de mises à
+      # jour impossibles (la clé change à chaque exécution ; voir
+      # mobile-recette.yml et builds-mobiles.md §3.4). Un .aab signé en debug,
+      # lui, est REFUSÉ par la Play Console. Les deux besoins ne se mélangent
+      # pas, et on ne fait jamais passer l'un pour l'autre : ce workflow-ci ne
+      # produit que du signé pour de vrai, ou rien.
       #
       # LES QUATRE SECRETS À CRÉER, de préférence SUR L'ENVIRONNEMENT
       # `mobile-production` (Settings → Environments → mobile-production →
