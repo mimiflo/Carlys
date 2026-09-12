@@ -412,7 +412,12 @@ Deux ajouts aux tokens pour cette maquette, gardés par
   et droite du bouton). C'est le violet demandé par le produit pour
   « Se connecter » et « Créer mon compte » ; la page de bienvenue garde,
   elle, le dégradé de signature — `AppBrandButton` prend le dégradé en
-  paramètre plutôt que d'en imposer un.
+  paramètre plutôt que d'en imposer un ;
+- **`color.brand.fieldIcon`** (`#FF9ECF`), le rose clair des icônes de
+  préfixe des champs de ces écrans (enveloppe, cadenas, personne) — demandé
+  par le produit, distinct du rose des cœurs (`affection`), qui reste
+  réservé aux encouragements (`entry_field_icons_test.dart` le garde sur
+  les deux écrans réels).
 
 ## Écarts assumés
 

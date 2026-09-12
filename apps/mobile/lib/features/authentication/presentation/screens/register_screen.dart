@@ -76,6 +76,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   label: 'Nom affiché',
                   inlineLabel: true,
                   prefixIcon: AppIcons.personOutline,
+                  prefixIconColor: AppColors.fieldIcon,
                   controller: _nameController,
                   textInputAction: TextInputAction.next,
                   autofillHints: const [AutofillHints.name],
@@ -87,6 +88,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   label: 'Adresse e-mail',
                   inlineLabel: true,
                   prefixIcon: AppIcons.mail,
+                  prefixIconColor: AppColors.fieldIcon,
                   // La vérité utile au moment utile : c'est à cette adresse
                   // que la confirmation partira.
                   helper: 'Un e-mail de confirmation te sera envoyé.',
@@ -103,6 +105,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                   label: 'Mot de passe',
                   inlineLabel: true,
                   prefixIcon: AppIcons.lock,
+                  prefixIconColor: AppColors.fieldIcon,
                   helper: 'Minimum $passwordMinLength caractères.',
                   controller: _passwordController,
                   textInputAction: TextInputAction.done,

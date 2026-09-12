@@ -14,6 +14,7 @@ class AppPasswordField extends StatefulWidget {
     this.onFieldSubmitted,
     this.enabled = true,
     this.prefixIcon,
+    this.prefixIconColor,
     this.helper,
     this.inlineLabel = false,
     super.key,
@@ -28,6 +29,10 @@ class AppPasswordField extends StatefulWidget {
   final ValueChanged<String>? onFieldSubmitted;
   final bool enabled;
   final IconData? prefixIcon;
+
+  /// Couleur de l'icône de préfixe — au thème par défaut ; les écrans
+  /// d'entrée passent [AppColors.fieldIcon], le rose clair de leur maquette.
+  final Color? prefixIconColor;
 
   /// Ligne d'aide sous le champ — la contrainte de longueur, typiquement.
   final String? helper;
@@ -61,7 +66,9 @@ class _AppPasswordFieldState extends State<AppPasswordField> {
         hintText: widget.inlineLabel ? widget.label : null,
         helperText: widget.helper,
         errorText: widget.errorText,
-        prefixIcon: widget.prefixIcon == null ? null : Icon(widget.prefixIcon),
+        prefixIcon: widget.prefixIcon == null
+            ? null
+            : Icon(widget.prefixIcon, color: widget.prefixIconColor),
         suffixIcon: IconButton(
           onPressed: () => setState(() => _obscured = !_obscured),
           tooltip: _obscured

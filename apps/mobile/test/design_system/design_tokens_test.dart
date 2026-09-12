@@ -152,15 +152,17 @@ void main() {
     });
   });
 
-  group('color.brand (dégradés) ↔ AppColors', () {
-    // Les bornes des deux dégradés de marque : la signature (bienvenue) et
-    // le bouton des écrans d'entrée, relevé au pixel sur sa maquette.
+  group('color.brand (dégradés, accents) ↔ AppColors', () {
+    // Les bornes des deux dégradés de marque — la signature (bienvenue) et
+    // le bouton des écrans d'entrée, relevé au pixel sur sa maquette — et
+    // le rose clair des icônes de champ de ces mêmes écrans.
     const gradients = <String, Color>{
       'signatureStart': AppColors.signatureStart,
       'signatureMid': AppColors.signatureMid,
       'signatureEnd': AppColors.signatureEnd,
       'ctaStart': AppColors.ctaStart,
       'ctaEnd': AppColors.ctaEnd,
+      'fieldIcon': AppColors.fieldIcon,
     };
 
     test('chaque borne reflète son hexadécimal', () {

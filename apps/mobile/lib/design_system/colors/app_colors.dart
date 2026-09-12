@@ -89,6 +89,11 @@ abstract final class AppColors {
   /// Dégradé du bouton d'entrée, de gauche à droite.
   static const LinearGradient cta = LinearGradient(colors: [ctaStart, ctaEnd]);
 
+  /// Icônes de préfixe des champs des écrans d'entrée (tokens.json →
+  /// color.brand.fieldIcon) : rose clair demandé par le produit — distinct
+  /// d'[affection], le rose des cœurs, qui reste réservé aux encouragements.
+  static const Color fieldIcon = Color(0xFFFF9ECF);
+
   // Neutres
   static const Color neutral0 = Color(0xFFFFFFFF);
   static const Color neutral50 = Color(0xFFFAFAFB);

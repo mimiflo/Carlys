@@ -18,6 +18,7 @@ class AppTextField extends StatelessWidget {
     this.enabled = true,
     this.autocorrect = true,
     this.prefixIcon,
+    this.prefixIconColor,
     this.maxLines = 1,
     this.maxLength,
     this.helper,
@@ -40,6 +41,10 @@ class AppTextField extends StatelessWidget {
   final bool enabled;
   final bool autocorrect;
   final IconData? prefixIcon;
+
+  /// Couleur de l'icône de préfixe — au thème par défaut ; les écrans
+  /// d'entrée passent [AppColors.fieldIcon], le rose clair de leur maquette.
+  final Color? prefixIconColor;
 
   /// Nombre de lignes visibles ; > 1 pour un champ multiligne (notes).
   final int maxLines;
@@ -75,7 +80,9 @@ class AppTextField extends StatelessWidget {
         hintText: inlineLabel ? (hint ?? label) : hint,
         helperText: helper,
         errorText: errorText,
-        prefixIcon: prefixIcon == null ? null : Icon(prefixIcon),
+        prefixIcon: prefixIcon == null
+            ? null
+            : Icon(prefixIcon, color: prefixIconColor),
       ),
     );
 

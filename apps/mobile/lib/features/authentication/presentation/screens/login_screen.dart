@@ -15,8 +15,8 @@ import '../widgets/social_auth_buttons.dart';
 /// Connexion par e-mail. La redirection vers l'accueil est assurée par le
 /// routeur dès que l'état de session devient authentifié.
 ///
-/// Surface de MARQUE, pas d'interface : la photographie d'athlète en fond,
-/// la signature compacte en tête — la disposition de la maquette validée.
+/// Surface de MARQUE, pas d'interface : le cœur de Carlys en décor, la
+/// signature compacte en tête — la même composition que l'inscription.
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
 
@@ -68,6 +68,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   label: 'Adresse e-mail',
                   inlineLabel: true,
                   prefixIcon: AppIcons.mail,
+                  prefixIconColor: AppColors.fieldIcon,
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
                   textInputAction: TextInputAction.next,
@@ -81,6 +82,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   label: 'Mot de passe',
                   inlineLabel: true,
                   prefixIcon: AppIcons.lock,
+                  prefixIconColor: AppColors.fieldIcon,
                   controller: _passwordController,
                   textInputAction: TextInputAction.done,
                   autofillHints: const [AutofillHints.password],
