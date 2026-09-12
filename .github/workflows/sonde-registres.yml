@@ -43,17 +43,11 @@ jobs:
           sonde_image "quay.io/minio/mc:RELEASE.2025-04-16T18-13-26Z"
           sonde_image "bitnamilegacy/minio:latest"
 
-      - name: Binaires officiels signés (dl.min.io, HEAD)
+# Première passe (exécution nº 1) : quay.io porte tous les tags, Docker Hub
+# plus aucun, dl.min.io rend 410 Gone sur les binaires. Seconde passe : les
+# EMPREINTES des deux images retenues, pour les épingler par digest — même
+# logique que l'épinglage SHA des actions, contre un tag redirigé ou effacé.
+      - name: Empreintes des images retenues (quay.io)
         run: |
-          sonde_url() {
-            code=$(curl -s -o /dev/null -w '%{http_code}' -I --max-time 15 "$1" || echo 'ERREUR')
-            echo "HTTP $code  $1"
-          }
-          BASE_SRV="https://dl.min.io/server/minio/release/linux-amd64/archive"
-          BASE_MC="https://dl.min.io/client/mc/release/linux-amd64/archive"
-          sonde_url "$BASE_SRV/minio.RELEASE.2025-09-07T16-13-09Z"
-          sonde_url "$BASE_SRV/minio.RELEASE.2025-09-07T16-13-09Z.sha256sum"
-          sonde_url "$BASE_SRV/minio.RELEASE.2025-09-07T16-13-09Z.minisig"
-          sonde_url "$BASE_MC/mc.RELEASE.2025-08-13T08-35-41Z"
-          sonde_url "$BASE_MC/mc.RELEASE.2025-08-13T08-35-41Z.sha256sum"
-          sonde_url "$BASE_MC/mc.RELEASE.2025-08-13T08-35-41Z.minisig"
+          docker buildx imagetools inspect "quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z" | sed -n '1,3p'
+          docker buildx imagetools inspect "quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z" | sed -n '1,3p'
