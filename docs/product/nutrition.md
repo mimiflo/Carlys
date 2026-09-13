@@ -91,6 +91,13 @@ trois objectifs, et que le champ `goals` **discrimine** — si toutes les
 recettes se disaient bonnes pour tout, le classement de l'écran serait
 décoratif.
 
+Une garde de plus, née d'un vrai défaut : **aucun titre en double dans un même
+onglet**. Des identifiants uniques ne suffisent pas. « Déjeuner & dîner » est
+UN onglet, et deux recettes écrites séparément y ont porté le même titre, à
+quelques grammes près ; la liste se répétait à l'écran, ce qui se lit comme un
+bug plutôt que comme un choix. C'est la paire (volet, saveur) qui fait
+l'onglet, donc c'est elle que le test regroupe.
+
 ### Pas d'images, pour l'instant
 
 Les recettes n'embarquent aucune photo : l'écran s'appuie sur la typographie
@@ -131,7 +138,8 @@ rapport avec l'assiette.
   journal avant le formulaire).
 - Recettes : intégrité du pack (bilan 4/4/9 des macros à 15 % près, saveur
   obligatoire sur le volet petit-déj, trois objectifs couverts, `goals` qui
-  discrimine, rechargement après échec de lecture) ; règle de classement pure
+  discrimine, aucun titre en double dans un onglet, rechargement après échec
+  de lecture) ; règle de classement pure
   (`recipe_selection_test` : classe sans cacher, tri stable, silence sans
   cible) ; écran (bascule des volets, partage sucré/salé absent sur les repas,
   recette pour l'objectif remontée sans faire disparaître les autres, part de

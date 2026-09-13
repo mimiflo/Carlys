@@ -37,6 +37,31 @@ void main() {
     expect(recipes.map((recipe) => recipe.id).toSet().length, recipes.length);
   });
 
+  test('aucun titre en double DANS UN MÊME ONGLET', () async {
+    // Des identifiants uniques ne suffisent pas : « Déjeuner & dîner » est UN
+    // onglet, et deux recettes écrites séparément y ont porté le même titre.
+    // À l'écran, la liste se répétait, ce qui se lit comme un bug. C'est la
+    // paire (volet, saveur) qui fait l'onglet, donc c'est elle qui compte.
+    final recipes = await loadRecipesPack();
+    final parOnglet = <String, List<String>>{};
+    for (final recipe in recipes) {
+      final onglet = '${recipe.moment.name}/${recipe.saveur?.name ?? ''}';
+      parOnglet.putIfAbsent(onglet, () => []).add(recipe.title.toLowerCase());
+    }
+
+    for (final entree in parOnglet.entries) {
+      final titres = entree.value;
+      final doublons = titres.where(
+        (titre) => titres.where((autre) => autre == titre).length > 1,
+      );
+      expect(
+        doublons,
+        isEmpty,
+        reason: 'onglet ${entree.key} : ${doublons.toSet().join(', ')}',
+      );
+    }
+  });
+
   test(
     'LE BILAN DES MACROS TOMBE : 4/4/9 contre les calories annoncées',
     () async {

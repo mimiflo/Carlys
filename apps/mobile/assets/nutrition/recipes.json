@@ -627,12 +627,12 @@
       "id": "dej-dahl-lentilles-corail-epinards",
       "moment": "repas",
       "title": "Dahl de lentilles corail aux épinards",
-      "summary": "Un plat végétarien très riche en fibres qui cale longtemps pour 450 kcal.",
+      "summary": "Un plat végétarien très riche en fibres qui cale longtemps pour 470 kcal.",
       "minutes": 30,
-      "kcal": 450,
-      "proteinG": 25,
-      "carbsG": 55,
-      "fatG": 13,
+      "kcal": 470,
+      "proteinG": 26,
+      "carbsG": 62,
+      "fatG": 12,
       "goals": [
         "loseWeight",
         "maintain"
@@ -696,10 +696,10 @@
       "title": "Saumon rôti, quinoa et courgettes",
       "summary": "Un plat chaud riche en oméga 3 et en protéines, qui cuit au four pendant que le quinoa gonfle.",
       "minutes": 35,
-      "kcal": 535,
+      "kcal": 555,
       "proteinG": 37,
       "carbsG": 40,
-      "fatG": 24,
+      "fatG": 27,
       "goals": [
         "maintain",
         "gainMuscle"
@@ -792,7 +792,7 @@
       "minutes": 20,
       "kcal": 400,
       "proteinG": 41,
-      "carbsG": 37,
+      "carbsG": 40,
       "fatG": 8,
       "goals": [
         "loseWeight",
@@ -807,6 +807,7 @@
         "10 ml de sauce soja",
         "1 gousse d'ail",
         "1/2 citron",
+        "sel",
         "poivre"
       ],
       "steps": [
@@ -848,36 +849,40 @@
       ]
     },
     {
-      "id": "din-dahl-lentilles-corail-epinards",
+      "id": "din-tofu-nouilles-completes-legumes",
       "moment": "repas",
-      "title": "Dahl de lentilles corail aux épinards",
-      "summary": "Un dîner végétarien riche en fibres qui cale longtemps grâce aux lentilles corail, pour un coût calorique modéré.",
+      "saveur": null,
+      "title": "Sauté de tofu, nouilles complètes et légumes croquants",
+      "summary": "Un plat du soir sans viande ni poisson, 28 g de protéines végétales et des légumes qui restent croquants.",
       "minutes": 25,
-      "kcal": 465,
-      "proteinG": 24,
-      "carbsG": 55,
-      "fatG": 14,
+      "kcal": 500,
+      "proteinG": 28,
+      "carbsG": 51,
+      "fatG": 20,
       "goals": [
-        "loseWeight",
-        "maintain"
+        "maintain",
+        "gainMuscle"
       ],
       "ingredients": [
-        "80 g de lentilles corail sèches",
-        "100 ml de lait de coco allégé",
-        "100 g de tomates concassées en conserve",
-        "80 g de pousses d'épinards",
-        "60 g d'oignon (1 petit)",
-        "5 g d'huile d'olive (1 cuillère à café)",
-        "1 cuillère à café de curry en poudre",
-        "1/2 cuillère à café de cumin moulu",
+        "150 g de tofu ferme nature",
+        "50 g de nouilles complètes (poids cru)",
+        "100 g de carottes",
+        "100 g de poivron rouge",
+        "1 gousse d'ail",
+        "10 g de gingembre frais",
+        "15 ml de sauce soja",
+        "6 g d'huile de colza",
+        "5 g de graines de sésame",
         "sel"
       ],
       "steps": [
-        "Émince l'oignon et fais-le suer 4 minutes dans l'huile avec le curry et le cumin.",
-        "Ajoute les lentilles rincées, les tomates concassées et 250 ml d'eau, puis porte à ébullition.",
-        "Baisse le feu et laisse mijoter 15 minutes à couvert, en remuant de temps en temps.",
-        "Verse le lait de coco et les épinards, poursuis 2 minutes jusqu'à ce que les feuilles tombent.",
-        "Sale, écrase quelques lentilles à la cuillère si tu veux un dahl plus épais, et sers."
+        "Égoutte le tofu et presse-le 10 minutes entre deux feuilles de papier absorbant sous une assiette lestée, puis coupe-le en cubes de 2 cm.",
+        "Porte une casserole d'eau salée à ébullition et fais cuire les nouilles le temps indiqué sur le paquet, puis égoutte-les.",
+        "Pendant ce temps, taille les carottes et le poivron en fines lanières, puis hache l'ail et le gingembre.",
+        "Chauffe l'huile dans une poêle à feu vif et fais dorer les cubes de tofu 5 minutes sans y toucher, puis retourne-les pour colorer les autres faces.",
+        "Ajoute les légumes et fais-les sauter 4 minutes : ils doivent rester croquants.",
+        "Ajoute l'ail, le gingembre et la sauce soja, puis mélange encore 1 minute.",
+        "Verse les nouilles égouttées dans la poêle, mélange hors du feu et parsème de graines de sésame."
       ]
     },
     {
