@@ -225,9 +225,21 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
       if (set == null) {
         return; // déjà purgée : rien à supprimer, rien à envoyer
       }
-      await (_db.update(_db.localWorkoutSets)
-            ..where((row) => row.id.equals(setId)))
-          .write(const LocalWorkoutSetsCompanion(deleted: Value(true)));
+      await (_db.update(
+        _db.localWorkoutSets,
+      )..where((row) => row.id.equals(setId))).write(
+        const LocalWorkoutSetsCompanion(
+          deleted: Value(true),
+          // `pending` AVEC la pierre tombale, et pas seulement elle. Le
+          // rapatriement efface les séries `synced` pour reproduire
+          // l'état du serveur, et ne protège que ce qui ne lui appartient
+          // pas encore (`syncStatus != 'synced'`). Une pierre tombale
+          // laissée `synced` était donc effacée comme une ligne du
+          // serveur — lequel a toujours la série, puisque le DELETE
+          // n'est pas parti — et la série revenait VIVANTE à l'écran.
+          syncStatus: Value('pending'),
+        ),
+      );
       await _writer.enqueue(
         entityType: 'set',
         entityId: setId,

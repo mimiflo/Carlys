@@ -222,6 +222,46 @@ void main() {
     },
   );
 
+  test('une série supprimée hors ligne NE RESSUSCITE PAS', () async {
+    // LE PIÈGE. Le rapatriement efface les séries `synced` et réinsère celles
+    // du serveur ; sa protection tient toute entière dans le commentaire du
+    // code : « Une série jamais acquittée n'est pas à lui : elle reste »,
+    // c'est-à-dire `syncStatus != 'synced'`. Or une suppression posait la
+    // pierre tombale SANS repasser la ligne en `pending` : le rapatriement
+    // l'effaçait comme une ligne du serveur, et le serveur — qui a toujours
+    // la série puisque le DELETE n'est jamais parti — la réinsérait vivante.
+    final serveur = [
+      RemoteWorkoutSet(
+        id: 'set-1',
+        exerciseName: 'Développé couché',
+        position: 0,
+        kind: 'NORMAL',
+        reps: 8,
+        completedAt: DateTime.utc(2026, 8, 8, 17, 5),
+      ),
+    ];
+    await repositoryOn(
+      _FakeRemote([_pushSession(sets: serveur)]),
+    ).restoreSessions();
+    expect(await db.select(db.localWorkoutSets).get(), hasLength(1));
+
+    // Hors ligne : la suppression reste en file, le serveur garde la série.
+    api.networkDown = true;
+    await repositoryOn(_FakeRemote([])).deleteSet('set-1');
+
+    // Redémarrage : le rapatriement repasse, le serveur sert toujours set-1.
+    await repositoryOn(
+      _FakeRemote([_pushSession(sets: serveur)]),
+    ).restoreSessions();
+
+    final restantes = await db.select(db.localWorkoutSets).get();
+    expect(
+      restantes.where((row) => !row.deleted),
+      isEmpty,
+      reason: 'la série supprimée est revenue vivante après le rapatriement',
+    );
+  });
+
   test('une séance déjà acquittée est rafraîchie sans conflit', () async {
     await repositoryOn(_FakeRemote([_pushSession()])).restoreSessions();
 
