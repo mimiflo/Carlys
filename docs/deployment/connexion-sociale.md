@@ -59,6 +59,13 @@ Le plus simple, si tu n'as plus le fichier sous la main : lance
 signature » les affiche à chaque exécution signée, SHA-1 et SHA-256. Rien n'y
 est secret : une empreinte est un condensé de la partie PUBLIQUE de la clé.
 
+Ces empreintes sont lues dans le keystore, pas dans l'APK — elles ne valent
+donc que si l'APK porte bien cette clé. C'est ce que prouve l'étape précédente,
+« La signature de l'APK est bien la nôtre » : elle compare, avec `apksigner`,
+le certificat trouvé DANS l'APK à celui de l'alias du keystore, et fait
+échouer l'exécution s'ils diffèrent. Exécution verte ⇒ l'empreinte affichée
+est celle de l'APK que tu installes.
+
 Sinon, depuis ta sauvegarde base64 (gestionnaire de mots de passe) :
 
 ```bash

@@ -682,36 +682,56 @@ jobs:
           set -euo pipefail
           keytool_bin="$(command -v keytool || echo "${JAVA_HOME:-}/bin/keytool")"
           if [ ! -x "$keytool_bin" ]; then
-            echo "::error title=keytool introuvable::La signature de l'APK ne peut pas être vérifiée sans le JDK. Le runner GitHub en fournit un ; si cette étape échoue, ajouter actions/setup-java avant le build."
+            echo "::error title=keytool introuvable::L'empreinte attendue se lit dans le keystore avec keytool, fourni par le JDK. Le runner GitHub en fournit un ; si cette étape échoue, ajouter actions/setup-java avant le build."
             exit 1
           fi
+
+          apk="build/livraison/apk/carlys-recette-$SHA12.apk"
+
+          # apksigner, PAS keytool : depuis AGP 8, Gradle ne pose plus de bloc
+          # v1 (META-INF/*.RSA) quand minSdk ≥ 24 — l'APK n'est signé qu'en
+          # v2/v3, que keytool ne sait pas lire. La garde précédente, bâtie sur
+          # ce bloc, ne trouvait donc plus rien et se dégradait en simple
+          # avertissement : elle laissait passer exactement ce qu'elle devait
+          # arrêter. apksigner lit les trois schémas, et il est forcément
+          # installé ici puisque le build Gradle ci-dessus a réussi.
+          apksigner_bin="$(command -v apksigner || true)"
+          if [ -z "$apksigner_bin" ]; then
+            sdk="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
+            apksigner_bin="$(find "$sdk/build-tools" -maxdepth 2 -name apksigner -type f 2>/dev/null | sort -V | tail -1 || true)"
+          fi
+          if [ -z "$apksigner_bin" ] || [ ! -x "$apksigner_bin" ]; then
+            echo "::error title=apksigner introuvable::La signature de l'APK ne peut pas être vérifiée. apksigner vient des build-tools du SDK Android (\$ANDROID_SDK_ROOT/build-tools/<version>/apksigner) ; le build Gradle ayant réussi, elles sont installées — vérifier ANDROID_SDK_ROOT."
+            exit 1
+          fi
+
+          # `verify` contrôle AUSSI l'intégrité : un APK modifié après
+          # signature échoue ici, pas seulement un APK signé par une autre clé.
+          if ! certificats="$("$apksigner_bin" verify --print-certs "$apk" 2>&1)"; then
+            echo "::error title=Signature de l'APK invalide::apksigner refuse $apk. Sortie : $certificats"
+            exit 1
+          fi
+
+          # Les deux outils écrivent la même empreinte différemment —
+          # « 4ee4… » pour apksigner, « 4E:E4:… » pour keytool. On compare des
+          # formes normalisées, jamais les chaînes brutes.
           # `|| true` sur chaque extraction : sans lui, `pipefail` ferait
           # échouer l'étape sur un grep vide AVANT que les messages ci-dessous
           # aient pu nommer la cause.
-          empreinte() { grep -m1 -oE 'SHA256: [0-9A-Fa-f:]+' | cut -d' ' -f2; }
+          normaliser() { tr -d ':' | tr '[:upper:]' '[:lower:]'; }
 
-          apk="build/livraison/apk/carlys-recette-$SHA12.apk"
-          bloc="$(unzip -Z1 "$apk" | grep -m1 -E '^META-INF/.*\.(RSA|DSA|EC)$' || true)"
-          if [ -z "$bloc" ]; then
-            # v2/v3 seulement (pas de bloc v1) : l'APK est signé, mais cette
-            # garde ne sait pas le lire. On ne fait pas échouer un artefact
-            # valide — on retire la promesse, qui n'est plus démontrée.
-            echo "::warning title=Signature de l'APK non vérifiable::Aucun bloc META-INF/*.RSA (signature v1) dans l'APK : impossible de comparer son certificat à celui du keystore avec keytool seul. L'APK est livré, mais ce workflow ne peut pas garantir qu'il porte la clé du dépôt."
-            exit 0
-          fi
-          unzip -p "$apk" "$bloc" > "$RUNNER_TEMP/signature-apk.bin"
-
-          obtenue="$("$keytool_bin" -printcert -file "$RUNNER_TEMP/signature-apk.bin" 2>/dev/null | empreinte || true)"
+          obtenue="$(printf '%s\n' "$certificats" \
+            | grep -m1 -oE 'SHA-256 digest: [0-9A-Fa-f]+' | cut -d' ' -f3 | normaliser || true)"
           attendue="$("$keytool_bin" -list -v -keystore "$RUNNER_TEMP/carlys-release.jks" \
-            -alias "$KEY_ALIAS" -storepass "$KEYSTORE_PASSWORD" 2>/dev/null | empreinte || true)"
-          rm -f "$RUNNER_TEMP/signature-apk.bin"
+            -alias "$KEY_ALIAS" -storepass "$KEYSTORE_PASSWORD" 2>/dev/null \
+            | grep -m1 -oE 'SHA256: [0-9A-Fa-f:]+' | cut -d' ' -f2 | normaliser || true)"
 
           if [ -z "$attendue" ] || [ -z "$obtenue" ]; then
             echo "::error title=Certificat illisible::Impossible de lire l'empreinte du certificat de l'APK ou celle de l'alias « $KEY_ALIAS » dans le keystore. Vérifie ANDROID_KEY_ALIAS et ANDROID_KEYSTORE_PASSWORD — « keytool -list -keystore carlys-release.jks » donne la liste exacte des alias. Aucun mot de passe n'est affiché ici."
             exit 1
           fi
           if [ "$obtenue" != "$attendue" ]; then
-            echo "::error title=L'APK n'est PAS signé avec la clé du dépôt::Empreinte trouvée dans l'APK : $obtenue — attendue (keystore, alias $KEY_ALIAS) : $attendue. C'est presque toujours la signature de DEBUG du gabarit Flutter : le bloc ajouté à android/app/build.gradle.kts n'a pas pris. Livrer cet APK en annonçant qu'il se met à jour en place serait faux."
+            echo "::error title=L'APK n'est PAS signé avec la clé du dépôt::Empreinte trouvée dans l'APK : $obtenue — attendue (keystore, alias $KEY_ALIAS) : $attendue. C'est presque toujours la signature de DEBUG du gabarit Flutter : le bloc ajouté à android/app/build.gradle.kts n'a pas pris. Livrer cet APK en annonçant qu'il se met à jour en place serait faux — et la SHA-1 déclarée à Google Cloud à l'étape suivante ne serait pas celle de l'APK, donc la connexion Google échouerait."
             exit 1
           fi
           echo "APK signé avec la clé du dépôt (SHA-256 : $obtenue)."
