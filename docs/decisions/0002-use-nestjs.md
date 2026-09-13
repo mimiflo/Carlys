@@ -49,8 +49,8 @@ modulaire (ADR 0004).
   code reste homogène à mesure que les tranches verticales s'ajoutent.
 - Versioning URI natif (`/api/v1`) et enveloppes de réponse uniformes
   (`{ data, meta, requestId }` / `{ error: … }`) faciles à imposer globalement.
-- Testabilité : Jest unitaire + e2e déjà en place (l'e2e `/health/live` passe
-  sans infrastructure).
+- Testabilité : Jest unitaire + e2e déjà en place (le projet e2e `sans-infra`
+  passe sans PostgreSQL ni Redis).
 - Validation stricte de bout en bout : Zod au démarrage (`src/config/env.schema.ts`,
   refus de démarrer si une variable essentielle manque) et class-validator en
   `whitelist` + `forbidNonWhitelisted` sur les DTO.

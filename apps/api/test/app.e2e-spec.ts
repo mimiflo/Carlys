@@ -30,7 +30,14 @@ describe('Carlys API (e2e) — fondation', () => {
     await app.close();
   });
 
-  it('GET /health/live répond 200 sans dépendre de PostgreSQL ni Redis', async () => {
+  // Ce fichier amorce AppModule EN ENTIER, donc Redis et PostgreSQL sont
+  // forcément là : il ne peut rien prouver sur l'indépendance de la
+  // vivacité, quoi qu'en dise son nom. Cette preuve-là vit dans
+  // `health-live.sans-infra-spec.ts`, qui n'amorce que le contrôleur de
+  // santé et remplace les sondes par des doublures qui lèvent si on les
+  // appelle. Ici, on vérifie ce qu'on peut vraiment vérifier : la route
+  // répond dans une application complète, avec son identifiant de requête.
+  it('GET /health/live répond 200 et porte un identifiant de requête', async () => {
     const response = await request(app.getHttpServer()).get('/health/live').expect(200);
 
     const body = response.body as LivenessReport;

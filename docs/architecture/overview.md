@@ -113,7 +113,10 @@ Garde-fous en place dès l'Étape 1 :
 - Swagger sur `/api/docs` (désactivé en production) ;
 - `/metrics` Prometheus, protégé par Bearer `METRICS_TOKEN` en production ;
 - Dockerfile multi-stage (contexte de build : racine du monorepo) ;
-- tests Jest unitaires + e2e (`/health/live` passe sans infrastructure).
+- tests Jest unitaires + e2e (le projet e2e `sans-infra` passe sans
+  infrastructure ; les vingt et un autres fichiers e2e exigent PostgreSQL et
+  Redis, car `setup-e2e.ts` remet à zéro un compteur de débit qui vit dans
+  Redis).
 
 Détails dans [backend.md](./backend.md).
 

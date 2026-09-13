@@ -6,6 +6,7 @@ import '../../features/academy/data/answered_lessons_store.dart';
 import '../../features/academy/presentation/controllers/academy_controllers.dart';
 import '../../features/community/presentation/controllers/community_controllers.dart';
 import '../../features/onboarding/data/first_run_store.dart';
+import '../../features/progress/presentation/controllers/progress_controllers.dart';
 import '../../features/progression/data/reward_ledger.dart';
 import '../../features/progression/presentation/controllers/reward_controllers.dart';
 import '../logging/app_logger.dart';
@@ -58,13 +59,22 @@ class DriftLocalAccountPurge implements LocalAccountPurge {
     LocalAccountOwner.key,
   ];
 
-  /// Providers NON auto-disposés qui gardent en MÉMOIRE des données du
-  /// compte : sans eux, l'effacement du disque est annulé par le cache.
+  /// Providers qui gardent en MÉMOIRE des données du compte : sans eux,
+  /// l'effacement du disque est annulé par le cache.
   ///
   /// Le code ami de celui qui part serait montré et partagé par le suivant ;
   /// les questions d'Academy abordées et les récompenses obtenues seraient
   /// les siennes à l'écran — et le journal des récompenses, une fois relu
   /// depuis ce cache, se réécrirait dans les préférences du nouveau compte.
+  ///
+  /// `personalRecordsProvider` est ici MALGRÉ son `autoDispose`, et c'est le
+  /// piège de cette liste : deux Provider permanents le regardent
+  /// (`rewardFactsProvider` et `showcaseRewardsProvider`), et l'accueil monte
+  /// le second dès le lancement. Un auditeur permanent ne relâche jamais,
+  /// donc l'élément auto-disposé n'est JAMAIS détruit. Sur un téléphone
+  /// partagé, le compte suivant voyait les records du précédent. La leçon
+  /// générale : « auto-disposé » ne dispense pas de cette liste, c'est
+  /// l'absence d'auditeur permanent qui en dispense.
   ///
   /// Cette liste est posée à côté de [accountOwnedPreferenceKeys] pour que
   /// l'ajout d'un futur cache de compte soit un geste évident.
@@ -72,6 +82,7 @@ class DriftLocalAccountPurge implements LocalAccountPurge {
     myFriendCodeProvider,
     answeredLessonsProvider,
     earnedRewardsProvider,
+    personalRecordsProvider,
   ];
 
   final Ref _ref;

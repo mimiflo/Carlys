@@ -25,9 +25,17 @@ class ActiveWorkoutScreen extends ConsumerWidget {
             bottom: false,
             child: workout.when(
               loading: () => const AppLoadingIndicator(label: 'Chargement'),
-              error: (_, __) => const AppErrorState(
+              // Le flux Drift se TERMINE sur erreur, et le provider n'est pas
+              // `autoDispose` : sans reprise, l'écran de la séance en cours
+              // resterait mort jusqu'à la fin de la session. C'est le pire
+              // endroit où rester bloqué — on est à la salle, au milieu d'une
+              // séance. « Séance introuvable » a sa propre branche (`data`
+              // nul) : ici, c'est une vraie panne de lecture, donc réessayer
+              // a du sens.
+              error: (_, __) => AppErrorState(
                 title: 'Séance indisponible',
                 message: 'Impossible de lire la séance en cours.',
+                onRetry: () => ref.invalidate(activeWorkoutProvider),
               ),
               data: (active) => active == null
                   ? const AppEmptyState(

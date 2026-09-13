@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../progress/presentation/controllers/progress_controllers.dart';
 import '../../data/repositories/workout_repository_impl.dart';
 import '../../domain/entities/workout.dart';
 
@@ -66,8 +67,22 @@ class WorkoutActions {
   Future<void> deleteSet(String setId) =>
       _ref.read(workoutRepositoryProvider).deleteSet(setId);
 
-  Future<void> complete(String sessionId) =>
-      _ref.read(workoutRepositoryProvider).completeWorkout(sessionId);
+  /// Clôt la séance, puis redemande les records.
+  ///
+  /// La clôture est LE moment où le serveur les recalcule (Étape 5). Sans
+  /// cette invalidation ils restaient ceux du lancement de l'application :
+  /// `personalRecordsProvider` est bien `autoDispose`, mais deux Provider
+  /// permanents l'épinglent, donc il n'était jamais rejoué. On battait un
+  /// record et rien ne bougeait, ni dans Progrès, ni dans la vitrine, ni
+  /// dans « Dernière récompense » — jusqu'au redémarrage de l'application.
+  ///
+  /// Hors ligne, l'invalidation ne fait rien perdre : depuis Riverpod 2, la
+  /// valeur précédente est conservée pendant le rechargement comme en cas
+  /// d'échec, donc l'écran continue d'afficher les derniers records connus.
+  Future<void> complete(String sessionId) async {
+    await _ref.read(workoutRepositoryProvider).completeWorkout(sessionId);
+    _ref.invalidate(personalRecordsProvider);
+  }
 
   Future<void> abandon(String sessionId) =>
       _ref.read(workoutRepositoryProvider).abandonWorkout(sessionId);
@@ -88,6 +103,9 @@ class WorkoutActions {
         .read(workoutRepositoryProvider)
         .resolveCloseConflict(sessionId, resolution);
     _ref.invalidate(workoutDetailProvider(sessionId));
+    // Trancher un conflit de clôture, c'est clôturer : mêmes records à
+    // redemander que dans `complete`.
+    _ref.invalidate(personalRecordsProvider);
   }
 }
 

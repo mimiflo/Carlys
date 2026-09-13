@@ -43,9 +43,15 @@ class _AcademyScreenState extends ConsumerState<AcademyScreen> {
       backgroundColor: AppColors.darkBackground,
       body: pack.when(
         loading: () => const AppLoadingIndicator(),
-        error: (error, _) => const AppErrorState(
+        // `academyPackProvider` n'est pas `autoDispose` : sans reprise, un
+        // unique échec de lecture resterait mémoïsé et l'Academy serait morte
+        // jusqu'à la fin de la session, même après avoir quitté l'écran. Le
+        // chargeur, lui, sait réessayer : il ne mémoïse jamais une future en
+        // échec.
+        error: (error, _) => AppErrorState(
           title: 'Academy indisponible',
           message: 'Le contenu d’apprentissage n’a pas pu être chargé.',
+          onRetry: () => ref.invalidate(academyPackProvider),
         ),
         data: (lessons) => ListView(
           padding: EdgeInsets.fromLTRB(

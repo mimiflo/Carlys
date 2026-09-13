@@ -23,7 +23,13 @@ class WorkoutDetailScreen extends ConsumerWidget {
       body: SafeArea(
         child: detail.when(
           loading: () => const AppLoadingIndicator(label: 'Chargement'),
-          error: (_, __) => const AppErrorState(title: 'Séance indisponible'),
+          // La séance absente a sa propre branche (`data` nul, ci-dessous) :
+          // arriver ICI, c'est une vraie panne de lecture locale, le cas même
+          // où réessayer a un sens.
+          error: (_, __) => AppErrorState(
+            title: 'Séance indisponible',
+            onRetry: () => ref.invalidate(workoutDetailProvider(sessionId)),
+          ),
           data: (workout) => workout == null
               ? const AppEmptyState(
                   title: 'Séance introuvable',

@@ -67,6 +67,43 @@ Widget _app({NutritionGoal? goal, int? targetKcal}) {
 }
 
 void main() {
+  testWidgets('après un échec de lecture, « Réessayer » rouvre le livre', (
+    tester,
+  ) async {
+    // CE QUE CE TEST PROTÈGE : `recipesPackProvider` n'est pas `autoDispose`.
+    // Sans bouton de reprise, un unique échec resterait mémoïsé et l'écran
+    // serait mort jusqu'à la fin de la session, même en le quittant et en le
+    // rouvrant. Le bouton doit donc réellement relancer la lecture.
+    var appels = 0;
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          recipesPackProvider.overrideWith((ref) async {
+            appels += 1;
+            if (appels == 1) {
+              throw Exception('asset illisible');
+            }
+            return _pack;
+          }),
+          nutritionGoalProvider.overrideWith((ref) => null),
+          targetKcalProvider.overrideWith((ref) => null),
+        ],
+        child: const MaterialApp(home: RecipesScreen()),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Recettes indisponibles'), findsOneWidget);
+    expect(find.text('porridge'), findsNothing);
+
+    await tester.tap(find.text('Réessayer'));
+    await tester.pumpAndSettle();
+
+    expect(appels, 2, reason: 'la lecture doit être RELANCÉE, pas resservie');
+    expect(find.text('Recettes indisponibles'), findsNothing);
+    expect(find.text('porridge'), findsOneWidget);
+  });
+
   testWidgets('ouvre sur le petit-déj sucré, et bascule en salé', (
     tester,
   ) async {

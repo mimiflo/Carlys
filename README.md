@@ -261,7 +261,8 @@ Règles :
 ```bash
 pnpm test                                # tous les projets TypeScript
 pnpm --filter @carlys/api test           # unitaires API (Jest)
-pnpm --filter @carlys/api test:e2e       # e2e API (le test /health/live passe sans infra)
+pnpm --filter @carlys/api test:e2e       # e2e API (infra requise pour le projet « e2e »)
+pnpm --filter @carlys/api test:e2e -- --selectProjects sans-infra   # sans PostgreSQL ni Redis
 pnpm --filter @carlys/api test:cov       # couverture API
 pnpm --filter @carlys/admin test         # admin (Vitest + Testing Library)
 

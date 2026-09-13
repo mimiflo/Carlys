@@ -199,7 +199,9 @@ sur les 34 fichiers de `controllers/`, un qui porte trois Notifier
 Chaque fonctionnalité livrée comprend :
 
 - **Tests** adaptés à sa nature : unitaires (logique), widget (UI Flutter),
-  intégration, e2e (API — supertest ; l'e2e `/health/live` passe sans infra).
+  intégration, e2e (API — supertest ; le projet Jest `sans-infra` passe sans
+  PostgreSQL ni Redis :
+  `pnpm --filter @carlys/api test:e2e -- --selectProjects sans-infra`).
 - **Gestion des états** : erreur, chargement, vide, hors-ligne (composants
   `AppErrorState`, `AppLoadingIndicator`, `AppEmptyState` côté mobile).
 - **Accessibilité** : sémantique, contrastes, respect de la réduction d'animations

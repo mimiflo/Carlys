@@ -42,10 +42,17 @@ class _RecipesScreenState extends ConsumerState<RecipesScreen> {
       backgroundColor: AppColors.darkBackground,
       appBar: AppBar(title: const Text('Recettes')),
       body: pack.when(
-        loading: () => const AppLoadingIndicator(),
-        error: (error, _) => const AppErrorState(
+        loading: () => const AppLoadingIndicator(label: 'Ouverture du livre'),
+        // La reprise n'est PAS décorative ici. `recipesPackProvider` n'est
+        // pas `autoDispose` (le pack ne change jamais en session, le relire
+        // serait du travail pour rien) : sans ce bouton, un unique échec de
+        // lecture resterait mémoïsé et l'écran serait mort jusqu'à la fin de
+        // la session, y compris après l'avoir quitté et rouvert. Le chargeur
+        // sait déjà réessayer — il ne mémoïse jamais une future en échec.
+        error: (error, _) => AppErrorState(
           title: 'Recettes indisponibles',
           message: 'Le livre de recettes n’a pas pu être chargé.',
+          onRetry: () => ref.invalidate(recipesPackProvider),
         ),
         data: (recipes) {
           final visibles = recipesFor(

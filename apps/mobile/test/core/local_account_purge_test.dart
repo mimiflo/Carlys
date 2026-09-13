@@ -6,6 +6,8 @@ import 'package:carlys_mobile/features/academy/data/answered_lessons_store.dart'
 import 'package:carlys_mobile/features/academy/presentation/controllers/academy_controllers.dart';
 import 'package:carlys_mobile/features/community/presentation/controllers/community_controllers.dart';
 import 'package:carlys_mobile/features/onboarding/data/first_run_store.dart';
+import 'package:carlys_mobile/features/progress/domain/entities/progress.dart';
+import 'package:carlys_mobile/features/progress/presentation/controllers/progress_controllers.dart';
 import 'package:carlys_mobile/features/progression/data/reward_ledger.dart';
 import 'package:carlys_mobile/features/progression/domain/reward.dart';
 import 'package:carlys_mobile/features/progression/presentation/controllers/reward_controllers.dart';
@@ -69,6 +71,10 @@ void main() {
         earnedRewardsProvider.overrideWith((ref) async {
           countBuild('recompenses');
           return const <EarnedReward>[];
+        }),
+        personalRecordsProvider.overrideWith((ref) async {
+          countBuild('records');
+          return const <PersonalRecordEntry>[];
         }),
       ],
     );
@@ -161,7 +167,44 @@ void main() {
     expect(await container.read(myFriendCodeProvider.future), 'CARLYS-2');
     expect(await container.read(answeredLessonsProvider.future), isEmpty);
     expect(await container.read(earnedRewardsProvider.future), isEmpty);
-    expect(builds, {'codeAmi': 2, 'leconsRepondues': 2, 'recompenses': 2});
+    // `records` apparaît à 1 sans que ce test l'ait jamais lu : l'invalidation
+    // de la purge le construit. C'est le comportement attendu, et il n'est pas
+    // nouveau — `myFriendCodeProvider`, dans la même liste, est aussi un appel
+    // réseau refait à la purge. Le test qui suit vérifie ce qui compte
+    // vraiment : que ce renouvellement ait bien lieu.
+    expect(builds, {
+      'codeAmi': 2,
+      'leconsRepondues': 2,
+      'recompenses': 2,
+      'records': 1,
+    });
+  });
+
+  test('les records personnels non plus, malgré leur autoDispose', () async {
+    // LE PIÈGE QUE CE TEST FIGE. `personalRecordsProvider` est déclaré
+    // `autoDispose`, ce qui donne à croire qu'il se détruit tout seul et
+    // n'a donc rien à faire dans la liste de purge. C'est faux ici : deux
+    // Provider PERMANENTS le regardent (`rewardFactsProvider` et
+    // `showcaseRewardsProvider`), et l'accueil monte le second dès le
+    // lancement via `TitleSummary`. Un auditeur permanent ne relâche
+    // jamais : l'élément auto-disposé n'est jamais détruit, et il traverse
+    // la purge avec les records de celui qui part. Sur un téléphone
+    // partagé, le compte suivant voyait les records du précédent.
+    final abonnement = container.listen(showcaseRewardsProvider, (_, _) {});
+    addTearDown(abonnement.close);
+    await container.read(personalRecordsProvider.future);
+    expect(builds['records'], 1);
+
+    await container.read(localAccountPurgeProvider).run();
+
+    await container.read(personalRecordsProvider.future);
+    expect(
+      builds['records'],
+      2,
+      reason:
+          'les records du compte parti survivent à la purge : '
+          'un Provider permanent épingle l’élément auto-disposé',
+    );
   });
 }
 

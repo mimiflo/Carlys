@@ -413,6 +413,16 @@ Points structurants :
   du parcours de première ouverture décrivent l'appareil et restent.
   `AuthController` l'appelle à la **déconnexion volontaire** ; la routine est
   aussi exposée par `localAccountPurgeProvider` pour la suppression du compte.
+- **« Auto-disposé » ne dispense pas de `accountOwnedProviders`.** Le critère
+  n'est pas le mot-clé, c'est l'absence d'auditeur PERMANENT. Un provider
+  `autoDispose` regardé par un `Provider` ordinaire n'est jamais détruit, car
+  cet auditeur ne relâche jamais : il traverse alors la purge intact.
+  `personalRecordsProvider` était dans ce cas, épinglé par `rewardFactsProvider`
+  et `showcaseRewardsProvider`, eux-mêmes montés dès l'accueil par
+  `TitleSummary` ; sur un téléphone partagé, le compte suivant voyait les
+  records du précédent. Il figure désormais dans la liste, et
+  `local_account_purge_test.dart` fige le piège en montant un auditeur
+  permanent avant de purger.
 - **Quand purger** : l'expiration de session (401 au renouvellement, soit
   trente jours sans ouvrir l'application) n'est **pas** un changement de
   compte, et ne purge rien : c'est le même utilisateur, et effacer là
