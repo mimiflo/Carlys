@@ -147,9 +147,10 @@ class _TemplateEditorScreenState extends ConsumerState<TemplateEditorScreen> {
             onPressed: () => Navigator.of(dialogContext).pop(false),
             child: const Text('Continuer l’édition'),
           ),
-          FilledButton(
+          AppButton(
+            label: 'Abandonner',
+            variant: AppButtonVariant.destructive,
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Abandonner'),
           ),
         ],
       ),

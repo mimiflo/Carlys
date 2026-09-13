@@ -36,7 +36,7 @@ class OnboardingCta extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final foreground = _enabled
-        ? AppColors.darkBackground
+        ? AppColors.neutral0
         : AppColors.darkTextTertiary;
 
     return Column(
@@ -54,9 +54,12 @@ class OnboardingCta extends StatelessWidget {
               curve: AppMotion.standard,
               padding: const EdgeInsets.all(_paddingAll),
               decoration: BoxDecoration(
-                color: _enabled ? AppColors.accent : AppColors.darkSurfaceAlt,
+                // Le dégradé violet des écrans d'entrée : le CTA d'onboarding
+                // parle la même couleur que « Se connecter », plus l'orange.
+                gradient: _enabled ? AppColors.cta : null,
+                color: _enabled ? null : AppColors.darkSurfaceAlt,
                 borderRadius: AppRadius.buttonAll,
-                boxShadow: _enabled ? _accentGlow : null,
+                boxShadow: _enabled ? _actionGlow : null,
               ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.center,
@@ -117,10 +120,11 @@ class OnboardingCta extends StatelessWidget {
     color: AppColors.darkTextTertiary,
   );
 
-  /// Halo orange sous la pastille (ombre de la maquette).
-  static final List<BoxShadow> _accentGlow = [
+  /// Halo violet sous la pastille (ombre de la maquette), accordé au dégradé
+  /// d'action.
+  static final List<BoxShadow> _actionGlow = [
     BoxShadow(
-      color: AppColors.accent.withValues(alpha: 0.5),
+      color: AppColors.primary.withValues(alpha: 0.5),
       offset: const Offset(0, 12),
       blurRadius: 30,
       spreadRadius: -12,

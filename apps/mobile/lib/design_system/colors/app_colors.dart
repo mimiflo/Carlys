@@ -171,6 +171,8 @@ abstract final class AppColors {
   static const Color primaryFill = Color(0x739B30FF); // primary .45
   static const Color accentBadgeBg = Color(0x1FFF7A45); // accent .12
   static const Color accentBadgeBorder = Color(0x47FF7A45); // accent .28
+  static const Color primaryBadgeBg = Color(0x1F9B30FF); // primary .12
+  static const Color primaryBadgeBorder = Color(0x479B30FF); // primary .28
   static const Color neutralBadgeBg = Color(0x12FFFFFF); // blanc .07
   static const Color neutralBadgeText = Color(0xFFD3D3E4);
   static const Color gaugeTrack = Color(0x12FFFFFF); // blanc .07

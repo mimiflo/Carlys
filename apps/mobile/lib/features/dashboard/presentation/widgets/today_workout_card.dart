@@ -94,11 +94,15 @@ class _PlayDisc extends StatelessWidget {
       onTap: onPressed,
       child: ExcludeSemantics(
         child: DecoratedBox(
+          // Le dégradé violet des écrans d'entrée, sur l'action forte de
+          // l'accueil : ce disque parle désormais la même couleur que
+          // « Se connecter », halo compris — l'orange a disparu.
           decoration: BoxDecoration(
+            gradient: AppColors.cta,
             shape: BoxShape.circle,
             boxShadow: [
               BoxShadow(
-                color: AppColors.accent.withValues(alpha: 0.8),
+                color: AppColors.primary.withValues(alpha: 0.8),
                 blurRadius: 26,
                 spreadRadius: -10,
                 offset: const Offset(0, 10),
@@ -106,7 +110,7 @@ class _PlayDisc extends StatelessWidget {
             ],
           ),
           child: Material(
-            color: AppColors.accent,
+            color: Colors.transparent,
             shape: const CircleBorder(),
             child: InkWell(
               customBorder: const CircleBorder(),
@@ -116,7 +120,7 @@ class _PlayDisc extends StatelessWidget {
                 child: Icon(
                   AppIcons.play,
                   size: _iconSize,
-                  color: AppColors.onAccent,
+                  color: AppColors.neutral0,
                 ),
               ),
             ),

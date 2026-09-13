@@ -144,9 +144,10 @@ class TemplateCard extends StatelessWidget {
             onPressed: () => Navigator.of(dialogContext).pop(false),
             child: const Text('Annuler'),
           ),
-          FilledButton(
+          AppButton(
+            label: 'Supprimer',
+            variant: AppButtonVariant.destructive,
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Supprimer'),
           ),
         ],
       ),

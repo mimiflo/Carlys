@@ -142,12 +142,12 @@ Future<String?> _promptFreeExercise(BuildContext context) {
           onPressed: () => Navigator.of(dialogContext).pop(),
           child: const Text('Annuler'),
         ),
-        FilledButton(
+        AppButton(
+          label: 'Choisir',
           onPressed: () {
             final name = controller.text.trim();
             Navigator.of(dialogContext).pop(name.isEmpty ? null : name);
           },
-          child: const Text('Choisir'),
         ),
       ],
     ),

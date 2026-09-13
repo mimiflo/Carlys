@@ -52,9 +52,12 @@ class RestTimerRow extends StatelessWidget {
           ),
           const SizedBox(width: AppSpacing.sm),
           TextButton(
+            // Puce, pas un bouton d'action plein : elle garde son archétype
+            // de jeton mais quitte l'orange pour le violet de la marque, pour
+            // qu'aucune surface cliquable ne reste orange.
             style: TextButton.styleFrom(
-              foregroundColor: AppColors.accent,
-              backgroundColor: AppColors.accentBadgeBg,
+              foregroundColor: AppColors.primaryLight,
+              backgroundColor: AppColors.primaryBadgeBg,
               padding: const EdgeInsets.symmetric(
                 horizontal: AppSpacing.gapRow,
                 vertical: AppSpacing.gapTile,
@@ -66,7 +69,7 @@ class RestTimerRow extends StatelessWidget {
               ),
               shape: const RoundedRectangleBorder(
                 borderRadius: AppRadius.lgAll,
-                side: BorderSide(color: AppColors.accentBadgeBorder),
+                side: BorderSide(color: AppColors.primaryBadgeBorder),
               ),
             ),
             onPressed: onSkip,

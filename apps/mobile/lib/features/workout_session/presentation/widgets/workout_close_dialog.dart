@@ -36,9 +36,9 @@ Future<bool?> showWorkoutCloseDialog(
           onPressed: () => Navigator.of(dialogContext).pop(false),
           child: const Text('Annuler'),
         ),
-        FilledButton(
+        AppButton(
+          label: 'Confirmer',
           onPressed: () => Navigator.of(dialogContext).pop(true),
-          child: const Text('Confirmer'),
         ),
       ],
     ),

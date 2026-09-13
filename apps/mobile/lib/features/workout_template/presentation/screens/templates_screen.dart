@@ -138,9 +138,9 @@ class TemplatesScreen extends ConsumerWidget {
             onPressed: () => Navigator.of(dialogContext).pop(false),
             child: const Text('Plus tard'),
           ),
-          FilledButton(
+          AppButton(
+            label: 'Reprendre la séance',
             onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Reprendre la séance'),
           ),
         ],
       ),

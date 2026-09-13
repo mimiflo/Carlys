@@ -119,8 +119,11 @@ class _SendButton extends StatelessWidget {
                 width: _discDiameter,
                 height: _discDiameter,
                 decoration: BoxDecoration(
+                  // Le dégradé d'action (celui du login) quand on peut
+                  // envoyer ; un violet plat tamisé quand c'est désactivé.
+                  gradient: enabled ? AppColors.cta : null,
                   color: enabled
-                      ? AppColors.primary
+                      ? null
                       : AppColors.primary.withValues(alpha: 0.35),
                   shape: BoxShape.circle,
                 ),
