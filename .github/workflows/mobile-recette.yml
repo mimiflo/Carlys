@@ -1658,6 +1658,7 @@ jobs:
           NUMERO: ${{ github.run_number }}
           BUNDLE: ${{ steps.bundle.outputs.id }}
           GOOGLE_CLIENT: ${{ vars.CARLYS_GOOGLE_SERVER_CLIENT_ID }}
+          GOOGLE_IOS_CLIENT: ${{ vars.CARLYS_GOOGLE_IOS_CLIENT_ID }}
         run: |
           flutter build ipa --release \
             --no-pub \
@@ -1668,7 +1669,8 @@ jobs:
             --dart-define=CARLYS_FLAVOR=staging \
             --dart-define=CARLYS_API_BASE_URL="$API" \
             --dart-define=CARLYS_PUBLIC_WEB_BASE_URL="$WEB" \
-            --dart-define=CARLYS_GOOGLE_SERVER_CLIENT_ID="$GOOGLE_CLIENT"
+            --dart-define=CARLYS_GOOGLE_SERVER_CLIENT_ID="$GOOGLE_CLIENT" \
+            --dart-define=CARLYS_GOOGLE_IOS_CLIENT_ID="$GOOGLE_IOS_CLIENT"
 
           set -- build/ios/ipa/*.ipa
           if [ ! -f "$1" ]; then

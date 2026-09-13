@@ -812,6 +812,7 @@ jobs:
           WEB_URL: ${{ needs.controles.outputs.web_url }}
           NUMERO: ${{ needs.controles.outputs.build_number }}
           GOOGLE_CLIENT: ${{ vars.CARLYS_GOOGLE_SERVER_CLIENT_ID }}
+          GOOGLE_IOS_CLIENT: ${{ vars.CARLYS_GOOGLE_IOS_CLIENT_ID }}
         run: |
           set -euo pipefail
           flutter build apk --release \
@@ -823,7 +824,8 @@ jobs:
             --dart-define=CARLYS_FLAVOR="$FLAVOR" \
             --dart-define=CARLYS_API_BASE_URL="$API_URL" \
             --dart-define=CARLYS_PUBLIC_WEB_BASE_URL="$WEB_URL" \
-            --dart-define=CARLYS_GOOGLE_SERVER_CLIENT_ID="$GOOGLE_CLIENT"
+            --dart-define=CARLYS_GOOGLE_SERVER_CLIENT_ID="$GOOGLE_CLIENT" \
+            --dart-define=CARLYS_GOOGLE_IOS_CLIENT_ID="$GOOGLE_IOS_CLIENT"
           ls -lh build/app/outputs/flutter-apk/app-release.apk
 
       # ── La preuve que la signature est bien la nôtre ────────────────────────

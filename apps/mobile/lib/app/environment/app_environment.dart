@@ -32,6 +32,7 @@ class AppEnvironment {
     this.publicWebBaseUrl = defaultPublicWebBaseUrl,
     this.push,
     this.googleServerClientId,
+    this.googleIosClientId,
   });
 
   /// Application web publique en développement : le Next.js d'`apps/admin`
@@ -80,6 +81,15 @@ class AppEnvironment {
       'CARLYS_GOOGLE_SERVER_CLIENT_ID',
     );
 
+    // Client OAuth « iOS » du même projet. Android n'en a pas besoin — il
+    // s'identifie par son nom de paquet et l'empreinte de sa clé de
+    // signature —, mais le SDK iOS, lui, l'EXIGE : sans `clientId` ni
+    // `GIDClientID` dans l'Info.plist, il lève au premier appel. Vide =
+    // bouton Google inerte sur iOS, tout le reste intact.
+    const googleIosClientId = String.fromEnvironment(
+      'CARLYS_GOOGLE_IOS_CLIENT_ID',
+    );
+
     final flavor = AppFlavor.values.firstWhere(
       (value) => value.name == flavorName,
       orElse: () => AppFlavor.development,
@@ -92,6 +102,7 @@ class AppEnvironment {
       googleServerClientId: googleServerClientId.isEmpty
           ? null
           : googleServerClientId,
+      googleIosClientId: googleIosClientId.isEmpty ? null : googleIosClientId,
       push: firebaseConfigured
           ? const FirebasePushOptions(
               apiKey: firebaseApiKey,
@@ -124,6 +135,13 @@ class AppEnvironment {
   /// serveur ne la propose pas. Valeur CLIENT, pas un secret — mais elle
   /// est propre à chaque projet, donc jamais commitée.
   final String? googleServerClientId;
+
+  /// Client OAuth « iOS » du projet Google Cloud, exigé par le SDK iOS.
+  ///
+  /// Null sur Android, et c'est normal : cette plateforme n'en a aucun
+  /// usage. Null sur iOS = connexion Google annoncée indisponible, plutôt
+  /// qu'une feuille qui lève.
+  final String? googleIosClientId;
 
   bool get isDevelopment => flavor == AppFlavor.development;
   bool get isProduction => flavor == AppFlavor.production;

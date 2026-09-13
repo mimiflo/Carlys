@@ -42,7 +42,13 @@ class AuthInterceptor extends Interceptor {
     final isAuthRoute =
         options.path.contains('/auth/refresh') ||
         options.path.contains('/auth/login') ||
-        options.path.contains('/auth/register');
+        options.path.contains('/auth/register') ||
+        // `/auth/social` OUVRE une session, elle n'en consomme pas : son 401
+        // dit « ce jeton Google/Apple est refusé », jamais « ton accès a
+        // expiré ». Rafraîchir puis rejouer y était inutile dans le meilleur
+        // cas, et trompeur dans le pire — la seconde tentative renvoyait le
+        // MÊME jeton du fournisseur et le même refus, en doublant l'attente.
+        options.path.contains('/auth/social');
     final shouldRetry =
         err.response?.statusCode == 401 &&
         !isAuthRoute &&

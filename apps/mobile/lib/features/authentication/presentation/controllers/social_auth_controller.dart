@@ -83,6 +83,26 @@ class SocialAuthController extends AutoDisposeNotifier<SocialProvider?> {
           ? const SocialAuthCancelled()
           : const SocialAuthSucceeded();
     } on SocialSignInUnavailable catch (error) {
+      // La cause d'origine du SDK était capturée par la passerelle puis
+      // JAMAIS lue : trois situations très différentes rendaient la même
+      // phrase, sans laisser la moindre trace. On l'écrit ici, une fois,
+      // au seul endroit qui décide quoi afficher.
+      _logger.error(
+        'Connexion ${error.provider.label} indisponible '
+        '(${error.obstacle.name})',
+        error: error.cause,
+      );
+      if (error.obstacle == SocialSignInObstacle.identiteAppareil) {
+        // Google a bien répondu — il REFUSE cette installation. Le dire
+        // « arrive bientôt » était faux, et envoyait chercher une variable
+        // manquante alors que le build est correct : c'est la console
+        // Google Cloud qui ne connaît pas le nom de paquet ou l'empreinte
+        // de signature de cet APK.
+        return SocialAuthFailed(
+          'Google n’a pas reconnu cette version de l’application. '
+          'Utilise ton adresse e-mail en attendant.',
+        );
+      }
       // Côté application : client OAuth absent du build, ou fournisseur qui
       // ne s'ouvre pas sur cette plateforme. La RAISON vient de la
       // passerelle — le contrôleur n'interroge pas la plateforme.

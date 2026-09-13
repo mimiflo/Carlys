@@ -40,7 +40,16 @@ Il en faut **deux** — c'est le point qui piège tout le monde :
 | --- | --- | --- |
 | **Web application** | C'est l'AUDIENCE du jeton, donc l'identité du SERVEUR | Son client ID va dans `GOOGLE_OAUTH_CLIENT_IDS` (API) **et** dans `CARLYS_GOOGLE_SERVER_CLIENT_ID` (mobile) |
 | **Android** | Autorise l'application signée à demander un jeton | Rien à recopier : il est reconnu par le nom de paquet et l'empreinte |
-| **iOS** (le jour où l'app iOS existe) | Sur iOS, le SDK émet un jeton dont l'audience est CE client — pas le « Web » | Son client ID s'ajoute à `GOOGLE_OAUTH_CLIENT_IDS`, séparé par une virgule |
+| **iOS** (le jour où l'app iOS existe) | Sur iOS, le SDK émet un jeton dont l'audience est CE client — pas le « Web » | Son client ID s'ajoute à `GOOGLE_OAUTH_CLIENT_IDS`, séparé par une virgule, **et** va dans `CARLYS_GOOGLE_IOS_CLIENT_ID` (mobile) |
+
+> **Le client Android ne se recopie nulle part.** C'est la question qui
+> revient, et la réponse est contre-intuitive : il doit exister dans le
+> projet — sans lui Google refuse la demande avec `ApiException: 10` —, mais
+> son identifiant n'apparaît dans aucun fichier, ni côté serveur ni côté
+> mobile. Sur Android, l'application est reconnue à son nom de paquet et à
+> l'empreinte de sa clé de signature ; l'identifiant qui voyage dans le jeton
+> (`aud`) est celui du client « Web ». L'ajouter à `GOOGLE_OAUTH_CLIENT_IDS`
+> élargit la liste des audiences acceptées sans rien permettre de plus.
 
 Pour le client Android, Google demande :
 
@@ -122,6 +131,7 @@ sudo docker ps --filter label=com.carlys.environment=staging --format '{{.Names}
 | Nom | Valeur |
 | --- | --- |
 | `CARLYS_GOOGLE_SERVER_CLIENT_ID` | le **même** client « Web » qu'au serveur |
+| `CARLYS_GOOGLE_IOS_CLIENT_ID` | le client « iOS ». Inutile tant qu'il n'y a pas de build iOS ; sans lui le bouton Google y est annoncé indisponible au lieu de faire lever le SDK |
 
 En local :
 

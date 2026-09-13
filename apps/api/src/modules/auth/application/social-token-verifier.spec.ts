@@ -7,6 +7,7 @@ import {
   type KeyLike,
   SignJWT,
 } from 'jose';
+import { type PinoLogger } from 'nestjs-pino';
 import { type SocialKeyStore, SocialTokenVerifier } from './social-token-verifier';
 
 /**
@@ -29,6 +30,13 @@ describe('SocialTokenVerifier', () => {
   let jwks: { keys: JWK[] };
   let verifier: SocialTokenVerifier;
 
+  /**
+   * Le refus reste nu côté client ; côté serveur il doit être MOTIVÉ. Ce
+   * double est là pour que les tests puissent l'exiger, pas pour décorer.
+   */
+  const warn = jest.fn();
+  const logger = { warn } as unknown as PinoLogger;
+
   beforeAll(async () => {
     const paire = await generateKeyPair('RS256', { extractable: true });
     const autre = await generateKeyPair('RS256', { extractable: true });
@@ -39,19 +47,29 @@ describe('SocialTokenVerifier', () => {
     const keyStore: Pick<SocialKeyStore, 'keyFor'> = {
       keyFor: () => createLocalJWKSet(jwks),
     };
-    verifier = new SocialTokenVerifier(keyStore as SocialKeyStore);
+    verifier = new SocialTokenVerifier(keyStore as SocialKeyStore, logger);
   });
+
+  beforeEach(() => jest.clearAllMocks());
 
   /** Un jeton d'identité réaliste, signé par la clé du trousseau. */
   async function jeton(
     claims: Record<string, unknown>,
-    options: { issuer?: string; audience?: string; expiration?: string; cle?: KeyLike } = {},
+    options: {
+      issuer?: string;
+      audience?: string;
+      expiration?: string;
+      cle?: KeyLike;
+      /** Recule (valeur positive) ou avance (négative) `iat`, en secondes. */
+      emisIlYaSecondes?: number;
+    } = {},
   ): Promise<string> {
+    const emission = Math.floor(Date.now() / 1000) - (options.emisIlYaSecondes ?? 0);
     return new SignJWT(claims)
       .setProtectedHeader({ alg: 'RS256', kid: 'carlys-test' })
       .setIssuer(options.issuer ?? 'https://accounts.google.com')
       .setAudience(options.audience ?? GOOGLE_AUDIENCE)
-      .setIssuedAt()
+      .setIssuedAt(emission)
       .setExpirationTime(options.expiration ?? '10m')
       .sign(options.cle ?? signer);
   }
@@ -154,5 +172,66 @@ describe('SocialTokenVerifier', () => {
     );
 
     expect(claims.emailVerified).toBe(false);
+  });
+
+  /**
+   * LA FENÊTRE D'ÂGE, éprouvée des deux côtés.
+   *
+   * Elle n'était couverte par aucun test : n'importe quelle valeur de
+   * `MAX_TOKEN_AGE` — dix minutes, une seconde, un an — gardait la suite
+   * verte. Or elle est mécaniquement liée au mobile : Android ne sait PAS
+   * régénérer un jeton d'identité (google_sign_in 6.3.0 réutilise celui de
+   * la première connexion), donc la passerelle Dart oublie le compte avant
+   * chaque demande pour en obtenir un frais. Ces deux tests tiennent les
+   * deux bords de cet accord : trop vieux se refuse, dans la fenêtre
+   * s'accepte.
+   */
+  it('refuse un jeton d’identité plus vieux que la fenêtre, même non expiré', async () => {
+    // DOUZE minutes, pas onze : le plafond réel est
+    // `MAX_TOKEN_AGE + CLOCK_TOLERANCE`, jose ADDITIONNE la tolérance à
+    // l'âge maximal au lieu de la retrancher. Un test posé à onze minutes
+    // pile tombait sur la borne, passait, et laissait croire que la garde
+    // ne mordait pas du tout.
+    const vieux = await jeton({ sub: 'vieux' }, { emisIlYaSecondes: 12 * 60 });
+
+    await expect(verifier.verify('google', vieux, [GOOGLE_AUDIENCE])).rejects.toBeInstanceOf(
+      UnauthorizedException,
+    );
+  });
+
+  it('accepte un jeton encore dans la fenêtre', async () => {
+    const frais = await jeton({ sub: 'frais' }, { emisIlYaSecondes: 9 * 60 });
+
+    await expect(verifier.verify('google', frais, [GOOGLE_AUDIENCE])).resolves.toMatchObject({
+      subject: 'frais',
+    });
+  });
+
+  it('tolère une horloge de fournisseur en avance sur la nôtre', async () => {
+    // `iat` est daté par Google, jamais par le téléphone. Trente secondes
+    // d'avance chez eux faisaient échouer « iat claim timestamp check » sur
+    // un jeton parfaitement légitime, en rendant ce refus indiscernable
+    // d'un vrai. Sans `clockTolerance`, ce test échoue.
+    const enAvance = await jeton({ sub: 'avance' }, { emisIlYaSecondes: -30 });
+
+    await expect(verifier.verify('google', enAvance, [GOOGLE_AUDIENCE])).resolves.toMatchObject({
+      subject: 'avance',
+    });
+  });
+
+  it('écrit le motif du refus dans les journaux, sans le dire au client', async () => {
+    // Cinq causes très différentes rendent le même 401 : audience mal
+    // configurée, trousseau injoignable, horloge qui dérive, jeton périmé,
+    // signature fausse. Les taire AUSSI côté serveur rendait le diagnostic
+    // impossible. La réponse, elle, ne dit toujours rien.
+    await expect(
+      verifier.verify('google', await jeton({ sub: 'x' }, { cle: etrangere }), [GOOGLE_AUDIENCE]),
+    ).rejects.toThrow('Jeton Google invalide.');
+
+    expect(warn).toHaveBeenCalledTimes(1);
+    const [details] = warn.mock.calls[0] as [Record<string, unknown>];
+    expect(details.provider).toBe('google');
+    expect(details.raison).toEqual(expect.any(String));
+    expect(details.raison).not.toBe('');
   });
 });

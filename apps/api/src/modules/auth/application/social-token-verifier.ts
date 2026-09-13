@@ -1,6 +1,7 @@
 import { type SocialProvider } from '@carlys/api-contracts';
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { createRemoteJWKSet, jwtVerify, type JWTVerifyGetKey } from 'jose';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 
 /** Ce que le jeton d'identité prouve, une fois vérifié. */
 export interface SocialIdentityClaims {
@@ -29,6 +30,18 @@ const ISSUERS: Record<SocialProvider, string[]> = {
  * utile bien longtemps.
  */
 const MAX_TOKEN_AGE = '10 minutes';
+
+/**
+ * Tolérance d'horloge entre NOTRE serveur et celui du fournisseur.
+ *
+ * `iat` est daté par Google ou Apple, jamais par le téléphone. Sans cette
+ * marge, une seconde d'avance chez eux — ou de retard chez nous — suffit à
+ * faire échouer « iat claim timestamp check » sur un jeton parfaitement
+ * légitime, en rendant un 401 indiscernable d'un vrai refus. Soixante
+ * secondes couvrent la dérive d'un serveur synchronisé sans ouvrir de
+ * fenêtre utile à un rejeu.
+ */
+const CLOCK_TOLERANCE = '60 seconds';
 
 const JWKS_URLS: Record<SocialProvider, string> = {
   google: 'https://www.googleapis.com/oauth2/v3/certs',
@@ -66,7 +79,11 @@ export class SocialKeyStore {
  */
 @Injectable()
 export class SocialTokenVerifier {
-  constructor(private readonly keys: SocialKeyStore) {}
+  constructor(
+    private readonly keys: SocialKeyStore,
+    @InjectPinoLogger(SocialTokenVerifier.name)
+    private readonly logger: PinoLogger,
+  ) {}
 
   async verify(
     provider: SocialProvider,
@@ -82,6 +99,7 @@ export class SocialTokenVerifier {
         // toujours un — raison de plus pour que son absence soit un refus.
         requiredClaims: ['sub', 'iat', 'exp'],
         maxTokenAge: MAX_TOKEN_AGE,
+        clockTolerance: CLOCK_TOLERANCE,
       });
       if (typeof payload.sub !== 'string' || payload.sub.length === 0) {
         throw new Error('sub absent');
@@ -96,7 +114,29 @@ export class SocialTokenVerifier {
             ? payload.name.trim()
             : null,
       };
-    } catch {
+    } catch (error) {
+      // Le refus reste un 401 NU côté client — on ne dit jamais à un
+      // appelant anonyme POURQUOI son jeton est refusé, ce serait lui
+      // apprendre à en fabriquer un meilleur. Mais le taire AUSSI dans nos
+      // journaux rendait indiscernables cinq causes très différentes :
+      // audience mal configurée, trousseau JWKS injoignable, horloge qui
+      // dérive, jeton périmé, signature fausse. Ici, corrélé au requestId,
+      // le motif est écrit une fois, côté serveur seulement.
+      this.logger.warn(
+        {
+          provider,
+          // jose nomme ses refus (`ERR_JWT_EXPIRED`,
+          // `ERR_JWT_CLAIM_VALIDATION_FAILED`…) : c'est ce code qui dit
+          // laquelle des cinq causes a joué.
+          raison: error instanceof Error ? error.message : 'inconnue',
+          code:
+            error !== null && typeof error === 'object' && 'code' in error
+              ? String(error.code)
+              : undefined,
+          audiencesConfigurees: audiences.length,
+        },
+        'Jeton social refusé',
+      );
       throw new UnauthorizedException(
         provider === 'apple' ? 'Jeton Apple invalide.' : 'Jeton Google invalide.',
       );
