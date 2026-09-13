@@ -8,6 +8,7 @@ import {
   HttpStatus,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
   Query,
 } from '@nestjs/common';
@@ -15,7 +16,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../../../common/decorators/current-user.decorator';
 import { type AuthenticatedPrincipal } from '../../../../common/types/authenticated-request';
 import { ProgressService } from '../../application/progress.service';
-import { CreateBodyMetricDto, ListBodyMetricsQuery } from './dto/progress.dto';
+import { CreateBodyMetricDto, ListBodyMetricsQuery, UpdateBodyMetricDto } from './dto/progress.dto';
 
 @ApiTags('progress')
 @ApiBearerAuth()
@@ -40,6 +41,16 @@ export class BodyMetricsController {
     @Body() dto: CreateBodyMetricDto,
   ): Promise<BodyMetric> {
     return this.progress.addBodyMetric(user.userId, dto);
+  }
+
+  @Patch(':id')
+  @ApiOperation({ summary: 'Corriger une mesure (valeur, date, ou les deux)' })
+  update(
+    @CurrentUser() user: AuthenticatedPrincipal,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() dto: UpdateBodyMetricDto,
+  ): Promise<BodyMetric> {
+    return this.progress.updateBodyMetric(user.userId, id, dto);
   }
 
   @Delete(':id')

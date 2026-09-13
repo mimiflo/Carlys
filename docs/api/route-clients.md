@@ -124,6 +124,7 @@ OpenAPI : `{id}`.
 | --- | --- | --- |
 | `GET /body-metrics` | **mobile** | apps/mobile |
 | `POST /body-metrics` | **mobile** | apps/mobile |
+| `PATCH /body-metrics/{id}` | **mobile** | apps/mobile |
 | `DELETE /body-metrics/{id}` | **mobile** | apps/mobile |
 | `GET /progress/exercises/{exerciseId}` | **aucun** (constaté le 7 septembre 2026) | La courbe par exercice n’a pas encore d’écran ; l’écran Progression montre le résumé et les records. |
 | `GET /progress/overview` | **mobile** | apps/mobile |

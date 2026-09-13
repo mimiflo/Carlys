@@ -44,6 +44,27 @@ class BodyMetricActions {
     _ref.invalidate(bodyWeightMetricsProvider);
   }
 
+  /// Corrige une mesure déjà enregistrée.
+  ///
+  /// À SAVOIR : le dernier poids non supprimé nourrit le rapport métabolique
+  /// (métabolisme de base, dépense, cible calorique). Corriger une valeur
+  /// change donc les objectifs nutritionnels ; corriger une DATE peut changer
+  /// quelle mesure fait foi. C'est voulu, et c'est pourquoi l'écran le dit.
+  Future<void> correct(
+    String id, {
+    double? valueKg,
+    DateTime? measuredAt,
+  }) async {
+    await _ref
+        .read(progressRepositoryProvider)
+        .updateBodyMetric(
+          id: id,
+          value: valueKg,
+          measuredAt: measuredAt?.toUtc(),
+        );
+    _ref.invalidate(bodyWeightMetricsProvider);
+  }
+
   Future<void> remove(String id) async {
     await _ref.read(progressRepositoryProvider).deleteBodyMetric(id);
     _ref.invalidate(bodyWeightMetricsProvider);

@@ -69,3 +69,25 @@ export const bodyMetricSchema = z.object({
   measuredAt: z.string(),
 });
 export type BodyMetric = z.infer<typeof bodyMetricSchema>;
+
+/**
+ * Correction d'une mesure déjà enregistrée : la valeur, la date, ou les deux.
+ *
+ * Le TYPE ne se corrige pas — un poids ne devient pas un taux de masse
+ * grasse. Se tromper de type se répare en supprimant la ligne et en en
+ * créant une autre, ce que l'API permet déjà.
+ *
+ * `refine` plutôt que deux champs obligatoires : un corps vide n'est pas une
+ * correction, c'est un appel qui ne veut rien dire. Le refuser tôt évite une
+ * écriture inutile et un `updatedAt` qui bougerait pour rien.
+ */
+export const updateBodyMetricRequestSchema = z
+  .object({
+    value: z.number().min(1).max(500).optional(),
+    measuredAt: z.string().optional(),
+  })
+  .refine(
+    (body) => body.value !== undefined || body.measuredAt !== undefined,
+    'Rien à corriger : donne au moins la valeur ou la date.',
+  );
+export type UpdateBodyMetricRequest = z.infer<typeof updateBodyMetricRequestSchema>;

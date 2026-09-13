@@ -173,6 +173,21 @@ class _WeightRow extends ConsumerWidget {
               ),
             ),
             IconButton(
+              onPressed: () => correctBodyWeight(
+                context,
+                ref,
+                metricId: entry.id,
+                valueKg: entry.value,
+                measuredAt: entry.measuredAt,
+              ),
+              tooltip: 'Corriger la mesure du $date',
+              icon: const Icon(
+                Icons.edit_outlined,
+                size: 20,
+                color: AppColors.darkTextTertiary,
+              ),
+            ),
+            IconButton(
               onPressed: () => _remove(context, ref),
               tooltip: 'Supprimer la mesure du $date',
               icon: const Icon(

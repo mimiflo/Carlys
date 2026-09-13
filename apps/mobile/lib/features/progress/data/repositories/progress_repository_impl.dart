@@ -81,6 +81,29 @@ class ProgressRepositoryImpl implements ProgressRepository {
   }
 
   @override
+  Future<BodyMetricEntry> updateBodyMetric({
+    required String id,
+    double? value,
+    DateTime? measuredAt,
+  }) {
+    return _guard(() async {
+      final response = await _dio.patch<Map<String, dynamic>>(
+        '/body-metrics/$id',
+        // Seuls les champs RÉELLEMENT corrigés partent : le serveur laisse
+        // les autres colonnes intactes. Envoyer `null` les écraserait.
+        data: {
+          if (value != null) 'value': value,
+          if (measuredAt != null)
+            'measuredAt': measuredAt.toUtc().toIso8601String(),
+        },
+      );
+      return bodyMetricFromJson(
+        response.data?['data'] as Map<String, dynamic>? ?? const {},
+      );
+    });
+  }
+
+  @override
   Future<void> deleteBodyMetric(String id) {
     return _guard(() => _dio.delete<void>('/body-metrics/$id'));
   }

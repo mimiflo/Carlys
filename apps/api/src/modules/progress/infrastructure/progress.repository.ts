@@ -216,6 +216,15 @@ export class ProgressRepository {
     });
   }
 
+  /**
+   * Corrige une mesure en place. `data` ne porte que ce qui change : Prisma
+   * laisse intactes les colonnes absentes, et `updatedAt` se met à jour tout
+   * seul (`@updatedAt`), ce qui garde une trace de la correction.
+   */
+  updateBodyMetric(id: string, data: { value?: number; measuredAt?: Date }): Promise<BodyMetric> {
+    return this.prisma.bodyMetric.update({ where: { id }, data });
+  }
+
   softDeleteBodyMetric(id: string): Promise<void> {
     return this.prisma.bodyMetric
       .update({ where: { id }, data: { deletedAt: new Date() } })

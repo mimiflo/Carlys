@@ -19,6 +19,21 @@ abstract interface class ProgressRepository {
     required DateTime measuredAt,
   });
 
+  /// Corrige une mesure existante : la valeur, la date, ou les deux.
+  ///
+  /// Le TYPE ne se corrige pas — un poids ne devient pas un taux de masse
+  /// grasse ; cette erreur-là se répare en supprimant puis recréant.
+  ///
+  /// Contrairement à la suppression, ce n'est PAS idempotent : corriger une
+  /// mesure inconnue ou déjà supprimée échoue, pour que l'application ne
+  /// laisse jamais croire qu'une correction est prise alors que la ligne ne
+  /// compte plus.
+  Future<BodyMetricEntry> updateBodyMetric({
+    required String id,
+    double? value,
+    DateTime? measuredAt,
+  });
+
   /// Idempotent : supprimer une mesure déjà supprimée aboutit.
   Future<void> deleteBodyMetric(String id);
 }

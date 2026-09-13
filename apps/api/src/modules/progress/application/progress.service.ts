@@ -6,7 +6,12 @@ import {
   type ProgressOverview,
   type ProgressPeriod,
 } from '@carlys/api-contracts';
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { type BodyMetric, type PersonalRecord, type WorkoutSet } from '@prisma/client';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { PrismaService } from '../../../database/prisma/prisma.service';
@@ -166,6 +171,40 @@ export class ProgressService {
     const metrics = await this.progress.listBodyMetrics(userId, metricType, limit);
     // Servies du plus ancien au plus récent (prêt pour les graphiques).
     return metrics.reverse().map(presentBodyMetric);
+  }
+
+  /**
+   * Corrige une mesure existante.
+   *
+   * CE QUE CETTE CORRECTION DÉPLACE, ET QU'IL FAUT SAVOIR : le rapport
+   * métabolique (métabolisme de base, dépense, cible calorique, protéines,
+   * eau, IMC) est calculé à partir du DERNIER poids non supprimé, choisi par
+   * `measuredAt` décroissant. Corriger une valeur change donc les objectifs
+   * nutritionnels ; corriger une DATE peut changer QUELLE mesure fait foi,
+   * même si aucune valeur ne bouge. C'est voulu — une mesure fausse doit
+   * cesser de peser —, mais ce n'est pas anodin, et un test e2e le tient.
+   *
+   * Contrairement à la suppression, la correction n'est PAS idempotente au
+   * sens « aboutit toujours » : corriger une mesure inconnue ou déjà
+   * supprimée est une erreur, pas un succès silencieux. Le client viserait
+   * une ligne qui n'existe plus et croirait sa correction enregistrée.
+   */
+  async updateBodyMetric(
+    userId: string,
+    id: string,
+    input: { value?: number; measuredAt?: Date },
+  ): Promise<BodyMetricContract> {
+    if (input.value === undefined && input.measuredAt === undefined) {
+      throw new BadRequestException('Rien à corriger : donne au moins la valeur ou la date.');
+    }
+    const metric = await this.progress.findBodyMetricById(id);
+    // Une mesure qui appartient à quelqu'un d'autre est INTROUVABLE, jamais
+    // « interdite » : un 403 confirmerait que cet identifiant existe.
+    if (metric === null || metric.userId !== userId || metric.deletedAt !== null) {
+      throw new NotFoundException('Mesure introuvable.');
+    }
+    const updated = await this.progress.updateBodyMetric(id, input);
+    return presentBodyMetric(updated);
   }
 
   /** Idempotent : supprimer une mesure déjà supprimée ou inconnue aboutit. */

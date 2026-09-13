@@ -44,6 +44,31 @@ export class CreateBodyMetricDto {
   measuredAt!: Date;
 }
 
+/**
+ * Correction d'une mesure : la valeur, la date, ou les deux.
+ *
+ * Le TYPE est absent volontairement — un poids ne devient pas un taux de
+ * masse grasse. Cette erreur-là se répare en supprimant puis recréant, ce
+ * que l'API sait déjà faire.
+ *
+ * Les deux champs sont facultatifs, mais un corps entièrement vide est
+ * refusé par le service : ce n'est pas une correction.
+ */
+export class UpdateBodyMetricDto {
+  @ApiPropertyOptional({ minimum: 1, maximum: 500 })
+  @IsOptional()
+  @IsNumber({ maxDecimalPlaces: 2 })
+  @Min(1)
+  @Max(500)
+  value?: number;
+
+  @ApiPropertyOptional({ description: 'Date de mesure, UTC (ISO 8601)' })
+  @IsOptional()
+  @Type(() => Date)
+  @IsDate()
+  measuredAt?: Date;
+}
+
 export class ListBodyMetricsQuery {
   @ApiPropertyOptional({ enum: BodyMetricType, default: BodyMetricType.WEIGHT_KG })
   @IsOptional()

@@ -95,6 +95,29 @@ class FakeProgressRepository implements ProgressRepository {
   }
 
   @override
+  Future<BodyMetricEntry> updateBodyMetric({
+    required String id,
+    double? value,
+    DateTime? measuredAt,
+  }) async {
+    final index = _bodyMetrics.indexWhere((metric) => metric.id == id);
+    // Le vrai dépôt refuse une mesure inconnue (404) : le faux le refuse
+    // aussi, sinon un test passerait sur une correction qui n'a rien touché.
+    if (index < 0) {
+      throw StateError('Mesure $id introuvable');
+    }
+    final avant = _bodyMetrics[index];
+    final apres = BodyMetricEntry(
+      id: avant.id,
+      kind: avant.kind,
+      value: value ?? avant.value,
+      measuredAt: measuredAt ?? avant.measuredAt,
+    );
+    _bodyMetrics[index] = apres;
+    return apres;
+  }
+
+  @override
   Future<void> deleteBodyMetric(String id) async {
     _bodyMetrics.removeWhere((metric) => metric.id == id);
   }

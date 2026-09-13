@@ -85,6 +85,8 @@ describe('Progression (e2e)', () => {
       request(app.getHttpServer()).post(url).set('Authorization', `Bearer ${token}`),
     get: (url: string) =>
       request(app.getHttpServer()).get(url).set('Authorization', `Bearer ${token}`),
+    patch: (url: string) =>
+      request(app.getHttpServer()).patch(url).set('Authorization', `Bearer ${token}`),
     delete: (url: string) =>
       request(app.getHttpServer()).delete(url).set('Authorization', `Bearer ${token}`),
   });
@@ -291,5 +293,105 @@ describe('Progression (e2e)', () => {
 
     // La mesure d'autrui reste invisible, même à la suppression.
     await authed(otherAccessToken).delete(`/api/v1/body-metrics/${metricId}`).expect(404);
+  });
+
+  it('corrige une mesure : valeur, date, et les refus', async () => {
+    const id = randomUUID();
+    await authed(accessToken)
+      .post('/api/v1/body-metrics')
+      .send({ id, metricType: 'WEIGHT_KG', value: 90, measuredAt: at(30) })
+      .expect(201);
+
+    const corrigee = data<BodyMetric>(
+      (
+        await authed(accessToken)
+          .patch(`/api/v1/body-metrics/${id}`)
+          .send({ value: 88.4 })
+          .expect(200)
+      ).body,
+    );
+    expect(corrigee.value).toBe(88.4);
+
+    // La date seule se corrige aussi — c'est elle qui décide, plus loin,
+    // quelle mesure fait foi pour le rapport métabolique.
+    const veille = at(60 * 24);
+    const redatee = data<BodyMetric>(
+      (
+        await authed(accessToken)
+          .patch(`/api/v1/body-metrics/${id}`)
+          .send({ measuredAt: veille })
+          .expect(200)
+      ).body,
+    );
+    expect(new Date(redatee.measuredAt).toISOString()).toBe(new Date(veille).toISOString());
+    expect(redatee.value).toBe(88.4); // la valeur n'a pas bougé
+
+    // Un corps vide n'est pas une correction.
+    await authed(accessToken).patch(`/api/v1/body-metrics/${id}`).send({}).expect(400);
+    // Hors bornes, comme à la création.
+    await authed(accessToken)
+      .patch(`/api/v1/body-metrics/${id}`)
+      .send({ value: 5_000 })
+      .expect(400);
+    // Le type ne se corrige pas : `forbidNonWhitelisted` refuse le champ.
+    await authed(accessToken)
+      .patch(`/api/v1/body-metrics/${id}`)
+      .send({ metricType: 'BODY_FAT_PERCENT' })
+      .expect(400);
+    // La mesure d'autrui est introuvable, jamais interdite.
+    await authed(otherAccessToken)
+      .patch(`/api/v1/body-metrics/${id}`)
+      .send({ value: 70 })
+      .expect(404);
+
+    // Une mesure supprimée ne se corrige plus : le client croirait sa
+    // correction enregistrée alors que la ligne ne compte plus.
+    await authed(accessToken).delete(`/api/v1/body-metrics/${id}`).expect(204);
+    await authed(accessToken).patch(`/api/v1/body-metrics/${id}`).send({ value: 70 }).expect(404);
+  });
+
+  /**
+   * CE QUE CE TEST PROTÈGE, et que rien ne disait : une mesure de poids
+   * n'appartient pas au seul domaine « progression ». Le rapport métabolique
+   * (métabolisme de base, dépense, cible calorique, protéines, eau, IMC) est
+   * calculé à partir du DERNIER poids non supprimé, choisi par `measuredAt`
+   * décroissant. Corriger un poids change donc les objectifs nutritionnels de
+   * la personne — et corriger une DATE suffit à changer QUELLE mesure fait
+   * foi, sans qu'aucune valeur ne bouge. C'est le comportement voulu ; sans
+   * ce test, rien n'empêcherait de le casser sans s'en apercevoir, le
+   * symptôme n'apparaissant que dans un autre module.
+   */
+  it('corriger un poids déplace le rapport métabolique', async () => {
+    await authed(accessToken)
+      .patch('/api/v1/users/me')
+      .send({
+        sex: 'MALE',
+        birthDate: '1996-01-15T00:00:00.000Z',
+        heightCm: 180,
+        activityLevel: 'MODERATE',
+        nutritionGoal: 'MAINTAIN',
+      })
+      .expect(200);
+
+    const recent = randomUUID();
+    await authed(accessToken)
+      .post('/api/v1/body-metrics')
+      .send({ id: recent, metricType: 'WEIGHT_KG', value: 80, measuredAt: at(1) })
+      .expect(201);
+
+    const avant = data<{ profile: { weightKg: number | null } }>(
+      (await authed(accessToken).get('/api/v1/nutrition/metabolism').expect(200)).body,
+    );
+    expect(avant.profile.weightKg).toBe(80);
+
+    await authed(accessToken)
+      .patch(`/api/v1/body-metrics/${recent}`)
+      .send({ value: 74 })
+      .expect(200);
+
+    const apres = data<{ profile: { weightKg: number | null } }>(
+      (await authed(accessToken).get('/api/v1/nutrition/metabolism').expect(200)).body,
+    );
+    expect(apres.profile.weightKg).toBe(74);
   });
 });

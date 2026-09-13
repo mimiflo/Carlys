@@ -1,4 +1,4 @@
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
 import { type WorkoutSet } from '@prisma/client';
 import { type PinoLogger } from 'nestjs-pino';
 import { type PrismaService } from '../../../database/prisma/prisma.service';
@@ -18,6 +18,7 @@ interface Stubs {
   createBodyMetric: jest.Mock;
   findBodyMetricById: jest.Mock;
   listBodyMetrics: jest.Mock;
+  updateBodyMetric: jest.Mock;
   softDeleteBodyMetric: jest.Mock;
 }
 
@@ -37,6 +38,7 @@ function buildStubs(): Stubs {
     createBodyMetric: jest.fn().mockResolvedValue(true),
     findBodyMetricById: jest.fn().mockResolvedValue(null),
     listBodyMetrics: jest.fn().mockResolvedValue([]),
+    updateBodyMetric: jest.fn().mockResolvedValue(bodyMetricRow()),
     softDeleteBodyMetric: jest.fn().mockResolvedValue(undefined),
   };
 }
@@ -219,6 +221,70 @@ describe('ProgressService', () => {
       const metrics = await service.listBodyMetrics(USER, 'WEIGHT_KG', 90);
 
       expect(metrics.map((metric) => metric.id)).toEqual(['a', 'b']);
+    });
+  });
+
+  describe('updateBodyMetric', () => {
+    it('corrige la valeur seule, sans toucher à la date', async () => {
+      const stubs = buildStubs();
+      stubs.findBodyMetricById.mockResolvedValue(bodyMetricRow());
+      stubs.updateBodyMetric.mockResolvedValue(bodyMetricRow({ value: 81 }));
+      const service = buildService(stubs);
+
+      const metric = await service.updateBodyMetric(USER, 'metric-1', { value: 81 });
+
+      expect(metric.value).toBe(81);
+      // `measuredAt` absent de l'objet transmis : Prisma laisse la colonne
+      // intacte. L'envoyer à `undefined` marcherait aussi, mais le vérifier
+      // ici interdit qu'un futur remaniement passe `null` par mégarde.
+      expect(stubs.updateBodyMetric).toHaveBeenCalledWith('metric-1', { value: 81 });
+    });
+
+    it('corrige la date seule — c’est elle qui décide quelle mesure fait foi', async () => {
+      const stubs = buildStubs();
+      stubs.findBodyMetricById.mockResolvedValue(bodyMetricRow());
+      const veille = new Date('2026-08-06T07:00:00Z');
+      stubs.updateBodyMetric.mockResolvedValue(bodyMetricRow({ measuredAt: veille }));
+      const service = buildService(stubs);
+
+      await service.updateBodyMetric(USER, 'metric-1', { measuredAt: veille });
+
+      expect(stubs.updateBodyMetric).toHaveBeenCalledWith('metric-1', { measuredAt: veille });
+    });
+
+    it('un corps vide n’est pas une correction', async () => {
+      const stubs = buildStubs();
+      stubs.findBodyMetricById.mockResolvedValue(bodyMetricRow());
+      const service = buildService(stubs);
+
+      await expect(service.updateBodyMetric(USER, 'metric-1', {})).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(stubs.updateBodyMetric).not.toHaveBeenCalled();
+    });
+
+    it('corriger une mesure supprimée échoue — le client croirait sa correction prise', async () => {
+      const stubs = buildStubs();
+      stubs.findBodyMetricById.mockResolvedValue(bodyMetricRow({ deletedAt: new Date() }));
+      const service = buildService(stubs);
+
+      await expect(service.updateBodyMetric(USER, 'metric-1', { value: 80 })).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(stubs.updateBodyMetric).not.toHaveBeenCalled();
+    });
+
+    it('la mesure d’un autre utilisateur reste introuvable, jamais interdite', async () => {
+      const stubs = buildStubs();
+      stubs.findBodyMetricById.mockResolvedValue(bodyMetricRow({ userId: OTHER_USER }));
+      const service = buildService(stubs);
+
+      // NotFound et non Forbidden : un 403 confirmerait que cet identifiant
+      // existe, et transformerait la route en oracle d'énumération.
+      await expect(service.updateBodyMetric(USER, 'metric-1', { value: 80 })).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(stubs.updateBodyMetric).not.toHaveBeenCalled();
     });
   });
 
