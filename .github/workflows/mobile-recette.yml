@@ -741,6 +741,18 @@ jobs:
             echo "::warning title=Empreintes illisibles::Le keystore n'a pas rendu d'empreinte pour l'alias « $KEY_ALIAS ». La signature, elle, a déjà été vérifiée à l'étape précédente."
             exit 0
           fi
+          # DANS LE LOG d'abord : c'est là qu'on regarde. Le récapitulatif
+          # est plus lisible, mais il faut savoir qu'il existe — et sur un
+          # téléphone, personne ne le trouve.
+          echo "── Empreintes de la clé d'upload ─────────────────────────"
+          echo "$empreintes"
+          echo "──────────────────────────────────────────────────────────"
+          echo "Client OAuth Android de Google Cloud :"
+          echo "  Package name : com.carlys.carlys_mobile"
+          echo "  SHA-1        : la ligne SHA1 ci-dessus"
+          echo "Une empreinte est un condensé du certificat PUBLIC : rien de"
+          echo "secret n'est imprimé ici."
+
           {
             echo "### Empreintes de la clé d'upload"
             echo
