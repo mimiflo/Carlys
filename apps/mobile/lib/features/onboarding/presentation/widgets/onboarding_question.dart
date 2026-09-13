@@ -77,11 +77,14 @@ class OnboardingQuestion extends StatelessWidget {
         ],
       ),
       1 => OnboardingStepBody(
-        label: 'Ton objectif',
+        label: 'Ton plan nutrition',
         question: 'Qu’est-ce qu’on\nconstruit ensemble ?',
-        subtitle:
-            'On calibre tes charges, ton volume et tes macros '
-            'à partir de ça.',
+        // Ce choix écrit un `NutritionGoal`, et LUI SEUL : il fixe la cible
+        // calorique et les macros. Le sous-titre promettait aussi les
+        // charges et le volume — rien ne les calibre à partir d'ici, et
+        // l'objectif d'ENTRAÎNEMENT est un autre concept, encore à naître.
+        // Ne promettre que ce qui est tenu.
+        subtitle: 'On calibre tes calories et tes macros à partir de ça.',
         options: [
           for (final value in onboardingGoals)
             OnboardingOptionCard(

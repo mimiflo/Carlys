@@ -44,7 +44,7 @@ Le système n'affiche RIEN de lui-même quand l'application est au premier
 plan. Sans traitement, un encouragement envoyé au moment précis où l'on
 utilise Carlys n'existerait pas.
 
-`PushForegroundHost` enveloppe la coquille des cinq onglets, écoute
+`PushForegroundHost` enveloppe la coquille des onglets, écoute
 `FirebaseMessaging.onMessage` et pose un bandeau. Une seule à la fois : deux
 notifications coup sur coup empileraient deux bandeaux devant le contenu.
 C'est le seul endroit où l'application MONTRE une notification, et elle n'en

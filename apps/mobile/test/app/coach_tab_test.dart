@@ -95,15 +95,21 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  testWidgets('la barre porte cinq onglets — le coach vit dans Training', (
+  testWidgets('la barre porte six onglets — le coach vit dans Training', (
     tester,
   ) async {
     await pumpApp(tester, FakeCoachRepository());
 
-    expect(appBottomBarItems, hasLength(5));
+    // SIX depuis septembre 2026 : la nutrition a rejoint la barre, entre
+    // s'entraîner et mesurer. Le COACH, lui, reste dans le hub Training —
+    // c'est bien cette décision-là que la réorganisation d'août avait prise,
+    // et elle tient. Les deux affirmations vivent dans le même test pour
+    // qu'on ne puisse pas confondre l'une avec l'autre.
+    expect(appBottomBarItems, hasLength(6));
     expect(appBottomBarItems.map((item) => item.label), [
       'Accueil',
       'Training',
+      'Nutrition',
       'Progrès',
       'Academy',
       'Communauté',

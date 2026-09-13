@@ -83,7 +83,7 @@ String? _firstRunRedirect(
 ///  - parcours ou session inconnus → splash (restauration en cours) ;
 ///  - parcours en cours → tunnel de première ouverture ;
 ///  - parcours terminé, non authentifié → écrans d'authentification ;
-///  - parcours terminé, authentifié → coquille 5 onglets et plein écran.
+///  - parcours terminé, authentifié → coquille 6 onglets et plein écran.
 final appRouterProvider = Provider<GoRouter>((ref) {
   final refreshListenable = ValueNotifier(0);
   ref.onDispose(refreshListenable.dispose);
@@ -148,14 +148,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const ForgotPasswordScreen(),
       ),
 
-      // ── Coquille : 5 onglets avec bottom bar ──────────────────────
+      // ── Coquille : 6 onglets avec bottom bar ──────────────────────
       // L'ordre des branches EST celui de `appBottomBarItems` : la barre
       // rend un index, la coquille ouvre la branche du même rang.
       //
       // Une branche peut porter PLUSIEURS routes racines : les écrans
-      // regroupés sous un onglet (exercices et coach sous Training, la
-      // nutrition sous Academy) se poussent dans la pile de leur branche —
-      // la bottom bar reste visible, et « retour » ramène au hub.
+      // regroupés sous un onglet (exercices et coach sous Training) se
+      // poussent dans la pile de leur branche — la bottom bar reste
+      // visible, et « retour » ramène au hub.
       StatefulShellRoute.indexedStack(
         builder: (context, state, navigationShell) =>
             AppShell(navigationShell: navigationShell),
@@ -202,6 +202,19 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               ),
             ],
           ),
+          // La nutrition a sa propre branche depuis septembre 2026 : elle
+          // était une page poussée sous Academy, donc un pilier quotidien
+          // rangé derrière « comprendre ». Sa pile est maintenant la sienne,
+          // et son onglet conserve son état comme les autres.
+          StatefulShellBranch(
+            routes: [
+              GoRoute(
+                path: AppRoutes.nutrition,
+                name: 'nutrition',
+                builder: (context, state) => const NutritionScreen(),
+              ),
+            ],
+          ),
           StatefulShellBranch(
             routes: [
               GoRoute(
@@ -217,11 +230,6 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 path: AppRoutes.academy,
                 name: 'academy',
                 builder: (context, state) => const AcademyScreen(),
-              ),
-              GoRoute(
-                path: AppRoutes.nutrition,
-                name: 'nutrition',
-                builder: (context, state) => const NutritionScreen(),
               ),
             ],
           ),

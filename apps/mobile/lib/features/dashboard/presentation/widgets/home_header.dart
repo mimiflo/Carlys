@@ -191,7 +191,7 @@ class _BrandMark extends StatelessWidget {
   }
 }
 
-/// L'avatar est LA porte du profil depuis la réorganisation en cinq onglets :
+/// L'avatar est LA porte du profil depuis la réorganisation d'août 2026 :
 /// l'onglet Profil n'existe plus, ce geste le remplace.
 class _AvatarButton extends StatelessWidget {
   const _AvatarButton({required this.child});

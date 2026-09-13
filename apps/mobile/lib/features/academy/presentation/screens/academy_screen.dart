@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 
-import '../../../../app/router/app_routes.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/academy.dart';
 import '../controllers/academy_controllers.dart';
@@ -75,8 +73,6 @@ class AcademyScreen extends ConsumerWidget {
               ),
               const SizedBox(height: AppSpacing.gapRow),
             ],
-            _NutritionEntry(onOpen: () => context.push(AppRoutes.nutrition)),
-            const SizedBox(height: AppSpacing.gapSection),
             for (final category in AcademyCategory.values) ...[
               AppSectionLabel(category.label),
               const SizedBox(height: AppSpacing.xs),
@@ -98,49 +94,6 @@ class AcademyScreen extends ConsumerWidget {
             ],
           ],
         ),
-      ),
-    );
-  }
-}
-
-/// La porte d'entrée vers la nutrition : métabolisme, objectifs, macros.
-class _NutritionEntry extends StatelessWidget {
-  const _NutritionEntry({required this.onOpen});
-
-  final VoidCallback onOpen;
-
-  @override
-  Widget build(BuildContext context) {
-    return AppCard(
-      onTap: onOpen,
-      child: Row(
-        children: [
-          const Icon(AppIcons.nutrition, color: AppColors.accent),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Nutrition',
-                  style: AppTypography.subheading.copyWith(
-                    color: AppColors.darkTextPrimary,
-                  ),
-                ),
-                Text(
-                  'Métabolisme, objectifs caloriques et macros.',
-                  style: AppTypography.body.copyWith(
-                    color: AppColors.darkTextSecondary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const Icon(
-            Icons.chevron_right_rounded,
-            color: AppColors.darkTextTertiary,
-          ),
-        ],
       ),
     );
   }

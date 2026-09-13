@@ -121,7 +121,11 @@ void main() {
 
     await tapContinue(tester);
     expect(find.text('2/5'), findsOneWidget);
-    expect(find.text('TON OBJECTIF'), findsOneWidget);
+    // « TON PLAN NUTRITION » depuis septembre 2026 : cette étape écrit un
+    // `NutritionGoal` et lui seul. « Objectif » recouvrait au moins deux
+    // notions — le but alimentaire et le but d'entraînement, qui n'existe
+    // pas encore — et c'est ce mot valise qu'on retire.
+    expect(find.text('TON PLAN NUTRITION'), findsOneWidget);
   });
 
   testWidgets('le retour ramène à l’étape précédente', (tester) async {

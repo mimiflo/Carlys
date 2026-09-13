@@ -31,11 +31,13 @@ Future<void> openCoach(WidgetTester tester) async {
   await tester.pumpAndSettle();
 }
 
-/// Ouvre la nutrition : Academy → carte « Nutrition ».
+/// Ouvre la nutrition : son propre onglet depuis septembre 2026.
+///
+/// Elle était une carte à ouvrir depuis Academy. Le chemin passe par ce
+/// helper précisément pour que ce genre de déplacement se règle ICI, en un
+/// endroit, et non dans chaque test qui a besoin de l'écran.
 Future<void> openNutrition(WidgetTester tester) async {
-  await tapTab(tester, 'Academy');
-  await tester.tap(find.text('Nutrition'));
-  await tester.pumpAndSettle();
+  await tapTab(tester, 'Nutrition');
 }
 
 /// Ouvre le profil : l'avatar de l'accueil — l'onglet Profil n'existe plus.

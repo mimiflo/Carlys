@@ -144,12 +144,12 @@ mais sépare toujours interface / logique / données.
 Le routeur est exposé par `appRouterProvider` (`lib/app/router/app_router.dart`)
 et consommé par `MaterialApp.router`. Les chemins vivent dans `AppRoutes`.
 
-Deux familles de routes : la **coquille à cinq onglets**
+Deux familles de routes : la **coquille à six onglets**
 (`StatefulShellRoute.indexedStack`, barre basse visible) et le **plein écran**
 (hors coquille), pour tout ce qui demande de la concentration ou une sortie
 explicite.
 
-Les cinq onglets — Accueil, Training, Progrès, Academy, Communauté — sont des
+Les six onglets — Accueil, Training, Nutrition, Progrès, Academy, Communauté — sont des
 **hubs** : une branche peut porter plusieurs routes racines, et un `push` vers
 une route sœur de la même branche garde la barre basse visible (le retour
 ramène au hub). C'est ainsi que les anciens onglets ont été rangés : la

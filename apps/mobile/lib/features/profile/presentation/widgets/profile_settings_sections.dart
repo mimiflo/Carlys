@@ -62,19 +62,20 @@ class ProfileIdentitySettings extends StatelessWidget {
 ///
 /// Les lignes « temps de repos par défaut » et « unités » de la maquette sont
 /// absentes : aucun réglage correspondant n'existe dans le domaine.
+///
+/// La ligne « Objectif » a QUITTÉ ce groupe en septembre 2026 : elle porte un
+/// `NutritionGoal`, donc elle pilote les calories et les macros, pas les
+/// charges. Rangée sous « Entraînement » et nommée d'un mot qui recouvre au
+/// moins deux notions distinctes, elle laissait croire qu'on y choisissait un
+/// but d'entraînement. Elle vit maintenant dans son propre groupe, sous un
+/// nom qui dit ce qu'elle fait.
 class ProfileTrainingSettings extends StatelessWidget {
   const ProfileTrainingSettings({
-    required this.goalLabel,
-    required this.onGoal,
     required this.onTemplates,
     required this.onHistory,
     required this.onBodyMetrics,
     super.key,
   });
-
-  /// Libellé de l'objectif nutritionnel courant, `null` s'il n'est pas défini.
-  final String? goalLabel;
-  final VoidCallback onGoal;
 
   /// Ouvre « Mes modèles » : gérer ses séances types est un réglage
   /// d'entraînement, pas un geste de démarrage.
@@ -87,12 +88,6 @@ class ProfileTrainingSettings extends StatelessWidget {
     return AppSettingsGroup(
       label: 'Entraînement',
       rows: [
-        AppSettingsRow(
-          icon: AppIcons.goal,
-          label: 'Objectif',
-          value: goalLabel,
-          onTap: onGoal,
-        ),
         AppSettingsRow(
           icon: AppIcons.programs,
           label: 'Mes modèles de séance',

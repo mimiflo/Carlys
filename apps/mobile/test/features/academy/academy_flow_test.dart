@@ -3,6 +3,7 @@ import 'package:carlys_mobile/app/environment/app_environment.dart';
 import 'package:carlys_mobile/app/restore/app_restore.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
 import 'package:carlys_mobile/features/academy/domain/entities/academy.dart';
+import 'package:carlys_mobile/features/academy/presentation/screens/academy_screen.dart';
 import 'package:carlys_mobile/features/academy/presentation/widgets/lesson_card.dart';
 import 'package:carlys_mobile/features/academy/presentation/widgets/quiz_card.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
@@ -71,15 +72,23 @@ void main() {
         .clearAccessibilityFeaturesTestValue();
   });
 
-  testWidgets('question du jour, entrée nutrition et leçons par domaine', (
-    tester,
-  ) async {
+  testWidgets('question du jour et leçons par domaine', (tester) async {
     await tester.pumpWidget(app());
     await tester.pumpAndSettle();
     await tapTab(tester, 'Academy');
 
     expect(find.text('QUESTION DU JOUR'), findsOneWidget);
-    expect(find.text('Nutrition'), findsOneWidget);
+    // La carte « Nutrition » a quitté l'Academy en septembre 2026 : la
+    // nutrition a son propre onglet, et deux portes pour un même écran
+    // valent moins qu'une seule, évidente. Le seul « Nutrition » visible
+    // ici est donc l'étiquette de la barre du bas.
+    expect(
+      find.descendant(
+        of: find.byType(AcademyScreen),
+        matching: find.text('Nutrition'),
+      ),
+      findsNothing,
+    );
     // Les quatre domaines, en-têtes de section. Chaque libellé est unique et
     // la liste est PARESSEUSE : le viseur doit tolérer zéro correspondance
     // tant qu'on n'a pas défilé jusqu'à la section (`.first` planterait).

@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 import '../../design_system/design_system.dart';
 import '../../features/notifications/presentation/widgets/push_foreground_host.dart';
 
-/// Coquille des 5 onglets : le contenu défile SOUS la bottom bar floutée
+/// Coquille des 6 onglets : le contenu défile SOUS la bottom bar floutée
 /// (`extendBody`), chaque onglet garde sa propre pile de navigation.
 class AppShell extends StatelessWidget {
   const AppShell({required this.navigationShell, super.key});
@@ -14,7 +14,7 @@ class AppShell extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     // Le guichet des notifications reçues application ouverte enveloppe la
-    // coquille : il vaut ainsi pour les cinq onglets, sans se réabonner à
+    // coquille : il vaut ainsi pour tous les onglets, sans se réabonner à
     // chaque changement d'onglet.
     return PushForegroundHost(
       child: Scaffold(

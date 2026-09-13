@@ -11,6 +11,7 @@ import '../../../progression/presentation/controllers/progression_controllers.da
 import '../widgets/profile_email_verification.dart';
 import '../widgets/profile_header.dart';
 import '../widgets/profile_legal_section.dart';
+import '../widgets/profile_nutrition_settings.dart';
 import '../widgets/profile_settings_sections.dart';
 import '../widgets/profile_summary.dart';
 
@@ -31,14 +32,14 @@ class ProfileScreen extends ConsumerWidget {
       AuthAuthenticated(:final user) => user,
       _ => null,
     };
-    // L'objectif d'entraînement est le SEUL chiffre serveur resté ici : il
-    // ne s'affiche que sur une ligne de réglage, où l'absence de valeur
+    // Le plan nutrition est la SEULE donnée serveur restée ici : il ne
+    // s'affiche que sur une ligne de réglage, où l'absence de valeur
     // n'affirme rien. Tout le reste passe par ProfileSummary, qui distingue
     // « pas encore », « pas pu » et « rien à montrer ».
     final profile = ref.watch(metabolismReportProvider).valueOrNull?.profile;
     final progression = ref.watch(progressionProfileProvider);
-    // Plein écran depuis la réorganisation en cinq onglets : la bottom bar ne
-    // recouvre plus cet écran, seul l'encart système compte.
+    // Plein écran depuis que le profil n'est plus un onglet : la bottom bar
+    // ne recouvre plus cet écran, seul l'encart système compte.
     final bottomInset = MediaQuery.paddingOf(context).bottom;
 
     return Scaffold(
@@ -82,13 +83,16 @@ class ProfileScreen extends ConsumerWidget {
             ),
             const SizedBox(height: AppSpacing.md),
             ProfileTrainingSettings(
-              goalLabel: profile?.goal?.label,
-              // L'objectif se règle dans le profil métabolique (onglet
-              // Nutrition), seul écrivain de cette donnée.
-              onGoal: () => context.go(AppRoutes.nutrition),
               onTemplates: () => context.push(AppRoutes.templates),
               onHistory: () => context.push(AppRoutes.history),
               onBodyMetrics: () => context.go(AppRoutes.progress),
+            ),
+            const SizedBox(height: AppSpacing.md),
+            ProfileNutritionSettings(
+              goalLabel: profile?.goal?.label,
+              // Le plan se règle dans le profil métabolique (onglet
+              // Nutrition), seul écrivain de cette donnée.
+              onGoal: () => context.go(AppRoutes.nutrition),
             ),
             const SizedBox(height: AppSpacing.md),
             ProfileAppSettings(

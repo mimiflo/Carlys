@@ -189,12 +189,12 @@ class _MetabolicProfileFormState extends ConsumerState<MetabolicProfileForm> {
             onChanged: (value) => setState(() => _activityLevel = value),
           ),
           const SizedBox(height: AppSpacing.md),
-          Text('Objectif', style: theme.textTheme.labelLarge),
+          Text('Mon plan nutrition', style: theme.textTheme.labelLarge),
           const SizedBox(height: AppSpacing.xxs),
           DropdownButtonFormField<NutritionGoal>(
             initialValue: _goal,
             isExpanded: true,
-            hint: const Text('Choisir un objectif'),
+            hint: const Text('Choisir un plan'),
             items: [
               for (final goal in NutritionGoal.values)
                 DropdownMenuItem(value: goal, child: Text(goal.label)),

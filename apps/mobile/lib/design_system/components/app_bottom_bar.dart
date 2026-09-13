@@ -20,13 +20,19 @@ class AppBottomBarItem {
   final String label;
 }
 
-/// Les 5 onglets de l'application.
+/// Les 6 onglets de l'application.
 ///
-/// Réorganisation d'août 2026 : cinq destinations, chacune un VERBE du
-/// parcours — arriver (Accueil), s'entraîner (Training), mesurer (Progrès),
-/// comprendre (Academy), s'encourager (Communauté). L'exercice, le coach et
-/// la nutrition vivent DANS ces destinations ; le profil s'ouvre depuis
-/// l'avatar de l'accueil.
+/// Réorganisation d'août 2026 : des destinations qui sont chacune un VERBE
+/// du parcours — arriver (Accueil), s'entraîner (Training), mesurer
+/// (Progrès), comprendre (Academy), s'encourager (Communauté). L'exercice et
+/// le coach vivent DANS ces destinations ; le profil s'ouvre depuis l'avatar
+/// de l'accueil.
+///
+/// SE NOURRIR rejoint la liste en septembre 2026, entre s'entraîner et
+/// mesurer. Ce n'est pas un retour sur la décision d'août, qui portait sur
+/// le COACH — lui reste dans le hub Training, là où il a un sens. La
+/// nutrition, elle, était rangée sous Academy : un pilier quotidien caché
+/// derrière « comprendre », alors que manger se décide trois fois par jour.
 const List<AppBottomBarItem> appBottomBarItems = [
   AppBottomBarItem(
     icon: Icons.home_outlined,
@@ -37,6 +43,11 @@ const List<AppBottomBarItem> appBottomBarItems = [
     icon: Icons.fitness_center_outlined,
     activeIcon: AppIcons.workout,
     label: 'Training',
+  ),
+  AppBottomBarItem(
+    icon: Icons.restaurant_outlined,
+    activeIcon: AppIcons.nutrition,
+    label: 'Nutrition',
   ),
   AppBottomBarItem(
     icon: Icons.insights_outlined,

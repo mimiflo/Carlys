@@ -35,7 +35,8 @@ abstract final class AppRoutes {
   static const String welcome = '/bienvenue';
   static const String onboarding = '/onboarding';
 
-  /// Les cinq onglets de la réorganisation d'août 2026.
+  /// Les six onglets : réorganisation d'août 2026, plus la nutrition
+  /// promue pilier en septembre 2026.
   static const String training = '/training';
   static const String academy = '/academy';
   static const String community = '/community';

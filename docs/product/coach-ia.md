@@ -341,7 +341,9 @@ apps/mobile/lib/features/coaching/
 
 **Le coach vit dans le hub Training** *(réorganisation d'août 2026 — il a
 d'abord été un sixième onglet, au centre de la barre)*. La barre basse est
-repassée à cinq entrées (Accueil, Training, Progrès, Academy, Communauté) et
+repassée à cinq entrées (Accueil, Training, Progrès, Academy, Communauté) —
+la Nutrition en ajoute une sixième en septembre 2026, ce qui ne change rien
+pour le coach — et
 le coach s'ouvre en un geste depuis la carte « Coach IA » du hub Training :
 sa route `/coach` est une **route sœur de la branche Training**, la barre
 reste donc visible et le retour ramène au hub.
@@ -502,6 +504,6 @@ Le streaming, s'il est retenu, s'insère entre 2 et 3.
    sur le prix de l'abonnement.
 4. ~~**Point d'entrée**~~ — tranché une première fois comme sixième onglet au
    centre de la barre, puis **re-tranché en août 2026** avec la réorganisation
-   en cinq onglets : le coach s'ouvre depuis la carte « Coach IA » du hub
+   en onglets : le coach s'ouvre depuis la carte « Coach IA » du hub
    Training (route sœur de la branche, barre visible). La carte sur l'accueil
    et le lien depuis le débrief de séance restent possibles en complément.
