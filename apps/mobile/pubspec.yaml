@@ -120,6 +120,9 @@ flutter:
     # Pack d'apprentissage de l'Academy : contenu ÉDITORIAL embarqué (leçons
     # et questions), pas une donnée serveur — l'Academy fonctionne hors ligne.
     - assets/academy/
+    # Pack de RECETTES : contenu éditorial embarqué lui aussi. Une recette se
+    # lit en cuisine, où le réseau manque souvent.
+    - assets/nutrition/
     # Illustrations des 4 profils Carlys (voir le README du dossier). Tant
     # qu'un fichier manque, la carte pose un repli de marque — jamais un trou.
     - assets/profiles/

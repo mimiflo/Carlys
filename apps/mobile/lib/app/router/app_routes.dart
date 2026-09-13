@@ -15,6 +15,9 @@ abstract final class AppRoutes {
   static const String coach = '/coach';
   static const String progress = '/progress';
   static const String nutrition = '/nutrition';
+
+  /// Recettes : poussée depuis l'onglet Nutrition, dans sa pile.
+  static const String recipes = '/nutrition/recettes';
   static const String profile = '/profile';
 
   // Plein écran, hors coquille (pas de bottom bar)

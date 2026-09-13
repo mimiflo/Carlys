@@ -17,6 +17,7 @@ import '../../features/dashboard/presentation/screens/home_screen.dart';
 import '../../features/exercises/presentation/screens/exercise_detail_screen.dart';
 import '../../features/exercises/presentation/screens/exercise_library_screen.dart';
 import '../../features/nutrition/presentation/screens/nutrition_screen.dart';
+import '../../features/nutrition/presentation/screens/recipes_screen.dart';
 import '../../features/onboarding/domain/first_run_step.dart';
 import '../../features/onboarding/presentation/controllers/first_run_controller.dart';
 import '../../features/onboarding/presentation/controllers/splash_gate.dart';
@@ -212,6 +213,13 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 path: AppRoutes.nutrition,
                 name: 'nutrition',
                 builder: (context, state) => const NutritionScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'recettes',
+                    name: 'recipes',
+                    builder: (context, state) => const RecipesScreen(),
+                  ),
+                ],
               ),
             ],
           ),

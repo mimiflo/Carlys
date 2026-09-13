@@ -1,0 +1,917 @@
+{
+  "version": 1,
+  "recipes": [
+    {
+      "id": "pdj-sucre-porridge-banane-cacahuete",
+      "moment": "petitDejCollation",
+      "saveur": "sucre",
+      "title": "Porridge banane et beurre de cacahuète",
+      "summary": "Un porridge dense en glucides lents et en bon gras, taillé pour les matins où tu enchaînes avec une grosse séance.",
+      "minutes": 10,
+      "kcal": 550,
+      "proteinG": 22,
+      "carbsG": 72,
+      "fatG": 18,
+      "goals": [
+        "maintain",
+        "gainMuscle"
+      ],
+      "ingredients": [
+        "60 g de flocons d'avoine",
+        "250 ml de lait demi-écrémé",
+        "1 banane mûre (environ 110 g épluchée)",
+        "20 g de beurre de cacahuète non sucré",
+        "1 pincée de cannelle",
+        "1 pincée de sel"
+      ],
+      "steps": [
+        "Verse les flocons d'avoine, le lait et le sel dans une petite casserole et porte à frémissement.",
+        "Baisse le feu et remue 5 minutes, jusqu'à ce que le mélange épaississe et accroche à la cuillère.",
+        "Écrase la moitié de la banane à la fourchette et incorpore-la hors du feu.",
+        "Verse dans un bol, pose le reste de la banane en rondelles, ajoute le beurre de cacahuète et la cannelle."
+      ]
+    },
+    {
+      "id": "pdj-sucre-bol-skyr-framboises",
+      "moment": "petitDejCollation",
+      "saveur": "sucre",
+      "title": "Bol de skyr aux framboises",
+      "summary": "26 g de protéines pour 300 calories, prêt en trois minutes, quand tu n'as le temps de rien le matin.",
+      "minutes": 3,
+      "kcal": 300,
+      "proteinG": 26,
+      "carbsG": 43,
+      "fatG": 3,
+      "goals": [
+        "loseWeight",
+        "gainMuscle"
+      ],
+      "ingredients": [
+        "200 g de skyr nature",
+        "125 g de framboises surgelées",
+        "20 g de flocons d'avoine",
+        "10 g de miel"
+      ],
+      "steps": [
+        "Sors les framboises du congélateur et laisse-les 2 minutes à température ambiante.",
+        "Verse le skyr dans un bol et détends-le à la cuillère pour qu'il devienne crémeux.",
+        "Ajoute les framboises, les flocons d'avoine et le miel par-dessus.",
+        "Mélange grossièrement et mange tout de suite, avant que les flocons ne ramollissent."
+      ]
+    },
+    {
+      "id": "pdj-sucre-pancakes-proteines-avoine",
+      "moment": "petitDejCollation",
+      "saveur": "sucre",
+      "title": "Pancakes protéinés à l'avoine",
+      "summary": "Des pancakes sans farine ni sucre ajouté qui apportent 27 g de protéines, de quoi soutenir une journée de prise de muscle.",
+      "minutes": 15,
+      "kcal": 460,
+      "proteinG": 27,
+      "carbsG": 52,
+      "fatG": 16,
+      "goals": [
+        "gainMuscle",
+        "maintain"
+      ],
+      "ingredients": [
+        "40 g de flocons d'avoine",
+        "1 banane (environ 100 g épluchée)",
+        "1 œuf",
+        "2 blancs d'œufs (environ 66 g)",
+        "100 g de fromage blanc 3 % de matière grasse",
+        "2 g de levure chimique (une demi cuillère à café)",
+        "5 g d'huile de colza",
+        "1 pincée de cannelle"
+      ],
+      "steps": [
+        "Mixe les flocons d'avoine avec la banane, l'œuf, les blancs, la levure et la cannelle jusqu'à obtenir une pâte lisse.",
+        "Laisse reposer 5 minutes, le temps que les flocons boivent le liquide et que la pâte épaississe.",
+        "Chauffe l'huile dans une poêle antiadhésive à feu moyen et dépose 3 ou 4 petits tas de pâte.",
+        "Retourne les pancakes dès que des bulles crèvent à la surface, puis compte encore 1 minute de cuisson.",
+        "Empile-les dans une assiette et recouvre du fromage blanc."
+      ]
+    },
+    {
+      "id": "pdj-sucre-tartines-completes-poire",
+      "moment": "petitDejCollation",
+      "saveur": "sucre",
+      "title": "Tartines complètes poire et miel",
+      "summary": "Deux tartines complètes qui tiennent au corps sans peser, pour un matin ordinaire où tu n'as ni temps ni envie de cuisiner.",
+      "minutes": 5,
+      "kcal": 400,
+      "proteinG": 17,
+      "carbsG": 69,
+      "fatG": 6,
+      "goals": [
+        "maintain"
+      ],
+      "ingredients": [
+        "2 tranches de pain complet (80 g)",
+        "120 g de fromage blanc 3 % de matière grasse",
+        "10 g de miel",
+        "1 poire (environ 150 g)",
+        "1 pincée de cannelle"
+      ],
+      "steps": [
+        "Fais griller les deux tranches de pain complet.",
+        "Mélange le fromage blanc et le miel dans un bol jusqu'à ce que ce soit homogène.",
+        "Étale ce mélange sur les tartines encore chaudes.",
+        "Coupe la poire en fines lamelles, dispose-les dessus et saupoudre de cannelle."
+      ]
+    },
+    {
+      "id": "pdj-sucre-bircher-pomme-cannelle",
+      "moment": "petitDejCollation",
+      "saveur": "sucre",
+      "title": "Bircher pomme cannelle",
+      "summary": "Un muesli trempé riche en fibres et en protéines pour 345 calories, qui coupe la faim jusqu'au déjeuner.",
+      "minutes": 10,
+      "kcal": 345,
+      "proteinG": 20,
+      "carbsG": 58,
+      "fatG": 4,
+      "goals": [
+        "loseWeight",
+        "maintain"
+      ],
+      "ingredients": [
+        "40 g de flocons d'avoine",
+        "200 ml de lait écrémé",
+        "100 g de fromage blanc 0 %",
+        "1 pomme (environ 150 g)",
+        "5 ml de jus de citron",
+        "1 pincée de cannelle"
+      ],
+      "steps": [
+        "Mélange les flocons d'avoine et le lait dans un bol.",
+        "Râpe la pomme avec la peau et arrose-la de jus de citron pour qu'elle ne noircisse pas.",
+        "Ajoute la pomme râpée et le fromage blanc, puis remue.",
+        "Saupoudre de cannelle et laisse gonfler 5 minutes avant de manger."
+      ]
+    },
+    {
+      "id": "coll-sucre-skyr-myrtilles-amandes",
+      "moment": "petitDejCollation",
+      "saveur": "sucre",
+      "title": "Skyr, myrtilles et amandes",
+      "summary": "Vingt grammes de protéines dans un bocal, prêtes en cinq minutes et transportables sans se renverser.",
+      "minutes": 5,
+      "kcal": 260,
+      "proteinG": 20,
+      "carbsG": 25,
+      "fatG": 8,
+      "goals": [
+        "loseWeight",
+        "maintain",
+        "gainMuscle"
+      ],
+      "ingredients": [
+        "150 g de skyr nature",
+        "80 g de myrtilles (fraîches ou surgelées décongelées)",
+        "15 g d'amandes entières",
+        "10 g de miel"
+      ],
+      "steps": [
+        "Verse 150 g de skyr nature dans un bocal ou une petite boîte hermétique.",
+        "Rince 80 g de myrtilles et répartis-les sur le skyr.",
+        "Concasse 15 g d'amandes au couteau et parsème-les dessus.",
+        "Ajoute 10 g de miel, mélange une seule fois pour garder les couches, puis referme si tu emportes."
+      ]
+    },
+    {
+      "id": "coll-sucre-pomme-rapee-fromage-blanc",
+      "moment": "petitDejCollation",
+      "saveur": "sucre",
+      "title": "Pomme râpée, fromage blanc et cannelle",
+      "summary": "Un bol de 315 g pour seulement 205 kcal, qui cale par le volume de la pomme et les 14 g de protéines du fromage blanc.",
+      "minutes": 8,
+      "kcal": 205,
+      "proteinG": 14,
+      "carbsG": 33,
+      "fatG": 2,
+      "goals": [
+        "loseWeight",
+        "maintain"
+      ],
+      "ingredients": [
+        "1 pomme de 150 g (type Gala ou Pink Lady)",
+        "150 g de fromage blanc 0 %",
+        "15 g de flocons d'avoine",
+        "1 g de cannelle en poudre (une bonne pincée)"
+      ],
+      "steps": [
+        "Lave la pomme, retire le trognon et râpe-la avec la peau sur les gros trous.",
+        "Verse 150 g de fromage blanc 0 % dans un bol et incorpore la pomme râpée.",
+        "Ajoute 15 g de flocons d'avoine et la cannelle, mélange bien.",
+        "Laisse reposer 5 minutes pour que l'avoine s'assouplisse, puis mange à la cuillère."
+      ]
+    },
+    {
+      "id": "coll-sucre-billes-dattes-avoine-cacao",
+      "moment": "petitDejCollation",
+      "saveur": "sucre",
+      "title": "Billes dattes, avoine et cacao",
+      "summary": "Quatre billes à glisser dans un sac de sport, avec 43 g de glucides faciles à digérer avant une séance.",
+      "minutes": 25,
+      "kcal": 275,
+      "proteinG": 8,
+      "carbsG": 43,
+      "fatG": 8,
+      "goals": [
+        "maintain"
+      ],
+      "ingredients": [
+        "40 g de dattes dénoyautées (Deglet Nour)",
+        "25 g de flocons d'avoine",
+        "10 g de beurre de cacahuète sans sucre ajouté",
+        "5 g de cacao en poudre non sucré",
+        "1 pincée de sel"
+      ],
+      "steps": [
+        "Mixe 40 g de dattes dénoyautées jusqu'à obtenir une pâte collante. Si elles sont sèches, trempe-les 10 minutes dans l'eau chaude et égoutte-les avant.",
+        "Ajoute 25 g de flocons d'avoine, 10 g de beurre de cacahuète, 5 g de cacao non sucré et la pincée de sel, puis mixe encore 30 secondes.",
+        "Forme 4 billes en pressant fermement la pâte entre tes paumes.",
+        "Place-les 20 minutes au réfrigérateur pour qu'elles se tiennent, puis range-les dans une petite boîte."
+      ]
+    },
+    {
+      "id": "coll-sucre-mug-cake-banane-chocolat",
+      "moment": "petitDejCollation",
+      "saveur": "sucre",
+      "title": "Mug cake banane et chocolat noir",
+      "summary": "Un gâteau chaud en six minutes au micro-ondes, 340 kcal et 15 g de protéines pour tenir jusqu'au dîner sans ouvrir un paquet de biscuits.",
+      "minutes": 6,
+      "kcal": 340,
+      "proteinG": 15,
+      "carbsG": 42,
+      "fatG": 12,
+      "goals": [
+        "maintain",
+        "gainMuscle"
+      ],
+      "ingredients": [
+        "80 g de banane bien mûre (environ une petite)",
+        "30 g de flocons d'avoine",
+        "1 œuf (50 g)",
+        "50 ml de lait demi-écrémé",
+        "5 g de cacao en poudre non sucré",
+        "2 g de levure chimique",
+        "10 g de pépites de chocolat noir"
+      ],
+      "steps": [
+        "Écrase 80 g de banane à la fourchette directement dans un grand mug.",
+        "Casse l'œuf dedans, verse 50 ml de lait demi-écrémé et mélange à la fourchette.",
+        "Ajoute 30 g de flocons d'avoine, 5 g de cacao non sucré et 2 g de levure chimique, puis mélange jusqu'à ce qu'il ne reste aucune poudre sèche.",
+        "Parsème 10 g de pépites de chocolat noir sur le dessus.",
+        "Fais chauffer 2 minutes au micro-ondes à 800 W, pique le centre avec la pointe d'un couteau et remets 20 secondes s'il ressort humide.",
+        "Attends 1 minute avant de manger, la pâte est brûlante au centre."
+      ]
+    },
+    {
+      "id": "pdj-sale-omelette-jambon-comte",
+      "moment": "petitDejCollation",
+      "saveur": "sale",
+      "title": "Omelette jambon-comté et pain grillé",
+      "summary": "36 g de protéines en dix minutes, pour un matin où tu t'entraînes dans la journée.",
+      "minutes": 10,
+      "kcal": 475,
+      "proteinG": 36,
+      "carbsG": 18,
+      "fatG": 27,
+      "goals": [
+        "gainMuscle",
+        "maintain"
+      ],
+      "ingredients": [
+        "3 œufs (150 g sans coquille)",
+        "40 g de jambon blanc (1 tranche)",
+        "20 g de comté râpé",
+        "5 g de beurre",
+        "40 g de pain complet (1 tranche)",
+        "5 g de ciboulette",
+        "sel, poivre"
+      ],
+      "steps": [
+        "Casse les œufs dans un bol, sale, poivre et bats-les à la fourchette 20 secondes.",
+        "Coupe le jambon en lanières et mets le pain à griller.",
+        "Fais fondre le beurre dans une poêle à feu moyen, verse les œufs et remue 30 secondes à la spatule.",
+        "Quand le dessus est encore crémeux, répartis le jambon et le comté sur une moitié, puis replie l'omelette.",
+        "Laisse 1 minute à feu doux, parsème de ciboulette ciselée et sers avec le pain grillé."
+      ]
+    },
+    {
+      "id": "pdj-sale-tartine-avocat-oeuf-poche",
+      "moment": "petitDejCollation",
+      "saveur": "sale",
+      "title": "Tartines d'avocat et œufs pochés",
+      "summary": "Des fibres, des bons gras et deux œufs sur du pain complet pour tenir jusqu'au déjeuner sans coup de barre.",
+      "minutes": 12,
+      "kcal": 390,
+      "proteinG": 19,
+      "carbsG": 30,
+      "fatG": 20,
+      "goals": [
+        "maintain"
+      ],
+      "ingredients": [
+        "60 g de pain complet (2 petites tranches)",
+        "60 g de chair d'avocat (environ un demi-avocat)",
+        "2 œufs",
+        "10 ml de jus de citron",
+        "1 pincée de piment d'Espelette",
+        "sel, poivre"
+      ],
+      "steps": [
+        "Mets les tranches de pain à griller.",
+        "Porte une casserole d'eau à frémissement, casse chaque œuf dans un ramequin et fais-les pocher 3 minutes.",
+        "Écrase la chair d'avocat à la fourchette avec le jus de citron, du sel et du poivre.",
+        "Étale l'avocat sur les tartines et pose un œuf poché sur chacune.",
+        "Saupoudre de piment d'Espelette et mange tout de suite, l'œuf doit rester coulant."
+      ]
+    },
+    {
+      "id": "pdj-sale-fromage-blanc-concombre-radis",
+      "moment": "petitDejCollation",
+      "saveur": "sale",
+      "title": "Bol de fromage blanc salé, concombre et radis",
+      "summary": "25 g de protéines pour 285 kcal, la version salée et croquante du bol de fromage blanc.",
+      "minutes": 5,
+      "kcal": 285,
+      "proteinG": 25,
+      "carbsG": 30,
+      "fatG": 7,
+      "goals": [
+        "loseWeight",
+        "maintain"
+      ],
+      "ingredients": [
+        "250 g de fromage blanc 0 %",
+        "100 g de concombre",
+        "60 g de radis",
+        "5 g de ciboulette",
+        "5 ml d'huile d'olive",
+        "40 g de pain complet (1 tranche)",
+        "sel, poivre"
+      ],
+      "steps": [
+        "Coupe le concombre en petits dés et les radis en rondelles fines.",
+        "Verse le fromage blanc dans un bol, sale, poivre et mélange avec l'huile d'olive.",
+        "Ajoute les légumes et la ciboulette ciselée, puis mélange une dernière fois.",
+        "Fais griller la tranche de pain complet et mange-la avec le bol."
+      ]
+    },
+    {
+      "id": "pdj-sale-porridge-avoine-parmesan-oeufs-mollets",
+      "moment": "petitDejCollation",
+      "saveur": "sale",
+      "title": "Porridge salé au parmesan et œufs mollets",
+      "summary": "31 g de protéines et des glucides lents dans un bol chaud, pour une grosse matinée de travail ou d'entraînement.",
+      "minutes": 15,
+      "kcal": 470,
+      "proteinG": 31,
+      "carbsG": 37,
+      "fatG": 21,
+      "goals": [
+        "gainMuscle",
+        "maintain"
+      ],
+      "ingredients": [
+        "50 g de flocons d'avoine",
+        "200 ml de bouillon de volaille",
+        "100 ml de lait demi-écrémé",
+        "20 g de parmesan râpé",
+        "2 œufs",
+        "50 g de pousses d'épinards",
+        "poivre"
+      ],
+      "steps": [
+        "Porte le bouillon et le lait à petite ébullition dans une casserole.",
+        "Verse les flocons d'avoine et remue 5 minutes à feu doux, jusqu'à ce que le mélange épaississe.",
+        "Pendant ce temps, plonge les œufs 6 minutes dans l'eau bouillante, refroidis-les sous l'eau froide et écale-les.",
+        "Ajoute les épinards au porridge, remue 1 minute, puis retire du feu et incorpore le parmesan.",
+        "Verse dans un bol, pose les œufs coupés en deux, poivre et sers chaud."
+      ]
+    },
+    {
+      "id": "coll-sale-houmous-express-crudites",
+      "moment": "petitDejCollation",
+      "saveur": "sale",
+      "title": "Houmous express et bâtonnets de crudités",
+      "summary": "Une collation riche en fibres qui cale vraiment pour 230 kcal, prête en dix minutes avec une boîte de pois chiches.",
+      "minutes": 10,
+      "kcal": 230,
+      "proteinG": 10,
+      "carbsG": 26,
+      "fatG": 9,
+      "goals": [
+        "loseWeight",
+        "maintain"
+      ],
+      "ingredients": [
+        "100 g de pois chiches en conserve, égouttés et rincés",
+        "12 g de purée de sésame (tahini), soit 1 cuillère à café bombée",
+        "15 ml de jus de citron, environ un demi-citron",
+        "1 petite gousse d'ail",
+        "1 pincée de cumin moulu",
+        "2 cuillères à soupe d'eau froide",
+        "60 g de carotte, soit 1 petite",
+        "80 g de concombre",
+        "Sel, poivre"
+      ],
+      "steps": [
+        "Rince les pois chiches sous l'eau froide et retire les peaux qui se détachent toutes seules.",
+        "Mixe les pois chiches avec le tahini, le jus de citron, l'ail écrasé, le cumin et une pincée de sel.",
+        "Ajoute l'eau froide cuillère par cuillère jusqu'à obtenir une texture souple qui tient sur un bâtonnet.",
+        "Taille la carotte et le concombre en bâtonnets de la longueur d'un doigt.",
+        "Verse le houmous dans un bol, poivre et trempe les crudités dedans."
+      ]
+    },
+    {
+      "id": "coll-sale-rillettes-thon-fromage-blanc",
+      "moment": "petitDejCollation",
+      "saveur": "sale",
+      "title": "Rillettes de thon au fromage blanc sur pain complet",
+      "summary": "30 g de protéines pour 224 kcal, sans une goutte de mayonnaise.",
+      "minutes": 10,
+      "kcal": 224,
+      "proteinG": 30,
+      "carbsG": 21,
+      "fatG": 2,
+      "goals": [
+        "loseWeight",
+        "maintain",
+        "gainMuscle"
+      ],
+      "ingredients": [
+        "1 boîte de thon au naturel, soit 80 g égoutté",
+        "60 g de fromage blanc 0 %",
+        "1 tranche de pain complet de 40 g",
+        "1 cuillère à café de moutarde, soit 5 g",
+        "2 cornichons, soit 20 g",
+        "5 g de ciboulette fraîche",
+        "1 cuillère à café de jus de citron",
+        "Sel, poivre"
+      ],
+      "steps": [
+        "Égoutte le thon en pressant bien la boîte avec son couvercle.",
+        "Écrase-le à la fourchette avec le fromage blanc, la moutarde et le jus de citron.",
+        "Hache les cornichons et la ciboulette, mélange-les à la préparation, sale et poivre.",
+        "Fais griller la tranche de pain complet.",
+        "Étale les rillettes sur le pain encore chaud et mange tout de suite."
+      ]
+    },
+    {
+      "id": "coll-sale-skyr-sale-concombre-graines",
+      "moment": "petitDejCollation",
+      "saveur": "sale",
+      "title": "Skyr salé au concombre et aux graines de courge",
+      "summary": "20 g de protéines pour 171 kcal, prêt en cinq minutes et sans aucune cuisson.",
+      "minutes": 5,
+      "kcal": 171,
+      "proteinG": 20,
+      "carbsG": 11,
+      "fatG": 5,
+      "goals": [
+        "loseWeight",
+        "gainMuscle"
+      ],
+      "ingredients": [
+        "150 g de skyr nature",
+        "80 g de concombre",
+        "30 g de radis roses",
+        "10 g de graines de courge",
+        "10 g d'échalote",
+        "5 g de ciboulette",
+        "1 cuillère à café de jus de citron",
+        "Sel, poivre"
+      ],
+      "steps": [
+        "Coupe le concombre et les radis en petits dés, émince l'échalote très finement.",
+        "Mélange le skyr avec le jus de citron, le sel et le poivre jusqu'à ce qu'il devienne crémeux.",
+        "Incorpore les dés de légumes et l'échalote.",
+        "Parsème de graines de courge et de ciboulette ciselée juste avant de manger."
+      ]
+    },
+    {
+      "id": "coll-sale-tartine-cottage-oeuf-avocat",
+      "moment": "petitDejCollation",
+      "saveur": "sale",
+      "title": "Tartine cottage cheese, oeuf dur et avocat",
+      "summary": "La collation la plus copieuse du lot, 350 kcal et 21 g de protéines pour tenir jusqu'au repas suivant.",
+      "minutes": 15,
+      "kcal": 350,
+      "proteinG": 21,
+      "carbsG": 29,
+      "fatG": 16,
+      "goals": [
+        "maintain",
+        "gainMuscle"
+      ],
+      "ingredients": [
+        "1 oeuf",
+        "1 tranche de pain de seigle de 50 g",
+        "80 g de cottage cheese",
+        "40 g d'avocat, soit un quart environ",
+        "5 g de ciboulette",
+        "1 pincée de paprika",
+        "Sel, poivre"
+      ],
+      "steps": [
+        "Plonge l'oeuf dans l'eau bouillante, compte 9 minutes puis passe-le sous l'eau froide.",
+        "Fais griller la tranche de pain de seigle pendant ce temps.",
+        "Écrase l'avocat à la fourchette directement sur le pain et sale légèrement.",
+        "Étale le cottage cheese par-dessus, puis pose l'oeuf écalé et coupé en rondelles.",
+        "Saupoudre de paprika, ajoute la ciboulette ciselée et poivre."
+      ]
+    },
+    {
+      "id": "dej-poulet-riz-complet-brocoli",
+      "moment": "repas",
+      "title": "Poulet grillé, riz complet et brocoli",
+      "summary": "Une assiette qui se transporte en boîte et tient jusqu'au soir grâce à 46 g de protéines et des glucides lents.",
+      "minutes": 35,
+      "kcal": 570,
+      "proteinG": 46,
+      "carbsG": 59,
+      "fatG": 15,
+      "goals": [
+        "maintain",
+        "gainMuscle"
+      ],
+      "ingredients": [
+        "150 g de filet de poulet",
+        "70 g de riz complet (poids cru)",
+        "200 g de brocoli en fleurettes",
+        "10 ml d'huile d'olive",
+        "10 ml de sauce soja",
+        "1 gousse d'ail",
+        "1 cuillère à café de paprika",
+        "1/2 citron",
+        "sel, poivre"
+      ],
+      "steps": [
+        "Fais cuire le riz complet 25 minutes dans un grand volume d'eau salée, puis égoutte-le.",
+        "Coupe le poulet en lanières et mélange-le avec l'ail écrasé, le paprika, la sauce soja, du sel et du poivre.",
+        "Fais chauffer l'huile dans une poêle et saisis les lanières 6 à 8 minutes à feu vif, jusqu'à ce qu'elles soient dorées et fermes.",
+        "Fais cuire le brocoli 5 minutes à la vapeur, il doit rester croquant sous la dent.",
+        "Réunis le riz, le brocoli et le poulet dans une assiette ou une boîte, puis arrose du jus de citron."
+      ]
+    },
+    {
+      "id": "dej-thon-pois-chiches-citron",
+      "moment": "repas",
+      "title": "Salade de thon et pois chiches au citron",
+      "summary": "Un déjeuner froid prêt en dix minutes qui apporte 39 g de protéines pour 400 kcal.",
+      "minutes": 10,
+      "kcal": 400,
+      "proteinG": 39,
+      "carbsG": 31,
+      "fatG": 13,
+      "goals": [
+        "loseWeight",
+        "gainMuscle"
+      ],
+      "ingredients": [
+        "1 boîte de thon au naturel (110 g égoutté)",
+        "120 g de pois chiches en conserve",
+        "150 g de tomates cerises",
+        "100 g de concombre",
+        "30 g d'oignon rouge",
+        "8 ml d'huile d'olive",
+        "10 ml de vinaigre de vin",
+        "1 cuillère à café de moutarde",
+        "1/2 citron",
+        "quelques brins de persil plat",
+        "sel, poivre"
+      ],
+      "steps": [
+        "Rince et égoutte les pois chiches, puis égoutte le thon en pressant bien la boîte.",
+        "Coupe les tomates cerises en deux, le concombre en demi-rondelles et l'oignon rouge en fines lamelles.",
+        "Fouette la moutarde, le vinaigre, le jus du demi-citron, l'huile, du sel et du poivre dans le fond du saladier.",
+        "Verse tous les ingrédients dessus, ajoute le persil ciselé et mélange.",
+        "Mange tout de suite ou tasse le tout dans une boîte, la salade se garde 24 heures au frais."
+      ]
+    },
+    {
+      "id": "dej-omelette-pommes-de-terre-epinards",
+      "moment": "repas",
+      "title": "Omelette aux pommes de terre et épinards",
+      "summary": "L'assiette du frigo vide, avec 30 g de protéines et de vrais glucides pour ne pas décrocher à 16 h.",
+      "minutes": 25,
+      "kcal": 510,
+      "proteinG": 30,
+      "carbsG": 37,
+      "fatG": 26,
+      "goals": [
+        "maintain",
+        "gainMuscle"
+      ],
+      "ingredients": [
+        "3 œufs",
+        "200 g de pommes de terre",
+        "100 g de pousses d'épinards",
+        "15 g d'emmental râpé",
+        "6 ml d'huile d'olive",
+        "sel, poivre"
+      ],
+      "steps": [
+        "Coupe les pommes de terre en cubes de 1 cm et fais-les cuire 10 minutes dans l'eau bouillante salée, elles doivent rester fermes.",
+        "Fais chauffer l'huile dans une poêle et fais dorer les cubes égouttés 5 minutes.",
+        "Ajoute les épinards et laisse-les tomber 1 minute en remuant.",
+        "Bats les œufs avec l'emmental, du sel et du poivre, puis verse-les dans la poêle.",
+        "Cuis 4 minutes à feu doux, retourne l'omelette à l'aide d'une assiette et termine 2 minutes."
+      ]
+    },
+    {
+      "id": "dej-dahl-lentilles-corail-epinards",
+      "moment": "repas",
+      "title": "Dahl de lentilles corail aux épinards",
+      "summary": "Un plat végétarien très riche en fibres qui cale longtemps pour 450 kcal.",
+      "minutes": 30,
+      "kcal": 450,
+      "proteinG": 25,
+      "carbsG": 55,
+      "fatG": 13,
+      "goals": [
+        "loseWeight",
+        "maintain"
+      ],
+      "ingredients": [
+        "80 g de lentilles corail",
+        "200 g de tomates concassées en conserve",
+        "80 ml de lait de coco allégé",
+        "100 g de pousses d'épinards",
+        "60 g d'oignon",
+        "1 gousse d'ail",
+        "5 ml d'huile d'olive",
+        "1 cuillère à café de curry en poudre",
+        "1/2 cuillère à café de cumin moulu",
+        "sel, poivre"
+      ],
+      "steps": [
+        "Émince l'oignon et l'ail, puis fais-les revenir 3 minutes dans l'huile.",
+        "Ajoute le curry et le cumin, remue 30 secondes pour réveiller les épices.",
+        "Verse les lentilles rincées, les tomates concassées et 200 ml d'eau, puis porte à ébullition.",
+        "Baisse le feu et laisse mijoter 18 minutes à couvert, en remuant de temps en temps.",
+        "Ajoute le lait de coco et les épinards, poursuis 2 minutes, sale et poivre."
+      ]
+    },
+    {
+      "id": "dej-boeuf-boulgour-poivrons",
+      "moment": "repas",
+      "title": "Bol de bœuf haché, boulgour et poivrons",
+      "summary": "Un bol complet à 37 g de protéines qui se mange aussi bien froid le lendemain au bureau.",
+      "minutes": 25,
+      "kcal": 525,
+      "proteinG": 37,
+      "carbsG": 55,
+      "fatG": 16,
+      "goals": [
+        "maintain",
+        "gainMuscle"
+      ],
+      "ingredients": [
+        "125 g de bœuf haché à 5 % de matière grasse",
+        "60 g de boulgour (poids cru)",
+        "150 g de poivron rouge",
+        "50 g d'oignon",
+        "30 g de concentré de tomate",
+        "8 ml d'huile d'olive",
+        "1 cuillère à café de cumin moulu",
+        "1 cuillère à café de paprika",
+        "sel, poivre"
+      ],
+      "steps": [
+        "Verse le boulgour dans un bol, couvre de 120 ml d'eau bouillante salée et laisse gonfler 12 minutes à couvert.",
+        "Émince l'oignon et le poivron, puis fais-les revenir 5 minutes dans l'huile.",
+        "Ajoute le bœuf haché, écrase-le à la cuillère et cuis 5 minutes jusqu'à ce qu'il ne soit plus rosé.",
+        "Incorpore le concentré de tomate, le cumin, le paprika et 60 ml d'eau, laisse réduire 3 minutes.",
+        "Égrène le boulgour à la fourchette, verse la poêlée dessus, sale et poivre."
+      ]
+    },
+    {
+      "id": "dej-saumon-quinoa-courgettes",
+      "moment": "repas",
+      "title": "Saumon rôti, quinoa et courgettes",
+      "summary": "Un plat chaud riche en oméga 3 et en protéines, qui cuit au four pendant que le quinoa gonfle.",
+      "minutes": 35,
+      "kcal": 535,
+      "proteinG": 37,
+      "carbsG": 40,
+      "fatG": 24,
+      "goals": [
+        "maintain",
+        "gainMuscle"
+      ],
+      "ingredients": [
+        "130 g de pavé de saumon",
+        "60 g de quinoa (poids cru)",
+        "200 g de courgettes",
+        "6 ml d'huile d'olive",
+        "1/2 citron",
+        "1 gousse d'ail",
+        "quelques brins d'aneth",
+        "sel, poivre"
+      ],
+      "steps": [
+        "Préchauffe le four à 200 °C.",
+        "Rince le quinoa et fais-le cuire 15 minutes dans deux fois son volume d'eau salée.",
+        "Coupe les courgettes en rondelles, mélange-les avec l'huile, l'ail écrasé, du sel et du poivre, puis étale-les sur une plaque.",
+        "Pose le pavé de saumon au milieu de la plaque et enfourne 15 minutes.",
+        "Sers le saumon et les courgettes sur le quinoa, avec l'aneth ciselé et un filet de jus de citron."
+      ]
+    },
+    {
+      "id": "din-cabillaud-boulgour-courgettes",
+      "moment": "repas",
+      "title": "Cabillaud au four, courgettes et boulgour",
+      "summary": "Un poisson blanc très maigre avec juste ce qu'il faut de boulgour pour tenir jusqu'au matin sans alourdir la soirée.",
+      "minutes": 25,
+      "kcal": 470,
+      "proteinG": 38,
+      "carbsG": 52,
+      "fatG": 13,
+      "goals": [
+        "maintain",
+        "gainMuscle"
+      ],
+      "ingredients": [
+        "150 g de dos de cabillaud, frais ou décongelé",
+        "60 g de boulgour cru",
+        "200 g de courgette (environ 1 petite)",
+        "100 g de tomates cerises",
+        "10 g d'huile d'olive (2 cuillères à café)",
+        "1 gousse d'ail",
+        "1/2 citron",
+        "quelques brins de persil, sel, poivre"
+      ],
+      "steps": [
+        "Préchauffe le four à 200 °C et mets le boulgour à cuire dans 120 ml d'eau bouillante salée, 12 minutes à couvert.",
+        "Coupe la courgette en rondelles de 5 mm et les tomates cerises en deux, étale-les sur une plaque avec 5 g d'huile d'olive.",
+        "Pose le cabillaud au centre, arrose-le du reste d'huile, ajoute l'ail écrasé, sale et poivre.",
+        "Enfourne 12 à 14 minutes : le poisson est cuit quand il se détache à la fourchette.",
+        "Presse le demi-citron dessus, parsème le persil et sers sur le boulgour."
+      ]
+    },
+    {
+      "id": "din-omelette-champignons-epinards",
+      "moment": "repas",
+      "title": "Omelette aux champignons et épinards",
+      "summary": "Trois œufs et beaucoup de légumes pour un dîner monté en quinze minutes quand le frigo est presque vide.",
+      "minutes": 15,
+      "kcal": 410,
+      "proteinG": 30,
+      "carbsG": 22,
+      "fatG": 21,
+      "goals": [
+        "maintain",
+        "gainMuscle"
+      ],
+      "ingredients": [
+        "3 œufs (environ 150 g sans la coquille)",
+        "150 g de champignons de Paris frais",
+        "80 g de pousses d'épinards",
+        "5 g d'huile d'olive (1 cuillère à café)",
+        "1 tranche de pain complet de 40 g",
+        "sel, poivre, 1 pincée de muscade"
+      ],
+      "steps": [
+        "Émince les champignons et fais-les revenir 6 minutes à feu vif dans l'huile, jusqu'à ce que toute l'eau se soit évaporée.",
+        "Ajoute les épinards et remue 1 minute, le temps qu'ils tombent.",
+        "Bats les œufs avec le sel, le poivre et la muscade, verse-les dans la poêle et baisse le feu.",
+        "Laisse prendre 4 minutes sans remuer, puis replie l'omelette en deux et coupe le feu.",
+        "Fais griller le pain et sers-le à côté."
+      ]
+    },
+    {
+      "id": "din-crevettes-brocoli-riz",
+      "moment": "repas",
+      "title": "Crevettes sautées à l'ail, brocoli et riz",
+      "summary": "Beaucoup de volume dans l'assiette et 41 g de protéines pour 400 kcal, quand tu veux un dîner léger mais qui cale.",
+      "minutes": 20,
+      "kcal": 400,
+      "proteinG": 41,
+      "carbsG": 37,
+      "fatG": 8,
+      "goals": [
+        "loseWeight",
+        "maintain",
+        "gainMuscle"
+      ],
+      "ingredients": [
+        "150 g de crevettes crues décortiquées, fraîches ou surgelées",
+        "250 g de brocoli en fleurettes",
+        "40 g de riz basmati cru",
+        "5 g d'huile d'olive (1 cuillère à café)",
+        "10 ml de sauce soja",
+        "1 gousse d'ail",
+        "1/2 citron",
+        "poivre"
+      ],
+      "steps": [
+        "Mets le riz à cuire 11 minutes dans une casserole d'eau bouillante salée.",
+        "Fais cuire le brocoli 5 minutes à la vapeur au-dessus de la casserole, il doit rester ferme.",
+        "Chauffe l'huile à feu vif, jette l'ail haché puis les crevettes et saute 3 minutes, jusqu'à ce qu'elles soient roses.",
+        "Ajoute le brocoli et la sauce soja, mélange encore 1 minute.",
+        "Presse le citron, poivre et sers sur le riz."
+      ]
+    },
+    {
+      "id": "din-dinde-patate-douce-haricots-verts",
+      "moment": "repas",
+      "title": "Dinde grillée, purée de patate douce et haricots verts",
+      "summary": "Une assiette complète qui apporte les protéines pour réparer le muscle et des glucides lents pour recharger après l'entraînement.",
+      "minutes": 30,
+      "kcal": 420,
+      "proteinG": 34,
+      "carbsG": 45,
+      "fatG": 10,
+      "goals": [
+        "maintain",
+        "gainMuscle"
+      ],
+      "ingredients": [
+        "130 g d'escalope de dinde",
+        "200 g de patate douce",
+        "150 g de haricots verts, frais ou surgelés",
+        "8 g d'huile d'olive",
+        "5 g de moutarde",
+        "paprika, sel, poivre"
+      ],
+      "steps": [
+        "Épluche la patate douce, coupe-la en cubes de 2 cm et fais-la cuire 18 minutes dans l'eau bouillante salée.",
+        "Fais cuire les haricots verts 8 minutes à la vapeur au-dessus de la casserole.",
+        "Badigeonne l'escalope de moutarde et de paprika, puis grille-la 4 minutes par face à la poêle avec 3 g d'huile.",
+        "Égoutte la patate douce et écrase-la à la fourchette avec le reste d'huile, sale et poivre.",
+        "Tranche la dinde et dresse avec la purée et les haricots verts."
+      ]
+    },
+    {
+      "id": "din-dahl-lentilles-corail-epinards",
+      "moment": "repas",
+      "title": "Dahl de lentilles corail aux épinards",
+      "summary": "Un dîner végétarien riche en fibres qui cale longtemps grâce aux lentilles corail, pour un coût calorique modéré.",
+      "minutes": 25,
+      "kcal": 465,
+      "proteinG": 24,
+      "carbsG": 55,
+      "fatG": 14,
+      "goals": [
+        "loseWeight",
+        "maintain"
+      ],
+      "ingredients": [
+        "80 g de lentilles corail sèches",
+        "100 ml de lait de coco allégé",
+        "100 g de tomates concassées en conserve",
+        "80 g de pousses d'épinards",
+        "60 g d'oignon (1 petit)",
+        "5 g d'huile d'olive (1 cuillère à café)",
+        "1 cuillère à café de curry en poudre",
+        "1/2 cuillère à café de cumin moulu",
+        "sel"
+      ],
+      "steps": [
+        "Émince l'oignon et fais-le suer 4 minutes dans l'huile avec le curry et le cumin.",
+        "Ajoute les lentilles rincées, les tomates concassées et 250 ml d'eau, puis porte à ébullition.",
+        "Baisse le feu et laisse mijoter 15 minutes à couvert, en remuant de temps en temps.",
+        "Verse le lait de coco et les épinards, poursuis 2 minutes jusqu'à ce que les feuilles tombent.",
+        "Sale, écrase quelques lentilles à la cuillère si tu veux un dahl plus épais, et sers."
+      ]
+    },
+    {
+      "id": "din-chili-boeuf-haricots-rouges",
+      "moment": "repas",
+      "title": "Chili express au bœuf et haricots rouges",
+      "summary": "Un mijoté prêt en 25 minutes qui associe viande maigre et légumineuses pour un maximum de satiété le soir.",
+      "minutes": 25,
+      "kcal": 420,
+      "proteinG": 36,
+      "carbsG": 36,
+      "fatG": 12,
+      "goals": [
+        "maintain",
+        "gainMuscle"
+      ],
+      "ingredients": [
+        "120 g de steak haché à 5 % de matière grasse",
+        "120 g de haricots rouges en conserve, égouttés et rincés",
+        "200 g de tomates concassées en conserve",
+        "60 g de poivron rouge",
+        "60 g d'oignon",
+        "5 g d'huile d'olive (1 cuillère à café)",
+        "1 cuillère à café de cumin moulu",
+        "1/2 cuillère à café de paprika fumé",
+        "piment en poudre selon ton goût, sel, poivre"
+      ],
+      "steps": [
+        "Coupe l'oignon et le poivron en petits dés et fais-les revenir 5 minutes dans l'huile.",
+        "Ajoute le steak haché, écrase-le à la spatule et laisse-le colorer 4 minutes.",
+        "Verse les épices, remue 30 secondes, puis ajoute les tomates concassées et les haricots rouges.",
+        "Laisse mijoter 12 minutes à feu doux et à découvert, jusqu'à ce que la sauce épaississe.",
+        "Sale, poivre et sers bien chaud."
+      ]
+    }
+  ]
+}

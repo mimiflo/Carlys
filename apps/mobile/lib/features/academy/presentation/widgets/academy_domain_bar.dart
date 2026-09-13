@@ -86,7 +86,9 @@ class _Pastille extends StatelessWidget {
       child: AppPill(
         label: label,
         selected: selected,
-        selectedTone: AppPillTone.accentSolid,
+        // Violet et non orange plein : depuis l'unification des boutons, tout
+        // ce sur quoi on clique parle la couleur de la marque.
+        selectedTone: AppPillTone.primary,
         onTap: onTap,
       ),
     );

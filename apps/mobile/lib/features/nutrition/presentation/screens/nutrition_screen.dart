@@ -12,6 +12,7 @@ import '../widgets/metabolic_profile_form.dart';
 import '../widgets/metabolism_hero.dart';
 import '../widgets/metabolism_view.dart';
 import '../widgets/missing_profile_card.dart';
+import '../widgets/recipes_entry.dart';
 
 /// Nutrition (maquette 2g) : hero métabolisme sur hélice ADN, macros en
 /// jauges, journal du jour, profil complété sur place — calculs côté serveur
@@ -158,6 +159,13 @@ class _NutritionContentState extends State<_NutritionContent> {
           const SizedBox(height: AppSpacing.gapSection),
           journal,
         ],
+        // La porte des recettes ferme la page, dans les deux ordres. Elle
+        // s'affiche que le profil soit complet ou non (chercher quoi manger
+        // ne demande pas d'avoir renseigné sa taille), mais elle ne passe
+        // JAMAIS devant le formulaire : quand le profil est incomplet, le
+        // seul geste utile du premier jour reste le premier.
+        const SizedBox(height: AppSpacing.gapSection),
+        const _Section(child: RecipesEntry()),
       ],
     );
   }
