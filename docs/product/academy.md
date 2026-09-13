@@ -18,6 +18,18 @@ Seuls les LIBELLÉS ont changé — jamais les noms de l'énumération, qui sont
 la clé du pack et des réponses déjà enregistrées : les renommer effacerait
 la progression de chacun.
 
+### Naviguer entre eux
+
+Une barre de pastilles en tête d'écran, « Tous » d'abord et par défaut.
+« Tous » déroule les douze sections avec leurs en-têtes : c'est la lecture
+de découverte, celle qui fait tomber sur une leçon qu'on ne cherchait pas.
+Une pastille active n'affiche que son domaine, et l'en-tête de section
+disparaît alors — la pastille le dit déjà, le répéter ne ferait que pousser
+la première leçon vers le bas.
+
+Le domaine choisi est un état LOCAL de l'écran, pas un provider : c'est une
+préférence d'affichage propre à la visite, que rien d'autre ne lit.
+
 L'illustration n'est obligatoire que pour **Comprendre son corps**, où le
 schéma porte l'information : on ne situe pas un muscle sans le voir.
 Ailleurs elle est facultative, et `LessonIllustration` rend alors un

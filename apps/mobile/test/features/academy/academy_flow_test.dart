@@ -2,8 +2,8 @@ import 'package:carlys_mobile/app/app.dart';
 import 'package:carlys_mobile/app/environment/app_environment.dart';
 import 'package:carlys_mobile/app/restore/app_restore.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
+import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/academy/domain/entities/academy.dart';
-import 'package:carlys_mobile/features/academy/presentation/screens/academy_screen.dart';
 import 'package:carlys_mobile/features/academy/presentation/widgets/lesson_card.dart';
 import 'package:carlys_mobile/features/academy/presentation/widgets/quiz_card.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
@@ -51,9 +51,21 @@ Widget app({FakeCommunityRepository? community}) => ProviderScope(
   child: const CarlysApp(),
 );
 
+/// Le défilement VERTICAL de la page, et lui seul.
+///
+/// `find.byType(Scrollable).last` suffisait tant que l'écran n'en portait
+/// qu'un. La barre de domaines en ajoute un horizontal : « le dernier »
+/// tombait dessus, et chaque `reveal` tentait de faire défiler la page
+/// latéralement. On désigne donc l'axe explicitement.
+Finder get _pageScrollable => find.byWidgetPredicate(
+  (widget) =>
+      widget is Scrollable &&
+      (widget.axisDirection == AxisDirection.down ||
+          widget.axisDirection == AxisDirection.up),
+);
+
 Future<void> reveal(WidgetTester tester, Finder item) async {
-  final scrollable = find.byType(Scrollable).last;
-  await tester.scrollUntilVisible(item, 240, scrollable: scrollable);
+  await tester.scrollUntilVisible(item, 240, scrollable: _pageScrollable.last);
   await tester.pumpAndSettle();
 }
 
@@ -78,15 +90,13 @@ void main() {
     await tapTab(tester, 'Academy');
 
     expect(find.text('QUESTION DU JOUR'), findsOneWidget);
-    // La carte « Nutrition » a quitté l'Academy en septembre 2026 : la
-    // nutrition a son propre onglet, et deux portes pour un même écran
-    // valent moins qu'une seule, évidente. Le seul « Nutrition » visible
-    // ici est donc l'étiquette de la barre du bas.
+    // La CARTE d'entrée vers l'écran Nutrition a quitté l'Academy en
+    // septembre 2026 : la nutrition a son propre onglet, et deux portes pour
+    // un même écran valent moins qu'une seule, évidente. On vise son
+    // sous-titre, pas le mot « Nutrition » : celui-ci reste légitimement à
+    // l'écran, en pastille de domaine et en étiquette d'onglet.
     expect(
-      find.descendant(
-        of: find.byType(AcademyScreen),
-        matching: find.text('Nutrition'),
-      ),
+      find.text('Métabolisme, objectifs caloriques et macros.'),
       findsNothing,
     );
     // Les quatre domaines, en-têtes de section. Chaque libellé est unique et
@@ -247,5 +257,45 @@ void main() {
     // Sur l'accueil, la carte « Question du jour » est plus bas dans la page.
     await reveal(tester, find.text('QUESTION DU JOUR'));
     expect(find.byType(QuizCard), findsOneWidget);
+  });
+  testWidgets('la barre de domaines filtre, et « Tous » déroule tout', (
+    tester,
+  ) async {
+    // CE QUE CE TEST PROTÈGE : à douze domaines, dérouler la totalité dans
+    // une liste unique transforme l'Academy en couloir, il fallait traverser
+    // onze domaines pour en atteindre un. La barre permet de viser ;
+    // « Tous » garde la flânerie.
+    await tester.pumpWidget(app());
+    await tester.pumpAndSettle();
+    await tapTab(tester, 'Academy');
+
+    // On vise une pastille déjà visible : ce qui est éprouvé ici est le
+    // FILTRE, pas le défilement horizontal de la barre. « Musculation » est
+    // aussi un libellé unique à l'écran, contrairement à « Nutrition » que
+    // porte également l'onglet du bas.
+    await tester.tap(find.widgetWithText(AppPill, 'Musculation'));
+    await tester.pumpAndSettle();
+
+    // ON N'ASSERTE QUE SUR CE QUI EST RÉELLEMENT CONSTRUIT. La liste est
+    // paresseuse : un domaine situé plus bas n'est pas dans l'arbre, filtre
+    // ou pas, et l'affirmer absent ne prouverait RIEN. La première version de
+    // ce test tombait dans ce piège, et passait encore avec le filtre
+    // débranché. Nutrition est le PREMIER domaine : sans filtre il est en
+    // haut de page, donc bâti. Son absence ici a du sens.
+    expect(find.text('Les protéines, brique du muscle'), findsNothing);
+    expect(find.text('NUTRITION'), findsNothing);
+    // Et la première leçon visible appartient au domaine visé.
+    expect(find.text('La surcharge progressive'), findsOneWidget);
+    // L'en-tête de section disparaît en vue filtrée : la pastille active le
+    // dit déjà, le répéter pousserait la première leçon vers le bas.
+    expect(find.text('MUSCULATION'), findsNothing);
+
+    // Retour à « Tous » : le premier domaine revient, en haut.
+    await tester.tap(find.widgetWithText(AppPill, 'Tous'));
+    await tester.pumpAndSettle();
+    expect(find.text('NUTRITION'), findsOneWidget);
+    expect(find.text('Les protéines, brique du muscle'), findsOneWidget);
+    // Et le dernier domaine reste atteignable en défilant.
+    await reveal(tester, find.text('CALISTHENICS'));
   });
 }

@@ -4,20 +4,32 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/academy.dart';
 import '../controllers/academy_controllers.dart';
+import '../widgets/academy_domain_bar.dart';
 import '../widgets/lesson_card.dart';
 import '../widgets/quiz_card.dart';
 
 /// Academy — apprendre, et comprendre ce qu'on fait à l'entraînement.
 ///
-/// Trois étages : la question du jour (la même que sur l'accueil), la
-/// nutrition — intégrée ici plutôt qu'en sixième onglet —, puis les leçons
-/// par domaine. Le contenu est éditorial et embarqué : l'Academy fonctionne
-/// hors ligne, comme le reste de l'application.
-class AcademyScreen extends ConsumerWidget {
+/// Trois étages : la question du jour (la même que sur l'accueil), la barre
+/// des domaines, puis les leçons. Le contenu est éditorial et embarqué :
+/// l'Academy fonctionne hors ligne, comme le reste de l'application.
+class AcademyScreen extends ConsumerStatefulWidget {
   const AcademyScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<AcademyScreen> createState() => _AcademyScreenState();
+}
+
+class _AcademyScreenState extends ConsumerState<AcademyScreen> {
+  /// Domaine affiché, `null` pour « Tous ».
+  ///
+  /// État LOCAL et non provider : c'est une préférence d'affichage, propre à
+  /// cette visite de l'écran, que rien d'autre ne lit. La promouvoir en
+  /// provider créerait une donnée partagée là où il n'y a qu'un filtre.
+  AcademyCategory? _domaine;
+
+  @override
+  Widget build(BuildContext context) {
     final pack = ref.watch(academyPackProvider);
     final daily = ref.watch(dailyLessonProvider);
     final actions = ref.read(academyActionsProvider);
@@ -57,6 +69,13 @@ class AcademyScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: AppSpacing.gapRow),
+            AcademyDomainBar(
+              selected: _domaine,
+              onSelect: (domaine) => setState(() => _domaine = domaine),
+              countOf: (category) =>
+                  lessons.where((lesson) => lesson.category == category).length,
+            ),
+            const SizedBox(height: AppSpacing.gapRow),
             if (daily != null) ...[
               QuizCard(
                 question: daily.question,
@@ -73,9 +92,17 @@ class AcademyScreen extends ConsumerWidget {
               ),
               const SizedBox(height: AppSpacing.gapRow),
             ],
-            for (final category in AcademyCategory.values) ...[
-              AppSectionLabel(category.label),
-              const SizedBox(height: AppSpacing.xs),
+            // « Tous » déroule les douze sections ; un domaine choisi n'en
+            // montre qu'une, et l'en-tête disparaît alors : la pastille
+            // active le dit déjà, le répéter ne fait que pousser la première
+            // leçon vers le bas.
+            for (final category in AcademyCategory.values.where(
+              (category) => _domaine == null || category == _domaine,
+            )) ...[
+              if (_domaine == null) ...[
+                AppSectionLabel(category.label),
+                const SizedBox(height: AppSpacing.xs),
+              ],
               for (final lesson in lessons.where(
                 (lesson) => lesson.category == category,
               )) ...[
