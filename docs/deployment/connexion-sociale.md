@@ -44,19 +44,35 @@ Il en faut **deux** — c'est le point qui piège tout le monde :
 
 Pour le client Android, Google demande :
 
-- **Package name** : `com.carlys.app` (celui du `applicationId` Android) ;
+- **Package name** : `com.carlys.carlys_mobile`. C'est `flutter create --org
+  com.carlys --project-name carlys_mobile` (voir `scripts/mobile_platforms.sh`)
+  qui le décide — Android reçoit le nom tel quel, iOS en camelCase
+  (`com.carlys.carlysMobile`). À recopier exactement : une lettre de travers
+  et Google refuse le jeton sans rien expliquer ;
 - **SHA-1 certificate fingerprint** : l'empreinte de la clé qui signe l'APK.
 
 Il en faut **une par clé de signature**, et il y en a deux :
 
-```bash
-# 1. La clé d'upload du dépôt (celle des secrets GitHub ANDROID_KEYSTORE_BASE64)
-keytool -list -v -keystore carlys-release.jks -alias upload | grep SHA1
+**1. La clé d'upload** (celle des secrets GitHub `ANDROID_KEYSTORE_BASE64`).
+Le plus simple, si tu n'as plus le fichier sous la main : lance
+`mobile-recette` et lis son récapitulatif — l'étape « Empreintes de la clé de
+signature » les affiche à chaque exécution signée, SHA-1 et SHA-256. Rien n'y
+est secret : une empreinte est un condensé de la partie PUBLIQUE de la clé.
 
-# 2. La clé de Play App Signing (Google re-signe les installations du Store) :
-#    Play Console → ton app → Test and release → Setup → App signing
-#    → « SHA-1 certificate fingerprint » de l'« App signing key certificate »
+Sinon, depuis ta sauvegarde base64 (gestionnaire de mots de passe) :
+
+```bash
+# Le keystore n'a pas besoin d'exister ailleurs qu'en mémoire de la commande.
+printf %s "<la-ligne-base64>" | base64 -d > /tmp/upload.jks
+keytool -list -v -keystore /tmp/upload.jks -alias upload | grep -E 'SHA1|SHA256'
+shred -u /tmp/upload.jks   # on ne laisse pas traîner une clé de signature
 ```
+
+**2. La clé de Play App Signing** (Google re-signe les installations du
+Store) : Play Console → ton app → Test and release → Setup → App signing →
+« SHA-1 certificate fingerprint » de l'« App signing key certificate ».
+Cette seconde empreinte n'existe qu'une fois l'application déposée sur le
+Store ; tant que tu installes l'APK toi-même, la première suffit.
 
 > Oublier la seconde est l'erreur classique : la connexion marche avec l'APK
 > qu'on installe soi-même, et échoue pour tous ceux qui installent depuis le
@@ -99,7 +115,8 @@ Apple ne s'active que sur iOS, et réclame un **compte Apple Developer payant**
 — le bouton Apple dira de lui-même qu'il n'est pas disponible.
 
 1. <https://developer.apple.com/account> → **Certificates, Identifiers &
-   Profiles → Identifiers** : sur l'App ID de Carlys (`com.carlys.app`),
+   Profiles → Identifiers** : sur l'App ID de Carlys
+   (`com.carlys.carlysMobile` — la forme iOS, en camelCase),
    coche la capacité **Sign in with Apple**.
 2. Dans Xcode, onglet **Signing & Capabilities** du runner iOS : ajoute la
    capacité **Sign in with Apple**. (Le dossier `ios/` est engendré par
@@ -108,12 +125,16 @@ Apple ne s'active que sur iOS, et réclame un **compte Apple Developer payant**
 3. Côté serveur, l'audience du jeton est le **bundle ID** :
 
 ```bash
-APPLE_OAUTH_AUDIENCES=com.carlys.app
+APPLE_OAUTH_AUDIENCES=com.carlys.carlysMobile
 ```
 
 > Si un jour la connexion Apple est proposée sur le web, ajoute aussi le
 > **Services ID** (`com.carlys.web`, par exemple) à la même liste, séparé par
 > une virgule.
+
+> Le workflow `mobile-recette.yml` LIT ce bundle depuis le projet engendré
+> plutôt que de le recopier : la valeur ci-dessus est celle qu'il trouve
+> aujourd'hui, et son récapitulatif d'exécution l'affiche à chaque build iOS.
 
 ## 3. Vérifier
 

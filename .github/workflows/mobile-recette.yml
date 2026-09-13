@@ -716,6 +716,51 @@ jobs:
           fi
           echo "APK signé avec la clé du dépôt (SHA-256 : $obtenue)."
 
+      # Les empreintes de la clé d'upload, affichées à chaque exécution signée.
+      #
+      # Pourquoi ici : Google Cloud réclame la SHA-1 de la clé de signature
+      # pour le client OAuth Android, sans quoi la connexion Google échoue
+      # avec un laconique « sign_in_failed ». La chercher obligeait sinon à
+      # ressortir le keystore d'une sauvegarde et à le déchiffrer à la main —
+      # un geste risqué, pour une donnée qui ne l'est pas : une empreinte est
+      # un condensé de la partie PUBLIQUE du certificat. Rien de secret n'est
+      # imprimé, et aucun mot de passe ne transite par le récapitulatif.
+      - name: Empreintes de la clé de signature (pour Google Cloud)
+        if: steps.signature.outputs.actif == 'oui'
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+        run: |
+          set -euo pipefail
+          keytool_bin="$(command -v keytool || echo "${JAVA_HOME:-}/bin/keytool")"
+          empreintes="$("$keytool_bin" -list -v \
+            -keystore "$RUNNER_TEMP/carlys-release.jks" \
+            -alias "$KEY_ALIAS" -storepass "$KEYSTORE_PASSWORD" 2>/dev/null \
+            | grep -E '^[[:space:]]*(SHA1|SHA256):' || true)"
+          if [ -z "$empreintes" ]; then
+            echo "::warning title=Empreintes illisibles::Le keystore n'a pas rendu d'empreinte pour l'alias « $KEY_ALIAS ». La signature, elle, a déjà été vérifiée à l'étape précédente."
+            exit 0
+          fi
+          {
+            echo "### Empreintes de la clé d'upload"
+            echo
+            echo "Pour le client OAuth **Android** de Google Cloud (Package name :"
+            echo '`com.carlys.carlys_mobile`). La SHA-1 est celle que demande le'
+            echo "formulaire ; voir \`docs/deployment/connexion-sociale.md\`."
+            echo
+            echo '```'
+            echo "$empreintes"
+            echo '```'
+            echo
+            echo "> Une empreinte n'est pas un secret : c'est un condensé du"
+            echo "> certificat public. La clé privée, elle, n'est jamais affichée."
+            echo
+            echo "Si l'application est publiée sur le Play Store, AJOUTE aussi"
+            echo "l'empreinte de la clé de Play App Signing (Play Console →"
+            echo "Test and release → Setup → App signing) : sans elle, la"
+            echo "connexion Google échoue pour toutes les installations du Store."
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: Artefact — APK installable
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
