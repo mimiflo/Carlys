@@ -47,6 +47,31 @@ class AuthApi {
     return AuthResultDto.fromJson(_data(response));
   }
 
+  /// Échange un jeton d'identité Apple/Google contre une session Carlys.
+  ///
+  /// Le serveur VÉRIFIE le jeton (signature du fournisseur, émetteur,
+  /// audience) avant d'ouvrir quoi que ce soit : ce que l'appareil envoie
+  /// ici est une preuve à contrôler, pas une décision.
+  Future<AuthResultDto> socialLogin({
+    required String provider,
+    required String idToken,
+    String? displayName,
+    String? deviceName,
+    String? devicePlatform,
+  }) async {
+    final response = await _dio.post<Map<String, dynamic>>(
+      '/auth/social',
+      data: {
+        'provider': provider,
+        'idToken': idToken,
+        if (displayName != null) 'displayName': displayName,
+        if (deviceName != null) 'deviceName': deviceName,
+        if (devicePlatform != null) 'devicePlatform': devicePlatform,
+      },
+    );
+    return AuthResultDto.fromJson(_data(response));
+  }
+
   Future<void> logout() => _dio.post<void>('/auth/logout');
 
   Future<void> forgotPassword(String email) =>

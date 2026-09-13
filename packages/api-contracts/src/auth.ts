@@ -76,3 +76,22 @@ export const loginRequestSchema = z.object({
 export const refreshRequestSchema = z.object({
   refreshToken: z.string().min(1),
 });
+
+/** Fournisseurs de connexion sociale acceptés par POST /auth/social. */
+export const socialProviderSchema = z.enum(['apple', 'google']);
+export type SocialProvider = z.infer<typeof socialProviderSchema>;
+
+/** Borne large : un jeton d'identité Apple/Google fait ~1-2 Ko. */
+export const SOCIAL_ID_TOKEN_MAX_LENGTH = 8192;
+
+export const socialLoginRequestSchema = z.object({
+  provider: socialProviderSchema,
+  /** Jeton d'IDENTITÉ (JWT) émis par le fournisseur — vérifié côté serveur
+   *  (signature JWKS, émetteur, audience). Jamais un access token. */
+  idToken: z.string().min(1).max(SOCIAL_ID_TOKEN_MAX_LENGTH),
+  /** Nom à afficher, transmis par le SDK à la PREMIÈRE connexion — Apple ne
+   *  le redonne jamais ensuite, le client doit donc le faire suivre. */
+  displayName: z.string().min(1).max(60).optional(),
+  deviceName: z.string().max(120).optional(),
+  devicePlatform: z.string().max(40).optional(),
+});

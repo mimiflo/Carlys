@@ -31,6 +31,7 @@ class AppEnvironment {
     required this.apiBaseUrl,
     this.publicWebBaseUrl = defaultPublicWebBaseUrl,
     this.push,
+    this.googleServerClientId,
   });
 
   /// Application web publique en développement : le Next.js d'`apps/admin`
@@ -71,6 +72,14 @@ class AppEnvironment {
         firebaseSenderId != '' &&
         firebaseProjectId != '';
 
+    // Client OAuth « Web » du projet Google Cloud. C'est LUI qu'il faut
+    // donner au SDK Android : sans `serverClientId`, Google n'émet pas de
+    // jeton d'identité pour notre serveur, et la connexion Google reste
+    // inerte. Vide = bouton Google désactivé, rien de cassé.
+    const googleServerClientId = String.fromEnvironment(
+      'CARLYS_GOOGLE_SERVER_CLIENT_ID',
+    );
+
     final flavor = AppFlavor.values.firstWhere(
       (value) => value.name == flavorName,
       orElse: () => AppFlavor.development,
@@ -80,6 +89,9 @@ class AppEnvironment {
       flavor: flavor,
       apiBaseUrl: apiBaseUrl,
       publicWebBaseUrl: publicWebBaseUrl,
+      googleServerClientId: googleServerClientId.isEmpty
+          ? null
+          : googleServerClientId,
       push: firebaseConfigured
           ? const FirebasePushOptions(
               apiKey: firebaseApiKey,
@@ -103,6 +115,15 @@ class AppEnvironment {
   /// Null tant que la configuration Firebase n'est pas injectée : le push
   /// est alors inactif, le reste de l'application vit normalement.
   final FirebasePushOptions? push;
+
+  /// Client OAuth « Web » du projet Google Cloud, à donner au SDK Android
+  /// pour qu'il demande un jeton d'identité destiné à NOTRE serveur.
+  ///
+  /// Null tant qu'il n'est pas injecté : la connexion Google est alors
+  /// annoncée comme pas encore disponible, exactement comme lorsque le
+  /// serveur ne la propose pas. Valeur CLIENT, pas un secret — mais elle
+  /// est propre à chaque projet, donc jamais commitée.
+  final String? googleServerClientId;
 
   bool get isDevelopment => flavor == AppFlavor.development;
   bool get isProduction => flavor == AppFlavor.production;

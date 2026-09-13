@@ -10,17 +10,24 @@ import '../../../../core/auth/token_storage.dart';
 import '../../../../core/logging/app_logger.dart';
 import '../../domain/entities/auth_session_device.dart';
 import '../../domain/entities/auth_user.dart';
+import '../../domain/entities/social_provider.dart';
 import '../../domain/repositories/auth_repository.dart';
 import '../datasources/auth_api.dart';
+import '../datasources/social_sign_in.dart';
 import '../dto/auth_dtos.dart';
 
 class AuthRepositoryImpl implements AuthRepository {
-  AuthRepositoryImpl({required this._api, required this._storage});
+  AuthRepositoryImpl({
+    required this._api,
+    required this._storage,
+    required this._socialSignIn,
+  });
 
   static const _logger = AppLogger('AuthRepository');
 
   final AuthApi _api;
   final TokenStorage _storage;
+  final SocialSignIn _socialSignIn;
 
   static String get _devicePlatform =>
       Platform.isIOS ? 'ios' : (Platform.isAndroid ? 'android' : 'desktop');
@@ -72,7 +79,34 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
+  Future<AuthUser?> signInWithProvider(SocialProvider provider) async {
+    // Le SDK d'abord (hors de `_guard` : ses erreurs ne sont pas des erreurs
+    // Dio), le serveur ensuite. La personne peut renoncer devant la feuille :
+    // c'est un `null`, pas un échec.
+    final credential = await _socialSignIn.obtain(provider);
+    if (credential == null) return null;
+
+    return _guard(() async {
+      final result = await _api.socialLogin(
+        provider: provider.wireName,
+        idToken: credential.idToken,
+        displayName: credential.displayName,
+        devicePlatform: _devicePlatform,
+      );
+      await _saveTokens(result.tokens);
+      return result.user.toEntity();
+    });
+  }
+
+  @override
   Future<void> logout() async {
+    // Le SDK retient le compte choisi : sans cet oubli, le bouton
+    // reconnecterait le même compte sans jamais reproposer le choix.
+    try {
+      await _socialSignIn.forget();
+    } on Exception catch (error) {
+      _logger.warning('Oubli du compte social impossible', error: error);
+    }
     try {
       await _api.logout();
     } on Exception catch (error) {
@@ -165,5 +199,6 @@ final authRepositoryProvider = Provider<AuthRepository>((ref) {
   return AuthRepositoryImpl(
     api: AuthApi(ref.watch(dioProvider)),
     storage: ref.watch(tokenStorageProvider),
+    socialSignIn: ref.watch(socialSignInProvider),
   );
 });

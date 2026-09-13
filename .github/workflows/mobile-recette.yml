@@ -605,6 +605,11 @@ jobs:
           CARLYS_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           SIGNATURE: ${{ steps.signature.outputs.actif }}
           NUMERO: ${{ github.run_number }}
+          # Client OAuth « Web » du projet Google Cloud : sans lui, le bouton
+          # Google annonce simplement qu'il n'est pas encore disponible.
+          # Valeur CLIENT, pas un secret — mais propre au projet, donc en
+          # variable de dépôt. Voir docs/deployment/connexion-sociale.md.
+          GOOGLE_CLIENT: ${{ vars.CARLYS_GOOGLE_SERVER_CLIENT_ID }}
         run: |
           flutter build apk --release \
             --no-pub \
@@ -614,7 +619,8 @@ jobs:
             --split-debug-info=build/symboles-apk \
             --dart-define=CARLYS_FLAVOR=staging \
             --dart-define=CARLYS_API_BASE_URL="$API" \
-            --dart-define=CARLYS_PUBLIC_WEB_BASE_URL="$WEB"
+            --dart-define=CARLYS_PUBLIC_WEB_BASE_URL="$WEB" \
+            --dart-define=CARLYS_GOOGLE_SERVER_CLIENT_ID="$GOOGLE_CLIENT"
 
           mkdir -p build/livraison/apk
           mv build/app/outputs/flutter-apk/app-release.apk \
@@ -742,6 +748,7 @@ jobs:
           CARLYS_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           CARLYS_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
           NUMERO: ${{ github.run_number }}
+          GOOGLE_CLIENT: ${{ vars.CARLYS_GOOGLE_SERVER_CLIENT_ID }}
         run: |
           flutter build appbundle --release \
             --no-pub \
@@ -750,7 +757,8 @@ jobs:
             --split-debug-info=build/symboles-aab \
             --dart-define=CARLYS_FLAVOR=staging \
             --dart-define=CARLYS_API_BASE_URL="$API" \
-            --dart-define=CARLYS_PUBLIC_WEB_BASE_URL="$WEB"
+            --dart-define=CARLYS_PUBLIC_WEB_BASE_URL="$WEB" \
+            --dart-define=CARLYS_GOOGLE_SERVER_CLIENT_ID="$GOOGLE_CLIENT"
 
           mkdir -p build/livraison/aab
           mv build/app/outputs/bundle/release/app-release.aab \

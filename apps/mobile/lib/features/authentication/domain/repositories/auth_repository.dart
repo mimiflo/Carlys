@@ -1,5 +1,6 @@
 import '../entities/auth_session_device.dart';
 import '../entities/auth_user.dart';
+import '../entities/social_provider.dart';
 
 /// Contrat du domaine authentification.
 ///
@@ -24,6 +25,16 @@ abstract interface class AuthRepository {
   });
 
   Future<AuthUser> login({required String email, required String password});
+
+  /// Connexion via Apple ou Google.
+  ///
+  /// `null` quand la personne RENONCE devant la feuille du fournisseur : ce
+  /// n'est pas une erreur, et il n'y a rien à lui dire. Tout le reste
+  /// remonte en [AppException] — y compris le refus du serveur.
+  ///
+  /// Le jeton obtenu du SDK ne décide de rien : c'est le serveur qui le
+  /// vérifie et ouvre, ou non, la session.
+  Future<AuthUser?> signInWithProvider(SocialProvider provider);
 
   /// Révoque la session côté serveur (au mieux) puis efface les jetons locaux.
   Future<void> logout();

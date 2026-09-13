@@ -145,6 +145,18 @@ export const envSchema = z
      */
     FIREBASE_SERVICE_ACCOUNT_JSON: z.string().min(2).optional(),
 
+    // ── Connexion sociale (Apple, Google) ───────────────────────────────────
+    /**
+     * Audiences ACCEPTÉES des jetons d'identité, séparées par des virgules.
+     * Google : les client IDs OAuth (Web « serveur » + Android + iOS) de la
+     * console Google Cloud. Apple : le bundle ID iOS (et le Services ID web
+     * le cas échéant). **Optionnelles** : sans elles, POST /auth/social
+     * répond 503 pour le fournisseur concerné au lieu d'empêcher le
+     * démarrage — même politique que le coach.
+     */
+    GOOGLE_OAUTH_CLIENT_IDS: z.string().min(1).optional(),
+    APPLE_OAUTH_AUDIENCES: z.string().min(1).optional(),
+
     // ── Coach IA ────────────────────────────────────────────────────────────
     /**
      * Clé du fournisseur de modèle. **Optionnelle** : sans elle, le module se

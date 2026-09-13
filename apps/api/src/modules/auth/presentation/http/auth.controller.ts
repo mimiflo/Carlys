@@ -10,6 +10,7 @@ import {
 } from '../../../../common/types/authenticated-request';
 import { type RequestWithId } from '../../../../common/types/request-with-id';
 import { AuthService } from '../../application/auth.service';
+import { SocialAuthService } from '../../application/social-auth.service';
 import {
   ChangePasswordDto,
   ForgotPasswordDto,
@@ -17,6 +18,7 @@ import {
   RefreshDto,
   RegisterDto,
   ResetPasswordDto,
+  SocialLoginDto,
   VerifyEmailDto,
 } from './dto/auth.dto';
 
@@ -26,7 +28,10 @@ const STRICT_THROTTLE = { default: { limit: 10, ttl: 60_000 } };
 @ApiTags('auth')
 @Controller('auth')
 export class AuthController {
-  constructor(private readonly auth: AuthService) {}
+  constructor(
+    private readonly auth: AuthService,
+    private readonly social: SocialAuthService,
+  ) {}
 
   @Public()
   @Throttle(STRICT_THROTTLE)
@@ -43,6 +48,19 @@ export class AuthController {
   @ApiOperation({ summary: 'Connexion (verrouillage temporaire après échecs répétés)' })
   login(@Body() dto: LoginDto, @Req() request: RequestWithId): Promise<AuthResult> {
     return this.auth.login(dto, clientContextOf(request));
+  }
+
+  @Public()
+  @Throttle(STRICT_THROTTLE)
+  @Post('social')
+  @HttpCode(HttpStatus.OK)
+  @ApiOperation({
+    summary:
+      "Connexion via Apple ou Google — jeton d'identité vérifié côté serveur " +
+      '(503 tant que le fournisseur n’est pas configuré)',
+  })
+  socialLogin(@Body() dto: SocialLoginDto, @Req() request: RequestWithId): Promise<AuthResult> {
+    return this.social.login(dto, clientContextOf(request));
   }
 
   @Public()

@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:carlys_mobile/core/errors/app_exception.dart';
 import 'package:carlys_mobile/features/authentication/domain/entities/auth_session_device.dart';
 import 'package:carlys_mobile/features/authentication/domain/entities/auth_user.dart';
+import 'package:carlys_mobile/features/authentication/domain/entities/social_provider.dart';
 import 'package:carlys_mobile/features/authentication/domain/repositories/auth_repository.dart';
 
 const fakeUser = AuthUser(
@@ -86,6 +87,25 @@ class FakeAuthRepository implements AuthRepository {
     if (failLogin) {
       throw const UnauthorizedException('E-mail ou mot de passe incorrect.');
     }
+    storedSession = true;
+    return user;
+  }
+
+  /// Fournisseur social : la doublure répond ce qu'on lui a dit de répondre.
+  /// `socialOutcome` null = la personne a renoncé.
+  SocialProvider? lastSocialProvider;
+  bool socialCancelled = false;
+
+  /// Erreur à lever au lieu d'ouvrir une session — exception du SDK
+  /// (`SocialSignInUnavailable`) ou du serveur (`AppException`).
+  Object? socialError;
+
+  @override
+  Future<AuthUser?> signInWithProvider(SocialProvider provider) async {
+    lastSocialProvider = provider;
+    final error = socialError;
+    if (error != null) throw error;
+    if (socialCancelled) return null;
     storedSession = true;
     return user;
   }

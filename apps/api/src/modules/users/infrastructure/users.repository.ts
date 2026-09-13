@@ -8,10 +8,17 @@ export type UserWithProfile = User & { profile: UserProfile | null };
 
 export interface CreateUserInput {
   email: string;
-  passwordHash: string;
+  /**
+   * Absent pour un compte créé par CONNEXION SOCIALE : pas de ligne
+   * credential du tout — la connexion par mot de passe échoue alors
+   * naturellement (hash introuvable), sans état « mot de passe vide ».
+   */
+  passwordHash?: string;
   displayName: string;
   locale?: string;
   timezone?: string;
+  /** Adresse déjà vérifiée PAR LE FOURNISSEUR (connexion sociale). */
+  emailVerifiedAt?: Date;
 }
 
 /** Accès Prisma du domaine utilisateurs — seul point de contact avec la base. */
@@ -49,6 +56,7 @@ export class UsersRepository {
           data: {
             email: input.email,
             friendCode: generateFriendCode(),
+            emailVerifiedAt: input.emailVerifiedAt,
             profile: {
               create: {
                 displayName: input.displayName,
@@ -56,9 +64,10 @@ export class UsersRepository {
                 timezone: input.timezone ?? 'Europe/Paris',
               },
             },
-            credential: {
-              create: { passwordHash: input.passwordHash },
-            },
+            credential:
+              input.passwordHash === undefined
+                ? undefined
+                : { create: { passwordHash: input.passwordHash } },
           },
           include: { profile: true },
         });

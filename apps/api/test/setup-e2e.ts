@@ -1,4 +1,4 @@
-import { Redis } from 'ioredis';
+import { reinitialiserDebit } from './support/throttle';
 
 /**
  * Remet le compteur de débit à zéro AVANT CHAQUE FICHIER de la suite e2e.
@@ -14,33 +14,13 @@ import { Redis } from 'ioredis';
  * correctif : 96 tests en échec sur 155, tous sur des routes sans rapport avec
  * la limitation de débit.
  *
- * Ce qu'il ne fait PAS : desserrer la limite. Les trois suites qui PROUVENT le
- * refus (verrouillage admin, plafond de messages du coach, demandes d'amis)
- * continuent de l'atteindre à l'intérieur de leur fichier — seule la frontière
- * ENTRE fichiers est rétablie, exactement là où elle était avant.
+ * Ce qu'il ne fait PAS : desserrer la limite. Les suites qui PROUVENT le refus
+ * (verrouillage admin, plafond de messages du coach, demandes d'amis, quota de
+ * la connexion sociale) continuent de l'atteindre à l'intérieur d'un même
+ * test — seule la frontière ENTRE fichiers est rétablie, exactement là où elle
+ * était avant.
  *
- * Portée volontairement étroite : le préfixe des seuls compteurs de débit.
- * Un `FLUSHDB` effacerait aussi les caches et la présence, et masquerait le
- * jour où une suite dépendrait par erreur de l'état laissé par une autre.
+ * Le geste lui-même vit dans `support/throttle.ts` : une suite dense en
+ * requêtes sur une route sensible le rejoue entre ses propres tests.
  */
-const PREFIXE_DEBIT = 'carlys:throttle:';
-
-beforeAll(async () => {
-  const client = new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379', {
-    maxRetriesPerRequest: 1,
-  });
-  try {
-    // SCAN, jamais KEYS : même dans les tests, on ne prend pas l'habitude de
-    // bloquer Redis sur un parcours complet du keyspace.
-    let cursor = '0';
-    do {
-      const [suivant, cles] = await client.scan(cursor, 'MATCH', `${PREFIXE_DEBIT}*`, 'COUNT', 500);
-      cursor = suivant;
-      if (cles.length > 0) {
-        await client.del(...cles);
-      }
-    } while (cursor !== '0');
-  } finally {
-    await client.quit();
-  }
-});
+beforeAll(reinitialiserDebit);

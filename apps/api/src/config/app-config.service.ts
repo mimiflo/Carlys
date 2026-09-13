@@ -164,6 +164,23 @@ export class AppConfigService {
     return this.config.get('FIREBASE_SERVICE_ACCOUNT_JSON', { infer: true });
   }
 
+  /** Audiences Google acceptées — vide : connexion Google non activée (503). */
+  get googleOauthClientIds(): string[] {
+    return this.csv(this.config.get('GOOGLE_OAUTH_CLIENT_IDS', { infer: true }));
+  }
+
+  /** Audiences Apple acceptées — vide : connexion Apple non activée (503). */
+  get appleOauthAudiences(): string[] {
+    return this.csv(this.config.get('APPLE_OAUTH_AUDIENCES', { infer: true }));
+  }
+
+  private csv(value: string | undefined): string[] {
+    return (value ?? '')
+      .split(',')
+      .map((entry) => entry.trim())
+      .filter((entry) => entry.length > 0);
+  }
+
   // ── Coach IA ───────────────────────────────────────────────────────────
 
   get anthropicApiKey(): string | undefined {

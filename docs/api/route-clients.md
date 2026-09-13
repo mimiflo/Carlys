@@ -62,6 +62,7 @@ OpenAPI : `{id}`.
 | `POST /auth/register` | **mobile** | apps/mobile |
 | `POST /auth/resend-verification` | **mobile** | apps/mobile |
 | `POST /auth/reset-password` | **web-public** | apps/admin (pages publiques) |
+| `POST /auth/social` | **mobile** | apps/mobile (boutons Apple et Google) |
 | `DELETE /auth/sessions` | **mobile** | apps/mobile |
 | `GET /auth/sessions` | **mobile** | apps/mobile |
 | `DELETE /auth/sessions/{id}` | **mobile** | apps/mobile |

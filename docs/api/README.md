@@ -188,7 +188,7 @@ docs) et sera documentée précisément ici à sa livraison.
 
 | Domaine | Routes cibles (indicatives) | Étape |
 | --- | --- | --- |
-| Authentification | **Livré** — voir le tableau détaillé ci-dessous | Étape 2 ✅ |
+| Authentification | **Livré** — voir le tableau détaillé ci-dessous ; connexion sociale Apple/Google incluse (`POST /auth/social`) | Étape 2 ✅ |
 | Utilisateur courant | **Livré** — `GET/PATCH/DELETE /api/v1/users/me`, sessions | Étape 2 ✅ |
 | Exercices | **Livré** — `GET /api/v1/exercises` (recherche `search`, filtres `muscleGroup`/`equipment`/`difficulty`/`type`, pagination `cursor`+`limit`, `meta.nextCursor`/`hasMore`/`total`), `GET /api/v1/exercises/:idOrSlug`, `GET /api/v1/muscle-groups` (groupes NON VIDES seulement), `GET /api/v1/equipment` — catalogue seedé (170 exercices, dont 156 illustrés : pectoraux, biceps, dos, triceps, épaules et abdominaux), cache Redis tolérant aux pannes, exercices non publiés jamais servis | Étape 3 ✅ |
 | Modèles de séance | **Livré** — `GET /api/v1/workout-templates` (curseur), `GET /workout-templates/:id`, `PUT /workout-templates/:id` (**unique écriture**, create-or-replace, 201/200), `DELETE /workout-templates/:id` (suppression logique rejouable) — voir le tableau détaillé ci-dessous. Programmes multi-semaines : voir la ligne dédiée | Étape 4 ✅ |
@@ -232,6 +232,7 @@ celle de l'API. Voir [`docs/architecture/admin.md`](../architecture/admin.md).
 | --- | --- | --- |
 | `POST /api/v1/auth/register` (public) | 201, 400, 409 | Ouvre une session ; envoie l'e-mail de vérification |
 | `POST /api/v1/auth/login` (public) | 200, 401, 429 | 401 générique (anti-énumération) ; 429 en cas de verrouillage |
+| `POST /api/v1/auth/social` (public) | 200, 400, 401, 429, 503 | Connexion Apple/Google. Le jeton d'IDENTITÉ est vérifié côté serveur (signature du fournisseur, émetteur, audience, expiration) ; la session émise est celle de la connexion par e-mail. Identité connue → connexion ; adresse **vérifiée par le fournisseur** d'un compte existant → rattachement ; sinon création sans mot de passe. 401 si l'adresse n'est pas garantie vérifiée. 503 tant que le fournisseur n'est pas configuré (`GOOGLE_OAUTH_CLIENT_IDS`, `APPLE_OAUTH_AUDIENCES`) — voir `docs/deployment/connexion-sociale.md` |
 | `POST /api/v1/auth/refresh` (public) | 200, 401 | Rotation ; réutilisation détectée → session révoquée |
 | `POST /api/v1/auth/logout` | 204, 401 | Révoque la session courante |
 | `POST /api/v1/auth/verify-email` (public) | 204, 401 | Jeton à usage unique ; **consommateur : page web `/verify-email`** (aucun écran mobile) |

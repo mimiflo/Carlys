@@ -4,6 +4,7 @@ library;
 
 import 'package:carlys_mobile/features/authentication/domain/entities/auth_session_device.dart';
 import 'package:carlys_mobile/features/authentication/domain/entities/auth_user.dart';
+import 'package:carlys_mobile/features/authentication/domain/entities/social_provider.dart';
 import 'package:carlys_mobile/features/authentication/domain/repositories/auth_repository.dart';
 import 'package:carlys_mobile/features/carlys_profile/domain/entities/carlys_profile.dart';
 import 'package:carlys_mobile/features/carlys_profile/domain/repositories/carlys_profile_repository.dart';
@@ -63,6 +64,12 @@ class InMemoryAuthRepository implements AuthRepository {
     required String email,
     required String password,
   }) async {
+    _connected = true;
+    return _user;
+  }
+
+  @override
+  Future<AuthUser?> signInWithProvider(SocialProvider provider) async {
     _connected = true;
     return _user;
   }

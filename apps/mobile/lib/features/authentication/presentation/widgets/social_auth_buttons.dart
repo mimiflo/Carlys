@@ -1,35 +1,57 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../design_system/design_system.dart';
+import '../../domain/entities/social_provider.dart';
+import '../controllers/social_auth_controller.dart';
 import 'google_glyph.dart';
 
 /// Le séparateur « OU » et les entrées sociales : Apple et Google.
 ///
-/// LES FOURNISSEURS NE SONT PAS ENCORE BRANCHÉS — l'API n'expose que la
-/// connexion par e-mail (Étape 2). Le toucher le dit franchement plutôt que
-/// d'échouer en silence ou de simuler : un message nomme le fournisseur et
-/// renvoie vers l'e-mail. Le jour où l'API saura, seul `_announce` change.
-class SocialAuthButtons extends StatelessWidget {
+/// Le toucher ouvre la feuille du fournisseur, obtient un jeton d'identité et
+/// le confie au SERVEUR, qui le vérifie et ouvre la session — la redirection
+/// est ensuite l'affaire du routeur. Quand le fournisseur n'est pas encore
+/// branché (serveur non configuré, client OAuth absent du build, Apple hors
+/// iOS), on le DIT plutôt que d'afficher une panne ; renoncer devant la
+/// feuille ne dit rien du tout.
+class SocialAuthButtons extends ConsumerWidget {
   const SocialAuthButtons({this.enabled = true, super.key});
 
   /// Neutralisé pendant une soumission, comme le reste du formulaire.
   final bool enabled;
 
-  void _announce(BuildContext context, String provider) {
-    ScaffoldMessenger.of(context)
+  Future<void> _signIn(
+    BuildContext context,
+    WidgetRef ref,
+    SocialProvider provider,
+  ) async {
+    final messenger = ScaffoldMessenger.of(context);
+    final outcome = await ref
+        .read(socialAuthControllerProvider.notifier)
+        .signIn(provider);
+
+    final message = switch (outcome) {
+      // Le routeur emmène ailleurs : rien à annoncer.
+      SocialAuthSucceeded() => null,
+      // Refermer la feuille n'est pas un échec.
+      SocialAuthCancelled() => null,
+      SocialAuthUnavailable() => outcome.message,
+      SocialAuthFailed() => outcome.message,
+    };
+    if (message == null) return;
+
+    messenger
       ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Text(
-            'La connexion avec $provider arrive bientôt. Utilise ton '
-            'adresse e-mail en attendant.',
-          ),
-        ),
-      );
+      ..showSnackBar(SnackBar(content: Text(message)));
   }
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    // Une tentative en cours neutralise les DEUX boutons : deux feuilles de
+    // connexion ouvertes en même temps n'ont aucun sens.
+    final enCours = ref.watch(socialAuthControllerProvider);
+    final actif = enabled && enCours == null;
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -37,25 +59,26 @@ class SocialAuthButtons extends StatelessWidget {
         const SizedBox(height: AppSpacing.md),
         Row(
           children: [
-            Expanded(
-              child: _SocialButton(
-                semanticLabel: 'Continuer avec Apple',
-                onPressed: enabled ? () => _announce(context, 'Apple') : null,
-                child: const Icon(
-                  AppIcons.apple,
-                  size: 26,
-                  color: AppColors.neutral0,
+            for (final provider in SocialProvider.values) ...[
+              if (provider != SocialProvider.values.first)
+                const SizedBox(width: AppSpacing.sm),
+              Expanded(
+                child: _SocialButton(
+                  semanticLabel: 'Continuer avec ${provider.label}',
+                  onPressed: actif
+                      ? () => _signIn(context, ref, provider)
+                      : null,
+                  child: switch (provider) {
+                    SocialProvider.apple => const Icon(
+                      AppIcons.apple,
+                      size: 26,
+                      color: AppColors.neutral0,
+                    ),
+                    SocialProvider.google => const GoogleGlyph(size: 22),
+                  },
                 ),
               ),
-            ),
-            const SizedBox(width: AppSpacing.sm),
-            Expanded(
-              child: _SocialButton(
-                semanticLabel: 'Continuer avec Google',
-                onPressed: enabled ? () => _announce(context, 'Google') : null,
-                child: const GoogleGlyph(size: 22),
-              ),
-            ),
+            ],
           ],
         ),
       ],

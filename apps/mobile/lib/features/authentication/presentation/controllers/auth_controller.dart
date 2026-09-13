@@ -9,6 +9,7 @@ import '../../../../core/logging/app_logger.dart';
 import '../../../notifications/presentation/controllers/push_registration.dart';
 import '../../data/repositories/auth_repository_impl.dart';
 import '../../domain/entities/auth_user.dart';
+import '../../domain/entities/social_provider.dart';
 import 'device_timezone_controller.dart';
 
 /// État global de session.
@@ -84,6 +85,19 @@ class AuthController extends Notifier<AuthState> {
     final user = await ref
         .read(authRepositoryProvider)
         .login(email: email, password: password);
+    await _enterAccount();
+    state = AuthAuthenticated(user: user);
+    unawaited(_declareDeviceTimezone(user));
+    return user;
+  }
+
+  /// Connexion Apple ou Google. `null` si la personne a renoncé devant la
+  /// feuille du fournisseur — l'état de session ne bouge alors pas d'un pouce.
+  Future<AuthUser?> signInWithProvider(SocialProvider provider) async {
+    final user = await ref
+        .read(authRepositoryProvider)
+        .signInWithProvider(provider);
+    if (user == null) return null;
     await _enterAccount();
     state = AuthAuthenticated(user: user);
     unawaited(_declareDeviceTimezone(user));

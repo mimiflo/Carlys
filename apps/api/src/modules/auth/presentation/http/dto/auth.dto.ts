@@ -1,7 +1,13 @@
-import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from '@carlys/api-contracts';
+import {
+  PASSWORD_MAX_LENGTH,
+  PASSWORD_MIN_LENGTH,
+  SOCIAL_ID_TOKEN_MAX_LENGTH,
+  type SocialProvider,
+} from '@carlys/api-contracts';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsEmail,
+  IsIn,
   IsNotEmpty,
   IsOptional,
   IsString,
@@ -91,6 +97,26 @@ export class ResetPasswordDto {
   })
   @MaxLength(PASSWORD_MAX_LENGTH)
   newPassword!: string;
+}
+
+export class SocialLoginDto extends DeviceInfoDto {
+  @ApiProperty({ enum: ['apple', 'google'] })
+  @IsIn(['apple', 'google'], { message: 'Fournisseur inconnu.' })
+  provider!: SocialProvider;
+
+  /** Jeton d'IDENTITÉ (JWT) du fournisseur — jamais un access token. */
+  @ApiProperty({ description: "Jeton d'identité émis par Apple ou Google." })
+  @IsString()
+  @IsNotEmpty()
+  @MaxLength(SOCIAL_ID_TOKEN_MAX_LENGTH)
+  idToken!: string;
+
+  /** Apple ne transmet le nom qu'à la PREMIÈRE connexion, hors jeton. */
+  @ApiPropertyOptional({ example: 'Camille' })
+  @IsOptional()
+  @IsString()
+  @Length(1, 60)
+  displayName?: string;
 }
 
 export class ChangePasswordDto {

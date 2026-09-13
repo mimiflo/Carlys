@@ -9,7 +9,10 @@ import { AuthService } from './application/auth.service';
 import { LockoutService } from './application/lockout.service';
 import { PasswordService } from './application/password.service';
 import { SessionsService } from './application/sessions.service';
+import { SocialAuthService } from './application/social-auth.service';
+import { SocialKeyStore, SocialTokenVerifier } from './application/social-token-verifier';
 import { TokenService } from './application/token.service';
+import { IdentitiesRepository } from './infrastructure/identities.repository';
 import { SessionsRepository } from './infrastructure/sessions.repository';
 import { VerificationRepository } from './infrastructure/verification.repository';
 import { AccountController } from './presentation/http/account.controller';
@@ -21,12 +24,16 @@ import { SessionsController } from './presentation/http/sessions.controller';
   controllers: [AuthController, SessionsController, AccountController],
   providers: [
     AuthService,
+    SocialAuthService,
+    SocialTokenVerifier,
+    SocialKeyStore,
     AccountService,
     SessionsService,
     PasswordService,
     TokenService,
     LockoutService,
     SessionsRepository,
+    IdentitiesRepository,
     VerificationRepository,
     // Guard global : toute route est authentifiée sauf @Public().
     { provide: APP_GUARD, useClass: JwtAuthGuard },
