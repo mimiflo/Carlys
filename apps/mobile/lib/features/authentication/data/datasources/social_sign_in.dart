@@ -1,5 +1,6 @@
 import 'dart:io' show Platform;
 
+import 'package:flutter/services.dart' show PlatformException;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:sign_in_with_apple/sign_in_with_apple.dart';
@@ -37,10 +38,17 @@ enum SocialSignInObstacle {
 /// interroger la plateforme elle-même — ce qu'un contrôleur ne doit pas faire,
 /// et ce qu'un test ne pourrait pas simuler.
 class SocialSignInUnavailable implements Exception {
-  const SocialSignInUnavailable(this.provider, this.obstacle);
+  const SocialSignInUnavailable(this.provider, this.obstacle, {this.cause});
 
   final SocialProvider provider;
   final SocialSignInObstacle obstacle;
+
+  /// L'erreur d'origine du SDK — pour les logs, jamais pour l'affichage.
+  final Object? cause;
+
+  @override
+  String toString() =>
+      'SocialSignInUnavailable(${provider.name}, ${obstacle.name}, $cause)';
 }
 
 /// Passerelle vers les SDK Apple et Google.
@@ -81,19 +89,32 @@ class PlatformSocialSignIn implements SocialSignIn {
   @override
   Future<SocialCredential?> obtain(SocialProvider provider) {
     return switch (provider) {
-      SocialProvider.google => _google2(),
+      SocialProvider.google => _googleSignIn(),
       SocialProvider.apple => _apple(),
     };
   }
 
-  Future<SocialCredential?> _google2() async {
+  Future<SocialCredential?> _googleSignIn() async {
     if (environment.googleServerClientId == null) {
       throw const SocialSignInUnavailable(
         SocialProvider.google,
         SocialSignInObstacle.configuration,
       );
     }
-    final compte = await _google.signIn();
+    final GoogleSignInAccount? compte;
+    try {
+      compte = await _google.signIn();
+    } on PlatformException catch (error) {
+      // Le SDK Google avale l'annulation et rend `null` ; ce qui remonte ici
+      // est un vrai échec de configuration — le plus courant étant
+      // `sign_in_failed` (code 10) quand l'empreinte SHA-1 de la clé de
+      // signature manque au client OAuth Android.
+      throw SocialSignInUnavailable(
+        SocialProvider.google,
+        SocialSignInObstacle.configuration,
+        cause: error,
+      );
+    }
     if (compte == null) return null; // renoncé
     final auth = await compte.authentication;
     final idToken = auth.idToken;
@@ -115,12 +136,38 @@ class PlatformSocialSignIn implements SocialSignIn {
         SocialSignInObstacle.plateforme,
       );
     }
-    final identifiant = await SignInWithApple.getAppleIDCredential(
-      scopes: const [
-        AppleIDAuthorizationScopes.email,
-        AppleIDAuthorizationScopes.fullName,
-      ],
-    );
+    final AuthorizationCredentialAppleID identifiant;
+    try {
+      identifiant = await SignInWithApple.getAppleIDCredential(
+        scopes: const [
+          AppleIDAuthorizationScopes.email,
+          AppleIDAuthorizationScopes.fullName,
+        ],
+      );
+    } on SignInWithAppleAuthorizationException catch (error) {
+      // Apple, CONTRAIREMENT à Google, LÈVE quand on referme la feuille.
+      // Sans ce rattrapage, l'exception traversait le contrôleur et
+      // ressortait d'un `onPressed` : aucun message, aucune trace, un bouton
+      // qui semble ne rien faire.
+      if (error.code == AuthorizationErrorCode.canceled) return null;
+      throw SocialSignInUnavailable(
+        SocialProvider.apple,
+        SocialSignInObstacle.configuration,
+        cause: error,
+      );
+    } on SignInWithAppleException catch (error) {
+      throw SocialSignInUnavailable(
+        SocialProvider.apple,
+        SocialSignInObstacle.configuration,
+        cause: error,
+      );
+    } on PlatformException catch (error) {
+      throw SocialSignInUnavailable(
+        SocialProvider.apple,
+        SocialSignInObstacle.configuration,
+        cause: error,
+      );
+    }
     final idToken = identifiant.identityToken;
     if (idToken == null) {
       throw const SocialSignInUnavailable(

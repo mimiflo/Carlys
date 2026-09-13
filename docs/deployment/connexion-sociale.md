@@ -40,6 +40,7 @@ Il en faut **deux** — c'est le point qui piège tout le monde :
 | --- | --- | --- |
 | **Web application** | C'est l'AUDIENCE du jeton, donc l'identité du SERVEUR | Son client ID va dans `GOOGLE_OAUTH_CLIENT_IDS` (API) **et** dans `CARLYS_GOOGLE_SERVER_CLIENT_ID` (mobile) |
 | **Android** | Autorise l'application signée à demander un jeton | Rien à recopier : il est reconnu par le nom de paquet et l'empreinte |
+| **iOS** (le jour où l'app iOS existe) | Sur iOS, le SDK émet un jeton dont l'audience est CE client — pas le « Web » | Son client ID s'ajoute à `GOOGLE_OAUTH_CLIENT_IDS`, séparé par une virgule |
 
 Pour le client Android, Google demande :
 
@@ -150,6 +151,16 @@ lequel des deux côtés manque.
 4. **Refus si l'adresse n'est pas vérifiée par le fournisseur** : ni
    rattachement ni création. C'est la garde qui empêche de prendre le compte
    d'autrui avec une adresse revendiquée mais non prouvée.
+5. **Rattachement à un compte dont l'adresse n'avait jamais été vérifiée** :
+   le compte est REPRIS, pas partagé. N'importe qui peut s'inscrire avec
+   l'adresse d'un autre — le compte est utilisable aussitôt, la vérification
+   n'étant qu'une bannière. Quelqu'un a donc pu s'installer à l'avance sur
+   l'adresse de la personne qui arrive. Le fournisseur, lui, vient de prouver
+   la propriété de cette adresse : tout ce qui pouvait appartenir à un tiers
+   tombe (sessions ouvertes, mot de passe, réinitialisations en cours), et la
+   personne repart d'une porte unique, la sienne. Quand l'adresse était DÉJÀ
+   vérifiée des deux côtés, rien n'est retiré : le mot de passe continue de
+   fonctionner, deux portes pour une seule maison.
 
 La session émise est **exactement** celle de la connexion par e-mail : mêmes
 jetons, même rotation, même révocation par appareil.
@@ -162,7 +173,10 @@ continue de fonctionner. Deux portes, une seule maison.
 
 **« Un compte créé par Google peut-il se connecter par mot de passe ? »**
 Pas tant qu'il n'en a pas : il n'a aucune ligne `UserCredential`. « Mot de
-passe oublié » lui en donne un — c'est le chemin prévu.
+passe oublié » lui en donne un — c'est le chemin prévu, et c'est aussi le
+passage obligé pour SUPPRIMER un tel compte, la suppression demandant le mot
+de passe. L'API le dit explicitement (409) au lieu de répondre « mot de passe
+incorrect » à quelqu'un qui n'en a jamais eu.
 
 **« Apple ne me redonne plus mon nom. »**
 Normal : Apple ne transmet le nom qu'à la **toute première** autorisation.
@@ -170,7 +184,10 @@ L'application le fait suivre au serveur ce jour-là ; ensuite, il vient du
 profil Carlys.
 
 **« Le bouton dit "arrive bientôt" alors que j'ai tout configuré. »**
-Trois causes, dans l'ordre de fréquence : l'API n'a pas été redéployée depuis
+Quatre causes, dans l'ordre de fréquence : l'API n'a pas été redéployée depuis
 l'ajout de la variable ; la variable de dépôt GitHub a été posée après le
-dernier build de l'APK (elle est figée dans le binaire) ; ou le client Android
-manque l'empreinte SHA-1 de la clé qui a signé l'APK installé.
+dernier build de l'APK (elle est figée dans le binaire) ; le client Android
+manque l'empreinte SHA-1 de la clé qui a signé l'APK installé ; ou la variable
+de dépôt n'existe pas du tout, auquel cas TOUS les builds — recette comme
+production — sortent avec un bouton Google inerte alors que le serveur, lui,
+est prêt.

@@ -14,8 +14,15 @@ import { ConfigService } from '@nestjs/config';
 import { type NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
 import { ExternalIdentityProvider, PrismaClient } from '@prisma/client';
-import { createLocalJWKSet, exportJWK, generateKeyPair, type JWK, SignJWT } from 'jose';
-import { randomUUID } from 'node:crypto';
+import {
+  createLocalJWKSet,
+  exportJWK,
+  generateKeyPair,
+  type JWK,
+  type KeyLike,
+  SignJWT,
+} from 'jose';
+import { createHash, randomUUID } from 'node:crypto';
 import request from 'supertest';
 import { type App } from 'supertest/types';
 import { AppModule } from '../src/app/app.module';
@@ -41,7 +48,7 @@ import { reinitialiserDebit } from './support/throttle';
 describe('Connexion sociale (e2e)', () => {
   let app: INestApplication<App>;
   let prisma: PrismaClient;
-  let signer: CryptoKey;
+  let signer: KeyLike;
   let jwks: { keys: JWK[] };
 
   const GOOGLE_AUDIENCE = 'carlys-e2e.apps.googleusercontent.com';
@@ -186,7 +193,60 @@ describe('Connexion sociale (e2e)', () => {
     expect(await prisma.user.count({ where: { email } })).toBe(1);
   });
 
-  it('adresse d’un compte e-mail existant : l’identité s’y rattache', async () => {
+  it('compte e-mail JAMAIS vérifié : l’arrivant reprend le compte, l’autre perd tout', async () => {
+    // LE SCÉNARIO D'ATTAQUE, EN ENTIER. N'importe qui peut s'inscrire avec
+    // l'adresse d'un autre : rien ne vérifie l'adresse avant usage. Ici,
+    // l'attaquant s'installe d'avance sur l'adresse de la victime, garde une
+    // session ouverte, puis la victime arrive par Google.
+    const email = adresseNeuve();
+    const attaquant = data<AuthResult>(
+      (
+        await server()
+          .post('/api/v1/auth/register')
+          .send({ email, password: 'MotDePasseAttaquant42', displayName: 'Pas Camille' })
+          .expect(201)
+      ).body,
+    );
+
+    const sub = `google-${randomUUID()}`;
+    const victime = data<AuthResult>(
+      (
+        await server()
+          .post('/api/v1/auth/social')
+          .send({ provider: 'google', idToken: await jeton({ sub, email, email_verified: true }) })
+          .expect(200)
+      ).body,
+    );
+
+    // C'est bien le même compte — sinon l'adresse serait prise pour rien.
+    expect(victime.user.id).toBe(attaquant.user.id);
+    expect(victime.user.emailVerified).toBe(true);
+
+    // Mais TOUT ce que l'attaquant y avait laissé est mort :
+    // sa session ouverte…
+    await server()
+      .get('/api/v1/users/me')
+      .set('Authorization', `Bearer ${attaquant.tokens.accessToken}`)
+      .expect(401);
+    // …et son mot de passe.
+    await server()
+      .post('/api/v1/auth/login')
+      .send({ email, password: 'MotDePasseAttaquant42' })
+      .expect(401);
+    expect(
+      await prisma.userCredential.findUnique({ where: { userId: victime.user.id } }),
+    ).toBeNull();
+
+    // La victime, elle, entre : la session qu'on vient de lui donner marche.
+    await server()
+      .get('/api/v1/users/me')
+      .set('Authorization', `Bearer ${victime.tokens.accessToken}`)
+      .expect(200);
+  });
+
+  it('compte e-mail DÉJÀ vérifié : rattachement simple, le mot de passe survit', async () => {
+    // L'autre moitié de la règle : quand l'adresse a été prouvée des deux
+    // côtés, il n'y a aucune raison de retirer quoi que ce soit.
     const email = adresseNeuve();
     const inscription = data<AuthResult>(
       (
@@ -196,9 +256,81 @@ describe('Connexion sociale (e2e)', () => {
           .expect(201)
       ).body,
     );
+    await prisma.user.update({
+      where: { id: inscription.user.id },
+      data: { emailVerifiedAt: new Date() },
+    });
 
-    const sub = `google-${randomUUID()}`;
     const social = data<AuthResult>(
+      (
+        await server()
+          .post('/api/v1/auth/social')
+          .send({
+            provider: 'google',
+            idToken: await jeton({
+              sub: `google-${randomUUID()}`,
+              email,
+              email_verified: true,
+            }),
+          })
+          .expect(200)
+      ).body,
+    );
+
+    expect(social.user.id).toBe(inscription.user.id);
+    // Deux portes, une seule maison — et les deux ouvrent.
+    await server()
+      .post('/api/v1/auth/login')
+      .send({ email, password: 'MotDePasseSolide42' })
+      .expect(200);
+  });
+
+  it('compte créé par Google : « mot de passe oublié » lui en donne un', async () => {
+    // Le seul repli d'un compte social. Il passait par un `update` sur une
+    // ligne credential inexistante : 500, jeton non consommé, en boucle.
+    const email = adresseNeuve();
+    const compte = data<AuthResult>(
+      (
+        await server()
+          .post('/api/v1/auth/social')
+          .send({
+            provider: 'google',
+            idToken: await jeton({ sub: `google-${randomUUID()}`, email, email_verified: true }),
+          })
+          .expect(200)
+      ).body,
+    );
+
+    await server().post('/api/v1/auth/forgot-password').send({ email }).expect(202);
+    // Le jeton part par e-mail ; en test on le pose nous-mêmes, le chemin
+    // éprouvé ici étant l'ÉCRITURE du mot de passe, pas l'envoi.
+    const jetonClair = randomUUID();
+    await prisma.passwordReset.create({
+      data: {
+        userId: compte.user.id,
+        tokenHash: createHash('sha256').update(jetonClair).digest('hex'),
+        expiresAt: new Date(Date.now() + 3_600_000),
+      },
+    });
+
+    await server()
+      .post('/api/v1/auth/reset-password')
+      .send({ token: jetonClair, newPassword: 'MonNouveauMotDePasse42' })
+      .expect(204);
+
+    await server()
+      .post('/api/v1/auth/login')
+      .send({ email, password: 'MonNouveauMotDePasse42' })
+      .expect(200);
+  });
+
+  it('compte supprimé : le retour par Google recrée un compte propre', async () => {
+    // L'identité survivait à la suppression en pointant sur la tombe : le
+    // retour créait un doublon SANS identité, et toute connexion suivante
+    // échouait — définitivement, sans recours.
+    const email = adresseNeuve();
+    const sub = `google-${randomUUID()}`;
+    const premier = data<AuthResult>(
       (
         await server()
           .post('/api/v1/auth/social')
@@ -206,18 +338,44 @@ describe('Connexion sociale (e2e)', () => {
           .expect(200)
       ).body,
     );
+    // On rejoue ce que fait `UsersRepository.deleteAccount` : compte tombal,
+    // ET identités externes emportées avec lui — c'est justement ce qui
+    // manquait. (Le parcours HTTP complet exige un mot de passe, qu'un compte
+    // social n'a pas : c'est le défaut suivant, traité à part.)
+    await prisma.$transaction(async (tx) => {
+      await tx.externalIdentity.deleteMany({ where: { userId: premier.user.id } });
+      await tx.user.update({
+        where: { id: premier.user.id },
+        data: {
+          status: 'DELETED',
+          deletedAt: new Date(),
+          email: `supprime-${premier.user.id}@carlys.invalid`,
+        },
+      });
+    });
+    emails.push(`supprime-${premier.user.id}@carlys.invalid`);
 
-    // Un seul compte, deux façons d'y entrer.
-    expect(social.user.id).toBe(inscription.user.id);
-    // Le mot de passe existant continue de fonctionner : le rattachement
-    // AJOUTE une entrée, il n'en retire aucune.
-    await server()
-      .post('/api/v1/auth/login')
-      .send({ email, password: 'MotDePasseSolide42' })
-      .expect(200);
-    // Et l'adresse, jusque-là non vérifiée, l'est désormais : le fournisseur
-    // vient d'en prouver la propriété.
-    expect(social.user.emailVerified).toBe(true);
+    const retour = data<AuthResult>(
+      (
+        await server()
+          .post('/api/v1/auth/social')
+          .send({ provider: 'google', idToken: await jeton({ sub, email, email_verified: true }) })
+          .expect(200)
+      ).body,
+    );
+    expect(retour.user.id).not.toBe(premier.user.id);
+
+    // Et la fois d'après, c'est bien CE compte qu'on retrouve — pas un
+    // troisième, pas un 401.
+    const encore = data<AuthResult>(
+      (
+        await server()
+          .post('/api/v1/auth/social')
+          .send({ provider: 'google', idToken: await jeton({ sub, email, email_verified: true }) })
+          .expect(200)
+      ).body,
+    );
+    expect(encore.user.id).toBe(retour.user.id);
   });
 
   it('adresse NON vérifiée par le fournisseur : 401, aucun compte touché', async () => {
@@ -302,13 +460,16 @@ describe('Connexion sociale (e2e)', () => {
       idToken: await jeton({ sub: `google-${randomUUID()}`, email, email_verified: true }),
     };
 
-    let refus = 0;
+    const statuts: number[] = [];
     for (let essai = 0; essai < 12; essai += 1) {
       const { status } = await server().post('/api/v1/auth/social').send(corps);
-      if (status === 429) refus += 1;
+      statuts.push(status);
     }
 
-    expect(refus).toBeGreaterThan(0);
+    // Dix passent, les deux suivantes sont refusées : c'est le quota annoncé,
+    // pas seulement « il y a un quota quelque part ».
+    expect(statuts.slice(0, 10).every((status) => status === 200)).toBe(true);
+    expect(statuts.slice(10)).toEqual([429, 429]);
   });
 
   it('corps invalide : 400, jamais une erreur serveur', async () => {

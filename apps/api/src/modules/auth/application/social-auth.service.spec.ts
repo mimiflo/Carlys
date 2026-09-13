@@ -7,6 +7,8 @@ import {
   type IdentitiesRepository,
   type IdentityOwner,
 } from '../infrastructure/identities.repository';
+import { type SessionsRepository } from '../infrastructure/sessions.repository';
+import { type VerificationRepository } from '../infrastructure/verification.repository';
 import { type SessionsService } from './sessions.service';
 import { SocialAuthService } from './social-auth.service';
 import { type SocialIdentityClaims, type SocialTokenVerifier } from './social-token-verifier';
@@ -55,9 +57,14 @@ describe('SocialAuthService', () => {
 
   interface Stubs {
     users: jest.Mocked<
-      Pick<UsersRepository, 'findActiveByEmail' | 'findActiveById' | 'create' | 'markEmailVerified'>
+      Pick<
+        UsersRepository,
+        'findActiveByEmail' | 'findActiveById' | 'create' | 'markEmailVerified' | 'deleteCredential'
+      >
     >;
     identities: jest.Mocked<Pick<IdentitiesRepository, 'findOwner' | 'attach'>>;
+    sessions: jest.Mocked<Pick<SessionsRepository, 'revokeAllSessions'>>;
+    verifications: jest.Mocked<Pick<VerificationRepository, 'invalidateOpenPasswordResets'>>;
     sessionsService: jest.Mocked<Pick<SessionsService, 'open'>>;
     verifier: jest.Mocked<Pick<SocialTokenVerifier, 'verify'>>;
     audit: jest.Mocked<Pick<AuditService, 'record'>>;
@@ -73,10 +80,15 @@ describe('SocialAuthService', () => {
         findActiveById: jest.fn().mockResolvedValue(null),
         create: jest.fn().mockResolvedValue(utilisateur({ id: 'user-neuf' })),
         markEmailVerified: jest.fn().mockResolvedValue(undefined),
+        deleteCredential: jest.fn().mockResolvedValue(undefined),
       },
       identities: {
         findOwner: jest.fn().mockResolvedValue(null),
         attach: jest.fn().mockResolvedValue(true),
+      },
+      sessions: { revokeAllSessions: jest.fn().mockResolvedValue(undefined) },
+      verifications: {
+        invalidateOpenPasswordResets: jest.fn().mockResolvedValue(undefined),
       },
       sessionsService: { open: jest.fn().mockResolvedValue(TOKENS) },
       verifier: {
@@ -99,6 +111,8 @@ describe('SocialAuthService', () => {
     const service = new SocialAuthService(
       stubs.users as unknown as UsersRepository,
       stubs.identities as unknown as IdentitiesRepository,
+      stubs.sessions as unknown as SessionsRepository,
+      stubs.verifications as unknown as VerificationRepository,
       stubs.sessionsService as unknown as SessionsService,
       stubs.verifier as unknown as SocialTokenVerifier,
       stubs.audit as unknown as AuditService,
@@ -173,6 +187,53 @@ describe('SocialAuthService', () => {
     // annoncerait une adresse non vérifiée juste après l'avoir vérifiée, et
     // le client relancerait une demande de vérification sans objet.
     expect(result.user.emailVerified).toBe(true);
+  });
+
+  it('compte jamais vérifié : ce qui pouvait venir d’un TIERS est retiré', async () => {
+    // Le pré-enregistrement : n'importe qui peut s'inscrire avec l'adresse
+    // d'un autre, le compte étant utilisable sans vérification. Le
+    // fournisseur vient de prouver que l'adresse appartient à l'arrivant :
+    // le compte lui revient, débarrassé de tout ce qu'un tiers y a laissé.
+    const { service, stubs } = monter();
+    stubs.users.findActiveByEmail.mockResolvedValue(
+      utilisateur({ id: 'pre-enregistre', emailVerifiedAt: null }),
+    );
+    stubs.users.findActiveById.mockResolvedValue(
+      utilisateur({ id: 'pre-enregistre', emailVerifiedAt: new Date('2026-02-02') }),
+    );
+
+    await service.login(requete, client);
+
+    expect(stubs.sessions.revokeAllSessions).toHaveBeenCalledWith(
+      'pre-enregistre',
+      'social_link_unverified_email',
+    );
+    expect(stubs.users.deleteCredential).toHaveBeenCalledWith('pre-enregistre');
+    expect(stubs.verifications.invalidateOpenPasswordResets).toHaveBeenCalledWith('pre-enregistre');
+  });
+
+  it('compte DÉJÀ vérifié : on ne retire rien — deux portes, une maison', async () => {
+    const { service, stubs } = monter();
+    stubs.users.findActiveByEmail.mockResolvedValue(utilisateur({ id: 'ancien' }));
+
+    await service.login(requete, client);
+
+    expect(stubs.sessions.revokeAllSessions).not.toHaveBeenCalled();
+    expect(stubs.users.deleteCredential).not.toHaveBeenCalled();
+  });
+
+  it('compte suspendu : on n’écrit RIEN avant de refuser', async () => {
+    // Rattacher une identité à un compte suspendu, ou lui marquer son
+    // adresse vérifiée, reviendrait à modifier un compte auquel on vient
+    // précisément d'interdire l'accès.
+    const { service, stubs } = monter();
+    stubs.users.findActiveByEmail.mockResolvedValue(
+      utilisateur({ id: 'suspendu', status: UserStatus.SUSPENDED }),
+    );
+
+    await expect(service.login(requete, client)).rejects.toBeInstanceOf(UnauthorizedException);
+    expect(stubs.identities.attach).not.toHaveBeenCalled();
+    expect(stubs.users.markEmailVerified).not.toHaveBeenCalled();
   });
 
   it('ADRESSE NON VÉRIFIÉE : ni rattachement, ni création — 401', async () => {

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/errors/app_exception.dart';
+import '../../../../core/logging/app_logger.dart';
 import '../../data/datasources/social_sign_in.dart';
 import '../../domain/entities/social_provider.dart';
 import 'auth_controller.dart';
@@ -57,6 +58,8 @@ final class SocialAuthFailed extends SocialAuthOutcome {
 ///
 /// L'écran ne connaît que [SocialAuthOutcome] : ni Dio, ni SDK, ni code HTTP.
 class SocialAuthController extends AutoDisposeNotifier<SocialProvider?> {
+  static const _logger = AppLogger('SocialAuth');
+
   bool _gone = false;
 
   @override
@@ -103,6 +106,17 @@ class SocialAuthController extends AutoDisposeNotifier<SocialProvider?> {
             ? error.message
             : _repli(provider),
       );
+    } catch (error, pile) {
+      // FILET DE SÉCURITÉ. Ce qui sort d'ici part dans un `onPressed` : une
+      // exception non rattrapée y disparaît sans message ni trace, et le
+      // bouton paraît ne rien faire. Tout ce qui n'a pas été prévu devient
+      // donc un échec ordinaire, dit à la personne et écrit dans les logs.
+      _logger.error(
+        'Connexion ${provider.label} inattendue',
+        error: error,
+        stackTrace: pile,
+      );
+      return SocialAuthFailed(_repli(provider));
     } finally {
       // Le contrôleur s'auto-dispose : l'écran a pu être quitté pendant que
       // la feuille du fournisseur était ouverte, et écrire dans un

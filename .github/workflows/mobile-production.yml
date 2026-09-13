@@ -768,6 +768,10 @@ jobs:
           API_URL: ${{ needs.controles.outputs.api_url }}
           WEB_URL: ${{ needs.controles.outputs.web_url }}
           NUMERO: ${{ needs.controles.outputs.build_number }}
+          # Client OAuth « Web » du projet Google Cloud. Sans lui, l'APPLICATION
+          # PUBLIÉE annonce en permanence que la connexion Google « arrive
+          # bientôt », alors même que le serveur, lui, est configuré.
+          GOOGLE_CLIENT: ${{ vars.CARLYS_GOOGLE_SERVER_CLIENT_ID }}
         run: |
           set -euo pipefail
           # Note : la configuration Firebase (CARLYS_FIREBASE_*) n'est pas
@@ -783,7 +787,8 @@ jobs:
             --split-debug-info=build/symbols \
             --dart-define=CARLYS_FLAVOR="$FLAVOR" \
             --dart-define=CARLYS_API_BASE_URL="$API_URL" \
-            --dart-define=CARLYS_PUBLIC_WEB_BASE_URL="$WEB_URL"
+            --dart-define=CARLYS_PUBLIC_WEB_BASE_URL="$WEB_URL" \
+            --dart-define=CARLYS_GOOGLE_SERVER_CLIENT_ID="$GOOGLE_CLIENT"
           ls -lh build/app/outputs/bundle/release/app-release.aab
 
       # ── L'APK de vérification, et pourquoi il n'est pas un doublon ──────────
@@ -806,6 +811,7 @@ jobs:
           API_URL: ${{ needs.controles.outputs.api_url }}
           WEB_URL: ${{ needs.controles.outputs.web_url }}
           NUMERO: ${{ needs.controles.outputs.build_number }}
+          GOOGLE_CLIENT: ${{ vars.CARLYS_GOOGLE_SERVER_CLIENT_ID }}
         run: |
           set -euo pipefail
           flutter build apk --release \
@@ -816,7 +822,8 @@ jobs:
             --split-debug-info=build/symbols \
             --dart-define=CARLYS_FLAVOR="$FLAVOR" \
             --dart-define=CARLYS_API_BASE_URL="$API_URL" \
-            --dart-define=CARLYS_PUBLIC_WEB_BASE_URL="$WEB_URL"
+            --dart-define=CARLYS_PUBLIC_WEB_BASE_URL="$WEB_URL" \
+            --dart-define=CARLYS_GOOGLE_SERVER_CLIENT_ID="$GOOGLE_CLIENT"
           ls -lh build/app/outputs/flutter-apk/app-release.apk
 
       # ── La preuve que la signature est bien la nôtre ────────────────────────

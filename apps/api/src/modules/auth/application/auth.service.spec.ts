@@ -25,7 +25,7 @@ interface Stubs {
       | 'findActiveById'
       | 'emailExists'
       | 'findPasswordHash'
-      | 'updatePasswordHash'
+      | 'upsertPasswordHash'
     >
   >;
   sessions: jest.Mocked<
@@ -56,7 +56,7 @@ function buildStubs(): Stubs {
       findActiveById: jest.fn(),
       emailExists: jest.fn().mockResolvedValue(null),
       findPasswordHash: jest.fn(),
-      updatePasswordHash: jest.fn().mockResolvedValue(undefined),
+      upsertPasswordHash: jest.fn().mockResolvedValue(undefined),
     },
     sessions: {
       findRefreshTokenByHash: jest.fn(),
@@ -334,7 +334,7 @@ describe('AuthService', () => {
       await expect(
         service.changePassword('user-1', 'session-1', 'mauvais', 'x'.repeat(10), client),
       ).rejects.toThrow(UnauthorizedException);
-      expect(stubs.users.updatePasswordHash).not.toHaveBeenCalled();
+      expect(stubs.users.upsertPasswordHash).not.toHaveBeenCalled();
       expect(stubs.sessions.revokeAllSessions).not.toHaveBeenCalled();
     });
 
@@ -346,7 +346,7 @@ describe('AuthService', () => {
 
       await service.changePassword('user-1', 'session-1', 'actuel', 'x'.repeat(10), client);
 
-      expect(stubs.users.updatePasswordHash).toHaveBeenCalled();
+      expect(stubs.users.upsertPasswordHash).toHaveBeenCalled();
       expect(stubs.sessions.revokeAllSessions).toHaveBeenCalledWith(
         'user-1',
         'password_changed',

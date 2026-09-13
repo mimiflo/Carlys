@@ -19,6 +19,10 @@ const PREFIXE_DEBIT = 'carlys:throttle:';
  * Portée volontairement étroite : un `FLUSHDB` effacerait aussi les caches et
  * la présence, et masquerait le jour où une suite dépendrait par erreur de
  * l'état laissé par une autre.
+ *
+ * AUCUN `catch` : un Redis injoignable doit faire échouer bruyamment ici, où
+ * la cause est évidente, plutôt que vingt tests plus loin sous la forme de
+ * 429 inexplicables.
  */
 export async function reinitialiserDebit(): Promise<void> {
   const client = new Redis(process.env.REDIS_URL ?? 'redis://localhost:6379', {
@@ -35,10 +39,6 @@ export async function reinitialiserDebit(): Promise<void> {
         await client.del(...cles);
       }
     } while (cursor !== '0');
-  } catch {
-    // Redis absent : la limitation passe en fail-open, il n'y a alors aucun
-    // compteur à effacer — le silence est ici la bonne réponse, et les
-    // suites qui en dépendent vraiment échoueront d'elles-mêmes.
   } finally {
     await client.quit().catch(() => undefined);
   }

@@ -87,10 +87,33 @@ export class UsersRepository {
       .then((credential) => credential?.passwordHash ?? null);
   }
 
-  updatePasswordHash(userId: string, passwordHash: string): Promise<void> {
+  /**
+   * Pose (ou remplace) le mot de passe.
+   *
+   * `upsert`, jamais `update` : un compte créé par connexion Apple/Google n'a
+   * AUCUNE ligne credential, et « mot de passe oublié » est justement le
+   * chemin par lequel il s'en donne un. Un `update` y échouait en P2025, que
+   * le filtre rendait en 500 — sans consommer le jeton, donc en boucle.
+   */
+  upsertPasswordHash(userId: string, passwordHash: string): Promise<void> {
     return this.prisma.userCredential
-      .update({ where: { userId }, data: { passwordHash } })
+      .upsert({
+        where: { userId },
+        update: { passwordHash },
+        create: { userId, passwordHash },
+      })
       .then(() => undefined);
+  }
+
+  /**
+   * Retire le mot de passe du compte : il ne reste que ses identités externes.
+   *
+   * Appelé quand une identité sociale est rattachée à un compte dont
+   * l'adresse n'avait JAMAIS été vérifiée — le mot de passe qui s'y trouvait
+   * a pu être posé par quelqu'un d'autre, avant la personne légitime.
+   */
+  deleteCredential(userId: string): Promise<void> {
+    return this.prisma.userCredential.deleteMany({ where: { userId } }).then(() => undefined);
   }
 
   markEmailVerified(userId: string): Promise<void> {
@@ -129,6 +152,13 @@ export class UsersRepository {
     await this.prisma.$transaction(async (tx) => {
       await within(tx);
       await tx.deviceToken.deleteMany({ where: { userId } });
+      // Les identités externes partent AVEC le compte. Elles ne portent rien
+      // d'historique — seulement un identifiant de fournisseur et une adresse,
+      // donnée personnelle que cette suppression prétend justement libérer.
+      // Les garder enfermait l'adresse dehors : l'identité survivante pointait
+      // sur la tombe, le retour par le fournisseur créait un doublon, puis
+      // toute connexion suivante échouait — définitivement.
+      await tx.externalIdentity.deleteMany({ where: { userId } });
       await tx.userProfile.updateMany({
         where: { userId },
         data: { displayName: '', birthDate: null, sex: null, heightCm: null },

@@ -22,6 +22,14 @@ const ISSUERS: Record<SocialProvider, string[]> = {
   apple: ['https://appleid.apple.com'],
 };
 
+/**
+ * Âge maximal d'un jeton d'identité accepté. Il sert à ouvrir une session
+ * dans la seconde qui suit son obtention ; dix minutes laissent de la marge
+ * à une horloge d'appareil approximative sans rendre un jeton intercepté
+ * utile bien longtemps.
+ */
+const MAX_TOKEN_AGE = '10 minutes';
+
 const JWKS_URLS: Record<SocialProvider, string> = {
   google: 'https://www.googleapis.com/oauth2/v3/certs',
   apple: 'https://appleid.apple.com/auth/keys',
@@ -69,6 +77,11 @@ export class SocialTokenVerifier {
       const { payload } = await jwtVerify(idToken, this.keys.keyFor(provider), {
         issuer: ISSUERS[provider],
         audience: audiences,
+        // jose n'exige aucun claim par défaut : un jeton sans `exp`, bien
+        // signé et bien adressé, serait éternel. Apple et Google en mettent
+        // toujours un — raison de plus pour que son absence soit un refus.
+        requiredClaims: ['sub', 'iat', 'exp'],
+        maxTokenAge: MAX_TOKEN_AGE,
       });
       if (typeof payload.sub !== 'string' || payload.sub.length === 0) {
         throw new Error('sub absent');

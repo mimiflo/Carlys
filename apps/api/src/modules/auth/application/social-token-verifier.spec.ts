@@ -1,5 +1,12 @@
 import { UnauthorizedException } from '@nestjs/common';
-import { createLocalJWKSet, exportJWK, generateKeyPair, type JWK, SignJWT } from 'jose';
+import {
+  createLocalJWKSet,
+  exportJWK,
+  generateKeyPair,
+  type JWK,
+  type KeyLike,
+  SignJWT,
+} from 'jose';
 import { type SocialKeyStore, SocialTokenVerifier } from './social-token-verifier';
 
 /**
@@ -17,8 +24,8 @@ describe('SocialTokenVerifier', () => {
   const GOOGLE_AUDIENCE = '1234.apps.googleusercontent.com';
   const APPLE_AUDIENCE = 'com.carlys.app';
 
-  let signer: CryptoKey;
-  let etrangere: CryptoKey;
+  let signer: KeyLike;
+  let etrangere: KeyLike;
   let jwks: { keys: JWK[] };
   let verifier: SocialTokenVerifier;
 
@@ -38,7 +45,7 @@ describe('SocialTokenVerifier', () => {
   /** Un jeton d'identité réaliste, signé par la clé du trousseau. */
   async function jeton(
     claims: Record<string, unknown>,
-    options: { issuer?: string; audience?: string; expiration?: string; cle?: CryptoKey } = {},
+    options: { issuer?: string; audience?: string; expiration?: string; cle?: KeyLike } = {},
   ): Promise<string> {
     return new SignJWT(claims)
       .setProtectedHeader({ alg: 'RS256', kid: 'carlys-test' })

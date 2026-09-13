@@ -172,7 +172,18 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<void> clearLocalSession() => _storage.clear();
+  Future<void> clearLocalSession() async {
+    // Appelé après une suppression de compte : le SDK retient encore le
+    // compte choisi, et le bouton suivant reconnecterait sans reproposer le
+    // choix — sur l'ancien compte, désormais supprimé, ou sur celui du
+    // propriétaire précédent d'un appareil partagé.
+    try {
+      await _socialSignIn.forget();
+    } on Exception catch (error) {
+      _logger.warning('Oubli du compte social impossible', error: error);
+    }
+    await _storage.clear();
+  }
 
   @override
   Future<void> resendEmailVerification() {

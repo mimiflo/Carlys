@@ -209,7 +209,7 @@ export class AuthService {
     if (!valid) {
       throw new UnauthorizedException('Lien de réinitialisation invalide ou expiré.');
     }
-    await this.users.updatePasswordHash(record.userId, await this.passwords.hash(newPassword));
+    await this.users.upsertPasswordHash(record.userId, await this.passwords.hash(newPassword));
     await this.verifications.markPasswordResetUsed(record.id);
     await this.verifications.invalidateOpenPasswordResets(record.userId);
     // Le mot de passe a pu être compromis : toutes les sessions tombent.
@@ -230,7 +230,7 @@ export class AuthService {
       this.audit.record({ action: 'auth.password_change_failed', userId, ...client });
       throw new UnauthorizedException('Mot de passe actuel incorrect.');
     }
-    await this.users.updatePasswordHash(userId, await this.passwords.hash(newPassword));
+    await this.users.upsertPasswordHash(userId, await this.passwords.hash(newPassword));
     // Les autres appareils doivent se reconnecter ; la session courante survit.
     await this.sessions.revokeAllSessions(userId, 'password_changed', sessionId);
     this.audit.record({ action: 'auth.password_changed', userId, ...client });

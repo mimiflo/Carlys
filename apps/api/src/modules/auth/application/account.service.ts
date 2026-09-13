@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { type RequestClientContext } from '../../../common/types/authenticated-request';
 import { AuditService } from '../../audit/audit.service';
 import { UsersRepository } from '../../users/infrastructure/users.repository';
@@ -35,7 +35,19 @@ export class AccountService {
     client: RequestClientContext,
   ): Promise<void> {
     const passwordHash = await this.users.findPasswordHash(userId);
-    if (passwordHash === null || !(await this.passwords.verify(passwordHash, password))) {
+    if (passwordHash === null) {
+      // Compte créé par connexion Apple/Google : il n'a JAMAIS eu de mot de
+      // passe, et « incorrect » serait faux — la personne chercherait
+      // indéfiniment un mot de passe qui n'existe pas, sans pouvoir exercer
+      // son droit à l'effacement. On la renvoie au seul chemin qui marche.
+      this.audit.record({ action: 'account.delete_without_password', userId, ...client });
+      throw new ConflictException(
+        'Ce compte n’a pas de mot de passe : il a été créé par une connexion ' +
+          'Apple ou Google. Définis-en un avec « Mot de passe oublié », puis ' +
+          'reviens supprimer ton compte.',
+      );
+    }
+    if (!(await this.passwords.verify(passwordHash, password))) {
       this.audit.record({ action: 'account.delete_failed', userId, ...client });
       throw new UnauthorizedException('Mot de passe incorrect.');
     }

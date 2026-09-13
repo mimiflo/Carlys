@@ -1,4 +1,4 @@
-import { UnauthorizedException } from '@nestjs/common';
+import { ConflictException, UnauthorizedException } from '@nestjs/common';
 import { type Prisma } from '@prisma/client';
 import { type AuditService } from '../../audit/audit.service';
 import { type UsersRepository } from '../../users/infrastructure/users.repository';
@@ -52,14 +52,19 @@ describe('AccountService', () => {
     );
   });
 
-  it('sans crédential connue : même refus (jamais de suppression sans preuve)', async () => {
+  it('compte SANS mot de passe (Apple/Google) : refus, mais on dit lequel', async () => {
+    // Répondre « mot de passe incorrect » à quelqu'un qui n'en a jamais eu
+    // l'enverrait chercher indéfiniment : son droit à l'effacement devient
+    // inatteignable. Le 409 nomme le chemin qui marche.
     const stubs = buildStubs();
     stubs.users.findPasswordHash.mockResolvedValue(null);
     const service = buildService(stubs);
 
+    await expect(service.deleteAccount('user-1', 'x', client)).rejects.toThrow(ConflictException);
     await expect(service.deleteAccount('user-1', 'x', client)).rejects.toThrow(
-      UnauthorizedException,
+      /Mot de passe oublié/,
     );
+    // Et surtout : rien n'est supprimé sans preuve.
     expect(stubs.passwords.verify).not.toHaveBeenCalled();
     expect(stubs.users.deleteAccount).not.toHaveBeenCalled();
   });
