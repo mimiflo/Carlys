@@ -88,8 +88,25 @@ Store ; tant que tu installes l'APK toi-même, la première suffit.
 GOOGLE_OAUTH_CLIENT_IDS=000000000000-xxxx.apps.googleusercontent.com
 ```
 
-Puis redéploie l'API (`carlysctl deploy staging`, ou la minuterie si
-`CARLYS_AUTO_UPDATE=oui`).
+Puis **redéploie**, faute de quoi la ligne ne sera jamais lue : un conteneur
+reçoit son environnement à sa CRÉATION, pas à chaque requête.
+
+```bash
+# `carlysctl update` ne suffit PAS : voyant le même sha déjà déployé, il
+# répond « déjà sur sha-… » et s'arrête sans rien recréer. C'est le
+# redéploiement du sha COURANT qu'il faut — même code, conteneurs neufs.
+SHA=$(sudo /srv/carlys/repo/scripts/server/carlysctl status staging \
+      | grep -oE 'sha-[0-9a-f]+' | head -1 | cut -d- -f2)
+sudo /srv/carlys/repo/scripts/server/carlysctl deploy staging "$SHA"
+```
+
+Pour vérifier que le conteneur la voit vraiment :
+
+```bash
+sudo docker ps --filter label=com.carlys.environment=staging --format '{{.Names}}' \
+  | grep api | head -1 | xargs -r -I{} sudo docker exec {} printenv GOOGLE_OAUTH_CLIENT_IDS
+# vide → le conteneur n'a pas été recréé depuis l'ajout de la ligne
+```
 
 **Mobile** — variable de dépôt GitHub, lue par `mobile-recette.yml` :
 
@@ -139,14 +156,19 @@ APPLE_OAUTH_AUDIENCES=com.carlys.carlysMobile
 ## 3. Vérifier
 
 ```bash
-# Le serveur répond-il autre chose que 503 ? (jeton bidon = 401 attendu,
-# ce qui prouve que le fournisseur EST configuré et que la vérification tourne)
-curl -s -o /dev/null -w '%{http_code}\n' \
-  -X POST https://api.<domaine>/api/v1/auth/social \
+# Un jeton bidon doit donner 401 : la preuve que le fournisseur EST configuré
+# et que la vérification tourne pour de bon. Lis le CORPS, pas seulement le
+# code — un 503 d'nginx (API qui redémarre) et un 503 de l'API (« fournisseur
+# pas configuré ») portent le même chiffre et ne veulent pas dire la même
+# chose. Le nôtre est du JSON, code SERVICE_UNAVAILABLE ; celui d'nginx est
+# du HTML.
+curl -s -X POST https://api.<domaine>/api/v1/auth/social \
   -H 'Content-Type: application/json' \
   -d '{"provider":"google","idToken":"pas-un-vrai-jeton"}'
-# 503 → GOOGLE_OAUTH_CLIENT_IDS absent côté serveur
-# 401 → configuré : la vérification a bien refusé un faux jeton
+# 401 UNAUTHORIZED      → configuré : le faux jeton a bien été refusé
+# 503 SERVICE_UNAVAILABLE (JSON) → GOOGLE_OAUTH_CLIENT_IDS absent, ou .env
+#                                  ajouté sans redéploiement (voir §1.3)
+# 503 en HTML           → nginx : l'API ne répond pas encore, réessaie
 ```
 
 Sur le téléphone, le bouton doit ouvrir la feuille Google, puis l'application
