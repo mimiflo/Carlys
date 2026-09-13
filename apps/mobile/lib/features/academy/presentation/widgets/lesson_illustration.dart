@@ -79,9 +79,21 @@ class _Fallback extends StatelessWidget {
   }
 }
 
+/// L'icône qui tient lieu d'illustration quand la leçon n'en déclare pas.
+///
+/// Le `switch` est EXHAUSTIF sans clause par défaut, et c'est une garde
+/// volontaire : ajouter un domaine sans lui choisir d'icône ne compile pas.
 IconData _categoryIcon(AcademyCategory category) => switch (category) {
-  AcademyCategory.anatomie => AppIcons.workout,
-  AcademyCategory.technique => AppIcons.exercises,
   AcademyCategory.nutrition => AppIcons.nutrition,
+  AcademyCategory.technique => AppIcons.exercises,
+  AcademyCategory.cardio => Icons.monitor_heart_outlined,
+  AcademyCategory.mobilite => Icons.self_improvement_rounded,
+  AcademyCategory.mental => AppIcons.spark,
   AcademyCategory.recuperation => AppIcons.recovery,
+  AcademyCategory.blessures => Icons.health_and_safety_outlined,
+  AcademyCategory.anatomie => AppIcons.workout,
+  AcademyCategory.mythes => AppIcons.question,
+  AcademyCategory.hyrox => Icons.bolt_rounded,
+  AcademyCategory.running => Icons.directions_run_rounded,
+  AcademyCategory.calisthenics => Icons.accessibility_new_rounded,
 };

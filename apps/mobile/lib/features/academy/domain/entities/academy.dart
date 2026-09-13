@@ -4,11 +4,27 @@
 library;
 
 /// Domaines couverts par l'Academy.
+///
+/// L'ORDRE compte : c'est celui des sections à l'écran, et il va du geste
+/// quotidien vers le spécialisé — ce qu'on mange et soulève d'abord, les
+/// disciplines ensuite. Les quatre premiers existaient déjà sous d'autres
+/// libellés (`technique` était « Technique », `anatomie` « Anatomie »,
+/// `recuperation` « Récupération ») ; seuls les LIBELLÉS changent, jamais les
+/// noms de l'énumération, qui sont la clé du pack et des réponses déjà
+/// enregistrées.
 enum AcademyCategory {
-  anatomie('Anatomie'),
-  technique('Technique'),
   nutrition('Nutrition'),
-  recuperation('Récupération');
+  technique('Musculation'),
+  cardio('Cardio'),
+  mobilite('Mobilité & stretching'),
+  mental('Mental & discipline'),
+  recuperation('Sommeil & récupération'),
+  blessures('Blessures & prévention'),
+  anatomie('Comprendre son corps'),
+  mythes('Mythes du fitness'),
+  hyrox('Hyrox'),
+  running('Running / Marathon'),
+  calisthenics('Calisthenics');
 
   const AcademyCategory(this.label);
 

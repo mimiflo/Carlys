@@ -47,13 +47,41 @@ void main() {
   });
 
   test(
-    'chaque leçon porte son essentiel : points, illustration déclarée',
+    'chaque leçon porte son essentiel : des points, jamais plus de quatre',
     () async {
       final lessons = await loadAcademyPack();
       for (final lesson in lessons) {
         expect(lesson.points, isNotEmpty, reason: lesson.id);
         expect(lesson.points.length, lessThanOrEqualTo(4), reason: lesson.id);
-        expect(lesson.image, startsWith('assets/academy/'), reason: lesson.id);
+      }
+    },
+  );
+
+  test(
+    'l’anatomie illustre TOUJOURS, les autres domaines peuvent s’en passer',
+    () async {
+      // L'illustration était exigée de toutes les leçons. Cette règle datait
+      // d'un pack presque entièrement anatomique, où le schéma PORTE
+      // l'information : on ne comprend pas où se trouve un muscle sans le voir.
+      // Ailleurs, une leçon est un texte ; exiger une image de chacune aurait
+      // voulu dire bloquer l'écriture derrière la production d'illustrations,
+      // ou recycler des schémas sans rapport. LessonIllustration rend déjà un
+      // dégradé et l'icône du domaine quand rien n'est déclaré.
+      final lessons = await loadAcademyPack();
+      for (final lesson in lessons) {
+        final obligatoire = lesson.category == AcademyCategory.anatomie;
+        if (obligatoire) {
+          expect(lesson.image, isNotNull, reason: lesson.id);
+        }
+        // Déclarée ou non, une image doit pointer au bon endroit : le
+        // contrôle de ratio plus bas lit le fichier réel.
+        if (lesson.image != null) {
+          expect(
+            lesson.image,
+            startsWith('assets/academy/'),
+            reason: lesson.id,
+          );
+        }
       }
     },
   );

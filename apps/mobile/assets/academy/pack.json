@@ -1,5 +1,5 @@
 {
-  "version": 2,
+  "version": 3,
   "lessons": [
     {
       "id": "anatomie-pectoraux",
@@ -528,6 +528,342 @@
         ],
         "answerIndex": 1,
         "explanation": "La reconstruction des fibres demande 2 à 3 jours ; c'est ce qui justifie l'alternance des groupes musculaires dans la semaine."
+      }
+    },
+    {
+      "id": "cardio-zones",
+      "category": "cardio",
+      "title": "Les zones d'intensité, en clair",
+      "body": "L'endurance se travaille à deux étages. Le premier, dit fondamental, se tient à une allure où l'on peut encore parler par phrases entières : il développe le cœur et la capacité à tenir longtemps. Le second, bien plus dur, se pratique par intervalles courts et améliore la puissance maximale. La majorité du volume hebdomadaire gagne à rester au premier étage, et une petite part seulement au second.",
+      "points": [
+        "L'allure fondamentale : on peut parler en phrases entières.",
+        "Le travail intense se fait par intervalles, pas en continu.",
+        "L'essentiel du volume reste facile ; l'intensité est une minorité."
+      ],
+      "question": {
+        "prompt": "À quoi reconnaît-on l'allure d'endurance fondamentale ?",
+        "choices": [
+          "On ne peut plus dire un mot",
+          "On peut parler par phrases entières",
+          "On tient moins de cinq minutes"
+        ],
+        "answerIndex": 1,
+        "explanation": "La capacité à parler est le repère de terrain le plus fiable : elle traduit une intensité tenable longtemps, celle qui construit le socle aérobie."
+      }
+    },
+    {
+      "id": "cardio-avant-apres",
+      "category": "cardio",
+      "title": "Cardio avant ou après les charges ?",
+      "body": "Enchaîner une séance de cardio intense juste avant de soulever dégrade la force disponible : les jambes arrivent déjà fatiguées. L'inverse est bien mieux toléré. Si les deux doivent tenir dans la même séance, place les charges en premier et le cardio ensuite. Si l'objectif est vraiment la performance des deux, sépare-les de plusieurs heures, ou de jours.",
+      "points": [
+        "Les charges d'abord, le cardio ensuite, dans une même séance.",
+        "Un cardio intense avant les charges coûte de la force.",
+        "Séparer les deux de plusieurs heures quand c'est possible."
+      ],
+      "question": {
+        "prompt": "Dans une séance qui combine les deux, quel ordre préserve le mieux la force ?",
+        "choices": [
+          "Cardio intense puis charges",
+          "Charges puis cardio",
+          "L'ordre n'a aucune importance"
+        ],
+        "answerIndex": 1,
+        "explanation": "Soulever demande un système nerveux frais. Le cardio placé après ne coûte presque rien à la séance de force, alors que l'inverse l'ampute."
+      }
+    },
+    {
+      "id": "mobilite-avant-apres",
+      "category": "mobilite",
+      "title": "Étirer avant ou après ?",
+      "body": "Les étirements longs et passifs tenus avant l'effort réduisent temporairement la force et la puissance. L'échauffement gagne à être actif : mouvements amples, articulations mobilisées, montée progressive en intensité. Les étirements tenus trouvent leur place à distance de la séance, ou après, quand l'objectif est de gagner de l'amplitude.",
+      "points": [
+        "Avant l'effort : mobilité active, pas d'étirement long tenu.",
+        "Les étirements longs diminuent la force sur le moment.",
+        "Pour gagner en amplitude : à distance de la séance, ou après."
+      ],
+      "question": {
+        "prompt": "Que faire juste avant de soulever lourd ?",
+        "choices": [
+          "Des étirements passifs tenus deux minutes",
+          "Une mobilité active et une montée progressive en charge",
+          "Rien du tout, entrer dans le vif"
+        ],
+        "answerIndex": 1,
+        "explanation": "La mobilité active prépare les articulations sans endormir la production de force, contrairement aux étirements longs tenus."
+      }
+    },
+    {
+      "id": "mobilite-amplitude",
+      "category": "mobilite",
+      "title": "La souplesse se gagne surtout sous charge",
+      "body": "Travailler un mouvement sur toute son amplitude, avec une charge maîtrisée, améliore la souplesse au moins autant que l'étirement passif, et cette amplitude est utilisable, parce qu'elle est contrôlée. Un squat profond bien exécuté vaut beaucoup d'étirements de hanche.",
+      "points": [
+        "L'amplitude complète sous charge développe aussi la souplesse.",
+        "Une amplitude contrôlée est une amplitude utilisable.",
+        "Le geste complet vaut mieux que l'étirement isolé."
+      ],
+      "question": {
+        "prompt": "Quel moyen développe une souplesse directement utilisable ?",
+        "choices": [
+          "Travailler ses mouvements sur toute leur amplitude",
+          "Étirer passivement le plus loin possible",
+          "Augmenter la charge en réduisant l'amplitude"
+        ],
+        "answerIndex": 0,
+        "explanation": "Une amplitude acquise sous contrôle musculaire se retrouve dans le geste ; une amplitude purement passive ne s'y transfère que partiellement."
+      }
+    },
+    {
+      "id": "mental-discipline",
+      "category": "mental",
+      "title": "La motivation lance, la discipline tient",
+      "body": "La motivation est une émotion : elle va et vient, et compter dessus revient à ne s'entraîner que les bons jours. La discipline est une décision prise à l'avance, un créneau, un lieu, un programme, qui retire la question du moment. Les jours sans, l'objectif n'est pas la performance : c'est d'y aller.",
+      "points": [
+        "La motivation fluctue ; la décision prise à l'avance, non.",
+        "Fixer le créneau et le lieu supprime la négociation quotidienne.",
+        "Les jours sans, y aller suffit."
+      ],
+      "question": {
+        "prompt": "Sur quoi s'appuie une pratique qui dure ?",
+        "choices": [
+          "Attendre d'être motivé",
+          "Une décision prise à l'avance, tenue même sans envie",
+          "S'entraîner uniquement quand la forme est là"
+        ],
+        "answerIndex": 1,
+        "explanation": "Décider une fois pour toutes du quand et du où retire la négociation quotidienne, qui est ce qui use le plus."
+      }
+    },
+    {
+      "id": "mental-tout-ou-rien",
+      "category": "mental",
+      "title": "Sortir du tout ou rien",
+      "body": "Une séance écourtée reste une séance. La logique du tout ou rien, si ce n'est pas parfait, autant sauter, est la première cause d'abandon. Vingt minutes valent infiniment mieux que zéro, et surtout elles maintiennent l'habitude intacte, ce qui coûte bien moins cher que de la reconstruire.",
+      "points": [
+        "Une séance écourtée vaut mieux qu'une séance annulée.",
+        "L'habitude est plus précieuse que la séance parfaite.",
+        "Reprendre après une coupure coûte plus que maintenir."
+      ],
+      "question": {
+        "prompt": "La séance prévue ne tient pas dans le temps disponible. Que faire ?",
+        "choices": [
+          "L'annuler, elle serait incomplète",
+          "En faire une version courte",
+          "Doubler la suivante"
+        ],
+        "answerIndex": 1,
+        "explanation": "Ce qu'on protège, c'est la régularité. Une version courte la maintient ; une annulation la fissure."
+      }
+    },
+    {
+      "id": "blessures-progressivite",
+      "category": "blessures",
+      "title": "La progressivité, première prévention",
+      "body": "La plupart des blessures d'entraînement ne viennent pas d'un geste isolé mais d'une charge qui a augmenté plus vite que la capacité des tissus à s'adapter. Tendons et os s'adaptent plus lentement que les muscles. Augmenter le volume par petites marches, et ne pas monter volume et intensité en même temps, protège mieux que n'importe quel exercice de prévention.",
+      "points": [
+        "Les tissus s'adaptent plus lentement que les muscles.",
+        "Augmenter le volume par petites marches.",
+        "Ne pas monter volume et intensité la même semaine."
+      ],
+      "question": {
+        "prompt": "Quelle est la cause la plus fréquente des blessures d'entraînement ?",
+        "choices": [
+          "Un mouvement dangereux en soi",
+          "Une charge qui augmente trop vite",
+          "Le manque d'étirements"
+        ],
+        "answerIndex": 1,
+        "explanation": "C'est presque toujours une affaire de dose : trop, trop vite, avant que les tissus aient eu le temps de suivre."
+      }
+    },
+    {
+      "id": "blessures-douleur",
+      "category": "blessures",
+      "title": "Lire la douleur sans la fuir",
+      "body": "Une courbature diffuse qui apparaît un jour ou deux après l'effort et s'estompe fait partie du jeu. Une douleur vive, localisée, qui apparaît pendant le geste, qui augmente séance après séance ou réveille la nuit, appelle autre chose : réduire, modifier le geste, et consulter si elle persiste. Carlys ne remplace pas un professionnel de santé.",
+      "points": [
+        "Courbature diffuse et retardée : normale.",
+        "Douleur vive, localisée, qui progresse : on s'arrête et on adapte.",
+        "Une douleur qui persiste se fait examiner."
+      ],
+      "question": {
+        "prompt": "Quel signal doit faire modifier ou arrêter un exercice ?",
+        "choices": [
+          "Une courbature diffuse le lendemain",
+          "Une douleur vive et localisée pendant le geste",
+          "Un essoufflement en fin de série"
+        ],
+        "answerIndex": 1,
+        "explanation": "La courbature retardée est une réponse normale à l'effort. Une douleur vive et localisée pendant le mouvement est un signal à respecter."
+      }
+    },
+    {
+      "id": "mythes-localise",
+      "category": "mythes",
+      "title": "On ne maigrit pas d'un endroit choisi",
+      "body": "Faire des abdominaux ne fait pas fondre le ventre en particulier. La perte de masse grasse est un phénomène global, commandé par le bilan énergétique ; la répartition, elle, dépend largement de facteurs individuels sur lesquels l'exercice local n'a pas de prise. Les abdominaux renforcent la sangle, ce qui est utile, mais ne choisissent pas où le corps puise.",
+      "points": [
+        "La perte de gras est globale, jamais ciblée par l'exercice local.",
+        "Le bilan énergétique commande la perte ; la répartition non.",
+        "Travailler une zone la renforce, ne la dégraisse pas."
+      ],
+      "question": {
+        "prompt": "Faire beaucoup d'abdominaux fait-il perdre le gras du ventre ?",
+        "choices": [
+          "Oui, l'exercice puise dans le gras voisin",
+          "Non, la perte de gras est globale",
+          "Oui, si on en fait tous les jours"
+        ],
+        "answerIndex": 1,
+        "explanation": "Le corps mobilise ses réserves selon sa propre logique ; aucun exercice local ne lui indique où puiser."
+      }
+    },
+    {
+      "id": "mythes-courbatures",
+      "category": "mythes",
+      "title": "La courbature n'est pas la mesure de la séance",
+      "body": "Une séance efficace ne laisse pas forcément de courbatures, et une séance très courbaturante n'est pas forcément productive. La courbature traduit surtout la nouveauté d'une sollicitation. Les repères qui comptent sont la charge soulevée, les répétitions et la régularité, pas l'inconfort du lendemain.",
+      "points": [
+        "Courbature ne veut pas dire séance efficace.",
+        "Elle traduit surtout la nouveauté de la sollicitation.",
+        "Les vrais repères : charge, répétitions, régularité."
+      ],
+      "question": {
+        "prompt": "Que mesure vraiment une grosse courbature ?",
+        "choices": [
+          "L'efficacité de la séance",
+          "La nouveauté de la sollicitation",
+          "La quantité de muscle gagnée"
+        ],
+        "answerIndex": 1,
+        "explanation": "Un mouvement inhabituel courbature beaucoup ; répété, il en donne de moins en moins tout en restant aussi efficace."
+      }
+    },
+    {
+      "id": "hyrox-format",
+      "category": "hyrox",
+      "title": "Ce qu'est une course Hyrox",
+      "body": "Une course Hyrox alterne huit kilomètres de course à pied, par tronçons d'un kilomètre, et huit ateliers fonctionnels intercalés : skierg, poussée et traction de traîneau, déplacements en fentes, rameur, port de sacs, balançage de kettlebell et fentes lestées, avant un dernier bloc de burpees et de wall balls. Le format est identique partout, ce qui rend les temps comparables d'une ville à l'autre.",
+      "points": [
+        "Huit kilomètres de course, par tronçons d'un kilomètre.",
+        "Huit ateliers fonctionnels intercalés entre les tronçons.",
+        "Un format identique partout, donc des temps comparables."
+      ],
+      "question": {
+        "prompt": "Comment s'organise une course Hyrox ?",
+        "choices": [
+          "Huit kilomètres d'affilée puis les ateliers",
+          "Un kilomètre de course avant chacun des huit ateliers",
+          "Les ateliers au choix du concurrent"
+        ],
+        "answerIndex": 1,
+        "explanation": "L'alternance est le cœur du format : chaque atelier se négocie avec des jambes déjà chargées par le kilomètre qui précède."
+      }
+    },
+    {
+      "id": "hyrox-transitions",
+      "category": "hyrox",
+      "title": "La course se joue dans les transitions",
+      "body": "Entre deux efforts, le temps continue de courir. Beaucoup de secondes se perdent à chercher son souffle avant d'attaquer l'atelier, ou à repartir trop vite après. S'entraîner à enchaîner, finir un bloc et démarrer le suivant sans s'arrêter, vaut souvent plus que quelques pour cent de force en plus.",
+      "points": [
+        "Le chronomètre ne s'arrête jamais entre les blocs.",
+        "S'entraîner à enchaîner, pas seulement à performer isolément.",
+        "Repartir à une allure tenable plutôt qu'au sprint."
+      ],
+      "question": {
+        "prompt": "Où se perd le plus de temps sur une course Hyrox ?",
+        "choices": [
+          "Sur les tronçons de course",
+          "Dans les transitions entre les blocs",
+          "Sur le dernier atelier"
+        ],
+        "answerIndex": 1,
+        "explanation": "Chaque hésitation entre deux blocs s'ajoute au chronomètre ; l'enchaînement s'entraîne comme le reste."
+      }
+    },
+    {
+      "id": "running-volume-facile",
+      "category": "running",
+      "title": "L'essentiel du volume doit rester facile",
+      "body": "Les coureurs qui progressent le plus courent la grande majorité de leurs kilomètres à une allure confortable, et réservent une petite part au travail rapide. Courir toutes ses sorties à une allure intermédiaire, trop rapide pour récupérer, trop lente pour progresser, est l'erreur la plus répandue.",
+      "points": [
+        "La grande majorité des kilomètres à allure confortable.",
+        "Une petite part seulement en travail rapide.",
+        "L'allure intermédiaire permanente est le piège classique."
+      ],
+      "question": {
+        "prompt": "Quelle répartition d'allures fait le plus progresser ?",
+        "choices": [
+          "Tout à allure moyenne",
+          "Beaucoup de facile, un peu de rapide",
+          "Tout le plus vite possible"
+        ],
+        "answerIndex": 1,
+        "explanation": "Le facile construit le socle sans coûter de récupération ; le rapide apporte le reste. L'allure moyenne permanente cumule la fatigue sans les bénéfices."
+      }
+    },
+    {
+      "id": "running-mur",
+      "category": "running",
+      "title": "Le mur du marathon est une affaire de carburant",
+      "body": "Les réserves de glycogène d'un coureur suffisent rarement à couvrir les quarante-deux kilomètres à allure de course. Le fameux mur survient quand elles s'épuisent. Deux leviers : apprendre à s'alimenter en course, à intervalles réguliers et répétés à l'entraînement, et partir à une allure tenable plutôt qu'à celle qu'on espère.",
+      "points": [
+        "Le mur, c'est l'épuisement des réserves de glycogène.",
+        "S'alimenter en course, et l'avoir répété à l'entraînement.",
+        "Partir à l'allure qu'on peut tenir, pas à celle qu'on vise."
+      ],
+      "question": {
+        "prompt": "Qu'est-ce qui provoque le plus souvent le mur du marathon ?",
+        "choices": [
+          "Un manque de souplesse",
+          "L'épuisement des réserves de glycogène",
+          "Des chaussures inadaptées"
+        ],
+        "answerIndex": 1,
+        "explanation": "Les réserves sont limitées : sans apport pendant la course et sans gestion d'allure, elles se vident avant l'arrivée."
+      }
+    },
+    {
+      "id": "calisthenics-progressions",
+      "category": "calisthenics",
+      "title": "Progresser sans charge, par le levier",
+      "body": "Au poids de corps, on n'ajoute pas de kilos : on modifie la difficulté du levier. Une pompe se durcit en surélevant les pieds, une traction en ralentissant la descente, un gainage en éloignant les appuis. Chaque mouvement possède ainsi une échelle de variantes, du plus assisté au plus exigeant, qui remplace la pile de disques.",
+      "points": [
+        "La difficulté se règle par le levier, pas par la charge.",
+        "Chaque mouvement a son échelle de variantes.",
+        "Ralentir, surélever, éloigner les appuis : autant de crans."
+      ],
+      "question": {
+        "prompt": "Comment augmente-t-on la difficulté d'un exercice au poids de corps ?",
+        "choices": [
+          "En faisant toujours plus de répétitions",
+          "En modifiant le levier et la vitesse d'exécution",
+          "On ne peut pas, il faut ajouter des charges"
+        ],
+        "answerIndex": 1,
+        "explanation": "Modifier le bras de levier change la contrainte réelle sur le muscle, exactement comme ajouter des kilos le ferait."
+      }
+    },
+    {
+      "id": "calisthenics-tirage",
+      "category": "calisthenics",
+      "title": "Autant tirer que pousser",
+      "body": "Les mouvements de poussée, pompes, dips, sont les plus accessibles, et les plus pratiqués. Les négliger côté tirage déséquilibre les épaules et enferme les dos ronds. Pour une série de poussée, vise au moins autant de travail de tirage : tractions, rowings, ou leurs variantes assistées.",
+      "points": [
+        "Poussée et tirage au moins à parts égales.",
+        "Le déséquilibre se paie sur les épaules et la posture.",
+        "Variantes assistées d'abord, si la traction stricte n'est pas là."
+      ],
+      "question": {
+        "prompt": "Pourquoi équilibrer poussée et tirage au poids de corps ?",
+        "choices": [
+          "Pour varier les séances",
+          "Pour préserver les épaules et la posture",
+          "Parce que le tirage brûle plus de calories"
+        ],
+        "answerIndex": 1,
+        "explanation": "Un travail de poussée dominant enroule progressivement les épaules vers l'avant ; le tirage rétablit cet équilibre."
       }
     }
   ]

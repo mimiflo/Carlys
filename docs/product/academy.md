@@ -1,10 +1,29 @@
 # Academy — le pack d'apprentissage
 
-L'Academy enseigne ce que l'application fait pratiquer : anatomie,
-technique, nutrition, récupération. Son contenu est **éditorial et
-embarqué** (`apps/mobile/assets/academy/pack.json`, version 2) — pas une
-donnée serveur : il voyage avec l'application, comme les vignettes de
-muscles.
+L'Academy enseigne ce que l'application fait pratiquer. Son contenu est
+**éditorial et embarqué** (`apps/mobile/assets/academy/pack.json`, version
+3) — pas une donnée serveur : il voyage avec l'application, comme les
+vignettes de muscles.
+
+## Les douze domaines
+
+Dans l'ordre des sections, du geste quotidien vers le spécialisé :
+Nutrition, Musculation, Cardio, Mobilité & stretching, Mental & discipline,
+Sommeil & récupération, Blessures & prévention, Comprendre son corps,
+Mythes du fitness, Hyrox, Running / Marathon, Calisthenics.
+
+Quatre existaient déjà sous d'autres libellés : `technique` s'appelait
+« Technique », `anatomie` « Anatomie », `recuperation` « Récupération ».
+Seuls les LIBELLÉS ont changé — jamais les noms de l'énumération, qui sont
+la clé du pack et des réponses déjà enregistrées : les renommer effacerait
+la progression de chacun.
+
+L'illustration n'est obligatoire que pour **Comprendre son corps**, où le
+schéma porte l'information : on ne situe pas un muscle sans le voir.
+Ailleurs elle est facultative, et `LessonIllustration` rend alors un
+dégradé et l'icône du domaine. Exiger une image de chaque leçon aurait
+voulu dire bloquer l'écriture derrière la production d'illustrations, ou
+recycler des schémas sans rapport avec le propos.
 
 ## Le modèle d'une leçon
 

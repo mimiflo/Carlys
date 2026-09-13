@@ -217,9 +217,14 @@ void main() {
     await tester.pumpAndSettle();
     await tapTab(tester, 'Academy');
 
-    // Ouvre la première fiche d'anatomie (les pectoraux).
-    await reveal(tester, find.byType(LessonCard).first);
-    await tester.tap(find.byType(LessonCard).first);
+    // Ouvre la fiche des pectoraux, désignée par son TITRE et non par sa
+    // position : l'ordre des sections est un choix éditorial qui bouge
+    // (la nutrition est passée en tête en septembre 2026), et un test qui
+    // tape « la première carte » se casse à chaque réorganisation en
+    // faisant croire à une régression de navigation.
+    final fiche = find.text('Les pectoraux, un éventail');
+    await reveal(tester, fiche);
+    await tester.tap(fiche);
     await tester.pumpAndSettle();
 
     // L'essentiel à retenir est là, puis le pont vers la pratique.
