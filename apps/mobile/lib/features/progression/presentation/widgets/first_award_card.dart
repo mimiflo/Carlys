@@ -75,7 +75,6 @@ class FirstAwardCard extends StatelessWidget {
             AppButton(
               label: 'Ouvrir la première leçon',
               onPressed: onStart,
-              variant: AppButtonVariant.accent,
               isExpanded: true,
             ),
           ],

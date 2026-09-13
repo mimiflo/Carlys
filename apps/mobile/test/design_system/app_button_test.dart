@@ -54,6 +54,51 @@ void main() {
       expect(pressed, isFalse);
     });
 
+    testWidgets('l’action principale porte le MÊME dégradé que le login', (
+      tester,
+    ) async {
+      // Le bouton primaire n'est plus un violet plat : il reprend le dégradé
+      // des écrans d'entrée (AppColors.cta), pour que « Valider » ici et
+      // « Se connecter » là parlent la même couleur. La garde suit le
+      // dégradé, pas un ton isolé.
+      await tester.pumpWidget(
+        _wrap(const AppButton(label: 'Valider', onPressed: _noop)),
+      );
+
+      final gradients = tester
+          .widgetList<DecoratedBox>(find.byType(DecoratedBox))
+          .map((box) => box.decoration)
+          .whereType<BoxDecoration>()
+          .map((decoration) => decoration.gradient)
+          .whereType<LinearGradient>();
+
+      expect(
+        gradients,
+        contains(AppColors.cta),
+        reason: 'le fond du bouton primaire doit être le dégradé cta du login',
+      );
+    });
+
+    testWidgets('désactivée, l’action principale s’éteint (fond ET texte)', (
+      tester,
+    ) async {
+      // Un dégradé plein sous un libellé grisé se lirait comme un bug : tout
+      // pâlit d'un même mouvement via une opacité d'ensemble.
+      await tester.pumpWidget(
+        _wrap(const AppButton(label: 'Valider', onPressed: null)),
+      );
+
+      final opacity = tester.widget<Opacity>(
+        find
+            .ancestor(
+              of: find.byType(FilledButton),
+              matching: find.byType(Opacity),
+            )
+            .first,
+      );
+      expect(opacity.opacity, lessThan(1));
+    });
+
     testWidgets('la variante destructive utilise la couleur d’erreur', (
       tester,
     ) async {

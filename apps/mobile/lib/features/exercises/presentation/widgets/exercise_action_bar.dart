@@ -49,29 +49,39 @@ class ExerciseActionBar extends ConsumerWidget {
                   _HistoryButton(exercise: exercise),
                   const SizedBox(width: AppSpacing.gapTile),
                   Expanded(
-                    child: FilledButton(
-                      style: FilledButton.styleFrom(
-                        minimumSize: const Size.fromHeight(_buttonSize),
-                        backgroundColor: AppColors.accent,
-                        foregroundColor: AppColors.darkBackground,
-                        textStyle: AppTypography.subheading.copyWith(
-                          fontWeight: FontWeight.w700,
-                        ),
+                    // Dégradé violet des écrans d'entrée peint derrière le
+                    // bouton : l'action principale de la barre parle la même
+                    // couleur que « Se connecter », plus l'orange d'avant.
+                    child: DecoratedBox(
+                      decoration: const BoxDecoration(
+                        gradient: AppColors.cta,
+                        borderRadius: AppRadius.buttonAll,
                       ),
-                      onPressed: () => _addToWorkout(context, ref),
-                      child: const Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: [
-                          Icon(AppIcons.add, size: _addIconSize),
-                          SizedBox(width: AppSpacing.xs),
-                          Flexible(
-                            child: Text(
-                              'Ajouter à la séance',
-                              maxLines: 1,
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                      child: FilledButton(
+                        style: FilledButton.styleFrom(
+                          minimumSize: const Size.fromHeight(_buttonSize),
+                          backgroundColor: Colors.transparent,
+                          foregroundColor: AppColors.neutral0,
+                          shadowColor: Colors.transparent,
+                          textStyle: AppTypography.subheading.copyWith(
+                            fontWeight: FontWeight.w700,
                           ),
-                        ],
+                        ),
+                        onPressed: () => _addToWorkout(context, ref),
+                        child: const Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(AppIcons.add, size: _addIconSize),
+                            SizedBox(width: AppSpacing.xs),
+                            Flexible(
+                              child: Text(
+                                'Ajouter à la séance',
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
                       ),
                     ),
                   ),

@@ -208,10 +208,11 @@ class _StartButton extends StatelessWidget {
       label: semanticLabel,
       child: DecoratedBox(
         decoration: BoxDecoration(
+          gradient: AppColors.cta,
           borderRadius: AppRadius.buttonAll,
           boxShadow: [
             BoxShadow(
-              color: AppColors.accent.withValues(alpha: 0.7),
+              color: AppColors.primary.withValues(alpha: 0.7),
               blurRadius: _glowBlur,
               spreadRadius: _glowSpread,
               offset: const Offset(0, _glowOffset),
@@ -220,8 +221,9 @@ class _StartButton extends StatelessWidget {
         ),
         child: FilledButton(
           style: FilledButton.styleFrom(
-            backgroundColor: AppColors.accent,
-            foregroundColor: AppColors.darkBackground,
+            backgroundColor: Colors.transparent,
+            foregroundColor: AppColors.neutral0,
+            shadowColor: Colors.transparent,
             textStyle: AppTypography.subheading.copyWith(
               fontWeight: FontWeight.w700,
             ),

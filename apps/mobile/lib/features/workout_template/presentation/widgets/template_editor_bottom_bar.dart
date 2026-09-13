@@ -125,11 +125,15 @@ class _SaveButton extends StatelessWidget {
       label: 'Enregistrer le modèle',
       child: DecoratedBox(
         decoration: BoxDecoration(
+          // Le dégradé (et son halo) ne s'affichent qu'actif : désactivé, le
+          // bouton retombe sur la plaque sombre, comme avant.
+          gradient: enabled ? AppColors.cta : null,
+          color: enabled ? null : AppColors.darkSurface,
           borderRadius: AppRadius.buttonAll,
           boxShadow: enabled
               ? [
                   BoxShadow(
-                    color: AppColors.accent.withValues(alpha: 0.7),
+                    color: AppColors.primary.withValues(alpha: 0.7),
                     blurRadius: _glowBlur,
                     spreadRadius: _glowSpread,
                     offset: const Offset(0, _glowOffset),
@@ -139,10 +143,11 @@ class _SaveButton extends StatelessWidget {
         ),
         child: FilledButton(
           style: FilledButton.styleFrom(
-            backgroundColor: AppColors.accent,
-            foregroundColor: AppColors.darkBackground,
-            disabledBackgroundColor: AppColors.darkSurface,
+            backgroundColor: Colors.transparent,
+            foregroundColor: AppColors.neutral0,
+            disabledBackgroundColor: Colors.transparent,
             disabledForegroundColor: AppColors.darkIconInactive,
+            shadowColor: Colors.transparent,
             textStyle: AppTypography.subheading.copyWith(
               fontWeight: FontWeight.w700,
             ),
