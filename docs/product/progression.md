@@ -30,7 +30,25 @@ l'application sait trancher avec des faits qu'elle possède.
 | Axe | Question | Fait mesuré | Barème |
 | --- | -------- | ----------- | ------ |
 | **Constance** | Reviens-tu ? | Semaines avec au moins une séance | 8 semaines observées, plein à 8/8 |
-| **Maîtrise** | Comprends-tu ? | Leçons de l'Academy abordées | Part du pack, plein au pack entier |
+| **Maîtrise** | Comprends-tu ? | Leçons de l'Academy abordées | Rapport à une CIBLE FIXE (20 leçons), plein à la cible |
+
+> **Pourquoi une cible fixe et non la taille du pack.** L'axe valait
+> « leçons abordées ÷ taille du pack ». Étoffer l'Academy — ce que le produit
+> demande, de 22 à ~80 leçons — aurait donc divisé cet axe par près de quatre
+> chez chaque personne déjà inscrite, du jour au lendemain et sans qu'elle ait
+> rien fait ; son titre Carlys aurait reculé avec. Un contenu qu'on enrichit ne
+> reprend pas ce qui a été acquis. La cible vaut 20 et non 22 pour que la
+> bascule ne puisse que faire MONTER le rapport (`n/20 ≥ n/22`) : personne ne
+> perd un point au passage, et un test balaie les 22 états possibles pour le
+> prouver. Si le pack tombait un jour sous la cible, c'est lui qui ferait foi —
+> sinon l'axe serait plafonné pour tout le monde et « Icône » deviendrait
+> inatteignable.
+>
+> Les RÉCOMPENSES de l'axe (« La moitié du pack », « Academy terminée »)
+> restent rapportées au pack, elles : ce sont des jalons datés, inscrits une
+> fois pour toutes dans un journal qui ne retire jamais rien. Qui a terminé le
+> pack de 22 leçons garde son certificat ; finir un pack de 80 est un autre
+> exploit, et c'est normal qu'il en demande plus.
 | **Performance** | Progresses-tu ? | Volume des 4 dernières semaines contre les 4 précédentes | −20 % vide, maintien à mi-course, +20 % plein |
 | **Discipline** | Tiens-tu tes rendez-vous ? | Séances closes sur séances commencées | Part des séances menées à leur terme |
 | **Équilibre** | Récupères-tu ? | Séances par semaine sur 28 jours | Plein entre 2 et 4, dégressif des deux côtés |

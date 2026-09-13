@@ -216,6 +216,62 @@ void main() {
     });
   });
 
+  group('MAÎTRISE — étoffer l’Academy ne reprend rien', () {
+    /// L'axe seul, isolé du reste du profil.
+    ProgressionAxis maitrise({required int abordees, required int pack}) {
+      final profile = computeProgression(
+        ProgressionFacts(
+          today: today,
+          lessonsAnswered: abordees,
+          lessonsTotal: pack,
+        ),
+      );
+      return profile.axes.firstWhere(
+        (axis) => axis.value == CarlysValue.maitrise,
+      );
+    }
+
+    test('passer le pack de 22 à 80 leçons ne fait perdre AUCUN point', () {
+      // LE test de ce groupe. L'axe valait `abordées / taille du pack` :
+      // enrichir le contenu divisait la progression — et donc le titre — de
+      // chaque personne déjà inscrite, sans qu'elle ait rien fait. On balaie
+      // tous les états possibles du pack actuel, pas un cas choisi.
+      for (var abordees = 1; abordees <= 22; abordees++) {
+        final avant = maitrise(abordees: abordees, pack: 22);
+        final apres = maitrise(abordees: abordees, pack: 80);
+
+        expect(
+          apres.points,
+          greaterThanOrEqualTo(avant.points),
+          reason:
+              'avec $abordees leçons abordées, passer le pack à 80 fait '
+              'tomber l’axe de ${avant.points} à ${apres.points} points',
+        );
+        expect(apres.ratio, greaterThanOrEqualTo(avant.ratio));
+      }
+    });
+
+    test('l’axe se remplit à la cible, sans attendre le pack entier', () {
+      // Vingt leçons abordées suffisent, que le pack en compte 22 ou 80 :
+      // c'est ce qui rend la cible indépendante du contenu.
+      expect(maitrise(abordees: 20, pack: 22).ratio, 1.0);
+      expect(maitrise(abordees: 20, pack: 80).ratio, 1.0);
+      expect(maitrise(abordees: 20, pack: 500).ratio, 1.0);
+    });
+
+    test('un pack plus court que la cible reste remplissable', () {
+      // Sinon l'axe serait plafonné à moins de 100 % pour tout le monde,
+      // et « Icône » deviendrait inatteignable.
+      expect(maitrise(abordees: 8, pack: 8).ratio, 1.0);
+    });
+
+    test('sans aucune réponse, l’axe dit comment s’ouvrir', () {
+      final axe = maitrise(abordees: 0, pack: 22);
+      expect(axe.points, 0);
+      expect(axe.reason, contains('Academy'));
+    });
+  });
+
   test('un profil complet reste borné', () {
     final profile = computeProgression(
       ProgressionFacts(

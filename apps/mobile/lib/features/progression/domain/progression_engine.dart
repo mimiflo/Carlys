@@ -125,29 +125,49 @@ ProgressionAxis _constance(ProgressionFacts facts) {
   );
 }
 
+/// Nombre de leçons abordées qui remplit l'axe MAÎTRISE.
+///
+/// Une CONSTANTE, et non la taille du pack : c'est tout l'enjeu. L'axe valait
+/// `leçons abordées / taille du pack`, donc étoffer l'Academy faisait CHUTER
+/// la progression — et le titre Carlys — de chaque personne déjà inscrite,
+/// sans qu'elle ait rien fait. Passer le pack de 22 à 80 leçons aurait divisé
+/// cet axe par près de quatre du jour au lendemain. Un contenu qu'on enrichit
+/// ne doit jamais reprendre ce qui a été acquis.
+///
+/// Vingt, et pas vingt-deux : à la bascule, le rapport ne peut que MONTER
+/// (`n/20 ≥ n/22` pour tout n), jamais descendre. Personne ne perd un point
+/// au passage — la règle a été choisie pour ça.
+const int _cibleMaitrise = 20;
+
 /// MAÎTRISE — comprends-tu ce que tu fais ?
 ///
-/// La part du pack de l'Academy à laquelle l'utilisateur a répondu. Répondre
-/// suffit : se tromper fait apprendre, et n'accorder les points qu'aux bonnes
-/// réponses transformerait l'Academy en examen.
+/// Le nombre de leçons de l'Academy auxquelles l'utilisateur a répondu,
+/// rapporté à [_cibleMaitrise]. Répondre suffit : se tromper fait apprendre,
+/// et n'accorder les points qu'aux bonnes réponses transformerait l'Academy
+/// en examen.
 ProgressionAxis _maitrise(ProgressionFacts facts) {
-  if (facts.lessonsTotal <= 0 || facts.lessonsAnswered <= 0) {
+  if (facts.lessonsAnswered <= 0) {
     return const ProgressionAxis.unknown(
       CarlysValue.maitrise,
       'Réponds à une question de l’Academy pour ouvrir cet axe.',
     );
   }
 
-  // Borné comme les points : un pack raccourci après coup, ou un
-  // décompte incohérent, ne doit pas produire une jauge qui déborde.
-  final ratio = (facts.lessonsAnswered / facts.lessonsTotal).clamp(0.0, 1.0);
+  // Une cible plus haute que le pack disponible serait inatteignable : on
+  // se rabat alors sur le pack, pour que l'axe reste toujours remplissable.
+  final cible = facts.lessonsTotal > 0
+      ? (facts.lessonsTotal < _cibleMaitrise
+            ? facts.lessonsTotal
+            : _cibleMaitrise)
+      : _cibleMaitrise;
+  // Borné comme les points : un décompte incohérent ne doit pas produire
+  // une jauge qui déborde.
+  final ratio = (facts.lessonsAnswered / cible).clamp(0.0, 1.0);
   return ProgressionAxis(
     value: CarlysValue.maitrise,
     ratio: ratio,
     points: _pointsFor(ratio),
-    reason:
-        '${facts.lessonsAnswered} leçons abordées '
-        'sur ${facts.lessonsTotal}.',
+    reason: '${facts.lessonsAnswered} leçons abordées sur $cible.',
   );
 }
 
