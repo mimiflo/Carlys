@@ -146,5 +146,25 @@ jobs:
         working-directory: .
         run: ./scripts/check_mobile_file_sizes.sh
 
+      # FUSEAU À CHANGEMENT D'HEURE, EXPRÈS. Les runners GitHub tournent en
+      # UTC, un fuseau où l'heure ne change jamais : les gardes de calendrier
+      # du dépôt (`dayOfYearIndex`, `today_metrics`, `formatShortDateMono`) y
+      # deviennent MUETTES, car le calcul fautif et le calcul correct y
+      # rendent le même résultat. Mesuré, en réintroduisant le bug d'origine
+      # de `dayOfYearIndex` (une DURÉE écoulée au lieu d'un jour civil) :
+      # sous TZ=UTC les trois tests de daily_lesson_test.dart passent, bug
+      # compris ; sous TZ=Europe/Paris deux échouent. Sans cette ligne, cette
+      # classe de défauts — la plus coûteuse à diagnostiquer, parce qu'elle
+      # n'apparaît que deux dimanches par an — franchissait la porte.
+      #
+      # Europe/Paris plutôt qu'un autre : c'est le fuseau des membres, donc
+      # celui où les bascules d'heure doivent être justes. UTC n'est pas
+      # perdu pour autant, c'est le cas dégénéré — sans changement d'heure,
+      # un calcul juste sous Paris l'est aussi sous UTC, l'inverse étant faux.
+      # Une seconde exécution complète sous UTC coûterait 1 min 30 par
+      # poussée au workflow déjà le plus lent du dépôt pour ne couvrir que la
+      # portabilité de la SUITE, jamais celle du produit : pas retenue.
       - name: Tests
+        env:
+          TZ: Europe/Paris
         run: flutter test

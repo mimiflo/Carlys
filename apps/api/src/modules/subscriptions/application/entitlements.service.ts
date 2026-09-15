@@ -100,6 +100,20 @@ export class EntitlementsService {
   }
 
   /**
+   * L'administration a-t-elle RETIRÉ ce droit à la main ?
+   *
+   * À distinguer d'un simple « pas de droit » : une ligne posée par le
+   * back-office (`sourceSubscriptionId === null`) avec `isActive: false`
+   * survit désormais à tout webhook. Un abonnement souscrit après ce retrait
+   * ne rendrait donc RIEN — il faut refuser le paiement plutôt qu'encaisser
+   * pour rien.
+   */
+  async isManuallyRevoked(userId: string, key: EntitlementKey): Promise<boolean> {
+    const row = await this.subscriptions.findEntitlement(userId, key);
+    return row !== null && row.sourceSubscriptionId === null && !row.isActive;
+  }
+
+  /**
    * Recalcule les droits matérialisés d'un compte, depuis TOUS ses
    * abonnements — pas depuis celui dont l'événement vient d'arriver.
    *

@@ -11,11 +11,19 @@ import 'package:flutter_test/flutter_test.dart';
 /// décalait la bascule à 01 h 30 jusqu'à l'automne.
 ///
 /// Les deux premiers tests ci-dessous sont écrits avec des `DateTime` LOCAUX,
-/// exprès : sous un fuseau à changement d'heure (Europe/Paris, celui du
-/// dépôt), ils tombent avec l'ancien calcul. Sous un fuseau sans changement
-/// d'heure — UTC, tel que la CI l'emploie souvent — ils passent des deux
-/// façons ; ce sont alors les valeurs exactes du troisième test qui tiennent
-/// la garde.
+/// exprès : sous un fuseau à changement d'heure, ils tombent avec l'ancien
+/// calcul. C'est pourquoi les tests tournent sous `TZ=Europe/Paris`, imposé
+/// par `scripts/check_mobile.sh` et par le bloc « Tests » de
+/// `.github/workflows/mobile-ci.yml` — les runners sont en UTC, où l'heure ne
+/// change jamais.
+///
+/// Sans ce fuseau, CE FICHIER NE GARDE RIEN. Mesuré en réintroduisant
+/// l'ancien calcul : sous `TZ=UTC` les trois tests passent, bug compris —
+/// le troisième y compris, car il ne franchit aucun changement d'heure et
+/// rend donc le même quantième des deux façons. Sous `TZ=Europe/Paris`, les
+/// deux premiers échouent. Le troisième ne distingue pas les deux calculs :
+/// il fixe les valeurs exactes aux bornes (1er janvier, années bissextiles),
+/// ce que les deux autres, écrits en écarts, ne voient pas.
 void main() {
   test('deux instants du MÊME jour civil donnent le même rang', () {
     // Le 30 mars 2026 est le lendemain du passage à l'heure d'été en Europe.

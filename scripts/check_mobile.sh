@@ -96,7 +96,14 @@ echo "── Analyse statique ────────────────�
 flutter analyze
 
 echo "── Tests ───────────────────────────────────────────────────────────"
-flutter test
+# `TZ=Europe/Paris` recopie le bloc `run:` de la CI, et pour la même raison :
+# sous un fuseau sans changement d'heure — UTC sur les runners, et tout poste
+# réglé ailleurs qu'en Europe — les gardes de calendrier du dépôt rendent le
+# même résultat avec le calcul fautif et avec le calcul correct. Mesuré en
+# réintroduisant le bug d'origine de `dayOfYearIndex` : trois tests verts sous
+# UTC, deux rouges sous Europe/Paris. Le forcer ici rend la vérification locale
+# indépendante du réglage de la machine, ce qui est bien le but du script.
+TZ=Europe/Paris flutter test
 
 echo ""
 echo "Toutes les vérifications Flutter sont passées."

@@ -9,6 +9,7 @@ import {
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   Injectable,
   ServiceUnavailableException,
 } from '@nestjs/common';
@@ -107,6 +108,16 @@ export class SubscriptionsService {
     if (await this.entitlements.hasEntitlement(userId, 'premium_exercises')) {
       throw new ConflictException(
         'Cet abonnement est déjà actif. Gère-le depuis « Mon abonnement ».',
+      );
+    }
+    // Droit RETIRÉ à la main par l'administration : la décision survit à tout
+    // webhook, donc un abonnement souscrit maintenant ne rendrait rien. Sans
+    // ce refus, le compte était prélevé chaque mois sans jamais obtenir
+    // Premium, et aucun écran ne lui disait pourquoi. Encaisser en sachant
+    // qu'on ne livrera pas n'est pas une option.
+    if (await this.entitlements.isManuallyRevoked(userId, 'premium_exercises')) {
+      throw new ForbiddenException(
+        'Cet accès a été suspendu par notre équipe. Contacte le support avant de souscrire.',
       );
     }
 

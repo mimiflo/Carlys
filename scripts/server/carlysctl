@@ -276,7 +276,14 @@ Si tu lis ce message, une vraie alerte te parviendra aussi."; then
 # est saisi sans écho, confirmé, et transmis au conteneur par l'entrée
 # standard. Vide, la commande en engendre un et l'affiche une fois.
 cmd_admin_create() {
-  local env_name file email role=superadmin reset=non mdp='' mdp2='' hote
+  # `role` est VIDE par défaut, et non « superadmin » : c'est la différence
+  # entre « donne-lui ce rôle » et « on ne touche pas aux rôles ». Le wrapper
+  # portait son propre défaut et passait `--role` INCONDITIONNELLEMENT, ce qui
+  # neutralisait la garde de la commande — laquelle ne remplace les rôles que
+  # si `--role` a été écrit. Une réinitialisation de mot de passe par ce
+  # chemin, le seul qui existe en production, effaçait donc le rôle d'origine
+  # du compte pour le remplacer par superadmin.
+  local env_name file email role='' reset=non mdp='' mdp2='' hote
   env_name="$(environnement_requis "${1-}")"
   email="${2-}"
   [ -n "$email" ] || die "Adresse attendue." \
@@ -284,7 +291,11 @@ cmd_admin_create() {
   shift 2 || true
   while [ "$#" -gt 0 ]; do
     case "$1" in
-      --role) role="${2-}"; shift 2 ;;
+      --role)
+        role="${2-}"
+        [ -n "$role" ] || die "--role attend un slug." \
+          "Attendu : superadmin | support | content-manager"
+        shift 2 ;;
       --reset-password) reset=oui; shift ;;
       *) die "Option inconnue : $1" "Attendu : --role <slug>, --reset-password" ;;
     esac
@@ -305,7 +316,7 @@ cmd_admin_create() {
 
   step "Compte administrateur sur « $env_name »"
   info "adresse : $email"
-  info "rôle    : $role"
+  info "rôle    : ${role:-inchangé (création : superadmin par défaut)}"
   if [ -t 0 ]; then
     printf '   Mot de passe (vide = engendré et affiché une fois) : ' >&2
     read -rs mdp; printf '\n' >&2
@@ -320,7 +331,10 @@ cmd_admin_create() {
     IFS= read -r mdp || true
   fi
 
-  local -a opts=(--role "$role")
+  # `--role` n'est transmis QUE si l'opérateur l'a écrit : sans lui, la
+  # commande crée avec son défaut et ne touche à aucun rôle existant.
+  local -a opts=()
+  [ -n "$role" ] && opts+=(--role "$role")
   [ "$reset" = oui ] && opts+=(--reset-password)
   printf '%s' "$mdp" | dc "$env_name" "$file" run --rm --no-deps -T api \
     node dist/cli/admin-bootstrap "$email" "${opts[@]}" || die "La création a échoué — le message ci-dessus dit pourquoi."

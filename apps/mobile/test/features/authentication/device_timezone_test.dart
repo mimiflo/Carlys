@@ -333,4 +333,56 @@ void main() {
       },
     );
   });
+
+  group('refus de validation', () {
+    const user = AuthUser(
+      id: 'user-1',
+      email: 'camille@example.com',
+      displayName: 'Camille',
+      emailVerified: true,
+      locale: 'fr',
+      timezone: 'Europe/Paris',
+    );
+
+    test('une valeur refusée n’est plus reproposée de la session', () async {
+      // Depuis que le fuseau est validé côté serveur, un identifiant que
+      // l'appareil rend et que le serveur n'accepte pas — certains Android
+      // rendent un décalage brut plutôt qu'un nom IANA — était renvoyé à
+      // CHAQUE lancement, refusé à chaque fois, sans qu'aucun écran ne le
+      // dise. Le rejeu reste bon pour une panne passagère, pas pour un refus
+      // définitif.
+      final repo = FakeAuthRepository(storedSession: true)
+        ..timezoneFailure = const ValidationException('Fuseau horaire inconnu');
+      final sync = DeviceTimezoneSync(
+        repository: repo,
+        readDeviceTimezone: () async => 'GMT+02:00',
+      );
+
+      expect(await sync.reconcile(user), isNull);
+      expect(await sync.reconcile(user), isNull);
+      expect(await sync.reconcile(user), isNull);
+
+      expect(repo.timezonesSent, [
+        'GMT+02:00',
+      ], reason: 'un refus définitif ne se rejoue pas');
+    });
+
+    test('un échec de RÉSEAU, lui, reste rejouable', () async {
+      final repo = FakeAuthRepository(storedSession: true)
+        ..timezoneFailure = const NetworkException('hors ligne');
+      final sync = DeviceTimezoneSync(
+        repository: repo,
+        readDeviceTimezone: () async => 'America/Montreal',
+      );
+
+      await sync.reconcile(user);
+      await sync.reconcile(user);
+
+      expect(
+        repo.timezonesSent,
+        hasLength(2),
+        reason: 'une panne passagère doit être retentée',
+      );
+    });
+  });
 }

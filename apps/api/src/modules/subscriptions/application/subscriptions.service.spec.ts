@@ -1,6 +1,7 @@
 import {
   BadRequestException,
   ConflictException,
+  ForbiddenException,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { type AppConfigService } from '../../../config/app-config.service';
@@ -65,6 +66,7 @@ const repositoryStub = {
 };
 const entitlementsStub = {
   hasEntitlement: jest.fn().mockResolvedValue(false),
+  isManuallyRevoked: jest.fn().mockResolvedValue(false),
   syncFromSubscription: jest.fn().mockResolvedValue(undefined),
 };
 
@@ -88,6 +90,7 @@ beforeEach(() => {
   // `mockClear` efface les APPELS, pas l'implémentation : sans ce retour à
   // la valeur par défaut, un test qui rend `true` contamine les suivants.
   entitlementsStub.hasEntitlement.mockReset().mockResolvedValue(false);
+  entitlementsStub.isManuallyRevoked.mockReset().mockResolvedValue(false);
   entitlementsStub.syncFromSubscription.mockClear();
 });
 
@@ -171,6 +174,23 @@ describe('SubscriptionsService — chemin d’achat', () => {
     await expect(
       buildService(buildConfig(), checkout).createCheckout(USER, MONTHLY_OFFER_ID, DEVICE_ID),
     ).rejects.toThrow(ConflictException);
+
+    expect(checkout.createSession).not.toHaveBeenCalled();
+  });
+
+  it('droit RETIRÉ par l’administration : le paiement est refusé, pas encaissé', async () => {
+    // Le trou entre deux correctifs. Une décision manuelle de retrait survit
+    // désormais à tout webhook — donc un abonnement souscrit après ce retrait
+    // ne rendrait RIEN. Sans ce refus, le compte était prélevé chaque mois
+    // sans jamais obtenir Premium, et aucun écran ne lui disait pourquoi.
+    // `hasEntitlement` reste faux dans ce cas : c'est bien un second contrôle
+    // qu'il fallait, pas le même.
+    entitlementsStub.isManuallyRevoked.mockResolvedValue(true);
+    const checkout = buildCheckout();
+
+    await expect(
+      buildService(buildConfig(), checkout).createCheckout(USER, MONTHLY_OFFER_ID, DEVICE_ID),
+    ).rejects.toThrow(ForbiddenException);
 
     expect(checkout.createSession).not.toHaveBeenCalled();
   });
