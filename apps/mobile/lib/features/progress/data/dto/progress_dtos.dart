@@ -44,3 +44,28 @@ BodyMetricEntry bodyMetricFromJson(Map<String, dynamic> json) =>
       value: (json['value'] as num).toDouble(),
       measuredAt: DateTime.parse(json['measuredAt'] as String),
     );
+
+ExerciseProgressionPoint exerciseProgressionPointFromJson(
+  Map<String, dynamic> json,
+) => ExerciseProgressionPoint(
+  sessionId: json['sessionId'] as String,
+  date: DateTime.parse(json['date'] as String),
+  volumeKg: (json['volumeKg'] as num).toDouble(),
+  maxWeightKg: (json['maxWeightKg'] as num?)?.toDouble(),
+  maxReps: (json['maxReps'] as num?)?.toInt(),
+);
+
+ExerciseProgressionEntity exerciseProgressionFromJson(
+  Map<String, dynamic> json,
+) => ExerciseProgressionEntity(
+  exerciseId: json['exerciseId'] as String,
+  exerciseName: json['exerciseName'] as String,
+  records: (json['records'] as List<dynamic>)
+      .whereType<Map<String, dynamic>>()
+      .map(personalRecordFromJson)
+      .toList(),
+  points: (json['points'] as List<dynamic>)
+      .whereType<Map<String, dynamic>>()
+      .map(exerciseProgressionPointFromJson)
+      .toList(),
+);

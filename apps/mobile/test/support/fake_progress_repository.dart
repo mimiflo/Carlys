@@ -117,8 +117,35 @@ class FakeProgressRepository implements ProgressRepository {
     return apres;
   }
 
+  /// Identifiants réellement supprimés, dans l'ordre.
+  ///
+  /// Sert à prouver qu'ANNULER une confirmation ne supprime rien : sans ce
+  /// compteur, un test qui annule et voit la mesure toujours là ne saurait
+  /// pas distinguer « rien n'a été demandé » de « la suppression a échoué ».
+  final List<String> removedMetricIds = [];
+
+  /// Progressions par exercice, indexées par identifiant.
+  final Map<String, ExerciseProgressionEntity> exerciseProgressions = {};
+
+  /// Identifiants réellement demandés : prouve qu'un écran interroge bien la
+  /// route, au lieu de recomposer la courbe à partir d'autre chose.
+  final List<String> requestedExerciseIds = [];
+
+  @override
+  Future<ExerciseProgressionEntity> exerciseProgression(
+    String exerciseId,
+  ) async {
+    requestedExerciseIds.add(exerciseId);
+    final trouve = exerciseProgressions[exerciseId];
+    if (trouve == null) {
+      throw Exception('Exercice introuvable : $exerciseId');
+    }
+    return trouve;
+  }
+
   @override
   Future<void> deleteBodyMetric(String id) async {
+    removedMetricIds.add(id);
     _bodyMetrics.removeWhere((metric) => metric.id == id);
   }
 }

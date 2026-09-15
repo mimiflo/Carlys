@@ -36,4 +36,10 @@ abstract interface class ProgressRepository {
 
   /// Idempotent : supprimer une mesure déjà supprimée aboutit.
   Future<void> deleteBodyMetric(String id);
+
+  /// Progression sur UN exercice : ses séances et ses records, ensemble.
+  ///
+  /// La route existe et est testée côté serveur depuis septembre ; elle
+  /// n'avait simplement aucun client.
+  Future<ExerciseProgressionEntity> exerciseProgression(String exerciseId);
 }

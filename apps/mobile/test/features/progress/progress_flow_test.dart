@@ -51,11 +51,23 @@ Widget appWith(FakeProgressRepository progress) {
   );
 }
 
-/// Rend visible un élément de l'écran COURANT (dernier Scrollable de la
-/// pile) : remonte d'abord en haut, puis descend jusqu'à la cible —
-/// déterministe quelle que soit la position de défilement précédente.
+/// Rend visible un élément de l'écran COURANT : remonte d'abord en haut,
+/// puis descend jusqu'à la cible, déterministe quelle que soit la position
+/// de défilement précédente.
+///
+/// Le Scrollable visé est le dernier qui défile VERTICALEMENT. Le filtre
+/// n'est pas cosmétique : les sélecteurs de période et les listes de
+/// vignettes posent des Scrollable HORIZONTAUX, et un glissement vertical
+/// n'y mord pas. `find.byType(Scrollable).last` pouvait donc ramener un
+/// Scrollable où rien ne bouge, auquel cas le test ne passait que tant que
+/// sa cible tenait dans le `cacheExtent` de la vraie liste.
 Future<void> reveal(WidgetTester tester, Finder item) async {
-  final scrollable = find.byType(Scrollable).last;
+  final scrollable = find
+      .byWidgetPredicate(
+        (widget) =>
+            widget is Scrollable && widget.axisDirection == AxisDirection.down,
+      )
+      .last;
   await tester.drag(scrollable, const Offset(0, 2000), warnIfMissed: false);
   await tester.pumpAndSettle();
   await tester.scrollUntilVisible(item, 150, scrollable: scrollable);
@@ -197,13 +209,33 @@ void main() {
     expect(find.text(BodyWeightFirstMeasure.note), findsOneWidget);
     expect(find.byType(BodyWeightChart), findsNothing);
 
-    // Suppression rejouable côté API ; ici la liste redevient vide.
+    // Supprimer DEMANDE confirmation : effacer la dernière pesée déplace le
+    // métabolisme de base, la cible calorique et les macros.
     await reveal(tester, find.byIcon(AppIcons.delete));
     await tester.tap(find.byIcon(AppIcons.delete));
+    await tester.pumpAndSettle();
+    expect(find.textContaining('Supprimer la mesure du'), findsOneWidget);
+    expect(
+      find.textContaining('ta cible calorique'),
+      findsOneWidget,
+      reason: 'La conséquence doit être dite, pas seulement le geste.',
+    );
+
+    // Annuler ne supprime RIEN.
+    await tester.tap(find.text('Annuler'));
+    await tester.pumpAndSettle();
+    expect(progress.removedMetricIds, isEmpty);
+    await reveal(tester, find.textContaining('70,5kg', findRichText: true));
+
+    // Suppression rejouable côté API ; ici la liste redevient vide.
+    await tester.tap(find.byIcon(AppIcons.delete));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(AppButton, 'Supprimer'));
     await tester.pumpAndSettle();
 
     await reveal(tester, find.text('Aucune mesure enregistrée'));
     expect(find.text('Aucune mesure enregistrée'), findsOneWidget);
+    expect(progress.removedMetricIds, hasLength(1));
   });
 
   testWidgets('deux mesures : la courbe apparaît, la promesse disparaît', (
@@ -320,6 +352,76 @@ void main() {
     expect(find.text('Statistiques indisponibles'), findsNothing);
     expect(find.text('SÉANCES'), findsOneWidget);
   });
+
+  testWidgets(
+    'toute mesure est corrigeable, pas seulement les trois dernières',
+    (tester) async {
+      // Le trou exact que cette tranche bouche : la page ne listait que les
+      // TROIS dernières mesures, donc une pesée d'il y a deux semaines était
+      // enregistrée, tracée dans la courbe, et impossible à corriger ou à
+      // supprimer, alors que l'API sait le faire depuis le début.
+      final progress = FakeProgressRepository(
+        bodyMetrics: [
+          for (var jour = 1; jour <= 6; jour++)
+            BodyMetricEntry(
+              id: 'w-$jour',
+              kind: BodyMetricKind.weightKg,
+              value: 80.5 + jour,
+              measuredAt: DateTime.utc(2026, 7, 20 + jour, 7),
+            ),
+        ],
+      );
+
+      await tester.pumpWidget(appWith(progress));
+      await tester.pumpAndSettle();
+      await openProgressTab(tester);
+
+      // La page n'en montre que trois : la plus ancienne n'y est pas.
+      await reveal(tester, find.textContaining('86,5kg', findRichText: true));
+      expect(
+        find.textContaining('81,5kg', findRichText: true),
+        findsNothing,
+        reason: 'La page liste les trois dernières, pas toutes.',
+      );
+
+      await reveal(tester, find.text('Voir mes 6 mesures'));
+      await tester.tap(find.text('Voir mes 6 mesures'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Mes 6 mesures'), findsOneWidget);
+
+      // La feuille se pose PAR-DESSUS la page, qui garde ses trois lignes :
+      // on cherche donc dans la liste de la feuille, la dernière empilée.
+      final feuille = find.byType(ListView).last;
+      for (var jour = 1; jour <= 6; jour++) {
+        expect(
+          find.descendant(
+            of: feuille,
+            matching: find.textContaining('8$jour,5kg', findRichText: true),
+          ),
+          findsOneWidget,
+          reason: 'La mesure w-$jour manque à la liste complète.',
+        );
+      }
+
+      // Et la plus ANCIENNE se supprime, ce qui était impossible.
+      final suppressions = find.descendant(
+        of: feuille,
+        matching: find.byIcon(AppIcons.delete),
+      );
+      expect(suppressions, findsNWidgets(6));
+      // La feuille défile : la plus ancienne est sous le pli.
+      await tester.ensureVisible(suppressions.last);
+      await tester.pumpAndSettle();
+      await tester.tap(suppressions.last);
+      await tester.pumpAndSettle();
+      await tester.tap(find.widgetWithText(AppButton, 'Supprimer'));
+      await tester.pumpAndSettle();
+
+      expect(progress.removedMetricIds, ['w-1']);
+      expect(find.text('Mes 5 mesures'), findsOneWidget);
+    },
+  );
 }
 
 /// Le serveur répond, avec des zéros : aucune séance sur la période.

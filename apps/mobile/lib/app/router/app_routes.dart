@@ -46,6 +46,14 @@ abstract final class AppRoutes {
 
   static String exerciseDetail(String idOrSlug) => '/exercises/$idOrSlug';
 
+  /// La courbe de charge d'UN exercice, avec ses records posés dessus.
+  ///
+  /// Poussée depuis l'onglet Progrès : c'est là qu'on se demande « est-ce
+  /// que je progresse sur CE mouvement », question à laquelle le volume
+  /// agrégé de la page ne répond pas.
+  static String exerciseProgression(String exerciseId) =>
+      '$progress/exercises/$exerciseId';
+
   /// Bibliothèque ouverte directement sur un groupe musculaire — le pont
   /// « apprendre → pratiquer » des fiches d'anatomie de l'Academy.
   static String exercisesForGroup(String slug) => '/exercises?groupe=$slug';

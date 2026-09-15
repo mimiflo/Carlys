@@ -25,6 +25,7 @@ import '../../features/onboarding/presentation/screens/onboarding_screen.dart';
 import '../../features/onboarding/presentation/screens/splash_screen.dart';
 import '../../features/onboarding/presentation/screens/welcome_screen.dart';
 import '../../features/profile/presentation/screens/profile_screen.dart';
+import '../../features/progress/presentation/screens/exercise_progression_screen.dart';
 import '../../features/progress/presentation/screens/progress_screen.dart';
 import '../../features/progression/presentation/screens/manifesto_screen.dart';
 import '../../features/progression/presentation/screens/progression_screen.dart';
@@ -229,6 +230,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 path: AppRoutes.progress,
                 name: 'progress',
                 builder: (context, state) => const ProgressScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'exercises/:exerciseId',
+                    name: 'exercise-progression',
+                    parentNavigatorKey: _rootNavigatorKey,
+                    builder: (context, state) => ExerciseProgressionScreen(
+                      exerciseId: state.pathParameters['exerciseId'] ?? '',
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

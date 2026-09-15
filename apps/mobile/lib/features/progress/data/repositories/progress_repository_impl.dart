@@ -108,6 +108,18 @@ class ProgressRepositoryImpl implements ProgressRepository {
     return _guard(() => _dio.delete<void>('/body-metrics/$id'));
   }
 
+  @override
+  Future<ExerciseProgressionEntity> exerciseProgression(String exerciseId) {
+    return _guard(() async {
+      final response = await _dio.get<Map<String, dynamic>>(
+        '/progress/exercises/$exerciseId',
+      );
+      return exerciseProgressionFromJson(
+        response.data?['data'] as Map<String, dynamic>? ?? const {},
+      );
+    });
+  }
+
   Future<T> _guard<T>(Future<T> Function() action) async {
     try {
       return await action();

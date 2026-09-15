@@ -124,3 +124,49 @@ class BodyMetricEntry {
   final double value;
   final DateTime measuredAt;
 }
+
+/// Un point de la progression sur UN exercice : une séance, sa meilleure
+/// charge et son volume.
+///
+/// Le serveur sert `maxWeightKg` et `maxReps` à `null` quand la séance n'a
+/// porté aucune charge (poids du corps, cardio) : l'absence se dit, elle ne
+/// se remplace pas par un zéro qui ressemblerait à un échec.
+class ExerciseProgressionPoint {
+  const ExerciseProgressionPoint({
+    required this.sessionId,
+    required this.date,
+    required this.volumeKg,
+    this.maxWeightKg,
+    this.maxReps,
+  });
+
+  final String sessionId;
+  final DateTime date;
+  final double volumeKg;
+  final double? maxWeightKg;
+  final int? maxReps;
+}
+
+/// La progression sur un exercice : ses séances ET ses records, ensemble.
+///
+/// Les deux arrivent dans la même réponse parce qu'ils se lisent ensemble :
+/// un record est un point de la courbe, pas une liste à côté.
+class ExerciseProgressionEntity {
+  const ExerciseProgressionEntity({
+    required this.exerciseId,
+    required this.exerciseName,
+    required this.records,
+    required this.points,
+  });
+
+  final String exerciseId;
+  final String exerciseName;
+  final List<PersonalRecordEntry> records;
+
+  /// Du plus ancien au plus récent, prêts pour un tracé.
+  final List<ExerciseProgressionPoint> points;
+
+  /// Séances où une charge a été notée : les seules traçables en kilos.
+  List<ExerciseProgressionPoint> get chargedPoints =>
+      points.where((point) => point.maxWeightKg != null).toList();
+}
