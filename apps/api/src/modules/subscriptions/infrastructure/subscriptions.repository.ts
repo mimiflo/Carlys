@@ -53,6 +53,22 @@ export class SubscriptionsRepository {
     });
   }
 
+  /**
+   * TOUS les abonnements du compte, plan compris.
+   *
+   * Un compte peut légitimement en porter plusieurs : la migration web →
+   * magasin d'applications, que `PaymentProvider` prévoit explicitement,
+   * laisse l'abonnement Stripe résilié à côté de l'achat in-app actif. Les
+   * droits se calculent donc sur l'ENSEMBLE, jamais sur un seul.
+   */
+  listSubscriptions(userId: string): Promise<SubscriptionWithPlan[]> {
+    return this.prisma.subscription.findMany({
+      where: { userId },
+      include: { plan: true },
+      orderBy: { updatedAt: 'desc' },
+    });
+  }
+
   upsertSubscription(input: UpsertSubscriptionInput): Promise<SubscriptionWithPlan> {
     const { provider, externalSubscriptionId, ...data } = input;
     return this.prisma.subscription.upsert({

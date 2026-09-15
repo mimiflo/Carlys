@@ -63,7 +63,10 @@ const repositoryStub = {
   // Par défaut, aucun client Stripe connu : premier achat.
   stripeCustomerIdOf: jest.fn().mockResolvedValue(null),
 };
-const entitlementsStub = { hasEntitlement: jest.fn().mockResolvedValue(false) };
+const entitlementsStub = {
+  hasEntitlement: jest.fn().mockResolvedValue(false),
+  syncFromSubscription: jest.fn().mockResolvedValue(undefined),
+};
 
 function buildService(
   config: ConfigStub,
@@ -82,7 +85,10 @@ function buildService(
 beforeEach(() => {
   repositoryStub.latestSubscription.mockClear();
   repositoryStub.stripeCustomerIdOf.mockReset().mockResolvedValue(null);
-  entitlementsStub.hasEntitlement.mockClear();
+  // `mockClear` efface les APPELS, pas l'implémentation : sans ce retour à
+  // la valeur par défaut, un test qui rend `true` contamine les suivants.
+  entitlementsStub.hasEntitlement.mockReset().mockResolvedValue(false);
+  entitlementsStub.syncFromSubscription.mockClear();
 });
 
 describe('SubscriptionsService — chemin d’achat', () => {
@@ -137,7 +143,13 @@ describe('SubscriptionsService — chemin d’achat', () => {
     expect(checkout.createSession).not.toHaveBeenCalled();
   });
 
-  it('n’accorde AUCUN droit : ni le dépôt ni les entitlements ne sont touchés', async () => {
+  it('n’accorde AUCUN droit : ouvrir un paiement n’écrit rien', async () => {
+    // L'intention de ce test n'a pas bougé : ouvrir une session de paiement ne
+    // doit RIEN accorder — c'est le webhook, et lui seul, qui matérialise les
+    // droits une fois l'argent encaissé. Il exigeait en plus que les droits ne
+    // soient même pas LUS, ce qui figeait le défaut : faute de les lire, le
+    // serveur ouvrait un second paiement à un membre déjà abonné. La lecture
+    // est désormais attendue ; c'est l'écriture qui reste interdite.
     await buildService(buildConfig(), buildCheckout()).createCheckout(
       USER,
       MONTHLY_OFFER_ID,
@@ -145,7 +157,22 @@ describe('SubscriptionsService — chemin d’achat', () => {
     );
 
     expect(repositoryStub.latestSubscription).not.toHaveBeenCalled();
-    expect(entitlementsStub.hasEntitlement).not.toHaveBeenCalled();
+    expect(entitlementsStub.syncFromSubscription).not.toHaveBeenCalled();
+    expect(entitlementsStub.hasEntitlement).toHaveBeenCalledWith(USER, 'premium_exercises');
+  });
+
+  it('déjà Premium : le second paiement est REFUSÉ, pas ouvert', async () => {
+    // Le membre voyait encore les offres et pouvait appuyer : il se serait
+    // retrouvé avec deux abonnements facturés en parallèle, éventuellement
+    // chez deux fournisseurs différents.
+    entitlementsStub.hasEntitlement.mockResolvedValue(true);
+    const checkout = buildCheckout();
+
+    await expect(
+      buildService(buildConfig(), checkout).createCheckout(USER, MONTHLY_OFFER_ID, DEVICE_ID),
+    ).rejects.toThrow(ConflictException);
+
+    expect(checkout.createSession).not.toHaveBeenCalled();
   });
 
   it('au premier achat, aucun client n’est passé : Stripe le crée', async () => {

@@ -39,6 +39,12 @@ class SubscriptionScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final plan = ref.watch(planStatusProvider);
+    // Lu ici parce que `status` n'existe que dans la branche `data` du plan,
+    // alors que la décision d'afficher les offres se prend plus bas, hors de
+    // cette branche. Tant que le plan n'est pas connu, on suppose « pas
+    // encore abonné » : c'est le cas courant, et cacher les offres pendant le
+    // chargement ferait clignoter l'action principale de l'écran.
+    final dejaPremium = plan.valueOrNull?.isPremium ?? false;
     final entitlements = ref.watch(entitlementsProvider);
     final firstRun =
         ref.watch(firstRunStepProvider) == FirstRunStep.subscription;
@@ -134,7 +140,17 @@ class SubscriptionScreen extends ConsumerWidget {
                           // Les offres vivent DANS la page : mises en pied
                           // fixe, elles écraseraient la partie qui explique
                           // Premium, juste au-dessus.
-                          if (!firstRun) ...[
+                          //
+                          // `!dejaPremium` : un membre déjà abonné ne se
+                          // voit plus proposer d'acheter. L'écran affichait
+                          // « Gérer mon abonnement » ET les offres dessous ;
+                          // appuyer ouvrait un SECOND paiement, et le membre
+                          // se retrouvait avec deux abonnements facturés en
+                          // parallèle. Le serveur refuse désormais ce
+                          // second achat (409) — c'est lui qui fait autorité —
+                          // mais l'écran ne doit pas proposer un geste dont il
+                          // sait qu'il sera refusé.
+                          if (!firstRun && !dejaPremium) ...[
                             const SizedBox(height: AppSpacing.gapSection),
                             const Padding(
                               padding: EdgeInsets.symmetric(

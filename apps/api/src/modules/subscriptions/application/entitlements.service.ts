@@ -38,6 +38,34 @@ function rowIsActive(row: UserEntitlement, nowMs: number): boolean {
 }
 
 /**
+ * Le plan ouvre-t-il les droits payants ?
+ *
+ * Le slug vit ICI, en un seul endroit, plutôt que dispersé dans le calcul.
+ * Ce n'est pas la forme cible — l'ADR 0006 veut que le plan PORTE ses droits
+ * en base plutôt que d'être reconnu par son nom — mais tant que
+ * `SubscriptionPlan` n'a pas de relation vers les droits, le nommer une fois
+ * vaut mieux que de le comparer au fil du code.
+ */
+function planGrantsPremium(slug: string): boolean {
+  return slug === 'premium';
+}
+
+/** L'échéance la plus lointaine ; `null` (sans fin) l'emporte sur toute date. */
+function latestExpiry(subscriptions: SubscriptionWithPlan[]): Date | null {
+  let latest: Date | null = null;
+  for (const subscription of subscriptions) {
+    const end = subscription.currentPeriodEnd ?? subscription.trialEndsAt;
+    if (end === null) {
+      return null;
+    }
+    if (latest === null || end.getTime() > latest.getTime()) {
+      latest = end;
+    }
+  }
+  return latest;
+}
+
+/**
  * Droits effectifs des utilisateurs — TOUJOURS décidés côté serveur.
  * Les lignes UserEntitlement sont matérialisées à chaque événement
  * d'abonnement ; l'expiration est réévaluée à chaque lecture.
@@ -72,15 +100,48 @@ export class EntitlementsService {
   }
 
   /**
-   * Recalcule les droits matérialisés depuis l'état d'un abonnement.
+   * Recalcule les droits matérialisés d'un compte, depuis TOUS ses
+   * abonnements — pas depuis celui dont l'événement vient d'arriver.
+   *
+   * POURQUOI CETTE DISTINCTION EST VITALE. Un compte peut légitimement porter
+   * plusieurs abonnements : la migration web → magasin d'applications, que
+   * `PaymentProvider` prévoit, laisse l'abonnement Stripe résilié à côté de
+   * l'achat in-app actif. La version précédente calculait `grants` depuis le
+   * SEUL abonnement reçu, puis écrasait les lignes de droits du compte :
+   * l'événement terminal de l'abonnement révolu (expiration de la période
+   * déjà payée, `customer.subscription.deleted`) passait donc les droits à
+   * `false` — alors qu'un autre abonnement, actif et payé, les justifiait
+   * toujours. Le membre perdait son accès en ayant payé.
+   *
+   * On prend le MEILLEUR des abonnements : dès qu'un seul ouvre le droit, le
+   * droit est ouvert, et l'échéance retenue est la plus lointaine.
+   *
    * Les attributions MANUELLES actives (sourceSubscriptionId null — Étape 7)
    * ne sont jamais écrasées par la synchronisation.
    */
   async syncFromSubscription(subscription: SubscriptionWithPlan): Promise<void> {
-    const grants =
-      subscription.plan.slug === 'premium' &&
-      subscriptionGrantsAccess(subscription.status, subscription.currentPeriodEnd, Date.now());
-    const expiresAt = subscription.currentPeriodEnd ?? subscription.trialEndsAt;
+    const now = Date.now();
+    const all = await this.subscriptions.listSubscriptions(subscription.userId);
+    // L'abonnement reçu peut ne pas encore figurer dans la liste relue (même
+    // transaction, réplica en retard) : on l'y ajoute, en remplaçant sa
+    // version éventuellement périmée.
+    const considered = [subscription, ...all.filter((row) => row.id !== subscription.id)];
+
+    const granting = considered.filter(
+      (row) =>
+        planGrantsPremium(row.plan.slug) &&
+        subscriptionGrantsAccess(row.status, row.currentPeriodEnd, now),
+    );
+    const grants = granting.length > 0;
+
+    // L'échéance la plus LOINTAINE parmi ceux qui ouvrent le droit ; `null`
+    // (jamais d'expiration) l'emporte sur toute date. Sans droit ouvert, on
+    // garde l'échéance de l'abonnement reçu : la ligne inactive porte alors
+    // la date à laquelle l'accès s'est arrêté.
+    const expiresAt = grants
+      ? latestExpiry(granting)
+      : (subscription.currentPeriodEnd ?? subscription.trialEndsAt);
+    const source = grants ? (granting[0]?.id ?? subscription.id) : subscription.id;
 
     const existing = await this.subscriptions.listEntitlements(subscription.userId);
     const manuallyGranted = new Set(
@@ -96,7 +157,7 @@ export class EntitlementsService {
       await this.subscriptions.upsertEntitlement(subscription.userId, key, {
         isActive: grants,
         expiresAt,
-        sourceSubscriptionId: subscription.id,
+        sourceSubscriptionId: source,
       });
     }
   }

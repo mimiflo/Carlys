@@ -1,6 +1,7 @@
 import 'package:carlys_mobile/core/errors/app_exception.dart';
 import 'package:carlys_mobile/features/exercises/domain/entities/exercise.dart';
 import 'package:carlys_mobile/features/exercises/presentation/widgets/muscle_group_card.dart';
+import 'package:carlys_mobile/features/subscription/presentation/widgets/subscription_offers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -9,6 +10,23 @@ import '../../support/fake_subscription_repository.dart';
 import '../../support/first_run_prefs.dart';
 import '../../support/navigation.dart';
 import '../../support/subscription_app.dart';
+
+/// Amène le bas de l'écran d'abonnement à l'écran.
+///
+/// Les offres vivent dans la `ListView` de la page, sous le pli. Tant qu'elles
+/// ne sont pas construites, toute assertion `findsNothing` à leur sujet est
+/// vide de sens : elle passerait aussi bien avec qu'sans le comportement
+/// qu'elle prétend vérifier.
+Future<void> _defilerJusquAuxOffres(WidgetTester tester) async {
+  // Un ancrage `dragUntilVisible` ne convient pas : la cible qu'on cherche
+  // est justement celle qui peut ne pas exister. On descend donc jusqu'au
+  // bout, franchement. Que ce geste atteigne bien les offres est prouvé par
+  // le test du compte gratuit, qui les trouve après ce même appel.
+  for (var i = 0; i < 3; i++) {
+    await tester.drag(find.byType(ListView).last, const Offset(0, -1200));
+    await tester.pumpAndSettle();
+  }
+}
 
 void main() {
   setUp(() {
@@ -77,6 +95,34 @@ void main() {
     expect(find.textContaining('SEPT.'), findsOneWidget);
     // Une fois Premium, la porte vers le portail de facturation est là.
     expect(find.text('Gérer mon abonnement'), findsOneWidget);
+
+    // … et les OFFRES disparaissent. L'écran affichait « Gérer mon
+    // abonnement » ET les deux cartes d'offre dessous : appuyer ouvrait un
+    // SECOND paiement, et le membre se retrouvait avec deux abonnements
+    // facturés en parallèle. Le serveur le refuse désormais (409), mais un
+    // écran ne propose pas un geste dont il sait qu'il sera refusé.
+    //
+    // ON DÉFILE D'ABORD. Les offres sont en bas d'une ListView paresseuse :
+    // sans ce geste, `findsNothing` passerait que le correctif existe ou non
+    // — l'assertion ne prouverait rien du tout. Le test jumeau ci-dessous
+    // vérifie qu'après ce même défilement, un compte gratuit les voit.
+    await _defilerJusquAuxOffres(tester);
+    expect(find.byType(SubscriptionOffers), findsNothing);
+  });
+
+  testWidgets('plan gratuit : les offres, elles, sont bien proposées', (
+    tester,
+  ) async {
+    // Le pendant du test précédent, et ce qui le rend non vacuous : sans lui,
+    // masquer les offres à TOUT le monde passerait inaperçu.
+    await tester.pumpWidget(
+      appWith(subscription: FakeSubscriptionRepository()),
+    );
+    await tester.pumpAndSettle();
+    await openSubscription(tester);
+
+    await _defilerJusquAuxOffres(tester);
+    expect(find.byType(SubscriptionOffers), findsOneWidget);
   });
 
   testWidgets(

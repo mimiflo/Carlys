@@ -11,6 +11,7 @@ interface Stubs {
   listEntitlements: jest.Mock;
   findEntitlement: jest.Mock;
   upsertEntitlement: jest.Mock;
+  listSubscriptions: jest.Mock;
 }
 
 function buildStubs(): Stubs {
@@ -18,7 +19,19 @@ function buildStubs(): Stubs {
     listEntitlements: jest.fn().mockResolvedValue([]),
     findEntitlement: jest.fn().mockResolvedValue(null),
     upsertEntitlement: jest.fn().mockResolvedValue(undefined),
+    listSubscriptions: jest.fn().mockResolvedValue([]),
   };
+}
+
+/** Les arguments captés par `upsertEntitlement`, typés — `mock.calls` est `any`. */
+function upsertCalls(
+  stubs: Stubs,
+): [string, string, { isActive: boolean; expiresAt: Date | null }][] {
+  return stubs.upsertEntitlement.mock.calls as [
+    string,
+    string,
+    { isActive: boolean; expiresAt: Date | null },
+  ][];
 }
 
 function buildService(stubs: Stubs): EntitlementsService {
@@ -144,5 +157,70 @@ describe('EntitlementsService', () => {
 
     const touchedKeys = stubs.upsertEntitlement.mock.calls.map((call: unknown[]) => call[1]);
     expect(touchedKeys).not.toContain('premium_exercises');
+  });
+});
+
+describe('syncFromSubscription — plusieurs abonnements sur un même compte', () => {
+  it('un abonnement révolu NE RÉVOQUE PAS ce qu’un autre paie encore', async () => {
+    // LE DÉFAUT QUE CE TEST FERME. Un compte peut légitimement porter deux
+    // abonnements : la migration web → magasin d'applications, que
+    // `PaymentProvider` prévoit, laisse le Stripe résilié à côté de l'achat
+    // in-app actif. Le calcul se faisait depuis le SEUL abonnement reçu, puis
+    // écrasait les droits du compte : l'événement terminal du révolu les
+    // passait à `false` alors que l'autre, payé, les justifiait. Le membre
+    // perdait son accès en ayant payé.
+    const stubs = buildStubs();
+    const revolu = subscriptionRow({
+      id: 'sub-stripe',
+      status: SubscriptionStatus.EXPIRED,
+      currentPeriodEnd: PAST,
+    });
+    const encorePaye = subscriptionRow({
+      id: 'sub-store',
+      provider: 'REVENUECAT',
+      status: SubscriptionStatus.ACTIVE,
+      currentPeriodEnd: FUTURE,
+    });
+    stubs.listSubscriptions.mockResolvedValue([revolu, encorePaye]);
+    const service = buildService(stubs);
+
+    await service.syncFromSubscription(revolu);
+
+    expect(stubs.upsertEntitlement).toHaveBeenCalledTimes(PREMIUM_ENTITLEMENT_KEYS.length);
+    for (const [, , values] of upsertCalls(stubs)) {
+      expect(values).toMatchObject({ isActive: true, sourceSubscriptionId: 'sub-store' });
+    }
+  });
+
+  it('l’échéance retenue est la plus LOINTAINE de ceux qui ouvrent le droit', async () => {
+    const stubs = buildStubs();
+    const plusLoin = new Date(FUTURE.getTime() + 30 * 24 * 3_600_000);
+    stubs.listSubscriptions.mockResolvedValue([
+      subscriptionRow({ id: 'sub-mensuel', currentPeriodEnd: FUTURE }),
+      subscriptionRow({ id: 'sub-annuel', currentPeriodEnd: plusLoin }),
+    ]);
+    const service = buildService(stubs);
+
+    await service.syncFromSubscription(subscriptionRow({ id: 'sub-mensuel' }));
+
+    for (const [, , values] of upsertCalls(stubs)) {
+      expect(values).toMatchObject({ isActive: true, expiresAt: plusLoin });
+    }
+  });
+
+  it('aucun abonnement ouvrant le droit : les droits tombent, comme avant', async () => {
+    const stubs = buildStubs();
+    const revolu = subscriptionRow({
+      status: SubscriptionStatus.EXPIRED,
+      currentPeriodEnd: PAST,
+    });
+    stubs.listSubscriptions.mockResolvedValue([revolu]);
+    const service = buildService(stubs);
+
+    await service.syncFromSubscription(revolu);
+
+    for (const [, , values] of upsertCalls(stubs)) {
+      expect(values).toMatchObject({ isActive: false });
+    }
   });
 });

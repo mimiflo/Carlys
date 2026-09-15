@@ -98,6 +98,17 @@ export class SubscriptionsService {
     if (!this.checkout.isConfigured) {
       throw new ServiceUnavailableException('Le paiement n’est pas configuré.');
     }
+    // Déjà Premium : on n'ouvre PAS un second paiement. Rien n'empêchait un
+    // membre à jour d'arriver ici — l'écran lui montrait encore les offres —
+    // et il se retrouvait avec deux abonnements facturés en parallèle chez
+    // deux fournisseurs possibles, sans qu'aucun écran ne sache lequel
+    // présenter. Changer de formule ou résilier passe par le portail, qui
+    // sait le faire sans doubler la facture.
+    if (await this.entitlements.hasEntitlement(userId, 'premium_exercises')) {
+      throw new ConflictException(
+        'Cet abonnement est déjà actif. Gère-le depuis « Mon abonnement ».',
+      );
+    }
 
     const customerId = await this.subscriptions.stripeCustomerIdOf(userId);
     const url = await this.checkout.createSession({
