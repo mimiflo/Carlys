@@ -724,6 +724,16 @@ model Subscription {
   /// Client chez le fournisseur (Stripe : `cus_…`), appris par webhook :
   /// réutilisé au prochain paiement, requis pour le portail de gestion.
   externalCustomerId     String?
+  /// Date d'ÉMISSION du dernier événement appliqué, telle que le fournisseur
+  /// l'a datée (Stripe `created`, RevenueCat `event_timestamp_ms`) — pas la
+  /// date de réception. C'est la garde contre le rembobinage : les webhooks
+  /// n'arrivent pas dans l'ordre d'émission (réessais, parallélisme côté
+  /// fournisseur), et l'écriture était inconditionnelle. Un
+  /// `customer.subscription.updated` émis AVANT un renouvellement mais livré
+  /// APRÈS écrasait la période à jour par l'ancienne, et coupait l'accès d'un
+  /// membre qui venait de payer. `null` : aucun événement daté appliqué
+  /// encore — la garde laisse alors passer, faute de pouvoir comparer.
+  lastEventAt            DateTime?
   createdAt              DateTime           @default(now())
   updatedAt              DateTime           @updatedAt
 

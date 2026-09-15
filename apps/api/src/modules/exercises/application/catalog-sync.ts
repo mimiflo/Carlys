@@ -22,6 +22,13 @@ export interface CatalogSyncSummary {
   readonly muscleGroups: number;
   readonly equipment: number;
   readonly exercises: number;
+  /**
+   * Exercices présents dans le code mais SUPPRIMÉS par l'administration :
+   * leur contenu a été mis à jour, leur publication non. Compté pour que
+   * l'exploitant le voie plutôt que de le deviner — un écart durable entre
+   * le code et le catalogue servi mérite d'être su.
+   */
+  readonly keptDeleted: number;
 }
 
 export function mustGet(map: Map<string, string>, key: string): string {
@@ -56,15 +63,28 @@ export async function syncCatalog(prisma: PrismaClient): Promise<CatalogSyncSumm
     (await prisma.equipment.findMany()).map((equipment) => [equipment.slug, equipment.id]),
   );
 
+  let keptDeleted = 0;
+
   for (const exercise of EXERCISES) {
-    const data = {
+    // `isPublished` ne fait PLUS partie du contenu, et c'est tout l'objet du
+    // correctif.
+    //
+    // La suppression d'un exercice par le back-office est DOUCE et repose
+    // entièrement sur ce drapeau : `softDeleteExercise` pose `deletedAt` et
+    // met `isPublished` à false, et c'est ce dernier qui fait tout le travail
+    // — le catalogue mobile, le coach et les modèles filtrent sur lui, aucune
+    // de ces requêtes ne connaît `deletedAt`. Un `update` qui forçait
+    // `isPublished: true` remettait donc l'exercice en ligne. Et ce n'est pas
+    // une commande rare : le chargement du catalogue est l'étape 5/7 de
+    // CHAQUE déploiement. Une suppression décidée par l'administration tenait
+    // jusqu'au déploiement suivant, sans que rien ne le dise.
+    const contenu = {
       name: exercise.name,
       description: exercise.description,
       instructions: exercise.instructions,
       difficulty: exercise.difficulty,
       type: exercise.type,
       isPremium: exercise.isPremium ?? false,
-      isPublished: true,
       tags: exercise.tags,
     };
     // UNE TRANSACTION PAR EXERCICE, et c'est le point important.
@@ -95,10 +115,25 @@ export async function syncCatalog(prisma: PrismaClient): Promise<CatalogSyncSumm
     // attente de verrou.
     await prisma.$transaction(
       async (tx: Prisma.TransactionClient) => {
+        // Lu DANS la transaction : entre la lecture et l'écriture, un admin
+        // pourrait supprimer l'exercice, et la republication reviendrait par
+        // la fenêtre.
+        const existant = await tx.exercise.findUnique({
+          where: { slug: exercise.slug },
+          select: { deletedAt: true },
+        });
+        const supprime = existant !== null && existant.deletedAt !== null;
+        if (supprime) {
+          keptDeleted += 1;
+        }
+
         const { id } = await tx.exercise.upsert({
           where: { slug: exercise.slug },
-          update: data,
-          create: { slug: exercise.slug, ...data },
+          // Sur un exercice supprimé : le contenu se met à jour — il servira
+          // si l'administration le restaure — mais la publication reste ce
+          // qu'elle a décidé.
+          update: supprime ? contenu : { ...contenu, isPublished: true },
+          create: { slug: exercise.slug, ...contenu, isPublished: true },
         });
 
         // Liens muscles/équipements reconstruits à chaque passage (idempotent
@@ -136,5 +171,6 @@ export async function syncCatalog(prisma: PrismaClient): Promise<CatalogSyncSumm
     muscleGroups: MUSCLE_GROUPS.length,
     equipment: EQUIPMENT.length,
     exercises: EXERCISES.length,
+    keptDeleted,
   };
 }

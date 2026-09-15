@@ -53,6 +53,14 @@ Montrer un bouton d'achat qui échouerait est pire que de ne pas en montrer.
 4. Stripe encaisse, puis appelle `POST /api/v1/webhooks/stripe` — **signé**,
    **idempotent** (journal `SubscriptionEvent`).
 5. Le webhook crée l'abonnement et le droit. `/entitlements` change.
+   Si la projection échoue pour une raison qui peut guérir — produit encore
+   absent du catalogue, base indisponible — l'API répond **5xx** et Stripe
+   réémet : c'est le seul mécanisme de rattrapage, et il est sans effet de
+   bord (un événement journalisé mais non traité est retraité à la
+   re-livraison). Une charge utile inexploitable, elle, est acquittée 200 et
+   journalisée : la réémettre rendrait le même échec.
+   Un événement plus **ancien** que le dernier appliqué est ignoré — voir
+   `lastEventAt` dans `docs/database/schema.md`.
 6. Stripe renvoie le navigateur vers `${PUBLIC_APP_URL}/abonnement/merci`
    (ou `/abonnement` si le paiement est abandonné) : deux pages publiques
    statiques de l'application Next.js (`apps/admin`, groupe de routes

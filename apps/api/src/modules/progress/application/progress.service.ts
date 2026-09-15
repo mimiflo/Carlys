@@ -104,8 +104,8 @@ export class ProgressService {
     const timeZone = safeTimeZone(await this.progress.userTimeZone(userId));
 
     const [totals, buckets] = await Promise.all([
-      this.progress.periodTotals(userId, from),
-      this.progress.volumeBuckets(userId, from, period, timeZone),
+      this.progress.periodTotals(userId, from, to),
+      this.progress.volumeBuckets(userId, from, to, period, timeZone),
     ]);
 
     return {

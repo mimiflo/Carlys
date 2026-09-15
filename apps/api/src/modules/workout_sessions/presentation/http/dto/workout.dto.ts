@@ -13,12 +13,14 @@ import {
   IsString,
   IsUUID,
   Max,
+  MaxDate,
   MaxLength,
   Min,
   MinLength,
   ValidateNested,
 } from 'class-validator';
 import { DEFAULT_PAGE_SIZE, MAX_PAGE_SIZE } from '@carlys/shared-config';
+import { nowWithClockSkew } from '../../../../../common/validators/clock-skew';
 
 /**
  * Série PRÉVUE transmise au lancement d'une séance issue d'un modèle.
@@ -110,9 +112,10 @@ export class CreateWorkoutSessionDto {
   @MaxLength(WORKOUT_LIMITS.notesMax)
   notes?: string;
 
-  @ApiProperty({ description: 'Début de séance, UTC (ISO 8601)' })
+  @ApiProperty({ description: 'Début de séance, UTC (ISO 8601) — pas dans le futur' })
   @Type(() => Date)
   @IsDate()
+  @MaxDate(nowWithClockSkew, { message: 'La date de début de séance est dans le futur.' })
   startedAt!: Date;
 
   @ApiPropertyOptional({

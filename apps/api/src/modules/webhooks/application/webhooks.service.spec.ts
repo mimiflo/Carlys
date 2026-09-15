@@ -28,7 +28,9 @@ function buildStubs(): Stubs {
         planId: 'plan-premium',
         plan: { slug: 'premium' },
       }),
-      upsertSubscription: jest.fn().mockResolvedValue({ id: 'sub-1', userId: USER_ID }),
+      upsertSubscription: jest
+        .fn()
+        .mockResolvedValue({ subscription: { id: 'sub-1', userId: USER_ID }, stale: false }),
       recordEvent: jest
         .fn()
         .mockResolvedValue({ created: true, event: { id: 'event-1', processedAt: null } }),
@@ -51,7 +53,7 @@ function buildService(
       return secrets.revenueCat;
     },
   };
-  const logger = { error: jest.fn() };
+  const logger = { error: jest.fn(), warn: jest.fn() };
   return new WebhooksService(
     stubs.repository as unknown as SubscriptionsRepository,
     stubs.entitlements as unknown as EntitlementsService,
@@ -60,11 +62,17 @@ function buildService(
   );
 }
 
-function stripeBody(overrides: Record<string, unknown> = {}): Buffer {
+/**
+ * `created` (date d'ÉMISSION) est au niveau de l'événement, pas de l'objet :
+ * le passer dans `overrides` le rendrait invisible à la garde d'ordre. D'où
+ * le second paramètre.
+ */
+function stripeBody(overrides: Record<string, unknown> = {}, created?: number): Buffer {
   return Buffer.from(
     JSON.stringify({
       id: 'evt_1',
       type: 'customer.subscription.created',
+      ...(created === undefined ? {} : { created }),
       data: {
         object: {
           id: 'sub_ext_1',
@@ -139,20 +147,94 @@ describe('WebhooksService', () => {
     expect(stubs.repository.upsertSubscription).not.toHaveBeenCalled();
   });
 
-  it('produit inconnu : échec JOURNALISÉ sur l’événement, accusé de réception quand même', async () => {
+  it('produit inconnu : journalisé ET 503, pour que le fournisseur réémette', async () => {
+    // C'est LE cas où quelqu'un a payé : un tarif créé chez Stripe avant
+    // d'être chargé en base, ou une étape de catalogue ratée au déploiement.
+    // Le 200 d'avant laissait ce compte gratuit pour toujours — rien ne
+    // rejouait, et `processingError` n'était lu par personne.
     const stubs = buildStubs();
     stubs.repository.findProduct.mockResolvedValue(null);
     const service = buildService(stubs);
     const body = stripeBody();
+
+    await expect(service.handleStripe(body, signedHeader(body))).rejects.toThrow(
+      ServiceUnavailableException,
+    );
+
+    expect(stubs.repository.markEventFailed).toHaveBeenCalledWith(
+      'event-1',
+      expect.stringContaining('price_carlys_premium_monthly'),
+    );
+    expect(stubs.entitlements.syncFromSubscription).not.toHaveBeenCalled();
+  });
+
+  it('charge utile inexploitable : 200, car la réémettre rendrait le même échec', async () => {
+    // L'autre versant de la règle, et la raison pour laquelle le 503 n'est
+    // pas universel : `metadata.userId` absent n'est pas une panne
+    // passagère. Stripe réémettrait le MÊME corps, trois jours durant, pour
+    // rien.
+    const stubs = buildStubs();
+    const service = buildService(stubs);
+    const body = stripeBody({ metadata: {} });
 
     const ack = await service.handleStripe(body, signedHeader(body));
 
     expect(ack).toEqual({ received: true });
     expect(stubs.repository.markEventFailed).toHaveBeenCalledWith(
       'event-1',
-      expect.stringContaining('price_carlys_premium_monthly'),
+      expect.stringContaining('metadata.userId'),
     );
-    expect(stubs.entitlements.syncFromSubscription).not.toHaveBeenCalled();
+    expect(stubs.repository.upsertSubscription).not.toHaveBeenCalled();
+  });
+
+  it('la date d’ÉMISSION est transmise au dépôt, pas celle de réception', async () => {
+    // Sans elle, le dépôt ne peut rien ordonner : la garde est désarmée dès
+    // l'appelant. L'horodatage de la signature ne convient pas — il est
+    // refait à chaque tentative d'envoi.
+    const stubs = buildStubs();
+    const service = buildService(stubs);
+    const emission = 1_750_000_000;
+    const body = stripeBody({}, emission);
+
+    await service.handleStripe(body, signedHeader(body));
+
+    expect(stubs.repository.upsertSubscription).toHaveBeenCalledWith(
+      expect.objectContaining({ eventAt: new Date(emission * 1_000) }),
+    );
+  });
+
+  it('sans date d’émission, l’événement passe : eventAt vaut null', async () => {
+    // Refuser un corps sans `created` fermerait la porte à un fournisseur
+    // qui ne la date pas. Faute de pouvoir comparer, on applique.
+    const stubs = buildStubs();
+    const service = buildService(stubs);
+    const body = stripeBody();
+
+    await service.handleStripe(body, signedHeader(body));
+
+    expect(stubs.repository.upsertSubscription).toHaveBeenCalledWith(
+      expect.objectContaining({ eventAt: null }),
+    );
+  });
+
+  it('événement périmé : droits recalculés quand même, sur l’état COURANT', async () => {
+    // Un événement ignoré reste un événement TRAITÉ : la ligne n'a pas
+    // bougé, mais les droits se recalculent depuis elle et l'événement est
+    // marqué traité — sans quoi le fournisseur le réémettrait sans fin.
+    const stubs = buildStubs();
+    stubs.repository.upsertSubscription.mockResolvedValue({
+      subscription: { id: 'sub-1', userId: USER_ID },
+      stale: true,
+    });
+    const service = buildService(stubs);
+    const body = stripeBody({}, 1_700_000_000);
+
+    const ack = await service.handleStripe(body, signedHeader(body));
+
+    expect(ack).toEqual({ received: true });
+    expect(stubs.entitlements.syncFromSubscription).toHaveBeenCalled();
+    expect(stubs.repository.markEventProcessed).toHaveBeenCalledWith('event-1', 'sub-1');
+    expect(stubs.repository.markEventFailed).not.toHaveBeenCalled();
   });
 
   it('RevenueCat : Bearer invalide → 401 ; EXPIRATION projette un statut expiré', async () => {
@@ -177,6 +259,29 @@ describe('WebhooksService', () => {
     await service.handleRevenueCat(body, `Bearer ${SECRET}`);
     expect(stubs.repository.upsertSubscription).toHaveBeenCalledWith(
       expect.objectContaining({ userId: USER_ID, status: 'EXPIRED' }),
+    );
+  });
+
+  it('RevenueCat : event_timestamp_ms sert de date d’émission', async () => {
+    const stubs = buildStubs();
+    const service = buildService(stubs);
+    const emission = 1_755_000_000_000;
+    const body = Buffer.from(
+      JSON.stringify({
+        event: {
+          id: 'rc_2',
+          type: 'RENEWAL',
+          app_user_id: USER_ID,
+          product_id: 'carlys_premium_monthly',
+          event_timestamp_ms: emission,
+        },
+      }),
+    );
+
+    await service.handleRevenueCat(body, `Bearer ${SECRET}`);
+
+    expect(stubs.repository.upsertSubscription).toHaveBeenCalledWith(
+      expect.objectContaining({ eventAt: new Date(emission) }),
     );
   });
 });

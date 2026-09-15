@@ -1,0 +1,21 @@
+-- Date d'ÉMISSION du dernier événement de facturation appliqué à l'abonnement,
+-- telle que le fournisseur l'a datée (Stripe `created`, RevenueCat
+-- `event_timestamp_ms`) — et non la date de réception.
+--
+-- Les webhooks n'arrivent pas dans l'ordre d'émission : un réessai après une
+-- panne réseau, ou le parallélisme du fournisseur, suffit à livrer un
+-- événement ancien APRÈS un plus récent. La projection écrivait sans rien
+-- comparer : l'ancien écrasait alors la période à jour, et l'accès d'un membre
+-- qui venait de payer se coupait jusqu'au prochain événement.
+--
+-- NULL sur les lignes existantes, volontairement : aucune date d'émission
+-- n'est connue pour les événements déjà appliqués, et l'inventer (createdAt,
+-- updatedAt — des dates de RÉCEPTION) ferait refuser à tort les prochains
+-- événements légitimement plus anciens que leur propre réception. La garde
+-- laisse donc passer le premier événement daté de chaque abonnement, puis
+-- compare à partir de là.
+--
+-- Migration écrite à la main, alignée sur les conventions Prisma.
+
+-- AlterTable
+ALTER TABLE "Subscription" ADD COLUMN "lastEventAt" TIMESTAMP(3);

@@ -555,7 +555,22 @@ fournisseurs.
   `externalCustomerId` nullable (client chez le fournisseur, Stripe `cus_…`,
   appris par webhook — migration `20260906120000_subscription_stripe_customer` :
   réutilisé au prochain paiement et requis par le portail de gestion
-  `POST /subscriptions/portal`).
+  `POST /subscriptions/portal`),
+  `lastEventAt` nullable (migration `20260915120000_subscription_event_ordering`).
+- **`lastEventAt` est la garde contre le rembobinage.** C'est la date
+  d'**émission** du dernier événement appliqué, telle que le fournisseur l'a
+  datée (Stripe `created`, RevenueCat `event_timestamp_ms`) — jamais sa date
+  de réception. Les webhooks n'arrivent pas dans l'ordre d'émission : un
+  réessai après une coupure, ou le parallélisme du fournisseur, suffit à
+  livrer un événement ancien après un plus récent, et l'écriture était
+  inconditionnelle. Un `customer.subscription.updated` émis **avant** un
+  renouvellement mais livré **après** réécrivait la période à jour avec
+  l'ancienne : l'accès d'un membre qui venait de payer se coupait jusqu'au
+  prochain événement, soit un mois. Un événement strictement plus ancien est
+  désormais **ignoré** (pas une erreur : les droits sont recalculés depuis
+  l'état courant et l'événement est marqué traité). `null` — les lignes
+  d'avant la migration, et tout fournisseur qui ne date pas ses événements —
+  laisse passer, faute de pouvoir comparer.
 - Relations : n–1 `User`, n–1 `SubscriptionPlan` ; 1–n `SubscriptionEvent`.
 - Index : `(user_id, status)`.
 
@@ -571,6 +586,17 @@ domaine.
   établie).
 - Traitement en transaction : insertion de l'événement → mise à jour de
   `Subscription` → recalcul des `UserEntitlement`.
+- **`processedAt` à `null` signifie « à rejouer », et la réponse HTTP est ce
+  qui déclenche le rejeu.** Le service répondait 200 à tout échec de
+  projection, ce qui confond *reçu* et *appliqué* : rien d'autre ne rejouait
+  (aucune tâche planifiée), et `processingError` n'était lu par aucun écran.
+  Un paiement encaissé dont la projection échouait laissait le compte gratuit,
+  définitivement et sans un mot. Désormais : un échec qui peut guérir tout
+  seul — produit absent du catalogue, base indisponible — répond **5xx**, et
+  le fournisseur réémet (le rejeu est sans effet de bord, l'événement non
+  traité étant retraité) ; un échec **définitif** — charge utile inexploitable,
+  `metadata.userId` absent — répond 200, puisque la réémettre rendrait le même
+  échec.
 
 ### `UserEntitlement`
 Source de vérité **serveur** des droits effectifs d'un utilisateur, matérialisée

@@ -18,9 +18,7 @@ import {
   Min,
   ValidateNested,
 } from 'class-validator';
-
-const trimmed = ({ value }: { value: unknown }): unknown =>
-  typeof value === 'string' ? value.trim() : value;
+import { trimmed } from '../../../../../common/transforms/trimmed';
 
 /** Série prévue : des CIBLES facultatives, jamais des mesures. */
 export class PlannedSetDto {

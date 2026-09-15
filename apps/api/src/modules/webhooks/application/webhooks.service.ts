@@ -18,6 +18,7 @@ import {
   type StripeEvent,
   stripeEventSchema,
 } from './webhook-payloads';
+import { PermanentWebhookError } from './webhook-errors';
 import { verifyStripeSignature } from './stripe-signature.util';
 
 export interface WebhookAck {
@@ -78,9 +79,20 @@ export class WebhooksService {
   }
 
   /**
-   * Journalise puis traite. Un échec de traitement est enregistré sur
-   * l'événement (retraitable en rejouant le webhook) mais répond 200 :
-   * le fournisseur n'a pas à réémettre un événement bien reçu.
+   * Journalise puis traite.
+   *
+   * La RÉPONSE décide de la suite : Stripe et RevenueCat réémettent tant
+   * qu'ils n'ont pas reçu un 2xx. Un échec qui peut guérir tout seul répond
+   * donc 5xx et sera rejoué — l'événement reste journalisé avec
+   * `processedAt` à `null`, et la re-livraison le retraite, chemin déjà écrit
+   * et déjà sûr. Seul un échec définitif répond 200 : voir
+   * [PermanentWebhookError] pour ce que « définitif » recouvre exactement.
+   *
+   * L'ancienne version répondait 200 à tout, au motif que « le fournisseur
+   * n'a pas à réémettre un événement bien reçu » — ce qui confond reçu et
+   * APPLIQUÉ. Rien d'autre ne rejouait, et `processingError` n'était lu par
+   * personne : un paiement encaissé dont la projection échouait laissait le
+   * compte gratuit, définitivement et sans un mot.
    */
   private async ingest(
     provider: PaymentProvider,
@@ -104,10 +116,22 @@ export class WebhooksService {
       await this.subscriptions.markEventProcessed(event.id, subscriptionId);
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
+      // Journalisé AVANT de décider de la réponse : quelle que soit la suite,
+      // la cause reste lisible sur l'événement.
       await this.subscriptions.markEventFailed(event.id, message);
+      if (error instanceof PermanentWebhookError) {
+        this.logger.error(
+          { provider, externalEventId, eventType, err: error },
+          'Webhook inexploitable — journalisé, accusé de réception : le rejeu rendrait le même échec',
+        );
+        return { received: true };
+      }
       this.logger.error(
         { provider, externalEventId, eventType, err: error },
-        'Échec de traitement du webhook — journalisé, retraitable par rejeu',
+        'Échec de traitement du webhook — 5xx rendu pour que le fournisseur réémette',
+      );
+      throw new ServiceUnavailableException(
+        'Événement reçu mais non appliqué — réémettre (le rejeu est sans effet de bord).',
       );
     }
     return { received: true };
@@ -120,14 +144,19 @@ export class WebhooksService {
     const object = event.data.object;
     const userId = object.metadata?.['userId'];
     if (userId === undefined || !UUID_PATTERN.test(userId)) {
-      throw new Error('metadata.userId absent ou invalide dans l’événement Stripe.');
+      throw new PermanentWebhookError(
+        'metadata.userId absent ou invalide dans l’événement Stripe.',
+      );
     }
     const priceId = object.items?.data[0]?.price.id;
     if (priceId === undefined) {
-      throw new Error('Aucun produit (price) dans l’événement Stripe.');
+      throw new PermanentWebhookError('Aucun produit (price) dans l’événement Stripe.');
     }
     const product = await this.subscriptions.findProduct(PaymentProvider.STRIPE, priceId);
     if (product === null) {
+      // PAS définitif, et c'est le cas dangereux : un tarif créé chez Stripe
+      // avant d'être chargé en base, ou une étape de catalogue ratée au
+      // déploiement. Le rejeu réussira dès que la base aura rattrapé.
       throw new Error(`Produit Stripe inconnu : ${priceId}.`);
     }
 
@@ -135,7 +164,7 @@ export class WebhooksService {
       event.type === 'customer.subscription.deleted'
         ? mapStripeStatus('canceled')
         : mapStripeStatus(object.status);
-    const subscription = await this.subscriptions.upsertSubscription({
+    const { subscription, stale } = await this.subscriptions.upsertSubscription({
       userId,
       planId: product.planId,
       provider: PaymentProvider.STRIPE,
@@ -146,7 +175,9 @@ export class WebhooksService {
       cancelAtPeriodEnd: object.cancel_at_period_end ?? false,
       trialEndsAt: secondsToDate(object.trial_end),
       externalCustomerId: object.customer ?? null,
+      eventAt: secondsToDate(event.created),
     });
+    this.logIfStale(stale, PaymentProvider.STRIPE, event.id, subscription.id);
     await this.entitlements.syncFromSubscription(subscription);
     return subscription.id;
   }
@@ -158,22 +189,25 @@ export class WebhooksService {
       return null; // Type d'événement non suivi : accusé de réception simple.
     }
     if (!UUID_PATTERN.test(event.app_user_id)) {
-      throw new Error('app_user_id RevenueCat invalide (UUID utilisateur attendu).');
+      throw new PermanentWebhookError(
+        'app_user_id RevenueCat invalide (UUID utilisateur attendu).',
+      );
     }
     if (event.product_id === undefined) {
-      throw new Error('product_id absent de l’événement RevenueCat.');
+      throw new PermanentWebhookError('product_id absent de l’événement RevenueCat.');
     }
     const product = await this.subscriptions.findProduct(
       PaymentProvider.REVENUECAT,
       event.product_id,
     );
     if (product === null) {
+      // Rattrapable, comme côté Stripe : le catalogue peut rattraper.
       throw new Error(`Produit RevenueCat inconnu : ${event.product_id}.`);
     }
 
     const expiresAt =
       typeof event.expiration_at_ms === 'number' ? new Date(event.expiration_at_ms) : null;
-    const subscription = await this.subscriptions.upsertSubscription({
+    const { subscription, stale } = await this.subscriptions.upsertSubscription({
       userId: event.app_user_id,
       planId: product.planId,
       provider: PaymentProvider.REVENUECAT,
@@ -185,9 +219,33 @@ export class WebhooksService {
       trialEndsAt: event.period_type === 'TRIAL' ? expiresAt : null,
       // Les magasins n'ont pas de portail Stripe : rien à retenir ici.
       externalCustomerId: null,
+      eventAt:
+        typeof event.event_timestamp_ms === 'number' ? new Date(event.event_timestamp_ms) : null,
     });
+    this.logIfStale(stale, PaymentProvider.REVENUECAT, event.id, subscription.id);
     await this.entitlements.syncFromSubscription(subscription);
     return subscription.id;
+  }
+
+  /**
+   * Un événement périmé n'est ni une erreur ni un silence : il est TRACÉ.
+   * Sans cette ligne, une inversion d'ordre répétée — signe d'un vrai
+   * problème chez le fournisseur ou d'un réessai en boucle — resterait
+   * invisible, la garde faisant simplement son office sans le dire.
+   */
+  private logIfStale(
+    stale: boolean,
+    provider: PaymentProvider,
+    externalEventId: string,
+    subscriptionId: string,
+  ): void {
+    if (!stale) {
+      return;
+    }
+    this.logger.warn(
+      { provider, externalEventId, subscriptionId },
+      'Webhook plus ancien que le dernier appliqué — ignoré, droits recalculés sur l’état courant',
+    );
   }
 
   private parse<T>(

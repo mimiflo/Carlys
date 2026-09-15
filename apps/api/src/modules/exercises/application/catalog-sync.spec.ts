@@ -32,29 +32,56 @@ interface Panne {
   readonly occurrence: number;
 }
 
-function fauxPrisma(panne?: Panne): {
+/** Ce que `exercise.upsert` a reçu — pour lire la publication écrite. */
+interface Upsert {
+  readonly slug: string;
+  readonly update: Record<string, unknown>;
+  readonly create: Record<string, unknown>;
+}
+
+function fauxPrisma(
+  panne?: Panne,
+  /** Slugs que l'administration a SUPPRIMÉS en base (suppression douce). */
+  supprimes: ReadonlySet<string> = new Set(),
+): {
   client: PrismaClient;
   traces: Trace[];
+  upserts: Upsert[];
   transactions: number;
   transactionsAnnulees: number;
 } {
   const traces: Trace[] = [];
+  const upserts: Upsert[] = [];
   const etat = { transactions: 0, annulees: 0 };
   const compteur = new Map<string, number>();
 
   const ecriture = (appel: string, dansTransaction: boolean) => {
-    return jest.fn(() => {
+    return jest.fn((args?: Record<string, unknown>) => {
       const rang = (compteur.get(appel) ?? 0) + 1;
       compteur.set(appel, rang);
       if (panne !== undefined && panne.appel === appel && panne.occurrence === rang) {
         return Promise.reject(new Error(`panne simulée sur ${appel}`));
       }
       traces.push({ appel, dansTransaction });
+      if (appel === 'exercise.upsert' && args !== undefined) {
+        upserts.push({
+          slug: (args['where'] as { slug: string }).slug,
+          update: args['update'] as Record<string, unknown>,
+          create: args['create'] as Record<string, unknown>,
+        });
+      }
       return Promise.resolve(
         appel === 'exercise.upsert' ? { id: `id-${traces.length}` } : { count: 0 },
       );
     });
   };
+
+  /** L'état en base : supprimé (deletedAt posé) ou non. */
+  const lectureExercice = jest.fn((args: { where: { slug: string } }) =>
+    Promise.resolve(
+      supprimes.has(args.where.slug) ? { deletedAt: new Date('2026-09-01T00:00:00Z') } : null,
+    ),
+  );
 
   const modeles = (dansTransaction: boolean) => ({
     muscleGroup: {
@@ -69,7 +96,10 @@ function fauxPrisma(panne?: Panne): {
         Promise.resolve(EQUIPMENT.map((e) => ({ id: `eq-${e.slug}`, slug: e.slug }))),
       ),
     },
-    exercise: { upsert: ecriture('exercise.upsert', dansTransaction) },
+    exercise: {
+      upsert: ecriture('exercise.upsert', dansTransaction),
+      findUnique: lectureExercice,
+    },
     exerciseMuscle: {
       deleteMany: ecriture('exerciseMuscle.deleteMany', dansTransaction),
       createMany: ecriture('exerciseMuscle.createMany', dansTransaction),
@@ -101,6 +131,7 @@ function fauxPrisma(panne?: Panne): {
   return {
     client: client as unknown as PrismaClient,
     traces,
+    upserts,
     get transactions() {
       return etat.transactions;
     },
@@ -120,9 +151,42 @@ describe('syncCatalog', () => {
       muscleGroups: MUSCLE_GROUPS.length,
       equipment: EQUIPMENT.length,
       exercises: EXERCISES.length,
+      keptDeleted: 0,
     });
     // Une transaction par exercice, ni plus ni moins.
     expect(faux.transactions).toBe(EXERCISES.length);
+  });
+
+  it('un exercice SUPPRIMÉ par l’administration n’est pas republié', async () => {
+    // Le défaut : la suppression du back-office est douce et tient
+    // entièrement au drapeau `isPublished` — le catalogue mobile, le coach et
+    // les modèles filtrent sur lui, personne ne connaît `deletedAt`. Un
+    // `update` qui forçait `isPublished: true` remettait donc l'exercice en
+    // ligne, à l'étape 5/7 de CHAQUE déploiement.
+    const supprime = EXERCISES[0]?.slug ?? '';
+    const faux = fauxPrisma(undefined, new Set([supprime]));
+
+    const resume = await syncCatalog(faux.client);
+
+    expect(resume.keptDeleted).toBe(1);
+    const ecrit = faux.upserts.find((u) => u.slug === supprime);
+    expect(ecrit?.update).not.toHaveProperty('isPublished');
+    // Le contenu, lui, se met à jour : il servira si l'admin le restaure.
+    expect(ecrit?.update).toHaveProperty('name', EXERCISES[0]?.name);
+    // La création, elle, publie toujours — un exercice absent de la base
+    // n'a jamais été supprimé par personne.
+    expect(ecrit?.create).toHaveProperty('isPublished', true);
+  });
+
+  it('un exercice VIVANT est publié, comme avant', async () => {
+    // La contre-épreuve : sans elle, une garde qui refuserait de publier
+    // QUOI QUE CE SOIT passerait le test précédent.
+    const faux = fauxPrisma();
+
+    await syncCatalog(faux.client);
+
+    const ecrit = faux.upserts.find((u) => u.slug === EXERCISES[0]?.slug);
+    expect(ecrit?.update).toHaveProperty('isPublished', true);
   });
 
   it('ne reconstruit AUCUNE liaison hors transaction', async () => {

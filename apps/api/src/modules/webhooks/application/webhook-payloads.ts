@@ -9,6 +9,14 @@ import { z } from 'zod';
 export const stripeEventSchema = z.object({
   id: z.string().min(1),
   type: z.string().min(1),
+  /**
+   * Date d'ÉMISSION de l'événement, en secondes Unix. À ne pas confondre avec
+   * l'horodatage de l'en-tête `Stripe-Signature`, refait à CHAQUE tentative
+   * d'envoi : lui ne dit rien de l'ordre des événements, celui-ci le dit.
+   * Optionnel par prudence — un corps sans `created` reste traité, sans garde
+   * d'ordre, plutôt que rejeté.
+   */
+  created: z.number().optional(),
   data: z.object({
     object: z.object({
       id: z.string().min(1),
@@ -34,6 +42,8 @@ export const revenueCatEventSchema = z.object({
   event: z.object({
     id: z.string().min(1),
     type: z.string().min(1),
+    /** Date d'ÉMISSION, en millisecondes Unix — voir `created` côté Stripe. */
+    event_timestamp_ms: z.number().optional(),
     app_user_id: z.string().min(1),
     product_id: z.string().optional(),
     original_transaction_id: z.string().optional(),

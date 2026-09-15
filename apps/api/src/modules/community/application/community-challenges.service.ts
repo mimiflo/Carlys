@@ -114,9 +114,11 @@ export class CommunityChallengesService {
     userId: string,
     input: { lessonId: string; answeredOn: string; correct: boolean },
   ): Promise<void> {
-    const created = await this.challenges.createQuizAnswer({ userId, ...input });
-    if (created && input.correct) {
-      await this.challenges.incrementCultureContributions(userId, new Date());
-    }
+    // Les deux écritures partent ENSEMBLE, dans une transaction du dépôt.
+    // Séparées, l'échec de la seconde laissait la première : au rejeu,
+    // l'unicité rendait « déjà comptée », l'incrément n'était jamais retenté,
+    // et la contribution était perdue définitivement — une leçon ne se répond
+    // qu'une fois par jour, il n'y a pas de rattrapage possible.
+    await this.challenges.recordQuizAnswer({ userId, ...input, at: new Date() });
   }
 }

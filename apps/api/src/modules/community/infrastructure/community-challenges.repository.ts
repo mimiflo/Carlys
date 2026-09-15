@@ -92,15 +92,41 @@ export class CommunityChallengesRepository {
 
   // ── Réponses de quiz (défis CULTURE) ────────────────────────────────────
 
-  /** Création idempotente : `false` si cette réponse existait déjà. */
-  async createQuizAnswer(input: {
+  /**
+   * Réponse de quiz ET contribution aux défis CULTURE, dans UNE transaction.
+   *
+   * Rend `false` si cette réponse existait déjà — l'idempotence est portée
+   * par `@@unique([userId, lessonId, answeredOn])`.
+   *
+   * POURQUOI LES DEUX ÉCRITURES SONT LIÉES. Elles étaient séparées, et
+   * l'idempotence rendait la perte DÉFINITIVE : la réponse écrite d'abord,
+   * puis l'incrément — si l'incrément échouait (contention, coupure), la
+   * ligne de réponse restait. Au rejeu, la contrainte d'unicité rendait
+   * `false`, l'incrément n'était jamais retenté, et la contribution était
+   * perdue pour de bon. La voie jumelle (`recordWorkoutCompleted`) n'a pas ce
+   * problème : elle n'écrit qu'une chose, et se rattrape à la séance
+   * suivante. Ici il n'y a pas de « suivante » — une leçon ne se répond
+   * qu'une fois par jour.
+   *
+   * Tout ou rien, donc : l'échec de l'incrément annule la réponse, et le
+   * rejeu refait les deux.
+   */
+  async recordQuizAnswer(input: {
     userId: string;
     lessonId: string;
     answeredOn: string;
     correct: boolean;
+    /** Instant de référence pour la fenêtre des défis. */
+    at: Date;
   }): Promise<boolean> {
+    const { at, ...answer } = input;
     try {
-      await this.prisma.quizAnswer.create({ data: input });
+      await this.prisma.$transaction(async (tx) => {
+        await tx.quizAnswer.create({ data: answer });
+        if (answer.correct) {
+          await this.incrementCultureContributions(answer.userId, at, tx);
+        }
+      });
       return true;
     } catch (error) {
       // P2002 : réponse déjà comptée (utilisateur, leçon, jour local).
@@ -111,9 +137,19 @@ export class CommunityChallengesRepository {
     }
   }
 
-  /** +1 sur tous les défis CULTURE rejoints dont la fenêtre couvre `at`. */
-  async incrementCultureContributions(userId: string, at: Date): Promise<void> {
-    await this.prisma.challengeParticipation.updateMany({
+  /**
+   * +1 sur tous les défis CULTURE rejoints dont la fenêtre couvre `at`.
+   *
+   * `client` permet de l'exécuter DANS la transaction de `recordQuizAnswer`
+   * plutôt qu'à côté ; sans argument, il travaille hors transaction, comme
+   * avant.
+   */
+  async incrementCultureContributions(
+    userId: string,
+    at: Date,
+    client: Prisma.TransactionClient | PrismaService = this.prisma,
+  ): Promise<void> {
+    await client.challengeParticipation.updateMany({
       where: {
         userId,
         challenge: { kind: 'CULTURE', startsAt: { lte: at }, endsAt: { gte: at } },

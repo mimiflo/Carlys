@@ -62,12 +62,12 @@ export class WorkoutSetsService {
       return presentSet(existing);
     }
 
-    const exerciseName = await this.resolveExerciseName(input);
+    const { exerciseId, exerciseName } = await this.resolveExercise(input);
 
     const created = await this.workouts.createSet({
       id: input.id,
       sessionId: session.id,
-      exerciseId: input.exerciseId ?? null,
+      exerciseId,
       exerciseName,
       position: input.position,
       kind: input.kind ?? WorkoutSetKind.NORMAL,
@@ -157,20 +157,42 @@ export class WorkoutSetsService {
   }
 
   /**
+   * À quel exercice la série se rattache — identifiant ET nom, décidés
+   * ENSEMBLE.
+   *
    * Le nom du catalogue fait foi ; à défaut, celui transmis par l'appareil.
    * Sans l'un ni l'autre, la série n'a pas de sujet et la requête est refusée.
+   *
+   * POURQUOI L'IDENTIFIANT SUIT LE NOM. `exerciseId` part dans une colonne à
+   * VRAIE clé étrangère (`Exercise?` avec `onDelete: SetNull`), et le DTO
+   * n'exige qu'un UUID bien formé — jamais qu'il existe. L'ancienne version
+   * ne choisissait que le nom et laissait passer l'identifiant tel quel : un
+   * UUID inconnu — appareil resté hors ligne pendant qu'un exercice
+   * disparaissait du catalogue, exactement le cas que l'offline-first
+   * provoque — levait un P2003 que rien ne rattrapait, rendu en 500
+   * `INTERNAL_ERROR`. La file de synchronisation, elle, ne rejoue jamais un
+   * 5xx indéfiniment : la série finissait « épuisée ».
+   *
+   * Le module savait déjà faire, pour le PLAN de séance : « un `exerciseId`
+   * inconnu ou dépublié dégrade la prévision en exercice LIBRE (clé étrangère
+   * nulle, nom dénormalisé conservé) au lieu de faire échouer la requête :
+   * une séance ne se perd jamais à cause du catalogue ». Une série vaut au
+   * moins autant qu'une prévision — c'est le travail réellement fait.
    */
-  private async resolveExerciseName(input: CreateSetInput): Promise<string> {
+  private async resolveExercise(
+    input: CreateSetInput,
+  ): Promise<{ exerciseId: string | null; exerciseName: string }> {
     if (input.exerciseId !== undefined) {
       const name = await this.workouts.exercisePublishedName(input.exerciseId);
       if (name !== null) {
-        return name;
+        return { exerciseId: input.exerciseId, exerciseName: name };
       }
     }
     const fallback = input.exerciseName?.trim();
     if (fallback === undefined || fallback.length === 0) {
       throw new BadRequestException('exerciseId inconnu et exerciseName absent.');
     }
-    return fallback;
+    // Le catalogue ne reconnaît pas cet identifiant : la série devient LIBRE.
+    return { exerciseId: null, exerciseName: fallback };
   }
 }

@@ -326,6 +326,7 @@ describe('ProgressService', () => {
       expect(stubs.volumeBuckets).toHaveBeenCalledWith(
         USER,
         expect.any(Date),
+        expect.any(Date),
         'week',
         'America/Montreal',
       );
@@ -341,7 +342,13 @@ describe('ProgressService', () => {
 
       await service.overview(USER, 'month');
 
-      expect(stubs.volumeBuckets).toHaveBeenCalledWith(USER, expect.any(Date), 'month', 'UTC');
+      expect(stubs.volumeBuckets).toHaveBeenCalledWith(
+        USER,
+        expect.any(Date),
+        expect.any(Date),
+        'month',
+        'UTC',
+      );
     });
   });
 });

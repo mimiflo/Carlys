@@ -16,7 +16,7 @@ interface Stubs {
   leaveChallenge: jest.Mock;
   challengeStats: jest.Mock;
   incrementSportContributions: jest.Mock;
-  createQuizAnswer: jest.Mock;
+  recordQuizAnswer: jest.Mock;
   incrementCultureContributions: jest.Mock;
 }
 
@@ -31,7 +31,7 @@ function buildStubs(): Stubs {
     leaveChallenge: jest.fn().mockResolvedValue(undefined),
     challengeStats: jest.fn().mockResolvedValue(null),
     incrementSportContributions: jest.fn().mockResolvedValue(undefined),
-    createQuizAnswer: jest.fn().mockResolvedValue(true),
+    recordQuizAnswer: jest.fn().mockResolvedValue(true),
     incrementCultureContributions: jest.fn().mockResolvedValue(undefined),
   };
 }
@@ -164,33 +164,23 @@ describe('CommunityChallengesService — défis du mois, création paresseuse', 
 describe('CommunityChallengesService — réponses de quiz (défis CULTURE)', () => {
   const answer = { lessonId: 'lecon-dos', answeredOn: '2026-08-11', correct: true };
 
-  it('une première réponse JUSTE contribue aux défis culturels', async () => {
+  it('les deux écritures partent ENSEMBLE, jamais l’une puis l’autre', async () => {
+    // Le service décidait lui-même d'incrémenter APRÈS l'écriture de la
+    // réponse. Un échec entre les deux laissait la réponse seule, et
+    // l'unicité rendait la perte définitive : au rejeu, « déjà comptée »,
+    // l'incrément jamais retenté. Le choix appartient désormais au dépôt,
+    // qui peut les tenir dans une transaction ; ce que le service doit
+    // garantir, c'est de ne PAS les séparer.
     const stubs = buildStubs();
     const service = buildService(stubs);
 
     await service.recordQuizAnswer(ME, answer);
 
-    expect(stubs.createQuizAnswer).toHaveBeenCalledWith({ userId: ME, ...answer });
-    expect(stubs.incrementCultureContributions).toHaveBeenCalledTimes(1);
-  });
-
-  it('un rejeu (réponse déjà comptée) ne contribue pas deux fois', async () => {
-    const stubs = buildStubs();
-    stubs.createQuizAnswer.mockResolvedValue(false);
-    const service = buildService(stubs);
-
-    await service.recordQuizAnswer(ME, answer);
-
-    expect(stubs.incrementCultureContributions).not.toHaveBeenCalled();
-  });
-
-  it('une réponse fausse est enregistrée mais ne contribue pas', async () => {
-    const stubs = buildStubs();
-    const service = buildService(stubs);
-
-    await service.recordQuizAnswer(ME, { ...answer, correct: false });
-
-    expect(stubs.createQuizAnswer).toHaveBeenCalled();
+    expect(stubs.recordQuizAnswer).toHaveBeenCalledWith({
+      userId: ME,
+      ...answer,
+      at: expect.any(Date) as Date,
+    });
     expect(stubs.incrementCultureContributions).not.toHaveBeenCalled();
   });
 });

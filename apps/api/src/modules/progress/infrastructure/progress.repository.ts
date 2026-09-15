@@ -45,14 +45,26 @@ export class ProgressRepository {
     return profile?.timezone ?? null;
   }
 
-  async periodTotals(userId: string, from: Date): Promise<PeriodTotals> {
+  /**
+   * Totaux de la période — fenêtre fermée des DEUX côtés.
+   *
+   * La borne haute manquait, alors que le contrat en annonce une (`to` figure
+   * dans la réponse). Les dates de séance viennent de l'horloge du téléphone,
+   * jamais corrigées par le serveur : une séance datée du futur — horloge
+   * déréglée, ou saisie aberrante — passait la borne basse de TOUTES les
+   * périodes, et pour toujours. Le `lte` est la vraie correction ; la borne
+   * de validation qui l'accompagne (`nowWithClockSkew`) n'arrête que
+   * l'absurde, exprès, pour ne pas rejeter une séance légitime dont l'horloge
+   * avance de trois minutes.
+   */
+  async periodTotals(userId: string, from: Date, to: Date): Promise<PeriodTotals> {
     const [sessions, setRows] = await Promise.all([
       this.prisma.workoutSession.aggregate({
         where: {
           userId,
           status: WorkoutSessionStatus.COMPLETED,
           deletedAt: null,
-          startedAt: { gte: from },
+          startedAt: { gte: from, lte: to },
         },
         _count: { id: true },
         _sum: { durationSeconds: true },
@@ -67,6 +79,7 @@ export class ProgressRepository {
           AND w."status" = 'COMPLETED'
           AND w."deletedAt" IS NULL
           AND w."startedAt" >= ${from}
+          AND w."startedAt" <= ${to}
           AND s."deletedAt" IS NULL
       `),
     ]);
@@ -100,6 +113,7 @@ export class ProgressRepository {
   async volumeBuckets(
     userId: string,
     from: Date,
+    to: Date,
     period: ProgressPeriod,
     timeZone: string,
   ): Promise<RawBucket[]> {
@@ -119,6 +133,7 @@ export class ProgressRepository {
         AND w."status" = 'COMPLETED'
         AND w."deletedAt" IS NULL
         AND w."startedAt" >= ${from}
+        AND w."startedAt" <= ${to}
       GROUP BY bucket_start
       ORDER BY bucket_start ASC
     `);

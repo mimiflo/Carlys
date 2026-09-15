@@ -951,6 +951,17 @@ Une limite à connaître, enfin : le chargement **ne dépublie pas**. Un exercic
 ou un matériel retiré du code reste visible en base ; l'effacer est un geste
 d'administration, pas un effet de bord du déploiement.
 
+**La réciproque tient désormais aussi : le chargement ne REPUBLIE pas.** La
+suppression d'un exercice par le back-office est douce et repose entièrement
+sur `isPublished` — le catalogue mobile, le coach et les modèles filtrent sur
+ce drapeau, aucun ne connaît `deletedAt`. Le chargement forçait pourtant
+`isPublished: true` sur chaque exercice du code : une suppression décidée dans
+le back-office tenait jusqu'au déploiement suivant, puis l'exercice revenait
+en ligne, sans que rien ne le dise. Un exercice supprimé voit maintenant son
+**contenu** mis à jour — il servira s'il est restauré — mais sa publication
+reste ce que l'administration a décidé. Quand il y en a, la commande le
+compte : « supprimés respectés : N exercice(s) du code laissé(s) hors ligne ».
+
 Trois échappatoires, pour les cas où l'on veut agir autrement :
 
 ```bash

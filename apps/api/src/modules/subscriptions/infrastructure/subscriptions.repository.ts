@@ -23,6 +23,22 @@ export interface UpsertSubscriptionInput {
   trialEndsAt: Date | null;
   /** Client chez le fournisseur ; `null` quand l'événement ne le porte pas. */
   externalCustomerId: string | null;
+  /**
+   * Date d'ÉMISSION de l'événement chez le fournisseur — pas sa date de
+   * réception. C'est elle qui ordonne les écritures ; `null` quand la charge
+   * utile ne la porte pas, auquel cas l'ordre ne peut pas être établi et
+   * l'écriture passe.
+   */
+  eventAt: Date | null;
+}
+
+export interface UpsertSubscriptionResult {
+  subscription: SubscriptionWithPlan;
+  /**
+   * true : l'événement était plus ANCIEN que le dernier appliqué — la ligne
+   * n'a pas été touchée, et c'est son état courant qui est rendu.
+   */
+  stale: boolean;
 }
 
 export interface RecordEventResult {
@@ -69,27 +85,73 @@ export class SubscriptionsRepository {
     });
   }
 
-  upsertSubscription(input: UpsertSubscriptionInput): Promise<SubscriptionWithPlan> {
-    const { provider, externalSubscriptionId, ...data } = input;
-    return this.prisma.subscription.upsert({
-      where: {
-        provider_externalSubscriptionId: { provider, externalSubscriptionId },
-      },
-      create: { provider, externalSubscriptionId, ...data },
-      update: {
-        planId: data.planId,
-        status: data.status,
-        currentPeriodStart: data.currentPeriodStart,
-        currentPeriodEnd: data.currentPeriodEnd,
-        cancelAtPeriodEnd: data.cancelAtPeriodEnd,
-        trialEndsAt: data.trialEndsAt,
-        // Un client connu ne s'oublie pas : un événement sans `customer`
-        // ne doit pas effacer ce qu'un précédent a appris.
-        ...(data.externalCustomerId === null
-          ? {}
-          : { externalCustomerId: data.externalCustomerId }),
-      },
-      include: { plan: true },
+  /**
+   * Projette l'état d'un abonnement, en REFUSANT les événements périmés.
+   *
+   * L'écriture était inconditionnelle. Or les webhooks n'arrivent pas dans
+   * l'ordre d'émission — un réessai après une coupure réseau, ou simplement
+   * le parallélisme du fournisseur, suffit à livrer un événement ancien après
+   * un plus récent. Un `customer.subscription.updated` émis AVANT un
+   * renouvellement mais livré APRÈS réécrivait la période à jour avec
+   * l'ancienne : l'accès d'un membre qui venait de payer se coupait, jusqu'au
+   * prochain événement — c'est-à-dire un mois.
+   *
+   * Un événement périmé n'est pas une erreur : la ligne est rendue telle
+   * qu'elle est, l'appelant recalcule les droits depuis cet état courant et
+   * marque l'événement traité. Il A été traité — en étant ignoré à bon droit.
+   *
+   * La transaction lit puis écrit. Deux événements du MÊME abonnement traités
+   * exactement en parallèle peuvent encore se marcher dessus (lecture-écriture
+   * non atomique) ; l'écart est alors de quelques millisecondes entre deux
+   * événements quasi simultanés, sans commune mesure avec le rembobinage que
+   * cette garde supprime. Le verrouillage de ligne serait le remède complet ;
+   * il n'est pas payé tant que ce scénario n'est pas observé.
+   */
+  async upsertSubscription(input: UpsertSubscriptionInput): Promise<UpsertSubscriptionResult> {
+    const { provider, externalSubscriptionId, eventAt, ...data } = input;
+    const where = {
+      provider_externalSubscriptionId: { provider, externalSubscriptionId },
+    };
+
+    return this.prisma.$transaction(async (tx) => {
+      const existing = await tx.subscription.findUnique({ where, include: { plan: true } });
+      if (existing === null) {
+        const subscription = await tx.subscription.create({
+          data: { provider, externalSubscriptionId, lastEventAt: eventAt, ...data },
+          include: { plan: true },
+        });
+        return { subscription, stale: false };
+      }
+
+      // Strictement plus ancien : refusé. À égalité, on applique — les
+      // fournisseurs datent à la seconde et émettent plusieurs événements
+      // dans la même, où refuser ferait perdre des mises à jour légitimes.
+      if (eventAt !== null && existing.lastEventAt !== null && eventAt < existing.lastEventAt) {
+        return { subscription: existing, stale: true };
+      }
+
+      const subscription = await tx.subscription.update({
+        where,
+        data: {
+          planId: data.planId,
+          status: data.status,
+          currentPeriodStart: data.currentPeriodStart,
+          currentPeriodEnd: data.currentPeriodEnd,
+          cancelAtPeriodEnd: data.cancelAtPeriodEnd,
+          trialEndsAt: data.trialEndsAt,
+          // Un client connu ne s'oublie pas : un événement sans `customer`
+          // ne doit pas effacer ce qu'un précédent a appris.
+          ...(data.externalCustomerId === null
+            ? {}
+            : { externalCustomerId: data.externalCustomerId }),
+          // Même raison pour la date : un événement non daté ne doit pas
+          // effacer le repère laissé par un événement daté, sans quoi la
+          // garde se désarmerait toute seule.
+          ...(eventAt === null ? {} : { lastEventAt: eventAt }),
+        },
+        include: { plan: true },
+      });
+      return { subscription, stale: false };
     });
   }
 

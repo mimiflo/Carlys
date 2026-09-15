@@ -1,6 +1,6 @@
 import { PROGRAM_MAX_DAYS, PROGRAM_MAX_WEEKS } from '@carlys/api-contracts';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   IsArray,
@@ -15,6 +15,7 @@ import {
   MinLength,
   ValidateNested,
 } from 'class-validator';
+import { trimmed } from '../../../../../common/transforms/trimmed';
 
 export class ListProgramsQuery {
   @ApiPropertyOptional({ description: 'Curseur : id du dernier élément servi' })
@@ -55,6 +56,7 @@ export class SaveProgramDayDto {
 
   @ApiPropertyOptional({ description: 'Déduit du contexte s’il est absent' })
   @IsOptional()
+  @Transform(trimmed)
   @IsString()
   @MinLength(1)
   @MaxLength(120)
@@ -68,7 +70,13 @@ export class SaveProgramDayDto {
 
 /** Corps du `PUT` : l'état COMPLET du programme, pas un correctif. */
 export class SaveProgramDto {
+  // Élagués AVANT d'être mesurés, comme le contrat Zod publié
+  // (`saveProgramRequestSchema` : `z.string().trim().min(1).max(120)`) et
+  // comme le module jumeau des modèles. Sans cela `@MinLength(1)` acceptait
+  // trois espaces — un programme sans nom, enregistré tel quel — et un nom
+  // de 120 caractères suivi d'un espace était refusé pour 121.
   @ApiProperty()
+  @Transform(trimmed)
   @IsString()
   @MinLength(1)
   @MaxLength(120)
@@ -76,6 +84,7 @@ export class SaveProgramDto {
 
   @ApiPropertyOptional({ nullable: true })
   @IsOptional()
+  @Transform(trimmed)
   @IsString()
   @MaxLength(2000)
   description?: string | null;

@@ -82,10 +82,22 @@ describe('Abonnements (e2e)', () => {
       .set('Stripe-Signature', header ?? stripeSign(payload))
       .send(payload);
 
-  const stripeEvent = (eventId: string, type: string, object: Record<string, unknown>): string =>
+  /**
+   * `created` est au niveau de l'ÉVÉNEMENT, pas de l'objet : c'est la date
+   * d'émission, celle qui ordonne les projections. La passer dans `object`
+   * la rendrait invisible à la garde d'ordre — d'où ce quatrième paramètre
+   * plutôt qu'une entrée de plus dans le dernier.
+   */
+  const stripeEvent = (
+    eventId: string,
+    type: string,
+    object: Record<string, unknown>,
+    created?: number,
+  ): string =>
     JSON.stringify({
       id: eventId,
       type,
+      ...(created === undefined ? {} : { created }),
       data: {
         object: {
           id: stripeSubscriptionId,
@@ -276,18 +288,72 @@ describe('Abonnements (e2e)', () => {
     await authed(accessToken).get(`/api/v1/exercises/${premiumExerciseSlug}`).expect(403);
   });
 
-  it('un produit inconnu est journalisé en erreur, sans casser l’accusé de réception', async () => {
+  it('un produit inconnu est journalisé ET rendu en 503, pour que Stripe réémette', async () => {
+    // Le 200 d'avant était le défaut : un tarif créé chez Stripe avant d'être
+    // chargé en base laissait un compte PAYANT sur le plan gratuit, sans
+    // rejeu possible — aucune tâche planifiée, et `processingError` lu par
+    // personne. Le 503 rend au fournisseur la seule chose qui déclenche un
+    // réessai, et le rejeu est sans effet de bord : l'événement est
+    // journalisé avec `processedAt` à null, donc RETRAITÉ à la re-livraison.
     const payload = stripeEvent(`${eventPrefix}-3`, 'customer.subscription.created', {
       status: 'active',
       items: { data: [{ price: { id: 'price_inconnu' } }] },
     });
-    await postStripe(payload).expect(200);
+    await postStripe(payload).expect(503);
 
     const event = await prisma.subscriptionEvent.findFirstOrThrow({
       where: { externalEventId: `${eventPrefix}-3` },
     });
     expect(event.processedAt).toBeNull();
     expect(event.processingError).toContain('price_inconnu');
+  });
+
+  it('une charge utile inexploitable reste en 200 : la réémettre rendrait le même échec', async () => {
+    // L'autre versant de la règle. `metadata.userId` absent n'est pas une
+    // panne passagère : Stripe réémettrait le MÊME corps. Le faire réessayer
+    // trois jours durant n'apporterait rien — on accuse réception et on
+    // journalise.
+    const payload = stripeEvent(`${eventPrefix}-4`, 'customer.subscription.created', {
+      status: 'active',
+      metadata: {},
+    });
+    await postStripe(payload).expect(200);
+
+    const event = await prisma.subscriptionEvent.findFirstOrThrow({
+      where: { externalEventId: `${eventPrefix}-4` },
+    });
+    expect(event.processedAt).toBeNull();
+    expect(event.processingError).toContain('metadata.userId');
+  });
+
+  it('un événement plus ANCIEN ne rembobine pas l’abonnement', async () => {
+    // Le rembobinage grandeur nature : l'abonnement est à jour (période
+    // courante loin devant), puis un événement émis AVANT — mais livré après,
+    // ce qui arrive à chaque réessai du fournisseur — annonce une période
+    // finie. Sans garde d'ordre, il écrasait la période à jour et coupait
+    // l'accès d'un membre qui venait de payer, pour un mois.
+    const maintenant = Math.floor(Date.now() / 1_000);
+    const aJour = stripeEvent(
+      `${eventPrefix}-5`,
+      'customer.subscription.updated',
+      { status: 'active', current_period_end: maintenant + 30 * 24 * 3_600 },
+      maintenant,
+    );
+    await postStripe(aJour).expect(200);
+
+    const perime = stripeEvent(
+      `${eventPrefix}-6`,
+      'customer.subscription.updated',
+      { status: 'canceled', current_period_end: maintenant - 3_600 },
+      maintenant - 7_200, // ÉMIS deux heures plus tôt, livré maintenant
+    );
+    await postStripe(perime).expect(200);
+
+    const me = data<SubscriptionMe>(
+      (await authed(accessToken).get('/api/v1/subscriptions/me').expect(200)).body,
+    );
+    expect(me.isPremium).toBe(true);
+    expect(me.subscription?.status).toBe('ACTIVE');
   });
 
   it('RevenueCat : Bearer requis, achat puis expiration projetés', async () => {

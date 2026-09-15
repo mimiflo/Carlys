@@ -10,8 +10,10 @@ import {
   IsOptional,
   IsUUID,
   Max,
+  MaxDate,
   Min,
 } from 'class-validator';
+import { nowWithClockSkew } from '../../../../../common/validators/clock-skew';
 
 export const PROGRESS_PERIODS = ['week', 'month', 'year'] as const;
 export type ProgressPeriodValue = (typeof PROGRESS_PERIODS)[number];
@@ -38,9 +40,15 @@ export class CreateBodyMetricDto {
   @Max(500)
   value!: number;
 
-  @ApiProperty({ description: 'Date de mesure, UTC (ISO 8601)' })
+  @ApiProperty({ description: 'Date de mesure, UTC (ISO 8601) — pas dans le futur' })
   @Type(() => Date)
   @IsDate()
+  // La date choisit QUELLE mesure fait foi : `latestWeightKg` prend la plus
+  // récente par `measuredAt`, et ce poids alimente tout le rapport
+  // métabolique. Une pesée datée de l'an prochain devenait donc le poids de
+  // référence, définitivement. L'écran mobile l'interdit déjà (« on ne se
+  // pèse pas demain ») ; l'API ne s'appuie pas sur l'écran pour valider.
+  @MaxDate(nowWithClockSkew, { message: 'La date de mesure est dans le futur.' })
   measuredAt!: Date;
 }
 
@@ -62,10 +70,13 @@ export class UpdateBodyMetricDto {
   @Max(500)
   value?: number;
 
-  @ApiPropertyOptional({ description: 'Date de mesure, UTC (ISO 8601)' })
+  @ApiPropertyOptional({ description: 'Date de mesure, UTC (ISO 8601) — pas dans le futur' })
   @IsOptional()
   @Type(() => Date)
   @IsDate()
+  // Même borne qu'à la création : sans elle, la correction rouvrait la porte
+  // que la création vient de fermer.
+  @MaxDate(nowWithClockSkew, { message: 'La date de mesure est dans le futur.' })
   measuredAt?: Date;
 }
 

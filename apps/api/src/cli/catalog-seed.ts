@@ -138,6 +138,15 @@ async function main(argv: readonly string[]): Promise<number> {
         `  groupes musculaires : ${summary.muscleGroups}`,
         `  matériels           : ${summary.equipment}`,
         `  exercices publiés   : ${summary.exercises}`,
+        // Dit seulement quand il y en a : une ligne « 0 » à chaque
+        // déploiement banaliserait l'information au lieu de la signaler.
+        ...(summary.keptDeleted === 0
+          ? []
+          : [
+              `  supprimés respectés : ${summary.keptDeleted} exercice(s) du code laissé(s) hors ligne`,
+              '                        (suppression faite dans le back-office — le contenu a',
+              '                        été mis à jour, la publication non).',
+            ]),
         `  photos              : ${photos}`,
         purged === null
           ? '  cache : Redis injoignable — les listes se rafraîchiront au TTL (≤ 1 h).'
