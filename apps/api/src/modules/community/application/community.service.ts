@@ -176,24 +176,34 @@ export class CommunityService {
     const friends = allFriends.filter((friend) => !hidden.has(friend.userId));
     const now = new Date();
     const from = new Date(now.getTime() - STREAK_WINDOW_DAYS * 24 * 3_600_000);
+    const weekAgo = new Date(now.getTime() - 7 * 24 * 3_600_000);
 
-    return Promise.all(
-      friends.map(async (friend) => {
-        if (!friend.sharesProgress) {
-          // La donnée privée ne QUITTE JAMAIS le serveur.
-          return this.present(friend, null, null);
-        }
-        const starts = await this.community.completedSessionStarts(friend.userId, from);
-        const weekAgo = new Date(now.getTime() - 7 * 24 * 3_600_000);
-        const weekly = starts.filter((start) => start >= weekAgo).length;
-        const streak = computeStreakDays({
-          sessionStarts: starts,
-          timeZone: friend.timezone,
-          now,
-        });
-        return this.present(friend, streak, weekly);
-      }),
+    // UNE requête pour tous les amis, au lieu d'une par ami. La version
+    // précédente les lançait en parallèle : autant de connexions demandées
+    // d'un coup à un pool borné à dix, sur le chemin le plus fréquenté de
+    // l'écran Communauté — qui réclame en même temps le fil, les demandes,
+    // les défis et les blocages. Seuls les comptes qui PARTAGENT leur
+    // progression sont interrogés : la donnée privée ne quitte jamais le
+    // serveur, et ce filtre-là est une règle, pas une optimisation.
+    const partageurs = friends.filter((friend) => friend.sharesProgress);
+    const parCompte = await this.community.completedSessionStartsByUser(
+      partageurs.map((friend) => friend.userId),
+      from,
     );
+
+    return friends.map((friend) => {
+      if (!friend.sharesProgress) {
+        return this.present(friend, null, null);
+      }
+      const starts = parCompte.get(friend.userId) ?? [];
+      const weekly = starts.filter((start) => start >= weekAgo).length;
+      const streak = computeStreakDays({
+        sessionStarts: starts,
+        timeZone: friend.timezone,
+        now,
+      });
+      return this.present(friend, streak, weekly);
+    });
   }
 
   private present(

@@ -135,18 +135,44 @@ export class CommunityRepository {
 
   // ── Statistiques partagées ──────────────────────────────────────────────
 
-  /** Débuts des séances terminées des 60 derniers jours (assez pour la série). */
-  async completedSessionStarts(userId: string, from: Date): Promise<Date[]> {
+  /**
+   * Débuts des séances terminées des 60 derniers jours (assez pour la série),
+   * pour PLUSIEURS comptes à la fois.
+   *
+   * Une requête par ami était un N+1 sur le chemin le plus fréquenté de
+   * l'écran Communauté : `listFriends` les lançait toutes EN PARALLÈLE
+   * (`Promise.all`), c'est-à-dire N connexions demandées d'un coup à un pool
+   * borné à dix. Quelques amis suffisaient à faire attendre les autres
+   * requêtes de la même page — le fil, les demandes, les défis, les blocages,
+   * que l'écran réclame en même temps. Une seule requête, quel que soit le
+   * nombre d'amis.
+   *
+   * Rend une carte `userId → débuts`, ordonnée par compte. Un compte sans
+   * séance n'y figure pas : l'appelant lit un tableau vide, pas `undefined`.
+   */
+  async completedSessionStartsByUser(userIds: string[], from: Date): Promise<Map<string, Date[]>> {
+    const parCompte = new Map<string, Date[]>();
+    if (userIds.length === 0) {
+      return parCompte;
+    }
     const sessions = await this.prisma.workoutSession.findMany({
       where: {
-        userId,
+        userId: { in: userIds },
         status: 'COMPLETED',
         deletedAt: null,
         startedAt: { gte: from },
       },
-      select: { startedAt: true },
+      select: { userId: true, startedAt: true },
     });
-    return sessions.map((session) => session.startedAt);
+    for (const session of sessions) {
+      const deja = parCompte.get(session.userId);
+      if (deja === undefined) {
+        parCompte.set(session.userId, [session.startedAt]);
+      } else {
+        deja.push(session.startedAt);
+      }
+    }
+    return parCompte;
   }
 
   // ── Fil d'encouragements ────────────────────────────────────────────────

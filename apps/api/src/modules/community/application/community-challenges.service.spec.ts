@@ -5,7 +5,6 @@ import { type CommunityChallengesRepository } from '../infrastructure/community-
 import { CommunityChallengesService } from './community-challenges.service';
 
 const ME = 'utilisateur-moi';
-const FRIEND = 'utilisateur-ami';
 
 interface Stubs {
   countForMonth: jest.Mock;
@@ -63,13 +62,9 @@ describe('CommunityChallengesService — défis collectifs', () => {
   it('la progression est collective, bornée à 1', async () => {
     const stubs = buildStubs();
     stubs.listOpenChallenges.mockResolvedValue([
-      {
-        ...challenge,
-        participations: [
-          { userId: ME, contribution: 8 },
-          { userId: FRIEND, contribution: 7 },
-        ],
-      },
+      // Le dépôt agrège désormais en base : le service reçoit les trois
+      // scalaires, il ne parcourt plus une liste de participants.
+      { ...challenge, totalContribution: 15, participants: 2, joined: true },
     ]);
     const service = buildService(stubs);
 
@@ -82,7 +77,9 @@ describe('CommunityChallengesService — défis collectifs', () => {
 
   it('un objectif nul ne divise pas par zéro', async () => {
     const stubs = buildStubs();
-    stubs.listOpenChallenges.mockResolvedValue([{ ...challenge, target: 0, participations: [] }]);
+    stubs.listOpenChallenges.mockResolvedValue([
+      { ...challenge, target: 0, totalContribution: 0, participants: 0, joined: false },
+    ]);
     const service = buildService(stubs);
 
     const [presented] = await service.listChallenges(ME);

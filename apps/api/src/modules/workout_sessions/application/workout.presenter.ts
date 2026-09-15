@@ -5,7 +5,10 @@ import {
   type WorkoutSet as WorkoutSetContract,
 } from '@carlys/api-contracts';
 import { type WorkoutSessionPlanItem, type WorkoutSet } from '@prisma/client';
-import { type SessionWithSets } from '../infrastructure/workouts.repository';
+import {
+  type SessionSummaryRow,
+  type SessionWithSets,
+} from '../infrastructure/workouts.repository';
 
 export function presentSet(set: WorkoutSet): WorkoutSetContract {
   return {
@@ -26,7 +29,7 @@ export function presentSet(set: WorkoutSet): WorkoutSetContract {
   };
 }
 
-export function presentSessionSummary(session: SessionWithSets): WorkoutSessionSummary {
+export function presentSessionSummary(session: SessionSummaryRow): WorkoutSessionSummary {
   const totalVolumeKg = session.sets.reduce((total, set) => {
     if (set.reps === null || set.weightKg === null) {
       return total;

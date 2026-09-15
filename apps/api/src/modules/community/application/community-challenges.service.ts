@@ -7,17 +7,17 @@ import {
   CommunityChallengesRepository,
 } from '../infrastructure/community-challenges.repository';
 
-function presentChallenge(challenge: ChallengeWithStats, userId: string): ChallengeContract {
-  const total = challenge.participations.reduce((sum, p) => sum + p.contribution, 0);
+function presentChallenge(challenge: ChallengeWithStats): ChallengeContract {
   return {
     id: challenge.id,
     kind: challenge.kind,
     title: challenge.title,
     description: challenge.description,
     target: challenge.target,
-    progress: challenge.target <= 0 ? 0 : Math.min(1, total / challenge.target),
-    participants: challenge.participations.length,
-    joined: challenge.participations.some((p) => p.userId === userId),
+    progress:
+      challenge.target <= 0 ? 0 : Math.min(1, challenge.totalContribution / challenge.target),
+    participants: challenge.participants,
+    joined: challenge.joined,
     endsAt: challenge.endsAt.toISOString(),
   };
 }
@@ -34,8 +34,8 @@ export class CommunityChallengesService {
   async listChallenges(userId: string): Promise<ChallengeContract[]> {
     const now = new Date();
     await this.ensureMonthlyChallenges(now);
-    const challenges = await this.challenges.listOpenChallenges(now);
-    return challenges.map((challenge) => presentChallenge(challenge, userId));
+    const challenges = await this.challenges.listOpenChallenges(now, userId);
+    return challenges.map(presentChallenge);
   }
 
   /**
@@ -82,11 +82,11 @@ export class CommunityChallengesService {
   }
 
   private async challengeOf(userId: string, challengeId: string): Promise<ChallengeContract> {
-    const challenge = await this.challenges.challengeStats(challengeId);
+    const challenge = await this.challenges.challengeStats(challengeId, userId);
     if (challenge === null) {
       throw new NotFoundException('Défi introuvable.');
     }
-    return presentChallenge(challenge, userId);
+    return presentChallenge(challenge);
   }
 
   /**

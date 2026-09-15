@@ -16,6 +16,17 @@ export type MessageWithProposal = Prisma.CoachMessageGetPayload<{
   include: { proposal: { include: { items: true } } };
 }>;
 
+/**
+ * La proposition d'un message, séries dans l'ordre de l'écran.
+ * `satisfies` plutôt qu'une annotation : l'annotation effacerait le type
+ * littéral, et Prisma ne saurait plus que `items` est chargé.
+ */
+const PROPOSITION_ORDONNEE = {
+  proposal: {
+    include: { items: { orderBy: [{ exercisePosition: 'asc' }, { setPosition: 'asc' }] } },
+  },
+} satisfies Prisma.CoachMessageInclude;
+
 /** Accès Prisma du coach — et de lui seul. */
 @Injectable()
 export class CoachRepository {
@@ -33,12 +44,33 @@ export class CoachRepository {
     });
   }
 
-  async findConversation(userId: string, id: string): Promise<ConversationWithMessages | null> {
-    return this.prisma.coachConversation.findFirst({
+  /**
+   * Un fil et ses messages, du plus ancien au plus récent.
+   *
+   * `messageLimit` ne garde que les N DERNIERS. Le chemin chaud — envoyer un
+   * message — n'a besoin que de ceux-là : l'historique transmis au modèle est
+   * plafonné à vingt tours, et le fil, lui, n'a aucun plafond. Relire des
+   * centaines de messages, leurs propositions et les séries de chaque
+   * proposition pour en garder vingt, à chaque envoi, c'était payer le passé
+   * entier à chaque phrase.
+   *
+   * Sans limite, tout le fil : c'est ce que l'écran de conversation demande,
+   * et il a raison de le demander.
+   */
+  async findConversation(
+    userId: string,
+    id: string,
+    messageLimit?: number,
+  ): Promise<ConversationWithMessages | null> {
+    const conversation = await this.prisma.coachConversation.findFirst({
       where: { id, userId, deletedAt: null },
       include: {
         messages: {
-          orderBy: { createdAt: 'asc' },
+          // Les N DERNIERS se prennent en ordre décroissant puis se
+          // remettent à l'endroit — `take` sur un tri croissant rendrait les
+          // N premiers, c'est-à-dire le début du fil.
+          orderBy: { createdAt: messageLimit === undefined ? 'asc' : 'desc' },
+          ...(messageLimit === undefined ? {} : { take: messageLimit }),
           include: {
             proposal: {
               include: {
@@ -49,6 +81,47 @@ export class CoachRepository {
         },
       },
     });
+    if (conversation !== null && messageLimit !== undefined) {
+      conversation.messages.reverse();
+    }
+    return conversation;
+  }
+
+  /**
+   * Un message de CE fil, avec la réponse d'assistant qui le suit
+   * immédiatement — ou `null` si l'identifiant n'appartient pas à ce fil.
+   *
+   * Le rejeu se cherchait auparavant dans le fil chargé en mémoire. Depuis
+   * que ce chargement est borné, un message plus ancien que la fenêtre n'y
+   * serait plus trouvé : le service le prendrait pour un message NEUF,
+   * brûlerait un tour de quota, rappellerait le modèle, puis échouerait à
+   * l'écrire (identifiant déjà pris). Chercher par identifiant, sur une clé
+   * primaire, coûte moins cher que la fenêtre qu'on vient d'économiser et ne
+   * dépend plus de sa taille.
+   */
+  async findMessageWithReply(
+    conversationId: string,
+    messageId: string,
+  ): Promise<{ message: MessageWithProposal; reply: MessageWithProposal | null } | null> {
+    const message = await this.prisma.coachMessage.findFirst({
+      where: { id: messageId, conversationId },
+      include: PROPOSITION_ORDONNEE,
+    });
+    if (message === null) {
+      return null;
+    }
+    // « Immédiatement après » se lit sur la date, comme le faisait le
+    // parcours du tableau : le premier message postérieur, et seulement s'il
+    // vient de l'assistant.
+    const suivant = await this.prisma.coachMessage.findFirst({
+      where: { conversationId, createdAt: { gte: message.createdAt }, id: { not: message.id } },
+      orderBy: { createdAt: 'asc' },
+      include: PROPOSITION_ORDONNEE,
+    });
+    return {
+      message,
+      reply: suivant !== null && suivant.role === CoachMessageRole.ASSISTANT ? suivant : null,
+    };
   }
 
   async listConversations(

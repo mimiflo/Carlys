@@ -13,6 +13,11 @@ export type SessionWithSets = WorkoutSession & {
   planItems: WorkoutSessionPlanItem[];
 };
 
+/** Une séance vue par l'historique — voir [SUMMARY_SETS]. */
+export type SessionSummaryRow = WorkoutSession & {
+  sets: Pick<WorkoutSet, 'reps' | 'weightKg'>[];
+};
+
 const ACTIVE_SETS = {
   sets: {
     where: { deletedAt: null },
@@ -20,6 +25,23 @@ const ACTIVE_SETS = {
   },
   planItems: {
     orderBy: [{ exercisePosition: 'asc' as const }, { setPosition: 'asc' as const }],
+  },
+};
+
+/**
+ * Ce qu'une ligne d'HISTORIQUE lit d'une séance : le volume et le nombre de
+ * séries, rien d'autre.
+ *
+ * La liste partageait l'include du DÉTAIL. Elle rapatriait donc, pour chaque
+ * séance d'une page, le plan complet — jusqu'à 30 exercices × 20 séries, soit
+ * 600 lignes que le résumé ne regarde jamais — et toutes les colonnes des
+ * séries alors qu'il n'en somme que deux. Le tri des séries est abandonné
+ * lui aussi : une somme et un compte ne dépendent pas de l'ordre.
+ */
+const SUMMARY_SETS = {
+  sets: {
+    where: { deletedAt: null },
+    select: { reps: true as const, weightKg: true as const },
   },
 };
 
@@ -96,10 +118,10 @@ export class WorkoutsRepository {
     });
   }
 
-  listSessionsPage(userId: string, limit: number, cursor?: string): Promise<SessionWithSets[]> {
+  listSessionsPage(userId: string, limit: number, cursor?: string): Promise<SessionSummaryRow[]> {
     return this.prisma.workoutSession.findMany({
       where: { userId, deletedAt: null },
-      include: ACTIVE_SETS,
+      include: SUMMARY_SETS,
       orderBy: [{ startedAt: 'desc' }, { id: 'desc' }],
       take: limit + 1,
       ...(cursor === undefined ? {} : { cursor: { id: cursor }, skip: 1 }),

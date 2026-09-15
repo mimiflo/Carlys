@@ -259,9 +259,23 @@ model AuditLog {
   user      User?      @relation(fields: [userId], references: [id], onDelete: SetNull)
   adminUser AdminUser? @relation(fields: [adminUserId], references: [id], onDelete: SetNull)
 
+  /// La SEULE lecture du journal : `listAuditLogs` pagine sans aucun filtre,
+  /// `ORDER BY "createdAt" DESC, "id" DESC`. Aucun des index d'origine ne
+  /// commençait par `createdAt`, donc aucun ne pouvait la servir : chaque
+  /// page du back-office balayait puis triait une table append-only, jamais
+  /// purgée, alimentée à chaque connexion et à chaque rafraîchissement. Un
+  /// btree se parcourt dans les deux sens : pas besoin de `sort: Desc` ici.
+  @@index([createdAt, id])
+  /// Gardé, et il le mérite — contrairement à ce qu'une lecture rapide
+  /// suggère, ce n'est PAS un index sans requête. La relation est
+  /// `onDelete: SetNull` : supprimer un compte déclenche
+  /// `UPDATE "AuditLog" SET "userId" = NULL WHERE "userId" = $1`. Sans cet
+  /// index, l'effacement d'un compte — un droit, pas une option — balaierait
+  /// tout le journal.
   @@index([userId, createdAt])
-  @@index([action, createdAt])
-  @@index([resourceType, resourceId, createdAt])
+  /// Ajouté pour la même raison, et il manquait : `adminUser` est aussi en
+  /// `onDelete: SetNull`, sans rien pour le servir.
+  @@index([adminUserId])
 }
 
 // ───────────────────── Catalogue d'exercices (Étape 3) ─────────────────────

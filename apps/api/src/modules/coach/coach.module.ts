@@ -6,6 +6,7 @@ import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
 import { WorkoutsModule } from '../workout_sessions/workouts.module';
 import { WorkoutTemplatesModule } from '../workout_templates/workout-templates.module';
 import { CoachQuota } from './application/coach.quota';
+import { CoachAvailability } from './application/coach.availability';
 import { CoachService } from './application/coach.service';
 import { CoachTools } from './application/coach.tools';
 import { COACH_MODEL_PORT } from './domain/coach-model.port';
@@ -34,6 +35,7 @@ import { CoachController } from './presentation/http/coach.controller';
   ],
   controllers: [CoachController],
   providers: [
+    CoachAvailability,
     CoachService,
     CoachTools,
     CoachQuota,

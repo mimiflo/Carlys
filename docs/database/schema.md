@@ -680,16 +680,32 @@ Journal **append-only et immuable** (jamais de `UPDATE`/`DELETE` applicatif) de
 toute action sensible : actions admin, événements de sécurité (révocation de
 famille de sessions, détection de réutilisation de refresh token), attributions
 manuelles d'entitlements.
-- Champs clés : `id`, `actorType` (`admin | user | system`), `actorId`
-  nullable, `action`, `resourceType`, `resourceId` nullable, `requestId`
-  (corrélation directe avec les logs Pino et l'en-tête `x-request-id`),
-  `metadata` (JSON : diff avant/après, contexte — usage légitime), `ip`,
-  `createdAt`.
+- Champs clés : `id`, `actorType` (`USER | ADMIN | SYSTEM`), `userId` et
+  `adminUserId` nullables (l'acteur, selon son type — il n'y a pas de colonne
+  `actorId` unique), `action`, `resourceType` et `resourceId` nullables,
+  `requestId` (corrélation directe avec les logs Pino et l'en-tête
+  `x-request-id`), `metadata` (JSON : diff avant/après, contexte — usage
+  légitime), `ipAddress`, `userAgent`, `createdAt`.
 - Relations : volontairement **sans clé étrangère** vers les ressources
   auditées (le journal doit survivre à leur suppression) ; référence logique
-  par `(resourceType, resourceId)`.
-- Index : `(resource_type, resource_id, created_at DESC)`,
-  `(actor_type, actor_id, created_at DESC)`.
+  par `(resourceType, resourceId)`. Les deux colonnes d'acteur, elles, ont
+  bien une relation, en `onDelete: SetNull` — c'est la seule nuance à
+  « jamais de `UPDATE` applicatif » plus haut : effacer un compte détache ses
+  lignes d'audit au lieu de les supprimer, le journal survit à la personne.
+- Index (migration `20260915130000_audit_log_indexes`) :
+  - `(createdAt, id)` — la SEULE lecture, `listAuditLogs`, pagine sans aucun
+    filtre et trie `("createdAt" DESC, "id" DESC)`. Aucun index ne commençait
+    par `createdAt` : chaque page du back-office balayait puis triait la
+    table entière. Un btree se parcourt dans les deux sens, `DESC` n'a donc
+    pas à figurer dans l'index.
+  - `(userId, createdAt)` et `(adminUserId)` — pour les `SetNull` ci-dessus,
+    pas pour une lecture. Sans eux, effacer un compte balaierait tout le
+    journal.
+  - Il n'y en a pas d'autre, et c'est délibéré : les index sur `action` et
+    `(resourceType, resourceId)` n'avaient AUCUN lecteur — ni filtre au
+    contrat, ni filtre au contrôleur — et se payaient à chaque écriture, sur
+    une table alimentée à chaque connexion. Ils reviendront avec les filtres
+    qui les justifieront.
 
 ---
 

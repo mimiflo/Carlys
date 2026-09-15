@@ -1,10 +1,25 @@
 import { Injectable } from '@nestjs/common';
-import { type ChallengeParticipation, type CommunityChallenge, Prisma } from '@prisma/client';
+import { type CommunityChallenge, Prisma } from '@prisma/client';
 import { PrismaService } from '../../../database/prisma/prisma.service';
 import { type MonthlyChallengeSeed } from '../domain/challenge-catalog';
 
+/**
+ * Un défi et les TROIS scalaires que l'écran en tire — pas la liste de ses
+ * participants.
+ *
+ * Le dépôt rapatriait toutes les participations de tous les défis ouverts
+ * (`include: { participations: … }`), pour n'en calculer qu'une somme, un
+ * compte et un booléen. Un défi collectif est fait pour rassembler tout le
+ * monde : la liste grossit avec la base d'utilisateurs, alors que ce qu'on
+ * en fait ne change pas de taille. L'agrégation se fait donc en base, où
+ * elle coûte un parcours d'index plutôt qu'un transfert.
+ */
 export interface ChallengeWithStats extends CommunityChallenge {
-  participations: Pick<ChallengeParticipation, 'userId' | 'contribution'>[];
+  /** Somme des contributions, tous participants confondus. */
+  totalContribution: number;
+  participants: number;
+  /** L'appelant a-t-il rejoint ce défi ? */
+  joined: boolean;
 }
 
 /** Défis collectifs et réponses de quiz (la source des défis CULTURE). */
@@ -44,13 +59,13 @@ export class CommunityChallengesRepository {
     });
   }
 
-  /** Défis dont la fenêtre n'est pas terminée, avec toutes les contributions. */
-  listOpenChallenges(now: Date): Promise<ChallengeWithStats[]> {
-    return this.prisma.communityChallenge.findMany({
+  /** Défis dont la fenêtre n'est pas terminée, avec leurs totaux agrégés. */
+  async listOpenChallenges(now: Date, userId: string): Promise<ChallengeWithStats[]> {
+    const challenges = await this.prisma.communityChallenge.findMany({
       where: { endsAt: { gte: now } },
       orderBy: { endsAt: 'asc' },
-      include: { participations: { select: { userId: true, contribution: true } } },
     });
+    return this.withStats(challenges, userId);
   }
 
   findChallengeById(id: string): Promise<CommunityChallenge | null> {
@@ -72,10 +87,54 @@ export class CommunityChallengesRepository {
     });
   }
 
-  challengeStats(challengeId: string): Promise<ChallengeWithStats | null> {
-    return this.prisma.communityChallenge.findUnique({
+  async challengeStats(challengeId: string, userId: string): Promise<ChallengeWithStats | null> {
+    const challenge = await this.prisma.communityChallenge.findUnique({
       where: { id: challengeId },
-      include: { participations: { select: { userId: true, contribution: true } } },
+    });
+    if (challenge === null) {
+      return null;
+    }
+    const [avecStats] = await this.withStats([challenge], userId);
+    return avecStats ?? null;
+  }
+
+  /**
+   * Agrège en BASE, en deux requêtes de taille fixe, quel que soit le nombre
+   * de participants : un `groupBy` pour la somme et le compte, une lecture
+   * ciblée pour savoir si l'appelant a rejoint.
+   */
+  private async withStats(
+    challenges: CommunityChallenge[],
+    userId: string,
+  ): Promise<ChallengeWithStats[]> {
+    if (challenges.length === 0) {
+      return [];
+    }
+    const ids = challenges.map((challenge) => challenge.id);
+    const [totaux, miennes] = await Promise.all([
+      this.prisma.challengeParticipation.groupBy({
+        by: ['challengeId'],
+        where: { challengeId: { in: ids } },
+        _sum: { contribution: true },
+        _count: { _all: true },
+      }),
+      this.prisma.challengeParticipation.findMany({
+        where: { challengeId: { in: ids }, userId },
+        select: { challengeId: true },
+      }),
+    ]);
+
+    const parDefi = new Map(totaux.map((ligne) => [ligne.challengeId, ligne]));
+    const rejoints = new Set(miennes.map((ligne) => ligne.challengeId));
+
+    return challenges.map((challenge) => {
+      const ligne = parDefi.get(challenge.id);
+      return {
+        ...challenge,
+        totalContribution: ligne?._sum.contribution ?? 0,
+        participants: ligne?._count._all ?? 0,
+        joined: rejoints.has(challenge.id),
+      };
     });
   }
 

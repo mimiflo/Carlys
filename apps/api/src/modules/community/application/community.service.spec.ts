@@ -24,7 +24,7 @@ interface Stubs {
   findUserIdByEmail: jest.Mock;
   findUserByFriendCode: jest.Mock;
   friendCodeOf: jest.Mock;
-  completedSessionStarts: jest.Mock;
+  completedSessionStartsByUser: jest.Mock;
   listEncouragements: jest.Mock;
   createEncouragement: jest.Mock;
   sharesProgress: jest.Mock;
@@ -45,7 +45,7 @@ function buildStubs(): Stubs {
     findUserIdByEmail: jest.fn().mockResolvedValue(null),
     findUserByFriendCode: jest.fn().mockResolvedValue(null),
     friendCodeOf: jest.fn().mockResolvedValue('AC23DEF4'),
-    completedSessionStarts: jest.fn().mockResolvedValue([]),
+    completedSessionStartsByUser: jest.fn().mockResolvedValue(new Map()),
     listEncouragements: jest.fn().mockResolvedValue([]),
     createEncouragement: jest.fn().mockResolvedValue({}),
     sharesProgress: jest.fn().mockResolvedValue(true),
@@ -334,8 +334,11 @@ describe('CommunityService — confidentialité des statistiques', () => {
         weeklySessions: null,
       },
     ]);
-    // La donnée privée n'est même pas LUE : aucune requête de séances.
-    expect(stubs.completedSessionStarts).not.toHaveBeenCalled();
+    // La donnée privée n'est même pas LUE. Depuis que la lecture est
+    // groupée, « pas lue » ne veut plus dire « aucun appel » mais « pas dans
+    // la liste demandée » : c'est ce qu'on vérifie, et c'est la garantie qui
+    // compte — un identifiant absent de la requête ne peut rien rendre.
+    expect(stubs.completedSessionStartsByUser).toHaveBeenCalledWith([], expect.any(Date));
   });
 
   it('un profil partagé reçoit série et séances de la semaine', async () => {
@@ -349,7 +352,7 @@ describe('CommunityService — confidentialité des statistiques', () => {
       },
     ]);
     const today = new Date();
-    stubs.completedSessionStarts.mockResolvedValue([today]);
+    stubs.completedSessionStartsByUser.mockResolvedValue(new Map([[FRIEND, [today]]]));
     const service = buildService(stubs);
 
     const [friend] = await service.listFriends(ME);

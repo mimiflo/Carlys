@@ -5,29 +5,26 @@ import {
 } from '@carlys/api-contracts';
 import {
   ConflictException,
-  ForbiddenException,
   HttpException,
   HttpStatus,
   Inject,
   Injectable,
   NotFoundException,
-  ServiceUnavailableException,
 } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
-import { AppConfigService } from '../../../config/app-config.service';
-import { EntitlementsService } from '../../subscriptions/application/entitlements.service';
 import { COACH_MODEL_PORT, type CoachModelPort } from '../domain/coach-model.port';
 import {
   type ConversationWithMessages,
   CoachRepository,
   type MessageWithProposal,
 } from '../infrastructure/coach.repository';
+import { CoachAvailability } from './coach.availability';
 import { presentMessage } from './coach.presenter';
 import { COACH_TOOLS, CoachTools } from './coach.tools';
 import { COACH_SYSTEM_PROMPT, carlysProfileBriefing } from './coach.prompt';
 import { CoachQuota } from './coach.quota';
-import { assistantReplyTo, buildHistory, extractExerciseIds, titleFrom } from './coach.turn';
+import { HISTORY_LIMIT, buildHistory, extractExerciseIds, titleFrom } from './coach.turn';
 import { validateProposal } from './proposal.validator';
 
 /**
@@ -40,7 +37,6 @@ export class CoachQuotaExceededError extends HttpException {
   }
 }
 
-const REQUIRED_ENTITLEMENT = 'ai_coaching';
 const CONVERSATIONS_LIMIT = 30;
 /** Même réponse qu'un fil inconnu : ne pas révéler l'existence d'autrui. */
 const CONVERSATION_NOT_FOUND = 'Conversation introuvable.';
@@ -58,14 +54,13 @@ export class CoachService {
     private readonly repository: CoachRepository,
     private readonly tools: CoachTools,
     private readonly quota: CoachQuota,
-    private readonly entitlements: EntitlementsService,
-    private readonly config: AppConfigService,
+    private readonly availability: CoachAvailability,
     @Inject(COACH_MODEL_PORT) private readonly model: CoachModelPort,
     @InjectPinoLogger(CoachService.name) private readonly logger: PinoLogger,
   ) {}
 
   async listConversations(userId: string): Promise<CoachConversationSummary[]> {
-    await this.assertAvailable(userId);
+    await this.availability.assertAvailable(userId);
     const rows = await this.repository.listConversations(userId, CONVERSATIONS_LIMIT);
     return rows.map((row) => ({
       id: row.id,
@@ -76,7 +71,7 @@ export class CoachService {
   }
 
   async createConversation(userId: string, id: string): Promise<CoachConversationSummary> {
-    await this.assertAvailable(userId);
+    await this.availability.assertAvailable(userId);
     await this.repository.ensureConversation(userId, id);
     const conversation = await this.requireConversation(userId, id);
     return {
@@ -88,7 +83,7 @@ export class CoachService {
   }
 
   async conversation(userId: string, id: string): Promise<CoachConversation> {
-    await this.assertAvailable(userId);
+    await this.availability.assertAvailable(userId);
     const conversation = await this.requireConversation(userId, id);
     return {
       id: conversation.id,
@@ -111,18 +106,25 @@ export class CoachService {
     messageId: string,
     content: string,
   ): Promise<CoachReply> {
-    await this.assertAvailable(userId);
+    await this.availability.assertAvailable(userId);
     await this.repository.ensureConversation(userId, conversationId);
-    const conversation = await this.requireConversation(userId, conversationId);
+    // La fenêtre chargée ne sert QUE d'historique pour le modèle, qui est de
+    // toute façon plafonné : inutile de relire tout le passé du fil à chaque
+    // phrase. `+ 1` pour que le message de ce tour, s'il y figure déjà,
+    // n'évince pas un tour utile.
+    const conversation = await this.requireConversation(userId, conversationId, HISTORY_LIMIT + 1);
 
-    const stored = conversation.messages.find((message) => message.id === messageId);
-    if (stored === undefined) {
+    // Le rejeu se cherche par IDENTIFIANT, pas dans la fenêtre : un message
+    // plus ancien qu'elle y serait introuvable, donc pris pour neuf — un tour
+    // de quota brûlé, le modèle rappelé, puis un échec d'écriture.
+    const deja = await this.repository.findMessageWithReply(conversationId, messageId);
+    if (deja === null) {
       // L'identifiant n'est unique que globalement : déjà porté par un AUTRE
       // fil, il n'a rien à faire ici. Vérifié AVANT le compteur (un rejeu
       // invalide ne coûte pas un tour), refusé comme un fil d'autrui : 404.
       await this.assertMessageAddressable(conversationId, messageId);
     } else {
-      const replayed = await this.replay(userId, conversation, stored, content);
+      const replayed = await this.replay(userId, deja.message, deja.reply, content);
       if (replayed !== null) {
         return replayed;
       }
@@ -202,7 +204,7 @@ export class CoachService {
   }
 
   async acceptProposal(userId: string, proposalId: string, sessionId: string): Promise<void> {
-    await this.assertAvailable(userId);
+    await this.availability.assertAvailable(userId);
     const marked = await this.repository.markProposalAccepted(userId, proposalId, sessionId);
     if (!marked) {
       throw new NotFoundException('Proposition introuvable.');
@@ -210,7 +212,7 @@ export class CoachService {
   }
 
   async remainingToday(userId: string): Promise<number> {
-    await this.assertAvailable(userId);
+    await this.availability.assertAvailable(userId);
     return this.quota.remaining(userId);
   }
 
@@ -223,15 +225,14 @@ export class CoachService {
    */
   private async replay(
     userId: string,
-    conversation: ConversationWithMessages,
     stored: MessageWithProposal,
+    reply: MessageWithProposal | null,
     content: string,
   ): Promise<CoachReply | null> {
     if (stored.content !== content) {
       throw new ConflictException('Identifiant de message déjà utilisé.');
     }
-    const reply = assistantReplyTo(conversation.messages, stored);
-    if (reply === undefined) {
+    if (reply === null) {
       return null;
     }
     return {
@@ -260,26 +261,12 @@ export class CoachService {
     return validation.proposal;
   }
 
-  /**
-   * Le coach est-il disponible pour cet utilisateur ?
-   * Coupé globalement ou sans clé → 503. Sans droit → 403. Dans les deux cas,
-   * AVANT toute dépense de jeton.
-   */
-  private async assertAvailable(userId: string): Promise<void> {
-    if (!this.config.coachEnabled || this.config.anthropicApiKey === undefined) {
-      throw new ServiceUnavailableException('Le coach est momentanément indisponible.');
-    }
-    const { entitlements } = await this.entitlements.entitlementsFor(userId);
-    const granted = entitlements.some(
-      (entitlement) => entitlement.key === REQUIRED_ENTITLEMENT && entitlement.isActive,
-    );
-    if (!granted) {
-      throw new ForbiddenException('Le coach est réservé aux abonnés.');
-    }
-  }
-
-  private async requireConversation(userId: string, id: string): Promise<ConversationWithMessages> {
-    const conversation = await this.repository.findConversation(userId, id);
+  private async requireConversation(
+    userId: string,
+    id: string,
+    messageLimit?: number,
+  ): Promise<ConversationWithMessages> {
+    const conversation = await this.repository.findConversation(userId, id, messageLimit);
     if (conversation === null) {
       throw new NotFoundException(CONVERSATION_NOT_FOUND);
     }

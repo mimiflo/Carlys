@@ -3,7 +3,7 @@ import { type MessageWithProposal } from '../infrastructure/coach.repository';
 import { volatileContext } from './coach.prompt';
 
 /** Tours renvoyés au modèle. Au-delà, la compaction serait nécessaire. */
-const HISTORY_LIMIT = 20;
+export const HISTORY_LIMIT = 20;
 const TITLE_MAX_LENGTH = 60;
 
 /**
