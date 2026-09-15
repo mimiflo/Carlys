@@ -143,15 +143,26 @@ export class EntitlementsService {
       : (subscription.currentPeriodEnd ?? subscription.trialEndsAt);
     const source = grants ? (granting[0]?.id ?? subscription.id) : subscription.id;
 
+    // TOUTE décision manuelle est respectée, l'octroi COMME le retrait.
+    //
+    // Le filtre exigeait `isActive` en plus de `sourceSubscriptionId === null` :
+    // seuls les octrois manuels étaient protégés. Un RETRAIT manuel — un admin
+    // qui coupe l'accès d'un compte abusif — portait pourtant la même marque
+    // (`sourceSubscriptionId: null`, `isActive: false`, cf.
+    // `admin-users.repository.ts`), et le premier webhook venu le réécrivait.
+    // La décision de l'administration était annulée en silence, par un
+    // renouvellement de routine.
+    //
+    // Conséquence assumée : un compte dont un admin a retiré le droit ne le
+    // retrouve pas en payant. C'est le propre d'une décision manuelle, et le
+    // back-office est le seul chemin pour la lever.
     const existing = await this.subscriptions.listEntitlements(subscription.userId);
-    const manuallyGranted = new Set(
-      existing
-        .filter((row) => row.sourceSubscriptionId === null && row.isActive)
-        .map((row) => row.entitlementKey),
+    const manuallyDecided = new Set(
+      existing.filter((row) => row.sourceSubscriptionId === null).map((row) => row.entitlementKey),
     );
 
     for (const key of PREMIUM_ENTITLEMENT_KEYS) {
-      if (manuallyGranted.has(key)) {
+      if (manuallyDecided.has(key)) {
         continue;
       }
       await this.subscriptions.upsertEntitlement(subscription.userId, key, {

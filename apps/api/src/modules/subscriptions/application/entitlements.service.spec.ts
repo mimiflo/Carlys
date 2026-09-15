@@ -224,3 +224,42 @@ describe('syncFromSubscription — plusieurs abonnements sur un même compte', (
     }
   });
 });
+
+describe('syncFromSubscription — décisions manuelles de l’administration', () => {
+  it('un RETRAIT manuel survit au webhook suivant', async () => {
+    // L'admin coupe l'accès d'un compte abusif : la ligne porte
+    // `sourceSubscriptionId: null` et `isActive: false`, exactement comme un
+    // octroi manuel porte `null` et `true`. La protection n'écoutait que les
+    // octrois : un simple renouvellement rendait donc l'accès au compte que
+    // l'administration venait d'écarter.
+    const stubs = buildStubs();
+    stubs.listEntitlements.mockResolvedValue([
+      entitlementRow({ isActive: false, sourceSubscriptionId: null }),
+    ]);
+    stubs.listSubscriptions.mockResolvedValue([subscriptionRow()]);
+    const service = buildService(stubs);
+
+    await service.syncFromSubscription(subscriptionRow());
+
+    const touchees = upsertCalls(stubs).map(([, key]) => key);
+    expect(touchees).not.toContain('premium_exercises');
+  });
+
+  it('un OCTROI manuel survit aussi, comme avant', async () => {
+    const stubs = buildStubs();
+    stubs.listEntitlements.mockResolvedValue([
+      entitlementRow({ isActive: true, sourceSubscriptionId: null }),
+    ]);
+    stubs.listSubscriptions.mockResolvedValue([
+      subscriptionRow({ status: SubscriptionStatus.EXPIRED, currentPeriodEnd: PAST }),
+    ]);
+    const service = buildService(stubs);
+
+    await service.syncFromSubscription(
+      subscriptionRow({ status: SubscriptionStatus.EXPIRED, currentPeriodEnd: PAST }),
+    );
+
+    const touchees = upsertCalls(stubs).map(([, key]) => key);
+    expect(touchees).not.toContain('premium_exercises');
+  });
+});

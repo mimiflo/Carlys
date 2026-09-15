@@ -40,6 +40,15 @@ export interface BootstrapArgs {
   readonly role: string;
   readonly displayName: string;
   readonly resetPassword: boolean;
+  /**
+   * `--role` a-t-il été écrit sur la ligne de commande ?
+   *
+   * La distinction n'est pas cosmétique : `role` porte un DÉFAUT
+   * (« superadmin »), et sans ce drapeau une simple réinitialisation de mot
+   * de passe appliquait ce défaut au compte visé — promouvant superadmin un
+   * admin support dont on voulait seulement changer le mot de passe.
+   */
+  readonly roleExplicite: boolean;
 }
 
 export class UsageError extends Error {}
@@ -58,6 +67,7 @@ export function parseArgs(argv: readonly string[]): BootstrapArgs {
   }
 
   let role = 'superadmin';
+  let roleExplicite = false;
   let displayName = '';
   let resetPassword = false;
   for (let i = 0; i < rest.length; i += 1) {
@@ -71,6 +81,7 @@ export function parseArgs(argv: readonly string[]): BootstrapArgs {
           );
         }
         role = value;
+        roleExplicite = true;
         i += 1;
         break;
       }
@@ -95,6 +106,7 @@ export function parseArgs(argv: readonly string[]): BootstrapArgs {
     role,
     displayName: displayName === '' ? (email.data.split('@')[0] ?? email.data) : displayName,
     resetPassword,
+    roleExplicite,
   };
 }
 
@@ -165,11 +177,31 @@ export async function bootstrapAdmin(
           data: { passwordHash, status: 'ACTIVE' },
         });
 
-  await prisma.adminUserRole.upsert({
-    where: { adminUserId_roleId: { adminUserId: admin.id, roleId: role.id } },
-    update: {},
-    create: { adminUserId: admin.id, roleId: role.id },
-  });
+  // LES RÔLES NE SE TOUCHENT PAS À LA LÉGÈRE.
+  //
+  // Deux défauts se combinaient ici. D'abord `--role` porte un défaut,
+  // « superadmin » : réinitialiser le mot de passe d'un admin support sans
+  // préciser de rôle lui appliquait donc ce défaut. Ensuite l'`upsert`
+  // AJOUTAIT le rôle sans retirer les autres : le compte cumulait son rôle
+  // d'origine et superadmin. Une opération de dépannage banale — « remets-lui
+  // un mot de passe » — promouvait ainsi son destinataire.
+  //
+  // Désormais : à la CRÉATION, le rôle demandé (ou le défaut) s'applique ; sur
+  // un compte EXISTANT, les rôles ne bougent que si `--role` a été écrit
+  // explicitement, et ils sont alors REMPLACÉS — c'est ce que « donne-lui ce
+  // rôle » veut dire, et le cumul silencieux n'a jamais été demandé.
+  if (existing === null || args.roleExplicite) {
+    await prisma.$transaction([
+      prisma.adminUserRole.deleteMany({
+        where: { adminUserId: admin.id, roleId: { not: role.id } },
+      }),
+      prisma.adminUserRole.upsert({
+        where: { adminUserId_roleId: { adminUserId: admin.id, roleId: role.id } },
+        update: {},
+        create: { adminUserId: admin.id, roleId: role.id },
+      }),
+    ]);
+  }
   return {
     outcome: existing === null ? 'created' : 'password-reset',
     displayName: admin.displayName,

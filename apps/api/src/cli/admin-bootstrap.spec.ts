@@ -23,6 +23,7 @@ describe('admin-bootstrap — arguments', () => {
       role: 'superadmin',
       displayName: 'ops',
       resetPassword: false,
+      roleExplicite: false,
     });
   });
 
@@ -30,6 +31,17 @@ describe('admin-bootstrap — arguments', () => {
     expect(parseArgs(['a@b.fr', '--role', 'support']).role).toBe('support');
     expect(() => parseArgs(['a@b.fr', '--role', 'dieu'])).toThrow(/--role attend/);
     expect(() => parseArgs(['a@b.fr', '--role'])).toThrow(/--role attend/);
+  });
+
+  it('distingue un rôle DEMANDÉ du rôle par défaut', () => {
+    // La distinction porte une élévation de privilèges. `role` vaut
+    // « superadmin » par défaut : sans ce drapeau, réinitialiser le mot de
+    // passe d'un admin support lui appliquait ce défaut, et l'`upsert`
+    // l'AJOUTAIT à ses rôles existants. Une opération de dépannage banale
+    // promouvait son destinataire superadmin.
+    expect(parseArgs(['a@b.fr', '--reset-password']).roleExplicite).toBe(false);
+    expect(parseArgs(['a@b.fr', '--reset-password']).role).toBe('superadmin');
+    expect(parseArgs(['a@b.fr', '--role', 'support']).roleExplicite).toBe(true);
   });
 
   it('lit le nom d’affichage et le drapeau de réinitialisation', () => {
