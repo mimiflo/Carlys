@@ -48,10 +48,10 @@ class TemplatesHeader extends StatelessWidget {
                   const SizedBox(width: AppSpacing.xxs),
                   Text(
                     'NOUVEAU',
-                    style: AppTypography.labelMono.copyWith(
-                      fontSize: 11,
-                      color: AppColors.primaryLight,
-                    ),
+                    style: AppTypography.resized(
+                      AppTypography.labelMono,
+                      11,
+                    ).copyWith(color: AppColors.primaryLight),
                   ),
                 ],
               ),

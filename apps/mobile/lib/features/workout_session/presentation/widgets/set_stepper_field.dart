@@ -37,11 +37,10 @@ class SetStepperField extends StatelessWidget {
       children: [
         Text(
           label.toUpperCase(),
-          style: AppTypography.labelMono.copyWith(
-            fontSize: 9,
-            letterSpacing: 1.08,
-            color: AppColors.darkTextTertiary,
-          ),
+          style: AppTypography.resized(
+            AppTypography.labelMono,
+            9,
+          ).copyWith(letterSpacing: 1.08, color: AppColors.darkTextTertiary),
         ),
         const SizedBox(height: AppSpacing.xs),
         DecoratedBox(
@@ -68,11 +67,11 @@ class SetStepperField extends StatelessWidget {
                     value,
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: AppTypography.metricL.copyWith(
-                      fontSize: 24,
-                      letterSpacing: -0.72,
-                      color: AppColors.darkTextPrimary,
-                    ),
+                    style: AppTypography.resized(AppTypography.metricL, 24)
+                        .copyWith(
+                          letterSpacing: -0.72,
+                          color: AppColors.darkTextPrimary,
+                        ),
                   ),
                 ),
                 _StepButton(

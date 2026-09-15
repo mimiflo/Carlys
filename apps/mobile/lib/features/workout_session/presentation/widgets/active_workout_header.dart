@@ -63,11 +63,11 @@ class ActiveWorkoutHeader extends StatelessWidget {
                     name.toUpperCase(),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: AppTypography.labelMono.copyWith(
-                      fontSize: 9,
-                      letterSpacing: 1.08,
-                      color: AppColors.darkTextTertiary,
-                    ),
+                    style: AppTypography.resized(AppTypography.labelMono, 9)
+                        .copyWith(
+                          letterSpacing: 1.08,
+                          color: AppColors.darkTextTertiary,
+                        ),
                   ),
               ],
             ),
@@ -155,11 +155,10 @@ class _ElapsedTimerState extends State<_ElapsedTimer> {
     final elapsed = _now.difference(widget.startedAt.toLocal());
     return Text(
       formatChrono(elapsed.inSeconds),
-      style: AppTypography.metricM.copyWith(
-        fontSize: 17,
-        letterSpacing: -0.34,
-        color: AppColors.darkTextPrimary,
-      ),
+      style: AppTypography.resized(
+        AppTypography.metricM,
+        17,
+      ).copyWith(letterSpacing: -0.34, color: AppColors.darkTextPrimary),
       semanticsLabel: 'Durée écoulée',
     );
   }

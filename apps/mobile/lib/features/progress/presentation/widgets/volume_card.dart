@@ -54,11 +54,14 @@ class VolumeCard extends StatelessWidget {
                     Text.rich(
                       TextSpan(
                         text: volume.value,
-                        style: AppTypography.metricL.copyWith(
-                          fontSize: progressCardValueFontSize,
-                          letterSpacing: progressCardValueLetterSpacing,
-                          color: AppColors.darkTextPrimary,
-                        ),
+                        style:
+                            AppTypography.resized(
+                              AppTypography.metricL,
+                              progressCardValueFontSize,
+                            ).copyWith(
+                              letterSpacing: progressCardValueLetterSpacing,
+                              color: AppColors.darkTextPrimary,
+                            ),
                         children: [
                           TextSpan(
                             text: ' ${volume.unit}',
@@ -86,10 +89,10 @@ class VolumeCard extends StatelessWidget {
                 for (final label in labels)
                   Text(
                     label,
-                    style: AppTypography.labelMono.copyWith(
-                      fontSize: 9,
-                      color: AppColors.darkTextTertiary,
-                    ),
+                    style: AppTypography.resized(
+                      AppTypography.labelMono,
+                      9,
+                    ).copyWith(color: AppColors.darkTextTertiary),
                   ),
               ],
             ),

@@ -34,10 +34,10 @@ class RestTimerRow extends StatelessWidget {
               children: [
                 Text(
                   'Repos en cours',
-                  style: AppTypography.subheading.copyWith(
-                    fontSize: 14,
-                    color: AppColors.darkTextPrimary,
-                  ),
+                  style: AppTypography.resized(
+                    AppTypography.subheading,
+                    14,
+                  ).copyWith(color: AppColors.darkTextPrimary),
                 ),
                 const SizedBox(height: AppSpacing.xxs),
                 Text(

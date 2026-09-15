@@ -50,10 +50,10 @@ class AppSectionHeader extends StatelessWidget {
           ],
           Text(
             trailing!.toUpperCase(),
-            style: AppTypography.labelMono.copyWith(
-              fontSize: 11,
-              color: trailingColor,
-            ),
+            style: AppTypography.resized(
+              AppTypography.labelMono,
+              11,
+            ).copyWith(color: trailingColor),
           ),
         ],
       );
@@ -79,10 +79,10 @@ class AppSectionHeader extends StatelessWidget {
         Expanded(
           child: Text(
             title,
-            style: AppTypography.subheading.copyWith(
-              fontSize: 15,
-              color: AppColors.darkTextPrimary,
-            ),
+            style: AppTypography.resized(
+              AppTypography.subheading,
+              15,
+            ).copyWith(color: AppColors.darkTextPrimary),
           ),
         ),
         if (trailingWidget != null) trailingWidget,

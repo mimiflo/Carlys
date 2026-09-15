@@ -146,10 +146,10 @@ class _Stepper extends StatelessWidget {
           child: Text(
             value,
             textAlign: TextAlign.center,
-            style: AppTypography.metric.copyWith(
-              fontSize: 22,
-              color: theme.colorScheme.onSurface,
-            ),
+            style: AppTypography.resized(
+              AppTypography.metric,
+              22,
+            ).copyWith(color: theme.colorScheme.onSurface),
           ),
         ),
         IconButton.filledTonal(

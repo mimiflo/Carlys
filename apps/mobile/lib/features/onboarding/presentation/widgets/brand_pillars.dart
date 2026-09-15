@@ -53,7 +53,7 @@ class _Pillar extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final label = AppTypography.labelMono.copyWith(fontSize: _labelSize);
+    final label = AppTypography.resized(AppTypography.labelMono, _labelSize);
 
     return Container(
       padding: const EdgeInsets.symmetric(

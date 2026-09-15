@@ -86,20 +86,20 @@ class _ProgressTile extends StatelessWidget {
               label.toUpperCase(),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: AppTypography.labelMono.copyWith(
-                fontSize: 9,
-                color: AppColors.darkTextTertiary,
-              ),
+              style: AppTypography.resized(
+                AppTypography.labelMono,
+                9,
+              ).copyWith(color: AppColors.darkTextTertiary),
             ),
             const SizedBox(height: 7),
             Text.rich(
               TextSpan(
                 text: value,
-                style: AppTypography.metricM.copyWith(
-                  fontSize: 22,
-                  letterSpacing: -0.66,
-                  color: AppColors.darkTextPrimary,
-                ),
+                style: AppTypography.resized(AppTypography.metricM, 22)
+                    .copyWith(
+                      letterSpacing: -0.66,
+                      color: AppColors.darkTextPrimary,
+                    ),
                 children: [
                   if (unit != null)
                     TextSpan(

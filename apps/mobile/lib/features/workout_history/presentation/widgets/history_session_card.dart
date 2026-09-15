@@ -65,12 +65,12 @@ class HistorySessionCard extends StatelessWidget {
                       subtitle,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: AppTypography.labelMono.copyWith(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w400,
-                        letterSpacing: 0,
-                        color: AppColors.darkTextTertiary,
-                      ),
+                      style: AppTypography.resized(AppTypography.labelMono, 11)
+                          .copyWith(
+                            fontWeight: FontWeight.w400,
+                            letterSpacing: 0,
+                            color: AppColors.darkTextTertiary,
+                          ),
                     ),
                   ],
                 ),

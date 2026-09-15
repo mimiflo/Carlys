@@ -62,20 +62,20 @@ class TitleSummary extends ConsumerWidget {
                 children: [
                   Text(
                     profile.title.label,
-                    style: AppTypography.title.copyWith(
-                      fontSize: 18,
-                      letterSpacing: -0.36,
-                      color: AppColors.darkTextPrimary,
-                    ),
+                    style: AppTypography.resized(AppTypography.title, 18)
+                        .copyWith(
+                          letterSpacing: -0.36,
+                          color: AppColors.darkTextPrimary,
+                        ),
                   ),
                   const SizedBox(width: AppSpacing.xs + 1),
                   Text(
                     '${opened ? profile.points : '—'} / $maxTotal',
-                    style: AppTypography.labelMono.copyWith(
-                      fontSize: 12,
-                      letterSpacing: 0,
-                      color: AppColors.darkTextTertiary,
-                    ),
+                    style: AppTypography.resized(AppTypography.labelMono, 12)
+                        .copyWith(
+                          letterSpacing: 0,
+                          color: AppColors.darkTextTertiary,
+                        ),
                   ),
                   const Spacer(),
                   const Icon(

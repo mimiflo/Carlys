@@ -97,10 +97,10 @@ class _SetEntryCardState extends State<SetEntryCard> {
         children: [
           Text(
             'Série ${formatThousands(widget.setNumber)}',
-            style: AppTypography.subheading.copyWith(
-              fontSize: 14,
-              color: AppColors.darkTextPrimary,
-            ),
+            style: AppTypography.resized(
+              AppTypography.subheading,
+              14,
+            ).copyWith(color: AppColors.darkTextPrimary),
           ),
           if (_pills().isNotEmpty) ...[
             const SizedBox(height: AppSpacing.xs),

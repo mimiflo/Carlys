@@ -126,11 +126,11 @@ class _Row extends StatelessWidget {
                     children: [
                       Text(
                         entry.label.toUpperCase(),
-                        style: AppTypography.labelMono.copyWith(
-                          fontSize: 9,
-                          letterSpacing: 1.4,
-                          color: AppColors.textMuted,
-                        ),
+                        style: AppTypography.resized(AppTypography.labelMono, 9)
+                            .copyWith(
+                              letterSpacing: 1.4,
+                              color: AppColors.textMuted,
+                            ),
                       ),
                       const SizedBox(height: AppSpacing.xs - 1),
                       Text(

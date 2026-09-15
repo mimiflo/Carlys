@@ -145,10 +145,10 @@ class _WeightRow extends ConsumerWidget {
                     formatRelativeDayMono(entry.measuredAt),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
-                    style: AppTypography.labelMono.copyWith(
-                      fontSize: 11,
-                      color: AppColors.darkTextTertiary,
-                    ),
+                    style: AppTypography.resized(
+                      AppTypography.labelMono,
+                      11,
+                    ).copyWith(color: AppColors.darkTextTertiary),
                   ),
                 ],
               ),

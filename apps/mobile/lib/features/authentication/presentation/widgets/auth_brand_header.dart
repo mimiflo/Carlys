@@ -43,14 +43,14 @@ class AuthBrandHeader extends StatelessWidget {
               children: [
                 Text(
                   'CARLYS',
-                  style: AppTypography.display.copyWith(
-                    fontSize: _wordSize,
-                    height: 1,
-                    letterSpacing: _wordTracking,
-                    fontWeight: FontWeight.w300,
-                    color: AppColors.neutral0,
-                    shadows: AppShadows.brandText,
-                  ),
+                  style: AppTypography.resized(AppTypography.display, _wordSize)
+                      .copyWith(
+                        height: 1,
+                        letterSpacing: _wordTracking,
+                        fontWeight: FontWeight.w300,
+                        color: AppColors.neutral0,
+                        shadows: AppShadows.brandText,
+                      ),
                 ),
                 const SizedBox(height: AppSpacing.xxs),
                 Text(

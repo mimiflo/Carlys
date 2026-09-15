@@ -25,10 +25,10 @@ class AppSettingsGroup extends StatelessWidget {
       children: [
         Text(
           label.toUpperCase(),
-          style: AppTypography.labelMono.copyWith(
-            fontSize: 10,
-            color: AppColors.darkTextTertiary,
-          ),
+          style: AppTypography.resized(
+            AppTypography.labelMono,
+            10,
+          ).copyWith(color: AppColors.darkTextTertiary),
         ),
         const SizedBox(height: AppSpacing.gapTile),
         DecoratedBox(
@@ -129,7 +129,7 @@ class AppSettingsRow extends StatelessWidget {
               value!,
               style:
                   (valueIsMono
-                          ? AppTypography.labelMono.copyWith(fontSize: 12)
+                          ? AppTypography.resized(AppTypography.labelMono, 12)
                           : AppTypography.body.copyWith(fontSize: 12))
                       .copyWith(color: AppColors.darkTextTertiary),
             ),

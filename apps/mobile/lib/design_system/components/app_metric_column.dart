@@ -29,8 +29,7 @@ class AppMetricColumn extends StatelessWidget {
         children: [
           Text(
             label.toUpperCase(),
-            style: AppTypography.labelMono.copyWith(
-              fontSize: 9,
+            style: AppTypography.resized(AppTypography.labelMono, 9).copyWith(
               fontWeight: FontWeight.w400,
               color: AppColors.darkTextTertiary,
             ),

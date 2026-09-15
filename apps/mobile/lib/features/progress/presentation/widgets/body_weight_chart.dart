@@ -86,10 +86,10 @@ class BodyWeightChart extends StatelessWidget {
               for (final label in _axisLabels())
                 Text(
                   label,
-                  style: AppTypography.labelMono.copyWith(
-                    fontSize: 9,
-                    color: AppColors.darkTextTertiary,
-                  ),
+                  style: AppTypography.resized(
+                    AppTypography.labelMono,
+                    9,
+                  ).copyWith(color: AppColors.darkTextTertiary),
                 ),
             ],
           ),

@@ -150,10 +150,10 @@ class _DetailBody extends StatelessWidget {
                       if (set.reps != null) '${set.reps}',
                       if (set.weightKg != null) '${set.weightKg} kg',
                     ].join(' × '),
-                    style: AppTypography.metric.copyWith(
-                      fontSize: 16,
-                      color: theme.colorScheme.onSurface,
-                    ),
+                    style: AppTypography.resized(
+                      AppTypography.metric,
+                      16,
+                    ).copyWith(color: theme.colorScheme.onSurface),
                   ),
                 ],
               ),
@@ -196,10 +196,10 @@ class _Metric extends StatelessWidget {
         children: [
           Text(
             value,
-            style: AppTypography.metric.copyWith(
-              fontSize: 24,
-              color: theme.colorScheme.primary,
-            ),
+            style: AppTypography.resized(
+              AppTypography.metric,
+              24,
+            ).copyWith(color: theme.colorScheme.primary),
           ),
           const SizedBox(height: AppSpacing.xxs),
           Text(label, style: theme.textTheme.bodySmall),

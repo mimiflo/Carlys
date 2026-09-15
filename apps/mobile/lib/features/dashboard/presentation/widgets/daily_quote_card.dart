@@ -60,11 +60,11 @@ class DailyQuoteCard extends StatelessWidget {
                   const SizedBox(height: AppSpacing.sm),
                   Text(
                     'CITATION DU JOUR',
-                    style: AppTypography.labelMono.copyWith(
-                      fontSize: 9,
-                      letterSpacing: 1.4,
-                      color: AppColors.darkTextTertiary,
-                    ),
+                    style: AppTypography.resized(AppTypography.labelMono, 9)
+                        .copyWith(
+                          letterSpacing: 1.4,
+                          color: AppColors.darkTextTertiary,
+                        ),
                   ),
                 ],
               ),

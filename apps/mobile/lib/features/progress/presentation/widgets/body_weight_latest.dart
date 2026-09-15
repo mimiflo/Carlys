@@ -46,11 +46,14 @@ class BodyWeightLatest extends StatelessWidget {
         Text.rich(
           TextSpan(
             text: formatDecimal(entry.value),
-            style: AppTypography.metricL.copyWith(
-              fontSize: progressCardValueFontSize,
-              letterSpacing: progressCardValueLetterSpacing,
-              color: AppColors.darkTextPrimary,
-            ),
+            style:
+                AppTypography.resized(
+                  AppTypography.metricL,
+                  progressCardValueFontSize,
+                ).copyWith(
+                  letterSpacing: progressCardValueLetterSpacing,
+                  color: AppColors.darkTextPrimary,
+                ),
             children: [
               TextSpan(
                 text: ' kg',

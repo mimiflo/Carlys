@@ -185,12 +185,15 @@ class _Label extends StatelessWidget {
       textAlign: TextAlign.center,
       maxLines: 1,
       overflow: TextOverflow.ellipsis,
-      style: AppTypography.subheading.copyWith(
-        fontSize: AppBrandButton._fontSize,
-        color: AppColors.neutral0,
-        fontWeight: FontWeight.w700,
-        letterSpacing: AppBrandButton._tracking,
-      ),
+      style:
+          AppTypography.resized(
+            AppTypography.subheading,
+            AppBrandButton._fontSize,
+          ).copyWith(
+            color: AppColors.neutral0,
+            fontWeight: FontWeight.w700,
+            letterSpacing: AppBrandButton._tracking,
+          ),
     );
     if (trailingIcon == null) return text;
     return Row(

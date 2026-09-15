@@ -50,11 +50,10 @@ class ProfileHeader extends StatelessWidget {
             child: Center(
               child: Text(
                 name.isEmpty ? '?' : name.characters.first.toUpperCase(),
-                style: AppTypography.title.copyWith(
-                  fontSize: 24,
-                  letterSpacing: 0,
-                  color: AppColors.neutral0,
-                ),
+                style: AppTypography.resized(
+                  AppTypography.title,
+                  24,
+                ).copyWith(letterSpacing: 0, color: AppColors.neutral0),
               ),
             ),
           ),
@@ -69,10 +68,10 @@ class ProfileHeader extends StatelessWidget {
                 name.isEmpty ? 'Profil' : name,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-                style: AppTypography.title.copyWith(
-                  fontSize: 21,
-                  color: AppColors.darkTextPrimary,
-                ),
+                style: AppTypography.resized(
+                  AppTypography.title,
+                  21,
+                ).copyWith(color: AppColors.darkTextPrimary),
               ),
               if (email.isNotEmpty) ...[
                 const SizedBox(height: AppSpacing.xxs + 2),
@@ -80,10 +79,10 @@ class ProfileHeader extends StatelessWidget {
                   email.toUpperCase(),
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: AppTypography.labelMono.copyWith(
-                    fontSize: 12,
-                    color: AppColors.darkTextTertiary,
-                  ),
+                  style: AppTypography.resized(
+                    AppTypography.labelMono,
+                    12,
+                  ).copyWith(color: AppColors.darkTextTertiary),
                 ),
               ],
             ],

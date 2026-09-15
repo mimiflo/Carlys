@@ -49,10 +49,10 @@ class AppStatTile extends StatelessWidget {
               label.toUpperCase(),
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: AppTypography.labelMono.copyWith(
-                fontSize: 9,
-                color: AppColors.darkTextTertiary,
-              ),
+              style: AppTypography.resized(
+                AppTypography.labelMono,
+                9,
+              ).copyWith(color: AppColors.darkTextTertiary),
             ),
             const SizedBox(height: 7),
             Text.rich(

@@ -74,11 +74,16 @@ class MacroRow extends StatelessWidget {
   final Color color;
 
   /// Grammes en mono tabulaire, à la taille du label texte (12).
-  static final TextStyle _valueStyle = AppTypography.labelMono.copyWith(
-    fontSize: AppTypography.label.fontSize,
-    letterSpacing: 0,
-    color: AppColors.darkTextSecondary,
-  );
+  ///
+  /// `!` justifié : `AppTypography.label` est une constante du design system
+  /// qui pose toujours `fontSize` ; c'est `TextStyle` qui le déclare
+  /// facultatif, pas nous. L'interlettrage est remis à ZÉRO exprès — les
+  /// chiffres sont déjà tabulaires, les espacer les désalignerait de la
+  /// colonne voisine.
+  static final TextStyle _valueStyle = AppTypography.resized(
+    AppTypography.labelMono,
+    AppTypography.label.fontSize!,
+  ).copyWith(letterSpacing: 0, color: AppColors.darkTextSecondary);
 
   @override
   Widget build(BuildContext context) {

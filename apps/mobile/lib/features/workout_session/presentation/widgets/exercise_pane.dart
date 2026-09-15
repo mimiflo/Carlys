@@ -84,8 +84,7 @@ class ExercisePane extends StatelessWidget {
           const SizedBox(height: AppSpacing.xs),
           Text(
             exercise.name,
-            style: AppTypography.display.copyWith(
-              fontSize: 28,
+            style: AppTypography.resized(AppTypography.display, 28).copyWith(
               height: 1.08,
               letterSpacing: -0.84,
               color: AppColors.darkTextPrimary,

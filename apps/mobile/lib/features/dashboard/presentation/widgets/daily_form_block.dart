@@ -43,11 +43,10 @@ class DailyFormBlock extends StatelessWidget {
           const SizedBox(height: AppSpacing.padCard),
           Text(
             form.headline,
-            style: AppTypography.title.copyWith(
-              fontSize: 20,
-              letterSpacing: -0.6,
-              color: AppColors.darkTextPrimary,
-            ),
+            style: AppTypography.resized(
+              AppTypography.title,
+              20,
+            ).copyWith(letterSpacing: -0.6, color: AppColors.darkTextPrimary),
           ),
           const SizedBox(height: AppSpacing.xs),
           Text(
@@ -141,8 +140,7 @@ class _BandLabels extends StatelessWidget {
                 1 => TextAlign.center,
                 _ => TextAlign.right,
               },
-              style: AppTypography.labelMono.copyWith(
-                fontSize: 9,
+              style: AppTypography.resized(AppTypography.labelMono, 9).copyWith(
                 fontWeight: value == band ? FontWeight.w700 : FontWeight.w500,
                 color: value == band ? AppColors.accent : AppColors.textMuted,
               ),
@@ -177,8 +175,7 @@ class _SessionsFooter extends StatelessWidget {
           children: [
             Text(
               sessions == null ? '—' : '$done',
-              style: AppTypography.metricM.copyWith(
-                fontSize: 17,
+              style: AppTypography.resized(AppTypography.metricM, 17).copyWith(
                 letterSpacing: -0.34,
                 color: AppColors.darkTextPrimary,
               ),

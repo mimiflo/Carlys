@@ -44,11 +44,10 @@ class TodayPrimer extends StatelessWidget {
                   const SizedBox(width: AppSpacing.xs - 1),
                   Text(
                     'AUJOURD’HUI',
-                    style: AppTypography.labelMono.copyWith(
-                      fontSize: 9,
-                      letterSpacing: 1.4,
-                      color: AppColors.textMuted,
-                    ),
+                    style: AppTypography.resized(
+                      AppTypography.labelMono,
+                      9,
+                    ).copyWith(letterSpacing: 1.4, color: AppColors.textMuted),
                   ),
                 ],
               ),

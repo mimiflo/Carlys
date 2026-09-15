@@ -71,10 +71,10 @@ class AppListRow extends StatelessWidget {
                   title,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
-                  style: AppTypography.subheading.copyWith(
-                    fontSize: 14,
-                    color: AppColors.darkTextPrimary,
-                  ),
+                  style: AppTypography.resized(
+                    AppTypography.subheading,
+                    14,
+                  ).copyWith(color: AppColors.darkTextPrimary),
                 ),
                 if (subtitle != null) ...[
                   const SizedBox(height: 5),

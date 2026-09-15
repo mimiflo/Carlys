@@ -47,11 +47,10 @@ class TodayWorkoutHeading extends StatelessWidget {
           title,
           maxLines: 2,
           overflow: TextOverflow.ellipsis,
-          style: AppTypography.title.copyWith(
-            fontSize: 20,
-            letterSpacing: -0.6,
-            color: AppColors.darkTextPrimary,
-          ),
+          style: AppTypography.resized(
+            AppTypography.title,
+            20,
+          ).copyWith(letterSpacing: -0.6, color: AppColors.darkTextPrimary),
         ),
         const SizedBox(height: AppSpacing.xs - 1),
         Text(

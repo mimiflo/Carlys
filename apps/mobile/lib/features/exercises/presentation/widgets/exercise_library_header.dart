@@ -31,10 +31,10 @@ class ExerciseLibraryHeader extends ConsumerWidget {
         Expanded(
           child: Text(
             'Exercices',
-            style: AppTypography.display.copyWith(
-              fontSize: _titleSize,
-              color: AppColors.darkTextPrimary,
-            ),
+            style: AppTypography.resized(
+              AppTypography.display,
+              _titleSize,
+            ).copyWith(color: AppColors.darkTextPrimary),
           ),
         ),
         Semantics(

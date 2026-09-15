@@ -112,11 +112,14 @@ class TodayCell extends StatelessWidget {
                           metric.label.toUpperCase(),
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: AppTypography.labelMono.copyWith(
-                            fontSize: 9,
-                            letterSpacing: 1.4,
-                            color: AppColors.textMuted,
-                          ),
+                          style:
+                              AppTypography.resized(
+                                AppTypography.labelMono,
+                                9,
+                              ).copyWith(
+                                letterSpacing: 1.4,
+                                color: AppColors.textMuted,
+                              ),
                         ),
                       ),
                     ],
@@ -128,11 +131,11 @@ class TodayCell extends StatelessWidget {
                     children: [
                       Text(
                         metric.value,
-                        style: AppTypography.metricM.copyWith(
-                          fontSize: 17,
-                          letterSpacing: -0.34,
-                          color: AppColors.darkTextPrimary,
-                        ),
+                        style: AppTypography.resized(AppTypography.metricM, 17)
+                            .copyWith(
+                              letterSpacing: -0.34,
+                              color: AppColors.darkTextPrimary,
+                            ),
                       ),
                       if (metric.target.isNotEmpty) ...[
                         const SizedBox(width: AppSpacing.xxs),

@@ -91,10 +91,10 @@ class _AppFormRingState extends State<AppFormRing>
                     const SizedBox(height: 2),
                     Text(
                       widget.label.toUpperCase(),
-                      style: AppTypography.labelMono.copyWith(
-                        fontSize: 8,
-                        color: AppColors.darkTextTertiary,
-                      ),
+                      style: AppTypography.resized(
+                        AppTypography.labelMono,
+                        8,
+                      ).copyWith(color: AppColors.darkTextTertiary),
                     ),
                   ],
                 ),

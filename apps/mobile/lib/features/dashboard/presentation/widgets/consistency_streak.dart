@@ -186,11 +186,10 @@ class _DayInitial extends StatelessWidget {
     return Text(
       data?.initial ?? _initials[fallbackIndex],
       textAlign: TextAlign.center,
-      style: AppTypography.labelMono.copyWith(
-        fontSize: 9,
-        fontWeight: weight,
-        color: color,
-      ),
+      style: AppTypography.resized(
+        AppTypography.labelMono,
+        9,
+      ).copyWith(fontWeight: weight, color: color),
     );
   }
 }
