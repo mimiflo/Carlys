@@ -58,41 +58,56 @@ Rôle de chaque dossier racine :
 | `common/` | Transverse HTTP : filtre d'exceptions, intercepteur d'enveloppe, types et utilitaires partagés. |
 | `database/` | Accès aux données : `PrismaService` (et, à terme, les repositories transverses). |
 | `infrastructure/` | Adaptateurs techniques : cache Redis aujourd'hui ; files BullMQ, stockage objet, e-mail… demain (cible). |
-| `modules/` | Modules fonctionnels. Étape 1 : `health` et `metrics` uniquement. |
+| `modules/` | Modules fonctionnels, un par domaine métier — 18 aujourd'hui (`ls apps/api/src/modules \| wc -l`). |
 
-## Arborescence cible — modules métier
+## Les modules livrés
 
-Les modules métier arrivent par tranches verticales. Cible du dossier
-`modules/` à terme (aucun de ces modules n'existe encore, sauf `health` et
-`metrics`) :
+Les modules métier arrivent par **tranches verticales** : chaque étape livre
+une fonctionnalité complète, jamais une couche isolée. Les sept étapes de
+CLAUDE.md sont faites, et voici ce qu'elles ont laissé — l'état réel, pas une
+cible. Cette section a longtemps annoncé l'inverse (« aucun de ces modules
+n'existe encore, sauf `health` et `metrics` ») tout en nommant neuf dossiers
+qui n'ont jamais été construits sous ce nom, et en en omettant quatre qui
+existent ; la liste se relit donc, elle ne se recopie pas :
+
+```bash
+ls apps/api/src/modules
+```
 
 ```text
 src/modules/
-├── health/               # Étape 1 (fait)
-├── metrics/              # Étape 1 (fait)
-├── auth/                 # Étape 2 — JWT access court + refresh rotatif hashé, Argon2id
-├── users/                # Étape 2
-├── profiles/             # Étape 2
-├── devices/              # Étape 2 — sessions par appareil, détection de réutilisation
-├── exercises/            # Étape 3 — + seed 30+ exercices, cache Redis
-├── muscle_groups/        # Étape 3
-├── media/                # Étape 3 — premiers médias d'exercices, via StorageProvider (voir plus bas)
-├── programs/             # LIVRÉ — plan multi-semaines, jours reliés aux modèles
-├── workout_templates/    # Étape 4
+├── admin/                # Étape 7 — comptes séparés, RBAC par permissions
+├── audit/                # Étape 7 — journal append-only
+├── auth/                 # Étape 2 — JWT access court + refresh rotatif hashé,
+│                         #   Argon2id, sessions par appareil, détection de
+│                         #   réutilisation, connexion Apple et Google
+├── coach/                # coach conversationnel et propositions de séance
+├── community/            # amis, encouragements, défis, signalements
+├── exercises/            # Étape 3 — catalogue, seed 30+ exercices, cache Redis
+├── health/               # Étape 1 — sonde de vivacité
+├── media/                # Étape 3 — dépôt de fichiers via StorageProvider
+├── metrics/              # Étape 1 — export Prometheus
+├── notifications/        # jetons d'appareil + envoi FCM
+│                         #   (docs/product/notifications.md)
+├── nutrition/            # profil métabolique, journal alimentaire, recettes
+├── programs/             # plan multi-semaines, jours reliés aux modèles
+├── progress/             # Étape 5 — records, statistiques, mesures corporelles
+├── subscriptions/        # Étape 6 — entitlements côté serveur, Stripe web
+├── users/                # Étape 2 — profil et compte
+├── webhooks/             # Étape 6 — Stripe et RevenueCat, signés et idempotents
 ├── workout_sessions/     # Étape 4 — synchronisation offline-first idempotente
-├── workout_sets/         # Étape 4
-├── progress/             # Étape 5
-├── body_metrics/         # Étape 5
-├── subscriptions/        # Étape 6 — Stripe web, RevenueCat possible
-├── entitlements/         # Étape 6 — autorité côté serveur
-├── notifications/        # LIVRÉ — jetons d'appareil + envoi FCM (docs/product/notifications.md)
-├── health_integrations/  # post-MVP
-├── coaches/              # post-MVP
-├── social/               # post-MVP
-├── reports/              # Étape 7
-├── audit/                # Étape 7
-└── admin/                # Étape 7 — rôles, permissions, audit
+└── workout_templates/    # Étape 4 — modèles de séance
 ```
+
+Les domaines restés HORS de cette liste — intégrations santé (pas, sommeil),
+coachs humains — n'ont pas de module : ils n'ont pas encore de tranche
+verticale. Un domaine sans écran n'a pas d'API dans ce dépôt.
+
+Quelques regroupements méritent d'être dits, parce qu'un lecteur pourrait
+chercher un dossier qui n'existe pas : le profil vit dans `users/`, les groupes
+musculaires dans `exercises/`, les séries dans `workout_sessions/`, les mesures
+corporelles dans `progress/`, les entitlements dans `subscriptions/`, et les
+signalements dans `community/`. Un module par DOMAINE, pas par table.
 
 ## Structure interne d'un module métier (cible)
 

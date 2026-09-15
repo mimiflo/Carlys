@@ -20,7 +20,7 @@
     "prisma:generate": "pnpm --filter @carlys/api prisma:generate",
     "prisma:migrate": "pnpm --filter @carlys/api prisma:migrate",
     "prisma:seed": "pnpm --filter @carlys/api prisma:seed",
-    "check": "pnpm format:check && pnpm lint && pnpm typecheck && pnpm test && pnpm build",
+    "check": "bash scripts/check.sh",
     "refresh": "bash scripts/after_update.sh"
   },
   "devDependencies": {

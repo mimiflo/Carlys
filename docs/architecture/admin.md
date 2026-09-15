@@ -210,8 +210,19 @@ Décisions :
 - `pnpm test` (dans `apps/admin`) ou `pnpm -r test` à la racine ; exécuté par
   le workflow `admin-ci` avec format, lint, typecheck et build — auxquels
   s'ajoutent le lint et les tests des paquets partagés
-  (`pnpm --filter "./packages/**" lint` et `test`), dont les tests de
-  `packages/ui`, le design system que l'admin consomme.
+  (`pnpm --filter "./packages/**" lint` et `test`).
+
+  `packages/ui` en fait partie, mais l'admin **ne le consomme pas** : c'est la
+  déclinaison React du design system Flutter, maintenue pour la
+  synchronisation Claude Design (`.design-sync/config.json`, arbitrage écrit
+  dans `.design-sync/NOTES.md`). Le dépôt le dit à trois endroits — le
+  `package.json` de l'admin ne liste aucun `@carlys/ui`, `pnpm-lock.yaml` ne
+  lui connaît aucun importateur, et le `Dockerfile` installe
+  `--filter "@carlys/admin..."`, dont la fermeture transitive l'exclut donc.
+  `apps/admin/src/app/globals.css` acte la même absence : ses couleurs sont
+  RECOPIÉES depuis `packages/design-tokens/src/tokens.json`, pas importées.
+  L'adoption reste possible ; elle se déciderait à part, et ferait cesser
+  cette recopie.
 
 ## Build standalone et Docker
 

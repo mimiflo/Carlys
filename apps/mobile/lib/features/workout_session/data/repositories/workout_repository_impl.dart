@@ -83,25 +83,13 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
   @override
   Stream<List<WorkoutHistoryEntry>> watchHistory() {
     final sessions = _db.localWorkoutSessions;
-    final sets = _db.localWorkoutSets;
-    final setsCount = sets.id.count();
-    final totalVolumeKg = (sets.reps.cast<double>() * sets.weightKg).sum();
+    final setsCount = _db.localWorkoutSets.id.count();
+    final totalVolumeKg =
+        (_db.localWorkoutSets.reps.cast<double>() *
+                _db.localWorkoutSets.weightKg)
+            .sum();
 
-    final query =
-        sessions.select().join([
-            leftOuterJoin(
-              sets,
-              sets.sessionId.equalsExp(sessions.id) &
-                  sets.deleted.equals(false),
-              useColumns: false,
-            ),
-          ])
-          ..addColumns([setsCount, totalVolumeKg])
-          ..where(sessions.status.isNotValue(WorkoutStatus.inProgress.apiValue))
-          ..groupBy([sessions.id])
-          ..orderBy([OrderingTerm.desc(sessions.startedAt)]);
-
-    return query
+    return _requeteHistorique(setsCount, totalVolumeKg)
         .watch()
         .map(
           (rows) => rows
@@ -114,20 +102,42 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
               )
               .toList(),
         )
-        // Drift réémet dès qu'une table LUE est écrite, sans comparer le
-        // résultat. Or cette requête EXCLUT la séance en cours : valider une
-        // série pendant la séance écrit dans `localWorkoutSets`, donc
-        // réémet, alors que l'historique n'a pas bougé d'un octet.
-        //
-        // Ce qui pendait derrière n'était pas gratuit : le flux est PERMANENT
-        // (pas d'`autoDispose`) et toute la chaîne des récompenses — elle
-        // aussi permanente — en dépend, accueil compris. Une séance de
-        // soixante séries déclenchait soixante recalculs complets, et le
-        // rapatriement de l'historique autant qu'il écrivait de séries.
         .distinct(_memeHistorique);
   }
 
+  /// La jointure agrégée de l'historique : une ligne par séance close.
+  JoinedSelectStatement<HasResultSet, dynamic> _requeteHistorique(
+    Expression<int> setsCount,
+    Expression<double> totalVolumeKg,
+  ) {
+    final sessions = _db.localWorkoutSessions;
+    final sets = _db.localWorkoutSets;
+    return sessions.select().join([
+        leftOuterJoin(
+          sets,
+          sets.sessionId.equalsExp(sessions.id) & sets.deleted.equals(false),
+          useColumns: false,
+        ),
+      ])
+      ..addColumns([setsCount, totalVolumeKg])
+      ..where(sessions.status.isNotValue(WorkoutStatus.inProgress.apiValue))
+      ..groupBy([sessions.id])
+      ..orderBy([OrderingTerm.desc(sessions.startedAt)]);
+  }
+
   /// Deux historiques portent-ils la même information ?
+  ///
+  /// POURQUOI CE COMPARATEUR EXISTE. Drift réémet dès qu'une table LUE est
+  /// écrite, sans comparer le résultat. Or la requête d'historique EXCLUT la
+  /// séance en cours : valider une série pendant la séance écrit dans
+  /// `localWorkoutSets`, donc réémet, alors que l'historique n'a pas bougé
+  /// d'un octet.
+  ///
+  /// Ce qui pend derrière n'est pas gratuit : le flux est PERMANENT (pas
+  /// d'`autoDispose`) et toute la chaîne des récompenses — elle aussi
+  /// permanente — en dépend, accueil compris. Une séance de soixante séries
+  /// déclenchait soixante recalculs complets, et le rapatriement de
+  /// l'historique autant qu'il écrivait de séries.
   ///
   /// Comparaison de SURFACE, sur ce que l'écran affiche vraiment : le rang,
   /// l'identité de la séance, son état de synchronisation, et les deux

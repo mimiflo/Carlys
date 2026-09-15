@@ -33,6 +33,37 @@ docker compose up -d
 echo "── Client Prisma ───────────────────────────────────────────────────"
 pnpm prisma:generate
 
+echo "── Migrations et données de référence ──────────────────────────────"
+# CE BLOC MANQUAIT, et son absence se voyait au premier lancement : rien ne
+# crée le schéma à part `prisma migrate`. `01-init.sql`, monté dans
+# /docker-entrypoint-initdb.d, ne pose que des extensions et la base de test ;
+# l'API, elle, ne migre JAMAIS au démarrage (règle du dépôt : `migrate deploy`
+# précède la bascule du trafic, il ne vit pas dans l'entrypoint du conteneur).
+# Un poste neuf terminait donc l'installation sur une base SANS UNE SEULE
+# TABLE, et `pnpm dev` — la commande proposée juste en dessous — rendait une
+# erreur Prisma à la première requête.
+#
+# Un conteneur démarré n'est pas une base prête : on attend qu'elle accepte
+# une connexion, comme le fait déjà dev_up.sh, sinon la migration échoue sur
+# une course de démarrage.
+printf '  attente de PostgreSQL'
+PRETE=0
+for _ in $(seq 1 30); do
+  if docker compose exec -T postgres pg_isready -q 2>/dev/null; then
+    PRETE=1; printf ' — prête\n'; break
+  fi
+  printf '.'; sleep 2
+done
+if [ "$PRETE" -eq 1 ]; then
+  pnpm prisma:migrate
+  pnpm prisma:seed
+else
+  printf '\n'
+  echo "  ⚠ PostgreSQL ne répond pas après 60 s : migrations NON jouées."
+  echo "    Une fois la base démarrée, reprendre à la main :"
+  echo "        pnpm prisma:migrate && pnpm prisma:seed"
+fi
+
 echo ""
 echo "Terminé. Prochaines commandes utiles :"
 echo "  pnpm dev            # API (3000) + Admin (3001)"

@@ -134,7 +134,7 @@ seuil est dépassé — jamais de contournement :
 | Type de fichier | Limite |
 | --------------- | ------ |
 | Widget Flutter | < 250 lignes |
-| Contrôleur Riverpod (Notifier, providers d'écran) | < 250 lignes — même couche de présentation qu'un widget, donc même budget. Un seul Notifier par fichier ; les providers purement dérivés se rangent hors de `controllers/` |
+| Contrôleur Riverpod (`controllers/`) et providers dérivés (`providers/`) | < 250 lignes — même couche de présentation qu'un widget, donc même budget. Un seul Notifier par fichier ; les providers purement dérivés se rangent hors de `controllers/` |
 | Service | < 300 lignes |
 | Contrôleur HTTP (NestJS) | < 200 lignes |
 | Use case | < 200 lignes |
@@ -148,22 +148,24 @@ seuil est dépassé — jamais de contournement :
   ensemble des cas opposés : `community_repository_impl.dart` (287 lignes) est une
   façade Dio de 22 `@override` d'une dizaine de lignes sur un contrat de 93 ;
   `workout_template_repository_impl.dart` (378) délègue déjà à six collaborateurs
-  extraits ; `workout_repository_impl.dart` (305) était le seul des trois
+  extraits ; `workout_repository_impl.dart` (376) était le seul des trois
   réellement dense. Un seuil à 300 acquitterait le plus risqué des trois dès
   qu'il tomberait à 299 lignes, et condamnerait les deux autres sans rien
-  améliorer.
+  améliorer. (Ces trois nombres périment ; la commande qui les rend est plus
+  bas, avec celle des méthodes.)
 
-  La règle a fini par payer : les trois méthodes qui la dépassaient ont été
-  extraites là où leur logique se réutilise vraiment — `addSet` (59) et
-  `_closeWorkout` (45) dans `WorkoutSessionWriter`, qui sert désormais les deux
-  chemins d'écriture d'une série ; `metabolismReport` (46) dans
-  `data/mappers/metabolism_mappers.dart`, en fonctions pures. Aucune méthode de
-  repository ne dépasse plus 40 lignes. Un plafond de FICHIER n'aurait rien
-  suggéré de tel.
+  La règle a fini par payer, quatre fois : `addSet` (59) et `_closeWorkout` (45)
+  sont partis dans `WorkoutSessionWriter`, qui sert désormais les deux chemins
+  d'écriture d'une série ; `metabolismReport` (46) dans
+  `data/mappers/metabolism_mappers.dart`, en fonctions pures ; et
+  `watchHistory` (45), une fois sa jointure agrégée séparée de la lecture du
+  flux. Aucune méthode de repository ne dépasse plus 40 lignes. Un plafond de
+  FICHIER n'aurait rien suggéré de tel — il aurait même RÉCOMPENSÉ le
+  contraire, puisque l'extraction ajoute des lignes au fichier.
 - **Contrôleur Riverpod — 250, comme un widget.** Aucun ne dépasse 164 lignes de code
   hors imports, commentaires et lignes vides : `coach_controllers` 249 lignes dont 163
-  de code, `dashboard_controllers` 241 dont 164, `auth_controller` 230 dont 116 (36 %
-  du fichier est de la documentation), `exercise_library_controller` 216 dont 159. Le
+  de code, `dashboard_controllers` 241 dont 164, `auth_controller` 244 dont 126 (35 %
+  du fichier est de la documentation), `exercise_library_controller` 201 dont 145. Le
   seuil de 200 n'est franchi que par les commentaires : l'appliquer reviendrait à taxer
   la documentation. Un Notifier est de la présentation, pas un service — il a donc le
   budget du widget.
@@ -194,12 +196,14 @@ grep -c 'extends [A-Za-z]*Notifier' \
 ```
 
 Ce qu'elles rendaient le 15 septembre 2026, pour donner l'ordre de grandeur —
-**relancer plutôt que croire** : plus AUCUNE méthode de repository au-dessus de
-40 lignes (les trois qui restaient ont été extraites) ; et, sur les 36 fichiers
-de `controllers/`, un qui porte trois Notifier (`account_controllers.dart`) et
-**vingt-deux** qui n'en portent aucun — `dashboard_controllers.dart` est l'un
-d'eux, pas le seul. Ce second écart, lui, reste entier : ces fichiers sont des
-providers dérivés à ranger dans `presentation/providers/`.
+**relancer plutôt que croire** : AUCUNE méthode de repository au-dessus de 40
+lignes ; **plus
+aucun** fichier de `controllers/` portant plusieurs Notifier — le dernier,
+`account_controllers.dart`, a été scindé en trois ; et **vingt-deux** qui n'en
+portent aucun, `dashboard_controllers.dart` parmi eux. Ce dernier écart reste
+entier : ce sont des providers dérivés à ranger dans `presentation/providers/`,
+un dossier qui EXISTE désormais — `exercises` y a rangé les siens, et
+`check_mobile_file_sizes.sh` lui applique le même seuil qu'à `controllers/`.
 
 ## Qualité exigée par fonctionnalité
 

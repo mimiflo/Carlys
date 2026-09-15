@@ -32,7 +32,14 @@
 #     SEULEMENT : `COMPOSE_PROFILES=` est vide exprès en production ;
 #   - un `CHANGE_MOI_` resté en place : les exemples documentent ce contrôle
 #     depuis toujours, personne ne l'exécutait ;
-#   - une clé active de l'exemple ABSENTE du fichier réel.
+#   - une clé active de l'exemple ABSENTE du fichier réel ;
+#   - et l'inverse : une clé du SCHÉMA que l'exemple ne porte NI active NI
+#     commentée. Celui-là ferme le trou par lequel GOOGLE_OAUTH_CLIENT_IDS et
+#     APPLE_OAUTH_AUDIENCES sont passées : ajoutées au schéma Zod, elles
+#     n'étaient dans aucun gabarit, donc `_envsync.sh` ne pouvait pas les
+#     recopier et aucun des six autres contrôles ne regardait de ce côté.
+#     Sans elles, POST /auth/social répond 503 — sur un serveur où les
+#     boutons « Continuer avec… » sont pourtant à l'écran.
 #
 # CE QUE LE LECTEUR DE .env D'ICI NE COUVRE PAS, dit franchement plutôt
 # qu'oublié : Compose accepte des valeurs multi-lignes entre guillemets
@@ -106,8 +113,17 @@ envcheck_schema_api() {
 # exactement le mensonge de diagnostic que ce fichier existe pour supprimer.
 #
 # La liste n'est donc pas tenue ici : elle est LUE dans le schéma, qui fait foi.
-# Mesuré : 50 clés extraites, dont les 8 absentes des exemples sont précisément
-# les 8 qui y sont commentées parce que facultatives. Aucun faux positif.
+#
+# Le compte exact n'est PAS recopié ici : il a été écrit une fois (« 50 clés »),
+# puis le schéma en a gagné deux, et la ligne est devenue fausse sans que rien
+# ne le dise — l'écart même que ce fichier existe pour supprimer. La commande
+# qui le recalcule, elle, ne périme pas :
+#
+#     grep -oE '^[[:space:]]+[A-Z][A-Z_0-9]*:' apps/api/src/config/env.schema.ts \
+#       | tr -d ' :' | sort -u | wc -l
+#
+# Les clés absentes des exemples sont celles que le contrôle 7 nomme — et il
+# n'en reste aucune : c'est lui qui le dit, pas ce commentaire.
 envcheck_cles_api() {
   local schema
   schema="$(envcheck_schema_api)"
@@ -126,6 +142,33 @@ envcheck_cles_api() {
 envcheck_change_moi() {
   [ -r "$1" ] || return 1
   sed -n 's/^[[:space:]]*\(export[[:space:]][[:space:]]*\)\{0,1\}\([A-Za-z_][A-Za-z_0-9]*\)[[:space:]]*=.*CHANGE_MOI_.*/\2/p' "$1"
+}
+
+# Les clés d'un fichier d'exemple, ACTIVES OU COMMENTÉES.
+#
+# Distinct d'`envcheck_cles`, et pour une raison de fond : dans un .env réel,
+# une ligne commentée n'existe pas. Dans un GABARIT, elle existe pleinement —
+# les exemples imposent qu'« une variable facultative se laisse COMMENTÉE,
+# jamais vide », donc la forme commentée EST la façon dont un gabarit porte
+# une variable facultative. Le contrôle 7 doit voir les deux.
+envcheck_cles_exemple() {
+  [ -r "$1" ] || return 1
+  sed -n 's/^[[:space:]]*#\{0,1\}[[:space:]]*\(export[[:space:]][[:space:]]*\)\{0,1\}\([A-Za-z_][A-Za-z_0-9]*\)[[:space:]]*=.*/\2/p' "$1" | sort -u
+}
+
+# Les clés du SCHÉMA que le gabarit ne porte pas du tout.
+#
+# C'est la question qu'aucun autre contrôle ne pose : ils partent tous de
+# l'exemple pour juger le .env réel. Une variable ajoutée au schéma et oubliée
+# dans les gabarits est invisible pour eux — et pour `_envsync.sh`, qui ne
+# recopie que ce que l'exemple porte.
+envcheck_oubliees_du_gabarit() {
+  local exemple
+  exemple="$(envcheck_exemple "$1")"
+  [ -f "$exemple" ] || return 0
+  local api
+  api="$(envcheck_cles_api)" || return 0
+  comm -23 <(printf '%s\n' "$api") <(envcheck_cles_exemple "$exemple")
 }
 
 # Le fichier d'exemple d'un environnement, s'il existe.
@@ -253,6 +296,26 @@ envcheck_env() {
         ;;
     esac
   fi
+
+  # 7. L'inverse du contrôle 5 : ce que le SCHÉMA exige et que le GABARIT
+  # ne porte pas — ni actif, ni commenté.
+  #
+  # Ce n'est pas un défaut du serveur diagnostiqué, c'est un défaut du DÉPÔT,
+  # et c'est justement pourquoi il faut le dire ici : rien d'autre ne
+  # l'attrape. Les six contrôles précédents partent tous de l'exemple pour
+  # juger le .env ; une variable ajoutée au schéma et oubliée dans les
+  # gabarits leur est invisible, et `_envsync.sh` ne peut pas davantage la
+  # recopier. GOOGLE_OAUTH_CLIENT_IDS et APPLE_OAUTH_AUDIENCES sont passées
+  # par là : présentes dans le schéma Zod, absentes des deux gabarits, et
+  # sans elles POST /auth/social répond 503 alors que les boutons
+  # « Continuer avec… » sont à l'écran.
+  while read -r cle; do
+    [ -n "$cle" ] || continue
+    warn "  $cle est au schéma de l'API mais dans AUCUN gabarit"
+    warn "        l'ajouter à infrastructure/server/env/$env_name.env.example"
+    warn "        (facultative : la laisser COMMENTÉE, jamais vide)"
+    defaut=1
+  done < <(envcheck_oubliees_du_gabarit "$env_name")
 
   return "$defaut"
 }

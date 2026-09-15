@@ -504,17 +504,31 @@ analyze` et la suite complète, et ne se serait vue qu'en production.
   dépendances : `domain` n'importe ni `data` ni `presentation`, `data`
   n'importe pas `presentation`, le transport HTTP reste dans `data/`, et
   aucun écran ni widget ne tient un client Dio, la base Drift ou une source
-  de données distante. Hors du filet, volontairement : les arêtes entre
-  fonctionnalités (le code en a plus que le README de `lib/features/` n'en
-  documente), et l'arête `presentation` → `data` que le câblage Riverpod des
-  contrôleurs emprunte légitimement.
+  de données distante — ni ne DÉCLARE de provider. Cette dernière règle ferme
+  la porte par la forme là où la précédente ne voyait rien : la feuille de
+  sélection d'exercice déclarait son propre `FutureProvider` appelant le dépôt
+  du catalogue, sans jamais importer Dio. Hors du filet, volontairement : les
+  arêtes entre fonctionnalités (le code en a plus que le README de
+  `lib/features/` n'en documente), et l'arête `presentation` → `data` que le
+  câblage Riverpod des contrôleurs emprunte légitimement.
 - `scripts/check_mobile_file_sizes.sh` — les seuils du tableau « Tailles de
-  fichiers » de CLAUDE.md, par convention de chemin : widgets, use cases,
-  services. En shell parce que l'analyseur Dart n'a pas de règle de longueur
-  de fichier (`max_lines_per_file` rend « isn't a recognized lint rule »).
-  Les dépôts de `data/repositories/` et les contrôleurs Riverpod en sont
-  exclus tant que leur seuil n'est pas arbitré, et `design_system/scenes/`
-  aussi — c'est un moteur de rendu, pas de l'écran.
+  fichiers » de CLAUDE.md, par convention de chemin, et **rejoué par la CI**
+  (`mobile-ci.yml`, étape « Tailles de fichiers », après `flutter analyze`).
+  Quatre catégories sont contrôlées : widgets et écrans à 250 lignes,
+  contrôleurs et providers Riverpod à 250 aussi, use cases à 200, services à
+  300. En shell parce que l'analyseur Dart n'a pas de règle de longueur de
+  fichier (`max_lines_per_file` rend « isn't a recognized lint rule »).
+
+  Deux dossiers restent hors du filet, et pour des raisons opposées.
+  `data/repositories/` : CLAUDE.md n'y plafonne pas le FICHIER mais la
+  MÉTHODE, à 40 lignes — une mesure qu'un script shell ne sait pas faire, et
+  que CLAUDE.md confie à la commande `awk` qu'il embarque. `design_system/
+  scenes/` : c'est un moteur de rendu 3D logiciel, pas de l'écran ; le seuil
+  « widget » n'y veut rien dire.
+
+  Le seuil des contrôleurs Riverpod a longtemps été annoncé ici comme « non
+  arbitré ». Il l'est depuis septembre 2026, à 250, et la CI en fait une
+  porte : l'argumentaire est dans CLAUDE.md, la mesure dans le script.
 
 Stratégie cible, par tranche :
 

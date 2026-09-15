@@ -267,10 +267,18 @@ Le nom du groupe est écrit **par l'application**, jamais gravé dans l'image :
 il vient du référentiel de l'API, il se traduit, et il reste net à toutes les
 tailles. L'image ne porte que l'anatomie.
 
-**Manque aux images : `ischio-jambiers`.** La planche fournie couvre onze des
-douze groupes ; elle contient une vue de face des cuisses (quadriceps) mais
-aucune vue arrière. La carte s'affiche donc sans image, avec son nom — jamais
-avec celle d'un autre muscle : une anatomie fausse enseignerait une erreur.
+**Plus aucun groupe sans image.** `ischio-jambiers` a longtemps manqué — la
+planche d'origine n'avait qu'une vue de face des cuisses, pas de vue arrière —
+et la carte s'affichait alors sans image, avec son seul nom : jamais avec celle
+d'un autre muscle, parce qu'une anatomie fausse enseignerait une erreur. La
+vue arrière a été livrée depuis ; `MuscleGroupCard.illustrated` liste le slug,
+et `assets/muscles/ischio-jambiers.webp` existe. Ce que le code sait, et qui
+fait foi contre ce paragraphe :
+
+```bash
+ls apps/mobile/assets/muscles/*.webp | wc -l
+grep -c "'" apps/mobile/lib/features/exercises/presentation/widgets/muscle_group_card.dart
+```
 
 ## Règle sur les données
 

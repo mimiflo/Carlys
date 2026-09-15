@@ -14,7 +14,7 @@
 #
 # ── Catégories volontairement NON contrôlées, et pourquoi ────────────────
 #
-# 1. `data/repositories/` (jusqu'à 353 lignes). CLAUDE.md ne lui donne PAS
+# 1. `data/repositories/` (jusqu'à 378 lignes). CLAUDE.md ne lui donne PAS
 #    de plafond de fichier : la longueur d'un dépôt suit le nombre de
 #    méthodes du contrat qu'il implémente, pas sa complexité. Ce qu'il
 #    plafonne, c'est la MÉTHODE (40 lignes) — une mesure que ce script ne

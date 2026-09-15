@@ -109,7 +109,7 @@ Le design system Flutter (`AppColors`, `AppTypography`, `AppSpacing`, `AppRadius
 ./scripts/setup.sh
 ```
 
-Le script vérifie les prérequis, copie les fichiers `.env.example`, exécute `pnpm install`, build les packages partagés, démarre l'infrastructure Docker et génère le client Prisma.
+Le script vérifie les prérequis, copie les fichiers `.env.example`, exécute `pnpm install`, build les packages partagés, démarre l'infrastructure Docker, génère le client Prisma, **joue les migrations et charge les données de référence**.
 
 ### Option B — étapes manuelles
 
@@ -130,6 +130,15 @@ docker compose up -d
 
 # 5. Client Prisma
 pnpm prisma:generate
+
+# 6. Schéma de la base. SANS CETTE ÉTAPE, la base n'a AUCUNE table : rien
+#    d'autre ne la crée. `01-init.sql` ne pose que des extensions et la base
+#    de test, et l'API ne migre jamais à son démarrage. `pnpm dev` rendrait
+#    une erreur Prisma à la première requête.
+pnpm prisma:migrate
+
+# 7. Données de référence (catalogue d'exercices, rôles d'administration)
+pnpm prisma:seed
 ```
 
 ### Application mobile (optionnel, nécessite le SDK Flutter)
@@ -159,9 +168,19 @@ Toutes les valeurs des `.env.example` sont **factices** et adaptées au dévelop
 | `POSTGRES_DB` | Base de développement | `carlys_dev` |
 | `MINIO_ROOT_USER` | Identifiant MinIO | `carlys-dev` |
 | `MINIO_ROOT_PASSWORD` | Secret MinIO | `carlys-dev-secret` |
-| `S3_ENDPOINT` | Endpoint S3 local | `http://localhost:9000` |
-| `S3_BUCKET` | Bucket des médias (créé et ouvert en lecture par `minio-init`) | `carlys-media` |
-| `SMTP_HOST` / `SMTP_PORT` | SMTP de dev (Mailpit, UI sur `http://localhost:8025`) | `localhost` / `1025` |
+| `S3_PUBLIC_BASE_URL` | Adresse des médias telle que le CLIENT la voit — mettre l'IP du poste pour tester depuis un téléphone | `http://localhost:9000/carlys-media` |
+| `JWT_ACCESS_SECRET` | Signature des jetons d'accès du profil `api` de compose | `openssl rand -base64 48` |
+
+Ce tableau ne liste **que** ce que `docker-compose.yml` interpole réellement.
+Il a longtemps annoncé `S3_ENDPOINT`, `S3_BUCKET` et `SMTP_HOST`/`SMTP_PORT` :
+compose fixe ces valeurs en dur dans le service `api` (`mailpit:1025`,
+`http://minio:9000`, bucket créé par `minio-init`), donc les régler à la racine
+n'avait aucun effet. Leur place est `apps/api/.env`, ci-dessous. La liste se
+vérifie plutôt qu'elle ne se croit :
+
+```bash
+grep -oE '\$\{[A-Z_][A-Z_0-9]*' docker-compose.yml | tr -d '${' | sort -u
+```
 
 ### `apps/api/.env`
 
@@ -226,7 +245,7 @@ Une fois l'API lancée :
 - santé : `http://localhost:3000/health` (+ `/health/live`, `/health/ready`) ;
 - métriques Prometheus : `http://localhost:3000/metrics`.
 
-L'admin affiche sur sa page d'accueil le **statut de la plateforme** (interrogation de `/health`). La page `/login` est un emplacement documenté : l'authentification admin réelle arrive à l'Étape 7 — aucune fausse authentification n'est simulée.
+L'admin affiche sur sa page d'accueil le **statut de la plateforme** (interrogation de `/health`). La page `/login` est la **connexion administrateur réelle** depuis l'Étape 7 : comptes séparés des comptes mobiles, jeton JWT d'audience dédiée `carlys-admin`, et redirection vers la première page que les permissions du compte autorisent. Créer le premier compte : `pnpm --filter @carlys/api admin:bootstrap` (voir `docs/architecture/admin.md`).
 
 ```bash
 # Application mobile (après bootstrap_mobile.sh)
@@ -240,7 +259,12 @@ flutter run \
 
 ## Migrations Prisma
 
-Le schéma (`apps/api/prisma/schema.prisma`) est **volontairement vide de modèles** à l'Étape 1 : chaque tranche verticale apporte ses modèles et sa migration.
+Chaque tranche verticale apporte ses modèles et sa migration. Le schéma (`apps/api/prisma/schema.prisma`) en porte **50** aujourd'hui, pour **26** migrations datées dans `apps/api/prisma/migrations/` — deux nombres qui se comptent plutôt qu'ils ne se recopient :
+
+```bash
+grep -c '^model ' apps/api/prisma/schema.prisma
+ls apps/api/prisma/migrations | grep -c '^2'
+```
 
 ```bash
 pnpm prisma:generate                          # (ré)génère le client Prisma
@@ -277,8 +301,8 @@ pnpm lint             # ESLint 9 (flat config, typescript-eslint strict)
 pnpm typecheck        # tsc --noEmit (strict + noUncheckedIndexedAccess)
 pnpm format           # Prettier (écriture)
 pnpm format:check     # Prettier (vérification)
-pnpm check            # format:check + lint + typecheck + test + build
-./scripts/check.sh    # équivalent avec build en premier — à lancer avant tout commit
+./scripts/check.sh    # build, format:check, lint, typecheck, test — avant tout commit
+pnpm check            # le MÊME script, par pnpm : une seule définition, pas deux
 
 cd apps/mobile
 dart format .         # bloquant en CI
@@ -366,7 +390,7 @@ Politique complète et signalement de vulnérabilités : [SECURITY.md](./SECURIT
 | `pnpm lint` / `pnpm typecheck` | Lint / vérification des types |
 | `pnpm test` | Tests de tous les projets TypeScript |
 | `pnpm format` / `pnpm format:check` | Prettier |
-| `pnpm check` | Toutes les vérifications (avant commit) |
+| `pnpm check` / `./scripts/check.sh` | Toutes les vérifications, build EN PREMIER (avant commit) |
 | `pnpm prisma:generate` / `prisma:migrate` / `prisma:seed` | Cycle Prisma |
 | `docker compose up -d` / `down` | Infrastructure locale |
 | `./scripts/setup.sh` | Installation complète |
@@ -395,7 +419,7 @@ Politique complète et signalement de vulnérabilités : [SECURITY.md](./SECURIT
 
 **Étape 6 — Abonnements : terminée.** Le premium existe, et c'est le **serveur qui décide** : plans (`free`, `premium`) et correspondances produits par fournisseur en base, webhooks **Stripe** (signature `Stripe-Signature` HMAC vérifiée sur le corps brut, fenêtre anti-rejeu) et **RevenueCat** (Bearer dédié) — tous **idempotents** grâce au journal append-only `SubscriptionEvent` (unicité `(provider, externalEventId)` ; un échec de traitement est journalisé sur l'événement et retraitable par rejeu). Chaque événement projette l'état `Subscription` puis matérialise les **`UserEntitlement`** (accès maintenu jusqu'à la fin de période payée en cas d'impayé/résiliation, expiration réévaluée à chaque lecture, attributions manuelles jamais écrasées). API : `GET /subscriptions/me`, `GET /entitlements` — et le catalogue applique le droit `premium_exercises` : la fiche d'un exercice premium répond 403 sans abonnement. Côté app : écran **Abonnement** (plan effectif, état, droits verrouillés/actifs), écran d'exercice avec état « Exercice Premium » et renvoi vers l'abonnement. Aucun faux paiement : l'achat passera par les stores/Stripe, l'app ne fait qu'afficher l'état serveur.
 
-**Étape 7 — Administration : terminée.** Le back-office devient réel, avec des **comptes administrateurs séparés** des comptes mobiles (Argon2id, jeton JWT à **audience dédiée** `carlys-admin` — jamais interchangeable avec un jeton mobile, dans un sens comme dans l'autre) et un **RBAC par permissions** (`user:read`, `user:update`, `entitlement:grant`, `exercise:publish`, `audit:read`) seedé depuis le code avec les rôles `superadmin`, `support` et `content-manager`. API : synthèse plateforme, liste/fiche des utilisateurs, **suspension** (toutes les sessions révoquées immédiatement, reconnexion refusée), **attribution manuelle d'entitlements** (jamais écrasée par la synchro des webhooks), publication/dépublication d'exercices (cache catalogue invalidé), **journal d'audit** enrichi (acteur, ressource, `requestId`) et paginé. Côté `apps/admin` : connexion réelle, tableau utilisateurs avec recherche, fiche avec actions, journal d'audit — réponses validées par les contrats Zod partagés, le serveur restant seul décideur des accès.
+**Étape 7 — Administration : terminée.** Le back-office devient réel, avec des **comptes administrateurs séparés** des comptes mobiles (Argon2id, jeton JWT à **audience dédiée** `carlys-admin` — jamais interchangeable avec un jeton mobile, dans un sens comme dans l'autre) et un **RBAC par permissions** — dix, déclarées dans `packages/api-contracts/src/admin.ts` qui fait foi : `user:read`, `user:update`, `entitlement:grant`, `exercise:read`, `exercise:publish`, `exercise:write`, `media:read`, `media:write`, `audit:read`, `community:moderate` — seedé depuis le code avec les rôles `superadmin`, `support` et `content-manager`. API : synthèse plateforme, liste/fiche des utilisateurs, **suspension** (toutes les sessions révoquées immédiatement, reconnexion refusée), **attribution manuelle d'entitlements** (jamais écrasée par la synchro des webhooks), publication/dépublication d'exercices (cache catalogue invalidé), **journal d'audit** enrichi (acteur, ressource, `requestId`) et paginé. Côté `apps/admin` : connexion réelle, tableau utilisateurs avec recherche, fiche avec actions, journal d'audit — réponses validées par les contrats Zod partagés, le serveur restant seul décideur des accès.
 
 **Nutrition & réglages : terminés.** La nutrition suit la même règle que le premium : **le serveur calcule, l'app affiche**. `GET /nutrition/metabolism` renvoie un rapport complet — **BMR** (Mifflin-St Jeor), **TDEE** (facteur d'activité), **objectif calorique** selon le but (perte/maintien/prise de muscle), **macros** (protéines par kg selon l'objectif, lipides 25 %, glucides en complément), **IMC** avec catégorie OMS et **hydratation** (35 ml/kg). Le poids n'est jamais ressaisi : il provient de la **dernière mesure corporelle** (Étape 5), le reste du profil (sexe biologique, naissance, taille, activité, objectif) se complète via `PATCH /users/me` (migration `nutrition_profile`, validations bornées). Côté app : écran **Nutrition** avec **hélice d'ADN animée en continu** (CustomPainter isolé dans un RepaintBoundary, pose statique si l'utilisateur réduit les animations), objectif calorique en grand, barres de macros, IMC et hydratation, et formulaire de profil sur place (champs manquants listés par le serveur). S'y ajoutent un écran **Réglages** avec thème **système/clair/sombre/sombre OLED** (persisté via `shared_preferences`, appliqué instantanément) et des optimisations de rendu (graphiques fl_chart isolés dans des RepaintBoundary).
 
