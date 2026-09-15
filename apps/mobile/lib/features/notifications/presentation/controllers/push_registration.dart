@@ -86,6 +86,18 @@ class PushRegistration {
   /// À la déconnexion — avant l'invalidation de la session, l'appel au
   /// serveur étant authentifié. N'échoue jamais l'appelant.
   Future<void> forgetDevice() async {
+    // L'objet SURVIT à la déconnexion : `pushRegistrationProvider` n'est pas
+    // auto-disposé. Oublier l'appareil doit donc le remettre à NEUF, pas
+    // seulement effacer le jeton. Sans cette remise à zéro, `_started`
+    // restait vrai et `ensureStarted()` ressortait aussitôt pour le compte
+    // suivant : plus aucun appareil n'était enregistré, et la personne
+    // suivante ne recevait AUCUNE notification jusqu'au redémarrage de
+    // l'application. L'abonnement au rafraîchissement part avec, sinon un
+    // jeton renouvelé par FCM s'enregistrerait sous la session d'après.
+    await _refreshSubscription?.cancel();
+    _refreshSubscription = null;
+    _started = false;
+
     final token = _token;
     if (token == null) {
       return;

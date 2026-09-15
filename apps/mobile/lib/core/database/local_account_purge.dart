@@ -5,6 +5,7 @@ import '../../app/restore/app_restore.dart';
 import '../../features/academy/data/answered_lessons_store.dart';
 import '../../features/academy/presentation/controllers/academy_controllers.dart';
 import '../../features/community/presentation/controllers/community_controllers.dart';
+import '../../features/notifications/presentation/controllers/notification_preferences.dart';
 import '../../features/onboarding/data/first_run_store.dart';
 import '../../features/progress/presentation/controllers/progress_controllers.dart';
 import '../../features/progression/data/reward_ledger.dart';
@@ -83,6 +84,10 @@ class DriftLocalAccountPurge implements LocalAccountPurge {
     answeredLessonsProvider,
     earnedRewardsProvider,
     personalRecordsProvider,
+    // Ce que la personne accepte de recevoir la décrit, ELLE, pas l'appareil :
+    // sans cette ligne, le compte suivant ouvrait les réglages et y lisait les
+    // choix du précédent.
+    notificationPreferencesProvider,
   ];
 
   final Ref _ref;

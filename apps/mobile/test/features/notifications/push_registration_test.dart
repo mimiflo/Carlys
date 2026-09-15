@@ -182,6 +182,52 @@ void main() {
     expect(repository.unregistered, hasLength(1));
   });
 
+  test('déconnexion : le compte SUIVANT est bien réenregistré', () async {
+    // CE QUE CE TEST PROTÈGE. `pushRegistrationProvider` n'est pas
+    // auto-disposé : le MÊME objet sert au compte suivant. `forgetDevice`
+    // effaçait le jeton sans remettre `_started` à faux, donc
+    // `ensureStarted()` ressortait aussitôt et plus aucun appareil n'était
+    // enregistré : la personne suivante ne recevait aucune notification
+    // jusqu'au redémarrage de l'application.
+    final (registration, messenger, repository) = build();
+    registration.ensureStarted();
+    await pumpEventQueue();
+    expect(repository.registered, hasLength(1));
+
+    await registration.forgetDevice();
+
+    // Le compte suivant ouvre l'application : tout doit repartir.
+    messenger.token = 'jeton-du-suivant';
+    registration.ensureStarted();
+    await pumpEventQueue();
+
+    expect(repository.registered.last, (
+      'jeton-du-suivant',
+      DevicePlatform.android,
+    ));
+    expect(registration.registeredToken, 'jeton-du-suivant');
+  });
+
+  test(
+    'déconnexion : un jeton rafraîchi ne s’enregistre plus sous la session suivante',
+    () async {
+      // L'abonnement au rafraîchissement appartenait au compte parti : laissé
+      // vivant, un renouvellement FCM enregistrait son jeton sous la session
+      // d'après.
+      final (registration, messenger, repository) = build();
+      registration.ensureStarted();
+      await pumpEventQueue();
+
+      await registration.forgetDevice();
+      final apresOubli = repository.registered.length;
+
+      messenger.refreshes.add('jeton-fantome');
+      await pumpEventQueue();
+
+      expect(repository.registered, hasLength(apresOubli));
+    },
+  );
+
   test('déconnexion sans enregistrement préalable : no-op', () async {
     final (registration, messenger, repository) = build();
 

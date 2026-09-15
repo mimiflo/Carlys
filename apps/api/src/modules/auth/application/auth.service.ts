@@ -231,6 +231,13 @@ export class AuthService {
       throw new UnauthorizedException('Mot de passe actuel incorrect.');
     }
     await this.users.upsertPasswordHash(userId, await this.passwords.hash(newPassword));
+    // Les liens de réinitialisation encore ouverts tombent AVEC le mot de
+    // passe. Sans cela, changer son mot de passe n'évinçait qu'à moitié :
+    // quelqu'un qui a eu accès à la boîte mail demande un lien et ne s'en sert
+    // pas ; la victime change son mot de passe pour le chasser, les sessions
+    // tombent — mais le lien reste valide et le ramène. `resetPassword` et la
+    // liaison sociale appliquent déjà cet invariant ; ce chemin l'oubliait.
+    await this.verifications.invalidateOpenPasswordResets(userId);
     // Les autres appareils doivent se reconnecter ; la session courante survit.
     await this.sessions.revokeAllSessions(userId, 'password_changed', sessionId);
     this.audit.record({ action: 'auth.password_changed', userId, ...client });

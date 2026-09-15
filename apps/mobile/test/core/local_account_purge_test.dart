@@ -5,6 +5,8 @@ import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
 import 'package:carlys_mobile/features/academy/data/answered_lessons_store.dart';
 import 'package:carlys_mobile/features/academy/presentation/controllers/academy_controllers.dart';
 import 'package:carlys_mobile/features/community/presentation/controllers/community_controllers.dart';
+import 'package:carlys_mobile/features/notifications/domain/repositories/device_token_repository.dart';
+import 'package:carlys_mobile/features/notifications/presentation/controllers/notification_preferences.dart';
 import 'package:carlys_mobile/features/onboarding/data/first_run_store.dart';
 import 'package:carlys_mobile/features/progress/domain/entities/progress.dart';
 import 'package:carlys_mobile/features/progress/presentation/controllers/progress_controllers.dart';
@@ -75,6 +77,10 @@ void main() {
         personalRecordsProvider.overrideWith((ref) async {
           countBuild('records');
           return const <PersonalRecordEntry>[];
+        }),
+        notificationPreferencesProvider.overrideWith((ref) async {
+          countBuild('preferencesNotifications');
+          return const <NotificationCategory, bool>{};
         }),
       ],
     );
@@ -177,7 +183,29 @@ void main() {
       'leconsRepondues': 2,
       'recompenses': 2,
       'records': 1,
+      'preferencesNotifications': 1,
     });
+  });
+
+  test('les réglages de notifications ne suivent pas le compte', () async {
+    // Ce que la personne accepte de recevoir la décrit, ELLE. Le provider
+    // n'est pas auto-disposé et l'écran des réglages le relit tel quel : sans
+    // purge, le compte suivant ouvrait Réglages et y voyait les choix du
+    // précédent.
+    expect(
+      await container.read(notificationPreferencesProvider.future),
+      isEmpty,
+    );
+    expect(builds['preferencesNotifications'], 1);
+
+    await container.read(localAccountPurgeProvider).run();
+
+    await container.read(notificationPreferencesProvider.future);
+    expect(
+      builds['preferencesNotifications'],
+      2,
+      reason: 'les réglages du compte parti survivent à la purge',
+    );
   });
 
   test('les records personnels non plus, malgré leur autoDispose', () async {

@@ -350,7 +350,16 @@ sequenceDiagram
 - [ ] Réutilisation → révocation de la famille + `SecurityEvent` + test e2e dédié.
 - [ ] Sessions par appareil : liste, déconnexion ciblée, déconnexion globale.
 - [ ] Limites de tentatives dédiées + verrouillage temporaire (Redis) testés.
-- [ ] Aucune énumération d'e-mails (register, login, forgot-password).
+- [ ] Aucune énumération d'e-mails sur **login** et **forgot-password**.
+      `register` fait exception, ASSUMÉE : il rend un `409` explicite
+      (« un compte existe déjà avec cette adresse »), parce qu'une inscription
+      silencieusement refusée laisse la personne devant un formulaire qui ne
+      marche pas sans lui dire pourquoi, et qu'un `register` non énumérant
+      devrait cesser de rendre des jetons — donc changer tout le parcours
+      d'inscription. L'atténuation est le débit : `register` porte le même
+      `STRICT_THROTTLE` que `login`. Deux tests figent ce `409`
+      (`auth.e2e-spec.ts`, `auth.service.spec.ts`) : le changer est une
+      décision produit, pas un correctif.
 - [ ] Mobile : `flutter_secure_storage` uniquement ; interceptor Dio avec verrou
       anti-concurrence testé (un seul refresh simultané).
 - [ ] Migrations Prisma écrites ; `prisma validate` et la détection de

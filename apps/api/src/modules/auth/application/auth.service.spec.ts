@@ -35,7 +35,10 @@ interface Stubs {
     >
   >;
   verifications: jest.Mocked<
-    Pick<VerificationRepository, 'createPasswordReset' | 'findPasswordReset'>
+    Pick<
+      VerificationRepository,
+      'createPasswordReset' | 'findPasswordReset' | 'invalidateOpenPasswordResets'
+    >
   >;
   sessionsService: jest.Mocked<Pick<SessionsService, 'open'>>;
   passwords: jest.Mocked<Pick<PasswordService, 'hash' | 'verify'>>;
@@ -67,6 +70,7 @@ function buildStubs(): Stubs {
     verifications: {
       createPasswordReset: jest.fn().mockResolvedValue(undefined),
       findPasswordReset: jest.fn(),
+      invalidateOpenPasswordResets: jest.fn().mockResolvedValue(undefined),
     },
     sessionsService: {
       open: jest.fn().mockResolvedValue({
@@ -352,6 +356,36 @@ describe('AuthService', () => {
         'password_changed',
         'session-1',
       );
+    });
+
+    it('évince POUR DE BON : les liens de réinitialisation ouverts tombent aussi', async () => {
+      // Le scénario que ce test ferme. Quelqu'un a eu accès à la boîte mail,
+      // a demandé un lien de réinitialisation et ne s'en est pas encore
+      // servi. La victime change son mot de passe pour le chasser : les
+      // sessions tombent bien, mais le lien restait valide et le ramenait.
+      // `resetPassword` et la liaison sociale appliquaient déjà cet
+      // invariant ; ce chemin l'oubliait.
+      const stubs = buildStubs();
+      stubs.users.findPasswordHash.mockResolvedValue('$argon2id$reel');
+      stubs.passwords.verify.mockResolvedValue(true);
+      const service = buildService(stubs);
+
+      await service.changePassword('user-1', 'session-1', 'actuel', 'x'.repeat(10), client);
+
+      expect(stubs.verifications.invalidateOpenPasswordResets).toHaveBeenCalledWith('user-1');
+    });
+
+    it('mot de passe actuel erroné : aucun lien n’est invalidé', async () => {
+      const stubs = buildStubs();
+      stubs.users.findPasswordHash.mockResolvedValue('$argon2id$reel');
+      stubs.passwords.verify.mockResolvedValue(false);
+      const service = buildService(stubs);
+
+      await expect(
+        service.changePassword('user-1', 'session-1', 'faux', 'x'.repeat(10), client),
+      ).rejects.toThrow(UnauthorizedException);
+
+      expect(stubs.verifications.invalidateOpenPasswordResets).not.toHaveBeenCalled();
     });
   });
 });
