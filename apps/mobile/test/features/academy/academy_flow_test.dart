@@ -4,6 +4,7 @@ import 'package:carlys_mobile/app/restore/app_restore.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/academy/domain/entities/academy.dart';
+import 'package:carlys_mobile/features/academy/presentation/widgets/domain_completed_banner.dart';
 import 'package:carlys_mobile/features/academy/presentation/widgets/lesson_card.dart';
 import 'package:carlys_mobile/features/academy/presentation/widgets/quiz_card.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
@@ -114,8 +115,18 @@ void main() {
     await tester.pumpAndSettle();
     await tapTab(tester, 'Academy');
 
-    await reveal(tester, find.byType(LessonCard).first);
-    final firstLesson = find.byType(LessonCard).first;
+    // Le finder passé à `reveal` vise UNE leçon nommée, et non
+    // `find.byType(LessonCard).first`. Deux pièges de `scrollUntilVisible` à
+    // la fois : `.first` sur un finder qui ne matche encore rien LÈVE
+    // (`_FirstFinderMixin` fait `.first` sur un itérable vide), et le type
+    // nu en matche plusieurs une fois la liste construite, ce qui lève
+    // aussi (`.single`). Un titre unique traverse les deux.
+    const premiere = 'Les protéines, brique du muscle';
+    await reveal(tester, find.text(premiere));
+    final firstLesson = find.ancestor(
+      of: find.text(premiere),
+      matching: find.byType(LessonCard),
+    );
     // Repliée : pas de quiz dans l'arbre (retiré, pas masqué).
     expect(
       find.descendant(of: firstLesson, matching: find.byType(QuizCard)),
@@ -285,17 +296,71 @@ void main() {
     expect(find.text('Les protéines, brique du muscle'), findsNothing);
     expect(find.text('NUTRITION'), findsNothing);
     // Et la première leçon visible appartient au domaine visé.
+    await reveal(tester, find.text('La surcharge progressive'));
     expect(find.text('La surcharge progressive'), findsOneWidget);
-    // L'en-tête de section disparaît en vue filtrée : la pastille active le
-    // dit déjà, le répéter pousserait la première leçon vers le bas.
-    expect(find.text('MUSCULATION'), findsNothing);
+    // L'en-tête de section RESTE en vue filtrée depuis qu'il porte
+    // l'avancement : il ne répète plus le nom que la pastille active dit
+    // déjà, il ajoute « 0 / 4 » et sa jauge.
+    expect(find.text('MUSCULATION'), findsOneWidget);
+    expect(find.text('0 / 4'), findsOneWidget);
 
-    // Retour à « Tous » : le premier domaine revient, en haut.
+    // Retour à « Tous ». La barre de domaines vit DANS la liste : le
+    // défilement précédent l'a sortie de l'arbre, il faut remonter avant de
+    // pouvoir la viser.
+    await tester.drag(_pageScrollable.last, const Offset(0, 2000));
+    await tester.pumpAndSettle();
     await tester.tap(find.widgetWithText(AppPill, 'Tous'));
     await tester.pumpAndSettle();
+    // La carte d'avancement et la question du jour occupent le haut : le
+    // premier domaine est juste sous le pli, donc pas encore construit.
+    await reveal(tester, find.text('NUTRITION'));
     expect(find.text('NUTRITION'), findsOneWidget);
     expect(find.text('Les protéines, brique du muscle'), findsOneWidget);
     // Et le dernier domaine reste atteignable en défilant.
     await reveal(tester, find.text('CALISTHENICS'));
+  });
+
+  testWidgets('l’Academy dit enfin où on en est, et dans quelle unité', (
+    tester,
+  ) async {
+    // Elle n'affichait AUCUN chiffre d'avancement, et ses trois récompenses
+    // de maîtrise ne paraissaient que sur les écrans de progression.
+    await tester.pumpWidget(app());
+    await tester.pumpAndSettle();
+    await tapTab(tester, 'Academy');
+
+    expect(find.text('OÙ TU EN ES'), findsOneWidget);
+    expect(find.textContaining('leçons sur'), findsOneWidget);
+    expect(find.text('Aucun domaine bouclé pour l’instant.'), findsOneWidget);
+    // Un COMPTE, jamais un pourcentage : l'axe « Maîtrise » du profil
+    // rapporte déjà ces mêmes leçons à une autre base, et deux nombres pour
+    // un seul travail est exactement ce que la règle de non-concurrence
+    // interdit.
+    expect(find.textContaining('%'), findsNothing);
+  });
+
+  testWidgets('la fête d’un domaine bouclé se ferme et ne revient pas', (
+    tester,
+  ) async {
+    var ferme = false;
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: AppTheme.dark(),
+        home: Scaffold(
+          body: DomainCompletedBanner(
+            domaine: AcademyCategory.nutrition,
+            onDismiss: () => ferme = true,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Domaine bouclé'), findsOneWidget);
+    expect(find.text(AcademyCategory.nutrition.label), findsOneWidget);
+
+    await tester.tap(find.byTooltip('Fermer'));
+    await tester.pumpAndSettle();
+    expect(ferme, isTrue);
   });
 }

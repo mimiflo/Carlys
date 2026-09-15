@@ -2,9 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../design_system/design_system.dart';
+import '../../domain/academy_progress.dart';
 import '../../domain/entities/academy.dart';
 import '../controllers/academy_controllers.dart';
+import '../providers/academy_progress_providers.dart';
 import '../widgets/academy_domain_bar.dart';
+import '../widgets/academy_domain_header.dart';
+import '../widgets/academy_progress_card.dart';
+import '../widgets/domain_completed_banner.dart';
 import '../widgets/lesson_card.dart';
 import '../widgets/quiz_card.dart';
 
@@ -28,11 +33,42 @@ class _AcademyScreenState extends ConsumerState<AcademyScreen> {
   /// provider créerait une donnée partagée là où il n'y a qu'un filtre.
   AcademyCategory? _domaine;
 
+  /// Domaine tout juste bouclé, à fêter une fois. Local, comme le filtre :
+  /// c'est un événement d'écran, pas une donnée partagée.
+  AcademyCategory? _aFeter;
+
+  /// Enregistre une réponse, puis regarde si elle vient de BOUCLER un
+  /// domaine.
+  ///
+  /// La comparaison avant/après se fait ici et pas dans l'état final :
+  /// rouvrir l'écran d'un domaine déjà terminé ne doit rien rejouer.
+  Future<void> _repondre({
+    required String lessonId,
+    required int choiceIndex,
+    required bool correct,
+  }) async {
+    final avant = ref.read(academyProgressProvider);
+    await ref
+        .read(academyActionsProvider)
+        .answer(lessonId: lessonId, choiceIndex: choiceIndex, correct: correct);
+    if (!mounted || avant == null) {
+      return;
+    }
+    final apres = ref.read(academyProgressProvider);
+    if (apres == null) {
+      return;
+    }
+    final acheve = domaineAcheve(avant: avant, apres: apres);
+    if (acheve != null) {
+      setState(() => _aFeter = acheve);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final pack = ref.watch(academyPackProvider);
     final daily = ref.watch(dailyLessonProvider);
-    final actions = ref.read(academyActionsProvider);
+    final progress = ref.watch(academyProgressProvider);
     // Les réponses déjà données, d'où qu'elles viennent : la question du
     // jour répondue sur l'accueil arrive ici déjà remplie.
     final answered = ref.watch(answeredLessonsProvider).valueOrNull ?? const {};
@@ -75,11 +111,23 @@ class _AcademyScreenState extends ConsumerState<AcademyScreen> {
               ),
             ),
             const SizedBox(height: AppSpacing.gapRow),
+            if (_aFeter != null) ...[
+              DomainCompletedBanner(
+                domaine: _aFeter!,
+                onDismiss: () => setState(() => _aFeter = null),
+              ),
+              const SizedBox(height: AppSpacing.gapRow),
+            ],
+            if (progress != null) ...[
+              AcademyProgressCard(progress: progress),
+              const SizedBox(height: AppSpacing.gapRow),
+            ],
             AcademyDomainBar(
               selected: _domaine,
               onSelect: (domaine) => setState(() => _domaine = domaine),
               countOf: (category) =>
                   lessons.where((lesson) => lesson.category == category).length,
+              readOf: (category) => progress?.parDomaine[category]?.abordees,
             ),
             const SizedBox(height: AppSpacing.gapRow),
             if (daily != null) ...[
@@ -90,7 +138,7 @@ class _AcademyScreenState extends ConsumerState<AcademyScreen> {
                 // profil de progression) puis rejoint les défis culturels,
                 // sans jamais gêner le quiz, qui fonctionne hors ligne.
                 answeredChoice: answered[daily.id],
-                onAnswered: (choice, correct) => actions.answer(
+                onAnswered: (choice, correct) => _repondre(
                   lessonId: daily.id,
                   choiceIndex: choice,
                   correct: correct,
@@ -105,10 +153,14 @@ class _AcademyScreenState extends ConsumerState<AcademyScreen> {
             for (final category in AcademyCategory.values.where(
               (category) => _domaine == null || category == _domaine,
             )) ...[
-              if (_domaine == null) ...[
-                AppSectionLabel(category.label),
-                const SizedBox(height: AppSpacing.xs),
-              ],
+              // L'en-tête reste même sur un domaine choisi : il ne répète
+              // plus seulement le nom que la pastille active porte déjà, il
+              // dit où en est la lecture de CE domaine.
+              AcademyDomainHeader(
+                category: category,
+                progress: progress?.parDomaine[category],
+              ),
+              const SizedBox(height: AppSpacing.xs),
               for (final lesson in lessons.where(
                 (lesson) => lesson.category == category,
               )) ...[
@@ -116,7 +168,7 @@ class _AcademyScreenState extends ConsumerState<AcademyScreen> {
                   lesson: lesson,
                   showCategory: false,
                   answeredChoice: answered[lesson.id],
-                  onAnswered: (choice, correct) => actions.answer(
+                  onAnswered: (choice, correct) => _repondre(
                     lessonId: lesson.id,
                     choiceIndex: choice,
                     correct: correct,

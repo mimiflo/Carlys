@@ -26,6 +26,8 @@ class RewardFacts {
     this.balancedWeeks = 0,
     this.lessonsAnswered = 0,
     this.lessonsTotal = 0,
+    this.academyDomainsCompleted = 0,
+    this.academyDomainsServed = 0,
     this.personalRecords = 0,
   });
 
@@ -45,6 +47,17 @@ class RewardFacts {
 
   final int lessonsAnswered;
   final int lessonsTotal;
+
+  /// Domaines de l'Academy entièrement abordés, et domaines qui contiennent
+  /// au moins une leçon.
+  ///
+  /// Deux ENTIERS, pas l'énumération des domaines : le moteur de
+  /// récompenses n'a pas à connaître l'Academy pour décider d'un palier, et
+  /// lui passer ses types ferait dépendre la progression d'une autre
+  /// fonctionnalité. Le nom du domaine achevé, lui, se célèbre DANS
+  /// l'Academy, là où il veut dire quelque chose.
+  final int academyDomainsCompleted;
+  final int academyDomainsServed;
 
   /// Records personnels connus. Ils viennent du serveur : hors ligne on en
   /// compte zéro, et le journal continue d'afficher ceux déjà obtenus.
@@ -138,6 +151,46 @@ final List<RewardRule> rewardCatalog = [
     ),
     (facts) =>
         facts.lessonsTotal > 0 && facts.lessonsAnswered >= facts.lessonsTotal,
+  ),
+
+  // Achever un DOMAINE est un jalon différent d'avoir abordé N leçons : on
+  // y a fait le tour d'un sujet. Trois paliers et non un par domaine — douze
+  // récompenses de plus noieraient la vitrine, et « Hyrox terminé » après
+  // deux questions vaudrait autant qu'« Academy terminée ». Le domaine
+  // PRÉCIS se célèbre dans l'Academy, au moment où il se termine.
+  RewardRule(
+    const Reward(
+      id: 'domaines-1',
+      kind: RewardKind.badge,
+      label: 'Un domaine bouclé',
+      story: 'Toutes les leçons d’un domaine de l’Academy abordées.',
+      value: CarlysValue.maitrise,
+    ),
+    (facts) => facts.academyDomainsCompleted >= 1,
+  ),
+  RewardRule(
+    const Reward(
+      id: 'domaines-moitie',
+      kind: RewardKind.medaille,
+      label: 'La moitié des domaines',
+      story: 'La moitié des domaines de l’Academy bouclés.',
+      value: CarlysValue.maitrise,
+    ),
+    (facts) =>
+        facts.academyDomainsServed > 0 &&
+        facts.academyDomainsCompleted * 2 >= facts.academyDomainsServed,
+  ),
+  RewardRule(
+    const Reward(
+      id: 'domaines-tous',
+      kind: RewardKind.certificat,
+      label: 'Tous les domaines',
+      story: 'Chaque domaine de l’Academy bouclé, du premier au dernier.',
+      value: CarlysValue.maitrise,
+    ),
+    (facts) =>
+        facts.academyDomainsServed > 0 &&
+        facts.academyDomainsCompleted >= facts.academyDomainsServed,
   ),
 
   // ── PERFORMANCE : demander un peu plus, régulièrement ──────────────────

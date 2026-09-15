@@ -19,6 +19,7 @@ class AcademyDomainBar extends StatelessWidget {
     required this.selected,
     required this.onSelect,
     required this.countOf,
+    this.readOf,
     super.key,
   });
 
@@ -29,6 +30,11 @@ class AcademyDomainBar extends StatelessWidget {
 
   /// Nombre de leçons du domaine — un domaine vide ne s'affiche pas.
   final int Function(AcademyCategory) countOf;
+
+  /// Leçons déjà abordées dans le domaine, ou `null` tant que l'avancement
+  /// n'est pas connu. La pastille dit alors seulement son nom : « 0 sur 5 »
+  /// pendant le chargement se lirait comme « tu n'as rien lu ».
+  final int? Function(AcademyCategory)? readOf;
 
   @override
   Widget build(BuildContext context) {
@@ -54,8 +60,15 @@ class AcademyDomainBar extends StatelessWidget {
             );
           }
           final domaine = domaines[index - 1];
+          final total = countOf(domaine);
+          final lues = readOf?.call(domaine);
           return _Pastille(
             label: domaine.label,
+            // Le COMPTE ne tient pas ici : « Nutrition 4/5 » sur douze
+            // pastilles allonge la barre d'un tiers pour un chiffre qu'on
+            // relit mieux sous le titre de section. La pastille ne garde
+            // que le fait binaire — bouclé ou non.
+            termine: lues != null && total > 0 && lues >= total,
             selected: selected == domaine,
             onTap: () => onSelect(domaine),
           );
@@ -74,17 +87,22 @@ class _Pastille extends StatelessWidget {
     required this.label,
     required this.selected,
     required this.onTap,
+    this.termine = false,
   });
 
   final String label;
   final bool selected;
   final VoidCallback onTap;
 
+  /// Domaine entièrement abordé : il porte le trophée.
+  final bool termine;
+
   @override
   Widget build(BuildContext context) {
     return Center(
       child: AppPill(
         label: label,
+        icon: termine ? AppIcons.record : null,
         selected: selected,
         // Violet et non orange plein : depuis l'unification des boutons, tout
         // ce sur quoi on clique parle la couleur de la marque.

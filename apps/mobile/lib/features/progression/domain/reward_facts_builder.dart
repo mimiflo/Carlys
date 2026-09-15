@@ -18,6 +18,8 @@ RewardFacts buildRewardFacts({
   required CarlysTitle reachedTitle,
   int lessonsAnswered = 0,
   int lessonsTotal = 0,
+  int academyDomainsCompleted = 0,
+  int academyDomainsServed = 0,
   int personalRecords = 0,
 }) {
   var completed = 0;
@@ -45,6 +47,8 @@ RewardFacts buildRewardFacts({
         .length,
     lessonsAnswered: lessonsAnswered,
     lessonsTotal: lessonsTotal,
+    academyDomainsCompleted: academyDomainsCompleted,
+    academyDomainsServed: academyDomainsServed,
     personalRecords: personalRecords,
   );
 }

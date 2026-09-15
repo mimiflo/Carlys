@@ -111,6 +111,78 @@ trace d'une question abordée.
   défis culturels, et le parcours « fiche d'anatomie → bibliothèque
   filtrée sur le muscle ».
 
+- Avancement (`academy_progress_test.dart`) : décompte par domaine, leçon
+  retirée du pack qui ne compte pas, domaine vide jamais « bouclé »,
+  célébration qui ne se déclenche qu'au franchissement, et les six
+  récompenses de l'Academy décidées sans lire le titre atteint ni
+  l'historique des séances.
+- Écran (`academy_flow_test.dart`) : la carte « Où tu en es » affiche un
+  compte et AUCUN pourcentage, l'en-tête de domaine porte son « 0 / 4 » même
+  en vue filtrée, et le bandeau de domaine bouclé se ferme.
+
+## Où en est la lecture — un repère, jamais un second score
+
+L'Academy n'affichait aucun chiffre d'avancement, et ses trois récompenses de
+maîtrise ne paraissaient que sur les écrans de progression : on pouvait
+boucler le pack sans jamais le voir dit là où on l'avait fait.
+
+Elle compte désormais, **dans l'unité de ce qu'elle compte** : « 24 leçons sur
+38 » en tête, « 3 / 4 » sous chaque titre de domaine, une jauge par domaine.
+Pas de pourcentage global, et la raison est chiffrée plus bas dans ce
+document : l'axe « Maîtrise » du profil rapporte déjà ces mêmes leçons à une
+cible fixe de 20.
+
+- **« Abordée », pas « réussie ».** Le moteur de progression a déjà tranché
+  dans ce sens et l'a documenté : se tromper fait apprendre, et n'ouvrir
+  l'axe qu'aux bonnes réponses transformerait l'Academy en examen. Compter
+  autrement ici contredirait une règle écrite.
+- **La pastille d'un domaine bouclé porte un trophée**, pas son compte :
+  douze pastilles allongées d'un « 4/5 » transforment la barre en couloir. Le
+  compte se lit sous le titre de section, où il y a la place.
+- **Une réponse à une leçon retirée du pack ne compte pas.** Le magasin local
+  garde les réponses par identifiant ; les compter ferait dépasser le total.
+
+### Les récompenses, décidées SANS le reste de l'application
+
+Six sceaux s'affichent dans l'Academy : les trois de maîtrise (cinq leçons,
+la moitié du pack, le pack entier) et trois nouveaux qui récompensent
+d'avoir fait le TOUR d'un sujet (un domaine, la moitié, tous).
+
+Trois paliers et non un badge par domaine : douze récompenses de plus
+noieraient la vitrine, et « Hyrox terminé » après deux questions vaudrait
+autant qu'« Academy terminée ». Le domaine précis, lui, se célèbre dans
+l'Academy au moment où il se boucle, par un bandeau qui reprend la grammaire
+du franchissement de titre.
+
+L'état des sceaux se calcule **depuis les seuls faits de l'Academy**, jamais
+depuis `earnedRewardsProvider` : ce provider lit l'historique des séances et
+le profil dérivé, et le brancher rendrait l'Academy dépendante de la base
+d'entraînement pour afficher SES badges, alors que tout son contenu est
+embarqué et qu'elle doit tenir hors ligne. Un test vérifie qu'aucune des six
+règles ne lit le titre atteint, plutôt que de le supposer.
+
+Côté moteur, `RewardFacts` ne reçoit que **deux entiers** — domaines bouclés,
+domaines servis. Lui passer l'énumération des domaines ferait dépendre la
+progression de l'Academy, alors qu'un compte suffit à décider d'un palier.
+
+### La célébration se déclenche au franchissement, pas à l'état
+
+Le bandeau compare l'avant et l'après d'une réponse. Lire l'état final
+rejouerait la fête à chaque ouverture d'un écran déjà terminé, et une fête
+qui revient ne célèbre plus rien.
+
+### Ce qui reste, et pourquoi
+
+Quatre morceaux de la tranche attendent un arbitrage qui n'est pas technique :
+
+| Morceau | Ce qu'il faut trancher |
+| --- | --- |
+| **Niveaux** | Difficulté par leçon, rang Academy, ou déverrouillage progressif : trois lectures aux coûts et aux risques opposés |
+| **Mode Parcours** | Les six étapes ne recouvrent aucun découpage existant des douze domaines. Quelle leçon dans quelle étape est un choix éditorial, et le verrouillage entrerait en conflit avec l'onglet « Tous » |
+| **Quiz de chapitre** | Définir « chapitre ». Si chapitre = leçon, il existe déjà |
+| **Persistance serveur** | Les réponses partent au serveur mais ne se relisent pas : la progression ne survit pas à un changement d'appareil |
+
+
 ## Les niveaux ne notent pas, ils situent
 
 La tranche 37 prévoit des niveaux. Ils sont un repère de POSITION dans le

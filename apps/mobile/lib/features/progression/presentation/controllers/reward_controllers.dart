@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../academy/presentation/controllers/academy_controllers.dart';
+import '../../../academy/presentation/providers/academy_progress_providers.dart';
 import '../../../progress/domain/entities/progress.dart';
 import '../../../progress/presentation/controllers/progress_controllers.dart';
 import '../../../workout_session/presentation/controllers/workout_controllers.dart';
@@ -29,6 +30,9 @@ final rewardFactsProvider = Provider<RewardFacts?>((ref) {
     lessonsAnswered:
         ref.watch(answeredLessonsProvider).valueOrNull?.length ?? 0,
     lessonsTotal: ref.watch(academyPackProvider).valueOrNull?.length ?? 0,
+    academyDomainsCompleted: ref.watch(completedAcademyDomainsProvider),
+    academyDomainsServed:
+        ref.watch(academyProgressProvider)?.domainesServis ?? 0,
     personalRecords:
         ref.watch(personalRecordsProvider).valueOrNull?.length ?? 0,
   );
