@@ -27,6 +27,7 @@ import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import { type App } from 'supertest/types';
 import { AppModule } from '../src/app/app.module';
+import { AuditService } from '../src/modules/audit/audit.service';
 import { configureApp } from '../src/app/configure-app';
 
 const ADMIN_PASSWORD = 'MotDePasseAdmin42!';
@@ -371,6 +372,9 @@ describe('Modération de la communauté (e2e)', () => {
     );
     expect(done.some((entry) => entry.id === reportId)).toBe(true);
 
+    // Même raison qu'en authentification : l'audit s'écrit sans bloquer la
+    // réponse, donc relire immédiatement courait contre la promesse.
+    await app.get(AuditService).flush();
     const logs = data<AdminAuditLog[]>(
       (await authed(superToken).get('/api/v1/admin/audit-logs?limit=50').expect(200)).body,
     );

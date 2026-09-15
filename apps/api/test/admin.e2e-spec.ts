@@ -28,6 +28,7 @@ import { randomUUID } from 'node:crypto';
 import request from 'supertest';
 import { type App } from 'supertest/types';
 import { AppModule } from '../src/app/app.module';
+import { AuditService } from '../src/modules/audit/audit.service';
 import { configureApp } from '../src/app/configure-app';
 import { ensureExerciseFixture } from './support/exercise-fixture';
 
@@ -460,19 +461,16 @@ describe('Administration (e2e)', () => {
       .send({ email: memberEmail, password: 'MotDePasseSolide42' })
       .expect(401);
 
-    // L'écriture d'audit est volontairement non bloquante : on sonde.
-    let suspension: AdminAuditLog | undefined;
-    for (let attempt = 0; attempt < 20 && suspension === undefined; attempt += 1) {
-      const logs = data<AdminAuditLog[]>(
-        (await asAdmin(superToken).get('/api/v1/admin/audit-logs?limit=50').expect(200)).body,
-      );
-      suspension = logs.find(
-        (log) => log.action === 'admin.user_suspended' && log.userId === memberId,
-      );
-      if (suspension === undefined) {
-        await new Promise((resolve) => setTimeout(resolve, 100));
-      }
-    }
+    // L'écriture d'audit est volontairement non bloquante ; ce test SONDAIT
+    // donc, jusqu'à deux secondes. `flush()` attend ce qui est en vol :
+    // déterministe, et immédiat.
+    await app.get(AuditService).flush();
+    const logs = data<AdminAuditLog[]>(
+      (await asAdmin(superToken).get('/api/v1/admin/audit-logs?limit=50').expect(200)).body,
+    );
+    const suspension = logs.find(
+      (log) => log.action === 'admin.user_suspended' && log.userId === memberId,
+    );
     expect(suspension).toBeDefined();
     expect(suspension?.actorType).toBe('ADMIN');
 

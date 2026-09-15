@@ -20,6 +20,7 @@ import { createHash, randomBytes, randomUUID } from 'node:crypto';
 import request from 'supertest';
 import { type App } from 'supertest/types';
 import { AppModule } from '../src/app/app.module';
+import { AuditService } from '../src/modules/audit/audit.service';
 import { configureApp } from '../src/app/configure-app';
 
 /**
@@ -178,6 +179,12 @@ describe('Authentification (e2e)', () => {
       .set('Authorization', `Bearer ${rotated.accessToken}`)
       .expect(401);
 
+    // L'audit s'écrit SANS bloquer la requête : au retour du 401, la ligne
+    // peut ne pas encore être posée. Lire tout de suite faisait tomber ce
+    // test au hasard en CI. On attend les écritures en vol — c'est
+    // déterministe, là où un délai fixe ne ferait que rendre l'intermittence
+    // plus rare.
+    await app.get(AuditService).flush();
     const reuseAudit = await prisma.auditLog.findFirst({
       where: { action: 'auth.refresh_reuse_detected', user: { email } },
     });
@@ -340,16 +347,14 @@ describe('Authentification (e2e)', () => {
     ).toBe(0);
 
     // L'audit, lui, reste : il porte sa PROPRE adresse pour l'enquête.
-    // L'écriture d'audit est volontairement non bloquante : on sonde.
-    let audited = null;
-    for (let attempt = 0; attempt < 20 && audited === null; attempt += 1) {
-      audited = await prisma.auditLog.findFirst({
-        where: { action: 'account.deleted', userId: before.id },
-      });
-      if (audited === null) {
-        await new Promise((resolve) => setTimeout(resolve, 100));
-      }
-    }
+    // L'écriture est volontairement non bloquante ; ce test SONDAIT donc,
+    // jusqu'à deux secondes. `flush()` attend exactement ce qui est en vol :
+    // c'est plus court, et surtout déterministe — un sondage borné finit
+    // toujours par échouer sous charge.
+    await app.get(AuditService).flush();
+    const audited = await prisma.auditLog.findFirst({
+      where: { action: 'account.deleted', userId: before.id },
+    });
     expect(audited).not.toBeNull();
     expect(audited?.ipAddress).toBeTruthy();
   });
