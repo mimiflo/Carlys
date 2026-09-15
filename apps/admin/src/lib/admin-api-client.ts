@@ -11,6 +11,7 @@ import { ApiError, apiUrl, requestJson, unwrapResponse } from './api-transport';
  */
 
 const TOKEN_KEY = 'carlys-admin-token';
+const PERMISSIONS_KEY = 'carlys-admin-permissions';
 
 export const adminToken = {
   get(): string | null {
@@ -21,8 +22,69 @@ export const adminToken = {
   },
   clear(): void {
     window.sessionStorage.removeItem(TOKEN_KEY);
+    window.sessionStorage.removeItem(PERMISSIONS_KEY);
   },
 };
+
+/**
+ * Les permissions de l'administrateur connecté, telles que la CONNEXION les a
+ * rendues (`adminLoginResultSchema.admin.permissions`).
+ *
+ * La page de connexion n'en gardait que le jeton et les jetait. La navigation
+ * était alors en dur : un administrateur « content-manager », qui n'a ni
+ * `user:read` ni `audit:read` ni `community:moderate`, arrivait sur
+ * « Utilisateurs » — la page d'accueil du back-office — et n'y voyait qu'un
+ * message d'erreur lui conseillant de se reconnecter. Se reconnecter n'y
+ * changeait rien : c'est son rôle, pas sa session.
+ *
+ * Ce n'est PAS un contrôle d'accès — celui-ci reste entièrement côté serveur,
+ * sur chaque requête, où il ne peut pas être contourné. C'est de
+ * l'ergonomie : ne pas proposer une porte qu'on sait fermée.
+ */
+export const EMPTY_PERMISSIONS: readonly string[] = Object.freeze([]);
+
+/**
+ * MÉMOÏSATION OBLIGATOIRE, pas une optimisation. `AdminShell` lit ces
+ * permissions par `useSyncExternalStore`, qui compare les instantanés PAR
+ * IDENTITÉ : rendre un tableau neuf à chaque appel fait conclure à React que
+ * la source a changé à chaque rendu, et il coupe la boucle en levant « The
+ * result of getSnapshot should be cached to avoid an infinite loop ». La
+ * chaîne brute du stockage sert de clé — deux lectures de la même chaîne
+ * rendent donc le même tableau, et une écriture change la chaîne.
+ */
+let brutEnCache: string | null = null;
+let luEnCache: readonly string[] = EMPTY_PERMISSIONS;
+
+export const adminPermissions = {
+  get(): readonly string[] {
+    if (typeof window === 'undefined') {
+      return EMPTY_PERMISSIONS;
+    }
+    const brut = window.sessionStorage.getItem(PERMISSIONS_KEY);
+    if (brut === brutEnCache) {
+      return luEnCache;
+    }
+    brutEnCache = brut;
+    luEnCache = brut === null ? EMPTY_PERMISSIONS : lire(brut);
+    return luEnCache;
+  },
+  set(permissions: readonly string[]): void {
+    window.sessionStorage.setItem(PERMISSIONS_KEY, JSON.stringify(permissions));
+  },
+};
+
+function lire(brut: string): readonly string[] {
+  try {
+    const lu: unknown = JSON.parse(brut);
+    return Array.isArray(lu)
+      ? lu.filter((x): x is string => typeof x === 'string')
+      : EMPTY_PERMISSIONS;
+  } catch {
+    // Stockage corrompu : on n'affiche rien de plus que le strict nécessaire
+    // plutôt que de deviner.
+    return EMPTY_PERMISSIONS;
+  }
+}
 
 const successEnvelopeSchema = z.object({ data: z.unknown() });
 const pageMetaSchema = z.object({

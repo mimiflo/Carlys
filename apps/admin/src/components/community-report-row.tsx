@@ -19,15 +19,24 @@ export const COMMUNITY_REPORT_REASON_LABELS: Record<CommunityReportReason, strin
 /**
  * Lien vers la fiche : c'est là qu'on suspend, on ne duplique pas ce geste
  * ici. Le nom peut manquer (profil jamais rempli) : l'e-mail prend le relais.
+ *
+ * L'e-mail s'affichait EN PLUS du nom quand le nom existait : les deux
+ * branches le rendaient, donc il apparaissait dans 100 % des cas et non dans
+ * le seul repli que ce commentaire décrit. Deux parties par ligne, vingt
+ * lignes par page : quatre-vingts adresses en permanence à l'écran, pour une
+ * file où le seul geste est « Résoudre / Rouvrir ». Il reste atteignable —
+ * l'infobulle le donne pour départager deux homonymes, la fiche le donne en
+ * clair — mais sur une intention, pas par défaut.
  */
 function PartyLink({ party }: { party: AdminCommunityReportParty }) {
   return (
-    <span className="flex flex-col">
-      <Link href={`/users/${party.id}`} className="font-medium text-primary underline">
-        {party.displayName ?? party.email}
-      </Link>
-      {party.displayName !== null && <span className="text-xs text-muted">{party.email}</span>}
-    </span>
+    <Link
+      href={`/users/${party.id}`}
+      title={party.email}
+      className="font-medium text-primary underline"
+    >
+      {party.displayName ?? party.email}
+    </Link>
   );
 }
 

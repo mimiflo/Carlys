@@ -145,6 +145,23 @@ describe('Page Signalements', () => {
     );
   });
 
+  // Vingt signalements par page, deux parties chacun : l'adresse affichée par
+  // défaut, c'était quatre-vingts adresses à l'écran d'une file où le seul
+  // geste est « Résoudre ». Elle reste accessible, sur intention.
+  it('n’affiche PAS l’e-mail de qui porte déjà un nom — il passe en infobulle', async () => {
+    adminToken.set('jeton-admin');
+    vi.spyOn(adminApi, 'listCommunityReports').mockResolvedValue(pageOf([REPORT]));
+
+    renderPage();
+
+    const auteur = await screen.findByRole('link', { name: 'Membre' });
+    expect(screen.queryByText(REPORTER.email)).not.toBeInTheDocument();
+    expect(auteur).toHaveAttribute('title', REPORTER.email);
+
+    // Sans nom, l'e-mail reste le libellé : c'est le repli, et il tient.
+    expect(screen.getByRole('link', { name: REPORTED.email })).toBeInTheDocument();
+  });
+
   it('résout un signalement, puis recharge la liste', async () => {
     adminToken.set('jeton-admin');
     const list = vi.spyOn(adminApi, 'listCommunityReports').mockResolvedValue(pageOf([REPORT]));

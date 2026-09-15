@@ -73,15 +73,60 @@ void main() {
   test(
     'l’identifiant d’appareil voyage : rejouer n’ouvre pas deux paiements',
     () async {
+      // Ce test ne REJOUAIT rien : il n'appelait `buy()` qu'une fois et
+      // n'exigeait de l'identifiant que `isNotEmpty`. Il restait donc vert
+      // alors que la production violait déjà ce que son titre promet —
+      // `_uuid.v4()` était appelé à CHAQUE appel, donc deux appuis donnaient
+      // deux clés d'idempotence, donc deux sessions de paiement chez le
+      // fournisseur. Un double appui sur un bouton qui met une seconde à
+      // ouvrir un navigateur suffisait.
       final repository = FakeSubscriptionRepository(checkoutAvailable: true);
       final container = containerFor(repository);
+      final actions = container.read(subscriptionActionsProvider);
 
-      await container.read(subscriptionActionsProvider).buy(offer);
+      await actions.buy(offer);
+      await actions.buy(offer);
 
-      expect(repository.checkouts.single.offerId, 'premium-annuel');
-      expect(repository.checkouts.single.id, isNotEmpty);
+      expect(repository.checkouts, hasLength(2));
+      expect(
+        repository.checkouts.map((demande) => demande.offerId),
+        everyElement('premium-annuel'),
+      );
+      // LE point : la même clé, donc la même page de paiement.
+      expect(
+        repository.checkouts.first.id,
+        repository.checkouts.last.id,
+        reason: 'deux demandes pour la même offre partagent leur identifiant',
+      );
+      expect(repository.checkouts.first.id, isNotEmpty);
     },
   );
+
+  test('deux offres DIFFÉRENTES ont des identifiants différents', () async {
+    // Contre-épreuve : un identifiant figé une fois pour toutes passerait le
+    // test précédent, et ferait payer l'offre mensuelle sous la clé de
+    // l'annuelle.
+    final repository = FakeSubscriptionRepository(checkoutAvailable: true);
+    final container = containerFor(repository);
+    final actions = container.read(subscriptionActionsProvider);
+
+    await actions.buy(offer);
+    await actions.buy(
+      const SubscriptionOffer(
+        id: 'premium-mensuel',
+        name: 'Premium mensuel',
+        period: OfferPeriod.month,
+        amountCents: 999,
+        currency: 'EUR',
+        monthlyEquivalentCents: 999,
+        trialDays: 7,
+        isRecommended: false,
+      ),
+    );
+
+    expect(repository.checkouts, hasLength(2));
+    expect(repository.checkouts.first.id, isNot(repository.checkouts.last.id));
+  });
 
   test('un serveur qui refuse le paiement ne fait pas semblant', () async {
     final repository = FakeSubscriptionRepository(

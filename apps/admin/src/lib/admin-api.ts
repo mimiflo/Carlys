@@ -41,7 +41,14 @@ import { ApiError } from './api-transport';
 
 /** Nom historique du back-office pour l'erreur commune du transport. */
 export { ApiError as AdminApiError };
-export { adminToken, parseData, parsePage, type Page } from './admin-api-client';
+export {
+  EMPTY_PERMISSIONS,
+  adminPermissions,
+  adminToken,
+  parseData,
+  parsePage,
+  type Page,
+} from './admin-api-client';
 
 export const adminApi = {
   // Signalements de la communauté — voir `admin-community-api.ts`.

@@ -83,18 +83,34 @@ final class PortalFailed extends PortalOutcome {
 /// action, pas un rendu, et l'écran doit pouvoir être éprouvé sans ouvrir
 /// quoi que ce soit.
 class SubscriptionActions {
-  const SubscriptionActions(this._ref, {this._uuid = const Uuid()});
+  SubscriptionActions(this._ref, {this._uuid = const Uuid()});
 
   final Ref _ref;
   final Uuid _uuid;
+
+  /// L'identifiant de paiement DÉJÀ engendré pour une offre.
+  ///
+  /// Le commentaire promettait « rejouer la demande rend la même page de
+  /// paiement » ; le code appelait `_uuid.v4()` à chaque `buy()`, donc deux
+  /// appuis donnaient deux clés d'idempotence différentes, donc deux
+  /// sessions de paiement chez le fournisseur. Un double appui — le geste le
+  /// plus banal sur un bouton qui met une seconde à ouvrir un navigateur —
+  /// suffisait à en ouvrir deux.
+  ///
+  /// L'identifiant est donc RETENU par offre, pour la durée du fournisseur
+  /// (permanent : l'application entière). Le rejeu rend alors la même page,
+  /// ce que la clé d'idempotence côté Stripe garantit.
+  final Map<String, String> _paiementsEnCours = {};
 
   Future<CheckoutOutcome> buy(SubscriptionOffer offer) async {
     final repository = _ref.read(subscriptionRepositoryProvider);
     final String url;
     try {
-      // L'identifiant est engendré ICI, hors ligne : rejouer la demande rend
-      // la même page de paiement plutôt que d'en ouvrir une seconde.
-      url = await repository.startCheckout(offerId: offer.id, id: _uuid.v4());
+      // L'identifiant est engendré ICI, hors ligne, et CONSERVÉ : rejouer la
+      // demande rend la même page de paiement plutôt que d'en ouvrir une
+      // seconde.
+      final id = _paiementsEnCours.putIfAbsent(offer.id, () => _uuid.v4());
+      url = await repository.startCheckout(offerId: offer.id, id: id);
     } on StateError {
       return CheckoutOutcome.unavailable;
     } on Object {

@@ -6,6 +6,24 @@ import type { AdminAuditLog } from '@carlys/api-contracts';
 import { AdminShell } from '@/components/admin-shell';
 import { adminApi } from '@/lib/admin-api';
 
+/** Le type d'acteur, en français : « ADMIN » n'est pas un mot de la langue. */
+const ACTOR_LABELS: Record<AdminAuditLog['actorType'], string> = {
+  ADMIN: 'Administration',
+  USER: 'Membre',
+  SYSTEM: 'Système',
+};
+
+/**
+ * L'identifiant de CELUI qui a agi, selon son type.
+ *
+ * Le journal porte deux colonnes d'acteur — `adminUserId` et `userId` —
+ * parce qu'elles pointent vers deux tables. Un seul des deux est renseigné
+ * à la fois ; c'est `actorType` qui dit lequel regarder.
+ */
+function actorId(log: AdminAuditLog): string | null {
+  return log.actorType === 'ADMIN' ? log.adminUserId : log.userId;
+}
+
 /** Journal d'audit append-only, du plus récent au plus ancien. */
 export default function AuditPage() {
   const [pages, setPages] = useState<AdminAuditLog[][]>([]);
@@ -35,6 +53,7 @@ export default function AuditPage() {
               <th className="px-4 py-3">Acteur</th>
               <th className="px-4 py-3">Action</th>
               <th className="px-4 py-3">Ressource</th>
+              <th className="px-4 py-3">Origine</th>
             </tr>
           </thead>
           <tbody>
@@ -43,16 +62,27 @@ export default function AuditPage() {
                 <td className="whitespace-nowrap px-4 py-3">
                   {new Date(log.createdAt).toLocaleString('fr-FR')}
                 </td>
-                <td className="px-4 py-3">{log.actorType}</td>
+                <td className="px-4 py-3">
+                  <span className="block">{ACTOR_LABELS[log.actorType]}</span>
+                  {/* L'IDENTITÉ, pas seulement le type. La colonne ne rendait
+                      que « ADMIN » ou « USER » — alors que le contrat porte
+                      `adminUserId` et `userId` depuis toujours, et que
+                      docs/architecture/admin.md promet « qui a fait quoi ».
+                      Sur les quatre, la page en rendait deux. */}
+                  <span className="block font-mono text-xs text-muted">{actorId(log) ?? '—'}</span>
+                </td>
                 <td className="px-4 py-3 font-mono text-xs">{log.action}</td>
                 <td className="px-4 py-3 font-mono text-xs">
                   {log.resourceType === null ? '—' : `${log.resourceType}:${log.resourceId ?? ''}`}
                 </td>
+                {/* L'adresse d'où l'action est partie : c'est le « d'où »
+                    d'une enquête, et le journal la porte déjà. */}
+                <td className="px-4 py-3 font-mono text-xs">{log.ipAddress ?? '—'}</td>
               </tr>
             ))}
             {!isPending && logs.length === 0 && (
               <tr>
-                <td colSpan={4} className="px-4 py-6 text-center text-muted">
+                <td colSpan={5} className="px-4 py-6 text-center text-muted">
                   Aucun événement.
                 </td>
               </tr>

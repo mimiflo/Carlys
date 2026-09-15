@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
-import { AdminApiError, adminApi, adminToken } from '@/lib/admin-api';
+import { firstAllowedRoute } from '@/components/admin-shell';
+import { AdminApiError, adminApi, adminPermissions, adminToken } from '@/lib/admin-api';
 
 /**
  * Connexion administrateur (comptes séparés des comptes mobiles).
@@ -24,7 +25,10 @@ export default function LoginPage() {
     try {
       const result = await adminApi.login(email, password);
       adminToken.set(result.accessToken);
-      router.replace('/users');
+      // La réponse de connexion porte DÉJÀ les permissions : elles étaient
+      // jetées, et la navigation était en dur.
+      adminPermissions.set(result.admin.permissions);
+      router.replace(firstAllowedRoute(result.admin.permissions));
     } catch (cause) {
       setError(
         cause instanceof AdminApiError && cause.status === 401

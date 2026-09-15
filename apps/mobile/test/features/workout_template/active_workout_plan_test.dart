@@ -38,7 +38,14 @@ void main() {
         .clearAccessibilityFeaturesTestValue();
   });
 
-  /// Modèle « 4 × 8 à 60 kg » sur un seul exercice.
+  /// Modèle de trois séries sur un seul exercice.
+  ///
+  /// Les trois cibles sont DISTINCTES, et c'est délibéré : les deux premières
+  /// étaient identiques (8 × 60 kg), si bien qu'aucun test ne pouvait
+  /// distinguer « on est encore sur la première » de « on est passé à la
+  /// deuxième ». Le test de « Passer cette série » assertait d'ailleurs
+  /// exactement l'état d'AVANT son propre geste, et restait vert quoi qu'il
+  /// arrive.
   const pushTemplate = SaveTemplateInput(
     id: 'tpl-1',
     name: 'Push force',
@@ -47,7 +54,7 @@ void main() {
         exerciseName: 'Développé couché',
         sets: [
           PlannedSetInput(targetReps: 8, targetWeightKg: 60, restSeconds: 120),
-          PlannedSetInput(targetReps: 8, targetWeightKg: 60, restSeconds: 120),
+          PlannedSetInput(targetReps: 10, targetWeightKg: 65, restSeconds: 120),
           PlannedSetInput(targetReps: 6, targetWeightKg: 70, restSeconds: 150),
         ],
       ),
@@ -163,9 +170,14 @@ void main() {
     expect(plan!.doneCount, 0);
     expect(plan.remainingCount, 2);
 
-    // La cible suivante est bien celle de la deuxième série prévue.
+    // La cible affichée est celle de la DEUXIÈME série prévue — et elle
+    // diffère de la première, sans quoi cette assertion ne prouverait rien.
+    expect(find.text('PRÉVU 10 × 65 KG'), findsOneWidget);
+    expect(find.text('PRÉVU 8 × 60 KG'), findsNothing);
+    // Le rang affiché reste « 1 sur 3 » : une série PASSÉE n'est pas faite,
+    // elle ne compte donc pas dans le décompte des séries réalisées. C'est
+    // le `remainingCount` qui recule, et lui seul.
     expect(find.text('SÉRIE 1 SUR 3 · DÉVELOPPÉ COUCHÉ'), findsOneWidget);
-    expect(find.text('PRÉVU 8 × 60 KG'), findsOneWidget);
   });
 
   testWidgets('séance libre : aucun objectif, comportement inchangé', (
