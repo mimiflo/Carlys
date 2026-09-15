@@ -63,6 +63,25 @@ void main() {
       expect(formatMonthYearMono(DateTime(2025, 3, 4)), 'MARS 2025');
     });
 
+    test('un instant UTC est rendu dans le JOUR LOCAL, pas le jour UTC', () {
+      // Les instants viennent de l'API en UTC. Lire `date.day` brut affichait
+      // le quantième ET le nom du jour de la date UTC : un encouragement du
+      // vendredi soir à Montréal se lisait « sam. 5 sept. ».
+      //
+      // 23 h 30 UTC : dans tout fuseau à l'est de UTC (l'Europe, donc le
+      // fuseau du dépôt) le jour LOCAL est déjà le lendemain, et c'est là que
+      // la garde mord. Sous UTC même, les deux jours coïncident et le test
+      // passe des deux façons — comme la garde du changement d'heure.
+      final instantUtc = DateTime.utc(2026, 9, 4, 23, 30);
+      expect(
+        formatShortDateMono(instantUtc),
+        formatShortDateMono(instantUtc.toLocal()),
+      );
+      // Et sur une date déjà locale, rien ne bouge.
+      final locale = DateTime(2025, 11, 11);
+      expect(formatShortDateMono(locale), 'MAR. 11 NOV.');
+    });
+
     test('dates relatives', () {
       final now = DateTime(2025, 11, 15, 10);
       String relative(DateTime date) => formatRelativeDayMono(date, now: now);

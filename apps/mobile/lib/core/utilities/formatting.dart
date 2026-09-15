@@ -131,9 +131,16 @@ String formatLongDateMono(DateTime date) =>
     '${_monthsShort[date.month - 1]}';
 
 /// « LUN. 11 NOV. » — sous-titre des cartes de séance.
-String formatShortDateMono(DateTime date) =>
-    '${_weekdaysShort[date.weekday - 1]} ${date.day} '
-    '${_monthsShort[date.month - 1]}';
+/// `.toLocal()` D'ABORD, comme `formatDayKey` et `formatRelativeDayMono` : les
+/// instants viennent de l'API en UTC, et lire `date.day`/`date.weekday` bruts
+/// affichait le quantième ET le nom du jour de la date UTC. Un encouragement
+/// envoyé le vendredi 4 septembre à 21 h à Montréal (2026-09-05T01:00Z) se
+/// lisait « sam. 5 sept. ». Sur une date déjà locale, l'appel ne fait rien.
+String formatShortDateMono(DateTime date) {
+  final local = date.toLocal();
+  return '${_weekdaysShort[local.weekday - 1]} ${local.day} '
+      '${_monthsShort[local.month - 1]}';
+}
 
 /// « MARS 2025 » — « membre depuis ».
 String formatMonthYearMono(DateTime date) =>

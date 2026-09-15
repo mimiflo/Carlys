@@ -171,13 +171,21 @@ final weeklyVolumeProvider =
         return (thisWeek: null, lastWeek: null);
       }
 
+      // Des dates de CALENDRIER, jamais des durées retranchées. Une semaine
+      // ne fait pas toujours 7 × 24 h : au retour à l'heure d'hiver,
+      // `monday.subtract(Duration(days: 7))` rendait le 19 octobre à 01 h 00
+      // et non à minuit — une séance de ce lundi-là se retrouvait AVANT le
+      // « lundi précédent », donc comptée dans aucune des deux semaines et
+      // silencieusement perdue par la comparaison. Le constructeur, lui,
+      // normalise un quantième hors bornes et retombe sur un vrai minuit
+      // local, quel que soit le décalage.
       final now = DateTime.now();
-      final monday = DateTime(
-        now.year,
-        now.month,
-        now.day,
-      ).subtract(Duration(days: now.weekday - 1));
-      final previousMonday = monday.subtract(const Duration(days: 7));
+      final monday = DateTime(now.year, now.month, now.day - (now.weekday - 1));
+      final previousMonday = DateTime(
+        monday.year,
+        monday.month,
+        monday.day - 7,
+      );
 
       var current = 0.0;
       var previous = 0.0;
