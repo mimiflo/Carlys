@@ -354,6 +354,26 @@ describe('Abonnements (e2e)', () => {
     );
     expect(me.isPremium).toBe(true);
     expect(me.subscription?.status).toBe('ACTIVE');
+
+    // REMISE EN ÉTAT, et ce n'est pas une politesse. Les tests de ce fichier
+    // partagent UN compte et s'exécutent dans l'ordre : celui-ci vient de le
+    // rendre Premium, or les tests de paiement plus bas attendent un compte
+    // gratuit — depuis que `createCheckout` refuse (409) un second achat à un
+    // membre déjà abonné, les laisser sur un compte Premium les fait tomber.
+    // Un événement postérieur, lui, passe la garde d'ordre : c'est même la
+    // preuve que la garde ne bloque QUE ce qui est périmé.
+    const cloture = stripeEvent(
+      `${eventPrefix}-7`,
+      'customer.subscription.updated',
+      { status: 'canceled', current_period_end: maintenant - 3_600 },
+      maintenant + 60,
+    );
+    await postStripe(cloture).expect(200);
+
+    const apres = data<SubscriptionMe>(
+      (await authed(accessToken).get('/api/v1/subscriptions/me').expect(200)).body,
+    );
+    expect(apres.isPremium).toBe(false);
   });
 
   it('RevenueCat : Bearer requis, achat puis expiration projetés', async () => {
