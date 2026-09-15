@@ -1,8 +1,23 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { Prisma, type User, type UserProfile, UserStatus } from '@prisma/client';
 import { PrismaService } from '../../../database/prisma/prisma.service';
 import { generateFriendCode } from '../domain/friend-code';
 import { tombstoneEmail, tombstoneFriendCode } from '../domain/tombstone';
+
+/**
+ * La contrainte d'unicité qui a cédé, d'après `meta.target` de Prisma.
+ *
+ * Le champ est un tableau de colonnes sur PostgreSQL, mais d'autres
+ * connecteurs rendent une chaîne : on accepte les deux plutôt que de parier.
+ * Cible inconnue ou absente : on ne prétend rien, et l'appelant décide.
+ */
+function collidedOn(error: Prisma.PrismaClientKnownRequestError, column: string): boolean {
+  const target = error.meta?.target;
+  if (Array.isArray(target)) {
+    return target.includes(column);
+  }
+  return typeof target === 'string' && target.includes(column);
+}
 
 export type UserWithProfile = User & { profile: UserProfile | null };
 
@@ -48,8 +63,17 @@ export class UsersRepository {
   async create(input: CreateUserInput): Promise<UserWithProfile> {
     // Le code ami est tiré ici, pas en base : l'alphabet est une règle du
     // domaine. Une collision sur 2×10¹¹ combinaisons est invraisemblable ;
-    // si elle arrive, on retire — l'e-mail unique, lui, a déjà été vérifié
-    // par l'appelant, donc un P2002 ne peut venir que du code.
+    // si elle arrive, on retire.
+    //
+    // MAIS un P2002 ne vient PAS forcément du code, contrairement à ce qui
+    // était écrit ici. L'appelant vérifie l'e-mail AVANT d'appeler `create`,
+    // et deux inscriptions simultanées sur la même adresse passent toutes
+    // deux cette vérification : la perdante se prend un P2002 sur l'e-mail.
+    // La boucle le prenait pour une collision de code, retirait trois codes
+    // contre le même mur, puis relançait l'erreur brute — soit un 500 là où
+    // la personne attend le 409 qu'elle aurait eu une milliseconde plus tôt.
+    // `meta.target` dit quelle contrainte a cédé : on ne retire QUE sur le
+    // code ami.
     for (let attempt = 0; ; attempt += 1) {
       try {
         return await this.prisma.user.create({
@@ -72,9 +96,15 @@ export class UsersRepository {
           include: { profile: true },
         });
       } catch (error) {
-        const collision =
-          error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002';
-        if (!collision || attempt >= 2) {
+        if (!(error instanceof Prisma.PrismaClientKnownRequestError) || error.code !== 'P2002') {
+          throw error;
+        }
+        if (collidedOn(error, 'email')) {
+          // Course perdue sur l'adresse : même réponse que la vérification
+          // préalable de l'appelant, pas une erreur serveur.
+          throw new ConflictException('Un compte existe déjà avec cette adresse e-mail.');
+        }
+        if (!collidedOn(error, 'friendCode') || attempt >= 2) {
           throw error;
         }
       }
