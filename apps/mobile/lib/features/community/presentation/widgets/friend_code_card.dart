@@ -27,12 +27,33 @@ class FriendCodeCard extends ConsumerWidget {
       ),
       // Hors ligne, le code n'est pas connu : la feuille reste utilisable
       // (e-mail, saisie de code), seule cette carte s'excuse.
+      //
+      // Elle s'excusait en promettant que le code « arriverait avec la
+      // connexion » — ce qui était faux. `myFriendCodeProvider` n'est pas
+      // auto-disposé (un code est attribué à vie, il ne doit pas changer sous
+      // la feuille) : l'échec restait donc mémoïsé pour TOUTE la session, et
+      // rien ne le rejouait, ni le retour du réseau, ni la fermeture puis la
+      // réouverture de la feuille. Le texte dit maintenant ce qui est vrai,
+      // et le geste qu'il annonce existe.
       error: (_, __) => Padding(
         padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
-        child: Text(
-          'Ton code arrivera avec la connexion.',
-          style: AppTypography.label.copyWith(
-            color: AppColors.darkTextSecondary,
+        // `button: true` sans libellé concurrent : la phrase affichée EST le
+        // libellé, et elle dit déjà quoi faire. Un libellé posé par-dessus
+        // aurait masqué la cause de l'échec aux lecteurs d'écran.
+        child: Semantics(
+          button: true,
+          child: InkWell(
+            onTap: () => ref.invalidate(myFriendCodeProvider),
+            borderRadius: AppRadius.mdAll,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+              child: Text(
+                'Ton code n’a pas pu être chargé. Touche pour réessayer.',
+                style: AppTypography.label.copyWith(
+                  color: AppColors.darkTextSecondary,
+                ),
+              ),
+            ),
           ),
         ),
       ),
