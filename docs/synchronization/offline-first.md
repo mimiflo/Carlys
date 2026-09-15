@@ -185,6 +185,7 @@ stateDiagram-v2
   pending --> failed : erreur définitive (4xx non récupérable)
   pending --> exhausted : serverAttemptsMax réponses 5xx d'affilée
   exhausted --> pending : ouverture suivante de l'application\n(retryExhausted)
+  failed --> pending : « Réessayer la synchronisation »,\ngeste EXPLICITE seulement (retryRejected)
   pending --> conflict : 409 à la clôture, le serveur a clos\nla séance avec une AUTRE issue
   conflict --> [*] : « Prendre la version du serveur » :\nversion serveur rapatriée, opération supprimée
   conflict --> pending : « Garder ma version » : clôture locale\nrejouée, marquée arbitrée (resolution: keepLocal)
@@ -197,8 +198,16 @@ stateDiagram-v2
 - **succès** : l'opération est **supprimée** et l'entité locale passe
   `synced` — c'est sur l'entité, pas sur la file, que l'état s'affiche.
 - `failed` : erreur **définitive** (ex. `VALIDATION_ERROR`, `FORBIDDEN`).
-  L'opération n'est plus rejouée ; `error` est conservé et l'entité est
-  marquée `failed`.
+  Le drainage ne la ramasse plus et l'ouverture suivante ne la ranime pas ;
+  `error` est conservé et l'entité est marquée `failed`.
+  **Seul un geste explicite la ranime** : « Réessayer la synchronisation » sur
+  le détail de la séance appelle `SyncEngine.retryRejected()`, qui couvre
+  `exhausted` ET `failed`. La distinction compte : ranimer un refus définitif
+  à chaque ouverture le rejouerait à l'infini, alors que le ranimer sur
+  demande est borné et peut aboutir si la cause du refus a disparu. Sans cela,
+  le bouton ne faisait RIEN sur ce cas-là, en silence — l'entité porte le même
+  marqueur `failed` pour `exhausted` et pour `failed`, donc la même carte
+  s'affiche dans les deux cas.
 - `exhausted` : **mise de côté** après `serverAttemptsMax` réponses 5xx
   d'affilée. L'entité est marquée `failed` (l'utilisateur voit l'échec), les
   opérations qui la suivent **sur sa voie** attendent, celles des autres

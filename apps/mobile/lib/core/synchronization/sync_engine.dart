@@ -120,9 +120,15 @@ class SyncEngine {
   /// attente, et l'interface peut reconstruire un cycle de vie sur l'ancienne
   /// base pendant une purge à la frontière de compte. La base fermée sous lui
   /// est celle du compte qui part : rien n'est perdu, on le journalise.
-  Future<void> retryExhausted() async {
+  Future<void> retryExhausted() => _guardedRevive(_states.retryExhausted);
+
+  /// Rejeu demandé explicitement par la personne : ranime AUSSI les refus
+  /// définitifs, que le rejeu automatique laisse volontairement de côté.
+  Future<void> retryRejected() => _guardedRevive(_states.retryRejected);
+
+  Future<void> _guardedRevive(Future<void> Function() revive) async {
     try {
-      await _states.retryExhausted();
+      await revive();
     } on StateError catch (error) {
       _logger.warning(
         'Rejeu des mises de côté interrompu : base fermée',

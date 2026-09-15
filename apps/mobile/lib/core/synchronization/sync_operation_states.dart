@@ -130,16 +130,38 @@ class SyncOperationStates {
 
   /// Redonne leur chance aux opérations mises de côté : compteurs à zéro,
   /// et l'entité redevient « en attente » à l'écran.
-  Future<void> retryExhausted() async {
-    final exhausted = await (_db.select(
+  ///
+  /// Appelée À CHAQUE OUVERTURE par `SyncLifecycle` : elle ne touche donc que
+  /// les opérations `exhausted`, mises de côté après trop d'erreurs SERVEUR.
+  /// Un refus définitif (`failed`) n'a rien à faire ici — il se rejouerait à
+  /// l'infini, une fois par lancement.
+  Future<void> retryExhausted() => _revive(const ['exhausted']);
+
+  /// Rejeu demandé EXPLICITEMENT par la personne, depuis la carte d'une
+  /// séance en échec.
+  ///
+  /// Couvre aussi les refus définitifs (`failed`), et c'est tout l'objet de
+  /// cette méthode : à l'écran, `exhausted` et `failed` marquent l'entité de
+  /// la même façon, donc la même carte s'affiche dans les deux cas. Le bouton
+  /// ne ranimait que les premiers — sur un refus définitif, appuyer ne
+  /// faisait RIEN, en silence, sous un texte qui promettait le contraire.
+  ///
+  /// Le rejeu automatique, lui, continue d'ignorer `failed` : c'est un geste
+  /// délibéré qui le ranime, jamais une boucle. Si le serveur refuse encore,
+  /// l'opération retombe en `failed` et la carte montre la raison — ce qui
+  /// vaut infiniment mieux qu'un bouton muet.
+  Future<void> retryRejected() => _revive(const ['exhausted', 'failed']);
+
+  Future<void> _revive(List<String> statuses) async {
+    final stuck = await (_db.select(
       _db.syncOperations,
-    )..where((op) => op.status.equals('exhausted'))).get();
-    if (exhausted.isEmpty) {
+    )..where((op) => op.status.isIn(statuses))).get();
+    if (stuck.isEmpty) {
       return;
     }
-    _logger.info('${exhausted.length} opération(s) mise(s) de côté rejouée(s)');
+    _logger.info('${stuck.length} opération(s) mise(s) de côté rejouée(s)');
     await _db.transaction(() async {
-      for (final operation in exhausted) {
+      for (final operation in stuck) {
         await _write(
           operation,
           const SyncOperationsCompanion(

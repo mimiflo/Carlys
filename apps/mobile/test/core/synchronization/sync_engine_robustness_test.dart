@@ -195,6 +195,37 @@ void main() {
       },
     );
 
+    test(
+      'un refus DÉFINITIF ne repart qu’au geste explicite, mais il repart',
+      () async {
+        // CE QUE CE TEST FERME. Un refus définitif (4xx) marque l'opération
+        // `failed` ; le drainage ne ramasse que `pending`, `exhausted` et
+        // `conflict`. Or l'entité est marquée pareil que pour une mise de
+        // côté, donc la MÊME carte s'affiche — avec un bouton
+        // « Réessayer la synchronisation » qui ne ranimait que les
+        // `exhausted`. Sur un refus définitif, appuyer ne faisait rien, en
+        // silence, sous un texte qui promettait le contraire.
+        final refusee = await enqueue();
+        api.statusByEntityId[refusee] = 422;
+        await engine.syncNow();
+        expect((await allOperations()).single.status, 'failed');
+
+        // Le rejeu AUTOMATIQUE l'ignore toujours, et c'est voulu : sinon un
+        // refus définitif se rejouerait à chaque ouverture, pour toujours.
+        await engine.retryExhausted();
+        expect((await allOperations()).single.status, 'failed');
+
+        // Le geste explicite, lui, la ranime.
+        await engine.retryRejected();
+        expect((await allOperations()).single.status, 'pending');
+
+        // Et si le serveur a changé d'avis, elle passe pour de bon.
+        api.statusByEntityId.remove(refusee);
+        await engine.syncNow();
+        expect(await allOperations(), isEmpty);
+      },
+    );
+
     test('une coupure réseau ne compte jamais comme erreur serveur', () async {
       // Hors ligne pendant une heure : la file ne doit pas se vider dans
       // « mis de côté » opération par opération — c'est le réseau qui

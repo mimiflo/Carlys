@@ -85,11 +85,16 @@ class _WorkoutRetrySyncCardState extends ConsumerState<WorkoutRetrySyncCard> {
             ],
           ),
           const SizedBox(height: AppSpacing.xs),
+          // Le texte ne promet plus le rejeu automatique. Cette carte couvre
+          // DEUX états d'opération que l'entité marque pareil : une mise de
+          // côté après trop d'erreurs serveur, qui repart bien toute seule à
+          // l'ouverture suivante, et un refus DÉFINITIF, que le rejeu
+          // automatique ignore. Promettre le premier dans les deux cas était
+          // faux une fois sur deux ; ce qui reste vrai partout, c'est que
+          // rien n'est perdu et que le bouton, lui, ranime les deux.
           Text(
             'Le serveur n’a pas pu enregistrer cette séance. Rien n’est '
-            'perdu : elle est gardée sur cet appareil et repartira toute '
-            'seule à la prochaine ouverture. Tu peux aussi réessayer tout de '
-            'suite.',
+            'perdu : elle reste sur cet appareil. Réessaie quand tu veux.',
             style: theme.textTheme.bodyMedium,
           ),
           const SizedBox(height: AppSpacing.md),

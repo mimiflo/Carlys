@@ -309,7 +309,10 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
 
   @override
   Future<void> retryFailedSync() async {
-    await _sync.retryExhausted();
+    // `retryRejected` et non `retryExhausted` : la carte s'affiche aussi sur
+    // un refus DÉFINITIF, que le rejeu automatique ignore. Le bouton doit
+    // ranimer ce cas-là, sinon il ne fait rien du tout.
+    await _sync.retryRejected();
     // Attendu, contrairement au `_poke()` des écritures : c'est un geste de
     // l'utilisateur, l'écran doit pouvoir montrer la fin de la tentative.
     await _sync.syncNow();
