@@ -138,6 +138,18 @@ describe('Administration (e2e)', () => {
   });
 
   afterAll(async () => {
+    // L'APPLICATION SE FERME EN PREMIER, et l'ordre n'est pas cosmétique.
+    // `app.close()` draine les écritures d'audit encore en vol
+    // (`AuditService.onModuleDestroy`). Nettoyer AVANT, comme ici
+    // auparavant, laissait trois atterrissages possibles à la dernière
+    // écriture : avant la suppression — le cas nominal ; entre la
+    // suppression du journal et celle du compte — la ligne survivait au
+    // nettoyage d'une base que les suites PARTAGENT ; ou après la
+    // suppression du compte — l'INSERT violait alors la clé étrangère, et
+    // `AuditService` avalait l'erreur dans son `catch`. Fermer d'abord rend
+    // le nettoyage exact : plus rien ne s'écrit derrière lui.
+    await app.close();
+
     // Nettoyage strictement limité à cette suite (les e2e partagent la base).
     await prisma.auditLog.deleteMany({
       where: { adminUser: { email: { in: [superEmail, supportEmail] } } },
@@ -152,7 +164,6 @@ describe('Administration (e2e)', () => {
     await prisma.user.deleteMany({ where: { email: { in: [memberEmail, witnessEmail] } } });
     await prisma.exercise.deleteMany({ where: { slug: 'e2e-admin-moderation' } });
     await prisma.$disconnect();
-    await app.close();
   });
 
   it('connexion admin : message uniforme en échec, rôles et permissions en succès', async () => {
@@ -464,7 +475,16 @@ describe('Administration (e2e)', () => {
     // L'écriture d'audit est volontairement non bloquante ; ce test SONDAIT
     // donc, jusqu'à deux secondes. `flush()` attend ce qui est en vol :
     // déterministe, et immédiat.
-    await app.get(AuditService).flush();
+    // Le RÉSULTAT est lu, pas jeté. `flush` garantit que l'écriture a été
+    // TENTÉE, jamais qu'elle a réussi : son `catch` transforme un `create`
+    // rejeté en promesse résolue. Sans cette assertion, une violation de clé
+    // étrangère ou un pool saturé rendrait un flush parfaitement normal suivi
+    // d'une relecture vide — le symptôme EXACT de la course que flush corrige,
+    // et le prochain échec serait diagnostiqué à tort comme « elle est revenue ».
+    expect(await app.get(AuditService).flush()).toEqual({
+      abandonnees: 0,
+      echouees: 0,
+    });
     const logs = data<AdminAuditLog[]>(
       (await asAdmin(superToken).get('/api/v1/admin/audit-logs?limit=50').expect(200)).body,
     );

@@ -156,6 +156,17 @@ describe('Modération de la communauté (e2e)', () => {
   });
 
   afterAll(async () => {
+    // L'APPLICATION SE FERME EN PREMIER, et l'ordre n'est pas cosmétique.
+    // `app.close()` draine les écritures d'audit encore en vol
+    // (`AuditService.onModuleDestroy`). Nettoyer AVANT, comme ici
+    // auparavant, laissait trois atterrissages possibles à la dernière
+    // écriture : avant la suppression — le cas nominal ; entre la
+    // suppression du journal et celle du compte — la ligne survivait au
+    // nettoyage d'une base que les suites PARTAGENT ; ou après la
+    // suppression du compte — l'INSERT violait alors la clé étrangère, et
+    // `AuditService` avalait l'erreur dans son `catch`. Fermer d'abord rend
+    // le nettoyage exact : plus rien ne s'écrit derrière lui.
+    await app.close();
     await prisma.auditLog.deleteMany({
       where: { adminUser: { email: { in: [superEmail, readerEmail] } } },
     });
@@ -164,7 +175,6 @@ describe('Modération de la communauté (e2e)', () => {
     // Blocages, signalements et encouragements suivent les comptes (cascade).
     await prisma.user.deleteMany({ where: { email: { in: [emailA, emailB, emailC] } } });
     await prisma.$disconnect();
-    await app.close();
   });
 
   it('un encouragement se retire par son destinataire ou son auteur, jamais par un tiers', async () => {
@@ -374,7 +384,16 @@ describe('Modération de la communauté (e2e)', () => {
 
     // Même raison qu'en authentification : l'audit s'écrit sans bloquer la
     // réponse, donc relire immédiatement courait contre la promesse.
-    await app.get(AuditService).flush();
+    // Le RÉSULTAT est lu, pas jeté. `flush` garantit que l'écriture a été
+    // TENTÉE, jamais qu'elle a réussi : son `catch` transforme un `create`
+    // rejeté en promesse résolue. Sans cette assertion, une violation de clé
+    // étrangère ou un pool saturé rendrait un flush parfaitement normal suivi
+    // d'une relecture vide — le symptôme EXACT de la course que flush corrige,
+    // et le prochain échec serait diagnostiqué à tort comme « elle est revenue ».
+    expect(await app.get(AuditService).flush()).toEqual({
+      abandonnees: 0,
+      echouees: 0,
+    });
     const logs = data<AdminAuditLog[]>(
       (await authed(superToken).get('/api/v1/admin/audit-logs?limit=50').expect(200)).body,
     );

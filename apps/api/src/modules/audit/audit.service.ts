@@ -1,5 +1,6 @@
 import { Injectable, type OnModuleDestroy } from '@nestjs/common';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
+import { type DrainageResult, TravauxEnVol } from '../../common/async/travaux-en-vol';
 import { PrismaService } from '../../database/prisma/prisma.service';
 
 export interface AuditEntry {
@@ -18,6 +19,9 @@ export interface AuditEntry {
   /** Contexte non sensible uniquement — jamais de mot de passe ni de jeton. */
   metadata?: Record<string, string | number | boolean | null>;
 }
+
+/** Ce qu'un drainage d'audit a réellement obtenu. */
+export type AuditFlushResult = DrainageResult;
 
 /**
  * Journal d'audit des événements de sécurité (persisté en base).
@@ -47,18 +51,24 @@ export class AuditService implements OnModuleDestroy {
    *
    * Le contrat public ne change pas : `record` reste non bloquant, et un
    * échec d'écriture reste journalisé sans faire échouer l'opération métier.
+   *
+   * Le registre lui-même vit dans `common/async/travaux-en-vol.ts` : l'envoi
+   * d'e-mail avait le même défaut, et le raisonnement sur la BORNE du
+   * drainage est trop délicat pour exister en deux exemplaires.
    */
-  private readonly enVol = new Set<Promise<void>>();
+  private readonly enVol: TravauxEnVol;
 
   constructor(
     private readonly prisma: PrismaService,
     @InjectPinoLogger(AuditService.name)
     private readonly logger: PinoLogger,
-  ) {}
+  ) {
+    this.enVol = new TravauxEnVol('audit', logger);
+  }
 
   record(entry: AuditEntry): void {
-    const ecriture: Promise<void> = this.prisma.auditLog
-      .create({
+    this.enVol.suivre(
+      this.prisma.auditLog.create({
         data: {
           action: entry.action,
           actorType: entry.actorType ?? 'USER',
@@ -71,31 +81,28 @@ export class AuditService implements OnModuleDestroy {
           userAgent: entry.userAgent ?? null,
           metadata: entry.metadata ?? undefined,
         },
-      })
-      .then(() => {
-        this.logger.info({ action: entry.action, userId: entry.userId }, 'Événement de sécurité');
-      })
-      .catch((error: unknown) => {
-        this.logger.error({ err: error, action: entry.action }, "Échec d'écriture de l'audit");
-      })
-      .finally(() => {
-        this.enVol.delete(ecriture);
-      });
-    this.enVol.add(ecriture);
+      }),
+      {
+        succes: () => {
+          this.logger.info({ action: entry.action, userId: entry.userId }, 'Événement de sécurité');
+        },
+        echec: (erreur) => {
+          this.logger.error({ err: erreur, action: entry.action }, "Échec d'écriture de l'audit");
+        },
+      },
+    );
   }
 
   /**
-   * Attend que les écritures en vol soient posées.
+   * Attend que les écritures en vol soient posées, et rend ce qu'il en est.
    *
-   * La boucle est voulue : une écriture peut en avoir déclenché une autre
-   * pendant l'attente. Aucune de ces promesses ne rejette — `record` les a
-   * déjà toutes terminées par un `catch` — donc l'attente ne peut pas
-   * échouer, seulement se terminer.
+   * `abandonnees` non nul veut dire que la file se remplissait plus vite
+   * qu'elle ne se vidait ; `echouees` non nul, que la base a REFUSÉ des
+   * lignes — la relecture sera vide, et ce n'est pas une course. Voir
+   * `TravauxEnVol` pour la borne du drainage.
    */
-  async flush(): Promise<void> {
-    while (this.enVol.size > 0) {
-      await Promise.all([...this.enVol]);
-    }
+  flush(): Promise<AuditFlushResult> {
+    return this.enVol.drainer();
   }
 
   /** Arrêt propre : ce qui est en vol se pose avant que le processus parte. */

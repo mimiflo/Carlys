@@ -117,7 +117,7 @@ describe('AuditService', () => {
   });
 
   it('sans rien en vol, flush rend la main tout de suite', async () => {
-    await expect(banc().service.flush()).resolves.toBeUndefined();
+    await expect(banc().service.flush()).resolves.toEqual({ abandonnees: 0, echouees: 0 });
   });
 
   it('une écriture qui ÉCHOUE est journalisée et ne fait pas échouer flush', async () => {
@@ -133,8 +133,77 @@ describe('AuditService', () => {
 
     service.record({ action: 'auth.login' });
 
-    await expect(service.flush()).resolves.toBeUndefined();
+    // `flush` ne rejette pas — mais il ne PRÉTEND plus que la ligne est
+    // posée. C'est toute la différence entre « la tentative est finie » et
+    // « la ligne est là » : sans `echouees`, une violation de clé étrangère
+    // ou un pool saturé rendrait un flush parfaitement normal suivi d'une
+    // relecture vide, c'est-à-dire le symptôme EXACT de la course que flush
+    // corrige — et le prochain échec serait diagnostiqué à tort.
+    await expect(service.flush()).resolves.toEqual({ abandonnees: 0, echouees: 1 });
     expect(logger.error).toHaveBeenCalled();
+
+    // Le compteur se PRÉLÈVE : un second flush ne réclame pas deux fois le
+    // même échec, sinon un appelant qui draine en boucle croirait la base en
+    // train de refuser sans arrêt.
+    await expect(service.flush()).resolves.toEqual({ abandonnees: 0, echouees: 0 });
+  });
+
+  it('un arrêt SOUS CHARGE se termine au lieu de tourner sans fin', async () => {
+    // LE DÉFAUT QUE CE TEST FERME. Dans `@nestjs/core` 11, `close()` exécute
+    // `callDestroyHook()` AVANT `dispose()` : le serveur HTTP est encore
+    // OUVERT quand `onModuleDestroy` draine. Un déploiement sous charge —
+    // le cas normal ici — voit donc arriver des requêtes pendant le
+    // drainage, et chacune rappelle `record`. Sans borne, `enVol` n'est
+    // jamais vide à un point de contrôle, la boucle ne rend jamais la main,
+    // et le conteneur est tué au bout du délai de l'orchestrateur : le
+    // SIGKILL emporte alors exactement les écritures que ce drainage
+    // existe pour sauver.
+    //
+    // On reproduit le pire cas : CHAQUE écriture posée en déclenche une
+    // autre, donc la file se remplit aussi vite qu'elle se vide et ne peut
+    // jamais atteindre zéro.
+    const logger = { info: jest.fn(), error: jest.fn() };
+    let lancees = 0;
+    // La charge simulée est BORNÉE — largement au-delà de ce que le drainage
+    // s'autorise, mais bornée : sans ce plafond, le nourrisseur continue
+    // après le retour de `flush` et sature la mémoire du processus de test.
+    // C'est arrivé à l'écriture de ce test, et c'est la démonstration en
+    // creux du défaut corrigé : une file qui se réalimente toute seule ne
+    // s'arrête pas d'elle-même.
+    const CHARGE_MAX = 200;
+    const create: jest.Mock<Promise<unknown>, []> = jest.fn(() => {
+      lancees += 1;
+      if (lancees < CHARGE_MAX) {
+        // Le rappel est posé pour APRÈS la résolution : l'écriture suivante
+        // entre dans `enVol` pendant que le drainage attend celle-ci.
+        queueMicrotask(() => {
+          service.record({ action: 'auth.login' });
+        });
+      }
+      return Promise.resolve(undefined);
+    });
+    // `const` alors que `create` s'y réfère : la référence n'est LUE qu'au
+    // premier appel, bien après l'initialisation.
+    const service = new AuditService(
+      { auditLog: { create } } as unknown as PrismaService,
+      logger as unknown as PinoLogger,
+    );
+
+    service.record({ action: 'auth.login' });
+
+    // Sans borne, cet `await` ne rendrait JAMAIS la main : le test tomberait
+    // sur le délai d'expiration de Jest au lieu de cette assertion.
+    const resultat = await service.flush();
+
+    expect(resultat.abandonnees).toBeGreaterThan(0);
+    expect(logger.error).toHaveBeenCalledWith(
+      expect.objectContaining({ abandonnees: expect.any(Number) as number }),
+      expect.stringContaining('abandonné'),
+    );
+    // La borne est un nombre de TOURS, pas un plafond d'écritures : on
+    // vérifie seulement qu'elle a coupé, et qu'elle a coupé large — un
+    // drainage qui renoncerait au premier tour ne draînerait rien.
+    expect(lancees).toBeGreaterThan(1);
   });
 
   it('onModuleDestroy attend, lui aussi : un arrêt ne perd rien', async () => {

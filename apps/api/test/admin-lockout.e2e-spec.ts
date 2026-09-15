@@ -65,6 +65,17 @@ describe('Verrouillage de la connexion admin (e2e)', () => {
   });
 
   afterAll(async () => {
+    // L'APPLICATION SE FERME EN PREMIER, et l'ordre n'est pas cosmétique.
+    // `app.close()` draine les écritures d'audit encore en vol
+    // (`AuditService.onModuleDestroy`). Nettoyer AVANT, comme ici
+    // auparavant, laissait trois atterrissages possibles à la dernière
+    // écriture : avant la suppression — le cas nominal ; entre la
+    // suppression du journal et celle du compte — la ligne survivait au
+    // nettoyage d'une base que les suites PARTAGENT ; ou après la
+    // suppression du compte — l'INSERT violait alors la clé étrangère, et
+    // `AuditService` avalait l'erreur dans son `catch`. Fermer d'abord rend
+    // le nettoyage exact : plus rien ne s'écrit derrière lui.
+    await app.close();
     await prisma.auditLog.deleteMany({
       where: { adminUser: { email: { in: [lockedEmail, witnessEmail] } } },
     });
@@ -74,7 +85,6 @@ describe('Verrouillage de la connexion admin (e2e)', () => {
     await redis.del(`auth:lockout:admin:${lockedEmail}`, `auth:lockout:admin:${witnessEmail}`);
     await redis.quit();
     await prisma.$disconnect();
-    await app.close();
   });
 
   it('après N échecs, la connexion admin est refusée (429) même avec le bon mot de passe', async () => {

@@ -193,7 +193,16 @@ describe('Authentification (e2e)', () => {
     // test au hasard en CI. On attend les écritures en vol — c'est
     // déterministe, là où un délai fixe ne ferait que rendre l'intermittence
     // plus rare.
-    await app.get(AuditService).flush();
+    // Le RÉSULTAT est lu, pas jeté. `flush` garantit que l'écriture a été
+    // TENTÉE, jamais qu'elle a réussi : son `catch` transforme un `create`
+    // rejeté en promesse résolue. Sans cette assertion, une violation de clé
+    // étrangère ou un pool saturé rendrait un flush parfaitement normal suivi
+    // d'une relecture vide — le symptôme EXACT de la course que flush corrige,
+    // et le prochain échec serait diagnostiqué à tort comme « elle est revenue ».
+    expect(await app.get(AuditService).flush()).toEqual({
+      abandonnees: 0,
+      echouees: 0,
+    });
     const reuseAudit = await prisma.auditLog.findFirst({
       where: { action: 'auth.refresh_reuse_detected', user: { email } },
     });
@@ -360,7 +369,16 @@ describe('Authentification (e2e)', () => {
     // jusqu'à deux secondes. `flush()` attend exactement ce qui est en vol :
     // c'est plus court, et surtout déterministe — un sondage borné finit
     // toujours par échouer sous charge.
-    await app.get(AuditService).flush();
+    // Le RÉSULTAT est lu, pas jeté. `flush` garantit que l'écriture a été
+    // TENTÉE, jamais qu'elle a réussi : son `catch` transforme un `create`
+    // rejeté en promesse résolue. Sans cette assertion, une violation de clé
+    // étrangère ou un pool saturé rendrait un flush parfaitement normal suivi
+    // d'une relecture vide — le symptôme EXACT de la course que flush corrige,
+    // et le prochain échec serait diagnostiqué à tort comme « elle est revenue ».
+    expect(await app.get(AuditService).flush()).toEqual({
+      abandonnees: 0,
+      echouees: 0,
+    });
     const audited = await prisma.auditLog.findFirst({
       where: { action: 'account.deleted', userId: before.id },
     });

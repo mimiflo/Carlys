@@ -1,6 +1,7 @@
 import { Injectable, type OnModuleDestroy } from '@nestjs/common';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { createTransport, type Transporter } from 'nodemailer';
+import { type DrainageResult, TravauxEnVol } from '../../common/async/travaux-en-vol';
 import { AppConfigService } from '../../config/app-config.service';
 
 /**
@@ -9,10 +10,27 @@ import { AppConfigService } from '../../config/app-config.service';
  * L'envoi n'est JAMAIS bloquant pour la requête : les méthodes retournent
  * immédiatement et les échecs sont journalisés. Le passage par une file
  * BullMQ est prévu avec le module notifications.
+ *
+ * CE QUI A ÉTÉ CORRIGÉ. La promesse de `sendMail` était simplement
+ * abandonnée (`void … .then().catch()`), et `onModuleDestroy` fermait le
+ * transporteur sans rien attendre — le jumeau exact du défaut corrigé dans
+ * `AuditService`, avec une conséquence plus visible pour la personne
+ * concernée. À chaque déploiement, une inscription ou une demande de
+ * réinitialisation servie dans la seconde qui précède l'arrêt voyait son
+ * e-mail partir en vol ; le transporteur se fermait, le processus mourait.
+ * L'utilisateur recevait un 200, puis attendait un lien de vérification
+ * d'adresse ou de mot de passe qui n'arrivait jamais — sans rien à l'écran
+ * pour le lui dire, et sans qu'aucun test ne puisse le voir, puisque aucune
+ * suite ne parle à Mailpit.
+ *
+ * Le registre des envois en vol est celui de `common/async/travaux-en-vol.ts`,
+ * partagé avec l'audit : c'est le même raisonnement, y compris sur la BORNE
+ * du drainage, et il n'a pas à exister en deux exemplaires.
  */
 @Injectable()
 export class EmailService implements OnModuleDestroy {
   private readonly transporter: Transporter;
+  private readonly enVol: TravauxEnVol;
 
   constructor(
     private readonly config: AppConfigService,
@@ -24,6 +42,7 @@ export class EmailService implements OnModuleDestroy {
       port: config.smtpPort,
       secure: false,
     });
+    this.enVol = new TravauxEnVol('e-mail', logger);
   }
 
   sendEmailVerification(to: string, token: string): void {
@@ -60,18 +79,37 @@ export class EmailService implements OnModuleDestroy {
     );
   }
 
-  onModuleDestroy(): void {
+  /**
+   * Attend les envois en vol, et rend ce qu'il en est.
+   *
+   * `echouees` non nul veut dire que le serveur SMTP a refusé : le courrier
+   * n'est pas parti, et l'attendre plus longtemps n'y changerait rien.
+   */
+  flush(): Promise<DrainageResult> {
+    return this.enVol.drainer();
+  }
+
+  /**
+   * Arrêt propre. L'ordre compte : on DRAINE d'abord, on ferme ensuite.
+   * L'inverse — fermer le transporteur puis partir — est ce qui perdait les
+   * e-mails de vérification et de réinitialisation à chaque déploiement.
+   */
+  async onModuleDestroy(): Promise<void> {
+    await this.flush();
     this.transporter.close();
   }
 
   private send(to: string, subject: string, text: string): void {
-    void this.transporter
-      .sendMail({ from: this.config.emailFrom, to, subject, text })
-      .then(() => {
-        this.logger.info({ to, subject }, 'E-mail envoyé');
-      })
-      .catch((error: unknown) => {
-        this.logger.error({ err: error, to, subject }, "Échec d'envoi d'e-mail");
-      });
+    this.enVol.suivre(
+      this.transporter.sendMail({ from: this.config.emailFrom, to, subject, text }),
+      {
+        succes: () => {
+          this.logger.info({ to, subject }, 'E-mail envoyé');
+        },
+        echec: (erreur) => {
+          this.logger.error({ err: erreur, to, subject }, "Échec d'envoi d'e-mail");
+        },
+      },
+    );
   }
 }

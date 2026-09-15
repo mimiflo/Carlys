@@ -168,7 +168,22 @@ describe('Observabilité (e2e)', () => {
 
   describe('limitation de débit partagée', () => {
     const limite = 3;
-    const fenetreMs = 5_000;
+    /**
+     * LARGE EXPRÈS. Un seul test de ce bloc dort (1,1 s : il faut dépasser la
+     * seconde pour que le compte à rebours, exprimé en SECONDES, ait
+     * visiblement baissé). Avec une fenêtre de 5 s, il ne restait que 3,9 s
+     * de marge avant que la clé de blocage n'expire — et ce job démarre
+     * PostgreSQL, Redis et MinIO en parallèle sur un runner partagé. Une
+     * pause de garbage collector ou une contention de quelques secondes
+     * suffisait à faire rendre `isBlocked: false` et à faire tomber le test
+     * sans qu'aucun code de production n'ait changé : le profil exact du
+     * test qui passe neuf fois sur dix.
+     *
+     * La fenêtre n'est qu'un ARGUMENT passé au stockage : l'élargir ne change
+     * rien à ce qui est éprouvé, et rend la marge (58,9 s) hors d'atteinte
+     * d'un ralentissement de runner.
+     */
+    const fenetreMs = 60_000;
 
     it('bloque au-delà de la limite et annonce un Retry-After en secondes', async () => {
       const storage = app.get(RedisThrottlerStorage);
