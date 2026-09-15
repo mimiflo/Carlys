@@ -13,6 +13,7 @@ import {
   MaxDate,
   Min,
 } from 'class-validator';
+import { IsIanaTimeZone } from '../../../../../common/validators/is-iana-time-zone';
 
 export class UpdateProfileDto {
   @ApiPropertyOptional({ example: 'Camille' })
@@ -31,6 +32,10 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsString()
   @Length(1, 60)
+  // Un vrai identifiant IANA, reconnu par ICU. Sans cette garde, n'importe
+  // quelle chaîne atteignait la colonne, et la lecture des statistiques —
+  // qui découpe les journées `AT TIME ZONE` ce fuseau — échouait en base.
+  @IsIanaTimeZone()
   timezone?: string;
 
   @ApiPropertyOptional({

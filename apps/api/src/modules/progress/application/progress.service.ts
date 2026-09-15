@@ -17,6 +17,7 @@ import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { PrismaService } from '../../../database/prisma/prisma.service';
 import { ProgressRepository } from '../infrastructure/progress.repository';
 import { computeSessionBests } from './records.calculator';
+import { safeTimeZone } from '../../../common/utilities/time-zone';
 
 const PERIOD_DAYS: Record<ProgressPeriod, number> = {
   week: 7,
@@ -95,9 +96,16 @@ export class ProgressService {
     const to = new Date();
     const from = new Date(to.getTime() - PERIOD_DAYS[period] * 24 * 3_600_000);
 
+    // Les paniers se découpent dans le fuseau de la personne, pas en UTC :
+    // sinon une séance du soir bascule dans la journée suivante et s'affiche
+    // à la date de la veille. `safeTimeZone` couvre les lignes écrites avant
+    // que le fuseau ne soit validé : mieux vaut un découpage UTC visible
+    // qu'une erreur 500 sur une page de statistiques.
+    const timeZone = safeTimeZone(await this.progress.userTimeZone(userId));
+
     const [totals, buckets] = await Promise.all([
       this.progress.periodTotals(userId, from),
-      this.progress.volumeBuckets(userId, from, period),
+      this.progress.volumeBuckets(userId, from, period, timeZone),
     ]);
 
     return {

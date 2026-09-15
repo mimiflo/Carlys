@@ -36,6 +36,15 @@ const BUCKET_BY_PERIOD: Record<ProgressPeriod, string> = {
 export class ProgressRepository {
   constructor(private readonly prisma: PrismaService) {}
 
+  /** Le fuseau déclaré par la personne, tel qu'il est en base. */
+  async userTimeZone(userId: string): Promise<string | null> {
+    const profile = await this.prisma.userProfile.findUnique({
+      where: { userId },
+      select: { timezone: true },
+    });
+    return profile?.timezone ?? null;
+  }
+
   async periodTotals(userId: string, from: Date): Promise<PeriodTotals> {
     const [sessions, setRows] = await Promise.all([
       this.prisma.workoutSession.aggregate({
@@ -71,13 +80,36 @@ export class ProgressRepository {
     };
   }
 
-  async volumeBuckets(userId: string, from: Date, period: ProgressPeriod): Promise<RawBucket[]> {
+  /**
+   * Volume par jour ou par semaine, découpé DANS LE FUSEAU DE LA PERSONNE.
+   *
+   * `startedAt` est un instant UTC ; `date_trunc` seul découpe donc des
+   * journées UTC. Pour quelqu'un à Montréal (UTC−4 en septembre), une séance
+   * de 21 h locales vaut 01 h UTC le lendemain : deux séances du même soir
+   * tombaient dans deux paniers différents, et l'un d'eux s'affichait à la
+   * date de la veille une fois ramené à l'heure locale. Le dépôt en fait
+   * pourtant une règle : le serveur ne découpe jamais les journées à la place
+   * du client.
+   *
+   * Le double `AT TIME ZONE` est l'idiome PostgreSQL : le premier ramène
+   * l'instant à l'heure murale locale, le second renvoie le minuit local
+   * obtenu vers l'instant qui lui correspond. Le contrat est inchangé —
+   * `bucketStart` reste un instant — mais il tombe désormais sur un vrai
+   * minuit local.
+   */
+  async volumeBuckets(
+    userId: string,
+    from: Date,
+    period: ProgressPeriod,
+    timeZone: string,
+  ): Promise<RawBucket[]> {
     const bucket = Prisma.raw(`'${BUCKET_BY_PERIOD[period]}'`);
     const rows = await this.prisma.$queryRaw<
       { bucket_start: Date; sessions: bigint; volume: number | null }[]
     >(Prisma.sql`
       SELECT
-        date_trunc(${bucket}, w."startedAt")              AS bucket_start,
+        date_trunc(${bucket}, w."startedAt" AT TIME ZONE ${timeZone})
+          AT TIME ZONE ${timeZone}                        AS bucket_start,
         COUNT(DISTINCT w."id")                            AS sessions,
         COALESCE(SUM(s."reps" * s."weightKg"), 0)::float8 AS volume
       FROM "WorkoutSession" w

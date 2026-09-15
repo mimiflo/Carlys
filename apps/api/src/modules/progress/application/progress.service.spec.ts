@@ -11,6 +11,7 @@ const OTHER_USER = 'user-2';
 interface Stubs {
   periodTotals: jest.Mock;
   volumeBuckets: jest.Mock;
+  userTimeZone: jest.Mock;
   exercisePoints: jest.Mock;
   listRecords: jest.Mock;
   findRecords: jest.Mock;
@@ -31,6 +32,7 @@ function buildStubs(): Stubs {
       totalDurationSeconds: 0,
     }),
     volumeBuckets: jest.fn().mockResolvedValue([]),
+    userTimeZone: jest.fn().mockResolvedValue('Europe/Paris'),
     exercisePoints: jest.fn().mockResolvedValue([]),
     listRecords: jest.fn().mockResolvedValue([]),
     findRecords: jest.fn().mockResolvedValue([]),
@@ -306,6 +308,40 @@ describe('ProgressService', () => {
       const service = buildService(stubs);
 
       await expect(service.deleteBodyMetric(USER, 'metric-1')).rejects.toThrow(NotFoundException);
+    });
+  });
+
+  describe('overview — découpage des journées', () => {
+    it('découpe dans le fuseau de la personne, pas en UTC', async () => {
+      // Le serveur ne découpe jamais les journées à la place du client :
+      // sans cela, une séance de 21 h à Montréal (01 h UTC le lendemain)
+      // tombait dans le panier du jour suivant et s'affichait à la date de
+      // la veille une fois ramenée à l'heure locale.
+      const stubs = buildStubs();
+      stubs.userTimeZone.mockResolvedValue('America/Montreal');
+      const service = buildService(stubs);
+
+      await service.overview(USER, 'week');
+
+      expect(stubs.volumeBuckets).toHaveBeenCalledWith(
+        USER,
+        expect.any(Date),
+        'week',
+        'America/Montreal',
+      );
+    });
+
+    it('fuseau absent ou fantaisiste : UTC, jamais une erreur', async () => {
+      // La colonne a longtemps accepté n'importe quelle chaîne. Un découpage
+      // UTC, visiblement décalé mais lisible, vaut mieux qu'un 500 sur une
+      // page de statistiques.
+      const stubs = buildStubs();
+      stubs.userTimeZone.mockResolvedValue('Europe/Pariss');
+      const service = buildService(stubs);
+
+      await service.overview(USER, 'month');
+
+      expect(stubs.volumeBuckets).toHaveBeenCalledWith(USER, expect.any(Date), 'month', 'UTC');
     });
   });
 });

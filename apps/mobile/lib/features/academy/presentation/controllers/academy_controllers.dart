@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../community/presentation/controllers/community_controllers.dart';
 import '../../data/academy_pack.dart';
 import '../../data/answered_lessons_store.dart';
+import '../../domain/daily_lesson.dart';
 import '../../domain/entities/academy.dart';
 
 /// Le pack d'apprentissage, chargé une fois par processus.
@@ -18,8 +19,9 @@ final dailyLessonProvider = Provider<Lesson?>((ref) {
   if (lessons == null || lessons.isEmpty) {
     return null;
   }
-  final now = DateTime.now();
-  final dayOfYear = now.difference(DateTime(now.year)).inDays;
+  // Un jour CIVIL, pas une durée écoulée : voir `dayOfYearIndex`, qui porte
+  // la mesure du décalage provoqué par les changements d'heure.
+  final dayOfYear = dayOfYearIndex(DateTime.now());
   return lessons[dayOfYear % lessons.length];
 });
 
