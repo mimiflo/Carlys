@@ -166,4 +166,70 @@ void main() {
 
     expect(emissions, [0, 1]);
   });
+
+  test('une série de la séance EN COURS ne réémet pas l’historique', () async {
+    // Le défaut : Drift réémet dès qu'une table LUE est écrite, sans comparer
+    // le résultat. Cette requête exclut pourtant la séance en cours — valider
+    // une série pendant la séance ne change RIEN à l'historique. Le flux
+    // étant permanent, et toute la chaîne des récompenses (accueil compris)
+    // en dépendant, une séance de soixante séries déclenchait soixante
+    // recalculs complets pour un résultat identique.
+    await insertSession(
+      id: 'terminee',
+      status: 'COMPLETED',
+      startedAt: DateTime.utc(2026, 9, 1, 10),
+    );
+    await insertSession(
+      id: 'en-cours',
+      status: 'IN_PROGRESS',
+      startedAt: DateTime.utc(2026, 9, 2, 10),
+    );
+
+    var emissions = 0;
+    final subscription = repository.watchHistory().listen((_) => emissions++);
+    await pumpEventQueue();
+    expect(emissions, 1, reason: 'la première lecture');
+
+    for (var i = 0; i < 5; i++) {
+      await insertSet(
+        id: 'encours-$i',
+        sessionId: 'en-cours',
+        position: i,
+        reps: 10,
+        weightKg: 40,
+      );
+      await pumpEventQueue();
+    }
+    await subscription.cancel();
+
+    expect(emissions, 1, reason: 'aucune de ces cinq séries n’y change rien');
+  });
+
+  test('une série de la séance TERMINÉE réémet, elle', () async {
+    // Contre-épreuve indispensable : un flux qui ne réémettrait plus jamais
+    // passerait le test précédent tout aussi bien, et l'historique se
+    // figerait.
+    await insertSession(
+      id: 'terminee',
+      status: 'COMPLETED',
+      startedAt: DateTime.utc(2026, 9, 1, 10),
+    );
+
+    final comptes = <int>[];
+    final subscription = repository.watchHistory().listen(
+      (entries) => comptes.add(entries.single.setsCount),
+    );
+    await pumpEventQueue();
+    await insertSet(
+      id: 'apres-coup',
+      sessionId: 'terminee',
+      position: 0,
+      reps: 8,
+      weightKg: 60,
+    );
+    await pumpEventQueue();
+    await subscription.cancel();
+
+    expect(comptes, [0, 1]);
+  });
 }

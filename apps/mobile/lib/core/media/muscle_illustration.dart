@@ -12,6 +12,7 @@ class MuscleIllustration extends StatefulWidget {
     this.fit = BoxFit.contain,
     this.semanticLabel,
     this.placeholder = const SizedBox.shrink(),
+    this.decodeWidth,
     super.key,
   });
 
@@ -44,6 +45,16 @@ class MuscleIllustration extends StatefulWidget {
   final BoxFit fit;
   final String? semanticLabel;
   final Widget placeholder;
+
+  /// Largeur d'AFFICHAGE en points logiques, pour décoder à la bonne taille.
+  ///
+  /// Les treize silhouettes de `assets/muscles/` sont des WebP 640 × 640. La
+  /// grille les montre à une centaine de points ; sans cette indication,
+  /// Flutter décodait les treize en pleine résolution et gardait en mémoire
+  /// treize bitmaps de 640 × 640 × 4 octets là où le rendu n'en demande que
+  /// le vingtième. `null` : pas de redimensionnement — c'est le cas d'un
+  /// appelant qui ne connaît pas sa géométrie.
+  final double? decodeWidth;
 
   @override
   State<MuscleIllustration> createState() => _MuscleIllustrationState();
@@ -85,17 +96,39 @@ class _MuscleIllustrationState extends State<MuscleIllustration> {
   @override
   void didUpdateWidget(MuscleIllustration oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.image != oldWidget.image) _resolveImage();
+    if (widget.image != oldWidget.image ||
+        widget.decodeWidth != oldWidget.decodeWidth) {
+      _resolveImage();
+    }
   }
 
   void _resolveImage() {
-    final next = widget.image.resolve(createLocalImageConfiguration(context));
+    final next = _provider().resolve(createLocalImageConfiguration(context));
     if (next.key == _stream?.key) return;
     _stream?.removeListener(_listener);
     _image?.dispose();
     _image = null;
     _stream = next;
     next.addListener(_listener);
+  }
+
+  /// L'image, décodée à la taille réellement affichée quand on la connaît.
+  ///
+  /// `ResizeImagePolicy.fit` plutôt que `exact` : la silhouette garde ses
+  /// proportions, et la largeur demandée est un PLAFOND. Le facteur de pixels
+  /// de l'écran est appliqué ici — décoder en points logiques rendrait une
+  /// image floue sur tout appareil dense.
+  ImageProvider<Object> _provider() {
+    final logique = widget.decodeWidth;
+    if (logique == null || logique <= 0) {
+      return widget.image;
+    }
+    final physique = (logique * MediaQuery.devicePixelRatioOf(context)).round();
+    return ResizeImage(
+      widget.image,
+      width: physique,
+      policy: ResizeImagePolicy.fit,
+    );
   }
 
   void _onImage(ImageInfo image, bool synchronousCall) {

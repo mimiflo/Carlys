@@ -101,17 +101,65 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
           ..groupBy([sessions.id])
           ..orderBy([OrderingTerm.desc(sessions.startedAt)]);
 
-    return query.watch().map(
-      (rows) => rows
-          .map(
-            (row) => WorkoutHistoryEntry(
-              session: _rows.mapSession(row.readTable(sessions)),
-              setsCount: row.read(setsCount) ?? 0,
-              totalVolumeKg: row.read(totalVolumeKg) ?? 0,
-            ),
-          )
-          .toList(),
-    );
+    return query
+        .watch()
+        .map(
+          (rows) => rows
+              .map(
+                (row) => WorkoutHistoryEntry(
+                  session: _rows.mapSession(row.readTable(sessions)),
+                  setsCount: row.read(setsCount) ?? 0,
+                  totalVolumeKg: row.read(totalVolumeKg) ?? 0,
+                ),
+              )
+              .toList(),
+        )
+        // Drift réémet dès qu'une table LUE est écrite, sans comparer le
+        // résultat. Or cette requête EXCLUT la séance en cours : valider une
+        // série pendant la séance écrit dans `localWorkoutSets`, donc
+        // réémet, alors que l'historique n'a pas bougé d'un octet.
+        //
+        // Ce qui pendait derrière n'était pas gratuit : le flux est PERMANENT
+        // (pas d'`autoDispose`) et toute la chaîne des récompenses — elle
+        // aussi permanente — en dépend, accueil compris. Une séance de
+        // soixante séries déclenchait soixante recalculs complets, et le
+        // rapatriement de l'historique autant qu'il écrivait de séries.
+        .distinct(_memeHistorique);
+  }
+
+  /// Deux historiques portent-ils la même information ?
+  ///
+  /// Comparaison de SURFACE, sur ce que l'écran affiche vraiment : le rang,
+  /// l'identité de la séance, son état de synchronisation, et les deux
+  /// agrégats. Une égalité de valeur sur toute l'entité serait plus stricte
+  /// sans rien garder de plus, et coûterait un `==` à écrire sur trois
+  /// classes du domaine.
+  static bool _memeHistorique(
+    List<WorkoutHistoryEntry> avant,
+    List<WorkoutHistoryEntry> apres,
+  ) {
+    if (identical(avant, apres)) {
+      return true;
+    }
+    if (avant.length != apres.length) {
+      return false;
+    }
+    for (var i = 0; i < avant.length; i++) {
+      final a = avant[i].session;
+      final b = apres[i].session;
+      if (a.id != b.id ||
+          a.status != b.status ||
+          a.syncState != b.syncState ||
+          a.name != b.name ||
+          a.startedAt != b.startedAt ||
+          a.endedAt != b.endedAt ||
+          a.durationSeconds != b.durationSeconds ||
+          avant[i].setsCount != apres[i].setsCount ||
+          avant[i].totalVolumeKg != apres[i].totalVolumeKg) {
+        return false;
+      }
+    }
+    return true;
   }
 
   @override

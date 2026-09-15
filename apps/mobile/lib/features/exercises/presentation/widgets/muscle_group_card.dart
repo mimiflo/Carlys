@@ -90,10 +90,20 @@ class MuscleGroupCard extends StatelessWidget {
                             AppSpacing.xs,
                             0,
                           ),
-                          child: MuscleIllustration(
-                            image: AssetImage(asset),
-                            slug: slug ?? allSlug,
-                            fit: BoxFit.contain,
+                          // La largeur RÉELLE de la vignette, mesurée au
+                          // lieu d'être supposée : la grille fait trois
+                          // colonnes sur toutes les tailles d'écran, et
+                          // décoder un WebP 640 × 640 pour une centaine de
+                          // points gaspillait vingt fois la mémoire
+                          // nécessaire, treize fois de suite.
+                          child: LayoutBuilder(
+                            builder: (context, contraintes) =>
+                                MuscleIllustration(
+                                  image: AssetImage(asset),
+                                  slug: slug ?? allSlug,
+                                  fit: BoxFit.contain,
+                                  decodeWidth: contraintes.maxWidth,
+                                ),
                           ),
                         )
                       else

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/utilities/debouncer.dart';
 import '../../../../design_system/design_system.dart';
 import '../../../exercises/data/repositories/exercises_repository_impl.dart';
 import '../../../exercises/domain/entities/exercise.dart' as catalog;
@@ -44,12 +45,33 @@ class _ExercisePicker extends ConsumerStatefulWidget {
 
 class _ExercisePickerState extends ConsumerState<_ExercisePicker> {
   final _searchController = TextEditingController();
+
+  /// La frappe est RETENUE avant d'atteindre le réseau.
+  ///
+  /// `_search` est la clé d'une famille de `FutureProvider` qui appelle
+  /// l'API : chaque caractère déclenchait une requête, soit dix-sept pour
+  /// « Développé couché » dont seize jetées — et cette feuille s'ouvre en
+  /// pleine séance, sur le réseau d'une salle de sport. La bibliothèque
+  /// d'exercices, elle, débouncait depuis toujours ; c'est ici que ça
+  /// manquait.
+  final _debounce = Debouncer();
   String _search = '';
 
   @override
   void dispose() {
+    _debounce.cancel();
     _searchController.dispose();
     super.dispose();
+  }
+
+  void _onSearchChanged(String value) {
+    final saisie = value.trim();
+    _debounce.run(() {
+      if (!mounted || saisie == _search) {
+        return;
+      }
+      setState(() => _search = saisie);
+    });
   }
 
   @override
@@ -68,7 +90,7 @@ class _ExercisePickerState extends ConsumerState<_ExercisePicker> {
             AppSearchField(
               controller: _searchController,
               hint: 'Rechercher un exercice',
-              onChanged: (value) => setState(() => _search = value.trim()),
+              onChanged: _onSearchChanged,
             ),
             const SizedBox(height: AppSpacing.sm),
             Expanded(

@@ -14,7 +14,14 @@ class AthletePhoto extends StatelessWidget {
   const AthletePhoto({required this.screen, super.key});
 
   /// Le fichier détouré, seul cliché de la page de marque.
-  static const String asset = 'assets/brand/carlys-athlete.png';
+  ///
+  /// WebP à qualité 95, et non PNG : c'est une PHOTOGRAPHIE, le format sans
+  /// perte n'y apporte rien qu'un œil distingue et coûtait 1,45 Mo — autant
+  /// que les quarante et une autres images du dépôt réunies. L'alpha du
+  /// détourage est préservé à l'octet près (WebP le porte, comme les treize
+  /// silhouettes de `assets/muscles/`) ; l'écart mesuré sur les pixels
+  /// opaques est de 1,86 en moyenne sur 255.
+  static const String asset = 'assets/brand/carlys-athlete.webp';
 
   /// Taille de l'ÉCRAN, pas du cadre : le cadrage et le fondu sont exprimés
   /// en fractions d'écran, seul repère qui se transpose d'un format à l'autre.

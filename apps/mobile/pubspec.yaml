@@ -94,6 +94,14 @@ dev_dependencies:
     sdk: flutter
   flutter_lints: ^5.0.0
 
+  # Horloge simulée pour les tests de minuterie (`Debouncer`) : faire passer
+  # le temps d'un coup plutôt que d'attendre pour de vrai. Déjà présent en
+  # transitif via flutter_test — c'est la dépendance que Flutter emploie
+  # lui-même pour `tester.pump(duration)` —, déclaré ici parce que le test
+  # l'importe directement, ce que `depend_on_referenced_packages` exige et
+  # qu'un lock ne garantit pas dans le temps.
+  fake_async: ^1.3.0
+
   # Génération de code — DRIFT UNIQUEMENT.
   #
   # Les générateurs Riverpod, Freezed et json_serializable ont été retirés :

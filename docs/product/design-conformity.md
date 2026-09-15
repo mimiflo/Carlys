@@ -232,9 +232,16 @@ Trois règles tiennent l'écran :
 ### Les images des groupes
 
 Détourages anatomiques fournis par le produit (générés), embarqués dans
-`assets/muscles/` : douze fichiers WebP à canal alpha, 165 Ko en tout. Ils sont
-**embarqués et non servis** — ils sont douze, fixes, et doivent s'afficher hors
-ligne. Les images PAR EXERCICE suivront un autre chemin : elles seront des
+`assets/muscles/` : **treize** fichiers WebP à canal alpha, 596 Kio en tout
+(`du -sb apps/mobile/assets/muscles` — le chiffre de 165 Ko annoncé ici
+auparavant était faux d'un facteur quatre, et le compte de douze d'une unité).
+Ils sont **embarqués et non servis** — ils sont en nombre fixe et doivent
+s'afficher hors ligne.
+
+Ce sont des images 640 × 640, affichées à une centaine de points dans la
+grille : `MuscleIllustration` reçoit donc une largeur de décodage
+(`decodeWidth`) et ne matérialise plus treize bitmaps de pleine résolution
+pour un rendu vingt fois plus petit. Les images PAR EXERCICE suivront un autre chemin : elles seront des
 centaines et modifiables depuis l'admin, donc servies par le serveur.
 
 **Le détourage, en trois passes.** La planche est fournie en JPEG sur fond

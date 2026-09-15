@@ -70,6 +70,9 @@ class RemoteImage extends ConsumerWidget {
                 fit: fit,
                 semanticLabel: semanticLabel,
                 placeholder: placeholder,
+                // L'appelant connaît déjà sa largeur d'affichage : autant
+                // décoder à cette taille plutôt qu'en pleine résolution.
+                decodeWidth: logicalWidth?.toDouble(),
               ),
         orElse: () => placeholder,
       );

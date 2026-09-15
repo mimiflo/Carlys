@@ -23,6 +23,11 @@ on:
   pull_request:
     paths:
       - 'apps/mobile/**'
+      # Les scripts que ce workflow EXÉCUTE. Sans eux, modifier
+      # check_mobile_file_sizes.sh ou check_mobile_fonts.py ne réveillait
+      # aucun workflow capable de les faire tourner : la garde changeait sans
+      # que personne ne la relise.
+      - 'scripts/check_mobile*'
       # packages/design-tokens/src/tokens.json est la SOURCE DE VÉRITÉ du
       # design system (CLAUDE.md : « toute évolution s'y fait d'abord »), et
       # apps/mobile/test/design_system/design_tokens_test.dart vérifie que le
@@ -40,6 +45,7 @@ on:
     # telle quelle. Toute entrée ajoutée ici doit l'être aux deux endroits.
     paths:
       - 'apps/mobile/**'
+      - 'scripts/check_mobile*'
       - 'packages/**'
       - '.github/workflows/mobile-ci.yml'
   # Relance MANUELLE : un runner qui gèle (build_runner suspendu, coupé par
@@ -145,6 +151,15 @@ jobs:
       - name: Tailles de fichiers
         working-directory: .
         run: ./scripts/check_mobile_file_sizes.sh
+
+      # Les polices embarquées sont SOUS-ENSEMBLÉES (Flutter ne le fait pas
+      # pour les polices de texte) : un glyphe perdu ne donne pas un carré
+      # vide, l'application retombe sur la fonte système et le changement de
+      # dessin passe inaperçu. Ce contrôle lit la table `cmap` à la main —
+      # aucune dépendance à installer — et compare à `tools/fonts-source/`.
+      - name: Couverture des polices
+        working-directory: .
+        run: python3 scripts/check_mobile_fonts.py
 
       # FUSEAU À CHANGEMENT D'HEURE, EXPRÈS. Les runners GitHub tournent en
       # UTC, un fuseau où l'heure ne change jamais : les gardes de calendrier

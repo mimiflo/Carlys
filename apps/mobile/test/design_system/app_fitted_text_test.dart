@@ -97,4 +97,108 @@ void main() {
       40,
     );
   });
+
+  group('mémoïsation', () {
+    setUp(() => AppFittedText.misesEnPage = 0);
+
+    testWidgets('une reconstruction à entrées IDENTIQUES ne recalcule rien', (
+      tester,
+    ) async {
+      // La dichotomie tournait dans le `builder` d'un `LayoutBuilder` : elle
+      // se rejouait à chaque image, huit mises en page par tuile, pour un
+      // résultat inchangé. Le compteur est le seul moyen de le voir — la
+      // mémoïsation n'a, par construction, aucun effet à l'écran.
+      final cle = GlobalKey();
+      Widget scene() => MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            height: 40,
+            width: 120,
+            child: AppFittedText(
+              'Développé couché',
+              key: cle,
+              style: AppTypography.body,
+              minFontSize: 8,
+              maxFontSize: 24,
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpWidget(scene());
+      final premier = AppFittedText.misesEnPage;
+      expect(premier, greaterThan(0), reason: 'le premier calcul a bien lieu');
+
+      // Même arbre, mêmes contraintes : rien à recalculer.
+      await tester.pumpWidget(scene());
+      expect(AppFittedText.misesEnPage, premier);
+    });
+
+    testWidgets('changer le TEXTE recalcule', (tester) async {
+      // Le risque que la mémoïsation introduit : servir un corps calculé
+      // pour un autre texte. C'est ce qui doit être gardé, pas l'économie.
+      final cle = GlobalKey();
+      Widget scene(String texte) => MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            height: 40,
+            width: 120,
+            child: AppFittedText(
+              texte,
+              key: cle,
+              style: AppTypography.body,
+              minFontSize: 8,
+              maxFontSize: 24,
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpWidget(scene('Court'));
+      final court = tester.widget<Text>(find.text('Court')).style?.fontSize;
+      final apresPremier = AppFittedText.misesEnPage;
+
+      await tester.pumpWidget(
+        scene('Un libellé nettement plus long que le précédent, et alors'),
+      );
+      expect(AppFittedText.misesEnPage, greaterThan(apresPremier));
+
+      final long = tester
+          .widget<Text>(
+            find.text(
+              'Un libellé nettement plus long que le précédent, et alors',
+            ),
+          )
+          .style
+          ?.fontSize;
+      expect(long, isNotNull);
+      expect(court, isNotNull);
+      expect(long! < court!, isTrue, reason: 'le texte long rétrécit');
+    });
+
+    testWidgets('changer la BOÎTE recalcule', (tester) async {
+      final cle = GlobalKey();
+      Widget scene(double hauteur) => MaterialApp(
+        home: Scaffold(
+          body: SizedBox(
+            height: hauteur,
+            width: 120,
+            child: AppFittedText(
+              'Développé couché incliné haltères',
+              key: cle,
+              style: AppTypography.body,
+              minFontSize: 8,
+              maxFontSize: 24,
+            ),
+          ),
+        ),
+      );
+
+      await tester.pumpWidget(scene(40));
+      final apresPremier = AppFittedText.misesEnPage;
+
+      await tester.pumpWidget(scene(18));
+      expect(AppFittedText.misesEnPage, greaterThan(apresPremier));
+    });
+  });
 }

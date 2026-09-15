@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/utilities/debouncer.dart';
 import '../../../progress/domain/entities/progress.dart';
 import '../../../progress/presentation/controllers/progress_controllers.dart';
 import '../../data/repositories/exercises_repository_impl.dart';
@@ -73,9 +74,11 @@ class ExerciseLibraryState {
 /// fusionnées, recherche débouncée, filtres exclusifs.
 class ExerciseLibraryController
     extends AutoDisposeAsyncNotifier<ExerciseLibraryState> {
-  static const searchDebounce = Duration(milliseconds: 350);
+  /// Le délai vit au cœur : la feuille de sélection d'exercice en séance
+  /// a besoin du MÊME, et deux minuteries écrites séparément divergent.
+  static const searchDebounce = Debouncer.search;
 
-  Timer? _debounce;
+  final _debounce = Debouncer(delay: searchDebounce);
   ExercisesFilters _filters = const ExercisesFilters();
   bool _disposed = false;
 
@@ -83,7 +86,7 @@ class ExerciseLibraryController
   Future<ExerciseLibraryState> build() async {
     _disposed = false;
     ref.onDispose(() {
-      _debounce?.cancel();
+      _debounce.cancel();
       // Poser `state` après la destruction jette : les réponses encore en
       // vol quand l'écran se ferme doivent se laisser tomber sans bruit.
       _disposed = true;
@@ -121,8 +124,7 @@ class ExerciseLibraryController
   }
 
   void setSearch(String search) {
-    _debounce?.cancel();
-    _debounce = Timer(searchDebounce, () {
+    _debounce.run(() {
       final trimmed = search.trim();
       _filters = _filters.copyWith(
         search: () => trimmed.isEmpty ? null : trimmed,

@@ -23,7 +23,11 @@ class BrandSignature extends StatelessWidget {
   /// mot, devise, proportions) ne se redessine pas à deux endroits.
   final bool centered;
 
-  static const String markAsset = 'assets/brand/carlys-mark.png';
+  /// WebP SANS PERTE : la marque est un dessin, pas une photographie, et un
+  /// sceau qui banderait sur un aplat ne vaut pas les soixante kilo-octets
+  /// que la compression avec perte ferait gagner. Pixel pour pixel identique
+  /// au PNG d'origine (écart mesuré : zéro), pour 21 % de moins.
+  static const String markAsset = 'assets/brand/carlys-mark.webp';
 
   /// Géométrie de la référence : sceau de 120, mot en 40 très espacé, devise
   /// en 13 espacée.

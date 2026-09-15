@@ -16,6 +16,14 @@ import 'package:flutter/material.dart';
 /// n'est jamais déformé ni mis à l'échelle : c'est la police qui change de
 /// corps, la mise en page étant recalculée à chaque essai.
 class AppFittedText extends StatefulWidget {
+  /// Nombre de MISES EN PAGE effectuées depuis le démarrage.
+  ///
+  /// Uniquement pour les tests : la mémoïsation n'a aucun effet observable à
+  /// l'écran — c'est bien le but — et un test qui ne peut pas la voir ne
+  /// garderait rien. Ce compteur la rend mesurable.
+  @visibleForTesting
+  static int misesEnPage = 0;
+
   const AppFittedText(
     this.text, {
     required this.style,
@@ -61,19 +69,43 @@ class _AppFittedTextState extends State<AppFittedText> {
     super.dispose();
   }
 
+  @override
+  void didUpdateWidget(AppFittedText oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.text != widget.text ||
+        oldWidget.style != widget.style ||
+        oldWidget.minFontSize != widget.minFontSize ||
+        oldWidget.maxFontSize != widget.maxFontSize) {
+      _dernier = null;
+    }
+  }
+
   void _onFontsChanged() {
     if (mounted) {
+      // Les polices ont changé : toute mise en page mémorisée est caduque.
+      _dernier = null;
       setState(() {});
     }
   }
+
+  /// La dernière mise en page calculée, et les entrées qui l'ont produite.
+  ///
+  /// La dichotomie tourne dans le `builder` d'un `LayoutBuilder` : elle se
+  /// rejouait donc à CHAQUE reconstruction, soit huit mises en page de texte
+  /// par tuile de l'accueil, pour un résultat inchangé neuf fois sur dix —
+  /// le texte, le style et la boîte sont les mêmes d'une image à l'autre.
+  /// Une mémoire d'UN élément suffit : ce qui change d'une reconstruction à
+  /// l'autre, ce sont les données affichées, pas la géométrie.
+  _Ajustement? _dernier;
 
   @override
   Widget build(BuildContext context) {
     return LayoutBuilder(
       builder: (context, constraints) {
         final scaler = MediaQuery.textScalerOf(context);
-        final fontSize = _bestFontSize(constraints, scaler);
-        final maxLines = _maxLines(constraints, fontSize, scaler);
+        final ajustement = _ajustement(constraints, scaler);
+        final fontSize = ajustement.fontSize;
+        final maxLines = ajustement.maxLines;
         return Text(
           widget.text,
           textAlign: widget.textAlign,
@@ -88,6 +120,29 @@ class _AppFittedTextState extends State<AppFittedText> {
         );
       },
     );
+  }
+
+  /// Le corps et le nombre de lignes, calculés une fois par géométrie.
+  _Ajustement _ajustement(BoxConstraints constraints, TextScaler scaler) {
+    final precedent = _dernier;
+    if (precedent != null &&
+        precedent.text == widget.text &&
+        precedent.style == widget.style &&
+        precedent.constraints == constraints &&
+        precedent.scaler == scaler) {
+      return precedent;
+    }
+    final fontSize = _bestFontSize(constraints, scaler);
+    final calcul = _Ajustement(
+      text: widget.text,
+      style: widget.style,
+      constraints: constraints,
+      scaler: scaler,
+      fontSize: fontSize,
+      maxLines: _maxLines(constraints, fontSize, scaler),
+    );
+    _dernier = calcul;
+    return calcul;
   }
 
   double _bestFontSize(BoxConstraints constraints, TextScaler scaler) {
@@ -113,8 +168,13 @@ class _AppFittedTextState extends State<AppFittedText> {
   }
 
   bool _fits(double fontSize, BoxConstraints constraints, TextScaler scaler) {
-    return _paint(fontSize, constraints, scaler).height <=
-        constraints.maxHeight;
+    // Le peintre est LIBÉRÉ : il tient des ressources natives, et la
+    // dichotomie en construit une dizaine par appel. Les abandonner au
+    // ramasse-miettes marche, mais retarde la libération d'autant.
+    final painter = _paint(fontSize, constraints, scaler);
+    final tient = painter.height <= constraints.maxHeight;
+    painter.dispose();
+    return tient;
   }
 
   /// Filet de sécurité : si même [AppFittedText.minFontSize] ne tient pas
@@ -129,10 +189,12 @@ class _AppFittedTextState extends State<AppFittedText> {
       return null;
     }
     final painter = _paint(fontSize, constraints, scaler);
-    if (painter.height <= constraints.maxHeight) {
+    final hauteur = painter.height;
+    final lineHeight = painter.preferredLineHeight;
+    painter.dispose();
+    if (hauteur <= constraints.maxHeight) {
       return null; // tout tient : aucune limite à poser
     }
-    final lineHeight = painter.preferredLineHeight;
     return lineHeight <= 0
         ? 1
         : (constraints.maxHeight / lineHeight).floor().clamp(1, 1 << 20);
@@ -143,6 +205,7 @@ class _AppFittedTextState extends State<AppFittedText> {
     BoxConstraints constraints,
     TextScaler scaler,
   ) {
+    AppFittedText.misesEnPage += 1;
     return TextPainter(
       text: TextSpan(
         text: widget.text,
@@ -153,4 +216,26 @@ class _AppFittedTextState extends State<AppFittedText> {
       textScaler: scaler,
     )..layout(maxWidth: constraints.maxWidth);
   }
+}
+
+/// Une mise en page ajustée, et les entrées dont elle découle.
+///
+/// Les quatre entrées suffisent : le corps retenu ne dépend que du texte, de
+/// son style, de la boîte disponible et de l'échelle système.
+class _Ajustement {
+  const _Ajustement({
+    required this.text,
+    required this.style,
+    required this.constraints,
+    required this.scaler,
+    required this.fontSize,
+    required this.maxLines,
+  });
+
+  final String text;
+  final TextStyle style;
+  final BoxConstraints constraints;
+  final TextScaler scaler;
+  final double fontSize;
+  final int? maxLines;
 }

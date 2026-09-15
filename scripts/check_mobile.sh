@@ -20,15 +20,17 @@
 # Le seul écart restant avec la CI est le SDK lui-même : l'avertissement de
 # version ci-dessous le couvre.
 #
-# Un bloc, et un seul, ne vient PAS de la CI : les tailles de fichiers, en
-# tête. Ce n'est pas une divergence au sens ci-dessus — les cinq commandes de
-# la CI restent identiques, contiguës et dans le même ordre juste après —,
-# c'est un AJOUT local qui va dans le sens sûr : un vert ici reste un vert
-# là-bas. Il est en tête parce qu'il coûte quelques millisecondes et qu'il
-# n'a aucune raison de faire attendre le développeur derrière deux minutes de
-# tests. Et il est écrit en shell parce que l'analyseur Dart n'a pas de règle
-# de longueur de fichier : `max_lines_per_file` rend « isn't a recognized
-# lint rule ».
+# Deux blocs ne font pas partie des cinq commandes de la CI : les tailles de
+# fichiers et la couverture des polices. Ce n'est pas une divergence au sens
+# ci-dessus — les cinq commandes restent identiques, contiguës et dans le même
+# ordre juste après ; ce sont des AJOUTS qui vont dans le sens sûr, et que la
+# CI exécute désormais elle aussi, comme étapes distinctes.
+#
+# Ils sont en tête parce qu'ils coûtent quelques millisecondes et n'ont
+# aucune raison de faire attendre derrière deux minutes de tests. Le premier
+# est écrit en shell parce que l'analyseur Dart n'a pas de règle de longueur
+# de fichier (`max_lines_per_file` rend « isn't a recognized lint rule ») ;
+# le second en Python, parce qu'il lit une table binaire de police.
 #
 # Note : `dart format` et la règle de lint `require_trailing_commas` peuvent se
 # contredire sur un appel qui tient de justesse sur deux lignes. La forme qui
@@ -56,8 +58,16 @@ else
     "rien sur la CI (mobile-ci.yml)."
 fi
 
-echo "── Tailles de fichiers (règle du dépôt, hors CI) ───────────────────"
+echo "── Tailles de fichiers ─────────────────────────────────────────────"
 "$SCRIPTS_DIR/check_mobile_file_sizes.sh"
+
+echo "── Couverture des polices ──────────────────────────────────────────"
+# Les neuf TTF embarquées sont SOUS-ENSEMBLÉES : Flutter ne le fait pas pour
+# les polices de texte, et les versions complètes emportaient 2,99 Mo dans
+# l'APK. Un glyphe perdu ne donne pas un carré vide — l'application retombe
+# sur la fonte système — donc rien ne le signale à la relecture. Le contrôle
+# lit la table `cmap` à la main, sans dépendance à installer.
+python3 "$SCRIPTS_DIR/check_mobile_fonts.py"
 
 echo "── Dépendances ─────────────────────────────────────────────────────"
 # Le message de pub est exact mais muet sur la suite : ici, la suite est de
