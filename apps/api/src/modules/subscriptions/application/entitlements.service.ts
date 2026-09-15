@@ -2,7 +2,6 @@ import {
   ENTITLEMENT_KEYS,
   type EntitlementKey,
   type EntitlementsResponse,
-  PREMIUM_ENTITLEMENT_KEYS,
 } from '@carlys/api-contracts';
 import { Injectable } from '@nestjs/common';
 import { SubscriptionStatus, type UserEntitlement } from '@prisma/client';
@@ -38,16 +37,23 @@ function rowIsActive(row: UserEntitlement, nowMs: number): boolean {
 }
 
 /**
- * Le plan ouvre-t-il les droits payants ?
+ * Les droits qu'un plan ouvre, tels que la BASE les déclare.
  *
- * Le slug vit ICI, en un seul endroit, plutôt que dispersé dans le calcul.
- * Ce n'est pas la forme cible — l'ADR 0006 veut que le plan PORTE ses droits
- * en base plutôt que d'être reconnu par son nom — mais tant que
- * `SubscriptionPlan` n'a pas de relation vers les droits, le nommer une fois
- * vaut mieux que de le comparer au fil du code.
+ * Le plan n'est plus reconnu à son slug : c'est ce qu'exige l'ADR 0006
+ * (« aucun test de nom de plan en dur ; toute condition d'accès nomme un
+ * droit »), et ce que la table `SubscriptionPlanEntitlement` porte désormais.
+ *
+ * Les clés inconnues du contrat sont IGNORÉES plutôt que propagées : la
+ * colonne est un `TEXT`, donc une ligne posée à la main peut porter n'importe
+ * quoi, et écrire un droit que `ENTITLEMENT_KEYS` ne connaît pas ferait
+ * échouer la validation Zod de la réponse — l'API rendrait 500 sur la lecture
+ * des droits d'un compte parfaitement sain.
  */
-function planGrantsPremium(slug: string): boolean {
-  return slug === 'premium';
+function planEntitlementKeys(plan: SubscriptionWithPlan['plan']): EntitlementKey[] {
+  const connues = new Set<string>(ENTITLEMENT_KEYS);
+  return plan.entitlements
+    .map((row) => row.entitlementKey)
+    .filter((key): key is EntitlementKey => connues.has(key));
 }
 
 /** L'échéance la plus lointaine ; `null` (sans fin) l'emporte sur toute date. */
@@ -141,21 +147,29 @@ export class EntitlementsService {
     // version éventuellement périmée.
     const considered = [subscription, ...all.filter((row) => row.id !== subscription.id)];
 
-    const granting = considered.filter(
-      (row) =>
-        planGrantsPremium(row.plan.slug) &&
-        subscriptionGrantsAccess(row.status, row.currentPeriodEnd, now),
-    );
-    const grants = granting.length > 0;
-
-    // L'échéance la plus LOINTAINE parmi ceux qui ouvrent le droit ; `null`
-    // (jamais d'expiration) l'emporte sur toute date. Sans droit ouvert, on
-    // garde l'échéance de l'abonnement reçu : la ligne inactive porte alors
-    // la date à laquelle l'accès s'est arrêté.
-    const expiresAt = grants
-      ? latestExpiry(granting)
-      : (subscription.currentPeriodEnd ?? subscription.trialEndsAt);
-    const source = grants ? (granting[0]?.id ?? subscription.id) : subscription.id;
+    // DROIT PAR DROIT, et non « premium ou rien ». Chaque plan déclare ses
+    // clés en base ; on ne réécrit QUE celles que les plans du compte
+    // couvrent. La version précédente réécrivait la liste des droits premium
+    // codée dans les contrats, quel que soit le plan reçu : un second plan
+    // payant aurait donc rétrogradé un membre déjà Premium par son propre
+    // achat, en silence.
+    const couvertes = new Set<EntitlementKey>();
+    const ouvrantes = new Map<EntitlementKey, SubscriptionWithPlan[]>();
+    for (const row of considered) {
+      const ouvre = subscriptionGrantsAccess(row.status, row.currentPeriodEnd, now);
+      for (const key of planEntitlementKeys(row.plan)) {
+        couvertes.add(key);
+        if (!ouvre) {
+          continue;
+        }
+        const deja = ouvrantes.get(key);
+        if (deja === undefined) {
+          ouvrantes.set(key, [row]);
+        } else {
+          deja.push(row);
+        }
+      }
+    }
 
     // TOUTE décision manuelle est respectée, l'octroi COMME le retrait.
     //
@@ -175,14 +189,22 @@ export class EntitlementsService {
       existing.filter((row) => row.sourceSubscriptionId === null).map((row) => row.entitlementKey),
     );
 
-    for (const key of PREMIUM_ENTITLEMENT_KEYS) {
+    for (const key of couvertes) {
       if (manuallyDecided.has(key)) {
         continue;
       }
+      const ouvrant = ouvrantes.get(key) ?? [];
+      const grants = ouvrant.length > 0;
+      // L'échéance la plus LOINTAINE parmi ceux qui ouvrent CE droit ; `null`
+      // (jamais d'expiration) l'emporte sur toute date. Sans droit ouvert, on
+      // garde l'échéance de l'abonnement reçu : la ligne inactive porte alors
+      // la date à laquelle l'accès s'est arrêté.
       await this.subscriptions.upsertEntitlement(subscription.userId, key, {
         isActive: grants,
-        expiresAt,
-        sourceSubscriptionId: source,
+        expiresAt: grants
+          ? latestExpiry(ouvrant)
+          : (subscription.currentPeriodEnd ?? subscription.trialEndsAt),
+        sourceSubscriptionId: grants ? (ouvrant[0]?.id ?? subscription.id) : subscription.id,
       });
     }
   }

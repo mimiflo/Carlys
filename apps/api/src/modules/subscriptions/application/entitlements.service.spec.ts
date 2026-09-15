@@ -66,7 +66,15 @@ function subscriptionRow(overrides: Record<string, unknown> = {}): never {
     trialEndsAt: null,
     createdAt: new Date(),
     updatedAt: new Date(),
-    plan: { id: 'plan-premium', slug: 'premium', name: 'Premium' },
+    // Le plan PORTE ses droits — c'est la base qui les déclare depuis que la
+    // correspondance a quitté le code (ADR 0006). Un plan sans cette liste
+    // n'ouvre plus rien, et c'est voulu.
+    plan: {
+      id: 'plan-premium',
+      slug: 'premium',
+      name: 'Premium',
+      entitlements: PREMIUM_ENTITLEMENT_KEYS.map((key) => ({ entitlementKey: key })),
+    },
     ...overrides,
   } as never;
 }
@@ -113,6 +121,92 @@ describe('EntitlementsService', () => {
     expect(
       response.entitlements.find((entitlement) => entitlement.key === 'ai_coaching')?.isActive,
     ).toBe(false);
+  });
+
+  describe('la correspondance plan → droits vit en BASE (ADR 0006)', () => {
+    /** Un second plan payant, qui n'ouvre QUE son propre droit. */
+    const PLAN_COACH = {
+      id: 'plan-coach',
+      slug: 'coach',
+      name: 'Coach',
+      entitlements: [{ entitlementKey: 'coach_dashboard' }],
+    };
+
+    it('un second plan n’écrit QUE ses droits, jamais ceux d’un autre', async () => {
+      // LE DÉFAUT. Le calcul reconnaissait le plan à son slug puis réécrivait
+      // la liste des droits premium codée dans les contrats. Un abonnement
+      // « coach » n'étant pas « premium », `grants` valait false et la boucle
+      // passait les SIX droits premium à `isActive: false` — un membre déjà
+      // Premium était rétrogradé par son propre achat, en silence.
+      const stubs = buildStubs();
+      const service = buildService(stubs);
+
+      await service.syncFromSubscription(
+        subscriptionRow({ id: 'sub-coach', planId: 'plan-coach', plan: PLAN_COACH }),
+      );
+
+      const cles = upsertCalls(stubs).map(([, key]) => key);
+      expect(cles).toEqual(['coach_dashboard']);
+      expect(cles).not.toContain('premium_exercises');
+    });
+
+    it('deux plans à la fois : chacun ouvre les siens', async () => {
+      const stubs = buildStubs();
+      stubs.listSubscriptions.mockResolvedValue([
+        subscriptionRow(),
+        subscriptionRow({ id: 'sub-coach', planId: 'plan-coach', plan: PLAN_COACH }),
+      ]);
+      const service = buildService(stubs);
+
+      await service.syncFromSubscription(
+        subscriptionRow({ id: 'sub-coach', planId: 'plan-coach', plan: PLAN_COACH }),
+      );
+
+      const actifs = upsertCalls(stubs)
+        .filter(([, , valeur]) => valeur.isActive)
+        .map(([, key]) => key)
+        .sort();
+      expect(actifs).toEqual([...PREMIUM_ENTITLEMENT_KEYS, 'coach_dashboard'].sort());
+    });
+
+    it('un plan sans droit déclaré n’écrit RIEN — il ne révoque pas', async () => {
+      // Le cas du plan `free`, et celui d'une base incomplète : ne rien
+      // savoir n'autorise pas à tout couper.
+      const stubs = buildStubs();
+      const service = buildService(stubs);
+
+      await service.syncFromSubscription(
+        subscriptionRow({
+          plan: { id: 'plan-free', slug: 'free', name: 'Gratuit', entitlements: [] },
+        }),
+      );
+
+      expect(stubs.upsertEntitlement).not.toHaveBeenCalled();
+    });
+
+    it('une clé inconnue du contrat est ignorée, pas propagée', async () => {
+      // La colonne est un TEXT : une ligne posée à la main peut porter
+      // n'importe quoi. L'écrire ferait échouer la validation Zod de la
+      // réponse — 500 sur la lecture des droits d'un compte sain.
+      const stubs = buildStubs();
+      const service = buildService(stubs);
+
+      await service.syncFromSubscription(
+        subscriptionRow({
+          plan: {
+            id: 'plan-premium',
+            slug: 'premium',
+            name: 'Premium',
+            entitlements: [
+              { entitlementKey: 'premium_exercises' },
+              { entitlementKey: 'droit_qui_nexiste_pas' },
+            ],
+          },
+        }),
+      );
+
+      expect(upsertCalls(stubs).map(([, key]) => key)).toEqual(['premium_exercises']);
+    });
   });
 
   it('syncFromSubscription matérialise les droits premium', async () => {

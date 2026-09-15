@@ -12,7 +12,7 @@
  * démonstration — le compte premium reçoit ses entitlements (droits
  * décidés côté serveur, Étape 6).
  */
-import { PREMIUM_ENTITLEMENT_KEYS } from '@carlys/api-contracts';
+import { type EntitlementKey, PREMIUM_ENTITLEMENT_KEYS } from '@carlys/api-contracts';
 import { syncAdminRbac } from '../src/modules/admin/application/admin-rbac';
 import { mustGet, syncCatalog } from '../src/modules/exercises/application/catalog-sync';
 import { syncExerciseMedia } from '../src/modules/media/application/catalog-media-sync';
@@ -32,9 +32,13 @@ const DEV_PASSWORD = 'Carlys-Dev-2026!';
  * Identifiants produits FACTICES (remplacés par la vraie configuration
  * Stripe/RevenueCat via le tableau de bord de chaque fournisseur).
  */
-const SUBSCRIPTION_PLANS = [
-  { slug: 'free', name: 'Gratuit' },
-  { slug: 'premium', name: 'Premium' },
+const SUBSCRIPTION_PLANS: {
+  slug: string;
+  name: string;
+  entitlements: readonly EntitlementKey[];
+}[] = [
+  { slug: 'free', name: 'Gratuit', entitlements: [] },
+  { slug: 'premium', name: 'Premium', entitlements: PREMIUM_ENTITLEMENT_KEYS },
 ];
 
 const SUBSCRIPTION_PRODUCTS = [
@@ -69,7 +73,30 @@ async function seedSubscriptionPlans(): Promise<void> {
     await prisma.subscriptionPlan.upsert({
       where: { slug: plan.slug },
       update: { name: plan.name },
-      create: plan,
+      create: { slug: plan.slug, name: plan.name },
+    });
+  }
+
+  // Les droits que chaque plan ouvre — EN DONNÉE, comme l'exige l'ADR 0006.
+  // Le calcul des droits ne reconnaît plus le plan à son slug : sans ces
+  // lignes, un plan existe mais n'ouvre rien, et le premier webhook coupe
+  // l'accès de ses abonnés. Le seed est donc la source de vérité du
+  // développement, la migration de reprise celle de l'existant.
+  for (const plan of SUBSCRIPTION_PLANS) {
+    const row = await prisma.subscriptionPlan.findUniqueOrThrow({
+      where: { slug: plan.slug },
+    });
+    for (const key of plan.entitlements) {
+      await prisma.subscriptionPlanEntitlement.upsert({
+        where: { planId_entitlementKey: { planId: row.id, entitlementKey: key } },
+        update: {},
+        create: { planId: row.id, entitlementKey: key },
+      });
+    }
+    // Un droit RETIRÉ du plan dans le code doit disparaître de la base :
+    // sinon le seed n'est plus idempotent, il est seulement additif.
+    await prisma.subscriptionPlanEntitlement.deleteMany({
+      where: { planId: row.id, entitlementKey: { notIn: [...plan.entitlements] } },
     });
   }
 

@@ -707,6 +707,29 @@ model SubscriptionPlan {
 
   products      SubscriptionProduct[]
   subscriptions Subscription[]
+  entitlements  SubscriptionPlanEntitlement[]
+}
+
+/// Les droits qu'un plan ouvre — la correspondance plan → entitlements, EN
+/// DONNÉE.
+///
+/// C'est ce que l'ADR 0006 exige, et ce qui manquait : « aucun test de nom de
+/// plan en dur (`plan === "premium"` est interdit en revue) ; toute condition
+/// d'accès nomme un droit ». Le calcul des droits reconnaissait le plan à son
+/// slug et réécrivait, à chaque événement, la liste des droits premium codée
+/// dans `packages/api-contracts`. Un second plan payant — un plan « coach »,
+/// ou simplement un tarif distinct — aurait donc rétrogradé par son propre
+/// achat un membre déjà Premium : le nouvel abonnement ne « valant » pas
+/// premium, la boucle écrivait `isActive: false` sur tous ses droits, sans
+/// erreur et avec l'événement marqué traité.
+model SubscriptionPlanEntitlement {
+  planId         String   @db.Uuid
+  entitlementKey String
+  createdAt      DateTime @default(now())
+
+  plan SubscriptionPlan @relation(fields: [planId], references: [id], onDelete: Cascade)
+
+  @@id([planId, entitlementKey])
 }
 
 /// Correspondance plan interne ↔ produit chez un fournisseur.

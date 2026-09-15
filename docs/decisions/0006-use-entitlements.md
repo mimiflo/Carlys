@@ -69,6 +69,18 @@ finale sur chaque action protégée.
 - Règle de code, applicable dès maintenant : **aucun test de nom de plan en
   dur** (`plan === "premium"` est interdit en revue) ; toute condition d'accès
   nomme un droit.
+
+  *Mise à jour du 15 septembre 2026.* Cette règle a été enfreinte pendant
+  toute l'Étape 6 : `EntitlementsService` reconnaissait le plan à son slug,
+  puis réécrivait la liste `PREMIUM_ENTITLEMENT_KEYS` codée dans les
+  contrats. La conséquence n'était pas théorique — le jour où un second plan
+  payant existe, son événement ne « vaut » pas premium, donc la boucle écrit
+  `isActive: false` sur tous les droits premium du compte : un membre déjà
+  Premium est rétrogradé par son propre achat, et un acheteur du seul second
+  plan paie pour un compte gratuit, sans erreur et l'événement marqué traité.
+  La table `SubscriptionPlanEntitlement` porte désormais la correspondance,
+  et la synchronisation ne réécrit que les clés que les plans du compte
+  couvrent.
 - L'Étape 6 livrera : modèles Prisma des abonnements et entitlements, endpoint
   des droits effectifs, guards NestJS par entitlement, webhooks
   Stripe/RevenueCat signés et idempotents.

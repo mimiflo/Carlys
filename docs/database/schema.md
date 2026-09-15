@@ -24,7 +24,7 @@ migration manque par rapport au schéma.
 | Programmes | `WorkoutTemplate`, `WorkoutTemplateExercise`, `WorkoutTemplateSet`, `WorkoutSessionPlanItem` — **implémenté** (migrations `20260808135805_workout_templates` et `20260808153828_workout_session_plan_items` ; modèles de séance autonomes, plan de séance persisté pour la reprise multi-appareil, ids générés sur l'appareil) ; `TrainingProgram`, `ProgramWeek`, `ProgramDay` (programmes multi-semaines) différés | Étape 4 ✅ |
 | Séances | `WorkoutSession`, `WorkoutSet` — **implémenté** (migration `20260807010000_workout_sessions`, ids générés sur l'appareil, écritures idempotentes ; provenance et cibles ajoutées par `20260808135805_workout_templates`) ; `WorkoutSessionExercise` fusionné dans `WorkoutSet` (`exerciseId` + `exerciseName` dénormalisé), `WorkoutNote` porté par `WorkoutSession.notes`, `PersonalRecord` livré à l'Étape 5 | Étape 4 ✅ |
 | Progression | `PersonalRecord`, `BodyMetric` — **implémenté** (migration `20260807040000_progress`, records recalculés à la clôture, mesures idempotentes) ; `ProgressGoal` et `ProgressSnapshot` différés (agrégats calculés à la volée) | Étape 5 ✅ |
-| Abonnements | `SubscriptionPlan`, `SubscriptionProduct`, `Subscription`, `SubscriptionEvent`, `UserEntitlement` — **implémenté** (migration `20260807064832_subscriptions`, conforme à la cible) | Étape 6 ✅ |
+| Abonnements | `SubscriptionPlan`, `SubscriptionPlanEntitlement`, `SubscriptionProduct`, `Subscription`, `SubscriptionEvent`, `UserEntitlement` — **implémenté** (migrations `20260807064832_subscriptions` et `20260915140000_plan_entitlements`) | Étape 6 ✅ |
 | Notifications | `Notification`, `NotificationPreference`, `PushDevice` | Introduit avec l'intégration FCM réelle (au plus tôt Étape 4, `NotificationPreference` au plus tard Étape 6) |
 | Administration | `AdminUser`, `AdminRole`, `AdminPermission` (+ jointures), `AuditLog` enrichi (`actorType`, `resourceType`/`resourceId`, `requestId`) — **implémenté** (migration `20260807070624_administration` ; `AuditLog` introduit dès l'Étape 2) | Étape 7 ✅ |
 | Communauté | `Friendship`, `Encouragement`, `CommunityChallenge`, `ChallengeParticipation`, `CommunityPreference`, `QuizAnswer`, `CommunityBlock`, `CommunityReport` — **implémenté** (migrations `20260811120000_community`, `20260811190000_quiz_answers`, `20260830120000_friend_codes`, `20260906100000_community_moderation`, `20260906110000_community_monthly_challenges`, `20260906130000_community_report_snapshot`) — voir la section [Communauté](#communauté-implémenté) | Vague 1 ✅ |
@@ -536,7 +536,24 @@ traitement) et **idempotents**.
 Plan commercial interne (ex. `free`, `premium`), indépendant des fournisseurs
 de paiement.
 - Champs clés : `slug` (unique), `name`, `isActive`.
-- Relations : 1–n `SubscriptionProduct`, `Subscription`.
+- Relations : 1–n `SubscriptionProduct`, `Subscription`,
+  `SubscriptionPlanEntitlement`.
+
+### `SubscriptionPlanEntitlement`
+Les droits qu'un plan ouvre — **la correspondance plan → entitlements, en
+donnée**. C'est ce que l'ADR 0006 exige (« aucun test de nom de plan en dur ;
+toute condition d'accès nomme un droit ») et ce qui manquait : le calcul des
+droits reconnaissait le plan à son slug, puis réécrivait la liste des droits
+premium codée dans `packages/api-contracts`. Un second plan payant aurait donc
+rétrogradé, par son propre achat, un membre déjà Premium.
+- Champs clés : `planId`, `entitlementKey` — clé primaire composite.
+- Relations : n–1 `SubscriptionPlan` (`onDelete: Cascade`).
+- `entitlementKey` est un `TEXT` et non un `enum` : ajouter un droit ne doit
+  pas demander une migration de type. Le contrat
+  (`ENTITLEMENT_KEYS`) reste l'autorité sur ce qui est LISIBLE — une clé qu'il
+  ne connaît pas est ignorée à la lecture plutôt que servie, sans quoi la
+  validation Zod de la réponse ferait rendre 500 sur un compte sain.
+- Reprise de l'existant : migration `20260915140000_plan_entitlements`.
 
 ### `SubscriptionProduct`
 Correspondance entre un plan interne et un produit chez un fournisseur.

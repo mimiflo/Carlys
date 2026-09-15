@@ -11,6 +11,7 @@ process.env.STRIPE_SECRET_KEY ??= 'sk_test_e2e_0123456789abcdef';
 process.env.STRIPE_PRICE_MONTHLY ??= 'price_carlys_premium_monthly';
 
 import {
+  PREMIUM_ENTITLEMENT_KEYS,
   type ApiErrorEnvelope,
   type ApiSuccessEnvelope,
   type AuthResult,
@@ -170,6 +171,16 @@ describe('Abonnements (e2e)', () => {
       update: {},
       create: { slug: 'premium', name: 'Premium' },
     });
+    // Le plan PORTE ses droits depuis que la correspondance a quitté le code
+    // (ADR 0006). Sans ces lignes, l'abonnement se projette et n'ouvre rien —
+    // la suite dirait « pas Premium » sur un compte qui vient de payer.
+    for (const entitlementKey of PREMIUM_ENTITLEMENT_KEYS) {
+      await prisma.subscriptionPlanEntitlement.upsert({
+        where: { planId_entitlementKey: { planId: plan.id, entitlementKey } },
+        update: {},
+        create: { planId: plan.id, entitlementKey },
+      });
+    }
     for (const [provider, externalProductId] of [
       [PaymentProvider.STRIPE, 'price_carlys_premium_monthly'],
       [PaymentProvider.REVENUECAT, 'carlys_premium_monthly'],

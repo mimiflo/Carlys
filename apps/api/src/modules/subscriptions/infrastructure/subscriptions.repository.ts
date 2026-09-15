@@ -8,7 +8,20 @@ import {
 } from '@prisma/client';
 import { PrismaService } from '../../../database/prisma/prisma.service';
 
-export type SubscriptionWithPlan = Prisma.SubscriptionGetPayload<{ include: { plan: true } }>;
+/**
+ * Le plan d'un abonnement vient TOUJOURS avec les droits qu'il ouvre.
+ *
+ * `satisfies` et non une annotation : la forme littérale est ce dont Prisma
+ * déduit le type du résultat ; l'annoter l'effacerait, et `plan.entitlements`
+ * redeviendrait inconnu.
+ */
+export const PLAN_AVEC_DROITS = {
+  plan: { include: { entitlements: true } },
+} satisfies Prisma.SubscriptionInclude;
+
+export type SubscriptionWithPlan = Prisma.SubscriptionGetPayload<{
+  include: typeof PLAN_AVEC_DROITS;
+}>;
 export type ProductWithPlan = Prisma.SubscriptionProductGetPayload<{ include: { plan: true } }>;
 
 export interface UpsertSubscriptionInput {
@@ -57,14 +70,14 @@ export class SubscriptionsRepository {
   ): Promise<ProductWithPlan | null> {
     return this.prisma.subscriptionProduct.findUnique({
       where: { provider_externalProductId: { provider, externalProductId } },
-      include: { plan: true },
+      include: PLAN_AVEC_DROITS,
     });
   }
 
   latestSubscription(userId: string): Promise<SubscriptionWithPlan | null> {
     return this.prisma.subscription.findFirst({
       where: { userId },
-      include: { plan: true },
+      include: PLAN_AVEC_DROITS,
       orderBy: { updatedAt: 'desc' },
     });
   }
@@ -80,7 +93,7 @@ export class SubscriptionsRepository {
   listSubscriptions(userId: string): Promise<SubscriptionWithPlan[]> {
     return this.prisma.subscription.findMany({
       where: { userId },
-      include: { plan: true },
+      include: PLAN_AVEC_DROITS,
       orderBy: { updatedAt: 'desc' },
     });
   }
@@ -114,11 +127,11 @@ export class SubscriptionsRepository {
     };
 
     return this.prisma.$transaction(async (tx) => {
-      const existing = await tx.subscription.findUnique({ where, include: { plan: true } });
+      const existing = await tx.subscription.findUnique({ where, include: PLAN_AVEC_DROITS });
       if (existing === null) {
         const subscription = await tx.subscription.create({
           data: { provider, externalSubscriptionId, lastEventAt: eventAt, ...data },
-          include: { plan: true },
+          include: PLAN_AVEC_DROITS,
         });
         return { subscription, stale: false };
       }
@@ -149,7 +162,7 @@ export class SubscriptionsRepository {
           // garde se désarmerait toute seule.
           ...(eventAt === null ? {} : { lastEventAt: eventAt }),
         },
-        include: { plan: true },
+        include: PLAN_AVEC_DROITS,
       });
       return { subscription, stale: false };
     });
