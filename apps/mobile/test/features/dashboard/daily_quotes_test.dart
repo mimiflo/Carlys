@@ -111,4 +111,68 @@ void main() {
       }
     });
   });
+
+  group('l’entrelacement est construit, pas confié à la vigilance', () {
+    test('un cycle sert une maxime de chaque valeur, dans l’ordre', () {
+      final compose = entrelacer(const {
+        CarlysValue.constance: ['c1', 'c2'],
+        CarlysValue.maitrise: ['m1', 'm2'],
+        CarlysValue.performance: ['p1', 'p2'],
+        CarlysValue.discipline: ['d1', 'd2'],
+        CarlysValue.equilibre: ['e1', 'e2'],
+      });
+
+      expect(compose.map((q) => q.text).toList(), [
+        'c1',
+        'm1',
+        'p1',
+        'd1',
+        'e1',
+        'c2',
+        'm2',
+        'p2',
+        'd2',
+        'e2',
+      ]);
+      expect(compose.first.value, CarlysValue.constance);
+      expect(compose[4].value, CarlysValue.equilibre);
+    });
+
+    test('des listes inégales sont REFUSÉES, jamais tronquées en silence', () {
+      // C'est la faute qu'on attend : quelqu'un ajoute une maxime à une
+      // seule valeur. Tronquer perdrait la maxime sans le dire ; composer
+      // quand même casserait l'alternance sur la fin du cycle.
+      expect(
+        () => entrelacer(const {
+          CarlysValue.constance: ['c1', 'c2'],
+          CarlysValue.maitrise: ['m1'],
+          CarlysValue.performance: ['p1'],
+          CarlysValue.discipline: ['d1'],
+          CarlysValue.equilibre: ['e1'],
+        }),
+        throwsA(
+          isA<StateError>().having(
+            (e) => e.message,
+            'message',
+            allOf(contains('constance 2'), contains('maitrise 1')),
+          ),
+        ),
+      );
+    });
+
+    test('le recueil réel est composé de cycles entiers', () {
+      final tailles = quotesByValue.values.map((l) => l.length).toSet();
+      expect(
+        tailles,
+        hasLength(1),
+        reason:
+            'Les cinq listes de maximes doivent rester de même longueur : '
+            'les ajouts se font par cycles de cinq.',
+      );
+      expect(
+        carlysQuotes,
+        hasLength(tailles.single * CarlysValue.values.length),
+      );
+    });
+  });
 }

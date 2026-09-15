@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/explanations/explanation.dart';
+import '../../../../core/explanations/explanation_sheet.dart';
 import '../../../../design_system/design_system.dart';
-import '../../domain/metric_explanation.dart';
-import 'metric_explanation_sheet.dart';
 
 /// Libellé de champ suivi de sa porte d'explication.
 ///
@@ -24,7 +24,7 @@ class ExplainedFieldLabel extends StatelessWidget {
   });
 
   final String label;
-  final MetricExplanation explication;
+  final Explanation explication;
 
   @override
   Widget build(BuildContext context) {
@@ -35,7 +35,7 @@ class ExplainedFieldLabel extends StatelessWidget {
         ),
         AppExplainButton(
           aProposDe: explication.titre,
-          onPressed: () => showMetricExplanation(context, explication),
+          onPressed: () => showExplanation(context, explication),
         ),
       ],
     );

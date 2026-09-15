@@ -1,48 +1,24 @@
-/// Le POURQUOI de chaque chiffre affiché — la promesse de marque, en données.
+/// Le POURQUOI des chiffres de l'écran Nutrition.
 ///
-/// « Carlys ne dit jamais seulement quoi faire, il explique toujours
-/// pourquoi. » Ces explications existaient déjà, mais en commentaires
-/// TypeScript dans `metabolism.calculator.ts` : le serveur savait, personne ne
-/// lisait. L'écran affichait « IMC 27,3 » et « Surpoids » sans un mot.
+/// Ces explications existaient déjà, mais en commentaires TypeScript dans
+/// `metabolism.calculator.ts` : le serveur savait, personne ne lisait.
+/// L'écran affichait « IMC 27,3 » et « Surpoids » sans un mot.
 ///
-/// Ce fichier est du CONTENU, pas du calcul : il ne recalcule rien, il dit ce
-/// que le serveur a fait. Toute évolution de `metabolism.calculator.ts` — un
+/// C'est du CONTENU, pas du calcul : rien n'y est recalculé, on y dit ce que
+/// le serveur a fait. Toute évolution de `metabolism.calculator.ts` — un
 /// facteur d'activité, un ratio de lipides — doit se refléter ici, sinon
-/// l'explication ment. Un test verrouille ce couplage.
+/// l'explication ment. Un test verrouille ce couplage en LISANT le
+/// calculateur du serveur.
 library;
 
-/// Ce qu'on explique d'une donnée : ce qu'elle est, d'où elle sort, et — le
-/// plus utile — ce qu'elle ne dit PAS.
-class MetricExplanation {
-  const MetricExplanation({
-    required this.titre,
-    required this.cequeCest,
-    required this.douCaSort,
-    this.cequeCaNeDitPas,
-  });
-
-  /// Nom de la donnée, tel qu'il est écrit à l'écran.
-  final String titre;
-
-  /// En une phrase, sans jargon.
-  final String cequeCest;
-
-  /// Le calcul réel, avec ses nombres. Pas une paraphrase : les chiffres qui
-  /// figurent ici sont ceux que le serveur applique.
-  final String douCaSort;
-
-  /// Les limites, quand elles existent. C'est souvent la partie qui évite une
-  /// mauvaise décision — un IMC pris au pied de la lettre par un pratiquant
-  /// de force, une dépense estimée prise pour une mesure.
-  final String? cequeCaNeDitPas;
-}
+import '../../../core/explanations/explanation.dart';
 
 /// Le catalogue, une entrée par donnée que l'application affiche.
 ///
 /// Rien n'y est inventé : chaque nombre cité se retrouve dans
 /// `apps/api/src/modules/nutrition/application/metabolism.calculator.ts`.
-abstract final class MetricExplanations {
-  static const MetricExplanation imc = MetricExplanation(
+abstract final class NutritionExplanations {
+  static const Explanation imc = Explanation(
     titre: 'IMC',
     cequeCest:
         'Un rapport entre ton poids et ta taille, et rien de plus. Il sert à '
@@ -59,7 +35,7 @@ abstract final class MetricExplanations {
         'sait pas faire la différence entre du muscle et de la graisse.',
   );
 
-  static const MetricExplanation metabolismeDeBase = MetricExplanation(
+  static const Explanation metabolismeDeBase = Explanation(
     titre: 'Métabolisme de base',
     cequeCest:
         'Ce que ton corps dépense au repos complet, rien qu’à rester en vie : '
@@ -75,7 +51,7 @@ abstract final class MetricExplanations {
         'c’est la conséquence.',
   );
 
-  static const MetricExplanation depenseEnergetique = MetricExplanation(
+  static const Explanation depenseEnergetique = Explanation(
     titre: 'Dépense énergétique',
     cequeCest:
         'Ton métabolisme de base, plus tout ce que tu fais de ta journée : '
@@ -91,7 +67,7 @@ abstract final class MetricExplanations {
         'revoir avant de douter de la balance.',
   );
 
-  static const MetricExplanation caloriesCibles = MetricExplanation(
+  static const Explanation caloriesCibles = Explanation(
     titre: 'Objectif calorique',
     cequeCest: 'Ta dépense estimée, ajustée à l’objectif que tu as choisi.',
     douCaSort:
@@ -106,7 +82,7 @@ abstract final class MetricExplanations {
         'bout d’un mois.',
   );
 
-  static const MetricExplanation proteines = MetricExplanation(
+  static const Explanation proteines = Explanation(
     titre: 'Protéines',
     cequeCest: 'De quoi construire et surtout CONSERVER ton muscle.',
     douCaSort:
@@ -118,7 +94,7 @@ abstract final class MetricExplanations {
         'protéine est ce qui l’en dissuade.',
   );
 
-  static const MetricExplanation lipides = MetricExplanation(
+  static const Explanation lipides = Explanation(
     titre: 'Lipides',
     cequeCest: 'Le gras alimentaire : indispensable, pas facultatif.',
     douCaSort:
@@ -129,7 +105,7 @@ abstract final class MetricExplanations {
         'Couper le gras n’est pas une stratégie, c’est une carence différée.',
   );
 
-  static const MetricExplanation glucides = MetricExplanation(
+  static const Explanation glucides = Explanation(
     titre: 'Glucides',
     cequeCest: 'Ton carburant d’effort, celui que tu brûles le plus vite.',
     douCaSort:
@@ -140,7 +116,7 @@ abstract final class MetricExplanations {
         'ce sont les glucides qui reculent en premier, pas les protéines.',
   );
 
-  static const MetricExplanation eau = MetricExplanation(
+  static const Explanation eau = Explanation(
     titre: 'Hydratation',
     cequeCest: 'La quantité d’eau visée sur une journée ordinaire.',
     douCaSort: '35 millilitres par kilo de poids corporel.',
@@ -155,7 +131,7 @@ abstract final class MetricExplanations {
   /// La spécification demande d'expliquer la masse musculaire et la masse
   /// grasse. Carlys ne les calcule pas — et le dire, avec la raison, est
   /// plus pédagogique que d'afficher une estimation qui se trompe.
-  static const MetricExplanation masseGrasseEtMusculaire = MetricExplanation(
+  static const Explanation masseGrasseEtMusculaire = Explanation(
     titre: 'Masse grasse et masse musculaire',
     cequeCest:
         'La part de ton poids qui est du gras, et celle qui est du muscle. '
@@ -174,7 +150,7 @@ abstract final class MetricExplanations {
   );
 
   /// Toutes les explications, pour les tests d'intégrité.
-  static const List<MetricExplanation> toutes = [
+  static const List<Explanation> toutes = [
     imc,
     metabolismeDeBase,
     depenseEnergetique,

@@ -301,3 +301,29 @@ simplement perdue (la barre est collective, pas comptable).
   service (silence sur code inconnu ou soi-même, aperçu 404) ; e2e du tour
   complet profil → aperçu → demande → amis ; feuille d'ajout (QR affiché,
   champ unique, saisie invalide retenue au bord).
+
+## Une ligue ne peut pas devenir un second score
+
+La tranche 42 apportera des ligues. Deux contraintes les encadrent avant la
+première ligne de code.
+
+**Elle ne double pas le titre Carlys.** Le titre est le seul score de
+progression personnelle (voir [progression.md](progression.md), « Un seul
+score : la règle de non-concurrence »). Une ligue est une comparaison SOCIALE
+bornée dans le temps : elle dit qui fait quoi pendant une période, la fenêtre
+se ferme puis repart, et rien de ce qu’elle affiche ne devient un palier que la
+personne « est ». En particulier, une ligue assise sur `streakDays`
+contredirait l’axe Constance, qui compte les semaines et non les jours : trois
+jours sans séance ne retirent rien à l’axe tant que chaque semaine garde la
+sienne, alors qu’ils remettent la série à zéro. Le même arrêt ferait reculer un
+écran et pas l’autre, et celui qui recule serait servi par le serveur alors que
+le profil, lui, est local.
+
+**Elle contredit frontalement le principe 5.** « La progression des défis est
+collective, jamais un classement individuel » est écrit ici comme non
+négociable, et le service le tient : seule la somme agrégée des contributions
+sort du serveur, jamais la part d’une personne nommée. Une ligue ordonne des
+personnes, donc c’est un classement individuel, par construction. Aucune
+rédaction ne réconcilie les deux. Il faut trancher avant de coder : soit le
+principe 5 est réécrit pour ne porter que sur les défis, soit la ligue ne se
+fait pas.

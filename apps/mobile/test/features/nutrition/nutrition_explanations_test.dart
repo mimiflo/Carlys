@@ -3,8 +3,11 @@ library;
 
 import 'dart:io';
 
-import 'package:carlys_mobile/features/nutrition/domain/metric_explanation.dart';
+import 'package:carlys_mobile/core/explanations/explanation.dart';
+import 'package:carlys_mobile/features/nutrition/domain/nutrition_explanations.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../../support/explanation_catalogue.dart';
 
 /// Le calculateur du serveur : la SOURCE des nombres que les explications
 /// citent. Chemin relatif à `apps/mobile`, d'où les tests s'exécutent.
@@ -16,7 +19,7 @@ final File _calculateur = File(
 /// réflexion, de savoir si une explication déclarée a été oubliée dans
 /// `toutes`.
 final File _catalogue = File(
-  'lib/features/nutrition/domain/metric_explanation.dart',
+  'lib/features/nutrition/domain/nutrition_explanations.dart',
 );
 
 /// Un nombre TypeScript tel qu'un francophone le lit : `1.375` → « 1,375 »,
@@ -58,7 +61,7 @@ double _valeur(String bloc, String cle, {required String dans}) {
 
 /// Échoue en NOMMANT le chiffre qui a bougé — une explication qui ment est
 /// pire qu'une absence d'explication.
-void _cite(MetricExplanation explication, String attendu, String quoi) {
+void _cite(Explanation explication, String attendu, String quoi) {
   // Comparaison insensible à la casse : « un quart » est écrit « Un quart »
   // quand il ouvre la phrase, et la majuscule n'est pas le sujet du test.
   expect(
@@ -85,62 +88,11 @@ void main() {
     serveur = _calculateur.readAsStringSync();
   });
 
-  group('intégrité du catalogue', () {
-    test('chaque explication dit ce que c’est ET d’où ça sort', () {
-      for (final explication in MetricExplanations.toutes) {
-        expect(explication.titre.trim(), isNotEmpty);
-        expect(
-          explication.cequeCest.trim(),
-          isNotEmpty,
-          reason: '« ${explication.titre} » n’explique pas ce que c’est.',
-        );
-        expect(
-          explication.douCaSort.trim(),
-          isNotEmpty,
-          reason: '« ${explication.titre} » ne dit pas d’où ça sort.',
-        );
-      }
-    });
-
-    test('aucun titre en double — l’un cacherait l’autre à l’écran', () {
-      final titres = MetricExplanations.toutes.map((e) => e.titre).toList();
-      expect(titres.toSet(), hasLength(titres.length));
-    });
-
-    test('aucune explication déclarée n’est oubliée dans `toutes`', () {
-      final source = _catalogue.readAsStringSync();
-      final declarees = RegExp(
-        r'static const MetricExplanation (\w+) =',
-      ).allMatches(source).map((m) => m.group(1)!).toList();
-
-      expect(
-        declarees,
-        isNotEmpty,
-        reason: 'Le catalogue ne déclare plus aucune explication.',
-      );
-
-      // Le contenu de `static const List<MetricExplanation> toutes = [...]`.
-      final liste = RegExp(
-        r'toutes = \[([^\]]*)\]',
-      ).firstMatch(source)?.group(1);
-      expect(liste, isNotNull, reason: 'La liste `toutes` a disparu.');
-
-      final listees = liste!
-          .split(',')
-          .map((e) => e.trim())
-          .where((e) => e.isNotEmpty)
-          .toSet();
-
-      expect(
-        listees,
-        containsAll(declarees),
-        reason:
-            'Une explication déclarée manque à `toutes` : elle échapperait '
-            'à TOUS les contrôles de ce fichier.',
-      );
-      expect(MetricExplanations.toutes, hasLength(declarees.length));
-    });
-  });
+  verifierCatalogue(
+    nom: 'nutrition',
+    source: _catalogue,
+    toutes: NutritionExplanations.toutes,
+  );
 
   group('les chiffres cités sont ceux que le serveur applique', () {
     test('facteurs d’activité — dépense énergétique', () {
@@ -154,7 +106,7 @@ void main() {
       ]) {
         final facteur = _valeur(bloc, niveau, dans: 'ACTIVITY_FACTORS');
         _cite(
-          MetricExplanations.depenseEnergetique,
+          NutritionExplanations.depenseEnergetique,
           _enFrancais(facteur),
           'le niveau $niveau',
         );
@@ -183,7 +135,7 @@ void main() {
       final homme = double.parse(formule.group(4)!);
       final femme = double.parse(formule.group(5)!);
 
-      final explication = MetricExplanations.metabolismeDeBase;
+      final explication = NutritionExplanations.metabolismeDeBase;
       _cite(explication, '${_enFrancais(poids)} ×', 'le poids');
       _cite(explication, '${_enFrancais(taille)} ×', 'la taille');
       _cite(explication, '${_enFrancais(age)} ×', 'l’âge');
@@ -196,7 +148,7 @@ void main() {
       final perte = _valeur(bloc, 'LOSE_WEIGHT', dans: 'GOAL_FACTORS');
       final prise = _valeur(bloc, 'GAIN_MUSCLE', dans: 'GOAL_FACTORS');
 
-      final explication = MetricExplanations.caloriesCibles;
+      final explication = NutritionExplanations.caloriesCibles;
       _cite(
         explication,
         '${_enFrancais((1 - perte) * 100)} %',
@@ -211,7 +163,7 @@ void main() {
 
     test('protéines — grammes par kilo', () {
       final bloc = _bloc(serveur, 'PROTEIN_PER_KG');
-      final explication = MetricExplanations.proteines;
+      final explication = NutritionExplanations.proteines;
       for (final objectif in const ['LOSE_WEIGHT', 'MAINTAIN', 'GAIN_MUSCLE']) {
         final parKilo = _valeur(bloc, objectif, dans: 'PROTEIN_PER_KG');
         _cite(explication, _enFrancais(parKilo), 'l’objectif $objectif');
@@ -243,7 +195,7 @@ void main() {
             'encore comment l’écrire en français dans l’explication '
             '« Lipides ». Ajoute la formulation, puis le texte.',
       );
-      _cite(MetricExplanations.lipides, attendu!, 'la part des lipides');
+      _cite(NutritionExplanations.lipides, attendu!, 'la part des lipides');
     });
 
     test('densités énergétiques — lipides et glucides', () {
@@ -252,8 +204,12 @@ void main() {
         contains('/ 9'),
         reason: 'Le serveur ne divise plus les lipides par 9 kcal/g.',
       );
-      _cite(MetricExplanations.lipides, '9 kcal par gramme', 'les lipides');
-      _cite(MetricExplanations.glucides, '4 kcal par gramme', 'les glucides');
+      _cite(NutritionExplanations.lipides, '9 kcal par gramme', 'les lipides');
+      _cite(
+        NutritionExplanations.glucides,
+        '4 kcal par gramme',
+        'les glucides',
+      );
     });
 
     test('hydratation — millilitres par kilo', () {
@@ -266,7 +222,7 @@ void main() {
         reason: 'Le calcul de l’eau a changé de forme.',
       );
       _cite(
-        MetricExplanations.eau,
+        NutritionExplanations.eau,
         '${_enFrancais(double.parse(trouve!.group(1)!))} millilitres',
         'l’hydratation',
       );
@@ -284,14 +240,14 @@ void main() {
             'l’explication « IMC » les énumère une par une.',
       );
       for (final seuil in seuils) {
-        _cite(MetricExplanations.imc, _enFrancais(seuil), 'un seuil d’IMC');
+        _cite(NutritionExplanations.imc, _enFrancais(seuil), 'un seuil d’IMC');
       }
     });
   });
 
   group('la donnée ABSENTE est expliquée comme les autres', () {
     test('masse grasse et masse musculaire : ni calcul, ni estimation', () {
-      final explication = MetricExplanations.masseGrasseEtMusculaire;
+      final explication = NutritionExplanations.masseGrasseEtMusculaire;
       expect(explication.cequeCaNeDitPas, isNotNull);
       // Le serveur ne produit RIEN de tel : le jour où il le ferait, cette
       // explication deviendrait un mensonge.

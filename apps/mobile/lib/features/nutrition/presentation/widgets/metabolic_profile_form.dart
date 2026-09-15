@@ -7,7 +7,7 @@ import '../../../../core/errors/app_exception.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/nutrition.dart';
 import '../../domain/height_cm.dart';
-import '../../domain/metric_explanation.dart';
+import '../../domain/nutrition_explanations.dart';
 import '../controllers/nutrition_controllers.dart';
 import 'explained_field_label.dart';
 
@@ -148,7 +148,7 @@ class _MetabolicProfileFormState extends ConsumerState<MetabolicProfileForm> {
           const SizedBox(height: AppSpacing.md),
           const ExplainedFieldLabel(
             label: 'Niveau d’activité',
-            explication: MetricExplanations.depenseEnergetique,
+            explication: NutritionExplanations.depenseEnergetique,
           ),
           const SizedBox(height: AppSpacing.xxs),
           DropdownButtonFormField<ActivityLevel>(
@@ -170,7 +170,7 @@ class _MetabolicProfileFormState extends ConsumerState<MetabolicProfileForm> {
           const SizedBox(height: AppSpacing.md),
           const ExplainedFieldLabel(
             label: 'Mon plan nutrition',
-            explication: MetricExplanations.caloriesCibles,
+            explication: NutritionExplanations.caloriesCibles,
           ),
           const SizedBox(height: AppSpacing.xxs),
           DropdownButtonFormField<NutritionGoal>(

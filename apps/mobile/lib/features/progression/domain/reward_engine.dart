@@ -242,7 +242,7 @@ final List<RewardRule> rewardCatalog = [
       .map(
         (title) => RewardRule(
           Reward(
-            id: 'titre-${title.name}',
+            id: '$titleRewardPrefix${title.name}',
             kind: RewardKind.titre,
             label: title.label,
             story: 'Titre atteint à ${title.threshold} points.',
@@ -252,6 +252,35 @@ final List<RewardRule> rewardCatalog = [
         ),
       ),
 ];
+
+/// Préfixe des identifiants de journal des titres.
+///
+/// GELÉ, comme tous les identifiants de récompense : le changer effacerait
+/// des récompenses déjà obtenues chez les gens qui les ont gagnées. Il est
+/// nommé ici pour que [titleOfReward] et le catalogue ne puissent pas
+/// diverger — la seule façon sûre de relire une clé est de la construire au
+/// même endroit qu'on l'écrit.
+const String titleRewardPrefix = 'titre-';
+
+/// Le titre derrière un identifiant de récompense, ou `null` si l'entrée
+/// n'est pas un titre.
+///
+/// Sert au bandeau de franchissement, qui n'a qu'une récompense en main et
+/// doit retrouver le palier pour en dire le SENS. Tolérant par construction :
+/// un identifiant inconnu rend `null` au lieu de lever, parce qu'un journal
+/// écrit par une version plus ancienne ne doit pas faire tomber l'écran.
+CarlysTitle? titleOfReward(String rewardId) {
+  if (!rewardId.startsWith(titleRewardPrefix)) {
+    return null;
+  }
+  final nom = rewardId.substring(titleRewardPrefix.length);
+  for (final titre in CarlysTitle.values) {
+    if (titre.name == nom) {
+      return titre;
+    }
+  }
+  return null;
+}
 
 /// Les récompenses méritées par ces faits, dans l'ordre du catalogue.
 List<Reward> earnedRewards(RewardFacts facts) {

@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/explanations/explanation_sheet.dart';
 import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/nutrition.dart';
-import '../../domain/metric_explanation.dart';
-import 'metric_explanation_sheet.dart';
+import '../../domain/nutrition_explanations.dart';
 
 /// Bas du hero « métabolisme » : dépense totale à gauche, décomposition
 /// MB / activité à droite.
@@ -33,9 +33,9 @@ class MetabolismExpenditureRow extends StatelessWidget {
         Expanded(
           child: AppExplainable(
             enonce: 'Dépense totale $total kilocalories',
-            onExplain: () => showMetricExplanation(
+            onExplain: () => showExplanation(
               context,
-              MetricExplanations.depenseEnergetique,
+              NutritionExplanations.depenseEnergetique,
             ),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -60,10 +60,8 @@ class MetabolismExpenditureRow extends StatelessWidget {
           // Deux lignes de label ne font pas 48 points : c'est ce
           // rembourrage qui porte le bloc au-dessus de la cible tactile.
           padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
-          onExplain: () => showMetricExplanation(
-            context,
-            MetricExplanations.metabolismeDeBase,
-          ),
+          onExplain: () =>
+              showExplanation(context, NutritionExplanations.metabolismeDeBase),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.end,
             mainAxisSize: MainAxisSize.min,

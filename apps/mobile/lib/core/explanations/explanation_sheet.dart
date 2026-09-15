@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
-import '../../../../design_system/design_system.dart';
-import '../../domain/metric_explanation.dart';
+import '../../design_system/design_system.dart';
+import 'explanation.dart';
 
 /// Ouvre le POURQUOI d'une donnée.
 ///
@@ -9,10 +9,7 @@ import '../../domain/metric_explanation.dart';
 /// ce que ça ne dit pas. Le troisième est facultatif mais c'est souvent le
 /// plus utile — un IMC pris au pied de la lettre par un pratiquant de force,
 /// une dépense estimée prise pour une mesure.
-Future<void> showMetricExplanation(
-  BuildContext context,
-  MetricExplanation explication,
-) {
+Future<void> showExplanation(BuildContext context, Explanation explication) {
   return showAppSheet<void>(
     context,
     style: AppSheetStyle.form,
@@ -23,7 +20,7 @@ Future<void> showMetricExplanation(
 class _ExplanationBody extends StatelessWidget {
   const _ExplanationBody({required this.explication});
 
-  final MetricExplanation explication;
+  final Explanation explication;
 
   @override
   Widget build(BuildContext context) {

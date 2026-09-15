@@ -5,6 +5,7 @@ import '../../domain/progression.dart';
 import 'majesty.dart';
 import 'majesty_plate.dart';
 import 'progression_gauge.dart';
+import 'titles_explained_sheet.dart';
 
 /// LA CARTE DE TITRE : le palier porté, le total, le chemin qui reste.
 ///
@@ -41,11 +42,27 @@ class TitleCard extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            'TON TITRE',
-            style: AppTypography.labelMono.copyWith(
-              color: AppColors.primaryLight,
-            ),
+          Row(
+            children: [
+              Text(
+                'TON TITRE',
+                style: AppTypography.labelMono.copyWith(
+                  color: AppColors.primaryLight,
+                ),
+              ),
+              const Spacer(),
+              // Le seul endroit de l'écran où le glyphe EST le bouton : la
+              // carte entière porte déjà la jauge et le total, la rendre
+              // tapable ferait concurrence à ce qu'elle montre.
+              AppExplainButton(
+                aProposDe: 'les titres',
+                onPressed: () => showTitlesExplained(
+                  context,
+                  porte: profile.title,
+                  grave: majestyTier,
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: AppSpacing.sm),
           Row(

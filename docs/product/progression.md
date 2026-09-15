@@ -81,6 +81,154 @@ Ils racontent un métier qui s'apprend, pas un niveau qui se farme. Le dernier
 seuil reste sous le maximum : « Icône » doit être atteignable, sinon c'est une
 carotte, pas un titre.
 
+### Le titre porté, le titre gravé, le rang
+
+Trois mots s'affichent et deux se confondent facilement.
+
+- Le **titre porté** suit le score du moment. Le score étant dérivé, il
+  redescend si la pratique s'arrête : c'est la vérité, et la masquer serait
+  mentir.
+- Le **titre gravé** est le plus haut jamais atteint (`highestTitleProvider`).
+  C'est lui qui décide du cran de majesté et du sceau : **l'écrin ne se ternit
+  jamais**, même quand les points redescendent. C'est la promesse la plus
+  rassurante du système, et rien ne l'énonçait à l'utilisateur.
+- Le **rang** est la position du palier sur l'échelle, la même chose écrite de
+  deux façons : le chiffre romain frappé sur le sceau, et la fraction
+  « n / 5 PALIERS » de la carte. Ce n'est pas un score, c'est un numéro d'ordre.
+
+La feuille « Comprendre les titres » (`presentation/widgets/titles_explained_sheet.dart`,
+ouverte depuis la carte de titre) dit tout cela à l'écran : les cinq paliers
+avec leur seuil, leur sens, celui qu'on porte mis en évidence, et celui qui
+reste gravé quand il est plus haut. Chaque palier ouvre son explication
+complète par le mécanisme commun à toute l'application (`AppExplainable` :
+la ligne entière répond, le glyphe n'est qu'un ornement).
+
+Les identifiants d'énumération sont **gelés** : `reward_engine.dart` en dérive
+les clés de journal (`titleRewardPrefix` + le nom). Renommer un titre pour le
+rendre plus clair effacerait une récompense déjà obtenue. On explique les
+libellés, on ne les renomme pas.
+
+## Un seul score : la règle de non-concurrence
+
+Le titre Carlys est le **seul score de progression personnelle**. Les ligues
+(tranche 42) et les niveaux Academy (tranche 37) n’existent pas encore. Le jour
+où ils arriveront, ils devront tenir sans produire un second nombre que la
+personne « est ».
+
+Ce n’est pas une affaire de goût. Le score est dérivé, jamais accumulé : il se
+recalcule à chaque lecture depuis des faits, et ces faits sont en nombre fini.
+Un deuxième système construit naïvement ne mesure donc pas autre chose, il
+repèse les mêmes faits sur une autre échelle. Deux échelles pour un fait, ce
+sont deux nombres à l’écran, et la personne en retient un troisième : celui de
+sa propre confusion.
+
+Deux cas sont déjà mesurables aujourd’hui.
+
+**Un « niveau Academy » calculé sur le pack recompterait l’axe Maîtrise.**
+L’axe rapporte les leçons répondues à une cible FIXE de 20, et le pack en
+compte 38 (`assets/academy/pack.json`, version 3). À 20 leçons répondues,
+quelqu’un lirait « Maîtrise 100 % » sur son profil de progression et « 53 % »
+dans l’Academy, au même instant, pour le même travail. Pire : la cible fixe
+existe justement pour qu’étoffer le pack ne reprenne rien à personne
+(`n/20 ≥ n/22`, voir plus haut). Un niveau assis sur la taille du pack
+réintroduirait exactement le défaut que cette cible a supprimé, puisque passer
+de 38 à 80 leçons le diviserait par deux du jour au lendemain, sans que
+personne ait rien fait.
+
+**Une « ligue » assise sur la série de jours contredirait l’axe Constance.**
+`computeStreakDays` (API, `modules/community/application/streak.calculator.ts`)
+compte les JOURS CALENDAIRES consécutifs avec séance, dans le fuseau du
+propriétaire, côté serveur. L’axe Constance compte les SEMAINES avec au moins
+une séance sur les huit dernières, en local. Les deux ne réagissent pas au même
+événement : trois jours sans séance ne retirent rien à l’axe tant que chaque
+semaine garde la sienne, alors qu’ils remettent la série à zéro. Un classement
+bâti sur la série ferait donc reculer la progression au moment précis où la
+règle « aucun axe ne punit une absence » dit qu’elle ne bouge pas. Et il la
+ferait reculer depuis le serveur, quand le profil est local et doit tenir hors
+ligne.
+
+### Ce que chacun a le droit d’être
+
+| Système | Ce qu’il est | Ce qu’il lui est interdit d’être |
+| ------- | ------------ | -------------------------------- |
+| **Titre Carlys** | Le score de progression personnelle, dérivé des cinq axes | Il est le seul : rien d’autre ne résume la personne par un nombre |
+| **Ligue** | Une comparaison SOCIALE bornée dans le temps : qui fait quoi sur une période qui se ferme, puis repart | Un état durable de la personne, un palier qui s’ajoute au titre, une échelle que l’on « monte » |
+| **Niveau Academy** | Un repère de POSITION dans le contenu : où en est la lecture du pack | Une note, un pourcentage de la personne, une condition d’accès à un titre |
+
+Les deux derniers ont le droit d’exister à côté du titre parce qu’ils ne
+répondent pas à sa question. Le titre dit où en est la pratique. La ligue dit
+qui fait quoi ce mois-ci. Le niveau Academy dit où en est la lecture d’un
+contenu. Trois questions, un seul score.
+
+### La règle opératoire
+
+Quatre tests, à passer avant d’écrire le premier compteur. Un seul qui échoue
+suffit à refuser l’écran.
+
+1. **Le test du fait déjà compté.** Le fait est-il dans `ProgressionFacts`
+   (jours de séance, séances commencées et terminées, volume, leçons
+   répondues) ? S’il y est, un axe le pèse déjà. Le nouvel écran a le droit de
+   le PRÉSENTER : le lister, le situer, le comparer. Il n’a pas le droit de le
+   RENOTER.
+2. **Le test de l’unité.** Un repère se dit dans l’unité de ce qu’il compte :
+   « 12 leçons sur 38 », « 4 séances ce mois-ci », « 3e place sur 12 ». Dès
+   qu’il se dit en pourcentage ou en points, il se lit comme une note, et une
+   note est un score.
+3. **Le test de la phrase.** Écrire la phrase que la personne lira. Si elle
+   tient la forme « tu es 7 » ou « ton niveau est 12 », c’est un second score.
+   « Tu es Artisan » existe déjà, et une fois suffit.
+4. **Le test de la date de fin.** Une comparaison sociale porte une fenêtre qui
+   se ferme, et ce qu’elle affiche meurt avec elle. Si le résultat d’une ligue
+   survit à son mois et s’empile, ce n’est plus une comparaison, c’est un
+   second titre.
+
+Ce qui doit rester d’une période close relève du journal des récompenses, pas
+d’un compteur parallèle : une ligue tenue se marque par une récompense datée,
+gagnée une fois et jamais reprise, comme le reste de la vitrine.
+
+### La contradiction à trancher avant d’écrire une ligue
+
+[community.md](community.md) pose en principe non négociable que « la
+progression des défis est collective, jamais un classement individuel », et le
+code le tient : le serveur n’expose qu’une somme agrégée (`_sum.contribution`),
+jamais la part d’une personne nommée. Or une ligue est par nature un classement
+individuel, puisqu’elle ordonne des personnes.
+
+Les deux ne se concilient pas à la rédaction. Soit le principe 5 est réécrit
+pour ne porter que sur les DÉFIS, la ligue devenant un autre objet avec ses
+propres garde-fous, soit la ligue ne se fait pas. Cette page ne tranche pas :
+elle refuse seulement que la tranche 42 s’écrive comme si la contradiction
+n’existait pas.
+
+### Ce que « rang » désigne dans cette tranche
+
+Le mot « rang » de la tranche 44 est la position du titre sur l'échelle, telle
+qu'elle s'affiche déjà : le chiffre romain du sceau et la fraction
+« n / 5 PALIERS ». **Ce n'est pas une sixième échelle.** Si une échelle de
+rangs distincte devait naître un jour, elle tomberait sous la règle ci-dessus
+et le compte de systèmes passerait de trois à quatre.
+
+## Les maximes du jour
+
+Le recueil vit dans `features/dashboard/data/quotes/<valeur>_quotes.dart` :
+**cinq listes de texte, une par valeur de marque**, recomposées par
+`entrelacer` dans `daily_quotes.dart`. La rotation sert une maxime de chaque
+valeur, puis recommence, si bien que deux jours consécutifs n'en servent
+jamais la même.
+
+Cet ordre était tenu à la main dans une seule longue liste, et rien d'autre
+qu'un commentaire n'empêchait d'y glisser une entrée isolée : l'alternance
+serait tombée en silence, sur la fin du cycle seulement. `entrelacer`
+**refuse** de composer des listes de longueurs inégales et dit lesquelles.
+Les maximes s'ajoutent donc par cycles de cinq, une par valeur.
+
+Rien n'est attribué à une personne réelle : ce sont des phrases maison.
+Le ton est sous test (`daily_quotes_test.dart`) : quatre registres proscrits
+— culpabilité, culte de la douleur, perfectionnisme, jugement du corps — avec
+leurs mots-témoins. Contrainte de rédaction, pas de mise en page : la carte
+d'accueil rétrécit le texte jusqu'à 15 pt puis le tronque, donc une maxime
+tient en une phrase.
+
 ## Ce que la marque interdit ici
 
 Un profil de progression est l'endroit où « exigeante mais bienveillante » se
@@ -139,6 +287,15 @@ les essais n'entrent dans le calcul : se tromper fait apprendre, et compter les
 | `presentation/widgets/upcoming_award_row.dart` | Celle qui reste à gagner : une invitation |
 | `presentation/widgets/progression_body.dart` | L'écran d'un compte qui a déjà travaillé |
 | `presentation/widgets/first_steps_body.dart` | L'écran du premier jour |
+| `domain/title_explanations.dart` | Ce que chaque titre VEUT DIRE : le contenu, jamais le calcul |
+| `presentation/widgets/titles_explained_sheet.dart` | L'échelle entière, ouverte depuis la carte de titre |
+
+Les explications de titres remplissent le gabarit partagé
+`core/explanations/explanation.dart` (ce que c'est, d'où ça sort, ce que ça ne
+dit pas) et s'ouvrent par `core/explanations/explanation_sheet.dart`, les
+mêmes que la nutrition. Ce gabarit vivait sous `features/nutrition/` ; l'y
+laisser aurait obligé la progression à dépendre d'une autre fonctionnalité, ou
+pire, à s'en recopier une deuxième version.
 
 Cette coupure permet de tester le barème sans base de données, et la lecture
 sans barème.
@@ -165,7 +322,12 @@ gagné est l'histoire, et l'histoire ne se reprend pas.
 | **Certificat** | Un engagement long | Une saison entière, Academy terminée |
 | **Record personnel** | Une charge jamais atteinte | Servis par l'API, affichés dans Progrès |
 | **Titre** | Un palier du profil | Architecte, Artisan, Maître, Icône |
-| **Citation** | Le mot du jour | Une par jour, adossée à une des cinq valeurs |
+
+La **citation du jour** figurait dans ce tableau. Elle n'y avait pas sa place :
+une récompense se gagne, s'inscrit au journal et ne se reprend pas, alors
+qu'une maxime tourne pour tout le monde selon le jour civil. `RewardKind` ne
+la connaît d'ailleurs pas (badge, médaille, certificat, record, titre), et
+rien ne la journalise. Le recueil est décrit sous « Les maximes du jour ».
 
 Le catalogue (`domain/reward_engine.dart`) compte **quinze paliers** — deux à
 quatre par valeur de marque — auxquels s'ajoutent les **quatre titres**, qui

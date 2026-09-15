@@ -32,188 +32,75 @@
 /// Une maxime Carlys apprend quelque chose, ou allège. Jamais elle ne fait
 /// honte. `daily_quotes_test.dart` garde ces interdits par écrit.
 ///
-/// Les entrées sont **entrelacées par valeur** (constance, maîtrise,
+/// ## L'entrelacement n'est plus une convention, c'est une construction
+///
+/// Les entrées sont servies **entrelacées par valeur** (constance, maîtrise,
 /// performance, discipline, équilibre, puis on recommence) : comme la
 /// sélection avance d'un cran par jour, deux jours consécutifs ne servent
 /// jamais la même valeur.
+///
+/// Cet ordre était tenu à la main dans une seule longue liste. Ça marchait
+/// tant que personne n'ajoutait une maxime isolée — et rien n'empêchait de
+/// le faire, sinon un commentaire. Les maximes vivent désormais en **cinq
+/// listes, une par valeur**, et [entrelacer] compose l'ordre. Ajouter une
+/// maxime à une seule valeur ne dégrade plus l'alternance en silence : ça
+/// déséquilibre les listes, et le composeur refuse.
 library;
 
+import 'package:flutter/foundation.dart';
+
 import '../domain/entities/daily_quote.dart';
+import 'quotes/constance_quotes.dart';
+import 'quotes/discipline_quotes.dart';
+import 'quotes/equilibre_quotes.dart';
+import 'quotes/maitrise_quotes.dart';
+import 'quotes/performance_quotes.dart';
 
-const List<DailyQuote> carlysQuotes = [
-  // — Cycle 1
-  DailyQuote(
-    text: 'Reviens demain. C’est tout ce que la régularité demande.',
-    value: CarlysValue.constance,
-  ),
-  DailyQuote(
-    text: 'Un mouvement compris vaut dix mouvements imités.',
-    value: CarlysValue.maitrise,
-  ),
-  DailyQuote(
-    text:
-        'Une répétition de plus qu’hier : la progression n’a pas besoin '
-        'd’être spectaculaire.',
-    value: CarlysValue.performance,
-  ),
-  DailyQuote(
-    text:
-        'La discipline te donne rendez-vous. La motivation, elle, ne '
-        'prévient pas.',
-    value: CarlysValue.discipline,
-  ),
-  DailyQuote(
-    text: 'Le repos fait partie de l’entraînement, pas de son absence.',
-    value: CarlysValue.equilibre,
-  ),
+/// Les maximes brutes, par valeur, dans l'ordre du manifeste.
+///
+/// L'ordre des clés EST l'ordre de l'entrelacement : le changer change la
+/// rotation. `Map` littérale, donc ordre d'insertion garanti.
+const Map<CarlysValue, List<String>> quotesByValue = {
+  CarlysValue.constance: constanceQuotes,
+  CarlysValue.maitrise: maitriseQuotes,
+  CarlysValue.performance: performanceQuotes,
+  CarlysValue.discipline: disciplineQuotes,
+  CarlysValue.equilibre: equilibreQuotes,
+};
 
-  // — Cycle 2
-  DailyQuote(
-    text:
-        'Une semaine ordinaire, répétée, vaut mieux qu’un mois parfait '
-        'isolé.',
-    value: CarlysValue.constance,
-  ),
-  DailyQuote(
-    text: 'Savoir quel muscle travaille change la façon dont il travaille.',
-    value: CarlysValue.maitrise,
-  ),
-  DailyQuote(
-    text:
-        'Ce qui te semblait lourd il y a six mois est ton échauffement '
-        'd’aujourd’hui.',
-    value: CarlysValue.performance,
-  ),
-  DailyQuote(
-    text: 'Décide la veille : le matin, tu n’auras plus qu’à y aller.',
-    value: CarlysValue.discipline,
-  ),
-  DailyQuote(
-    text: 'Dors : c’est là que la séance d’aujourd’hui devient du muscle.',
-    value: CarlysValue.equilibre,
-  ),
+/// Le recueil servi : un cycle complet de valeurs, puis le suivant.
+final List<DailyQuote> carlysQuotes = entrelacer(quotesByValue);
 
-  // — Cycle 3
-  DailyQuote(
-    text: 'Sauter une séance ne défait rien. La reprendre construit tout.',
-    value: CarlysValue.constance,
-  ),
-  DailyQuote(
-    text: 'Cinq minutes de lecture t’entraînent mieux pendant des mois.',
-    value: CarlysValue.maitrise,
-  ),
-  DailyQuote(
-    text:
-        'Le muscle s’adapte à ce qu’on lui demande. Demande-lui un peu '
-        'plus, régulièrement.',
-    value: CarlysValue.performance,
-  ),
-  DailyQuote(
-    text: 'Une séance écourtée mais faite tient l’engagement.',
-    value: CarlysValue.discipline,
-  ),
-  DailyQuote(
-    text: 'Un corps qui récupère est un corps qui progresse.',
-    value: CarlysValue.equilibre,
-  ),
+/// Compose l'ordre de rotation : une maxime de chaque valeur, puis on
+/// recommence.
+///
+/// Lève si les listes n'ont pas la même longueur. C'est volontaire et c'est
+/// tout l'intérêt du découpage : tronquer à la plus courte perdrait des
+/// maximes sans le dire, et composer quand même casserait l'alternance sur
+/// la fin du cycle. Un déséquilibre est une erreur de rédaction, pas un cas
+/// à rattraper.
+@visibleForTesting
+List<DailyQuote> entrelacer(Map<CarlysValue, List<String>> parValeur) {
+  final longueurs = parValeur.values.map((liste) => liste.length).toSet();
+  if (longueurs.length != 1) {
+    final detail = parValeur.entries
+        .map((e) => '${e.key.name} ${e.value.length}')
+        .join(', ');
+    throw StateError(
+      'Les listes de maximes doivent avoir la même longueur pour que deux '
+      'jours consécutifs ne servent jamais la même valeur. Ici : $detail. '
+      'Les maximes s’ajoutent par cycles de ${parValeur.length}, une par '
+      'valeur.',
+    );
+  }
 
-  // — Cycle 4
-  DailyQuote(
-    text: 'Ton corps additionne les semaines, pas les exploits.',
-    value: CarlysValue.constance,
-  ),
-  DailyQuote(
-    text: 'Le pourquoi d’un exercice te dit quand le remplacer.',
-    value: CarlysValue.maitrise,
-  ),
-  DailyQuote(
-    text: 'Note tes charges : on ne progresse que sur ce qu’on mesure.',
-    value: CarlysValue.performance,
-  ),
-  DailyQuote(
-    text: 'Tu n’as pas besoin d’avoir envie. Tu as besoin d’avoir prévu.',
-    value: CarlysValue.discipline,
-  ),
-  DailyQuote(
-    text: 'Fatigué ? Allège la charge et garde le rendez-vous.',
-    value: CarlysValue.equilibre,
-  ),
-
-  // — Cycle 5
-  DailyQuote(
-    text: 'La progression aime les rythmes tenables. Choisis le tien.',
-    value: CarlysValue.constance,
-  ),
-  DailyQuote(
-    text: 'Les courbatures ne mesurent rien. Tes charges notées, si.',
-    value: CarlysValue.maitrise,
-  ),
-  DailyQuote(
-    text:
-        'Une répétition propre construit plus qu’une répétition '
-        'arrachée.',
-    value: CarlysValue.performance,
-  ),
-  DailyQuote(
-    text:
-        'Le plan existe pour les jours sans. Les jours avec se débrouillent '
-        'seuls.',
-    value: CarlysValue.discipline,
-  ),
-  DailyQuote(
-    text: 'Adapter sa séance n’est pas renoncer. C’est durer.',
-    value: CarlysValue.equilibre,
-  ),
-
-  // — Cycle 6
-  DailyQuote(
-    text:
-        'Ce que tu peux tenir six mois vaut mieux que ce que tu tiens six '
-        'jours.',
-    value: CarlysValue.constance,
-  ),
-  DailyQuote(
-    text: 'Comprendre son plan, c’est pouvoir l’adapter sans le casser.',
-    value: CarlysValue.maitrise,
-  ),
-  DailyQuote(
-    text:
-        'La barre monte quand la semaine est complète, pas quand la séance '
-        'est héroïque.',
-    value: CarlysValue.performance,
-  ),
-  DailyQuote(
-    text: 'Commence par l’échauffement. La suite se décide après.',
-    value: CarlysValue.discipline,
-  ),
-  DailyQuote(
-    text:
-        'Une douleur qui s’installe n’est pas du courage. Va voir un '
-        'professionnel de santé.',
-    value: CarlysValue.equilibre,
-  ),
-
-  // — Cycle 7
-  DailyQuote(
-    text: 'Recommencer fait partie du plan : ce n’est pas repartir de zéro.',
-    value: CarlysValue.constance,
-  ),
-  DailyQuote(text: 'Comprendre, puis charger.', value: CarlysValue.maitrise),
-  DailyQuote(
-    text: 'Ton record d’aujourd’hui sera ton échauffement de l’an prochain.',
-    value: CarlysValue.performance,
-  ),
-  DailyQuote(
-    text: 'Essayer compte déjà. Le reste vient tout seul.',
-    value: CarlysValue.discipline,
-  ),
-  DailyQuote(
-    text:
-        'Bois, mange, dors : trois leviers que l’entraînement seul ne '
-        'remplace pas.',
-    value: CarlysValue.equilibre,
-  ),
-];
+  final cycles = longueurs.single;
+  return [
+    for (var cycle = 0; cycle < cycles; cycle++)
+      for (final entree in parValeur.entries)
+        DailyQuote(text: entree.value[cycle], value: entree.key),
+  ];
+}
 
 /// Maxime du jour, **déterministe** : la même toute la journée, différente
 /// demain, identique sur tous les appareils de l'utilisateur.

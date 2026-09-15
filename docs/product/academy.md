@@ -110,3 +110,21 @@ trace d'une question abordée.
   dépliage, explication affichée juste ou faux, remontée des réponses aux
   défis culturels, et le parcours « fiche d'anatomie → bibliothèque
   filtrée sur le muscle ».
+
+## Les niveaux ne notent pas, ils situent
+
+La tranche 37 prévoit des niveaux. Ils sont un repère de POSITION dans le
+contenu, jamais un second score : « 12 leçons sur 38 », « il te reste quatre
+leçons en Nutrition ». Un pourcentage global est exclu, et la raison est
+chiffrée. L’axe Maîtrise du profil de progression rapporte déjà les leçons
+répondues à une cible FIXE de 20, quand le pack en compte 38 : à 20 leçons
+répondues, quelqu’un lirait « Maîtrise 100 % » sur son profil et « 53 % » ici,
+au même moment et pour le même travail. La cible fixe existe justement pour
+qu’étoffer le pack ne reprenne rien à personne ; un niveau assis sur la taille
+du pack ramènerait ce défaut, puisque passer de 38 à 80 leçons le diviserait
+par deux sans que personne ait rien fait.
+
+Ce que les niveaux ont le droit d’apporter : un ordre de lecture, une position
+dans un domaine, un jalon qui s’inscrit une fois au journal des récompenses.
+La règle complète et ses quatre tests vivent dans
+[progression.md](progression.md).

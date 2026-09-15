@@ -1,6 +1,7 @@
+import 'package:carlys_mobile/core/explanations/explanation.dart';
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/nutrition/domain/entities/nutrition.dart';
-import 'package:carlys_mobile/features/nutrition/domain/metric_explanation.dart';
+import 'package:carlys_mobile/features/nutrition/domain/nutrition_explanations.dart';
 import 'package:carlys_mobile/features/nutrition/presentation/widgets/macros_card.dart';
 import 'package:carlys_mobile/features/nutrition/presentation/widgets/metabolism_hero.dart';
 import 'package:carlys_mobile/features/nutrition/presentation/widgets/metabolism_view.dart';
@@ -41,7 +42,7 @@ Finder _bloc(String titre) => find.text(titre.toUpperCase());
 /// Une phrase que SEULE cette explication contient — assez longue pour ne pas
 /// se confondre avec une autre, assez courte pour survivre à une relecture du
 /// texte.
-String _empreinte(MetricExplanation explication) {
+String _empreinte(Explanation explication) {
   final mots = explication.cequeCest.split(' ');
   return mots.take(6).join(' ');
 }
@@ -60,9 +61,9 @@ void main() {
 
       expect(_bloc('Ce que c’est'), findsOneWidget);
       expect(_bloc('D’où ça sort'), findsOneWidget);
-      expect(find.text(MetricExplanations.imc.titre), findsWidgets);
+      expect(find.text(NutritionExplanations.imc.titre), findsWidgets);
       expect(
-        find.textContaining(_empreinte(MetricExplanations.imc)),
+        find.textContaining(_empreinte(NutritionExplanations.imc)),
         findsOneWidget,
       );
       // La limite est le bloc le plus utile : un IMC pris au pied de la
@@ -86,9 +87,9 @@ void main() {
 
     testWidgets('chaque ligne de macro ouvre SA macro', (tester) async {
       final attendus = {
-        'Protéines': MetricExplanations.proteines,
-        'Glucides': MetricExplanations.glucides,
-        'Lipides': MetricExplanations.lipides,
+        'Protéines': NutritionExplanations.proteines,
+        'Glucides': NutritionExplanations.glucides,
+        'Lipides': NutritionExplanations.lipides,
       };
 
       for (final entree in attendus.entries) {
@@ -125,7 +126,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(
-        find.textContaining(_empreinte(MetricExplanations.caloriesCibles)),
+        find.textContaining(_empreinte(NutritionExplanations.caloriesCibles)),
         findsOneWidget,
       );
     });
@@ -138,7 +139,7 @@ void main() {
       await tester.tap(find.text('Et ma masse grasse ?'));
       await tester.pumpAndSettle();
 
-      final explication = MetricExplanations.masseGrasseEtMusculaire;
+      final explication = NutritionExplanations.masseGrasseEtMusculaire;
       expect(find.textContaining(_empreinte(explication)), findsOneWidget);
       expect(find.textContaining('Carlys ne les affiche pas'), findsOneWidget);
     });
@@ -171,7 +172,9 @@ void main() {
       await tester.tap(find.text('2 759'));
       await tester.pumpAndSettle();
       expect(
-        find.textContaining(_empreinte(MetricExplanations.depenseEnergetique)),
+        find.textContaining(
+          _empreinte(NutritionExplanations.depenseEnergetique),
+        ),
         findsOneWidget,
       );
       await tester.tap(find.text('J’ai compris'));
@@ -180,7 +183,9 @@ void main() {
       await tester.tap(find.text('MB 1 782'));
       await tester.pumpAndSettle();
       expect(
-        find.textContaining(_empreinte(MetricExplanations.metabolismeDeBase)),
+        find.textContaining(
+          _empreinte(NutritionExplanations.metabolismeDeBase),
+        ),
         findsOneWidget,
       );
     });

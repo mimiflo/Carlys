@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/explanations/explanation.dart';
+import '../../../../core/explanations/explanation_sheet.dart';
 import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/nutrition.dart';
-import '../../domain/metric_explanation.dart';
-import 'metric_explanation_sheet.dart';
+import '../../domain/nutrition_explanations.dart';
 
 /// Carte macros (maquette 2g) : trois lignes « nom → grammes » surmontant
 /// chacune une jauge de 6.
@@ -42,7 +43,7 @@ class MacrosCard extends StatelessWidget {
             kcalPerGram: 4,
             targetKcal: metabolism.targetKcal,
             color: AppColors.accent,
-            explication: MetricExplanations.proteines,
+            explication: NutritionExplanations.proteines,
           ),
           MacroRow(
             label: 'Glucides',
@@ -50,7 +51,7 @@ class MacrosCard extends StatelessWidget {
             kcalPerGram: 4,
             targetKcal: metabolism.targetKcal,
             color: AppColors.primary,
-            explication: MetricExplanations.glucides,
+            explication: NutritionExplanations.glucides,
           ),
           MacroRow(
             label: 'Lipides',
@@ -58,7 +59,7 @@ class MacrosCard extends StatelessWidget {
             kcalPerGram: 9,
             targetKcal: metabolism.targetKcal,
             color: AppColors.primaryLight,
-            explication: MetricExplanations.lipides,
+            explication: NutritionExplanations.lipides,
           ),
         ],
       ),
@@ -88,7 +89,7 @@ class MacroRow extends StatelessWidget {
   final int kcalPerGram;
   final int targetKcal;
   final Color color;
-  final MetricExplanation? explication;
+  final Explanation? explication;
 
   /// Grammes en mono tabulaire, à la taille du label texte (12).
   ///
@@ -158,7 +159,7 @@ class MacroRow extends StatelessWidget {
     return AppExplainable(
       enonce: enonce,
       padding: marge,
-      onExplain: () => showMetricExplanation(context, explication),
+      onExplain: () => showExplanation(context, explication),
       child: corps,
     );
   }

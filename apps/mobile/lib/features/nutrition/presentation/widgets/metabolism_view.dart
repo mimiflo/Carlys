@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/explanations/explanation_sheet.dart';
 import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/nutrition.dart';
-import '../../domain/metric_explanation.dart';
+import '../../domain/nutrition_explanations.dart';
 import 'macros_card.dart';
-import 'metric_explanation_sheet.dart';
 
 /// Résultats métaboliques (maquette 2g) : macros en jauges, puis les données
 /// corporelles réellement fournies par le serveur (IMC, hydratation).
@@ -34,7 +34,7 @@ class MetabolismView extends StatelessWidget {
           trailing: 'Objectif $target kcal',
           trailingIcon: AppIcons.info,
           onTrailingTap: () =>
-              showMetricExplanation(context, MetricExplanations.caloriesCibles),
+              showExplanation(context, NutritionExplanations.caloriesCibles),
         ),
         const SizedBox(height: AppSpacing.sm),
         MacrosCard(metabolism: metabolism),
@@ -51,7 +51,7 @@ class MetabolismView extends StatelessWidget {
                 label: 'IMC',
                 value: formatDecimal(metabolism.bmi),
                 onExplain: () =>
-                    showMetricExplanation(context, MetricExplanations.imc),
+                    showExplanation(context, NutritionExplanations.imc),
               ),
             ),
             const SizedBox(width: AppSpacing.gapTile),
@@ -61,7 +61,7 @@ class MetabolismView extends StatelessWidget {
                 value: waterLitres,
                 unit: ' L',
                 onExplain: () =>
-                    showMetricExplanation(context, MetricExplanations.eau),
+                    showExplanation(context, NutritionExplanations.eau),
               ),
             ),
           ],
@@ -76,9 +76,9 @@ class MetabolismView extends StatelessWidget {
           child: AppPill(
             label: 'Et ma masse grasse ?',
             icon: AppIcons.info,
-            onTap: () => showMetricExplanation(
+            onTap: () => showExplanation(
               context,
-              MetricExplanations.masseGrasseEtMusculaire,
+              NutritionExplanations.masseGrasseEtMusculaire,
             ),
           ),
         ),
