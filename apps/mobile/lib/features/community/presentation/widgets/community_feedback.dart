@@ -1,40 +1,22 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/errors/app_exception.dart';
-import '../../../../core/logging/app_logger.dart';
+import '../../../../core/feedback/server_gesture.dart';
 
-const _logger = AppLogger('CommunityFeedback');
-
-/// Exécute un geste qui parle au serveur et en rend compte dans la barre de
-/// message : le texte rendu par [gesture] en cas de succès (`null` : rien à
-/// dire), sinon l'échec, en disant VRAI : hors ligne n'est pas une panne.
+/// Exécute un geste communautaire et en rend compte dans la barre de message.
 ///
-/// La communauté vit sur le serveur ; sans ce filet, un appui hors réseau
-/// échouerait en silence et l'écran resterait figé sur l'ancien état.
+/// La mécanique vit désormais au cœur (`core/feedback/server_gesture.dart`) :
+/// la règle — tout geste qui part sur le réseau dit ce qu'il advient de lui —
+/// n'a rien de propre à la communauté, et trois autres écrans en avaient
+/// besoin. Ce nom reste parce que les appelants le lisent bien : ici, on
+/// parle de gestes communautaires.
 Future<void> runCommunityGesture(
   BuildContext context,
   Future<String?> Function() gesture,
-) async {
-  String? message;
-  try {
-    message = await gesture();
-  } on AppException catch (exception) {
-    _logger.warning('Geste communautaire refusé', error: exception);
-    message = communityFailureMessage(exception);
-  } on Exception catch (exception) {
-    _logger.warning('Geste communautaire en échec', error: exception);
-    message = communityFailureMessage(null);
-  }
-  if (message == null || !context.mounted) {
-    return;
-  }
-  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+) {
+  return runServerGesture(context, gesture, scope: 'CommunityFeedback');
 }
 
 /// Le mot juste pour un geste qui n'a pas abouti, hors ligne ou pas.
-String communityFailureMessage(AppException? exception) {
-  return exception is NetworkException
-      ? 'Hors connexion : ce geste a besoin du réseau. Réessaie une fois '
-            'connecté.'
-      : 'Ça n’a pas fonctionné. Réessaie dans un instant.';
-}
+String communityFailureMessage(AppException? exception) =>
+    serverFailureMessage(exception);

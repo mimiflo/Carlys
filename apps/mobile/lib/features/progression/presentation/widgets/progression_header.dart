@@ -38,7 +38,7 @@ class ProgressionHeader extends StatelessWidget {
             children: [
               Text(
                 'Progression',
-                style: AppTypography.display.copyWith(
+                style: AppTypography.pageTitle.copyWith(
                   color: AppColors.darkTextPrimary,
                 ),
               ),

@@ -150,39 +150,51 @@ class _TemplateRow extends StatelessWidget {
         child: GestureDetector(
           onTap: onTap,
           behavior: HitTestBehavior.opaque,
-          child: Row(
-            children: [
-              const Icon(
-                AppIcons.programs,
-                size: 18,
-                color: AppColors.primaryLight,
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Text(
-                  'Lancer un modèle',
-                  style: AppTypography.body.copyWith(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.darkTextPrimary,
+          // CIBLE TACTILE. `HitTestBehavior.opaque` fait de la boîte du
+          // détecteur la zone sensible — et cette boîte était exactement
+          // celle de la `Row`, donc la hauteur de son plus haut enfant : un
+          // texte de 14 et une icône de 18, soit une vingtaine de points.
+          // Sur l'écran le plus visité de l'application, l'action la plus
+          // fréquente se visait au tiers de la cible minimale. Le contenu ne
+          // bouge pas : c'est la boîte qui s'élargit autour de lui.
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              minHeight: AppSpacing.touchTarget,
+            ),
+            child: Row(
+              children: [
+                const Icon(
+                  AppIcons.programs,
+                  size: 18,
+                  color: AppColors.primaryLight,
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: Text(
+                    'Lancer un modèle',
+                    style: AppTypography.body.copyWith(
+                      fontSize: 14,
+                      fontWeight: FontWeight.w600,
+                      color: AppColors.darkTextPrimary,
+                    ),
                   ),
                 ),
-              ),
-              if (saved != null && saved > 0) ...[
-                Text(
-                  '$saved ENREGISTRÉ${saved > 1 ? 'S' : ''}',
-                  style: AppTypography.labelMono.copyWith(
-                    color: AppColors.darkTextTertiary,
+                if (saved != null && saved > 0) ...[
+                  Text(
+                    '$saved ENREGISTRÉ${saved > 1 ? 'S' : ''}',
+                    style: AppTypography.labelMono.copyWith(
+                      color: AppColors.darkTextTertiary,
+                    ),
                   ),
+                  const SizedBox(width: AppSpacing.xs),
+                ],
+                const Icon(
+                  AppIcons.chevronRight,
+                  size: 18,
+                  color: AppColors.darkTextTertiary,
                 ),
-                const SizedBox(width: AppSpacing.xs),
               ],
-              const Icon(
-                AppIcons.chevronRight,
-                size: 18,
-                color: AppColors.darkTextTertiary,
-              ),
-            ],
+            ),
           ),
         ),
       ),

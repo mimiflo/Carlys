@@ -100,7 +100,7 @@ class AppSettingsRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final foreground = destructive
-        ? AppColors.logout
+        ? AppColors.danger
         : AppColors.darkTextPrimary;
     final isToggle = toggleValue != null;
 
@@ -111,7 +111,7 @@ class AppSettingsRow extends StatelessWidget {
           Icon(
             icon,
             size: 21,
-            color: destructive ? AppColors.logout : AppColors.primaryLight,
+            color: destructive ? AppColors.danger : AppColors.primaryLight,
           ),
           const SizedBox(width: 14),
           Expanded(

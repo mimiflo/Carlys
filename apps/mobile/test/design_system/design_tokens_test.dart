@@ -45,6 +45,7 @@ void main() {
       'tab': AppMotion.tab,
       'route': AppMotion.route,
       'ring': AppMotion.ring,
+      'reveal': AppMotion.reveal,
       'dashLoop': AppMotion.dashLoop,
     };
 
@@ -216,6 +217,198 @@ void main() {
         }
       },
     );
+  });
+
+  group('radius ↔ AppRadius', () {
+    const radius = <String, double>{
+      'xs': AppRadius.xs,
+      'sm': AppRadius.sm,
+      'md': AppRadius.md,
+      'lg': AppRadius.lg,
+      'xl': AppRadius.xl,
+      'full': AppRadius.full,
+      'cardMain': AppRadius.cardMain,
+      'cardSecondary': AppRadius.cardSecondary,
+      'listRow': AppRadius.listRow,
+      'statTile': AppRadius.statTile,
+      'button': AppRadius.button,
+      'avatar': AppRadius.avatar,
+      'phoneFrame': AppRadius.phoneFrame,
+    };
+
+    test('chaque token a son reflet, au point près', () {
+      final declared = section('radius');
+      expect(
+        declared.keys.toSet(),
+        radius.keys.toSet(),
+        reason: 'un token sans reflet, ou un reflet sans token',
+      );
+      for (final entry in declared.entries) {
+        expect(
+          radius[entry.key],
+          (entry.value! as num).toDouble(),
+          reason: 'radius.${entry.key}',
+        );
+      }
+    });
+  });
+
+  group('breakpoint ↔ AppBreakpoints', () {
+    const breakpoints = <String, double>{
+      'compact': AppBreakpoints.compact,
+      'medium': AppBreakpoints.medium,
+      'expanded': AppBreakpoints.expanded,
+      'large': AppBreakpoints.large,
+      'xlarge': AppBreakpoints.xlarge,
+    };
+
+    test('chaque token a son reflet, au point près', () {
+      final declared = section('breakpoint');
+      expect(
+        declared.keys.toSet(),
+        breakpoints.keys.toSet(),
+        reason: 'un token sans reflet, ou un reflet sans token',
+      );
+      for (final entry in declared.entries) {
+        expect(
+          breakpoints[entry.key],
+          (entry.value! as num).toDouble(),
+          reason: 'breakpoint.${entry.key}',
+        );
+      }
+    });
+  });
+
+  group('shadow ↔ AppShadows', () {
+    const shadows = <String, List<BoxShadow>>{
+      'sm': AppShadows.sm,
+      'md': AppShadows.md,
+      'lg': AppShadows.lg,
+    };
+
+    test('décalage, flou et opacité suivent le token', () {
+      final declared = section('shadow');
+      expect(
+        declared.keys.toSet(),
+        shadows.keys.toSet(),
+        reason: 'un token sans reflet, ou un reflet sans token',
+      );
+      for (final entry in declared.entries) {
+        final token = entry.value! as Map<String, Object?>;
+        final ombres = shadows[entry.key]!;
+        expect(ombres, hasLength(1), reason: 'shadow.${entry.key}');
+        final ombre = ombres.single;
+        expect(
+          ombre.offset.dy,
+          (token['y']! as num).toDouble(),
+          reason: 'shadow.${entry.key}.y',
+        );
+        expect(
+          ombre.blurRadius,
+          (token['blur']! as num).toDouble(),
+          reason: 'shadow.${entry.key}.blur',
+        );
+        // L'opacité du token se lit dans le canal alpha de la couleur, à
+        // l'arrondi d'un octet près (0.08 × 255 = 20,4 → 20).
+        expect(
+          (ombre.color.a * 255).round(),
+          ((token['opacity']! as num).toDouble() * 255).round(),
+          reason: 'shadow.${entry.key}.opacity',
+        );
+      }
+    });
+  });
+
+  group('typography.scale ↔ AppTypography', () {
+    const styles = <String, TextStyle>{
+      'display': AppTypography.display,
+      'title': AppTypography.title,
+      'heading': AppTypography.heading,
+      'subheading': AppTypography.subheading,
+      'body': AppTypography.body,
+      'label': AppTypography.label,
+      'tab': AppTypography.tab,
+      'metricXL': AppTypography.metricXL,
+      'metricL': AppTypography.metricL,
+      'metricM': AppTypography.metricM,
+      'metricS': AppTypography.metricS,
+      'labelMono': AppTypography.labelMono,
+    };
+
+    const familles = <String, String>{
+      'body': AppTypography.textFamily,
+      'mono': AppTypography.monoFamily,
+      'quote': AppTypography.quoteFamily,
+    };
+
+    test('taille, interligne, graisse et FAMILLE suivent le token', () {
+      final declared = section('typography.scale');
+      expect(
+        declared.keys.toSet(),
+        styles.keys.toSet(),
+        reason: 'un token sans reflet, ou un reflet sans token',
+      );
+      for (final entry in declared.entries) {
+        final token = entry.value! as Map<String, Object?>;
+        final style = styles[entry.key]!;
+        expect(
+          style.fontSize,
+          (token['size']! as num).toDouble(),
+          reason: 'typography.scale.${entry.key}.size',
+        );
+        expect(
+          style.height,
+          (token['lineHeight']! as num).toDouble(),
+          reason: 'typography.scale.${entry.key}.lineHeight',
+        );
+        expect(
+          style.fontWeight!.value,
+          token['weight'],
+          reason: 'typography.scale.${entry.key}.weight',
+        );
+        expect(
+          style.fontFamily,
+          familles[token['family']],
+          reason: 'typography.scale.${entry.key}.family',
+        );
+      }
+    });
+
+    test('l’interlettrage est le token × la taille — il est en EM', () {
+      // Le piège de ce pont, et la raison pour laquelle il méritait d'être
+      // tendu : `letterSpacingEm` est RELATIF dans le fichier de jetons, là
+      // où Flutter stocke des points absolus. Cinq titres d'écran écrivaient
+      // `display.copyWith(fontSize: 27)` et gardaient donc l'interlettrage
+      // calculé pour 30 — le style dérivé était plus serré que le jeton ne le
+      // demande, sans que rien ne le signale.
+      final declared = section('typography.scale');
+      for (final entry in declared.entries) {
+        final token = entry.value! as Map<String, Object?>;
+        final em = (token['letterSpacingEm']! as num).toDouble();
+        final taille = (token['size']! as num).toDouble();
+        final attendu = em * taille;
+        final style = styles[entry.key]!;
+        expect(
+          style.letterSpacing ?? 0,
+          closeTo(attendu, 0.005),
+          reason: 'typography.scale.${entry.key}.letterSpacingEm',
+        );
+      }
+    });
+
+    test('AppTypography.resized garde la PROPORTION de l’interlettrage', () {
+      // La sortie de secours quand une taille hors échelle est vraiment
+      // voulue : `copyWith(fontSize:)` laisse l'interlettrage d'origine,
+      // `resized` le recalcule.
+      final derive = AppTypography.resized(AppTypography.display, 15);
+
+      expect(derive.fontSize, 15);
+      expect(derive.letterSpacing, closeTo(-0.45, 0.001)); // -0,03 × 15
+      expect(
+        AppTypography.display.copyWith(fontSize: 15).letterSpacing,
+        AppTypography.display.letterSpacing,
+      );
+    });
   });
 }
 

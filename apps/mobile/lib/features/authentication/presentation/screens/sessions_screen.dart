@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/feedback/server_gesture.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/auth_session_device.dart';
 import '../controllers/sessions_controller.dart';
@@ -57,10 +58,15 @@ class _SessionsList extends ConsumerWidget {
                 'Déconnecter les autres appareils ?',
                 'Les $others autre(s) appareil(s) devront se reconnecter.',
               );
-              if (confirmed) {
-                await ref
-                    .read(sessionsControllerProvider.notifier)
-                    .revokeOthers();
+              if (confirmed && context.mounted) {
+                // Un échec ne doit pas rester muet : l'écran ne bougeant pas,
+                // rien ne distinguerait « refusé » de « déjà fait ».
+                await runServerGesture(context, () async {
+                  await ref
+                      .read(sessionsControllerProvider.notifier)
+                      .revokeOthers();
+                  return null;
+                }, scope: 'SessionsScreen');
               }
             },
           ),
@@ -106,10 +112,13 @@ class _SessionTile extends ConsumerWidget {
                     'Déconnecter cet appareil ?',
                     '« ${device.label} » devra se reconnecter.',
                   );
-                  if (confirmed) {
-                    await ref
-                        .read(sessionsControllerProvider.notifier)
-                        .revoke(device.id);
+                  if (confirmed && context.mounted) {
+                    await runServerGesture(context, () async {
+                      await ref
+                          .read(sessionsControllerProvider.notifier)
+                          .revoke(device.id);
+                      return null;
+                    }, scope: 'SessionsScreen');
                   }
                 },
               ),

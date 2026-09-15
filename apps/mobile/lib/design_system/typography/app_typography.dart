@@ -37,6 +37,23 @@ abstract final class AppTypography {
   static const String quoteFamily = 'Oswald';
 
   // ── Texte (Inter) ────────────────────────────────────────────────
+
+  /// LE TITRE D'ÉCRAN, et le seul.
+  ///
+  /// Cinq écrans écrivaient `display.copyWith(fontSize: 27)` — Historique,
+  /// Modèles, détail de programme, éditeur de modèle, Progrès — pendant que
+  /// quatre autres laissaient les 30 du jeton : Academy, Communauté,
+  /// Training, Progression. Le même mot « Progression » s'affichait donc à
+  /// deux tailles selon l'écran d'où on venait.
+  ///
+  /// Le 27 n'existait dans AUCUN jeton, et il emportait un second défaut :
+  /// `letterSpacingEm` vaut −0,03 dans `tokens.json`, une valeur RELATIVE que
+  /// Flutter stocke en points absolus (−0,9 pour 30). Redimensionner par
+  /// `copyWith(fontSize:)` laissait donc l'interlettrage de 30 sur un corps
+  /// de 27. Quand une taille dérivée est vraiment voulue, [resized] la
+  /// calcule correctement.
+  static const TextStyle pageTitle = display;
+
   static const TextStyle display = TextStyle(
     fontFamily: textFamily,
     fontFamilyFallback: emojiFallback,
@@ -179,6 +196,27 @@ abstract final class AppTypography {
     fontWeight: FontWeight.w400,
   );
   static const TextStyle metric = metricL;
+
+  /// Dérive un style à une AUTRE taille, en gardant sa proportion.
+  ///
+  /// `copyWith(fontSize:)` ne touche pas `letterSpacing`, qui est absolu en
+  /// Flutter alors que le jeton l'exprime en em : le style dérivé porte alors
+  /// l'interlettrage de la taille d'origine, serré ou lâche selon le sens de
+  /// la dérivation. Cette fonction remet la proportion.
+  ///
+  /// À n'employer que lorsqu'une taille hors échelle est réellement voulue —
+  /// la première question reste « quel jeton dit cela ? ».
+  static TextStyle resized(TextStyle style, double fontSize) {
+    final origine = style.fontSize;
+    final spacing = style.letterSpacing;
+    if (origine == null || origine == 0 || spacing == null) {
+      return style.copyWith(fontSize: fontSize);
+    }
+    return style.copyWith(
+      fontSize: fontSize,
+      letterSpacing: spacing * fontSize / origine,
+    );
+  }
 
   static TextTheme textTheme(Color color, Color mutedColor) {
     return TextTheme(

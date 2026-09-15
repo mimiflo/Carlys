@@ -21,8 +21,7 @@ class HistoryHeader extends StatelessWidget {
         Expanded(
           child: Text(
             'Historique',
-            style: AppTypography.display.copyWith(
-              fontSize: 27,
+            style: AppTypography.pageTitle.copyWith(
               color: AppColors.darkTextPrimary,
             ),
           ),

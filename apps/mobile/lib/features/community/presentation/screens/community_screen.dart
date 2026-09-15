@@ -111,7 +111,7 @@ class CommunityScreen extends ConsumerWidget {
               Expanded(
                 child: Text(
                   'Communauté',
-                  style: AppTypography.display.copyWith(
+                  style: AppTypography.pageTitle.copyWith(
                     color: AppColors.darkTextPrimary,
                   ),
                 ),

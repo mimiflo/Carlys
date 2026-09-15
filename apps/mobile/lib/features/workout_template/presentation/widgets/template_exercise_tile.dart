@@ -88,7 +88,7 @@ class TemplateExerciseTile extends StatelessWidget {
                     child: TextButton(
                       onPressed: onRemove,
                       style: TextButton.styleFrom(
-                        foregroundColor: AppColors.logout,
+                        foregroundColor: AppColors.danger,
                         textStyle: AppTypography.label,
                       ),
                       child: const Text('Retirer cet exercice'),

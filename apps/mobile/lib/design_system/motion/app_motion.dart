@@ -31,6 +31,17 @@ abstract final class AppMotion {
   /// la valeur, au premier affichage.
   static const Duration ring = Duration(milliseconds: 900);
 
+  /// Apparition d'une annonce : un titre franchi, un palier atteint. Plus
+  /// longue qu'une transition ordinaire parce qu'elle est le sujet, pas un
+  /// enchaînement — on la regarde.
+  ///
+  /// Elle vivait en dur dans `title_crossing_banner.dart`
+  /// (`static const Duration revealDuration = Duration(milliseconds: 700)`),
+  /// exactement ce que l'en-tête ci-dessus déclare impossible : une durée
+  /// écrite ailleurs contourne la source de vérité, et reste en arrière le
+  /// jour où le jeton bouge.
+  static const Duration reveal = Duration(milliseconds: 700);
+
   /// Un tour complet du segment voyageur d'une bordure animée.
   static const Duration dashLoop = Duration(milliseconds: 3400);
 

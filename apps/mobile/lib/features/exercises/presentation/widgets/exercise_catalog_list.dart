@@ -88,6 +88,17 @@ class _PaginatedRows extends ConsumerWidget {
         separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.gapTile),
         itemBuilder: (context, index) {
           if (index >= state.items.length) {
+            // La page précédente a ÉCHOUÉ : on propose de réessayer plutôt
+            // que de redemander tout seul. La sentinelle est reconstruite à
+            // chaque image ; insister automatiquement lançait une requête par
+            // image, indéfiniment, sans qu'aucun écran ne le dise.
+            if (state.loadMoreFailed) {
+              return _SuiteIndisponible(
+                onRetry: () => ref
+                    .read(exerciseLibraryControllerProvider.notifier)
+                    .loadMore(force: true),
+              );
+            }
             // Sentinelle de fin de liste : la page suivante est demandée
             // après le frame (jamais pendant le build).
             WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -104,6 +115,38 @@ class _PaginatedRows extends ConsumerWidget {
             onTap: () => context.push(AppRoutes.exerciseDetail(exercise.slug)),
           );
         },
+      ),
+    );
+  }
+}
+
+/// Pied de liste quand la page SUIVANTE n'a pas pu être chargée.
+///
+/// La liste déjà obtenue reste utilisable — c'est tout l'intérêt de ne pas
+/// basculer l'écran en erreur — mais la suite ne se redemande plus toute
+/// seule : la sentinelle est reconstruite à chaque image, et insister
+/// automatiquement lançait une requête par image jusqu'au retour du réseau.
+class _SuiteIndisponible extends StatelessWidget {
+  const _SuiteIndisponible({required this.onRetry});
+
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
+      child: Column(
+        children: [
+          Text(
+            'La suite n’a pas pu être chargée.',
+            style: AppTypography.label.copyWith(
+              color: AppColors.darkTextSecondary,
+            ),
+            textAlign: TextAlign.center,
+          ),
+          const SizedBox(height: AppSpacing.xs),
+          TextButton(onPressed: onRetry, child: const Text('Réessayer')),
+        ],
       ),
     );
   }

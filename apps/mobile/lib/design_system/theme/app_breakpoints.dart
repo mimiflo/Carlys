@@ -24,6 +24,12 @@ enum WindowSize {
 }
 
 abstract final class AppBreakpoints {
+  /// La classe la plus étroite commence à zéro. Elle vit dans `tokens.json`
+  /// depuis toujours et n'avait pas de reflet ici — le code s'en passait
+  /// (`return WindowSize.compact` est la branche par défaut), mais un jeton
+  /// sans reflet est une moitié de pont, et le test qui garde ce pont ne
+  /// pouvait pas le dire tant qu'il ne regardait pas cette section.
+  static const double compact = 0;
   static const double medium = 600;
   static const double expanded = 840;
   static const double large = 1200;

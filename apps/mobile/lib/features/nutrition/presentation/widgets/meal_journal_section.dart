@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/feedback/server_gesture.dart';
 import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
 import '../../../../shared/widgets/connection_aware_error.dart';
@@ -18,14 +19,32 @@ class MealJournalSection extends ConsumerWidget {
   /// Objectif calorique du jour, si le profil métabolique le donne.
   final int? targetKcal;
 
+  /// Le journal vit sur le SERVEUR — l'écran le dit lui-même plus bas. Un
+  /// ajout ou une suppression qui échoue doit donc se voir : la feuille s'est
+  /// déjà refermée, la liste ne bouge pas, et rien ne distinguerait « refusé »
+  /// de « déjà enregistré ».
   Future<void> _addMeal(BuildContext context, WidgetRef ref) async {
     final draft = await showAddMealSheet(context);
-    if (draft == null) {
+    if (draft == null || !context.mounted) {
       return;
     }
-    await ref
-        .read(nutritionActionsProvider)
-        .addMeal(name: draft.name, kcal: draft.kcal, proteinG: draft.proteinG);
+    await runServerGesture(context, () async {
+      await ref
+          .read(nutritionActionsProvider)
+          .addMeal(
+            name: draft.name,
+            kcal: draft.kcal,
+            proteinG: draft.proteinG,
+          );
+      return null;
+    }, scope: 'MealJournal');
+  }
+
+  Future<void> _deleteMeal(BuildContext context, WidgetRef ref, String id) {
+    return runServerGesture(context, () async {
+      await ref.read(nutritionActionsProvider).deleteMeal(id);
+      return null;
+    }, scope: 'MealJournal');
   }
 
   @override
@@ -74,8 +93,7 @@ class MealJournalSection extends ConsumerWidget {
                 for (final meal in entries) ...[
                   _MealTile(
                     meal: meal,
-                    onDelete: () =>
-                        ref.read(nutritionActionsProvider).deleteMeal(meal.id),
+                    onDelete: () => _deleteMeal(context, ref, meal.id),
                   ),
                   const SizedBox(height: AppSpacing.xs),
                 ],

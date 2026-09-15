@@ -186,8 +186,7 @@ class _Header extends StatelessWidget {
               title,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
-              style: AppTypography.display.copyWith(
-                fontSize: 27,
+              style: AppTypography.pageTitle.copyWith(
                 color: AppColors.darkTextPrimary,
               ),
             ),

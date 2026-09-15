@@ -115,7 +115,7 @@ class ProfileScreen extends ConsumerWidget {
                     ref.read(authControllerProvider.notifier).logout(),
                 child: Text(
                   'Se déconnecter',
-                  style: AppTypography.body.copyWith(color: AppColors.logout),
+                  style: AppTypography.body.copyWith(color: AppColors.danger),
                 ),
               ),
             ),

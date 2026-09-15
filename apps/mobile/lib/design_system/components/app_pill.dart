@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../colors/app_colors.dart';
+import '../spacing/app_spacing.dart';
 import '../typography/app_typography.dart';
 
 /// Ton d'une pastille de la refonte.
@@ -89,16 +90,43 @@ class AppPill extends StatelessWidget {
     );
 
     if (onTap == null) {
+      // Pastille décorative : rien ne se presse, aucune cible tactile à
+      // ménager. Elle garde sa hauteur d'ornement.
       return pill;
     }
+    // CIBLE TACTILE : l'ornement reste à 32, la zone qui répond au doigt
+    // s'élargit AUTOUR de lui jusqu'à AppSpacing.touchTarget.
+    //
+    // La `ConstrainedBox(minHeight: 32)` d'avant était à la fois la boîte
+    // peinte ET la boîte sensible : 32 dp, soit une constante rivale du seul
+    // repère de cible tactile de l'application, que sept écrans franchissent
+    // — filtres de progression, amorces du coach, séries prévues, leçons,
+    // domaines d'académie, onglets de recettes. Un `GestureDetector` n'a, lui,
+    // aucun rembourrage automatique, contrairement à un `IconButton`.
+    //
+    // `Center` garde la pastille à sa taille et la pose au milieu des 48 ;
+    // `HitTestBehavior.opaque` fait répondre toute la boîte, y compris les
+    // huit dixièmes transparents au-dessus et au-dessous.
     return Semantics(
       button: true,
       selected: selected,
       child: GestureDetector(
         onTap: onTap,
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(minHeight: 32),
-          child: pill,
+        behavior: HitTestBehavior.opaque,
+        child: SizedBox(
+          height: AppSpacing.touchTarget,
+          // `widthFactor: 1` : la boîte ne prend QUE la largeur de la
+          // pastille. Sans lui, un Center placé dans une largeur bornée
+          // (une cellule d'`Expanded`, par exemple) s'étalerait et
+          // recentrerait la pastille — un changement visuel là où on ne
+          // voulait toucher qu'à la hauteur sensible.
+          child: Center(
+            widthFactor: 1,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: 32),
+              child: pill,
+            ),
+          ),
         ),
       ),
     );

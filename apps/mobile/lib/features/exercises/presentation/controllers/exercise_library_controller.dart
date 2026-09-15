@@ -16,6 +16,7 @@ class ExerciseLibraryState {
     required this.hasMore,
     required this.nextCursor,
     required this.isLoadingMore,
+    this.loadMoreFailed = false,
     this.total,
   });
 
@@ -25,6 +26,7 @@ class ExerciseLibraryState {
       hasMore = false,
       nextCursor = null,
       isLoadingMore = false,
+      loadMoreFailed = false,
       total = null;
 
   final List<ExerciseSummary> items;
@@ -32,6 +34,16 @@ class ExerciseLibraryState {
   final bool hasMore;
   final String? nextCursor;
   final bool isLoadingMore;
+
+  /// La DERNIÈRE demande de page suivante a échoué.
+  ///
+  /// Sans ce drapeau, la sentinelle de fin de liste rappelait `loadMore` à
+  /// chaque reconstruction : un échec la laissait affichée, la reconstruction
+  /// relançait la requête, l'échec la laissait affichée… Une coupure réseau
+  /// suffisait donc à lancer une requête par image, indéfiniment, sans qu'un
+  /// seul écran ne le dise. La sentinelle propose maintenant de réessayer, et
+  /// n'insiste plus toute seule.
+  final bool loadMoreFailed;
 
   /// Total annoncé par le serveur, `null` s'il ne le donne pas.
   final int? total;
@@ -42,6 +54,7 @@ class ExerciseLibraryState {
     bool? hasMore,
     String? Function()? nextCursor,
     bool? isLoadingMore,
+    bool? loadMoreFailed,
     int? total,
   }) {
     return ExerciseLibraryState(
@@ -50,6 +63,7 @@ class ExerciseLibraryState {
       hasMore: hasMore ?? this.hasMore,
       nextCursor: nextCursor == null ? this.nextCursor : nextCursor(),
       isLoadingMore: isLoadingMore ?? this.isLoadingMore,
+      loadMoreFailed: loadMoreFailed ?? this.loadMoreFailed,
       total: total ?? this.total,
     );
   }
@@ -127,12 +141,19 @@ class ExerciseLibraryController
     return _reload();
   }
 
-  Future<void> loadMore() async {
+  /// Charge la page suivante.
+  ///
+  /// `force` : demandé EXPLICITEMENT par la personne, après un échec. La
+  /// sentinelle, elle, ne force jamais — voir [ExerciseLibraryState.loadMoreFailed].
+  Future<void> loadMore({bool force = false}) async {
     final current = state.valueOrNull;
     if (current == null ||
         !current.hasMore ||
         current.isLoadingMore ||
         current.nextCursor == null) {
+      return;
+    }
+    if (current.loadMoreFailed && !force) {
       return;
     }
 
@@ -141,7 +162,9 @@ class ExerciseLibraryController
     // n'existe plus — la fusionner recollerait les résultats de l'ANCIEN
     // filtre sous les puces du nouveau.
     final requested = _filters;
-    state = AsyncData(current.copyWith(isLoadingMore: true));
+    state = AsyncData(
+      current.copyWith(isLoadingMore: true, loadMoreFailed: false),
+    );
     try {
       final page = await ref
           .read(exercisesRepositoryProvider)
@@ -162,8 +185,11 @@ class ExerciseLibraryController
       if (_disposed || !identical(requested, _filters)) {
         return;
       }
-      // La page suivante a échoué : on garde la liste actuelle utilisable.
-      state = AsyncData(current.copyWith(isLoadingMore: false));
+      // La page suivante a échoué : on garde la liste actuelle utilisable,
+      // et on le DIT — sans quoi la sentinelle redemanderait à chaque image.
+      state = AsyncData(
+        current.copyWith(isLoadingMore: false, loadMoreFailed: true),
+      );
     }
   }
 }

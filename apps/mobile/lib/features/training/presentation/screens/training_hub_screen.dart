@@ -33,7 +33,7 @@ class TrainingHubScreen extends ConsumerWidget {
         children: [
           Text(
             'Training',
-            style: AppTypography.display.copyWith(
+            style: AppTypography.pageTitle.copyWith(
               color: AppColors.darkTextPrimary,
             ),
           ),

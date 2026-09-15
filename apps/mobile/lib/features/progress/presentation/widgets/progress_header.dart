@@ -21,8 +21,7 @@ class ProgressHeader extends ConsumerWidget {
         Expanded(
           child: Text(
             'Progression',
-            style: AppTypography.display.copyWith(
-              fontSize: 27,
+            style: AppTypography.pageTitle.copyWith(
               color: AppColors.darkTextPrimary,
             ),
           ),

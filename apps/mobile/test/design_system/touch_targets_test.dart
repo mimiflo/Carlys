@@ -145,4 +145,40 @@ void main() {
       ),
     );
   });
+
+  testWidgets('une pastille INTERACTIVE répond au-delà de son ornement', (
+    tester,
+  ) async {
+    // La pastille peinte fait 32 — c'est le dessin, et il ne change pas.
+    // Sa boîte SENSIBLE, elle, déclarait aussi 32 : une constante rivale du
+    // seul repère de cible tactile de l'application, que sept écrans
+    // franchissent (filtres de progression, amorces du coach, séries prévues,
+    // leçons, domaines d'académie, onglets de recettes).
+    var presses = 0;
+    await tester.pumpWidget(
+      harness(AppPill(label: 'Semaine', onTap: () => presses++)),
+    );
+
+    final cible = find.ancestor(
+      of: find.text('Semaine'),
+      matching: find.byType(GestureDetector),
+    );
+    expect(tester.getSize(cible).height, AppSpacing.touchTarget);
+
+    // Le HAUT de la boîte : au-dessus de l'ornement, dans les huit dixièmes
+    // transparents que `HitTestBehavior.opaque` rend sensibles.
+    await tester.tapAt(tester.getRect(cible).topCenter + const Offset(0, 3));
+    expect(presses, 1);
+  });
+
+  testWidgets('une pastille DÉCORATIVE ne gagne pas de cible', (tester) async {
+    // Contre-épreuve : une pastille sans `onTap` est un ornement. Lui donner
+    // 48 de haut gonflerait toutes les listes de badges de l'application pour
+    // une zone que personne ne presse.
+    await tester.pumpWidget(harness(const AppPill(label: '52 MIN')));
+
+    expect(find.byType(GestureDetector), findsNothing);
+    final hauteur = tester.getSize(find.byType(AppPill)).height;
+    expect(hauteur, lessThan(AppSpacing.touchTarget));
+  });
 }

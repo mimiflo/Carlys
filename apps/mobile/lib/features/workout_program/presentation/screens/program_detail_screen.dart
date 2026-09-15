@@ -133,8 +133,7 @@ class ProgramDetailScreen extends ConsumerWidget {
                   Expanded(
                     child: Text(
                       program.name,
-                      style: AppTypography.display.copyWith(
-                        fontSize: 27,
+                      style: AppTypography.pageTitle.copyWith(
                         color: AppColors.darkTextPrimary,
                       ),
                     ),

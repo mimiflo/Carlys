@@ -21,8 +21,7 @@ class TemplatesHeader extends StatelessWidget {
         Expanded(
           child: Text(
             'Mes modèles',
-            style: AppTypography.display.copyWith(
-              fontSize: 27,
+            style: AppTypography.pageTitle.copyWith(
               color: AppColors.darkTextPrimary,
             ),
           ),

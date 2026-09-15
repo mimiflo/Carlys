@@ -113,7 +113,16 @@ abstract final class AppColors {
   static const Color warning = Color(0xFFF59E0B);
   static const Color danger = Color(0xFFEF4444);
   static const Color info = Color(0xFF3B82F6);
-  static const Color logout = Color(0xFFFF6B6B);
+
+  /// Un rôle, une couleur — `logout` a été SUPPRIMÉ.
+  ///
+  /// Ce `#FF6B6B` ne figurait dans aucun jeton (`semantic` n'en compte que
+  /// quatre), et peignait pourtant le même booléen `destructive` que
+  /// `danger` : `app_settings_group.dart` employait l'un,
+  /// `community_overflow_menu.dart` l'autre, pour la même intention. Deux
+  /// rouges pour un rôle, ce n'est pas une nuance, c'est une divergence — et
+  /// l'admin, lui, sert déjà `semantic.danger` à ses actions destructives.
+  /// Les trois usages restants sont passés à `danger`.
 
   // Surfaces — thème sombre de RÉFÉRENCE (dark-first)
   //

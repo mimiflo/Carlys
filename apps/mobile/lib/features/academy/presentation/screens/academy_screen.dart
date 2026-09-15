@@ -63,7 +63,7 @@ class _AcademyScreenState extends ConsumerState<AcademyScreen> {
           children: [
             Text(
               'Academy',
-              style: AppTypography.display.copyWith(
+              style: AppTypography.pageTitle.copyWith(
                 color: AppColors.darkTextPrimary,
               ),
             ),

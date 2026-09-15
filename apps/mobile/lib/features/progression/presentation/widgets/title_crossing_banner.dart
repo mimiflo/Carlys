@@ -18,8 +18,6 @@ import 'seal_engraving.dart';
 class TitleCrossingBanner extends ConsumerWidget {
   const TitleCrossingBanner({super.key});
 
-  static const Duration revealDuration = Duration(milliseconds: 700);
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final earned = ref.watch(earnedRewardsProvider).valueOrNull ?? const [];
@@ -35,7 +33,7 @@ class TitleCrossingBanner extends ConsumerWidget {
     final reward = crossing.reward;
     return TweenAnimationBuilder<double>(
       tween: Tween(begin: 0, end: 1),
-      duration: AppMotion.resolve(context, revealDuration),
+      duration: AppMotion.resolve(context, AppMotion.reveal),
       curve: AppMotion.emphasized,
       builder: (context, value, child) => Opacity(
         opacity: value,
