@@ -3,9 +3,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/utilities/debouncer.dart';
 import '../../../../design_system/design_system.dart';
-import '../../../exercises/data/repositories/exercises_repository_impl.dart';
 import '../../../exercises/domain/entities/exercise.dart' as catalog;
-import '../../../exercises/domain/repositories/exercises_repository.dart';
+import '../../../exercises/presentation/providers/exercise_catalog_providers.dart';
 
 /// Exercice choisi pour la prochaine série.
 class PickedExercise {
@@ -25,16 +24,6 @@ Future<PickedExercise?> showExercisePickerSheet(BuildContext context) {
     ),
   );
 }
-
-final _pickerResultsProvider = FutureProvider.autoDispose
-    .family<List<catalog.ExerciseSummary>, String>((ref, search) {
-      return ref
-          .watch(exercisesRepositoryProvider)
-          .list(
-            filters: ExercisesFilters(search: search.isEmpty ? null : search),
-          )
-          .then((page) => page.items);
-    });
 
 class _ExercisePicker extends ConsumerStatefulWidget {
   const _ExercisePicker();
@@ -57,6 +46,14 @@ class _ExercisePickerState extends ConsumerState<_ExercisePicker> {
   final _debounce = Debouncer();
   String _search = '';
 
+  /// Les résultats de la saisie PRÉCÉDENTE, gardés le temps de la suivante.
+  ///
+  /// Chaque saisie est une clé de famille distincte, donc un provider neuf
+  /// qui part en `AsyncLoading` sans valeur : sans ce report, la liste
+  /// disparaissait derrière un tourniquet à chaque recherche. On montre la
+  /// liste précédente, grisée, plutôt que rien.
+  List<catalog.ExerciseSummary>? _derniersResultats;
+
   @override
   void dispose() {
     _debounce.cancel();
@@ -76,8 +73,16 @@ class _ExercisePickerState extends ConsumerState<_ExercisePicker> {
 
   @override
   Widget build(BuildContext context) {
-    final results = ref.watch(_pickerResultsProvider(_search));
+    final results = ref.watch(exerciseSearchProvider(_search));
     final theme = Theme.of(context);
+
+    // Report de la liste précédente : simple cache dérivé de la valeur
+    // observée, sans `setState` — il ne provoque donc aucune reconstruction.
+    final arrivees = results.valueOrNull;
+    if (arrivees != null) {
+      _derniersResultats = arrivees;
+    }
+    final affichables = arrivees ?? _derniersResultats;
 
     return SafeArea(
       child: Padding(
@@ -94,38 +99,11 @@ class _ExercisePickerState extends ConsumerState<_ExercisePicker> {
             ),
             const SizedBox(height: AppSpacing.sm),
             Expanded(
-              child: results.when(
-                loading: () => const AppLoadingIndicator(),
-                error: (_, __) => AppErrorState(
-                  title: 'Catalogue indisponible',
-                  message: 'Tu peux réessayer ou saisir un exercice libre.',
-                  onRetry: () =>
-                      ref.invalidate(_pickerResultsProvider(_search)),
-                ),
-                data: (exercises) => ListView.separated(
-                  itemCount: exercises.length,
-                  separatorBuilder: (_, __) =>
-                      const SizedBox(height: AppSpacing.xs),
-                  itemBuilder: (context, index) {
-                    final exercise = exercises[index];
-                    return ListTile(
-                      shape: const RoundedRectangleBorder(
-                        borderRadius: AppRadius.mdAll,
-                      ),
-                      tileColor: theme.colorScheme.surfaceContainerHighest,
-                      title: Text(exercise.name),
-                      subtitle: exercise.primaryMuscleGroup == null
-                          ? null
-                          : Text(exercise.primaryMuscleGroup!.name),
-                      onTap: () => Navigator.of(context).pop(
-                        PickedExercise(
-                          exerciseId: exercise.id,
-                          name: exercise.name,
-                        ),
-                      ),
-                    );
-                  },
-                ),
+              child: _Resultats(
+                exercices: affichables,
+                enErreur: results.hasError,
+                recherche: _search,
+                onRetry: () => ref.invalidate(exerciseSearchProvider(_search)),
               ),
             ),
             const SizedBox(height: AppSpacing.sm),
@@ -143,6 +121,73 @@ class _ExercisePickerState extends ConsumerState<_ExercisePicker> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Les quatre états de la liste : erreur, chargement, vide, résultats.
+///
+/// L'état VIDE manquait : une recherche sans réponse rendait un `ListView`
+/// de zéro élément, donc une zone blanche, sans un mot — alors que c'est le
+/// cas le plus courant du sélecteur (une faute de frappe, un exercice hors
+/// catalogue) et que le recours, « Exercice libre », est juste dessous.
+class _Resultats extends StatelessWidget {
+  const _Resultats({
+    required this.exercices,
+    required this.enErreur,
+    required this.recherche,
+    required this.onRetry,
+  });
+
+  final List<catalog.ExerciseSummary>? exercices;
+  final bool enErreur;
+  final String recherche;
+  final VoidCallback onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final liste = exercices;
+
+    // L'erreur ne prend toute la place que si rien n'est montrable : avec une
+    // liste précédente à l'écran, la remplacer par une pleine page d'erreur
+    // ferait perdre à la personne ce qu'elle avait déjà trouvé.
+    if (enErreur && liste == null) {
+      return AppErrorState(
+        title: 'Catalogue indisponible',
+        message: 'Tu peux réessayer ou saisir un exercice libre.',
+        onRetry: onRetry,
+      );
+    }
+    if (liste == null) {
+      return const AppLoadingIndicator();
+    }
+    if (liste.isEmpty) {
+      return AppEmptyState(
+        title: recherche.isEmpty
+            ? 'Catalogue vide'
+            : 'Aucun exercice pour « $recherche »',
+        message: 'Saisis-le en exercice libre, juste en dessous.',
+      );
+    }
+
+    return ListView.separated(
+      itemCount: liste.length,
+      separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.xs),
+      itemBuilder: (context, index) {
+        final exercise = liste[index];
+        return ListTile(
+          shape: const RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
+          tileColor: theme.colorScheme.surfaceContainerHighest,
+          title: Text(exercise.name),
+          subtitle: exercise.primaryMuscleGroup == null
+              ? null
+              : Text(exercise.primaryMuscleGroup!.name),
+          onTap: () => Navigator.of(
+            context,
+          ).pop(PickedExercise(exerciseId: exercise.id, name: exercise.name)),
+        );
+      },
     );
   }
 }

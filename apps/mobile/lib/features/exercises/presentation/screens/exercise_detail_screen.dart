@@ -6,7 +6,7 @@ import '../../../../app/router/app_routes.dart';
 import '../../../../core/errors/app_exception.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/exercise.dart';
-import '../controllers/exercise_library_controller.dart';
+import '../providers/exercise_catalog_providers.dart';
 import '../widgets/exercise_action_bar.dart';
 import '../widgets/exercise_glass_button.dart';
 import '../widgets/exercise_media_header.dart';

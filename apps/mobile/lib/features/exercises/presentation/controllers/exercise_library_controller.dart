@@ -3,8 +3,6 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/utilities/debouncer.dart';
-import '../../../progress/domain/entities/progress.dart';
-import '../../../progress/presentation/controllers/progress_controllers.dart';
 import '../../data/repositories/exercises_repository_impl.dart';
 import '../../domain/entities/exercise.dart';
 import '../../domain/repositories/exercises_repository.dart';
@@ -201,44 +199,3 @@ final exerciseLibraryControllerProvider =
       ExerciseLibraryController,
       ExerciseLibraryState
     >(ExerciseLibraryController.new);
-
-/// L'utilisateur a demandé le catalogue ENTIER depuis la grille.
-///
-/// État de navigation, pas de filtre : « aucun groupe » veut dire deux choses
-/// opposées — on n'a pas encore choisi (grille), ou on a choisi de tout voir
-/// (liste). Le domaine n'a pas à porter cette nuance, l'écran si.
-final exerciseCatalogueOpenProvider = StateProvider.autoDispose<bool>(
-  (ref) => false,
-);
-
-/// Référentiel des groupes musculaires (pour les filtres).
-final muscleGroupsProvider = FutureProvider.autoDispose<List<MuscleGroupRef>>((
-  ref,
-) {
-  return ref.watch(exercisesRepositoryProvider).muscleGroups();
-});
-
-/// Fiche détaillée d'un exercice.
-final exerciseDetailProvider = FutureProvider.autoDispose
-    .family<ExerciseDetail, String>((ref, idOrSlug) {
-      return ref.watch(exercisesRepositoryProvider).byIdOrSlug(idOrSlug);
-    });
-
-/// Clé d'un exercice pour la sélection de ses records : l'API historique
-/// rattache un record par identifiant quand il existe, par nom sinon.
-typedef ExerciseRecordsKey = ({String id, String name});
-
-/// Records personnels de l'utilisateur sur un exercice donné (liste vide
-/// tant que les records ne sont pas chargés — jamais de valeur inventée).
-final exerciseRecordsProvider = Provider.autoDispose
-    .family<List<PersonalRecordEntry>, ExerciseRecordsKey>((ref, key) {
-      final all =
-          ref.watch(personalRecordsProvider).valueOrNull ??
-          const <PersonalRecordEntry>[];
-      return all
-          .where(
-            (record) =>
-                record.exerciseId == key.id || record.exerciseName == key.name,
-          )
-          .toList();
-    });

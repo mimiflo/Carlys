@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
 import '../../../progress/domain/entities/progress.dart';
-import '../controllers/exercise_library_controller.dart';
+import '../providers/exercise_catalog_providers.dart';
 
 /// Grille de trois tuiles mono sous le média de la fiche (maquette 2e).
 ///

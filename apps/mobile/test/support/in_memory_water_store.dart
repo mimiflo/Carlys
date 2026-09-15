@@ -9,7 +9,7 @@ library;
 
 import 'dart:async';
 
-import 'package:carlys_mobile/features/nutrition/presentation/controllers/water_controllers.dart';
+import 'package:carlys_mobile/features/nutrition/domain/repositories/water_store.dart';
 
 class InMemoryWaterStore implements WaterStore {
   final StreamController<int> _controller = StreamController<int>.broadcast();

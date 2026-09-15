@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../core/validators/form_validators.dart';
 import '../../../../design_system/design_system.dart';
-import '../controllers/account_controllers.dart';
+import '../controllers/change_password_controller.dart';
 import '../widgets/auth_form_error.dart';
 import '../widgets/auth_scaffold.dart';
 

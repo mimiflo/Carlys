@@ -26,9 +26,9 @@ feature/
     ├── controllers/     # UN Notifier Riverpod par fichier, et rien d'autre
     ├── providers/       # Providers dérivés (Provider, FutureProvider…) qui
     │                    #   ne portent aucun état : la destination prévue
-    │                    #   par la règle de CLAUDE.md. N'existe ENCORE dans
-    │                    #   aucune fonctionnalité — les fichiers concernés
-    │                    #   sont pour l'instant dans `controllers/`
+    │                    #   par la règle de CLAUDE.md. `exercises` est la
+    │                    #   première fonctionnalité à les y ranger ; les
+    │                    #   autres ont encore les leurs dans `controllers/`
     ├── screens/         # Écrans
     ├── utils/           # Calculs purs de l'écran, sans Riverpod : agrégats,
     │                    #   formatage, seuils (`workout_history`, `progress`)

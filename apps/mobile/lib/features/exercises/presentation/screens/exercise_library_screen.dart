@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../design_system/design_system.dart';
 import '../controllers/exercise_library_controller.dart';
+import '../providers/exercise_catalog_providers.dart';
 import '../widgets/exercise_catalog_list.dart';
 import '../widgets/exercise_library_header.dart';
 import '../widgets/muscle_group_grid.dart';

@@ -4,6 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/restore/app_restore.dart';
 import '../../../../app/router/app_routes.dart';
+import '../../../../core/feedback/server_gesture.dart';
 import '../../../../core/synchronization/sync_lifecycle.dart';
 import '../../../../design_system/design_system.dart';
 import '../../../../design_system/scenes/scene_scroll_activity.dart';
@@ -98,10 +99,20 @@ class HomeScreen extends ConsumerWidget {
                     ?.length,
                 onOpenTemplates: () => context.push(AppRoutes.templates),
                 onStart: () async {
-                  if (activeWorkout == null) {
-                    await ref.read(workoutActionsProvider).start();
-                  }
-                  if (context.mounted) {
+                  // Même règle, même endroit que la fiche d'exercice : la
+                  // décision se prend sur la BASE, et l'échec se dit. Ce
+                  // bouton lisait `activeWorkout`, c'est-à-dire le cache du
+                  // provider, et appelait `start()` sans filet — sur un cache
+                  // en échec il partait ouvrir une séance alors qu'une séance
+                  // existait, et le `StateError` du domaine le laissait sur
+                  // place, sans message.
+                  final abouti = await runLocalGesture(
+                    context,
+                    ref.read(workoutActionsProvider).currentOrStart,
+                    scope: 'HomeScreen',
+                    echec: 'La séance n’a pas pu être ouverte. Réessaie.',
+                  );
+                  if (abouti && context.mounted) {
                     await context.push(AppRoutes.activeWorkout);
                   }
                 },

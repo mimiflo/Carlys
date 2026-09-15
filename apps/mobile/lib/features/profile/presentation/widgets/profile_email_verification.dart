@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../design_system/design_system.dart';
 import '../../../authentication/domain/entities/auth_user.dart';
-import '../../../authentication/presentation/controllers/account_controllers.dart';
+import '../../../authentication/presentation/controllers/email_verification_controller.dart';
 import '../../../authentication/presentation/widgets/auth_form_error.dart';
 
 /// Rappel sobre : l'adresse e-mail n'a jamais été vérifiée.

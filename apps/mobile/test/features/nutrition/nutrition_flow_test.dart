@@ -6,6 +6,7 @@ import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
 import 'package:carlys_mobile/features/nutrition/data/repositories/nutrition_repository_impl.dart';
 import 'package:carlys_mobile/features/nutrition/domain/entities/nutrition.dart';
+import 'package:carlys_mobile/features/nutrition/presentation/controllers/water_controllers.dart';
 import 'package:carlys_mobile/features/nutrition/presentation/screens/nutrition_screen.dart';
 import 'package:carlys_mobile/features/nutrition/presentation/widgets/dna_helix.dart';
 import 'package:carlys_mobile/features/nutrition/presentation/widgets/metabolic_profile_form.dart';
@@ -18,6 +19,7 @@ import '../../support/fake_auth_repository.dart';
 import '../../support/fake_nutrition_repository.dart';
 import '../../support/fake_workout_repository.dart';
 import '../../support/first_run_prefs.dart';
+import '../../support/in_memory_water_store.dart';
 import '../../support/navigation.dart' as navigation;
 
 Widget appWith(FakeNutritionRepository nutrition) => ProviderScope(
@@ -35,6 +37,12 @@ Widget appWith(FakeNutritionRepository nutrition) => ProviderScope(
     syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
     appRestoreProvider.overrideWithValue(NoopAppRestore()),
     nutritionRepositoryProvider.overrideWithValue(nutrition),
+    // Le compteur d'eau arme un minuteur sur le prochain minuit LOCAL, pour
+    // basculer de jour sans que personne n'ait à invalider quoi que ce soit.
+    // En test ce minuteur est à plusieurs heures, et `flutter_test` refuse
+    // qu'un minuteur survive à l'arbre : la doublure en mémoire, prévue pour
+    // ça, remplace la vraie.
+    waterStoreProvider.overrideWithValue(InMemoryWaterStore()),
   ],
   child: const CarlysApp(),
 );
@@ -43,7 +51,10 @@ Widget appWith(FakeNutritionRepository nutrition) => ProviderScope(
 /// défilement, où la taille de fenêtre décide de ce que la liste paresseuse
 /// a déjà construit.
 Widget screenWith(FakeNutritionRepository nutrition) => ProviderScope(
-  overrides: [nutritionRepositoryProvider.overrideWithValue(nutrition)],
+  overrides: [
+    nutritionRepositoryProvider.overrideWithValue(nutrition),
+    waterStoreProvider.overrideWithValue(InMemoryWaterStore()),
+  ],
   child: MaterialApp(theme: AppTheme.dark(), home: const NutritionScreen()),
 );
 

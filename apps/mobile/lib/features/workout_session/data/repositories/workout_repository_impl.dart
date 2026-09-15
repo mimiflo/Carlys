@@ -179,6 +179,19 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
   // ── Écritures ────────────────────────────────────────────────────────────
 
   @override
+  Future<String?> activeWorkoutId() async {
+    final row =
+        await (_db.select(_db.localWorkoutSessions)
+              ..where(
+                (session) =>
+                    session.status.equals(WorkoutStatus.inProgress.apiValue),
+              )
+              ..limit(1))
+            .getSingleOrNull();
+    return row?.id;
+  }
+
+  @override
   Future<String> startWorkout({
     String? name,
     String? templateId,

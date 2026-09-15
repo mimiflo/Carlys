@@ -4,7 +4,7 @@ import 'package:carlys_mobile/core/errors/app_exception.dart';
 import 'package:carlys_mobile/features/community/domain/entities/community.dart';
 import 'package:carlys_mobile/features/community/domain/entities/community_moderation.dart';
 import 'package:carlys_mobile/features/community/domain/repositories/community_repository.dart';
-import 'package:carlys_mobile/features/nutrition/presentation/controllers/water_controllers.dart';
+import 'package:carlys_mobile/features/nutrition/domain/repositories/water_store.dart';
 
 /// Un signalement reçu par le dépôt factice : la personne, le message visé
 /// (ou `null`), le motif et les précisions nettoyées.

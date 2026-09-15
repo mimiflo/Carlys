@@ -45,12 +45,36 @@ class FakeWorkoutRepository implements WorkoutRepository {
   @override
   Future<WorkoutWithSets?> workoutDetail(String sessionId) async => active;
 
+  /// L'état RÉEL de la doublure, pas le dernier émis sur le flux : c'est la
+  /// distinction que `activeWorkoutId` existe pour porter, et un test qui
+  /// coupe le flux doit pouvoir la mettre en scène.
+  @override
+  Future<String?> activeWorkoutId() async =>
+      active?.session.status == WorkoutStatus.inProgress
+      ? active?.session.id
+      : null;
+
+  /// Ce que jette le prochain `startWorkout` — typiquement le
+  /// `StateError('Une séance est déjà en cours.')` du domaine, pour rejouer
+  /// la course « une séance a démarré entre-temps ». Consommé à l'appel.
+  Object? startFailure;
+
+  /// Appelé JUSTE APRÈS un `startWorkout` refusé : de quoi mettre en scène
+  /// la course — une séance ouverte ailleurs pendant la saisie.
+  void Function()? onStartFailed;
+
   @override
   Future<String> startWorkout({
     String? name,
     String? templateId,
     String? templateName,
   }) async {
+    final echec = startFailure;
+    if (echec != null) {
+      startFailure = null;
+      onStartFailed?.call();
+      throw echec;
+    }
     const id = 'fake-session';
     _publish(
       WorkoutWithSets(

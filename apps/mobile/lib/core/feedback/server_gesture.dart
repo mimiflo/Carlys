@@ -43,6 +43,43 @@ Future<void> runServerGesture(
   ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
 }
 
+/// Même contrat que [runServerGesture], pour un geste qui écrit D'ABORD EN
+/// LOCAL : il rend `true` si le geste a abouti, pour que l'appelant sache
+/// s'il peut enchaîner (naviguer, refermer une feuille).
+///
+/// Pourquoi une seconde fonction. Une écriture locale échoue autrement qu'un
+/// appel réseau : la règle « au plus une séance en cours » se défend par un
+/// `StateError`, qui est une `Error` et non une `Exception` — `on Exception`
+/// ne l'attrape donc PAS. C'est exactement ce qui faisait disparaître une
+/// série saisie, sans message, sans navigation, sans trace : le bouton
+/// semblait n'avoir pas répondu.
+///
+/// [echec] donne le mot juste pour CE geste-là : « la série n'a pas pu être
+/// enregistrée » n'est pas « le repas n'a pas pu être ajouté ».
+Future<bool> runLocalGesture(
+  BuildContext context,
+  Future<void> Function() gesture, {
+  required String scope,
+  required String echec,
+}) async {
+  try {
+    await gesture();
+    return true;
+  } catch (erreur, trace) {
+    // `catch` NU, et c'est le propos : `on Exception` laisserait filer les
+    // `Error`, dont le `StateError` du domaine.
+    AppLogger(
+      scope,
+    ).error('Geste local en échec', error: erreur, stackTrace: trace);
+    if (context.mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(echec)));
+    }
+    return false;
+  }
+}
+
 /// Le mot juste pour un geste qui n'a pas abouti, hors ligne ou pas.
 ///
 /// La distinction compte : « réessaie une fois connecté » est une consigne

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../design_system/design_system.dart';
-import '../controllers/account_controllers.dart';
+import '../controllers/delete_account_controller.dart';
 import '../widgets/account_deletion_summary.dart';
 import '../widgets/auth_form_error.dart';
 import '../widgets/auth_scaffold.dart';

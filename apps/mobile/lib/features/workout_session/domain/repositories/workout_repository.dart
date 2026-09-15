@@ -13,6 +13,19 @@ abstract interface class WorkoutRepository {
 
   Future<WorkoutWithSets?> workoutDetail(String sessionId);
 
+  /// L'identifiant de la séance en cours, lu dans la BASE, ou `null`.
+  ///
+  /// Distinct de [watchActiveWorkout] et de son provider, qui sont un CACHE :
+  /// ce flux Drift se termine sur erreur, et le provider qui le porte n'est
+  /// pas `autoDispose` — un échec de lecture y reste donc collant pour toute
+  /// la vie de l'application, seul l'écran de séance offrant un
+  /// « Réessayer ». Les écrans qui décident « reprendre la séance ouverte,
+  /// sinon en ouvrir une » lisaient ce cache : sur un cache en échec ils
+  /// voyaient `null` alors qu'une séance existait, et [startWorkout] levait
+  /// un `StateError` que personne n'attrapait — la série saisie disparaissait
+  /// sans un mot. Cette lecture-ci va à la source.
+  Future<String?> activeWorkoutId();
+
   /// Démarre une séance ; échoue si une séance est déjà en cours.
   ///
   /// [templateId] / [templateName] tracent la provenance quand la séance est

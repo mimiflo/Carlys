@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_routes.dart';
+import '../../../../core/feedback/server_gesture.dart';
 import '../../../../design_system/design_system.dart';
 import '../../../workout_session/domain/entities/workout.dart';
 import '../../../workout_session/presentation/controllers/workout_controllers.dart';
@@ -101,21 +102,30 @@ class ExerciseActionBar extends ConsumerWidget {
     if (input == null || !context.mounted) {
       return;
     }
+    // « Reprendre la séance ouverte, sinon en ouvrir une » est une règle du
+    // domaine : elle vit dans `WorkoutActions`, et se décide sur la base, pas
+    // sur le cache d'un provider. Ce widget lisait `activeWorkoutProvider` —
+    // qui peut être en échec alors qu'une séance existe — puis appelait
+    // `start()`, qui levait alors un `StateError` que rien n'attrapait : la
+    // série saisie disparaissait sans message et sans navigation.
     final actions = ref.read(workoutActionsProvider);
-    final active = ref.read(activeWorkoutProvider).valueOrNull;
-    final sessionId = active?.session.id ?? await actions.start();
-    await actions.addSet(
-      AddSetInput(
-        sessionId: sessionId,
-        exerciseId: exercise.id,
-        exerciseName: exercise.name,
-        kind: input.kind,
-        reps: input.reps,
-        weightKg: input.weightKg,
-        restSeconds: input.restSeconds,
+    final abouti = await runLocalGesture(
+      context,
+      () => actions.addSetToCurrentOrStart(
+        (sessionId) => AddSetInput(
+          sessionId: sessionId,
+          exerciseId: exercise.id,
+          exerciseName: exercise.name,
+          kind: input.kind,
+          reps: input.reps,
+          weightKg: input.weightKg,
+          restSeconds: input.restSeconds,
+        ),
       ),
+      scope: 'ExerciseActionBar',
+      echec: 'La série n’a pas pu être enregistrée. Réessaie.',
     );
-    if (context.mounted) {
+    if (abouti && context.mounted) {
       await context.push(AppRoutes.activeWorkout);
     }
   }

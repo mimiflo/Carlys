@@ -61,6 +61,50 @@ class WorkoutActions {
   Future<String> start({String? name}) =>
       _ref.read(workoutRepositoryProvider).startWorkout(name: name);
 
+  /// Reprend la séance en cours, ou en ouvre une — et rend son identifiant.
+  ///
+  /// La décision « reprendre ou démarrer » est une règle du domaine, pas une
+  /// affaire d'écran : deux widgets la rejouaient chacun à sa façon, sur le
+  /// CACHE de `activeWorkoutProvider`. Ce cache peut être en échec alors
+  /// qu'une séance existe (flux Drift terminé sur erreur, provider non
+  /// `autoDispose`, reprise manuelle offerte sur le seul écran de séance) :
+  /// ils lisaient alors `null`, appelaient `start()`, et prenaient un
+  /// `StateError` que personne n'attrapait.
+  ///
+  /// Ici l'état vient de la base, et la course est rattrapée : si une séance
+  /// démarre entre la lecture et l'ouverture — l'accueil, le coach ou un
+  /// modèle peuvent le faire —, on rejoint celle-là au lieu de perdre le
+  /// geste. C'est ce que `templates_screen` était seul à faire.
+  Future<String> currentOrStart() async {
+    final repository = _ref.read(workoutRepositoryProvider);
+    final ouverte = await repository.activeWorkoutId();
+    if (ouverte != null) {
+      return ouverte;
+    }
+    try {
+      return await repository.startWorkout();
+    } on StateError {
+      final apparue = await repository.activeWorkoutId();
+      if (apparue == null) {
+        rethrow;
+      }
+      return apparue;
+    }
+  }
+
+  /// Enregistre une série sur la séance en cours, en l'ouvrant s'il le faut.
+  ///
+  /// La série n'est connue qu'une fois la séance choisie : d'où le
+  /// constructeur passé en argument plutôt qu'un `AddSetInput` déjà bâti
+  /// autour d'un identifiant que l'appelant n'a pas.
+  Future<String> addSetToCurrentOrStart(
+    AddSetInput Function(String sessionId) serie,
+  ) async {
+    final sessionId = await currentOrStart();
+    await addSet(serie(sessionId));
+    return sessionId;
+  }
+
   Future<void> addSet(AddSetInput input) =>
       _ref.read(workoutRepositoryProvider).addSet(input);
 

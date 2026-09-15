@@ -21,7 +21,8 @@
 #    sait pas faire, et que la section « Tailles de fichiers » de CLAUDE.md
 #    confie à une commande `awk` qu'elle embarque.
 #
-#    `presentation/controllers/` EST contrôlé, à 250 comme un widget :
+#    `presentation/controllers/` et `presentation/providers/` SONT
+#    contrôlés, à 250 comme un widget :
 #    l'arbitrage de septembre 2026 range le Notifier Riverpod dans la couche
 #    présentation, dont il partage le budget. La marge est mince — le plus
 #    gros, `coach_controllers.dart`, est à 249 — donc ce seuil mordra tôt.
@@ -59,7 +60,11 @@ while IFS= read -r file; do
       kind='Widget Flutter'
       limit=$WIDGET_LIMIT
       ;;
-    */presentation/controllers/*)
+    # `providers/` partage le budget de `controllers/` : mêmes seuils, même
+    # couche. `features/README.md` distingue les deux par l'ÉTAT (un Notifier
+    # en tient un, un provider dérivé non), pas par la taille — et un dossier
+    # sans garde-fou est l'endroit où la prochaine dérive ira se loger.
+    */presentation/controllers/* | */presentation/providers/*)
       kind='Contrôleur'
       limit=$CONTROLLER_LIMIT
       ;;

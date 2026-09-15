@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../design_system/design_system.dart';
 import '../../../progress/presentation/widgets/record_row.dart';
-import '../controllers/exercise_library_controller.dart';
+import '../providers/exercise_catalog_providers.dart';
 
 /// Historique de l'exercice : ses records personnels, du plus récent au plus
 /// ancien. C'est la seule trace par mouvement que l'API expose aujourd'hui.

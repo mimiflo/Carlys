@@ -2,35 +2,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/database/app_database.dart';
 import '../../data/datasources/water_local_data_source.dart';
+import '../../data/repositories/local_water_store.dart';
+import '../../domain/repositories/water_store.dart';
 import 'nutrition_controllers.dart';
 
 /// Quantités proposées au pouce. Un verre, une grande bouteille.
 const int waterGlassMl = 250;
 const int waterBottleMl = 500;
 
-/// Source des données d'hydratation.
+/// Câblage du compteur d'hydratation.
 ///
-/// Une INTERFACE, et non le data source directement : les tests la
-/// remplacent par une version en mémoire, comme tous les autres dépôts —
-/// sans elle, un harnais devrait ouvrir une base pour un compteur.
-abstract interface class WaterStore {
-  Stream<int> watchToday();
-  Future<int> addToday(int milliliters);
-}
-
-class LocalWaterStore implements WaterStore {
-  const LocalWaterStore(this._source);
-
-  final WaterLocalDataSource _source;
-
-  @override
-  Stream<int> watchToday() => _source.watchDay(DateTime.now());
-
-  @override
-  Future<int> addToday(int milliliters) =>
-      _source.add(DateTime.now(), milliliters);
-}
-
+/// Le contrat vit dans `domain/repositories/`, son implémentation Drift dans
+/// `data/repositories/` : ils étaient tous deux déclarés ICI, seul
+/// `abstract interface class` du dépôt hors de `domain/`. Ce n'était pas
+/// qu'une question de rangement — une implémentation posée à côté de son
+/// provider se relit comme du câblage, et personne n'a vu qu'elle figeait le
+/// jour à la création du flux.
 final waterStoreProvider = Provider<WaterStore>((ref) {
   return LocalWaterStore(WaterLocalDataSource(ref.watch(appDatabaseProvider)));
 });

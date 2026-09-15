@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../design_system/design_system.dart';
 import '../controllers/exercise_library_controller.dart';
+import '../providers/exercise_catalog_providers.dart';
 import 'muscle_group_card.dart';
 
 /// Porte d'entrée de la bibliothèque : on choisit d'abord un muscle.

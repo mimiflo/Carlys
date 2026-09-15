@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../design_system/design_system.dart';
 import '../controllers/exercise_library_controller.dart';
+import '../providers/exercise_catalog_providers.dart';
 
 /// Barre de retour aux catégories, au-dessus de la liste d'exercices.
 ///
