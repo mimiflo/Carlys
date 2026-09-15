@@ -4,6 +4,7 @@ import { type NestExpressApplication } from '@nestjs/platform-express';
 import express from 'express';
 import helmet from 'helmet';
 import { AppConfigService } from '../config/app-config.service';
+import { validationExceptionFactory } from '../common/validation/validation-exception.factory';
 import { HttpMetricsMiddleware } from '../modules/metrics/http-metrics.middleware';
 
 /**
@@ -79,6 +80,11 @@ export function configureApp(app: NestExpressApplication): void {
       whitelist: true,
       forbidNonWhitelisted: true,
       transform: true,
+      // Sans cette fabrique, le pipe n'aplatit que des phrases : le filtre
+      // d'exceptions ne sait plus à quel CHAMP les rattacher, et
+      // `details[].field` — publié au contrat, lu par le client mobile —
+      // restait vide depuis l'origine.
+      exceptionFactory: validationExceptionFactory,
     }),
   );
 

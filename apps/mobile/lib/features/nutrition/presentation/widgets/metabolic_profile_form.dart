@@ -6,6 +6,7 @@ import '../../../../app/router/app_routes.dart';
 import '../../../../core/errors/app_exception.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/nutrition.dart';
+import '../../domain/height_cm.dart';
 import '../controllers/nutrition_controllers.dart';
 
 /// Formulaire du profil métabolique (sexe, naissance, taille, activité, but).
@@ -21,9 +22,6 @@ class MetabolicProfileForm extends ConsumerStatefulWidget {
 }
 
 class _MetabolicProfileFormState extends ConsumerState<MetabolicProfileForm> {
-  static const double _minHeightCm = 80;
-  static const double _maxHeightCm = 250;
-
   final _formKey = GlobalKey<FormState>();
   late final TextEditingController _heightController;
 
@@ -38,7 +36,7 @@ class _MetabolicProfileFormState extends ConsumerState<MetabolicProfileForm> {
     super.initState();
     final height = widget.profile.heightCm;
     _heightController = TextEditingController(
-      text: height == null ? '' : _formatHeight(height),
+      text: height == null ? '' : HeightCm.format(height),
     );
   }
 
@@ -46,18 +44,6 @@ class _MetabolicProfileFormState extends ConsumerState<MetabolicProfileForm> {
   void dispose() {
     _heightController.dispose();
     super.dispose();
-  }
-
-  static String _formatHeight(double value) => value == value.roundToDouble()
-      ? value.toStringAsFixed(0)
-      : value.toStringAsFixed(1).replaceFirst('.', ',');
-
-  double? _parsedHeight() {
-    final raw = _heightController.text.trim().replaceFirst(',', '.');
-    if (raw.isEmpty) {
-      return null;
-    }
-    return double.tryParse(raw);
   }
 
   bool get _weightMissing => widget.profile.weightKg == null;
@@ -85,7 +71,7 @@ class _MetabolicProfileFormState extends ConsumerState<MetabolicProfileForm> {
     final update = MetabolicProfileUpdate(
       sex: _sex,
       birthDate: _birthDate,
-      heightCm: _parsedHeight(),
+      heightCm: HeightCm.parse(_heightController.text),
       activityLevel: _activityLevel,
       goal: _goal,
     );
@@ -155,19 +141,7 @@ class _MetabolicProfileFormState extends ConsumerState<MetabolicProfileForm> {
             controller: _heightController,
             hint: 'Par exemple 178',
             keyboardType: const TextInputType.numberWithOptions(decimal: true),
-            validator: (value) {
-              if (value == null || value.trim().isEmpty) {
-                return null; // Optionnel : le serveur liste les manquants.
-              }
-              final parsed = _parsedHeight();
-              if (parsed == null ||
-                  parsed < _minHeightCm ||
-                  parsed > _maxHeightCm) {
-                return 'Taille entre ${_minHeightCm.round()} et '
-                    '${_maxHeightCm.round()} cm';
-              }
-              return null;
-            },
+            validator: HeightCm.validationError,
           ),
           const SizedBox(height: AppSpacing.md),
           Text('Niveau d’activité', style: theme.textTheme.labelLarge),

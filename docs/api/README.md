@@ -89,15 +89,26 @@ refusés, contraintes non respectées) détaille chaque problème :
     "code": "VALIDATION_ERROR",
     "message": "Certaines données sont invalides.",
     "details": [
-      { "message": "email must be an email" },
-      { "message": "property isAdmin should not exist" }
+      { "field": "email", "message": "Adresse e-mail invalide." },
+      { "field": "isAdmin", "message": "property isAdmin should not exist" }
     ],
     "requestId": "6f1cbb3e-6c1e-4b6e-9e2d-b7f3a1c0d942"
   }
 }
 ```
 
-Chaque entrée de `details` est de la forme `{ field?, message }`.
+Chaque entrée de `details` est de la forme `{ field?, message }`, et **`field`
+est posé** : un champ imbriqué porte son chemin complet (`days.0.label`), une
+règle par entrée — un champ qui viole deux contraintes en produit deux, pour
+qu'on n'en corrige pas une afin de découvrir l'autre au renvoi.
+
+`field` a longtemps figuré au contrat sans jamais être émis. `ValidationPipe`
+ne rendait que des phrases aplaties, que le filtre relayait telles quelles :
+les messages écrits pour un humain restaient donc inatteignables derrière le
+`message` générique, qui ne dit pas quoi corriger. Une fabrique d'exception
+dédiée (`apps/api/src/common/validation/validation-exception.factory.ts`) les
+rattache maintenant à leur champ, et le client mobile — qui savait déjà les
+ranger — les affiche.
 
 ### Codes d'erreur
 

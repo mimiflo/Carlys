@@ -79,15 +79,15 @@ export const coachReplySchema = z.object({
 });
 export type CoachReply = z.infer<typeof coachReplySchema>;
 
-/**
- * Amorces de conversation, calculées depuis l'état RÉEL de l'utilisateur —
- * un modèle disponible, un record récent, un poids qui stagne. Un champ vide
- * invite des questions que le domaine ne sait pas honorer.
- */
-export const coachSuggestionsSchema = z.object({
-  suggestions: z.array(z.string()),
-});
-export type CoachSuggestions = z.infer<typeof coachSuggestionsSchema>;
+// Les AMORCES de conversation ne sont pas un contrat d'API, et ne l'ont
+// jamais été. Un `coachSuggestionsSchema` vivait ici, présenté comme « calculé
+// depuis l'état réel de l'utilisateur » côté serveur : aucune route ne le
+// servait, aucun client ne le lisait. Le calcul est LOCAL et l'a toujours été
+// (`apps/mobile/lib/features/coaching/domain/services/coach_suggestions.dart`,
+// branché par `coach_controllers.dart`) — c'est d'ailleurs le bon endroit :
+// les amorces dépendent de ce que l'appareil sait déjà, et n'ont pas à coûter
+// un aller-retour réseau. Un contrat publié qui décrit un comportement
+// inexistant est pire qu'une absence : il se lit comme une promesse.
 
 // ── Requêtes ──────────────────────────────────────────────────────────────
 

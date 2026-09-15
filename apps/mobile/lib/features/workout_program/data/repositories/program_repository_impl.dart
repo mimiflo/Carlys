@@ -12,15 +12,41 @@ class ProgramRepositoryImpl implements ProgramRepository {
 
   final Dio _dio;
 
+  /// Garde-fou : un serveur qui rendrait toujours `hasMore` avec le même
+  /// curseur ne doit pas faire tourner l'application indéfiniment. Vingt
+  /// pages de vingt, c'est quatre cents programmes — très au-delà de ce
+  /// qu'une personne écrit.
+  static const int _maxPages = 20;
+
+  /// Tous les programmes, en suivant la PAGINATION du serveur.
+  ///
+  /// `GET /programs` est paginé par curseur au contrat comme au contrôleur,
+  /// avec une page de vingt par défaut, et l'enveloppe porte
+  /// `meta.nextCursor` / `meta.hasMore`. Ce client ne lisait ni l'un ni
+  /// l'autre : au vingt et unième programme, la liste s'arrêtait — sans
+  /// erreur, sans message, sans rien qui le laisse deviner. Les deux autres
+  /// listes paginées du mobile suivent déjà le curseur ; c'est le même motif.
   @override
   Future<List<ProgramSummary>> list() {
     return _guard(() async {
-      final response = await _dio.get<Map<String, dynamic>>('/programs');
-      final rows = response.data?['data'] as List<dynamic>? ?? const [];
-      return rows
-          .cast<Map<String, dynamic>>()
-          .map(_summary)
-          .toList(growable: false);
+      final programmes = <ProgramSummary>[];
+      String? cursor;
+      var pages = 0;
+      do {
+        final response = await _dio.get<Map<String, dynamic>>(
+          '/programs',
+          queryParameters: {if (cursor != null) 'cursor': cursor},
+        );
+        final body = response.data ?? const <String, dynamic>{};
+        final rows = body['data'] as List<dynamic>? ?? const [];
+        programmes.addAll(rows.cast<Map<String, dynamic>>().map(_summary));
+
+        final meta = body['meta'] as Map<String, dynamic>? ?? const {};
+        final suivant = meta['nextCursor'] as String?;
+        cursor = (meta['hasMore'] as bool? ?? false) ? suivant : null;
+        pages += 1;
+      } while (cursor != null && pages < _maxPages);
+      return List<ProgramSummary>.unmodifiable(programmes);
     });
   }
 

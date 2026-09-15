@@ -1,3 +1,10 @@
+import {
+  DISPLAY_NAME_MAX_LENGTH,
+  HEIGHT_CM_DECIMALS,
+  HEIGHT_CM_MAX,
+  HEIGHT_CM_MIN,
+  LOCALE_PATTERN,
+} from '@carlys/api-contracts';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { ActivityLevel, BiologicalSex, CarlysProfile, NutritionGoal } from '@prisma/client';
 import { Type } from 'class-transformer';
@@ -19,13 +26,13 @@ export class UpdateProfileDto {
   @ApiPropertyOptional({ example: 'Camille' })
   @IsOptional()
   @IsString()
-  @Length(1, 60)
+  @Length(1, DISPLAY_NAME_MAX_LENGTH)
   displayName?: string;
 
   @ApiPropertyOptional({ example: 'fr', description: 'Code langue BCP 47' })
   @IsOptional()
   @IsString()
-  @Matches(/^[a-z]{2}(-[A-Z]{2})?$/, { message: 'Locale invalide (ex. fr, fr-FR).' })
+  @Matches(LOCALE_PATTERN, { message: 'Locale invalide (ex. fr, fr-FR).' })
   locale?: string;
 
   @ApiPropertyOptional({ example: 'Europe/Paris', description: 'Fuseau IANA' })
@@ -60,11 +67,18 @@ export class UpdateProfileDto {
   @MaxDate(() => new Date(), { message: 'La date de naissance est dans le futur.' })
   birthDate?: Date;
 
-  @ApiPropertyOptional({ minimum: 80, maximum: 250, description: 'Taille en cm' })
+  // Les bornes viennent du CONTRAT (`packages/api-contracts/src/users.ts`),
+  // pas de chiffres recopiés ici : c'est ce qui manquait, et les clients
+  // devinaient. L'écran mobile vérifiait l'intervalle mais pas la précision.
+  @ApiPropertyOptional({
+    minimum: HEIGHT_CM_MIN,
+    maximum: HEIGHT_CM_MAX,
+    description: 'Taille en cm (une décimale au maximum)',
+  })
   @IsOptional()
-  @IsNumber({ maxDecimalPlaces: 1 })
-  @Min(80)
-  @Max(250)
+  @IsNumber({ maxDecimalPlaces: HEIGHT_CM_DECIMALS })
+  @Min(HEIGHT_CM_MIN)
+  @Max(HEIGHT_CM_MAX)
   heightCm?: number;
 
   @ApiPropertyOptional({ enum: ActivityLevel })

@@ -25,6 +25,21 @@ const STATUS_TO_CODE: Readonly<Record<number, ApiErrorCode>> = {
   [HttpStatus.SERVICE_UNAVAILABLE]: 'SERVICE_UNAVAILABLE',
 };
 
+const DEFAULT_VALIDATION_MESSAGE = 'Certaines données sont invalides.';
+
+/** Le corps porte-t-il des détails déjà structurés `{ field?, message }` ? */
+function isDetailList(value: unknown): value is ApiErrorDetail[] {
+  return (
+    Array.isArray(value) &&
+    value.every(
+      (entry) =>
+        typeof entry === 'object' &&
+        entry !== null &&
+        typeof (entry as { message?: unknown }).message === 'string',
+    )
+  );
+}
+
 /**
  * Convertit toute exception en enveloppe d'erreur normalisée
  * `{ error: { code, message, details, requestId } }` sans fuiter de détails
@@ -56,10 +71,20 @@ export class AllExceptionsFilter implements ExceptionFilter {
       if (typeof payload === 'string') {
         message = payload;
       } else if (payload !== null && typeof payload === 'object') {
-        const body = payload as { message?: string | string[] };
-        if (Array.isArray(body.message)) {
+        const body = payload as { message?: string | string[]; details?: unknown };
+        if (isDetailList(body.details)) {
+          // Erreur de validation STRUCTURÉE (voir
+          // `validation-exception.factory.ts`) : chaque message porte son
+          // champ, et le client peut les placer sous les bons libellés.
           code = status === Number(HttpStatus.BAD_REQUEST) ? 'VALIDATION_ERROR' : code;
-          message = 'Certaines données sont invalides.';
+          message = typeof body.message === 'string' ? body.message : DEFAULT_VALIDATION_MESSAGE;
+          details = body.details;
+        } else if (Array.isArray(body.message)) {
+          // Repli : un tableau de phrases sans champ. Ce que rendait la
+          // fabrique par défaut de NestJS ; conservé pour toute exception
+          // construite à la main sous cette forme.
+          code = status === Number(HttpStatus.BAD_REQUEST) ? 'VALIDATION_ERROR' : code;
+          message = DEFAULT_VALIDATION_MESSAGE;
           details = body.message.map((entry) => ({ message: entry }));
         } else if (typeof body.message === 'string') {
           message = body.message;

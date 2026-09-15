@@ -71,6 +71,15 @@ describe('Authentification (e2e)', () => {
     const error = errorOf(response.body);
     expect(error.code).toBe('VALIDATION_ERROR');
     expect(error.details.length).toBeGreaterThan(0);
+    // Chaque détail porte SON champ. `details[].field` figure au contrat
+    // depuis l'origine et n'était jamais posé : les messages écrits pour un
+    // humain restaient derrière un « Certaines données sont invalides. »
+    // que le client ne pouvait rattacher à rien.
+    expect(error.details.every((detail) => typeof detail.field === 'string')).toBe(true);
+    expect(error.details).toContainEqual({
+      field: 'email',
+      message: 'Adresse e-mail invalide.',
+    });
   });
 
   let firstSession: AuthTokens;

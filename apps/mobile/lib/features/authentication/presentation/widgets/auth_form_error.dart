@@ -4,11 +4,19 @@ import '../../../../core/errors/app_exception.dart';
 import '../../../../design_system/design_system.dart';
 
 /// Traduit une erreur du domaine en message utilisateur.
+///
+/// Pour une erreur de validation, les messages PAR CHAMP l'emportent sur le
+/// message général. L'API écrit des phrases destinées à un humain — « Adresse
+/// e-mail invalide. », « Mot de passe trop court. » — et le client les range
+/// déjà par champ ([ValidationException.fieldErrors]) ; seul l'affichage
+/// manquait, si bien que l'écran ne montrait que le générique « Certaines
+/// données sont invalides. », qui ne dit pas quoi corriger.
 String authErrorMessage(Object error) {
   return switch (error) {
     NetworkException() => 'Connexion impossible. Vérifie ton accès Internet.',
     UnauthorizedException(:final message) => message,
-    ValidationException(:final message) => message,
+    ValidationException(:final message, :final fieldErrors) =>
+      fieldErrors.isEmpty ? message : fieldErrors.values.join('\n'),
     ServerException() => 'Le serveur est momentanément indisponible.',
     _ => 'Une erreur inattendue est survenue.',
   };
