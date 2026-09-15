@@ -1001,7 +1001,17 @@ model MealEntry {
   userId    String    @db.Uuid
   name      String
   kcal      Int
+  /// Les trois macros, toutes FACULTATIVES et indépendantes : une entrée
+  /// rapide n'en porte aucune, une estimation les porte toutes, et une
+  /// saisie à la main peut n'en connaître qu'une. `null` veut dire « on ne
+  /// sait pas », jamais « zéro » — l'écran doit pouvoir faire la différence.
+  ///
+  /// L'écran affichait quatre macros CIBLES et n'en journalisait que deux :
+  /// la comparaison consommé / objectif était impossible sur les deux tiers
+  /// de ce qu'il montrait.
   proteinG  Int?
+  carbsG    Int?
+  fatG      Int?
   eatenAt   DateTime
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt

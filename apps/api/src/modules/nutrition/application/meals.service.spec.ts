@@ -13,6 +13,8 @@ function mealRow(overrides: Partial<MealEntry> = {}): MealEntry {
     name: 'Poulet riz',
     kcal: 650,
     proteinG: 45,
+    carbsG: 80,
+    fatG: 12,
     eatenAt: new Date('2026-08-11T12:00:00Z'),
     createdAt: new Date(),
     updatedAt: new Date(),
@@ -46,6 +48,10 @@ const input = {
   name: 'Poulet riz',
   kcal: 650,
   proteinG: 45,
+  // Les trois macros sont INDÉPENDANTES : celle qu'on ne connaît pas reste
+  // nulle, et l'entrée est acceptée quand même.
+  carbsG: 80,
+  fatG: null,
   eatenAt: new Date('2026-08-11T12:00:00Z'),
 };
 
@@ -62,6 +68,8 @@ describe('MealsService', () => {
       name: 'Poulet riz',
       kcal: 650,
       proteinG: 45,
+      carbsG: 80,
+      fatG: 12,
       eatenAt: '2026-08-11T12:00:00.000Z',
     });
   });

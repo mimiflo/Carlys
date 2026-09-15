@@ -26,6 +26,8 @@ function present(meal: MealEntry): MealEntryContract {
     name: meal.name,
     kcal: meal.kcal,
     proteinG: meal.proteinG,
+    carbsG: meal.carbsG,
+    fatG: meal.fatG,
     eatenAt: meal.eatenAt.toISOString(),
   };
 }
@@ -50,6 +52,8 @@ export class MealsService {
       name: string;
       kcal: number;
       proteinG: number | null;
+      carbsG: number | null;
+      fatG: number | null;
       eatenAt: Date;
     },
   ): Promise<MealEntryContract> {

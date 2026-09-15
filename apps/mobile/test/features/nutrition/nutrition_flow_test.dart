@@ -373,4 +373,101 @@ void main() {
     expect(find.byType(DnaHelix), findsOneWidget);
     expect(tester.hasRunningAnimations, isFalse);
   });
+
+  group('journal du jour — les quatre macros', () {
+    // L'hélice ADN du hero tourne en BOUCLE : sans réduction d'animations,
+    // `pumpAndSettle` n'atteint jamais le repos.
+    setUp(() {
+      TestWidgetsFlutterBinding
+              .instance
+              .platformDispatcher
+              .accessibilityFeaturesTestValue =
+          FakeAccessibilityFeatures.allOn;
+    });
+
+    tearDown(() {
+      TestWidgetsFlutterBinding.instance.platformDispatcher
+          .clearAccessibilityFeaturesTestValue();
+    });
+
+    FakeNutritionRepository profilComplet() => FakeNutritionRepository(
+      weightKg: 80,
+      sex: BiologicalSex.male,
+      birthDate: DateTime.utc(1996, 3, 12),
+      heightCm: 180,
+      activityLevel: ActivityLevel.moderate,
+      goal: NutritionGoal.maintain,
+    );
+
+    /// Les champs DE LA FEUILLE, dans l'ordre : repas, kcal, protéines,
+    /// glucides, lipides.
+    Finder champsFeuille() => find.descendant(
+      of: find.byType(BottomSheet),
+      matching: find.byType(TextFormField),
+    );
+
+    Future<void> ouvrirLaFeuille(
+      WidgetTester tester,
+      FakeNutritionRepository nutrition,
+    ) async {
+      await tester.pumpWidget(appWith(nutrition));
+      await openNutritionTab(tester);
+      await reveal(tester, find.text('Journal du jour'));
+      await tester.tap(find.text('Ajouter un repas'));
+      await tester.pumpAndSettle();
+    }
+
+    testWidgets('les trois macros se saisissent, et l’absence reste absente', (
+      tester,
+    ) async {
+      // L'écran affiche quatre macros CIBLES et n'en journalisait que deux :
+      // sur les deux tiers de ce qu'il montrait, la comparaison consommé /
+      // objectif n'était pas possible.
+      final nutrition = profilComplet();
+      await ouvrirLaFeuille(tester, nutrition);
+
+      final champs = champsFeuille();
+      expect(champs, findsNWidgets(5));
+      await tester.enterText(champs.at(0), 'Riz complet');
+      await tester.enterText(champs.at(1), '650');
+      // Protéines et lipides restent VIDES : « on ne sait pas », pas zéro.
+      await tester.enterText(champs.at(3), '80');
+      await tester.tap(find.text('Ajouter au journal'));
+      await tester.pumpAndSettle();
+
+      final ajoute = nutrition.meals.single;
+      expect(ajoute.carbsG, 80);
+      expect(
+        ajoute.proteinG,
+        isNull,
+        reason: 'Un champ vide ne vaut pas zéro : le serveur les distingue.',
+      );
+      expect(ajoute.fatG, isNull);
+
+      // Et la ligne du journal ne parle que de ce qu'elle sait.
+      await reveal(tester, find.text('Riz complet'));
+      expect(find.textContaining('80 g de glucides'), findsOneWidget);
+      expect(find.textContaining('g de protéines'), findsNothing);
+      expect(find.textContaining('g de lipides'), findsNothing);
+    });
+
+    testWidgets('une macro hors bornes est refusée, pas tronquée', (
+      tester,
+    ) async {
+      final nutrition = profilComplet();
+      await ouvrirLaFeuille(tester, nutrition);
+
+      final champs = champsFeuille();
+      await tester.enterText(champs.at(0), 'Riz complet');
+      await tester.enterText(champs.at(1), '650');
+      await tester.enterText(champs.at(4), '2000');
+      await tester.tap(find.text('Ajouter au journal'));
+      await tester.pumpAndSettle();
+
+      // Les bornes sont celles du contrat serveur : mieux vaut les dire ici
+      // qu'encaisser un 400 après coup.
+      expect(find.text('Entre 0 et 1 000.'), findsOneWidget);
+      expect(nutrition.meals, isEmpty);
+    });
+  });
 }

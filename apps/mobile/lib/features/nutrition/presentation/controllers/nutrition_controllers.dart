@@ -74,6 +74,8 @@ class NutritionActions {
     required String name,
     required int kcal,
     int? proteinG,
+    int? carbsG,
+    int? fatG,
   }) async {
     await _repository.addMeal(
       MealEntry(
@@ -81,6 +83,8 @@ class NutritionActions {
         name: name,
         kcal: kcal,
         proteinG: proteinG,
+        carbsG: carbsG,
+        fatG: fatG,
         eatenAt: DateTime.now().toUtc(),
       ),
     );

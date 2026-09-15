@@ -153,7 +153,10 @@ describe('Nutrition (e2e)', () => {
       id: mealId,
       name: 'Poulet riz',
       kcal: 650,
+      // Les trois macros sont INDÉPENDANTES : ici les lipides ne sont pas
+      // connus, et l'entrée doit passer quand même.
       proteinG: 45,
+      carbsG: 80,
       eatenAt: noon.toISOString(),
     };
 
@@ -167,6 +170,10 @@ describe('Nutrition (e2e)', () => {
     );
     expect(meals).toHaveLength(1);
     expect(meals[0]?.kcal).toBe(650);
+    expect(meals[0]?.carbsG).toBe(80);
+    // `null`, jamais 0 : l'absence d'une macro se distingue d'un zéro, sinon
+    // l'écran afficherait « 0 g de lipides » pour « on ne sait pas ».
+    expect(meals[0]?.fatG).toBeNull();
 
     // Hors fenêtre : la même liste, interrogée sur la veille, est vide.
     const previousWindow = `from=${new Date(dayStart.getTime() - 24 * 3_600_000).toISOString()}&to=${dayStart.toISOString()}`;
@@ -189,5 +196,20 @@ describe('Nutrition (e2e)', () => {
       .post('/api/v1/nutrition/meals')
       .send({ id: randomUUID(), name: 'Rien', kcal: 0, eatenAt: new Date().toISOString() })
       .expect(400);
+  });
+
+  it('refuse une macro hors bornes, sans la tronquer en silence', async () => {
+    for (const macro of ['proteinG', 'carbsG', 'fatG']) {
+      await authed()
+        .post('/api/v1/nutrition/meals')
+        .send({
+          id: randomUUID(),
+          name: 'Absurde',
+          kcal: 650,
+          [macro]: 2_000,
+          eatenAt: new Date().toISOString(),
+        })
+        .expect(400);
+    }
   });
 });

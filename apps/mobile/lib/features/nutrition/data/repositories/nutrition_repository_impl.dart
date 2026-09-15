@@ -79,6 +79,8 @@ class NutritionRepositoryImpl implements NutritionRepository {
           'name': meal.name,
           'kcal': meal.kcal,
           if (meal.proteinG != null) 'proteinG': meal.proteinG,
+          if (meal.carbsG != null) 'carbsG': meal.carbsG,
+          if (meal.fatG != null) 'fatG': meal.fatG,
           'eatenAt': meal.eatenAt.toUtc().toIso8601String(),
         },
       );
@@ -100,6 +102,8 @@ class NutritionRepositoryImpl implements NutritionRepository {
       name: row['name'] as String,
       kcal: (row['kcal'] as num).toInt(),
       proteinG: (row['proteinG'] as num?)?.toInt(),
+      carbsG: (row['carbsG'] as num?)?.toInt(),
+      fatG: (row['fatG'] as num?)?.toInt(),
       eatenAt: DateTime.parse(row['eatenAt'] as String),
     );
   }

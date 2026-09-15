@@ -26,7 +26,17 @@ Règles :
   jour local, quel que soit le fuseau.
 - **Mêmes garanties que les séances** : id client (rejouable), suppression
   douce idempotente, 404 indiscernable pour la donnée d'autrui.
-- Un repas porte `name`, `kcal` (1 à 10 000) et `proteinG` facultatif.
+- Un repas porte `name`, `kcal` (1 à 10 000) et **les trois macros**,
+  `proteinG`, `carbsG` et `fatG`, toutes facultatives (0 à 1 000) et
+  **indépendantes**. `null` veut dire « on ne sait pas », jamais « zéro » :
+  l'écran doit pouvoir faire la différence, sinon une macro inconnue
+  s'afficherait « 0 g ».
+
+  L'écran montrait quatre macros CIBLES et n'en journalisait que deux : sur
+  les deux tiers de ce qu'il affichait, la comparaison consommé / objectif
+  était impossible. Les colonnes sont nullables et sans valeur par défaut
+  (migration `20260915170000_meal_macros`) — poser un 0 aux entrées déjà
+  enregistrées les aurait fait mentir.
 
 ## Hydratation — la seule mesure qui reste sur l'appareil
 
@@ -115,8 +125,10 @@ commentaires TypeScript dans `metabolism.calculator.ts`, c'est-à-dire là où
 personne ne les lira jamais.
 
 Elles sont désormais du **contenu**, dans
-`apps/mobile/lib/features/nutrition/domain/metric_explanation.dart` : neuf
-entrées, chacune en trois blocs, toujours dans le même ordre.
+`apps/mobile/lib/features/nutrition/domain/nutrition_explanations.dart` : neuf
+entrées, chacune en trois blocs, toujours dans le même ordre. Le gabarit
+(`Explanation`) et la feuille qui l'ouvre vivent dans `core/explanations/`,
+parce que la progression s'en sert aussi pour expliquer ses titres.
 
 | Bloc | Ce qu'il porte |
 | --- | --- |
@@ -151,7 +163,7 @@ pourquoi » vaut mieux qu'afficher un chiffre faux.
 
 ### La garde : une explication qui ment est pire que pas d'explication
 
-`metric_explanation_test.dart` **lit le calculateur du serveur** et vérifie
+`nutrition_explanations_test.dart` **lit le calculateur du serveur** et vérifie
 que chaque nombre cité est celui qu'il applique : facteurs d'activité,
 coefficients de Mifflin-St Jeor, ajustements par objectif, grammes de
 protéines par kilo, part des lipides, millilitres d'eau par kilo, seuils
@@ -204,9 +216,9 @@ oubliée dans `toutes`, qui échapperait sinon à tous les autres contrôles.
   recette pour l'objectif remontée sans faire disparaître les autres, part de
   la journée tue sans profil, dépliage ingrédients puis préparation).
 - Pédagogie : couplage explication ↔ calculateur serveur
-  (`metric_explanation_test`, qui lit `metabolism.calculator.ts`), intégrité
+  (`nutrition_explanations_test`, qui lit `metabolism.calculator.ts`), intégrité
   du catalogue (titres uniques, aucune explication oubliée dans `toutes`), et
-  les portes elles-mêmes (`metric_explanation_sheet_test` : chaque tuile,
+  les portes elles-mêmes (`explanation_doors_test` : chaque tuile,
   chaque ligne de macro et chaque bloc du hero ouvre SON explication et
   aucune autre, « J'ai compris » referme, l'annonce au lecteur d'écran donne
   la valeur avant le mot « Explication », et chaque porte dépasse la cible

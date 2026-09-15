@@ -4,15 +4,31 @@ import '../../../../design_system/design_system.dart';
 
 /// Ce que la feuille d'ajout rend : un repas nommé et chiffré.
 class MealDraft {
-  const MealDraft({required this.name, required this.kcal, this.proteinG});
+  const MealDraft({
+    required this.name,
+    required this.kcal,
+    this.proteinG,
+    this.carbsG,
+    this.fatG,
+  });
 
   final String name;
   final int kcal;
+
+  /// Les trois macros, toutes facultatives et INDÉPENDANTES : on peut ne
+  /// connaître que les protéines d'un plat, et `null` veut alors dire « on
+  /// ne sait pas », pas « zéro ».
   final int? proteinG;
+  final int? carbsG;
+  final int? fatG;
 }
 
-/// Feuille « Ajouter un repas » : nom, calories, protéines (facultatif).
-/// Rend `null` si la personne renonce.
+/// Feuille « Ajouter un repas » : nom, calories, et les trois macros, toutes
+/// facultatives. Rend `null` si la personne renonce.
+///
+/// L'écran affiche quatre macros CIBLES et n'en journalisait que deux : sur
+/// les deux tiers de ce qu'il montrait, la comparaison consommé / objectif
+/// n'était pas possible.
 Future<MealDraft?> showAddMealSheet(BuildContext context) {
   return showAppSheet<MealDraft>(context, builder: (_) => const _AddMealForm());
 }
@@ -28,6 +44,8 @@ class _AddMealFormState extends State<_AddMealForm> {
   final _name = TextEditingController();
   final _kcal = TextEditingController();
   final _protein = TextEditingController();
+  final _carbs = TextEditingController();
+  final _fat = TextEditingController();
   final _formKey = GlobalKey<FormState>();
 
   @override
@@ -35,6 +53,8 @@ class _AddMealFormState extends State<_AddMealForm> {
     _name.dispose();
     _kcal.dispose();
     _protein.dispose();
+    _carbs.dispose();
+    _fat.dispose();
     super.dispose();
   }
 
@@ -47,6 +67,8 @@ class _AddMealFormState extends State<_AddMealForm> {
         name: _name.text.trim(),
         kcal: int.parse(_kcal.text.trim()),
         proteinG: int.tryParse(_protein.text.trim()),
+        carbsG: int.tryParse(_carbs.text.trim()),
+        fatG: int.tryParse(_fat.text.trim()),
       ),
     );
   }
@@ -98,24 +120,26 @@ class _AddMealFormState extends State<_AddMealForm> {
                 ),
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
-                  child: AppTextField(
+                  child: _MacroField(
                     label: 'Protéines (g)',
                     controller: _protein,
-                    hint: 'facultatif',
-                    keyboardType: TextInputType.number,
-                    textInputAction: TextInputAction.done,
-                    validator: (value) {
-                      final raw = value?.trim() ?? '';
-                      if (raw.isEmpty) {
-                        return null;
-                      }
-                      final grams = int.tryParse(raw);
-                      if (grams == null || grams < 0 || grams > 1000) {
-                        return 'Entre 0 et 1 000.';
-                      }
-                      return null;
-                    },
-                    onFieldSubmitted: (_) => _submit(),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: _MacroField(label: 'Glucides (g)', controller: _carbs),
+                ),
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: _MacroField(
+                    label: 'Lipides (g)',
+                    controller: _fat,
+                    onSubmitted: _submit,
                   ),
                 ),
               ],
@@ -129,6 +153,57 @@ class _AddMealFormState extends State<_AddMealForm> {
           ],
         ),
       ),
+    );
+  }
+}
+
+/// Un champ de macro : même libellé facultatif, mêmes bornes, même message.
+///
+/// Extrait parce qu'il y en a TROIS : recopier le validateur trois fois, ce
+/// serait trois endroits où corriger une borne, et deux occasions d'oublier.
+class _MacroField extends StatelessWidget {
+  const _MacroField({
+    required this.label,
+    required this.controller,
+    this.onSubmitted,
+  });
+
+  final String label;
+  final TextEditingController controller;
+
+  /// Fourni sur le DERNIER champ seulement : la touche de validation du
+  /// clavier y enregistre au lieu de passer au champ suivant.
+  final VoidCallback? onSubmitted;
+
+  /// Bornes du contrat serveur (`@Min(0) @Max(1_000)`), en un seul endroit.
+  static const int maxGrams = 1000;
+
+  @override
+  Widget build(BuildContext context) {
+    final valider = onSubmitted;
+
+    return AppTextField(
+      label: label,
+      controller: controller,
+      hint: 'facultatif',
+      keyboardType: TextInputType.number,
+      textInputAction: valider == null
+          ? TextInputAction.next
+          : TextInputAction.done,
+      validator: (value) {
+        final raw = value?.trim() ?? '';
+        // Vide n'est PAS zéro : c'est « on ne sait pas », et le serveur
+        // accepte l'absence.
+        if (raw.isEmpty) {
+          return null;
+        }
+        final grams = int.tryParse(raw);
+        if (grams == null || grams < 0 || grams > maxGrams) {
+          return 'Entre 0 et ${maxGrams ~/ 1000} 000.';
+        }
+        return null;
+      },
+      onFieldSubmitted: valider == null ? null : (_) => valider(),
     );
   }
 }

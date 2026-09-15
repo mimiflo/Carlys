@@ -13,6 +13,8 @@ export class MealsRepository {
     name: string;
     kcal: number;
     proteinG: number | null;
+    carbsG: number | null;
+    fatG: number | null;
     eatenAt: Date;
   }): Promise<void> {
     try {

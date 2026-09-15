@@ -35,6 +35,8 @@ class MealJournalSection extends ConsumerWidget {
             name: draft.name,
             kcal: draft.kcal,
             proteinG: draft.proteinG,
+            carbsG: draft.carbsG,
+            fatG: draft.fatG,
           );
       return null;
     }, scope: 'MealJournal');
@@ -119,7 +121,13 @@ class _MealTile extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final protein = meal.proteinG;
+    // Une macro inconnue ne s'écrit PAS « 0 g » : elle ne s'écrit pas du
+    // tout. Le serveur distingue l'absence du zéro, l'écran aussi.
+    final macros = [
+      if (meal.proteinG != null) '${meal.proteinG} g de protéines',
+      if (meal.carbsG != null) '${meal.carbsG} g de glucides',
+      if (meal.fatG != null) '${meal.fatG} g de lipides',
+    ];
 
     return AppCard(
       child: Row(
@@ -135,8 +143,7 @@ class _MealTile extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  '${formatThousands(meal.kcal)} kcal'
-                  '${protein == null ? '' : ' · $protein g de protéines'}',
+                  ['${formatThousands(meal.kcal)} kcal', ...macros].join(' · '),
                   style: AppTypography.label.copyWith(
                     color: AppColors.darkTextTertiary,
                   ),

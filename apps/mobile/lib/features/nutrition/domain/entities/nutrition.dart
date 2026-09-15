@@ -206,12 +206,21 @@ class MealEntry {
     required this.kcal,
     required this.eatenAt,
     this.proteinG,
+    this.carbsG,
+    this.fatG,
   });
 
   final String id;
   final String name;
   final int kcal;
+
+  /// Les trois macros, toutes facultatives et INDÉPENDANTES : `null` veut
+  /// dire « on ne sait pas », jamais « zéro ». L'écran affiche quatre macros
+  /// CIBLES et n'en journalisait que deux — la comparaison consommé /
+  /// objectif était impossible sur les deux tiers de ce qu'il montrait.
   final int? proteinG;
+  final int? carbsG;
+  final int? fatG;
 
   /// Instant de consommation, UTC — l'affichage est localisé.
   final DateTime eatenAt;

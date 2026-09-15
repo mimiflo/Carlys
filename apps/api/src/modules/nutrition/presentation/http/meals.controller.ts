@@ -31,6 +31,8 @@ export class MealsController {
       name: dto.name,
       kcal: dto.kcal,
       proteinG: dto.proteinG ?? null,
+      carbsG: dto.carbsG ?? null,
+      fatG: dto.fatG ?? null,
       eatenAt: dto.eatenAt,
     });
   }

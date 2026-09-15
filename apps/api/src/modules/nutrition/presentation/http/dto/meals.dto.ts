@@ -36,6 +36,20 @@ export class CreateMealDto {
   @Max(1_000)
   proteinG?: number;
 
+  @ApiPropertyOptional({ minimum: 0, maximum: 1000 })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(1_000)
+  carbsG?: number;
+
+  @ApiPropertyOptional({ minimum: 0, maximum: 1000 })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(1_000)
+  fatG?: number;
+
   @ApiProperty({ description: 'Instant de consommation, UTC (ISO 8601)' })
   @Type(() => Date)
   @IsDate()

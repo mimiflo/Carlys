@@ -290,29 +290,47 @@ stocke **jamais** le binaire.
 
 ---
 
-## Programmes — Étape 4
+## Programmes — livré
 
 Structures **prescriptives** (ce qui est prévu), distinctes des séances
-**réalisées**. Un programme peut être officiel (owner null, géré à l'Étape 7
-par l'admin) ou personnel.
+**réalisées**.
 
-### `TrainingProgram`
-Programme d'entraînement sur plusieurs semaines.
-- Champs clés : `id`, `ownerId` nullable, `name`, `goal`, `level`,
-  `weekCount`, `isPublished` (programmes officiels), `deletedAt`.
-- Relations : 1–n `ProgramWeek` ; n–1 `User` (optionnelle).
+> **Ce qui était décrit ici ne l'a jamais été livré.** Trois modèles étaient
+> annoncés — `TrainingProgram`, `ProgramWeek`, `ProgramDay` — avec un champ
+> `goal`, un `level`, un `ownerId` nullable et des semaines réifiées. La
+> migration `20260809170000_programs` en a livré DEUX, sans aucun de ces
+> champs. Qui codait d'après cette page construisait à côté du réel ; elle
+> décrit maintenant ce qui existe.
 
-### `ProgramWeek`
-Semaine ordonnée d'un programme.
-- Champs clés : `programId`, `position`. Unique `(programId, position)`.
-- Relations : n–1 `TrainingProgram` ; 1–n `ProgramDay`.
+### `Program`
+Un plan sur plusieurs semaines, propre à un utilisateur.
+- Champs clés : `id` (fourni par le client), `userId` **non nul**, `name`,
+  `description` nullable, `weeksCount` (1 à 52), `isActive`, `deletedAt`.
+- `isActive` : **un seul programme suivi à la fois**. PostgreSQL ne peut pas
+  l'exprimer ici — il faudrait un index unique PARTIEL, hors du vocabulaire
+  Prisma — c'est donc le service qui l'impose, en désactivant les autres dans
+  la même transaction.
+- Relations : n–1 `User` (obligatoire) ; 1–n `ProgramDay`.
+- Index : `[userId, updatedAt desc]`.
 
 ### `ProgramDay`
-Jour d'une semaine : repos, ou renvoi vers un modèle de séance.
-- Champs clés : `weekId`, `position`, `isRestDay`, `workoutTemplateId`
-  nullable. Unique `(weekId, position)` ; `CHECK` : jour de repos ⇔ pas de
-  template.
-- Relations : n–1 `ProgramWeek` ; n–1 `WorkoutTemplate` (optionnelle).
+Une case du calendrier : semaine N, jour J. **Il n'y a pas de `ProgramWeek`** :
+la semaine est un simple entier porté par le jour.
+- Champs clés : `programId`, `weekNumber` (1 à `weeksCount`), `dayOfWeek`
+  (1 lundi à 7 dimanche), `templateId` nullable, `label`, `isRest`.
+- `label` : nom du modèle figé à l'enregistrement, ou texte libre (« Repos »,
+  « Course »). Il garde un sens même sans modèle.
+- `templateId` en `SetNull` : supprimer un modèle vide la case, il ne fait
+  jamais disparaître le programme.
+- Unique `(programId, weekNumber, dayOfWeek)`.
+
+**Ce que ce schéma NE permet PAS, et qu'il faudra trancher.** `dayOfWeek` est
+une colonne du programme, verrouillée par cette contrainte d'unicité : la
+prescription (« ce jour-là, ce modèle ») et le PLACEMENT dans le calendrier
+sont donc le même objet. Un programme n'a par ailleurs aucune date de début,
+ce qui rend un plan daté — préparation Hyrox, plan marathon — impossible à
+exprimer. Les séparer suppose une migration de données sur une table déjà
+déployée, donc une décision, pas seulement du code.
 
 ### `WorkoutTemplate` — implémenté
 

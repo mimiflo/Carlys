@@ -48,9 +48,10 @@ Il est **imposé** : ces mots-là, partout, dans le code comme dans l'interface.
 | **Déviation**          | —                            | Écart entre le prévu et le réalisé — **normal, jamais une erreur** |
 
 Le mot « programme » reste réservé aux structures **multi-semaines**
-(`TrainingProgram`, `ProgramWeek`, `ProgramDay` de
-[`docs/database/schema.md`](../database/schema.md)) — hors périmètre ici, voir
-[§8, D9](#d9--programmes-multi-semaines--hors-périmètre).
+(`Program` et `ProgramDay` de
+[`docs/database/schema.md`](../database/schema.md)). Elles étaient hors
+périmètre de CE document et ont été livrées depuis, par la migration
+`20260809170000_programs` — voir [§8, D9](#d9--programmes-multi-semaines--livrés-depuis).
 
 ---
 
@@ -1087,13 +1088,17 @@ Même raisonnement pour `supersetGroup`, `targetRpe`, `tempo` et
 [`docs/database/schema.md`](../database/schema.md) : **hors périmètre**,
 ajoutables plus tard en colonnes nullables sans toucher au contrat.
 
-### D9 — Programmes multi-semaines : hors périmètre
+### D9 — Programmes multi-semaines : livrés depuis
 
-`TrainingProgram`, `ProgramWeek`, `ProgramDay` ne sont pas livrés ici. Le
-modèle de séance est **autonome** — c'est d'ailleurs ce que la cible prévoit
-(« réutilisable, seul ou au sein d'un programme »). Le jour venu,
-`ProgramDay.workoutTemplateId` pointera vers `WorkoutTemplate` sans rien
-changer à ce contrat.
+Ils n'étaient pas livrés par CETTE tranche, et ce paragraphe disait encore
+qu'ils ne l'étaient nulle part. C'est faux depuis la migration
+`20260809170000_programs` : `Program` et `ProgramDay` existent, et
+`ProgramDay.templateId` pointe bien vers `WorkoutTemplate`, sans que ce
+contrat ait eu à changer — ce que la décision annonçait.
+
+Deux écarts avec ce qui était prévu, à connaître avant d'y toucher : il n'y a
+PAS de `ProgramWeek` (la semaine est un entier porté par le jour), et le champ
+s'appelle `templateId`, pas `workoutTemplateId`.
 
 ### D10 — Le modèle appartient à un utilisateur
 
@@ -1174,8 +1179,8 @@ contrats partagés. Il se livre **en premier**, avant tout le reste.
   ajouter `template.save` / `template.delete` / `plan.skip` aux opérations, et
   décrire le rapatriement des séances (D5 révisée).
 - [`docs/product/product-scope.md`](./product-scope.md) — ligne « Création de
-  programme » : préciser ce qui est livré (modèles de séance) et ce qui reste
-  cible (programmes multi-semaines).
+  programme » : FAIT, elle décrit bien les programmes personnels livrés
+  (semaines, jours, modèles de séances).
 - [`apps/mobile/lib/features/README.md`](../../apps/mobile/lib/features/README.md) —
   déclarer la fonctionnalité `workout_template` et sa dépendance à
   `workout_session`.
@@ -1185,7 +1190,7 @@ contrats partagés. Il se livre **en premier**, avant tout le reste.
 ## 12. Explicitement hors périmètre
 
 Dupliquer un modèle · partager ou exporter un modèle · modèles officiels
-publiés par l'administration · programmes multi-semaines (D9) · supersets et
+publiés par l'administration · supersets et
 circuits · cibles de durée, distance, RPE, tempo, % de 1RM (D8) · suggestion
 automatique de charge · quota Premium actif (D11) · récupération d'un plan de
 séance entre appareils (D5).

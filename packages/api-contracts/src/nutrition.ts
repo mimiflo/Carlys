@@ -77,7 +77,14 @@ export const mealEntrySchema = z.object({
   id: z.string(),
   name: z.string(),
   kcal: z.number(),
+  /**
+   * Les trois macros, toutes facultatives et INDÉPENDANTES : `null` veut
+   * dire « on ne sait pas », jamais « zéro ». L'écran affiche quatre macros
+   * cibles ; il doit pouvoir dire lesquelles il sait comparer.
+   */
   proteinG: z.number().nullable(),
+  carbsG: z.number().nullable(),
+  fatG: z.number().nullable(),
   /** Instant UTC (ISO 8601) — le découpage en journées appartient au client. */
   eatenAt: z.string(),
 });
