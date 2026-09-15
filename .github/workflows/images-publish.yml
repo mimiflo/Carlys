@@ -248,7 +248,7 @@ jobs:
           fi
 
       - name: Image API — exécution
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: .
           file: apps/api/Dockerfile
@@ -264,7 +264,7 @@ jobs:
           provenance: false
 
       - name: Image API — migrations
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: .
           file: apps/api/Dockerfile
@@ -295,7 +295,7 @@ jobs:
       # par images-publish-prod.yml, garde armée : c'est là que le tag `-prod`
       # se gagne, et nulle part ailleurs.
       - name: Image admin — recette (garde légale desserrée)
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        uses: docker/build-push-action@53b7df96c91f9c12dcc8a07bcb9ccacbed38856a # v7.3.0
         with:
           context: .
           file: apps/admin/Dockerfile
