@@ -14,6 +14,8 @@ export 'components/app_card.dart';
 export 'components/app_difficulty_dashes.dart';
 export 'components/app_empty_state.dart';
 export 'components/app_error_state.dart';
+export 'components/app_explain_button.dart';
+export 'components/app_explainable.dart';
 export 'components/app_fitted_text.dart';
 export 'components/app_form_ring.dart';
 export 'components/app_gauge.dart';

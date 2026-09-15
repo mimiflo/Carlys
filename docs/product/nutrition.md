@@ -106,6 +106,65 @@ anatomiques de l'Academy — exiger une photo par recette reviendrait à bloquer
 l'écriture derrière la production d'images, ou à recycler des visuels sans
 rapport avec l'assiette.
 
+## Le POURQUOI de chaque chiffre
+
+« Carlys ne dit jamais seulement quoi faire, il explique toujours pourquoi. »
+L'écran annonçait « IMC 27,3 » puis « Surpoids », et s'arrêtait là : un
+verdict, pas une explication. Les raisons existaient pourtant déjà — en
+commentaires TypeScript dans `metabolism.calculator.ts`, c'est-à-dire là où
+personne ne les lira jamais.
+
+Elles sont désormais du **contenu**, dans
+`apps/mobile/lib/features/nutrition/domain/metric_explanation.dart` : neuf
+entrées, chacune en trois blocs, toujours dans le même ordre.
+
+| Bloc | Ce qu'il porte |
+| --- | --- |
+| **Ce que c'est** | Une phrase, sans jargon. |
+| **D'où ça sort** | Le calcul RÉEL, avec ses nombres — pas une paraphrase. |
+| **Ce que ça ne dit pas** | Les limites. Facultatif, souvent le plus utile. |
+
+### Où sont les portes
+
+Le glyphe d'information marque la donnée ; **c'est la donnée entière qui
+répond au doigt**, pas le glyphe. Poser un bouton de 48 points sur une tuile
+recouvrirait la valeur et créerait deux cibles concurrentes pour une seule
+intention. D'où deux composants, et la règle qui les départage :
+
+- `AppExplainable` — enveloppe une donnée affichée : tuile d'IMC ou
+  d'hydratation (`AppStatTile.onExplain`), ligne de macro, dépense totale et
+  métabolisme de base du hero.
+- `AppExplainButton` — quand le glyphe EST le bouton. Un seul emploi : les
+  libellés « Niveau d'activité » et « Mon plan nutrition » du formulaire de
+  profil, qui n'ont rien à ouvrir par eux-mêmes. C'est aussi là que le
+  pourquoi compte le plus : ce sont les deux **seules** entrées libres, et
+  elles déplacent tous les chiffres de l'écran.
+
+### La donnée ABSENTE a sa porte, elle aussi
+
+La masse grasse et la masse musculaire ne sont ni calculées ni estimées :
+aucune des deux ne se déduit du poids et de la taille, et les formules qui
+prétendent le contraire partent de l'IMC — elles se trompent donc surtout
+chez les gens qui s'entraînent, c'est-à-dire ici. Une pastille « Et ma masse
+grasse ? » le dit, avec la raison. Répondre « nous ne le mesurons pas, voici
+pourquoi » vaut mieux qu'afficher un chiffre faux.
+
+### La garde : une explication qui ment est pire que pas d'explication
+
+`metric_explanation_test.dart` **lit le calculateur du serveur** et vérifie
+que chaque nombre cité est celui qu'il applique : facteurs d'activité,
+coefficients de Mifflin-St Jeor, ajustements par objectif, grammes de
+protéines par kilo, part des lipides, millilitres d'eau par kilo, seuils
+d'IMC. Changer `FAT_RATIO` ou un facteur d'activité côté API fait tomber un
+test **côté mobile**, en nommant le chiffre qui a bougé.
+
+Deux détails du test méritent d'être connus avant d'y toucher : la part des
+lipides s'écrit en toutes lettres (« un quart »), donc une table dit comment
+chaque valeur se lit — une valeur absente échoue exprès, pour qu'on écrive la
+formulation au lieu de la deviner ; et le catalogue est aussi relu comme un
+TEXTE, seul moyen sans réflexion de repérer une explication déclarée mais
+oubliée dans `toutes`, qui échapperait sinon à tous les autres contrôles.
+
 ## Mobile
 
 - Écran Nutrition : section « Journal du jour » (liste, total en en-tête
@@ -144,6 +203,14 @@ rapport avec l'assiette.
   cible) ; écran (bascule des volets, partage sucré/salé absent sur les repas,
   recette pour l'objectif remontée sans faire disparaître les autres, part de
   la journée tue sans profil, dépliage ingrédients puis préparation).
+- Pédagogie : couplage explication ↔ calculateur serveur
+  (`metric_explanation_test`, qui lit `metabolism.calculator.ts`), intégrité
+  du catalogue (titres uniques, aucune explication oubliée dans `toutes`), et
+  les portes elles-mêmes (`metric_explanation_sheet_test` : chaque tuile,
+  chaque ligne de macro et chaque bloc du hero ouvre SON explication et
+  aucune autre, « J'ai compris » referme, l'annonce au lecteur d'écran donne
+  la valeur avant le mot « Explication », et chaque porte dépasse la cible
+  tactile).
 - Hydratation : migration 3 → 4 non destructive (`app_database_migration_test`),
   lecture du compteur sur l'accueil, feuille ouverte au tapotement de la
   cellule et écriture réellement enregistrée dans le magasin.

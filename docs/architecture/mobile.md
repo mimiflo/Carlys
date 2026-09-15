@@ -281,6 +281,17 @@ trois tailles, état de chargement anti-double-soumission, `isExpanded`,
 `Semantics` intégré), `AppLoadingIndicator` (libellé accessible),
 `AppErrorState` (icône, titre, message, réessai), `AppEmptyState`.
 
+**Portes d'explication** : deux composants, et une règle qui les départage.
+`AppExplainable` enveloppe une donnée AFFICHÉE — c'est la donnée entière qui
+répond au doigt, le glyphe d'information n'étant qu'un ornement posé à côté de
+son libellé (`AppStatTile.onExplain` en est le cas emballé). `AppExplainButton`
+sert quand le glyphe EST le bouton : un libellé de champ, par exemple, qui n'a
+rien à ouvrir par lui-même. Dès que la donnée dépasse déjà la cible tactile
+minimale, poser dessus un bouton de 48 points recouvrirait la valeur et
+créerait **deux cibles concurrentes pour une seule intention** — le doigt ne
+sait plus où viser, et le lecteur d'écran annonce deux fois la même chose.
+Aucun des deux ne connaît de contenu : ce qui s'ouvre est du domaine.
+
 **Feuilles modales** : toute feuille passe par `showAppSheet`
 (`design_system/components/app_sheet.dart`) — jamais `showModalBottomSheet`
 directement. Le composant garantit ce que chaque feuille réinventait ou

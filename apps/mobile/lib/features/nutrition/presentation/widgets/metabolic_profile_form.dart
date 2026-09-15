@@ -7,7 +7,9 @@ import '../../../../core/errors/app_exception.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/nutrition.dart';
 import '../../domain/height_cm.dart';
+import '../../domain/metric_explanation.dart';
 import '../controllers/nutrition_controllers.dart';
+import 'explained_field_label.dart';
 
 /// Formulaire du profil métabolique (sexe, naissance, taille, activité, but).
 /// Le poids n'est PAS saisi ici : il provient des mesures corporelles.
@@ -144,7 +146,10 @@ class _MetabolicProfileFormState extends ConsumerState<MetabolicProfileForm> {
             validator: HeightCm.validationError,
           ),
           const SizedBox(height: AppSpacing.md),
-          Text('Niveau d’activité', style: theme.textTheme.labelLarge),
+          const ExplainedFieldLabel(
+            label: 'Niveau d’activité',
+            explication: MetricExplanations.depenseEnergetique,
+          ),
           const SizedBox(height: AppSpacing.xxs),
           DropdownButtonFormField<ActivityLevel>(
             initialValue: _activityLevel,
@@ -163,7 +168,10 @@ class _MetabolicProfileFormState extends ConsumerState<MetabolicProfileForm> {
             onChanged: (value) => setState(() => _activityLevel = value),
           ),
           const SizedBox(height: AppSpacing.md),
-          Text('Mon plan nutrition', style: theme.textTheme.labelLarge),
+          const ExplainedFieldLabel(
+            label: 'Mon plan nutrition',
+            explication: MetricExplanations.caloriesCibles,
+          ),
           const SizedBox(height: AppSpacing.xxs),
           DropdownButtonFormField<NutritionGoal>(
             initialValue: _goal,

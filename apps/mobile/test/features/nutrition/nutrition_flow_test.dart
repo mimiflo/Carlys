@@ -58,9 +58,23 @@ Widget screenWith(FakeNutritionRepository nutrition) => ProviderScope(
   child: MaterialApp(theme: AppTheme.dark(), home: const NutritionScreen()),
 );
 
-/// Rend visible un élément de l'écran courant (dernier Scrollable de la pile).
+/// Rend visible un élément de l'écran courant.
+///
+/// Le Scrollable visé est le dernier qui défile VERTICALEMENT. Le filtre n'est
+/// pas cosmétique : dès qu'un `TextField` est à l'écran, il pose son propre
+/// Scrollable HORIZONTAL (`restorationId: "editable"`) et c'est lui que
+/// `find.byType(Scrollable).last` ramenait. Le glissement vertical n'y
+/// mordait pas, `scrollUntilVisible` ne bougeait donc rien, et le test ne
+/// passait que tant que la cible tenait dans le `cacheExtent` de la liste —
+/// il tombait à la première section qui s'allongeait, sans que la page ait le
+/// moindre défaut.
 Future<void> reveal(WidgetTester tester, Finder item) async {
-  final scrollable = find.byType(Scrollable).last;
+  final scrollable = find
+      .byWidgetPredicate(
+        (widget) =>
+            widget is Scrollable && widget.axisDirection == AxisDirection.down,
+      )
+      .last;
   await tester.drag(scrollable, const Offset(0, 2000), warnIfMissed: false);
   await tester.pumpAndSettle();
   await tester.scrollUntilVisible(item, 150, scrollable: scrollable);

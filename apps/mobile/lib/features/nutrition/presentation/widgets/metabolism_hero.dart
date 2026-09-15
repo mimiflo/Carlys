@@ -2,11 +2,11 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
 import '../../../../design_system/scenes/app_scene_container.dart';
 import '../../domain/entities/nutrition.dart';
 import 'dna_helix.dart';
+import 'metabolism_expenditure_row.dart';
 
 /// Hero « métabolisme » (maquette 2g) : hélice ADN plein cadre décalée à
 /// droite, halo violet, dégradés de lisibilité pour la colonne de gauche.
@@ -96,66 +96,12 @@ class MetabolismHero extends StatelessWidget {
                   ),
                   const Spacer(),
                   if (result != null)
-                    _ExpenditureRow(metabolism: result)
+                    MetabolismExpenditureRow(metabolism: result)
                   else
                     _ProfilePrompt(onCompleteProfile: onCompleteProfile),
                 ],
               ),
             ),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-/// Bas du hero : dépense totale à gauche, décomposition MB / activité à droite.
-class _ExpenditureRow extends StatelessWidget {
-  const _ExpenditureRow({required this.metabolism});
-
-  final MetabolismResult metabolism;
-
-  @override
-  Widget build(BuildContext context) {
-    // « 2 759 » — séparateur de milliers commun à toute l'app.
-    final total = formatThousands(metabolism.tdeeKcal);
-    final bmr = formatThousands(metabolism.bmrKcal);
-    // Activité = dépense totale − métabolisme de base : aucune valeur inventée.
-    final activity = formatThousands(metabolism.tdeeKcal - metabolism.bmrKcal);
-
-    return Semantics(
-      label:
-          'Dépense totale $total kilocalories, dont $bmr de métabolisme '
-          'de base et $activity d’activité',
-      excludeSemantics: true,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  total,
-                  style: AppTypography.metricXL.copyWith(
-                    color: AppColors.accent,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                const AppSectionLabel('Kcal / dépense totale'),
-              ],
-            ),
-          ),
-          Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            children: [
-              AppSectionLabel('MB $bmr', color: AppColors.darkTextTertiary),
-              const SizedBox(height: AppSpacing.xxs),
-              AppSectionLabel(
-                'Activité $activity',
-                color: AppColors.darkTextTertiary,
-              ),
-            ],
           ),
         ],
       ),
