@@ -213,6 +213,20 @@ class InMemoryWorkoutTemplateRepository implements WorkoutTemplateRepository {
     required String setId,
   }) async => _replace(planItemId, (item) => _copy(item, doneSetId: setId));
 
+  /// En mémoire, il n'y a rien à rendre atomique : aucune transaction, et rien
+  /// ne peut tuer le processus entre les deux gestes. Le double reproduit donc
+  /// l'EFFET (série écrite, item pointé), pas la garantie — celle-ci se
+  /// vérifie sur l'implémentation Drift, dans son propre test.
+  @override
+  Future<String> recordSetFulfillingPlan({
+    required AddSetInput input,
+    required String planItemId,
+  }) async {
+    final setId = await _workouts.addSet(input);
+    await fulfillPlanItem(planItemId: planItemId, setId: setId);
+    return setId;
+  }
+
   @override
   Future<void> skipPlanItem(String planItemId) async =>
       _replace(planItemId, (item) => _copy(item, skipped: true));

@@ -45,19 +45,24 @@ class RecordPlannedSet {
       exerciseId: input.exerciseId,
     );
 
-    final setId = await _workouts.addSet(
-      planItem == null
-          ? input
-          : input.copyWith(
-              plannedReps: planItem.targetReps,
-              plannedWeightKg: planItem.targetWeightKg,
-              planItemId: planItem.id,
-            ),
-    );
-
-    if (planItem != null) {
-      await _templates.fulfillPlanItem(planItemId: planItem.id, setId: setId);
+    // Série libre : une écriture. Série qui honore une prévision : UNE
+    // écriture elle aussi, côté modèles, qui enchaîne la série et le pointage
+    // de l'item dans la même transaction. Les deux gestes étaient auparavant
+    // deux transactions distinctes, et une application tuée entre elles
+    // laissait la série enregistrée avec la case du plan vide.
+    if (planItem == null) {
+      final setId = await _workouts.addSet(input);
+      return RecordedSet(setId: setId, fulfilled: null);
     }
+
+    final setId = await _templates.recordSetFulfillingPlan(
+      input: input.copyWith(
+        plannedReps: planItem.targetReps,
+        plannedWeightKg: planItem.targetWeightKg,
+        planItemId: planItem.id,
+      ),
+      planItemId: planItem.id,
+    );
     return RecordedSet(setId: setId, fulfilled: planItem);
   }
 }

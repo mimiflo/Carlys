@@ -5,6 +5,7 @@ import '../../../../core/api/api_error_mapper.dart';
 import '../../../../core/api/dio_client.dart';
 import '../../domain/entities/nutrition.dart';
 import '../../domain/repositories/nutrition_repository.dart';
+import '../mappers/metabolism_mappers.dart';
 
 class NutritionRepositoryImpl implements NutritionRepository {
   NutritionRepositoryImpl(this._dio);
@@ -18,43 +19,15 @@ class NutritionRepositoryImpl implements NutritionRepository {
         '/nutrition/metabolism',
       );
       final body = response.data?['data'] as Map<String, dynamic>? ?? const {};
-      final profile = body['profile'] as Map<String, dynamic>? ?? const {};
-      final metabolism = body['metabolism'] as Map<String, dynamic>?;
 
       return MetabolismReport(
-        profile: MetabolicProfile(
-          sex: BiologicalSex.fromApi(profile['sex'] as String?),
-          birthDate: profile['birthDate'] == null
-              ? null
-              : DateTime.parse(profile['birthDate'] as String),
-          ageYears: (profile['ageYears'] as num?)?.toInt(),
-          heightCm: (profile['heightCm'] as num?)?.toDouble(),
-          weightKg: (profile['weightKg'] as num?)?.toDouble(),
-          activityLevel: ActivityLevel.fromApi(
-            profile['activityLevel'] as String?,
-          ),
-          goal: NutritionGoal.fromApi(profile['goal'] as String?),
+        profile: metabolicProfileFromJson(
+          body['profile'] as Map<String, dynamic>? ?? const {},
         ),
-        missing: (body['missing'] as List<dynamic>? ?? const [])
-            .whereType<String>()
-            .map(MetabolismMissingField.fromApi)
-            .whereType<MetabolismMissingField>()
-            .toList(),
-        metabolism: metabolism == null
-            ? null
-            : MetabolismResult(
-                bmi: (metabolism['bmi'] as num).toDouble(),
-                bmiCategory: BmiCategory.fromApi(
-                  metabolism['bmiCategory'] as String,
-                ),
-                bmrKcal: (metabolism['bmrKcal'] as num).toInt(),
-                tdeeKcal: (metabolism['tdeeKcal'] as num).toInt(),
-                targetKcal: (metabolism['targetKcal'] as num).toInt(),
-                proteinG: (metabolism['proteinG'] as num).toInt(),
-                fatG: (metabolism['fatG'] as num).toInt(),
-                carbsG: (metabolism['carbsG'] as num).toInt(),
-                waterMl: (metabolism['waterMl'] as num).toInt(),
-              ),
+        missing: missingFieldsFromJson(body['missing'] as List<dynamic>?),
+        metabolism: metabolismResultFromJson(
+          body['metabolism'] as Map<String, dynamic>?,
+        ),
       );
     });
   }

@@ -99,6 +99,109 @@ class WorkoutSessionWriter {
     );
   }
 
+  /// Écrit une série et enfile `set.upsert`, dans la transaction courante.
+  ///
+  /// Deux appelants : `WorkoutRepositoryImpl.addSet` (série libre) et
+  /// `WorkoutTemplateRepositoryImpl.recordSetFulfillingPlan` (série qui honore
+  /// une prévision du plan). Le second enchaîne, DANS LA MÊME TRANSACTION, le
+  /// pointage de l'item de plan : sans cela, une application tuée entre les
+  /// deux écritures laissait la série enregistrée et la case du plan vide.
+  ///
+  /// La POSITION se compte ici, donc à l'intérieur de la transaction. Elle se
+  /// lisait auparavant avant de l'ouvrir : deux séries validées coup sur coup
+  /// pouvaient lire le même compte et réclamer la même position.
+  Future<void> insertSet({
+    required String id,
+    required AddSetInput input,
+    required DateTime completedAt,
+  }) async {
+    final existing = await (_db.select(
+      _db.localWorkoutSets,
+    )..where((set) => set.sessionId.equals(input.sessionId))).get();
+    final position = existing.length;
+
+    await _db
+        .into(_db.localWorkoutSets)
+        .insert(
+          LocalWorkoutSetsCompanion.insert(
+            id: id,
+            sessionId: input.sessionId,
+            exerciseId: Value(input.exerciseId),
+            exerciseName: input.exerciseName,
+            position: position,
+            kind: Value(input.kind.apiValue),
+            reps: Value(input.reps),
+            weightKg: Value(input.weightKg),
+            restSeconds: Value(input.restSeconds),
+            rpe: Value(input.rpe),
+            plannedReps: Value(input.plannedReps),
+            plannedWeightKg: Value(input.plannedWeightKg),
+            completedAt: completedAt,
+          ),
+        );
+    await enqueue(
+      entityType: 'set',
+      entityId: id,
+      operationType: 'set.upsert',
+      payload: {
+        'sessionId': input.sessionId,
+        'body': <String, dynamic>{
+          'id': id,
+          if (input.exerciseId != null) 'exerciseId': input.exerciseId,
+          'exerciseName': input.exerciseName,
+          'position': position,
+          'kind': input.kind.apiValue,
+          if (input.reps != null) 'reps': input.reps,
+          if (input.weightKg != null) 'weightKg': input.weightKg,
+          if (input.restSeconds != null) 'restSeconds': input.restSeconds,
+          if (input.rpe != null) 'rpe': input.rpe,
+          if (input.plannedReps != null) 'plannedReps': input.plannedReps,
+          if (input.plannedWeightKg != null)
+            'plannedWeightKg': input.plannedWeightKg,
+          // L'appariement au plan voyage AVEC la série : aucune opération
+          // supplémentaire, et l'ordre FIFO garantit que le serveur connaît
+          // déjà le plan (transmis avec la création de la séance).
+          if (input.planItemId != null) 'planItemId': input.planItemId,
+          'completedAt': completedAt.toIso8601String(),
+        },
+      },
+    );
+  }
+
+  /// Clôt la séance et enfile l'opération de clôture, dans la transaction
+  /// courante. La DÉCISION de clore (séance trouvée, encore en cours) et le
+  /// calcul de la durée restent à l'appelant : ici, on écrit.
+  Future<void> closeSession({
+    required String sessionId,
+    required WorkoutStatus to,
+    required String operationType,
+    required DateTime endedAt,
+    required int durationSeconds,
+  }) async {
+    await (_db.update(
+      _db.localWorkoutSessions,
+    )..where((row) => row.id.equals(sessionId))).write(
+      LocalWorkoutSessionsCompanion(
+        status: Value(to.apiValue),
+        endedAt: Value(endedAt),
+        durationSeconds: Value(durationSeconds),
+        syncStatus: const Value('pending'),
+      ),
+    );
+    await enqueue(
+      entityType: 'session',
+      entityId: sessionId,
+      operationType: operationType,
+      payload: {
+        'id': sessionId,
+        'body': {
+          'endedAt': endedAt.toIso8601String(),
+          'durationSeconds': durationSeconds,
+        },
+      },
+    );
+  }
+
   /// Insère une opération dans la file, dans la transaction courante.
   ///
   /// `idempotencyKey = entityId` : l'UUID métier généré sur l'appareil EST la

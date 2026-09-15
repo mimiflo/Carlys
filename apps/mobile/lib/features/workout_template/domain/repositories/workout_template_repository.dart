@@ -1,3 +1,4 @@
+import '../../../workout_session/domain/entities/workout.dart';
 import '../entities/session_plan.dart';
 import '../entities/workout_template.dart';
 
@@ -64,6 +65,21 @@ abstract interface class WorkoutTemplateRepository {
   Future<void> fulfillPlanItem({
     required String planItemId,
     required String setId,
+  });
+
+  /// Écrit la série ET le pointage de l'item de plan en UNE SEULE écriture,
+  /// puis rend l'identifiant de la série.
+  ///
+  /// Les deux gestes étaient deux transactions distinctes : une application
+  /// tuée entre elles — mise à mort par le système pendant le repos entre
+  /// deux séries, ou balayage de l'application — laissait la série
+  /// enregistrée et la case du plan VIDE. Le plan réclamait alors une série
+  /// déjà faite, et la refaire créait un doublon. Le serveur, lui, n'était
+  /// jamais perdu (l'appariement voyage dans la charge utile de la série), et
+  /// un rapatriement finissait par réparer ; mais entre-temps l'écran mentait.
+  Future<String> recordSetFulfillingPlan({
+    required AddSetInput input,
+    required String planItemId,
   });
 
   /// Passe une série prévue. Rien n'est envoyé au serveur.

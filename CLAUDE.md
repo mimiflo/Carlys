@@ -147,12 +147,19 @@ seuil est dépassé — jamais de contournement :
 - **Repository — borner la méthode, pas le fichier.** Un plafond de fichier classe
   ensemble des cas opposés : `community_repository_impl.dart` (287 lignes) est une
   façade Dio de 22 `@override` d'une dizaine de lignes sur un contrat de 93 ;
-  `workout_template_repository_impl.dart` (353) délègue déjà à six collaborateurs
-  extraits ; `workout_repository_impl.dart` (346) est le seul des trois réellement
-  dense — **deux** de ses méthodes dépassent le plafond, `addSet` (59 lignes) et
-  `_closeWorkout` (45). Un seuil à 300 acquitterait le plus risqué des
-  trois dès qu'il tomberait à 299 lignes, et condamnerait les deux autres sans rien
+  `workout_template_repository_impl.dart` (378) délègue déjà à six collaborateurs
+  extraits ; `workout_repository_impl.dart` (305) était le seul des trois
+  réellement dense. Un seuil à 300 acquitterait le plus risqué des trois dès
+  qu'il tomberait à 299 lignes, et condamnerait les deux autres sans rien
   améliorer.
+
+  La règle a fini par payer : les trois méthodes qui la dépassaient ont été
+  extraites là où leur logique se réutilise vraiment — `addSet` (59) et
+  `_closeWorkout` (45) dans `WorkoutSessionWriter`, qui sert désormais les deux
+  chemins d'écriture d'une série ; `metabolismReport` (46) dans
+  `data/mappers/metabolism_mappers.dart`, en fonctions pures. Aucune méthode de
+  repository ne dépasse plus 40 lignes. Un plafond de FICHIER n'aurait rien
+  suggéré de tel.
 - **Contrôleur Riverpod — 250, comme un widget.** Aucun ne dépasse 164 lignes de code
   hors imports, commentaires et lignes vides : `coach_controllers` 249 lignes dont 163
   de code, `dashboard_controllers` 241 dont 164, `auth_controller` 230 dont 116 (36 %
@@ -186,13 +193,13 @@ grep -c 'extends [A-Za-z]*Notifier' \
   apps/mobile/lib/features/*/presentation/controllers/*.dart | grep -v ':1$'
 ```
 
-Ce qu'elles rendaient le 7 septembre 2026, pour donner l'ordre de grandeur —
-**relancer plutôt que croire** : trois méthodes au-dessus de 40 lignes, dans
-deux fichiers (`metabolismReport` 46 dans `nutrition_repository_impl.dart`,
-`addSet` 59 et `_closeWorkout` 45 dans `workout_repository_impl.dart`) ; et,
-sur les 34 fichiers de `controllers/`, un qui porte trois Notifier
-(`account_controllers.dart`) et **vingt et un** qui n'en portent aucun —
-`dashboard_controllers.dart` est l'un d'eux, pas le seul.
+Ce qu'elles rendaient le 15 septembre 2026, pour donner l'ordre de grandeur —
+**relancer plutôt que croire** : plus AUCUNE méthode de repository au-dessus de
+40 lignes (les trois qui restaient ont été extraites) ; et, sur les 36 fichiers
+de `controllers/`, un qui porte trois Notifier (`account_controllers.dart`) et
+**vingt-deux** qui n'en portent aucun — `dashboard_controllers.dart` est l'un
+d'eux, pas le seul. Ce second écart, lui, reste entier : ces fichiers sont des
+providers dérivés à ranger dans `presentation/providers/`.
 
 ## Qualité exigée par fonctionnalité
 

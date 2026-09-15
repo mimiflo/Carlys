@@ -158,59 +158,18 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
   @override
   Future<String> addSet(AddSetInput input) async {
     final id = _uuid.v4();
-    final completedAt = DateTime.now().toUtc();
-    final existing = await (_db.select(
-      _db.localWorkoutSets,
-    )..where((set) => set.sessionId.equals(input.sessionId))).get();
-    final position = existing.length;
-
-    final body = <String, dynamic>{
-      'id': id,
-      if (input.exerciseId != null) 'exerciseId': input.exerciseId,
-      'exerciseName': input.exerciseName,
-      'position': position,
-      'kind': input.kind.apiValue,
-      if (input.reps != null) 'reps': input.reps,
-      if (input.weightKg != null) 'weightKg': input.weightKg,
-      if (input.restSeconds != null) 'restSeconds': input.restSeconds,
-      if (input.rpe != null) 'rpe': input.rpe,
-      if (input.plannedReps != null) 'plannedReps': input.plannedReps,
-      if (input.plannedWeightKg != null)
-        'plannedWeightKg': input.plannedWeightKg,
-      // L'appariement au plan voyage AVEC la série : aucune opération
-      // supplémentaire, et l'ordre FIFO garantit que le serveur connaît déjà
-      // le plan (transmis avec la création de la séance).
-      if (input.planItemId != null) 'planItemId': input.planItemId,
-      'completedAt': completedAt.toIso8601String(),
-    };
-
-    await _db.transaction(() async {
-      await _db
-          .into(_db.localWorkoutSets)
-          .insert(
-            LocalWorkoutSetsCompanion.insert(
-              id: id,
-              sessionId: input.sessionId,
-              exerciseId: Value(input.exerciseId),
-              exerciseName: input.exerciseName,
-              position: position,
-              kind: Value(input.kind.apiValue),
-              reps: Value(input.reps),
-              weightKg: Value(input.weightKg),
-              restSeconds: Value(input.restSeconds),
-              rpe: Value(input.rpe),
-              plannedReps: Value(input.plannedReps),
-              plannedWeightKg: Value(input.plannedWeightKg),
-              completedAt: completedAt,
-            ),
-          );
-      await _writer.enqueue(
-        entityType: 'set',
-        entityId: id,
-        operationType: 'set.upsert',
-        payload: {'sessionId': input.sessionId, 'body': body},
-      );
-    });
+    // Tout le corps vit dans `WorkoutSessionWriter` : la même écriture sert
+    // au chemin « série libre » (ici) et au chemin « série qui honore une
+    // prévision du plan », qui doit l'enchaîner au pointage de l'item DANS LA
+    // MÊME transaction. La dupliquer aurait donné deux versions du format de
+    // la ligne locale et du corps de `set.upsert`.
+    await _db.transaction(
+      () => _writer.insertSet(
+        id: id,
+        input: input,
+        completedAt: DateTime.now().toUtc(),
+      ),
+    );
 
     _poke();
     return id;
@@ -279,30 +238,15 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
         .difference(session.startedAt.toUtc())
         .inSeconds;
 
-    await _db.transaction(() async {
-      await (_db.update(
-        _db.localWorkoutSessions,
-      )..where((row) => row.id.equals(sessionId))).write(
-        LocalWorkoutSessionsCompanion(
-          status: Value(to.apiValue),
-          endedAt: Value(endedAt),
-          durationSeconds: Value(durationSeconds),
-          syncStatus: const Value('pending'),
-        ),
-      );
-      await _writer.enqueue(
-        entityType: 'session',
-        entityId: sessionId,
+    await _db.transaction(
+      () => _writer.closeSession(
+        sessionId: sessionId,
+        to: to,
         operationType: operationType,
-        payload: {
-          'id': sessionId,
-          'body': {
-            'endedAt': endedAt.toIso8601String(),
-            'durationSeconds': durationSeconds,
-          },
-        },
-      );
-    });
+        endedAt: endedAt,
+        durationSeconds: durationSeconds,
+      ),
+    );
 
     _poke();
   }

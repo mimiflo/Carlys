@@ -8,6 +8,7 @@ import '../../../../core/database/app_database.dart';
 import '../../../../core/synchronization/sync_engine.dart';
 import '../../../../core/synchronization/sync_owner.dart';
 import '../../../workout_session/data/local/workout_session_writer.dart';
+import '../../../workout_session/domain/entities/workout.dart';
 import '../../domain/entities/session_plan.dart';
 import '../../domain/entities/workout_template.dart';
 import '../../domain/repositories/workout_template_repository.dart';
@@ -257,6 +258,30 @@ class WorkoutTemplateRepositoryImpl implements WorkoutTemplateRepository {
     required String planItemId,
     required String setId,
   }) => _plans.fulfillItem(planItemId: planItemId, setId: setId);
+
+  @override
+  Future<String> recordSetFulfillingPlan({
+    required AddSetInput input,
+    required String planItemId,
+  }) async {
+    final id = _uuid.v4();
+    // UNE transaction pour les deux écritures. `WorkoutSessionWriter` sert
+    // aussi `WorkoutRepositoryImpl.addSet` : le format de la ligne locale et
+    // le corps de `set.upsert` n'existent qu'en un seul exemplaire.
+    await _db.transaction(() async {
+      await _sessions.insertSet(
+        id: id,
+        input: input,
+        completedAt: DateTime.now().toUtc(),
+      );
+      await _plans.fulfillItem(planItemId: planItemId, setId: id);
+    });
+
+    // Après le commit, jamais dedans : un drainage déclenché à l'intérieur
+    // d'une transaction s'exécuterait sur un exécuteur refermé entre-temps.
+    _poke();
+    return id;
+  }
 
   @override
   Future<void> skipPlanItem(String planItemId) async {
