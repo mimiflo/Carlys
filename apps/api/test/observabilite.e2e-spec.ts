@@ -131,20 +131,55 @@ describe('Observabilité (e2e)', () => {
       }
     });
 
+    /**
+     * Rejoue [corps] tant qu'une MINUTE D'HORLOGE tourne pendant son
+     * exécution, et échoue clairement si ça se reproduit trop souvent.
+     *
+     * POURQUOI C'EST NÉCESSAIRE. La présence est une fenêtre de 300 secondes
+     * découpée en seaux d'une minute, et `windowKeys` fusionne le seau
+     * courant plus les cinq précédents. Au passage d'une minute, le plus
+     * ancien sort de la fenêtre : un utilisateur qui n'avait été vu que là
+     * DISPARAÎT du compte. Une assertion du genre « avant + 2 » devient donc
+     * fausse d'une unité, sans que rien ne soit cassé — c'est le comportement
+     * voulu de la fenêtre glissante.
+     *
+     * Observé en CI : « Expected: 23, Received: 22 ». Le test était vert des
+     * dizaines de fois, et rouge quand la suite tombait à cheval sur une
+     * minute. Ce n'est pas une tolérance qu'il faut ici — elle masquerait un
+     * vrai décompte faux — mais la garantie de mesurer DANS un seul tour
+     * d'horloge.
+     */
+    const dansLaMemeMinute = async (corps: () => Promise<void>): Promise<void> => {
+      for (let essai = 0; essai < 5; essai += 1) {
+        const debut = Math.floor(Date.now() / 60_000);
+        await corps();
+        if (Math.floor(Date.now() / 60_000) === debut) {
+          return;
+        }
+      }
+      throw new Error(
+        'Cinq essais coupés par un passage de minute : la fenêtre de présence ' +
+          'tourne plus vite que le test ne mesure.',
+      );
+    };
+
     it('compte les personnes distinctes, pas les requêtes', async () => {
       const presence = app.get(PresenceService);
-      const avant = await presence.onlineUsers();
 
-      const utilisateur = randomUUID();
-      await presence.touch(utilisateur);
-      await presence.touch(utilisateur);
-      await presence.touch(utilisateur);
+      await dansLaMemeMinute(async () => {
+        const avant = await presence.onlineUsers();
 
-      // Trois activités du MÊME utilisateur : +1, pas +3.
-      expect(await presence.onlineUsers()).toBe(avant + 1);
+        const utilisateur = randomUUID();
+        await presence.touch(utilisateur);
+        await presence.touch(utilisateur);
+        await presence.touch(utilisateur);
 
-      await presence.touch(randomUUID());
-      expect(await presence.onlineUsers()).toBe(avant + 2);
+        // Trois activités du MÊME utilisateur : +1, pas +3.
+        expect(await presence.onlineUsers()).toBe(avant + 1);
+
+        await presence.touch(randomUUID());
+        expect(await presence.onlineUsers()).toBe(avant + 2);
+      });
     });
 
     it('est comptée dans Redis, donc commune à tous les réplicas', async () => {
