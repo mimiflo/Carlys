@@ -58,7 +58,7 @@ void main() {
     tester,
   ) async {
     final repository = await monter(tester);
-    expect(find.text('5 × 200.0 kg'), findsOneWidget);
+    expect(find.text('5 × 200 kg'), findsOneWidget);
 
     await tester.tap(find.text('Squat'));
     await tester.pumpAndSettle();

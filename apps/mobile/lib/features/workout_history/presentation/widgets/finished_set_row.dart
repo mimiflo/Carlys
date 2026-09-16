@@ -147,9 +147,15 @@ class FinishedSetRow extends ConsumerWidget {
   }
 }
 
+/// « 5 × 200 kg », jamais « 5 × 200.0 kg ».
+///
+/// Le point décimal d'un `double` brut passait tel quel dans l'ancienne carte
+/// de l'écran de détail, d'où elle est extraite : une charge ronde s'affichait
+/// avec un zéro superflu, et un point là où le dépôt écrit une virgule. La
+/// ligne d'à côté, celle du lecteur d'écran, formatait déjà correctement.
 String _valeur(WorkoutSetEntry set) => [
-  if (set.reps != null) '${set.reps}',
-  if (set.weightKg != null) '${set.weightKg} kg',
+  if (set.reps != null) formatThousands(set.reps!),
+  if (set.weightKg != null) '${formatDecimal(set.weightKg!)} kg',
 ].join(' × ');
 
 /// La même valeur, dite pour un lecteur d'écran : « × » ne se prononce pas.

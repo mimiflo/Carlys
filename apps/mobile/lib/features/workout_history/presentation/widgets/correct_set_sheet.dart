@@ -93,50 +93,59 @@ class _CorrectSetFormState extends State<_CorrectSetForm> {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Form(
-      key: _formKey,
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Text('Corriger la série', style: theme.textTheme.titleLarge),
-          const SizedBox(height: AppSpacing.xxs),
-          Text(widget.set.exerciseName, style: theme.textTheme.bodySmall),
-          const SizedBox(height: AppSpacing.md),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: _NombreField(
-                  label: 'Répétitions',
-                  controller: _reps,
-                  max: _repsMax,
+    // `showAppSheet` ne pose AUCUNE marge horizontale : elle garantit le
+    // navigateur racine, le clavier et les zones sûres, et laisse la mise en
+    // page à son contenu. Chaque feuille pose donc la sienne — celle-ci
+    // l'avait oubliée, et le texte touchait les deux bords. Même valeur que
+    // la feuille d'ajout d'un repas, qui est l'autre formulaire du dépôt.
+    return Padding(
+      padding: const EdgeInsets.all(AppSpacing.gutter),
+      child: Form(
+        key: _formKey,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text('Corriger la série', style: theme.textTheme.titleLarge),
+            const SizedBox(height: AppSpacing.xxs),
+            Text(widget.set.exerciseName, style: theme.textTheme.bodySmall),
+            const SizedBox(height: AppSpacing.md),
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: _NombreField(
+                    label: 'Répétitions',
+                    controller: _reps,
+                    max: _repsMax,
+                  ),
                 ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: _NombreField(
-                  label: 'Charge (kg)',
-                  controller: _weight,
-                  max: _weightMax,
-                  decimal: true,
-                  onSubmitted: _submit,
+                const SizedBox(width: AppSpacing.sm),
+                Expanded(
+                  child: _NombreField(
+                    label: 'Charge (kg)',
+                    controller: _weight,
+                    max: _weightMax,
+                    decimal: true,
+                    onSubmitted: _submit,
+                  ),
                 ),
-              ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.sm),
-          // La conséquence, dite avant le geste : c'est la raison d'être de
-          // la correction, et personne ne devine qu'un record peut descendre.
-          Text(
-            'Tes records et tes statistiques seront recalculés sur la valeur '
-            'corrigée. Un record que cette série portait à tort redescendra.',
-            style: theme.textTheme.bodySmall,
-          ),
-          const SizedBox(height: AppSpacing.md),
-          AppButton(label: 'Corriger', onPressed: _submit),
-          const SizedBox(height: AppSpacing.sm),
-        ],
+              ],
+            ),
+            const SizedBox(height: AppSpacing.sm),
+            // La conséquence, dite avant le geste : c'est la raison d'être de
+            // la correction, et personne ne devine qu'un record peut
+            // descendre.
+            Text(
+              'Tes records et tes statistiques seront recalculés sur la '
+              'valeur corrigée. Un record que cette série portait à tort '
+              'redescendra.',
+              style: theme.textTheme.bodySmall,
+            ),
+            const SizedBox(height: AppSpacing.md),
+            AppButton(label: 'Corriger', onPressed: _submit),
+          ],
+        ),
       ),
     );
   }
