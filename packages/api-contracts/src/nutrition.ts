@@ -53,8 +53,14 @@ export const metabolismResultSchema = z.object({
   bmrKcal: z.number(),
   /** Dépense énergétique totale (BMR × activité), kcal/jour. */
   tdeeKcal: z.number(),
-  /** Objectif calorique quotidien selon le but visé. */
+  /** Objectif calorique quotidien selon le but visé, plancher appliqué. */
   targetKcal: z.number(),
+  /**
+   * Vrai quand le plancher de sécurité a RELEVÉ la cible : `targetKcal` ne
+   * vaut alors plus « dépense × facteur d'objectif », et l'écran doit le dire
+   * plutôt que d'afficher un chiffre qui contredit sa propre explication.
+   */
+  targetKcalFloored: z.boolean(),
   /** Répartition macro-nutriments, grammes/jour. */
   proteinG: z.number(),
   fatG: z.number(),

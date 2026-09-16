@@ -93,6 +93,74 @@ describe('computeMetabolism', () => {
   });
 });
 
+/**
+ * Le plancher de sécurité. La fixture ci-dessous ATTEIGNAIT déjà ce cas — le
+ * test au-dessus la construit pour vérifier les glucides — et rendait 843
+ * kcal sans que rien ne s'en émeuve.
+ */
+describe('computeMetabolism — plancher de l’objectif calorique', () => {
+  const petiteSedentaire = {
+    sex: 'FEMALE',
+    ageYears: 70,
+    heightCm: 150,
+    weightKg: 40,
+    activityLevel: 'SEDENTARY',
+    goal: 'LOSE_WEIGHT',
+  } as const;
+
+  it('relève une cible sous le plancher, et le DIT', () => {
+    const result = computeMetabolism(petiteSedentaire);
+
+    const bmr = 10 * 40 + 6.25 * 150 - 5 * 70 - 161;
+    expect(Math.round(bmr * 1.2 * 0.85)).toBe(843); // ce qui était servi
+    expect(result.targetKcal).toBe(1200);
+    expect(result.targetKcalFloored).toBe(true);
+  });
+
+  it('les macros suivent la cible RELEVÉE, pas la cible calculée', () => {
+    const result = computeMetabolism(petiteSedentaire);
+
+    // Lipides = un quart de la cible, à 9 kcal/g : sur 1200, pas sur 843.
+    expect(result.fatG).toBe(Math.round((1200 * 0.25) / 9));
+    // Et le solde de glucides reste cohérent avec la cible affichée.
+    const kcalDesMacros = result.proteinG * 4 + result.fatG * 9 + result.carbsG * 4;
+    expect(Math.abs(kcalDesMacros - result.targetKcal)).toBeLessThanOrEqual(5);
+  });
+
+  it('le plancher masculin est plus haut', () => {
+    const result = computeMetabolism({ ...petiteSedentaire, sex: 'MALE' });
+
+    expect(result.targetKcal).toBe(1500);
+    expect(result.targetKcalFloored).toBe(true);
+  });
+
+  it('un profil ordinaire n’est ni relevé ni signalé', () => {
+    const result = computeMetabolism({
+      sex: 'MALE',
+      ageYears: 30,
+      heightCm: 180,
+      weightKg: 80,
+      activityLevel: 'MODERATE',
+      goal: 'LOSE_WEIGHT',
+    });
+
+    expect(result.targetKcal).toBeGreaterThan(1500);
+    expect(result.targetKcalFloored).toBe(false);
+  });
+
+  it('sous plancher, perte de gras et maintien se rejoignent', () => {
+    // Conséquence ASSUMÉE : l'objectif cesse d'être monotone quand les deux
+    // valeurs tombent sous le plancher. C'est exactement ce que le plancher
+    // veut dire — on ne creuse pas un déficit sous un seuil de sécurité —
+    // et c'est pour ça que l'écran doit expliquer, pas seulement afficher.
+    const perte = computeMetabolism(petiteSedentaire);
+    const maintien = computeMetabolism({ ...petiteSedentaire, goal: 'MAINTAIN' });
+
+    expect(perte.targetKcal).toBe(maintien.targetKcal);
+    expect(maintien.targetKcalFloored).toBe(true);
+  });
+});
+
 describe('ageYearsAt', () => {
   it('âge révolu : avant et après l’anniversaire', () => {
     const birth = new Date('1996-08-15T00:00:00Z');

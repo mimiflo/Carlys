@@ -1,5 +1,5 @@
 import { type AuthUser } from '@carlys/api-contracts';
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import {
   type ActivityLevel,
   type BiologicalSex,
@@ -22,8 +22,6 @@ export interface UpdateProfileInput {
   nutritionGoal?: NutritionGoal;
 }
 
-const MAX_AGE_YEARS = 120;
-
 @Injectable()
 export class UsersService {
   constructor(private readonly users: UsersRepository) {}
@@ -41,13 +39,10 @@ export class UsersService {
     if (user === null) {
       throw new NotFoundException('Compte introuvable.');
     }
-    if (data.birthDate !== undefined) {
-      const oldest = new Date();
-      oldest.setUTCFullYear(oldest.getUTCFullYear() - MAX_AGE_YEARS);
-      if (data.birthDate < oldest) {
-        throw new BadRequestException('Date de naissance invalide.');
-      }
-    }
+    // La date de naissance est bornée par `UpdateProfileDto`, à partir de
+    // `birthDateRange` du contrat. Elle l'était AUSSI ici, avec un maximum de
+    // 120 ans recopié — deux règles pour un seul fait, dont celle-ci n'était
+    // couverte par aucun test unitaire (ce module n'a pas de `.spec.ts`).
     const updated = await this.users.updateProfile(userId, {
       ...(data.displayName === undefined ? {} : { displayName: data.displayName.trim() }),
       ...(data.locale === undefined ? {} : { locale: data.locale }),

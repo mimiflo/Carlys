@@ -237,4 +237,59 @@ void main() {
       }
     });
   });
+
+  group('la cible relevée au plancher se dit à l’écran', () {
+    /// Le même métabolisme, mais servi par un profil que le plancher a
+    /// rattrapé : la cible ne vaut plus « dépense × facteur d'objectif ».
+    const releve = MetabolismResult(
+      bmi: 17.8,
+      bmiCategory: BmiCategory.underweight,
+      bmrKcal: 827,
+      tdeeKcal: 992,
+      targetKcal: 1200,
+      targetKcalFloored: true,
+      proteinG: 80,
+      fatG: 33,
+      carbsG: 145,
+      waterMl: 1400,
+    );
+
+    const mention = 'Cible relevée au minimum de sécurité';
+
+    testWidgets('rien ne s’affiche quand le plancher n’a pas joué', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        _ecran(const MetabolismView(metabolism: _resultat)),
+      );
+
+      expect(find.text(mention), findsNothing);
+    });
+
+    testWidgets('la mention paraît, et ouvre SON explication', (tester) async {
+      await tester.pumpWidget(_ecran(const MetabolismView(metabolism: releve)));
+
+      expect(find.text(mention), findsOneWidget);
+
+      await tester.tap(find.text(mention));
+      await tester.pumpAndSettle();
+
+      expect(
+        find.text(NutritionExplanations.plancherCalorique.titre),
+        findsWidgets,
+      );
+      expect(
+        find.textContaining(
+          _empreinte(NutritionExplanations.plancherCalorique),
+        ),
+        findsOneWidget,
+      );
+      // Ce n'est pas l'explication de l'objectif qui s'ouvre : les deux
+      // répondent à des questions différentes.
+      expect(
+        find.textContaining(_empreinte(NutritionExplanations.caloriesCibles)),
+        findsNothing,
+      );
+    });
+  });
 }

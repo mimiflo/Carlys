@@ -37,6 +37,25 @@ class MetabolismView extends StatelessWidget {
               showExplanation(context, NutritionExplanations.caloriesCibles),
         ),
         const SizedBox(height: AppSpacing.sm),
+        // Une cible relevée au plancher ne vaut plus « dépense × objectif » :
+        // l'afficher nue la ferait contredire sa propre explication, celle
+        // que le bouton d'en-tête vient d'ouvrir. On le dit donc à côté du
+        // chiffre, avec sa porte, plutôt que de laisser deviner.
+        if (metabolism.targetKcalFloored) ...[
+          Align(
+            alignment: Alignment.centerLeft,
+            child: AppPill(
+              label: 'Cible relevée au minimum de sécurité',
+              tone: AppPillTone.accent,
+              icon: AppIcons.info,
+              onTap: () => showExplanation(
+                context,
+                NutritionExplanations.plancherCalorique,
+              ),
+            ),
+          ),
+          const SizedBox(height: AppSpacing.sm),
+        ],
         MacrosCard(metabolism: metabolism),
         const SizedBox(height: AppSpacing.gapSection),
         AppSectionHeader(

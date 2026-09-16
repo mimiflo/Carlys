@@ -74,12 +74,38 @@ abstract final class NutritionExplanations {
         'Perte de gras : la dépense moins 15 %. Maintien : la dépense telle '
         'quelle. Prise de muscle : la dépense plus 10 %. Des écarts modérés, '
         'et c’est exprès : un déficit plus creux fait perdre du muscle avec '
-        'le gras.',
+        'le gras. Et le résultat ne descend jamais sous un plancher : 1200 '
+        'kcal pour une femme, 1500 kcal pour un homme.',
     cequeCaNeDitPas:
         'Cet objectif n’est pas figé. En perdant du poids tu baisses ton '
         'métabolisme de base, donc ta dépense, donc ta cible : elle descend '
         'avec toi. Un chiffre calculé une fois pour toutes serait faux au '
-        'bout d’un mois.',
+        'bout d’un mois. Si le plancher s’applique, la multiplication '
+        'ci-dessus ne décrit plus ta cible : c’est le plancher qui la fixe, '
+        'et perte de gras et maintien se rejoignent.',
+  );
+
+  /// Ce que veut dire une cible RELEVÉE au plancher.
+  ///
+  /// Une entrée séparée, parce que c'est une situation, pas une donnée : elle
+  /// ne paraît que quand le serveur pose `targetKcalFloored`, et elle répond
+  /// à la question que le bandeau fait naître.
+  static const Explanation plancherCalorique = Explanation(
+    titre: 'Pourquoi ta cible a été relevée',
+    cequeCest:
+        'Ton objectif calculé tombait sous le seuil bas d’un régime qu’on '
+        'suit sans médecin. Carlys l’a remonté à ce seuil.',
+    douCaSort:
+        'Le plancher vaut 1200 kcal pour une femme et 1500 kcal pour un '
+        'homme. Ta dépense estimée multipliée par ton objectif donnait moins '
+        'que ça, donc c’est le plancher qui s’affiche.',
+    cequeCaNeDitPas:
+        'Il ne dit pas que descendre plus bas est impossible, il dit que ça '
+        'ne se décide pas tout seul : sous ce seuil, couvrir ses vitamines '
+        'et ses minéraux devient difficile, et c’est une affaire de '
+        'professionnel de santé, pas d’application. Il ne dit pas non plus '
+        'que tu dois manger 1200 kcal : si tu n’as pas faim à ce niveau, '
+        'c’est le profil qu’il faut revoir, pas l’appétit.',
   );
 
   static const Explanation proteines = Explanation(
@@ -155,6 +181,7 @@ abstract final class NutritionExplanations {
     metabolismeDeBase,
     depenseEnergetique,
     caloriesCibles,
+    plancherCalorique,
     proteines,
     lipides,
     glucides,

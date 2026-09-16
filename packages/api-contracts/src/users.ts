@@ -21,6 +21,39 @@ export const HEIGHT_CM_MIN = 80;
 export const HEIGHT_CM_MAX = 250;
 export const HEIGHT_CM_DECIMALS = 1;
 
+/**
+ * Âge admissible pour le profil métabolique.
+ *
+ * La date de naissance n'était bornée que par « pas dans le futur » côté DTO,
+ * et par 120 ans dans le service — une règle écrite à deux endroits, dont
+ * aucun n'était couvert par un test unitaire. Un âge de 0 an passait donc les
+ * deux gardes et entrait tel quel dans Mifflin-St Jeor, où il vaut `-5 × 0`.
+ *
+ * 15 ans est l'audience que le produit se donne lui-même
+ * (`docs/legal/terms.md`, `docs/legal/privacy.md` §8). Ce n'est PAS une
+ * vérification d'âge à l'inscription — le compte se crée sans date de
+ * naissance, et les documents continuent de le dire : c'est le refus d'une
+ * valeur dont ces mêmes documents disent qu'elle ne devrait pas exister.
+ */
+export const AGE_YEARS_MIN = 15;
+export const AGE_YEARS_MAX = 120;
+
+/**
+ * Les deux dates entre lesquelles une naissance est acceptée, à l'instant
+ * donné. Bornes INCLUSES : on naît admissible le jour de ses 15 ans.
+ *
+ * Passer `now` plutôt que de le lire ici garde la fonction pure, donc
+ * testable sans horloge figée — et c'est ce qui permet au DTO de la rappeler
+ * à chaque requête au lieu de figer un intervalle au démarrage du serveur.
+ */
+export function birthDateRange(now: Date): { earliest: Date; latest: Date } {
+  const earliest = new Date(now);
+  earliest.setUTCFullYear(earliest.getUTCFullYear() - AGE_YEARS_MAX);
+  const latest = new Date(now);
+  latest.setUTCFullYear(latest.getUTCFullYear() - AGE_YEARS_MIN);
+  return { earliest, latest };
+}
+
 export const DISPLAY_NAME_MAX_LENGTH = 60;
 
 /** Locale BCP 47 telle que l'API l'accepte : `fr` ou `fr-FR`. */
@@ -49,7 +82,7 @@ export const updateProfileRequestSchema = z.object({
   timezone: z.string().min(1).max(60).optional(),
   carlysProfile: carlysProfileSchema.optional(),
   sex: biologicalSexSchema.optional(),
-  /** ISO 8601, jamais dans le futur. */
+  /** ISO 8601, dans l'intervalle `birthDateRange` (de 15 à 120 ans). */
   birthDate: z.string().datetime().optional(),
   heightCm: heightCmSchema.optional(),
   activityLevel: activityLevelSchema.optional(),

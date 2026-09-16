@@ -143,6 +143,7 @@ class MetabolismResult {
     required this.fatG,
     required this.carbsG,
     required this.waterMl,
+    this.targetKcalFloored = false,
   });
 
   final double bmi;
@@ -150,6 +151,13 @@ class MetabolismResult {
   final int bmrKcal;
   final int tdeeKcal;
   final int targetKcal;
+
+  /// Vrai quand le serveur a RELEVÉ la cible à son plancher de sécurité.
+  ///
+  /// Dans ce cas `targetKcal` ne vaut plus « dépense × facteur d'objectif »,
+  /// et l'écran doit le dire : afficher le chiffre seul le ferait contredire
+  /// l'explication « Objectif calorique », qui énonce cette multiplication.
+  final bool targetKcalFloored;
   final int proteinG;
   final int fatG;
   final int carbsG;

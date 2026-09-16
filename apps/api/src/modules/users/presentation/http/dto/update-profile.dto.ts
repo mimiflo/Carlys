@@ -1,9 +1,12 @@
 import {
+  AGE_YEARS_MAX,
+  AGE_YEARS_MIN,
   DISPLAY_NAME_MAX_LENGTH,
   HEIGHT_CM_DECIMALS,
   HEIGHT_CM_MAX,
   HEIGHT_CM_MIN,
   LOCALE_PATTERN,
+  birthDateRange,
 } from '@carlys/api-contracts';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { ActivityLevel, BiologicalSex, CarlysProfile, NutritionGoal } from '@prisma/client';
@@ -19,6 +22,7 @@ import {
   Max,
   MaxDate,
   Min,
+  MinDate,
 } from 'class-validator';
 import { IsIanaTimeZone } from '../../../../../common/validators/is-iana-time-zone';
 
@@ -60,11 +64,22 @@ export class UpdateProfileDto {
   @IsEnum(BiologicalSex)
   sex?: BiologicalSex;
 
-  @ApiPropertyOptional({ description: 'Date de naissance, UTC (ISO 8601)' })
+  // L'intervalle vient du CONTRAT, comme la taille juste en dessous, et il
+  // est réévalué à CHAQUE requête : figer les deux dates au chargement du
+  // module ferait vieillir la borne avec le processus, et un serveur resté
+  // debout un an refuserait les quinze ans de l'année suivante.
+  @ApiPropertyOptional({
+    description: `Date de naissance, UTC (ISO 8601) — de ${AGE_YEARS_MIN} à ${AGE_YEARS_MAX} ans`,
+  })
   @IsOptional()
   @Type(() => Date)
   @IsDate()
-  @MaxDate(() => new Date(), { message: 'La date de naissance est dans le futur.' })
+  @MinDate(() => birthDateRange(new Date()).earliest, {
+    message: `L’âge ne peut pas dépasser ${AGE_YEARS_MAX} ans.`,
+  })
+  @MaxDate(() => birthDateRange(new Date()).latest, {
+    message: `Carlys s’adresse aux personnes d’au moins ${AGE_YEARS_MIN} ans.`,
+  })
   birthDate?: Date;
 
   // Les bornes viennent du CONTRAT (`packages/api-contracts/src/users.ts`),

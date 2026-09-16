@@ -10,6 +10,46 @@ L'accueil affiche « consommé / objectif » (ex. « 654 / 2 759 ») **uniquemen
 quand les deux existent**. Journal non chargé : l'objectif seul, jamais un
 zéro inventé. Journal vide : un VRAI zéro (« 0 / 2 759 »), qui est un fait.
 
+## Deux bornes de sécurité sur le calcul
+
+Le calcul n'avait aucun fond, ni en entrée ni en sortie.
+
+**L'âge.** `birthDate` n'était bornée que par « pas dans le futur » au DTO, et
+par un maximum de 120 ans recopié dans `users.service.ts` — deux règles pour
+un seul fait, dont la seconde n'était couverte par aucun test unitaire, le
+module n'ayant pas de `.spec.ts`. Entre les deux, un âge de 0 an passait et
+entrait tel quel dans Mifflin-St Jeor, où il vaut `-5 × 0`. L'intervalle vit
+désormais dans le contrat (`AGE_YEARS_MIN` 15, `AGE_YEARS_MAX` 120,
+`birthDateRange`), le DTO l'applique seul, et `update-profile.dto.spec.ts` le
+tient — bornes incluses, on naît admissible le jour de ses 15 ans. Les deux
+dates sont recalculées à CHAQUE requête : les figer au chargement du module
+ferait vieillir la borne avec le processus.
+
+Ce n'est **pas** une vérification d'âge à l'inscription — le compte se crée
+sans date de naissance, et `docs/legal/privacy.md` §8 continue de le dire
+honnêtement. C'est le refus d'une valeur dont les documents du produit disent
+déjà qu'elle ne devrait pas exister.
+
+**L'objectif calorique.** `tdee × 0,85` n'avait pas de plancher : le seul
+`Math.max` du calculateur bornait les glucides à 0, ce qui protégeait la
+cohérence des macros, jamais la personne. Une fixture du dépôt atteignait
+déjà le cas sans le voir — femme de 70 ans, 150 cm, 40 kg, sédentaire, perte
+de gras — et rendait **843 kcal**. `TARGET_KCAL_FLOOR` vaut désormais 1200
+(femmes) et 1500 (hommes), les seuils bas usuels d'un régime non supervisé
+médicalement, et s'applique **avant** les macros : lipides et glucides se
+calculent sur la cible affichée, pas sur celle d'avant.
+
+Deux conséquences assumées, toutes deux testées :
+
+- l'objectif cesse d'être **monotone** en objectif — sous le plancher, perte
+  de gras et maintien se rejoignent. C'est précisément ce que le plancher
+  veut dire ;
+- la cible ne vaut plus « dépense × facteur », donc l'afficher nue la ferait
+  contredire son explication. Le serveur pose `targetKcalFloored`, l'écran
+  montre la mention « Cible relevée au minimum de sécurité », et cette
+  mention ouvre sa propre explication — pas celle de l'objectif, qui répond à
+  une autre question.
+
 ## Journal alimentaire (`/api/v1/nutrition/meals`)
 
 | Méthode | Chemin | Rôle |
@@ -125,7 +165,7 @@ commentaires TypeScript dans `metabolism.calculator.ts`, c'est-à-dire là où
 personne ne les lira jamais.
 
 Elles sont désormais du **contenu**, dans
-`apps/mobile/lib/features/nutrition/domain/nutrition_explanations.dart` : neuf
+`apps/mobile/lib/features/nutrition/domain/nutrition_explanations.dart` : dix
 entrées, chacune en trois blocs, toujours dans le même ordre. Le gabarit
 (`Explanation`) et la feuille qui l'ouvre vivent dans `core/explanations/`,
 parce que la progression s'en sert aussi pour expliquer ses titres.

@@ -161,6 +161,39 @@ void main() {
       );
     });
 
+    test('plancher de sécurité — les deux seuils, par sexe', () {
+      final bloc = _bloc(serveur, 'TARGET_KCAL_FLOOR');
+      for (final sexe in const ['FEMALE', 'MALE']) {
+        final plancher = _valeur(bloc, sexe, dans: 'TARGET_KCAL_FLOOR');
+        // Cité DEUX fois, et c'est voulu : l'explication de l'objectif dit
+        // qu'un plancher existe, celle du plancher dit pourquoi. Laisser
+        // l'une des deux vieillir suffirait à faire mentir l'écran.
+        _cite(
+          NutritionExplanations.caloriesCibles,
+          _enFrancais(plancher),
+          'le plancher $sexe',
+        );
+        _cite(
+          NutritionExplanations.plancherCalorique,
+          _enFrancais(plancher),
+          'le plancher $sexe',
+        );
+      }
+    });
+
+    test('le plancher s’applique AVANT les macros', () {
+      // Si `fatG` se remettait à lire la cible d'avant plancher, l'écran
+      // afficherait des macros qui ne totalisent pas la cible affichée.
+      expect(
+        serveur,
+        contains('const target = Math.max(floor, ajuste);'),
+        reason:
+            'La cible n’est plus relevée au plancher avant le calcul des '
+            'macros. L’explication « ${NutritionExplanations.plancherCalorique.titre} » '
+            'affirme que c’est le plancher qui s’affiche : relis-la.',
+      );
+    });
+
     test('protéines — grammes par kilo', () {
       final bloc = _bloc(serveur, 'PROTEIN_PER_KG');
       final explication = NutritionExplanations.proteines;

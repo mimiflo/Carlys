@@ -46,6 +46,11 @@ MetabolismResult? metabolismResultFromJson(Map<String, dynamic>? json) {
     bmrKcal: (json['bmrKcal'] as num).toInt(),
     tdeeKcal: (json['tdeeKcal'] as num).toInt(),
     targetKcal: (json['targetKcal'] as num).toInt(),
+    // Absent d'un serveur antérieur au plancher : on retombe alors sur
+    // « pas relevée », ce qui est exactement ce que ce serveur-là voulait
+    // dire. Une absence n'est pas une panne, comme pour les champs manquants
+    // juste au-dessus.
+    targetKcalFloored: json['targetKcalFloored'] as bool? ?? false,
     proteinG: (json['proteinG'] as num).toInt(),
     fatG: (json['fatG'] as num).toInt(),
     carbsG: (json['carbsG'] as num).toInt(),
