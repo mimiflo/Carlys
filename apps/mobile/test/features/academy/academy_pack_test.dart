@@ -46,6 +46,25 @@ void main() {
     expect(ids.length, lessons.length);
   });
 
+  test('chaque domaine sert au moins QUATRE leçons', () async {
+    // Le plancher de la fournée éditoriale de septembre 2026 (20 leçons
+    // écrites puis relues en adversaire, faits et forme). En dessous, un
+    // domaine est une vitrine vide : deux leçons se bouclent en une
+    // minute et le « domaine bouclé » ne récompense rien. Retirer une
+    // leçon d'un domaine à quatre se remplace, ne se supprime pas.
+    final lessons = await loadAcademyPack();
+    for (final category in AcademyCategory.values) {
+      final servies = lessons
+          .where((lesson) => lesson.category == category)
+          .length;
+      expect(
+        servies,
+        greaterThanOrEqualTo(4),
+        reason: '${category.name} ne sert que $servies leçon(s).',
+      );
+    }
+  });
+
   test(
     'chaque leçon porte son essentiel : des points, jamais plus de quatre',
     () async {

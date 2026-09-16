@@ -1,14 +1,16 @@
 /// Où en est la lecture du pack — un REPÈRE, jamais un second score.
 ///
-/// La règle de non-concurrence (`docs/product/progression.md`) l'impose, et
-/// elle est chiffrée : l'axe « Maîtrise » du profil rapporte déjà les leçons
-/// répondues à une cible FIXE de 20, quand le pack en compte 38. Un
-/// pourcentage global affiché ici dirait « 53 % » à quelqu'un que son profil
-/// annonce à « Maîtrise 100 % », au même instant et pour le même travail.
-///
-/// L'Academy compte donc dans l'unité de ce qu'elle compte : des LEÇONS.
-/// « 24 sur 38 », « 4 sur 5 en Nutrition ». Une jauge par domaine reste une
-/// position dans un contenu, pas une note sur la personne.
+/// L'Academy compte dans l'unité de ce qu'elle compte : des LEÇONS.
+/// « 24 sur 38 », « 4 sur 5 en Nutrition ». Un pourcentage peut accompagner
+/// ce compte, à une condition ARBITRÉE (septembre 2026, décision produit,
+/// consignée dans `docs/product/academy.md`) : il NOMME sa base — « du
+/// pack », « du domaine ». C'est ce que la règle de non-concurrence
+/// (`docs/product/progression.md`) protégeait réellement : l'axe
+/// « Maîtrise » du profil rapporte les mêmes leçons à une cible FIXE de 20,
+/// et deux nombres SANS base annoncée pour le même travail se contrediraient.
+/// « 63 % du pack » et « Maîtrise 100 % » ne se contredisent pas : chacun dit
+/// sur quoi il porte. Un pourcentage resté muet sur sa base est toujours
+/// interdit.
 ///
 /// « Abordée » et non « réussie » : le moteur de progression a déjà tranché
 /// dans l'autre sens, et l'a documenté — se tromper fait apprendre, et
@@ -28,6 +30,10 @@ class DomainProgress {
   /// Part du domaine parcourue, de 0 à 1. Sert la JAUGE, pas un chiffre
   /// affiché : c'est une position dans un contenu.
   double get ratio => total == 0 ? 0 : (abordees / total).clamp(0.0, 1.0);
+
+  /// Position dans le domaine, en pourcentage ENTIER, tronqué : « 100 » ne
+  /// se dit qu'au domaine réellement bouclé, jamais par arrondi.
+  int get pourcent => total == 0 ? 0 : abordees * 100 ~/ total;
 
   /// Un domaine vide n'est jamais « terminé » : il n'y avait rien à lire.
   bool get termine => total > 0 && abordees >= total;
@@ -56,6 +62,11 @@ class AcademyProgress {
 
   /// Domaines qui contiennent au moins une leçon.
   int get domainesServis => parDomaine.length;
+
+  /// Position dans le pack, en pourcentage ENTIER, tronqué comme celui du
+  /// domaine et pour la même raison. Toujours affiché avec sa base
+  /// (« du pack ») — voir l'en-tête de cette bibliothèque.
+  int get pourcent => total == 0 ? 0 : abordees * 100 ~/ total;
 }
 
 /// Croise le pack et les réponses déjà données. FONCTION PURE : ni horloge,

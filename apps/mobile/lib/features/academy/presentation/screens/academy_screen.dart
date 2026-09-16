@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/app_routes.dart';
 import '../../../../design_system/design_system.dart';
+import '../../domain/academy_journey.dart';
 import '../../domain/academy_progress.dart';
 import '../../domain/entities/academy.dart';
 import '../controllers/academy_controllers.dart';
@@ -10,6 +13,7 @@ import '../widgets/academy_domain_bar.dart';
 import '../widgets/academy_domain_header.dart';
 import '../widgets/academy_progress_card.dart';
 import '../widgets/domain_completed_banner.dart';
+import '../widgets/journey_entry_card.dart';
 import '../widgets/lesson_card.dart';
 import '../widgets/quiz_card.dart';
 
@@ -69,6 +73,7 @@ class _AcademyScreenState extends ConsumerState<AcademyScreen> {
     final pack = ref.watch(academyPackProvider);
     final daily = ref.watch(dailyLessonProvider);
     final progress = ref.watch(academyProgressProvider);
+    final journey = ref.watch(academyJourneyProgressProvider);
     // Les réponses déjà données, d'où qu'elles viennent : la question du
     // jour répondue sur l'accueil arrive ici déjà remplie.
     final answered = ref.watch(answeredLessonsProvider).valueOrNull ?? const {};
@@ -122,6 +127,23 @@ class _AcademyScreenState extends ConsumerState<AcademyScreen> {
               AcademyProgressCard(progress: progress),
               const SizedBox(height: AppSpacing.gapRow),
             ],
+            if (journey != null) ...[
+              JourneyEntryCard(
+                progress: journey,
+                onOpen: () => context.push(AppRoutes.academyJourney),
+                onResume: () {
+                  final courante = journey.etapeCourante;
+                  if (courante != null) {
+                    context.push(
+                      AppRoutes.academyJourneyStage(
+                        academyJourney[courante].rang,
+                      ),
+                    );
+                  }
+                },
+              ),
+              const SizedBox(height: AppSpacing.gapRow),
+            ],
             AcademyDomainBar(
               selected: _domaine,
               onSelect: (domaine) => setState(() => _domaine = domaine),
@@ -159,6 +181,8 @@ class _AcademyScreenState extends ConsumerState<AcademyScreen> {
               AcademyDomainHeader(
                 category: category,
                 progress: progress?.parDomaine[category],
+                onQuiz: () =>
+                    context.push(AppRoutes.academyDomainQuiz(category.name)),
               ),
               const SizedBox(height: AppSpacing.xs),
               for (final lesson in lessons.where(

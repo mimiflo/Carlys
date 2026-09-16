@@ -1,5 +1,5 @@
 {
-  "version": 3,
+  "version": 4,
   "lessons": [
     {
       "id": "anatomie-pectoraux",
@@ -462,6 +462,48 @@
       }
     },
     {
+      "id": "nutrition-glucides",
+      "category": "nutrition",
+      "title": "Les glucides, carburant de l’effort",
+      "body": "Tes muscles stockent les glucides sous forme de glycogène, et c’est lui qui alimente les séries intenses : réserves basses, séance qui se traîne, charges qui tombent. Réduire fortement les glucides en pensant « sécher » plus vite se paie donc d’abord en performance. Autour de l’entraînement, privilégie des sources simples à digérer ; le reste de la journée, des sources de glucides peu transformées (riz, pâtes, pommes de terre, légumineuses, fruits) qui apportent aussi fibres et micronutriments. La quantité se règle sur ton volume d’entraînement : plus tu t’entraînes, plus ils comptent.",
+      "points": [
+        "Le glycogène musculaire alimente tes séries intenses.",
+        "Couper fortement les glucides se paie d’abord en performance.",
+        "Ajuste la quantité à ton volume d’entraînement."
+      ],
+      "question": {
+        "prompt": "Quel rôle jouent les glucides pour un pratiquant de musculation ?",
+        "choices": [
+          "Ils ne servent qu’à prendre du gras",
+          "Stockés en glycogène, ils alimentent les efforts intenses",
+          "Ils remplacent les protéines pour construire le muscle"
+        ],
+        "answerIndex": 1,
+        "explanation": "Le glycogène musculaire est le carburant privilégié des séries dures : des réserves basses se traduisent par des charges et des répétitions en baisse, avant tout autre effet."
+      }
+    },
+    {
+      "id": "nutrition-autour-seance",
+      "category": "nutrition",
+      "title": "Manger autour de la séance",
+      "body": "Le total de la journée pèse plus que l’horaire du moindre repas : c’est lui qui décide de ta progression. Autour de la séance, quelques repères simples aident quand même. Un repas complet 2 à 3 heures avant, ou une collation légère plus près, te donne de l’énergie sans peser sur l’estomac. Après, un apport de protéines et de glucides dans les heures qui suivent soutient la réparation : la fameuse « fenêtre » de 30 minutes est bien plus large qu’on l’a cru. Rater ce moment ne ruine pas ta séance ; sauter des repas toute la journée, si.",
+      "points": [
+        "Le total quotidien compte plus que l’horaire exact des repas.",
+        "Avant la séance : un repas complet 2 à 3 heures plus tôt, ou une collation légère.",
+        "Après : des protéines et des glucides dans les heures qui suivent, sans urgence."
+      ],
+      "question": {
+        "prompt": "La « fenêtre anabolique » de 30 minutes après la séance est-elle critique ?",
+        "choices": [
+          "Oui, sans apport immédiat la séance est perdue",
+          "Oui, mais seulement pour le cardio",
+          "Non, l’apport des heures qui suivent et le total du jour comptent davantage"
+        ],
+        "answerIndex": 2,
+        "explanation": "La sensibilité du muscle aux nutriments reste élevée bien au-delà de 30 minutes : un repas dans les heures qui suivent fait le travail, tant que le total du jour est là."
+      }
+    },
+    {
       "id": "recuperation-sommeil",
       "category": "recuperation",
       "title": "Le sommeil, l'entraînement invisible",
@@ -531,6 +573,48 @@
       }
     },
     {
+      "id": "recuperation-active",
+      "category": "recuperation",
+      "title": "Bouger les jours de repos",
+      "body": "Un jour de repos n’oblige pas au canapé. Une activité légère (marche, vélo tranquille, mobilité, natation douce) entretient la circulation sanguine, ce qui aide à évacuer l’inconfort et garde le corps en mouvement sans créer de nouvelle fatigue. La règle est simple : l’effort doit rester assez facile pour que tu puisses parler sans peine, et tu dois en sortir plus frais qu’en y entrant. Si une sortie « facile » te laisse des jambes lourdes le lendemain, c’était une séance déguisée : le repos, lui aussi, se protège.",
+      "points": [
+        "Marche, vélo tranquille ou mobilité : léger, jamais épuisant.",
+        "Tu dois pouvoir parler sans peine pendant l’effort.",
+        "Sortir plus frais qu’en entrant, sinon c’était une séance."
+      ],
+      "question": {
+        "prompt": "À quoi reconnaît-on une vraie récupération active ?",
+        "choices": [
+          "On peut parler sans peine et on en sort plus frais",
+          "On termine essoufflé, signe que ça a travaillé",
+          "Elle remplace la séance de jambes de la semaine"
+        ],
+        "answerIndex": 0,
+        "explanation": "La récupération active vise la circulation, pas l’adaptation : dès que l’effort fatigue, il puise dans la récupération qu’il était censé servir."
+      }
+    },
+    {
+      "id": "recuperation-decharge",
+      "category": "recuperation",
+      "title": "La semaine allégée",
+      "body": "La fatigue s’accumule plus vite qu’elle ne se voit : après plusieurs semaines d’entraînement soutenu, les charges plafonnent, le sommeil se dégrade, l’envie s’émousse. Une semaine allégée, où tu réduis nettement le volume ou les charges sans arrêter de t’entraîner, laisse cette fatigue se dissiper pendant que les adaptations se consolident. Beaucoup de pratiquants en programment une toutes les 4 à 8 semaines, ou simplement quand les signaux s’allument. Ce n’est pas du temps perdu : les records tombent souvent juste après, une fois la fatigue retirée de l’équation.",
+      "points": [
+        "Charges qui plafonnent, sommeil dégradé, envie en berne : des signaux.",
+        "Réduire nettement volume ou charges, sans arrêter de s’entraîner.",
+        "Toutes les 4 à 8 semaines environ, ou dès que les signaux s’allument."
+      ],
+      "question": {
+        "prompt": "En quoi consiste une semaine allégée ?",
+        "choices": [
+          "Arrêter totalement l’entraînement pendant une semaine",
+          "Réduire nettement volume ou charges tout en continuant à s’entraîner",
+          "Doubler le volume pour forcer l’adaptation"
+        ],
+        "answerIndex": 1,
+        "explanation": "Garder le geste tout en baissant la dose laisse la fatigue se dissiper sans perdre le rythme : c’est cette fatigue en moins qui fait souvent réapparaître la progression."
+      }
+    },
+    {
       "id": "cardio-zones",
       "category": "cardio",
       "title": "Les zones d'intensité, en clair",
@@ -570,6 +654,48 @@
         ],
         "answerIndex": 1,
         "explanation": "Soulever demande un système nerveux frais. Le cardio placé après ne coûte presque rien à la séance de force, alors que l'inverse l'ampute."
+      }
+    },
+    {
+      "id": "cardio-dose",
+      "category": "cardio",
+      "title": "Combien de cardio par semaine ?",
+      "body": "Le repère de santé le plus consensuel tourne autour de 150 minutes d’endurance modérée par semaine, marche rapide comprise. L’essentiel du bénéfice s’obtient en passant de rien à un peu ; chaque tranche supplémentaire rapporte ensuite un peu moins. Répartis ce volume sur plusieurs jours plutôt que de tout concentrer, et si tu soulèves déjà, deux à trois sorties faciles suffisent largement : à cette dose, le cardio ne freine pas la prise de muscle, et il aide même à mieux récupérer entre les efforts.",
+      "points": [
+        "Vise environ 150 minutes d’endurance modérée par semaine.",
+        "Le plus grand gain s’obtient en passant de rien à un peu.",
+        "Deux à trois sorties faciles ne freinent pas la prise de muscle."
+      ],
+      "question": {
+        "prompt": "Quel volume hebdomadaire d’endurance modérée sert de repère de santé ?",
+        "choices": [
+          "Environ 150 minutes",
+          "Environ 30 minutes",
+          "Au moins 600 minutes"
+        ],
+        "answerIndex": 0,
+        "explanation": "C’est le repère des grandes recommandations de santé publique : il se répartit sur la semaine, et marcher d’un bon pas compte déjà dedans."
+      }
+    },
+    {
+      "id": "cardio-choix",
+      "category": "cardio",
+      "title": "Quel cardio choisir ?",
+      "body": "Pour le cœur, l’outil compte moins que l’intensité et la durée : vélo, rameur, marche en côte ou course construisent la même base d’endurance si l’effort est comparable. Les différences sont ailleurs. La course impose des impacts à chaque foulée, ce qui demande une progression prudente ; vélo, rameur et natation portent le corps et se tolèrent en plus grand volume. Si tu soulèves lourd, une option sans impact préserve mieux la récupération des jambes. Et le critère décisif reste le plaisir : le meilleur cardio est celui que tu referas la semaine prochaine.",
+      "points": [
+        "À effort égal, le cœur progresse quel que soit l’outil.",
+        "Vélo, rameur, natation : sans impact, donc plus de volume toléré.",
+        "Le meilleur cardio est celui que tu tiendras dans la durée."
+      ],
+      "question": {
+        "prompt": "Qu’est-ce qui fait progresser le cœur avant tout ?",
+        "choices": [
+          "La machine utilisée",
+          "L’intensité et la durée de l’effort",
+          "Le fait de courir plutôt que pédaler"
+        ],
+        "answerIndex": 1,
+        "explanation": "Le système cardiovasculaire répond à la demande qu’on lui impose, pas à l’outil : ce qui change d’une activité à l’autre, ce sont les impacts et les muscles sollicités."
       }
     },
     {
@@ -615,6 +741,48 @@
       }
     },
     {
+      "id": "mobilite-regularite",
+      "category": "mobilite",
+      "title": "Quelques minutes, mais souvent",
+      "body": "Un tissu ne gagne pas d’amplitude en une séance, aussi longue soit-elle : il s’adapte à ce qu’on lui demande régulièrement, sur des semaines. Quelques minutes d’étirements plusieurs fois par semaine font plus qu’une grande session isolée, et les premiers progrès se voient en général au bout de quelques semaines de pratique suivie. Le plus simple pour tenir : accrocher la mobilité à une habitude existante, la fin de séance, la pause du soir, et cibler une ou deux zones qui te limitent vraiment plutôt que d’étirer tout le corps en surface.",
+      "points": [
+        "Quelques minutes plusieurs fois par semaine battent une grande séance isolée.",
+        "Compte en semaines : les gains d’amplitude sont lents mais fiables.",
+        "Accroche la mobilité à une habitude existante pour la tenir."
+      ],
+      "question": {
+        "prompt": "Quelle organisation fait le plus progresser la souplesse ?",
+        "choices": [
+          "Une longue séance d’étirements par mois",
+          "Étirer uniquement les jours de courbatures",
+          "De courtes doses régulières sur plusieurs semaines"
+        ],
+        "answerIndex": 2,
+        "explanation": "Les tissus s’adaptent à une demande répétée : c’est la régularité sur la durée qui déplace l’amplitude, pas l’intensité d’une séance unique."
+      }
+    },
+    {
+      "id": "mobilite-intensite",
+      "category": "mobilite",
+      "title": "Jusqu’où pousser un étirement ?",
+      "body": "Un étirement efficace se reconnaît à une tension nette mais supportable, jamais à une douleur vive : dans les premières semaines, l’amplitude progresse surtout parce que ton système nerveux apprend à tolérer la position, et forcer lui apprend l’inverse. Installe-toi, tiens la position une trentaine de secondes et respire lentement : l’expiration aide le muscle à se relâcher. Évite les à-coups et les rebonds, qui déclenchent le réflexe de protection au lieu de l’apaiser. Si une zone reste douloureuse à l’étirement séance après séance, la question n’est plus de souplesse : fais-la examiner.",
+      "points": [
+        "Cherche une tension nette et supportable, jamais une douleur vive.",
+        "Tiens une trentaine de secondes en respirant lentement.",
+        "Pas de rebonds : ils réveillent le réflexe de protection."
+      ],
+      "question": {
+        "prompt": "Quelle sensation vise-t-on pendant un étirement tenu ?",
+        "choices": [
+          "Une douleur vive, signe que ça travaille",
+          "Une tension nette mais supportable",
+          "Aucune sensation du tout"
+        ],
+        "answerIndex": 1,
+        "explanation": "L’amplitude gagnée vient en grande partie d’une meilleure tolérance du système nerveux à la position : la douleur le met en défense, la tension supportable le laisse céder du terrain."
+      }
+    },
+    {
       "id": "mental-discipline",
       "category": "mental",
       "title": "La motivation lance, la discipline tient",
@@ -654,6 +822,48 @@
         ],
         "answerIndex": 1,
         "explanation": "Ce qu'on protège, c'est la régularité. Une version courte la maintient ; une annulation la fissure."
+      }
+    },
+    {
+      "id": "mental-objectifs",
+      "category": "mental",
+      "title": "Des objectifs qui dépendent de toi",
+      "body": "« Perdre cinq kilos » ou « prendre du muscle » sont des objectifs de résultat : ils dépendent de facteurs que tu ne maîtrises qu’en partie, et ils ne disent rien de ce qu’il faut faire lundi. Un objectif de processus, trois séances cette semaine, dix minutes de mobilité le soir, se décide, s’exécute et se vérifie. Le résultat suit le processus, rarement l’inverse : fixer le comportement plutôt que la conséquence remet la réussite entre tes mains chaque semaine. Garde le résultat comme cap, et juge tes semaines sur ce que tu as fait, pas sur ce que la balance affiche.",
+      "points": [
+        "Fixe des objectifs d’action : trois séances, pas trois kilos.",
+        "Un objectif de processus se vérifie en fin de semaine : fait ou pas.",
+        "Juge ta semaine sur ce qui a été fait, pas sur la balance."
+      ],
+      "question": {
+        "prompt": "Quel objectif te donne le plus de prise cette semaine ?",
+        "choices": [
+          "Faire trois séances cette semaine",
+          "Perdre cinq kilos avant l’été",
+          "Avoir plus de volonté"
+        ],
+        "answerIndex": 0,
+        "explanation": "Un objectif de processus se décide et se vérifie : soit les séances sont faites, soit non. Le résultat, lui, dépend de facteurs que tu ne contrôles qu’en partie."
+      }
+    },
+    {
+      "id": "mental-comparaison",
+      "category": "mental",
+      "title": "Se comparer à soi, pas aux autres",
+      "body": "À la salle comme sur les réseaux, tu ne vois que des instantanés : la meilleure série de quelqu’un d’autre, filmée un bon jour, sans les années d’entraînement ni la génétique qu’il y a derrière. Te mesurer à ça n’apprend rien et décourage beaucoup. La comparaison utile existe pourtant : toi, il y a trois mois. Ton carnet la rend possible : charges, répétitions, régularité, tout y est daté. Si ces chiffres montent, tu progresses, quoi que fasse le voisin de rack. Et s’ils stagnent, ils te disent où agir, ce qu’aucun fil d’actualité ne fera jamais.",
+      "points": [
+        "Compare-toi à ton carnet d’il y a trois mois, pas au voisin.",
+        "Les réseaux montrent des instantanés choisis, jamais le chemin.",
+        "Charges, répétitions, régularité : si ça monte, tu avances."
+      ],
+      "question": {
+        "prompt": "Quel repère mesure vraiment ta progression ?",
+        "choices": [
+          "Le niveau des plus forts de ta salle",
+          "Tes propres chiffres d’il y a quelques mois",
+          "Ce que montrent les réseaux sociaux"
+        ],
+        "answerIndex": 1,
+        "explanation": "Chacun part d’un niveau, d’un vécu et d’une génétique différents : seuls tes chiffres datés mesurent l’effet de ton propre travail."
       }
     },
     {
@@ -699,6 +909,48 @@
       }
     },
     {
+      "id": "blessures-technique",
+      "category": "blessures",
+      "title": "Quand la technique lâche, la série est finie",
+      "body": "Sous la fatigue, le geste change avant que tu t’en rendes compte : le dos s’arrondit, les genoux rentrent, la barre dévie. Une technique qui se dégrade déplace la contrainte vers des structures qui n’y sont pas préparées, et c’est souvent dans ces dernières répétitions arrachées que le corps encaisse le plus. La série utile s’arrête quand le geste ne peut plus être maintenu, pas quand plus rien ne bouge. Garder une ou deux répétitions en réserve sur les exercices lourds ne coûte presque rien en progression, et t’épargne les répétitions les plus risquées de la séance.",
+      "points": [
+        "La série s’arrête quand la technique lâche, pas quand tout lâche.",
+        "Garde une ou deux répétitions en réserve sur les exercices lourds.",
+        "Filme-toi ou fais-toi observer : la dégradation se voit mal de l’intérieur."
+      ],
+      "question": {
+        "prompt": "Quel signal marque la fin d’une série lourde bien menée ?",
+        "choices": [
+          "L’impossibilité totale de bouger la charge",
+          "Le moment où la technique ne peut plus être maintenue",
+          "Une durée fixe, la même à chaque série"
+        ],
+        "answerIndex": 1,
+        "explanation": "L’échec technique arrive avant l’échec musculaire : au-delà, chaque répétition se fait avec un geste dégradé, qui reporte la charge sur des structures mal préparées."
+      }
+    },
+    {
+      "id": "blessures-reprise",
+      "category": "blessures",
+      "title": "Reprendre après une coupure",
+      "body": "Après deux semaines d’arrêt ou plus, la tentation est de reprendre exactement là où tu t’étais arrêté. C’est le moment où beaucoup se blessent : la force revient vite, la tolérance des tendons et des articulations, elle, met plus de temps, et le carnet affiche des chiffres que les tissus ne peuvent plus honorer. Reprends nettement en dessous de tes dernières charges, puis remonte par paliers sur deux à trois semaines : le niveau d’avant revient bien plus vite qu’il n’a été construit. Après une blessure ou une maladie sérieuse, le feu vert et le rythme de reprise se décident avec un professionnel de santé.",
+      "points": [
+        "Reprends en dessous de tes dernières charges, jamais au même niveau.",
+        "Remonte par paliers sur deux à trois semaines.",
+        "Après une blessure ou une maladie, la reprise se valide avec un professionnel de santé."
+      ],
+      "question": {
+        "prompt": "Après un mois sans entraînement, comment reprendre ?",
+        "choices": [
+          "Aux charges exactes d’avant la coupure",
+          "Plus lourd, pour rattraper le temps perdu",
+          "Nettement plus léger, en remontant sur quelques semaines"
+        ],
+        "answerIndex": 2,
+        "explanation": "La force revient vite, mais tendons et articulations ont perdu une partie de leur tolérance : une remontée progressive leur laisse le temps de la retrouver."
+      }
+    },
+    {
       "id": "mythes-localise",
       "category": "mythes",
       "title": "On ne maigrit pas d'un endroit choisi",
@@ -738,6 +990,48 @@
         ],
         "answerIndex": 1,
         "explanation": "Un mouvement inhabituel courbature beaucoup ; répété, il en donne de moins en moins tout en restant aussi efficace."
+      }
+    },
+    {
+      "id": "mythes-transformation",
+      "category": "mythes",
+      "title": "Le muscle ne se transforme pas en gras",
+      "body": "Muscle et graisse sont deux tissus différents : l’un ne devient jamais l’autre, dans aucun sens. Quand tu arrêtes de t’entraîner, le muscle inutilisé fond lentement, et si ton appétit reste calé sur ton ancien niveau d’activité, le surplus se stocke en graisse. Les deux phénomènes sont simultanés, pas liés : de là vient l’illusion d’une transformation. Le même raisonnement joue dans l’autre sens : reprendre l’entraînement rebâtit le muscle, et le corps retrouve d’autant plus vite un niveau déjà atteint, un phénomène souvent appelé mémoire musculaire.",
+      "points": [
+        "Muscle et graisse sont deux tissus distincts, sans conversion possible.",
+        "À l’arrêt, le muscle fond et un appétit inchangé fait stocker du gras.",
+        "Un niveau déjà atteint se retrouve plus vite qu’il ne s’est construit."
+      ],
+      "question": {
+        "prompt": "Que devient le muscle après un long arrêt de l’entraînement ?",
+        "choices": [
+          "Il se transforme progressivement en graisse",
+          "Il fond lentement, sans jamais devenir de la graisse",
+          "Il reste intact si l’alimentation ne change pas"
+        ],
+        "answerIndex": 1,
+        "explanation": "Muscle et graisse sont deux tissus sans conversion possible : à l’arrêt, l’un s’atrophie pendant que l’autre se stocke si les apports ne baissent pas."
+      }
+    },
+    {
+      "id": "mythes-femmes-muscle",
+      "category": "mythes",
+      "title": "Soulever lourd ne rend pas « massive »",
+      "body": "Beaucoup de femmes évitent les charges lourdes par peur de devenir « trop musclées ». Cette crainte surestime largement la vitesse du processus : construire du muscle est lent pour tout le monde, et le taux de testostérone bien plus bas des femmes ralentit encore ce rythme : au mieux quelques kilos par an, et de moins en moins à mesure que l’on progresse. Les physiques très développés que tu as en tête demandent des années d’entraînement structuré, une alimentation calibrée et la volonté explicite d’aller là. Soulever lourd construit d’abord de la force, de la densité et une silhouette athlétique : le volume spectaculaire ne s’attrape jamais par accident.",
+      "points": [
+        "La prise de muscle est lente : quelques kilos par an, au mieux.",
+        "Un physique très développé demande des années de travail volontaire.",
+        "Les charges lourdes construisent force et silhouette avant le volume."
+      ],
+      "question": {
+        "prompt": "Pourquoi soulever lourd ne rend-il pas « massive » malgré soi ?",
+        "choices": [
+          "Parce que les femmes ne peuvent pas construire de muscle",
+          "Parce que la prise de muscle est lente et demande des années de travail dédié",
+          "Parce que soulever léger protège du volume"
+        ],
+        "answerIndex": 1,
+        "explanation": "Personne ne prend un volume spectaculaire par accident : c’est le fruit d’années d’entraînement et d’alimentation calibrés, avec un profil hormonal qui le favorise."
       }
     },
     {
@@ -783,6 +1077,48 @@
       }
     },
     {
+      "id": "hyrox-allure",
+      "category": "hyrox",
+      "title": "Partir en retenue, finir fort",
+      "body": "Pour la plupart des participants, une course Hyrox dure plus d’une heure : c’est une épreuve d’endurance, pas une succession de sprints. L’erreur classique se commet dans les premières minutes, portée par l’adrénaline du départ : un premier kilomètre trop rapide et un skierg attaqué à fond se paient sur tous les blocs suivants. Vise une intensité que tu sais pouvoir tenir jusqu’aux wall balls, quitte à accélérer sur la fin si les jambes répondent. Négocier la première moitié en retenue et finir fort bat presque toujours le scénario inverse.",
+      "points": [
+        "Une Hyrox se court à une allure d’endurance, pas de sprint.",
+        "Retiens-toi sur le premier kilomètre et le premier atelier.",
+        "Garde de quoi accélérer dans la seconde moitié."
+      ],
+      "question": {
+        "prompt": "Quelle stratégie d’allure paie le plus souvent sur Hyrox ?",
+        "choices": [
+          "Partir vite pour prendre de l’avance",
+          "Partir en retenue et finir fort",
+          "Sprinter la course et récupérer sur les ateliers"
+        ],
+        "answerIndex": 1,
+        "explanation": "L’épreuve dure plus d’une heure pour la plupart : un départ trop rapide se paie sur tous les blocs suivants, alors qu’une première moitié en retenue laisse de quoi finir fort."
+      }
+    },
+    {
+      "id": "hyrox-course-chargee",
+      "category": "hyrox",
+      "title": "Courir sur des jambes chargées",
+      "body": "La course représente environ la moitié du temps d’une Hyrox, mais elle ne se court presque jamais sur des jambes fraîches : passé le premier kilomètre, chaque tronçon part juste après un atelier qui les a chargées. Courir vite ne suffit donc pas, il faut retrouver une foulée correcte sur la fatigue. La séance la plus spécifique reproduit l’alternance : un atelier ou un effort de force, puis un tronçon de course à ton allure visée, et l’on répète. L’objectif n’est pas la vitesse de chaque morceau, mais la rapidité avec laquelle la foulée redevient économique. Cette capacité s’entraîne, et elle paie plus que du volume de course seul.",
+      "points": [
+        "La moitié d’une Hyrox se court, presque toujours sur des jambes chargées.",
+        "Alterne ateliers et tronçons de course dans la même séance.",
+        "Travaille la reprise d’une foulée économique après l’effort."
+      ],
+      "question": {
+        "prompt": "Quelle séance prépare le mieux les tronçons de course d’une Hyrox ?",
+        "choices": [
+          "Des sorties longues uniquement, sur jambes fraîches",
+          "Alterner efforts de force et tronçons de course dans la même séance",
+          "Remplacer toute la course par du renforcement"
+        ],
+        "answerIndex": 1,
+        "explanation": "En course, chaque kilomètre après le premier part d’un atelier : s’entraîner à relancer la foulée sur la fatigue est la compétence la plus spécifique du format."
+      }
+    },
+    {
       "id": "running-volume-facile",
       "category": "running",
       "title": "L'essentiel du volume doit rester facile",
@@ -825,6 +1161,48 @@
       }
     },
     {
+      "id": "running-sortie-longue",
+      "category": "running",
+      "title": "La sortie longue, pilier de la semaine",
+      "body": "Une sortie plus longue que les autres, chaque semaine ou presque, apprend au corps à durer : le cœur, les tendons et les réserves d’énergie s’adaptent à l’effort prolongé. Elle se court à allure confortable, celle où tu peux encore parler, et s’allonge par petites marches, dix à quinze minutes de plus à la fois. Elle ne doit pas écraser le reste : si elle pèse beaucoup plus du tiers de ton volume hebdomadaire, c’est le volume total qui est trop faible, pas la sortie qui est trop longue. C’est aussi le bon terrain pour répéter le ravitaillement prévu le jour de course.",
+      "points": [
+        "Allure confortable : la durée fait le travail, pas la vitesse.",
+        "L’allonger par petites marches, dix à quinze minutes à la fois.",
+        "Y répéter le ravitaillement prévu pour le jour de course."
+      ],
+      "question": {
+        "prompt": "Comment faire progresser sa sortie longue ?",
+        "choices": [
+          "L’allonger par petites marches, dix à quinze minutes à la fois",
+          "La courir plus vite chaque semaine",
+          "La doubler dès qu’elle devient facile"
+        ],
+        "answerIndex": 0,
+        "explanation": "Tendons et articulations s’adaptent plus lentement que le souffle : de petites marches régulières allongent la sortie sans dépasser leur capacité d’adaptation."
+      }
+    },
+    {
+      "id": "running-renforcement",
+      "category": "running",
+      "title": "Le renforcement, allié du coureur",
+      "body": "Beaucoup de coureurs évitent la salle de peur de s’alourdir. C’est l’inverse qui se produit : une à deux séances de renforcement par semaine, jambes et tronc en tête, améliorent l’économie de course, c’est-à-dire le coût énergétique de chaque foulée, et sont associées à moins de blessures. Le volume nécessaire est trop faible pour prendre du poids notable, surtout avec le kilométrage qui tourne à côté. Squats, fentes, mollets et gainage te suffisent largement pour commencer ; quelques charges maîtrisées valent mieux qu’une accumulation de répétitions légères.",
+      "points": [
+        "Une à deux séances de renforcement par semaine suffisent.",
+        "L’économie de course s’améliore : chaque foulée coûte moins.",
+        "Jambes, mollets et gainage d’abord, avec des charges maîtrisées."
+      ],
+      "question": {
+        "prompt": "Que gagne un coureur à faire du renforcement musculaire ?",
+        "choices": [
+          "Rien, il risque surtout de s’alourdir",
+          "Une meilleure économie de course et moins de blessures",
+          "Uniquement un avantage esthétique"
+        ],
+        "answerIndex": 1,
+        "explanation": "À raison d’une à deux séances par semaine, la foulée devient moins coûteuse en énergie ; à cette dose, la prise de poids redoutée ne se produit pas, surtout avec le kilométrage couru à côté."
+      }
+    },
+    {
       "id": "calisthenics-progressions",
       "category": "calisthenics",
       "title": "Progresser sans charge, par le levier",
@@ -864,6 +1242,48 @@
         ],
         "answerIndex": 1,
         "explanation": "Un travail de poussée dominant enroule progressivement les épaules vers l'avant ; le tirage rétablit cet équilibre."
+      }
+    },
+    {
+      "id": "calisthenics-jambes",
+      "category": "calisthenics",
+      "title": "Des jambes solides au poids de corps",
+      "body": "Le poids de corps sait aussi charger les jambes, à condition de passer sur un seul appui : une fente bulgare ou un squat sur une jambe concentre presque tout ton poids sur une seule cuisse, équilibre à tenir en plus. La progression suit la même logique que pour le haut du corps : squat complet d’abord, puis fentes, puis variantes unilatérales de plus en plus profondes, en ralentissant la descente quand cela devient facile. Les mollets se travaillent sur une marche, en amplitude complète, et les sauts, introduits progressivement, apportent l’explosivité que les flexions lentes ne développent pas.",
+      "points": [
+        "Passer sur un seul appui : c’est la surcharge du bas du corps.",
+        "Squat complet, fentes, puis unilatéral : monter cran par cran.",
+        "Mollets sur une marche, sauts introduits progressivement."
+      ],
+      "question": {
+        "prompt": "Comment rendre le travail des jambes exigeant sans matériel ?",
+        "choices": [
+          "En passant sur un seul appui",
+          "En multipliant les squats rapides à deux jambes",
+          "C’est impossible sans charges"
+        ],
+        "answerIndex": 0,
+        "explanation": "Sur un appui, la cuisse porte presque tout le poids du corps au lieu de la moitié : la contrainte change d’ordre de grandeur sans ajouter un kilo."
+      }
+    },
+    {
+      "id": "calisthenics-gainage",
+      "category": "calisthenics",
+      "title": "Le gainage, clé des figures",
+      "body": "En calisthénie, le corps entier est la barre : s’il plie, la force des bras se perd en route. La position creuse (hollow body), bassin rétroversé, bas du dos plaqué au sol, jambes tendues, apprend cette tenue : c’est elle que tu retrouves dans une traction stricte, un appui renversé ou une pompe bien alignée. Quelques minutes en fin de séance suffisent, en tenues courtes et propres plutôt que longues et tremblantes. Quand un mouvement stagne alors que la force semble là, c’est souvent la ligne du corps qui cède, pas les bras.",
+      "points": [
+        "La position creuse s’apprend au sol, bassin rétroversé, lombaires plaquées.",
+        "Des tenues courtes et propres plutôt que longues et tremblantes.",
+        "Un geste qui stagne : vérifie la ligne du corps avant d’accuser les bras."
+      ],
+      "question": {
+        "prompt": "Pourquoi travailler la position creuse (hollow body) ?",
+        "choices": [
+          "Pour dessiner les abdominaux",
+          "Parce qu’elle enseigne la tenue du corps commune aux figures",
+          "Pour remplacer le travail de tirage"
+        ],
+        "answerIndex": 1,
+        "explanation": "Un corps qui reste rigide transmet toute la force des bras au mouvement ; la position creuse entraîne exactement cette rigidité, de la traction stricte à l’appui renversé."
       }
     }
   ]

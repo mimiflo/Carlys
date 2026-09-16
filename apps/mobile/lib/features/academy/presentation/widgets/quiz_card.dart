@@ -19,6 +19,7 @@ class QuizCard extends StatefulWidget {
     this.answeredChoice,
     this.onAnswered,
     this.framed = true,
+    this.hint,
     super.key,
   });
 
@@ -43,6 +44,11 @@ class QuizCard extends StatefulWidget {
   /// (accueil, sous sa barre de titre de section). La question ne change pas,
   /// seul son écrin s'adapte à ce qui l'entoure.
   final bool framed;
+
+  /// Invite affichée AVANT la réponse. Par défaut, celle de la question du
+  /// jour (« une seule tentative par jour ») ; le quiz de domaine, qui se
+  /// rejoue à volonté, passe la sienne.
+  final String? hint;
 
   @override
   State<QuizCard> createState() => _QuizCardState();
@@ -118,6 +124,7 @@ class _QuizCardState extends State<QuizCard> {
         _Hint(
           answered: answered,
           correct: answered && picked == question.answerIndex,
+          invite: widget.hint,
         ),
         if (answered) ...[
           const SizedBox(height: AppSpacing.sm),
@@ -143,16 +150,20 @@ class _QuizCardState extends State<QuizCard> {
 /// La ligne d'invite, sous les réponses : elle dit quoi faire, puis ce qui
 /// vient d'être fait. Jamais un reproche.
 class _Hint extends StatelessWidget {
-  const _Hint({required this.answered, required this.correct});
+  const _Hint({required this.answered, required this.correct, this.invite});
 
   final bool answered;
   final bool correct;
+
+  /// Invite de remplacement avant la réponse, quand le contexte n'est pas
+  /// la question du jour.
+  final String? invite;
 
   @override
   Widget build(BuildContext context) {
     final (text, color) = switch ((answered, correct)) {
       (false, _) => (
-        'Touche une réponse : une seule tentative par jour.',
+        invite ?? 'Touche une réponse : une seule tentative par jour.',
         AppColors.darkTextTertiary,
       ),
       (true, true) => ('Bonne réponse.', AppColors.success),

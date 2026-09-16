@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../domain/academy_journey.dart';
 import '../../domain/academy_progress.dart';
 import '../controllers/academy_controllers.dart';
 
@@ -19,6 +20,22 @@ final academyProgressProvider = Provider<AcademyProgress?>((ref) {
   final answered = ref.watch(answeredLessonsProvider).valueOrNull ?? const {};
   return computeAcademyProgress(
     lessons: lessons,
+    answeredIds: answered.keys.toSet(),
+  );
+});
+
+/// L'avancement du Parcours, dérivé des MÊMES réponses que le reste de
+/// l'Academy : une leçon lue hors parcours y compte aussi, la donnée est
+/// unique. `null` tant que le pack n'est pas lu, comme l'avancement.
+final academyJourneyProgressProvider = Provider<JourneyProgress?>((ref) {
+  final lessons = ref.watch(academyPackProvider).valueOrNull;
+  if (lessons == null) {
+    return null;
+  }
+  final answered = ref.watch(answeredLessonsProvider).valueOrNull ?? const {};
+  return computeJourneyProgress(
+    stages: academyJourney,
+    packIds: lessons.map((lesson) => lesson.id).toSet(),
     answeredIds: answered.keys.toSet(),
   );
 });

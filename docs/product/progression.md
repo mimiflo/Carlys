@@ -111,9 +111,12 @@ libellés, on ne les renomme pas.
 ## Un seul score : la règle de non-concurrence
 
 Le titre Carlys est le **seul score de progression personnelle**. Les ligues
-(tranche 42) et les niveaux Academy (tranche 37) n’existent pas encore. Le jour
-où ils arriveront, ils devront tenir sans produire un second nombre que la
-personne « est ».
+(tranche 42) n’existent pas encore ; les niveaux Academy (tranche 37) sont
+livrés et montrent comment tenir la règle : cinq jalons à seuils ABSOLUS
+(indépendants de la taille du pack, donc jamais de recul quand le contenu
+s’étoffe), un affichage sans récompense (le journal fête déjà ces
+franchissements), aucun nombre que la personne « est ». Le jour où les
+ligues arriveront, elles devront tenir de la même façon.
 
 Ce n’est pas une affaire de goût. Le score est dérivé, jamais accumulé : il se
 recalcule à chaque lecture depuis des faits, et ces faits sont en nombre fini.
@@ -126,14 +129,14 @@ Deux cas sont déjà mesurables aujourd’hui.
 
 **Un « niveau Academy » calculé sur le pack recompterait l’axe Maîtrise.**
 L’axe rapporte les leçons répondues à une cible FIXE de 20, et le pack en
-compte 38 (`assets/academy/pack.json`, version 3). À 20 leçons répondues,
-quelqu’un lirait « Maîtrise 100 % » sur son profil de progression et « 53 % »
+compte 58 (`assets/academy/pack.json`, version 4). À 20 leçons répondues,
+quelqu’un lirait « Maîtrise 100 % » sur son profil de progression et « 34 % »
 dans l’Academy, au même instant, pour le même travail. Pire : la cible fixe
 existe justement pour qu’étoffer le pack ne reprenne rien à personne
 (`n/20 ≥ n/22`, voir plus haut). Un niveau assis sur la taille du pack
-réintroduirait exactement le défaut que cette cible a supprimé, puisque passer
-de 38 à 80 leçons le diviserait par deux du jour au lendemain, sans que
-personne ait rien fait.
+réintroduirait exactement le défaut que cette cible a supprimé, puisque
+doubler la taille du pack le diviserait par deux du jour au lendemain, sans
+que personne ait rien fait.
 
 **Une « ligue » assise sur la série de jours contredirait l’axe Constance.**
 `computeStreakDays` (API, `modules/community/application/streak.calculator.ts`)
@@ -171,9 +174,14 @@ suffit à refuser l’écran.
    le PRÉSENTER : le lister, le situer, le comparer. Il n’a pas le droit de le
    RENOTER.
 2. **Le test de l’unité.** Un repère se dit dans l’unité de ce qu’il compte :
-   « 12 leçons sur 38 », « 4 séances ce mois-ci », « 3e place sur 12 ». Dès
-   qu’il se dit en pourcentage ou en points, il se lit comme une note, et une
-   note est un score.
+   « 12 leçons sur 58 », « 4 séances ce mois-ci », « 3e place sur 12 ».
+   Amendement arbitré en septembre 2026 (décision produit, Academy) : un
+   pourcentage a le droit d’ACCOMPAGNER ce compte quand il est une position
+   dans un CONTENU et qu’il **nomme sa base** — « 63 % du pack », « 75 % du
+   domaine ». C’est la base nommée qui le distingue d’une note : deux
+   nombres qui disent sur quoi ils portent ne se concurrencent pas. Un
+   pourcentage muet sur sa base, ou un pourcentage de la PERSONNE (« tu es à
+   80 % »), reste interdit et se lit comme un score.
 3. **Le test de la phrase.** Écrire la phrase que la personne lira. Si elle
    tient la forme « tu es 7 » ou « ton niveau est 12 », c’est un second score.
    « Tu es Artisan » existe déjà, et une fois suffit.

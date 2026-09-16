@@ -24,8 +24,9 @@ dépôt. Le propriétaire du produit a tranché, les documents suivent :
    l'exclusion écrite dans `docs/product/academy.md` (« un pourcentage global
    est exclu »). Acté : le pourcentage s'affiche comme une position dans le
    CONTENU (« du pack », « du domaine »), jamais comme un score de la
-   personne. Les deux documents (`academy.md`, `progression.md`) sont à
-   réécrire pour porter ce nouvel arbitrage — Plan 1.
+   personne. FAIT : les deux documents portent l'arbitrage (`academy.md`
+   « il nomme sa base », `progression.md` amendement du test de l'unité),
+   et un test d'écran épingle la base nommée.
 2. **Défis, ligues, pas** : le principe 5 de `docs/product/community.md`
    (« jamais un classement individuel ») et la promesse de
    `docs/legal/privacy.md` (« ne lit pas les données de santé ») devront être
@@ -58,11 +59,12 @@ local (`answered_lessons_store.dart`) + POST serveur en meilleur effort.
       (`domain/entities/academy.dart:15-27`).
 - [x] Architecture extensible : une catégorie nouvelle = une entrée d'enum +
       des leçons dans le pack ; l'écran n'affiche que les domaines SERVIS.
-- [~] Contenu : 38 leçons, dont 2 seulement dans chacun des huit domaines
-      récents. À étoffer (≥ 4 par domaine) + plancher par domaine ajouté au
-      test d'intégrité du pack.
+- [x] Contenu : 58 leçons (pack v4), chaque domaine en sert au moins 4 —
+      20 leçons écrites par ateliers puis relues en ADVERSAIRE (faits +
+      forme, 7 corrections appliquées, 2 fautes des relecteurs eux-mêmes
+      réparées) ; plancher ≥ 4 par domaine ajouté au test d'intégrité.
 
-### 1.3 Gamification  `[~]`
+### 1.3 Gamification  `[x]`
 
 - [x] Badges de progression : six sceaux, calculés depuis les seuls faits de
       l'Academy (`academy_progress_card.dart`).
@@ -70,24 +72,32 @@ local (`answered_lessons_store.dart`) + POST serveur en meilleur effort.
       domaine (`domain_completed_banner.dart`).
 - [x] Progression par catégorie : compte + jauge par domaine
       (`academy_domain_header.dart`).
-- [ ] Niveaux : sémantique DÉJÀ tranchée (`academy.md` : « ils situent, ne
-      notent pas ») et chiffres déjà calculés (`academy_progress.dart`) —
-      reste l'affichage, les jalons au journal des récompenses, les tests.
-- [ ] Pourcentage de complétion (par catégorie et global) — décision actée
-      ci-dessus, documents à réécrire dans le même commit.
-- [ ] Quiz de chapitre : « chapitre » = domaine. Quiz multi-questions à la
-      fin d'un domaine bouclé, score montré sur l'instant et jamais stocké
-      (se tromper fait apprendre — règle écrite du moteur de progression).
+- [x] Niveaux : cinq jalons à seuils ABSOLUS (1/5/12/20/30 — Découverte,
+      Exploration, Assiduité, Profondeur, Érudition), affichage seul, AUCUNE
+      récompense nouvelle (le journal fête déjà ces franchissements, une par
+      niveau compterait deux fois). `academy_level.dart`, tués par mutation.
+- [x] Pourcentage de complétion : « X % du pack » (carte) et « % du
+      domaine » (en-têtes), TRONQUÉ (100 seulement au contenu bouclé), la
+      base toujours nommée — arbitrage consigné dans `academy.md` +
+      amendement du test de l'unité dans `progression.md`.
+- [x] Quiz de chapitre : « chapitre » = domaine. `domain_quiz_screen.dart`,
+      offert par l'en-tête d'un domaine BOUCLÉ, une question à la fois,
+      score affiché puis mort avec l'écran PAR CONSTRUCTION (l'écran ne lit
+      que le pack, n'écrit nulle part).
 
-### 1.4 Mode Parcours  `[ ]`
+### 1.4 Mode Parcours  `[x]`
 
-Six étapes (Débutant → Nutrition → Entraînement → Récupération → Discipline
-→ Optimisation) : manifeste d'étapes référençant des leçons existantes,
-progression dérivée des réponses (aucune persistance nouvelle), reprise au
-premier chapitre non lu, écran du parcours courant, validation d'étape.
-Arbitrage pris : le Parcours n'enferme PAS la navigation libre — les onglets
-de domaines restent ouverts, seul l'ordre de VALIDATION des étapes est
-séquentiel.
+Livré : six étapes (Débutant → Nutrition → Entraînement → Récupération →
+Discipline → Optimisation), manifeste de 32 leçons (`academy_journey.dart`,
+intégrité testée : uniquement des identifiants du pack, jamais deux fois la
+même), progression DÉRIVÉE des mêmes réponses que le reste (rien à stocker),
+reprise automatique (carte d'entrée sur l'écran Academy : étape courante,
+Commencer/Reprendre/Terminé), vue des six étapes (`journey_screen.dart`),
+écran d'étape réutilisant `LessonCard` avec bandeau « Étape validée » au
+franchissement (`journey_stage_screen.dart`). Rien de verrouillé — un test
+l'épingle — et une leçon lue hors parcours y compte. Les fiches d'anatomie
+et les filières spécialisées restent en exploration libre (choix éditorial
+documenté dans `academy.md`).
 
 ### Préalable serveur (rattaché au Plan 1, livrable sans arbitrage)
 

@@ -156,14 +156,16 @@ void main() {
     // Réponse volontairement FAUSSE (ou la deuxième, si la bonne est la
     // première) : l'explication doit s'afficher quand même.
     final wrongIndex = question.answerIndex == 0 ? 1 : 0;
-    await tester.tap(
-      find
-          .descendant(
-            of: quiz,
-            matching: find.text(question.choices[wrongIndex]),
-          )
-          .first,
-    );
+    final mauvais = find
+        .descendant(of: quiz, matching: find.text(question.choices[wrongIndex]))
+        .first;
+    // RÉVÉLER avant de toucher, ici et pour le second tap : la carte
+    // d'avancement a grandi (niveau, pourcentage) et un choix peut se
+    // retrouver sous la barre d'onglets. Un tap « silencieux »
+    // (warnIfMissed) qui manque sa cible touche alors la barre, change
+    // d'onglet, et le test meurt sur un écran qui n'a rien à voir.
+    await reveal(tester, mauvais);
+    await tester.tap(mauvais);
     await tester.pumpAndSettle();
 
     expect(
@@ -172,15 +174,14 @@ void main() {
     );
     // Et une fois répondu, on ne peut plus changer : un second tap sur un
     // autre choix ne modifie rien.
-    await tester.tap(
-      find
-          .descendant(
-            of: quiz,
-            matching: find.text(question.choices[question.answerIndex]),
-          )
-          .first,
-      warnIfMissed: false,
-    );
+    final bon = find
+        .descendant(
+          of: quiz,
+          matching: find.text(question.choices[question.answerIndex]),
+        )
+        .first;
+    await reveal(tester, bon);
+    await tester.tap(bon, warnIfMissed: false);
     await tester.pumpAndSettle();
     expect(
       find.descendant(of: quiz, matching: find.text(question.explanation)),
@@ -200,14 +201,12 @@ void main() {
     final question = tester.widget<QuizCard>(quiz).question;
     final wrongIndex = question.answerIndex == 0 ? 1 : 0;
 
-    await tester.tap(
-      find
-          .descendant(
-            of: quiz,
-            matching: find.text(question.choices[wrongIndex]),
-          )
-          .first,
-    );
+    final mauvais = find
+        .descendant(of: quiz, matching: find.text(question.choices[wrongIndex]))
+        .first;
+    // Même précaution que le test précédent : révéler avant de toucher.
+    await reveal(tester, mauvais);
+    await tester.tap(mauvais);
     await tester.pumpAndSettle();
 
     // La réponse (fausse) est rapportée, avec le jour local.
@@ -218,15 +217,14 @@ void main() {
     expect(correct, isFalse);
 
     // Un second tap ne compte pas : la carte est verrouillée après réponse.
-    await tester.tap(
-      find
-          .descendant(
-            of: quiz,
-            matching: find.text(question.choices[question.answerIndex]),
-          )
-          .first,
-      warnIfMissed: false,
-    );
+    final bon = find
+        .descendant(
+          of: quiz,
+          matching: find.text(question.choices[question.answerIndex]),
+        )
+        .first;
+    await reveal(tester, bon);
+    await tester.tap(bon, warnIfMissed: false);
     await tester.pumpAndSettle();
     expect(community.quizReports, hasLength(1));
   });
@@ -302,7 +300,7 @@ void main() {
     // l'avancement : il ne répète plus le nom que la pastille active dit
     // déjà, il ajoute « 0 / 4 » et sa jauge.
     expect(find.text('MUSCULATION'), findsOneWidget);
-    expect(find.text('0 / 4'), findsOneWidget);
+    expect(find.text('0 / 4 · 0 %'), findsOneWidget);
 
     // Retour à « Tous ». La barre de domaines vit DANS la liste : le
     // défilement précédent l'a sortie de l'arbre, il faut remonter avant de
@@ -332,11 +330,12 @@ void main() {
     expect(find.text('OÙ TU EN ES'), findsOneWidget);
     expect(find.textContaining('leçons sur'), findsOneWidget);
     expect(find.text('Aucun domaine bouclé pour l’instant.'), findsOneWidget);
-    // Un COMPTE, jamais un pourcentage : l'axe « Maîtrise » du profil
-    // rapporte déjà ces mêmes leçons à une autre base, et deux nombres pour
-    // un seul travail est exactement ce que la règle de non-concurrence
-    // interdit.
-    expect(find.textContaining('%'), findsNothing);
+    // Le pourcentage est arrivé par arbitrage produit (septembre 2026,
+    // consigné dans docs/product/academy.md), à une condition que ce test
+    // épingle : il NOMME sa base. « 0 % du pack » ne concurrence pas l'axe
+    // « Maîtrise » du profil, compté sur une cible fixe, parce que chacun
+    // dit sur quoi il porte. Un « % » orphelin resterait un défaut.
+    expect(find.text('0 % du pack'), findsOneWidget);
   });
 
   testWidgets('la fête d’un domaine bouclé se ferme et ne revient pas', (

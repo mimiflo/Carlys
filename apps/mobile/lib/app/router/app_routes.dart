@@ -58,6 +58,14 @@ abstract final class AppRoutes {
   /// « apprendre → pratiquer » des fiches d'anatomie de l'Academy.
   static String exercisesForGroup(String slug) => '/exercises?groupe=$slug';
 
+  /// Le quiz d'un domaine BOUCLÉ de l'Academy : ses questions rejouées
+  /// d'un trait. `domaine` est le nom de l'énumération, clé du pack.
+  static String academyDomainQuiz(String domaine) => '/academy/quiz/$domaine';
+
+  /// Le Parcours guidé : la vue des six étapes, puis chaque étape.
+  static const String academyJourney = '/academy/parcours';
+  static String academyJourneyStage(int rang) => '/academy/parcours/$rang';
+
   static String workoutDetail(String sessionId) => '/history/$sessionId';
 
   /// Éditeur d'un modèle de séance.

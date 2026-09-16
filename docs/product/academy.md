@@ -2,8 +2,9 @@
 
 L'Academy enseigne ce que l'application fait pratiquer. Son contenu est
 **éditorial et embarqué** (`apps/mobile/assets/academy/pack.json`, version
-3) — pas une donnée serveur : il voyage avec l'application, comme les
-vignettes de muscles.
+4, 58 leçons — la fournée de septembre 2026 en a ajouté 20, écrites puis
+relues en adversaire sous deux angles, faits et forme) — pas une donnée
+serveur : il voyage avec l'application, comme les vignettes de muscles.
 
 ## Les douze domaines
 
@@ -116,9 +117,22 @@ trace d'une question abordée.
   célébration qui ne se déclenche qu'au franchissement, et les six
   récompenses de l'Academy décidées sans lire le titre atteint ni
   l'historique des séances.
-- Écran (`academy_flow_test.dart`) : la carte « Où tu en es » affiche un
-  compte et AUCUN pourcentage, l'en-tête de domaine porte son « 0 / 4 » même
-  en vue filtrée, et le bandeau de domaine bouclé se ferme.
+- Écran (`academy_flow_test.dart`) : la carte « Où tu en es » affiche le
+  compte et un pourcentage qui NOMME sa base (« 0 % du pack »), l'en-tête de
+  domaine porte son « 0 / 4 · 0 % » même en vue filtrée, et le bandeau de
+  domaine bouclé se ferme.
+- Niveaux et pourcentages (`academy_level_test.dart`,
+  `academy_progress_card_test.dart`) : barème strictement croissant, seuils
+  absolus tous atteignables, aucun niveau avant la première leçon, jamais de
+  recul, pourcentage TRONQUÉ (100 ne se dit qu'au contenu réellement
+  bouclé — l'arrondi entier est tué par mutation), et la carte qui tait le
+  niveau à zéro leçon puis dit le prochain pas comme une direction.
+- Quiz de domaine (`domain_quiz_test.dart`) : seules les questions du
+  domaine, une à la fois, explication puis pas suivant, score affiché puis
+  remis à zéro par « Refaire », état vide sur domaine inconnu, affordance
+  de l'en-tête réservée au domaine bouclé.
+- Parcours (`academy_journey_test.dart`, `journey_flow_test.dart`) : voir
+  la section « Le Parcours ».
 
 ## Où en est la lecture — un repère, jamais un second score
 
@@ -127,10 +141,15 @@ maîtrise ne paraissaient que sur les écrans de progression : on pouvait
 boucler le pack sans jamais le voir dit là où on l'avait fait.
 
 Elle compte désormais, **dans l'unité de ce qu'elle compte** : « 24 leçons sur
-38 » en tête, « 3 / 4 » sous chaque titre de domaine, une jauge par domaine.
-Pas de pourcentage global, et la raison est chiffrée plus bas dans ce
-document : l'axe « Maîtrise » du profil rapporte déjà ces mêmes leçons à une
-cible fixe de 20.
+58 » en tête, « 3 / 4 » sous chaque titre de domaine, une jauge par domaine.
+Un pourcentage accompagne le compte depuis l'arbitrage produit de septembre
+2026, à une condition qui n'est pas négociable : **il nomme sa base** — « 63 %
+du pack », « 75 % du domaine ». C'est ce que la règle de non-concurrence
+protégeait réellement : l'axe « Maîtrise » du profil rapporte ces mêmes
+leçons à une cible fixe de 20, et deux nombres SANS base annoncée pour le
+même travail se contrediraient à l'écran. Deux nombres qui disent chacun sur
+quoi ils portent ne se contredisent pas. Un « % » resté muet sur sa base est
+toujours un défaut, et un test l'épingle.
 
 - **« Abordée », pas « réussie ».** Le moteur de progression a déjà tranché
   dans ce sens et l'a documenté : se tromper fait apprendre, et n'ouvrir
@@ -173,30 +192,90 @@ qui revient ne célèbre plus rien.
 
 ### Ce qui reste, et pourquoi
 
-Quatre morceaux de la tranche attendent un arbitrage qui n'est pas technique :
+Un seul morceau de la tranche attend encore (niveaux, Parcours et quiz de
+domaine sont livrés — sections suivantes) :
 
 | Morceau | Ce qu'il faut trancher |
 | --- | --- |
-| **Niveaux** | Difficulté par leçon, rang Academy, ou déverrouillage progressif : trois lectures aux coûts et aux risques opposés |
-| **Mode Parcours** | Les six étapes ne recouvrent aucun découpage existant des douze domaines. Quelle leçon dans quelle étape est un choix éditorial, et le verrouillage entrerait en conflit avec l'onglet « Tous » |
-| **Quiz de chapitre** | Définir « chapitre ». Si chapitre = leçon, il existe déjà |
 | **Persistance serveur** | Les réponses partent au serveur mais ne se relisent pas : la progression ne survit pas à un changement d'appareil |
+
+## Le quiz de domaine
+
+« Quiz de chapitre » est arbitré : le chapitre, c'est le DOMAINE. L'en-tête
+d'un domaine BOUCLÉ propose « Quiz du domaine »
+(`domain_quiz_screen.dart`) : ses questions rejouées d'un trait, une à la
+fois, avec la même `QuizCard` que partout — seule l'invite change, puisque
+ce quiz se rejoue à volonté.
+
+Avant la fin du domaine, pas de quiz : il poserait des questions jamais
+lues, un examen d'entrée là où l'Academy fait des répétitions. Le score
+s'affiche à la fin puis meurt avec l'écran, PAR CONSTRUCTION : l'écran ne
+lit que le pack et n'écrit nulle part. Un score conservé serait une note de
+la personne (règle de non-concurrence) ; les réponses aux leçons, elles,
+sont déjà notées à la première lecture, et rejouer ne les réécrit pas.
+
+## Le Parcours
+
+Six étapes guidées (`academy_journey.dart`) : Débutant → Nutrition →
+Entraînement → Récupération → Discipline → Optimisation. Le choix éditorial
+attendu est fait : une TRAVERSÉE généraliste de 32 leçons — les fiches
+d'anatomie (référence à consulter) et les filières spécialisées (Hyrox,
+running, calisthenics) restent en exploration libre, sinon le parcours
+imposerait le marathon à qui fait de la musculation.
+
+Ce qui a été tranché, et pourquoi :
+
+- **Un ordre de lecture, pas un verrou.** Chaque étape s'ouvre librement ;
+  le conflit annoncé avec l'onglet « Tous » est résolu en ne verrouillant
+  RIEN. La reprise automatique dit simplement où l'on en est
+  (`JourneyEntryCard` sur l'écran Academy : étape courante, « Reprendre »).
+- **Une leçon lue hors parcours compte dans le parcours.** La réponse est
+  la même donnée (`answeredLessonsProvider`) : rien à stocker côté
+  parcours, donc rien à désynchroniser.
+- **La validation d'une étape se constate au franchissement**, comme le
+  domaine bouclé : un bandeau, une fois, décidé AVANT l'écriture (relire le
+  provider juste après l'invalidation ferait la course avec la lecture
+  asynchrone du magasin).
+- **Une leçon retirée du pack ne bloque jamais une étape** : le calcul
+  ignore les identifiants que le pack ne sert plus, et un test d'intégrité
+  interdit au manifeste de référencer une leçon inexistante.
+
+Couverture : `academy_journey_test.dart` (manifeste intègre, reprise,
+étape passée, leçon hors pack, leçon lue hors parcours) et
+`journey_flow_test.dart` (six étapes sans verrou, ordre du manifeste,
+validation au franchissement et jamais avant, carte d'entrée Commencer /
+Reprendre / Terminé). Le filtre du pack et le franchissement sont tués par
+mutation.
 
 
 ## Les niveaux ne notent pas, ils situent
 
-La tranche 37 prévoit des niveaux. Ils sont un repère de POSITION dans le
-contenu, jamais un second score : « 12 leçons sur 38 », « il te reste quatre
-leçons en Nutrition ». Un pourcentage global est exclu, et la raison est
-chiffrée. L’axe Maîtrise du profil de progression rapporte déjà les leçons
-répondues à une cible FIXE de 20, quand le pack en compte 38 : à 20 leçons
-répondues, quelqu’un lirait « Maîtrise 100 % » sur son profil et « 53 % » ici,
-au même moment et pour le même travail. La cible fixe existe justement pour
-qu’étoffer le pack ne reprenne rien à personne ; un niveau assis sur la taille
-du pack ramènerait ce défaut, puisque passer de 38 à 80 leçons le diviserait
-par deux sans que personne ait rien fait.
+Les niveaux sont livrés (`academy_level.dart`), et ils tiennent la règle par
+construction. Cinq jalons de lecture — Découverte (1 leçon), Exploration (5),
+Assiduité (12), Profondeur (20), Érudition (30) — dont les noms disent un
+RAPPORT au contenu, pas une valeur de la personne : « Assiduité » décrit une
+habitude de lecture, là où « Expert » noterait.
 
-Ce que les niveaux ont le droit d’apporter : un ordre de lecture, une position
-dans un domaine, un jalon qui s’inscrit une fois au journal des récompenses.
-La règle complète et ses quatre tests vivent dans
-[progression.md](progression.md).
+Trois choix portent la règle :
+
+- **Des seuils ABSOLUS, pas proportionnels au pack.** L'axe Maîtrise a sa
+  cible fixe de 20 pour qu'étoffer le pack ne reprenne rien à personne ; un
+  niveau assis sur la taille du pack ramènerait ce défaut, puisque doubler
+  le pack le diviserait par deux sans que personne ait rien fait. Les
+  seuils absolus ont la même propriété : le pack grandit, personne ne
+  recule. Un test parcourt 0 à 60 leçons et vérifie que le rang ne descend
+  jamais.
+- **Un affichage, pas des récompenses.** Le journal des récompenses fête
+  déjà ces franchissements (« maitrise-5 », « maitrise-moitie »,
+  « maitrise-pack ») : créer une récompense par niveau compterait le même
+  fait deux fois.
+- **Aucun niveau avant la première leçon.** Un « niveau zéro » d'office se
+  lirait comme une note d'échec ; la carte parle d'elle-même (« 0 leçons sur
+  58 ») et le niveau arrive avec la lecture. Le prochain pas se dit comme
+  une direction (« encore 3 leçons avant Profondeur »), jamais en creux.
+
+Le pourcentage qui accompagne le compte suit l'arbitrage rappelé plus haut :
+il nomme sa base (« du pack », « du domaine »), il est TRONQUÉ pour que
+« 100 % » ne se dise qu'au contenu réellement bouclé, et il reste une
+position dans un contenu — jamais un pourcentage de la personne. La règle
+complète et ses quatre tests vivent dans [progression.md](progression.md).

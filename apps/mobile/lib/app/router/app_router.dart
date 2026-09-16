@@ -3,6 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../features/academy/presentation/screens/academy_screen.dart';
+import '../../features/academy/presentation/screens/domain_quiz_screen.dart';
+import '../../features/academy/presentation/screens/journey_screen.dart';
+import '../../features/academy/presentation/screens/journey_stage_screen.dart';
 import '../../features/authentication/presentation/controllers/auth_controller.dart';
 import '../../features/authentication/presentation/screens/change_password_screen.dart';
 import '../../features/authentication/presentation/screens/delete_account_screen.dart';
@@ -249,6 +252,39 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                 path: AppRoutes.academy,
                 name: 'academy',
                 builder: (context, state) => const AcademyScreen(),
+                routes: [
+                  GoRoute(
+                    path: 'quiz/:domaine',
+                    name: 'academy-domain-quiz',
+                    // Plein écran : un quiz se joue d'un trait, la bottom
+                    // bar n'a rien à y faire.
+                    parentNavigatorKey: _rootNavigatorKey,
+                    builder: (context, state) => DomainQuizScreen(
+                      domaine: state.pathParameters['domaine'] ?? '',
+                    ),
+                  ),
+                  // Le Parcours vit DANS la pile de l'onglet, comme les
+                  // recettes sous Nutrition : c'est une navigation de fond,
+                  // pas un aparté plein écran.
+                  GoRoute(
+                    path: 'parcours',
+                    name: 'academy-journey',
+                    builder: (context, state) => const JourneyScreen(),
+                    routes: [
+                      GoRoute(
+                        path: ':etape',
+                        name: 'academy-journey-stage',
+                        builder: (context, state) => JourneyStageScreen(
+                          rang:
+                              int.tryParse(
+                                state.pathParameters['etape'] ?? '',
+                              ) ??
+                              0,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
               ),
             ],
           ),

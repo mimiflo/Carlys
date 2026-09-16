@@ -6,6 +6,7 @@ import '../../../progression/domain/reward.dart';
 import '../../../progression/domain/reward_engine.dart';
 import '../../../progression/presentation/widgets/award_seal.dart';
 import '../../../progression/presentation/widgets/seal_size.dart';
+import '../../domain/academy_level.dart';
 import '../../domain/academy_progress.dart';
 
 /// Où en est la lecture du pack, et ce qu'elle a déjà rapporté.
@@ -15,10 +16,11 @@ import '../../domain/academy_progress.dart';
 /// progression : on pouvait boucler le pack sans jamais le voir dit là où on
 /// l'avait fait.
 ///
-/// Un COMPTE, jamais un pourcentage global : la règle de non-concurrence
-/// l'impose, parce que l'axe « Maîtrise » du profil rapporte déjà les leçons
-/// à une cible fixe de 20 et afficherait un autre nombre pour le même
-/// travail. Voir `docs/product/progression.md`.
+/// Le COMPTE d'abord, le pourcentage ensuite et jamais sans sa base : « 63 %
+/// du pack » est une position dans un contenu, arbitrage consigné dans
+/// `docs/product/academy.md`. Le niveau, lui, est un jalon d'affichage : il
+/// ne crée AUCUNE récompense, le journal fête déjà ces franchissements
+/// (voir `academy_level.dart`).
 ///
 /// L'état des sceaux se calcule ICI, à partir des seuls faits de l'Academy,
 /// et non depuis `earnedRewardsProvider`. Ce provider-là lit l'historique
@@ -57,6 +59,7 @@ class AcademyProgressCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final niveau = academyLevelOf(progress.abordees);
     final facts = factsOf(progress);
     final gagnees = {
       for (final regle in rewardCatalog)
@@ -77,11 +80,33 @@ class AcademyProgressCard extends StatelessWidget {
         children: [
           const AppSectionLabel('Où tu en es'),
           const SizedBox(height: AppSpacing.sm),
-          Text(
-            '${progress.abordees} leçons sur ${progress.total}',
-            style: AppTypography.title.copyWith(
-              color: AppColors.darkTextPrimary,
-            ),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(
+                child: Text(
+                  '${progress.abordees} leçons sur ${progress.total}',
+                  style: AppTypography.title.copyWith(
+                    color: AppColors.darkTextPrimary,
+                  ),
+                ),
+              ),
+              // La base du pourcentage se dit TOUJOURS : « du pack » est ce
+              // qui le distingue de l'axe « Maîtrise » du profil, compté sur
+              // une autre base.
+              Padding(
+                padding: const EdgeInsets.only(bottom: AppSpacing.xxs),
+                child: Text(
+                  '${progress.pourcent} % du pack',
+                  style: AppTypography.resized(AppTypography.labelMono, 11)
+                      .copyWith(
+                        color: progress.pourcent >= 100
+                            ? AppColors.accent
+                            : AppColors.darkTextTertiary,
+                      ),
+                ),
+              ),
+            ],
           ),
           const SizedBox(height: AppSpacing.xxs),
           Text(
@@ -100,6 +125,12 @@ class AcademyProgressCard extends StatelessWidget {
                 : progress.abordees / progress.total,
             color: AppColors.primaryLight,
           ),
+          // Le niveau ne paraît qu'à partir de la première leçon : avant,
+          // un « niveau zéro » se lirait comme une note d'échec d'office.
+          if (niveau != null) ...[
+            const SizedBox(height: AppSpacing.sm),
+            _NiveauLigne(niveau: niveau, abordees: progress.abordees),
+          ],
           const SizedBox(height: AppSpacing.md),
           // Les sceaux déjà gagnés en pleine couleur, les autres éteints :
           // ce qui reste à faire se voit, sans jamais ressembler à un échec.
@@ -114,6 +145,62 @@ class AcademyProgressCard extends StatelessWidget {
         ],
       ),
     );
+  }
+}
+
+/// Le niveau atteint, et ce qui ouvre le suivant.
+///
+/// Le rang et le nom disent où on en est ; la droite dit le PROCHAIN pas,
+/// jamais ce qui manque en creux : « encore 3 leçons avant Profondeur » est
+/// une direction, « il te manque 3 leçons » serait un reproche.
+class _NiveauLigne extends StatelessWidget {
+  const _NiveauLigne({required this.niveau, required this.abordees});
+
+  final AcademyLevel niveau;
+  final int abordees;
+
+  @override
+  Widget build(BuildContext context) {
+    final prochain = nextAcademyLevelOf(abordees);
+
+    return Semantics(
+      label:
+          'Niveau ${niveau.rang}, ${niveau.nom}'
+          '${prochain == null ? '' : '. ${_versLeProchain(prochain)}'}',
+      excludeSemantics: true,
+      child: Row(
+        children: [
+          Text(
+            'Niveau ${niveau.rang}',
+            style: AppTypography.resized(
+              AppTypography.labelMono,
+              11,
+            ).copyWith(color: AppColors.primaryLight),
+          ),
+          const SizedBox(width: AppSpacing.xs),
+          Text(
+            niveau.nom,
+            style: AppTypography.label.copyWith(
+              color: AppColors.darkTextSecondary,
+            ),
+          ),
+          const Spacer(),
+          if (prochain != null)
+            Text(
+              _versLeProchain(prochain),
+              style: AppTypography.label.copyWith(
+                color: AppColors.darkTextTertiary,
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  String _versLeProchain(AcademyLevel prochain) {
+    final manque = prochain.seuil - abordees;
+    final lecons = manque > 1 ? '$manque leçons' : '1 leçon';
+    return 'encore $lecons avant ${prochain.nom}';
   }
 }
 
