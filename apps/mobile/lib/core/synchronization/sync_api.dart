@@ -40,6 +40,17 @@ abstract interface class SyncApi {
     required String idempotencyKey,
   });
 
+  /// `PATCH /workout-sets/{setId}` : corriger le FAIT réalisé.
+  ///
+  /// Distinct de [upsertSet], et ce n'en est pas un doublon : le POST est un
+  /// upsert IDEMPOTENT PAR IDENTIFIANT, donc rejoué avec le même UUID il rend
+  /// la série existante SANS la modifier. Il ne peut pas servir à corriger.
+  Future<void> updateSet(
+    String setId,
+    Map<String, dynamic> body, {
+    required String idempotencyKey,
+  });
+
   Future<void> deleteSet(String setId, {required String idempotencyKey});
 
   /// `POST /workout-sessions/{sessionId}/plan/skip` : le corps liste les
@@ -114,6 +125,17 @@ class DioSyncApi implements SyncApi {
     required String idempotencyKey,
   }) => _dio.post<void>(
     '/workout-sessions/$sessionId/sets',
+    data: body,
+    options: _options(idempotencyKey),
+  );
+
+  @override
+  Future<void> updateSet(
+    String setId,
+    Map<String, dynamic> body, {
+    required String idempotencyKey,
+  }) => _dio.patch<void>(
+    '/workout-sets/$setId',
     data: body,
     options: _options(idempotencyKey),
   );

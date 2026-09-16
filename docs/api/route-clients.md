@@ -98,7 +98,7 @@ OpenAPI : `{id}`.
 | `POST /workout-sessions/{id}/plan/skip` | **mobile** | apps/mobile |
 | `POST /workout-sessions/{id}/sets` | **mobile** | apps/mobile |
 | `DELETE /workout-sets/{id}` | **mobile** | apps/mobile |
-| `PATCH /workout-sets/{id}` | **aucun** (constaté le 7 septembre 2026) | Corriger une série faite n’est proposé nulle part : l’application supprime la ligne et en repose une. |
+| `PATCH /workout-sets/{id}` | **mobile** | apps/mobile — corriger une série d’une séance TERMINÉE. Distinct du POST, qui est un upsert idempotent par identifiant : rejoué, il rend la série sans la modifier. |
 
 ### Modèles de séance
 

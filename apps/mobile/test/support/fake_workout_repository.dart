@@ -127,6 +127,40 @@ class FakeWorkoutRepository implements WorkoutRepository {
   }
 
   @override
+  Future<void> updateSet(String setId, {int? reps, double? weightKg}) async {
+    final current = active;
+    if (current == null) {
+      return;
+    }
+    _publish(
+      WorkoutWithSets(
+        session: current.session,
+        sets: [
+          for (final set in current.sets)
+            if (set.id == setId)
+              WorkoutSetEntry(
+                id: set.id,
+                exerciseId: set.exerciseId,
+                exerciseName: set.exerciseName,
+                position: set.position,
+                kind: set.kind,
+                completedAt: set.completedAt,
+                syncState: set.syncState,
+                reps: reps ?? set.reps,
+                weightKg: weightKg ?? set.weightKg,
+                restSeconds: set.restSeconds,
+                rpe: set.rpe,
+                plannedReps: set.plannedReps,
+                plannedWeightKg: set.plannedWeightKg,
+              )
+            else
+              set,
+        ],
+      ),
+    );
+  }
+
+  @override
   Future<void> deleteSet(String setId) async {
     final current = active;
     if (current == null) {

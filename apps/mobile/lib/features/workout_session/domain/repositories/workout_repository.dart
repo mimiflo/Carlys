@@ -44,6 +44,16 @@ abstract interface class WorkoutRepository {
   /// qu'elle honore (cf. `workout_template`).
   Future<String> addSet(AddSetInput input);
 
+  /// Corrige une série DÉJÀ enregistrée : le fait réalisé, rien d'autre.
+  ///
+  /// La cible affichée au moment de la validation (`planned*`) n'est jamais
+  /// réécrivable, côté serveur comme ici : c'est un fait historique.
+  ///
+  /// Passe par `PATCH /workout-sets/{id}` et NON par le réenregistrement de
+  /// la série : l'ajout est un upsert idempotent par identifiant, donc rejoué
+  /// avec le même UUID il rend la série existante sans la modifier.
+  Future<void> updateSet(String setId, {int? reps, double? weightKg});
+
   Future<void> deleteSet(String setId);
 
   Future<void> completeWorkout(String sessionId);

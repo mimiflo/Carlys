@@ -202,6 +202,64 @@ class WorkoutSessionWriter {
     );
   }
 
+  /// Corrige une série DÉJÀ enregistrée, localement puis en file.
+  ///
+  /// La correction est un PATCH, pas un réenregistrement : l'ajout d'une
+  /// série est un upsert idempotent par identifiant, donc rejoué avec le même
+  /// UUID il rend la série existante SANS la modifier.
+  ///
+  /// Le corps ne porte que ce qui change, et jamais `plannedReps` ni
+  /// `plannedWeightKg` : la cible affichée à l'instant de la validation est un
+  /// fait historique, que le serveur refuse d'ailleurs de réécrire.
+  ///
+  /// Une série inconnue ou déjà supprimée ne met RIEN en file : corriger ce
+  /// qui n'existe plus enverrait un PATCH voué au 404, et la file ne rejoue
+  /// jamais indéfiniment un refus définitif.
+  Future<void> correctSet(
+    String setId, {
+    required int? reps,
+    required double? weightKg,
+  }) async {
+    if (reps == null && weightKg == null) {
+      return;
+    }
+    await _db.transaction(() async {
+      final set = await (_db.select(
+        _db.localWorkoutSets,
+      )..where((row) => row.id.equals(setId))).getSingleOrNull();
+      if (set == null || set.deleted) {
+        return;
+      }
+      await (_db.update(
+        _db.localWorkoutSets,
+      )..where((row) => row.id.equals(setId))).write(
+        LocalWorkoutSetsCompanion(
+          reps: reps == null ? const Value.absent() : Value(reps),
+          weightKg: weightKg == null ? const Value.absent() : Value(weightKg),
+          // `pending` comme pour la pierre tombale : sans cela, le
+          // rapatriement effacerait la correction locale en reproduisant
+          // l'état du serveur, qui ne l'a pas encore reçue.
+          syncStatus: const Value('pending'),
+        ),
+      );
+      await enqueue(
+        entityType: 'set',
+        entityId: setId,
+        operationType: 'set.update',
+        // `sessionId` range l'opération sur la voie de sa séance, derrière la
+        // création et l'ajout de la série : un PATCH parti avant son POST
+        // serait refusé pour toujours.
+        payload: {
+          'sessionId': set.sessionId,
+          'body': <String, dynamic>{
+            if (reps != null) 'reps': reps,
+            if (weightKg != null) 'weightKg': weightKg,
+          },
+        },
+      );
+    });
+  }
+
   /// Insère une opération dans la file, dans la transaction courante.
   ///
   /// `idempotencyKey = entityId` : l'UUID métier généré sur l'appareil EST la

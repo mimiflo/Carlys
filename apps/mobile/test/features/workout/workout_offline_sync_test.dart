@@ -214,6 +214,69 @@ void main() {
   );
 
   test(
+    'correction d’une série : valeur locale immédiate + PATCH en file',
+    () async {
+      api.networkDown = true;
+      final sessionId = await repository.startWorkout();
+      await repository.addSet(
+        AddSetInput(
+          sessionId: sessionId,
+          exerciseName: 'Squat',
+          reps: 5,
+          weightKg: 200, // le zéro de trop
+        ),
+      );
+      final active = await repository.watchActiveWorkout().first;
+      final setId = active!.sets.single.id;
+
+      await repository.updateSet(setId, weightKg: 20);
+
+      final corrige = await repository.watchActiveWorkout().first;
+      expect(corrige!.sets.single.weightKg, 20);
+      expect(
+        corrige.sets.single.reps,
+        5,
+        reason: 'Ce qui n’a pas changé reste.',
+      );
+
+      api.networkDown = false;
+      clock = clock.add(const Duration(minutes: 10));
+      await engine.syncNow();
+
+      // Un PATCH, PAS un second POST : l'ajout est un upsert idempotent par
+      // identifiant, donc rejoué il rendrait la série SANS la modifier.
+      expect(api.log, contains('set.update:$setId:{"weightKg":20.0}'));
+    },
+  );
+
+  test(
+    'une série supprimée ne se corrige plus : rien ne part au serveur',
+    () async {
+      api.networkDown = true;
+      final sessionId = await repository.startWorkout();
+      await repository.addSet(
+        AddSetInput(sessionId: sessionId, exerciseName: 'Squat', reps: 5),
+      );
+      final active = await repository.watchActiveWorkout().first;
+      final setId = active!.sets.single.id;
+      await repository.deleteSet(setId);
+
+      await repository.updateSet(setId, reps: 8);
+
+      api.networkDown = false;
+      clock = clock.add(const Duration(minutes: 10));
+      await engine.syncNow();
+
+      // Un PATCH sur une série supprimée serait voué au 404, et la file ne
+      // rejoue jamais indéfiniment un refus définitif.
+      expect(
+        api.log.where((ligne) => ligne.startsWith('set.update:')),
+        isEmpty,
+      );
+    },
+  );
+
+  test(
     'une seule séance active à la fois ; clôture locale idempotente',
     () async {
       api.networkDown = true; // les opérations restent en file, comptables

@@ -247,6 +247,12 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
   }
 
   @override
+  Future<void> updateSet(String setId, {int? reps, double? weightKg}) async {
+    await _writer.correctSet(setId, reps: reps, weightKg: weightKg);
+    _poke();
+  }
+
+  @override
   Future<void> deleteSet(String setId) async {
     await _db.transaction(() async {
       final set = await (_db.select(

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:carlys_mobile/core/synchronization/sync_api.dart';
 import 'package:dio/dio.dart';
 
@@ -92,6 +94,16 @@ class FakeSyncApi implements SyncApi {
     await _guard(id, idempotencyKey);
     log.add('set.upsert:$id');
     upsertedSets.add(body);
+  }
+
+  @override
+  Future<void> updateSet(
+    String setId,
+    Map<String, dynamic> body, {
+    required String idempotencyKey,
+  }) async {
+    await _guard(setId, idempotencyKey);
+    log.add('set.update:$setId:${jsonEncode(body)}');
   }
 
   @override

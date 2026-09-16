@@ -111,6 +111,34 @@ class WorkoutActions {
   Future<void> deleteSet(String setId) =>
       _ref.read(workoutRepositoryProvider).deleteSet(setId);
 
+  /// Corrige une série d'une séance TERMINÉE, puis redemande les records.
+  ///
+  /// L'invalidation est la même qu'à la clôture, et pour la même raison : le
+  /// serveur recalcule les records à chaque écriture sur une série d'une
+  /// séance close, donc une charge corrigée fait DESCENDRE un record. Sans
+  /// cela, l'écran Progrès continuerait d'afficher le record faux jusqu'au
+  /// prochain redémarrage — exactement le défaut que la correction répare.
+  Future<void> correctSet(
+    String sessionId,
+    String setId, {
+    int? reps,
+    double? weightKg,
+  }) async {
+    await _ref
+        .read(workoutRepositoryProvider)
+        .updateSet(setId, reps: reps, weightKg: weightKg);
+    _ref.invalidate(workoutDetailProvider(sessionId));
+    _ref.invalidate(personalRecordsProvider);
+  }
+
+  /// Supprime une série d'une séance TERMINÉE. Même invalidation, même
+  /// raison : la suppression fait redescendre un record tout autant.
+  Future<void> removeSetFromFinished(String sessionId, String setId) async {
+    await _ref.read(workoutRepositoryProvider).deleteSet(setId);
+    _ref.invalidate(workoutDetailProvider(sessionId));
+    _ref.invalidate(personalRecordsProvider);
+  }
+
   /// Clôt la séance, puis redemande les records.
   ///
   /// La clôture est LE moment où le serveur les recalcule (Étape 5). Sans

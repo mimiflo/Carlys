@@ -45,6 +45,33 @@ maintenir pour devenir une fonction des séries stockées. Trois conséquences :
   startedAt)` puis `WorkoutSet(sessionId, position)`, deux index qui
   existent), et une séance ABANDONNÉE n'y entre pas — un test e2e l'exige.
 
+### Le geste qui manquait : corriger une série d'une séance terminée
+
+Le serveur savait corriger, l'application ne le demandait jamais. `PATCH
+/api/v1/workout-sets/{id}` était livré, validé et testé, et le manifeste
+routes ↔ clients le notait « aucun » depuis le 7 septembre. Une séance
+terminée était donc définitivement figée : aucun écran n'offrait de corriger
+une série ni d'en supprimer une, la suppression n'existant que PENDANT la
+séance. L'incohérence sautait aux yeux depuis que les mesures corporelles sont
+redevenues corrigeables : une PESÉE se corrigeait, une SÉRIE non.
+
+- La ligne ENTIÈRE ouvre la correction, l'appui long supprime. Poser un bouton
+  d'édition à côté des chiffres créerait deux cibles concurrentes pour une
+  seule intention, exactement ce que la règle des portes d'explication a déjà
+  tranché ailleurs.
+- La feuille s'ouvre PRÉ-REMPLIE, et ne renvoie que ce qui a bougé : un champ
+  inchangé ne part pas au serveur.
+- Les deux gestes DISENT leur conséquence avant de l'appliquer — « tes records
+  et tes statistiques seront recalculés » — parce que personne ne devine qu'un
+  record peut descendre.
+- La correction passe par `set.update` dans la file de synchronisation, donc
+  elle aboutit hors ligne. Elle ne passe PAS par un réenregistrement de la
+  série : l'ajout est un upsert idempotent par identifiant, donc rejoué avec
+  le même UUID il rend la série existante SANS la modifier.
+- Une série supprimée ne se corrige plus, et rien n'est mis en file : un PATCH
+  voué au 404 n'a rien à faire dans une file qui ne rejoue jamais
+  indéfiniment un refus définitif.
+
 ## Mesures corporelles : tout est corrigeable
 
 `PATCH` et `DELETE /api/v1/body-metrics/:id` existent, sont testés, et

@@ -40,6 +40,12 @@ class SyncDispatcher {
           payload['body'] as Map<String, dynamic>,
           idempotencyKey: key,
         );
+      case 'set.update':
+        await _api.updateSet(
+          operation.entityId,
+          payload['body'] as Map<String, dynamic>,
+          idempotencyKey: key,
+        );
       case 'set.delete':
         await _api.deleteSet(operation.entityId, idempotencyKey: key);
       case 'plan.skip':
