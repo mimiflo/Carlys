@@ -15,6 +15,8 @@ interface Stubs {
   exercisePoints: jest.Mock;
   listRecords: jest.Mock;
   findRecords: jest.Mock;
+  findSetsForRecords: jest.Mock;
+  deleteRecords: jest.Mock;
   upsertRecord: jest.Mock;
   createBodyMetric: jest.Mock;
   findBodyMetricById: jest.Mock;
@@ -36,6 +38,8 @@ function buildStubs(): Stubs {
     exercisePoints: jest.fn().mockResolvedValue([]),
     listRecords: jest.fn().mockResolvedValue([]),
     findRecords: jest.fn().mockResolvedValue([]),
+    findSetsForRecords: jest.fn().mockResolvedValue([]),
+    deleteRecords: jest.fn().mockResolvedValue(undefined),
     upsertRecord: jest.fn().mockResolvedValue(undefined),
     createBodyMetric: jest.fn().mockResolvedValue(true),
     findBodyMetricById: jest.fn().mockResolvedValue(null),
@@ -118,39 +122,71 @@ describe('ProgressService', () => {
   });
 
   describe('updateRecordsForSession', () => {
-    it('crée un record quand aucun n’existe pour l’exercice', async () => {
+    it('écrit les records depuis l’HISTORIQUE, pas depuis la séance seule', async () => {
       const stubs = buildStubs();
-      const service = buildService(stubs);
-
-      await service.updateRecordsForSession(USER, 'session-1', [workoutSet()]);
-
-      // MAX_WEIGHT, MAX_REPS et MAX_SET_VOLUME sont tous nouveaux.
-      expect(stubs.upsertRecord).toHaveBeenCalledTimes(3);
-    });
-
-    it('ne remplace un record que s’il est battu', async () => {
-      const stubs = buildStubs();
-      stubs.findRecords.mockResolvedValue([
-        storedRecord({ recordType: 'MAX_WEIGHT', value: 100 }),
-        storedRecord({ id: 'record-2', recordType: 'MAX_REPS', value: 8 }),
-        storedRecord({ id: 'record-3', recordType: 'MAX_SET_VOLUME', value: 10_000 }),
+      // La séance du jour porte 60 kg ; l'historique garde un 100 kg.
+      stubs.findSetsForRecords.mockResolvedValue([
+        workoutSet(),
+        workoutSet({ id: 'ancienne', sessionId: 'session-0', reps: 3, weightKg: 100 }),
       ]);
       const service = buildService(stubs);
 
-      // 60 kg < 100 kg, 10 reps > 8 reps, 600 kg < 10 000 kg.
       await service.updateRecordsForSession(USER, 'session-1', [workoutSet()]);
 
-      expect(stubs.upsertRecord).toHaveBeenCalledTimes(1);
+      expect(stubs.findSetsForRecords).toHaveBeenCalledWith(USER, ['Développé couché']);
+      // MAX_WEIGHT vient de l'ancienne séance, MAX_REPS de celle du jour.
       expect(stubs.upsertRecord).toHaveBeenCalledWith(
         USER,
-        expect.objectContaining({ recordType: 'MAX_REPS', value: 10 }),
-        'session-1',
+        expect.objectContaining({
+          recordType: 'MAX_WEIGHT',
+          value: 100,
+          sessionId: 'session-0',
+        }),
       );
+      expect(stubs.upsertRecord).toHaveBeenCalledWith(
+        USER,
+        expect.objectContaining({
+          recordType: 'MAX_REPS',
+          value: 10,
+          sessionId: 'session-1',
+        }),
+      );
+    });
+
+    it('le record DESCEND quand l’historique ne le justifie plus', async () => {
+      // Le cas qui rendait une charge mal saisie définitive : 100 kg tapé au
+      // lieu de 10, corrigé ensuite. L'ancienne version gardait 100.
+      const stubs = buildStubs();
+      stubs.findRecords.mockResolvedValue([storedRecord({ recordType: 'MAX_WEIGHT', value: 100 })]);
+      stubs.findSetsForRecords.mockResolvedValue([workoutSet({ reps: 10, weightKg: 10 })]);
+      const service = buildService(stubs);
+
+      await service.updateRecordsForSession(USER, 'session-1', [workoutSet()]);
+
+      expect(stubs.upsertRecord).toHaveBeenCalledWith(
+        USER,
+        expect.objectContaining({ recordType: 'MAX_WEIGHT', value: 10 }),
+      );
+    });
+
+    it('un record que plus aucune série ne porte est SUPPRIMÉ', async () => {
+      const stubs = buildStubs();
+      stubs.findRecords.mockResolvedValue([storedRecord({ recordType: 'MAX_WEIGHT', value: 100 })]);
+      // Toutes les séries chargées ont disparu de l'historique.
+      stubs.findSetsForRecords.mockResolvedValue([]);
+      const service = buildService(stubs);
+
+      await service.updateRecordsForSession(USER, 'session-1', [workoutSet()]);
+
+      expect(stubs.deleteRecords).toHaveBeenCalledWith(USER, [
+        { exerciseName: 'Développé couché', recordType: 'MAX_WEIGHT' },
+      ]);
+      expect(stubs.upsertRecord).not.toHaveBeenCalled();
     });
 
     it('ne fait jamais échouer la clôture : les erreurs sont journalisées', async () => {
       const stubs = buildStubs();
-      stubs.findRecords.mockRejectedValue(new Error('base indisponible'));
+      stubs.findSetsForRecords.mockRejectedValue(new Error('base indisponible'));
       const service = buildService(stubs);
 
       await expect(
@@ -159,14 +195,52 @@ describe('ProgressService', () => {
       expect(loggerStub.error).toHaveBeenCalled();
     });
 
+    it('et l’échec se RATTRAPE vraiment à la clôture suivante', async () => {
+      // La promesse que l'ancienne docstring faisait sans la tenir. La
+      // séance suivante relit l'historique, donc elle retrouve le 100 kg
+      // que l'écriture ratée avait laissé de côté.
+      const stubs = buildStubs();
+      stubs.findSetsForRecords.mockRejectedValueOnce(new Error('base indisponible'));
+      const service = buildService(stubs);
+      await service.updateRecordsForSession(USER, 'session-1', [
+        workoutSet({ reps: 3, weightKg: 100 }),
+      ]);
+      expect(stubs.upsertRecord).not.toHaveBeenCalled();
+
+      stubs.findSetsForRecords.mockResolvedValue([
+        workoutSet({ id: 'ancienne', sessionId: 'session-1', reps: 3, weightKg: 100 }),
+        workoutSet({ id: 'nouvelle', sessionId: 'session-2', reps: 3, weightKg: 80 }),
+      ]);
+      await service.updateRecordsForSession(USER, 'session-2', [
+        workoutSet({ sessionId: 'session-2', reps: 3, weightKg: 80 }),
+      ]);
+
+      expect(stubs.upsertRecord).toHaveBeenCalledWith(
+        USER,
+        expect.objectContaining({ recordType: 'MAX_WEIGHT', value: 100 }),
+      );
+    });
+
     it('ne consulte rien quand la séance n’a aucune série exploitable', async () => {
       const stubs = buildStubs();
       const service = buildService(stubs);
 
       await service.updateRecordsForSession(USER, 'session-1', []);
 
+      expect(stubs.findSetsForRecords).not.toHaveBeenCalled();
       expect(stubs.findRecords).not.toHaveBeenCalled();
       expect(stubs.upsertRecord).not.toHaveBeenCalled();
+    });
+
+    it('une série supprimée ne fait pas recalculer son exercice pour rien', async () => {
+      const stubs = buildStubs();
+      const service = buildService(stubs);
+
+      await service.updateRecordsForSession(USER, 'session-1', [
+        workoutSet({ deletedAt: new Date() }),
+      ]);
+
+      expect(stubs.findSetsForRecords).not.toHaveBeenCalled();
     });
   });
 

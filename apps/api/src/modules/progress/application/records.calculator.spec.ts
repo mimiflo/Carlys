@@ -1,5 +1,5 @@
 import { type WorkoutSet } from '@prisma/client';
-import { computeSessionBests } from './records.calculator';
+import { computeBests } from './records.calculator';
 
 function set(overrides: Partial<Record<keyof WorkoutSet, unknown>> = {}): WorkoutSet {
   return {
@@ -23,9 +23,9 @@ function set(overrides: Partial<Record<keyof WorkoutSet, unknown>> = {}): Workou
   } as unknown as WorkoutSet;
 }
 
-describe('computeSessionBests', () => {
+describe('computeBests', () => {
   it('retient la meilleure valeur par exercice et par type de record', () => {
-    const bests = computeSessionBests([
+    const bests = computeBests([
       set({ id: 'a', reps: 10, weightKg: 60 }),
       set({ id: 'b', reps: 5, weightKg: 80 }),
       set({ id: 'c', reps: 12, weightKg: 40 }),
@@ -39,7 +39,7 @@ describe('computeSessionBests', () => {
   });
 
   it('sépare les candidats par nom d’exercice', () => {
-    const bests = computeSessionBests([
+    const bests = computeBests([
       set({ exerciseName: 'Développé couché', weightKg: 80, reps: 5 }),
       set({ id: 'b', exerciseName: 'Squat', weightKg: 100, reps: 8 }),
     ]);
@@ -54,7 +54,7 @@ describe('computeSessionBests', () => {
   });
 
   it('ignore les séries supprimées', () => {
-    const bests = computeSessionBests([
+    const bests = computeBests([
       set({ weightKg: 60, reps: 10 }),
       set({ id: 'b', weightKg: 200, reps: 20, deletedAt: new Date() }),
     ]);
@@ -63,9 +63,7 @@ describe('computeSessionBests', () => {
   });
 
   it('une série au poids du corps ne produit qu’un record de répétitions', () => {
-    const bests = computeSessionBests([
-      set({ exerciseName: 'Tractions', weightKg: null, reps: 15 }),
-    ]);
+    const bests = computeBests([set({ exerciseName: 'Tractions', weightKg: null, reps: 15 })]);
 
     expect(bests).toHaveLength(1);
     expect(bests[0]?.recordType).toBe('MAX_REPS');
@@ -73,7 +71,7 @@ describe('computeSessionBests', () => {
   });
 
   it('renvoie une liste vide sans série exploitable', () => {
-    expect(computeSessionBests([])).toEqual([]);
-    expect(computeSessionBests([set({ reps: null, weightKg: null })])).toEqual([]);
+    expect(computeBests([])).toEqual([]);
+    expect(computeBests([set({ reps: null, weightKg: null })])).toEqual([]);
   });
 });

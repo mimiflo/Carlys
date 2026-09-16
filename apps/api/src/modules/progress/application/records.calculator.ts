@@ -9,14 +9,28 @@ export interface RecordCandidate {
   reps: number | null;
   weightKg: number | null;
   achievedAt: Date;
+  /**
+   * La séance où la performance a RÉELLEMENT eu lieu.
+   *
+   * Elle était déduite de l'appelant — la séance qu'on venait de clôturer —
+   * ce qui était vrai tant que le record se calculait sur cette seule séance.
+   * Depuis qu'il se recalcule sur l'historique, le meilleur candidat peut
+   * venir d'une séance d'il y a six mois, et l'attribuer à celle du jour
+   * serait un fait faux.
+   */
+  sessionId: string;
 }
 
 /**
- * Meilleures performances d'une séance, par exercice et par type de record.
- * Fonction pure : l'entrée est la liste des séries (non supprimées) de la
- * séance, la sortie les candidats à comparer aux records stockés.
+ * Meilleures performances par exercice et par type de record.
+ *
+ * Fonction pure, et volontairement AGNOSTIQUE de la provenance des séries :
+ * on lui donne celles d'une séance ou tout l'historique d'un exercice, elle
+ * rend le maximum de ce qu'elle a reçu. C'est ce qui permet de recalculer un
+ * record depuis l'historique avec le même code que celui qui le calculait
+ * séance par séance.
  */
-export function computeSessionBests(sets: WorkoutSet[]): RecordCandidate[] {
+export function computeBests(sets: WorkoutSet[]): RecordCandidate[] {
   const candidates = new Map<string, RecordCandidate>();
 
   const consider = (set: WorkoutSet, recordType: PersonalRecordType, value: number): void => {
@@ -31,6 +45,7 @@ export function computeSessionBests(sets: WorkoutSet[]): RecordCandidate[] {
         reps: set.reps,
         weightKg: set.weightKg === null ? null : Number(set.weightKg),
         achievedAt: set.completedAt,
+        sessionId: set.sessionId,
       });
     }
   };

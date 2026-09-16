@@ -1,4 +1,5 @@
 import { NotFoundException } from '@nestjs/common';
+import { type WorkoutSession, type WorkoutSet } from '@prisma/client';
 import {
   type SessionWithSets,
   type WorkoutsRepository,
@@ -30,14 +31,21 @@ export async function ownedSession(
   return session;
 }
 
-/** Série de l'utilisateur, encore vivante, ou 404. */
+/**
+ * Série de l'utilisateur, encore vivante, ou 404.
+ *
+ * Elle est RENDUE plutôt que seulement vérifiée : l'appelant a besoin de son
+ * exercice et du statut de sa séance pour savoir s'il doit recalculer les
+ * records, et la lecture a déjà eu lieu ici.
+ */
 export async function ownedSet(
   workouts: WorkoutsRepository,
   userId: string,
   setId: string,
-): Promise<void> {
+): Promise<WorkoutSet & { session: WorkoutSession }> {
   const set = await workouts.findSetById(setId);
   if (set === null || set.session.userId !== userId || set.deletedAt !== null) {
     throw new NotFoundException('Série introuvable.');
   }
+  return set;
 }

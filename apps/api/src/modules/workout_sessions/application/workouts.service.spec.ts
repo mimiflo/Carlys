@@ -1,5 +1,6 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { WorkoutSessionStatus, WorkoutSetKind } from '@prisma/client';
+import { type PinoLogger } from 'nestjs-pino';
 import { type CommunityService } from '../../community/application/community.service';
 import { type ProgressService } from '../../progress/application/progress.service';
 import { type WorkoutTemplatesService } from '../../workout_templates/application/workout-templates.service';
@@ -97,9 +98,18 @@ function buildService(
 }
 
 /** Les séries ont leur propre service : mêmes doublures, même dépôt. */
-function buildSetsService(stubs: Stubs): WorkoutSetsService {
-  return new WorkoutSetsService(stubs as unknown as WorkoutsRepository);
+function buildSetsService(
+  stubs: Stubs,
+  progress: { recomputeRecords: jest.Mock } = { recomputeRecords: jest.fn() },
+): WorkoutSetsService {
+  return new WorkoutSetsService(
+    stubs as unknown as WorkoutsRepository,
+    progress as unknown as ProgressService,
+    setsLoggerStub as unknown as PinoLogger,
+  );
 }
+
+const setsLoggerStub = { error: jest.fn() };
 
 const createInput = {
   id: 'session-1',

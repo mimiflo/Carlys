@@ -16,7 +16,7 @@ import { type BodyMetric, type PersonalRecord, type WorkoutSet } from '@prisma/c
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { PrismaService } from '../../../database/prisma/prisma.service';
 import { ProgressRepository } from '../infrastructure/progress.repository';
-import { computeSessionBests } from './records.calculator';
+import { computeBests } from './records.calculator';
 import { safeTimeZone } from '../../../common/utilities/time-zone';
 
 const PERIOD_DAYS: Record<ProgressPeriod, number> = {
@@ -58,37 +58,72 @@ export class ProgressService {
 
   /**
    * Recalcule les records après la clôture d'une séance. Ne fait JAMAIS
-   * échouer la clôture : un échec est journalisé, les records seront
-   * rattrapés à la prochaine séance.
+   * échouer la clôture : un échec est journalisé, et il se rattrape vraiment
+   * — voir `recomputeRecords`, qui relit l'historique au lieu de mettre à
+   * jour un maximum courant.
    */
   async updateRecordsForSession(
     userId: string,
     sessionId: string,
     sets: WorkoutSet[],
   ): Promise<void> {
+    const exerciseNames = [
+      ...new Set(sets.filter((set) => set.deletedAt === null).map((set) => set.exerciseName)),
+    ];
     try {
-      const candidates = computeSessionBests(sets);
-      if (candidates.length === 0) {
-        return;
-      }
-      const existing = await this.progress.findRecords(userId, [
-        ...new Set(candidates.map((candidate) => candidate.exerciseName)),
-      ]);
-      const byKey = new Map(
-        existing.map((record) => [`${record.exerciseName}|${record.recordType}`, record]),
-      );
-
-      for (const candidate of candidates) {
-        const current = byKey.get(`${candidate.exerciseName}|${candidate.recordType}`);
-        if (current === undefined || candidate.value > Number(current.value)) {
-          await this.progress.upsertRecord(userId, candidate, sessionId);
-        }
-      }
+      await this.recomputeRecords(userId, exerciseNames);
     } catch (error) {
       this.logger.error(
         { err: error, sessionId },
-        'Échec du recalcul des records — rattrapage à la prochaine séance',
+        'Échec du recalcul des records — rattrapé à la prochaine séance portant ces exercices',
       );
+    }
+  }
+
+  /**
+   * Rend les records de ces exercices ÉGAUX à ce que dit l'historique.
+   *
+   * POURQUOI CE N'EST PLUS UN MAXIMUM INCRÉMENTAL. L'ancienne version
+   * comparait les séries de la séance qu'on venait de clore aux records
+   * stockés et ne gardait que ce qui montait. Deux conséquences, et la
+   * docstring en promettait la réparation sans la faire :
+   *
+   *  - un échec d'écriture perdait le record POUR TOUJOURS. La séance
+   *    suivante ne voyait que ses propres séries : un 100 kg perdu laissait
+   *    un 80 kg ultérieur devenir le record, puisque plus aucune ligne
+   *    stockée ne s'y opposait. La promesse « rattrapés à la prochaine
+   *    séance » était donc fausse, et elle masquait une perte de donnée ;
+   *  - un record ne descendait JAMAIS. Corriger une charge saisie 100 au
+   *    lieu de 10, ou supprimer la série, laissait le record intact.
+   *
+   * Recalculer depuis l'historique supprime les deux d'un coup : le record
+   * cesse d'être un état à maintenir pour devenir une FONCTION des séries
+   * stockées. Toute écriture qui change ces séries n'a plus qu'à rappeler
+   * cette méthode pour les exercices touchés.
+   */
+  async recomputeRecords(userId: string, exerciseNames: string[]): Promise<void> {
+    if (exerciseNames.length === 0) {
+      return;
+    }
+    const sets = await this.progress.findSetsForRecords(userId, exerciseNames);
+    const bests = computeBests(sets);
+    const attendus = new Set(bests.map((best) => `${best.exerciseName}|${best.recordType}`));
+
+    // Les records qui ne correspondent plus à aucune série : ce sont eux que
+    // l'ancienne version laissait derrière elle.
+    const existants = await this.progress.findRecords(userId, exerciseNames);
+    await this.progress.deleteRecords(
+      userId,
+      existants
+        .filter((record) => !attendus.has(`${record.exerciseName}|${record.recordType}`))
+        .map((record) => ({
+          exerciseName: record.exerciseName,
+          recordType: record.recordType,
+        })),
+    );
+
+    for (const best of bests) {
+      await this.progress.upsertRecord(userId, best);
     }
   }
 

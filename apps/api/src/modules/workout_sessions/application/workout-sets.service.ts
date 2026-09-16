@@ -5,7 +5,9 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { WorkoutSetKind } from '@prisma/client';
+import { type WorkoutSession, type WorkoutSet, WorkoutSetKind } from '@prisma/client';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
+import { ProgressService } from '../../progress/application/progress.service';
 import { WorkoutsRepository } from '../infrastructure/workouts.repository';
 import { ownedSession, ownedSet } from './workout-ownership';
 import { presentSet } from './workout.presenter';
@@ -40,7 +42,12 @@ export interface CreateSetInput {
  */
 @Injectable()
 export class WorkoutSetsService {
-  constructor(private readonly workouts: WorkoutsRepository) {}
+  constructor(
+    private readonly workouts: WorkoutsRepository,
+    private readonly progress: ProgressService,
+    @InjectPinoLogger(WorkoutSetsService.name)
+    private readonly logger: PinoLogger,
+  ) {}
 
   /** Upsert idempotent d'une série (id généré sur l'appareil). */
   async addSet(
@@ -125,7 +132,7 @@ export class WorkoutSetsService {
       >
     >,
   ): Promise<WorkoutSetContract> {
-    await ownedSet(this.workouts, userId, setId);
+    const avant = await ownedSet(this.workouts, userId, setId);
     const updated = await this.workouts.updateSet(setId, {
       ...(data.kind === undefined ? {} : { kind: data.kind }),
       ...(data.reps === undefined ? {} : { reps: data.reps }),
@@ -136,6 +143,7 @@ export class WorkoutSetsService {
       ...(data.restSeconds === undefined ? {} : { restSeconds: data.restSeconds }),
       ...(data.completedAt === undefined ? {} : { completedAt: data.completedAt }),
     });
+    await this.recomputeIfClosed(userId, avant);
     return presentSet(updated);
   }
 
@@ -154,6 +162,43 @@ export class WorkoutSetsService {
       return;
     }
     await this.workouts.softDeleteSet(setId);
+    await this.recomputeIfClosed(userId, set);
+  }
+
+  /**
+   * Remet les records d'accord avec l'historique quand on vient de toucher
+   * une série d'une séance TERMINÉE.
+   *
+   * C'est le maillon qui manquait pour qu'une correction serve à quelque
+   * chose. Les records ne s'écrivaient qu'à la clôture : corriger ensuite une
+   * charge saisie 100 au lieu de 10, ou supprimer la série, laissait le
+   * record faux — définitivement, puisqu'un maximum incrémental ne redescend
+   * jamais. `PATCH /workout-sets/{id}` existait, était validé et testé, et ne
+   * réparait rien.
+   *
+   * Rien à faire tant que la séance est en cours : aucun record n'a encore
+   * été écrit pour elle, et recalculer à chaque série validée mettrait une
+   * lecture d'historique sur le chemin le plus chaud de l'application.
+   *
+   * L'échec ne fait pas échouer la correction, pour la même raison qu'à la
+   * clôture : la série corrigée est le fait, le record n'en est que la
+   * lecture — et il se rattrape maintenant pour de bon.
+   */
+  private async recomputeIfClosed(
+    userId: string,
+    set: WorkoutSet & { session: WorkoutSession },
+  ): Promise<void> {
+    if (set.session.status !== 'COMPLETED') {
+      return;
+    }
+    try {
+      await this.progress.recomputeRecords(userId, [set.exerciseName]);
+    } catch (error) {
+      this.logger.error(
+        { err: error, setId: set.id, exerciseName: set.exerciseName },
+        'Échec du recalcul des records après correction — rattrapé à la prochaine écriture sur cet exercice',
+      );
+    }
   }
 
   /**

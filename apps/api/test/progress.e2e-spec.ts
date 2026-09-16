@@ -394,4 +394,78 @@ describe('Progression (e2e)', () => {
     );
     expect(apres.profile.weightKg).toBe(74);
   });
+
+  /**
+   * Le record faux et définitif. Placé en FIN de fichier à dessein : il
+   * ajoute une séance, et les tests d'agrégation plus haut comptent les
+   * séances et les séries de la période.
+   */
+  describe('une charge mal saisie ne reste pas un record', () => {
+    const sessionD = randomUUID();
+    const setFautif = randomUUID();
+
+    const maxWeight = async (): Promise<number | undefined> => {
+      const records = data<PersonalRecord[]>(
+        (await authed(accessToken).get('/api/v1/progress/records').expect(200)).body,
+      );
+      return records.find((record) => record.recordType === 'MAX_WEIGHT')?.value;
+    };
+
+    it('200 kg au lieu de 20 : corrigé, le record REDESCEND à la vraie valeur', async () => {
+      await createSession(sessionD, 40);
+      await authed(accessToken)
+        .post(`/api/v1/workout-sessions/${sessionD}/sets`)
+        .send({
+          id: setFautif,
+          exerciseId,
+          position: 0,
+          reps: 5,
+          weightKg: 200, // le zéro de trop
+          completedAt: at(35),
+        })
+        .expect(201);
+      await authed(accessToken)
+        .post(`/api/v1/workout-sessions/${sessionD}/complete`)
+        .send({ endedAt: at(30) })
+        .expect(200);
+
+      expect(await maxWeight()).toBe(200);
+
+      await authed(accessToken)
+        .patch(`/api/v1/workout-sets/${setFautif}`)
+        .send({ weightKg: 20 })
+        .expect(200);
+
+      // 70 kg est le vrai meilleur, posé par la séance B bien plus haut :
+      // c'est l'HISTORIQUE qui le rend, pas un maximum resté en mémoire.
+      expect(await maxWeight()).toBe(70);
+    });
+
+    it('supprimer la série fautive donne le même résultat', async () => {
+      const autre = randomUUID();
+      await createSession(autre, 25);
+      const setSupprime = randomUUID();
+      await authed(accessToken)
+        .post(`/api/v1/workout-sessions/${autre}/sets`)
+        .send({
+          id: setSupprime,
+          exerciseId,
+          position: 0,
+          reps: 5,
+          weightKg: 300,
+          completedAt: at(22),
+        })
+        .expect(201);
+      await authed(accessToken)
+        .post(`/api/v1/workout-sessions/${autre}/complete`)
+        .send({ endedAt: at(20) })
+        .expect(200);
+
+      expect(await maxWeight()).toBe(300);
+
+      await authed(accessToken).delete(`/api/v1/workout-sets/${setSupprime}`).expect(204);
+
+      expect(await maxWeight()).toBe(70);
+    });
+  });
 });

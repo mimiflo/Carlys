@@ -8,6 +8,43 @@ records, pesées) ; `features/progression` en tire un score.
 Cible mobile : `apps/mobile/lib/features/progress/`
 API : `apps/api/src/modules/progress/`
 
+## Un record est une LECTURE de l'historique, plus un état à maintenir
+
+Les records se calculaient en maximum incrémental : à la clôture, on
+comparait les séries de la séance aux records stockés et on ne gardait que ce
+qui montait. Deux défauts en découlaient, et la docstring promettait de
+réparer le premier sans le faire.
+
+**Un échec d'écriture perdait le record pour toujours.** `updateRecordsForSession`
+attrape toute erreur et journalise « rattrapage à la prochaine séance ». Mais
+la séance suivante ne voyait que SES propres séries : un 100 kg perdu laissait
+un 80 kg ultérieur devenir le record, puisque plus aucune ligne stockée ne s'y
+opposait. La promesse était fausse, et elle masquait une perte de donnée.
+
+**Un record ne descendait jamais.** Une charge saisie 100 au lieu de 10 posait
+un record faux, définitif, qui polluait aussi les statistiques et la courbe
+par exercice. `PATCH /api/v1/workout-sets/{id}` existait pourtant, validé et
+testé — il ne réparait simplement rien, puisque les records ne se recalculent
+qu'à la clôture.
+
+`recomputeRecords(userId, exerciseNames)` remplace les deux : les records de
+ces exercices deviennent ÉGAUX à ce que dit l'historique, un record que plus
+aucune série ne porte est supprimé, et le record cesse d'être un état à
+maintenir pour devenir une fonction des séries stockées. Trois conséquences :
+
+- toute écriture qui change ces séries n'a plus qu'à rappeler la méthode. Elle
+  est donc branchée sur `PATCH` et `DELETE` d'une série, **uniquement quand la
+  séance est TERMINÉE** : rien à faire tant qu'elle est en cours, aucun record
+  n'a encore été écrit pour elle, et recalculer à chaque série validée
+  mettrait une lecture d'historique sur le chemin le plus chaud de l'app ;
+- le record est attribué à la séance où la performance a RÉELLEMENT eu lieu.
+  `RecordCandidate` porte désormais son `sessionId` au lieu de le recevoir de
+  l'appelant : avec un recalcul sur l'historique, le meilleur candidat peut
+  venir d'une séance d'il y a six mois ;
+- la lecture est bornée à l'historique de la personne (`WorkoutSession(userId,
+  startedAt)` puis `WorkoutSet(sessionId, position)`, deux index qui
+  existent), et une séance ABANDONNÉE n'y entre pas — un test e2e l'exige.
+
 ## Mesures corporelles : tout est corrigeable
 
 `PATCH` et `DELETE /api/v1/body-metrics/:id` existent, sont testés, et

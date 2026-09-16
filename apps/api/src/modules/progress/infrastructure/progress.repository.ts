@@ -1,6 +1,13 @@
 import { type ProgressPeriod } from '@carlys/api-contracts';
 import { Injectable } from '@nestjs/common';
-import { type BodyMetric, type PersonalRecord, Prisma, WorkoutSessionStatus } from '@prisma/client';
+import {
+  type BodyMetric,
+  type PersonalRecord,
+  type PersonalRecordType,
+  Prisma,
+  type WorkoutSet,
+  WorkoutSessionStatus,
+} from '@prisma/client';
 import { PrismaService } from '../../../database/prisma/prisma.service';
 import { type RecordCandidate } from '../application/records.calculator';
 
@@ -194,7 +201,53 @@ export class ProgressRepository {
     });
   }
 
-  upsertRecord(userId: string, candidate: RecordCandidate, sessionId: string): Promise<void> {
+  /**
+   * TOUTES les séries qui comptent pour ces exercices, tous entraînements
+   * confondus — la matière d'un recalcul de record.
+   *
+   * Les trois filtres sont la définition même de « ce qui compte », et ils
+   * sont déjà ceux de `exercisePoints` juste au-dessus : séance terminée,
+   * séance non supprimée, série non supprimée. Une séance ABANDONNÉE n'entre
+   * donc pas, ce qu'un test e2e exige explicitement.
+   *
+   * Pas d'index dédié, et c'est délibéré : le plan part de
+   * `WorkoutSession(userId, startedAt)`, qui existe, puis rejoint les séries
+   * par `WorkoutSet(sessionId, position)`, qui existe aussi. La lecture est
+   * donc bornée à l'historique de LA personne, jamais à la table entière, et
+   * elle n'a lieu qu'à la clôture d'une séance ou à la correction d'une
+   * série. Indexer `exerciseName` coûterait une écriture de plus sur la
+   * table la plus écrite du schéma pour un gain que rien ne mesure encore.
+   */
+  findSetsForRecords(userId: string, exerciseNames: string[]): Promise<WorkoutSet[]> {
+    return this.prisma.workoutSet.findMany({
+      where: {
+        exerciseName: { in: exerciseNames },
+        deletedAt: null,
+        session: { userId, status: 'COMPLETED', deletedAt: null },
+      },
+    });
+  }
+
+  /**
+   * Retire les records devenus sans objet — la série qui les portait a été
+   * corrigée vers le bas ou supprimée, et plus aucune ne les justifie.
+   *
+   * Sans cette suppression, un record survivrait au fait qui l'a produit :
+   * c'est précisément ce qui rendait une charge mal saisie définitive.
+   */
+  async deleteRecords(
+    userId: string,
+    keys: { exerciseName: string; recordType: PersonalRecordType }[],
+  ): Promise<void> {
+    if (keys.length === 0) {
+      return;
+    }
+    await this.prisma.personalRecord.deleteMany({
+      where: { userId, OR: keys },
+    });
+  }
+
+  upsertRecord(userId: string, candidate: RecordCandidate): Promise<void> {
     return this.prisma.personalRecord
       .upsert({
         where: {
@@ -213,7 +266,7 @@ export class ProgressRepository {
           reps: candidate.reps,
           weightKg: candidate.weightKg,
           achievedAt: candidate.achievedAt,
-          sessionId,
+          sessionId: candidate.sessionId,
         },
         update: {
           exerciseId: candidate.exerciseId,
@@ -221,7 +274,7 @@ export class ProgressRepository {
           reps: candidate.reps,
           weightKg: candidate.weightKg,
           achievedAt: candidate.achievedAt,
-          sessionId,
+          sessionId: candidate.sessionId,
         },
       })
       .then(() => undefined);
