@@ -45,12 +45,25 @@ export const AGE_YEARS_MAX = 120;
  * Passer `now` plutôt que de le lire ici garde la fonction pure, donc
  * testable sans horloge figée — et c'est ce qui permet au DTO de la rappeler
  * à chaque requête au lieu de figer un intervalle au démarrage du serveur.
+ *
+ * LES BORNES SONT DES JOURNÉES, PAS DES INSTANTS, et ce n'est pas un détail
+ * de confort : un âge se compte en jours civils. Comparer à la milliseconde
+ * rendait la règle dépendante de l'heure de la requête — « né il y a
+ * exactement 120 ans » passait ou non selon les quelques millisecondes
+ * écoulées entre la construction de la date et la validation. C'est
+ * précisément ce qui a rendu un test vert en local et rouge en CI.
+ *
+ * `earliest` tombe donc au DÉBUT de la journée des 120 ans, et `latest` à sa
+ * FIN pour les 15 ans : on est admissible tout le jour de son anniversaire,
+ * quelle que soit l'heure de naissance.
  */
 export function birthDateRange(now: Date): { earliest: Date; latest: Date } {
   const earliest = new Date(now);
   earliest.setUTCFullYear(earliest.getUTCFullYear() - AGE_YEARS_MAX);
+  earliest.setUTCHours(0, 0, 0, 0);
   const latest = new Date(now);
   latest.setUTCFullYear(latest.getUTCFullYear() - AGE_YEARS_MIN);
+  latest.setUTCHours(23, 59, 59, 999);
   return { earliest, latest };
 }
 

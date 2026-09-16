@@ -53,6 +53,28 @@ describe('UpdateProfileDto — date de naissance', () => {
     expect(champsFautifs({ birthDate: neIlYa(AGE_YEARS_MAX) })).toEqual([]);
   });
 
+  it('la borne est une JOURNÉE, pas un instant', () => {
+    // Le défaut qui a rendu ce fichier vert en local et rouge en CI : la
+    // date testée était construite quelques millisecondes AVANT que le
+    // validateur ne recalcule sa borne, et « né il y a exactement 120 ans »
+    // basculait d'un côté ou de l'autre selon ce délai.
+    const minuit = new Date();
+    minuit.setUTCFullYear(minuit.getUTCFullYear() - AGE_YEARS_MAX);
+    minuit.setUTCHours(0, 0, 0, 0);
+    expect(champsFautifs({ birthDate: minuit.toISOString() })).toEqual([]);
+
+    const justeAvantMinuit = new Date(minuit.getTime() - 1);
+    expect(champsFautifs({ birthDate: justeAvantMinuit.toISOString() })).toEqual(['birthDate']);
+
+    const finDeJournee = new Date();
+    finDeJournee.setUTCFullYear(finDeJournee.getUTCFullYear() - AGE_YEARS_MIN);
+    finDeJournee.setUTCHours(23, 59, 59, 999);
+    expect(champsFautifs({ birthDate: finDeJournee.toISOString() })).toEqual([]);
+
+    const justeApres = new Date(finDeJournee.getTime() + 1);
+    expect(champsFautifs({ birthDate: justeApres.toISOString() })).toEqual(['birthDate']);
+  });
+
   it('reste facultative : un profil sans date de naissance est valide', () => {
     expect(champsFautifs({ displayName: 'Camille' })).toEqual([]);
   });
