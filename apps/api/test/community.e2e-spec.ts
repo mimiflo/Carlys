@@ -12,6 +12,7 @@ import {
   type CommunityProfile,
   type Encouragement,
   type FriendRequest,
+  type QuizAnswerRecord,
 } from '@carlys/api-contracts';
 import { type INestApplication } from '@nestjs/common';
 import { type NestExpressApplication } from '@nestjs/platform-express';
@@ -38,6 +39,7 @@ describe('Communauté (e2e)', () => {
   let tokenA: string;
   let tokenB: string;
   let tokenC: string;
+  let userIdA: string;
   let userIdB: string;
 
   const emailA = `e2e-communaute-a-${randomUUID()}@carlys.test`;
@@ -86,6 +88,7 @@ describe('Communauté (e2e)', () => {
     tokenA = a.tokens.accessToken;
     tokenB = b.tokens.accessToken;
     tokenC = c.tokens.accessToken;
+    userIdA = a.user.id;
     userIdB = b.user.id;
 
     // Mois vierge : la création paresseuse doit se voir ici, pas être héritée.
@@ -379,6 +382,52 @@ describe('Communauté (e2e)', () => {
     expect(mine?.progress).toBe(0.5); // 1 bonne réponse / objectif 2.
 
     await prisma.communityChallenge.deleteMany({ where: { slug: cultureSlug } });
+  });
+
+  it('les réponses de quiz se RELISENT : une par leçon, la première fait foi', async () => {
+    // La lecture qui manquait : les réponses partaient au serveur sans
+    // jamais se relire, et la progression de l'Academy mourait avec
+    // l'appareil.
+    await prisma.quizAnswer.deleteMany({ where: { userId: userIdA } });
+
+    // Avec le choix retenu, puis un REJEU un autre jour avec un autre
+    // choix : la relecture doit rendre le premier, comme le magasin local.
+    await authed(tokenA)
+      .post('/api/v1/community/quiz-answers')
+      .send({ lessonId: 'lecon-dos', answeredOn: '2026-08-11', correct: false, choiceIndex: 2 })
+      .expect(204);
+    await authed(tokenA)
+      .post('/api/v1/community/quiz-answers')
+      .send({ lessonId: 'lecon-dos', answeredOn: '2026-08-12', correct: true, choiceIndex: 0 })
+      .expect(204);
+    // Un client d'avant la migration n'envoie pas le choix : la réponse
+    // compte quand même, le choix relu est nul.
+    await authed(tokenA)
+      .post('/api/v1/community/quiz-answers')
+      .send({ lessonId: 'lecon-squat', answeredOn: '2026-08-11', correct: true })
+      .expect(204);
+
+    const answers = data<QuizAnswerRecord[]>(
+      (await authed(tokenA).get('/api/v1/community/quiz-answers').expect(200)).body,
+    );
+
+    const dos = answers.find((entry) => entry.lessonId === 'lecon-dos');
+    expect(dos).toEqual({
+      lessonId: 'lecon-dos',
+      choiceIndex: 2,
+      correct: false,
+      answeredOn: '2026-08-11',
+    });
+    const squat = answers.find((entry) => entry.lessonId === 'lecon-squat');
+    expect(squat?.choiceIndex).toBeNull();
+    // Une entrée PAR leçon, jamais une par jour.
+    expect(answers.filter((entry) => entry.lessonId === 'lecon-dos')).toHaveLength(1);
+
+    // Et un choix hors bornes est refusé, pas tronqué.
+    await authed(tokenA)
+      .post('/api/v1/community/quiz-answers')
+      .send({ lessonId: 'lecon-dos', answeredOn: '2026-08-13', correct: true, choiceIndex: 7 })
+      .expect(400);
   });
 
   it('retirer un ami est idempotent, et coupe les encouragements', async () => {

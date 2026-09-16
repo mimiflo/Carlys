@@ -1,4 +1,7 @@
-import { type CommunityChallenge as ChallengeContract } from '@carlys/api-contracts';
+import {
+  type CommunityChallenge as ChallengeContract,
+  type QuizAnswerRecord,
+} from '@carlys/api-contracts';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { buildMonthlyChallenges } from '../domain/challenge-catalog';
@@ -112,7 +115,7 @@ export class CommunityChallengesService {
    */
   async recordQuizAnswer(
     userId: string,
-    input: { lessonId: string; answeredOn: string; correct: boolean },
+    input: { lessonId: string; answeredOn: string; correct: boolean; choiceIndex?: number },
   ): Promise<void> {
     // Les deux écritures partent ENSEMBLE, dans une transaction du dépôt.
     // Séparées, l'échec de la seconde laissait la première : au rejeu,
@@ -120,5 +123,14 @@ export class CommunityChallengesService {
     // et la contribution était perdue définitivement — une leçon ne se répond
     // qu'une fois par jour, il n'y a pas de rattrapage possible.
     await this.challenges.recordQuizAnswer({ userId, ...input, at: new Date() });
+  }
+
+  /**
+   * Les leçons déjà répondues, une entrée par leçon (la première fait foi).
+   * C'est la lecture qui manquait : les réponses partaient au serveur sans
+   * jamais se relire, et la progression mourait avec l'appareil.
+   */
+  listQuizAnswers(userId: string): Promise<QuizAnswerRecord[]> {
+    return this.challenges.listQuizAnswers(userId);
   }
 }

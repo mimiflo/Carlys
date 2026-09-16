@@ -131,3 +131,21 @@ export const communityReportSchema = z.object({
   resolvedAt: z.string().nullable(),
 });
 export type CommunityReport = z.infer<typeof communityReportSchema>;
+
+/**
+ * GET /community/quiz-answers — les leçons de l'Academy déjà répondues,
+ * relues pour reconstruire la progression sur un nouvel appareil.
+ *
+ * Une entrée par leçon : la PREMIÈRE réponse fait foi, comme sur l'appareil
+ * (le magasin local applique « la première gagne »). `choiceIndex` est
+ * `null` sur les réponses enregistrées avant que le choix ne soit transmis :
+ * on sait que la leçon a été abordée, pas ce qui a été coché.
+ */
+export const quizAnswerRecordSchema = z.object({
+  lessonId: z.string(),
+  choiceIndex: z.number().int().nullable(),
+  correct: z.boolean(),
+  /** Jour LOCAL de l'appareil au moment de la réponse (YYYY-MM-DD). */
+  answeredOn: z.string(),
+});
+export type QuizAnswerRecord = z.infer<typeof quizAnswerRecordSchema>;

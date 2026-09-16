@@ -1188,6 +1188,11 @@ model QuizAnswer {
   lessonId   String
   answeredOn String
   correct    Boolean
+  /// Index du choix retenu, pour reconstruire la carte de quiz sur un
+  /// nouvel appareil (afficher la bonne réponse sans montrer le choix fait
+  /// laisserait croire à une réussite). Nul sur les réponses d'avant la
+  /// migration : on sait « abordée », pas « quoi ».
+  choiceIndex Int?
   createdAt  DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)

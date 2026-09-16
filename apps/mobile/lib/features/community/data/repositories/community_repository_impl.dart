@@ -156,6 +156,7 @@ class CommunityRepositoryImpl implements CommunityRepository {
     required String lessonId,
     required String answeredOn,
     required bool correct,
+    required int choiceIndex,
   }) {
     return _guard(() async {
       await _dio.post<Map<String, dynamic>>(
@@ -164,8 +165,20 @@ class CommunityRepositoryImpl implements CommunityRepository {
           'lessonId': lessonId,
           'answeredOn': answeredOn,
           'correct': correct,
+          'choiceIndex': choiceIndex,
         },
       );
+    });
+  }
+
+  @override
+  Future<Map<String, int?>> fetchQuizAnswers() {
+    return _guard(() async {
+      final rows = await _list('/community/quiz-answers');
+      return {
+        for (final row in rows)
+          row['lessonId'] as String: row['choiceIndex'] as int?,
+      };
     });
   }
 

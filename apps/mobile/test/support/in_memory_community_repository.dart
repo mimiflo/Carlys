@@ -141,10 +141,14 @@ class InMemoryCommunityRepository implements CommunityRepository {
     required String lessonId,
     required String answeredOn,
     required bool correct,
+    required int choiceIndex,
   }) async {
     // Pas d'objectif chiffré derrière ses barres : la réponse
     // est acceptée et c'est tout — le vrai comptage est serveur.
   }
+
+  @override
+  Future<Map<String, int?>> fetchQuizAnswers() async => const {};
 
   @override
   Future<bool> sharesProgress() async => _sharesProgress;

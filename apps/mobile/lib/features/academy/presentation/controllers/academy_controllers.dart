@@ -1,5 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/logging/app_logger.dart';
+import '../../../community/data/repositories/community_repository_impl.dart';
 import '../../../community/presentation/controllers/community_controllers.dart';
 import '../../data/academy_pack.dart';
 import '../../data/answered_lessons_store.dart';
@@ -65,7 +67,48 @@ class AcademyActions {
     _ref.invalidate(answeredLessonsProvider);
     await _ref
         .read(communityActionsProvider)
-        .reportQuizAnswer(lessonId: lessonId, correct: correct);
+        .reportQuizAnswer(
+          lessonId: lessonId,
+          correct: correct,
+          choiceIndex: choiceIndex,
+        );
+  }
+
+  static const _logger = AppLogger('AcademyActions');
+
+  /// Ramène du serveur les réponses données sur un AUTRE appareil, en
+  /// meilleur effort : hors ligne, rien ne se passe et rien n'échoue.
+  ///
+  /// Le magasin local reste la source première (« la première gagne » y est
+  /// déjà la règle : une réponse locale n'est jamais réécrite), le serveur
+  /// ne fait que COMBLER les trous. Une réponse d'avant la migration, sans
+  /// choix retenu, est ignorée : afficher un choix inventé mentirait sur ce
+  /// qui a été coché.
+  Future<void> pullAnswers() async {
+    try {
+      final serveur = await _ref
+          .read(communityRepositoryProvider)
+          .fetchQuizAnswers();
+      if (serveur.isEmpty) {
+        return;
+      }
+      final store = _ref.read(answeredLessonsStoreProvider);
+      final locales = await store.read();
+      var comblees = false;
+      for (final entry in serveur.entries) {
+        final choix = entry.value;
+        if (choix == null || locales.containsKey(entry.key)) {
+          continue;
+        }
+        await store.markAnswered(entry.key, choix);
+        comblees = true;
+      }
+      if (comblees) {
+        _ref.invalidate(answeredLessonsProvider);
+      }
+    } on Exception catch (exception) {
+      _logger.warning('Réponses serveur non relues : $exception');
+    }
   }
 }
 

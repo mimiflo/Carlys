@@ -41,6 +41,14 @@ class _AcademyScreenState extends ConsumerState<AcademyScreen> {
   /// c'est un événement d'écran, pas une donnée partagée.
   AcademyCategory? _aFeter;
 
+  @override
+  void initState() {
+    super.initState();
+    // Les réponses données sur un AUTRE appareil comblent le magasin local,
+    // en meilleur effort : hors ligne, l'Academy s'ouvre exactement pareil.
+    Future.microtask(() => ref.read(academyActionsProvider).pullAnswers());
+  }
+
   /// Enregistre une réponse, puis regarde si elle vient de BOUCLER un
   /// domaine.
   ///

@@ -3,15 +3,16 @@
 ///
 /// ## Pourquoi une copie locale
 ///
-/// Les réponses partent déjà au serveur, pour les défis culturels. Mais cet
-/// envoi est en ÉCRITURE SEULE : aucun endpoint ne permet de les relire.
-/// Deux besoins en dépendent pourtant, et tous deux doivent tenir hors ligne :
-/// l'axe « Maîtrise » du profil de progression, et l'état des cartes de quiz.
+/// Les réponses partent au serveur (défis culturels, choix retenu compris)
+/// et s'y RELISENT désormais (`GET /community/quiz-answers`). Ce magasin
+/// reste pourtant la source PREMIÈRE : l'axe « Maîtrise » du profil et
+/// l'état des cartes de quiz doivent tenir hors ligne, sans dépendre d'une
+/// lecture réseau.
 ///
-/// Cette copie n'est donc pas une duplication de confort : c'est la seule
-/// source lisible qui existe. Le jour où l'API exposera la lecture, ce dépôt
-/// deviendra un cache et se remplacera sans toucher au moteur de calcul, qui
-/// ne connaît qu'un nombre.
+/// Le serveur ne fait que COMBLER les trous, à l'ouverture de l'Academy
+/// (`AcademyActions.pullAnswers`) : une réponse donnée sur un autre appareil
+/// arrive ici, une réponse locale n'est jamais réécrite — « la première
+/// gagne » vaut aussi entre appareils.
 ///
 /// ## Pourquoi on garde le CHOIX, et pas seulement « répondu »
 ///

@@ -182,14 +182,28 @@ class FakeCommunityRepository implements CommunityRepository {
   /// Réponses de quiz reçues, dans l'ordre : (leçon, jour, juste ?).
   final List<(String, String, bool)> quizReports = [];
 
+  /// Choix retenus tels que transmis, par leçon.
+  final Map<String, int> quizChoices = {};
+
+  /// Ce que le serveur rendrait à la relecture des réponses.
+  Map<String, int?> remoteQuizAnswers = {};
+
   @override
   Future<void> reportQuizAnswer({
     required String lessonId,
     required String answeredOn,
     required bool correct,
+    required int choiceIndex,
   }) async {
     _guard();
     quizReports.add((lessonId, answeredOn, correct));
+    quizChoices[lessonId] = choiceIndex;
+  }
+
+  @override
+  Future<Map<String, int?>> fetchQuizAnswers() async {
+    _guard();
+    return Map.of(remoteQuizAnswers);
   }
 
   @override

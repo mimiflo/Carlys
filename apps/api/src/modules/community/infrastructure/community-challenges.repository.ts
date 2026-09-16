@@ -175,6 +175,8 @@ export class CommunityChallengesRepository {
     lessonId: string;
     answeredOn: string;
     correct: boolean;
+    /** Index du choix retenu — absent des clients d'avant sa lecture. */
+    choiceIndex?: number;
     /** Instant de référence pour la fenêtre des défis. */
     at: Date;
   }): Promise<boolean> {
@@ -194,6 +196,36 @@ export class CommunityChallengesRepository {
       }
       throw error;
     }
+  }
+
+  /**
+   * Les réponses de quiz relues pour reconstruire la progression sur un
+   * nouvel appareil : UNE entrée par leçon, la PREMIÈRE réponse fait foi —
+   * la même règle que le magasin local (« la première gagne »), sinon les
+   * deux sources divergeraient sur le choix affiché.
+   */
+  async listQuizAnswers(userId: string): Promise<
+    Array<{
+      lessonId: string;
+      choiceIndex: number | null;
+      correct: boolean;
+      answeredOn: string;
+    }>
+  > {
+    // `distinct` retient la première ligne rencontrée par leçon dans
+    // l'ordre demandé : trier par date de création rend donc la première
+    // réponse, pas une au hasard.
+    return this.prisma.quizAnswer.findMany({
+      where: { userId },
+      orderBy: { createdAt: 'asc' },
+      distinct: ['lessonId'],
+      select: {
+        lessonId: true,
+        choiceIndex: true,
+        correct: true,
+        answeredOn: true,
+      },
+    });
   }
 
   /**

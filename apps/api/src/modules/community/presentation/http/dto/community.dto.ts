@@ -2,10 +2,14 @@ import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsBoolean,
   IsEmail,
+  IsInt,
+  IsOptional,
   IsString,
   IsUUID,
   Matches,
+  Max,
   MaxLength,
+  Min,
   MinLength,
   ValidateIf,
 } from 'class-validator';
@@ -74,4 +78,18 @@ export class QuizAnswerDto {
   @ApiProperty()
   @IsBoolean()
   correct!: boolean;
+
+  @ApiPropertyOptional({
+    description:
+      'Index du choix retenu (0 à 3). Facultatif : les clients déployés ' +
+      'avant sa lecture serveur ne l’envoient pas — la réponse compte, le ' +
+      'choix reste inconnu à la relecture.',
+    minimum: 0,
+    maximum: 3,
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(3)
+  choiceIndex?: number;
 }

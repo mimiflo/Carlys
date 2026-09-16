@@ -190,14 +190,24 @@ Le bandeau compare l'avant et l'après d'une réponse. Lire l'état final
 rejouerait la fête à chaque ouverture d'un écran déjà terminé, et une fête
 qui revient ne célèbre plus rien.
 
-### Ce qui reste, et pourquoi
+### La progression survit au changement d'appareil
 
-Un seul morceau de la tranche attend encore (niveaux, Parcours et quiz de
-domaine sont livrés — sections suivantes) :
+Le dernier morceau de la tranche est livré : les réponses se RELISENT.
+`GET /community/quiz-answers` rend une entrée par leçon — la PREMIÈRE
+réponse fait foi, la même règle que le magasin local — et le POST emporte
+désormais le choix retenu (`choiceIndex`, migration Prisma dédiée,
+facultatif pour ne pas casser les clients déjà déployés).
 
-| Morceau | Ce qu'il faut trancher |
-| --- | --- |
-| **Persistance serveur** | Les réponses partent au serveur mais ne se relisent pas : la progression ne survit pas à un changement d'appareil |
+À l'ouverture de l'Academy, `AcademyActions.pullAnswers` COMBLE le magasin
+local en meilleur effort : hors ligne, rien ne se passe et rien n'échoue.
+Trois règles, toutes testées :
+
+- une réponse locale n'est JAMAIS réécrite par le serveur (« la première
+  gagne » vaut aussi entre appareils) ;
+- une réponse d'avant la migration, sans choix retenu, est ignorée :
+  afficher un choix inventé mentirait sur ce qui a été coché ;
+- l'ordre serveur est tué par mutation : `distinct` retiré ou tri inversé,
+  le e2e tombe.
 
 ## Le quiz de domaine
 

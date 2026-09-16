@@ -71,6 +71,7 @@ class CommunityActions {
   Future<void> reportQuizAnswer({
     required String lessonId,
     required bool correct,
+    required int choiceIndex,
   }) async {
     try {
       await _ref
@@ -79,6 +80,7 @@ class CommunityActions {
             lessonId: lessonId,
             answeredOn: formatDayKey(DateTime.now()),
             correct: correct,
+            choiceIndex: choiceIndex,
           );
     } on Exception catch (exception) {
       _logger.warning('Réponse de quiz non rapportée : $exception');

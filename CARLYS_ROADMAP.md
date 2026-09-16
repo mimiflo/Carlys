@@ -40,7 +40,7 @@ dépôt. Le propriétaire du produit a tranché, les documents suivent :
 
 ---
 
-## PLAN 1 — Carlys Academy  `[~] EN COURS`
+## PLAN 1 — Carlys Academy  `[x] TERMINÉ (à confirmer au Plan 11)`
 
 Fichiers : `apps/mobile/lib/features/academy/`,
 `apps/mobile/assets/academy/pack.json`, `assets/academy/README.md`,
@@ -101,11 +101,15 @@ documenté dans `academy.md`).
 
 ### Préalable serveur (rattaché au Plan 1, livrable sans arbitrage)
 
-- [ ] Lecture serveur des réponses de quiz : `GET /community/quiz-answers`
-      n'existe pas, et le POST n'emporte pas le choix retenu. Migration
-      (`choiceIndex` sur `QuizAnswer`), route, contrat, bascule
-      d'`answered_lessons_store` en cache. Sans quoi ni la progression ni le
-      Parcours ne survivent à un changement d'appareil.
+- [x] Lecture serveur des réponses de quiz : migration Prisma
+      (`choiceIndex Int?` sur `QuizAnswer`), POST qui emporte le choix
+      (facultatif — clients déployés), `GET /community/quiz-answers` (une
+      entrée par leçon, la PREMIÈRE fait foi — `distinct` + tri tués par
+      mutation en e2e), contrat `quizAnswerRecordSchema`, et
+      `AcademyActions.pullAnswers` qui COMBLE le magasin local à
+      l'ouverture de l'Academy sans jamais réécrire une réponse locale ni
+      inventer un choix inconnu. La progression et le Parcours survivent
+      au changement d'appareil.
 
 ---
 

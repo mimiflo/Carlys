@@ -54,12 +54,21 @@ abstract interface class CommunityRepository {
 
   /// Enregistre une réponse de quiz de l'Academy. Idempotent par
   /// (leçon, jour local) : seule une PREMIÈRE réponse juste contribue aux
-  /// défis culturels rejoints.
+  /// défis culturels rejoints. Le choix retenu part avec, pour que la
+  /// progression se relise sur un autre appareil.
   Future<void> reportQuizAnswer({
     required String lessonId,
     required String answeredOn,
     required bool correct,
+    required int choiceIndex,
   });
+
+  /// Les réponses déjà enregistrées côté serveur : identifiant de leçon
+  /// vers l'index du choix retenu, `null` quand une réponse d'avant la
+  /// migration n'a pas emporté le choix (on sait « abordée », pas
+  /// « quoi »). Une entrée par leçon, la PREMIÈRE réponse fait foi — la
+  /// même règle que le magasin local.
+  Future<Map<String, int?>> fetchQuizAnswers();
 
   /// Ma préférence : partager (ou non) ma progression avec mes amis.
   Future<bool> sharesProgress();

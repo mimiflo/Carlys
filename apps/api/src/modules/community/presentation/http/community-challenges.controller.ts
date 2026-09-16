@@ -1,4 +1,4 @@
-import { type CommunityChallenge } from '@carlys/api-contracts';
+import { type CommunityChallenge, type QuizAnswerRecord } from '@carlys/api-contracts';
 import {
   Body,
   Controller,
@@ -58,5 +58,16 @@ export class CommunityChallengesController {
     @Body() dto: QuizAnswerDto,
   ): Promise<void> {
     await this.challenges.recordQuizAnswer(user.userId, dto);
+  }
+
+  @Get('quiz-answers')
+  @ApiOperation({
+    summary:
+      'Les leçons déjà répondues, une entrée par leçon (la PREMIÈRE réponse ' +
+      'fait foi, comme sur l’appareil). Sert à reconstruire la progression ' +
+      'de l’Academy sur un nouvel appareil.',
+  })
+  listQuizAnswers(@CurrentUser() user: AuthenticatedPrincipal): Promise<QuizAnswerRecord[]> {
+    return this.challenges.listQuizAnswers(user.userId);
   }
 }

@@ -158,6 +158,7 @@ OpenAPI : `{id}`.
 | `GET /community/profile` | **mobile** | apps/mobile |
 | `PATCH /community/profile` | **mobile** | apps/mobile |
 | `POST /community/quiz-answers` | **mobile** | apps/mobile |
+| `GET /community/quiz-answers` | **mobile** | apps/mobile |
 | `POST /community/reports` | **mobile** | apps/mobile |
 | `GET /community/requests` | **mobile** | apps/mobile |
 | `POST /community/requests` | **mobile** | apps/mobile |
