@@ -17,6 +17,7 @@
  */
 import { type PinoLogger } from 'nestjs-pino';
 import { type AppConfigService } from '../../config/app-config.service';
+import { createTransport } from 'nodemailer';
 import { EmailService } from './email.service';
 
 /** Rend la main après avoir vidé TOUTE la file de microtâches en attente. */
@@ -50,7 +51,7 @@ jest.mock('nodemailer', () => ({
   createTransport: jest.fn(() => (globalThis as { __transport?: unknown }).__transport),
 }));
 
-function banc(): Banc {
+function banc(surcharges: Record<string, unknown> = {}): Banc {
   const ordre: string[] = [];
   const verrous: { resoudre: () => void; rejeter: () => void }[] = [];
   const sendMail: jest.Mock<Promise<unknown>, [EnvoiMail]> = jest.fn(
@@ -75,10 +76,14 @@ function banc(): Banc {
   const config = {
     smtpHost: 'localhost',
     smtpPort: 1025,
+    smtpUser: '',
+    smtpPassword: '',
+    smtpSecure: false,
     emailFrom: 'carlys@example.test',
     publicAppUrl: 'https://carlys.test',
     emailVerificationTtlHours: 24,
     passwordResetTtlMinutes: 60,
+    ...surcharges,
   };
 
   return {
@@ -100,6 +105,43 @@ function banc(): Banc {
     logger,
   };
 }
+
+describe('EmailService — authentification du relais', () => {
+  /**
+   * Le verrou de production qui manquait : le transport se construisait sans
+   * bloc `auth`, et AUCUN relais commercial (SES, SendGrid, Mailgun,
+   * Postmark, OVH) n'accepte un envoi non authentifié. Sans e-mail sortant,
+   * la vérification d'adresse et la réinitialisation de mot de passe ne
+   * fonctionnent pas, et l'inscription paraît cassée sans qu'aucun journal ne
+   * le dise.
+   */
+  const transportCree = (): Record<string, unknown> => {
+    const dernier = jest.mocked(createTransport).mock.calls.at(-1);
+    expect(dernier).toBeDefined();
+    return dernier![0] as unknown as Record<string, unknown>;
+  };
+
+  it('sans identifiant, AUCUN bloc auth : Mailpit refuserait une authentification vide', () => {
+    banc();
+    expect(transportCree()).not.toHaveProperty('auth');
+  });
+
+  it('avec un identifiant, le bloc auth part au relais', () => {
+    banc({ smtpUser: 'apikey', smtpPassword: 'secret-du-relais' });
+    expect(transportCree().auth).toEqual({
+      user: 'apikey',
+      pass: 'secret-du-relais',
+    });
+  });
+
+  it('`secure` suit la configuration, et vaut faux par défaut (STARTTLS sur 587)', () => {
+    banc();
+    expect(transportCree().secure).toBe(false);
+
+    banc({ smtpSecure: true }); // port 465, TLS dès la connexion
+    expect(transportCree().secure).toBe(true);
+  });
+});
 
 describe('EmailService', () => {
   it('sendEmailVerification ne bloque PAS l’appelant', () => {

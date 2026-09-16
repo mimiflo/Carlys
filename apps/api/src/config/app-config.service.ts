@@ -243,6 +243,18 @@ export class AppConfigService {
     return this.config.get('SMTP_PORT', { infer: true });
   }
 
+  get smtpUser(): string {
+    return this.config.get('SMTP_USER', { infer: true });
+  }
+
+  get smtpPassword(): string {
+    return this.config.get('SMTP_PASSWORD', { infer: true });
+  }
+
+  get smtpSecure(): boolean {
+    return this.config.get('SMTP_SECURE', { infer: true });
+  }
+
   get emailFrom(): string {
     return this.config.get('EMAIL_FROM', { infer: true });
   }

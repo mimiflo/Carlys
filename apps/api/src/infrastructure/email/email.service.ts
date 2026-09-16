@@ -37,10 +37,21 @@ export class EmailService implements OnModuleDestroy {
     @InjectPinoLogger(EmailService.name)
     private readonly logger: PinoLogger,
   ) {
+    // Le bloc `auth` n'est passé que si un identifiant est fourni : Mailpit,
+    // en développement, n'authentifie rien, et nodemailer tenterait sinon
+    // une authentification vide qu'il refuserait. Sans ce bloc, AUCUN relais
+    // commercial n'acceptait l'envoi — c'était le verrou qui rendait la
+    // vérification d'adresse et la réinitialisation de mot de passe muettes
+    // en production, sans qu'aucun journal ne le dise.
+    const user = config.smtpUser;
     this.transporter = createTransport({
       host: config.smtpHost,
       port: config.smtpPort,
-      secure: false,
+      // `false` ne veut PAS dire « en clair » : c'est STARTTLS, que
+      // nodemailer négocie seul sur le port 587. `true` est le TLS implicite
+      // du port 465.
+      secure: config.smtpSecure,
+      ...(user === '' ? {} : { auth: { user, pass: config.smtpPassword } }),
     });
     this.enVol = new TravauxEnVol('e-mail', logger);
   }

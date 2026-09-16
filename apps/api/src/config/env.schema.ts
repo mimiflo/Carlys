@@ -198,6 +198,27 @@ export const envSchema = z
     // ── E-mails (Mailpit en développement) ─────────────────────────────────
     SMTP_HOST: z.string().min(1).default(DEVELOPMENT_DEFAULTS.SMTP_HOST),
     SMTP_PORT: z.coerce.number().int().min(1).max(65535).default(1025),
+    /**
+     * Authentification du relais. Elle MANQUAIT, et c'est un verrou de
+     * production : le transport se construisait sans bloc `auth`, or aucun
+     * relais commercial (SES, SendGrid, Mailgun, Postmark, OVH) n'accepte un
+     * envoi non authentifié. Sans e-mail sortant, la vérification d'adresse
+     * et la réinitialisation de mot de passe ne fonctionnent pas, et
+     * l'inscription paraît cassée sans qu'aucun journal ne le dise.
+     *
+     * Vides par défaut : Mailpit, en développement, n'authentifie rien. Le
+     * bloc `auth` n'est passé à nodemailer QUE si un identifiant est fourni,
+     * sinon nodemailer tenterait une authentification vide et Mailpit la
+     * refuserait.
+     */
+    SMTP_USER: z.string().default(''),
+    SMTP_PASSWORD: z.string().default(''),
+    /**
+     * TLS implicite dès la connexion (port 465). Les relais en 587 utilisent
+     * STARTTLS, que nodemailer négocie tout seul avec `secure: false` : le
+     * défaut reste donc `false`, et ce n'est PAS « sans chiffrement ».
+     */
+    SMTP_SECURE: z.coerce.boolean().default(false),
     EMAIL_FROM: z.string().min(3).default(DEVELOPMENT_DEFAULTS.EMAIL_FROM),
     /**
      * Base des liens contenus dans les e-mails (vérification,

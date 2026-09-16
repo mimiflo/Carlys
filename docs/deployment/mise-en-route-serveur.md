@@ -476,15 +476,17 @@ les ajouter plus tard sans redéployer l'application mobile.
 ### Les e-mails de production
 
 En recette, tout part dans Mailpit et rien ne sort de la machine. En
-production, il faut un vrai relais — et le schéma impose une contrainte qu'il
-vaut mieux découvrir maintenant que le jour de la bascule :
+production, il faut un vrai relais, et le schéma le prend désormais :
+`SMTP_USER`, `SMTP_PASSWORD` et `SMTP_SECURE` s'ajoutent à `SMTP_HOST`,
+`SMTP_PORT` et `EMAIL_FROM`.
 
-> **Le schéma ne prévoit NI identifiant NI mot de passe SMTP.**
-> `env.schema.ts` ne déclare que `SMTP_HOST`, `SMTP_PORT` et `EMAIL_FROM` : il
-> n'existe pas de `SMTP_USER`, pas de `SMTP_PASSWORD`. Le relais doit donc
-> accepter ce serveur **sans authentification** — relais autorisé par adresse
-> IP, ou passerelle locale (Postfix en `relayhost`). Un fournisseur qui exige
-> `AUTH` sur le 587 ne fonctionnera pas en l'état.
+> **Deux pièges, et ils se compensent.** Laisser `SMTP_USER` vide ne « désactive
+> pas la sécurité » : ça fait SAUTER le bloc d'authentification, ce qu'il faut
+> pour Mailpit — qui n'authentifie rien et refuserait une authentification vide
+> — et sûrement pas pour un relais commercial, qui refuse alors l'envoi. Et
+> `SMTP_SECURE=false` sur le port 587 ne veut pas dire « en clair » : c'est
+> STARTTLS, que nodemailer négocie tout seul. Le `true` est réservé au port
+> 465, en TLS dès la connexion.
 
 `EMAIL_FROM` doit par ailleurs appartenir au domaine, avec SPF et DKIM en
 place : sans quoi les messages de vérification d'adresse partent en
@@ -1189,9 +1191,9 @@ Contrairement à la recette, la production a besoin des vraies valeurs :
   c'est Stripe qui encaisse, l'API ne fait qu'afficher.
 - **Firebase** : `FIREBASE_SERVICE_ACCOUNT_JSON`, le JSON complet du compte de
   service (console Firebase → Paramètres → Comptes de service).
-- **SMTP** : un vrai relais, **acceptant ce serveur sans authentification** —
-  la contrainte est détaillée au §5, « Les e-mails de production », et elle
-  écarte la plupart des fournisseurs grand public. Mailpit n'existe pas ici :
+- **SMTP** : un vrai relais, avec son identifiant et son mot de passe —
+  les deux pièges sont détaillés au §5, « Les e-mails de production ».
+  Mailpit n'existe pas ici :
   il est sous profil `staging`. Un `SMTP_HOST` qui ne route nulle part rendrait
   la vérification d'adresse et la réinitialisation de mot de passe
   **silencieusement** inopérantes.
