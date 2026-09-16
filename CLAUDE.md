@@ -86,6 +86,52 @@ graphify query "<question>" --budget 2000   # BFS sur le graphe
 graphify god-nodes                          # les plaques tournantes du code
 graphify affected "<symbole>"               # qui casse si ce nœud change
 graphify explain "<nœud>"                   # un nœud et ses voisins
+graphify path "A" "B"                       # le chemin le plus court entre deux nœuds
+```
+
+**Le graphe est dense côté TypeScript, plat côté Dart.** Mesuré le 16 septembre
+2026 sur `graphify-out/graph.json` (13 014 nœuds, 21 035 arêtes) :
+
+| | nœuds | relations extraites |
+| --- | --- | --- |
+| `apps/api`, `apps/admin`, `packages` (TS) | 2 365 | `references` 1651, `contains` 1240, `imports` 1160, `imports_from` 1063, **`calls` 824**, `method` 712 |
+| `apps/mobile` (Dart) | 7 039 | `defines` 6418, `imports` 3429, `references` 1829, `inherits` 527, `navigates` 63 — et **`calls` : 0** |
+
+Conséquences, à connaître avant d'interpréter une réponse :
+
+- **`affected "<symbole>"` sur du Dart est un FAUX NÉGATIF, jamais une preuve
+  d'absence.** Sans arête `calls` et sans nœud `_callable` côté Dart (0 sur
+  7 039), `affected "AppExplainable"` rend « No affected nodes found » alors que
+  quatre fichiers en dépendent. Même chose pour `path` entre deux nœuds Dart.
+- **Une arête `imports` Dart vise la chaîne d'import BRUTE, pas le fichier
+  résolu.** Un même fichier porte donc plusieurs nœuds alias : le vrai
+  (`source_file` renseigné) plus un alias `package:carlys_mobile/…` et un par
+  chemin relatif distinct. Les dépendances inverses d'un fichier Dart se lisent
+  en faisant l'**union des alias** :
+
+  ```bash
+  graphify affected "package:carlys_mobile/<chemin>/<fichier>.dart" --relation imports --depth 1
+  graphify affected "../../<chemin relatif>/<fichier>.dart"          --relation imports --depth 1
+  ```
+
+- **`god-nodes` est un classement de l'API, pas du dépôt.** Le vrai pivot mobile,
+  `design_system/design_system.dart` (258 importeurs, soit 210 des 459 fichiers de
+  `lib/`), n'y figure pas. Et son rang 7, `_Body` (47 arêtes), est une **collision
+  de normalisation** : 45 de ses arêtes sont les décorateurs `@Body()` de 21
+  contrôleurs NestJS, rattachés à une classe Dart privée homonyme
+  (`exercise_progression_screen.dart:55`) utilisée une seule fois.
+
+**Le graphe SUGGÈRE, la source PROUVE.** Il cadre la question et donne le rayon
+de casse côté TS ; toute conclusion se vérifie ensuite par lecture du fichier, et
+une divergence se tranche toujours en faveur de la source.
+
+**Fraîcheur.** Le hook ne rejoue `graphify update .` qu'à l'OUVERTURE de la
+session : le graphe se périme dès le premier commit de la session. Le vérifier
+coûte une commande, et `GRAPH_REPORT.md` porte aussi la réponse en tête :
+
+```bash
+test "$(git rev-parse HEAD)" = "$(python3 -c "import json;print(json.load(open('graphify-out/graph.json'))['built_at_commit'])")" \
+  && echo "graphe à jour" || graphify update .
 ```
 
 ## Règles générales (spécification produit — à respecter intégralement)
