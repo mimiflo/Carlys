@@ -442,4 +442,32 @@ void main() {
     // On ne lance pas une séance quand une autre est ouverte.
     expect(find.text('Lancer un modèle'), findsNothing);
   }, semanticsEnabled: true);
+
+  testWidgets('le mot du Mentor ouvre sa feuille, puis la visite guidée', (
+    tester,
+  ) async {
+    // Aucun style choisi : la voix NEUTRE parle — jamais un style deviné.
+    // Et aucune célébration : la garde de première lecture du journal des
+    // récompenses vient de passer, tout s'inscrit en silence.
+    await pumpHome(tester);
+
+    await scrollTo(tester, find.text('LE MENTOR'));
+    expect(find.text('LE MENTOR'), findsOneWidget);
+
+    await tester.tap(find.text('LE MENTOR'));
+    await tester.pumpAndSettle();
+    expect(find.text('Le Mentor Carlys'), findsOneWidget);
+    expect(find.text('Visite guidée'), findsOneWidget);
+
+    await tester.tap(find.text('Visite guidée'));
+    await tester.pumpAndSettle();
+    expect(find.text('Visite guidée · 1 sur 7'), findsOneWidget);
+    expect(find.text('L’accueil'), findsOneWidget);
+
+    // « Étape suivante » marque l'étape vue et déroule la suivante.
+    await tester.tap(find.text('Étape suivante'));
+    await tester.pumpAndSettle();
+    expect(find.text('Visite guidée · 2 sur 7'), findsOneWidget);
+    expect(find.text('L’entraînement'), findsOneWidget);
+  });
 }

@@ -110,6 +110,11 @@ model UserProfile {
   /// Nullable tant que la personne n'a pas choisi ; modifiable à tout moment.
   carlysProfile CarlysProfile?
 
+  /// Style de voix du Mentor Carlys — un axe INDÉPENDANT du profil : le
+  /// profil décrit l'utilisateur, le style décrit la VOIX qui lui parle.
+  /// Nullable tant que la personne n'a pas choisi.
+  mentorStyle MentorStyle?
+
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
@@ -120,6 +125,15 @@ enum CarlysProfile {
   CHALLENGER
   ATHLETE
   STRATEGE
+}
+
+/// Les 4 styles de voix du Mentor Carlys. Les deux axes se COMPOSENT
+/// (4 briefings de profil + 4 de style, jamais 16 combinaisons écrites).
+enum MentorStyle {
+  BIENVEILLANT
+  EXIGEANT
+  ATHLETE
+  PHILOSOPHE
 }
 
 model UserCredential {

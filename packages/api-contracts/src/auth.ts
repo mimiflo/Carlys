@@ -6,6 +6,14 @@ import { z } from 'zod';
 export const carlysProfileSchema = z.enum(['CONSTRUCTEUR', 'CHALLENGER', 'ATHLETE', 'STRATEGE']);
 export type CarlysProfile = z.infer<typeof carlysProfileSchema>;
 
+/**
+ * Les 4 styles de voix du Mentor Carlys — un axe INDÉPENDANT du profil :
+ * le profil décrit l'utilisateur, le style décrit la VOIX qui lui parle.
+ * Les deux se composent côté serveur (4 briefings + 4, jamais 16).
+ */
+export const mentorStyleSchema = z.enum(['BIENVEILLANT', 'EXIGEANT', 'ATHLETE', 'PHILOSOPHE']);
+export type MentorStyle = z.infer<typeof mentorStyleSchema>;
+
 export const authUserSchema = z.object({
   id: z.string(),
   email: z.string(),
@@ -15,6 +23,8 @@ export const authUserSchema = z.object({
   timezone: z.string(),
   /** `null` tant que la personne n'a pas choisi ; modifiable à tout moment. */
   carlysProfile: carlysProfileSchema.nullable(),
+  /** Style de voix du Mentor — `null` tant que la personne n'a pas choisi. */
+  mentorStyle: mentorStyleSchema.nullable(),
   createdAt: z.string(),
 });
 

@@ -43,6 +43,11 @@ et l'on évolue d'un profil à l'autre à tout moment.
 
 `null` signifie « pas de personnalisation », jamais un profil par défaut.
 
+Le profil est un des DEUX axes de la voix du coach : il décrit la
+personne. L'autre axe, le style du Mentor Carlys
+([mentor.md](mentor.md)), décrit la voix qui lui parle — les deux se
+composent côté serveur et se choisissent indépendamment.
+
 - **Accueil** : la ligne « Ton cap » de la carte « Pour toi » oriente chaque
   identité vers la partie de l'application qui sert sa devise — Constructeur
   → Académie, Challenger → défis de la communauté, Athlète → programmes,

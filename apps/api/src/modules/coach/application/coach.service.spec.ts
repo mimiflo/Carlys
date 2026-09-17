@@ -18,7 +18,7 @@ interface Stubs {
   repository: {
     ensureConversation: jest.Mock;
     findConversation: jest.Mock;
-    carlysProfileOf: jest.Mock;
+    voiceOf: jest.Mock;
     findMessageWithReply: jest.Mock;
     conversationIdOfMessage: jest.Mock;
     saveUserMessage: jest.Mock;
@@ -59,7 +59,7 @@ function buildStubs(): Stubs {
     repository: {
       ensureConversation: jest.fn().mockResolvedValue(undefined),
       findConversation: jest.fn().mockResolvedValue(conversationWith([])),
-      carlysProfileOf: jest.fn().mockResolvedValue(null),
+      voiceOf: jest.fn().mockResolvedValue({ carlysProfile: null, mentorStyle: null }),
       findMessageWithReply: jest.fn().mockResolvedValue(null),
       conversationIdOfMessage: jest.fn().mockResolvedValue(null),
       saveUserMessage: jest.fn().mockResolvedValue(storedMessage('USER', 'Salut coach.', MESSAGE)),

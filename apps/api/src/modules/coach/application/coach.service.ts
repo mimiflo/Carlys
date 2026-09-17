@@ -22,7 +22,7 @@ import {
 import { CoachAvailability } from './coach.availability';
 import { presentMessage } from './coach.presenter';
 import { COACH_TOOLS, CoachTools } from './coach.tools';
-import { COACH_SYSTEM_PROMPT, carlysProfileBriefing } from './coach.prompt';
+import { COACH_SYSTEM_PROMPT, mentorVoiceBriefing } from './coach.prompt';
 import { CoachQuota } from './coach.quota';
 import { HISTORY_LIMIT, buildHistory, extractExerciseIds, titleFrom } from './coach.turn';
 import { validateProposal } from './proposal.validator';
@@ -130,10 +130,13 @@ export class CoachService {
       }
     }
 
-    // Le profil Carlys aiguille le ton du coach. Chargé AVANT le compteur, et
-    // dégradé en silence : un incident sur cette lecture ne doit ni brûler un
-    // tour de quota, ni empêcher le coach de répondre.
-    const carlysProfile = await this.repository.carlysProfileOf(userId).catch(() => null);
+    // La voix du Mentor (profil Carlys + style choisi) aiguille le ton du
+    // coach. Chargée AVANT le compteur, et dégradée en silence : un incident
+    // sur cette lecture ne doit ni brûler un tour de quota, ni empêcher le
+    // coach de répondre.
+    const voice = await this.repository
+      .voiceOf(userId)
+      .catch(() => ({ carlysProfile: null, mentorStyle: null }));
 
     // Le compteur passe AVANT l'appel : un échec du fournisseur ne doit pas
     // offrir un tour gratuit à qui insiste.
@@ -158,7 +161,7 @@ export class CoachService {
       system: COACH_SYSTEM_PROMPT,
       // Après la césure de cache : le préfixe partagé reste identique pour
       // tous les utilisateurs, briefing ou pas.
-      systemPerUser: carlysProfileBriefing(carlysProfile),
+      systemPerUser: mentorVoiceBriefing(voice),
       tools: COACH_TOOLS,
       history,
       runTools: (calls) => this.tools.run(userId, calls),

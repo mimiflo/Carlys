@@ -21,7 +21,7 @@ fond**, ouvert par une barre de titre dont le filet court jusqu'au bord droit.
 | 3 | Aujourd'hui, ou son amorçage | **oui** | `TodayGrid` / `TodayPrimer` |
 | 4 | Séance du jour | **oui** | `TodayWorkoutCard` |
 | 5 | Ton titre | non | `TitleSummary` |
-| 6 | Pour toi | **oui** | `ForYouCard` |
+| 6 | Pour toi (mot du Mentor compris) | **oui** | `ForYouCard` |
 | 7 | Question du jour | non | `QuizCard` |
 | 8 | Forme du jour | non | `DailyFormBlock` |
 
@@ -163,3 +163,13 @@ n'atteignait pas — et réveille des lectures qui dormaient.
 | `presentation/widgets/today_workout_heading.dart` | Son en-tête, et la phrase qui dit où en est la séance |
 
 Les contrôleurs formatent : l'écran ne calcule ni n'arrondit rien.
+
+### Le Mentor dans « Pour toi »
+
+Le mot du Mentor ouvre la carte « Pour toi » quand ses interventions sont
+actives (réglage local, actif par défaut au cran hebdomadaire) : une
+phrase à la voix choisie, la célébration d'un cap fraîchement franchi en
+priorité. Toucher la ligne ouvre la feuille du Mentor — son mot, la
+visite guidée (sept étapes, rejouable), sa voix. Le détail vit dans
+[mentor.md](mentor.md) ; l'accueil n'ajoute qu'une entrée à une carte qui
+existait.

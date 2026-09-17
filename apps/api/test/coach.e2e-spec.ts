@@ -230,6 +230,22 @@ describe('Coach IA (e2e)', () => {
     // régression à guetter est ici — elle ne ferait échouer aucun appel,
     // elle doublerait la facture en silence.
     expect(lastInput?.system).toBe(COACH_SYSTEM_PROMPT);
+
+    // La voix du Mentor s'ajoute au profil : les deux axes COMPOSÉS
+    // partent dans le même bloc par utilisateur, et le préfixe partagé
+    // ne bouge toujours pas.
+    await prisma.userProfile.update({
+      where: { userId },
+      data: { mentorStyle: 'EXIGEANT' },
+    });
+    nextOutput = textOnly('Au travail.');
+    await authed(accessToken)
+      .post(`/api/v1/coach/conversations/${conversationId}/messages`)
+      .send({ id: randomUUID(), content: 'Un conseil ?' })
+      .expect(201);
+    expect(lastInput?.systemPerUser).toContain('Stratège');
+    expect(lastInput?.systemPerUser).toContain('Exigeant');
+    expect(lastInput?.system).toBe(COACH_SYSTEM_PROMPT);
   });
 
   it('une séance proposée n’existe que si chaque exercice existe', async () => {

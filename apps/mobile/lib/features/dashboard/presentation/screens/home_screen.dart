@@ -13,6 +13,8 @@ import '../../../academy/presentation/widgets/quiz_card.dart';
 import '../../../authentication/presentation/controllers/auth_controller.dart';
 import '../../../carlys_profile/presentation/controllers/carlys_profile_controllers.dart';
 import '../../../community/presentation/controllers/community_controllers.dart';
+import '../../../mentor/presentation/controllers/mentor_controllers.dart';
+import '../../../mentor/presentation/widgets/mentor_sheet.dart';
 import '../../../notifications/presentation/controllers/push_registration.dart';
 import '../../../nutrition/presentation/widgets/water_sheet.dart';
 import '../../../workout_session/presentation/controllers/workout_controllers.dart';
@@ -167,7 +169,27 @@ class _ForYouSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(currentCarlysProfileProvider);
     final nudge = ref.watch(latestEncouragementProvider);
+    final mot = ref.watch(mentorWordProvider);
     final entries = [
+      // Le Mentor parle en premier : c'est lui qui fête un cap franchi, et
+      // une célébration ne s'ouvre pas en troisième ligne.
+      if (mot != null)
+        ForYouEntry(
+          icon: AppIcons.spark,
+          iconColor: AppColors.primaryLight,
+          iconSize: 20,
+          label: 'Le Mentor',
+          message: mot.message,
+          onOpen: () {
+            // Une célébration touchée est DITE : elle ne se répète pas, le
+            // journal des récompenses garde la trace durable.
+            final feteeId = mot.celebratedRewardId;
+            if (feteeId != null) {
+              ref.read(mentorActionsProvider).marquerCelebrationDite(feteeId);
+            }
+            showMentorSheet(context);
+          },
+        ),
       if (profile != null) ForYouEntry.focus(context, profile),
       if (nudge != null) ForYouEntry.encouragement(context, nudge),
     ];

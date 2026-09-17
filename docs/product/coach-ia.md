@@ -250,13 +250,19 @@ utilisateur à l'autre. Ils vivent après la césure. Un `new Date()` dans le
 prompt système annulerait la totalité du bénéfice — c'est le piège classique,
 et il est silencieux : rien n'échoue, la facture double.
 
-**Profil Carlys** : quand l'utilisateur a choisi son identité
-(Constructeur/Challenger/Athlète/Stratège), un briefing d'angle
-(`carlysProfileBriefing`, fonction pure de l'énumération — jamais de texte
-libre) part en second bloc système, **après** la césure via
-`CoachTurnInput.systemPerUser`. Il oriente le ton, jamais les chiffres — les
-chiffres viennent des outils. Un nom de profil dans le préfixe partagé le
-fragmenterait en quatre variantes de cache : un test l'interdit explicitement.
+**La voix du Mentor** : le bloc système par utilisateur compose DEUX axes
+(`mentorVoiceBriefing`) — le profil Carlys
+(Constructeur/Challenger/Athlète/Stratège : l'ANGLE, qui est la personne)
+et le style du Mentor (Bienveillant/Exigeant/Athlète/Philosophe : la VOIX,
+comment lui parler). Deux fonctions pures des énumérations — jamais de
+texte libre — jointes par une ligne vide : 4 briefings + 4, jamais 16
+croisements. Le tout part en second bloc système, **après** la césure via
+`CoachTurnInput.systemPerUser`. Les briefings orientent le ton, jamais les
+chiffres — les chiffres viennent des outils. Un nom de profil OU de style
+dans le préfixe partagé le fragmenterait en variantes de cache : un test
+l'interdit explicitement pour les deux axes, et la composition rend la
+chaîne vide (pas un saut de ligne orphelin) quand rien n'est choisi.
+Voir [mentor.md](mentor.md) pour le personnage complet.
 
 Vérification : `usage.cache_read_input_tokens` doit être non nul dès le
 deuxième tour. Un test d'assemblage vérifie qu'aucune donnée volatile

@@ -3,6 +3,7 @@
 library;
 
 import '../../../carlys_profile/domain/entities/carlys_profile.dart';
+import '../../../mentor/domain/entities/mentor_style.dart';
 import '../../domain/entities/auth_session_device.dart';
 import '../../domain/entities/auth_user.dart';
 
@@ -15,6 +16,7 @@ class AuthUserDto {
     required this.locale,
     required this.timezone,
     this.carlysProfile,
+    this.mentorStyle,
   });
 
   factory AuthUserDto.fromJson(Map<String, dynamic> json) => AuthUserDto(
@@ -25,6 +27,7 @@ class AuthUserDto {
     locale: json['locale'] as String,
     timezone: json['timezone'] as String,
     carlysProfile: json['carlysProfile'] as String?,
+    mentorStyle: json['mentorStyle'] as String?,
   );
 
   final String id;
@@ -34,6 +37,7 @@ class AuthUserDto {
   final String locale;
   final String timezone;
   final String? carlysProfile;
+  final String? mentorStyle;
 
   AuthUser toEntity() => AuthUser(
     id: id,
@@ -43,6 +47,7 @@ class AuthUserDto {
     locale: locale,
     timezone: timezone,
     carlysProfile: CarlysProfile.fromWire(carlysProfile),
+    mentorStyle: MentorStyle.fromWire(mentorStyle),
   );
 }
 

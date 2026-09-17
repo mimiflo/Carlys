@@ -1,5 +1,10 @@
 import { Injectable } from '@nestjs/common';
-import { type CarlysProfile, CoachMessageRole, type Prisma } from '@prisma/client';
+import {
+  type CarlysProfile,
+  CoachMessageRole,
+  type MentorStyle,
+  type Prisma,
+} from '@prisma/client';
 import { PrismaService } from '../../../database/prisma/prisma.service';
 import { type ValidatedProposal } from '../application/proposal.validator';
 
@@ -245,12 +250,23 @@ export class CoachRepository {
    * que `NutritionRepository.findProfile`, pour une préférence déclarée qui
    * aiguille le ton du coach à chaque tour.
    */
-  async carlysProfileOf(userId: string): Promise<CarlysProfile | null> {
+  /**
+   * La voix complète du Mentor en UNE lecture : profil Carlys et style,
+   * les deux axes que le briefing compose. Une seule requête plutôt que
+   * deux : ils vivent sur la même ligne de profil.
+   */
+  async voiceOf(userId: string): Promise<{
+    carlysProfile: CarlysProfile | null;
+    mentorStyle: MentorStyle | null;
+  }> {
     const row = await this.prisma.userProfile.findUnique({
       where: { userId },
-      select: { carlysProfile: true },
+      select: { carlysProfile: true, mentorStyle: true },
     });
-    return row?.carlysProfile ?? null;
+    return {
+      carlysProfile: row?.carlysProfile ?? null,
+      mentorStyle: row?.mentorStyle ?? null,
+    };
   }
 
   /**

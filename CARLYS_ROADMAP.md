@@ -134,25 +134,41 @@ Fichiers : `apps/mobile/lib/core/explanations/`,
 
 ---
 
-## PLAN 3 — Le Mentor Carlys  `[ ] À FAIRE`
+## PLAN 3 — Le Mentor Carlys  `[x] TERMINÉ (à confirmer au Plan 11)`
 
-Zéro occurrence de « mentor » dans le dépôt. Socle prouvé : l'injection par
-utilisateur du coach (`systemPerUser`, couverte e2e) et le précédent complet
-de l'écran « Profil Carlys » (choix à 4 cartes, persistance, repli d'image).
+Livré sur le socle prouvé (`systemPerUser` du coach, précédent « Profil
+Carlys ») — `features/mentor/` côté mobile, la voix côté serveur.
 
-- [ ] Nom : « Mentor Carlys » accepté comme nom provisoire (décision de la
-      feuille de route).
-- [ ] Styles (Bienveillant / Exigeant / Athlète / Philosophe) : axe NOUVEAU,
-      indépendant du profil Carlys — le profil décrit l'utilisateur, le style
-      décrit la VOIX. Les deux briefings se composent (4 + 4 textes, pas 16).
-- [ ] Persistance : enum + colonne `mentorStyle` (migration Prisma), DTO,
-      contrat, entité Dart tolérante aux valeurs inconnues.
-- [ ] Préférences profil : style, activation des interventions, fréquence.
-- [ ] Accueil / visite des fonctionnalités : AUCUN moteur de guide n'existe
-      (vérifié) — ancrage, ordre, état « déjà vu », rejouable. Le gros du plan.
-- [ ] Célébrations transverses à la voix du Mentor (événement + surface +
-      déduplication).
-- [ ] `docs/product/mentor.md` + mise à jour de `coach-ia.md`.
+- [x] Nom : « Mentor Carlys », provisoire et assumé tel (`mentor.md`) —
+      visible dans l'application (feuille du Mentor, groupe de réglages).
+- [x] Styles : Bienveillant / Exigeant / Athlète / Philosophe —
+      `mentorStyleBriefing` composé avec le briefing de profil par
+      `mentorVoiceBriefing` (4 + 4, jamais 16), chaîne vide sans choix,
+      aucun nom de style dans le préfixe partagé (cache protégé par spec).
+      Le contenu change VRAIMENT : briefings serveur distincts + mots
+      d'accueil distincts par voix + célébrations distinctes par voix,
+      chacun sous test d'unicité.
+- [x] Persistance : enum + colonne `mentorStyle` (migration
+      `20260917175451_mentor_style`), DTO, contrat `mentorStyleSchema`,
+      `AuthUser.mentorStyle`, entité Dart `MentorStyle.fromWire` (null pour
+      toute valeur inconnue). E2e : PATCH indépendant du profil, valeur
+      hors liste refusée, les DEUX briefings dans le tour du coach.
+- [x] Préférences profil : groupe « Mentor Carlys » (voix, interventions,
+      fréquence 2 crans, visite guidée) — voix sur le serveur, interventions
+      locales à l'appareil comme le thème, défauts sûrs (actives, cran
+      discret).
+- [x] Accueil / visite : le MOT du Mentor dans « Pour toi » (rotation
+      déterministe par période, voix neutre sans choix) ouvre la feuille du
+      Mentor ; visite guidée en 7 étapes (manifeste pur, « déjà vu » local,
+      ordre testé, rejouable, table étape → route complète sous test,
+      RIEN de verrouillé).
+- [x] Célébrations transverses : la récompense fraîche (`isNew`, donc garde
+      de première lecture du journal héritée) prend la parole à la voix du
+      style, se marque « dite » au premier toucher, ne crée AUCUN score
+      (non-concurrence).
+- [x] `docs/product/mentor.md` créé ; `coach-ia.md` (composition des deux
+      axes), `carlys-profiles.md` (indépendance), `home-screen.md` (Pour
+      toi + visite) amendés.
 
 ---
 

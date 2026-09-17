@@ -6,6 +6,7 @@ import '../../../../app/router/app_routes.dart';
 import '../../../../design_system/design_system.dart';
 import '../../../authentication/presentation/controllers/auth_controller.dart';
 import '../../../carlys_profile/presentation/widgets/carlys_profile_content.dart';
+import '../../../mentor/presentation/widgets/mentor_settings_section.dart';
 import '../../../nutrition/presentation/controllers/nutrition_controllers.dart';
 import '../../../progression/presentation/controllers/progression_controllers.dart';
 import '../widgets/profile_email_verification.dart';
@@ -81,6 +82,8 @@ class ProfileScreen extends ConsumerWidget {
               onProgression: () => context.push(AppRoutes.progression),
               onManifesto: () => context.push(AppRoutes.manifesto),
             ),
+            const SizedBox(height: AppSpacing.md),
+            const MentorSettingsSection(),
             const SizedBox(height: AppSpacing.md),
             ProfileTrainingSettings(
               onTemplates: () => context.push(AppRoutes.templates),

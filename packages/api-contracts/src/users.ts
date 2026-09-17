@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { carlysProfileSchema } from './auth';
+import { carlysProfileSchema, mentorStyleSchema } from './auth';
 import { activityLevelSchema, biologicalSexSchema, nutritionGoalSchema } from './nutrition';
 
 /**
@@ -94,6 +94,8 @@ export const updateProfileRequestSchema = z.object({
   /** Identifiant IANA ; le serveur le vérifie en plus contre ICU. */
   timezone: z.string().min(1).max(60).optional(),
   carlysProfile: carlysProfileSchema.optional(),
+  /** Voix du Mentor — un axe indépendant du profil Carlys. */
+  mentorStyle: mentorStyleSchema.optional(),
   sex: biologicalSexSchema.optional(),
   /** ISO 8601, dans l'intervalle `birthDateRange` (de 15 à 120 ans). */
   birthDate: z.string().datetime().optional(),

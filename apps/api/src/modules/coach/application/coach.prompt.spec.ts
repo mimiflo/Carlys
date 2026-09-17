@@ -1,8 +1,10 @@
-import { CarlysProfile } from '@prisma/client';
+import { CarlysProfile, MentorStyle } from '@prisma/client';
 import {
   COACH_SYSTEM_PROMPT,
   carlysProfileBriefing,
   looksVolatile,
+  mentorStyleBriefing,
+  mentorVoiceBriefing,
   volatileContext,
 } from './coach.prompt';
 import { COACH_TOOLS, PROPOSE_SESSION_TOOL } from './coach.tools';
@@ -120,5 +122,78 @@ describe('Briefing de profil Carlys', () => {
     for (const profile of Object.values(CarlysProfile)) {
       expect(carlysProfileBriefing(profile)).not.toMatch(/\d/);
     }
+  });
+});
+
+/**
+ * Voix du Mentor — le second axe du bloc système par utilisateur.
+ *
+ * La règle gardée ici est celle de la COMPOSITION : 4 briefings de profil
+ * plus 4 de style, jamais 16 croisements écrits à la main. Et la même
+ * discipline de cache que le profil : aucun style dans le préfixe partagé.
+ */
+describe('Voix du Mentor', () => {
+  it('le préfixe partagé ne cite AUCUN style : il reste identique pour tous', () => {
+    for (const style of Object.values(MentorStyle)) {
+      expect(COACH_SYSTEM_PROMPT).not.toContain(style);
+    }
+  });
+
+  it('chaque style a un briefing court, nommé, sans chiffre ni volatile', () => {
+    for (const style of Object.values(MentorStyle)) {
+      const briefing = mentorStyleBriefing(style);
+
+      expect(briefing).not.toBe('');
+      expect(briefing).toContain('Mentor');
+      expect(briefing.length).toBeLessThan(400);
+      expect(looksVolatile(briefing)).toBe(false);
+      expect(briefing).not.toMatch(/\d/);
+      expect(briefing).not.toContain('—');
+    }
+  });
+
+  it('les quatre voix disent des choses DIFFÉRENTES : le contenu change vraiment', () => {
+    const briefings = Object.values(MentorStyle).map(mentorStyleBriefing);
+    expect(new Set(briefings).size).toBe(briefings.length);
+  });
+
+  it('sans style choisi, aucun briefing — jamais une voix devinée', () => {
+    expect(mentorStyleBriefing(null)).toBe('');
+  });
+
+  it('profil et style se COMPOSENT : les deux, un seul, ou rien', () => {
+    const deux = mentorVoiceBriefing({
+      carlysProfile: CarlysProfile.STRATEGE,
+      mentorStyle: MentorStyle.EXIGEANT,
+    });
+    expect(deux).toContain(carlysProfileBriefing(CarlysProfile.STRATEGE));
+    expect(deux).toContain(mentorStyleBriefing(MentorStyle.EXIGEANT));
+    // Deux blocs séparés, pas une phrase fusionnée : chacun reste relisible.
+    expect(deux).toContain('\n\n');
+
+    const profilSeul = mentorVoiceBriefing({
+      carlysProfile: CarlysProfile.ATHLETE,
+      mentorStyle: null,
+    });
+    expect(profilSeul).toBe(carlysProfileBriefing(CarlysProfile.ATHLETE));
+
+    const styleSeul = mentorVoiceBriefing({
+      carlysProfile: null,
+      mentorStyle: MentorStyle.PHILOSOPHE,
+    });
+    expect(styleSeul).toBe(mentorStyleBriefing(MentorStyle.PHILOSOPHE));
+
+    expect(mentorVoiceBriefing({ carlysProfile: null, mentorStyle: null })).toBe('');
+  });
+
+  it('les DEUX axes ATHLETE composés restent lisibles, sans redite mot à mot', () => {
+    // Le seul nom partagé par les deux énumérations : la composition doit
+    // rester deux blocs distincts, pas un doublon.
+    const voix = mentorVoiceBriefing({
+      carlysProfile: CarlysProfile.ATHLETE,
+      mentorStyle: MentorStyle.ATHLETE,
+    });
+    const [profil, style] = voix.split('\n\n');
+    expect(profil).not.toBe(style);
   });
 });

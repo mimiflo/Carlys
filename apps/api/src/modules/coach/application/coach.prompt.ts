@@ -8,7 +8,7 @@
  * données-là vivent dans le premier message, après la césure.
  */
 
-import { CarlysProfile } from '@prisma/client';
+import { CarlysProfile, MentorStyle } from '@prisma/client';
 
 /** Ce que le coach sait faire, ce qu'il ignore, et comment il se tait. */
 export const COACH_SYSTEM_PROMPT = `Tu es le coach de Carlys, une application de musculation. Tu parles français, tu tutoies, tu es direct et concret.
@@ -67,6 +67,45 @@ export function carlysProfileBriefing(profile: CarlysProfile | null): string {
       // plutôt qu'un briefing deviné.
       return '';
   }
+}
+
+/**
+ * La voix du Mentor Carlys — le STYLE dans lequel le coach parle, choisi
+ * dans les préférences. Un axe indépendant du profil : le profil décrit la
+ * personne (ce qu'il faut privilégier), le style décrit la voix (comment le
+ * dire). Fonction PURE de l'énumération, comme le briefing de profil, et
+ * pour les mêmes raisons : injection insensible aux messages, angle et ton
+ * seulement, jamais de chiffres.
+ */
+export function mentorStyleBriefing(style: MentorStyle | null): string {
+  switch (style) {
+    case MentorStyle.BIENVEILLANT:
+      return `L'utilisateur a choisi la voix « Bienveillant » pour son Mentor : commence par ce qui va, formule chaque critique comme un prochain pas, et bannis tout reproche. La chaleur n'empêche pas la précision : dis les choses, avec le sourire dans la voix.`;
+    case MentorStyle.EXIGEANT:
+      return `L'utilisateur a choisi la voix « Exigeant » pour son Mentor : va droit au fait, nomme ce qui ne va pas sans l'adoucir, et ne félicite que ce qui le mérite vraiment. L'exigence n'est jamais du mépris : chaque exigence s'accompagne du geste concret pour y répondre.`;
+    case MentorStyle.ATHLETE:
+      return `L'utilisateur a choisi la voix « Athlète » pour son Mentor : parle comme un partenaire d'entraînement, au vocabulaire du terrain, en phrases courtes et énergiques. Ancre chaque conseil dans la séance : ce qu'on fait, quand, combien de fois.`;
+    case MentorStyle.PHILOSOPHE:
+      return `L'utilisateur a choisi la voix « Philosophe » pour son Mentor : prends de la hauteur, relie l'effort du jour à ce qu'il construit sur des mois, et livre une seule idée forte par réponse. La sobriété est la règle : pas de citation plaquée, pas de grandiloquence.`;
+    default:
+      // Style non choisi — ou valeur future inconnue : aucun briefing,
+      // plutôt qu'une voix devinée.
+      return '';
+  }
+}
+
+/**
+ * La voix complète du Mentor : profil et style COMPOSÉS, jamais croisés.
+ * 4 briefings de profil + 4 de style suffisent ; en écrire 16 serait
+ * inmaintenable et chaque correction devrait se recopier quatre fois.
+ */
+export function mentorVoiceBriefing(voice: {
+  carlysProfile: CarlysProfile | null;
+  mentorStyle: MentorStyle | null;
+}): string {
+  return [carlysProfileBriefing(voice.carlysProfile), mentorStyleBriefing(voice.mentorStyle)]
+    .filter((part) => part !== '')
+    .join('\n\n');
 }
 
 /**

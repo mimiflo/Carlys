@@ -9,7 +9,13 @@ import {
   birthDateRange,
 } from '@carlys/api-contracts';
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { ActivityLevel, BiologicalSex, CarlysProfile, NutritionGoal } from '@prisma/client';
+import {
+  ActivityLevel,
+  BiologicalSex,
+  CarlysProfile,
+  MentorStyle,
+  NutritionGoal,
+} from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
   IsDate,
@@ -56,6 +62,16 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsEnum(CarlysProfile)
   carlysProfile?: CarlysProfile;
+
+  @ApiPropertyOptional({
+    enum: MentorStyle,
+    description:
+      'Style de voix du Mentor Carlys — un axe indépendant du profil : le ' +
+      'profil décrit la personne, le style décrit la voix qui lui parle',
+  })
+  @IsOptional()
+  @IsEnum(MentorStyle)
+  mentorStyle?: MentorStyle;
 
   // ── Profil métabolique (nutrition) ──────────────────────────────────────
 

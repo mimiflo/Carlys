@@ -146,6 +146,31 @@ describe('Authentification (e2e)', () => {
       .expect(400);
   });
 
+  it('choisit la voix du Mentor — un axe indépendant du profil', async () => {
+    // Tant que rien n'est choisi : null, jamais une voix imposée.
+    const before = await api()
+      .get('/api/v1/users/me')
+      .set('Authorization', `Bearer ${firstSession.accessToken}`)
+      .expect(200);
+    expect(data<AuthUser>(before.body).mentorStyle).toBeNull();
+
+    const chosen = await api()
+      .patch('/api/v1/users/me')
+      .set('Authorization', `Bearer ${firstSession.accessToken}`)
+      .send({ mentorStyle: 'PHILOSOPHE' })
+      .expect(200);
+    expect(data<AuthUser>(chosen.body).mentorStyle).toBe('PHILOSOPHE');
+    // L'axe est INDÉPENDANT : changer la voix ne touche pas le profil.
+    expect(data<AuthUser>(chosen.body).carlysProfile).toBe('CHALLENGER');
+
+    // Une valeur hors des quatre styles est refusée.
+    await api()
+      .patch('/api/v1/users/me')
+      .set('Authorization', `Bearer ${firstSession.accessToken}`)
+      .send({ mentorStyle: 'SERGENT' })
+      .expect(400);
+  });
+
   it('refuse un mot de passe erroné avec un message générique', async () => {
     const response = await api()
       .post('/api/v1/auth/login')
