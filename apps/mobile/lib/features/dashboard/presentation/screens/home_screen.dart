@@ -175,7 +175,7 @@ class _ForYouSection extends ConsumerWidget {
       // une célébration ne s'ouvre pas en troisième ligne.
       if (mot != null)
         ForYouEntry(
-          icon: AppIcons.spark,
+          icon: AppIcons.mentor,
           iconColor: AppColors.primaryLight,
           iconSize: 20,
           label: 'Le Mentor',

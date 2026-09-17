@@ -27,13 +27,13 @@ class MentorSettingsSection extends ConsumerWidget {
       label: 'Mentor Carlys',
       rows: [
         AppSettingsRow(
-          icon: AppIcons.forYou,
+          icon: style == null ? AppIcons.forYou : mentorVoiceIcon(style),
           label: 'Sa voix',
           value: style?.label ?? 'À choisir',
           onTap: () => showMentorStyleSheet(context),
         ),
         AppSettingsRow(
-          icon: AppIcons.exercises,
+          icon: AppIcons.tour,
           label: 'La visite guidée',
           value: visite == null
               ? '—'

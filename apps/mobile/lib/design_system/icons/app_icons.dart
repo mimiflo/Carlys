@@ -126,6 +126,25 @@ abstract final class AppIcons {
   static const IconData terms = Icons.description_outlined;
   static const IconData externalLink = Icons.open_in_new_rounded;
 
+  // Mentor Carlys : le guide, sa parole, ses voix.
+  /// L'emblème du Mentor : la boussole du guide — pas l'étincelle du coach.
+  static const IconData mentor = Icons.explore_rounded;
+
+  /// Le mot que le Mentor adresse, cité tel quel.
+  static const IconData quote = Icons.format_quote_rounded;
+
+  /// La visite guidée : le fanion du guide qui fait faire le tour.
+  static const IconData tour = Icons.tour_rounded;
+
+  /// La communauté — le même dessin que son onglet.
+  static const IconData community = Icons.group_rounded;
+
+  // Les quatre voix du Mentor, une image par ton.
+  static const IconData voiceBienveillant = Icons.volunteer_activism_rounded;
+  static const IconData voiceExigeant = Icons.track_changes_rounded;
+  static const IconData voiceAthlete = Icons.fitness_center_rounded;
+  static const IconData voicePhilosophe = Icons.self_improvement_rounded;
+
   // Coach IA
   static const IconData coach = Icons.auto_awesome_rounded;
   static const IconData coachOutline = Icons.auto_awesome_outlined;

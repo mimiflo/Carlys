@@ -6,6 +6,7 @@ import '../../../../app/router/app_routes.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/mentor_tour.dart';
 import '../controllers/mentor_controllers.dart';
+import 'mentor_tour_chemin.dart';
 
 /// Où chaque étape emmène. La table vit ICI, pas dans le manifeste : le
 /// domaine ne connaît pas le routeur, et un test vérifie que chaque étape a
@@ -21,9 +22,10 @@ const Map<String, String> mentorTourRoutes = {
 };
 
 /// Feuille de la visite guidée : UNE étape à la fois, l'ordre du manifeste,
-/// et deux gestes — y aller (l'ancrage réel), ou passer à la suivante.
-/// Rien n'est verrouillé : fermer la feuille n'engage à rien, et « déjà
-/// vu » se rejoue depuis les réglages du Mentor.
+/// le chemin des sept pièces sous les yeux, et deux gestes — y aller
+/// (l'ancrage réel), ou passer à la suivante. Rien n'est verrouillé :
+/// fermer la feuille n'engage à rien, et « déjà vu » se rejoue depuis les
+/// réglages du Mentor.
 Future<void> showMentorTourSheet(BuildContext context) {
   return showAppSheet<void>(context, builder: (_) => const _MentorTourSheet());
 }
@@ -49,7 +51,7 @@ class _MentorTourSheet extends ConsumerWidget {
   }
 }
 
-/// Une étape : sa position, son titre, son propos, ses deux gestes.
+/// Une étape : sa position, le chemin, son titre, son propos, ses gestes.
 class _Etape extends ConsumerWidget {
   const _Etape({required this.progress});
 
@@ -59,6 +61,7 @@ class _Etape extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
     final etape = progress.prochaine!;
+    final vues = ref.watch(mentorTourVuesProvider).valueOrNull ?? const {};
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -77,7 +80,28 @@ class _Etape extends ConsumerWidget {
           height: 3,
         ),
         const SizedBox(height: AppSpacing.md),
-        Text(etape.titre, style: theme.textTheme.titleLarge),
+        MentorTourChemin(vues: vues, etapeCourante: etape.id),
+        const SizedBox(height: AppSpacing.md),
+        Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(AppSpacing.xs),
+              decoration: const BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: AppColors.signature,
+              ),
+              child: Icon(
+                mentorTourIcons[etape.id] ?? AppIcons.mentor,
+                size: 20,
+                color: AppColors.neutral0,
+              ),
+            ),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Text(etape.titre, style: theme.textTheme.titleLarge),
+            ),
+          ],
+        ),
         const SizedBox(height: AppSpacing.xs),
         Text(
           etape.corps,
@@ -121,7 +145,8 @@ class _Etape extends ConsumerWidget {
   }
 }
 
-/// La fin de la visite : rien à fêter en fanfare, une porte pour la revoir.
+/// La fin de la visite : le bandeau de signature qui la salue, le chemin
+/// complet, et une porte pour la revoir.
 class _VisiteTerminee extends StatelessWidget {
   const _VisiteTerminee({required this.onRejouer});
 
@@ -129,14 +154,50 @@ class _VisiteTerminee extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
     return Column(
       mainAxisSize: MainAxisSize.min,
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Text('Visite terminée', style: theme.textTheme.titleLarge),
-        const SizedBox(height: AppSpacing.xs),
+        Container(
+          padding: const EdgeInsets.all(AppSpacing.md),
+          decoration: const BoxDecoration(
+            gradient: AppColors.signature,
+            borderRadius: AppRadius.cardSecondaryAll,
+          ),
+          child: Row(
+            children: [
+              const Icon(
+                AppIcons.checkCircle,
+                size: 28,
+                color: AppColors.neutral0,
+              ),
+              const SizedBox(width: AppSpacing.gapRow),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Les sept pièces vues',
+                      style: AppTypography.label.copyWith(
+                        color: AppColors.neutral0.withValues(alpha: 0.8),
+                      ),
+                    ),
+                    const SizedBox(height: AppSpacing.xxs),
+                    Text(
+                      'Visite terminée',
+                      style: AppTypography.title.copyWith(
+                        color: AppColors.neutral0,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: AppSpacing.md),
+        MentorTourChemin(vues: {for (final step in mentorTour) step.id}),
+        const SizedBox(height: AppSpacing.md),
         Text(
           'Tu as fait le tour des grandes pièces. Tout reste là où tu l’as '
           'vu, et tu peux revoir la visite quand tu veux.',

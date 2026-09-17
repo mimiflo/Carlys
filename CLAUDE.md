@@ -314,3 +314,10 @@ Chaque fonctionnalité livrée comprend :
 6. Documentation mise à jour (`docs/`, README, Swagger le cas échéant).
 7. États erreur/chargement/vide/hors-ligne couverts, accessibilité vérifiée,
    logs corrélés au `requestId`.
+8. **Toute modification d'interface mobile part avec ses captures** :
+   `apps/mobile/tool/screenshots/` (harnais `--update-goldens`), régénérées,
+   **regardées une à une** avant le commit, puis montrées à l'utilisateur.
+   Ce que la relecture juge : la densité (pas d'écran à moitié vide — poser
+   du contenu plausible derrière une feuille), et l'identité Carlys (dégradé
+   de signature, tokens du design system) — un écran gris de lignes nues
+   n'est pas fini, même s'il fonctionne.

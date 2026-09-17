@@ -4,12 +4,22 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/errors/app_exception.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/mentor_style.dart';
+import '../../domain/mentor_word.dart';
 import '../controllers/mentor_controllers.dart';
+
+/// L'image de chaque voix — présentation pure, le domaine n'en sait rien.
+IconData mentorVoiceIcon(MentorStyle style) => switch (style) {
+  MentorStyle.bienveillant => AppIcons.voiceBienveillant,
+  MentorStyle.exigeant => AppIcons.voiceExigeant,
+  MentorStyle.athlete => AppIcons.voiceAthlete,
+  MentorStyle.philosophe => AppIcons.voicePhilosophe,
+};
 
 /// Feuille « La voix du Mentor » : quatre styles, un choix, modifiable à
 /// tout moment. La sélection affichée vient de `AuthUser.mentorStyle` (une
 /// seule source de vérité) ; choisir écrit au serveur puis rafraîchit
-/// l'utilisateur, et un échec s'affiche sans rien changer.
+/// l'utilisateur, et un échec s'affiche sans rien changer. Chaque carte
+/// fait ENTENDRE sa voix : le premier mot de son catalogue, cité tel quel.
 Future<void> showMentorStyleSheet(BuildContext context) {
   return showAppSheet<void>(context, builder: (_) => const _MentorStyleSheet());
 }
@@ -74,7 +84,8 @@ class _MentorStyleSheet extends ConsumerWidget {
   }
 }
 
-/// Une voix : son nom, ce qu'elle change, et l'état « choisie ».
+/// Une voix : son image, son nom, ce qu'elle change, un mot d'elle — et
+/// l'état « choisie » (bordure et fond accentués, coche).
 class _StyleRow extends StatelessWidget {
   const _StyleRow({
     required this.style,
@@ -88,6 +99,8 @@ class _StyleRow extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final exemple = mentorWordCatalog[style]!.first;
+
     return Semantics(
       button: true,
       selected: current,
@@ -101,7 +114,9 @@ class _StyleRow extends StatelessWidget {
         child: Container(
           padding: const EdgeInsets.all(AppSpacing.md),
           decoration: BoxDecoration(
-            color: AppColors.darkSurface,
+            color: current
+                ? AppColors.primaryCardSoft
+                : AppColors.darkSurfaceAlt,
             borderRadius: AppRadius.cardSecondaryAll,
             border: Border.fromBorderSide(
               BorderSide(
@@ -109,36 +124,67 @@ class _StyleRow extends StatelessWidget {
               ),
             ),
           ),
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
+              Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(AppSpacing.xs),
+                    decoration: const BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: AppColors.primaryBadgeBg,
+                    ),
+                    child: Icon(
+                      mentorVoiceIcon(style),
+                      size: 18,
+                      color: AppColors.primaryLight,
+                    ),
+                  ),
+                  const SizedBox(width: AppSpacing.sm),
+                  Expanded(
+                    child: Text(
                       style.label,
                       style: AppTypography.subheading.copyWith(
                         color: AppColors.darkTextPrimary,
                       ),
                     ),
-                    const SizedBox(height: AppSpacing.xxs),
-                    Text(
-                      style.description,
-                      style: AppTypography.label.copyWith(
-                        color: AppColors.darkTextSecondary,
-                      ),
+                  ),
+                  if (current)
+                    const Icon(
+                      AppIcons.checkCircle,
+                      size: 18,
+                      color: AppColors.primaryLight,
                     ),
-                  ],
+                ],
+              ),
+              const SizedBox(height: AppSpacing.xs),
+              Text(
+                style.description,
+                style: AppTypography.label.copyWith(
+                  color: AppColors.darkTextSecondary,
                 ),
               ),
-              if (current) ...[
-                const SizedBox(width: AppSpacing.sm),
-                const Icon(
-                  AppIcons.checkCircle,
-                  size: 18,
-                  color: AppColors.primaryLight,
-                ),
-              ],
+              const SizedBox(height: AppSpacing.xs),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Icon(
+                    AppIcons.quote,
+                    size: 14,
+                    color: AppColors.primaryLight,
+                  ),
+                  const SizedBox(width: AppSpacing.xs),
+                  Expanded(
+                    child: Text(
+                      '« $exemple »',
+                      style: AppTypography.label.copyWith(
+                        color: AppColors.darkTextTertiary,
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
         ),

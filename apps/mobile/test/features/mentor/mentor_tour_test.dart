@@ -1,4 +1,5 @@
 import 'package:carlys_mobile/features/mentor/domain/mentor_tour.dart';
+import 'package:carlys_mobile/features/mentor/presentation/widgets/mentor_tour_chemin.dart';
 import 'package:carlys_mobile/features/mentor/presentation/widgets/mentor_tour_sheet.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -26,6 +27,15 @@ void main() {
       }
       // Et pas de destination orpheline non plus.
       expect(mentorTourRoutes.length, mentorTour.length);
+    });
+
+    test('chaque étape a son image dans la table des icônes', () {
+      // Même garde que pour les routes : le chemin des pastilles montre
+      // chaque pièce avec le dessin de son onglet, jamais un repli muet.
+      for (final step in mentorTour) {
+        expect(mentorTourIcons.keys, contains(step.id));
+      }
+      expect(mentorTourIcons.length, mentorTour.length);
     });
   });
 

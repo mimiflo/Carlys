@@ -6,6 +6,10 @@
 //
 // Les données d'exemple vivent ici, jamais dans `lib/`. Les mots du Mentor
 // sont DÉTERMINISTES par date : chaque capture fige la sienne.
+//
+// Ce fichier EST un harnais de test (exécuté via `flutter test`), simplement
+// rangé hors de test/ — l'avertissement visible_for_testing est donc infondé :
+// ignore_for_file: invalid_use_of_visible_for_testing_member
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/carlys_profile/domain/entities/carlys_profile.dart';
 import 'package:carlys_mobile/features/dashboard/presentation/widgets/for_you_card.dart';
@@ -62,11 +66,13 @@ void main() {
   }
 
   /// Monte un hôte : soit un contenu posé sur l'écran, soit un déclencheur
-  /// qui ouvre une feuille — la capture montre alors la feuille elle-même.
+  /// qui ouvre une feuille — la capture montre alors la feuille posée sur
+  /// [fond], du contenu plausible plutôt qu'un écran vide derrière elle.
   Future<void> monter(
     WidgetTester tester, {
     Widget? corps,
     void Function(BuildContext context)? ouvrir,
+    Widget? fond,
     List<Override> overrides = const [],
     MentorStyle? style,
   }) async {
@@ -88,11 +94,19 @@ void main() {
                   padding: const EdgeInsets.all(AppSpacing.gutter),
                   child: ouvrir == null
                       ? corps!
-                      : Center(
-                          child: TextButton(
-                            onPressed: () => ouvrir(context),
-                            child: const Text('ouvrir'),
-                          ),
+                      : Stack(
+                          children: [
+                            if (fond != null) fond,
+                            // En bas : la feuille ouverte le recouvre, la
+                            // capture ne montre jamais ce déclencheur.
+                            Align(
+                              alignment: Alignment.bottomCenter,
+                              child: TextButton(
+                                onPressed: () => ouvrir(context),
+                                child: const Text('ouvrir'),
+                              ),
+                            ),
+                          ],
                         ),
                 ),
               ),
@@ -117,7 +131,7 @@ void main() {
       child: ForYouCard(
         entries: [
           ForYouEntry(
-            icon: AppIcons.spark,
+            icon: AppIcons.mentor,
             iconColor: AppColors.primaryLight,
             iconSize: 20,
             label: 'Le Mentor',
@@ -160,6 +174,45 @@ void main() {
     await capture(tester, 'mentor-02-celebration');
   });
 
+  /// Le fond des captures de feuilles : l'accueil plausible au moment
+  /// d'ouvrir la porte du Mentor — « Pour toi » puis les mesures du jour,
+  /// jamais un écran noir derrière la feuille.
+  Widget fondAccueil(MentorStyle? style) {
+    final mot = mentorWord(
+      style: style,
+      frequence: MentorFrequency.hebdomadaire,
+      now: DateTime(2026, 9, 17),
+    );
+    return Builder(
+      builder: (context) => Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          pourToi(context, mot: mot),
+          const SizedBox(height: AppSpacing.gapSection),
+          TitledSection(
+            icon: AppIcons.today,
+            label: 'Aujourd’hui',
+            child: Row(
+              children: const [
+                Expanded(
+                  child: AppStatTile(label: 'Série', value: '5', unit: 'j'),
+                ),
+                SizedBox(width: AppSpacing.gapTile),
+                Expanded(
+                  child: AppStatTile(label: 'Kcal', value: '1 840'),
+                ),
+                SizedBox(width: AppSpacing.gapTile),
+                Expanded(
+                  child: AppStatTile(label: 'Eau', value: '1,5', unit: 'L'),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   testWidgets('la feuille du Mentor : mot, visite, voix', (tester) async {
     SharedPreferences.setMockInitialValues(const {
       MentorPrefsStore.visiteVuesKey: ['accueil', 'entrainement'],
@@ -168,6 +221,7 @@ void main() {
       tester,
       style: MentorStyle.exigeant,
       ouvrir: showMentorSheet,
+      fond: fondAccueil(MentorStyle.exigeant),
     );
     expect(find.text('Le Mentor Carlys'), findsOneWidget);
     await capture(tester, 'mentor-03-feuille');
@@ -178,24 +232,23 @@ void main() {
       tester,
       style: MentorStyle.exigeant,
       ouvrir: showMentorStyleSheet,
+      fond: fondAccueil(MentorStyle.exigeant),
     );
     expect(find.text('La voix du Mentor'), findsOneWidget);
     await capture(tester, 'mentor-04-voix');
   });
 
   testWidgets('la visite guidée — première étape', (tester) async {
-    await monter(tester, ouvrir: showMentorTourSheet);
+    await monter(tester, ouvrir: showMentorTourSheet, fond: fondAccueil(null));
     expect(find.text('Visite guidée · 1 sur 7'), findsOneWidget);
     await capture(tester, 'mentor-05-visite');
   });
 
   testWidgets('la visite guidée — terminée, et rejouable', (tester) async {
     SharedPreferences.setMockInitialValues({
-      MentorPrefsStore.visiteVuesKey: [
-        for (final step in mentorTour) step.id,
-      ],
+      MentorPrefsStore.visiteVuesKey: [for (final step in mentorTour) step.id],
     });
-    await monter(tester, ouvrir: showMentorTourSheet);
+    await monter(tester, ouvrir: showMentorTourSheet, fond: fondAccueil(null));
     expect(find.text('Visite terminée'), findsOneWidget);
     await capture(tester, 'mentor-06-visite-terminee');
   });

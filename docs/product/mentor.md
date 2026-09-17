@@ -35,13 +35,18 @@ quatre), chaîne vide quand rien n'est choisi — jamais une voix devinée.
 serveur plus récent n'a pas le droit de faire planter un ancien client.
 
 Le choix se fait dans le profil (groupe « Mentor Carlys » → « Sa voix »),
-par une feuille à quatre options. Écrit au serveur PUIS relu depuis
+par une feuille à quatre options. Chaque carte porte l'image de sa voix et
+un mot d'exemple tiré de son catalogue (`mentorWordCatalog`) : on ENTEND la
+voix avant de la choisir. Écrit au serveur PUIS relu depuis
 `AuthUser` : une seule source de vérité, un échec s'affiche sans état faux.
 
 ## Le mot du Mentor (accueil)
 
 Une phrase dans « Pour toi », à la voix choisie (voix neutre tant que rien
-n'est choisi). `mentorWord` est une fonction PURE : style + fréquence +
+n'est choisi). Toucher l'entrée ouvre la feuille du Mentor, qui s'ouvre sur
+son bandeau de signature (`mentor_bandeau.dart`) : l'identité et le mot du
+moment posés sur le dégradé de la marque — la même grammaire que les
+bannières de franchissement. `mentorWord` est une fonction PURE : style + fréquence +
 jour civil → le mot, en rotation DÉTERMINISTE par période — au cran
 quotidien il change chaque jour, au cran hebdomadaire il tient la semaine.
 Aucune date stockée, donc rien à désynchroniser : la même grammaire que la
@@ -58,7 +63,10 @@ accepté ».
 Sept étapes (`mentor_tour.dart`) : accueil, entraînement, nutrition,
 progrès, Academy, communauté, coach. Un manifeste constant, un état « déjà
 vu » local, et RIEN de verrouillé — la même doctrine que le Parcours de
-l'Academy. La feuille montre UNE étape à la fois : « Aller voir » est
+l'Academy. La feuille montre UNE étape à la fois, au-dessus du chemin des
+sept pastilles (`mentor_tour_chemin.dart` — vue, courante, à venir ; chaque
+étape porte l'icône de sa pièce, table `mentorTourIcons` gardée par le même
+test que les routes) : « Aller voir » est
 l'ancrage réel (marque vue, ferme, navigue), « Étape suivante » avance sur
 place. La visite se rejoue depuis les réglages du Mentor, à volonté.
 
