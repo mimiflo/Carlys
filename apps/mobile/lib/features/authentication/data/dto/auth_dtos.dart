@@ -4,6 +4,7 @@ library;
 
 import '../../../carlys_profile/domain/entities/carlys_profile.dart';
 import '../../../mentor/domain/entities/mentor_style.dart';
+import '../../../workout_program/domain/entities/training_goal.dart';
 import '../../domain/entities/auth_session_device.dart';
 import '../../domain/entities/auth_user.dart';
 
@@ -17,6 +18,7 @@ class AuthUserDto {
     required this.timezone,
     this.carlysProfile,
     this.mentorStyle,
+    this.trainingGoal,
   });
 
   factory AuthUserDto.fromJson(Map<String, dynamic> json) => AuthUserDto(
@@ -28,6 +30,7 @@ class AuthUserDto {
     timezone: json['timezone'] as String,
     carlysProfile: json['carlysProfile'] as String?,
     mentorStyle: json['mentorStyle'] as String?,
+    trainingGoal: json['trainingGoal'] as String?,
   );
 
   final String id;
@@ -38,6 +41,7 @@ class AuthUserDto {
   final String timezone;
   final String? carlysProfile;
   final String? mentorStyle;
+  final String? trainingGoal;
 
   AuthUser toEntity() => AuthUser(
     id: id,
@@ -48,6 +52,7 @@ class AuthUserDto {
     timezone: timezone,
     carlysProfile: CarlysProfile.fromWire(carlysProfile),
     mentorStyle: MentorStyle.fromWire(mentorStyle),
+    trainingGoal: TrainingGoal.fromWire(trainingGoal),
   );
 }
 

@@ -68,14 +68,24 @@ class ProfileIdentitySettings extends StatelessWidget {
 /// charges. Rangée sous « Entraînement » et nommée d'un mot qui recouvre au
 /// moins deux notions distinctes, elle laissait croire qu'on y choisissait un
 /// but d'entraînement. Elle vit maintenant dans son propre groupe, sous un
-/// nom qui dit ce qu'elle fait.
+/// nom qui dit ce qu'elle fait — et depuis le Plan 4, le VRAI objectif
+/// d'entraînement (`TrainingGoal`) a sa ligne ici, en tête de groupe.
 class ProfileTrainingSettings extends StatelessWidget {
   const ProfileTrainingSettings({
+    required this.goalLabel,
+    required this.onGoal,
     required this.onTemplates,
     required this.onHistory,
     required this.onBodyMetrics,
     super.key,
   });
+
+  /// Libellé de l'objectif d'entraînement choisi, `null` tant qu'aucun ne
+  /// l'est.
+  final String? goalLabel;
+
+  /// Ouvre la feuille de choix de l'objectif d'entraînement.
+  final VoidCallback onGoal;
 
   /// Ouvre « Mes modèles » : gérer ses séances types est un réglage
   /// d'entraînement, pas un geste de démarrage.
@@ -88,6 +98,12 @@ class ProfileTrainingSettings extends StatelessWidget {
     return AppSettingsGroup(
       label: 'Entraînement',
       rows: [
+        AppSettingsRow(
+          icon: AppIcons.goal,
+          label: 'Mon objectif',
+          value: goalLabel ?? 'À choisir',
+          onTap: onGoal,
+        ),
         AppSettingsRow(
           icon: AppIcons.programs,
           label: 'Mes modèles de séance',

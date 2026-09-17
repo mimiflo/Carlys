@@ -15,6 +15,7 @@ import {
   CarlysProfile,
   MentorStyle,
   NutritionGoal,
+  TrainingGoal,
 } from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
@@ -72,6 +73,16 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsEnum(MentorStyle)
   mentorStyle?: MentorStyle;
+
+  @ApiPropertyOptional({
+    enum: TrainingGoal,
+    description:
+      'Objectif d’entraînement — distinct de l’objectif nutritionnel, ' +
+      'jamais déduit de lui ; entrée première de la génération de programme',
+  })
+  @IsOptional()
+  @IsEnum(TrainingGoal)
+  trainingGoal?: TrainingGoal;
 
   // ── Profil métabolique (nutrition) ──────────────────────────────────────
 

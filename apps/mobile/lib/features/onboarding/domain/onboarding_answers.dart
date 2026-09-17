@@ -1,5 +1,6 @@
 import '../../carlys_profile/domain/entities/carlys_profile.dart';
 import '../../nutrition/domain/entities/nutrition.dart';
+import '../../workout_program/domain/entities/training_goal.dart';
 
 /// Réponses données pendant l'onboarding.
 ///
@@ -9,6 +10,7 @@ import '../../nutrition/domain/entities/nutrition.dart';
 class OnboardingAnswers {
   const OnboardingAnswers({
     this.carlysProfile,
+    this.trainingGoal,
     this.goal,
     this.sex,
     this.birthDate,
@@ -24,6 +26,7 @@ class OnboardingAnswers {
 
     return OnboardingAnswers(
       carlysProfile: CarlysProfile.fromWire(json[_carlysProfileKey] as String?),
+      trainingGoal: TrainingGoal.fromWire(json[_trainingGoalKey] as String?),
       goal: NutritionGoal.fromApi(json[_goalKey] as String?),
       sex: BiologicalSex.fromApi(json[_sexKey] as String?),
       birthDate: birthDate is String
@@ -35,6 +38,7 @@ class OnboardingAnswers {
   }
 
   static const String _carlysProfileKey = 'profilCarlys';
+  static const String _trainingGoalKey = 'objectifEntrainement';
   static const String _goalKey = 'objectif';
   static const String _sexKey = 'sexe';
   static const String _birthDateKey = 'naissance';
@@ -44,6 +48,10 @@ class OnboardingAnswers {
   /// Identité Carlys choisie — enregistrée via `PATCH /users/me`, pas sur le
   /// profil métabolique.
   final CarlysProfile? carlysProfile;
+
+  /// Objectif d'ENTRAÎNEMENT — enregistré via `PATCH /users/me`, comme
+  /// l'identité Carlys : distinct de l'objectif nutritionnel [goal].
+  final TrainingGoal? trainingGoal;
 
   final NutritionGoal? goal;
   final BiologicalSex? sex;
@@ -62,7 +70,8 @@ class OnboardingAnswers {
       heightCm != null ||
       activityLevel != null;
 
-  bool get isEmpty => !hasMetabolicAnswers && carlysProfile == null;
+  bool get isEmpty =>
+      !hasMetabolicAnswers && carlysProfile == null && trainingGoal == null;
 
   MetabolicProfileUpdate toProfileUpdate() => MetabolicProfileUpdate(
     goal: goal,
@@ -74,6 +83,7 @@ class OnboardingAnswers {
 
   Map<String, Object?> toStorage() => {
     if (carlysProfile != null) _carlysProfileKey: carlysProfile!.wire,
+    if (trainingGoal != null) _trainingGoalKey: trainingGoal!.wire,
     if (goal != null) _goalKey: goal!.apiValue,
     if (sex != null) _sexKey: sex!.apiValue,
     if (birthDate != null) _birthDateKey: birthDate!.toUtc().toIso8601String(),

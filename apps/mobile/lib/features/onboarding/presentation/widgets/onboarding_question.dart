@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../carlys_profile/domain/entities/carlys_profile.dart';
 import '../../../carlys_profile/presentation/widgets/carlys_profile_card.dart';
 import '../../../nutrition/domain/entities/nutrition.dart';
+import '../../../workout_program/domain/entities/training_goal.dart';
 import 'onboarding_birth_date_card.dart';
 import 'onboarding_choices.dart';
 import 'onboarding_height_card.dart';
@@ -17,6 +18,7 @@ class OnboardingQuestion extends StatelessWidget {
   const OnboardingQuestion({
     required this.step,
     required this.carlysProfile,
+    required this.trainingGoal,
     required this.goal,
     required this.sex,
     required this.birthDate,
@@ -24,6 +26,7 @@ class OnboardingQuestion extends StatelessWidget {
     required this.heightTouched,
     required this.activityLevel,
     required this.onCarlysProfile,
+    required this.onTrainingGoal,
     required this.onGoal,
     required this.onSex,
     required this.onPickBirthDate,
@@ -32,10 +35,11 @@ class OnboardingQuestion extends StatelessWidget {
     super.key,
   });
 
-  /// Index de l'étape courante (0 = identité Carlys, 4 = rythme).
+  /// Index de l'étape courante (0 = identité Carlys, 5 = rythme).
   final int step;
 
   final CarlysProfile? carlysProfile;
+  final TrainingGoal? trainingGoal;
   final NutritionGoal? goal;
   final BiologicalSex? sex;
   final DateTime? birthDate;
@@ -47,6 +51,7 @@ class OnboardingQuestion extends StatelessWidget {
   final ActivityLevel? activityLevel;
 
   final ValueChanged<CarlysProfile> onCarlysProfile;
+  final ValueChanged<TrainingGoal> onTrainingGoal;
   final ValueChanged<NutritionGoal> onGoal;
   final ValueChanged<BiologicalSex> onSex;
   final VoidCallback onPickBirthDate;
@@ -76,7 +81,28 @@ class OnboardingQuestion extends StatelessWidget {
             ),
         ],
       ),
+      // L'objectif d'ENTRAÎNEMENT vient tout de suite après l'identité :
+      // c'est le POURQUOI des séances, et l'entrée première de la future
+      // génération de programme. La nutrition est une AUTRE question, posée
+      // juste après — viser un marathon en recomposition est cohérent.
       1 => OnboardingStepBody(
+        label: 'Ton entraînement',
+        question: 'Tu t’entraînes\npour quoi ?',
+        subtitle:
+            'Un axe distinct de la nutrition : ton futur programme '
+            'partira de là.',
+        options: [
+          for (final value in TrainingGoal.values)
+            OnboardingOptionCard(
+              title: value.label,
+              subtitle: value.description,
+              icon: trainingGoalIcon(value),
+              selected: trainingGoal == value,
+              onTap: () => onTrainingGoal(value),
+            ),
+        ],
+      ),
+      2 => OnboardingStepBody(
         label: 'Ton plan nutrition',
         question: 'Qu’est-ce qu’on\nconstruit ensemble ?',
         // Ce choix écrit un `NutritionGoal`, et LUI SEUL : il fixe la cible
@@ -96,7 +122,7 @@ class OnboardingQuestion extends StatelessWidget {
             ),
         ],
       ),
-      2 => OnboardingStepBody(
+      3 => OnboardingStepBody(
         label: 'Ton profil',
         question: 'Pour calibrer\nton métabolisme',
         subtitle: 'La formule de Mifflin-St Jeor dépend du sexe biologique.',
@@ -110,7 +136,7 @@ class OnboardingQuestion extends StatelessWidget {
             ),
         ],
       ),
-      3 => OnboardingStepBody(
+      4 => OnboardingStepBody(
         label: 'Tes mesures',
         question: 'Naissance\net taille',
         subtitle: 'L’âge et la taille entrent dans le calcul quotidien.',

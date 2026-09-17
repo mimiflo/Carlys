@@ -90,6 +90,21 @@ enum NutritionGoal {
   GAIN_MUSCLE
 }
 
+/// Objectif d'ENTRAÎNEMENT — un axe distinct de l'objectif nutritionnel
+/// (deux questions, deux réponses : viser un marathon en recomposition
+/// corporelle est parfaitement cohérent). Extensible : une valeur inconnue
+/// côté client rend `null`, jamais un objectif deviné.
+enum TrainingGoal {
+  FAT_LOSS
+  MUSCLE_GAIN
+  RECOMPOSITION
+  HYROX
+  MARATHON
+  MAINTENANCE
+  STRENGTH
+  CALISTHENICS
+}
+
 model UserProfile {
   userId      String   @id @db.Uuid
   displayName String
@@ -114,6 +129,11 @@ model UserProfile {
   /// profil décrit l'utilisateur, le style décrit la VOIX qui lui parle.
   /// Nullable tant que la personne n'a pas choisi.
   mentorStyle MentorStyle?
+
+  /// Objectif d'ENTRAÎNEMENT (Plan 4) — coexiste avec `nutritionGoal`,
+  /// jamais déduit de lui. Nullable tant que la personne n'a pas choisi ;
+  /// la génération de programme s'en servira comme entrée première.
+  trainingGoal TrainingGoal?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }

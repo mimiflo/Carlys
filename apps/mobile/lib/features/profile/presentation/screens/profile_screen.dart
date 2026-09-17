@@ -9,6 +9,8 @@ import '../../../carlys_profile/presentation/widgets/carlys_profile_content.dart
 import '../../../mentor/presentation/widgets/mentor_settings_section.dart';
 import '../../../nutrition/presentation/controllers/nutrition_controllers.dart';
 import '../../../progression/presentation/controllers/progression_controllers.dart';
+import '../../../workout_program/presentation/controllers/training_goal_controllers.dart';
+import '../../../workout_program/presentation/widgets/training_goal_sheet.dart';
 import '../widgets/profile_email_verification.dart';
 import '../widgets/profile_header.dart';
 import '../widgets/profile_legal_section.dart';
@@ -86,6 +88,8 @@ class ProfileScreen extends ConsumerWidget {
             const MentorSettingsSection(),
             const SizedBox(height: AppSpacing.md),
             ProfileTrainingSettings(
+              goalLabel: ref.watch(currentTrainingGoalProvider)?.label,
+              onGoal: () => showTrainingGoalSheet(context),
               onTemplates: () => context.push(AppRoutes.templates),
               onHistory: () => context.push(AppRoutes.history),
               onBodyMetrics: () => context.go(AppRoutes.progress),

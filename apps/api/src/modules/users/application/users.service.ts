@@ -6,6 +6,7 @@ import {
   type CarlysProfile,
   type MentorStyle,
   type NutritionGoal,
+  type TrainingGoal,
 } from '@prisma/client';
 import { presentUser } from '../../auth/application/user.presenter';
 import { UsersRepository } from '../infrastructure/users.repository';
@@ -18,6 +19,8 @@ export interface UpdateProfileInput {
   carlysProfile?: CarlysProfile;
   /** Voix du Mentor — un axe indépendant du profil, modifiable à tout moment. */
   mentorStyle?: MentorStyle;
+  /** Objectif d'entraînement — distinct de l'objectif nutritionnel. */
+  trainingGoal?: TrainingGoal;
   sex?: BiologicalSex;
   birthDate?: Date;
   heightCm?: number;
@@ -52,6 +55,7 @@ export class UsersService {
       ...(data.timezone === undefined ? {} : { timezone: data.timezone }),
       ...(data.carlysProfile === undefined ? {} : { carlysProfile: data.carlysProfile }),
       ...(data.mentorStyle === undefined ? {} : { mentorStyle: data.mentorStyle }),
+      ...(data.trainingGoal === undefined ? {} : { trainingGoal: data.trainingGoal }),
       ...(data.sex === undefined ? {} : { sex: data.sex }),
       ...(data.birthDate === undefined ? {} : { birthDate: data.birthDate }),
       ...(data.heightCm === undefined ? {} : { heightCm: data.heightCm }),

@@ -7,6 +7,8 @@ import '../../../authentication/presentation/controllers/auth_controller.dart';
 import '../../../carlys_profile/domain/entities/carlys_profile.dart';
 import '../../../carlys_profile/presentation/controllers/carlys_profile_controllers.dart';
 import '../../../nutrition/presentation/controllers/nutrition_controllers.dart';
+import '../../../workout_program/domain/entities/training_goal.dart';
+import '../../../workout_program/presentation/controllers/training_goal_controllers.dart';
 import '../../data/first_run_store.dart';
 import '../../domain/first_run_step.dart';
 import '../../domain/onboarding_answers.dart';
@@ -64,6 +66,9 @@ class FirstRunController extends Notifier<FirstRunState> {
         }
         if (answers.carlysProfile != null) {
           await _saveCarlysProfile(answers.carlysProfile!);
+        }
+        if (answers.trainingGoal != null) {
+          await _saveTrainingGoal(answers.trainingGoal!);
         }
       } else {
         await _rememberAnswers(answers);
@@ -140,6 +145,9 @@ class FirstRunController extends Notifier<FirstRunState> {
       if (answers.carlysProfile != null) {
         await _saveCarlysProfile(answers.carlysProfile!);
       }
+      if (answers.trainingGoal != null) {
+        await _saveTrainingGoal(answers.trainingGoal!);
+      }
       await _store.clearAnswers();
       _logger.info('Réponses d’onboarding reportées sur le profil');
     } on Exception catch (error) {
@@ -168,6 +176,11 @@ class FirstRunController extends Notifier<FirstRunState> {
   /// n'est pas auto-disposé, un simple `read` suffit.
   Future<void> _saveCarlysProfile(CarlysProfile profile) =>
       ref.read(carlysProfileActionsProvider).choose(profile);
+
+  /// L'objectif d'entraînement suit le même chemin que l'identité :
+  /// `PATCH /users/me` puis rafraîchissement de la session.
+  Future<void> _saveTrainingGoal(TrainingGoal goal) =>
+      ref.read(trainingGoalActionsProvider).choose(goal);
 }
 
 final firstRunControllerProvider =

@@ -10,6 +10,8 @@ import 'package:carlys_mobile/features/carlys_profile/domain/entities/carlys_pro
 import 'package:carlys_mobile/features/nutrition/data/repositories/nutrition_repository_impl.dart';
 import 'package:carlys_mobile/features/nutrition/domain/entities/nutrition.dart';
 import 'package:carlys_mobile/features/onboarding/presentation/widgets/onboarding_height_card.dart';
+import 'package:carlys_mobile/features/workout_program/data/repositories/training_goal_repository_impl.dart';
+import 'package:carlys_mobile/features/workout_program/domain/entities/training_goal.dart';
 import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -19,6 +21,7 @@ import 'package:go_router/go_router.dart';
 import '../../support/fake_auth_repository.dart';
 import '../../support/fake_carlys_profile_repository.dart';
 import '../../support/fake_nutrition_repository.dart';
+import '../../support/fake_training_goal_repository.dart';
 import '../../support/fake_workout_repository.dart';
 import '../../support/first_run_prefs.dart';
 
@@ -26,9 +29,11 @@ void main() {
   final binding = TestWidgetsFlutterBinding.ensureInitialized();
 
   late FakeCarlysProfileRepository carlysRepo;
+  late FakeTrainingGoalRepository trainingRepo;
 
   setUp(() {
     carlysRepo = FakeCarlysProfileRepository();
+    trainingRepo = FakeTrainingGoalRepository();
     // Écran ouvert hors tunnel : le parcours de première ouverture est
     // déjà terminé (il est couvert par first_run_journey_test.dart).
     seedCompletedFirstRun();
@@ -61,6 +66,7 @@ void main() {
             FakeAuthRepository(storedSession: true),
           ),
           carlysProfileRepositoryProvider.overrideWithValue(carlysRepo),
+          trainingGoalRepositoryProvider.overrideWithValue(trainingRepo),
           workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
           nutritionRepositoryProvider.overrideWithValue(nutrition),
           syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
@@ -96,7 +102,7 @@ void main() {
   ) async {
     await openOnboarding(tester);
 
-    expect(find.text('1/5'), findsOneWidget);
+    expect(find.text('1/6'), findsOneWidget);
     expect(find.byIcon(AppIcons.back), findsNothing);
     // Se reconnaître d'abord : l'identité ouvre le parcours, avec les MÊMES
     // cartes illustrées que l'écran Profil Carlys.
@@ -106,7 +112,7 @@ void main() {
 
     // Aucune réponse choisie : le CTA ne fait rien.
     await tapContinue(tester);
-    expect(find.text('1/5'), findsOneWidget);
+    expect(find.text('1/6'), findsOneWidget);
   });
 
   testWidgets('choisir une identité pose le badge et débloque le CTA', (
@@ -120,12 +126,13 @@ void main() {
     expect(find.text('Ton profil'), findsOneWidget);
 
     await tapContinue(tester);
-    expect(find.text('2/5'), findsOneWidget);
-    // « TON PLAN NUTRITION » depuis septembre 2026 : cette étape écrit un
-    // `NutritionGoal` et lui seul. « Objectif » recouvrait au moins deux
-    // notions — le but alimentaire et le but d'entraînement, qui n'existe
-    // pas encore — et c'est ce mot valise qu'on retire.
-    expect(find.text('TON PLAN NUTRITION'), findsOneWidget);
+    expect(find.text('2/6'), findsOneWidget);
+    // Le POURQUOI des séances vient tout de suite après l'identité : c'est
+    // l'objectif d'ENTRAÎNEMENT (Plan 4), distinct du plan nutrition qui
+    // arrive à l'étape suivante — deux questions, deux réponses.
+    expect(find.text('TON ENTRAÎNEMENT'), findsOneWidget);
+    expect(find.text('Prise de muscle'), findsOneWidget);
+    expect(find.text('Hyrox'), findsOneWidget);
   });
 
   testWidgets('le retour ramène à l’étape précédente', (tester) async {
@@ -136,12 +143,12 @@ void main() {
 
     await tester.tap(find.byIcon(AppIcons.back));
     await tester.pumpAndSettle();
-    expect(find.text('1/5'), findsOneWidget);
+    expect(find.text('1/6'), findsOneWidget);
     // La réponse déjà donnée reste sélectionnée.
     expect(find.text('Ton profil'), findsOneWidget);
   });
 
-  testWidgets('les 5 étapes enregistrent identité ET profil métabolique', (
+  testWidgets('les 6 étapes enregistrent identité, objectif ET profil', (
     tester,
   ) async {
     final nutrition = await openOnboarding(tester);
@@ -149,6 +156,12 @@ void main() {
     await tapCard(tester, 'LE CHALLENGER');
     await tapContinue(tester);
 
+    expect(find.text('TON ENTRAÎNEMENT'), findsOneWidget);
+    await tester.tap(find.text('Recomposition'));
+    await tester.pumpAndSettle();
+    await tapContinue(tester);
+
+    expect(find.text('TON PLAN NUTRITION'), findsOneWidget);
     await tester.tap(find.text('Prendre du muscle'));
     await tester.pumpAndSettle();
     await tapContinue(tester);
@@ -190,6 +203,8 @@ void main() {
     expect(report.profile.activityLevel, ActivityLevel.active);
     // L'identité choisie part vers SON endpoint, pas le profil métabolique.
     expect(carlysRepo.chosen, [CarlysProfile.challenger]);
+    // L'objectif d'entraînement aussi : le sien, jamais `nutritionGoal`.
+    expect(trainingRepo.chosen, [TrainingGoal.recomposition]);
     // Retour à l'accueil une fois le profil enregistré.
     expect(find.byType(AppBottomBar), findsOneWidget);
   });
@@ -206,6 +221,7 @@ void main() {
 
     expect(nutrition.updateCount, 0);
     expect(carlysRepo.chosen, isEmpty);
+    expect(trainingRepo.chosen, isEmpty);
     expect(find.byType(AppBottomBar), findsOneWidget);
   });
 }

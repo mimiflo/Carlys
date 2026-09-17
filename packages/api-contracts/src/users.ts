@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { carlysProfileSchema, mentorStyleSchema } from './auth';
+import { carlysProfileSchema, mentorStyleSchema, trainingGoalSchema } from './auth';
 import { activityLevelSchema, biologicalSexSchema, nutritionGoalSchema } from './nutrition';
 
 /**
@@ -96,6 +96,8 @@ export const updateProfileRequestSchema = z.object({
   carlysProfile: carlysProfileSchema.optional(),
   /** Voix du Mentor — un axe indépendant du profil Carlys. */
   mentorStyle: mentorStyleSchema.optional(),
+  /** Objectif d'entraînement — distinct de `nutritionGoal`, jamais déduit. */
+  trainingGoal: trainingGoalSchema.optional(),
   sex: biologicalSexSchema.optional(),
   /** ISO 8601, dans l'intervalle `birthDateRange` (de 15 à 120 ans). */
   birthDate: z.string().datetime().optional(),

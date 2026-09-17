@@ -14,6 +14,24 @@ export type CarlysProfile = z.infer<typeof carlysProfileSchema>;
 export const mentorStyleSchema = z.enum(['BIENVEILLANT', 'EXIGEANT', 'ATHLETE', 'PHILOSOPHE']);
 export type MentorStyle = z.infer<typeof mentorStyleSchema>;
 
+/**
+ * Objectif d'ENTRAÎNEMENT — un axe distinct de l'objectif nutritionnel
+ * (deux questions, deux réponses). Entrée première de la génération de
+ * programme (Plan 4) ; extensible côté serveur, les clients rendent `null`
+ * pour toute valeur inconnue.
+ */
+export const trainingGoalSchema = z.enum([
+  'FAT_LOSS',
+  'MUSCLE_GAIN',
+  'RECOMPOSITION',
+  'HYROX',
+  'MARATHON',
+  'MAINTENANCE',
+  'STRENGTH',
+  'CALISTHENICS',
+]);
+export type TrainingGoal = z.infer<typeof trainingGoalSchema>;
+
 export const authUserSchema = z.object({
   id: z.string(),
   email: z.string(),
@@ -25,6 +43,8 @@ export const authUserSchema = z.object({
   carlysProfile: carlysProfileSchema.nullable(),
   /** Style de voix du Mentor — `null` tant que la personne n'a pas choisi. */
   mentorStyle: mentorStyleSchema.nullable(),
+  /** Objectif d'entraînement — `null` tant que la personne n'a pas choisi. */
+  trainingGoal: trainingGoalSchema.nullable(),
   createdAt: z.string(),
 });
 

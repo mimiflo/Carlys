@@ -8,6 +8,7 @@ import '../../../../design_system/design_system.dart';
 import '../../../authentication/presentation/controllers/auth_controller.dart';
 import '../../../carlys_profile/domain/entities/carlys_profile.dart';
 import '../../../nutrition/domain/entities/nutrition.dart';
+import '../../../workout_program/domain/entities/training_goal.dart';
 import '../../domain/onboarding_answers.dart';
 import '../controllers/first_run_controller.dart';
 import '../widgets/onboarding_backdrop.dart';
@@ -15,9 +16,10 @@ import '../widgets/onboarding_cta.dart';
 import '../widgets/onboarding_header.dart';
 import '../widgets/onboarding_question.dart';
 
-/// Onboarding (maquette 2a) : 5 étapes — l'identité Carlys d'abord (se
-/// reconnaître est l'accroche du parcours), puis le profil métabolique réel
-/// (objectif, sexe, naissance/taille, activité).
+/// Onboarding : 6 étapes — l'identité Carlys d'abord (se reconnaître est
+/// l'accroche du parcours), l'objectif d'ENTRAÎNEMENT ensuite (le pourquoi
+/// des séances, distinct de la nutrition), puis le profil métabolique réel
+/// (objectif nutritionnel, sexe, naissance/taille, activité).
 ///
 /// Première marche du parcours de première ouverture : les réponses sont
 /// enregistrées tout de suite si un compte existe, conservées localement
@@ -34,11 +36,12 @@ class OnboardingScreen extends ConsumerStatefulWidget {
 }
 
 class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
-  static const int _stepCount = 5;
+  static const int _stepCount = 6;
   static const double _defaultHeightCm = 175;
 
   int _step = 0;
   CarlysProfile? _carlysProfile;
+  TrainingGoal? _trainingGoal;
   NutritionGoal? _goal;
   BiologicalSex? _sex;
   DateTime? _birthDate;
@@ -49,9 +52,10 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   bool get _stepComplete => switch (_step) {
     0 => _carlysProfile != null,
-    1 => _goal != null,
-    2 => _sex != null,
-    3 => _birthDate != null && _heightTouched,
+    1 => _trainingGoal != null,
+    2 => _goal != null,
+    3 => _sex != null,
+    4 => _birthDate != null && _heightTouched,
     _ => _activity != null,
   };
 
@@ -59,6 +63,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   OnboardingAnswers get _answers => OnboardingAnswers(
     carlysProfile: _carlysProfile,
+    trainingGoal: _trainingGoal,
     goal: _goal,
     sex: _sex,
     birthDate: _birthDate,
@@ -175,9 +180,14 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   /// Le bloc bas est collé en bas de l'espace disponible, et défile si
   /// l'écran est trop court pour lui.
+  ///
+  /// La clé par étape REMET le défilement à zéro à chaque question : sans
+  /// elle, une étape haute (l'objectif d'entraînement et ses huit cartes)
+  /// s'ouvrait à la position léguée par la précédente, question coupée.
   Widget _buildBottomBlock({required bool authenticated}) {
     return LayoutBuilder(
       builder: (context, constraints) => SingleChildScrollView(
+        key: ValueKey('onboarding-etape-$_step'),
         child: ConstrainedBox(
           constraints: BoxConstraints(minHeight: constraints.maxHeight),
           child: Column(
@@ -206,6 +216,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     return OnboardingQuestion(
       step: _step,
       carlysProfile: _carlysProfile,
+      trainingGoal: _trainingGoal,
       goal: _goal,
       sex: _sex,
       birthDate: _birthDate,
@@ -213,6 +224,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
       heightTouched: _heightTouched,
       activityLevel: _activity,
       onCarlysProfile: (value) => setState(() => _carlysProfile = value),
+      onTrainingGoal: (value) => setState(() => _trainingGoal = value),
       onGoal: (value) => setState(() => _goal = value),
       onSex: (value) => setState(() => _sex = value),
       onPickBirthDate: _pickBirthDate,

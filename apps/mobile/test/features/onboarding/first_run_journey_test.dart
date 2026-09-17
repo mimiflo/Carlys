@@ -16,6 +16,8 @@ import 'package:carlys_mobile/features/onboarding/presentation/widgets/brand_sig
 import 'package:carlys_mobile/features/onboarding/presentation/widgets/onboarding_height_card.dart';
 import 'package:carlys_mobile/features/progress/data/repositories/progress_repository_impl.dart';
 import 'package:carlys_mobile/features/subscription/data/repositories/subscription_repository_impl.dart';
+import 'package:carlys_mobile/features/workout_program/data/repositories/training_goal_repository_impl.dart';
+import 'package:carlys_mobile/features/workout_program/domain/entities/training_goal.dart';
 import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -26,6 +28,7 @@ import '../../support/fake_carlys_profile_repository.dart';
 import '../../support/fake_nutrition_repository.dart';
 import '../../support/fake_progress_repository.dart';
 import '../../support/fake_subscription_repository.dart';
+import '../../support/fake_training_goal_repository.dart';
 import '../../support/fake_workout_repository.dart';
 import '../../support/first_run_prefs.dart';
 
@@ -58,6 +61,7 @@ void main() {
   late FakeAuthRepository auth;
   late FakeNutritionRepository nutrition;
   late FakeCarlysProfileRepository carlysRepo;
+  late FakeTrainingGoalRepository trainingRepo;
 
   setUp(() {
     seedFirstOpen();
@@ -68,6 +72,7 @@ void main() {
     auth = FakeAuthRepository();
     nutrition = FakeNutritionRepository();
     carlysRepo = FakeCarlysProfileRepository();
+    trainingRepo = FakeTrainingGoalRepository();
   });
 
   tearDown(() {
@@ -84,6 +89,7 @@ void main() {
       ),
       authRepositoryProvider.overrideWithValue(auth),
       carlysProfileRepositoryProvider.overrideWithValue(carlysRepo),
+      trainingGoalRepositoryProvider.overrideWithValue(trainingRepo),
       nutritionRepositoryProvider.overrideWithValue(nutrition),
       subscriptionRepositoryProvider.overrideWithValue(
         FakeSubscriptionRepository(),
@@ -149,6 +155,11 @@ void main() {
     await tapText(tester, 'LE CONSTRUCTEUR');
     await tapText(tester, 'Continuer');
 
+    // L'objectif d'ENTRAÎNEMENT d'abord, la nutrition ensuite : deux
+    // questions distinctes, deux réponses.
+    await tapText(tester, 'Prise de muscle');
+    await tapText(tester, 'Continuer');
+
     await tapText(tester, 'Prendre du muscle');
     await tapText(tester, 'Continuer');
 
@@ -194,14 +205,14 @@ void main() {
       expect(find.text('L’ART DE DEVENIR'), findsOneWidget);
       // Les quatre univers sont annoncés, sans prétendre être navigables.
       expect(find.byType(BrandPillars), findsOneWidget);
-      expect(find.text('1/5'), findsNothing);
+      expect(find.text('1/6'), findsNothing);
       expect(find.byType(AppBottomBar), findsNothing);
 
       // Rien d'autre n'en sort : pas d'échappatoire vers la connexion.
       expect(find.text('J’ai déjà un compte'), findsNothing);
 
       await passWelcomePage(tester);
-      expect(find.text('1/5'), findsOneWidget);
+      expect(find.text('1/6'), findsOneWidget);
     },
   );
 
@@ -212,7 +223,7 @@ void main() {
       await launch(tester);
 
       // 1. L'application s'ouvre sur l'onboarding, pas sur l'accueil.
-      expect(find.text('1/5'), findsOneWidget);
+      expect(find.text('1/6'), findsOneWidget);
       expect(find.byType(AppBottomBar), findsNothing);
 
       await answerOnboarding(tester);
@@ -222,6 +233,7 @@ void main() {
       expect(find.text('Crée ton compte'), findsOneWidget);
       expect(nutrition.updateCount, 0);
       expect(carlysRepo.chosen, isEmpty);
+      expect(trainingRepo.chosen, isEmpty);
 
       await fillRegisterForm(tester);
 
@@ -241,6 +253,8 @@ void main() {
       expect(report.profile.heightCm, 176);
       expect(report.profile.activityLevel, ActivityLevel.active);
       expect(carlysRepo.chosen, [CarlysProfile.constructeur]);
+      // L'objectif d'entraînement aussi, par SON endpoint.
+      expect(trainingRepo.chosen, [TrainingGoal.muscleGain]);
 
       // 4. Refus : la version gratuite est proposée explicitement, puis
       // l'application s'ouvre.
@@ -254,7 +268,7 @@ void main() {
       await tester.pumpWidget(app());
       await tester.pumpAndSettle();
       expect(find.byType(AppBottomBar), findsOneWidget);
-      expect(find.text('1/5'), findsNothing);
+      expect(find.text('1/6'), findsNothing);
     },
   );
 
@@ -353,7 +367,7 @@ void main() {
     await tapText(tester, 'Se connecter');
 
     expect(auth.loginCalls, 1);
-    expect(find.text('1/5'), findsOneWidget);
+    expect(find.text('1/6'), findsOneWidget);
     // Session ouverte : le lien de connexion n'a plus lieu d'être.
     expect(find.text('J’ai déjà un compte'), findsNothing);
   });
@@ -365,7 +379,7 @@ void main() {
     await launch(tester, passWelcome: false);
 
     expect(find.text('Crée ton compte'), findsOneWidget);
-    expect(find.text('1/5'), findsNothing);
+    expect(find.text('1/6'), findsNothing);
 
     // Qui a déjà un compte rejoint la connexion depuis l'inscription.
     await tapText(tester, 'Se connecter');
@@ -380,7 +394,7 @@ void main() {
       await launch(tester, passWelcome: false);
 
       expect(find.byType(AppBottomBar), findsOneWidget);
-      expect(find.text('1/5'), findsNothing);
+      expect(find.text('1/6'), findsNothing);
       expect(find.text('CARLYS PREMIUM'), findsNothing);
     },
   );

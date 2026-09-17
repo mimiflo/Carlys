@@ -172,27 +172,37 @@ Carlys ») — `features/mentor/` côté mobile, la voix côté serveur.
 
 ---
 
-## PLAN 4 — Objectifs / Programmes / Calendrier  `[ ] À FAIRE`
+## PLAN 4 — Objectifs / Programmes / Calendrier  `[~] EN COURS`
 
 Existant : grille `Program`/`ProgramDay` (semaine N × jour J) éditable à la
 main, modèles de séance, `propose_session` du coach (UNE séance, n'écrit
-rien). Le seul « objectif » du dépôt est `NutritionGoal`.
+rien). Audit du 17 septembre 2026 : conforme — aucun objectif
+d'entraînement, aucune entrée de génération, aucune génération, aucune
+date sur `Program`, aucun lien `WorkoutSession` ↔ jour de programme.
 
-- [ ] Objectif d'entraînement : enum extensible (perte de gras, muscle,
-      recomposition, Hyrox, marathon, maintien, force, calisthenics) —
-      migration + API + onboarding/profil. Coexiste avec l'objectif
-      nutritionnel (deux questions distinctes).
+- [x] Objectif d'entraînement : enum `TrainingGoal` 8 valeurs (perte de
+      gras, muscle, recomposition, Hyrox, marathon, maintien, force,
+      callisthénie) — migration `20260917190658_training_goal`,
+      `PATCH /users/me`, `AuthUser.trainingGoal`, onboarding (étape 2
+      « Ton entraînement », 6 étapes désormais), profil (« Entraînement »
+      → « Mon objectif », feuille à huit cartes). Coexiste avec l'objectif
+      nutritionnel — indépendance épinglée par le e2e, wires disjoints
+      épinglés par un test Dart. Doc : `docs/product/entrainement-objectifs.md`.
 - [ ] Entrées de génération au profil : expérience, séances/semaine, durée,
-      matériel (`UserEquipment`) — migrations.
+      matériel (`UserEquipment` — s'adosser à la taxonomie `Equipment`
+      existante du catalogue, slugs déjà filtrés par le coach) — migrations.
 - [ ] Génération d'un programme (règles par objectif : fréquence,
       répartition, cardio, progression) — côté serveur, auditables.
 - [ ] Calendrier : date de début de `Program` (migration sur table
       déployée), vue semaine datée, déplacer/reporter, fait/manqué — exige le
-      lien séance réalisée ↔ jour de programme (migration `WorkoutSession`).
-- [!] Prescription ≠ placement : `@@unique([programId, weekNumber,
-      dayOfWeek])` interdit deux séances le même jour. Les séparer est une
-      MIGRATION DE DONNÉES sur une table déployée — à trancher explicitement
-      en tête de plan (deux tables, ou assumer une case = un jour).
+      lien séance réalisée ↔ jour de programme (migration `WorkoutSession`,
+      contrat, Drift + file de synchronisation).
+- [x] Prescription ≠ placement — TRANCHÉ (17 septembre 2026) : on ASSUME
+      une case = un jour. `@@unique([programId, weekNumber, dayOfWeek])`
+      reste : c'est la grammaire de la grille actuelle, le moindre risque
+      sur une table déployée, et « deux séances le même jour » reste
+      exprimable par un modèle combiné. Si le besoin réel apparaît un jour,
+      l'extension est ADDITIVE (un champ de créneau), pas une refonte.
 
 ---
 

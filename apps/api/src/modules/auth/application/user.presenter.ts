@@ -13,6 +13,7 @@ export function presentUser(user: UserWithProfile): AuthUser {
     timezone: user.profile?.timezone ?? 'Europe/Paris',
     carlysProfile: user.profile?.carlysProfile ?? null,
     mentorStyle: user.profile?.mentorStyle ?? null,
+    trainingGoal: user.profile?.trainingGoal ?? null,
     createdAt: user.createdAt.toISOString(),
   };
 }

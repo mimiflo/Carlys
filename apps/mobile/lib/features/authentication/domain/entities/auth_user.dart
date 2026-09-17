@@ -1,5 +1,6 @@
 import '../../../carlys_profile/domain/entities/carlys_profile.dart';
 import '../../../mentor/domain/entities/mentor_style.dart';
+import '../../../workout_program/domain/entities/training_goal.dart';
 
 /// Utilisateur authentifié.
 ///
@@ -15,6 +16,7 @@ class AuthUser {
     required this.timezone,
     this.carlysProfile,
     this.mentorStyle,
+    this.trainingGoal,
   });
 
   final String id;
@@ -30,6 +32,9 @@ class AuthUser {
   /// Voix du Mentor choisie — null tant qu'elle ne l'a pas été.
   final MentorStyle? mentorStyle;
 
+  /// Objectif d'entraînement choisi — null tant qu'il ne l'a pas été.
+  final TrainingGoal? trainingGoal;
+
   @override
   bool operator ==(Object other) =>
       other is AuthUser &&
@@ -40,7 +45,8 @@ class AuthUser {
       other.locale == locale &&
       other.timezone == timezone &&
       other.carlysProfile == carlysProfile &&
-      other.mentorStyle == mentorStyle;
+      other.mentorStyle == mentorStyle &&
+      other.trainingGoal == trainingGoal;
 
   @override
   int get hashCode => Object.hash(
@@ -52,5 +58,6 @@ class AuthUser {
     timezone,
     carlysProfile,
     mentorStyle,
+    trainingGoal,
   );
 }

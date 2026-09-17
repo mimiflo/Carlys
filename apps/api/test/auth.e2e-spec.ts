@@ -171,6 +171,42 @@ describe('Authentification (e2e)', () => {
       .expect(400);
   });
 
+  it('choisit un objectif d’entraînement — distinct de l’objectif nutritionnel', async () => {
+    // Tant que rien n'est choisi : null, jamais un objectif deviné.
+    const before = await api()
+      .get('/api/v1/users/me')
+      .set('Authorization', `Bearer ${firstSession.accessToken}`)
+      .expect(200);
+    expect(data<AuthUser>(before.body).trainingGoal).toBeNull();
+
+    // Les DEUX objectifs coexistent : viser un marathon en recomposition
+    // est cohérent — poser l'un n'écrit jamais l'autre.
+    const chosen = await api()
+      .patch('/api/v1/users/me')
+      .set('Authorization', `Bearer ${firstSession.accessToken}`)
+      .send({ trainingGoal: 'MARATHON', nutritionGoal: 'LOSE_WEIGHT' })
+      .expect(200);
+    expect(data<AuthUser>(chosen.body).trainingGoal).toBe('MARATHON');
+    // Les axes voisins restent intacts.
+    expect(data<AuthUser>(chosen.body).carlysProfile).toBe('CHALLENGER');
+    expect(data<AuthUser>(chosen.body).mentorStyle).toBe('PHILOSOPHE');
+
+    // On change d'objectif à tout moment, sans toucher au reste.
+    const changed = await api()
+      .patch('/api/v1/users/me')
+      .set('Authorization', `Bearer ${firstSession.accessToken}`)
+      .send({ trainingGoal: 'HYROX' })
+      .expect(200);
+    expect(data<AuthUser>(changed.body).trainingGoal).toBe('HYROX');
+
+    // Une valeur hors de la liste est refusée.
+    await api()
+      .patch('/api/v1/users/me')
+      .set('Authorization', `Bearer ${firstSession.accessToken}`)
+      .send({ trainingGoal: 'TRIATHLON' })
+      .expect(400);
+  });
+
   it('refuse un mot de passe erroné avec un message générique', async () => {
     const response = await api()
       .post('/api/v1/auth/login')

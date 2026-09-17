@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../design_system/design_system.dart';
 import '../../../nutrition/domain/entities/nutrition.dart';
+import '../../../workout_program/domain/entities/training_goal.dart';
 
 /// Habillage des options de l'onboarding : icône et sous-titre descriptif.
 ///
@@ -27,6 +28,19 @@ String goalSubtitle(NutritionGoal goal) => switch (goal) {
   NutritionGoal.gainMuscle => 'Surplus léger · volume élevé',
   NutritionGoal.loseWeight => 'Déficit maîtrisé · cardio',
   NutritionGoal.maintain => 'Régularité avant tout',
+};
+
+/// Un glyphe par objectif d'entraînement — l'ordre d'affichage est celui
+/// de l'enum : du plus demandé (perte de gras, muscle) au plus spécialisé.
+IconData trainingGoalIcon(TrainingGoal goal) => switch (goal) {
+  TrainingGoal.fatLoss => Icons.local_fire_department_rounded,
+  TrainingGoal.muscleGain => AppIcons.workout,
+  TrainingGoal.recomposition => Icons.autorenew_rounded,
+  TrainingGoal.hyrox => Icons.sports_score_rounded,
+  TrainingGoal.marathon => Icons.directions_run_rounded,
+  TrainingGoal.maintenance => Icons.balance_rounded,
+  TrainingGoal.strength => AppIcons.trendingUp,
+  TrainingGoal.calisthenics => AppIcons.exercises,
 };
 
 IconData sexIcon(BiologicalSex sex) => switch (sex) {
