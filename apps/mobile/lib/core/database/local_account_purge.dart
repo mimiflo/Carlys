@@ -5,6 +5,8 @@ import '../../app/restore/app_restore.dart';
 import '../../features/academy/data/answered_lessons_store.dart';
 import '../../features/academy/presentation/controllers/academy_controllers.dart';
 import '../../features/community/presentation/controllers/community_controllers.dart';
+import '../../features/mentor/data/mentor_prefs_store.dart';
+import '../../features/mentor/presentation/controllers/mentor_controllers.dart';
 import '../../features/notifications/presentation/controllers/notification_preferences.dart';
 import '../../features/onboarding/data/first_run_store.dart';
 import '../../features/progress/presentation/controllers/progress_controllers.dart';
@@ -57,6 +59,12 @@ class DriftLocalAccountPurge implements LocalAccountPurge {
     RewardLedger.key,
     AnsweredLessonsStore.key,
     FirstRunStore.answersKey,
+    // Les célébrations que le Mentor a DITES : les identifiants de
+    // récompense sont ceux du catalogue, identiques pour tous — laisser la
+    // liste, c'était voler au compte suivant la fête de « maitrise-5 »
+    // parce que le précédent l'avait déjà entendue. La voix, la visite et
+    // les interventions, elles, décrivent l'appareil et restent.
+    MentorPrefsStore.celebrationsDitesKey,
     LocalAccountOwner.key,
   ];
 
@@ -88,6 +96,8 @@ class DriftLocalAccountPurge implements LocalAccountPurge {
     // sans cette ligne, le compte suivant ouvrait les réglages et y lisait les
     // choix du précédent.
     notificationPreferencesProvider,
+    // Le cache des célébrations dites suit sa préférence, effacée ci-dessus.
+    mentorCelebrationsDitesProvider,
   ];
 
   final Ref _ref;

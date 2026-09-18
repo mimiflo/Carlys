@@ -51,6 +51,9 @@ class TrainingProfile {
     required this.equipmentSlugs,
   });
 
+  /// Objectif tel que servi par CE relevé. Pour l'AFFICHAGE, la source de
+  /// vérité reste `AuthUser.trainingGoal` (rafraîchi au choix) : cette copie
+  /// sert au serveur de génération et aux tests du relevé, pas aux écrans.
   final TrainingGoal? goal;
   final TrainingExperience? experience;
 

@@ -187,14 +187,30 @@ export class UsersRepository {
     return user;
   }
 
-  /** Slugs du matériel de l'utilisateur, triés par nom d'équipement. */
-  async equipmentSlugs(userId: string): Promise<string[]> {
-    const rows = await this.prisma.userEquipment.findMany({
-      where: { userId },
-      select: { equipment: { select: { slug: true } } },
-      orderBy: { equipment: { name: 'asc' } },
-    });
-    return rows.map((row) => row.equipment.slug);
+  /**
+   * Le profil ET son matériel, lus dans UNE transaction `RepeatableRead` :
+   * les deux lectures partagent le même instantané — deux requêtes séparées
+   * pouvaient mêler deux états si un PATCH concurrent passait entre elles.
+   * Les slugs sortent triés par nom d'équipement.
+   */
+  async trainingSnapshot(
+    userId: string,
+  ): Promise<{ user: UserWithProfile | null; equipmentSlugs: string[] }> {
+    const [user, rows] = await this.prisma.$transaction(
+      [
+        this.prisma.user.findFirst({
+          where: { id: userId, deletedAt: null },
+          include: { profile: true },
+        }),
+        this.prisma.userEquipment.findMany({
+          where: { userId },
+          select: { equipment: { select: { slug: true } } },
+          orderBy: { equipment: { name: 'asc' } },
+        }),
+      ],
+      { isolationLevel: Prisma.TransactionIsolationLevel.RepeatableRead },
+    );
+    return { user, equipmentSlugs: rows.map((row) => row.equipment.slug) };
   }
 
   /** Résout des slugs vers la taxonomie du catalogue — jamais de texte libre. */

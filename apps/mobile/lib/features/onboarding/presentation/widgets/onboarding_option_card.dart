@@ -14,7 +14,6 @@ class OnboardingOptionCard extends StatelessWidget {
     required this.onTap,
     this.subtitle,
     this.icon,
-    this.trailing,
     super.key,
   });
 
@@ -23,9 +22,6 @@ class OnboardingOptionCard extends StatelessWidget {
   final IconData? icon;
   final bool selected;
   final VoidCallback onTap;
-
-  /// Contrôle à droite (pas à pas de la taille) — remplace la coche.
-  final Widget? trailing;
 
   /// Géométrie de la maquette : icône 24, coche 22.
   static const double _iconSize = 24;
@@ -84,9 +80,7 @@ class OnboardingOptionCard extends StatelessWidget {
                   ],
                 ),
               ),
-              if (trailing != null)
-                trailing!
-              else if (selected)
+              if (selected)
                 const Icon(
                   AppIcons.checkCircle,
                   size: _checkSize,

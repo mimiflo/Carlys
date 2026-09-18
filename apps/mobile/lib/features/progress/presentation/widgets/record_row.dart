@@ -106,6 +106,8 @@ class RecordRow extends StatelessWidget {
     return Semantics(
       label: '$enonce. Voir la progression',
       button: true,
+      // Relais d'action : `excludeSemantics` masque celle de l'InkWell.
+      onTap: () => context.push(AppRoutes.exerciseProgression(exerciseId)),
       excludeSemantics: true,
       child: Material(
         color: Colors.transparent,

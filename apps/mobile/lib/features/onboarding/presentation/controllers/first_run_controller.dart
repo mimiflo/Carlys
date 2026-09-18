@@ -53,22 +53,35 @@ class FirstRunController extends Notifier<FirstRunState> {
   }
 
   /// Fin de l'onboarding : les réponses sont enregistrées tout de suite si
-  /// un compte existe déjà, mises de côté sinon. L'échec d'enregistrement
-  /// remonte à l'écran (qui l'affiche) ; l'étape n'avance alors pas.
+  /// un compte existe déjà, mises de côté sinon — et le parcours avance
+  /// TOUJOURS. Un enregistrement qui échoue (hors ligne, serveur
+  /// indisponible) rejoint la même mise de côté que le chemin sans compte :
+  /// les réponses repartiront via `_flushPendingAnswers`, jamais perdues,
+  /// jamais bloquantes. C'est la parité offline-first du dépôt.
   ///
   /// L'identité Carlys et le profil métabolique partent chacun vers leur
   /// endpoint : on n'écrit que ce qui a réellement été répondu.
   Future<void> submitOnboarding(OnboardingAnswers answers) async {
     if (!answers.isEmpty) {
       if (ref.read(authControllerProvider) is AuthAuthenticated) {
-        if (answers.hasMetabolicAnswers) {
-          await _saveProfile(answers);
-        }
-        if (answers.carlysProfile != null) {
-          await _saveCarlysProfile(answers.carlysProfile!);
-        }
-        if (answers.trainingGoal != null) {
-          await _saveTrainingGoal(answers.trainingGoal!);
+        try {
+          if (answers.hasMetabolicAnswers) {
+            await _saveProfile(answers);
+          }
+          if (answers.carlysProfile != null) {
+            await _saveCarlysProfile(answers.carlysProfile!);
+          }
+          if (answers.trainingGoal != null) {
+            await _saveTrainingGoal(answers.trainingGoal!);
+          }
+        } on Exception catch (error) {
+          // Réécrire plus tard ce qui a déjà abouti est sans danger : ces
+          // enregistrements sont idempotents (mêmes valeurs, mêmes PATCH).
+          _logger.warning(
+            'Réponses d’onboarding mises de côté : enregistrement échoué',
+            error: error,
+          );
+          await _rememberAnswers(answers);
         }
       } else {
         await _rememberAnswers(answers);
@@ -139,13 +152,18 @@ class FirstRunController extends Notifier<FirstRunState> {
       if (answers == null || answers.isEmpty) {
         return;
       }
+      // Des réponses en attente peuvent être PLUS VIEILLES qu'un choix fait
+      // entre-temps (depuis le profil, ou sur un autre appareil) : ce que le
+      // compte porte déjà ne se réécrit pas.
+      final auth = ref.read(authControllerProvider);
+      final user = auth is AuthAuthenticated ? auth.user : null;
       if (answers.hasMetabolicAnswers) {
         await _saveProfile(answers);
       }
-      if (answers.carlysProfile != null) {
+      if (answers.carlysProfile != null && user?.carlysProfile == null) {
         await _saveCarlysProfile(answers.carlysProfile!);
       }
-      if (answers.trainingGoal != null) {
+      if (answers.trainingGoal != null && user?.trainingGoal == null) {
         await _saveTrainingGoal(answers.trainingGoal!);
       }
       await _store.clearAnswers();
@@ -159,17 +177,13 @@ class FirstRunController extends Notifier<FirstRunState> {
     }
   }
 
-  /// L'enregistrement passe par le cas d'usage nutrition, maintenu vivant
-  /// le temps de l'appel : `nutritionActionsProvider` est auto-disposé, et
-  /// il rafraîchit le rapport métabolique une fois le profil écrit.
-  Future<void> _saveProfile(OnboardingAnswers answers) async {
-    final subscription = ref.listen(nutritionActionsProvider, (_, __) {});
-    try {
-      await subscription.read().saveProfile(answers.toProfileUpdate());
-    } finally {
-      subscription.close();
-    }
-  }
+  /// L'enregistrement passe par le cas d'usage nutrition, qui rafraîchit le
+  /// rapport métabolique une fois le profil écrit. `nutritionActionsProvider`
+  /// n'est PAS auto-disposé (comme toutes les actions) : un simple `read`
+  /// suffit — la danse `listen`/`close` qui vivait ici gardait en vie un
+  /// provider qui ne meurt jamais.
+  Future<void> _saveProfile(OnboardingAnswers answers) =>
+      ref.read(nutritionActionsProvider).saveProfile(answers.toProfileUpdate());
 
   /// L'identité Carlys suit le chemin normal du choix de profil
   /// (`PATCH /users/me` puis rafraîchissement de la session) ; le provider

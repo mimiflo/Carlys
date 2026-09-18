@@ -78,4 +78,23 @@ describe('UpdateProfileDto — date de naissance', () => {
   it('reste facultative : un profil sans date de naissance est valide', () => {
     expect(champsFautifs({ displayName: 'Camille' })).toEqual([]);
   });
+
+  it('refuse un booléen ou un nombre — `new Date(true)` donnait 1970, un âge valide', () => {
+    expect(champsFautifs({ birthDate: true })).toEqual(['birthDate']);
+    expect(champsFautifs({ birthDate: 12345 })).toEqual(['birthDate']);
+  });
+
+  it('refuse une chaîne qui n’est pas une date', () => {
+    expect(champsFautifs({ birthDate: 'trente ans' })).toEqual(['birthDate']);
+  });
+});
+
+describe('UpdateProfileDto — nom affiché', () => {
+  it('refuse un nom fait d’espaces : le service le range trimé, donc vide', () => {
+    expect(champsFautifs({ displayName: '   ' })).toEqual(['displayName']);
+  });
+
+  it('accepte un nom entouré d’espaces : il reste un nom une fois trimé', () => {
+    expect(champsFautifs({ displayName: '  Camille  ' })).toEqual([]);
+  });
 });

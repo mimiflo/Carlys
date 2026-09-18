@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_routes.dart';
-import '../../../../core/errors/app_exception.dart';
 import '../../../../design_system/design_system.dart';
 import '../../../authentication/presentation/controllers/auth_controller.dart';
 import '../../../carlys_profile/domain/entities/carlys_profile.dart';
@@ -87,29 +86,17 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   /// Enregistre puis laisse le routeur enchaîner : à la fin du parcours de
   /// première ouverture, `/home` est redirigé vers l'étape suivante.
+  ///
+  /// `submitOnboarding` n'échoue jamais : un enregistrement raté met les
+  /// réponses de côté (elles repartiront d'elles-mêmes) et le parcours
+  /// avance — le premier contact ne se bloque pas sur un serveur absent.
   Future<void> _save() async {
     setState(() => _saving = true);
-    try {
-      await ref
-          .read(firstRunControllerProvider.notifier)
-          .submitOnboarding(_answers);
-      if (mounted) {
-        context.go(AppRoutes.home);
-      }
-    } on AppException catch (exception) {
-      if (!mounted) {
-        return;
-      }
-      setState(() => _saving = false);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            exception is NetworkException
-                ? 'Serveur injoignable : réessaie une fois connecté.'
-                : 'Enregistrement impossible. Réessaie dans un instant.',
-          ),
-        ),
-      );
+    await ref
+        .read(firstRunControllerProvider.notifier)
+        .submitOnboarding(_answers);
+    if (mounted) {
+      context.go(AppRoutes.home);
     }
   }
 

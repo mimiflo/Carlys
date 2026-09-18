@@ -90,9 +90,9 @@ export class UsersService {
     return presentUser(updated);
   }
 
-  /** Les entrées de génération de programme, en une lecture. */
+  /** Les entrées de génération de programme, en UN instantané cohérent. */
   async training(userId: string): Promise<TrainingProfile> {
-    const user = await this.users.findActiveById(userId);
+    const { user, equipmentSlugs } = await this.users.trainingSnapshot(userId);
     if (user === null) {
       throw new NotFoundException('Compte introuvable.');
     }
@@ -101,7 +101,7 @@ export class UsersService {
       trainingExperience: user.profile?.trainingExperience ?? null,
       weeklySessionsTarget: user.profile?.weeklySessionsTarget ?? null,
       sessionMinutesTarget: user.profile?.sessionMinutesTarget ?? null,
-      equipmentSlugs: await this.users.equipmentSlugs(userId),
+      equipmentSlugs,
     };
   }
 

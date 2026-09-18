@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/logging/app_logger.dart';
 import '../../../authentication/presentation/controllers/auth_controller.dart';
 import '../../data/repositories/training_goal_repository_impl.dart';
 import '../../domain/entities/training_goal.dart';
@@ -11,13 +12,22 @@ import '../../domain/entities/training_goal.dart';
 /// `Provider` simple (PAS autoDispose) : la référence est capturée dans des
 /// callbacks tardifs — même leçon que les actions communauté.
 class TrainingGoalActions {
+  static const _logger = AppLogger('TrainingGoalActions');
+
   TrainingGoalActions(this._ref);
 
   final Ref _ref;
 
   Future<void> choose(TrainingGoal goal) async {
     await _ref.read(trainingGoalRepositoryProvider).choose(goal);
-    await _ref.read(authControllerProvider.notifier).refreshProfile();
+    // Le choix serveur a RÉUSSI : un rafraîchissement de session qui échoue
+    // juste après ne doit pas le déguiser en échec du choix. Meilleur
+    // effort — l'affichage se remettra au prochain rafraîchissement.
+    try {
+      await _ref.read(authControllerProvider.notifier).refreshProfile();
+    } on Exception catch (error) {
+      _logger.warning('Session non rafraîchie après le choix', error: error);
+    }
   }
 }
 

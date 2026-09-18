@@ -162,6 +162,8 @@ class _Bandeau extends StatelessWidget {
           Semantics(
             button: true,
             label: 'Ton objectif : ${goal?.label ?? 'à choisir'}',
+            // Relais d'action : `excludeSemantics` masque celle de l'InkWell.
+            onTap: () => showTrainingGoalSheet(context),
             excludeSemantics: true,
             child: InkWell(
               onTap: () => showTrainingGoalSheet(context),

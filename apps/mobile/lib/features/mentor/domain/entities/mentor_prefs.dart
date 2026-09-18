@@ -42,14 +42,4 @@ class MentorPrefs {
 
   final bool interventionsActives;
   final MentorFrequency frequence;
-
-  MentorPrefs copyWith({
-    bool? interventionsActives,
-    MentorFrequency? frequence,
-  }) {
-    return MentorPrefs(
-      interventionsActives: interventionsActives ?? this.interventionsActives,
-      frequence: frequence ?? this.frequence,
-    );
-  }
 }

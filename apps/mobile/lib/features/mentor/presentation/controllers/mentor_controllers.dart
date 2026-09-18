@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/logging/app_logger.dart';
 import '../../../authentication/presentation/controllers/auth_controller.dart';
 import '../../../progression/domain/reward.dart';
 import '../../../progression/presentation/controllers/reward_controllers.dart';
@@ -17,13 +18,22 @@ import '../../domain/mentor_word.dart';
 /// `Provider` simple (PAS autoDispose) : la référence est capturée dans des
 /// callbacks tardifs — même leçon que les actions communauté.
 class MentorActions {
+  static const _logger = AppLogger('MentorActions');
+
   MentorActions(this._ref);
 
   final Ref _ref;
 
   Future<void> chooseStyle(MentorStyle style) async {
     await _ref.read(mentorRepositoryProvider).chooseStyle(style);
-    await _ref.read(authControllerProvider.notifier).refreshProfile();
+    // Le choix serveur a RÉUSSI : un rafraîchissement de session qui échoue
+    // juste après ne doit pas le déguiser en échec du choix. Meilleur
+    // effort — l'affichage se remettra au prochain rafraîchissement.
+    try {
+      await _ref.read(authControllerProvider.notifier).refreshProfile();
+    } on Exception catch (error) {
+      _logger.warning('Session non rafraîchie après le choix', error: error);
+    }
   }
 
   Future<void> setInterventionsActives({required bool actives}) async {

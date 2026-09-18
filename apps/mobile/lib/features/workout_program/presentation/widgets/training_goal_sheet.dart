@@ -79,10 +79,14 @@ class _TrainingGoalSheet extends ConsumerWidget {
     TrainingGoal goal,
   ) async {
     final messenger = ScaffoldMessenger.of(context);
+    // Même garde que la feuille de voix : la route de LA feuille, pas le
+    // navigateur racine (toujours « monté ») — sinon un second choix
+    // pendant l'appel réseau fermait l'écran du dessous.
+    final route = ModalRoute.of(context);
     final navigator = Navigator.of(context);
     try {
       await ref.read(trainingGoalActionsProvider).choose(goal);
-      if (navigator.mounted) {
+      if (context.mounted && (route?.isCurrent ?? false)) {
         navigator.pop();
       }
       messenger.showSnackBar(

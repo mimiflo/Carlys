@@ -26,12 +26,19 @@ class MentorPrefsStore {
 
   Future<MentorPrefs> read() async {
     final prefs = await SharedPreferences.getInstance();
-    return MentorPrefs(
-      interventionsActives:
-          prefs.getBool(interventionsKey) ??
-          MentorPrefs.defauts.interventionsActives,
-      frequence: MentorFrequency.fromWire(prefs.getString(frequenceKey)),
-    );
+    // La promesse d'en-tête se TIENT ici : une valeur d'un autre type fait
+    // jeter `getBool`/`getString` — sans ce filet, le Mentor restait muet
+    // derrière un provider en erreur au lieu de parler à ses défauts.
+    try {
+      return MentorPrefs(
+        interventionsActives:
+            prefs.getBool(interventionsKey) ??
+            MentorPrefs.defauts.interventionsActives,
+        frequence: MentorFrequency.fromWire(prefs.getString(frequenceKey)),
+      );
+    } catch (_) {
+      return MentorPrefs.defauts;
+    }
   }
 
   Future<void> setInterventionsActives({required bool actives}) async {
@@ -48,7 +55,12 @@ class MentorPrefsStore {
 
   Future<Set<String>> readVisiteVues() async {
     final prefs = await SharedPreferences.getInstance();
-    return (prefs.getStringList(visiteVuesKey) ?? const []).toSet();
+    try {
+      return (prefs.getStringList(visiteVuesKey) ?? const []).toSet();
+    } catch (_) {
+      // Illisible : la visite se repropose, elle ne bloque jamais.
+      return const {};
+    }
   }
 
   /// IDEMPOTENT : marquer deux fois la même étape n'écrit qu'une entrée.
@@ -70,7 +82,12 @@ class MentorPrefsStore {
 
   Future<Set<String>> readCelebrationsDites() async {
     final prefs = await SharedPreferences.getInstance();
-    return (prefs.getStringList(celebrationsDitesKey) ?? const []).toSet();
+    try {
+      return (prefs.getStringList(celebrationsDitesKey) ?? const []).toSet();
+    } catch (_) {
+      // Illisible : le pire est une célébration redite une fois.
+      return const {};
+    }
   }
 
   Future<void> marquerCelebrationDite(String rewardId) async {

@@ -75,10 +75,16 @@ class _MentorStyleSheet extends ConsumerWidget {
     MentorStyle style,
   ) async {
     final messenger = ScaffoldMessenger.of(context);
+    // La route de LA feuille, capturée avant l'attente. Le navigateur
+    // RACINE, lui, reste « monté » toute la vie de l'application : sa garde
+    // ne disait rien, et un second choix pendant l'appel réseau fermait
+    // l'écran situé SOUS la feuille. `isCurrent` neutralise aussi le
+    // double-tap : le premier pop rend la route non courante.
+    final route = ModalRoute.of(context);
     final navigator = Navigator.of(context);
     try {
       await ref.read(mentorActionsProvider).chooseStyle(style);
-      if (navigator.mounted) {
+      if (context.mounted && (route?.isCurrent ?? false)) {
         navigator.pop();
       }
       messenger.showSnackBar(

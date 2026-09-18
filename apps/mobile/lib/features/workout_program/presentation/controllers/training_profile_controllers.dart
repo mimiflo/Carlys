@@ -4,7 +4,8 @@ import '../../data/repositories/training_profile_repository_impl.dart';
 import '../../domain/entities/training_profile.dart';
 
 /// Les entrées de génération, lues une fois puis invalidées à l'écriture.
-/// Non auto-disposé : le profil et l'écran de préparation les lisent.
+/// Non auto-disposé : les actions le relisent dans des rappels tardifs, et
+/// l'écran de génération à venir s'y branchera aussi.
 final trainingProfileProvider = FutureProvider<TrainingProfile>((ref) {
   return ref.read(trainingProfileRepositoryProvider).fetch();
 });
@@ -44,6 +45,13 @@ class TrainingProfileActions {
   }
 
   Future<void> _toggleEquipment(String slug) async {
+    // Une lecture restée en ERREUR se rejouerait telle quelle à chaque
+    // bascule (`.future` rend l'échec en cache) : on la relance d'abord —
+    // le réseau revenu, la section matériel revit sans passer par
+    // « Réessayer ».
+    if (_ref.read(trainingProfileProvider).hasError) {
+      _ref.invalidate(trainingProfileProvider);
+    }
     final current = await _ref.read(trainingProfileProvider.future);
     final owned = current.equipmentSlugs.toSet();
     if (!owned.add(slug)) {

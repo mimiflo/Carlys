@@ -11,8 +11,8 @@ import 'mentor_tour_sheet.dart';
 ///
 /// C'est la porte unique ouverte depuis l'accueil (« Pour toi ») : tout ce
 /// que le Mentor sait faire tient ici, et chaque ligne mène à son geste.
-/// Le bandeau reprend la grammaire du dégradé de signature (bannières de
-/// franchissement) : le Mentor parle DEPUIS l'identité visuelle de Carlys.
+/// Le bandeau parle depuis le dégradé VIOLET de l'application (règle 9 du
+/// CLAUDE.md) — le dégradé de marque reste aux célébrations.
 Future<void> showMentorSheet(BuildContext context) {
   return showAppSheet<void>(context, builder: (_) => const _MentorSheet());
 }
@@ -106,6 +106,8 @@ class _Ligne extends StatelessWidget {
     return Semantics(
       button: true,
       label: valeur == null ? label : '$label, $valeur',
+      // Relais d'action : `excludeSemantics` masque celle de l'InkWell.
+      onTap: onTap,
       excludeSemantics: true,
       child: InkWell(
         onTap: onTap,

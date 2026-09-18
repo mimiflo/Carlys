@@ -23,7 +23,7 @@ import {
   TrainingExperience,
   TrainingGoal,
 } from '@prisma/client';
-import { Type } from 'class-transformer';
+import { Transform } from 'class-transformer';
 import {
   ArrayMaxSize,
   IsArray,
@@ -47,6 +47,9 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsString()
   @Length(1, DISPLAY_NAME_MAX_LENGTH)
+  // Le service range le nom TRIMÉ : sans ce motif, un nom fait d'espaces
+  // passait `@Length` puis se stockait vide.
+  @Matches(/\S/, { message: 'Le nom affiché ne peut pas être vide.' })
   displayName?: string;
 
   @ApiPropertyOptional({ example: 'fr', description: 'Code langue BCP 47' })
@@ -154,8 +157,12 @@ export class UpdateProfileDto {
     description: `Date de naissance, UTC (ISO 8601) — de ${AGE_YEARS_MIN} à ${AGE_YEARS_MAX} ans`,
   })
   @IsOptional()
-  @Type(() => Date)
-  @IsDate()
+  // Seule une CHAÎNE se convertit : `@Type(() => Date)` passait tout à
+  // `new Date(...)`, et un booléen ou un nombre devenait une date valide
+  // (epoch 1970 tombe dans l'intervalle d'âge). Une chaîne illisible donne
+  // une date invalide, que `@IsDate` refuse.
+  @Transform(({ value }) => (typeof value === 'string' ? new Date(value) : value))
+  @IsDate({ message: 'Date de naissance illisible (attendu : ISO 8601).' })
   @MinDate(() => birthDateRange(new Date()).earliest, {
     message: `L’âge ne peut pas dépasser ${AGE_YEARS_MAX} ans.`,
   })

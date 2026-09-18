@@ -50,6 +50,9 @@ class ChoicePills extends StatelessWidget {
     super.key,
   });
 
+  /// Presets proposés ; une valeur SERVEUR hors presets (bornes du contrat
+  /// plus larges) est ajoutée en fin de rangée, sélectionnée — sans quoi
+  /// l'écran la cachait et le premier tap l'écrasait en silence.
   final List<int> choices;
   final int? current;
   final ValueChanged<int> onChoose;
@@ -57,11 +60,15 @@ class ChoicePills extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final affiches = [
+      ...choices,
+      if (current != null && !choices.contains(current)) current!,
+    ];
     return Wrap(
       spacing: AppSpacing.xs,
       runSpacing: AppSpacing.xs,
       children: [
-        for (final value in choices)
+        for (final value in affiches)
           AppPill(
             label: labelOf(value),
             mono: true,
@@ -130,6 +137,8 @@ class _EquipmentRow extends StatelessWidget {
       button: true,
       selected: owned,
       label: '${equipment.name}${owned ? ', disponible' : ''}',
+      // Relais d'action : `excludeSemantics` masque celle de l'InkWell.
+      onTap: onToggle,
       excludeSemantics: true,
       child: InkWell(
         onTap: onToggle,

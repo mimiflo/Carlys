@@ -55,6 +55,9 @@ class AppExplainable extends StatelessWidget {
     return Semantics(
       label: '$enonce. Explication',
       button: true,
+      // `excludeSemantics` retire AUSSI l'action de l'InkWell enfant : sans
+      // ce relais, le lecteur d'écran annonçait un bouton inactivable.
+      onTap: onExplain,
       excludeSemantics: true,
       child: Material(
         color: surface ?? Colors.transparent,

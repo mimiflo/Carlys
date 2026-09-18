@@ -19,21 +19,28 @@ class OnboardingAnswers {
   });
 
   /// Relecture depuis les préférences locales — toute valeur inconnue est
-  /// ignorée plutôt que devinée.
+  /// ignorée plutôt que devinée. « Ignorée » vaut aussi pour le TYPE : un
+  /// `as String?` jetterait un `TypeError` (une `Error`, que les gardes
+  /// `on Exception` des appelants laissent passer) sur un stockage corrompu.
   factory OnboardingAnswers.fromStorage(Map<String, Object?> json) {
+    String? chaine(String key) {
+      final value = json[key];
+      return value is String ? value : null;
+    }
+
     final birthDate = json[_birthDateKey];
     final heightCm = json[_heightKey];
 
     return OnboardingAnswers(
-      carlysProfile: CarlysProfile.fromWire(json[_carlysProfileKey] as String?),
-      trainingGoal: TrainingGoal.fromWire(json[_trainingGoalKey] as String?),
-      goal: NutritionGoal.fromApi(json[_goalKey] as String?),
-      sex: BiologicalSex.fromApi(json[_sexKey] as String?),
+      carlysProfile: CarlysProfile.fromWire(chaine(_carlysProfileKey)),
+      trainingGoal: TrainingGoal.fromWire(chaine(_trainingGoalKey)),
+      goal: NutritionGoal.fromApi(chaine(_goalKey)),
+      sex: BiologicalSex.fromApi(chaine(_sexKey)),
       birthDate: birthDate is String
           ? DateTime.tryParse(birthDate)?.toUtc()
           : null,
       heightCm: heightCm is num ? heightCm.toDouble() : null,
-      activityLevel: ActivityLevel.fromApi(json[_activityKey] as String?),
+      activityLevel: ActivityLevel.fromApi(chaine(_activityKey)),
     );
   }
 

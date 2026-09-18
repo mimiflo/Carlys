@@ -49,6 +49,9 @@ class AppChoiceCard extends StatelessWidget {
     return Semantics(
       button: true,
       selected: selected,
+      // `excludeSemantics` retire aussi l'action du InkWell : le relais est
+      // obligatoire, sinon la carte est inactivable au lecteur d'écran.
+      onTap: onTap,
       label:
           '$title.'
           '${description == null ? '' : ' $description'}'

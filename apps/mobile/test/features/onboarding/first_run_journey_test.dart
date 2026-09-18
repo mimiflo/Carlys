@@ -150,7 +150,7 @@ void main() {
     await tester.pumpAndSettle();
   }
 
-  /// Répond aux 5 étapes de l'onboarding (l'identité d'abord) puis valide.
+  /// Répond aux 6 étapes de l'onboarding (l'identité d'abord) puis valide.
   Future<void> answerOnboarding(WidgetTester tester) async {
     await tapText(tester, 'LE CONSTRUCTEUR');
     await tapText(tester, 'Continuer');

@@ -127,20 +127,29 @@ class _Etape extends ConsumerWidget {
 
   /// « Aller voir » est l'ancrage réel : l'étape se marque vue, la feuille
   /// se ferme, et la navigation emmène sur la pièce présentée.
+  ///
+  /// La garde porte sur la route de LA feuille (le navigateur racine est
+  /// toujours « monté ») : si elle a été balayée ou déjà fermée pendant
+  /// l'écriture, on ne pop rien et on ne navigue pas — naviguer depuis une
+  /// feuille disparue surprendrait. Et « y aller » va TOUJOURS, accueil
+  /// compris : la feuille s'ouvre aussi depuis les réglages du profil,
+  /// « Rester ici » y laissait l'utilisateur sur le profil.
   Future<void> _aller(
     BuildContext context,
     WidgetRef ref,
     MentorTourStep etape,
   ) async {
+    final route = ModalRoute.of(context);
     final navigator = Navigator.of(context);
     final router = GoRouter.of(context);
     await ref.read(mentorActionsProvider).marquerEtapeVue(etape.id);
-    if (navigator.mounted) {
-      navigator.pop();
+    if (!context.mounted || !(route?.isCurrent ?? false)) {
+      return;
     }
-    final route = mentorTourRoutes[etape.id];
-    if (route != null && route != AppRoutes.home) {
-      router.go(route);
+    navigator.pop();
+    final destination = mentorTourRoutes[etape.id];
+    if (destination != null) {
+      router.go(destination);
     }
   }
 }

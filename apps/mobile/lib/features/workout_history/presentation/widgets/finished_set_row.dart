@@ -32,6 +32,10 @@ class FinishedSetRow extends ConsumerWidget {
       child: Semantics(
         button: true,
         label: '${set.exerciseName}, ${_valeurEnToutesLettres(set)}. Corriger',
+        // Relais des actions : `excludeSemantics` masque celles de
+        // l'InkWell — corriger au tap, supprimer à l'appui long.
+        onTap: () => _corriger(context, ref),
+        onLongPress: () => _supprimer(context, ref),
         excludeSemantics: true,
         child: InkWell(
           onTap: () => _corriger(context, ref),

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -181,13 +183,21 @@ class _ForYouSection extends ConsumerWidget {
           label: 'Le Mentor',
           message: mot.message,
           onOpen: () {
-            // Une célébration touchée est DITE : elle ne se répète pas, le
-            // journal des récompenses garde la trace durable.
+            // Une célébration touchée est DITE — mais à la FERMETURE de la
+            // feuille : marquée avant, le provider recalculait en quelques
+            // millisecondes et remplaçait le mot fêté par le mot ordinaire
+            // sous les yeux de l'utilisateur. Le journal des récompenses
+            // garde la trace durable.
             final feteeId = mot.celebratedRewardId;
-            if (feteeId != null) {
-              ref.read(mentorActionsProvider).marquerCelebrationDite(feteeId);
-            }
-            showMentorSheet(context);
+            unawaited(
+              showMentorSheet(context).then((_) {
+                if (feteeId != null) {
+                  ref
+                      .read(mentorActionsProvider)
+                      .marquerCelebrationDite(feteeId);
+                }
+              }),
+            );
           },
         ),
       if (profile != null) ForYouEntry.focus(context, profile),
