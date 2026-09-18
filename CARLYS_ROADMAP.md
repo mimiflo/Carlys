@@ -180,6 +180,16 @@ rien). Audit du 17 septembre 2026 : conforme — aucun objectif
 d'entraînement, aucune entrée de génération, aucune génération, aucune
 date sur `Program`, aucun lien `WorkoutSession` ↔ jour de programme.
 
+- [~] Durcissement inter-tranches (audit adverse de l'application entière,
+      demandé le 18 septembre 2026 avant la tranche « génération ») :
+      confirmés + relecture manuelle corrigés en deux commits (`1b94543`
+      anti-clignotement/sérialisation matériel/`AppChoiceCard`, `6b56dbe`
+      purge des célébrations, gardes de feuille, relais `Semantics.onTap`,
+      parité hors-ligne de l'onboarding, DTO displayName/birthDate, lecture
+      d'entraînement transactionnelle). Reste : verdicts du workflow de
+      reprise (9 sous-systèmes jamais relus + 15 constats hors-ligne et
+      programmes à trancher) — corriger les confirmés avant la génération.
+
 - [x] Objectif d'entraînement : enum `TrainingGoal` 8 valeurs (perte de
       gras, muscle, recomposition, Hyrox, marathon, maintien, force,
       callisthénie) — migration `20260917190658_training_goal`,
