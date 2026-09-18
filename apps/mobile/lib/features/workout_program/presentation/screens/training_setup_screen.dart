@@ -24,6 +24,10 @@ class TrainingSetupScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(trainingProfileProvider);
+    // `valueOrNull` GARDE la dernière valeur pendant un rafraîchissement :
+    // chaque écriture invalide le provider, et sans cette lecture l'écran
+    // entier clignoterait en chargement à chaque geste.
+    final value = profile.valueOrNull;
     final goal = ref.watch(currentTrainingGoalProvider);
     final bottomInset = MediaQuery.paddingOf(context).bottom;
 
@@ -31,8 +35,8 @@ class TrainingSetupScreen extends ConsumerWidget {
       backgroundColor: AppColors.darkBackground,
       body: SafeArea(
         bottom: false,
-        child: switch (profile) {
-          AsyncData(:final value) => ListView(
+        child: switch ((value, profile)) {
+          (final TrainingProfile value, _) => ListView(
             padding: EdgeInsets.fromLTRB(
               AppSpacing.gutter,
               AppSpacing.gutter,
@@ -95,7 +99,7 @@ class TrainingSetupScreen extends ConsumerWidget {
               _Materiel(profile: value),
             ],
           ),
-          AsyncError() => AppErrorState(
+          (null, AsyncError()) => AppErrorState(
             title: 'Préparation indisponible',
             message: 'Impossible de lire ton profil d’entraînement.',
             onRetry: () => ref.invalidate(trainingProfileProvider),
@@ -216,16 +220,14 @@ class _Materiel extends ConsumerWidget {
       AsyncData(:final value) => EquipmentChecklist(
         catalog: value,
         ownedSlugs: profile.equipmentSlugs.toSet(),
+        // La bascule vit dans les actions, SÉRIALISÉE : l'écran ne
+        // calcule pas la liste — deux coches rapides se courraient après.
         onToggle: (equipment) async {
-          final owned = profile.equipmentSlugs.toSet();
-          if (!owned.add(equipment.slug)) {
-            owned.remove(equipment.slug);
-          }
           final messenger = ScaffoldMessenger.of(context);
           try {
             await ref
                 .read(trainingProfileActionsProvider)
-                .setEquipment(owned.toList());
+                .toggleEquipment(equipment.slug);
           } on AppException catch (exception) {
             messenger.showSnackBar(SnackBar(content: Text(exception.message)));
           }

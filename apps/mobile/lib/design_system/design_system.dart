@@ -11,6 +11,7 @@ export 'components/app_bottom_bar.dart';
 export 'components/app_brand_button.dart';
 export 'components/app_button.dart';
 export 'components/app_card.dart';
+export 'components/app_choice_card.dart';
 export 'components/app_difficulty_dashes.dart';
 export 'components/app_empty_state.dart';
 export 'components/app_error_state.dart';

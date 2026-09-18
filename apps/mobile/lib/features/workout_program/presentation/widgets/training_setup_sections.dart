@@ -9,8 +9,7 @@ import '../../domain/entities/training_profile.dart';
 const List<int> weeklySessionsChoices = [2, 3, 4, 5, 6];
 const List<int> sessionMinutesChoices = [30, 45, 60, 75, 90];
 
-/// L'expérience : trois cartes, une sélection — la même grammaire que les
-/// cartes de voix du Mentor (fond teinté, bordure accent, coche).
+/// L'expérience : trois cartes de choix du design system, une sélection.
 class ExperienceChoices extends StatelessWidget {
   const ExperienceChoices({
     required this.current,
@@ -27,88 +26,16 @@ class ExperienceChoices extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         for (final experience in TrainingExperience.values) ...[
-          _ExperienceRow(
-            experience: experience,
-            current: experience == current,
-            onChoose: () => onChoose(experience),
+          AppChoiceCard(
+            title: experience.label,
+            description: experience.description,
+            selected: experience == current,
+            selectedSemantics: 'Expérience actuelle.',
+            onTap: () => onChoose(experience),
           ),
           const SizedBox(height: AppSpacing.xs),
         ],
       ],
-    );
-  }
-}
-
-class _ExperienceRow extends StatelessWidget {
-  const _ExperienceRow({
-    required this.experience,
-    required this.current,
-    required this.onChoose,
-  });
-
-  final TrainingExperience experience;
-  final bool current;
-  final VoidCallback onChoose;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      selected: current,
-      label:
-          '${experience.label}. ${experience.description}'
-          '${current ? ' Expérience actuelle.' : ''}',
-      excludeSemantics: true,
-      child: InkWell(
-        onTap: onChoose,
-        borderRadius: AppRadius.cardSecondaryAll,
-        child: Container(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          decoration: BoxDecoration(
-            color: current
-                ? AppColors.primaryCardSoft
-                : AppColors.darkSurfaceAlt,
-            borderRadius: AppRadius.cardSecondaryAll,
-            border: Border.fromBorderSide(
-              BorderSide(
-                color: current ? AppColors.primaryLight : AppColors.darkBorder,
-              ),
-            ),
-          ),
-          child: Row(
-            children: [
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      experience.label,
-                      style: AppTypography.subheading.copyWith(
-                        color: AppColors.darkTextPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.xxs),
-                    Text(
-                      experience.description,
-                      style: AppTypography.label.copyWith(
-                        color: AppColors.darkTextSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (current) ...[
-                const SizedBox(width: AppSpacing.sm),
-                const Icon(
-                  AppIcons.checkCircle,
-                  size: 18,
-                  color: AppColors.primaryLight,
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

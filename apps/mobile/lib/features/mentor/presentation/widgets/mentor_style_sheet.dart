@@ -51,10 +51,16 @@ class _MentorStyleSheet extends ConsumerWidget {
           ),
           const SizedBox(height: AppSpacing.md),
           for (final style in MentorStyle.values) ...[
-            _StyleRow(
-              style: style,
-              current: style == current,
-              onChoose: () => _choisir(context, ref, style),
+            // La carte est celle du design system ; la feuille n'apporte
+            // que le contenu de la voix — et son mot d'exemple en pied.
+            AppChoiceCard(
+              icon: mentorVoiceIcon(style),
+              title: style.label,
+              description: style.description,
+              selected: style == current,
+              selectedSemantics: 'Voix actuelle.',
+              onTap: () => _choisir(context, ref, style),
+              footer: _ExempleDeVoix(style: style),
             ),
             const SizedBox(height: AppSpacing.xs),
           ],
@@ -84,111 +90,29 @@ class _MentorStyleSheet extends ConsumerWidget {
   }
 }
 
-/// Une voix : son image, son nom, ce qu'elle change, un mot d'elle — et
-/// l'état « choisie » (bordure et fond accentués, coche).
-class _StyleRow extends StatelessWidget {
-  const _StyleRow({
-    required this.style,
-    required this.current,
-    required this.onChoose,
-  });
+/// Le mot d'exemple d'une voix, cité tel quel : on ENTEND la voix avant
+/// de la choisir.
+class _ExempleDeVoix extends StatelessWidget {
+  const _ExempleDeVoix({required this.style});
 
   final MentorStyle style;
-  final bool current;
-  final VoidCallback onChoose;
 
   @override
   Widget build(BuildContext context) {
-    final exemple = mentorWordCatalog[style]!.first;
-
-    return Semantics(
-      button: true,
-      selected: current,
-      label:
-          '${style.label}. ${style.description}'
-          '${current ? ' Voix actuelle.' : ''}',
-      excludeSemantics: true,
-      child: InkWell(
-        onTap: onChoose,
-        borderRadius: AppRadius.cardSecondaryAll,
-        child: Container(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          decoration: BoxDecoration(
-            color: current
-                ? AppColors.primaryCardSoft
-                : AppColors.darkSurfaceAlt,
-            borderRadius: AppRadius.cardSecondaryAll,
-            border: Border.fromBorderSide(
-              BorderSide(
-                color: current ? AppColors.primaryLight : AppColors.darkBorder,
-              ),
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Icon(AppIcons.quote, size: 14, color: AppColors.primaryLight),
+        const SizedBox(width: AppSpacing.xs),
+        Expanded(
+          child: Text(
+            '« ${mentorWordCatalog[style]!.first} »',
+            style: AppTypography.label.copyWith(
+              color: AppColors.darkTextTertiary,
             ),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(AppSpacing.xs),
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: AppColors.primaryBadgeBg,
-                    ),
-                    child: Icon(
-                      mentorVoiceIcon(style),
-                      size: 18,
-                      color: AppColors.primaryLight,
-                    ),
-                  ),
-                  const SizedBox(width: AppSpacing.sm),
-                  Expanded(
-                    child: Text(
-                      style.label,
-                      style: AppTypography.subheading.copyWith(
-                        color: AppColors.darkTextPrimary,
-                      ),
-                    ),
-                  ),
-                  if (current)
-                    const Icon(
-                      AppIcons.checkCircle,
-                      size: 18,
-                      color: AppColors.primaryLight,
-                    ),
-                ],
-              ),
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                style.description,
-                style: AppTypography.label.copyWith(
-                  color: AppColors.darkTextSecondary,
-                ),
-              ),
-              const SizedBox(height: AppSpacing.xs),
-              Row(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Icon(
-                    AppIcons.quote,
-                    size: 14,
-                    color: AppColors.primaryLight,
-                  ),
-                  const SizedBox(width: AppSpacing.xs),
-                  Expanded(
-                    child: Text(
-                      '« $exemple »',
-                      style: AppTypography.label.copyWith(
-                        color: AppColors.darkTextTertiary,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
         ),
-      ),
+      ],
     );
   }
 }

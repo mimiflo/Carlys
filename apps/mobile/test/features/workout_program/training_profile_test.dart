@@ -1,7 +1,11 @@
 import 'package:carlys_mobile/features/workout_program/data/repositories/training_profile_repository_impl.dart';
 import 'package:carlys_mobile/features/workout_program/domain/entities/training_goal.dart';
 import 'package:carlys_mobile/features/workout_program/domain/entities/training_profile.dart';
+import 'package:carlys_mobile/features/workout_program/presentation/controllers/training_profile_controllers.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../../support/fake_training_profile_repository.dart';
 
 /// Les entrées de génération : un niveau assumé, une relecture tolérante.
 void main() {
@@ -58,5 +62,37 @@ void main() {
     expect(profile.weeklySessionsTarget, isNull);
     expect(profile.sessionMinutesTarget, isNull);
     expect(profile.equipmentSlugs, isEmpty);
+  });
+
+  test('deux bascules de matériel SANS attente s\u2019enchaînent, rien ne '
+      's\u2019écrase', () async {
+    // La liste est un remplacement COMPLET : sans sérialisation, la
+    // seconde bascule calculerait depuis l'état d'avant la première et
+    // l'écraserait. Ici : barre puis banc, lancées d'un même geste.
+    final repo = FakeTrainingProfileRepository(
+      initial: const TrainingProfile(
+        goal: null,
+        experience: null,
+        weeklySessionsTarget: null,
+        sessionMinutesTarget: null,
+        equipmentSlugs: ['halteres'],
+      ),
+    );
+    final container = ProviderContainer(
+      overrides: [trainingProfileRepositoryProvider.overrideWithValue(repo)],
+    );
+    addTearDown(container.dispose);
+    final actions = container.read(trainingProfileActionsProvider);
+
+    final premiere = actions.toggleEquipment('barre');
+    final seconde = actions.toggleEquipment('banc');
+    await premiere;
+    await seconde;
+
+    expect(repo.equipmentWrites, hasLength(2));
+    expect(repo.equipmentWrites.first.toSet(), {'halteres', 'barre'});
+    // La seconde REPART de l'état écrit par la première.
+    expect(repo.equipmentWrites.last.toSet(), {'halteres', 'barre', 'banc'});
+    expect(repo.profile.equipmentSlugs.toSet(), {'halteres', 'barre', 'banc'});
   });
 }

@@ -52,10 +52,15 @@ class _TrainingGoalSheet extends ConsumerWidget {
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   for (final goal in TrainingGoal.values) ...[
-                    _GoalRow(
-                      goal: goal,
-                      current: goal == current,
-                      onChoose: () => _choisir(context, ref, goal),
+                    // La carte de choix du design system : la feuille
+                    // n'apporte que le contenu de l'objectif.
+                    AppChoiceCard(
+                      icon: trainingGoalIcon(goal),
+                      title: goal.label,
+                      description: goal.description,
+                      selected: goal == current,
+                      selectedSemantics: 'Objectif actuel.',
+                      onTap: () => _choisir(context, ref, goal),
                     ),
                     const SizedBox(height: AppSpacing.xs),
                   ],
@@ -86,93 +91,5 @@ class _TrainingGoalSheet extends ConsumerWidget {
     } on AppException catch (exception) {
       messenger.showSnackBar(SnackBar(content: Text(exception.message)));
     }
-  }
-}
-
-/// Un objectif : son image, son nom, ce qu'il vise, l'état « choisi ».
-class _GoalRow extends StatelessWidget {
-  const _GoalRow({
-    required this.goal,
-    required this.current,
-    required this.onChoose,
-  });
-
-  final TrainingGoal goal;
-  final bool current;
-  final VoidCallback onChoose;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      selected: current,
-      label:
-          '${goal.label}. ${goal.description}'
-          '${current ? ' Objectif actuel.' : ''}',
-      excludeSemantics: true,
-      child: InkWell(
-        onTap: onChoose,
-        borderRadius: AppRadius.cardSecondaryAll,
-        child: Container(
-          padding: const EdgeInsets.all(AppSpacing.md),
-          decoration: BoxDecoration(
-            color: current
-                ? AppColors.primaryCardSoft
-                : AppColors.darkSurfaceAlt,
-            borderRadius: AppRadius.cardSecondaryAll,
-            border: Border.fromBorderSide(
-              BorderSide(
-                color: current ? AppColors.primaryLight : AppColors.darkBorder,
-              ),
-            ),
-          ),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(AppSpacing.xs),
-                decoration: const BoxDecoration(
-                  shape: BoxShape.circle,
-                  color: AppColors.primaryBadgeBg,
-                ),
-                child: Icon(
-                  trainingGoalIcon(goal),
-                  size: 18,
-                  color: AppColors.primaryLight,
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      goal.label,
-                      style: AppTypography.subheading.copyWith(
-                        color: AppColors.darkTextPrimary,
-                      ),
-                    ),
-                    const SizedBox(height: AppSpacing.xxs),
-                    Text(
-                      goal.description,
-                      style: AppTypography.label.copyWith(
-                        color: AppColors.darkTextSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              if (current) ...[
-                const SizedBox(width: AppSpacing.sm),
-                const Icon(
-                  AppIcons.checkCircle,
-                  size: 18,
-                  color: AppColors.primaryLight,
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
   }
 }

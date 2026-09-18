@@ -29,9 +29,30 @@ class TrainingProfileActions {
   Future<void> setSessionMinutes(int minutes) =>
       _patch(sessionMinutesTarget: minutes);
 
-  /// Remplacement COMPLET de la liste de matériel.
-  Future<void> setEquipment(List<String> slugs) =>
-      _patch(equipmentSlugs: slugs);
+  /// Coche ou décoche UN équipement.
+  ///
+  /// SÉRIALISÉ : deux coches rapides s'enchaînent au lieu de se courir
+  /// après — chaque bascule relit l'état serveur À SON TOUR avant de
+  /// calculer la liste complète, sinon la seconde écraserait la première
+  /// (la liste est un remplacement complet). Un échec ne casse pas la
+  /// chaîne : la bascule suivante repart de l'état serveur réel.
+  Future<void> toggleEquipment(String slug) {
+    final task = _equipmentChain.then((_) => _toggleEquipment(slug));
+    // La chaîne avale l'échec pour survivre ; l'appelant, lui, voit le sien.
+    _equipmentChain = task.then((_) {}, onError: (Object _) {});
+    return task;
+  }
+
+  Future<void> _toggleEquipment(String slug) async {
+    final current = await _ref.read(trainingProfileProvider.future);
+    final owned = current.equipmentSlugs.toSet();
+    if (!owned.add(slug)) {
+      owned.remove(slug);
+    }
+    await _patch(equipmentSlugs: owned.toList());
+  }
+
+  Future<void> _equipmentChain = Future<void>.value();
 
   Future<void> _patch({
     TrainingExperience? experience,
