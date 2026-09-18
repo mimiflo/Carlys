@@ -74,6 +74,7 @@ OpenAPI : `{id}`.
 | --- | --- | --- |
 | `DELETE /users/me` | **mobile** | apps/mobile |
 | `GET /users/me` | **mobile** | apps/mobile |
+| `GET /users/me/training` | **mobile** | apps/mobile |
 | `PATCH /users/me` | **mobile** | apps/mobile |
 
 ### Catalogue d’exercices

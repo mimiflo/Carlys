@@ -1,4 +1,4 @@
-import { type AuthUser } from '@carlys/api-contracts';
+import { type AuthUser, type TrainingProfile } from '@carlys/api-contracts';
 import { Body, Controller, Get, Patch } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../../../common/decorators/current-user.decorator';
@@ -16,6 +16,12 @@ export class UsersController {
   @ApiOperation({ summary: 'Profil de l’utilisateur connecté' })
   me(@CurrentUser() user: AuthenticatedPrincipal): Promise<AuthUser> {
     return this.users.me(user.userId);
+  }
+
+  @Get('me/training')
+  @ApiOperation({ summary: 'Entrées de génération de programme' })
+  training(@CurrentUser() user: AuthenticatedPrincipal): Promise<TrainingProfile> {
+    return this.users.training(user.userId);
   }
 
   @Patch('me')

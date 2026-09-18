@@ -24,6 +24,10 @@ abstract final class AppRoutes {
   static const String activeWorkout = '/workout';
   static const String templates = '/templates';
   static const String programs = '/programs';
+
+  /// Les entrées de génération de programme (Plan 4) : objectif,
+  /// expérience, rythme, matériel — le futur écran de génération.
+  static const String programSetup = '/programs/preparation';
   static const String history = '/history';
   static const String sessions = '/sessions';
   static const String subscription = '/subscription';

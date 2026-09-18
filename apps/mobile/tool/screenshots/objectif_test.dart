@@ -13,10 +13,15 @@ import 'package:carlys_mobile/app/restore/app_restore.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
+import 'package:carlys_mobile/features/exercises/data/repositories/exercises_repository_impl.dart';
+import 'package:carlys_mobile/features/exercises/domain/entities/exercise.dart';
 import 'package:carlys_mobile/features/onboarding/domain/first_run_step.dart';
-import 'package:carlys_mobile/features/profile/presentation/widgets/profile_settings_sections.dart';
+import 'package:carlys_mobile/features/profile/presentation/widgets/profile_training_settings.dart';
+import 'package:carlys_mobile/features/workout_program/data/repositories/training_profile_repository_impl.dart';
 import 'package:carlys_mobile/features/workout_program/domain/entities/training_goal.dart';
+import 'package:carlys_mobile/features/workout_program/domain/entities/training_profile.dart';
 import 'package:carlys_mobile/features/workout_program/presentation/controllers/training_goal_controllers.dart';
+import 'package:carlys_mobile/features/workout_program/presentation/screens/training_setup_screen.dart';
 import 'package:carlys_mobile/features/workout_program/presentation/widgets/training_goal_sheet.dart';
 import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';
 import 'package:flutter/material.dart';
@@ -25,6 +30,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../test/support/fake_auth_repository.dart';
+import '../../test/support/fake_exercises_repository.dart';
+import '../../test/support/fake_training_profile_repository.dart';
 import '../../test/support/fake_workout_repository.dart';
 import '../../test/support/first_run_prefs.dart';
 import 'capture_test.dart' show loadRealFonts;
@@ -128,6 +135,7 @@ void main() {
                       ProfileTrainingSettings(
                         goalLabel: TrainingGoal.hyrox.label,
                         onGoal: () {},
+                        onSetup: () {},
                         onTemplates: () {},
                         onHistory: () {},
                         onBodyMetrics: () {},
@@ -154,5 +162,54 @@ void main() {
 
     expect(find.text('Ton objectif d’entraînement'), findsOneWidget);
     await capture(tester, 'objectif-02-feuille');
+  });
+
+  testWidgets('« Préparer mon programme » : entrées remplies', (tester) async {
+    telephone(tester);
+    final repo = FakeTrainingProfileRepository(
+      initial: const TrainingProfile(
+        goal: TrainingGoal.hyrox,
+        experience: TrainingExperience.intermediate,
+        weeklySessionsTarget: 4,
+        sessionMinutesTarget: 60,
+        equipmentSlugs: ['barre', 'halteres', 'poids-du-corps'],
+      ),
+    );
+    final exercises = FakeExercisesRepository(const [])
+      ..equipmentRefs = const [
+        EquipmentRef(id: 'e1', slug: 'barre', name: 'Barre'),
+        EquipmentRef(id: 'e2', slug: 'banc', name: 'Banc'),
+        EquipmentRef(id: 'e3', slug: 'elastiques', name: 'Élastiques'),
+        EquipmentRef(id: 'e4', slug: 'halteres', name: 'Haltères'),
+        EquipmentRef(id: 'e5', slug: 'kettlebell', name: 'Kettlebell'),
+        EquipmentRef(id: 'e6', slug: 'poids-du-corps', name: 'Poids du corps'),
+      ];
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          trainingProfileRepositoryProvider.overrideWithValue(repo),
+          exercisesRepositoryProvider.overrideWithValue(exercises),
+          currentTrainingGoalProvider.overrideWithValue(TrainingGoal.hyrox),
+        ],
+        child: MaterialApp(
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.dark(),
+          home: const TrainingSetupScreen(),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Préparer mon programme'), findsOneWidget);
+    await capture(tester, 'objectif-03-preparation');
+
+    // Le bas de l'écran : rythme, durée et matériel coché.
+    await tester.scrollUntilVisible(
+      find.text('Poids du corps'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    await capture(tester, 'objectif-04-materiel');
   });
 }

@@ -6,6 +6,11 @@ import {
   HEIGHT_CM_MAX,
   HEIGHT_CM_MIN,
   LOCALE_PATTERN,
+  TRAINING_EQUIPMENT_MAX,
+  TRAINING_SESSION_MINUTES_MAX,
+  TRAINING_SESSION_MINUTES_MIN,
+  TRAINING_WEEKLY_SESSIONS_MAX,
+  TRAINING_WEEKLY_SESSIONS_MIN,
   birthDateRange,
 } from '@carlys/api-contracts';
 import { ApiPropertyOptional } from '@nestjs/swagger';
@@ -15,12 +20,16 @@ import {
   CarlysProfile,
   MentorStyle,
   NutritionGoal,
+  TrainingExperience,
   TrainingGoal,
 } from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
+  IsArray,
   IsDate,
   IsEnum,
+  IsInt,
   IsNumber,
   IsOptional,
   IsString,
@@ -83,6 +92,52 @@ export class UpdateProfileDto {
   @IsOptional()
   @IsEnum(TrainingGoal)
   trainingGoal?: TrainingGoal;
+
+  // ── Entrées de génération de programme (Plan 4) — bornes du contrat ────
+
+  @ApiPropertyOptional({
+    enum: TrainingExperience,
+    description: 'Expérience d’entraînement — règle volume et complexité',
+  })
+  @IsOptional()
+  @IsEnum(TrainingExperience)
+  trainingExperience?: TrainingExperience;
+
+  @ApiPropertyOptional({
+    minimum: TRAINING_WEEKLY_SESSIONS_MIN,
+    maximum: TRAINING_WEEKLY_SESSIONS_MAX,
+    description: 'Séances visées par semaine',
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(TRAINING_WEEKLY_SESSIONS_MIN)
+  @Max(TRAINING_WEEKLY_SESSIONS_MAX)
+  weeklySessionsTarget?: number;
+
+  @ApiPropertyOptional({
+    minimum: TRAINING_SESSION_MINUTES_MIN,
+    maximum: TRAINING_SESSION_MINUTES_MAX,
+    description: 'Durée visée d’une séance, en minutes',
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(TRAINING_SESSION_MINUTES_MIN)
+  @Max(TRAINING_SESSION_MINUTES_MAX)
+  sessionMinutesTarget?: number;
+
+  @ApiPropertyOptional({
+    isArray: true,
+    type: String,
+    description:
+      'Matériel disponible : slugs de la taxonomie du catalogue — ' +
+      'remplacement complet de la liste, slug inconnu refusé',
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(TRAINING_EQUIPMENT_MAX)
+  @IsString({ each: true })
+  @Length(1, 80, { each: true })
+  equipmentSlugs?: string[];
 
   // ── Profil métabolique (nutrition) ──────────────────────────────────────
 

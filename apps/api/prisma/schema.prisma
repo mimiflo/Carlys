@@ -53,6 +53,7 @@ model User {
   subscriptions      Subscription[]
   entitlements       UserEntitlement[]
   coachConversations CoachConversation[]
+  equipment          UserEquipment[]
 
   mealEntries              MealEntry[]
   quizAnswers              QuizAnswer[]
@@ -105,6 +106,15 @@ enum TrainingGoal {
   CALISTHENICS
 }
 
+/// Expérience d'entraînement — entrée de génération (Plan 4) : elle règle
+/// le volume et la complexité du programme, jamais l'identité (le profil
+/// Carlys n'est PAS un niveau, celle-ci en est un, assumé).
+enum TrainingExperience {
+  BEGINNER
+  INTERMEDIATE
+  ADVANCED
+}
+
 model UserProfile {
   userId      String   @id @db.Uuid
   displayName String
@@ -134,6 +144,14 @@ model UserProfile {
   /// jamais déduit de lui. Nullable tant que la personne n'a pas choisi ;
   /// la génération de programme s'en servira comme entrée première.
   trainingGoal TrainingGoal?
+
+  // ── Entrées de génération de programme (Plan 4) — tous facultatifs :
+  // la génération liste ce qui manque, elle n'invente rien.
+  trainingExperience TrainingExperience?
+  /// Séances visées par semaine (bornes du contrat : 1 à 7).
+  weeklySessionsTarget Int?
+  /// Durée visée d'une séance, en minutes (bornes du contrat : 15 à 240).
+  sessionMinutesTarget Int?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
@@ -351,6 +369,23 @@ model Equipment {
   updatedAt DateTime @updatedAt
 
   exerciseLinks ExerciseEquipment[]
+  userLinks     UserEquipment[]
+}
+
+/// Matériel dont l'utilisateur DISPOSE — entrée de génération (Plan 4).
+/// S'adosse à la taxonomie du catalogue (`Equipment`), jamais une liste
+/// libre : la génération filtre les exercices par les mêmes slugs que le
+/// coach. Écriture par remplacement complet de la liste, idempotente.
+model UserEquipment {
+  userId      String   @db.Uuid
+  equipmentId String   @db.Uuid
+  createdAt   DateTime @default(now())
+
+  user      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  equipment Equipment @relation(fields: [equipmentId], references: [id], onDelete: Cascade)
+
+  @@id([userId, equipmentId])
+  @@index([equipmentId])
 }
 
 /// Nature d'un média. La photo d'exercice et le maillage 3D suivent le MÊME

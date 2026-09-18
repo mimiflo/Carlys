@@ -37,10 +37,31 @@ faire planter un ancien client, et jamais un objectif n'est deviné.
   cartes (image, nom, ce que l'objectif vise, sélection marquée) —
   `training_goal_sheet.dart`, modifiable à tout moment.
 
+## Les entrées de génération (tranche 2)
+
+Quatre entrées, toutes FACULTATIVES — la génération listera ce qui manque,
+elle n'inventera rien :
+
+- **Expérience** (`TrainingExperience` : débutant, intermédiaire, avancé) —
+  un NIVEAU assumé, contrairement au profil Carlys qui est une identité.
+- **Séances par semaine** et **durée d'une séance** — bornes au contrat
+  (`TRAINING_WEEKLY_SESSIONS_*`, `TRAINING_SESSION_MINUTES_*`), l'écran
+  propose des presets, le contrat accepte plus large.
+- **Matériel** (`UserEquipment`) — des SLUGS de la taxonomie `Equipment`
+  du catalogue, la même que le filtre d'exercices et le coach ; un slug
+  inconnu est refusé en 400 en le nommant, jamais ignoré (une liste
+  silencieusement amputée générerait un programme pour un matériel
+  absent). Écriture par remplacement complet, transactionnelle avec les
+  scalaires du même `PATCH`.
+
+Écriture : `PATCH /users/me` (le guichet unique du profil). Lecture :
+`GET /users/me/training` — l'état complet des entrées, objectif compris.
+Sur mobile : écran « Préparer mon programme » (profil → Entraînement,
+route `/programs/preparation`), chaque geste écrit SON champ puis relit —
+l'écran reflète toujours l'état serveur. C'est le futur écran de
+génération : il gagnera son bouton « Générer » à la tranche suivante.
+
 ## La suite du plan
 
-L'objectif est l'ENTRÉE PREMIÈRE de la génération de programme : les
-prochaines tranches ajoutent les autres entrées (expérience,
-séances/semaine, durée, matériel), les règles de génération par objectif
-(serveur, auditables), puis le calendrier daté. Voir `CARLYS_ROADMAP.md`,
-Plan 4.
+Prochaines tranches : les règles de génération par objectif (serveur,
+auditables), puis le calendrier daté. Voir `CARLYS_ROADMAP.md`, Plan 4.

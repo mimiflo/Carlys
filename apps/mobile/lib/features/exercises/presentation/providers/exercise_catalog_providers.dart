@@ -33,6 +33,14 @@ final muscleGroupsProvider = FutureProvider.autoDispose<List<MuscleGroupRef>>((
   return ref.watch(exercisesRepositoryProvider).muscleGroups();
 });
 
+/// Référentiel du matériel — filtres du catalogue ET matériel déclaré au
+/// profil d'entraînement : une seule taxonomie, jamais deux listes.
+final equipmentCatalogProvider = FutureProvider.autoDispose<List<EquipmentRef>>(
+  (ref) {
+    return ref.watch(exercisesRepositoryProvider).equipment();
+  },
+);
+
 /// Fiche détaillée d'un exercice.
 final exerciseDetailProvider = FutureProvider.autoDispose
     .family<ExerciseDetail, String>((ref, idOrSlug) {

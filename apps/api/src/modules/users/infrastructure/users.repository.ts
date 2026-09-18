@@ -164,6 +164,48 @@ export class UsersRepository {
   }
 
   /**
+   * Profil ET matériel en UNE transaction : un remplacement de liste qui
+   * échouerait ne doit pas laisser des scalaires à moitié écrits. La liste
+   * est l'état COMPLET (vider = tableau vide), l'écriture est idempotente.
+   */
+  async updateProfileAndEquipment(
+    userId: string,
+    data: Prisma.UserProfileUpdateWithoutUserInput,
+    equipmentIds: string[],
+  ): Promise<UserWithProfile> {
+    const [user] = await this.prisma.$transaction([
+      this.prisma.user.update({
+        where: { id: userId },
+        data: { profile: { update: data } },
+        include: { profile: true },
+      }),
+      this.prisma.userEquipment.deleteMany({ where: { userId } }),
+      this.prisma.userEquipment.createMany({
+        data: equipmentIds.map((equipmentId) => ({ userId, equipmentId })),
+      }),
+    ]);
+    return user;
+  }
+
+  /** Slugs du matériel de l'utilisateur, triés par nom d'équipement. */
+  async equipmentSlugs(userId: string): Promise<string[]> {
+    const rows = await this.prisma.userEquipment.findMany({
+      where: { userId },
+      select: { equipment: { select: { slug: true } } },
+      orderBy: { equipment: { name: 'asc' } },
+    });
+    return rows.map((row) => row.equipment.slug);
+  }
+
+  /** Résout des slugs vers la taxonomie du catalogue — jamais de texte libre. */
+  findEquipmentBySlugs(slugs: string[]): Promise<{ id: string; slug: string }[]> {
+    return this.prisma.equipment.findMany({
+      where: { slug: { in: slugs } },
+      select: { id: true, slug: true },
+    });
+  }
+
+  /**
    * Suppression de compte, en UNE transaction : le compte passe DELETED et
    * son identité est libérée (adresse et code ami tombaux, nom et profil
    * personnel effacés), ses jetons d'appareil disparaissent. `within` tourne

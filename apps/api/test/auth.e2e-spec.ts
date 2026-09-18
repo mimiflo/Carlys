@@ -11,6 +11,7 @@ import {
   type AuthSession,
   type AuthTokens,
   type AuthUser,
+  type TrainingProfile,
 } from '@carlys/api-contracts';
 import { type INestApplication } from '@nestjs/common';
 import { type NestExpressApplication } from '@nestjs/platform-express';
@@ -205,6 +206,99 @@ describe('Authentification (e2e)', () => {
       .set('Authorization', `Bearer ${firstSession.accessToken}`)
       .send({ trainingGoal: 'TRIATHLON' })
       .expect(400);
+  });
+
+  it('règle les entrées de génération — le matériel validé contre le catalogue', async () => {
+    // Deux équipements de taxonomie créés POUR ce test, purgés à sa fin.
+    await prisma.equipment.createMany({
+      data: [
+        { slug: 'barre-e2e', name: 'Barre e2e' },
+        { slug: 'halteres-e2e', name: 'Haltères e2e' },
+      ],
+      skipDuplicates: true,
+    });
+    try {
+      // Avant tout réglage : rien n'est deviné, la liste est vide — et
+      // l'objectif déjà choisi (test précédent) est bien LA même donnée.
+      const before = await api()
+        .get('/api/v1/users/me/training')
+        .set('Authorization', `Bearer ${firstSession.accessToken}`)
+        .expect(200);
+      const initial = data<TrainingProfile>(before.body);
+      expect(initial.trainingGoal).toBe('HYROX');
+      expect(initial.trainingExperience).toBeNull();
+      expect(initial.weeklySessionsTarget).toBeNull();
+      expect(initial.sessionMinutesTarget).toBeNull();
+      expect(initial.equipmentSlugs).toEqual([]);
+
+      // Un doublon dans la liste ne crée rien deux fois, et la lecture
+      // rend les slugs triés par NOM d'équipement.
+      await api()
+        .patch('/api/v1/users/me')
+        .set('Authorization', `Bearer ${firstSession.accessToken}`)
+        .send({
+          trainingExperience: 'INTERMEDIATE',
+          weeklySessionsTarget: 4,
+          sessionMinutesTarget: 60,
+          equipmentSlugs: ['halteres-e2e', 'barre-e2e', 'barre-e2e'],
+        })
+        .expect(200);
+      const set = await api()
+        .get('/api/v1/users/me/training')
+        .set('Authorization', `Bearer ${firstSession.accessToken}`)
+        .expect(200);
+      const filled = data<TrainingProfile>(set.body);
+      expect(filled.trainingExperience).toBe('INTERMEDIATE');
+      expect(filled.weeklySessionsTarget).toBe(4);
+      expect(filled.sessionMinutesTarget).toBe(60);
+      expect(filled.equipmentSlugs).toEqual(['barre-e2e', 'halteres-e2e']);
+
+      // Un slug inconnu est refusé EN NOMMANT le coupable, et rien n'a
+      // bougé : ni les scalaires du même corps, ni la liste.
+      const refused = await api()
+        .patch('/api/v1/users/me')
+        .set('Authorization', `Bearer ${firstSession.accessToken}`)
+        .send({ weeklySessionsTarget: 5, equipmentSlugs: ['barre-e2e', 'tapis-volant'] })
+        .expect(400);
+      expect(errorOf(refused.body).message).toContain('tapis-volant');
+      const after = await api()
+        .get('/api/v1/users/me/training')
+        .set('Authorization', `Bearer ${firstSession.accessToken}`)
+        .expect(200);
+      expect(data<TrainingProfile>(after.body).weeklySessionsTarget).toBe(4);
+      expect(data<TrainingProfile>(after.body).equipmentSlugs).toEqual([
+        'barre-e2e',
+        'halteres-e2e',
+      ]);
+
+      // La liste est un état COMPLET : vide la vide.
+      await api()
+        .patch('/api/v1/users/me')
+        .set('Authorization', `Bearer ${firstSession.accessToken}`)
+        .send({ equipmentSlugs: [] })
+        .expect(200);
+      const cleared = await api()
+        .get('/api/v1/users/me/training')
+        .set('Authorization', `Bearer ${firstSession.accessToken}`)
+        .expect(200);
+      expect(data<TrainingProfile>(cleared.body).equipmentSlugs).toEqual([]);
+
+      // Les bornes du contrat font foi.
+      await api()
+        .patch('/api/v1/users/me')
+        .set('Authorization', `Bearer ${firstSession.accessToken}`)
+        .send({ weeklySessionsTarget: 8 })
+        .expect(400);
+      await api()
+        .patch('/api/v1/users/me')
+        .set('Authorization', `Bearer ${firstSession.accessToken}`)
+        .send({ sessionMinutesTarget: 10 })
+        .expect(400);
+    } finally {
+      await prisma.equipment.deleteMany({
+        where: { slug: { in: ['barre-e2e', 'halteres-e2e'] } },
+      });
+    }
   });
 
   it('refuse un mot de passe erroné avec un message générique', async () => {

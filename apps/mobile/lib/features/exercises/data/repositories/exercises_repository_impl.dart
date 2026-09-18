@@ -70,6 +70,17 @@ class ExercisesRepositoryImpl implements ExercisesRepository {
     });
   }
 
+  @override
+  Future<List<EquipmentRef>> equipment() {
+    return _guard(() async {
+      final response = await _dio.get<Map<String, dynamic>>('/equipment');
+      return (response.data?['data'] as List<dynamic>? ?? const [])
+          .whereType<Map<String, dynamic>>()
+          .map(equipmentFromJson)
+          .toList();
+    });
+  }
+
   Future<T> _guard<T>(Future<T> Function() action) async {
     try {
       return await action();

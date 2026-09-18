@@ -39,6 +39,7 @@ import '../../features/workout_history/presentation/screens/workout_detail_scree
 import '../../features/workout_history/presentation/screens/workout_history_screen.dart';
 import '../../features/workout_program/presentation/screens/program_detail_screen.dart';
 import '../../features/workout_program/presentation/screens/programs_screen.dart';
+import '../../features/workout_program/presentation/screens/training_setup_screen.dart';
 import '../../features/workout_session/presentation/screens/active_workout_screen.dart';
 import '../../features/workout_template/presentation/screens/template_editor_screen.dart';
 import '../../features/workout_template/presentation/screens/templates_screen.dart';
@@ -343,6 +344,14 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const ProgramsScreen(),
         routes: [
+          // AVANT `:programId` : un segment nommé déclaré après le
+          // paramètre serait avalé par lui.
+          GoRoute(
+            path: 'preparation',
+            name: 'program-setup',
+            parentNavigatorKey: _rootNavigatorKey,
+            builder: (context, state) => const TrainingSetupScreen(),
+          ),
           GoRoute(
             path: ':programId',
             name: 'program-detail',

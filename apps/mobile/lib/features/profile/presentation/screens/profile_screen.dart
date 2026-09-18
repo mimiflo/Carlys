@@ -17,6 +17,7 @@ import '../widgets/profile_legal_section.dart';
 import '../widgets/profile_nutrition_settings.dart';
 import '../widgets/profile_settings_sections.dart';
 import '../widgets/profile_summary.dart';
+import '../widgets/profile_training_settings.dart';
 
 /// Profil & réglages (maquette 2j) : identité, bannière d'abonnement, tuiles
 /// mono, groupes de réglages puis déconnexion.
@@ -90,6 +91,7 @@ class ProfileScreen extends ConsumerWidget {
             ProfileTrainingSettings(
               goalLabel: ref.watch(currentTrainingGoalProvider)?.label,
               onGoal: () => showTrainingGoalSheet(context),
+              onSetup: () => context.push(AppRoutes.programSetup),
               onTemplates: () => context.push(AppRoutes.templates),
               onHistory: () => context.push(AppRoutes.history),
               onBodyMetrics: () => context.go(AppRoutes.progress),

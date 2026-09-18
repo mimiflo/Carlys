@@ -123,6 +123,12 @@ class FakeExercisesRepository implements ExercisesRepository {
   /// ordre : la bibliothèque s'ouvre sur ces douze groupes, et un jeu tronqué
   /// donnerait une grille qui ne ressemble à rien de réel.
   @override
+  Future<List<EquipmentRef>> equipment() async => equipmentRefs;
+
+  /// Taxonomie servie par la doublure — vide par défaut, posable au test.
+  List<EquipmentRef> equipmentRefs = const [];
+
+  @override
   Future<List<MuscleGroupRef>> muscleGroups() async {
     return const [
       MuscleGroupRef(id: 'mg-pec', slug: 'pectoraux', name: 'Pectoraux'),

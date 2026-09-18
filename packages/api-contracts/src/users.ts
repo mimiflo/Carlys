@@ -38,6 +38,50 @@ export const HEIGHT_CM_DECIMALS = 1;
 export const AGE_YEARS_MIN = 15;
 export const AGE_YEARS_MAX = 120;
 
+// ── Entrées de génération de programme (Plan 4) ─────────────────────────
+
+/**
+ * Expérience d'entraînement : elle règle le volume et la complexité du
+ * programme généré. C'est un NIVEAU assumé — contrairement au profil
+ * Carlys, qui est une identité et n'en est pas un.
+ */
+export const trainingExperienceSchema = z.enum(['BEGINNER', 'INTERMEDIATE', 'ADVANCED']);
+export type TrainingExperience = z.infer<typeof trainingExperienceSchema>;
+
+/** Séances visées par semaine. */
+export const TRAINING_WEEKLY_SESSIONS_MIN = 1;
+export const TRAINING_WEEKLY_SESSIONS_MAX = 7;
+
+/** Durée visée d'une séance, en minutes. */
+export const TRAINING_SESSION_MINUTES_MIN = 15;
+export const TRAINING_SESSION_MINUTES_MAX = 240;
+
+/**
+ * Matériel disponible : des SLUGS de la taxonomie `Equipment` du catalogue
+ * (les mêmes que le filtre d'exercices et le coach), jamais du texte libre.
+ * Un slug inconnu est refusé en 400 — pas ignoré : une liste silencieusement
+ * amputée générerait un programme pour un matériel que la personne n'a pas.
+ */
+export const TRAINING_EQUIPMENT_MAX = 40;
+
+/**
+ * Profil d'entraînement — `GET /users/me/training`.
+ *
+ * La lecture UNIQUE des entrées de génération : l'objectif (aussi porté par
+ * `AuthUser`, même source), l'expérience, le rythme visé et le matériel.
+ * Tout est nullable ou vide tant que rien n'est choisi — la génération
+ * liste ce qui manque, elle n'invente rien.
+ */
+export const trainingProfileSchema = z.object({
+  trainingGoal: trainingGoalSchema.nullable(),
+  trainingExperience: trainingExperienceSchema.nullable(),
+  weeklySessionsTarget: z.number().int().nullable(),
+  sessionMinutesTarget: z.number().int().nullable(),
+  /** Slugs de la taxonomie, triés par nom d'équipement. */
+  equipmentSlugs: z.array(z.string()),
+});
+export type TrainingProfile = z.infer<typeof trainingProfileSchema>;
+
 /**
  * Les deux dates entre lesquelles une naissance est acceptée, à l'instant
  * donné. Bornes INCLUSES : on naît admissible le jour de ses 15 ans.
@@ -98,6 +142,21 @@ export const updateProfileRequestSchema = z.object({
   mentorStyle: mentorStyleSchema.optional(),
   /** Objectif d'entraînement — distinct de `nutritionGoal`, jamais déduit. */
   trainingGoal: trainingGoalSchema.optional(),
+  trainingExperience: trainingExperienceSchema.optional(),
+  weeklySessionsTarget: z
+    .number()
+    .int()
+    .min(TRAINING_WEEKLY_SESSIONS_MIN)
+    .max(TRAINING_WEEKLY_SESSIONS_MAX)
+    .optional(),
+  sessionMinutesTarget: z
+    .number()
+    .int()
+    .min(TRAINING_SESSION_MINUTES_MIN)
+    .max(TRAINING_SESSION_MINUTES_MAX)
+    .optional(),
+  /** Remplacement COMPLET de la liste ; slug inconnu refusé en 400. */
+  equipmentSlugs: z.array(z.string().min(1)).max(TRAINING_EQUIPMENT_MAX).optional(),
   sex: biologicalSexSchema.optional(),
   /** ISO 8601, dans l'intervalle `birthDateRange` (de 15 à 120 ans). */
   birthDate: z.string().datetime().optional(),

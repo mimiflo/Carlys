@@ -188,9 +188,14 @@ date sur `Program`, aucun lien `WorkoutSession` ↔ jour de programme.
       → « Mon objectif », feuille à huit cartes). Coexiste avec l'objectif
       nutritionnel — indépendance épinglée par le e2e, wires disjoints
       épinglés par un test Dart. Doc : `docs/product/entrainement-objectifs.md`.
-- [ ] Entrées de génération au profil : expérience, séances/semaine, durée,
-      matériel (`UserEquipment` — s'adosser à la taxonomie `Equipment`
-      existante du catalogue, slugs déjà filtrés par le coach) — migrations.
+- [x] Entrées de génération au profil : `TrainingExperience`,
+      `weeklySessionsTarget`, `sessionMinutesTarget`, `UserEquipment`
+      (adossé à la taxonomie `Equipment` du catalogue, slug inconnu refusé
+      en 400 nommé, remplacement de liste transactionnel) — migration
+      `20260917192528_training_generation_inputs`, `PATCH /users/me`,
+      `GET /users/me/training` (manifeste des routes à jour), écran mobile
+      « Préparer mon programme » (`/programs/preparation`, profil →
+      Entraînement), doublures et tests des deux côtés.
 - [ ] Génération d'un programme (règles par objectif : fréquence,
       répartition, cardio, progression) — côté serveur, auditables.
 - [ ] Calendrier : date de début de `Program` (migration sur table

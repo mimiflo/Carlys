@@ -29,4 +29,8 @@ abstract interface class ExercisesRepository {
   Future<ExerciseDetail> byIdOrSlug(String idOrSlug);
 
   Future<List<MuscleGroupRef>> muscleGroups();
+
+  /// La taxonomie du matériel — la même que le filtre du catalogue et que
+  /// le matériel déclaré au profil d'entraînement (Plan 4).
+  Future<List<EquipmentRef>> equipment();
 }
