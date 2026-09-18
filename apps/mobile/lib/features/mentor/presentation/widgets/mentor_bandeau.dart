@@ -4,11 +4,12 @@ import '../../../../design_system/design_system.dart';
 import '../../domain/entities/mentor_prefs.dart';
 import '../../domain/mentor_word.dart';
 
-/// Le bandeau de signature du Mentor : qui parle, et ce qu'il dit.
+/// Le bandeau du Mentor : qui parle, et ce qu'il dit.
 ///
-/// Même grammaire que les bannières de franchissement (dégradé de
-/// signature, texte `neutral0`) : le Mentor parle DEPUIS l'identité
-/// visuelle de Carlys, pas depuis une carte grise.
+/// Le dégradé VIOLET de l'application (`cta`), texte `neutral0` : le
+/// Mentor parle depuis le thème de Carlys, pas depuis une carte grise —
+/// et pas depuis le dégradé de marque multicolore, réservé aux
+/// célébrations de franchissement (préférence actée le 18/09/2026).
 class MentorBandeau extends StatelessWidget {
   const MentorBandeau({required this.mot, required this.frequence, super.key});
 
@@ -33,7 +34,7 @@ class MentorBandeau extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: const BoxDecoration(
-        gradient: AppColors.signature,
+        gradient: AppColors.cta,
         borderRadius: AppRadius.cardSecondaryAll,
       ),
       child: Column(

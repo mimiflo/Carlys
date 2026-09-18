@@ -121,8 +121,9 @@ class TrainingSetupScreen extends ConsumerWidget {
   }
 }
 
-/// Le bandeau de signature : ce que cet écran prépare, et l'objectif choisi
-/// comme porte d'entrée — le même dégradé que les moments d'identité.
+/// Le bandeau d'en-tête : ce que cet écran prépare, et l'objectif choisi
+/// comme porte d'entrée — le dégradé VIOLET de l'application (`cta`),
+/// jamais le dégradé de marque multicolore (réservé aux célébrations).
 /// L'objectif vient de `AuthUser` (rafraîchi par la feuille de choix),
 /// jamais d'une copie locale qui divergerait.
 class _Bandeau extends StatelessWidget {
@@ -135,7 +136,7 @@ class _Bandeau extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(AppSpacing.md),
       decoration: const BoxDecoration(
-        gradient: AppColors.signature,
+        gradient: AppColors.cta,
         borderRadius: AppRadius.cardSecondaryAll,
       ),
       child: Column(

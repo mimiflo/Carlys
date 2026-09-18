@@ -88,7 +88,7 @@ class _Etape extends ConsumerWidget {
               padding: const EdgeInsets.all(AppSpacing.xs),
               decoration: const BoxDecoration(
                 shape: BoxShape.circle,
-                gradient: AppColors.signature,
+                gradient: AppColors.cta,
               ),
               child: Icon(
                 mentorTourIcons[etape.id] ?? AppIcons.mentor,
@@ -145,7 +145,7 @@ class _Etape extends ConsumerWidget {
   }
 }
 
-/// La fin de la visite : le bandeau de signature qui la salue, le chemin
+/// La fin de la visite : le bandeau violet qui la salue, le chemin
 /// complet, et une porte pour la revoir.
 class _VisiteTerminee extends StatelessWidget {
   const _VisiteTerminee({required this.onRejouer});
@@ -161,7 +161,7 @@ class _VisiteTerminee extends StatelessWidget {
         Container(
           padding: const EdgeInsets.all(AppSpacing.md),
           decoration: const BoxDecoration(
-            gradient: AppColors.signature,
+            gradient: AppColors.cta,
             borderRadius: AppRadius.cardSecondaryAll,
           ),
           child: Row(

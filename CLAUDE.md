@@ -318,6 +318,16 @@ Chaque fonctionnalité livrée comprend :
    `apps/mobile/tool/screenshots/` (harnais `--update-goldens`), régénérées,
    **regardées une à une** avant le commit, puis montrées à l'utilisateur.
    Ce que la relecture juge : la densité (pas d'écran à moitié vide — poser
-   du contenu plausible derrière une feuille), et l'identité Carlys (dégradé
-   de signature, tokens du design system) — un écran gris de lignes nues
-   n'est pas fini, même s'il fonctionne.
+   du contenu plausible derrière une feuille), et l'identité Carlys (tokens
+   du design system) — un écran gris de lignes nues n'est pas fini, même
+   s'il fonctionne.
+9. **Le thème, c'est le VIOLET** (préférence propriétaire actée le
+   18 septembre 2026, après correction demandée). Les bandeaux, en-têtes et
+   accents se peignent avec les dégradés violets de l'appli (`AppColors.cta`,
+   `violetRamp`) et `primary`/`primaryLight` sur fonds sombres. Le dégradé
+   de marque multicolore (`AppColors.signature`, violet → magenta → orange)
+   est **réservé aux surfaces de marque et aux célébrations de
+   franchissement existantes** (bienvenue, franchissement de titre, domaine
+   bouclé) — jamais un en-tête ordinaire, jamais un écran de réglage. Le
+   commentaire d'`app_colors.dart` le disait déjà : le relire avant de
+   peindre.

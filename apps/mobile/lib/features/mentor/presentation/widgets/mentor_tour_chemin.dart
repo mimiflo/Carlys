@@ -19,7 +19,7 @@ const Map<String, IconData> mentorTourIcons = {
 /// Le chemin de la visite : les sept pièces en pastilles, d'un coup d'œil.
 ///
 /// Trois états, du plus discret au plus visible : à venir (éteinte), vue
-/// (teinte primaire), courante (dégradé de signature). Purement décoratif
+/// (teinte primaire), courante (dégradé violet `cta`). Purement décoratif
 /// pour un lecteur d'écran : l'en-tête « x sur 7 » dit déjà l'avancement.
 class MentorTourChemin extends StatelessWidget {
   const MentorTourChemin({required this.vues, this.etapeCourante, super.key});
@@ -65,7 +65,7 @@ class _Pastille extends StatelessWidget {
       padding: const EdgeInsets.all(AppSpacing.xs),
       decoration: BoxDecoration(
         shape: BoxShape.circle,
-        gradient: courante ? AppColors.signature : null,
+        gradient: courante ? AppColors.cta : null,
         color: courante
             ? null
             : (vue ? AppColors.primaryBadgeBg : AppColors.darkSurfaceAlt),

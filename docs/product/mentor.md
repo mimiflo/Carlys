@@ -44,9 +44,11 @@ voix avant de la choisir. Écrit au serveur PUIS relu depuis
 
 Une phrase dans « Pour toi », à la voix choisie (voix neutre tant que rien
 n'est choisi). Toucher l'entrée ouvre la feuille du Mentor, qui s'ouvre sur
-son bandeau de signature (`mentor_bandeau.dart`) : l'identité et le mot du
-moment posés sur le dégradé de la marque — la même grammaire que les
-bannières de franchissement. `mentorWord` est une fonction PURE : style + fréquence +
+son bandeau (`mentor_bandeau.dart`) : l'identité et le mot du moment posés
+sur le dégradé VIOLET de l'application (`cta`) — le dégradé de marque
+multicolore reste réservé aux célébrations (règle 9 du CLAUDE.md).
+
+`mentorWord` est une fonction PURE : style + fréquence +
 jour civil → le mot, en rotation DÉTERMINISTE par période — au cran
 quotidien il change chaque jour, au cran hebdomadaire il tient la semaine.
 Aucune date stockée, donc rien à désynchroniser : la même grammaire que la
