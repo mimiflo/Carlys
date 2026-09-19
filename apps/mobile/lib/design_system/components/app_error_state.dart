@@ -1,10 +1,19 @@
 import 'package:flutter/material.dart';
 
+import '../colors/app_colors.dart';
 import '../icons/app_icons.dart';
 import '../spacing/app_spacing.dart';
 import 'app_button.dart';
 
 /// État d'erreur standard : icône, titre, message et action de réessai.
+///
+/// LES COULEURS SONT CELLES DU FOND SOMBRE, pas celles du thème. Les écrans
+/// qui accueillent cet état peignent leur `Scaffold` en
+/// `AppColors.darkBackground` — quarante-cinq fichiers le font, l'application
+/// est sombre par dessin. Or ce composant lisait `Theme.of(context)`, dont
+/// l'`onSurface` vaut `neutral900` sous le thème Clair : titre et message
+/// s'écrivaient alors en quasi-noir sur ce fond sombre, illisibles. Il n'y a
+/// qu'un seul fond possible derrière cet état ; autant le dire.
 class AppErrorState extends StatelessWidget {
   const AppErrorState({
     required this.title,
@@ -39,18 +48,22 @@ class AppErrorState extends StatelessWidget {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 48, color: theme.colorScheme.error),
+            Icon(icon, size: 48, color: AppColors.danger),
             const SizedBox(height: AppSpacing.md),
             Text(
               title,
-              style: theme.textTheme.titleLarge,
+              style: theme.textTheme.titleLarge?.copyWith(
+                color: AppColors.darkTextPrimary,
+              ),
               textAlign: TextAlign.center,
             ),
             if (message != null) ...[
               const SizedBox(height: AppSpacing.xs),
               Text(
                 message!,
-                style: theme.textTheme.bodySmall,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: AppColors.darkTextSecondary,
+                ),
                 textAlign: TextAlign.center,
               ),
             ],

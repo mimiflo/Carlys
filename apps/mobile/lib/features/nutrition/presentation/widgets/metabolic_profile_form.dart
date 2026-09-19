@@ -76,35 +76,51 @@ class _MetabolicProfileFormState extends ConsumerState<MetabolicProfileForm> {
     }
   }
 
+  /// Un mot à l'écran. Tout refus d'enregistrement passe par ici : un bouton
+  /// qui ne fait rien sans rien dire est un bouton cassé.
+  void _dire(String message) {
+    if (!mounted) {
+      return;
+    }
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(message)));
+  }
+
   Future<void> _save() async {
     if (!(_formKey.currentState?.validate() ?? false)) {
+      return;
+    }
+    final height = HeightCm.parse(_heightController.text);
+    // VIDER UN CHAMP N'EFFACE RIEN. Dans le PATCH du profil, une valeur
+    // absente veut dire « inchangée », pas « supprimée ». Effacer sa taille
+    // puis enregistrer semblait donc marcher : le bouton tournait, aucune
+    // erreur, et l'ancienne valeur revenait à la réouverture — sans un mot.
+    if (height == null && widget.profile.heightCm != null) {
+      _dire('Ta taille se corrige, elle ne se retire pas : saisis une valeur.');
       return;
     }
     final update = MetabolicProfileUpdate(
       sex: _sex,
       birthDate: _birthDate,
-      heightCm: HeightCm.parse(_heightController.text),
+      heightCm: height,
       activityLevel: _activityLevel,
       goal: _goal,
     );
     if (update.isEmpty) {
+      // Formulaire entièrement vide : le bouton ne doit pas faire semblant.
+      _dire('Renseigne au moins une valeur avant d’enregistrer.');
       return;
     }
     setState(() => _saving = true);
     try {
       await ref.read(nutritionActionsProvider).saveProfile(update);
     } on AppException catch (exception) {
-      if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              exception is NetworkException
-                  ? 'Serveur injoignable : réessaie une fois connecté.'
-                  : 'Enregistrement impossible. Vérifie les valeurs saisies.',
-            ),
-          ),
-        );
-      }
+      _dire(
+        exception is NetworkException
+            ? 'Serveur injoignable : réessaie une fois connecté.'
+            : 'Enregistrement impossible. Vérifie les valeurs saisies.',
+      );
     } finally {
       if (mounted) {
         setState(() => _saving = false);
