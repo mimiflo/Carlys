@@ -640,6 +640,12 @@ model WorkoutTemplate {
   estimatedDurationMinutes Int?
   /// Dernier lancement : posé à la création d'une séance qui référence ce modèle.
   lastUsedAt               DateTime?
+  /// Programme qui a engendré ce modèle — `null` pour un modèle écrit à la
+  /// main. Une génération de huit semaines dépose jusqu'à plusieurs dizaines
+  /// de modèles : sans cette colonne, la bibliothèque de la personne se
+  /// noierait sous des séances qu'elle n'a pas composées et qu'elle ne
+  /// saurait pas distinguer des siennes.
+  generatedFromProgramId   String?   @db.Uuid
   createdAt                DateTime  @default(now())
   updatedAt                DateTime  @updatedAt
   deletedAt                DateTime?
@@ -651,6 +657,7 @@ model WorkoutTemplate {
   programDays    ProgramDay[]
 
   @@index([userId, updatedAt(sort: Desc)])
+  @@index([generatedFromProgramId])
 }
 
 /// Ligne d'exercice prescrite dans un modèle, ordonnée.
@@ -1374,6 +1381,15 @@ model Program {
   /// PARTIEL, hors du vocabulaire Prisma), c'est donc le service qui l'impose,
   /// en désactivant les autres dans la même transaction.
   isActive    Boolean   @default(false)
+  /// Rapport de la génération qui a produit ce programme — `null` s'il a été
+  /// composé à la main. Écrit UNE fois, jamais relu par le moteur.
+  ///
+  /// C'est ce qui rend la tranche auditable au-delà de l'instant : sans lui,
+  /// un support qui ouvre un programme trois semaines plus tard ne peut plus
+  /// expliquer pourquoi tel exercice y figure ni quelle règle a dû céder —
+  /// il faudrait régénérer, et le profil aura bougé entre-temps. C'est
+  /// justement la première chose qu'on change quand un programme déçoit.
+  generationReport Json?
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
   deletedAt   DateTime?

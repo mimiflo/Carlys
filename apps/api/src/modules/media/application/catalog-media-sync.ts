@@ -28,6 +28,7 @@ import { type PrismaClient } from '@prisma/client';
 import { createHash } from 'node:crypto';
 import { readdir, readFile } from 'node:fs/promises';
 import { join } from 'node:path';
+import { derivedUuid } from '../../../common/utilities/derived-uuid';
 import { readImageSize } from './image-size';
 
 const MEDIA_DIRECTORY = join(process.cwd(), 'prisma', 'seed-media', 'exercises');
@@ -41,21 +42,13 @@ const NAMESPACE = 'carlys.seed.media';
  * C'est ce qui rend l'étape rejouable : re-seeder ne crée pas un second
  * média. La clé de stockage inclut le checksum pour renouveler les caches
  * immuables lorsque l'illustration change.
+ *
+ * Le calcul lui-même vit dans `common/utilities/derived-uuid.ts` depuis que la
+ * génération de programme en a eu besoin : une seule définition, deux
+ * namespaces.
  */
 function mediaIdFor(slug: string): string {
-  const hash = createHash('sha256').update(`${NAMESPACE}:${slug}`).digest();
-  const bytes = Buffer.from(hash.subarray(0, 16));
-  // Version 4 et variante RFC 4122 : un UUID valide, mais reproductible.
-  bytes[6] = (bytes[6]! & 0x0f) | 0x40;
-  bytes[8] = (bytes[8]! & 0x3f) | 0x80;
-  const hex = bytes.toString('hex');
-  return [
-    hex.slice(0, 8),
-    hex.slice(8, 12),
-    hex.slice(12, 16),
-    hex.slice(16, 20),
-    hex.slice(20),
-  ].join('-');
+  return derivedUuid(NAMESPACE, slug);
 }
 
 interface StorageSettings {

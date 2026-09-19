@@ -71,3 +71,74 @@ export const saveProgramRequestSchema = z.object({
   days: z.array(saveProgramDaySchema).max(PROGRAM_MAX_DAYS),
 });
 export type SaveProgramRequest = z.infer<typeof saveProgramRequestSchema>;
+
+// ── Génération de programme (Plan 4, tranche 3) ─────────────────────────────
+
+/**
+ * Un ASSOUPLISSEMENT consenti par le générateur, nommé et chiffré.
+ *
+ * C'est ce qui rend la génération auditable : le programme ne dit pas
+ * seulement ce qu'il prescrit, il dit où il a dû céder et de combien. Un
+ * générateur qui livre en silence un dos à quatre séries quand la règle en
+ * demande douze ment par omission.
+ *
+ * `code` nomme la règle (`R1_VOLUME_AU_MINIMUM`, `R6_GROUPE_SOUS_LE_MINIMUM`…),
+ * `subject` le groupe musculaire ou le jour concerné quand il y en a un,
+ * `expected` et `actual` les deux nombres qui font la différence.
+ */
+export const generationRelaxationSchema = z.object({
+  code: z.string(),
+  subject: z.string().nullable(),
+  expected: z.number().nullable(),
+  actual: z.number().nullable(),
+  message: z.string(),
+});
+export type GenerationRelaxation = z.infer<typeof generationRelaxationSchema>;
+
+/** Séries hebdomadaires réellement allouées à un groupe, et la cible visée. */
+export const generationVolumeSchema = z.object({
+  muscleGroup: z.string(),
+  weeklySets: z.number().int(),
+  targetMin: z.number().int(),
+  targetMax: z.number().int(),
+});
+export type GenerationVolume = z.infer<typeof generationVolumeSchema>;
+
+/**
+ * Ce que le générateur a produit, et ce qu'il n'a pas pu produire.
+ *
+ * `templatedDays` / `freeLabelDays` comptent les jours actifs selon qu'ils
+ * portent un modèle de séance ou seulement un intitulé. L'écart n'est pas un
+ * détail pour MARATHON et HYROX : le catalogue ne contient aucun exercice de
+ * course, de rameur ni de traîneau, donc ces séances-là sont PLANIFIÉES mais
+ * pas détaillées, et elles ne produiront ni séance, ni record, ni courbe de
+ * progression dans l'application. L'utilisateur doit l'apprendre ici, pas de
+ * sa propre déception au bout de trois semaines.
+ */
+export const generationReportSchema = z.object({
+  status: z.enum(['satisfied', 'relaxed']),
+  rulesVersion: z.number().int(),
+  goal: z.string(),
+  experience: z.string(),
+  /** Séances par semaine réellement retenues, après normalisation. */
+  sessionsPerWeek: z.number().int(),
+  split: z.array(z.string()),
+  templatedDays: z.number().int(),
+  freeLabelDays: z.number().int(),
+  restDays: z.number().int(),
+  templatesCreated: z.number().int(),
+  weeklyVolume: z.array(generationVolumeSchema),
+  /** Groupes du découpage qu'aucun exercice jouable ne couvre en principal. */
+  uncoveredGroups: z.array(z.string()),
+  relaxations: z.array(generationRelaxationSchema),
+  /** Phrases d'explication destinées à l'écran, déjà rédigées côté serveur. */
+  notes: z.array(z.string()),
+});
+export type GenerationReport = z.infer<typeof generationReportSchema>;
+
+/** Réponse de `PUT /programs/:id/generate`. */
+export const generatedProgramSchema = z.object({
+  program: programDetailSchema,
+  report: generationReportSchema,
+});
+export type GeneratedProgram = z.infer<typeof generatedProgramSchema>;

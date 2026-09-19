@@ -23,6 +23,7 @@ function program(overrides: Partial<ProgramWithDays> = {}): ProgramWithDays {
     name: 'Prise de masse',
     description: null,
     weeksCount: 4,
+    generationReport: null,
     isActive: false,
     createdAt: new Date('2026-01-01'),
     updatedAt: new Date('2026-01-01'),

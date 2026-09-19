@@ -1,6 +1,7 @@
 import {
   type ApiSuccessEnvelope,
   type CursorPaginationMeta,
+  type GeneratedProgram,
   type ProgramDetail,
   type ProgramSummary,
 } from '@carlys/api-contracts';
@@ -24,14 +25,19 @@ import { CurrentUser } from '../../../../common/decorators/current-user.decorato
 import { type AuthenticatedPrincipal } from '../../../../common/types/authenticated-request';
 import { type RequestWithId } from '../../../../common/types/request-with-id';
 import { enveloped } from '../../../../common/utilities/enveloped';
+import { ProgramGenerationService } from '../../application/program-generation.service';
 import { ProgramsService } from '../../application/programs.service';
+import { GenerateProgramDto } from './dto/generate-program.dto';
 import { ListProgramsQuery, SaveProgramDto } from './dto/program.dto';
 
 @ApiTags('programs')
 @ApiBearerAuth()
 @Controller('programs')
 export class ProgramsController {
-  constructor(private readonly programs: ProgramsService) {}
+  constructor(
+    private readonly programs: ProgramsService,
+    private readonly generation: ProgramGenerationService,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'Mes programmes (pagination par curseur)' })
@@ -75,6 +81,35 @@ export class ProgramsController {
     const saved = await this.programs.save(id, user.userId, dto);
     response.status(saved.created ? HttpStatus.CREATED : HttpStatus.OK);
     return saved.program;
+  }
+
+  @Put(':id/generate')
+  @ApiOperation({
+    summary: 'Engendre un programme depuis le profil d’entraînement',
+    description:
+      'Compose le plan à partir de l’objectif, du niveau, du rythme, de la ' +
+      'durée de séance et du matériel déjà enregistrés. Le programme naît ' +
+      'INACTIF : générer ne désactive jamais le plan en cours. Rejouer le ' +
+      'même identifiant rend le programme tel quel, sans régénérer — pour en ' +
+      'obtenir un autre, envoyer un nouvel identifiant.',
+  })
+  @ApiResponse({ status: HttpStatus.CREATED, description: 'Programme engendré' })
+  @ApiResponse({ status: HttpStatus.OK, description: 'Déjà engendré : rendu tel quel' })
+  @ApiResponse({ status: HttpStatus.BAD_REQUEST, description: 'Profil d’entraînement incomplet' })
+  @ApiResponse({ status: HttpStatus.FORBIDDEN, description: 'Plafond du plan gratuit atteint' })
+  @ApiResponse({
+    status: HttpStatus.CONFLICT,
+    description: 'Identifiant pris, ou objectif impossible avec ce matériel',
+  })
+  async generate(
+    @CurrentUser() user: AuthenticatedPrincipal,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() dto: GenerateProgramDto,
+    @Res({ passthrough: true }) response: Response,
+  ): Promise<GeneratedProgram> {
+    const generated = await this.generation.generate(user.userId, id, dto);
+    response.status(generated.created ? HttpStatus.CREATED : HttpStatus.OK);
+    return generated.result;
   }
 
   @Delete(':id')

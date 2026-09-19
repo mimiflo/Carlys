@@ -58,10 +58,76 @@ elle n'inventera rien :
 `GET /users/me/training` — l'état complet des entrées, objectif compris.
 Sur mobile : écran « Préparer mon programme » (profil → Entraînement,
 route `/programs/preparation`), chaque geste écrit SON champ puis relit —
-l'écran reflète toujours l'état serveur. C'est le futur écran de
-génération : il gagnera son bouton « Générer » à la tranche suivante.
+l'écran reflète toujours l'état serveur.
+
+## La génération (tranche 3)
+
+`PUT /api/v1/programs/{id}/generate` — identifiant fourni par l'appareil,
+comme tout le domaine. AUCUNE entrée de profil dans le corps : elles ont
+déjà leur guichet, en accepter une copie ouvrirait une seconde source
+donc une divergence. Seul `name` est accepté, et il est facultatif.
+
+**Le moteur est une fonction PURE** (`programs/domain/generation/`) :
+aucune base, aucun réseau, aucune horloge, aucun hasard. C'est ce qui rend
+la tranche *auditable* au sens de la feuille de route — rejouer le calcul
+explique un programme écrit il y a trois mois. La variété entre semaines
+et entre créneaux vient d'un décalage modulaire calculé sur une graine
+(identifiant du programme + profil + matériel trié), jamais d'un tirage.
+Un test-garde interdit `Math.random`, `Date.now`, `new Date`,
+`randomUUID` et `process.env` dans tout le dossier.
+
+Les dosages vivent dans **une table par objectif** (`goal-rules.ts`), et
+chaque ligne porte son `rationale` en français : sans lui, le prochain
+développeur modifierait un 4 × 8 à 120 s sans savoir s'il avait une
+raison. Huit contraintes dures (fréquence, récupération, temps, matériel,
+difficulté, droits, volume, unicité) sont relues par `verify()` — la MÊME
+fonction que le générateur appelle en dernière phase et que le test
+rejoue sur les 8 232 combinaisons d'entrées.
+
+Ce que le générateur ne fait JAMAIS : prescrire une charge (le serveur ne
+sait pas ce que la personne soulève), écrire un exercice sans lien au
+catalogue, dépasser le plafond de difficulté du niveau, ou remplir un
+créneau avec un étirement. Et il n'invente aucune entrée manquante : un
+profil incomplet rend un 400 qui liste TOUS les champs d'un coup.
+
+**Le rapport de génération** (`Program.generationReport`, migration
+`20260919163304_generation_de_programme`) est écrit une fois et rendu
+avec le programme. Il porte le découpage retenu, le volume hebdomadaire
+par groupe face à sa cible, les groupes qu'aucun exercice jouable ne
+couvre, et chaque assouplissement consenti avec ses deux nombres. Sans
+cette colonne, un support qui ouvre un programme trois semaines plus tard
+ne pourrait plus expliquer pourquoi tel exercice y figure : il faudrait
+régénérer, et le profil aura bougé — c'est justement la première chose
+qu'on change quand un programme déçoit.
+
+**Deux arbitrages qui se voient** :
+
+- Le programme naît **inactif**. L'activer désactiverait le plan en cours
+  dans la même transaction (invariant « un seul actif ») : quelqu'un qui
+  voulait seulement voir à quoi ressemblerait une génération y perdrait
+  son programme. L'activation reste le `PUT /programs/{id}` existant.
+- **Rejouer le même identifiant rend le programme tel quel**, sans
+  régénérer. Un renvoi après coupure ne crée donc pas un second programme
+  et ne consomme pas le plafond du plan gratuit, et les retouches de la
+  personne ne sont jamais écrasées. « Régénérer » côté mobile, c'est
+  envoyer un NOUVEL identifiant — et comme la graine en dépend, le
+  programme obtenu est différent.
+
+**MARATHON et HYROX** passent par des jours à intitulé libre
+(`ProgramDay.label`, `templateId` nul). Le catalogue ne contient aucun
+mouvement de course, de rameur ni de traîneau, et `WorkoutTemplateSet`
+n'a ni durée ni distance : inventer ces exercices leur ferait porter des
+répétitions qui n'ont aucun sens et empoisonnerait `PersonalRecord`.
+L'ordre correct est la migration des cibles temps/distance d'abord. En
+attendant, le rapport DIT combien de jours ne produiront aucune donnée
+dans l'application — trois quarts des jours actifs d'un plan marathon.
+
+Les modèles engendrés portent `WorkoutTemplate.generatedFromProgramId` :
+une génération dépose plusieurs dizaines de séances, et sans cette
+colonne la bibliothèque de la personne se noierait sous des modèles
+qu'elle n'a pas composés.
 
 ## La suite du plan
 
-Prochaines tranches : les règles de génération par objectif (serveur,
-auditables), puis le calendrier daté. Voir `CARLYS_ROADMAP.md`, Plan 4.
+Prochaine tranche : le calendrier daté (date de début, vue par semaine,
+déplacement d'une séance, fait/manqué). Voir `CARLYS_ROADMAP.md`, Plan 4.
