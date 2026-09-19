@@ -29,9 +29,12 @@ dépôt. Le propriétaire du produit a tranché, les documents suivent :
    et un test d'écran épingle la base nommée.
 2. **Défis, ligues, pas** : le principe 5 de `docs/product/community.md`
    (« jamais un classement individuel ») et la promesse de
-   `docs/legal/privacy.md` (« ne lit pas les données de santé ») devront être
+   `docs/legal/privacy.md` (« ne lit pas les données de santé ») devaient être
    réécrits AVANT le code du Plan 7. Réécrire une politique publiée est un
-   acte juridique : il se fait en tête de plan, pas en catimini.
+   acte juridique : il se fait en tête de plan, pas en catimini. FAIT le
+   19 septembre 2026 — les deux documents portent l'arbitrage (voir le
+   premier point du Plan 7). Le Plan 7 n'est donc plus bloqué par un
+   arbitrage ; ce qu'il reste est du code et un document de règles de ligue.
 3. **Photo et description IA d'un repas** : `privacy.md` promet « Carlys ne te
    demande jamais de photo ». Acté au Plan 6 : la photo est transmise au
    modèle puis JETÉE, jamais stockée — la réécriture de la politique est
@@ -309,15 +312,22 @@ Existant : saisie manuelle (nom, kcal, 3 macros), journal du jour, suppression.
 
 ---
 
-## PLAN 7 — Défis & communauté  `[!] BLOQUÉ EN TÊTE DE PLAN`
+## PLAN 7 — Défis & communauté  `[~] DÉBLOQUÉ, préalable écrit`
 
 Existant : défis mensuels GLOBAUX à deux entrées (sport/culture),
 contribution +1 codée en dur, barre collective. Rien d'individuel, rien
 entre amis, aucune ligue, aucun pas.
 
-- [!] Préalable : réécrire le principe 5 de `community.md` (le limiter aux
+- [x] Préalable : réécrire le principe 5 de `community.md` (le limiter aux
       défis collectifs) et la phrase santé de `privacy.md` + consentement
-      dédié. Décision produit actée, actes d'écriture à faire en premier.
+      dédié. FAIT le 19 septembre 2026 : `community.md` principe 5 borné aux
+      défis COLLECTIFS, avec les trois conditions de tout classement
+      (périmètre choisi, fenêtre qui se ferme, aucun report dans le profil)
+      et la section finale qui acte l'arbitrage ; `privacy.md` — la phrase
+      « ni les données de santé de ton téléphone » retirée, remplacée par une
+      section « Les pas de ton téléphone (facultatif, consentement dédié) »
+      (pas SEULS, consentement distinct du compte, révocation qui efface),
+      base légale au §3, droit de retrait au §7, date de mise à jour.
 - [ ] Défis entre amis : portée, invitation/acceptation, durées (3 j / 7 j /
       30 j, extensible), clôture — modèle de données entier.
 - [ ] Généraliser la métrique d'un défi (`CommunityChallenge` ne sait compter

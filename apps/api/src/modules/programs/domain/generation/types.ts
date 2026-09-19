@@ -68,6 +68,14 @@ export interface GenerationInput {
 export interface PrescribedSet {
   position: number;
   targetReps: number | null;
+  /**
+   * Cible en SECONDES pour un maintien ou un bloc de cardio.
+   *
+   * Elle n'existait pas quand la génération a été écrite : la durée partait
+   * alors dans la note de l'exercice, faute de champ où la loger. Le champ
+   * existe maintenant, et la note n'a plus à porter une donnée.
+   */
+  targetDurationSeconds: number | null;
   restSeconds: number;
 }
 

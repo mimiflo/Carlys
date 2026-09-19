@@ -209,15 +209,19 @@ export function buildTemplate(
       exerciseId: chosen.id,
       exerciseName: chosen.name,
       position: exercises.length,
+      // La note ne porte plus la durée : elle vit dans `targetDurationSeconds`,
+      // où l'application sait la lire, la décompter et la comparer. Une donnée
+      // rangée dans une phrase est une donnée que seul un humain peut relire.
       notes: timed
-        ? `${dose.sets} × ${TIMED_SECONDS_DEFAULT} s`
+        ? 'Tiens la position sans bouger : la durée est la charge.'
         : 'Monte la charge quand tu tiens le haut de la fourchette.',
       sets: Array.from({ length: dose.sets }, (_unused, position) => ({
         position,
         // Une durée n'est PAS un nombre de répétitions : écrire 45 ici ferait
         // entrer « 45 répétitions de planche » dans les records personnels et
-        // les y laisserait pour toujours.
+        // les y laisserait pour toujours. Elle a son propre champ.
         targetReps: timed ? null : dose.reps,
+        targetDurationSeconds: timed ? TIMED_SECONDS_DEFAULT : null,
         restSeconds: rest,
       })),
     });

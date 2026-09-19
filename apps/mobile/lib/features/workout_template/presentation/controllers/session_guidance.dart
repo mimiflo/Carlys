@@ -24,6 +24,7 @@ class SessionGuidance {
     this.overline,
     this.targetReps,
     this.targetWeightKg,
+    this.targetDurationSeconds,
     this.restSeconds,
   });
 
@@ -57,6 +58,11 @@ class SessionGuidance {
 
   final int? targetReps;
   final double? targetWeightKg;
+
+  /// Cible chronométrée du programme : elle ouvre la carte de saisie sur le
+  /// chronomètre plutôt que sur les répétitions, sans quoi un gainage prescrit
+  /// « 45 s » se saisirait en charge et en reps.
+  final int? targetDurationSeconds;
 
   /// Repos prescrit après cette série ; `null` laisse la logique habituelle.
   final int? restSeconds;
@@ -127,6 +133,7 @@ SessionGuidance guidanceFor(
         'Série ${formatThousands(item.setPosition + 1)} sur '
         '${formatThousands(ofExercise.length)} · ${item.exerciseName}',
     targetReps: item.targetReps,
+    targetDurationSeconds: item.targetDurationSeconds,
     targetWeightKg: item.targetWeightKg,
     restSeconds: item.restSeconds,
   );

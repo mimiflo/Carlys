@@ -31,6 +31,8 @@ Map<String, dynamic> templatePutBody(WorkoutTemplateDetail template) {
                 'id': set.id,
                 'kind': set.kind.apiValue,
                 'targetReps': set.targetReps,
+                'targetDurationSeconds': set.targetDurationSeconds,
+                'targetDistanceMeters': set.targetDistanceMeters,
                 'targetWeightKg': set.targetWeightKg,
                 'restSeconds': set.restSeconds,
               },
@@ -87,6 +89,10 @@ WorkoutTemplateDetail templateDetailFromJson(Map<String, dynamic> json) {
                 position: (set['position'] as num?)?.toInt() ?? 0,
                 kind: SetKind.fromApi(set['kind'] as String? ?? 'NORMAL'),
                 targetReps: (set['targetReps'] as num?)?.toInt(),
+                targetDurationSeconds: (set['targetDurationSeconds'] as num?)
+                    ?.toInt(),
+                targetDistanceMeters: (set['targetDistanceMeters'] as num?)
+                    ?.toInt(),
                 targetWeightKg: (set['targetWeightKg'] as num?)?.toDouble(),
                 restSeconds: (set['restSeconds'] as num?)?.toInt(),
               ),

@@ -13,13 +13,26 @@ import { workoutSetKindSchema } from './workouts';
  * idempotente, le corps décrivant l'état final complet du modèle.
  */
 
-/** Série prévue : des CIBLES, pas des mesures. Les trois sont facultatives. */
+/**
+ * Série prévue : des CIBLES, pas des mesures. Toutes sont facultatives.
+ *
+ * Quatre cibles et non deux, parce que tous les mouvements ne se comptent
+ * pas en répétitions : un gainage se tient en SECONDES, une course se
+ * mesure en MÈTRES. Détourner `targetReps` pour les dire ferait entrer
+ * « 45 répétitions de planche » dans les records personnels, où le fait est
+ * dénormalisé et ne se rattrape plus.
+ *
+ * La série RÉALISÉE (`workouts.ts`) portait déjà `durationSeconds` et
+ * `distanceMeters` : c'est la prescription qui ne savait pas les exprimer.
+ */
 export const workoutTemplateSetSchema = z.object({
   id: z.string(),
   position: z.number(),
   kind: workoutSetKindSchema,
   targetReps: z.number().nullable(),
   targetWeightKg: z.number().nullable(),
+  targetDurationSeconds: z.number().nullable(),
+  targetDistanceMeters: z.number().nullable(),
   restSeconds: z.number().nullable(),
 });
 export type WorkoutTemplateSet = z.infer<typeof workoutTemplateSetSchema>;

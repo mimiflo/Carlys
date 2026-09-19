@@ -58,6 +58,8 @@ class WorkoutRowMapper {
     exerciseName: row.exerciseName,
     position: row.position,
     kind: SetKind.fromApi(row.kind),
+    durationSeconds: row.durationSeconds,
+    distanceMeters: row.distanceMeters,
     reps: row.reps,
     weightKg: row.weightKg,
     restSeconds: row.restSeconds,

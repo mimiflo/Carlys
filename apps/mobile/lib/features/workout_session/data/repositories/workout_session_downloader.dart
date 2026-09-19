@@ -227,6 +227,7 @@ class WorkoutSessionDownloader {
       reps: Value(set.reps),
       weightKg: Value(set.weightKg),
       durationSeconds: Value(set.durationSeconds),
+      distanceMeters: Value(set.distanceMeters),
       restSeconds: Value(set.restSeconds),
       rpe: Value(set.rpe),
       plannedReps: Value(set.plannedReps),

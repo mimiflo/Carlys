@@ -70,6 +70,11 @@ export function toRows(
           templateExerciseId: exerciseRow,
           position: set.position,
           targetReps: set.targetReps,
+          targetDurationSeconds: set.targetDurationSeconds,
+          // La distance reste nulle : le catalogue ne contient aucun exercice
+          // de course ni de rameur, donc rien à prescrire en mètres. Le champ
+          // attend le lot d'endurance, il ne se remplit pas d'avance.
+          targetDistanceMeters: null,
           // `targetWeightKg` reste NUL : le serveur ne lit ni les records ni
           // l'historique dans cette tranche, donc il ne sait pas ce que la
           // personne soulève — le prescrire serait l'inventer.

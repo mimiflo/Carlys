@@ -110,6 +110,8 @@ class WorkoutSetEntry {
     this.exerciseId,
     this.reps,
     this.weightKg,
+    this.durationSeconds,
+    this.distanceMeters,
     this.restSeconds,
     this.rpe,
     this.plannedReps,
@@ -123,6 +125,14 @@ class WorkoutSetEntry {
   final SetKind kind;
   final int? reps;
   final double? weightKg;
+
+  /// Ce qui se compte en TEMPS ou en DISTANCE : un gainage, une course.
+  /// `reps` ne sait pas les dire — l'y écrire ferait entrer « 45 répétitions
+  /// de planche » dans les records personnels, où le fait est dénormalisé et
+  /// ne se rattrape plus.
+  final int? durationSeconds;
+  final int? distanceMeters;
+
   final int? restSeconds;
   final int? rpe;
 
@@ -182,6 +192,8 @@ class AddSetInput {
     this.kind = SetKind.normal,
     this.reps,
     this.weightKg,
+    this.durationSeconds,
+    this.distanceMeters,
     this.restSeconds,
     this.rpe,
     this.plannedReps,
@@ -195,6 +207,13 @@ class AddSetInput {
   final SetKind kind;
   final int? reps;
   final double? weightKg;
+
+  /// Durée tenue et distance parcourue : ce qu'un mouvement chronométré ou
+  /// une course laisse comme trace. Les deux restent nulles pour une série
+  /// de musculation ordinaire.
+  final int? durationSeconds;
+  final int? distanceMeters;
+
   final int? restSeconds;
   final int? rpe;
 

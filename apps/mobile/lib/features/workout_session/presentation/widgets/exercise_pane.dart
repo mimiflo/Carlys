@@ -6,6 +6,7 @@ import '../../domain/entities/workout.dart';
 import 'exercise_picker_sheet.dart';
 import 'exercise_set_row.dart';
 import 'set_entry_card.dart';
+import 'set_entry_fields.dart';
 
 /// Panneau défilant de l'exercice en cours : sur-titre, nom, carte de saisie
 /// et séries déjà enregistrées suivies de la série à saisir.
@@ -21,6 +22,7 @@ class ExercisePane extends StatelessWidget {
     required this.exerciseSets,
     required this.previous,
     required this.onValidate,
+    this.plannedDurationSeconds,
     required this.onDelete,
     this.overline,
     this.planItemId,
@@ -52,6 +54,7 @@ class ExercisePane extends StatelessWidget {
   final String? planItemId;
 
   final int? plannedReps;
+  final int? plannedDurationSeconds;
   final double? plannedWeightKg;
 
   /// Séries prévues restant après celle en cours de saisie — dessinées en
@@ -62,7 +65,7 @@ class ExercisePane extends StatelessWidget {
   final VoidCallback? onSkipSet;
   final VoidCallback? onSkipExercise;
 
-  final void Function(double weightKg, int reps) onValidate;
+  final void Function(SetEntryValues values) onValidate;
   final Future<void> Function(String setId) onDelete;
 
   @override
@@ -99,6 +102,8 @@ class ExercisePane extends StatelessWidget {
             previous: previous,
             plannedReps: plannedReps,
             plannedWeightKg: plannedWeightKg,
+            plannedDurationSeconds: plannedDurationSeconds,
+            measure: exercise.measure,
             onValidate: onValidate,
           ),
           if (onSkipSet != null || onSkipExercise != null) ...[

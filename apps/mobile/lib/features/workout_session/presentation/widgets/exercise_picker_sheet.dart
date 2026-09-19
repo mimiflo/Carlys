@@ -8,10 +8,30 @@ import '../../../exercises/presentation/providers/exercise_catalog_providers.dar
 
 /// Exercice choisi pour la prochaine série.
 class PickedExercise {
-  const PickedExercise({required this.name, this.exerciseId});
+  const PickedExercise({
+    required this.name,
+    this.exerciseId,
+    this.measure = SetMeasure.repsAndWeight,
+  });
 
   final String? exerciseId;
   final String name;
+
+  /// Ce que ce mouvement se mesure EN : des répétitions et une charge, ou du
+  /// temps et de la distance. Déduit du catalogue pour ouvrir la saisie sur
+  /// la bonne unité — une course ne se compte pas en répétitions. Reste un
+  /// DÉFAUT : la carte laisse basculer, parce qu'un gainage tenu au maximum
+  /// se chronomètre même si le catalogue le classe en renforcement.
+  final SetMeasure measure;
+}
+
+/// L'unité d'une série. Le catalogue la propose, la personne la tranche.
+enum SetMeasure {
+  repsAndWeight,
+  timeAndDistance;
+
+  static SetMeasure of(catalog.ExerciseKind kind) =>
+      kind == catalog.ExerciseKind.cardio ? timeAndDistance : repsAndWeight;
 }
 
 /// Feuille de sélection d'exercice depuis le catalogue (avec recherche).
@@ -183,9 +203,13 @@ class _Resultats extends StatelessWidget {
           subtitle: exercise.primaryMuscleGroup == null
               ? null
               : Text(exercise.primaryMuscleGroup!.name),
-          onTap: () => Navigator.of(
-            context,
-          ).pop(PickedExercise(exerciseId: exercise.id, name: exercise.name)),
+          onTap: () => Navigator.of(context).pop(
+            PickedExercise(
+              exerciseId: exercise.id,
+              name: exercise.name,
+              measure: SetMeasure.of(exercise.kind),
+            ),
+          ),
         );
       },
     );

@@ -29,9 +29,24 @@ l'application ne dépend d'elle.
    miroir Dart `features/community/domain/friend_code.dart` côté mobile.
 4. **On n'écrit que chez ses amis.** Un encouragement vers quiconque n'est pas
    un ami ACCEPTÉ est refusé (`403`). Le fil de chacun est privé.
-5. **La progression des défis est collective.** La barre montre
-   `somme des contributions / objectif`, bornée à 1 — l'effort du groupe,
-   jamais un classement individuel.
+5. **Un défi COLLECTIF ne classe personne.** La barre d'un défi ouvert à
+   toute la communauté montre `somme des contributions / objectif`, bornée à
+   1 : l'effort du groupe, et rien d'autre — la part d'une personne nommée ne
+   sort JAMAIS du serveur. Cette règle porte sur les défis collectifs, et sur
+   eux seuls (réécriture du 19 septembre 2026 : elle interdisait tout
+   classement individuel, ce qui rendait impossibles les défis entre amis et
+   les ligues décidés par le propriétaire du produit). Un défi ENTRE AMIS et
+   une LIGUE ordonnent des personnes par construction ; ils sont permis, sous
+   trois conditions qui les tiennent à distance du titre Carlys :
+   - **périmètre CHOISI** — on n'est classé qu'avec des gens qu'on a acceptés
+     (invitation à un défi) ou après avoir rejoint une ligue ; jamais un
+     classement mondial subi, jamais un ami qui découvre son rang sans avoir
+     rien demandé ;
+   - **fenêtre qui SE FERME** — un classement expire avec sa période et
+     repart ; il ne devient jamais un palier que la personne « est » ;
+   - **aucun report dans le profil** — ni point, ni axe, ni titre, ni
+     récompense (voir [progression.md](progression.md), « Un seul score : la
+     règle de non-concurrence »).
 6. **Chacun peut se protéger, sans que l'autre le sache.** Bloquer quelqu'un
    est unilatéral et OPAQUE : l'amitié et les demandes en attente sont
    retirées dans les deux sens, puis, pour chacun des deux, l'autre répond
@@ -319,11 +334,26 @@ sienne, alors qu’ils remettent la série à zéro. Le même arrêt ferait recu
 écran et pas l’autre, et celui qui recule serait servi par le serveur alors que
 le profil, lui, est local.
 
-**Elle contredit frontalement le principe 5.** « La progression des défis est
-collective, jamais un classement individuel » est écrit ici comme non
-négociable, et le service le tient : seule la somme agrégée des contributions
-sort du serveur, jamais la part d’une personne nommée. Une ligue ordonne des
-personnes, donc c’est un classement individuel, par construction. Aucune
-rédaction ne réconcilie les deux. Il faut trancher avant de coder : soit le
-principe 5 est réécrit pour ne porter que sur les défis, soit la ligue ne se
-fait pas.
+**Elle contredisait le principe 5 — tranché le 19 septembre 2026.** Le
+principe disait « la progression des défis est collective, jamais un
+classement individuel », sans restriction : une ligue ordonne des personnes,
+donc aucune rédaction ne réconciliait les deux. Le propriétaire du produit a
+tranché en faveur des ligues et des défis entre amis ; le principe 5 ci-dessus
+est réécrit en conséquence et ne porte plus que sur les défis COLLECTIFS, avec
+les trois conditions qui encadrent tout classement (périmètre choisi, fenêtre
+qui se ferme, aucun report dans le profil). Ce que le service tient reste
+intact pour les défis collectifs : seule la somme agrégée des contributions
+sort du serveur, jamais la part d’une personne nommée
+(`community-challenges.repository.ts`, `withStats`).
+
+**Sur quel fait une ligue compte.** Pas sur `streakDays` (raison ci-dessus),
+et pas non plus sur « les semaines avec séance » : c’est EXACTEMENT ce que
+l’axe Constance compte déjà (`progression_engine.dart`, `_constance` : les
+semaines avec au moins une séance terminée sur les huit dernières). Une ligue
+assise dessus ne mesurerait pas autre chose, elle repèserait le même fait sur
+une autre échelle, et le même point de bascule ferait bouger deux nombres à
+l’écran. Une ligue compte donc un fait que le profil ne regarde pas —
+par exemple la somme des contributions versées aux défis pendant la période,
+ou une métrique (pas, eau) qui n’entre dans aucun axe. Le test est simple et
+il s’applique avant d’écrire la règle : si le fait figure dans
+`ProgressionFacts` ou dans `RewardFacts`, la ligue ne le compte pas.

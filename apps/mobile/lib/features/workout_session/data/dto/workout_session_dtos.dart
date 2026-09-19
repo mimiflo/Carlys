@@ -48,6 +48,7 @@ class RemoteWorkoutSet {
     this.reps,
     this.weightKg,
     this.durationSeconds,
+    this.distanceMeters,
     this.restSeconds,
     this.rpe,
     this.plannedReps,
@@ -62,6 +63,7 @@ class RemoteWorkoutSet {
   final int? reps;
   final double? weightKg;
   final int? durationSeconds;
+  final int? distanceMeters;
   final int? restSeconds;
   final int? rpe;
   final int? plannedReps;
@@ -146,6 +148,7 @@ RemoteWorkoutSet _setFromJson(Map<String, dynamic> json) {
     reps: json['reps'] as int?,
     weightKg: _toDouble(json['weightKg']),
     durationSeconds: json['durationSeconds'] as int?,
+    distanceMeters: json['distanceMeters'] as int?,
     restSeconds: json['restSeconds'] as int?,
     rpe: json['rpe'] as int?,
     plannedReps: json['plannedReps'] as int?,

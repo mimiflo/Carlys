@@ -344,8 +344,10 @@ describe('génération de programme', () => {
           if (!chrono.has(exercise.exerciseId)) continue;
           for (const set of exercise.sets) {
             expect(set.targetReps).toBeNull();
+            // La durée a son CHAMP : rangée dans la note, l'application ne
+            // saurait ni la décompter ni la comparer d'une semaine à l'autre.
+            expect(set.targetDurationSeconds).toBeGreaterThan(0);
           }
-          expect(exercise.notes).toMatch(/\d+ s$/);
         }
       }
     });

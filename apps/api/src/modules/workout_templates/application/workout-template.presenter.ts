@@ -20,6 +20,8 @@ function presentPlannedSet(set: WorkoutTemplateSet): WorkoutTemplateSetContract 
     kind: set.kind,
     targetReps: set.targetReps,
     targetWeightKg: set.targetWeightKg === null ? null : Number(set.targetWeightKg),
+    targetDurationSeconds: set.targetDurationSeconds,
+    targetDistanceMeters: set.targetDistanceMeters,
     restSeconds: set.restSeconds,
   };
 }

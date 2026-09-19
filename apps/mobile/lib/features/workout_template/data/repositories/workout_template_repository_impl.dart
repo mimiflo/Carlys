@@ -207,6 +207,8 @@ class WorkoutTemplateRepositoryImpl implements WorkoutTemplateRepository {
             setPosition: set.position,
             kind: Value(set.kind.apiValue),
             targetReps: Value(set.targetReps),
+            targetDurationSeconds: Value(set.targetDurationSeconds),
+            targetDistanceMeters: Value(set.targetDistanceMeters),
             targetWeightKg: Value(set.targetWeightKg),
             restSeconds: Value(set.restSeconds),
           ),

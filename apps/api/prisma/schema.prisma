@@ -689,6 +689,15 @@ model WorkoutTemplateSet {
   kind               WorkoutSetKind @default(NORMAL)
   targetReps         Int?
   targetWeightKg     Decimal?       @db.Decimal(6, 2)
+  /// Cibles des mouvements qui se comptent en TEMPS ou en DISTANCE : un
+  /// gainage, une course, un rameur. Elles existent parce que `targetReps`
+  /// ne sait pas les dire : y écrire « 45 » pour quarante-cinq secondes de
+  /// planche ferait entrer « 45 répétitions » dans les records personnels,
+  /// et les y laisserait — le fait est dénormalisé et ne se rattrape pas.
+  /// La série RÉALISÉE porte déjà les deux (`WorkoutSet`) : c'est la
+  /// PRESCRIPTION qui ne savait pas les exprimer.
+  targetDurationSeconds Int?
+  targetDistanceMeters  Int?
   restSeconds        Int?
 
   templateExercise WorkoutTemplateExercise @relation(fields: [templateExerciseId], references: [id], onDelete: Cascade)

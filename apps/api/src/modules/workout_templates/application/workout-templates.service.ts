@@ -17,6 +17,8 @@ export interface PlannedSetInput {
   id: string;
   kind?: WorkoutSetKind | null;
   targetReps?: number | null;
+  targetDurationSeconds?: number | null;
+  targetDistanceMeters?: number | null;
   targetWeightKg?: number | null;
   restSeconds?: number | null;
 }
@@ -240,6 +242,8 @@ export class WorkoutTemplatesService {
           kind: set.kind ?? WorkoutSetKind.NORMAL,
           targetReps: set.targetReps ?? null,
           targetWeightKg: set.targetWeightKg ?? null,
+          targetDurationSeconds: set.targetDurationSeconds ?? null,
+          targetDistanceMeters: set.targetDistanceMeters ?? null,
           restSeconds: set.restSeconds ?? null,
         });
       });

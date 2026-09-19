@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/workout.dart';
-import 'set_stepper_field.dart';
+import 'exercise_picker_sheet.dart' show SetMeasure;
+import 'set_entry_actions.dart';
+import 'set_entry_fields.dart';
 
 /// Carte de saisie de la série en cours (maquette 2e) : rang de la série,
 /// cible du programme s'il y en a une, rappel de la performance précédente,
@@ -21,6 +23,8 @@ class SetEntryCard extends StatefulWidget {
     required this.onValidate,
     this.plannedReps,
     this.plannedWeightKg,
+    this.plannedDurationSeconds,
+    this.measure = SetMeasure.repsAndWeight,
     super.key,
   });
 
@@ -33,8 +37,14 @@ class SetEntryCard extends StatefulWidget {
   /// Cible du programme pour cette série, `null` hors modèle.
   final int? plannedReps;
   final double? plannedWeightKg;
+  final int? plannedDurationSeconds;
 
-  final void Function(double weightKg, int reps) onValidate;
+  /// L'unité PROPOSÉE, venue du catalogue. La carte laisse en changer : un
+  /// gainage tenu au maximum se chronomètre même si le catalogue le classe
+  /// en renforcement, et un rameur se compte parfois en coups.
+  final SetMeasure measure;
+
+  final void Function(SetEntryValues values) onValidate;
 
   /// Valeurs de départ quand aucune cible ni aucun historique n'existe (pas de
   /// donnée à rappeler : ce sont des valeurs de formulaire, jamais affichées
@@ -43,11 +53,12 @@ class SetEntryCard extends StatefulWidget {
   static const int _defaultReps = 10;
   static const double _weightStep = 2.5;
 
-  /// Géométrie de la maquette : CTA accent avec halo `0 12px 30px -12px`.
-  static const double _ctaIconSize = 19;
-  static const double _glowBlur = 30;
-  static const double _glowSpread = -12;
-  static const double _glowOffset = 12;
+  /// Amorces du mode chronométré. La distance part de ZÉRO : un gainage ne va
+  /// nulle part, et proposer mille mètres obligerait à corriger un chiffre
+  /// que personne n'a saisi.
+  static const int _defaultDurationSeconds = 60;
+  static const int _durationStep = 15;
+  static const int _distanceStep = 100;
 
   @override
   State<SetEntryCard> createState() => _SetEntryCardState();
@@ -56,6 +67,17 @@ class SetEntryCard extends StatefulWidget {
 class _SetEntryCardState extends State<SetEntryCard> {
   late double _weightKg = _seedWeight();
   late int _reps = _seedReps();
+  late int _durationSeconds = _seedDuration();
+  late int _distanceMeters = widget.previous?.distanceMeters ?? 0;
+  late SetMeasure _measure = _seedMeasure();
+
+  /// Une cible chronométrée du programme l'emporte sur le type du catalogue :
+  /// si le plan dit « 45 s », la carte s'ouvre sur le chronomètre, même pour
+  /// un mouvement que le catalogue classe en renforcement — c'est le cas de
+  /// tous les gainages.
+  SetMeasure _seedMeasure() => widget.plannedDurationSeconds != null
+      ? SetMeasure.timeAndDistance
+      : widget.measure;
 
   /// La cible du programme prime sur la dernière performance : c'est ce qu'on
   /// a décidé de faire aujourd'hui.
@@ -67,6 +89,11 @@ class _SetEntryCardState extends State<SetEntryCard> {
   int _seedReps() =>
       widget.plannedReps ?? widget.previous?.reps ?? SetEntryCard._defaultReps;
 
+  int _seedDuration() =>
+      widget.plannedDurationSeconds ??
+      widget.previous?.durationSeconds ??
+      SetEntryCard._defaultDurationSeconds;
+
   @override
   void didUpdateWidget(SetEntryCard oldWidget) {
     super.didUpdateWidget(oldWidget);
@@ -74,9 +101,19 @@ class _SetEntryCardState extends State<SetEntryCard> {
     // programme : on repart de la meilleure amorce disponible.
     if (oldWidget.previous?.id != widget.previous?.id ||
         oldWidget.plannedReps != widget.plannedReps ||
-        oldWidget.plannedWeightKg != widget.plannedWeightKg) {
+        oldWidget.plannedWeightKg != widget.plannedWeightKg ||
+        oldWidget.plannedDurationSeconds != widget.plannedDurationSeconds) {
       _weightKg = _seedWeight();
       _reps = _seedReps();
+      _durationSeconds = _seedDuration();
+      _distanceMeters = widget.previous?.distanceMeters ?? 0;
+    }
+    // L'unité PROPOSÉE change avec l'exercice ; celle que la personne a
+    // choisie à la main ne doit pas survivre au changement d'exercice, sinon
+    // le squat suivant s'ouvrirait en chronomètre.
+    if (oldWidget.measure != widget.measure ||
+        oldWidget.plannedDurationSeconds != widget.plannedDurationSeconds) {
+      _measure = _seedMeasure();
     }
   }
 
@@ -115,42 +152,47 @@ class _SetEntryCardState extends State<SetEntryCard> {
             ),
           ],
           const SizedBox(height: AppSpacing.md),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: SetStepperField(
-                  label: 'Charge',
-                  unit: 'kg',
-                  value: formatDecimal(_weightKg),
-                  onDecrement: _weightKg >= SetEntryCard._weightStep
-                      ? () => setState(
-                          () => _weightKg -= SetEntryCard._weightStep,
-                        )
-                      : null,
-                  onIncrement: () =>
-                      setState(() => _weightKg += SetEntryCard._weightStep),
-                ),
-              ),
-              const SizedBox(width: AppSpacing.sm),
-              Expanded(
-                child: SetStepperField(
-                  label: 'Répétitions',
-                  unit: 'reps',
-                  value: formatThousands(_reps),
-                  onDecrement: _reps > 1
-                      ? () => setState(() => _reps -= 1)
-                      : null,
-                  onIncrement: () => setState(() => _reps += 1),
-                ),
-              ),
-            ],
+          if (_measure == SetMeasure.repsAndWeight)
+            RepsAndWeightFields(
+              weightKg: _weightKg,
+              reps: _reps,
+              weightStep: SetEntryCard._weightStep,
+              onWeight: (value) => setState(() => _weightKg = value),
+              onReps: (value) => setState(() => _reps = value),
+            )
+          else
+            TimeAndDistanceFields(
+              durationSeconds: _durationSeconds,
+              distanceMeters: _distanceMeters,
+              durationStep: SetEntryCard._durationStep,
+              distanceStep: SetEntryCard._distanceStep,
+              onDuration: (value) => setState(() => _durationSeconds = value),
+              onDistance: (value) => setState(() => _distanceMeters = value),
+            ),
+          const SizedBox(height: AppSpacing.xs),
+          SetMeasureToggle(
+            measure: _measure,
+            onChange: (value) => setState(() => _measure = value),
           ),
           const SizedBox(height: AppSpacing.md),
-          _ValidateCta(onPressed: () => widget.onValidate(_weightKg, _reps)),
+          SetValidateCta(onPressed: () => widget.onValidate(_values())),
         ],
       ),
     );
+  }
+
+  /// Ce que la validation transmet : le couple de l'unité choisie, et LUI
+  /// SEUL. Envoyer les quatre valeurs ferait enregistrer une charge de 20 kg
+  /// sur une course, parce que le formulaire l'avait en mémoire.
+  SetEntryValues _values() {
+    return _measure == SetMeasure.repsAndWeight
+        ? SetEntryValues(weightKg: _weightKg, reps: _reps)
+        : SetEntryValues(
+            durationSeconds: _durationSeconds,
+            // Zéro mètre n'est pas une distance : un gainage ne va nulle part,
+            // et l'enregistrer à 0 laisserait croire à une mesure.
+            distanceMeters: _distanceMeters > 0 ? _distanceMeters : null,
+          );
   }
 
   /// La cible du programme passe en premier, en accent ; le rappel de la
@@ -194,51 +236,3 @@ class _SetEntryCardState extends State<SetEntryCard> {
 }
 
 /// Unique action accent de l'écran : valider la série saisie.
-class _ValidateCta extends StatelessWidget {
-  const _ValidateCta({required this.onPressed});
-
-  final VoidCallback onPressed;
-
-  @override
-  Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: AppColors.cta,
-        borderRadius: AppRadius.buttonAll,
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.7),
-            blurRadius: SetEntryCard._glowBlur,
-            spreadRadius: SetEntryCard._glowSpread,
-            offset: const Offset(0, SetEntryCard._glowOffset),
-          ),
-        ],
-      ),
-      child: FilledButton(
-        style: FilledButton.styleFrom(
-          backgroundColor: Colors.transparent,
-          foregroundColor: AppColors.neutral0,
-          shadowColor: Colors.transparent,
-          textStyle: AppTypography.subheading.copyWith(
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        onPressed: onPressed,
-        child: const Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(AppIcons.check, size: SetEntryCard._ctaIconSize),
-            SizedBox(width: AppSpacing.xs),
-            Flexible(
-              child: Text(
-                'Valider la série',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}

@@ -39,6 +39,8 @@ class PlannedSet {
     this.kind = SetKind.normal,
     this.targetReps,
     this.targetWeightKg,
+    this.targetDurationSeconds,
+    this.targetDistanceMeters,
     this.restSeconds,
   });
 
@@ -49,6 +51,13 @@ class PlannedSet {
   final SetKind kind;
   final int? targetReps;
   final double? targetWeightKg;
+
+  /// Cibles chronométrées : un gainage se prescrit en SECONDES, une course en
+  /// MÈTRES. Les mettre dans `targetReps` ferait entrer « 45 répétitions de
+  /// planche » dans les records personnels, où le fait est dénormalisé.
+  final int? targetDurationSeconds;
+  final int? targetDistanceMeters;
+
   final int? restSeconds;
 }
 
@@ -139,6 +148,8 @@ class PlannedSetInput {
     this.kind = SetKind.normal,
     this.targetReps,
     this.targetWeightKg,
+    this.targetDurationSeconds,
+    this.targetDistanceMeters,
     this.restSeconds,
   });
 
@@ -146,6 +157,13 @@ class PlannedSetInput {
   final SetKind kind;
   final int? targetReps;
   final double? targetWeightKg;
+
+  /// Cibles chronométrées : un gainage se prescrit en SECONDES, une course en
+  /// MÈTRES. Les mettre dans `targetReps` ferait entrer « 45 répétitions de
+  /// planche » dans les records personnels, où le fait est dénormalisé.
+  final int? targetDurationSeconds;
+  final int? targetDistanceMeters;
+
   final int? restSeconds;
 }
 

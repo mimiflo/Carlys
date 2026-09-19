@@ -1,6 +1,6 @@
 # Politique de confidentialité de Carlys
 
-Dernière mise à jour : 3 septembre 2026.
+Dernière mise à jour : 19 septembre 2026.
 
 Carlys est une application mobile de suivi d'entraînement, accompagnée de
 quelques pages web (vérification d'adresse, nouveau mot de passe, retours de
@@ -73,8 +73,9 @@ corporelle et hydratation.
 ### Ta communauté
 
 Tes demandes d'ami envoyées et reçues, ta liste d'amis, les encouragements
-envoyés et reçus, ta participation aux défis, tes réponses aux quiz et ton
-réglage de partage de progression.
+envoyés et reçus, ta participation aux défis — collectifs comme entre amis —
+et ce que tu y as apporté, ton classement dans une ligue pendant la période
+en cours, tes réponses aux quiz et ton réglage de partage de progression.
 
 ### Tes notifications
 
@@ -112,7 +113,31 @@ figure jamais.
 
 Les pages web de Carlys ne déposent aucun cookie et n'embarquent aucun
 traceur ni outil de mesure d'audience. L'application ne lit ni tes contacts,
-ni ta position, ni les données de santé de ton téléphone.
+ni ta position.
+
+### Les pas de ton téléphone (facultatif, consentement dédié)
+
+Par défaut, Carlys ne lit RIEN dans le service de santé de ton téléphone
+(Health Connect sur Android, Santé/HealthKit sur iOS).
+
+Si tu veux participer à un défi qui compte les pas, et seulement à ce
+moment-là, l'application te demande d'abord un consentement DISTINCT de celui
+de ton compte — un écran qui dit ce qui sera lu et à quoi cela sert — puis
+l'autorisation du système d'exploitation. Tant que les deux ne sont pas
+accordés, rien n'est lu et le reste de l'application fonctionne comme avant.
+
+Ce qui est alors lu, puis transmis à nos serveurs : ton **nombre de pas par
+journée**, et rien d'autre. Ni fréquence cardiaque, ni sommeil, ni poids
+mesuré ailleurs, ni position, ni séance enregistrée par une autre
+application. Ces totaux servent uniquement à faire avancer les défis auxquels
+tu participes.
+
+Tu retires ce consentement quand tu veux, dans l'application (Profil →
+Confidentialité → Pas et données de santé) ou en révoquant l'autorisation
+dans les réglages de ton téléphone. Le retrait arrête la lecture
+immédiatement et efface de nos serveurs les totaux déjà remontés. Ce qu'ils
+avaient déjà apporté à un défi reste acquis au compteur COLLECTIF de ce défi,
+qui ne redescend pas — il n'est plus rattaché à toi.
 
 ## 3. Pourquoi Carlys traite ces données
 
@@ -127,6 +152,10 @@ ni ta position, ni les données de santé de ton téléphone.
   nutrition, conversations avec le coach) : c'est ton consentement. Tu les
   saisis toi-même, elles sont facultatives, et tu peux les effacer ou cesser
   d'utiliser ces fonctions à tout moment.
+- **Pour tes pas** (lus dans le service de santé de ton téléphone) : c'est un
+  consentement SÉPARÉ, demandé uniquement si tu actives un défi qui les
+  compte, et révocable à tout moment sans toucher au reste de ton compte.
+  Refuser ce consentement n'enlève rien d'autre que ces défis-là.
 - **Pour la communauté** : ton nom d'affichage, ta série de jours et, si tu
   l'as activé, ta progression sont visibles de tes amis uniquement. Un refus
   de demande d'ami n'est jamais notifié à la personne refusée.
@@ -229,7 +258,10 @@ Tu peux, à tout moment :
   immédiate et irréversible. Tu peux aussi nous écrire à l'adresse de contact,
   l'effet est exactement le même.
 - **Retirer ton consentement** pour les données de santé : efface ton profil
-  physique et tes mesures, ou cesse d'utiliser la nutrition et le coach.
+  physique et tes mesures, ou cesse d'utiliser la nutrition et le coach. Pour
+  les pas lus dans ton téléphone, le retrait est un geste à part : Profil →
+  Confidentialité → Pas et données de santé, ou les réglages de ton
+  téléphone. Il arrête la lecture et efface les totaux déjà remontés.
 - **T'opposer** à un traitement fondé sur notre intérêt légitime, ou en
   demander la limitation.
 - **Obtenir la portabilité** de tes données dans un format structuré.

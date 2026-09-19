@@ -84,7 +84,14 @@ class LocalWorkoutSets extends Table {
   TextColumn get kind => text().withDefault(const Constant('NORMAL'))();
   IntColumn get reps => integer().nullable()();
   RealColumn get weightKg => real().nullable()();
+
+  /// Ce qui se compte en TEMPS ou en DISTANCE : un gainage, une course, un
+  /// rameur. `reps` ne sait pas les dire, et les y écrire ferait entrer
+  /// « 45 répétitions de planche » dans les records — un fait dénormalisé
+  /// qui ne se rattrape pas. Le serveur portait déjà les deux colonnes ;
+  /// l'appareil n'en connaissait qu'une, donc la distance se perdait.
   IntColumn get durationSeconds => integer().nullable()();
+  IntColumn get distanceMeters => integer().nullable()();
   IntColumn get restSeconds => integer().nullable()();
   IntColumn get rpe => integer().nullable()();
 
@@ -147,6 +154,13 @@ class LocalTemplateSets extends Table {
   TextColumn get kind => text().withDefault(const Constant('NORMAL'))();
   IntColumn get targetReps => integer().nullable()();
   RealColumn get targetWeightKg => real().nullable()();
+
+  /// Cibles des mouvements qui se comptent en TEMPS ou en DISTANCE. Un
+  /// gainage prescrit « 45 s » n'a pas de répétitions : les écrire dans
+  /// `targetReps` ferait entrer « 45 répétitions » dans les records.
+  IntColumn get targetDurationSeconds => integer().nullable()();
+  IntColumn get targetDistanceMeters => integer().nullable()();
+
   IntColumn get restSeconds => integer().nullable()();
 
   @override
@@ -181,6 +195,13 @@ class LocalSessionPlanItems extends Table {
   TextColumn get kind => text().withDefault(const Constant('NORMAL'))();
   IntColumn get targetReps => integer().nullable()();
   RealColumn get targetWeightKg => real().nullable()();
+
+  /// Cibles des mouvements qui se comptent en TEMPS ou en DISTANCE. Un
+  /// gainage prescrit « 45 s » n'a pas de répétitions : les écrire dans
+  /// `targetReps` ferait entrer « 45 répétitions » dans les records.
+  IntColumn get targetDurationSeconds => integer().nullable()();
+  IntColumn get targetDistanceMeters => integer().nullable()();
+
   IntColumn get restSeconds => integer().nullable()();
 
   /// Série réalisée qui a honoré cet item, sinon null.
@@ -290,8 +311,12 @@ class AppDatabase extends _$AppDatabase {
   ///    statut et ordre d'écriture) ; `serverErrorCount` sur la file, pour le
   ///    plafond de tentatives ; `ownerUserId` sur la file, pour ne jamais
   ///    drainer les opérations d'un autre compte.
+  /// 6. Le TEMPS et la DISTANCE, des deux côtés : `distanceMeters` sur la
+  ///    série réalisée, `targetDurationSeconds` / `targetDistanceMeters` sur
+  ///    la série prescrite et sur l'item de plan. L'appareil ne savait dire
+  ///    ni « j'ai couru 2 km » ni « tiens la planche 45 s » — le serveur, si.
   @override
-  int get schemaVersion => 5;
+  int get schemaVersion => 6;
 
   /// Vide TOUTES les tables, dans une transaction : rien ne survit d'un
   /// compte à l'autre sur le même appareil. Appelée à la frontière de compte
@@ -368,6 +393,42 @@ class AppDatabase extends _$AppDatabase {
         await migrator.createIndex(idxLocalWorkoutSetsSessionId);
         await migrator.createIndex(idxLocalSessionPlanItemsSessionId);
         await migrator.createIndex(idxSyncOperationsStatusCreatedAt);
+      }
+      if (from < 6) {
+        // Colonne nullable : les séries déjà saisies restent intactes et
+        // gardent une distance nulle, ce qui est exact — personne n'avait pu
+        // en saisir une.
+        await migrator.addColumn(
+          localWorkoutSets,
+          localWorkoutSets.distanceMeters,
+        );
+      }
+      // Les cibles chronométrées, côté PRESCRIPTION. Un modèle déjà local les
+      // reçoit nulles, ce qui est exact : le serveur ne savait pas encore les
+      // exprimer quand il les a servies.
+      //
+      // `from >= 2` et non `from < 6` seul, pour la même raison que le palier
+      // de la version 2 plus haut : les tables de modèles sont créées par
+      // `from < 2` avec leur définition ACTUELLE, colonnes comprises. Les
+      // ajouter ensuite lève « duplicate column name » et laisse la base
+      // inutilisable — la garde de migration l'a attrapé.
+      if (from >= 2 && from < 6) {
+        await migrator.addColumn(
+          localTemplateSets,
+          localTemplateSets.targetDurationSeconds,
+        );
+        await migrator.addColumn(
+          localTemplateSets,
+          localTemplateSets.targetDistanceMeters,
+        );
+        await migrator.addColumn(
+          localSessionPlanItems,
+          localSessionPlanItems.targetDurationSeconds,
+        );
+        await migrator.addColumn(
+          localSessionPlanItems,
+          localSessionPlanItems.targetDistanceMeters,
+        );
       }
     },
   );

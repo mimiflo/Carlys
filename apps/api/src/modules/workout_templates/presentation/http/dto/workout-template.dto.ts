@@ -45,6 +45,27 @@ export class PlannedSetDto {
   @Max(WORKOUT_LIMITS.weightKgMax)
   targetWeightKg?: number | null;
 
+  /**
+   * Cibles des mouvements qui se comptent en TEMPS ou en DISTANCE.
+   *
+   * Elles existent pour que `targetReps` n'ait jamais à les porter : « 45 »
+   * écrit en répétitions pour quarante-cinq secondes de planche entrerait
+   * dans les records personnels et y resterait.
+   */
+  @ApiPropertyOptional({ maximum: WORKOUT_LIMITS.durationSecondsMax })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(WORKOUT_LIMITS.durationSecondsMax)
+  targetDurationSeconds?: number | null;
+
+  @ApiPropertyOptional({ maximum: WORKOUT_LIMITS.distanceMetersMax })
+  @IsOptional()
+  @IsInt()
+  @Min(0)
+  @Max(WORKOUT_LIMITS.distanceMetersMax)
+  targetDistanceMeters?: number | null;
+
   @ApiPropertyOptional({ maximum: WORKOUT_LIMITS.restSecondsMax })
   @IsOptional()
   @IsInt()

@@ -13,6 +13,7 @@ import 'active_workout_choices.dart';
 import 'active_workout_header.dart';
 import 'exercise_pane.dart';
 import 'exercise_picker_sheet.dart';
+import 'set_entry_fields.dart';
 import 'workout_close_dialog.dart';
 import 'workout_progress_segments.dart';
 
@@ -113,13 +114,9 @@ class _ActiveWorkoutBodyState extends ConsumerState<ActiveWorkoutBody> {
                               sessionId: _sessionId,
                               exercisePosition: guidance!.exercisePosition!,
                             ),
-                  onValidate: (weightKg, reps) => _validate(
-                    exercise,
-                    exerciseSets,
-                    guidance,
-                    weightKg,
-                    reps,
-                  ),
+                  plannedDurationSeconds: guidance?.targetDurationSeconds,
+                  onValidate: (values) =>
+                      _validate(exercise, exerciseSets, guidance, values),
                   onDelete: (setId) =>
                       ref.read(workoutActionsProvider).deleteSet(setId),
                 ),
@@ -164,8 +161,7 @@ class _ActiveWorkoutBodyState extends ConsumerState<ActiveWorkoutBody> {
     PickedExercise exercise,
     List<WorkoutSetEntry> exerciseSets,
     SessionGuidance? guidance,
-    double weightKg,
-    int reps,
+    SetEntryValues values,
   ) async {
     final restSeconds = guidance?.restSeconds ?? lastRestSeconds(exerciseSets);
 
@@ -176,8 +172,10 @@ class _ActiveWorkoutBodyState extends ConsumerState<ActiveWorkoutBody> {
             sessionId: _sessionId,
             exerciseId: exercise.exerciseId,
             exerciseName: exercise.name,
-            reps: reps,
-            weightKg: weightKg,
+            reps: values.reps,
+            weightKg: values.weightKg,
+            durationSeconds: values.durationSeconds,
+            distanceMeters: values.distanceMeters,
             restSeconds: restSeconds,
           ),
         );

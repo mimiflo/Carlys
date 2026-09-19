@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/workout.dart';
+import 'set_entry_fields.dart';
 
 /// Ligne de série de l'exercice en cours (maquette 2e).
 ///
@@ -123,14 +124,27 @@ class ExerciseSetRow extends StatelessWidget {
     );
   }
 
+  /// Ce qu'une série montre, DANS SON UNITÉ.
+  ///
+  /// Une série chronométrée affichée « — kg × — » se lit comme une série
+  /// ratée, alors qu'elle est complète : c'est juste qu'elle ne se compte pas
+  /// en charge. On lit donc d'abord ce qui est renseigné.
   String _detail(WorkoutSetEntry? entry) {
+    final kind = entry != null && entry.kind != SetKind.normal
+        ? ' · ${entry.kind.label}'
+        : '';
+    if (entry?.durationSeconds != null) {
+      final duree = formatDuration(entry!.durationSeconds!);
+      final distance = entry.distanceMeters;
+      final parcouru = distance == null
+          ? ''
+          : ' · ${formatThousands(distance)} m';
+      return '${duree.value} ${duree.unit}$parcouru$kind';
+    }
     final weight = entry?.weightKg == null
         ? '—'
         : formatDecimal(entry!.weightKg!);
     final reps = entry?.reps == null ? '—' : formatThousands(entry!.reps!);
-    final kind = entry != null && entry.kind != SetKind.normal
-        ? ' · ${entry.kind.label}'
-        : '';
     return '$weight kg × $reps$kind';
   }
 

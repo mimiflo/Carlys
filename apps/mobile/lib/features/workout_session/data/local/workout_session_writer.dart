@@ -143,6 +143,8 @@ class WorkoutSessionWriter {
             kind: Value(input.kind.apiValue),
             reps: Value(input.reps),
             weightKg: Value(input.weightKg),
+            durationSeconds: Value(input.durationSeconds),
+            distanceMeters: Value(input.distanceMeters),
             restSeconds: Value(input.restSeconds),
             rpe: Value(input.rpe),
             plannedReps: Value(input.plannedReps),
@@ -164,6 +166,10 @@ class WorkoutSessionWriter {
           'kind': input.kind.apiValue,
           if (input.reps != null) 'reps': input.reps,
           if (input.weightKg != null) 'weightKg': input.weightKg,
+          if (input.durationSeconds != null)
+            'durationSeconds': input.durationSeconds,
+          if (input.distanceMeters != null)
+            'distanceMeters': input.distanceMeters,
           if (input.restSeconds != null) 'restSeconds': input.restSeconds,
           if (input.rpe != null) 'rpe': input.rpe,
           if (input.plannedReps != null) 'plannedReps': input.plannedReps,

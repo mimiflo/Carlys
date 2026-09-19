@@ -21,6 +21,8 @@ class SessionPlanItem {
     this.kind = SetKind.normal,
     this.targetReps,
     this.targetWeightKg,
+    this.targetDurationSeconds,
+    this.targetDistanceMeters,
     this.restSeconds,
     this.doneSetId,
     this.skipped = false,
@@ -39,6 +41,13 @@ class SessionPlanItem {
   final SetKind kind;
   final int? targetReps;
   final double? targetWeightKg;
+
+  /// Cibles chronométrées : un gainage se prescrit en SECONDES, une course en
+  /// MÈTRES. Les mettre dans `targetReps` ferait entrer « 45 répétitions de
+  /// planche » dans les records personnels, où le fait est dénormalisé.
+  final int? targetDurationSeconds;
+  final int? targetDistanceMeters;
+
   final int? restSeconds;
 
   /// Série réalisée qui a honoré cet item, sinon `null`.
