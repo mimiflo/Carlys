@@ -93,6 +93,20 @@ export class GenerationRepository {
   }
 
   /**
+   * Les noms d'affichage du matériel, par slug.
+   *
+   * Le rapport en a besoin pour écrire « ajoute des Haltères » plutôt que
+   * « ajoute halteres » : la taxonomie porte les deux, le générateur ne
+   * connaît que les slugs.
+   */
+  async equipmentNames(): Promise<Record<string, string>> {
+    const rows = await this.prisma.equipment.findMany({
+      select: { slug: true, name: true },
+    });
+    return Object.fromEntries(rows.map((row) => [row.slug, row.name]));
+  }
+
+  /**
    * Écrit le programme généré ET ses modèles en UNE transaction.
    *
    * Les identifiants sont DÉRIVÉS de `programId` (voir `generator.ts`), donc

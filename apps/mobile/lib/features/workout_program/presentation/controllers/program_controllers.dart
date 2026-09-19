@@ -2,6 +2,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../data/repositories/program_repository_impl.dart';
+import '../../domain/entities/generation_report.dart';
 import '../../domain/entities/program.dart';
 
 final programsProvider = FutureProvider.autoDispose<List<ProgramSummary>>((
@@ -106,6 +107,23 @@ class ProgramActions {
       }
       await repository.save(fresh.copyWith(isActive: active));
     });
+  }
+
+  /// Engendre un programme depuis le profil, et rend son plan avec son
+  /// EXPLICATION.
+  ///
+  /// L'identifiant naît ici, sur l'appareil : chaque appel en produit un
+  /// NOUVEAU, donc « régénérer » rend un autre programme au lieu de renvoyer
+  /// le même. Le serveur s'en sert comme graine, et rejouer un identifiant
+  /// déjà connu rendrait le plan tel quel — ce qui protège les retouches de
+  /// la personne, mais n'est pas ce qu'on veut quand elle redemande.
+  Future<GeneratedProgramResult> generate() async {
+    final id = _uuid.v4();
+    late GeneratedProgramResult result;
+    await _write(id, () async {
+      result = await _ref.read(programRepositoryProvider).generate(id);
+    });
+    return result;
   }
 
   /// Un identifiant de jour, exposé pour que l'interface n'importe pas uuid.

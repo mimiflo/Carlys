@@ -52,6 +52,16 @@ export interface GenerationInput {
    * couché à quelqu'un qui n'a pas de barre.
    */
   catalogue: PoolExercise[];
+  /**
+   * Les NOMS d'affichage du matériel, par slug.
+   *
+   * Le rapport écrit des phrases destinées à être lues telles quelles : y
+   * laisser passer un slug donne « ajoute halteres », sans accent et sans
+   * majuscule, c'est-à-dire un identifiant de base de données montré à
+   * quelqu'un. La traduction se fait ICI, là où la phrase se compose, et non
+   * dans chaque client qui l'afficherait.
+   */
+  equipmentNames: Record<string, string>;
 }
 
 /** Une série prescrite. `targetWeightKg` n'existe pas : voir `goal-rules.ts`. */
@@ -99,6 +109,8 @@ export interface PrescribedProgram {
 /** Un matériel qui débloquerait des exercices, et combien. */
 export interface EquipmentLever {
   slug: string;
+  /** Nom d'affichage — c'est LUI qui part dans les phrases du rapport. */
+  name: string;
   /** Exercices de force gagnés en PRINCIPAL sur les groupes qui manquent. */
   unlocks: number;
   muscleGroups: string[];

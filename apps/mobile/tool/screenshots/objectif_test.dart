@@ -17,6 +17,7 @@ import 'package:carlys_mobile/features/exercises/data/repositories/exercises_rep
 import 'package:carlys_mobile/features/exercises/domain/entities/exercise.dart';
 import 'package:carlys_mobile/features/onboarding/domain/first_run_step.dart';
 import 'package:carlys_mobile/features/profile/presentation/widgets/profile_training_settings.dart';
+import 'package:carlys_mobile/features/workout_program/data/repositories/program_repository_impl.dart';
 import 'package:carlys_mobile/features/workout_program/data/repositories/training_profile_repository_impl.dart';
 import 'package:carlys_mobile/features/workout_program/domain/entities/training_goal.dart';
 import 'package:carlys_mobile/features/workout_program/domain/entities/training_profile.dart';
@@ -31,6 +32,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../test/support/fake_auth_repository.dart';
 import '../../test/support/fake_exercises_repository.dart';
+import '../../test/support/fake_program_repository.dart';
 import '../../test/support/fake_training_profile_repository.dart';
 import '../../test/support/fake_workout_repository.dart';
 import '../../test/support/first_run_prefs.dart';
@@ -189,6 +191,7 @@ void main() {
         overrides: [
           trainingProfileRepositoryProvider.overrideWithValue(repo),
           exercisesRepositoryProvider.overrideWithValue(exercises),
+          programRepositoryProvider.overrideWithValue(FakeProgramRepository()),
           currentTrainingGoalProvider.overrideWithValue(TrainingGoal.hyrox),
         ],
         child: MaterialApp(
@@ -211,5 +214,20 @@ void main() {
     );
     await tester.pumpAndSettle();
     await capture(tester, 'objectif-04-materiel');
+
+    // Le bas de l'écran : le bouton « Générer », prêt puisque les cinq
+    // réponses sont là.
+    await tester.scrollUntilVisible(
+      find.text('Tout est prêt'),
+      300,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await tester.pumpAndSettle();
+    await capture(tester, 'objectif-05-generer');
+
+    // Et ce que la génération RÉPOND : le plan avec son explication.
+    await tester.tap(find.text('Générer mon programme'));
+    await tester.pumpAndSettle();
+    await capture(tester, 'objectif-06-rapport');
   });
 }

@@ -80,8 +80,20 @@ export function generateProgram(input: GenerationInput): GenerationOutcome {
   const blocking = rules.requiredGroups.filter((group) => (byGroup.get(group)?.length ?? 0) === 0);
   if (blocking.length > 0) {
     const kit = new Set(input.equipmentSlugs);
-    const levers = suggestLevers(input.catalogue, kit, input.experience, blocking);
-    const inutiles = uselessLevers(input.catalogue, kit, input.experience, blocking);
+    const levers = suggestLevers(
+      input.catalogue,
+      kit,
+      input.experience,
+      blocking,
+      input.equipmentNames,
+    );
+    const inutiles = uselessLevers(
+      input.catalogue,
+      kit,
+      input.experience,
+      blocking,
+      input.equipmentNames,
+    );
     return {
       kind: 'impossible',
       blockingGroups: blocking,
@@ -173,18 +185,25 @@ export function generateProgram(input: GenerationInput): GenerationOutcome {
   const manquants = volumes
     .filter((volume) => volume.weeklySets < volume.targetMin)
     .map((volume) => volume.muscleGroup);
-  const leviers = suggestLevers(input.catalogue, kit, input.experience, [
-    ...manquants,
-    ...uncovered,
-  ]);
-  const inutiles = uselessLevers(input.catalogue, kit, input.experience, [
-    ...manquants,
-    ...uncovered,
-  ]);
+  const cibles = [...manquants, ...uncovered];
+  const leviers = suggestLevers(
+    input.catalogue,
+    kit,
+    input.experience,
+    cibles,
+    input.equipmentNames,
+  );
+  const inutiles = uselessLevers(
+    input.catalogue,
+    kit,
+    input.experience,
+    cibles,
+    input.equipmentNames,
+  );
   if (leviers.length > 0) {
     const meilleur = leviers[0]!;
     state.notes.push(
-      `Pour aller plus loin : « ${meilleur.slug} » ouvrirait ${meilleur.unlocks} exercices de plus (${meilleur.muscleGroups.join(', ')}).`,
+      `Pour aller plus loin : « ${meilleur.name} » ouvrirait ${meilleur.unlocks} exercices de plus (${meilleur.muscleGroups.join(', ')}).`,
     );
   }
   if (inutiles.length > 0) {

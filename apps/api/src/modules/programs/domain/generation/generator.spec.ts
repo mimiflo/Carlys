@@ -1,5 +1,5 @@
 import { ExerciseDifficulty, ExerciseType, TrainingExperience, TrainingGoal } from '@prisma/client';
-import { EXERCISES, MUSCLE_GROUPS } from '../../../exercises/application/catalog-data';
+import { EQUIPMENT, EXERCISES, MUSCLE_GROUPS } from '../../../exercises/application/catalog-data';
 import { derivedUuid } from '../../../../common/utilities/derived-uuid';
 import { EXERCISES_PER_SESSION_MAX, GENERATION_UUID_NAMESPACE } from './constants';
 import { verify } from './constraints';
@@ -104,6 +104,7 @@ function inputFor(
     equipmentSlugs: kit,
     pool: poolFor(kit, experience),
     catalogue: CATALOGUE,
+    equipmentNames: Object.fromEntries(EQUIPMENT.map((item) => [item.slug, item.name])),
   };
 }
 

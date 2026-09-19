@@ -55,6 +55,7 @@ export function suggestLevers(
   kit: Set<string>,
   experience: TrainingExperience,
   missingGroups: string[],
+  names: Record<string, string> = {},
 ): EquipmentLever[] {
   const wanted = new Set(missingGroups);
   const gains = new Map<string, { count: number; groups: Set<string> }>();
@@ -81,6 +82,7 @@ export function suggestLevers(
     [...gains.entries()]
       .map(([slug, entry]) => ({
         slug,
+        name: names[slug] ?? slug,
         unlocks: entry.count,
         muscleGroups: [...entry.groups].sort(),
       }))
@@ -102,6 +104,7 @@ export function uselessLevers(
   kit: Set<string>,
   experience: TrainingExperience,
   missingGroups: string[],
+  names: Record<string, string> = {},
 ): string[] {
   const wanted = new Set(missingGroups);
   const utile = new Set(
@@ -114,7 +117,7 @@ export function uselessLevers(
     const missing = exercise.equipment.filter((slug) => !kit.has(slug));
     if (missing.length !== 1) continue;
     const slug = missing[0]!;
-    if (!utile.has(slug)) vus.add(slug);
+    if (!utile.has(slug)) vus.add(names[slug] ?? slug);
   }
   return [...vus].sort();
 }

@@ -8,6 +8,7 @@ import '../../domain/entities/training_goal.dart';
 import '../../domain/entities/training_profile.dart';
 import '../controllers/training_goal_controllers.dart';
 import '../controllers/training_profile_controllers.dart';
+import '../widgets/generate_program_card.dart';
 import '../widgets/training_goal_sheet.dart';
 import '../widgets/training_setup_sections.dart';
 
@@ -15,9 +16,8 @@ import '../widgets/training_setup_sections.dart';
 /// objectif, expérience, rythme, matériel. Chaque geste écrit SON champ au
 /// serveur puis relit : l'écran reflète toujours l'état serveur.
 ///
-/// C'est le futur écran de génération (Plan 4, tranche suivante) : il
-/// gagnera son bouton « Générer » quand les règles existeront — d'ici là,
-/// remplir ces réponses prépare le terrain, rien n'est bloquant.
+/// Le bouton « Générer » vit en bas : c'est l'aboutissement de l'écran, pas
+/// son ouverture — on répond, puis on génère.
 class TrainingSetupScreen extends ConsumerWidget {
   const TrainingSetupScreen({super.key});
 
@@ -97,6 +97,8 @@ class TrainingSetupScreen extends ConsumerWidget {
               const AppSectionLabel('Ton matériel'),
               const SizedBox(height: AppSpacing.sm),
               _Materiel(profile: value),
+              const SizedBox(height: AppSpacing.gapSection),
+              GenerateProgramCard(profile: value),
             ],
           ),
           (null, AsyncError()) => AppErrorState(
@@ -152,8 +154,8 @@ class _Bandeau extends StatelessWidget {
           ),
           const SizedBox(height: AppSpacing.xxs),
           Text(
-            'Quatre réponses, et ton futur programme partira de toi, '
-            'pas d’un modèle générique.',
+            'Cinq réponses, objectif compris, et ton futur programme partira '
+            'de toi, pas d’un modèle générique.',
             style: AppTypography.label.copyWith(
               color: AppColors.neutral0.withValues(alpha: 0.8),
             ),

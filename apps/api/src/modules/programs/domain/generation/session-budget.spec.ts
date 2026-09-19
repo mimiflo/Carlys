@@ -171,15 +171,31 @@ describe('les leviers de matériel', () => {
     exercise('pompes', 'pectoraux', ['poids-du-corps'], ExerciseDifficulty.BEGINNER),
   ];
   const kit = new Set(['poids-du-corps']);
+  /// Les noms d'affichage : ce sont EUX qui partent dans les phrases du
+  /// rapport. Un slug montré à quelqu'un est un identifiant de base de
+  /// données qui a fui jusqu'à l'écran.
+  const noms = {
+    'barre-de-traction': 'Barre de traction',
+    halteres: 'Haltères',
+  };
 
   it('n’envoie PAS acheter ce qui n’ouvrirait rien à ce niveau', () => {
     // C'est le piège que ce calcul existe pour éviter : compter les gains tous
     // niveaux confondus conseillerait une barre de traction à un débutant, à
     // qui elle n'ouvre rien du tout.
-    const leviers = suggestLevers(catalogue, kit, TrainingExperience.BEGINNER, ['dos', 'biceps']);
+    const leviers = suggestLevers(
+      catalogue,
+      kit,
+      TrainingExperience.BEGINNER,
+      ['dos', 'biceps'],
+      noms,
+    );
     expect(leviers.map((lever) => lever.slug)).toEqual(['halteres']);
-    expect(uselessLevers(catalogue, kit, TrainingExperience.BEGINNER, ['dos'])).toEqual([
-      'barre-de-traction',
+    // Le rapport écrit le NOM, jamais le slug : « ajoute halteres » serait un
+    // identifiant de base de données montré à quelqu'un.
+    expect(leviers.map((lever) => lever.name)).toEqual(['Haltères']);
+    expect(uselessLevers(catalogue, kit, TrainingExperience.BEGINNER, ['dos'], noms)).toEqual([
+      'Barre de traction',
     ]);
   });
 

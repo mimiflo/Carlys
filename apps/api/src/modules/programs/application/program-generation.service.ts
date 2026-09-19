@@ -102,9 +102,10 @@ export class ProgramGenerationService {
     // catalogue entier au lieu de le laisser passer.
     const kit = [...new Set([...profile.equipmentSlugs, BODYWEIGHT_SLUG])].sort();
     const premium = await this.entitlements.hasEntitlement(userId, 'premium_exercises');
-    const [pool, catalogue] = await Promise.all([
+    const [pool, catalogue, equipmentNames] = await Promise.all([
       this.generation.playablePool(kit, profile.trainingExperience!, premium),
       this.generation.fullCatalogue(),
+      this.generation.equipmentNames(),
     ]);
 
     const outcome = generateProgram({
@@ -119,6 +120,7 @@ export class ProgramGenerationService {
       // peut dire ce qui manquerait. Deux listes, jamais une.
       pool,
       catalogue,
+      equipmentNames,
     });
 
     if (outcome.kind === 'impossible') {
@@ -128,7 +130,7 @@ export class ProgramGenerationService {
           { field: 'equipmentSlugs', message: outcome.message },
           ...outcome.levers.map((lever) => ({
             field: 'equipmentSlugs',
-            message: `« ${lever.slug} » ouvrirait ${lever.unlocks} exercices (${lever.muscleGroups.join(', ')}).`,
+            message: `« ${lever.name} » ouvrirait ${lever.unlocks} exercices (${lever.muscleGroups.join(', ')}).`,
           })),
         ],
       });
