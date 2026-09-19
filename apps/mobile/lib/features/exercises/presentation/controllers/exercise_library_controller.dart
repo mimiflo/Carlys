@@ -106,7 +106,10 @@ class ExerciseLibraryController
     );
   }
 
-  Future<void> _reload() async {
+  /// Rend `false` quand le chargement de CE geste a échoué — l'état d'erreur
+  /// porte la valeur précédente (`copyWithPrevious`), donc un écran resté
+  /// sur la grille ne le montrera jamais : c'est à l'appelant de le dire.
+  Future<bool> _reload() async {
     // Génération de la demande : `_filters` est remplacé (jamais muté) à
     // chaque changement, son identité date donc chaque réponse. Une réponse
     // dont la génération n'est plus la bonne est simplement abandonnée —
@@ -116,9 +119,10 @@ class ExerciseLibraryController
     state = const AsyncLoading();
     final next = await AsyncValue.guard(_loadFirstPage);
     if (_disposed || !identical(requested, _filters)) {
-      return;
+      return true; // remplacé par un geste plus récent : rien à dire ici
     }
     state = next;
+    return !next.hasError;
   }
 
   void setSearch(String search) {
@@ -131,12 +135,13 @@ class ExerciseLibraryController
     });
   }
 
-  Future<void> setMuscleGroup(String? slug) {
+  /// Rend `false` si le chargement du groupe a échoué (voir [_reload]).
+  Future<bool> setMuscleGroup(String? slug) {
     _filters = _filters.copyWith(muscleGroupSlug: () => slug);
     return _reload();
   }
 
-  Future<void> setDifficulty(ExerciseDifficulty? difficulty) {
+  Future<bool> setDifficulty(ExerciseDifficulty? difficulty) {
     _filters = _filters.copyWith(difficulty: () => difficulty);
     return _reload();
   }

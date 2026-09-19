@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/errors/app_exception.dart';
+import '../../../../core/feedback/server_gesture.dart';
 import '../../../../design_system/design_system.dart';
 import '../controllers/exercise_library_controller.dart';
 import '../providers/exercise_catalog_providers.dart';
@@ -59,7 +61,28 @@ class MuscleGroupGrid extends ConsumerWidget {
             MuscleGroupCard(
               label: group.name,
               slug: group.slug,
-              onTap: () => controller.setMuscleGroup(group.slug),
+              // L'échec de CE chargement se dit ICI : l'état d'erreur garde
+              // la valeur précédente (filtres sans groupe), donc l'écran
+              // reste sur la grille et son état d'erreur n'est jamais
+              // rendu — sans ce mot, le tap hors ligne était une impasse
+              // muette.
+              onTap: () async {
+                final messenger = ScaffoldMessenger.of(context);
+                final abouti = await controller.setMuscleGroup(group.slug);
+                if (abouti || !context.mounted) {
+                  return;
+                }
+                final error = ref.read(exerciseLibraryControllerProvider).error;
+                messenger.showSnackBar(
+                  SnackBar(
+                    content: Text(
+                      serverFailureMessage(
+                        error is AppException ? error : null,
+                      ),
+                    ),
+                  ),
+                );
+              },
             ),
         ],
       ),

@@ -86,5 +86,9 @@ abstract interface class WorkoutRepository {
   /// premier, cibles comprises. Ne touche jamais une séance dont des
   /// modifications locales n'ont pas encore été acquittées : l'appareil ne
   /// perd jamais sa propre saisie.
-  Future<void> restoreSessions();
+  ///
+  /// [shouldContinue], consulté entre deux séances, permet d'ARRÊTER un
+  /// rapatriement en vol : la purge de compte s'en sert pour qu'aucune
+  /// écriture ne retombe dans la base après son vidage.
+  Future<void> restoreSessions({bool Function()? shouldContinue});
 }

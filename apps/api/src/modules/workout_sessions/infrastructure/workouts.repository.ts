@@ -176,9 +176,22 @@ export class WorkoutsRepository {
     return this.prisma.workoutSet.update({ where: { id }, data });
   }
 
+  /**
+   * Pierre tombale ET libération du plan, en une transaction : la série
+   * supprimée rend sa prévision. Sans quoi l'item gardait un `doneSetId`
+   * orphelin — compté « fait » pour toujours, jamais reproposé, et
+   * `linkPlanItem` (qui exige `doneSetId` null) ne pouvait plus jamais le
+   * réapparier ; la reprise multi-appareil rapatriait le même orphelin.
+   */
   softDeleteSet(id: string): Promise<void> {
-    return this.prisma.workoutSet
-      .update({ where: { id }, data: { deletedAt: new Date() } })
+    return this.prisma
+      .$transaction([
+        this.prisma.workoutSet.update({ where: { id }, data: { deletedAt: new Date() } }),
+        this.prisma.workoutSessionPlanItem.updateMany({
+          where: { doneSetId: id },
+          data: { doneSetId: null },
+        }),
+      ])
       .then(() => undefined);
   }
 

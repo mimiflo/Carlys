@@ -99,7 +99,9 @@ class WorkoutTemplateActions {
     exercisePosition: exercisePosition,
   );
 
-  /// Purge le plan local d'une séance close (rien n'a jamais été envoyé).
+  /// Purge le plan LOCAL d'une séance close. Le serveur garde sa copie
+  /// (partie en bloc avec `session.create`, D5 révisée) : rien n'est perdu,
+  /// c'est même elle que la reprise multi-appareil rapatrie.
   Future<void> purgePlan(String sessionId) =>
       _repository.purgeSessionPlan(sessionId);
 

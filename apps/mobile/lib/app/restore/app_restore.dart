@@ -38,20 +38,43 @@ class AppRestore {
   final WorkoutRepository _workouts;
   final WorkoutTemplateRepository _templates;
   bool _started = false;
+  bool _cancelled = false;
+  Future<void>? _running;
 
   void ensureRestored() {
     if (_started) {
       return;
     }
     _started = true;
-    unawaited(_run());
+    final run = _run();
+    _running = run;
+    unawaited(run);
+  }
+
+  /// Annule le rapatriement et ATTEND qu'il ait rendu la main.
+  ///
+  /// La purge de compte l'appelle AVANT de vider la base : invalider le
+  /// provider n'arrête pas un futur déjà lancé, et une écriture du
+  /// rapatriement qui aboutissait entre le vidage et la fermeture
+  /// réinjectait les séances de l'ancien compte dans le fichier SQLite que
+  /// le compte suivant rouvre. Après le retour de cette méthode, plus
+  /// aucune écriture du rapatriement ne touchera la base.
+  Future<void> cancelAndWait() async {
+    _cancelled = true;
+    await (_running ?? Future<void>.value());
   }
 
   Future<void> _run() async {
     try {
       await _sync.syncNow();
+      if (_cancelled) {
+        return;
+      }
       await _templates.refreshTemplates();
-      await _workouts.restoreSessions();
+      if (_cancelled) {
+        return;
+      }
+      await _workouts.restoreSessions(shouldContinue: () => !_cancelled);
     } on Exception catch (exception) {
       // Hors ligne ou serveur indisponible : l'application vit sur son local,
       // le prochain démarrage réessaiera.
@@ -59,6 +82,11 @@ class AppRestore {
         'Rapatriement impossible pour le moment',
         error: exception,
       );
+    } on StateError catch (error) {
+      // Base Drift fermée sous nos pieds (purge de compte pendant le
+      // rapatriement) : le moteur de synchronisation attrape ce cas exprès,
+      // ici il finissait en erreur asynchrone non gérée.
+      _logger.warning('Rapatriement interrompu par la purge', error: error);
     }
   }
 }

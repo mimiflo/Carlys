@@ -68,10 +68,12 @@ class WorkoutProgressSegments extends StatelessWidget {
     if (upcoming == 0) {
       return 'Progression de la séance : $done';
     }
-    // Avec un modèle, la progression se lit par rapport au programme.
-    final total = completed + upcoming + 1;
-    return 'Progression de la séance : ${formatThousands(completed)} série'
-        '${completed > 1 ? 's' : ''} sur ${formatThousands(total)} prévue'
-        '${total > 1 ? 's' : ''}';
+    // Le libellé décrit CE QUE LA RANGÉE DESSINE : l'enregistré, la saisie
+    // en cours, le prévu restant. Annoncer « X sur TOTAL prévues » gonflait
+    // le dénominateur d'une unité par série libre (l'enregistré compte
+    // AUSSI les séries hors programme) — le constat de clôture, lui, disait
+    // le vrai compte quelques minutes plus tard.
+    return 'Progression de la séance : $done, une en saisie, '
+        '${formatThousands(upcoming)} encore prévue${upcoming > 1 ? 's' : ''}';
   }
 }

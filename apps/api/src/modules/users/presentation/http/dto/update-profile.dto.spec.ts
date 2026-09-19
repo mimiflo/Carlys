@@ -1,4 +1,9 @@
-import { AGE_YEARS_MAX, AGE_YEARS_MIN } from '@carlys/api-contracts';
+import {
+  AGE_YEARS_MAX,
+  AGE_YEARS_MIN,
+  TRAINING_EQUIPMENT_SLUG_MAX_LENGTH,
+  updateProfileRequestSchema,
+} from '@carlys/api-contracts';
 import { plainToInstance } from 'class-transformer';
 import { validateSync } from 'class-validator';
 import { UpdateProfileDto } from './update-profile.dto';
@@ -96,5 +101,45 @@ describe('UpdateProfileDto — nom affiché', () => {
 
   it('accepte un nom entouré d’espaces : il reste un nom une fois trimé', () => {
     expect(champsFautifs({ displayName: '  Camille  ' })).toEqual([]);
+  });
+});
+
+describe('UpdateProfileDto — taille', () => {
+  it('accepte l’artefact flottant d’une valeur à une décimale', () => {
+    // 175.1 n'est pas représentable en binaire : un client qui convertit des
+    // unités peut produire cette écriture pour LA MÊME valeur.
+    expect(champsFautifs({ heightCm: 175.10000000000002 })).toEqual([]);
+  });
+
+  it('refuse deux vraies décimales', () => {
+    expect(champsFautifs({ heightCm: 175.15 })).toEqual(['heightCm']);
+  });
+});
+
+/**
+ * CE QUE CE BLOC PROTÈGE : le contrat (`updateProfileRequestSchema`) et le
+ * DTO jugent PAREIL. Rien d'autre dans le dépôt ne les confronte, et c'est
+ * ainsi que trois dérives s'étaient installées (bornes de date absentes du
+ * contrat, plafond de slug absent, précision de taille comptée sur
+ * l'écriture au DTO).
+ */
+describe('Contrat ↔ DTO — le même verdict sur les mêmes cas', () => {
+  const cas: Array<[string, Record<string, unknown>]> = [
+    ['taille : artefact flottant d’une décimale', { heightCm: 175.10000000000002 }],
+    ['taille : deux décimales', { heightCm: 175.15 }],
+    ['naissance : dix ans, trop jeune', { birthDate: neIlYa(10) }],
+    ['naissance : trente ans', { birthDate: neIlYa(30) }],
+    [
+      'matériel : slug trop long',
+      { equipmentSlugs: ['a'.repeat(TRAINING_EQUIPMENT_SLUG_MAX_LENGTH + 1)] },
+    ],
+    ['matériel : slug légitime', { equipmentSlugs: ['barre-olympique'] }],
+    ['nom : fait d’espaces', { displayName: '   ' }],
+  ];
+
+  it.each(cas)('%s', (_nom, payload) => {
+    const contrat = updateProfileRequestSchema.safeParse(payload).success;
+    const dto = champsFautifs(payload).length === 0;
+    expect(dto).toBe(contrat);
   });
 });

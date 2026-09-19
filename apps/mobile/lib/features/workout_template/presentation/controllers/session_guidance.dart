@@ -104,7 +104,6 @@ SessionGuidance guidanceFor(
   }
 
   final ofExercise = plan.itemsOfExercise(item.exercisePosition);
-  final done = ofExercise.where((it) => it.isDone).length;
   final pending = ofExercise.where((it) => it.isPending).length;
 
   return SessionGuidance(
@@ -119,10 +118,13 @@ SessionGuidance guidanceFor(
     exerciseId: item.exerciseId,
     exercisePosition: item.exercisePosition,
     planItemId: item.id,
-    // « Série 2 sur 4 » : le rang est celui de la série qu'on s'apprête à
-    // faire, le total celui prévu par le modèle pour cet exercice.
+    // « Série 2 sur 4 » : le rang est celui de l'ITEM qu'on s'apprête à
+    // faire (sa position dans le plan), le total celui prévu par le modèle
+    // pour cet exercice. Compter `done + 1` ré-annonçait la série qu'on
+    // venait de PASSER : une série sautée avance l'item sans compter
+    // dans `done`.
     overline:
-        'Série ${formatThousands(done + 1)} sur '
+        'Série ${formatThousands(item.setPosition + 1)} sur '
         '${formatThousands(ofExercise.length)} · ${item.exerciseName}',
     targetReps: item.targetReps,
     targetWeightKg: item.targetWeightKg,

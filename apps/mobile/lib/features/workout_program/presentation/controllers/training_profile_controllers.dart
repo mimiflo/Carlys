@@ -77,6 +77,11 @@ class TrainingProfileActions {
           equipmentSlugs: equipmentSlugs,
         );
     _ref.invalidate(trainingProfileProvider);
+    // La RELECTURE peut échouer alors que l'écriture a réussi (réseau tombé
+    // juste après le PATCH) : l'attendre fait remonter cet échec au geste —
+    // sans quoi l'écran gardait l'ancienne valeur SANS AUCUN SIGNAL, alors
+    // que le serveur portait déjà la nouvelle.
+    await _ref.read(trainingProfileProvider.future);
   }
 }
 

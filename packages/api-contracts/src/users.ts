@@ -64,6 +64,9 @@ export const TRAINING_SESSION_MINUTES_MAX = 240;
  */
 export const TRAINING_EQUIPMENT_MAX = 40;
 
+/** Longueur maximale d'un slug de matériel — la même au contrat et au DTO. */
+export const TRAINING_EQUIPMENT_SLUG_MAX_LENGTH = 80;
+
 /**
  * Profil d'entraînement — `GET /users/me/training`.
  *
@@ -156,10 +159,30 @@ export const updateProfileRequestSchema = z.object({
     .max(TRAINING_SESSION_MINUTES_MAX)
     .optional(),
   /** Remplacement COMPLET de la liste ; slug inconnu refusé en 400. */
-  equipmentSlugs: z.array(z.string().min(1)).max(TRAINING_EQUIPMENT_MAX).optional(),
+  equipmentSlugs: z
+    .array(z.string().min(1).max(TRAINING_EQUIPMENT_SLUG_MAX_LENGTH))
+    .max(TRAINING_EQUIPMENT_MAX)
+    .optional(),
   sex: biologicalSexSchema.optional(),
-  /** ISO 8601, dans l'intervalle `birthDateRange` (de 15 à 120 ans). */
-  birthDate: z.string().datetime().optional(),
+  /**
+   * ISO 8601, dans l'intervalle `birthDateRange` — VÉRIFIÉ ici, pas
+   * seulement annoncé : sans la borne, un client qui valide avec le contrat
+   * acceptait la date d'un enfant de dix ans puis prenait le 400 du DTO.
+   * L'intervalle se recalcule à CHAQUE analyse, comme au DTO : figé au
+   * chargement du module, il vieillirait avec le processus.
+   */
+  birthDate: z
+    .string()
+    .datetime()
+    .refine(
+      (value) => {
+        const { earliest, latest } = birthDateRange(new Date());
+        const date = new Date(value);
+        return date >= earliest && date <= latest;
+      },
+      { message: `De ${AGE_YEARS_MIN} à ${AGE_YEARS_MAX} ans.` },
+    )
+    .optional(),
   heightCm: heightCmSchema.optional(),
   activityLevel: activityLevelSchema.optional(),
   nutritionGoal: nutritionGoalSchema.optional(),

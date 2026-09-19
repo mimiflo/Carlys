@@ -252,6 +252,47 @@ void main() {
       },
     );
 
+    test(
+      'prendre la version du serveur ne perd pas une correction en attente',
+      () async {
+        // La série 1, que le serveur CONNAÎT, vient d'être corrigée : le
+        // PATCH est encore en file, retenu derrière le conflit. « Tes
+        // séries sont conservées dans les deux cas » vaut aussi pour elle —
+        // l'upsert du rapatriement la repassait aux valeurs serveur,
+        // marquée `synced`, et la correction disparaissait de l'écran.
+        await repository.updateSet('set-1', weightKg: 10);
+        remote.session = _serverVersion(
+          status: 'ABANDONED',
+          sets: [
+            RemoteWorkoutSet(
+              id: 'set-1',
+              exerciseName: 'Développé couché',
+              position: 0,
+              kind: 'NORMAL',
+              reps: 8,
+              weightKg: 72.5,
+              completedAt: DateTime(2026, 9, 1, 17, 10),
+            ),
+          ],
+        );
+
+        await repository.resolveCloseConflict(
+          'seance',
+          WorkoutConflictResolution.takeServer,
+        );
+
+        final sets = await db.select(db.localWorkoutSets).get();
+        final byId = {for (final set in sets) set.id: set};
+        expect(byId['set-1']!.weightKg, 10);
+        expect(byId['set-1']!.syncStatus, 'pending');
+        // L'opération survit : le serveur finira par porter la correction.
+        expect(
+          (await operations()).map((op) => op.operationType),
+          contains('set.update'),
+        );
+      },
+    );
+
     test('prendre la version du serveur hors ligne : rien ne bouge', () async {
       remote.failure = const NetworkException('Serveur injoignable');
 

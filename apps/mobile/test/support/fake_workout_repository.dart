@@ -222,7 +222,7 @@ class FakeWorkoutRepository implements WorkoutRepository {
   }
 
   @override
-  Future<void> restoreSessions() async {}
+  Future<void> restoreSessions({bool Function()? shouldContinue}) async {}
 
   @override
   Future<void> resolveCloseConflict(
@@ -269,6 +269,9 @@ class FakeWorkoutRepository implements WorkoutRepository {
 class NoopAppRestore implements AppRestore {
   @override
   void ensureRestored() {}
+
+  @override
+  Future<void> cancelAndWait() async {}
 
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);

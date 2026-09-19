@@ -602,11 +602,11 @@ void main() {
     await settle(tester);
   }
 
-  Future<void> openNutrition(WidgetTester tester) async {
-    await goTab(tester, 'Academy');
-    await tester.tap(find.text('Nutrition'));
-    await settle(tester);
-  }
+  /// Nutrition est un ONGLET depuis la réorganisation de la barre : le
+  /// harnais la cherchait encore comme une carte du hub Academy, et
+  /// « Nutrition » y désignait alors DEUX widgets (l'onglet et la carte) —
+  /// un `tap` ambigu, donc trois captures impossibles à régénérer.
+  Future<void> openNutrition(WidgetTester tester) => goTab(tester, 'Nutrition');
 
   /// L'avatar se repère par l'étiquette de son `Semantics`, côté widget :
   /// aucun `SemanticsHandle` n'est posé, l'arbre de sémantique n'existe pas.
@@ -978,10 +978,16 @@ void main() {
       ),
     );
     await goTab(tester, 'Academy');
+    // Le défilement VERTICAL, nommé explicitement : l'écran porte aussi la
+    // barre horizontale des domaines, et `Scrollable.last` tombait dessus —
+    // la leçon ne remontait jamais, le harnais s'arrêtait là.
     await tester.scrollUntilVisible(
       find.text('Les pectoraux, un éventail'),
       150,
-      scrollable: find.byType(Scrollable).last,
+      scrollable: find.byWidgetPredicate(
+        (widget) =>
+            widget is Scrollable && widget.axisDirection == AxisDirection.down,
+      ),
     );
     await settle(tester);
     await tester.tap(find.text('Les pectoraux, un éventail'));

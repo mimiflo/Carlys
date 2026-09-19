@@ -207,11 +207,12 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
     String? templateId,
     String? templateName,
   }) async {
-    await _writer.requireNoActiveSession();
-
     final id = _uuid.v4();
     final startedAt = DateTime.now().toUtc();
 
+    // « Au plus une séance active » se vérifie DANS la transaction, par
+    // `insertSession` : vérifiée ici avant de l'ouvrir, deux démarrages
+    // concurrents créaient chacun leur séance IN_PROGRESS.
     await _db.transaction(
       () => _writer.insertSession(
         id: id,
@@ -276,6 +277,14 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
           syncStatus: Value('pending'),
         ),
       );
+      // La série supprimée REND sa prévision au plan : l'item qui la
+      // pointait redevient à faire — la consigne la repropose, et le
+      // constat de clôture ne compte plus une série qui n'existe pas.
+      // Le serveur fait pareil à l'arrivée de `set.delete` : aucun
+      // marquage `pending` nécessaire, la convergence suit l'opération.
+      await (_db.update(_db.localSessionPlanItems)
+            ..where((item) => item.doneSetId.equals(setId)))
+          .write(const LocalSessionPlanItemsCompanion(doneSetId: Value(null)));
       await _writer.enqueue(
         entityType: 'set',
         entityId: setId,
@@ -342,12 +351,15 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
   // ── Rapatriement depuis le serveur ───────────────────────────────────────
 
   @override
-  Future<void> restoreSessions() async {
+  Future<void> restoreSessions({bool Function()? shouldContinue}) async {
     final remote = _remote;
     if (remote == null) {
       return; // aucune source distante (mode démo, tests hors ligne)
     }
-    await WorkoutSessionDownloader(database: _db, remote: remote).run();
+    await WorkoutSessionDownloader(
+      database: _db,
+      remote: remote,
+    ).run(shouldContinue: shouldContinue);
   }
 
   @override

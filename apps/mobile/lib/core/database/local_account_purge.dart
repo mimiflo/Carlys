@@ -105,8 +105,14 @@ class DriftLocalAccountPurge implements LocalAccountPurge {
   @override
   Future<void> run() async {
     // 1. Plus aucun déclencheur : ni drainage ni rapatriement ne doit
-    //    démarrer sur la base qu'on s'apprête à vider.
+    //    démarrer sur la base qu'on s'apprête à vider. Le rapatriement EN
+    //    VOL est annulé et ATTENDU — invalider ne tue pas un futur déjà
+    //    lancé, et une de ses écritures qui aboutissait après le vidage
+    //    réinjectait les séances de l'ancien compte dans le fichier SQLite
+    //    que le compte suivant rouvre (le marqueur de propriétaire effacé,
+    //    rien ne les purgeait plus jamais).
     _ref.invalidate(syncLifecycleProvider);
+    await _ref.read(appRestoreProvider).cancelAndWait();
     _ref.invalidate(appRestoreProvider);
 
     // 2. La base, d'un bloc, dans une transaction.

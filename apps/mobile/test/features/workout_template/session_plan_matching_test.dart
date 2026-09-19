@@ -120,6 +120,53 @@ void main() {
     },
   );
 
+  test('supprimer une série honorée REND sa prévision au plan', () async {
+    final sessionId = await startPush();
+    final recorded = await recordSet(
+      AddSetInput(
+        sessionId: sessionId,
+        exerciseId: 'exo-dc',
+        exerciseName: 'Développé couché',
+        reps: 8,
+        weightKg: 60,
+      ),
+    );
+    expect(recorded.fulfilled, isNotNull);
+
+    await workouts.deleteSet(recorded.setId);
+
+    // L'item redevient à faire : la consigne le repropose, et la clôture ne
+    // compte plus une série qui n'existe pas. Sans cela, le `doneSetId`
+    // orphelin comptait la série supprimée « faite » à jamais.
+    final plan = await templates.sessionPlan(sessionId);
+    expect(plan!.doneCount, 0);
+    expect(plan.items.first.doneSetId, isNull);
+    expect(plan.current!.setPosition, 0); // la série 1 se repropose
+  });
+
+  test('deux démarrages CONCURRENTS : une seule séance en cours', () async {
+    // La règle « au plus une séance active » se vérifie DANS la transaction
+    // du démarrage : le perdant de la course voit la séance du gagnant et
+    // lève — `currentOrStart` rattrape ce StateError et rejoint la séance.
+    Future<Object> tenter() async {
+      try {
+        return await workouts.startWorkout();
+      } on StateError catch (error) {
+        return error;
+      }
+    }
+
+    final issues = await Future.wait([tenter(), tenter()]);
+
+    expect(issues.whereType<String>(), hasLength(1));
+    expect(issues.whereType<StateError>(), hasLength(1));
+    final rows = await db.select(db.localWorkoutSessions).get();
+    expect(
+      rows.where((row) => row.status == WorkoutStatus.inProgress.apiValue),
+      hasLength(1),
+    );
+  });
+
   test('un exercice hors programme ne bouge pas le dénominateur', () async {
     final sessionId = await startPush();
 

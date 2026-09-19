@@ -59,7 +59,9 @@ class DriftCoachSessionLauncher implements CoachSessionLauncher {
 
   @override
   Future<String> start(CoachSessionProposal proposal) async {
-    await _sessions.requireNoActiveSession();
+    // « Au plus une séance active » se vérifie dans `insertSession`, donc
+    // DANS la transaction — hors d'elle, accepter une proposition pendant
+    // un démarrage depuis l'accueil créait deux séances.
 
     final sessionId = _uuid.v4();
     final startedAt = DateTime.now().toUtc();

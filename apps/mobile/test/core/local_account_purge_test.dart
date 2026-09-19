@@ -208,6 +208,37 @@ void main() {
     );
   });
 
+  test(
+    'le rapatriement EN VOL est annulé et attendu AVANT le vidage',
+    () async {
+      // LE SCÉNARIO. Le compte A ouvre l'accueil : le rapatriement part (des
+      // dizaines de GET, chacun suivi d'une écriture). A se déconnecte.
+      // Invalider le provider n'annule PAS le futur déjà lancé : une écriture
+      // qui aboutissait entre le vidage et la fermeture réinjectait les
+      // séances de A dans le fichier SQLite que le compte suivant rouvre —
+      // et le marqueur de propriétaire venant d'être effacé, plus rien ne les
+      // purgeait jamais. L'espion écrit PENDANT qu'on l'attend : si la purge
+      // attend vraiment, son écriture est emportée par le vidage.
+      final espion = _RapatriementEnVol(database);
+      final local = ProviderContainer(
+        overrides: [
+          appDatabaseProvider.overrideWithValue(database),
+          syncLifecycleProvider.overrideWith((ref) => NoopSyncLifecycle()),
+          appRestoreProvider.overrideWithValue(espion),
+        ],
+      );
+      addTearDown(local.dispose);
+
+      await local.read(localAccountPurgeProvider).run();
+
+      expect(espion.annule, isTrue);
+      expect(
+        await database.select(database.localWorkoutSessions).get(),
+        isEmpty,
+      );
+    },
+  );
+
   test('les records personnels non plus, malgré leur autoDispose', () async {
     // LE PIÈGE QUE CE TEST FIGE. `personalRecordsProvider` est déclaré
     // `autoDispose`, ce qui donne à croire qu'il se détruit tout seul et
@@ -234,6 +265,35 @@ void main() {
           'un Provider permanent épingle l’élément auto-disposé',
     );
   });
+}
+
+/// Un rapatriement dont une écriture aboutit PENDANT qu'on l'attend : c'est
+/// la fenêtre que la purge doit refermer avant de vider la base.
+class _RapatriementEnVol implements AppRestore {
+  _RapatriementEnVol(this._db);
+
+  final AppDatabase _db;
+  bool annule = false;
+
+  @override
+  void ensureRestored() {}
+
+  @override
+  Future<void> cancelAndWait() async {
+    annule = true;
+    await _db
+        .into(_db.localWorkoutSessions)
+        .insert(
+          LocalWorkoutSessionsCompanion.insert(
+            id: 'seance-en-vol',
+            status: 'COMPLETED',
+            startedAt: DateTime.utc(2026, 9, 1, 11),
+          ),
+        );
+  }
+
+  @override
+  dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 }
 
 /// Une ligne dans CHAQUE table : la purge doit les connaître toutes, y

@@ -1192,5 +1192,4 @@ contrats partagés. Il se livre **en premier**, avant tout le reste.
 Dupliquer un modèle · partager ou exporter un modèle · modèles officiels
 publiés par l'administration · supersets et
 circuits · cibles de durée, distance, RPE, tempo, % de 1RM (D8) · suggestion
-automatique de charge · quota Premium actif (D11) · récupération d'un plan de
-séance entre appareils (D5).
+automatique de charge · quota Premium actif (D11).

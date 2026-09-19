@@ -174,10 +174,13 @@ void main() {
     // diffère de la première, sans quoi cette assertion ne prouverait rien.
     expect(find.text('PRÉVU 10 × 65 KG'), findsOneWidget);
     expect(find.text('PRÉVU 8 × 60 KG'), findsNothing);
-    // Le rang affiché reste « 1 sur 3 » : une série PASSÉE n'est pas faite,
-    // elle ne compte donc pas dans le décompte des séries réalisées. C'est
-    // le `remainingCount` qui recule, et lui seul.
-    expect(find.text('SÉRIE 1 SUR 3 · DÉVELOPPÉ COUCHÉ'), findsOneWidget);
+    // Le rang NOMME la série proposée — la deuxième, dont on affiche
+    // justement la cible deux lignes plus haut. Cette assertion attendait
+    // « SÉRIE 1 SUR 3 » : l'écran ré-annonçait la série qu'on venait de
+    // passer, avec les cibles de la suivante. Une série passée ne compte
+    // toujours pas comme faite (`doneCount` reste 0, vérifié plus haut) :
+    // c'est le RANG qui suit l'item, pas le décompte des séries réalisées.
+    expect(find.text('SÉRIE 2 SUR 3 · DÉVELOPPÉ COUCHÉ'), findsOneWidget);
   });
 
   testWidgets('séance libre : aucun objectif, comportement inchangé', (

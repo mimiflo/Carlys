@@ -45,11 +45,20 @@ class WorkoutSessionDownloader {
   final SessionPlanLocalDataSource _plans;
 
   /// Renvoie le nombre de séances effectivement réécrites en local.
-  Future<int> run() async {
+  ///
+  /// [shouldContinue], consulté avant chaque séance, arrête la boucle dès
+  /// qu'il rend faux : la purge de compte annule ainsi un rapatriement en
+  /// vol, puis ATTEND sa fin — aucune écriture ne retombe dans la base
+  /// qu'elle vient de vider.
+  Future<int> run({bool Function()? shouldContinue}) async {
     final refs = await _collectRefs();
     var restored = 0;
 
     for (final ref in refs) {
+      if (shouldContinue != null && !shouldContinue()) {
+        _logger.info('Rapatriement interrompu ($restored séances réécrites)');
+        return restored;
+      }
       // Une saisie locale non acquittée gagne TOUJOURS : l'appareil ne perd
       // jamais ce qu'il a enregistré au profit d'un état serveur plus ancien.
       if (await _hasLocalChanges(ref.id)) {
@@ -148,8 +157,10 @@ class WorkoutSessionDownloader {
   ///
   /// Sert au rapatriement (où la séance n'a aucune modification locale) et
   /// à la résolution d'un conflit de clôture, où une série encore non
-  /// acquittée peut exister : elle est **conservée** — seules les séries
-  /// que le serveur connaît déjà sont remplacées par sa liste.
+  /// acquittée peut exister : elle est **conservée**, même quand le serveur
+  /// connaît son identifiant — une correction ou une pierre tombale en file
+  /// porte une vérité que le serveur n'a pas encore reçue, l'opération la
+  /// lui appliquera.
   Future<void> write(RemoteWorkoutSession session) {
     return _db.transaction(() async {
       await _db
@@ -171,17 +182,30 @@ class WorkoutSessionDownloader {
 
       // Le serveur ne sert que les séries vivantes : remplacer d'un bloc
       // celles qu'il connaît reproduit exactement son état, suppressions
-      // comprises. Une série jamais acquittée n'est pas à lui : elle reste.
+      // comprises. Une série non acquittée n'est pas à lui : elle reste —
+      // y compris quand le serveur connaît son IDENTIFIANT (correction ou
+      // pierre tombale en file sur une série existante). L'upsert la
+      // repassait aux valeurs serveur, `synced` : la correction disparaissait
+      // de l'écran alors que la carte de conflit venait de promettre
+      // « Tes séries sont conservées dans les deux cas ».
       await (_db.delete(_db.localWorkoutSets)..where(
             (row) =>
                 row.sessionId.equals(session.id) &
                 row.syncStatus.equals('synced'),
           ))
           .go();
+      final protegees =
+          (await (_db.select(
+                _db.localWorkoutSets,
+              )..where((row) => row.sessionId.equals(session.id))).get())
+              .map((row) => row.id)
+              .toSet();
       await _db.batch(
         (batch) => batch.insertAllOnConflictUpdate(
           _db.localWorkoutSets,
-          session.sets.map((set) => _setRow(session.id, set)),
+          session.sets
+              .where((set) => !protegees.contains(set.id))
+              .map((set) => _setRow(session.id, set)),
         ),
       );
 

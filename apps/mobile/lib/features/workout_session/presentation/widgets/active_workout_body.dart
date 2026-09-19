@@ -207,9 +207,9 @@ class _ActiveWorkoutBodyState extends ConsumerState<ActiveWorkoutBody> {
     } else {
       await actions.complete(sessionId);
     }
-    // Le plan n'a jamais quitté l'appareil (D5) et plus rien ne le lit une
-    // fois la séance close : les cibles atteintes vivent désormais sur les
-    // séries elles-mêmes.
+    // Le serveur a SA copie du plan (partie avec `session.create`, D5
+    // révisée) : purger la copie locale ne perd rien — plus rien ne la lit
+    // une fois la séance close, les cibles atteintes vivent sur les séries.
     await templates.purgePlan(sessionId);
 
     if (!mounted) {

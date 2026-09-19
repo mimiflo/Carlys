@@ -41,6 +41,12 @@ class WorkoutSessionWriter {
   /// Le domaine impose **au plus une séance active** : deux séances
   /// simultanées rendraient l'écran de séance et l'appariement au plan
   /// ambigus.
+  ///
+  /// Appelée par [insertSession], donc DANS la transaction du démarrage :
+  /// vérifiée avant de l'ouvrir, deux démarrages concurrents (double-touche,
+  /// accueil + proposition du coach) passaient tous deux le SELECT puis
+  /// inséraient chacun leur séance — la même course que la position des
+  /// séries, corrigée de la même façon (voir [insertSet]).
   Future<void> requireNoActiveSession() async {
     final active =
         await (_db.select(_db.localWorkoutSessions)..where(
@@ -72,6 +78,11 @@ class WorkoutSessionWriter {
     String? templateName,
     List<Map<String, dynamic>> plan = const [],
   }) async {
+    // La règle « au plus une séance active » se vérifie ICI, dans la
+    // transaction : les transactions Drift se sérialisent, le perdant d'une
+    // course voit donc la séance du gagnant et lève — `currentOrStart`
+    // rattrape ce StateError et rejoint la séance apparue.
+    await requireNoActiveSession();
     await _db
         .into(_db.localWorkoutSessions)
         .insert(

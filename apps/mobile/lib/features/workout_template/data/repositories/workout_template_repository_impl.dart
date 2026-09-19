@@ -163,7 +163,9 @@ class WorkoutTemplateRepositoryImpl implements WorkoutTemplateRepository {
     if (template == null) {
       throw StateError('Modèle de séance introuvable : $templateId');
     }
-    await _sessions.requireNoActiveSession();
+    // « Au plus une séance active » se vérifie dans `insertSession`, donc
+    // DANS la transaction — hors d'elle, deux lancements concurrents
+    // passaient tous deux la garde.
 
     final sessionId = _uuid.v4();
     final startedAt = DateTime.now().toUtc();

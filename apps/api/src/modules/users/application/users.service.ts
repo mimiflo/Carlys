@@ -79,7 +79,10 @@ export class UsersService {
         : { sessionMinutesTarget: data.sessionMinutesTarget }),
       ...(data.sex === undefined ? {} : { sex: data.sex }),
       ...(data.birthDate === undefined ? {} : { birthDate: data.birthDate }),
-      ...(data.heightCm === undefined ? {} : { heightCm: data.heightCm }),
+      // Rangée ARRONDIE au dixième : la validation juge la valeur (175.1 et
+      // son artefact flottant 175.10000000000002 sont la même taille) — la
+      // base ne doit porter que la forme canonique.
+      ...(data.heightCm === undefined ? {} : { heightCm: Math.round(data.heightCm * 10) / 10 }),
       ...(data.activityLevel === undefined ? {} : { activityLevel: data.activityLevel }),
       ...(data.nutritionGoal === undefined ? {} : { nutritionGoal: data.nutritionGoal }),
     };

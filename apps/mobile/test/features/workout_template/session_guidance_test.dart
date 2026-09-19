@@ -99,6 +99,45 @@ void main() {
     expect(guidance.summary, '1 série sur 4 prévues');
   });
 
+  test('après une série PASSÉE : le rang est celui de l’item proposé', () {
+    // La série 1 est sautée, aucune n'est honorée : la consigne propose la
+    // série 2 — et doit LA nommer. `done + 1` ré-annonçait « Série 1 »,
+    // celle qu'on venait de passer, avec les cibles de la série 2.
+    final plan = SessionPlan(
+      sessionId: 's-1',
+      templateName: 'Push force',
+      items: [
+        item(
+          'p-1',
+          exercisePosition: 0,
+          exerciseName: 'Développé couché',
+          setPosition: 0,
+          targetReps: 8,
+          skipped: true,
+        ),
+        item(
+          'p-2',
+          exercisePosition: 0,
+          exerciseName: 'Développé couché',
+          setPosition: 1,
+          targetReps: 8,
+        ),
+        item(
+          'p-3',
+          exercisePosition: 0,
+          exerciseName: 'Développé couché',
+          setPosition: 2,
+          targetReps: 6,
+        ),
+      ],
+    );
+
+    final guidance = guidanceFor(plan);
+
+    expect(guidance.planItemId, 'p-2');
+    expect(guidance.overline, 'Série 2 sur 3 · Développé couché');
+  });
+
   test('choix manuel d’un exercice du programme : l’appariement le suit', () {
     final guidance = guidanceFor(
       planOf(),

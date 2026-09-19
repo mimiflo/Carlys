@@ -118,6 +118,7 @@ class _CorrectSetFormState extends State<_CorrectSetForm> {
                     label: 'Répétitions',
                     controller: _reps,
                     max: _repsMax,
+                    initiallyFilled: widget.set.reps != null,
                   ),
                 ),
                 const SizedBox(width: AppSpacing.sm),
@@ -127,6 +128,7 @@ class _CorrectSetFormState extends State<_CorrectSetForm> {
                     controller: _weight,
                     max: _weightMax,
                     decimal: true,
+                    initiallyFilled: widget.set.weightKg != null,
                     onSubmitted: _submit,
                   ),
                 ),
@@ -151,13 +153,20 @@ class _CorrectSetFormState extends State<_CorrectSetForm> {
   }
 }
 
-/// Un champ numérique borné. Vide n'est PAS zéro : c'est « on ne note pas
-/// cette grandeur », et le serveur accepte l'absence.
+/// Un champ numérique borné.
+///
+/// Vide n'est pas zéro — mais son sens dépend de l'histoire du champ. Une
+/// grandeur jamais notée peut rester vide : elle reste non notée. Une
+/// grandeur DÉJÀ notée ne peut pas être retirée par ce chemin : la
+/// correction est un PATCH où l'absence signifie « inchangé », vider le
+/// champ était donc AVALÉ (la feuille se fermait sans rien écrire ni rien
+/// dire). On le refuse en le disant, plutôt que de le taire.
 class _NombreField extends StatelessWidget {
   const _NombreField({
     required this.label,
     required this.controller,
     required this.max,
+    required this.initiallyFilled,
     this.decimal = false,
     this.onSubmitted,
   });
@@ -165,6 +174,10 @@ class _NombreField extends StatelessWidget {
   final String label;
   final TextEditingController controller;
   final num max;
+
+  /// La grandeur était notée à l'ouverture : le vide devient un refus
+  /// expliqué au lieu d'un geste perdu.
+  final bool initiallyFilled;
   final bool decimal;
   final VoidCallback? onSubmitted;
 
@@ -183,7 +196,9 @@ class _NombreField extends StatelessWidget {
       validator: (value) {
         final raw = value?.trim().replaceAll(',', '.') ?? '';
         if (raw.isEmpty) {
-          return null;
+          return initiallyFilled
+              ? 'Vide n’efface pas la valeur : remets-la ou corrige-la.'
+              : null;
         }
         final nombre = decimal ? double.tryParse(raw) : int.tryParse(raw);
         if (nombre == null || nombre <= 0 || nombre > max) {

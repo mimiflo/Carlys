@@ -7,6 +7,7 @@ import {
   HEIGHT_CM_MIN,
   LOCALE_PATTERN,
   TRAINING_EQUIPMENT_MAX,
+  TRAINING_EQUIPMENT_SLUG_MAX_LENGTH,
   TRAINING_SESSION_MINUTES_MAX,
   TRAINING_SESSION_MINUTES_MIN,
   TRAINING_WEEKLY_SESSIONS_MAX,
@@ -40,6 +41,7 @@ import {
   Min,
   MinDate,
 } from 'class-validator';
+import { HasDecimalPrecision } from '../../../../../common/validators/has-decimal-precision';
 import { IsIanaTimeZone } from '../../../../../common/validators/is-iana-time-zone';
 
 export class UpdateProfileDto {
@@ -139,7 +141,7 @@ export class UpdateProfileDto {
   @IsArray()
   @ArrayMaxSize(TRAINING_EQUIPMENT_MAX)
   @IsString({ each: true })
-  @Length(1, 80, { each: true })
+  @Length(1, TRAINING_EQUIPMENT_SLUG_MAX_LENGTH, { each: true })
   equipmentSlugs?: string[];
 
   // ── Profil métabolique (nutrition) ──────────────────────────────────────
@@ -161,7 +163,9 @@ export class UpdateProfileDto {
   // `new Date(...)`, et un booléen ou un nombre devenait une date valide
   // (epoch 1970 tombe dans l'intervalle d'âge). Une chaîne illisible donne
   // une date invalide, que `@IsDate` refuse.
-  @Transform(({ value }) => (typeof value === 'string' ? new Date(value) : value))
+  @Transform(({ value }: { value: unknown }): unknown =>
+    typeof value === 'string' ? new Date(value) : value,
+  )
   @IsDate({ message: 'Date de naissance illisible (attendu : ISO 8601).' })
   @MinDate(() => birthDateRange(new Date()).earliest, {
     message: `L’âge ne peut pas dépasser ${AGE_YEARS_MAX} ans.`,
@@ -174,13 +178,18 @@ export class UpdateProfileDto {
   // Les bornes viennent du CONTRAT (`packages/api-contracts/src/users.ts`),
   // pas de chiffres recopiés ici : c'est ce qui manquait, et les clients
   // devinaient. L'écran mobile vérifiait l'intervalle mais pas la précision.
+  // La précision se juge sur la VALEUR (arrondie au dixième), comme le
+  // contrat le déclare — `maxDecimalPlaces` comptait les décimales de
+  // l'ÉCRITURE et refusait 175.10000000000002, artefact flottant que le
+  // contrat accepte.
   @ApiPropertyOptional({
     minimum: HEIGHT_CM_MIN,
     maximum: HEIGHT_CM_MAX,
     description: 'Taille en cm (une décimale au maximum)',
   })
   @IsOptional()
-  @IsNumber({ maxDecimalPlaces: HEIGHT_CM_DECIMALS })
+  @IsNumber()
+  @HasDecimalPrecision(HEIGHT_CM_DECIMALS)
   @Min(HEIGHT_CM_MIN)
   @Max(HEIGHT_CM_MAX)
   heightCm?: number;
