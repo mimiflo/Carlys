@@ -215,11 +215,11 @@ info "exemplaires API : $API_REPLICAS (plage de $API_CAPACITY port(s))"
 
 # ── 1. Registre : connexion puis pull des trois images ──────────────────────
 # Rien n'a encore bougé : c'est le bon moment pour échouer.
-step "1/7 Connexion au registre"
+step "1/8 Connexion au registre"
 ghcr_login
 ok "connecté à $CARLYS_REGISTRY"
 
-step "2/7 Récupération des images (sha-$SHA)"
+step "2/8 Récupération des images (sha-$SHA)"
 IMG_API="$(image_api "$SHA")"
 IMG_MIGRATE="$(image_migrate "$SHA")"
 IMG_ADMIN="$(image_admin "$SHA" "$ENV_NAME")"
@@ -238,7 +238,7 @@ ok "trois images présentes localement"
 # n'est exposée au trafic. En régime établi ils tournent déjà et cette étape ne
 # coûte rien ; au premier déploiement elle crée le réseau et le volume dont la
 # migration a besoin.
-step "3/7 Socle de données (postgres, redis)"
+step "3/8 Socle de données (postgres, redis)"
 export_tags "$SHA"
 # shellcheck disable=SC2086 # DATA_SERVICES est une liste de services, volontairement découpée
 dc "$ENV_NAME" "$ENV_FILE" up -d $DATA_SERVICES || die \
@@ -272,7 +272,7 @@ ok "PostgreSQL accepte les connexions"
 # l'attente `pg_isready` de l'étape précédente — un second avis, plus faible
 # (`pg_isready` accepte une connexion, le healthcheck interroge la BASE), et
 # qui divergerait du compose au premier changement.
-step "4/7 Migrations Prisma (tâche ponctuelle)"
+step "4/8 Migrations Prisma (tâche ponctuelle)"
 if ! dc "$ENV_NAME" "$ENV_FILE" run --rm migrate; then
   die "La migration a échoué — DÉPLOIEMENT INTERROMPU." \
     "RIEN n'a été basculé : api et admin tournent toujours sur ${PREVIOUS_SHA:-leur version précédente}." \
@@ -298,7 +298,7 @@ ok "schéma à jour"
 # déterministes) et se compte en secondes, quand le déploiement se compte en
 # minutes. Le test « le catalogue a-t-il changé ? » coûterait plus cher en
 # complexité qu'il ne ferait gagner, et se tromperait un jour.
-step "5/7 Catalogue d'exercices"
+step "5/8 Catalogue d'exercices"
 if vaut_non "$DEPLOY_CATALOG"; then
   warn "étape sautée : CARLYS_DEPLOY_CATALOG=$DEPLOY_CATALOG"
   info "La bibliothèque d'exercices reste telle qu'elle est en base."
@@ -347,8 +347,49 @@ else
   ok "catalogue à jour"
 fi
 
-# ── 5. Bascule ─────────────────────────────────────────────────────────────
-step "6/7 Bascule (compose up -d)"
+# ── 6. Catalogue d'ABONNEMENT — avant la bascule aussi ─────────────────────
+# Plans, droits ouverts, produits Stripe/RevenueCat de CET environnement.
+#
+# POURQUOI CETTE ÉTAPE EXISTE. Ces tables n'étaient écrites que par le seed
+# de développement, qui ne s'exécute jamais ici — il crée des comptes de
+# démonstration. Un serveur neuf n'avait donc aucun plan : la projection du
+# premier webhook Stripe échouait sur « Produit Stripe inconnu », échec
+# classé rattrapable donc rendu en 503. Stripe réémettait, échouait autant
+# de fois, puis abandonnait. Le paiement était encaissé et le compte restait
+# gratuit, sans un mot.
+#
+# Idempotente, comme le catalogue d'exercices, et rejouée à chaque
+# déploiement pour la même raison : elle se compte en secondes.
+step "6/8 Catalogue d'abonnement"
+if ! abonnement_commande_presente "$ENV_NAME" "$ENV_FILE"; then
+  # Image antérieure à la commande (retour arrière, promotion d'un vieux
+  # sha) : ce n'est pas une panne, le catalogue déjà en base reste servi.
+  warn "l'image sha-$SHA ne porte pas dist/cli/subscription-catalog : plans laissés en l'état."
+elif ! abonnement_projeter "$ENV_NAME" "$ENV_FILE"; then
+  # La commande rend 1 quand AUCUN identifiant produit n'est configuré : le
+  # catalogue est alors lisible mais ne peut rien accorder. On refuse de
+  # basculer en le taisant — c'est exactement le trou qui laissait un
+  # paiement réel sans effet.
+  die "Le catalogue d'abonnement n'a pas pu être projeté — DÉPLOIEMENT INTERROMPU." \
+    "RIEN n'a été basculé : api et admin tournent toujours sur ${PREVIOUS_SHA:-leur version précédente}." \
+    "" \
+    "Cause la plus fréquente : aucun identifiant produit dans le .env de cet" \
+    "environnement. Sans eux, un paiement Stripe ou un achat dans les magasins" \
+    "n'accorde RIEN — le webhook échoue sur « produit inconnu », est réémis," \
+    "puis abandonné." \
+    "" \
+    "Renseigner dans $ENV_FILE :" \
+    "  STRIPE_PRICE_MONTHLY=price_…      (tableau de bord Stripe)" \
+    "  STRIPE_PRICE_YEARLY=price_…" \
+    "  REVENUECAT_PRODUCT_MONTHLY=…      (si les magasins sont ouverts)" \
+    "  REVENUECAT_PRODUCT_YEARLY=…" \
+    "puis relancer : carlysctl deploy $ENV_NAME $SHA"
+else
+  ok "catalogue d'abonnement à jour"
+fi
+
+# ── 7. Bascule ─────────────────────────────────────────────────────────────
+step "7/8 Bascule (compose up -d)"
 if ! dc "$ENV_NAME" "$ENV_FILE" up -d; then
   # Compose a refusé de démarrer la pile. Le schéma est déjà migré (migration
   # compatible avec la version précédente : c'est la contrainte annoncée en
@@ -367,7 +408,7 @@ fi
 ok "conteneurs démarrés sur sha-$SHA"
 
 # ── 6. Santé, en boucle BORNÉE ─────────────────────────────────────────────
-step "7/7 Vérification de santé"
+step "8/8 Vérification de santé"
 healthy=1
 sante_api "$HEALTH_TRIES" || healthy=0
 # L'admin sert AUSSI les pages publiques du produit (/verify-email,

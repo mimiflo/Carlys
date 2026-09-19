@@ -61,7 +61,9 @@ void main() {
     final controller = TextEditingController(text: 'Combien de séries ?');
     addTearDown(controller.dispose);
     await tester.pumpWidget(
-      harness(CoachComposer(controller: controller, onSend: sent.add)),
+      harness(
+        CoachComposer(controller: controller, onSend: sent.add, onRetry: () {}),
+      ),
     );
 
     final send = find.ancestor(

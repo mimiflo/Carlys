@@ -85,6 +85,7 @@ void main() {
           composerController: controller,
           onSend: (_) {},
           onOpenProposal: (_) {},
+          onRetry: () {},
           isOffline: isOffline,
           isSending: isSending,
         ),

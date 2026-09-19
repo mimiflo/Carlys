@@ -135,6 +135,16 @@ export const envSchema = z
     STRIPE_PRICE_MONTHLY: z.string().min(1).optional(),
     STRIPE_PRICE_YEARLY: z.string().min(1).optional(),
 
+    /**
+     * Identifiants produits RevenueCat (achats dans les magasins). Même
+     * rôle que les `STRIPE_PRICE_*` : ils disent quel produit du
+     * fournisseur ouvre le plan payant, et c'est ce que la commande
+     * `subscription-catalog` projette en base. Sans eux, un achat
+     * iOS/Android arrive sur un « produit inconnu » et n'accorde rien.
+     */
+    REVENUECAT_PRODUCT_MONTHLY: z.string().min(1).optional(),
+    REVENUECAT_PRODUCT_YEARLY: z.string().min(1).optional(),
+
     // ── Notifications push (FCM) ───────────────────────────────────────────
     /**
      * Compte de service Firebase, JSON complet (téléchargé depuis la console

@@ -21,6 +21,7 @@ class CoachScreen extends StatelessWidget {
     required this.composerController,
     required this.onSend,
     required this.onOpenProposal,
+    required this.onRetry,
     this.isOffline = false,
     this.isSending = false,
     this.notice,
@@ -32,6 +33,10 @@ class CoachScreen extends StatelessWidget {
   final TextEditingController composerController;
   final ValueChanged<String> onSend;
   final ValueChanged<CoachSessionProposal> onOpenProposal;
+
+  /// Sortie de l'état hors ligne : l'encart qui remplace le composeur
+  /// l'offre, faute de quoi l'écran resterait muet le réseau revenu.
+  final VoidCallback onRetry;
   final bool isOffline;
   final bool isSending;
 
@@ -103,6 +108,7 @@ class CoachScreen extends StatelessWidget {
               child: CoachComposer(
                 controller: composerController,
                 onSend: onSend,
+                onRetry: onRetry,
                 isOffline: isOffline,
                 isSending: isSending,
               ),

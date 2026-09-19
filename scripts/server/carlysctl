@@ -44,9 +44,15 @@ AGIR À LA MAIN
                                           saisi sans écho, jamais en argument
   carlysctl catalog-seed <env>            recharge le catalogue d'exercices
                                           SANS redéployer — le déploiement s'en
-                                          charge tout seul (étape 5/7).
+                                          charge tout seul (étape 5/8).
                                           Idempotent (--sans-photos : textes
                                           seuls, sans le stockage objet)
+  carlysctl subscription-catalog <env>    projette plans, droits et produits
+                                          Stripe/RevenueCat SANS redéployer —
+                                          le déploiement le fait aussi
+                                          (étape 6/8). À relancer après avoir
+                                          changé un STRIPE_PRICE_* ou un
+                                          REVENUECAT_PRODUCT_* du .env
   carlysctl scale <env> <n>               fixe le nombre d'exemplaires d'API
   carlysctl heal <env>                    répare ce qui est tombé
   carlysctl env-sync <env> [--appliquer]  ajoute au .env les réglages qui lui
@@ -404,6 +410,44 @@ cmd_catalog_seed() {
   ok "catalogue en place — l'application mobile le voit immédiatement."
 }
 
+# Projette le catalogue d'ABONNEMENT — plans, droits ouverts, et produits des
+# fournisseurs tels que le .env de cet environnement les déclare.
+#
+# EN TEMPS NORMAL, PERSONNE N'EN A BESOIN : deploy.sh le fait à chaque
+# déploiement (étape 6/8). Elle sert quand on change un identifiant produit
+# sans redéployer — ouvrir les magasins, corriger un `price_…` recopié de
+# travers — car ces valeurs viennent du .env, pas de l'image.
+#
+# Sans elle, ces tables n'étaient écrites que par le seed de développement,
+# qui ne tourne jamais sur un serveur : un webhook de paiement tombait alors
+# sur « produit inconnu », était réémis, puis abandonné — encaissé sans rien
+# accorder.
+cmd_subscription_catalog() {
+  local env_name file
+  env_name="$(environnement_requis "${1-}")"
+  file="$(env_file "$env_name")"
+  require_commands docker
+  require_compose_file
+  [ -n "$(deployed_current "$env_name")" ] || die "« $env_name » n'a jamais été déployé." \
+    "La commande vit dans l'image API : déployer d'abord (carlysctl deploy $env_name <sha>)."
+
+  # Même verrou que le catalogue d'exercices : le DÉPLOIEMENT projette aussi
+  # ces tables, et deux écritures simultanées se disputeraient les mêmes
+  # lignes. On attend, ce rattrapage n'étant pas pressé.
+  lock_env "$env_name" "$CARLYS_LOCK_WAIT"
+
+  if ! abonnement_commande_presente "$env_name" "$file"; then
+    die "L'image API déployée sur « $env_name » ne porte pas encore subscription-catalog." \
+      "Elle est antérieure à cette commande : déployer une version plus récente, puis relancer."
+  fi
+
+  step "Catalogue d'abonnement sur « $env_name »"
+  abonnement_projeter "$env_name" "$file" \
+    || die "La projection a échoué — le message ci-dessus dit pourquoi." \
+      "Cause la plus fréquente : aucun STRIPE_PRICE_* ni REVENUECAT_PRODUCT_* dans $file."
+  ok "plans et produits en place — un paiement peut désormais accorder Premium."
+}
+
 cmd_update() {
   local env_name file
   env_name="$(environnement_requis "${1-}")"
@@ -604,6 +648,7 @@ case "$COMMANDE" in
   alert-test) cmd_alert_test ;;
   admin-create) cmd_admin_create "$@" ;;
   catalog-seed) cmd_catalog_seed "$@" ;;
+  subscription-catalog) cmd_subscription_catalog "$@" ;;
   prune)     cmd_prune "${1-}" ;;
   update)    cmd_update "${1-}" ;;
   supervise) cmd_supervise "${1-}" ;;

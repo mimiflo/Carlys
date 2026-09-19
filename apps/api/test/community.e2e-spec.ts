@@ -33,6 +33,20 @@ import {
  * confidentialité décidée côté serveur, encouragements réservés aux amis,
  * défis à progression collective.
  */
+/**
+ * Un jour `YYYY-MM-DD` relatif à AUJOURD'HUI (UTC).
+ *
+ * Les dates étaient figées (`2026-08-11`) : depuis que le serveur borne
+ * `answeredOn` à la fenêtre du jour courant — sans quoi une seule leçon
+ * renvoyée avec des dates fabriquées créditait indéfiniment le défi
+ * collectif —, un jour en dur périme le test au lendemain de son écriture.
+ */
+function jour(decalage = 0): string {
+  const date = new Date();
+  date.setUTCDate(date.getUTCDate() + decalage);
+  return date.toISOString().slice(0, 10);
+}
+
 describe('Communauté (e2e)', () => {
   let app: INestApplication<App>;
   let prisma: PrismaClient;
@@ -350,6 +364,12 @@ describe('Communauté (e2e)', () => {
   });
 
   it('défi CULTURE : une première réponse juste contribue, le rejeu non', async () => {
+    // Les jours sont RELATIFS depuis que le serveur borne `answeredOn` : une
+    // exécution précédente a donc pu laisser la réponse d'aujourd'hui, et
+    // l'unicité empêcherait alors toute contribution. On repart d'un journal
+    // vide, comme le test de relecture juste en dessous.
+    await prisma.quizAnswer.deleteMany({ where: { userId: userIdA } });
+
     // Défi culturel fixture, rejoint par Alice.
     const cultureSlug = `e2e-defi-culture-${randomUUID()}`;
     const culture = await prisma.communityChallenge.create({
@@ -360,19 +380,24 @@ describe('Communauté (e2e)', () => {
         title: 'Défi culturel e2e',
         description: 'Cinq questions par jour.',
         target: 2,
+        // Début au 1er du mois, comme `buildMonthlyChallenges` en
+        // production : le défaut `now()` du schéma plaçait le départ APRÈS
+        // l'instant de référence d'une réponse du jour, et la fenêtre
+        // excluait la contribution — un artefact de fixture, pas du code.
+        startsAt: new Date(`${currentMonth}-01T00:00:00Z`),
         endsAt: new Date(Date.now() + 7 * 24 * 3_600_000),
       },
     });
     await authed(tokenA).post(`/api/v1/community/challenges/${culture.id}/join`).expect(201);
 
-    const answer = { lessonId: 'lecon-dos', answeredOn: '2026-08-11', correct: true };
+    const answer = { lessonId: 'lecon-dos', answeredOn: jour(), correct: true };
     await authed(tokenA).post('/api/v1/community/quiz-answers').send(answer).expect(204);
     // REJOUER la même réponse : aucune contribution supplémentaire.
     await authed(tokenA).post('/api/v1/community/quiz-answers').send(answer).expect(204);
     // Une réponse FAUSSE le lendemain : enregistrée, pas comptée.
     await authed(tokenA)
       .post('/api/v1/community/quiz-answers')
-      .send({ lessonId: 'lecon-dos', answeredOn: '2026-08-12', correct: false })
+      .send({ lessonId: 'lecon-dos', answeredOn: jour(-1), correct: false })
       .expect(204);
 
     const challenges = data<CommunityChallenge[]>(
@@ -394,17 +419,17 @@ describe('Communauté (e2e)', () => {
     // choix : la relecture doit rendre le premier, comme le magasin local.
     await authed(tokenA)
       .post('/api/v1/community/quiz-answers')
-      .send({ lessonId: 'lecon-dos', answeredOn: '2026-08-11', correct: false, choiceIndex: 2 })
+      .send({ lessonId: 'lecon-dos', answeredOn: jour(), correct: false, choiceIndex: 2 })
       .expect(204);
     await authed(tokenA)
       .post('/api/v1/community/quiz-answers')
-      .send({ lessonId: 'lecon-dos', answeredOn: '2026-08-12', correct: true, choiceIndex: 0 })
+      .send({ lessonId: 'lecon-dos', answeredOn: jour(-1), correct: true, choiceIndex: 0 })
       .expect(204);
     // Un client d'avant la migration n'envoie pas le choix : la réponse
     // compte quand même, le choix relu est nul.
     await authed(tokenA)
       .post('/api/v1/community/quiz-answers')
-      .send({ lessonId: 'lecon-squat', answeredOn: '2026-08-11', correct: true })
+      .send({ lessonId: 'lecon-squat', answeredOn: jour(), correct: true })
       .expect(204);
 
     const answers = data<QuizAnswerRecord[]>(
@@ -416,7 +441,7 @@ describe('Communauté (e2e)', () => {
       lessonId: 'lecon-dos',
       choiceIndex: 2,
       correct: false,
-      answeredOn: '2026-08-11',
+      answeredOn: jour(),
     });
     const squat = answers.find((entry) => entry.lessonId === 'lecon-squat');
     expect(squat?.choiceIndex).toBeNull();
@@ -426,8 +451,31 @@ describe('Communauté (e2e)', () => {
     // Et un choix hors bornes est refusé, pas tronqué.
     await authed(tokenA)
       .post('/api/v1/community/quiz-answers')
-      .send({ lessonId: 'lecon-dos', answeredOn: '2026-08-13', correct: true, choiceIndex: 7 })
+      .send({ lessonId: 'lecon-dos', answeredOn: jour(1), correct: true, choiceIndex: 7 })
       .expect(400);
+  });
+
+  it('un jour FABRIQUÉ est refusé : le compteur collectif n’est pas gonflable', async () => {
+    // L'unicité porte sur (utilisateur, leçon, jour). Le jour venant du
+    // client sans aucune borne, une seule leçon renvoyée avec des dates
+    // inventées franchissait la contrainte autant de fois qu'on voulait —
+    // et chaque envoi créditait le défi EN COURS, puisque le comptage
+    // visait l'horloge serveur. L'objectif mensuel d'un groupe entier
+    // tombait en quelques minutes, avec une seule question.
+    for (const fabrique of ['2020-01-01', jour(-9), jour(9)]) {
+      await authed(tokenA)
+        .post('/api/v1/community/quiz-answers')
+        .send({ lessonId: 'lecon-dos', answeredOn: fabrique, correct: true })
+        .expect(400);
+    }
+    // La marge d'un fuseau reste acceptée, elle : un appareil à UTC+14 est
+    // déjà demain, un autre à UTC-11 encore hier.
+    for (const admis of [jour(-1), jour(), jour(1)]) {
+      await authed(tokenA)
+        .post('/api/v1/community/quiz-answers')
+        .send({ lessonId: `lecon-fuseau-${admis}`, answeredOn: admis, correct: true })
+        .expect(204);
+    }
   });
 
   it('retirer un ami est idempotent, et coupe les encouragements', async () => {

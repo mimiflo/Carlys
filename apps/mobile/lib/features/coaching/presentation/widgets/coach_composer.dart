@@ -12,6 +12,7 @@ class CoachComposer extends StatelessWidget {
   const CoachComposer({
     required this.controller,
     required this.onSend,
+    required this.onRetry,
     this.isOffline = false,
     this.isSending = false,
     super.key,
@@ -21,6 +22,9 @@ class CoachComposer extends StatelessWidget {
   final ValueChanged<String> onSend;
   final bool isOffline;
 
+  /// Sortie de l'état hors ligne, offerte par l'encart qui le remplace.
+  final VoidCallback onRetry;
+
   /// Un envoi est en cours : la saisie reste possible, l'envoi non — sinon
   /// deux questions partent avant la première réponse.
   final bool isSending;
@@ -28,7 +32,7 @@ class CoachComposer extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (isOffline) {
-      return const _OfflineNotice();
+      return _OfflineNotice(onRetry: onRetry);
     }
 
     return Row(
@@ -141,8 +145,16 @@ class _SendButton extends StatelessWidget {
   }
 }
 
+/// L'état hors ligne du coach, AVEC sa porte de sortie.
+///
+/// Sans ce bouton, la barre remplaçait le champ de saisie et les
+/// suggestions sans rien offrir : le seul chemin qui relève le drapeau
+/// passe par un envoi, devenu impossible. Le réseau revenu, l'écran
+/// continuait d'affirmer le contraire.
 class _OfflineNotice extends StatelessWidget {
-  const _OfflineNotice();
+  const _OfflineNotice({required this.onRetry});
+
+  final VoidCallback onRetry;
 
   @override
   Widget build(BuildContext context) {
@@ -170,6 +182,30 @@ class _OfflineNotice extends StatelessWidget {
               'Le coach a besoin d’une connexion. Ton historique reste lisible.',
               style: AppTypography.label.copyWith(
                 color: AppColors.darkTextSecondary,
+              ),
+            ),
+          ),
+          const SizedBox(width: AppSpacing.xs),
+          Semantics(
+            button: true,
+            label: 'Réessayer, revenir à la saisie',
+            // Relais d'action : `excludeSemantics` masque celle de l'InkWell.
+            onTap: onRetry,
+            excludeSemantics: true,
+            child: InkWell(
+              onTap: onRetry,
+              borderRadius: AppRadius.fullAll,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.xs,
+                  vertical: AppSpacing.xxs,
+                ),
+                child: Text(
+                  'Réessayer',
+                  style: AppTypography.label.copyWith(
+                    color: AppColors.primaryLight,
+                  ),
+                ),
               ),
             ),
           ),

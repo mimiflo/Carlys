@@ -6,13 +6,13 @@ import {
   IsOptional,
   IsString,
   IsUUID,
-  Matches,
   Max,
   MaxLength,
   Min,
   MinLength,
   ValidateIf,
 } from 'class-validator';
+import { IsRecentDayKey } from '../../../../../common/validators/is-recent-day-key';
 
 export class FriendRequestDto {
   @ApiPropertyOptional({
@@ -69,10 +69,11 @@ export class QuizAnswerDto {
   @ApiProperty({
     description:
       'Jour LOCAL de l’appareil (YYYY-MM-DD) — le serveur ne découpe pas ' +
-      'les journées. Une seule réponse comptée par leçon et par jour.',
+      'les journées. Une seule réponse comptée par leçon et par jour, et le ' +
+      'jour doit être celui du serveur à un jour près (marge d’un fuseau).',
     example: '2026-08-11',
   })
-  @Matches(/^\d{4}-\d{2}-\d{2}$/)
+  @IsRecentDayKey()
   answeredOn!: string;
 
   @ApiProperty()

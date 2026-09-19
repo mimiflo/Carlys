@@ -986,9 +986,36 @@ sudo CARLYS_DEPLOY_CATALOG=non /srv/carlys/repo/scripts/server/carlysctl deploy 
 > sens — c'est le bon outil pour rattraper des photos après avoir réparé le
 > stockage objet.
 
-Strictement le catalogue, dans tous les cas : aucun compte, aucun plan
-d'abonnement n'est créé. Et tout ceci vaut pour la production sans changement,
-le jour venu.
+Strictement le catalogue d'EXERCICES, dans tous les cas : aucun compte n'est
+créé. Et tout ceci vaut pour la production sans changement, le jour venu.
+
+### Le catalogue d'abonnement
+
+Les **plans** (gratuit, premium), les **droits** que chacun ouvre et la
+correspondance vers les **produits** des fournisseurs sont projetés par
+l'étape `6/8` du déploiement, via `dist/cli/subscription-catalog`.
+
+Cette étape existe parce que ces tables n'étaient écrites que par le seed de
+développement, qui ne s'exécute jamais ici : un serveur neuf n'avait donc
+aucun plan, et la projection du premier webhook Stripe échouait sur
+« Produit Stripe inconnu ». Cet échec est classé rattrapable, donc rendu en
+`503` — Stripe réémettait, échouait autant de fois, puis abandonnait. **Le
+paiement était encaissé et le compte restait gratuit**, sans un mot.
+
+Les identifiants produits viennent du `.env` de l'environnement, jamais de
+l'image : `STRIPE_PRICE_MONTHLY`, `STRIPE_PRICE_YEARLY` et, le jour où les
+magasins s'ouvrent, `REVENUECAT_PRODUCT_MONTHLY` / `REVENUECAT_PRODUCT_YEARLY`.
+Tant qu'aucun n'est renseigné, **le déploiement refuse de basculer** : un
+catalogue sans produit est lisible mais n'accorde rien, et mieux vaut le
+savoir avant le premier paiement réel que le découvrir après.
+
+Après avoir changé un de ces identifiants sans redéployer :
+
+```bash
+carlysctl subscription-catalog production
+```
+
+Idempotente, comme le catalogue d'exercices dont elle partage la forme.
 
 ### La boîte aux lettres de la recette
 

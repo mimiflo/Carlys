@@ -15,55 +15,12 @@ import '../../../workout_template/presentation/controllers/workout_template_cont
 import '../../data/repositories/coach_repository_impl.dart';
 import '../../data/repositories/coach_session_launcher.dart';
 import '../../domain/entities/coach.dart';
+import '../../domain/entities/coach_thread_state.dart';
 import '../../domain/services/coach_suggestions.dart';
 
-/// État du fil affiché : la conversation, plus ce que l'écran doit savoir
-/// pour ne pas mentir à l'utilisateur.
-class CoachThreadState {
-  const CoachThreadState({
-    required this.conversation,
-    this.isSending = false,
-    this.isOffline = false,
-    this.notice,
-    this.remainingToday,
-  });
-
-  final CoachConversation conversation;
-
-  /// Un envoi est parti, la réponse n'est pas revenue.
-  final bool isSending;
-
-  /// Le dernier envoi n'a pas atteint le serveur : le composeur se remplace
-  /// par son état hors ligne plutôt que d'accepter une question qui partirait
-  /// dans le vide.
-  final bool isOffline;
-
-  /// Message court affiché au-dessus du composeur (plafond atteint, coach
-  /// momentanément coupé…). Toujours issu d'un refus RÉEL du serveur.
-  final String? notice;
-
-  /// Messages restants pour la journée — compté par le serveur, jamais ici.
-  final int? remainingToday;
-
-  CoachThreadState copyWith({
-    CoachConversation? conversation,
-    bool? isSending,
-    bool? isOffline,
-    int? remainingToday,
-    // `notice` se remet à zéro à chaque envoi : un drapeau explicite évite
-    // qu'un `null` passé volontairement soit confondu avec « inchangé ».
-    bool clearNotice = false,
-    String? notice,
-  }) {
-    return CoachThreadState(
-      conversation: conversation ?? this.conversation,
-      isSending: isSending ?? this.isSending,
-      isOffline: isOffline ?? this.isOffline,
-      notice: clearNotice ? null : (notice ?? this.notice),
-      remainingToday: remainingToday ?? this.remainingToday,
-    );
-  }
-}
+// L'état du fil vit dans le domaine ; il se relit par ce fichier, comme
+// avant, pour que l'écran et ses tests n'aient pas à changer d'import.
+export '../../domain/entities/coach_thread_state.dart';
 
 /// Le fil de discussion courant.
 ///
@@ -147,6 +104,22 @@ class CoachThread extends AutoDisposeAsyncNotifier<CoachThreadState> {
       );
       return false;
     }
+  }
+
+  /// Rouvre le composeur après une coupure.
+  ///
+  /// POURQUOI CETTE MÉTHODE EXISTE. Le drapeau hors ligne ne se levait que
+  /// dans `send()` — or hors ligne, le composeur ET les suggestions sont
+  /// masqués, donc `send()` était devenu inatteignable : le coach restait
+  /// muet jusqu'à ce qu'on quitte l'écran et qu'on le rouvre, réseau revenu
+  /// ou pas. Une fonctionnalité payante condamnée par deux secondes de
+  /// métro.
+  void clearOffline() {
+    final current = state.valueOrNull;
+    if (current == null || !current.isOffline) {
+      return;
+    }
+    state = AsyncData(current.copyWith(isOffline: false, clearNotice: true));
   }
 
   /// Texte utilisateur d'un refus du serveur. Hors ligne, le composeur dit

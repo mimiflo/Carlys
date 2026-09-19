@@ -8,30 +8,14 @@ import '../../../../core/database/local_account_switch.dart';
 import '../../../../core/logging/app_logger.dart';
 import '../../../notifications/presentation/controllers/push_registration.dart';
 import '../../data/repositories/auth_repository_impl.dart';
+import '../../domain/entities/auth_state.dart';
 import '../../domain/entities/auth_user.dart';
 import '../../domain/entities/social_provider.dart';
 import 'device_timezone_controller.dart';
 
-/// État global de session.
-sealed class AuthState {
-  const AuthState();
-}
-
-/// Démarrage : la présence d'une session locale n'est pas encore connue.
-final class AuthUnknown extends AuthState {
-  const AuthUnknown();
-}
-
-final class AuthUnauthenticated extends AuthState {
-  const AuthUnauthenticated();
-}
-
-final class AuthAuthenticated extends AuthState {
-  const AuthAuthenticated({this.user});
-
-  /// Renseigné après le chargement du profil ; null juste après restauration.
-  final AuthUser? user;
-}
+// L'état vit dans le domaine ; il se relit par ce fichier, comme avant, pour
+// que les dizaines d'écrans qui l'observent n'aient pas à changer d'import.
+export '../../domain/entities/auth_state.dart';
 
 /// Source de vérité de l'état de session, consommée par le routeur.
 class AuthController extends Notifier<AuthState> {
@@ -48,7 +32,25 @@ class AuthController extends Notifier<AuthState> {
   /// le profil est ensuite rafraîchi en arrière-plan.
   Future<void> restore() async {
     final repository = ref.read(authRepositoryProvider);
-    if (!await repository.hasStoredSession()) {
+    // La lecture du trousseau peut ÉCHOUER, pas seulement rendre faux (un
+    // keystore Android en vrac après restauration ou montée d'OS). Sans ce
+    // filet, l'état restait `AuthUnknown` et le routeur renvoyait
+    // indéfiniment sur l'écran de démarrage : application figée, sans un mot
+    // — `restore()` n'est appelé qu'une fois. `catch` NU, même raison que
+    // `_leaveAccount` ; la connexion est le repli sûr, elle n'efface rien.
+    bool stored;
+    try {
+      stored = await repository.hasStoredSession();
+    } catch (error, trace) {
+      _logger.error(
+        'Session locale illisible : retour à la connexion',
+        error: error,
+        stackTrace: trace,
+      );
+      state = const AuthUnauthenticated();
+      return;
+    }
+    if (!stored) {
       state = const AuthUnauthenticated();
       return;
     }

@@ -385,6 +385,26 @@ catalogue_charger() {
   dc "$env_name" "$file" run --rm -T api node dist/cli/catalog-seed "$@"
 }
 
+# ── Catalogue d'ABONNEMENT ──────────────────────────────────────────────────
+# Plans, droits ouverts, et correspondance vers les produits Stripe/RevenueCat
+# CONFIGURÉS sur cet environnement. Ces tables n'étaient écrites que par le
+# seed de développement, qui ne tourne jamais ici : un serveur neuf n'avait
+# donc aucun plan, et le premier webhook Stripe échouait sur « produit
+# inconnu » — 503, réémissions, abandon. Le paiement encaissé, le compte
+# restait gratuit.
+#
+# `--no-deps` : la commande ne touche QUE la base, aucun stockage objet.
+abonnement_commande_presente() {
+  local env_name="$1" file="$2"
+  dc "$env_name" "$file" run --rm --no-deps -T --entrypoint test api \
+    -f dist/cli/subscription-catalog.js >/dev/null 2>&1
+}
+
+abonnement_projeter() {
+  local env_name="$1" file="$2"
+  dc "$env_name" "$file" run --rm -T api node dist/cli/subscription-catalog
+}
+
 # ── Attente bornée d'un point HTTP ──────────────────────────────────────────
 # BORNÉE est le mot important : une boucle infinie sur un service qui ne
 # démarrera jamais bloque le déploiement au lieu de déclencher le retour

@@ -75,6 +75,7 @@ class _CoachPageState extends ConsumerState<CoachPage> {
         composerController: _composer,
         onSend: _send,
         onOpenProposal: _openProposal,
+        onRetry: () => ref.read(coachThreadProvider.notifier).clearOffline(),
         isOffline: state.isOffline,
         isSending: state.isSending,
         notice: state.notice,

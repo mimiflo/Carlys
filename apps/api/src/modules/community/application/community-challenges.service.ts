@@ -9,6 +9,7 @@ import {
   type ChallengeWithStats,
   CommunityChallengesRepository,
 } from '../infrastructure/community-challenges.repository';
+import { dayKeyToInstant } from '../../../common/validators/is-recent-day-key';
 
 function presentChallenge(challenge: ChallengeWithStats): ChallengeContract {
   return {
@@ -122,7 +123,20 @@ export class CommunityChallengesService {
     // l'unicité rendait « déjà comptée », l'incrément n'était jamais retenté,
     // et la contribution était perdue définitivement — une leçon ne se répond
     // qu'une fois par jour, il n'y a pas de rattrapage possible.
-    await this.challenges.recordQuizAnswer({ userId, ...input, at: new Date() });
+    //
+    // L'instant de référence vient du JOUR DÉCLARÉ, pas de l'horloge
+    // serveur : l'unicité porte sur `answeredOn`, donc compter sur
+    // `new Date()` laissait une seule leçon renvoyée avec des dates
+    // fabriquées créditer autant de fois le défi EN COURS. Les deux faits
+    // parlent désormais du même jour, et une réponse hors de la fenêtre
+    // d'un défi ne lui apporte rien (la borne `startsAt <= at <= endsAt`
+    // s'en charge). Le DTO borne en amont ce jour à celui du serveur, à un
+    // fuseau près.
+    await this.challenges.recordQuizAnswer({
+      userId,
+      ...input,
+      at: dayKeyToInstant(input.answeredOn),
+    });
   }
 
   /**

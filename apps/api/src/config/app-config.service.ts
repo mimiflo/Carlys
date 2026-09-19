@@ -158,6 +158,14 @@ export class AppConfigService {
     return this.config.get('STRIPE_PRICE_YEARLY', { infer: true });
   }
 
+  get revenueCatProductMonthly(): string | undefined {
+    return this.config.get('REVENUECAT_PRODUCT_MONTHLY', { infer: true });
+  }
+
+  get revenueCatProductYearly(): string | undefined {
+    return this.config.get('REVENUECAT_PRODUCT_YEARLY', { infer: true });
+  }
+
   // ── Notifications push ─────────────────────────────────────────────────
 
   get firebaseServiceAccountJson(): string | undefined {

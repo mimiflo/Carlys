@@ -183,6 +183,7 @@ void main() {
         composerController: TextEditingController(),
         onSend: (_) {},
         onOpenProposal: (_) {},
+        onRetry: () {},
       ),
       [],
     );

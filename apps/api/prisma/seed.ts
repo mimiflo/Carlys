@@ -12,10 +12,11 @@
  * démonstration — le compte premium reçoit ses entitlements (droits
  * décidés côté serveur, Étape 6).
  */
-import { type EntitlementKey, PREMIUM_ENTITLEMENT_KEYS } from '@carlys/api-contracts';
+import { PREMIUM_ENTITLEMENT_KEYS } from '@carlys/api-contracts';
 import { syncAdminRbac } from '../src/modules/admin/application/admin-rbac';
 import { mustGet, syncCatalog } from '../src/modules/exercises/application/catalog-sync';
 import { syncExerciseMedia } from '../src/modules/media/application/catalog-media-sync';
+import { syncSubscriptionCatalog } from '../src/modules/subscriptions/application/subscription-catalog-sync';
 import { BillingPeriod, PaymentProvider, PrismaClient } from '@prisma/client';
 import * as argon2 from 'argon2';
 
@@ -28,99 +29,33 @@ const DEV_USERS = [
 const DEV_PASSWORD = 'Carlys-Dev-2026!';
 
 /**
- * Plans d'abonnement et correspondances produit chez les fournisseurs.
- * Identifiants produits FACTICES (remplacés par la vraie configuration
- * Stripe/RevenueCat via le tableau de bord de chaque fournisseur).
+ * Produits FACTICES du développement : ils n'encaissent rien, ils servent à
+ * ce que le parcours d'abonnement soit jouable en local. Sur un serveur,
+ * c'est `dist/cli/subscription-catalog` qui projette les VRAIS identifiants
+ * lus dans la configuration — le même code, d'autres valeurs.
  */
-const SUBSCRIPTION_PLANS: {
-  slug: string;
-  name: string;
-  entitlements: readonly EntitlementKey[];
-}[] = [
-  { slug: 'free', name: 'Gratuit', entitlements: [] },
-  { slug: 'premium', name: 'Premium', entitlements: PREMIUM_ENTITLEMENT_KEYS },
-];
-
-const SUBSCRIPTION_PRODUCTS = [
+const DEV_SUBSCRIPTION_PRODUCTS = [
   {
-    plan: 'premium',
     provider: PaymentProvider.STRIPE,
     externalProductId: 'price_carlys_premium_monthly',
     billingPeriod: BillingPeriod.MONTHLY,
   },
   {
-    plan: 'premium',
     provider: PaymentProvider.STRIPE,
     externalProductId: 'price_carlys_premium_yearly',
     billingPeriod: BillingPeriod.YEARLY,
   },
   {
-    plan: 'premium',
     provider: PaymentProvider.REVENUECAT,
     externalProductId: 'carlys_premium_monthly',
     billingPeriod: BillingPeriod.MONTHLY,
   },
   {
-    plan: 'premium',
     provider: PaymentProvider.REVENUECAT,
     externalProductId: 'carlys_premium_yearly',
     billingPeriod: BillingPeriod.YEARLY,
   },
 ];
-
-async function seedSubscriptionPlans(): Promise<void> {
-  for (const plan of SUBSCRIPTION_PLANS) {
-    await prisma.subscriptionPlan.upsert({
-      where: { slug: plan.slug },
-      update: { name: plan.name },
-      create: { slug: plan.slug, name: plan.name },
-    });
-  }
-
-  // Les droits que chaque plan ouvre — EN DONNÉE, comme l'exige l'ADR 0006.
-  // Le calcul des droits ne reconnaît plus le plan à son slug : sans ces
-  // lignes, un plan existe mais n'ouvre rien, et le premier webhook coupe
-  // l'accès de ses abonnés. Le seed est donc la source de vérité du
-  // développement, la migration de reprise celle de l'existant.
-  for (const plan of SUBSCRIPTION_PLANS) {
-    const row = await prisma.subscriptionPlan.findUniqueOrThrow({
-      where: { slug: plan.slug },
-    });
-    for (const key of plan.entitlements) {
-      await prisma.subscriptionPlanEntitlement.upsert({
-        where: { planId_entitlementKey: { planId: row.id, entitlementKey: key } },
-        update: {},
-        create: { planId: row.id, entitlementKey: key },
-      });
-    }
-    // Un droit RETIRÉ du plan dans le code doit disparaître de la base :
-    // sinon le seed n'est plus idempotent, il est seulement additif.
-    await prisma.subscriptionPlanEntitlement.deleteMany({
-      where: { planId: row.id, entitlementKey: { notIn: [...plan.entitlements] } },
-    });
-  }
-
-  const plans = new Map(
-    (await prisma.subscriptionPlan.findMany()).map((plan) => [plan.slug, plan.id]),
-  );
-  for (const product of SUBSCRIPTION_PRODUCTS) {
-    await prisma.subscriptionProduct.upsert({
-      where: {
-        provider_externalProductId: {
-          provider: product.provider,
-          externalProductId: product.externalProductId,
-        },
-      },
-      update: { billingPeriod: product.billingPeriod },
-      create: {
-        planId: mustGet(plans, product.plan),
-        provider: product.provider,
-        externalProductId: product.externalProductId,
-        billingPeriod: product.billingPeriod,
-      },
-    });
-  }
-}
 
 const DEV_ADMIN = { email: 'dev.admin@carlys.local', displayName: 'Dev Admin' };
 const DEV_ADMIN_PASSWORD = 'Carlys-Admin-2026!';
@@ -179,7 +114,7 @@ async function seedDevUsers(): Promise<void> {
 async function main(): Promise<void> {
   await syncCatalog(prisma);
   await syncExerciseMedia(prisma);
-  await seedSubscriptionPlans();
+  await syncSubscriptionCatalog(prisma, DEV_SUBSCRIPTION_PRODUCTS);
   await seedAdministration();
   await seedDevUsers();
   // Pas de défis ici : le jeu du mois se crée tout seul à la première lecture

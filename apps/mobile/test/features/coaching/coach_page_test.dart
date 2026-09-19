@@ -160,4 +160,27 @@ void main() {
     expect(find.textContaining('besoin d’une connexion'), findsOneWidget);
     expect(find.byType(TextField), findsNothing);
   });
+
+  testWidgets('hors ligne : « Réessayer » rouvre le composeur', (tester) async {
+    // Le drapeau hors ligne ne se levait QUE dans `send()` — or hors ligne,
+    // le composeur et les suggestions disparaissent, donc `send()` était
+    // inatteignable : le coach restait muet jusqu'à ce qu'on quitte l'écran,
+    // réseau revenu ou non. Une coupure d'une seconde condamnait l'accès.
+    final repository = FakeCoachRepository(
+      threads: [thread],
+      sendError: const NetworkException('Serveur injoignable'),
+    );
+    await pumpPage(tester, repository);
+
+    await tester.enterText(find.byType(TextField), 'Une question');
+    await tester.tap(find.bySemanticsLabel('Envoyer'));
+    await tester.pumpAndSettle();
+    expect(find.byType(TextField), findsNothing);
+
+    await tester.tap(find.text('Réessayer'));
+    await tester.pumpAndSettle();
+
+    expect(find.byType(TextField), findsOneWidget);
+    expect(find.textContaining('besoin d’une connexion'), findsNothing);
+  });
 }
