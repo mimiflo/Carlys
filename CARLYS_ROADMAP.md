@@ -229,8 +229,41 @@ date sur `Program`, aucun lien `WorkoutSession` ↔ jour de programme.
       `GET /users/me/training` (manifeste des routes à jour), écran mobile
       « Préparer mon programme » (`/programs/preparation`, profil →
       Entraînement), doublures et tests des deux côtés.
-- [ ] Génération d'un programme (règles par objectif : fréquence,
+- [x] **Catalogue ouvert à qui n'a aucun matériel** — PRÉALABLE mesuré, pas
+      prévu : `equipment` est une CONJONCTION, et quinze mouvements de sol
+      exigeaient un TAPIS. Une personne sans matériel n'atteignait que neuf
+      exercices, et six groupes musculaires lui étaient fermés ; la
+      génération n'avait rien d'honnête à lui proposer. Commits `65e7328`
+      (le tapis retiré) puis `30d19fb` (vingt exercices écrits puis relus
+      sous trois angles — un doublon entre deux lots, une instruction
+      physiquement fausse et quatre classements de matériel corrigés avant
+      collage). Catalogue 170 → 190, sans matériel 24 → 46, **11 des 12
+      groupes couverts en principal contre 5**. `avant-bras` reste à zéro
+      sur tout le catalogue, matériel compris, et le plancher de
+      `catalog-data.spec.ts` l'écarte NOMMÉMENT.
+- [x] Génération d'un programme (règles par objectif : fréquence,
       répartition, cardio, progression) — côté serveur, auditables.
+      **Terminé le 19 septembre 2026**, commits `0f1328b` (serveur) et
+      `f4b8a3d` (mobile). `PUT /api/v1/programs/{id}/generate`, moteur PUR
+      dans `programs/domain/generation/` (aucune base, aucune horloge,
+      aucun hasard — un test-garde lit les sources et le vérifie). Table
+      des huit objectifs, chaque ligne portant son `rationale` en français.
+      Huit contraintes dures relues par `verify()`, LA MÊME fonction que le
+      test rejoue sur les **8 232 combinaisons d'entrées** — et qui a
+      trouvé deux défauts réels : vingt séries de pectoraux dans une
+      séance, et deux séances lourdes du même groupe à un jour d'écart.
+      Migration `20260919163304_generation_de_programme` :
+      `Program.generationReport` (un programme reste explicable des mois
+      plus tard) et `WorkoutTemplate.generatedFromProgramId` (la
+      bibliothèque ne se noie pas). Programme né INACTIF, rejeu rendu tel
+      quel. Mobile : bouton « Générer » + feuille de rapport qui montre ce
+      que le serveur a dû céder.
+      **Reste ouvert, et dit comme tel** : le dos et le biceps sans
+      matériel sont OUVERTS, pas résolus (`tirage-a-plat-ventre` travaille
+      contre le poids des bras, `curl-auto-resiste` n'a pas de charge
+      mesurable) ; MARATHON et HYROX passent par des jours à intitulé
+      libre tant que `WorkoutTemplateSet` n'a ni durée ni distance — c'est
+      la migration à faire AVANT d'ajouter des exercices d'endurance.
 - [ ] Calendrier : date de début de `Program` (migration sur table
       déployée), vue semaine datée, déplacer/reporter, fait/manqué — exige le
       lien séance réalisée ↔ jour de programme (migration `WorkoutSession`,
