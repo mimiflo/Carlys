@@ -119,21 +119,17 @@ class InMemoryCommunityRepository implements CommunityRepository {
     return updated;
   }
 
+  /// Les encouragements ENVOYÉS, que le fil ne montre jamais.
+  final List<({String friendId, String message})> sent = [];
+
   @override
   Future<void> encourage(String friendId, String message) async {
-    final friend = _friends.firstWhere((f) => f.id == friendId);
-    // En exemple, l'encouragement envoyé revient dans le fil comme un merci :
-    // l'écran montre le cycle complet sans serveur.
-    _received.insert(
-      0,
-      Encouragement(
-        id: 'exemple-sent-${_nextId++}',
-        fromUserId: friend.id,
-        fromName: friend.displayName,
-        message: 'Merci pour ton message ! 🙌',
-        sentAt: DateTime.now(),
-      ),
-    );
+    // Le fil ne sert que les mots REÇUS : un encouragement envoyé n'y entre
+    // pas. Le double le faisait entrer, sous la forme d'un merci immédiat —
+    // une amabilité qui donnait au geste un retour que la vraie application
+    // n'a pas, et qui masquait justement son absence de retour.
+    _friends.firstWhere((f) => f.id == friendId);
+    sent.add((friendId: friendId, message: message));
   }
 
   @override

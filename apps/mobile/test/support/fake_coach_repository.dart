@@ -20,11 +20,19 @@ class FakeCoachRepository implements CoachRepository {
   final AppException? listError;
 
   /// Erreur levée à l'envoi (plafond atteint, réseau perdu en route).
-  final AppException? sendError;
+  ///
+  /// MUTABLE à dessein : une coupure passagère se rejoue en la remettant à
+  /// `null` entre deux envois, ce qui est exactement le scénario où
+  /// l'identifiant de message doit être réutilisé.
+  AppException? sendError;
 
   final CoachReply? reply;
 
   final List<String> sent = [];
+
+  /// Les identifiants reçus, dans l'ordre : c'est la clé d'idempotence du
+  /// serveur, et deux tentatives d'une même question doivent la partager.
+  final List<String> sentIds = [];
   final List<String> createdConversations = [];
   final List<({String proposalId, String sessionId})> accepted = [];
 
@@ -59,6 +67,7 @@ class FakeCoachRepository implements CoachRepository {
     required String content,
   }) async {
     sent.add(content);
+    sentIds.add(messageId);
     final error = sendError;
     if (error != null) throw error;
 

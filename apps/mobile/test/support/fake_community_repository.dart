@@ -54,6 +54,10 @@ class FakeCommunityRepository implements CommunityRepository {
   /// Ce que [lookupFriendCode] répond — nom du porteur, ou `null`.
   String? lookupAnswer = 'Sarah';
 
+  /// Une demande d'ami qui ARRIVE entre deux lectures — ce que le serveur
+  /// fait tout seul, et que seul un rafraîchissement peut faire apparaître.
+  void receiveRequest(FriendRequest request) => _requests.add(request);
+
   void _guard() {
     if (offline) {
       throw const NetworkException('hors ligne (voulu par le test)');

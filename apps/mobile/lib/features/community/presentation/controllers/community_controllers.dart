@@ -58,11 +58,19 @@ final communityActionsProvider = Provider<CommunityActions>((ref) {
 });
 
 class CommunityActions {
-  const CommunityActions(this._ref);
+  CommunityActions(this._ref);
 
   static const _logger = AppLogger('CommunityActions');
 
   final Ref _ref;
+
+  /// Les amis dont l'encouragement est PARTI sans être encore acquitté.
+  ///
+  /// Rien ne bougeait à l'écran après un envoi (le fil ne sert que les mots
+  /// REÇUS) : un second appui, réflexe naturel devant un bouton qui semble
+  /// n'avoir rien fait, expédiait un second message. Le provider n'est pas
+  /// `autoDispose`, cet ensemble vit donc aussi longtemps que l'application.
+  final Set<String> _encouraging = <String>{};
 
   /// Rapporte une réponse de quiz aux défis culturels — SANS jamais gêner le
   /// quiz : l'Academy fonctionne hors ligne, l'échec est journalisé et la
@@ -98,9 +106,23 @@ class CommunityActions {
     _ref.invalidate(communityChallengesProvider);
   }
 
-  Future<void> encourage(String friendId, String message) async {
-    await _ref.read(communityRepositoryProvider).encourage(friendId, message);
-    _ref.invalidate(encouragementsProvider);
+  /// Encourage un ami. Rend `false` si un envoi est DÉJÀ en route vers lui —
+  /// l'appelant sait alors qu'il n'a rien de neuf à annoncer.
+  ///
+  /// Rien n'est invalidé : encourager quelqu'un n'ajoute rien à son propre
+  /// fil, puisque `/feed` ne sert que les mots REÇUS. L'invalidation qui
+  /// suivait relançait un appel réseau, sur l'écran le plus fréquenté de la
+  /// communauté, pour recevoir exactement la même liste.
+  Future<bool> encourage(String friendId, String message) async {
+    if (!_encouraging.add(friendId)) {
+      return false;
+    }
+    try {
+      await _ref.read(communityRepositoryProvider).encourage(friendId, message);
+      return true;
+    } finally {
+      _encouraging.remove(friendId);
+    }
   }
 
   /// Réponse opaque côté serveur : rien à lire, rien à invalider — les

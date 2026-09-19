@@ -254,9 +254,45 @@ void main() {
     expect(tester.widget<Switch>(find.byType(Switch)).value, isFalse);
   });
 
-  testWidgets('encourager un ami fait revenir un merci dans le fil', (
+  testWidgets('tirer pour rafraîchir fait apparaître une demande reçue', (
     tester,
   ) async {
+    // Les demandes d'ami arrivent des AUTRES : rien sur l'appareil ne
+    // déclenche leur relecture, et l'onglet vit dans un `IndexedStack` —
+    // il reste monté, donc `autoDispose` ne se déclenche jamais. Sans geste
+    // de rafraîchissement, la demande n'apparaissait qu'après avoir tué
+    // l'application.
+    final community = FakeCommunityRepository(
+      friends: [
+        const CommunityFriend(
+          id: 'ami-1',
+          displayName: 'Tom',
+          streakDays: null,
+          weeklySessions: null,
+          sharesProgress: false,
+        ),
+      ],
+    );
+    await openCommunity(tester, appWith(community));
+    expect(find.text('Nina'), findsNothing);
+
+    community.receiveRequest(
+      FriendRequest(
+        id: 'demande-nina',
+        fromDisplayName: 'Nina',
+        createdAt: DateTime.now().subtract(const Duration(hours: 1)),
+      ),
+    );
+    await tester.fling(find.byType(Scrollable).last, const Offset(0, 400), 800);
+    await tester.pumpAndSettle();
+
+    expect(find.text('Nina'), findsOneWidget);
+  });
+
+  testWidgets('encourager un ami DIT que le message est parti', (tester) async {
+    // Le geste ne laissait aucune trace : le fil ne montre que les mots
+    // reçus, la carte ne bouge pas, et rien ne confirmait le départ. Le
+    // bouton semblait n'avoir rien fait.
     await tester.pumpWidget(sampleWorldApp());
     await tester.pumpAndSettle();
     await tapTab(tester, 'Communauté');
@@ -265,10 +301,9 @@ void main() {
     await tester.tap(find.byTooltip('Encourager').first);
     await tester.pumpAndSettle();
 
-    // Le fil (en tête d'écran) gagne le remerciement.
-    final scrollable = find.byType(Scrollable).last;
-    await tester.drag(scrollable, const Offset(0, 2000), warnIfMissed: false);
-    await tester.pumpAndSettle();
-    expect(find.textContaining('Merci pour ton message'), findsOneWidget);
+    expect(
+      find.textContaining('Ton encouragement est parti à'),
+      findsOneWidget,
+    );
   });
 }

@@ -34,10 +34,19 @@ class CommunityGestures {
     });
   }
 
+  /// Encourager DIT qu'il a abouti.
+  ///
+  /// Le geste ne laissait aucune trace à l'écran : le fil ne montre que les
+  /// mots reçus, la carte de l'ami ne bouge pas, et aucun message ne
+  /// confirmait le départ. Le bouton semblait n'avoir rien fait — d'où les
+  /// doubles envois, que le contrôleur refuse désormais (il rend `false`, et
+  /// il n'y a alors rien de neuf à annoncer).
   Future<void> encourage(BuildContext context, CommunityFriend friend) {
     return runCommunityGesture(context, () async {
-      await _actions.encourage(friend.id, 'Continue, ça paie !');
-      return null;
+      final sent = await _actions.encourage(friend.id, 'Continue, ça paie !');
+      return sent
+          ? 'Ton encouragement est parti à ${friend.displayName}.'
+          : null;
     });
   }
 

@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -49,6 +51,27 @@ class CommunityScreen extends ConsumerWidget {
     });
   }
 
+  /// Redemande TOUT au serveur, et attend la réponse.
+  ///
+  /// L'attente n'est pas décorative : `RefreshIndicator` garde son anneau
+  /// tant que ce futur n'est pas terminé, et le geste doit durer aussi
+  /// longtemps que l'appel.
+  static Future<void> _reload(WidgetRef ref) async {
+    ref
+      ..invalidate(encouragementsProvider)
+      ..invalidate(communityFriendsProvider)
+      ..invalidate(friendRequestsProvider)
+      ..invalidate(communityChallengesProvider)
+      ..invalidate(blockedUsersProvider);
+    await Future.wait([
+      ref.read(encouragementsProvider.future),
+      ref.read(communityFriendsProvider.future),
+      ref.read(friendRequestsProvider.future),
+      ref.read(communityChallengesProvider.future),
+      ref.read(blockedUsersProvider.future),
+    ]);
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final feed = ref.watch(encouragementsProvider);
@@ -97,86 +120,94 @@ class CommunityScreen extends ConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.darkBackground,
-      body: ListView(
-        padding: EdgeInsets.fromLTRB(
-          AppSpacing.gutter,
-          MediaQuery.paddingOf(context).top + AppSpacing.gapSection,
-          AppSpacing.gutter,
-          bottomInset + AppSpacing.gapSection,
-        ),
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Expanded(
-                child: Text(
-                  'Communauté',
-                  style: AppTypography.pageTitle.copyWith(
-                    color: AppColors.darkTextPrimary,
+      // TIRER POUR RAFRAÎCHIR — indispensable ici, pas confortable.
+      // Demandes d'ami, encouragements et défis arrivent des AUTRES : rien
+      // sur l'appareil ne déclenche leur relecture. Et l'onglet vit dans un
+      // `IndexedStack`, donc il reste monté pour toute la durée de
+      // l'application : `autoDispose` ne se déclenche jamais et les listes
+      // gelaient au premier chargement. Une demande reçue n'apparaissait
+      // qu'après avoir tué l'application.
+      body: RefreshIndicator(
+        onRefresh: () => _reload(ref),
+        color: AppColors.primaryLight,
+        backgroundColor: AppColors.darkSurface,
+        child: ListView(
+          // L'anneau doit pouvoir se saisir même quand la liste tient dans
+          // l'écran — sinon le geste ne part pas sur un compte tout neuf.
+          physics: const AlwaysScrollableScrollPhysics(),
+          padding: EdgeInsets.fromLTRB(
+            AppSpacing.gutter,
+            MediaQuery.paddingOf(context).top + AppSpacing.gapSection,
+            AppSpacing.gutter,
+            bottomInset + AppSpacing.gapSection,
+          ),
+          children: [
+            Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Expanded(
+                  child: Text(
+                    'Communauté',
+                    style: AppTypography.pageTitle.copyWith(
+                      color: AppColors.darkTextPrimary,
+                    ),
                   ),
                 ),
-              ),
-              IconButton(
-                onPressed: () => _addFriend(context, actions),
-                tooltip: 'Ajouter un ami',
-                icon: const Icon(
-                  Icons.person_add_alt_1_outlined,
-                  color: AppColors.accent,
+                IconButton(
+                  onPressed: () => _addFriend(context, actions),
+                  tooltip: 'Ajouter un ami',
+                  icon: const Icon(
+                    Icons.person_add_alt_1_outlined,
+                    color: AppColors.accent,
+                  ),
                 ),
+              ],
+            ),
+            const SizedBox(height: AppSpacing.xxs),
+            Text(
+              'On tient plus longtemps à plusieurs.',
+              style: AppTypography.body.copyWith(
+                color: AppColors.darkTextSecondary,
               ),
-            ],
-          ),
-          const SizedBox(height: AppSpacing.xxs),
-          Text(
-            'On tient plus longtemps à plusieurs.',
-            style: AppTypography.body.copyWith(
-              color: AppColors.darkTextSecondary,
             ),
-          ),
-          const SizedBox(height: AppSpacing.gapRow),
-          if (error != null)
-            ConnectionAwareError(
-              error: error,
-              title: 'Communauté indisponible',
-              message: 'Impossible de charger le fil pour le moment.',
-              offlineMessage:
-                  'Les amis, les encouragements et les défis '
-                  'vivent sur le serveur. Reviens quand le réseau est là.',
-              onRetry: () {
-                ref
-                  ..invalidate(encouragementsProvider)
-                  ..invalidate(communityFriendsProvider)
-                  ..invalidate(friendRequestsProvider)
-                  ..invalidate(communityChallengesProvider)
-                  ..invalidate(blockedUsersProvider);
-              },
-            )
-          else if (!hasData)
-            const AppLoadingIndicator()
-          else if (loaded && isEmpty)
-            // Le serveur crée les défis du mois à la lecture : en ligne, cet
-            // état ne se voit que si le serveur n'a VRAIMENT rien rendu. Hors
-            // ligne, c'est l'état d'erreur ci-dessus qui parle, jamais
-            // « personne ici ». Le premier ami, lui, s'invite dans la section
-            // « Amis » des sections (voir FriendsEmptyCard).
-            AppEmptyState(
-              icon: Icons.group_outlined,
-              title: 'Personne ici pour l’instant',
-              message: FriendsEmptyCard.invitation,
-              actionLabel: 'Ajouter un ami',
-              onAction: () => _addFriend(context, actions),
-            )
-          else
-            CommunitySections(
-              requests: requests.valueOrNull,
-              feed: feed.valueOrNull,
-              friends: friends.valueOrNull,
-              challenges: challenges.valueOrNull,
-              blocked: blocked.valueOrNull,
-              sharesProgress: sharesProgress.valueOrNull,
-              onAddFriend: () => _addFriend(context, actions),
-            ),
-        ],
+            const SizedBox(height: AppSpacing.gapRow),
+            if (error != null)
+              ConnectionAwareError(
+                error: error,
+                title: 'Communauté indisponible',
+                message: 'Impossible de charger le fil pour le moment.',
+                offlineMessage:
+                    'Les amis, les encouragements et les défis '
+                    'vivent sur le serveur. Reviens quand le réseau est là.',
+                onRetry: () => unawaited(_reload(ref)),
+              )
+            else if (!hasData)
+              const AppLoadingIndicator()
+            else if (loaded && isEmpty)
+              // Le serveur crée les défis du mois à la lecture : en ligne, cet
+              // état ne se voit que si le serveur n'a VRAIMENT rien rendu. Hors
+              // ligne, c'est l'état d'erreur ci-dessus qui parle, jamais
+              // « personne ici ». Le premier ami, lui, s'invite dans la section
+              // « Amis » des sections (voir FriendsEmptyCard).
+              AppEmptyState(
+                icon: Icons.group_outlined,
+                title: 'Personne ici pour l’instant',
+                message: FriendsEmptyCard.invitation,
+                actionLabel: 'Ajouter un ami',
+                onAction: () => _addFriend(context, actions),
+              )
+            else
+              CommunitySections(
+                requests: requests.valueOrNull,
+                feed: feed.valueOrNull,
+                friends: friends.valueOrNull,
+                challenges: challenges.valueOrNull,
+                blocked: blocked.valueOrNull,
+                sharesProgress: sharesProgress.valueOrNull,
+                onAddFriend: () => _addFriend(context, actions),
+              ),
+          ],
+        ),
       ),
     );
   }

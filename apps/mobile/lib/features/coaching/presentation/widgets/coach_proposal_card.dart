@@ -61,8 +61,22 @@ class CoachProposalCard extends StatelessWidget {
                 _ExerciseRow(exercise: exercise),
               ],
               const SizedBox(height: AppSpacing.md),
+              // Une proposition acceptée a déjà SA séance : le dire, et
+              // proposer d'y retourner plutôt qu'un lancement qui ressemble
+              // à un premier.
+              if (proposal.isAccepted) ...[
+                Text(
+                  'Séance déjà lancée',
+                  style: AppTypography.label.copyWith(
+                    color: AppColors.darkTextSecondary,
+                  ),
+                ),
+                const SizedBox(height: AppSpacing.xs),
+              ],
               AppButton(
-                label: 'Voir la séance',
+                label: proposal.isAccepted
+                    ? 'Reprendre la séance'
+                    : 'Voir la séance',
                 onPressed: onOpen,
                 isExpanded: true,
                 icon: AppIcons.play,

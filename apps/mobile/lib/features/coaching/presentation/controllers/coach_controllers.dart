@@ -7,20 +7,16 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../../core/errors/app_exception.dart';
-import '../../../carlys_profile/presentation/controllers/carlys_profile_controllers.dart';
-import '../../../progress/domain/entities/progress.dart';
-import '../../../progress/presentation/controllers/progress_controllers.dart';
-import '../../../workout_session/presentation/controllers/workout_controllers.dart';
-import '../../../workout_template/presentation/controllers/workout_template_controllers.dart';
 import '../../data/repositories/coach_repository_impl.dart';
 import '../../data/repositories/coach_session_launcher.dart';
 import '../../domain/entities/coach.dart';
 import '../../domain/entities/coach_thread_state.dart';
-import '../../domain/services/coach_suggestions.dart';
 
-// L'état du fil vit dans le domaine ; il se relit par ce fichier, comme
-// avant, pour que l'écran et ses tests n'aient pas à changer d'import.
+// L'état du fil vit dans le domaine, les amorces dans `providers/` (elles ne
+// portent aucun Notifier) ; les deux se relisent par ce fichier, comme avant,
+// pour que l'écran et ses tests n'aient pas à changer d'import.
 export '../../domain/entities/coach_thread_state.dart';
+export '../providers/coach_suggestion_providers.dart';
 
 /// Le fil de discussion courant.
 ///
@@ -33,6 +29,18 @@ class CoachThread extends AutoDisposeAsyncNotifier<CoachThreadState> {
 
   /// Le fil existe côté serveur (créé, ou rapatrié depuis la liste).
   bool _created = false;
+
+  /// Le message EN COURS de tentative : son identifiant et son texte.
+  ///
+  /// L'identifiant est la clé d'idempotence du serveur, et il était tiré à
+  /// NEUF à chaque appui. Une réponse perdue en route (coupure juste après
+  /// l'envoi) faisait donc réessayer avec un autre identifiant : le serveur
+  /// voyait un second message, le comptait dans le quota du jour et le
+  /// facturait, alors que la personne n'avait posé qu'une question. On garde
+  /// donc l'identifiant tant que la MÊME question n'est pas passée ; changer
+  /// le texte en tire un nouveau, sans quoi le serveur rendrait la réponse de
+  /// la question précédente.
+  ({String id, String content})? _pending;
 
   @override
   Future<CoachThreadState> build() async {
@@ -72,12 +80,19 @@ class CoachThread extends AutoDisposeAsyncNotifier<CoachThreadState> {
         _created = true;
       }
 
+      final pending = _pending;
+      final messageId = (pending != null && pending.content == trimmed)
+          ? pending.id
+          : _uuid.v4();
+      _pending = (id: messageId, content: trimmed);
+
       final reply = await repository.sendMessage(
         conversationId: current.conversation.id,
-        messageId: _uuid.v4(),
+        messageId: messageId,
         content: trimmed,
       );
 
+      _pending = null;
       state = AsyncData(
         current.copyWith(
           conversation: CoachConversation(
@@ -91,6 +106,11 @@ class CoachThread extends AutoDisposeAsyncNotifier<CoachThreadState> {
           ),
           isSending: false,
           remainingToday: reply.remainingToday,
+          // `current` est l'état d'AVANT l'envoi : il porte encore le refus
+          // précédent, que l'affichage optimiste venait justement d'effacer.
+          // Sans ce drapeau, « Tu as atteint le nombre de messages du jour »
+          // réapparaissait sous la réponse qu'on venait de recevoir.
+          clearNotice: true,
         ),
       );
       return true;
@@ -155,6 +175,17 @@ class CoachProposalActions {
   final Ref _ref;
 
   Future<String> start(CoachSessionProposal proposal) async {
+    // Une proposition DÉJÀ acceptée a déjà sa séance : le serveur nous dit
+    // laquelle (`acceptedSessionId`), et l'appui suivant doit y ramener, pas
+    // en créer une seconde. Sans ce garde-fou, rouvrir le fil et réappuyer
+    // fabriquait une séance de plus à chaque fois — sitôt la précédente
+    // terminée, puisque la règle « au plus une séance en cours » ne bloque
+    // que pendant. L'historique se remplissait de séances jamais faites.
+    final already = proposal.acceptedSessionId;
+    if (already != null) {
+      return already;
+    }
+
     final sessionId = await _ref
         .read(coachSessionLauncherProvider)
         .start(proposal);
@@ -175,48 +206,3 @@ class CoachProposalActions {
 final coachProposalActionsProvider = Provider<CoachProposalActions>(
   CoachProposalActions.new,
 );
-
-/// Amorces de conversation, calculées depuis l'état réel de l'utilisateur.
-///
-/// Les trois sources sont déjà chargées par ailleurs (modèles en local,
-/// records et poids en cache Riverpod) : la bande de puces n'ajoute aucun
-/// appel réseau. Une source en échec ne fait pas échouer les autres — sans
-/// donnée, il reste la puce générique.
-final coachSuggestionsProvider = Provider.autoDispose<List<String>>((ref) {
-  final templates = ref.watch(workoutTemplatesProvider).valueOrNull;
-  final records = ref.watch(personalRecordsProvider).valueOrNull;
-  final weights = ref.watch(bodyWeightMetricsProvider).valueOrNull;
-  final history = ref.watch(workoutHistoryProvider).valueOrNull;
-
-  final freshest = _freshestRecord(records);
-  final now = DateTime.now().toUtc();
-
-  return coachSuggestions(
-    CoachContext(
-      carlysProfile: ref.watch(currentCarlysProfileProvider),
-      templateName: (templates == null || templates.isEmpty)
-          ? null
-          : templates.first.name,
-      recordExerciseName: freshest?.exerciseName,
-      recordAgeDays: freshest == null
-          ? null
-          : now.difference(freshest.achievedAt).inDays,
-      weightTrendKg: _weightTrend(weights),
-      hasHistory: history != null && history.isNotEmpty,
-    ),
-  );
-});
-
-PersonalRecordEntry? _freshestRecord(List<PersonalRecordEntry>? records) {
-  if (records == null || records.isEmpty) return null;
-  return records.reduce(
-    (best, entry) => entry.achievedAt.isAfter(best.achievedAt) ? entry : best,
-  );
-}
-
-/// Écart entre la dernière mesure et la précédente. `null` en deçà de deux
-/// mesures : une seule pesée ne fait pas une tendance.
-double? _weightTrend(List<BodyMetricEntry>? weights) {
-  if (weights == null || weights.length < 2) return null;
-  return weights.last.value - weights[weights.length - 2].value;
-}
