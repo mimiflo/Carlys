@@ -180,24 +180,38 @@ rien). Audit du 17 septembre 2026 : conforme — aucun objectif
 d'entraînement, aucune entrée de génération, aucune génération, aucune
 date sur `Program`, aucun lien `WorkoutSession` ↔ jour de programme.
 
-- [~] Durcissement inter-tranches (audit adverse de l'application entière,
-      demandé le 18 septembre 2026 avant la tranche « génération ») —
-      CINQ commits : `1b94543` (anti-clignotement, matériel sérialisé,
-      `AppChoiceCard`), `6b56dbe` (purge des célébrations, gardes de
-      feuille, relais `Semantics.onTap`, parité hors-ligne de l'onboarding,
-      DTO displayName/birthDate, lecture d'entraînement transactionnelle),
+- [x] Durcissement inter-tranches (audit adverse de l'application ENTIÈRE,
+      demandé le 18 septembre 2026 avant la tranche « génération »).
+      **Terminé le 19 septembre 2026** : les dix sous-systèmes ont été
+      relus, et les 47 constats confirmés des sept derniers sont traités.
+      TREIZE commits, du plus ancien au plus récent : `1b94543`
+      (anti-clignotement, matériel sérialisé, `AppChoiceCard`), `6b56dbe`
+      (purge des célébrations, gardes de feuille, relais
+      `Semantics.onTap`, parité hors-ligne de l'onboarding, DTO
+      displayName/birthDate, lecture d'entraînement transactionnelle),
       `c1dd133` (les 13 confirmés : purge vs rapatriement en vol, séance
       active atomique, `doneSetId` rendu à la suppression, corrections non
       écrasées, calendrier qui dit ses échecs, contrat ↔ DTO alignés),
       `7be4f83` (les 15 constats nutrition/Academy/progression :
       `currentDayProvider`, `SerialQueue`, faits de récompense complets),
       `611b484` (jour figé de l'accueil, `dashboard_controllers` scindé et
-      rangé en `presentation/providers/`).
-      RESTE : sept sous-systèmes que les relecteurs adverses n'ont jamais
-      vus (communauté/coach, compte, design system, les trois pans d'API,
-      transverse) — leurs agents avaient échoué sur la limite de session,
-      la reprise est programmée. Une passe transversale par MOTIF les a
-      déjà balayés sur les défauts récurrents connus.
+      rangé en `presentation/providers/`), `69373bd` (les 4 bloquants),
+      `81be6d7` (photos du seed vs back-office, P2002 de `createSession`,
+      série supprimée rejouée, N+1 des programmes, ordre de suppression
+      d'un média, fenêtre d'historique du coach), `c4a6e45` (le compteur
+      collectif ne recule plus — `leftAt` ; la paire d'amis est unique en
+      base — `userLowId`/`userHighId`), `57e7e87` (trois pages du
+      back-office : journal d'audit qui s'annonçait vide, comptes tronqués
+      à vingt, brouillon de catégorie qui écrasait un renommage),
+      `8e8e079` (le coach ne facture plus deux fois, la communauté se
+      rafraîchit), `8b13402` (clé d'idempotence de paiement qui suivait le
+      compte, `buy()` qui attrapait un `StateError` jamais levé, Premium
+      qui ne fermait pas le tunnel, push mort après suppression de compte,
+      bascule de notification muette hors ligne, report d'onboarding sur un
+      profil pas encore lu), `b90482d` (états vide et erreur illisibles
+      sous le thème Clair, feuille d'explication qui ne défilait pas,
+      champ vidé sans un mot), `3ad10c5` (code mort retiré, documentation
+      remise d'accord avec le code).
 
 - [x] Objectif d'entraînement : enum `TrainingGoal` 8 valeurs (perte de
       gras, muscle, recomposition, Hyrox, marathon, maintien, force,
