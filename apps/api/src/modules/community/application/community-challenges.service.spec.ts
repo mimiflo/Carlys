@@ -2,6 +2,7 @@ import { NotFoundException } from '@nestjs/common';
 import { type PinoLogger } from 'nestjs-pino';
 import { MONTHLY_CHALLENGE_CATALOG, type MonthlyChallengeSeed } from '../domain/challenge-catalog';
 import { type CommunityChallengesRepository } from '../infrastructure/community-challenges.repository';
+import { type FriendChallengesRepository } from '../infrastructure/friend-challenges.repository';
 import { CommunityChallengesService } from './community-challenges.service';
 
 const ME = 'utilisateur-moi';
@@ -35,9 +36,18 @@ function buildStubs(): Stubs {
 
 const loggerStub = { error: jest.fn() };
 
+/**
+ * Les défis ENTRE AMIS reçoivent la même chose que les collectifs : la
+ * doublure existe pour que les épreuves ci-dessous continuent de porter sur
+ * UN chemin, et un test dédié vérifie qu'ils reçoivent bien les deux.
+ */
+const friendStub = { contribute: jest.fn().mockResolvedValue(undefined) };
+
 function buildService(stubs: Stubs): CommunityChallengesService {
+  friendStub.contribute.mockClear();
   return new CommunityChallengesService(
     stubs as unknown as CommunityChallengesRepository,
+    friendStub as unknown as FriendChallengesRepository,
     loggerStub as unknown as PinoLogger,
   );
 }
@@ -199,6 +209,10 @@ describe('CommunityChallengesService — réponses de quiz (défis CULTURE)', ()
       userId: ME,
       ...answer,
       at: expect.any(Date) as Date,
+      // La contribution aux défis entre amis part DANS la transaction du
+      // dépôt, sous forme de fonction : écrite à côté, son échec laisserait
+      // la réponse seule, et l'unicité rendrait la perte définitive.
+      alsoInTransaction: expect.any(Function) as () => Promise<void>,
     });
     // La contribution part DANS la transaction du dépôt, jamais à côté :
     // séparées, l'échec de la seconde écriture laissait la première, et

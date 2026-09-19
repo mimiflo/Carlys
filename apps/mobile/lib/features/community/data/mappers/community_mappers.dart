@@ -6,6 +6,7 @@ library;
 
 import '../../domain/entities/community.dart';
 import '../../domain/entities/community_moderation.dart';
+import '../../domain/entities/friend_challenge.dart';
 
 Encouragement encouragementFromJson(Map<String, dynamic> row) {
   return Encouragement(
@@ -60,5 +61,35 @@ BlockedUser blockedUserFromJson(Map<String, dynamic> row) {
     userId: row['userId'] as String,
     displayName: row['displayName'] as String,
     blockedAt: DateTime.parse(row['blockedAt'] as String),
+  );
+}
+
+FriendChallengeMember friendChallengeMemberFromJson(Map<String, dynamic> row) {
+  return FriendChallengeMember(
+    userId: row['userId'] as String,
+    displayName: row['displayName'] as String,
+    status: FriendChallengeMemberStatus.fromApi(row['status'] as String?),
+    contribution: (row['contribution'] as num?)?.toInt() ?? 0,
+    rank: (row['rank'] as num?)?.toInt(),
+    isMe: row['isMe'] as bool? ?? false,
+  );
+}
+
+FriendChallenge friendChallengeFromJson(Map<String, dynamic> row) {
+  return FriendChallenge(
+    id: row['id'] as String,
+    title: row['title'] as String,
+    metric: ChallengeMetric.fromApi(row['metric'] as String?),
+    unit: row['unit'] as String? ?? '',
+    target: (row['target'] as num?)?.toInt(),
+    status: FriendChallengeStatus.fromApi(row['status'] as String?),
+    myStatus: FriendChallengeMemberStatus.fromApi(row['myStatus'] as String?),
+    startsAt: DateTime.parse(row['startsAt'] as String),
+    endsAt: DateTime.parse(row['endsAt'] as String),
+    creatorDisplayName: row['creatorDisplayName'] as String? ?? 'Membre Carlys',
+    members: (row['members'] as List<dynamic>? ?? const [])
+        .cast<Map<String, dynamic>>()
+        .map(friendChallengeMemberFromJson)
+        .toList(growable: false),
   );
 }

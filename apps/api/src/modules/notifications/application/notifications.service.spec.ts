@@ -166,9 +166,12 @@ describe('NotificationsService — ce que la personne refuse', () => {
 
     const result = await service.preferencesOf(USER);
 
+    // CHALLENGE_INVITES est arrivée après les deux autres : elle vaut
+    // ACCEPTÉE comme elles, ce qui est exactement ce que ce test protège.
     expect(result.preferences).toEqual([
       { category: 'FRIEND_REQUESTS', enabled: true },
       { category: 'ENCOURAGEMENTS', enabled: true },
+      { category: 'CHALLENGE_INVITES', enabled: true },
     ]);
   });
 

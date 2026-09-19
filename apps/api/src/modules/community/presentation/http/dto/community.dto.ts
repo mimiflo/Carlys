@@ -1,7 +1,15 @@
+import { FRIEND_CHALLENGE_DURATIONS, FRIEND_CHALLENGE_MAX_INVITES } from '@carlys/api-contracts';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ChallengeMetric } from '@prisma/client';
+import { Transform } from 'class-transformer';
 import {
+  ArrayMaxSize,
+  ArrayMinSize,
+  IsArray,
   IsBoolean,
   IsEmail,
+  IsEnum,
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -12,6 +20,7 @@ import {
   MinLength,
   ValidateIf,
 } from 'class-validator';
+import { trimmed } from '../../../../../common/transforms/trimmed';
 import { IsRecentDayKey } from '../../../../../common/validators/is-recent-day-key';
 
 export class FriendRequestDto {
@@ -93,4 +102,49 @@ export class QuizAnswerDto {
   @Min(0)
   @Max(3)
   choiceIndex?: number;
+}
+
+/**
+ * Corps de `POST /community/friend-challenges`.
+ *
+ * `endsAt` n'y figure pas, et c'est délibéré : le serveur le calcule depuis
+ * la durée. Une fin fournie par l'appelant est un défi éternel en une
+ * requête.
+ */
+export class CreateFriendChallengeDto {
+  @ApiProperty({ description: 'UUID généré par l’appareil (création idempotente)' })
+  @IsUUID()
+  id!: string;
+
+  @ApiProperty({ minLength: 1, maxLength: 80 })
+  @Transform(trimmed)
+  @IsString()
+  @MinLength(1)
+  @MaxLength(80)
+  title!: string;
+
+  @ApiProperty({ enum: ChallengeMetric })
+  @IsEnum(ChallengeMetric)
+  metric!: ChallengeMetric;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    description: 'Objectif commun, ou absent pour un « qui en fait le plus »',
+  })
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(10_000_000)
+  target?: number | null;
+
+  @ApiProperty({ enum: FRIEND_CHALLENGE_DURATIONS })
+  @IsIn([...FRIEND_CHALLENGE_DURATIONS])
+  durationDays!: number;
+
+  @ApiProperty({ type: [String], maxItems: FRIEND_CHALLENGE_MAX_INVITES })
+  @IsArray()
+  @ArrayMinSize(1)
+  @ArrayMaxSize(FRIEND_CHALLENGE_MAX_INVITES)
+  @IsUUID('4', { each: true })
+  invitedUserIds!: string[];
 }

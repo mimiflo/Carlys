@@ -23,7 +23,12 @@ export type RegisterDeviceToken = z.infer<typeof registerDeviceTokenSchema>;
  * en même temps que tout le reste, alors qu'on ne refuse pas les deux pour
  * les mêmes raisons.
  */
-export const notificationCategorySchema = z.enum(['FRIEND_REQUESTS', 'ENCOURAGEMENTS']);
+export const notificationCategorySchema = z.enum([
+  'FRIEND_REQUESTS',
+  'ENCOURAGEMENTS',
+  /** Invitations à un défi entre amis — refusables à part du reste. */
+  'CHALLENGE_INVITES',
+]);
 export type NotificationCategory = z.infer<typeof notificationCategorySchema>;
 
 export const notificationPreferenceSchema = z.object({

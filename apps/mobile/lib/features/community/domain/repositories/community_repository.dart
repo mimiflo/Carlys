@@ -1,5 +1,6 @@
 import '../entities/community.dart';
 import '../entities/community_moderation.dart';
+import '../entities/friend_challenge.dart';
 
 /// Contrat de la communauté.
 ///
@@ -99,4 +100,26 @@ abstract interface class CommunityRepository {
 
   /// Retire un encouragement de mon fil (rejouable et opaque côté serveur).
   Future<void> deleteEncouragement(String encouragementId);
+
+  // ── Défis entre amis ──────────────────────────────────────────────────
+
+  /// Mes défis entre amis : ceux qu'on m'a proposés et ceux que j'ai
+  /// acceptés. Les refusés et les quittés n'y sont plus — ce sont des
+  /// décisions prises, pas des choses à revoir.
+  Future<List<FriendChallenge>> friendChallenges();
+
+  /// Lance un défi à ses amis. L'identifiant naît sur l'appareil : rejouer
+  /// après une coupure ne pose pas un second défi.
+  Future<FriendChallenge> createFriendChallenge(
+    String id,
+    NewFriendChallenge challenge,
+  );
+
+  /// Accepte une invitation : on entre au classement, à zéro.
+  Future<FriendChallenge> acceptFriendChallenge(String challengeId);
+
+  /// Refuse une invitation, ou quitte un défi commencé. Dans les deux cas,
+  /// on sort du classement — contrairement à un défi collectif, dont la
+  /// contribution reste acquise au groupe.
+  Future<void> declineFriendChallenge(String challengeId);
 }

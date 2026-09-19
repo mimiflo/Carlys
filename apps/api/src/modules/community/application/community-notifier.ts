@@ -44,6 +44,18 @@ export class CommunityNotifier {
     }));
   }
 
+  /**
+   * Invitation à un défi. Catégorie DISTINCTE des encouragements : quelqu'un
+   * peut vouloir des encouragements sans vouloir être défié, et le refus
+   * d'une famille ne doit pas couper l'autre.
+   */
+  challengeInvite(invitedId: string, fromUserId: string, title: string): Promise<void> {
+    return this.notify(invitedId, fromUserId, 'CHALLENGE_INVITES', (fromName) => ({
+      title: 'Nouveau défi',
+      body: `${fromName} te défie : ${title}`,
+    }));
+  }
+
   private async notify(
     recipientId: string,
     fromUserId: string,

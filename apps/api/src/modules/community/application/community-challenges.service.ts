@@ -3,12 +3,14 @@ import {
   type QuizAnswerRecord,
 } from '@carlys/api-contracts';
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { type ChallengeMetric } from '@prisma/client';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { METRIC_UNITS, buildMonthlyChallenges } from '../domain/challenge-catalog';
 import {
   type ChallengeWithStats,
   CommunityChallengesRepository,
 } from '../infrastructure/community-challenges.repository';
+import { FriendChallengesRepository } from '../infrastructure/friend-challenges.repository';
 import { dayKeyToInstant } from '../../../common/validators/is-recent-day-key';
 
 function presentChallenge(challenge: ChallengeWithStats): ChallengeContract {
@@ -52,9 +54,27 @@ export interface SessionEffort {
 export class CommunityChallengesService {
   constructor(
     private readonly challenges: CommunityChallengesRepository,
+    private readonly friendChallenges: FriendChallengesRepository,
     @InjectPinoLogger(CommunityChallengesService.name)
     private readonly logger: PinoLogger,
   ) {}
+
+  /**
+   * Verse une quantité aux DEUX familles de défis à la fois.
+   *
+   * Un seul appelant pour deux écritures : c'est ce qui garantit qu'une
+   * séance compte pareil dans un défi collectif et dans un défi entre amis.
+   * Deux chemins séparés auraient dérivé au premier ajout de métrique.
+   */
+  private async verser(
+    userId: string,
+    metric: ChallengeMetric,
+    amount: number,
+    at: Date,
+  ): Promise<void> {
+    await this.challenges.contribute(userId, metric, amount, at);
+    await this.friendChallenges.contribute(userId, metric, amount, at);
+  }
 
   async listChallenges(userId: string): Promise<ChallengeContract[]> {
     const now = new Date();
@@ -132,14 +152,9 @@ export class CommunityChallengesService {
     effort: SessionEffort,
   ): Promise<void> {
     try {
-      await this.challenges.contribute(userId, 'WORKOUTS', 1, completedAt);
-      await this.challenges.contribute(userId, 'ACTIVE_SECONDS', effort.activeSeconds, completedAt);
-      await this.challenges.contribute(
-        userId,
-        'DISTANCE_METERS',
-        effort.distanceMeters,
-        completedAt,
-      );
+      await this.verser(userId, 'WORKOUTS', 1, completedAt);
+      await this.verser(userId, 'ACTIVE_SECONDS', effort.activeSeconds, completedAt);
+      await this.verser(userId, 'DISTANCE_METERS', effort.distanceMeters, completedAt);
     } catch (error) {
       this.logger.error(
         { err: error, userId },
@@ -171,10 +186,16 @@ export class CommunityChallengesService {
     // d'un défi ne lui apporte rien (la borne `startsAt <= at <= endsAt`
     // s'en charge). Le DTO borne en amont ce jour à celui du serveur, à un
     // fuseau près.
+    const at = dayKeyToInstant(input.answeredOn);
     await this.challenges.recordQuizAnswer({
       userId,
       ...input,
-      at: dayKeyToInstant(input.answeredOn),
+      at,
+      // Les défis ENTRE AMIS reçoivent leur part dans la MÊME transaction :
+      // une contribution écrite à côté serait perdue définitivement si elle
+      // échouait, l'unicité empêchant tout rejeu.
+      alsoInTransaction: (tx) =>
+        this.friendChallenges.contribute(userId, 'QUIZ_CORRECT', 1, at, tx),
     });
   }
 

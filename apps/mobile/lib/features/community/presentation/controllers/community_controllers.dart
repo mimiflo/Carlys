@@ -1,10 +1,12 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:uuid/uuid.dart';
 
 import '../../../../core/logging/app_logger.dart';
 import '../../../../core/utilities/formatting.dart';
 
 import '../../data/repositories/community_repository_impl.dart';
 import '../../domain/entities/community.dart';
+import '../../domain/entities/friend_challenge.dart';
 
 /// Encouragements reçus. Rafraîchis par invalidation après chaque action.
 final encouragementsProvider = FutureProvider.autoDispose<List<Encouragement>>((
@@ -27,6 +29,12 @@ final friendRequestsProvider = FutureProvider.autoDispose<List<FriendRequest>>((
 final communityChallengesProvider =
     FutureProvider.autoDispose<List<CommunityChallenge>>((ref) {
       return ref.watch(communityRepositoryProvider).challenges();
+    });
+
+/// Mes défis entre amis : proposés et acceptés.
+final friendChallengesProvider =
+    FutureProvider.autoDispose<List<FriendChallenge>>((ref) {
+      return ref.watch(communityRepositoryProvider).friendChallenges();
     });
 
 /// Ma préférence de partage — pilotée par le serveur, comme le reste.
@@ -61,6 +69,7 @@ class CommunityActions {
   CommunityActions(this._ref);
 
   static const _logger = AppLogger('CommunityActions');
+  static const _uuid = Uuid();
 
   final Ref _ref;
 
@@ -104,6 +113,31 @@ class CommunityActions {
       await repository.joinChallenge(challenge.id);
     }
     _ref.invalidate(communityChallengesProvider);
+  }
+
+  /// Lance un défi à ses amis. L'identifiant naît ICI, sur l'appareil :
+  /// rejouer après une coupure ne pose pas un second défi.
+  Future<void> createFriendChallenge(NewFriendChallenge challenge) async {
+    await _ref
+        .read(communityRepositoryProvider)
+        .createFriendChallenge(_uuid.v4(), challenge);
+    _ref.invalidate(friendChallengesProvider);
+  }
+
+  /// Accepte une invitation : on entre au classement, à zéro.
+  Future<void> acceptFriendChallenge(String challengeId) async {
+    await _ref
+        .read(communityRepositoryProvider)
+        .acceptFriendChallenge(challengeId);
+    _ref.invalidate(friendChallengesProvider);
+  }
+
+  /// Refuse une invitation, ou quitte un défi commencé.
+  Future<void> declineFriendChallenge(String challengeId) async {
+    await _ref
+        .read(communityRepositoryProvider)
+        .declineFriendChallenge(challengeId);
+    _ref.invalidate(friendChallengesProvider);
   }
 
   /// Encourage un ami. Rend `false` si un envoi est DÉJÀ en route vers lui —

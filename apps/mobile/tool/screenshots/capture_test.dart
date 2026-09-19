@@ -1044,6 +1044,22 @@ void main() {
     await pumpApp(tester);
     await goTab(tester, 'Communauté');
     await capture(tester, '29-communaute', shows: find.byType(CommunityScreen));
+
+    // Plus bas : les défis ENTRE AMIS, qui ne se lisent pas comme une barre
+    // de groupe mais comme un classement — un en cours, une invitation.
+    // `AppSectionLabel` rend son texte en MAJUSCULES : c'est ce qui est à
+    // l'écran, et donc ce qu'on cherche.
+    await tester.scrollUntilVisible(
+      find.text('DÉFIS ENTRE AMIS'),
+      240,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await settle(tester);
+    await capture(
+      tester,
+      '35-communaute-defis-amis',
+      shows: find.text('DÉFIS ENTRE AMIS'),
+    );
   });
 
   testWidgets('séance active', (tester) async {

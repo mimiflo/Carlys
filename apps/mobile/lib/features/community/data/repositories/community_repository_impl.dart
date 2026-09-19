@@ -5,6 +5,7 @@ import '../../../../core/api/api_error_mapper.dart';
 import '../../../../core/api/dio_client.dart';
 import '../../domain/entities/community.dart';
 import '../../domain/entities/community_moderation.dart';
+import '../../domain/entities/friend_challenge.dart';
 import '../../domain/repositories/community_repository.dart';
 import '../mappers/community_mappers.dart';
 
@@ -272,6 +273,59 @@ class CommunityRepositoryImpl implements CommunityRepository {
           'reason': report.reason.serverValue,
           if (report.details != null) 'details': report.details,
         },
+      );
+    });
+  }
+
+  // ── Défis entre amis ──────────────────────────────────────────────────
+
+  @override
+  Future<List<FriendChallenge>> friendChallenges() {
+    return _guard(() async {
+      final rows = await _list('/community/friend-challenges');
+      return rows.map(friendChallengeFromJson).toList(growable: false);
+    });
+  }
+
+  @override
+  Future<FriendChallenge> createFriendChallenge(
+    String id,
+    NewFriendChallenge challenge,
+  ) {
+    return _guard(() async {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/community/friend-challenges',
+        data: {
+          'id': id,
+          'title': challenge.title,
+          'metric': challenge.metric.apiValue,
+          if (challenge.target != null) 'target': challenge.target,
+          'durationDays': challenge.durationDays,
+          'invitedUserIds': challenge.invitedUserIds,
+          // `endsAt` n'est PAS envoyé : le serveur le calcule depuis la
+          // durée. Une fin fournie par le client est un défi éternel en une
+          // requête.
+        },
+      );
+      return friendChallengeFromJson(_data(response));
+    });
+  }
+
+  @override
+  Future<FriendChallenge> acceptFriendChallenge(String challengeId) {
+    return _guard(() async {
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/community/friend-challenges/$challengeId/accept',
+      );
+      return friendChallengeFromJson(_data(response));
+    });
+  }
+
+  @override
+  Future<void> declineFriendChallenge(String challengeId) {
+    return _guard(() async {
+      await _dio.delete<Map<String, dynamic>>(
+        '/community/friend-challenges/$challengeId/join',
       );
     });
   }

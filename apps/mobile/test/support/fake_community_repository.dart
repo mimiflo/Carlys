@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:carlys_mobile/core/errors/app_exception.dart';
 import 'package:carlys_mobile/features/community/domain/entities/community.dart';
 import 'package:carlys_mobile/features/community/domain/entities/community_moderation.dart';
+import 'package:carlys_mobile/features/community/domain/entities/friend_challenge.dart';
 import 'package:carlys_mobile/features/community/domain/repositories/community_repository.dart';
 import 'package:carlys_mobile/features/nutrition/domain/repositories/water_store.dart';
 
@@ -314,6 +315,51 @@ class FakeCommunityRepository implements CommunityRepository {
     _guard();
     deletedEncouragements.add(encouragementId);
     _feed.removeWhere((word) => word.id == encouragementId);
+  }
+
+  // ── Défis entre amis ──────────────────────────────────────────────────
+
+  /// Les défis en mémoire, pilotables par les tests.
+  final List<FriendChallenge> friendChallengeList = [];
+
+  @override
+  Future<List<FriendChallenge>> friendChallenges() async =>
+      List.unmodifiable(friendChallengeList);
+
+  @override
+  Future<FriendChallenge> createFriendChallenge(
+    String id,
+    NewFriendChallenge challenge,
+  ) async {
+    final cree = FriendChallenge(
+      id: id,
+      title: challenge.title,
+      metric: challenge.metric,
+      unit: challenge.metric.label,
+      target: challenge.target,
+      status: FriendChallengeStatus.open,
+      myStatus: FriendChallengeMemberStatus.accepted,
+      startsAt: DateTime.now(),
+      endsAt: DateTime.now().add(Duration(days: challenge.durationDays)),
+      creatorDisplayName: 'Moi',
+      members: const [],
+    );
+    friendChallengeList.add(cree);
+    return cree;
+  }
+
+  @override
+  Future<FriendChallenge> acceptFriendChallenge(String challengeId) async {
+    // La doublure ne recompose pas le classement : ce que les écrans
+    // testent, c'est que le geste part et que la liste se relit.
+    return friendChallengeList.firstWhere(
+      (challenge) => challenge.id == challengeId,
+    );
+  }
+
+  @override
+  Future<void> declineFriendChallenge(String challengeId) async {
+    friendChallengeList.removeWhere((challenge) => challenge.id == challengeId);
   }
 }
 

@@ -5,12 +5,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../design_system/design_system.dart';
 import '../../../../shared/widgets/connection_aware_error.dart';
+import '../../domain/entities/community.dart';
 import '../controllers/community_controllers.dart';
 import '../controllers/community_moderation_controllers.dart';
 import '../widgets/add_friend_sheet.dart';
 import '../widgets/community_feedback.dart';
 import '../widgets/community_sections.dart';
 import '../widgets/friends_empty_card.dart';
+import '../widgets/new_friend_challenge_sheet.dart';
 
 /// Communauté — les autres, comme moteur.
 ///
@@ -51,6 +53,24 @@ class CommunityScreen extends ConsumerWidget {
     });
   }
 
+  /// Lance un défi à ses amis. La liste d'amis vient de l'écran, déjà
+  /// chargée : la feuille n'a pas à la redemander, et une feuille qui
+  /// attendrait le réseau pour s'ouvrir se lirait comme une lenteur.
+  Future<void> _newFriendChallenge(
+    BuildContext context,
+    CommunityActions actions,
+    List<CommunityFriend> friends,
+  ) async {
+    final draft = await showNewFriendChallengeSheet(context, friends: friends);
+    if (draft == null || !context.mounted) {
+      return;
+    }
+    await runCommunityGesture(context, () async {
+      await actions.createFriendChallenge(draft);
+      return 'Ton défi est lancé. Tes amis vont le recevoir.';
+    });
+  }
+
   /// Redemande TOUT au serveur, et attend la réponse.
   ///
   /// L'attente n'est pas décorative : `RefreshIndicator` garde son anneau
@@ -62,12 +82,14 @@ class CommunityScreen extends ConsumerWidget {
       ..invalidate(communityFriendsProvider)
       ..invalidate(friendRequestsProvider)
       ..invalidate(communityChallengesProvider)
+      ..invalidate(friendChallengesProvider)
       ..invalidate(blockedUsersProvider);
     await Future.wait([
       ref.read(encouragementsProvider.future),
       ref.read(communityFriendsProvider.future),
       ref.read(friendRequestsProvider.future),
       ref.read(communityChallengesProvider.future),
+      ref.read(friendChallengesProvider.future),
       ref.read(blockedUsersProvider.future),
     ]);
   }
@@ -78,6 +100,7 @@ class CommunityScreen extends ConsumerWidget {
     final friends = ref.watch(communityFriendsProvider);
     final requests = ref.watch(friendRequestsProvider);
     final challenges = ref.watch(communityChallengesProvider);
+    final friendChallenges = ref.watch(friendChallengesProvider);
     // Les blocages comptent comme une donnée : un compte qui n'a plus que
     // des personnes bloquées n'est pas « vide », il doit pouvoir débloquer.
     final blocked = ref.watch(blockedUsersProvider);
@@ -202,9 +225,15 @@ class CommunityScreen extends ConsumerWidget {
                 feed: feed.valueOrNull,
                 friends: friends.valueOrNull,
                 challenges: challenges.valueOrNull,
+                friendChallenges: friendChallenges.valueOrNull,
                 blocked: blocked.valueOrNull,
                 sharesProgress: sharesProgress.valueOrNull,
                 onAddFriend: () => _addFriend(context, actions),
+                onNewFriendChallenge: () => _newFriendChallenge(
+                  context,
+                  actions,
+                  friends.valueOrNull ?? const [],
+                ),
               ),
           ],
         ),

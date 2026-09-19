@@ -225,13 +225,23 @@ export class CommunityChallengesRepository {
     choiceIndex?: number;
     /** Instant de référence pour la fenêtre des défis. */
     at: Date;
+    /**
+     * Ce qu'il faut écrire DANS la même transaction — la contribution aux
+     * défis entre amis, que ce dépôt ne connaît pas.
+     *
+     * Passée en fonction plutôt qu'appelée après coup pour la raison
+     * ci-dessus : hors transaction, son échec laisserait la réponse écrite,
+     * et l'unicité rendrait la perte définitive au rejeu.
+     */
+    alsoInTransaction?: (tx: Prisma.TransactionClient) => Promise<void>;
   }): Promise<boolean> {
-    const { at, ...answer } = input;
+    const { at, alsoInTransaction, ...answer } = input;
     try {
       await this.prisma.$transaction(async (tx) => {
         await tx.quizAnswer.create({ data: answer });
         if (answer.correct) {
           await this.contribute(answer.userId, 'QUIZ_CORRECT', 1, at, tx);
+          await alsoInTransaction?.(tx);
         }
       });
       return true;

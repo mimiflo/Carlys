@@ -6,9 +6,11 @@ import { CommunityChallengesService } from './application/community-challenges.s
 import { CommunityModerationService } from './application/community-moderation.service';
 import { CommunityNotifier } from './application/community-notifier';
 import { CommunityService } from './application/community.service';
+import { FriendChallengesService } from './application/friend-challenges.service';
 import { CommunityChallengesRepository } from './infrastructure/community-challenges.repository';
 import { CommunityModerationRepository } from './infrastructure/community-moderation.repository';
 import { CommunityRepository } from './infrastructure/community.repository';
+import { FriendChallengesRepository } from './infrastructure/friend-challenges.repository';
 import { AdminCommunityController } from './presentation/http/admin-community.controller';
 import { CommunityChallengesController } from './presentation/http/community-challenges.controller';
 import { CommunityModerationController } from './presentation/http/community-moderation.controller';
@@ -33,9 +35,11 @@ import { CommunityController } from './presentation/http/community.controller';
     CommunityService,
     CommunityNotifier,
     CommunityChallengesService,
+    FriendChallengesService,
     CommunityModerationService,
     CommunityRepository,
     CommunityChallengesRepository,
+    FriendChallengesRepository,
     CommunityModerationRepository,
   ],
   // Exporté pour la clôture de séance (contribution aux défis SPORT).

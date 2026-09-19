@@ -1,4 +1,8 @@
-import { type CommunityChallenge, type QuizAnswerRecord } from '@carlys/api-contracts';
+import {
+  type CommunityChallenge,
+  type FriendChallenge,
+  type QuizAnswerRecord,
+} from '@carlys/api-contracts';
 import {
   Body,
   Controller,
@@ -13,14 +17,86 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../../../common/decorators/current-user.decorator';
 import { type AuthenticatedPrincipal } from '../../../../common/types/authenticated-request';
 import { CommunityChallengesService } from '../../application/community-challenges.service';
-import { QuizAnswerDto } from './dto/community.dto';
+import { FriendChallengesService } from '../../application/friend-challenges.service';
+import { CreateFriendChallengeDto, QuizAnswerDto } from './dto/community.dto';
 
 /** Défis collectifs et réponses de quiz (préfixe /community, comme le reste). */
 @ApiTags('community')
 @ApiBearerAuth()
 @Controller('community')
 export class CommunityChallengesController {
-  constructor(private readonly challenges: CommunityChallengesService) {}
+  constructor(
+    private readonly challenges: CommunityChallengesService,
+    private readonly friendChallenges: FriendChallengesService,
+  ) {}
+
+  // ── Défis ENTRE AMIS ────────────────────────────────────────────────────
+
+  @Get('friend-challenges')
+  @ApiOperation({
+    summary: 'Mes défis entre amis — proposés et acceptés',
+    description:
+      'Les défis refusés et quittés en sortent : ce sont des décisions ' +
+      'prises. Un défi échu est RÉGLÉ à la lecture (classement figé), sans ' +
+      'tâche planifiée.',
+  })
+  listFriendChallenges(@CurrentUser() user: AuthenticatedPrincipal): Promise<FriendChallenge[]> {
+    return this.friendChallenges.list(user.userId);
+  }
+
+  @Post('friend-challenges')
+  @HttpCode(201)
+  @ApiOperation({
+    summary: 'Défier ses amis (id appareil, création idempotente)',
+    description:
+      'On n’invite que des amis acceptés et non bloqués — 403 sans dire ' +
+      'lequel des deux. La fin du défi est CALCULÉE depuis la durée.',
+  })
+  createFriendChallenge(
+    @CurrentUser() user: AuthenticatedPrincipal,
+    @Body() dto: CreateFriendChallengeDto,
+  ): Promise<FriendChallenge> {
+    return this.friendChallenges.create(user.userId, {
+      ...dto,
+      target: dto.target ?? null,
+      durationDays: dto.durationDays as 3 | 7 | 30,
+    });
+  }
+
+  @Get('friend-challenges/:id')
+  @ApiOperation({ summary: 'Un défi et son classement' })
+  friendChallenge(
+    @CurrentUser() user: AuthenticatedPrincipal,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ): Promise<FriendChallenge> {
+    return this.friendChallenges.detail(user.userId, id);
+  }
+
+  @Post('friend-challenges/:id/accept')
+  @ApiOperation({ summary: 'Accepter un défi : on entre au classement, à zéro' })
+  acceptFriendChallenge(
+    @CurrentUser() user: AuthenticatedPrincipal,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ): Promise<FriendChallenge> {
+    return this.friendChallenges.accept(user.userId, id);
+  }
+
+  @Delete('friend-challenges/:id/join')
+  @HttpCode(204)
+  @ApiOperation({
+    summary: 'Refuser, ou quitter — dans les deux cas, on sort du classement',
+    description:
+      'Contrairement à un défi collectif, dont la contribution reste acquise ' +
+      'au groupe : ici le classement est individuel.',
+  })
+  async declineFriendChallenge(
+    @CurrentUser() user: AuthenticatedPrincipal,
+    @Param('id', new ParseUUIDPipe()) id: string,
+  ): Promise<void> {
+    await this.friendChallenges.decline(user.userId, id);
+  }
+
+  // ── Défis COLLECTIFS ────────────────────────────────────────────────────
 
   @Get('challenges')
   @ApiOperation({ summary: 'Défis ouverts, progression collective incluse' })

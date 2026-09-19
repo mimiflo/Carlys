@@ -65,6 +65,8 @@ l'application ne dépend d'elle.
 | `Friendship` | UNE ligne par paire ; `PENDING` → `ACCEPTED`/`DECLINED`, direction conservée (qui a demandé). L'unicité porte sur la PAIRE ordonnée (`userLowId`, `userHighId`) : c'est la base qui l'impose, y compris quand les deux personnes se demandent en même temps. |
 | `Encouragement` | Mot d'un ami ; le nom de l'expéditeur est lu au moment de servir (nom COURANT, pas dénormalisé). |
 | `CommunityChallenge` | Défi collectif du MOIS (`month`, `YYYY-MM` UTC), `SPORT` ou `CULTURE`, avec sa `metric` (ce qu'il compte), son `target` et sa fenêtre `startsAt`/`endsAt` ; unique par `(slug, month)`, matérialisé paresseusement depuis le catalogue en code, jamais créé par un utilisateur. |
+| `FriendChallenge` | Défi lancé par quelqu'un à ses amis : `metric`, `target` facultatif, `durationDays` (3/7/30), `endsAt` CALCULÉ par le serveur, `closedAt` qui sert de clé d'idempotence au règlement. |
+| `FriendChallengeMember` | Membre d'un défi entre amis : `status` (INVITED/ACCEPTED/DECLINED/LEFT), `contribution` dans l'unité de la métrique, `finalRank` figé à la clôture. |
 | `ChallengeParticipation` | Participation + `contribution` individuelle à l'objectif. Quitter DATE le départ (`leftAt`) sans effacer la ligne : la contribution déjà versée reste acquise au collectif, seule la présence s'arrête. |
 | `CommunityPreference` | `sharesProgress` (absence = partagé, défaut du modèle). |
 | `CommunityBlock` | Blocage unilatéral `(blockerId, blockedId)`, unique par paire orientée ; consulté dans les DEUX sens partout où deux personnes se rencontrent. |
@@ -85,6 +87,11 @@ l'application ne dépend d'elle.
 | GET | `/challenges` | Défis ouverts, progression collective incluse ; crée le jeu du mois à la première lecture (voir ci-dessous) |
 | POST | `/challenges/:id/join` | Rejoindre (idempotent) |
 | DELETE | `/challenges/:id/join` | Quitter (idempotent) : la contribution déjà versée reste au compteur collectif |
+| GET | `/friend-challenges` | Mes défis ENTRE AMIS (proposés et acceptés) ; un défi échu est réglé à la lecture |
+| POST | `/friend-challenges` | Défier ses amis (id appareil, création idempotente) — `403` si l'un des invités n'est pas un ami accepté ou qu'un blocage les sépare |
+| GET | `/friend-challenges/:id` | Un défi et son classement — `404` pour qui n'en est pas membre |
+| POST | `/friend-challenges/:id/accept` | Accepter : on entre au classement, à zéro |
+| DELETE | `/friend-challenges/:id/join` | Refuser ou quitter (`204`) : dans les deux cas, on SORT du classement |
 | GET · PATCH | `/profile` | Ma préférence `sharesProgress` + mon `friendCode` |
 | POST | `/blocks/:userId` | Bloquer (idempotent, `204`) : retire amitié et demandes dans les deux sens ; `400` soi-même, `404` compte inconnu |
 | DELETE | `/blocks/:userId` | Débloquer (idempotent, `204`) : ne rétablit rien |
@@ -383,3 +390,54 @@ par exemple la somme des contributions versées aux défis pendant la période,
 ou une métrique (pas, eau) qui n’entre dans aucun axe. Le test est simple et
 il s’applique avant d’écrire la règle : si le fait figure dans
 `ProgressionFacts` ou dans `RewardFacts`, la ligue ne le compte pas.
+
+## Défis entre amis
+
+Des TABLES SÉPARÉES des défis collectifs, et pour des raisons mesurées :
+
+- la lecture des défis collectifs n'a **aucun prédicat de visibilité**
+  (`listOpenChallenges` filtre sur la seule fenêtre de dates) parce qu'elle
+  n'en a jamais eu besoin. Y glisser des défis d'utilisateurs exposerait le
+  défi de chacun à tout le monde, instantanément ;
+- `@@unique([slug, month])` EST l'identité d'un défi de catalogue. Un défi
+  entre amis n'a ni slug ni mois ;
+- la sémantique du DÉPART est **inverse**. Quitter un défi collectif garde la
+  contribution acquise, parce qu'un compteur collectif ne peut que monter ;
+  quitter un défi entre amis retire du classement, qui est individuel ;
+- rejoindre un défi collectif est un simple upsert : il n'existe pas d'état
+  « invité, pas encore accepté », et c'est tout l'objet de celui-ci.
+
+Ce qui EST partagé : l'enum `ChallengeMetric` et le **chemin d'écriture des
+contributions** — une séance terminée verse aux deux familles par le même
+appel. Deux compteurs séparés dériveraient au premier ajout de métrique.
+
+Les garde-fous, chacun repris d'une règle déjà écrite :
+
+- **on n'invite que des amis acceptés**, jamais quelqu'un qu'un blocage
+  sépare, dans un sens comme dans l'autre. Un seul message pour les deux
+  refus : rien ne doit distinguer « pas ami » de « t'a bloqué », sans quoi
+  l'invitation devient un détecteur de blocage ;
+- **plafonds** : 9 invités par défi, 5 défis ouverts par créateur. Sans eux,
+  l'invitation devient un canal d'envoi de messages vers quelqu'un qui ne l'a
+  pas demandé — exactement ce que le refus opposable des demandes d'ami avait
+  fermé ;
+- **`endsAt` est calculé côté serveur** depuis `durationDays`. Une fin fournie
+  par l'appelant est un défi éternel en une requête ;
+- **`CHALLENGE_INVITES`** est une famille de notification à part : quelqu'un
+  peut vouloir des encouragements sans vouloir être défié.
+
+### La clôture, sans cron — mais avec une écriture
+
+Les défis collectifs ne closent RIEN : ils cessent simplement d'être lus
+(`endsAt >= now`). Un défi entre amis, lui, produit un **résultat** : le
+classement final doit rester stable même si plus personne ne regarde.
+
+La première lecture qui passe après la fin règle donc le défi : rangs figés
+dans `finalRank`, `status = CLOSED`, `closedAt` posé. L'écriture est
+conditionnée à `closedAt: null` — deux lectures simultanées d'un défi échu
+tentent chacune le règlement, une seule le gagne. Même absence de tâche
+planifiée que le jeu du mois, une écriture de plus.
+
+Le rang se calcule à contribution décroissante, **ex æquo compris** : deux
+personnes à 12 séances sont deuxièmes, et la suivante quatrième. Départager
+par l'identifiant serait un tirage au sort déguisé.

@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/community.dart';
 import '../../domain/entities/community_moderation.dart';
+import '../../domain/entities/friend_challenge.dart';
 import '../controllers/community_controllers.dart';
 import '../controllers/community_moderation_controllers.dart';
 import 'blocked_user_card.dart';
@@ -11,6 +12,7 @@ import 'challenge_card.dart';
 import 'community_gestures.dart';
 import 'encouragement_tile.dart';
 import 'friend_card.dart';
+import 'friend_challenge_card.dart';
 import 'friend_request_card.dart';
 import 'friends_empty_card.dart';
 import 'privacy_card.dart';
@@ -26,7 +28,9 @@ class CommunitySections extends ConsumerWidget {
     required this.feed,
     required this.friends,
     required this.challenges,
+    required this.friendChallenges,
     required this.blocked,
+    required this.onNewFriendChallenge,
     required this.sharesProgress,
     required this.onAddFriend,
     super.key,
@@ -36,7 +40,11 @@ class CommunitySections extends ConsumerWidget {
   final List<Encouragement>? feed;
   final List<CommunityFriend>? friends;
   final List<CommunityChallenge>? challenges;
+  final List<FriendChallenge>? friendChallenges;
   final List<BlockedUser>? blocked;
+
+  /// Ouvre la feuille « Défier mes amis ».
+  final VoidCallback onNewFriendChallenge;
 
   /// `null` tant que la préférence n'est pas chargée.
   final bool? sharesProgress;
@@ -120,6 +128,26 @@ class CommunitySections extends ConsumerWidget {
               )
               .toList(),
         ),
+        ..._section('Défis entre amis', [
+          // Le bouton d'abord, toujours : la section serait sinon muette
+          // tant que personne n'a été défié, et rien ne dirait qu'on peut
+          // l'être.
+          AppButton(
+            label: 'Défier mes amis',
+            variant: AppButtonVariant.secondary,
+            isExpanded: true,
+            onPressed: onNewFriendChallenge,
+          ),
+          ...?friendChallenges?.map<Widget>(
+            (challenge) => FriendChallengeCard(
+              challenge: challenge,
+              onAccept: () =>
+                  gestures.acceptFriendChallenge(context, challenge),
+              onDecline: () =>
+                  gestures.declineFriendChallenge(context, challenge),
+            ),
+          ),
+        ]),
         ..._section('Confidentialité', [
           PrivacyCard(
             sharesProgress: sharesProgress,

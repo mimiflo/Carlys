@@ -353,8 +353,25 @@ entre amis, aucune ligue, aucun pas.
       section « Les pas de ton téléphone (facultatif, consentement dédié) »
       (pas SEULS, consentement distinct du compte, révocation qui efface),
       base légale au §3, droit de retrait au §7, date de mise à jour.
-- [ ] Défis entre amis : portée, invitation/acceptation, durées (3 j / 7 j /
-      30 j, extensible), clôture — modèle de données entier.
+- [x] Défis entre amis — FAIT le 19 septembre 2026. Migration
+      `20260919…_defis_entre_amis` : `FriendChallenge` +
+      `FriendChallengeMember`, tables SÉPARÉES de `CommunityChallenge` pour
+      quatre raisons mesurées (la lecture des défis collectifs n'a aucun
+      prédicat de visibilité ; `@@unique([slug, month])` est l'identité d'un
+      défi de catalogue ; la sémantique du départ est INVERSE — partir
+      retire du classement individuel, là où quitter un défi collectif
+      laisse sa contribution au groupe ; et il n'existait aucun état
+      « invité, pas encore accepté »). Ce qui EST partagé : la métrique et
+      le chemin d'écriture des contributions — une séance verse aux deux
+      familles par le même appel. Garde-fous : on n'invite que des amis
+      acceptés et non bloqués (403 indiscernable), 9 invités par défi, 5
+      défis ouverts par créateur, `endsAt` CALCULÉ côté serveur, nouvelle
+      famille de notification `CHALLENGE_INVITES`. Clôture PARESSEUSE et
+      idempotente : la première lecture après la fin fige les rangs
+      (`finalRank`), pose `closedAt`, et l'écriture est conditionnée à sa
+      nullité — deux lectures simultanées n'en règlent qu'une. Mobile :
+      section « Défis entre amis », carte-classement avec MA ligne même
+      hors du podium, feuille « Défier mes amis ». Tests : 7 e2e, 7 widget.
 - [x] Métrique généralisée — FAIT le 19 septembre 2026. Migration
       `20260919200500_metrique_des_defis` : `CommunityChallenge.metric`,
       rétro-remplie depuis `kind` (SPORT → WORKOUTS, CULTURE →

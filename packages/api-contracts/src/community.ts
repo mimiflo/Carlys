@@ -175,3 +175,87 @@ export const quizAnswerRecordSchema = z.object({
   answeredOn: z.string(),
 });
 export type QuizAnswerRecord = z.infer<typeof quizAnswerRecordSchema>;
+
+// ── Défis entre amis (Plan 7) ───────────────────────────────────────────────
+
+/**
+ * Durées offertes. Trois valeurs, et pas un champ libre : un défi « entre
+ * amis » de 400 jours n'est plus un défi, c'est une dette. La liste est du
+ * CODE — l'allonger ne demande pas de migration.
+ */
+export const FRIEND_CHALLENGE_DURATIONS = [3, 7, 30] as const;
+export type FriendChallengeDuration = (typeof FRIEND_CHALLENGE_DURATIONS)[number];
+
+/** Nombre d'invités en plus du créateur. Au-delà, ce n'est plus « entre amis ». */
+export const FRIEND_CHALLENGE_MAX_INVITES = 9;
+
+/**
+ * Défis OUVERTS qu'une personne peut avoir créés en même temps.
+ *
+ * Sans ce plafond, l'invitation devient un canal d'envoi de messages vers
+ * quelqu'un qui ne l'a pas demandé — exactement ce que le refus opposable
+ * des demandes d'ami avait fermé.
+ */
+export const FRIEND_CHALLENGE_MAX_OPEN_PER_CREATOR = 5;
+
+export const friendChallengeStatusSchema = z.enum(['OPEN', 'CLOSED', 'CANCELLED']);
+export type FriendChallengeStatus = z.infer<typeof friendChallengeStatusSchema>;
+
+export const friendChallengeMemberStatusSchema = z.enum([
+  'INVITED',
+  'ACCEPTED',
+  'DECLINED',
+  'LEFT',
+]);
+export type FriendChallengeMemberStatus = z.infer<typeof friendChallengeMemberStatusSchema>;
+
+/** Une ligne du classement : qui, combien, et à quelle place. */
+export const friendChallengeMemberSchema = z.object({
+  userId: z.string(),
+  displayName: z.string(),
+  status: friendChallengeMemberStatusSchema,
+  contribution: z.number(),
+  /**
+   * Rang courant pendant le défi, FIGÉ à la clôture. `null` pour qui n'a pas
+   * encore accepté : on ne classe pas quelqu'un qui n'a rien accepté.
+   */
+  rank: z.number().nullable(),
+  isMe: z.boolean(),
+});
+export type FriendChallengeMember = z.infer<typeof friendChallengeMemberSchema>;
+
+export const friendChallengeSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  metric: challengeMetricSchema,
+  unit: z.string(),
+  /** Objectif commun, ou `null` : c'est alors « qui en fait le plus ». */
+  target: z.number().nullable(),
+  status: friendChallengeStatusSchema,
+  startsAt: z.string(),
+  endsAt: z.string(),
+  creatorDisplayName: z.string(),
+  /** L'état de l'appelant DANS ce défi — ce qui décide des boutons offerts. */
+  myStatus: friendChallengeMemberStatusSchema,
+  members: z.array(friendChallengeMemberSchema),
+});
+export type FriendChallenge = z.infer<typeof friendChallengeSchema>;
+
+/**
+ * Corps de `POST /community/friend-challenges`.
+ *
+ * L'identifiant vient de l'appareil, comme partout ailleurs : rejouer la
+ * création après une coupure ne crée pas un second défi. `endsAt` n'y figure
+ * PAS — le serveur le calcule depuis la durée, sinon une seule requête
+ * suffirait à poser un défi éternel.
+ */
+export const createFriendChallengeRequestSchema = z.object({
+  id: z.string().uuid(),
+  title: z.string().trim().min(1).max(80),
+  metric: challengeMetricSchema,
+  target: z.number().int().positive().max(10_000_000).nullable().optional(),
+  durationDays: z.union([z.literal(3), z.literal(7), z.literal(30)]),
+  /** Amis invités — au moins un : un défi contre personne n'en est pas un. */
+  invitedUserIds: z.array(z.string().uuid()).min(1).max(FRIEND_CHALLENGE_MAX_INVITES),
+});
+export type CreateFriendChallengeRequest = z.infer<typeof createFriendChallengeRequestSchema>;

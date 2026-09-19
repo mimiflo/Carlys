@@ -41,6 +41,20 @@ void main() {
   DateTime midi(DateTime jour) =>
       DateTime(jour.year, jour.month, jour.day, 12).toUtc();
 
+  /// Un instant du jour COURANT et déjà PASSÉ.
+  ///
+  /// Midi, sauf quand il n'est pas encore midi. La feuille refuse un repas
+  /// daté du futur — à raison, le serveur aussi — donc un repas d'exemple
+  /// posé à « midi aujourd'hui » rendait ces tests rouges entre minuit et
+  /// midi, heure locale. Invisible sous UTC, visible sous la
+  /// `TZ=Europe/Paris` que la CI impose : en soirée UTC, il est déjà demain
+  /// à Paris, et midi n'y est pas encore passé.
+  DateTime dejaPris() {
+    final now = DateTime.now();
+    final midiLocal = DateTime(now.year, now.month, now.day, 12);
+    return (midiLocal.isAfter(now) ? now : midiLocal).toUtc();
+  }
+
   MealEntry repas({
     String id = 'repas-1',
     String name = 'Poulet riz',
@@ -56,7 +70,7 @@ void main() {
     quantity: quantity,
     quantityUnit: quantityUnit,
     proteinG: proteinG,
-    eatenAt: eatenAt ?? midi(DateTime.now()),
+    eatenAt: eatenAt ?? dejaPris(),
   );
 
   Future<void> ouvrirLaCorrection(WidgetTester tester) async {

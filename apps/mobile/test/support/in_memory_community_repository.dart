@@ -12,6 +12,7 @@ library;
 
 import 'package:carlys_mobile/features/community/domain/entities/community.dart';
 import 'package:carlys_mobile/features/community/domain/entities/community_moderation.dart';
+import 'package:carlys_mobile/features/community/domain/entities/friend_challenge.dart';
 import 'package:carlys_mobile/features/community/domain/friend_code.dart';
 import 'package:carlys_mobile/features/community/domain/repositories/community_repository.dart';
 import 'community_sample_world.dart';
@@ -221,5 +222,102 @@ class InMemoryCommunityRepository implements CommunityRepository {
   @override
   Future<void> deleteEncouragement(String encouragementId) async {
     _received.removeWhere((word) => word.id == encouragementId);
+  }
+
+  // ── Défis entre amis ──────────────────────────────────────────────────
+
+  /// Les défis ENTRE AMIS de l'exemple : un en cours où l'on est deuxième,
+  /// et une invitation en attente. Les deux états que la carte sait montrer.
+  final List<FriendChallenge> friendChallengeList = [
+    FriendChallenge(
+      id: 'exemple-defi-ami-course',
+      title: 'Qui court le plus',
+      metric: ChallengeMetric.distanceMeters,
+      unit: 'mètres',
+      status: FriendChallengeStatus.open,
+      myStatus: FriendChallengeMemberStatus.accepted,
+      startsAt: DateTime.now().subtract(const Duration(days: 2)),
+      endsAt: DateTime.now().add(const Duration(days: 5)),
+      creatorDisplayName: 'Boris',
+      members: const [
+        FriendChallengeMember(
+          userId: 'exemple-ami-boris',
+          displayName: 'Boris',
+          status: FriendChallengeMemberStatus.accepted,
+          contribution: 12400,
+          rank: 1,
+          isMe: false,
+        ),
+        FriendChallengeMember(
+          userId: 'exemple-moi',
+          displayName: 'Moi',
+          status: FriendChallengeMemberStatus.accepted,
+          contribution: 9800,
+          rank: 2,
+          isMe: true,
+        ),
+        FriendChallengeMember(
+          userId: 'exemple-ami-chloe',
+          displayName: 'Chloé',
+          status: FriendChallengeMemberStatus.accepted,
+          contribution: 4200,
+          rank: 3,
+          isMe: false,
+        ),
+      ],
+    ),
+    FriendChallenge(
+      id: 'exemple-defi-ami-seances',
+      title: 'Cinq séances cette semaine',
+      metric: ChallengeMetric.workouts,
+      unit: 'séances',
+      target: 5,
+      status: FriendChallengeStatus.open,
+      myStatus: FriendChallengeMemberStatus.invited,
+      startsAt: DateTime.now(),
+      endsAt: DateTime.now().add(const Duration(days: 7)),
+      creatorDisplayName: 'Chloé',
+      members: const [],
+    ),
+  ];
+
+  @override
+  Future<List<FriendChallenge>> friendChallenges() async =>
+      List.unmodifiable(friendChallengeList);
+
+  @override
+  Future<FriendChallenge> createFriendChallenge(
+    String id,
+    NewFriendChallenge challenge,
+  ) async {
+    final cree = FriendChallenge(
+      id: id,
+      title: challenge.title,
+      metric: challenge.metric,
+      unit: challenge.metric.label,
+      target: challenge.target,
+      status: FriendChallengeStatus.open,
+      myStatus: FriendChallengeMemberStatus.accepted,
+      startsAt: DateTime.now(),
+      endsAt: DateTime.now().add(Duration(days: challenge.durationDays)),
+      creatorDisplayName: 'Moi',
+      members: const [],
+    );
+    friendChallengeList.add(cree);
+    return cree;
+  }
+
+  @override
+  Future<FriendChallenge> acceptFriendChallenge(String challengeId) async {
+    // La doublure ne recompose pas le classement : ce que les écrans
+    // testent, c'est que le geste part et que la liste se relit.
+    return friendChallengeList.firstWhere(
+      (challenge) => challenge.id == challengeId,
+    );
+  }
+
+  @override
+  Future<void> declineFriendChallenge(String challengeId) async {
+    friendChallengeList.removeWhere((challenge) => challenge.id == challengeId);
   }
 }

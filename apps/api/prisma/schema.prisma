@@ -63,6 +63,8 @@ model User {
   encouragementsSent       Encouragement[]          @relation("EncouragementsSent")
   encouragementsReceived   Encouragement[]          @relation("EncouragementsReceived")
   challengeParticipations  ChallengeParticipation[]
+  friendChallengesCreated  FriendChallenge[]
+  friendChallengeMembers   FriendChallengeMember[]
   communityBlocksIssued    CommunityBlock[]         @relation("CommunityBlocksIssued")
   communityBlocksReceived  CommunityBlock[]         @relation("CommunityBlocksReceived")
   communityReportsFiled    CommunityReport[]        @relation("CommunityReportsFiled")
@@ -1095,6 +1097,91 @@ model CoachSessionProposalItem {
   @@index([exerciseId])
 }
 
+// ──────────────────────── Défis entre amis ────────────────────────────────
+//
+// TABLES SÉPARÉES de `CommunityChallenge`, et pour des raisons mesurées, pas
+// par goût de la symétrie :
+//
+//  - la lecture des défis collectifs n'a AUCUN prédicat de visibilité
+//    (`listOpenChallenges` filtre sur la seule fenêtre de dates) parce qu'elle
+//    n'en a jamais eu besoin : y glisser des défis d'utilisateurs exposerait
+//    le défi de chacun à tout le monde, instantanément ;
+//  - `@@unique([slug, month])` EST l'identité d'un défi de catalogue. Un défi
+//    entre amis n'a ni slug ni mois ;
+//  - la sémantique du DÉPART est inverse. Quitter un défi collectif garde la
+//    contribution acquise, parce qu'un compteur collectif ne peut que monter ;
+//    quitter un défi entre amis doit RETIRER du classement, qui est
+//    individuel. Deux règles opposées sur la même colonne ;
+//  - rejoindre un défi collectif est un simple upsert : il n'y a pas d'état
+//    « invité, pas encore accepté », et c'est tout l'objet de celui-ci.
+//
+// Ce qui EST partagé : `ChallengeMetric` et le chemin d'écriture des
+// contributions. Deux compteurs séparés dériveraient.
+
+enum FriendChallengeStatus {
+  OPEN
+  CLOSED
+  CANCELLED
+}
+
+enum FriendChallengeMemberStatus {
+  INVITED
+  ACCEPTED
+  DECLINED
+  LEFT
+}
+
+/// Un défi lancé par quelqu'un à ses amis.
+model FriendChallenge {
+  /// UUID fourni par l'appareil : rejouer la création ne crée pas de doublon.
+  id           String                @id @db.Uuid
+  creatorId    String                @db.Uuid
+  title        String
+  metric       ChallengeMetric
+  /// Objectif commun, ou `null` pour un « qui en fait le plus ».
+  target       Int?
+  /// 3, 7 ou 30 — borné par le DTO, donc extensible sans migration.
+  durationDays Int
+  startsAt     DateTime
+  /// CALCULÉ par le serveur (`startsAt` + `durationDays`), jamais reçu du
+  /// client : une fin fournie par l'appelant est un défi éternel en une
+  /// requête.
+  endsAt       DateTime
+  status       FriendChallengeStatus @default(OPEN)
+  /// Posé UNE fois par la clôture paresseuse, et clé de son idempotence :
+  /// l'écriture est conditionnée à sa nullité, donc deux lectures
+  /// simultanées d'un défi échu n'en règlent qu'une.
+  closedAt     DateTime?
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+
+  creator User                    @relation(fields: [creatorId], references: [id], onDelete: Cascade)
+  members FriendChallengeMember[]
+
+  @@index([creatorId])
+  @@index([status, endsAt])
+}
+
+model FriendChallengeMember {
+  challengeId String                      @db.Uuid
+  userId      String                      @db.Uuid
+  status      FriendChallengeMemberStatus @default(INVITED)
+  invitedById String                      @db.Uuid
+  /// Dans l'unité de `FriendChallenge.metric`, jamais un `+1` en dur.
+  contribution Int                        @default(0)
+  joinedAt    DateTime?
+  leftAt      DateTime?
+  /// Figé à la clôture, nul avant : le classement d'un défi terminé ne doit
+  /// plus bouger, même si quelqu'un continue à s'entraîner.
+  finalRank   Int?
+
+  challenge FriendChallenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
+  user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@id([challengeId, userId])
+  @@index([userId, status])
+}
+
 // ─────────────────────────── Journal alimentaire ──────────────────────────
 
 /// L'unité dans laquelle une quantité se dit. Quatre, parce que c'est ce
@@ -1406,6 +1493,9 @@ model ChallengeParticipation {
 enum NotificationCategory {
   FRIEND_REQUESTS
   ENCOURAGEMENTS
+  /// Invitations à un défi entre amis. Une famille À PART : quelqu'un peut
+  /// vouloir des encouragements sans vouloir être défié, et l'inverse.
+  CHALLENGE_INVITES
 }
 
 enum DevicePlatform {
