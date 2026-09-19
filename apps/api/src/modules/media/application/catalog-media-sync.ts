@@ -89,7 +89,13 @@ function storageOf(): StorageSettings | null {
  * lui, ÉCHOUE quand les photos étaient demandées et n'ont pas pu partir.
  */
 export type ExerciseMediaOutcome =
-  | { readonly status: 'ok'; readonly attached: number; readonly missing: number }
+  | {
+      readonly status: 'ok';
+      readonly attached: number;
+      readonly missing: number;
+      /** Photos de seed que l'ADMINISTRATION a remplacées ou retirées : laissées. */
+      readonly keptAdmin: number;
+    }
   | { readonly status: 'sans-stockage' }
   | { readonly status: 'sans-dossier' }
   | { readonly status: 'stockage-injoignable'; readonly reason: string };
@@ -114,6 +120,7 @@ export async function syncExerciseMedia(
 
   let attached = 0;
   let missing = 0;
+  let keptAdmin = 0;
   for (const file of files.sort()) {
     const slug = file.replace(/\.(png|webp)$/, '');
     const exercise = await prisma.exercise.findUnique({ where: { slug }, select: { id: true } });
@@ -149,6 +156,16 @@ export async function syncExerciseMedia(
       return { status: 'stockage-injoignable', reason: (error as Error).message };
     }
 
+    // CE QUE L'ADMINISTRATION A DÉCIDÉ FAIT FOI, comme pour les exercices
+    // eux-mêmes (`syncCatalog` et son `keptDeleted`). Ce code forçait
+    // `deletedAt: null` puis réécrivait `exercise.imageId` : une photo de
+    // seed supprimée depuis le back-office RESSUSCITAIT à chaque
+    // déploiement, et la photo choisie à la main était remplacée par celle
+    // du dépôt. Le contenu se met à jour, la DÉCISION ne se défait pas.
+    const existing = await prisma.mediaAsset.findUnique({
+      where: { id },
+      select: { deletedAt: true },
+    });
     const data = {
       kind: 'IMAGE' as const,
       storageKey,
@@ -158,21 +175,37 @@ export async function syncExerciseMedia(
       height: size?.height ?? null,
       checksum,
       originalName: file,
-      deletedAt: null,
     };
     await prisma.mediaAsset.upsert({
       where: { id },
-      create: { id, ...data },
+      create: { id, ...data, deletedAt: null },
+      // `deletedAt` n'est PAS touché : un média retiré le reste, son
+      // contenu se met simplement à jour s'il revient un jour.
       update: data,
     });
-    await prisma.exercise.update({ where: { id: exercise.id }, data: { imageId: id } });
+    if (existing?.deletedAt != null) {
+      keptAdmin++;
+      continue;
+    }
+    // Le rattachement ne s'impose qu'aux exercices qui portent ENCORE cette
+    // photo-là (ou aucune) : celui dont l'administration a choisi une autre
+    // image garde la sienne.
+    const { count } = await prisma.exercise.updateMany({
+      where: { id: exercise.id, OR: [{ imageId: null }, { imageId: id }] },
+      data: { imageId: id },
+    });
+    if (count === 0) {
+      keptAdmin++;
+      continue;
+    }
     attached++;
   }
 
   process.stdout.write(
     `Photos du catalogue : ${attached} rattachées` +
       (missing > 0 ? `, ${missing} sans exercice correspondant` : '') +
+      (keptAdmin > 0 ? `, ${keptAdmin} laissée(s) à la décision du back-office` : '') +
       '\n',
   );
-  return { status: 'ok', attached, missing };
+  return { status: 'ok', attached, missing, keptAdmin };
 }

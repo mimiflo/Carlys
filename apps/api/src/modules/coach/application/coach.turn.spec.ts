@@ -59,6 +59,25 @@ describe('buildHistory', () => {
     const many = Array.from({ length: 30 }, (_, index) => message('USER', `q${index}`));
     expect(buildHistory(many, 'Fin')).toHaveLength(21);
   });
+
+  it('la fenêtre s’OUVRE sur un tour utilisateur, même si la découpe tombe mal', () => {
+    // L'API du modèle refuse un historique commençant par une réponse — et ce
+    // refus arrive APRÈS que le quota du jour a été décompté. Un tour
+    // interrompu (la réponse jamais archivée) laisse un message utilisateur
+    // orphelin qui retourne la parité du fil : la découpe des 20 derniers
+    // pouvait alors commencer sur un `assistant`.
+    const fil = Array.from({ length: 40 }, (_, index) =>
+      message(index % 2 === 0 ? 'USER' : 'ASSISTANT', `m${index}`),
+    );
+    // Un message utilisateur orphelin en fin de fil : la parité bascule.
+    fil.push(message('USER', 'orphelin'));
+
+    const history = buildHistory(fil, 'Nouvelle question');
+
+    expect(history[0]?.role).toBe('user');
+    // Au pire UN tour d'historique sacrifié, jamais plus.
+    expect(history.length).toBeGreaterThanOrEqual(20);
+  });
 });
 
 describe('extractExerciseIds', () => {

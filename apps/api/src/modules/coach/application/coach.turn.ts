@@ -24,6 +24,16 @@ export function buildHistory(
     role: message.role === 'USER' ? 'user' : 'assistant',
     content: message.content,
   }));
+  // La fenêtre doit s'OUVRIR sur un tour utilisateur : l'API du modèle
+  // refuse un historique qui commence par une réponse, et ce refus arrive
+  // après que le quota du jour a été décompté. La parité tombe juste sur un
+  // fil bien formé, mais un tour interrompu (la réponse n'a jamais été
+  // archivée) laisse un message utilisateur orphelin qui la retourne. On
+  // sacrifie au pire un tour d'historique, et l'invariant ne dépend plus de
+  // la parité du fil.
+  while (turns.length > 0 && turns[0]?.role === 'assistant') {
+    turns.shift();
+  }
   return [...turns, { role: 'user', content: `${volatileContext(now)}\n${content}` }];
 }
 

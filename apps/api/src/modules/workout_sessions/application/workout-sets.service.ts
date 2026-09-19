@@ -62,6 +62,14 @@ export class WorkoutSetsService {
       if (existing.sessionId !== sessionId || existing.session.userId !== userId) {
         throw new ConflictException('Identifiant de série déjà utilisé.');
       }
+      // Une série SUPPRIMÉE n'est pas une série : la servir comme vivante
+      // (elle n'apparaît dans aucune lecture, qui filtrent `deletedAt`) et
+      // réapparier sa prévision à un mort remettait le plan dans l'état
+      // exact que la suppression venait de défaire. L'identifiant a été
+      // consommé puis rendu : c'est un conflit, pas un rejeu.
+      if (existing.deletedAt !== null) {
+        throw new ConflictException('Cette série a été supprimée.');
+      }
       // Rejeu : la série est là, mais l'appariement au plan a pu manquer si le
       // premier envoi s'est interrompu entre les deux écritures. On le refait,
       // il est idempotent.

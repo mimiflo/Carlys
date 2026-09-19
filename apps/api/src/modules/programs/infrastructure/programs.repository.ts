@@ -6,15 +6,28 @@ export type ProgramWithDays = Prisma.ProgramGetPayload<{
   include: { days: true };
 }>;
 
+/**
+ * Ce qu'une LIGNE DE LISTE lit d'un programme : le nombre de jours, pas les
+ * jours.
+ *
+ * La liste partageait l'include du détail. Elle rapatriait donc, pour chaque
+ * programme d'une page, la totalité de ses jours — jusqu'à 364 lignes par
+ * programme, triées par PostgreSQL — pour n'en garder qu'un `length`. Même
+ * défaut, même remède que l'historique des séances (`SUMMARY_SETS`).
+ */
+export type ProgramSummaryRow = Prisma.ProgramGetPayload<{
+  include: { _count: { select: { days: true } } };
+}>;
+
 /** Accès Prisma des programmes — et de lui seul. */
 @Injectable()
 export class ProgramsRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  listPage(userId: string, limit: number, cursor?: string): Promise<ProgramWithDays[]> {
+  listPage(userId: string, limit: number, cursor?: string): Promise<ProgramSummaryRow[]> {
     return this.prisma.program.findMany({
       where: { userId, deletedAt: null },
-      include: { days: { orderBy: [{ weekNumber: 'asc' }, { dayOfWeek: 'asc' }] } },
+      include: { _count: { select: { days: true } } },
       orderBy: [{ updatedAt: 'desc' }, { id: 'desc' }],
       take: limit + 1,
       ...(cursor === undefined ? {} : { cursor: { id: cursor }, skip: 1 }),

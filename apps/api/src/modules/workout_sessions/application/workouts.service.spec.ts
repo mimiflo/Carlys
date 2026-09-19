@@ -446,6 +446,20 @@ describe('WorkoutsService', () => {
       await expect(sets.addSet(USER, 'session-1', setInput)).rejects.toThrow(ConflictException);
     });
 
+    it('une série SUPPRIMÉE ne se rejoue pas : c’est un conflit', async () => {
+      // Elle était servie comme vivante alors qu'aucune lecture ne la montre
+      // (toutes filtrent `deletedAt`), et sa prévision était réappariée à un
+      // mort : le plan revenait dans l'état exact que la suppression venait
+      // de défaire, et la prévision restait « faite » pour toujours.
+      const stubs = buildStubs();
+      stubs.findSetById.mockResolvedValue(setRow({ deletedAt: new Date() }));
+      const sets = buildSetsService(stubs);
+
+      await expect(sets.addSet(USER, 'session-1', setInput)).rejects.toThrow(ConflictException);
+      expect(stubs.linkPlanItem).not.toHaveBeenCalled();
+      expect(stubs.createSet).not.toHaveBeenCalled();
+    });
+
     it('le nom d’exercice est résolu depuis le catalogue quand exerciseId est connu', async () => {
       const stubs = buildStubs();
       stubs.findSetById

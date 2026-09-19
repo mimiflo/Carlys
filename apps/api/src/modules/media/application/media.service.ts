@@ -10,6 +10,7 @@ import {
   PayloadTooLargeException,
   UnsupportedMediaTypeException,
 } from '@nestjs/common';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { type MediaAsset } from '@prisma/client';
 import { createHash } from 'node:crypto';
 import { AppConfigService } from '../../../config/app-config.service';
@@ -53,6 +54,8 @@ export class MediaService {
     private readonly config: AppConfigService,
     private readonly exercises: ExercisesService,
     private readonly audit: AuditService,
+    @InjectPinoLogger(MediaService.name)
+    private readonly logger: PinoLogger,
   ) {}
 
   async upload(input: {
@@ -120,8 +123,22 @@ export class MediaService {
       );
     }
 
+    // L'OBJET part avant la LIGNE, et son échec n'annule pas la suppression.
+    // Dans l'ordre inverse, un stockage injoignable laissait la ligne déjà
+    // supprimée et l'objet en place : le rejeu ne trouvait plus rien
+    // (`findById` filtre les supprimés) et répondait 404 — l'objet restait
+    // orphelin pour toujours, sans aucun moyen de le reprendre. Un objet
+    // absent sous une ligne vivante, lui, se rattrape : la suppression se
+    // rejoue.
+    try {
+      await this.storage.delete(media.storageKey);
+    } catch (error) {
+      this.logger.warn(
+        { err: error, mediaId: id, storageKey: media.storageKey },
+        'Objet non supprimé du stockage — la ligne est retirée, l’objet reste à purger',
+      );
+    }
     await this.repository.softDelete(id);
-    await this.storage.delete(media.storageKey);
     this.record('admin.media_deleted', id, actor, { kind: media.kind });
   }
 

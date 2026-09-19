@@ -45,6 +45,22 @@ const SUMMARY_SETS = {
   },
 };
 
+/**
+ * Le conflit porte-t-il sur la SÉANCE elle-même ?
+ *
+ * `meta.target` nomme les colonnes (tableau sur PostgreSQL, chaîne sur
+ * d'autres connecteurs) ou la contrainte. La séance se reconnaît à sa clé
+ * primaire `id` ; le plan, lui, viole `sessionId`+positions ou son propre
+ * identifiant. Cible inconnue : on ne prétend rien et l'erreur remonte.
+ */
+function collidedOnSession(error: Prisma.PrismaClientKnownRequestError): boolean {
+  const target = error.meta?.target;
+  if (Array.isArray(target)) {
+    return target.length === 1 && target[0] === 'id';
+  }
+  return typeof target === 'string' && /WorkoutSession_pkey|\bid\b/.test(target);
+}
+
 /** Accès Prisma des séances — toutes les requêtes sont scoppées à un userId. */
 @Injectable()
 export class WorkoutsRepository {
@@ -80,7 +96,17 @@ export class WorkoutsRepository {
       });
       return true;
     } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+      // SEUL le conflit sur la SÉANCE est un rejeu. Un P2002 venu du PLAN
+      // (deux prévisions au même rang, un identifiant d'item déjà pris)
+      // annule la transaction : la séance n'existe alors PAS, et rendre
+      // « déjà créée » envoyait l'appelant la relire pour ne rien trouver —
+      // un POST de création se terminait en 404, séance perdue. Le plan
+      // fautif doit remonter comme une erreur, pas se déguiser en rejeu.
+      if (
+        error instanceof Prisma.PrismaClientKnownRequestError &&
+        error.code === 'P2002' &&
+        collidedOnSession(error)
+      ) {
         return false;
       }
       throw error;
@@ -158,6 +184,9 @@ export class WorkoutsRepository {
       await this.prisma.workoutSet.create({ data });
       return true;
     } catch (error) {
+      // UNE seule écriture ici : le seul conflit possible est l'identifiant
+      // de la série, donc tout P2002 est bien un rejeu (contrairement à
+      // `createSession`, qui écrit aussi le plan dans sa transaction).
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
         return false;
       }

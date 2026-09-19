@@ -1,3 +1,4 @@
+import { type PinoLogger } from 'nestjs-pino';
 import {
   BadRequestException,
   NotFoundException,
@@ -46,6 +47,7 @@ interface Stubs {
   storage: { put: jest.Mock; delete: jest.Mock; urlFor: jest.Mock };
   exercises: { invalidateCache: jest.Mock };
   audit: { record: jest.Mock };
+  logger: { warn: jest.Mock; error: jest.Mock; info: jest.Mock };
 }
 
 function buildStubs(): Stubs {
@@ -65,6 +67,7 @@ function buildStubs(): Stubs {
     },
     exercises: { invalidateCache: jest.fn().mockResolvedValue(undefined) },
     audit: { record: jest.fn() },
+    logger: { warn: jest.fn(), error: jest.fn(), info: jest.fn() },
   };
 }
 
@@ -75,6 +78,7 @@ function buildService(stubs: Stubs, maxBytes = 1_024): MediaService {
     { mediaMaxUploadBytes: maxBytes } as AppConfigService,
     stubs.exercises as unknown as ExercisesService,
     stubs.audit as unknown as AuditService,
+    stubs.logger as unknown as PinoLogger,
   );
 }
 
@@ -203,14 +207,41 @@ describe('MediaService', () => {
     expect(stubs.storage.delete).not.toHaveBeenCalled();
   });
 
-  it('média libre : ligne marquée supprimée puis objet retiré', async () => {
+  it('média libre : objet retiré PUIS ligne marquée supprimée', async () => {
     const stubs = buildStubs();
     stubs.repository.findById.mockResolvedValue(row());
+    const order: string[] = [];
+    stubs.storage.delete.mockImplementation(() => {
+      order.push('storage');
+      return Promise.resolve();
+    });
+    stubs.repository.softDelete.mockImplementation(() => {
+      order.push('base');
+      return Promise.resolve();
+    });
 
     await buildService(stubs).remove(ID, { adminUserId: ADMIN });
 
     expect(stubs.repository.softDelete).toHaveBeenCalledWith(ID);
     expect(stubs.storage.delete).toHaveBeenCalledWith(`image/${ID}.webp`);
+    expect(order).toEqual(['storage', 'base']);
+  });
+
+  it('stockage injoignable : la ligne part quand même, l’objet est signalé', async () => {
+    // Dans l'ordre inverse, la ligne était déjà supprimée quand le stockage
+    // refusait : `findById` filtrant les supprimés, le rejeu répondait 404 et
+    // l'objet restait orphelin POUR TOUJOURS, sans moyen de le reprendre.
+    const stubs = buildStubs();
+    stubs.repository.findById.mockResolvedValue(row());
+    stubs.storage.delete.mockRejectedValue(new Error('stockage injoignable'));
+
+    await buildService(stubs).remove(ID, { adminUserId: ADMIN });
+
+    expect(stubs.repository.softDelete).toHaveBeenCalledWith(ID);
+    expect(stubs.logger.warn).toHaveBeenCalled();
+    expect(stubs.audit.record).toHaveBeenCalledWith(
+      expect.objectContaining({ action: 'admin.media_deleted' }),
+    );
   });
 
   it('suppression d’un média inconnu → 404', async () => {

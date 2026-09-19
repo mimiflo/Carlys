@@ -128,6 +128,11 @@ async function main(argv: readonly string[]): Promise<number> {
       photos =
         `${outcome.attached} déposées dans le stockage objet` +
         (outcome.missing > 0 ? ` (${outcome.missing} sans exercice correspondant)` : '') +
+        // Dit seulement quand il y en a, comme les exercices supprimés : une
+        // ligne « 0 » à chaque déploiement banaliserait l'information.
+        (outcome.keptAdmin > 0
+          ? ` — ${outcome.keptAdmin} laissée(s) telle(s) que le back-office les a décidées`
+          : '') +
         '.';
     }
 
