@@ -293,11 +293,15 @@ date sur `Program`, aucun lien `WorkoutSession` ↔ jour de programme.
 
 Existant : saisie manuelle (nom, kcal, 3 macros), journal du jour, suppression.
 
-- [~] Option 2 (manuel) : il manque la QUANTITÉ (aucune colonne nulle part —
-      migration), la date choisie (`eatenAt` figé à maintenant), la
-      CORRECTION d'un repas (aucun PATCH — migration non requise, route +
-      contrat + mobile) et l'historique (le journal n'a pas d'hier alors que
-      la lecture par intervalle existe côté serveur).
+- [x] Option 2 (manuel) : FAIT le 19 septembre 2026. QUANTITÉ descriptive
+      (`quantity` + `quantityUnit`, migration `20260919181907`, jamais
+      multiplicatrice), DATE et HEURE choisies (`eatenAt` ne vient plus de
+      l'instant de saisie, et le futur est refusé à la création comme à la
+      correction), CORRECTION sur place (`PATCH /nutrition/meals/:id` —
+      absent = inchangé, `null` = effacé), HISTORIQUE (deux flèches, un an en
+      arrière, `mealsForDayProvider` par jour civil). Tests : 9 widget/unité
+      mobiles, 5 e2e API, captures `30-nutrition-journal` et
+      `31-nutrition-correction-repas` régénérées.
 - [!] Option 1 (base d'aliments) : la SOURCE est un choix produit/juridique —
       CIQUAL (fiable, français, embarquable hors ligne, sans codes-barres),
       Open Food Facts (ODbL, codes-barres, réseau), ou table maison.

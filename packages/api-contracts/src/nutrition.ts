@@ -78,11 +78,30 @@ export const metabolismReportSchema = z.object({
 });
 export type MetabolismReport = z.infer<typeof metabolismReportSchema>;
 
+/**
+ * L'unité dans laquelle une quantité se dit — grammes, millilitres, portion,
+ * pièce. Quatre valeurs, parce que c'est ce qu'on lit sur un emballage ou
+ * dans une assiette.
+ */
+export const mealQuantityUnitSchema = z.enum(['GRAM', 'MILLILITER', 'PORTION', 'PIECE']);
+export type MealQuantityUnit = z.infer<typeof mealQuantityUnitSchema>;
+
 /** Entrée du journal alimentaire (/api/v1/nutrition/meals). */
 export const mealEntrySchema = z.object({
   id: z.string(),
   name: z.string(),
   kcal: z.number(),
+  /**
+   * Ce qui a été mangé, en clair : « 250 g », « 1,5 portion », « 2 pièces ».
+   *
+   * PUREMENT DESCRIPTIVE : elle ne multiplie NI `kcal` NI les macros, qui
+   * restent le total réellement consommé. Un client qui multiplierait par
+   * elle compterait deux fois. Les deux champs vont PAR PAIRE — une quantité
+   * sans unité ne dit rien — et valent `null` ensemble quand l'entrée a été
+   * saisie sans.
+   */
+  quantity: z.number().nullable(),
+  quantityUnit: mealQuantityUnitSchema.nullable(),
   /**
    * Les trois macros, toutes facultatives et INDÉPENDANTES : `null` veut
    * dire « on ne sait pas », jamais « zéro ». L'écran affiche quatre macros

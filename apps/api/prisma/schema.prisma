@@ -1075,6 +1075,16 @@ model CoachSessionProposalItem {
 
 // ─────────────────────────── Journal alimentaire ──────────────────────────
 
+/// L'unité dans laquelle une quantité se dit. Quatre, parce que c'est ce
+/// qu'on lit sur un emballage ou dans une assiette : des grammes, des
+/// millilitres, une portion, une pièce.
+enum MealQuantityUnit {
+  GRAM
+  MILLILITER
+  PORTION
+  PIECE
+}
+
 /// Entrée du journal alimentaire : ce que l'utilisateur dit avoir mangé.
 ///
 /// C'est la moitié RÉELLE du « 654 / 2 100 » de l'accueil : le consommé vient
@@ -1086,6 +1096,22 @@ model MealEntry {
   userId    String    @db.Uuid
   name      String
   kcal      Int
+  /// Ce qui a été mangé, en clair : « 250 g », « 1,5 portion », « 2 pièces ».
+  ///
+  /// PUREMENT DESCRIPTIVE : elle ne multiplie NI `kcal` NI les macros, qui
+  /// restent le TOTAL réellement consommé. La rendre multiplicatrice
+  /// changerait le sens de `kcal` — il cesserait de dire « ce repas » pour
+  /// dire « une unité de ce repas » — et les bornes de saisie (10 000 kcal,
+  /// 1 000 g par macro) sont des bornes de REPAS, pas d'unité.
+  ///
+  /// Nullable et sans défaut, comme les macros l'ont été à leur arrivée :
+  /// poser un 1 aux entrées déjà enregistrées redéfinirait après coup ce que
+  /// la personne a saisi, et la première correction de 1 à 2 doublerait un
+  /// nombre qu'elle avait tapé comme un total.
+  ///
+  /// Les deux champs vont PAR PAIRE : une quantité sans unité ne dit rien.
+  quantity     Decimal?          @db.Decimal(7, 2)
+  quantityUnit MealQuantityUnit?
   /// Les trois macros, toutes FACULTATIVES et indépendantes : une entrée
   /// rapide n'en porte aucune, une estimation les porte toutes, et une
   /// saisie à la main peut n'en connaître qu'une. `null` veut dire « on ne

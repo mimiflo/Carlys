@@ -2,7 +2,13 @@
 ///
 /// Tous les calculs métaboliques sont faits CÔTÉ SERVEUR ; l'app collecte le
 /// profil et affiche le rapport, jamais l'inverse.
+///
+/// Le journal alimentaire vit dans `meal_entry.dart` : ce fichier le
+/// réexporte pour que ses appelants n'aient pas à savoir lequel des deux les
+/// concerne.
 library;
+
+export 'meal_entry.dart';
 
 /// Sexe biologique — requis par la formule de Mifflin-St Jeor.
 enum BiologicalSex {
@@ -212,35 +218,4 @@ class MetabolicProfileUpdate {
       heightCm == null &&
       activityLevel == null &&
       goal == null;
-}
-
-/// Une entrée du journal alimentaire — ce que l'utilisateur dit avoir mangé.
-///
-/// C'est la moitié RÉELLE du « consommé / objectif » de l'accueil.
-/// L'identifiant est un UUID généré sur l'appareil (création idempotente).
-class MealEntry {
-  const MealEntry({
-    required this.id,
-    required this.name,
-    required this.kcal,
-    required this.eatenAt,
-    this.proteinG,
-    this.carbsG,
-    this.fatG,
-  });
-
-  final String id;
-  final String name;
-  final int kcal;
-
-  /// Les trois macros, toutes facultatives et INDÉPENDANTES : `null` veut
-  /// dire « on ne sait pas », jamais « zéro ». L'écran affiche quatre macros
-  /// CIBLES et n'en journalisait que deux — la comparaison consommé /
-  /// objectif était impossible sur les deux tiers de ce qu'il montrait.
-  final int? proteinG;
-  final int? carbsG;
-  final int? fatG;
-
-  /// Instant de consommation, UTC — l'affichage est localisé.
-  final DateTime eatenAt;
 }

@@ -56,6 +56,7 @@ Deux conséquences assumées, toutes deux testées :
 | --- | --- | --- |
 | POST | `/` | Ajouter un repas — id UUID généré sur l'appareil, création idempotente et rejouable |
 | GET | `/?from&to` | Repas entre deux instants UTC |
+| PATCH | `/:id` | Corriger sur place — champ absent = inchangé, champ `null` = effacé |
 | DELETE | `/:id` | Retirer (suppression douce, idempotente) |
 
 Règles :
@@ -77,6 +78,44 @@ Règles :
   était impossible. Les colonnes sont nullables et sans valeur par défaut
   (migration `20260915170000_meal_macros`) — poser un 0 aux entrées déjà
   enregistrées les aurait fait mentir.
+
+- **La quantité est PUREMENT DESCRIPTIVE.** `quantity` (0,01 à 9 999,99) et
+  `quantityUnit` (`GRAM`, `MILLILITER`, `PORTION`, `PIECE`) vont **par
+  paire** — une quantité sans unité ne dit rien — et valent `null` ensemble
+  quand l'entrée n'en porte pas (migration `20260919181907_quantite_du_repas`).
+
+  Elle ne multiplie NI `kcal` NI les macros, qui restent le TOTAL réellement
+  consommé. La rendre multiplicatrice changerait le sens de `kcal` — il
+  cesserait de dire « ce repas » pour dire « une unité de ce repas » — et les
+  bornes de saisie (10 000 kcal, 1 000 g par macro) sont des bornes de REPAS.
+  L'écran l'écrit sous le champ, parce que « 250 g » à côté de « 350 kcal » se
+  lit sinon comme « 350 kcal pour 100 g ».
+
+- **`eatenAt` ne peut pas être dans le futur** (`@MaxDate(nowWithClockSkew)`,
+  un jour de tolérance d'horloge), à la création COMME à la correction. Sans
+  cette borne, un repas daté de l'an prochain sortait du jour courant pour
+  toujours : le total « consommé » de l'accueil ne le voyait plus, et la
+  personne cherchait un repas pourtant bien enregistré. La pesée portait déjà
+  la même borne ; le repas ne l'avait pas.
+
+- **Corriger, plutôt que supprimer puis ressaisir.** `PATCH /:id` garde
+  l'identifiant, donc la place dans le journal et le total : un champ ABSENT
+  du corps reste tel quel, un champ à `null` EFFACE ce qu'on croyait savoir.
+  `name`, `kcal` et `eatenAt` refusent `null` (400, jamais 500) ; un corps
+  vide est refusé ; le repas d'autrui, inconnu ou supprimé répond 404 sans
+  distinction. La cohérence de la paire quantité/unité se juge sur l'état
+  APRÈS correction, pas sur le fragment reçu.
+
+  Côté mobile, la feuille sert les DEUX usages — ajouter, corriger — et
+  s'ouvre pré-remplie en correction : elle montre l'entrée entière, donc une
+  case vidée veut dire « on ne sait plus » et part en `null` explicite.
+
+- **Le journal se consulte en arrière.** Deux flèches reculent d'un jour
+  civil (jusqu'à un an, la plage que le serveur accepte en une requête) ;
+  celle de demain reste éteinte, un jour à venir n'ayant rien à montrer ni à
+  recevoir. Le jour sélectionné est un ÉCART en jours avec aujourd'hui, jamais
+  une date mémorisée — celle-ci se périmerait à minuit en continuant de
+  s'appeler « Aujourd'hui ».
 
 ## Hydratation — la seule mesure qui reste sur l'appareil
 

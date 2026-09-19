@@ -146,6 +146,7 @@ déclare ici à la main.
 | --- | --- | --- |
 | `GET /nutrition/meals` | **mobile** | apps/mobile |
 | `POST /nutrition/meals` | **mobile** | apps/mobile |
+| `PATCH /nutrition/meals/{id}` | **mobile** | apps/mobile |
 | `DELETE /nutrition/meals/{id}` | **mobile** | apps/mobile |
 | `GET /nutrition/metabolism` | **mobile** | apps/mobile |
 

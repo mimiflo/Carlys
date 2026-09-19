@@ -78,10 +78,46 @@ class NutritionRepositoryImpl implements NutritionRepository {
           'id': meal.id,
           'name': meal.name,
           'kcal': meal.kcal,
+          // Une clé ABSENTE à la création, jamais `null` : le serveur accepte
+          // l'absence, et la paire quantité/unité se refuse à moitié.
+          if (meal.quantity != null && meal.quantityUnit != null) ...{
+            'quantity': meal.quantity,
+            'quantityUnit': meal.quantityUnit!.apiValue,
+          },
           if (meal.proteinG != null) 'proteinG': meal.proteinG,
           if (meal.carbsG != null) 'carbsG': meal.carbsG,
           if (meal.fatG != null) 'fatG': meal.fatG,
           'eatenAt': meal.eatenAt.toUtc().toIso8601String(),
+        },
+      );
+      final body = response.data?['data'] as Map<String, dynamic>? ?? const {};
+      return _meal(body);
+    });
+  }
+
+  @override
+  Future<MealEntry> updateMeal(String id, MealCorrection correction) {
+    return _guard(() async {
+      // La paire est indivisible : à moitié renseignée, elle s'efface en
+      // entier plutôt que de partir en 400 pour une saisie que l'écran
+      // aurait dû empêcher.
+      final paire =
+          correction.quantity != null && correction.quantityUnit != null;
+      final response = await _dio.patch<Map<String, dynamic>>(
+        '/nutrition/meals/$id',
+        // Ici les clés sont TOUTES présentes, `null` compris : le formulaire
+        // montrait l'entrée entière, donc une case vidée veut dire « on ne
+        // sait plus », et seul un `null` explicite l'écrit. Omettre la clé
+        // laisserait l'ancienne valeur en place.
+        data: {
+          'name': correction.name,
+          'kcal': correction.kcal,
+          'quantity': paire ? correction.quantity : null,
+          'quantityUnit': paire ? correction.quantityUnit!.apiValue : null,
+          'proteinG': correction.proteinG,
+          'carbsG': correction.carbsG,
+          'fatG': correction.fatG,
+          'eatenAt': correction.eatenAt.toUtc().toIso8601String(),
         },
       );
       final body = response.data?['data'] as Map<String, dynamic>? ?? const {};
@@ -101,6 +137,8 @@ class NutritionRepositoryImpl implements NutritionRepository {
       id: row['id'] as String,
       name: row['name'] as String,
       kcal: (row['kcal'] as num).toInt(),
+      quantity: (row['quantity'] as num?)?.toDouble(),
+      quantityUnit: MealQuantityUnit.fromApi(row['quantityUnit'] as String?),
       proteinG: (row['proteinG'] as num?)?.toInt(),
       carbsG: (row['carbsG'] as num?)?.toInt(),
       fatG: (row['fatG'] as num?)?.toInt(),

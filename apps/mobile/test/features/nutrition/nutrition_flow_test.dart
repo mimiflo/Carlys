@@ -130,10 +130,10 @@ void main() {
       // Tant que le profil est incomplet, le formulaire vient AVANT le
       // journal : le seul geste utile du premier jour n'est pas en bas de
       // page.
-      await reveal(tester, find.text('Journal du jour'));
+      await reveal(tester, find.text('Journal'));
       expect(
         tester.getTopLeft(find.byType(MetabolicProfileForm)).dy,
-        lessThan(tester.getTopLeft(find.text('Journal du jour')).dy),
+        lessThan(tester.getTopLeft(find.text('Journal')).dy),
       );
     });
 
@@ -265,10 +265,10 @@ void main() {
       await reveal(tester, find.textContaining('2,8'));
       expect(find.textContaining('2,8'), findsWidgets);
       // Profil complet : le journal garde sa place AVANT le formulaire.
-      await reveal(tester, find.text('Journal du jour'));
+      await reveal(tester, find.text('Journal'));
       expect(
         tester.getTopLeft(find.byType(MetabolicProfileForm)).dy,
-        greaterThan(tester.getTopLeft(find.text('Journal du jour')).dy),
+        greaterThan(tester.getTopLeft(find.text('Journal')).dy),
       );
       // L'objectif nutritionnel reste lisible dans le formulaire de profil.
       await reveal(tester, find.text('Maintenir'));
@@ -307,7 +307,7 @@ void main() {
       await tester.pumpWidget(appWith(nutrition));
       await openNutritionTab(tester);
 
-      await reveal(tester, find.text('Journal du jour'));
+      await reveal(tester, find.text('Journal'));
       expect(find.textContaining('Rien au journal'), findsOneWidget);
 
       await tester.tap(find.text('Ajouter un repas'));
@@ -321,6 +321,8 @@ void main() {
       );
       await tester.enterText(fields.at(0), 'Skyr, granola');
       await tester.enterText(fields.at(1), '654');
+      // La feuille DÉFILE : son bouton peut être sous le bord bas.
+      await tester.ensureVisible(find.text('Ajouter au journal'));
       await tester.tap(find.text('Ajouter au journal'));
       await tester.pumpAndSettle();
 
@@ -412,7 +414,7 @@ void main() {
     ) async {
       await tester.pumpWidget(appWith(nutrition));
       await openNutritionTab(tester);
-      await reveal(tester, find.text('Journal du jour'));
+      await reveal(tester, find.text('Journal'));
       await tester.tap(find.text('Ajouter un repas'));
       await tester.pumpAndSettle();
     }
@@ -427,11 +429,13 @@ void main() {
       await ouvrirLaFeuille(tester, nutrition);
 
       final champs = champsFeuille();
-      expect(champs, findsNWidgets(5));
+      expect(champs, findsNWidgets(6));
       await tester.enterText(champs.at(0), 'Riz complet');
       await tester.enterText(champs.at(1), '650');
       // Protéines et lipides restent VIDES : « on ne sait pas », pas zéro.
       await tester.enterText(champs.at(3), '80');
+      // La feuille DÉFILE : son bouton peut être sous le bord bas.
+      await tester.ensureVisible(find.text('Ajouter au journal'));
       await tester.tap(find.text('Ajouter au journal'));
       await tester.pumpAndSettle();
 
@@ -461,6 +465,8 @@ void main() {
       await tester.enterText(champs.at(0), 'Riz complet');
       await tester.enterText(champs.at(1), '650');
       await tester.enterText(champs.at(4), '2000');
+      // La feuille DÉFILE : son bouton peut être sous le bord bas.
+      await tester.ensureVisible(find.text('Ajouter au journal'));
       await tester.tap(find.text('Ajouter au journal'));
       await tester.pumpAndSettle();
 

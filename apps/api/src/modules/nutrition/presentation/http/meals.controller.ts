@@ -7,6 +7,7 @@ import {
   HttpCode,
   Param,
   ParseUUIDPipe,
+  Patch,
   Post,
   Query,
 } from '@nestjs/common';
@@ -14,7 +15,7 @@ import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../../../common/decorators/current-user.decorator';
 import { type AuthenticatedPrincipal } from '../../../../common/types/authenticated-request';
 import { MealsService } from '../../application/meals.service';
-import { CreateMealDto, ListMealsQuery } from './dto/meals.dto';
+import { CreateMealDto, ListMealsQuery, UpdateMealDto } from './dto/meals.dto';
 
 @ApiTags('nutrition')
 @ApiBearerAuth()
@@ -30,11 +31,30 @@ export class MealsController {
       id: dto.id,
       name: dto.name,
       kcal: dto.kcal,
+      quantity: dto.quantity ?? null,
+      quantityUnit: dto.quantityUnit ?? null,
       proteinG: dto.proteinG ?? null,
       carbsG: dto.carbsG ?? null,
       fatG: dto.fatG ?? null,
       eatenAt: dto.eatenAt,
     });
+  }
+
+  @Patch(':id')
+  @ApiOperation({
+    summary:
+      'Corriger un repas — un champ absent reste tel quel, un champ à null ' +
+      'efface ce qu’on croyait savoir',
+  })
+  update(
+    @CurrentUser() user: AuthenticatedPrincipal,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body() dto: UpdateMealDto,
+  ): Promise<MealEntry> {
+    // Le DTO est recopié tel quel : `undefined` (« n'y touche pas ») et
+    // `null` (« efface ») doivent traverser sans être confondus, ce qu'un
+    // `?? null` ferait exactement.
+    return this.meals.update(user.userId, id, dto);
   }
 
   @Get()

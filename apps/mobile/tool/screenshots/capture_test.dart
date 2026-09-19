@@ -808,6 +808,8 @@ void main() {
           id: 'capture-repas-1',
           name: 'Skyr, granola, myrtilles',
           kcal: 380,
+          quantity: 1,
+          quantityUnit: MealQuantityUnit.portion,
           proteinG: 28,
           eatenAt: DateTime.now().subtract(const Duration(hours: 4)),
         ),
@@ -815,6 +817,8 @@ void main() {
           id: 'capture-repas-2',
           name: 'Poulet, riz, brocoli',
           kcal: 274,
+          quantity: 320,
+          quantityUnit: MealQuantityUnit.gram,
           proteinG: 46,
           eatenAt: DateTime.now().subtract(const Duration(hours: 1)),
         ),
@@ -822,15 +826,42 @@ void main() {
     await pumpApp(tester, nutrition: nutrition);
     await openNutrition(tester);
     await tester.scrollUntilVisible(
-      find.text('Journal du jour'),
+      find.text('Journal'),
       240,
       scrollable: find.byType(Scrollable).last,
     );
     await settle(tester);
+    await capture(tester, '30-nutrition-journal', shows: find.text('Journal'));
+  });
+
+  testWidgets('feuille de correction d’un repas', (tester) async {
+    final nutrition = nutritionOf()
+      ..meals.add(
+        MealEntry(
+          id: 'capture-repas-3',
+          name: 'Poulet, riz, brocoli',
+          kcal: 274,
+          quantity: 320,
+          quantityUnit: MealQuantityUnit.gram,
+          proteinG: 46,
+          carbsG: 58,
+          eatenAt: DateTime.now().subtract(const Duration(hours: 1)),
+        ),
+      );
+    await pumpApp(tester, nutrition: nutrition);
+    await openNutrition(tester);
+    await tester.scrollUntilVisible(
+      find.text('Journal'),
+      240,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await settle(tester);
+    await tester.tap(find.text('Poulet, riz, brocoli'));
+    await settle(tester);
     await capture(
       tester,
-      '30-nutrition-journal',
-      shows: find.text('Journal du jour'),
+      '31-nutrition-correction-repas',
+      shows: find.text('Corriger ce repas'),
     );
   });
 

@@ -198,6 +198,130 @@ describe('Nutrition (e2e)', () => {
       .expect(400);
   });
 
+  it('journalise une quantité — descriptive, jamais multiplicatrice', async () => {
+    const mealId = randomUUID();
+    const eatenAt = new Date();
+    await authed()
+      .post('/api/v1/nutrition/meals')
+      .send({
+        id: mealId,
+        name: 'Riz basmati',
+        kcal: 350,
+        quantity: 250.5,
+        quantityUnit: 'GRAM',
+        eatenAt: eatenAt.toISOString(),
+      })
+      .expect(201);
+
+    const window = `from=${new Date(eatenAt.getTime() - 3_600_000).toISOString()}&to=${new Date(eatenAt.getTime() + 3_600_000).toISOString()}`;
+    const meals = data<MealEntry[]>(
+      (await authed().get(`/api/v1/nutrition/meals?${window}`).expect(200)).body,
+    );
+    const stored = meals.find((meal) => meal.id === mealId);
+    // Un NOMBRE, pas la chaîne « 250.5 » : le `Decimal` de Prisma se
+    // sérialise en chaîne si personne ne le convertit, et le contrat la
+    // refuserait.
+    expect(stored?.quantity).toBe(250.5);
+    expect(stored?.quantityUnit).toBe('GRAM');
+    // Les calories restent le TOTAL mangé : elles ne sont pas multipliées
+    // par 250,5 au passage.
+    expect(stored?.kcal).toBe(350);
+  });
+
+  it('refuse une quantité orpheline de son unité, dans les deux sens', async () => {
+    for (const orpheline of [{ quantity: 250 }, { quantityUnit: 'GRAM' }]) {
+      await authed()
+        .post('/api/v1/nutrition/meals')
+        .send({
+          id: randomUUID(),
+          name: 'Moitié de phrase',
+          kcal: 350,
+          ...orpheline,
+          eatenAt: new Date().toISOString(),
+        })
+        .expect(400);
+    }
+  });
+
+  it('refuse un repas mangé dans le futur, à la création comme à la correction', async () => {
+    const mealId = randomUUID();
+    const nextWeek = new Date(Date.now() + 7 * 24 * 3_600_000).toISOString();
+    // Hors du jour courant pour toujours : le total « consommé » de l'accueil
+    // ne le verrait plus, et la personne chercherait un repas pourtant bien
+    // enregistré.
+    await authed()
+      .post('/api/v1/nutrition/meals')
+      .send({ id: mealId, name: 'Demain', kcal: 500, eatenAt: nextWeek })
+      .expect(400);
+
+    await authed()
+      .post('/api/v1/nutrition/meals')
+      .send({ id: mealId, name: 'Aujourd’hui', kcal: 500, eatenAt: new Date().toISOString() })
+      .expect(201);
+
+    // La correction porte la MÊME borne : sans elle, elle rouvrirait la porte
+    // que la création vient de fermer.
+    await authed()
+      .patch(`/api/v1/nutrition/meals/${mealId}`)
+      .send({ eatenAt: nextWeek })
+      .expect(400);
+  });
+
+  it('corrige un repas sans effacer ce qu’on ne lui redonne pas', async () => {
+    const mealId = randomUUID();
+    const eatenAt = new Date();
+    await authed()
+      .post('/api/v1/nutrition/meals')
+      .send({
+        id: mealId,
+        name: 'Poulet riz',
+        kcal: 650,
+        proteinG: 45,
+        carbsG: 80,
+        quantity: 1,
+        quantityUnit: 'PORTION',
+        eatenAt: eatenAt.toISOString(),
+      })
+      .expect(201);
+
+    const corrected = data<MealEntry>(
+      (await authed().patch(`/api/v1/nutrition/meals/${mealId}`).send({ kcal: 700 }).expect(200))
+        .body,
+    );
+    expect(corrected.kcal).toBe(700);
+    // Ni les macros ni la quantité n'ont bougé : elles n'étaient pas dans le
+    // corps de la requête.
+    expect(corrected.proteinG).toBe(45);
+    expect(corrected.quantity).toBe(1);
+
+    // `null` EFFACE, lui : on ne sait plus combien de protéines.
+    const erased = data<MealEntry>(
+      (
+        await authed()
+          .patch(`/api/v1/nutrition/meals/${mealId}`)
+          .send({ proteinG: null })
+          .expect(200)
+      ).body,
+    );
+    expect(erased.proteinG).toBeNull();
+    expect(erased.carbsG).toBe(80);
+
+    // Un corps vide n'est pas une correction ; un `null` sur un champ qui ne
+    // peut pas l'être non plus.
+    await authed().patch(`/api/v1/nutrition/meals/${mealId}`).send({}).expect(400);
+    await authed().patch(`/api/v1/nutrition/meals/${mealId}`).send({ kcal: null }).expect(400);
+    // Défaire la moitié d'une paire laisserait « 1 » sans unité.
+    await authed()
+      .patch(`/api/v1/nutrition/meals/${mealId}`)
+      .send({ quantityUnit: null })
+      .expect(400);
+
+    // Un repas supprimé n'est plus corrigible, et un inconnu répond pareil.
+    await authed().delete(`/api/v1/nutrition/meals/${mealId}`).expect(204);
+    await authed().patch(`/api/v1/nutrition/meals/${mealId}`).send({ kcal: 700 }).expect(404);
+    await authed().patch(`/api/v1/nutrition/meals/${randomUUID()}`).send({ kcal: 700 }).expect(404);
+  });
+
   it('refuse une macro hors bornes, sans la tronquer en silence', async () => {
     for (const macro of ['proteinG', 'carbsG', 'fatG']) {
       await authed()

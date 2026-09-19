@@ -104,6 +104,28 @@ class FakeNutritionRepository implements NutritionRepository {
   }
 
   @override
+  Future<MealEntry> updateMeal(String id, MealCorrection correction) async {
+    final index = meals.indexWhere((meal) => meal.id == id);
+    if (index < 0) {
+      // Même réponse que le serveur : introuvable, sans dire pourquoi.
+      throw StateError('Repas introuvable.');
+    }
+    final corrected = MealEntry(
+      id: id,
+      name: correction.name,
+      kcal: correction.kcal,
+      quantity: correction.quantity,
+      quantityUnit: correction.quantityUnit,
+      proteinG: correction.proteinG,
+      carbsG: correction.carbsG,
+      fatG: correction.fatG,
+      eatenAt: correction.eatenAt,
+    );
+    meals[index] = corrected;
+    return corrected;
+  }
+
+  @override
   Future<void> deleteMeal(String id) async {
     meals.removeWhere((meal) => meal.id == id);
   }

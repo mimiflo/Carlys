@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { Prisma, type MealEntry } from '@prisma/client';
+import { Prisma, type MealEntry, type MealQuantityUnit } from '@prisma/client';
 import { PrismaService } from '../../../database/prisma/prisma.service';
 
 @Injectable()
@@ -12,6 +12,8 @@ export class MealsRepository {
     userId: string;
     name: string;
     kcal: number;
+    quantity: number | null;
+    quantityUnit: MealQuantityUnit | null;
     proteinG: number | null;
     carbsG: number | null;
     fatG: number | null;
@@ -49,6 +51,18 @@ export class MealsRepository {
       orderBy: { eatenAt: 'asc' },
       take: MealsRepository.HARD_LIMIT,
     });
+  }
+
+  /**
+   * Correction d'une entrée existante.
+   *
+   * `data` ne porte QUE les champs à changer : ce que le service a laissé de
+   * côté n'apparaît pas dans l'objet, donc Prisma n'y touche pas. Un champ
+   * présent à `null` efface, un champ absent conserve — c'est toute la
+   * différence entre une correction et un écrasement.
+   */
+  update(id: string, data: Prisma.MealEntryUpdateInput): Promise<MealEntry> {
+    return this.prisma.mealEntry.update({ where: { id }, data });
   }
 
   async softDelete(id: string): Promise<void> {

@@ -73,7 +73,7 @@ corporelle et hydratation.
 ### Ta communauté
 
 Tes demandes d'ami envoyées et reçues, ta liste d'amis, les encouragements
-envoyés et reçus, ta participation aux défis — collectifs comme entre amis —
+envoyés et reçus, ta participation aux défis (collectifs comme entre amis)
 et ce que tu y as apporté, ton classement dans une ligue pendant la période
 en cours, tes réponses aux quiz et ton réglage de partage de progression.
 
@@ -122,7 +122,7 @@ Par défaut, Carlys ne lit RIEN dans le service de santé de ton téléphone
 
 Si tu veux participer à un défi qui compte les pas, et seulement à ce
 moment-là, l'application te demande d'abord un consentement DISTINCT de celui
-de ton compte — un écran qui dit ce qui sera lu et à quoi cela sert — puis
+de ton compte : un écran qui dit ce qui sera lu et à quoi cela sert. Puis vient
 l'autorisation du système d'exploitation. Tant que les deux ne sont pas
 accordés, rien n'est lu et le reste de l'application fonctionne comme avant.
 
@@ -137,7 +137,7 @@ Confidentialité → Pas et données de santé) ou en révoquant l'autorisation
 dans les réglages de ton téléphone. Le retrait arrête la lecture
 immédiatement et efface de nos serveurs les totaux déjà remontés. Ce qu'ils
 avaient déjà apporté à un défi reste acquis au compteur COLLECTIF de ce défi,
-qui ne redescend pas — il n'est plus rattaché à toi.
+qui ne redescend pas ; il n'est plus rattaché à toi.
 
 ## 3. Pourquoi Carlys traite ces données
 

@@ -16,6 +16,12 @@ abstract interface class NutritionRepository {
   /// Ajoute un repas (id client, création idempotente et rejouable).
   Future<MealEntry> addMeal(MealEntry meal);
 
+  /// Corrige un repas déjà journalisé, SUR PLACE.
+  ///
+  /// Supprimer puis recréer ferait disparaître le repas du total, puis
+  /// revenir sous un AUTRE identifiant.
+  Future<MealEntry> updateMeal(String id, MealCorrection correction);
+
   /// Retire un repas (suppression douce, idempotente).
   Future<void> deleteMeal(String id);
 }
