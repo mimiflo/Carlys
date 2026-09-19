@@ -4,6 +4,7 @@ import { MONTHLY_CHALLENGE_CATALOG, type MonthlyChallengeSeed } from '../domain/
 import { type CommunityChallengesRepository } from '../infrastructure/community-challenges.repository';
 import { type FriendChallengesRepository } from '../infrastructure/friend-challenges.repository';
 import { CommunityChallengesService } from './community-challenges.service';
+import { type LeaguesService } from './leagues.service';
 
 const ME = 'utilisateur-moi';
 
@@ -43,11 +44,20 @@ const loggerStub = { error: jest.fn() };
  */
 const friendStub = { contribute: jest.fn().mockResolvedValue(undefined) };
 
+/**
+ * La LIGUE reçoit par la même couture, et sa doublure existe pour la même
+ * raison : le barème (`league-ladder.spec.ts`) et le versement (e2e) sont
+ * éprouvés ailleurs, chacun sur son terrain.
+ */
+const leagueStub = { contribute: jest.fn().mockResolvedValue(undefined) };
+
 function buildService(stubs: Stubs): CommunityChallengesService {
   friendStub.contribute.mockClear();
+  leagueStub.contribute.mockClear();
   return new CommunityChallengesService(
     stubs as unknown as CommunityChallengesRepository,
     friendStub as unknown as FriendChallengesRepository,
+    leagueStub as unknown as LeaguesService,
     loggerStub as unknown as PinoLogger,
   );
 }

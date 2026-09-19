@@ -1,6 +1,7 @@
 import '../entities/community.dart';
 import '../entities/community_moderation.dart';
 import '../entities/friend_challenge.dart';
+import '../entities/league.dart';
 
 /// Contrat de la communauté.
 ///
@@ -122,4 +123,14 @@ abstract interface class CommunityRepository {
   /// on sort du classement — contrairement à un défi collectif, dont la
   /// contribution reste acquise au groupe.
   Future<void> declineFriendChallenge(String challengeId);
+
+  // ── Ligue ─────────────────────────────────────────────────────────────
+
+  /// Ma ligue de la semaine, classement compris. Sans adhésion, le
+  /// classement arrive VIDE : on n'est classé qu'après avoir dit oui.
+  Future<League> league();
+
+  /// Entre dans la ligue, ou en sort. Le geste EST le consentement — c'est
+  /// un réglage distinct du partage de progression entre amis.
+  Future<League> setLeagueJoined(bool joined);
 }

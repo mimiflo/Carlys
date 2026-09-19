@@ -393,9 +393,32 @@ entre amis, aucune ligue, aucun pas.
       Les kcal brûlées n'ont aucune source dans le dépôt (le TDEE est une
       dépense estimée et statique, pas une mesure) : arbitrage propriétaire
       avant d'en faire une métrique.
-- [ ] Ligues Bronze→Diamant sur la régularité : RÈGLES À ÉCRIRE D'ABORD
-      (doc), sans repeser un fait déjà compté par l'axe Constance ; clôture de
-      période SANS cron (matérialisation paresseuse, comme les défis).
+- [x] Ligues Bronze→Diamant — FAIT le 19 septembre 2026. Barème ÉCRIT
+      D'ABORD dans `community.md` (« Les ligues, barème complet »), puis
+      migration `20260919225014_ligues` : `LeagueDivision`,
+      `LeagueMembership((userId, periodKey))`, `CommunityPreference.joinsLeague`
+      (défaut `false`). Période = SEMAINE ISO en UTC (`YYYY-Www`, chaîne :
+      une période est un fait civil). Score = l'EFFORT converti en points
+      (séance 50, minute d'effort 1, cent mètres 1, bonne réponse 10),
+      versé par la MÊME couture `verser` que les deux familles de défis —
+      pas les contributions aux défis, qui feraient dépendre le rang d'avoir
+      rejoint le jeu du mois. Montées/descentes : 5 et 5, jamais pour un
+      score NUL (aucun axe ne punit une absence), rien si moins de 10
+      joueurs, ex æquo partagés. Règlement PARESSEUX à la lecture
+      (`settledAt` en clé d'idempotence, `nextDivision` pour que la montée
+      survive sans créer une ligne par semaine d'absence). Tests : 18
+      unitaires sur le barème, 6 e2e, 10 widget. Captures `37` et `38`.
+      **Arbitrage assumé, et écrit comme tel** : le test « si le fait est
+      dans `ProgressionFacts` ou `RewardFacts`, la ligue ne le compte pas »
+      ne laisse, MESURÉ, que `ACTIVE_SECONDS` et `DISTANCE_METERS` — les
+      deux que la fonte produit à zéro. Le test est donc ramené à ce qu'il
+      protégeait : la ligue ne rend RIEN au profil (ni point, ni axe, ni
+      titre, ni récompense), et c'est vérifiable — aucun des deux
+      constructeurs de faits ne connaît `LeagueMembership`. Réversible par
+      le propriétaire.
+- [ ] Ligues, suite possible : une notification à la montée (le résultat
+      s'annonce aujourd'hui à la première lecture, pas en push), et un écran
+      dédié si une division de 20 devient trop longue pour une carte.
 - [ ] Défis communautaires à objectif chiffré : généralisation du présent.
 - [ ] Pas : abstraction santé (Health Connect / HealthKit), permissions,
       historique, doublons, révocation. Dépend de la réécriture `privacy.md`.

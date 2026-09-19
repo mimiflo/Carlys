@@ -107,6 +107,18 @@ class CommunityGestures {
     });
   }
 
+  /// Entrer dans la ligue, ou en sortir. ENTRER ne se confirme pas — le
+  /// geste est déjà le consentement ; SORTIR non plus, puisque rien ne se
+  /// perd : la semaine en cours se règle normalement.
+  Future<void> setLeagueJoined(BuildContext context, {required bool joined}) {
+    return runCommunityGesture(context, () async {
+      await _actions.setLeagueJoined(joined: joined);
+      return joined
+          ? 'Te voilà dans la ligue. La semaine repart dimanche soir.'
+          : 'Tu es sortie de la ligue. Plus rien n’y est compté.';
+    });
+  }
+
   /// Retirer un ami se confirme : l'amitié était acceptée des deux côtés.
   Future<void> removeFriend(
     BuildContext context,

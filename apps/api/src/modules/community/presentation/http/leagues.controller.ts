@@ -1,0 +1,51 @@
+import { type League } from '@carlys/api-contracts';
+import { Controller, Delete, Get, Post } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { CurrentUser } from '../../../../common/decorators/current-user.decorator';
+import { type AuthenticatedPrincipal } from '../../../../common/types/authenticated-request';
+import { LeaguesService } from '../../application/leagues.service';
+
+/**
+ * La ligue — un contrôleur à part, et pas trois routes de plus chez les
+ * défis : ce sont deux domaines qui ne partagent qu'une couture d'écriture,
+ * et le contrôleur des défis porte déjà deux familles.
+ */
+@ApiTags('community')
+@ApiBearerAuth()
+@Controller('community/league')
+export class LeaguesController {
+  constructor(private readonly leagues: LeaguesService) {}
+
+  @Get()
+  @ApiOperation({
+    summary: 'Ma ligue de la semaine, classement compris',
+    description:
+      'Sans adhésion, rend l’échelle et un classement VIDE : la ligue est un ' +
+      'opt-in. La période échue est RÉGLÉE à la lecture (rangs figés, ' +
+      'division suivante décidée), sans tâche planifiée.',
+  })
+  read(@CurrentUser() user: AuthenticatedPrincipal): Promise<League> {
+    return this.leagues.read(user.userId);
+  }
+
+  @Post('join')
+  @ApiOperation({
+    summary: 'Entrer dans la ligue — le geste EST le consentement',
+    description:
+      'Réglage distinct de `sharesProgress`, qui ne décide que de ce qu’un ' +
+      'AMI voit de ta progression.',
+  })
+  join(@CurrentUser() user: AuthenticatedPrincipal): Promise<League> {
+    return this.leagues.setJoined(user.userId, true);
+  }
+
+  @Delete('join')
+  @ApiOperation({
+    summary: 'Sortir de la ligue : le compte s’arrête',
+    description:
+      'La semaine en cours se règle normalement ; aucune période n’est ' + 'ouverte ensuite.',
+  })
+  leave(@CurrentUser() user: AuthenticatedPrincipal): Promise<League> {
+    return this.leagues.setJoined(user.userId, false);
+  }
+}

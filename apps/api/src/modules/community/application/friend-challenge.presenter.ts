@@ -1,5 +1,6 @@
 import { type FriendChallenge as FriendChallengeContract } from '@carlys/api-contracts';
 import { METRIC_UNITS } from '../domain/challenge-catalog';
+import { competitionRanks } from '../domain/competition-ranks';
 import { type FriendChallengeWithMembers } from '../infrastructure/friend-challenges.repository';
 
 /**
@@ -16,24 +17,11 @@ import { type FriendChallengeWithMembers } from '../infrastructure/friend-challe
  * son départ le sort du classement, point.
  */
 function ranksOf(challenge: FriendChallengeWithMembers): Map<string, number> {
-  const classes = challenge.members
-    .filter((member) => member.status === 'ACCEPTED')
-    // À contribution ÉGALE, le rang est le même : deux personnes à 12
-    // séances sont deuxièmes ex æquo, et la suivante quatrième. Départager
-    // par l'identifiant serait un tirage au sort déguisé.
-    .sort((a, b) => b.contribution - a.contribution);
-
-  const rangs = new Map<string, number>();
-  let rang = 0;
-  let precedente: number | null = null;
-  classes.forEach((member, index) => {
-    if (precedente === null || member.contribution !== precedente) {
-      rang = index + 1;
-      precedente = member.contribution;
-    }
-    rangs.set(member.userId, rang);
-  });
-  return rangs;
+  return competitionRanks(
+    challenge.members.filter((member) => member.status === 'ACCEPTED'),
+    (member) => member.contribution,
+    (member) => member.userId,
+  );
 }
 
 export function presentFriendChallenge(

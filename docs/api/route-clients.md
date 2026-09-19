@@ -164,6 +164,9 @@ déclare ici à la main.
 | `GET /community/friend-challenges/{id}` | **mobile** | apps/mobile |
 | `POST /community/friend-challenges/{id}/accept` | **mobile** | apps/mobile |
 | `DELETE /community/friend-challenges/{id}/join` | **mobile** | apps/mobile |
+| `GET /community/league` | **mobile** | apps/mobile |
+| `POST /community/league/join` | **mobile** | apps/mobile |
+| `DELETE /community/league/join` | **mobile** | apps/mobile |
 | `DELETE /community/challenges/{id}/join` | **mobile** | apps/mobile |
 | `POST /community/challenges/{id}/join` | **mobile** | apps/mobile |
 | `POST /community/encouragements` | **mobile** | apps/mobile |

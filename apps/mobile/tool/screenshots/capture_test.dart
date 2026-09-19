@@ -1060,6 +1060,27 @@ void main() {
       '35-communaute-defis-amis',
       shows: find.text('DÉFIS ENTRE AMIS'),
     );
+
+    // Encore plus bas : la LIGUE de la semaine — l'échelle des divisions, la
+    // montée annoncée, et le classement où ma ligne se trouve.
+    await tester.scrollUntilVisible(
+      find.text('LIGUE'),
+      240,
+      scrollable: find.byType(Scrollable).first,
+    );
+    await settle(tester);
+    await capture(tester, '37-communaute-ligue', shows: find.text('LIGUE'));
+
+    // Et l'autre visage de la carte : celui que TOUT LE MONDE voit d'abord,
+    // puisque la ligue est un opt-in. Le classement y disparaît — on ne
+    // montre pas des noms d'inconnus à qui n'a pas dit oui.
+    await tester.tap(find.text('Quitter la ligue'));
+    await settle(tester);
+    await capture(
+      tester,
+      '38-communaute-ligue-invitation',
+      shows: find.text('Rejoindre la ligue'),
+    );
   });
 
   testWidgets('séance active', (tester) async {

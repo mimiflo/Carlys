@@ -83,6 +83,7 @@ class CommunityScreen extends ConsumerWidget {
       ..invalidate(friendRequestsProvider)
       ..invalidate(communityChallengesProvider)
       ..invalidate(friendChallengesProvider)
+      ..invalidate(leagueProvider)
       ..invalidate(blockedUsersProvider);
     await Future.wait([
       ref.read(encouragementsProvider.future),
@@ -90,6 +91,7 @@ class CommunityScreen extends ConsumerWidget {
       ref.read(friendRequestsProvider.future),
       ref.read(communityChallengesProvider.future),
       ref.read(friendChallengesProvider.future),
+      ref.read(leagueProvider.future),
       ref.read(blockedUsersProvider.future),
     ]);
   }
@@ -101,6 +103,7 @@ class CommunityScreen extends ConsumerWidget {
     final requests = ref.watch(friendRequestsProvider);
     final challenges = ref.watch(communityChallengesProvider);
     final friendChallenges = ref.watch(friendChallengesProvider);
+    final league = ref.watch(leagueProvider);
     // Les blocages comptent comme une donnée : un compte qui n'a plus que
     // des personnes bloquées n'est pas « vide », il doit pouvoir débloquer.
     final blocked = ref.watch(blockedUsersProvider);
@@ -226,6 +229,7 @@ class CommunityScreen extends ConsumerWidget {
                 friends: friends.valueOrNull,
                 challenges: challenges.valueOrNull,
                 friendChallenges: friendChallenges.valueOrNull,
+                league: league.valueOrNull,
                 blocked: blocked.valueOrNull,
                 sharesProgress: sharesProgress.valueOrNull,
                 onAddFriend: () => _addFriend(context, actions),

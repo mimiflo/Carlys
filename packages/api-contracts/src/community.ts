@@ -259,3 +259,57 @@ export const createFriendChallengeRequestSchema = z.object({
   invitedUserIds: z.array(z.string().uuid()).min(1).max(FRIEND_CHALLENGE_MAX_INVITES),
 });
 export type CreateFriendChallengeRequest = z.infer<typeof createFriendChallengeRequestSchema>;
+
+// ──────────────────────────────── Ligues ─────────────────────────────────
+
+/**
+ * Les cinq divisions, de la plus basse à la plus haute. L'ordre EST le
+ * barème : le mobile s'en sert pour dessiner l'échelle.
+ */
+export const leagueDivisionSchema = z.enum(['BRONZE', 'ARGENT', 'OR', 'PLATINE', 'DIAMANT']);
+export type LeagueDivision = z.infer<typeof leagueDivisionSchema>;
+
+/** Une ligne du classement de division. */
+export const leagueStandingSchema = z.object({
+  userId: z.string(),
+  displayName: z.string(),
+  /** Points de la période, jamais l'unité brute d'une métrique. */
+  score: z.number(),
+  /** Rang courant, FIGÉ dès que la période est réglée. */
+  rank: z.number(),
+  isMe: z.boolean(),
+});
+export type LeagueStanding = z.infer<typeof leagueStandingSchema>;
+
+/**
+ * Ce que la ligue rend en une lecture.
+ *
+ * `joined` à `false` décrit une ligue à laquelle on n'a PAS adhéré : le
+ * classement est alors vide, et l'écran montre l'invitation à entrer. La
+ * ligue est un opt-in — voir `docs/product/community.md`, principe 5.
+ */
+export const leagueSchema = z.object({
+  joined: z.boolean(),
+  /** Semaine ISO en UTC, `YYYY-Www`. */
+  periodKey: z.string(),
+  /** Fin de la période, en ISO 8601 : ce qui écrit « il reste 3 jours ». */
+  endsAt: z.string(),
+  division: leagueDivisionSchema,
+  /** Mon score de la période, 0 tant que rien n'a été versé. */
+  score: z.number(),
+  standings: z.array(leagueStandingSchema),
+  /**
+   * Le résultat de la période PRÉCÉDENTE, s'il vient d'être réglé et qu'on
+   * y figurait : c'est ce qui permet d'annoncer une montée ou une descente
+   * une fois, au lieu d'un changement de division sans explication.
+   */
+  lastResult: z
+    .object({
+      periodKey: z.string(),
+      rank: z.number(),
+      from: leagueDivisionSchema,
+      to: leagueDivisionSchema,
+    })
+    .nullable(),
+});
+export type League = z.infer<typeof leagueSchema>;

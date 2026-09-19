@@ -11,6 +11,7 @@ import {
   CommunityChallengesRepository,
 } from '../infrastructure/community-challenges.repository';
 import { FriendChallengesRepository } from '../infrastructure/friend-challenges.repository';
+import { LeaguesService } from './leagues.service';
 import { dayKeyToInstant } from '../../../common/validators/is-recent-day-key';
 
 function presentChallenge(challenge: ChallengeWithStats): ChallengeContract {
@@ -55,16 +56,21 @@ export class CommunityChallengesService {
   constructor(
     private readonly challenges: CommunityChallengesRepository,
     private readonly friendChallenges: FriendChallengesRepository,
+    private readonly leagues: LeaguesService,
     @InjectPinoLogger(CommunityChallengesService.name)
     private readonly logger: PinoLogger,
   ) {}
 
   /**
-   * Verse une quantité aux DEUX familles de défis à la fois.
+   * Verse une quantité aux TROIS compteurs à la fois : défis collectifs,
+   * défis entre amis, ligue.
    *
-   * Un seul appelant pour deux écritures : c'est ce qui garantit qu'une
-   * séance compte pareil dans un défi collectif et dans un défi entre amis.
-   * Deux chemins séparés auraient dérivé au premier ajout de métrique.
+   * Un seul appelant pour trois écritures : c'est ce qui garantit qu'une
+   * séance compte pareil partout. Trois chemins séparés auraient dérivé au
+   * premier ajout de métrique.
+   *
+   * La ligue convertit en POINTS (barème `league-ladder.ts`) là où les défis
+   * comptent l'unité brute, et n'écrit rien tant qu'on ne l'a pas rejointe.
    */
   private async verser(
     userId: string,
@@ -74,6 +80,7 @@ export class CommunityChallengesService {
   ): Promise<void> {
     await this.challenges.contribute(userId, metric, amount, at);
     await this.friendChallenges.contribute(userId, metric, amount, at);
+    await this.leagues.contribute(userId, metric, amount, at);
   }
 
   async listChallenges(userId: string): Promise<ChallengeContract[]> {
@@ -191,11 +198,13 @@ export class CommunityChallengesService {
       userId,
       ...input,
       at,
-      // Les défis ENTRE AMIS reçoivent leur part dans la MÊME transaction :
-      // une contribution écrite à côté serait perdue définitivement si elle
-      // échouait, l'unicité empêchant tout rejeu.
-      alsoInTransaction: (tx) =>
-        this.friendChallenges.contribute(userId, 'QUIZ_CORRECT', 1, at, tx),
+      // Les défis ENTRE AMIS et la LIGUE reçoivent leur part dans la MÊME
+      // transaction : une contribution écrite à côté serait perdue
+      // définitivement si elle échouait, l'unicité empêchant tout rejeu.
+      alsoInTransaction: async (tx) => {
+        await this.friendChallenges.contribute(userId, 'QUIZ_CORRECT', 1, at, tx);
+        await this.leagues.contribute(userId, 'QUIZ_CORRECT', 1, at, tx);
+      },
     });
   }
 

@@ -7,6 +7,7 @@ import '../../../../core/utilities/formatting.dart';
 import '../../data/repositories/community_repository_impl.dart';
 import '../../domain/entities/community.dart';
 import '../../domain/entities/friend_challenge.dart';
+import '../../domain/entities/league.dart';
 
 /// Encouragements reçus. Rafraîchis par invalidation après chaque action.
 final encouragementsProvider = FutureProvider.autoDispose<List<Encouragement>>((
@@ -36,6 +37,12 @@ final friendChallengesProvider =
     FutureProvider.autoDispose<List<FriendChallenge>>((ref) {
       return ref.watch(communityRepositoryProvider).friendChallenges();
     });
+
+/// Ma ligue de la semaine. Sans adhésion, le classement arrive VIDE : on
+/// n'est classé qu'après avoir dit oui.
+final leagueProvider = FutureProvider.autoDispose<League>((ref) {
+  return ref.watch(communityRepositoryProvider).league();
+});
 
 /// Ma préférence de partage — pilotée par le serveur, comme le reste.
 final sharesProgressProvider = FutureProvider.autoDispose<bool>((ref) {
@@ -197,6 +204,14 @@ class CommunityActions {
   Future<void> removeFriend(String userId) async {
     await _ref.read(communityRepositoryProvider).removeFriend(userId);
     _ref.invalidate(communityFriendsProvider);
+  }
+
+  /// Entre dans la ligue, ou en sort. Le geste EST le consentement, et il
+  /// est distinct du partage de progression entre amis : celui-là n'a jamais
+  /// promis de montrer un nom et un score à dix-neuf inconnus.
+  Future<void> setLeagueJoined({required bool joined}) async {
+    await _ref.read(communityRepositoryProvider).setLeagueJoined(joined);
+    _ref.invalidate(leagueProvider);
   }
 
   Future<void> setSharesProgress({required bool value}) async {

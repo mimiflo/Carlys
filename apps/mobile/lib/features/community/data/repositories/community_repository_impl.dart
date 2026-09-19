@@ -6,6 +6,7 @@ import '../../../../core/api/dio_client.dart';
 import '../../domain/entities/community.dart';
 import '../../domain/entities/community_moderation.dart';
 import '../../domain/entities/friend_challenge.dart';
+import '../../domain/entities/league.dart';
 import '../../domain/repositories/community_repository.dart';
 import '../mappers/community_mappers.dart';
 
@@ -327,6 +328,29 @@ class CommunityRepositoryImpl implements CommunityRepository {
       await _dio.delete<Map<String, dynamic>>(
         '/community/friend-challenges/$challengeId/join',
       );
+    });
+  }
+
+  @override
+  Future<League> league() {
+    return _guard(() async {
+      final response = await _dio.get<Map<String, dynamic>>(
+        '/community/league',
+      );
+      return leagueFromJson(_data(response));
+    });
+  }
+
+  @override
+  Future<League> setLeagueJoined(bool joined) {
+    return _guard(() async {
+      // Entrer et sortir sont deux VERBES, pas un drapeau posté : le serveur
+      // n'a pas de route « régler », et une bascule idempotente se relit
+      // mieux dans un journal d'accès.
+      final response = joined
+          ? await _dio.post<Map<String, dynamic>>('/community/league/join')
+          : await _dio.delete<Map<String, dynamic>>('/community/league/join');
+      return leagueFromJson(_data(response));
     });
   }
 

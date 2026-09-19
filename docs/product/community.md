@@ -68,7 +68,8 @@ l'application ne dépend d'elle.
 | `FriendChallenge` | Défi lancé par quelqu'un à ses amis : `metric`, `target` facultatif, `durationDays` (3/7/30), `endsAt` CALCULÉ par le serveur, `closedAt` qui sert de clé d'idempotence au règlement. |
 | `FriendChallengeMember` | Membre d'un défi entre amis : `status` (INVITED/ACCEPTED/DECLINED/LEFT), `contribution` dans l'unité de la métrique, `finalRank` figé à la clôture. |
 | `ChallengeParticipation` | Participation + `contribution` individuelle à l'objectif. Quitter DATE le départ (`leftAt`) sans effacer la ligne : la contribution déjà versée reste acquise au collectif, seule la présence s'arrête. |
-| `CommunityPreference` | `sharesProgress` (absence = partagé, défaut du modèle). |
+| `CommunityPreference` | `sharesProgress` (absence = partagé, défaut du modèle) et `joinsLeague` (défaut `false` : la ligue est un opt-in). |
+| `LeagueMembership` | Ma place dans une ligue pour UNE période : `(userId, periodKey)` où `periodKey` est la semaine ISO en UTC, plus `division`, `score` en POINTS, `finalRank` et `nextDivision` figés au règlement, `settledAt` qui en est la clé d'idempotence. |
 | `CommunityBlock` | Blocage unilatéral `(blockerId, blockedId)`, unique par paire orientée ; consulté dans les DEUX sens partout où deux personnes se rencontrent. |
 | `CommunityReport` | Signalement : `reporterId`, `reportedUserId`, `encouragementId?` (mis à `NULL` si le message est supprimé), `encouragementMessage?` (cliché du texte visé, pris dans la même transaction que le signalement : la preuve survit au retrait du message), `reason` (`HARCELEMENT`, `SPAM`, `CONTENU_INAPPROPRIE`, `AUTRE`), `details?` (500 caractères), `status` (`OPEN`, `RESOLVED`), `resolvedAt?`. |
 
@@ -92,6 +93,9 @@ l'application ne dépend d'elle.
 | GET | `/friend-challenges/:id` | Un défi et son classement — `404` pour qui n'en est pas membre |
 | POST | `/friend-challenges/:id/accept` | Accepter : on entre au classement, à zéro |
 | DELETE | `/friend-challenges/:id/join` | Refuser ou quitter (`204`) : dans les deux cas, on SORT du classement |
+| GET | `/league` | Ma ligue de la semaine ; sans adhésion, classement VIDE |
+| POST | `/league/join` | Entrer dans la ligue (le geste EST le consentement) |
+| DELETE | `/league/join` | Sortir : le compte s'arrête, la semaine en cours se règle |
 | GET · PATCH | `/profile` | Ma préférence `sharesProgress` + mon `friendCode` |
 | POST | `/blocks/:userId` | Bloquer (idempotent, `204`) : retire amitié et demandes dans les deux sens ; `400` soi-même, `404` compte inconnu |
 | DELETE | `/blocks/:userId` | Débloquer (idempotent, `204`) : ne rétablit rien |
@@ -390,6 +394,119 @@ par exemple la somme des contributions versées aux défis pendant la période,
 ou une métrique (pas, eau) qui n’entre dans aucun axe. Le test est simple et
 il s’applique avant d’écrire la règle : si le fait figure dans
 `ProgressionFacts` ou dans `RewardFacts`, la ligue ne le compte pas.
+
+### Ce test, mesuré — et ce qu’il devient (19 septembre 2026)
+
+Le test ci-dessus a été écrit AVANT d’être appliqué aux métriques réelles.
+Appliqué, il ne laisse presque rien :
+
+| métrique | le profil la regarde-t-il ? | où |
+| -------- | --------------------------- | -- |
+| `WORKOUTS` | OUI | `ProgressionFacts.completedSessions`, `RewardFacts.completedSessions` |
+| `QUIZ_CORRECT` | OUI | `ProgressionFacts.lessonsAnswered`, `RewardFacts.lessonsAnswered` |
+| `ACTIVE_SECONDS` | non | absente des deux |
+| `DISTANCE_METERS` | non | absente des deux |
+
+Les deux seules qui passent sont exactement celles qu’une séance de FONTE
+produit à zéro : `sessionEffort` (`workouts.service.ts`) le dit en toutes
+lettres — « les séries sans chrono ni distance, la fonte, l’immense majorité,
+apportent zéro, ce qui est exact ». Le test strict ne donne donc pas une ligue
+plus sage, il donne une ligue que seuls les coureurs peuvent jouer.
+
+Il est donc ramené à ce qu’il protégeait. Ce qui empêche une ligue de devenir
+un second score, ce n’est pas la disjonction des FAITS — c’est qu’elle ne
+rende rien au profil. Les trois conditions du principe 5 tiennent seules, et
+la troisième fait tout le travail :
+
+- **aucun report dans le profil.** Ni point, ni axe, ni titre, ni récompense.
+  Vérifiable, et pas seulement affirmé : ni `progression_facts_builder.dart`
+  ni `reward_facts_builder.dart` ne lisent `LeagueMembership`, et aucun des
+  deux ne connaît le mot « ligue ». C’est la garde à relire à chaque ajout.
+- **fenêtre qui se ferme** — une semaine, puis on repart de zéro. Un rang de
+  ligue n’est jamais un palier que la personne « est ».
+- **périmètre choisi** — la ligue est un OPT-IN, voir plus bas.
+
+Et la collision que le test visait est bornée par la FORME des deux mesures :
+l’axe Constance est un binaire par semaine sur huit semaines — il ne sait pas
+distinguer une séance de cinq ; la ligue est un total continu sur UNE semaine,
+et cette différence-là est tout son signal. Elles bougent ensemble une fois
+par semaine au plus, à la première séance, et jamais dans la même unité.
+
+## Les ligues, barème complet
+
+**Cinq divisions**, dans l’ordre : Bronze, Argent, Or, Platine, Diamant.
+
+**La période est la semaine ISO, en UTC** (`YYYY-Www`, fonction pure de
+l’instant comme `monthWindowUtc`). La semaine plutôt que le mois : une fenêtre
+qui se ferme doit se fermer assez souvent pour se sentir, et un mauvais mois
+serait irrattrapable.
+
+**Le score est l’EFFORT de la période, converti en points** — pas les
+contributions versées aux défis. La nuance est délibérée : compter les
+contributions ferait dépendre le rang d’une autre fonctionnalité (avoir
+rejoint le jeu du mois), et une ligue dont le droit d’entrée est une seconde
+fonctionnalité est un piège. L’effort est versé par la MÊME couture que les
+deux familles de défis (`verser`), donc les trois compteurs ne peuvent pas
+diverger.
+
+| métrique | une unité de contribution | points |
+| -------- | ------------------------- | ------ |
+| `WORKOUTS` | 1 séance terminée | **50** |
+| `ACTIVE_SECONDS` | 60 s réellement chronométrées | **1** |
+| `DISTANCE_METERS` | 100 m parcourus | **1** |
+| `QUIZ_CORRECT` | 1 bonne réponse, première du jour | **10** |
+
+Le barème est choisi pour qu’AUCUNE métrique ne domine les autres : 10 km de
+course valent 100 points, soit deux séances ; une heure de chrono en vaut 60,
+soit un peu plus d’une. Une semaine de fonte à trois séances fait 150 points,
+une semaine de course de 20 km en fait 200 : un pratiquant de fonte et un
+coureur peuvent tous deux tenir le haut d’une division. Ordre de grandeur
+d’une semaine régulière : 150 à 400 points.
+
+La conversion est une **division entière tronquée** : 59 secondes valent 0
+point, 119 mètres en valent 1. Le reste n’est PAS reporté — le reporter
+demanderait un registre de restes par personne et par métrique, et rendrait le
+score dépendant de l’ordre des écritures.
+
+**Une division tient 20 places.** Une division qui en compte moins se joue
+telle quelle : ni remplissage, ni adversaire fabriqué.
+
+**Montées et descentes, au règlement de la période :**
+
+- les **5 premiers** montent d’une division (rien au-dessus de Diamant) ;
+- les **5 derniers** descendent d’une division (rien en dessous de Bronze),
+  **mais uniquement parmi les membres dont le score est supérieur à zéro**.
+  Un score nul veut dire « n’a pas joué », et ne fait jamais descendre : la
+  règle du dépôt est qu’aucun axe ne punit une absence (`progression_engine`,
+  fenêtre de 28 jours), et une ligue qui reléguerait une semaine de maladie la
+  contredirait ;
+- si **moins de 10 membres ont joué**, personne ne bouge. Un classement à
+  trois ne décide pas d’une division.
+
+**Les ex æquo partagent leur rang, et le suivant saute** — même règle que les
+défis entre amis. Départager par l’identifiant serait un tirage au sort
+déguisé. Conséquence assumée : une égalité à la frontière peut faire monter
+plus de cinq personnes.
+
+**La ligue est un OPT-IN** (`CommunityPreference.joinsLeague`, défaut
+`false`). Y entrer EST le consentement, ce qu’exige le « périmètre choisi ».
+C’est un réglage DISTINCT de `sharesProgress` : celui-ci décide si un ami voit
+ta progression, il n’a jamais promis de montrer ton nom et ton score à
+dix-neuf inconnus. Sortir arrête le compte ; la ligne de la semaine en cours
+reste jusqu’à son règlement, et aucune autre n’est créée ensuite.
+
+**Le règlement est PARESSEUX**, comme le jeu du mois et les défis entre amis :
+la première lecture qui passe après la fin d’une période fige les rangs de
+cette période (`finalRank`), pose `settledAt`, et l’écriture est conditionnée
+à sa nullité — deux lectures simultanées n’en règlent qu’une. Une lecture
+règle la division ENTIÈRE, sans quoi deux personnes liraient deux classements
+différents de la même semaine.
+
+**Les périodes manquées ne se rattrapent pas, et n’ont pas à l’être.** Aucune
+ligne n’existe pour une semaine sans effort et sans lecture : il n’y a donc
+rien à régler. Six semaines d’absence produisent ZÉRO relégation, et le retour
+ouvre une semaine neuve dans la division quittée. Ce n’est pas une règle
+ajoutée par-dessus la matérialisation paresseuse, c’est sa conséquence.
 
 ## Défis entre amis
 

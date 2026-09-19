@@ -13,6 +13,7 @@ library;
 import 'package:carlys_mobile/features/community/domain/entities/community.dart';
 import 'package:carlys_mobile/features/community/domain/entities/community_moderation.dart';
 import 'package:carlys_mobile/features/community/domain/entities/friend_challenge.dart';
+import 'package:carlys_mobile/features/community/domain/entities/league.dart';
 import 'package:carlys_mobile/features/community/domain/friend_code.dart';
 import 'package:carlys_mobile/features/community/domain/repositories/community_repository.dart';
 import 'community_sample_world.dart';
@@ -319,5 +320,28 @@ class InMemoryCommunityRepository implements CommunityRepository {
   @override
   Future<void> declineFriendChallenge(String challengeId) async {
     friendChallengeList.removeWhere((challenge) => challenge.id == challengeId);
+  }
+
+  League _league = sampleLeague();
+
+  @override
+  Future<League> league() async => _league;
+
+  @override
+  Future<League> setLeagueJoined(bool joined) async {
+    final vue = _league;
+    // Sortir VIDE le classement, comme le serveur : sans adhésion, on ne
+    // montre pas des noms d'inconnus. Le score de la semaine, lui, ne
+    // s'efface pas — la sortie arrête le compte, elle ne réécrit rien.
+    _league = League(
+      joined: joined,
+      periodKey: vue.periodKey,
+      endsAt: vue.endsAt,
+      division: vue.division,
+      score: vue.score,
+      standings: joined ? sampleLeague().standings : const [],
+      lastResult: joined ? vue.lastResult : null,
+    );
+    return _league;
   }
 }

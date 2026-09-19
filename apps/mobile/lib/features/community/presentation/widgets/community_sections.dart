@@ -5,6 +5,7 @@ import '../../../../design_system/design_system.dart';
 import '../../domain/entities/community.dart';
 import '../../domain/entities/community_moderation.dart';
 import '../../domain/entities/friend_challenge.dart';
+import '../../domain/entities/league.dart';
 import '../controllers/community_controllers.dart';
 import '../controllers/community_moderation_controllers.dart';
 import 'blocked_user_card.dart';
@@ -15,6 +16,7 @@ import 'friend_card.dart';
 import 'friend_challenge_card.dart';
 import 'friend_request_card.dart';
 import 'friends_empty_card.dart';
+import 'league_card.dart';
 import 'privacy_card.dart';
 
 /// Les étages de l'écran Communauté, une fois les données là : demandes
@@ -29,6 +31,7 @@ class CommunitySections extends ConsumerWidget {
     required this.friends,
     required this.challenges,
     required this.friendChallenges,
+    required this.league,
     required this.blocked,
     required this.onNewFriendChallenge,
     required this.sharesProgress,
@@ -41,6 +44,9 @@ class CommunitySections extends ConsumerWidget {
   final List<CommunityFriend>? friends;
   final List<CommunityChallenge>? challenges;
   final List<FriendChallenge>? friendChallenges;
+
+  /// `null` tant que la ligue n'est pas chargée : la section s'efface.
+  final League? league;
   final List<BlockedUser>? blocked;
 
   /// Ouvre la feuille « Défier mes amis ».
@@ -148,6 +154,9 @@ class CommunitySections extends ConsumerWidget {
             ),
           ),
         ]),
+        // Après les défis, et avant la confidentialité : c'est le même
+        // sujet — ce qu'on accepte de montrer, et à qui.
+        ..._section('Ligue', _leagueSection(context, gestures)),
         ..._section('Confidentialité', [
           PrivacyCard(
             sharesProgress: sharesProgress,
@@ -171,6 +180,25 @@ class CommunitySections extends ConsumerWidget {
   }
 
   /// Une section titrée, absente si sa liste est vide : pas de titre orphelin.
+  /// La carte de ligue, ou rien tant qu'elle n'est pas chargée : la section
+  /// s'efface plutôt que de poser un titre orphelin.
+  List<Widget>? _leagueSection(
+    BuildContext context,
+    CommunityGestures gestures,
+  ) {
+    final chargee = league;
+    if (chargee == null) {
+      return null;
+    }
+    return [
+      LeagueCard(
+        league: chargee,
+        onJoin: () => gestures.setLeagueJoined(context, joined: true),
+        onLeave: () => gestures.setLeagueJoined(context, joined: false),
+      ),
+    ];
+  }
+
   List<Widget> _section(String title, List<Widget>? children) {
     if (children == null || children.isEmpty) {
       return const [];

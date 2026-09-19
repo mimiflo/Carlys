@@ -7,6 +7,7 @@ library;
 import '../../domain/entities/community.dart';
 import '../../domain/entities/community_moderation.dart';
 import '../../domain/entities/friend_challenge.dart';
+import '../../domain/entities/league.dart';
 
 Encouragement encouragementFromJson(Map<String, dynamic> row) {
   return Encouragement(
@@ -91,5 +92,38 @@ FriendChallenge friendChallengeFromJson(Map<String, dynamic> row) {
         .cast<Map<String, dynamic>>()
         .map(friendChallengeMemberFromJson)
         .toList(growable: false),
+  );
+}
+
+LeagueStanding leagueStandingFromJson(Map<String, dynamic> row) {
+  return LeagueStanding(
+    userId: row['userId'] as String,
+    displayName: row['displayName'] as String,
+    score: (row['score'] as num?)?.toInt() ?? 0,
+    rank: (row['rank'] as num?)?.toInt() ?? 0,
+    isMe: row['isMe'] as bool? ?? false,
+  );
+}
+
+League leagueFromJson(Map<String, dynamic> row) {
+  final result = row['lastResult'] as Map<String, dynamic>?;
+  return League(
+    joined: row['joined'] as bool? ?? false,
+    periodKey: row['periodKey'] as String? ?? '',
+    endsAt: DateTime.parse(row['endsAt'] as String),
+    division: LeagueDivision.fromApi(row['division'] as String?),
+    score: (row['score'] as num?)?.toInt() ?? 0,
+    standings: (row['standings'] as List<dynamic>? ?? const [])
+        .cast<Map<String, dynamic>>()
+        .map(leagueStandingFromJson)
+        .toList(growable: false),
+    lastResult: result == null
+        ? null
+        : LeagueResult(
+            periodKey: result['periodKey'] as String? ?? '',
+            rank: (result['rank'] as num?)?.toInt() ?? 0,
+            from: LeagueDivision.fromApi(result['from'] as String?),
+            to: LeagueDivision.fromApi(result['to'] as String?),
+          ),
   );
 }

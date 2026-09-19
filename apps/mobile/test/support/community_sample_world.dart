@@ -16,6 +16,7 @@
 library;
 
 import 'package:carlys_mobile/features/community/domain/entities/community.dart';
+import 'package:carlys_mobile/features/community/domain/entities/league.dart';
 
 /// Les mots déjà reçus, du plus récent au plus ancien.
 List<Encouragement> sampleEncouragements() => [
@@ -144,3 +145,52 @@ const Map<String, String> sampleKnownFriendCodes = {
   'AC23DEF4': 'Sarah',
   'MK78WXY2': 'Mehdi',
 };
+
+/// La ligue d'exemple : une division Or déjà jouée, et une montée annoncée.
+///
+/// REJOINTE dans le monde d'exemple, parce que l'écran à montrer est le
+/// classement : la carte d'invitation, elle, se lit en un paragraphe et
+/// n'apprend rien sur la mise en page d'un tableau.
+League sampleLeague() => League(
+  joined: true,
+  periodKey: '2026-W38',
+  endsAt: DateTime.now().add(const Duration(days: 3)),
+  division: LeagueDivision.or,
+  score: 240,
+  standings: const [
+    LeagueStanding(
+      userId: 'exemple-sarah',
+      displayName: 'Sarah',
+      score: 480,
+      rank: 1,
+      isMe: false,
+    ),
+    LeagueStanding(
+      userId: 'exemple-mehdi',
+      displayName: 'Mehdi',
+      score: 355,
+      rank: 2,
+      isMe: false,
+    ),
+    LeagueStanding(
+      userId: 'exemple-lea',
+      displayName: 'Léa',
+      score: 300,
+      rank: 3,
+      isMe: false,
+    ),
+    LeagueStanding(
+      userId: 'exemple-moi',
+      displayName: 'Toi',
+      score: 240,
+      rank: 4,
+      isMe: true,
+    ),
+  ],
+  lastResult: const LeagueResult(
+    periodKey: '2026-W37',
+    rank: 2,
+    from: LeagueDivision.argent,
+    to: LeagueDivision.or,
+  ),
+);

@@ -4,6 +4,7 @@ import 'package:carlys_mobile/core/errors/app_exception.dart';
 import 'package:carlys_mobile/features/community/domain/entities/community.dart';
 import 'package:carlys_mobile/features/community/domain/entities/community_moderation.dart';
 import 'package:carlys_mobile/features/community/domain/entities/friend_challenge.dart';
+import 'package:carlys_mobile/features/community/domain/entities/league.dart';
 import 'package:carlys_mobile/features/community/domain/repositories/community_repository.dart';
 import 'package:carlys_mobile/features/nutrition/domain/repositories/water_store.dart';
 
@@ -360,6 +361,34 @@ class FakeCommunityRepository implements CommunityRepository {
   @override
   Future<void> declineFriendChallenge(String challengeId) async {
     friendChallengeList.removeWhere((challenge) => challenge.id == challengeId);
+  }
+
+  /// La LIGUE, pilotable : `joinsLeague` décide de ce que la lecture rend,
+  /// comme le serveur — sans adhésion, le classement est VIDE.
+  bool joinsLeague = false;
+  League? leagueOverride;
+
+  @override
+  Future<League> league() async {
+    final impose = leagueOverride;
+    if (impose != null) {
+      return impose;
+    }
+    return League(
+      joined: joinsLeague,
+      periodKey: '2026-W38',
+      endsAt: DateTime.now().add(const Duration(days: 3)),
+      division: LeagueDivision.bronze,
+      score: 0,
+      standings: const [],
+    );
+  }
+
+  @override
+  Future<League> setLeagueJoined(bool joined) async {
+    joinsLeague = joined;
+    leagueOverride = null;
+    return league();
   }
 }
 

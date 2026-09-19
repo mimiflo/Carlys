@@ -75,7 +75,14 @@ corporelle et hydratation.
 Tes demandes d'ami envoyées et reçues, ta liste d'amis, les encouragements
 envoyés et reçus, ta participation aux défis (collectifs comme entre amis)
 et ce que tu y as apporté, ton classement dans une ligue pendant la période
-en cours, tes réponses aux quiz et ton réglage de partage de progression.
+en cours, tes réponses aux quiz et tes réglages de partage (ta progression
+visible par tes amis, et ta participation à la ligue).
+
+La ligue est FACULTATIVE et se rejoint explicitement : tant que tu n'y es pas
+entrée, rien n'y est compté et personne n'y voit ton nom. Une fois entrée, ton
+prénom d'affichage et ton score de la semaine sont visibles par les autres
+membres de ta division, et par eux seuls. Tu en sors quand tu veux : le compte
+s'arrête aussitôt.
 
 ### Tes notifications
 
