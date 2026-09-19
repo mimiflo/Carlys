@@ -69,7 +69,7 @@ export class StripeCheckoutClient {
       endpoint: StripeCheckoutClient.endpoint,
       body,
       idempotencyKey: request.idempotencyKey,
-      failureMessage: 'La page de paiement n’a pas pu être ouverte.',
+      failureLog: 'Stripe : ouverture de la page de paiement refusée.',
     });
   }
 }

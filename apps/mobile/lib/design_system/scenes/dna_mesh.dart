@@ -3,9 +3,9 @@
 ///
 /// Le maillage est construit UNE seule fois pour toute l'application : deux
 /// brins en TUBE le long d'une courbe hélicoïdale, puis 26 barreaux faits de
-/// deux demi-cylindres et de deux billes. Chaque partie ([MeshPart]) porte son
-/// centre local, ce qui permet au peintre de trier en profondeur à chaque
-/// image sans jamais retoucher la géométrie.
+/// deux demi-cylindres et de deux billes. Le tri en profondeur se fait au
+/// rendu, triangle par triangle (voir `dna_scene.dart`) : la géométrie n'est
+/// jamais retouchée d'une image à l'autre.
 ///
 /// Les constantes ci-dessous ne sont pas des valeurs visuelles arbitraires :
 /// ce sont les cotes de la maquette, la définition même de la scène.
@@ -52,7 +52,6 @@ class DnaMesh {
     materials = Uint8List.fromList(builder.materials);
     rungs = Int8List.fromList(builder.groups);
     indices = Uint16List.fromList(builder.indices);
-    parts = List<MeshPart>.unmodifiable(builder.parts);
     vertexCount = positions.length ~/ 3;
   }
 
@@ -88,7 +87,6 @@ class DnaMesh {
   /// Barreau propriétaire de chaque sommet, −1 pour un brin.
   late final Int8List rungs;
   late final Uint16List indices;
-  late final List<MeshPart> parts;
   late final int vertexCount;
 
   /// Phase de respiration de chaque barreau (`t * 4π` dans la maquette).
@@ -114,11 +112,6 @@ class DnaMesh {
   late final Float32List facing = Float32List(vertexCount);
   late final Int32List colors = Int32List(vertexCount);
   late final Uint16List drawOrder = Uint16List(indices.length);
-  late final Float64List partDepth = Float64List(parts.length);
-  late final List<int> partOrder = List<int>.generate(
-    parts.length,
-    (index) => index,
-  );
 
   /// Brin en tube : repère parallèle transporté le long de l'hélice, donc
   /// aucune vrille des anneaux d'un bout à l'autre.
@@ -134,9 +127,6 @@ class DnaMesh {
     var nz = -math.sin(phase);
 
     var previousRing = 0;
-    var previousX = 0.0;
-    var previousY = 0.0;
-    var previousZ = 0.0;
 
     for (var step = 0; step <= tubeSteps; step++) {
       final t = step / tubeSteps;
@@ -187,7 +177,6 @@ class DnaMesh {
       }
 
       if (step > 0) {
-        b.beginPart();
         for (var side = 0; side < tubeSides; side++) {
           b.addQuad(
             previousRing + side,
@@ -196,17 +185,9 @@ class DnaMesh {
             ring + side,
           );
         }
-        b.endPart(
-          (cx + previousX) * 0.5,
-          (cy + previousY) * 0.5,
-          (cz + previousZ) * 0.5,
-        );
       }
 
       previousRing = ring;
-      previousX = cx;
-      previousY = cy;
-      previousZ = cz;
     }
   }
 
@@ -257,7 +238,6 @@ class DnaMesh {
       }
     }
 
-    b.beginPart();
     const row = rungSides + 1;
     for (var i = 0; i < rungSides; i++) {
       b.addQuad(first + i, first + i + 1, first + row + i + 1, first + row + i);
@@ -290,7 +270,6 @@ class DnaMesh {
         b.addTriangle(centre, ringStart + i, ringStart + i + 1);
       }
     }
-    b.endPart(cx, y, cz);
   }
 
   /// Bille d'extrémité — sphère basse résolution : elle ne fait qu'une
@@ -318,7 +297,6 @@ class DnaMesh {
       }
     }
 
-    b.beginPart();
     const row = segments + 1;
     for (var iy = 0; iy < rings; iy++) {
       for (var ix = 0; ix < segments; ix++) {
@@ -326,6 +304,5 @@ class DnaMesh {
         b.addQuad(a, a + 1, a + row + 1, a + row);
       }
     }
-    b.endPart(cx, cy, cz);
   }
 }

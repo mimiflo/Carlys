@@ -18,7 +18,7 @@ fond**, ouvert par une barre de titre dont le filet court jusqu'au bord droit.
 | ----- | ------- | ------- | --------- |
 | 1 | Zone haute : cœur, en-tête, citation | non | `HomeHero` |
 | 2 | Série de constance | non | `ConsistencyStreak` |
-| 3 | Aujourd'hui, ou son amorçage | **oui** | `TodayGrid` / `TodayPrimer` |
+| 3 | Aujourd'hui, ou son amorçage | **oui** | `TodaySection` (qui choisit entre `TodayGrid` et `TodayPrimer`) |
 | 4 | Séance du jour | **oui** | `TodayWorkoutCard` |
 | 5 | Ton titre | non | `TitleSummary` |
 | 6 | Pour toi (mot du Mentor compris) | **oui** | `ForYouCard` |

@@ -5,6 +5,7 @@ import {
   type SocialProvider,
 } from '@carlys/api-contracts';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Transform } from 'class-transformer';
 import {
   IsEmail,
   IsIn,
@@ -15,6 +16,7 @@ import {
   MaxLength,
   MinLength,
 } from 'class-validator';
+import { trimmed } from '../../../../../common/transforms/trimmed';
 
 export class DeviceInfoDto {
   @ApiPropertyOptional({ example: 'iPhone de Camille' })
@@ -43,7 +45,13 @@ export class RegisterDto extends DeviceInfoDto {
   @MaxLength(PASSWORD_MAX_LENGTH)
   password!: string;
 
+  // Le nom est TAILLÉ avant d'être mesuré. Sans cela, « &nbsp;&nbsp;&nbsp; »
+  // faisait trois caractères, passait la longueur minimale, et le compte
+  // naissait avec un nom vide — affiché tel quel dans la communauté, les
+  // encouragements et les notifications, sans plus aucun moyen de s'en
+  // apercevoir côté serveur.
   @ApiProperty({ example: 'Camille' })
+  @Transform(trimmed)
   @IsString()
   @Length(1, 60)
   displayName!: string;
@@ -113,6 +121,7 @@ export class SocialLoginDto extends DeviceInfoDto {
 
   /** Apple ne transmet le nom qu'à la PREMIÈRE connexion, hors jeton. */
   @ApiPropertyOptional({ example: 'Camille' })
+  @Transform(trimmed)
   @IsOptional()
   @IsString()
   @Length(1, 60)

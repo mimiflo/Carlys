@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../colors/app_colors.dart';
+import '../motion/app_motion.dart';
 import '../radius/app_radius.dart';
 import '../spacing/app_spacing.dart';
 import '../typography/app_typography.dart';
@@ -56,9 +57,13 @@ class AppBrandButton extends StatefulWidget {
   static const double _disabledOpacity = 0.45;
 
   /// Réaction au toucher : un tassement à peine perceptible et un éclat.
+  ///
+  /// La durée vient du jeton `AppMotion.tap`, comme toute surface pressée.
+  /// Elle était écrite en dur (160 ms) : le seul bouton de l'application à
+  /// répondre à un autre rythme que les autres, et une valeur visuelle codée
+  /// en dur — ce que le dépôt s'interdit.
   static const double _pressedScale = 0.985;
   static const double _pressedBrightness = 1.08;
-  static const Duration _pressDuration = Duration(milliseconds: 160);
 
   bool get _enabled => onPressed != null && !isLoading;
 
@@ -93,10 +98,10 @@ class _AppBrandButtonState extends State<AppBrandButton> {
           onTap: enabled ? widget.onPressed : null,
           child: AnimatedScale(
             scale: _pressed ? AppBrandButton._pressedScale : 1,
-            duration: AppBrandButton._pressDuration,
+            duration: AppMotion.tap,
             child: AnimatedOpacity(
               opacity: enabled ? 1 : AppBrandButton._disabledOpacity,
-              duration: AppBrandButton._pressDuration,
+              duration: AppMotion.tap,
               child: _Surface(
                 // L'éclat au toucher est rendu par un voile blanc très léger :
                 // un filtre de luminosité coûterait une couche de composition
@@ -136,7 +141,7 @@ class _Surface extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AnimatedContainer(
-      duration: AppBrandButton._pressDuration,
+      duration: AppMotion.tap,
       height: AppBrandButton._height,
       alignment: Alignment.center,
       padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),

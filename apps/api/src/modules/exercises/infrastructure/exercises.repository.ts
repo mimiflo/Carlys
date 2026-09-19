@@ -5,7 +5,6 @@ import {
   type ExerciseDifficulty,
   type ExerciseEquipment,
   type ExerciseMuscle,
-  ExerciseMuscleRole,
   type ExerciseType,
   type MuscleGroup,
   type MediaAsset,
@@ -122,10 +121,5 @@ export class ExercisesRepository {
 
   listEquipment(): Promise<Equipment[]> {
     return this.prisma.equipment.findMany({ orderBy: { name: 'asc' } });
-  }
-
-  /** Rôle primaire d'abord (l'enum PRIMARY précède SECONDARY). */
-  static primaryFirst(role: ExerciseMuscleRole): number {
-    return role === ExerciseMuscleRole.PRIMARY ? 0 : 1;
   }
 }

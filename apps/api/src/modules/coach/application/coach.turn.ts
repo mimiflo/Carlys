@@ -37,24 +37,6 @@ export function buildHistory(
   return [...turns, { role: 'user', content: `${volatileContext(now)}\n${content}` }];
 }
 
-/**
- * La réponse du coach à ce message : celle qui le suit IMMÉDIATEMENT dans le
- * fil (les messages sont ordonnés par date). `undefined` si le tour s'est
- * interrompu avant qu'elle soit archivée — le message suivant, s'il existe,
- * est alors une autre question, jamais sa réponse.
- */
-export function assistantReplyTo(
-  messages: readonly MessageWithProposal[],
-  userMessage: Pick<MessageWithProposal, 'id'>,
-): MessageWithProposal | undefined {
-  const index = messages.findIndex((message) => message.id === userMessage.id);
-  if (index === -1) {
-    return undefined;
-  }
-  const next = messages[index + 1];
-  return next?.role === 'ASSISTANT' ? next : undefined;
-}
-
 /** Identifiants cités par la proposition, pour n'interroger que ceux-là. */
 export function extractExerciseIds(raw: Record<string, unknown>): string[] {
   if (!Array.isArray(raw.items)) {

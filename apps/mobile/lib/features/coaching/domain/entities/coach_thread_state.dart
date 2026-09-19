@@ -2,13 +2,18 @@ import 'coach.dart';
 
 /// État du fil affiché : la conversation, plus ce que l'écran doit savoir
 /// pour ne pas mentir à l'utilisateur.
+///
+/// Le compteur de messages restants n'est PAS ici. Le serveur le rend à
+/// chaque réponse (`CoachReply.remainingToday`) et l'état le recopiait, mais
+/// aucun widget ne le lisait : un champ porté d'un bout à l'autre pour
+/// n'être jamais affiché. Le jour où l'écran voudra l'annoncer, il vient de
+/// la réponse, pas d'un état qui le traîne en attendant.
 class CoachThreadState {
   const CoachThreadState({
     required this.conversation,
     this.isSending = false,
     this.isOffline = false,
     this.notice,
-    this.remainingToday,
   });
 
   final CoachConversation conversation;
@@ -25,14 +30,10 @@ class CoachThreadState {
   /// momentanément coupé…). Toujours issu d'un refus RÉEL du serveur.
   final String? notice;
 
-  /// Messages restants pour la journée — compté par le serveur, jamais ici.
-  final int? remainingToday;
-
   CoachThreadState copyWith({
     CoachConversation? conversation,
     bool? isSending,
     bool? isOffline,
-    int? remainingToday,
     // `notice` se remet à zéro à chaque envoi : un drapeau explicite évite
     // qu'un `null` passé volontairement soit confondu avec « inchangé ».
     bool clearNotice = false,
@@ -43,7 +44,6 @@ class CoachThreadState {
       isSending: isSending ?? this.isSending,
       isOffline: isOffline ?? this.isOffline,
       notice: clearNotice ? null : (notice ?? this.notice),
-      remainingToday: remainingToday ?? this.remainingToday,
     );
   }
 }

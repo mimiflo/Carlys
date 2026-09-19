@@ -16,6 +16,20 @@ import { declaredRoutes, type RouteSignature } from './support/openapi-routes';
 const MANIFEST = join(__dirname, '..', '..', '..', 'docs', 'api', 'route-clients.md');
 
 /**
+ * Les routes LIVRÉES que le document OpenAPI ne montre pas.
+ *
+ * `GET /metrics` porte `@ApiExcludeController()` — l'exposition Prometheus n'a
+ * rien à faire dans la documentation publique de l'API. Elle échappait donc
+ * aux deux sens du test : il ne pouvait ni réclamer sa ligne, ni la voir
+ * disparaître. Résultat, elle ne figurait NULLE PART au manifeste depuis sa
+ * livraison, alors que ce fichier promet de déclarer chaque route.
+ *
+ * Toute route sortie de Swagger se déclare donc ici, à la main : c'est le
+ * seul angle mort du mécanisme, et il est maintenant nommé.
+ */
+const HORS_OPENAPI: readonly RouteSignature[] = ['GET /metrics'];
+
+/**
  * Lit les signatures déclarées par le manifeste : la première colonne des
  * lignes de tableau, sous la forme `` `GET /api/v1/…` ``.
  */
@@ -78,10 +92,20 @@ describe('Manifeste des consommateurs de routes (e2e)', () => {
   });
 
   it('chaque ligne du manifeste correspond à une route existante', () => {
-    const existing = new Set(declared);
+    const existing = new Set([...declared, ...HORS_OPENAPI]);
     const stale = manifestRoutes().filter((route) => !existing.has(route));
 
     expect(stale).toEqual([]);
+  });
+
+  it('les routes hors OpenAPI sont déclarées au manifeste', () => {
+    // La liste ci-dessus n'excuse pas l'absence : elle la CHANGE de sens.
+    // Une route sortie de Swagger doit toujours dire qui l'appelle, le test
+    // ne peut simplement pas la découvrir tout seul.
+    const documented = new Set(manifestRoutes());
+    const missing = HORS_OPENAPI.filter((route) => !documented.has(route));
+
+    expect(missing).toEqual([]);
   });
 
   it('le manifeste ne déclare jamais deux fois la même route', () => {

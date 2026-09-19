@@ -105,7 +105,6 @@ class CoachThread extends AutoDisposeAsyncNotifier<CoachThreadState> {
             ],
           ),
           isSending: false,
-          remainingToday: reply.remainingToday,
           // `current` est l'état d'AVANT l'envoi : il porte encore le refus
           // précédent, que l'affichage optimiste venait justement d'effacer.
           // Sans ce drapeau, « Tu as atteint le nombre de messages du jour »

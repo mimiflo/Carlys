@@ -2,8 +2,14 @@
  * Dimensions d'une image, lues dans son en-tête.
  *
  * Écrit à la main plutôt qu'ajouté en dépendance : on a besoin de deux entiers
- * pour quatre formats, pas d'un décodeur. Une image dont l'en-tête n'est pas
- * reconnu rend `null` — l'absence de dimensions n'empêche jamais un dépôt.
+ * pour TROIS formats — PNG, JPEG, WebP — pas d'un décodeur. Une image dont
+ * l'en-tête n'est pas reconnu rend `null` : l'absence de dimensions n'empêche
+ * jamais un dépôt.
+ *
+ * L'AVIF, quatrième type accepté au dépôt, n'est PAS lu ici : son en-tête vit
+ * dans une boîte ISO-BMFF qu'il faut parcourir, ce qui n'a plus rien d'un
+ * en-tête à deux entiers. Un AVIF se dépose donc sans dimensions, et le
+ * commentaire annonçait « quatre formats » comme si de rien n'était.
  */
 export function readImageSize(buffer: Buffer): { width: number; height: number } | null {
   return png(buffer) ?? jpeg(buffer) ?? webp(buffer);

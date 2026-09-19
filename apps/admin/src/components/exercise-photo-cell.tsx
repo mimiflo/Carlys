@@ -23,10 +23,26 @@ export function ExercisePhotoCell({ exercise }: { exercise: AdminExerciseSummary
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['admin', 'exercises'] });
 
+  /**
+   * L'identifiant du dépôt EN COURS, avec le fichier auquel il appartient.
+   *
+   * C'est la clé d'idempotence du serveur : rejouer le même identifiant rend
+   * le média déjà déposé au lieu d'en créer un second. Il était tiré à NEUF à
+   * chaque appel, donc une tentative reprise après une coupure déposait un
+   * SECOND média — une seconde ligne, un second objet en stockage — pour le
+   * même fichier. Un fichier différent prend bien un identifiant neuf : c'est
+   * un autre dépôt.
+   */
+  const pendingUpload = useRef<{ file: File; id: string } | null>(null);
+
   const upload = useMutation({
     mutationFn: async (file: File) => {
-      const media = await adminApi.uploadMedia(file, 'IMAGE', crypto.randomUUID());
+      if (pendingUpload.current?.file !== file) {
+        pendingUpload.current = { file, id: crypto.randomUUID() };
+      }
+      const media = await adminApi.uploadMedia(file, 'IMAGE', pendingUpload.current.id);
       await adminApi.setExerciseImage(exercise.id, media.id);
+      pendingUpload.current = null;
     },
     onSuccess: async () => {
       setError(null);

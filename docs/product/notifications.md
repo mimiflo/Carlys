@@ -36,7 +36,9 @@ connaîtrait laisserait la notification arriver quand même : elle ne servirait
 
 Côté mobile, la section « Notifications » du profil porte les bascules. Elle
 disparaît si le serveur ne répond pas : une bascule qui ne refléterait rien
-vaut moins que pas de bascule.
+vaut moins que pas de bascule. Et une bascule qui n'aboutit PAS le dit :
+l'appel part sur le réseau, il échoue hors ligne, et le message le nomme au
+lieu de laisser l'interrupteur revenir tout seul à sa place.
 
 ## Application ouverte
 

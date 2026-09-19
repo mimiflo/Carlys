@@ -115,6 +115,12 @@ class AppStatTile extends StatelessWidget {
     if (ouvrir == null) {
       return Semantics(
         label: enonce,
+        // Le sous-arbre porte DÉJÀ ses textes : le libellé en capitales et la
+        // valeur avec son unité. Sans cette exclusion, le lecteur d'écran
+        // annonçait la tuile trois fois — « poids : 72,5 kg », puis
+        // « POIDS », puis « 72,5kg ». La branche explicable, elle, exclut
+        // depuis toujours (voir `AppExplainable`).
+        excludeSemantics: true,
         child: DecoratedBox(decoration: _pleine, child: corps),
       );
     }

@@ -39,7 +39,7 @@ export class StripeBillingPortalClient {
       secret,
       endpoint: StripeBillingPortalClient.endpoint,
       body,
-      failureMessage: 'Le portail de gestion n’a pas pu être ouvert.',
+      failureLog: 'Stripe : ouverture du portail de gestion refusée.',
     });
   }
 }

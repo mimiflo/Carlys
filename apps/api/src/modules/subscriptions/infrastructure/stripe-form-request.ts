@@ -17,11 +17,18 @@ export interface StripeUrlRequest {
   /** Stripe garantit lui-même l'unicité sur cette clé : rejouer rend la MÊME page. */
   readonly idempotencyKey?: string;
   /**
-   * Message rendu au client en cas d'échec — jamais celui de Stripe : le
-   * détail reste dans les journaux du fournisseur, et le relayer exposerait
-   * un objet interne.
+   * Ce qui a échoué, pour les JOURNAUX — pas pour le client.
+   *
+   * Le champ s'appelait `failureMessage` et se voulait le texte rendu à
+   * l'appelant. Il ne l'atteignait jamais : `BadGatewayException` est un 502,
+   * et le filtre d'exceptions remplace tout message 5xx par « Une erreur
+   * interne est survenue. » — à dessein, pour ne rien laisser fuiter d'un
+   * objet interne. La phrase ne servait donc à rien d'autre qu'à distinguer,
+   * dans le journal d'erreur, laquelle des deux routes Stripe a échoué : le
+   * paiement ou le portail. C'est utile, et c'est ce qu'elle dit maintenant.
+   * Le texte montré à la personne appartient au client, qui le formule déjà.
    */
-  readonly failureMessage: string;
+  readonly failureLog: string;
 }
 
 export async function requestStripeUrl(request: StripeUrlRequest): Promise<string> {
@@ -38,14 +45,14 @@ export async function requestStripeUrl(request: StripeUrlRequest): Promise<strin
   });
 
   if (!response.ok) {
-    throw new BadGatewayException(request.failureMessage);
+    throw new BadGatewayException(request.failureLog);
   }
 
   const payload: unknown = await response.json();
   const url =
     typeof payload === 'object' && payload !== null && 'url' in payload ? payload.url : null;
   if (typeof url !== 'string' || url === '') {
-    throw new BadGatewayException(request.failureMessage);
+    throw new BadGatewayException(request.failureLog);
   }
   return url;
 }

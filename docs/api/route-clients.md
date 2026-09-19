@@ -49,6 +49,14 @@ OpenAPI : `{id}`.
 | `GET /health` | **supervision** | orchestrateur / supervision |
 | `GET /health/live` | **supervision** | orchestrateur / supervision |
 | `GET /health/ready` | **supervision** | orchestrateur / supervision |
+| `GET /metrics` | **supervision** | Prometheus — exposition protégée par `MetricsAuthGuard`, hors préfixe de version |
+
+Une route manque au test, et elle est ci-dessus : `GET /metrics` porte
+`@ApiExcludeController()`, donc elle ne figure PAS dans le document OpenAPI
+que `route-clients.e2e-spec.ts` compare à ce tableau. Le test ne pouvait ni
+réclamer sa ligne ni la voir disparaître ; elle manquait depuis sa livraison.
+C'est le seul angle mort du mécanisme : une route exclue de Swagger se
+déclare ici à la main.
 
 ### Authentification
 
@@ -81,7 +89,7 @@ OpenAPI : `{id}`.
 
 | Route | Consommateur | Où |
 | --- | --- | --- |
-| `GET /equipment` | **aucun** (constaté le 7 septembre 2026) | Aucun écran ne filtre par matériel : la valeur voyage déjà dans chaque fiche d’exercice. Le back-office lit `/admin/equipment`. |
+| `GET /equipment` | **mobile** | apps/mobile — `equipmentCatalogProvider`, lu par l’écran de préparation d’entraînement (choix du matériel disponible). La ligne annonçait « aucun » depuis le 7 septembre 2026 : l’écran est arrivé après, et personne n’a corrigé le manifeste dans le même commit. Le back-office, lui, lit `/admin/equipment`. |
 | `GET /exercises` | **mobile** | apps/mobile |
 | `GET /exercises/{idOrSlug}` | **mobile** | apps/mobile |
 | `GET /muscle-groups` | **mobile** | apps/mobile |

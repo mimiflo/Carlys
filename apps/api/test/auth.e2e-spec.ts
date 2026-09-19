@@ -83,6 +83,23 @@ describe('Authentification (e2e)', () => {
     });
   });
 
+  it('un nom fait d’ESPACES est refusé comme un nom vide', async () => {
+    // `@Length(1, 60)` mesurait la chaîne telle quelle : trois espaces font
+    // trois caractères, passaient la longueur minimale, et le compte naissait
+    // avec un nom vide — affiché tel quel dans la communauté, les
+    // encouragements et les notifications.
+    const response = await api()
+      .post('/api/v1/auth/register')
+      .send({
+        email: `e2e-nom-blanc-${randomUUID()}@carlys.test`,
+        password: 'MotDePasse1!',
+        displayName: '   ',
+      })
+      .expect(400);
+
+    expect(errorOf(response.body).code).toBe('VALIDATION_ERROR');
+  });
+
   let firstSession: AuthTokens;
 
   it('inscrit un utilisateur et ouvre une session', async () => {
