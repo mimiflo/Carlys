@@ -14,6 +14,21 @@ export function CategoryRow({ group }: { group: AdminMuscleGroup }) {
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['admin', 'muscle-groups'] });
 
+  /**
+   * Le brouillon repart de ce que la LISTE affiche — à l'ouverture comme à
+   * l'annulation.
+   *
+   * « Annuler » ne faisait que refermer les champs : la saisie abandonnée
+   * restait en mémoire, et la rouvrir puis enregistrer réécrivait le
+   * renommage qu'on venait d'annuler. Pire, entre-temps la liste a pu
+   * rapporter le renommage d'un AUTRE administrateur : enregistrer ce
+   * brouillon périmé écrasait son travail sans un mot.
+   */
+  const resetDraft = () => {
+    setName(group.name);
+    setSortOrder(String(group.sortOrder));
+  };
+
   const save = useMutation({
     mutationFn: () =>
       adminApi.updateMuscleGroup(group.id, { name, sortOrder: Number(sortOrder) || 0 }),
@@ -81,7 +96,10 @@ export function CategoryRow({ group }: { group: AdminMuscleGroup }) {
               </button>
               <button
                 type="button"
-                onClick={() => setEditing(false)}
+                onClick={() => {
+                  resetDraft();
+                  setEditing(false);
+                }}
                 className="rounded-lg px-3 py-1 text-xs text-muted hover:bg-black/5"
               >
                 Annuler
@@ -90,7 +108,10 @@ export function CategoryRow({ group }: { group: AdminMuscleGroup }) {
           ) : (
             <button
               type="button"
-              onClick={() => setEditing(true)}
+              onClick={() => {
+                resetDraft();
+                setEditing(true);
+              }}
               className="rounded-lg px-3 py-1 text-xs text-primary hover:bg-primary/10"
             >
               Modifier

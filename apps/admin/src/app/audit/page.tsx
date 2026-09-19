@@ -1,7 +1,6 @@
 'use client';
 
-import { useQuery } from '@tanstack/react-query';
-import { useState } from 'react';
+import { useInfiniteQuery } from '@tanstack/react-query';
 import type { AdminAuditLog } from '@carlys/api-contracts';
 import { AdminShell } from '@/components/admin-shell';
 import { adminApi } from '@/lib/admin-api';
@@ -24,19 +23,27 @@ function actorId(log: AdminAuditLog): string | null {
   return log.actorType === 'ADMIN' ? log.adminUserId : log.userId;
 }
 
-/** Journal d'audit append-only, du plus récent au plus ancien. */
+/**
+ * Journal d'audit append-only, du plus récent au plus ancien.
+ *
+ * Les pages déjà chargées vivent dans le CACHE de la requête, pas dans un
+ * état local. Elles étaient empilées par un `setState` appelé DEPUIS le
+ * `queryFn` : en revenant sur la page dans les trente secondes de fraîcheur,
+ * React Query servait le cache sans rejouer la fonction, l'état local
+ * repartait vide, et le journal affichait « Aucun événement. » — sur une base
+ * pleine, et sans le moindre moyen de s'en sortir autrement qu'en attendant.
+ */
 export default function AuditPage() {
-  const [pages, setPages] = useState<AdminAuditLog[][]>([]);
-  const [cursor, setCursor] = useState<string | undefined>(undefined);
-  const { data, isPending, isError } = useQuery({
-    queryKey: ['admin', 'audit', cursor ?? 'first'],
-    queryFn: async () => {
-      const page = await adminApi.auditLogs(cursor);
-      setPages((previous) => (cursor === undefined ? [page.items] : [...previous, page.items]));
-      return page;
-    },
-  });
-  const logs = pages.flat();
+  const { data, isPending, isError, fetchNextPage, hasNextPage, isFetchingNextPage } =
+    useInfiniteQuery({
+      queryKey: ['admin', 'audit'],
+      queryFn: ({ pageParam }) => adminApi.auditLogs(pageParam),
+      initialPageParam: undefined as string | undefined,
+      // `undefined` = fin du journal ; c'est ce qui éteint le bouton.
+      getNextPageParam: (last) =>
+        last.hasMore && last.nextCursor !== null ? last.nextCursor : undefined,
+    });
+  const logs = data?.pages.flatMap((page) => page.items) ?? [];
 
   return (
     <AdminShell title="Journal d’audit">
@@ -90,13 +97,14 @@ export default function AuditPage() {
           </tbody>
         </table>
       </div>
-      {data?.hasMore === true && data.nextCursor !== null && (
+      {hasNextPage && (
         <button
           type="button"
-          onClick={() => setCursor(data.nextCursor ?? undefined)}
-          className="mt-4 rounded-lg border border-primary px-4 py-2 text-sm font-semibold text-primary hover:bg-primary hover:text-white"
+          onClick={() => void fetchNextPage()}
+          disabled={isFetchingNextPage}
+          className="mt-4 rounded-lg border border-primary px-4 py-2 text-sm font-semibold text-primary hover:bg-primary hover:text-white disabled:opacity-50"
         >
-          Charger la suite
+          {isFetchingNextPage ? 'Chargement…' : 'Charger la suite'}
         </button>
       )}
     </AdminShell>

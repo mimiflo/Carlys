@@ -61,8 +61,9 @@ vi.mock('next/navigation', () => ({
   useRouter: () => ({ replace: vi.fn(), push: vi.fn() }),
 }));
 
-function renderPage() {
-  const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+function renderPage(
+  queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } }),
+) {
   return render(
     <QueryClientProvider client={queryClient}>
       <AuditPage />
@@ -117,6 +118,34 @@ describe('Page Journal d’audit', () => {
     const vide = await screen.findByText('Aucun événement.');
     // Cinq colonnes d'en-tête : le message doit toutes les couvrir.
     expect(vide).toHaveAttribute('colspan', String(screen.getAllByRole('columnheader').length));
+  });
+
+  it('revenir sur la page dans la fenêtre de fraîcheur montre TOUJOURS le journal', async () => {
+    // Les pages étaient empilées dans un état local, rempli depuis le
+    // `queryFn`. Au retour, React Query servait le cache sans rejouer la
+    // fonction : l'état repartait vide et la page annonçait « Aucun
+    // événement. » sur une base pleine, sans aucun moyen d'en sortir avant
+    // l'expiration du cache.
+    adminToken.set('jeton-admin');
+    adminPermissions.set(ADMIN_PERMISSIONS);
+    const auditLogs = vi
+      .spyOn(adminApi, 'auditLogs')
+      .mockResolvedValue(pageOf([PAR_UN_ADMIN, PAR_UN_MEMBRE]));
+    const queryClient = new QueryClient({
+      defaultOptions: { queries: { retry: false, staleTime: 30_000 } },
+    });
+
+    const premiere = renderPage(queryClient);
+    await screen.findByText('admin.user.suspend');
+    premiere.unmount();
+
+    renderPage(queryClient);
+
+    expect(await screen.findByText('admin.user.suspend')).toBeInTheDocument();
+    expect(screen.queryByText('Aucun événement.')).not.toBeInTheDocument();
+    // Le cache a servi : la requête n'est pas rejouée, c'est bien le chemin
+    // qui cassait.
+    expect(auditLogs).toHaveBeenCalledTimes(1);
   });
 
   it('montre le refus de permission comme tel', async () => {

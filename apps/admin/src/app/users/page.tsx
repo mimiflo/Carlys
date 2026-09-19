@@ -1,7 +1,7 @@
 'use client';
 
 import Link from 'next/link';
-import { useQuery } from '@tanstack/react-query';
+import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { AdminShell } from '@/components/admin-shell';
 import { adminApi } from '@/lib/admin-api';
@@ -29,13 +29,28 @@ function OverviewCards() {
   );
 }
 
+/**
+ * Les comptes, page par page.
+ *
+ * La liste ne demandait QUE la première page et n'offrait aucune suite : la
+ * route sert vingt comptes par défaut et porte un curseur depuis toujours, si
+ * bien que le vingt-et-unième était inatteignable — sans le moindre signe que
+ * la liste était coupée. La carte « Comptes » juste au-dessus annonçait
+ * pourtant le vrai total.
+ */
 export default function UsersPage() {
   const [search, setSearch] = useState('');
   const [submitted, setSubmitted] = useState('');
-  const { data, isPending, isError } = useQuery({
-    queryKey: ['admin', 'users', submitted],
-    queryFn: () => adminApi.listUsers(submitted === '' ? undefined : submitted),
-  });
+  const { data, isPending, isError, fetchNextPage, hasNextPage, isFetchingNextPage } =
+    useInfiniteQuery({
+      queryKey: ['admin', 'users', submitted],
+      queryFn: ({ pageParam }) =>
+        adminApi.listUsers(submitted === '' ? undefined : submitted, pageParam),
+      initialPageParam: undefined as string | undefined,
+      getNextPageParam: (last) =>
+        last.hasMore && last.nextCursor !== null ? last.nextCursor : undefined,
+    });
+  const users = data?.pages.flatMap((page) => page.items) ?? [];
 
   return (
     <AdminShell title="Utilisateurs">
@@ -82,7 +97,7 @@ export default function UsersPage() {
               </tr>
             </thead>
             <tbody>
-              {data.items.map((user) => (
+              {users.map((user) => (
                 <tr key={user.id} className="border-b border-black/5 last:border-0">
                   <td className="px-4 py-3">
                     <Link href={`/users/${user.id}`} className="font-medium text-primary underline">
@@ -97,7 +112,7 @@ export default function UsersPage() {
                   </td>
                 </tr>
               ))}
-              {data.items.length === 0 && (
+              {users.length === 0 && (
                 <tr>
                   <td colSpan={5} className="px-4 py-6 text-center text-muted">
                     Aucun utilisateur trouvé.
@@ -107,6 +122,16 @@ export default function UsersPage() {
             </tbody>
           </table>
         </div>
+      )}
+      {hasNextPage && (
+        <button
+          type="button"
+          onClick={() => void fetchNextPage()}
+          disabled={isFetchingNextPage}
+          className="mt-4 rounded-lg border border-primary px-4 py-2 text-sm font-semibold text-primary hover:bg-primary hover:text-white disabled:opacity-50"
+        >
+          {isFetchingNextPage ? 'Chargement…' : 'Charger la suite'}
+        </button>
       )}
     </AdminShell>
   );
