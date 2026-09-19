@@ -1289,6 +1289,37 @@ enum ChallengeKind {
   CULTURE
 }
 
+/// CE QU'UN DÉFI COMPTE, et dans quelle unité.
+///
+/// `kind` ne disait que la FAMILLE (sport ou culture) ; l'unité, elle, vivait
+/// en prose dans le catalogue et en `+1` codé en dur dans deux méthodes du
+/// dépôt. Un défi « 500 km ensemble » était donc impossible à exprimer, et
+/// un défi « 500 séances » ne savait pas dire ce que valait une unité.
+///
+/// Les quatre valeurs présentes ont toutes une SOURCE RÉELLE aujourd'hui :
+/// la clôture d'une séance (une séance, ses secondes d'effort, ses mètres
+/// parcourus) et la première bonne réponse du jour à une leçon. Les pas et
+/// l'eau n'en ont pas — les pas ne sont pas lus, l'eau ne quitte pas
+/// l'appareil — et ils ne figurent donc pas ici : une valeur d'enum que rien
+/// n'alimente est une promesse qu'aucun écran ne peut tenir.
+///
+/// Toutes sont des ÉVÉNEMENTS, jamais des totaux redéclarés : elles
+/// s'additionnent par incrément, ce qui suppose que le même fait ne se
+/// produise qu'une fois (une clôture de séance est gardée par sa transition
+/// d'état, une réponse de quiz par son unicité). Le jour où une métrique
+/// REDÉCLARE un total — les pas d'hier resynchronisés — l'incrément devient
+/// faux, et il faudra un registre de totaux quotidiens avec un delta.
+enum ChallengeMetric {
+  /// Séances terminées, une par clôture.
+  WORKOUTS
+  /// Bonnes réponses, une par leçon et par jour.
+  QUIZ_CORRECT
+  /// Secondes d'effort réellement chronométrées dans les séries.
+  ACTIVE_SECONDS
+  /// Mètres parcourus, déclarés série par série.
+  DISTANCE_METERS
+}
+
 /// Défi COLLECTIF — jamais créé par un utilisateur. Le jeu du mois est
 /// matérialisé PARESSEUSEMENT à la première lecture d'un mois sans défi,
 /// depuis le catalogue en code (`community/domain/challenge-catalog.ts`) :
@@ -1301,6 +1332,11 @@ model CommunityChallenge {
   /// Mois du défi, `YYYY-MM` en UTC : la clé d'idempotence du jeu du mois.
   month       String
   kind        ChallengeKind
+  /// L'unité réellement comptée. Rétro-remplie depuis `kind` à l'arrivée de
+  /// la colonne (SPORT → WORKOUTS, CULTURE → QUIZ_CORRECT) : les défis déjà
+  /// en base comptaient bien ces deux choses-là, la colonne ne fait que le
+  /// dire enfin.
+  metric      ChallengeMetric
   title       String
   description String
   /// Objectif collectif (séances, bonnes réponses…).

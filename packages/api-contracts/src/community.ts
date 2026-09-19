@@ -40,13 +40,39 @@ export type Encouragement = z.infer<typeof encouragementSchema>;
 export const challengeKindSchema = z.enum(['SPORT', 'CULTURE']);
 export type ChallengeKind = z.infer<typeof challengeKindSchema>;
 
+/**
+ * CE QU'UN DÉFI COMPTE. `kind` ne disait que la famille ; l'unité vivait en
+ * prose dans le catalogue et en `+1` codé en dur côté serveur, donc un défi
+ * « 500 km ensemble » ne pouvait pas s'exprimer.
+ */
+export const challengeMetricSchema = z.enum([
+  'WORKOUTS',
+  'QUIZ_CORRECT',
+  'ACTIVE_SECONDS',
+  'DISTANCE_METERS',
+]);
+export type ChallengeMetric = z.infer<typeof challengeMetricSchema>;
+
 export const communityChallengeSchema = z.object({
   id: z.string(),
   kind: challengeKindSchema,
+  metric: challengeMetricSchema,
+  /**
+   * L'unité écrite en toutes lettres (« séances », « mètres »), servie par
+   * le serveur comme le titre et la description : deux endroits où nommer la
+   * même unité, c'est un endroit de trop pour la faire diverger.
+   */
+  unit: z.string(),
   title: z.string(),
   description: z.string(),
-  /** Objectif collectif (séances, répétitions, bonnes réponses…). */
+  /** Objectif collectif, dans l'unité de `metric`. */
   target: z.number(),
+  /**
+   * Somme BRUTE des contributions, non bornée : c'est elle qui permet
+   * d'écrire « 127 / 500 séances » là où le seul ratio ne disait rien, et
+   * un groupe qui dépasse son objectif mérite de le voir.
+   */
+  totalContribution: z.number(),
   /** Progression COLLECTIVE, bornée à [0, 1]. */
   progress: z.number(),
   participants: z.number(),

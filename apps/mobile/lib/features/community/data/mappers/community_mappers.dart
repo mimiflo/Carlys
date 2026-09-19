@@ -44,6 +44,11 @@ CommunityChallenge challengeFromJson(Map<String, dynamic> row) {
     title: row['title'] as String,
     description: row['description'] as String,
     participants: (row['participants'] as num).toInt(),
+    // Lus DÉFENSIVEMENT : un serveur déployé avant ce client ne les sert
+    // pas, et un défi sans légende vaut mieux qu'un écran vide.
+    target: (row['target'] as num?)?.toInt() ?? 0,
+    totalContribution: (row['totalContribution'] as num?)?.toInt() ?? 0,
+    unit: row['unit'] as String? ?? '',
     progress: (row['progress'] as num).toDouble(),
     joined: row['joined'] as bool,
     endsAt: DateTime.parse(row['endsAt'] as String),

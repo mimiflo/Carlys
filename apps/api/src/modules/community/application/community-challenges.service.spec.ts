@@ -14,9 +14,8 @@ interface Stubs {
   joinChallenge: jest.Mock;
   leaveChallenge: jest.Mock;
   challengeStats: jest.Mock;
-  incrementSportContributions: jest.Mock;
+  contribute: jest.Mock;
   recordQuizAnswer: jest.Mock;
-  incrementCultureContributions: jest.Mock;
 }
 
 function buildStubs(): Stubs {
@@ -29,9 +28,8 @@ function buildStubs(): Stubs {
     joinChallenge: jest.fn().mockResolvedValue(undefined),
     leaveChallenge: jest.fn().mockResolvedValue(undefined),
     challengeStats: jest.fn().mockResolvedValue(null),
-    incrementSportContributions: jest.fn().mockResolvedValue(undefined),
+    contribute: jest.fn().mockResolvedValue(undefined),
     recordQuizAnswer: jest.fn().mockResolvedValue(true),
-    incrementCultureContributions: jest.fn().mockResolvedValue(undefined),
   };
 }
 
@@ -100,11 +98,35 @@ describe('CommunityChallengesService — défis collectifs', () => {
 
   it('la contribution de séance n’échoue JAMAIS bruyamment', async () => {
     const stubs = buildStubs();
-    stubs.incrementSportContributions.mockRejectedValue(new Error('base indisponible'));
+    stubs.contribute.mockRejectedValue(new Error('base indisponible'));
     const service = buildService(stubs);
 
-    await expect(service.recordWorkoutCompleted(ME, new Date())).resolves.toBeUndefined();
+    await expect(
+      service.recordWorkoutCompleted(ME, new Date(), {
+        activeSeconds: 0,
+        distanceMeters: 0,
+      }),
+    ).resolves.toBeUndefined();
     expect(loggerStub.error).toHaveBeenCalled();
+  });
+
+  it('une séance verse à TROIS métriques : séance, secondes, mètres', async () => {
+    const stubs = buildStubs();
+    const service = buildService(stubs);
+    const at = new Date('2026-09-15T12:00:00.000Z');
+
+    await service.recordWorkoutCompleted(ME, at, {
+      activeSeconds: 1_800,
+      distanceMeters: 5_000,
+    });
+
+    // Le même fait alimente les défis qui comptent des séances ET ceux qui
+    // comptent des kilomètres : c'est tout l'objet de la généralisation.
+    expect(stubs.contribute.mock.calls.map((call: unknown[]) => call.slice(1, 3))).toEqual([
+      ['WORKOUTS', 1],
+      ['ACTIVE_SECONDS', 1_800],
+      ['DISTANCE_METERS', 5_000],
+    ]);
   });
 });
 
@@ -178,6 +200,9 @@ describe('CommunityChallengesService — réponses de quiz (défis CULTURE)', ()
       ...answer,
       at: expect.any(Date) as Date,
     });
-    expect(stubs.incrementCultureContributions).not.toHaveBeenCalled();
+    // La contribution part DANS la transaction du dépôt, jamais à côté :
+    // séparées, l'échec de la seconde écriture laissait la première, et
+    // l'unicité rendait la perte définitive au rejeu.
+    expect(stubs.contribute).not.toHaveBeenCalled();
   });
 });

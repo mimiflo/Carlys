@@ -64,7 +64,7 @@ l'application ne dépend d'elle.
 | --- | --- |
 | `Friendship` | UNE ligne par paire ; `PENDING` → `ACCEPTED`/`DECLINED`, direction conservée (qui a demandé). L'unicité porte sur la PAIRE ordonnée (`userLowId`, `userHighId`) : c'est la base qui l'impose, y compris quand les deux personnes se demandent en même temps. |
 | `Encouragement` | Mot d'un ami ; le nom de l'expéditeur est lu au moment de servir (nom COURANT, pas dénormalisé). |
-| `CommunityChallenge` | Défi collectif du MOIS (`month`, `YYYY-MM` UTC), `SPORT` ou `CULTURE`, avec `target` et fenêtre `startsAt`/`endsAt` ; unique par `(slug, month)`, matérialisé paresseusement depuis le catalogue en code, jamais créé par un utilisateur. |
+| `CommunityChallenge` | Défi collectif du MOIS (`month`, `YYYY-MM` UTC), `SPORT` ou `CULTURE`, avec sa `metric` (ce qu'il compte), son `target` et sa fenêtre `startsAt`/`endsAt` ; unique par `(slug, month)`, matérialisé paresseusement depuis le catalogue en code, jamais créé par un utilisateur. |
 | `ChallengeParticipation` | Participation + `contribution` individuelle à l'objectif. Quitter DATE le départ (`leftAt`) sans effacer la ligne : la contribution déjà versée reste acquise au collectif, seule la présence s'arrête. |
 | `CommunityPreference` | `sharesProgress` (absence = partagé, défaut du modèle). |
 | `CommunityBlock` | Blocage unilatéral `(blockerId, blockedId)`, unique par paire orientée ; consulté dans les DEUX sens partout où deux personnes se rencontrent. |
@@ -170,16 +170,42 @@ seul, à la lecture** :
   les lectures concurrentes : deux premières lectures simultanées écrivent
   chacune ce qui manque, jamais deux fois la même ligne. **Pas de cron**, rien
   à surveiller : un mois déjà servi ne coûte qu'un comptage.
-- Les objectifs sont exprimés dans l'unité réellement comptée : une séance
-  terminée (`SPORT`), une première bonne réponse par leçon et par jour
-  (`CULTURE`).
+- Les objectifs sont exprimés dans l'unité réellement comptée, et cette unité
+  est une **donnée** (`CommunityChallenge.metric`), plus une phrase du
+  catalogue. Quatre valeurs, toutes avec une source réelle : `WORKOUTS`
+  (séances terminées), `QUIZ_CORRECT` (une bonne réponse par leçon et par
+  jour), `ACTIVE_SECONDS` (secondes chronométrées série par série),
+  `DISTANCE_METERS` (mètres déclarés série par série). `kind` ne dit plus que
+  la FAMILLE, pour le badge de la carte.
+
+  Les pas et l'eau n'y figurent pas, et c'est délibéré : les pas ne sont pas
+  lus, l'eau ne quitte jamais l'appareil. Une valeur d'enum que rien
+  n'alimente est une promesse qu'aucun écran ne peut tenir.
+
+  Toutes ces métriques sont des **événements**, jamais des totaux redéclarés :
+  elles s'additionnent par incrément, ce qui suppose que le même fait ne se
+  produise qu'une fois (la clôture est gardée par sa transition d'état, la
+  réponse de quiz par son unicité). Le jour où une métrique redéclare un
+  total — les pas d'hier resynchronisés — l'incrément devient faux, et il
+  faudra un registre de totaux quotidiens avec un delta `max(0, nouveau −
+  ancien)`.
 
 ## Contribution des séances aux défis
 
 À la clôture d'une séance (`workouts.service`), `recordWorkoutCompleted`
-incrémente de 1 la contribution de chaque défi **SPORT** rejoint dont la
-fenêtre couvre la clôture. Comme le recalcul des records : l'échec est
-journalisé et ne fait JAMAIS échouer la clôture.
+verse à **trois** métriques à la fois : une séance, ses secondes d'effort et
+ses mètres parcourus. C'est tout l'objet de la généralisation — le même fait
+alimente les défis qui comptent des séances ET ceux qui comptent des
+kilomètres, sans que personne n'ait à choisir.
+
+Les secondes versées sont celles des SÉRIES, pas la durée de la séance :
+`durationSeconds` mesure du début à la fin, pauses et rangement compris, et
+un défi qui compte des secondes d'effort ne doit pas créditer le temps passé
+à discuter. Une quantité nulle n'écrit rien du tout — une séance de fonte ne
+parcourt aucun mètre, c'est le cas ordinaire.
+
+Comme le recalcul des records : l'échec est journalisé et ne fait JAMAIS
+échouer la clôture.
 
 Les défis **CULTURE** sont alimentés par les quiz de l'Academy :
 `POST /community/quiz-answers` enregistre chaque réponse — idempotente par

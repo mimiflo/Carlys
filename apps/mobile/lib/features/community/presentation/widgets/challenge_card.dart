@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/community.dart';
 
@@ -70,6 +71,18 @@ class ChallengeCard extends StatelessWidget {
               valueColor: const AlwaysStoppedAnimation(AppColors.primaryLight),
             ),
           ),
+          if (challenge.unit.isNotEmpty) ...[
+            const SizedBox(height: AppSpacing.xxs),
+            Text(
+              // Ce que la barre MESURE, en toutes lettres. Sans elle, une
+              // barre aux deux tiers ne disait ni de quoi ni combien.
+              '${formatThousands(challenge.totalContribution)} / '
+              '${formatThousands(challenge.target)} ${challenge.unit}',
+              style: AppTypography.label.copyWith(
+                color: AppColors.darkTextSecondary,
+              ),
+            ),
+          ],
           const SizedBox(height: AppSpacing.sm),
           Row(
             children: [

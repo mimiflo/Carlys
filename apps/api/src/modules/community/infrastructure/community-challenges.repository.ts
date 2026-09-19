@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { type CommunityChallenge, Prisma } from '@prisma/client';
+import { type ChallengeMetric, type CommunityChallenge, Prisma } from '@prisma/client';
 import { PrismaService } from '../../../database/prisma/prisma.service';
 import { type MonthlyChallengeSeed } from '../domain/challenge-catalog';
 
@@ -49,6 +49,7 @@ export class CommunityChallengesRepository {
         slug: seed.slug,
         month: seed.month,
         kind: seed.kind,
+        metric: seed.metric,
         title: seed.title,
         description: seed.description,
         target: seed.target,
@@ -159,18 +160,38 @@ export class CommunityChallengesRepository {
   }
 
   /**
-   * +1 sur tous les défis SPORT ENCORE rejoints dont la fenêtre couvre `at`.
+   * `amount` sur tous les défis de cette MÉTRIQUE encore rejoints dont la
+   * fenêtre couvre `at`.
+   *
+   * Une seule méthode pour toutes les unités, là où il y en avait deux, une
+   * par famille, avec `+1` écrit en dur dans chacune. Compter des mètres
+   * demandait donc une troisième copie — et trois copies d'une même règle,
+   * c'est deux occasions de la corriger à moitié.
+   *
    * `leftAt: null` : la ligne d'un défi quitté survit pour garder sa
    * contribution acquise, elle ne doit plus en recevoir de nouvelles.
+   *
+   * `amount <= 0` ne fait RIEN et ne lève pas : une séance sans distance
+   * parcourue n'est pas une erreur, c'est le cas ordinaire. Une écriture
+   * inutile par séance et par métrique absente, en revanche, en serait une.
    */
-  async incrementSportContributions(userId: string, at: Date): Promise<void> {
-    await this.prisma.challengeParticipation.updateMany({
+  async contribute(
+    userId: string,
+    metric: ChallengeMetric,
+    amount: number,
+    at: Date,
+    client: Prisma.TransactionClient | PrismaService = this.prisma,
+  ): Promise<void> {
+    if (amount <= 0) {
+      return;
+    }
+    await client.challengeParticipation.updateMany({
       where: {
         userId,
         leftAt: null,
-        challenge: { kind: 'SPORT', startsAt: { lte: at }, endsAt: { gte: at } },
+        challenge: { metric, startsAt: { lte: at }, endsAt: { gte: at } },
       },
-      data: { contribution: { increment: 1 } },
+      data: { contribution: { increment: amount } },
     });
   }
 
@@ -210,7 +231,7 @@ export class CommunityChallengesRepository {
       await this.prisma.$transaction(async (tx) => {
         await tx.quizAnswer.create({ data: answer });
         if (answer.correct) {
-          await this.incrementCultureContributions(answer.userId, at, tx);
+          await this.contribute(answer.userId, 'QUIZ_CORRECT', 1, at, tx);
         }
       });
       return true;
@@ -250,29 +271,6 @@ export class CommunityChallengesRepository {
         correct: true,
         answeredOn: true,
       },
-    });
-  }
-
-  /**
-   * +1 sur tous les défis CULTURE ENCORE rejoints dont la fenêtre couvre
-   * `at` — même règle que la voie SPORT sur `leftAt`.
-   *
-   * `client` permet de l'exécuter DANS la transaction de `recordQuizAnswer`
-   * plutôt qu'à côté ; sans argument, il travaille hors transaction, comme
-   * avant.
-   */
-  async incrementCultureContributions(
-    userId: string,
-    at: Date,
-    client: Prisma.TransactionClient | PrismaService = this.prisma,
-  ): Promise<void> {
-    await client.challengeParticipation.updateMany({
-      where: {
-        userId,
-        leftAt: null,
-        challenge: { kind: 'CULTURE', startsAt: { lte: at }, endsAt: { gte: at } },
-      },
-      data: { contribution: { increment: 1 } },
     });
   }
 }

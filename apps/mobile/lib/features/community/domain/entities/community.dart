@@ -91,6 +91,9 @@ class CommunityChallenge {
     required this.progress,
     required this.joined,
     required this.endsAt,
+    this.target = 0,
+    this.totalContribution = 0,
+    this.unit = '',
   });
 
   final String id;
@@ -98,6 +101,17 @@ class CommunityChallenge {
   final String title;
   final String description;
   final int participants;
+
+  /// L'objectif collectif et ce qui a été versé, dans l'unité de `unit` —
+  /// « 127 / 500 séances ». Le serveur les envoyait déjà pour le premier,
+  /// jamais pour le second, et le client jetait les deux : la barre n'avait
+  /// aucune légende, et rien ne disait ce qu'elle mesurait.
+  ///
+  /// Zéro par défaut : un serveur plus ancien ne les sert pas, et la carte
+  /// se tait alors au lieu d'écrire « 0 / 0 ».
+  final int target;
+  final int totalContribution;
+  final String unit;
 
   /// Progression COLLECTIVE, de 0 à 1 : la somme des efforts du groupe.
   final double progress;

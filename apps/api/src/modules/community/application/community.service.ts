@@ -10,7 +10,7 @@ import { type Friendship, FriendRequestStatus } from '@prisma/client';
 import { CommunityModerationRepository } from '../infrastructure/community-moderation.repository';
 import { CommunityRepository, type FriendRow } from '../infrastructure/community.repository';
 import { normalizeFriendCode } from '../../users/domain/friend-code';
-import { CommunityChallengesService } from './community-challenges.service';
+import { CommunityChallengesService, type SessionEffort } from './community-challenges.service';
 import { CommunityNotifier } from './community-notifier';
 import { computeStreakDays } from './streak.calculator';
 
@@ -279,8 +279,8 @@ export class CommunityService {
    * séances ne connaît que ce service : la logique vit dans
    * `CommunityChallengesService`, ceci ne fait que déléguer.
    */
-  recordWorkoutCompleted(userId: string, completedAt: Date): Promise<void> {
-    return this.challenges.recordWorkoutCompleted(userId, completedAt);
+  recordWorkoutCompleted(userId: string, at: Date, effort: SessionEffort): Promise<void> {
+    return this.challenges.recordWorkoutCompleted(userId, at, effort);
   }
 
   // ── Préférence de partage ───────────────────────────────────────────────

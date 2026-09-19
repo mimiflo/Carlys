@@ -1,4 +1,4 @@
-import { type ChallengeKind } from '@prisma/client';
+import { type ChallengeKind, type ChallengeMetric } from '@prisma/client';
 
 /**
  * Catalogue des défis du mois.
@@ -9,23 +9,40 @@ import { type ChallengeKind } from '@prisma/client';
  * même jeu, matérialisé à la première lecture (voir
  * `CommunityChallengesService.ensureMonthlyChallenges`).
  *
- * Les objectifs sont exprimés dans l'unité RÉELLEMENT comptée : une séance
- * terminée pour les défis SPORT, une première bonne réponse par leçon et par
- * jour pour les défis CULTURE. Les textes sont visibles dans l'application
- * (tutoiement, pas de tiret cadratin).
+ * Les objectifs sont exprimés dans l'unité RÉELLEMENT comptée, et cette
+ * unité est désormais une DONNÉE (`metric`) et non plus une phrase : c'est
+ * elle qui décide ce qu'un défi additionne, et elle qui permet à l'écran
+ * d'écrire « 127 / 500 séances » plutôt qu'une barre sans légende. Les textes
+ * sont visibles dans l'application (tutoiement, pas de tiret cadratin).
  */
 export interface ChallengeTemplate {
   readonly slug: string;
   readonly kind: ChallengeKind;
+  readonly metric: ChallengeMetric;
   readonly title: string;
   readonly description: string;
   readonly target: number;
 }
 
+/**
+ * Comment une quantité se dit, au singulier et au pluriel.
+ *
+ * Servi par l'API plutôt que traduit par le client : les titres et les
+ * descriptions des défis viennent déjà du serveur, et deux endroits où
+ * nommer la même unité, c'est un endroit de trop pour la faire diverger.
+ */
+export const METRIC_UNITS: Readonly<Record<ChallengeMetric, string>> = {
+  WORKOUTS: 'séances',
+  QUIZ_CORRECT: 'bonnes réponses',
+  ACTIVE_SECONDS: 'secondes d’effort',
+  DISTANCE_METERS: 'mètres',
+};
+
 export const MONTHLY_CHALLENGE_CATALOG: readonly ChallengeTemplate[] = [
   {
     slug: 'seances-du-mois',
     kind: 'SPORT',
+    metric: 'WORKOUTS',
     title: '500 séances à plusieurs',
     description:
       'Chaque séance que tu termines ce mois-ci s’ajoute au compteur du groupe. ' +
@@ -35,11 +52,25 @@ export const MONTHLY_CHALLENGE_CATALOG: readonly ChallengeTemplate[] = [
   {
     slug: 'quiz-du-mois',
     kind: 'CULTURE',
+    metric: 'QUIZ_CORRECT',
     title: 'Le quiz du mois',
     description:
       'Chaque bonne réponse dans l’Academy compte, une par leçon et par jour. ' +
       'Objectif : 300 bonnes réponses ensemble.',
     target: 300,
+  },
+  {
+    slug: 'distance-du-mois',
+    kind: 'SPORT',
+    metric: 'DISTANCE_METERS',
+    title: '500 km à plusieurs',
+    description:
+      'Chaque mètre parcouru dans une séance compte : course, rameur, vélo. ' +
+      'Objectif : 500 000 mètres avant la fin du mois.',
+    // En MÈTRES, l'unité réellement saisie série par série. Convertir en
+    // kilomètres pour l'affichage est le travail de l'écran ; le compteur,
+    // lui, additionne ce que les gens déclarent.
+    target: 500_000,
   },
 ];
 

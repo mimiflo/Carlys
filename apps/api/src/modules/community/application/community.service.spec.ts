@@ -476,9 +476,10 @@ describe('CommunityService — relais vers les défis', () => {
     const service = buildService(buildStubs());
     const at = new Date('2026-08-11T10:00:00Z');
 
-    await service.recordWorkoutCompleted(ME, at);
+    const effort = { activeSeconds: 600, distanceMeters: 2_000 };
+    await service.recordWorkoutCompleted(ME, at, effort);
 
-    expect(challengesStub.recordWorkoutCompleted).toHaveBeenCalledWith(ME, at);
+    expect(challengesStub.recordWorkoutCompleted).toHaveBeenCalledWith(ME, at, effort);
   });
 });
 

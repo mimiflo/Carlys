@@ -1,6 +1,7 @@
 import { type WorkoutSessionDetail, type WorkoutSessionSummary } from '@carlys/api-contracts';
 import { ConflictException, Injectable } from '@nestjs/common';
 import { type Prisma, WorkoutSessionStatus, WorkoutSetKind } from '@prisma/client';
+import { type SessionEffort } from '../../community/application/community-challenges.service';
 import { CommunityService } from '../../community/application/community.service';
 import { ProgramsRepository } from '../../programs/infrastructure/programs.repository';
 import { ProgressService } from '../../progress/application/progress.service';
@@ -45,6 +46,28 @@ export interface CreateSessionInput {
 }
 
 type PlanItemRow = Prisma.WorkoutSessionPlanItemUncheckedCreateInput;
+
+/**
+ * Ce qu'une séance a coûté en TEMPS et en DISTANCE, d'après ses séries.
+ *
+ * Fonction pure, et volontairement ailleurs que dans la durée de la séance :
+ * `durationSeconds` mesure du début à la fin, pauses et rangement compris,
+ * alors que ces secondes-ci sont celles qu'on a réellement chronométrées
+ * série par série. Un défi qui compte des secondes d'effort ne doit pas
+ * créditer le temps passé à discuter entre deux séries.
+ *
+ * Les séries sans chrono ni distance — la fonte, l'immense majorité —
+ * apportent zéro, ce qui est exact.
+ */
+function sessionEffort(sets: SessionWithSets['sets']): SessionEffort {
+  return sets.reduce(
+    (total, set) => ({
+      activeSeconds: total.activeSeconds + (set.durationSeconds ?? 0),
+      distanceMeters: total.distanceMeters + (set.distanceMeters ?? 0),
+    }),
+    { activeSeconds: 0, distanceMeters: 0 },
+  );
+}
 
 export interface SessionsPage {
   items: WorkoutSessionSummary[];
@@ -245,7 +268,7 @@ export class WorkoutsService {
       // Aucun des deux ne fait échouer la clôture : chacun journalise
       // ses erreurs et se rattrape à la séance suivante.
       await this.progress.updateRecordsForSession(userId, sessionId, closed.sets);
-      await this.community.recordWorkoutCompleted(userId, endedAt);
+      await this.community.recordWorkoutCompleted(userId, endedAt, sessionEffort(closed.sets));
     }
     return presentSessionDetail(closed);
   }

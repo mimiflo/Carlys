@@ -227,11 +227,28 @@ describe('CommunityChallengesRepository — départ d’un défi', () => {
   it('un défi quitté ne reçoit plus de nouvelles contributions', async () => {
     const b = bancDefis();
 
-    await b.repository.incrementSportContributions('user-1', new Date('2026-09-15T12:00:00.000Z'));
+    await b.repository.contribute('user-1', 'WORKOUTS', 1, new Date('2026-09-15T12:00:00.000Z'));
 
     expect(b.updateMany.mock.calls[0]?.[0].where).toMatchObject({
       userId: 'user-1',
       leftAt: null,
+      challenge: { metric: 'WORKOUTS' },
     });
+  });
+
+  it('une quantité NULLE n’écrit rien du tout', async () => {
+    const b = bancDefis();
+
+    // Une séance de fonte ne parcourt aucun mètre : le cas ordinaire, pas
+    // une erreur. Une écriture par métrique absente, en revanche, en serait
+    // une — une par séance et par défi, pour ajouter zéro.
+    await b.repository.contribute(
+      'user-1',
+      'DISTANCE_METERS',
+      0,
+      new Date('2026-09-15T12:00:00.000Z'),
+    );
+
+    expect(b.updateMany).not.toHaveBeenCalled();
   });
 });

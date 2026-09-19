@@ -4,7 +4,7 @@ import {
 } from '@carlys/api-contracts';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
-import { buildMonthlyChallenges } from '../domain/challenge-catalog';
+import { METRIC_UNITS, buildMonthlyChallenges } from '../domain/challenge-catalog';
 import {
   type ChallengeWithStats,
   CommunityChallengesRepository,
@@ -15,15 +15,36 @@ function presentChallenge(challenge: ChallengeWithStats): ChallengeContract {
   return {
     id: challenge.id,
     kind: challenge.kind,
+    metric: challenge.metric,
+    unit: METRIC_UNITS[challenge.metric],
     title: challenge.title,
     description: challenge.description,
     target: challenge.target,
+    // Le total BRUT part avec le ratio : la barre seule ne sait pas écrire
+    // « 127 / 500 séances », et le client qui voulait le faire n'avait que
+    // le pourcentage. Non borné, lui — un groupe qui dépasse son objectif
+    // mérite de le voir.
+    totalContribution: challenge.totalContribution,
     progress:
       challenge.target <= 0 ? 0 : Math.min(1, challenge.totalContribution / challenge.target),
     participants: challenge.participants,
     joined: challenge.joined,
     endsAt: challenge.endsAt.toISOString(),
   };
+}
+
+/**
+ * Ce qu'une séance a coûté, dans les unités que les défis savent compter.
+ *
+ * Nommé plutôt qu'écrit en clair à chaque signature : trois endroits le
+ * traversent (le service des séances qui le calcule, la façade communauté
+ * qui le relaie, ce service qui le verse), et un objet anonyme recopié trois
+ * fois est trois occasions de le faire diverger.
+ */
+export interface SessionEffort {
+  /** Secondes réellement chronométrées série par série, pauses exclues. */
+  activeSeconds: number;
+  distanceMeters: number;
 }
 
 /** Défis collectifs : progression de groupe, contributions des séances et des quiz. */
@@ -94,13 +115,31 @@ export class CommunityChallengesService {
   }
 
   /**
-   * Contribution des défis SPORT à la clôture d'une séance. Ne fait JAMAIS
-   * échouer la clôture : un échec est journalisé, le compte se rattrape à la
-   * prochaine séance (la barre est collective, pas comptable).
+   * Ce qu'une séance terminée verse aux défis : une séance, ses secondes
+   * d'effort, ses mètres parcourus.
+   *
+   * TROIS métriques pour une clôture, et c'est le but de la généralisation :
+   * le même fait alimente les défis qui comptent des séances ET ceux qui
+   * comptent des kilomètres, sans que personne n'ait à choisir. Les deux
+   * dernières valent zéro sur une séance de fonte, et zéro ne s'écrit pas.
+   *
+   * Ne fait JAMAIS échouer la clôture : un échec est journalisé, le compte se
+   * rattrape à la prochaine séance (la barre est collective, pas comptable).
    */
-  async recordWorkoutCompleted(userId: string, completedAt: Date): Promise<void> {
+  async recordWorkoutCompleted(
+    userId: string,
+    completedAt: Date,
+    effort: SessionEffort,
+  ): Promise<void> {
     try {
-      await this.challenges.incrementSportContributions(userId, completedAt);
+      await this.challenges.contribute(userId, 'WORKOUTS', 1, completedAt);
+      await this.challenges.contribute(userId, 'ACTIVE_SECONDS', effort.activeSeconds, completedAt);
+      await this.challenges.contribute(
+        userId,
+        'DISTANCE_METERS',
+        effort.distanceMeters,
+        completedAt,
+      );
     } catch (error) {
       this.logger.error(
         { err: error, userId },

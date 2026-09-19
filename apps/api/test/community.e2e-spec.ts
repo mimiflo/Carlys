@@ -116,6 +116,7 @@ describe('Communauté (e2e)', () => {
         slug: challengeSlug,
         month: currentMonth,
         kind: 'SPORT',
+        metric: 'WORKOUTS',
         title: 'Défi e2e',
         description: 'Défi collectif de test.',
         target: 2,
@@ -376,6 +377,60 @@ describe('Communauté (e2e)', () => {
     expect(challenge).toMatchObject({ joined: true, participants: 1, progress: 0.5 });
   });
 
+  it('défi DISTANCE : une séance verse ses MÈTRES, pas un +1', async () => {
+    // Le défi du mois en mètres : la généralisation de la métrique existe
+    // pour ça — le même fait (une séance terminée) alimente les défis qui
+    // comptent des séances ET ceux qui comptent des kilomètres.
+    const distanceSlug = `e2e-distance-${randomUUID()}`;
+    const distance = await prisma.communityChallenge.create({
+      data: {
+        slug: distanceSlug,
+        month: currentMonth,
+        kind: 'SPORT',
+        metric: 'DISTANCE_METERS',
+        title: 'Défi e2e distance',
+        description: 'Des mètres, pas des séances.',
+        target: 10_000,
+        endsAt: new Date(Date.now() + 7 * 24 * 3_600_000),
+      },
+    });
+    await authed(tokenB).post(`/api/v1/community/challenges/${distance.id}/join`).expect(201);
+
+    const sessionId = randomUUID();
+    await authed(tokenB)
+      .post('/api/v1/workout-sessions')
+      .send({ id: sessionId, name: 'Sortie longue', startedAt: new Date().toISOString() })
+      .expect(201);
+    await authed(tokenB)
+      .post(`/api/v1/workout-sessions/${sessionId}/sets`)
+      .send({
+        id: randomUUID(),
+        exerciseName: 'Course',
+        position: 0,
+        durationSeconds: 1_800,
+        distanceMeters: 5_000,
+        completedAt: new Date().toISOString(),
+      })
+      .expect(201);
+    await authed(tokenB)
+      .post(`/api/v1/workout-sessions/${sessionId}/complete`)
+      .send({})
+      .expect(200);
+
+    const challenges = data<CommunityChallenge[]>(
+      (await authed(tokenB).get('/api/v1/community/challenges').expect(200)).body,
+    );
+    const mien = challenges.find((entry) => entry.id === distance.id);
+    // 5 000 mètres sur 10 000, et l'unité voyage avec : la barre seule ne
+    // saurait pas dire ce qu'elle mesure.
+    expect(mien?.totalContribution).toBe(5_000);
+    expect(mien?.progress).toBe(0.5);
+    expect(mien?.unit).toBe('mètres');
+    expect(mien?.metric).toBe('DISTANCE_METERS');
+
+    await prisma.communityChallenge.deleteMany({ where: { slug: distanceSlug } });
+  });
+
   it('défi CULTURE : une première réponse juste contribue, le rejeu non', async () => {
     // Les jours sont RELATIFS depuis que le serveur borne `answeredOn` : une
     // exécution précédente a donc pu laisser la réponse d'aujourd'hui, et
@@ -390,6 +445,7 @@ describe('Communauté (e2e)', () => {
         slug: cultureSlug,
         month: currentMonth,
         kind: 'CULTURE',
+        metric: 'QUIZ_CORRECT',
         title: 'Défi culturel e2e',
         description: 'Cinq questions par jour.',
         target: 2,

@@ -355,8 +355,27 @@ entre amis, aucune ligue, aucun pas.
       base légale au §3, droit de retrait au §7, date de mise à jour.
 - [ ] Défis entre amis : portée, invitation/acceptation, durées (3 j / 7 j /
       30 j, extensible), clôture — modèle de données entier.
-- [ ] Généraliser la métrique d'un défi (`CommunityChallenge` ne sait compter
-      que +1) : pas, séances, kcal brûlées, temps de course, eau.
+- [x] Métrique généralisée — FAIT le 19 septembre 2026. Migration
+      `20260919200500_metrique_des_defis` : `CommunityChallenge.metric`,
+      rétro-remplie depuis `kind` (SPORT → WORKOUTS, CULTURE →
+      QUIZ_CORRECT) par un `UPDATE` écrit à la main entre l'ajout de la
+      colonne et son passage en NOT NULL. Les deux méthodes qui portaient
+      `+1` en dur fusionnent en `contribute(userId, metric, amount, at)`, et
+      une séance terminée verse désormais à TROIS métriques : une séance,
+      ses secondes chronométrées série par série (pas sa durée totale,
+      pauses comprises), ses mètres parcourus. Le contrat transporte
+      `metric`, `unit` et `totalContribution` : la carte écrit « 390 000 /
+      500 000 mètres » là où une barre nue ne disait pas ce qu'elle mesurait.
+      Quatrième défi du mois ajouté au catalogue (500 km à plusieurs).
+      **Reste ouvert, et dit comme tel** : `STEPS` et `WATER_ML` ne sont PAS
+      dans l'enum, parce que rien ne les alimente — les pas ne sont pas lus,
+      l'eau ne quitte jamais l'appareil. Et toutes les métriques présentes
+      sont des ÉVÉNEMENTS : le jour où l'une redéclare un total (les pas
+      d'hier resynchronisés), l'incrément devient faux et il faudra un
+      registre de totaux quotidiens avec un delta `max(0, nouveau − ancien)`.
+      Les kcal brûlées n'ont aucune source dans le dépôt (le TDEE est une
+      dépense estimée et statique, pas une mesure) : arbitrage propriétaire
+      avant d'en faire une métrique.
 - [ ] Ligues Bronze→Diamant sur la régularité : RÈGLES À ÉCRIRE D'ABORD
       (doc), sans repeser un fait déjà compté par l'axe Constance ; clôture de
       période SANS cron (matérialisation paresseuse, comme les défis).

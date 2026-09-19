@@ -97,6 +97,9 @@ Map<String, CommunityChallenge> sampleChallenges() => {
     description:
         'Le groupe additionne ses répétitions de squat jusqu’à 10 000 avant la fin du mois.',
     participants: 47,
+    target: 10000,
+    totalContribution: 6200,
+    unit: 'répétitions',
     progress: 0.62,
     joined: true,
     endsAt: DateTime.now().add(const Duration(days: 12)),
@@ -108,6 +111,9 @@ Map<String, CommunityChallenge> sampleChallenges() => {
     description:
         'Cinq questions d’anatomie par jour pendant une semaine. Le meilleur score gagne.',
     participants: 23,
+    target: 300,
+    totalContribution: 120,
+    unit: 'bonnes réponses',
     progress: 0.4,
     joined: false,
     endsAt: DateTime.now().add(const Duration(days: 5)),
@@ -119,6 +125,9 @@ Map<String, CommunityChallenge> sampleChallenges() => {
     description:
         'Une activité par jour pendant trois semaines, quelle qu’elle soit. La série collective compte.',
     participants: 128,
+    target: 500000,
+    totalContribution: 390000,
+    unit: 'mètres',
     progress: 0.78,
     joined: false,
     endsAt: DateTime.now().add(const Duration(days: 17)),
