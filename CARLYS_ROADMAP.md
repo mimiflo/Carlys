@@ -181,14 +181,23 @@ d'entraînement, aucune entrée de génération, aucune génération, aucune
 date sur `Program`, aucun lien `WorkoutSession` ↔ jour de programme.
 
 - [~] Durcissement inter-tranches (audit adverse de l'application entière,
-      demandé le 18 septembre 2026 avant la tranche « génération ») :
-      confirmés + relecture manuelle corrigés en deux commits (`1b94543`
-      anti-clignotement/sérialisation matériel/`AppChoiceCard`, `6b56dbe`
-      purge des célébrations, gardes de feuille, relais `Semantics.onTap`,
-      parité hors-ligne de l'onboarding, DTO displayName/birthDate, lecture
-      d'entraînement transactionnelle). Reste : verdicts du workflow de
-      reprise (9 sous-systèmes jamais relus + 15 constats hors-ligne et
-      programmes à trancher) — corriger les confirmés avant la génération.
+      demandé le 18 septembre 2026 avant la tranche « génération ») —
+      CINQ commits : `1b94543` (anti-clignotement, matériel sérialisé,
+      `AppChoiceCard`), `6b56dbe` (purge des célébrations, gardes de
+      feuille, relais `Semantics.onTap`, parité hors-ligne de l'onboarding,
+      DTO displayName/birthDate, lecture d'entraînement transactionnelle),
+      `c1dd133` (les 13 confirmés : purge vs rapatriement en vol, séance
+      active atomique, `doneSetId` rendu à la suppression, corrections non
+      écrasées, calendrier qui dit ses échecs, contrat ↔ DTO alignés),
+      `7be4f83` (les 15 constats nutrition/Academy/progression :
+      `currentDayProvider`, `SerialQueue`, faits de récompense complets),
+      `611b484` (jour figé de l'accueil, `dashboard_controllers` scindé et
+      rangé en `presentation/providers/`).
+      RESTE : sept sous-systèmes que les relecteurs adverses n'ont jamais
+      vus (communauté/coach, compte, design system, les trois pans d'API,
+      transverse) — leurs agents avaient échoué sur la limite de session,
+      la reprise est programmée. Une passe transversale par MOTIF les a
+      déjà balayés sur les défauts récurrents connus.
 
 - [x] Objectif d'entraînement : enum `TrainingGoal` 8 valeurs (perte de
       gras, muscle, recomposition, Hyrox, marathon, maintien, force,
