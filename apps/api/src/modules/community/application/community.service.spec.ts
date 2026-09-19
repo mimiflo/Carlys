@@ -142,6 +142,27 @@ describe('CommunityService — demandes d’ami', () => {
     expect(stubs.createRequest).not.toHaveBeenCalled();
   });
 
+  it('demandes croisées SIMULTANÉES : la base tranche, l’amitié se noue quand même', async () => {
+    // Les deux personnes lisent « pas de lien » puis écrivent. L'unicité de
+    // la paire refuse la seconde (auparavant : deux lignes pour une même
+    // paire, dont une en attente pour toujours — ou un 500 sur une route qui
+    // promet 202). La perdante relit la ligne gagnante et l'accepte.
+    const stubs = buildStubs();
+    stubs.findUserIdByEmail.mockResolvedValue({ id: FRIEND });
+    stubs.findFriendshipBetween.mockResolvedValueOnce(null).mockResolvedValue({
+      id: 'demande-1',
+      requesterId: FRIEND,
+      addresseeId: ME,
+      status: FriendRequestStatus.PENDING,
+    });
+    stubs.createRequest.mockResolvedValue(null); // Paire déjà prise.
+    const service = buildService(stubs);
+
+    await service.requestFriend(ME, 'ami@carlys.test');
+
+    expect(stubs.setRequestStatus).toHaveBeenCalledWith('demande-1', FriendRequestStatus.ACCEPTED);
+  });
+
   it('redemander sa PROPRE demande en attente ne crée pas de doublon', async () => {
     const stubs = buildStubs();
     stubs.findUserIdByEmail.mockResolvedValue({ id: FRIEND });

@@ -6,7 +6,7 @@ import {
   type FriendRequest,
 } from '@carlys/api-contracts';
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { FriendRequestStatus } from '@prisma/client';
+import { type Friendship, FriendRequestStatus } from '@prisma/client';
 import { CommunityModerationRepository } from '../infrastructure/community-moderation.repository';
 import { CommunityRepository, type FriendRow } from '../infrastructure/community.repository';
 import { normalizeFriendCode } from '../../users/domain/friend-code';
@@ -101,11 +101,32 @@ export class CommunityService {
       return; // Pour chacun des deux, l'autre n'existe plus.
     }
     const existing = await this.community.findFriendshipBetween(userId, targetId);
-    if (existing === null) {
-      await this.community.createRequest(userId, targetId);
+    if (existing !== null) {
+      await this.applyToExisting(userId, targetId, existing);
+      return;
+    }
+    const created = await this.community.createRequest(userId, targetId);
+    if (created !== null) {
       await this.notifier.newRequest(userId, targetId);
       return;
     }
+    // L'autre côté a écrit la ligne de la paire entre notre lecture et notre
+    // écriture — c'est exactement le cas « demandes croisées ». On la relit
+    // et on lui applique les mêmes règles. UNE seule fois : la ligne existe
+    // désormais, et rien ne la fait disparaître dans ce sens-là.
+    const concurrent = await this.community.findFriendshipBetween(userId, targetId);
+    if (concurrent === null) {
+      return;
+    }
+    await this.applyToExisting(userId, targetId, concurrent);
+  }
+
+  /** Les trois règles, appliquées à une ligne d'amitié qui existe déjà. */
+  private async applyToExisting(
+    userId: string,
+    targetId: string,
+    existing: Friendship,
+  ): Promise<void> {
     if (existing.status === FriendRequestStatus.PENDING) {
       if (existing.requesterId === targetId) {
         // Demandes croisées = amitié voulue des deux côtés.

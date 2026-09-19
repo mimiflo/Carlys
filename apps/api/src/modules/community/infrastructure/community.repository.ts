@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
-import { type Encouragement, type Friendship, FriendRequestStatus } from '@prisma/client';
+import { type Encouragement, type Friendship, FriendRequestStatus, Prisma } from '@prisma/client';
 import { PrismaService } from '../../../database/prisma/prisma.service';
+import { friendshipPair } from '../domain/friendship-pair';
 
 /** Ami accepté, avec le nécessaire pour l'affichage et la confidentialité. */
 export interface FriendRow {
@@ -25,22 +26,38 @@ export class CommunityRepository {
 
   // ── Amitiés ─────────────────────────────────────────────────────────────
 
-  /** La ligne d'amitié entre deux personnes, quel que soit le sens. */
+  /**
+   * La ligne d'amitié entre deux personnes, quel que soit le sens. La paire
+   * ordonnée est unique en base : une lecture d'index, jamais deux lignes.
+   */
   findFriendshipBetween(a: string, b: string): Promise<Friendship | null> {
-    return this.prisma.friendship.findFirst({
-      where: {
-        OR: [
-          { requesterId: a, addresseeId: b },
-          { requesterId: b, addresseeId: a },
-        ],
-      },
+    return this.prisma.friendship.findUnique({
+      where: { userLowId_userHighId: friendshipPair(a, b) },
     });
   }
 
-  createRequest(requesterId: string, addresseeId: string): Promise<Friendship> {
-    return this.prisma.friendship.create({
-      data: { requesterId, addresseeId },
-    });
+  /**
+   * Crée la demande, ou rend `null` si la paire vient d'être écrite par
+   * l'autre côté.
+   *
+   * C'est la base qui tranche, pas la lecture qui précède : deux personnes
+   * qui se demandent en même temps lisent toutes deux « pas de lien » et
+   * écrivent toutes deux. L'unicité de la paire refuse la seconde (P2002) ;
+   * l'appelant relit alors la ligne gagnante et lui applique ses règles —
+   * c'est exactement le cas « demandes croisées = amitié ». Sans ça, la
+   * seconde écriture remontait en 500 sur une route qui promet 202.
+   */
+  async createRequest(requesterId: string, addresseeId: string): Promise<Friendship | null> {
+    try {
+      return await this.prisma.friendship.create({
+        data: { requesterId, addresseeId, ...friendshipPair(requesterId, addresseeId) },
+      });
+    } catch (error) {
+      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
+        return null;
+      }
+      throw error;
+    }
   }
 
   findRequestById(id: string): Promise<Friendship | null> {

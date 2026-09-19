@@ -72,18 +72,31 @@ export class CommunityChallengesRepository {
     return this.prisma.communityChallenge.findUnique({ where: { id } });
   }
 
-  /** Rejoindre est idempotent : rejouer la requête ne crée pas de doublon. */
+  /**
+   * Rejoindre est idempotent : rejouer la requête ne crée pas de doublon.
+   * Revenir après un départ REPREND la même ligne — la contribution déjà
+   * versée n'est ni perdue ni comptée deux fois.
+   */
   async joinChallenge(challengeId: string, userId: string): Promise<void> {
     await this.prisma.challengeParticipation.upsert({
       where: { challengeId_userId: { challengeId, userId } },
       create: { challengeId, userId },
-      update: {},
+      update: { leftAt: null },
     });
   }
 
+  /**
+   * Quitter DATE le départ, sans effacer la ligne.
+   *
+   * La supprimer retirait la contribution déjà versée de la somme collective :
+   * la barre du mois, que tout le monde voit, redescendait d'autant — un
+   * compteur collectif ne peut que monter. Ce qui a été fait pendant qu'on
+   * participait reste acquis au défi ; seule la participation s'arrête.
+   */
   async leaveChallenge(challengeId: string, userId: string): Promise<void> {
-    await this.prisma.challengeParticipation.deleteMany({
-      where: { challengeId, userId },
+    await this.prisma.challengeParticipation.updateMany({
+      where: { challengeId, userId, leftAt: null },
+      data: { leftAt: new Date() },
     });
   }
 
@@ -99,9 +112,14 @@ export class CommunityChallengesRepository {
   }
 
   /**
-   * Agrège en BASE, en deux requêtes de taille fixe, quel que soit le nombre
-   * de participants : un `groupBy` pour la somme et le compte, une lecture
-   * ciblée pour savoir si l'appelant a rejoint.
+   * Agrège en BASE, en trois requêtes de taille fixe, quel que soit le nombre
+   * de participants.
+   *
+   * La SOMME porte sur toutes les lignes, parties comprises : une
+   * contribution versée appartient à l'objectif collectif. Le COMPTE, lui,
+   * ne retient que les participants encore présents — c'est « combien sommes-
+   * nous », pas « combien sommes-nous passés ». Deux questions différentes,
+   * donc deux agrégats.
    */
   private async withStats(
     challenges: CommunityChallenge[],
@@ -111,38 +129,45 @@ export class CommunityChallengesRepository {
       return [];
     }
     const ids = challenges.map((challenge) => challenge.id);
-    const [totaux, miennes] = await Promise.all([
+    const [totaux, presents, miennes] = await Promise.all([
       this.prisma.challengeParticipation.groupBy({
         by: ['challengeId'],
         where: { challengeId: { in: ids } },
         _sum: { contribution: true },
+      }),
+      this.prisma.challengeParticipation.groupBy({
+        by: ['challengeId'],
+        where: { challengeId: { in: ids }, leftAt: null },
         _count: { _all: true },
       }),
       this.prisma.challengeParticipation.findMany({
-        where: { challengeId: { in: ids }, userId },
+        where: { challengeId: { in: ids }, userId, leftAt: null },
         select: { challengeId: true },
       }),
     ]);
 
     const parDefi = new Map(totaux.map((ligne) => [ligne.challengeId, ligne]));
+    const parDefiPresents = new Map(presents.map((ligne) => [ligne.challengeId, ligne]));
     const rejoints = new Set(miennes.map((ligne) => ligne.challengeId));
 
-    return challenges.map((challenge) => {
-      const ligne = parDefi.get(challenge.id);
-      return {
-        ...challenge,
-        totalContribution: ligne?._sum.contribution ?? 0,
-        participants: ligne?._count._all ?? 0,
-        joined: rejoints.has(challenge.id),
-      };
-    });
+    return challenges.map((challenge) => ({
+      ...challenge,
+      totalContribution: parDefi.get(challenge.id)?._sum.contribution ?? 0,
+      participants: parDefiPresents.get(challenge.id)?._count._all ?? 0,
+      joined: rejoints.has(challenge.id),
+    }));
   }
 
-  /** +1 sur tous les défis SPORT rejoints dont la fenêtre couvre `at`. */
+  /**
+   * +1 sur tous les défis SPORT ENCORE rejoints dont la fenêtre couvre `at`.
+   * `leftAt: null` : la ligne d'un défi quitté survit pour garder sa
+   * contribution acquise, elle ne doit plus en recevoir de nouvelles.
+   */
   async incrementSportContributions(userId: string, at: Date): Promise<void> {
     await this.prisma.challengeParticipation.updateMany({
       where: {
         userId,
+        leftAt: null,
         challenge: { kind: 'SPORT', startsAt: { lte: at }, endsAt: { gte: at } },
       },
       data: { contribution: { increment: 1 } },
@@ -229,7 +254,8 @@ export class CommunityChallengesRepository {
   }
 
   /**
-   * +1 sur tous les défis CULTURE rejoints dont la fenêtre couvre `at`.
+   * +1 sur tous les défis CULTURE ENCORE rejoints dont la fenêtre couvre
+   * `at` — même règle que la voie SPORT sur `leftAt`.
    *
    * `client` permet de l'exécuter DANS la transaction de `recordQuizAnswer`
    * plutôt qu'à côté ; sans argument, il travaille hors transaction, comme
@@ -243,6 +269,7 @@ export class CommunityChallengesRepository {
     await client.challengeParticipation.updateMany({
       where: {
         userId,
+        leftAt: null,
         challenge: { kind: 'CULTURE', startsAt: { lte: at }, endsAt: { gte: at } },
       },
       data: { contribution: { increment: 1 } },

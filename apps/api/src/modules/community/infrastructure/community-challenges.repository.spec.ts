@@ -127,3 +127,111 @@ describe('CommunityChallengesRepository.recordQuizAnswer', () => {
     );
   });
 });
+
+/**
+ * CE QUE CETTE SECTION PROTÈGE : un compteur collectif ne redescend jamais.
+ *
+ * Quitter un défi EFFAÇAIT la ligne de participation. Les séances déjà
+ * comptées disparaissaient de la somme affichée à tous les autres : la barre
+ * du mois reculait, sans que personne n'y puisse rien. Ce qui a été fait
+ * pendant qu'on participait appartient au défi ; seule la présence s'arrête.
+ */
+
+/** Ce que le test lit d'un appel d'agrégat : ce qu'il demande, et sur quoi. */
+interface GroupByArgs {
+  _sum?: unknown;
+  where: Record<string, unknown>;
+}
+
+interface BancDefis {
+  repository: CommunityChallengesRepository;
+  upsert: jest.Mock;
+  updateMany: jest.Mock<Promise<{ count: number }>, [{ where: Record<string, unknown> }]>;
+  deleteMany: jest.Mock;
+  groupBy: jest.Mock<Promise<unknown[]>, [GroupByArgs]>;
+}
+
+/** Un défi ouvert, deux participants présents, un parti qui a contribué. */
+function bancDefis(): BancDefis {
+  const upsert = jest.fn().mockResolvedValue({});
+  const updateMany = jest
+    .fn<Promise<{ count: number }>, [{ where: Record<string, unknown> }]>()
+    .mockResolvedValue({ count: 1 });
+  const deleteMany = jest.fn().mockResolvedValue({ count: 1 });
+  // Les deux agrégats se distinguent par ce qu'ils demandent : la SOMME
+  // porte sur toutes les lignes, le COMPTE sur les présents seulement.
+  const groupBy = jest.fn<Promise<unknown[]>, [GroupByArgs]>((args) =>
+    Promise.resolve(
+      args._sum === undefined
+        ? [{ challengeId: 'defi-1', _count: { _all: 2 } }]
+        : [{ challengeId: 'defi-1', _sum: { contribution: 30 } }],
+    ),
+  );
+  const prisma = {
+    communityChallenge: {
+      findMany: jest.fn().mockResolvedValue([{ id: 'defi-1', kind: 'SPORT', target: 100 }]),
+    },
+    challengeParticipation: {
+      upsert,
+      updateMany,
+      deleteMany,
+      groupBy,
+      findMany: jest.fn().mockResolvedValue([]),
+    },
+  };
+  return {
+    repository: new CommunityChallengesRepository(prisma as unknown as PrismaService),
+    upsert,
+    updateMany,
+    deleteMany,
+    groupBy,
+  };
+}
+
+describe('CommunityChallengesRepository — départ d’un défi', () => {
+  it('quitter DATE le départ, la ligne n’est jamais effacée', async () => {
+    const b = bancDefis();
+
+    await b.repository.leaveChallenge('defi-1', 'user-1');
+
+    expect(b.deleteMany).not.toHaveBeenCalled();
+    expect(b.updateMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { challengeId: 'defi-1', userId: 'user-1', leftAt: null },
+      }),
+    );
+  });
+
+  it('revenir reprend la MÊME ligne : contribution ni perdue ni doublée', async () => {
+    const b = bancDefis();
+
+    await b.repository.joinChallenge('defi-1', 'user-1');
+
+    expect(b.upsert).toHaveBeenCalledWith(expect.objectContaining({ update: { leftAt: null } }));
+  });
+
+  it('la somme garde les partants, le compte ne retient que les présents', async () => {
+    const b = bancDefis();
+
+    const [stats] = await b.repository.listOpenChallenges(
+      new Date('2026-09-15T12:00:00.000Z'),
+      'user-1',
+    );
+
+    expect(stats).toMatchObject({ totalContribution: 30, participants: 2, joined: false });
+    // Le cœur du correctif : la SOMME ne filtre pas les partants.
+    const somme = b.groupBy.mock.calls.find(([args]) => args._sum !== undefined)?.[0];
+    expect(somme?.where).not.toHaveProperty('leftAt');
+  });
+
+  it('un défi quitté ne reçoit plus de nouvelles contributions', async () => {
+    const b = bancDefis();
+
+    await b.repository.incrementSportContributions('user-1', new Date('2026-09-15T12:00:00.000Z'));
+
+    expect(b.updateMany.mock.calls[0]?.[0].where).toMatchObject({
+      userId: 'user-1',
+      leftAt: null,
+    });
+  });
+});

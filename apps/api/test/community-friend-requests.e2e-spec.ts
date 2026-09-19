@@ -21,6 +21,7 @@ import request from 'supertest';
 import { type App } from 'supertest/types';
 import { AppModule } from '../src/app/app.module';
 import { configureApp } from '../src/app/configure-app';
+import { friendshipPair } from '../src/modules/community/domain/friendship-pair';
 
 /** Limite dédiée de POST /community/requests (voir CommunityController). */
 const FRIEND_REQUEST_LIMIT = 10;
@@ -155,5 +156,32 @@ describe('Demandes d’ami : refus opposable et limite de débit (e2e)', () => {
     // Le seau est propre à la route : le reste de la communauté répond.
     await authed(tokenA).get('/api/v1/community/friends').expect(200);
     await authed(tokenA).get('/api/v1/community/requests').expect(200);
+  });
+
+  // Écriture DIRECTE, sans passer par la route : c'est la contrainte de base
+  // qu'on éprouve ici, pas le service. Elle ne consomme donc pas le budget de
+  // débit que le scénario précédent vient d'épuiser.
+  it('la PAIRE est unique en base, quel que soit le sens de la demande', async () => {
+    // Le garde-fou qui rend la course impossible. L'unicité était DIRIGÉE
+    // (`requesterId`, `addresseeId`) : deux personnes qui se demandaient en
+    // même temps lisaient toutes deux « pas de lien » et écrivaient toutes
+    // deux leur ligne. Accepter l'une laissait l'autre en attente pour
+    // toujours dans la liste des demandes reçues — et une demande en double
+    // remontait en 500 sur une route qui promet 202.
+    const pair = friendshipPair(userIdA, userIdB);
+    await prisma.friendship.deleteMany({ where: pair });
+    await prisma.friendship.create({
+      data: { requesterId: userIdA, addresseeId: userIdB, ...pair },
+    });
+
+    await expect(
+      prisma.friendship.create({
+        // Le sens INVERSE : exactement ce que l'ancienne contrainte laissait
+        // passer.
+        data: { requesterId: userIdB, addresseeId: userIdA, ...pair },
+      }),
+    ).rejects.toMatchObject({ code: 'P2002' });
+
+    expect(await prisma.friendship.count({ where: pair })).toBe(1);
   });
 });

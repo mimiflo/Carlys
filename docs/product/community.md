@@ -47,10 +47,10 @@ l'application ne dépend d'elle.
 
 | Table | Rôle |
 | --- | --- |
-| `Friendship` | UNE ligne par paire ; `PENDING` → `ACCEPTED`/`DECLINED`, direction conservée (qui a demandé). La symétrie est imposée par le service. |
+| `Friendship` | UNE ligne par paire ; `PENDING` → `ACCEPTED`/`DECLINED`, direction conservée (qui a demandé). L'unicité porte sur la PAIRE ordonnée (`userLowId`, `userHighId`) : c'est la base qui l'impose, y compris quand les deux personnes se demandent en même temps. |
 | `Encouragement` | Mot d'un ami ; le nom de l'expéditeur est lu au moment de servir (nom COURANT, pas dénormalisé). |
 | `CommunityChallenge` | Défi collectif du MOIS (`month`, `YYYY-MM` UTC), `SPORT` ou `CULTURE`, avec `target` et fenêtre `startsAt`/`endsAt` ; unique par `(slug, month)`, matérialisé paresseusement depuis le catalogue en code, jamais créé par un utilisateur. |
-| `ChallengeParticipation` | Participation + `contribution` individuelle à l'objectif. |
+| `ChallengeParticipation` | Participation + `contribution` individuelle à l'objectif. Quitter DATE le départ (`leftAt`) sans effacer la ligne : la contribution déjà versée reste acquise au collectif, seule la présence s'arrête. |
 | `CommunityPreference` | `sharesProgress` (absence = partagé, défaut du modèle). |
 | `CommunityBlock` | Blocage unilatéral `(blockerId, blockedId)`, unique par paire orientée ; consulté dans les DEUX sens partout où deux personnes se rencontrent. |
 | `CommunityReport` | Signalement : `reporterId`, `reportedUserId`, `encouragementId?` (mis à `NULL` si le message est supprimé), `encouragementMessage?` (cliché du texte visé, pris dans la même transaction que le signalement : la preuve survit au retrait du message), `reason` (`HARCELEMENT`, `SPAM`, `CONTENU_INAPPROPRIE`, `AUTRE`), `details?` (500 caractères), `status` (`OPEN`, `RESOLVED`), `resolvedAt?`. |
@@ -69,7 +69,7 @@ l'application ne dépend d'elle.
 | POST | `/requests/:id/accept` · `/decline` | Répondre (destinataire uniquement) |
 | GET | `/challenges` | Défis ouverts, progression collective incluse ; crée le jeu du mois à la première lecture (voir ci-dessous) |
 | POST | `/challenges/:id/join` | Rejoindre (idempotent) |
-| DELETE | `/challenges/:id/join` | Quitter (idempotent) |
+| DELETE | `/challenges/:id/join` | Quitter (idempotent) : la contribution déjà versée reste au compteur collectif |
 | GET · PATCH | `/profile` | Ma préférence `sharesProgress` + mon `friendCode` |
 | POST | `/blocks/:userId` | Bloquer (idempotent, `204`) : retire amitié et demandes dans les deux sens ; `400` soi-même, `404` compte inconnu |
 | DELETE | `/blocks/:userId` | Débloquer (idempotent, `204`) : ne rétablit rien |

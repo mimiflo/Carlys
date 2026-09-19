@@ -1127,11 +1127,20 @@ model Friendship {
   status      FriendRequestStatus @default(PENDING)
   createdAt   DateTime            @default(now())
   respondedAt DateTime?
+  /// La PAIRE, ordonnée : les deux mêmes identifiants, toujours dans le même
+  /// ordre, quel que soit le sens de la demande. C'est la seule forme qu'une
+  /// base sait rendre unique. L'unicité dirigée `(requesterId, addresseeId)`
+  /// laissait passer deux lignes pour une même paire dès que les deux
+  /// personnes se demandaient en même temps : chacune lisait « pas de lien »,
+  /// chacune écrivait la sienne, et accepter l'une laissait l'autre en
+  /// attente pour toujours dans la liste des demandes reçues.
+  userLowId   String              @db.Uuid
+  userHighId  String              @db.Uuid
 
   requester User @relation("FriendshipsSent", fields: [requesterId], references: [id], onDelete: Cascade)
   addressee User @relation("FriendshipsReceived", fields: [addresseeId], references: [id], onDelete: Cascade)
 
-  @@unique([requesterId, addresseeId])
+  @@unique([userLowId, userHighId])
   @@index([addresseeId, status])
   @@index([requesterId, status])
 }
@@ -1277,6 +1286,12 @@ model ChallengeParticipation {
   /// incrémentée à la clôture de chaque séance pendant la fenêtre du défi.
   contribution Int      @default(0)
   joinedAt     DateTime @default(now())
+  /// Départ du défi. La ligne SURVIT au départ : la contribution déjà versée
+  /// appartient à l'objectif COLLECTIF, pas à celui qui l'a versée. Effacer
+  /// la ligne faisait reculer un compteur qui ne peut que monter — les autres
+  /// participants voyaient la barre du mois redescendre sans rien y pouvoir.
+  /// Rejoindre à nouveau remet ce champ à `null`.
+  leftAt       DateTime?
 
   challenge CommunityChallenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
   user      User               @relation(fields: [userId], references: [id], onDelete: Cascade)

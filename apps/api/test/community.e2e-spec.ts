@@ -354,13 +354,26 @@ describe('Communauté (e2e)', () => {
     const mine = challenges.find((entry) => entry.id === challengeId);
     expect(mine?.progress).toBe(0.5);
 
-    // Quitter : la carte repasse « non rejointe » pour Alice.
+    // Quitter : la carte repasse « non rejointe » pour Alice, et le compte
+    // des participants tombe — elle n'est plus là.
     challenge = data<CommunityChallenge>(
       (await authed(tokenA).delete(`/api/v1/community/challenges/${challengeId}/join`).expect(200))
         .body,
     );
     expect(challenge.joined).toBe(false);
     expect(challenge.participants).toBe(0);
+    // Mais la séance qu'elle a faite pendant qu'elle participait reste
+    // acquise au COLLECTIF. La ligne de participation était effacée : la
+    // barre du mois reculait pour tous les autres, sans que personne n'y
+    // puisse rien — un compteur collectif ne peut que monter.
+    expect(challenge.progress).toBe(0.5);
+
+    // Et revenir ne la compte pas une seconde fois : c'est la même ligne.
+    challenge = data<CommunityChallenge>(
+      (await authed(tokenA).post(`/api/v1/community/challenges/${challengeId}/join`).expect(201))
+        .body,
+    );
+    expect(challenge).toMatchObject({ joined: true, participants: 1, progress: 0.5 });
   });
 
   it('défi CULTURE : une première réponse juste contribue, le rejeu non', async () => {

@@ -754,9 +754,15 @@ manuelles d'entitlements.
 ### `Friendship`
 UNE ligne par paire, direction conservée (qui a demandé).
 - Champs clés : `requesterId`, `addresseeId`, `status`
-  (`PENDING | ACCEPTED | DECLINED`), `respondedAt`.
-  Unique `(requesterId, addresseeId)` ; la symétrie est imposée par le
-  service. Une ligne `DECLINED` survit au blocage : elle porte le délai.
+  (`PENDING | ACCEPTED | DECLINED`), `respondedAt`, plus la PAIRE ordonnée
+  `userLowId`/`userHighId` (les deux mêmes identifiants, toujours rangés
+  pareil).
+  **Unique `(userLowId, userHighId)`** : c'est la BASE qui garantit une seule
+  ligne par paire, plus le service. L'unicité dirigée d'avant
+  (`requesterId`, `addresseeId`) laissait passer deux lignes dès que les deux
+  personnes se demandaient en même temps — chacune lisait « pas de lien »,
+  chacune écrivait la sienne, et accepter l'une laissait l'autre en attente
+  pour toujours. Une ligne `DECLINED` survit au blocage : elle porte le délai.
 - Relations : n–1 `User` (deux fois, `Cascade`).
 
 ### `Encouragement`
@@ -777,7 +783,13 @@ code (jamais créé par un utilisateur).
 
 ### `ChallengeParticipation`
 Participation et `contribution` individuelle à l'objectif collectif.
-- Clé primaire composée `(challengeId, userId)` ; `joinedAt`.
+- Clé primaire composée `(challengeId, userId)` ; `joinedAt`, `leftAt?`.
+- **La ligne survit au départ** : `leftAt` date la sortie, elle n'efface rien.
+  La somme collective porte sur TOUTES les lignes (une contribution versée
+  appartient au défi) ; le compte des participants et les incréments, eux, ne
+  retiennent que `leftAt IS NULL`. Supprimer la ligne faisait reculer un
+  compteur collectif, que tous les autres participants voient. Revenir reprend
+  la même ligne (`leftAt` remis à `null`) : rien n'est perdu ni compté deux fois.
 - Relations : n–1 `CommunityChallenge`, n–1 `User` (`Cascade`).
 
 ### `CommunityPreference` et `QuizAnswer`
