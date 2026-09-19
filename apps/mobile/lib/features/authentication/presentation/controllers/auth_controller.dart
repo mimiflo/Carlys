@@ -160,14 +160,19 @@ class AuthController extends Notifier<AuthState> {
 
   /// Le compte vient d'être supprimé côté serveur : l'appareil l'oublie.
   ///
-  /// Rien n'est demandé au serveur ici — ni déconnexion ni oubli du jeton
-  /// push : la suppression a déjà retiré sessions, refresh tokens et jetons
-  /// d'appareil. Restent les jetons du trousseau, puis la purge de frontière
-  /// de compte, qui bascule l'interface vers l'écran de connexion.
+  /// Rien n'est demandé au SERVEUR ici — ni déconnexion ni désenregistrement
+  /// du jeton push : la suppression a déjà retiré sessions, refresh tokens et
+  /// jetons d'appareil. Restent trois gestes LOCAUX : remettre à neuf
+  /// l'enregistrement push, effacer les jetons du trousseau, puis purger la
+  /// frontière de compte, qui bascule l'interface vers l'écran de connexion.
   ///
   /// NE JETTE JAMAIS : l'écran appelle `submit()` sans l'attendre, donc une
   /// exception d'ici deviendrait une erreur asynchrone non capturée.
   Future<void> forgetDeletedAccount() async {
+    // L'enregistrement push SURVIT à la bascule de compte, et ce chemin ne le
+    // touchait pas : `ensureStarted()` ressortait aussitôt pour la personne
+    // suivante, qui ne recevait plus rien jusqu'au redémarrage.
+    await ref.read(pushRegistrationProvider).forgetLocally();
     try {
       await ref.read(authRepositoryProvider).clearLocalSession();
     } catch (error) {
@@ -177,9 +182,7 @@ class AuthController extends Notifier<AuthState> {
       // keystore en vrac, canal absent). Laisser filer coûtait cher : la
       // bascule n'avait jamais lieu et l'écran restait tel quel — compte
       // détruit côté serveur, jetons toujours sur l'appareil, pas un mot à
-      // l'utilisateur. Ces jetons ne valent d'ailleurs plus rien : le compte
-      // n'existe plus, aucun renouvellement ne passera. On journalise, et on
-      // va jusqu'à l'écran de connexion.
+      // l'utilisateur. Ces jetons ne valent d'ailleurs plus rien.
       _logger.error('Jetons du compte supprimé non effacés', error: error);
     }
     await _leaveAccount();

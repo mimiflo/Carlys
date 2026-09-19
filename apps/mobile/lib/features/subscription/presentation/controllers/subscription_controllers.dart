@@ -24,19 +24,48 @@ final offerCatalogProvider = FutureProvider.autoDispose<OfferCatalog>((ref) {
 });
 
 /// Comment un achat se termine, du point de vue de l'écran.
-enum CheckoutOutcome {
-  /// La page de paiement s'est ouverte. Le droit, lui, arrivera par le
-  /// serveur : rien n'est accordé ici.
-  opened,
+///
+/// Scellé plutôt qu'énuméré, pour la même raison que [PortalOutcome] : un
+/// refus du serveur porte SON message — « cet abonnement est déjà actif »,
+/// « cet accès a été suspendu, contacte le support » — et l'écran le montre
+/// tel quel. Il répondait « la page de paiement n'a pas pu s'ouvrir » à ces
+/// deux cas-là, ce qui est faux et n'indique aucune suite.
+sealed class CheckoutOutcome {
+  const CheckoutOutcome();
+}
 
-  /// Le serveur n'ouvre pas encore de paiement.
-  unavailable,
+/// La page de paiement s'est ouverte. Le droit, lui, arrivera par le
+/// serveur : rien n'est accordé ici.
+final class CheckoutOpened extends CheckoutOutcome {
+  const CheckoutOpened();
+}
 
-  /// L'appareil n'a pas pu ouvrir de navigateur.
-  cannotOpen,
+/// Le serveur n'ouvre pas encore de paiement (503, prestataire non
+/// configuré).
+final class CheckoutUnavailable extends CheckoutOutcome {
+  const CheckoutUnavailable();
+}
 
-  /// Réseau, refus, panne : l'écran le dit au lieu de rester muet.
-  failed,
+/// Pas de réseau : la page de paiement vit chez le prestataire.
+final class CheckoutOffline extends CheckoutOutcome {
+  const CheckoutOffline();
+}
+
+/// Le serveur refuse, et dit pourquoi.
+final class CheckoutRefused extends CheckoutOutcome {
+  const CheckoutRefused(this.message);
+
+  final String message;
+}
+
+/// L'appareil n'a pas pu ouvrir de navigateur.
+final class CheckoutCannotOpen extends CheckoutOutcome {
+  const CheckoutCannotOpen();
+}
+
+/// Panne, réponse invalide : l'écran le dit au lieu de rester muet.
+final class CheckoutFailed extends CheckoutOutcome {
+  const CheckoutFailed();
 }
 
 /// Comment l'ouverture du portail de facturation se termine.
@@ -111,17 +140,33 @@ class SubscriptionActions {
       // seconde.
       final id = _paiementsEnCours.putIfAbsent(offer.id, () => _uuid.v4());
       url = await repository.startCheckout(offerId: offer.id, id: id);
-    } on StateError {
-      return CheckoutOutcome.unavailable;
+    } on NetworkException {
+      return const CheckoutOffline();
+    } on ValidationException catch (exception) {
+      // Refus MÉTIER (409 « abonnement déjà actif ») : le serveur explique
+      // et donne la suite, l'écran répète.
+      return CheckoutRefused(exception.message);
+    } on ForbiddenException catch (exception) {
+      // 403 « accès suspendu par notre équipe » : surtout pas un message
+      // d'échec technique, il y a une démarche à faire.
+      return CheckoutRefused(exception.message);
+    } on ServerException catch (exception) {
+      // Le paiement n'est pas configuré côté serveur : 503, et c'est le
+      // seul cas qui mérite « pas encore ouvert ». Le `on StateError` d'avant
+      // n'attrapait RIEN — le dépôt ne lève que des `AppException` — donc ce
+      // cas-là tombait dans l'échec générique, comme tous les autres.
+      return exception.statusCode == 503
+          ? const CheckoutUnavailable()
+          : const CheckoutFailed();
     } on Object {
-      return CheckoutOutcome.failed;
+      return const CheckoutFailed();
     }
 
     // Rien n'est relu ici : `launchUrl` rend la main dès que le navigateur
     // s'ouvre, l'utilisateur n'a pas encore payé. La relecture se fait au
     // retour au premier plan (`SubscriptionResumeRefresh`).
     final opened = await _ref.read(externalLinkOpenerProvider)(Uri.parse(url));
-    return opened ? CheckoutOutcome.opened : CheckoutOutcome.cannotOpen;
+    return opened ? const CheckoutOpened() : const CheckoutCannotOpen();
   }
 
   /// Ouvre le portail de facturation du prestataire : moyen de paiement,

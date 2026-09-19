@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/feedback/server_gesture.dart';
 import '../../../../design_system/design_system.dart';
 import '../../../notifications/domain/repositories/device_token_repository.dart';
 import '../../../notifications/presentation/controllers/notification_preferences.dart';
@@ -166,9 +167,17 @@ class NotificationSettingsSection extends ConsumerWidget {
             // Une catégorie jamais réglée vaut « acceptée » : même règle que
             // le serveur, sinon la bascule clignoterait à l'ouverture.
             toggleValue: preferences[category] ?? true,
-            onToggle: (value) => ref
-                .read(notificationPreferenceActionsProvider)
-                .set(category, enabled: value),
+            // La bascule PARLE AU RÉSEAU : hors ligne, l'appel échouait dans
+            // le vide. L'erreur partait en asynchrone non capturée, la
+            // bascule revenait à sa place — le geste semblait n'avoir pas
+            // pris, sans un mot d'explication ni la consigne qui va avec.
+            onToggle: (value) => runServerGesture(context, () async {
+              await ref
+                  .read(notificationPreferenceActionsProvider)
+                  .set(category, enabled: value);
+              // Succès : la bascule elle-même est le retour, rien à dire.
+              return null;
+            }, scope: 'NotificationSettings'),
           ),
       ],
     );

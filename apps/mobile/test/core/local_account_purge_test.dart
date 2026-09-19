@@ -13,6 +13,7 @@ import 'package:carlys_mobile/features/progress/presentation/controllers/progres
 import 'package:carlys_mobile/features/progression/data/reward_ledger.dart';
 import 'package:carlys_mobile/features/progression/domain/reward.dart';
 import 'package:carlys_mobile/features/progression/presentation/controllers/reward_controllers.dart';
+import 'package:carlys_mobile/features/subscription/presentation/controllers/subscription_controllers.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -185,6 +186,20 @@ void main() {
       'records': 1,
       'preferencesNotifications': 1,
     });
+  });
+
+  test('la clé d’idempotence de PAIEMENT ne suit pas le compte', () async {
+    // Elle est retenue par offre, pour qu'un double appui rouvre la MÊME
+    // page de paiement. Chez le prestataire, elle désigne donc la session
+    // créée pour le compte d'AVANT — et le provider qui la porte est
+    // permanent. Sans ce renouvellement, le compte suivant qui achetait la
+    // même offre sur cet appareil tombait sur la page de paiement de
+    // quelqu'un d'autre.
+    final avant = container.read(subscriptionActionsProvider);
+
+    await container.read(localAccountPurgeProvider).run();
+
+    expect(container.read(subscriptionActionsProvider), isNot(same(avant)));
   });
 
   test('les réglages de notifications ne suivent pas le compte', () async {

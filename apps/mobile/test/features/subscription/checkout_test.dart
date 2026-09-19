@@ -60,7 +60,7 @@ void main() {
         .read(subscriptionActionsProvider)
         .buy(offer);
 
-    expect(outcome, CheckoutOutcome.opened);
+    expect(outcome, isA<CheckoutOpened>());
     expect(opened.single.toString(), 'https://paiement.exemple/session');
     // Le plan reste celui du serveur : l'app n'a rien accordé.
     final plan = await container.read(planStatusProvider.future);
@@ -128,20 +128,66 @@ void main() {
     expect(repository.checkouts.first.id, isNot(repository.checkouts.last.id));
   });
 
-  test('un serveur qui refuse le paiement ne fait pas semblant', () async {
-    final repository = FakeSubscriptionRepository(
-      checkoutAvailable: true,
-      checkoutError: StateError('paiement non configuré'),
+  test(
+    'paiement non configuré (503) : « pas encore ouvert », pas une panne',
+    () async {
+      // Le test posait ici un `StateError`, que le dépôt ne lève JAMAIS : il
+      // ne mappe que des `AppException`. Il prouvait donc un chemin qui
+      // n'existait pas, pendant que le vrai 503 tombait dans l'échec
+      // générique — « la page de paiement n'a pas pu s'ouvrir », qui ne dit ni
+      // la cause ni la suite.
+      final repository = FakeSubscriptionRepository(
+        checkoutAvailable: true,
+        checkoutError: const ServerException(
+          'Le paiement n’est pas configuré.',
+          statusCode: 503,
+        ),
+      );
+      final opened = <Uri>[];
+      final container = containerFor(repository, opened: opened);
+
+      final outcome = await container
+          .read(subscriptionActionsProvider)
+          .buy(offer);
+
+      expect(outcome, isA<CheckoutUnavailable>());
+      expect(opened, isEmpty);
+    },
+  );
+
+  test('hors ligne : le DIRE, au lieu d’une panne générique', () async {
+    final container = containerFor(
+      FakeSubscriptionRepository(
+        checkoutAvailable: true,
+        checkoutError: const NetworkException('hors ligne'),
+      ),
     );
-    final opened = <Uri>[];
-    final container = containerFor(repository, opened: opened);
+
+    expect(
+      await container.read(subscriptionActionsProvider).buy(offer),
+      isA<CheckoutOffline>(),
+    );
+  });
+
+  test('refus MÉTIER : le message du serveur passe tel quel', () async {
+    // « Cet abonnement est déjà actif. Gère-le depuis Mon abonnement. » dit
+    // la cause ET la suite ; l'écran répondait « la page de paiement n'a pas
+    // pu s'ouvrir », qui est faux et ne mène nulle part.
+    final container = containerFor(
+      FakeSubscriptionRepository(
+        checkoutAvailable: true,
+        checkoutError: const ValidationException(
+          'Cet abonnement est déjà actif. Gère-le depuis « Mon abonnement ».',
+        ),
+      ),
+    );
 
     final outcome = await container
         .read(subscriptionActionsProvider)
         .buy(offer);
 
-    expect(outcome, CheckoutOutcome.unavailable);
-    expect(opened, isEmpty);
+    expect(outcome, isA<CheckoutRefused>());
+    expect((outcome as CheckoutRefused).message, contains('déjà actif'));
   });
 
   test('un appareil sans navigateur le DIT au lieu de rester muet', () async {
@@ -152,7 +198,7 @@ void main() {
 
     expect(
       await container.read(subscriptionActionsProvider).buy(offer),
-      CheckoutOutcome.cannotOpen,
+      isA<CheckoutCannotOpen>(),
     );
   });
 

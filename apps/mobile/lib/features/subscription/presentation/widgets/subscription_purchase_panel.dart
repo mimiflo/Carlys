@@ -33,12 +33,19 @@ class _SubscriptionPurchasePanelState
     setState(() => _opening = false);
 
     final message = switch (outcome) {
-      CheckoutOutcome.opened => null,
-      CheckoutOutcome.unavailable =>
+      CheckoutOpened() => null,
+      CheckoutUnavailable() =>
         'Le paiement n’est pas encore ouvert. Réessaie bientôt.',
-      CheckoutOutcome.cannotOpen =>
+      CheckoutOffline() =>
+        'Hors connexion : la page de paiement a besoin du réseau. '
+            'Réessaie une fois connecté.',
+      // Le serveur a une raison ET une suite (« gère-le depuis Mon
+      // abonnement », « contacte le support ») : on ne les remplace pas par
+      // un message d'échec technique.
+      CheckoutRefused(:final message) => message,
+      CheckoutCannotOpen() =>
         'Aucun navigateur n’a pu s’ouvrir sur cet appareil.',
-      CheckoutOutcome.failed => 'La page de paiement n’a pas pu s’ouvrir.',
+      CheckoutFailed() => 'La page de paiement n’a pas pu s’ouvrir.',
     };
     if (message != null) {
       ScaffoldMessenger.of(

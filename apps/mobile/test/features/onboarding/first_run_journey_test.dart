@@ -16,6 +16,7 @@ import 'package:carlys_mobile/features/onboarding/presentation/widgets/brand_sig
 import 'package:carlys_mobile/features/onboarding/presentation/widgets/onboarding_height_card.dart';
 import 'package:carlys_mobile/features/progress/data/repositories/progress_repository_impl.dart';
 import 'package:carlys_mobile/features/subscription/data/repositories/subscription_repository_impl.dart';
+import 'package:carlys_mobile/features/subscription/presentation/controllers/subscription_controllers.dart';
 import 'package:carlys_mobile/features/workout_program/data/repositories/training_goal_repository_impl.dart';
 import 'package:carlys_mobile/features/workout_program/domain/entities/training_goal.dart';
 import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';
@@ -62,6 +63,7 @@ void main() {
   late FakeNutritionRepository nutrition;
   late FakeCarlysProfileRepository carlysRepo;
   late FakeTrainingGoalRepository trainingRepo;
+  late FakeSubscriptionRepository subscription;
 
   setUp(() {
     seedFirstOpen();
@@ -73,6 +75,7 @@ void main() {
     nutrition = FakeNutritionRepository();
     carlysRepo = FakeCarlysProfileRepository();
     trainingRepo = FakeTrainingGoalRepository();
+    subscription = FakeSubscriptionRepository();
   });
 
   tearDown(() {
@@ -91,9 +94,7 @@ void main() {
       carlysProfileRepositoryProvider.overrideWithValue(carlysRepo),
       trainingGoalRepositoryProvider.overrideWithValue(trainingRepo),
       nutritionRepositoryProvider.overrideWithValue(nutrition),
-      subscriptionRepositoryProvider.overrideWithValue(
-        FakeSubscriptionRepository(),
-      ),
+      subscriptionRepositoryProvider.overrideWithValue(subscription),
       progressRepositoryProvider.overrideWithValue(FakeProgressRepository()),
       workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
       syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
@@ -334,6 +335,29 @@ void main() {
     await tapText(tester, 'Continuer sans Premium');
     await tapText(tester, 'Continuer en version gratuite');
     expect(find.byType(AppBottomBar), findsOneWidget);
+  });
+
+  testWidgets('Premium souscrit PENDANT le tunnel le referme', (tester) async {
+    // Seul « Continuer en version gratuite » terminait le parcours. Qui
+    // payait vraiment revenait du navigateur, le serveur lui accordait
+    // Premium… et l'étape restait `subscription` : le routeur le maintenait
+    // sur le mur payant, dont la seule sortie proposée était « Continuer
+    // sans Premium ». On disait à un client qui venait de payer de renoncer.
+    seedFirstRunStep(FirstRunStep.subscription);
+    auth.storedSession = true;
+    await launch(tester);
+    expect(find.text('CARLYS PREMIUM'), findsOneWidget);
+
+    // Le paiement aboutit dehors ; au retour, le serveur accorde le droit et
+    // la relecture du plan le rapporte (`SubscriptionResumeRefresh`).
+    subscription.isPremium = true;
+    ProviderScope.containerOf(
+      tester.element(find.byType(CarlysApp)),
+    ).invalidate(planStatusProvider);
+    await tester.pumpAndSettle();
+
+    expect(find.byType(HomeScreen), findsOneWidget);
+    expect(find.text('CARLYS PREMIUM'), findsNothing);
   });
 
   testWidgets('« Passer » franchit l’onboarding sans rien enregistrer', (

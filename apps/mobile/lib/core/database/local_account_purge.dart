@@ -12,6 +12,7 @@ import '../../features/onboarding/data/first_run_store.dart';
 import '../../features/progress/presentation/controllers/progress_controllers.dart';
 import '../../features/progression/data/reward_ledger.dart';
 import '../../features/progression/presentation/controllers/reward_controllers.dart';
+import '../../features/subscription/presentation/controllers/subscription_controllers.dart';
 import '../logging/app_logger.dart';
 import '../synchronization/sync_lifecycle.dart';
 import 'app_database.dart';
@@ -98,6 +99,14 @@ class DriftLocalAccountPurge implements LocalAccountPurge {
     notificationPreferencesProvider,
     // Le cache des célébrations dites suit sa préférence, effacée ci-dessus.
     mentorCelebrationsDitesProvider,
+    // LA CLÉ D'IDEMPOTENCE DE PAIEMENT, retenue par offre pour qu'un double
+    // appui rouvre la MÊME page de paiement. Elle est nominative sans le
+    // dire : chez le prestataire, elle désigne la session créée pour le
+    // compte d'avant. Le compte suivant qui achetait la même offre sur cet
+    // appareil rejouait donc cette clé et tombait sur la page de paiement
+    // de quelqu'un d'autre. Le provider est permanent : seule cette ligne
+    // lui rend une carte vierge.
+    subscriptionActionsProvider,
   ];
 
   final Ref _ref;

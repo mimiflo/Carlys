@@ -156,14 +156,29 @@ class FirstRunController extends Notifier<FirstRunState> {
       // entre-temps (depuis le profil, ou sur un autre appareil) : ce que le
       // compte porte déjà ne se réécrit pas.
       final auth = ref.read(authControllerProvider);
-      final user = auth is AuthAuthenticated ? auth.user : null;
+      if (auth is! AuthAuthenticated) {
+        return;
+      }
+      final user = auth.user;
+      if (user == null) {
+        // LE PROFIL N'EST PAS ENCORE REVENU DU SERVEUR. Au démarrage, la
+        // restauration pose `AuthAuthenticated()` sans profil, puis le
+        // remplace une fois `me()` rendu — et ce premier état déclenchait
+        // déjà ce report. Le garde-fou juste en dessous lisait alors un
+        // profil vide, croyait le compte vierge, et réécrivait par-dessus
+        // un choix plus RÉCENT fait ailleurs. On attend : les réponses
+        // restent sur le disque, et l'arrivée du profil rappelle cette
+        // méthode (l'écoute de session se redéclenche sur le nouvel état).
+        _logger.info('Report différé : profil du compte pas encore lu');
+        return;
+      }
       if (answers.hasMetabolicAnswers) {
         await _saveProfile(answers);
       }
-      if (answers.carlysProfile != null && user?.carlysProfile == null) {
+      if (answers.carlysProfile != null && user.carlysProfile == null) {
         await _saveCarlysProfile(answers.carlysProfile!);
       }
-      if (answers.trainingGoal != null && user?.trainingGoal == null) {
+      if (answers.trainingGoal != null && user.trainingGoal == null) {
         await _saveTrainingGoal(answers.trainingGoal!);
       }
       await _store.clearAnswers();

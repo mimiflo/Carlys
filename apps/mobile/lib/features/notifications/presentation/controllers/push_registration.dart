@@ -86,17 +86,7 @@ class PushRegistration {
   /// À la déconnexion — avant l'invalidation de la session, l'appel au
   /// serveur étant authentifié. N'échoue jamais l'appelant.
   Future<void> forgetDevice() async {
-    // L'objet SURVIT à la déconnexion : `pushRegistrationProvider` n'est pas
-    // auto-disposé. Oublier l'appareil doit donc le remettre à NEUF, pas
-    // seulement effacer le jeton. Sans cette remise à zéro, `_started`
-    // restait vrai et `ensureStarted()` ressortait aussitôt pour le compte
-    // suivant : plus aucun appareil n'était enregistré, et la personne
-    // suivante ne recevait AUCUNE notification jusqu'au redémarrage de
-    // l'application. L'abonnement au rafraîchissement part avec, sinon un
-    // jeton renouvelé par FCM s'enregistrerait sous la session d'après.
-    await _refreshSubscription?.cancel();
-    _refreshSubscription = null;
-    _started = false;
+    await _reset();
 
     final token = _token;
     if (token == null) {
@@ -109,6 +99,43 @@ class PushRegistration {
     } on Exception catch (error) {
       _logger.warning('Jeton push non oublié', error: error);
     }
+  }
+
+  /// Après une SUPPRESSION de compte : l'appareil oublie SANS rien demander
+  /// au serveur.
+  ///
+  /// Le compte n'existe plus, ses jetons d'appareil sont partis avec lui : il
+  /// n'y a rien à désenregistrer. Mais tout ce qui restait à faire était
+  /// LOCAL, et ne se faisait pas — ce chemin n'appelait rien du tout. La
+  /// personne suivante qui se connectait sur cet appareil tombait sur un
+  /// `_started` resté vrai, `ensureStarted()` ressortait aussitôt, et elle ne
+  /// recevait AUCUNE notification jusqu'au redémarrage de l'application.
+  Future<void> forgetLocally() async {
+    await _reset();
+
+    if (_token == null) {
+      return;
+    }
+    _token = null;
+    try {
+      // Le jeton de l'appareil change : celui d'avant a été révoqué avec le
+      // compte, le garder ferait ré-enregistrer un jeton mort.
+      await _messenger.deleteToken();
+    } on Exception catch (error) {
+      _logger.warning('Jeton push local non effacé', error: error);
+    }
+  }
+
+  /// Remet l'enregistrement À NEUF.
+  ///
+  /// L'objet SURVIT à la bascule de compte (`pushRegistrationProvider` n'est
+  /// pas auto-disposé) : sans cette remise à zéro, `_started` reste vrai pour
+  /// le compte suivant. L'abonnement au rafraîchissement part avec, sinon un
+  /// jeton renouvelé par FCM s'enregistrerait sous la session d'après.
+  Future<void> _reset() async {
+    await _refreshSubscription?.cancel();
+    _refreshSubscription = null;
+    _started = false;
   }
 
   DevicePlatform get _platform => defaultTargetPlatform == TargetPlatform.iOS

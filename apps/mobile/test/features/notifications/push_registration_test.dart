@@ -236,4 +236,57 @@ void main() {
     expect(repository.unregistered, isEmpty);
     expect(messenger.deleteCalls, 0);
   });
+
+  group('compte SUPPRIMÉ', () {
+    test('rien n’est demandé au serveur : le compte n’existe plus', () async {
+      // Ses jetons d'appareil sont partis avec lui. Un désenregistrement
+      // partirait sur une session déjà invalide, pour rien.
+      final (registration, messenger, repository) = build();
+      registration.ensureStarted();
+      await pumpEventQueue();
+
+      await registration.forgetLocally();
+
+      expect(repository.unregistered, isEmpty);
+      // Le jeton local, lui, est bien effacé : celui d'avant est mort.
+      expect(messenger.deleteCalls, 1);
+      expect(registration.registeredToken, isNull);
+    });
+
+    test('le compte SUIVANT reçoit à nouveau ses notifications', () async {
+      // CE QUE CE TEST PROTÈGE. Ce chemin n'appelait RIEN : `_started`
+      // restait vrai sur l'objet, qui survit à la bascule de compte, et
+      // `ensureStarted()` ressortait aussitôt pour la personne suivante —
+      // aucune notification jusqu'au redémarrage de l'application.
+      final (registration, messenger, repository) = build();
+      registration.ensureStarted();
+      await pumpEventQueue();
+
+      await registration.forgetLocally();
+
+      messenger.token = 'jeton-du-suivant';
+      registration.ensureStarted();
+      await pumpEventQueue();
+
+      expect(registration.registeredToken, 'jeton-du-suivant');
+      expect(repository.registered.last, (
+        'jeton-du-suivant',
+        DevicePlatform.android,
+      ));
+    });
+
+    test('un jeton rafraîchi ne s’enregistre plus sous la suite', () async {
+      final (registration, messenger, repository) = build();
+      registration.ensureStarted();
+      await pumpEventQueue();
+
+      await registration.forgetLocally();
+      final apres = repository.registered.length;
+
+      messenger.refreshes.add('jeton-fantome');
+      await pumpEventQueue();
+
+      expect(repository.registered, hasLength(apres));
+    });
+  });
 }

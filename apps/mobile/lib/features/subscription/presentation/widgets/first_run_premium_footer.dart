@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -5,6 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/app_routes.dart';
 import '../../../../design_system/design_system.dart';
 import '../../../onboarding/presentation/controllers/first_run_controller.dart';
+import '../controllers/subscription_controllers.dart';
 import 'subscription_purchase_note.dart';
 import 'subscription_purchase_panel.dart';
 
@@ -53,8 +56,36 @@ class _FirstRunPremiumFooterState extends ConsumerState<FirstRunPremiumFooter> {
     router.go(AppRoutes.home);
   }
 
+  /// PREMIUM SOUSCRIT PENDANT LE TUNNEL : le tunnel se ferme.
+  ///
+  /// Seul « Continuer en version gratuite » terminait le parcours. Qui payait
+  /// vraiment revenait du navigateur, le serveur lui accordait Premium… et
+  /// l'étape restait `subscription` : le routeur le maintenait sur le mur
+  /// payant, dont la seule sortie proposée était « Continuer sans Premium ».
+  /// On disait à un client qui venait de payer de renoncer.
+  ///
+  /// Le plan se relit tout seul au retour au premier plan
+  /// (`SubscriptionResumeRefresh`, deux lectures pour laisser passer le
+  /// webhook) : il suffit de l'écouter. Le routeur est saisi hors de
+  /// l'attente, pour la même raison qu'au repli gratuit.
+  Future<void> _premiumAcquis() async {
+    if (_finishing) {
+      return;
+    }
+    setState(() => _finishing = true);
+    final router = GoRouter.of(context);
+    await ref.read(firstRunControllerProvider.notifier).completeJourney();
+    router.go(AppRoutes.home);
+  }
+
   @override
   Widget build(BuildContext context) {
+    ref.listen(planStatusProvider, (previous, next) {
+      if (next.valueOrNull?.isPremium ?? false) {
+        unawaited(_premiumAcquis());
+      }
+    });
+
     return Padding(
       padding: const EdgeInsets.fromLTRB(
         AppSpacing.gutter,
