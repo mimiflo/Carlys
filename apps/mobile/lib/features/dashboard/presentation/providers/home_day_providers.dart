@@ -1,128 +1,33 @@
+/// LE JOUR de l'accueil : la maxime, la semaine de constance, l'entraînement
+/// du jour, la phrase d'état et le repos depuis la dernière séance.
+///
+/// Tout ce qui dépend de « quel jour on est » passe par `currentDayProvider`
+/// plutôt que par `DateTime.now()` : l'accueil ne quitte jamais la pile du
+/// shell, donc rien ici n'est jamais disposé, et un instant lu au lancement
+/// y restait figé jusqu'à la fermeture de l'application.
+///
+/// Des providers DÉRIVÉS, pas des contrôleurs : aucun Notifier ici.
+library;
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/utilities/current_day.dart';
 import '../../../../core/utilities/formatting.dart';
-import '../../../progress/data/repositories/progress_repository_impl.dart';
-import '../../../progress/domain/entities/progress.dart';
 import '../../../workout_session/domain/entities/workout.dart';
 import '../../../workout_session/presentation/controllers/workout_controllers.dart';
 import '../../data/daily_quotes.dart';
 import '../../domain/entities/consistency_week.dart';
 import '../../domain/entities/daily_quote.dart';
 
-/// Objectif hebdomadaire de séances — référence commune de l'indice de forme
-/// et du bloc « Ta semaine ».
-const int weeklySessionsTarget = 5;
-
-/// Vue « semaine » de l'accueil — indépendante de la période sélectionnée
-/// sur l'onglet Progression.
-final weekOverviewProvider = FutureProvider.autoDispose<ProgressOverviewEntity>(
-  (ref) {
-    return ref.watch(progressRepositoryProvider).overview(ProgressPeriod.week);
-  },
-);
-
-/// Indice de forme : part de l'objectif hebdomadaire déjà réalisée, sur 100.
-///
-/// `null` tant que la semaine n'est pas chargée — l'écran affiche alors un
-/// tiret plutôt qu'une valeur inventée.
-final fitnessIndexProvider = Provider.autoDispose<int?>((ref) {
-  final week = ref.watch(weekOverviewProvider).valueOrNull;
-  if (week == null) {
-    return null;
-  }
-  final done = week.sessionsCount.clamp(0, weeklySessionsTarget);
-  return (done / weeklySessionsTarget * 100).round();
-});
-
-/// LA LECTURE DE LA FORME, en trois bandes.
-///
-/// L'échelle graduée du bas de l'accueil n'est pas un score de santé : c'est
-/// la part de l'objectif hebdomadaire déjà faite, dite en français. Les trois
-/// bandes valent chacune un tiers — repos, charge juste, surcharge — et c'est
-/// celle où tombe le score qui s'allume.
-enum FormBand {
-  repos('Repos'),
-  chargeJuste('Charge juste'),
-  surcharge('Surcharge');
-
-  const FormBand(this.label);
-
-  final String label;
-
-  /// La bande où tombe un score de 0 à 100.
-  static FormBand forScore(int score) {
-    if (score < 34) return FormBand.repos;
-    if (score < 67) return FormBand.chargeJuste;
-    return FormBand.surcharge;
-  }
-}
-
-/// Ce que l'échelle de forme raconte : une lecture courte et son pourquoi.
-class FormReading {
-  const FormReading({
-    required this.score,
-    required this.headline,
-    required this.explanation,
-  });
-
-  final int score;
-
-  /// Trois mots, lus d'un coup d'œil.
-  final String headline;
-
-  /// La phrase qui dit d'où vient la lecture — jamais un conseil médical,
-  /// toujours un fait de la semaine.
-  final String explanation;
-
-  FormBand get band => FormBand.forScore(score);
-}
-
-/// La forme du jour, adossée aux séances RÉELLEMENT terminées de la semaine.
-///
-/// `null` tant que la semaine n'est pas lue : l'écran patiente au lieu
-/// d'inventer une lecture.
-final formReadingProvider = Provider.autoDispose<FormReading?>((ref) {
-  final score = ref.watch(fitnessIndexProvider);
-  final week = ref.watch(weekOverviewProvider).valueOrNull;
-  if (score == null || week == null) {
-    return null;
-  }
-
-  final sessions = week.sessionsCount;
-  final remaining = weeklySessionsTarget - sessions;
-  return switch (FormBand.forScore(score)) {
-    FormBand.repos => FormReading(
-      score: score,
-      headline: sessions == 0 ? 'La semaine commence' : 'De la marge',
-      explanation: sessions == 0
-          ? 'Rien encore cette semaine. La première séance ouvre tout le '
-                'reste.'
-          : 'Une séance derrière toi. Le corps est frais, la place est '
-                'large.',
-    ),
-    FormBand.chargeJuste => FormReading(
-      score: score,
-      headline: 'Prêt pour du lourd',
-      explanation:
-          '$sessions séances derrière toi, la récupération suit. '
-          'Tu peux charger sans réserve aujourd’hui.',
-    ),
-    FormBand.surcharge => FormReading(
-      score: score,
-      headline: remaining <= 0 ? 'Objectif atteint' : 'Semaine chargée',
-      explanation: remaining <= 0
-          ? 'Les $weeklySessionsTarget séances sont faites. Ce qui vient en '
-                'plus est du bonus, pas une dette.'
-          : 'Le rythme est haut. Garde une journée pour récupérer, elle '
-                'fait partie du travail.',
-    ),
-  };
-});
-
 /// Maxime du jour, tirée du recueil Carlys. Déterministe : même phrase toute
 /// la journée, et sur tous les appareils de l'utilisateur.
+///
+/// Le jour vient de [currentDayProvider] : `autoDispose` ne suffit pas ici,
+/// l'accueil observe cette maxime en permanence (il ne quitte jamais la pile
+/// du shell), donc rien ne la renouvelait jamais — « même phrase toute la
+/// journée » devenait la même phrase indéfiniment.
 final dailyQuoteProvider = Provider.autoDispose<DailyQuote>((ref) {
-  return quoteOfTheDay(DateTime.now());
+  return quoteOfTheDay(ref.watch(currentDayProvider));
 });
 
 /// Semaine de constance, déduite des séances RÉELLEMENT terminées.
@@ -134,7 +39,10 @@ final consistencyWeekProvider = Provider.autoDispose<ConsistencyWeek?>((ref) {
   if (history == null) {
     return null;
   }
-  final now = DateTime.now();
+  // Le jour COURANT, pas celui du lancement : l'accueil garde ce provider
+  // vivant en permanence, et la semaine affichée restait celle d'hier après
+  // minuit — jusqu'à ce qu'une écriture de séance réveille l'historique.
+  final now = ref.watch(currentDayProvider);
   final trainedDays = <DateTime>{};
   for (final entry in history) {
     if (entry.session.status != WorkoutStatus.completed) {

@@ -126,7 +126,7 @@ casser l'un des deux sens sans le savoir casse l'autre.
 `presentation` → `data` — un contrôleur câble une implémentation concrète
 d'une autre fonctionnalité :
 
-- `dashboard/…/dashboard_controllers.dart` → `progress/data/repositories/progress_repository_impl.dart`
+- `dashboard/…/form_reading_providers.dart` → `progress/data/repositories/progress_repository_impl.dart`
 - `profile/…/profile_controllers.dart` → `progress/data/repositories/progress_repository_impl.dart`
 - `workout_session/…/exercise_picker_sheet.dart` → `exercises/data/repositories/exercises_repository_impl.dart`
 - `workout_template/…/workout_template_controllers.dart` → `workout_session/data/repositories/workout_repository_impl.dart`

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../design_system/design_system.dart';
-import '../controllers/dashboard_controllers.dart';
+import '../providers/form_reading_providers.dart';
 import 'section_title_bar.dart';
 
 /// LA FORME DU JOUR : une échelle graduée, pas un score.

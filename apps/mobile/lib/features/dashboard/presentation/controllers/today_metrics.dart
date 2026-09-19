@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/utilities/current_day.dart';
 import '../../../../core/utilities/formatting.dart';
 import '../../../nutrition/presentation/controllers/nutrition_controllers.dart';
 import '../../../nutrition/presentation/controllers/water_controllers.dart';
@@ -179,7 +180,9 @@ final weeklyVolumeProvider =
       // silencieusement perdue par la comparaison. Le constructeur, lui,
       // normalise un quantième hors bornes et retombe sur un vrai minuit
       // local, quel que soit le décalage.
-      final now = DateTime.now();
+      // Le jour COURANT : ce provider vit tant que l'accueil vit, donc un
+      // `DateTime.now()` lu ici figeait « cette semaine » au lancement.
+      final now = ref.watch(currentDayProvider);
       final monday = DateTime(now.year, now.month, now.day - (now.weekday - 1));
       final previousMonday = DateTime(
         monday.year,
