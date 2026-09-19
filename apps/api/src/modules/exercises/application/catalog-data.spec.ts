@@ -50,6 +50,49 @@ describe('catalogue', () => {
     }
   });
 
+  /**
+   * CE QUE CETTE SECTION PROTÈGE : quelqu'un qui n'a AUCUN matériel peut
+   * s'entraîner.
+   *
+   * `equipment` est une CONJONCTION — le filtre ne retient un exercice que si
+   * la personne possède TOUT ce qui y figure. Y glisser un objet de confort
+   * ferme donc l'exercice à qui ne l'a pas. Quinze mouvements de sol (planche,
+   * crunch, pont fessier, gainage latéral…) exigeaient un TAPIS : une personne
+   * sans matériel n'atteignait que neuf exercices du catalogue, et six groupes
+   * musculaires sur douze lui étaient inaccessibles. La génération de
+   * programme ne pouvait rien lui proposer d'honnête.
+   *
+   * Le plancher ci-dessous est délibérément bas : il ne dit pas que le
+   * catalogue est riche, il dit qu'il n'est pas VIDE là où il comptait.
+   *
+   * CE QUI MANQUE ENCORE, et que ce fichier n'épingle pas encore : le DOS,
+   * les ÉPAULES et les BICEPS restent sans le moindre exercice réalisable
+   * sans matériel. Le plancher par groupe musculaire arrivera avec les
+   * exercices qui le rendront vrai — un test écrit avant son contenu échoue
+   * en CI et n'apprend rien à personne.
+   */
+  describe('sans aucun matériel', () => {
+    const bodyweight = EXERCISES.filter(
+      (exercise) => exercise.equipment.length === 1 && exercise.equipment[0] === 'poids-du-corps',
+    );
+
+    it('en porte assez pour composer une séance complète', () => {
+      // Huit exercices, c'est le plancher d'une séance de corps entier
+      // générée : sous ce seuil, le générateur répéterait les mêmes
+      // mouvements d'une séance à l'autre.
+      expect(bodyweight.length).toBeGreaterThanOrEqual(8);
+    });
+
+    it('n’exige jamais un objet de CONFORT', () => {
+      // Le tapis en est un : une planche se tient sur le sol. Aucun exercice
+      // ne doit se rendre inaccessible pour un accessoire substituable.
+      const surTapisSeul = EXERCISES.filter(
+        (exercise) => exercise.equipment.length === 1 && exercise.equipment[0] === 'tapis',
+      );
+      expect(surTapisSeul.map((exercise) => exercise.slug)).toEqual([]);
+    });
+  });
+
   it('ne livre pas de photo orpheline', () => {
     // Le nom du fichier EST le slug (`seed-media.ts`) : une photo dont le slug
     // n'existe pas ne serait jamais rattachée, et personne ne s'en apercevrait.

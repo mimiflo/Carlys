@@ -2400,7 +2400,7 @@ export const EXERCISES: SeedExercise[] = [
     tags: ['poids-du-corps', 'maison', 'echauffement'],
     primary: 'fessiers',
     secondary: ['ischio-jambiers', 'lombaires'],
-    equipment: ['tapis'],
+    equipment: ['poids-du-corps'],
   },
   {
     slug: 'mollets-debout',
@@ -2432,7 +2432,7 @@ export const EXERCISES: SeedExercise[] = [
     tags: ['gainage', 'isometrique', 'maison'],
     primary: 'abdominaux',
     secondary: ['lombaires', 'epaules'],
-    equipment: ['tapis'],
+    equipment: ['poids-du-corps'],
   },
   {
     slug: 'crunch',
@@ -2448,7 +2448,7 @@ export const EXERCISES: SeedExercise[] = [
     tags: ['maison', 'isolation'],
     primary: 'abdominaux',
     secondary: [],
-    equipment: ['tapis'],
+    equipment: ['poids-du-corps'],
   },
   {
     slug: 'releve-de-jambes-suspendu',
@@ -2579,7 +2579,7 @@ export const EXERCISES: SeedExercise[] = [
     tags: ['poids-du-corps', 'maison', 'isolation'],
     primary: 'abdominaux',
     secondary: [],
-    equipment: ['tapis'],
+    equipment: ['poids-du-corps'],
   },
   {
     slug: 'v-up',
@@ -2595,7 +2595,7 @@ export const EXERCISES: SeedExercise[] = [
     tags: ['poids-du-corps', 'maison', 'gainage'],
     primary: 'abdominaux',
     secondary: ['quadriceps'],
-    equipment: ['tapis'],
+    equipment: ['poids-du-corps'],
   },
   {
     slug: 'dragon-flag',
@@ -2629,7 +2629,7 @@ export const EXERCISES: SeedExercise[] = [
     tags: ['poids-du-corps', 'maison', 'isolation'],
     primary: 'abdominaux',
     secondary: [],
-    equipment: ['tapis'],
+    equipment: ['poids-du-corps'],
   },
   {
     slug: 'reverse-crunch',
@@ -2646,7 +2646,7 @@ export const EXERCISES: SeedExercise[] = [
     tags: ['poids-du-corps', 'maison', 'isolation'],
     primary: 'abdominaux',
     secondary: [],
-    equipment: ['tapis'],
+    equipment: ['poids-du-corps'],
   },
   {
     slug: 'releves-de-genoux-suspendu',
@@ -2679,7 +2679,7 @@ export const EXERCISES: SeedExercise[] = [
     tags: ['poids-du-corps', 'maison', 'gainage'],
     primary: 'abdominaux',
     secondary: ['quadriceps'],
-    equipment: ['tapis'],
+    equipment: ['poids-du-corps'],
   },
   {
     slug: 'bicycle-crunch',
@@ -2696,7 +2696,7 @@ export const EXERCISES: SeedExercise[] = [
     tags: ['poids-du-corps', 'maison', 'obliques'],
     primary: 'abdominaux',
     secondary: [],
-    equipment: ['tapis'],
+    equipment: ['poids-du-corps'],
   },
   {
     slug: 'cross-body-crunch',
@@ -2712,7 +2712,7 @@ export const EXERCISES: SeedExercise[] = [
     tags: ['poids-du-corps', 'maison', 'obliques'],
     primary: 'abdominaux',
     secondary: [],
-    equipment: ['tapis'],
+    equipment: ['poids-du-corps'],
   },
   {
     slug: 'releves-de-genoux-lateraux',
@@ -2795,7 +2795,7 @@ export const EXERCISES: SeedExercise[] = [
     tags: ['poids-du-corps', 'maison', 'gainage', 'isometrique'],
     primary: 'abdominaux',
     secondary: ['epaules', 'fessiers'],
-    equipment: ['tapis'],
+    equipment: ['poids-du-corps'],
   },
   {
     slug: 'hollow-body-hold',
@@ -2812,7 +2812,7 @@ export const EXERCISES: SeedExercise[] = [
     tags: ['poids-du-corps', 'gainage', 'isometrique'],
     primary: 'abdominaux',
     secondary: ['quadriceps'],
-    equipment: ['tapis'],
+    equipment: ['poids-du-corps'],
   },
   {
     slug: 'gainage-sur-ballon',
@@ -2844,7 +2844,7 @@ export const EXERCISES: SeedExercise[] = [
     tags: ['poids-du-corps', 'maison', 'gainage'],
     primary: 'abdominaux',
     secondary: ['epaules'],
-    equipment: ['tapis'],
+    equipment: ['poids-du-corps'],
   },
   {
     slug: 'plank-jack',
@@ -2860,7 +2860,7 @@ export const EXERCISES: SeedExercise[] = [
     tags: ['poids-du-corps', 'maison', 'hiit'],
     primary: 'abdominaux',
     secondary: ['epaules', 'fessiers'],
-    equipment: ['tapis'],
+    equipment: ['poids-du-corps'],
   },
   {
     slug: 'rouleau-abdominal',
@@ -2930,7 +2930,7 @@ export const EXERCISES: SeedExercise[] = [
     tags: ['mobilite', 'echauffement', 'maison'],
     primary: 'lombaires',
     secondary: ['abdominaux'],
-    equipment: ['tapis'],
+    equipment: ['poids-du-corps'],
   },
   {
     slug: 'etirement-ischio-debout',
