@@ -81,10 +81,20 @@ enum BmiCategory {
   final String apiValue;
   final String label;
 
-  static BmiCategory fromApi(String value) => BmiCategory.values.firstWhere(
-    (category) => category.apiValue == value,
-    orElse: () => BmiCategory.normal,
-  );
+  /// `null` pour une valeur absente OU inconnue — jamais une catégorie
+  /// devinée. Rabattre l'inconnu sur « Corpulence normale » écrivait une
+  /// contre-vérité de santé le jour où le serveur découpe ses catégories
+  /// autrement : « normale » se serait affiché à côté d'un IMC de 42. Même
+  /// règle que le reste du sous-système, écrite dans
+  /// `metabolism_mappers.dart`.
+  static BmiCategory? fromApi(String? value) {
+    for (final category in BmiCategory.values) {
+      if (category.apiValue == value) {
+        return category;
+      }
+    }
+    return null;
+  }
 }
 
 /// Champ manquant pour calculer le métabolisme.
@@ -147,7 +157,10 @@ class MetabolismResult {
   });
 
   final double bmi;
-  final BmiCategory bmiCategory;
+
+  /// `null` quand le serveur sert une catégorie que cette version ignore :
+  /// l'écran se tait alors sur la catégorie, l'IMC reste affiché.
+  final BmiCategory? bmiCategory;
   final int bmrKcal;
   final int tdeeKcal;
   final int targetKcal;
@@ -175,8 +188,6 @@ class MetabolismReport {
   final MetabolicProfile profile;
   final List<MetabolismMissingField> missing;
   final MetabolismResult? metabolism;
-
-  bool get isComplete => metabolism != null;
 }
 
 /// Mise à jour du profil métabolique — seuls les champs fournis sont envoyés.

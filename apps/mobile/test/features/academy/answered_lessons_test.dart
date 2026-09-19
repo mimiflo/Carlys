@@ -25,7 +25,7 @@ void main() {
     test('la PREMIÈRE réponse gagne : rouvrir ne réécrit rien', () async {
       // Un score dérivé compte les questions abordées : réécrire à chaque
       // ouverture ferait bouger le passé, et compter deux fois la même.
-      const store = AnsweredLessonsStore();
+      final store = AnsweredLessonsStore();
 
       await store.markAnswered('anatomie-epaules', 2);
       await store.markAnswered('anatomie-epaules', 0);
@@ -40,7 +40,7 @@ void main() {
         AnsweredLessonsStore.key: 'ceci n’est pas du JSON',
       });
 
-      expect(await const AnsweredLessonsStore().read(), isEmpty);
+      expect(await AnsweredLessonsStore().read(), isEmpty);
     });
   });
 

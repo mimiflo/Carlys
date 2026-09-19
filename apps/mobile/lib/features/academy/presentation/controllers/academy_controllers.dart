@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/logging/app_logger.dart';
+import '../../../../core/utilities/current_day.dart';
 import '../../../community/data/repositories/community_repository_impl.dart';
 import '../../../community/presentation/controllers/community_controllers.dart';
 import '../../data/academy_pack.dart';
@@ -16,6 +17,12 @@ final academyPackProvider = FutureProvider<List<Lesson>>((ref) {
 /// La leçon du jour — déterministe : le jour de l'année parcourt le pack en
 /// boucle. Tout le monde a la même question le même jour, et elle change
 /// chaque matin sans aucun tirage aléatoire.
+///
+/// « Chaque matin » se TIENT grâce à [currentDayProvider] : ce provider n'est
+/// pas auto-disposé et sa seule autre dépendance ne bouge plus une fois le
+/// pack chargé, si bien qu'un `DateTime.now()` lu ici figeait la question au
+/// lancement — une application restée résidente, cas normal sur mobile,
+/// servait la même question des jours durant.
 final dailyLessonProvider = Provider<Lesson?>((ref) {
   final lessons = ref.watch(academyPackProvider).valueOrNull;
   if (lessons == null || lessons.isEmpty) {
@@ -23,7 +30,7 @@ final dailyLessonProvider = Provider<Lesson?>((ref) {
   }
   // Un jour CIVIL, pas une durée écoulée : voir `dayOfYearIndex`, qui porte
   // la mesure du décalage provoqué par les changements d'heure.
-  final dayOfYear = dayOfYearIndex(DateTime.now());
+  final dayOfYear = dayOfYearIndex(ref.watch(currentDayProvider));
   return lessons[dayOfYear % lessons.length];
 });
 

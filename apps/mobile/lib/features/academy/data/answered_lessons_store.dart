@@ -38,15 +38,28 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/logging/app_logger.dart';
+import '../../../core/utilities/serial_queue.dart';
 
 /// Persistance locale des questions abordées.
 class AnsweredLessonsStore {
-  const AnsweredLessonsStore();
+  AnsweredLessonsStore();
 
   static const _logger = AppLogger('AnsweredLessonsStore');
 
   /// Clé des préférences locales.
   static const String key = 'academy.lecons_repondues';
+
+  /// Les écritures se SUIVENT. Sans cette file, la promesse « la PREMIÈRE
+  /// gagne » cédait dès que deux écritures se chevauchaient — répondre à la
+  /// question du jour pendant que `pullAnswers` rapatrie les réponses du
+  /// serveur, par exemple : chacune relisait la carte avant l'écriture de
+  /// l'autre, et une réponse disparaissait.
+  ///
+  /// Par INSTANCE, et c'est ce qui compte : le provider n'en construit
+  /// qu'une, donc toutes les écritures de l'application passent par la même
+  /// file. Statique, elle aurait aussi lié entre eux des tests successifs,
+  /// dont une tâche restée en suspens aurait bloqué les suivants.
+  final SerialQueue _queue = SerialQueue();
 
   /// Identifiant de leçon vers l'index du choix retenu.
   Future<Map<String, int>> read() async {
@@ -75,17 +88,19 @@ class AnsweredLessonsStore {
   /// Note une réponse. IDEMPOTENT, et la PREMIÈRE gagne : rouvrir une leçon
   /// ne réécrit pas ce qui a été répondu, et un score dérivé ne peut pas
   /// compter deux fois la même question.
-  Future<void> markAnswered(String lessonId, int choiceIndex) async {
-    final current = Map<String, int>.from(await read());
-    if (current.containsKey(lessonId)) {
-      return;
-    }
-    current[lessonId] = choiceIndex;
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(key, jsonEncode(current));
+  Future<void> markAnswered(String lessonId, int choiceIndex) {
+    return _queue.run(() async {
+      final current = Map<String, int>.from(await read());
+      if (current.containsKey(lessonId)) {
+        return;
+      }
+      current[lessonId] = choiceIndex;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(key, jsonEncode(current));
+    });
   }
 }
 
 final answeredLessonsStoreProvider = Provider<AnsweredLessonsStore>(
-  (ref) => const AnsweredLessonsStore(),
+  (ref) => AnsweredLessonsStore(),
 );

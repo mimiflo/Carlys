@@ -42,7 +42,7 @@ MetabolismResult? metabolismResultFromJson(Map<String, dynamic>? json) {
   }
   return MetabolismResult(
     bmi: (json['bmi'] as num).toDouble(),
-    bmiCategory: BmiCategory.fromApi(json['bmiCategory'] as String),
+    bmiCategory: BmiCategory.fromApi(json['bmiCategory'] as String?),
     bmrKcal: (json['bmrKcal'] as num).toInt(),
     tdeeKcal: (json['tdeeKcal'] as num).toInt(),
     targetKcal: (json['targetKcal'] as num).toInt(),

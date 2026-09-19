@@ -16,14 +16,26 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../../core/logging/app_logger.dart';
+import '../../../core/utilities/serial_queue.dart';
 
 class RewardLedger {
-  const RewardLedger();
+  RewardLedger();
 
   static const _logger = AppLogger('RewardLedger');
 
   /// Clé des préférences locales.
   static const String key = 'progression.recompenses';
+
+  /// Les écritures du journal se SUIVENT. Sans cette file, les
+  /// invalidations en rafale du démarrage faisaient tourner plusieurs
+  /// `record()` en parallèle : chacun lisait le journal avant l'écriture de
+  /// l'autre, une inscription se perdait, et la récompense était
+  /// re-célébrée plus tard avec une date réécrite.
+  ///
+  /// Par INSTANCE : le provider n'en construit qu'une, donc toutes les
+  /// écritures de l'application passent par la même file — et deux tests
+  /// successifs ne se transmettent pas une tâche en suspens.
+  final SerialQueue _queue = SerialQueue();
 
   /// Identifiant de récompense vers la date de première obtention.
   Future<Map<String, DateTime>> read() async {
@@ -68,43 +80,44 @@ class RewardLedger {
 
   /// Ouvre le journal, même vide, pour que la prochaine récompense sache
   /// qu'elle est bien la première À ÊTRE GAGNÉE, et non la première lue.
-  Future<void> start() async {
-    final prefs = await SharedPreferences.getInstance();
-    if (prefs.containsKey(key)) return;
-    await prefs.setString(key, '{}');
+  Future<void> start() {
+    return _queue.run(() async {
+      final prefs = await SharedPreferences.getInstance();
+      if (prefs.containsKey(key)) return;
+      await prefs.setString(key, '{}');
+    });
   }
 
   /// Inscrit les récompenses ABSENTES du journal, à la date fournie.
   ///
   /// Rend les identifiants réellement inscrits : ce sont eux, et eux seuls,
   /// qui se gravent sous les yeux de l'utilisateur.
-  Future<Set<String>> record(
-    Iterable<String> rewardIds,
-    DateTime earnedAt,
-  ) async {
-    final current = Map<String, DateTime>.from(await read());
-    final added = <String>{};
-    for (final id in rewardIds) {
-      if (current.containsKey(id)) continue;
-      current[id] = earnedAt;
-      added.add(id);
-    }
-    if (added.isEmpty) {
-      return const {};
-    }
+  Future<Set<String>> record(Iterable<String> rewardIds, DateTime earnedAt) {
+    return _queue.run(() async {
+      final current = Map<String, DateTime>.from(await read());
+      final added = <String>{};
+      for (final id in rewardIds) {
+        if (current.containsKey(id)) continue;
+        current[id] = earnedAt;
+        added.add(id);
+      }
+      if (added.isEmpty) {
+        return const <String>{};
+      }
 
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setString(
-      key,
-      jsonEncode({
-        for (final entry in current.entries)
-          entry.key: entry.value.toIso8601String(),
-      }),
-    );
-    return added;
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString(
+        key,
+        jsonEncode({
+          for (final entry in current.entries)
+            entry.key: entry.value.toIso8601String(),
+        }),
+      );
+      return added;
+    });
   }
 }
 
 final rewardLedgerProvider = Provider<RewardLedger>((ref) {
-  return const RewardLedger();
+  return RewardLedger();
 });

@@ -1,6 +1,7 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../../core/utilities/current_day.dart';
 import '../../data/repositories/nutrition_repository_impl.dart';
 import '../../domain/entities/nutrition.dart';
 import '../../domain/repositories/nutrition_repository.dart';
@@ -14,10 +15,18 @@ final metabolismReportProvider = FutureProvider.autoDispose<MetabolismReport>((
 
 /// Repas d'AUJOURD'HUI, au sens de la journée locale de l'appareil : c'est
 /// le client qui connaît son fuseau, il envoie les bornes au serveur.
+///
+/// Le jour vient de [currentDayProvider], qui bascule TOUT SEUL à minuit :
+/// lu ici par un `DateTime.now()`, il restait figé au lancement — l'accueil
+/// l'observe en permanence, donc rien ne rendait jamais cet auto-disposé, et
+/// les tuiles Calories et Protéines affichaient encore les totaux de la
+/// veille à 0 h 05. La borne haute est le jour CIVIL suivant, jamais
+/// « +24 h » : la nuit du changement d'heure dure 23 ou 25 heures, et un
+/// repas de 23 h 30 tombait alors hors de l'intervalle demandé au serveur —
+/// il disparaissait du journal aussitôt ajouté.
 final todayMealsProvider = FutureProvider.autoDispose<List<MealEntry>>((ref) {
-  final now = DateTime.now();
-  final dayStart = DateTime(now.year, now.month, now.day);
-  final dayEnd = dayStart.add(const Duration(days: 1));
+  final dayStart = ref.watch(currentDayProvider);
+  final dayEnd = nextMidnight(dayStart);
   return ref
       .watch(nutritionRepositoryProvider)
       .mealsBetween(dayStart.toUtc(), dayEnd.toUtc());

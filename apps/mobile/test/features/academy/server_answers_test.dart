@@ -25,7 +25,7 @@ void main() {
     return container;
   }
 
-  Future<Map<String, int>> locales() => const AnsweredLessonsStore().read();
+  Future<Map<String, int>> locales() => AnsweredLessonsStore().read();
 
   setUp(() {
     SharedPreferences.setMockInitialValues(const {});

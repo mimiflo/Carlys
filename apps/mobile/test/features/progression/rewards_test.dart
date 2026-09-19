@@ -163,7 +163,7 @@ void main() {
     test('une récompense obtenue ne se reprend JAMAIS', () async {
       // LE test de la marque. On gagne un cap, on s'arrête, les faits
       // redescendent : la médaille reste au journal.
-      const ledger = RewardLedger();
+      final ledger = RewardLedger();
       final day = DateTime(2026, 5, 1);
 
       await ledger.record(['constance-4'], day);
@@ -180,7 +180,7 @@ void main() {
     });
 
     test('la date de PREMIÈRE obtention ne se réécrit pas', () async {
-      const ledger = RewardLedger();
+      final ledger = RewardLedger();
       final first = DateTime(2026, 5, 1);
 
       await ledger.record(['discipline-10'], first);
@@ -192,7 +192,7 @@ void main() {
     test('seules les récompenses NOUVELLES sont annoncées', () async {
       // C'est ce qui décide de la gravure : une gravure qui rejouerait à
       // chaque ouverture ne célébrerait plus rien.
-      const ledger = RewardLedger();
+      final ledger = RewardLedger();
       final day = DateTime(2026, 5, 1);
 
       final first = await ledger.record(['maitrise-5', 'discipline-10'], day);
@@ -211,7 +211,7 @@ void main() {
       // d'un coup à la première ouverture. Les graver ensemble ne
       // célébrerait rien : c'est une histoire qu'on inscrit, pas un cap
       // qu'on franchit.
-      const ledger = RewardLedger();
+      final ledger = RewardLedger();
 
       expect(await ledger.hasStarted(), isFalse);
       await ledger.start();
@@ -224,7 +224,7 @@ void main() {
     test(
       'après l’ouverture, la récompense suivante est bien NOUVELLE',
       () async {
-        const ledger = RewardLedger();
+        final ledger = RewardLedger();
         await ledger.start();
 
         final fresh = await ledger.record([
@@ -241,7 +241,7 @@ void main() {
         RewardLedger.key: 'ceci n’est pas du JSON',
       });
 
-      expect(await const RewardLedger().read(), isEmpty);
+      expect(await RewardLedger().read(), isEmpty);
     });
   });
 }

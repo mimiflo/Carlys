@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/feedback/server_gesture.dart';
 import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
 import '../controllers/water_controllers.dart';
@@ -73,7 +74,7 @@ class _WaterForm extends ConsumerWidget {
                 child: AppButton(
                   label: '+ 25 cl',
                   icon: AppIcons.water,
-                  onPressed: () => actions.add(waterGlassMl),
+                  onPressed: () => _compter(context, actions, waterGlassMl),
                 ),
               ),
               const SizedBox(width: AppSpacing.sm),
@@ -81,7 +82,7 @@ class _WaterForm extends ConsumerWidget {
                 child: AppButton(
                   label: '+ 50 cl',
                   icon: AppIcons.water,
-                  onPressed: () => actions.add(waterBottleMl),
+                  onPressed: () => _compter(context, actions, waterBottleMl),
                 ),
               ),
             ],
@@ -96,7 +97,7 @@ class _WaterForm extends ConsumerWidget {
               // ne fait rien quand on le presse est pire qu'un bouton éteint.
               onPressed: consumed == 0
                   ? null
-                  : () => actions.add(-waterGlassMl),
+                  : () => _compter(context, actions, -waterGlassMl),
             ),
           ),
           const SizedBox(height: AppSpacing.sm),
@@ -104,4 +105,19 @@ class _WaterForm extends ConsumerWidget {
       ),
     );
   }
+
+  /// Un verre compté, c'est une écriture locale : elle peut échouer (base
+  /// fermée, disque plein) et son échec DOIT se dire. Les trois boutons
+  /// jetaient leur future — l'erreur partait dans le vide, le compteur ne
+  /// bougeait pas, et rien ne l'expliquait.
+  Future<void> _compter(
+    BuildContext context,
+    WaterActions actions,
+    int millilitres,
+  ) => runLocalGesture(
+    context,
+    () => actions.add(millilitres),
+    scope: 'WaterSheet',
+    echec: 'Le verre n’a pas pu être compté. Réessaie.',
+  );
 }

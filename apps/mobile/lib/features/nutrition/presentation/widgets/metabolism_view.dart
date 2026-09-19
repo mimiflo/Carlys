@@ -60,7 +60,9 @@ class MetabolismView extends StatelessWidget {
         const SizedBox(height: AppSpacing.gapSection),
         AppSectionHeader(
           title: 'Corps',
-          trailing: metabolism.bmiCategory.label,
+          // Muet plutôt que faux : une catégorie que cette version ne
+          // connaît pas ne s'affiche pas, l'IMC chiffré reste.
+          trailing: metabolism.bmiCategory?.label,
         ),
         const SizedBox(height: AppSpacing.sm),
         Row(

@@ -155,7 +155,10 @@ class _Meta extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Text(
-      '${entry.reward.kind.label} · ${formatMonthYear(entry.earnedAt)}'
+      // `.toLocal()` : la date vient du serveur en UTC (règle du dépôt —
+      // stocké en UTC, affiché localisé). Sans lui, un record soulevé le
+      // 1er septembre à 0 h 30 à Paris s'affichait « AOÛT ».
+      '${entry.reward.kind.label} · ${formatMonthYear(entry.earnedAt.toLocal())}'
           .toUpperCase(),
       style: AppTypography.labelMono.copyWith(
         color: AppColors.darkTextTertiary,

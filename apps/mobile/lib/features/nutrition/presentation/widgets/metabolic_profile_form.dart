@@ -50,13 +50,23 @@ class _MetabolicProfileFormState extends ConsumerState<MetabolicProfileForm> {
 
   bool get _weightMissing => widget.profile.weightKg == null;
 
+  /// Bornes d'âge du CONTRAT serveur (`AGE_YEARS_MIN`/`MAX`), pas des
+  /// chiffres choisis ici : le sélecteur offrait jusqu'à aujourd'hui et
+  /// depuis le 1er janvier d'il y a 120 ans, donc des dates que le serveur
+  /// refuse toujours — une faute de frappe sur l'année partait en 400.
+  static const int _ageMin = 15;
+  static const int _ageMax = 120;
+
   Future<void> _pickBirthDate() async {
     final now = DateTime.now();
+    final lastDate = DateTime(now.year - _ageMin, now.month, now.day);
+    final firstDate = DateTime(now.year - _ageMax, now.month, now.day);
+    final initial = _birthDate ?? DateTime(now.year - 25, now.month, now.day);
     final picked = await showDatePicker(
       context: context,
-      initialDate: _birthDate ?? DateTime(now.year - 25, now.month, now.day),
-      firstDate: DateTime(now.year - 120),
-      lastDate: now,
+      initialDate: initial.isAfter(lastDate) ? lastDate : initial,
+      firstDate: firstDate,
+      lastDate: lastDate,
       helpText: 'Date de naissance',
     );
     if (picked != null) {

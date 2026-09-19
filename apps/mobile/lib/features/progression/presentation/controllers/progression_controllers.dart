@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../academy/presentation/controllers/academy_controllers.dart';
+import '../../../academy/presentation/providers/academy_progress_providers.dart';
 import '../../../authentication/presentation/controllers/auth_controller.dart';
 import '../../../workout_session/presentation/controllers/workout_controllers.dart';
 import '../../domain/progression.dart';
@@ -60,15 +60,19 @@ final progressionProfileProvider = Provider<ProgressionProfile?>((ref) {
   // pas encore répondu, le profil s'affiche quand même et l'axe « Maîtrise »
   // se dit en attente. Bloquer tout le profil sur cette seule lecture serait
   // disproportionné.
-  final answered = ref.watch(answeredLessonsProvider).valueOrNull;
-  final pack = ref.watch(academyPackProvider).valueOrNull;
+  //
+  // Le couple vient d'`AcademyProgress`, qui compte les réponses FILTRÉES
+  // par le pack : la taille brute du magasin local porte aussi des leçons
+  // retirées d'une version à l'autre, ou rapatriées d'un appareil au pack
+  // plus grand — le numérateur pouvait alors dépasser son dénominateur.
+  final progress = ref.watch(academyProgressProvider);
 
   return computeProgression(
     buildProgressionFacts(
       history: history,
       today: DateTime.now(),
-      lessonsAnswered: answered?.length ?? 0,
-      lessonsTotal: pack?.length ?? 0,
+      lessonsAnswered: progress?.abordees ?? 0,
+      lessonsTotal: progress?.total ?? 0,
     ),
   );
 });

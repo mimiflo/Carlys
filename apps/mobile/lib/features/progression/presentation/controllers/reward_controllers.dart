@@ -18,23 +18,44 @@ import 'progression_controllers.dart';
 /// sans conséquence — le journal continue d'afficher ceux déjà obtenus, et
 /// la dérivation ne retire jamais rien.
 final rewardFactsProvider = Provider<RewardFacts?>((ref) {
-  final history = ref.watch(workoutHistoryProvider).valueOrNull;
+  final history = ref.watch(workoutHistoryProvider);
+  final answered = ref.watch(answeredLessonsProvider);
+  final pack = ref.watch(academyPackProvider);
+  final records = ref.watch(personalRecordsProvider);
   final profile = ref.watch(progressionProfileProvider);
-  if (history == null || profile == null) {
+
+  // TOUTES les sources doivent avoir répondu — données ou échec — avant de
+  // rendre des faits. Un « a répondu » suffit : une source en erreur (les
+  // records, hors ligne) ne doit pas bloquer les récompenses, mais une
+  // source encore EN ROUTE, si. Sans cette garde, les faits partiels du
+  // démarrage ouvraient le journal (`start()`) avec une histoire
+  // incomplète : tout ce qui arrivait ensuite comptait comme fraîchement
+  // gagné, et un appareil neuf rejouait les célébrations de tout un passé.
+  final pret = [
+    history,
+    answered,
+    pack,
+    records,
+  ].every((source) => source.hasValue || source.hasError);
+  if (!pret || history.valueOrNull == null || profile == null) {
     return null;
   }
 
+  // Le couple leçons vient d'`AcademyProgress` : il compte les réponses
+  // FILTRÉES par le pack courant, quand le magasin local en porte aussi
+  // d'autres (leçon retirée d'une version à l'autre, réponses rapatriées
+  // d'un appareil au pack plus grand). Comparé au total du pack, le compte
+  // brut pouvait déclarer l'Academy terminée sans qu'elle le soit.
+  final progress = ref.watch(academyProgressProvider);
+
   return buildRewardFacts(
-    history: history,
+    history: history.valueOrNull!,
     reachedTitle: profile.title,
-    lessonsAnswered:
-        ref.watch(answeredLessonsProvider).valueOrNull?.length ?? 0,
-    lessonsTotal: ref.watch(academyPackProvider).valueOrNull?.length ?? 0,
+    lessonsAnswered: progress?.abordees ?? 0,
+    lessonsTotal: progress?.total ?? 0,
     academyDomainsCompleted: ref.watch(completedAcademyDomainsProvider),
-    academyDomainsServed:
-        ref.watch(academyProgressProvider)?.domainesServis ?? 0,
-    personalRecords:
-        ref.watch(personalRecordsProvider).valueOrNull?.length ?? 0,
+    academyDomainsServed: progress?.domainesServis ?? 0,
+    personalRecords: records.valueOrNull?.length ?? 0,
   );
 });
 
@@ -153,11 +174,13 @@ final highestTitleProvider = Provider<CarlysTitle>((ref) {
       ref.watch(progressionProfileProvider)?.title ?? CarlysTitle.apprenti;
   for (final entry in earned) {
     if (entry.reward.kind != RewardKind.titre) continue;
-    for (final title in CarlysTitle.values) {
-      if (entry.reward.id == 'titre-${title.name}' &&
-          title.index > highest.index) {
-        highest = title;
-      }
+    // `titleOfReward` relit la clé là où le catalogue l'écrit : le préfixe
+    // reconstruit à la main ici aurait divergé en silence le jour où il
+    // change, et la majesté de la mise en scène serait retombée sans que
+    // rien ne le signale.
+    final title = titleOfReward(entry.reward.id);
+    if (title != null && title.index > highest.index) {
+      highest = title;
     }
   }
   return highest;

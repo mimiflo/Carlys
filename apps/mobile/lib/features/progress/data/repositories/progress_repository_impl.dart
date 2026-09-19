@@ -67,7 +67,13 @@ class ProgressRepositoryImpl implements ProgressRepository {
       final response = await _dio.post<Map<String, dynamic>>(
         '/body-metrics',
         data: {
-          // Id généré ici : renvoyer la même requête ne crée aucun doublon.
+          // Id né sur l'appareil : le serveur déduplique sur CET identifiant,
+          // donc une même requête REJOUÉE telle quelle ne crée pas de
+          // doublon. À ne pas confondre avec un nouvel essai de
+          // l'utilisateur : il rouvre la feuille et resaisit, ce qui est un
+          // autre geste, avec un autre identifiant — aucun appelant ne
+          // conserve le précédent, et aucun rejeu automatique n'existe sur
+          // ce chemin (les mesures ne passent pas par la file hors ligne).
           'id': _uuid.v4(),
           'metricType': kind.apiValue,
           'value': value,

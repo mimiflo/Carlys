@@ -54,9 +54,13 @@ class MetabolismExpenditureRow extends StatelessWidget {
           ),
         ),
         AppExplainable(
+          // « plus », jamais « dont » : l'activité est calculée comme
+          // `tdee − bmr`, donc elle s'AJOUTE au métabolisme de base. Le
+          // « dont » affirmait l'inverse au lecteur d'écran, alors que le
+          // visuel, lui, décompose bien la dépense totale en deux parts.
           enonce:
               'Métabolisme de base $bmr kilocalories, '
-              'dont $activity d’activité',
+              'plus $activity kilocalories d’activité',
           // Deux lignes de label ne font pas 48 points : c'est ce
           // rembourrage qui porte le bloc au-dessus de la cible tactile.
           padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
