@@ -66,6 +66,7 @@ import 'package:carlys_mobile/features/subscription/presentation/screens/subscri
 import 'package:carlys_mobile/features/training/presentation/screens/training_hub_screen.dart';
 import 'package:carlys_mobile/features/workout_history/presentation/screens/workout_history_screen.dart';
 import 'package:carlys_mobile/features/workout_program/data/repositories/program_repository_impl.dart';
+import 'package:carlys_mobile/features/workout_program/presentation/screens/program_calendar_screen.dart';
 import 'package:carlys_mobile/features/workout_program/presentation/screens/program_detail_screen.dart';
 import 'package:carlys_mobile/features/workout_program/presentation/screens/programs_screen.dart';
 import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';
@@ -878,6 +879,17 @@ void main() {
       tester,
       '33-programme-calendrier',
       shows: find.byType(ProgramDetailScreen),
+    );
+
+    // Et la grille POSÉE SUR DE VRAIES DATES : ce qui est fait, manqué, à
+    // venir. L'exemple commence une semaine avant aujourd'hui, donc sa
+    // semaine 1 a une histoire.
+    await tester.tap(find.text('Voir le calendrier'));
+    await settle(tester);
+    await capture(
+      tester,
+      '34-programme-calendrier-date',
+      shows: find.byType(ProgramCalendarScreen),
     );
   });
 

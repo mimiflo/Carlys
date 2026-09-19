@@ -7,6 +7,7 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { type Prisma } from '@prisma/client';
+import { columnOfDayKey } from '../../../common/utilities/civil-day';
 import { EntitlementsService } from '../../subscriptions/application/entitlements.service';
 import { ProgramsRepository } from '../infrastructure/programs.repository';
 import { presentProgramDetail, presentProgramSummary } from './program.presenter';
@@ -25,6 +26,8 @@ export interface SaveProgramInput {
   description?: string | null;
   weeksCount: number;
   isActive?: boolean;
+  /** Jour civil `YYYY-MM-DD`, ou `null` pour un programme sans calendrier. */
+  startsOn?: string | null;
   days: ProgramDayInput[];
 }
 
@@ -99,6 +102,9 @@ export class ProgramsService {
         description: input.description ?? null,
         weeksCount: input.weeksCount,
         isActive: input.isActive ?? false,
+        // Le `PUT` décrit l'état COMPLET : une date absente du corps est une
+        // date retirée, comme un jour absent de `days` est un jour retiré.
+        startsOn: input.startsOn == null ? null : columnOfDayKey(input.startsOn),
       },
       days,
       input.isActive ?? false,

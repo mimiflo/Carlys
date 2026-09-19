@@ -83,4 +83,9 @@ abstract final class AppRoutes {
   /// Comme les modèles : l'identifiant d'un nouveau programme est un UUID
   /// généré sur l'appareil, jamais une route `/programs/new`.
   static String programDetail(String programId) => '/programs/$programId';
+
+  /// Le CALENDRIER DATÉ d'un programme : la grille posée sur de vraies
+  /// dates. Sous la fiche du programme, parce qu'il n'existe pas sans elle.
+  static String programCalendar(String programId) =>
+      '/programs/$programId/calendrier';
 }

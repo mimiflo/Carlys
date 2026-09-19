@@ -1,6 +1,7 @@
 import 'package:carlys_mobile/core/errors/app_exception.dart';
 import 'package:carlys_mobile/features/workout_program/domain/entities/generation_report.dart';
 import 'package:carlys_mobile/features/workout_program/domain/entities/program.dart';
+import 'package:carlys_mobile/features/workout_program/domain/entities/program_calendar.dart';
 import 'package:carlys_mobile/features/workout_program/domain/repositories/program_repository.dart';
 
 /// Dépôt de programmes pilotable : état en mémoire, pannes à la demande.
@@ -154,6 +155,78 @@ class FakeProgramRepository implements ProgramRepository {
           'Pour aller plus loin : « Haltères » ouvrirait 14 exercices de plus (biceps, dos).',
         ],
       ),
+    );
+  }
+
+  /// La semaine demandée, DATÉE depuis la date de début du programme.
+  ///
+  /// La doublure refait le calcul du serveur — ancrage au lundi, jours
+  /// d'avant le départ « hors période » — pour que les écrans se testent
+  /// sans réseau. Elle ne connaît AUCUNE séance : rien n'y est jamais
+  /// « fait », ce qui est exact, une doublure de programmes ne voit pas
+  /// l'historique.
+  @override
+  Future<ProgramCalendarWeek> calendarWeek(
+    String programId, {
+    int? week,
+  }) async {
+    final program = _programs[programId];
+    if (program == null) {
+      throw StateError('Programme introuvable : $programId');
+    }
+    final startsOn = program.startsOn;
+    if (startsOn == null) {
+      throw StateError('Programme sans date de début : $programId');
+    }
+    final depart = asLocalDate(startsOn);
+    final ancre = depart.subtract(Duration(days: depart.weekday - 1));
+    final aujourdHui = DateTime.now();
+    final semaine = week ?? 1;
+    String cle(DateTime jour) =>
+        '${jour.year}-${jour.month.toString().padLeft(2, '0')}'
+        '-${jour.day.toString().padLeft(2, '0')}';
+
+    return ProgramCalendarWeek(
+      programId: programId,
+      name: program.name,
+      weeksCount: program.weeksCount,
+      startsOn: startsOn,
+      weekNumber: semaine,
+      currentWeek: null,
+      today: cle(aujourdHui),
+      days: [
+        for (var dayOfWeek = 1; dayOfWeek <= 7; dayOfWeek++)
+          () {
+            final date = ancre.add(
+              Duration(days: 7 * (semaine - 1) + (dayOfWeek - 1)),
+            );
+            final entry = program.dayAt(semaine, dayOfWeek);
+            return ProgramCalendarDay(
+              id: entry?.id,
+              weekNumber: semaine,
+              dayOfWeek: dayOfWeek,
+              date: cle(date),
+              templateId: entry?.templateId,
+              label: entry?.label,
+              isRest: entry?.isRest ?? false,
+              status: entry == null
+                  ? ProgramDayStatus.free
+                  : entry.isRest
+                  ? ProgramDayStatus.rest
+                  : date.isBefore(depart)
+                  ? ProgramDayStatus.before
+                  : date.isBefore(
+                      DateTime(
+                        aujourdHui.year,
+                        aujourdHui.month,
+                        aujourdHui.day,
+                      ),
+                    )
+                  ? ProgramDayStatus.missed
+                  : ProgramDayStatus.upcoming,
+            );
+          }(),
+      ],
     );
   }
 

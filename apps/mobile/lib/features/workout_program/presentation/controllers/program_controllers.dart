@@ -4,6 +4,7 @@ import 'package:uuid/uuid.dart';
 import '../../data/repositories/program_repository_impl.dart';
 import '../../domain/entities/generation_report.dart';
 import '../../domain/entities/program.dart';
+import '../../domain/entities/program_calendar.dart';
 
 final programsProvider = FutureProvider.autoDispose<List<ProgramSummary>>((
   ref,
@@ -14,6 +15,17 @@ final programsProvider = FutureProvider.autoDispose<List<ProgramSummary>>((
 final programDetailProvider = FutureProvider.autoDispose
     .family<ProgramDetail, String>((ref, programId) {
       return ref.watch(programRepositoryProvider).byId(programId);
+    });
+
+/// Une semaine DATÉE du programme.
+///
+/// La semaine est facultative : sans elle, le serveur ouvre sur celle
+/// d'aujourd'hui — il connaît le fuseau de la personne, l'écran non.
+final programCalendarProvider = FutureProvider.autoDispose
+    .family<ProgramCalendarWeek, ({String programId, int? week})>((ref, key) {
+      return ref
+          .watch(programRepositoryProvider)
+          .calendarWeek(key.programId, week: key.week);
     });
 
 /// Actions des programmes : une seule écriture (PUT de l'état complet),
@@ -48,7 +60,10 @@ class ProgramActions {
     return tour.whenComplete(() {
       _ref
         ..invalidate(programsProvider)
-        ..invalidate(programDetailProvider(programId));
+        ..invalidate(programDetailProvider(programId))
+        // La famille ENTIÈRE : changer la date de début déplace toutes les
+        // semaines à la fois, et l'écran n'a pas à savoir lesquelles.
+        ..invalidate(programCalendarProvider);
     });
   }
 
@@ -124,6 +139,21 @@ class ProgramActions {
       result = await _ref.read(programRepositoryProvider).generate(id);
     });
     return result;
+  }
+
+  /// Pose ou retire la DATE DE DÉBUT, sur l'état serveur frais.
+  ///
+  /// Le calendrier tout entier en découle : sans elle, le programme reste la
+  /// grille qu'il a toujours été.
+  Future<void> setStartsOn(String programId, DayKey? day) {
+    return _write(programId, () async {
+      final repository = _ref.read(programRepositoryProvider);
+      final fresh = await repository.byId(programId);
+      if (fresh.startsOn == day) {
+        return;
+      }
+      await repository.save(fresh.withStartsOn(day));
+    });
   }
 
   /// Un identifiant de jour, exposé pour que l'interface n'importe pas uuid.

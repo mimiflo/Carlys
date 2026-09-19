@@ -538,6 +538,25 @@ model WorkoutSession {
   /// l'historique reste lisible même modèle supprimé ou renommé.
   templateName String?
 
+  /// Jour de programme honoré par cette séance — ce qui rend une case du
+  /// calendrier « faite ». Rempli au lancement depuis le calendrier, nul
+  /// pour une séance libre.
+  ///
+  /// VOLONTAIREMENT SANS CLÉ ÉTRANGÈRE, et pour une raison mesurée : les
+  /// lignes `ProgramDay` sont PHYSIQUEMENT détruites puis recréées à chaque
+  /// enregistrement du programme (`programs.repository.ts`, `deleteMany`
+  /// suivi de `createMany`), c'est-à-dire à chaque geste d'édition. Avec
+  /// `SetNull`, cocher une case effacerait tous les liens séance ↔ jour ;
+  /// avec `Restrict`, le PUT tomberait dès la première séance faite ; avec
+  /// `Cascade`, on supprimerait des séances RÉALISÉES.
+  ///
+  /// Une référence par identifiant seul survit à ce cycle, parce que les
+  /// identifiants sont stables : l'écran conserve celui de la case, et la
+  /// génération le DÉRIVE de la position. La contrepartie est assumée — un
+  /// lien peut pendre quand la case disparaît, et la séance redevient alors
+  /// une séance libre. Perdre le lien vaut mieux que perdre l'historique.
+  programDayId String? @db.Uuid
+
   user            User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
   template        WorkoutTemplate?         @relation(fields: [templateId], references: [id], onDelete: SetNull)
   sets            WorkoutSet[]
@@ -546,6 +565,9 @@ model WorkoutSession {
 
   @@index([userId, startedAt(sort: Desc)])
   @@index([templateId])
+  /// Le calendrier lit « les séances de ces sept jours ». Sans cet index,
+  /// chaque ouverture balaie tout l'historique du compte.
+  @@index([programDayId])
 }
 
 /// Série PRÉVUE d'une séance : copie APLATIE du modèle au lancement.
@@ -1416,6 +1438,26 @@ model Program {
   /// PARTIEL, hors du vocabulaire Prisma), c'est donc le service qui l'impose,
   /// en désactivant les autres dans la même transaction.
   isActive    Boolean   @default(false)
+  /// Premier jour RÉEL du plan — une DATE CIVILE, jamais un instant.
+  ///
+  /// C'est elle qui donne une date à chaque case : la grille est ancrée au
+  /// LUNDI de sa semaine, et `date(semaine, jour) = lundi + 7×(s−1) + (j−1)`.
+  /// La grille reste donc alignée sur les jours de la semaine, que le
+  /// générateur utilise pour espacer les séances ; et les jours de la
+  /// semaine 1 ANTÉRIEURS à `startsOn` sont « hors période » — ni faits, ni
+  /// manqués. Sans cette nuance, commencer un mercredi afficherait deux
+  /// jours manqués avant même la première séance.
+  ///
+  /// `@db.Date` et non `DateTime` : stockée en instant, elle traverserait le
+  /// contrat en ISO 8601 complet et le mobile lui appliquerait le
+  /// `.toLocal()` qu'il applique à tout le reste — à raison, puisque tout le
+  /// reste EST un instant. Le 21 deviendrait le 20 à l'ouest de Greenwich.
+  ///
+  /// Nullable : les programmes déjà enregistrés n'en ont pas, et un
+  /// `NOT NULL` sans défaut casserait la migration sur une table peuplée.
+  /// Sans date, un programme reste ce qu'il a toujours été — une GRILLE
+  /// (semaine N, jour J), sans calendrier.
+  startsOn    DateTime? @db.Date
   /// Rapport de la génération qui a produit ce programme — `null` s'il a été
   /// composé à la main. Écrit UNE fois, jamais relu par le moteur.
   ///

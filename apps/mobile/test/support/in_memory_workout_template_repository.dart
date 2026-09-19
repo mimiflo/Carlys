@@ -141,7 +141,10 @@ class InMemoryWorkoutTemplateRepository implements WorkoutTemplateRepository {
   }
 
   @override
-  Future<String> startFromTemplate(String templateId) async {
+  Future<String> startFromTemplate(
+    String templateId, {
+    String? programDayId,
+  }) async {
     final template = _templates[templateId];
     if (template == null) {
       throw StateError('Modèle de séance introuvable : $templateId');

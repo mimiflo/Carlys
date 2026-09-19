@@ -7,6 +7,7 @@ library;
 
 import 'package:carlys_mobile/features/workout_program/domain/entities/generation_report.dart';
 import 'package:carlys_mobile/features/workout_program/domain/entities/program.dart';
+import 'package:carlys_mobile/features/workout_program/domain/entities/program_calendar.dart';
 import 'package:carlys_mobile/features/workout_program/domain/repositories/program_repository.dart';
 
 ProgramDayEntry _day(
@@ -26,7 +27,32 @@ ProgramDayEntry _day(
   );
 }
 
+/// Le lundi d'il y a une semaine, en jour civil `AAAA-MM-JJ`.
+///
+/// L'exemple commence donc une semaine AVANT aujourd'hui : sa semaine 1 est
+/// entièrement passée, sa semaine 2 en cours. C'est la seule façon de montrer
+/// un calendrier qui a une histoire — des séances faites, une manquée, des
+/// jours à venir — plutôt qu'une grille vierge.
+String _lundiDernier() {
+  final maintenant = DateTime.now();
+  final lundi = DateTime(
+    maintenant.year,
+    maintenant.month,
+    maintenant.day - (maintenant.weekday - 1) - 7,
+  );
+  return '${lundi.year}-${lundi.month.toString().padLeft(2, '0')}'
+      '-${lundi.day.toString().padLeft(2, '0')}';
+}
+
 class InMemoryProgramRepository implements ProgramRepository {
+  /// Les cases que l'exemple donne pour FAITES. Une doublure de programmes
+  /// ne voit pas l'historique des séances : ce qui est « fait » se déclare
+  /// donc ici, au lieu de se déduire de rien.
+  final Set<String> doneDayIds = {
+    'exemple-programme-day-1-1',
+    'exemple-programme-day-1-3',
+  };
+
   final Map<String, ProgramDetail> _programs = {
     'exemple-programme-force': ProgramDetail(
       id: 'exemple-programme-force',
@@ -34,6 +60,7 @@ class InMemoryProgramRepository implements ProgramRepository {
       description: 'Push, pull, jambes, et du vrai repos.',
       weeksCount: 2,
       isActive: true,
+      startsOn: _lundiDernier(),
       days: [
         for (final week in const [1, 2]) ...[
           _day(week, 1, 'Push force', templateId: 'exemple-modele-push'),
@@ -164,6 +191,95 @@ class InMemoryProgramRepository implements ProgramRepository {
           'Pour aller plus loin : « Haltères » ouvrirait 14 exercices de plus (biceps, dos).',
         ],
       ),
+    );
+  }
+
+  /// La semaine demandée, DATÉE depuis la date de début du programme.
+  ///
+  /// La doublure refait le calcul du serveur — ancrage au lundi, jours
+  /// d'avant le départ « hors période » — pour que les écrans se testent
+  /// sans réseau. Elle ne connaît AUCUNE séance : rien n'y est jamais
+  /// « fait », ce qui est exact, une doublure de programmes ne voit pas
+  /// l'historique.
+  @override
+  Future<ProgramCalendarWeek> calendarWeek(
+    String programId, {
+    int? week,
+  }) async {
+    final program = _programs[programId];
+    if (program == null) {
+      throw StateError('Programme introuvable : $programId');
+    }
+    final startsOn = program.startsOn;
+    if (startsOn == null) {
+      throw StateError('Programme sans date de début : $programId');
+    }
+    final depart = asLocalDate(startsOn);
+    final ancre = depart.subtract(Duration(days: depart.weekday - 1));
+    final aujourdHui = DateTime.now();
+    final semaine = week ?? 1;
+    String cle(DateTime jour) =>
+        '${jour.year}-${jour.month.toString().padLeft(2, '0')}'
+        '-${jour.day.toString().padLeft(2, '0')}';
+
+    return ProgramCalendarWeek(
+      programId: programId,
+      name: program.name,
+      weeksCount: program.weeksCount,
+      startsOn: startsOn,
+      weekNumber: semaine,
+      // La semaine qui contient aujourd'hui, calculée comme le serveur le
+      // fait : sans elle, l'écran annoncerait « hors de la période du plan »
+      // sur un programme parfaitement en cours.
+      currentWeek: () {
+        final ecart = DateTime(
+          aujourdHui.year,
+          aujourdHui.month,
+          aujourdHui.day,
+        ).difference(ancre).inDays;
+        if (ecart < 0) return null;
+        final rang = ecart ~/ 7 + 1;
+        return rang > program.weeksCount ? null : rang;
+      }(),
+      today: cle(aujourdHui),
+      days: [
+        for (var dayOfWeek = 1; dayOfWeek <= 7; dayOfWeek++)
+          () {
+            final date = ancre.add(
+              Duration(days: 7 * (semaine - 1) + (dayOfWeek - 1)),
+            );
+            final entry = program.dayAt(semaine, dayOfWeek);
+            return ProgramCalendarDay(
+              id: entry?.id,
+              weekNumber: semaine,
+              dayOfWeek: dayOfWeek,
+              date: cle(date),
+              templateId: entry?.templateId,
+              label: entry?.label,
+              isRest: entry?.isRest ?? false,
+              sessionId: entry != null && doneDayIds.contains(entry.id)
+                  ? 'exemple-seance-${entry.id}'
+                  : null,
+              status: entry == null
+                  ? ProgramDayStatus.free
+                  : doneDayIds.contains(entry.id)
+                  ? ProgramDayStatus.done
+                  : entry.isRest
+                  ? ProgramDayStatus.rest
+                  : date.isBefore(depart)
+                  ? ProgramDayStatus.before
+                  : date.isBefore(
+                      DateTime(
+                        aujourdHui.year,
+                        aujourdHui.month,
+                        aujourdHui.day,
+                      ),
+                    )
+                  ? ProgramDayStatus.missed
+                  : ProgramDayStatus.upcoming,
+            );
+          }(),
+      ],
     );
   }
 

@@ -1,4 +1,5 @@
 import { type ProgramDetail, type ProgramSummary } from '@carlys/api-contracts';
+import { dayKeyOfColumn } from '../../../common/utilities/civil-day';
 import {
   type ProgramSummaryRow,
   type ProgramWithDays,
@@ -22,6 +23,10 @@ export function presentProgramSummary(
     description: program.description,
     weeksCount: program.weeksCount,
     isActive: program.isActive,
+    // Un JOUR CIVIL, pas un instant : servi en ISO 8601 complet, le client
+    // lui appliquerait son `.toLocal()` habituel et le 21 deviendrait le 20
+    // à l'ouest de Greenwich.
+    startsOn: program.startsOn === null ? null : dayKeyOfColumn(program.startsOn),
     daysCount: daysCountOf(program),
     updatedAt: program.updatedAt.toISOString(),
   };

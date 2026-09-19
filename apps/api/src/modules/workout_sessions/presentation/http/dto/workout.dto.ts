@@ -135,6 +135,17 @@ export class CreateWorkoutSessionDto {
   templateName?: string;
 
   @ApiPropertyOptional({
+    description: 'Jour de programme honoré — ignoré s’il est inconnu, jamais bloquant',
+  })
+  @IsOptional()
+  // AUCUNE garde bloquante, et surtout pas de `@MaxDate` voisin : un jour
+  // inconnu, supprimé ou appartenant à autrui doit se perdre en silence,
+  // comme le modèle. La file de synchronisation traite un 4xx comme
+  // DÉFINITIF — refuser ici perdrait la séance elle-même.
+  @IsUUID()
+  programDayId?: string;
+
+  @ApiPropertyOptional({
     description:
       'Plan copié du modèle au lancement — transmis À LA CRÉATION seulement, ' +
       'ce qui permet de reprendre la séance sur un autre appareil',

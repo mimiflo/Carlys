@@ -5,6 +5,7 @@ import '../../../../core/api/api_error_mapper.dart';
 import '../../../../core/api/dio_client.dart';
 import '../../domain/entities/generation_report.dart';
 import '../../domain/entities/program.dart';
+import '../../domain/entities/program_calendar.dart';
 import '../../domain/repositories/program_repository.dart';
 
 /// Programmes servis par l'API (/api/v1/programs).
@@ -62,6 +63,17 @@ class ProgramRepositoryImpl implements ProgramRepository {
   }
 
   @override
+  Future<ProgramCalendarWeek> calendarWeek(String programId, {int? week}) {
+    return _guard(() async {
+      final response = await _dio.get<Map<String, dynamic>>(
+        '/programs/$programId/calendar',
+        queryParameters: {if (week != null) 'week': week},
+      );
+      return _calendar(_data(response));
+    });
+  }
+
+  @override
   Future<ProgramDetail> save(ProgramDetail program) {
     return _guard(() async {
       final response = await _dio.put<Map<String, dynamic>>(
@@ -71,6 +83,8 @@ class ProgramRepositoryImpl implements ProgramRepository {
           'description': program.description,
           'weeksCount': program.weeksCount,
           'isActive': program.isActive,
+          // Le PUT décrit l'état COMPLET : taire la date la retirerait.
+          'startsOn': program.startsOn,
           'days': [
             for (final day in program.days)
               {
@@ -120,6 +134,10 @@ class ProgramRepositoryImpl implements ProgramRepository {
       description: row['description'] as String?,
       weeksCount: (row['weeksCount'] as num).toInt(),
       isActive: row['isActive'] as bool,
+      // Lu DÉFENSIVEMENT : un serveur déployé après ce client ne sert pas
+      // encore la clé, et la liste des programmes ne doit pas tomber pour
+      // autant.
+      startsOn: row['startsOn'] as String?,
       daysCount: (row['daysCount'] as num).toInt(),
       updatedAt: DateTime.parse(row['updatedAt'] as String),
     );
@@ -133,6 +151,7 @@ class ProgramRepositoryImpl implements ProgramRepository {
       description: row['description'] as String?,
       weeksCount: (row['weeksCount'] as num).toInt(),
       isActive: row['isActive'] as bool,
+      startsOn: row['startsOn'] as String?,
       days: days
           .cast<Map<String, dynamic>>()
           .map(
@@ -143,6 +162,35 @@ class ProgramRepositoryImpl implements ProgramRepository {
               templateId: day['templateId'] as String?,
               label: day['label'] as String,
               isRest: day['isRest'] as bool,
+            ),
+          )
+          .toList(growable: false),
+    );
+  }
+
+  ProgramCalendarWeek _calendar(Map<String, dynamic> row) {
+    final days = row['days'] as List<dynamic>? ?? const [];
+    return ProgramCalendarWeek(
+      programId: row['programId'] as String,
+      name: row['name'] as String,
+      weeksCount: (row['weeksCount'] as num).toInt(),
+      startsOn: row['startsOn'] as String,
+      weekNumber: (row['weekNumber'] as num).toInt(),
+      currentWeek: (row['currentWeek'] as num?)?.toInt(),
+      today: row['today'] as String,
+      days: days
+          .cast<Map<String, dynamic>>()
+          .map(
+            (day) => ProgramCalendarDay(
+              id: day['id'] as String?,
+              weekNumber: (day['weekNumber'] as num).toInt(),
+              dayOfWeek: (day['dayOfWeek'] as num).toInt(),
+              date: day['date'] as String,
+              status: ProgramDayStatus.fromApi(day['status'] as String?),
+              templateId: day['templateId'] as String?,
+              label: day['label'] as String?,
+              isRest: day['isRest'] as bool? ?? false,
+              sessionId: day['sessionId'] as String?,
             ),
           )
           .toList(growable: false),

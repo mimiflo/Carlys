@@ -81,8 +81,8 @@ class WorkoutTemplateActions {
   /// Lance le modèle : crée la séance et matérialise son plan. Renvoie l'id de
   /// la séance à afficher. Lève un [StateError] si une séance est déjà en
   /// cours (l'écran propose alors de la terminer d'abord).
-  Future<String> start(String templateId) =>
-      _repository.startFromTemplate(templateId);
+  Future<String> start(String templateId, {String? programDayId}) =>
+      _repository.startFromTemplate(templateId, programDayId: programDayId);
 
   /// Valide une série : appariement au plan, écriture locale, mise en file.
   Future<RecordedSet> recordSet(AddSetInput input) =>

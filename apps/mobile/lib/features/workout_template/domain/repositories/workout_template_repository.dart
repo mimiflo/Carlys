@@ -39,7 +39,11 @@ abstract interface class WorkoutTemplateRepository {
   /// N'appelle jamais l'API : lancer un modèle fonctionne intégralement hors
   /// ligne. Lève un [StateError] si une séance est déjà en cours, ou si le
   /// modèle est introuvable.
-  Future<String> startFromTemplate(String templateId);
+  ///
+  /// [programDayId] est la case du calendrier honorée par cette séance, quand
+  /// elle est lancée depuis un programme : c'est ce lien, et lui seul, qui
+  /// fera dire « fait » à cette case.
+  Future<String> startFromTemplate(String templateId, {String? programDayId});
 
   /// Plan d'une séance, en temps réel. `null` pour une séance libre (sans
   /// modèle) : l'écran de séance garde alors exactement son comportement

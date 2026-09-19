@@ -1,4 +1,5 @@
-import { computeStreakDays, dayKeyInZone } from './streak.calculator';
+import { dayKeyInZone } from '../../../common/utilities/civil-day';
+import { computeStreakDays } from './streak.calculator';
 
 describe('dayKeyInZone', () => {
   it('découpe les jours dans le fuseau demandé, pas en UTC', () => {

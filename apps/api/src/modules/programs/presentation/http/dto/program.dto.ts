@@ -16,6 +16,22 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { trimmed } from '../../../../../common/transforms/trimmed';
+import { IsDayKey } from '../../../../../common/validators/is-day-key';
+
+/** Semaine demandée au calendrier. Absente : celle d'aujourd'hui. */
+export class CalendarWeekQuery {
+  @ApiPropertyOptional({
+    minimum: 1,
+    maximum: PROGRAM_MAX_WEEKS,
+    description: 'Semaine du programme. Absente : celle qui contient aujourd’hui.',
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(PROGRAM_MAX_WEEKS)
+  week?: number;
+}
 
 export class ListProgramsQuery {
   @ApiPropertyOptional({ description: 'Curseur : id du dernier élément servi' })
@@ -99,6 +115,20 @@ export class SaveProgramDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
+
+  @ApiPropertyOptional({
+    nullable: true,
+    example: '2026-09-21',
+    description:
+      'Premier jour du plan, jour civil YYYY-MM-DD. Absent vaut « pas de ' +
+      'calendrier » : le corps décrit l’état complet.',
+  })
+  @IsOptional()
+  // Une CHAÎNE, pas un `Date` : un jour civil converti en instant recule
+  // d'un jour à l'ouest de Greenwich, et aucune borne de futur ne s'y
+  // applique — commencer lundi prochain est le cas normal.
+  @IsDayKey()
+  startsOn?: string | null;
 
   @ApiProperty({ type: [SaveProgramDayDto], maxItems: PROGRAM_MAX_DAYS })
   @IsArray()

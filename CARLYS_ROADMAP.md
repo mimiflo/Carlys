@@ -267,10 +267,31 @@ date sur `Program`, aucun lien `WorkoutSession` ↔ jour de programme.
       mesurable) ; MARATHON et HYROX passent par des jours à intitulé
       libre tant que `WorkoutTemplateSet` n'a ni durée ni distance — c'est
       la migration à faire AVANT d'ajouter des exercices d'endurance.
-- [ ] Calendrier : date de début de `Program` (migration sur table
-      déployée), vue semaine datée, déplacer/reporter, fait/manqué — exige le
-      lien séance réalisée ↔ jour de programme (migration `WorkoutSession`,
-      contrat, Drift + file de synchronisation).
+- [x] Calendrier daté — FAIT le 19 septembre 2026. Migration
+      `20260919185324_calendrier_date` : `Program.startsOn` (`@db.Date`,
+      nullable) et `WorkoutSession.programDayId` (`@db.Uuid`, nullable,
+      indexé) — **volontairement SANS clé étrangère** : les lignes
+      `ProgramDay` sont détruites puis recréées à chaque enregistrement du
+      programme, donc `SetNull` aurait effacé tous les liens au premier
+      geste d'édition, `Restrict` cassé le PUT, `Cascade` supprimé des
+      séances réalisées. Le lien tient par l'identifiant, stable d'une
+      écriture à l'autre — un e2e le prouve en réécrivant le programme
+      entre deux lectures. `GET /programs/:id/calendar?week=` rend les SEPT
+      jours datés ; leurs états (`done`, `missed`, `before`, `upcoming`,
+      `rest`, `free`) sont tous DÉDUITS, aucun stocké. La grille est ancrée
+      au LUNDI de la semaine de `startsOn`, et les jours de la semaine 1
+      antérieurs au départ sont « hors période » : sans cette nuance,
+      commencer un mercredi accueillait par deux cases rouges des séances
+      que personne n'avait promis de faire. Mobile : Drift **v7**
+      (`programDayId` voyage dans `session.create`, donc lancer depuis le
+      calendrier marche HORS LIGNE), écran de calendrier daté, choix du
+      premier jour, résumé et légende des couleurs.
+      **Reste ouvert, et dit comme tel** : « déplacer / reporter » se fait
+      par le PUT existant (l'état complet passe toute permutation, là où un
+      `UPDATE` unique violerait `@@unique([programId, weekNumber,
+      dayOfWeek])`) — mais AUCUN geste d'écran ne l'expose encore ; et une
+      séance lancée librement, hors du calendrier, ne coche pas sa case (il
+      faudrait un « marquer comme fait », c'est-à-dire du stockage réel).
 - [x] Prescription ≠ placement — TRANCHÉ (17 septembre 2026) : on ASSUME
       une case = un jour. `@@unique([programId, weekNumber, dayOfWeek])`
       reste : c'est la grammaire de la grille actuelle, le moindre risque

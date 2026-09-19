@@ -48,6 +48,7 @@ export function presentSessionSummary(session: SessionSummaryRow): WorkoutSessio
     totalVolumeKg: Math.round(totalVolumeKg),
     templateId: session.templateId,
     templateName: session.templateName,
+    programDayId: session.programDayId,
   };
 }
 

@@ -70,12 +70,18 @@ class WorkoutSessionWriter {
   /// c'est ce qui permet de reprendre la séance sur un autre appareil, avec
   /// ses cibles. Elle ne repart jamais ensuite — le plan est figé au
   /// lancement.
+  ///
+  /// [programDayId] est la case du calendrier que cette séance honore, s'il
+  /// y en a une. Elle part dans le MÊME corps, donc lancer une séance depuis
+  /// le calendrier marche hors ligne comme le reste — et le serveur ignore
+  /// silencieusement un jour qu'il ne connaît pas.
   Future<void> insertSession({
     required String id,
     required DateTime startedAt,
     String? name,
     String? templateId,
     String? templateName,
+    String? programDayId,
     List<Map<String, dynamic>> plan = const [],
   }) async {
     // La règle « au plus une séance active » se vérifie ICI, dans la
@@ -83,6 +89,43 @@ class WorkoutSessionWriter {
     // course voit donc la séance du gagnant et lève — `currentOrStart`
     // rattrape ce StateError et rejoint la séance apparue.
     await requireNoActiveSession();
+    await _insertRow(
+      id: id,
+      startedAt: startedAt,
+      name: name,
+      templateId: templateId,
+      templateName: templateName,
+      programDayId: programDayId,
+    );
+    await enqueue(
+      entityType: 'session',
+      entityId: id,
+      operationType: 'session.create',
+      payload: _createPayload(
+        id: id,
+        startedAt: startedAt,
+        name: name,
+        templateId: templateId,
+        templateName: templateName,
+        programDayId: programDayId,
+        plan: plan,
+      ),
+    );
+  }
+
+  /// La LIGNE locale de la séance, à part.
+  ///
+  /// Comme le corps ci-dessous : ce qu'une séance porte s'allonge à chaque
+  /// tranche, et ces deux extractions gardent `insertSession` lisible d'un
+  /// seul regard.
+  Future<void> _insertRow({
+    required String id,
+    required DateTime startedAt,
+    String? name,
+    String? templateId,
+    String? templateName,
+    String? programDayId,
+  }) async {
     await _db
         .into(_db.localWorkoutSessions)
         .insert(
@@ -93,21 +136,38 @@ class WorkoutSessionWriter {
             startedAt: startedAt,
             templateId: Value(templateId),
             templateName: Value(templateName),
+            programDayId: Value(programDayId),
           ),
         );
-    await enqueue(
-      entityType: 'session',
-      entityId: id,
-      operationType: 'session.create',
-      payload: {
-        'id': id,
-        if (name != null) 'name': name,
-        'startedAt': startedAt.toIso8601String(),
-        if (templateId != null) 'templateId': templateId,
-        if (templateName != null) 'templateName': templateName,
-        if (plan.isNotEmpty) 'plan': plan,
-      },
-    );
+  }
+
+  /// Le corps de `session.create`, à part.
+  ///
+  /// Extrait pour que `insertSession` reste sous les quarante lignes que le
+  /// dépôt accorde à une méthode de dépôt : le corps grandit d'une clé à
+  /// chaque chose que la séance apprend à porter, la méthode non.
+  ///
+  /// Une clé ABSENTE, jamais nulle : le serveur distingue « pas de valeur »
+  /// d'une valeur nulle sur d'autres routes, et l'habitude vaut mieux que
+  /// l'exception.
+  Map<String, dynamic> _createPayload({
+    required String id,
+    required DateTime startedAt,
+    required List<Map<String, dynamic>> plan,
+    String? name,
+    String? templateId,
+    String? templateName,
+    String? programDayId,
+  }) {
+    return {
+      'id': id,
+      if (name != null) 'name': name,
+      'startedAt': startedAt.toIso8601String(),
+      if (templateId != null) 'templateId': templateId,
+      if (templateName != null) 'templateName': templateName,
+      if (programDayId != null) 'programDayId': programDayId,
+      if (plan.isNotEmpty) 'plan': plan,
+    };
   }
 
   /// Écrit une série et enfile `set.upsert`, dans la transaction courante.

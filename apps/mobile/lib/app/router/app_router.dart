@@ -37,6 +37,7 @@ import '../../features/subscription/presentation/screens/subscription_screen.dar
 import '../../features/training/presentation/screens/training_hub_screen.dart';
 import '../../features/workout_history/presentation/screens/workout_detail_screen.dart';
 import '../../features/workout_history/presentation/screens/workout_history_screen.dart';
+import '../../features/workout_program/presentation/screens/program_calendar_screen.dart';
 import '../../features/workout_program/presentation/screens/program_detail_screen.dart';
 import '../../features/workout_program/presentation/screens/programs_screen.dart';
 import '../../features/workout_program/presentation/screens/training_setup_screen.dart';
@@ -359,6 +360,16 @@ final appRouterProvider = Provider<GoRouter>((ref) {
             builder: (context, state) => ProgramDetailScreen(
               programId: state.pathParameters['programId'] ?? '',
             ),
+            routes: [
+              GoRoute(
+                path: 'calendrier',
+                name: 'program-calendar',
+                parentNavigatorKey: _rootNavigatorKey,
+                builder: (context, state) => ProgramCalendarScreen(
+                  programId: state.pathParameters['programId'] ?? '',
+                ),
+              ),
+            ],
           ),
         ],
       ),

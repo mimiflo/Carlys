@@ -5,6 +5,8 @@
 /// intitulé (repos, activité libre) — il ne duplique jamais un exercice.
 library;
 
+import 'program_calendar.dart';
+
 /// Libellés courts des jours, 1 = lundi … 7 = dimanche (convention API).
 const List<String> programDayLabels = [
   'LUN',
@@ -53,6 +55,7 @@ class ProgramSummary {
     required this.daysCount,
     required this.updatedAt,
     this.description,
+    this.startsOn,
   });
 
   final String id;
@@ -65,6 +68,10 @@ class ProgramSummary {
 
   /// Jours renseignés, repos compris.
   final int daysCount;
+
+  /// Premier jour du plan, `AAAA-MM-JJ`, ou `null` : le programme n'est
+  /// alors qu'une grille (semaine N, jour J), sans calendrier.
+  final DayKey? startsOn;
   final DateTime updatedAt;
 }
 
@@ -76,6 +83,7 @@ class ProgramDetail {
     required this.isActive,
     required this.days,
     this.description,
+    this.startsOn,
   });
 
   final String id;
@@ -83,6 +91,10 @@ class ProgramDetail {
   final String? description;
   final int weeksCount;
   final bool isActive;
+
+  /// Premier jour du plan, `AAAA-MM-JJ`. `null` tant qu'aucune date n'a été
+  /// choisie : le calendrier daté ne s'ouvre qu'à partir de là.
+  final DayKey? startsOn;
   final List<ProgramDayEntry> days;
 
   ProgramDayEntry? dayAt(int weekNumber, int dayOfWeek) {
@@ -94,6 +106,8 @@ class ProgramDetail {
     return null;
   }
 
+  /// `startsOn` se change par [withStartsOn] et non ici : `copyWith` ne sait
+  /// pas distinguer « inchangé » de « retiré », et cette date-là se retire.
   ProgramDetail copyWith({
     String? name,
     String? description,
@@ -107,7 +121,21 @@ class ProgramDetail {
       description: description ?? this.description,
       weeksCount: weeksCount ?? this.weeksCount,
       isActive: isActive ?? this.isActive,
+      startsOn: startsOn,
       days: days ?? this.days,
+    );
+  }
+
+  /// Le même programme, commencé le [day] — ou sans date si [day] est nul.
+  ProgramDetail withStartsOn(DayKey? day) {
+    return ProgramDetail(
+      id: id,
+      name: name,
+      description: description,
+      weeksCount: weeksCount,
+      isActive: isActive,
+      startsOn: day,
+      days: days,
     );
   }
 }

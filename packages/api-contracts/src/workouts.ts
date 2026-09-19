@@ -50,6 +50,13 @@ export const workoutSessionSummarySchema = z.object({
   templateId: z.string().nullable(),
   /** Nom du modèle AU MOMENT DU LANCEMENT : provenance immuable. */
   templateName: z.string().nullable(),
+  /**
+   * Jour de programme honoré par cette séance — ce qui rend une case du
+   * calendrier « faite ». `null` pour une séance libre, et `null` aussi
+   * quand le jour envoyé était inconnu : le lien se dégrade, la séance
+   * jamais.
+   */
+  programDayId: z.string().nullable(),
 });
 export type WorkoutSessionSummary = z.infer<typeof workoutSessionSummarySchema>;
 

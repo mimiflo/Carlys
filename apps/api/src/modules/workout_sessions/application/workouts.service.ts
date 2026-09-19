@@ -2,6 +2,7 @@ import { type WorkoutSessionDetail, type WorkoutSessionSummary } from '@carlys/a
 import { ConflictException, Injectable } from '@nestjs/common';
 import { type Prisma, WorkoutSessionStatus, WorkoutSetKind } from '@prisma/client';
 import { CommunityService } from '../../community/application/community.service';
+import { ProgramsRepository } from '../../programs/infrastructure/programs.repository';
 import { ProgressService } from '../../progress/application/progress.service';
 import { WorkoutTemplatesService } from '../../workout_templates/application/workout-templates.service';
 import { type SessionWithSets, WorkoutsRepository } from '../infrastructure/workouts.repository';
@@ -30,6 +31,11 @@ export interface CreateSessionInput {
   templateId?: string;
   /** Nom du modèle conservé par le client, utilisé en secours. */
   templateName?: string;
+  /**
+   * Jour de programme honoré — facultatif, et jamais bloquant s'il est
+   * inconnu : c'est ce qui coche une case du calendrier.
+   */
+  programDayId?: string;
   /**
    * Plan de la séance, copié du modèle par l'appareil au lancement. Absent
    * pour une séance libre. Transmis À LA CRÉATION et jamais ensuite : c'est
@@ -60,6 +66,7 @@ export class WorkoutsService {
     private readonly progress: ProgressService,
     private readonly community: CommunityService,
     private readonly templates: WorkoutTemplatesService,
+    private readonly programs: ProgramsRepository,
   ) {}
 
   /**
@@ -81,6 +88,7 @@ export class WorkoutsService {
         startedAt: input.startedAt,
         templateId: origin.templateId,
         templateName: origin.templateName,
+        programDayId: await this.resolveProgramDay(userId, input.programDayId),
       },
       origin.templateId === null
         ? undefined
@@ -90,6 +98,25 @@ export class WorkoutsService {
     // Créée ou rejouée : dans les deux cas on sert l'état stocké, qui doit
     // appartenir au même utilisateur.
     return presentSessionDetail(await this.ownedSession(userId, input.id));
+  }
+
+  /**
+   * Le jour de programme, s'il existe ET appartient à cette personne.
+   *
+   * MÊME POLITIQUE QUE LE MODÈLE : inconnu, supprimé, ou venu du programme
+   * d'autrui, il se perd en silence. Refuser rendrait un 4xx que la file de
+   * synchronisation traite comme définitif, et la séance — le travail réel —
+   * serait perdue pour une case de calendrier.
+   */
+  private async resolveProgramDay(
+    userId: string,
+    programDayId: string | undefined,
+  ): Promise<string | null> {
+    if (programDayId === undefined) {
+      return null;
+    }
+    const day = await this.programs.findOwnedDay(programDayId, userId);
+    return day === null ? null : day.id;
   }
 
   /**

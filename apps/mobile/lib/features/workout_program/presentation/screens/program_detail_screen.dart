@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 
+import '../../../../app/router/app_routes.dart';
 import '../../../../core/errors/app_exception.dart';
 import '../../../../core/feedback/server_gesture.dart';
 import '../../../../design_system/design_system.dart';
@@ -8,6 +10,7 @@ import '../../../../shared/widgets/connection_aware_error.dart';
 import '../../domain/entities/program.dart';
 import '../controllers/program_controllers.dart';
 import '../widgets/program_day_sheet.dart';
+import '../widgets/program_settings_card.dart';
 import '../widgets/program_week_view.dart';
 
 /// Le calendrier d'un programme, ÉDITABLE en place : chaque case s'affecte
@@ -168,32 +171,27 @@ class ProgramDetailScreen extends ConsumerWidget {
                 ],
               ),
               const SizedBox(height: AppSpacing.xs),
-              AppCard(
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: Text(
-                        'Programme suivi',
-                        style: AppTypography.subheading.copyWith(
-                          color: AppColors.darkTextPrimary,
-                        ),
-                      ),
-                    ),
-                    Switch(
-                      value: program.isActive,
-                      // `setActive` relit l'état serveur frais (jamais d'un
-                      // instantané), et l'échec se dit — l'interrupteur
-                      // retombait en silence.
-                      onChanged: (value) =>
-                          runServerGesture(context, scope: _scope, () async {
-                            await ref
-                                .read(programActionsProvider)
-                                .setActive(programId, active: value);
-                            return null;
-                          }),
-                    ),
-                  ],
-                ),
+              ProgramSettingsCard(
+                program: program,
+                // `setActive` et `setStartsOn` relisent l'état serveur frais
+                // (jamais un instantané), et l'échec se DIT — l'interrupteur
+                // retombait en silence.
+                onActive: (value) =>
+                    runServerGesture(context, scope: _scope, () async {
+                      await ref
+                          .read(programActionsProvider)
+                          .setActive(programId, active: value);
+                      return null;
+                    }),
+                onStartsOn: (day) =>
+                    runServerGesture(context, scope: _scope, () async {
+                      await ref
+                          .read(programActionsProvider)
+                          .setStartsOn(programId, day);
+                      return null;
+                    }),
+                onOpenCalendar: () =>
+                    context.push(AppRoutes.programCalendar(programId)),
               ),
               const SizedBox(height: AppSpacing.gapSection),
               for (var week = 1; week <= program.weeksCount; week++) ...[

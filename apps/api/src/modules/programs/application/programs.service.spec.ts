@@ -25,6 +25,7 @@ function program(overrides: Partial<ProgramWithDays> = {}): ProgramWithDays {
     weeksCount: 4,
     generationReport: null,
     isActive: false,
+    startsOn: null,
     createdAt: new Date('2026-01-01'),
     updatedAt: new Date('2026-01-01'),
     deletedAt: null,

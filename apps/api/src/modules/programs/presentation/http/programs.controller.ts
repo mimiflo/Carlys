@@ -2,6 +2,7 @@ import {
   type ApiSuccessEnvelope,
   type CursorPaginationMeta,
   type GeneratedProgram,
+  type ProgramCalendarWeek,
   type ProgramDetail,
   type ProgramSummary,
 } from '@carlys/api-contracts';
@@ -25,10 +26,11 @@ import { CurrentUser } from '../../../../common/decorators/current-user.decorato
 import { type AuthenticatedPrincipal } from '../../../../common/types/authenticated-request';
 import { type RequestWithId } from '../../../../common/types/request-with-id';
 import { enveloped } from '../../../../common/utilities/enveloped';
+import { ProgramCalendarService } from '../../application/program-calendar.service';
 import { ProgramGenerationService } from '../../application/program-generation.service';
 import { ProgramsService } from '../../application/programs.service';
 import { GenerateProgramDto } from './dto/generate-program.dto';
-import { ListProgramsQuery, SaveProgramDto } from './dto/program.dto';
+import { CalendarWeekQuery, ListProgramsQuery, SaveProgramDto } from './dto/program.dto';
 
 @ApiTags('programs')
 @ApiBearerAuth()
@@ -37,6 +39,7 @@ export class ProgramsController {
   constructor(
     private readonly programs: ProgramsService,
     private readonly generation: ProgramGenerationService,
+    private readonly calendar: ProgramCalendarService,
   ) {}
 
   @Get()
@@ -58,6 +61,29 @@ export class ProgramsController {
     @Param('id', new ParseUUIDPipe()) id: string,
   ): Promise<ProgramDetail> {
     return this.programs.detail(id, user.userId);
+  }
+
+  @Get(':id/calendar')
+  @ApiOperation({
+    summary: 'Une semaine DATÉE du programme',
+    description:
+      'Les sept jours de la semaine, avec leur date civile et leur état — ' +
+      'fait, manqué, hors période, à venir, repos ou libre. Rien n’est ' +
+      'stocké : « fait » découle du lien séance → jour, « manqué » de la ' +
+      'date dans le fuseau de la personne. Sans semaine demandée, celle qui ' +
+      'contient aujourd’hui.',
+  })
+  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Inconnu, supprimé, ou à autrui' })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Programme sans date de début, ou semaine hors du plan',
+  })
+  calendarWeek(
+    @CurrentUser() user: AuthenticatedPrincipal,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Query() query: CalendarWeekQuery,
+  ): Promise<ProgramCalendarWeek> {
+    return this.calendar.week(id, user.userId, query.week);
   }
 
   @Put(':id')

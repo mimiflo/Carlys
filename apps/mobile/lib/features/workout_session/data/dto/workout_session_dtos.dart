@@ -20,6 +20,7 @@ class RemoteWorkoutSession {
     this.durationSeconds,
     this.templateId,
     this.templateName,
+    this.programDayId,
   });
 
   final String id;
@@ -33,6 +34,12 @@ class RemoteWorkoutSession {
   final int? durationSeconds;
   final String? templateId;
   final String? templateName;
+
+  /// Case du calendrier honorée par cette séance, telle que le serveur la
+  /// connaît. Sans elle, une réinstallation rapatrierait les séances SANS
+  /// leurs liens, et le calendrier de l'appareil neuf serait vide alors que
+  /// le serveur sait tout.
+  final String? programDayId;
   final List<RemoteWorkoutSet> sets;
   final List<RemoteSessionPlanItem> plan;
 }
@@ -127,6 +134,9 @@ RemoteWorkoutSession sessionFromJson(Map<String, dynamic> json) {
     durationSeconds: json['durationSeconds'] as int?,
     templateId: json['templateId'] as String?,
     templateName: json['templateName'] as String?,
+    // Un serveur plus vieux que ce client ne le sert pas : la clé manque, le
+    // lien reste nul, et la séance se rapatrie quand même.
+    programDayId: json['programDayId'] as String?,
     sets: (json['sets'] as List<dynamic>? ?? const [])
         .whereType<Map<String, dynamic>>()
         .map(_setFromJson)

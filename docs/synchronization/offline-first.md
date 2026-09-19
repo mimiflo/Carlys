@@ -12,7 +12,8 @@
 > - table locale `sync_operations` avec exactement les colonnes décrites plus
 >   bas ; **une opération réussie est supprimée** (l'état `synced` vit sur
 >   l'entité), `failed` est réservé aux refus définitifs du serveur (4xx) ;
-> - **index Drift** (schéma local v5) sur les colonnes que les requêtes
+> - **index Drift** (posés au schéma local v5 ; le schéma en est à la **v7**)
+>   sur les colonnes que les requêtes
 >   réelles filtrent : `(status, started_at)` des séances, `session_id` des
 >   séries et du plan, `(status, created_at)` de la file — sans eux, chaque
 >   émission de l'historique ou chaque drainage parcourait la table entière ;
@@ -83,6 +84,14 @@ exactement le même protocole, avec deux particularités :
   permet de reprendre sur un autre appareil une séance commencée ailleurs, avec
   ses cibles (voir D5 dans
   [docs/product/workout-templates.md](../product/workout-templates.md)).
+
+Le **jour de programme honoré** par la séance (`programDayId`) voyage dans ce
+même corps : lancer une séance depuis le calendrier daté marche donc hors
+ligne comme le reste, sans opération dédiée. Le serveur applique au jour la
+politique du modèle — inconnu, supprimé ou venu du programme d'autrui, il est
+ignoré en silence. Refuser rendrait un 4xx, que la file traite comme
+**définitif** : la séance, c'est-à-dire le travail réel, serait perdue pour
+une case de calendrier.
 
 Lancer un modèle fonctionne **intégralement hors ligne** : la séance, son plan
 et l'opération `session.create` sont écrits dans une seule transaction SQLite,

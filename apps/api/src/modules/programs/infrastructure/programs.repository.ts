@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { type Prisma } from '@prisma/client';
+import { type Prisma, type ProgramDay } from '@prisma/client';
 import { PrismaService } from '../../../database/prisma/prisma.service';
 
 export type ProgramWithDays = Prisma.ProgramGetPayload<{
@@ -38,6 +38,70 @@ export class ProgramsRepository {
     return this.prisma.program.findUnique({
       where: { id },
       include: { days: { orderBy: [{ weekNumber: 'asc' }, { dayOfWeek: 'asc' }] } },
+    });
+  }
+
+  /**
+   * Les jours d'UNE SEULE semaine, avec la séance terminée qui honore
+   * chacun.
+   *
+   * Deux requêtes, jamais huit : `findById` charge TOUS les jours du
+   * programme — jusqu'à 364 — et une lecture par case rouvrirait le N+1 déjà
+   * corrigé sur ce module.
+   */
+  async weekWithSessions(
+    programId: string,
+    userId: string,
+    weekNumber: number,
+  ): Promise<{ days: ProgramDay[]; doneByDayId: Map<string, string> }> {
+    const days = await this.prisma.programDay.findMany({
+      where: { programId, weekNumber },
+      orderBy: { dayOfWeek: 'asc' },
+    });
+    if (days.length === 0) {
+      return { days, doneByDayId: new Map() };
+    }
+    const sessions = await this.prisma.workoutSession.findMany({
+      where: {
+        userId,
+        programDayId: { in: days.map((day) => day.id) },
+        status: 'COMPLETED',
+        // La suppression est LOGIQUE : sans ce filtre, une case brillerait
+        // encore pour une séance que la personne a effacée.
+        deletedAt: null,
+      },
+      select: { id: true, programDayId: true },
+      orderBy: { startedAt: 'asc' },
+    });
+    const doneByDayId = new Map<string, string>();
+    for (const session of sessions) {
+      if (session.programDayId !== null) {
+        doneByDayId.set(session.programDayId, session.id);
+      }
+    }
+    return { days, doneByDayId };
+  }
+
+  /**
+   * Le fuseau déclaré par la personne, tel qu'il est en base.
+   *
+   * Lu ICI plutôt qu'emprunté à `progress` : deux modules métier n'ont pas à
+   * se connaître pour six lignes de lecture, et `safeTimeZone` — le seul
+   * endroit où se décide ce qu'on fait d'une valeur douteuse — reste
+   * partagé.
+   */
+  async userTimeZone(userId: string): Promise<string | null> {
+    const profile = await this.prisma.userProfile.findUnique({
+      where: { userId },
+      select: { timezone: true },
+    });
+    return profile?.timezone ?? null;
+  }
+
+  /** Le jour de programme `id`, s'il appartient à un programme vivant de `userId`. */
+  async findOwnedDay(id: string, userId: string): Promise<ProgramDay | null> {
+    return this.prisma.programDay.findFirst({
+      where: { id, program: { userId, deletedAt: null } },
     });
   }
 

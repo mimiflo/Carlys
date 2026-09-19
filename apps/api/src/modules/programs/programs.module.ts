@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
 import { UsersModule } from '../users/users.module';
+import { ProgramCalendarService } from './application/program-calendar.service';
 import { ProgramGenerationService } from './application/program-generation.service';
 import { ProgramsService } from './application/programs.service';
 import { GenerationRepository } from './infrastructure/generation.repository';
@@ -19,7 +20,13 @@ import { ProgramsController } from './presentation/http/programs.controller';
 @Module({
   imports: [SubscriptionsModule, UsersModule],
   controllers: [ProgramsController],
-  providers: [ProgramsService, ProgramGenerationService, ProgramsRepository, GenerationRepository],
-  exports: [ProgramsService],
+  providers: [
+    ProgramsService,
+    ProgramGenerationService,
+    ProgramCalendarService,
+    ProgramsRepository,
+    GenerationRepository,
+  ],
+  exports: [ProgramsService, ProgramsRepository],
 })
 export class ProgramsModule {}

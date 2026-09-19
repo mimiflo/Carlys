@@ -29,12 +29,27 @@ export const programDaySchema = z.object({
 });
 export type ProgramDay = z.infer<typeof programDaySchema>;
 
+/**
+ * Un jour civil `YYYY-MM-DD`, jamais un instant ISO 8601.
+ *
+ * `Program.startsOn` dit QUEL JOUR le plan commence, pas à quelle seconde.
+ * Servi en instant, il se ferait convertir en heure locale par le client —
+ * comme tout le reste, à raison — et reculerait d'un jour à l'ouest de
+ * Greenwich. Une chaîne ne se convertit pas par accident.
+ */
+export const dayKeySchema = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+
 export const programSummarySchema = z.object({
   id: z.string(),
   name: z.string(),
   description: z.string().nullable(),
   weeksCount: z.number().int(),
   isActive: z.boolean(),
+  /**
+   * Premier jour du plan, ou `null` pour un programme sans calendrier — il
+   * reste alors la grille (semaine N, jour J) qu'il a toujours été.
+   */
+  startsOn: dayKeySchema.nullable(),
   /** Jours renseignés, repos compris — ce qui donne l'avancement du plan. */
   daysCount: z.number().int(),
   updatedAt: z.string(),
@@ -68,9 +83,76 @@ export const saveProgramRequestSchema = z.object({
   description: z.string().trim().max(2000).nullable().optional(),
   weeksCount: z.number().int().min(1).max(PROGRAM_MAX_WEEKS),
   isActive: z.boolean().optional(),
+  /**
+   * Premier jour du plan. ABSENT vaut `null` comme le reste du corps — c'est
+   * un état complet, pas un fragment : un client qui garde la date la renvoie.
+   *
+   * Aucune borne haute, contrairement aux dates d'ÉVÉNEMENT (`startedAt`,
+   * `measuredAt`, `eatenAt`) qui refusent le futur : commencer lundi
+   * prochain est le cas normal, pas une horloge déréglée.
+   */
+  startsOn: dayKeySchema.nullable().optional(),
   days: z.array(saveProgramDaySchema).max(PROGRAM_MAX_DAYS),
 });
 export type SaveProgramRequest = z.infer<typeof saveProgramRequestSchema>;
+
+// ── Calendrier daté (Plan 4, tranche 4) ─────────────────────────────────────
+
+/**
+ * L'état d'une case, DÉDUIT à chaque lecture — rien de tout cela n'est
+ * stocké.
+ *
+ * `before` est la nuance qui évite le mur rouge : commencer un mercredi
+ * laisse lundi et mardi de la semaine 1 avant le départ, et ces jours-là
+ * n'ont jamais été promis.
+ */
+export const programDayStatusSchema = z.enum([
+  /** Aucune case n'occupe ce jour : rien n'était prévu, rien n'est reproché. */
+  'free',
+  /** Repos EXPLICITEMENT planifié — ce n'est pas la même chose que `free`. */
+  'rest',
+  'done',
+  'missed',
+  'before',
+  'upcoming',
+]);
+export type ProgramDayStatus = z.infer<typeof programDayStatusSchema>;
+
+export const programCalendarDaySchema = z.object({
+  /** `null` quand aucune case n'occupe ce jour — le calendrier montre les sept. */
+  id: z.string().nullable(),
+  weekNumber: z.number().int(),
+  dayOfWeek: z.number().int(),
+  templateId: z.string().nullable(),
+  label: z.string().nullable(),
+  isRest: z.boolean(),
+  /** Le jour civil de cette case, `YYYY-MM-DD`. */
+  date: dayKeySchema,
+  status: programDayStatusSchema,
+  /** La séance TERMINÉE qui honore cette case, s'il y en a une. */
+  sessionId: z.string().nullable(),
+});
+export type ProgramCalendarDay = z.infer<typeof programCalendarDaySchema>;
+
+/**
+ * Une semaine datée du programme — ce que `GET /programs/:id/calendar` rend.
+ *
+ * Toujours SEPT jours, y compris ceux qu'aucune case ne remplit : un
+ * calendrier qui saute les jours vides n'est plus un calendrier.
+ */
+export const programCalendarWeekSchema = z.object({
+  programId: z.string(),
+  name: z.string(),
+  weeksCount: z.number().int(),
+  startsOn: dayKeySchema,
+  /** Semaine servie, et celle qui contient aujourd'hui (`null` hors plan). */
+  weekNumber: z.number().int(),
+  currentWeek: z.number().int().nullable(),
+  /** Aujourd'hui dans le fuseau de la personne — l'écran n'en décide pas. */
+  today: dayKeySchema,
+  days: z.array(programCalendarDaySchema),
+});
+export type ProgramCalendarWeek = z.infer<typeof programCalendarWeekSchema>;
 
 // ── Génération de programme (Plan 4, tranche 3) ─────────────────────────────
 

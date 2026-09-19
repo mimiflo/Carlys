@@ -9,6 +9,7 @@ import {
   type WorkoutsRepository,
 } from '../infrastructure/workouts.repository';
 import { WorkoutSetsService } from './workout-sets.service';
+import { type ProgramsRepository } from '../../programs/infrastructure/programs.repository';
 import { WorkoutsService } from './workouts.service';
 
 const USER = 'user-1';
@@ -29,6 +30,7 @@ function sessionRow(overrides: Partial<SessionWithSets> = {}): SessionWithSets {
     deletedAt: null,
     templateId: null,
     templateName: null,
+    programDayId: null,
     sets: [],
     planItems: [],
     ...overrides,
@@ -88,12 +90,18 @@ function buildService(
   community: { recordWorkoutCompleted: jest.Mock } = {
     recordWorkoutCompleted: jest.fn().mockResolvedValue(undefined),
   },
+  // Par défaut, AUCUN jour de programme ne répond : une séance libre est le
+  // cas majoritaire, et le lien ne doit rien changer à ces tests-là.
+  programs: { findOwnedDay: jest.Mock } = {
+    findOwnedDay: jest.fn().mockResolvedValue(null),
+  },
 ): WorkoutsService {
   return new WorkoutsService(
     stubs as unknown as WorkoutsRepository,
     progress as unknown as ProgressService,
     community as unknown as CommunityService,
     templates as unknown as WorkoutTemplatesService,
+    programs as unknown as ProgramsRepository,
   );
 }
 

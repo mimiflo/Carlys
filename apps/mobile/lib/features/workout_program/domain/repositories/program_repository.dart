@@ -1,5 +1,6 @@
 import '../entities/generation_report.dart';
 import '../entities/program.dart';
+import '../entities/program_calendar.dart';
 
 /// Contrat des programmes multi-semaines.
 ///
@@ -25,4 +26,12 @@ abstract interface class ProgramRepository {
 
   /// Supprime (suppression douce côté serveur, idempotente).
   Future<void> delete(String programId);
+
+  /// Une semaine DATÉE du programme.
+  ///
+  /// Sans [week], celle qui contient aujourd'hui — le serveur connaît le
+  /// fuseau de la personne, l'application non. Lève si le programme n'a pas
+  /// encore de date de début : c'est un refus qui se corrige en deux gestes,
+  /// et il vaut mieux le dire qu'afficher une semaine vide.
+  Future<ProgramCalendarWeek> calendarWeek(String programId, {int? week});
 }

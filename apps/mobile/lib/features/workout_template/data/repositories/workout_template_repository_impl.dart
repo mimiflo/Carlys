@@ -158,7 +158,10 @@ class WorkoutTemplateRepositoryImpl implements WorkoutTemplateRepository {
   /// part quand même — le serveur ignore alors le `templateId` et conserve le
   /// `templateName` transmis.
   @override
-  Future<String> startFromTemplate(String templateId) async {
+  Future<String> startFromTemplate(
+    String templateId, {
+    String? programDayId,
+  }) async {
     final template = await _local.detail(templateId);
     if (template == null) {
       throw StateError('Modèle de séance introuvable : $templateId');
@@ -178,6 +181,7 @@ class WorkoutTemplateRepositoryImpl implements WorkoutTemplateRepository {
         startedAt: startedAt,
         templateId: template.id,
         templateName: template.name,
+        programDayId: programDayId,
         plan: plan.map(_planItemBody).toList(),
       );
       await _plans.insertPlanItems(plan);

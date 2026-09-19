@@ -7,29 +7,15 @@
  * timezone) : une séance à 23 h 30 à Paris compte pour le jour parisien,
  * pas pour le lendemain UTC.
  */
+import { addDays, dayKeyInZone } from '../../../common/utilities/civil-day';
 
-/** `YYYY-MM-DD` de `date` dans `timeZone` (repli UTC si fuseau inconnu). */
-export function dayKeyInZone(date: Date, timeZone: string): string {
-  try {
-    // en-CA donne nativement YYYY-MM-DD.
-    return new Intl.DateTimeFormat('en-CA', {
-      timeZone,
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-    }).format(date);
-  } catch {
-    return date.toISOString().slice(0, 10);
-  }
-}
+/**
+ * `dayKeyInZone` vit dans `common/utilities/civil-day.ts` : le calendrier
+ * de programme en a besoin pour la même raison que la série de constance,
+ * et une seconde copie divergerait au premier correctif.
+ */
 
-function previousDayKey(dayKey: string): string {
-  // Midi UTC : reculer de 24 h ne peut pas sauter un jour, quel que soit le
-  // calendrier — les clés sont déjà des jours abstraits, sans fuseau.
-  const noon = new Date(`${dayKey}T12:00:00Z`);
-  noon.setUTCDate(noon.getUTCDate() - 1);
-  return noon.toISOString().slice(0, 10);
-}
+const previousDayKey = (dayKey: string): string => addDays(dayKey, -1);
 
 export function computeStreakDays(input: {
   /** Débuts des séances TERMINÉES, ordre indifférent. */

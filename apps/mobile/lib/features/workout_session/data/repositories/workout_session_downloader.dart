@@ -176,6 +176,7 @@ class WorkoutSessionDownloader {
               durationSeconds: Value(session.durationSeconds),
               templateId: Value(session.templateId),
               templateName: Value(session.templateName),
+              programDayId: Value(session.programDayId),
               syncStatus: const Value('synced'),
             ),
           );

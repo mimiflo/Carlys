@@ -60,6 +60,15 @@ class LocalWorkoutSessions extends Table {
   /// provenance reste lisible même si le modèle est renommé ou supprimé.
   TextColumn get templateName => text().nullable()();
 
+  /// Jour de programme honoré par cette séance — ce qui coche une case du
+  /// calendrier. Nul pour une séance libre.
+  ///
+  /// Il voyage dans le corps de `session.create` : lancer une séance depuis
+  /// le calendrier marche donc HORS LIGNE, comme tout le reste du
+  /// lancement. Le serveur ignore un jour qu'il ne connaît pas — la séance
+  /// n'est jamais perdue pour une case.
+  TextColumn get programDayId => text().nullable()();
+
   /// pending | synced | failed.
   TextColumn get syncStatus => text().withDefault(const Constant('pending'))();
 
@@ -315,8 +324,12 @@ class AppDatabase extends _$AppDatabase {
   ///    série réalisée, `targetDurationSeconds` / `targetDistanceMeters` sur
   ///    la série prescrite et sur l'item de plan. L'appareil ne savait dire
   ///    ni « j'ai couru 2 km » ni « tiens la planche 45 s » — le serveur, si.
+  /// 7. Le CALENDRIER : `programDayId` sur la séance, qui dit quelle case du
+  ///    programme elle honore. C'est la seule chose qu'on écrive du
+  ///    calendrier — « fait », « manqué » et « à venir » se déduisent, ils ne
+  ///    se stockent pas.
   @override
-  int get schemaVersion => 6;
+  int get schemaVersion => 7;
 
   /// Vide TOUTES les tables, dans une transaction : rien ne survit d'un
   /// compte à l'autre sur le même appareil. Appelée à la frontière de compte
@@ -428,6 +441,17 @@ class AppDatabase extends _$AppDatabase {
         await migrator.addColumn(
           localSessionPlanItems,
           localSessionPlanItems.targetDistanceMeters,
+        );
+      }
+      // La séance porte désormais la case de programme qu'elle honore.
+      // `localWorkoutSessions` existe depuis la v1 — la table n'est PAS
+      // recréée par `from < 2`, qui se contente d'y ajouter des colonnes :
+      // la garde `from < 7` est donc juste ici, là où elle ne le serait pas
+      // pour une table née avec le lot précédent.
+      if (from < 7) {
+        await migrator.addColumn(
+          localWorkoutSessions,
+          localWorkoutSessions.programDayId,
         );
       }
     },
