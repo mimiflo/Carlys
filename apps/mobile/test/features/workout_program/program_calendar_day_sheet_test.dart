@@ -1,4 +1,5 @@
 import 'package:carlys_mobile/design_system/design_system.dart';
+import 'package:carlys_mobile/features/workout_program/domain/entities/program.dart';
 import 'package:carlys_mobile/features/workout_program/domain/entities/program_calendar.dart';
 import 'package:carlys_mobile/features/workout_program/presentation/widgets/program_calendar_day_sheet.dart';
 import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';
@@ -237,6 +238,75 @@ void main() {
     await tester.pumpAndSettle();
     expect(geste.valeur, isA<LaunchDay>());
   });
+
+  group(
+    'déplacer la case — le geste que la feuille désignait sans l’avoir',
+    () {
+      testWidgets('une case à venir propose les six AUTRES jours', (
+        tester,
+      ) async {
+        final geste = await ouvrir(
+          tester,
+          day: caseDu(status: ProgramDayStatus.upcoming),
+        );
+
+        // La case est au LUNDI (`dayOfWeek: 1`) : les sept pastilles sont là,
+        // celle du lundi marquée et inerte.
+        for (final jour in programDayLabels) {
+          expect(find.text(jour), findsOneWidget, reason: jour);
+        }
+
+        await tester.tap(find.text('JEU'));
+        await tester.pumpAndSettle();
+        expect(geste.valeur, isA<MoveDayTo>());
+        expect((geste.valeur! as MoveDayTo).dayOfWeek, 4);
+      });
+
+      testWidgets('taper le jour ACTUEL ne rend aucun geste', (tester) async {
+        // La pastille du jour courant est inerte : elle marque, elle n'agit
+        // pas. Un geste vers soi-même ferait un aller-retour serveur pour
+        // rien — et la règle du domaine le rendrait de toute façon inchangé.
+        final geste = await ouvrir(
+          tester,
+          day: caseDu(status: ProgramDayStatus.upcoming),
+        );
+
+        await tester.tap(find.text('LUN'));
+        await tester.pumpAndSettle();
+        expect(geste.valeur, isNull);
+      });
+
+      testWidgets('une case DÉJÀ honorée ne se déplace pas', (tester) async {
+        // Son identifiant porte le lien avec la séance qui l'a honorée : la
+        // déplacer emporterait ce fait vers une autre date, et ferait dire au
+        // calendrier qu'on s'est entraîné un jour où on ne s'est pas entraîné.
+        await ouvrir(
+          tester,
+          day: caseDu(status: ProgramDayStatus.done, sessionId: 'seance-1'),
+        );
+
+        expect(find.text('Déplacer vers'), findsNothing);
+        expect(find.text('JEU'), findsNothing);
+      });
+
+      testWidgets('une case d’AVANT le départ non plus', (tester) async {
+        await ouvrir(tester, day: caseDu(status: ProgramDayStatus.before));
+
+        expect(find.text('Déplacer vers'), findsNothing);
+      });
+
+      testWidgets('un jour VIDE n’a pas de case à déplacer', (tester) async {
+        // `id` nul : le calendrier montre les sept jours, y compris ceux
+        // qu'aucune case n'occupe. Il n'y a rien à bouger.
+        await ouvrir(
+          tester,
+          day: caseDu(status: ProgramDayStatus.free, id: null),
+        );
+
+        expect(find.text('Déplacer vers'), findsNothing);
+      });
+    },
+  );
 }
 
 /// La boîte où le geste choisi atterrit, une fois la feuille refermée.

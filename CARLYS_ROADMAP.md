@@ -286,10 +286,21 @@ date sur `Program`, aucun lien `WorkoutSession` ↔ jour de programme.
       (`programDayId` voyage dans `session.create`, donc lancer depuis le
       calendrier marche HORS LIGNE), écran de calendrier daté, choix du
       premier jour, résumé et légende des couleurs.
-      **Reste ouvert, et dit comme tel** : « déplacer / reporter » se fait
+      **« Déplacer / reporter » : FERMÉ le 22 septembre 2026.** Il se fait
       par le PUT existant (l'état complet passe toute permutation, là où un
       `UPDATE` unique violerait `@@unique([programId, weekNumber,
-      dayOfWeek])`) — mais AUCUN geste d'écran ne l'expose encore.
+      dayOfWeek])`), et la feuille de la case l'expose désormais : les sept
+      jours de la semaine, celui d'origine marqué et inerte. Si le jour
+      d'arrivée est pris, **les deux s'échangent** — écraser perdrait une
+      séance prévue sans le dire. Une case DÉJÀ honorée ne se déplace pas :
+      son identifiant porte le lien avec la séance, et l'emmener ailleurs
+      ferait dire au calendrier qu'on s'est entraîné un jour où on ne s'est
+      pas entraîné. UNE lecture, UNE écriture : un échange en deux
+      enregistrements laisserait entre les deux un programme où la même
+      séance occupe deux jours, ou aucun. La règle est pure
+      (`program_day_move.dart`, 7 épreuves) et le geste en a 5 de plus.
+      Le message de la feuille, enfin, désignait ce geste — « c'est la case
+      qu'il faut déplacer » — depuis sa livraison, sans qu'il existe.
 - [x] Le calendrier se corrige — FAIT le 22 septembre 2026. Le second
       « reste ouvert » de la tranche 4 est fermé : une séance lancée HORS
       calendrier ne portait l'identifiant d'aucune case, donc elle était

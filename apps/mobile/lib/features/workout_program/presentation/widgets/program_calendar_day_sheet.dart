@@ -6,6 +6,7 @@ import '../../../../design_system/design_system.dart';
 import '../../../workout_session/domain/entities/workout.dart';
 import '../../../workout_session/presentation/controllers/workout_controllers.dart';
 import '../../domain/entities/program_calendar.dart';
+import 'program_day_move_picker.dart';
 
 /// Ce qu'on peut faire d'une case DATÉE du calendrier.
 sealed class CalendarDayAction {
@@ -27,6 +28,18 @@ class LinkSessionToDay extends CalendarDayAction {
 /// Détacher la séance que la case reconnaît.
 class UnlinkSessionFromDay extends CalendarDayAction {
   const UnlinkSessionFromDay();
+}
+
+/// Déplacer la case vers un autre jour de la MÊME semaine.
+///
+/// La feuille désignait ce geste depuis sa livraison — « c'est la case qu'il
+/// faut déplacer » — sans qu'il existe. Une phrase qui renvoie à une action
+/// absente est pire qu'un silence : elle fait chercher.
+class MoveDayTo extends CalendarDayAction {
+  const MoveDayTo(this.dayOfWeek);
+
+  /// 1 (lundi) à 7 (dimanche), la convention de l'API.
+  final int dayOfWeek;
 }
 
 /// La feuille d'une case du calendrier : son état en toutes lettres, et les
@@ -143,7 +156,7 @@ class ProgramCalendarDaySheet extends ConsumerWidget {
                           'elle pourra être reconnue dès son envoi.'
                     : 'Aucune séance terminée ce jour-là sur cet appareil. '
                           'Une séance faite un AUTRE jour ne coche pas cette '
-                          'case : c’est la case qu’il faut déplacer.',
+                          'case : déplace-la, plus bas.',
                 style: AppTypography.label.copyWith(
                   color: AppColors.darkTextTertiary,
                 ),
@@ -163,11 +176,33 @@ class ProgramCalendarDaySheet extends ConsumerWidget {
                   ).pop(LinkSessionToDay(entry.session.id)),
                 ),
           ],
+          if (_seDeplace) ...[
+            const SizedBox(height: AppSpacing.sm),
+            ProgramDayMovePicker(
+              currentDayOfWeek: day.dayOfWeek,
+              onMove: (jour) => Navigator.of(context).pop(MoveDayTo(jour)),
+            ),
+          ],
           const SizedBox(height: AppSpacing.xs),
         ],
       ),
     );
   }
+
+  /// Quand la case peut changer de jour.
+  ///
+  /// Deux exclusions, et la première est la moins évidente : une case DÉJÀ
+  /// honorée ne se déplace pas. Son identifiant porte le lien avec la séance
+  /// qui l'a honorée ; la déplacer emporterait ce « fait » vers une autre
+  /// date, et ferait dire au calendrier qu'on s'est entraîné un jour où on
+  /// ne s'est pas entraîné. Le geste qui a du sens là est de détacher.
+  ///
+  /// Une case d'AVANT le départ, elle, n'a jamais été promise : il n'y a
+  /// rien à replacer.
+  bool get _seDeplace =>
+      day.id != null &&
+      day.status != ProgramDayStatus.done &&
+      day.status != ProgramDayStatus.before;
 
   /// Quand la case peut encore reconnaître une séance.
   ///

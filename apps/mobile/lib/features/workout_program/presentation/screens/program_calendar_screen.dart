@@ -8,6 +8,7 @@ import '../../../../design_system/design_system.dart';
 import '../../../../shared/widgets/connection_aware_error.dart';
 import '../../../workout_session/presentation/controllers/workout_controllers.dart';
 import '../../../workout_template/presentation/controllers/workout_template_controllers.dart';
+import '../../domain/entities/program.dart';
 import '../../domain/entities/program_calendar.dart';
 import '../controllers/program_controllers.dart';
 import '../widgets/program_calendar_day_row.dart';
@@ -58,7 +59,29 @@ class _ProgramCalendarScreenState extends ConsumerState<ProgramCalendarScreen> {
         await _link(day, sessionId);
       case UnlinkSessionFromDay():
         await _link(day, null);
+      case MoveDayTo(:final dayOfWeek):
+        await _move(day, dayOfWeek);
     }
+  }
+
+  /// Déplace la case vers un autre jour de la même semaine.
+  ///
+  /// Le message nomme le jour d'ARRIVÉE et rien d'autre : dire « échangée
+  /// avec le jeudi » obligerait l'écran à savoir ce que le serveur avait ce
+  /// jour-là, alors qu'il vient justement de le relire. La grille, elle, se
+  /// réaffiche derrière et montre le résultat.
+  Future<void> _move(ProgramCalendarDay day, int dayOfWeek) async {
+    await runServerGesture(context, () async {
+      await ref
+          .read(programActionsProvider)
+          .moveDay(
+            widget.programId,
+            weekNumber: day.weekNumber,
+            fromDayOfWeek: day.dayOfWeek,
+            toDayOfWeek: dayOfWeek,
+          );
+      return 'Déplacée au ${programDayLabels[dayOfWeek - 1].toLowerCase()}.';
+    }, scope: 'program-calendar');
   }
 
   /// Fait reconnaître (ou oublier) une séance par la case.

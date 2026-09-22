@@ -5,6 +5,7 @@ import '../../data/repositories/program_repository_impl.dart';
 import '../../domain/entities/generation_report.dart';
 import '../../domain/entities/program.dart';
 import '../../domain/entities/program_calendar.dart';
+import '../../domain/program_day_move.dart';
 
 final programsProvider = FutureProvider.autoDispose<List<ProgramSummary>>((
   ref,
@@ -109,6 +110,39 @@ class ProgramActions {
       await repository.save(
         fresh.copyWith(days: [...others, if (day != null) day]),
       );
+    });
+  }
+
+  /// Déplace une case vers un autre jour de la MÊME semaine — en échangeant
+  /// avec celle qui s'y trouve, s'il y en a une.
+  ///
+  /// UNE seule lecture et UNE seule écriture, quoi qu'il arrive : un échange
+  /// fait en deux `setDay` laisserait, entre les deux, un programme où la
+  /// même séance occupe deux jours — ou aucun. La règle du déplacement vit
+  /// dans `program_day_move.dart`, éprouvée sans réseau.
+  ///
+  /// L'écriture est ÉVITÉE quand rien ne bouge (même jour, départ vide, jour
+  /// hors semaine) : `moveProgramDay` rend alors le programme inchangé, et
+  /// on le reconnaît à son identité.
+  Future<void> moveDay(
+    String programId, {
+    required int weekNumber,
+    required int fromDayOfWeek,
+    required int toDayOfWeek,
+  }) {
+    return _write(programId, () async {
+      final repository = _ref.read(programRepositoryProvider);
+      final fresh = await repository.byId(programId);
+      final moved = moveProgramDay(
+        fresh,
+        weekNumber: weekNumber,
+        fromDayOfWeek: fromDayOfWeek,
+        toDayOfWeek: toDayOfWeek,
+      );
+      if (identical(moved, fresh)) {
+        return;
+      }
+      await repository.save(moved);
     });
   }
 

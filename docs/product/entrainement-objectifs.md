@@ -169,8 +169,31 @@ civil, et seulement celles que le serveur connaît déjà. Une séance encore en
 file de synchronisation n'est pas offerte, et la feuille le dit plutôt que de
 se taire : se taire laisserait croire qu'elle n'a pas eu lieu.
 
-## La suite du plan
+## Déplacer une case
 
-Reste ouvert sur le calendrier, et dit comme tel : « déplacer / reporter » se
-fait par le PUT existant, mais aucun geste d'écran ne l'expose encore.
-Voir `CARLYS_ROADMAP.md`, Plan 4.
+La feuille d'une case offre les **sept jours de sa semaine**, celui d'origine
+marqué et inerte. Taper un autre jour déplace la case, et si ce jour est déjà
+pris, **les deux s'échangent** : écraser ferait disparaître une séance prévue
+sans le dire, et refuser obligerait à vider le jour d'arrivée d'abord — deux
+gestes pour intervertir un mardi et un jeudi, ce que personne ne fait.
+
+Le déplacement reste **dans la semaine**. Le calendrier en montre une à la
+fois : déplacer au-delà serait déplacer vers quelque chose qu'on ne voit pas.
+Changer de semaine reste une modification du programme, qui a sa propre porte.
+
+**Une case DÉJÀ honorée ne se déplace pas**, et c'est la règle la moins
+évidente. Son identifiant porte le lien avec la séance qui l'a honorée ;
+l'emmener ailleurs ferait dire au calendrier qu'on s'est entraîné un jour où
+on ne s'est pas entraîné. Le geste qui a du sens là est de détacher. Une case
+d'avant le départ ne se déplace pas non plus : elle n'a jamais été promise.
+
+Aucune route nouvelle : le PUT complet du programme suffit, puisque les
+identifiants de jour sont stables d'une écriture à l'autre — la case emporte
+son lien avec elle. **Une seule lecture et une seule écriture**, quoi qu'il
+arrive : un échange fait en deux enregistrements laisserait, entre les deux,
+un programme où la même séance occupe deux jours, ou aucun. La règle vit dans
+`program_day_move.dart`, éprouvée sans réseau.
+
+Le message de la feuille le disait avant de le faire — « c'est la case qu'il
+faut déplacer », à côté d'un geste qui n'existait pas. Une phrase qui renvoie
+à une action absente est pire qu'un silence : elle fait chercher.
