@@ -18,6 +18,7 @@ import '../../../community/presentation/controllers/community_controllers.dart';
 import '../../../mentor/presentation/controllers/mentor_controllers.dart';
 import '../../../mentor/presentation/widgets/mentor_sheet.dart';
 import '../../../notifications/presentation/controllers/push_registration.dart';
+import '../../../nutrition/presentation/meal_entry_flow.dart';
 import '../../../nutrition/presentation/widgets/water_sheet.dart';
 import '../../../workout_session/presentation/controllers/workout_controllers.dart';
 import '../../../workout_template/presentation/controllers/workout_template_controllers.dart';
@@ -93,6 +94,10 @@ class HomeScreen extends ConsumerWidget {
               child: TodaySection(
                 onStartPrimer: () => context.push(AppRoutes.nutrition),
                 onOpenHydration: () => showWaterSheet(context),
+                // La MÊME porte que celle du journal, pas une copie : le
+                // geste d'écriture vit dans `meal_entry_flow.dart`.
+                onAddMeal: () =>
+                    noteUnRepas(context, ref, scope: 'HomeTodayGrid'),
               ),
             ),
             _Section(

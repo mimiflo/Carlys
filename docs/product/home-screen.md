@@ -77,11 +77,33 @@ du serveur (`MetabolismTargets.waterMl`), le consommé d'une table Drift à une
 ligne par jour (`LocalWaterIntakes`, schéma 4). Aucune synchronisation : un
 verre d'eau n'a pas d'histoire à raconter à un autre appareil, et une file de
 synchronisation pour un entier remis à zéro chaque nuit coûterait plus qu'elle
-ne rapporte. La cellule est la seule de la grille à être **tapotable** : elle
-ouvre une feuille (`+ 25 cl`, `+ 50 cl`, retrait d'un verre) plutôt que
-d'incrémenter sous le doigt — ajouter de l'eau par mégarde depuis l'accueil
-serait pénible à défaire, et le retour arrière doit être aussi accessible que
-l'ajout.
+ne rapporte. La cellule est **tapotable** : elle ouvre une feuille (`+ 25 cl`,
+`+ 50 cl`, retrait d'un verre) plutôt que d'incrémenter sous le doigt —
+ajouter de l'eau par mégarde depuis l'accueil serait pénible à défaire, et le
+retour arrière doit être aussi accessible que l'ajout.
+
+**Deux cellules se nourrissent depuis l'accueil, pas une.** Les calories ont
+rejoint l'hydratation le 22 septembre 2026, et pour la même raison : boire et
+manger se décident plusieurs fois par jour, là où une séance et une pesée ont
+leur propre moment. Ce sont aussi les deux seules mesures dont le chiffre du
+jour reste faux tant qu'on n'a pas ouvert un autre onglet — la tuile montrait
+le manque sans offrir de le combler, et noter un repas demandait un changement
+d'onglet suivi d'un défilement.
+
+La porte est **la même** que celle du journal, pas une copie : le geste
+d'écriture vit dans `meal_entry_flow.dart`, et les deux appelants s'y rendent.
+Deux copies d'un geste d'écriture divergent toujours par où ça se voit le plus
+— le message d'échec, le champ qu'on oublie de passer.
+
+Les deux autres cellules n'ont **aucun geste**, et pour deux raisons
+distinctes. Le volume vient des séances, qui ont leur propre moment. Les
+protéines, elles, viennent du MÊME journal que les calories : noter un repas
+les nourrit déjà toutes les deux, et leur donner chacune sa porte ferait deux
+entrées pour un seul acte, sur un même écran. La tuile des calories est donc
+aussi celle des protéines.
+
+C'est délibéré, et gardé par un test — sémantique comprise : une cellule qui
+ressemble à un bouton et ne répond pas est pire qu'une cellule inerte.
 
 **La cible de volume est la semaine précédente.** Aucun objectif de tonnage
 n'existe dans le domaine, et il n'y a pas de barème universel. La seule

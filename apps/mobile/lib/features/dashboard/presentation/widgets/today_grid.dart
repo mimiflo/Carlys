@@ -14,13 +14,28 @@ import 'today_gauge.dart';
 /// La valeur seule ne vaut rien : « 654 kcal » n'est ni bon ni mauvais tant
 /// qu'on ignore la cible.
 class TodayGrid extends StatelessWidget {
-  const TodayGrid({required this.metrics, this.onOpenHydration, super.key});
+  const TodayGrid({
+    required this.metrics,
+    this.onOpenHydration,
+    this.onAddMeal,
+    super.key,
+  });
 
   final List<TodayMetric> metrics;
 
-  /// Ouvre la feuille d'hydratation. Seule cette mesure se nourrit depuis
-  /// l'accueil : les autres viennent du journal ou des séances.
+  /// Ouvre la feuille d'hydratation.
   final VoidCallback? onOpenHydration;
+
+  /// Ouvre la feuille de saisie d'un repas.
+  ///
+  /// DEUX mesures se nourrissent donc depuis l'accueil, et les deux pour la
+  /// même raison : boire et manger se décident plusieurs fois par jour, là
+  /// où les séances et le poids ont leur propre moment. Ce sont aussi les
+  /// deux seules dont le chiffre du jour reste faux tant qu'on n'a pas
+  /// ouvert un autre onglet — la tuile montrait le manque sans offrir de le
+  /// combler. Les deux autres cellules viennent des séances et n'ont
+  /// toujours aucun geste : leur en donner un ferait croire le contraire.
+  final VoidCallback? onAddMeal;
 
   /// Épaisseur du filet interne — c'est l'espacement qui le dessine.
   static const double _rule = 1;
@@ -66,7 +81,11 @@ class TodayGrid extends StatelessWidget {
 
   TodayCell _cell(TodayMetric metric) => TodayCell(
     metric: metric,
-    onTap: metric.kind == TodayMetricKind.hydratation ? onOpenHydration : null,
+    onTap: switch (metric.kind) {
+      TodayMetricKind.hydratation => onOpenHydration,
+      TodayMetricKind.calories => onAddMeal,
+      _ => null,
+    },
   );
 }
 

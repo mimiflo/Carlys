@@ -332,7 +332,20 @@ date sur `Program`, aucun lien `WorkoutSession` ↔ jour de programme.
 - [x] Emplacement : onglet « Nutrition », 3e des six de la barre.
 - [x] « Objectif » déjà reformulé : « Mon plan nutrition »
       (`metabolic_profile_form.dart:172`, `profile_nutrition_settings.dart`).
-- [ ] Passe UX finale au Plan 11 (hiérarchie, accès rapide).
+- [x] Passe UX finale — 22 septembre 2026. **Hiérarchie** : déjà arbitrée et
+      écrite, et deux fois — l'écran ordonne différemment selon que le profil
+      est complet ou non, et `nutrition_screen.dart` dit pourquoi à chaque
+      fois (la porte des recettes ferme la page dans les deux ordres, mais ne
+      passe jamais devant le formulaire du premier jour). Rien à reprendre
+      là. **Accès rapide** : c'était le vrai manque. Noter un repas demandait
+      un changement d'onglet PUIS un défilement, alors que l'envie de le
+      noter naît en lisant le total du jour sur l'accueil. La tuile des
+      calories ouvre donc la feuille de saisie, comme celle de l'hydratation
+      le faisait déjà — les deux mesures qui se décident plusieurs fois par
+      jour, et les deux seules dont le chiffre reste faux tant qu'on n'a pas
+      ouvert un autre onglet. La MÊME porte que le journal, pas une copie :
+      le geste d'écriture est parti dans `meal_entry_flow.dart`. Les deux
+      autres cellules n'ont toujours aucun geste, et un test le garde.
 
 ---
 

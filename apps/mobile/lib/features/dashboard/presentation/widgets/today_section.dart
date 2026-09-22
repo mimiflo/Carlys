@@ -35,6 +35,7 @@ class TodaySection extends ConsumerWidget {
   const TodaySection({
     required this.onStartPrimer,
     required this.onOpenHydration,
+    required this.onAddMeal,
     super.key,
   });
 
@@ -42,6 +43,7 @@ class TodaySection extends ConsumerWidget {
   final VoidCallback onStartPrimer;
 
   final VoidCallback onOpenHydration;
+  final VoidCallback onAddMeal;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -74,6 +76,7 @@ class TodaySection extends ConsumerWidget {
                   child: TodayGrid(
                     metrics: ref.watch(todayMetricsProvider),
                     onOpenHydration: onOpenHydration,
+                    onAddMeal: onAddMeal,
                   ),
                 ),
         );

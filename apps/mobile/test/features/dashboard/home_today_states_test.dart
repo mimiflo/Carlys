@@ -190,7 +190,11 @@ void main() {
         ],
         child: MaterialApp(
           home: Scaffold(
-            body: TodaySection(onStartPrimer: () {}, onOpenHydration: () {}),
+            body: TodaySection(
+              onStartPrimer: () {},
+              onOpenHydration: () {},
+              onAddMeal: () {},
+            ),
           ),
         ),
       ),
