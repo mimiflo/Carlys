@@ -33,7 +33,7 @@ class MealDaySelector extends ConsumerWidget {
         IconButton(
           onPressed: offset > -journalMaxDaysBack ? () => bouger(-1) : null,
           tooltip: 'Jour précédent',
-          icon: const Icon(Icons.chevron_left_rounded),
+          icon: const Icon(AppIcons.chevronLeft),
           color: AppColors.darkTextSecondary,
         ),
         Expanded(
@@ -55,7 +55,7 @@ class MealDaySelector extends ConsumerWidget {
           // venir, donc un jour futur n'aurait rien à montrer ni à recevoir.
           onPressed: aujourdHui ? null : () => bouger(1),
           tooltip: 'Jour suivant',
-          icon: const Icon(Icons.chevron_right_rounded),
+          icon: const Icon(AppIcons.chevronRight),
           color: AppColors.darkTextSecondary,
         ),
       ],

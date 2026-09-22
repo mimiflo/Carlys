@@ -163,10 +163,7 @@ class CommunityScreen extends ConsumerWidget {
                 IconButton(
                   onPressed: () => _addFriend(context, actions),
                   tooltip: 'Ajouter un ami',
-                  icon: const Icon(
-                    Icons.person_add_alt_1_outlined,
-                    color: AppColors.accent,
-                  ),
+                  icon: const Icon(AppIcons.addFriend, color: AppColors.accent),
                 ),
               ],
             ),
@@ -197,7 +194,7 @@ class CommunityScreen extends ConsumerWidget {
               // « personne ici ». Le premier ami, lui, s'invite dans la section
               // « Amis » des sections (voir FriendsEmptyCard).
               AppEmptyState(
-                icon: Icons.group_outlined,
+                icon: AppIcons.communityOutline,
                 title: 'Personne ici pour l’instant',
                 message: FriendsEmptyCard.invitation,
                 actionLabel: 'Ajouter un ami',

@@ -170,4 +170,89 @@ abstract final class AppIcons {
   static const IconData empty = Icons.inbox_rounded;
   static const IconData offline = Icons.cloud_off_rounded;
   static const IconData retry = Icons.refresh_rounded;
+
+  // ── Programme et calendrier ───────────────────────────────────────
+  // Les états d'un jour, chacun sous sa forme : un jour se lit d'un coup
+  // d'œil, donc le glyphe porte l'état avant que la couleur ne l'appuie.
+  static const IconData restDay = Icons.bedtime_outlined;
+  static const IconData trainingDay = Icons.directions_run_rounded;
+  static const IconData dayDone = Icons.check_circle_outline_rounded;
+  static const IconData dayMissed = Icons.remove_circle_outline_rounded;
+  static const IconData dayUpcoming = Icons.schedule_rounded;
+  static const IconData startDay = Icons.play_circle_outline_rounded;
+
+  /// Le calendrier en trait fin, quand il DÉSIGNE un programme plutôt que
+  /// d'ouvrir une date ([calendar], plein, fait cela).
+  static const IconData calendarOutline = Icons.calendar_month_outlined;
+  static const IconData programOutline = Icons.event_note_outlined;
+
+  /// Détacher la séance rattachée à un jour — l'inverse du lien, pas sa
+  /// suppression : la séance reste, seul le rattachement tombe.
+  static const IconData unlink = Icons.link_off_rounded;
+  static const IconData clearEntry = Icons.backspace_outlined;
+  static const IconData uncheckedCircle = Icons.circle_outlined;
+  static const IconData date = Icons.event_outlined;
+  static const IconData time = Icons.schedule_outlined;
+  static const IconData playFilled = Icons.play_circle_fill_rounded;
+  static const IconData dragHandle = Icons.drag_indicator_rounded;
+
+  // ── Communauté ────────────────────────────────────────────────────
+  static const IconData block = Icons.block_rounded;
+  static const IconData report = Icons.flag_outlined;
+  static const IconData addFriend = Icons.person_add_alt_1_outlined;
+  static const IconData communityOutline = Icons.group_outlined;
+  static const IconData encouragementHeart = Icons.favorite_rounded;
+  static const IconData encourage = Icons.volunteer_activism_outlined;
+  static const IconData challengeOutline = Icons.emoji_events_outlined;
+  static const IconData leagueOutline = Icons.military_tech_outlined;
+  static const IconData academyOutline = Icons.school_outlined;
+  static const IconData overflow = Icons.more_vert_rounded;
+
+  /// L'identifiant public qu'on partage pour être ajouté — d'où l'arobase,
+  /// et non un QR ([qrCode], qui est l'autre chemin vers le même but).
+  static const IconData friendCode = Icons.alternate_email_rounded;
+
+  /// Le sens d'une place en ligue. [trendingUp] complète la paire ; le
+  /// trait plat dit « ni montée ni descente », ce qu'une flèche ne sait
+  /// pas dire.
+  static const IconData trendingDown = Icons.trending_down_rounded;
+  static const IconData trendingFlat = Icons.horizontal_rule_rounded;
+
+  // ── Profil corporel et objectifs (embarquement) ───────────────────
+  static const IconData male = Icons.male_rounded;
+  static const IconData female = Icons.female_rounded;
+  static const IconData birthDate = Icons.cake_rounded;
+  static const IconData birthDateOutline = Icons.cake_outlined;
+
+  /// Les niveaux d'activité, du canapé à l'athlète. Les deux plus hauts
+  /// réemploient [workout] et [spark], déjà chargés de ce sens.
+  static const IconData activitySedentary = Icons.weekend_rounded;
+  static const IconData activityLight = Icons.directions_walk_rounded;
+  static const IconData activityModerate = Icons.directions_run_rounded;
+
+  /// Les objectifs d'entraînement qui n'ont pas déjà leur glyphe ailleurs.
+  static const IconData goalRecomposition = Icons.autorenew_rounded;
+  static const IconData goalHyrox = Icons.sports_score_rounded;
+  static const IconData goalMarathon = Icons.directions_run_rounded;
+  static const IconData goalMaintenance = Icons.balance_rounded;
+
+  // ── Academy : les illustrations de leçon ──────────────────────────
+  static const IconData lessonPosture = Icons.accessibility_new_rounded;
+  static const IconData lessonCardio = Icons.directions_run_rounded;
+  static const IconData lessonHealth = Icons.health_and_safety_outlined;
+  static const IconData lessonHeart = Icons.monitor_heart_outlined;
+  static const IconData lessonExpand = Icons.keyboard_arrow_down_rounded;
+
+  // ── Listes et replis ──────────────────────────────────────────────
+  static const IconData expand = Icons.expand_more_rounded;
+  static const IconData collapse = Icons.expand_less_rounded;
+  static const IconData chevronLeft = Icons.chevron_left_rounded;
+
+  /// Puce d'énumération — un disque plein, pas une icône de sens.
+  static const IconData bullet = Icons.circle;
+
+  // ── Compte et appareils ───────────────────────────────────────────
+  static const IconData device = Icons.smartphone_rounded;
+  static const IconData editOutline = Icons.edit_outlined;
+  static const IconData emailSent = Icons.mark_email_read_outlined;
 }

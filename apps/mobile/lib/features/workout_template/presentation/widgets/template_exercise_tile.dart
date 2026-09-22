@@ -168,9 +168,7 @@ class _Summary extends StatelessWidget {
                   ),
                 ),
                 Icon(
-                  expanded
-                      ? Icons.expand_less_rounded
-                      : Icons.expand_more_rounded,
+                  expanded ? AppIcons.collapse : AppIcons.expand,
                   size: 22,
                   color: AppColors.darkTextTertiary,
                 ),

@@ -71,20 +71,20 @@ class ProgramWeekSummary extends StatelessWidget {
             children: [
               const _LegendRow(
                 color: AppColors.success,
-                icon: Icons.check_circle_rounded,
+                icon: AppIcons.checkCircle,
                 text: 'Séance faite : une séance terminée porte ce jour.',
               ),
               const SizedBox(height: AppSpacing.xxs),
               const _LegendRow(
                 color: AppColors.danger,
-                icon: Icons.remove_circle_outline_rounded,
+                icon: AppIcons.dayMissed,
                 text: 'Séance manquée : le jour est passé, rien n’a été fait.',
               ),
               if (avantDepart > 0) ...[
                 const SizedBox(height: AppSpacing.xxs),
                 const _LegendRow(
                   color: AppColors.darkTextTertiary,
-                  icon: Icons.schedule_rounded,
+                  icon: AppIcons.dayUpcoming,
                   text:
                       'Avant le départ : ces jours précèdent ton premier '
                       'jour, ils ne te sont pas reprochés.',

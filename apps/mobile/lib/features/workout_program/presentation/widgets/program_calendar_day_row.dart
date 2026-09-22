@@ -33,22 +33,22 @@ class ProgramCalendarDayRow extends StatelessWidget {
     ProgramDayStatus.done => (
       day.label ?? 'Séance faite',
       AppColors.success,
-      Icons.check_circle_rounded,
+      AppIcons.checkCircle,
     ),
     ProgramDayStatus.missed => (
       day.label ?? 'Séance manquée',
       AppColors.danger,
-      Icons.remove_circle_outline_rounded,
+      AppIcons.dayMissed,
     ),
     ProgramDayStatus.rest => (
       day.label ?? 'Repos',
       AppColors.darkTextSecondary,
-      Icons.bedtime_outlined,
+      AppIcons.restDay,
     ),
     ProgramDayStatus.before => (
       day.label ?? 'Avant le départ',
       AppColors.darkTextTertiary,
-      Icons.schedule_rounded,
+      AppIcons.dayUpcoming,
     ),
     ProgramDayStatus.free => (
       'Rien de prévu',
@@ -58,7 +58,7 @@ class ProgramCalendarDayRow extends StatelessWidget {
     ProgramDayStatus.upcoming => (
       day.label ?? 'À venir',
       AppColors.darkTextPrimary,
-      day.templateId == null ? Icons.directions_run_rounded : AppIcons.workout,
+      day.templateId == null ? AppIcons.trainingDay : AppIcons.workout,
     ),
   };
 
@@ -115,7 +115,7 @@ class ProgramCalendarDayRow extends StatelessWidget {
             ),
             if (onTap != null)
               const Icon(
-                Icons.play_circle_outline_rounded,
+                AppIcons.startDay,
                 size: 20,
                 color: AppColors.primaryLight,
               ),

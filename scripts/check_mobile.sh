@@ -61,6 +61,11 @@ fi
 echo "── Tailles de fichiers ─────────────────────────────────────────────"
 "$SCRIPTS_DIR/check_mobile_file_sizes.sh"
 
+echo "── Banque d'icônes ─────────────────────────────────────────────────"
+# `app_icons.dart` interdit `Icons.*` dans les écrans depuis sa première
+# ligne ; rien ne le vérifiait, et 106 références l'avaient contourné.
+"$SCRIPTS_DIR/check_mobile_icons.sh"
+
 echo "── Couverture des polices ──────────────────────────────────────────"
 # Les neuf TTF embarquées sont SOUS-ENSEMBLÉES : Flutter ne le fait pas pour
 # les polices de texte, et les versions complètes emportaient 2,99 Mo dans

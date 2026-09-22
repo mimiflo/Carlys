@@ -76,7 +76,7 @@ Carlys/
 │   ├── monitoring/           # observabilité : état actuel et cible
 │   └── deployment/           # stratégie de déploiement
 ├── docs/                     # documentation détaillée (voir fin de ce fichier)
-├── scripts/                  # setup.sh, check.sh, bootstrap_mobile.sh, check_mobile.sh (+ check_mobile_file_sizes.sh)
+├── scripts/                  # setup.sh, check.sh, bootstrap_mobile.sh, check_mobile.sh (+ check_mobile_file_sizes.sh, check_mobile_icons.sh)
 ├── .github/workflows/        # 9 : api-ci, admin-ci, mobile-ci, security-ci, images-ci,
 │                             #     images-publish, images-publish-prod,
 │                             #     mobile-recette, mobile-production
@@ -397,8 +397,9 @@ Politique complète et signalement de vulnérabilités : [SECURITY.md](./SECURIT
 | `./scripts/check.sh` | Vérifications complètes (build inclus) |
 | `./scripts/bootstrap_mobile.sh` | Prépare l'app Flutter (plateformes + deps) |
 | `./scripts/mobile_platforms.sh android,ios` | Régénère `android/`/`ios/` seuls, sans toucher au lock |
-| `./scripts/check_mobile.sh` | Vérifications Flutter — rejoue `mobile-ci` à l'identique, précédé des tailles de fichiers et de la couverture des polices (que la CI exécute aussi, en étapes distinctes) |
+| `./scripts/check_mobile.sh` | Vérifications Flutter — rejoue `mobile-ci` à l'identique, précédé des tailles de fichiers, de la banque d'icônes et de la couverture des polices (que la CI exécute aussi, en étapes distinctes) |
 | `./scripts/check_mobile_file_sizes.sh` | Seuls les seuils de taille (widgets, contrôleurs, use cases, services) — appelé par le précédent et par la CI |
+| `./scripts/check_mobile_icons.sh` | Aucun `Icons.` hors du design system : les écrans nomment `AppIcons.<sens>` — appelé par le précédent et par la CI |
 | `flutter pub get` | Dépendances Flutter |
 | `dart run build_runner build` | Génération de code Flutter |
 | `flutter analyze` / `flutter test` | Qualité Flutter |

@@ -84,28 +84,25 @@ class FriendCard extends StatelessWidget {
           IconButton(
             onPressed: onEncourage,
             tooltip: 'Encourager',
-            icon: const Icon(
-              Icons.volunteer_activism_outlined,
-              color: AppColors.accent,
-            ),
+            icon: const Icon(AppIcons.encourage, color: AppColors.accent),
           ),
           CommunityOverflowMenu(
             tooltip: 'Options pour ${friend.displayName}',
             actions: [
               CommunityMenuAction(
                 label: 'Retirer',
-                icon: Icons.person_remove_outlined,
+                icon: AppIcons.deleteAccount,
                 onSelected: onRemove,
               ),
               CommunityMenuAction(
                 label: 'Bloquer',
-                icon: Icons.block_rounded,
+                icon: AppIcons.block,
                 destructive: true,
                 onSelected: onBlock,
               ),
               CommunityMenuAction(
                 label: 'Signaler',
-                icon: Icons.flag_outlined,
+                icon: AppIcons.report,
                 onSelected: onReport,
               ),
             ],

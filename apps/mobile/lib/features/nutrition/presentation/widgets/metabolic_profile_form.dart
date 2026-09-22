@@ -156,7 +156,7 @@ class _MetabolicProfileFormState extends ConsumerState<MetabolicProfileForm> {
           const SizedBox(height: AppSpacing.xxs),
           OutlinedButton.icon(
             onPressed: _pickBirthDate,
-            icon: const Icon(Icons.cake_outlined),
+            icon: const Icon(AppIcons.birthDateOutline),
             label: Text(
               _birthDate == null
                   ? 'Choisir une date'

@@ -20,7 +20,7 @@ class PrivacyCard extends StatelessWidget {
     return AppCard(
       child: Row(
         children: [
-          const Icon(Icons.lock_outline_rounded, color: AppColors.primaryLight),
+          const Icon(AppIcons.lock, color: AppColors.primaryLight),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Column(

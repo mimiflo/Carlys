@@ -20,8 +20,8 @@ const List<NutritionGoal> onboardingGoals = [
 
 IconData goalIcon(NutritionGoal goal) => switch (goal) {
   NutritionGoal.gainMuscle => AppIcons.workout,
-  NutritionGoal.loseWeight => Icons.local_fire_department_rounded,
-  NutritionGoal.maintain => Icons.self_improvement_rounded,
+  NutritionGoal.loseWeight => AppIcons.streak,
+  NutritionGoal.maintain => AppIcons.voicePhilosophe,
 };
 
 String goalSubtitle(NutritionGoal goal) => switch (goal) {
@@ -33,25 +33,25 @@ String goalSubtitle(NutritionGoal goal) => switch (goal) {
 /// Un glyphe par objectif d'entraînement — l'ordre d'affichage est celui
 /// de l'enum : du plus demandé (perte de gras, muscle) au plus spécialisé.
 IconData trainingGoalIcon(TrainingGoal goal) => switch (goal) {
-  TrainingGoal.fatLoss => Icons.local_fire_department_rounded,
+  TrainingGoal.fatLoss => AppIcons.streak,
   TrainingGoal.muscleGain => AppIcons.workout,
-  TrainingGoal.recomposition => Icons.autorenew_rounded,
-  TrainingGoal.hyrox => Icons.sports_score_rounded,
-  TrainingGoal.marathon => Icons.directions_run_rounded,
-  TrainingGoal.maintenance => Icons.balance_rounded,
+  TrainingGoal.recomposition => AppIcons.goalRecomposition,
+  TrainingGoal.hyrox => AppIcons.goalHyrox,
+  TrainingGoal.marathon => AppIcons.goalMarathon,
+  TrainingGoal.maintenance => AppIcons.goalMaintenance,
   TrainingGoal.strength => AppIcons.trendingUp,
   TrainingGoal.calisthenics => AppIcons.exercises,
 };
 
 IconData sexIcon(BiologicalSex sex) => switch (sex) {
-  BiologicalSex.male => Icons.male_rounded,
-  BiologicalSex.female => Icons.female_rounded,
+  BiologicalSex.male => AppIcons.male,
+  BiologicalSex.female => AppIcons.female,
 };
 
 IconData activityIcon(ActivityLevel level) => switch (level) {
-  ActivityLevel.sedentary => Icons.weekend_rounded,
-  ActivityLevel.light => Icons.directions_walk_rounded,
-  ActivityLevel.moderate => Icons.directions_run_rounded,
+  ActivityLevel.sedentary => AppIcons.activitySedentary,
+  ActivityLevel.light => AppIcons.activityLight,
+  ActivityLevel.moderate => AppIcons.activityModerate,
   ActivityLevel.active => AppIcons.workout,
-  ActivityLevel.veryActive => Icons.bolt_rounded,
+  ActivityLevel.veryActive => AppIcons.spark,
 };

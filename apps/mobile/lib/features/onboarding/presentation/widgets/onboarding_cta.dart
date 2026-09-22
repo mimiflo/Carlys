@@ -85,7 +85,7 @@ class OnboardingCta extends StatelessWidget {
                   else
                     // Absente d'AppIcons : même glyphe que la maquette.
                     Icon(
-                      Icons.arrow_forward_rounded,
+                      AppIcons.arrowForward,
                       size: _arrowSize,
                       color: foreground,
                     ),
@@ -120,14 +120,8 @@ class OnboardingCta extends StatelessWidget {
     color: AppColors.darkTextTertiary,
   );
 
-  /// Halo violet sous la pastille (ombre de la maquette), accordé au dégradé
-  /// d'action.
-  static final List<BoxShadow> _actionGlow = [
-    BoxShadow(
-      color: AppColors.primary.withValues(alpha: 0.5),
-      offset: const Offset(0, 12),
-      blurRadius: 30,
-      spreadRadius: -12,
-    ),
-  ];
+  /// Halo violet sous la pastille : la MÊME lueur d'action que le reste de
+  /// l'application, à 0,5 plutôt que 0,7 — ces écrans portent déjà leur
+  /// propre lumière, et la pleine intensité y bavait.
+  static final List<BoxShadow> _actionGlow = AppShadows.ctaGlow(alpha: 0.5);
 }

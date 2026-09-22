@@ -44,7 +44,7 @@ class EncouragementTile extends StatelessWidget {
           Row(
             children: [
               const Icon(
-                Icons.favorite_rounded,
+                AppIcons.encouragementHeart,
                 size: 16,
                 color: AppColors.affection,
               ),
@@ -76,13 +76,13 @@ class EncouragementTile extends StatelessWidget {
                   ),
                   CommunityMenuAction(
                     label: 'Bloquer',
-                    icon: Icons.block_rounded,
+                    icon: AppIcons.block,
                     destructive: true,
                     onSelected: onBlock,
                   ),
                   CommunityMenuAction(
                     label: 'Signaler',
-                    icon: Icons.flag_outlined,
+                    icon: AppIcons.report,
                     onSelected: onReport,
                   ),
                 ],

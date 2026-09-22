@@ -51,7 +51,7 @@ class TrainingHubScreen extends ConsumerWidget {
               child: Row(
                 children: [
                   const Icon(
-                    Icons.play_circle_fill_rounded,
+                    AppIcons.playFilled,
                     color: AppColors.accent,
                     size: 32,
                   ),
@@ -76,7 +76,7 @@ class TrainingHubScreen extends ConsumerWidget {
                     ),
                   ),
                   const Icon(
-                    Icons.chevron_right_rounded,
+                    AppIcons.chevronRight,
                     color: AppColors.darkTextTertiary,
                   ),
                 ],
@@ -85,14 +85,14 @@ class TrainingHubScreen extends ConsumerWidget {
             const SizedBox(height: AppSpacing.gapRow),
           ],
           _Entry(
-            icon: Icons.event_note_outlined,
+            icon: AppIcons.programOutline,
             color: AppColors.accent,
             title: 'Mes séances',
             subtitle: 'Modèles prêts à lancer, checklist d’exercices.',
             onTap: () => context.push(AppRoutes.templates),
           ),
           _Entry(
-            icon: Icons.calendar_month_outlined,
+            icon: AppIcons.calendarOutline,
             color: AppColors.primaryLight,
             title: 'Programmes',
             subtitle: 'Des semaines planifiées, jour par jour.',
@@ -113,7 +113,7 @@ class TrainingHubScreen extends ConsumerWidget {
             onTap: () => context.push(AppRoutes.coach),
           ),
           _Entry(
-            icon: Icons.calendar_month_outlined,
+            icon: AppIcons.calendarOutline,
             color: AppColors.accent,
             title: 'Calendrier & historique',
             subtitle: 'Tes séances passées, mois par mois.',
@@ -170,7 +170,7 @@ class _Entry extends StatelessWidget {
               ),
             ),
             const Icon(
-              Icons.chevron_right_rounded,
+              AppIcons.chevronRight,
               color: AppColors.darkTextTertiary,
             ),
           ],

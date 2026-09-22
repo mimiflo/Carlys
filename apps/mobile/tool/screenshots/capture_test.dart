@@ -103,6 +103,16 @@ import '../../test/support/in_memory_workout_template_repository.dart';
 /// Les repas de la galerie s'y ancrent : « il y a N heures » bascule la
 /// veille quand la capture tourne après minuit, et le total du jour change
 /// d'une exécution à l'autre.
+///
+/// **Trois repas ne s'y ancraient pas**, malgré ce commentaire : ils
+/// portaient `DateTime.now().subtract(...)`. Or la tuile REND l'heure
+/// (`MealMomentRows.spellTime`), à la minute : deux régénérations à quinze
+/// minutes d'écart donnaient deux images différentes, et la galerie ne
+/// pouvait plus servir à prouver qu'un changement n'avait rien changé.
+///
+/// La règle complète des décors tient donc en deux temps : un JOUR se date
+/// relativement à maintenant — sans quoi il vieillit —, et une HEURE se pose
+/// en dur dans ce jour — sans quoi elle bouge à chaque exécution.
 DateTime startOfToday() {
   final now = DateTime.now();
   return DateTime(now.year, now.month, now.day);
@@ -1029,7 +1039,8 @@ void main() {
           quantity: 1,
           quantityUnit: MealQuantityUnit.portion,
           proteinG: 28,
-          eatenAt: DateTime.now().subtract(const Duration(hours: 4)),
+          // Petit-déjeuner : une heure FIXE dans la journée en cours.
+          eatenAt: startOfToday().add(const Duration(hours: 8, minutes: 15)),
         ),
         MealEntry(
           id: 'capture-repas-2',
@@ -1038,7 +1049,8 @@ void main() {
           quantity: 320,
           quantityUnit: MealQuantityUnit.gram,
           proteinG: 46,
-          eatenAt: DateTime.now().subtract(const Duration(hours: 1)),
+          // Déjeuner : heure FIXE, pour que deux captures coïncident.
+          eatenAt: startOfToday().add(const Duration(hours: 13, minutes: 20)),
         ),
       ]);
     await pumpApp(tester, nutrition: nutrition);
@@ -1063,7 +1075,8 @@ void main() {
           quantityUnit: MealQuantityUnit.gram,
           proteinG: 46,
           carbsG: 58,
-          eatenAt: DateTime.now().subtract(const Duration(hours: 1)),
+          // Déjeuner : heure FIXE, pour que deux captures coïncident.
+          eatenAt: startOfToday().add(const Duration(hours: 13, minutes: 20)),
         ),
       );
     await pumpApp(tester, nutrition: nutrition);

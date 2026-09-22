@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 
 import '../../../../core/utilities/formatting.dart';
@@ -30,59 +28,46 @@ class TemplateEditorBottomBar extends StatelessWidget {
   final VoidCallback onSave;
   final VoidCallback onCancel;
 
-  /// Géométrie de la maquette : voile flouté à 20, fond à 90 %.
-  static const double _blur = 20;
-  static const double _veilAlpha = 0.9;
-
   @override
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.paddingOf(context).bottom;
 
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: _blur, sigmaY: _blur),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: AppColors.darkBackground.withValues(alpha: _veilAlpha),
-            border: const Border(top: BorderSide(color: AppColors.darkBorder)),
-          ),
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(
-              AppSpacing.gutter,
-              AppSpacing.sm,
-              AppSpacing.gutter,
-              AppSpacing.md + bottomInset,
+    return AppTranslucentBar(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          AppSpacing.gutter,
+          AppSpacing.sm,
+          AppSpacing.gutter,
+          AppSpacing.md + bottomInset,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            Text(
+              _summary(),
+              style: AppTypography.labelMono.copyWith(
+                color: AppColors.darkTextTertiary,
+              ),
             ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+            const SizedBox(height: AppSpacing.sm),
+            Row(
               children: [
-                Text(
-                  _summary(),
-                  style: AppTypography.labelMono.copyWith(
-                    color: AppColors.darkTextTertiary,
-                  ),
+                TextButton(
+                  onPressed: saving ? null : onCancel,
+                  child: const Text('Annuler'),
                 ),
-                const SizedBox(height: AppSpacing.sm),
-                Row(
-                  children: [
-                    TextButton(
-                      onPressed: saving ? null : onCancel,
-                      child: const Text('Annuler'),
-                    ),
-                    const SizedBox(width: AppSpacing.xs),
-                    Expanded(
-                      child: _SaveButton(
-                        enabled: canSave && !saving,
-                        saving: saving,
-                        onPressed: onSave,
-                      ),
-                    ),
-                  ],
+                const SizedBox(width: AppSpacing.xs),
+                Expanded(
+                  child: _SaveButton(
+                    enabled: canSave && !saving,
+                    saving: saving,
+                    onPressed: onSave,
+                  ),
                 ),
               ],
             ),
-          ),
+          ],
         ),
       ),
     );
@@ -113,9 +98,6 @@ class _SaveButton extends StatelessWidget {
   final VoidCallback onPressed;
 
   static const double _iconSize = 19;
-  static const double _glowBlur = 30;
-  static const double _glowSpread = -12;
-  static const double _glowOffset = 12;
 
   @override
   Widget build(BuildContext context) {
@@ -130,16 +112,7 @@ class _SaveButton extends StatelessWidget {
           gradient: enabled ? AppColors.cta : null,
           color: enabled ? null : AppColors.darkSurface,
           borderRadius: AppRadius.buttonAll,
-          boxShadow: enabled
-              ? [
-                  BoxShadow(
-                    color: AppColors.primary.withValues(alpha: 0.7),
-                    blurRadius: _glowBlur,
-                    spreadRadius: _glowSpread,
-                    offset: const Offset(0, _glowOffset),
-                  ),
-                ]
-              : const [],
+          boxShadow: enabled ? AppShadows.ctaGlow() : const [],
         ),
         child: FilledButton(
           style: FilledButton.styleFrom(

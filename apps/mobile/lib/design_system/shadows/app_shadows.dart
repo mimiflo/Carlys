@@ -66,4 +66,31 @@ abstract final class AppShadows {
       blurRadius: 16,
     ),
   ];
+
+  /// LUEUR du bouton principal : le violet qui déborde sous l'action.
+  ///
+  /// À ne pas confondre avec [primaryGlow], qui est un halo DISCRET posé
+  /// autour d'un élément de marque. Celle-ci est portée : elle tombe de 12
+  /// sous le bouton, floute sur 30, et se resserre de 12 pour ne pas
+  /// déborder sur les côtés. C'est la signature visuelle d'un appel à
+  /// l'action, pas une mise en avant.
+  ///
+  /// **Quatre écrans la déclaraient chacun pour soi** — la barre d'action
+  /// d'une série, la carte de modèle, la barre de l'éditeur de modèle et le
+  /// bouton d'accueil de l'embarquement — avec, pour trois d'entre eux, un
+  /// triplet privé `_glowBlur` / `_glowSpread` / `_glowOffset` aux MÊMES
+  /// valeurs recopiées. Quatre copies d'une même lueur finissent par
+  /// diverger : l'une se corrige, les autres restent.
+  ///
+  /// [alpha] reste un paramètre parce que l'intensité, elle, diffère
+  /// réellement d'un écran à l'autre : 0,7 sur un fond de contenu, 0,5 sur
+  /// les écrans d'entrée, déjà chargés de lumière.
+  static List<BoxShadow> ctaGlow({double alpha = 0.7}) => [
+    BoxShadow(
+      color: AppColors.primary.withValues(alpha: alpha),
+      offset: const Offset(0, 12),
+      blurRadius: 30,
+      spreadRadius: -12,
+    ),
+  ];
 }

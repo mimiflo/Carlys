@@ -90,8 +90,8 @@ class _SessionTile extends ConsumerWidget {
       child: ListTile(
         leading: Icon(
           device.devicePlatform == 'ios' || device.devicePlatform == 'android'
-              ? Icons.smartphone
-              : Icons.devices_other,
+              ? AppIcons.device
+              : AppIcons.devices,
           color: theme.colorScheme.primary,
         ),
         title: Text(device.label),
@@ -105,7 +105,7 @@ class _SessionTile extends ConsumerWidget {
             ? null
             : IconButton(
                 tooltip: 'Déconnecter cet appareil',
-                icon: Icon(Icons.logout, color: theme.colorScheme.error),
+                icon: Icon(AppIcons.logout, color: theme.colorScheme.error),
                 onPressed: () async {
                   final confirmed = await _confirm(
                     context,

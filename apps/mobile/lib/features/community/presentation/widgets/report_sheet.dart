@@ -124,7 +124,7 @@ class _ReasonRow extends StatelessWidget {
   Widget build(BuildContext context) {
     return AppListRow(
       title: reason.label,
-      leading: Icons.flag_outlined,
+      leading: AppIcons.report,
       leadingTint: selected ? AppColors.accent : AppColors.primaryLight,
       trailing: selected
           ? const Icon(AppIcons.check, size: 20, color: AppColors.accent)

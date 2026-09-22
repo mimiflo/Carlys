@@ -58,22 +58,18 @@ class _DayRow extends StatelessWidget {
   Widget build(BuildContext context) {
     final entry = day;
     final (String label, Color color, IconData icon) = switch (entry) {
-      null => ('À planifier', AppColors.darkTextTertiary, Icons.add_rounded),
+      null => ('À planifier', AppColors.darkTextTertiary, AppIcons.add),
       ProgramDayEntry(isRest: true) => (
         entry.label,
         AppColors.darkTextSecondary,
-        Icons.bedtime_outlined,
+        AppIcons.restDay,
       ),
       ProgramDayEntry(templateId: final id?) when id.isNotEmpty => (
         entry.label,
         AppColors.darkTextPrimary,
         AppIcons.workout,
       ),
-      _ => (
-        entry.label,
-        AppColors.darkTextPrimary,
-        Icons.directions_run_rounded,
-      ),
+      _ => (entry.label, AppColors.darkTextPrimary, AppIcons.trainingDay),
     };
 
     return InkWell(

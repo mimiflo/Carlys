@@ -51,7 +51,7 @@ class _ProfileSheet extends StatelessWidget {
                   const Padding(
                     padding: EdgeInsets.only(top: 2),
                     child: Icon(
-                      Icons.arrow_forward_rounded,
+                      AppIcons.arrowForward,
                       size: 16,
                       color: AppColors.accent,
                     ),

@@ -19,7 +19,7 @@ class ProgramCard extends StatelessWidget {
       child: Row(
         children: [
           Icon(
-            Icons.calendar_month_outlined,
+            AppIcons.calendarOutline,
             color: program.isActive ? AppColors.accent : AppColors.primaryLight,
           ),
           const SizedBox(width: AppSpacing.sm),
@@ -50,10 +50,7 @@ class ProgramCard extends StatelessWidget {
             const SizedBox(width: AppSpacing.xs),
             const AppSectionLabel('Suivi', color: AppColors.accent),
           ],
-          const Icon(
-            Icons.chevron_right_rounded,
-            color: AppColors.darkTextTertiary,
-          ),
+          const Icon(AppIcons.chevronRight, color: AppColors.darkTextTertiary),
         ],
       ),
     );

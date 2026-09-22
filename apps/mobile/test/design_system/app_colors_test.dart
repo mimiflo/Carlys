@@ -171,12 +171,6 @@ void main() {
       final colors = AppColors.violetRamp.colors;
       expect(luminance(colors.last), greaterThan(luminance(colors.first)));
     });
-
-    test('la variante verticale monte vers le clair', () {
-      expect(AppColors.violetRampUp.begin, Alignment.bottomCenter);
-      expect(AppColors.violetRampUp.end, Alignment.topCenter);
-      expect(AppColors.violetRampUp.colors, AppColors.violetRamp.colors);
-    });
   });
 
   group('extrémités transparentes', () {

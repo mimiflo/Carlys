@@ -100,13 +100,13 @@ class MealMomentRows extends StatelessWidget {
         AppListRow(
           title: 'Jour du repas',
           trailingText: spellDay(eatenAt, DateTime.now()),
-          leading: Icons.event_outlined,
+          leading: AppIcons.date,
           onTap: () => _pickDate(context),
         ),
         AppListRow(
           title: 'Heure du repas',
           trailingText: spellTime(eatenAt),
-          leading: Icons.schedule_outlined,
+          leading: AppIcons.time,
           onTap: () => _pickTime(context),
         ),
       ],

@@ -106,7 +106,7 @@ class WeightRow extends ConsumerWidget {
               ),
               tooltip: 'Corriger la mesure du $date',
               icon: const Icon(
-                Icons.edit_outlined,
+                AppIcons.editOutline,
                 size: 20,
                 color: AppColors.darkTextTertiary,
               ),

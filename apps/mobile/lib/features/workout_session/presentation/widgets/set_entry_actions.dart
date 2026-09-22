@@ -11,11 +11,7 @@ import 'exercise_picker_sheet.dart' show SetMeasure;
 /// plafond de 250 lignes du dépôt, et une carte de 330 lignes ne se relit plus
 /// d'un coup d'œil.
 
-/// Géométrie de la maquette : CTA accent avec halo `0 12px 30px -12px`.
 const double _ctaIconSize = 19;
-const double _glowBlur = 30;
-const double _glowSpread = -12;
-const double _glowOffset = 12;
 
 class SetValidateCta extends StatelessWidget {
   const SetValidateCta({required this.onPressed, super.key});
@@ -28,14 +24,7 @@ class SetValidateCta extends StatelessWidget {
       decoration: BoxDecoration(
         gradient: AppColors.cta,
         borderRadius: AppRadius.buttonAll,
-        boxShadow: [
-          BoxShadow(
-            color: AppColors.primary.withValues(alpha: 0.7),
-            blurRadius: _glowBlur,
-            spreadRadius: _glowSpread,
-            offset: const Offset(0, _glowOffset),
-          ),
-        ],
+        boxShadow: AppShadows.ctaGlow(),
       ),
       child: FilledButton(
         style: FilledButton.styleFrom(

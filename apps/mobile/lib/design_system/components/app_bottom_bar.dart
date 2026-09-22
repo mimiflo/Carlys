@@ -1,11 +1,10 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 
 import '../colors/app_colors.dart';
 import '../icons/app_icons.dart';
 import '../motion/app_motion.dart';
 import '../typography/app_typography.dart';
+import 'app_translucent_bar.dart';
 
 /// Un onglet de la bottom bar : icône outline/remplie + libellé.
 class AppBottomBarItem {
@@ -86,15 +85,23 @@ class AppBottomBar extends StatelessWidget {
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.paddingOf(context).bottom;
 
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 20, sigmaY: 20),
-        child: Container(
-          height: height + bottomInset,
-          padding: EdgeInsets.only(bottom: bottomInset),
-          decoration: const BoxDecoration(
-            color: _background,
-            border: Border(top: BorderSide(color: AppColors.darkBorder)),
+    return AppTranslucentBar(
+      // Fond plus dense que celui des barres d'action : la navigation reste
+      // lisible au-dessus de n'importe quel écran, y compris une photo.
+      color: _background,
+      child: SizedBox(
+        height: height + bottomInset,
+        child: Padding(
+          // Le `top` n'est pas une marge choisie : c'est l'épaisseur du trait
+          // du haut. `Container` la posait TOUT SEUL — il ajoute
+          // `decoration.padding`, c'est-à-dire les dimensions de la bordure,
+          // autour de son enfant. `DecoratedBox`, lui, ne le fait pas : en
+          // passant de l'un à l'autre, les six onglets remontaient d'un
+          // pixel logique. Mesuré, pas deviné — 0,24 % de pixels différents
+          // sur les vingt-trois captures qui portent cette barre.
+          padding: EdgeInsets.only(
+            top: AppTranslucentBar.borderWidth,
+            bottom: bottomInset,
           ),
           child: Row(
             children: [

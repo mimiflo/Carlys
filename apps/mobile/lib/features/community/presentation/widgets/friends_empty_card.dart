@@ -30,7 +30,10 @@ class FriendsEmptyCard extends StatelessWidget {
         children: [
           Row(
             children: [
-              const Icon(Icons.group_outlined, color: AppColors.primaryLight),
+              const Icon(
+                AppIcons.communityOutline,
+                color: AppColors.primaryLight,
+              ),
               const SizedBox(width: AppSpacing.sm),
               Expanded(
                 child: Text(
@@ -52,7 +55,7 @@ class FriendsEmptyCard extends StatelessWidget {
           const SizedBox(height: AppSpacing.sm),
           AppButton(
             label: 'Ajouter un ami',
-            icon: Icons.person_add_alt_1_outlined,
+            icon: AppIcons.addFriend,
             size: AppButtonSize.small,
             onPressed: onAddFriend,
           ),

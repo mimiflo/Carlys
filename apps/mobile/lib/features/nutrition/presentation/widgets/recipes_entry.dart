@@ -39,10 +39,7 @@ class RecipesEntry extends StatelessWidget {
               ],
             ),
           ),
-          const Icon(
-            Icons.chevron_right_rounded,
-            color: AppColors.darkTextTertiary,
-          ),
+          const Icon(AppIcons.chevronRight, color: AppColors.darkTextTertiary),
         ],
       ),
     );

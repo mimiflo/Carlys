@@ -67,7 +67,7 @@ class _DaySheet extends ConsumerWidget {
           ListTile(
             contentPadding: EdgeInsets.zero,
             leading: const Icon(
-              Icons.bedtime_outlined,
+              AppIcons.restDay,
               color: AppColors.primaryLight,
             ),
             title: const Text('Repos'),
@@ -103,7 +103,7 @@ class _DaySheet extends ConsumerWidget {
           ListTile(
             contentPadding: EdgeInsets.zero,
             leading: const Icon(
-              Icons.directions_run_rounded,
+              AppIcons.trainingDay,
               color: AppColors.primaryLight,
             ),
             title: const Text('Activité libre…'),
@@ -118,7 +118,7 @@ class _DaySheet extends ConsumerWidget {
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(
-                Icons.backspace_outlined,
+                AppIcons.clearEntry,
                 color: AppColors.darkTextTertiary,
               ),
               title: const Text('Effacer la case'),

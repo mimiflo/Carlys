@@ -75,7 +75,7 @@ class _LessonCardState extends State<LessonCard> {
                   turns: _open ? 0.5 : 0,
                   duration: AppMotion.fast,
                   child: const Icon(
-                    Icons.keyboard_arrow_down_rounded,
+                    AppIcons.lessonExpand,
                     color: AppColors.darkTextTertiary,
                   ),
                 ),
@@ -108,7 +108,7 @@ class _LessonCardState extends State<LessonCard> {
                       const Padding(
                         padding: EdgeInsets.only(top: 2),
                         child: Icon(
-                          Icons.arrow_forward_rounded,
+                          AppIcons.arrowForward,
                           size: 14,
                           color: AppColors.accent,
                         ),

@@ -14,6 +14,20 @@ import 'package:flutter/material.dart';
 ///    graphiques (choix produit d'août 2026 : la donnée doit trancher sur le
 ///    décor violet/orange) — jamais sur les surfaces ni le texte ;
 ///  - aucune ombre portée sur les cartes.
+///
+/// **UN JETON INUTILISÉ N'EST PAS FORCÉMENT MORT**, et la distinction se
+/// tranche en une question : est-il dans `tokens.json` ? S'il y est, il
+/// REFLÈTE la source de vérité — c'est une palette, et une palette se tient
+/// entière. La rampe neutre (0 → 950) en est l'exemple : quatre de ses
+/// échelons ne sont appelés nulle part, et les retirer casserait le miroir
+/// pour ne gagner que quatre lignes.
+///
+/// S'il n'y est pas, en revanche, il a été inventé ici : inutilisé, il est
+/// bien mort. Quatre l'étaient et sont partis en septembre 2026
+/// (`violetRampUp`, `ringHole`, `primaryFill`, `vignetteBorder`) — chacun
+/// décrivait un usage précis qu'un remaniement avait emporté sans lui. Une
+/// couleur qu'on veut garder se promeut dans `tokens.json`, où elle
+/// redevient une décision de design plutôt qu'un vestige.
 abstract final class AppColors {
   // Marque — violet électrique
   static const Color primary = Color(0xFF9B30FF);
@@ -44,13 +58,6 @@ abstract final class AppColors {
   /// Dégradé d'ambiance : ce qui remplit (jauges, halos) plutôt que ce qui
   /// se lit. Il s'éclaircit dans le sens de la progression.
   static const LinearGradient violetRamp = LinearGradient(
-    colors: [primaryDark, primaryFlash],
-  );
-
-  /// Même dégradé, pour ce qui monte plutôt que ce qui avance.
-  static const LinearGradient violetRampUp = LinearGradient(
-    begin: Alignment.bottomCenter,
-    end: Alignment.topCenter,
     colors: [primaryDark, primaryFlash],
   );
 
@@ -154,9 +161,6 @@ abstract final class AppColors {
   static const Color darkBorder = Color(0x12FFFFFF);
   static const Color darkBorderStrong = Color(0x24FFFFFF);
 
-  /// Trou central de l'anneau de forme.
-  static const Color ringHole = Color(0xFF0E0916);
-
   // Surfaces — thème clair (secondaire) et OLED
   static const Color lightBackground = Color(0xFFFAFAFC);
   static const Color lightSurface = Color(0xFFFFFFFF);
@@ -177,7 +181,6 @@ abstract final class AppColors {
 
   /// Voile sous la courbe rose des graphiques (magenta .05).
   static const Color magentaCardSoft = Color(0x0DED35A9);
-  static const Color primaryFill = Color(0x739B30FF); // primary .45
   static const Color accentBadgeBg = Color(0x1FFF7A45); // accent .12
   static const Color accentBadgeBorder = Color(0x47FF7A45); // accent .28
   static const Color primaryBadgeBg = Color(0x1F9B30FF); // primary .12
@@ -187,7 +190,6 @@ abstract final class AppColors {
   static const Color gaugeTrack = Color(0x12FFFFFF); // blanc .07
   static const Color primaryLightBorder = Color(0x4DC88BFF); // primaryLight .30
   static const Color difficultyTrack = Color(0x1FFFFFFF); // blanc .12
-  static const Color vignetteBorder = Color(0x38C88BFF); // primaryLight .22
   static const Color rowDivider = Color(0x0FFFFFFF); // blanc .06
   static const Color heatEmpty = Color(0x0DFFFFFF); // blanc .05
   static const Color heatOutOfMonth = Color(0x08FFFFFF); // blanc .03

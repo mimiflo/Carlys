@@ -198,7 +198,7 @@ class _CardBody extends StatelessWidget {
                     ),
                   ),
                   child: const Icon(
-                    Icons.chevron_right_rounded,
+                    AppIcons.chevronRight,
                     size: 20,
                     color: AppColors.primaryLight,
                   ),

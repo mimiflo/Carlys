@@ -182,10 +182,7 @@ class _Hint extends StatelessWidget {
         ),
         const SizedBox(width: AppSpacing.xs - 1),
         Expanded(
-          child: Text(
-            text,
-            style: AppTypography.label.copyWith(fontSize: 12, color: color),
-          ),
+          child: Text(text, style: AppTypography.label.copyWith(color: color)),
         ),
       ],
     );

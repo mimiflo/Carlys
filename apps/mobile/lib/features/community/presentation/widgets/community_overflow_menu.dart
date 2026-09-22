@@ -41,10 +41,7 @@ class CommunityOverflowMenu extends StatelessWidget {
       // Navigateur RACINE, comme les feuilles : ouvert depuis un onglet, le
       // menu passerait sinon sous la bottom bar flottante.
       useRootNavigator: true,
-      icon: const Icon(
-        Icons.more_vert_rounded,
-        color: AppColors.darkTextTertiary,
-      ),
+      icon: const Icon(AppIcons.overflow, color: AppColors.darkTextTertiary),
       style: IconButton.styleFrom(
         minimumSize: const Size.square(AppSpacing.touchTarget),
       ),

@@ -186,7 +186,6 @@ class _NextTier extends StatelessWidget {
     }
 
     final label = AppTypography.label.copyWith(
-      fontSize: 12,
       color: AppColors.darkTextTertiary,
     );
     return Text.rich(
@@ -216,7 +215,6 @@ class _Latest extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final label = AppTypography.label.copyWith(
-      fontSize: 12,
       color: AppColors.darkTextTertiary,
     );
 

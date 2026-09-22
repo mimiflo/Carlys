@@ -122,7 +122,7 @@ class ProgramCalendarDaySheet extends ConsumerWidget {
             ListTile(
               contentPadding: EdgeInsets.zero,
               leading: const Icon(
-                Icons.link_off_rounded,
+                AppIcons.unlink,
                 color: AppColors.darkTextTertiary,
               ),
               title: const Text('Ce n’est pas cette séance'),
@@ -153,7 +153,7 @@ class ProgramCalendarDaySheet extends ConsumerWidget {
                 ListTile(
                   contentPadding: EdgeInsets.zero,
                   leading: const Icon(
-                    Icons.check_circle_outline_rounded,
+                    AppIcons.dayDone,
                     color: AppColors.success,
                   ),
                   title: Text(entry.session.name ?? 'Séance libre'),

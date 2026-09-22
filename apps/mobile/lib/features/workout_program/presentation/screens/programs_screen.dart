@@ -64,7 +64,7 @@ class ProgramsScreen extends ConsumerWidget {
                   child: AppSectionHeader(
                     title: 'Programmes',
                     trailing: 'Nouveau',
-                    trailingIcon: Icons.add_rounded,
+                    trailingIcon: AppIcons.add,
                     trailingTone: AppSectionTrailingTone.accent,
                     onTrailingTap: () => _create(context, ref),
                   ),
@@ -95,7 +95,7 @@ class ProgramsScreen extends ConsumerWidget {
               ),
               data: (entries) => entries.isEmpty
                   ? AppEmptyState(
-                      icon: Icons.calendar_month_outlined,
+                      icon: AppIcons.calendarOutline,
                       title: 'Aucun programme',
                       message:
                           'Planifie tes semaines : chaque jour renvoie à un '

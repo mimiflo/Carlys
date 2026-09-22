@@ -145,6 +145,11 @@ test "$(git rev-parse HEAD)" = "$(python3 -c "import json;print(json.load(open('
 - Ne **jamais** coder en dur une valeur visuelle (couleur, espacement, rayon, ombre,
   durée d'animation) dans une page Flutter : le design system (`lib/design_system/`)
   est obligatoire.
+- Ne **jamais** écrire `Icons.` dans un écran : la banque d'icônes ne se nomme que
+  dans `lib/design_system/icons/app_icons.dart`, et les écrans appellent
+  `AppIcons.<ce que ça VEUT DIRE>` (`AppIcons.restDay`, pas
+  `Icons.bedtime_outlined`). `check_mobile_icons.sh` le vérifie, en local et en CI.
+  Le nom manque ? On l'ajoute au design system — jamais on ne contourne.
 - Ne **jamais** faire d'appel API directement depuis un widget Flutter — toujours via
   contrôleur → use case → repository.
 - Ne **jamais** accéder à Prisma depuis un contrôleur NestJS — l'accès aux données

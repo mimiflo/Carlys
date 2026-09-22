@@ -101,7 +101,7 @@ class _AddFriendFormState extends State<_AddFriendForm> {
               hint: 'AC23-DEF4 ou ami@exemple.fr',
               textInputAction: TextInputAction.done,
               autocorrect: false,
-              prefixIcon: Icons.alternate_email_rounded,
+              prefixIcon: AppIcons.friendCode,
               validator: (value) {
                 // Garde-fou de FORME uniquement — la vérité est au serveur.
                 return _parse(value ?? '') == null

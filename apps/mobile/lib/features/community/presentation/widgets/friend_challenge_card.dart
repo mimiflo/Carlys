@@ -33,7 +33,7 @@ class FriendChallengeCard extends StatelessWidget {
           Row(
             children: [
               const Icon(
-                Icons.emoji_events_outlined,
+                AppIcons.challengeOutline,
                 size: 18,
                 color: AppColors.primaryLight,
               ),

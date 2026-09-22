@@ -123,7 +123,7 @@ class _Header extends StatelessWidget {
     return Row(
       children: [
         const Icon(
-          Icons.military_tech_outlined,
+          AppIcons.leagueOutline,
           size: 18,
           color: AppColors.primaryLight,
         ),
@@ -157,15 +157,15 @@ class _LastResultBanner extends StatelessWidget {
   Widget build(BuildContext context) {
     final (icone, phrase) = switch (result) {
       final r when r.isPromotion => (
-        Icons.trending_up_rounded,
+        AppIcons.trendingUp,
         '${r.rank}e la semaine passée : te voilà en ${r.to.label}.',
       ),
       final r when r.isRelegation => (
-        Icons.trending_down_rounded,
+        AppIcons.trendingDown,
         '${r.rank}e la semaine passée : retour en ${r.to.label}.',
       ),
       final r => (
-        Icons.horizontal_rule_rounded,
+        AppIcons.trendingFlat,
         '${r.rank}e la semaine passée : tu restes en ${r.to.label}.',
       ),
     };

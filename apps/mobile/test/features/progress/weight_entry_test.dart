@@ -1,3 +1,4 @@
+import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/progress/domain/entities/progress.dart';
 import 'package:carlys_mobile/features/progress/presentation/widgets/add_weight_sheet.dart';
 import 'package:flutter/material.dart';
@@ -93,7 +94,7 @@ void main() {
   ) async {
     await ouvrir(tester, initialKg: 70);
 
-    await tester.tap(find.byIcon(Icons.add));
+    await tester.tap(find.byIcon(AppIcons.add));
     await tester.pump();
 
     expect(find.widgetWithText(TextField, '70.5'), findsOneWidget);

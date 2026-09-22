@@ -27,7 +27,7 @@ class ProgramWeekNavigator extends StatelessWidget {
               ? () => onWeek(week.weekNumber - 1)
               : null,
           tooltip: 'Semaine précédente',
-          icon: const Icon(Icons.chevron_left_rounded),
+          icon: const Icon(AppIcons.chevronLeft),
           color: AppColors.darkTextSecondary,
         ),
         Expanded(
@@ -59,7 +59,7 @@ class ProgramWeekNavigator extends StatelessWidget {
               ? () => onWeek(week.weekNumber + 1)
               : null,
           tooltip: 'Semaine suivante',
-          icon: const Icon(Icons.chevron_right_rounded),
+          icon: const Icon(AppIcons.chevronRight),
           color: AppColors.darkTextSecondary,
         ),
       ],

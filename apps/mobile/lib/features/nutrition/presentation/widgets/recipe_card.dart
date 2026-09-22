@@ -51,9 +51,7 @@ class RecipeCard extends StatelessWidget {
               ),
               const SizedBox(width: AppSpacing.xs),
               Icon(
-                expanded
-                    ? Icons.expand_less_rounded
-                    : Icons.chevron_right_rounded,
+                expanded ? AppIcons.collapse : AppIcons.chevronRight,
                 size: 20,
                 color: AppColors.darkTextTertiary,
               ),
@@ -158,7 +156,7 @@ class _Block extends StatelessWidget {
                         ),
                       )
                     : const Icon(
-                        Icons.circle,
+                        AppIcons.bullet,
                         size: 6,
                         color: AppColors.primaryLight,
                       ),

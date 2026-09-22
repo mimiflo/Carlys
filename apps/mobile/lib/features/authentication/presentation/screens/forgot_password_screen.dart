@@ -53,7 +53,7 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
                 'mène à une page web où tu choisis ton nouveau mot de passe. '
                 'Reviens ensuite te connecter ici. Le lien vaut une heure, et '
                 'une seule fois.',
-            icon: Icons.mark_email_read_outlined,
+            icon: AppIcons.emailSent,
           ),
           const SizedBox(height: AppSpacing.lg),
           AppButton(

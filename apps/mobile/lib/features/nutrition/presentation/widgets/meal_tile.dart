@@ -70,7 +70,7 @@ class MealTile extends StatelessWidget {
             onPressed: onDelete,
             tooltip: 'Retirer ce repas',
             icon: const Icon(
-              Icons.delete_outline_rounded,
+              AppIcons.delete,
               color: AppColors.darkTextTertiary,
             ),
           ),

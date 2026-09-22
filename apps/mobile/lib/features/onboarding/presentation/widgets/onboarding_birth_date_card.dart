@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/utilities/formatting.dart';
+import '../../../../design_system/design_system.dart';
 import 'onboarding_option_card.dart';
 
 /// Carte « Date de naissance » : ouvre le sélecteur de date et affiche la
@@ -24,7 +25,7 @@ class OnboardingBirthDateCard extends StatelessWidget {
           ? 'Sert au calcul de ton âge'
           : 'Né(e) le ${_format(date)}',
       // Absente d'AppIcons : même glyphe que la maquette.
-      icon: Icons.cake_rounded,
+      icon: AppIcons.birthDate,
       selected: date != null,
       onTap: onTap,
     );

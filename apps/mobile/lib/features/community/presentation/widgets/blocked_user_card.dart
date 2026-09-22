@@ -22,7 +22,7 @@ class BlockedUserCard extends StatelessWidget {
     return AppCard(
       child: Row(
         children: [
-          const Icon(Icons.block_rounded, color: AppColors.darkTextTertiary),
+          const Icon(AppIcons.block, color: AppColors.darkTextTertiary),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Column(

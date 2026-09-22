@@ -673,6 +673,102 @@ erreur/chargement/vide/hors-ligne, `check.sh` + `check_mobile.sh`.
       `deleteSet` faisait 43 lignes dans `workout_repository_impl.dart`.
       Déplacée dans `WorkoutSessionWriter`, comme `addSet` et `_closeWorkout`
       avant elle. Aucune méthode de repository ne dépasse plus 40 lignes.
+- [x] **Le design system reprend ce qui lui appartient** — 22 septembre 2026.
+      Quatre règles que le design system ÉNONÇAIT sans que rien ne les
+      tienne. Chacune vérifiée dans la source avant d'être corrigée — et
+      deux prétendues violations n'en étaient pas, ce qui est dit plus bas.
+      1. **La banque d'icônes.** `app_icons.dart` dit depuis sa première
+         ligne « les écrans référencent ces noms métier, jamais `Icons.*`
+         directement ». Ils le faisaient **106 fois, dans 46 fichiers** —
+         plus que les 89 noms déclarés. Vingt-huit étaient des doublons purs
+         (`Icons.chevron_right_rounded` à côté d'`AppIcons.chevronRight`) ;
+         les autres ont reçu un nom qui dit le SENS — `AppIcons.restDay`,
+         pas `Icons.bedtime_outlined`. Au passage, les variantes carrées
+         (`Icons.add`, `Icons.remove`, `Icons.logout`, `Icons.smartphone`,
+         `Icons.devices_other`) rejoignent la famille arrondie du reste de
+         l'application : les `+` et `−` des incrémenteurs n'étaient pas ceux
+         des autres écrans. **Et surtout une GARDE**, sans quoi la règle se
+         redégrade au premier écran : `check_mobile_icons.sh`, appelé par
+         `check_mobile.sh` ET par `mobile-ci.yml`.
+      2. **La lueur du bouton principal**, `0 12px 30px -12px` violet,
+         déclarée par quatre écrans pour leur compte — trois avec un triplet
+         privé `_glowBlur` / `_glowSpread` / `_glowOffset` aux mêmes valeurs
+         recopiées. Devenue `AppShadows.ctaGlow(alpha:)` ; seule l'intensité
+         diffère réellement (0,7 sur du contenu, 0,5 sur les écrans
+         d'entrée, déjà lumineux).
+      3. **Le verre dépoli des barres basses** — `ClipRect` +
+         `BackdropFilter` 20 + fond à 0,9 + bordure haute — écrit quatre
+         fois : fiche d'exercice, séance en cours, éditeur de modèle, et la
+         barre de navigation. Devenu `AppTranslucentBar`. Le `ClipRect` y
+         est commenté : sans lui, le flou prend TOUT l'écran, pas la barre.
+         **Ce regroupement a déplacé un pixel, et c'est la galerie qui l'a
+         dit.** La barre de navigation venait d'un `Container`, les trois
+         autres d'un `DecoratedBox` — et `Container` ajoute TOUT SEUL
+         `decoration.padding`, c'est-à-dire l'épaisseur de la bordure,
+         autour de son enfant. Passer au composant commun remontait donc les
+         six onglets d'un pixel logique, sur les vingt-trois captures qui
+         portent cette barre (0,24 % des pixels, et 0,02 % sur la feuille de
+         correction d'un repas, où la barre ne dépasse que d'un filet). La
+         marge est reposée explicitement, `AppTranslucentBar.borderWidth` la
+         nomme, et la comparaison repasse au vert.
+      4. **Quatre `copyWith(fontSize: 12)` sur `AppTypography.label`**, qui
+         vaut 12 : du code mort qui se lit comme une décision de taille.
+      Et quatre jetons de couleur morts (`violetRampUp`, `ringHole`,
+      `primaryFill`, `vignetteBorder`) : inventés en Dart, absents de
+      `tokens.json`, appelés nulle part. La règle qui les distingue est
+      désormais écrite en tête d'`app_colors.dart` — **un jeton qui reflète
+      `tokens.json` n'est jamais mort**, c'est une palette, et la rampe
+      neutre 0→950 en est l'exemple : quatre de ses échelons ne servent à
+      rien et doivent rester.
+      **Deux constats de l'audit étaient FAUX, et la source l'a montré.**
+      Les 27 `fontSize:` en dur hors design system ne cassent aucun
+      interlettrage : les trois styles dont ils dérivent (`body`, `label`,
+      `metricS`) n'en déclarent pas, donc `AppTypography.resized()` y
+      rendrait exactement `copyWith`. Et les deux seuls écrans qui dérivent
+      un style QUI en porte — la signature et l'accroche de marque —
+      réécrivent le leur explicitement à la ligne suivante. Rien à corriger
+      là : seuls les quatre no-op l'étaient. De même, les dix jetons de
+      couleur « inutilisés » du premier relevé n'étaient que six, le compte
+      ayant oublié les références internes à la classe (`ctaStart` et
+      `ctaEnd` servent `cta`, deux lignes plus bas).
+      **Précision de méthode, apprise ici.** `tool/screenshots/goldens/` est
+      dans le `.gitignore` : `git status` ne dira JAMAIS qu'une capture a
+      bougé, et prendre son silence pour une preuve revient à ne pas
+      regarder. La comparaison se FABRIQUE — on remise le lot, on régénère
+      la référence, on remet le lot, puis on rejoue
+      `flutter test tool/screenshots` SANS `--update-goldens`. C'est ce qui
+      a trouvé le pixel de la barre, qu'une relecture à l'œil n'aurait pas
+      vu sur vingt-trois écrans.
+      **Et cette comparaison a buté sur un second défaut, dans le décor.**
+      Deux captures de nutrition ne coïncidaient avec elles-mêmes à AUCUNE
+      exécution : trois repas portaient `DateTime.now().subtract(...)` alors
+      que la tuile REND l'heure à la minute. Le commentaire de
+      `startOfToday()` prescrivait pourtant déjà de s'y ancrer. La règle des
+      décors se dit donc maintenant en deux temps, à l'endroit où on la
+      lit : un JOUR se date relativement à maintenant — sans quoi il
+      vieillit —, une HEURE se pose en dur dans ce jour — sans quoi elle
+      bouge à chaque exécution. Les deux captures sont désormais identiques
+      d'une passe à l'autre, vérifié deux fois de suite.
+      **Deux captures neuves**, enfin (`pas-01-serie`, `pas-02-poids`) : le
+      seul changement visible de la passe — les `+` et `−` des deux feuilles
+      de saisie, passés aux glyphes arrondis du reste de l'application —
+      n'apparaissait dans AUCUNE image, ces feuilles s'ouvrant par un geste.
+      Un changement d'interface qu'aucune capture ne montre ne se relit pas.
+      Chacune est posée sur SON écran, avec les vrais widgets et des faits
+      plausibles, et le déclencheur vit dans la barre basse, là où la
+      feuille le recouvre — un bouton de harnais resté visible se relirait
+      comme un bouton du produit.
+- [x] **Le lot « code mort » de l'audit : rien à retirer** — 22 septembre
+      2026, et c'est un résultat, pas un renoncement. Balayage des deux
+      côtés : **zéro** fichier Dart de `lib/` jamais importé ni exporté
+      (459 fichiers), et les 28 modules TypeScript que le même balayage
+      signale sont tous atteints autrement — les `.test.ts(x)` sont des
+      points d'entrée de Vitest, et les trois CLI (`admin-bootstrap`,
+      `catalog-seed`, `subscription-catalog`) sont appelés par
+      `scripts/server/carlysctl`, `deploy.sh` et `apps/api/package.json`,
+      jamais par un `import`. Un balayage qui ne regarde que les `import`
+      déclare mort tout ce qu'un shell lance. Les seuls vrais morts de cette
+      passe étaient les quatre jetons de couleur ci-dessus.
 
 ---
 

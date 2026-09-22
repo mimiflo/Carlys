@@ -196,11 +196,8 @@ class _StartButton extends StatelessWidget {
   final VoidCallback onPressed;
   final String semanticLabel;
 
-  /// Géométrie de la maquette : icône 19, halo `0 12px 30px -12px`.
+  /// Géométrie de la maquette : icône 19 ; le halo vient du design system.
   static const double _iconSize = 19;
-  static const double _glowBlur = 30;
-  static const double _glowSpread = -12;
-  static const double _glowOffset = 12;
 
   @override
   Widget build(BuildContext context) {
@@ -211,14 +208,7 @@ class _StartButton extends StatelessWidget {
         decoration: BoxDecoration(
           gradient: AppColors.cta,
           borderRadius: AppRadius.buttonAll,
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.primary.withValues(alpha: 0.7),
-              blurRadius: _glowBlur,
-              spreadRadius: _glowSpread,
-              offset: const Offset(0, _glowOffset),
-            ),
-          ],
+          boxShadow: AppShadows.ctaGlow(),
         ),
         child: FilledButton(
           style: FilledButton.styleFrom(

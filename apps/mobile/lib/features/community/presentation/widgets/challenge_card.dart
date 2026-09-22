@@ -28,7 +28,7 @@ class ChallengeCard extends StatelessWidget {
               Icon(
                 challenge.kind == ChallengeKind.sport
                     ? AppIcons.workout
-                    : Icons.school_outlined,
+                    : AppIcons.academyOutline,
                 size: 18,
                 color: challenge.kind == ChallengeKind.sport
                     ? AppColors.accent

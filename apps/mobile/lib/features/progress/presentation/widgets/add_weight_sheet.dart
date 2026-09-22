@@ -157,7 +157,7 @@ class _AddWeightFormState extends State<_AddWeightForm> {
                       ? () => _pas(-_step)
                       : null,
                   tooltip: 'Diminuer le poids',
-                  icon: const Icon(Icons.remove),
+                  icon: const Icon(AppIcons.minus),
                 ),
                 const SizedBox(width: AppSpacing.sm),
                 Expanded(
@@ -178,7 +178,7 @@ class _AddWeightFormState extends State<_AddWeightForm> {
                       ? () => _pas(_step)
                       : null,
                   tooltip: 'Augmenter le poids',
-                  icon: const Icon(Icons.add),
+                  icon: const Icon(AppIcons.add),
                 ),
               ],
             ),
@@ -186,7 +186,7 @@ class _AddWeightFormState extends State<_AddWeightForm> {
             AppListRow(
               title: 'Date de la pesée',
               trailingText: _dateLisible,
-              leading: Icons.event_outlined,
+              leading: AppIcons.date,
               onTap: _choisirLaDate,
             ),
             if (widget.correction) ...[

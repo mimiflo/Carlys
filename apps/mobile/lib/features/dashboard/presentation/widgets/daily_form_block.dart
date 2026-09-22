@@ -185,7 +185,6 @@ class _SessionsFooter extends StatelessWidget {
               child: Text(
                 'séances / $weeklySessionsTarget cette semaine',
                 style: AppTypography.label.copyWith(
-                  fontSize: 12,
                   color: AppColors.darkTextTertiary,
                 ),
               ),

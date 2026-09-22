@@ -88,7 +88,7 @@ class ForYouEntry {
     Encouragement received,
   ) {
     return ForYouEntry(
-      icon: Icons.favorite_rounded,
+      icon: AppIcons.encouragementHeart,
       iconColor: AppColors.affection,
       iconSize: 20,
       label: '${received.fromName} t’encourage',

@@ -158,7 +158,7 @@ class _EquipmentRow extends StatelessWidget {
                 ),
               ),
               Icon(
-                owned ? AppIcons.checkCircle : Icons.circle_outlined,
+                owned ? AppIcons.checkCircle : AppIcons.uncheckedCircle,
                 size: 20,
                 color: owned
                     ? AppColors.primaryLight

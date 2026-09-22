@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
@@ -21,74 +19,63 @@ class ExerciseActionBar extends ConsumerWidget {
   final ExerciseDetail exercise;
 
   static const double _buttonSize = 54;
-  static const double _blur = 20;
-  static const double _backgroundAlpha = 0.9;
   static const double _historyIconSize = 21;
   static const double _addIconSize = 19;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: _blur, sigmaY: _blur),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: AppColors.darkBackground.withValues(alpha: _backgroundAlpha),
-            border: const Border(top: BorderSide(color: AppColors.darkBorder)),
+    return AppTranslucentBar(
+      child: SafeArea(
+        top: false,
+        child: Padding(
+          padding: const EdgeInsets.fromLTRB(
+            AppSpacing.gutter,
+            AppSpacing.gapRow,
+            AppSpacing.gutter,
+            AppSpacing.gapRow,
           ),
-          child: SafeArea(
-            top: false,
-            child: Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.gutter,
-                AppSpacing.gapRow,
-                AppSpacing.gutter,
-                AppSpacing.gapRow,
-              ),
-              child: Row(
-                children: [
-                  _HistoryButton(exercise: exercise),
-                  const SizedBox(width: AppSpacing.gapTile),
-                  Expanded(
-                    // Dégradé violet des écrans d'entrée peint derrière le
-                    // bouton : l'action principale de la barre parle la même
-                    // couleur que « Se connecter », plus l'orange d'avant.
-                    child: DecoratedBox(
-                      decoration: const BoxDecoration(
-                        gradient: AppColors.cta,
-                        borderRadius: AppRadius.buttonAll,
-                      ),
-                      child: FilledButton(
-                        style: FilledButton.styleFrom(
-                          minimumSize: const Size.fromHeight(_buttonSize),
-                          backgroundColor: Colors.transparent,
-                          foregroundColor: AppColors.neutral0,
-                          shadowColor: Colors.transparent,
-                          textStyle: AppTypography.subheading.copyWith(
-                            fontWeight: FontWeight.w700,
-                          ),
-                        ),
-                        onPressed: () => _addToWorkout(context, ref),
-                        child: const Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(AppIcons.add, size: _addIconSize),
-                            SizedBox(width: AppSpacing.xs),
-                            Flexible(
-                              child: Text(
-                                'Ajouter à la séance',
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                          ],
-                        ),
+          child: Row(
+            children: [
+              _HistoryButton(exercise: exercise),
+              const SizedBox(width: AppSpacing.gapTile),
+              Expanded(
+                // Dégradé violet des écrans d'entrée peint derrière le
+                // bouton : l'action principale de la barre parle la même
+                // couleur que « Se connecter », plus l'orange d'avant.
+                child: DecoratedBox(
+                  decoration: const BoxDecoration(
+                    gradient: AppColors.cta,
+                    borderRadius: AppRadius.buttonAll,
+                  ),
+                  child: FilledButton(
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size.fromHeight(_buttonSize),
+                      backgroundColor: Colors.transparent,
+                      foregroundColor: AppColors.neutral0,
+                      shadowColor: Colors.transparent,
+                      textStyle: AppTypography.subheading.copyWith(
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
+                    onPressed: () => _addToWorkout(context, ref),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(AppIcons.add, size: _addIconSize),
+                        SizedBox(width: AppSpacing.xs),
+                        Flexible(
+                          child: Text(
+                            'Ajouter à la séance',
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                ],
+                ),
               ),
-            ),
+            ],
           ),
         ),
       ),

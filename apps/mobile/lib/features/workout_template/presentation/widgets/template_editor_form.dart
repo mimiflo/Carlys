@@ -111,7 +111,7 @@ class _TemplateEditorFormState extends ConsumerState<TemplateEditorForm> {
               child: const Padding(
                 padding: EdgeInsets.symmetric(horizontal: AppSpacing.xxs),
                 child: Icon(
-                  Icons.drag_indicator_rounded,
+                  AppIcons.dragHandle,
                   size: 20,
                   color: AppColors.darkTextTertiary,
                 ),

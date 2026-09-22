@@ -33,6 +33,7 @@ export 'components/app_settings_group.dart';
 export 'components/app_sheet.dart';
 export 'components/app_stat_tile.dart';
 export 'components/app_text_field.dart';
+export 'components/app_translucent_bar.dart';
 export 'icons/app_icons.dart';
 export 'motion/app_motion.dart';
 export 'radius/app_radius.dart';

@@ -1,5 +1,3 @@
-import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -17,39 +15,27 @@ class ActiveWorkoutBottomBar extends ConsumerWidget {
   final VoidCallback onFinish;
 
   /// Géométrie de la maquette : voile flouté à 20, fond à 90 %.
-  static const double _blur = 20;
-  static const double _veilAlpha = 0.9;
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final timer = ref.watch(restTimerProvider);
     final bottomInset = MediaQuery.paddingOf(context).bottom;
 
-    return ClipRect(
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: _blur, sigmaY: _blur),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: AppColors.darkBackground.withValues(alpha: _veilAlpha),
-            border: const Border(top: BorderSide(color: AppColors.darkBorder)),
-          ),
-          child: Padding(
-            padding: EdgeInsets.fromLTRB(
-              AppSpacing.gutter,
-              AppSpacing.md,
-              AppSpacing.gutter,
-              AppSpacing.lg + bottomInset,
-            ),
-            child: _Morph(
-              duration: AppMotion.resolve(context, AppMotion.normal),
-              child: timer == null
-                  ? _FinishButton(onPressed: onFinish)
-                  : RestTimerRow(
-                      timer: timer,
-                      onSkip: () => ref.read(restTimerProvider.notifier).stop(),
-                    ),
-            ),
-          ),
+    return AppTranslucentBar(
+      child: Padding(
+        padding: EdgeInsets.fromLTRB(
+          AppSpacing.gutter,
+          AppSpacing.md,
+          AppSpacing.gutter,
+          AppSpacing.lg + bottomInset,
+        ),
+        child: _Morph(
+          duration: AppMotion.resolve(context, AppMotion.normal),
+          child: timer == null
+              ? _FinishButton(onPressed: onFinish)
+              : RestTimerRow(
+                  timer: timer,
+                  onSkip: () => ref.read(restTimerProvider.notifier).stop(),
+                ),
         ),
       ),
     );

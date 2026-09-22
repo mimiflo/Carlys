@@ -86,7 +86,7 @@ class ProgramSettingsCard extends StatelessWidget {
           AppListRow(
             title: 'Premier jour',
             trailingText: _dateLisible,
-            leading: Icons.event_outlined,
+            leading: AppIcons.date,
             onTap: () => _pickDate(context),
           ),
           if (date == null)

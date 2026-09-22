@@ -22,7 +22,7 @@ class FriendRequestCard extends StatelessWidget {
     return AppCard(
       child: Row(
         children: [
-          const Icon(Icons.person_add_alt_1_outlined, color: AppColors.accent),
+          const Icon(AppIcons.addFriend, color: AppColors.accent),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Column(
@@ -47,15 +47,12 @@ class FriendRequestCard extends StatelessWidget {
           IconButton(
             onPressed: onDecline,
             tooltip: 'Refuser',
-            icon: const Icon(
-              Icons.close_rounded,
-              color: AppColors.darkTextTertiary,
-            ),
+            icon: const Icon(AppIcons.close, color: AppColors.darkTextTertiary),
           ),
           IconButton(
             onPressed: onAccept,
             tooltip: 'Accepter',
-            icon: const Icon(Icons.check_rounded, color: AppColors.success),
+            icon: const Icon(AppIcons.check, color: AppColors.success),
           ),
         ],
       ),

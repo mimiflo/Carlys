@@ -152,6 +152,16 @@ jobs:
         working-directory: .
         run: ./scripts/check_mobile_file_sizes.sh
 
+      # `app_icons.dart` interdit `Icons.*` dans les écrans depuis sa
+      # première ligne — « changer de banque d'icônes ne touche alors qu'à
+      # ce fichier ». Rien ne le vérifiait, et 106 références directes
+      # avaient contourné la règle, dans 46 fichiers. Même leçon que les
+      # tailles juste au-dessus : une règle écrite que rien ne relit finit
+      # toujours par être franchie.
+      - name: Banque d'icônes
+        working-directory: .
+        run: ./scripts/check_mobile_icons.sh
+
       # Les polices embarquées sont SOUS-ENSEMBLÉES (Flutter ne le fait pas
       # pour les polices de texte) : un glyphe perdu ne donne pas un carré
       # vide, l'application retombe sur la fonte système et le changement de

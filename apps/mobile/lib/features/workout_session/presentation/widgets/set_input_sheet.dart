@@ -139,7 +139,7 @@ class _Stepper extends StatelessWidget {
         IconButton.outlined(
           onPressed: onMinus,
           tooltip: 'Diminuer $label',
-          icon: const Icon(Icons.remove),
+          icon: const Icon(AppIcons.minus),
         ),
         SizedBox(
           width: 72,
@@ -155,7 +155,7 @@ class _Stepper extends StatelessWidget {
         IconButton.filledTonal(
           onPressed: onPlus,
           tooltip: 'Augmenter $label',
-          icon: const Icon(Icons.add),
+          icon: const Icon(AppIcons.add),
         ),
       ],
     );
