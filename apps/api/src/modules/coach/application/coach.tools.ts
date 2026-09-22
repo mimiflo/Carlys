@@ -4,6 +4,7 @@ import { BodyMetricType } from '@prisma/client';
 import { ExercisesService } from '../../exercises/application/exercises.service';
 import { MealsService } from '../../nutrition/application/meals.service';
 import { NutritionService } from '../../nutrition/application/nutrition.service';
+import { BodyMetricsService } from '../../progress/application/body-metrics.service';
 import { ProgressService } from '../../progress/application/progress.service';
 import { WorkoutsService } from '../../workout_sessions/application/workouts.service';
 import { WorkoutTemplatesService } from '../../workout_templates/application/workout-templates.service';
@@ -173,6 +174,7 @@ export class CoachTools {
     private readonly templates: WorkoutTemplatesService,
     private readonly workouts: WorkoutsService,
     private readonly progress: ProgressService,
+    private readonly metrics: BodyMetricsService,
     private readonly nutrition: NutritionService,
     private readonly meals: MealsService,
   ) {}
@@ -226,7 +228,7 @@ export class CoachTools {
         return this.progress.overview(userId, asPeriod(input.period));
 
       case 'get_body_weight_trend':
-        return this.progress.listBodyMetrics(userId, BodyMetricType.WEIGHT_KG, DEFAULT_LIMIT);
+        return this.metrics.listBodyMetrics(userId, BodyMetricType.WEIGHT_KG, DEFAULT_LIMIT);
 
       case 'get_nutrition_targets':
         return this.nutrition.metabolismReport(userId);

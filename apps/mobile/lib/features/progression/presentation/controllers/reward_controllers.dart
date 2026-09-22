@@ -1,7 +1,11 @@
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/logging/app_logger.dart';
 import '../../../academy/presentation/controllers/academy_controllers.dart';
 import '../../../academy/presentation/providers/academy_progress_providers.dart';
+import '../../../progress/data/repositories/progress_repository_impl.dart';
 import '../../../progress/domain/entities/progress.dart';
 import '../../../progress/presentation/controllers/progress_controllers.dart';
 import '../../../workout_session/presentation/controllers/workout_controllers.dart';
@@ -111,11 +115,36 @@ final earnedRewardsProvider = FutureProvider<List<EarnedReward>>((ref) async {
     );
   }
 
+  // Le journal REMONTE, pour que la frise ait de quoi raconter. Tâche de
+  // fond : l'échouer ne doit rien coûter à l'écran, et la plus ANCIENNE
+  // date gagnant côté serveur, un rejeu ne réécrit jamais l'histoire.
+  unawaited(_pousserLeJournal(ref, earned));
+
   // Les plus récentes d'abord : la vitrine s'ouvre sur ce qui vient d'être
   // gagné, pas sur le premier badge d'il y a six mois.
   earned.sort((a, b) => b.earnedAt.compareTo(a.earnedAt));
   return earned;
 });
+
+/// Remonte le journal de CET appareil, sans jamais faire échouer l'écran.
+///
+/// Hors ligne, l'envoi échoue et le journal reste ce qu'il est : il n'a
+/// jamais cessé d'être la mémoire locale. La prochaine lecture réessaiera,
+/// et l'unicité côté serveur absorbe le rejeu.
+Future<void> _pousserLeJournal(Ref ref, List<EarnedReward> earned) async {
+  if (earned.isEmpty) {
+    return;
+  }
+  try {
+    await ref.read(progressRepositoryProvider).pushMilestones({
+      for (final entry in earned) entry.reward.id: entry.earnedAt,
+    });
+  } on Object catch (error) {
+    _logger.warning('Journal de récompenses non remonté', error: error);
+  }
+}
+
+const _logger = AppLogger('RewardControllers');
 
 /// LA VITRINE : le journal, ET les records réellement soulevés.
 ///

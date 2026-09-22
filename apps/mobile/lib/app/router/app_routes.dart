@@ -58,6 +58,12 @@ abstract final class AppRoutes {
   static String exerciseProgression(String exerciseId) =>
       '$progress/exercises/$exerciseId';
 
+  /// LA FRISE : ce qui s'est passé, dans l'ordre.
+  ///
+  /// Poussée depuis l'onglet Progrès, qui répond à « où j'en suis » là où
+  /// la frise répond à « d'où je viens ».
+  static String get timeline => '$progress/timeline';
+
   /// Bibliothèque ouverte directement sur un groupe musculaire — le pont
   /// « apprendre → pratiquer » des fiches d'anatomie de l'Academy.
   static String exercisesForGroup(String slug) => '/exercises?groupe=$slug';

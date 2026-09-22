@@ -138,6 +138,53 @@ class ProgressRepositoryImpl implements ProgressRepository {
     });
   }
 
+  @override
+  Future<ProgressTimelinePage> timeline({
+    int limit = 30,
+    String? cursor,
+    List<ProgressEventKind> kinds = const [],
+  }) {
+    return _guard(() async {
+      final response = await _dio.get<Map<String, dynamic>>(
+        '/progress/timeline',
+        queryParameters: {
+          'limit': limit,
+          if (cursor != null) 'cursor': cursor,
+          if (kinds.isNotEmpty)
+            'kinds': kinds.map((kind) => kind.apiValue).join(','),
+        },
+      );
+      return progressTimelineFromJson(
+        response.data?['data'] as Map<String, dynamic>? ?? const {},
+      );
+    });
+  }
+
+  @override
+  Future<void> pushMilestones(Map<String, DateTime> rewards) {
+    return _guard(() async {
+      if (rewards.isEmpty) {
+        return;
+      }
+      await _dio.post<void>(
+        '/progress/milestones',
+        data: {
+          'milestones': [
+            for (final entry in rewards.entries)
+              {
+                // Les titres sont des récompenses du même catalogue, mais la
+                // frise les distingue : un franchissement de titre ne doit
+                // pas produire AUSSI une ligne de récompense.
+                'kind': entry.key.startsWith('titre-') ? 'TITLE' : 'REWARD',
+                'key': entry.key,
+                'occurredAt': entry.value.toUtc().toIso8601String(),
+              },
+          ],
+        },
+      );
+    });
+  }
+
   Future<T> _guard<T>(Future<T> Function() action) async {
     try {
       return await action();

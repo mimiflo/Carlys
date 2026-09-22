@@ -137,6 +137,8 @@ déclare ici à la main.
 | `POST /body-metrics` | **mobile** | apps/mobile |
 | `PATCH /body-metrics/{id}` | **mobile** | apps/mobile |
 | `DELETE /body-metrics/{id}` | **mobile** | apps/mobile |
+| `GET /progress/timeline` | **mobile** | apps/mobile — la frise ; quatre sources fusionnées, curseur `(date, id)` |
+| `POST /progress/milestones` | **mobile** | apps/mobile — reprise du journal de récompenses, la plus ancienne date gagne |
 | `GET /progress/lifetime` | **mobile** | apps/mobile — compteurs de récompense, hors plafond des 60 séances rapatriées |
 | `GET /progress/exercises/{exerciseId}` | **mobile** | apps/mobile — `ExerciseProgressionScreen`, poussé depuis une ligne de record ; charge OU cardio selon les faits servis |
 | `GET /progress/overview` | **mobile** | apps/mobile |

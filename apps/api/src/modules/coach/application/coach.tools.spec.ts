@@ -1,6 +1,7 @@
 import { type ExercisesService } from '../../exercises/application/exercises.service';
 import { type MealsService } from '../../nutrition/application/meals.service';
 import { type NutritionService } from '../../nutrition/application/nutrition.service';
+import { type BodyMetricsService } from '../../progress/application/body-metrics.service';
 import { type ProgressService } from '../../progress/application/progress.service';
 import { type WorkoutsService } from '../../workout_sessions/application/workouts.service';
 import { type WorkoutTemplatesService } from '../../workout_templates/application/workout-templates.service';
@@ -38,6 +39,7 @@ function buildTools(stubs: Stubs): CoachTools {
     {} as unknown as WorkoutTemplatesService,
     {} as unknown as WorkoutsService,
     {} as unknown as ProgressService,
+    {} as unknown as BodyMetricsService,
     stubs.nutrition as unknown as NutritionService,
     stubs.meals as unknown as MealsService,
   );

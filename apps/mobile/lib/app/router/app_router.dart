@@ -30,6 +30,7 @@ import '../../features/onboarding/presentation/screens/welcome_screen.dart';
 import '../../features/profile/presentation/screens/profile_screen.dart';
 import '../../features/progress/presentation/screens/exercise_progression_screen.dart';
 import '../../features/progress/presentation/screens/progress_screen.dart';
+import '../../features/progress/presentation/screens/timeline_screen.dart';
 import '../../features/progression/presentation/screens/manifesto_screen.dart';
 import '../../features/progression/presentation/screens/progression_screen.dart';
 import '../../features/settings/presentation/screens/settings_screen.dart';
@@ -243,6 +244,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                     builder: (context, state) => ExerciseProgressionScreen(
                       exerciseId: state.pathParameters['exerciseId'] ?? '',
                     ),
+                  ),
+                  GoRoute(
+                    path: 'timeline',
+                    name: 'timeline',
+                    parentNavigatorKey: _rootNavigatorKey,
+                    builder: (context, state) => const TimelineScreen(),
                   ),
                 ],
               ),

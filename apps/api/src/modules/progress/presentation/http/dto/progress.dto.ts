@@ -1,17 +1,28 @@
+import {
+  MILESTONES_IMPORT_MAX,
+  TIMELINE_MAX_PAGE_SIZE,
+  progressEventKindSchema,
+} from '@carlys/api-contracts';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { BodyMetricType } from '@prisma/client';
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
+  IsArray,
   IsDate,
   IsEnum,
   IsIn,
   IsInt,
   IsNumber,
   IsOptional,
+  IsString,
   IsUUID,
+  Length,
   Max,
   MaxDate,
   Min,
+  MinDate,
+  ValidateNested,
 } from 'class-validator';
 import { nowWithClockSkew } from '../../../../../common/validators/clock-skew';
 
@@ -93,4 +104,87 @@ export class ListBodyMetricsQuery {
   @Min(1)
   @Max(365)
   limit: number = 90;
+}
+
+/**
+ * Un franchissement décidé par le MOBILE : une récompense, un titre.
+ *
+ * Les records ne passent pas par là — ils se dérivent des séries stockées,
+ * et les accepter d'un client laisserait inventer un franchissement
+ * qu'aucune série ne justifie.
+ */
+export class ImportedMilestoneDto {
+  @ApiProperty({ enum: ['REWARD', 'TITLE'] })
+  @IsIn(['REWARD', 'TITLE'])
+  kind!: 'REWARD' | 'TITLE';
+
+  @ApiProperty({ description: 'Clé du catalogue : `constance-4`, `titre-artisan`' })
+  @IsString()
+  @Length(1, 120)
+  key!: string;
+
+  @ApiProperty({
+    description: 'Date du FAIT, UTC (ISO 8601) — ni future, ni antérieure au produit',
+  })
+  @Type(() => Date)
+  @IsDate()
+  // La règle d'import est « la plus ANCIENNE gagne » : sans borne basse, une
+  // date de 1970 se poserait définitivement au pied de la frise, et rien ne
+  // pourrait plus la remonter.
+  @MinDate(new Date('2020-01-01T00:00:00Z'), {
+    message: 'Cette date précède le produit.',
+  })
+  @MaxDate(nowWithClockSkew, { message: 'Un franchissement ne se date pas du futur.' })
+  occurredAt!: Date;
+}
+
+export class ImportMilestonesDto {
+  @ApiProperty({ type: [ImportedMilestoneDto], maxItems: MILESTONES_IMPORT_MAX })
+  @IsArray()
+  @ArrayMaxSize(MILESTONES_IMPORT_MAX)
+  @ValidateNested({ each: true })
+  @Type(() => ImportedMilestoneDto)
+  milestones!: ImportedMilestoneDto[];
+}
+
+/**
+ * Filtres de la frise.
+ *
+ * `kinds` est une liste séparée par des virgules — une frise de deux ans
+ * sans filtre est illisible, et c'est aussi ce qui permet à un écran de
+ * n'afficher que les records.
+ */
+export class TimelineQuery {
+  @ApiPropertyOptional({ default: 30, maximum: TIMELINE_MAX_PAGE_SIZE })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  @Max(TIMELINE_MAX_PAGE_SIZE)
+  limit: number = 30;
+
+  @ApiPropertyOptional({ description: 'Curseur opaque de la page suivante' })
+  @IsOptional()
+  @IsString()
+  @Length(1, 200)
+  cursor?: string;
+
+  @ApiPropertyOptional({
+    description: 'Types retenus, séparés par des virgules. Vide = tous.',
+    example: 'SESSION,RECORD',
+  })
+  @IsOptional()
+  @Transform(({ value }: { value: unknown }) =>
+    typeof value !== 'string'
+      ? []
+      : value
+          .split(',')
+          .map((part) => part.trim().toUpperCase())
+          // Un type inconnu est IGNORÉ plutôt que refusé : un client d'une
+          // version future qui en demande un de plus doit recevoir ce que
+          // celle-ci sait servir, pas un 400.
+          .filter((part) => progressEventKindSchema.safeParse(part).success),
+  )
+  @IsArray()
+  kinds: string[] = [];
 }

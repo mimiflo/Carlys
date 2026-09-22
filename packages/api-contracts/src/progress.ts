@@ -52,6 +52,73 @@ export const lifetimeStatsSchema = z.object({
 });
 export type LifetimeStats = z.infer<typeof lifetimeStatsSchema>;
 
+/**
+ * LA FRISE — ce qui s'est passé, dans l'ordre.
+ *
+ * Six types d'événements, un contrat commun. Trois viennent de tables déjà
+ * datées (séances, mesures, leçons) et sont dérivés à la lecture ; trois
+ * sont des FRANCHISSEMENTS matérialisés dans `ProgressMilestone`, parce
+ * qu'ils ne correspondent à aucune ligne existante.
+ */
+export const progressEventKindSchema = z.enum([
+  'SESSION',
+  'MEASURE',
+  'LESSON',
+  'RECORD',
+  'REWARD',
+  'TITLE',
+]);
+export type ProgressEventKind = z.infer<typeof progressEventKindSchema>;
+
+export const progressEventSchema = z.object({
+  /** Identifiant de l'événement dans la frise, stable et opaque. */
+  id: z.string(),
+  kind: progressEventKindSchema,
+  occurredAt: z.string(),
+  /** Ce qu'il faut pour écrire la ligne, sans rejouer le moindre calcul. */
+  payload: z.record(z.string(), z.unknown()),
+});
+export type ProgressEvent = z.infer<typeof progressEventSchema>;
+
+/** Page maximale d'une frise. Le défaut est plus petit, voir le DTO. */
+export const TIMELINE_MAX_PAGE_SIZE = 50;
+
+export const progressTimelineSchema = z.object({
+  items: z.array(progressEventSchema),
+  nextCursor: z.string().nullable(),
+  hasMore: z.boolean(),
+});
+export type ProgressTimeline = z.infer<typeof progressTimelineSchema>;
+
+export const milestoneKindSchema = z.enum(['RECORD', 'REWARD', 'TITLE']);
+export type MilestoneKind = z.infer<typeof milestoneKindSchema>;
+
+/**
+ * Plafond d'un import : le catalogue compte 22 récompenses et 4 titres.
+ * Cent laisse la place à trois fois ça sans ouvrir un tuyau.
+ */
+export const MILESTONES_IMPORT_MAX = 100;
+
+/**
+ * Corps de `POST /progress/milestones`.
+ *
+ * Seuls les franchissements que le MOBILE décide s'importent : les
+ * récompenses et les titres sortent d'un moteur qui vit sur l'appareil. Les
+ * records, eux, se dérivent des séries côté serveur et ne s'envoient jamais.
+ */
+export const importMilestonesRequestSchema = z.object({
+  milestones: z
+    .array(
+      z.object({
+        kind: z.enum(['REWARD', 'TITLE']),
+        key: z.string().min(1).max(120),
+        occurredAt: z.string(),
+      }),
+    )
+    .max(MILESTONES_IMPORT_MAX),
+});
+export type ImportMilestonesRequest = z.infer<typeof importMilestonesRequestSchema>;
+
 export const personalRecordTypeSchema = z.enum(['MAX_WEIGHT', 'MAX_REPS', 'MAX_SET_VOLUME']);
 export type PersonalRecordType = z.infer<typeof personalRecordTypeSchema>;
 

@@ -49,6 +49,7 @@ model User {
   programs           Program[]
   workoutSessions    WorkoutSession[]
   personalRecords    PersonalRecord[]
+  progressMilestones ProgressMilestone[]
   bodyMetrics        BodyMetric[]
   subscriptions      Subscription[]
   entitlements       UserEntitlement[]
@@ -761,6 +762,52 @@ model PersonalRecord {
 
   @@unique([userId, exerciseName, recordType])
   @@index([userId, achievedAt])
+}
+
+/// Ce qu'un franchissement peut être.
+enum MilestoneKind {
+  /// Un record BATTU, ce jour-là. Dérivé des séries, jamais saisi.
+  RECORD
+  /// Une récompense du catalogue, décidée par le moteur du mobile.
+  REWARD
+  /// Un palier de titre Carlys franchi.
+  TITLE
+}
+
+/// Un FRANCHISSEMENT daté — la matière propre d'une frise de progression.
+///
+/// Pourquoi une table, quand séances, mesures et leçons restent dérivées à
+/// la lecture : ce sont les trois seuls événements qui ne correspondent à
+/// AUCUNE ligne existante. `PersonalRecord` ne garde que le maximum courant
+/// (un 80 kg en mars puis un 85 en avril, et il ne reste que le 85) ; la
+/// récompense n'existe nulle part côté serveur ; et le titre dépend d'un
+/// score calculé sur une fenêtre MOBILE, que rejouer ici demanderait de
+/// réécrire le moteur Dart en TypeScript et de le maintenir en double.
+///
+/// L'unicité porte la règle du journal local sur le serveur — « la première
+/// gagne, rien ne s'efface » devient un `ON CONFLICT DO NOTHING`.
+model ProgressMilestone {
+  id     String        @id @default(uuid()) @db.Uuid
+  userId String        @db.Uuid
+  kind   MilestoneKind
+  /// Clé STABLE du franchissement, gelée comme les identifiants du catalogue
+  /// de récompenses : `constance-4`, `titre-artisan`,
+  /// `record:<exercice>|MAX_WEIGHT|<valeur>`.
+  key    String
+  /// La date du FAIT, jamais celle de l'inscription. Le journal local datait
+  /// une récompense du jour où l'application avait regardé, ce qui la plaçait
+  /// systématiquement APRÈS ce qui l'avait méritée — sur une frise
+  /// chronologique, ça se lit comme un mensonge.
+  occurredAt DateTime
+  /// Libellé, valeur, exercice : de quoi écrire la ligne sans rejouer le
+  /// calcul. Jamais interrogé, seulement rendu.
+  payload    Json?
+  createdAt  DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, kind, key])
+  @@index([userId, occurredAt(sort: Desc)])
 }
 
 enum BodyMetricType {

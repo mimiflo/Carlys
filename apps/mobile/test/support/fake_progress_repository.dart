@@ -160,6 +160,45 @@ class FakeProgressRepository implements ProgressRepository {
     return servi;
   }
 
+  /// La frise, pilotable : une liste plate, paginée comme le serveur.
+  final List<ProgressEvent> timelineEvents = [];
+
+  /// Bascule pour éprouver l'écran hors ligne, page initiale ou suivante.
+  bool timelineFails = false;
+
+  /// Ce qui a été remonté du journal local — prouve qu'un écran POUSSE ses
+  /// récompenses au lieu de les garder pour lui.
+  final List<Map<String, DateTime>> pushedMilestones = [];
+
+  @override
+  Future<ProgressTimelinePage> timeline({
+    int limit = 30,
+    String? cursor,
+    List<ProgressEventKind> kinds = const [],
+  }) async {
+    if (timelineFails) {
+      throw Exception('Frise indisponible.');
+    }
+    final retenus = kinds.isEmpty
+        ? timelineEvents
+        : timelineEvents.where((event) => kinds.contains(event.kind)).toList();
+    // Le curseur est l'INDEX de reprise : la doublure n'a pas à reproduire
+    // l'encodage du serveur, seulement sa promesse — ni saut, ni rejeu.
+    final depuis = cursor == null ? 0 : int.parse(cursor);
+    final page = retenus.skip(depuis).take(limit).toList(growable: false);
+    final suite = depuis + page.length;
+    return ProgressTimelinePage(
+      items: page,
+      hasMore: suite < retenus.length,
+      nextCursor: suite < retenus.length ? '$suite' : null,
+    );
+  }
+
+  @override
+  Future<void> pushMilestones(Map<String, DateTime> rewards) async {
+    pushedMilestones.add(Map.of(rewards));
+  }
+
   @override
   Future<void> deleteBodyMetric(String id) async {
     removedMetricIds.add(id);

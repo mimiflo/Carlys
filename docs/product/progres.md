@@ -206,10 +206,74 @@ Sous-compter n'efface rien, puisque le journal ne s'écrit qu'en AJOUT : seul
 un appareil neuf ET hors ligne verrait moins, et il n'a de toute façon rien à
 montrer.
 
+## La frise — « Ton histoire » (22 septembre 2026)
+
+`GET /progress/timeline` réunit ce qui s'est passé, du plus récent au plus
+ancien : séances terminées, pesées, leçons et **franchissements**.
+
+**Ce qui est dérivé, ce qui est matérialisé.** La ligne de partage tient en
+une question : *le fait est-il déjà une ligne datée et corrigible ?*
+
+- **Séances, mesures, leçons → DÉRIVÉES à la lecture.** Ce sont déjà trois
+  tables datées et indexées. Les recopier dans une table d'événements
+  ajouterait un état à maintenir pour zéro gain, et rouvrirait le bug que
+  `recomputeRecords` a fermé : une séance corrigée laisserait derrière elle un
+  événement qui n'a jamais eu lieu.
+- **Franchissements → MATÉRIALISÉS** dans `ProgressMilestone`. Ce sont les
+  trois seuls qui ne correspondent à aucune ligne existante :
+  `PersonalRecord` ne garde que le maximum COURANT (un 80 kg battu en mars
+  par un 85 en avril n'y laisse plus rien — c'est un mur de trophées, pas une
+  chronologie) ; la récompense n'existait nulle part côté serveur ; et le
+  titre dépend d'un score calculé sur une fenêtre mobile, que rejouer ici
+  demanderait de réécrire le moteur Dart en TypeScript.
+
+**Les franchissements de RECORD restent une FONCTION des séries.** Ils se
+dérivent à chaque `recomputeRecords` par rejeu du maximum au fil du temps, et
+la table est mise à l'ÉGAL de ce que dit l'historique — ce qui n'a plus de
+série pour le justifier est retiré. Une charge saisie 300 au lieu de 30 fait
+donc disparaître le franchissement qu'elle avait inventé.
+
+**Les récompenses et les titres s'IMPORTENT** (`POST /progress/milestones`),
+parce que le moteur qui les décide vit sur l'appareil. Règle : **la plus
+ANCIENNE date gagne**, appliquée par un `LEAST` dans l'écriture elle-même. Le
+journal local date une récompense du jour où l'application a REGARDÉ, pas du
+jour du fait ; deux appareils n'ont pas regardé le même jour, et sans cette
+règle le dernier à parler réécrirait l'histoire. Les records, eux, ne
+s'importent jamais : les accepter d'un client laisserait inventer un
+franchissement qu'aucune série ne justifie.
+
+**Le curseur encode le couple `(occurredAt, id)`**, jamais l'identifiant
+seul. Les autres listes paginées du dépôt s'en tirent avec l'id parce qu'une
+SEULE table est triée ; un flux fusionné a des ex æquo à la milliseconde, et
+un curseur sur l'id sauterait des lignes ou les rejouerait. Un curseur
+illisible est traité comme absent — une position n'est pas une autorisation.
+
+**Les en-têtes de mois se posent côté CLIENT.** Découpés côté serveur, une
+page vaudrait deux lignes ou deux cents selon le mois ; le serveur pagine par
+compte d'éléments, et l'écran ouvre un en-tête quand le mois change, y
+compris à cheval sur deux pages.
+
+**Le double comptage, évité nommément** : les leçons se groupent par jour
+APRÈS dédoublonnage par leçon (le serveur garde deux réponses d'une même
+leçon sur deux jours, là où l'appareil applique « la première gagne ») ; un
+record battu ne produit qu'une ligne, celle du record, jamais aussi celle du
+badge ; un titre ne produit jamais aussi un `REWARD`.
+
+**Le libellé n'est pas en base.** Le serveur ne stocke que la clé
+(`constance-4`) : le libellé est du contenu éditorial, il change avec
+l'application, et le figer ferait vieillir les anciennes lignes. Le client le
+retrouve dans son catalogue embarqué, et retombe sur un titre générique quand
+la clé vient d'une version plus récente.
+
+**Jamais l'historique Drift**, plafonné à 60 séances : une frise tronquée à
+soixante séances mentirait sur deux ans de pratique. C'est une lecture
+serveur, et elle affiche son erreur hors ligne plutôt qu'un vide. Une page
+déjà lue RESTE quand la suivante échoue.
+
 ## Hors périmètre, et pourquoi
 
-Deux morceaux de la tranche « Progression » attendent une décision qui n'est
-pas technique :
+Un morceau de la tranche « Progression » attend une décision qui n'est pas
+technique :
 
 - **Les photos de progression.** `StorageService` est PUBLIC par
   construction (`urlFor` concatène `s3PublicBaseUrl`, `put` pose
@@ -217,10 +281,9 @@ pas technique :
   intimes derrière une URL devinable et mise en cache un an n'est pas
   acceptable ; le choix entre URL présignées et relais API est technique, la
   décision de stocker des photos de corps ne l'est pas — elle emporte purge
-  RGPD, effacement à la suppression de compte et sauvegardes MinIO.
-- **La frise chronologique**, qui réunit séances, records, mesures, photos et
-  récompenses. Ses quatre premières sources existent ; la cinquième dépend du
-  point précédent, et une frise livrée sans elle serait à refaire.
+  RGPD, effacement à la suppression de compte et sauvegardes MinIO. La frise
+  les accueillera sans rien changer à sa lecture : un sixième type
+  d'événement, et rien d'autre.
 
 ## Couverture
 

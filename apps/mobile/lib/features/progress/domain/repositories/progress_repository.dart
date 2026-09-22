@@ -46,4 +46,19 @@ abstract interface class ProgressRepository {
   /// Ce que la vie entière compte, pour les récompenses. Voir
   /// [LifetimeStats] : des faits, jamais une règle.
   Future<LifetimeStats> lifetimeStats();
+
+  /// Une page de la FRISE, de la plus récente à la plus ancienne.
+  ///
+  /// [kinds] vide veut dire « tous » : une frise de deux ans sans filtre est
+  /// illisible, et c'est aussi ce qui permet de n'afficher que les records.
+  Future<ProgressTimelinePage> timeline({
+    int limit,
+    String? cursor,
+    List<ProgressEventKind> kinds,
+  });
+
+  /// Remonte le journal de récompenses de CET appareil. La plus ANCIENNE
+  /// date gagne côté serveur : deux appareils n'ont pas regardé le même
+  /// jour, et le journal date du jour où l'application a regardé.
+  Future<void> pushMilestones(Map<String, DateTime> rewards);
 }

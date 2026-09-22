@@ -475,31 +475,27 @@ entre amis, aucune ligue, aucun pas.
       kilomètres. Les deux courbes partagent leur cadre
       (`progression_chart_frame.dart`), extrait pour l'occasion. Tests :
       1 e2e, 12 widget/unitaires. Capture `39-progression-cardio`.
-- [~] 8.4 Timeline — PRÉALABLE LEVÉ le 22 septembre 2026, frise à faire.
-      Le préalable annoncé (« remonter les récompenses au serveur ») était
-      mal posé, et mesuré il cachait pire : ce ne sont pas les FAITS qui
-      manquaient au serveur — les 22 règles du catalogue se décident toutes
-      sur des faits qu'il a déjà — c'est que le mobile les dérivait de son
-      historique LOCAL, plafonné à 60 séances au rapatriement. Sur un compte
-      à 200 séances, un téléphone neuf ne re-méritait pas `discipline-150`,
-      et la médaille DISPARAISSAIT. `GET /progress/lifetime` sert désormais
-      les séances terminées et les semaines actives de la vie entière, sans
-      plafond ; la RÈGLE (meilleure série, semaines équilibrées) reste dans
-      `reward_facts_builder.dart`, seul propriétaire du barème. Tests :
-      2 e2e, 4 unitaires.
-      **Reste pour la frise elle-même** : `ProgressMilestone(userId, kind,
-      key, occurredAt)` avec `@@unique([userId, kind, key])` — la règle du
-      journal local (« la première gagne, rien ne s'efface ») devient un
-      `ON CONFLICT DO NOTHING` ; séances, mesures et leçons restent DÉRIVÉES
-      à la lecture (trois tables déjà datées et indexées, et les recopier
-      rouvrirait le bug de la correction) ; `GET /progress/timeline` paginé
-      par un curseur qui encode `(occurredAt, id)` et non l'id seul, un flux
-      fusionné ayant des ex æquo à la seconde. Les en-têtes de mois se posent
-      côté CLIENT : découpés côté serveur, une page vaudrait 2 lignes ou 200.
-      Attention au double comptage : un record battu et son badge ne font
-      qu'UNE ligne, un titre ne produit jamais aussi un `REWARD`, les leçons
-      se groupent par jour, et `mentor.celebrations.dites` ne nourrit rien.
-
+- [x] 8.4 Timeline — FAIT le 22 septembre 2026. « Ton histoire » :
+      `GET /progress/timeline` fusionne séances, mesures, leçons (groupées
+      par jour, APRÈS dédoublonnage) et franchissements. La ligne de partage
+      est « le fait est-il déjà une ligne datée et corrigible ? » : les trois
+      premières sources sont DÉRIVÉES à la lecture, les franchissements
+      MATÉRIALISÉS dans `ProgressMilestone` — ce sont les seuls qui ne
+      correspondent à aucune ligne (`PersonalRecord` ne garde que le maximum
+      courant, un mur de trophées et non une chronologie). Les
+      franchissements de record restent une FONCTION des séries, synchronisés
+      à chaque `recomputeRecords` : une charge saisie 300 au lieu de 30 fait
+      disparaître le franchissement qu'elle avait inventé. Récompenses et
+      titres s'IMPORTENT du journal local, la plus ANCIENNE date gagnant par
+      un `LEAST` dans l'écriture ; les records ne s'importent jamais. Curseur
+      sur le couple `(occurredAt, id)`, en-têtes de mois côté client. Le
+      libellé n'est pas en base : le serveur stocke la clé, le client la
+      résout dans son catalogue embarqué. Tests : 10 e2e, 8 unitaires sur le
+      rejeu des records, 10 widget. Capture `40-progression-frise`.
+      **Le préalable annoncé était mal posé**, et mesuré il cachait pire : le
+      moteur de récompenses dérivait ses compteurs des 60 séances
+      rapatriées, et une médaille gagnée disparaissait en changeant de
+      téléphone. Réparé la veille (`GET /progress/lifetime`).
 ---
 
 ## PLAN 9 — Titres & rangs  `[~] QUASI TERMINÉ`

@@ -13,6 +13,7 @@ import '../widgets/progress_first_steps.dart';
 import '../widgets/progress_header.dart';
 import '../widgets/progress_tiles.dart';
 import '../widgets/records_section.dart';
+import '../widgets/timeline_entry_card.dart';
 import '../widgets/volume_card.dart';
 
 /// Progression (maquette 2c) : volume de la période et sa tendance, tuiles
@@ -74,6 +75,11 @@ class ProgressScreen extends ConsumerWidget {
               // s'affiche donc même quand les statistiques du serveur, juste
               // au-dessus, sont en erreur ou hors ligne.
               const ProgressionEntryCard(),
+              const SizedBox(height: AppSpacing.md),
+              // « Où j'en suis » juste au-dessus, « d'où je viens » ici :
+              // deux questions voisines, deux écrans, parce qu'une période
+              // et une histoire ne se lisent pas dans la même liste.
+              const TimelineEntryCard(),
               const SizedBox(height: AppSpacing.gapSection),
               // La vitrine, sans « ce qui vient » : l'écran Progrès raconte
               // la période, le profil raconte l'histoire entière et la

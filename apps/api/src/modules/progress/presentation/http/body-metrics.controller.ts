@@ -15,14 +15,14 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { CurrentUser } from '../../../../common/decorators/current-user.decorator';
 import { type AuthenticatedPrincipal } from '../../../../common/types/authenticated-request';
-import { ProgressService } from '../../application/progress.service';
+import { BodyMetricsService } from '../../application/body-metrics.service';
 import { CreateBodyMetricDto, ListBodyMetricsQuery, UpdateBodyMetricDto } from './dto/progress.dto';
 
 @ApiTags('progress')
 @ApiBearerAuth()
 @Controller('body-metrics')
 export class BodyMetricsController {
-  constructor(private readonly progress: ProgressService) {}
+  constructor(private readonly metrics: BodyMetricsService) {}
 
   @Get()
   @ApiOperation({ summary: 'Mesures corporelles (du plus ancien au plus récent)' })
@@ -30,7 +30,7 @@ export class BodyMetricsController {
     @CurrentUser() user: AuthenticatedPrincipal,
     @Query() query: ListBodyMetricsQuery,
   ): Promise<BodyMetric[]> {
-    return this.progress.listBodyMetrics(user.userId, query.metricType, query.limit);
+    return this.metrics.listBodyMetrics(user.userId, query.metricType, query.limit);
   }
 
   @Post()
@@ -40,7 +40,7 @@ export class BodyMetricsController {
     @CurrentUser() user: AuthenticatedPrincipal,
     @Body() dto: CreateBodyMetricDto,
   ): Promise<BodyMetric> {
-    return this.progress.addBodyMetric(user.userId, dto);
+    return this.metrics.addBodyMetric(user.userId, dto);
   }
 
   @Patch(':id')
@@ -50,7 +50,7 @@ export class BodyMetricsController {
     @Param('id', new ParseUUIDPipe()) id: string,
     @Body() dto: UpdateBodyMetricDto,
   ): Promise<BodyMetric> {
-    return this.progress.updateBodyMetric(user.userId, id, dto);
+    return this.metrics.updateBodyMetric(user.userId, id, dto);
   }
 
   @Delete(':id')
@@ -60,6 +60,6 @@ export class BodyMetricsController {
     @CurrentUser() user: AuthenticatedPrincipal,
     @Param('id', new ParseUUIDPipe()) id: string,
   ): Promise<void> {
-    await this.progress.deleteBodyMetric(user.userId, id);
+    await this.metrics.deleteBodyMetric(user.userId, id);
   }
 }

@@ -58,6 +58,7 @@ import 'package:carlys_mobile/features/progress/data/repositories/progress_repos
 import 'package:carlys_mobile/features/progress/domain/entities/progress.dart';
 import 'package:carlys_mobile/features/progress/presentation/screens/exercise_progression_screen.dart';
 import 'package:carlys_mobile/features/progress/presentation/screens/progress_screen.dart';
+import 'package:carlys_mobile/features/progress/presentation/screens/timeline_screen.dart';
 import 'package:carlys_mobile/features/progress/presentation/widgets/body_weight_section.dart';
 import 'package:carlys_mobile/features/progression/presentation/widgets/manifesto_tile.dart';
 import 'package:carlys_mobile/features/progression/presentation/widgets/progression_entry_card.dart';
@@ -306,6 +307,72 @@ FakeProgressRepository progressOf() => FakeProgressRepository(
       ),
   ],
 );
+
+/// Deux mois d'histoire : la vitrine de la FRISE.
+///
+/// Des six types, cinq sont représentés — séances, records, pesées, leçons,
+/// récompense — parce que c'est le mélange qui fait la frise. Une liste de
+/// séances seules ne serait qu'un historique.
+List<ProgressEvent> timelineSampleOf() {
+  ProgressEvent event(
+    ProgressEventKind kind,
+    int joursAvant,
+    Map<String, dynamic> payload,
+  ) => ProgressEvent(
+    id: '${kind.apiValue}-$joursAvant',
+    kind: kind,
+    occurredAt: DateTime.utc(
+      2026,
+      9,
+      20,
+      18,
+    ).subtract(Duration(days: joursAvant)),
+    payload: payload,
+  );
+
+  return [
+    event(ProgressEventKind.session, 0, {
+      'name': 'Push A',
+      'setsCount': 16,
+      'volumeKg': 5400,
+    }),
+    event(ProgressEventKind.record, 0, {
+      'exerciseName': 'Développé couché',
+      'recordType': 'MAX_WEIGHT',
+      'value': 85,
+    }),
+    event(ProgressEventKind.lesson, 1, {'lessons': 4}),
+    event(ProgressEventKind.session, 2, {
+      'name': 'Pull B',
+      'setsCount': 14,
+      'volumeKg': 4900,
+    }),
+    event(ProgressEventKind.measure, 3, {
+      'metricType': 'WEIGHT_KG',
+      'value': 78.4,
+    }),
+    event(ProgressEventKind.reward, 5, {'key': 'constance-4'}),
+    event(ProgressEventKind.session, 5, {
+      'name': 'Jambes',
+      'setsCount': 18,
+      'volumeKg': 7200,
+    }),
+    event(ProgressEventKind.record, 12, {
+      'exerciseName': 'Squat',
+      'recordType': 'MAX_SET_VOLUME',
+      'value': 1080,
+    }),
+    event(ProgressEventKind.session, 26, {
+      'name': 'Push A',
+      'setsCount': 15,
+      'volumeKg': 5100,
+    }),
+    event(ProgressEventKind.measure, 31, {
+      'metricType': 'WEIGHT_KG',
+      'value': 79.6,
+    }),
+  ];
+}
 
 /// Une course suivie sur six semaines : la vitrine de la courbe CARDIO.
 ///
@@ -782,6 +849,31 @@ void main() {
       tester,
       '39-progression-cardio',
       shows: find.text('DISTANCE PAR SÉANCE'),
+    );
+  });
+
+  testWidgets('progression — la frise', (tester) async {
+    final progress = FakeProgressRepository()
+      ..timelineEvents.addAll(timelineSampleOf());
+
+    tester.view.physicalSize = const Size(1179, 2556);
+    tester.view.devicePixelRatio = 3.0;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [progressRepositoryProvider.overrideWithValue(progress)],
+        child: MaterialApp(
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.dark(),
+          home: const TimelineScreen(),
+        ),
+      ),
+    );
+    await settle(tester);
+    await capture(
+      tester,
+      '40-progression-frise',
+      shows: find.text('Ton histoire'),
     );
   });
 

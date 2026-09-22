@@ -247,3 +247,76 @@ class LifetimeStats {
   /// Une entrée par semaine ACTIVE, de la plus ancienne à la plus récente.
   final List<LifetimeWeek> weeks;
 }
+
+/// Ce qu'une ligne de la frise raconte.
+///
+/// Six types, une seule liste. Trois viennent de tables déjà datées
+/// (séances, mesures, leçons) ; trois sont des FRANCHISSEMENTS, qui ne
+/// correspondent à aucune ligne existante côté serveur.
+enum ProgressEventKind {
+  session('SESSION'),
+  measure('MEASURE'),
+  lesson('LESSON'),
+  record('RECORD'),
+  reward('REWARD'),
+  title('TITLE');
+
+  const ProgressEventKind(this.apiValue);
+
+  final String apiValue;
+
+  /// Vrai pour les trois types qui célèbrent un franchissement.
+  bool get isMilestone =>
+      this == ProgressEventKind.record ||
+      this == ProgressEventKind.reward ||
+      this == ProgressEventKind.title;
+
+  static ProgressEventKind? fromApi(String? value) {
+    for (final kind in ProgressEventKind.values) {
+      if (kind.apiValue == value) {
+        return kind;
+      }
+    }
+    // Un serveur plus récent peut inventer un type : la ligne est IGNORÉE
+    // plutôt que rendue vide — une frise ne montre pas des trous.
+    return null;
+  }
+}
+
+/// Un événement de la frise.
+class ProgressEvent {
+  const ProgressEvent({
+    required this.id,
+    required this.kind,
+    required this.occurredAt,
+    required this.payload,
+  });
+
+  final String id;
+  final ProgressEventKind kind;
+  final DateTime occurredAt;
+
+  /// De quoi écrire la ligne, sans rejouer le moindre calcul.
+  final Map<String, dynamic> payload;
+
+  /// Un nombre du payload, quel que soit son type JSON.
+  num? number(String key) => payload[key] as num?;
+
+  String? text(String key) => payload[key] as String?;
+}
+
+/// Une page de frise, et de quoi demander la suivante.
+class ProgressTimelinePage {
+  const ProgressTimelinePage({
+    required this.items,
+    required this.hasMore,
+    this.nextCursor,
+  });
+
+  final List<ProgressEvent> items;
+  final bool hasMore;
+
+  /// Curseur OPAQUE : il encode le couple (date, identifiant), parce qu'un
+  /// flux fusionné a des ex æquo qu'un identifiant seul ne départage pas.
+  final String? nextCursor;
+}

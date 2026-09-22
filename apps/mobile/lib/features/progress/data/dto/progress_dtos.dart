@@ -86,3 +86,32 @@ LifetimeStats lifetimeStatsFromJson(Map<String, dynamic> json) => LifetimeStats(
       )
       .toList(growable: false),
 );
+
+/// Une ligne de frise, ou `null` si le serveur en sert une que cette version
+/// ne sait pas lire — la frise saute la ligne plutôt que de montrer un trou.
+ProgressEvent? progressEventFromJson(Map<String, dynamic> json) {
+  final kind = ProgressEventKind.fromApi(json['kind'] as String?);
+  if (kind == null) {
+    return null;
+  }
+  return ProgressEvent(
+    id: json['id'] as String,
+    kind: kind,
+    occurredAt: DateTime.parse(json['occurredAt'] as String),
+    payload: Map<String, dynamic>.from(
+      json['payload'] as Map<dynamic, dynamic>? ?? const {},
+    ),
+  );
+}
+
+ProgressTimelinePage progressTimelineFromJson(Map<String, dynamic> json) {
+  return ProgressTimelinePage(
+    items: (json['items'] as List<dynamic>? ?? const [])
+        .whereType<Map<String, dynamic>>()
+        .map(progressEventFromJson)
+        .nonNulls
+        .toList(growable: false),
+    hasMore: json['hasMore'] as bool? ?? false,
+    nextCursor: json['nextCursor'] as String?,
+  );
+}

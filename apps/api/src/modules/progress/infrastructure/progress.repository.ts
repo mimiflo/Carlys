@@ -57,6 +57,14 @@ export interface RawLifetimeWeek {
   sessions: number;
 }
 
+/** Une ligne brute de la frise, avant mise en forme. */
+export interface RawTimelineEvent {
+  kind: string;
+  id: string;
+  occurredAt: Date;
+  payload: Prisma.JsonValue;
+}
+
 /** Regroupement SQL par période — mots-clés STRICTEMENT whitelistés. */
 const BUCKET_BY_PERIOD: Record<ProgressPeriod, string> = {
   week: 'day',
@@ -289,6 +297,197 @@ export class ProgressRepository {
    * série. Indexer `exerciseName` coûterait une écriture de plus sur la
    * table la plus écrite du schéma pour un gain que rien ne mesure encore.
    */
+  /**
+   * LA FRISE : quatre sources fusionnées, une page, un curseur.
+   *
+   * Séances, mesures et leçons sont DÉRIVÉES — ce sont déjà trois tables
+   * datées et indexées, et les recopier dans une table d'événements
+   * ajouterait un état à maintenir pour zéro gain. Les franchissements, eux,
+   * sont lus dans `ProgressMilestone` : ils ne correspondent à aucune ligne
+   * existante.
+   *
+   * LE CURSEUR ENCODE LE COUPLE `(occurredAt, id)`, jamais l'id seul. Les
+   * autres listes du dépôt s'en tirent avec l'id parce qu'une seule table
+   * est triée ; un flux fusionné a des ex æquo à la milliseconde près, et un
+   * curseur sur l'id seul sauterait des lignes ou les rejouerait.
+   *
+   * Les leçons sont GROUPÉES PAR JOUR après dédoublonnage par leçon. Sans le
+   * `DISTINCT ON`, la même leçon répondue deux jours ferait deux lignes — le
+   * serveur garde les deux réponses (la clé est `(userId, lessonId,
+   * answeredOn)`) là où l'appareil applique « la première gagne ». Sans le
+   * groupement, cinquante-huit lignes de bruit noieraient la frise.
+   */
+  async timeline(
+    userId: string,
+    limit: number,
+    kinds: string[],
+    cursor: { occurredAt: Date; id: string } | null,
+  ): Promise<RawTimelineEvent[]> {
+    const voulu = (kind: string) => kinds.length === 0 || kinds.includes(kind);
+    const borne =
+      cursor === null
+        ? Prisma.sql`TRUE`
+        : Prisma.sql`(e.occurred_at, e.id) < (${cursor.occurredAt}, ${cursor.id})`;
+
+    const sources: Prisma.Sql[] = [];
+    if (voulu('SESSION')) {
+      sources.push(Prisma.sql`
+        SELECT 'SESSION' AS kind, w."id"::text AS id, w."startedAt" AS occurred_at,
+               jsonb_build_object(
+                 'name', w."name",
+                 'setsCount', (SELECT COUNT(*) FROM "WorkoutSet" s
+                                WHERE s."sessionId" = w."id" AND s."deletedAt" IS NULL),
+                 'volumeKg', COALESCE((SELECT SUM(s."reps" * s."weightKg") FROM "WorkoutSet" s
+                                        WHERE s."sessionId" = w."id" AND s."deletedAt" IS NULL), 0)
+               ) AS payload
+        FROM "WorkoutSession" w
+        WHERE w."userId" = ${userId}::uuid
+          AND w."status" = 'COMPLETED'
+          AND w."deletedAt" IS NULL
+      `);
+    }
+    if (voulu('MEASURE')) {
+      sources.push(Prisma.sql`
+        SELECT 'MEASURE' AS kind, m."id"::text AS id, m."measuredAt" AS occurred_at,
+               jsonb_build_object('metricType', m."metricType", 'value', m."value") AS payload
+        FROM "BodyMetric" m
+        WHERE m."userId" = ${userId}::uuid AND m."deletedAt" IS NULL
+      `);
+    }
+    if (voulu('LESSON')) {
+      sources.push(Prisma.sql`
+        SELECT 'LESSON' AS kind, 'lesson-' || d.jour AS id,
+               (d.jour || ' 12:00:00')::timestamp AS occurred_at,
+               jsonb_build_object('lessons', COUNT(*)) AS payload
+        FROM (
+          SELECT DISTINCT ON (q."lessonId") q."lessonId", q."answeredOn" AS jour
+          FROM "QuizAnswer" q
+          WHERE q."userId" = ${userId}::uuid
+          ORDER BY q."lessonId", q."createdAt" ASC
+        ) d
+        GROUP BY d.jour
+      `);
+    }
+    const franchissements = ['RECORD', 'REWARD', 'TITLE'].filter(voulu);
+    if (franchissements.length > 0) {
+      sources.push(Prisma.sql`
+        SELECT ms."kind"::text AS kind, ms."id"::text AS id, ms."occurredAt" AS occurred_at,
+               -- La CLÉ voyage avec la ligne : sans elle, « Récompense
+               -- obtenue » ne nomme rien, et le client n'a aucun moyen de
+               -- retrouver de laquelle il s'agit dans son catalogue.
+               jsonb_build_object('key', ms."key") ||
+                 COALESCE(ms."payload", '{}'::jsonb) AS payload
+        FROM "ProgressMilestone" ms
+        WHERE ms."userId" = ${userId}::uuid
+          AND ms."kind"::text IN (${Prisma.join(franchissements)})
+      `);
+    }
+    if (sources.length === 0) {
+      return [];
+    }
+
+    const rows = await this.prisma.$queryRaw<
+      { kind: string; id: string; occurred_at: Date; payload: Prisma.JsonValue }[]
+    >(Prisma.sql`
+      SELECT e.kind, e.id, e.occurred_at, e.payload
+      FROM (${Prisma.join(sources, ' UNION ALL ')}) AS e
+      WHERE ${borne}
+      ORDER BY e.occurred_at DESC, e.id DESC
+      LIMIT ${limit}
+    `);
+
+    return rows.map((row) => ({
+      kind: row.kind,
+      id: row.id,
+      occurredAt: row.occurred_at,
+      payload: row.payload,
+    }));
+  }
+
+  /**
+   * Importe des franchissements décidés par le MOBILE, « la plus ANCIENNE
+   * date gagne ».
+   *
+   * Le journal local date une récompense du jour où l'application a
+   * REGARDÉ, pas du jour où le cap a été franchi — il le dit lui-même. Deux
+   * appareils n'ont donc pas regardé le même jour, et sans cette règle le
+   * dernier à parler réécrirait l'histoire. `LEAST` la tranche en SQL, dans
+   * l'écriture elle-même : deux imports simultanés ne peuvent pas la
+   * contourner.
+   *
+   * Symétrique de `pullAnswers` côté Academy : le serveur COMBLE les trous,
+   * il ne réécrit jamais.
+   */
+  async importMilestones(
+    userId: string,
+    milestones: ReadonlyArray<{ kind: 'REWARD' | 'TITLE'; key: string; occurredAt: Date }>,
+  ): Promise<void> {
+    if (milestones.length === 0) {
+      return;
+    }
+    const valeurs = milestones.map(
+      (entry) =>
+        Prisma.sql`(gen_random_uuid(), ${userId}::uuid, ${entry.kind}::"MilestoneKind", ${entry.key}, ${entry.occurredAt})`,
+    );
+    await this.prisma.$executeRaw(Prisma.sql`
+      INSERT INTO "ProgressMilestone" ("id", "userId", "kind", "key", "occurredAt")
+      VALUES ${Prisma.join(valeurs)}
+      ON CONFLICT ("userId", "kind", "key")
+      DO UPDATE SET "occurredAt" = LEAST(
+        "ProgressMilestone"."occurredAt",
+        EXCLUDED."occurredAt"
+      )
+    `);
+  }
+
+  /**
+   * Met les franchissements de RECORD de ces exercices à l'ÉGAL de ce que
+   * dit l'historique : on écrit ce qui manque, on retire ce qui n'a plus de
+   * série pour le justifier.
+   *
+   * Même philosophie que `recomputeRecords` juste à côté — un franchissement
+   * est une FONCTION des séries stockées, pas un état à maintenir. Sans la
+   * suppression, une charge saisie 100 au lieu de 10 laisserait derrière
+   * elle un record qui n'a jamais eu lieu, sur une frise qui prétend
+   * raconter une histoire vraie.
+   */
+  async syncRecordMilestones(
+    userId: string,
+    exerciseNames: string[],
+    breaks: ReadonlyArray<{ key: string; occurredAt: Date; payload: Prisma.InputJsonValue }>,
+  ): Promise<void> {
+    if (exerciseNames.length === 0) {
+      return;
+    }
+    const gardees = breaks.map((entry) => entry.key);
+    await this.prisma.progressMilestone.deleteMany({
+      where: {
+        userId,
+        kind: 'RECORD',
+        key: { notIn: gardees.length === 0 ? [''] : gardees },
+        // Bornée aux exercices recalculés : les autres n'ont pas bougé, et
+        // les relire pour les réécrire à l'identique coûterait tout
+        // l'historique à chaque clôture de séance.
+        OR: exerciseNames.map((name) => ({ key: { startsWith: `record:${name}|` } })),
+      },
+    });
+    if (breaks.length === 0) {
+      return;
+    }
+    await this.prisma.progressMilestone.createMany({
+      data: breaks.map((entry) => ({
+        userId,
+        kind: 'RECORD' as const,
+        key: entry.key,
+        occurredAt: entry.occurredAt,
+        payload: entry.payload,
+      })),
+      // « La première gagne, rien ne s'efface » : rejouer n'écrase pas une
+      // date déjà inscrite.
+      skipDuplicates: true,
+    });
+  }
+
   findSetsForRecords(userId: string, exerciseNames: string[]): Promise<WorkoutSet[]> {
     return this.prisma.workoutSet.findMany({
       where: {
