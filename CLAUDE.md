@@ -208,17 +208,23 @@ seuil est dépassé — jamais de contournement :
   flux. Aucune méthode de repository ne dépasse plus 40 lignes. Un plafond de
   FICHIER n'aurait rien suggéré de tel — il aurait même RÉCOMPENSÉ le
   contraire, puisque l'extraction ajoute des lignes au fichier.
-- **Contrôleur Riverpod — 250, comme un widget.** Aucun ne dépasse 164 lignes de code
-  hors imports, commentaires et lignes vides : `coach_controllers` 249 lignes dont 163
-  de code, `dashboard_controllers` 241 dont 164, `auth_controller` 244 dont 126 (35 %
-  du fichier est de la documentation), `exercise_library_controller` 201 dont 145. Le
-  seuil de 200 n'est franchi que par les commentaires : l'appliquer reviendrait à taxer
-  la documentation. Un Notifier est de la présentation, pas un service — il a donc le
-  budget du widget.
+- **Contrôleur Riverpod — 250, comme un widget.** Un Notifier est de la présentation,
+  pas un service : il a le budget du widget. L'arbitrage tient à un écart mesuré entre
+  deux comptes — celui du fichier et celui du CODE, hors imports, commentaires et
+  lignes vides. Les contrôleurs les plus longs frôlent 250 lignes de fichier pour
+  environ 150 de code : le seuil de 200 n'y serait franchi que par les commentaires,
+  et l'appliquer reviendrait à taxer la documentation. La commande qui rend les deux
+  comptes est plus bas, avec celles des méthodes et des Notifier ; elle fait foi.
+
+  Cette ligne citait quatre fichiers avec leurs deux comptes. Les quatre nombres
+  étaient faux au 22 septembre 2026, et l'un des fichiers — `dashboard_controllers`
+  — avait été scindé puis supprimé : la règle nommait donc un fichier inexistant
+  pour justifier un seuil, dans la section même qui dit que les écarts se comptent
+  et ne se recopient pas. D'où la commande à la place des nombres.
 
 **Les écarts se comptent, ils ne se recopient pas.** Une liste d'écarts écrite en
 dur périme au premier commit, et une règle posée à côté d'une dette fausse vaut
-moins qu'une règle sans dette annoncée. Ces deux commandes rendent l'état réel ;
+moins qu'une règle sans dette annoncée. Ces trois commandes rendent l'état réel ;
 elles font foi contre toute liste, celle-ci comprise.
 
 ```bash
@@ -239,17 +245,26 @@ awk 'FNR==1{s=0;d=0} /^  @/{next} !s && /^  [A-Za-z_]/{s=FNR;d=0}
 # providers dérivés à ranger dans `presentation/providers/`.
 grep -c 'extends [A-Za-z]*Notifier' \
   apps/mobile/lib/features/*/presentation/controllers/*.dart | grep -v ':1$'
+
+# Contrôleurs, par taille : lignes de FICHIER, puis lignes de CODE (hors
+# imports, commentaires et lignes vides). C'est l'écart entre les deux qui
+# justifie le seuil de 250 ; aucun nombre n'est recopié plus haut.
+for f in apps/mobile/lib/features/*/presentation/controllers/*.dart; do
+  printf '%4d  %4d  %s\n' "$(wc -l < "$f")" \
+    "$(grep -vcE '^\s*$|^\s*//|^\s*///' "$f")" "${f##*/}"
+done | sort -rn | head
 ```
 
-Ce qu'elles rendaient le 15 septembre 2026, pour donner l'ordre de grandeur —
+Ce qu'elles rendaient le 22 septembre 2026, pour donner l'ordre de grandeur —
 **relancer plutôt que croire** : AUCUNE méthode de repository au-dessus de 40
-lignes ; **plus
-aucun** fichier de `controllers/` portant plusieurs Notifier — le dernier,
-`account_controllers.dart`, a été scindé en trois ; et **vingt-deux** qui n'en
-portent aucun, `dashboard_controllers.dart` parmi eux. Ce dernier écart reste
-entier : ce sont des providers dérivés à ranger dans `presentation/providers/`,
-un dossier qui EXISTE désormais — `exercises` y a rangé les siens, et
-`check_mobile_file_sizes.sh` lui applique le même seuil qu'à `controllers/`.
+lignes ; **aucun** fichier de `controllers/` portant plusieurs Notifier ; et
+**vingt-quatre** qui n'en portent aucun. Le plus long contrôleur,
+`auth_controller.dart`, fait 249 lignes de fichier pour 139 de code — l'écart
+que le seuil de 250 reconnaît. Ce troisième écart reste entier : les
+vingt-quatre sont des providers dérivés à ranger dans
+`presentation/providers/`, un dossier qui EXISTE désormais — `exercises` et
+`dashboard` y ont rangé les leurs, et `check_mobile_file_sizes.sh` lui
+applique le même seuil qu'à `controllers/`.
 
 ## Qualité exigée par fonctionnalité
 

@@ -337,6 +337,58 @@ class WorkoutSessionWriter {
     });
   }
 
+  /// Efface une série : pierre tombale locale, prévision rendue au plan, et
+  /// `set.delete` en file.
+  ///
+  /// Extraite du dépôt pour la même raison que [correctSet] et [addSet] : la
+  /// règle du dépôt borne la MÉTHODE de repository à 40 lignes, et
+  /// l'écriture d'une série — trois tables et une opération de
+  /// synchronisation — n'y tient pas. Les deux chemins d'écriture d'une
+  /// série vivent désormais côte à côte, ce qui est aussi le bon endroit
+  /// pour les comparer.
+  Future<void> deleteSet(String setId) async {
+    await _db.transaction(() async {
+      final set = await (_db.select(
+        _db.localWorkoutSets,
+      )..where((row) => row.id.equals(setId))).getSingleOrNull();
+      if (set == null) {
+        return; // déjà purgée : rien à supprimer, rien à envoyer
+      }
+      await (_db.update(
+        _db.localWorkoutSets,
+      )..where((row) => row.id.equals(setId))).write(
+        const LocalWorkoutSetsCompanion(
+          deleted: Value(true),
+          // `pending` AVEC la pierre tombale, et pas seulement elle. Le
+          // rapatriement efface les séries `synced` pour reproduire
+          // l'état du serveur, et ne protège que ce qui ne lui appartient
+          // pas encore (`syncStatus != 'synced'`). Une pierre tombale
+          // laissée `synced` était donc effacée comme une ligne du
+          // serveur — lequel a toujours la série, puisque le DELETE
+          // n'est pas parti — et la série revenait VIVANTE à l'écran.
+          syncStatus: Value('pending'),
+        ),
+      );
+      // La série supprimée REND sa prévision au plan : l'item qui la
+      // pointait redevient à faire — la consigne la repropose, et le
+      // constat de clôture ne compte plus une série qui n'existe pas.
+      // Le serveur fait pareil à l'arrivée de `set.delete` : aucun
+      // marquage `pending` nécessaire, la convergence suit l'opération.
+      await (_db.update(_db.localSessionPlanItems)
+            ..where((item) => item.doneSetId.equals(setId)))
+          .write(const LocalSessionPlanItemsCompanion(doneSetId: Value(null)));
+      await enqueue(
+        entityType: 'set',
+        entityId: setId,
+        operationType: 'set.delete',
+        // `sessionId` ne part pas au serveur : il range l'opération sur la
+        // voie de sa séance, derrière la création et les séries qui la
+        // précèdent (cf. `syncLaneOf`).
+        payload: {'id': setId, 'sessionId': set.sessionId},
+      );
+    });
+  }
+
   /// Insère une opération dans la file, dans la transaction courante.
   ///
   /// `idempotencyKey = entityId` : l'UUID métier généré sur l'appareil EST la

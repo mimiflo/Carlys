@@ -625,6 +625,54 @@ erreur/chargement/vide/hors-ligne, `check.sh` + `check_mobile.sh`.
          mort exactement après une réinstallation. **Garde STRUCTUREL et dit
          comme tel** : le harnais de test ne reproduit pas ce clamping, donc
          l'épreuve vérifie le réglage, pas son effet.
+- [x] **Onze documents qui affirmaient le faux** — 22 septembre 2026. Chaque
+      affirmation relue dans la source AVANT correction ; deux d'entre elles
+      ont désigné du code à réparer, pas de la prose à réécrire.
+      1. `docs/api/README.md` titrait « Endpoints cibles du MVP
+         (spécification produit — non implémentés) » et écrivait « aucune de
+         ces routes n'existe encore » au-dessus d'un tableau de **dix-huit
+         lignes livrées**. Un lecteur qui s'arrêtait à l'en-tête concluait
+         que l'API était vide. Le titre dit maintenant ce que le tableau
+         montre, et la phrase de clôture renvoie aux signatures réelles.
+      2. et 3. Le seed compte **190** exercices ; `README.md`,
+         `docs/database/schema.md` et `docs/api/README.md` en annonçaient
+         170 tous les trois (les 156 illustrés, eux, étaient justes).
+      4. `README.md` décrivait le contrôle des tailles de fichiers comme une
+         « règle du dépôt, absente de la CI ». `mobile-ci.yml` l'exécute,
+         et l'en-tête de `check_mobile.sh` le disait déjà.
+      5. et 6. `docs/product/coach-ia.md` annonçait deux limites tombées :
+         « rien sur les apports alimentaires (aucun journal) » — le coach
+         lit `get_nutrition_targets` et `get_recent_meals` —, et « aucun
+         programme hebdomadaire (le module `programs` n'existe pas
+         encore) » — il est livré. La limite tient toujours, mais pour
+         l'autre raison : le coach n'a aucun outil dessus.
+      7. 8. et 9. `docs/product/progression.md` donnait les ligues pour
+         inexistantes, leur ouvrait une « récompense datée » que les ligues
+         livrées n'accordent pas (`LeaguesService` n'écrit que dans
+         `LeagueMembership`), et laissait ouverte une contradiction TRANCHÉE
+         le 19 septembre 2026 dans `community.md`.
+      10. `CLAUDE.md` justifiait le seuil des contrôleurs Riverpod par
+         quatre fichiers et leurs deux comptes. Les quatre nombres étaient
+         faux, et `dashboard_controllers` avait été scindé puis SUPPRIMÉ :
+         la règle nommait un fichier inexistant, dans la section même qui
+         interdit de recopier les mesures. Les nombres cèdent la place à une
+         troisième commande, à côté des deux autres.
+      11. `docs/product/citations.md` datait un record frais « d'aujourd'hui
+         ou d'hier ». **C'est le code qui avait dérivé, pas la page** :
+         `_estFrais` comptait des tranches de 24 heures au lieu de jours
+         civils, bornait à `<= 2` une fenêtre de deux jours, et son
+         garde-fou `>= 0` laissait passer une date au futur de moins de
+         24 heures. Cumulés, ils fêtaient un record jusqu'à près de quatre
+         jours après — ou avant qu'il existe, sur une horloge en avance. Le
+         compteur de jours civils de `quote_facts.dart`, qui était juste et
+         à deux fichiers de là, est devenu public et sert les deux ; il
+         perd au passage son erreur d'un jour au changement d'heure d'été.
+         Six épreuves bornent les deux extrémités ; sans le correctif, trois
+         tombent.
+      Un douzième écart, trouvé par la commande de `CLAUDE.md` elle-même :
+      `deleteSet` faisait 43 lignes dans `workout_repository_impl.dart`.
+      Déplacée dans `WorkoutSessionWriter`, comme `addSet` et `_closeWorkout`
+      avant elle. Aucune méthode de repository ne dépasse plus 40 lignes.
 
 ---
 

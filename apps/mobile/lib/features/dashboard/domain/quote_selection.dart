@@ -94,12 +94,32 @@ bool _estVrai(QuoteContext contexte, QuoteFacts facts) {
   };
 }
 
+/// Un record est-il assez frais pour qu'on le fête ?
+///
+/// TROIS défauts vivaient sur l'ancienne ligne, et ils se compensaient assez
+/// souvent pour passer inaperçus.
+///
+/// Elle comptait `today.difference(record).inDays`, c'est-à-dire des
+/// tranches de 24 heures écoulées, là où `recordFraisJours` parle de JOURS
+/// CIVILS. Un record battu hier à 23 h était donc « d'aujourd'hui » à 20 h
+/// ce soir — 21 heures, zéro tranche.
+///
+/// Et elle bornait à `<= recordFraisJours`, soit trois valeurs pour une
+/// constante qui en promet deux : son commentaire dit « ce jour-là et le
+/// suivant », `docs/product/citations.md` disait « aujourd'hui ou hier ».
+/// Cumulé au premier défaut, un record pouvait être fêté jusqu'à près de
+/// quatre jours après, bien après que la personne l'ait oublié.
+///
+/// Le garde-fou `jours >= 0`, enfin, ne gardait rien : une date au FUTUR de
+/// moins de 24 heures rendait `inDays == 0`, donc « aujourd'hui ». Une
+/// horloge d'appareil en avance suffisait à faire féliciter un record qui
+/// n'existait pas encore. En jours civils, demain est demain.
 bool _estFrais(DateTime? record, DateTime today) {
   if (record == null) {
     return false;
   }
-  final jours = today.difference(record).inDays;
-  return jours >= 0 && jours <= recordFraisJours;
+  final jours = joursCivilsEntre(record, today);
+  return jours >= 0 && jours < recordFraisJours;
 }
 
 bool _enRecuperation(QuoteFacts facts) {

@@ -113,7 +113,7 @@ class QuoteFacts {
   /// Jours écoulés depuis la dernière séance terminée, ou `null`.
   int? get daysSinceLast {
     final derniere = lastCompletedAt;
-    return derniere == null ? null : _joursEntre(derniere, today);
+    return derniere == null ? null : joursCivilsEntre(derniere, today);
   }
 
   /// Heures écoulées depuis la dernière séance terminée, ou `null`.
@@ -129,7 +129,7 @@ class QuoteFacts {
     if (derniere == null || avant == null) {
       return null;
     }
-    return _joursEntre(avant, derniere);
+    return joursCivilsEntre(avant, derniere);
   }
 }
 
@@ -138,14 +138,23 @@ class QuoteFacts {
 /// Par les composantes de date, jamais par une différence d'heures : deux
 /// séances à 23 h et 1 h sont à deux heures l'une de l'autre et pourtant à
 /// un jour d'écart, et c'est le jour qui compte ici.
-int _joursEntre(DateTime debut, DateTime fin) {
+///
+/// Les deux dates sont reconstruites en UTC. Ce n'est pas un changement de
+/// fuseau — les composantes viennent du LOCAL, juste au-dessus — c'est le
+/// retrait de l'heure d'été du calcul : dans un fuseau qui avance, la nuit
+/// du passage ne dure que 23 heures, et `inDays` rendait alors 0 pour deux
+/// jours civils voisins. Un jour par an, « hier » devenait « aujourd'hui ».
+///
+/// Public parce que la fraîcheur d'un record se compte de la même façon
+/// (`quote_selection.dart`), et qu'elle l'avait recomptée autrement.
+int joursCivilsEntre(DateTime debut, DateTime fin) {
   final a = debut.toLocal();
   final b = fin.toLocal();
-  return DateTime(
+  return DateTime.utc(
     b.year,
     b.month,
     b.day,
-  ).difference(DateTime(a.year, a.month, a.day)).inDays;
+  ).difference(DateTime.utc(a.year, a.month, a.day)).inDays;
 }
 
 /// Construit les faits depuis l'historique local et ce que le serveur a bien

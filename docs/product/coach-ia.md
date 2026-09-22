@@ -40,14 +40,27 @@ données réelles ; adapter un modèle de séance existant à une contrainte
 (« j'ai 25 minutes », « pas de barre aujourd'hui », « j'ai mal dormi ») ;
 expliquer un record, une stagnation, une tendance de poids.
 
-**Ce qu'il ne fait pas, et le dit.** Rien sur les apports alimentaires (aucun
-journal), rien sur le sommeil ni la fréquence cardiaque (aucune donnée de
-santé), aucun diagnostic de blessure ni conseil médical, aucun programme
-hebdomadaire (le module `programs` n'existe pas encore). Ces limites sont
-écrites dans le prompt système **et** testées.
+**Ce qu'il ne fait pas, et le dit.** Rien sur le sommeil ni la fréquence
+cardiaque (aucune donnée de santé n'est collectée), aucun diagnostic de
+blessure ni conseil médical. Ces limites sont écrites dans le prompt système
+**et** testées.
 
-**Ce qui n'est pas dans la tranche :** la génération de programme, la voix,
-les notifications proactives.
+**Deux limites sont TOMBÉES depuis, et ce paragraphe les annonçait encore.**
+L'alimentation en est sortie : le journal de repas existe, et le coach le lit
+par `get_nutrition_targets` et `get_recent_meals` — il connaît donc les
+objectifs caloriques et ce qui a été noté, et rien de plus, ce que le prompt
+dit désormais à sa place (« un journal vide veut dire qu'il n'a rien noté,
+pas qu'il n'a rien mangé »). Le programme hebdomadaire, lui, reste hors
+périmètre, mais plus pour la raison écrite ici : le module `programs` est
+livré (`PUT /programs/:id`, calendrier daté) ; c'est le coach qui n'a aucun
+outil dessus, et sa seule écriture reste `propose_session`, une séance à la
+fois.
+
+**Ce qui n'est pas dans la tranche :** la génération de programme PAR LE
+COACH, la voix, les notifications proactives. Générer un programme est
+possible — `PUT /programs/:id/generate`, règles déterministes du module
+`programs`, sans modèle de langage — mais c'est une autre porte, et le coach
+n'y touche pas.
 
 ## Modèle de données (Prisma)
 

@@ -190,18 +190,25 @@ Exemple de réponse `/health` :
 Ces endpoints ne sont ni enveloppés ni soumis au rate limiting, et ne sont
 pas auto-journalisés.
 
-## Endpoints cibles du MVP (spécification produit — non implémentés)
+## Le périmètre livré, domaine par domaine
 
-La liste ci-dessous est la **cible** issue de la spécification produit,
-marquée par étape. Aucune de ces routes n'existe encore ; chacune arrivera
-avec sa tranche verticale complète (schéma Prisma → API → clients → tests →
-docs) et sera documentée précisément ici à sa livraison.
+Ce tableau a commencé comme la **cible** de la spécification produit,
+sous un titre qui annonçait « non implémentés » et une phrase qui disait
+« aucune de ces routes n'existe encore ». Les tranches verticales l'ont
+rattrapé ligne à ligne sans que ni le titre ni la phrase ne bougent : un
+lecteur qui s'arrêtait à l'en-tête concluait que l'API était vide.
+
+Le titre dit donc maintenant ce que le tableau montre. **Chaque ligne porte
+son état** : `Livré` ouvre le résumé de ce qui existe vraiment, et l'étape
+d'origine ferme la ligne. Une ligne sans `Livré` est une cible, et ne se lit
+pas autrement. Les tableaux détaillés qui suivent donnent les signatures
+exactes, domaine par domaine.
 
 | Domaine | Routes cibles (indicatives) | Étape |
 | --- | --- | --- |
 | Authentification | **Livré** — voir le tableau détaillé ci-dessous ; connexion sociale Apple/Google incluse (`POST /auth/social`) | Étape 2 ✅ |
 | Utilisateur courant | **Livré** — `GET/PATCH/DELETE /api/v1/users/me`, sessions | Étape 2 ✅ |
-| Exercices | **Livré** — `GET /api/v1/exercises` (recherche `search`, filtres `muscleGroup`/`equipment`/`difficulty`/`type`, pagination `cursor`+`limit`, `meta.nextCursor`/`hasMore`/`total`), `GET /api/v1/exercises/:idOrSlug`, `GET /api/v1/muscle-groups` (groupes NON VIDES seulement), `GET /api/v1/equipment` — catalogue seedé (170 exercices, dont 156 illustrés : pectoraux, biceps, dos, triceps, épaules et abdominaux), cache Redis tolérant aux pannes, exercices non publiés jamais servis | Étape 3 ✅ |
+| Exercices | **Livré** — `GET /api/v1/exercises` (recherche `search`, filtres `muscleGroup`/`equipment`/`difficulty`/`type`, pagination `cursor`+`limit`, `meta.nextCursor`/`hasMore`/`total`), `GET /api/v1/exercises/:idOrSlug`, `GET /api/v1/muscle-groups` (groupes NON VIDES seulement), `GET /api/v1/equipment` — catalogue seedé (190 exercices, dont 156 illustrés : pectoraux, biceps, dos, triceps, épaules et abdominaux), cache Redis tolérant aux pannes, exercices non publiés jamais servis | Étape 3 ✅ |
 | Modèles de séance | **Livré** — `GET /api/v1/workout-templates` (curseur), `GET /workout-templates/:id`, `PUT /workout-templates/:id` (**unique écriture**, create-or-replace, 201/200), `DELETE /workout-templates/:id` (suppression logique rejouable) — voir le tableau détaillé ci-dessous. Programmes multi-semaines : voir la ligne dédiée | Étape 4 ✅ |
 | Séances | **Livré** — `POST /workout-sessions` (création idempotente, id appareil, `templateId`/`templateName`/`programDayId` facultatifs et jamais bloquants — un jour de programme inconnu se perd en silence, la séance jamais), `GET /workout-sessions` (curseur), `GET/PATCH /workout-sessions/:id`, `POST …/:id/complete` et `…/:id/abandon` (rejouables, 409 si clôture croisée) | Étape 4 ✅ |
 | Séries | **Livré** — `POST /workout-sessions/:id/sets` (upsert idempotent, nom d'exercice résolu depuis le catalogue, `plannedReps`/`plannedWeightKg`/`planItemId` facultatifs), `PATCH /workout-sets/:id` (corrige le fait réalisé, jamais la cible), `DELETE /workout-sets/:id` (suppression logique rejouable) | Étape 4 ✅ |
@@ -217,8 +224,11 @@ docs) et sera documentée précisément ici à sa livraison.
 | Repas | **Livré** — `POST /api/v1/nutrition/meals` (201, création idempotente par id appareil, date refusée dans le futur, quantité facultative **descriptive** — `quantity` + `quantityUnit` vont par paire et ne multiplient NI les kcal NI les macros), `GET /nutrition/meals` (journal entre deux instants, plage plafonnée à 366 jours et 10 000 lignes), `PATCH /nutrition/meals/:id` (correction sur place : un champ absent reste tel quel, un champ à `null` efface ce qu'on croyait savoir ; `name`, `kcal` et `eatenAt` refusent `null`), `DELETE /nutrition/meals/:id` (204) — alimente les kcal consommées de l'accueil | Post-Étape 7 ✅ |
 | Notifications | **Livré** — `POST /api/v1/notifications/device-tokens` (204, enregistrement rejouable), `DELETE /notifications/device-tokens` (204, à la déconnexion), `GET /notifications/preferences` (toutes les familles ; jamais réglée = acceptée), `PATCH /notifications/preferences` (204, refus respecté À L'ENVOI côté serveur) ; l'envoi part via FCM, voir `docs/product/notifications.md` | Post-Étape 7 ✅ |
 
-Les chemins exacts, les DTO et les réponses seront fixés à l'implémentation ;
-le tableau engage le périmètre, pas la signature finale.
+Pour une ligne `Livré`, la signature fait foi dans le tableau détaillé de son
+domaine, plus bas, et dans Swagger (`/api/docs`, hors production) ; le résumé
+de la ligne cadre le périmètre, il ne remplace pas la signature. Pour une
+ligne qui reste une cible, chemins, DTO et réponses se fixeront à
+l'implémentation.
 
 ### Endpoints livrés — authentification (Étape 2)
 

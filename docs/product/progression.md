@@ -110,13 +110,21 @@ libellés, on ne les renomme pas.
 
 ## Un seul score : la règle de non-concurrence
 
-Le titre Carlys est le **seul score de progression personnelle**. Les ligues
-(tranche 42) n’existent pas encore ; les niveaux Academy (tranche 37) sont
-livrés et montrent comment tenir la règle : cinq jalons à seuils ABSOLUS
-(indépendants de la taille du pack, donc jamais de recul quand le contenu
-s’étoffe), un affichage sans récompense (le journal fête déjà ces
-franchissements), aucun nombre que la personne « est ». Le jour où les
-ligues arriveront, elles devront tenir de la même façon.
+Le titre Carlys est le **seul score de progression personnelle**. Les niveaux
+Academy (tranche 37) montrent comment tenir la règle : cinq jalons à seuils
+ABSOLUS (indépendants de la taille du pack, donc jamais de recul quand le
+contenu s’étoffe), un affichage sans récompense (le journal fête déjà ces
+franchissements), aucun nombre que la personne « est ».
+
+Les ligues Bronze → Diamant (tranche 42) sont livrées depuis, et ce
+paragraphe les annonçait encore comme à venir. Elles tiennent la règle par
+trois conditions, écrites avec leurs raisons dans
+[community.md](community.md), « Les ligues, barème complet » : un périmètre
+CHOISI (on rejoint une ligue, on ne subit pas un classement mondial), une
+fenêtre qui SE FERME (la période se règle, puis repart), et **aucun report
+dans le profil** — ni point, ni axe, ni titre, ni récompense. Une ligue dit
+qui a fait quoi pendant une période ; elle ne dit jamais ce que la personne
+« est ».
 
 Ce n’est pas une affaire de goût. Le score est dérivé, jamais accumulé : il se
 recalcule à chaque lecture depuis des faits, et ces faits sont en nombre fini.
@@ -191,22 +199,29 @@ suffit à refuser l’écran.
    second titre.
 
 Ce qui doit rester d’une période close relève du journal des récompenses, pas
-d’un compteur parallèle : une ligue tenue se marque par une récompense datée,
-gagnée une fois et jamais reprise, comme le reste de la vitrine.
+d’un compteur parallèle. **Les ligues, elles, ne laissent RIEN** — pas même
+une récompense datée, que ce paragraphe leur ouvrait pourtant. L’arbitrage
+d’écriture a été plus strict que la page : `LeaguesService` n’écrit que dans
+`LeagueMembership`, et son en-tête nomme la garde à relire à chaque ajout —
+« ni `ProgressionFacts` ni `RewardFacts` ne le lisent ». Une récompense de
+ligue serait un report dans le profil, donc le quatrième test ci-dessus
+appliqué à l’envers.
 
-### La contradiction à trancher avant d’écrire une ligue
+### La contradiction, tranchée le 19 septembre 2026
 
-[community.md](community.md) pose en principe non négociable que « la
-progression des défis est collective, jamais un classement individuel », et le
-code le tient : le serveur n’expose qu’une somme agrégée (`_sum.contribution`),
-jamais la part d’une personne nommée. Or une ligue est par nature un classement
-individuel, puisqu’elle ordonne des personnes.
+[community.md](community.md) posait en principe non négociable que « la
+progression des défis est collective, jamais un classement individuel ». Or
+une ligue ordonne des personnes par construction. Les deux ne se conciliaient
+pas à la rédaction, et cette page refusait que la tranche 42 s’écrive comme si
+la contradiction n’existait pas.
 
-Les deux ne se concilient pas à la rédaction. Soit le principe 5 est réécrit
-pour ne porter que sur les DÉFIS, la ligue devenant un autre objet avec ses
-propres garde-fous, soit la ligue ne se fait pas. Cette page ne tranche pas :
-elle refuse seulement que la tranche 42 s’écrive comme si la contradiction
-n’existait pas.
+**Elle a été tranchée dans le premier sens** : le principe 5 a été réécrit
+pour ne porter que sur les DÉFIS COLLECTIFS — le serveur n’y expose toujours
+qu’une somme agrégée (`_sum.contribution`), jamais la part d’une personne
+nommée. Un défi ENTRE AMIS et une LIGUE deviennent des objets distincts,
+permis sous trois garde-fous nommés : périmètre CHOISI, fenêtre qui SE FERME,
+aucun report dans le profil. Les trois sont portés par `LeaguesService` et
+par lui seul, et son en-tête les cite un à un.
 
 ### Ce que « rang » désigne dans cette tranche
 

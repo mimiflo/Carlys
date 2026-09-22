@@ -308,6 +308,89 @@ void main() {
       );
     });
   });
+
+  group('la fraîcheur d’un record se compte en JOURS CIVILS', () {
+    /// `recordFraisJours` vaut 2, et son commentaire dit ce que vaut cette
+    /// fenêtre : « ce jour-là et le suivant ». Les quatre cas ci-dessous
+    /// bornent les deux extrémités, et les deux derniers tiennent ensemble
+    /// la distinction civil / écoulé — c'est elle que l'ancienne ligne
+    /// confondait, en comptant des tranches de 24 heures.
+    QuoteFacts avecRecord(DateTime today, DateTime record) => QuoteFacts(
+      today: today,
+      completedSessions: 20,
+      lastCompletedAt: today.subtract(const Duration(hours: 2)),
+      recentRecordAt: record,
+    );
+
+    test('un record d’AUJOURD’HUI se fête', () {
+      final today = DateTime(2026, 8, 12, 20);
+      expect(
+        activeContexts(avecRecord(today, DateTime(2026, 8, 12, 7))),
+        contains(QuoteContext.recordBattu),
+      );
+    });
+
+    test('un record d’HIER se fête encore', () {
+      final today = DateTime(2026, 8, 12, 20);
+      expect(
+        activeContexts(avecRecord(today, DateTime(2026, 8, 11, 7))),
+        contains(QuoteContext.recordBattu),
+      );
+    });
+
+    test('un record d’AVANT-HIER ne se fête plus', () {
+      // La borne haute. L'ancienne ligne bornait à `<= 2` : elle fêtait ce
+      // record, et celui de la veille encore.
+      final today = DateTime(2026, 8, 12, 20);
+      expect(
+        activeContexts(avecRecord(today, DateTime(2026, 8, 10, 7))),
+        isNot(contains(QuoteContext.recordBattu)),
+      );
+    });
+
+    test('vingt-et-une heures peuvent faire DEUX jours civils', () {
+      // Hier 23 h, aujourd'hui 20 h : 21 heures écoulées, donc ZÉRO tranche
+      // de 24 h — l'ancienne ligne datait ce record d'aujourd'hui. Il est
+      // d'hier, et la phrase servie doit pouvoir le dire au passé.
+      final today = DateTime(2026, 8, 12, 20);
+      final facts = avecRecord(today, DateTime(2026, 8, 11, 23));
+
+      expect(activeContexts(facts), contains(QuoteContext.recordBattu));
+      expect(
+        joursCivilsEntre(DateTime(2026, 8, 11, 23), today),
+        1,
+        reason: 'vingt-et-une heures, et pourtant un jour civil d’écart',
+      );
+    });
+
+    test('soixante-dix heures ne rattrapent pas trois jours civils', () {
+      // Le symétrique, et le cas que l'ancienne ligne fêtait à tort : lundi
+      // 22 h → jeudi 20 h, c'est 70 heures, donc deux tranches de 24 h, et
+      // `<= 2` laissait passer. Trois jours civils : c'est fini.
+      final today = DateTime(2026, 8, 13, 20);
+      final record = DateTime(2026, 8, 10, 22);
+
+      expect(
+        today.difference(record).inDays,
+        2,
+        reason: 'l’ancien compte, celui qui bornait à tort',
+      );
+      expect(joursCivilsEntre(record, today), 3);
+      expect(
+        activeContexts(avecRecord(today, record)),
+        isNot(contains(QuoteContext.recordBattu)),
+      );
+    });
+
+    test('un record À VENIR ne se fête pas', () {
+      // Une horloge d'appareil en avance, ou un serveur qui date au futur.
+      final today = DateTime(2026, 8, 12, 20);
+      expect(
+        activeContexts(avecRecord(today, DateTime(2026, 8, 13, 7))),
+        isNot(contains(QuoteContext.recordBattu)),
+      );
+    });
+  });
 }
 
 /// Les faits de quelqu'un qui s'entraîne tous les jours depuis un mois.

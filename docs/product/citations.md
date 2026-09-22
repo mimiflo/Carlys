@@ -63,7 +63,7 @@ Deux gardes tiennent la réparation, dans `daily_quotes_test.dart` :
 | `retourApresPause` | une séance **aujourd'hui**, après un écart d'au moins 10 jours |
 | `pauseEnCours` | au moins 4 jours sans séance, et **aucune** aujourd'hui |
 | `serieEnCours` | 3 jours d'affilée ou plus |
-| `recordBattu` | un record daté d'aujourd'hui ou d'hier |
+| `recordBattu` | un record daté d'aujourd'hui ou d'hier, en jours CIVILS locaux |
 | `objectifAtteint` | une cible du jour atteinte |
 | `seanceAbandonnee` | la dernière tentative a été abandonnée |
 | `plateau` | le volume de la semaine est sous 90 % de la précédente |
@@ -76,6 +76,16 @@ Une maxime porte **plusieurs** étiquettes quand elle sert plusieurs états.
 Sans ça, il faudrait douze variantes quasi identiques de la même phrase,
 c'est-à-dire douze listes concurrentes — exactement ce que la tranche
 cherchait à éviter.
+
+**« Jours civils » n'est pas un détail de rédaction** — c'est la règle du
+dépôt, et `_estFrais` l'avait perdue. Elle comptait des tranches de 24
+heures : un record d'hier 23 h était « d'aujourd'hui » à 20 h ce soir, et un
+record de lundi 22 h se fêtait encore jeudi soir (70 heures, deux tranches).
+Elle bornait de surcroît à `<= 2` une fenêtre de deux jours, et son garde-fou
+`>= 0` laissait passer une date au futur de moins de 24 heures — une horloge
+d'appareil en avance suffisait à faire féliciter un record inexistant. Cette
+page disait juste ; c'est le code qui a été ramené vers elle (22 septembre
+2026), et six tests bornent maintenant les deux extrémités.
 
 `retourApresPause` et `pauseEnCours` sont des **miroirs exacts** : la
 première exige une séance aujourd'hui, la seconde exige qu'il n'y en ait pas.
