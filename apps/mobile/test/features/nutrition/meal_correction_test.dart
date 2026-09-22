@@ -9,7 +9,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/fake_nutrition_repository.dart';
-import '../../support/in_memory_water_store.dart';
+import '../../support/fake_water_store.dart';
 
 /// CE QUE CE FICHIER PROTÈGE : un repas mal saisi se répare, et une journée
 /// oubliée se rattrape.
@@ -26,7 +26,7 @@ void main() {
   Widget journalWith(FakeNutritionRepository nutrition) => ProviderScope(
     overrides: [
       nutritionRepositoryProvider.overrideWithValue(nutrition),
-      waterStoreProvider.overrideWithValue(InMemoryWaterStore()),
+      waterStoreProvider.overrideWithValue(FakeWaterStore(milliliters: 1250)),
     ],
     child: MaterialApp(
       theme: AppTheme.dark(),

@@ -9,6 +9,7 @@ import 'package:carlys_mobile/features/carlys_profile/domain/entities/carlys_pro
 import 'package:carlys_mobile/features/dashboard/presentation/screens/home_screen.dart';
 import 'package:carlys_mobile/features/nutrition/data/repositories/nutrition_repository_impl.dart';
 import 'package:carlys_mobile/features/nutrition/domain/entities/nutrition.dart';
+import 'package:carlys_mobile/features/nutrition/presentation/controllers/water_controllers.dart';
 import 'package:carlys_mobile/features/onboarding/data/first_run_store.dart';
 import 'package:carlys_mobile/features/onboarding/domain/first_run_step.dart';
 import 'package:carlys_mobile/features/onboarding/presentation/widgets/brand_pillars.dart';
@@ -30,6 +31,7 @@ import '../../support/fake_nutrition_repository.dart';
 import '../../support/fake_progress_repository.dart';
 import '../../support/fake_subscription_repository.dart';
 import '../../support/fake_training_goal_repository.dart';
+import '../../support/fake_water_store.dart';
 import '../../support/fake_workout_repository.dart';
 import '../../support/first_run_prefs.dart';
 
@@ -97,6 +99,7 @@ void main() {
       subscriptionRepositoryProvider.overrideWithValue(subscription),
       progressRepositoryProvider.overrideWithValue(FakeProgressRepository()),
       workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
+      waterStoreProvider.overrideWithValue(FakeWaterStore()),
       syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
       appRestoreProvider.overrideWithValue(NoopAppRestore()),
       ...extra,

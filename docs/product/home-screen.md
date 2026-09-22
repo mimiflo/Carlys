@@ -124,6 +124,11 @@ les jours où la maxime est courte. Un simple **filet vertical** suffit à dire
 typographie, et qui ne creuse jamais. Le corps s'ajuste entre 15 et 21 : les
 maximes vont du simple au double en longueur.
 
+Et elle n'est plus seulement celle du calendrier : **les faits du jour la
+choisissent**, avec repli sur la rotation quand aucun n'est vrai. La règle,
+les douze contextes et leur ordre de priorité vivent dans
+[`citations.md`](citations.md) — et c'est là, pas ici, qu'on les modifie.
+
 ## Le cœur ne se touche pas
 
 La scène 3D de la zone haute reste **exactement** ce qu'elle était : 330 × 330
@@ -144,9 +149,20 @@ lectures partent au réseau : tout harnais de test qui rend l'accueil doit donc
 fournir ses dépôts factices, sinon un minuteur reste en vol après la fin du
 test.
 
-C'est un piège qui s'est déjà refermé trois fois sur ce dépôt. L'écran étant
+C'est un piège qui s'est déjà refermé quatre fois sur ce dépôt. L'écran étant
 plus dense qu'avant, la liste paresseuse atteint des sections qu'elle
 n'atteignait pas — et réveille des lectures qui dormaient.
+
+La quatrième fois n'est pas venue de la liste, mais de la **zone haute** : la
+maxime contextuelle lit les cibles du jour (`todayMetricsProvider`) pour
+savoir si l'une est atteinte, et les cibles du jour comptent l'hydratation,
+comptée sur l'appareil par un magasin Drift qui arme un minuteur de minuit.
+Autrement dit, la citation — le tout premier élément rendu — réveille
+désormais ce qui n'était réveillé qu'en atteignant la grille « AUJOURD'HUI ».
+Sur l'appareil, rien ne change : la grille est de toute façon dans le premier
+écran. En test, **tout harnais qui monte l'accueil doit fournir
+`FakeWaterStore`** (`test/support/fake_water_store.dart`), et seize d'entre
+eux ont dû l'apprendre d'un coup.
 
 ## Découpage
 

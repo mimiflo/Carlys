@@ -12,6 +12,7 @@ import 'package:carlys_mobile/features/coaching/presentation/controllers/coach_c
 import 'package:carlys_mobile/features/coaching/presentation/screens/coach_page.dart';
 import 'package:carlys_mobile/features/coaching/presentation/widgets/coach_composer.dart';
 import 'package:carlys_mobile/features/nutrition/data/repositories/nutrition_repository_impl.dart';
+import 'package:carlys_mobile/features/nutrition/presentation/controllers/water_controllers.dart';
 import 'package:carlys_mobile/features/nutrition/presentation/screens/nutrition_screen.dart';
 import 'package:carlys_mobile/features/profile/presentation/screens/profile_screen.dart';
 import 'package:carlys_mobile/features/progress/data/repositories/progress_repository_impl.dart';
@@ -27,6 +28,7 @@ import '../support/fake_coach_repository.dart';
 import '../support/fake_nutrition_repository.dart';
 import '../support/fake_progress_repository.dart';
 import '../support/fake_subscription_repository.dart';
+import '../support/fake_water_store.dart';
 import '../support/fake_workout_repository.dart';
 import '../support/first_run_prefs.dart';
 import '../support/navigation.dart';
@@ -86,6 +88,7 @@ void main() {
           coachSuggestionsProvider.overrideWithValue(const [
             'Par où je commence ?',
           ]),
+          waterStoreProvider.overrideWithValue(FakeWaterStore()),
           syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
           appRestoreProvider.overrideWithValue(NoopAppRestore()),
         ],

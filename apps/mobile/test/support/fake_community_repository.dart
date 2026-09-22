@@ -1,12 +1,9 @@
-import 'dart:async';
-
 import 'package:carlys_mobile/core/errors/app_exception.dart';
 import 'package:carlys_mobile/features/community/domain/entities/community.dart';
 import 'package:carlys_mobile/features/community/domain/entities/community_moderation.dart';
 import 'package:carlys_mobile/features/community/domain/entities/friend_challenge.dart';
 import 'package:carlys_mobile/features/community/domain/entities/league.dart';
 import 'package:carlys_mobile/features/community/domain/repositories/community_repository.dart';
-import 'package:carlys_mobile/features/nutrition/domain/repositories/water_store.dart';
 
 /// Un signalement reçu par le dépôt factice : la personne, le message visé
 /// (ou `null`), le motif et les précisions nettoyées.
@@ -389,32 +386,5 @@ class FakeCommunityRepository implements CommunityRepository {
     joinsLeague = joined;
     leagueOverride = null;
     return league();
-  }
-}
-
-/// Magasin d'hydratation de test : en mémoire, pilotable.
-///
-/// Indispensable dans tout harnais qui monte l'accueil : sans lui, le
-/// provider ouvrirait une VRAIE base Drift, et le test laisserait derrière
-/// lui un fichier et une connexion ouverte.
-class FakeWaterStore implements WaterStore {
-  FakeWaterStore({this._milliliters = 0});
-
-  int _milliliters;
-  final StreamController<int> _controller = StreamController<int>.broadcast();
-
-  int get milliliters => _milliliters;
-
-  @override
-  Stream<int> watchToday() async* {
-    yield _milliliters;
-    yield* _controller.stream;
-  }
-
-  @override
-  Future<int> addToday(int milliliters) async {
-    _milliliters = (_milliliters + milliliters).clamp(0, 20000);
-    _controller.add(_milliliters);
-    return _milliliters;
   }
 }

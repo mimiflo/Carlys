@@ -520,17 +520,37 @@ entre amis, aucune ligue, aucun pas.
 
 ---
 
-## PLAN 10 — Citations Carlys  `[~] PARTIEL`
+## PLAN 10 — Citations Carlys  `[x] TERMINÉ (à confirmer au Plan 11)`
 
 Existant : 60 maximes originales, 12 par valeur (constance, maîtrise,
 performance, discipline, équilibre), entrelacées par construction
 (`entrelacer()` lève si les listes divergent), rotation par jour.
 
-- [ ] Étendre aux 12 catégories demandées (échec, patience, retour après une
+- [x] Étendre aux 12 catégories demandées (échec, patience, retour après une
       pause, objectifs atteints…) — étiquetage par contexte plutôt que douze
-      listes concurrentes.
-- [ ] Affichage CONTEXTUEL : brancher sur les faits réels (retour après X
+      listes concurrentes. `QuoteContext` porte les douze ; une maxime en
+      porte plusieurs quand elle sert plusieurs états, ce qui évite douze
+      variantes quasi identiques de la même phrase.
+- [x] Affichage CONTEXTUEL : brancher sur les faits réels (retour après X
       jours, record battu, objectif atteint), avec repli sur la rotation.
+      `buildQuoteFacts()` est PUR (ni horloge, ni base, ni réseau) et
+      `contextualQuote()` sert le premier contexte vrai, sinon la rotation
+      d'origine, jour pour jour.
+
+**Un défaut LIVRÉ a été trouvé et fermé au passage.** Trois maximes de la
+rotation parlaient d'un état qu'elles ne vérifiaient pas — « Après une pause,
+reprends plus léger… » s'affichait à tout le monde un jour sur soixante, y
+compris à qui s'entraîne depuis six mois sans en manquer une. Le premier
+geste du plan n'a donc pas été d'ajouter des maximes, mais de sortir
+celles-là de la rotation en les étiquetant. Deux gardes le tiennent : un
+garde structurel (aucune maxime de rotation n'est étiquetée, sur deux tours)
+et un garde lexical (aucune ne contient un marqueur qui AFFIRME un état).
+
+Le balayage sur soixante jours est le cœur du dispositif : une assertion sur
+un seul jour passerait par chance 59 fois sur 60 — c'est-à-dire aussi verte
+que la CI l'était pendant que le défaut était livré.
+
+Règle, priorité et sources des faits : `docs/product/citations.md`.
 
 ---
 

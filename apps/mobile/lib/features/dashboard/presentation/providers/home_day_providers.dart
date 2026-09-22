@@ -13,21 +13,77 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/utilities/current_day.dart';
 import '../../../../core/utilities/formatting.dart';
+import '../../../progress/domain/entities/progress.dart';
+import '../../../progress/presentation/controllers/progress_controllers.dart';
+import '../../../progression/presentation/controllers/progression_controllers.dart';
 import '../../../workout_session/domain/entities/workout.dart';
 import '../../../workout_session/presentation/controllers/workout_controllers.dart';
 import '../../data/daily_quotes.dart';
 import '../../domain/entities/consistency_week.dart';
 import '../../domain/entities/daily_quote.dart';
+import '../../domain/quote_facts.dart';
+import '../controllers/today_metrics.dart';
 
-/// Maxime du jour, tirée du recueil Carlys. Déterministe : même phrase toute
-/// la journée, et sur tous les appareils de l'utilisateur.
+/// LES FAITS qui décident de la maxime.
+///
+/// Aucune requête de plus : les six sources sont des providers que l'accueil
+/// tient déjà vivants. Deux d'entre elles viennent du réseau — les records
+/// et les cibles du jour — et valent donc faux hors ligne ; le repli
+/// calendaire reprend alors la main, ce qui est exactement le comportement
+/// d'avant cette tranche.
+final quoteFactsProvider = Provider.autoDispose<QuoteFacts>((ref) {
+  final today = ref.watch(currentDayProvider);
+  final semaine = ref.watch(consistencyWeekProvider);
+  final volume = ref.watch(weeklyVolumeProvider);
+  final records = ref.watch(personalRecordsProvider).valueOrNull;
+  final profil = ref.watch(progressionProfileProvider);
+
+  // Le record le PLUS RÉCENT, s'il y en a un. La liste arrive triée par le
+  // serveur, mais s'en remettre à un tri qu'on ne contrôle pas rendrait la
+  // fraîcheur dépendante d'une promesse tacite.
+  DateTime? dernierRecord;
+  for (final record in records ?? const <PersonalRecordEntry>[]) {
+    final quand = record.achievedAt;
+    if (dernierRecord == null || quand.isAfter(dernierRecord)) {
+      dernierRecord = quand;
+    }
+  }
+
+  return buildQuoteFacts(
+    today: today,
+    history: ref.watch(workoutHistoryProvider).valueOrNull ?? const [],
+    streakDays: semaine?.streakDays ?? 0,
+    trainedThisWeek: semaine?.trainedCount ?? 0,
+    recentRecordAt: dernierRecord,
+    goalReached: ref
+        .watch(todayMetricsProvider)
+        .any((metric) => (metric.ratio ?? 0) >= 1),
+    thisWeekVolumeKg: volume.thisWeek ?? 0,
+    lastWeekVolumeKg: volume.lastWeek ?? 0,
+    masteryPending:
+        profil?.axes.any(
+          (axe) => axe.value == CarlysValue.maitrise && !axe.known,
+        ) ??
+        false,
+  );
+});
+
+/// Maxime du jour : celle que les FAITS appellent, à défaut celle du
+/// calendrier.
+///
+/// Le contrat de stabilité a changé avec cette tranche, et il faut le dire :
+/// ce n'est plus « la même phrase toute la journée » mais « la même TANT QUE
+/// LES FAITS NE CHANGENT PAS ». Terminer une séance à 18 h change
+/// légitimement la citation — c'est tout l'objet de l'affichage contextuel.
 ///
 /// Le jour vient de [currentDayProvider] : `autoDispose` ne suffit pas ici,
 /// l'accueil observe cette maxime en permanence (il ne quitte jamais la pile
-/// du shell), donc rien ne la renouvelait jamais — « même phrase toute la
-/// journée » devenait la même phrase indéfiniment.
+/// du shell), donc rien ne la renouvelait jamais.
 final dailyQuoteProvider = Provider.autoDispose<DailyQuote>((ref) {
-  return quoteOfTheDay(ref.watch(currentDayProvider));
+  return contextualQuote(
+    facts: ref.watch(quoteFactsProvider),
+    day: ref.watch(currentDayProvider),
+  );
 });
 
 /// Semaine de constance, déduite des séances RÉELLEMENT terminées.

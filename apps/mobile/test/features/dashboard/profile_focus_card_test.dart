@@ -7,6 +7,7 @@ import 'package:carlys_mobile/features/authentication/domain/entities/auth_user.
 import 'package:carlys_mobile/features/carlys_profile/domain/entities/carlys_profile.dart';
 import 'package:carlys_mobile/features/community/presentation/screens/community_screen.dart';
 import 'package:carlys_mobile/features/nutrition/data/repositories/nutrition_repository_impl.dart';
+import 'package:carlys_mobile/features/nutrition/presentation/controllers/water_controllers.dart';
 import 'package:carlys_mobile/features/progress/data/repositories/progress_repository_impl.dart';
 import 'package:carlys_mobile/features/progress/presentation/screens/progress_screen.dart';
 import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';
@@ -17,6 +18,7 @@ import 'package:flutter_test/flutter_test.dart';
 import '../../support/fake_auth_repository.dart';
 import '../../support/fake_nutrition_repository.dart';
 import '../../support/fake_progress_repository.dart';
+import '../../support/fake_water_store.dart';
 import '../../support/fake_workout_repository.dart';
 import '../../support/first_run_prefs.dart';
 
@@ -72,6 +74,10 @@ void main() {
           nutritionRepositoryProvider.overrideWithValue(
             FakeNutritionRepository(),
           ),
+          // La maxime du jour lit désormais les cibles d'aujourd'hui, donc
+          // l'eau : sans doublure, le vrai magasin Drift arme son minuteur
+          // de minuit et le laisse pendre à la fin du test.
+          waterStoreProvider.overrideWithValue(FakeWaterStore()),
           syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
           appRestoreProvider.overrideWithValue(NoopAppRestore()),
         ],

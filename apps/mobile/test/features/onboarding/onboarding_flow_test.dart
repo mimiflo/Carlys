@@ -9,6 +9,7 @@ import 'package:carlys_mobile/features/carlys_profile/data/repositories/carlys_p
 import 'package:carlys_mobile/features/carlys_profile/domain/entities/carlys_profile.dart';
 import 'package:carlys_mobile/features/nutrition/data/repositories/nutrition_repository_impl.dart';
 import 'package:carlys_mobile/features/nutrition/domain/entities/nutrition.dart';
+import 'package:carlys_mobile/features/nutrition/presentation/controllers/water_controllers.dart';
 import 'package:carlys_mobile/features/onboarding/presentation/widgets/onboarding_height_card.dart';
 import 'package:carlys_mobile/features/workout_program/data/repositories/training_goal_repository_impl.dart';
 import 'package:carlys_mobile/features/workout_program/domain/entities/training_goal.dart';
@@ -22,6 +23,7 @@ import '../../support/fake_auth_repository.dart';
 import '../../support/fake_carlys_profile_repository.dart';
 import '../../support/fake_nutrition_repository.dart';
 import '../../support/fake_training_goal_repository.dart';
+import '../../support/fake_water_store.dart';
 import '../../support/fake_workout_repository.dart';
 import '../../support/first_run_prefs.dart';
 
@@ -69,6 +71,7 @@ void main() {
           trainingGoalRepositoryProvider.overrideWithValue(trainingRepo),
           workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
           nutritionRepositoryProvider.overrideWithValue(nutrition),
+          waterStoreProvider.overrideWithValue(FakeWaterStore()),
           syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
           appRestoreProvider.overrideWithValue(NoopAppRestore()),
         ],

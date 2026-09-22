@@ -88,12 +88,12 @@ import '../../test/support/fake_exercises_repository.dart';
 import '../../test/support/fake_nutrition_repository.dart';
 import '../../test/support/fake_progress_repository.dart';
 import '../../test/support/fake_subscription_repository.dart';
+import '../../test/support/fake_water_store.dart';
 import '../../test/support/fake_workout_repository.dart';
 import '../../test/support/first_run_prefs.dart';
 import '../../test/support/in_memory_community_repository.dart';
 import '../../test/support/in_memory_device_token_repository.dart';
 import '../../test/support/in_memory_program_repository.dart';
-import '../../test/support/in_memory_water_store.dart';
 import '../../test/support/in_memory_workout_template_repository.dart';
 
 /// Minuit de la journée en cours.
@@ -260,25 +260,42 @@ WorkoutWithSets activeWorkoutOf() {
   );
 }
 
+/// Cinq séances récentes, datées RELATIVEMENT à aujourd'hui.
+///
+/// Elles l'étaient en août 2026 en dur, et la galerie l'a payé : au fil des
+/// semaines, l'accueil s'est mis à annoncer « 43 jours de repos », une
+/// semaine de constance vide et un volume à zéro — la capture phare du
+/// produit montrait quelqu'un qui a arrêté. Une date figée dans un décor
+/// vieillit ; un décalage, non.
+///
+/// Le calage sert l'écran : trois jours d'affilée (hier, avant-hier et le
+/// jour d'avant) donnent une SÉRIE EN COURS, la journée d'aujourd'hui reste
+/// libre pour que la tuile « Séance du jour » garde son appel à l'action, et
+/// deux séances plus anciennes nourrissent l'historique.
 List<WorkoutHistoryEntry> historyOf() {
-  WorkoutHistoryEntry entry(int day, String name, int sets, double volume) =>
+  final midi = startOfToday().add(const Duration(hours: 9));
+  WorkoutHistoryEntry entry(int recul, String name, int sets, double volume) =>
       WorkoutHistoryEntry(
         session: WorkoutInfo(
-          id: 'h-$day',
+          id: 'h-$recul',
           name: name,
           status: WorkoutStatus.completed,
-          startedAt: DateTime.utc(2026, 8, day, 9),
+          startedAt: midi.subtract(Duration(days: recul)),
+          endedAt: midi
+              .subtract(Duration(days: recul))
+              .add(const Duration(minutes: 52)),
+          durationSeconds: 3120,
           syncState: LocalSyncState.synced,
         ),
         setsCount: sets,
         totalVolumeKg: volume,
       );
   return [
-    entry(7, 'Push A', 14, 2140),
-    entry(6, 'Legs', 12, 3260),
-    entry(4, 'Pull A', 15, 1980),
-    entry(2, 'Push B', 13, 2050),
-    entry(1, 'Full body', 10, 1720),
+    entry(1, 'Push A', 14, 2140),
+    entry(2, 'Legs', 12, 3260),
+    entry(3, 'Pull A', 15, 1980),
+    entry(5, 'Push B', 13, 2050),
+    entry(7, 'Full body', 10, 1720),
   ];
 }
 
@@ -621,7 +638,9 @@ void main() {
           // Sans cette doublure, l'accueil ouvre un vrai flux Drift pour la
           // jauge d'eau, et sa fermeture au démontage laisse un minuteur en
           // vol — toute la galerie échouait sur « A Timer is still pending ».
-          waterStoreProvider.overrideWithValue(InMemoryWaterStore()),
+          waterStoreProvider.overrideWithValue(
+            FakeWaterStore(milliliters: 1250),
+          ),
           // Les puces se calculent depuis les modèles de séance, qui vivent
           // dans Drift : la galerie n'ouvre pas de base locale, elle fige donc
           // le résultat que la règle donnerait pour ce jeu d'exemple.
@@ -940,16 +959,25 @@ void main() {
       workouts: FakeWorkoutRepository()..history = historyOf(),
       nutrition: nutritionOf()
         ..meals.addAll([
+          // Les macros sont renseignées : sans elles, la tuile PROTÉINES
+          // affichait « 0 / 128 g » sur la capture phare, et un journal sans
+          // protéines n'existe pas dans la vraie vie.
           MealEntry(
             id: 'capture-repas-1',
             name: 'Skyr, granola',
             kcal: 380,
+            proteinG: 28,
+            carbsG: 44,
+            fatG: 9,
             eatenAt: startOfToday().add(const Duration(hours: 8)),
           ),
           MealEntry(
             id: 'capture-repas-2',
             name: 'Poulet, riz',
             kcal: 274,
+            proteinG: 31,
+            carbsG: 26,
+            fatG: 5,
             eatenAt: startOfToday().add(const Duration(hours: 12)),
           ),
         ]),

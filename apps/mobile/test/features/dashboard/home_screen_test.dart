@@ -6,6 +6,7 @@ import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/design_system/scenes/heart_scene.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
 import 'package:carlys_mobile/features/dashboard/data/daily_quotes.dart';
+import 'package:carlys_mobile/features/dashboard/domain/entities/daily_quote.dart';
 import 'package:carlys_mobile/features/dashboard/presentation/widgets/consistency_streak.dart';
 import 'package:carlys_mobile/features/dashboard/presentation/widgets/daily_quote_card.dart';
 import 'package:carlys_mobile/features/dashboard/presentation/widgets/home_hero.dart';
@@ -22,9 +23,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/fake_auth_repository.dart';
-import '../../support/fake_community_repository.dart';
 import '../../support/fake_nutrition_repository.dart';
 import '../../support/fake_progress_repository.dart';
+import '../../support/fake_water_store.dart';
 import '../../support/fake_workout_repository.dart';
 import '../../support/first_run_prefs.dart';
 
@@ -279,18 +280,22 @@ void main() {
 
     expect(find.text('CITATION DU JOUR'), findsOneWidget);
 
-    // Celle du jour, exactement — c'est le câblage qu'on vérifie ici ; la
-    // règle de rotation a ses propres tests.
-    final today = quoteOfTheDay(DateTime.now());
-    expect(find.text(today.text), findsOneWidget);
+    // Celle que les FAITS appellent, pas celle du calendrier — c'est le
+    // câblage qu'on vérifie ici ; la règle de sélection a ses propres tests.
+    // La doublure n'a aucune séance terminée : le contexte du jour est donc
+    // « première séance », et la carte doit porter cette maxime-là.
+    final carte = tester.widget<DailyQuoteCard>(find.byType(DailyQuoteCard));
+    expect(carte.quote.contexts, contains(QuoteContext.premiereSeance));
+    expect(carte.quote.text, isNot(quoteOfTheDay(DateTime.now()).text));
+    expect(find.text(carte.quote.text), findsOneWidget);
     // La valeur Carlys ordonne la rotation, elle ne s'affiche pas.
-    expect(find.text(today.value.label), findsNothing);
+    expect(find.text(carte.quote.value.label), findsNothing);
 
     // Elle vit DANS la zone haute, au même niveau que le cœur — mais dans
     // la colonne de gauche, jamais sur la masse de la scène.
     final hero = find.byType(HomeHero);
     expect(
-      find.descendant(of: hero, matching: find.text(today.text)),
+      find.descendant(of: hero, matching: find.text(carte.quote.text)),
       findsOneWidget,
     );
     expect(find.byType(HeartScene), findsOneWidget);

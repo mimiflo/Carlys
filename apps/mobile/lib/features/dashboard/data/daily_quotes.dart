@@ -50,6 +50,8 @@ library;
 import 'package:flutter/foundation.dart';
 
 import '../domain/entities/daily_quote.dart';
+import '../domain/quote_facts.dart';
+import '../domain/quote_selection.dart';
 import 'quotes/constance_quotes.dart';
 import 'quotes/discipline_quotes.dart';
 import 'quotes/equilibre_quotes.dart';
@@ -60,7 +62,7 @@ import 'quotes/performance_quotes.dart';
 ///
 /// L'ordre des clés EST l'ordre de l'entrelacement : le changer change la
 /// rotation. `Map` littérale, donc ordre d'insertion garanti.
-const Map<CarlysValue, List<String>> quotesByValue = {
+const Map<CarlysValue, List<QuoteEntry>> quotesByValue = {
   CarlysValue.constance: constanceQuotes,
   CarlysValue.maitrise: maitriseQuotes,
   CarlysValue.performance: performanceQuotes,
@@ -68,37 +70,63 @@ const Map<CarlysValue, List<String>> quotesByValue = {
   CarlysValue.equilibre: equilibreQuotes,
 };
 
-/// Le recueil servi : un cycle complet de valeurs, puis le suivant.
+/// LE RECUEIL DE ROTATION : un cycle complet de valeurs, puis le suivant.
+///
+/// Les maximes CONTEXTUELLES n'y sont pas, et c'est tout l'objet : « Après
+/// une pause, reprends plus léger » s'affichait un jour sur soixante à qui
+/// s'entraîne depuis six mois sans en manquer une. Elles vivent dans
+/// [carlysContextualQuotes] et ne sortent que quand leur fait est vrai.
 final List<DailyQuote> carlysQuotes = entrelacer(quotesByValue);
+
+/// Les maximes ÉTIQUETÉES, toutes valeurs confondues, dans l'ordre des
+/// fichiers. Servies par `quote_selection.dart`, jamais par la rotation.
+final List<DailyQuote> carlysContextualQuotes = [
+  for (final entree in quotesByValue.entries)
+    for (final maxime in entree.value)
+      if (maxime.contexts.isNotEmpty)
+        DailyQuote(
+          text: maxime.text,
+          value: entree.key,
+          contexts: maxime.contexts,
+        ),
+];
 
 /// Compose l'ordre de rotation : une maxime de chaque valeur, puis on
 /// recommence.
 ///
-/// Lève si les listes n'ont pas la même longueur. C'est volontaire et c'est
-/// tout l'intérêt du découpage : tronquer à la plus courte perdrait des
-/// maximes sans le dire, et composer quand même casserait l'alternance sur
-/// la fin du cycle. Un déséquilibre est une erreur de rédaction, pas un cas
-/// à rattraper.
+/// L'invariant porte sur les maximes SANS CONTEXTE, et sur elles seules :
+/// ce sont les seules qui tournent. Lève si leur nombre diffère d'une valeur
+/// à l'autre — tronquer à la plus courte perdrait des maximes sans le dire,
+/// et composer quand même casserait l'alternance sur la fin du cycle. Un
+/// déséquilibre est une erreur de rédaction, pas un cas à rattraper.
+///
+/// Les maximes étiquetées, elles, s'ajoutent librement : trois de plus à la
+/// constance ne déséquilibrent rien, puisqu'elles ne passent jamais par ici.
 @visibleForTesting
-List<DailyQuote> entrelacer(Map<CarlysValue, List<String>> parValeur) {
-  final longueurs = parValeur.values.map((liste) => liste.length).toSet();
+List<DailyQuote> entrelacer(Map<CarlysValue, List<QuoteEntry>> parValeur) {
+  final rotation = {
+    for (final entree in parValeur.entries)
+      entree.key: entree.value.where((m) => m.contexts.isEmpty).toList(),
+  };
+  final longueurs = rotation.values.map((liste) => liste.length).toSet();
   if (longueurs.length != 1) {
-    final detail = parValeur.entries
+    final detail = rotation.entries
         .map((e) => '${e.key.name} ${e.value.length}')
         .join(', ');
     throw StateError(
-      'Les listes de maximes doivent avoir la même longueur pour que deux '
-      'jours consécutifs ne servent jamais la même valeur. Ici : $detail. '
-      'Les maximes s’ajoutent par cycles de ${parValeur.length}, une par '
-      'valeur.',
+      'Les listes de maximes SANS CONTEXTE doivent avoir la même longueur '
+      'pour que deux jours consécutifs ne servent jamais la même valeur. '
+      'Ici : $detail. Une maxime ÉTIQUETÉE ne compte pas : elle ne tourne '
+      'pas. Les maximes de rotation s’ajoutent par cycles de '
+      '${parValeur.length}, une par valeur.',
     );
   }
 
   final cycles = longueurs.single;
   return [
     for (var cycle = 0; cycle < cycles; cycle++)
-      for (final entree in parValeur.entries)
-        DailyQuote(text: entree.value[cycle], value: entree.key),
+      for (final entree in rotation.entries)
+        DailyQuote(text: entree.value[cycle].text, value: entree.key),
   ];
 }
 
@@ -110,6 +138,34 @@ List<DailyQuote> entrelacer(Map<CarlysValue, List<String>> parValeur) {
 DailyQuote quoteOfTheDay(DateTime day) {
   final index = _daysSinceEpoch(day) % carlysQuotes.length;
   return carlysQuotes[index];
+}
+
+/// LA MAXIME DU JOUR, contexte compris : les faits d'abord, le calendrier
+/// ensuite.
+///
+/// L'ORDRE vient du domaine (`activeContexts`), la PHRASE vient d'ici : la
+/// règle ne connaît pas le recueil, et le recueil ne décide de rien.
+///
+/// Déterministe à faits constants : deux appareils de la même personne
+/// lisent la même phrase. Le contrat de stabilité n'est plus « la même toute
+/// la journée » mais « la même TANT QUE LES FAITS NE CHANGENT PAS » :
+/// terminer une séance à 18 h change légitimement la citation, et c'est tout
+/// l'objet de l'affichage contextuel.
+DailyQuote contextualQuote({required QuoteFacts facts, required DateTime day}) {
+  for (final contexte in activeContexts(facts)) {
+    final candidates = carlysContextualQuotes
+        .where((maxime) => maxime.contexts.contains(contexte))
+        .toList();
+    if (candidates.isEmpty) {
+      // Un contexte sans maxime rédigée n'est pas une erreur : il se saute,
+      // et la priorité continue. C'est ce qui permet d'ajouter un contexte
+      // avant son corpus sans casser l'accueil.
+      continue;
+    }
+    // Le même repère que la rotation : le numéro de jour civil local.
+    return candidates[_daysSinceEpoch(day) % candidates.length];
+  }
+  return quoteOfTheDay(day);
 }
 
 /// Numéro de jour civil local. On repasse par `DateTime.utc` avec les seuls

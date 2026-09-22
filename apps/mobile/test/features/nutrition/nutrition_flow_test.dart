@@ -17,9 +17,9 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/fake_auth_repository.dart';
 import '../../support/fake_nutrition_repository.dart';
+import '../../support/fake_water_store.dart';
 import '../../support/fake_workout_repository.dart';
 import '../../support/first_run_prefs.dart';
-import '../../support/in_memory_water_store.dart';
 import '../../support/navigation.dart' as navigation;
 
 Widget appWith(FakeNutritionRepository nutrition) => ProviderScope(
@@ -42,7 +42,7 @@ Widget appWith(FakeNutritionRepository nutrition) => ProviderScope(
     // En test ce minuteur est à plusieurs heures, et `flutter_test` refuse
     // qu'un minuteur survive à l'arbre : la doublure en mémoire, prévue pour
     // ça, remplace la vraie.
-    waterStoreProvider.overrideWithValue(InMemoryWaterStore()),
+    waterStoreProvider.overrideWithValue(FakeWaterStore(milliliters: 1250)),
   ],
   child: const CarlysApp(),
 );
@@ -53,7 +53,7 @@ Widget appWith(FakeNutritionRepository nutrition) => ProviderScope(
 Widget screenWith(FakeNutritionRepository nutrition) => ProviderScope(
   overrides: [
     nutritionRepositoryProvider.overrideWithValue(nutrition),
-    waterStoreProvider.overrideWithValue(InMemoryWaterStore()),
+    waterStoreProvider.overrideWithValue(FakeWaterStore(milliliters: 1250)),
   ],
   child: MaterialApp(theme: AppTheme.dark(), home: const NutritionScreen()),
 );

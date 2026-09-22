@@ -2,10 +2,10 @@ import 'package:carlys_mobile/app/app.dart';
 import 'package:carlys_mobile/app/environment/app_environment.dart';
 import 'package:carlys_mobile/app/restore/app_restore.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
-
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
 import 'package:carlys_mobile/features/dashboard/presentation/screens/home_screen.dart';
+import 'package:carlys_mobile/features/nutrition/presentation/controllers/water_controllers.dart';
 import 'package:carlys_mobile/features/onboarding/presentation/controllers/splash_gate.dart';
 import 'package:carlys_mobile/features/onboarding/presentation/screens/splash_screen.dart';
 import 'package:carlys_mobile/features/onboarding/presentation/widgets/athlete_photo.dart';
@@ -20,6 +20,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/fake_auth_repository.dart';
 import '../../support/fake_progress_repository.dart';
+import '../../support/fake_water_store.dart';
 import '../../support/fake_workout_repository.dart';
 import '../../support/first_run_prefs.dart';
 import '../../support/in_memory_workout_template_repository.dart';
@@ -58,6 +59,7 @@ void main() {
         InMemoryWorkoutTemplateRepository(FakeWorkoutRepository()),
       ),
       progressRepositoryProvider.overrideWithValue(FakeProgressRepository()),
+      waterStoreProvider.overrideWithValue(FakeWaterStore()),
       syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
       appRestoreProvider.overrideWithValue(NoopAppRestore()),
     ],
