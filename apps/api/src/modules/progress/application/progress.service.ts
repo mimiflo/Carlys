@@ -184,6 +184,8 @@ export class ProgressService {
         maxWeightKg: point.maxWeightKg,
         maxReps: point.maxReps,
         volumeKg: point.volumeKg,
+        distanceMeters: point.distanceMeters,
+        durationSeconds: point.durationSeconds,
       })),
     };
   }

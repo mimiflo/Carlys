@@ -138,6 +138,8 @@ class ExerciseProgressionPoint {
     required this.volumeKg,
     this.maxWeightKg,
     this.maxReps,
+    this.distanceMeters = 0,
+    this.durationSeconds = 0,
   });
 
   final String sessionId;
@@ -145,6 +147,15 @@ class ExerciseProgressionPoint {
   final double volumeKg;
   final double? maxWeightKg;
   final int? maxReps;
+
+  /// Ce que la séance a parcouru et chronométré sur cet exercice, SOMMÉ :
+  /// trois fractionnés de 400 m font 1 200 m de course. Zéro sur un
+  /// exercice de fonte, ce qui est exact.
+  final int distanceMeters;
+  final int durationSeconds;
+
+  /// Vrai quand la séance a laissé une trace de cardio.
+  bool get hasCardio => distanceMeters > 0 || durationSeconds > 0;
 }
 
 /// La progression sur un exercice : ses séances ET ses records, ensemble.
@@ -169,4 +180,38 @@ class ExerciseProgressionEntity {
   /// Séances où une charge a été notée : les seules traçables en kilos.
   List<ExerciseProgressionPoint> get chargedPoints =>
       points.where((point) => point.maxWeightKg != null).toList();
+
+  /// Séances où une distance ou un chrono a été noté.
+  List<ExerciseProgressionPoint> get cardioPoints =>
+      points.where((point) => point.hasCardio).toList();
+
+  /// Ce que cet exercice raconte le mieux : des kilos, ou des kilomètres.
+  ///
+  /// Le choix se fait sur les FAITS, pas sur une étiquette d'exercice : une
+  /// fiche mal catégorisée n'a alors aucune conséquence, et un exercice
+  /// hybride (le rameur chargé, la marche lestée) suit ce qu'on y a
+  /// réellement noté. À égalité, la charge l'emporte — c'est le cœur de
+  /// l'application.
+  bool get readsAsCardio => cardioPoints.length > chargedPoints.length;
+
+  /// Ce qu'une courbe cardio trace : la distance quand elle est notée au
+  /// moins aussi souvent que le chrono, le temps sinon.
+  ///
+  /// La distance l'emporte à égalité parce qu'elle dit la performance : un
+  /// coureur qui met le même temps sur plus de kilomètres progresse, et
+  /// l'inverse ne se lit pas.
+  CardioReading get cardioReading {
+    final avecDistance = cardioPoints
+        .where((point) => point.distanceMeters > 0)
+        .length;
+    final avecChrono = cardioPoints
+        .where((point) => point.durationSeconds > 0)
+        .length;
+    return avecDistance >= avecChrono
+        ? CardioReading.distance
+        : CardioReading.duration;
+  }
 }
+
+/// Ce qu'une courbe cardio met en ordonnée.
+enum CardioReading { distance, duration }

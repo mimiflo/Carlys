@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/workout.dart';
-import 'set_entry_fields.dart';
 
 /// Ligne de série de l'exercice en cours (maquette 2e).
 ///

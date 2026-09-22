@@ -128,15 +128,3 @@ class TimeAndDistanceFields extends StatelessWidget {
     );
   }
 }
-
-/// Une durée lisible : des secondes tant qu'elles se comptent, des minutes
-/// ensuite. « 180 s » se lit moins bien que « 3:00 », et « 45 s » se lit
-/// mieux que « 0:45 ».
-({String value, String unit}) formatDuration(int seconds) {
-  if (seconds < 60) {
-    return (value: '$seconds', unit: 's');
-  }
-  final minutes = seconds ~/ 60;
-  final reste = seconds % 60;
-  return (value: '$minutes:${reste.toString().padLeft(2, '0')}', unit: 'min');
-}

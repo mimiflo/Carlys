@@ -129,10 +129,52 @@ trois cas et les DIT :
 | Cas | Ce qui s'affiche |
 | --- | --- |
 | Aucune séance | État vide, avec la sortie (« termine une séance qui le contient ») |
-| Séances sans aucune charge notée | « Pas encore de courbe », et le rappel que le volume compte quand même |
-| Une seule séance chargée | « La courbe se trace à partir de deux » |
+| Séances sans charge, ni chrono, ni distance | « Pas encore de courbe », et le rappel que le volume compte quand même |
+| Une seule séance chiffrée | « La courbe se trace à partir de deux » |
 
 Les séances restent listées dans les trois cas : elles ont bien eu lieu.
+
+### La courbe CARDIO (22 septembre 2026)
+
+Un tapis et un développé couché ne se lisent pas sur la même courbe. La
+charge maximale d'une course vaut `null`, et l'écran rendait donc « pas
+encore de courbe » à quelqu'un qui courait depuis six mois : il disait
+« rien » là où il y avait tout.
+
+`GET /progress/exercises/:id` sert désormais `distanceMeters` et
+`durationSeconds` par séance, **SOMMÉS** et non maximisés : trois fractionnés
+de 400 m font 1 200 m de course, alors qu'une charge ne s'additionne pas
+d'une série à l'autre. Zéro sur un exercice de fonte, ce qui est exact — et
+c'est ce zéro qui permet au client de choisir la courbe à tracer.
+
+**Ce qui décide de la courbe, ce sont les FAITS, jamais une étiquette
+d'exercice.** Une fiche mal catégorisée n'a alors aucune conséquence, et un
+exercice hybride (le rameur chargé, la marche lestée) suit ce qu'on y a
+réellement noté :
+
+1. plus de séances cardio que de séances chargées → **courbe cardio** ;
+2. sinon, au moins deux séances chargées → **courbe de charge** ;
+3. sinon, au moins deux séances cardio → **courbe cardio** (le repli d'un
+   exercice qui n'a qu'une seule séance chargée) ;
+4. sinon, l'état vide du tableau ci-dessus.
+
+En ordonnée, la **distance** quand elle est notée au moins aussi souvent que
+le chrono, le **temps** sinon. La distance l'emporte à égalité parce qu'elle
+dit la performance : un coureur qui met le même temps sur plus de kilomètres
+progresse, et l'inverse ne se lit pas. L'échelle est en kilomètres ou en
+minutes, jamais en mètres ou en secondes — une échelle en secondes écrase la
+courbe d'une séance à l'autre.
+
+Les lignes de séance suivent : une séance de course écrit sa distance et son
+chrono là où une séance de fonte écrit sa charge et son volume. Elles
+affichaient « — » et « 0 kg », c'est-à-dire un échec là où il y avait huit
+kilomètres.
+
+Les deux courbes partagent leur CADRE (`progression_chart_frame.dart`) :
+carte, tracé, révélation au balayage, trois repères de date pris sur des
+séances réelles, énoncé pour le lecteur d'écran. Elles ne diffèrent que par
+ce qu'elles tracent, et deux copies auraient divergé par leur sémantique,
+c'est-à-dire par la moitié qui ne se voit pas.
 
 ## Hors périmètre, et pourquoi
 

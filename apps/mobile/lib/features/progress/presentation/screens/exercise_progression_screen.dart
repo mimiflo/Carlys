@@ -5,6 +5,7 @@ import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/progress.dart';
 import '../providers/exercise_progression_providers.dart';
+import '../widgets/exercise_cardio_chart.dart';
 import '../widgets/exercise_progression_chart.dart';
 import '../widgets/record_row.dart';
 
@@ -71,21 +72,10 @@ class _Body extends StatelessWidget {
     return ListView(
       padding: const EdgeInsets.all(AppSpacing.gutter),
       children: [
-        if (ExerciseProgressionChart.traceable(progression))
-          ExerciseProgressionChart(progression: progression)
-        else
-          // Une charge notée ne suffit pas à faire une courbe, et deux
-          // séances au poids du corps n'en feront jamais. Le dire vaut mieux
-          // qu'un graphique vide ou qu'une ligne plate à zéro.
-          AppEmptyState(
-            title: 'Pas encore de courbe',
-            message: progression.chargedPoints.isEmpty
-                ? 'Cet exercice n’a encore aucune charge notée. Le volume '
-                      'compte quand même dans tes statistiques.'
-                : 'Une seule séance chargée pour l’instant : la courbe se '
-                      'trace à partir de deux.',
-            icon: AppIcons.progress,
-          ),
+        // La courbe suit ce que l'exercice PRODUIT. Un tapis n'a pas de
+        // charge maximale, et la courbe de kilos rendait « pas encore de
+        // courbe » à quelqu'un qui courait depuis six mois.
+        ?_courbe(progression),
         const SizedBox(height: AppSpacing.gapSection),
         AppSectionHeader(
           title: 'Séances',
@@ -111,6 +101,36 @@ class _Body extends StatelessWidget {
   }
 }
 
+/// La courbe qui convient à cet exercice, ou l'explication de son absence.
+///
+/// Ordre volontaire : le cardio d'abord QUAND l'exercice se lit ainsi, la
+/// charge sinon. Un exercice hybride (le rameur chargé) a les deux ; on en
+/// trace une seule, celle que ses séances racontent le mieux.
+Widget? _courbe(ExerciseProgressionEntity progression) {
+  if (progression.readsAsCardio && ExerciseCardioChart.traceable(progression)) {
+    return ExerciseCardioChart(progression: progression);
+  }
+  if (ExerciseProgressionChart.traceable(progression)) {
+    return ExerciseProgressionChart(progression: progression);
+  }
+  if (ExerciseCardioChart.traceable(progression)) {
+    return ExerciseCardioChart(progression: progression);
+  }
+  // Une seule séance ne suffit pas à faire une courbe, et deux séances sans
+  // charge, sans chrono ni distance n'en feront jamais. Le dire vaut mieux
+  // qu'un graphique vide ou qu'une ligne plate à zéro.
+  return AppEmptyState(
+    title: 'Pas encore de courbe',
+    message:
+        progression.chargedPoints.isEmpty && progression.cardioPoints.isEmpty
+        ? 'Cet exercice n’a encore ni charge, ni chrono, ni distance notés. '
+              'Le volume compte quand même dans tes statistiques.'
+        : 'Une seule séance chiffrée pour l’instant : la courbe se trace à '
+              'partir de deux.',
+    icon: AppIcons.progress,
+  );
+}
+
 /// Une séance sur cet exercice : sa date, sa charge, son volume.
 class _SessionRow extends StatelessWidget {
   const _SessionRow({required this.point});
@@ -120,17 +140,16 @@ class _SessionRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final date = formatShortDateMono(point.date.toLocal());
-    // Une séance sans charge notée ne vaut pas zéro kilo : elle n'a pas de
-    // charge. Le tiret le dit, un « 0 kg » mentirait.
-    final charge = point.maxWeightKg == null
-        ? '—'
-        : '${formatDecimal(point.maxWeightKg!)} kg';
-    final volume = formatVolume(point.volumeKg);
+    // Une séance de COURSE n'a ni charge ni volume : les deux colonnes
+    // affichaient « — » et « 0 kg », c'est-à-dire un échec là où il y avait
+    // huit kilomètres. Quand la séance a laissé une trace cardio, ce sont
+    // ses chiffres à elle qui s'écrivent.
+    final (valeur, detail, dit) = point.hasCardio
+        ? _cardio(point)
+        : _charge(point);
 
     return Semantics(
-      label:
-          'Séance du $date, charge maximale $charge, '
-          'volume ${volume.value} ${volume.unit}',
+      label: 'Séance du $date, $dit',
       excludeSemantics: true,
       child: Container(
         padding: const EdgeInsets.symmetric(
@@ -169,7 +188,7 @@ class _SessionRow extends StatelessWidget {
               ),
             ),
             Text(
-              charge,
+              valeur,
               style: AppTypography.resized(
                 AppTypography.metricS,
                 15,
@@ -177,7 +196,7 @@ class _SessionRow extends StatelessWidget {
             ),
             const SizedBox(width: AppSpacing.md),
             Text(
-              '${volume.value} ${volume.unit}',
+              detail,
               style: AppTypography.resized(
                 AppTypography.labelMono,
                 11,
@@ -186,6 +205,43 @@ class _SessionRow extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  /// Ce qu'une séance de FONTE met dans les deux colonnes : sa charge
+  /// maximale, son volume. Une séance sans charge notée ne vaut pas zéro
+  /// kilo — elle n'a pas de charge, et le tiret le dit là où « 0 kg »
+  /// mentirait.
+  static (String, String, String) _charge(ExerciseProgressionPoint point) {
+    final charge = point.maxWeightKg == null
+        ? '—'
+        : '${formatDecimal(point.maxWeightKg!)} kg';
+    final volume = formatVolume(point.volumeKg);
+    return (
+      charge,
+      '${volume.value} ${volume.unit}',
+      'charge maximale $charge, volume ${volume.value} ${volume.unit}',
+    );
+  }
+
+  /// Ce qu'une séance de CARDIO y met : sa distance et son chrono, dans
+  /// l'ordre où ils ont été notés. L'un peut manquer sans l'autre.
+  static (String, String, String) _cardio(ExerciseProgressionPoint point) {
+    final distance = point.distanceMeters > 0
+        ? formatDistance(point.distanceMeters)
+        : null;
+    final duree = point.durationSeconds > 0
+        ? formatDuration(point.durationSeconds)
+        : null;
+    final tete = distance ?? duree!;
+    final queue = distance == null ? null : duree;
+    return (
+      '${tete.value} ${tete.unit}',
+      queue == null ? '' : '${queue.value} ${queue.unit}',
+      [
+        if (distance != null) 'distance ${distance.value} ${distance.unit}',
+        if (duree != null) 'durée ${duree.value} ${duree.unit}',
+      ].join(', '),
     );
   }
 }

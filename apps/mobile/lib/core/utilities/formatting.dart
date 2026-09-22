@@ -104,6 +104,32 @@ String formatDurationShort(int seconds) {
   return '${minutes ~/ 60} H ${rest.toString().padLeft(2, '0')}';
 }
 
+/// Une durée lisible : des secondes tant qu'elles se comptent, des minutes
+/// ensuite. « 180 s » se lit moins bien que « 3:00 », et « 45 s » se lit
+/// mieux que « 0:45 ».
+///
+/// Vivait dans `set_entry_fields.dart`, c'est-à-dire dans un widget d'une
+/// autre fonctionnalité : la courbe cardio en avait besoin, et l'importer de
+/// là aurait collé `progress` à `workout_session`.
+({String value, String unit}) formatDuration(int seconds) {
+  if (seconds < 60) {
+    return (value: '$seconds', unit: 's');
+  }
+  final minutes = seconds ~/ 60;
+  final reste = seconds % 60;
+  return (value: '$minutes:${reste.toString().padLeft(2, '0')}', unit: 'min');
+}
+
+/// Une distance lisible : des mètres tant qu'ils se comptent, des kilomètres
+/// ensuite. « 5 400 m » se lit moins bien que « 5,4 km », et « 400 m » se lit
+/// mieux que « 0,4 km ». Même forme que [formatWeight] et [formatDuration].
+({String value, String unit}) formatDistance(int meters) {
+  if (meters < 1000) {
+    return (value: formatThousands(meters), unit: 'm');
+  }
+  return (value: formatDecimal(meters / 1000), unit: 'km');
+}
+
 /// Chronomètre de séance : « 18:42 », ou « 1:18:42 » au-delà de l'heure.
 String formatChrono(int seconds) {
   final safe = seconds < 0 ? 0 : seconds;

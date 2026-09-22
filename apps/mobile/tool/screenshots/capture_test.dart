@@ -56,6 +56,7 @@ import 'package:carlys_mobile/features/profile/presentation/screens/profile_scre
 import 'package:carlys_mobile/features/profile/presentation/widgets/profile_plan_card.dart';
 import 'package:carlys_mobile/features/progress/data/repositories/progress_repository_impl.dart';
 import 'package:carlys_mobile/features/progress/domain/entities/progress.dart';
+import 'package:carlys_mobile/features/progress/presentation/screens/exercise_progression_screen.dart';
 import 'package:carlys_mobile/features/progress/presentation/screens/progress_screen.dart';
 import 'package:carlys_mobile/features/progress/presentation/widgets/body_weight_section.dart';
 import 'package:carlys_mobile/features/progression/presentation/widgets/manifesto_tile.dart';
@@ -302,6 +303,33 @@ FakeProgressRepository progressOf() => FakeProgressRepository(
         kind: BodyMetricKind.weightKg,
         value: value,
         measuredAt: DateTime.utc(2026, 6, 25).add(Duration(days: index * 6)),
+      ),
+  ],
+);
+
+/// Une course suivie sur six semaines : la vitrine de la courbe CARDIO.
+///
+/// Sans charge et sans volume, exprès — c'est le cas que la courbe de kilos
+/// rendait comme « pas encore de courbe ».
+ExerciseProgressionEntity cardioProgressionOf() => ExerciseProgressionEntity(
+  exerciseId: 'course',
+  exerciseName: 'Course à pied',
+  records: const [],
+  points: [
+    for (final (index, (metres, secondes)) in const [
+      (5000, 1980),
+      (5600, 2100),
+      (6200, 2220),
+      (6000, 2040),
+      (7100, 2400),
+      (8000, 2580),
+    ].indexed)
+      ExerciseProgressionPoint(
+        sessionId: 'c-$index',
+        date: DateTime.utc(2026, 8, 3 + index * 6, 7),
+        volumeKg: 0,
+        distanceMeters: metres,
+        durationSeconds: secondes,
       ),
   ],
 );
@@ -719,6 +747,41 @@ void main() {
       tester,
       '37c-progression-axes',
       shows: find.byType(ManifestoTile),
+    );
+  });
+
+  testWidgets('progression — la courbe cardio d’un exercice', (tester) async {
+    // L'écran par exercice, monté SEUL : il a son propre Scaffold et sa
+    // propre barre, et l'atteindre par la navigation demanderait un record
+    // porteur d'identifiant d'exercice que la vitrine n'a pas.
+    final progress = progressOf()
+      ..exerciseProgressions['course'] = cardioProgressionOf();
+
+    // La surface et le bandeau de débogage viennent de `pumpApp` pour tous
+    // les autres écrans : montés à la main, il faut les poser ici, sinon la
+    // capture sort en paysage avec le ruban rouge dans le coin.
+    tester.view.physicalSize = const Size(1179, 2556);
+    tester.view.devicePixelRatio = 3.0;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [progressRepositoryProvider.overrideWithValue(progress)],
+        child: MaterialApp(
+          debugShowCheckedModeBanner: false,
+          theme: AppTheme.dark(),
+          home: const ExerciseProgressionScreen(exerciseId: 'course'),
+        ),
+      ),
+    );
+    await settle(tester);
+    // La courbe SE DESSINE en 600 ms, et `settle` n'en pompe que 430 : sans
+    // cette attente, la capture montre un tracé coupé net à mi-chemin.
+    await tester.pump(AppMotion.deliberate);
+    await tester.pump();
+    await capture(
+      tester,
+      '39-progression-cardio',
+      shows: find.text('DISTANCE PAR SÉANCE'),
     );
   });
 

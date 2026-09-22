@@ -53,6 +53,10 @@ ExerciseProgressionPoint exerciseProgressionPointFromJson(
   volumeKg: (json['volumeKg'] as num).toDouble(),
   maxWeightKg: (json['maxWeightKg'] as num?)?.toDouble(),
   maxReps: (json['maxReps'] as num?)?.toInt(),
+  // Zéro par défaut : un serveur d'avant cette tranche ne les envoie pas,
+  // et l'exercice se lit alors comme de la fonte — sa courbe de charge.
+  distanceMeters: (json['distanceMeters'] as num?)?.toInt() ?? 0,
+  durationSeconds: (json['durationSeconds'] as num?)?.toInt() ?? 0,
 );
 
 ExerciseProgressionEntity exerciseProgressionFromJson(

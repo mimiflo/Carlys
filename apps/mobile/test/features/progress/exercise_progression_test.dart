@@ -2,6 +2,7 @@ import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/progress/data/repositories/progress_repository_impl.dart';
 import 'package:carlys_mobile/features/progress/domain/entities/progress.dart';
 import 'package:carlys_mobile/features/progress/presentation/screens/exercise_progression_screen.dart';
+import 'package:carlys_mobile/features/progress/presentation/widgets/exercise_cardio_chart.dart';
 import 'package:carlys_mobile/features/progress/presentation/widgets/exercise_progression_chart.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -16,12 +17,16 @@ void main() {
     int jour, {
     double? charge,
     double volume = 1200,
+    int metres = 0,
+    int secondes = 0,
   }) => ExerciseProgressionPoint(
     sessionId: 's-$jour',
     date: DateTime.utc(2026, 8, jour, 18),
     volumeKg: volume,
     maxWeightKg: charge,
     maxReps: charge == null ? null : 8,
+    distanceMeters: metres,
+    durationSeconds: secondes,
   );
 
   ExerciseProgressionEntity progression({
@@ -148,8 +153,12 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(ExerciseProgressionChart), findsNothing);
+    expect(find.byType(ExerciseCardioChart), findsNothing);
     expect(find.text('Pas encore de courbe'), findsOneWidget);
-    expect(find.textContaining('aucune charge notée'), findsOneWidget);
+    expect(
+      find.textContaining('ni charge, ni chrono, ni distance'),
+      findsOneWidget,
+    );
     // Les séances restent listées : elles ont bien eu lieu.
     expect(find.text('3'), findsOneWidget);
   });
@@ -188,5 +197,118 @@ void main() {
 
     expect(find.text('Progression indisponible'), findsOneWidget);
     expect(find.text('Réessayer'), findsOneWidget);
+  });
+
+  group('Le CARDIO a sa propre courbe', () {
+    testWidgets('une course se trace en kilomètres, pas en kilos', (
+      tester,
+    ) async {
+      // Le cas qui a motivé la tranche : la charge maximale d'une course
+      // vaut `null`, et l'écran rendait « pas encore de courbe » à quelqu'un
+      // qui courait depuis six mois.
+      final repository = avec(
+        progression(
+          points: [
+            point(1, volume: 0, metres: 5000, secondes: 1800),
+            point(8, volume: 0, metres: 6500, secondes: 2100),
+            point(15, volume: 0, metres: 8000, secondes: 2400),
+          ],
+        ),
+      );
+
+      await tester.pumpWidget(host(repository));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ExerciseCardioChart), findsOneWidget);
+      expect(find.byType(ExerciseProgressionChart), findsNothing);
+      expect(find.text('DISTANCE PAR SÉANCE'), findsOneWidget);
+      // Le cumul dit ce que la courbe ne dit pas : 19,5 km au total.
+      expect(find.text('19,5 km sur 3 séances'), findsOneWidget);
+    });
+
+    testWidgets('sans distance notée, c’est le CHRONO qui monte en ordonnée', (
+      tester,
+    ) async {
+      final repository = avec(
+        progression(
+          points: [
+            point(1, volume: 0, secondes: 1800),
+            point(8, volume: 0, secondes: 2400),
+          ],
+        ),
+      );
+
+      await tester.pumpWidget(host(repository));
+      await tester.pumpAndSettle();
+
+      expect(find.text('TEMPS D’EFFORT PAR SÉANCE'), findsOneWidget);
+      expect(find.text('70:00 min sur 2 séances'), findsOneWidget);
+    });
+
+    testWidgets('un exercice HYBRIDE suit ce que ses séances racontent', (
+      tester,
+    ) async {
+      // Le rameur : deux séances chargées, trois en cardio. On trace UNE
+      // courbe, celle de la majorité des faits — pas celle d'une étiquette
+      // d'exercice, qu'une fiche mal catégorisée rendrait fausse.
+      final repository = avec(
+        progression(
+          points: [
+            point(1, charge: 40),
+            point(3, charge: 42),
+            point(8, volume: 0, metres: 2000, secondes: 600),
+            point(10, volume: 0, metres: 2400, secondes: 660),
+            point(15, volume: 0, metres: 3000, secondes: 720),
+          ],
+        ),
+      );
+
+      await tester.pumpWidget(host(repository));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(ExerciseCardioChart), findsOneWidget);
+      expect(find.byType(ExerciseProgressionChart), findsNothing);
+    });
+
+    testWidgets('une séance de course s’écrit avec ses chiffres à elle', (
+      tester,
+    ) async {
+      final repository = avec(
+        progression(
+          points: [
+            point(1, volume: 0, metres: 5000, secondes: 1800),
+            point(8, volume: 0, metres: 6500, secondes: 2100),
+          ],
+        ),
+      );
+
+      await tester.pumpWidget(host(repository));
+      await tester.pumpAndSettle();
+
+      // La ligne de séance affichait « — » et « 0 kg », c'est-à-dire un
+      // échec là où il y avait cinq kilomètres.
+      expect(find.text('6,5 km'), findsOneWidget);
+      expect(find.text('35:00 min'), findsOneWidget);
+      expect(find.text('—'), findsNothing);
+    });
+
+    test('la lecture se décide sur les FAITS, à égalité la distance gagne', () {
+      final distanceEtChrono = progression(
+        points: [
+          point(1, volume: 0, metres: 5000, secondes: 1800),
+          point(8, volume: 0, metres: 6500, secondes: 2100),
+        ],
+      );
+      expect(distanceEtChrono.cardioReading, CardioReading.distance);
+
+      final surtoutDuChrono = progression(
+        points: [
+          point(1, volume: 0, metres: 5000, secondes: 1800),
+          point(8, volume: 0, secondes: 2100),
+          point(15, volume: 0, secondes: 2400),
+        ],
+      );
+      expect(surtoutDuChrono.cardioReading, CardioReading.duration);
+    });
   });
 }

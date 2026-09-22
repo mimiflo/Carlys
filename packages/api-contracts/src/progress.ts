@@ -48,6 +48,17 @@ export const exerciseProgressionPointSchema = z.object({
   maxWeightKg: z.number().nullable(),
   maxReps: z.number().nullable(),
   volumeKg: z.number(),
+  /**
+   * Ce que la séance a parcouru et chronométré sur CET exercice.
+   *
+   * SOMMÉS, jamais maximisés : trois fractionnés de 400 m font 1 200 m de
+   * course, alors qu'une charge ne s'additionne pas d'une série à l'autre.
+   * Zéro sur un exercice de fonte, ce qui est exact — un tapis et un développé
+   * couché ne se lisent pas sur la même courbe, et c'est le client qui choisit
+   * laquelle tracer.
+   */
+  distanceMeters: z.number(),
+  durationSeconds: z.number(),
 });
 export type ExerciseProgressionPoint = z.infer<typeof exerciseProgressionPointSchema>;
 

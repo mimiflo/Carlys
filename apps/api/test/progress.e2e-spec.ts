@@ -75,7 +75,9 @@ describe('Progression (e2e)', () => {
   afterAll(async () => {
     // Nettoyage strictement limité à cette suite (les e2e partagent la base).
     await prisma.user.deleteMany({ where: { email: { in: [userEmail, otherEmail] } } });
-    await prisma.exercise.deleteMany({ where: { slug: 'e2e-progress-exercice' } });
+    await prisma.exercise.deleteMany({
+      where: { slug: { in: ['e2e-progress-exercice', 'e2e-progress-course'] } },
+    });
     await prisma.$disconnect();
     await app.close();
   });
@@ -204,11 +206,55 @@ describe('Progression (e2e)', () => {
     expect(progression.points).toHaveLength(2); // séances terminées uniquement
     expect(progression.points[0]?.maxWeightKg).toBe(60);
     expect(progression.points[1]?.maxWeightKg).toBe(70);
+    // Une séance de FONTE n'a ni distance ni chrono, et zéro est exact ici :
+    // c'est ce qui permet au client de choisir la courbe à tracer.
+    expect(progression.points[0]?.distanceMeters).toBe(0);
+    expect(progression.points[0]?.durationSeconds).toBe(0);
     expect(progression.records.find((record) => record.recordType === 'MAX_WEIGHT')?.value).toBe(
       70,
     );
 
     await authed(accessToken).get(`/api/v1/progress/exercises/${randomUUID()}`).expect(404);
+  });
+
+  it('trace aussi le CARDIO : distance et chrono, SOMMÉS par séance', async () => {
+    // Un exercice à part : la course n'a pas de charge, et c'est exactement
+    // le cas que la courbe de kilos rendait comme « pas encore de courbe ».
+    const course = await ensureExerciseFixture(prisma, 'e2e-progress-course');
+    const sessionD = randomUUID();
+    await createSession(sessionD, 120);
+
+    // Trois fractionnés de 400 m : la distance s'ADDITIONNE d'une série à
+    // l'autre, là où une charge se maximise. C'est la différence qui a
+    // décidé du `SUM` plutôt que du `MAX`.
+    for (const position of [0, 1, 2]) {
+      await authed(accessToken)
+        .post(`/api/v1/workout-sessions/${sessionD}/sets`)
+        .send({
+          id: randomUUID(),
+          exerciseId: course.id,
+          position,
+          distanceMeters: 400,
+          durationSeconds: 90,
+          completedAt: at(110 - position),
+        })
+        .expect(201);
+    }
+    await authed(accessToken)
+      .post(`/api/v1/workout-sessions/${sessionD}/complete`)
+      .send({})
+      .expect(200);
+
+    const progression = data<ExerciseProgression>(
+      (await authed(accessToken).get(`/api/v1/progress/exercises/${course.id}`).expect(200)).body,
+    );
+
+    expect(progression.points).toHaveLength(1);
+    expect(progression.points[0]?.distanceMeters).toBe(1_200);
+    expect(progression.points[0]?.durationSeconds).toBe(270);
+    // Et aucune charge : le tiret de l'écran ne ment pas, il n'y en a pas.
+    expect(progression.points[0]?.maxWeightKg).toBeNull();
+    expect(progression.points[0]?.volumeKg).toBe(0);
   });
 
   it('la progression d’autrui reste invisible', async () => {

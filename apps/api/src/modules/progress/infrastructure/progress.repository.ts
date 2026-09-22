@@ -30,6 +30,16 @@ export interface RawExercisePoint {
   maxWeightKg: number | null;
   maxReps: number | null;
   volumeKg: number;
+  /**
+   * Ce que la séance a parcouru et chronométré sur CET exercice.
+   *
+   * Sommés, jamais maximisés : trois fractionnés de 400 m font 1 200 m de
+   * course, alors que la charge d'une série ne s'additionne pas d'une série
+   * à l'autre. Zéro sur un exercice de fonte, ce qui est exact — la même
+   * règle que `sessionEffort` côté séances.
+   */
+  distanceMeters: number;
+  durationSeconds: number;
 }
 
 /** Regroupement SQL par période — mots-clés STRICTEMENT whitelistés. */
@@ -160,6 +170,8 @@ export class ProgressRepository {
         max_weight: number | null;
         max_reps: number | null;
         volume: number | null;
+        distance: number | null;
+        duration: number | null;
       }[]
     >(Prisma.sql`
       SELECT
@@ -167,7 +179,9 @@ export class ProgressRepository {
         w."startedAt"                                     AS date,
         MAX(s."weightKg")::float8                         AS max_weight,
         MAX(s."reps")                                     AS max_reps,
-        COALESCE(SUM(s."reps" * s."weightKg"), 0)::float8 AS volume
+        COALESCE(SUM(s."reps" * s."weightKg"), 0)::float8 AS volume,
+        COALESCE(SUM(s."distanceMeters"), 0)::float8      AS distance,
+        COALESCE(SUM(s."durationSeconds"), 0)::float8     AS duration
       FROM "WorkoutSession" w
       JOIN "WorkoutSet" s ON s."sessionId" = w."id" AND s."deletedAt" IS NULL
       WHERE w."userId" = ${userId}::uuid
@@ -185,6 +199,8 @@ export class ProgressRepository {
       maxWeightKg: row.max_weight === null ? null : Number(row.max_weight),
       maxReps: row.max_reps === null ? null : Number(row.max_reps),
       volumeKg: Math.round(Number(row.volume ?? 0)),
+      distanceMeters: Math.round(Number(row.distance ?? 0)),
+      durationSeconds: Math.round(Number(row.duration ?? 0)),
     }));
   }
 

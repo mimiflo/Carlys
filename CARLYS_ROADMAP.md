@@ -419,11 +419,34 @@ entre amis, aucune ligue, aucun pas.
 - [ ] Ligues, suite possible : une notification à la montée (le résultat
       s'annonce aujourd'hui à la première lecture, pas en push), et un écran
       dédié si une division de 20 devient trop longue pour une carte.
-- [ ] Défis communautaires à objectif chiffré : généralisation du présent.
+- [x] Défis communautaires à objectif chiffré — FAIT le 19 septembre 2026,
+      par la généralisation de la métrique elle-même. `CommunityChallenge`
+      porte déjà `metric`, `target` et `unit`, le contrat transporte
+      `totalContribution` BRUT en plus du ratio, et `challenge_card.dart`
+      écrit « 390 000 / 500 000 mètres » là où une barre nue ne disait pas
+      ce qu'elle mesurait. Rien de plus à livrer : l'item était la
+      conséquence de la tranche précédente, pas une tranche de plus.
 - [ ] Pas : abstraction santé (Health Connect / HealthKit), permissions,
-      historique, doublons, révocation. Dépend de la réécriture `privacy.md`.
-- [ ] Prérequis transverse : l'eau et les récompenses ne quittent jamais
-      l'appareil — remonter ce qui sert une ligue.
+      historique, doublons, révocation. La dépendance à `privacy.md` est
+      LEVÉE (réécriture du 19 septembre 2026, section « Les pas de ton
+      téléphone »). Ce qui bloque désormais est MATÉRIEL, et il faut le
+      dire : `android/` et `ios/` ne sont pas versionnés (ils se génèrent
+      par `bootstrap_mobile.sh`), Health Connect et HealthKit exigent un
+      appareil réel pour accorder puis révoquer une permission, et aucun
+      test d'ici ne peut voir passer un seul pas. Le livrer à l'aveugle
+      reviendrait à poser un faux backend, que les règles interdisent.
+      Reste aussi, côté serveur et celui-là testable : les pas sont un
+      TOTAL REDÉCLARÉ, pas un événement — il faudra un registre
+      `MetricDailyTotal(userId, metric, jour)` et un delta
+      `max(0, nouveau − ancien)` écrit dans la même transaction que la
+      contribution, sans quoi un téléphone qui resynchronise hier
+      rajouterait ses 8 000 pas.
+- [x] Prérequis transverse — SANS OBJET pour la ligue livrée. Elle compte
+      l'effort déjà connu du serveur (séances, secondes, mètres, quiz) et
+      ne demande donc à remonter NI l'eau NI les récompenses, qui restent
+      sur l'appareil comme la règle l'exige. Le prérequis redeviendrait
+      vrai si une future métrique s'asseyait sur l'eau — auquel cas il
+      faudrait rouvrir `privacy.md` §2, ce que la ligue actuelle évite.
 
 ---
 
@@ -437,10 +460,21 @@ entre amis, aucune ligue, aucun pas.
       `[!]` le stockage est PUBLIC par construction (URL devinable, cache un
       an) : arbitrage lecture privée (URL présignée / relais API) + légal
       avant toute photo de corps.
-- [~] 8.3 Courbe performances : courbe par exercice avec records SUR le
-      tracé, livrée ; cardio absent tant que durée/distance ne se saisissent
-      pas (chantier transverse avec Plans 4 et 7 ; la chaîne serveur accepte
-      déjà tout).
+- [x] 8.3 Courbe performances — COMPLÈTE le 22 septembre 2026. La courbe par
+      exercice avec records SUR le tracé était livrée ; le cardio manquait,
+      et sa condition (la saisie durée/distance) a été remplie entre-temps.
+      `GET /progress/exercises/:id` sert désormais `distanceMeters` et
+      `durationSeconds` par séance, SOMMÉS et non maximisés (trois
+      fractionnés de 400 m font 1 200 m de course, là où une charge se
+      maximise). L'écran choisit la courbe sur les FAITS, jamais sur une
+      étiquette d'exercice : plus de séances cardio que chargées → courbe
+      cardio, sinon la charge, avec un repli cardio quand une seule séance
+      est chargée. En ordonnée, la distance quand elle est notée au moins
+      aussi souvent que le chrono, le temps sinon. Les lignes de séance
+      suivent — elles écrivaient « — » et « 0 kg » là où il y avait huit
+      kilomètres. Les deux courbes partagent leur cadre
+      (`progression_chart_frame.dart`), extrait pour l'occasion. Tests :
+      1 e2e, 12 widget/unitaires. Capture `39-progression-cardio`.
 - [ ] 8.4 Timeline : rien. `[!]` architecture : les récompenses vivent en
       SharedPreferences sur l'appareil — les remonter au serveur d'abord,
       sinon la frise change d'un appareil à l'autre.
