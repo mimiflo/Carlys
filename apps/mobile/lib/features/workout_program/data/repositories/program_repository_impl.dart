@@ -74,6 +74,23 @@ class ProgramRepositoryImpl implements ProgramRepository {
   }
 
   @override
+  Future<ProgramCalendarWeek> linkCalendarSession({
+    required String programId,
+    required String dayId,
+    required String? sessionId,
+  }) {
+    return _guard(() async {
+      final response = await _dio.put<Map<String, dynamic>>(
+        '/programs/$programId/calendar/days/$dayId/session',
+        // `null` est une VALEUR, pas une absence : c'est l'état « plus
+        // aucune séance ». L'omettre serait refusé par le serveur.
+        data: {'sessionId': sessionId},
+      );
+      return _calendar(_data(response));
+    });
+  }
+
+  @override
   Future<ProgramDetail> save(ProgramDetail program) {
     return _guard(() async {
       final response = await _dio.put<Map<String, dynamic>>(

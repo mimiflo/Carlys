@@ -240,6 +240,174 @@ describe('Calendrier de programme (e2e)', () => {
     expect((await calendrier('?week=1')).days[2]?.status).toBe('missed');
   });
 
+  describe('la case reconnaît une séance faite HORS calendrier', () => {
+    /**
+     * LE DÉFAUT QUE CE BLOC FERME. Une séance lancée librement, sans passer
+     * par une case, ne portait l'identifiant d'aucune : elle était faite, et
+     * sa case restait rouge. Le calendrier accusait d'un manquement
+     * quelqu'un qui s'était entraîné.
+     *
+     * Un programme à part, daté SUR AUJOURD'HUI : le jour civil est la seule
+     * règle du geste, il faut donc une case qui tombe vraiment aujourd'hui.
+     */
+    const libreId = randomUUID();
+    const caseDuJour = randomUUID();
+    const caseDeRepos = randomUUID();
+    let aujourdHui: string;
+
+    const calendrierLibre = async (): Promise<ProgramCalendarWeek> =>
+      data<ProgramCalendarWeek>(
+        (await as(token).get(`/api/v1/programs/${libreId}/calendar?week=1`).expect(200)).body,
+      );
+
+    const caseDatee = async (date: string) =>
+      (await calendrierLibre()).days.find((jour) => jour.date === date);
+
+    const seanceTerminee = async (startedAt: string): Promise<string> => {
+      const id = randomUUID();
+      await as(token)
+        .post('/api/v1/workout-sessions')
+        .send({ id, startedAt, templateId })
+        .expect(201);
+      await as(token).post(`/api/v1/workout-sessions/${id}/complete`).expect(200);
+      return id;
+    };
+
+    const lier = (dayId: string, sessionId: string | null) =>
+      as(token)
+        .put(`/api/v1/programs/${libreId}/calendar/days/${dayId}/session`)
+        .send({ sessionId });
+
+    beforeAll(async () => {
+      // Une sonde d'abord : le jour civil est celui que le SERVEUR voit dans
+      // le fuseau de la personne, jamais celui de la machine de test.
+      await as(token)
+        .put(`/api/v1/programs/${libreId}`)
+        .send({ name: 'Hors calendrier', weeksCount: 1, startsOn: '2026-01-05', days: [] })
+        .expect(201);
+      aujourdHui = (await calendrierLibre()).today;
+
+      const lundi = lundiDe(aujourdHui);
+      const jourDeLaSemaine = midi(aujourdHui).getUTCDay() || 7;
+      // Le repos se pose ailleurs qu'aujourd'hui : une case doit rester
+      // libre pour le geste, l'autre pour le refus.
+      const jourDeRepos = jourDeLaSemaine === 7 ? 1 : jourDeLaSemaine + 1;
+      await as(token)
+        .put(`/api/v1/programs/${libreId}`)
+        .send({
+          name: 'Hors calendrier',
+          weeksCount: 1,
+          startsOn: lundi,
+          days: [
+            { id: caseDuJour, weekNumber: 1, dayOfWeek: jourDeLaSemaine, templateId },
+            { id: caseDeRepos, weekNumber: 1, dayOfWeek: jourDeRepos, isRest: true },
+          ],
+        })
+        .expect(200);
+    });
+
+    it('coche la case du jour, et la semaine revient à jour en un aller-retour', async () => {
+      expect((await caseDatee(aujourdHui))?.status).toBe('upcoming');
+
+      const sessionId = await seanceTerminee(new Date().toISOString());
+      const semaine = data<ProgramCalendarWeek>(
+        (await lier(caseDuJour, sessionId).expect(200)).body,
+      );
+
+      // La réponse EST la semaine : l'écran la réaffiche sans second appel.
+      const cochee = semaine.days.find((jour) => jour.date === aujourdHui);
+      expect(cochee?.status).toBe('done');
+      expect(cochee?.sessionId).toBe(sessionId);
+      expect((await caseDatee(aujourdHui))?.sessionId).toBe(sessionId);
+    });
+
+    it('la reconnaissance est EXCLUSIVE : une seconde séance délie la première', async () => {
+      const premiere = (await caseDatee(aujourdHui))?.sessionId;
+      expect(premiere).not.toBeNull();
+
+      const seconde = await seanceTerminee(new Date().toISOString());
+      await lier(caseDuJour, seconde).expect(200);
+
+      // Sans cette exclusivité, deux séances honoreraient la même case, la
+      // lecture n'en montrerait qu'une, et « délier » ne saurait plus
+      // laquelle viser.
+      expect((await caseDatee(aujourdHui))?.sessionId).toBe(seconde);
+      const detail = data<WorkoutSessionDetail>(
+        (await as(token).get(`/api/v1/workout-sessions/${premiere}`).expect(200)).body,
+      );
+      expect(detail.programDayId).toBeNull();
+    });
+
+    it('`null` détache, et le détachement est rejouable', async () => {
+      await lier(caseDuJour, null).expect(200);
+      expect((await caseDatee(aujourdHui))?.status).toBe('upcoming');
+      // Rejouer le même corps redonne le même état : c'est ce qui fait de ce
+      // geste un PUT et non un POST.
+      await lier(caseDuJour, null).expect(200);
+      expect((await caseDatee(aujourdHui))?.status).toBe('upcoming');
+    });
+
+    it('refuse une séance d’un AUTRE jour : cocher n’est pas déplacer', async () => {
+      const hier = await seanceTerminee(new Date(Date.now() - 26 * 60 * 60 * 1000).toISOString());
+      const refus = await lier(caseDuJour, hier).expect(400);
+      // Le message NOMME les deux dates : sans elles, la personne ne sait
+      // pas si c'est sa séance ou sa case qui est au mauvais endroit.
+      expect(JSON.stringify(refus.body)).toContain('déplace la case');
+      expect((await caseDatee(aujourdHui))?.status).toBe('upcoming');
+    });
+
+    it('refuse un jour de REPOS, qu’aucune coche ne pourrait rendre visible', async () => {
+      const sessionId = await seanceTerminee(new Date().toISOString());
+      // `rest` l'emporte sur `done` à la lecture : lier ici écrirait un fait
+      // que le calendrier ne montrerait jamais.
+      const refus = await lier(caseDeRepos, sessionId).expect(400);
+      expect(JSON.stringify(refus.body)).toContain('repos');
+    });
+
+    it('une case, une séance ou un programme qui n’est pas le sien : 404', async () => {
+      const sessionId = await seanceTerminee(new Date().toISOString());
+
+      // Case inconnue.
+      await lier(randomUUID(), sessionId).expect(404);
+      // Case réelle, mais d'un AUTRE programme : le calendrier rendu ne
+      // serait pas celui qu'on modifie.
+      await lier(jours.mercrediS1, sessionId).expect(404);
+      // Séance d'autrui : introuvable, jamais « interdite » — sinon le refus
+      // dirait qu'elle existe.
+      const autrui = randomUUID();
+      await as(otherToken)
+        .post('/api/v1/workout-sessions')
+        .send({ id: autrui, startedAt: new Date().toISOString() })
+        .expect(201);
+      await as(otherToken).post(`/api/v1/workout-sessions/${autrui}/complete`).expect(200);
+      await lier(caseDuJour, autrui).expect(404);
+      // Programme d'autrui.
+      await as(otherToken)
+        .put(`/api/v1/programs/${libreId}/calendar/days/${caseDuJour}/session`)
+        .send({ sessionId: null })
+        .expect(404);
+    });
+
+    it('refuse une séance EN COURS : commencée n’est pas faite', async () => {
+      const id = randomUUID();
+      await as(token)
+        .post('/api/v1/workout-sessions')
+        .send({ id, startedAt: new Date().toISOString(), templateId })
+        .expect(201);
+      await lier(caseDuJour, id).expect(404);
+    });
+
+    it('refuse un corps vide ou un identifiant qui n’en est pas un', async () => {
+      // `null` est une VALEUR, pas une absence : un corps vide ne doit pas
+      // détacher par défaut.
+      await as(token)
+        .put(`/api/v1/programs/${libreId}/calendar/days/${caseDuJour}/session`)
+        .send({})
+        .expect(400);
+      await lier(caseDuJour, 'pas-un-uuid').expect(400);
+    });
+  });
+
   it('un jour inconnu ou venu d’autrui se perd en SILENCE, la séance jamais', async () => {
     // La file de synchronisation traite un 4xx comme DÉFINITIF : refuser
     // ici perdrait le travail réel pour une case de calendrier.

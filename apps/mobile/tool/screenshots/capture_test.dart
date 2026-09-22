@@ -71,6 +71,8 @@ import 'package:carlys_mobile/features/workout_program/data/repositories/program
 import 'package:carlys_mobile/features/workout_program/presentation/screens/program_calendar_screen.dart';
 import 'package:carlys_mobile/features/workout_program/presentation/screens/program_detail_screen.dart';
 import 'package:carlys_mobile/features/workout_program/presentation/screens/programs_screen.dart';
+import 'package:carlys_mobile/features/workout_program/presentation/widgets/program_calendar_day_row.dart';
+import 'package:carlys_mobile/features/workout_program/presentation/widgets/program_calendar_day_sheet.dart';
 import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';
 import 'package:carlys_mobile/features/workout_session/domain/entities/workout.dart';
 import 'package:carlys_mobile/features/workout_session/presentation/screens/active_workout_screen.dart';
@@ -1050,7 +1052,13 @@ void main() {
   });
 
   testWidgets('programmes — liste et calendrier', (tester) async {
-    await pumpApp(tester);
+    // L'historique est NÉCESSAIRE à la dernière capture : la feuille d'une
+    // case ne propose que des séances réellement faites ce jour-là, et sans
+    // lui elle n'aurait rien à montrer.
+    await pumpApp(
+      tester,
+      workouts: FakeWorkoutRepository()..history = historyOf(),
+    );
     await goTab(tester, 'Training');
     await tester.tap(find.text('Programmes'));
     await settle(tester);
@@ -1073,6 +1081,18 @@ void main() {
       tester,
       '34-programme-calendrier-date',
       shows: find.byType(ProgramCalendarScreen),
+    );
+
+    // La feuille d'une case, sur le cas qu'elle répare : le JEUDI manqué,
+    // alors que l'historique porte bien une séance ce jour-là. C'est
+    // exactement la personne qui s'est entraînée hors calendrier et dont la
+    // case restait rouge sans recours.
+    await tester.tap(find.byType(ProgramCalendarDayRow).at(3));
+    await settle(tester);
+    await capture(
+      tester,
+      '34b-calendrier-case',
+      shows: find.byType(ProgramCalendarDaySheet),
     );
   });
 

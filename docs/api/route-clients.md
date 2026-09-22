@@ -127,6 +127,7 @@ déclare ici à la main.
 | `GET /programs/{id}` | **mobile** | apps/mobile |
 | `PUT /programs/{id}` | **mobile** | apps/mobile |
 | `GET /programs/{id}/calendar` | **mobile** | apps/mobile |
+| `PUT /programs/{id}/calendar/days/{dayId}/session` | **mobile** | apps/mobile |
 | `PUT /programs/{id}/generate` | **mobile** | apps/mobile |
 
 ### Progression et mesures

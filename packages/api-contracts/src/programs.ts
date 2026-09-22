@@ -154,6 +154,24 @@ export const programCalendarWeekSchema = z.object({
 });
 export type ProgramCalendarWeek = z.infer<typeof programCalendarWeekSchema>;
 
+/**
+ * Corps de `PUT /programs/:id/calendar/days/:dayId/session` — la case
+ * reconnaît une séance, ou n'en reconnaît plus aucune.
+ *
+ * Pourquoi un PUT et non un POST : l'état visé est « cette case est honorée
+ * par CETTE séance », pas « ajoute un lien ». Rejouer le même corps redonne
+ * le même état, et `null` est l'état « plus aucune », pas une absence.
+ *
+ * Le jour civil décide : une séance n'honore une case que si elle a eu lieu
+ * CE JOUR-LÀ, dans le fuseau de la personne. Corriger une séance faite un
+ * autre jour n'est pas ce geste-ci — c'est DÉPLACER la case, ce que
+ * l'enregistrement complet du programme sait déjà faire.
+ */
+export const linkCalendarSessionRequestSchema = z.object({
+  sessionId: z.string().uuid().nullable(),
+});
+export type LinkCalendarSessionRequest = z.infer<typeof linkCalendarSessionRequestSchema>;
+
 // ── Génération de programme (Plan 4, tranche 3) ─────────────────────────────
 
 /**

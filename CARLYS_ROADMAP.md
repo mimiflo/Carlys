@@ -289,9 +289,24 @@ date sur `Program`, aucun lien `WorkoutSession` ↔ jour de programme.
       **Reste ouvert, et dit comme tel** : « déplacer / reporter » se fait
       par le PUT existant (l'état complet passe toute permutation, là où un
       `UPDATE` unique violerait `@@unique([programId, weekNumber,
-      dayOfWeek])`) — mais AUCUN geste d'écran ne l'expose encore ; et une
-      séance lancée librement, hors du calendrier, ne coche pas sa case (il
-      faudrait un « marquer comme fait », c'est-à-dire du stockage réel).
+      dayOfWeek])`) — mais AUCUN geste d'écran ne l'expose encore.
+- [x] Le calendrier se corrige — FAIT le 22 septembre 2026. Le second
+      « reste ouvert » de la tranche 4 est fermé : une séance lancée HORS
+      calendrier ne portait l'identifiant d'aucune case, donc elle était
+      faite et sa case restait rouge. `PUT
+      /programs/{id}/calendar/days/{dayId}/session` la fait reconnaître,
+      `null` la détache. **Le jour civil est la seule règle** : une séance
+      n'honore une case que si elle a eu lieu CE JOUR-LÀ dans le fuseau de
+      la personne — sans cette borne, « marquer comme fait » deviendrait
+      « cocher » et le calendrier ne mesurerait plus rien. Trois refus
+      nommés (séance d'un autre jour, jour de repos, case ou séance
+      d'autrui), reconnaissance EXCLUSIVE en une transaction, réponse = la
+      semaine entière (pas de second aller-retour). Aucune migration : la
+      colonne `WorkoutSession.programDayId` existait déjà. Mobile : la case
+      ouvre une FEUILLE qui dit son état et ne propose que du vrai — les
+      séances terminées de ce jour civil, et seulement celles que le serveur
+      connaît (une séance en file de synchronisation est nommée, pas tue).
+      Tests : 8 e2e, 7 widget. Capture `34b-calendrier-case`.
 - [x] Prescription ≠ placement — TRANCHÉ (17 septembre 2026) : on ASSUME
       une case = un jour. `@@unique([programId, weekNumber, dayOfWeek])`
       reste : c'est la grammaire de la grille actuelle, le moindre risque

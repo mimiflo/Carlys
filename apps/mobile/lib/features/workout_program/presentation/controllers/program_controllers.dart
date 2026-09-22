@@ -156,6 +156,31 @@ class ProgramActions {
     });
   }
 
+  /// Fait reconnaître une séance par une case — ou l'en détache.
+  ///
+  /// HORS de la file d'écritures : celle-ci sérialise les PUT de l'état
+  /// COMPLET du programme, qui s'écrasent l'un l'autre. Ce geste-ci n'écrit
+  /// pas le programme, il écrit le lien d'UNE séance, et rien ne le met en
+  /// concurrence avec la grille.
+  ///
+  /// Rend la semaine que le serveur a recalculée : l'écran la réaffiche
+  /// telle quelle, sans second aller-retour ni état déduit localement.
+  Future<ProgramCalendarWeek> linkCalendarSession({
+    required String programId,
+    required String dayId,
+    required String? sessionId,
+  }) async {
+    final semaine = await _ref
+        .read(programRepositoryProvider)
+        .linkCalendarSession(
+          programId: programId,
+          dayId: dayId,
+          sessionId: sessionId,
+        );
+    _ref.invalidate(programCalendarProvider);
+    return semaine;
+  }
+
   /// Un identifiant de jour, exposé pour que l'interface n'importe pas uuid.
   String newDayId() => _uuid.v4();
 

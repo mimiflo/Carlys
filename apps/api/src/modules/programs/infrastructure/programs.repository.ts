@@ -105,6 +105,55 @@ export class ProgramsRepository {
     });
   }
 
+  /**
+   * La séance TERMINÉE `id` de `userId`, si elle existe et vit encore.
+   *
+   * `startedAt` suffit à l'appelant : c'est l'instant qui décide de quel
+   * JOUR CIVIL la séance relève, et donc quelle case elle peut honorer.
+   */
+  findOwnedCompletedSession(
+    id: string,
+    userId: string,
+  ): Promise<{ id: string; startedAt: Date } | null> {
+    return this.prisma.workoutSession.findFirst({
+      where: { id, userId, status: 'COMPLETED', deletedAt: null },
+      select: { id: true, startedAt: true },
+    });
+  }
+
+  /**
+   * Fait reconnaître `sessionId` par la case `dayId` — ou n'en fait plus
+   * reconnaître aucune quand il vaut `null`.
+   *
+   * EXCLUSIF, et en une transaction : toute autre séance qui pointait sur
+   * cette case est déliée d'abord. Sans cette exclusivité, deux séances
+   * pourraient honorer la même case, la lecture n'en montrerait qu'une (la
+   * plus ancienne), et « délier » ne saurait plus laquelle viser.
+   *
+   * Le cas où `sessionId` pointait déjà sur une AUTRE case se règle tout
+   * seul : `programDayId` est une colonne unique par séance, donc l'écrire
+   * la détache de l'ancienne. Une séance honore au plus un jour, un jour est
+   * honoré par au plus une séance.
+   */
+  async linkSessionToDay(dayId: string, userId: string, sessionId: string | null): Promise<void> {
+    await this.prisma.$transaction(async (tx) => {
+      await tx.workoutSession.updateMany({
+        where: {
+          userId,
+          programDayId: dayId,
+          ...(sessionId === null ? {} : { id: { not: sessionId } }),
+        },
+        data: { programDayId: null },
+      });
+      if (sessionId !== null) {
+        await tx.workoutSession.updateMany({
+          where: { id: sessionId, userId },
+          data: { programDayId: dayId },
+        });
+      }
+    });
+  }
+
   /** Programmes vivants d'un compte — sert le plafond du plan gratuit. */
   countLive(userId: string): Promise<number> {
     return this.prisma.program.count({ where: { userId, deletedAt: null } });

@@ -34,4 +34,17 @@ abstract interface class ProgramRepository {
   /// encore de date de début : c'est un refus qui se corrige en deux gestes,
   /// et il vaut mieux le dire qu'afficher une semaine vide.
   Future<ProgramCalendarWeek> calendarWeek(String programId, {int? week});
+
+  /// Fait reconnaître une séance par une case — ou l'en détache
+  /// ([sessionId] à `null`).
+  ///
+  /// Le geste de celui qui s'est entraîné SANS passer par le calendrier :
+  /// sa séance ne portait l'identifiant d'aucune case, et la case restait
+  /// rouge. Le serveur n'accepte que ce qui est vrai — une séance terminée
+  /// CE JOUR-LÀ — et rend la semaine entière, réaffichable telle quelle.
+  Future<ProgramCalendarWeek> linkCalendarSession({
+    required String programId,
+    required String dayId,
+    required String? sessionId,
+  });
 }

@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_routes.dart';
+import '../../../../core/feedback/server_gesture.dart';
 import '../../../../design_system/design_system.dart';
 import '../../../../shared/widgets/connection_aware_error.dart';
 import '../../../workout_session/presentation/controllers/workout_controllers.dart';
@@ -10,6 +11,8 @@ import '../../../workout_template/presentation/controllers/workout_template_cont
 import '../../domain/entities/program_calendar.dart';
 import '../controllers/program_controllers.dart';
 import '../widgets/program_calendar_day_row.dart';
+import '../widgets/program_calendar_day_sheet.dart';
+import '../widgets/program_week_navigator.dart';
 import '../widgets/program_week_summary.dart';
 
 /// LE CALENDRIER DATÉ : le programme posé sur de vraies dates.
@@ -36,6 +39,52 @@ class _ProgramCalendarScreenState extends ConsumerState<ProgramCalendarScreen> {
   /// `null` tant que personne n'a navigué : le serveur ouvre alors sur la
   /// semaine d'AUJOURD'HUI, qu'il est le seul à connaître.
   int? _week;
+
+  /// Ouvre la feuille de la case, puis exécute le geste choisi.
+  ///
+  /// La case ne lance plus directement : elle DIT d'abord ce qu'elle sait —
+  /// ce qui était prévu, ce qui a été fait — puis propose. C'est ce qui rend
+  /// atteignable la correction de celui qui s'est entraîné hors calendrier,
+  /// et dont la case restait rouge sans recours.
+  Future<void> _openDay(ProgramCalendarDay day) async {
+    final geste = await showProgramCalendarDaySheet(context, day: day);
+    if (geste == null || !mounted) {
+      return;
+    }
+    switch (geste) {
+      case LaunchDay():
+        await _start(day);
+      case LinkSessionToDay(:final sessionId):
+        await _link(day, sessionId);
+      case UnlinkSessionFromDay():
+        await _link(day, null);
+    }
+  }
+
+  /// Fait reconnaître (ou oublier) une séance par la case.
+  ///
+  /// Le serveur refuse ce qui n'est pas vrai : une séance d'un autre jour,
+  /// une case de repos. La feuille ne propose déjà que du vrai, donc ces
+  /// refus ne se voient qu'en cas de course — d'où le filet partagé du
+  /// dépôt, qui distingue au moins la panne du hors-ligne.
+  Future<void> _link(ProgramCalendarDay day, String? sessionId) async {
+    final dayId = day.id;
+    if (dayId == null) {
+      return;
+    }
+    await runServerGesture(context, () async {
+      await ref
+          .read(programActionsProvider)
+          .linkCalendarSession(
+            programId: widget.programId,
+            dayId: dayId,
+            sessionId: sessionId,
+          );
+      return sessionId == null
+          ? 'Case libérée : elle redevient à faire.'
+          : 'Case cochée : la séance de ce jour la remplit.';
+    }, scope: 'program-calendar');
+  }
 
   Future<void> _start(ProgramCalendarDay day) async {
     final templateId = day.templateId;
@@ -131,7 +180,7 @@ class _ProgramCalendarScreenState extends ConsumerState<ProgramCalendarScreen> {
                 ],
               ),
               const SizedBox(height: AppSpacing.sm),
-              _WeekNavigator(
+              ProgramWeekNavigator(
                 week: calendrier,
                 onWeek: (value) => setState(() => _week = value),
               ),
@@ -145,7 +194,9 @@ class _ProgramCalendarScreenState extends ConsumerState<ProgramCalendarScreen> {
                       ProgramCalendarDayRow(
                         day: jour,
                         isToday: jour.date == calendrier.today,
-                        onTap: jour.isLaunchable ? () => _start(jour) : null,
+                        // Une case VIDE ne répond pas : une ligne qui répond
+                        // au doigt sans rien faire se lit comme un défaut.
+                        onTap: jour.id == null ? null : () => _openDay(jour),
                       ),
                     ],
                   ],
@@ -157,66 +208,6 @@ class _ProgramCalendarScreenState extends ConsumerState<ProgramCalendarScreen> {
           ),
         ),
       ),
-    );
-  }
-}
-
-/// Les deux flèches et le rang de la semaine servie.
-///
-/// La flèche éteinte aux bornes du plan, jamais masquée : une commande qui
-/// disparaît laisse croire à un défaut, une commande éteinte dit « pas par
-/// là ».
-class _WeekNavigator extends StatelessWidget {
-  const _WeekNavigator({required this.week, required this.onWeek});
-
-  final ProgramCalendarWeek week;
-  final ValueChanged<int> onWeek;
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      children: [
-        IconButton(
-          onPressed: week.weekNumber > 1
-              ? () => onWeek(week.weekNumber - 1)
-              : null,
-          tooltip: 'Semaine précédente',
-          icon: const Icon(Icons.chevron_left_rounded),
-          color: AppColors.darkTextSecondary,
-        ),
-        Expanded(
-          child: Column(
-            children: [
-              Text(
-                'Semaine ${week.weekNumber} sur ${week.weeksCount}',
-                style: AppTypography.subheading.copyWith(
-                  color: AppColors.darkTextPrimary,
-                ),
-              ),
-              Text(
-                week.isCurrentWeek
-                    ? 'Semaine en cours'
-                    : week.currentWeek == null
-                    ? 'Hors de la période du plan'
-                    : 'Semaine en cours : ${week.currentWeek}',
-                style: AppTypography.label.copyWith(
-                  color: week.isCurrentWeek
-                      ? AppColors.primaryLight
-                      : AppColors.darkTextTertiary,
-                ),
-              ),
-            ],
-          ),
-        ),
-        IconButton(
-          onPressed: week.weekNumber < week.weeksCount
-              ? () => onWeek(week.weekNumber + 1)
-              : null,
-          tooltip: 'Semaine suivante',
-          icon: const Icon(Icons.chevron_right_rounded),
-          color: AppColors.darkTextSecondary,
-        ),
-      ],
     );
   }
 }

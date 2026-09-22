@@ -127,7 +127,50 @@ une génération dépose plusieurs dizaines de séances, et sans cette
 colonne la bibliothèque de la personne se noierait sous des modèles
 qu'elle n'a pas composés.
 
+## Le calendrier se corrige (tranche 5)
+
+Le calendrier daté DÉDUIT tout : « fait » découle du lien séance → case,
+« manqué » de la date dans le fuseau de la personne. Rien n'est stocké, donc
+rien ne peut mentir après coup. Mais cette déduction avait un angle mort,
+et il était livré : **une séance lancée hors du calendrier ne portait
+l'identifiant d'aucune case.** Elle était bel et bien faite, elle apparaissait
+au journal, elle comptait pour la série de constance — et sa case restait
+rouge. Le calendrier accusait d'un manquement quelqu'un qui s'était entraîné,
+sans le moindre recours.
+
+`PUT /programs/{id}/calendar/days/{dayId}/session` répare ce cas, et lui seul.
+
+**Le JOUR CIVIL est la seule règle.** Une séance n'honore une case que si elle
+a eu lieu CE JOUR-LÀ, dans le fuseau de la personne. Sans cette borne,
+« marquer comme fait » deviendrait « cocher », et le calendrier ne mesurerait
+plus rien. Celui qui a déplacé sa séance d'un jour n'a pas besoin de ce
+geste-ci : il a besoin de déplacer sa CASE, ce que l'enregistrement complet du
+programme sait déjà faire — les identifiants de jour sont stables d'une
+écriture à l'autre, donc la case emporte son lien avec elle.
+
+Trois refus NOMMÉS, chacun pour sa raison :
+
+| Refus | Pourquoi |
+| ----- | -------- |
+| Séance d'un autre jour (400) | cocher n'est pas déplacer ; le message donne les deux dates |
+| Jour de repos (400) | `rest` l'emporte sur `done` à la lecture : la reconnaissance y serait invisible |
+| Case, séance ou programme d'autrui (404) | introuvable, jamais « interdit » — un refus qui distingue dirait que la chose existe |
+
+La reconnaissance est **exclusive et transactionnelle** : lier une séance à une
+case délie d'abord celle qui l'occupait. Sans cette exclusivité, deux séances
+honoreraient la même case, la lecture n'en montrerait qu'une, et « délier » ne
+saurait plus laquelle viser. `null` détache, et rejouer le même corps redonne
+le même état — c'est ce qui en fait un PUT.
+
+Côté mobile, la case ouvre désormais une **feuille** au lieu de lancer
+directement : elle dit son état en toutes lettres, puis propose ce que cet
+état autorise. Elle ne propose que du VRAI — les séances terminées de ce jour
+civil, et seulement celles que le serveur connaît déjà. Une séance encore en
+file de synchronisation n'est pas offerte, et la feuille le dit plutôt que de
+se taire : se taire laisserait croire qu'elle n'a pas eu lieu.
+
 ## La suite du plan
 
-Prochaine tranche : le calendrier daté (date de début, vue par semaine,
-déplacement d'une séance, fait/manqué). Voir `CARLYS_ROADMAP.md`, Plan 4.
+Reste ouvert sur le calendrier, et dit comme tel : « déplacer / reporter » se
+fait par le PUT existant, mais aucun geste d'écran ne l'expose encore.
+Voir `CARLYS_ROADMAP.md`, Plan 4.

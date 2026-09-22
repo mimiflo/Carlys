@@ -84,6 +84,72 @@ export class ProgramCalendarService {
     };
   }
 
+  /**
+   * Fait reconnaître une séance par une case — ou lui en fait oublier une.
+   *
+   * LE GESTE QUE ÇA RÉPARE. Une séance lancée librement, sans passer par le
+   * calendrier, ne portait l'identifiant d'aucune case : elle était bel et
+   * bien faite, et sa case restait rouge. Le calendrier accusait alors d'un
+   * manquement quelqu'un qui s'était entraîné.
+   *
+   * LE JOUR CIVIL DÉCIDE, et c'est la seule règle. Une séance n'honore une
+   * case que si elle a eu lieu CE JOUR-LÀ dans le fuseau de la personne.
+   * Sans cette borne, « marquer comme fait » deviendrait « cocher », et le
+   * calendrier ne mesurerait plus rien. Celui qui a déplacé sa séance d'un
+   * jour n'a pas besoin de ce geste-ci : il a besoin de DÉPLACER la case,
+   * ce que l'enregistrement complet du programme sait déjà faire.
+   */
+  async linkSession(
+    programId: string,
+    dayId: string,
+    userId: string,
+    sessionId: string | null,
+  ): Promise<ProgramCalendarWeek> {
+    const day = await this.programs.findOwnedDay(dayId, userId);
+    // Une case d'un AUTRE programme rendrait un calendrier qui n'est pas
+    // celui qu'on modifie : 404, comme une case inconnue.
+    if (day === null || day.programId !== programId) {
+      throw new NotFoundException('Jour de programme introuvable.');
+    }
+    if (day.isRest) {
+      throw new BadRequestException(
+        'Ce jour est un repos planifié : il n’y a rien à y marquer comme fait.',
+      );
+    }
+
+    const program = await this.programs.findById(programId);
+    if (program === null || program.startsOn === null) {
+      throw new BadRequestException(
+        'Ce programme n’a pas de date de début : choisis-en une pour ouvrir son calendrier.',
+      );
+    }
+    const date = dateOfSlot(
+      anchorOf(dayKeyOfColumn(program.startsOn)),
+      day.weekNumber,
+      day.dayOfWeek,
+    );
+
+    if (sessionId !== null) {
+      const session = await this.programs.findOwnedCompletedSession(sessionId, userId);
+      if (session === null) {
+        throw new NotFoundException('Séance terminée introuvable.');
+      }
+      const zone = safeTimeZone(await this.programs.userTimeZone(userId));
+      const jourDeLaSeance = dayKeyInZone(session.startedAt, zone);
+      if (jourDeLaSeance !== date) {
+        throw new BadRequestException(
+          `Cette séance date du ${jourDeLaSeance}, pas du ${date} : déplace la case plutôt que de la cocher.`,
+        );
+      }
+    }
+
+    await this.programs.linkSessionToDay(dayId, userId, sessionId);
+    // La semaine ENTIÈRE, et pas la seule case : l'écran la réaffiche telle
+    // quelle, sans second aller-retour ni recalcul local d'un état que le
+    // serveur est seul à savoir déduire.
+    return this.week(programId, userId, day.weekNumber);
+  }
+
   private presentDay(input: {
     day: ProgramDay | undefined;
     weekNumber: number;

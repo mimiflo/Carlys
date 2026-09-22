@@ -165,6 +165,20 @@ class FakeProgramRepository implements ProgramRepository {
   /// sans réseau. Elle ne connaît AUCUNE séance : rien n'y est jamais
   /// « fait », ce qui est exact, une doublure de programmes ne voit pas
   /// l'historique.
+  /// Les liaisons reçues, dans l'ordre : `(case, séance)` — `null` détache.
+  final List<(String, String?)> linkedSessions = [];
+
+  @override
+  Future<ProgramCalendarWeek> linkCalendarSession({
+    required String programId,
+    required String dayId,
+    required String? sessionId,
+  }) async {
+    _guard();
+    linkedSessions.add((dayId, sessionId));
+    return calendarWeek(programId);
+  }
+
   @override
   Future<ProgramCalendarWeek> calendarWeek(
     String programId, {

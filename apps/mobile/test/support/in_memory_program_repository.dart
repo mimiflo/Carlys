@@ -201,6 +201,25 @@ class InMemoryProgramRepository implements ProgramRepository {
   /// sans réseau. Elle ne connaît AUCUNE séance : rien n'y est jamais
   /// « fait », ce qui est exact, une doublure de programmes ne voit pas
   /// l'historique.
+  /// Fait reconnaître (ou oublier) une séance par une case.
+  ///
+  /// La doublure ne connaît pas l'historique : elle se contente de tenir à
+  /// jour l'ensemble des cases FAITES, qui est sa seule mémoire de ce qui a
+  /// été honoré.
+  @override
+  Future<ProgramCalendarWeek> linkCalendarSession({
+    required String programId,
+    required String dayId,
+    required String? sessionId,
+  }) async {
+    if (sessionId == null) {
+      doneDayIds.remove(dayId);
+    } else {
+      doneDayIds.add(dayId);
+    }
+    return calendarWeek(programId);
+  }
+
   @override
   Future<ProgramCalendarWeek> calendarWeek(
     String programId, {

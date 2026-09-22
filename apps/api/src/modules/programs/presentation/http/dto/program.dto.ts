@@ -13,6 +13,7 @@ import {
   MaxLength,
   Min,
   MinLength,
+  ValidateIf,
   ValidateNested,
 } from 'class-validator';
 import { trimmed } from '../../../../../common/transforms/trimmed';
@@ -136,4 +137,22 @@ export class SaveProgramDto {
   @ValidateNested({ each: true })
   @Type(() => SaveProgramDayDto)
   days!: SaveProgramDayDto[];
+}
+
+/**
+ * Corps de `PUT /programs/:id/calendar/days/:dayId/session`.
+ *
+ * `null` est une VALEUR, pas une absence : c'est l'état « cette case ne
+ * reconnaît plus aucune séance ». Le champ est donc requis, et le pipe
+ * global (`whitelist` + `forbidNonWhitelisted`) refuse un corps vide en 400
+ * plutôt que de délier par défaut.
+ */
+export class LinkCalendarSessionDto {
+  @ApiProperty({
+    nullable: true,
+    description: 'Séance TERMINÉE qui honore cette case, ou null pour l’en détacher',
+  })
+  @ValidateIf((_, value) => value !== null)
+  @IsUUID()
+  sessionId!: string | null;
 }

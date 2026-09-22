@@ -30,7 +30,12 @@ import { ProgramCalendarService } from '../../application/program-calendar.servi
 import { ProgramGenerationService } from '../../application/program-generation.service';
 import { ProgramsService } from '../../application/programs.service';
 import { GenerateProgramDto } from './dto/generate-program.dto';
-import { CalendarWeekQuery, ListProgramsQuery, SaveProgramDto } from './dto/program.dto';
+import {
+  CalendarWeekQuery,
+  LinkCalendarSessionDto,
+  ListProgramsQuery,
+  SaveProgramDto,
+} from './dto/program.dto';
 
 @ApiTags('programs')
 @ApiBearerAuth()
@@ -84,6 +89,31 @@ export class ProgramsController {
     @Query() query: CalendarWeekQuery,
   ): Promise<ProgramCalendarWeek> {
     return this.calendar.week(id, user.userId, query.week);
+  }
+
+  @Put(':id/calendar/days/:dayId/session')
+  @ApiOperation({
+    summary: 'La case reconnaît une séance, ou n’en reconnaît plus aucune',
+    description:
+      'Répare le cas de la séance faite HORS calendrier : elle ne portait ' +
+      'l’identifiant d’aucune case, et la case restait rouge. Le JOUR CIVIL ' +
+      'décide — une séance n’honore une case que si elle a eu lieu ce ' +
+      'jour-là dans le fuseau de la personne. `null` détache. Rend la ' +
+      'semaine entière, réaffichable telle quelle.',
+  })
+  @ApiResponse({ status: HttpStatus.OK, description: 'Semaine mise à jour' })
+  @ApiResponse({ status: HttpStatus.NOT_FOUND, description: 'Case ou séance introuvable' })
+  @ApiResponse({
+    status: HttpStatus.BAD_REQUEST,
+    description: 'Jour de repos, programme sans date de début, ou séance d’un autre jour',
+  })
+  linkCalendarSession(
+    @CurrentUser() user: AuthenticatedPrincipal,
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Param('dayId', new ParseUUIDPipe()) dayId: string,
+    @Body() dto: LinkCalendarSessionDto,
+  ): Promise<ProgramCalendarWeek> {
+    return this.calendar.linkSession(id, dayId, user.userId, dto.sessionId);
   }
 
   @Put(':id')
