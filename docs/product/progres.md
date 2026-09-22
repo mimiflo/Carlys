@@ -176,6 +176,36 @@ séances réelles, énoncé pour le lecteur d'écran. Elles ne diffèrent que pa
 ce qu'elles tracent, et deux copies auraient divergé par leur sémantique,
 c'est-à-dire par la moitié qui ne se voit pas.
 
+## Les récompenses ne dépendent plus de l'appareil (22 septembre 2026)
+
+**Le défaut, mesuré.** Le moteur de récompenses dérivait `completedSessions`,
+`bestWeekStreak` et `balancedWeeks` de l'historique LOCAL. Celui-ci est
+plafonné à 60 séances au rapatriement
+(`WorkoutSessionDownloader.restoredSessionsMax`). Sur un compte à 200
+séances, un téléphone neuf en voyait donc 60 : `discipline-150` n'était pas
+re-mérité, et comme le journal des récompenses vit dans les préférences de
+l'appareil — donc vide sur le neuf — la médaille **disparaissait**. C'est
+exactement ce que le journal promet de ne jamais laisser arriver (« une
+médaille obtenue le reste »).
+
+**Le partage retenu : le serveur sert les FAITS, le mobile garde la RÈGLE.**
+`GET /progress/lifetime` rend le nombre de séances terminées et la liste des
+semaines actives avec leur compte — une ligne par semaine où l'on s'est
+entraîné, soit une centaine sur deux ans. Ce qu'est une « meilleure série »
+ou une « semaine équilibrée » reste décidé par `reward_facts_builder.dart`,
+et par lui seul : le calculer aussi en SQL en ferait une seconde
+implémentation, et deux copies divergent.
+
+Les semaines sont découpées dans le **fuseau de la personne**, comme les
+paniers de `overview` et pour la même raison : une séance du dimanche soir
+bascule au lundi en UTC et changerait de semaine. Elles voyagent en jour
+civil (`YYYY-MM-DD`), jamais en instant.
+
+**Hors ligne**, la lecture échoue et l'historique local reprend la main.
+Sous-compter n'efface rien, puisque le journal ne s'écrit qu'en AJOUT : seul
+un appareil neuf ET hors ligne verrait moins, et il n'a de toute façon rien à
+montrer.
+
 ## Hors périmètre, et pourquoi
 
 Deux morceaux de la tranche « Progression » attendent une décision qui n'est

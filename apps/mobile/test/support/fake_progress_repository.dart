@@ -143,6 +143,23 @@ class FakeProgressRepository implements ProgressRepository {
     return trouve;
   }
 
+  /// Ce que le « serveur » compte sur la vie entière.
+  ///
+  /// `null` par défaut : la plupart des tests n'en ont que faire, et le
+  /// moteur retombe alors sur l'historique local, comme hors ligne.
+  LifetimeStats? lifetime;
+
+  @override
+  Future<LifetimeStats> lifetimeStats() async {
+    final servi = lifetime;
+    if (servi == null) {
+      // Même forme que le serveur muet : le provider passe en erreur, et la
+      // dérivation locale reprend la main.
+      throw Exception('Compteurs de vie entière indisponibles.');
+    }
+    return servi;
+  }
+
   @override
   Future<void> deleteBodyMetric(String id) async {
     removedMetricIds.add(id);

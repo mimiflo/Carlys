@@ -9,6 +9,7 @@ import {
   type AuthResult,
   type BodyMetric,
   type ExerciseProgression,
+  type LifetimeStats,
   type PersonalRecord,
   type ProgressOverview,
 } from '@carlys/api-contracts';
@@ -195,6 +196,36 @@ describe('Progression (e2e)', () => {
       expect(other.sessionsCount).toBe(2);
     }
     await authed(accessToken).get('/api/v1/progress/overview?period=decade').expect(400);
+  });
+
+  it('compte la VIE ENTIÈRE, sans borne ni plafond', async () => {
+    // Le mobile dérivait ces compteurs de son historique LOCAL, plafonné à
+    // 60 séances au rapatriement : sur un compte plus fourni, un téléphone
+    // neuf ne re-méritait pas `discipline-150` et la récompense
+    // disparaissait. Cette lecture-ci ne connaît pas de plafond.
+    const lifetime = data<LifetimeStats>(
+      (await authed(accessToken).get('/api/v1/progress/lifetime').expect(200)).body,
+    );
+
+    // Deux séances TERMINÉES ; la troisième a été abandonnée et ne compte
+    // pas — la même règle que partout ailleurs dans la progression.
+    expect(lifetime.completedSessions).toBe(2);
+    expect(lifetime.weeks.reduce((total, week) => total + week.sessions, 0)).toBe(2);
+    // Des FAITS, pas une règle : aucune « meilleure série » n'est servie,
+    // c'est le moteur de récompenses du mobile qui la décide, et lui seul.
+    for (const week of lifetime.weeks) {
+      expect(week.mondayOn).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+      // `date_trunc('week', …)` rend un LUNDI, dans le fuseau de la personne.
+      expect(new Date(`${week.mondayOn}T12:00:00Z`).getUTCDay()).toBe(1);
+    }
+  });
+
+  it('la vie entière d’autrui reste invisible', async () => {
+    const lifetime = data<LifetimeStats>(
+      (await authed(otherAccessToken).get('/api/v1/progress/lifetime').expect(200)).body,
+    );
+    expect(lifetime.completedSessions).toBe(0);
+    expect(lifetime.weeks).toEqual([]);
   });
 
   it('trace la progression sur un exercice du catalogue', async () => {

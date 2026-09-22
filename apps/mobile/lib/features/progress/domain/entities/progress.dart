@@ -215,3 +215,35 @@ class ExerciseProgressionEntity {
 
 /// Ce qu'une courbe cardio met en ordonnée.
 enum CardioReading { distance, duration }
+
+/// Une semaine de la vie entière : le lundi qui l'ouvre, et ses séances.
+class LifetimeWeek {
+  const LifetimeWeek({required this.mondayOn, required this.sessions});
+
+  /// `YYYY-MM-DD`, dans le fuseau de la personne. Une CHAÎNE, parce qu'une
+  /// semaine est un fait civil : un instant se décalerait d'un fuseau à
+  /// l'autre, et changerait de semaine au passage.
+  final String mondayOn;
+  final int sessions;
+}
+
+/// Ce que la vie entière compte, servi par le serveur.
+///
+/// Des FAITS, jamais une règle. Le moteur de récompenses reste seul à
+/// décider ce qu'est une « meilleure série » ou une « semaine équilibrée » :
+/// recalculer ces règles côté serveur en ferait une seconde implémentation,
+/// et deux copies divergent.
+///
+/// Pourquoi le serveur plutôt que l'historique local : celui-ci est plafonné
+/// à 60 séances au rapatriement (`WorkoutSessionDownloader`). Sur un compte à
+/// 200 séances, un téléphone neuf en voyait 60, ne re-méritait pas
+/// `discipline-150`, et la récompense DISPARAISSAIT — exactement ce que le
+/// journal promet de ne jamais laisser arriver.
+class LifetimeStats {
+  const LifetimeStats({required this.completedSessions, required this.weeks});
+
+  final int completedSessions;
+
+  /// Une entrée par semaine ACTIVE, de la plus ancienne à la plus récente.
+  final List<LifetimeWeek> weeks;
+}

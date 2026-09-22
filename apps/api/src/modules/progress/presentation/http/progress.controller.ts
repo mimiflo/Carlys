@@ -1,5 +1,6 @@
 import {
   type ExerciseProgression,
+  type LifetimeStats,
   type PersonalRecord,
   type ProgressOverview,
 } from '@carlys/api-contracts';
@@ -23,6 +24,20 @@ export class ProgressController {
     @Query() query: OverviewQuery,
   ): Promise<ProgressOverview> {
     return this.progress.overview(user.userId, query.period);
+  }
+
+  @Get('lifetime')
+  @ApiOperation({
+    summary: 'Ce que la VIE ENTIÈRE compte, pour les récompenses',
+    description:
+      'Des FAITS (séances terminées, semaines actives et leur compte), ' +
+      'jamais une règle : le moteur de récompenses du mobile reste seul à ' +
+      'décider ce qu’est une meilleure série ou une semaine équilibrée. ' +
+      'Sans cette lecture, un téléphone neuf ne voyait que les 60 dernières ' +
+      'séances rapatriées et une récompense gagnée disparaissait.',
+  })
+  lifetime(@CurrentUser() user: AuthenticatedPrincipal): Promise<LifetimeStats> {
+    return this.progress.lifetime(user.userId);
   }
 
   @Get('records')

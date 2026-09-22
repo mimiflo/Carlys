@@ -42,6 +42,21 @@ export interface RawExercisePoint {
   durationSeconds: number;
 }
 
+/**
+ * Une semaine de la vie entière : le LUNDI qui l'ouvre, et le nombre de
+ * séances terminées cette semaine-là.
+ *
+ * Des FAITS, pas une règle : c'est le moteur de récompenses côté mobile qui
+ * décide ce qu'est une « meilleure série » ou une « semaine équilibrée », et
+ * il reste le seul à le décider. Recalculer ces règles en SQL les
+ * dupliquerait, et deux copies divergent.
+ */
+export interface RawLifetimeWeek {
+  /** Lundi de la semaine, `YYYY-MM-DD` dans le fuseau de la personne. */
+  mondayOn: string;
+  sessions: number;
+}
+
 /** Regroupement SQL par période — mots-clés STRICTEMENT whitelistés. */
 const BUCKET_BY_PERIOD: Record<ProgressPeriod, string> = {
   week: 'day',
@@ -159,6 +174,46 @@ export class ProgressRepository {
       bucketStart: row.bucket_start,
       sessionsCount: Number(row.sessions),
       volumeKg: Math.round(Number(row.volume ?? 0)),
+    }));
+  }
+
+  /**
+   * Les semaines de la VIE ENTIÈRE où au moins une séance a été terminée.
+   *
+   * Sans bornes de date et sans `LIMIT` : c'est tout le propos. Le mobile
+   * dérivait ces compteurs de son historique LOCAL, plafonné à 60 séances
+   * par `WorkoutSessionDownloader.restoredSessionsMax` — un téléphone neuf
+   * sur un compte à 200 séances en voyait 60, ne re-méritait pas
+   * `discipline-150`, et la récompense DISPARAISSAIT, ce que le journal
+   * promet justement de ne jamais faire.
+   *
+   * Le volume reste minuscule : une ligne par semaine ACTIVE, soit ~104
+   * lignes sur deux ans, ~520 sur dix ans.
+   *
+   * Découpage dans le fuseau de la personne, comme `volumeBuckets` et pour
+   * la même raison : une séance du dimanche soir bascule au lundi en UTC, et
+   * changerait donc de semaine. `date_trunc('week', …)` rend le LUNDI, qui
+   * est aussi le jour d'ouverture retenu côté mobile.
+   */
+  async lifetimeWeeks(userId: string, timeZone: string): Promise<RawLifetimeWeek[]> {
+    const rows = await this.prisma.$queryRaw<{ monday: Date; sessions: bigint }[]>(Prisma.sql`
+      SELECT
+        date_trunc('week', w."startedAt" AT TIME ZONE ${timeZone}) AS monday,
+        COUNT(*)                                                   AS sessions
+      FROM "WorkoutSession" w
+      WHERE w."userId" = ${userId}::uuid
+        AND w."status" = 'COMPLETED'
+        AND w."deletedAt" IS NULL
+      GROUP BY monday
+      ORDER BY monday ASC
+    `);
+
+    return rows.map((row) => ({
+      // `date_trunc` sans `AT TIME ZONE` de retour rend un timestamp SANS
+      // fuseau, que le pilote présente en UTC : ses composantes UTC sont
+      // donc exactement le minuit local cherché.
+      mondayOn: row.monday.toISOString().slice(0, 10),
+      sessions: Number(row.sessions),
     }));
   }
 

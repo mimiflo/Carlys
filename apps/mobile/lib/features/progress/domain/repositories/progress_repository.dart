@@ -42,4 +42,8 @@ abstract interface class ProgressRepository {
   /// La route existe et est testée côté serveur depuis septembre ; elle
   /// n'avait simplement aucun client.
   Future<ExerciseProgressionEntity> exerciseProgression(String exerciseId);
+
+  /// Ce que la vie entière compte, pour les récompenses. Voir
+  /// [LifetimeStats] : des faits, jamais une règle.
+  Future<LifetimeStats> lifetimeStats();
 }

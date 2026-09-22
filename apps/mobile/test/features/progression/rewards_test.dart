@@ -1,3 +1,4 @@
+import 'package:carlys_mobile/features/progress/domain/entities/progress.dart';
 import 'package:carlys_mobile/features/progression/data/reward_ledger.dart';
 import 'package:carlys_mobile/features/progression/domain/progression.dart';
 import 'package:carlys_mobile/features/progression/domain/reward_engine.dart';
@@ -26,6 +27,102 @@ void main() {
       setsCount: 12,
     );
   }
+
+  group('les compteurs de VIE ENTIÈRE viennent du serveur', () {
+    // LE BUG QUE CE GROUPE FERME : l'historique local est plafonné à 60
+    // séances au rapatriement (`WorkoutSessionDownloader`). Sur un compte à
+    // 200 séances, un téléphone neuf en dérivait 60, ne re-méritait pas
+    // `discipline-150`, et la récompense DISPARAISSAIT — alors que le
+    // journal promet qu'une médaille gagnée le reste.
+    LifetimeStats vieEntiere(int semaines, int parSemaine) => LifetimeStats(
+      completedSessions: semaines * parSemaine,
+      weeks: [
+        for (var index = 0; index < semaines; index++)
+          LifetimeWeek(
+            // Lundis consécutifs à partir du 5 janvier 2026.
+            mondayOn: DateTime.utc(
+              2026,
+              1,
+              5,
+            ).add(Duration(days: index * 7)).toIso8601String().substring(0, 10),
+            sessions: parSemaine,
+          ),
+      ],
+    );
+
+    test('le serveur l’emporte sur les 60 séances rapatriées', () {
+      final facts = buildRewardFacts(
+        // Ce qu'un téléphone NEUF voit : les soixante dernières séances.
+        history: [
+          for (var index = 0; index < 60; index++)
+            session(DateTime(2026, 1, 5).add(Duration(days: index * 2))),
+        ],
+        reachedTitle: CarlysTitle.apprenti,
+        lifetime: vieEntiere(70, 3),
+      );
+
+      expect(facts.completedSessions, 210);
+      expect(facts.bestWeekStreak, 70);
+      expect(facts.balancedWeeks, 70);
+    });
+
+    test('sans serveur, l’historique local reprend la main', () {
+      // Hors ligne. Sous-compter n'efface rien : le journal ne s'écrit qu'en
+      // AJOUT, et une récompense déjà inscrite y reste.
+      final facts = buildRewardFacts(
+        history: [
+          session(DateTime(2026, 1, 5)),
+          session(DateTime(2026, 1, 12)),
+        ],
+        reachedTitle: CarlysTitle.apprenti,
+      );
+
+      expect(facts.completedSessions, 2);
+      expect(facts.bestWeekStreak, 2);
+    });
+
+    test('un trou de semaine reste un trou, quelle que soit la source', () {
+      // La RÈGLE ne change pas de camp : le serveur sert des faits, le
+      // moteur décide. Deux semaines, un trou, deux semaines — le record
+      // vaut deux, pas quatre.
+      final facts = buildRewardFacts(
+        history: const [],
+        reachedTitle: CarlysTitle.apprenti,
+        lifetime: LifetimeStats(
+          completedSessions: 12,
+          weeks: const [
+            LifetimeWeek(mondayOn: '2026-01-05', sessions: 3),
+            LifetimeWeek(mondayOn: '2026-01-12', sessions: 3),
+            LifetimeWeek(mondayOn: '2026-01-26', sessions: 3),
+            LifetimeWeek(mondayOn: '2026-02-02', sessions: 3),
+          ],
+        ),
+      );
+
+      expect(facts.bestWeekStreak, 2);
+      expect(facts.completedSessions, 12);
+    });
+
+    test(
+      'une semaine hors du rythme tenable ne compte pas comme équilibrée',
+      () {
+        final facts = buildRewardFacts(
+          history: const [],
+          reachedTitle: CarlysTitle.apprenti,
+          lifetime: LifetimeStats(
+            completedSessions: 9,
+            weeks: const [
+              LifetimeWeek(mondayOn: '2026-01-05', sessions: 1), // trop peu
+              LifetimeWeek(mondayOn: '2026-01-12', sessions: 3), // tenable
+              LifetimeWeek(mondayOn: '2026-01-19', sessions: 5), // trop
+            ],
+          ),
+        );
+
+        expect(facts.balancedWeeks, 1);
+      },
+    );
+  });
 
   group('faits de récompense', () {
     test(

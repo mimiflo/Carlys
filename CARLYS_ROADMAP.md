@@ -475,9 +475,30 @@ entre amis, aucune ligue, aucun pas.
       kilomètres. Les deux courbes partagent leur cadre
       (`progression_chart_frame.dart`), extrait pour l'occasion. Tests :
       1 e2e, 12 widget/unitaires. Capture `39-progression-cardio`.
-- [ ] 8.4 Timeline : rien. `[!]` architecture : les récompenses vivent en
-      SharedPreferences sur l'appareil — les remonter au serveur d'abord,
-      sinon la frise change d'un appareil à l'autre.
+- [~] 8.4 Timeline — PRÉALABLE LEVÉ le 22 septembre 2026, frise à faire.
+      Le préalable annoncé (« remonter les récompenses au serveur ») était
+      mal posé, et mesuré il cachait pire : ce ne sont pas les FAITS qui
+      manquaient au serveur — les 22 règles du catalogue se décident toutes
+      sur des faits qu'il a déjà — c'est que le mobile les dérivait de son
+      historique LOCAL, plafonné à 60 séances au rapatriement. Sur un compte
+      à 200 séances, un téléphone neuf ne re-méritait pas `discipline-150`,
+      et la médaille DISPARAISSAIT. `GET /progress/lifetime` sert désormais
+      les séances terminées et les semaines actives de la vie entière, sans
+      plafond ; la RÈGLE (meilleure série, semaines équilibrées) reste dans
+      `reward_facts_builder.dart`, seul propriétaire du barème. Tests :
+      2 e2e, 4 unitaires.
+      **Reste pour la frise elle-même** : `ProgressMilestone(userId, kind,
+      key, occurredAt)` avec `@@unique([userId, kind, key])` — la règle du
+      journal local (« la première gagne, rien ne s'efface ») devient un
+      `ON CONFLICT DO NOTHING` ; séances, mesures et leçons restent DÉRIVÉES
+      à la lecture (trois tables déjà datées et indexées, et les recopier
+      rouvrirait le bug de la correction) ; `GET /progress/timeline` paginé
+      par un curseur qui encode `(occurredAt, id)` et non l'id seul, un flux
+      fusionné ayant des ex æquo à la seconde. Les en-têtes de mois se posent
+      côté CLIENT : découpés côté serveur, une page vaudrait 2 lignes ou 200.
+      Attention au double comptage : un record battu et son badge ne font
+      qu'UNE ligne, un titre ne produit jamais aussi un `REWARD`, les leçons
+      se groupent par jour, et `mentor.celebrations.dites` ne nourrit rien.
 
 ---
 

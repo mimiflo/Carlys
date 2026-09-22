@@ -137,6 +137,7 @@ déclare ici à la main.
 | `POST /body-metrics` | **mobile** | apps/mobile |
 | `PATCH /body-metrics/{id}` | **mobile** | apps/mobile |
 | `DELETE /body-metrics/{id}` | **mobile** | apps/mobile |
+| `GET /progress/lifetime` | **mobile** | apps/mobile — compteurs de récompense, hors plafond des 60 séances rapatriées |
 | `GET /progress/exercises/{exerciseId}` | **mobile** | apps/mobile — `ExerciseProgressionScreen`, poussé depuis une ligne de record ; charge OU cardio selon les faits servis |
 | `GET /progress/overview` | **mobile** | apps/mobile |
 | `GET /progress/records` | **mobile** | apps/mobile |

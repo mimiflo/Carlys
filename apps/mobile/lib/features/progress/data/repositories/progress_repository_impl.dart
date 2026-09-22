@@ -126,6 +126,18 @@ class ProgressRepositoryImpl implements ProgressRepository {
     });
   }
 
+  @override
+  Future<LifetimeStats> lifetimeStats() {
+    return _guard(() async {
+      final response = await _dio.get<Map<String, dynamic>>(
+        '/progress/lifetime',
+      );
+      return lifetimeStatsFromJson(
+        response.data?['data'] as Map<String, dynamic>? ?? const {},
+      );
+    });
+  }
+
   Future<T> _guard<T>(Future<T> Function() action) async {
     try {
       return await action();

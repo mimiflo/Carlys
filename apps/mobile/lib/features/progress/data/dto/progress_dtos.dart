@@ -73,3 +73,16 @@ ExerciseProgressionEntity exerciseProgressionFromJson(
       .map(exerciseProgressionPointFromJson)
       .toList(),
 );
+
+LifetimeStats lifetimeStatsFromJson(Map<String, dynamic> json) => LifetimeStats(
+  completedSessions: (json['completedSessions'] as num?)?.toInt() ?? 0,
+  weeks: (json['weeks'] as List<dynamic>? ?? const [])
+      .whereType<Map<String, dynamic>>()
+      .map(
+        (row) => LifetimeWeek(
+          mondayOn: row['mondayOn'] as String,
+          sessions: (row['sessions'] as num?)?.toInt() ?? 0,
+        ),
+      )
+      .toList(growable: false),
+);

@@ -25,6 +25,33 @@ export const progressOverviewSchema = z.object({
 });
 export type ProgressOverview = z.infer<typeof progressOverviewSchema>;
 
+/**
+ * Ce que la VIE ENTIÈRE compte, pour les récompenses.
+ *
+ * Des FAITS, jamais une règle : le serveur dit combien de séances et
+ * quelles semaines, le moteur de récompenses (mobile) décide seul ce qu'est
+ * une « meilleure série » ou une « semaine équilibrée ». Calculer ces règles
+ * ici les dupliquerait, et deux copies divergent.
+ *
+ * Pourquoi le serveur : le mobile les dérivait de son historique LOCAL,
+ * plafonné à 60 séances au rapatriement. Sur un compte à 200 séances, un
+ * téléphone neuf en voyait 60 — et une récompense déjà gagnée disparaissait.
+ */
+export const lifetimeWeekSchema = z.object({
+  /** Lundi qui ouvre la semaine, `YYYY-MM-DD` dans le fuseau de la personne. */
+  mondayOn: z.string(),
+  /** Séances TERMINÉES cette semaine-là. */
+  sessions: z.number(),
+});
+export type LifetimeWeek = z.infer<typeof lifetimeWeekSchema>;
+
+export const lifetimeStatsSchema = z.object({
+  completedSessions: z.number(),
+  /** Une entrée par semaine ACTIVE, de la plus ancienne à la plus récente. */
+  weeks: z.array(lifetimeWeekSchema),
+});
+export type LifetimeStats = z.infer<typeof lifetimeStatsSchema>;
+
 export const personalRecordTypeSchema = z.enum(['MAX_WEIGHT', 'MAX_REPS', 'MAX_SET_VOLUME']);
 export type PersonalRecordType = z.infer<typeof personalRecordTypeSchema>;
 

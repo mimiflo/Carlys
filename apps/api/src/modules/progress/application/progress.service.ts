@@ -2,6 +2,7 @@ import {
   type BodyMetric as BodyMetricContract,
   type BodyMetricType,
   type ExerciseProgression,
+  type LifetimeStats,
   type PersonalRecord as PersonalRecordContract,
   type ProgressOverview,
   type ProgressPeriod,
@@ -158,6 +159,23 @@ export class ProgressService {
 
   async records(userId: string): Promise<PersonalRecordContract[]> {
     return (await this.progress.listRecords(userId)).map(presentRecord);
+  }
+
+  /**
+   * Ce que la vie entière compte, pour les récompenses.
+   *
+   * Le serveur sert les FAITS ; la RÈGLE reste côté mobile, dans le moteur
+   * de récompenses qui en est le seul propriétaire. C'est pour ça que la
+   * réponse porte les semaines brutes plutôt qu'une « meilleure série »
+   * déjà calculée : la calculer ici en serait une seconde implémentation.
+   */
+  async lifetime(userId: string): Promise<LifetimeStats> {
+    const timeZone = safeTimeZone(await this.progress.userTimeZone(userId));
+    const weeks = await this.progress.lifetimeWeeks(userId, timeZone);
+    return {
+      completedSessions: weeks.reduce((total, week) => total + week.sessions, 0),
+      weeks,
+    };
   }
 
   async exerciseProgression(userId: string, exerciseId: string): Promise<ExerciseProgression> {

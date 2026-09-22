@@ -21,6 +21,14 @@ final personalRecordsProvider =
       return ref.watch(progressRepositoryProvider).records();
     });
 
+/// Ce que la vie entière compte, pour les récompenses.
+///
+/// NON auto-disposé, comme `earnedRewardsProvider` qui en dépend : le
+/// relire à chaque navigation ferait clignoter les récompenses.
+final lifetimeStatsProvider = FutureProvider<LifetimeStats>((ref) {
+  return ref.watch(progressRepositoryProvider).lifetimeStats();
+});
+
 /// Historique de poids corporel (du plus ancien au plus récent).
 final bodyWeightMetricsProvider =
     FutureProvider.autoDispose<List<BodyMetricEntry>>((ref) {

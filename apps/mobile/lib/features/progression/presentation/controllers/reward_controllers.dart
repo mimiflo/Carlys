@@ -14,14 +14,16 @@ import 'progression_controllers.dart';
 
 /// Les faits qui décident des récompenses.
 ///
-/// Les records viennent du serveur : hors ligne ils comptent zéro, et c'est
-/// sans conséquence — le journal continue d'afficher ceux déjà obtenus, et
-/// la dérivation ne retire jamais rien.
+/// Les records et les compteurs de vie entière viennent du serveur : hors
+/// ligne ils comptent zéro ou retombent sur l'historique local, et c'est
+/// sans conséquence — le journal continue d'afficher ce qui est déjà
+/// obtenu, et la dérivation ne retire jamais rien.
 final rewardFactsProvider = Provider<RewardFacts?>((ref) {
   final history = ref.watch(workoutHistoryProvider);
   final answered = ref.watch(answeredLessonsProvider);
   final pack = ref.watch(academyPackProvider);
   final records = ref.watch(personalRecordsProvider);
+  final lifetime = ref.watch(lifetimeStatsProvider);
   final profile = ref.watch(progressionProfileProvider);
 
   // TOUTES les sources doivent avoir répondu — données ou échec — avant de
@@ -36,6 +38,7 @@ final rewardFactsProvider = Provider<RewardFacts?>((ref) {
     answered,
     pack,
     records,
+    lifetime,
   ].every((source) => source.hasValue || source.hasError);
   if (!pret || history.valueOrNull == null || profile == null) {
     return null;
@@ -51,6 +54,10 @@ final rewardFactsProvider = Provider<RewardFacts?>((ref) {
   return buildRewardFacts(
     history: history.valueOrNull!,
     reachedTitle: profile.title,
+    // Nul hors ligne : l'historique local reprend alors la main. Voir
+    // `buildRewardFacts` — sous-compter n'efface rien, le journal ne
+    // s'écrit qu'en ajout.
+    lifetime: lifetime.valueOrNull,
     lessonsAnswered: progress?.abordees ?? 0,
     lessonsTotal: progress?.total ?? 0,
     academyDomainsCompleted: ref.watch(completedAcademyDomainsProvider),
