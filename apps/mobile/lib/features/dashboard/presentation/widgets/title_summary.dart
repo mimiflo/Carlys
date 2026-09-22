@@ -88,6 +88,15 @@ class TitleSummary extends ConsumerWidget {
               const SizedBox(height: AppSpacing.sm + 1),
               _Gauge(value: profile.totalProgress, opened: opened),
               const SizedBox(height: AppSpacing.sm - 1),
+              // Le PROCHAIN PALIER, chiffré. La jauge dit « où j'en suis »,
+              // elle ne dit pas « combien il en reste » — et une barre sans
+              // son reste à parcourir ne donne rien à viser.
+              _NextTier(
+                next: profile.title.next,
+                remaining: profile.pointsToNextTitle,
+                opened: opened,
+              ),
+              const SizedBox(height: AppSpacing.xxs),
               _Latest(reward: latest?.reward.label),
             ],
           ),
@@ -150,6 +159,53 @@ class _PendingTrack extends CustomPainter {
 
   @override
   bool shouldRepaint(_PendingTrack oldDelegate) => false;
+}
+
+/// « Encore 42 points avant Artisan. »
+///
+/// Muet tant que le compteur n'est pas ouvert : annoncer un palier à
+/// quelqu'un qui n'a pas encore commencé, c'est lui montrer une dette.
+/// Muet aussi au dernier palier, où il n'y a plus de « prochain ».
+class _NextTier extends StatelessWidget {
+  const _NextTier({
+    required this.next,
+    required this.remaining,
+    required this.opened,
+  });
+
+  final CarlysTitle? next;
+  final int? remaining;
+  final bool opened;
+
+  @override
+  Widget build(BuildContext context) {
+    final palier = next;
+    final reste = remaining;
+    if (!opened || palier == null || reste == null) {
+      return const SizedBox.shrink();
+    }
+
+    final label = AppTypography.label.copyWith(
+      fontSize: 12,
+      color: AppColors.darkTextTertiary,
+    );
+    return Text.rich(
+      TextSpan(
+        children: [
+          const TextSpan(text: 'Encore '),
+          TextSpan(
+            text: '$reste',
+            style: label.copyWith(
+              fontWeight: FontWeight.w600,
+              color: AppColors.darkTextPrimary,
+            ),
+          ),
+          TextSpan(text: ' points avant ${palier.label}.'),
+        ],
+      ),
+      style: label,
+    );
+  }
 }
 
 class _Latest extends StatelessWidget {

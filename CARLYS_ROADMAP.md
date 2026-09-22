@@ -505,9 +505,16 @@ entre amis, aucune ligue, aucun pas.
       attrapées ainsi).
 - [x] Conditions d'obtention : seuils affichés, marque « GRAVÉ » quand un
       titre acquis n'est plus porté.
-- [~] Progression vers le suivant : les points sur le total existent sur
-      l'accueil ; vérifier qu'un « prochain palier : N points » explicite
-      est bien rendu, sinon l'ajouter.
+- [x] Progression vers le suivant — VÉRIFIÉ puis COMPLÉTÉ le 22 septembre
+      2026. La carte de titre du profil le disait déjà (« Encore 42 points
+      avant Artisan », plus le seuil absolu en regard) ; l'accueil, lui, ne
+      montrait que le total et la jauge. La jauge répond à « où j'en suis »,
+      pas à « combien encore » — une barre sans son reste à parcourir ne
+      donne rien à viser. La phrase est donc ajoutée sous la jauge de
+      l'accueil, muette tant que le compteur n'est pas ouvert (annoncer un
+      palier à qui n'a pas commencé, c'est montrer une dette) et au dernier
+      palier, où il n'y a plus de « prochain ». 4 tests, capture
+      `02b-accueil-progression` refaite.
 - [ ] Revoir les noms (« Apprenti ») : proposition de noms au propriétaire —
       décision produit, pas de code avant.
 
