@@ -128,6 +128,11 @@ void main() {
           measuredAt: DateTime.utc(2026, 8, 6, 7),
         ),
       ],
+      // La tuile visée ici est la DURÉE, qui ne s'affiche que tant que
+      // l'assiduité n'est pas calculable : il faut donc que les deux points
+      // tombent dans la même semaine ISO, ce que « hier et avant-hier » ne
+      // garantit pas un lundi.
+      overviewFor: (period) => overviewOf(period, points: pointsMemeSemaine()),
     );
 
     await tester.pumpWidget(appWith(progress));
@@ -165,10 +170,23 @@ void main() {
   testWidgets('ouvre la liste complète des records', (tester) async {
     final progress = FakeProgressRepository(
       records: [
-        recordOf('Développé couché', PersonalRecordType.maxWeight, 80),
-        recordOf('Squat', PersonalRecordType.maxWeight, 120),
-        recordOf('Soulevé de terre', PersonalRecordType.maxWeight, 145),
-        recordOf('Rowing', PersonalRecordType.maxWeight, 70),
+        // L'aperçu montre les TROIS PLUS RÉCENTS : le test nomme donc les
+        // reculs au lieu de compter sur un ordre d'insertion que la section
+        // ne respecte pas.
+        recordOf(
+          'Développé couché',
+          PersonalRecordType.maxWeight,
+          80,
+          joursAvant: 1,
+        ),
+        recordOf('Squat', PersonalRecordType.maxWeight, 120, joursAvant: 2),
+        recordOf(
+          'Soulevé de terre',
+          PersonalRecordType.maxWeight,
+          145,
+          joursAvant: 3,
+        ),
+        recordOf('Rowing', PersonalRecordType.maxWeight, 70, joursAvant: 40),
       ],
     );
 

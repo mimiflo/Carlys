@@ -1,4 +1,5 @@
 import 'package:carlys_mobile/core/errors/app_exception.dart';
+import 'package:carlys_mobile/core/utilities/formatting.dart';
 import 'package:carlys_mobile/features/exercises/domain/entities/exercise.dart';
 import 'package:carlys_mobile/features/exercises/presentation/widgets/muscle_group_card.dart';
 import 'package:carlys_mobile/features/subscription/presentation/widgets/subscription_offers.dart';
@@ -89,10 +90,17 @@ void main() {
     expect(find.text('Premium'), findsWidgets);
     expect(find.text('ACTIF'), findsOneWidget);
     expect(find.byIcon(Icons.check_circle_rounded), findsNWidgets(3));
-    // Échéance formatée par formatShortDateMono (« DIM. 6 SEPT. » en UTC ;
-    // le jour local dépend du fuseau de la machine de test).
+    // Échéance formatée par formatShortDateMono. Le libellé attendu se
+    // DÉRIVE du décor : coder un nom de mois y figeait la date, et la carte
+    // a fini par annoncer un renouvellement déjà passé.
     expect(find.textContaining('Renouvellement le '), findsOneWidget);
-    expect(find.textContaining('SEPT.'), findsOneWidget);
+    expect(
+      find.text(
+        'Renouvellement le '
+        '${formatShortDateMono(subscriptionRenewalDate().toLocal())}',
+      ),
+      findsOneWidget,
+    );
     // Une fois Premium, la porte vers le portail de facturation est là.
     expect(find.text('Gérer mon abonnement'), findsOneWidget);
 

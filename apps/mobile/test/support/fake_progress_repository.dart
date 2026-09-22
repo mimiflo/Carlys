@@ -1,6 +1,22 @@
 import 'package:carlys_mobile/features/progress/domain/entities/progress.dart';
 import 'package:carlys_mobile/features/progress/domain/repositories/progress_repository.dart';
 
+/// Minuit UTC d'il y a [jours] jours.
+///
+/// LA RÈGLE DE CE FICHIER, et de tout décor : une date RENDUE À L'ÉCRAN se
+/// date relativement à maintenant. Une date seulement utilisée comme
+/// identifiant peut rester figée ; celle qu'un écran transforme en « IL Y A
+/// 1 MOIS » ou qu'il compare à la semaine en cours, non — elle vieillit, et
+/// le décor finit par raconter le contraire de ce qu'il illustre.
+DateTime _ilYA(int jours) {
+  final maintenant = DateTime.now().toUtc();
+  return DateTime.utc(
+    maintenant.year,
+    maintenant.month,
+    maintenant.day - jours,
+  );
+}
+
 ProgressOverviewEntity overviewOf(
   ProgressPeriod period, {
   int sessionsCount = 2,
@@ -17,29 +33,70 @@ ProgressOverviewEntity overviewOf(
   points:
       points ??
       [
-        ProgressPoint(
-          bucketStart: DateTime.utc(2026, 8, 5),
-          sessionsCount: 1,
-          volumeKg: 840,
-        ),
-        ProgressPoint(
-          bucketStart: DateTime.utc(2026, 8, 6),
-          sessionsCount: 1,
-          volumeKg: 700,
-        ),
+        // Avant-hier et hier, PAS deux jours d'août figés : la carte
+        // s'intitule « Volume hebdo » et se légende « sur la semaine », et
+        // elle datait son axe de sept semaines plus tôt. Elle se
+        // contredisait donc dans son propre cadre.
+        //
+        // Ces deux jours peuvent tomber de part et d'autre d'un lundi, donc
+        // sur DEUX semaines ISO — et l'assiduité devient alors calculable,
+        // ce qui remplace la tuile de durée. C'est le comportement JUSTE de
+        // l'application ; une épreuve qui vise l'une des deux tuiles pose
+        // donc ses propres points avec [pointsMemeSemaine].
+        ProgressPoint(bucketStart: _ilYA(2), sessionsCount: 1, volumeKg: 840),
+        ProgressPoint(bucketStart: _ilYA(1), sessionsCount: 1, volumeKg: 700),
       ],
 );
 
+/// Deux points garantis dans la MÊME semaine ISO.
+///
+/// `weeklyAttendance` rend `null` sous deux semaines couvertes — « une
+/// assiduité sur une seule semaine vaudrait mécaniquement 100 % » — et c'est
+/// ce qui décide entre la tuile de durée et celle d'assiduité. Une épreuve
+/// qui vise l'une des deux doit donc fixer la semaine, pas la subir.
+List<ProgressPoint> pointsMemeSemaine({
+  double premier = 840,
+  double second = 700,
+}) {
+  final maintenant = DateTime.now().toUtc();
+  final lundi = DateTime.utc(
+    maintenant.year,
+    maintenant.month,
+    maintenant.day - (maintenant.weekday - 1),
+  );
+  return [
+    ProgressPoint(bucketStart: lundi, sessionsCount: 1, volumeKg: premier),
+    ProgressPoint(
+      bucketStart: lundi.add(const Duration(days: 1)),
+      sessionsCount: 1,
+      volumeKg: second,
+    ),
+  ];
+}
+
+/// Un record, daté RELATIVEMENT à maintenant.
+///
+/// La date était figée au 6 août 2026, et l'écran la rend en âge :
+/// `record_row.dart` écrit « IL Y A 1 MOIS », puis « IL Y A 2 MOIS », et
+/// ainsi de suite. La galerie montrait donc quelqu'un qui s'entraîne tous
+/// les jours et n'a plus battu un record depuis des semaines — l'inverse de
+/// ce que l'écran Progrès raconte. Même défaut, même remède que
+/// `historyOf()` : une date figée dans un décor vieillit, un décalage non.
+///
+/// [joursAvant] distingue les records entre eux : quatre entrées à la
+/// seconde près se lisent comme une donnée fabriquée, et le plus récent doit
+/// pouvoir porter son accent.
 PersonalRecordEntry recordOf(
   String exerciseName,
   PersonalRecordType type,
-  double value,
-) => PersonalRecordEntry(
+  double value, {
+  int joursAvant = 3,
+}) => PersonalRecordEntry(
   id: '$exerciseName-${type.apiValue}',
   exerciseName: exerciseName,
   type: type,
   value: value,
-  achievedAt: DateTime.utc(2026, 8, 6, 10),
+  achievedAt: DateTime.now().toUtc().subtract(Duration(days: joursAvant)),
 );
 
 /// ProgressRepository de test — données en mémoire, aucune requête réseau.

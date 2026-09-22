@@ -54,7 +54,7 @@ class FakeSubscriptionRepository implements SubscriptionRepository {
               planName: 'Premium',
               state: SubscriptionState.active,
               cancelAtPeriodEnd: false,
-              currentPeriodEnd: DateTime.utc(2026, 9, 6),
+              currentPeriodEnd: subscriptionRenewalDate(),
             )
           : null,
     );
@@ -117,3 +117,15 @@ class FakeSubscriptionRepository implements SubscriptionRepository {
     return portalUrl;
   }
 }
+
+/// L'échéance d'un abonnement actif : dans un peu plus de trois semaines.
+///
+/// Elle était figée au 6 septembre 2026, et la carte la rend SANS ANNÉE
+/// (« Renouvellement le dim. 6 sept. »). Passé cette date, l'écran d'ARGENT,
+/// celui qui doit inspirer le plus confiance, annonçait un renouvellement
+/// déjà révolu.
+///
+/// PUBLIQUE, pour que les épreuves dérivent le libellé attendu au lieu de
+/// coder un nom de mois : c'est ce couplage-là qui avait figé la date.
+DateTime subscriptionRenewalDate() =>
+    DateTime.now().toUtc().add(const Duration(days: 23));

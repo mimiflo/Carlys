@@ -569,12 +569,29 @@ Règle, priorité et sources des faits : `docs/product/citations.md`.
 
 ---
 
-## PLAN 11 — Cohérence globale  `[ ] EN DERNIER`
+## PLAN 11 — Cohérence globale  `[~] EN COURS`
 
 Passe finale UX / UI / architecture une fois les plans 1 à 10 livrés. Une
 partie est déjà tenue en continu par les gardes du dépôt : tailles de
 fichiers, tokens design obligatoires, états
 erreur/chargement/vide/hors-ligne, `check.sh` + `check_mobile.sh`.
+
+- [x] **Les décors de la galerie ne vieillissent plus** — 22 septembre 2026.
+      Sept dates étaient figées en dur dans les doublures, et les écrans les
+      rendent EN ÂGE : la vitrine du produit s'est mise à raconter le
+      contraire de ce qu'elle illustre. L'accueil annonçait « 43 jours de
+      repos » sous une semaine de constance vide ; les quatre records
+      affichaient tous « IL Y A 1 MOIS » à côté de séances « hier » ; la
+      carte « Dernière mesure » datait de deux mois ; la carte « Volume
+      hebdo · sur la semaine » traçait son axe sur deux jours d'août, sept
+      semaines plus tôt ; la courbe cardio « suivie sur six semaines »
+      listait des séances d'un mois ; et l'écran d'ARGENT, celui qui doit
+      inspirer le plus confiance, annonçait un renouvellement DÉJÀ PASSÉ.
+      **La règle, désormais écrite dans les décors** : une date RENDUE à
+      l'écran se date relativement à maintenant ; une date qui ne sert que
+      d'identifiant peut rester figée. Deux épreuves qui codaient un nom de
+      mois ou un ordre d'insertion ont été décorrélées du décor plutôt que
+      recalées. Galerie entièrement régénérée et relue.
 
 ---
 

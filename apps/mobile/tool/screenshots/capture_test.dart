@@ -302,11 +302,31 @@ List<WorkoutHistoryEntry> historyOf() {
 }
 
 FakeProgressRepository progressOf() => FakeProgressRepository(
+  // La galerie fixe sa semaine : « hier et avant-hier » peut tomber de part
+  // et d'autre d'un lundi, et la tuile bascule alors de la DURÉE à
+  // l'ASSIDUITÉ. C'est le comportement juste de l'application, mais une
+  // vitrine qui change de tuile selon le jour où on la photographie n'est
+  // pas une vitrine.
+  overviewFor: (period) => overviewOf(period, points: pointsMemeSemaine()),
   records: [
-    recordOf('Développé couché', PersonalRecordType.maxWeight, 80),
-    recordOf('Développé couché', PersonalRecordType.maxReps, 12),
-    recordOf('Développé couché', PersonalRecordType.maxSetVolume, 700),
-    recordOf('Squat', PersonalRecordType.maxWeight, 120),
+    // Quatre reculs DISTINCTS : les records s'affichent en âge, et quatre
+    // dates identiques se lisent comme une donnée fabriquée. Tous au-delà de
+    // trois jours, pour que la maxime de l'accueil reste celle de la série
+    // en cours plutôt que celle d'un record frais.
+    recordOf(
+      'Développé couché',
+      PersonalRecordType.maxWeight,
+      80,
+      joursAvant: 3,
+    ),
+    recordOf('Développé couché', PersonalRecordType.maxReps, 12, joursAvant: 6),
+    recordOf(
+      'Développé couché',
+      PersonalRecordType.maxSetVolume,
+      700,
+      joursAvant: 11,
+    ),
+    recordOf('Squat', PersonalRecordType.maxWeight, 120, joursAvant: 18),
   ],
   bodyMetrics: [
     for (final (index, value) in [
@@ -322,7 +342,12 @@ FakeProgressRepository progressOf() => FakeProgressRepository(
         id: 'w-$index',
         kind: BodyMetricKind.weightKg,
         value: value,
-        measuredAt: DateTime.utc(2026, 6, 25).add(Duration(days: index * 6)),
+        // La dernière pesée date d'HIER, les autres remontent de six jours
+        // en six jours. Figée au 25 juin, la série faisait dire « IL Y A
+        // 2 MOIS » à la carte qui s'intitule « Dernière mesure ».
+        measuredAt: startOfToday().toUtc().subtract(
+          Duration(days: (6 - index) * 6 + 1),
+        ),
       ),
   ],
 );
@@ -340,12 +365,13 @@ List<ProgressEvent> timelineSampleOf() {
   ) => ProgressEvent(
     id: '${kind.apiValue}-$joursAvant',
     kind: kind,
-    occurredAt: DateTime.utc(
-      2026,
-      9,
-      20,
-      18,
-    ).subtract(Duration(days: joursAvant)),
+    // Ancrée sur AUJOURD'HUI : les `joursAvant` gardent leur calage voulu
+    // (un événement du jour, un groupe récent, deux plus anciens qui font
+    // apparaître le second en-tête de mois) sans dater la capture.
+    occurredAt: startOfToday()
+        .toUtc()
+        .add(const Duration(hours: 18))
+        .subtract(Duration(days: joursAvant)),
     payload: payload,
   );
 
@@ -412,7 +438,13 @@ ExerciseProgressionEntity cardioProgressionOf() => ExerciseProgressionEntity(
     ].indexed)
       ExerciseProgressionPoint(
         sessionId: 'c-$index',
-        date: DateTime.utc(2026, 8, 3 + index * 6, 7),
+        // Six séances espacées de six jours, la dernière HIER. Figée au
+        // 3 août, la courbe « suivie sur six semaines » listait des séances
+        // vieilles d'un mois : elle décrédibilisait ce qu'elle démontre.
+        date: startOfToday()
+            .toUtc()
+            .subtract(Duration(days: (5 - index) * 6 + 1))
+            .add(const Duration(hours: 7)),
         volumeKg: 0,
         distanceMeters: metres,
         durationSeconds: secondes,
