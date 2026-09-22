@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/app_routes.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/academy_journey.dart';
+import '../controllers/academy_controllers.dart';
 import '../providers/academy_progress_providers.dart';
 
 /// Le Parcours en un coup d'œil : six étapes, où on en est, où reprendre.
@@ -18,6 +19,12 @@ class JourneyScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    // Le PACK, et pas seulement l'avancement qui en dérive : celui-ci vaut
+    // `null` pendant le chargement ET en cas d'échec, si bien qu'une lecture
+    // en erreur laissait tourner l'indicateur indéfiniment, sans reprise.
+    // `academy_screen.dart` et `journey_stage_screen.dart` branchent déjà
+    // les trois branches ; c'est leur grammaire qu'on reprend.
+    final pack = ref.watch(academyPackProvider);
     final progress = ref.watch(academyJourneyProgressProvider);
     final bottomInset =
         AppBottomBar.height + MediaQuery.paddingOf(context).bottom;
@@ -25,7 +32,13 @@ class JourneyScreen extends ConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.darkBackground,
       appBar: AppBar(title: const Text('Parcours')),
-      body: progress == null
+      body: pack.hasError
+          ? AppErrorState(
+              title: 'Parcours indisponible',
+              message: 'Le contenu d’apprentissage n’a pas pu être chargé.',
+              onRetry: () => ref.invalidate(academyPackProvider),
+            )
+          : progress == null
           ? const AppLoadingIndicator()
           : ListView(
               padding: EdgeInsets.fromLTRB(

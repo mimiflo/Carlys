@@ -321,8 +321,13 @@ class FakeCommunityRepository implements CommunityRepository {
   final List<FriendChallenge> friendChallengeList = [];
 
   @override
-  Future<List<FriendChallenge>> friendChallenges() async =>
-      List.unmodifiable(friendChallengeList);
+  Future<List<FriendChallenge>> friendChallenges() async {
+    // Comme toute autre lecture : sans ce garde, la doublure prétendait
+    // répondre alors que le dépôt est déclaré injoignable, et l'écran
+    // n'avait jamais l'occasion de dire la panne.
+    _guard();
+    return List.unmodifiable(friendChallengeList);
+  }
 
   @override
   Future<FriendChallenge> createFriendChallenge(
@@ -365,8 +370,18 @@ class FakeCommunityRepository implements CommunityRepository {
   bool joinsLeague = false;
   League? leagueOverride;
 
+  /// L'échec que la SEULE ligue oppose, sans faire tomber le reste : c'est
+  /// ainsi qu'on vérifie qu'une source isolée entre bien dans l'arbitrage
+  /// erreur / chargement / vide de l'écran.
+  Object? leagueError;
+
   @override
   Future<League> league() async {
+    _guard();
+    final erreur = leagueError;
+    if (erreur != null) {
+      throw erreur;
+    }
     final impose = leagueOverride;
     if (impose != null) {
       return impose;

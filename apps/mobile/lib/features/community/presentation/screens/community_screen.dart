@@ -8,6 +8,7 @@ import '../../../../shared/widgets/connection_aware_error.dart';
 import '../../domain/entities/community.dart';
 import '../controllers/community_controllers.dart';
 import '../controllers/community_moderation_controllers.dart';
+import '../providers/community_screen_state.dart';
 import '../widgets/add_friend_sheet.dart';
 import '../widgets/community_feedback.dart';
 import '../widgets/community_sections.dart';
@@ -71,31 +72,6 @@ class CommunityScreen extends ConsumerWidget {
     });
   }
 
-  /// Redemande TOUT au serveur, et attend la réponse.
-  ///
-  /// L'attente n'est pas décorative : `RefreshIndicator` garde son anneau
-  /// tant que ce futur n'est pas terminé, et le geste doit durer aussi
-  /// longtemps que l'appel.
-  static Future<void> _reload(WidgetRef ref) async {
-    ref
-      ..invalidate(encouragementsProvider)
-      ..invalidate(communityFriendsProvider)
-      ..invalidate(friendRequestsProvider)
-      ..invalidate(communityChallengesProvider)
-      ..invalidate(friendChallengesProvider)
-      ..invalidate(leagueProvider)
-      ..invalidate(blockedUsersProvider);
-    await Future.wait([
-      ref.read(encouragementsProvider.future),
-      ref.read(communityFriendsProvider.future),
-      ref.read(friendRequestsProvider.future),
-      ref.read(communityChallengesProvider.future),
-      ref.read(friendChallengesProvider.future),
-      ref.read(leagueProvider.future),
-      ref.read(blockedUsersProvider.future),
-    ]);
-  }
-
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final feed = ref.watch(encouragementsProvider);
@@ -112,27 +88,30 @@ class CommunityScreen extends ConsumerWidget {
     final bottomInset =
         AppBottomBar.height + MediaQuery.paddingOf(context).bottom;
 
-    final isEmpty =
-        (feed.valueOrNull?.isEmpty ?? true) &&
-        (friends.valueOrNull?.isEmpty ?? true) &&
-        (requests.valueOrNull?.isEmpty ?? true) &&
-        (challenges.valueOrNull?.isEmpty ?? true) &&
-        (blocked.valueOrNull?.isEmpty ?? true);
-    final loaded =
-        !feed.isLoading &&
-        !friends.isLoading &&
-        !requests.isLoading &&
-        !challenges.isLoading &&
-        !blocked.isLoading;
-    // Une erreur n'est PAS un écran vide : « personne ici » serait un
-    // mensonge si le serveur a simplement refusé de répondre. La PREMIÈRE
-    // erreur porte la cause — hors ligne ou panne, l'état affiché le dit.
-    final error =
-        feed.error ??
-        friends.error ??
-        requests.error ??
-        challenges.error ??
-        blocked.error;
+    // Les sept sources en UNE liste, et les trois déductions qui en
+    // découlent. Écrites en ligne, elles avaient divergé : la ligue et les
+    // défis entre amis manquaient à l'erreur et au chargement.
+    final etat = communityScreenState(
+      sources: [
+        feed,
+        friends,
+        requests,
+        challenges,
+        friendChallenges,
+        league,
+        blocked,
+      ],
+      // Le VIDE ne porte que sur les quatre listes d'origine, et la LIGUE
+      // n'en fait volontairement pas partie : elle n'est pas une liste dont
+      // l'absence signifierait « personne ici », et l'y ajouter changerait
+      // un comportement que des épreuves tiennent déjà. L'erreur et le
+      // chargement, EUX, la comptent — c'est là que le manque faisait du
+      // dégât.
+      porteursDuVide: [feed, friends, requests, challenges, blocked],
+    );
+    // Capturée hors de l'arbre : le `if` promeut la variable locale, pas le
+    // champ, et `ConnectionAwareError` attend un `Object` non nul.
+    final erreur = etat.error;
     // PREMIER chargement seulement : pendant un rafraîchissement, Riverpod
     // conserve la valeur précédente (`valueOrNull` reste peuplé) et l'écran
     // continue de la montrer — remplacer la liste par un indicateur ferait
@@ -142,6 +121,8 @@ class CommunityScreen extends ConsumerWidget {
         friends.hasValue ||
         requests.hasValue ||
         challenges.hasValue ||
+        friendChallenges.hasValue ||
+        league.hasValue ||
         blocked.hasValue;
 
     return Scaffold(
@@ -154,7 +135,7 @@ class CommunityScreen extends ConsumerWidget {
       // gelaient au premier chargement. Une demande reçue n'apparaissait
       // qu'après avoir tué l'application.
       body: RefreshIndicator(
-        onRefresh: () => _reload(ref),
+        onRefresh: () => reloadCommunity(ref),
         color: AppColors.primaryLight,
         backgroundColor: AppColors.darkSurface,
         child: ListView(
@@ -197,19 +178,19 @@ class CommunityScreen extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: AppSpacing.gapRow),
-            if (error != null)
+            if (erreur != null)
               ConnectionAwareError(
-                error: error,
+                error: erreur,
                 title: 'Communauté indisponible',
                 message: 'Impossible de charger le fil pour le moment.',
                 offlineMessage:
                     'Les amis, les encouragements et les défis '
                     'vivent sur le serveur. Reviens quand le réseau est là.',
-                onRetry: () => unawaited(_reload(ref)),
+                onRetry: () => unawaited(reloadCommunity(ref)),
               )
             else if (!hasData)
               const AppLoadingIndicator()
-            else if (loaded && isEmpty)
+            else if (etat.showsEmpty)
               // Le serveur crée les défis du mois à la lecture : en ligne, cet
               // état ne se voit que si le serveur n'a VRAIMENT rien rendu. Hors
               // ligne, c'est l'état d'erreur ci-dessus qui parle, jamais

@@ -592,6 +592,39 @@ erreur/chargement/vide/hors-ligne, `check.sh` + `check_mobile.sh`.
       d'identifiant peut rester figée. Deux épreuves qui codaient un nom de
       mois ou un ordre d'insertion ont été décorrélées du décor plutôt que
       recalées. Galerie entièrement régénérée et relue.
+- [x] **Six états d'écran qui mentaient ou se taisaient** — 22 septembre
+      2026. Tous confirmés par lecture de la source avant correction, et
+      tous épinglés : sans les correctifs, 6 des 10 épreuves ajoutées
+      tombent.
+      1. `todayTrainingProvider` figeait « aujourd'hui » au lancement :
+         passé minuit, la tuile félicitait encore pour la séance de la
+         VEILLE, et la phrase d'état répétait « Séance faite aujourd'hui ».
+         Le remède existait deux providers plus bas (`currentDayProvider`),
+         appliqué à la semaine de constance et à la maxime — cette tuile
+         était restée en arrière. `restSinceLastWorkoutProvider` en
+         dépendait aussi : « 3 jours de repos » restait affiché une semaine
+         plus tard.
+      2. Le catalogue d'offres rendait `SizedBox.shrink()` sur ERREUR, avec
+         l'argument du chargement. Sans offres il n'y a plus de porte
+         d'achat du tout : la faire disparaître sans un mot laisse croire
+         que Premium ne se vend pas. Le chargement garde son silence, lui.
+      3. et 4. L'arbitrage erreur/chargement/vide de l'écran Communauté
+         avait été écrit pour CINQ sources ; la ligue et les défis entre
+         amis sont arrivés après et n'y ont jamais été ajoutés. Leur panne
+         effaçait leur section sous un écran qui se déclarait en bon état.
+      5. Le geste « tirer pour rafraîchir » de la Communauté attendait un
+         `Future.wait` que personne n'entourait : hors ligne, il levait une
+         exception non traitée.
+      6. L'écran Parcours se décidait sur un avancement `null`, qui vaut
+         `null` pendant le chargement ET en cas d'échec : une panne laissait
+         tourner l'indicateur indéfiniment, sans reprise — alors que
+         l'Academy et l'étape, juste à côté, branchent les trois branches.
+      7. La liste garnie des modèles n'avait pas
+         `AlwaysScrollableScrollPhysics` : sous Android, une liste qui ne
+         déborde pas refuse l'overscroll, et le geste de rapatriement était
+         mort exactement après une réinstallation. **Garde STRUCTUREL et dit
+         comme tel** : le harnais de test ne reproduit pas ce clamping, donc
+         l'épreuve vérifie le réglage, pas son effet.
 
 ---
 

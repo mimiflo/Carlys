@@ -137,14 +137,19 @@ final todayTrainingProvider = Provider.autoDispose<TodayTraining>((ref) {
   }
 
   final history = ref.watch(workoutHistoryProvider).valueOrNull;
-  final now = DateTime.now();
-  final today = DateTime(now.year, now.month, now.day);
+  // Le jour COURANT, pas celui du lancement. L'accueil ne quitte jamais la
+  // pile du shell : un instant lu au démarrage y restait figé, et passé
+  // minuit la tuile félicitait encore pour la séance de la VEILLE. Même
+  // défaut, même remède que `consistencyWeekProvider` juste en dessous.
+  final today = ref.watch(currentDayProvider);
   for (final entry in history ?? const <WorkoutHistoryEntry>[]) {
     if (entry.session.status != WorkoutStatus.completed) {
       continue;
     }
     final local = entry.session.startedAt.toLocal();
-    if (DateTime(local.year, local.month, local.day) != today) {
+    if (local.year != today.year ||
+        local.month != today.month ||
+        local.day != today.day) {
       continue;
     }
     final seconds = entry.session.durationSeconds;
@@ -189,6 +194,9 @@ final homeSubtitleProvider = Provider.autoDispose<String>((ref) {
 ///
 /// `null` si aucune séance terminée n'est connue localement.
 final restSinceLastWorkoutProvider = Provider.autoDispose<Duration?>((ref) {
+  // Le jour courant, observé pour la DÉPENDANCE : c'est lui qui fait
+  // recalculer le repos au passage de minuit.
+  ref.watch(currentDayProvider);
   final history = ref.watch(workoutHistoryProvider).valueOrNull;
   if (history == null) {
     return null;
@@ -199,6 +207,10 @@ final restSinceLastWorkoutProvider = Provider.autoDispose<Duration?>((ref) {
     }
     final endedAt = entry.session.endedAt ?? entry.session.startedAt;
     final rest = DateTime.now().difference(endedAt.toLocal());
+    // `DateTime.now()` est ici le bon instant — un REPOS est une durée, pas
+    // un jour civil. Ce qui manquait, c'est le réveil : sans la dépendance
+    // ci-dessus, ce provider n'était recalculé qu'à une écriture de séance,
+    // et « 3 jours de repos » restait affiché une semaine plus tard.
     return rest.isNegative ? Duration.zero : rest;
   }
   return null;

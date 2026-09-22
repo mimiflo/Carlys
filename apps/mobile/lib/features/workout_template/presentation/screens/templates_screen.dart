@@ -57,6 +57,15 @@ class TemplatesScreen extends ConsumerWidget {
                   child: list.isEmpty
                       ? _EmptyList(onCreate: () => _create(context, ref))
                       : ListView.separated(
+                          // L'anneau doit pouvoir se saisir même quand la
+                          // liste tient dans l'écran : sous les physiques
+                          // par défaut d'Android, une liste qui ne déborde
+                          // pas ne se laisse pas tirer, et le geste était
+                          // mort exactement là où il sert — après une
+                          // réinstallation, quand la liste locale est
+                          // courte. `_EmptyList` le savait déjà, la liste
+                          // garnie non.
+                          physics: const AlwaysScrollableScrollPhysics(),
                           padding: EdgeInsets.fromLTRB(
                             AppSpacing.gutter,
                             0,

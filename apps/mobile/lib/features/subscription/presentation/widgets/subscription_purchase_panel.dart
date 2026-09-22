@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../design_system/design_system.dart';
+import '../../../../shared/widgets/connection_aware_error.dart';
 import '../../domain/entities/subscription.dart';
 import '../controllers/subscription_controllers.dart';
 import 'subscription_offers.dart';
@@ -62,7 +63,21 @@ class _SubscriptionPurchasePanelState
       // Le catalogue n'est pas le cœur de l'écran : son chargement ne doit
       // pas faire clignoter une page qui a déjà tout dit de Premium.
       loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
+      // Une erreur, EN REVANCHE, se dit : sans offres il n'y a plus de porte
+      // d'achat du tout, et la faire disparaître sans un mot laisse croire
+      // que Premium ne se vend pas. C'est la grammaire déjà en vigueur deux
+      // fois sur cet écran.
+      error: (error, _) => ConnectionAwareError(
+        error: error,
+        title: 'Offres indisponibles',
+        message:
+            'Les formules n’ont pas pu être chargées. Réessaie dans un '
+            'instant.',
+        offlineMessage:
+            'Les formules vivent sur le serveur : elles '
+            'reviennent avec le réseau.',
+        onRetry: () => ref.invalidate(offerCatalogProvider),
+      ),
       data: (data) {
         if (data.offers.isEmpty) return const SizedBox.shrink();
         final selected = _resolveSelection(data);

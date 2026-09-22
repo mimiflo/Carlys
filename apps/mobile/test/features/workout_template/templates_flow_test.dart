@@ -50,6 +50,7 @@ void main() {
   Future<FakeWorkoutRepository> openTemplates(
     WidgetTester tester, {
     List<SaveTemplateInput> seed = const [],
+    InMemoryWorkoutTemplateRepository? templates,
   }) async {
     tester.view.physicalSize = const Size(1179, 2556);
     tester.view.devicePixelRatio = 3;
@@ -83,7 +84,8 @@ void main() {
           ),
           workoutRepositoryProvider.overrideWithValue(workouts),
           workoutTemplateRepositoryProvider.overrideWithValue(
-            InMemoryWorkoutTemplateRepository(workouts, seed: seed),
+            templates ??
+                InMemoryWorkoutTemplateRepository(workouts, seed: seed),
           ),
           waterStoreProvider.overrideWithValue(FakeWaterStore()),
           syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
@@ -120,6 +122,50 @@ void main() {
       findsOneWidget,
     );
     expect(find.text('Créer un modèle'), findsOneWidget);
+  });
+
+  testWidgets('la liste garnie se laisse TIRER même si elle ne déborde pas', (
+    tester,
+  ) async {
+    // UN GARDE STRUCTUREL, et il faut dire pourquoi : le harnais de test ne
+    // reproduit pas les physiques par défaut d'Android, où une liste qui
+    // tient dans l'écran refuse l'overscroll — le geste passe ici même sans
+    // le réglage. Ce qui se vérifie donc est le RÉGLAGE, pas son effet.
+    //
+    // Il compte : sans lui, « tirer pour rafraîchir » était mort avec un ou
+    // deux modèles, c'est-à-dire exactement après une réinstallation, quand
+    // rapatrier ses modèles est le geste qu'on cherche.
+    final workouts = FakeWorkoutRepository();
+    final templates = InMemoryWorkoutTemplateRepository(
+      workouts,
+      seed: [
+        const SaveTemplateInput(
+          id: 'modele-unique',
+          name: 'Push A',
+          exercises: [
+            TemplateExerciseInput(
+              exerciseName: 'Développé couché',
+              sets: [PlannedSetInput(targetReps: 8, restSeconds: 120)],
+            ),
+          ],
+        ),
+      ],
+    );
+    await openTemplates(tester, templates: templates);
+
+    expect(find.text('Push A'), findsOneWidget);
+    final liste = tester.widget<ListView>(
+      find.descendant(
+        of: find.byType(RefreshIndicator),
+        matching: find.byType(ListView),
+      ),
+    );
+    expect(liste.physics, isA<AlwaysScrollableScrollPhysics>());
+
+    // Et le geste aboutit bien sur le rapatriement, harnais ou pas.
+    await tester.fling(find.text('Push A'), const Offset(0, 320), 1000);
+    await tester.pumpAndSettle();
+    expect(templates.refreshCount, 1);
   });
 
   testWidgets('création : nommer, ajouter un exercice puis enregistrer', (

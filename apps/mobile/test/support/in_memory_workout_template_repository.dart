@@ -258,9 +258,18 @@ class InMemoryWorkoutTemplateRepository implements WorkoutTemplateRepository {
     _plansController.add(sessionId);
   }
 
-  /// Doublure en mémoire : il n'y a rien à rapatrier.
+  /// Combien de fois un rapatriement a été demandé.
+  ///
+  /// Il n'y a rien à rapatrier depuis une doublure en mémoire — mais le
+  /// COMPTER est ce qui permet de prouver que le geste « tirer pour
+  /// rafraîchir » part vraiment, y compris sur une liste trop courte pour
+  /// déborder de l'écran.
+  int refreshCount = 0;
+
   @override
-  Future<void> refreshTemplates() async {}
+  Future<void> refreshTemplates() async {
+    refreshCount += 1;
+  }
 
   void _replace(
     String planItemId,

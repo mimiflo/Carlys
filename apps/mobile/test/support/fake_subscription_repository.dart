@@ -12,6 +12,7 @@ class FakeSubscriptionRepository implements SubscriptionRepository {
     this.checkoutError,
     this.portalUrl = 'https://portail.exemple/session',
     this.portalError,
+    this.offersError,
   });
 
   /// Mutable : un test simule le webhook qui accorde Premium PENDANT que
@@ -43,6 +44,11 @@ class FakeSubscriptionRepository implements SubscriptionRepository {
   /// Combien de fois le portail a été demandé.
   int portalOpenings = 0;
 
+  /// L'échec que le CATALOGUE d'offres oppose, s'il y en a un. Sans offres
+  /// il n'y a plus de porte d'achat du tout : l'écran doit le dire, pas la
+  /// faire disparaître.
+  final Object? offersError;
+
   @override
   Future<PlanStatus> planStatus() async {
     planStatusReads += 1;
@@ -69,32 +75,36 @@ class FakeSubscriptionRepository implements SubscriptionRepository {
   ];
 
   @override
-  Future<OfferCatalog> offers() async => OfferCatalog(
-    checkoutAvailable: checkoutAvailable,
-    offers: const [
-      SubscriptionOffer(
-        id: 'premium-mensuel',
-        name: 'Premium mensuel',
-        period: OfferPeriod.month,
-        amountCents: 999,
-        currency: 'EUR',
-        monthlyEquivalentCents: 999,
-        trialDays: 7,
-        isRecommended: false,
-      ),
-      SubscriptionOffer(
-        id: 'premium-annuel',
-        name: 'Premium annuel',
-        period: OfferPeriod.year,
-        amountCents: 7990,
-        currency: 'EUR',
-        monthlyEquivalentCents: 666,
-        trialDays: 7,
-        isRecommended: true,
-        savingPercent: 33,
-      ),
-    ],
-  );
+  Future<OfferCatalog> offers() async {
+    final error = offersError;
+    if (error != null) throw error;
+    return OfferCatalog(
+      checkoutAvailable: checkoutAvailable,
+      offers: const [
+        SubscriptionOffer(
+          id: 'premium-mensuel',
+          name: 'Premium mensuel',
+          period: OfferPeriod.month,
+          amountCents: 999,
+          currency: 'EUR',
+          monthlyEquivalentCents: 999,
+          trialDays: 7,
+          isRecommended: false,
+        ),
+        SubscriptionOffer(
+          id: 'premium-annuel',
+          name: 'Premium annuel',
+          period: OfferPeriod.year,
+          amountCents: 7990,
+          currency: 'EUR',
+          monthlyEquivalentCents: 666,
+          trialDays: 7,
+          isRecommended: true,
+          savingPercent: 33,
+        ),
+      ],
+    );
+  }
 
   @override
   Future<String> startCheckout({
