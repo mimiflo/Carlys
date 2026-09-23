@@ -130,8 +130,8 @@ void main() {
     await tester.pumpWidget(buildApp(repository));
     await tester.pumpAndSettle();
 
-    // La déconnexion vit désormais dans l'onglet Profil.
-    await openProfile(tester);
+    // La déconnexion vit dans les réglages, derrière le rouage du profil.
+    await openProfileSettings(tester);
     await tester.scrollUntilVisible(find.text('Se déconnecter'), 150);
     await tester.pumpAndSettle();
     await tester.tap(find.text('Se déconnecter'), warnIfMissed: false);

@@ -7,8 +7,8 @@ import '../controllers/theme_setting_controller.dart';
 
 /// Apparence de l'application — préférence locale, aucune donnée serveur.
 ///
-/// L'onglet Profil bascule clair/sombre d'un geste ; cet écran expose le choix
-/// complet (Système, Sombre OLED).
+/// Les réglages du profil basculent clair/sombre d'un geste ; cet écran
+/// expose le choix complet (Système, Sombre OLED).
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 

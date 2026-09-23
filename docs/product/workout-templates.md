@@ -794,7 +794,8 @@ Une `AppCard` par modèle : nom, `previewExerciseNames` joints par « · »,
 (hors périmètre MVP), Supprimer.
 
 **Accès.** Depuis l'accueil (`TodayWorkoutCard` : « Lancer un modèle » quand
-aucune séance n'est en cours) et depuis le profil.
+aucune séance n'est en cours) et depuis les réglages du profil (groupe
+« Entraînement »).
 
 **États.**
 

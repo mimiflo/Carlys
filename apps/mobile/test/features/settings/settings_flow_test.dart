@@ -47,9 +47,9 @@ Future<void> reveal(WidgetTester tester, Finder item) async {
 
 Future<void> openSettings(WidgetTester tester) async {
   await tester.pumpAndSettle();
-  // L'apparence se règle depuis le profil — ouvert par l'avatar de
-  // l'accueil depuis la réorganisation en cinq onglets.
-  await openProfile(tester);
+  // L'apparence se règle dans les réglages, derrière le rouage du profil
+  // — lui-même ouvert par l'avatar de l'accueil.
+  await openProfileSettings(tester);
   // La ligne « Thème sombre » ouvre l'écran d'apparence (l'interrupteur ne
   // bascule que clair ↔ sombre).
   await reveal(tester, find.text('Thème sombre'));

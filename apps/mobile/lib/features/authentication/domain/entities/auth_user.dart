@@ -17,6 +17,7 @@ class AuthUser {
     this.carlysProfile,
     this.mentorStyle,
     this.trainingGoal,
+    this.createdAt,
   });
 
   final String id;
@@ -35,6 +36,13 @@ class AuthUser {
   /// Objectif d'entraînement choisi — null tant qu'il ne l'a pas été.
   final TrainingGoal? trainingGoal;
 
+  /// Création du compte — « Membre depuis » sur le profil.
+  ///
+  /// Nullable alors que l'API la sert toujours : la date n'est qu'une ligne
+  /// d'affichage, et une valeur absente ou illisible doit effacer la ligne,
+  /// jamais faire échouer la connexion.
+  final DateTime? createdAt;
+
   @override
   bool operator ==(Object other) =>
       other is AuthUser &&
@@ -46,7 +54,8 @@ class AuthUser {
       other.timezone == timezone &&
       other.carlysProfile == carlysProfile &&
       other.mentorStyle == mentorStyle &&
-      other.trainingGoal == trainingGoal;
+      other.trainingGoal == trainingGoal &&
+      other.createdAt == createdAt;
 
   @override
   int get hashCode => Object.hash(
@@ -59,5 +68,6 @@ class AuthUser {
     carlysProfile,
     mentorStyle,
     trainingGoal,
+    createdAt,
   );
 }

@@ -34,7 +34,8 @@ quatre), chaîne vide quand rien n'est choisi — jamais une voix devinée.
 `MentorStyle.fromWire`, qui rend `null` pour toute valeur inconnue : un
 serveur plus récent n'a pas le droit de faire planter un ancien client.
 
-Le choix se fait dans le profil (groupe « Mentor Carlys » → « Sa voix »),
+Le choix se fait dans les réglages (rouage du profil, groupe « Mentor
+Carlys » → « Sa voix »),
 par une feuille à quatre options. Chaque carte porte l'image de sa voix et
 un mot d'exemple tiré de son catalogue (`mentorWordCatalog`) : on ENTEND la
 voix avant de la choisir. Écrit au serveur PUIS relu depuis

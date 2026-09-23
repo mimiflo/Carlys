@@ -75,7 +75,7 @@ void main() {
   Future<void> openProfileScreen(WidgetTester tester) async {
     await tester.pumpWidget(app());
     await tester.pumpAndSettle();
-    await openProfile(tester);
+    await openProfileSettings(tester);
   }
 
   testWidgets('le profil porte un groupe « Compte » avec ses deux lignes', (

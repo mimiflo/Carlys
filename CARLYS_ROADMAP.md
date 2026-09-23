@@ -796,6 +796,33 @@ erreur/chargement/vide/hors-ligne, `check.sh` + `check_mobile.sh`.
 
 ---
 
+## Refonte du design, écran par écran  `[~] EN COURS`
+
+Demandée le 23 septembre 2026 : « trop chargé », « l'esthétique ne me plaît
+pas », le violet reste. Le produit fournit les maquettes UNE À UNE ; chaque
+écran livré ici l'est avec ses captures regardées, ses écarts nommés et ses
+tests.
+
+- [x] **Profil** — 23 septembre 2026, d'après la maquette « Mon profil ».
+      Le profil RACONTE (identité, trois chiffres, objectif, programme,
+      portes vers statistiques, badges, amis, nouveau programme) ; les douze
+      groupes de réglages passent derrière le rouage, sur un écran à eux
+      (`/profile/reglages`), sans en perdre un. Trois faits manquaient et
+      existaient pourtant : la date d'inscription (servie par l'API, jetée
+      par le DTO mobile — dont un commentaire affirmait qu'elle n'existait
+      pas), les séances DEPUIS TOUJOURS (le profil comptait douze mois
+      faute de le savoir), et l'avancement d'un programme, qui se déduit de
+      son premier jour. Les arbitrages du produit : « Mes contenus
+      sauvegardés » caché (aucune sauvegarde dans le domaine), « Bronze »
+      retiré (une ligue ne se reporte jamais dans le profil), la jauge
+      nomme sa base (« Semaine 2 sur 8 », « 24 % du programme »), plein
+      écran depuis l'avatar. Un défaut vu à la relecture des captures et
+      corrigé : « consécutifs » perdait sa dernière lettre à droite de
+      l'icône. Voir `docs/product/profile.md`.
+- [ ] Écrans suivants : à recevoir du produit.
+
+---
+
 ## Hors plans, mais bloquant la publication (rappel)
 
 Ces verrous ne figurent pas dans les onze plans et restent entiers :

@@ -56,3 +56,13 @@ Future<void> openProfile(WidgetTester tester) async {
   );
   await tester.pumpAndSettle();
 }
+
+/// Ouvre les RÉGLAGES : le profil, puis son rouage.
+///
+/// Depuis la refonte du profil (septembre 2026), les réglages ne vivent plus
+/// à même le profil — qui raconte — mais derrière le rouage de son en-tête.
+Future<void> openProfileSettings(WidgetTester tester) async {
+  await openProfile(tester);
+  await tester.tap(find.byTooltip('Réglages'));
+  await tester.pumpAndSettle();
+}

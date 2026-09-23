@@ -20,6 +20,7 @@ import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/academy/presentation/screens/academy_screen.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
+import 'package:carlys_mobile/features/authentication/domain/entities/auth_user.dart';
 import 'package:carlys_mobile/features/authentication/presentation/screens/login_screen.dart';
 import 'package:carlys_mobile/features/authentication/presentation/screens/register_screen.dart';
 import 'package:carlys_mobile/features/carlys_profile/domain/entities/carlys_profile.dart';
@@ -53,6 +54,7 @@ import 'package:carlys_mobile/features/onboarding/presentation/screens/welcome_s
 import 'package:carlys_mobile/features/onboarding/presentation/widgets/athlete_photo.dart';
 import 'package:carlys_mobile/features/onboarding/presentation/widgets/brand_signature.dart';
 import 'package:carlys_mobile/features/profile/presentation/screens/profile_screen.dart';
+import 'package:carlys_mobile/features/profile/presentation/screens/profile_settings_screen.dart';
 import 'package:carlys_mobile/features/profile/presentation/widgets/profile_plan_card.dart';
 import 'package:carlys_mobile/features/progress/data/repositories/progress_repository_impl.dart';
 import 'package:carlys_mobile/features/progress/domain/entities/progress.dart';
@@ -68,6 +70,7 @@ import 'package:carlys_mobile/features/subscription/presentation/screens/subscri
 import 'package:carlys_mobile/features/training/presentation/screens/training_hub_screen.dart';
 import 'package:carlys_mobile/features/workout_history/presentation/screens/workout_history_screen.dart';
 import 'package:carlys_mobile/features/workout_program/data/repositories/program_repository_impl.dart';
+import 'package:carlys_mobile/features/workout_program/domain/entities/training_goal.dart';
 import 'package:carlys_mobile/features/workout_program/presentation/screens/program_calendar_screen.dart';
 import 'package:carlys_mobile/features/workout_program/presentation/screens/program_detail_screen.dart';
 import 'package:carlys_mobile/features/workout_program/presentation/screens/programs_screen.dart';
@@ -310,6 +313,20 @@ List<WorkoutHistoryEntry> historyOf() {
     entry(7, 'Full body', 10, 1720),
   ];
 }
+
+/// Le compte du profil : une ancienneté, un profil Carlys, un objectif —
+/// de quoi remplir chaque ligne de la carte d'identité.
+final AuthUser profileUser = AuthUser(
+  id: fakeUser.id,
+  email: fakeUser.email,
+  displayName: fakeUser.displayName,
+  emailVerified: true,
+  locale: fakeUser.locale,
+  timezone: fakeUser.timezone,
+  carlysProfile: CarlysProfile.challenger,
+  trainingGoal: TrainingGoal.muscleGain,
+  createdAt: DateTime.utc(2024, 3, 12, 9),
+);
 
 FakeProgressRepository progressOf() => FakeProgressRepository(
   // La galerie fixe sa semaine : « hier et avant-hier » peut tomber de part
@@ -622,6 +639,13 @@ void main() {
     FakeCoachRepository? coach,
     bool premium = false,
 
+    /// Le compte connecté. Celui des tests par défaut, sauf pour le profil,
+    /// qui a besoin d'une histoire (ancienneté, profil Carlys, objectif).
+    AuthUser user = fakeUser,
+
+    /// Ce que le « serveur » compte sur la vie entière — `null`, il se tait.
+    LifetimeStats? lifetime,
+
     /// Arrête le temps PENDANT l'écran de démarrage, pour le photographier.
     bool holdOnSplash = false,
   }) async {
@@ -638,7 +662,7 @@ void main() {
             ),
           ),
           authRepositoryProvider.overrideWithValue(
-            FakeAuthRepository(storedSession: authenticated),
+            FakeAuthRepository(storedSession: authenticated, user: user),
           ),
           exercisesRepositoryProvider.overrideWithValue(
             exercises ?? catalogOf(),
@@ -646,7 +670,9 @@ void main() {
           workoutRepositoryProvider.overrideWithValue(
             workouts ?? FakeWorkoutRepository(),
           ),
-          progressRepositoryProvider.overrideWithValue(progressOf()),
+          progressRepositoryProvider.overrideWithValue(
+            progressOf()..lifetime = lifetime,
+          ),
           nutritionRepositoryProvider.overrideWithValue(
             nutrition ?? nutritionOf(),
           ),
@@ -778,6 +804,13 @@ void main() {
             (widget.properties.label ?? '').startsWith('Profil'),
       ),
     );
+    await settle(tester);
+  }
+
+  /// Les réglages : le profil, puis le rouage de son en-tête.
+  Future<void> openProfileSettings(WidgetTester tester) async {
+    await openProfile(tester);
+    await tester.tap(find.byTooltip('Réglages'));
     await settle(tester);
   }
 
@@ -1393,7 +1426,7 @@ void main() {
 
   testWidgets('abonnement premium', (tester) async {
     await pumpApp(tester, premium: true);
-    await openProfile(tester);
+    await openProfileSettings(tester);
     await tester.tap(find.byType(ProfilePlanCard));
     await settle(tester);
     await capture(
@@ -1432,11 +1465,35 @@ void main() {
   });
 
   testWidgets('profil + réglages + thème clair', (tester) async {
-    await pumpApp(tester, premium: true);
+    await pumpApp(
+      tester,
+      premium: true,
+      user: profileUser,
+      lifetime: const LifetimeStats(completedSessions: 128, weeks: []),
+      workouts: FakeWorkoutRepository()..history = historyOf(),
+    );
     await openProfile(tester);
     await capture(tester, '13-profil', shows: find.byType(ProfileScreen));
 
-    // Le profil est désormais POUSSÉ par-dessus l'accueil : plusieurs
+    // Le bas du profil : les badges, les amis, « Toujours plus loin ».
+    await tester.scrollUntilVisible(
+      find.text('Toujours plus loin'),
+      150,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await settle(tester);
+    await capture(tester, '13a-profil-bas', shows: find.byType(ProfileScreen));
+
+    // Les réglages vivent derrière le rouage de l'en-tête.
+    await tester.tap(find.byTooltip('Réglages'));
+    await settle(tester);
+    await capture(
+      tester,
+      '13b-profil-reglages',
+      shows: find.byType(ProfileSettingsScreen),
+    );
+
+    // Les réglages sont POUSSÉS par-dessus le profil et l'accueil : plusieurs
     // Scrollable cohabitent dans l'arbre, on vise celui de l'écran visible.
     await tester.scrollUntilVisible(
       find.text('Thème sombre'),
@@ -1498,7 +1555,7 @@ void main() {
       await tester.runAsync(() => precacheImage(AssetImage(asset), context));
     }
     await settle(tester);
-    await openProfile(tester);
+    await openProfileSettings(tester);
     await tester.scrollUntilVisible(
       find.text('Mon profil'),
       150,

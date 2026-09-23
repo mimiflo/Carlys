@@ -9,6 +9,7 @@ class AppGauge extends StatelessWidget {
     required this.progress,
     required this.color,
     this.height = 6,
+    this.gradient,
     super.key,
   });
 
@@ -16,6 +17,10 @@ class AppGauge extends StatelessWidget {
   final double progress;
   final Color color;
   final double height;
+
+  /// Remplissage en dégradé, à la place de [color] quand il est donné —
+  /// `AppColors.violetRamp`, qui s'éclaircit dans le sens de la progression.
+  final Gradient? gradient;
 
   @override
   Widget build(BuildContext context) {
@@ -32,7 +37,8 @@ class AppGauge extends StatelessWidget {
               heightFactor: 1,
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  color: color,
+                  color: gradient == null ? color : null,
+                  gradient: gradient,
                   borderRadius: BorderRadius.circular(height),
                 ),
               ),

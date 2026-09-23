@@ -28,6 +28,7 @@ import '../../features/onboarding/presentation/screens/onboarding_screen.dart';
 import '../../features/onboarding/presentation/screens/splash_screen.dart';
 import '../../features/onboarding/presentation/screens/welcome_screen.dart';
 import '../../features/profile/presentation/screens/profile_screen.dart';
+import '../../features/profile/presentation/screens/profile_settings_screen.dart';
 import '../../features/progress/presentation/screens/exercise_progression_screen.dart';
 import '../../features/progress/presentation/screens/progress_screen.dart';
 import '../../features/progress/presentation/screens/timeline_screen.dart';
@@ -317,6 +318,12 @@ final appRouterProvider = Provider<GoRouter>((ref) {
         name: 'profile',
         parentNavigatorKey: _rootNavigatorKey,
         builder: (context, state) => const ProfileScreen(),
+      ),
+      GoRoute(
+        path: AppRoutes.profileSettings,
+        name: 'profile-settings',
+        parentNavigatorKey: _rootNavigatorKey,
+        builder: (context, state) => const ProfileSettingsScreen(),
       ),
 
       // ── Plein écran, hors coquille (pas de bottom bar) ────────────

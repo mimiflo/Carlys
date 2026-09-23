@@ -170,7 +170,8 @@ l'accueil (plein écran).
 | `/academy`              | `academy`         | Academy (onglet)                   |
 | `/nutrition`            | `nutrition`       | Nutrition (branche Academy)        |
 | `/community`            | `community`       | Communauté (onglet)                |
-| `/profile`              | `profile`         | Profil & réglages (plein écran, via l'avatar de l'accueil) |
+| `/profile`              | `profile`         | Profil (plein écran, via l'avatar de l'accueil) : le parcours, en portes vers chaque écran — voir `docs/product/profile.md` |
+| `/profile/reglages`     | `profile-settings`| Réglages (plein écran, via le rouage du profil) |
 | `/workout`              | `active-workout`  | Séance active (plein écran)        |
 | `/templates`            | `templates`       | Mes modèles de séance (plein écran)|
 | `/templates/:templateId`| `template-editor` | Éditeur de modèle (plein écran)    |

@@ -5,132 +5,158 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/app_routes.dart';
 import '../../../../design_system/design_system.dart';
 import '../../../authentication/presentation/controllers/auth_controller.dart';
-import '../../../carlys_profile/presentation/widgets/carlys_profile_content.dart';
-import '../../../mentor/presentation/widgets/mentor_settings_section.dart';
-import '../../../nutrition/presentation/controllers/nutrition_controllers.dart';
-import '../../../progression/presentation/controllers/progression_controllers.dart';
-import '../../../workout_program/presentation/controllers/training_goal_controllers.dart';
+import '../../../community/presentation/controllers/community_controllers.dart';
+import '../../../progress/presentation/controllers/progress_controllers.dart';
+import '../../../workout_program/presentation/controllers/program_controllers.dart';
 import '../../../workout_program/presentation/widgets/training_goal_sheet.dart';
+import '../providers/profile_hub_providers.dart';
 import '../widgets/profile_email_verification.dart';
-import '../widgets/profile_header.dart';
-import '../widgets/profile_legal_section.dart';
-import '../widgets/profile_nutrition_settings.dart';
-import '../widgets/profile_settings_sections.dart';
-import '../widgets/profile_summary.dart';
-import '../widgets/profile_training_settings.dart';
+import '../widgets/profile_further_banner.dart';
+import '../widgets/profile_hub_tile.dart';
+import '../widgets/profile_hub_wording.dart';
+import '../widgets/profile_identity_card.dart';
+import '../widgets/profile_objective_card.dart';
+import '../widgets/profile_page_header.dart';
+import '../widgets/profile_program_card.dart';
 
-/// Profil & réglages (maquette 2j) : identité, bannière d'abonnement, tuiles
-/// mono, groupes de réglages puis déconnexion.
+/// MON PROFIL : ton parcours, ta progression — refonte de septembre 2026,
+/// d'après la maquette validée.
 ///
-/// Blocs de la maquette absents faute de donnée : le crayon d'édition (aucune
-/// édition de profil), « MEMBRE DEPUIS » (pas de date de création servie),
-/// « temps de repos par défaut », « unités », « rappels de séance » et
-/// « exporter mes données » (aucun réglage correspondant).
+/// L'écran RACONTE et ne règle rien : chaque carte est une porte vers
+/// l'écran qui possède sa donnée, et tous les réglages vivent derrière le
+/// rouage (`ProfileSettingsScreen`). L'ancien profil empilait douze groupes
+/// de réglages sous l'identité ; c'était précisément le « trop chargé ».
+///
+/// Écarts à la maquette, tous délibérés :
+///  - « Mes contenus sauvegardés » est absent : aucune sauvegarde de
+///    contenu n'existe dans le domaine, et une ligne morte mentirait ;
+///  - « Bronze » est retiré de « Mes badges » : une ligue ne se reporte
+///    jamais dans le profil (`docs/product/progression.md`, test de la date
+///    de fin) ;
+///  - la jauge de l'objectif nomme sa base (« du programme ») sous son
+///    pourcentage ;
+///  - la bottom bar n'y est pas : le profil s'ouvre en plein écran depuis
+///    l'avatar de l'accueil, d'où la flèche de retour au-dessus du titre.
 class ProfileScreen extends ConsumerWidget {
   const ProfileScreen({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final authState = ref.watch(authControllerProvider);
-    final user = switch (authState) {
+    final user = switch (ref.watch(authControllerProvider)) {
       AuthAuthenticated(:final user) => user,
       _ => null,
     };
-    // Le plan nutrition est la SEULE donnée serveur restée ici : il ne
-    // s'affiche que sur une ligne de réglage, où l'absence de valeur
-    // n'affirme rien. Tout le reste passe par ProfileSummary, qui distingue
-    // « pas encore », « pas pu » et « rien à montrer ».
-    final profile = ref.watch(metabolismReportProvider).valueOrNull?.profile;
-    final progression = ref.watch(progressionProfileProvider);
-    // Plein écran depuis que le profil n'est plus un onglet : la bottom bar
-    // ne recouvre plus cet écran, seul l'encart système compte.
+    final badges = ref.watch(profileBadgeCountProvider);
+    final friends = ref.watch(profileFriendsCountProvider);
     final bottomInset = MediaQuery.paddingOf(context).bottom;
 
     return Scaffold(
       backgroundColor: AppColors.darkBackground,
       body: SafeArea(
         bottom: false,
-        child: ListView(
-          padding: EdgeInsets.fromLTRB(
-            AppSpacing.gutter,
-            AppSpacing.gutter,
-            AppSpacing.gutter,
-            bottomInset + AppSpacing.gapSection,
-          ),
-          children: [
-            const Align(
-              alignment: Alignment.centerLeft,
-              child: AppBackButton(),
+        child: RefreshIndicator(
+          color: AppColors.primary,
+          backgroundColor: AppColors.darkSurface,
+          onRefresh: () => _refresh(ref),
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: EdgeInsets.fromLTRB(
+              AppSpacing.md,
+              AppSpacing.md,
+              AppSpacing.md,
+              bottomInset + AppSpacing.gapSection,
             ),
-            const SizedBox(height: AppSpacing.xs),
-            ProfileHeader(user: user),
-            const SizedBox(height: AppSpacing.md),
-            // Juste sous l'identité, là où l'adresse se lit : le rappel ne
-            // s'affiche que si elle n'a jamais été vérifiée, et disparaît
-            // sans laisser d'espace sinon.
-            if (user != null && !user.emailVerified) ...[
-              ProfileEmailVerification(user: user),
-              const SizedBox(height: AppSpacing.md),
-            ],
-            ProfileSummary(
-              onOpenPlan: () => context.push(AppRoutes.subscription),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            ProfileIdentitySettings(
-              currentLabel: user?.carlysProfile == null
-                  ? null
-                  : carlysProfileContentOf(user!.carlysProfile!).title,
-              titleLabel: progression?.title.label,
-              onOpen: () => context.push(AppRoutes.carlysProfiles),
-              onProgression: () => context.push(AppRoutes.progression),
-              onManifesto: () => context.push(AppRoutes.manifesto),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            const MentorSettingsSection(),
-            const SizedBox(height: AppSpacing.md),
-            ProfileTrainingSettings(
-              goalLabel: ref.watch(currentTrainingGoalProvider)?.label,
-              onGoal: () => showTrainingGoalSheet(context),
-              onSetup: () => context.push(AppRoutes.programSetup),
-              onTemplates: () => context.push(AppRoutes.templates),
-              onHistory: () => context.push(AppRoutes.history),
-              onBodyMetrics: () => context.go(AppRoutes.progress),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            ProfileNutritionSettings(
-              goalLabel: profile?.goal?.label,
-              // Le plan se règle dans le profil métabolique (onglet
-              // Nutrition), seul écrivain de cette donnée.
-              onGoal: () => context.go(AppRoutes.nutrition),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            ProfileAppSettings(
-              onAppearance: () => context.push(AppRoutes.settings),
-              onDevices: () => context.push(AppRoutes.sessions),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            const NotificationSettingsSection(),
-            const SizedBox(height: AppSpacing.md),
-            ProfileAccountSettings(
-              onChangePassword: () => context.push(AppRoutes.changePassword),
-              onDeleteAccount: () => context.push(AppRoutes.deleteAccount),
-            ),
-            const SizedBox(height: AppSpacing.md),
-            const ProfileLegalSettings(),
-            const SizedBox(height: AppSpacing.gapSection),
-            Center(
-              child: TextButton(
-                onPressed: () =>
-                    ref.read(authControllerProvider.notifier).logout(),
-                child: Text(
-                  'Se déconnecter',
-                  style: AppTypography.body.copyWith(color: AppColors.danger),
+            children: [
+              ProfilePageHeader(
+                title: 'Mon profil',
+                tagline: 'Ton parcours, ta progression.',
+                action: ProfileSettingsButton(
+                  onPressed: () => context.push(AppRoutes.profileSettings),
                 ),
               ),
-            ),
-          ],
+              const SizedBox(height: AppSpacing.lg),
+              ProfileIdentityCard(
+                user: user,
+                onOpen: () => context.push(AppRoutes.carlysProfiles),
+              ),
+              // Là où l'adresse se lit : le rappel n'existe que tant qu'elle
+              // n'a jamais été vérifiée, et disparaît sans laisser d'espace.
+              if (user != null && !user.emailVerified) ...[
+                const SizedBox(height: AppSpacing.gapTile),
+                ProfileEmailVerification(user: user),
+              ],
+              const SizedBox(height: AppSpacing.sm),
+              ProfileObjectiveCard(onTap: () => showTrainingGoalSheet(context)),
+              const SizedBox(height: AppSpacing.gapTile),
+              ProfileProgramCard(
+                onOpenProgram: (id) =>
+                    context.push(AppRoutes.programDetail(id)),
+                onBrowse: () => context.push(AppRoutes.programs),
+              ),
+              const SizedBox(height: AppSpacing.gapTile),
+              ProfileHubCard(
+                children: [
+                  ProfileHubTile(
+                    icon: AppIcons.statistics,
+                    title: 'Mes statistiques',
+                    subtitle: 'Voir mon évolution',
+                    onTap: () => context.go(AppRoutes.progress),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.gapTile),
+              ProfileHubCard(
+                children: [
+                  ProfileHubTile(
+                    icon: AppIcons.rewards,
+                    tone: ProfileTileTone.ember,
+                    title: 'Mes badges',
+                    subtitle: countLine(
+                      badges,
+                      none: 'Ton premier badge t’attend',
+                      singular: 'badge',
+                      plural: 'badges',
+                    ),
+                    onTap: () => context.push(AppRoutes.progression),
+                  ),
+                  ProfileHubTile(
+                    icon: AppIcons.community,
+                    tone: ProfileTileTone.lavender,
+                    title: 'Mes amis',
+                    subtitle: countLine(
+                      friends,
+                      none: 'Invite quelqu’un à te suivre',
+                      singular: 'ami',
+                      plural: 'amis',
+                    ),
+                    onTap: () => context.go(AppRoutes.community),
+                  ),
+                ],
+              ),
+              const SizedBox(height: AppSpacing.md),
+              ProfileFurtherBanner(
+                onTap: () => context.push(AppRoutes.programSetup),
+              ),
+            ],
+          ),
         ),
       ),
     );
+  }
+
+  /// Relit ce qui vient du serveur. Les compteurs de vie entière ne sont
+  /// PAS auto-disposés (les récompenses en dépendent) : sans ce geste, un
+  /// échec hors ligne resterait affiché jusqu'au redémarrage.
+  ///
+  /// L'attente porte sur la relecture, pas sur son succès : un échec est
+  /// déjà dit par la ligne concernée, le relancer ici le dirait deux fois.
+  Future<void> _refresh(WidgetRef ref) {
+    ref
+      ..invalidate(lifetimeStatsProvider)
+      ..invalidate(communityFriendsProvider)
+      ..invalidate(programsProvider);
+    return ref
+        .read(lifetimeStatsProvider.future)
+        .then<void>((_) {}, onError: (Object _) {});
   }
 }

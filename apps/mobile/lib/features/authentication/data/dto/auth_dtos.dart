@@ -19,6 +19,7 @@ class AuthUserDto {
     this.carlysProfile,
     this.mentorStyle,
     this.trainingGoal,
+    this.createdAt,
   });
 
   factory AuthUserDto.fromJson(Map<String, dynamic> json) => AuthUserDto(
@@ -31,6 +32,14 @@ class AuthUserDto {
     carlysProfile: json['carlysProfile'] as String?,
     mentorStyle: json['mentorStyle'] as String?,
     trainingGoal: json['trainingGoal'] as String?,
+    // Le contrat la rend OBLIGATOIRE (`authUserSchema.createdAt`), et elle a
+    // toujours été servie : c'est ce DTO qui la jetait. Lue en tolérant
+    // l'absence — une réponse sans elle ne doit pas faire tomber la
+    // connexion pour une ligne d'affichage.
+    createdAt: switch (json['createdAt']) {
+      final String iso => DateTime.tryParse(iso),
+      _ => null,
+    },
   );
 
   final String id;
@@ -42,6 +51,7 @@ class AuthUserDto {
   final String? carlysProfile;
   final String? mentorStyle;
   final String? trainingGoal;
+  final DateTime? createdAt;
 
   AuthUser toEntity() => AuthUser(
     id: id,
@@ -53,6 +63,7 @@ class AuthUserDto {
     carlysProfile: CarlysProfile.fromWire(carlysProfile),
     mentorStyle: MentorStyle.fromWire(mentorStyle),
     trainingGoal: TrainingGoal.fromWire(trainingGoal),
+    createdAt: createdAt,
   );
 }
 

@@ -30,8 +30,10 @@ et l'on évolue d'un profil à l'autre à tout moment.
   (« Pour »), bouton « Choisir ce profil ».
 - Entrées : la **première question de l'onboarding** (« Quel Carlys es-tu ? »,
   étape 1/5 — se reconnaître est l'accroche du parcours, avant les questions
-  métaboliques), puis l'onglet Profil → groupe « Profil Carlys » (« À
-  choisir » tant que rien ne l'est) pour changer à tout moment.
+  métaboliques), puis la carte d'identité du profil (sa phrase est celle du
+  profil choisi), et les réglages → groupe « Identité Carlys » → « Mon
+  profil » (« À choisir » tant que rien ne l'est) pour changer à tout
+  moment.
 - À l'onboarding, le choix suit le même chemin différé que les réponses
   métaboliques : enregistré immédiatement si une session existe, sinon
   conservé localement (`profilCarlys` dans les réponses stockées) et reporté

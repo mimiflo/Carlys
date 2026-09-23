@@ -26,6 +26,10 @@ abstract final class AppIcons {
   static const IconData close = Icons.close_rounded;
   static const IconData search = Icons.search_rounded;
   static const IconData settings = Icons.settings_rounded;
+
+  /// L'entrée des réglages, en tête du profil : le rouage au trait, qui se
+  /// pose sur un disque sans l'alourdir.
+  static const IconData settingsOutline = Icons.settings_outlined;
   static const IconData edit = Icons.edit_rounded;
   static const IconData delete = Icons.delete_outline_rounded;
 
@@ -96,6 +100,17 @@ abstract final class AppIcons {
   static const IconData medal = Icons.emoji_events_rounded;
   static const IconData certificate = Icons.workspace_premium_rounded;
   static const IconData crown = Icons.auto_awesome_rounded;
+
+  // Profil : les portes vers ce qu'on a construit.
+  /// L'objectif d'entraînement choisi — la cible, pas le fanion d'un cap.
+  static const IconData objective = Icons.track_changes_rounded;
+
+  /// L'évolution chiffrée, ouverte depuis le profil.
+  static const IconData statistics = Icons.bar_chart_rounded;
+
+  /// La COLLECTION des récompenses, toutes familles confondues : le trophée,
+  /// quand `badge` ne dessine qu'une famille.
+  static const IconData rewards = Icons.emoji_events_rounded;
 
   // Univers de marque (page de bienvenue)
   static const IconData brandApp = Icons.smartphone_rounded;

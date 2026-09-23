@@ -9,6 +9,7 @@
 /// dites à l'endroit où elles comptent.
 library;
 
+import '../../../core/utilities/civil_days.dart';
 import '../../workout_session/domain/entities/workout.dart';
 
 /// Écart à partir duquel un retour est un RETOUR, et non la séance suivante.
@@ -131,30 +132,6 @@ class QuoteFacts {
     }
     return joursCivilsEntre(avant, derniere);
   }
-}
-
-/// Jours civils LOCAUX entre deux instants.
-///
-/// Par les composantes de date, jamais par une différence d'heures : deux
-/// séances à 23 h et 1 h sont à deux heures l'une de l'autre et pourtant à
-/// un jour d'écart, et c'est le jour qui compte ici.
-///
-/// Les deux dates sont reconstruites en UTC. Ce n'est pas un changement de
-/// fuseau — les composantes viennent du LOCAL, juste au-dessus — c'est le
-/// retrait de l'heure d'été du calcul : dans un fuseau qui avance, la nuit
-/// du passage ne dure que 23 heures, et `inDays` rendait alors 0 pour deux
-/// jours civils voisins. Un jour par an, « hier » devenait « aujourd'hui ».
-///
-/// Public parce que la fraîcheur d'un record se compte de la même façon
-/// (`quote_selection.dart`), et qu'elle l'avait recomptée autrement.
-int joursCivilsEntre(DateTime debut, DateTime fin) {
-  final a = debut.toLocal();
-  final b = fin.toLocal();
-  return DateTime.utc(
-    b.year,
-    b.month,
-    b.day,
-  ).difference(DateTime.utc(a.year, a.month, a.day)).inDays;
 }
 
 /// Construit les faits depuis l'historique local et ce que le serveur a bien

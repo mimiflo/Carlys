@@ -73,10 +73,10 @@ Future<void> reveal(WidgetTester tester, Finder item) async {
   await tester.pumpAndSettle();
 }
 
-/// Ouvre l'écran d'abonnement comme l'utilisateur : le profil, puis sa
-/// bannière de plan.
+/// Ouvre l'écran d'abonnement comme l'utilisateur : les réglages du profil,
+/// puis leur bannière de plan.
 Future<void> openSubscription(WidgetTester tester) async {
-  await openProfile(tester);
+  await openProfileSettings(tester);
   await reveal(tester, find.byType(ProfilePlanCard));
   await tester.tap(find.byType(ProfilePlanCard));
   await tester.pumpAndSettle();

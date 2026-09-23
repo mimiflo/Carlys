@@ -30,6 +30,7 @@
 /// même phrase sur tous les appareils.
 library;
 
+import '../../../core/utilities/civil_days.dart';
 import 'entities/daily_quote.dart';
 import 'quote_facts.dart';
 

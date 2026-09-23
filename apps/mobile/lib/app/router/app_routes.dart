@@ -20,6 +20,10 @@ abstract final class AppRoutes {
   static const String recipes = '/nutrition/recettes';
   static const String profile = '/profile';
 
+  /// Les réglages, derrière le rouage du profil : le profil raconte, cet
+  /// écran règle. À ne pas confondre avec [settings], l'apparence.
+  static const String profileSettings = '/profile/reglages';
+
   // Plein écran, hors coquille (pas de bottom bar)
   static const String activeWorkout = '/workout';
   static const String templates = '/templates';

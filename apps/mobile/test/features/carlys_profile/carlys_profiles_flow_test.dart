@@ -72,7 +72,7 @@ Widget appWith(FakeCarlysProfileRepository repository) => ProviderScope(
 );
 
 Future<void> openCarlysProfiles(WidgetTester tester) async {
-  await openProfile(tester);
+  await openProfileSettings(tester);
   final row = find.text('Mon profil');
   final scrollable = find.byType(Scrollable).last;
   await tester.scrollUntilVisible(row, 240, scrollable: scrollable);
@@ -202,7 +202,7 @@ void main() {
   ) async {
     await tester.pumpWidget(worldApp());
     await tester.pumpAndSettle();
-    await openProfile(tester);
+    await openProfileSettings(tester);
 
     // Le visiteur de démonstration est déjà Challenger.
     final scrollable = find.byType(Scrollable).last;
