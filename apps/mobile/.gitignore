@@ -39,3 +39,8 @@ config/firebase.json
 google-services.json
 GoogleService-Info.plist
 tool/screenshots/goldens/
+
+# Ce que le comparateur de captures écrit quand une image diffère : une
+# SORTIE de test, régénérée à chaque passe, jamais une source. 96 de ces
+# images (26 Mo) avaient été commitées par erreur le 22 septembre 2026.
+tool/screenshots/failures/
