@@ -83,7 +83,9 @@ void main() {
 
       expect(find.text('Boris'), findsWidgets);
       expect(find.text('Toi'), findsOneWidget);
-      expect(find.textContaining('mètres'), findsWidgets);
+      // Des quantités lisibles, dans leur unité : des kilomètres au-delà du
+      // kilomètre, jamais « 12000 mètres » bruts.
+      expect(find.text('12 km'), findsOneWidget);
       // Les rangs, en chiffres : un classement sans rangs n'est qu'une liste.
       expect(find.text('1'), findsOneWidget);
       expect(find.text('2'), findsOneWidget);

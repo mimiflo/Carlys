@@ -72,7 +72,9 @@ class FriendChallengeCard extends StatelessWidget {
             ),
           ),
           Text(
-            '${friendChallengeOrigin(challenge)} · ${challenge.unit}',
+            // Sans l'unité : chaque ligne du classement porte déjà la sienne
+            // (« 12,4 km »), et « · mètres » la contredisait.
+            friendChallengeOrigin(challenge),
             style: AppTypography.label.copyWith(
               color: AppColors.darkTextSecondary,
             ),
