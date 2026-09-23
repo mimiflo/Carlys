@@ -186,6 +186,168 @@ describe('Ligues (e2e)', () => {
     expect(apres.score).toBe(avant);
   });
 
+  it(
+    'une séance qui ouvre la semaine AVANT le règlement ne fait pas perdre la ' + 'montée',
+    async () => {
+      // Le cas de chaque lundi : première place la semaine passée, douze
+      // joueurs actifs, et la première séance de la semaine arrive AVANT que
+      // quiconque ait relu la ligue. La séance ouvrait alors la semaine dans
+      // l'ancienne division (la semaine passée, pas encore réglée, n'avait
+      // pas de division suivante), puis le règlement décidait la montée…
+      // qu'aucune ligne n'appliquait plus.
+      const prefixe = `e2e-league-montee-${randomUUID()}`;
+      const semainePassee = '2026-W02';
+      const moi = data<AuthResult>(
+        (
+          await server()
+            .post('/api/v1/auth/register')
+            .send({
+              email: `${prefixe}-moi@carlys.test`,
+              password: 'MotDePasseSolide42',
+              displayName: 'Première',
+            })
+            .expect(201)
+        ).body,
+      );
+      try {
+        // Adhérente SANS lecture : rejoindre par l'API lirait la ligue, et
+        // réglerait la semaine passée avant la séance — pas le cas testé.
+        await prisma.communityPreference.upsert({
+          where: { userId: moi.user.id },
+          create: { userId: moi.user.id, joinsLeague: true },
+          update: { joinsLeague: true },
+        });
+        const autres = await Promise.all(
+          Array.from({ length: 11 }, (_, index) =>
+            prisma.user.create({
+              data: {
+                email: `${prefixe}-${index}@carlys.test`,
+                friendCode: `M${randomUUID().slice(0, 7)}`.toUpperCase(),
+              },
+            }),
+          ),
+        );
+        await prisma.leagueMembership.createMany({
+          data: [
+            { userId: moi.user.id, periodKey: semainePassee, division: 'OR', score: 900 },
+            ...autres.map((autre, index) => ({
+              userId: autre.id,
+              periodKey: semainePassee,
+              division: 'OR' as const,
+              score: 100 + index,
+            })),
+          ],
+        });
+
+        // La séance d'abord…
+        const sessionId = randomUUID();
+        await as(moi.tokens.accessToken)
+          .post('/api/v1/workout-sessions')
+          .send({ id: sessionId, startedAt: new Date().toISOString() })
+          .expect(201);
+        await as(moi.tokens.accessToken)
+          .post(`/api/v1/workout-sessions/${sessionId}/complete`)
+          .send({})
+          .expect(200);
+
+        // … puis la lecture, qui règle la semaine passée.
+        const vue = data<League>(
+          (await as(moi.tokens.accessToken).get('/api/v1/community/league').expect(200)).body,
+        );
+
+        expect(vue.lastResult).toEqual({
+          periodKey: semainePassee,
+          rank: 1,
+          from: 'OR',
+          to: 'PLATINE',
+        });
+        expect(vue.division).toBe('PLATINE');
+        const courante = await prisma.leagueMembership.findUniqueOrThrow({
+          where: { userId_periodKey: { userId: moi.user.id, periodKey: vue.periodKey } },
+        });
+        expect(courante.division).toBe('PLATINE');
+        // Et la séance déjà versée reste comptée, dans la bonne division.
+        expect(courante.score).toBeGreaterThan(0);
+      } finally {
+        await prisma.user.deleteMany({ where: { email: { startsWith: prefixe } } });
+      }
+    },
+  );
+
+  it('le règlement fait par UN AUTRE réaligne aussi ma semaine ouverte trop tôt', async () => {
+    // Le règlement d'une division vient de la première lecture, quelle
+    // qu'elle soit. Si c'est un autre membre qui relit la ligue, ma semaine
+    // déjà ouverte (dans l'ancienne division) doit suivre la décision sans
+    // attendre que je relise la mienne.
+    const prefixe = `e2e-league-realign-${randomUUID()}`;
+    const semainePassee = '2026-W03';
+    const inscrire = async (nom: string) =>
+      data<AuthResult>(
+        (
+          await server()
+            .post('/api/v1/auth/register')
+            .send({
+              email: `${prefixe}-${nom}@carlys.test`,
+              password: 'MotDePasseSolide42',
+              displayName: nom,
+            })
+            .expect(201)
+        ).body,
+      );
+    const moi = await inscrire('moi');
+    const temoin = await inscrire('temoin');
+    try {
+      const autres = await Promise.all(
+        Array.from({ length: 10 }, (_, index) =>
+          prisma.user.create({
+            data: {
+              email: `${prefixe}-${index}@carlys.test`,
+              friendCode: `R${randomUUID().slice(0, 7)}`.toUpperCase(),
+            },
+          }),
+        ),
+      );
+      await prisma.communityPreference.createMany({
+        data: [moi.user.id, temoin.user.id].map((userId) => ({ userId, joinsLeague: true })),
+      });
+      await prisma.leagueMembership.createMany({
+        data: [
+          { userId: moi.user.id, periodKey: semainePassee, division: 'ARGENT', score: 900 },
+          { userId: temoin.user.id, periodKey: semainePassee, division: 'ARGENT', score: 50 },
+          ...autres.map((autre, index) => ({
+            userId: autre.id,
+            periodKey: semainePassee,
+            division: 'ARGENT' as const,
+            score: 100 + index,
+          })),
+        ],
+      });
+
+      const sessionId = randomUUID();
+      await as(moi.tokens.accessToken)
+        .post('/api/v1/workout-sessions')
+        .send({ id: sessionId, startedAt: new Date().toISOString() })
+        .expect(201);
+      await as(moi.tokens.accessToken)
+        .post(`/api/v1/workout-sessions/${sessionId}/complete`)
+        .send({})
+        .expect(200);
+
+      // C'est le TÉMOIN qui relit : son règlement couvre toute la division.
+      const vueTemoin = data<League>(
+        (await as(temoin.tokens.accessToken).get('/api/v1/community/league').expect(200)).body,
+      );
+
+      const maSemaine = await prisma.leagueMembership.findUniqueOrThrow({
+        where: { userId_periodKey: { userId: moi.user.id, periodKey: vueTemoin.periodKey } },
+      });
+      expect(maSemaine.division).toBe('OR');
+      expect(maSemaine.score).toBeGreaterThan(0);
+    } finally {
+      await prisma.user.deleteMany({ where: { email: { startsWith: prefixe } } });
+    }
+  });
+
   it('sortir arrête le compte, sans effacer la semaine en cours', async () => {
     const avant = (await ligue()).score;
     const sortie = data<League>(

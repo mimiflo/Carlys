@@ -618,6 +618,19 @@ cette période (`finalRank`), pose `settledAt`, et l’écriture est conditionn�
 règle la division ENTIÈRE, sans quoi deux personnes liraient deux classements
 différents de la même semaine.
 
+**Une semaine ouverte AVANT le règlement de la précédente suit la décision.**
+Une séance du lundi peut ouvrir la nouvelle semaine avant que quiconque ait
+relu la ligue : la semaine passée n’a alors pas encore de division suivante,
+et la nouvelle s’ouvre dans l’ancienne. Deux gardes la remettent à sa place,
+sans toucher à son score : le règlement réaligne la PREMIÈRE période ouverte
+après celle qu’il règle, pour chaque membre de la division (qui que soit le
+lecteur qui règle), et chaque lecture aligne la période en cours de son
+lecteur sur la division qui lui revient — filet des lignes écrites avant ce
+correctif. La division d’une période se lit toujours sur les périodes
+ANTÉRIEURES (`divisionToOpen`), jamais sur elle-même : c’est ce qui faisait
+perdre la montée (défaut trouvé à la relecture du 23 septembre 2026, e2e dans
+`test/leagues.e2e-spec.ts`).
+
 **Les périodes manquées ne se rattrapent pas, et n’ont pas à l’être.** Aucune
 ligne n’existe pour une semaine sans effort et sans lecture : il n’y a donc
 rien à régler. Six semaines d’absence produisent ZÉRO relégation, et le retour

@@ -35,6 +35,7 @@ function buildService(options: {
     setJoined: jest.fn().mockResolvedValue(undefined),
     divisionToOpen: jest.fn().mockResolvedValue(options.division ?? 'OR'),
     openPeriod: jest.fn().mockResolvedValue(undefined),
+    alignPeriod: jest.fn().mockResolvedValue(undefined),
     standings: jest.fn().mockResolvedValue(options.standings ?? []),
     // Aucune période échue : le règlement paresseux a son e2e.
     unsettledBefore: jest.fn().mockResolvedValue([]),

@@ -55,7 +55,7 @@ export class LeaguesService {
     if ((await this.leagues.addPoints(userId, periodKey, points, client)) > 0) {
       return;
     }
-    const division = await this.leagues.divisionToOpen(userId, client);
+    const division = await this.leagues.divisionToOpen(userId, periodKey, client);
     await this.leagues.openPeriod(userId, periodKey, division, client);
     await this.leagues.addPoints(userId, periodKey, points, client);
   }
@@ -78,7 +78,7 @@ export class LeaguesService {
         joined: false,
         periodKey,
         endsAt,
-        division: await this.leagues.divisionToOpen(userId),
+        division: await this.leagues.divisionToOpen(userId, periodKey),
         score: 0,
         standings: [],
         lastResult: null,
@@ -87,8 +87,11 @@ export class LeaguesService {
     }
 
     const lastResult = await this.settleDue(userId, periodKey);
-    const division = await this.leagues.divisionToOpen(userId);
+    // Lue sur les périodes AVANT celle-ci, maintenant réglées : une séance
+    // a pu ouvrir la semaine avant le règlement, dans l'ancienne division.
+    const division = await this.leagues.divisionToOpen(userId, periodKey);
     await this.leagues.openPeriod(userId, periodKey, division);
+    await this.leagues.alignPeriod(userId, periodKey, division);
 
     const membres = await this.leagues.standings(periodKey, division);
     const rangs = competitionRanks(
