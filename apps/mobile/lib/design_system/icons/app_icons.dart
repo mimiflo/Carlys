@@ -112,6 +112,23 @@ abstract final class AppIcons {
   /// quand `badge` ne dessine qu'une famille.
   static const IconData rewards = Icons.emoji_events_rounded;
 
+  // Ligue : ce qui rapporte des points, et le classement.
+  /// La ligue elle-même, en tête de sa carte : la coupe qu'on vise.
+  static const IconData leagueTrophy = Icons.emoji_events_rounded;
+
+  /// Les points d'une SÉANCE terminée.
+  static const IconData leagueSessionPoints =
+      Icons.local_fire_department_rounded;
+
+  /// Les points d'une minute d'EFFORT chronométrée.
+  static const IconData leagueEffortPoints = Icons.bolt_rounded;
+
+  /// Les points de la DISTANCE parcourue.
+  static const IconData leagueDistancePoints = Icons.directions_run_rounded;
+
+  /// Le classement complet, ouvert depuis le podium.
+  static const IconData ranking = Icons.bar_chart_rounded;
+
   // Univers de marque (page de bienvenue)
   static const IconData brandApp = Icons.smartphone_rounded;
   static const IconData brandAcademy = Icons.school_rounded;

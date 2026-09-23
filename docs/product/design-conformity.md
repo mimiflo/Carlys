@@ -434,6 +434,37 @@ Deux ajouts aux tokens pour cette maquette, gardés par
   réservé aux encouragements (`entry_field_icons_test.dart` le garde sur
   les deux écrans réels).
 
+## Les métaux des ligues (arbitrage du 23 septembre 2026)
+
+Le thème reste violet partout ; **une seule exception, bornée** : les cinq
+divisions de ligue (Bronze, Argent, Or, Platine, Diamant) ont leurs couleurs de
+métal. Arbitrage produit : une division porte le nom d'un métal et se reconnaît
+à sa couleur avant de se lire. Jusque-là, les peindre aurait voulu dire cinq
+valeurs visuelles en dur dans un écran ; ce sont désormais des jetons, gardés
+par `design_tokens_test.dart` :
+
+- le groupe **`color.league`** de `tokens.json`, reflété à la main dans
+  `AppColors.league*`, **réservé au blason de division et aux couronnes du
+  podium** — jamais une surface, un texte, un en-tête ni une autre
+  récompense. La réserve est écrite dans les deux fichiers ;
+- **trois tons par métal**, du plus clair au plus sombre : le reflet
+  (`…Light`), le corps, l'ombre (`…Dark`). Un métal se peint par sa lumière ;
+  en aplat, l'or n'est qu'un jaune. Le test compare les deux ENSEMBLES de clés
+  (un jeton sans reflet, ou un reflet sans jeton, échoue) et vérifie que
+  chaque métal s'assombrit bien du reflet à l'ombre ;
+- **le corps tient 3:1 sur `darkSurface`**, le seuil d'un élément graphique
+  non textuel (WCAG 1.4.11). Mesuré à la création : bronze 5,47, argent 9,14,
+  or 9,34, platine 10,93, diamant 8,82 — et encore 4,61 au plus bas (bronze)
+  sur `surfaceIcon`, la plus claire des surfaces sombres. L'ombre, elle, ne le
+  tient pas : elle ne se pose jamais seule sur le fond, elle creuse
+  l'intérieur du blason. Un ton de corps qui change se re-mesure.
+
+Les clés sont en anglais, comme tout `tokens.json` ; `LeagueDivision` parle
+français (argent = `silver`, or = `gold`, platine = `platinum`, diamant =
+`diamond`). L'admin ne les recopie pas : aucun de ses écrans ne montre de
+ligue, et `packages/ui/scripts/build-css.mjs` n'émet pas ce groupe, pas plus
+que `color.vendor`.
+
 ## Écarts assumés
 
 | Écran | Écart | Raison |
@@ -456,6 +487,7 @@ Deux ajouts aux tokens pour cette maquette, gardés par
 | Abonnement | ÉCART FERMÉ : offres servies par `GET /subscriptions/offers`, achat par Stripe Checkout, gestion par le portail de facturation | Voir `subscription-purchase.md` |
 | Profil | Lignes repos par défaut, unités, rappels, export absentes | Réglages inexistants |
 | Profil (maquette du 23 septembre 2026) | « Mes contenus sauvegardés » absent, « Bronze » retiré de « Mes badges », pourcentage de l'objectif suivi de sa base (« du programme »), flèche de retour au lieu de la barre d'onglets | Écarts VOULUS, détaillés dans `profile.md` : aucune sauvegarde de contenu dans le domaine ; une ligue ne se reporte jamais dans le profil ; un pourcentage nomme sa base ; le profil s'ouvre en plein écran depuis l'avatar |
+| Communauté, onglet Ligue (maquette du 23 septembre 2026) | Initiales au lieu de photos ; « Encore 35 points pour entrer dans le top 5 » et une jauge vers le score du 5e au lieu de « Encore 260 points pour passer Argent » sur « 240 / 500 pts » ; une ligne de barème en plus (« Et 10 pts par bonne réponse du jour à l’Academy ») ; la loupe filtre l’onglet ouvert au lieu de chercher des personnes | Écarts VOULUS, détaillés dans `community.md` : Carlys n’a pas de photo de profil ; la montée se joue au rang, aucun seuil de points n’existe ; le serveur compte aussi l’Academy ; la Communauté n’énumère personne (principes 2 et 3) |
 | Onboarding | 3 objectifs au lieu de 4 | `NutritionGoal` n'a pas d'équivalent « gagner en force » |
 | Connexion, Inscription | Le **cœur de la marque** en décor des deux écrans : à la place de la sphère de la maquette (inscription) et de la photographie d'athlète (connexion) ; devise « L'ART DE DEVENIR » conservée | Demandé (le cœur partout, même composition sur les deux écrans) ; l'identité de marque établie prime sur les éléments génériques de la planche |
 | Connexion, Inscription | **Apple et Google seulement**, sans Discord — et leur toucher annonce que le fournisseur « arrive bientôt » | Demandé (deux fournisseurs) ; l'API ne propose que l'e-mail (Étape 2) : un bouton qui simulerait une connexion sociale mentirait |

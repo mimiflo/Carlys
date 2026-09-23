@@ -115,7 +115,7 @@ class CommunityGestures {
       await _actions.setLeagueJoined(joined: joined);
       return joined
           ? 'Te voilà dans la ligue. La semaine repart dimanche soir.'
-          : 'Tu es sortie de la ligue. Plus rien n’y est compté.';
+          : 'C’est fait : tu ne joues plus la ligue. Plus rien n’y est compté.';
     });
   }
 

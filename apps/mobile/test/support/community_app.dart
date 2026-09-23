@@ -10,8 +10,10 @@ import 'package:carlys_mobile/app/app.dart';
 import 'package:carlys_mobile/app/environment/app_environment.dart';
 import 'package:carlys_mobile/app/restore/app_restore.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
+import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
 import 'package:carlys_mobile/features/community/data/repositories/community_repository_impl.dart';
+import 'package:carlys_mobile/features/community/presentation/screens/community_screen.dart';
 import 'package:carlys_mobile/features/nutrition/presentation/controllers/water_controllers.dart';
 import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';
 import 'package:flutter/material.dart';
@@ -70,11 +72,45 @@ Widget appWith(FakeCommunityRepository community) => ProviderScope(
   child: const CarlysApp(),
 );
 
-/// Monte l'application et ouvre l'onglet Communauté.
-Future<void> openCommunity(WidgetTester tester, Widget app) async {
+/// Monte l'application et ouvre l'onglet Communauté — sur son onglet
+/// [tab] (« Défis », « Ligue » ou « Amis ») quand il est donné, sinon sur
+/// celui qui s'ouvre le premier.
+Future<void> openCommunity(
+  WidgetTester tester,
+  Widget app, {
+  String? tab,
+}) async {
   await tester.pumpWidget(app);
   await tester.pumpAndSettle();
   await tapTab(tester, 'Communauté');
+  if (tab != null) {
+    await showCommunityTab(tester, tab);
+  }
+}
+
+/// Ouvre l'onglet [label] de la Communauté, sur sa piste segmentée : le
+/// même mot peut vivre ailleurs dans la page (« Amis » est aussi une
+/// section), seule la piste fait foi.
+///
+/// La piste défile avec la page : on remonte d'abord en haut, comme on le
+/// ferait du pouce — en-tête et loupe compris, que le test suivant peut
+/// vouloir toucher.
+Future<void> showCommunityTab(WidgetTester tester, String label) async {
+  final page = find
+      .descendant(
+        of: find.byType(CommunityScreen),
+        matching: find.byType(Scrollable),
+      )
+      .first;
+  tester.state<ScrollableState>(page).position.jumpTo(0);
+  await tester.pumpAndSettle();
+  await tester.tap(
+    find.descendant(
+      of: find.byType(AppSegmentedTabs),
+      matching: find.text(label),
+    ),
+  );
+  await tester.pumpAndSettle();
 }
 
 /// Fait défiler l'écran courant jusqu'à rendre [item] visible.

@@ -2,12 +2,14 @@ import { LeagueDivision } from '@prisma/client';
 import {
   LEAGUE_LADDER,
   LEAGUE_MIN_PLAYERS,
+  LEAGUE_PROMOTED,
   periodKeyOf,
   periodWindow,
   pointsOf,
   previousPeriodKey,
   isPeriodKey,
   promoted,
+  promotionOutlook,
   relegated,
   settleDivision,
 } from './league-ladder';
@@ -96,14 +98,14 @@ describe('L’échelle des divisions', () => {
   });
 });
 
+/** Un membre par score, nommés `u0`, `u1`… dans l'ordre donné. */
+const division = (scores: number[]) =>
+  scores.map((score, index) => ({ userId: `u${index}`, score }));
+
+const divisionOf = (results: ReturnType<typeof settleDivision>, userId: string) =>
+  results.find((result) => result.userId === userId)?.nextDivision;
+
 describe('Le règlement d’une division', () => {
-  /** `count` joueurs aux scores décroissants, du plus fort au plus faible. */
-  const division = (scores: number[]) =>
-    scores.map((score, index) => ({ userId: `u${index}`, score }));
-
-  const divisionOf = (results: ReturnType<typeof settleDivision>, userId: string) =>
-    results.find((result) => result.userId === userId)?.nextDivision;
-
   it('fait monter les 5 premiers et descendre les 5 derniers', () => {
     const scores = [200, 190, 180, 170, 160, 150, 140, 130, 120, 110];
     const results = settleDivision('OR', division(scores));
@@ -173,5 +175,137 @@ describe('Le règlement d’une division', () => {
         .slice(0, 5)
         .map((r) => r.nextDivision),
     ).toEqual(Array(5).fill('DIAMANT'));
+  });
+});
+
+describe('La zone de montée, annoncée avant le règlement', () => {
+  /** Douze joueurs, sans ex æquo, du plus fort au plus faible. */
+  const douze = [300, 280, 260, 240, 220, 200, 180, 160, 140, 120, 100, 80];
+
+  it('situe dans la zone une 4e sur 12, et sert le barème avec', () => {
+    expect(promotionOutlook('OR', division(douze), 'u3')).toEqual({
+      promotedCount: LEAGUE_PROMOTED,
+      minPlayers: LEAGUE_MIN_PLAYERS,
+      activePlayers: 12,
+      topDivision: false,
+      inZone: true,
+      // Le 5e score des AUTRES : 300, 280, 260, 220, puis 200.
+      zoneScore: 200,
+      pointsToZone: 0,
+    });
+  });
+
+  it('donne l’écart EXACT avec la 5e place à qui est hors de la zone', () => {
+    // 8e à 160 : les autres sont 300, 280, 260, 240, puis 220.
+    const zone = promotionOutlook('OR', division(douze), 'u7');
+
+    expect(zone.inZone).toBe(false);
+    expect(zone.zoneScore).toBe(220);
+    expect(zone.pointsToZone).toBe(60);
+  });
+
+  it('fait entrer dans la zone qui ÉGALE le 5e, comme le règlement', () => {
+    // Les ex æquo partagent le rang : égaler suffit, et le règlement fait
+    // monter les deux — l'annonce ne peut pas dire autre chose.
+    const scores = [300, 280, 260, 240, 220, 220, 200, 180, 160, 140, 120, 100];
+    const zone = promotionOutlook('OR', division(scores), 'u5');
+
+    expect(zone).toMatchObject({ inZone: true, zoneScore: 220, pointsToZone: 0 });
+    expect(divisionOf(settleDivision('OR', division(scores)), 'u5')).toBe('PLATINE');
+    // Un point de moins, et on en sort.
+    scores[5] = 219;
+    expect(promotionOutlook('OR', division(scores), 'u5')).toMatchObject({
+      inZone: false,
+      pointsToZone: 1,
+    });
+  });
+
+  it('ne met JAMAIS un score nul dans la zone, et ne le compte pas parmi les joueurs', () => {
+    // « N'a pas joué » ne monte pas plus qu'il ne descend : l'écart est
+    // alors le 5e score entier.
+    const zone = promotionOutlook('OR', division([...douze.slice(0, 11), 0]), 'u11');
+
+    expect(zone).toMatchObject({ activePlayers: 11, inZone: false, zoneScore: 220 });
+    expect(zone.pointsToZone).toBe(220);
+  });
+
+  it('n’a pas de seuil tant que moins de cinq AUTRES ont marqué', () => {
+    // Trois autres joueurs : quiconque marque est dans les cinq premiers.
+    const quatre = division([300, 200, 100, 50]);
+
+    expect(promotionOutlook('OR', quatre, 'u3')).toMatchObject({
+      inZone: true,
+      zoneScore: null,
+      pointsToZone: 0,
+    });
+    // À zéro, un seul point suffit — et c'est ce que le champ dit.
+    expect(promotionOutlook('OR', division([300, 200, 100, 0]), 'u3')).toMatchObject({
+      inZone: false,
+      zoneScore: null,
+      pointsToZone: 1,
+    });
+  });
+
+  it('dit la zone du RANG même sous le minimum de joueurs, et le minimum à part', () => {
+    // Sept joueurs : le règlement ne bougerait personne, mais la zone se dit
+    // quand même — c'est `activePlayers` face à `minPlayers` qui prévient
+    // que la semaine ne comptera pas encore.
+    const sept = division([300, 280, 260, 240, 220, 200, 180]);
+    const zone = promotionOutlook('OR', sept, 'u1');
+
+    expect(zone).toMatchObject({ activePlayers: 7, minPlayers: 10, inZone: true });
+    expect(divisionOf(settleDivision('OR', sept), 'u1')).toBe('OR');
+  });
+
+  it('ne promet rien en Diamant, même en tête', () => {
+    expect(promotionOutlook('DIAMANT', division(douze), 'u0')).toEqual({
+      promotedCount: LEAGUE_PROMOTED,
+      minPlayers: LEAGUE_MIN_PLAYERS,
+      activePlayers: 12,
+      topDivision: true,
+      inZone: false,
+      zoneScore: null,
+      pointsToZone: 0,
+    });
+  });
+
+  it('annonce exactement ce que le règlement décide, ex æquo compris', () => {
+    // La garde anti-divergence : `inZone` et le règlement partagent la même
+    // règle, donc sur toute division assez peuplée et sans ambiguïté, ils
+    // désignent les mêmes personnes.
+    const divisions = [
+      douze,
+      [200, 200, 200, 200, 200, 200, 190, 180, 170, 160, 150, 140, 130, 120, 110, 100],
+      [300, 280, 260, 240, 220, 220, 200, 180, 160, 140, 120, 100, 0, 0],
+    ];
+    for (const scores of divisions) {
+      const membres = division(scores);
+      const reglement = settleDivision('OR', membres);
+      for (const { userId } of membres) {
+        expect([userId, promotionOutlook('OR', membres, userId).inZone]).toEqual([
+          userId,
+          divisionOf(reglement, userId) === 'PLATINE',
+        ]);
+      }
+    }
+  });
+
+  it('ne se contredit jamais : dans la zone ⇔ a marqué et ne manque de rien', () => {
+    for (let score = 0; score <= 320; score += 10) {
+      const scores = [...douze.slice(0, 11), score];
+      const zone = promotionOutlook('OR', division(scores), 'u11');
+      expect(zone.inZone).toBe(score > 0 && zone.pointsToZone === 0);
+    }
+  });
+
+  it('dit la zone, pas le verdict, quand des ex æquo couvrent les deux moitiés', () => {
+    // Dix joueurs, égalité aux 5e et 6e places : chacun des deux est à la
+    // fois dans les cinq premiers et dans les cinq derniers, et le règlement
+    // ne bouge pas une ligue ambiguë. `inZone` dit le RANG — le cas ne se
+    // présente qu'à ce prix, et l'annonce le montre tel quel.
+    const scores = [100, 90, 80, 70, 60, 60, 50, 40, 30, 20];
+
+    expect(promotionOutlook('OR', division(scores), 'u4').inZone).toBe(true);
+    expect(divisionOf(settleDivision('OR', division(scores)), 'u4')).toBe('OR');
   });
 });

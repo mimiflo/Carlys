@@ -13,7 +13,7 @@ import '../../support/first_run_prefs.dart';
 /// Les gestes de protection de la communauté : retirer un ami, bloquer,
 /// débloquer, signaler (une personne ou un mot), retirer un mot du fil. Le
 /// dépôt factice reçoit l'appel, l'écran reflète l'état, l'échec hors ligne
-/// se dit.
+/// se dit. Tout se joue dans l'onglet AMIS.
 const _sarah = CommunityFriend(
   id: 'amie-sarah',
   displayName: 'Sarah',
@@ -70,7 +70,7 @@ void main() {
       tester,
     ) async {
       final community = FakeCommunityRepository(friends: [_sarah, _tom]);
-      await openCommunity(tester, appWith(community));
+      await openCommunity(tester, appWith(community), tab: 'Amis');
 
       // Le menu est une vraie cible tactile, pas un ornement.
       await reveal(tester, optionsOf('Tom'));
@@ -96,7 +96,7 @@ void main() {
 
     testWidgets('annuler ne touche à rien', (tester) async {
       final community = FakeCommunityRepository(friends: [_tom]);
-      await openCommunity(tester, appWith(community));
+      await openCommunity(tester, appWith(community), tab: 'Amis');
 
       await chooseOption(tester, optionsOf('Tom'), 'Retirer');
       await tester.tap(find.text('Annuler'));
@@ -108,7 +108,7 @@ void main() {
 
     testWidgets('hors ligne : l’échec se dit, l’ami reste', (tester) async {
       final community = FakeCommunityRepository(friends: [_tom]);
-      await openCommunity(tester, appWith(community));
+      await openCommunity(tester, appWith(community), tab: 'Amis');
 
       // Le réseau tombe APRÈS le chargement : le geste, lui, doit le dire.
       community.offline = true;
@@ -130,7 +130,7 @@ void main() {
           friends: [_sarah, _tom],
           feed: [_wordFrom(_tom, 'Trop fort ce matin.')],
         );
-        await openCommunity(tester, appWith(community));
+        await openCommunity(tester, appWith(community), tab: 'Amis');
         expect(find.text('Trop fort ce matin.'), findsOneWidget);
 
         await chooseOption(tester, optionsOf('Tom'), 'Bloquer');
@@ -164,7 +164,7 @@ void main() {
             _wordFrom(_sarah, 'Belle série !'),
           ],
         );
-        await openCommunity(tester, appWith(community));
+        await openCommunity(tester, appWith(community), tab: 'Amis');
         expect(_friendNamed('Tom'), findsNothing);
 
         await chooseOption(tester, messageOptionsOf('Tom'), 'Bloquer');
@@ -188,7 +188,7 @@ void main() {
       final community = FakeCommunityRepository(
         feed: [_wordFrom(_tom, 'Tu n’y arriveras jamais.')],
       );
-      await openCommunity(tester, appWith(community));
+      await openCommunity(tester, appWith(community), tab: 'Amis');
 
       await chooseOption(tester, messageOptionsOf('Tom'), 'Bloquer');
       await tester.tap(find.text('Annuler'));
@@ -200,7 +200,7 @@ void main() {
 
     testWidgets('annuler ne bloque personne', (tester) async {
       final community = FakeCommunityRepository(friends: [_tom]);
-      await openCommunity(tester, appWith(community));
+      await openCommunity(tester, appWith(community), tab: 'Amis');
 
       await chooseOption(tester, optionsOf('Tom'), 'Bloquer');
       await tester.tap(find.text('Annuler'));
@@ -222,7 +222,7 @@ void main() {
           ),
         ],
       );
-      await openCommunity(tester, appWith(community));
+      await openCommunity(tester, appWith(community), tab: 'Amis');
 
       // Un compte qui n'a plus que des blocages n'est pas « vide ».
       expect(find.text('Personne ici pour l’instant'), findsNothing);
@@ -244,7 +244,7 @@ void main() {
       'un ami : motif et précisions arrivent au dépôt, retour sobre',
       (tester) async {
         final community = FakeCommunityRepository(friends: [_tom]);
-        await openCommunity(tester, appWith(community));
+        await openCommunity(tester, appWith(community), tab: 'Amis');
 
         await chooseOption(tester, optionsOf('Tom'), 'Signaler');
         expect(find.text('Signaler Tom'), findsOneWidget);
@@ -279,7 +279,7 @@ void main() {
       final community = FakeCommunityRepository(
         feed: [_wordFrom(_tom, 'Trop fort ce matin.')],
       );
-      await openCommunity(tester, appWith(community));
+      await openCommunity(tester, appWith(community), tab: 'Amis');
 
       await chooseOption(tester, messageOptionsOf('Tom'), 'Signaler');
       expect(find.text('Signaler ce message'), findsOneWidget);
@@ -310,7 +310,7 @@ void main() {
           _wordFrom(_sarah, 'Belle série !'),
         ],
       );
-      await openCommunity(tester, appWith(community));
+      await openCommunity(tester, appWith(community), tab: 'Amis');
 
       await chooseOption(tester, messageOptionsOf('Tom'), 'Supprimer');
 

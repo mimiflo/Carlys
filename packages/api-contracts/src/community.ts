@@ -282,6 +282,57 @@ export const leagueStandingSchema = z.object({
 export type LeagueStanding = z.infer<typeof leagueStandingSchema>;
 
 /**
+ * OÙ J'EN SUIS face à la zone de montée, si la période se fermait maintenant.
+ *
+ * Calculé par le SERVEUR, à côté du règlement et avec la même règle
+ * (`league-ladder.ts`, `promotionOutlook`) : un client qui la recopierait
+ * divergerait exactement sur l'ex æquo à la frontière, et à la première
+ * retouche du barème. Le mobile ÉCRIT ces nombres, il ne les calcule pas.
+ */
+export const leaguePromotionSchema = z.object({
+  /** Combien montent au règlement — servi pour être écrit, jamais recopié. */
+  promotedCount: z.number(),
+  /** En dessous de ce nombre de joueurs à score non nul, personne ne bouge. */
+  minPlayers: z.number(),
+  /**
+   * Membres de ma division dont le score de la période est non nul, moi
+   * compris. Face à `minPlayers`, il dit si la semaine COMPTERA — ce que
+   * `inZone` ne dit volontairement pas.
+   */
+  activePlayers: z.number(),
+  /** Vrai en Diamant : il n'y a rien au-dessus, donc ni zone ni écart. */
+  topDivision: z.boolean(),
+  /**
+   * Je monterais si la période se fermait maintenant, AU SENS DU RANG SEUL :
+   * j'ai marqué, et moins de `promotedCount` autres joueurs font strictement
+   * mieux. Le minimum de joueurs n'y entre pas — il se lit à part, pour que
+   * l'écran puisse dire « dans la zone, mais il faut dix joueurs » au lieu de
+   * taire la zone. Ni la garde d'ambiguïté du règlement (des ex æquo à cheval
+   * sur les cinq premières et les cinq dernières places ne bougent pas) :
+   * c'est la ZONE, pas le verdict. Toujours faux en Diamant.
+   */
+  inZone: z.boolean(),
+  /**
+   * Le score qui fait entrer dans la zone : le `promotedCount`-ième plus haut
+   * parmi les AUTRES joueurs. L'ÉGALER suffit, les ex æquo partagent le rang.
+   * `null` quand moins de `promotedCount` autres ont marqué (un point suffit
+   * alors), et en Diamant.
+   */
+  zoneScore: z.number().nullable(),
+  /**
+   * Points qui me manquent pour entrer dans la zone : `zoneScore` moins mon
+   * score, jamais négatif ; sans `zoneScore`, 0 si j'ai marqué et 1 sinon.
+   * Toujours 0 dans la zone et en Diamant.
+   *
+   * La montée se joue au RANG, pas à un seuil de points — ce champ dit
+   * l'écart avec la 5e place, qui BOUGE avec les autres. C'est un état de la
+   * semaine à relire, jamais un objectif fixé qu'on atteindrait une fois.
+   */
+  pointsToZone: z.number(),
+});
+export type LeaguePromotion = z.infer<typeof leaguePromotionSchema>;
+
+/**
  * Ce que la ligue rend en une lecture.
  *
  * `joined` à `false` décrit une ligue à laquelle on n'a PAS adhéré : le
@@ -311,5 +362,10 @@ export const leagueSchema = z.object({
       to: leagueDivisionSchema,
     })
     .nullable(),
+  /**
+   * Où j'en suis face à la zone de montée ; `null` tant qu'on n'a pas
+   * rejoint — il n'y a alors ni classement, ni zone à situer.
+   */
+  promotion: leaguePromotionSchema.nullable(),
 });
 export type League = z.infer<typeof leagueSchema>;

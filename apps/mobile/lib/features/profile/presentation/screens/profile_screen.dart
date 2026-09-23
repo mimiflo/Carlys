@@ -4,19 +4,19 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_routes.dart';
 import '../../../../design_system/design_system.dart';
+import '../../../../shared/widgets/illustrated_banner.dart';
 import '../../../authentication/presentation/controllers/auth_controller.dart';
 import '../../../community/presentation/controllers/community_controllers.dart';
+import '../../../community/presentation/providers/community_tab_state.dart';
 import '../../../progress/presentation/controllers/progress_controllers.dart';
 import '../../../workout_program/presentation/controllers/program_controllers.dart';
 import '../../../workout_program/presentation/widgets/training_goal_sheet.dart';
 import '../providers/profile_hub_providers.dart';
 import '../widgets/profile_email_verification.dart';
-import '../widgets/profile_further_banner.dart';
 import '../widgets/profile_hub_tile.dart';
 import '../widgets/profile_hub_wording.dart';
 import '../widgets/profile_identity_card.dart';
 import '../widgets/profile_objective_card.dart';
-import '../widgets/profile_page_header.dart';
 import '../widgets/profile_program_card.dart';
 
 /// MON PROFIL : ton parcours, ta progression — refonte de septembre 2026,
@@ -67,12 +67,16 @@ class ProfileScreen extends ConsumerWidget {
               bottomInset + AppSpacing.gapSection,
             ),
             children: [
-              ProfilePageHeader(
+              AppScreenHeader(
                 title: 'Mon profil',
                 tagline: 'Ton parcours, ta progression.',
-                action: ProfileSettingsButton(
-                  onPressed: () => context.push(AppRoutes.profileSettings),
-                ),
+                actions: [
+                  AppRoundIconButton(
+                    icon: AppIcons.settingsOutline,
+                    tooltip: 'Réglages',
+                    onPressed: () => context.push(AppRoutes.profileSettings),
+                  ),
+                ],
               ),
               const SizedBox(height: AppSpacing.lg),
               ProfileIdentityCard(
@@ -129,12 +133,17 @@ class ProfileScreen extends ConsumerWidget {
                       singular: 'ami',
                       plural: 'amis',
                     ),
-                    onTap: () => context.go(AppRoutes.community),
+                    onTap: () =>
+                        context.go(AppRoutes.communityTab(CommunityTab.amis)),
                   ),
                 ],
               ),
               const SizedBox(height: AppSpacing.md),
-              ProfileFurtherBanner(
+              // La porte vers un nouveau programme : la seule façon concrète,
+              // dans l'application, de se fixer un nouvel objectif.
+              IllustratedBanner(
+                title: 'Toujours plus loin',
+                body: 'Garde l’élan et atteins de\u00A0nouveaux objectifs.',
                 onTap: () => context.push(AppRoutes.programSetup),
               ),
             ],

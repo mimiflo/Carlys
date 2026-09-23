@@ -1,3 +1,5 @@
+import '../../features/community/presentation/providers/community_tab_state.dart';
+
 /// Chemins de navigation nommés.
 abstract final class AppRoutes {
   static const String splash = '/';
@@ -51,6 +53,13 @@ abstract final class AppRoutes {
   static const String training = '/training';
   static const String academy = '/academy';
   static const String community = '/community';
+
+  /// La Communauté ouverte sur un onglet (`?onglet=amis`) : un raccourci
+  /// ouvre l'onglet qui répond à ce qu'il annonce. Typé par l'énumération,
+  /// pas par une chaîne : une faute de frappe dans un raccourci ne compile
+  /// pas, au lieu d'ouvrir en silence l'onglet par défaut.
+  static String communityTab(CommunityTab tab) =>
+      '$community?onglet=${tab.slug}';
 
   static String exerciseDetail(String idOrSlug) => '/exercises/$idOrSlug';
 

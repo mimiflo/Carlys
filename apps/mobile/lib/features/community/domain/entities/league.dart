@@ -76,6 +76,56 @@ class LeagueResult {
   bool get isRelegation => to.rung < from.rung;
 }
 
+/// OÙ J'EN SUIS face à la zone de montée, si la semaine se fermait
+/// maintenant.
+///
+/// Calculé par le SERVEUR, à côté du règlement et avec sa règle
+/// (`league-ladder.ts`, `promotionOutlook`) : l'appli ÉCRIT ces nombres, elle
+/// ne les calcule jamais. Une copie de la règle ici divergerait exactement
+/// sur l'ex æquo à la frontière, et à la première retouche du barème.
+///
+/// La montée se joue au RANG, pas à un seuil de points : [pointsToZone] dit
+/// l'écart avec la 5e place, qui BOUGE avec les autres.
+class LeaguePromotion {
+  const LeaguePromotion({
+    required this.promotedCount,
+    required this.minPlayers,
+    required this.activePlayers,
+    required this.topDivision,
+    required this.inZone,
+    required this.zoneScore,
+    required this.pointsToZone,
+  });
+
+  /// Combien montent au règlement — servi pour être écrit, jamais recopié.
+  final int promotedCount;
+
+  /// En dessous de ce nombre de joueurs à score non nul, personne ne bouge.
+  final int minPlayers;
+
+  /// Membres de ma division qui ont marqué cette semaine, moi compris. Face
+  /// à [minPlayers], il dit si la semaine COMPTERA — ce que [inZone] ne dit
+  /// volontairement pas.
+  final int activePlayers;
+
+  /// Vrai en Diamant : rien au-dessus, donc ni zone ni écart.
+  final bool topDivision;
+
+  /// Je monterais si la semaine se fermait maintenant, au sens du RANG seul :
+  /// ni le minimum de joueurs ni les ex æquo à cheval sur les deux moitiés
+  /// n'y entrent. C'est la zone, pas le verdict. Toujours faux en Diamant.
+  final bool inZone;
+
+  /// Le score à ÉGALER pour entrer dans la zone (les ex æquo partagent le
+  /// rang). `null` quand un point suffit — moins de [promotedCount] autres
+  /// ont marqué — et en Diamant.
+  final int? zoneScore;
+
+  /// Points qui me manquent pour entrer dans la zone ; 0 dedans et en
+  /// Diamant.
+  final int pointsToZone;
+}
+
 class League {
   const League({
     required this.joined,
@@ -85,6 +135,7 @@ class League {
     required this.score,
     required this.standings,
     this.lastResult,
+    this.promotion,
   });
 
   /// Faux tant qu'on n'a pas rejoint : le classement est alors VIDE, et
@@ -99,6 +150,10 @@ class League {
   final int score;
   final List<LeagueStanding> standings;
   final LeagueResult? lastResult;
+
+  /// Où j'en suis face à la zone de montée. `null` sans adhésion (il n'y a
+  /// ni classement ni zone), ou face à un serveur qui ne le sert pas encore.
+  final LeaguePromotion? promotion;
 
   /// Ma ligne du classement, s'il y en a une.
   LeagueStanding? get me {

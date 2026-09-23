@@ -2,7 +2,13 @@ import { type League as LeagueContract } from '@carlys/api-contracts';
 import { Injectable } from '@nestjs/common';
 import { type ChallengeMetric, type Prisma } from '@prisma/client';
 import { competitionRanks } from '../domain/competition-ranks';
-import { periodKeyOf, periodWindow, pointsOf, settleDivision } from '../domain/league-ladder';
+import {
+  periodKeyOf,
+  periodWindow,
+  pointsOf,
+  promotionOutlook,
+  settleDivision,
+} from '../domain/league-ladder';
 import { LeaguesRepository } from '../infrastructure/leagues.repository';
 
 /**
@@ -67,7 +73,7 @@ export class LeaguesService {
     if (!(await this.leagues.hasJoined(userId))) {
       // Un non-membre voit l'échelle et l'invitation à entrer, jamais le
       // classement : montrer des noms à qui n'a pas rejoint contredirait le
-      // « périmètre CHOISI ».
+      // « périmètre CHOISI ». Ni la zone de montée, qui se lit sur lui.
       return {
         joined: false,
         periodKey,
@@ -76,6 +82,7 @@ export class LeaguesService {
         score: 0,
         standings: [],
         lastResult: null,
+        promotion: null,
       };
     }
 
@@ -105,6 +112,9 @@ export class LeaguesService {
         isMe: membre.userId === userId,
       })),
       lastResult,
+      // Lu sur les MÊMES membres que le classement ci-dessus : la zone
+      // annoncée et les rangs affichés ne peuvent pas se contredire.
+      promotion: promotionOutlook(division, membres, userId),
     };
   }
 

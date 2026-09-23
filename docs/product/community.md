@@ -235,20 +235,61 @@ simplement perdue (la barre est collective, pas comptable).
   d'exemple — amis, mots, demandes, défis, codes — vit dans
   `test/support/community_sample_world.dart`) fait vivre l'écran sans
   réseau.
-- L'écran distingue HORS CONNEXION (statut dédié, comme le coach —
+- **Trois onglets** (refonte du 23 septembre 2026, d'après maquette). La page
+  empilait tout sur un seul défilement ; elle se range désormais en Défis
+  (ouvert le premier), Ligue et Amis, sur une piste segmentée du design system
+  (`AppSegmentedTabs`, qui porte le compte des demandes en attente en pastille
+  et le dit en mots au lecteur d'écran). Rien n'a été retiré en chemin :
+  Défis = défis du mois et défis entre amis ; Ligue = la carte « où j'en
+  suis », le classement de la semaine et la bannière ; Amis = demandes,
+  encouragements, amis, confidentialité, personnes bloquées. L'en-tête
+  (`AppScreenHeader`, partagé avec le profil) porte la loupe et l'ajout d'un
+  ami. L'onglet ouvert survit à un détour par un autre onglet de la barre du
+  bas, et l'ADRESSE le suit (`/community?onglet=amis`,
+  `AppRoutes.communityTab(CommunityTab.amis)`, typé par l'énumération) : les
+  raccourcis de l'accueil (encouragement → Amis, défi du profil Challenger →
+  Défis) et du profil (« Mes amis » → Amis) ouvrent l'onglet qu'ils
+  annoncent, y compris quand on l'avait quitté à la main.
+- **La loupe FILTRE l'onglet ouvert, et rien d'autre** : amis, demandes, mots
+  et blocages par prénom ; noms du classement de la ligue (podium ou pas) ;
+  défis par titre. Elle n'interroge jamais le serveur, qui n'énumère personne
+  (principes 2 et 3) : on n'y cherche pas des inconnus. Rien ne correspond ?
+  L'onglet le dit ; un réglage (Confidentialité) sort des résultats.
+- Chaque onglet distingue HORS CONNEXION (statut dédié, comme le coach —
   `ConnectionAwareError`), panne serveur (« Réessayer » réessaie vraiment),
-  premier chargement, vide (avec l'action « Ajouter un ami ») et données.
-  Pendant un rafraîchissement, la liste reste en place (Riverpod conserve la
-  valeur précédente).
+  premier chargement et données, sur SES sources seulement
+  (`CommunityTabGate`) : une ligue en panne ne masque plus les défis, qui ont
+  répondu. Pendant un rafraîchissement, la liste reste en place (Riverpod
+  conserve la valeur précédente).
 - **Les défis du mois changent l'état vide.** Depuis que le serveur crée le
-  jeu du mois à la lecture, un compte neuf en ligne voit toujours des défis :
-  l'écran n'est plus jamais « vide » et ne suppose plus une liste de défis
-  absente pour toujours. L'invitation à ajouter un premier ami vit donc dans
-  la section « Amis » (`FriendsEmptyCard`), affichée tant qu'il n'y a ni ami
-  ni demande en attente ; l'état vide global ne reste possible que si le
-  serveur ne renvoie vraiment rien (ni défis, ni blocages), et il dit alors
-  la vérité. Hors ligne au premier lancement, c'est « Hors connexion » qui
+  jeu du mois à la lecture, un compte neuf en ligne voit toujours des défis.
+  L'onglet Amis, lui, affiche « Personne ici pour l'instant » (avec l'action
+  « Ajouter un ami ») quand il n'a ni demande, ni mot, ni ami, ni blocage ;
+  dès qu'une de ces listes existe, l'invitation au premier ajout vit dans la
+  section « Amis » (`FriendsEmptyCard`), tant qu'il n'y a ni ami ni demande en
+  attente. Hors ligne au premier lancement, c'est « Hors connexion » qui
   s'affiche, jamais « personne ici » : rien n'a pu être lu.
+- **L'onglet Ligue** (`widgets/league/`) : « LIGUE », la division et celle
+  qui vient (« Bronze → Argent ») avec le blason peint aux couleurs des
+  métaux (`AppColors.league*`, réservés aux ligues), puis la phrase qui dit
+  où j'en suis — d'après le bloc `promotion` du serveur, dans cet ordre :
+  rien de calculé (score seul), Diamant (tenir sa place), moins de dix
+  joueurs actifs (la semaine ne comptera pas, jauge en JOUEURS), dans le top
+  5 (« la zone de montée », jamais « tu montes » : un ex æquo peut garder
+  quelqu'un en place), sinon l'écart (« Encore 35 points pour entrer dans le
+  top 5 », jauge « 240 / 275 pts » et sa base en toutes lettres : « 275 pts :
+  le score du 5e aujourd'hui »). La maquette écrivait « 260 points pour
+  passer Argent » sur « 240 / 500 » : ce seuil n'existe pas. Vient ensuite le
+  barème en trois tuiles et une ligne (la quatrième règle, l'Academy), le
+  classement de la semaine (podium couronné, MA ligne même hors du podium,
+  « Voir le classement complet » dans une feuille, sans nouvelle requête),
+  puis une bannière illustrée. Sans adhésion, l'onglet montre l'invitation —
+  la division où l'on entrerait et le barème, jamais un nom — et la même
+  bannière au futur. Les avatars sont des INITIALES (`AppInitialAvatar`) :
+  Carlys n'a pas de photo de profil, et en afficher serait inventer une
+  donnée. Chaque carte, chaque ligne du classement, le blason et le titre
+  sont leur propre nœud sémantique : fondue, la carte s'annonçait comme UN
+  bouton dont le geste couvrait tout l'onglet.
 - La feuille « Ajouter un ami » s'ouvre sur le navigateur RACINE : ouverte
   depuis un onglet, elle passerait sinon sous la bottom bar flottante.
 - Elle montre MON code (QR sur aplat blanc — un lecteur veut du contraste,
@@ -487,6 +528,23 @@ telle quelle : ni remplissage, ni adversaire fabriqué.
 défis entre amis. Départager par l’identifiant serait un tirage au sort
 déguisé. Conséquence assumée : une égalité à la frontière peut faire monter
 plus de cinq personnes.
+
+**Où j’en suis face à la montée, dit par le serveur.** `GET /league` (et les
+réponses de `join`/`leave`) porte un bloc `promotion`, `null` sans adhésion :
+le barème lui-même (`promotedCount`, `minPlayers`), les joueurs de la division
+qui ont marqué (`activePlayers`), `topDivision` en Diamant, et `inZone`,
+`zoneScore`, `pointsToZone`. La montée se joue au RANG, pas à un seuil de
+points : `zoneScore` est le cinquième score des AUTRES joueurs, qu’il suffit
+d’égaler, et il BOUGE avec eux — `null` tant que moins de cinq autres ont
+marqué, un point suffit alors. `inZone` dit la zone au sens du rang seul : le
+minimum de dix joueurs se lit à part (`activePlayers` face à `minPlayers`), et
+la garde d’ambiguïté du règlement n’y entre pas. Le calcul vit à côté du
+règlement et partage sa règle de montée (`promotionOutlook` et
+`settleDivision` appellent `ranksForPromotion`, `league-ladder.ts`) : une copie
+côté mobile divergerait exactement sur l’ex æquo à la frontière, et à la
+première retouche du barème. L’appli lit le bloc de façon tolérante — absent
+(serveur plus ancien) ou mal typé, il vaut `null` et la ligue s’affiche sans
+zone.
 
 **La ligue est un OPT-IN** (`CommunityPreference.joinsLeague`, défaut
 `false`). Y entrer EST le consentement, ce qu’exige le « périmètre choisi ».

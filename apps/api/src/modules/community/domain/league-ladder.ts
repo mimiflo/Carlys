@@ -146,6 +146,25 @@ export interface LeagueSettlement {
   nextDivision: LeagueDivision;
 }
 
+/** Les JOUEURS d'une division : les membres dont le score de la période est non nul. */
+function playersOf(members: readonly LeagueStanding[]): LeagueStanding[] {
+  return members.filter((member) => member.score > 0);
+}
+
+/**
+ * Vrai si `score` monterait parmi `players`, AU SENS DU RANG : il est non
+ * nul, et moins de [LEAGUE_PROMOTED] joueurs font STRICTEMENT mieux.
+ *
+ * La règle de montée n'existe qu'ici : le règlement s'en sert pour décider,
+ * `promotionOutlook` pour l'annoncer. Deux copies divergeraient exactement
+ * sur l'ex æquo à la frontière, le seul cas où la règle demande à réfléchir.
+ * Le minimum de joueurs n'y entre pas : chacun des deux appelants le dit à
+ * sa façon.
+ */
+function ranksForPromotion(players: readonly LeagueStanding[], score: number): boolean {
+  return score > 0 && players.filter((player) => player.score > score).length < LEAGUE_PROMOTED;
+}
+
 /**
  * Le règlement d'une division pour une période close : un rang par membre, et
  * la division de la période suivante.
@@ -173,7 +192,7 @@ export function settleDivision(
     (member) => member.score,
     (member) => member.userId,
   );
-  const joueurs = members.filter((member) => member.score > 0);
+  const joueurs = playersOf(members);
   const fige = joueurs.length < LEAGUE_MIN_PLAYERS;
 
   return members.map((member) => {
@@ -181,9 +200,8 @@ export function settleDivision(
     if (fige || member.score <= 0) {
       return { userId: member.userId, rank, nextDivision: division };
     }
-    const dessus = joueurs.filter((autre) => autre.score > member.score).length;
     const dessous = joueurs.filter((autre) => autre.score < member.score).length;
-    const monte = dessus < LEAGUE_PROMOTED;
+    const monte = ranksForPromotion(joueurs, member.score);
     const descend = dessous < LEAGUE_RELEGATED;
     if (monte === descend) {
       return { userId: member.userId, rank, nextDivision: division };
@@ -194,4 +212,68 @@ export function settleDivision(
       nextDivision: monte ? promoted(division) : relegated(division),
     };
   });
+}
+
+/** Où en est une personne face à la zone de montée — voir [promotionOutlook]. */
+export interface PromotionOutlook {
+  promotedCount: number;
+  minPlayers: number;
+  activePlayers: number;
+  topDivision: boolean;
+  inZone: boolean;
+  zoneScore: number | null;
+  pointsToZone: number;
+}
+
+/**
+ * OÙ J'EN SUIS face à la zone de montée, si la période se fermait maintenant.
+ *
+ * Calculé à côté du règlement et avec SA règle (`ranksForPromotion`) : le
+ * mobile l'écrit sans rien recopier du barème, et une retouche du barème ne
+ * peut pas laisser l'annonce dire autre chose que le règlement.
+ *
+ * `inZone` est la règle du rang SEULE. Le minimum de joueurs se lit à part
+ * (`activePlayers` face à `minPlayers`) : l'écran peut dire « dans la zone,
+ * mais la semaine ne comptera qu'à partir de dix joueurs » au lieu de taire
+ * la zone jusqu'au dixième. La garde d'ambiguïté du règlement n'y entre pas
+ * non plus : elle ne mord que quand des ex æquo couvrent à la fois les cinq
+ * premières et les cinq dernières places, et la taire ici garde `inZone`
+ * d'accord avec `pointsToZone`.
+ *
+ * `zoneScore` est le [LEAGUE_PROMOTED]-ième score parmi les AUTRES joueurs :
+ * l'ÉGALER suffit, puisque les ex æquo partagent le rang. Il n'existe pas
+ * tant que moins de [LEAGUE_PROMOTED] autres ont marqué — marquer un point
+ * suffit alors. En Diamant, rien au-dessus : ni zone, ni seuil, ni écart.
+ */
+export function promotionOutlook(
+  division: LeagueDivision,
+  members: readonly LeagueStanding[],
+  userId: string,
+): PromotionOutlook {
+  const joueurs = playersOf(members);
+  const monScore = members.find((member) => member.userId === userId)?.score ?? 0;
+  const bareme = {
+    promotedCount: LEAGUE_PROMOTED,
+    minPlayers: LEAGUE_MIN_PLAYERS,
+    activePlayers: joueurs.length,
+  };
+  // Le sommet se lit dans `promoted`, qui plafonne déjà le règlement : un
+  // test de plus sur DIAMANT ferait une seconde source de « tout en haut ».
+  if (promoted(division) === division) {
+    return { ...bareme, topDivision: true, inZone: false, zoneScore: null, pointsToZone: 0 };
+  }
+
+  const autres = joueurs
+    .filter((joueur) => joueur.userId !== userId)
+    .map((joueur) => joueur.score)
+    .sort((a, b) => b - a);
+  const zoneScore = autres[LEAGUE_PROMOTED - 1] ?? null;
+  return {
+    ...bareme,
+    topDivision: false,
+    inZone: ranksForPromotion(joueurs, monScore),
+    zoneScore,
+    // Sans seuil, la zone est ouverte à qui marque : un point suffit.
+    pointsToZone: zoneScore === null ? (monScore > 0 ? 0 : 1) : Math.max(0, zoneScore - monScore),
+  };
 }

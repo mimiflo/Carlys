@@ -341,6 +341,8 @@ class InMemoryCommunityRepository implements CommunityRepository {
       score: vue.score,
       standings: joined ? sampleLeague().standings : const [],
       lastResult: joined ? vue.lastResult : null,
+      // Sans adhésion, ni classement ni zone : le serveur rend `null`.
+      promotion: joined ? sampleLeague().promotion : null,
     );
     return _league;
   }

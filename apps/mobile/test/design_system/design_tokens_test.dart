@@ -219,6 +219,59 @@ void main() {
     );
   });
 
+  group('color.league ↔ AppColors', () {
+    // Les métaux des cinq divisions, réservés aux ligues : trois tons par
+    // métal (reflet, corps, ombre). Quinze teintes recopiées à la main — une
+    // table de clés seule laisserait passer celle qu'on a oublié de porter.
+    const league = <String, Color>{
+      'bronzeLight': AppColors.leagueBronzeLight,
+      'bronze': AppColors.leagueBronze,
+      'bronzeDark': AppColors.leagueBronzeDark,
+      'silverLight': AppColors.leagueSilverLight,
+      'silver': AppColors.leagueSilver,
+      'silverDark': AppColors.leagueSilverDark,
+      'goldLight': AppColors.leagueGoldLight,
+      'gold': AppColors.leagueGold,
+      'goldDark': AppColors.leagueGoldDark,
+      'platinumLight': AppColors.leaguePlatinumLight,
+      'platinum': AppColors.leaguePlatinum,
+      'platinumDark': AppColors.leaguePlatinumDark,
+      'diamondLight': AppColors.leagueDiamondLight,
+      'diamond': AppColors.leagueDiamond,
+      'diamondDark': AppColors.leagueDiamondDark,
+    };
+
+    test('chaque ton de métal reflète son hexadécimal, et rien ne manque', () {
+      final declared = section('color.league');
+      expect(
+        declared.keys.toSet(),
+        league.keys.toSet(),
+        reason: 'un token sans reflet, ou un reflet sans token',
+      );
+      for (final entry in league.entries) {
+        final hex = declared[entry.key];
+        expect(hex, isA<String>(), reason: 'color.league.${entry.key}');
+        expect(
+          entry.value.toARGB32().toRadixString(16).toUpperCase(),
+          'FF${(hex! as String).substring(1).toUpperCase()}',
+          reason: 'color.league.${entry.key}',
+        );
+      }
+    });
+
+    test('chaque métal va du reflet à l’ombre, en s’assombrissant', () {
+      // `…Light`, le corps, `…Dark` : l'ordre que le nom promet. Un reflet
+      // plus sombre que le corps éteindrait le blason au lieu de l'éclairer.
+      for (final metal in ['bronze', 'silver', 'gold', 'platinum', 'diamond']) {
+        final reflet = league['${metal}Light']!.computeLuminance();
+        final corps = league[metal]!.computeLuminance();
+        final ombre = league['${metal}Dark']!.computeLuminance();
+        expect(reflet, greaterThan(corps), reason: '$metal : reflet ≤ corps');
+        expect(corps, greaterThan(ombre), reason: '$metal : corps ≤ ombre');
+      }
+    });
+  });
+
   group('radius ↔ AppRadius', () {
     const radius = <String, double>{
       'xs': AppRadius.xs,

@@ -55,7 +55,6 @@ import 'package:carlys_mobile/features/onboarding/presentation/widgets/athlete_p
 import 'package:carlys_mobile/features/onboarding/presentation/widgets/brand_signature.dart';
 import 'package:carlys_mobile/features/profile/presentation/screens/profile_screen.dart';
 import 'package:carlys_mobile/features/profile/presentation/screens/profile_settings_screen.dart';
-import 'package:carlys_mobile/features/profile/presentation/widgets/further_banner_illustration.dart';
 import 'package:carlys_mobile/features/profile/presentation/widgets/profile_plan_card.dart';
 import 'package:carlys_mobile/features/progress/data/repositories/progress_repository_impl.dart';
 import 'package:carlys_mobile/features/progress/domain/entities/progress.dart';
@@ -81,6 +80,7 @@ import 'package:carlys_mobile/features/workout_session/data/repositories/workout
 import 'package:carlys_mobile/features/workout_session/domain/entities/workout.dart';
 import 'package:carlys_mobile/features/workout_session/presentation/screens/active_workout_screen.dart';
 import 'package:carlys_mobile/features/workout_template/data/repositories/workout_template_repository_impl.dart';
+import 'package:carlys_mobile/shared/widgets/summit_illustration.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -556,6 +556,20 @@ void main() {
     await tester.pump();
     await tester.pump(const Duration(milliseconds: 350));
     await tester.pump(const Duration(milliseconds: 80));
+  }
+
+  /// Remonte la Communauté en haut de page SANS glisser : un glissé qui
+  /// dépasse le haut arme « tirer pour rafraîchir », et la capture montrait
+  /// l'anneau de chargement sous l'en-tête.
+  Future<void> backToTop(WidgetTester tester) async {
+    final page = find
+        .descendant(
+          of: find.byType(CommunityScreen),
+          matching: find.byType(Scrollable),
+        )
+        .first;
+    tester.state<ScrollableState>(page).position.jumpTo(0);
+    await settle(tester);
   }
 
   /// Attente supplémentaire pour les scènes qui se DESSINENT : la gravure
@@ -1320,11 +1334,12 @@ void main() {
     await capture(tester, '36-academy-anatomie', shows: find.text('À RETENIR'));
   });
 
-  testWidgets('Communauté — amis, encouragements, défis', (tester) async {
+  testWidgets('Communauté — défis, ligue, amis', (tester) async {
     // Le harnais monte déjà le monde communauté en mémoire : amis,
-    // encouragements et défis à montrer, sans réseau.
+    // encouragements, défis et une ligue en cours, sans réseau.
     await pumpApp(tester);
     await goTab(tester, 'Communauté');
+    // L'onglet Défis s'ouvre le premier.
     await capture(tester, '29-communaute', shows: find.byType(CommunityScreen));
 
     // Plus bas : les défis ENTRE AMIS, qui ne se lisent pas comme une barre
@@ -1343,25 +1358,75 @@ void main() {
       shows: find.text('DÉFIS ENTRE AMIS'),
     );
 
-    // Encore plus bas : la LIGUE de la semaine — l'échelle des divisions, la
-    // montée annoncée, et le classement où ma ligne se trouve.
+    // L'onglet LIGUE, d'après la maquette : la division et celle qui vient,
+    // l'écart avec la zone de montée, le barème, le podium et MA ligne.
+    await backToTop(tester);
+    await tester.tap(find.text('Ligue'));
+    await settle(tester);
+    await capture(
+      tester,
+      '37-communaute-ligue',
+      shows: find.text('Classement de la semaine'),
+    );
+
+    // Le bas de l'onglet : la bannière, et la sortie discrète.
     await tester.scrollUntilVisible(
-      find.text('LIGUE'),
+      find.text('Quitter la ligue'),
       240,
       scrollable: find.byType(Scrollable).first,
     );
     await settle(tester);
-    await capture(tester, '37-communaute-ligue', shows: find.text('LIGUE'));
+    await capture(
+      tester,
+      '37a-communaute-ligue-bas',
+      shows: find.text('grands résultats.'),
+    );
 
-    // Et l'autre visage de la carte : celui que TOUT LE MONDE voit d'abord,
+    // Le classement COMPLET, dans sa feuille : toute la division, sans
+    // nouvelle requête.
+    await tester.tap(find.text('Voir le classement complet'));
+    await settle(tester);
+    await capture(
+      tester,
+      '37b-communaute-classement',
+      shows: find.text('12 membres cette semaine'),
+    );
+    await tester.tapAt(const Offset(20, 40));
+    await settle(tester);
+
+    // Et l'autre visage de l'onglet : celui que TOUT LE MONDE voit d'abord,
     // puisque la ligue est un opt-in. Le classement y disparaît — on ne
     // montre pas des noms d'inconnus à qui n'a pas dit oui.
     await tester.tap(find.text('Quitter la ligue'));
     await settle(tester);
+    // La confirmation de sortie a dit son mot : on la laisse partir, elle
+    // masquerait l'invitation.
+    ScaffoldMessenger.of(
+      tester.element(find.byType(CommunityScreen)),
+    ).removeCurrentSnackBar();
+    await backToTop(tester);
     await capture(
       tester,
       '38-communaute-ligue-invitation',
       shows: find.text('Rejoindre la ligue'),
+    );
+
+    // L'onglet AMIS, avec la loupe ouverte sur un prénom.
+    await tester.tap(find.text('Amis'));
+    await settle(tester);
+    await capture(
+      tester,
+      '29b-communaute-amis',
+      shows: find.text('DEMANDES REÇUES'),
+    );
+    await tester.tap(find.byTooltip('Rechercher'));
+    await settle(tester);
+    await tester.enterText(find.byType(TextField), 'sar');
+    await settle(tester);
+    await capture(
+      tester,
+      '29c-communaute-recherche',
+      shows: find.text('Chercher parmi tes amis'),
     );
   });
 
@@ -1477,10 +1542,7 @@ void main() {
     // avant capture, comme toute image du bundle.
     final context = tester.element(find.byType(MaterialApp));
     await tester.runAsync(
-      () => precacheImage(
-        const AssetImage(FurtherBannerIllustration.asset),
-        context,
-      ),
+      () => precacheImage(const AssetImage(SummitIllustration.asset), context),
     );
     await openProfile(tester);
     await capture(tester, '13-profil', shows: find.byType(ProfileScreen));

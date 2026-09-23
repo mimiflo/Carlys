@@ -146,51 +146,58 @@ const Map<String, String> sampleKnownFriendCodes = {
   'MK78WXY2': 'Mehdi',
 };
 
-/// La ligue d'exemple : une division Or déjà jouée, et une montée annoncée.
+/// La ligue d'exemple : la division Bronze de la maquette du 23 septembre
+/// 2026, en pleine semaine.
 ///
 /// REJOINTE dans le monde d'exemple, parce que l'écran à montrer est le
 /// classement : la carte d'invitation, elle, se lit en un paragraphe et
 /// n'apprend rien sur la mise en page d'un tableau.
+///
+/// Douze joueurs ont marqué : la semaine COMPTE (il en faut dix). Je suis
+/// 7e avec 240 points ; le 5e en a 275 — il m'en manque 35 pour la zone de
+/// montée. Le bloc `promotion` est celui que le serveur calculerait pour
+/// ces scores (`promotionOutlook`, `league-ladder.ts`), recopié ici à la
+/// main : c'est une doublure, pas une seconde implémentation de la règle.
 League sampleLeague() => League(
   joined: true,
-  periodKey: '2026-W38',
-  endsAt: DateTime.now().add(const Duration(days: 3)),
-  division: LeagueDivision.or,
+  periodKey: '2026-W39',
+  endsAt: DateTime.now().add(const Duration(days: 2, hours: 6)),
+  division: LeagueDivision.bronze,
   score: 240,
-  standings: const [
-    LeagueStanding(
-      userId: 'exemple-sarah',
-      displayName: 'Sarah',
-      score: 480,
-      rank: 1,
-      isMe: false,
-    ),
-    LeagueStanding(
-      userId: 'exemple-mehdi',
-      displayName: 'Mehdi',
-      score: 355,
-      rank: 2,
-      isMe: false,
-    ),
-    LeagueStanding(
-      userId: 'exemple-lea',
-      displayName: 'Léa',
-      score: 300,
-      rank: 3,
-      isMe: false,
-    ),
-    LeagueStanding(
-      userId: 'exemple-moi',
-      displayName: 'Toi',
-      score: 240,
-      rank: 4,
-      isMe: true,
-    ),
+  standings: [
+    for (final (index, (id, name, score)) in _classement.indexed)
+      LeagueStanding(
+        userId: id,
+        displayName: name,
+        score: score,
+        rank: index + 1,
+        isMe: id == 'exemple-moi',
+      ),
   ],
-  lastResult: const LeagueResult(
-    periodKey: '2026-W37',
-    rank: 2,
-    from: LeagueDivision.argent,
-    to: LeagueDivision.or,
+  promotion: const LeaguePromotion(
+    promotedCount: 5,
+    minPlayers: 10,
+    activePlayers: 12,
+    topDivision: false,
+    inZone: false,
+    zoneScore: 275,
+    pointsToZone: 35,
   ),
 );
+
+/// La division de la semaine, déjà triée : aucun ex æquo, pour que le rang
+/// se lise sans règle de départage.
+const List<(String, String, int)> _classement = [
+  ('exemple-sarah', 'Sarah', 480),
+  ('exemple-mehdi', 'Mehdi', 355),
+  ('exemple-lea', 'Léa', 300),
+  ('exemple-ines', 'Inès', 290),
+  ('exemple-tom', 'Tom', 275),
+  ('exemple-chloe', 'Chloé', 260),
+  ('exemple-moi', 'Camille', 240),
+  ('exemple-hugo', 'Hugo', 210),
+  ('exemple-nora', 'Nora', 180),
+  ('exemple-yanis', 'Yanis', 150),
+  ('exemple-jade', 'Jade', 120),
+  ('exemple-lucas', 'Lucas', 95),
+];

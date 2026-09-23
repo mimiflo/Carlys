@@ -169,7 +169,7 @@ l'accueil (plein écran).
 | `/progress`             | `progress`        | Progression (onglet)               |
 | `/academy`              | `academy`         | Academy (onglet)                   |
 | `/nutrition`            | `nutrition`       | Nutrition (branche Academy)        |
-| `/community`            | `community`       | Communauté (onglet)                |
+| `/community`            | `community`       | Communauté (onglet) ; `?onglet=defis\|ligue\|amis` ouvre l'un de ses trois onglets (`AppRoutes.communityTab`), et l'adresse suit l'onglet choisi |
 | `/profile`              | `profile`         | Profil (plein écran, via l'avatar de l'accueil) : le parcours, en portes vers chaque écran — voir `docs/product/profile.md` |
 | `/profile/reglages`     | `profile-settings`| Réglages (plein écran, via le rouage du profil) |
 | `/workout`              | `active-workout`  | Séance active (plein écran)        |

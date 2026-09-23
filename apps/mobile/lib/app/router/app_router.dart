@@ -15,6 +15,7 @@ import '../../features/authentication/presentation/screens/register_screen.dart'
 import '../../features/authentication/presentation/screens/sessions_screen.dart';
 import '../../features/carlys_profile/presentation/screens/carlys_profiles_screen.dart';
 import '../../features/coaching/presentation/screens/coach_page.dart';
+import '../../features/community/presentation/providers/community_tab_state.dart';
 import '../../features/community/presentation/screens/community_screen.dart';
 import '../../features/dashboard/presentation/screens/home_screen.dart';
 import '../../features/exercises/presentation/screens/exercise_detail_screen.dart';
@@ -303,7 +304,11 @@ final appRouterProvider = Provider<GoRouter>((ref) {
               GoRoute(
                 path: AppRoutes.community,
                 name: 'community',
-                builder: (context, state) => const CommunityScreen(),
+                builder: (context, state) => CommunityScreen(
+                  initialTab: CommunityTab.fromSlug(
+                    state.uri.queryParameters['onglet'],
+                  ),
+                ),
               ),
             ],
           ),

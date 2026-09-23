@@ -91,6 +91,8 @@ describe('Ligues (e2e)', () => {
     expect(avant.joined).toBe(false);
     expect(avant.division).toBe('BRONZE');
     expect(avant.standings).toEqual([]);
+    // Ni zone de montée : elle se lit sur un classement qu'on ne voit pas.
+    expect(avant.promotion).toBeNull();
 
     // Une séance faite AVANT d'avoir rejoint ne crée aucune ligne : c'est le
     // « périmètre CHOISI » — on n'est classé qu'après avoir dit oui.
@@ -105,6 +107,15 @@ describe('Ligues (e2e)', () => {
     expect(entree.joined).toBe(true);
     expect(entree.score).toBe(0);
     expect(entree.periodKey).toMatch(/^\d{4}-W\d{2}$/);
+    // Le barème voyage avec la réponse, et un score nul n'est jamais dans
+    // la zone : il lui manque au moins un point.
+    expect(entree.promotion).toMatchObject({
+      promotedCount: 5,
+      minPlayers: 10,
+      topDivision: false,
+      inZone: false,
+    });
+    expect(entree.promotion?.pointsToZone).toBeGreaterThanOrEqual(1);
 
     // Une séance de 5 km : 50 points pour la séance, 50 pour les 5 000 m
     // (un point par tranche de 100). Les mètres bruts écraseraient les
@@ -114,6 +125,10 @@ describe('Ligues (e2e)', () => {
     expect(apres.score).toBe(100);
     expect(apres.standings.find((ligne) => ligne.isMe)?.score).toBe(100);
     expect(apres.standings.find((ligne) => ligne.isMe)?.rank).toBe(1);
+    // Première de sa division : dans la zone, au sens du RANG — seule, la
+    // semaine ne comptera pas encore, et c'est `activePlayers` qui le dit.
+    expect(apres.promotion).toMatchObject({ inZone: true, pointsToZone: 0 });
+    expect(apres.promotion?.activePlayers).toBeGreaterThanOrEqual(1);
   });
 
   it('le reste d’une conversion n’est JAMAIS reporté', async () => {
@@ -178,6 +193,7 @@ describe('Ligues (e2e)', () => {
     );
     expect(sortie.joined).toBe(false);
     expect(sortie.standings).toEqual([]);
+    expect(sortie.promotion).toBeNull();
 
     await courir(5_000);
     // La ligne de la semaine existe toujours, avec son score d'avant : la

@@ -6,6 +6,7 @@ import '../../../../design_system/design_system.dart';
 import '../../../carlys_profile/domain/entities/carlys_profile.dart';
 import '../../../carlys_profile/presentation/widgets/carlys_profile_content.dart';
 import '../../../community/domain/entities/community.dart';
+import '../../../community/presentation/providers/community_tab_state.dart';
 
 /// POUR TOI : ce que Carlys a retenu, sans qu'on le lui demande.
 ///
@@ -93,7 +94,8 @@ class ForYouEntry {
       iconSize: 20,
       label: '${received.fromName} t’encourage',
       message: received.message,
-      onOpen: () => context.go(AppRoutes.community),
+      // Le mot vit dans l'onglet Amis : c'est lui qu'on ouvre.
+      onOpen: () => context.go(AppRoutes.communityTab(CommunityTab.amis)),
     );
   }
 }
@@ -187,7 +189,7 @@ _ProfileFocus _focusOf(CarlysProfile profile) {
       message:
           'Va chercher un défi : la communauté en lance à ta hauteur '
           'cette semaine.',
-      open: (context) => context.go(AppRoutes.community),
+      open: (context) => context.go(AppRoutes.communityTab(CommunityTab.defis)),
     ),
     CarlysProfile.athlete => _ProfileFocus(
       message:

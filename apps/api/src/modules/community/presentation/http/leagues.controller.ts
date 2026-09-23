@@ -22,7 +22,9 @@ export class LeaguesController {
     description:
       'Sans adhésion, rend l’échelle et un classement VIDE : la ligue est un ' +
       'opt-in. La période échue est RÉGLÉE à la lecture (rangs figés, ' +
-      'division suivante décidée), sans tâche planifiée.',
+      'division suivante décidée), sans tâche planifiée. `promotion` situe ' +
+      'l’appelant face à la zone de montée, calculé par le serveur avec la ' +
+      'règle du règlement (`null` sans adhésion).',
   })
   read(@CurrentUser() user: AuthenticatedPrincipal): Promise<League> {
     return this.leagues.read(user.userId);

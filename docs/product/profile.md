@@ -176,7 +176,8 @@ de la porte — chevron compris — ne réagissait plus au doigt.
 | `presentation/widgets/profile_hub_tile.dart` | La carte, la ligne, le disque d'icône |
 | `presentation/widgets/profile_identity_card.dart` · `profile_stats_row.dart` | L'identité et ses trois chiffres |
 | `presentation/widgets/profile_objective_card.dart` · `profile_program_card.dart` | L'objectif et sa jauge, le programme |
-| `presentation/widgets/profile_further_banner.dart` · `further_banner_illustration.dart` | « Toujours plus loin » et son illustration fondue |
+| `shared/widgets/illustrated_banner.dart` · `summit_illustration.dart` | « Toujours plus loin » et son illustration fondue — partagés depuis avec la ligue de la Communauté |
+| `design_system/components/app_screen_header.dart` · `app_round_icon_button.dart` | L'en-tête « Mon profil » et ses boutons-disques, partagés avec la Communauté |
 | `workout_program/domain/program_advancement.dart` | Avancement et rythme d'un programme, purs |
 | `core/utilities/civil_days.dart` | Le compte en jours civils, partagé avec la maxime du jour |
 

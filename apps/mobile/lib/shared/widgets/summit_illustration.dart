@@ -2,11 +2,13 @@ import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
-import '../../../../core/logging/app_logger.dart';
-import '../../../../design_system/design_system.dart';
+import '../../core/logging/app_logger.dart';
+import '../../design_system/design_system.dart';
 
-/// L'illustration de « Toujours plus loin » : le sommet au fanion, sous une
-/// lune violette — fournie par le produit le 23 septembre 2026.
+/// Le sommet au fanion, sous une lune violette — l'illustration fournie par
+/// le produit le 23 septembre 2026, posée dans les bannières de motivation
+/// (« Toujours plus loin » du profil, « Petits efforts, grands résultats »
+/// de la ligue). Voir `IllustratedBanner`.
 ///
 /// Posée sur la droite de la bannière et FONDUE dans la carte par la gauche,
 /// comme sur la maquette : sans le fondu, le bord de l'image se lirait comme
@@ -20,8 +22,8 @@ import '../../../../design_system/design_system.dart';
 /// bannière en a besoin : c'est elle qui tient son texte hors de la partie
 /// pleine de l'image. Une seule source, sans quoi le texte et l'image
 /// finiraient par ne plus s'accorder sur l'endroit où l'image devient pleine.
-class FurtherBannerIllustration extends StatelessWidget {
-  const FurtherBannerIllustration({super.key});
+class SummitIllustration extends StatelessWidget {
+  const SummitIllustration({super.key});
 
   /// WebP 1280 × 720 pixels, qualité 92 : 19 Ko, contre 1,7 Mo pour le PNG
   /// fourni, pour un écart moyen de 0,76 sur 255 par pixel. La boîte de
@@ -62,7 +64,7 @@ class FurtherBannerIllustration extends StatelessWidget {
   /// ne serait que de 0,88 au bord de la lune.
   static const List<double> fadeStops = [0, 0.3];
 
-  static const _logger = AppLogger('FurtherBannerIllustration');
+  static const _logger = AppLogger('SummitIllustration');
 
   /// Largeur de la boîte de l'image dans une carte de [cardWidth] points.
   static double boxWidthFor(double cardWidth) =>

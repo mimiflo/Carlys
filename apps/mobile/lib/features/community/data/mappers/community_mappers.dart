@@ -125,5 +125,34 @@ League leagueFromJson(Map<String, dynamic> row) {
             from: LeagueDivision.fromApi(result['from'] as String?),
             to: LeagueDivision.fromApi(result['to'] as String?),
           ),
+    promotion: leaguePromotionFromJson(row['promotion']),
   );
+}
+
+/// La zone de montée, lue TOLÉRANTE : un serveur déployé avant ce client ne
+/// sert pas le bloc, et un bloc mal typé ne doit pas coûter l'écran. Dans
+/// les deux cas, `null` — la ligue se lit alors sans zone, comme avant —
+/// plutôt qu'une exception. Tout ou rien : un bloc à moitié lu inventerait
+/// des zéros, et un `inZone` faux par défaut serait une information fausse.
+LeaguePromotion? leaguePromotionFromJson(Object? raw) {
+  if (raw case {
+    'promotedCount': final int promotedCount,
+    'minPlayers': final int minPlayers,
+    'activePlayers': final int activePlayers,
+    'topDivision': final bool topDivision,
+    'inZone': final bool inZone,
+    'zoneScore': final int? zoneScore,
+    'pointsToZone': final int pointsToZone,
+  }) {
+    return LeaguePromotion(
+      promotedCount: promotedCount,
+      minPlayers: minPlayers,
+      activePlayers: activePlayers,
+      topDivision: topDivision,
+      inZone: inZone,
+      zoneScore: zoneScore,
+      pointsToZone: pointsToZone,
+    );
+  }
+  return null;
 }

@@ -34,30 +34,16 @@ class FriendCard extends StatelessWidget {
   /// « Signaler » : un mot à l'équipe Carlys, à l'insu de l'autre.
   final VoidCallback onReport;
 
+  static const double _avatarSize = 44;
+
   @override
   Widget build(BuildContext context) {
-    final initial = friend.displayName.isEmpty
-        ? '?'
-        : friend.displayName.characters.first.toUpperCase();
-
     return AppCard(
       child: Row(
         children: [
-          Container(
-            width: 44,
-            height: 44,
-            alignment: Alignment.center,
-            decoration: const BoxDecoration(
-              gradient: AppColors.violetRamp,
-              borderRadius: AppRadius.avatarAll,
-            ),
-            child: Text(
-              initial,
-              style: AppTypography.subheading.copyWith(
-                color: AppColors.neutral0,
-              ),
-            ),
-          ),
+          // Le même disque que dans le classement de la ligue : sur une même
+          // page, une personne a un seul visage.
+          AppInitialAvatar(name: friend.displayName, size: _avatarSize),
           const SizedBox(width: AppSpacing.sm),
           Expanded(
             child: Column(

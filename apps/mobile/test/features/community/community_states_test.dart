@@ -34,10 +34,23 @@ void main() {
     // « Personne ici » serait un mensonge : le serveur a refusé de répondre.
     final community = FakeCommunityRepository()
       ..leagueError = StateError('ligue injoignable (voulu par le test)');
-    await openCommunity(tester, appWith(community));
+    await openCommunity(tester, appWith(community), tab: 'Ligue');
 
     expect(find.byType(AppErrorState), findsOneWidget);
+    expect(find.text('Ligue indisponible'), findsOneWidget);
     expect(find.byType(AppEmptyState), findsNothing);
+  });
+
+  testWidgets('une ligue en panne ne masque plus les défis', (tester) async {
+    // Tant que tout vivait sur un défilement, une seule source en panne
+    // emportait l'écran entier. Chaque onglet tranche désormais sur SES
+    // sources.
+    final community = FakeCommunityRepository()
+      ..leagueError = StateError('ligue injoignable (voulu par le test)');
+    await openCommunity(tester, appWith(community));
+
+    expect(find.byType(AppErrorState), findsNothing);
+    expect(find.text('Défier mes amis'), findsOneWidget);
   });
 
   testWidgets('tirer pour rafraîchir HORS LIGNE ne jette pas dans le vide', (

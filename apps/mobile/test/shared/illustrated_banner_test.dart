@@ -3,13 +3,15 @@ import 'dart:math' as math;
 import 'dart:ui' as ui;
 
 import 'package:carlys_mobile/design_system/design_system.dart';
-import 'package:carlys_mobile/features/profile/presentation/widgets/further_banner_illustration.dart';
-import 'package:carlys_mobile/features/profile/presentation/widgets/profile_further_banner.dart';
+import 'package:carlys_mobile/shared/widgets/illustrated_banner.dart';
+import 'package:carlys_mobile/shared/widgets/summit_illustration.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-/// « TOUJOURS PLUS LOIN » : une porte, et son illustration.
+/// LA BANNIÈRE ILLUSTRÉE : « Toujours plus loin » (une porte, au bas du
+/// profil) et « Petits efforts, grands résultats » (un mot, au bas de la
+/// ligue).
 ///
 /// L'image est un DÉCOR : elle ne doit ni manquer au bundle, ni peser ce
 /// que pesait le PNG fourni, ni parler au lecteur d'écran à la place du
@@ -48,7 +50,7 @@ void main() {
   const minGapToMoon = 6.0;
 
   test('l’illustration est déclarée, se décode, et reste légère', () async {
-    final data = await rootBundle.load(FurtherBannerIllustration.asset);
+    final data = await rootBundle.load(SummitIllustration.asset);
 
     // Le PNG fourni pesait 1,7 Mo ; le WebP 19 Ko. Le plafond laisse de la
     // marge à une retouche, pas à un retour du PNG.
@@ -62,6 +64,20 @@ void main() {
     codec.dispose();
   });
 
+  /// La porte du profil.
+  IllustratedBanner door({VoidCallback? onTap}) => IllustratedBanner(
+    title: 'Toujours plus loin',
+    body: 'Garde l’élan et atteins de\u00A0nouveaux objectifs.',
+    onTap: onTap ?? () {},
+  );
+
+  /// Le mot de la ligue : un titre sur deux lignes, et aucune porte.
+  const cheer = IllustratedBanner(
+    title: 'Petits efforts,',
+    titleAccent: 'grands résultats.',
+    body: 'Chaque séance te rapproche de la prochaine ligue.',
+  );
+
   /// La bannière comme sur le profil : un écran de [width] points en
   /// densité 3, la gouttière de 16, le texte système à [scale].
   Future<void> pumpBanner(
@@ -69,6 +85,7 @@ void main() {
     double width = 393,
     double scale = 1,
     VoidCallback? onTap,
+    IllustratedBanner? banner,
   }) async {
     tester.view.physicalSize = Size(width * 3, 852 * 3);
     tester.view.devicePixelRatio = 3;
@@ -85,7 +102,7 @@ void main() {
         home: Scaffold(
           body: ListView(
             padding: const EdgeInsets.all(AppSpacing.md),
-            children: [ProfileFurtherBanner(onTap: onTap ?? () {})],
+            children: [banner ?? door(onTap: onTap)],
           ),
         ),
       ),
@@ -96,7 +113,7 @@ void main() {
   Rect boxOf(WidgetTester tester) => tester.getRect(
     find
         .descendant(
-          of: find.byType(FurtherBannerIllustration),
+          of: find.byType(SummitIllustration),
           matching: find.byType(ShaderMask),
         )
         .first,
@@ -107,30 +124,27 @@ void main() {
 
     final image = tester.widget<Image>(
       find.descendant(
-        of: find.byType(FurtherBannerIllustration),
+        of: find.byType(SummitIllustration),
         matching: find.byType(Image),
       ),
     );
-    expect(
-      (image.image as AssetImage).assetName,
-      FurtherBannerIllustration.asset,
-    );
+    expect((image.image as AssetImage).assetName, SummitIllustration.asset);
     expect(image.excludeFromSemantics, isTrue);
 
     // Le fondu : transparent au bord gauche, plein à 30 % de la boîte.
     final mask = tester.widget<ShaderMask>(
       find
           .descendant(
-            of: find.byType(FurtherBannerIllustration),
+            of: find.byType(SummitIllustration),
             matching: find.byType(ShaderMask),
           )
           .first,
     );
     expect(mask.blendMode, BlendMode.dstIn);
-    expect(FurtherBannerIllustration.fadeStops, [0, 0.3]);
+    expect(SummitIllustration.fadeStops, [0, 0.3]);
 
     // La boîte est à DROITE de la carte, sur 62 % de sa largeur.
-    final card = tester.getRect(find.byType(ProfileFurtherBanner));
+    final card = tester.getRect(find.byType(IllustratedBanner));
     final box = boxOf(tester);
     expect(box.right, closeTo(card.right, 1));
     expect(box.width, closeTo(card.width * 0.62, 1));
@@ -151,52 +165,77 @@ void main() {
     (800, 1), // tablette
   ];
   for (final (width, scale) in cases) {
-    testWidgets('$width pt, texte ×${scale.toStringAsFixed(2)} : '
-        'le texte reste à gauche de la lune, rien ne déborde', (tester) async {
-      await pumpBanner(tester, width: width, scale: scale);
-      expect(tester.takeException(), isNull);
+    for (final (variant, banner) in [('porte', door()), ('mot', cheer)]) {
+      testWidgets('$variant, $width pt, texte ×${scale.toStringAsFixed(2)} : '
+          'le texte reste à gauche de la lune, rien ne déborde', (
+        tester,
+      ) async {
+        await pumpBanner(tester, width: width, scale: scale, banner: banner);
+        expect(tester.takeException(), isNull);
 
-      // Le cadrage, recalculé comme `BoxFit.cover` le fait, depuis le
-      // rectangle RÉEL de l'image et l'alignement réellement posé : l'image
-      // couvre son rectangle, et l'alignement décide de quel côté elle
-      // déborde.
-      final imageFinder = find.descendant(
-        of: find.byType(FurtherBannerIllustration),
-        matching: find.byType(Image),
-      );
-      final frame = tester.getRect(imageFinder);
-      final painted = math.max(frame.width, frame.height * imageAspect);
-      final alignment =
-          (tester.widget<Image>(imageFinder).alignment as Alignment).x;
-      final overflowLeft = (painted - frame.width) * (alignment + 1) / 2;
-      final moonLeft = frame.left - overflowLeft + moonLeftFraction * painted;
-
-      for (final label in ['Toujours plus loin', 'Garde']) {
-        final text = tester.getRect(find.textContaining(label));
-        expect(
-          text.right,
-          lessThanOrEqualTo(moonLeft - minGapToMoon),
-          reason:
-              '« $label » s’étend jusqu’à ${text.right} pt, la lune '
-              'commence à $moonLeft pt',
+        // Le cadrage, recalculé comme `BoxFit.cover` le fait, depuis le
+        // rectangle RÉEL de l'image et l'alignement réellement posé : l'image
+        // couvre son rectangle, et l'alignement décide de quel côté elle
+        // déborde.
+        final imageFinder = find.descendant(
+          of: find.byType(SummitIllustration),
+          matching: find.byType(Image),
         );
-      }
-      // La boîte de l'illustration suit la carte, même agrandie par le
-      // texte ; l'image, elle, garde son cadrage de référence : jamais
-      // agrandie au-delà de la largeur de sa boîte.
-      final card = tester.getRect(find.byType(ProfileFurtherBanner));
-      final box = boxOf(tester);
-      expect(box.height, closeTo(card.height, 2));
-      expect(painted, closeTo(box.width, 1));
-    });
+        final frame = tester.getRect(imageFinder);
+        final painted = math.max(frame.width, frame.height * imageAspect);
+        final alignment =
+            (tester.widget<Image>(imageFinder).alignment as Alignment).x;
+        final overflowLeft = (painted - frame.width) * (alignment + 1) / 2;
+        final moonLeft = frame.left - overflowLeft + moonLeftFraction * painted;
+
+        for (final label in [
+          banner.title,
+          ?banner.titleAccent,
+          banner.body.substring(0, 5),
+        ]) {
+          final text = tester.getRect(find.textContaining(label));
+          expect(
+            text.right,
+            lessThanOrEqualTo(moonLeft - minGapToMoon),
+            reason:
+                '« $label » s’étend jusqu’à ${text.right} pt, la lune '
+                'commence à $moonLeft pt',
+          );
+        }
+        // La boîte de l'illustration suit la carte, même agrandie par le
+        // texte ; l'image, elle, garde son cadrage de référence : jamais
+        // agrandie au-delà de la largeur de sa boîte.
+        final card = tester.getRect(find.byType(IllustratedBanner));
+        final box = boxOf(tester);
+        expect(box.height, closeTo(card.height, 2));
+        expect(painted, closeTo(box.width, 1));
+      });
+    }
   }
+
+  testWidgets('le mot de la ligue : ni chevron, ni bouton, un accent violet', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    await pumpBanner(tester, banner: cheer);
+
+    expect(find.byIcon(AppIcons.chevronRight), findsNothing);
+    expect(find.byType(InkWell), findsNothing);
+    final accent = tester.widget<Text>(find.text('grands résultats.'));
+    expect(accent.style?.color, AppColors.primaryLight);
+    expect(
+      tester.getSemantics(find.text('Petits efforts,')),
+      isNot(matchesSemantics(isButton: true)),
+    );
+    semantics.dispose();
+  });
 
   testWidgets('à la taille normale, rien ne change : titre sur une ligne', (
     tester,
   ) async {
     await pumpBanner(tester);
-    final card = tester.getRect(find.byType(ProfileFurtherBanner));
-    expect(card.height, FurtherBannerIllustration.referenceHeight);
+    final card = tester.getRect(find.byType(IllustratedBanner));
+    expect(card.height, SummitIllustration.referenceHeight);
     final title = tester.getSize(find.text('Toujours plus loin'));
     final oneLine = AppTypography.resized(AppTypography.title, 19);
     expect(title.height, lessThan(oneLine.fontSize! * 2));
@@ -207,8 +246,8 @@ void main() {
   ) async {
     await pumpBanner(tester, scale: 2);
     expect(tester.takeException(), isNull);
-    final card = tester.getRect(find.byType(ProfileFurtherBanner));
-    expect(card.height, greaterThan(FurtherBannerIllustration.referenceHeight));
+    final card = tester.getRect(find.byType(IllustratedBanner));
+    expect(card.height, greaterThan(SummitIllustration.referenceHeight));
   });
 
   testWidgets('tablette : la boîte garde le cadrage du téléphone', (
@@ -221,8 +260,7 @@ void main() {
     expect(
       box.width,
       closeTo(
-        FurtherBannerIllustration.referenceHeight *
-            FurtherBannerIllustration.maxAspect,
+        SummitIllustration.referenceHeight * SummitIllustration.maxAspect,
         0.5,
       ),
     );
@@ -244,7 +282,7 @@ void main() {
     final stack = tester.widget<Stack>(
       find
           .ancestor(
-            of: find.byType(FurtherBannerIllustration),
+            of: find.byType(SummitIllustration),
             matching: find.byType(Stack),
           )
           .first,

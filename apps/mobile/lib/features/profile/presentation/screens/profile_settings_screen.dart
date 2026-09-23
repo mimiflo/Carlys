@@ -13,7 +13,6 @@ import '../../../workout_program/presentation/controllers/training_goal_controll
 import '../../../workout_program/presentation/widgets/training_goal_sheet.dart';
 import '../widgets/profile_legal_section.dart';
 import '../widgets/profile_nutrition_settings.dart';
-import '../widgets/profile_page_header.dart';
 import '../widgets/profile_plan_section.dart';
 import '../widgets/profile_settings_sections.dart';
 import '../widgets/profile_training_settings.dart';
@@ -54,7 +53,7 @@ class ProfileSettingsScreen extends ConsumerWidget {
             bottomInset + AppSpacing.gapSection,
           ),
           children: [
-            const ProfilePageHeader(
+            const AppScreenHeader(
               title: 'Réglages',
               tagline: 'Ton compte, tes préférences.',
             ),

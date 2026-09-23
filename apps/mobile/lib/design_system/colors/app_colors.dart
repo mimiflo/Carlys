@@ -373,4 +373,40 @@ abstract final class AppColors {
   static const Color googleRed = Color(0xFFEA4335);
   static const Color googleYellow = Color(0xFFFBBC05);
   static const Color googleGreen = Color(0xFF34A853);
+
+  // ── Métaux des ligues (tokens.json → color.league) ──────────────────────
+  //
+  // Les cinq divisions de ligue, et RIEN d'autre : le blason de division et
+  // les couronnes du podium. Arbitrage produit du 23 septembre 2026 : une
+  // division porte le nom d'un métal et se reconnaît à sa couleur avant de
+  // se lire. Partout ailleurs, l'application reste violette — ces teintes
+  // n'entrent dans aucune autre palette, ni surface, ni texte, ni autre
+  // récompense. Tant qu'elles étaient à écrire dans un écran, elles étaient
+  // cinq valeurs en dur ; ce sont désormais des jetons.
+  //
+  // Trois tons par métal, du plus clair au plus sombre : le REFLET
+  // (`…Light`), le CORPS, l'OMBRE (`…Dark`). Un métal se peint par sa
+  // lumière ; en aplat, l'or n'est qu'un jaune. Le corps tient le seuil d'un
+  // élément graphique (3:1, WCAG 1.4.11) sur `darkSurface` : c'est lui qui
+  // dessine la silhouette. L'ombre ne le tient pas, et ne se pose donc
+  // jamais seule sur le fond — elle creuse l'intérieur du blason.
+  //
+  // Les noms suivent tokens.json, en anglais ; `LeagueDivision` parle
+  // français : argent = silver, or = gold, platine = platinum, diamant =
+  // diamond.
+  static const Color leagueBronzeLight = Color(0xFFF0B48A);
+  static const Color leagueBronze = Color(0xFFC27A45);
+  static const Color leagueBronzeDark = Color(0xFF6E3B1C);
+  static const Color leagueSilverLight = Color(0xFFEEF1F6);
+  static const Color leagueSilver = Color(0xFFAEB6C4);
+  static const Color leagueSilverDark = Color(0xFF5A6272);
+  static const Color leagueGoldLight = Color(0xFFFFE39A);
+  static const Color leagueGold = Color(0xFFE5AF37);
+  static const Color leagueGoldDark = Color(0xFF8A6412);
+  static const Color leaguePlatinumLight = Color(0xFFDDF4F3);
+  static const Color leaguePlatinum = Color(0xFF9FCFCF);
+  static const Color leaguePlatinumDark = Color(0xFF4B7D80);
+  static const Color leagueDiamondLight = Color(0xFFD6ECFF);
+  static const Color leagueDiamond = Color(0xFF7DB7F2);
+  static const Color leagueDiamondDark = Color(0xFF2F64A8);
 }
