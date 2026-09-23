@@ -55,6 +55,7 @@ import 'package:carlys_mobile/features/onboarding/presentation/widgets/athlete_p
 import 'package:carlys_mobile/features/onboarding/presentation/widgets/brand_signature.dart';
 import 'package:carlys_mobile/features/profile/presentation/screens/profile_screen.dart';
 import 'package:carlys_mobile/features/profile/presentation/screens/profile_settings_screen.dart';
+import 'package:carlys_mobile/features/profile/presentation/widgets/further_banner_illustration.dart';
 import 'package:carlys_mobile/features/profile/presentation/widgets/profile_plan_card.dart';
 import 'package:carlys_mobile/features/progress/data/repositories/progress_repository_impl.dart';
 import 'package:carlys_mobile/features/progress/domain/entities/progress.dart';
@@ -1471,6 +1472,15 @@ void main() {
       user: profileUser,
       lifetime: const LifetimeStats(completedSessions: 128, weeks: []),
       workouts: FakeWorkoutRepository()..history = historyOf(),
+    );
+    // L'illustration de « Toujours plus loin » : décodage en temps réel
+    // avant capture, comme toute image du bundle.
+    final context = tester.element(find.byType(MaterialApp));
+    await tester.runAsync(
+      () => precacheImage(
+        const AssetImage(FurtherBannerIllustration.asset),
+        context,
+      ),
     );
     await openProfile(tester);
     await capture(tester, '13-profil', shows: find.byType(ProfileScreen));

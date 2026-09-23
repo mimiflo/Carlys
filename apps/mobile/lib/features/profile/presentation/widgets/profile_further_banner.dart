@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../design_system/design_system.dart';
-import 'further_banner_painter.dart';
+import 'further_banner_illustration.dart';
 import 'profile_hub_tile.dart';
 
 /// « Toujours plus loin » : la porte vers un nouveau programme, en bas du
@@ -15,7 +15,11 @@ class ProfileFurtherBanner extends StatelessWidget {
 
   final VoidCallback onTap;
 
-  static const double _height = 96;
+  /// Une hauteur MINIMALE, pas une hauteur : avec un texte système agrandi,
+  /// les deux lignes du sous-titre en deviennent trois ou quatre, et une
+  /// hauteur fixe les faisait déborder de la carte. La bannière grandit
+  /// alors avec son texte, et l'illustration la couvre toujours.
+  static const double _minHeight = 96;
   static const double _chevronSize = 24;
 
   @override
@@ -26,24 +30,22 @@ class ProfileFurtherBanner extends StatelessWidget {
           button: true,
           child: InkWell(
             onTap: onTap,
-            child: SizedBox(
-              height: _height,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(minHeight: _minHeight),
               child: Stack(
+                alignment: AlignmentDirectional.centerStart,
                 children: [
-                  const Positioned.fill(
-                    child: ExcludeSemantics(
-                      child: CustomPaint(painter: FurtherBannerPainter()),
-                    ),
-                  ),
+                  const Positioned.fill(child: FurtherBannerIllustration()),
                   Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: AppSpacing.lg,
+                      vertical: AppSpacing.sm,
                     ),
                     child: Row(
                       children: [
                         Expanded(
                           child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
+                            mainAxisSize: MainAxisSize.min,
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(

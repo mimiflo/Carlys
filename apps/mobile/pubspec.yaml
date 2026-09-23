@@ -134,6 +134,10 @@ flutter:
     # Illustrations des 4 profils Carlys (voir le README du dossier). Tant
     # qu'un fichier manque, la carte pose un repli de marque — jamais un trou.
     - assets/profiles/
+    # Illustrations d'écran fournies par le produit (WebP, redimensionnées à
+    # ce que l'écran affiche). `sommet.webp` : la bannière « Toujours plus
+    # loin » du profil.
+    - assets/illustrations/
 
   # Polices de la refonte (licences OFL dans assets/fonts/) :
   # Inter pour le texte, JetBrains Mono pour TOUS les chiffres (tabulaires).

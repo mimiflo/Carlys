@@ -91,6 +91,31 @@ ce que l'ancien `valueOrNull` aurait dit. Un geste « tirer pour rafraîchir »
 relit les trois sources serveur — nécessaire, car les compteurs de vie
 entière ne sont pas auto-disposés (les récompenses en dépendent).
 
+## L'illustration de « Toujours plus loin »
+
+Le sommet au fanion, sous une lune violette, fourni par le produit le
+23 septembre 2026 (`assets/illustrations/sommet.webp`). Il remplace un
+paysage peint à la main qui tenait la place en attendant l'image.
+
+- **Fondue par la gauche, comme sur la maquette.** L'image occupe les 62 %
+  droits de la bannière ; son tiers gauche passe de transparent à plein.
+  Le fondu agit sur l'ALPHA de l'image (`ShaderMask`, `BlendMode.dstIn`),
+  pas par un voile posé dessus : c'est le fond de la carte qui apparaît, et
+  aucune teinte nouvelle n'entre dans l'écran. Même technique que la
+  photographie de la page de bienvenue.
+- **Le texte reste lisible, et c'est mesuré.** Contraste le plus faible sur
+  le fond réel, reconstitué à partir de l'image, de son cadrage et du
+  fondu : titre 16,2:1, sous-titre 5,97:1, chevron 5,94:1 (seuil AA 4,5:1).
+  La lune commence là où le fondu est déjà plein : elle se lit entière,
+  à droite du texte.
+- **19 Ko, pas 1,7 Mo.** Le PNG fourni est converti en WebP 1280 × 720,
+  qualité 92 (écart moyen de 0,76 sur 255 par pixel) : 1280 points couvrent
+  la bannière d'une tablette en densité 2. Un test plafonne le fichier à
+  64 Ko — de la marge pour une retouche, pas pour le retour du PNG.
+- **Muette pour le lecteur d'écran.** C'est un décor : la porte s'annonce
+  par son texte. Une image manquante laisse la carte nue et se dit dans les
+  journaux.
+
 ## Écarts à la maquette, tous délibérés
 
 - **« Mes contenus sauvegardés » est absent.** Aucune sauvegarde de contenu
@@ -123,8 +148,8 @@ entière ne sont pas auto-disposés (les récompenses en dépendent).
 | `presentation/widgets/profile_hub_tile.dart` | La carte, la ligne, le disque d'icône |
 | `presentation/widgets/profile_identity_card.dart` · `profile_stats_row.dart` | L'identité et ses trois chiffres |
 | `presentation/widgets/profile_objective_card.dart` · `profile_program_card.dart` | L'objectif et sa jauge, le programme |
-| `presentation/widgets/profile_further_banner.dart` · `further_banner_painter.dart` | « Toujours plus loin » et son paysage peint |
+| `presentation/widgets/profile_further_banner.dart` · `further_banner_illustration.dart` | « Toujours plus loin » et son illustration fondue |
 | `workout_program/domain/program_advancement.dart` | Avancement et rythme d'un programme, purs |
 | `core/utilities/civil_days.dart` | Le compte en jours civils, partagé avec la maxime du jour |
 
-Captures : `13-profil`, `13a-profil-bas`, `13b-profil-reglages`.
+Captures : `13-profil`, `13a-profil-bas` (la bannière et son illustration), `13b-profil-reglages`.

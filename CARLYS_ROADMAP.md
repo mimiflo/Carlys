@@ -819,6 +819,10 @@ tests.
       écran depuis l'avatar. Un défaut vu à la relecture des captures et
       corrigé : « consécutifs » perdait sa dernière lettre à droite de
       l'icône. Voir `docs/product/profile.md`.
+      **L'illustration de « Toujours plus loin »**, fournie ensuite par le
+      produit, remplace le paysage peint : fondue par la gauche sur son
+      alpha, 19 Ko en WebP au lieu de 1,7 Mo, contraste du texte mesuré sur
+      le fond réel (5,94:1 au plus bas).
 - [ ] Écrans suivants : à recevoir du produit.
 
 ---
