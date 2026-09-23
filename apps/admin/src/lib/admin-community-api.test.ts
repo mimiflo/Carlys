@@ -28,6 +28,7 @@ const REPORT = {
   id: '77777777-2222-4333-8444-555555555555',
   reportedUserId: '22222222-2222-4333-8444-555555555555',
   encouragementId: '33333333-2222-4333-8444-555555555555',
+  friendChallengeId: null,
   reason: 'HARCELEMENT',
   details: 'Il insiste après mon refus.',
   status: 'OPEN',
@@ -40,6 +41,8 @@ const REPORT = {
     displayName: null,
   },
   encouragementMessage: 'Réponds-moi.',
+  friendChallengeTitle: null,
+  friendChallengeMessage: null,
 };
 
 /**
@@ -100,6 +103,29 @@ describe('signalements de la communauté', () => {
     expect((init.headers as Record<string, string>).Authorization).toBe('Bearer jeton-admin');
     expect(report.status).toBe('RESOLVED');
     expect(report.resolvedAt).toBe('2026-09-02T08:00:00.000Z');
+  });
+
+  it('lit les clichés d’un défi signalé, message absent compris', async () => {
+    const challengeReport = {
+      ...REPORT,
+      encouragementId: null,
+      encouragementMessage: null,
+      friendChallengeId: '44444444-2222-4333-8444-555555555555',
+      friendChallengeTitle: 'Qui court le plus',
+      friendChallengeMessage: null,
+    };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue(respond({ data: [challengeReport], meta: {} })),
+    );
+
+    const page = await adminApi.listCommunityReports('OPEN');
+
+    expect(page.items[0]).toMatchObject({
+      friendChallengeId: challengeReport.friendChallengeId,
+      friendChallengeTitle: 'Qui court le plus',
+      friendChallengeMessage: null,
+    });
   });
 
   it('refuse un signalement qui ne respecte pas le contrat (auteur absent)', async () => {

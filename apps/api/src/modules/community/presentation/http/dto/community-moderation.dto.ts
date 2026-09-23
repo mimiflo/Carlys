@@ -14,15 +14,34 @@ export class CreateCommunityReportDto {
   @IsUUID()
   reportedUserId!: string;
 
+  // `type: String` explicite sur les deux cibles : sous `strictNullChecks`,
+  // TypeScript émet `design:type Object` pour `string | null`, et Swagger
+  // annonçait un objet là où l'API attend un uuid. `null` vaut « absent »,
+  // comme dans le contrat Zod.
   @ApiPropertyOptional({
+    type: String,
+    format: 'uuid',
+    nullable: true,
     description:
       'Encouragement visé. Il doit avoir été envoyé PAR la personne signalée ' +
       'AU signalant, sinon 404.',
-    format: 'uuid',
   })
   @IsOptional()
   @IsUUID()
-  encouragementId?: string;
+  encouragementId?: string | null;
+
+  @ApiPropertyOptional({
+    type: String,
+    format: 'uuid',
+    nullable: true,
+    description:
+      'Défi entre amis visé (son titre et son message). Le signalant doit en ' +
+      'être membre, quel que soit son statut, et la personne signalée doit ' +
+      'en être la créatrice, sinon 404. Exclusif avec encouragementId (400).',
+  })
+  @IsOptional()
+  @IsUUID()
+  friendChallengeId?: string | null;
 
   @ApiProperty({ enum: communityReportReasonSchema.options })
   @IsIn(communityReportReasonSchema.options)

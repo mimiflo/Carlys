@@ -16,6 +16,7 @@ import {
   type CommunityProfile,
   type CommunityReport,
   type Encouragement,
+  type FriendChallenge,
   type FriendRequest,
 } from '@carlys/api-contracts';
 import { type INestApplication } from '@nestjs/common';
@@ -48,6 +49,7 @@ describe('Modération de la communauté (e2e)', () => {
   let tokenC: string;
   let userIdA: string;
   let userIdB: string;
+  let userIdC: string;
   let superToken: string;
   let readerToken: string;
   let reportId: string;
@@ -104,6 +106,7 @@ describe('Modération de la communauté (e2e)', () => {
     tokenC = c.tokens.accessToken;
     userIdA = a.user.id;
     userIdB = b.user.id;
+    userIdC = c.user.id;
 
     // RBAC : mêmes upserts idempotents que le seed (suite autonome). Le
     // « lecteur » ne porte pas community:moderate : c'est lui qui prouve le 403.
@@ -412,5 +415,109 @@ describe('Modération de la communauté (e2e)', () => {
       .send({ status: 'FERME' })
       .expect(400);
     await authed(superToken).get('/api/v1/admin/community/reports?status=FERME').expect(400);
+  });
+
+  it('signaler un défi entre amis : membre seulement, créateur seulement, clichés figés', async () => {
+    // Alice et Boris redeviennent amis (la demande d'Alice attend depuis le
+    // déblocage), puis Alice défie Boris avec un mot.
+    const [pending] = await receivedBy(tokenB);
+    await authed(tokenB).post(`/api/v1/community/requests/${pending?.id}/accept`).expect(204);
+    const challengeId = randomUUID();
+    const challenge = data<FriendChallenge>(
+      (
+        await authed(tokenA)
+          .post('/api/v1/community/friend-challenges')
+          .send({
+            id: challengeId,
+            title: 'Qui court le plus',
+            metric: 'DISTANCE_METERS',
+            durationDays: 7,
+            message: '  Tu vas encore perdre, comme d’habitude.  ',
+            invitedUserIds: [userIdB],
+          })
+          .expect(201)
+      ).body,
+    );
+    expect(challenge.message).toBe('Tu vas encore perdre, comme d’habitude.');
+
+    // Boris REFUSE le défi : il l'a lu, il peut le signaler quand même.
+    await authed(tokenB)
+      .delete(`/api/v1/community/friend-challenges/${challengeId}/join`)
+      .expect(204);
+    const reportBody = {
+      reportedUserId: userIdA,
+      friendChallengeId: challengeId,
+      reason: 'CONTENU_INAPPROPRIE',
+    };
+    const report = data<CommunityReport>(
+      (await authed(tokenB).post('/api/v1/community/reports').send(reportBody).expect(201)).body,
+    );
+    expect(report).toMatchObject({
+      reportedUserId: userIdA,
+      friendChallengeId: challengeId,
+      encouragementId: null,
+      status: 'OPEN',
+    });
+    // Les clichés sont en base, pris dans la transaction du signalement.
+    const stored = await prisma.communityReport.findUniqueOrThrow({ where: { id: report.id } });
+    expect(stored).toMatchObject({
+      friendChallengeId: challengeId,
+      friendChallengeTitle: 'Qui court le plus',
+      friendChallengeMessage: 'Tu vas encore perdre, comme d’habitude.',
+      encouragementMessage: null,
+    });
+
+    // Rejouer rend le même accusé : pas de doublon pour l'administration.
+    const replay = data<CommunityReport>(
+      (await authed(tokenB).post('/api/v1/community/reports').send(reportBody).expect(201)).body,
+    );
+    expect(replay.id).toBe(report.id);
+
+    // Chloé n'en est pas membre : 404. Boris qui accuse Chloé, qui n'en est
+    // pas la créatrice : 404 aussi, et le MÊME message — pas d'oracle.
+    const notMember = await authed(tokenC)
+      .post('/api/v1/community/reports')
+      .send(reportBody)
+      .expect(404);
+    const notCreator = await authed(tokenB)
+      .post('/api/v1/community/reports')
+      .send({ ...reportBody, reportedUserId: userIdC })
+      .expect(404);
+    const unknown = await authed(tokenB)
+      .post('/api/v1/community/reports')
+      .send({ ...reportBody, friendChallengeId: randomUUID() })
+      .expect(404);
+    const messageOf = (body: unknown) => (body as { error: { message: string } }).error.message;
+    expect(messageOf(notMember.body)).toBe('Défi introuvable.');
+    expect(messageOf(notCreator.body)).toBe(messageOf(notMember.body));
+    expect(messageOf(unknown.body)).toBe(messageOf(notMember.body));
+
+    // Un encouragement ET un défi : 400. Son propre défi : 400 (soi-même).
+    await authed(tokenB)
+      .post('/api/v1/community/reports')
+      .send({ ...reportBody, encouragementId: randomUUID() })
+      .expect(400);
+    await authed(tokenA)
+      .post('/api/v1/community/reports')
+      .send({ ...reportBody, reportedUserId: userIdA })
+      .expect(400);
+    await authed(tokenB)
+      .post('/api/v1/community/reports')
+      .send({ ...reportBody, friendChallengeId: 'pas-un-uuid' })
+      .expect(400);
+
+    // L'administration lit les clichés, même une fois le défi disparu.
+    await prisma.friendChallenge.delete({ where: { id: challengeId } });
+    const open = data<AdminCommunityReport[]>(
+      (await authed(superToken).get('/api/v1/admin/community/reports?status=OPEN').expect(200))
+        .body,
+    );
+    expect(open.find((entry) => entry.id === report.id)).toMatchObject({
+      friendChallengeId: null,
+      friendChallengeTitle: 'Qui court le plus',
+      friendChallengeMessage: 'Tu vas encore perdre, comme d’habitude.',
+      encouragementMessage: null,
+      reportedUser: { id: userIdA },
+    });
   });
 });

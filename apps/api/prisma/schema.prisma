@@ -1185,6 +1185,13 @@ model FriendChallenge {
   id           String                @id @db.Uuid
   creatorId    String                @db.Uuid
   title        String
+  /// Le mot du créateur à ses invités (280 points de code au plus, découpé
+  /// à l'entrée : au plus 560 unités UTF-16 en base), NULL s'il n'a rien
+  /// écrit. Son heure est `createdAt` : il naît avec le défi et ne se
+  /// modifie pas, pas même par un rejeu de la création. Lu par les seuls
+  /// membres, jamais porté par la notification, et masqué au lecteur qu'un
+  /// blocage sépare du créateur.
+  message      String?
   metric       ChallengeMetric
   /// Objectif commun, ou `null` pour un « qui en fait le plus ».
   target       Int?
@@ -1205,6 +1212,8 @@ model FriendChallenge {
 
   creator User                    @relation(fields: [creatorId], references: [id], onDelete: Cascade)
   members FriendChallengeMember[]
+  /// Signalements qui visent ce défi (son titre ou son message).
+  reports CommunityReport[]
 
   @@index([creatorId])
   @@index([status, endsAt])
@@ -1447,30 +1456,44 @@ enum CommunityReportStatus {
   RESOLVED
 }
 
-/// Signalement d'une personne et, le cas échéant, d'un encouragement précis.
+/// Signalement d'une personne et, le cas échéant, d'un encouragement précis
+/// OU d'un défi entre amis qu'elle a créé (jamais les deux à la fois).
 /// Lu et résolu par l'administration (permission `community:moderate`),
 /// jamais visible de la personne signalée. Si l'encouragement est supprimé
 /// entre-temps, le signalement reste (référence mise à NULL) et son texte,
 /// figé dans `encouragementMessage` au moment du signalement, aussi : la
-/// preuve ne s'efface pas avec le message.
+/// preuve ne s'efface pas avec le message. Même règle pour un défi : titre
+/// et message figés dans `friendChallengeTitle` et `friendChallengeMessage`.
 model CommunityReport {
-  id                   String                @id @default(uuid()) @db.Uuid
-  reporterId           String                @db.Uuid
-  reportedUserId       String                @db.Uuid
-  encouragementId      String?               @db.Uuid
+  id                     String                @id @default(uuid()) @db.Uuid
+  reporterId             String                @db.Uuid
+  reportedUserId         String                @db.Uuid
+  encouragementId        String?               @db.Uuid
   /// Cliché du texte visé, pris dans la même transaction que le signalement.
   /// NULL quand le signalement vise la personne en général.
-  encouragementMessage String?
-  reason               CommunityReportReason
+  encouragementMessage   String?
+  /// Défi entre amis visé, exclusif avec `encouragementId`. Son créateur est
+  /// la personne signalée : le titre et le message sont les siens. Mis à
+  /// NULL si le défi disparaît ; les clichés ci-dessous restent.
+  friendChallengeId      String?               @db.Uuid
+  /// Cliché du titre du défi visé, pris dans la même transaction que le
+  /// signalement. NULL quand le signalement ne vise aucun défi.
+  friendChallengeTitle   String?
+  /// Cliché du message du défi visé, pris dans la même transaction. NULL
+  /// aussi quand ce défi n'en portait pas : c'est alors le titre seul que
+  /// l'on signale.
+  friendChallengeMessage String?
+  reason                 CommunityReportReason
   /// Précisions libres (500 caractères au plus, validées à l'entrée).
-  details              String?
-  status               CommunityReportStatus @default(OPEN)
-  createdAt            DateTime              @default(now())
-  resolvedAt           DateTime?
+  details                String?
+  status                 CommunityReportStatus @default(OPEN)
+  createdAt              DateTime              @default(now())
+  resolvedAt             DateTime?
 
-  reporter      User           @relation("CommunityReportsFiled", fields: [reporterId], references: [id], onDelete: Cascade)
-  reportedUser  User           @relation("CommunityReportsReceived", fields: [reportedUserId], references: [id], onDelete: Cascade)
-  encouragement Encouragement? @relation(fields: [encouragementId], references: [id], onDelete: SetNull)
+  reporter        User             @relation("CommunityReportsFiled", fields: [reporterId], references: [id], onDelete: Cascade)
+  reportedUser    User             @relation("CommunityReportsReceived", fields: [reportedUserId], references: [id], onDelete: Cascade)
+  encouragement   Encouragement?   @relation(fields: [encouragementId], references: [id], onDelete: SetNull)
+  friendChallenge FriendChallenge? @relation(fields: [friendChallengeId], references: [id], onDelete: SetNull)
 
   @@index([status, createdAt(sort: Desc)])
   @@index([reportedUserId])

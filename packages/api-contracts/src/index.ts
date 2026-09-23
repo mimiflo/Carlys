@@ -11,6 +11,7 @@ export * from './nutrition';
 export * from './programs';
 export * from './progress';
 export * from './subscriptions';
+export * from './text';
 export * from './users';
 export * from './workout-templates';
 export * from './workouts';

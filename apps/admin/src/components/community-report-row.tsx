@@ -41,17 +41,50 @@ function PartyLink({ party }: { party: AdminCommunityReportParty }) {
 }
 
 /**
- * Le texte visé, tel qu'il était AU MOMENT du signalement : le serveur en
- * fige un cliché (`encouragementMessage`) dans la transaction qui crée le
- * signalement, donc la preuve reste lisible même après coup. D'où trois
- * états, tous atteignables :
+ * Le défi entre amis visé, tel qu'il était AU MOMENT du signalement : son
+ * titre, puis le mot de son créateur cité — ou « (sans message) » s'il n'en
+ * avait pas écrit, car c'est alors le titre seul qui est signalé. Les deux
+ * sont des clichés figés par le serveur, comme le texte d'un encouragement.
+ */
+function ChallengeTarget({ title, message }: { title: string; message: string | null }) {
+  return (
+    <span className="flex flex-col gap-1">
+      <span className="font-medium">Défi « {title} »</span>
+      {message === null ? (
+        <span className="text-xs text-muted">(sans message)</span>
+      ) : (
+        <q className="italic">{message}</q>
+      )}
+    </span>
+  );
+}
+
+/**
+ * Ce que vise le signalement, tel qu'il était AU MOMENT du signalement : le
+ * serveur en fige un cliché dans la transaction qui le crée, donc la preuve
+ * reste lisible même après coup. Un encouragement OU un défi, jamais les
+ * deux (le serveur refuse). Pour un encouragement, trois états, tous
+ * atteignables :
  *
  * - cliché + `encouragementId` : le message est toujours dans le fil ;
  * - cliché seul (`encouragementId` remis à `NULL` par la suppression) : le
  *   message a été retiré depuis, on montre quand même ce qui a été signalé ;
  * - ni l'un ni l'autre : le signalement vise la personne, pas un message.
+ *
+ * Un défi, lui, n'a aucune route de suppression (la suppression d'un compte
+ * est logique, la ligne reste) : pas d'état « retiré depuis » à montrer. Si
+ * la ligne venait à être effacée en base, `friendChallengeId` passerait à
+ * `NULL` et les clichés suffiraient encore.
  */
-function EncouragementCell({ report }: { report: AdminCommunityReport }) {
+function TargetCell({ report }: { report: AdminCommunityReport }) {
+  if (report.friendChallengeTitle !== null) {
+    return (
+      <ChallengeTarget
+        title={report.friendChallengeTitle}
+        message={report.friendChallengeMessage}
+      />
+    );
+  }
   if (report.encouragementMessage === null) {
     return <span className="text-xs text-muted">La personne en général</span>;
   }
@@ -88,7 +121,7 @@ export function CommunityReportRow({ report }: { report: AdminCommunityReport })
         <PartyLink party={report.reportedUser} />
       </td>
       <td className="max-w-xs px-4 py-3">
-        <EncouragementCell report={report} />
+        <TargetCell report={report} />
       </td>
       <td className="px-4 py-3">
         <CommunityReportStatusCell report={report} />

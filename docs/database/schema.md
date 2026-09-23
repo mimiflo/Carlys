@@ -805,11 +805,17 @@ Blocage unilatéral et opaque.
 
 ### `CommunityReport`
 Signalement lu et résolu par l'administration (permission
-`community:moderate`), jamais visible de la personne signalée.
+`community:moderate`), jamais visible de la personne signalée. Il vise la
+personne, un encouragement qu'elle a envoyé OU un défi entre amis qu'elle a
+créé.
 - Champs clés : `reporterId`, `reportedUserId`, `encouragementId` nullable
   (`SetNull` si le message est retiré), `encouragementMessage` nullable
   (cliché du texte visé, pris dans la même transaction que le signalement :
-  la preuve survit au retrait du message), `reason`
+  la preuve survit au retrait du message), `friendChallengeId` nullable
+  (défi entre amis visé, exclusif avec `encouragementId`, `SetNull` si le
+  défi disparaît), `friendChallengeTitle` et `friendChallengeMessage`
+  nullables (clichés du titre et du mot du créateur, pris dans la même
+  transaction), `reason`
   (`HARCELEMENT | SPAM | CONTENU_INAPPROPRIE | AUTRE`), `details`,
   `status` (`OPEN | RESOLVED`), `resolvedAt`.
 - Index : `(status, created_at DESC)`, `(reported_user_id)`.

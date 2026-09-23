@@ -6,6 +6,7 @@ import {
   type CommunityReportStatus,
 } from '@carlys/api-contracts';
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { blankToNull } from '../../../common/utilities/blank-to-null';
 import { AuditService } from '../../audit/audit.service';
 import {
   CommunityModerationRepository,
@@ -20,7 +21,9 @@ export interface AdminActor {
 
 export interface CreateReportCommand {
   reportedUserId: string;
-  encouragementId?: string;
+  /** `null` et absent disent la même chose : pas de cible de ce type. */
+  encouragementId?: string | null;
+  friendChallengeId?: string | null;
   reason: CommunityReportReason;
   details?: string;
 }
@@ -36,6 +39,7 @@ function presentReport(row: CommunityReportRow): ReportContract {
     id: row.id,
     reportedUserId: row.reportedUserId,
     encouragementId: row.encouragementId,
+    friendChallengeId: row.friendChallengeId,
     reason: row.reason,
     details: row.details,
     status: row.status,
@@ -60,6 +64,9 @@ function presentAdminReport(row: CommunityReportRow): AdminCommunityReport {
     // Le cliché pris au signalement, jamais le message vivant : l'auteur a pu
     // le retirer depuis, la preuve doit rester lisible.
     encouragementMessage: row.encouragementMessage,
+    // Même règle pour un défi : son titre et son message tels qu'ils étaient.
+    friendChallengeTitle: row.friendChallengeTitle,
+    friendChallengeMessage: row.friendChallengeMessage,
   };
 }
 
@@ -119,38 +126,47 @@ export class CommunityModerationService {
   // ── Signalements ────────────────────────────────────────────────────────
 
   /**
-   * Signaler une personne, ou un encouragement précis qu'elle m'a envoyé.
-   * Un signalement OUVERT identique n'est pas dupliqué : rejouer l'envoi
-   * rend le même accusé de réception, l'administration ne reçoit pas de
-   * doublons. Le texte visé est figé à la création (voir le dépôt).
+   * Signaler une personne, un encouragement précis qu'elle m'a envoyé, ou un
+   * défi entre amis qu'elle a créé et dont je suis membre — un encouragement
+   * OU un défi, jamais les deux. Un signalement OUVERT identique n'est pas
+   * dupliqué : rejouer l'envoi rend le même accusé de réception,
+   * l'administration ne reçoit pas de doublons. Le texte visé est figé à la
+   * création (voir le dépôt).
    */
   async report(userId: string, command: CreateReportCommand): Promise<ReportContract> {
+    // Normalisée d'abord : `@IsOptional` laisse passer un `null` explicite,
+    // qui dit « pas de cible » comme une clé absente.
+    const target = {
+      encouragementId: command.encouragementId ?? null,
+      friendChallengeId: command.friendChallengeId ?? null,
+    };
+    if (target.encouragementId !== null && target.friendChallengeId !== null) {
+      throw new BadRequestException('Signale un encouragement OU un défi, pas les deux à la fois.');
+    }
     if (command.reportedUserId === userId) {
       throw new BadRequestException('Tu ne peux pas te signaler toi-même.');
     }
     if (!(await this.moderation.userExists(command.reportedUserId))) {
       throw new NotFoundException('Compte introuvable.');
     }
-    const encouragementId = command.encouragementId ?? null;
-    const existing = await this.moderation.findOpenReport(
-      userId,
-      command.reportedUserId,
-      encouragementId,
-    );
+    const existing = await this.moderation.findOpenReport(userId, command.reportedUserId, target);
     if (existing !== null) {
       return presentReport(existing);
     }
-    const details = command.details?.trim();
     const created = await this.moderation.createReport({
       reporterId: userId,
       reportedUserId: command.reportedUserId,
-      encouragementId,
+      ...target,
       reason: command.reason,
-      details: details === undefined || details === '' ? null : details,
+      details: blankToNull(command.details),
     });
     if (created === null) {
-      // Seul ce qu'on a REÇU de cette personne peut être signalé sous son nom.
-      throw new NotFoundException('Encouragement introuvable.');
+      // Seul ce qu'on a REÇU de cette personne, ou un défi qu'elle a lancé et
+      // où l'on figure, peut être signalé sous son nom. Le message est celui
+      // d'un défi introuvable, sans dire lequel des refus s'applique.
+      throw new NotFoundException(
+        target.friendChallengeId === null ? 'Encouragement introuvable.' : 'Défi introuvable.',
+      );
     }
     return presentReport(created);
   }

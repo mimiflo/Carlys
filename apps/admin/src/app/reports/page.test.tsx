@@ -20,6 +20,7 @@ const REPORT: AdminCommunityReport = {
   id: '77777777-2222-4333-8444-555555555555',
   reportedUserId: REPORTED.id,
   encouragementId: '33333333-2222-4333-8444-555555555555',
+  friendChallengeId: null,
   reason: 'HARCELEMENT',
   details: 'Il insiste après mon refus.',
   status: 'OPEN',
@@ -28,6 +29,8 @@ const REPORT: AdminCommunityReport = {
   reporter: REPORTER,
   reportedUser: REPORTED,
   encouragementMessage: 'Réponds-moi.',
+  friendChallengeTitle: null,
+  friendChallengeMessage: null,
 };
 
 const REPORT_ABOUT_PERSON: AdminCommunityReport = {
@@ -45,6 +48,27 @@ const REPORT_MESSAGE_REMOVED: AdminCommunityReport = {
   id: '99999999-2222-4333-8444-555555555555',
   encouragementId: null,
   encouragementMessage: 'Tu ne vaux rien.',
+};
+
+/** Défi entre amis signalé : son titre et le mot de son créateur, figés. */
+const REPORT_CHALLENGE: AdminCommunityReport = {
+  ...REPORT,
+  id: 'aaaaaaaa-2222-4333-8444-555555555555',
+  encouragementId: null,
+  encouragementMessage: null,
+  friendChallengeId: '44444444-2222-4333-8444-555555555555',
+  friendChallengeTitle: 'Qui court le plus',
+  friendChallengeMessage: 'Tu vas encore perdre, comme d’habitude.',
+  reason: 'CONTENU_INAPPROPRIE',
+  details: null,
+};
+
+/** Défi dont le créateur n'avait écrit aucun mot : c'est le titre qui est visé. */
+const REPORT_CHALLENGE_NO_MESSAGE: AdminCommunityReport = {
+  ...REPORT_CHALLENGE,
+  id: 'bbbbbbbb-2222-4333-8444-555555555555',
+  friendChallengeTitle: 'Dix séances',
+  friendChallengeMessage: null,
 };
 
 function pageOf(
@@ -127,6 +151,38 @@ describe('Page Signalements', () => {
 
     expect(await screen.findByText('La personne en général')).toBeInTheDocument();
     expect(screen.queryByText('Message retiré depuis')).not.toBeInTheDocument();
+  });
+
+  it('montre le défi visé : son titre, puis le mot cité du créateur', async () => {
+    adminToken.set('jeton-admin');
+    vi.spyOn(adminApi, 'listCommunityReports').mockResolvedValue(pageOf([REPORT_CHALLENGE]));
+
+    renderPage();
+
+    expect(await screen.findByText('Défi « Qui court le plus »')).toBeInTheDocument();
+    const quoted = screen.getByText('Tu vas encore perdre, comme d’habitude.');
+    expect(quoted.tagName).toBe('Q');
+    expect(screen.getByText('Contenu inapproprié')).toBeInTheDocument();
+    // Un défi n'est ni « la personne en général » ni un encouragement.
+    expect(screen.queryByText('La personne en général')).not.toBeInTheDocument();
+    expect(screen.queryByText('(sans message)')).not.toBeInTheDocument();
+  });
+
+  it('dit « (sans message) » quand le défi visé n’en portait pas', async () => {
+    adminToken.set('jeton-admin');
+    vi.spyOn(adminApi, 'listCommunityReports').mockResolvedValue(
+      pageOf([REPORT_CHALLENGE_NO_MESSAGE, REPORT]),
+    );
+
+    renderPage();
+
+    const rows = await screen.findAllByRole('row');
+    const challengeRow = within(rows[1] as HTMLElement);
+    expect(challengeRow.getByText('Défi « Dix séances »')).toBeInTheDocument();
+    expect(challengeRow.getByText('(sans message)')).toBeInTheDocument();
+    // Le cliché d'encouragement de la ligne voisine reste à sa place.
+    expect(within(rows[2] as HTMLElement).getByText('Réponds-moi.')).toBeInTheDocument();
+    expect(within(rows[2] as HTMLElement).queryByText(/^Défi/)).not.toBeInTheDocument();
   });
 
   it('lie l’auteur et la personne visée à leur fiche, l’e-mail suppléant un nom absent', async () => {

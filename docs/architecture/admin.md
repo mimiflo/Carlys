@@ -132,7 +132,7 @@ livré à l'Étape 7.
 | Notifications | campagnes push (après intégration FCM), modèles, ciblage, historique d'envoi |
 | Webhooks (Étape 6+) | journal des webhooks Stripe/RevenueCat signés, statut de traitement idempotent, rejeu |
 | Statistiques | tableaux de bord d'usage : inscriptions, rétention, séances, revenus |
-| Modération | **Livré (partiel)** — `/reports` : signalements de la communauté (ouverts par défaut, motif, auteur et personne visée liés à leur fiche, encouragement visé), résolution et réouverture auditées, permission `community:moderate`. Reste cible : retrait d'un contenu par l'administration |
+| Modération | **Livré (partiel)** — `/reports` : signalements de la communauté (ouverts par défaut, motif, auteur et personne visée liés à leur fiche, colonne « Contenu visé » : l'encouragement, ou le défi entre amis (« Défi « titre » » puis le mot du créateur cité, ou « (sans message) »), clichés figés au signalement et lus via `encouragementMessage`, `friendChallengeTitle`, `friendChallengeMessage`), résolution et réouverture auditées, permission `community:moderate`. Reste cible : retrait d'un contenu par l'administration |
 
 ## Pages publiques du produit (`src/app/(public)`)
 

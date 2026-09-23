@@ -24,9 +24,20 @@ function ranksOf(challenge: FriendChallengeWithMembers): Map<string, number> {
   );
 }
 
+/**
+ * Le défi tel que `userId` le voit.
+ *
+ * `blockedEitherWay` : les personnes qu'un blocage sépare de lui, dans un
+ * sens ou dans l'autre. Obligatoire, pour qu'aucun appelant ne l'oublie :
+ * quand le créateur en fait partie, son MOT n'est plus servi. Un texte libre
+ * suit la règle du fil, qui tait les personnes bloquées ; le défi, lui,
+ * reste lisible, parce que son classement est un résultat partagé qui ne se
+ * réécrit pas.
+ */
 export function presentFriendChallenge(
   challenge: FriendChallengeWithMembers,
   userId: string,
+  blockedEitherWay: ReadonlySet<string>,
 ): FriendChallengeContract {
   const vivant = ranksOf(challenge);
   const moi = challenge.members.find((member) => member.userId === userId);
@@ -34,10 +45,14 @@ export function presentFriendChallenge(
   return {
     id: challenge.id,
     title: challenge.title,
+    message: blockedEitherWay.has(challenge.creatorId) ? null : challenge.message,
     metric: challenge.metric,
     unit: METRIC_UNITS[challenge.metric],
     target: challenge.target,
     status: challenge.status,
+    durationDays: challenge.durationDays,
+    // L'heure du message, puisqu'il naît avec le défi et ne change plus.
+    createdAt: challenge.createdAt.toISOString(),
     startsAt: challenge.startsAt.toISOString(),
     endsAt: challenge.endsAt.toISOString(),
     creatorDisplayName: challenge.creator.profile?.displayName ?? 'Membre Carlys',
@@ -53,6 +68,7 @@ export function presentFriendChallenge(
       // Le rang FIGÉ l'emporte dès qu'il existe : c'est celui du résultat.
       rank: member.finalRank ?? vivant.get(member.userId) ?? null,
       isMe: member.userId === userId,
+      isCreator: member.userId === challenge.creatorId,
     })),
   };
 }

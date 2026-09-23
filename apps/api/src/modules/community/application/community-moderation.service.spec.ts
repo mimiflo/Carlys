@@ -32,6 +32,9 @@ function reportRow(overrides: Partial<CommunityReportRow> = {}): CommunityReport
     reportedUserId: OTHER,
     encouragementId: null,
     encouragementMessage: null,
+    friendChallengeId: null,
+    friendChallengeTitle: null,
+    friendChallengeMessage: null,
     reason: 'SPAM',
     details: null,
     status: 'OPEN',
@@ -172,7 +175,10 @@ describe('CommunityModerationService — signalements', () => {
     const report = await buildService(stubs).report(ME, command);
 
     expect(report.id).toBe('déjà-là');
-    expect(stubs.findOpenReport).toHaveBeenCalledWith(ME, OTHER, null);
+    expect(stubs.findOpenReport).toHaveBeenCalledWith(ME, OTHER, {
+      encouragementId: null,
+      friendChallengeId: null,
+    });
     expect(stubs.createReport).not.toHaveBeenCalled();
   });
 
@@ -199,6 +205,7 @@ describe('CommunityModerationService — signalements', () => {
       id: 'signalement-1',
       reportedUserId: OTHER,
       encouragementId: null,
+      friendChallengeId: null,
       reason: 'HARCELEMENT',
       details: null,
       status: 'OPEN',
@@ -206,6 +213,92 @@ describe('CommunityModerationService — signalements', () => {
       resolvedAt: null,
     });
     expect(report).not.toHaveProperty('reportedUser');
+  });
+});
+
+describe('CommunityModerationService — signaler un défi entre amis', () => {
+  const command = {
+    reportedUserId: OTHER,
+    reason: 'CONTENU_INAPPROPRIE' as const,
+    friendChallengeId: 'defi-1',
+  };
+
+  it('un encouragement ET un défi à la fois : 400, rien n’est lu ni écrit', async () => {
+    const stubs = buildStubs();
+
+    await expect(
+      buildService(stubs).report(ME, { ...command, encouragementId: 'message-1' }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(stubs.userExists).not.toHaveBeenCalled();
+    expect(stubs.findOpenReport).not.toHaveBeenCalled();
+    expect(stubs.createReport).not.toHaveBeenCalled();
+  });
+
+  it('un `null` explicite vaut « pas de cible » : il ne déclenche pas le 400 d’exclusivité', async () => {
+    const stubs = buildStubs();
+
+    await buildService(stubs).report(ME, { ...command, encouragementId: null });
+
+    expect(stubs.createReport).toHaveBeenCalledWith(
+      expect.objectContaining({ encouragementId: null, friendChallengeId: 'defi-1' }),
+    );
+  });
+
+  it('on ne signale pas son propre défi : la règle « pas soi-même » vaut ici aussi', async () => {
+    const stubs = buildStubs();
+
+    await expect(
+      buildService(stubs).report(ME, { ...command, reportedUserId: ME }),
+    ).rejects.toBeInstanceOf(BadRequestException);
+    expect(stubs.createReport).not.toHaveBeenCalled();
+  });
+
+  it('transmet le défi visé au dépôt, qui fige titre et message ; l’accusé cite le défi', async () => {
+    const stubs = buildStubs();
+    stubs.createReport.mockResolvedValue(
+      reportRow({
+        friendChallengeId: 'defi-1',
+        friendChallengeTitle: 'Qui court le plus',
+        friendChallengeMessage: 'On verra qui tient.',
+      }),
+    );
+
+    const report = await buildService(stubs).report(ME, command);
+
+    expect(stubs.findOpenReport).toHaveBeenCalledWith(ME, OTHER, {
+      encouragementId: null,
+      friendChallengeId: 'defi-1',
+    });
+    expect(stubs.createReport).toHaveBeenCalledWith(
+      expect.objectContaining({ encouragementId: null, friendChallengeId: 'defi-1' }),
+    );
+    expect(report.friendChallengeId).toBe('defi-1');
+    // Les clichés sont pour l'administration, pas pour l'accusé du membre.
+    expect(report).not.toHaveProperty('friendChallengeTitle');
+    expect(report).not.toHaveProperty('friendChallengeMessage');
+  });
+
+  it('un défi dont on n’est pas membre, ou qui n’est pas de la personne signalée : 404 « Défi introuvable »', async () => {
+    const stubs = buildStubs();
+    // Le dépôt ne distingue pas les refus : inconnu, non-membre ou autre
+    // créateur rendent le même `null`, donc le même 404.
+    stubs.createReport.mockResolvedValue(null);
+
+    await expect(buildService(stubs).report(ME, command)).rejects.toThrow(
+      new NotFoundException('Défi introuvable.'),
+    );
+  });
+
+  it('un signalement ouvert du même défi n’est pas dupliqué', async () => {
+    const stubs = buildStubs();
+    stubs.findOpenReport.mockResolvedValue(
+      reportRow({ id: 'déjà-là', friendChallengeId: 'defi-1' }),
+    );
+
+    const report = await buildService(stubs).report(ME, command);
+
+    expect(report.id).toBe('déjà-là');
+    expect(stubs.createReport).not.toHaveBeenCalled();
   });
 });
 
@@ -290,6 +383,36 @@ describe('CommunityModerationService — administration', () => {
     expect(page.items[0]).toMatchObject({
       encouragementId: null,
       encouragementMessage: 'Texte figé',
+    });
+  });
+
+  it('l’administration lit les clichés d’un défi signalé, message absent compris', async () => {
+    const stubs = buildStubs();
+    stubs.listReports.mockResolvedValue([
+      reportRow({
+        id: 'avec-message',
+        friendChallengeId: 'defi-1',
+        friendChallengeTitle: 'Qui court le plus',
+        friendChallengeMessage: 'On verra qui tient.',
+      }),
+      reportRow({
+        id: 'sans-message',
+        friendChallengeId: 'defi-2',
+        friendChallengeTitle: 'Dix séances',
+      }),
+    ]);
+
+    const page = await buildService(stubs).listReports(undefined, 10);
+
+    expect(page.items[0]).toMatchObject({
+      friendChallengeId: 'defi-1',
+      friendChallengeTitle: 'Qui court le plus',
+      friendChallengeMessage: 'On verra qui tient.',
+      encouragementMessage: null,
+    });
+    expect(page.items[1]).toMatchObject({
+      friendChallengeTitle: 'Dix séances',
+      friendChallengeMessage: null,
     });
   });
 });

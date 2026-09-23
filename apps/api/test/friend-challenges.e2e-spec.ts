@@ -34,6 +34,7 @@ describe('Défis entre amis (e2e)', () => {
   let tokenA: string;
   let tokenB: string;
   let tokenC: string;
+  let userIdA: string;
   let userIdB: string;
   let userIdC: string;
   const emailA = `e2e-fc-a-${randomUUID()}@carlys.test`;
@@ -81,6 +82,7 @@ describe('Défis entre amis (e2e)', () => {
     tokenA = a.tokens.accessToken;
     tokenB = b.tokens.accessToken;
     tokenC = c.tokens.accessToken;
+    userIdA = a.user.id;
     userIdB = b.user.id;
     userIdC = c.user.id;
 
@@ -246,5 +248,181 @@ describe('Défis entre amis (e2e)', () => {
   it('refuse une durée hors des trois offertes, et un défi sans personne', async () => {
     await defier(tokenA, { invitedUserIds: [userIdB], durationDays: 400 }).expect(400);
     await defier(tokenA, { invitedUserIds: [] }).expect(400);
+  });
+
+  it('le mot du créateur : découpé, daté, lu par l’invité, jamais réécrit par un rejeu', async () => {
+    const challengeId = randomUUID();
+    const avant = Date.now();
+    const cree = data<FriendChallenge>(
+      (
+        await defier(tokenA, {
+          id: challengeId,
+          invitedUserIds: [userIdB],
+          durationDays: 3,
+          message: '  On verra qui tient la semaine.  ',
+        }).expect(201)
+      ).body,
+    );
+    expect(cree.message).toBe('On verra qui tient la semaine.');
+    expect(cree.durationDays).toBe(3);
+    // L'heure du message est celle du défi : un instant ISO UTC, maintenant.
+    expect(cree.createdAt).toMatch(/Z$/);
+    expect(Date.parse(cree.createdAt)).toBeGreaterThanOrEqual(avant - 1_000);
+    expect(Date.parse(cree.createdAt)).toBeLessThanOrEqual(Date.now() + 1_000);
+    // Le créateur est marqué, et c'est l'appelant ; l'invité ne l'est pas.
+    expect(cree.members.find((m) => m.isMe)).toMatchObject({ isCreator: true, status: 'ACCEPTED' });
+    expect(cree.members.find((m) => m.userId === userIdB)?.isCreator).toBe(false);
+
+    // Rejeu avec un AUTRE mot : le défi est rendu tel qu'il a été créé.
+    const rejoue = data<FriendChallenge>(
+      (
+        await defier(tokenA, {
+          id: challengeId,
+          invitedUserIds: [userIdB],
+          durationDays: 3,
+          message: 'Un autre mot',
+        }).expect(201)
+      ).body,
+    );
+    expect(rejoue.message).toBe('On verra qui tient la semaine.');
+
+    // L'invité, qui n'a encore rien accepté, lit le mot au détail et dans sa
+    // liste ; un non-membre ne voit toujours rien.
+    const vu = data<FriendChallenge>(
+      (await as(tokenB).get(`/api/v1/community/friend-challenges/${challengeId}`).expect(200)).body,
+    );
+    expect(vu).toMatchObject({
+      message: 'On verra qui tient la semaine.',
+      createdAt: cree.createdAt,
+      durationDays: 3,
+      myStatus: 'INVITED',
+    });
+    expect(vu.members.find((m) => m.isCreator)?.displayName).toBe('Alice');
+    const siens = data<FriendChallenge[]>(
+      (await as(tokenB).get('/api/v1/community/friend-challenges').expect(200)).body,
+    );
+    expect(siens.find((entry) => entry.id === challengeId)?.message).toBe(
+      'On verra qui tient la semaine.',
+    );
+    await as(tokenC).get(`/api/v1/community/friend-challenges/${challengeId}`).expect(404);
+
+    // Accepter rend la même forme, mot compris.
+    const accepte = data<FriendChallenge>(
+      (
+        await as(tokenB)
+          .post(`/api/v1/community/friend-challenges/${challengeId}/accept`)
+          .expect(201)
+      ).body,
+    );
+    expect(accepte).toMatchObject({
+      message: 'On verra qui tient la semaine.',
+      myStatus: 'ACCEPTED',
+    });
+  });
+
+  it('le mot : 280 caractères APRÈS découpage, et un blanc vaut « pas de message »', async () => {
+    // Boris crée ici : le plafond de défis ouverts d'Alice reste à ses épreuves.
+    await defier(tokenB, { invitedUserIds: [userIdA], message: 'x'.repeat(281) }).expect(400);
+    await defier(tokenB, { invitedUserIds: [userIdA], message: 42 }).expect(400);
+
+    const pile = data<FriendChallenge>(
+      (
+        await defier(tokenB, {
+          invitedUserIds: [userIdA],
+          message: `  ${'x'.repeat(280)}  `,
+        }).expect(201)
+      ).body,
+    );
+    expect(pile.message).toHaveLength(280);
+
+    const blanc = data<FriendChallenge>(
+      (await defier(tokenB, { invitedUserIds: [userIdA], message: '   ' }).expect(201)).body,
+    );
+    expect(blanc.message).toBeNull();
+    const enBase = await prisma.friendChallenge.findUniqueOrThrow({ where: { id: blanc.id } });
+    expect(enBase.message).toBeNull();
+
+    const sans = data<FriendChallenge>(
+      (await defier(tokenB, { invitedUserIds: [userIdA] }).expect(201)).body,
+    );
+    expect(sans.message).toBeNull();
+  });
+
+  it('le mot se compte en POINTS DE CODE, comme le contrat publié', async () => {
+    // 280 émojis simples : 560 unités UTF-16, mais 280 points de code. Le
+    // contrat les refusait dès 141 ; l'API et lui disent désormais pareil.
+    const emojis = data<FriendChallenge>(
+      (await defier(tokenB, { invitedUserIds: [userIdA], message: '😀'.repeat(280) }).expect(201))
+        .body,
+    );
+    expect([...(emojis.message ?? '')]).toHaveLength(280);
+    await defier(tokenB, { invitedUserIds: [userIdA], message: '😀'.repeat(281) }).expect(400);
+
+    // ❤️ = U+2764 + U+FE0F : deux points de code. 141 cœurs en font 282,
+    // que `@MaxLength` laissait passer pour 141.
+    await defier(tokenB, { invitedUserIds: [userIdA], message: '❤️'.repeat(141) }).expect(400);
+  });
+
+  it('un blocage tait le mot du créateur, dans les deux sens, sans retirer le défi', async () => {
+    // Chloé devient l'amie d'Alice, puis la défie avec un mot. C'est Chloé
+    // qui crée : le plafond de défis ouverts d'Alice reste à ses épreuves.
+    await as(tokenC).post('/api/v1/community/requests').send({ email: emailA }).expect(202);
+    const recues = data<Array<{ id: string; fromDisplayName: string }>>(
+      (await as(tokenA).get('/api/v1/community/requests').expect(200)).body,
+    );
+    const deChloe = recues.find((demande) => demande.fromDisplayName === 'Chloé');
+    await as(tokenA).post(`/api/v1/community/requests/${deChloe?.id}/accept`).expect(204);
+    const challengeId = randomUUID();
+    const mot = 'Tu vas encore perdre, comme d’habitude.';
+    await defier(tokenC, { id: challengeId, invitedUserIds: [userIdA], message: mot }).expect(201);
+
+    const lu = async (bearer: string) => ({
+      detail: data<FriendChallenge>(
+        (await as(bearer).get(`/api/v1/community/friend-challenges/${challengeId}`).expect(200))
+          .body,
+      ),
+      liste: data<FriendChallenge[]>(
+        (await as(bearer).get('/api/v1/community/friend-challenges').expect(200)).body,
+      ).find((entry) => entry.id === challengeId),
+    });
+    expect((await lu(tokenA)).detail.message).toBe(mot);
+
+    // Alice bloque Chloé : le geste de protection documenté. Le défi reste,
+    // avec son titre et son classement ; le texte libre suit la règle du fil.
+    await as(tokenA).post(`/api/v1/community/blocks/${userIdC}`).expect(204);
+    const bloqueuse = await lu(tokenA);
+    expect(bloqueuse.detail).toMatchObject({ message: null, title: 'Qui court le plus' });
+    expect(bloqueuse.detail.members.find((m) => m.isCreator)?.userId).toBe(userIdC);
+    expect(bloqueuse.liste?.message).toBeNull();
+    // La créatrice, elle, lit toujours son propre mot.
+    expect((await lu(tokenC)).detail.message).toBe(mot);
+
+    // Le signalement reste possible : le cliché vient de la base, pas de la
+    // réponse qui vient de taire le mot.
+    const signalement = await as(tokenA)
+      .post('/api/v1/community/reports')
+      .send({ reportedUserId: userIdC, friendChallengeId: challengeId, reason: 'HARCELEMENT' })
+      .expect(201);
+    const enBase = await prisma.communityReport.findUniqueOrThrow({
+      where: { id: data<{ id: string }>(signalement.body).id },
+    });
+    expect(enBase.friendChallengeMessage).toBe(mot);
+
+    // Dans l'AUTRE sens : Chloé bloque Alice (après le déblocage d'Alice).
+    // Le mot se tait aussi pour Alice : le blocage se lit dans les deux sens.
+    await as(tokenA).delete(`/api/v1/community/blocks/${userIdC}`).expect(204);
+    expect((await lu(tokenA)).detail.message).toBe(mot);
+    await as(tokenC).post(`/api/v1/community/blocks/${userIdA}`).expect(204);
+    expect((await lu(tokenA)).detail.message).toBeNull();
+    // Accepter rend la même forme, mot masqué compris.
+    const accepte = data<FriendChallenge>(
+      (
+        await as(tokenA)
+          .post(`/api/v1/community/friend-challenges/${challengeId}/accept`)
+          .expect(201)
+      ).body,
+    );
+    expect(accepte.message).toBeNull();
+    await as(tokenC).delete(`/api/v1/community/blocks/${userIdA}`).expect(204);
   });
 });

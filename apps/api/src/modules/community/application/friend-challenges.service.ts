@@ -5,6 +5,7 @@ import {
 } from '@carlys/api-contracts';
 import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { FriendRequestStatus } from '@prisma/client';
+import { blankToNull } from '../../../common/utilities/blank-to-null';
 import { CommunityModerationRepository } from '../infrastructure/community-moderation.repository';
 import { CommunityRepository } from '../infrastructure/community.repository';
 import {
@@ -67,6 +68,9 @@ export class FriendChallengesService {
         id: input.id,
         creatorId: userId,
         title: input.title,
+        // Écrit UNE fois : un rejeu de la création retombe sur le défi
+        // existant sans rien réécrire, message compris.
+        message: blankToNull(input.message),
         metric: input.metric,
         target: input.target ?? null,
         durationDays: input.durationDays,
@@ -79,7 +83,9 @@ export class FriendChallengesService {
     );
     // Rejeu : le défi existe déjà, on le rend tel quel sans réinviter
     // personne — une notification par tentative serait du harcèlement par
-    // mauvais réseau.
+    // mauvais réseau. La notification ne porte que le TITRE, jamais le
+    // message : un texte libre sur l'écran verrouillé échapperait au refus de
+    // l'invitation, et il n'est lisible que des membres, dans le défi.
     if (cree) {
       await Promise.all(
         invites.map((invited) => this.notifier.challengeInvite(invited, userId, input.title)),
@@ -88,16 +94,30 @@ export class FriendChallengesService {
     return this.detail(userId, input.id);
   }
 
-  /** Mes défis : ceux qu'on m'a proposés et ceux que j'ai acceptés. */
+  /**
+   * Mes défis : ceux qu'on m'a proposés et ceux que j'ai acceptés.
+   *
+   * Les blocages sont lus à CHAQUE lecture, comme pour le fil : le mot d'un
+   * créateur qu'un blocage sépare de moi n'est plus servi (voir le
+   * présentateur). La liste ET le détail, sans quoi l'un rouvrirait ce que
+   * l'autre tait.
+   */
   async list(userId: string): Promise<FriendChallengeContract[]> {
-    const challenges = await this.challenges.listMine(userId, MAX_LISTED);
+    const [challenges, hidden] = await Promise.all([
+      this.challenges.listMine(userId, MAX_LISTED),
+      this.moderation.blockedUserIdsEitherWay(userId),
+    ]);
     const regles = await Promise.all(challenges.map((challenge) => this.settleIfDue(challenge)));
-    return regles.map((challenge) => presentFriendChallenge(challenge, userId));
+    return regles.map((challenge) => presentFriendChallenge(challenge, userId, hidden));
   }
 
   async detail(userId: string, challengeId: string): Promise<FriendChallengeContract> {
-    const challenge = await this.settleIfDue(await this.mine(userId, challengeId));
-    return presentFriendChallenge(challenge, userId);
+    const [mine, hidden] = await Promise.all([
+      this.mine(userId, challengeId),
+      this.moderation.blockedUserIdsEitherWay(userId),
+    ]);
+    const challenge = await this.settleIfDue(mine);
+    return presentFriendChallenge(challenge, userId, hidden);
   }
 
   /** Accepter : on entre au classement, à zéro. */

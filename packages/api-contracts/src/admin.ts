@@ -188,11 +188,18 @@ export type AdminCommunityReportParty = z.infer<typeof adminCommunityReportParty
  * signalement : l'auteur a beau retirer son message ensuite
  * (`encouragementId` passe alors à `null`), la preuve reste lisible.
  * `null` seulement quand le signalement vise la personne en général.
+ *
+ * Un signalement de DÉFI entre amis porte, lui, les clichés du titre et du
+ * message de son créateur (la personne signalée), figés de la même façon.
+ * `friendChallengeTitle` non nul dit qu'un défi est visé ;
+ * `friendChallengeMessage` peut rester `null` si le défi n'en portait pas.
  */
 export const adminCommunityReportSchema = communityReportSchema.extend({
   reporter: adminCommunityReportPartySchema,
   reportedUser: adminCommunityReportPartySchema,
   encouragementMessage: z.string().nullable(),
+  friendChallengeTitle: z.string().nullable(),
+  friendChallengeMessage: z.string().nullable(),
 });
 export type AdminCommunityReport = z.infer<typeof adminCommunityReportSchema>;
 

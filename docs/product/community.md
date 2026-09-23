@@ -51,12 +51,16 @@ l'application ne dépend d'elle.
    est unilatéral et OPAQUE : l'amitié et les demandes en attente sont
    retirées dans les deux sens, puis, pour chacun des deux, l'autre répond
    comme un compte qui n'existe pas (demande muette en `202`, code ami en
-   `404`, encouragement en `403`, absent des listes et du fil). Jamais de
-   « tu es bloqué ». Un encouragement se retire par son auteur OU son
-   destinataire. Un signalement (personne, ou encouragement précis) part vers
-   l'administration, qui le lit et le résout avec une permission dédiée ; la
-   personne signalée n'en sait rien, et retirer son message n'efface pas la
-   preuve : le texte est figé au moment du signalement.
+   `404`, encouragement en `403`, absent des listes et du fil). Un défi
+   entre amis lancé AVANT le blocage reste lisible des deux, avec son titre
+   et son classement (un résultat partagé ne se réécrit pas), mais le mot de
+   son créateur n'est plus servi à l'autre : un texte libre suit la règle du
+   fil. Jamais de « tu es bloqué ». Un encouragement se retire par son auteur OU son
+   destinataire. Un signalement (personne, encouragement précis, ou défi
+   entre amis qu'elle a lancé) part vers l'administration, qui le lit et le
+   résout avec une permission dédiée ; la personne signalée n'en sait rien,
+   et retirer son message n'efface pas la preuve : le texte est figé au
+   moment du signalement.
 
 ## Modèle de données (Prisma)
 
@@ -65,13 +69,13 @@ l'application ne dépend d'elle.
 | `Friendship` | UNE ligne par paire ; `PENDING` → `ACCEPTED`/`DECLINED`, direction conservée (qui a demandé). L'unicité porte sur la PAIRE ordonnée (`userLowId`, `userHighId`) : c'est la base qui l'impose, y compris quand les deux personnes se demandent en même temps. |
 | `Encouragement` | Mot d'un ami ; le nom de l'expéditeur est lu au moment de servir (nom COURANT, pas dénormalisé). |
 | `CommunityChallenge` | Défi collectif du MOIS (`month`, `YYYY-MM` UTC), `SPORT` ou `CULTURE`, avec sa `metric` (ce qu'il compte), son `target` et sa fenêtre `startsAt`/`endsAt` ; unique par `(slug, month)`, matérialisé paresseusement depuis le catalogue en code, jamais créé par un utilisateur. |
-| `FriendChallenge` | Défi lancé par quelqu'un à ses amis : `metric`, `target` facultatif, `durationDays` (3/7/30), `endsAt` CALCULÉ par le serveur, `closedAt` qui sert de clé d'idempotence au règlement. |
+| `FriendChallenge` | Défi lancé par quelqu'un à ses amis : `message?` (le mot du créateur, 280 points de code, `NULL` s'il n'a rien écrit ; son heure est `createdAt`), `metric`, `target` facultatif, `durationDays` (3/7/30), `endsAt` CALCULÉ par le serveur, `closedAt` qui sert de clé d'idempotence au règlement. |
 | `FriendChallengeMember` | Membre d'un défi entre amis : `status` (INVITED/ACCEPTED/DECLINED/LEFT), `contribution` dans l'unité de la métrique, `finalRank` figé à la clôture. |
 | `ChallengeParticipation` | Participation + `contribution` individuelle à l'objectif. Quitter DATE le départ (`leftAt`) sans effacer la ligne : la contribution déjà versée reste acquise au collectif, seule la présence s'arrête. |
 | `CommunityPreference` | `sharesProgress` (absence = partagé, défaut du modèle) et `joinsLeague` (défaut `false` : la ligue est un opt-in). |
 | `LeagueMembership` | Ma place dans une ligue pour UNE période : `(userId, periodKey)` où `periodKey` est la semaine ISO en UTC, plus `division`, `score` en POINTS, `finalRank` et `nextDivision` figés au règlement, `settledAt` qui en est la clé d'idempotence. |
 | `CommunityBlock` | Blocage unilatéral `(blockerId, blockedId)`, unique par paire orientée ; consulté dans les DEUX sens partout où deux personnes se rencontrent. |
-| `CommunityReport` | Signalement : `reporterId`, `reportedUserId`, `encouragementId?` (mis à `NULL` si le message est supprimé), `encouragementMessage?` (cliché du texte visé, pris dans la même transaction que le signalement : la preuve survit au retrait du message), `reason` (`HARCELEMENT`, `SPAM`, `CONTENU_INAPPROPRIE`, `AUTRE`), `details?` (500 caractères), `status` (`OPEN`, `RESOLVED`), `resolvedAt?`. |
+| `CommunityReport` | Signalement : `reporterId`, `reportedUserId`, `encouragementId?` (mis à `NULL` si le message est supprimé), `encouragementMessage?` (cliché du texte visé, pris dans la même transaction que le signalement : la preuve survit au retrait du message), `friendChallengeId?` (défi entre amis visé, exclusif avec `encouragementId`, mis à `NULL` si le défi disparaît), `friendChallengeTitle?` et `friendChallengeMessage?` (clichés du titre et du mot du créateur, pris dans la même transaction), `reason` (`HARCELEMENT`, `SPAM`, `CONTENU_INAPPROPRIE`, `AUTRE`), `details?` (500 caractères), `status` (`OPEN`, `RESOLVED`), `resolvedAt?`. |
 
 ## API (`/api/v1/community`)
 
@@ -89,8 +93,8 @@ l'application ne dépend d'elle.
 | POST | `/challenges/:id/join` | Rejoindre (idempotent) |
 | DELETE | `/challenges/:id/join` | Quitter (idempotent) : la contribution déjà versée reste au compteur collectif |
 | GET | `/friend-challenges` | Mes défis ENTRE AMIS (proposés et acceptés) ; un défi échu est réglé à la lecture |
-| POST | `/friend-challenges` | Défier ses amis (id appareil, création idempotente) — `403` si l'un des invités n'est pas un ami accepté ou qu'un blocage les sépare |
-| GET | `/friend-challenges/:id` | Un défi et son classement — `404` pour qui n'en est pas membre |
+| POST | `/friend-challenges` | Défier ses amis (id appareil, création idempotente) — `403` si l'un des invités n'est pas un ami accepté ou qu'un blocage les sépare ; `message` facultatif (280 caractères, comptés en points de code après découpage, `400` au-delà, blanc = absent), jamais réécrit par un rejeu |
+| GET | `/friend-challenges/:id` | Un défi et son classement — `404` pour qui n'en est pas membre. Même forme que la liste, la création et l'acceptation : `message` (ou `null`), `createdAt` (ISO UTC, l'heure du message), `durationDays`, et `isCreator` sur chaque membre ; `message` vaut aussi `null` quand un blocage, dans un sens ou l'autre, me sépare du créateur |
 | POST | `/friend-challenges/:id/accept` | Accepter : on entre au classement, à zéro |
 | DELETE | `/friend-challenges/:id/join` | Refuser ou quitter (`204`) : dans les deux cas, on SORT du classement |
 | GET | `/league` | Ma ligue de la semaine ; sans adhésion, classement VIDE |
@@ -101,26 +105,28 @@ l'application ne dépend d'elle.
 | DELETE | `/blocks/:userId` | Débloquer (idempotent, `204`) : ne rétablit rien |
 | GET | `/blocks` | Personnes que j'ai bloquées (`userId`, `displayName`, `blockedAt`) |
 | DELETE | `/encouragements/:id` | Retirer un encouragement (auteur OU destinataire) : `204` rejouable et opaque, un identifiant étranger n'a aucun effet |
-| POST | `/reports` | Signaler une personne, ou un encouragement qu'elle m'a envoyé (`201`) ; un signalement OUVERT identique n'est pas dupliqué (même accusé de réception) ; `404` si l'encouragement ne vient pas d'elle ou ne m'était pas adressé |
+| POST | `/reports` | Signaler une personne, un encouragement qu'elle m'a envoyé (`encouragementId`), ou un défi entre amis qu'elle a lancé (`friendChallengeId`) — `201` ; les deux cibles à la fois : `400` ; un signalement OUVERT identique n'est pas dupliqué (même accusé de réception) ; `404` si l'encouragement ne vient pas d'elle ou ne m'était pas adressé, et `404` « Défi introuvable. » si le défi n'existe pas, si je n'en suis pas membre (tout statut) ou s'il n'est pas d'elle |
 
 Côté back-office (`/api/v1/admin/community`, jeton admin, permission
 `community:moderate`, actions auditées) :
 
 | Méthode | Chemin | Rôle |
 | --- | --- | --- |
-| GET | `/reports?status=&limit=&cursor=` | Signalements, plus récents d'abord, avec les deux personnes (id, e-mail, nom) et le texte de l'encouragement visé, figé au moment du signalement (lisible même si l'auteur l'a retiré depuis) |
+| GET | `/reports?status=&limit=&cursor=` | Signalements, plus récents d'abord, avec les deux personnes (id, e-mail, nom) et le contenu visé, figé au moment du signalement : le texte de l'encouragement (lisible même si l'auteur l'a retiré depuis), ou le titre et le mot du défi (`friendChallengeTitle`, `friendChallengeMessage`) |
 | PATCH | `/reports/:id` | `{ status: "RESOLVED" }` résout (`resolvedAt` posé, audit `admin.community_report_resolved`) ; `{ status: "OPEN" }` rouvre (`admin.community_report_reopened`) ; rejouer le même statut ne réécrit rien |
 
 Ces deux routes ont leur écran : la page **Signalements** du back-office
 (`apps/admin`, `/reports`, entrée de navigation à côté d'Utilisateurs).
 Elle liste les signalements ouverts par défaut (résolus, ou tous, sur
 demande ; pages de 50 par curseur, « Charger la suite ») avec la date, le
-motif et ses précisions, l'auteur, la personne visée et le texte de
-l'encouragement visé. Ce texte est le cliché figé au signalement, donc trois
-états seulement : le message seul (il est encore dans le fil) ; le message
-suivi de « Message retiré depuis » (`encouragementId` remis à `NULL` par la
-suppression, la preuve reste) ; « La personne en général » quand le
-signalement ne vise aucun message. Un bouton résout chaque signalement, un
+motif et ses précisions, l'auteur, la personne visée et le contenu visé
+(colonne « Contenu visé »). Pour un encouragement, ce texte est le cliché
+figé au signalement, donc trois états seulement : le message seul (il est
+encore dans le fil) ; le message suivi de « Message retiré depuis »
+(`encouragementId` remis à `NULL` par la suppression, la preuve reste) ;
+« La personne en général » quand le signalement ne vise aucun message. Pour
+un défi entre amis : « Défi « titre » », puis le mot du créateur cité, ou
+« (sans message) » s'il n'en avait pas écrit. Un bouton résout chaque signalement, un
 autre le rouvre ; résoudre ne prévient personne et ne touche pas au compte
 visé : les deux personnes renvoient à leur fiche utilisateur, seul endroit
 où l'on suspend. Sans
@@ -146,7 +152,9 @@ Cas particuliers du service :
   par adresse, `429` au-delà), indépendant du plafond global.
 - **Blocages** : consultés par `requestFriendTo` (e-mail et code), l'aperçu
   de code, `encourage`, `listFriends` et le fil, toujours dans les deux sens
-  et toujours avec la réponse d'un compte inexistant. Bloquer supprime
+  et toujours avec la réponse d'un compte inexistant. Aussi par l'invitation
+  à un défi entre amis (`403` commun avec « pas ami ») et par sa LECTURE
+  (liste, détail, acceptation) : le mot du créateur n'est plus servi. Bloquer supprime
   l'amitié ou la demande en attente de la paire (`ACCEPTED`, `PENDING`) ;
   débloquer ne la recrée pas. Une ligne `DECLINED`, elle, reste en place : le
   blocage la rend inopérante, et son délai de 30 jours survit au déblocage.
@@ -290,6 +298,31 @@ simplement perdue (la barre est collective, pas comptable).
   donnée. Chaque carte, chaque ligne du classement, le blason et le titre
   sont leur propre nœud sémantique : fondue, la carte s'annonçait comme UN
   bouton dont le geste couvrait tout l'onglet.
+- **L'écran d'un défi entre amis** (`screens/friend_challenge_screen.dart`,
+  route `/community/defis/:id`, maquette du 23 septembre 2026). Chaque carte
+  de l'onglet Défis y mène ; il relit le défi par son identifiant (`GET
+  /community/friend-challenges/:id`, réservé aux membres). On y lit
+  l'en-tête (titre, « Léa te défie », participants, fin, compte à rebours),
+  une rangée de faits (objectif, durée, ce qui compte, « Amis uniquement »),
+  les participants avec leur statut (à l'origine, dans le défi, en attente —
+  des initiales, jamais des photos), le classement (avec l'objectif, « 2 / 5
+  séances » et une coche pour qui l'a atteint), la règle du jeu, puis le MOT
+  du créateur daté (« Aujourd'hui, 08h24 »). Une invitation se répond en bas
+  de l'écran (« Accepter le défi » / « Refuser ») ; une fois dedans, on
+  quitte depuis le menu « … », qui propose aussi « Signaler ce défi » (le
+  titre et le mot, sous le nom de leur auteur). Un défi refusé ou quitté
+  n'est plus lisible : l'écran dit « Ce défi n'est plus là » au lieu d'une
+  panne, et hors ligne, « Hors connexion ». Écarts VOULUS avec la maquette :
+  pas de « +150 points » ni de « validé si tout le monde atteint l'objectif »
+  (un défi entre amis classe, il ne rapporte rien — principe 5 ; la tuile et
+  le bloc disent la durée et la vraie règle du jeu), pas de bouton « Ajouter
+  des amis » (les invités se choisissent à la création), pas de « suivi en
+  temps réel » (le classement se relit, il n'est pas poussé). La photo
+  d'haltères de l'en-tête sera fondue dans le dégradé violet quand elle sera
+  fournie ; en attendant, une haltère en filigrane.
+- La feuille « Défier mes amis » porte un **mot facultatif** (280 caractères,
+  comptés en points de code comme le serveur : le champ tronque aux
+  caractères visibles, la feuille refuse au-delà avant l'aller-retour).
 - La feuille « Ajouter un ami » s'ouvre sur le navigateur RACINE : ouverte
   depuis un onglet, elle passerait sinon sous la bottom bar flottante.
 - Elle montre MON code (QR sur aplat blanc — un lecteur veut du contraste,
@@ -353,15 +386,40 @@ simplement perdue (la barre est collective, pas comptable).
   opaque), signalement avec doublon ouvert et garde-fous, blocage (amitié
   retirée, réponses opaques dans les deux sens, liste, déblocage), preuve
   d'un signalement lisible après le retrait du message par son auteur,
-  lecture et résolution auditée côté admin, `403` sans `community:moderate`.
+  lecture et résolution auditée côté admin, `403` sans `community:moderate`,
+  signalement d'un défi entre amis (invité qui a refusé → `201`, clichés du
+  titre et du mot en base, doublon ouvert rendu tel quel ; non-membre,
+  personne signalée qui n'est pas la créatrice et défi inconnu → le même
+  `404` « Défi introuvable. » ; encouragement ET défi → `400` ; clichés
+  encore lus par l'administration une fois le défi effacé) ;
+  `test/friend-challenges.e2e-spec.ts` : le mot du créateur découpé, rendu
+  avec `createdAt`, `durationDays` et `isCreator`, lu par l'invité au détail
+  et dans sa liste, inchangé par un rejeu, `404` pour un non-membre ;
+  281 caractères → `400`, 280 entourés de blancs → acceptés, blanc → `null` ;
+  280 émojis simples acceptés, 281 refusés, 141 ❤️ (282 points de code)
+  refusés ; un blocage dans un sens puis dans l'autre tait le mot à la
+  liste, au détail et à l'acceptation, sans retirer le défi ni empêcher son
+  signalement (cliché intact en base), et la créatrice lit toujours le sien.
 - Unitaires API, modération : garde-fous des blocages et signalements,
   doublon ouvert, nettoyage des précisions, cliché du texte signalé (lu et
   écrit dans une même transaction, `null` si le message ne vient pas de la
-  personne visée), audit de la résolution, pagination.
+  personne visée), clichés du défi signalé (une seule lecture : membre ET
+  créateur, sinon rien d'écrit), exclusivité encouragement/défi, audit de la
+  résolution, pagination. Défis entre amis (`friend-challenges.service.spec.ts`,
+  `friend-challenge.presenter.spec.ts`) : message découpé, blanc ou absent →
+  `null`, notification sans le message, rejeu qui rend le mot déjà écrit,
+  créateur marqué quel que soit le lecteur, mot masqué quand le CRÉATEUR est
+  séparé du lecteur par un blocage (et lui seul). DTO
+  (`community.dto.spec.ts`) : chaque longueur posée au DTO ET au contrat Zod,
+  qui doivent s'accorder (lettres, émojis simples, ❤️, sélecteurs, blancs,
+  `null`). Swagger (`community-dtos.openapi.spec.ts`, document produit comme
+  dans `main.ts`) : `message`, `encouragementId` et `friendChallengeId` sont
+  des chaînes nullables, pas des objets.
 - Vitest back-office (`apps/admin/src/app/reports/page.test.tsx`,
   `apps/admin/src/lib/admin-community-api.test.ts`) : liste des ouverts par défaut
-  avec motif, personnes liées à leur fiche et texte visé (message vivant,
-  cliché d'un message retiré depuis, signalement visant la personne) ;
+  avec motif, personnes liées à leur fiche et contenu visé (message vivant,
+  cliché d'un message retiré depuis, signalement visant la personne, défi
+  avec son mot cité ou « (sans message) ») ;
   résolution puis rechargement ; réouverture ; filtres Résolus/Tous ; pagination par
   curseur ; 403 distingué d'une panne, à la lecture comme à la résolution ;
   redirection sans jeton ; URL, corps du PATCH et rejet d'une réponse hors
@@ -600,6 +658,73 @@ Les garde-fous, chacun repris d'une règle déjà écrite :
   par l'appelant est un défi éternel en une requête ;
 - **`CHALLENGE_INVITES`** est une famille de notification à part : quelqu'un
   peut vouloir des encouragements sans vouloir être défié.
+
+### Le mot du créateur (23 septembre 2026)
+
+Une maquette de l'écran de détail montrait un « Message de Chloé » daté. Le
+propriétaire du produit a tranché : **un message facultatif à la création,
+stocké côté serveur, affiché avec son heure et signalable**. Aucune
+récompense ni point n'y est attaché (principe 5, inchangé), et on n'ajoute
+toujours personne après la création.
+
+- **Facultatif**, parce qu'un défi se comprend sans lui : le titre, la
+  métrique et la durée disent déjà tout ce qui compte. Un champ obligatoire
+  produirait des « . » et des « go » pour franchir la validation.
+- **280 caractères au plus, mesurés APRÈS découpage** des blancs autour
+  (`FRIEND_CHALLENGE_MESSAGE_MAX_LENGTH`, contrat partagé, réutilisé par le
+  DTO) : la longueur d'un encouragement, dont c'est la version adressée à
+  tous les invités d'un coup. Au-delà, `400`. Vide après découpage, il vaut
+  « pas de message » et s'écrit `NULL`, jamais une chaîne vide (une bulle
+  vide à l'écran).
+- **Un « caractère » est un POINT DE CODE Unicode**, compté par la même
+  fonction des deux côtés (`codePointLength` du contrat, `@MaxCodePoints` au
+  DTO). Un émoji simple vaut un ; un émoji composé en vaut plusieurs (❤️ et
+  son sélecteur de variante : deux ; un drapeau : deux ; une famille : cinq
+  et plus). Ni les unités UTF-16 (`z.string().max()` refusait 141 émojis),
+  ni le compte de `@MaxLength` (qui efface les sélecteurs de variante : la
+  base stockait jusqu'à trois fois la longueur annoncée), ni les graphèmes
+  (sans borne de stockage : un seul peut empiler des centaines de
+  diacritiques). C'est aussi l'unité de `maxLength` en JSON Schema, donc ce
+  que Swagger annonce. Un client qui borne la saisie compte de même
+  (`runes` en Dart), sans quoi il laisse taper ce que l'API refusera.
+- **Écrit une fois.** Le rejeu idempotent de la création (même `id`) rend
+  le défi tel qu'il est en base, message compris : il n'existe aucune route
+  pour le modifier. Son heure est donc `createdAt`, rendue en ISO UTC ; le
+  client la localise.
+- **Visible des seuls membres**, quel que soit leur statut (invité compris :
+  c'est en lisant le défi qu'on décide de l'accepter). Pour tous les autres,
+  le défi entier est un `404`, message compris.
+- **Masqué après un blocage.** Si un blocage sépare le lecteur du créateur, dans
+  un sens ou dans l'autre, la liste, le détail et l'acceptation rendent
+  `message: null` : bloquer est LE geste de protection, et un mot blessant
+  de 280 caractères ne doit pas y survivre alors que le fil tait déjà les
+  encouragements de la même personne. Le défi, lui, reste lisible avec son
+  titre, son créateur et son classement : c'est un résultat partagé, et le
+  réécrire (retirer quelqu'un du classement) fausserait les rangs des
+  autres. Le titre reste aussi : il nomme le défi, 80 caractères, et il a
+  déjà été porté par la notification d'invitation. Le signalement reste
+  possible : son cliché est lu en base, pas dans la réponse. Débloquer rend
+  le mot.
+- **Jamais dans la notification push.** L'invitation dit « Chloé te défie :
+  <titre> », sans le mot. Le titre est borné à 80 caractères ; le mot, trois
+  fois plus long et plus personnel, s'afficherait sur un écran verrouillé,
+  lisible par-dessus l'épaule, et hors de tout geste de protection : c'est
+  dans le défi qu'il se lit, là où l'on peut le signaler.
+- **Signalable, avec cliché.** `POST /community/reports` accepte
+  `friendChallengeId` (exclusif avec `encouragementId`, `400` sinon). Le
+  signalant doit être membre du défi, **quel que soit son statut** — il a pu
+  lire le mot avant de refuser —, et la personne signalée doit en être la
+  **créatrice** : le titre et le mot sont les siens. Toute autre combinaison
+  (défi inconnu, non-membre, autre personne visée) répond le MÊME `404`
+  « Défi introuvable. », sans oracle. Le titre et le mot sont figés dans
+  `friendChallengeTitle` et `friendChallengeMessage` par la transaction qui
+  crée le signalement, comme le texte d'un encouragement ; le doublon ouvert
+  (même signalant, même personne, même défi) rend le même accusé.
+
+La réponse d'un défi (liste, détail, création, acceptation) porte en
+conséquence `message` (ou `null` : pas de mot, ou mot masqué par un blocage),
+`createdAt`, `durationDays` et, sur chaque membre, `isCreator` (vrai pour le
+créateur, membre `ACCEPTED` d'office).
 
 ### La clôture, sans cron — mais avec une écriture
 

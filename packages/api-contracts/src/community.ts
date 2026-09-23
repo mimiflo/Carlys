@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { codePointLength } from './text';
 
 /**
  * Contrats de la communauté (/api/v1/community).
@@ -131,25 +132,46 @@ export type CommunityReportStatus = z.infer<typeof communityReportStatusSchema>;
 /** Longueur maximale des précisions d'un signalement. */
 export const COMMUNITY_REPORT_DETAILS_MAX_LENGTH = 500;
 
-/** POST /community/reports — signaler une personne, ou un encouragement précis. */
-export const createCommunityReportSchema = z.object({
-  reportedUserId: z.string().uuid(),
-  /** Encouragement visé : doit avoir été envoyé PAR la personne signalée AU signalant. */
-  encouragementId: z.string().uuid().optional(),
-  reason: communityReportReasonSchema,
-  details: z.string().max(COMMUNITY_REPORT_DETAILS_MAX_LENGTH).optional(),
-});
+/**
+ * POST /community/reports — signaler une personne, un encouragement précis
+ * qu'elle m'a envoyé, OU un défi entre amis qu'elle a créé (son titre et son
+ * message). Viser les deux à la fois est refusé (`400`).
+ */
+export const createCommunityReportSchema = z
+  .object({
+    reportedUserId: z.string().uuid(),
+    /** Encouragement visé : doit avoir été envoyé PAR la personne signalée AU signalant. */
+    encouragementId: z.string().uuid().nullable().optional(),
+    /**
+     * Défi entre amis visé : le signalant doit en être membre (quel que soit
+     * son statut, il a pu lire le message avant de refuser) et la personne
+     * signalée doit en être la CRÉATRICE. Sinon `404`, sans dire lequel.
+     */
+    friendChallengeId: z.string().uuid().nullable().optional(),
+    reason: communityReportReasonSchema,
+    details: z.string().max(COMMUNITY_REPORT_DETAILS_MAX_LENGTH).optional(),
+  })
+  // `null` et absent disent la même chose : pas de cible de ce type.
+  .refine(
+    (body) => (body.encouragementId ?? null) === null || (body.friendChallengeId ?? null) === null,
+    {
+      message: 'Un encouragement OU un défi, pas les deux.',
+      path: ['friendChallengeId'],
+    },
+  );
 export type CreateCommunityReport = z.infer<typeof createCommunityReportSchema>;
 
 /**
  * Signalement tel que le voit son AUTEUR : l'accusé de réception. Un
- * signalement OUVERT identique (même personne, même encouragement) n'est pas
- * dupliqué : le rejeu rend le même.
+ * signalement OUVERT identique (même personne, même encouragement ou même
+ * défi) n'est pas dupliqué : le rejeu rend le même.
  */
 export const communityReportSchema = z.object({
   id: z.string(),
   reportedUserId: z.string(),
   encouragementId: z.string().nullable(),
+  /** Défi entre amis visé, `null` si le signalement n'en vise aucun. */
+  friendChallengeId: z.string().nullable(),
   reason: communityReportReasonSchema,
   details: z.string().nullable(),
   status: communityReportStatusSchema,
@@ -198,6 +220,17 @@ export const FRIEND_CHALLENGE_MAX_INVITES = 9;
  */
 export const FRIEND_CHALLENGE_MAX_OPEN_PER_CREATOR = 5;
 
+/**
+ * Longueur maximale du mot du créateur, mesurée APRÈS découpage des blancs
+ * autour. La même que celle d'un encouragement : c'en est un, adressé à tous
+ * les invités d'un coup.
+ *
+ * Comptée en POINTS DE CODE (`codePointLength`), des deux côtés : ce contrat
+ * et le DTO de l'API (`@MaxCodePoints`). Un émoji simple vaut un, un émoji
+ * composé (❤️, drapeau, teinte de peau) plusieurs.
+ */
+export const FRIEND_CHALLENGE_MESSAGE_MAX_LENGTH = 280;
+
 export const friendChallengeStatusSchema = z.enum(['OPEN', 'CLOSED', 'CANCELLED']);
 export type FriendChallengeStatus = z.infer<typeof friendChallengeStatusSchema>;
 
@@ -221,17 +254,30 @@ export const friendChallengeMemberSchema = z.object({
    */
   rank: z.number().nullable(),
   isMe: z.boolean(),
+  /** Vrai pour la personne qui a lancé le défi (membre ACCEPTÉ d'office). */
+  isCreator: z.boolean(),
 });
 export type FriendChallengeMember = z.infer<typeof friendChallengeMemberSchema>;
 
 export const friendChallengeSchema = z.object({
   id: z.string(),
   title: z.string(),
+  /**
+   * Le mot du créateur à ses invités, `null` s'il n'a rien écrit. Lu par les
+   * seuls membres (le défi est `404` pour les autres), jamais porté par la
+   * notification d'invitation. `null` aussi quand un blocage, dans un sens ou
+   * l'autre, sépare le lecteur du créateur : le défi reste, son mot est masqué.
+   */
+  message: z.string().nullable(),
   metric: challengeMetricSchema,
   unit: z.string(),
   /** Objectif commun, ou `null` : c'est alors « qui en fait le plus ». */
   target: z.number().nullable(),
   status: friendChallengeStatusSchema,
+  /** 3, 7 ou 30 : la durée choisie à la création. */
+  durationDays: z.number().int(),
+  /** Création du défi (ISO UTC) — c'est aussi l'heure du message. */
+  createdAt: z.string(),
   startsAt: z.string(),
   endsAt: z.string(),
   creatorDisplayName: z.string(),
@@ -255,6 +301,21 @@ export const createFriendChallengeRequestSchema = z.object({
   metric: challengeMetricSchema,
   target: z.number().int().positive().max(10_000_000).nullable().optional(),
   durationDays: z.union([z.literal(3), z.literal(7), z.literal(30)]),
+  /**
+   * Le mot du créateur, facultatif. Découpé des blancs autour AVANT d'être
+   * mesuré ; vide après découpage, il vaut « pas de message » (`null` en
+   * base). Un rejeu de la création ne le modifie pas.
+   */
+  message: z
+    .string()
+    .trim()
+    // Pas `.max()`, qui compte les unités UTF-16 : un émoji y vaut deux, et
+    // le contrat refusait ce que l'API accepte. Voir `codePointLength`.
+    .refine((text) => codePointLength(text) <= FRIEND_CHALLENGE_MESSAGE_MAX_LENGTH, {
+      message: `Ton mot tient en ${FRIEND_CHALLENGE_MESSAGE_MAX_LENGTH} caractères au plus.`,
+    })
+    .nullable()
+    .optional(),
   /** Amis invités — au moins un : un défi contre personne n'en est pas un. */
   invitedUserIds: z.array(z.string().uuid()).min(1).max(FRIEND_CHALLENGE_MAX_INVITES),
 });

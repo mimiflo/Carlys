@@ -31,10 +31,18 @@ export type CommunityReportRow = Prisma.CommunityReportGetPayload<{
 export interface CreateReportInput {
   reporterId: string;
   reportedUserId: string;
+  /** Exclusif avec `friendChallengeId` : le service refuse les deux ensemble. */
   encouragementId: string | null;
+  friendChallengeId: string | null;
   reason: CommunityReportReason;
   details: string | null;
 }
+
+/** Les CLICHÉS figés à la création d'un signalement, `null` s'ils ne s'appliquent pas. */
+type ReportSnapshot = Pick<
+  Prisma.CommunityReportUncheckedCreateInput,
+  'encouragementMessage' | 'friendChallengeTitle' | 'friendChallengeMessage'
+>;
 
 /** Blocages, suppression d'encouragements et signalements. */
 @Injectable()
@@ -126,47 +134,97 @@ export class CommunityModerationRepository {
 
   // ── Signalements ────────────────────────────────────────────────────────
 
-  /** Signalement OUVERT du même auteur sur la même cible (et le même message). */
+  /**
+   * Signalement OUVERT du même auteur sur la même cible : même personne, et
+   * même encouragement OU même défi (`null` compris — un signalement de la
+   * personne en général n'est pas celui d'un de ses messages).
+   */
   findOpenReport(
     reporterId: string,
     reportedUserId: string,
-    encouragementId: string | null,
+    target: Pick<CreateReportInput, 'encouragementId' | 'friendChallengeId'>,
   ): Promise<CommunityReportRow | null> {
     return this.prisma.communityReport.findFirst({
-      where: { reporterId, reportedUserId, encouragementId, status: CommunityReportStatus.OPEN },
+      where: {
+        reporterId,
+        reportedUserId,
+        encouragementId: target.encouragementId,
+        friendChallengeId: target.friendChallengeId,
+        status: CommunityReportStatus.OPEN,
+      },
       include: reportInclude,
     });
   }
 
   /**
-   * Crée le signalement en FIGEANT le texte de l'encouragement visé, lu dans
-   * la même transaction : l'auteur pourra retirer son message, la preuve
-   * restera lisible par l'administration. Seul ce que le signalant a REÇU
-   * de la personne signalée peut être visé ; si l'encouragement n'est pas
-   * (ou plus) ce message-là, rien n'est écrit et `null` est rendu.
+   * Crée le signalement en FIGEANT le texte visé, lu dans la même
+   * transaction : l'auteur pourra retirer son message, la preuve restera
+   * lisible par l'administration. Si la cible n'est pas signalable par cette
+   * personne (voir `snapshotOf`), rien n'est écrit et `null` est rendu.
    */
   createReport(input: CreateReportInput): Promise<CommunityReportRow | null> {
     return this.prisma.$transaction(async (tx) => {
-      let encouragementMessage: string | null = null;
-      if (input.encouragementId !== null) {
-        const encouragement = await tx.encouragement.findFirst({
-          where: {
-            id: input.encouragementId,
-            senderId: input.reportedUserId,
-            recipientId: input.reporterId,
-          },
-          select: { message: true },
-        });
-        if (encouragement === null) {
-          return null;
-        }
-        encouragementMessage = encouragement.message;
+      const snapshot = await this.snapshotOf(tx, input);
+      if (snapshot === null) {
+        return null;
       }
       return tx.communityReport.create({
-        data: { ...input, encouragementMessage },
+        data: { ...input, ...snapshot },
         include: reportInclude,
       });
     });
+  }
+
+  /**
+   * Les clichés à figer, lus dans la transaction du signalement — ou `null`
+   * si la cible n'est pas signalable par cette personne :
+   *  - un encouragement ne se signale que s'il a été REÇU de la personne
+   *    signalée ;
+   *  - un défi, que si le signalant en est MEMBRE (quel que soit son statut :
+   *    il a pu lire le message avant de refuser) et que la personne signalée
+   *    en est la CRÉATRICE — le titre et le message sont les siens.
+   * Un seul `null` pour tous les refus : rien ne distingue « ce défi
+   * n'existe pas » de « tu n'en es pas » ni de « il n'est pas d'elle ».
+   */
+  private async snapshotOf(
+    tx: Prisma.TransactionClient,
+    input: CreateReportInput,
+  ): Promise<ReportSnapshot | null> {
+    const snapshot: ReportSnapshot = {
+      encouragementMessage: null,
+      friendChallengeTitle: null,
+      friendChallengeMessage: null,
+    };
+    if (input.encouragementId !== null) {
+      const encouragement = await tx.encouragement.findFirst({
+        where: {
+          id: input.encouragementId,
+          senderId: input.reportedUserId,
+          recipientId: input.reporterId,
+        },
+        select: { message: true },
+      });
+      if (encouragement === null) {
+        return null;
+      }
+      snapshot.encouragementMessage = encouragement.message;
+    }
+    if (input.friendChallengeId !== null) {
+      const challenge = await tx.friendChallenge.findFirst({
+        where: {
+          id: input.friendChallengeId,
+          creatorId: input.reportedUserId,
+          members: { some: { userId: input.reporterId } },
+        },
+        select: { title: true, message: true },
+      });
+      if (challenge === null) {
+        return null;
+      }
+      snapshot.friendChallengeTitle = challenge.title;
+      snapshot.friendChallengeMessage = challenge.message;
+    }
+    return snapshot;
   }
 
   findReportById(id: string): Promise<CommunityReportRow | null> {

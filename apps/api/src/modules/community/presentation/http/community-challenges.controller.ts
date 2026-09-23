@@ -50,7 +50,10 @@ export class CommunityChallengesController {
     summary: 'Défier ses amis (id appareil, création idempotente)',
     description:
       'On n’invite que des amis acceptés et non bloqués — 403 sans dire ' +
-      'lequel des deux. La fin du défi est CALCULÉE depuis la durée.',
+      'lequel des deux. La fin du défi est CALCULÉE depuis la durée. Le ' +
+      '`message` facultatif (280 points de code après découpage, blanc = absent) ' +
+      'est rendu avec `createdAt`, son heure ; il ne part jamais dans la ' +
+      'notification, et un rejeu ne le réécrit pas.',
   })
   createFriendChallenge(
     @CurrentUser() user: AuthenticatedPrincipal,
@@ -64,7 +67,15 @@ export class CommunityChallengesController {
   }
 
   @Get('friend-challenges/:id')
-  @ApiOperation({ summary: 'Un défi et son classement' })
+  @ApiOperation({
+    summary: 'Un défi et son classement',
+    description:
+      'Même forme que la liste et l’acceptation : `message` (ou null), ' +
+      '`createdAt` (ISO UTC, l’heure du message), `durationDays`, et ' +
+      '`isCreator` sur chaque membre. 404 pour qui n’en est pas membre. ' +
+      '`message` vaut null quand un blocage, dans un sens ou l’autre, sépare ' +
+      'le lecteur du créateur : le défi reste lisible, son mot est masqué.',
+  })
   friendChallenge(
     @CurrentUser() user: AuthenticatedPrincipal,
     @Param('id', new ParseUUIDPipe()) id: string,

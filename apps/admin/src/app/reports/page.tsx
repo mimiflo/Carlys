@@ -24,8 +24,8 @@ const EMPTY_MESSAGES: Record<StatusFilter, string> = {
 
 /**
  * Signalements de la communauté : ce que les membres remontent depuis l'app
- * (une personne, ou un encouragement précis), lu ici avec les deux comptes
- * et le texte visé, du plus récent au plus ancien.
+ * (une personne, un encouragement précis ou un défi entre amis), lu ici avec
+ * les deux comptes et le contenu visé, du plus récent au plus ancien.
  *
  * La pagination passe par `useInfiniteQuery` plutôt que par l'accumulation
  * manuelle du journal d'audit : ici une résolution invalide la liste, et le
@@ -86,7 +86,7 @@ export default function ReportsPage() {
                 <th className="px-4 py-3">Motif</th>
                 <th className="px-4 py-3">Auteur</th>
                 <th className="px-4 py-3">Personne visée</th>
-                <th className="px-4 py-3">Encouragement visé</th>
+                <th className="px-4 py-3">Contenu visé</th>
                 <th className="px-4 py-3">Traitement</th>
               </tr>
             </thead>

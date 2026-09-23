@@ -1,4 +1,8 @@
-import { FRIEND_CHALLENGE_DURATIONS, FRIEND_CHALLENGE_MAX_INVITES } from '@carlys/api-contracts';
+import {
+  FRIEND_CHALLENGE_DURATIONS,
+  FRIEND_CHALLENGE_MAX_INVITES,
+  FRIEND_CHALLENGE_MESSAGE_MAX_LENGTH,
+} from '@carlys/api-contracts';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ChallengeMetric } from '@prisma/client';
 import { Transform } from 'class-transformer';
@@ -22,6 +26,7 @@ import {
 } from 'class-validator';
 import { trimmed } from '../../../../../common/transforms/trimmed';
 import { IsRecentDayKey } from '../../../../../common/validators/is-recent-day-key';
+import { MaxCodePoints } from '../../../../../common/validators/max-code-points';
 
 export class FriendRequestDto {
   @ApiPropertyOptional({
@@ -140,6 +145,25 @@ export class CreateFriendChallengeDto {
   @ApiProperty({ enum: FRIEND_CHALLENGE_DURATIONS })
   @IsIn([...FRIEND_CHALLENGE_DURATIONS])
   durationDays!: number;
+
+  // `type: String` explicite : sous `strictNullChecks`, TypeScript émet
+  // `design:type Object` pour `string | null`, et Swagger annonçait un objet.
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    maxLength: FRIEND_CHALLENGE_MESSAGE_MAX_LENGTH,
+    description:
+      'Le mot du créateur à ses invités, facultatif. Découpé des blancs ' +
+      'autour AVANT d’être mesuré, puis compté en points de code (un émoji ' +
+      'simple vaut un, un émoji composé plusieurs) ; vide après découpage, ' +
+      'il vaut « pas de message ». Visible des seuls membres, jamais dans la ' +
+      'notification. Un rejeu de la création (même id) ne le modifie pas.',
+  })
+  @IsOptional()
+  @Transform(trimmed)
+  @IsString()
+  @MaxCodePoints(FRIEND_CHALLENGE_MESSAGE_MAX_LENGTH)
+  message?: string | null;
 
   @ApiProperty({ type: [String], maxItems: FRIEND_CHALLENGE_MAX_INVITES })
   @IsArray()

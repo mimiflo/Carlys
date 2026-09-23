@@ -77,8 +77,10 @@ export class CommunityModerationController {
   @HttpCode(201)
   @ApiOperation({
     summary:
-      'Signaler une personne, ou un encouragement précis qu’elle m’a envoyé. ' +
-      'Un signalement ouvert identique n’est pas dupliqué (même accusé de réception).',
+      'Signaler une personne, un encouragement précis qu’elle m’a envoyé, ou ' +
+      'un défi entre amis qu’elle a lancé et dont je suis membre (jamais les ' +
+      'deux : 400). Un signalement ouvert identique n’est pas dupliqué (même ' +
+      'accusé de réception).',
   })
   report(
     @CurrentUser() user: AuthenticatedPrincipal,
