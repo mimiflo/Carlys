@@ -97,21 +97,49 @@ Le sommet au fanion, sous une lune violette, fourni par le produit le
 23 septembre 2026 (`assets/illustrations/sommet.webp`). Il remplace un
 paysage peint à la main qui tenait la place en attendant l'image.
 
-- **Fondue par la gauche, comme sur la maquette.** L'image occupe les 62 %
-  droits de la bannière ; son tiers gauche passe de transparent à plein.
-  Le fondu agit sur l'ALPHA de l'image (`ShaderMask`, `BlendMode.dstIn`),
-  pas par un voile posé dessus : c'est le fond de la carte qui apparaît, et
-  aucune teinte nouvelle n'entre dans l'écran. Même technique que la
-  photographie de la page de bienvenue.
-- **Le texte reste lisible, et c'est mesuré.** Contraste le plus faible sur
-  le fond réel, reconstitué à partir de l'image, de son cadrage et du
-  fondu : titre 16,2:1, sous-titre 5,97:1, chevron 5,94:1 (seuil AA 4,5:1).
-  La lune commence là où le fondu est déjà plein : elle se lit entière,
-  à droite du texte.
-- **19 Ko, pas 1,7 Mo.** Le PNG fourni est converti en WebP 1280 × 720,
-  qualité 92 (écart moyen de 0,76 sur 255 par pixel) : 1280 points couvrent
-  la bannière d'une tablette en densité 2. Un test plafonne le fichier à
-  64 Ko — de la marge pour une retouche, pas pour le retour du PNG.
+**Trois couches**, dans cet ordre : l'illustration ; un `Material`
+transparent qui porte l'encre de l'appui ; le texte et le chevron. Posée
+sur la carte elle-même, l'encre passait SOUS l'image, et la moitié droite
+de la porte — chevron compris — ne réagissait plus au doigt.
+
+- **Fondue par la gauche, comme sur la maquette.** L'image occupe la droite
+  de la bannière (62 % sur un téléphone) ; ses 30 % gauches passent de
+  transparent à plein. Le fondu agit sur l'ALPHA de l'image (`ShaderMask`,
+  `BlendMode.dstIn`), pas par un voile posé dessus : c'est le fond de la
+  carte qui apparaît, et aucune teinte nouvelle n'entre dans l'écran. Même
+  technique que la photographie de la page de bienvenue. La lune commence à
+  29,4 % de l'image : le fondu s'achève sur son bord sans entamer le disque.
+- **Le cadrage ne bouge jamais.** La largeur de l'image se règle sur la
+  hauteur de la maquette (96 points) et plafonne à un rapport 2,4:1, celui
+  du téléphone. Sur tablette ou en paysage, une boîte élargie avec la carte
+  faisait agrandir l'image par `BoxFit.cover`, qui en rognait le haut — le
+  fanion avec. Et quand un texte agrandi fait grandir la bannière, l'image
+  garde sa taille, centrée, et se fond aussi en haut et en bas : agrandie
+  pour couvrir la hauteur, elle débordait sur les côtés, et la lune glissait
+  sous le texte ou sous le chevron.
+- **Le texte s'arrête avant la lune, à toute taille.** Sa largeur est bornée
+  à 8 points avant l'endroit où l'image devient pleine : agrandi, il passe à
+  la ligne au lieu de glisser dessus. À la taille normale, il tient dans la
+  borne et rien ne change. La coupure du sous-titre n'est pas forcée : une
+  espace insécable soude « de nouveaux », et la phrase se coupe d'elle-même
+  devant « de », comme sur la maquette, sans jamais finir une ligne sur un
+  « de ».
+- **Lisible, et mesuré à 17 réglages.** Contraste relevé sous chaque pixel
+  de lettre, sur le fond réel — vraies polices, image décodée — de 360 à
+  800 points de large et de la taille normale au texte doublé (Android
+  « la plus grande », iPhone XXXL compris) : aucun pixel sous le seuil AA
+  de 4,5:1. Au plus bas : titre 15,8:1, sous-titre 5,33:1, chevron 6,11:1.
+  Une première version ne tenait qu'à la taille normale : dès 1,3×, le
+  sous-titre passait sur la lune et tombait à 2:1. C'est la relecture qui
+  l'a trouvé ; les tests gardent désormais la géométrie (le texte reste à
+  au moins 6 points du bord de la lune, recalculé depuis le cadrage réel de
+  l'image) à sept tailles d'écran et de texte.
+- **19 Ko, pas 1,7 Mo.** Le PNG fourni est converti en WebP 1280 × 720
+  pixels, qualité 92 (écart moyen de 0,76 sur 255 par pixel). La boîte de
+  l'image ne dépasse jamais 230 points de large : à la hauteur de
+  référence, 1280 pixels la couvrent jusqu'en densité 4 sans
+  agrandissement. Un test décode le fichier et plafonne son poids à 64 Ko
+  — de la marge pour une retouche, pas pour le retour du PNG.
 - **Muette pour le lecteur d'écran.** C'est un décor : la porte s'annonce
   par son texte. Une image manquante laisse la carte nue et se dit dans les
   journaux.

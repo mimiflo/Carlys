@@ -821,8 +821,15 @@ tests.
       l'icône. Voir `docs/product/profile.md`.
       **L'illustration de « Toujours plus loin »**, fournie ensuite par le
       produit, remplace le paysage peint : fondue par la gauche sur son
-      alpha, 19 Ko en WebP au lieu de 1,7 Mo, contraste du texte mesuré sur
-      le fond réel (5,94:1 au plus bas).
+      alpha, 19 Ko en WebP au lieu de 1,7 Mo. Une relecture adverse (quatre
+      angles, chaque constat contre-vérifié : 13 confirmés, 4 réfutés) a
+      montré que sa première version ne tenait qu'à la taille de texte
+      normale — dès 1,3×, le sous-titre passait sur la lune à 2:1 —, que le
+      fanion sortait du cadre sur tablette, et que l'encre de l'appui passait
+      sous l'image. Corrigé : cadrage fixe, texte borné avant la lune, encre
+      sur une couche transparente au-dessus de l'image. Contraste mesuré
+      sous chaque pixel de lettre à 17 réglages, de 360 à 800 points et
+      jusqu'au texte doublé : aucun sous le seuil AA (5,33:1 au plus bas).
 - [ ] Écrans suivants : à recevoir du produit.
 
 ---
