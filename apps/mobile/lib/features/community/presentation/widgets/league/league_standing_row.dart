@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter/material.dart';
 
 import '../../../../../core/utilities/formatting.dart';
@@ -5,6 +7,7 @@ import '../../../../../design_system/design_system.dart';
 import '../../../domain/entities/league.dart';
 import 'league_crown.dart';
 import 'league_metal.dart';
+import 'league_wording.dart';
 
 /// Une ligne du classement : le rang, la couronne du podium, l'initiale, le
 /// prénom, les points.
@@ -21,14 +24,26 @@ class LeagueStandingRow extends StatelessWidget {
   static const double _crownSlot = 24;
   static const double _avatarSize = 36;
 
+  /// Tout ce qui ne plie pas dans la ligne : rang, couronne, initiale et
+  /// leurs espaces.
+  static const double _fixedWidth =
+      rankSize + _crownSlot + _avatarSize + 3 * AppSpacing.sm + AppSpacing.xs;
+
+  /// Ce qu'on garde au prénom avant de réduire les points.
+  static const double _minNameWidth = 48;
+
   @override
   Widget build(BuildContext context) {
     final me = standing.isMe;
     final name = me ? 'Toi' : standing.displayName;
-    final crown = LeagueMetal.ofPodiumRank(standing.rank);
+    // Pas de couronne sans points : un lundi, tout le monde est premier ex
+    // æquo à zéro, et la couronne d'or ne récompenserait rien.
+    final crown = standing.score > 0
+        ? LeagueMetal.ofPodiumRank(standing.rank)
+        : null;
     final points = '${formatThousands(standing.score)} pts';
 
-    final row = Row(
+    Widget rowFor(double pointsMaxWidth) => Row(
       children: [
         Container(
           width: rankSize,
@@ -70,10 +85,20 @@ class LeagueStandingRow extends StatelessWidget {
           ),
         ),
         const SizedBox(width: AppSpacing.xs),
-        Text(
-          points,
-          style: AppTypography.subheading.copyWith(
-            color: me ? AppColors.primaryLight : AppColors.darkTextPrimary,
+        // Les points gardent leur taille tant qu'il reste au prénom de quoi
+        // se lire ; au-delà (petit écran, grand texte), ils se réduisent
+        // au lieu de faire déborder la ligne.
+        ConstrainedBox(
+          constraints: BoxConstraints(maxWidth: pointsMaxWidth),
+          child: FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerRight,
+            child: Text(
+              points,
+              style: AppTypography.subheading.copyWith(
+                color: me ? AppColors.primaryLight : AppColors.darkTextPrimary,
+              ),
+            ),
           ),
         ),
       ],
@@ -84,9 +109,9 @@ class LeagueStandingRow extends StatelessWidget {
     return Semantics(
       container: true,
       label: [
-        '${standing.rank}e',
+        leaguePlace(standing.rank),
         name,
-        '${formatThousands(standing.score)} points',
+        leaguePoints(standing.score),
       ].join(', '),
       excludeSemantics: true,
       child: Container(
@@ -103,7 +128,11 @@ class LeagueStandingRow extends StatelessWidget {
                 ),
               )
             : null,
-        child: row,
+        child: LayoutBuilder(
+          builder: (context, constraints) => rowFor(
+            math.max(0, constraints.maxWidth - _fixedWidth - _minNameWidth),
+          ),
+        ),
       ),
     );
   }

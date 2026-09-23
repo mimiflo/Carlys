@@ -32,6 +32,7 @@ import 'package:carlys_mobile/features/coaching/presentation/controllers/coach_c
 import 'package:carlys_mobile/features/coaching/presentation/screens/coach_screen.dart';
 import 'package:carlys_mobile/features/community/data/repositories/community_repository_impl.dart';
 import 'package:carlys_mobile/features/community/presentation/screens/community_screen.dart';
+import 'package:carlys_mobile/features/community/presentation/screens/friend_challenge_screen.dart';
 import 'package:carlys_mobile/features/dashboard/presentation/screens/home_screen.dart';
 import 'package:carlys_mobile/features/dashboard/presentation/widgets/title_summary.dart';
 import 'package:carlys_mobile/features/dashboard/presentation/widgets/today_workout_card.dart';
@@ -1357,6 +1358,37 @@ void main() {
       '35-communaute-defis-amis',
       shows: find.text('DÉFIS ENTRE AMIS'),
     );
+
+    // L'écran d'UN défi entre amis, d'après la maquette : l'invitation de
+    // Léa, son message, les participants et la règle du jeu.
+    Finder challengePage() => find
+        .descendant(
+          of: find.byType(FriendChallengeScreen),
+          matching: find.byType(Scrollable),
+        )
+        .first;
+    await tester.tap(find.text('Cinq séances cette semaine'));
+    await settle(tester);
+    await capture(
+      tester,
+      '35b-defi-entre-amis',
+      shows: find.text('Défi entre amis'),
+    );
+    await tester.scrollUntilVisible(
+      find.text('Accepter le défi'),
+      240,
+      scrollable: challengePage(),
+    );
+    await settle(tester);
+    await capture(
+      tester,
+      '35c-defi-entre-amis-bas',
+      shows: find.text('Accepter le défi'),
+    );
+    tester.state<ScrollableState>(challengePage()).position.jumpTo(0);
+    await settle(tester);
+    await tester.tap(find.byType(AppBackButton));
+    await settle(tester);
 
     // L'onglet LIGUE, d'après la maquette : la division et celle qui vient,
     // l'écart avec la zone de montée, le barème, le podium et MA ligne.

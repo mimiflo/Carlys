@@ -5,6 +5,7 @@ import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
 import 'package:carlys_mobile/features/academy/data/answered_lessons_store.dart';
 import 'package:carlys_mobile/features/academy/presentation/controllers/academy_controllers.dart';
 import 'package:carlys_mobile/features/community/presentation/controllers/community_controllers.dart';
+import 'package:carlys_mobile/features/community/presentation/providers/community_tab_state.dart';
 import 'package:carlys_mobile/features/notifications/domain/repositories/device_token_repository.dart';
 import 'package:carlys_mobile/features/notifications/presentation/controllers/notification_preferences.dart';
 import 'package:carlys_mobile/features/onboarding/data/first_run_store.dart';
@@ -201,6 +202,22 @@ void main() {
 
     expect(container.read(subscriptionActionsProvider), isNot(same(avant)));
   });
+
+  test(
+    'la loupe et l’onglet de la Communauté ne suivent pas le compte',
+    () async {
+      // Deux providers PERMANENTS, voulus tels pour survivre à un détour par un
+      // autre onglet de la barre du bas. Sur un téléphone partagé, le compte
+      // suivant ouvrait la page filtrée sur le prénom d'un ami du précédent.
+      container.read(communitySearchProvider.notifier).state = 'sarah';
+      container.read(communityTabProvider.notifier).state = CommunityTab.amis;
+
+      await container.read(localAccountPurgeProvider).run();
+
+      expect(container.read(communitySearchProvider), isNull);
+      expect(container.read(communityTabProvider), CommunityTab.defis);
+    },
+  );
 
   test('les réglages de notifications ne suivent pas le compte', () async {
     // Ce que la personne accepte de recevoir la décrit, ELLE. Le provider

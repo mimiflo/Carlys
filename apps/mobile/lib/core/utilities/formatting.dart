@@ -168,6 +168,13 @@ String formatShortDateMono(DateTime date) {
       '${_monthsShort[local.month - 1]}';
 }
 
+/// « 30 sept. » — une échéance proche, sans le jour de la semaine. En heure
+/// LOCALE, comme [formatShortDateMono].
+String formatDayMonth(DateTime date) {
+  final local = date.toLocal();
+  return '${local.day} ${_monthsShort[local.month - 1].toLowerCase()}';
+}
+
 /// « MARS 2025 » — « membre depuis ».
 String formatMonthYearMono(DateTime date) =>
     '${_monthsShort[date.month - 1].replaceAll('.', '')} ${date.year}';
@@ -221,6 +228,33 @@ String formatRelativeTime(DateTime date, {DateTime? now}) {
     return 'il y a ${difference.inDays} jours';
   }
   return formatShortDateMono(date).toLowerCase();
+}
+
+/// « Aujourd’hui », « Hier », puis la date en clair (« 12/09/2026 ») : les
+/// deux jours qui couvrent la quasi-totalité des cas se nomment, les autres
+/// se datent. Le jour est lu tel quel : à l'appelant de passer une heure
+/// LOCALE (repas du journal, message d'un défi).
+String formatSpokenDay(DateTime moment, DateTime now) {
+  bool sameDay(DateTime other) =>
+      moment.year == other.year &&
+      moment.month == other.month &&
+      moment.day == other.day;
+  if (sameDay(now)) {
+    return 'Aujourd’hui';
+  }
+  if (sameDay(DateTime(now.year, now.month, now.day - 1))) {
+    return 'Hier';
+  }
+  final day = moment.day.toString().padLeft(2, '0');
+  final month = moment.month.toString().padLeft(2, '0');
+  return '$day/$month/${moment.year}';
+}
+
+/// L'heure en 24 h, comme partout ailleurs dans l'application : « 08h24 ».
+String formatClock(DateTime moment) {
+  final hours = moment.hour.toString().padLeft(2, '0');
+  final minutes = moment.minute.toString().padLeft(2, '0');
+  return '${hours}h$minutes';
 }
 
 /// « 2026-08-11 » — clé de JOUR LOCAL (réponses de quiz, bornes de journée).

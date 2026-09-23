@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/meal_entry.dart';
-import 'meal_moment_rows.dart';
 
 /// Une ligne du journal : l'heure, le nom, ce qu'on en sait, et les deux
 /// gestes qui s'y appliquent.
@@ -41,7 +40,7 @@ class MealTile extends StatelessWidget {
       child: Row(
         children: [
           Text(
-            MealMomentRows.spellTime(meal.eatenAt.toLocal()),
+            formatClock(meal.eatenAt.toLocal()),
             style: AppTypography.labelMono.copyWith(
               color: AppColors.primaryLight,
             ),

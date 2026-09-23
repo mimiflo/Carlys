@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 
 import '../../domain/entities/community.dart';
 import '../../domain/entities/community_moderation.dart';
-import '../../domain/entities/friend_challenge.dart';
 import '../controllers/community_controllers.dart';
 import '../controllers/community_moderation_controllers.dart';
 import 'community_confirm_sheet.dart';
@@ -48,45 +47,6 @@ class CommunityGestures {
       return sent
           ? 'Ton encouragement est parti à ${friend.displayName}.'
           : null;
-    });
-  }
-
-  /// Accepter un défi : on entre au classement, à zéro. Le geste DIT qu'il
-  /// a abouti — la carte change d'état, mais pas de place dans la liste.
-  Future<void> acceptFriendChallenge(
-    BuildContext context,
-    FriendChallenge challenge,
-  ) {
-    return runCommunityGesture(context, () async {
-      await _actions.acceptFriendChallenge(challenge.id);
-      return 'Tu es dans le défi « ${challenge.title} ».';
-    });
-  }
-
-  /// Refuser ou quitter : dans les deux cas on sort du classement, et le
-  /// défi quitte la liste. Un geste qui retire demande confirmation quand il
-  /// s'agit d'un défi DÉJÀ commencé — refuser une invitation, non : c'est
-  /// une réponse, pas un abandon.
-  Future<void> declineFriendChallenge(
-    BuildContext context,
-    FriendChallenge challenge,
-  ) async {
-    if (!challenge.isPending) {
-      final confirme = await showCommunityConfirmSheet(
-        context,
-        title: 'Quitter « ${challenge.title} » ?',
-        message:
-            'Tu sors du classement. Ce que tu as fait pendant le défi ne '
-            'comptera plus pour lui.',
-        confirmLabel: 'Quitter',
-      );
-      if (!confirme || !context.mounted) {
-        return;
-      }
-    }
-    await runCommunityGesture(context, () async {
-      await _actions.declineFriendChallenge(challenge.id);
-      return null;
     });
   }
 

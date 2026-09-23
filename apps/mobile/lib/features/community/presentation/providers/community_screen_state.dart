@@ -21,11 +21,18 @@ import '../../../../core/logging/app_logger.dart';
 import '../controllers/community_controllers.dart';
 import '../controllers/community_moderation_controllers.dart';
 
-/// Redemande TOUT au serveur, et attend la réponse.
+/// Redemande au serveur ce que l'écran MONTRE, et attend la réponse.
 ///
-/// Les MÊMES sept sources que l'arbitrage ci-dessous, et c'est pourquoi les
-/// deux vivent ici : une source ajoutée à l'un sans l'autre est exactement
-/// ce qui était arrivé à la ligue et aux défis entre amis.
+/// Les sources sont nommées ici, avec l'arbitrage ci-dessous : une
+/// source ajoutée à l'un sans l'autre est exactement ce qui était arrivé à
+/// la ligue et aux défis entre amis.
+///
+/// SEULES CELLES QUI VIVENT. Depuis les onglets, l'écran ne regarde plus que
+/// les sources de l'onglet ouvert (et les demandes, pour la pastille). Une
+/// source auto-disposée que personne n'écoute n'existe pas : la lire la
+/// créerait, lancerait sa requête, et Riverpod la jetterait en fin de trame
+/// — un appel réseau pour rien. `ref.exists` écarte ces sources AVANT
+/// l'invalidation, qui les ferait sinon exister.
 ///
 /// L'attente n'est pas décorative : `RefreshIndicator` garde son anneau tant
 /// que ce futur n'est pas terminé, et le geste doit durer aussi longtemps
@@ -37,24 +44,21 @@ import '../controllers/community_moderation_controllers.dart';
 /// source porte son `error`, et l'arbitrage le montre —, donc ici il se
 /// journalise et l'anneau se referme normalement.
 Future<void> reloadCommunity(WidgetRef ref) async {
-  ref
-    ..invalidate(encouragementsProvider)
-    ..invalidate(communityFriendsProvider)
-    ..invalidate(friendRequestsProvider)
-    ..invalidate(communityChallengesProvider)
-    ..invalidate(friendChallengesProvider)
-    ..invalidate(leagueProvider)
-    ..invalidate(blockedUsersProvider);
+  final live = <AutoDisposeFutureProvider<Object?>>[
+    encouragementsProvider,
+    communityFriendsProvider,
+    friendRequestsProvider,
+    communityChallengesProvider,
+    friendChallengesProvider,
+    leagueProvider,
+    blockedUsersProvider,
+    sharesProgressProvider,
+  ].where(ref.exists).toList();
+  for (final source in live) {
+    ref.invalidate(source);
+  }
   try {
-    await Future.wait([
-      ref.read(encouragementsProvider.future),
-      ref.read(communityFriendsProvider.future),
-      ref.read(friendRequestsProvider.future),
-      ref.read(communityChallengesProvider.future),
-      ref.read(friendChallengesProvider.future),
-      ref.read(leagueProvider.future),
-      ref.read(blockedUsersProvider.future),
-    ]);
+    await Future.wait([for (final source in live) ref.read(source.future)]);
   } on Exception catch (error) {
     AppLogger('community').warning('Communauté non rafraîchie', error: error);
   }

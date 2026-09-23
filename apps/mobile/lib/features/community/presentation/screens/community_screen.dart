@@ -57,6 +57,10 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
         ref.read(communityTabProvider.notifier).state = tab;
+        // Un raccourci ouvre l'onglet qu'il annonce SANS filtre resté
+        // d'avant : un titre de défi tapé dans la loupe masquerait l'ami
+        // dont l'accueil vient d'annoncer le mot.
+        ref.read(communitySearchProvider.notifier).state = null;
       }
     });
   }
@@ -119,7 +123,7 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
                   onPressed: _toggleSearch,
                 ),
                 AppRoundIconButton(
-                  icon: AppIcons.community,
+                  icon: AppIcons.inviteFriends,
                   color: AppColors.accent,
                   tooltip: 'Ajouter un ami',
                   onPressed: () => addFriendFlow(

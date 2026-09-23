@@ -80,6 +80,12 @@ void main() {
       expect(vue.gaugeSpoken, '7 joueurs actifs sur 10');
     });
 
+    test('un seul joueur actif se dit au singulier', () {
+      final vue = leagueProgressOf(ligue(promotion: montee(activePlayers: 1)));
+
+      expect(vue.gaugeSpoken, '1 joueur actif sur 10');
+    });
+
     test('trop peu de joueurs l’emporte même dans la zone', () {
       final vue = leagueProgressOf(
         ligue(promotion: montee(activePlayers: 4, inZone: true)),
@@ -149,9 +155,41 @@ void main() {
     });
   });
 
+  group('leaguePlace et leaguePoints', () {
+    test('la place s’accorde à « place », jamais à la personne', () {
+      expect(leaguePlace(1), '1re place');
+      expect(leaguePlace(2), '2e place');
+      expect(leaguePlace(18), '18e place');
+    });
+
+    test('zéro et un point au singulier', () {
+      expect(leaguePoints(0), '0 point');
+      expect(leaguePoints(1), '1 point');
+      expect(leaguePoints(2), '2 points');
+    });
+  });
+
+  group('leagueCountdownSpoken', () {
+    test('accordé au nombre de jours', () {
+      expect(
+        leagueCountdownSpoken(ligue(reste: const Duration(days: 1, hours: 3))),
+        'Encore 1 jour avant la fin de la semaine',
+      );
+      expect(
+        leagueCountdownSpoken(ligue()),
+        'Encore 2 jours avant la fin de la semaine',
+      );
+      expect(
+        leagueCountdownSpoken(ligue(reste: const Duration(hours: 5))),
+        'Dernier jour de la semaine',
+      );
+    });
+  });
+
   group('leagueCountdown', () {
     test('les jours pleins qui restent', () {
-      expect(leagueCountdown(ligue()), 'J-2');
+      // Le signe moins, comme les cartes de défis de la même page.
+      expect(leagueCountdown(ligue()), 'J\u22122');
     });
 
     test('le dernier jour se nomme', () {

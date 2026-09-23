@@ -99,6 +99,14 @@ abstract interface class CommunityRepository {
     CommunityReportDraft report,
   );
 
+  /// Signale le titre et le message d'un défi entre amis, sous le nom de
+  /// son CRÉATEUR — le seul auteur de ces mots. Le serveur en fige une
+  /// copie : le défi peut se clore, le signalement garde ce qui a été lu.
+  Future<void> reportFriendChallenge(
+    FriendChallenge challenge,
+    CommunityReportDraft report,
+  );
+
   /// Retire un encouragement de mon fil (rejouable et opaque côté serveur).
   Future<void> deleteEncouragement(String encouragementId);
 
@@ -108,6 +116,10 @@ abstract interface class CommunityRepository {
   /// acceptés. Les refusés et les quittés n'y sont plus — ce sont des
   /// décisions prises, pas des choses à revoir.
   Future<List<FriendChallenge>> friendChallenges();
+
+  /// Un défi, son classement et son message. Réservé à ses membres : le
+  /// serveur répond « introuvable » à tout autre, sans dire s'il existe.
+  Future<FriendChallenge> friendChallenge(String challengeId);
 
   /// Lance un défi à ses amis. L'identifiant naît sur l'appareil : rejouer
   /// après une coupure ne pose pas un second défi.

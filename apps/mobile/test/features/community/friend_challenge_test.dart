@@ -136,7 +136,7 @@ void main() {
 
       // Le classement est FIGÉ : il ne reste rien à faire, et le proposer
       // laisserait croire que le résultat peut encore bouger.
-      expect(find.text('terminé'), findsOneWidget);
+      expect(find.text('Terminé'), findsOneWidget);
       expect(find.text('Quitter'), findsNothing);
       expect(find.text('Accepter'), findsNothing);
     });
@@ -233,6 +233,61 @@ void main() {
       // La feuille ne rend AUCUNE date de fin : le serveur la calcule depuis
       // la durée, sinon une requête suffirait à poser un défi éternel.
       expect(find.text('Défier mes amis'), findsNothing);
+    });
+
+    testWidgets('le mot facultatif part découpé, et au-delà de 280 la feuille '
+        'le dit', (tester) async {
+      final rendus = <NewFriendChallenge?>[];
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.dark(),
+          home: Scaffold(
+            body: Builder(
+              builder: (context) => ElevatedButton(
+                onPressed: () async => rendus.add(
+                  await showNewFriendChallengeSheet(
+                    context,
+                    friends: const [
+                      CommunityFriend(
+                        id: 'ami-1',
+                        displayName: 'Léa',
+                        streakDays: 3,
+                        weeklySessions: 2,
+                        sharesProgress: true,
+                      ),
+                    ],
+                  ),
+                ),
+                child: const Text('ouvrir'),
+              ),
+            ),
+          ),
+        ),
+      );
+      await tester.tap(find.text('ouvrir'));
+      await tester.pumpAndSettle();
+
+      final champs = find.byType(TextFormField);
+      await tester.enterText(champs.first, 'Cinq séances');
+      await tester.tap(find.text('Léa'));
+      await tester.pumpAndSettle();
+
+      // Le champ tronque à 280 caractères VISIBLES ; un émoji nuancé en est
+      // un seul pour deux points de code. 150 font 300 points de code : le
+      // serveur refuserait, la feuille le dit AVANT l'aller-retour.
+      await tester.enterText(champs.at(1), '💪🏽' * 150);
+      await tester.ensureVisible(find.text('Lancer le défi'));
+      await tester.tap(find.text('Lancer le défi'));
+      await tester.pumpAndSettle();
+      expect(find.text('Ton mot dépasse 280 caractères.'), findsOneWidget);
+      expect(rendus, isEmpty);
+
+      await tester.enterText(champs.at(1), '  Allez on y va !  ');
+      await tester.ensureVisible(find.text('Lancer le défi'));
+      await tester.tap(find.text('Lancer le défi'));
+      await tester.pumpAndSettle();
+
+      expect(rendus.single?.message, 'Allez on y va !');
     });
   });
 }

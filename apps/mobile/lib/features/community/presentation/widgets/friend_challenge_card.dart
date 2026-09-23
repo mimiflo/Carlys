@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
-import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/friend_challenge.dart';
+import 'friend_challenge/friend_challenge_wording.dart';
 
 /// Un défi entre amis : qui mène, de combien, et ce qu'il reste à faire.
 ///
@@ -15,6 +15,7 @@ class FriendChallengeCard extends StatelessWidget {
     required this.challenge,
     required this.onAccept,
     required this.onDecline,
+    this.onOpen,
     super.key,
   });
 
@@ -22,11 +23,18 @@ class FriendChallengeCard extends StatelessWidget {
   final VoidCallback onAccept;
   final VoidCallback onDecline;
 
+  /// Ouvre l'écran du défi (participants, règle, message). La carte entière
+  /// y mène ; ses boutons gardent leur propre geste.
+  final VoidCallback? onOpen;
+
+  static const double _iconSize = 18;
+
   @override
   Widget build(BuildContext context) {
     final moi = challenge.me;
 
     return AppCard(
+      onTap: onOpen,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -34,22 +42,26 @@ class FriendChallengeCard extends StatelessWidget {
             children: [
               const Icon(
                 AppIcons.challengeOutline,
-                size: 18,
+                size: _iconSize,
                 color: AppColors.primaryLight,
               ),
               const SizedBox(width: AppSpacing.xs),
               const AppSectionLabel('Entre amis'),
               const Spacer(),
               Text(
-                challenge.isOver
-                    ? 'terminé'
-                    : challenge.daysLeft <= 0
-                    ? 'dernier jour'
-                    : 'J−${challenge.daysLeft}',
+                friendChallengeCountdown(challenge),
                 style: AppTypography.labelMono.copyWith(
                   color: AppColors.darkTextTertiary,
                 ),
               ),
+              if (onOpen != null) ...[
+                const SizedBox(width: AppSpacing.xxs),
+                const Icon(
+                  AppIcons.chevronRight,
+                  size: _iconSize,
+                  color: AppColors.darkTextTertiary,
+                ),
+              ],
             ],
           ),
           const SizedBox(height: AppSpacing.xs),
@@ -60,9 +72,7 @@ class FriendChallengeCard extends StatelessWidget {
             ),
           ),
           Text(
-            challenge.isPending
-                ? '${challenge.creatorDisplayName} te défie · ${challenge.unit}'
-                : 'Lancé par ${challenge.creatorDisplayName} · ${challenge.unit}',
+            '${friendChallengeOrigin(challenge)} · ${challenge.unit}',
             style: AppTypography.label.copyWith(
               color: AppColors.darkTextSecondary,
             ),
@@ -70,11 +80,11 @@ class FriendChallengeCard extends StatelessWidget {
           if (challenge.ranked.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.sm),
             for (final membre in challenge.ranked.take(3))
-              _RankRow(member: membre, unit: challenge.unit),
+              _RankRow(member: membre, metric: challenge.metric),
             // Ma ligne, même hors du podium : un classement où l'on ne se
             // trouve pas ne motive personne.
             if (moi != null && moi.rank != null && moi.rank! > 3)
-              _RankRow(member: moi, unit: challenge.unit),
+              _RankRow(member: moi, metric: challenge.metric),
           ],
           const SizedBox(height: AppSpacing.sm),
           if (challenge.isPending)
@@ -117,10 +127,10 @@ class FriendChallengeCard extends StatelessWidget {
 }
 
 class _RankRow extends StatelessWidget {
-  const _RankRow({required this.member, required this.unit});
+  const _RankRow({required this.member, required this.metric});
 
   final FriendChallengeMember member;
-  final String unit;
+  final ChallengeMetric metric;
 
   @override
   Widget build(BuildContext context) {
@@ -148,7 +158,7 @@ class _RankRow extends StatelessWidget {
             ),
           ),
           Text(
-            '${formatThousands(member.contribution)} $unit',
+            friendChallengeAmount(metric, member.contribution),
             style: AppTypography.label.copyWith(color: couleur),
           ),
         ],

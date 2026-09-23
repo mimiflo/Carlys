@@ -47,8 +47,18 @@ class LeagueProgressView {
   final String? caption;
 }
 
-String _points(int value) =>
+/// « 0 point », « 1 point », « 240 points » : la règle d'accord UNIQUE de
+/// la ligue, lue à l'écran comme au lecteur d'écran.
+String leaguePoints(int value) =>
     '${formatThousands(value)} ${value <= 1 ? 'point' : 'points'}';
+
+/// Une place du classement, accordée à « place » et donc à personne :
+/// « 1re place », « 2e place ». L'ordinal masculin (« 1er ») genrerait la
+/// personne classée.
+String leaguePlace(int rank) => '${rank == 1 ? '1re' : '${rank}e'} place';
+
+String _activePlayers(int value) =>
+    '$value ${value <= 1 ? 'joueur actif' : 'joueurs actifs'}';
 
 /// Où j'en suis cette semaine, dans l'ordre où ça compte.
 ///
@@ -62,7 +72,9 @@ String _points(int value) =>
 LeagueProgressView leagueProgressOf(League league) {
   final promotion = league.promotion;
   if (promotion == null) {
-    return LeagueProgressView(status: '${_points(league.score)} cette semaine');
+    return LeagueProgressView(
+      status: '${leaguePoints(league.score)} cette semaine',
+    );
   }
 
   final next = nextDivisionOf(league.division);
@@ -83,7 +95,7 @@ LeagueProgressView leagueProgressOf(League league) {
           '${promotion.activePlayers} / ${promotion.minPlayers} '
           'joueurs',
       gaugeSpoken:
-          '${promotion.activePlayers} joueurs actifs sur '
+          '${_activePlayers(promotion.activePlayers)} sur '
           '${promotion.minPlayers}',
     );
   }
@@ -105,7 +117,7 @@ LeagueProgressView leagueProgressOf(League league) {
   final zone = promotion.zoneScore;
   return LeagueProgressView(
     status:
-        'Encore ${_points(promotion.pointsToZone)} pour entrer dans le '
+        'Encore ${leaguePoints(promotion.pointsToZone)} pour entrer dans le '
         'top $top.',
     gauge: zone == null || zone == 0 ? null : league.score / zone,
     gaugeLabel: zone == null
@@ -115,7 +127,7 @@ LeagueProgressView leagueProgressOf(League league) {
     // lettre.
     gaugeSpoken: zone == null
         ? null
-        : '${_points(league.score)} sur ${formatThousands(zone)}, le score '
+        : '${leaguePoints(league.score)} sur ${formatThousands(zone)}, le score '
               'du ${top}e aujourd’hui',
     caption: zone == null
         ? null
@@ -123,6 +135,20 @@ LeagueProgressView leagueProgressOf(League league) {
   );
 }
 
-/// Le compte à rebours de la semaine : « J-2 », ou « Dernier jour ».
+/// Le compte à rebours de la semaine : « J−2 », ou « Dernier jour ».
+///
+/// Le SIGNE MOINS (U+2212), comme les cartes de défis de la même page : un
+/// trait d'union ici et un moins là, et la même information s'écrivait de
+/// deux façons d'un onglet à l'autre.
 String leagueCountdown(League league) =>
-    league.daysLeft <= 0 ? 'Dernier jour' : 'J-${league.daysLeft}';
+    league.daysLeft <= 0 ? 'Dernier jour' : 'J\u2212${league.daysLeft}';
+
+/// Le même compte à rebours, dit au lecteur d'écran, accordé au nombre.
+String leagueCountdownSpoken(League league) {
+  final days = league.daysLeft;
+  if (days <= 0) {
+    return 'Dernier jour de la semaine';
+  }
+  return 'Encore $days ${days == 1 ? 'jour' : 'jours'} avant la fin de la '
+      'semaine';
+}

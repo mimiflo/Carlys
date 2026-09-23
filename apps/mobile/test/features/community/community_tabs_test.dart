@@ -1,11 +1,13 @@
 import 'package:carlys_mobile/app/router/app_routes.dart';
 import 'package:carlys_mobile/design_system/design_system.dart';
+import 'package:carlys_mobile/features/community/domain/entities/community.dart';
 import 'package:carlys_mobile/features/community/presentation/providers/community_tab_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../support/community_app.dart';
+import '../../support/fake_community_repository.dart';
 import '../../support/first_run_prefs.dart';
 import '../../support/navigation.dart';
 
@@ -171,6 +173,90 @@ void main() {
       expect(find.text('Aucun défi ne porte ce nom.'), findsOneWidget);
       expect(find.text('Défier mes amis'), findsOneWidget);
     });
+  });
+
+  testWidgets('un raccourci ferme la loupe restée ouverte', (tester) async {
+    // Un titre de défi tapé dans la loupe masquait, à l'arrivée par le
+    // raccourci de l'accueil, l'ami dont l'accueil venait d'annoncer le mot.
+    await openCommunity(tester, sampleWorldApp());
+    await tester.tap(find.byTooltip('Rechercher'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField), 'marathon');
+    await tester.pumpAndSettle();
+    await tapTab(tester, 'Accueil');
+
+    await suivre(tester, AppRoutes.communityTab(CommunityTab.amis));
+
+    expect(find.byType(TextField), findsNothing);
+    expect(find.text('ENCOURAGEMENTS'), findsOneWidget);
+  });
+
+  testWidgets('amis en panne, défis là : la feuille ne dit pas « pas d’ami »', (
+    tester,
+  ) async {
+    final community = FakeCommunityRepository(
+      friends: const [
+        CommunityFriend(
+          id: 'ami-1',
+          displayName: 'Sarah',
+          streakDays: 3,
+          weeklySessions: 2,
+          sharesProgress: true,
+        ),
+      ],
+    )..friendsError = StateError('amis injoignables (voulu par le test)');
+    await openCommunity(tester, appWith(community));
+
+    // Les défis répondent : l'onglet ne tombe pas pour une liste d'amis.
+    expect(find.byType(AppErrorState), findsNothing);
+    final defier = tester.widget<AppButton>(
+      find.widgetWithText(AppButton, 'Défier mes amis'),
+    );
+    expect(defier.onPressed, isNull);
+    expect(
+      find.textContaining('Ta liste d’amis n’a pas pu se charger'),
+      findsOneWidget,
+    );
+  });
+
+  testWidgets('quitter puis rejoindre la ligue', (tester) async {
+    // Le geste vit désormais dans l'onglet Ligue : le test de l'ancienne
+    // carte est parti avec elle, celui-ci le remplace.
+    final community = FakeCommunityRepository()..joinsLeague = true;
+    await openCommunity(tester, appWith(community), tab: 'Ligue');
+    expect(find.text('Classement de la semaine'), findsOneWidget);
+
+    await reveal(tester, find.text('Quitter la ligue'));
+    await tester.tap(find.text('Quitter la ligue'));
+    await tester.pumpAndSettle();
+
+    expect(community.joinsLeague, isFalse);
+    expect(find.text('Classement de la semaine'), findsNothing);
+
+    await tester.tap(find.text('Rejoindre la ligue'));
+    await tester.pumpAndSettle();
+
+    expect(community.joinsLeague, isTrue);
+    expect(find.text('Classement de la semaine'), findsOneWidget);
+  });
+
+  testWidgets('tirer pour rafraîchir ne relit que ce que l’onglet montre', (
+    tester,
+  ) async {
+    // Une source que personne n'écoute n'existe pas : la relire la créait,
+    // lançait sa requête, et Riverpod la jetait en fin de trame.
+    final community = FakeCommunityRepository();
+    await openCommunity(tester, appWith(community));
+    final avant = community.leagueReads;
+
+    await tester.fling(
+      find.byType(RefreshIndicator),
+      const Offset(0, 320),
+      1000,
+    );
+    await tester.pumpAndSettle();
+
+    expect(community.leagueReads, avant);
   });
 
   testWidgets('les demandes en attente se lisent sur la piste', (tester) async {

@@ -10,6 +10,7 @@
 /// on y touche.
 library;
 
+import 'package:carlys_mobile/core/errors/app_exception.dart';
 import 'package:carlys_mobile/features/community/domain/entities/community.dart';
 import 'package:carlys_mobile/features/community/domain/entities/community_moderation.dart';
 import 'package:carlys_mobile/features/community/domain/entities/friend_challenge.dart';
@@ -227,60 +228,11 @@ class InMemoryCommunityRepository implements CommunityRepository {
 
   // ── Défis entre amis ──────────────────────────────────────────────────
 
-  /// Les défis ENTRE AMIS de l'exemple : un en cours où l'on est deuxième,
-  /// et une invitation en attente. Les deux états que la carte sait montrer.
-  final List<FriendChallenge> friendChallengeList = [
-    FriendChallenge(
-      id: 'exemple-defi-ami-course',
-      title: 'Qui court le plus',
-      metric: ChallengeMetric.distanceMeters,
-      unit: 'mètres',
-      status: FriendChallengeStatus.open,
-      myStatus: FriendChallengeMemberStatus.accepted,
-      startsAt: DateTime.now().subtract(const Duration(days: 2)),
-      endsAt: DateTime.now().add(const Duration(days: 5)),
-      creatorDisplayName: 'Boris',
-      members: const [
-        FriendChallengeMember(
-          userId: 'exemple-ami-boris',
-          displayName: 'Boris',
-          status: FriendChallengeMemberStatus.accepted,
-          contribution: 12400,
-          rank: 1,
-          isMe: false,
-        ),
-        FriendChallengeMember(
-          userId: 'exemple-moi',
-          displayName: 'Moi',
-          status: FriendChallengeMemberStatus.accepted,
-          contribution: 9800,
-          rank: 2,
-          isMe: true,
-        ),
-        FriendChallengeMember(
-          userId: 'exemple-ami-chloe',
-          displayName: 'Chloé',
-          status: FriendChallengeMemberStatus.accepted,
-          contribution: 4200,
-          rank: 3,
-          isMe: false,
-        ),
-      ],
-    ),
-    FriendChallenge(
-      id: 'exemple-defi-ami-seances',
-      title: 'Cinq séances cette semaine',
-      metric: ChallengeMetric.workouts,
-      unit: 'séances',
-      target: 5,
-      status: FriendChallengeStatus.open,
-      myStatus: FriendChallengeMemberStatus.invited,
-      startsAt: DateTime.now(),
-      endsAt: DateTime.now().add(const Duration(days: 7)),
-      creatorDisplayName: 'Chloé',
-      members: const [],
-    ),
-  ];
+  /// Les défis ENTRE AMIS de l'exemple (`sampleFriendChallenges`).
+  final List<FriendChallenge> friendChallengeList = sampleFriendChallenges();
+
+  /// Les signalements de défi reçus, dans l'ordre : identifiant du défi.
+  final List<String> reportedFriendChallenges = [];
 
   @override
   Future<List<FriendChallenge>> friendChallenges() async =>
@@ -301,20 +253,85 @@ class InMemoryCommunityRepository implements CommunityRepository {
       myStatus: FriendChallengeMemberStatus.accepted,
       startsAt: DateTime.now(),
       endsAt: DateTime.now().add(Duration(days: challenge.durationDays)),
+      createdAt: DateTime.now(),
+      durationDays: challenge.durationDays,
       creatorDisplayName: 'Moi',
-      members: const [],
+      message: challenge.message,
+      members: const [
+        FriendChallengeMember(
+          userId: 'exemple-moi',
+          displayName: 'Camille',
+          status: FriendChallengeMemberStatus.accepted,
+          contribution: 0,
+          rank: 1,
+          isMe: true,
+          isCreator: true,
+        ),
+      ],
     );
     friendChallengeList.add(cree);
     return cree;
   }
 
   @override
+  Future<FriendChallenge> friendChallenge(String challengeId) async {
+    for (final challenge in friendChallengeList) {
+      if (challenge.id == challengeId) {
+        return challenge;
+      }
+    }
+    // Comme le serveur : un défi quitté ou refusé n'est plus lisible.
+    throw const ServerException('Défi introuvable.', statusCode: 404);
+  }
+
+  @override
   Future<FriendChallenge> acceptFriendChallenge(String challengeId) async {
-    // La doublure ne recompose pas le classement : ce que les écrans
-    // testent, c'est que le geste part et que la liste se relit.
-    return friendChallengeList.firstWhere(
+    // J'entre au classement, à zéro, derrière ceux qui ont déjà marqué :
+    // l'écran de détail relit le défi et doit voir le geste pris.
+    final index = friendChallengeList.indexWhere(
       (challenge) => challenge.id == challengeId,
     );
+    final avant = friendChallengeList[index];
+    final classes = avant.members.where((m) => m.rank != null).length;
+    final apres = FriendChallenge(
+      id: avant.id,
+      title: avant.title,
+      metric: avant.metric,
+      unit: avant.unit,
+      target: avant.target,
+      status: avant.status,
+      myStatus: FriendChallengeMemberStatus.accepted,
+      startsAt: avant.startsAt,
+      endsAt: avant.endsAt,
+      createdAt: avant.createdAt,
+      durationDays: avant.durationDays,
+      creatorDisplayName: avant.creatorDisplayName,
+      message: avant.message,
+      members: [
+        for (final member in avant.members)
+          member.isMe
+              ? FriendChallengeMember(
+                  userId: member.userId,
+                  displayName: member.displayName,
+                  status: FriendChallengeMemberStatus.accepted,
+                  contribution: 0,
+                  rank: classes + 1,
+                  isMe: true,
+                  isCreator: member.isCreator,
+                )
+              : member,
+      ],
+    );
+    friendChallengeList[index] = apres;
+    return apres;
+  }
+
+  @override
+  Future<void> reportFriendChallenge(
+    FriendChallenge challenge,
+    CommunityReportDraft report,
+  ) async {
+    reportedFriendChallenges.add(challenge.id);
   }
 
   @override

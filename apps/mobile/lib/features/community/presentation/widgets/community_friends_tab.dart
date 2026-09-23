@@ -47,21 +47,41 @@ class CommunityFriendsTab extends ConsumerWidget {
           actions,
           ref.read(communityModerationActionsProvider),
         );
-        final isEmpty = [
-          requests.valueOrNull,
-          feed.valueOrNull,
-          friends.valueOrNull,
-          blocked.valueOrNull,
-        ].every((list) => list?.isEmpty ?? true);
-        if (isEmpty && query.trim().isEmpty) {
+        final sources = [requests, feed, friends, blocked];
+        final nothingToShow = sources.every(
+          (source) => source.valueOrNull?.isEmpty ?? true,
+        );
+        final privacy = communitySection('Confidentialité', [
+          PrivacyCard(
+            sharesProgress: sharesProgress.valueOrNull,
+            onChanged: (value) =>
+                gestures.setSharesProgress(context, value: value),
+          ),
+        ]);
+        if (nothingToShow && query.trim().isEmpty) {
+          // « Personne ici » ne se dit qu'une fois TOUT lu : une source
+          // encore en vol n'est pas une liste vide, et un ami chargé une
+          // seconde plus tard aurait démenti l'écran.
+          if (!sources.every((source) => source.hasValue)) {
+            return const AppLoadingIndicator();
+          }
           // Hors ligne, c'est l'état d'erreur du portail qui parle, jamais
-          // « personne ici ».
-          return AppEmptyState(
-            icon: AppIcons.communityOutline,
-            title: 'Personne ici pour l’instant',
-            message: FriendsEmptyCard.invitation,
-            actionLabel: 'Ajouter un ami',
-            onAction: () => addFriendFlow(context, actions),
+          // « personne ici ». Et le réglage de partage reste là : un compte
+          // neuf doit pouvoir décider AVANT son premier ami de ce qu'il
+          // montrera.
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              AppEmptyState(
+                icon: AppIcons.communityOutline,
+                title: 'Personne ici pour l’instant',
+                message: FriendsEmptyCard.invitation,
+                actionLabel: 'Ajouter un ami',
+                onAction: () => addFriendFlow(context, actions),
+              ),
+              const SizedBox(height: AppSpacing.gapSection),
+              ...privacy,
+            ],
           );
         }
 
@@ -146,14 +166,7 @@ class CommunityFriendsTab extends ConsumerWidget {
             ]),
             // Un réglage n'est pas un prénom : pendant une recherche, il
             // n'a rien à faire dans les résultats.
-            if (!searching)
-              ...communitySection('Confidentialité', [
-                PrivacyCard(
-                  sharesProgress: sharesProgress.valueOrNull,
-                  onChanged: (value) =>
-                      gestures.setSharesProgress(context, value: value),
-                ),
-              ]),
+            if (!searching) ...privacy,
             ...communitySection('Personnes bloquées', [
               for (final user in hidden)
                 BlockedUserCard(

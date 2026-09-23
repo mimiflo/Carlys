@@ -258,10 +258,29 @@ class CommunityRepositoryImpl implements CommunityRepository {
     );
   }
 
+  @override
+  Future<void> reportFriendChallenge(
+    FriendChallenge challenge,
+    CommunityReportDraft report,
+  ) {
+    final creator = challenge.creator;
+    if (creator == null) {
+      // Un serveur plus ancien ne dit pas qui a lancé le défi : sans auteur,
+      // il n'y a personne à signaler, et l'écran ne propose pas le geste.
+      throw StateError('Défi sans créateur connu : rien à signaler.');
+    }
+    return _report(
+      reportedUserId: creator.userId,
+      friendChallengeId: challenge.id,
+      report: report,
+    );
+  }
+
   Future<void> _report({
     required String reportedUserId,
     required CommunityReportDraft report,
     String? encouragementId,
+    String? friendChallengeId,
   }) {
     return _guard(() async {
       // L'accusé de réception (201) n'est pas relu : un signalement ouvert
@@ -271,6 +290,7 @@ class CommunityRepositoryImpl implements CommunityRepository {
         data: {
           'reportedUserId': reportedUserId,
           if (encouragementId != null) 'encouragementId': encouragementId,
+          if (friendChallengeId != null) 'friendChallengeId': friendChallengeId,
           'reason': report.reason.serverValue,
           if (report.details != null) 'details': report.details,
         },
@@ -289,6 +309,16 @@ class CommunityRepositoryImpl implements CommunityRepository {
   }
 
   @override
+  Future<FriendChallenge> friendChallenge(String challengeId) {
+    return _guard(() async {
+      final response = await _dio.get<Map<String, dynamic>>(
+        '/community/friend-challenges/$challengeId',
+      );
+      return friendChallengeFromJson(_data(response));
+    });
+  }
+
+  @override
   Future<FriendChallenge> createFriendChallenge(
     String id,
     NewFriendChallenge challenge,
@@ -303,6 +333,7 @@ class CommunityRepositoryImpl implements CommunityRepository {
           if (challenge.target != null) 'target': challenge.target,
           'durationDays': challenge.durationDays,
           'invitedUserIds': challenge.invitedUserIds,
+          if (challenge.message != null) 'message': challenge.message,
           // `endsAt` n'est PAS envoyé : le serveur le calcule depuis la
           // durée. Une fin fournie par le client est un défi éternel en une
           // requête.

@@ -185,6 +185,8 @@ abstract final class AppColors {
   static const Color accentBadgeBorder = Color(0x47FF7A45); // accent .28
   static const Color primaryBadgeBg = Color(0x1F9B30FF); // primary .12
   static const Color primaryBadgeBorder = Color(0x479B30FF); // primary .28
+  static const Color successBadgeBg = Color(0x1F22C55E); // success .12
+  static const Color successBadgeBorder = Color(0x4722C55E); // success .28
   static const Color neutralBadgeBg = Color(0x12FFFFFF); // blanc .07
   static const Color neutralBadgeText = Color(0xFFD3D3E4);
   static const Color gaugeTrack = Color(0x12FFFFFF); // blanc .07
@@ -348,6 +350,17 @@ abstract final class AppColors {
     stops: [0, 0.55, 1],
   );
 
+  /// Fond de l'en-tête d'un défi entre amis : la surface qui s'enfonce dans
+  /// le violet profond, en diagonale. Violet par règle (CLAUDE.md, règle 9) :
+  /// un défi n'est pas une surface de marque. La photographie de la maquette,
+  /// quand elle arrivera, se posera fondue par-dessus.
+  static const LinearGradient challengeHero = LinearGradient(
+    begin: Alignment.topLeft,
+    end: Alignment.bottomRight,
+    colors: [darkSurface, primaryDeep],
+    stops: [0.35, 1],
+  );
+
   /// Fond de la tuile du manifeste.
   static const LinearGradient manifestoTile = LinearGradient(
     begin: Alignment.topLeft,
@@ -388,8 +401,10 @@ abstract final class AppColors {
   // (`…Light`), le CORPS, l'OMBRE (`…Dark`). Un métal se peint par sa
   // lumière ; en aplat, l'or n'est qu'un jaune. Le corps tient le seuil d'un
   // élément graphique (3:1, WCAG 1.4.11) sur `darkSurface` : c'est lui qui
-  // dessine la silhouette. L'ombre ne le tient pas, et ne se pose donc
-  // jamais seule sur le fond — elle creuse l'intérieur du blason.
+  // dessine la silhouette. L'ombre, elle, n'est pas garantie : de 2,05
+  // (bronze, sous le seuil) à 4,04 (platine) sur `darkSurface`, et seul le
+  // platine tient 3:1 sur `surfaceIcon`. Elle ne se pose donc jamais seule
+  // sur le fond — elle creuse l'intérieur du blason.
   //
   // Les noms suivent tokens.json, en anglais ; `LeagueDivision` parle
   // français : argent = silver, or = gold, platine = platinum, diamant =

@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
 import '../providers/journal_day_provider.dart';
-import 'meal_moment_rows.dart';
 
 /// Les deux flèches qui font reculer le journal d'un jour.
 ///
@@ -40,7 +40,7 @@ class MealDaySelector extends ConsumerWidget {
           child: Semantics(
             liveRegion: true,
             child: Text(
-              MealMomentRows.spellDay(day, DateTime.now()),
+              formatSpokenDay(day, DateTime.now()),
               textAlign: TextAlign.center,
               style: AppTypography.label.copyWith(
                 color: aujourdHui

@@ -94,4 +94,28 @@ void main() {
       expect(relative(DateTime(2025, 8, 15)), 'IL Y A 3 MOIS');
     });
   });
+
+  group('jour nommé et heure', () {
+    test('aujourd’hui, hier, puis la date', () {
+      final now = DateTime(2026, 9, 23, 10);
+      expect(formatSpokenDay(DateTime(2026, 9, 23, 8, 24), now), 'Aujourd’hui');
+      expect(formatSpokenDay(DateTime(2026, 9, 22, 23, 59), now), 'Hier');
+      expect(formatSpokenDay(DateTime(2026, 9, 12, 7), now), '12/09/2026');
+      // Le 1er du mois : « hier » est la veille, même d'un autre mois.
+      expect(
+        formatSpokenDay(DateTime(2026, 8, 31, 20), DateTime(2026, 9, 1, 9)),
+        'Hier',
+      );
+    });
+
+    test('le jour et le mois, sans le jour de la semaine', () {
+      expect(formatDayMonth(DateTime(2026, 9, 30, 12)), '30 sept.');
+      expect(formatDayMonth(DateTime(2026, 5, 1, 12)), '1 mai');
+    });
+
+    test('l’heure en 24 h', () {
+      expect(formatClock(DateTime(2026, 9, 23, 8, 4)), '08h04');
+      expect(formatClock(DateTime(2026, 9, 23, 18, 30)), '18h30');
+    });
+  });
 }

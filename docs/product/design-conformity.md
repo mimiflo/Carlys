@@ -455,9 +455,12 @@ par `design_tokens_test.dart` :
 - **le corps tient 3:1 sur `darkSurface`**, le seuil d'un élément graphique
   non textuel (WCAG 1.4.11). Mesuré à la création : bronze 5,47, argent 9,14,
   or 9,34, platine 10,93, diamant 8,82 — et encore 4,61 au plus bas (bronze)
-  sur `surfaceIcon`, la plus claire des surfaces sombres. L'ombre, elle, ne le
-  tient pas : elle ne se pose jamais seule sur le fond, elle creuse
-  l'intérieur du blason. Un ton de corps qui change se re-mesure.
+  sur `surfaceIcon`, la plus claire des surfaces sombres. L'ombre, elle,
+  n'est pas garantie : sur `darkSurface` elle va de 2,05 (bronze, sous le
+  seuil) à 4,04 (platine) — argent 3,04, or 3,48, diamant 3,12 —, et sur
+  `surfaceIcon` seul le platine tient 3:1 (3,40). Elle ne se pose donc jamais
+  seule sur le fond : elle creuse l'intérieur du blason. Un ton qui change se
+  re-mesure.
 
 Les clés sont en anglais, comme tout `tokens.json` ; `LeagueDivision` parle
 français (argent = `silver`, or = `gold`, platine = `platinum`, diamant =
@@ -488,6 +491,7 @@ que `color.vendor`.
 | Profil | Lignes repos par défaut, unités, rappels, export absentes | Réglages inexistants |
 | Profil (maquette du 23 septembre 2026) | « Mes contenus sauvegardés » absent, « Bronze » retiré de « Mes badges », pourcentage de l'objectif suivi de sa base (« du programme »), flèche de retour au lieu de la barre d'onglets | Écarts VOULUS, détaillés dans `profile.md` : aucune sauvegarde de contenu dans le domaine ; une ligue ne se reporte jamais dans le profil ; un pourcentage nomme sa base ; le profil s'ouvre en plein écran depuis l'avatar |
 | Communauté, onglet Ligue (maquette du 23 septembre 2026) | Initiales au lieu de photos ; « Encore 35 points pour entrer dans le top 5 » et une jauge vers le score du 5e au lieu de « Encore 260 points pour passer Argent » sur « 240 / 500 pts » ; une ligne de barème en plus (« Et 10 pts par bonne réponse du jour à l’Academy ») ; la loupe filtre l’onglet ouvert au lieu de chercher des personnes | Écarts VOULUS, détaillés dans `community.md` : Carlys n’a pas de photo de profil ; la montée se joue au rang, aucun seuil de points n’existe ; le serveur compte aussi l’Academy ; la Communauté n’énumère personne (principes 2 et 3) |
+| Défi entre amis (maquette du 23 septembre 2026) | « +150 points » remplacé par la durée ; bloc « Récompense » remplacé par « Comment ça se joue » ; pas de bouton « Ajouter des amis » ; pas de repère « Suivi en temps réel » ; initiales au lieu de photos ; statuts « À l’origine / Dans le défi / En attente » au lieu de « Initiateur / Accepté / En attente » ; photo d’haltères remplacée, en attendant, par une haltère en filigrane | Écarts VOULUS, détaillés dans `community.md` : un défi entre amis ne rapporte rien (principe 5) ; les invités se choisissent à la création ; le classement se relit, il n’est pas poussé ; pas de photo de profil ; des statuts qui ne genrent personne ; la photo n’est pas encore fournie |
 | Onboarding | 3 objectifs au lieu de 4 | `NutritionGoal` n'a pas d'équivalent « gagner en force » |
 | Connexion, Inscription | Le **cœur de la marque** en décor des deux écrans : à la place de la sphère de la maquette (inscription) et de la photographie d'athlète (connexion) ; devise « L'ART DE DEVENIR » conservée | Demandé (le cœur partout, même composition sur les deux écrans) ; l'identité de marque établie prime sur les éléments génériques de la planche |
 | Connexion, Inscription | **Apple et Google seulement**, sans Discord — et leur toucher annonce que le fournisseur « arrive bientôt » | Demandé (deux fournisseurs) ; l'API ne propose que l'e-mail (Étape 2) : un bouton qui simulerait une connexion sociale mentirait |

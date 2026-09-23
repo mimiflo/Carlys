@@ -82,6 +82,7 @@ class FriendChallengeMember {
     required this.contribution,
     required this.isMe,
     this.rank,
+    this.isCreator = false,
   });
 
   final String userId;
@@ -93,6 +94,10 @@ class FriendChallengeMember {
   /// quelqu'un qui n'a rien accepté, et partir sort du classement.
   final int? rank;
   final bool isMe;
+
+  /// Celui qui a lancé le défi : l'initiateur, et l'auteur du titre et du
+  /// message — c'est lui qu'un signalement vise.
+  final bool isCreator;
 }
 
 class FriendChallenge {
@@ -108,6 +113,9 @@ class FriendChallenge {
     required this.creatorDisplayName,
     required this.members,
     this.target,
+    this.message,
+    this.createdAt,
+    this.durationDays,
   });
 
   final String id;
@@ -126,6 +134,38 @@ class FriendChallenge {
   final DateTime endsAt;
   final String creatorDisplayName;
   final List<FriendChallengeMember> members;
+
+  /// Le mot du créateur, facultatif (280 caractères au plus), visible des
+  /// seuls membres. `null` s'il n'a rien écrit — ou si le serveur est plus
+  /// ancien que le champ.
+  final String? message;
+
+  /// L'heure du lancement, donc celle du message. `null` sur un serveur plus
+  /// ancien : l'écran tait alors l'heure plutôt que d'en inventer une.
+  final DateTime? createdAt;
+
+  /// 3, 7 ou 30 jours, tels que choisis. `null` sur un serveur plus ancien.
+  final int? durationDays;
+
+  /// Le créateur, parmi les membres.
+  FriendChallengeMember? get creator {
+    for (final member in members) {
+      if (member.isCreator) {
+        return member;
+      }
+    }
+    return null;
+  }
+
+  /// Ceux qui sont DANS le défi ou y sont attendus : les acceptés et les
+  /// invités. Qui a refusé ou quitté n'est plus un participant.
+  List<FriendChallengeMember> get participants => members
+      .where(
+        (member) =>
+            member.status == FriendChallengeMemberStatus.accepted ||
+            member.status == FriendChallengeMemberStatus.invited,
+      )
+      .toList(growable: false);
 
   /// Ma ligne du classement, s'il y en a une.
   FriendChallengeMember? get me {
@@ -163,6 +203,7 @@ class NewFriendChallenge {
     required this.durationDays,
     required this.invitedUserIds,
     this.target,
+    this.message,
   });
 
   final String title;
@@ -173,4 +214,7 @@ class NewFriendChallenge {
   final int durationDays;
   final int? target;
   final List<String> invitedUserIds;
+
+  /// Le mot facultatif qui accompagne l'invitation (280 caractères au plus).
+  final String? message;
 }

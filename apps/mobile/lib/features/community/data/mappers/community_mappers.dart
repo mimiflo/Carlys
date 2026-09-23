@@ -73,6 +73,7 @@ FriendChallengeMember friendChallengeMemberFromJson(Map<String, dynamic> row) {
     contribution: (row['contribution'] as num?)?.toInt() ?? 0,
     rank: (row['rank'] as num?)?.toInt(),
     isMe: row['isMe'] as bool? ?? false,
+    isCreator: row['isCreator'] as bool? ?? false,
   );
 }
 
@@ -92,8 +93,16 @@ FriendChallenge friendChallengeFromJson(Map<String, dynamic> row) {
         .cast<Map<String, dynamic>>()
         .map(friendChallengeMemberFromJson)
         .toList(growable: false),
+    // Lus avec tolérance : un serveur plus ancien ne les envoie pas, et le
+    // défi reste lisible sans eux.
+    message: _blankToNull(row['message']),
+    createdAt: DateTime.tryParse(row['createdAt'] as String? ?? ''),
+    durationDays: (row['durationDays'] as num?)?.toInt(),
   );
 }
+
+String? _blankToNull(Object? value) =>
+    value is String && value.trim().isNotEmpty ? value : null;
 
 LeagueStanding leagueStandingFromJson(Map<String, dynamic> row) {
   return LeagueStanding(

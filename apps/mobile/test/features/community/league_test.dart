@@ -1,5 +1,6 @@
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/community/domain/entities/league.dart';
+import 'package:carlys_mobile/features/community/presentation/widgets/league/league_crown.dart';
 import 'package:carlys_mobile/features/community/presentation/widgets/league/league_invitation_card.dart';
 import 'package:carlys_mobile/features/community/presentation/widgets/league/league_ranking_card.dart';
 import 'package:carlys_mobile/features/community/presentation/widgets/league/league_status_card.dart';
@@ -67,7 +68,7 @@ void main() {
         expect(find.text('Rejoindre la ligue'), findsOneWidget);
         expect(find.text('Classement de la semaine'), findsNothing);
         // Ni compte à rebours : il compterait une semaine qu'on ne joue pas.
-        expect(find.textContaining('J-'), findsNothing);
+        expect(find.textContaining('J\u2212'), findsNothing);
         // Ni division visée : on n'y joue pas encore.
         expect(find.byIcon(AppIcons.arrowForward), findsNothing);
         // Le barème, lui, se lit avant d'entrer.
@@ -189,7 +190,11 @@ void main() {
       );
 
       // Sans cette phrase, la division changerait sans explication.
-      expect(find.textContaining('te voilà en Or'), findsOneWidget);
+      // « 1re place » : l'ordinal s'accorde à la place, jamais à la personne.
+      expect(
+        find.text('À la 2e place la semaine passée : te voilà en Or.'),
+        findsOneWidget,
+      );
       expect(find.byIcon(AppIcons.trendingUp), findsOneWidget);
     });
 
@@ -234,7 +239,7 @@ void main() {
       expect(find.text('Boris'), findsOneWidget);
       expect(find.text('Dan'), findsOneWidget);
       // Le compte à rebours de la semaine.
-      expect(find.text('J-3'), findsOneWidget);
+      expect(find.text('J\u22123'), findsOneWidget);
     });
 
     testWidgets('ma ligne apparaît MÊME hors du podium', (tester) async {
@@ -256,7 +261,7 @@ void main() {
         monte(LeagueRankingCard(league: ligue(standings: classement))),
       );
 
-      expect(find.bySemanticsLabel('5e, Toi, 40 points'), findsOneWidget);
+      expect(find.bySemanticsLabel('5e place, Toi, 40 points'), findsOneWidget);
       semantics.dispose();
     });
 
@@ -299,7 +304,7 @@ void main() {
       );
       // Ni la carte elle-même : ses lignes ne vivent pas sous un bouton.
       final podium = tester.getSemantics(
-        find.bySemanticsLabel('1e, Boris, 480 points'),
+        find.bySemanticsLabel('1re place, Boris, 480 points'),
       );
       expect(podium.parent, isSemantics(isButton: false));
       semantics.dispose();
@@ -312,6 +317,111 @@ void main() {
 
       expect(find.textContaining('Personne n’a encore marqué'), findsOneWidget);
       expect(find.text('Voir le classement complet'), findsNothing);
+    });
+
+    testWidgets('un lundi à zéro partout : pas de podium de couronnes', (
+      tester,
+    ) async {
+      // Le serveur rend AUSSI les lignes à zéro : tout le monde est premier
+      // ex æquo. Trois couronnes d'or sur des zéros ne voudraient rien dire.
+      await tester.pumpWidget(
+        monte(
+          LeagueRankingCard(
+            league: ligue(
+              score: 0,
+              standings: [
+                ligne('Boris', 0, 1),
+                ligne('Chloé', 0, 1),
+                ligne('Camille', 0, 1, isMe: true),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      expect(find.textContaining('Personne n’a encore marqué'), findsOneWidget);
+      expect(find.byType(LeagueCrown), findsNothing);
+    });
+
+    testWidgets('ma ligne reste là quand un ex æquo me range au podium sans '
+        'me donner une des trois premières lignes', (tester) async {
+      // Le serveur donne le même rang aux ex æquo et départage l'AFFICHAGE
+      // par identifiant : premier ex æquo, je peux être la quatrième ligne.
+      await tester.pumpWidget(
+        monte(
+          LeagueRankingCard(
+            league: ligue(
+              score: 50,
+              standings: [
+                ligne('Boris', 50, 1),
+                ligne('Chloé', 50, 1),
+                ligne('Dan', 50, 1),
+                ligne('Camille', 50, 1, isMe: true),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      expect(find.text('Toi'), findsOneWidget);
+    });
+
+    testWidgets('sans points, pas de couronne, même au premier rang', (
+      tester,
+    ) async {
+      // Deux personnes ont marqué : le podium s'arrête à elles, et ma ligne
+      // à zéro s'affiche sans couronne.
+      await tester.pumpWidget(
+        monte(
+          LeagueRankingCard(
+            league: ligue(
+              score: 0,
+              standings: [
+                ligne('Boris', 120, 1),
+                ligne('Chloé', 60, 2),
+                ligne('Camille', 0, 3, isMe: true),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      expect(find.byType(LeagueCrown), findsNWidgets(2));
+      expect(find.text('Toi'), findsOneWidget);
+    });
+
+    testWidgets('en grand texte sur un petit écran, aucune ligne ne déborde', (
+      tester,
+    ) async {
+      tester.view
+        ..physicalSize = const Size(320, 1400)
+        ..devicePixelRatio = 1;
+      tester.platformDispatcher.textScaleFactorTestValue = 2;
+      addTearDown(tester.view.reset);
+      addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+      await tester.pumpWidget(
+        monte(
+          Column(
+            children: [
+              LeagueStatusCard(league: ligue()),
+              LeagueRankingCard(
+                league: ligue(
+                  standings: [
+                    ligne('Boris', 1480, 1),
+                    ligne('Chloé', 320, 2),
+                    ligne('Dan', 300, 3),
+                    ligne('Camille', 240, 4, isMe: true),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+
+      // Un RenderFlex qui déborde lève une exception en test : son absence
+      // EST la preuve.
+      expect(tester.takeException(), isNull);
     });
 
     testWidgets('la loupe retrouve un prénom HORS du podium', (tester) async {

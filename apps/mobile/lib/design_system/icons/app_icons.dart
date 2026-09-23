@@ -232,6 +232,21 @@ abstract final class AppIcons {
   static const IconData block = Icons.block_rounded;
   static const IconData report = Icons.flag_outlined;
   static const IconData addFriend = Icons.person_add_alt_1_outlined;
+
+  /// Le bouton-disque « Ajouter un ami » de l'en-tête Communauté : le groupe
+  /// de la maquette, avec son « + » — il dit AJOUTER, là où `community` ne
+  /// dit que la section.
+  static const IconData inviteFriends = Icons.group_add_rounded;
+
+  // ── Défi entre amis (écran de détail) ─────────────────────────────
+  /// « Comment ça se joue » : la ligne d'arrivée, pas une récompense.
+  static const IconData challengeRules = Icons.sports_score_rounded;
+
+  /// Le mot de celui qui a lancé le défi.
+  static const IconData challengeMessage = Icons.chat_bubble_outline_rounded;
+
+  /// Le menu d'un écran poussé, en en-tête (« … ») : signaler, quitter.
+  static const IconData screenMenu = Icons.more_horiz_rounded;
   static const IconData communityOutline = Icons.group_outlined;
   static const IconData encouragementHeart = Icons.favorite_rounded;
   static const IconData encourage = Icons.volunteer_activism_outlined;

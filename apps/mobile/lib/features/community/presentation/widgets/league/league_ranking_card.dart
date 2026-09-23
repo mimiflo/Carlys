@@ -27,6 +27,12 @@ class LeagueRankingCard extends StatelessWidget {
 
   static const double _iconSize = 22;
 
+  /// Quelqu'un a-t-il marqué cette semaine ? Le serveur rend AUSSI les
+  /// lignes à zéro (chaque lecture ouvre la semaine du lecteur) : un lundi,
+  /// tout le monde est premier ex æquo à 0 point, et un podium de trois
+  /// couronnes d'or sur des zéros ne voudrait rien dire.
+  bool get anyoneScored => league.standings.any((row) => row.score > 0);
+
   /// Les lignes à montrer : le podium et moi, ou les résultats d'une
   /// recherche.
   List<LeagueStanding> get visibleRows {
@@ -36,12 +42,18 @@ class LeagueRankingCard extends StatelessWidget {
           if (matchesSearch(row.isMe ? 'Toi' : row.displayName, query)) row,
       ];
     }
-    final top = league.standings.take(podium).toList();
+    // Le podium, ce sont ceux qui ont MARQUÉ : trois lignes au plus.
+    final top = [
+      for (final row in league.standings.take(podium))
+        if (row.score > 0) row,
+    ];
     final me = league.me;
     return [
       ...top,
-      // Ma ligne, même hors du podium.
-      if (me != null && me.rank > podium && !top.contains(me)) me,
+      // Ma ligne, même hors des trois premières LIGNES — ex æquo compris :
+      // un rang de podium ne garantit pas une des trois premières lignes
+      // (le serveur départage l'affichage des ex æquo par identifiant).
+      if (me != null && !top.contains(me)) me,
     ];
   }
 
@@ -80,10 +92,7 @@ class LeagueRankingCard extends StatelessWidget {
                 ),
                 Semantics(
                   container: true,
-                  label: league.daysLeft <= 0
-                      ? 'Dernier jour de la semaine'
-                      : 'Encore ${league.daysLeft} jours avant la fin de la '
-                            'semaine',
+                  label: leagueCountdownSpoken(league),
                   excludeSemantics: true,
                   child: AppPill(
                     label: leagueCountdown(league),
@@ -94,7 +103,7 @@ class LeagueRankingCard extends StatelessWidget {
               ],
             ),
             const SizedBox(height: AppSpacing.sm),
-            if (league.standings.isEmpty)
+            if (!anyoneScored && !searching)
               Text(
                 'Personne n’a encore marqué. Une séance suffit à ouvrir le bal.',
                 style: AppTypography.label.copyWith(

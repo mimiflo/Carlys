@@ -8,7 +8,10 @@ import '../typography/app_typography.dart';
 ///
 /// `accentSolid` est l'orange en aplat (texte sombre) : réservé au filtre actif
 /// de la bibliothèque, seul usage plein du orange sur cet écran.
-enum AppPillTone { neutral, accent, accentSolid, primary }
+///
+/// `success` est le vert sémantique d'un état ACQUIS (un ami dans le défi) :
+/// jamais une couleur d'ambiance.
+enum AppPillTone { neutral, accent, accentSolid, primary, success }
 
 /// Pastille stadium : durée, groupe musculaire, filtre…
 /// Accent = fond orange .12 + bordure .28 ; neutre = blanc .07.
@@ -58,6 +61,11 @@ class AppPill extends StatelessWidget {
         AppColors.primaryCardSoft,
         AppColors.primaryLightBorder,
         AppColors.primaryLight,
+      ),
+      AppPillTone.success => (
+        AppColors.successBadgeBg,
+        AppColors.successBadgeBorder,
+        AppColors.success,
       ),
       AppPillTone.neutral => (
         AppColors.neutralBadgeBg,

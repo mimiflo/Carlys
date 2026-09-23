@@ -90,9 +90,17 @@ class FakeCommunityRepository implements CommunityRepository {
     return List.unmodifiable(_feed);
   }
 
+  /// L'échec que la SEULE liste d'amis oppose, les défis répondant : la
+  /// feuille « Défier mes amis » ne doit pas conclure à « pas d'ami ».
+  Object? friendsError;
+
   @override
   Future<List<CommunityFriend>> friends() async {
     _guard();
+    final erreur = friendsError;
+    if (erreur != null) {
+      throw erreur;
+    }
     return List.unmodifiable(_friends);
   }
 
@@ -308,6 +316,24 @@ class FakeCommunityRepository implements CommunityRepository {
     ));
   }
 
+  /// Signalements de DÉFI reçus, dans l'ordre : le défi, la personne visée
+  /// (son créateur), le motif.
+  final List<({String challengeId, String userId, String? details})>
+  challengeReports = [];
+
+  @override
+  Future<void> reportFriendChallenge(
+    FriendChallenge challenge,
+    CommunityReportDraft report,
+  ) async {
+    _guard();
+    challengeReports.add((
+      challengeId: challenge.id,
+      userId: challenge.creator?.userId ?? '',
+      details: report.details,
+    ));
+  }
+
   @override
   Future<void> deleteEncouragement(String encouragementId) async {
     _guard();
@@ -352,6 +378,17 @@ class FakeCommunityRepository implements CommunityRepository {
   }
 
   @override
+  Future<FriendChallenge> friendChallenge(String challengeId) async {
+    _guard();
+    for (final challenge in friendChallengeList) {
+      if (challenge.id == challengeId) {
+        return challenge;
+      }
+    }
+    throw const ServerException('Défi introuvable.', statusCode: 404);
+  }
+
+  @override
   Future<FriendChallenge> acceptFriendChallenge(String challengeId) async {
     // La doublure ne recompose pas le classement : ce que les écrans
     // testent, c'est que le geste part et que la liste se relit.
@@ -375,8 +412,13 @@ class FakeCommunityRepository implements CommunityRepository {
   /// erreur / chargement / vide de l'écran.
   Object? leagueError;
 
+  /// Combien de fois la ligue a été LUE : un rafraîchissement ne doit pas
+  /// interroger une source qu'aucun onglet ouvert ne montre.
+  int leagueReads = 0;
+
   @override
   Future<League> league() async {
+    leagueReads++;
     _guard();
     final erreur = leagueError;
     if (erreur != null) {

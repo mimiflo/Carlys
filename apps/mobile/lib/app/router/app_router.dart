@@ -17,6 +17,7 @@ import '../../features/carlys_profile/presentation/screens/carlys_profiles_scree
 import '../../features/coaching/presentation/screens/coach_page.dart';
 import '../../features/community/presentation/providers/community_tab_state.dart';
 import '../../features/community/presentation/screens/community_screen.dart';
+import '../../features/community/presentation/screens/friend_challenge_screen.dart';
 import '../../features/dashboard/presentation/screens/home_screen.dart';
 import '../../features/exercises/presentation/screens/exercise_detail_screen.dart';
 import '../../features/exercises/presentation/screens/exercise_library_screen.dart';
@@ -309,6 +310,18 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                     state.uri.queryParameters['onglet'],
                   ),
                 ),
+                routes: [
+                  // Plein écran, hors de la coquille : le défi se lit sans la
+                  // barre du bas, comme la fiche d'un exercice.
+                  GoRoute(
+                    path: 'defis/:challengeId',
+                    name: 'friend-challenge',
+                    parentNavigatorKey: _rootNavigatorKey,
+                    builder: (context, state) => FriendChallengeScreen(
+                      challengeId: state.pathParameters['challengeId'] ?? '',
+                    ),
+                  ),
+                ],
               ),
             ],
           ),

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
+
+import '../../../../app/router/app_routes.dart';
 
 import '../../../../core/utilities/text_search.dart';
 import '../../../../design_system/design_system.dart';
@@ -12,6 +15,7 @@ import 'challenge_card.dart';
 import 'community_flows.dart';
 import 'community_gestures.dart';
 import 'community_section.dart';
+import 'friend_challenge/friend_challenge_gestures.dart';
 import 'friend_challenge_card.dart';
 
 /// L'onglet DÉFIS : les défis du mois, à progression COLLECTIVE, puis les
@@ -36,10 +40,9 @@ class CommunityChallengesTab extends ConsumerWidget {
           'Les défis vivent sur le serveur. Ils reviennent avec le réseau.',
       builder: (context) {
         final actions = ref.read(communityActionsProvider);
-        final gestures = CommunityGestures(
-          actions,
-          ref.read(communityModerationActionsProvider),
-        );
+        final moderation = ref.read(communityModerationActionsProvider);
+        final gestures = CommunityGestures(actions, moderation);
+        final friendGestures = FriendChallengeGestures(actions, moderation);
         final monthly = [
           for (final challenge
               in challenges.valueOrNull ?? const <CommunityChallenge>[])
@@ -75,19 +78,29 @@ class CommunityChallengesTab extends ConsumerWidget {
                 label: 'Défier mes amis',
                 variant: AppButtonVariant.secondary,
                 isExpanded: true,
-                onPressed: () => newFriendChallengeFlow(
-                  context,
-                  actions,
-                  friends.valueOrNull ?? const <CommunityFriend>[],
-                ),
+                // Pas avant d'avoir la liste : ouverte trop tôt, ou sur une
+                // liste en panne, la feuille dirait « pas encore d'ami » à
+                // qui en a.
+                onPressed: friends.hasValue
+                    ? () => newFriendChallengeFlow(
+                        context,
+                        actions,
+                        friends.requireValue,
+                      )
+                    : null,
               ),
+              if (friends.hasError && !friends.hasValue)
+                const CommunityNoMatch(
+                  'Ta liste d’amis n’a pas pu se charger. Tire vers le bas '
+                  'pour réessayer.',
+                ),
               for (final challenge in betweenFriends)
                 FriendChallengeCard(
                   challenge: challenge,
-                  onAccept: () =>
-                      gestures.acceptFriendChallenge(context, challenge),
-                  onDecline: () =>
-                      gestures.declineFriendChallenge(context, challenge),
+                  onOpen: () =>
+                      context.push(AppRoutes.friendChallenge(challenge.id)),
+                  onAccept: () => friendGestures.accept(context, challenge),
+                  onDecline: () => friendGestures.leave(context, challenge),
                 ),
             ]),
           ],

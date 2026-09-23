@@ -28,28 +28,30 @@ import 'in_memory_community_repository.dart';
 import 'navigation.dart';
 
 /// L'écran Communauté sur le MONDE D'EXEMPLE en mémoire (amis, défis,
-/// encouragements — actions fonctionnelles, aucun réseau).
-Widget sampleWorldApp() => ProviderScope(
-  overrides: [
-    appEnvironmentProvider.overrideWithValue(
-      const AppEnvironment(
-        flavor: AppFlavor.development,
-        apiBaseUrl: 'http://localhost:3000',
-      ),
-    ),
-    authRepositoryProvider.overrideWithValue(
-      FakeAuthRepository(storedSession: true),
-    ),
-    workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
-    waterStoreProvider.overrideWithValue(FakeWaterStore()),
-    syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
-    appRestoreProvider.overrideWithValue(NoopAppRestore()),
-    communityRepositoryProvider.overrideWithValue(
-      InMemoryCommunityRepository(),
-    ),
-  ],
-  child: const CarlysApp(),
-);
+/// encouragements — actions fonctionnelles, aucun réseau). [community] le
+/// fournit quand le test doit lire ce que le dépôt a reçu.
+Widget sampleWorldApp({InMemoryCommunityRepository? community}) =>
+    ProviderScope(
+      overrides: [
+        appEnvironmentProvider.overrideWithValue(
+          const AppEnvironment(
+            flavor: AppFlavor.development,
+            apiBaseUrl: 'http://localhost:3000',
+          ),
+        ),
+        authRepositoryProvider.overrideWithValue(
+          FakeAuthRepository(storedSession: true),
+        ),
+        workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
+        waterStoreProvider.overrideWithValue(FakeWaterStore()),
+        syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
+        appRestoreProvider.overrideWithValue(NoopAppRestore()),
+        communityRepositoryProvider.overrideWithValue(
+          community ?? InMemoryCommunityRepository(),
+        ),
+      ],
+      child: const CarlysApp(),
+    );
 
 /// L'application connectée sur un dépôt communauté PILOTABLE (erreur, vide…).
 Widget appWith(FakeCommunityRepository community) => ProviderScope(

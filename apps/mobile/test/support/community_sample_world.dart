@@ -16,6 +16,7 @@
 library;
 
 import 'package:carlys_mobile/features/community/domain/entities/community.dart';
+import 'package:carlys_mobile/features/community/domain/entities/friend_challenge.dart';
 import 'package:carlys_mobile/features/community/domain/entities/league.dart';
 
 /// Les mots déjà reçus, du plus récent au plus ancien.
@@ -201,3 +202,95 @@ const List<(String, String, int)> _classement = [
   ('exemple-jade', 'Jade', 120),
   ('exemple-lucas', 'Lucas', 95),
 ];
+
+/// Les défis ENTRE AMIS de l'exemple, lancés par des amis du jeu (Sarah,
+/// Léa) : un en cours où l'on est deuxième, et une invitation en attente —
+/// celle de la maquette du 23 septembre 2026, message compris.
+List<FriendChallenge> sampleFriendChallenges() {
+  final now = DateTime.now();
+  return [
+    FriendChallenge(
+      id: 'exemple-defi-ami-course',
+      title: 'Qui court le plus',
+      metric: ChallengeMetric.distanceMeters,
+      unit: 'mètres',
+      status: FriendChallengeStatus.open,
+      myStatus: FriendChallengeMemberStatus.accepted,
+      startsAt: now.subtract(const Duration(days: 2)),
+      endsAt: now.add(const Duration(days: 5)),
+      createdAt: now.subtract(const Duration(days: 2)),
+      durationDays: 7,
+      creatorDisplayName: 'Sarah',
+      members: const [
+        FriendChallengeMember(
+          userId: 'exemple-friend-sarah',
+          displayName: 'Sarah',
+          status: FriendChallengeMemberStatus.accepted,
+          contribution: 12400,
+          rank: 1,
+          isMe: false,
+          isCreator: true,
+        ),
+        FriendChallengeMember(
+          userId: 'exemple-moi',
+          displayName: 'Camille',
+          status: FriendChallengeMemberStatus.accepted,
+          contribution: 9800,
+          rank: 2,
+          isMe: true,
+        ),
+        FriendChallengeMember(
+          userId: 'exemple-friend-tom',
+          displayName: 'Tom',
+          status: FriendChallengeMemberStatus.accepted,
+          contribution: 4200,
+          rank: 3,
+          isMe: false,
+        ),
+      ],
+    ),
+    FriendChallenge(
+      id: 'exemple-defi-ami-seances',
+      title: 'Cinq séances cette semaine',
+      metric: ChallengeMetric.workouts,
+      unit: 'séances',
+      target: 5,
+      status: FriendChallengeStatus.open,
+      myStatus: FriendChallengeMemberStatus.invited,
+      startsAt: now.subtract(const Duration(hours: 5)),
+      endsAt: now.add(const Duration(days: 6, hours: 19)),
+      createdAt: now.subtract(const Duration(hours: 5)),
+      durationDays: 7,
+      creatorDisplayName: 'Léa',
+      message:
+          'Allez on y va ! 5 séances cette semaine, on se motive et on se '
+          'tient au courant 💪',
+      members: const [
+        FriendChallengeMember(
+          userId: 'exemple-friend-lea',
+          displayName: 'Léa',
+          status: FriendChallengeMemberStatus.accepted,
+          contribution: 2,
+          rank: 1,
+          isMe: false,
+          isCreator: true,
+        ),
+        FriendChallengeMember(
+          userId: 'exemple-friend-mehdi',
+          displayName: 'Mehdi',
+          status: FriendChallengeMemberStatus.accepted,
+          contribution: 1,
+          rank: 2,
+          isMe: false,
+        ),
+        FriendChallengeMember(
+          userId: 'exemple-moi',
+          displayName: 'Camille',
+          status: FriendChallengeMemberStatus.invited,
+          contribution: 0,
+          isMe: true,
+        ),
+      ],
+    ),
+  ];
+}

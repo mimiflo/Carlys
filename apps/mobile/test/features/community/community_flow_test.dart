@@ -81,6 +81,10 @@ void main() {
 
     expect(find.text('Personne ici pour l’instant'), findsOneWidget);
     expect(find.text('Ajouter un ami'), findsWidgets);
+    // Et le réglage de partage reste à portée : un compte neuf décide AVANT
+    // son premier ami de ce qu'il montrera.
+    await reveal(tester, find.text('CONFIDENTIALITÉ'));
+    expect(find.byType(Switch), findsOneWidget);
   });
 
   testWidgets('défis du mois là, pas encore d’ami : les défis s’ouvrent, '

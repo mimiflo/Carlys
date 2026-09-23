@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/repositories/community_repository_impl.dart';
 import '../../domain/entities/community.dart';
 import '../../domain/entities/community_moderation.dart';
+import '../../domain/entities/friend_challenge.dart';
 import 'community_controllers.dart';
 
 /// Personnes que j'ai bloquées. Rafraîchie par invalidation après chaque
@@ -63,5 +64,15 @@ class CommunityModerationActions {
     return _ref
         .read(communityRepositoryProvider)
         .reportEncouragement(encouragement, report);
+  }
+
+  /// Signale le titre et le message d'un défi, sous le nom de son créateur.
+  Future<void> reportFriendChallenge(
+    FriendChallenge challenge,
+    CommunityReportDraft report,
+  ) {
+    return _ref
+        .read(communityRepositoryProvider)
+        .reportFriendChallenge(challenge, report);
   }
 }

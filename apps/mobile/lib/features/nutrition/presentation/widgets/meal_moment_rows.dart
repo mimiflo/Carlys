@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
 
 /// Quand le repas a été mangé : une date et une heure, toutes deux
@@ -67,45 +68,19 @@ class MealMomentRows extends StatelessWidget {
     );
   }
 
-  /// « Aujourd'hui », « Hier », puis la date en clair : les deux jours qui
-  /// couvrent la quasi-totalité des saisies se nomment, les autres se
-  /// datent.
-  static String spellDay(DateTime moment, DateTime now) {
-    bool memeJour(DateTime other) =>
-        moment.year == other.year &&
-        moment.month == other.month &&
-        moment.day == other.day;
-    if (memeJour(now)) {
-      return 'Aujourd’hui';
-    }
-    if (memeJour(DateTime(now.year, now.month, now.day - 1))) {
-      return 'Hier';
-    }
-    final jour = moment.day.toString().padLeft(2, '0');
-    final mois = moment.month.toString().padLeft(2, '0');
-    return '$jour/$mois/${moment.year}';
-  }
-
-  /// L'heure en 24 h, comme partout ailleurs dans l'application.
-  static String spellTime(DateTime moment) {
-    final heures = moment.hour.toString().padLeft(2, '0');
-    final minutes = moment.minute.toString().padLeft(2, '0');
-    return '${heures}h$minutes';
-  }
-
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
         AppListRow(
           title: 'Jour du repas',
-          trailingText: spellDay(eatenAt, DateTime.now()),
+          trailingText: formatSpokenDay(eatenAt, DateTime.now()),
           leading: AppIcons.date,
           onTap: () => _pickDate(context),
         ),
         AppListRow(
           title: 'Heure du repas',
-          trailingText: spellTime(eatenAt),
+          trailingText: formatClock(eatenAt),
           leading: AppIcons.time,
           onTap: () => _pickTime(context),
         ),

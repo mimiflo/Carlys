@@ -61,6 +61,11 @@ abstract final class AppRoutes {
   static String communityTab(CommunityTab tab) =>
       '$community?onglet=${tab.slug}';
 
+  /// Un défi entre amis, en plein écran : son classement, ses invités, le
+  /// mot de celui qui l'a lancé.
+  static String friendChallenge(String challengeId) =>
+      '$community/defis/$challengeId';
+
   static String exerciseDetail(String idOrSlug) => '/exercises/$idOrSlug';
 
   /// La courbe de charge d'UN exercice, avec ses records posés dessus.

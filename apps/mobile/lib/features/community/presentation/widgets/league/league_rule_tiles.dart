@@ -111,10 +111,18 @@ class _RuleTile extends StatelessWidget {
               children: [
                 Icon(icon, size: _iconSize, color: color),
                 const SizedBox(width: AppSpacing.xxs),
-                Text(
-                  value,
-                  style: AppTypography.heading.copyWith(
-                    color: AppColors.darkTextPrimary,
+                // Trois tuiles sur la largeur d'un téléphone : en grand texte,
+                // le chiffre se réduit plutôt que de déborder de sa tuile.
+                Flexible(
+                  child: FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      value,
+                      style: AppTypography.heading.copyWith(
+                        color: AppColors.darkTextPrimary,
+                      ),
+                    ),
                   ),
                 ),
               ],

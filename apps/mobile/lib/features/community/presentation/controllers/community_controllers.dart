@@ -8,6 +8,7 @@ import '../../data/repositories/community_repository_impl.dart';
 import '../../domain/entities/community.dart';
 import '../../domain/entities/friend_challenge.dart';
 import '../../domain/entities/league.dart';
+import '../providers/friend_challenge_detail_providers.dart';
 
 /// Encouragements reçus. Rafraîchis par invalidation après chaque action.
 final encouragementsProvider = FutureProvider.autoDispose<List<Encouragement>>((
@@ -136,7 +137,9 @@ class CommunityActions {
     await _ref
         .read(communityRepositoryProvider)
         .acceptFriendChallenge(challengeId);
-    _ref.invalidate(friendChallengesProvider);
+    _ref
+      ..invalidate(friendChallengesProvider)
+      ..invalidate(friendChallengeDetailProvider(challengeId));
   }
 
   /// Refuse une invitation, ou quitte un défi commencé.
@@ -144,7 +147,9 @@ class CommunityActions {
     await _ref
         .read(communityRepositoryProvider)
         .declineFriendChallenge(challengeId);
-    _ref.invalidate(friendChallengesProvider);
+    _ref
+      ..invalidate(friendChallengesProvider)
+      ..invalidate(friendChallengeDetailProvider(challengeId));
   }
 
   /// Encourage un ami. Rend `false` si un envoi est DÉJÀ en route vers lui —

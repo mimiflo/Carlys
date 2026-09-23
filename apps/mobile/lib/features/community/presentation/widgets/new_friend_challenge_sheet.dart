@@ -9,7 +9,12 @@ import '../../domain/entities/friend_challenge.dart';
 /// n'est pas dans cette liste.
 const List<int> friendChallengeDurations = [3, 7, 30];
 
-/// Feuille « Défier mes amis » : un titre, une unité, une durée, des amis.
+/// Le mot facultatif d'un défi : 280 caractères au plus, comme un
+/// encouragement (`FRIEND_CHALLENGE_MESSAGE_MAX_LENGTH` côté serveur).
+const int friendChallengeMessageMaxLength = 280;
+
+/// Feuille « Défier mes amis » : un titre, un mot facultatif, une unité, une
+/// durée, des amis.
 ///
 /// La fin du défi n'est pas demandée : le serveur la CALCULE depuis la
 /// durée. Un écran qui l'enverrait poserait un défi éternel en une requête.
@@ -35,6 +40,7 @@ class _NewFriendChallengeForm extends StatefulWidget {
 
 class _NewFriendChallengeFormState extends State<_NewFriendChallengeForm> {
   final _title = TextEditingController();
+  final _message = TextEditingController();
   final _formKey = GlobalKey<FormState>();
   final Set<String> _invites = {};
 
@@ -44,6 +50,7 @@ class _NewFriendChallengeFormState extends State<_NewFriendChallengeForm> {
   @override
   void dispose() {
     _title.dispose();
+    _message.dispose();
     super.dispose();
   }
 
@@ -65,9 +72,20 @@ class _NewFriendChallengeFormState extends State<_NewFriendChallengeForm> {
         metric: _metric,
         durationDays: _duration,
         invitedUserIds: _invites.toList(growable: false),
+        message: _message.text.trim().isEmpty ? null : _message.text.trim(),
       ),
     );
   }
+
+  /// Le serveur compte en POINTS DE CODE (`@MaxLength`, via
+  /// `validator.isLength`) : un émoji y vaut un. Le compteur du champ, lui,
+  /// compte des graphèmes, et un émoji nuancé (« 💪🏽 ») en fait un seul pour
+  /// deux points de code. Compter les points de code ici dit la limite AVANT
+  /// l'aller-retour, sans jamais laisser passer ce que le serveur refuserait.
+  static String? _validateMessage(String? value) =>
+      (value?.trim().runes.length ?? 0) > friendChallengeMessageMaxLength
+      ? 'Ton mot dépasse $friendChallengeMessageMaxLength caractères.'
+      : null;
 
   @override
   Widget build(BuildContext context) {
@@ -94,6 +112,17 @@ class _NewFriendChallengeFormState extends State<_NewFriendChallengeForm> {
               validator: (value) => (value?.trim().isEmpty ?? true)
                   ? 'Donne un titre à ton défi.'
                   : null,
+            ),
+            const SizedBox(height: AppSpacing.xs),
+            // Facultatif : lu par les seuls invités, sur l'écran du défi.
+            // Jamais dans la notification, qui ne porte que le titre.
+            AppTextField(
+              label: 'Un mot pour tes amis (facultatif)',
+              controller: _message,
+              hint: 'On se motive ensemble ?',
+              maxLines: 3,
+              maxLength: friendChallengeMessageMaxLength,
+              validator: _validateMessage,
             ),
             const SizedBox(height: AppSpacing.sm),
             const AppSectionLabel('Ce qu’on compte'),

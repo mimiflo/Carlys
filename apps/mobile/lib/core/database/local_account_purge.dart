@@ -5,6 +5,7 @@ import '../../app/restore/app_restore.dart';
 import '../../features/academy/data/answered_lessons_store.dart';
 import '../../features/academy/presentation/controllers/academy_controllers.dart';
 import '../../features/community/presentation/controllers/community_controllers.dart';
+import '../../features/community/presentation/providers/community_tab_state.dart';
 import '../../features/mentor/data/mentor_prefs_store.dart';
 import '../../features/mentor/presentation/controllers/mentor_controllers.dart';
 import '../../features/notifications/presentation/controllers/notification_preferences.dart';
@@ -107,6 +108,13 @@ class DriftLocalAccountPurge implements LocalAccountPurge {
     // de quelqu'un d'autre. Le provider est permanent : seule cette ligne
     // lui rend une carte vierge.
     subscriptionActionsProvider,
+    // Ce que celui qui part a tapé dans la loupe de la Communauté (le prénom
+    // d'un ami) et l'onglet qu'il y a laissé : deux providers PERMANENTS,
+    // voulus tels pour survivre à un détour par un autre onglet. Sans ces
+    // lignes, le compte suivant ouvrait la page filtrée sur le prénom d'un
+    // inconnu.
+    communitySearchProvider,
+    communityTabProvider,
   ];
 
   final Ref _ref;
