@@ -48,7 +48,15 @@ Finder _blockedNamed(String name) => find.descendant(
   matching: find.text(name),
 );
 
-Finder _confirm(String label) => find.widgetWithText(FilledButton, label);
+/// Le bouton de confirmation de la POPUP centrée (`showAppConfirm`), pas
+/// l'entrée homonyme du menu d'options.
+Finder _confirm(String label) => find.descendant(
+  of: find.byType(AppPopupCard),
+  matching: find.widgetWithText(AppButton, label),
+);
+
+/// Le bouton d'une FEUILLE (le signalement reste un formulaire).
+Finder _sheetButton(String label) => find.widgetWithText(FilledButton, label);
 
 void main() {
   setUp(() {
@@ -81,7 +89,7 @@ void main() {
 
       await chooseOption(tester, optionsOf('Tom'), 'Retirer');
 
-      // Rien ne part sans confirmation : la feuille dit ce qui va se passer.
+      // Rien ne part sans confirmation : la popup dit ce qui va se passer.
       expect(find.text('Retirer Tom de tes amis ?'), findsOneWidget);
       expect(community.removedFriends, isEmpty);
 
@@ -252,8 +260,8 @@ void main() {
         await tester.tap(find.text('Harcèlement'));
         await tester.pump();
         await tester.enterText(find.byType(TextFormField), ' Trop insistant. ');
-        await tester.ensureVisible(_confirm('Envoyer le signalement'));
-        await tester.tap(_confirm('Envoyer le signalement'));
+        await tester.ensureVisible(_sheetButton('Envoyer le signalement'));
+        await tester.tap(_sheetButton('Envoyer le signalement'));
         await tester.pumpAndSettle();
 
         expect(community.reports, [
@@ -286,8 +294,8 @@ void main() {
 
       await tester.tap(find.text('Spam ou publicité'));
       await tester.pump();
-      await tester.ensureVisible(_confirm('Envoyer le signalement'));
-      await tester.tap(_confirm('Envoyer le signalement'));
+      await tester.ensureVisible(_sheetButton('Envoyer le signalement'));
+      await tester.tap(_sheetButton('Envoyer le signalement'));
       await tester.pumpAndSettle();
 
       expect(community.reports, [

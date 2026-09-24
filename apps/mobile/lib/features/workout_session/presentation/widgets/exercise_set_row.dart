@@ -148,27 +148,14 @@ class ExerciseSetRow extends StatelessWidget {
   }
 
   Future<void> _confirmDelete(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Supprimer la série ?'),
-        content: const Text(
-          'La suppression est enregistrée localement puis synchronisée.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Annuler'),
-          ),
-          AppButton(
-            label: 'Supprimer',
-            variant: AppButtonVariant.destructive,
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-          ),
-        ],
-      ),
+    final confirmed = await showAppConfirm(
+      context,
+      title: 'Supprimer la série ?',
+      message: 'La suppression est enregistrée localement puis synchronisée.',
+      confirmLabel: 'Supprimer',
+      destructive: true,
     );
-    if (confirmed == true) {
+    if (confirmed) {
       await onDelete?.call();
     }
   }

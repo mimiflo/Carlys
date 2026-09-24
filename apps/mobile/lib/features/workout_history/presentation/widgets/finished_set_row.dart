@@ -100,29 +100,18 @@ class FinishedSetRow extends ConsumerWidget {
   }
 
   Future<void> _supprimer(BuildContext context, WidgetRef ref) async {
-    final confirme = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Supprimer cette série ?'),
-        // La conséquence, pas seulement le geste : c'est ce qui distingue
-        // une confirmation utile d'un « êtes-vous sûr » décoratif.
-        content: Text(
+    final confirme = await showAppConfirm(
+      context,
+      title: 'Supprimer cette série ?',
+      // La conséquence, pas seulement le geste : c'est ce qui distingue
+      // une confirmation utile d'un « êtes-vous sûr » décoratif.
+      message:
           '${set.exerciseName}, ${_valeur(set)}. Tes records et tes '
           'statistiques seront recalculés sans elle.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text('Annuler'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            child: const Text('Supprimer'),
-          ),
-        ],
-      ),
+      confirmLabel: 'Supprimer',
+      destructive: true,
     );
-    if (confirme != true || !context.mounted) {
+    if (!confirme || !context.mounted) {
       return;
     }
     await _ecrire(
@@ -141,12 +130,12 @@ class FinishedSetRow extends ConsumerWidget {
     Future<void> Function() geste, {
     required String succes,
   }) async {
-    final messenger = ScaffoldMessenger.of(context);
+    final notices = AppNotices.of(context);
     try {
       await geste();
-      messenger.showSnackBar(SnackBar(content: Text(succes)));
+      notices.show(succes, tone: AppNoticeTone.success);
     } on AppException catch (error) {
-      messenger.showSnackBar(SnackBar(content: Text(error.message)));
+      notices.show(error.message, tone: AppNoticeTone.error);
     }
   }
 }

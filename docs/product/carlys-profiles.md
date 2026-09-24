@@ -38,8 +38,8 @@ et l'on évolue d'un profil à l'autre à tout moment.
   métaboliques : enregistré immédiatement si une session existe, sinon
   conservé localement (`profilCarlys` dans les réponses stockées) et reporté
   dès la création du compte.
-- Un échec de choix s'affiche (SnackBar) et ne change rien — jamais un état
-  silencieusement faux.
+- Un échec de choix s'affiche (popup centrée `AppNotices`, ton « erreur ») et
+  ne change rien — jamais un état silencieusement faux.
 
 ## Ce que le profil change dans l'application
 

@@ -356,8 +356,8 @@ simplement perdue (la barre est collective, pas comptable).
   amitié laisse en place les mots déjà reçus, donc l'auteur d'un mot blessant
   peut très bien n'avoir plus aucune carte à l'écran ; le menu du mot est
   alors le seul chemin qui mène encore à son blocage. Retirer et bloquer se
-  confirment dans une feuille du
-  design system qui dit ce qui va se passer ; bloquer fait disparaître la
+  confirment dans une popup centrée du design system (`showAppConfirm`,
+  bouton rouge) qui dit ce qui va se passer ; bloquer fait disparaître la
   personne des amis et du fil sans un mot accusateur (le retour dit seulement
   où revenir dessus). Signaler ouvre une feuille avec le motif (les valeurs
   de l'enum serveur, libellées en français : Harcèlement, Spam ou publicité,
@@ -368,7 +368,7 @@ simplement perdue (la barre est collective, pas comptable).
   n'est rétabli. Un compte qui n'a plus que des blocages n'est pas « vide ».
 - Tous les gestes de l'écran passent par `CommunityGestures` →
   `CommunityActions` / `CommunityModerationActions` → dépôt : le retour est
-  un mot sobre dans la barre de message, et l'échec dit VRAI (hors ligne
+  un mot sobre dans une popup centrée (`AppNotices`), et l'échec dit VRAI (hors ligne
   n'est pas une panne, `runCommunityGesture`), au lieu d'échouer en silence.
   Le dépôt (`CommunityRepository`) expose `removeFriend`, `blockUser`,
   `unblockUser`, `listBlocked`, `reportUser`, `reportEncouragement`,

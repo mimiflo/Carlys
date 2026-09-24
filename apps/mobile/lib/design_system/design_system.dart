@@ -1,6 +1,12 @@
 /// Design system Carlys — point d'entrée unique.
 ///
 /// Les écrans importent ce fichier plutôt que les fichiers internes.
+///
+/// Deux fichiers de `components/` ne sont volontairement PAS exportés :
+/// `app_popup_layout.dart` et `app_notice_layer.dart`, la mécanique des
+/// popups. Un écran ouvre une popup par ses portes (`AppNotices`,
+/// `showAppConfirm`, `showAppPrompt`, `showAppDialog`), jamais par ce qu'il
+/// y a dessous.
 library;
 
 export 'colors/app_colors.dart';
@@ -12,6 +18,7 @@ export 'components/app_brand_button.dart';
 export 'components/app_button.dart';
 export 'components/app_card.dart';
 export 'components/app_choice_card.dart';
+export 'components/app_dialogs.dart';
 export 'components/app_difficulty_dashes.dart';
 export 'components/app_empty_state.dart';
 export 'components/app_error_state.dart';
@@ -24,8 +31,11 @@ export 'components/app_list_row.dart';
 export 'components/app_living_flame.dart';
 export 'components/app_loading_indicator.dart';
 export 'components/app_metric_column.dart';
+export 'components/app_notices.dart';
 export 'components/app_password_field.dart';
 export 'components/app_pill.dart';
+export 'components/app_popup_card.dart';
+export 'components/app_prompt.dart';
 export 'components/app_reveal_sweep.dart';
 export 'components/app_round_icon_button.dart';
 export 'components/app_screen_header.dart';

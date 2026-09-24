@@ -216,31 +216,13 @@ class _Resultats extends StatelessWidget {
   }
 }
 
+/// Le nom saisi, sans ses espaces de bord ; `null` si l'on renonce.
 Future<String?> _promptFreeExercise(BuildContext context) {
-  final controller = TextEditingController();
-  return showDialog<String>(
-    context: context,
-    builder: (dialogContext) => AlertDialog(
-      title: const Text('Exercice libre'),
-      content: TextField(
-        controller: controller,
-        autofocus: true,
-        maxLength: 120,
-        decoration: const InputDecoration(hintText: 'Nom de l’exercice'),
-      ),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(dialogContext).pop(),
-          child: const Text('Annuler'),
-        ),
-        AppButton(
-          label: 'Choisir',
-          onPressed: () {
-            final name = controller.text.trim();
-            Navigator.of(dialogContext).pop(name.isEmpty ? null : name);
-          },
-        ),
-      ],
-    ),
+  return showAppPrompt(
+    context,
+    title: 'Exercice libre',
+    hint: 'Nom de l’exercice',
+    maxLength: 120,
+    confirmLabel: 'Choisir',
   );
 }

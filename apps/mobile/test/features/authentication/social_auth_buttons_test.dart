@@ -81,7 +81,7 @@ void main() {
     // …la session est ouverte (le routeur emmène ailleurs en production)…
     expect(repository.storedSession, isTrue);
     // …et rien ne s'affiche : il n'y a rien à dire quand ça marche.
-    expect(find.byType(SnackBar), findsNothing);
+    expect(find.byType(AppPopupCard), findsNothing);
   });
 
   testWidgets('renoncer devant la feuille ne dit RIEN', (tester) async {
@@ -91,7 +91,7 @@ void main() {
     await tap(tester, 'Apple');
 
     expect(repository.storedSession, isFalse);
-    expect(find.byType(SnackBar), findsNothing);
+    expect(find.byType(AppPopupCard), findsNothing);
   });
 
   testWidgets('fournisseur pas encore activé côté serveur : on le DIT', (
@@ -109,6 +109,11 @@ void main() {
     expect(
       find.textContaining('La connexion avec Google arrive bientôt'),
       findsOneWidget,
+    );
+    // Pas une panne : la popup garde le médaillon violet, pas le rouge.
+    expect(
+      tester.widget<AppPopupCard>(find.byType(AppPopupCard)).tone,
+      AppPopupTone.brand,
     );
   });
 
@@ -139,6 +144,11 @@ void main() {
     await tap(tester, 'Google');
 
     expect(find.textContaining('adresse e-mail vérifiée'), findsOneWidget);
+    // Un refus, lui, est un échec du geste : médaillon rouge sémantique.
+    expect(
+      tester.widget<AppPopupCard>(find.byType(AppPopupCard)).tone,
+      AppPopupTone.danger,
+    );
   });
 
   testWidgets('panne réseau : un message utile, jamais une trace technique', (
@@ -163,6 +173,6 @@ void main() {
     await tester.pump();
 
     expect(repository.lastSocialProvider, isNull);
-    expect(find.byType(SnackBar), findsNothing);
+    expect(find.byType(AppPopupCard), findsNothing);
   });
 }

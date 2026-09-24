@@ -150,6 +150,13 @@ test "$(git rev-parse HEAD)" = "$(python3 -c "import json;print(json.load(open('
   `AppIcons.<ce que ça VEUT DIRE>` (`AppIcons.restDay`, pas
   `Icons.bedtime_outlined`). `check_mobile_icons.sh` le vérifie, en local et en CI.
   Le nom manque ? On l'ajoute au design system — jamais on ne contourne.
+- Ne **jamais** ouvrir une popup à la main (`SnackBar`, `showDialog`,
+  `AlertDialog`, une `DialogRoute`…) : toute popup est la carte centrée au thème violet du design
+  system. Un message passager passe par `AppNotices.of(context).show(…)`
+  (capturé avant un `await`), une question par `showAppConfirm`, une saisie par
+  `showAppPrompt`, toute autre forme par `showAppDialog` ; les menus et les
+  formulaires restent des feuilles (`showAppSheet`). `check_mobile_popups.sh`
+  le vérifie, en local et en CI.
 - Ne **jamais** faire d'appel API directement depuis un widget Flutter — toujours via
   contrôleur → use case → repository.
 - Ne **jamais** accéder à Prisma depuis un contrôleur NestJS — l'accès aux données

@@ -92,7 +92,17 @@ class AppPill extends StatelessWidget {
             Icon(icon, size: 14, color: textColor),
             const SizedBox(width: 4),
           ],
-          Text(mono ? label.toUpperCase() : label, style: style),
+          // Souple : dans une largeur bornée trop étroite (un constat de
+          // plan dans une popup, à 320 points, texte agrandi), le libellé
+          // passe à la ligne au lieu de déborder de la pastille. Tant qu'il
+          // tient, il garde exactement sa largeur : rien ne change ailleurs.
+          Flexible(
+            child: Text(
+              mono ? label.toUpperCase() : label,
+              style: style,
+              textAlign: TextAlign.center,
+            ),
+          ),
         ],
       ),
     );

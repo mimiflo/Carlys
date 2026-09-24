@@ -80,9 +80,9 @@ class CarlysProfilesScreen extends ConsumerWidget {
       await ref.read(carlysProfileActionsProvider).choose(profile);
     } on AppException catch (exception) {
       if (context.mounted) {
-        ScaffoldMessenger.of(
+        AppNotices.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(exception.message)));
+        ).show(exception.message, tone: AppNoticeTone.error);
       }
     }
   }

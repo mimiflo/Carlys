@@ -118,11 +118,11 @@ class TrainingSetupScreen extends ConsumerWidget {
     WidgetRef ref,
     Future<void> Function() action,
   ) async {
-    final messenger = ScaffoldMessenger.of(context);
+    final notices = AppNotices.of(context);
     try {
       await action();
     } on AppException catch (exception) {
-      messenger.showSnackBar(SnackBar(content: Text(exception.message)));
+      notices.show(exception.message, tone: AppNoticeTone.error);
     }
   }
 }
@@ -227,13 +227,13 @@ class _Materiel extends ConsumerWidget {
         // La bascule vit dans les actions, SÉRIALISÉE : l'écran ne
         // calcule pas la liste — deux coches rapides se courraient après.
         onToggle: (equipment) async {
-          final messenger = ScaffoldMessenger.of(context);
+          final notices = AppNotices.of(context);
           try {
             await ref
                 .read(trainingProfileActionsProvider)
                 .toggleEquipment(equipment.slug);
           } on AppException catch (exception) {
-            messenger.showSnackBar(SnackBar(content: Text(exception.message)));
+            notices.show(exception.message, tone: AppNoticeTone.error);
           }
         },
       ),

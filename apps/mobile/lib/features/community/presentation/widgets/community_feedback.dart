@@ -3,7 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../../core/errors/app_exception.dart';
 import '../../../../core/feedback/server_gesture.dart';
 
-/// Exécute un geste communautaire et en rend compte dans la barre de message.
+/// Exécute un geste communautaire et en rend compte dans une popup centrée
+/// (`AppNotices`).
 ///
 /// La mécanique vit désormais au cœur (`core/feedback/server_gesture.dart`) :
 /// la règle — tout geste qui part sur le réseau dit ce qu'il advient de lui —

@@ -113,10 +113,9 @@ class _MealFormState extends State<_MealForm> {
     // l'aller-retour, faute de quoi le refus arriverait sous forme d'un
     // « Enregistrement impossible » qui ne nomme pas la cause.
     if (_eatenAt.isAfter(DateTime.now())) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('On ne mange pas demain : choisis un moment passé.'),
-        ),
+      AppNotices.of(context).show(
+        'On ne mange pas demain : choisis un moment passé.',
+        tone: AppNoticeTone.error,
       );
       return;
     }

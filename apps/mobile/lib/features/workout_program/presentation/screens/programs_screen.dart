@@ -32,9 +32,9 @@ class ProgramsScreen extends ConsumerWidget {
     } on AppException catch (exception) {
       if (context.mounted) {
         // Typiquement la limite gratuite : le message vient du serveur.
-        ScaffoldMessenger.of(
+        AppNotices.of(
           context,
-        ).showSnackBar(SnackBar(content: Text(exception.message)));
+        ).show(exception.message, tone: AppNoticeTone.error);
       }
     }
   }

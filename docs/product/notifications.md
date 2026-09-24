@@ -49,12 +49,25 @@ plan. Sans traitement, un encouragement envoyé au moment précis où l'on
 utilise Carlys n'existerait pas.
 
 `PushForegroundHost` enveloppe la coquille des onglets, écoute
-`FirebaseMessaging.onMessage` et pose un bandeau. Une seule à la fois : deux
-notifications coup sur coup empileraient deux bandeaux devant le contenu.
+`FirebaseMessaging.onMessage` et montre la notification dans une **popup
+centrée**, au thème de l'application : la carte des messages passagers du
+design system (`AppNotices`, voir `docs/architecture/mobile.md`), avec le
+titre et le corps envoyés par le serveur. Elle remplace, depuis le
+24 septembre 2026, le bandeau clair posé en bas de l'écran, que le
+propriétaire trouvait hors thème. Une seule à la fois : une seconde
+notification remplace la première au lieu de s'empiler devant le contenu.
 C'est le seul endroit où l'application MONTRE une notification, et elle n'en
-fabrique jamais le contenu. Quand la notification annonce un écran, le
-bandeau propose « Voir », qui mène au même endroit que la toucher dans la
-barrette.
+fabrique jamais le contenu.
+
+Quand la notification annonce un écran, la popup propose d'y aller, et son
+bouton dit OÙ : « Voir le défi » pour une invitation à un défi entre amis,
+« Voir » pour l'onglet Amis (un `switch` exhaustif sur `PushDestination` :
+une destination ajoutée sans son libellé ne compile pas). Le bouton mène au
+même endroit que la toucher dans la barrette ; « Plus tard » referme. La
+popup se ferme seule après six secondes, sauf quand la navigation
+d'accessibilité est active : un lecteur d'écran met plus longtemps à
+atteindre le bouton. Le retour arrière d'Android la referme sans quitter
+l'écran.
 
 ## Toucher une notification
 
@@ -83,7 +96,15 @@ Les trois chemins passent par `PushForegroundHost` :
   le SDK initialisé et seulement si la configuration Firebase existe (le SDK
   ne rend ce message qu'une fois : recréer la coquille ne rouvre pas le
   même écran) ;
-- application ouverte : l'action « Voir » du bandeau.
+- application ouverte : le bouton « Voir le défi » (ou « Voir ») de la popup.
+
+Avant d'ouvrir l'écran, `PushForegroundHost` referme les popups encore
+ouvertes sur le navigateur racine (une confirmation, une feuille), comme si
+l'on y avait renoncé. Le message passager passe par-dessus elles, et l'écran
+du défi vit sur ce même navigateur : sans ce ménage, il s'ouvrait AU-DESSUS
+d'une question laissée en plan (« Supprimer cette série ? »), qui ressurgissait
+au retour, hors de son contexte. Les pages du routeur, elles, restent à la
+main de `go`.
 
 Couvert par `test/features/notifications/push_destination_test.dart`
 (lecture des données, adresse de chaque destination, les trois chemins sur
@@ -163,5 +184,5 @@ l'application montée), contre la doublure unique
 Les messages envoyés sont des messages **de notification** (titre + corps,
 plus la destination dans `data`) : en arrière-plan, le système les affiche
 lui-même dans la barrette — aucun gestionnaire d'arrière-plan n'est
-nécessaire. Au premier plan, c'est le bandeau de `PushForegroundHost` (voir
-« Application ouverte »).
+nécessaire. Au premier plan, c'est la popup centrée de `PushForegroundHost`
+(voir « Application ouverte »).

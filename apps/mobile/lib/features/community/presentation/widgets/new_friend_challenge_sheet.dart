@@ -61,9 +61,9 @@ class _NewFriendChallengeFormState extends State<_NewFriendChallengeForm> {
     if (_invites.isEmpty) {
       // Un défi contre personne n'en est pas un — et le serveur le refuse
       // aussi, en 400. Le dire ici évite l'aller-retour.
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Choisis au moins un ami à défier.')),
-      );
+      AppNotices.of(
+        context,
+      ).show('Choisis au moins un ami à défier.', tone: AppNoticeTone.error);
       return;
     }
     Navigator.of(context).pop(

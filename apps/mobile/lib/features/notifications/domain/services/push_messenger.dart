@@ -12,8 +12,8 @@ class PushNotice {
   final String title;
   final String body;
 
-  /// L'écran qui répond à la notification, s'il y en a un : le bandeau
-  /// propose alors « Voir ».
+  /// L'écran qui répond à la notification, s'il y en a un : la popup
+  /// propose alors d'y aller (« Voir le défi », « Voir »).
   final PushDestination? destination;
 }
 

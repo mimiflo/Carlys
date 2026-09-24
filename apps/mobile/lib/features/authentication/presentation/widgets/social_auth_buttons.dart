@@ -25,24 +25,24 @@ class SocialAuthButtons extends ConsumerWidget {
     WidgetRef ref,
     SocialProvider provider,
   ) async {
-    final messenger = ScaffoldMessenger.of(context);
+    final notices = AppNotices.of(context);
     final outcome = await ref
         .read(socialAuthControllerProvider.notifier)
         .signIn(provider);
 
-    final message = switch (outcome) {
+    switch (outcome) {
       // Le routeur emmène ailleurs : rien à annoncer.
-      SocialAuthSucceeded() => null,
+      case SocialAuthSucceeded():
       // Refermer la feuille n'est pas un échec.
-      SocialAuthCancelled() => null,
-      SocialAuthUnavailable() => outcome.message,
-      SocialAuthFailed() => outcome.message,
-    };
-    if (message == null) return;
-
-    messenger
-      ..hideCurrentSnackBar()
-      ..showSnackBar(SnackBar(content: Text(message)));
+      case SocialAuthCancelled():
+        return;
+      // Pas encore branché : on le DIT, ce n'est pas une panne. Une popup
+      // nouvelle remplace la précédente : deux touchers n'en empilent pas.
+      case SocialAuthUnavailable(:final message):
+        notices.show(message);
+      case SocialAuthFailed(:final message):
+        notices.show(message, tone: AppNoticeTone.error);
+    }
   }
 
   @override

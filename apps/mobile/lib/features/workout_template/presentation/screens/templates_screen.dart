@@ -5,6 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/app_routes.dart';
 import '../../../../design_system/design_system.dart';
 import '../../../workout_session/presentation/controllers/workout_controllers.dart';
+import '../../../workout_session/presentation/widgets/resume_workout_confirm.dart';
 import '../controllers/workout_template_controllers.dart';
 import '../widgets/template_card.dart';
 import '../widgets/templates_header.dart';
@@ -118,8 +119,8 @@ class TemplatesScreen extends ConsumerWidget {
     String templateId,
   ) async {
     if (ref.read(activeWorkoutProvider).valueOrNull != null) {
-      final resume = await _confirmActiveSession(context);
-      if (resume == true && context.mounted) {
+      final resume = await showResumeWorkoutConfirm(context);
+      if (resume && context.mounted) {
         await context.push(AppRoutes.activeWorkout);
       }
       return;
@@ -134,26 +135,6 @@ class TemplatesScreen extends ConsumerWidget {
     if (context.mounted) {
       await context.push(AppRoutes.activeWorkout);
     }
-  }
-
-  Future<bool?> _confirmActiveSession(BuildContext context) {
-    return showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Une séance est en cours'),
-        content: const Text('Termine-la avant d’en lancer une autre.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Plus tard'),
-          ),
-          AppButton(
-            label: 'Reprendre la séance',
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-          ),
-        ],
-      ),
-    );
   }
 }
 

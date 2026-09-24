@@ -101,9 +101,7 @@ class _TemplateEditorScreenState extends ConsumerState<TemplateEditorScreen> {
     } on InvalidTemplateException catch (error) {
       if (mounted) {
         setState(() => _saving = false);
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(error.message)));
+        AppNotices.of(context).show(error.message, tone: AppNoticeTone.error);
       }
       return;
     }
@@ -134,28 +132,16 @@ class _TemplateEditorScreenState extends ConsumerState<TemplateEditorScreen> {
     }
   }
 
-  Future<bool> _confirmDiscard() async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Abandonner les modifications ?'),
-        content: const Text(
-          'Ce modèle n’a pas été enregistré : tes réglages seront perdus.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Continuer l’édition'),
-          ),
-          AppButton(
-            label: 'Abandonner',
-            variant: AppButtonVariant.destructive,
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-          ),
-        ],
-      ),
+  Future<bool> _confirmDiscard() {
+    return showAppConfirm(
+      context,
+      title: 'Abandonner les modifications ?',
+      message: 'Ce modèle n’a pas été enregistré : tes réglages seront perdus.',
+      confirmLabel: 'Abandonner',
+      cancelLabel: 'Continuer l’édition',
+      destructive: true,
+      icon: AppIcons.confirmLeave,
     );
-    return confirmed ?? false;
   }
 }
 

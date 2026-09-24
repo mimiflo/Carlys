@@ -10,6 +10,7 @@ library;
 
 import 'package:carlys_mobile/core/errors/app_exception.dart';
 import 'package:carlys_mobile/core/feedback/server_gesture.dart';
+import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -51,7 +52,7 @@ void main() {
     await appuyer(tester);
 
     expect(aboutis, ['abouti']);
-    expect(find.byType(SnackBar), findsNothing);
+    expect(find.byType(AppPopupCard), findsNothing);
   });
 
   testWidgets(
@@ -66,6 +67,11 @@ void main() {
       expect(
         find.text('La série n’a pas pu être enregistrée. Réessaie.'),
         findsOneWidget,
+      );
+      // Dans la popup du design system, au ton « erreur ».
+      expect(
+        tester.widget<AppPopupCard>(find.byType(AppPopupCard)).tone,
+        AppPopupTone.danger,
       );
     },
   );

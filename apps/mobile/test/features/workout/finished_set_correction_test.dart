@@ -79,6 +79,11 @@ void main() {
       5,
       reason: 'Le champ non touché ne doit pas être réécrit.',
     );
+    // Le geste le DIT, dans la popup du design system.
+    expect(
+      find.widgetWithText(AppPopupCard, 'Série corrigée.'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('la feuille dit que le record va être recalculé', (tester) async {
@@ -117,23 +122,58 @@ void main() {
     expect(find.text('Supprimer cette série ?'), findsOneWidget);
     expect(find.textContaining('recalculés'), findsOneWidget);
 
-    await tester.tap(find.widgetWithText(TextButton, 'Supprimer'));
+    // La confirmation est la popup du design system, et son bouton dit le
+    // danger : c'est un geste qui supprime.
+    final supprimer = find.widgetWithText(AppButton, 'Supprimer');
+    expect(
+      tester.widget<AppButton>(supprimer).variant,
+      AppButtonVariant.destructive,
+    );
+    await tester.tap(supprimer);
     await tester.pumpAndSettle();
 
     expect(repository.active!.sets, isEmpty);
+    expect(
+      find.widgetWithText(AppPopupCard, 'Série supprimée.'),
+      findsOneWidget,
+    );
   });
 
-  testWidgets('une suppression refusée laisse la série en place', (
-    tester,
-  ) async {
-    final repository = await monter(tester);
+  // Une confirmation destructrice qui rend `false` ne supprime RIEN, par
+  // quelque porte qu'on la quitte : le bouton de renoncement, le voile, le
+  // retour arrière.
+  group('une suppression refusée laisse la série en place', () {
+    Future<void> refuser(
+      WidgetTester tester,
+      Future<void> Function() renoncer,
+    ) async {
+      final repository = await monter(tester);
 
-    await tester.longPress(find.text('Squat'));
-    await tester.pumpAndSettle();
-    await tester.tap(find.widgetWithText(TextButton, 'Annuler'));
-    await tester.pumpAndSettle();
+      await tester.longPress(find.text('Squat'));
+      await tester.pumpAndSettle();
+      expect(find.text('Supprimer cette série ?'), findsOneWidget);
+      await renoncer();
+      await tester.pumpAndSettle();
 
-    expect(repository.active!.sets, hasLength(1));
+      expect(find.text('Supprimer cette série ?'), findsNothing);
+      expect(repository.active!.sets, hasLength(1));
+      expect(find.text('Série supprimée.'), findsNothing);
+    }
+
+    testWidgets('par « Annuler »', (tester) async {
+      await refuser(
+        tester,
+        () => tester.tap(find.widgetWithText(AppButton, 'Annuler')),
+      );
+    });
+
+    testWidgets('par un toucher sur le voile', (tester) async {
+      await refuser(tester, () => tester.tapAt(const Offset(8, 8)));
+    });
+
+    testWidgets('par le retour arrière', (tester) async {
+      await refuser(tester, () => tester.binding.handlePopRoute());
+    });
   });
 
   testWidgets('la ligne annonce sa valeur AVANT de proposer la correction', (

@@ -23,6 +23,7 @@ class AppTextField extends StatelessWidget {
     this.maxLength,
     this.helper,
     this.inlineLabel = false,
+    this.autofocus = false,
     super.key,
   });
 
@@ -62,10 +63,15 @@ class AppTextField extends StatelessWidget {
   /// d'écran.
   final bool inlineLabel;
 
+  /// Prend le focus (et ouvre le clavier) dès l'affichage : pour le champ
+  /// UNIQUE d'une popup de saisie, qu'on ouvre précisément pour écrire.
+  final bool autofocus;
+
   @override
   Widget build(BuildContext context) {
     final field = TextFormField(
       controller: controller,
+      autofocus: autofocus,
       enabled: enabled,
       keyboardType: keyboardType,
       textInputAction: textInputAction,

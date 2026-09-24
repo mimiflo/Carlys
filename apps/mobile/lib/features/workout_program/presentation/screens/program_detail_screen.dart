@@ -80,38 +80,24 @@ class ProgramDetailScreen extends ConsumerWidget {
   }
 
   Future<void> _delete(BuildContext context, WidgetRef ref) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Supprimer ce programme ?'),
-        content: const Text(
-          'Les séances déjà réalisées restent dans l’historique.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Annuler'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-            child: const Text('Supprimer'),
-          ),
-        ],
-      ),
+    final confirmed = await showAppConfirm(
+      context,
+      title: 'Supprimer ce programme ?',
+      message: 'Les séances déjà réalisées restent dans l’historique.',
+      confirmLabel: 'Supprimer',
+      destructive: true,
     );
-    if (confirmed != true || !context.mounted) {
+    if (!confirmed || !context.mounted) {
       return;
     }
     // On ne quitte l'écran QUE si la suppression a abouti : hors ligne, le
     // programme existe toujours — partir en silence aurait dit le contraire.
-    final messenger = ScaffoldMessenger.of(context);
+    final notices = AppNotices.of(context);
     final navigator = Navigator.of(context);
     try {
       await ref.read(programActionsProvider).delete(programId);
     } on AppException catch (exception) {
-      messenger.showSnackBar(
-        SnackBar(content: Text(serverFailureMessage(exception))),
-      );
+      notices.show(serverFailureMessage(exception), tone: AppNoticeTone.error);
       return;
     }
     if (context.mounted) {

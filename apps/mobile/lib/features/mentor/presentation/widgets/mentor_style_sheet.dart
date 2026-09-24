@@ -74,7 +74,7 @@ class _MentorStyleSheet extends ConsumerWidget {
     WidgetRef ref,
     MentorStyle style,
   ) async {
-    final messenger = ScaffoldMessenger.of(context);
+    final notices = AppNotices.of(context);
     // La route de LA feuille, capturée avant l'attente. Le navigateur
     // RACINE, lui, reste « monté » toute la vie de l'application : sa garde
     // ne disait rien, et un second choix pendant l'appel réseau fermait
@@ -87,11 +87,12 @@ class _MentorStyleSheet extends ConsumerWidget {
       if (context.mounted && (route?.isCurrent ?? false)) {
         navigator.pop();
       }
-      messenger.showSnackBar(
-        SnackBar(content: Text('Le Mentor parlera en ${style.label}.')),
+      notices.show(
+        'Le Mentor parlera en ${style.label}.',
+        tone: AppNoticeTone.success,
       );
     } on AppException catch (exception) {
-      messenger.showSnackBar(SnackBar(content: Text(exception.message)));
+      notices.show(exception.message, tone: AppNoticeTone.error);
     }
   }
 }

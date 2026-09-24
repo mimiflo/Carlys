@@ -109,14 +109,14 @@ class _GenerateProgramCardState extends ConsumerState<GenerateProgramCard> {
 
   Future<void> _generer() async {
     setState(() => _enCours = true);
-    final messenger = ScaffoldMessenger.of(context);
+    final notices = AppNotices.of(context);
     GeneratedProgramResult? resultat;
     try {
       resultat = await ref.read(programActionsProvider).generate();
     } on AppException catch (exception) {
       // Le message vient du serveur : il nomme le champ qui manque ou le
       // matériel qui débloquerait. Le réécrire ici le rendrait plus vague.
-      messenger.showSnackBar(SnackBar(content: Text(exception.message)));
+      notices.show(exception.message, tone: AppNoticeTone.error);
     } finally {
       if (mounted) setState(() => _enCours = false);
     }

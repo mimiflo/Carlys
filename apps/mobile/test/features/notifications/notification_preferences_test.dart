@@ -142,13 +142,18 @@ void main() {
       expect(find.text('Encouragement de Léa'), findsOneWidget);
       expect(find.text('Ta série tient bon.'), findsOneWidget);
 
-      // Et se LIT : le bandeau est en surface inverse (claire sur l'appli
-      // sombre). Peint en texte clair du thème sombre, le titre disparaissait.
-      final banner = tester
+      // Au MILIEU de l'écran, dans la carte des popups de l'application :
+      // plus un bandeau clair posé en bas, hors thème.
+      final card = tester.getCenter(find.byType(AppPopupCard));
+      final screen = tester.getCenter(find.byType(Scaffold));
+      expect((card - screen).distance, lessThan(1));
+
+      // Et se LIT : chaque texte tient AA sur la surface de la carte.
+      final surface = tester
           .widget<Material>(
             find
                 .descendant(
-                  of: find.byType(SnackBar),
+                  of: find.byType(AppPopupCard),
                   matching: find.byType(Material),
                 )
                 .first,
@@ -157,14 +162,14 @@ void main() {
       for (final text in ['Encouragement de Léa', 'Ta série tient bon.']) {
         final ink = tester.widget<Text>(find.text(text)).style!.color!;
         expect(
-          _contrast(ink, banner),
+          _contrast(ink, surface),
           greaterThanOrEqualTo(4.5),
-          reason: '« $text » sur le fond du bandeau',
+          reason: '« $text » sur la carte',
         );
       }
     });
 
-    testWidgets('deux d’affilée n’empilent pas deux bandeaux', (tester) async {
+    testWidgets('deux d’affilée n’empilent pas deux popups', (tester) async {
       final messenger = FakePushMessenger(token: null);
       addTearDown(messenger.close);
 
@@ -189,8 +194,9 @@ void main() {
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
 
-      expect(find.byType(SnackBar), findsOneWidget);
+      expect(find.byType(AppPopupCard), findsOneWidget);
       expect(find.text('Seconde'), findsOneWidget);
+      expect(find.text('Première'), findsNothing);
     });
   });
 }

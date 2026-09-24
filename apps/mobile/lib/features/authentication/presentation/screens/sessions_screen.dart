@@ -134,27 +134,15 @@ String _formatDate(DateTime utc) {
       '${pad(local.hour)}:${pad(local.minute)}';
 }
 
-Future<bool> _confirm(
-  BuildContext context,
-  String title,
-  String message,
-) async {
-  final result = await showDialog<bool>(
-    context: context,
-    builder: (dialogContext) => AlertDialog(
-      title: Text(title),
-      content: Text(message),
-      actions: [
-        TextButton(
-          onPressed: () => Navigator.of(dialogContext).pop(false),
-          child: const Text('Annuler'),
-        ),
-        AppButton(
-          label: 'Confirmer',
-          onPressed: () => Navigator.of(dialogContext).pop(true),
-        ),
-      ],
-    ),
+/// Déconnecter un appareil le prive de sa session : le geste se confirme,
+/// en rouge comme les boutons qui le déclenchent.
+Future<bool> _confirm(BuildContext context, String title, String message) {
+  return showAppConfirm(
+    context,
+    title: title,
+    message: message,
+    confirmLabel: 'Confirmer',
+    destructive: true,
+    icon: AppIcons.logout,
   );
-  return result ?? false;
 }

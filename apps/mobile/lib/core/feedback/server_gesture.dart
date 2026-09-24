@@ -1,11 +1,13 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 
+import '../../design_system/design_system.dart';
 import '../errors/app_exception.dart';
 import '../logging/app_logger.dart';
 
-/// Exécute un geste qui parle au SERVEUR et en rend compte dans la barre de
-/// message : le texte rendu par [gesture] en cas de succès (`null` : rien à
-/// dire), sinon l'échec — en disant vrai, car hors ligne n'est pas une panne.
+/// Exécute un geste qui parle au SERVEUR et en rend compte dans une popup
+/// (`AppNotices`) : le texte rendu par [gesture] en cas de succès (`null` :
+/// rien à dire), sinon l'échec — en disant vrai, car hors ligne n'est pas une
+/// panne. Le succès prend le ton « réussite », l'échec le ton « erreur ».
 ///
 /// POURQUOI CETTE FONCTION EST AU CŒUR ET PLUS DANS `community`. Elle y était
 /// née, et la règle qu'elle porte ne l'est pas : tout geste qui part sur le
@@ -28,19 +30,22 @@ Future<void> runServerGesture(
 }) async {
   final logger = AppLogger(scope);
   String? message;
+  var tone = AppNoticeTone.success;
   try {
     message = await gesture();
   } on AppException catch (exception) {
     logger.warning('Geste refusé par le serveur', error: exception);
     message = serverFailureMessage(exception);
+    tone = AppNoticeTone.error;
   } on Exception catch (exception) {
     logger.warning('Geste en échec', error: exception);
     message = serverFailureMessage(null);
+    tone = AppNoticeTone.error;
   }
   if (message == null || !context.mounted) {
     return;
   }
-  ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+  AppNotices.of(context).show(message, tone: tone);
 }
 
 /// Même contrat que [runServerGesture], pour un geste qui écrit D'ABORD EN
@@ -72,9 +77,7 @@ Future<bool> runLocalGesture(
       scope,
     ).error('Geste local en échec', error: erreur, stackTrace: trace);
     if (context.mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(echec)));
+      AppNotices.of(context).show(echec, tone: AppNoticeTone.error);
     }
     return false;
   }

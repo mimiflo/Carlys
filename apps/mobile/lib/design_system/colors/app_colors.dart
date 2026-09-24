@@ -121,6 +121,16 @@ abstract final class AppColors {
   static const Color danger = Color(0xFFEF4444);
   static const Color info = Color(0xFF3B82F6);
 
+  /// Le rouge d'un REMPLISSAGE sous un libellé blanc : le bouton d'un geste
+  /// destructif (`AppButtonVariant.destructive`), dans chaque popup qui
+  /// supprime, retire ou quitte.
+  ///
+  /// Blanc sur [danger] ne tient que 3,76:1, sous le seuil AA (4,5) d'un
+  /// libellé de 15 points ; ce rouge plus profond en tient 4,83. [danger]
+  /// reste le rouge des textes et des icônes d'erreur, qui se posent sur les
+  /// surfaces sombres et y ont besoin de sa clarté.
+  static const Color dangerStrong = Color(0xFFDC2626);
+
   /// Un rôle, une couleur — `logout` a été SUPPRIMÉ.
   ///
   /// Ce `#FF6B6B` ne figurait dans aucun jeton (`semantic` n'en compte que
@@ -142,6 +152,17 @@ abstract final class AppColors {
 
   /// Cartes posées sur une scène 3D uniquement (avec BackdropFilter blur 24).
   static const Color darkGlass = Color(0xB815101F);
+
+  /// Voile derrière une popup (tokens.json → color.surface.darkScrim) : le
+  /// fond de l'application à 72 %. Il éteint l'écran sans le noircir, et la
+  /// carte centrée devient la seule chose qu'on lise.
+  static const Color darkScrim = Color(0xB808050E); // fond .72
+
+  /// Voile LÉGER derrière un simple message passager (tokens.json →
+  /// color.surface.darkScrimSoft) : le fond de l'application à 40 %.
+  /// Purement visuel, il laisse passer le toucher ; il détache la carte des
+  /// cartes de l'écran sans l'éteindre.
+  static const Color darkScrimSoft = Color(0x6608050E); // fond .40
 
   // Rôles de texte et traits du thème sombre
   //
@@ -359,6 +380,16 @@ abstract final class AppColors {
     end: Alignment.bottomRight,
     colors: [darkSurface, primaryDeep],
     stops: [0.35, 1],
+  );
+
+  /// Halo d'une popup : le violet qui descend du médaillon et s'éteint avant
+  /// le texte. Violet par règle (CLAUDE.md, règle 9) : une popup n'est pas
+  /// une surface de marque. Son pic ([primaryBadgeBg] sur [darkSurface]) est
+  /// mesuré par `app_popup_test.dart` : le texte secondaire y tient AA.
+  static const RadialGradient popupHalo = RadialGradient(
+    center: Alignment.topCenter,
+    radius: 0.9,
+    colors: [primaryBadgeBg, primaryCardClear],
   );
 
   /// Fond de la tuile du manifeste.

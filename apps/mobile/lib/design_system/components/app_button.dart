@@ -66,7 +66,6 @@ class AppButton extends StatelessWidget {
   }
 
   Widget _buildVariant(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
     final onPressedOrNull = _enabled ? onPressed : null;
     final child = _buildChild(context);
 
@@ -102,12 +101,14 @@ class AppButton extends StatelessWidget {
         ),
         child: child,
       ),
+      // Un rouge PLUS PROFOND que `colorScheme.error` (`danger`) : blanc sur
+      // `danger` ne tient que 3,76:1, sous l'AA d'un libellé de 15 points.
       AppButtonVariant.destructive => FilledButton(
         onPressed: onPressedOrNull,
         style: _sizeStyle().merge(
           FilledButton.styleFrom(
-            backgroundColor: colorScheme.error,
-            foregroundColor: colorScheme.onError,
+            backgroundColor: AppColors.dangerStrong,
+            foregroundColor: AppColors.neutral0,
           ),
         ),
         child: child,

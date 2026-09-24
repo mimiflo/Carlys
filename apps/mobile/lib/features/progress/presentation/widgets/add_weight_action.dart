@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../design_system/design_system.dart';
 import '../controllers/progress_controllers.dart';
 import 'add_weight_sheet.dart';
 
@@ -72,9 +73,7 @@ Future<void> _tenter(
     await action();
   } on Exception {
     if (context.mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(echec)));
+      AppNotices.of(context).show(echec, tone: AppNoticeTone.error);
     }
   }
 }

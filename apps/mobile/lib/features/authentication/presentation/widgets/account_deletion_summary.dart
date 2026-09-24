@@ -76,7 +76,7 @@ class AccountDeletionSummary extends ConsumerWidget {
             onPressed: () => openExternalLink(
               environment.privacyPolicyUrl,
               ref: ref,
-              messenger: ScaffoldMessenger.of(context),
+              notices: AppNotices.of(context),
             ),
             child: const Text('Lire la politique de confidentialité'),
           ),

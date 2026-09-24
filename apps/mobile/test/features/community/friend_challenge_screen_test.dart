@@ -154,7 +154,17 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Quitter « Qui court le plus » ?'), findsOneWidget);
-    await tester.tap(find.widgetWithText(FilledButton, 'Quitter'));
+    // La popup centrée du design system, bouton rouge : on sort du
+    // classement.
+    final quitter = find.descendant(
+      of: find.byType(AppPopupCard),
+      matching: find.widgetWithText(AppButton, 'Quitter'),
+    );
+    expect(
+      tester.widget<AppButton>(quitter).variant,
+      AppButtonVariant.destructive,
+    );
+    await tester.tap(quitter);
     await tester.pumpAndSettle();
 
     expect(find.byType(FriendChallengeScreen), findsNothing);

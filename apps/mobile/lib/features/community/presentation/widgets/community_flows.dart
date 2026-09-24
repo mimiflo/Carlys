@@ -1,5 +1,6 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 
+import '../../../../design_system/design_system.dart';
 import '../../domain/entities/community.dart';
 import '../controllers/community_controllers.dart';
 import 'add_friend_sheet.dart';
@@ -23,6 +24,10 @@ Future<void> addFriendFlow(
   // (le serveur ne révèle jamais qu'elle a un compte) ; un CODE se partage
   // volontairement, on confirme donc par le prénom — ou l'on dit
   // franchement qu'il ne mène nulle part.
+  //
+  // Ce dernier cas n'est pas une réussite : il prend le ton « erreur », et
+  // se dit donc ici plutôt que par le retour du geste, qui vaut succès.
+  final notices = AppNotices.of(context);
   await runCommunityGesture(context, () async {
     return switch (input) {
       AddFriendByEmail(:final email) => await () async {
@@ -32,7 +37,13 @@ Future<void> addFriendFlow(
       AddFriendByCode(:final code) => switch (await actions
           .sendFriendRequestByCode(code)) {
         final String name => 'Demande envoyée à $name.',
-        null => 'Ce code ne mène à personne. Vérifie-le avec ton ami.',
+        null => () {
+          notices.show(
+            'Ce code ne mène à personne. Vérifie-le avec ton ami.',
+            tone: AppNoticeTone.error,
+          );
+          return null;
+        }(),
       },
     };
   });

@@ -1,10 +1,10 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 
+import '../../../../design_system/design_system.dart';
 import '../../domain/entities/community.dart';
 import '../../domain/entities/community_moderation.dart';
 import '../controllers/community_controllers.dart';
 import '../controllers/community_moderation_controllers.dart';
-import 'community_confirm_sheet.dart';
 import 'community_feedback.dart';
 import 'report_sheet.dart';
 
@@ -85,13 +85,15 @@ class CommunityGestures {
     CommunityFriend friend,
   ) async {
     final name = friend.displayName;
-    final confirmed = await showCommunityConfirmSheet(
+    final confirmed = await showAppConfirm(
       context,
       title: 'Retirer $name de tes amis ?',
       message:
           'Ta progression et la sienne ne se partagent plus, et les '
           'encouragements s’arrêtent. $name pourra te redemander en ami.',
       confirmLabel: 'Retirer',
+      destructive: true,
+      icon: AppIcons.confirmRemoveFriend,
     );
     if (!confirmed || !context.mounted) {
       return;
@@ -130,7 +132,7 @@ class CommunityGestures {
     required String userId,
     required String name,
   }) async {
-    final confirmed = await showCommunityConfirmSheet(
+    final confirmed = await showAppConfirm(
       context,
       title: 'Bloquer $name ?',
       message:
@@ -138,6 +140,8 @@ class CommunityGestures {
           'redemander en ami, et n’en saura rien. Tu peux revenir dessus à '
           'tout moment depuis « Personnes bloquées ».',
       confirmLabel: 'Bloquer',
+      destructive: true,
+      icon: AppIcons.block,
     );
     if (!confirmed || !context.mounted) {
       return;

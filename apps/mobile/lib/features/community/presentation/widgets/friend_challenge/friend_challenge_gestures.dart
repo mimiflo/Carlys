@@ -1,9 +1,9 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/widgets.dart';
 
+import '../../../../../design_system/design_system.dart';
 import '../../../domain/entities/friend_challenge.dart';
 import '../../controllers/community_controllers.dart';
 import '../../controllers/community_moderation_controllers.dart';
-import '../community_confirm_sheet.dart';
 import '../community_feedback.dart';
 import '../report_sheet.dart';
 
@@ -40,13 +40,15 @@ class FriendChallengeGestures {
     VoidCallback? onLeft,
   }) async {
     if (!challenge.isPending) {
-      final confirme = await showCommunityConfirmSheet(
+      final confirme = await showAppConfirm(
         context,
         title: 'Quitter « ${challenge.title} » ?',
         message:
             'Tu sors du classement. Ce que tu as fait pendant le défi ne '
             'comptera plus pour lui.',
         confirmLabel: 'Quitter',
+        destructive: true,
+        icon: AppIcons.confirmLeave,
       );
       if (!confirme || !context.mounted) {
         return;

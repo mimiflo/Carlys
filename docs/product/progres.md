@@ -96,8 +96,8 @@ La correction prévient par construction : on y voit la valeur qu'on remplace.
 La suppression, elle, partait d'un seul tapotement, sans un mot et sans
 retour possible — alors que supprimer la mesure la plus récente **déplace le
 rapport métabolique** : métabolisme de base, cible calorique et macros sont
-recalculés sur la pesée précédente. La boîte de dialogue dit cette
-conséquence, et pas seulement le geste ; elle dit autre chose quand la mesure
+recalculés sur la pesée précédente. La popup de confirmation
+(`showAppConfirm`, bouton « Supprimer » en rouge) dit cette conséquence, et pas seulement le geste ; elle dit autre chose quand la mesure
 n'est pas la dernière, parce que la conséquence n'est alors pas la même.
 
 ## Courbe par exercice

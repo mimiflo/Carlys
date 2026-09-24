@@ -4,6 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/environment/app_environment.dart';
 import '../../../../core/utilities/external_links.dart';
+import '../../../../design_system/design_system.dart';
 
 /// La phrase de consentement, sous le bouton d'inscription.
 ///
@@ -34,7 +35,7 @@ class _LegalConsentNoticeState extends ConsumerState<LegalConsentNotice> {
   }
 
   Future<void> _open(Uri url) =>
-      openExternalLink(url, ref: ref, messenger: ScaffoldMessenger.of(context));
+      openExternalLink(url, ref: ref, notices: AppNotices.of(context));
 
   @override
   Widget build(BuildContext context) {

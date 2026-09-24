@@ -162,6 +162,17 @@ jobs:
         working-directory: .
         run: ./scripts/check_mobile_icons.sh
 
+      # Toutes les popups de l'application sont UNE carte centrée au thème
+      # violet (demande du propriétaire, 24 septembre 2026) : les messages
+      # passagers passent par `AppNotices`, les questions par
+      # `showAppConfirm`, les saisies par `showAppPrompt`. Une barre de
+      # message ou une boîte de dialogue Material posée à la main ramènerait
+      # le bandeau clair hors thème ; même leçon que la banque d'icônes
+      # juste au-dessus.
+      - name: Popups du design system
+        working-directory: .
+        run: ./scripts/check_mobile_popups.sh
+
       # Les polices embarquées sont SOUS-ENSEMBLÉES (Flutter ne le fait pas
       # pour les polices de texte) : un glyphe perdu ne donne pas un carré
       # vide, l'application retombe sur la fonte système et le changement de

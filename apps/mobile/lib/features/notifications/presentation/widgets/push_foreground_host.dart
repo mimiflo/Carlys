@@ -75,56 +75,47 @@ class _PushForegroundHostState extends ConsumerState<PushForegroundHost> {
 
   void _open(PushDestination destination) {
     if (!mounted) return;
+    // Les popups encore ouvertes (une confirmation, une feuille) vivent sur
+    // le navigateur RACINE, comme l'écran du défi : sans ce ménage, il
+    // s'ouvrirait PAR-DESSUS elles, et la question laissée en plan
+    // ressurgirait au retour, hors de son contexte. Elles se ferment comme
+    // si l'on avait renoncé (`false`, `null`) ; les pages du routeur, elles,
+    // restent à la main de `go`.
+    Navigator.of(
+      context,
+      rootNavigator: true,
+    ).popUntil((route) => route.settings is Page<Object?>);
     GoRouter.of(context).go(AppRoutes.pushDestination(destination));
   }
 
+  /// Montre une notification reçue application ouverte : la popup centrée
+  /// des messages passagers, au thème de l'application. Une seule à la
+  /// fois : deux encouragements reçus coup sur coup ne s'empilent pas, le
+  /// second remplace le premier.
   void _show(PushNotice notice) {
     if (!mounted) return;
-    final messenger = ScaffoldMessenger.maybeOf(context);
-    if (messenger == null) return;
+    final notices = AppNotices.maybeOf(context);
+    if (notices == null) return;
     final destination = notice.destination;
-    // Le bandeau se peint en surface INVERSE (claire sur l'appli sombre) :
-    // ses textes prennent la couleur qui va avec. Peints en texte clair du
-    // thème sombre, le titre disparaissait sur le fond clair.
-    final onBanner = Theme.of(context).colorScheme.onInverseSurface;
-
-    // Une seule à la fois : deux encouragements reçus coup sur coup
-    // empileraient deux bandeaux devant le contenu.
-    messenger
-      ..hideCurrentSnackBar()
-      ..showSnackBar(
-        SnackBar(
-          content: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                notice.title,
-                style: AppTypography.label.copyWith(
-                  color: onBanner,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              if (notice.body.isNotEmpty) ...[
-                const SizedBox(height: AppSpacing.xxs),
-                Text(
-                  notice.body,
-                  style: AppTypography.label.copyWith(color: onBanner),
-                ),
-              ],
-            ],
-          ),
-          // Le même écran que si on avait touché la notification système.
-          action: destination == null
-              ? null
-              : SnackBarAction(
-                  label: 'Voir',
-                  onPressed: () => _open(destination),
-                ),
-          duration: const Duration(seconds: 4),
-        ),
-      );
+    notices.show(
+      notice.body,
+      title: notice.title,
+      icon: AppIcons.noticePush,
+      // Le même écran que si on avait touché la notification système.
+      actionLabel: destination == null ? null : _actionLabel(destination),
+      onAction: destination == null ? null : () => _open(destination),
+    );
   }
+
+  /// Le bouton dit OÙ il mène : « Voir » seul, sous « Léa te défie »,
+  /// laissait deviner si l'on ouvrait le défi ou la Communauté. Le `switch`
+  /// est exhaustif sur la classe scellée : une destination ajoutée sans son
+  /// libellé ne compile pas.
+  static String _actionLabel(PushDestination destination) =>
+      switch (destination) {
+        FriendChallengeDestination() => 'Voir le défi',
+        CommunityFriendsDestination() => 'Voir',
+      };
 
   @override
   Widget build(BuildContext context) => widget.child;

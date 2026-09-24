@@ -305,6 +305,79 @@ les appareils à navigation 3 boutons comme à geste. Deux styles :
 (surface alternative, angles `cardMain`). Garanti par
 `test/design_system/app_sheet_test.dart`, qui simule barre système et clavier.
 
+**Popups** : toute popup est UNE carte centrée au thème violet (demande du
+propriétaire, 24 septembre 2026), et passe par l'une des quatre portes du
+design system — jamais `SnackBar`, `showDialog`, `AlertDialog` ni une
+`DialogRoute` poussée à la main (`scripts/check_mobile_popups.sh` le refuse,
+en local et en CI) :
+
+| Besoin | Porte | Rend |
+| ------ | ----- | ---- |
+| Message passager (succès, erreur, notification reçue) | `AppNotices.of(context).show(message, {title, tone, icon, actionLabel, onAction})` | rien ; `hide()` la retire |
+| Question avant un geste | `showAppConfirm(context, {title, message, confirmLabel, cancelLabel, destructive, icon})` | `Future<bool>` : `false` si l'on renonce, touche le voile ou fait retour |
+| Saisie courte (un nom) | `showAppPrompt(context, {title, message, hint, initialValue, maxLength, confirmLabel, cancelLabel, icon, validator})` | `Future<String?>` : le texte sans ses espaces de bord, `null` si l'on renonce |
+| Toute autre forme | `showAppDialog<T>(context, builder:)`, le `builder` rendant un `AppPopupCard` | `Future<T?>` |
+
+La coquille commune, `AppPopupCard` : surface `darkSurface` au liseré
+`primaryLightBorder` et au halo `popupHalo`, rayon `cardMain`, ombre `lg` ;
+médaillon rond au dégradé `cta` (rouge `danger` pour une ERREUR seulement :
+une confirmation de suppression reste violette, c'est son bouton
+`destructive` qui dit le danger) ; titre `subheading` en texte principal,
+message `body` en texte secondaire (seul, il prend la voix du texte
+principal) ; boutons `AppButton` EMPILÉS sur toute la largeur, l'action
+d'abord (`primary`, ou `destructive` rempli de `dangerStrong`, lisible sous
+son libellé blanc), la renonciation en `ghost`. La carte est sombre dans les deux
+thèmes et impose le thème sombre à son contenu. Largeur plafonnée à
+`AppPopupCard.maxWidth` (400), centrée, jamais sous la barre d'état ni sous
+le clavier, défilable quand le texte est agrandi. Voile `darkScrim`
+(`color.surface.darkScrim`). Apparition en fondu et zoom de 0,94 à 1 sur
+`AppMotion.normal` (courbe `standard`), départ sur `AppMotion.fast`
+(`accelerate`), pour les messages passagers comme pour les popups qui
+attendent une réponse (leur route, `_AppDialogRoute`, fixe sa durée de
+départ : celle de `showGeneralDialog` repartait sur la durée d'arrivée) ;
+rien ne bouge quand le système réduit les animations. Le nœud sémantique qui
+nomme la popup (« Boîte de dialogue ») entoure la CARTE seule : à
+l'exploration tactile, un toucher à côté d'elle atteint le voile « Fermer ».
+
+Les messages passagers vivent dans l'overlay RACINE : `AppNotices.of`
+se **capture avant un `await`**, comme l'ancien messager, et s'affiche après
+la fermeture d'une feuille ou le démontage de l'écran qui l'a demandé ; ils
+passent par-dessus feuilles et routes, et fonctionnent sous n'importe quel
+`MaterialApp`. Une seule à la fois (la nouvelle remplace la courante).
+Un message SANS action ne pose qu'un voile léger et purement visuel
+(`darkScrimSoft`) : il ne vole jamais le toucher suivant (en pleine séance,
+« Série supprimée. » ne doit pas coûter un geste), et un toucher ailleurs
+agit sur l'écran tout en le refermant (`TapRegion`). Avec une action, le voile revient : un toucher dessus ferme
+sans atteindre l'écran. Fermeture aussi au toucher de la carte, au retour
+arrière (via le répartiteur du `Router`), ou après
+`AppNotices.displayDuration` (3 s) —
+`actionDisplayDuration` (6 s) avec une action, qui s'accompagne alors de
+« Plus tard ». Avec une action ET la navigation d'accessibilité active, pas
+de fermeture automatique. La carte est son propre nœud sémantique, en
+`liveRegion`, avec l'action « fermer ». Le minuteur vit dans l'état du
+widget d'overlay : démonter l'application l'éteint.
+
+**Choisir le ton** : `success` pour un geste abouti (« Série supprimée. »),
+`error` pour un geste qui n'a PAS abouti (refus du serveur, hors ligne,
+validation refusée avant l'envoi), `info` pour un état qui n'est ni l'un ni
+l'autre (« Une séance est déjà en cours », « arrive bientôt »).
+`runServerGesture` et `runLocalGesture` (`core/feedback/server_gesture.dart`)
+le choisissent seuls : le texte rendu par le geste prend le ton succès,
+l'échec le ton erreur. Un geste qui supprime, retire, bloque, quitte ou
+déconnecte se confirme avec `destructive: true` ; la question « une séance
+est déjà en cours » vit une seule fois, `showResumeWorkoutConfirm`
+(`workout_session/presentation/widgets/`), pour les deux écrans qui lancent
+une séance.
+
+Ce qui RESTE une feuille (`showAppSheet`) : les menus d'options et les
+formulaires ou sélecteurs (création de défi, ajout de repas, signalement).
+Garanti par `test/design_system/app_notices_test.dart`,
+`app_dialogs_test.dart` et `app_popup_test.dart` (contraste AA de chaque
+texte au plus fort du halo, et du libellé de chaque bouton d'action sur son
+propre fond, dans les deux thèmes ; aucun débordement à `textScaler` 2 sur
+320 points), et `popup_glyphs_test.dart` (glyphes pleins dans le médaillon,
+sauf exception écrite).
+
 Composants cibles (créés avec la tranche qui en a besoin) :
 
 | Composant              | Rôle                                                | Étape |

@@ -113,14 +113,9 @@ abstract final class AppTheme {
         thickness: 1,
         space: AppSpacing.lg,
       ),
-      snackBarTheme: SnackBarThemeData(
-        behavior: SnackBarBehavior.floating,
-        shape: const RoundedRectangleBorder(borderRadius: AppRadius.mdAll),
-        backgroundColor: colorScheme.inverseSurface,
-        contentTextStyle: AppTypography.body.copyWith(
-          color: colorScheme.onInverseSurface,
-        ),
-      ),
+      // Pas de thème de barre de message : l'application n'en affiche plus.
+      // Ses messages passagers sont des popups centrées (`AppNotices`), et
+      // `scripts/check_mobile_popups.sh` refuse toute barre posée à la main.
     );
   }
 }

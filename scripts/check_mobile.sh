@@ -20,17 +20,19 @@
 # Le seul écart restant avec la CI est le SDK lui-même : l'avertissement de
 # version ci-dessous le couvre.
 #
-# Deux blocs ne font pas partie des cinq commandes de la CI : les tailles de
-# fichiers et la couverture des polices. Ce n'est pas une divergence au sens
-# ci-dessus — les cinq commandes restent identiques, contiguës et dans le même
-# ordre juste après ; ce sont des AJOUTS qui vont dans le sens sûr, et que la
-# CI exécute désormais elle aussi, comme étapes distinctes.
+# Quatre blocs ne font pas partie des cinq commandes de la CI : les tailles de
+# fichiers, la banque d'icônes, les popups et la couverture des polices. Ce
+# n'est pas une divergence au sens ci-dessus — les cinq commandes restent
+# identiques, contiguës et dans le même ordre juste après ; ce sont des AJOUTS
+# qui vont dans le sens sûr, et que la CI exécute désormais elle aussi, comme
+# étapes distinctes.
 #
 # Ils sont en tête parce qu'ils coûtent quelques millisecondes et n'ont
-# aucune raison de faire attendre derrière deux minutes de tests. Le premier
-# est écrit en shell parce que l'analyseur Dart n'a pas de règle de longueur
-# de fichier (`max_lines_per_file` rend « isn't a recognized lint rule ») ;
-# le second en Python, parce qu'il lit une table binaire de police.
+# aucune raison de faire attendre derrière deux minutes de tests. Les trois
+# premiers sont écrits en shell parce que l'analyseur Dart ne sait ni compter
+# les lignes d'un fichier (`max_lines_per_file` rend « isn't a recognized lint
+# rule ») ni interdire un identifiant dans un sous-arbre ; le dernier en
+# Python, parce qu'il lit une table binaire de police.
 #
 # Note : `dart format` et la règle de lint `require_trailing_commas` peuvent se
 # contredire sur un appel qui tient de justesse sur deux lignes. La forme qui
@@ -65,6 +67,12 @@ echo "── Banque d'icônes ────────────────�
 # `app_icons.dart` interdit `Icons.*` dans les écrans depuis sa première
 # ligne ; rien ne le vérifiait, et 106 références l'avaient contourné.
 "$SCRIPTS_DIR/check_mobile_icons.sh"
+
+echo "── Popups ──────────────────────────────────────────────────────────"
+# Toutes les popups sont UNE carte centrée au thème violet (demande du
+# 24 septembre 2026) : message passager, confirmation, saisie. Une barre de
+# message ou une boîte de dialogue Material posée à la main la contournerait.
+"$SCRIPTS_DIR/check_mobile_popups.sh"
 
 echo "── Couverture des polices ──────────────────────────────────────────"
 # Les neuf TTF embarquées sont SOUS-ENSEMBLÉES : Flutter ne le fait pas pour

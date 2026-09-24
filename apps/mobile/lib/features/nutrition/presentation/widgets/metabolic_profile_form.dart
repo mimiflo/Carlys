@@ -82,9 +82,7 @@ class _MetabolicProfileFormState extends ConsumerState<MetabolicProfileForm> {
     if (!mounted) {
       return;
     }
-    ScaffoldMessenger.of(
-      context,
-    ).showSnackBar(SnackBar(content: Text(message)));
+    AppNotices.of(context).show(message, tone: AppNoticeTone.error);
   }
 
   Future<void> _save() async {

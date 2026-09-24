@@ -1345,8 +1345,9 @@ void main() {
   });
 
   testWidgets('Notification reçue application ouverte', (tester) async {
-    // Une invitation arrive pendant qu'on est sur l'accueil : le bandeau la
-    // montre, et « Voir » mène au défi, comme la toucher dans la barrette.
+    // Une invitation arrive pendant qu'on est sur l'accueil : la popup
+    // centrée la montre, au thème de l'application, et « Voir le défi »
+    // mène au défi, comme la toucher dans la barrette.
     final messenger = FakePushMessenger(token: null);
     addTearDown(messenger.close);
     await pumpApp(tester, messenger: messenger);
@@ -1358,15 +1359,33 @@ void main() {
       ),
     );
     await settle(tester);
-    await capture(tester, '35d-notification-recue', shows: find.text('Voir'));
+    await capture(
+      tester,
+      '35d-notification-recue',
+      shows: find.text('Voir le défi'),
+    );
 
-    await tester.tap(find.text('Voir'));
+    // L'action referme la popup elle-même : sa minuterie part avec elle.
+    await tester.tap(find.text('Voir le défi'));
     await settle(tester);
     expect(find.byType(FriendChallengeScreen), findsOneWidget);
-    // Le bandeau a une minuterie : elle ne doit pas survivre à la scène.
-    ScaffoldMessenger.of(
-      tester.element(find.byType(FriendChallengeScreen)),
-    ).removeCurrentSnackBar();
+    expect(find.byType(AppPopupCard), findsNothing);
+  });
+
+  testWidgets('Message passager, sans voile', (tester) async {
+    // Un simple message (ici, un geste abouti) : la même carte centrée,
+    // mais SANS voile ; l'écran reste lisible et utilisable dessous.
+    await pumpApp(tester);
+    AppNotices.of(
+      tester.element(find.byType(HomeScreen)),
+    ).show('Série supprimée.', tone: AppNoticeTone.success);
+    await settle(tester);
+    await capture(
+      tester,
+      '35e-message-passager',
+      shows: find.text('Série supprimée.'),
+    );
+    AppNotices.of(tester.element(find.byType(HomeScreen))).hide();
     await settle(tester);
   });
 
@@ -1468,9 +1487,8 @@ void main() {
     await settle(tester);
     // La confirmation de sortie a dit son mot : on la laisse partir, elle
     // masquerait l'invitation.
-    ScaffoldMessenger.of(
-      tester.element(find.byType(CommunityScreen)),
-    ).removeCurrentSnackBar();
+    AppNotices.of(tester.element(find.byType(CommunityScreen))).hide();
+    await settle(tester);
     await backToTop(tester);
     await capture(
       tester,

@@ -40,7 +40,7 @@ class _CoachPageState extends ConsumerState<CoachPage> {
 
   Future<void> _openProposal(CoachSessionProposal proposal) async {
     final router = GoRouter.of(context);
-    final messenger = ScaffoldMessenger.of(context);
+    final notices = AppNotices.of(context);
 
     try {
       await ref.read(coachProposalActionsProvider).start(proposal);
@@ -48,14 +48,11 @@ class _CoachPageState extends ConsumerState<CoachPage> {
     } on StateError {
       // Règle du domaine séance : au plus une séance en cours. On ne
       // l'interprète pas comme une erreur, on dit ce qui bloque.
-      messenger.showSnackBar(
-        const SnackBar(
-          content: Text('Une séance est déjà en cours. Termine-la d’abord.'),
-        ),
-      );
+      notices.show('Une séance est déjà en cours. Termine-la d’abord.');
     } on AppException {
-      messenger.showSnackBar(
-        const SnackBar(content: Text('La séance n’a pas pu être lancée.')),
+      notices.show(
+        'La séance n’a pas pu être lancée.',
+        tone: AppNoticeTone.error,
       );
     }
   }

@@ -848,10 +848,11 @@ durées viennent du design system ; tous les nombres passent par
 
 Depuis la liste ou l'accueil. Séquence :
 
-1. si une séance est **déjà en cours** → feuille de confirmation :
-   « Une séance est en cours. La terminer avant d'en lancer une autre ? » (le
-   domaine impose déjà au plus une séance active — `startWorkout` lève
-   `StateError`) ;
+1. si une séance est **déjà en cours** → popup de confirmation centrée
+   (`showResumeWorkoutConfirm`, partagée avec le calendrier du programme) :
+   « Une séance est en cours. Termine-la avant d’en lancer une autre. »,
+   « Reprendre la séance » ou « Plus tard » (le domaine impose déjà au plus
+   une séance active — `startWorkout` lève `StateError`) ;
 2. sinon `startFromTemplate(templateId)` : transaction locale (séance + plan +
    opération `session.create`), puis `context.push(AppRoutes.activeWorkout)`.
 

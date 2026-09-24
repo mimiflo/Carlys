@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:carlys_mobile/app/environment/app_environment.dart';
 import 'package:carlys_mobile/app/router/app_routes.dart';
+import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/community/presentation/screens/friend_challenge_screen.dart';
 import 'package:carlys_mobile/features/notifications/domain/entities/push_destination.dart';
 import 'package:carlys_mobile/features/notifications/domain/services/push_messenger.dart';
@@ -172,7 +175,92 @@ void main() {
       expect(find.byType(FriendChallengeScreen), findsNothing);
     });
 
-    testWidgets('reçue application ouverte, « Voir » mène au même écran', (
+    testWidgets('reçue application ouverte, « Voir le défi » mène au même '
+        'écran', (tester) async {
+      final messenger = await launch(tester);
+
+      messenger.notices.add(
+        const PushNotice(
+          title: 'Léa t’invite à un défi',
+          body: 'Ouvre la Communauté pour répondre.',
+          destination: invitation,
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      // La popup centrée des messages passagers, qui dit OÙ elle mène.
+      expect(find.byType(AppPopupCard), findsOneWidget);
+      await tester.tap(find.text('Voir le défi'));
+      await tester.pumpAndSettle();
+
+      expect(find.byType(FriendChallengeScreen), findsOneWidget);
+      expect(find.byType(AppPopupCard), findsNothing);
+    });
+
+    testWidgets('reçue application ouverte, « Voir » ouvre l’onglet Amis', (
+      tester,
+    ) async {
+      final messenger = await launch(tester);
+
+      messenger.notices.add(
+        const PushNotice(
+          title: 'Léa t’a encouragé',
+          body: 'Belle série !',
+          destination: CommunityFriendsDestination(),
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.text('Voir le défi'), findsNothing);
+      await tester.tap(find.text('Voir'));
+      await tester.pumpAndSettle();
+
+      expect(find.text('ENCOURAGEMENTS'), findsOneWidget);
+    });
+
+    testWidgets('« Voir le défi » par-dessus une question ouverte la referme '
+        'd’abord : elle ne ressurgit pas au retour', (tester) async {
+      final messenger = await launch(tester);
+
+      // Une question en cours, sur le navigateur racine, comme l'écran du
+      // défi lui-même.
+      bool? answer;
+      unawaited(
+        showAppConfirm(
+          tester.element(find.byType(AppBottomBar)),
+          title: 'Supprimer cette série ?',
+          message: 'Elle disparaîtra de la séance.',
+          confirmLabel: 'Supprimer',
+          destructive: true,
+        ).then((value) => answer = value),
+      );
+      await tester.pumpAndSettle();
+
+      messenger.notices.add(
+        const PushNotice(
+          title: 'Léa t’invite à un défi',
+          body: 'Ouvre la Communauté pour répondre.',
+          destination: invitation,
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+      expect(find.byType(AppPopupCard), findsNWidgets(2));
+
+      await tester.tap(find.text('Voir le défi'));
+      await tester.pumpAndSettle();
+      expect(find.byType(FriendChallengeScreen), findsOneWidget);
+      // Refermée comme si l'on avait renoncé : rien n'est supprimé.
+      expect(answer, isFalse);
+
+      await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(find.byType(FriendChallengeScreen), findsNothing);
+      expect(find.text('Supprimer cette série ?'), findsNothing);
+      expect(find.byType(AppPopupCard), findsNothing);
+    });
+
+    testWidgets('« Plus tard » referme la popup et laisse l’écran en place', (
       tester,
     ) async {
       final messenger = await launch(tester);
@@ -186,13 +274,40 @@ void main() {
       );
       await tester.pump();
       await tester.pump(const Duration(milliseconds: 300));
-      await tester.tap(find.text('Voir'));
-      await tester.pumpAndSettle();
+      // Navigation d'accessibilité active (réglage du groupe) : une popup
+      // qui propose quelque chose attend qu'on choisisse.
+      await tester.pump(const Duration(seconds: 30));
+      expect(find.byType(AppPopupCard), findsOneWidget);
 
-      expect(find.byType(FriendChallengeScreen), findsOneWidget);
+      await tester.tap(find.text(AppNotices.laterLabel));
+      await tester.pumpAndSettle();
+      expect(find.byType(AppPopupCard), findsNothing);
+      expect(find.byType(FriendChallengeScreen), findsNothing);
     });
 
-    testWidgets('sans destination, le bandeau ne propose rien à ouvrir', (
+    testWidgets('le retour arrière ferme la popup, pas l’application', (
+      tester,
+    ) async {
+      final messenger = await launch(tester);
+
+      messenger.notices.add(
+        const PushNotice(
+          title: 'Léa t’invite à un défi',
+          body: 'Ouvre la Communauté pour répondre.',
+          destination: invitation,
+        ),
+      );
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      final handled = await tester.binding.handlePopRoute();
+      await tester.pumpAndSettle();
+      expect(handled, isTrue, reason: 'le retour a été pris par la popup');
+      expect(find.byType(AppPopupCard), findsNothing);
+      expect(find.byType(AppBottomBar), findsOneWidget);
+    });
+
+    testWidgets('sans destination, la popup ne propose rien à ouvrir', (
       tester,
     ) async {
       final messenger = await launch(tester);
@@ -205,6 +320,8 @@ void main() {
 
       expect(find.text('Une nouvelle de Carlys.'), findsOneWidget);
       expect(find.text('Voir'), findsNothing);
+      expect(find.text('Voir le défi'), findsNothing);
+      expect(find.text(AppNotices.laterLabel), findsNothing);
     });
   });
 }

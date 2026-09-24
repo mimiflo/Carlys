@@ -232,12 +232,29 @@ void main() {
 
     expect(community.joinsLeague, isFalse);
     expect(find.text('Classement de la semaine'), findsNothing);
+    // Le départ se DIT, dans la popup centrée ; elle couvre l'écran de son
+    // voile tant qu'on ne l'a pas touchée (ou qu'elle ne s'est pas fermée).
+    final depart = find.widgetWithText(
+      AppPopupCard,
+      'C’est fait : tu ne joues plus la ligue. Plus rien n’y est compté.',
+    );
+    expect(depart, findsOneWidget);
+    await tester.tap(depart);
+    await tester.pumpAndSettle();
+    expect(depart, findsNothing);
 
     await tester.tap(find.text('Rejoindre la ligue'));
     await tester.pumpAndSettle();
 
     expect(community.joinsLeague, isTrue);
     expect(find.text('Classement de la semaine'), findsOneWidget);
+    expect(
+      find.widgetWithText(
+        AppPopupCard,
+        'Te voilà dans la ligue. La semaine repart dimanche soir.',
+      ),
+      findsOneWidget,
+    );
   });
 
   testWidgets('tirer pour rafraîchir ne relit que ce que l’onglet montre', (

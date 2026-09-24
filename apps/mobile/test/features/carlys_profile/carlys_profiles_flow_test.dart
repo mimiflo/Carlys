@@ -192,8 +192,12 @@ void main() {
     await tester.tap(find.text('Choisir ce profil'));
     await tester.pumpAndSettle();
 
-    // L'échec s'affiche (SnackBar), le badge n'apparaît pas.
-    expect(find.byType(SnackBar), findsOneWidget);
+    // L'échec s'affiche (popup au ton « erreur », le message du dépôt), le
+    // badge n'apparaît pas.
+    expect(
+      find.widgetWithText(AppPopupCard, 'hors ligne (voulu par le test)'),
+      findsOneWidget,
+    );
     expect(find.text('Ton profil'), findsNothing);
   });
 

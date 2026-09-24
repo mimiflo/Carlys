@@ -67,20 +67,15 @@ class MuscleGroupGrid extends ConsumerWidget {
               // rendu — sans ce mot, le tap hors ligne était une impasse
               // muette.
               onTap: () async {
-                final messenger = ScaffoldMessenger.of(context);
+                final notices = AppNotices.of(context);
                 final abouti = await controller.setMuscleGroup(group.slug);
                 if (abouti || !context.mounted) {
                   return;
                 }
                 final error = ref.read(exerciseLibraryControllerProvider).error;
-                messenger.showSnackBar(
-                  SnackBar(
-                    content: Text(
-                      serverFailureMessage(
-                        error is AppException ? error : null,
-                      ),
-                    ),
-                  ),
+                notices.show(
+                  serverFailureMessage(error is AppException ? error : null),
+                  tone: AppNoticeTone.error,
                 );
               },
             ),

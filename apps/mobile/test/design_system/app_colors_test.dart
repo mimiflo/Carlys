@@ -141,6 +141,19 @@ void main() {
         lessThan(4.5),
       );
     });
+
+    test('le bouton destructif porte son libellé blanc, le rouge d’erreur '
+        'non', () {
+      // Un libellé de 15 points n'est pas du « grand texte » : il lui faut
+      // 4,5. `dangerStrong` remplit le bouton…
+      expect(
+        contrast(AppColors.dangerStrong, AppColors.neutral0),
+        greaterThanOrEqualTo(4.5),
+      );
+      // …parce que `danger`, sous du blanc, tombe à 3,76 : il reste aux
+      // textes et aux icônes d'erreur posés sur le fond sombre.
+      expect(contrast(AppColors.danger, AppColors.neutral0), lessThan(4.5));
+    });
   });
 
   group('dégradé de marque', () {

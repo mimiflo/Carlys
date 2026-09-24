@@ -49,9 +49,13 @@ class _SubscriptionPurchasePanelState
       CheckoutFailed() => 'La page de paiement n’a pas pu s’ouvrir.',
     };
     if (message != null) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(message)));
+      // « Pas encore ouvert » n'est pas un échec du geste : c'est un état.
+      AppNotices.of(context).show(
+        message,
+        tone: outcome is CheckoutUnavailable
+            ? AppNoticeTone.info
+            : AppNoticeTone.error,
+      );
     }
   }
 

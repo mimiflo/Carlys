@@ -132,32 +132,19 @@ class WeightRow extends ConsumerWidget {
   /// voit la valeur qu'on remplace ; la suppression, elle, partait d'un seul
   /// tapotement, sans un mot et sans retour possible.
   Future<void> _remove(BuildContext context, WidgetRef ref, String date) async {
-    final confirme = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text('Supprimer la mesure du $date ?'),
-        content: Text(
-          isLatest
-              ? 'C’est ta mesure la plus récente : ton métabolisme de base, '
-                    'ta cible calorique et tes macros seront recalculés sur '
-                    'la précédente.'
-              : 'Elle disparaîtra de ta courbe. Tes séances et tes records '
-                    'ne bougent pas.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Annuler'),
-          ),
-          AppButton(
-            label: 'Supprimer',
-            variant: AppButtonVariant.destructive,
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-          ),
-        ],
-      ),
+    final confirme = await showAppConfirm(
+      context,
+      title: 'Supprimer la mesure du $date ?',
+      message: isLatest
+          ? 'C’est ta mesure la plus récente : ton métabolisme de base, '
+                'ta cible calorique et tes macros seront recalculés sur '
+                'la précédente.'
+          : 'Elle disparaîtra de ta courbe. Tes séances et tes records '
+                'ne bougent pas.',
+      confirmLabel: 'Supprimer',
+      destructive: true,
     );
-    if (confirme != true) {
+    if (!confirme) {
       return;
     }
 
@@ -165,9 +152,9 @@ class WeightRow extends ConsumerWidget {
       await ref.read(bodyMetricActionsProvider).remove(entry.id);
     } on Exception {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Impossible de supprimer la mesure.')),
-        );
+        AppNotices.of(
+          context,
+        ).show('Impossible de supprimer la mesure.', tone: AppNoticeTone.error);
       }
     }
   }

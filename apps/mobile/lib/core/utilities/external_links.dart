@@ -1,6 +1,7 @@
-import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:url_launcher/url_launcher.dart';
+
+import '../../design_system/design_system.dart';
 
 /// Ouverture d'une adresse HORS de l'application (navigateur système).
 ///
@@ -27,16 +28,17 @@ final externalLinkOpenerProvider = Provider<ExternalLinkOpener>((ref) {
 /// (réglages, consentement d'inscription, récapitulatif de suppression) la
 /// doivent à l'utilisateur dans les mêmes termes.
 ///
-/// [messenger] est passé par l'appelant, capturé AVANT l'attente : le widget
+/// [notices] est passé par l'appelant, capturé AVANT l'attente : le widget
 /// peut être démonté quand l'ouverture rend la main, et son `context` avec.
 Future<void> openExternalLink(
   Uri url, {
   required WidgetRef ref,
-  required ScaffoldMessengerState messenger,
+  required AppNotices notices,
 }) async {
   final opened = await ref.read(externalLinkOpenerProvider)(url);
   if (opened) return;
-  messenger.showSnackBar(
-    const SnackBar(content: Text('Aucun navigateur n’a pu ouvrir cette page.')),
+  notices.show(
+    'Aucun navigateur n’a pu ouvrir cette page.',
+    tone: AppNoticeTone.error,
   );
 }

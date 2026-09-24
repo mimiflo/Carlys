@@ -187,6 +187,67 @@ void main() {
     });
   });
 
+  group('color.semantic ↔ AppColors', () {
+    // Les rouges, verts, ambres et bleus d'ÉTAT, et le rouge de remplissage
+    // des boutons destructifs : chacun a son reflet, et aucun reflet n'est
+    // sans token.
+    const semantic = <String, Color>{
+      'success': AppColors.success,
+      'warning': AppColors.warning,
+      'danger': AppColors.danger,
+      'info': AppColors.info,
+      'dangerStrong': AppColors.dangerStrong,
+    };
+
+    test(
+      'chaque couleur d’état reflète son hexadécimal, et rien ne manque',
+      () {
+        final declared = section('color.semantic');
+        expect(
+          declared.keys.toSet(),
+          semantic.keys.toSet(),
+          reason: 'un token sans reflet, ou un reflet sans token',
+        );
+        for (final entry in semantic.entries) {
+          final hex = declared[entry.key];
+          expect(hex, isA<String>(), reason: 'color.semantic.${entry.key}');
+          expect(
+            entry.value.toARGB32().toRadixString(16).toUpperCase(),
+            'FF${(hex! as String).substring(1).toUpperCase()}',
+            reason: 'color.semantic.${entry.key}',
+          );
+        }
+      },
+    );
+  });
+
+  group('color.surface.darkScrim* ↔ AppColors', () {
+    // Les voiles des popups : des couleurs TRANSLUCIDES, écrites en rgba
+    // dans le fichier de tokens et en ARGB ici — l'alpha se compare à
+    // l'octet près (0,72 × 255 = 183,6 → 184 ; 0,4 × 255 = 102).
+    const voiles = {
+      'darkScrim': AppColors.darkScrim,
+      'darkScrimSoft': AppColors.darkScrimSoft,
+    };
+    for (final MapEntry(key: name, value: color) in voiles.entries) {
+      test('$name reflète son rgba, alpha compris', () {
+        final declared = section('color.surface')[name];
+        expect(declared, isA<String>(), reason: 'color.surface.$name');
+        final rgba = RegExp(
+          r'^rgba\((\d+),(\d+),(\d+),([\d.]+)\)$',
+        ).firstMatch(declared! as String);
+        expect(rgba, isNotNull, reason: 'rgba(r,g,b,a) attendu : $declared');
+        final expected = Color.fromARGB(
+          (double.parse(rgba![4]!) * 255).round(),
+          int.parse(rgba[1]!),
+          int.parse(rgba[2]!),
+          int.parse(rgba[3]!),
+        );
+        expect(color.toARGB32(), expected.toARGB32());
+      });
+    }
+  });
+
   group('color.vendor ↔ AppColors', () {
     // Les couleurs de marques TIERCES (le « G » de Google) : des constantes
     // de charte externes — une dérive d'un côté du pont trahirait le logo.

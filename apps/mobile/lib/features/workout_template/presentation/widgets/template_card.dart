@@ -131,28 +131,16 @@ class TemplateCard extends StatelessWidget {
   }
 
   Future<void> _confirmDelete(BuildContext context) async {
-    final confirmed = await showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: Text('Supprimer « ${template.name} » ?'),
-        content: const Text(
+    final confirmed = await showAppConfirm(
+      context,
+      title: 'Supprimer « ${template.name} » ?',
+      message:
           'Le modèle disparaît de tes programmes. Les séances déjà '
           'réalisées avec lui ne bougent pas.',
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Annuler'),
-          ),
-          AppButton(
-            label: 'Supprimer',
-            variant: AppButtonVariant.destructive,
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-          ),
-        ],
-      ),
+      confirmLabel: 'Supprimer',
+      destructive: true,
     );
-    if (confirmed == true) {
+    if (confirmed) {
       onDelete();
     }
   }

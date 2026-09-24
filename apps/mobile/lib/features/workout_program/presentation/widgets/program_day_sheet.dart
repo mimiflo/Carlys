@@ -130,32 +130,13 @@ class _DaySheet extends ConsumerWidget {
     );
   }
 
+  /// Le libellé saisi, sans ses espaces de bord ; `null` si l'on renonce.
   Future<String?> _askFreeLabel(BuildContext context) {
-    final controller = TextEditingController();
-    return showDialog<String>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Activité libre'),
-        content: TextField(
-          controller: controller,
-          autofocus: true,
-          maxLength: 120,
-          decoration: const InputDecoration(hintText: 'Course, vélo, yoga…'),
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(),
-            child: const Text('Annuler'),
-          ),
-          TextButton(
-            onPressed: () {
-              final label = controller.text.trim();
-              Navigator.of(dialogContext).pop(label.isEmpty ? null : label);
-            },
-            child: const Text('Valider'),
-          ),
-        ],
-      ),
+    return showAppPrompt(
+      context,
+      title: 'Activité libre',
+      hint: 'Course, vélo, yoga…',
+      maxLength: 120,
     );
   }
 }

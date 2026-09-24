@@ -255,7 +255,7 @@ commandes, dans cet ordre :
 
 ```bash
 ./scripts/check.sh          # TypeScript : build, format, lint, types, tests
-./scripts/check_mobile.sh   # Flutter : tailles de fichiers, format, analyse, tests
+./scripts/check_mobile.sh   # Flutter : contrôles du dépôt, format, analyse, tests
 ```
 
 `flutter analyze && flutter test` ne suffit pas : `check_mobile.sh` ajoute
@@ -272,15 +272,16 @@ git add apps/mobile/pubspec.lock
 
 — faute de quoi la CI échoue exactement pareil sur le lock resté en arrière.
 
-**Un bloc du script ne vient pas de la CI**, et c'est assumé : les tailles
-de fichiers (`scripts/check_mobile_file_sizes.sh`), en tête parce qu'il
-coûte quelques millisecondes et n'a aucune raison de faire attendre derrière
-deux minutes de tests. Il applique les seuils du tableau « Tailles de
-fichiers » de CLAUDE.md aux widgets, use cases et services, par convention
-de chemin. L'ajout va dans le sens sûr — un vert local reste un vert en CI —
-et il n'existe pas d'autre moyen de tenir cette règle : l'analyseur Dart n'a
-pas de règle de longueur de fichier, `max_lines_per_file` rend « isn't a
-recognized lint rule ».
+**Le script ouvre sur des contrôles propres au dépôt**, en tête parce
+qu'ils coûtent quelques millisecondes et n'ont aucune raison de faire
+attendre derrière deux minutes de tests : les tailles de fichiers, la banque
+d'icônes, les popups du design system, la couverture des polices. Ce sont
+des AJOUTS aux cinq commandes de la CI, qui restent identiques et dans le
+même ordre ; la CI les rejoue elle aussi, chacun comme étape distincte. L'un
+d'eux peut donc faire échouer `check_mobile.sh` avant même l'analyse : le
+message dit quoi faire. Le détail de chacun, et pourquoi c'est un script
+plutôt qu'une règle de lint, c'est l'en-tête de `scripts/check_mobile.sh`
+qui le tient : il fait foi contre ce paragraphe.
 
 ## 6. Le poste se remet à niveau tout seul
 

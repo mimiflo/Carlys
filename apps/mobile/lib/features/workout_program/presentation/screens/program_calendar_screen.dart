@@ -7,6 +7,7 @@ import '../../../../core/feedback/server_gesture.dart';
 import '../../../../design_system/design_system.dart';
 import '../../../../shared/widgets/connection_aware_error.dart';
 import '../../../workout_session/presentation/controllers/workout_controllers.dart';
+import '../../../workout_session/presentation/widgets/resume_workout_confirm.dart';
 import '../../../workout_template/presentation/controllers/workout_template_controllers.dart';
 import '../../domain/entities/program.dart';
 import '../../domain/entities/program_calendar.dart';
@@ -117,8 +118,8 @@ class _ProgramCalendarScreenState extends ConsumerState<ProgramCalendarScreen> {
     if (ref.read(activeWorkoutProvider).valueOrNull != null) {
       // Le domaine impose AU PLUS UNE séance en cours : on ne remplace
       // jamais celle qui tourne, on propose de la reprendre.
-      final reprendre = await _confirmActiveSession();
-      if (reprendre == true && mounted) {
+      final reprendre = await showResumeWorkoutConfirm(context);
+      if (reprendre && mounted) {
         await context.push(AppRoutes.activeWorkout);
       }
       return;
@@ -134,26 +135,6 @@ class _ProgramCalendarScreenState extends ConsumerState<ProgramCalendarScreen> {
     if (mounted) {
       await context.push(AppRoutes.activeWorkout);
     }
-  }
-
-  Future<bool?> _confirmActiveSession() {
-    return showDialog<bool>(
-      context: context,
-      builder: (dialogContext) => AlertDialog(
-        title: const Text('Une séance est en cours'),
-        content: const Text('Termine-la avant d’en lancer une autre.'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(dialogContext).pop(false),
-            child: const Text('Plus tard'),
-          ),
-          AppButton(
-            label: 'Reprendre la séance',
-            onPressed: () => Navigator.of(dialogContext).pop(true),
-          ),
-        ],
-      ),
-    );
   }
 
   @override

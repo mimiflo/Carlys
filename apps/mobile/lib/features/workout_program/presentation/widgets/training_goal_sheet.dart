@@ -78,7 +78,7 @@ class _TrainingGoalSheet extends ConsumerWidget {
     WidgetRef ref,
     TrainingGoal goal,
   ) async {
-    final messenger = ScaffoldMessenger.of(context);
+    final notices = AppNotices.of(context);
     // Même garde que la feuille de voix : la route de LA feuille, pas le
     // navigateur racine (toujours « monté ») — sinon un second choix
     // pendant l'appel réseau fermait l'écran du dessous.
@@ -89,11 +89,12 @@ class _TrainingGoalSheet extends ConsumerWidget {
       if (context.mounted && (route?.isCurrent ?? false)) {
         navigator.pop();
       }
-      messenger.showSnackBar(
-        SnackBar(content: Text('Objectif retenu : ${goal.label}.')),
+      notices.show(
+        'Objectif retenu : ${goal.label}.',
+        tone: AppNoticeTone.success,
       );
     } on AppException catch (exception) {
-      messenger.showSnackBar(SnackBar(content: Text(exception.message)));
+      notices.show(exception.message, tone: AppNoticeTone.error);
     }
   }
 }

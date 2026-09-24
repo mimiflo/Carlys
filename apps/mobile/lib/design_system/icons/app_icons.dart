@@ -302,4 +302,48 @@ abstract final class AppIcons {
   static const IconData device = Icons.smartphone_rounded;
   static const IconData editOutline = Icons.edit_outlined;
   static const IconData emailSent = Icons.mark_email_read_outlined;
+
+  // ── Popups (AppNotices, showAppConfirm, showAppPrompt) ────────────
+  // Le glyphe du médaillon, en haut de la carte : il dit le GENRE de ce qui
+  // s'affiche avant qu'on le lise. Des glyphes pleins et sans cercle quand
+  // c'est possible : le médaillon EST déjà le cercle.
+
+  /// Message passager neutre : ce qui vient de se passer, sans jugement.
+  ///
+  /// Exception : la banque Material n'a aucun « i » sans cercle. En trait,
+  /// ce second cercle reste un filet discret dans le médaillon ; plein, ce
+  /// serait un disque blanc posé dans le disque violet.
+  static const IconData noticeInfo = Icons.info_outline_rounded;
+
+  /// Un geste a abouti.
+  static const IconData noticeSuccess = Icons.check_rounded;
+
+  /// Un geste n'a PAS abouti : le point d'exclamation seul, le cercle de
+  /// [error] en dessinerait un second dans le médaillon.
+  static const IconData noticeError = Icons.priority_high_rounded;
+
+  /// Une notification reçue pendant qu'on utilise l'application.
+  static const IconData noticePush = Icons.notifications_active_rounded;
+
+  /// Une question posée avant un geste (« Terminer la séance ? »).
+  static const IconData confirmQuestion = Icons.question_mark_rounded;
+
+  /// Une question posée avant un geste qui supprime ou retire.
+  static const IconData confirmDelete = Icons.delete_rounded;
+
+  /// Terminer une séance : la ligne d'arrivée.
+  static const IconData confirmFinish = Icons.flag_rounded;
+
+  /// Quitter ce qu'on a commencé : un défi, une séance, une édition.
+  static const IconData confirmLeave = Icons.logout_rounded;
+
+  /// Reprendre ce qui tourne déjà (la séance en cours) plutôt qu'en lancer
+  /// une autre.
+  static const IconData confirmResume = Icons.play_arrow_rounded;
+
+  /// Retirer une personne de ses amis.
+  static const IconData confirmRemoveFriend = Icons.person_remove_rounded;
+
+  /// Une saisie courte demandée dans une popup : un nom, un libellé.
+  static const IconData promptEdit = Icons.edit_rounded;
 }

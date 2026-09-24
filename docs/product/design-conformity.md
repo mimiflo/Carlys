@@ -468,6 +468,58 @@ français (argent = `silver`, or = `gold`, platine = `platinum`, diamant =
 ligue, et `packages/ui/scripts/build-css.mjs` n'émet pas ce groupe, pas plus
 que `color.vendor`.
 
+## Les popups (arbitrage du 24 septembre 2026)
+
+Demande du propriétaire, mot pour mot : « La popup du défi on peut pas faire un
+vrai truc une popup qui apparaît au milieu de l’écran dans le thème de
+l’application pour toutes les popup ». Il visait le bandeau clair qui
+annonçait une notification reçue application ouverte (capture
+`35d-notification-recue`) ; la règle vaut pour TOUTES les popups.
+
+- **Ce qui devient une popup centrée** : les messages passagers (succès,
+  erreurs, validations, notification reçue), les boîtes de dialogue Material
+  (confirmations de suppression, clôture de séance, déconnexion d'un
+  appareil, saisies de nom) et les confirmations présentées en feuille du bas.
+- **Ce qui reste une feuille** : les menus d'options et les formulaires ou
+  sélecteurs. Ce ne sont pas des popups.
+- **Le thème** : une seule carte, `AppPopupCard` — surface sombre, liseré
+  violet discret, halo violet sous un médaillon rond au dégradé `cta`, titre
+  et message centrés, boutons du design system empilés. Violet par règle
+  (CLAUDE.md, règle 9) : jamais le dégradé de marque `signature`. Le rouge
+  `danger` ne teinte le médaillon que pour une ERREUR ; une question avant
+  une suppression reste violette, son bouton `destructive` dit le danger.
+- **Trois jetons ajoutés**, gardés par `design_tokens_test.dart` :
+  `color.surface.darkScrim` (`rgba(8,5,14,0.72)`, le fond de l'application à
+  72 %), le voile posé derrière une popup qui attend un CHOIX (question,
+  saisie, notification avec action) — reflété dans `AppColors.darkScrim` ;
+  `color.surface.darkScrimSoft` (`rgba(8,5,14,0.4)`), le voile LÉGER et
+  purement visuel d'un simple message, qui détache la carte des cartes de
+  l'écran et laisse passer le toucher (`AppColors.darkScrimSoft`) ;
+  et `color.semantic.dangerStrong` (`#DC2626`), le rouge qui REMPLIT le
+  bouton `destructive` (`AppColors.dangerStrong`). Blanc sur `danger` ne tenait que
+  3,76:1, sous l'AA d'un libellé de 15 points : chaque « Supprimer »,
+  « Retirer », « Quitter » des popups l'était. `dangerStrong` en tient 4,83 ;
+  `danger` reste le rouge des textes et des icônes d'erreur. Aucun des deux
+  n'est recopié dans le CSS de l'admin, qui ne reprend (à la main, gardé par
+  `globals-tokens.test.ts`) que les couleurs qu'il peint.
+- **Mesuré** (`app_popup_test.dart`) : titre, message et bouton de
+  renonciation tiennent AA sur la surface de la carte ET au plus fort de son
+  halo (`primaryBadgeBg` sur `darkSurface`), dans les deux thèmes — la carte
+  impose le thème sombre à son contenu, sans quoi le bouton fantôme prendrait
+  le violet vif du thème clair ; le libellé du bouton d'action, principal ou
+  destructif, tient AA sur ce qui est peint sous lui (le dégradé `cta` lu aux
+  deux bords du libellé, ou le rouge `dangerStrong`) ; rien ne déborde à
+  `textScaler` 2 sur 320 points, pas même la pastille de constat de la
+  clôture de séance (`AppPill` passe désormais à la ligne plutôt que de
+  déborder d'une largeur trop étroite).
+
+Le détail des portes (`AppNotices`, `showAppConfirm`, `showAppPrompt`,
+`showAppDialog`) et de leurs règles est dans `docs/architecture/mobile.md` ;
+`scripts/check_mobile_popups.sh` refuse, en local et en CI, toute popup
+ouverte hors du design system, qu'elle passe par une fonction
+(`showDialog`, `showCupertinoModalPopup`…) ou par une route poussée à la main
+(`DialogRoute`, `RawDialogRoute`, `CupertinoDialogRoute`…).
+
 ## Écarts assumés
 
 | Écran | Écart | Raison |

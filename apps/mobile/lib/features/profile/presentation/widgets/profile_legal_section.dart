@@ -24,11 +24,8 @@ class ProfileLegalSettings extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final environment = ref.watch(appEnvironmentProvider);
 
-    Future<void> open(Uri url) => openExternalLink(
-      url,
-      ref: ref,
-      messenger: ScaffoldMessenger.of(context),
-    );
+    Future<void> open(Uri url) =>
+        openExternalLink(url, ref: ref, notices: AppNotices.of(context));
 
     return AppSettingsGroup(
       label: 'Légal',

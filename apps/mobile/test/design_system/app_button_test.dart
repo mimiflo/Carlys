@@ -99,9 +99,11 @@ void main() {
       expect(opacity.opacity, lessThan(1));
     });
 
-    testWidgets('la variante destructive utilise la couleur d’erreur', (
+    testWidgets('la variante destructive peint le rouge de remplissage', (
       tester,
     ) async {
+      // `dangerStrong`, pas `danger` : blanc sur `danger` ne tient que
+      // 3,76:1 (la contre-épreuve de lisibilité est dans app_colors_test).
       await tester.pumpWidget(
         _wrap(
           const AppButton(
@@ -116,7 +118,7 @@ void main() {
       final background = button.style?.backgroundColor?.resolve(
         <WidgetState>{},
       );
-      expect(background, AppColors.danger);
+      expect(background, AppColors.dangerStrong);
     });
   });
 

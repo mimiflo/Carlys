@@ -2,6 +2,7 @@ import 'package:carlys_mobile/app/app.dart';
 import 'package:carlys_mobile/app/environment/app_environment.dart';
 import 'package:carlys_mobile/app/restore/app_restore.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
+import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
 import 'package:carlys_mobile/features/nutrition/presentation/controllers/water_controllers.dart';
 import 'package:carlys_mobile/features/workout_program/data/repositories/program_repository_impl.dart';
@@ -193,9 +194,44 @@ void main() {
     await tester.pumpAndSettle();
     await tester.tap(find.byTooltip('Supprimer le programme'));
     await tester.pumpAndSettle();
-    await tester.tap(find.text('Supprimer'));
+    await tester.tap(_popupButton('Supprimer'));
     await tester.pumpAndSettle();
 
     expect(find.text('Aucun programme'), findsOneWidget);
   });
+
+  testWidgets('renoncer à la suppression ne supprime rien', (tester) async {
+    final programs = FakeProgramRepository(programs: [programOf()]);
+    await pumpApp(tester, programs);
+    await openPrograms(tester);
+
+    await tester.tap(find.text('Force en 2 semaines'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byTooltip('Supprimer le programme'));
+    await tester.pumpAndSettle();
+
+    // La question est la popup centrée, et son bouton dit le danger.
+    expect(find.text('Supprimer ce programme ?'), findsOneWidget);
+    expect(
+      tester.widget<AppButton>(_popupButton('Supprimer')).variant,
+      AppButtonVariant.destructive,
+    );
+    await tester.tap(_popupButton('Annuler'));
+    await tester.pumpAndSettle();
+
+    // L'écran reste (on ne quitte que sur une suppression aboutie), et la
+    // liste le montre toujours au retour.
+    expect(find.text('Supprimer ce programme ?'), findsNothing);
+    expect(find.byTooltip('Supprimer le programme'), findsOneWidget);
+    await tester.binding.handlePopRoute();
+    await tester.pumpAndSettle();
+    expect(find.text('Force en 2 semaines'), findsOneWidget);
+    expect(find.text('Aucun programme'), findsNothing);
+  });
 }
+
+/// Un bouton de la popup centrée, pas un texte homonyme de l'écran.
+Finder _popupButton(String label) => find.descendant(
+  of: find.byType(AppPopupCard),
+  matching: find.widgetWithText(AppButton, label),
+);
