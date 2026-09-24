@@ -51,6 +51,10 @@ export class FcmPushSender implements PushSenderPort {
       await messaging.send({
         token,
         notification: { title: message.title, body: message.body },
+        // Transmis TEL QUEL, à côté du titre et du corps : l'application le
+        // lit au toucher pour ouvrir l'écran concerné. Absent, rien n'est
+        // ajouté — FCM refuse un `data` qui ne serait pas un objet de chaînes.
+        ...(message.data === undefined ? {} : { data: message.data }),
       });
       return 'sent';
     } catch (error) {

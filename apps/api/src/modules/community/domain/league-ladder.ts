@@ -29,8 +29,14 @@ export const LEAGUE_LADDER: readonly LeagueDivision[] = [
   LeagueDivision.DIAMANT,
 ];
 
-/** Places d'une division. Une division qui en compte moins se joue telle quelle. */
-export const LEAGUE_DIVISION_SIZE = 20;
+/**
+ * Places d'un GROUPE. On n'est jamais classé avec toute une division : une
+ * division mondiale de milliers de joueurs rendrait le top 5 inaccessible.
+ * Chaque période d'une division se découpe donc en groupes de 20, remplis
+ * dans l'ordre ([cohortToJoin]) ; un groupe qui en compte moins se joue tel
+ * quel, sans adversaire fabriqué.
+ */
+export const LEAGUE_GROUP_SIZE = 20;
 
 /** Combien montent, et combien descendent, au règlement d'une période. */
 export const LEAGUE_PROMOTED = 5;
@@ -123,6 +129,37 @@ export function previousPeriodKey(periodKey: string): string {
   return periodKeyOf(new Date(periodWindow(periodKey).startsAt.getTime() - 86_400_000));
 }
 
+/** Un groupe d'une division pour une période, et combien il compte de membres. */
+export interface LeagueGroupCount {
+  cohort: number;
+  members: number;
+}
+
+/**
+ * Le groupe où ranger un nouveau membre de (période, division) : le PREMIER
+ * groupe, par numéro croissant, qui a moins de [LEAGUE_GROUP_SIZE] membres ;
+ * sinon un nouveau, numéroté après le plus grand. Le groupe 0 si la division
+ * est encore vide.
+ *
+ * Remplir d'abord les groupes existants, plutôt que d'ouvrir un groupe par
+ * vague d'arrivées : un groupe de trois ne décide de rien (voir
+ * [LEAGUE_MIN_PLAYERS]). Un numéro libéré par un départ n'est jamais
+ * « comblé » par un groupe neuf : il n'existe plus, donc il n'a pas de place.
+ *
+ * Pure : l'appelant la lit SOUS un verrou par (période, division), sans quoi
+ * deux ouvertures simultanées compteraient le même groupe à 19 et le
+ * rempliraient à 21.
+ */
+export function cohortToJoin(groups: readonly LeagueGroupCount[]): number {
+  const ordonnes = [...groups].sort((a, b) => a.cohort - b.cohort);
+  const libre = ordonnes.find((group) => group.members < LEAGUE_GROUP_SIZE);
+  if (libre !== undefined) {
+    return libre.cohort;
+  }
+  const dernier = ordonnes[ordonnes.length - 1];
+  return dernier === undefined ? 0 : dernier.cohort + 1;
+}
+
 /** Une division plus haut, ou la même si on est déjà en haut. */
 export function promoted(division: LeagueDivision): LeagueDivision {
   const index = LEAGUE_LADDER.indexOf(division);
@@ -146,7 +183,7 @@ export interface LeagueSettlement {
   nextDivision: LeagueDivision;
 }
 
-/** Les JOUEURS d'une division : les membres dont le score de la période est non nul. */
+/** Les JOUEURS d'un groupe : les membres dont le score de la période est non nul. */
 function playersOf(members: readonly LeagueStanding[]): LeagueStanding[] {
   return members.filter((member) => member.score > 0);
 }
@@ -166,8 +203,9 @@ function ranksForPromotion(players: readonly LeagueStanding[], score: number): b
 }
 
 /**
- * Le règlement d'une division pour une période close : un rang par membre, et
- * la division de la période suivante.
+ * Le règlement d'un GROUPE de `division` pour une période close : un rang par
+ * membre, et la division de la période suivante. `members` est le groupe, et
+ * lui seul : c'est parmi ses 20 membres que se jouent les cinq montées.
  *
  * MONTER se décide au nombre de joueurs STRICTEMENT AU-DESSUS, descendre au
  * nombre de joueurs strictement en dessous. Compter les positions plutôt que

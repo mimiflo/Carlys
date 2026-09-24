@@ -7,7 +7,8 @@ import {
 } from '@carlys/api-contracts';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsIn, IsInt, IsOptional, IsString, IsUUID, Max, MaxLength, Min } from 'class-validator';
+import { IsIn, IsInt, IsOptional, IsString, IsUUID, Max, Min } from 'class-validator';
+import { MaxCodePoints } from '../../../../../common/validators/max-code-points';
 
 export class CreateCommunityReportDto {
   @ApiProperty({ description: 'Personne signalée', format: 'uuid' })
@@ -47,10 +48,11 @@ export class CreateCommunityReportDto {
   @IsIn(communityReportReasonSchema.options)
   reason!: CommunityReportReason;
 
+  // Compté en POINTS DE CODE, comme le contrat (`createCommunityReportSchema`).
   @ApiPropertyOptional({ maxLength: COMMUNITY_REPORT_DETAILS_MAX_LENGTH })
   @IsOptional()
   @IsString()
-  @MaxLength(COMMUNITY_REPORT_DETAILS_MAX_LENGTH)
+  @MaxCodePoints(COMMUNITY_REPORT_DETAILS_MAX_LENGTH)
   details?: string;
 }
 

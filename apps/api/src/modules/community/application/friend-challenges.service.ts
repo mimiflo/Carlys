@@ -13,7 +13,7 @@ import {
   FriendChallengesRepository,
 } from '../infrastructure/friend-challenges.repository';
 import { CommunityNotifier } from './community-notifier';
-import { finalRanks, presentFriendChallenge } from './friend-challenge.presenter';
+import { finalRanks, isHiddenByBlock, presentFriendChallenge } from './friend-challenge.presenter';
 
 /**
  * Plafond de défis servis en une lecture. L'écran en montre quelques-uns ;
@@ -88,7 +88,9 @@ export class FriendChallengesService {
     // l'invitation, et il n'est lisible que des membres, dans le défi.
     if (cree) {
       await Promise.all(
-        invites.map((invited) => this.notifier.challengeInvite(invited, userId, input.title)),
+        invites.map((invited) =>
+          this.notifier.challengeInvite(invited, userId, input.id, input.title),
+        ),
       );
     }
     return this.detail(userId, input.id);
@@ -97,32 +99,37 @@ export class FriendChallengesService {
   /**
    * Mes défis : ceux qu'on m'a proposés et ceux que j'ai acceptés.
    *
-   * Les blocages sont lus à CHAQUE lecture, comme pour le fil : le mot d'un
-   * créateur qu'un blocage sépare de moi n'est plus servi (voir le
-   * présentateur). La liste ET le détail, sans quoi l'un rouvrirait ce que
-   * l'autre tait.
+   * Les blocages sont lus à CHAQUE lecture, comme pour le fil. Un défi dont
+   * le créateur est séparé de moi par un blocage disparaît tant que je ne
+   * suis pas à son classement (invitation en attente ou refusée, défi
+   * quitté) ; un défi où je suis au classement reste, mot du créateur masqué
+   * (voir le présentateur). La liste, le détail, l'acceptation ET le refus,
+   * sans quoi l'un rouvrirait ce que l'autre tait.
    */
   async list(userId: string): Promise<FriendChallengeContract[]> {
     const [challenges, hidden] = await Promise.all([
       this.challenges.listMine(userId, MAX_LISTED),
       this.moderation.blockedUserIdsEitherWay(userId),
     ]);
-    const regles = await Promise.all(challenges.map((challenge) => this.settleIfDue(challenge)));
+    const visibles = challenges.filter((challenge) => !isHiddenByBlock(challenge, userId, hidden));
+    const regles = await Promise.all(visibles.map((challenge) => this.settleIfDue(challenge)));
     return regles.map((challenge) => presentFriendChallenge(challenge, userId, hidden));
   }
 
   async detail(userId: string, challengeId: string): Promise<FriendChallengeContract> {
-    const [mine, hidden] = await Promise.all([
-      this.mine(userId, challengeId),
-      this.moderation.blockedUserIdsEitherWay(userId),
-    ]);
-    const challenge = await this.settleIfDue(mine);
+    const hidden = await this.moderation.blockedUserIdsEitherWay(userId);
+    const challenge = await this.settleIfDue(await this.mine(userId, challengeId, hidden));
     return presentFriendChallenge(challenge, userId, hidden);
   }
 
   /** Accepter : on entre au classement, à zéro. */
   async accept(userId: string, challengeId: string): Promise<FriendChallengeContract> {
-    const challenge = await this.mine(userId, challengeId);
+    const hidden = await this.moderation.blockedUserIdsEitherWay(userId);
+    // La visibilité AVANT la fin : « terminé » sur un défi masqué dirait
+    // qu'il existe encore. Et elle couvre la RÉACCEPTATION : un défi refusé
+    // ou quitté, puis séparé de son créateur par un blocage, est masqué lui
+    // aussi — sans quoi réaccepter rouvrait ce que le blocage a fermé.
+    const challenge = await this.mine(userId, challengeId, hidden);
     if (challenge.endsAt < new Date()) {
       throw new NotFoundException('Ce défi est terminé.');
     }
@@ -133,9 +140,15 @@ export class FriendChallengesService {
     return this.detail(userId, challengeId);
   }
 
-  /** Refuser, ou partir : dans les deux cas on sort du classement. */
+  /**
+   * Refuser, ou partir : dans les deux cas on sort du classement.
+   *
+   * Un défi masqué par un blocage est introuvable ici aussi : il a disparu
+   * partout, pas seulement à la lecture.
+   */
   async decline(userId: string, challengeId: string): Promise<void> {
-    const challenge = await this.mine(userId, challengeId);
+    const hidden = await this.moderation.blockedUserIdsEitherWay(userId);
+    const challenge = await this.mine(userId, challengeId, hidden);
     const moi = challenge.members.find((member) => member.userId === userId);
     // Refuser une invitation et quitter un défi commencé ne portent pas le
     // même nom dans l'historique, même si le geste est le même : l'écran
@@ -149,14 +162,24 @@ export class FriendChallengesService {
   }
 
   /**
-   * Le défi, s'il existe ET que l'appelant en est membre.
+   * Le défi, s'il existe, que l'appelant en est membre, et qu'un blocage ne
+   * le lui masque pas ([isHiddenByBlock]).
    *
-   * 404 dans les deux cas : un 403 sur un défi d'inconnus confirmerait qu'il
-   * existe, et de quoi il parle.
+   * Le MÊME 404 dans tous les cas : un 403 sur un défi d'inconnus
+   * confirmerait qu'il existe, et un message propre au défi masqué dirait
+   * qu'un blocage est passé par là.
    */
-  private async mine(userId: string, challengeId: string): Promise<FriendChallengeWithMembers> {
+  private async mine(
+    userId: string,
+    challengeId: string,
+    hidden: ReadonlySet<string>,
+  ): Promise<FriendChallengeWithMembers> {
     const challenge = await this.challenges.findById(challengeId);
-    if (challenge === null || !challenge.members.some((member) => member.userId === userId)) {
+    if (
+      challenge === null ||
+      !challenge.members.some((member) => member.userId === userId) ||
+      isHiddenByBlock(challenge, userId, hidden)
+    ) {
       throw new NotFoundException('Défi introuvable.');
     }
     return challenge;

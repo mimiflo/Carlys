@@ -6,13 +6,19 @@ import {
   periodKeyOf,
   periodWindow,
   pointsOf,
+  previousPeriodKey,
   promotionOutlook,
   settleDivision,
 } from '../domain/league-ladder';
+import { CommunityModerationRepository } from '../infrastructure/community-moderation.repository';
 import { LeaguesRepository } from '../infrastructure/leagues.repository';
 
 /**
  * LES LIGUES : un classement hebdomadaire, choisi, qui ne rend rien au profil.
+ *
+ * On est classé dans un GROUPE de 20 de sa division (`LEAGUE_GROUP_SIZE`),
+ * jamais avec la division entière : classement, règlement et zone de montée
+ * se lisent tous sur `(période, division, groupe)`.
  *
  * Les trois garanties du principe 5 sont portées ici et nulle part ailleurs :
  *  - **périmètre choisi** — rien n'est écrit tant que `joinsLeague` est faux,
@@ -28,7 +34,10 @@ import { LeaguesRepository } from '../infrastructure/leagues.repository';
  */
 @Injectable()
 export class LeaguesService {
-  constructor(private readonly leagues: LeaguesRepository) {}
+  constructor(
+    private readonly leagues: LeaguesRepository,
+    private readonly moderation: CommunityModerationRepository,
+  ) {}
 
   /**
    * Verse l'effort d'un fait à la ligue, dans l'unité du barème.
@@ -86,14 +95,20 @@ export class LeaguesService {
       };
     }
 
-    const lastResult = await this.settleDue(userId, periodKey);
+    await this.settleDue(userId, periodKey);
     // Lue sur les périodes AVANT celle-ci, maintenant réglées : une séance
     // a pu ouvrir la semaine avant le règlement, dans l'ancienne division.
     const division = await this.leagues.divisionToOpen(userId, periodKey);
-    await this.leagues.openPeriod(userId, periodKey, division);
-    await this.leagues.alignPeriod(userId, periodKey, division);
+    const cohort = await this.leagues.placeInPeriod(userId, periodKey, division);
 
-    const membres = await this.leagues.standings(periodKey, division);
+    const [membres, lastResult, bloques] = await Promise.all([
+      this.leagues.standings(periodKey, division, cohort),
+      this.lastResult(userId, periodKey),
+      this.moderation.blockedUserIdsEitherWay(userId),
+    ]);
+    // Les rangs se calculent sur le groupe ENTIER, avant de taire qui que
+    // ce soit : retirer une personne bloquée ne décale personne, et un trou
+    // dans la numérotation est plus honnête qu'un rang qui ment.
     const rangs = competitionRanks(
       membres,
       (membre) => membre.score,
@@ -106,52 +121,82 @@ export class LeaguesService {
       endsAt,
       division,
       score: membres.find((membre) => membre.userId === userId)?.score ?? 0,
-      standings: membres.map((membre) => ({
-        userId: membre.userId,
-        displayName: membre.user.profile?.displayName ?? 'Membre Carlys',
-        score: membre.score,
-        // Le rang FIGÉ l'emporte dès qu'il existe : c'est celui du résultat.
-        rank: membre.finalRank ?? rangs.get(membre.userId) ?? membres.length,
-        isMe: membre.userId === userId,
-      })),
+      // Principe 6 : une personne bloquée, dans un sens ou dans l'autre, est
+      // absente des listes — celle-ci comprise.
+      standings: membres
+        .filter((membre) => !bloques.has(membre.userId))
+        .map((membre) => ({
+          userId: membre.userId,
+          displayName: membre.user.profile?.displayName ?? 'Membre Carlys',
+          score: membre.score,
+          // Le rang FIGÉ l'emporte dès qu'il existe : c'est celui du résultat.
+          rank: membre.finalRank ?? rangs.get(membre.userId) ?? membres.length,
+          isMe: membre.userId === userId,
+        })),
       lastResult,
-      // Lu sur les MÊMES membres que le classement ci-dessus : la zone
-      // annoncée et les rangs affichés ne peuvent pas se contredire.
+      // Lu sur les MÊMES membres que les rangs ci-dessus, groupe entier : la
+      // zone annoncée et les rangs affichés ne peuvent pas se contredire, et
+      // taire quelqu'un ne rapproche personne de la montée.
       promotion: promotionOutlook(division, membres, userId),
     };
   }
 
   /**
-   * Règle les périodes échues de cette personne, et rend le résultat de la
-   * dernière — ce qui permet d'annoncer une montée UNE fois, au lieu d'un
-   * changement de division sans explication.
+   * Règle les périodes échues de cette personne.
    *
-   * Une lecture règle la division ENTIÈRE de la période, pas seulement la
+   * Une lecture règle le GROUPE ENTIER de chaque période, pas seulement la
    * ligne de l'appelant : deux personnes liraient sinon deux classements
    * différents de la même semaine.
+   *
+   * Chaque ligne est RELUE juste avant son règlement, jamais prise dans la
+   * liste lue d'abord : régler une semaine réaligne la suivante (division
+   * et groupe changés, voir `realignFollowing`). La régler ensuite avec sa
+   * ligne d'avant réglait l'ancien groupe, sans moi, et laissait ma semaine
+   * en suspens — sans résultat annoncé, et la semaine en cours ouverte dans
+   * la mauvaise division.
    */
-  private async settleDue(
+  private async settleDue(userId: string, periodKey: string): Promise<void> {
+    const echues = await this.leagues.unsettledBefore(userId, periodKey);
+    for (const { periodKey: echue } of echues) {
+      const ligne = await this.leagues.membership(userId, echue);
+      if (ligne === null || ligne.settledAt !== null) {
+        continue; // Réglée entre-temps, par une lecture concurrente.
+      }
+      const membres = await this.leagues.standings(echue, ligne.division, ligne.cohort);
+      // L'écriture reste conditionnée à `settledAt: null`, ligne par ligne :
+      // un règlement concurrent du même groupe n'y touche plus.
+      await this.leagues.settle(echue, settleDivision(ligne.division, membres));
+    }
+  }
+
+  /**
+   * Le résultat de la semaine PASSÉE (la semaine ISO qui précède
+   * `periodKey`), s'il est réglé et que cette personne y figurait.
+   *
+   * Lu en base, et non rendu par le règlement : quiconque règle la semaine
+   * (moi ou un autre membre du groupe), chacun lit SON résultat, et pendant
+   * toute la semaine en cours — la phrase affichée dit « la semaine
+   * passée », elle reste vraie jusqu'à dimanche. Absent la semaine passée
+   * (six semaines d'absence, par exemple) : aucun résultat à annoncer.
+   */
+  private async lastResult(
     userId: string,
     periodKey: string,
   ): Promise<LeagueContract['lastResult']> {
-    const echues = await this.leagues.unsettledBefore(userId, periodKey);
-    let dernier: LeagueContract['lastResult'] = null;
-
-    for (const echue of echues) {
-      const membres = await this.leagues.standings(echue.periodKey, echue.division);
-      const resultats = settleDivision(echue.division, membres);
-      const ecrites = await this.leagues.settle(echue.periodKey, resultats);
-      const mien = resultats.find((resultat) => resultat.userId === userId);
-      if (ecrites === 0 || mien === undefined) {
-        continue; // Réglée par une lecture concurrente : rien à annoncer.
-      }
-      dernier = {
-        periodKey: echue.periodKey,
-        rank: mien.rank,
-        from: echue.division,
-        to: mien.nextDivision,
-      };
+    const passee = await this.leagues.membership(userId, previousPeriodKey(periodKey));
+    if (
+      passee === null ||
+      passee.settledAt === null ||
+      passee.finalRank === null ||
+      passee.nextDivision === null
+    ) {
+      return null;
     }
-    return dernier;
+    return {
+      periodKey: passee.periodKey,
+      rank: passee.finalRank,
+      from: passee.division,
+      to: passee.nextDivision,
+    };
   }
 }

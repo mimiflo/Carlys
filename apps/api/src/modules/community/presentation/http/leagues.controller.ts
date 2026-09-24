@@ -21,10 +21,14 @@ export class LeaguesController {
     summary: 'Ma ligue de la semaine, classement compris',
     description:
       'Sans adhésion, rend l’échelle et un classement VIDE : la ligue est un ' +
-      'opt-in. La période échue est RÉGLÉE à la lecture (rangs figés, ' +
-      'division suivante décidée), sans tâche planifiée. `promotion` situe ' +
-      'l’appelant face à la zone de montée, calculé par le serveur avec la ' +
-      'règle du règlement (`null` sans adhésion).',
+      'opt-in. Le classement est celui du GROUPE de 20 de l’appelant dans sa ' +
+      'division, sans les personnes qu’un blocage sépare de lui (rangs ' +
+      'inchangés). La période échue est RÉGLÉE à la lecture (rangs figés, ' +
+      'division suivante décidée), sans tâche planifiée ; `lastResult` rend ' +
+      'le résultat de la semaine passée toute la semaine, quel que soit le ' +
+      'lecteur qui l’a réglée. `promotion` situe l’appelant face à la zone ' +
+      'de montée de son groupe, calculé par le serveur avec la règle du ' +
+      'règlement (`null` sans adhésion).',
   })
   read(@CurrentUser() user: AuthenticatedPrincipal): Promise<League> {
     return this.leagues.read(user.userId);

@@ -1,5 +1,7 @@
 import { LeagueDivision } from '@prisma/client';
 import {
+  cohortToJoin,
+  LEAGUE_GROUP_SIZE,
   LEAGUE_LADDER,
   LEAGUE_MIN_PLAYERS,
   LEAGUE_PROMOTED,
@@ -307,5 +309,44 @@ describe('La zone de montée, annoncée avant le règlement', () => {
 
     expect(promotionOutlook('OR', division(scores), 'u4').inZone).toBe(true);
     expect(divisionOf(settleDivision('OR', division(scores)), 'u4')).toBe('OR');
+  });
+});
+
+describe('Les groupes de vingt', () => {
+  it('une division vide ouvre le groupe 0', () => {
+    expect(cohortToJoin([])).toBe(0);
+  });
+
+  it('remplit le PREMIER groupe qui a de la place, par numéro croissant', () => {
+    // L'ordre d'arrivée des lignes ne compte pas : c'est le numéro qui range.
+    expect(
+      cohortToJoin([
+        { cohort: 2, members: 3 },
+        { cohort: 0, members: LEAGUE_GROUP_SIZE },
+        { cohort: 1, members: LEAGUE_GROUP_SIZE - 1 },
+      ]),
+    ).toBe(1);
+  });
+
+  it('un groupe à vingt est plein ; tous pleins, on en ouvre un après le plus grand', () => {
+    expect(LEAGUE_GROUP_SIZE).toBe(20);
+    expect(
+      cohortToJoin([
+        { cohort: 0, members: 20 },
+        { cohort: 1, members: 20 },
+      ]),
+    ).toBe(2);
+    // Un numéro qui n'existe plus (tout le monde a changé de division) n'est
+    // pas un groupe : on ne le « comble » pas.
+    expect(
+      cohortToJoin([
+        { cohort: 0, members: 20 },
+        { cohort: 4, members: 20 },
+      ]),
+    ).toBe(5);
+  });
+
+  it('les lignes d’avant les groupes (toutes au groupe 0, parfois plus de 20) débordent au 1', () => {
+    expect(cohortToJoin([{ cohort: 0, members: 57 }])).toBe(1);
   });
 });

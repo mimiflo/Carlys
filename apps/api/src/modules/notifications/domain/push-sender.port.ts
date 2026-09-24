@@ -10,6 +10,13 @@
 export interface PushMessage {
   title: string;
   body: string;
+  /**
+   * Données remises à l'application avec la notification, jamais affichées :
+   * c'est ce qui fait qu'un toucher ouvre le bon écran (`destination`, voir
+   * `PUSH_DESTINATIONS` dans `@carlys/api-contracts`). Des CHAÎNES seulement,
+   * comme le champ `data` de FCM.
+   */
+  data?: Record<string, string>;
 }
 
 /** Résultat d'un envoi : `invalid-token` déclenche la purge du jeton. */

@@ -1,7 +1,9 @@
 import {
+  ENCOURAGEMENT_MESSAGE_MAX_LENGTH,
   FRIEND_CHALLENGE_DURATIONS,
   FRIEND_CHALLENGE_MAX_INVITES,
   FRIEND_CHALLENGE_MESSAGE_MAX_LENGTH,
+  FRIEND_CHALLENGE_TITLE_MAX_LENGTH,
 } from '@carlys/api-contracts';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { ChallengeMetric } from '@prisma/client';
@@ -56,10 +58,12 @@ export class EncourageDto {
   @IsUUID()
   recipientUserId!: string;
 
-  @ApiProperty({ minLength: 1, maxLength: 280 })
+  // Compté en POINTS DE CODE, comme le contrat (`encourageRequestSchema`) :
+  // `@MaxLength` efface les sélecteurs de variante qui suivent un caractère.
+  @ApiProperty({ minLength: 1, maxLength: ENCOURAGEMENT_MESSAGE_MAX_LENGTH })
   @IsString()
   @MinLength(1)
-  @MaxLength(280)
+  @MaxCodePoints(ENCOURAGEMENT_MESSAGE_MAX_LENGTH)
   message!: string;
 }
 
@@ -121,18 +125,25 @@ export class CreateFriendChallengeDto {
   @IsUUID()
   id!: string;
 
-  @ApiProperty({ minLength: 1, maxLength: 80 })
+  // Découpé PUIS compté en points de code, comme le contrat : voir le mot
+  // du créateur, plus bas, pour la raison de l'unité.
+  @ApiProperty({ minLength: 1, maxLength: FRIEND_CHALLENGE_TITLE_MAX_LENGTH })
   @Transform(trimmed)
   @IsString()
   @MinLength(1)
-  @MaxLength(80)
+  @MaxCodePoints(FRIEND_CHALLENGE_TITLE_MAX_LENGTH)
   title!: string;
 
   @ApiProperty({ enum: ChallengeMetric })
   @IsEnum(ChallengeMetric)
   metric!: ChallengeMetric;
 
+  // `type` explicite : `number | null` s'émet `design:type Object`, et
+  // Swagger annonçait un objet (garde : `app/openapi-document.spec.ts`).
   @ApiPropertyOptional({
+    type: 'integer',
+    minimum: 1,
+    maximum: 10_000_000,
     nullable: true,
     description: 'Objectif commun, ou absent pour un « qui en fait le plus »',
   })

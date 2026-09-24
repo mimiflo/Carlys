@@ -51,11 +51,17 @@ l'application ne dépend d'elle.
    est unilatéral et OPAQUE : l'amitié et les demandes en attente sont
    retirées dans les deux sens, puis, pour chacun des deux, l'autre répond
    comme un compte qui n'existe pas (demande muette en `202`, code ami en
-   `404`, encouragement en `403`, absent des listes et du fil). Un défi
-   entre amis lancé AVANT le blocage reste lisible des deux, avec son titre
+   `404`, encouragement en `403`, absent des listes et du fil — classement
+   de ligue compris, sans décaler les rangs des autres). Un défi entre amis
+   dont le créateur est séparé de moi par un blocage disparaît tant que je
+   ne suis pas à son classement (invitation en attente ou refusée, défi
+   quitté) : absent de ma liste, et `404` « Défi introuvable. » au détail, à
+   l'acceptation et au refus, comme un défi qui n'existe pas — le
+   réaccepter après un refus ou un départ compris. Un défi où je suis au
+   classement (accepté, pas quitté) reste lisible des deux, avec son titre
    et son classement (un résultat partagé ne se réécrit pas), mais le mot de
-   son créateur n'est plus servi à l'autre : un texte libre suit la règle du
-   fil. Jamais de « tu es bloqué ». Un encouragement se retire par son auteur OU son
+   son créateur n'est plus servi à l'autre : un texte libre suit la règle
+   du fil. Jamais de « tu es bloqué ». Un encouragement se retire par son auteur OU son
    destinataire. Un signalement (personne, encouragement précis, ou défi
    entre amis qu'elle a lancé) part vers l'administration, qui le lit et le
    résout avec une permission dédiée ; la personne signalée n'en sait rien,
@@ -73,16 +79,16 @@ l'application ne dépend d'elle.
 | `FriendChallengeMember` | Membre d'un défi entre amis : `status` (INVITED/ACCEPTED/DECLINED/LEFT), `contribution` dans l'unité de la métrique, `finalRank` figé à la clôture. |
 | `ChallengeParticipation` | Participation + `contribution` individuelle à l'objectif. Quitter DATE le départ (`leftAt`) sans effacer la ligne : la contribution déjà versée reste acquise au collectif, seule la présence s'arrête. |
 | `CommunityPreference` | `sharesProgress` (absence = partagé, défaut du modèle) et `joinsLeague` (défaut `false` : la ligue est un opt-in). |
-| `LeagueMembership` | Ma place dans une ligue pour UNE période : `(userId, periodKey)` où `periodKey` est la semaine ISO en UTC, plus `division`, `score` en POINTS, `finalRank` et `nextDivision` figés au règlement, `settledAt` qui en est la clé d'idempotence. |
+| `LeagueMembership` | Ma place dans une ligue pour UNE période : `(userId, periodKey)` où `periodKey` est la semaine ISO en UTC, plus `division`, `cohort` (mon GROUPE de 20 dans la division, attribué à l'ouverture ; `0` pour les lignes d'avant les groupes), `score` en POINTS, `finalRank` et `nextDivision` figés au règlement, `settledAt` qui en est la clé d'idempotence. |
 | `CommunityBlock` | Blocage unilatéral `(blockerId, blockedId)`, unique par paire orientée ; consulté dans les DEUX sens partout où deux personnes se rencontrent. |
-| `CommunityReport` | Signalement : `reporterId`, `reportedUserId`, `encouragementId?` (mis à `NULL` si le message est supprimé), `encouragementMessage?` (cliché du texte visé, pris dans la même transaction que le signalement : la preuve survit au retrait du message), `friendChallengeId?` (défi entre amis visé, exclusif avec `encouragementId`, mis à `NULL` si le défi disparaît), `friendChallengeTitle?` et `friendChallengeMessage?` (clichés du titre et du mot du créateur, pris dans la même transaction), `reason` (`HARCELEMENT`, `SPAM`, `CONTENU_INAPPROPRIE`, `AUTRE`), `details?` (500 caractères), `status` (`OPEN`, `RESOLVED`), `resolvedAt?`. |
+| `CommunityReport` | Signalement : `reporterId`, `reportedUserId`, `encouragementId?` (mis à `NULL` si le message est supprimé), `encouragementMessage?` (cliché du texte visé, pris dans la même transaction que le signalement : la preuve survit au retrait du message), `friendChallengeId?` (défi entre amis visé, exclusif avec `encouragementId`, mis à `NULL` si le défi disparaît), `friendChallengeTitle?` et `friendChallengeMessage?` (clichés du titre et du mot du créateur, pris dans la même transaction), `reason` (`HARCELEMENT`, `SPAM`, `CONTENU_INAPPROPRIE`, `AUTRE`), `details?` (500 caractères, comptés en points de code), `status` (`OPEN`, `RESOLVED`), `resolvedAt?`. |
 
 ## API (`/api/v1/community`)
 
 | Méthode | Chemin | Rôle |
 | --- | --- | --- |
 | GET | `/feed` | Encouragements reçus (50 max, plus récents d'abord) |
-| POST | `/encouragements` | Encourager un ami accepté (`403` sinon) |
+| POST | `/encouragements` | Encourager un ami accepté (`403` sinon) ; `message` de 280 caractères au plus, comptés en points de code (`encourageRequestSchema`) |
 | GET | `/friends` | Amis acceptés, stats `null` si progression privée |
 | DELETE | `/friends/:userId` | Retirer un ami (idempotent) |
 | GET | `/requests` | Demandes REÇUES en attente |
@@ -92,12 +98,12 @@ l'application ne dépend d'elle.
 | GET | `/challenges` | Défis ouverts, progression collective incluse ; crée le jeu du mois à la première lecture (voir ci-dessous) |
 | POST | `/challenges/:id/join` | Rejoindre (idempotent) |
 | DELETE | `/challenges/:id/join` | Quitter (idempotent) : la contribution déjà versée reste au compteur collectif |
-| GET | `/friend-challenges` | Mes défis ENTRE AMIS (proposés et acceptés) ; un défi échu est réglé à la lecture |
-| POST | `/friend-challenges` | Défier ses amis (id appareil, création idempotente) — `403` si l'un des invités n'est pas un ami accepté ou qu'un blocage les sépare ; `message` facultatif (280 caractères, comptés en points de code après découpage, `400` au-delà, blanc = absent), jamais réécrit par un rejeu |
-| GET | `/friend-challenges/:id` | Un défi et son classement — `404` pour qui n'en est pas membre. Même forme que la liste, la création et l'acceptation : `message` (ou `null`), `createdAt` (ISO UTC, l'heure du message), `durationDays`, et `isCreator` sur chaque membre ; `message` vaut aussi `null` quand un blocage, dans un sens ou l'autre, me sépare du créateur |
-| POST | `/friend-challenges/:id/accept` | Accepter : on entre au classement, à zéro |
-| DELETE | `/friend-challenges/:id/join` | Refuser ou quitter (`204`) : dans les deux cas, on SORT du classement |
-| GET | `/league` | Ma ligue de la semaine ; sans adhésion, classement VIDE |
+| GET | `/friend-challenges` | Mes défis ENTRE AMIS (proposés et acceptés) ; un défi échu est réglé à la lecture ; une invitation dont le créateur est séparé de moi par un blocage n'y figure pas |
+| POST | `/friend-challenges` | Défier ses amis (id appareil, création idempotente) — `403` si l'un des invités n'est pas un ami accepté ou qu'un blocage les sépare ; `title` de 80 caractères et `message` facultatif de 280, tous deux comptés en points de code après découpage (`400` au-delà, `message` blanc = absent), jamais réécrits par un rejeu |
+| GET | `/friend-challenges/:id` | Un défi et son classement — `404` pour qui n'en est pas membre, et pour une INVITATION dont le créateur est séparé de moi par un blocage (même message « Défi introuvable. »). Même forme que la liste, la création et l'acceptation : `message` (ou `null`), `createdAt` (ISO UTC, l'heure du message), `durationDays`, et `isCreator` sur chaque membre ; sur un défi déjà accepté, `message` vaut aussi `null` quand un blocage, dans un sens ou l'autre, me sépare du créateur |
+| POST | `/friend-challenges/:id/accept` | Accepter : on entre au classement, à zéro — `404` « Défi introuvable. » pour une invitation masquée par un blocage |
+| DELETE | `/friend-challenges/:id/join` | Refuser ou quitter (`204`) : dans les deux cas, on SORT du classement (`404` pour une invitation masquée par un blocage) |
+| GET | `/league` | Ma ligue de la semaine : le classement de MON GROUPE de 20, sans les personnes bloquées ; sans adhésion, classement VIDE |
 | POST | `/league/join` | Entrer dans la ligue (le geste EST le consentement) |
 | DELETE | `/league/join` | Sortir : le compte s'arrête, la semaine en cours se règle |
 | GET · PATCH | `/profile` | Ma préférence `sharesProgress` + mon `friendCode` |
@@ -154,7 +160,10 @@ Cas particuliers du service :
   de code, `encourage`, `listFriends` et le fil, toujours dans les deux sens
   et toujours avec la réponse d'un compte inexistant. Aussi par l'invitation
   à un défi entre amis (`403` commun avec « pas ami ») et par sa LECTURE
-  (liste, détail, acceptation) : le mot du créateur n'est plus servi. Bloquer supprime
+  (liste, détail, acceptation, refus) : une invitation encore en attente
+  disparaît (`404` d'un défi inconnu), un défi déjà accepté reste mais le mot
+  du créateur n'est plus servi. Et par le classement de la ligue, qui tait
+  les personnes bloquées sans renuméroter les autres. Bloquer supprime
   l'amitié ou la demande en attente de la paire (`ACCEPTED`, `PENDING`) ;
   débloquer ne la recrée pas. Une ligne `DECLINED`, elle, reste en place : le
   blocage la rend inopérante, et son délai de 30 jours survit au déblocage.
@@ -291,7 +300,13 @@ simplement perdue (la barre est collective, pas comptable).
   barème en trois tuiles et une ligne (la quatrième règle, l'Academy), le
   classement de la semaine (podium couronné, MA ligne même hors du podium,
   « Voir le classement complet » dans une feuille, sans nouvelle requête),
-  puis une bannière illustrée. Sans adhésion, l'onglet montre l'invitation —
+  puis une bannière illustrée. Le classement est celui de MON GROUPE (vingt
+  joueurs au plus) ; ses rangs sont ceux du serveur, jamais renumérotés : une
+  personne bloquée n'a pas de ligne mais garde sa place, et « 1, 3, 4 » dit
+  vrai là où « 1, 2, 3 » mentirait sur la mienne. Le résultat de la semaine
+  passée (« À la 3e place la semaine passée : … ») reste affiché toute la
+  semaine, pour chaque membre, quel que soit celui dont la lecture l'a
+  réglée. Sans adhésion, l'onglet montre l'invitation —
   la division où l'on entrerait et le barème, jamais un nom — et la même
   bannière au futur. Les avatars sont des INITIALES (`AppInitialAvatar`) :
   Carlys n'a pas de photo de profil, et en afficher serait inventer une
@@ -361,9 +376,11 @@ simplement perdue (la barre est collective, pas comptable).
   signalement non relu), doublures de test (pilotée et monde en mémoire).
 - L'accueil relaie le dernier encouragement (« X t'encourage ») quand il y en
   a un.
-- Demandes d'ami, acceptations et encouragements déclenchent une notification
-  push chez la personne concernée (jamais bloquante, jamais sur un refus) —
-  voir [notifications.md](notifications.md).
+- Demandes d'ami, acceptations, encouragements et invitations à un défi
+  déclenchent une notification push chez la personne concernée (jamais
+  bloquante, jamais sur un refus). La toucher ouvre l'écran concerné :
+  l'onglet Amis, ou le défi entre amis — voir
+  [notifications.md](notifications.md).
 
 ## Couverture
 
@@ -397,9 +414,13 @@ simplement perdue (la barre est collective, pas comptable).
   et dans sa liste, inchangé par un rejeu, `404` pour un non-membre ;
   281 caractères → `400`, 280 entourés de blancs → acceptés, blanc → `null` ;
   280 émojis simples acceptés, 281 refusés, 141 ❤️ (282 points de code)
-  refusés ; un blocage dans un sens puis dans l'autre tait le mot à la
-  liste, au détail et à l'acceptation, sans retirer le défi ni empêcher son
-  signalement (cliché intact en base), et la créatrice lit toujours le sien.
+  refusés ; sur un défi ACCEPTÉ, un blocage dans un sens puis dans l'autre
+  tait le mot à la liste, au détail et à l'acceptation, sans retirer le défi
+  ni empêcher son signalement (cliché intact en base), et la créatrice lit
+  toujours le sien ; une INVITATION d'un créateur bloqué (dans un sens puis
+  dans l'autre) sort de la liste, rend au détail et à l'acceptation le même
+  `404` « Défi introuvable. » qu'un défi inconnu, n'écrit rien, reste
+  signalable, et revient au déblocage ; le créateur la voit toujours.
 - Unitaires API, modération : garde-fous des blocages et signalements,
   doublon ouvert, nettoyage des précisions, cliché du texte signalé (lu et
   écrit dans une même transaction, `null` si le message ne vient pas de la
@@ -407,14 +428,20 @@ simplement perdue (la barre est collective, pas comptable).
   créateur, sinon rien d'écrit), exclusivité encouragement/défi, audit de la
   résolution, pagination. Défis entre amis (`friend-challenges.service.spec.ts`,
   `friend-challenge.presenter.spec.ts`) : message découpé, blanc ou absent →
-  `null`, notification sans le message, rejeu qui rend le mot déjà écrit,
-  créateur marqué quel que soit le lecteur, mot masqué quand le CRÉATEUR est
-  séparé du lecteur par un blocage (et lui seul). DTO
-  (`community.dto.spec.ts`) : chaque longueur posée au DTO ET au contrat Zod,
-  qui doivent s'accorder (lettres, émojis simples, ❤️, sélecteurs, blancs,
-  `null`). Swagger (`community-dtos.openapi.spec.ts`, document produit comme
-  dans `main.ts`) : `message`, `encouragementId` et `friendChallengeId` sont
-  des chaînes nullables, pas des objets.
+  `null`, notification sans le message (mais avec l'identifiant du défi),
+  rejeu qui rend le mot déjà écrit, créateur marqué quel que soit le lecteur,
+  mot masqué quand le CRÉATEUR est séparé du lecteur par un blocage (et lui
+  seul), invitation d'un créateur bloqué absente de la liste et `404` au
+  détail, à l'acceptation et au refus sans rien écrire. Notifications
+  (`community-notifier.spec.ts`) : chaque message porte sa destination,
+  validée par le schéma publié `pushDataSchema`. DTO
+  (`community.dto.spec.ts`) : chaque texte libre (mot et titre d'un défi, mot
+  d'un encouragement, précisions d'un signalement) posé au DTO ET au contrat
+  Zod, qui doivent s'accorder (lettres, émojis simples, ❤️, sélecteurs,
+  blancs, absent). Swagger (`community-dtos.openapi.spec.ts`, et
+  `app/openapi-document.spec.ts` sur le document de l'application ENTIÈRE) :
+  aucun champ de requête `string | null` ou `number | null` n'est annoncé
+  comme un objet vide.
 - Vitest back-office (`apps/admin/src/app/reports/page.test.tsx`,
   `apps/admin/src/lib/admin-community-api.test.ts`) : liste des ouverts par défaut
   avec motif, personnes liées à leur fiche et contenu visé (message vivant,
@@ -424,6 +451,19 @@ simplement perdue (la barre est collective, pas comptable).
   curseur ; 403 distingué d'une panne, à la lecture comme à la résolution ;
   redirection sans jeton ; URL, corps du PATCH et rejet d'une réponse hors
   contrat côté transport.
+- Ligues : barème et groupes (`league-ladder.spec.ts` : premier groupe qui a
+  de la place, groupe plein à 20, nouveau groupe après le plus grand) ;
+  service (`leagues.service.spec.ts` : classement lu sur MON groupe,
+  règlement d'une période échue sur SON groupe, personnes bloquées tues sans
+  décaler les rangs ni la zone, résultat de la semaine passée lu en base) ;
+  e2e `test/leagues.e2e-spec.ts` (règlement à la lecture, résultat servi
+  toute la semaine, semaine plus ancienne réglée mais pas annoncée, montée
+  qui survit à une séance du lundi, règlement fait par un autre : chacun lit
+  SON résultat) et `test/leagues-groups.e2e-spec.ts` (dix ouvertures
+  simultanées face à un groupe de 19, écritures retenues pour forcer la
+  course : 20 puis 9 ; ouverture dans une transaction ; changement de groupe
+  au règlement et à la lecture ; classement de mon seul groupe, blocages
+  dans les deux sens tus avec un trou dans les rangs).
 - Défis du mois : catalogue (fenêtre UTC, passage d'année, slugs uniques,
   textes visibles sans tiret cadratin), service (création AVANT la liste sur
   un mois vierge, rien sur un mois servi) ; e2e : cinq lectures concurrentes
@@ -567,20 +607,54 @@ point, 119 mètres en valent 1. Le reste n’est PAS reporté — le reporter
 demanderait un registre de restes par personne et par métrique, et rendrait le
 score dépendant de l’ordre des écritures.
 
-**Une division tient 20 places.** Une division qui en compte moins se joue
-telle quelle : ni remplissage, ni adversaire fabriqué.
+**On se classe dans un GROUPE de 20** (`LEAGUE_GROUP_SIZE`, `league-ladder.ts`),
+jamais contre toute une division : avec des milliers de joueurs en Bronze,
+entrer dans le top 5 d'un classement mondial serait hors d'atteinte, et la
+promesse « vingt places » ne voulait rien dire. Chaque période d'une division
+se découpe donc en groupes (`LeagueMembership.cohort`), et tout ce qui classe
+se lit par groupe — `(periodKey, division, cohort)` : le classement servi, le
+règlement, la zone de montée et le compte des joueurs actifs.
+
+- **Remplissage.** Une période s'ouvre (première séance ou première lecture
+  de la semaine) dans le PREMIER groupe de sa (période, division), par numéro
+  croissant, qui compte moins de 20 membres ; s'ils sont tous pleins, dans un
+  nouveau groupe numéroté après le plus grand (`cohortToJoin`, pure). Remplir
+  d'abord plutôt qu'ouvrir un groupe par vague d'arrivées : un groupe de trois
+  ne décide de rien. Un groupe qui compte moins de 20 membres se joue tel
+  quel : ni adversaire fabriqué, ni fusion.
+- **Verrou.** Compter puis écrire est une lecture-écriture : deux ouvertures
+  simultanées liraient chacune « 19 » et rempliraient le groupe à 21. Un index
+  unique ne sait pas dire « au plus 20 lignes » ; l'attribution est donc
+  sérialisée par un verrou consultatif TRANSACTIONNEL de PostgreSQL
+  (`pg_advisory_xact_lock`), pris par (période, division) sur une empreinte
+  stable de la clé (`league-groups.ts`), dans la MÊME transaction que
+  l'écriture de la ligne. Il ne bloque ni les autres divisions ni les autres
+  semaines, et se libère tout seul à la fin de la transaction. L'écriture est
+  un `INSERT … ON CONFLICT DO NOTHING` : une ouverture concurrente de la même
+  ligne n'avorte pas la transaction englobante (la réponse de quiz verse sa
+  part de ligue dans la sienne).
+- **Changer de division, c'est changer de groupe.** Les deux réalignements
+  (voir plus bas) prennent une place dans la division d'arrivée sous le même
+  verrou, comme une ouverture ; quand un règlement en déplace plusieurs, les
+  verrous se prennent dans un ordre fixe, sans interblocage possible.
+- **Les lignes d'avant les groupes** (migration
+  `20260924120000_ligues_groupes_de_vingt`) gardent le groupe `0` : leur
+  classement reste celui qu'elles avaient, toute la division. Une semaine
+  déjà ouverte au-delà de 20 se finit telle quelle ; les ouvertures suivantes
+  débordent dans le groupe 1.
 
 **Montées et descentes, au règlement de la période :**
 
-- les **5 premiers** montent d’une division (rien au-dessus de Diamant) ;
+- les **5 premiers** de chaque groupe montent d’une division (rien au-dessus
+  de Diamant) ;
 - les **5 derniers** descendent d’une division (rien en dessous de Bronze),
   **mais uniquement parmi les membres dont le score est supérieur à zéro**.
   Un score nul veut dire « n’a pas joué », et ne fait jamais descendre : la
   règle du dépôt est qu’aucun axe ne punit une absence (`progression_engine`,
   fenêtre de 28 jours), et une ligue qui reléguerait une semaine de maladie la
   contredirait ;
-- si **moins de 10 membres ont joué**, personne ne bouge. Un classement à
-  trois ne décide pas d’une division.
+- si **moins de 10 membres du groupe ont joué**, personne ne bouge. Un
+  classement à trois ne décide pas d’une division.
 
 **Les ex æquo partagent leur rang, et le suivant saute** — même règle que les
 défis entre amis. Départager par l’identifiant serait un tirage au sort
@@ -589,7 +663,7 @@ plus de cinq personnes.
 
 **Où j’en suis face à la montée, dit par le serveur.** `GET /league` (et les
 réponses de `join`/`leave`) porte un bloc `promotion`, `null` sans adhésion :
-le barème lui-même (`promotedCount`, `minPlayers`), les joueurs de la division
+le barème lui-même (`promotedCount`, `minPlayers`), les joueurs du groupe
 qui ont marqué (`activePlayers`), `topDivision` en Diamant, et `inZone`,
 `zoneScore`, `pointsToZone`. La montée se joue au RANG, pas à un seuil de
 points : `zoneScore` est le cinquième score des AUTRES joueurs, qu’il suffit
@@ -615,21 +689,65 @@ reste jusqu’à son règlement, et aucune autre n’est créée ensuite.
 la première lecture qui passe après la fin d’une période fige les rangs de
 cette période (`finalRank`), pose `settledAt`, et l’écriture est conditionnée
 à sa nullité — deux lectures simultanées n’en règlent qu’une. Une lecture
-règle la division ENTIÈRE, sans quoi deux personnes liraient deux classements
+règle le GROUPE ENTIER, sans quoi deux personnes liraient deux classements
 différents de la même semaine.
+
+**Un classement déjà annoncé ne se corrige pas.** La garde `settledAt: null`
+porte sur CHAQUE ligne, et le rang, la division suivante et `settledAt`
+s’écrivent ensemble : une ligne réglée n’est jamais réécrite, et seules les
+lignes que ce règlement vient de régler réalignent leur semaine suivante. Une
+ligne peut en effet entrer APRÈS coup dans un groupe réglé — une séance
+synchronisée en retard ouvre la semaine close d’un nouveau membre, ou un
+réalignement déplace une semaine passée —, et elle se règle alors seule, sur
+le groupe tel qu’il est : sa place se lit parmi des rangs figés, et personne
+ne glisse d’un cran. Le règlement réécrivait auparavant les rangs du groupe
+entier, et pouvait annuler après coup une montée déjà annoncée (relecture du
+24 septembre 2026, e2e dans `test/leagues.e2e-spec.ts`).
+
+**Le résultat de la semaine passée, pour TOUS.** `lastResult` est le résultat
+réglé de la semaine ISO qui précède immédiatement la semaine en cours
+(`previousPeriodKey`), lu en base sur MA ligne : rang figé, division d’où je
+pars, division où j’arrive. Peu importe qui a réglé le groupe — moi ou
+n’importe quel autre membre : chacun lit SON résultat. Il était auparavant
+rendu par le règlement lui-même, donc au seul lecteur dont la lecture
+réglait la semaine ; les dix-neuf autres voyaient leur division changer sans
+jamais lire « te voilà en Argent ». Il reste servi toute la semaine en cours :
+la phrase dit « la semaine passée », elle est vraie jusqu’à dimanche. Pas de
+ligne la semaine passée (six semaines d’absence, par exemple) : pas de
+`lastResult`, même si une semaine plus ancienne vient d’être réglée.
+
+**Une personne bloquée est absente du classement** (principe 6), dans un sens
+comme dans l’autre. Les RANGS restent ceux du groupe entier — on ne décale
+personne, un trou dans la numérotation est honnête —, et la zone de montée se
+calcule elle aussi sur tout le groupe : taire quelqu’un ne rapproche personne
+de la montée.
 
 **Une semaine ouverte AVANT le règlement de la précédente suit la décision.**
 Une séance du lundi peut ouvrir la nouvelle semaine avant que quiconque ait
 relu la ligue : la semaine passée n’a alors pas encore de division suivante,
 et la nouvelle s’ouvre dans l’ancienne. Deux gardes la remettent à sa place,
 sans toucher à son score : le règlement réaligne la PREMIÈRE période ouverte
-après celle qu’il règle, pour chaque membre de la division (qui que soit le
+après celle qu’il règle, pour chaque membre du groupe (qui que soit le
 lecteur qui règle), et chaque lecture aligne la période en cours de son
 lecteur sur la division qui lui revient — filet des lignes écrites avant ce
-correctif. La division d’une période se lit toujours sur les périodes
+correctif. Dans les deux cas, la période change aussi de GROUPE : elle prend
+une place dans la division d’arrivée, sous son verrou. La division d’une période se lit toujours sur les périodes
 ANTÉRIEURES (`divisionToOpen`), jamais sur elle-même : c’est ce qui faisait
 perdre la montée (défaut trouvé à la relecture du 23 septembre 2026, e2e dans
 `test/leagues.e2e-spec.ts`).
+
+Deux conséquences, relevées à la relecture du 24 septembre 2026 :
+
+- **plusieurs semaines échues se règlent dans l’ordre, chacune sur sa ligne
+  RELUE.** Régler l’avant-dernière semaine peut réaligner la dernière
+  (division et groupe changés) ; la régler ensuite avec la ligne lue avant ce
+  réalignement réglait l’ancien groupe, sans son lecteur, et laissait sa
+  semaine passée en suspens — sans `lastResult`, et la semaine en cours
+  ouverte dans la mauvaise division jusqu’à une seconde lecture ;
+- **seule la semaine qui SUIT est réalignée, jamais une plus lointaine.** Si
+  elle est déjà réglée, elle a décidé de la suite elle-même : régler une
+  ligne tardive, plus ancienne, ne saute pas par-dessus pour réécrire la
+  semaine en cours.
 
 **Les périodes manquées ne se rattrapent pas, et n’ont pas à l’être.** Aucune
 ligne n’existe pour une semaine sans effort et sans lecture : il n’y a donc
@@ -663,6 +781,21 @@ Les garde-fous, chacun repris d'une règle déjà écrite :
   sépare, dans un sens comme dans l'autre. Un seul message pour les deux
   refus : rien ne doit distinguer « pas ami » de « t'a bloqué », sans quoi
   l'invitation devient un détecteur de blocage ;
+- **une invitation bloquée disparaît.** Le blocage peut arriver APRÈS
+  l'invitation : tant que je ne suis pas au classement — invitation en
+  attente (`INVITED`) ou refusée (`DECLINED`), défi quitté (`LEFT`) —, le
+  défi d'un créateur qu'un blocage sépare de moi (dans un sens ou dans
+  l'autre) sort de ma liste, et son détail, son acceptation et son refus
+  répondent le `404` « Défi introuvable. » d'un défi inconnu, sans rien
+  écrire (`isHiddenByBlock`, `friend-challenge.presenter.ts`). Sans cette
+  règle, j'acceptais encore le défi de quelqu'un que j'avais bloqué, et un
+  créateur bloqué gardait une carte sur mon écran. La première version ne
+  masquait que l'invitation EN ATTENTE : refuser, bloquer, puis réaccepter
+  rouvrait le défi (relecture du 24 septembre 2026, e2e dans
+  `test/friend-challenges.e2e-spec.ts`). Le créateur, lui, voit toujours
+  son défi et son invitée (membre acceptée d'office, sa liste ne se réécrit
+  pas), et le signalement reste possible. Débloquer fait revenir
+  l'invitation ;
 - **plafonds** : 9 invités par défi, 5 défis ouverts par créateur. Sans eux,
   l'invitation devient un canal d'envoi de messages vers quelqu'un qui ne l'a
   pas demandé — exactement ce que le refus opposable des demandes d'ami avait
@@ -691,7 +824,10 @@ toujours personne après la création.
   vide à l'écran).
 - **Un « caractère » est un POINT DE CODE Unicode**, compté par la même
   fonction des deux côtés (`codePointLength` du contrat, `@MaxCodePoints` au
-  DTO). Un émoji simple vaut un ; un émoji composé en vaut plusieurs (❤️ et
+  DTO) — pour le mot, et pour tous les textes libres de la communauté : titre
+  d'un défi (80, `FRIEND_CHALLENGE_TITLE_MAX_LENGTH`), mot d'un encouragement
+  (280, `ENCOURAGEMENT_MESSAGE_MAX_LENGTH`, contrat `encourageRequestSchema`)
+  et précisions d'un signalement (500), qui avaient le même écart. Un émoji simple vaut un ; un émoji composé en vaut plusieurs (❤️ et
   son sélecteur de variante : deux ; un drapeau : deux ; une famille : cinq
   et plus). Ni les unités UTF-16 (`z.string().max()` refusait 141 émojis),
   ni le compte de `@MaxLength` (qui efface les sélecteurs de variante : la
@@ -705,11 +841,15 @@ toujours personne après la création.
   pour le modifier. Son heure est donc `createdAt`, rendue en ISO UTC ; le
   client la localise.
 - **Visible des seuls membres**, quel que soit leur statut (invité compris :
-  c'est en lisant le défi qu'on décide de l'accepter). Pour tous les autres,
-  le défi entier est un `404`, message compris.
+  c'est en lisant le défi qu'on décide de l'accepter), hors blocage (voir
+  ci-dessous). Pour tous les autres, le défi entier est un `404`, message
+  compris.
 - **Masqué après un blocage.** Si un blocage sépare le lecteur du créateur, dans
-  un sens ou dans l'autre, la liste, le détail et l'acceptation rendent
-  `message: null` : bloquer est LE geste de protection, et un mot blessant
+  un sens ou dans l'autre, et que le lecteur est au classement (défi
+  accepté, pas quitté), la liste, le détail et l'acceptation rendent
+  `message: null` (un
+  défi dont il n'est pas au classement, lui, disparaît entièrement : voir
+  plus haut) : bloquer est LE geste de protection, et un mot blessant
   de 280 caractères ne doit pas y survivre alors que le fil tait déjà les
   encouragements de la même personne. Le défi, lui, reste lisible avec son
   titre, son créateur et son classement : c'est un résultat partagé, et le
@@ -719,7 +859,8 @@ toujours personne après la création.
   possible : son cliché est lu en base, pas dans la réponse. Débloquer rend
   le mot.
 - **Jamais dans la notification push.** L'invitation dit « Chloé te défie :
-  <titre> », sans le mot. Le titre est borné à 80 caractères ; le mot, trois
+  <titre> », sans le mot ; elle porte l'identifiant du défi (`data`,
+  `destination: friend-challenge`), pour que le toucher ouvre CE défi. Le titre est borné à 80 caractères ; le mot, trois
   fois plus long et plus personnel, s'afficherait sur un écran verrouillé,
   lisible par-dessus l'épaule, et hors de tout geste de protection : c'est
   dans le défi qu'il se lit, là où l'on peut le signaler.

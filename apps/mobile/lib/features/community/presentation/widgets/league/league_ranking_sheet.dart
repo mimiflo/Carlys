@@ -7,9 +7,11 @@ import 'league_wording.dart';
 
 /// Le classement COMPLET de la division, dans une feuille.
 ///
-/// Rien de plus à charger : le serveur rend déjà la division entière. La
-/// liste est paresseuse (`ListView.builder`) parce qu'aucune division n'est
-/// plafonnée côté serveur — elle peut compter bien plus que vingt lignes.
+/// Rien de plus à charger : le serveur rend déjà tout MON GROUPE, vingt
+/// joueurs au plus depuis septembre 2026 (une semaine ouverte avant les
+/// groupes se finit telle quelle, division entière). La liste reste
+/// paresseuse (`ListView.builder`) : ce plafond est une règle du serveur,
+/// que l'écran n'a pas à supposer.
 Future<void> showLeagueRankingSheet(BuildContext context, League league) {
   return showAppSheet<void>(
     context,

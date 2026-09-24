@@ -10,10 +10,15 @@ import 'league_wording.dart';
 /// LE CLASSEMENT DE LA SEMAINE : le podium, MA ligne même hors du podium,
 /// et la porte vers le classement complet.
 ///
-/// Le serveur rend la division ENTIÈRE ; la carte n'en montre qu'un extrait,
-/// et la feuille « Voir le classement complet » montre le reste, sans
-/// nouvelle requête. Pendant une recherche, la carte montre toutes les
-/// lignes dont le prénom correspond, podium ou pas.
+/// Le serveur rend MON GROUPE entier (vingt joueurs au plus) ; la carte n'en
+/// montre qu'un extrait, et la feuille « Voir le classement complet » montre
+/// le reste, sans nouvelle requête. Pendant une recherche, la carte montre
+/// toutes les lignes dont le prénom correspond, podium ou pas.
+///
+/// Les rangs sont ceux du SERVEUR, jamais renumérotés : une personne que
+/// j'ai bloquée (ou qui m'a bloqué) n'a pas de ligne, mais garde sa place,
+/// et un classement « 1, 3, 4 » dit vrai là où « 1, 2, 3 » mentirait sur ma
+/// position.
 class LeagueRankingCard extends StatelessWidget {
   const LeagueRankingCard({required this.league, this.query = '', super.key});
 

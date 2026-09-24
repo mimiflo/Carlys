@@ -1,4 +1,5 @@
 import { type CreateFriendChallengeRequest } from '@carlys/api-contracts';
+import { NotFoundException } from '@nestjs/common';
 import { type CommunityModerationRepository } from '../infrastructure/community-moderation.repository';
 import { type CommunityRepository } from '../infrastructure/community.repository';
 import {
@@ -12,8 +13,14 @@ const CHLOE = 'utilisateur-chloe';
 const BORIS = 'utilisateur-boris';
 const NOW = new Date('2026-09-23T08:15:00.000Z');
 
-/** Le défi tel que le dépôt le relit après la création. */
-function stored(message: string | null): FriendChallengeWithMembers {
+/** Le statut de Boris dans le défi de Chloé. */
+type MemberStatus = FriendChallengeWithMembers['members'][number]['status'];
+
+/** Le défi tel que le dépôt le relit après la création ; Boris y est invité. */
+function stored(
+  message: string | null,
+  borisStatus: MemberStatus = 'INVITED',
+): FriendChallengeWithMembers {
   return {
     id: 'defi-1',
     creatorId: CHLOE,
@@ -34,7 +41,7 @@ function stored(message: string | null): FriendChallengeWithMembers {
     members: [CHLOE, BORIS].map((userId) => ({
       challengeId: 'defi-1',
       userId,
-      status: userId === CHLOE ? ('ACCEPTED' as const) : ('INVITED' as const),
+      status: userId === CHLOE ? ('ACCEPTED' as const) : borisStatus,
       invitedById: CHLOE,
       contribution: 0,
       joinedAt: userId === CHLOE ? NOW : null,
@@ -49,12 +56,17 @@ function stored(message: string | null): FriendChallengeWithMembers {
  * `blockedEitherWay` : ce que le dépôt de modération répond pour celui qui
  * lit — les personnes qu'un blocage sépare de lui, dans un sens ou l'autre.
  */
-function build(created: boolean, message: string | null, blockedEitherWay: string[] = []) {
+function build(
+  created: boolean,
+  message: string | null,
+  blockedEitherWay: string[] = [],
+  borisStatus: MemberStatus = 'INVITED',
+) {
   const challenges = {
     create: jest.fn().mockResolvedValue(created),
     countOpenCreatedBy: jest.fn().mockResolvedValue(0),
-    findById: jest.fn().mockResolvedValue(stored(message)),
-    listMine: jest.fn().mockResolvedValue([stored(message)]),
+    findById: jest.fn().mockResolvedValue(stored(message, borisStatus)),
+    listMine: jest.fn().mockResolvedValue([stored(message, borisStatus)]),
     setMemberStatus: jest.fn().mockResolvedValue(undefined),
   };
   const community = {
@@ -117,7 +129,13 @@ describe('FriendChallengesService.create — le mot du créateur', () => {
 
     await service.create(CHLOE, request('Texte privé du défi'));
 
-    expect(notifier.challengeInvite).toHaveBeenCalledWith(BORIS, CHLOE, 'Qui court le plus');
+    // L'identifiant du défi voyage aussi : c'est lui que le toucher ouvre.
+    expect(notifier.challengeInvite).toHaveBeenCalledWith(
+      BORIS,
+      CHLOE,
+      'defi-1',
+      'Qui court le plus',
+    );
     expect(JSON.stringify(notifier.challengeInvite.mock.calls)).not.toContain('Texte privé');
   });
 
@@ -147,8 +165,8 @@ describe('FriendChallengesService.create — le mot du créateur', () => {
 });
 
 describe('FriendChallengesService — lecture après un blocage', () => {
-  it('la liste et le détail taisent le mot d’un créateur bloqué, dans un sens ou l’autre', async () => {
-    const { service, moderation } = build(true, 'Un mot blessant', [CHLOE]);
+  it('un défi ACCEPTÉ reste lisible, mot du créateur bloqué tu, dans un sens ou l’autre', async () => {
+    const { service, moderation } = build(true, 'Un mot blessant', [CHLOE], 'ACCEPTED');
 
     const liste = await service.list(BORIS);
     const detail = await service.detail(BORIS, 'defi-1');
@@ -161,8 +179,8 @@ describe('FriendChallengesService — lecture après un blocage', () => {
     expect(detail.creatorDisplayName).toBe('Chloé');
   });
 
-  it('accepter rend la même forme, mot masqué compris', async () => {
-    const { service, challenges } = build(true, 'Un mot blessant', [CHLOE]);
+  it('accepter sans blocage rend la même forme, mot compris', async () => {
+    const { service, challenges } = build(true, 'On y va ?');
 
     const accepte = await service.accept(BORIS, 'defi-1');
 
@@ -170,7 +188,7 @@ describe('FriendChallengesService — lecture après un blocage', () => {
       joinedAt: expect.any(Date) as Date,
       leftAt: null,
     });
-    expect(accepte.message).toBeNull();
+    expect(accepte.message).toBe('On y va ?');
   });
 
   it('sans blocage, le mot est servi', async () => {
@@ -179,3 +197,104 @@ describe('FriendChallengesService — lecture après un blocage', () => {
     expect((await service.detail(BORIS, 'defi-1')).message).toBe('On y va ?');
   });
 });
+
+describe('FriendChallengesService — une INVITATION d’un créateur bloqué disparaît', () => {
+  // Boris est invité (pas encore accepté) par Chloé, qu'un blocage sépare de
+  // lui, dans un sens ou l'autre : l'ensemble lu est le même.
+  const invitationMasquee = () => build(true, 'Un mot blessant', [CHLOE], 'INVITED');
+
+  it('absente de la liste', async () => {
+    const { service } = invitationMasquee();
+
+    expect(await service.list(BORIS)).toEqual([]);
+  });
+
+  it('introuvable au détail, avec le 404 d’un défi inconnu', async () => {
+    const { service } = invitationMasquee();
+
+    await expect(service.detail(BORIS, 'defi-1')).rejects.toThrow(
+      new NotFoundException('Défi introuvable.'),
+    );
+  });
+
+  it('introuvable à l’acceptation : rien n’est écrit, même message', async () => {
+    const { service, challenges } = invitationMasquee();
+
+    await expect(service.accept(BORIS, 'defi-1')).rejects.toThrow(
+      new NotFoundException('Défi introuvable.'),
+    );
+    expect(challenges.setMemberStatus).not.toHaveBeenCalled();
+  });
+
+  it('introuvable au refus aussi : elle a disparu partout', async () => {
+    const { service, challenges } = invitationMasquee();
+
+    await expect(service.decline(BORIS, 'defi-1')).rejects.toThrow(NotFoundException);
+    expect(challenges.setMemberStatus).not.toHaveBeenCalled();
+  });
+
+  it('le créateur, lui, voit toujours son défi et son invité', async () => {
+    // La règle porte sur l'INVITATION reçue, pas sur le défi : Chloé est
+    // membre acceptée d'office, et le blocage ne réécrit pas sa liste.
+    const { service } = build(true, 'Un mot blessant', [BORIS], 'INVITED');
+
+    const siens = await service.list(CHLOE);
+
+    expect(siens).toHaveLength(1);
+    expect(siens[0]?.members.map((member) => member.userId)).toEqual([CHLOE, BORIS]);
+  });
+
+  it('sans blocage, l’invitation reste lisible et acceptable', async () => {
+    const { service } = build(true, 'On y va ?', [], 'INVITED');
+
+    expect(await service.list(BORIS)).toHaveLength(1);
+    expect((await service.detail(BORIS, 'defi-1')).myStatus).toBe('INVITED');
+  });
+});
+
+describe.each(['DECLINED', 'LEFT'] as const)(
+  'FriendChallengesService — hors du classement (%s), un créateur bloqué fait disparaître le défi',
+  (statut) => {
+    // Boris a refusé l'invitation de Chloé, ou quitté son défi, puis un
+    // blocage les a séparés. Il n'est pas au classement : rien de partagé
+    // ne l'y retient. Réaccepter rouvrait sinon ce que le blocage a fermé.
+    const horsClassement = () => build(true, 'Un mot blessant', [CHLOE], statut);
+
+    it('introuvable au détail, avec le 404 d’un défi inconnu', async () => {
+      const { service } = horsClassement();
+
+      await expect(service.detail(BORIS, 'defi-1')).rejects.toThrow(
+        new NotFoundException('Défi introuvable.'),
+      );
+    });
+
+    it('introuvable à l’acceptation : rien n’est écrit, même message', async () => {
+      const { service, challenges } = horsClassement();
+
+      await expect(service.accept(BORIS, 'defi-1')).rejects.toThrow(
+        new NotFoundException('Défi introuvable.'),
+      );
+      expect(challenges.setMemberStatus).not.toHaveBeenCalled();
+    });
+
+    it('introuvable au refus aussi', async () => {
+      const { service, challenges } = horsClassement();
+
+      await expect(service.decline(BORIS, 'defi-1')).rejects.toThrow(
+        new NotFoundException('Défi introuvable.'),
+      );
+      expect(challenges.setMemberStatus).not.toHaveBeenCalled();
+    });
+
+    it('sans blocage, il se lit et se réaccepte', async () => {
+      const { service, challenges } = build(true, 'On y va ?', [], statut);
+
+      expect((await service.detail(BORIS, 'defi-1')).myStatus).toBe(statut);
+      await service.accept(BORIS, 'defi-1');
+      expect(challenges.setMemberStatus).toHaveBeenCalledWith('defi-1', BORIS, 'ACCEPTED', {
+        joinedAt: expect.any(Date) as Date,
+        leftAt: null,
+      });
+    });
+  },
+);

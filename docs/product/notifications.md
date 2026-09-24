@@ -1,23 +1,25 @@
 # Notifications push
 
 Notifications envoyées par **Firebase Cloud Messaging** (FCM), décidées
-**côté serveur uniquement**. Trois événements notifient aujourd'hui, tous
+**côté serveur uniquement**. Quatre événements notifient aujourd'hui, tous
 communautaires :
 
-| Événement | Destinataire | Contenu |
-| --------- | ------------ | ------- |
-| Nouvelle demande d'ami (ou redemande après refus) | Le destinataire de la demande | « _Nom_ souhaite devenir ton ami. » |
-| Demande acceptée (bouton ou demandes croisées) | Le demandeur d'origine | « _Nom_ a accepté ta demande d'ami. » |
-| Encouragement reçu | L'ami encouragé | Le message, titré « Encouragement de _Nom_ » |
+| Événement | Destinataire | Contenu | Famille | `data` (où mène le toucher) |
+| --------- | ------------ | ------- | ------- | --------------------------- |
+| Nouvelle demande d'ami (ou redemande après refus) | Le destinataire de la demande | « _Nom_ souhaite devenir ton ami. » | `FRIEND_REQUESTS` | `{ destination: "community-friends" }` |
+| Demande acceptée (bouton ou demandes croisées) | Le demandeur d'origine | « _Nom_ a accepté ta demande d'ami. » | `FRIEND_REQUESTS` | `{ destination: "community-friends" }` |
+| Encouragement reçu | L'ami encouragé | Le message, titré « Encouragement de _Nom_ » | `ENCOURAGEMENTS` | `{ destination: "community-friends" }` |
+| Invitation à un défi entre amis | Chaque invité | « _Nom_ te défie : _titre_ », titré « Nouveau défi » — jamais le mot du créateur | `CHALLENGE_INVITES` | `{ destination: "friend-challenge", challengeId: "<uuid du défi>" }` |
 
 Un **refus** de demande d'ami ne notifie jamais personne : refuser reste
 silencieux, comme le veut la logique anti-énumération de la communauté.
 
 ## Ce que la personne accepte de recevoir
 
-Deux familles se règlent séparément — **demandes d'ami** et
-**encouragements** : on ne refuse pas les deux pour les mêmes raisons, et une
-bascule unique couperait le lien social avec tout le reste.
+Trois familles se règlent séparément — **demandes d'ami**,
+**encouragements** et **invitations à un défi** : on ne refuse pas les trois
+pour les mêmes raisons, et une bascule unique couperait le lien social avec
+tout le reste.
 
 **Absence de réglage = accepté.** La table `NotificationPreference` ne retient
 que les REFUS : personne n'a besoin d'ouvrir les réglages pour que
@@ -117,6 +119,20 @@ l'application montée), contre la doublure unique
 - L'envoyeur FCM (`firebase-admin`, messagerie uniquement) vit derrière le
   port `PUSH_SENDER_PORT` : les tests substituent un faux, rien ne sort sur
   le réseau.
+- **La destination du toucher** : `PushMessage.data` (facultatif,
+  `Record<string, string>` — FCM ne transporte que des chaînes) est rempli
+  par `CommunityNotifier` selon le tableau du haut, et `FcmPushSender` le
+  transmet TEL QUEL dans le champ `data` du message FCM, en plus de
+  `notification` ; absent, rien n'est ajouté. Le contrat vit dans
+  `packages/api-contracts/src/notifications.ts` : `PUSH_DESTINATIONS =
+  ['community-friends', 'friend-challenge'] as const` (type
+  `PushDestination`) et la forme complète `pushDataSchema` (type `PushData`),
+  union discriminée par `destination` — `{ destination: 'community-friends' }`
+  ou `{ destination: 'friend-challenge', challengeId: <uuid> }`. Éprouvé par
+  `community-notifier.spec.ts` (chaque message confronté au schéma publié,
+  qui couvre exactement les destinations exportées) et `fcm.sender.spec.ts`
+  (un faux `Messaging` retient le message remis à FCM : `data` présent tel
+  quel, ou absent).
 - Configuration : `FIREBASE_SERVICE_ACCOUNT_JSON` (JSON complet du compte de
   service, console Firebase → Paramètres → Comptes de service). **Optionnel**
   — absent, l'envoi est inactif mais l'enregistrement des jetons continue :

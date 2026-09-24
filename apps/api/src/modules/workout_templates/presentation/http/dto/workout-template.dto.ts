@@ -20,25 +20,42 @@ import {
 } from 'class-validator';
 import { trimmed } from '../../../../../common/transforms/trimmed';
 
+/*
+ * `type` explicite sur chaque champ `… | null` : sous `strictNullChecks`,
+ * TypeScript émet `design:type Object` pour une union avec `null`, et
+ * Swagger annonçait un objet vide là où l'API attend un nombre ou une chaîne
+ * (garde : `app/openapi-document.spec.ts`).
+ */
+
 /** Série prévue : des CIBLES facultatives, jamais des mesures. */
 export class PlannedSetDto {
   @ApiProperty({ description: "UUID généré sur l'appareil" })
   @IsUUID()
   id!: string;
 
-  @ApiPropertyOptional({ enum: WorkoutSetKind, default: WorkoutSetKind.NORMAL })
+  @ApiPropertyOptional({ enum: WorkoutSetKind, default: WorkoutSetKind.NORMAL, nullable: true })
   @IsOptional()
   @IsEnum(WorkoutSetKind)
   kind?: WorkoutSetKind | null;
 
-  @ApiPropertyOptional({ maximum: WORKOUT_LIMITS.repsMax })
+  @ApiPropertyOptional({
+    type: 'integer',
+    minimum: 0,
+    maximum: WORKOUT_LIMITS.repsMax,
+    nullable: true,
+  })
   @IsOptional()
   @IsInt()
   @Min(0)
   @Max(WORKOUT_LIMITS.repsMax)
   targetReps?: number | null;
 
-  @ApiPropertyOptional({ maximum: WORKOUT_LIMITS.weightKgMax })
+  @ApiPropertyOptional({
+    type: Number,
+    minimum: 0,
+    maximum: WORKOUT_LIMITS.weightKgMax,
+    nullable: true,
+  })
   @IsOptional()
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0)
@@ -52,21 +69,36 @@ export class PlannedSetDto {
    * écrit en répétitions pour quarante-cinq secondes de planche entrerait
    * dans les records personnels et y resterait.
    */
-  @ApiPropertyOptional({ maximum: WORKOUT_LIMITS.durationSecondsMax })
+  @ApiPropertyOptional({
+    type: 'integer',
+    minimum: 0,
+    maximum: WORKOUT_LIMITS.durationSecondsMax,
+    nullable: true,
+  })
   @IsOptional()
   @IsInt()
   @Min(0)
   @Max(WORKOUT_LIMITS.durationSecondsMax)
   targetDurationSeconds?: number | null;
 
-  @ApiPropertyOptional({ maximum: WORKOUT_LIMITS.distanceMetersMax })
+  @ApiPropertyOptional({
+    type: 'integer',
+    minimum: 0,
+    maximum: WORKOUT_LIMITS.distanceMetersMax,
+    nullable: true,
+  })
   @IsOptional()
   @IsInt()
   @Min(0)
   @Max(WORKOUT_LIMITS.distanceMetersMax)
   targetDistanceMeters?: number | null;
 
-  @ApiPropertyOptional({ maximum: WORKOUT_LIMITS.restSecondsMax })
+  @ApiPropertyOptional({
+    type: 'integer',
+    minimum: 0,
+    maximum: WORKOUT_LIMITS.restSecondsMax,
+    nullable: true,
+  })
   @IsOptional()
   @IsInt()
   @Min(0)
@@ -80,19 +112,29 @@ export class TemplateExerciseDto {
   @IsUUID()
   id!: string;
 
-  @ApiPropertyOptional({ description: 'Exercice du catalogue' })
+  @ApiPropertyOptional({
+    type: String,
+    format: 'uuid',
+    nullable: true,
+    description: 'Exercice du catalogue',
+  })
   @IsOptional()
   @IsUUID()
   exerciseId?: string | null;
 
-  @ApiPropertyOptional({ description: 'Nom libre si hors catalogue' })
+  @ApiPropertyOptional({
+    type: String,
+    nullable: true,
+    maxLength: WORKOUT_LIMITS.nameMax,
+    description: 'Nom libre si hors catalogue',
+  })
   @IsOptional()
   @IsString()
   @Transform(trimmed)
   @MaxLength(WORKOUT_LIMITS.nameMax)
   exerciseName?: string | null;
 
-  @ApiPropertyOptional({ maxLength: WORKOUT_LIMITS.notesMax })
+  @ApiPropertyOptional({ type: String, nullable: true, maxLength: WORKOUT_LIMITS.notesMax })
   @IsOptional()
   @IsString()
   @MaxLength(WORKOUT_LIMITS.notesMax)
@@ -114,13 +156,15 @@ export class SaveWorkoutTemplateDto {
   @MaxLength(WORKOUT_LIMITS.nameMax)
   name!: string;
 
-  @ApiPropertyOptional({ maxLength: WORKOUT_LIMITS.notesMax })
+  @ApiPropertyOptional({ type: String, nullable: true, maxLength: WORKOUT_LIMITS.notesMax })
   @IsOptional()
   @IsString()
   @MaxLength(WORKOUT_LIMITS.notesMax)
   notes?: string | null;
 
   @ApiPropertyOptional({
+    type: 'integer',
+    nullable: true,
     description: "Saisie de l'utilisateur — jamais calculée par le serveur",
     minimum: 1,
     maximum: WORKOUT_TEMPLATE_LIMITS.estimatedDurationMinutesMax,

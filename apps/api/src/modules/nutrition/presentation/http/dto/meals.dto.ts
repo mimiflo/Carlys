@@ -126,7 +126,16 @@ export class UpdateMealDto {
   @Max(10_000)
   kcal?: number;
 
-  @ApiPropertyOptional({ minimum: QUANTITY_MIN, maximum: QUANTITY_MAX, nullable: true })
+  // `type` explicite sur les champs `number | null` : sous
+  // `strictNullChecks`, TypeScript émet `design:type Object` pour une union
+  // avec `null`, et Swagger annonçait un objet vide (garde :
+  // `app/openapi-document.spec.ts`).
+  @ApiPropertyOptional({
+    type: Number,
+    minimum: QUANTITY_MIN,
+    maximum: QUANTITY_MAX,
+    nullable: true,
+  })
   @IsOptional()
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(QUANTITY_MIN)
@@ -138,21 +147,21 @@ export class UpdateMealDto {
   @IsEnum(MealQuantityUnit)
   quantityUnit?: MealQuantityUnit | null;
 
-  @ApiPropertyOptional({ minimum: 0, maximum: 1000, nullable: true })
+  @ApiPropertyOptional({ type: 'integer', minimum: 0, maximum: 1000, nullable: true })
   @IsOptional()
   @IsInt()
   @Min(0)
   @Max(1_000)
   proteinG?: number | null;
 
-  @ApiPropertyOptional({ minimum: 0, maximum: 1000, nullable: true })
+  @ApiPropertyOptional({ type: 'integer', minimum: 0, maximum: 1000, nullable: true })
   @IsOptional()
   @IsInt()
   @Min(0)
   @Max(1_000)
   carbsG?: number | null;
 
-  @ApiPropertyOptional({ minimum: 0, maximum: 1000, nullable: true })
+  @ApiPropertyOptional({ type: 'integer', minimum: 0, maximum: 1000, nullable: true })
   @IsOptional()
   @IsInt()
   @Min(0)

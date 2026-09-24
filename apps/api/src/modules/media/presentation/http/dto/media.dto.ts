@@ -22,7 +22,14 @@ export class ListMediaQuery {
 }
 
 export class AttachExerciseMediaDto {
-  @ApiProperty({ nullable: true, description: '`null` détache le média.' })
+  // `type` explicite : `string | null` s'émet `design:type Object`, et
+  // Swagger annonçait un objet (garde : `app/openapi-document.spec.ts`).
+  @ApiProperty({
+    type: String,
+    format: 'uuid',
+    nullable: true,
+    description: '`null` détache le média.',
+  })
   @ValidateIf((_, value) => value !== null)
   @IsUUID()
   mediaId!: string | null;

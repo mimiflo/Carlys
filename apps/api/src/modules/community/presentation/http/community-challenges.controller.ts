@@ -37,8 +37,9 @@ export class CommunityChallengesController {
     summary: 'Mes défis entre amis — proposés et acceptés',
     description:
       'Les défis refusés et quittés en sortent : ce sont des décisions ' +
-      'prises. Un défi échu est RÉGLÉ à la lecture (classement figé), sans ' +
-      'tâche planifiée.',
+      'prises, et une invitation dont le créateur est séparé de moi par un ' +
+      'blocage aussi. Un défi échu est RÉGLÉ à la lecture (classement ' +
+      'figé), sans tâche planifiée.',
   })
   listFriendChallenges(@CurrentUser() user: AuthenticatedPrincipal): Promise<FriendChallenge[]> {
     return this.friendChallenges.list(user.userId);
@@ -51,7 +52,8 @@ export class CommunityChallengesController {
     description:
       'On n’invite que des amis acceptés et non bloqués — 403 sans dire ' +
       'lequel des deux. La fin du défi est CALCULÉE depuis la durée. Le ' +
-      '`message` facultatif (280 points de code après découpage, blanc = absent) ' +
+      '`title` (80) et le `message` facultatif (280) se comptent en points de ' +
+      'code après découpage (`message` blanc = absent). Le message ' +
       'est rendu avec `createdAt`, son heure ; il ne part jamais dans la ' +
       'notification, et un rejeu ne le réécrit pas.',
   })
@@ -72,9 +74,11 @@ export class CommunityChallengesController {
     description:
       'Même forme que la liste et l’acceptation : `message` (ou null), ' +
       '`createdAt` (ISO UTC, l’heure du message), `durationDays`, et ' +
-      '`isCreator` sur chaque membre. 404 pour qui n’en est pas membre. ' +
-      '`message` vaut null quand un blocage, dans un sens ou l’autre, sépare ' +
-      'le lecteur du créateur : le défi reste lisible, son mot est masqué.',
+      '`isCreator` sur chaque membre. 404 pour qui n’en est pas membre, et ' +
+      'pour une INVITATION dont le créateur est séparé du lecteur par un ' +
+      'blocage (même message). Sur un défi déjà accepté, `message` vaut null ' +
+      'quand un blocage, dans un sens ou l’autre, sépare le lecteur du ' +
+      'créateur : le défi reste lisible, son mot est masqué.',
   })
   friendChallenge(
     @CurrentUser() user: AuthenticatedPrincipal,
@@ -84,7 +88,10 @@ export class CommunityChallengesController {
   }
 
   @Post('friend-challenges/:id/accept')
-  @ApiOperation({ summary: 'Accepter un défi : on entre au classement, à zéro' })
+  @ApiOperation({
+    summary: 'Accepter un défi : on entre au classement, à zéro',
+    description: '404 « Défi introuvable. » pour une invitation masquée par un blocage.',
+  })
   acceptFriendChallenge(
     @CurrentUser() user: AuthenticatedPrincipal,
     @Param('id', new ParseUUIDPipe()) id: string,
@@ -98,7 +105,8 @@ export class CommunityChallengesController {
     summary: 'Refuser, ou quitter — dans les deux cas, on sort du classement',
     description:
       'Contrairement à un défi collectif, dont la contribution reste acquise ' +
-      'au groupe : ici le classement est individuel.',
+      'au groupe : ici le classement est individuel. 404 pour une invitation ' +
+      'masquée par un blocage, comme à la lecture.',
   })
   async declineFriendChallenge(
     @CurrentUser() user: AuthenticatedPrincipal,

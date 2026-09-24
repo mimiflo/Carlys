@@ -363,7 +363,7 @@ describe('Défis entre amis (e2e)', () => {
     await defier(tokenB, { invitedUserIds: [userIdA], message: '❤️'.repeat(141) }).expect(400);
   });
 
-  it('un blocage tait le mot du créateur, dans les deux sens, sans retirer le défi', async () => {
+  it('un blocage tait le mot du créateur d’un défi ACCEPTÉ, dans les deux sens, sans le retirer', async () => {
     // Chloé devient l'amie d'Alice, puis la défie avec un mot. C'est Chloé
     // qui crée : le plafond de défis ouverts d'Alice reste à ses épreuves.
     await as(tokenC).post('/api/v1/community/requests').send({ email: emailA }).expect(202);
@@ -386,6 +386,10 @@ describe('Défis entre amis (e2e)', () => {
       ).find((entry) => entry.id === challengeId),
     });
     expect((await lu(tokenA)).detail.message).toBe(mot);
+    // Alice ACCEPTE : c'est un défi en cours, son classement est un résultat
+    // partagé. (Une invitation encore en attente, elle, disparaîtrait : voir
+    // l'épreuve suivante.)
+    await as(tokenA).post(`/api/v1/community/friend-challenges/${challengeId}/accept`).expect(201);
 
     // Alice bloque Chloé : le geste de protection documenté. Le défi reste,
     // avec son titre et son classement ; le texte libre suit la règle du fil.
@@ -414,7 +418,7 @@ describe('Défis entre amis (e2e)', () => {
     expect((await lu(tokenA)).detail.message).toBe(mot);
     await as(tokenC).post(`/api/v1/community/blocks/${userIdA}`).expect(204);
     expect((await lu(tokenA)).detail.message).toBeNull();
-    // Accepter rend la même forme, mot masqué compris.
+    // Accepter (rejoué) rend la même forme, mot masqué compris.
     const accepte = data<FriendChallenge>(
       (
         await as(tokenA)
@@ -424,5 +428,154 @@ describe('Défis entre amis (e2e)', () => {
     );
     expect(accepte.message).toBeNull();
     await as(tokenC).delete(`/api/v1/community/blocks/${userIdA}`).expect(204);
+  });
+
+  it('une INVITATION d’un créateur bloqué disparaît : liste, détail, acceptation, même 404', async () => {
+    // Deux comptes à part : bloquer retire l'amitié, et les épreuves
+    // précédentes ont besoin de la leur.
+    const prefixe = `e2e-fc-invit-${randomUUID()}`;
+    const inscrire = async (nom: string) =>
+      data<AuthResult>(
+        (
+          await server()
+            .post('/api/v1/auth/register')
+            .send({
+              email: `${prefixe}-${nom}@carlys.test`,
+              password: 'MotDePasseSolide42',
+              displayName: nom,
+            })
+            .expect(201)
+        ).body,
+      );
+    const dora = await inscrire('dora');
+    const eliot = await inscrire('eliot');
+    try {
+      await as(eliot.tokens.accessToken)
+        .post('/api/v1/community/requests')
+        .send({ email: dora.user.email })
+        .expect(202);
+      const recues = data<Array<{ id: string }>>(
+        (await as(dora.tokens.accessToken).get('/api/v1/community/requests').expect(200)).body,
+      );
+      await as(dora.tokens.accessToken)
+        .post(`/api/v1/community/requests/${recues[0]?.id}/accept`)
+        .expect(204);
+      const challengeId = randomUUID();
+      await defier(eliot.tokens.accessToken, {
+        id: challengeId,
+        invitedUserIds: [dora.user.id],
+        message: 'Viens perdre.',
+      }).expect(201);
+
+      const doraVoit = async () => ({
+        liste: data<FriendChallenge[]>(
+          (await as(dora.tokens.accessToken).get('/api/v1/community/friend-challenges').expect(200))
+            .body,
+        ).some((entry) => entry.id === challengeId),
+        detail: (
+          await as(dora.tokens.accessToken).get(
+            `/api/v1/community/friend-challenges/${challengeId}`,
+          )
+        ).status,
+      });
+      expect(await doraVoit()).toEqual({ liste: true, detail: 200 });
+
+      // Dora bloque Éliot : son invitation disparaît partout, avec le 404
+      // d'un défi qui n'existe pas — le même message, sans oracle.
+      await as(dora.tokens.accessToken)
+        .post(`/api/v1/community/blocks/${eliot.user.id}`)
+        .expect(204);
+      expect(await doraVoit()).toEqual({ liste: false, detail: 404 });
+      const inconnu = await as(dora.tokens.accessToken)
+        .get(`/api/v1/community/friend-challenges/${randomUUID()}`)
+        .expect(404);
+      const accepte = await as(dora.tokens.accessToken)
+        .post(`/api/v1/community/friend-challenges/${challengeId}/accept`)
+        .expect(404);
+      const erreur = (body: unknown) => (body as { error: { message: string } }).error.message;
+      expect(erreur(accepte.body)).toBe(erreur(inconnu.body));
+      expect(erreur(accepte.body)).toBe('Défi introuvable.');
+      // Rien n'a été écrit : elle reste invitée, pas membre.
+      const ligne = await prisma.friendChallengeMember.findUniqueOrThrow({
+        where: { challengeId_userId: { challengeId, userId: dora.user.id } },
+      });
+      expect(ligne.status).toBe('INVITED');
+      // Le signalement, lui, reste possible : c'est le geste de protection.
+      await as(dora.tokens.accessToken)
+        .post('/api/v1/community/reports')
+        .send({ reportedUserId: eliot.user.id, friendChallengeId: challengeId, reason: 'SPAM' })
+        .expect(201);
+
+      // Le créateur voit toujours son défi, invitée comprise : la règle
+      // porte sur l'invitation REÇUE.
+      const siens = data<FriendChallenge>(
+        (
+          await as(eliot.tokens.accessToken)
+            .get(`/api/v1/community/friend-challenges/${challengeId}`)
+            .expect(200)
+        ).body,
+      );
+      expect(siens.members.find((m) => m.userId === dora.user.id)?.status).toBe('INVITED');
+
+      // Débloquer la fait revenir ; dans l'AUTRE sens, elle disparaît aussi.
+      await as(dora.tokens.accessToken)
+        .delete(`/api/v1/community/blocks/${eliot.user.id}`)
+        .expect(204);
+      expect(await doraVoit()).toEqual({ liste: true, detail: 200 });
+      await as(eliot.tokens.accessToken)
+        .post(`/api/v1/community/blocks/${dora.user.id}`)
+        .expect(204);
+      expect(await doraVoit()).toEqual({ liste: false, detail: 404 });
+      await as(dora.tokens.accessToken)
+        .post(`/api/v1/community/friend-challenges/${challengeId}/accept`)
+        .expect(404);
+
+      // REFUSER d'abord ne rouvre rien : une fois le blocage posé, le défi
+      // refusé disparaît aussi, et le réaccepter répond le même 404.
+      const statutDeDora = async () =>
+        (
+          await prisma.friendChallengeMember.findUniqueOrThrow({
+            where: { challengeId_userId: { challengeId, userId: dora.user.id } },
+          })
+        ).status;
+      const detailDeDora = () =>
+        as(dora.tokens.accessToken).get(`/api/v1/community/friend-challenges/${challengeId}`);
+      const accepterPourDora = () =>
+        as(dora.tokens.accessToken).post(
+          `/api/v1/community/friend-challenges/${challengeId}/accept`,
+        );
+      await as(eliot.tokens.accessToken)
+        .delete(`/api/v1/community/blocks/${dora.user.id}`)
+        .expect(204);
+      await as(dora.tokens.accessToken)
+        .delete(`/api/v1/community/friend-challenges/${challengeId}/join`)
+        .expect(204);
+      expect(await statutDeDora()).toBe('DECLINED');
+      await as(dora.tokens.accessToken)
+        .post(`/api/v1/community/blocks/${eliot.user.id}`)
+        .expect(204);
+      await detailDeDora().expect(404);
+      const reaccepte = await accepterPourDora().expect(404);
+      expect(erreur(reaccepte.body)).toBe('Défi introuvable.');
+      expect(await statutDeDora()).toBe('DECLINED');
+
+      // QUITTER non plus : accepté, quitté, puis bloqué — même 404.
+      await as(dora.tokens.accessToken)
+        .delete(`/api/v1/community/blocks/${eliot.user.id}`)
+        .expect(204);
+      await accepterPourDora().expect(201);
+      await as(dora.tokens.accessToken)
+        .delete(`/api/v1/community/friend-challenges/${challengeId}/join`)
+        .expect(204);
+      expect(await statutDeDora()).toBe('LEFT');
+      await as(eliot.tokens.accessToken)
+        .post(`/api/v1/community/blocks/${dora.user.id}`)
+        .expect(204);
+      await detailDeDora().expect(404);
+      expect(erreur((await accepterPourDora().expect(404)).body)).toBe('Défi introuvable.');
+      expect(await statutDeDora()).toBe('LEFT');
+    } finally {
+      await prisma.user.deleteMany({ where: { email: { startsWith: prefixe } } });
+    }
   });
 });

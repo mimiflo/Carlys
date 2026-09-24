@@ -66,7 +66,10 @@ export class SaveProgramDayDto {
   @Max(7)
   dayOfWeek!: number;
 
-  @ApiPropertyOptional({ nullable: true })
+  // `type` explicite : sous `strictNullChecks`, TypeScript émet
+  // `design:type Object` pour `string | null`, et Swagger annonçait un
+  // objet vide (garde : `app/openapi-document.spec.ts`).
+  @ApiPropertyOptional({ type: String, format: 'uuid', nullable: true })
   @IsOptional()
   @IsUUID()
   templateId?: string | null;
@@ -99,7 +102,7 @@ export class SaveProgramDto {
   @MaxLength(120)
   name!: string;
 
-  @ApiPropertyOptional({ nullable: true })
+  @ApiPropertyOptional({ type: String, nullable: true, maxLength: 2000 })
   @IsOptional()
   @Transform(trimmed)
   @IsString()
@@ -118,6 +121,8 @@ export class SaveProgramDto {
   isActive?: boolean;
 
   @ApiPropertyOptional({
+    type: String,
+    format: 'date',
     nullable: true,
     example: '2026-09-21',
     description:
@@ -149,6 +154,8 @@ export class SaveProgramDto {
  */
 export class LinkCalendarSessionDto {
   @ApiProperty({
+    type: String,
+    format: 'uuid',
     nullable: true,
     description: 'Séance TERMINÉE qui honore cette case, ou null pour l’en détacher',
   })

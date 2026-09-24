@@ -50,3 +50,29 @@ export type NotificationPreferencesResponse = z.infer<typeof notificationPrefere
 /** PATCH /notifications/preferences — une catégorie à la fois. */
 export const updateNotificationPreferenceSchema = notificationPreferenceSchema;
 export type UpdateNotificationPreference = z.infer<typeof updateNotificationPreferenceSchema>;
+
+/**
+ * OÙ MÈNE le toucher d'une notification : l'écran que l'application ouvre.
+ *
+ * Voyage dans le champ `data` du message FCM (en plus du titre et du corps
+ * affichés), sous la clé `destination`. Une valeur que l'application ne
+ * connaît pas (serveur plus récent) ouvre simplement l'application : la
+ * liste s'allonge sans casser les versions déjà installées.
+ *
+ *  - `community-friends` : l'onglet Amis de la communauté (demande d'ami
+ *    reçue ou acceptée, encouragement) ;
+ *  - `friend-challenge` : l'écran d'un défi entre amis, dont l'identifiant
+ *    voyage sous la clé `challengeId`.
+ */
+export const PUSH_DESTINATIONS = ['community-friends', 'friend-challenge'] as const;
+export type PushDestination = (typeof PUSH_DESTINATIONS)[number];
+
+/**
+ * Le champ `data` d'une notification, tel que l'application le lit. FCM ne
+ * transporte que des CHAÎNES : pas de nombre, pas d'objet imbriqué.
+ */
+export const pushDataSchema = z.discriminatedUnion('destination', [
+  z.object({ destination: z.literal('community-friends') }),
+  z.object({ destination: z.literal('friend-challenge'), challengeId: z.string().uuid() }),
+]);
+export type PushData = z.infer<typeof pushDataSchema>;

@@ -1,9 +1,12 @@
-import { type NotificationCategory } from '@carlys/api-contracts';
+import { type NotificationCategory, type PushData } from '@carlys/api-contracts';
 import { Injectable } from '@nestjs/common';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { NotificationsService } from '../../notifications/application/notifications.service';
 import { type PushMessage } from '../../notifications/domain/push-sender.port';
 import { CommunityRepository } from '../infrastructure/community.repository';
+
+/** Demandes d'ami et encouragements mènent à l'onglet Amis. */
+const VERS_LES_AMIS: PushData = { destination: 'community-friends' };
 
 /**
  * Notifications poussées de la communauté, au nom d'une personne.
@@ -13,6 +16,9 @@ import { CommunityRepository } from '../infrastructure/community.repository';
  * l'envoi (jamais l'e-mail), et la CATÉGORIE voyage jusqu'à l'envoi : c'est
  * elle qui permet de couper les demandes d'ami sans couper les
  * encouragements.
+ *
+ * Chaque message porte sa DESTINATION (`data`, contrat `PushData`) : sans
+ * elle, le toucher ouvrait l'application, jamais l'écran concerné.
  */
 @Injectable()
 export class CommunityNotifier {
@@ -27,6 +33,7 @@ export class CommunityNotifier {
     return this.notify(addresseeId, requesterId, 'FRIEND_REQUESTS', (fromName) => ({
       title: 'Nouvelle demande d’ami',
       body: `${fromName} souhaite devenir ton ami.`,
+      data: VERS_LES_AMIS,
     }));
   }
 
@@ -34,6 +41,7 @@ export class CommunityNotifier {
     return this.notify(requesterId, accepterId, 'FRIEND_REQUESTS', (fromName) => ({
       title: 'Demande acceptée',
       body: `${fromName} a accepté ta demande d’ami.`,
+      data: VERS_LES_AMIS,
     }));
   }
 
@@ -41,6 +49,7 @@ export class CommunityNotifier {
     return this.notify(recipientId, senderId, 'ENCOURAGEMENTS', (fromName) => ({
       title: `Encouragement de ${fromName}`,
       body: message,
+      data: VERS_LES_AMIS,
     }));
   }
 
@@ -48,11 +57,21 @@ export class CommunityNotifier {
    * Invitation à un défi. Catégorie DISTINCTE des encouragements : quelqu'un
    * peut vouloir des encouragements sans vouloir être défié, et le refus
    * d'une famille ne doit pas couper l'autre.
+   *
+   * Le toucher ouvre CE défi, d'où son identifiant ; jamais son mot, qui ne
+   * se lit que dans le défi (voir `FriendChallengesService.create`).
    */
-  challengeInvite(invitedId: string, fromUserId: string, title: string): Promise<void> {
+  challengeInvite(
+    invitedId: string,
+    fromUserId: string,
+    challengeId: string,
+    title: string,
+  ): Promise<void> {
+    const data: PushData = { destination: 'friend-challenge', challengeId };
     return this.notify(invitedId, fromUserId, 'CHALLENGE_INVITES', (fromName) => ({
       title: 'Nouveau défi',
       body: `${fromName} te défie : ${title}`,
+      data,
     }));
   }
 

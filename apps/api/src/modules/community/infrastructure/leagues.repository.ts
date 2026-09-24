@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { type LeagueDivision, type LeagueMembership, Prisma } from '@prisma/client';
+import { type LeagueDivision, type LeagueMembership, type Prisma } from '@prisma/client';
 import { PrismaService } from '../../../database/prisma/prisma.service';
+import { groupWithRoom, lockGroups } from './league-groups';
+
+type Client = Prisma.TransactionClient | PrismaService;
 
 /** Une ligne de classement, avec le nom qu'on affiche à côté du score. */
 export type LeagueMemberWithName = LeagueMembership & {
@@ -13,10 +16,7 @@ export class LeaguesRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   /** Vrai si cette personne a rejoint la ligue. Absence de ligne = non. */
-  async hasJoined(
-    userId: string,
-    client: Prisma.TransactionClient | PrismaService = this.prisma,
-  ): Promise<boolean> {
+  async hasJoined(userId: string, client: Client = this.prisma): Promise<boolean> {
     const preference = await client.communityPreference.findUnique({
       where: { userId },
       select: { joinsLeague: true },
@@ -54,12 +54,12 @@ export class LeaguesRepository {
    * suivante) : elle l'ouvre alors dans l'ancienne division. Relire cette
    * ligne-là après le règlement rendait encore l'ancienne division — la
    * montée décidée n'était appliquée nulle part. Voir [settle], qui réaligne
-   * la période suivante, et [alignPeriod].
+   * la période suivante, et [placeInPeriod].
    */
   async divisionToOpen(
     userId: string,
     periodKey: string,
-    client: Prisma.TransactionClient | PrismaService = this.prisma,
+    client: Client = this.prisma,
   ): Promise<LeagueDivision> {
     const derniere = await client.leagueMembership.findFirst({
       where: { userId, periodKey: { lt: periodKey } },
@@ -70,26 +70,103 @@ export class LeaguesRepository {
   }
 
   /**
-   * Ouvre la période si elle n'existe pas, et rend la ligne.
+   * Ouvre la période si elle n'existe pas, dans le premier GROUPE de
+   * (période, division) qui a de la place (voir `league-groups.ts`).
    *
-   * `create` en attrapant P2002 plutôt qu'un `upsert` vide : deux écritures
-   * simultanées sur la même période sont normales (une contribution et une
-   * lecture), et l'unicité `(userId, periodKey)` les absorbe.
+   * Dans la transaction de l'appelant s'il en fournit une (la réponse de
+   * quiz verse sa contribution dans la sienne), sinon dans une transaction
+   * à elle : le verrou du groupe ne vit que le temps d'une transaction.
    */
   async openPeriod(
     userId: string,
     periodKey: string,
     division: LeagueDivision,
-    client: Prisma.TransactionClient | PrismaService = this.prisma,
+    client: Client = this.prisma,
   ): Promise<void> {
-    try {
-      await client.leagueMembership.create({ data: { userId, periodKey, division } });
-    } catch (error) {
-      if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-        return; // Ouverte entre-temps par une écriture concurrente.
-      }
-      throw error;
+    const existante = await client.leagueMembership.findUnique({
+      where: { userId_periodKey: { userId, periodKey } },
+      select: { userId: true },
+    });
+    if (existante !== null) {
+      return; // Le cas courant : rien à verrouiller.
     }
+    await this.inTransaction(client, async (tx) => {
+      await lockGroups(tx, [{ periodKey, division }]);
+      await this.createInGroup(tx, userId, periodKey, division);
+    });
+  }
+
+  /**
+   * La place du LECTEUR dans la période en cours : l'ouvre si elle manque,
+   * la range dans la division qui lui revient si elle a été ouverte dans une
+   * autre, et rend son groupe.
+   *
+   * Le rangement est le filet des lignes écrites avant [realignFollowing] :
+   * une semaine ouverte trop tôt, dont le règlement précédent est déjà passé,
+   * resterait sinon dans la mauvaise division jusqu'à sa fin. Changer de
+   * division, c'est aussi changer de GROUPE : la nouvelle place se prend
+   * sous le verrou de la division d'arrivée, comme une ouverture. Le score
+   * reste acquis.
+   */
+  async placeInPeriod(
+    userId: string,
+    periodKey: string,
+    division: LeagueDivision,
+  ): Promise<number> {
+    const ligne = await this.prisma.leagueMembership.findUnique({
+      where: { userId_periodKey: { userId, periodKey } },
+      select: { division: true, cohort: true, settledAt: true },
+    });
+    if (ligne !== null && (ligne.division === division || ligne.settledAt !== null)) {
+      return ligne.cohort; // Le cas courant : déjà à sa place.
+    }
+    return this.prisma.$transaction(async (tx) => {
+      await lockGroups(tx, [{ periodKey, division }]);
+      const cohort = await this.createInGroup(tx, userId, periodKey, division);
+      await tx.leagueMembership.updateMany({
+        where: { userId, periodKey, settledAt: null, division: { not: division } },
+        data: { division, cohort },
+      });
+      // Relue sous le verrou : une écriture concurrente a pu l'ouvrir la
+      // première, et c'est SA place qui fait foi.
+      const placee = await tx.leagueMembership.findUniqueOrThrow({
+        where: { userId_periodKey: { userId, periodKey } },
+        select: { cohort: true },
+      });
+      return placee.cohort;
+    });
+  }
+
+  /**
+   * Écrit la ligne dans le groupe qui a de la place, si elle n'existe pas
+   * encore, et rend ce groupe. À appeler SOUS le verrou de (période,
+   * division).
+   *
+   * `skipDuplicates` (ON CONFLICT DO NOTHING) plutôt qu'un P2002 attrapé :
+   * deux écritures simultanées sur la même période sont normales (une
+   * contribution et une lecture), et une violation d'unicité AVORTERAIT la
+   * transaction englobante — celle de la réponse de quiz, par exemple.
+   */
+  private async createInGroup(
+    tx: Prisma.TransactionClient,
+    userId: string,
+    periodKey: string,
+    division: LeagueDivision,
+  ): Promise<number> {
+    const cohort = await groupWithRoom(tx, periodKey, division);
+    await tx.leagueMembership.createMany({
+      data: [{ userId, periodKey, division, cohort }],
+      skipDuplicates: true,
+    });
+    return cohort;
+  }
+
+  /** `work` dans la transaction fournie, ou dans une transaction à lui. */
+  private inTransaction<T>(
+    client: Client,
+    work: (tx: Prisma.TransactionClient) => Promise<T>,
+  ): Promise<T> {
+    return '$transaction' in client ? client.$transaction(work) : work(client);
   }
 
   /**
@@ -104,7 +181,7 @@ export class LeaguesRepository {
     userId: string,
     periodKey: string,
     points: number,
-    client: Prisma.TransactionClient | PrismaService = this.prisma,
+    client: Client = this.prisma,
   ): Promise<number> {
     if (points <= 0) {
       return 0;
@@ -116,10 +193,18 @@ export class LeaguesRepository {
     return result.count;
   }
 
-  /** Le classement d'une division pour une période, du meilleur au dernier. */
-  standings(periodKey: string, division: LeagueDivision): Promise<LeagueMemberWithName[]> {
+  /**
+   * Le classement d'un GROUPE de la division pour une période, du meilleur
+   * au dernier. Jamais la division entière : on n'est classé qu'avec les
+   * membres de son groupe.
+   */
+  standings(
+    periodKey: string,
+    division: LeagueDivision,
+    cohort: number,
+  ): Promise<LeagueMemberWithName[]> {
     return this.prisma.leagueMembership.findMany({
-      where: { periodKey, division },
+      where: { periodKey, division, cohort },
       include: { user: { select: { profile: { select: { displayName: true } } } } },
       orderBy: [{ score: 'desc' }, { userId: 'asc' }],
     });
@@ -134,35 +219,44 @@ export class LeaguesRepository {
   }
 
   /**
-   * RÈGLE une division entière pour une période close : rangs figés,
-   * division suivante décidée, `settledAt` posé. Idempotent.
+   * RÈGLE un groupe entier pour une période close : rangs figés, division
+   * suivante décidée, `settledAt` posé. Idempotent. Rend le nombre de
+   * lignes que CE règlement a réglées.
    *
-   * L'écriture est conditionnée à `settledAt: null` — deux lectures
-   * simultanées d'une période échue n'en règlent qu'une. Et c'est une
-   * lecture, quelle qu'elle soit, qui règle la division ENTIÈRE : sans ça,
-   * deux personnes liraient deux classements différents de la même semaine.
+   * Chaque écriture est conditionnée à `settledAt: null`, ligne par ligne,
+   * et porte le rang, la division suivante et `settledAt` ENSEMBLE : une
+   * ligne déjà réglée n'est jamais réécrite. Deux lectures simultanées d'une
+   * période échue n'en règlent donc qu'une, et une ligne arrivée APRÈS le
+   * règlement (séance synchronisée en retard, semaine réalignée après
+   * coup) se règle seule, sans décaler d'un cran les rangs déjà annoncés.
+   * Seules les lignes réglées ici réalignent leur semaine suivante.
    *
-   * Le règlement n'OUVRE rien : la période suivante naît quand quelqu'un la
-   * lit ou y verse un effort. Ouvrir ici créerait une ligne par semaine
-   * d'absence, et chaque lecture d'un revenant en déclencherait la cascade.
+   * Par identifiant croissant : deux règlements concurrents du même groupe
+   * verrouillent ses lignes dans le même ordre, jamais en croix.
+   *
+   * C'est une lecture, quelle qu'elle soit, qui règle le groupe ENTIER :
+   * sans ça, deux personnes liraient deux classements différents de la même
+   * semaine. Le règlement n'OUVRE rien : la période suivante naît quand
+   * quelqu'un la lit ou y verse un effort. Ouvrir ici créerait une ligne par
+   * semaine d'absence, et chaque lecture d'un revenant en déclencherait la
+   * cascade.
    */
   async settle(periodKey: string, results: ReadonlyArray<SettlementResult>): Promise<number> {
+    const ordonnes = [...results].sort((a, b) => (a.userId < b.userId ? -1 : 1));
     return this.prisma.$transaction(async (tx) => {
-      const regle = await tx.leagueMembership.updateMany({
-        where: { periodKey, settledAt: null, userId: { in: results.map((r) => r.userId) } },
-        data: { settledAt: new Date() },
-      });
-      if (regle.count === 0) {
-        return 0; // Déjà réglée par une lecture concurrente.
-      }
-      for (const { userId, rank, nextDivision } of results) {
-        await tx.leagueMembership.updateMany({
-          where: { userId, periodKey },
-          data: { finalRank: rank, nextDivision },
+      const settledAt = new Date();
+      const reglees: SettlementResult[] = [];
+      for (const result of ordonnes) {
+        const { count } = await tx.leagueMembership.updateMany({
+          where: { userId: result.userId, periodKey, settledAt: null },
+          data: { settledAt, finalRank: result.rank, nextDivision: result.nextDivision },
         });
+        if (count > 0) {
+          reglees.push(result);
+        }
       }
-      await this.realignFollowing(tx, periodKey, results);
-      return regle.count;
+      await this.realignFollowing(tx, periodKey, reglees);
+      return reglees.length;
     });
   }
 
@@ -170,52 +264,60 @@ export class LeaguesRepository {
    * Remet dans la division DÉCIDÉE la période qui suit, si une séance l'a
    * ouverte avant ce règlement (dans l'ancienne division, faute de mieux).
    *
-   * Seule la PREMIÈRE période ouverte après celle qu'on règle, et seulement
-   * si elle n'est pas réglée elle-même : une période plus lointaine dépend
-   * du règlement de la précédente, qui la réalignera à son tour. Son score
-   * reste acquis ; seule sa division change.
+   * Seule la période QUI SUIT celle qu'on règle — la première ligne après
+   * elle —, et seulement si elle n'est pas réglée elle-même. Réglée, elle a
+   * déjà décidé de la suite, et c'est SA décision que la période d'après
+   * suit : la sauter pour réaligner une période plus lointaine y
+   * appliquerait la décision d'une ligne tardive, plus ancienne. Une
+   * période plus lointaine dépend du règlement de la précédente, qui la
+   * réalignera à son tour. Son score reste acquis ; sa division change, et
+   * avec elle son GROUPE, attribué sous le verrou de la division d'arrivée
+   * comme une ouverture.
    */
   private async realignFollowing(
     tx: Prisma.TransactionClient,
     periodKey: string,
     results: ReadonlyArray<SettlementResult>,
   ): Promise<void> {
-    const suivantes = await tx.leagueMembership.findMany({
-      where: {
-        userId: { in: results.map((r) => r.userId) },
-        periodKey: { gt: periodKey },
-        settledAt: null,
-      },
-      orderBy: { periodKey: 'asc' },
-      select: { userId: true, periodKey: true, division: true },
-    });
-    const premiere = new Map<string, (typeof suivantes)[number]>();
-    for (const suivante of suivantes) {
-      if (!premiere.has(suivante.userId)) {
-        premiere.set(suivante.userId, suivante);
-      }
-    }
-    for (const { userId, nextDivision } of results) {
-      const suivante = premiere.get(userId);
-      if (suivante !== undefined && suivante.division !== nextDivision) {
-        await tx.leagueMembership.update({
-          where: { userId_periodKey: { userId, periodKey: suivante.periodKey } },
-          data: { division: nextDivision },
-        });
-      }
+    const deplacements = await this.misplacedFollowing(tx, periodKey, results);
+    await lockGroups(tx, deplacements);
+    for (const { userId, periodKey: suivante, division } of deplacements) {
+      const cohort = await groupWithRoom(tx, suivante, division);
+      await tx.leagueMembership.update({
+        where: { userId_periodKey: { userId, periodKey: suivante } },
+        data: { division, cohort },
+      });
     }
   }
 
   /**
-   * Aligne la période ENCORE OUVERTE de cette personne sur la division qui
-   * lui revient. Filet des lignes écrites avant [realignFollowing] : une
-   * semaine ouverte trop tôt, dont le règlement précédent est déjà passé,
-   * reste sinon dans la mauvaise division jusqu'à sa fin.
+   * Les périodes qui suivent `periodKey`, non réglées, et qui ne sont pas
+   * dans la division que le règlement vient de décider : où chacune doit
+   * aller. Une suivante DÉJÀ réglée n'est jamais sautée (voir
+   * [realignFollowing]).
    */
-  async alignPeriod(userId: string, periodKey: string, division: LeagueDivision): Promise<void> {
-    await this.prisma.leagueMembership.updateMany({
-      where: { userId, periodKey, settledAt: null, division: { not: division } },
-      data: { division },
+  private async misplacedFollowing(
+    tx: Prisma.TransactionClient,
+    periodKey: string,
+    results: ReadonlyArray<SettlementResult>,
+  ): Promise<Array<{ userId: string; periodKey: string; division: LeagueDivision }>> {
+    if (results.length === 0) {
+      return [];
+    }
+    const suivantes = await tx.leagueMembership.findMany({
+      where: { userId: { in: results.map((r) => r.userId) }, periodKey: { gt: periodKey } },
+      distinct: ['userId'],
+      orderBy: [{ userId: 'asc' }, { periodKey: 'asc' }],
+      select: { userId: true, periodKey: true, division: true, settledAt: true },
+    });
+    const premiere = new Map(suivantes.map((suivante) => [suivante.userId, suivante]));
+    return results.flatMap(({ userId, nextDivision }) => {
+      const suivante = premiere.get(userId);
+      return suivante !== undefined &&
+        suivante.settledAt === null &&
+        suivante.division !== nextDivision
+        ? [{ userId, periodKey: suivante.periodKey, division: nextDivision }]
+        : [];
     });
   }
 }

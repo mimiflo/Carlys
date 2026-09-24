@@ -1352,32 +1352,39 @@ enum LeagueDivision {
 /// étant conditionnée à sa nullité. Barème complet et raisons :
 /// `docs/product/community.md`, « Les ligues, barème complet ».
 model LeagueMembership {
-  userId    String         @db.Uuid
+  userId       String          @db.Uuid
   /// Semaine ISO en UTC, `YYYY-Www` — jamais un instant : une période est
   /// un fait CIVIL, et un instant se décale d'un fuseau à l'autre.
-  periodKey String
-  division  LeagueDivision
+  periodKey    String
+  division     LeagueDivision
+  /// Le GROUPE de (periodKey, division) : on n'est classé qu'avec les
+  /// membres de son groupe (`LEAGUE_GROUP_SIZE`, 20), jamais avec toute la
+  /// division. Attribué à l'ouverture de la période — le premier groupe qui
+  /// a de la place, sinon un nouveau — sous un verrou transactionnel par
+  /// (periodKey, division). Les lignes écrites avant les groupes gardent 0.
+  cohort       Int             @default(0)
   /// Points de la période, jamais l'unité brute d'une métrique : le barème
   /// (`POINTS_PER_METRIC`) convertit avant d'incrémenter, sans quoi les
   /// mètres écraseraient les séances de deux ordres de grandeur.
-  score     Int            @default(0)
+  score        Int             @default(0)
   /// Figé au règlement, nul avant.
-  finalRank Int?
+  finalRank    Int?
   /// La division que le règlement a décidée pour la SUITE — et le seul
   /// endroit où une montée survit. Sans elle, la période suivante rouvrirait
   /// dans `division`, et le classement de la semaine passée n'aurait servi à
   /// rien ; l'écrire ici évite surtout d'ouvrir une ligne par semaine
   /// d'absence juste pour porter l'information.
   nextDivision LeagueDivision?
-  settledAt DateTime?
-  createdAt DateTime       @default(now())
+  settledAt    DateTime?
+  createdAt    DateTime        @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@id([userId, periodKey])
-  /// Sert les deux lectures chaudes : le classement d'une division pour une
-  /// période, et la recherche des périodes non réglées.
-  @@index([periodKey, division, score(sort: Desc)])
+  /// Sert les deux lectures chaudes : le classement d'un GROUPE pour une
+  /// période (et le remplissage des groupes, qui se compte par groupe), et
+  /// la recherche des périodes non réglées.
+  @@index([periodKey, division, cohort, score(sort: Desc)])
   @@index([userId, periodKey(sort: Desc)])
 }
 

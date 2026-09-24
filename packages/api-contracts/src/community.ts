@@ -38,6 +38,29 @@ export const encouragementSchema = z.object({
 });
 export type Encouragement = z.infer<typeof encouragementSchema>;
 
+/**
+ * Longueur maximale d'un encouragement, en POINTS DE CODE
+ * (`codePointLength`), comme le DTO de l'API (`@MaxCodePoints`).
+ */
+export const ENCOURAGEMENT_MESSAGE_MAX_LENGTH = 280;
+
+/**
+ * POST /community/encouragements — encourager un ami ACCEPTÉ (`403` sinon).
+ *
+ * Le mot est compté en points de code, pas en unités UTF-16 : `.max()` y
+ * compterait un émoji pour deux, et refuserait ce que l'API accepte.
+ */
+export const encourageRequestSchema = z.object({
+  recipientUserId: z.string().uuid(),
+  message: z
+    .string()
+    .min(1)
+    .refine((text) => codePointLength(text) <= ENCOURAGEMENT_MESSAGE_MAX_LENGTH, {
+      message: `Ton mot tient en ${ENCOURAGEMENT_MESSAGE_MAX_LENGTH} caractères au plus.`,
+    }),
+});
+export type EncourageRequest = z.infer<typeof encourageRequestSchema>;
+
 export const challengeKindSchema = z.enum(['SPORT', 'CULTURE']);
 export type ChallengeKind = z.infer<typeof challengeKindSchema>;
 
@@ -129,7 +152,10 @@ export type CommunityReportReason = z.infer<typeof communityReportReasonSchema>;
 export const communityReportStatusSchema = z.enum(['OPEN', 'RESOLVED']);
 export type CommunityReportStatus = z.infer<typeof communityReportStatusSchema>;
 
-/** Longueur maximale des précisions d'un signalement. */
+/**
+ * Longueur maximale des précisions d'un signalement, en POINTS DE CODE
+ * (`codePointLength`), comme le DTO de l'API (`@MaxCodePoints`).
+ */
 export const COMMUNITY_REPORT_DETAILS_MAX_LENGTH = 500;
 
 /**
@@ -149,7 +175,13 @@ export const createCommunityReportSchema = z
      */
     friendChallengeId: z.string().uuid().nullable().optional(),
     reason: communityReportReasonSchema,
-    details: z.string().max(COMMUNITY_REPORT_DETAILS_MAX_LENGTH).optional(),
+    // Pas `.max()`, qui compte les unités UTF-16 : voir `codePointLength`.
+    details: z
+      .string()
+      .refine((text) => codePointLength(text) <= COMMUNITY_REPORT_DETAILS_MAX_LENGTH, {
+        message: `Tes précisions tiennent en ${COMMUNITY_REPORT_DETAILS_MAX_LENGTH} caractères au plus.`,
+      })
+      .optional(),
   })
   // `null` et absent disent la même chose : pas de cible de ce type.
   .refine(
@@ -231,6 +263,12 @@ export const FRIEND_CHALLENGE_MAX_OPEN_PER_CREATOR = 5;
  */
 export const FRIEND_CHALLENGE_MESSAGE_MAX_LENGTH = 280;
 
+/**
+ * Longueur maximale du titre d'un défi entre amis, APRÈS découpage des blancs
+ * autour, en POINTS DE CODE (`codePointLength`) comme le mot du créateur.
+ */
+export const FRIEND_CHALLENGE_TITLE_MAX_LENGTH = 80;
+
 export const friendChallengeStatusSchema = z.enum(['OPEN', 'CLOSED', 'CANCELLED']);
 export type FriendChallengeStatus = z.infer<typeof friendChallengeStatusSchema>;
 
@@ -297,7 +335,13 @@ export type FriendChallenge = z.infer<typeof friendChallengeSchema>;
  */
 export const createFriendChallengeRequestSchema = z.object({
   id: z.string().uuid(),
-  title: z.string().trim().min(1).max(80),
+  title: z
+    .string()
+    .trim()
+    .min(1)
+    .refine((text) => codePointLength(text) <= FRIEND_CHALLENGE_TITLE_MAX_LENGTH, {
+      message: `Ton titre tient en ${FRIEND_CHALLENGE_TITLE_MAX_LENGTH} caractères au plus.`,
+    }),
   metric: challengeMetricSchema,
   target: z.number().int().positive().max(10_000_000).nullable().optional(),
   durationDays: z.union([z.literal(3), z.literal(7), z.literal(30)]),
@@ -330,13 +374,22 @@ export type CreateFriendChallengeRequest = z.infer<typeof createFriendChallengeR
 export const leagueDivisionSchema = z.enum(['BRONZE', 'ARGENT', 'OR', 'PLATINE', 'DIAMANT']);
 export type LeagueDivision = z.infer<typeof leagueDivisionSchema>;
 
-/** Une ligne du classement de division. */
+/**
+ * Une ligne du classement de MON GROUPE : les membres de ma division rangés
+ * avec moi pour la période, 20 au plus (`LEAGUE_GROUP_SIZE` côté serveur),
+ * jamais la division entière. Une personne qu'un blocage sépare de moi, dans
+ * un sens ou dans l'autre, n'y figure pas.
+ */
 export const leagueStandingSchema = z.object({
   userId: z.string(),
   displayName: z.string(),
   /** Points de la période, jamais l'unité brute d'une métrique. */
   score: z.number(),
-  /** Rang courant, FIGÉ dès que la période est réglée. */
+  /**
+   * Rang courant dans le groupe ENTIER, FIGÉ dès que la période est réglée.
+   * Une personne tue (blocage) garde son rang : la numérotation peut donc
+   * sauter (1, 3, 4…), et c'est voulu — on ne décale personne.
+   */
   rank: z.number(),
   isMe: z.boolean(),
 });
@@ -356,8 +409,8 @@ export const leaguePromotionSchema = z.object({
   /** En dessous de ce nombre de joueurs à score non nul, personne ne bouge. */
   minPlayers: z.number(),
   /**
-   * Membres de ma division dont le score de la période est non nul, moi
-   * compris. Face à `minPlayers`, il dit si la semaine COMPTERA — ce que
+   * Membres de mon groupe dont le score de la période est non nul, moi
+   * compris (personnes tues comprises : la zone se lit sur tout le groupe). Face à `minPlayers`, il dit si la semaine COMPTERA — ce que
    * `inZone` ne dit volontairement pas.
    */
   activePlayers: z.number(),
@@ -411,9 +464,13 @@ export const leagueSchema = z.object({
   score: z.number(),
   standings: z.array(leagueStandingSchema),
   /**
-   * Le résultat de la période PRÉCÉDENTE, s'il vient d'être réglé et qu'on
-   * y figurait : c'est ce qui permet d'annoncer une montée ou une descente
-   * une fois, au lieu d'un changement de division sans explication.
+   * Le résultat de la semaine PASSÉE (la semaine ISO qui précède
+   * immédiatement `periodKey`), si elle est réglée et que j'y figurais : ce
+   * qui permet d'annoncer une montée ou une descente au lieu d'un changement
+   * de division sans explication. Servi à CHAQUE membre du groupe, quel que
+   * soit le lecteur qui a réglé la semaine, et pendant toute la semaine en
+   * cours ; `null` si je n'ai pas joué la semaine passée (même si une
+   * semaine plus ancienne vient d'être réglée).
    */
   lastResult: z
     .object({

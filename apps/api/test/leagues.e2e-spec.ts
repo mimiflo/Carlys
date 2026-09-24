@@ -9,11 +9,32 @@ import { type INestApplication } from '@nestjs/common';
 import { type NestExpressApplication } from '@nestjs/platform-express';
 import { Test } from '@nestjs/testing';
 import { PrismaClient } from '@prisma/client';
-import { randomUUID } from 'node:crypto';
+import { randomInt, randomUUID } from 'node:crypto';
 import request from 'supertest';
 import { type App } from 'supertest/types';
 import { AppModule } from '../src/app/app.module';
 import { configureApp } from '../src/app/configure-app';
+import { LeaguesService } from '../src/modules/community/application/leagues.service';
+import {
+  periodKeyOf,
+  periodWindow,
+  previousPeriodKey,
+  settleDivision,
+} from '../src/modules/community/domain/league-ladder';
+import { LeaguesRepository } from '../src/modules/community/infrastructure/leagues.repository';
+
+/**
+ * La semaine qui précède celle d'aujourd'hui : c'est la seule dont le
+ * résultat est annoncé (`lastResult`).
+ */
+const semainePassee = () => previousPeriodKey(periodKeyOf(new Date()));
+
+/**
+ * Un groupe à part pour chaque épreuve qui pose ses propres lignes : le
+ * classement et le règlement se font PAR GROUPE, donc des lignes laissées par
+ * une autre suite dans la même semaine ne s'y mêlent jamais.
+ */
+const groupeAPart = () => randomInt(10_000, 2_000_000_000);
 
 /**
  * LES LIGUES : un classement hebdomadaire, CHOISI, qui ne rend rien au profil.
@@ -143,9 +164,15 @@ describe('Ligues (e2e)', () => {
   it('une période échue se règle À LA LECTURE, et la montée survit', async () => {
     // La semaine passée, seule au classement : moins de dix joueurs, donc
     // personne ne bouge — un classement à une personne ne décide de rien.
-    const semaineEchue = '2026-W01';
+    const semaineEchue = semainePassee();
     await prisma.leagueMembership.create({
-      data: { userId, periodKey: semaineEchue, division: 'ARGENT', score: 320 },
+      data: {
+        userId,
+        periodKey: semaineEchue,
+        division: 'ARGENT',
+        cohort: groupeAPart(),
+        score: 320,
+      },
     });
 
     const vue = await ligue();
@@ -163,9 +190,61 @@ describe('Ligues (e2e)', () => {
       to: 'ARGENT',
     });
 
-    // Relire ne règle pas deux fois : l'écriture est conditionnée à
-    // `settledAt: null`, et le résultat n'est annoncé qu'une fois.
-    expect((await ligue()).lastResult).toBeNull();
+    // Relire ne règle pas deux fois (l'écriture est conditionnée à
+    // `settledAt: null`), mais le résultat reste servi : la phrase dit « la
+    // semaine passée », elle est vraie toute la semaine.
+    expect((await ligue()).lastResult).toEqual(vue.lastResult);
+    const relue = await prisma.leagueMembership.findUniqueOrThrow({
+      where: { userId_periodKey: { userId, periodKey: semaineEchue } },
+    });
+    expect(relue.settledAt).toEqual(reglee.settledAt);
+  });
+
+  it('une semaine plus ancienne se règle aussi, mais n’est PAS annoncée', async () => {
+    // Six semaines d'absence : la dernière semaine jouée n'est pas « la
+    // semaine passée ». Elle se règle (rien ne reste en suspens), sans
+    // qu'aucune phrase ne l'annonce.
+    const prefixe = `e2e-league-ancienne-${randomUUID()}`;
+    const revenante = data<AuthResult>(
+      (
+        await server()
+          .post('/api/v1/auth/register')
+          .send({
+            email: `${prefixe}@carlys.test`,
+            password: 'MotDePasseSolide42',
+            displayName: 'Revenante',
+          })
+          .expect(201)
+      ).body,
+    );
+    try {
+      const ancienne = periodKeyOf(new Date(Date.now() - 6 * 7 * 86_400_000));
+      await prisma.communityPreference.create({
+        data: { userId: revenante.user.id, joinsLeague: true },
+      });
+      await prisma.leagueMembership.create({
+        data: {
+          userId: revenante.user.id,
+          periodKey: ancienne,
+          division: 'OR',
+          cohort: groupeAPart(),
+          score: 200,
+        },
+      });
+
+      const vue = data<League>(
+        (await as(revenante.tokens.accessToken).get('/api/v1/community/league').expect(200)).body,
+      );
+
+      expect(vue.lastResult).toBeNull();
+      expect(vue.division).toBe('OR');
+      const reglee = await prisma.leagueMembership.findUniqueOrThrow({
+        where: { userId_periodKey: { userId: revenante.user.id, periodKey: ancienne } },
+      });
+      expect(reglee.settledAt).not.toBeNull();
+    } finally {
+      await prisma.user.deleteMany({ where: { email: { startsWith: prefixe } } });
+    }
   });
 
   it('un effort arrivé APRÈS le règlement ne fait plus bouger le classement', async () => {
@@ -196,7 +275,8 @@ describe('Ligues (e2e)', () => {
       // pas de division suivante), puis le règlement décidait la montée…
       // qu'aucune ligne n'appliquait plus.
       const prefixe = `e2e-league-montee-${randomUUID()}`;
-      const semainePassee = '2026-W02';
+      const precedente = semainePassee();
+      const groupe = groupeAPart();
       const moi = data<AuthResult>(
         (
           await server()
@@ -229,11 +309,18 @@ describe('Ligues (e2e)', () => {
         );
         await prisma.leagueMembership.createMany({
           data: [
-            { userId: moi.user.id, periodKey: semainePassee, division: 'OR', score: 900 },
+            {
+              userId: moi.user.id,
+              periodKey: precedente,
+              division: 'OR',
+              cohort: groupe,
+              score: 900,
+            },
             ...autres.map((autre, index) => ({
               userId: autre.id,
-              periodKey: semainePassee,
+              periodKey: precedente,
               division: 'OR' as const,
+              cohort: groupe,
               score: 100 + index,
             })),
           ],
@@ -256,7 +343,7 @@ describe('Ligues (e2e)', () => {
         );
 
         expect(vue.lastResult).toEqual({
-          periodKey: semainePassee,
+          periodKey: precedente,
           rank: 1,
           from: 'OR',
           to: 'PLATINE',
@@ -280,7 +367,8 @@ describe('Ligues (e2e)', () => {
     // déjà ouverte (dans l'ancienne division) doit suivre la décision sans
     // attendre que je relise la mienne.
     const prefixe = `e2e-league-realign-${randomUUID()}`;
-    const semainePassee = '2026-W03';
+    const precedente = semainePassee();
+    const groupe = groupeAPart();
     const inscrire = async (nom: string) =>
       data<AuthResult>(
         (
@@ -312,12 +400,25 @@ describe('Ligues (e2e)', () => {
       });
       await prisma.leagueMembership.createMany({
         data: [
-          { userId: moi.user.id, periodKey: semainePassee, division: 'ARGENT', score: 900 },
-          { userId: temoin.user.id, periodKey: semainePassee, division: 'ARGENT', score: 50 },
+          {
+            userId: moi.user.id,
+            periodKey: precedente,
+            division: 'ARGENT',
+            cohort: groupe,
+            score: 900,
+          },
+          {
+            userId: temoin.user.id,
+            periodKey: precedente,
+            division: 'ARGENT',
+            cohort: groupe,
+            score: 50,
+          },
           ...autres.map((autre, index) => ({
             userId: autre.id,
-            periodKey: semainePassee,
+            periodKey: precedente,
             division: 'ARGENT' as const,
+            cohort: groupe,
             score: 100 + index,
           })),
         ],
@@ -343,6 +444,209 @@ describe('Ligues (e2e)', () => {
       });
       expect(maSemaine.division).toBe('OR');
       expect(maSemaine.score).toBeGreaterThan(0);
+
+      // Le témoin, dernier des joueurs, lit SON résultat : il descend.
+      expect(vueTemoin.lastResult).toEqual({
+        periodKey: precedente,
+        rank: 12,
+        from: 'ARGENT',
+        to: 'BRONZE',
+      });
+      // Et moi, qui n'ai rien réglé du tout, je lis ENSUITE le mien : le
+      // règlement d'un autre ne me prive plus de « te voilà en Or ».
+      const maVue = data<League>(
+        (await as(moi.tokens.accessToken).get('/api/v1/community/league').expect(200)).body,
+      );
+      expect(maVue.lastResult).toEqual({
+        periodKey: precedente,
+        rank: 1,
+        from: 'ARGENT',
+        to: 'OR',
+      });
+      expect(maVue.division).toBe('OR');
+    } finally {
+      await prisma.user.deleteMany({ where: { email: { startsWith: prefixe } } });
+    }
+  });
+
+  it(
+    'deux semaines échues : la montée de l’avant-dernière déplace la dernière, et UNE ' +
+      'lecture règle et annonce la dernière',
+    async () => {
+      // Personne n'a relu la ligue pendant la semaine passée, ouverte trop
+      // tôt (par une séance) dans l'ancienne division. Régler l'avant-dernière
+      // fait monter et réaligne la semaine passée : autre division, autre
+      // groupe. La lecture réglait ensuite la semaine passée avec la ligne lue
+      // AVANT ce réalignement — l'ancien groupe, sans moi : ma semaine passée
+      // restait en suspens, et aucun résultat n'était annoncé.
+      const prefixe = `e2e-league-deux-${randomUUID()}`;
+      const passee = semainePassee();
+      const avantDerniere = previousPeriodKey(passee);
+      const groupe = groupeAPart();
+      const moi = data<AuthResult>(
+        (
+          await server()
+            .post('/api/v1/auth/register')
+            .send({
+              email: `${prefixe}-moi@carlys.test`,
+              password: 'MotDePasseSolide42',
+              displayName: 'Grimpeuse',
+            })
+            .expect(201)
+        ).body,
+      );
+      try {
+        await prisma.communityPreference.create({
+          data: { userId: moi.user.id, joinsLeague: true },
+        });
+        const autres = await Promise.all(
+          Array.from({ length: 11 }, (_, index) =>
+            prisma.user.create({
+              data: {
+                email: `${prefixe}-${index}@carlys.test`,
+                friendCode: `D${randomUUID().slice(0, 7)}`.toUpperCase(),
+              },
+            }),
+          ),
+        );
+        await prisma.leagueMembership.createMany({
+          data: [
+            {
+              userId: moi.user.id,
+              periodKey: avantDerniere,
+              division: 'ARGENT',
+              cohort: groupe,
+              score: 900,
+            },
+            ...autres.map((autre, index) => ({
+              userId: autre.id,
+              periodKey: avantDerniere,
+              division: 'ARGENT' as const,
+              cohort: groupe,
+              score: 100 + index,
+            })),
+            // Ouverte trop tôt, dans l'ancienne division.
+            {
+              userId: moi.user.id,
+              periodKey: passee,
+              division: 'ARGENT',
+              cohort: groupeAPart(),
+              score: 50,
+            },
+          ],
+        });
+
+        const vue = data<League>(
+          (await as(moi.tokens.accessToken).get('/api/v1/community/league').expect(200)).body,
+        );
+
+        const montee = await prisma.leagueMembership.findUniqueOrThrow({
+          where: { userId_periodKey: { userId: moi.user.id, periodKey: avantDerniere } },
+        });
+        expect(montee.nextDivision).toBe('OR');
+        // La semaine passée a suivi la montée, ET elle est réglée par cette
+        // seule lecture : son résultat est annoncé tout de suite.
+        const derniere = await prisma.leagueMembership.findUniqueOrThrow({
+          where: { userId_periodKey: { userId: moi.user.id, periodKey: passee } },
+        });
+        expect(derniere.division).toBe('OR');
+        expect(derniere.settledAt).not.toBeNull();
+        expect(vue.lastResult).toEqual({
+          periodKey: passee,
+          rank: derniere.finalRank,
+          from: 'OR',
+          to: derniere.nextDivision,
+        });
+        // Et la semaine en cours s'ouvre dans la division RÉGLÉE.
+        expect(vue.division).toBe(derniere.nextDivision);
+      } finally {
+        await prisma.user.deleteMany({ where: { email: { startsWith: prefixe } } });
+      }
+    },
+  );
+
+  it('une ligne TARDIVE dans une semaine réglée ne réécrit rien des autres', async () => {
+    // Une séance synchronisée après coup ouvre la semaine close d'un nouveau
+    // membre, dans un groupe DÉJÀ réglé. La régler ne doit toucher qu'elle :
+    // le règlement réécrivait les rangs et les divisions suivantes du groupe
+    // entier, et annulait après coup une montée déjà annoncée.
+    const prefixe = `e2e-league-tardive-${randomUUID()}`;
+    // Une semaine lointaine où aucune autre suite n'écrit : la ligne tardive
+    // y entre dans le groupe 0, le premier qui a de la place.
+    const semaine = '2001-W10';
+    const autres = await Promise.all(
+      Array.from({ length: 12 }, (_, index) =>
+        prisma.user.create({
+          data: {
+            email: `${prefixe}-${index}@carlys.test`,
+            friendCode: `T${randomUUID().slice(0, 7)}`.toUpperCase(),
+          },
+        }),
+      ),
+    );
+    const tardive = data<AuthResult>(
+      (
+        await server()
+          .post('/api/v1/auth/register')
+          .send({
+            email: `${prefixe}-tardive@carlys.test`,
+            password: 'MotDePasseSolide42',
+            displayName: 'Tardive',
+          })
+          .expect(201)
+      ).body,
+    );
+    try {
+      await prisma.leagueMembership.createMany({
+        data: autres.map((autre, index) => ({
+          userId: autre.id,
+          periodKey: semaine,
+          division: 'BRONZE' as const,
+          score: 300 - 20 * index,
+        })),
+      });
+      const repository = app.get(LeaguesRepository);
+      await repository.settle(
+        semaine,
+        settleDivision('BRONZE', await repository.standings(semaine, 'BRONZE', 0)),
+      );
+      const annonces = await prisma.leagueMembership.findMany({
+        where: { periodKey: semaine, userId: { in: autres.map((autre) => autre.id) } },
+        select: { userId: true, finalRank: true, nextDivision: true, settledAt: true },
+        orderBy: { userId: 'asc' },
+      });
+      // Le cinquième, à 220 points, monte : c'est ce qui est annoncé.
+      expect(annonces.filter((ligne) => ligne.nextDivision === 'ARGENT')).toHaveLength(5);
+
+      // 5 séances, 250 points : la tardive passerait QUATRIÈME du groupe, et
+      // le cinquième annoncé (220) serait sixième, donc plus promu.
+      await prisma.communityPreference.create({
+        data: { userId: tardive.user.id, joinsLeague: true },
+      });
+      await app
+        .get(LeaguesService)
+        .contribute(
+          tardive.user.id,
+          'WORKOUTS',
+          5,
+          new Date(periodWindow(semaine).startsAt.getTime() + 86_400_000),
+        );
+      await as(tardive.tokens.accessToken).get('/api/v1/community/league').expect(200);
+
+      // Les résultats déjà annoncés n'ont pas bougé d'un cran.
+      expect(
+        await prisma.leagueMembership.findMany({
+          where: { periodKey: semaine, userId: { in: autres.map((autre) => autre.id) } },
+          select: { userId: true, finalRank: true, nextDivision: true, settledAt: true },
+          orderBy: { userId: 'asc' },
+        }),
+      ).toEqual(annonces);
+      // La tardive, elle, est réglée sur le groupe tel qu'il est.
+      expect(
+        await prisma.leagueMembership.findUniqueOrThrow({
+          where: { userId_periodKey: { userId: tardive.user.id, periodKey: semaine } },
+        }),
+      ).toMatchObject({ cohort: 0, score: 250, finalRank: 4, nextDivision: 'ARGENT' });
     } finally {
       await prisma.user.deleteMany({ where: { email: { startsWith: prefixe } } });
     }

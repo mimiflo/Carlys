@@ -500,6 +500,8 @@ describe('CommunityService — notifications push', () => {
       {
         title: 'Nouvelle demande d’ami',
         body: 'Alice souhaite devenir ton ami.',
+        // Le toucher ouvre l'onglet Amis, où la demande attend.
+        data: { destination: 'community-friends' },
       },
       'FRIEND_REQUESTS',
     );
@@ -525,6 +527,7 @@ describe('CommunityService — notifications push', () => {
       {
         title: 'Demande acceptée',
         body: 'Alice a accepté ta demande d’ami.',
+        data: { destination: 'community-friends' },
       },
       'FRIEND_REQUESTS',
     );
@@ -548,6 +551,7 @@ describe('CommunityService — notifications push', () => {
       {
         title: 'Encouragement de Alice',
         body: 'Bravo pour ta série !',
+        data: { destination: 'community-friends' },
       },
       'ENCOURAGEMENTS',
     );

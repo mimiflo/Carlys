@@ -74,6 +74,32 @@ export function presentFriendChallenge(
 }
 
 /**
+ * Vrai si ce défi est MASQUÉ à `userId` par un blocage : un blocage le sépare
+ * du créateur, dans un sens ou dans l'autre, et `userId` n'est pas au
+ * classement — invitation en attente (`INVITED`) ou refusée (`DECLINED`),
+ * défi quitté (`LEFT`).
+ *
+ * Un tel défi DISPARAÎT : absent de la liste, introuvable au détail, à
+ * l'acceptation et au refus (principe 6, une personne bloquée est absente
+ * des listes). Sans cette règle, accepter le défi de quelqu'un qu'on a
+ * bloqué restait possible — y compris en le RÉACCEPTANT après un refus ou un
+ * départ —, et un créateur bloqué gardait un canal vers l'écran de l'autre.
+ * Un défi où `userId` est au classement (`ACCEPTED`), lui, reste lisible :
+ * son classement est un résultat partagé, et le mot du créateur y est
+ * masqué (voir [presentFriendChallenge]).
+ */
+export function isHiddenByBlock(
+  challenge: FriendChallengeWithMembers,
+  userId: string,
+  blockedEitherWay: ReadonlySet<string>,
+): boolean {
+  const moi = challenge.members.find((member) => member.userId === userId);
+  return (
+    moi !== undefined && moi.status !== 'ACCEPTED' && blockedEitherWay.has(challenge.creatorId)
+  );
+}
+
+/**
  * Les rangs à FIGER pour un défi qui vient d'échoir.
  *
  * Même calcul que l'affichage vivant, ce qui est le but : le classement
