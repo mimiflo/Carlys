@@ -53,6 +53,15 @@ const _environment = AppEnvironment(
   apiBaseUrl: 'http://localhost:3000',
 );
 
+/// Rapport de contraste WCAG entre deux couleurs opaques.
+double _contrast(Color a, Color b) {
+  final first = a.computeLuminance();
+  final second = b.computeLuminance();
+  final light = first > second ? first : second;
+  final dark = first > second ? second : first;
+  return (light + 0.05) / (dark + 0.05);
+}
+
 void main() {
   group('préférences', () {
     test('une catégorie jamais réglée est ACCEPTÉE, sans écriture', () async {
@@ -132,6 +141,27 @@ void main() {
 
       expect(find.text('Encouragement de Léa'), findsOneWidget);
       expect(find.text('Ta série tient bon.'), findsOneWidget);
+
+      // Et se LIT : le bandeau est en surface inverse (claire sur l'appli
+      // sombre). Peint en texte clair du thème sombre, le titre disparaissait.
+      final banner = tester
+          .widget<Material>(
+            find
+                .descendant(
+                  of: find.byType(SnackBar),
+                  matching: find.byType(Material),
+                )
+                .first,
+          )
+          .color!;
+      for (final text in ['Encouragement de Léa', 'Ta série tient bon.']) {
+        final ink = tester.widget<Text>(find.text(text)).style!.color!;
+        expect(
+          _contrast(ink, banner),
+          greaterThanOrEqualTo(4.5),
+          reason: '« $text » sur le fond du bandeau',
+        );
+      }
     });
 
     testWidgets('deux d’affilée n’empilent pas deux bandeaux', (tester) async {

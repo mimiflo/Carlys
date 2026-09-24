@@ -43,6 +43,9 @@ import 'package:carlys_mobile/features/exercises/presentation/widgets/exercise_c
 import 'package:carlys_mobile/features/exercises/presentation/widgets/muscle_group_card.dart';
 import 'package:carlys_mobile/features/exercises/presentation/widgets/muscle_group_grid.dart';
 import 'package:carlys_mobile/features/notifications/data/repositories/device_token_repository_impl.dart';
+import 'package:carlys_mobile/features/notifications/data/services/firebase_push_messenger.dart';
+import 'package:carlys_mobile/features/notifications/domain/entities/push_destination.dart';
+import 'package:carlys_mobile/features/notifications/domain/services/push_messenger.dart';
 import 'package:carlys_mobile/features/nutrition/data/repositories/nutrition_repository_impl.dart';
 import 'package:carlys_mobile/features/nutrition/domain/entities/nutrition.dart';
 import 'package:carlys_mobile/features/nutrition/presentation/controllers/water_controllers.dart';
@@ -94,6 +97,7 @@ import '../../test/support/fake_coach_repository.dart';
 import '../../test/support/fake_exercises_repository.dart';
 import '../../test/support/fake_nutrition_repository.dart';
 import '../../test/support/fake_progress_repository.dart';
+import '../../test/support/fake_push_messenger.dart';
 import '../../test/support/fake_subscription_repository.dart';
 import '../../test/support/fake_water_store.dart';
 import '../../test/support/fake_workout_repository.dart';
@@ -664,6 +668,9 @@ void main() {
 
     /// Arrête le temps PENDANT l'écran de démarrage, pour le photographier.
     bool holdOnSplash = false,
+
+    /// Le messager des notifications, quand la scène en reçoit une.
+    PushMessenger? messenger,
   }) async {
     tester.view.physicalSize = const Size(1179, 2556);
     tester.view.devicePixelRatio = 3.0;
@@ -736,6 +743,8 @@ void main() {
           ]),
           syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
           appRestoreProvider.overrideWithValue(NoopAppRestore()),
+          if (messenger != null)
+            pushMessengerProvider.overrideWithValue(messenger),
           // Base EN MÉMOIRE : sans cet écrasement, le harnais ouvrait la vraie
           // base de l'appareil — donc `path_provider`, absent des tests. Rien
           // n'échouait bruyamment, l'ouverture restait simplement en attente.
@@ -1333,6 +1342,32 @@ void main() {
     await tester.tap(find.text('Les pectoraux, un éventail'));
     await settle(tester);
     await capture(tester, '36-academy-anatomie', shows: find.text('À RETENIR'));
+  });
+
+  testWidgets('Notification reçue application ouverte', (tester) async {
+    // Une invitation arrive pendant qu'on est sur l'accueil : le bandeau la
+    // montre, et « Voir » mène au défi, comme la toucher dans la barrette.
+    final messenger = FakePushMessenger(token: null);
+    addTearDown(messenger.close);
+    await pumpApp(tester, messenger: messenger);
+    messenger.notices.add(
+      const PushNotice(
+        title: 'Nouveau défi',
+        body: 'Léa te défie : Cinq séances cette semaine',
+        destination: FriendChallengeDestination('exemple-defi-ami-seances'),
+      ),
+    );
+    await settle(tester);
+    await capture(tester, '35d-notification-recue', shows: find.text('Voir'));
+
+    await tester.tap(find.text('Voir'));
+    await settle(tester);
+    expect(find.byType(FriendChallengeScreen), findsOneWidget);
+    // Le bandeau a une minuterie : elle ne doit pas survivre à la scène.
+    ScaffoldMessenger.of(
+      tester.element(find.byType(FriendChallengeScreen)),
+    ).removeCurrentSnackBar();
+    await settle(tester);
   });
 
   testWidgets('Communauté — défis, ligue, amis', (tester) async {

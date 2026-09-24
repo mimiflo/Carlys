@@ -83,6 +83,10 @@ class _PushForegroundHostState extends ConsumerState<PushForegroundHost> {
     final messenger = ScaffoldMessenger.maybeOf(context);
     if (messenger == null) return;
     final destination = notice.destination;
+    // Le bandeau se peint en surface INVERSE (claire sur l'appli sombre) :
+    // ses textes prennent la couleur qui va avec. Peints en texte clair du
+    // thème sombre, le titre disparaissait sur le fond clair.
+    final onBanner = Theme.of(context).colorScheme.onInverseSurface;
 
     // Une seule à la fois : deux encouragements reçus coup sur coup
     // empileraient deux bandeaux devant le contenu.
@@ -97,7 +101,7 @@ class _PushForegroundHostState extends ConsumerState<PushForegroundHost> {
               Text(
                 notice.title,
                 style: AppTypography.label.copyWith(
-                  color: AppColors.darkTextPrimary,
+                  color: onBanner,
                   fontWeight: FontWeight.w600,
                 ),
               ),
@@ -105,9 +109,7 @@ class _PushForegroundHostState extends ConsumerState<PushForegroundHost> {
                 const SizedBox(height: AppSpacing.xxs),
                 Text(
                   notice.body,
-                  style: AppTypography.label.copyWith(
-                    color: AppColors.darkTextSecondary,
-                  ),
+                  style: AppTypography.label.copyWith(color: onBanner),
                 ),
               ],
             ],
