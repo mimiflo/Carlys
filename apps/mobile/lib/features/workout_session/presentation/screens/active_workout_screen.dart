@@ -15,8 +15,7 @@ class ActiveWorkoutScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final workout = ref.watch(activeWorkoutProvider);
 
-    return Scaffold(
-      backgroundColor: AppColors.darkBackground,
+    return AppDarkScaffold(
       body: Stack(
         children: [
           const _PrimaryHalo(),

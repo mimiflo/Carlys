@@ -305,7 +305,10 @@ Trois particularités qui ne valent **que là** :
   `packages/design-tokens/src/tokens.json` sous `color.brand.signature*`. Il
   est réservé aux surfaces de marque — il ne remplace jamais `primary`/`accent`
   dans l'application — et, sur la page, il ne peint que **deux** choses : le
-  bouton et une barre du motif de progression ;
+  bouton et une barre du motif de progression. Le bouton porte un texte : il
+  prend donc, depuis le 24 septembre 2026, la variante `signatureInk`
+  (magenta et orange assombris pour que le blanc tienne AA — voir « Contraste
+  AA de tout texte clair ») ; la barre du motif garde la signature d'origine ;
 - un bouton dédié, `AppBrandButton`, qui porte ce dégradé. Ailleurs, l'action
   principale reste `AppButton` en accent — deux boutons « principaux » de
   couleurs différentes dans un même écran annuleraient la hiérarchie ;
@@ -422,11 +425,20 @@ Deux ajouts aux tokens pour cette maquette, gardés par
   officielles du « G » de Google, dessiné par `GoogleGlyph` aux angles du
   logotype — des constantes de charte TIERCE, qui ne peignent rien d'autre
   dans l'application ;
-- **`color.brand.ctaStart/ctaEnd`** (`#A355FC → #7029D2`), le dégradé du
-  bouton des écrans d'entrée, relevé AU PIXEL sur la maquette (bornes gauche
-  et droite du bouton). C'est le violet demandé par le produit pour
-  « Se connecter » et « Créer mon compte » ; la page de bienvenue garde,
-  elle, le dégradé de signature — `AppBrandButton` prend le dégradé en
+- **`color.brand.ctaStart/ctaEnd`** (`#9943FC → #7029D2`), le dégradé du
+  bouton des écrans d'entrée. Les deux bornes ont été relevées AU PIXEL sur
+  la maquette (bornes gauche et droite du bouton), mais **`ctaStart` ne vaut
+  plus la valeur relevée** (`#A355FC`) : sous un libellé blanc, elle ne
+  tenait que 3,99:1, sous le seuil AA de 4,5. Arbitrage du propriétaire, le
+  24 septembre 2026 : elle a été assombrie à teinte et saturation identiques
+  (HSL 268°, 96,5 %, luminosité 66,1 → 62,4 %), et tient 4,60 ; le dégradé
+  ne fait que s'assombrir jusqu'à `ctaEnd` (7,15). À l'œil, le départ du
+  bouton est un cran plus dense que la maquette. C'est le violet demandé par
+  le produit pour « Se connecter » et « Créer mon compte », devenu celui de
+  toute surface qui porte un libellé blanc (bouton principal, onglet choisi,
+  avatar, médaillon des popups, bandeaux du Mentor) ; la page de bienvenue
+  garde, elle, le dégradé de signature — dans sa variante sous un texte,
+  `signatureInk` (voir plus bas) — : `AppBrandButton` prend le dégradé en
   paramètre plutôt que d'en imposer un ;
 - **`color.brand.fieldIcon`** (`#FF9ECF`), le rose clair des icônes de
   préfixe des champs de ces écrans (enveloppe, cadenas, personne) — demandé
@@ -499,9 +511,10 @@ annonçait une notification reçue application ouverte (capture
   bouton `destructive` (`AppColors.dangerStrong`). Blanc sur `danger` ne tenait que
   3,76:1, sous l'AA d'un libellé de 15 points : chaque « Supprimer »,
   « Retirer », « Quitter » des popups l'était. `dangerStrong` en tient 4,83 ;
-  `danger` reste le rouge des textes et des icônes d'erreur. Aucun des deux
-  n'est recopié dans le CSS de l'admin, qui ne reprend (à la main, gardé par
-  `globals-tokens.test.ts`) que les couleurs qu'il peint.
+  `danger` reste le rouge des textes et des icônes d'erreur. L'admin, qui ne
+  reprend (à la main, gardé par `globals-tokens.test.ts`) que les couleurs
+  qu'il peint, recopie `dangerStrong` depuis le 24 septembre 2026 : ses
+  boutons de suppression avaient le même défaut (voir la section suivante).
 - **Mesuré** (`app_popup_test.dart`) : titre, message et bouton de
   renonciation tiennent AA sur la surface de la carte ET au plus fort de son
   halo (`primaryBadgeBg` sur `darkSurface`), dans les deux thèmes — la carte
@@ -519,6 +532,194 @@ Le détail des portes (`AppNotices`, `showAppConfirm`, `showAppPrompt`,
 ouverte hors du design system, qu'elle passe par une fonction
 (`showDialog`, `showCupertinoModalPopup`…) ou par une route poussée à la main
 (`DialogRoute`, `RawDialogRoute`, `CupertinoDialogRoute`…).
+
+## Contraste AA de tout texte clair sur un fond coloré (24 septembre 2026)
+
+Demande du propriétaire : tout texte clair posé sur un fond coloré de
+l'application tient l'AA de WCAG 2.2 — 4,5:1 pour un texte de taille normale,
+3:1 pour une icône. Un audit, mesuré au pixel sur les captures puis revérifié,
+a confirmé une trentaine de paires sous le seuil. Toutes les corrections
+passent par les jetons ; les ratios sont avant → après, au pire point.
+
+**Mobile.**
+
+- **`ctaStart` assombri**, `#A355FC → #9943FC` (voir « Les écrans
+  d'entrée ») : 3,99 → 4,60. Il suffit à lui seul pour les boutons
+  principaux dont le libellé s'approche du bord clair : « Participer »
+  (4,31 → 4,88), les boutons des états vides (4,26–4,39 → 4,84–4,94),
+  « Créer mon compte » à l'échelle de texte iOS xxLarge (4,45 → ≥ 4,60).
+- **La signature ne porte plus de texte.** Sur `signature`, AUCUN libellé ne
+  tient d'un bord à l'autre : blanc 4,36 sur le magenta et 2,59 sur l'orange,
+  texte sombre 3,20 sur le violet de départ. Aucune couleur de libellé ne
+  pouvait donc sauver le bouton de bienvenue ni les bandeaux de
+  célébration, et les repeindre en violet leur aurait retiré l'identité que
+  la règle 9 de `CLAUDE.md` leur réserve. D'où une variante,
+  **`gradient.signatureInk`** (`#7B1FFF → #C123DE → #D73D00`, mêmes arrêts
+  `[0, .45, .9]`), assombrie par la méthode de `ctaStart` — teinte et
+  saturation identiques — : blanc ≥ 4,60 sur chaque arrêt, donc sur toute
+  la course. Elle devient le défaut d'`AppBrandButton` (« COMMENCER MON
+  PARCOURS » : 2,70 → 4,60) et le fond des bandeaux « Nouveau titre »
+  (explication 2,25 → 4,60, icône 2,59 → 4,61) et « Domaine bouclé » (croix
+  2,59 → 4,61). La signature d'origine reste au logo, au motif et au fil de
+  chargement, qui ne portent aucun texte. L'orange de fin du bouton de
+  bienvenue est plus brûlé : **à valider sur capture** par le propriétaire.
+- **Blanc PLEIN sur tout dégradé coloré.** Les surtitres et sous-titres à
+  80–85 % d'opacité (Mentor, « Visite terminée », « Préparer mon
+  programme », bandeaux de célébration) tombaient entre 2,25 et 3,45 ; en
+  blanc plein, ≥ 4,60. La hiérarchie tient par la taille et la graisse.
+- **Pastille de l'objectif** (« Préparer mon programme ») : son voile blanc à
+  16 % éclaircissait le fond sous le libellé (3,38) ; elle prend l'aplat
+  `ctaEnd` (7,15).
+- **Voiles d'état SOMBRES.** `FilledButton.styleFrom` dérive son voile de
+  survol, de focus et d'appui de la couleur du libellé : blanc, il
+  éclaircissait le fond sous un texte blanc. `AppButton` principal et
+  destructif prennent `overlayColor: darkBackground` (focus, avant : 3,46
+  sur l'ancien départ du dégradé, 4,32 sur le rouge) ; `AppBrandButton` pose
+  à l'appui un voile sombre de 8 % SOUS le libellé, au lieu d'un voile blanc
+  par-dessus (4,07 avant). Les ratios d'après se lisent dans
+  `contrast_pairs_test.dart`, qui les calcule état par état.
+- **`AppCtaButton`, l'appel à l'action d'une barre ou d'une carte.** La
+  recette « dégradé `cta` peint dans un `DecoratedBox`, `FilledButton`
+  transparent dessus » vivait en CINQ copies : celle d'`AppButton`, corrigée
+  ci-dessus, et quatre écrites à la main dans les écrans — « Ajouter à la
+  séance » (fiche d'exercice), « Valider la série » (saisie de série),
+  « Lancer » (carte de modèle), « Enregistrer » (éditeur de modèle) —,
+  toutes SANS voile d'état : au bord clair du dégradé, le libellé tombait à
+  4,10 au survol, 3,95 au focus et à l'appui, 3,42 sous l'éclaboussure. La
+  mécanique est désormais UNE : `app_gradient_action.dart`, interne au
+  design system, que partagent `AppButton` principal et le nouveau
+  composant `AppCtaButton` (icône, libellé gras, halo, toute la largeur,
+  hauteur réglable, état de chargement). Les quatre écrans l'emploient,
+  apparence au repos inchangée : les captures `04-fiche-exercice` et
+  `05-seance-active` sont identiques au pixel avant et après ; la carte et
+  l'éditeur de modèle, absents de la galerie, reçoivent les mêmes réglages
+  que la saisie de série. Désactivé, il retombe sur la plaque de
+  la surface ; en chargement, l'indicateur de l'éditeur, peint en
+  `darkBackground` sur cette plaque sombre (1,08:1), prend l'encre violette
+  du thème — du thème SOMBRE, que la barre en verre impose à son contenu
+  (voir « Ce qui est peint en sombre » ci-dessous) : sous le réglage Clair,
+  la plaque était sinon BLANCHE sur la barre sombre.
+- **Le disque « play » de l'accueil** : un `InkWell` posé à la main sur un
+  `Material` transparent, au-dessus du dégradé `cta`, sans voile à lui. Il
+  prenait les voiles gris CLAIRS du thème, qui pâlissaient le disque sous
+  son icône blanche à l'appui (2,55 au bord du disque en clair, 2,99 en
+  sombre, sous le seuil de 3:1 d'une icône). Il prend
+  `AppButton.stateOverlay`, le voile sombre des boutons violets, état par
+  état.
+- **`AppButton` contour et fantôme, thème clair** : leur libellé en violet
+  vif (`primary`) tombait sous son propre voile d'état — survol 4,22,
+  focus et appui 4,08, éclaboussure 3,55 sur la page. Il s'écrit en
+  `primaryDark`, et le voile devient le violet CLAIR (`primaryLight`) dans
+  les deux thèmes — celui que Material dérivait déjà du thème sombre. Un
+  voile tiré du violet profond ne suffisait pas : 4,20 sous l'éclaboussure.
+  Ce violet profond est celui d'une page CLAIRE ; sur ce que l'application
+  peint en sombre, voir le point suivant.
+- **Ce qui est peint en sombre porte le thème sombre.** L'application est
+  sombre par dessin : ses écrans peignent leur fond en `darkBackground`, ses
+  feuilles en `darkSurface` ou `darkSurfaceAlt`, ses barres basses un verre
+  sombre — sous le réglage Clair aussi. Ce qui s'y posait lisait pourtant le
+  thème AMBIANT : sous le Clair, le libellé violet profond d'un « Réessayer »
+  tombait à 3,35 sur la page sombre (2,53 sous l'éclaboussure), 3,09 dans
+  une feuille. Choisir l'encre selon le thème ne peut pas suffire : aucun
+  violet ne tient 4,5:1 à la fois sur la page claire et sur la page sombre.
+  C'est donc le thème qui dit ce qui est peint : `AppDarkTheme` impose le
+  thème sombre sous le réglage Clair — et ne touche à rien sous un thème
+  sombre ou OLED —, et l'enveloppent tout ce qui peint en sombre :
+  `AppDarkScaffold` (le `Scaffold` de chaque écran sombre, fond ET thème ;
+  un balai refuse un `Scaffold` peint en `darkBackground` à la main),
+  `showAppSheet`, `AppTranslucentBar`, `AppPopupCard`. Les écrans qui SUIVENT
+  le réglage (connexion utilitaire, sessions, détail d'une séance) gardent
+  un `Scaffold` ordinaire. Sous le réglage Clair, les cartes et barres
+  d'application de ces écrans sombres, jusqu'ici claires sur fond sombre,
+  deviennent sombres elles aussi.
+- **`AppSegmentedTabs` et `AppInitialAvatar`** passent de `violetRamp`
+  (réservé à ce qui se remplit, 3,86 à son bord clair) à `cta` : « Ligue »
+  sur 360 points 4,49 → ≥ 4,60, le « W » d'une initiale 4,46 → ≥ 4,60.
+- **`AppBottomBar`, onglets inactifs** : le libellé de 9 points portait la
+  couleur de l'icône (3,95). La barre étant translucide, elle se mesure
+  au-dessus de tout ce qui peut passer dessous — fond sombre, page claire du
+  thème clair, photo blanche : libellé `darkTextSecondary`, icône
+  `textMuted` (là où `iconInactive` tombait à 2,79 au-dessus d'une page
+  claire). Le pire cas des deux est la photo blanche ; ses ratios ne sont
+  pas recopiés ici, `contrast_pairs_test.dart` les calcule (ligne
+  « AppBottomBar »).
+- **`AppBadge`, thème clair** : la variante `primary` écrit en `primaryDark`
+  sur une teinte à 10 % (3,85 → 5,01 sur le fond de page, 4,76 au pire sur
+  la surface alternée), la variante `warning` en `neutral950` (1,83 →
+  16,66). Le thème sombre est inchangé.
+- **`AppButton` en chargement** : l'indicateur prenait `onPrimary`, sombre
+  sur une carte sombre (1,05). Hors variante principale, un bouton en
+  chargement est désactivé et n'a plus de fond à lui : l'indicateur prend
+  l'encre violette du thème, mesurée sur ce qui est réellement peint — le
+  pire cas est le voile gris d'un bouton plein désactivé, en thème clair,
+  au-dessus du seuil de 3:1 d'une icône. Le ratio se lit dans le test, pas
+  ici : ce document en a recopié un faux.
+
+**Admin** (`globals.css`, recopié de `tokens.json`) : une ENCRE n'est plus un
+APLAT. `--primary-ink` (`primaryDark` en clair, `primaryLight` en sombre : le
+violet des liens tombait à 3,78 sur les surfaces sombres) et `--danger-ink`
+(`dangerStrong` en clair, `danger` en sombre : 3,61 sur le fond clair)
+écrivent ; `--primary` et `--danger` remplissent. `--danger-strong` remplit
+les boutons de suppression sous du blanc (3,76 → 4,83), sans survol par
+opacité ; `--on-accent` écrit sur la pastille « Premium », devenue un aplat
+orange (2,36 → 7,46). `--muted` passe à `neutral.600` (4,04 → 6,96), et
+l'indicatif des champs le prend (3,36 → 6,96). Les lignes d'exercices
+supprimés et de signalements résolus ne pâlissent plus par opacité (2,17) :
+elles se barrent, ou le disent dans leur colonne d'état.
+
+**Design system web** (`packages/ui/src/styles/components.css`, rendu dans
+les aperçus de `.design-sync/`) : il gardait intactes les paires corrigées
+côté application et admin. Il prend la même séparation encre / aplat, par
+des variables de thème tirées des jetons. Ratios au pire point, sur la
+page, une carte ou la surface alternée : `--carlys-primary-ink`
+(`primaryDark` en clair, `primaryLight` en sombre) écrit le bouton
+secondaire (3,58 → 7,23, survol sombre) et la pastille violette, posée sur
+`--carlys-primary-tint` (3,67 → 4,76 en clair, 3,17 → 5,70 en sombre) ;
+`--carlys-warning-ink` écrit la pastille ambre (`neutral.950` en clair :
+1,75 → 15,91) ; `--carlys-danger-ink` écrit l'erreur d'un champ
+(`dangerStrong` en clair : 3,61 → 4,63) ; le bouton destructif se remplit de
+`dangerStrong` (3,76 → 4,83) ; `--carlys-text-muted` passe à `neutral.600`
+en clair (4,04 → 6,96 sur la page et une carte, 3,83 → 6,61 sous le
+survol du bouton fantôme).
+
+**Ce qui le garde.** `contrast_pairs_test.dart` est une TABLE : chaque ligne
+pose un composant du design system dans un état (thème clair, sombre, OLED ;
+repos, survol, focus, appui, éclaboussure, chargement), lit les couleurs
+qu'il peint et mesure chaque paire — le bouton principal et `AppCtaButton`
+contre les DEUX bords de leur dégradé, libellé et icône. Le voile d'un état
+est lu sur l'`InkWell` du bouton, où Material a déjà résolu le style du
+widget, celui du thème et ses défauts : un voile que personne n'a écrit est
+mesuré comme les autres. Il échoue avec l'ancien `ctaStart` (3,99:1 au bord
+gauche), sans le voile sombre (3,95 au focus), avec l'ancien indicateur de
+l'éditeur (1,08) et avec l'encre vive du contour en clair (4,08). Sa
+mécanique vit dans `test/support/contrast_table.dart`, que partage
+`dark_surfaces_test.dart` : dans chaque thème, il pose le contour, le
+fantôme et l'appel à l'action en chargement sur chaque surface peinte en
+sombre (écran, feuille formulaire et sélecteur, barre en verre) et les
+mesure contre ce qu'elle PEINT — il échoue sans `AppDarkTheme` (3,35 sur la
+page sombre en clair) —, vérifie qu'`AppDarkTheme` ne touche à rien sous
+un thème sombre, et refuse un `Scaffold` peint en sombre hors du design
+system. `app_cta_button_test.dart` y ajoute la plaque de l'éditeur,
+sombre dans les trois thèmes.
+`ink_on_gradients_test.dart` pose les bandeaux des écrans et le disque
+« play » de l'accueil, et mesure tout ce qu'ils écrivent contre chaque arrêt
+de leur dégradé, voile d'appui compris pour le disque ; ses balais y
+refusent un texte en blanc translucide sur un dégradé coloré, la signature
+d'origine dans un fichier qui écrit du texte, et, hors du design system,
+tout voile d'état posé SUR une boîte peinte au violet `cta` (ou à l'un de
+ses arrêts) sans `overlayColor` : un bouton stylé à la main (`FilledButton`,
+`ElevatedButton`, `TextButton`, `OutlinedButton`, `ButtonStyle`), ou un
+`InkWell` sur un `Material` au-dessus du dégradé. La recette du bouton ne
+vit plus qu'en un endroit. `app_colors_test.dart` garde les bornes
+de `cta` et de `signatureInk` ; `design_tokens_test.dart` leur miroir. Côté
+admin, `contrast.test.ts` mesure chaque paire employée dans les deux thèmes
+et refuse les classes qui la contourneraient (`text-primary`, `text-danger`,
+`text-accent`, blanc sur `bg-danger`, survol par opacité). Côté design
+system web, `packages/ui/src/contrast.test.ts` lit chaque règle de
+`components.css` — son encre, son fond, les variables du thème, les
+jetons — et mesure la paire dans les trois thèmes : l'ancienne feuille y
+échoue sur 52 paires. Côté mobile, les formules vivent dans
+`test/support/contrast.dart`.
 
 ## Écarts assumés
 
@@ -546,6 +747,8 @@ ouverte hors du design system, qu'elle passe par une fonction
 | Défi entre amis (maquette du 23 septembre 2026) | « +150 points » remplacé par la durée ; bloc « Récompense » remplacé par « Comment ça se joue » ; pas de bouton « Ajouter des amis » ; pas de repère « Suivi en temps réel » ; initiales au lieu de photos ; statuts « À l’origine / Dans le défi / En attente » au lieu de « Initiateur / Accepté / En attente » ; photo d’haltères remplacée, en attendant, par une haltère en filigrane | Écarts VOULUS, détaillés dans `community.md` : un défi entre amis ne rapporte rien (principe 5) ; les invités se choisissent à la création ; le classement se relit, il n’est pas poussé ; pas de photo de profil ; des statuts qui ne genrent personne ; la photo n’est pas encore fournie |
 | Onboarding | 3 objectifs au lieu de 4 | `NutritionGoal` n'a pas d'équivalent « gagner en force » |
 | Connexion, Inscription | Le **cœur de la marque** en décor des deux écrans : à la place de la sphère de la maquette (inscription) et de la photographie d'athlète (connexion) ; devise « L'ART DE DEVENIR » conservée | Demandé (le cœur partout, même composition sur les deux écrans) ; l'identité de marque établie prime sur les éléments génériques de la planche |
+| Connexion, Inscription, et tout bouton principal | Départ du dégradé violet en `#9943FC` au lieu du `#A355FC` relevé sur la maquette | Arbitrage du 24 septembre 2026 : sous un libellé blanc, la valeur relevée ne tenait que 3,99:1 (AA : 4,5). Même teinte, même saturation, un cran plus dense : 4,60 |
+| Bienvenue | Bouton au dégradé `signatureInk` : orange de fin `#D73D00` au lieu de `#FF7A45`, magenta `#C123DE` au lieu de `#C42EE0` ; à l'appui, voile sombre sous le libellé au lieu de `brightness 1.08` | Aucun libellé ne tient AA sur la signature d'origine (2,59:1 sur son orange). Le logo et le motif la gardent. À valider sur capture |
 | Connexion, Inscription | **Apple et Google seulement**, sans Discord — et leur toucher annonce que le fournisseur « arrive bientôt » | Demandé (deux fournisseurs) ; l'API ne propose que l'e-mail (Étape 2) : un bouton qui simulerait une connexion sociale mentirait |
 
 ## Ce qu'il faudrait côté serveur pour fermer les écarts

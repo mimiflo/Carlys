@@ -10,6 +10,10 @@ import '../../domain/mentor_word.dart';
 /// Mentor parle depuis le thème de Carlys, pas depuis une carte grise —
 /// et pas depuis le dégradé de marque multicolore, réservé aux
 /// célébrations de franchissement (préférence actée le 18/09/2026).
+///
+/// Chaque texte est en blanc PLEIN. Le surtitre et la cadence étaient à
+/// 80 % : 3,18:1 au départ clair du dégradé, et encore 3,55 une fois
+/// `ctaStart` assombri. La hiérarchie tient par la taille et la chasse.
 class MentorBandeau extends StatelessWidget {
   const MentorBandeau({required this.mot, required this.frequence, super.key});
 
@@ -62,7 +66,7 @@ class MentorBandeau extends StatelessWidget {
                     Text(
                       'Ton guide',
                       style: AppTypography.label.copyWith(
-                        color: AppColors.neutral0.withValues(alpha: 0.8),
+                        color: AppColors.neutral0,
                       ),
                     ),
                     const SizedBox(height: AppSpacing.xxs),
@@ -87,7 +91,7 @@ class MentorBandeau extends StatelessWidget {
             Text(
               _cadence.toUpperCase(),
               style: AppTypography.labelMono.copyWith(
-                color: AppColors.neutral0.withValues(alpha: 0.8),
+                color: AppColors.neutral0,
               ),
             ),
           ],

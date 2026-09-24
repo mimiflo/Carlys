@@ -89,8 +89,7 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
     final bottomInset =
         AppBottomBar.height + MediaQuery.paddingOf(context).bottom;
 
-    return Scaffold(
-      backgroundColor: AppColors.darkBackground,
+    return AppDarkScaffold(
       // TIRER POUR RAFRAÎCHIR — indispensable ici, pas confortable.
       // Demandes d'ami, encouragements, défis et classement arrivent des
       // AUTRES : rien sur l'appareil ne déclenche leur relecture. Et l'onglet

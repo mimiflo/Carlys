@@ -71,8 +71,7 @@ class _JourneyStageScreenState extends ConsumerState<JourneyStageScreen> {
     final answered = ref.watch(answeredLessonsProvider).valueOrNull ?? const {};
     final bottomInset = MediaQuery.paddingOf(context).bottom;
 
-    return Scaffold(
-      backgroundColor: AppColors.darkBackground,
+    return AppDarkScaffold(
       appBar: AppBar(
         title: Text(
           stage == null ? 'Parcours' : 'Étape ${stage.rang} · ${stage.nom}',

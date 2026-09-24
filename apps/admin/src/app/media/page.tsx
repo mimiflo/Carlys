@@ -65,12 +65,12 @@ export default function MediaPage() {
       </div>
 
       {isError && (
-        <p className="mt-6 text-sm text-danger" role="alert">
+        <p className="mt-6 text-sm text-danger-ink" role="alert">
           Bibliothèque indisponible : la permission media:read est requise.
         </p>
       )}
       {remove.isError && (
-        <p className="mt-6 text-sm text-danger" role="alert">
+        <p className="mt-6 text-sm text-danger-ink" role="alert">
           Suppression refusée. Un média rattaché à un exercice doit d’abord en être détaché.
         </p>
       )}
@@ -141,7 +141,7 @@ function MediaCard({
               type="button"
               onClick={onConfirm}
               disabled={isDeleting}
-              className="rounded-lg bg-danger px-3 py-1.5 text-xs text-white disabled:opacity-60"
+              className="rounded-lg bg-danger-strong px-3 py-1.5 text-xs text-white disabled:opacity-60"
             >
               {isDeleting ? 'Suppression…' : 'Confirmer'}
             </button>
@@ -150,7 +150,7 @@ function MediaCard({
             </button>
           </div>
         ) : (
-          <button type="button" onClick={onAskDelete} className="pt-2 text-xs text-danger">
+          <button type="button" onClick={onAskDelete} className="pt-2 text-xs text-danger-ink">
             Supprimer
           </button>
         )}

@@ -1,34 +1,16 @@
-import 'dart:math' as math;
-
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../support/contrast.dart';
 
 /// Garde-fous de la palette.
 ///
 /// Une couleur juste à l'œil peut être illisible à la mesure, et un dégradé
 /// à trois couleurs peut n'en montrer que deux. Ces deux erreurs ont déjà été
-/// commises ici ; ce fichier les empêche de revenir.
+/// commises ici ; ce fichier les empêche de revenir. Les paires que les
+/// COMPOSANTS peignent réellement se mesurent dans `contrast_pairs_test.dart`.
 void main() {
-  /// Luminance relative WCAG 2.1 (§ relative luminance).
-  double luminance(Color color) {
-    double channel(double value) => value <= 0.03928
-        ? value / 12.92
-        : math.pow((value + 0.055) / 1.055, 2.4).toDouble();
-    return 0.2126 * channel(color.r) +
-        0.7152 * channel(color.g) +
-        0.0722 * channel(color.b);
-  }
-
-  /// Rapport de contraste WCAG entre deux couleurs opaques.
-  double contrast(Color a, Color b) {
-    final first = luminance(a);
-    final second = luminance(b);
-    final light = math.max(first, second);
-    final dark = math.min(first, second);
-    return (light + 0.05) / (dark + 0.05);
-  }
-
   /// Les cinq surfaces sombres sur lesquelles du texte peut se poser, de la
   /// plus profonde à la plus claire.
   const darkSurfaces = <String, Color>{
@@ -154,6 +136,30 @@ void main() {
       // textes et aux icônes d'erreur posés sur le fond sombre.
       expect(contrast(AppColors.danger, AppColors.neutral0), lessThan(4.5));
     });
+
+    test('le violet des libellés blancs tient AA à ses deux bornes', () {
+      // Relevé sur la maquette, `ctaStart` valait #A355FC : 3,99:1 sous le
+      // blanc. Assombri à teinte et saturation égales, il en tient 4,60, et
+      // le dégradé ne fait que s'assombrir jusqu'à `ctaEnd`.
+      for (final stop in stopsOf(AppColors.cta)) {
+        expect(
+          contrast(AppColors.neutral0, stop),
+          greaterThanOrEqualTo(wcagText),
+          reason: 'blanc sur $stop',
+        );
+      }
+      final start = HSLColor.fromColor(AppColors.ctaStart);
+      expect(
+        start.hue,
+        closeTo(268, 0.5),
+        reason: 'même teinte que la maquette',
+      );
+      expect(
+        start.saturation,
+        closeTo(0.965, 0.005),
+        reason: 'même saturation',
+      );
+    });
   });
 
   group('dégradé de marque', () {
@@ -176,6 +182,47 @@ void main() {
       expect(stops.first, 0);
       // Le violet tient au moins les quatre premiers dixièmes.
       expect(stops[1], greaterThanOrEqualTo(0.4));
+    });
+
+    test('elle ne porte AUCUN libellé : ni blanc, ni sombre', () {
+      // La preuve que le bouton de bienvenue et les bandeaux de célébration
+      // ne pouvaient pas s'en tirer par la seule couleur de leur texte.
+      expect(
+        contrast(AppColors.neutral0, AppColors.signatureEnd),
+        lessThan(wcagText),
+      );
+      expect(
+        contrast(AppColors.onAccent, AppColors.signatureStart),
+        lessThan(wcagText),
+      );
+    });
+
+    test('sa variante sous un texte garde le logo et tient AA partout', () {
+      // Mêmes arrêts, même départ ; magenta et orange assombris à teinte et
+      // saturation égales.
+      expect(AppColors.signatureInk.stops, AppColors.signature.stops);
+      expect(AppColors.signatureInk.colors.first, AppColors.signatureStart);
+      for (final (ink, logo) in [
+        (AppColors.signatureInkMid, AppColors.signatureMid),
+        (AppColors.signatureInkEnd, AppColors.signatureEnd),
+      ]) {
+        final assombri = HSLColor.fromColor(ink);
+        final origine = HSLColor.fromColor(logo);
+        expect(assombri.hue, closeTo(origine.hue, 0.5), reason: '$ink');
+        expect(
+          assombri.saturation,
+          closeTo(origine.saturation, 0.01),
+          reason: '$ink',
+        );
+        expect(assombri.lightness, lessThan(origine.lightness));
+      }
+      for (final stop in stopsOf(AppColors.signatureInk)) {
+        expect(
+          contrast(AppColors.neutral0, stop),
+          greaterThanOrEqualTo(wcagText),
+          reason: 'blanc sur $stop',
+        );
+      }
     });
   });
 

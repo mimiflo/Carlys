@@ -60,8 +60,7 @@ class _WorkoutHistoryScreenState extends ConsumerState<WorkoutHistoryScreen> {
         const <PersonalRecordEntry>[];
     final bottomInset = MediaQuery.paddingOf(context).bottom;
 
-    return Scaffold(
-      backgroundColor: AppColors.darkBackground,
+    return AppDarkScaffold(
       body: SafeArea(
         bottom: false,
         child: ListView(

@@ -38,9 +38,11 @@ class AuthScaffold extends StatelessWidget {
   /// IMPOSÉ à tout l'écran — champs, liens et titre compris.
   final bool brand;
 
-  /// Le thème des surfaces de marque, construit une fois : celui que
-  /// l'application applique en mode sombre — les captures validées.
-  static final ThemeData _brandTheme = AppTheme.dark();
+  /// Le thème des surfaces de marque : celui que l'application applique en
+  /// mode sombre — les captures validées —, construit une fois par le design
+  /// system. Toujours LUI, même sous le thème OLED : le fond de marque est
+  /// celui des captures.
+  static final ThemeData _brandTheme = AppDarkTheme.theme;
 
   @override
   Widget build(BuildContext context) {

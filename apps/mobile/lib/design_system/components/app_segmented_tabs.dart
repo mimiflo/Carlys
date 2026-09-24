@@ -27,6 +27,11 @@ class AppSegment {
 /// Chaque onglet répond sur toute la hauteur de la piste
 /// ([AppSpacing.touchTarget]) : la pastille violette n'est que l'ornement
 /// de l'onglet choisi, jamais la seule zone qui répond au doigt.
+///
+/// La pastille porte le violet du bouton principal ([AppColors.cta]), celui
+/// des surfaces sous un libellé blanc. Elle portait [AppColors.violetRamp],
+/// qui s'éclaircit vers la droite jusqu'à 3,86:1 sous le blanc : le bord
+/// droit de « Ligue » passait sous 4,5 sur un écran de 360 points.
 class AppSegmentedTabs extends StatelessWidget {
   const AppSegmentedTabs({
     required this.segments,
@@ -115,7 +120,7 @@ class _Segment extends StatelessWidget {
               duration: AppMotion.resolve(context, AppMotion.tab),
               curve: AppMotion.standard,
               decoration: BoxDecoration(
-                gradient: selected ? AppColors.violetRamp : null,
+                gradient: selected ? AppColors.cta : null,
                 borderRadius: AppRadius.fullAll,
               ),
               alignment: Alignment.center,

@@ -1,10 +1,11 @@
 import 'dart:async';
-import 'dart:math' as math;
 
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../support/contrast.dart';
 
 /// LA CARTE DES POPUPS se lit, et ne déborde jamais.
 ///
@@ -12,23 +13,6 @@ import 'package:flutter_test/flutter_test.dart';
 /// AA (4,5:1) sur sa surface ET au plus fort de son halo violet, dans les
 /// deux thèmes de l'application ; et aucune des trois portes ne déborde
 /// quand le texte est agrandi deux fois sur un téléphone de 320 points.
-
-/// Luminance relative WCAG 2.1 — même calcul que `app_colors_test.dart`.
-double _luminance(Color color) {
-  double channel(double value) => value <= 0.03928
-      ? value / 12.92
-      : math.pow((value + 0.055) / 1.055, 2.4).toDouble();
-  return 0.2126 * channel(color.r) +
-      0.7152 * channel(color.g) +
-      0.0722 * channel(color.b);
-}
-
-/// Rapport de contraste WCAG entre deux couleurs opaques.
-double _contrast(Color a, Color b) {
-  final first = _luminance(a);
-  final second = _luminance(b);
-  return (math.max(first, second) + 0.05) / (math.min(first, second) + 0.05);
-}
 
 /// La couleur RENDUE d'un texte : celle de son style, thème compris (un
 /// libellé de bouton n'a pas de style propre, il hérite du bouton).
@@ -146,7 +130,7 @@ void main() {
         ]) {
           for (final background in [surface, haloPeak]) {
             expect(
-              _contrast(_ink(tester, text), background),
+              contrast(_ink(tester, text), background),
               greaterThanOrEqualTo(4.5),
               reason: '« $text » sur $background',
             );
@@ -183,7 +167,7 @@ void main() {
           expect(fills, isNotEmpty);
           for (final fill in fills) {
             expect(
-              _contrast(ink, fill),
+              contrast(ink, fill),
               greaterThanOrEqualTo(4.5),
               reason: '« Quitter » ($variant) sur $fill',
             );
@@ -201,7 +185,7 @@ void main() {
 
       final ink = _ink(tester, 'Objectif retenu : Force.');
       expect(ink, AppColors.darkTextPrimary);
-      expect(_contrast(ink, haloPeak), greaterThanOrEqualTo(4.5));
+      expect(contrast(ink, haloPeak), greaterThanOrEqualTo(4.5));
     });
   });
 

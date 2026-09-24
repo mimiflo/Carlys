@@ -98,6 +98,17 @@ const a = 1; /* Color(0xFFAABBCC) */
       expect(dartCode(source), isNot(contains('teinte')));
     });
 
+    test('garde ses accolades équilibrées, interpolations comprises', () {
+      // Les balais suivent l'imbrication des appels : une accolade de
+      // fermeture d'interpolation sans son ouvrante fermait trop tôt
+      // l'appel qui contient la chaîne.
+      const source = r"f(a, 'x ${b ? 'o' : 'n'} y', g(c));";
+      final code = dartCode(source);
+      expect(closingEnd(code, code.indexOf('(')), source.length - 1);
+      expect(enclosingOpen(code, code.indexOf('c)')), code.indexOf('g(') + 1);
+      expect(enclosingOpen(code, 0), isNull);
+    });
+
     test('garde la géométrie du fichier, ligne pour ligne', () {
       // Sans quoi une faute serait citée à la mauvaise ligne : le contenu
       // masqué rend des espaces, jamais rien de plus court.

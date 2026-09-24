@@ -70,8 +70,9 @@ abstract final class AppColors {
   // ── Dégradé de MARQUE ────────────────────────────────────────────
   //
   // Relevé sur le logo Carlys. Réservé aux surfaces de marque (page de
-  // bienvenue, logo) : il ne remplace jamais `primary`/`accent`, qui restent
-  // les couleurs de l'application. Les mélanger diluerait les deux.
+  // bienvenue, logo) et aux célébrations de franchissement : il ne remplace
+  // jamais `primary`/`accent`, qui restent les couleurs de l'application.
+  // Les mélanger diluerait les deux.
   static const Color signatureStart = primaryDark;
   static const Color signatureMid = Color(0xFFC42EE0);
   static const Color signatureEnd = Color(0xFFFF7A45);
@@ -82,18 +83,46 @@ abstract final class AppColors {
   /// la moitié de la course et l'orange n'apparaît que dans les tout derniers
   /// pixels — mesuré sur le bouton de bienvenue, il n'y arrivait jamais. Le
   /// violet tient la première moitié, l'orange le dernier dixième en aplat.
+  ///
+  /// **Jamais sous un texte** : aucun libellé n'y tient AA d'un bout à
+  /// l'autre (blanc 4,36 sur le magenta, 2,59 sur l'orange ; un texte sombre
+  /// tombe à 3,20 sur le violet). Sous un libellé, c'est [signatureInk].
   static const LinearGradient signature = LinearGradient(
     colors: [signatureStart, signatureMid, signatureEnd],
     stops: [0, 0.45, 0.9],
   );
 
-  // Bouton des écrans d'ENTRÉE (tokens.json → color.brand.cta*) : violet
-  // clair vers violet profond, sans l'orange de la signature. Relevé au
-  // pixel sur la maquette de septembre 2026. Réservé à ces boutons.
-  static const Color ctaStart = Color(0xFFA355FC);
+  // La signature SOUS UN LIBELLÉ BLANC (tokens.json →
+  // color.brand.signatureInk*) : magenta et orange assombris le 24 septembre
+  // 2026 à teinte et saturation identiques — la méthode de [ctaStart] —,
+  // pour que le blanc tienne 4,60 sur chaque arrêt. Le départ reste
+  // [signatureStart] (6,03).
+  static const Color signatureInkMid = Color(0xFFC123DE);
+  static const Color signatureInkEnd = Color(0xFFD73D00);
+
+  /// Dégradé de marque des surfaces qui PORTENT un texte blanc : le bouton
+  /// de bienvenue et les bandeaux de célébration (titre franchi, domaine
+  /// bouclé). Mêmes arrêts que [signature]. Interpolée en sRGB, la
+  /// luminance ne dépasse jamais le plus clair des deux arrêts voisins :
+  /// le blanc tient donc 4,60 sur toute la course.
+  static const LinearGradient signatureInk = LinearGradient(
+    colors: [signatureStart, signatureInkMid, signatureInkEnd],
+    stops: [0, 0.45, 0.9],
+  );
+
+  // Le violet de toute surface qui porte un LIBELLÉ BLANC (tokens.json →
+  // color.brand.cta*) : bouton principal, onglet choisi, avatar, médaillon
+  // des popups, bandeaux du Mentor. Violet clair vers violet profond, sans
+  // l'orange de la signature. [ctaEnd] est relevé au pixel sur la maquette de
+  // septembre 2026 ; [ctaStart] aussi (#A355FC), puis ASSOMBRI le 24
+  // septembre 2026 à teinte et saturation identiques (HSL 268°, 96,5 %,
+  // luminosité 66,1 → 62,4 %) : blanc dessus, la maquette ne tenait que
+  // 3,99:1, sous l'AA ; ce violet en tient 4,60.
+  static const Color ctaStart = Color(0xFF9943FC);
   static const Color ctaEnd = Color(0xFF7029D2);
 
-  /// Dégradé du bouton d'entrée, de gauche à droite.
+  /// Dégradé du bouton principal, de gauche à droite. Il ne fait que
+  /// s'assombrir : le blanc y tient 4,60 au départ et 7,15 à l'arrivée.
   static const LinearGradient cta = LinearGradient(colors: [ctaStart, ctaEnd]);
 
   /// Icônes de préfixe des champs des écrans d'entrée (tokens.json →

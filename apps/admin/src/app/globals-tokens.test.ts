@@ -165,9 +165,17 @@ const LIGHT: Record<string, string> = {
   '--surface': 'color.surface.lightSurface',
   '--primary': 'color.brand.primary',
   '--primary-dark': 'color.brand.primaryDark',
+  // L'encre violette : le violet profond sur fond clair (6,03:1 sur blanc,
+  // 5,20 sur une pastille primary/10).
+  '--primary-ink': 'color.brand.primaryDark',
   '--accent': 'color.brand.accent',
-  '--muted': 'color.neutral.500',
+  '--on-accent': 'color.brand.onAccent',
+  // neutral.500 ne tenait que 4,04:1 sur le fond clair.
+  '--muted': 'color.neutral.600',
   '--danger': 'color.semantic.danger',
+  '--danger-strong': 'color.semantic.dangerStrong',
+  // L'encre rouge : danger ne tient que 3,61:1 sur le fond clair.
+  '--danger-ink': 'color.semantic.dangerStrong',
   '--success': 'color.semantic.success',
 };
 
@@ -176,6 +184,10 @@ const DARK: Record<string, string> = {
   '--foreground': 'color.neutral.100',
   '--surface': 'color.surface.darkSurface',
   '--muted': 'color.neutral.400',
+  // Sur les surfaces sombres, primary ne tient que 3,78:1 ; le violet clair
+  // en tient 7,63. Le rouge d'erreur, lui, y tient tel quel (4,96).
+  '--primary-ink': 'color.brand.primaryLight',
+  '--danger-ink': 'color.semantic.danger',
 };
 
 describe.each([

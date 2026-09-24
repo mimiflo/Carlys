@@ -112,7 +112,7 @@ export function CategoryRow({ group }: { group: AdminMuscleGroup }) {
                 resetDraft();
                 setEditing(true);
               }}
-              className="rounded-lg px-3 py-1 text-xs text-primary hover:bg-primary/10"
+              className="rounded-lg px-3 py-1 text-xs text-primary-ink hover:bg-primary/10"
             >
               Modifier
             </button>
@@ -126,13 +126,13 @@ export function CategoryRow({ group }: { group: AdminMuscleGroup }) {
                 ? undefined
                 : 'Cette catégorie est le groupe principal d’exercices : reclassez-les d’abord.'
             }
-            className="rounded-lg px-3 py-1 text-xs font-semibold text-danger hover:bg-danger/10 disabled:opacity-40 disabled:hover:bg-transparent"
+            className="rounded-lg px-3 py-1 text-xs font-semibold text-danger-ink hover:underline disabled:opacity-40 disabled:hover:no-underline"
           >
             Supprimer
           </button>
         </div>
         {(save.isError || remove.isError) && (
-          <p className="mt-1 text-xs text-danger" role="alert">
+          <p className="mt-1 text-xs text-danger-ink" role="alert">
             {(save.error ?? remove.error) instanceof Error
               ? ((save.error ?? remove.error) as Error).message
               : 'Action refusée.'}

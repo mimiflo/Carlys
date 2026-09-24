@@ -12,6 +12,10 @@ import '../typography/app_typography.dart';
 /// Deux tons : [highlighted] faux, le dégradé violet des autres ; vrai,
 /// la personne elle-même — un disque sombre cerclé de violet, comme sur la
 /// maquette du classement, pour se reconnaître d'un coup d'œil.
+///
+/// Le dégradé est celui des surfaces sous un libellé blanc ([AppColors.cta]),
+/// pas [AppColors.violetRamp] : celui-là s'éclaircit jusqu'à 3,86:1 sous le
+/// blanc, et l'encre d'un « W » ou d'un « Æ » y passait sous 4,5.
 class AppInitialAvatar extends StatelessWidget {
   const AppInitialAvatar({
     required this.name,
@@ -40,7 +44,7 @@ class AppInitialAvatar extends StatelessWidget {
         alignment: Alignment.center,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          gradient: highlighted ? null : AppColors.violetRamp,
+          gradient: highlighted ? null : AppColors.cta,
           color: highlighted ? AppColors.darkSurface : null,
           border: highlighted
               ? const Border.fromBorderSide(

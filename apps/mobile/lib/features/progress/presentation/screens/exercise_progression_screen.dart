@@ -24,8 +24,7 @@ class ExerciseProgressionScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final progression = ref.watch(exerciseProgressionProvider(exerciseId));
 
-    return Scaffold(
-      backgroundColor: AppColors.darkBackground,
+    return AppDarkScaffold(
       appBar: AppBar(
         backgroundColor: AppColors.darkBackground,
         leading: const AppBackButton(),

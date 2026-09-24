@@ -31,8 +31,7 @@ class TrainingSetupScreen extends ConsumerWidget {
     final goal = ref.watch(currentTrainingGoalProvider);
     final bottomInset = MediaQuery.paddingOf(context).bottom;
 
-    return Scaffold(
-      backgroundColor: AppColors.darkBackground,
+    return AppDarkScaffold(
       body: SafeArea(
         bottom: false,
         child: switch ((value, profile)) {
@@ -153,12 +152,11 @@ class _Bandeau extends StatelessWidget {
             style: AppTypography.title.copyWith(color: AppColors.neutral0),
           ),
           const SizedBox(height: AppSpacing.xxs),
+          // Blanc PLEIN : à 80 %, 3,18:1 sur le départ clair du dégradé.
           Text(
             'Cinq réponses, objectif compris, et ton futur programme partira '
             'de toi, pas d’un modèle générique.',
-            style: AppTypography.label.copyWith(
-              color: AppColors.neutral0.withValues(alpha: 0.8),
-            ),
+            style: AppTypography.label.copyWith(color: AppColors.neutral0),
           ),
           const SizedBox(height: AppSpacing.md),
           Semantics(
@@ -175,9 +173,10 @@ class _Bandeau extends StatelessWidget {
                   horizontal: AppSpacing.sm,
                   vertical: AppSpacing.xxs,
                 ),
-                decoration: BoxDecoration(
+                // Le violet profond du dégradé : 7,15:1 (voile blanc : 3,38).
+                decoration: const BoxDecoration(
                   borderRadius: AppRadius.fullAll,
-                  color: AppColors.neutral0.withValues(alpha: 0.16),
+                  color: AppColors.ctaEnd,
                 ),
                 child: Row(
                   mainAxisSize: MainAxisSize.min,

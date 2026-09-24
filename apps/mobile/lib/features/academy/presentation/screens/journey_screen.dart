@@ -29,8 +29,7 @@ class JourneyScreen extends ConsumerWidget {
     final bottomInset =
         AppBottomBar.height + MediaQuery.paddingOf(context).bottom;
 
-    return Scaffold(
-      backgroundColor: AppColors.darkBackground,
+    return AppDarkScaffold(
       appBar: AppBar(title: const Text('Parcours')),
       body: pack.hasError
           ? AppErrorState(

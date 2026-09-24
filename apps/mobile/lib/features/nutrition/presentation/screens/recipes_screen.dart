@@ -38,8 +38,7 @@ class _RecipesScreenState extends ConsumerState<RecipesScreen> {
     final goal = ref.watch(nutritionGoalProvider);
     final targetKcal = ref.watch(targetKcalProvider);
 
-    return Scaffold(
-      backgroundColor: AppColors.darkBackground,
+    return AppDarkScaffold(
       appBar: AppBar(title: const Text('Recettes')),
       body: pack.when(
         loading: () => const AppLoadingIndicator(label: 'Ouverture du livre'),

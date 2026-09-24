@@ -26,6 +26,10 @@ les variables CSS du design system — jamais de valeurs en dur :
 - Surfaces (suivent le thème) : `--carlys-background`, `--carlys-surface`,
   `--carlys-surface-alt`, `--carlys-text`, `--carlys-text-muted`,
   `--carlys-border`.
+- Encres (suivent le thème) : ce qui S'ÉCRIT en couleur prend
+  `--carlys-primary-ink`, `--carlys-warning-ink` ou `--carlys-danger-ink`,
+  qui tiennent AA (4,5:1) dans chaque thème ; `--carlys-color-*` REMPLIT
+  (un violet ou un rouge vif en texte tombe sous le seuil).
 - Espacements : `--carlys-spacing-xxs|xs|sm|md|lg|xl|xxl|xxxl` (4→64px).
 - Rayons : `--carlys-radius-xs|sm|md|lg|xl|full` ; ombres :
   `--carlys-shadow-sm|md|lg` ; typo : `--carlys-font-body|display|mono`,

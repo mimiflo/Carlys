@@ -99,7 +99,7 @@ export function ExercisePhotoCell({ exercise }: { exercise: AdminExerciseSummary
             type="button"
             disabled={busy}
             onClick={() => inputRef.current?.click()}
-            className="rounded-lg border border-black/10 px-2.5 py-1 text-xs font-semibold transition-colors hover:border-primary hover:text-primary disabled:opacity-50"
+            className="rounded-lg border border-black/10 px-2.5 py-1 text-xs font-semibold transition-colors hover:border-primary hover:text-primary-ink disabled:opacity-50"
           >
             {upload.isPending
               ? 'Dépôt…'
@@ -112,7 +112,7 @@ export function ExercisePhotoCell({ exercise }: { exercise: AdminExerciseSummary
               type="button"
               disabled={busy}
               onClick={() => detach.mutate()}
-              className="text-xs font-medium text-muted transition-colors hover:text-danger disabled:opacity-50"
+              className="text-xs font-medium text-muted transition-colors hover:text-danger-ink disabled:opacity-50"
             >
               Retirer
             </button>
@@ -125,7 +125,7 @@ export function ExercisePhotoCell({ exercise }: { exercise: AdminExerciseSummary
           </p>
         )}
         {error !== null && (
-          <p className="mt-1 text-xs text-danger" role="alert">
+          <p className="mt-1 text-xs text-danger-ink" role="alert">
             {error}
           </p>
         )}

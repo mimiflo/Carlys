@@ -33,7 +33,7 @@ function GroupChoice({
         aria-pressed={isPrimary}
         title={`Faire de « ${name} » le groupe principal`}
         className={`rounded px-1.5 text-xs ${
-          isPrimary ? 'bg-primary/10 text-primary' : 'text-muted hover:bg-black/5'
+          isPrimary ? 'bg-primary/10 text-primary-ink' : 'text-muted hover:bg-black/5'
         }`}
       >
         {isPrimary ? 'principal' : 'définir'}
@@ -105,7 +105,7 @@ export function ExerciseCategoriesCell({ exercise }: { exercise: AdminExerciseSu
     <div className="w-64 rounded-lg bg-surface p-3 ring-1 ring-black/10">
       {referentials.isPending && <p className="text-xs text-muted">Chargement…</p>}
       {referentials.isError && (
-        <p className="text-xs text-danger" role="alert">
+        <p className="text-xs text-danger-ink" role="alert">
           Référentiels indisponibles.
         </p>
       )}
@@ -150,7 +150,7 @@ export function ExerciseCategoriesCell({ exercise }: { exercise: AdminExerciseSu
       )}
 
       {save.isError && (
-        <p className="mt-2 text-xs text-danger" role="alert">
+        <p className="mt-2 text-xs text-danger-ink" role="alert">
           {save.error instanceof Error ? save.error.message : 'Enregistrement refusé.'}
         </p>
       )}

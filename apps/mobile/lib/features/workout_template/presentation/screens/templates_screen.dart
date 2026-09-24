@@ -23,8 +23,7 @@ class TemplatesScreen extends ConsumerWidget {
     final templates = ref.watch(workoutTemplatesProvider);
     final bottomInset = MediaQuery.paddingOf(context).bottom;
 
-    return Scaffold(
-      backgroundColor: AppColors.darkBackground,
+    return AppDarkScaffold(
       body: SafeArea(
         bottom: false,
         child: Column(

@@ -5,7 +5,7 @@ export default function Home() {
   return (
     <main className="flex flex-1 items-center justify-center p-8">
       <div className="w-full max-w-xl rounded-2xl bg-surface p-8 shadow-sm ring-1 ring-black/5">
-        <p className="text-sm font-medium uppercase tracking-widest text-primary">Carlys</p>
+        <p className="text-sm font-medium uppercase tracking-widest text-primary-ink">Carlys</p>
         <h1 className="mt-2 text-3xl font-bold tracking-tight">Tableau de bord d’administration</h1>
         <p className="mt-4 text-muted">
           Gestion des utilisateurs, des droits premium et du catalogue, journal d’audit (Étape 7).

@@ -62,7 +62,7 @@ export function VerifyEmailStatus() {
           <button
             type="button"
             onClick={() => void verification.refetch()}
-            className="self-start rounded-lg border border-primary px-4 py-2 text-sm font-semibold text-primary transition-colors hover:bg-primary hover:text-white"
+            className="self-start rounded-lg border border-primary px-4 py-2 text-sm font-semibold text-primary-ink transition-colors hover:bg-primary hover:text-white"
           >
             Réessayer
           </button>

@@ -2,11 +2,13 @@
 ///
 /// Les écrans importent ce fichier plutôt que les fichiers internes.
 ///
-/// Deux fichiers de `components/` ne sont volontairement PAS exportés :
+/// Trois fichiers de `components/` ne sont volontairement PAS exportés :
 /// `app_popup_layout.dart` et `app_notice_layer.dart`, la mécanique des
-/// popups. Un écran ouvre une popup par ses portes (`AppNotices`,
-/// `showAppConfirm`, `showAppPrompt`, `showAppDialog`), jamais par ce qu'il
-/// y a dessous.
+/// popups, et `app_gradient_action.dart`, celle des boutons au dégradé
+/// violet. Un écran ouvre une popup par ses portes (`AppNotices`,
+/// `showAppConfirm`, `showAppPrompt`, `showAppDialog`), et pose une action
+/// violette par `AppButton` ou `AppCtaButton` — jamais par ce qu'il y a
+/// dessous.
 library;
 
 export 'colors/app_colors.dart';
@@ -18,6 +20,8 @@ export 'components/app_brand_button.dart';
 export 'components/app_button.dart';
 export 'components/app_card.dart';
 export 'components/app_choice_card.dart';
+export 'components/app_cta_button.dart';
+export 'components/app_dark_scaffold.dart';
 export 'components/app_dialogs.dart';
 export 'components/app_difficulty_dashes.dart';
 export 'components/app_empty_state.dart';
@@ -55,5 +59,6 @@ export 'shadows/app_shadows.dart';
 export 'spacing/app_spacing.dart';
 export 'theme/app_breakpoints.dart';
 export 'theme/app_color_schemes.dart';
+export 'theme/app_dark_theme.dart';
 export 'theme/app_theme.dart';
 export 'typography/app_typography.dart';

@@ -122,6 +122,15 @@ icône (26, #9A9AAE) → gap 8 → `CARLYS` (Mono 9 / w500 / ls 1.2 / #7A7A8C) �
 Inter 15 / w700 / letterSpacing **1.4** / #FFFFFF.
 Pressed : `scale 0.985` + `brightness 1.08`, durée 160 ms.
 
+> **Écart de lisibilité (24 septembre 2026).** Sur `gradientBrand`, le blanc
+> ne tient pas l'AA (2,59:1 sur l'orange de fin, 4,36 sur le magenta) : le
+> bouton prend `gradient.signatureInk` de `tokens.json`, la même signature
+> aux mêmes arrêts, magenta et orange assombris à teinte et saturation
+> identiques (blanc ≥ 4,60). À l'appui, un voile sombre de 8 % SOUS le
+> libellé remplace `brightness 1.08`, qui éclaircissait le fond sous le
+> texte blanc. La durée suit le jeton `AppMotion.tap`. Détail :
+> `design-conformity.md`, « Contraste AA de tout texte clair ».
+
 ## 4. Slogan en relief 3D
 
 Texte (4 lignes, `<br>` explicites) :

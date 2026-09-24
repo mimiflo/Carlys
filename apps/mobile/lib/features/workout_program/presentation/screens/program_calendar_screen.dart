@@ -143,8 +143,7 @@ class _ProgramCalendarScreenState extends ConsumerState<ProgramCalendarScreen> {
       programCalendarProvider((programId: widget.programId, week: _week)),
     );
 
-    return Scaffold(
-      backgroundColor: AppColors.darkBackground,
+    return AppDarkScaffold(
       body: SafeArea(
         bottom: false,
         child: semaine.when(

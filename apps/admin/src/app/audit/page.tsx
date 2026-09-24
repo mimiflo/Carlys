@@ -48,7 +48,7 @@ export default function AuditPage() {
   return (
     <AdminShell title="Journal d’audit">
       {isError && (
-        <p className="text-sm text-danger" role="alert">
+        <p className="text-sm text-danger-ink" role="alert">
           Journal indisponible : la permission audit:read est requise.
         </p>
       )}
@@ -102,7 +102,7 @@ export default function AuditPage() {
           type="button"
           onClick={() => void fetchNextPage()}
           disabled={isFetchingNextPage}
-          className="mt-4 rounded-lg border border-primary px-4 py-2 text-sm font-semibold text-primary hover:bg-primary hover:text-white disabled:opacity-50"
+          className="mt-4 rounded-lg border border-primary px-4 py-2 text-sm font-semibold text-primary-ink hover:bg-primary hover:text-white disabled:opacity-50"
         >
           {isFetchingNextPage ? 'Chargement…' : 'Charger la suite'}
         </button>

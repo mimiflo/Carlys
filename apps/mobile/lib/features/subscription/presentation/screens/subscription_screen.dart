@@ -50,8 +50,7 @@ class SubscriptionScreen extends ConsumerWidget {
         ref.watch(firstRunStepProvider) == FirstRunStep.subscription;
 
     return SubscriptionResumeListener(
-      child: Scaffold(
-        backgroundColor: AppColors.darkBackground,
+      child: AppDarkScaffold(
         // Le cœur ambiant se fige pendant le défilement de l'écran.
         body: SceneScrollActivity(
           child: Stack(

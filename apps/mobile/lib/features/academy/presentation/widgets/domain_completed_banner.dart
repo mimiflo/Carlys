@@ -11,6 +11,10 @@ import '../../domain/entities/academy.dart';
 /// gravé, dépliement plutôt que superposition — parce que c'est le même
 /// genre d'événement : rare, mérité, et qui ne se reprend pas.
 ///
+/// La signature est celle qui porte un texte ([AppColors.signatureInk]), et
+/// chaque texte est en blanc PLEIN : sur la signature d'origine, le surtitre
+/// à 80 % tombait à 3,31:1 et la croix de fermeture à 2,59, sur l'orange.
+///
 /// Il se déplie une seule fois, au moment du franchissement : l'écran le
 /// pose à partir d'une comparaison avant/après, jamais depuis l'état final.
 /// Une fête qui reviendrait à chaque ouverture ne célébrerait plus rien.
@@ -43,7 +47,7 @@ class DomainCompletedBanner extends StatelessWidget {
         excludeSemantics: true,
         child: DecoratedBox(
           decoration: BoxDecoration(
-            gradient: AppColors.signature,
+            gradient: AppColors.signatureInk,
             borderRadius: AppRadius.lgAll,
           ),
           child: Padding(
@@ -63,7 +67,7 @@ class DomainCompletedBanner extends StatelessWidget {
                       Text(
                         'Domaine bouclé',
                         style: AppTypography.label.copyWith(
-                          color: AppColors.neutral0.withValues(alpha: 0.8),
+                          color: AppColors.neutral0,
                         ),
                       ),
                       const SizedBox(height: AppSpacing.xxs),

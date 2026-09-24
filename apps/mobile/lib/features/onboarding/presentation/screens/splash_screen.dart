@@ -63,8 +63,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.darkBackground,
+    return AppDarkScaffold(
       body: Stack(
         children: [
           // Halo de marque, haut-centre : la même lueur violette que la page

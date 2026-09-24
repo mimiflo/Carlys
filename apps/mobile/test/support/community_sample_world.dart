@@ -208,6 +208,14 @@ const List<(String, String, int)> _classement = [
 /// celle de la maquette du 23 septembre 2026, message compris.
 List<FriendChallenge> sampleFriendChallenges() {
   final now = DateTime.now();
+  // Le mot de Léa est d'AUJOURD'HUI, quelle que soit l'heure du test :
+  // « il y a 5 h » tombait la veille entre minuit et 5 h (heure locale), et
+  // l'écran écrivait alors « Hier » là où le test attend « Aujourd'hui ».
+  final debutDuJour = DateTime(now.year, now.month, now.day);
+  final ilYaCinqHeures = now.subtract(const Duration(hours: 5));
+  final motDeLea = ilYaCinqHeures.isBefore(debutDuJour)
+      ? debutDuJour
+      : ilYaCinqHeures;
   return [
     FriendChallenge(
       id: 'exemple-defi-ami-course',
@@ -259,7 +267,7 @@ List<FriendChallenge> sampleFriendChallenges() {
       myStatus: FriendChallengeMemberStatus.invited,
       startsAt: now.subtract(const Duration(hours: 5)),
       endsAt: now.add(const Duration(days: 6, hours: 19)),
-      createdAt: now.subtract(const Duration(hours: 5)),
+      createdAt: motDeLea,
       durationDays: 7,
       creatorDisplayName: 'Léa',
       message:

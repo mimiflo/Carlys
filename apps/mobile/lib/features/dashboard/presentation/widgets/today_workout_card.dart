@@ -114,6 +114,9 @@ class _PlayDisc extends StatelessWidget {
             shape: const CircleBorder(),
             child: InkWell(
               customBorder: const CircleBorder(),
+              // Le voile SOMBRE des boutons violets : ceux du thème, gris
+              // clairs, pâlissaient le disque sous l'icône blanche à l'appui.
+              overlayColor: AppButton.stateOverlay,
               onTap: onPressed,
               child: const SizedBox.square(
                 dimension: _size,

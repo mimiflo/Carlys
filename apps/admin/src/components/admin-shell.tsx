@@ -76,7 +76,7 @@ export function AdminShell({ title, children }: { title: string; children: React
               connexion. */}
           <Link
             href={firstAllowedRoute(permissions)}
-            className="text-sm font-bold uppercase tracking-widest text-primary"
+            className="text-sm font-bold uppercase tracking-widest text-primary-ink"
           >
             Carlys Admin
           </Link>
@@ -86,8 +86,8 @@ export function AdminShell({ title, children }: { title: string; children: React
                 key={item.href}
                 href={item.href}
                 aria-current={pathname.startsWith(item.href) ? 'page' : undefined}
-                className={`text-sm font-medium transition-colors hover:text-primary ${
-                  pathname.startsWith(item.href) ? 'text-primary' : 'text-muted'
+                className={`text-sm font-medium transition-colors hover:text-primary-ink ${
+                  pathname.startsWith(item.href) ? 'text-primary-ink' : 'text-muted'
                 }`}
               >
                 {item.label}
@@ -100,7 +100,7 @@ export function AdminShell({ title, children }: { title: string; children: React
               adminToken.clear();
               router.replace('/login');
             }}
-            className="ml-auto text-sm font-medium text-muted transition-colors hover:text-danger"
+            className="ml-auto text-sm font-medium text-muted transition-colors hover:text-danger-ink"
           >
             Se déconnecter
           </button>

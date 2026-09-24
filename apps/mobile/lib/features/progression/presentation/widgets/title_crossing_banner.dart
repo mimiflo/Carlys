@@ -76,9 +76,13 @@ class _Bandeau extends StatelessWidget {
   Widget build(BuildContext context) {
     final explication = this.explication;
 
+    // La signature SOUS UN TEXTE (`signatureInk`), et chaque texte en blanc
+    // PLEIN : sur la signature d'origine, l'explication tombait à 2,25:1
+    // au-dessus de l'orange, et même opaque ne tenait que 2,59. La
+    // hiérarchie tient par la taille et la graisse, pas par l'opacité.
     final contenu = DecoratedBox(
       decoration: BoxDecoration(
-        gradient: AppColors.signature,
+        gradient: AppColors.signatureInk,
         borderRadius: AppRadius.lgAll,
       ),
       child: Padding(
@@ -97,7 +101,7 @@ class _Bandeau extends StatelessWidget {
                   Text(
                     'Nouveau titre',
                     style: AppTypography.label.copyWith(
-                      color: AppColors.neutral0.withValues(alpha: 0.8),
+                      color: AppColors.neutral0,
                     ),
                   ),
                   const SizedBox(height: AppSpacing.xxs),
@@ -112,7 +116,7 @@ class _Bandeau extends StatelessWidget {
                     Text(
                       explication.cequeCest,
                       style: AppTypography.label.copyWith(
-                        color: AppColors.neutral0.withValues(alpha: 0.85),
+                        color: AppColors.neutral0,
                       ),
                     ),
                   ],

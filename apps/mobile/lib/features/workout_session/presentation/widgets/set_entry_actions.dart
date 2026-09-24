@@ -3,16 +3,15 @@ import 'package:flutter/material.dart';
 import '../../../../design_system/design_system.dart';
 import 'exercise_picker_sheet.dart' show SetMeasure;
 
-/// Les deux commandes de la carte de saisie : la BASCULE d'unité et le
-/// bouton de validation.
-///
-/// Extraits de la carte parce qu'ils ne décident rien — ils rendent un geste.
-/// La carte, elle, tient l'état de la saisie ; les mêler la faisait passer le
-/// plafond de 250 lignes du dépôt, et une carte de 330 lignes ne se relit plus
-/// d'un coup d'œil.
+// Les deux commandes de la carte de saisie : la BASCULE d'unité et le
+// bouton de validation.
+//
+// Extraits de la carte parce qu'ils ne décident rien — ils rendent un geste.
+// La carte, elle, tient l'état de la saisie ; les mêler la faisait passer le
+// plafond de 250 lignes du dépôt, et une carte de 330 lignes ne se relit plus
+// d'un coup d'œil.
 
-const double _ctaIconSize = 19;
-
+/// L'appel à l'action de la carte : valider la série saisie.
 class SetValidateCta extends StatelessWidget {
   const SetValidateCta({required this.onPressed, super.key});
 
@@ -20,37 +19,10 @@ class SetValidateCta extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DecoratedBox(
-      decoration: BoxDecoration(
-        gradient: AppColors.cta,
-        borderRadius: AppRadius.buttonAll,
-        boxShadow: AppShadows.ctaGlow(),
-      ),
-      child: FilledButton(
-        style: FilledButton.styleFrom(
-          backgroundColor: Colors.transparent,
-          foregroundColor: AppColors.neutral0,
-          shadowColor: Colors.transparent,
-          textStyle: AppTypography.subheading.copyWith(
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        onPressed: onPressed,
-        child: const Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(AppIcons.check, size: _ctaIconSize),
-            SizedBox(width: AppSpacing.xs),
-            Flexible(
-              child: Text(
-                'Valider la série',
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-          ],
-        ),
-      ),
+    return AppCtaButton(
+      label: 'Valider la série',
+      icon: AppIcons.check,
+      onPressed: onPressed,
     );
   }
 }

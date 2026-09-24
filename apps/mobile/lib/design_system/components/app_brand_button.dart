@@ -9,8 +9,9 @@ import '../typography/app_typography.dart';
 /// Bouton pleine largeur à **dégradé du design system**.
 ///
 /// Réservé aux surfaces de marque, où l'orange de l'application n'a pas encore
-/// de sens : la page de bienvenue porte la signature (par défaut), les écrans
-/// d'entrée (connexion, inscription) le violet de leur maquette
+/// de sens : la page de bienvenue porte la signature (par défaut, dans sa
+/// variante [AppColors.signatureInk], la seule qui porte un libellé blanc),
+/// les écrans d'entrée (connexion, inscription) le violet de leur maquette
 /// ([AppColors.cta]) — c'est l'identité qu'on montre, pas l'interface.
 /// Ailleurs, l'action principale reste [AppButton] en accent — deux boutons
 /// « principaux » de couleurs différentes dans un même écran annuleraient la
@@ -22,7 +23,7 @@ class AppBrandButton extends StatefulWidget {
     this.uppercase = true,
     this.trailingIcon,
     this.isLoading = false,
-    this.gradient = AppColors.signature,
+    this.gradient = AppColors.signatureInk,
     super.key,
   });
 
@@ -30,7 +31,10 @@ class AppBrandButton extends StatefulWidget {
 
   /// Fond du bouton. La signature par défaut (page de bienvenue) ; les
   /// écrans d'entrée passent [AppColors.cta], le violet de leur maquette.
-  /// Toujours un dégradé du design system, jamais une valeur locale.
+  /// Toujours un dégradé du design system, jamais une valeur locale — et
+  /// toujours un dégradé où le blanc tient AA sur chaque arrêt : le libellé
+  /// le traverse d'un bord à l'autre. [AppColors.signature] elle-même n'y
+  /// tient pas (2,59 sur son orange), d'où [AppColors.signatureInk].
   final LinearGradient gradient;
 
   /// `null` désactive le bouton. Le dégradé s'éteint alors À MOITIÉ, texte
@@ -56,14 +60,19 @@ class AppBrandButton extends StatefulWidget {
   static const double _tracking = 1.4;
   static const double _disabledOpacity = 0.45;
 
-  /// Réaction au toucher : un tassement à peine perceptible et un éclat.
+  /// Réaction au toucher : un tassement à peine perceptible et un voile.
   ///
   /// La durée vient du jeton `AppMotion.tap`, comme toute surface pressée.
   /// Elle était écrite en dur (160 ms) : le seul bouton de l'application à
   /// répondre à un autre rythme que les autres, et une valeur visuelle codée
   /// en dur — ce que le dépôt s'interdit.
+  ///
+  /// Le voile est SOMBRE et passe SOUS le libellé. Il était blanc, posé
+  /// par-dessus tout : il éclaircissait le fond sous un texte blanc (4,07:1
+  /// sous « Créer mon compte » à l'appui). Sombre, il le fonce, comme le
+  /// voile d'état d'[AppButton].
   static const double _pressedScale = 0.985;
-  static const double _pressedBrightness = 1.08;
+  static const double _pressedVeil = 0.08;
 
   bool get _enabled => onPressed != null && !isLoading;
 
@@ -103,10 +112,10 @@ class _AppBrandButtonState extends State<AppBrandButton> {
               opacity: enabled ? 1 : AppBrandButton._disabledOpacity,
               duration: AppMotion.tap,
               child: _Surface(
-                // L'éclat au toucher est rendu par un voile blanc très léger :
-                // un filtre de luminosité coûterait une couche de composition
-                // pour un résultat identique à l'œil.
-                highlight: _pressed ? AppBrandButton._pressedBrightness - 1 : 0,
+                // Un voile plutôt qu'un filtre de luminosité : le filtre
+                // coûterait une couche de composition, et toucherait aussi
+                // le libellé.
+                veil: _pressed ? AppBrandButton._pressedVeil : 0,
                 gradient: widget.gradient,
                 label: widget.uppercase
                     ? widget.label.toUpperCase()
@@ -124,15 +133,16 @@ class _AppBrandButtonState extends State<AppBrandButton> {
 
 class _Surface extends StatelessWidget {
   const _Surface({
-    required this.highlight,
+    required this.veil,
     required this.gradient,
     required this.label,
     required this.trailingIcon,
     required this.isLoading,
   });
 
-  /// Part de blanc ajoutée par-dessus le dégradé, à l'appui.
-  final double highlight;
+  /// Part du fond de l'application posée entre le dégradé et le libellé, à
+  /// l'appui.
+  final double veil;
   final LinearGradient gradient;
   final String label;
   final IconData? trailingIcon;
@@ -140,20 +150,22 @@ class _Surface extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AnimatedContainer(
-      duration: AppMotion.tap,
-      height: AppBrandButton._height,
-      alignment: Alignment.center,
-      padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+    return DecoratedBox(
       decoration: BoxDecoration(
         gradient: gradient,
         borderRadius: AppRadius.fullAll,
       ),
-      foregroundDecoration: BoxDecoration(
-        color: AppColors.neutral0.withValues(alpha: highlight),
-        borderRadius: AppRadius.fullAll,
+      child: AnimatedContainer(
+        duration: AppMotion.tap,
+        height: AppBrandButton._height,
+        alignment: Alignment.center,
+        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+        decoration: BoxDecoration(
+          color: AppColors.darkBackground.withValues(alpha: veil),
+          borderRadius: AppRadius.fullAll,
+        ),
+        child: isLoading ? const _Spinner() : _Label(label, trailingIcon),
       ),
-      child: isLoading ? const _Spinner() : _Label(label, trailingIcon),
     );
   }
 }

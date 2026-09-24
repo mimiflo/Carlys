@@ -71,7 +71,7 @@ export default function ReportsPage() {
 
       {isPending && <p className="mt-6 text-sm text-muted">Chargement…</p>}
       {error !== null && (
-        <p className="mt-6 text-sm text-danger" role="alert">
+        <p className="mt-6 text-sm text-danger-ink" role="alert">
           {error instanceof AdminApiError && error.status === 403
             ? 'Signalements indisponibles : la permission community:moderate est requise.'
             : 'Signalements indisponibles : reconnectez-vous si le problème persiste.'}
@@ -110,7 +110,7 @@ export default function ReportsPage() {
           type="button"
           disabled={isFetchingNextPage}
           onClick={() => void fetchNextPage()}
-          className="mt-4 rounded-lg border border-primary px-4 py-2 text-sm font-semibold text-primary hover:bg-primary hover:text-white disabled:opacity-50"
+          className="mt-4 rounded-lg border border-primary px-4 py-2 text-sm font-semibold text-primary-ink hover:bg-primary hover:text-white disabled:opacity-50"
         >
           Charger la suite
         </button>

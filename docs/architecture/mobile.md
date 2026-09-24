@@ -280,8 +280,27 @@ Le splash l'applique déjà à son délai de transition.
 
 Composants actuels : `AppButton` (variantes primary/secondary/ghost/destructive,
 trois tailles, état de chargement anti-double-soumission, `isExpanded`,
-`Semantics` intégré), `AppLoadingIndicator` (libellé accessible),
-`AppErrorState` (icône, titre, message, réessai), `AppEmptyState`.
+`Semantics` intégré), `AppCtaButton` (l'appel à l'action d'une barre ou
+d'une carte : icône et libellé gras sur le dégradé `cta`, halo, toute la
+largeur, chargement ; même mécanique que le principal d'`AppButton`,
+`app_gradient_action.dart`, interne au design system — un écran ne pose
+JAMAIS son propre bouton transparent sur `AppColors.cta`, un balai
+d'`ink_on_gradients_test.dart` le refuse), `AppLoadingIndicator` (libellé
+accessible), `AppErrorState` (icône, titre, message, réessai),
+`AppEmptyState`, `AppDarkScaffold` (le `Scaffold` d'un écran sombre).
+
+**Ce qui est peint en sombre porte le thème sombre.** L'application est
+sombre par dessin, sous tous les réglages : ses écrans, ses feuilles, ses
+barres en verre et ses popups sont peints en sombre même sous le réglage
+Clair. `AppDarkTheme` leur impose alors le thème sombre (sous un thème
+sombre ou OLED, il ne touche à rien), pour que ce qui s'y pose — un bouton
+contour, une carte, une plaque — lise les couleurs de ce qui est peint, et
+non celles d'une page claire : aucun violet ne tient 4,5:1 sur les deux.
+Un écran sombre prend `AppDarkScaffold`, qui porte le fond ET le thème ;
+`showAppSheet`, `AppTranslucentBar` et `AppPopupCard` l'imposent d'eux-mêmes.
+Un écran qui SUIT le réglage garde un `Scaffold` ordinaire.
+`dark_surfaces_test.dart` mesure chaque surface dans chaque thème et refuse
+un `Scaffold` peint en `darkBackground` hors du design system.
 
 **Portes d'explication** : deux composants, et une règle qui les départage.
 `AppExplainable` enveloppe une donnée AFFICHÉE — c'est la donnée entière qui

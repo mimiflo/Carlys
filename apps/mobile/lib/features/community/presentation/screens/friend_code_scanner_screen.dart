@@ -47,8 +47,7 @@ class _FriendCodeScannerScreenState extends State<FriendCodeScannerScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.darkBackground,
+    return AppDarkScaffold(
       appBar: AppBar(
         backgroundColor: AppColors.darkBackground,
         leading: IconButton(

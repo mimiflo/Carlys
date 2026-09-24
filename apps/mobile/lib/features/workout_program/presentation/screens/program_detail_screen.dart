@@ -110,8 +110,7 @@ class ProgramDetailScreen extends ConsumerWidget {
     final detail = ref.watch(programDetailProvider(programId));
     final bottomInset = MediaQuery.paddingOf(context).bottom;
 
-    return Scaffold(
-      backgroundColor: AppColors.darkBackground,
+    return AppDarkScaffold(
       body: SafeArea(
         bottom: false,
         child: detail.when(

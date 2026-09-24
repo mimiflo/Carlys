@@ -37,13 +37,13 @@ export function CommunityReportStatusCell({ report }: { report: AdminCommunityRe
         className={
           isOpen
             ? 'rounded-lg bg-primary px-3 py-1 text-xs font-semibold text-white hover:bg-primary-dark disabled:opacity-50'
-            : 'rounded-lg px-3 py-1 text-xs font-semibold text-primary hover:bg-primary/10 disabled:opacity-50'
+            : 'rounded-lg px-3 py-1 text-xs font-semibold text-primary-ink hover:bg-primary/10 disabled:opacity-50'
         }
       >
         {isOpen ? 'Résoudre' : 'Rouvrir'}
       </button>
       {mutate.isError && (
-        <p className="mt-1 text-xs text-danger" role="alert">
+        <p className="mt-1 text-xs text-danger-ink" role="alert">
           {mutate.error instanceof AdminApiError && mutate.error.status === 403
             ? 'Permission manquante pour cette action.'
             : 'Action impossible, réessayez.'}

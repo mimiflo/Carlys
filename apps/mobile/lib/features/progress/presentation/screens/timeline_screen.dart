@@ -59,8 +59,7 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
   Widget build(BuildContext context) {
     final frise = ref.watch(timelineControllerProvider);
 
-    return Scaffold(
-      backgroundColor: AppColors.darkBackground,
+    return AppDarkScaffold(
       appBar: AppBar(
         backgroundColor: AppColors.darkBackground,
         leading: const AppBackButton(),

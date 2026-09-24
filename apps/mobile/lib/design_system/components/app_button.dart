@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
 
 import '../colors/app_colors.dart';
-import '../radius/app_radius.dart';
 import '../spacing/app_spacing.dart';
+import 'app_gradient_action.dart';
 
 enum AppButtonVariant {
   primary,
@@ -50,6 +50,16 @@ class AppButton extends StatelessWidget {
 
   bool get _enabled => onPressed != null && !isLoading;
 
+  /// Voile d'état SOMBRE des boutons pleins sous un libellé blanc (voir
+  /// [AppGradientAction.stateVeil]).
+  static const Color stateVeil = AppGradientAction.stateVeil;
+
+  /// Ce voile état par état, pour l'`overlayColor` d'un `InkWell` posé sur
+  /// un dégradé violet sous une encre blanche (voir
+  /// [AppGradientAction.stateOverlay]).
+  static final WidgetStateProperty<Color?> stateOverlay =
+      AppGradientAction.stateOverlay;
+
   @override
   Widget build(BuildContext context) {
     final button = _buildVariant(context);
@@ -74,21 +84,21 @@ class AppButton extends StatelessWidget {
       // (connexion, inscription). Auparavant un violet PLAT — proche, mais
       // pas identique au bouton du login. Le dégradé se peint derrière un
       // FilledButton rendu transparent, qui garde toute sa mécanique (tailles,
-      // pression, accessibilité) sans qu'on la réécrive.
-      AppButtonVariant.primary => _GradientAction(
-        enabled: _enabled,
+      // pression, accessibilité) sans qu'on la réécrive. Désactivée, l'action
+      // s'éteint à moitié, texte compris.
+      AppButtonVariant.primary => AppGradientAction(
         onPressed: onPressedOrNull,
-        sizeStyle: _sizeStyle(),
+        style: _sizeStyle(),
         child: child,
       ),
       AppButtonVariant.secondary => OutlinedButton(
         onPressed: onPressedOrNull,
-        style: _sizeStyle(),
+        style: _sizeStyle().merge(_inkStyle(context)),
         child: child,
       ),
       AppButtonVariant.ghost => TextButton(
         onPressed: onPressedOrNull,
-        style: _sizeStyle(),
+        style: _sizeStyle().merge(_inkStyle(context)),
         child: child,
       ),
       AppButtonVariant.accent => FilledButton(
@@ -103,17 +113,45 @@ class AppButton extends StatelessWidget {
       ),
       // Un rouge PLUS PROFOND que `colorScheme.error` (`danger`) : blanc sur
       // `danger` ne tient que 3,76:1, sous l'AA d'un libellé de 15 points.
+      // Le voile d'état est SOMBRE (voir [stateVeil]).
       AppButtonVariant.destructive => FilledButton(
         onPressed: onPressedOrNull,
         style: _sizeStyle().merge(
           FilledButton.styleFrom(
             backgroundColor: AppColors.dangerStrong,
             foregroundColor: AppColors.neutral0,
+            overlayColor: stateVeil,
           ),
         ),
         child: child,
       ),
     };
+  }
+
+  /// L'encre et le voile d'état des variantes SANS fond (contour, fantôme),
+  /// dont le libellé se pose sur la page ou sur une carte.
+  ///
+  /// Le voile est le violet CLAIR dans les deux thèmes — celui que Material
+  /// dérivait déjà de `colorScheme.primary` en sombre. En clair, le violet
+  /// vif du thème tombait sous 4,5:1 dès que son propre voile teintait le
+  /// fond (survol 4,21, focus 4,09 sur la page) : le libellé y prend le
+  /// violet PROFOND, et le voile clair le fonce moins que le vif ne le
+  /// faisait. `contrast_pairs_test.dart` mesure chaque état.
+  ///
+  /// Ce violet profond est celui d'une page CLAIRE : aucun violet ne tient
+  /// 4,5:1 à la fois sur la page claire et sur la page sombre. Tout ce que
+  /// l'application peint en sombre sous le réglage Clair (écran, feuille,
+  /// barre en verre, popup) porte donc le thème sombre ([AppDarkTheme]) :
+  /// le bouton y lit `primary` sombre (`dark_surfaces_test.dart`).
+  ButtonStyle _inkStyle(BuildContext context) {
+    final colorScheme = Theme.of(context).colorScheme;
+    final ink = colorScheme.brightness == Brightness.light
+        ? AppColors.primaryDark
+        : colorScheme.primary;
+    return TextButton.styleFrom(
+      foregroundColor: ink,
+      overlayColor: AppColors.primaryLight,
+    );
   }
 
   ButtonStyle _sizeStyle() {
@@ -134,12 +172,15 @@ class AppButton extends StatelessWidget {
 
   Widget _buildChild(BuildContext context) {
     if (isLoading) {
-      // Blanc, jamais `onPrimary` : le fond primaire est désormais un dégradé
-      // violet peint hors du colorScheme, où `onPrimary` n'a plus de rapport
-      // avec le fond réel.
+      // Jamais `onPrimary`, qui suppose un fond `primary`. Le primaire garde
+      // son dégradé (tamisé avec lui) : blanc. Les autres variantes, en
+      // chargement donc désactivées, n'ont plus de fond à elles — rien pour
+      // le contour et le texte, un voile gris pour les pleines : l'indicateur
+      // se pose sur la carte, et prend l'encre violette du thème. `onPrimary`
+      // y valait 1,05:1 en sombre, 1,00 en clair.
       final onFill = variant == AppButtonVariant.primary
           ? AppColors.neutral0
-          : Theme.of(context).colorScheme.onPrimary;
+          : Theme.of(context).colorScheme.primary;
       return SizedBox(
         height: 20,
         width: 20,
@@ -165,58 +206,5 @@ class AppButton extends StatelessWidget {
         Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.clip)),
       ],
     );
-  }
-}
-
-/// L'action principale, rendue avec le dégradé violet des écrans d'entrée.
-///
-/// Le dégradé ([AppColors.cta]) se peint dans un [DecoratedBox] ; le
-/// [FilledButton] posé dessus est rendu transparent, donc il n'apporte plus
-/// que sa mécanique — dimensions du thème, effet de pression, sémantique,
-/// zone tactile. Le rayon du fond suit celui du thème des boutons pour que
-/// les coins du dégradé épousent ceux du bouton.
-///
-/// Désactivé, l'ensemble s'éteint à moitié (texte compris), comme le bouton
-/// de marque : un fond vif sous un libellé grisé se lit comme un bug
-/// d'affichage, pas comme un état.
-class _GradientAction extends StatelessWidget {
-  const _GradientAction({
-    required this.enabled,
-    required this.onPressed,
-    required this.sizeStyle,
-    required this.child,
-  });
-
-  final bool enabled;
-  final VoidCallback? onPressed;
-  final ButtonStyle sizeStyle;
-  final Widget child;
-
-  static const double _disabledOpacity = 0.45;
-
-  @override
-  Widget build(BuildContext context) {
-    final surface = DecoratedBox(
-      decoration: const BoxDecoration(
-        gradient: AppColors.cta,
-        borderRadius: AppRadius.buttonAll,
-      ),
-      child: FilledButton(
-        onPressed: onPressed,
-        style: sizeStyle.merge(
-          FilledButton.styleFrom(
-            backgroundColor: Colors.transparent,
-            foregroundColor: AppColors.neutral0,
-            disabledBackgroundColor: Colors.transparent,
-            disabledForegroundColor: AppColors.neutral0,
-            shadowColor: Colors.transparent,
-          ),
-        ),
-        child: child,
-      ),
-    );
-    // L'opacité seule tamise ; les couleurs « disabled » restent pleines pour
-    // que ce soit le dégradé ET le texte qui pâlissent d'un même mouvement.
-    return Opacity(opacity: enabled ? 1 : _disabledOpacity, child: surface);
   }
 }

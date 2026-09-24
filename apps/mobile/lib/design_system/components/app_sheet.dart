@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../colors/app_colors.dart';
 import '../radius/app_radius.dart';
+import '../theme/app_dark_theme.dart';
 
 /// Les deux familles de feuilles de la maquette : formulaire (surface
 /// standard, angles `lg`) et sélecteur (surface alternative, angles
@@ -17,7 +18,10 @@ enum AppSheetStyle { form, picker }
 ///  - le contenu s'arrête AU-DESSUS de la barre système du téléphone
 ///    (SafeArea bas) : le bouton de validation reste atteignable sur les
 ///    appareils à barre de navigation 3 boutons comme à geste ;
-///  - jamais sous la barre d'état en haut (`useSafeArea`).
+///  - jamais sous la barre d'état en haut (`useSafeArea`) ;
+///  - le thème SOMBRE à son contenu ([AppDarkTheme]) : la feuille est peinte
+///    en sombre sous tous les réglages, et sous le thème Clair un bouton
+///    contour y prenait le violet profond pensé pour une page claire.
 Future<T?> showAppSheet<T>(
   BuildContext context, {
   required WidgetBuilder builder,
@@ -39,7 +43,10 @@ Future<T?> showAppSheet<T>(
       padding: EdgeInsets.only(
         bottom: MediaQuery.viewInsetsOf(sheetContext).bottom,
       ),
-      child: SafeArea(top: false, child: Builder(builder: builder)),
+      child: SafeArea(
+        top: false,
+        child: AppDarkTheme(child: Builder(builder: builder)),
+      ),
     ),
   );
 }

@@ -66,8 +66,19 @@ const List<AppBottomBarItem> appBottomBarItems = [
 ];
 
 /// Bottom bar de la refonte : hauteur 84 + safe area, fond assombri +
-/// blur 20, bordure haute 1px. Actif en accent (icône remplie), inactif
-/// en `iconInactive`, transition [AppMotion.tab].
+/// blur 20, bordure haute 1px. Actif en accent (icône remplie) ; inactif,
+/// l'icône en `textMuted` et le libellé en `textSecondary`. Transition
+/// [AppMotion.tab].
+///
+/// La barre est TRANSLUCIDE : elle se mesure au-dessus de ce qui passe
+/// dessous, fond sombre comme page claire du thème clair ou photo blanche.
+/// Inactifs, l'icône et le libellé portaient `iconInactive` : 3,95:1 sous
+/// un libellé de 9 points (il en faut 4,5) au-dessus du fond sombre, et
+/// 2,79 sous l'icône (il en faut 3) au-dessus d'une page claire. Le gris
+/// secondaire sous le libellé et le gris éteint sous l'icône tiennent leur
+/// seuil quoi qu'il passe dessous — le pire cas est la photo blanche, et
+/// `contrast_pairs_test.dart` le mesure : ce commentaire ne recopie pas ses
+/// nombres.
 class AppBottomBar extends StatelessWidget {
   const AppBottomBar({
     required this.currentIndex,
@@ -134,7 +145,8 @@ class _BarItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = active ? AppColors.accent : AppColors.darkIconInactive;
+    final iconColor = active ? AppColors.accent : AppColors.textMuted;
+    final labelColor = active ? AppColors.accent : AppColors.darkTextSecondary;
     final duration = AppMotion.resolve(context, AppMotion.tab);
 
     return Semantics(
@@ -154,14 +166,14 @@ class _BarItem extends StatelessWidget {
                   active ? item.activeIcon : item.icon,
                   key: ValueKey(active),
                   size: 23,
-                  color: color,
+                  color: iconColor,
                 ),
               ),
               const SizedBox(height: 7),
               AnimatedDefaultTextStyle(
                 duration: duration,
                 style: (active ? AppTypography.tabActive : AppTypography.tab)
-                    .copyWith(color: color),
+                    .copyWith(color: labelColor),
                 child: Text(item.label),
               ),
             ],

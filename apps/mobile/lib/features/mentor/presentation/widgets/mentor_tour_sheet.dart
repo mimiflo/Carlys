@@ -185,10 +185,11 @@ class _VisiteTerminee extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Blanc PLEIN : à 80 %, 3,36:1 sur le violet clair.
                     Text(
                       'Les sept pièces vues',
                       style: AppTypography.label.copyWith(
-                        color: AppColors.neutral0.withValues(alpha: 0.8),
+                        color: AppColors.neutral0,
                       ),
                     ),
                     const SizedBox(height: AppSpacing.xxs),

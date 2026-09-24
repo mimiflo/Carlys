@@ -42,7 +42,7 @@ export default function UserDetailPage() {
     <AdminShell title="Fiche utilisateur">
       {isPending && <p className="text-sm text-muted">Chargement…</p>}
       {error !== null && (
-        <p className="text-sm text-danger" role="alert">
+        <p className="text-sm text-danger-ink" role="alert">
           {error instanceof AdminApiError && error.status === 404
             ? 'Utilisateur introuvable.'
             : 'Fiche indisponible.'}
@@ -127,7 +127,7 @@ export default function UserDetailPage() {
                   type="button"
                   disabled={statusMutation.isPending || user.status === 'DELETED'}
                   onClick={() => statusMutation.mutate('SUSPENDED')}
-                  className="rounded-lg bg-danger px-4 py-2 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50"
+                  className="rounded-lg bg-danger-strong px-4 py-2 text-sm font-semibold text-white hover:ring-2 hover:ring-danger-strong/40 disabled:opacity-50"
                 >
                   Suspendre le compte
                 </button>
@@ -136,13 +136,13 @@ export default function UserDetailPage() {
                 type="button"
                 disabled={entitlementMutation.isPending}
                 onClick={() => entitlementMutation.mutate(!user.isPremium)}
-                className="rounded-lg border border-primary px-4 py-2 text-sm font-semibold text-primary hover:bg-primary hover:text-white disabled:opacity-50"
+                className="rounded-lg border border-primary px-4 py-2 text-sm font-semibold text-primary-ink hover:bg-primary hover:text-white disabled:opacity-50"
               >
                 {user.isPremium ? 'Retirer le premium manuel' : 'Accorder le premium (manuel)'}
               </button>
             </div>
             {actionError !== null && (
-              <p className="mt-3 text-sm text-danger" role="alert">
+              <p className="mt-3 text-sm text-danger-ink" role="alert">
                 {actionError instanceof AdminApiError && actionError.status === 403
                   ? 'Permission manquante pour cette action.'
                   : 'Action impossible, réessayez.'}

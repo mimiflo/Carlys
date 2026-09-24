@@ -154,13 +154,16 @@ void main() {
   });
 
   group('color.brand (dégradés, accents) ↔ AppColors', () {
-    // Les bornes des deux dégradés de marque — la signature (bienvenue) et
-    // le bouton des écrans d'entrée, relevé au pixel sur sa maquette — et
-    // le rose clair des icônes de champ de ces mêmes écrans.
+    // Les bornes des dégradés de marque — la signature du logo, sa variante
+    // sous un texte, et le violet des libellés blancs (ctaStart assombri
+    // depuis la maquette pour tenir AA) — et le rose clair des icônes de
+    // champ des écrans d'entrée.
     const gradients = <String, Color>{
       'signatureStart': AppColors.signatureStart,
       'signatureMid': AppColors.signatureMid,
       'signatureEnd': AppColors.signatureEnd,
+      'signatureInkMid': AppColors.signatureInkMid,
+      'signatureInkEnd': AppColors.signatureInkEnd,
       'ctaStart': AppColors.ctaStart,
       'ctaEnd': AppColors.ctaEnd,
       'fieldIcon': AppColors.fieldIcon,
@@ -183,6 +186,27 @@ void main() {
       expect(AppColors.cta.colors, const [
         AppColors.ctaStart,
         AppColors.ctaEnd,
+      ]);
+    });
+
+    test('la signature sous un texte reflète color.gradient.signatureInk', () {
+      final declared =
+          (tokens['color']! as Map<String, Object?>)['gradient']!
+              as Map<String, Object?>;
+      final ink = declared['signatureInk']! as Map<String, Object?>;
+      expect(
+        [
+          for (final color in AppColors.signatureInk.colors)
+            color.toARGB32().toRadixString(16).toUpperCase(),
+        ],
+        [
+          for (final hex in ink['colors']! as List<Object?>)
+            'FF${(hex! as String).substring(1).toUpperCase()}',
+        ],
+      );
+      expect(AppColors.signatureInk.stops, [
+        for (final stop in ink['stops']! as List<Object?>)
+          (stop! as num).toDouble(),
       ]);
     });
   });

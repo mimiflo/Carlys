@@ -35,7 +35,7 @@ export function ApiStatus() {
 
   if (isError || data === undefined) {
     return (
-      <p className="text-sm text-danger" role="status">
+      <p className="text-sm text-danger-ink" role="status">
         API injoignable : vérifiez que `pnpm dev:api` et `docker compose up -d` sont lancés.
       </p>
     );

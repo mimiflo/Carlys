@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../support/contrast.dart';
 import '../../support/fake_exercises_repository.dart';
 import '../../support/fake_training_profile_repository.dart';
 
@@ -135,6 +136,23 @@ void main() {
       expect(repo.equipmentWrites.last.toSet(), {'halteres'});
     },
   );
+
+  testWidgets('le bandeau se lit sur tout son violet, pastille comprise', (
+    tester,
+  ) async {
+    // Le sous-titre à 80 % tombait à 3,18:1 au départ clair du dégradé, et
+    // le libellé de la pastille à 3,38 sur son voile blanc.
+    await monter(
+      tester,
+      repo: FakeTrainingProfileRepository(),
+      goal: TrainingGoal.hyrox,
+    );
+
+    final bandeau = surfacePainting(AppColors.cta);
+    expect(bandeau, findsOneWidget);
+    expect(find.text('Hyrox'), findsOneWidget);
+    expect(inkFailuresOn(tester, bandeau), isEmpty);
+  });
 
   testWidgets('la lecture en échec montre l’état d’erreur, réessayable', (
     tester,

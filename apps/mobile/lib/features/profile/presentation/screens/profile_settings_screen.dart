@@ -41,8 +41,7 @@ class ProfileSettingsScreen extends ConsumerWidget {
     final progression = ref.watch(progressionProfileProvider);
     final bottomInset = MediaQuery.paddingOf(context).bottom;
 
-    return Scaffold(
-      backgroundColor: AppColors.darkBackground,
+    return AppDarkScaffold(
       body: SafeArea(
         bottom: false,
         child: ListView(

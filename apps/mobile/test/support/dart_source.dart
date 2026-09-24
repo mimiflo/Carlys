@@ -10,7 +10,9 @@
 ///
 /// Le contenu d'une interpolation `${…}` est du CODE : il est parcouru comme
 /// tel, les chaînes qu'il ouvre ressortent comme des littéraux à part
-/// entière, et les couleurs qu'il nomme restent visibles au balai. Les
+/// entière, et les couleurs qu'il nomme restent visibles au balai. Ses deux
+/// accolades restent dans le code, pour que parenthèses, crochets et
+/// accolades s'y équilibrent toujours ([closingEnd], [enclosingOpen]). Les
 /// séquences d'échappement et les `$identifiant` ne sont pas interprétés —
 /// ils ne portent jamais de prose.
 library;
@@ -81,7 +83,9 @@ DartSource readDartSource(String source) {
           i + 1 < source.length &&
           source[i + 1] == '{') {
         pile.add(_InterpolationFrame());
-        masquer(r'${');
+        // Le `$` se masque, l'accolade reste : celle qui ferme
+        // l'interpolation est du code, celle qui l'ouvre aussi.
+        code.write(' {');
         i += 2;
       } else if (!sommet.raw && char == r'$') {
         final debut = i;
@@ -166,6 +170,36 @@ DartSource readDartSource(String source) {
   }
 
   return DartSource(literals: literals, code: code.toString());
+}
+
+/// Dans un [code] rendu par [dartCode] : la position JUSTE APRÈS ce que
+/// ferme la parenthèse, le crochet ou l'accolade ouvert à [open].
+int closingEnd(String code, int open) {
+  var depth = 0;
+  for (var i = open; i < code.length; i++) {
+    final char = code[i];
+    if ('([{'.contains(char)) depth++;
+    if (')]}'.contains(char)) {
+      depth--;
+      if (depth == 0) return i + 1;
+    }
+  }
+  return code.length;
+}
+
+/// Dans un [code] rendu par [dartCode] : la parenthèse, le crochet ou
+/// l'accolade qui enclôt [position] ; `null` au niveau du fichier.
+int? enclosingOpen(String code, int position) {
+  var depth = 0;
+  for (var i = position - 1; i >= 0; i--) {
+    final char = code[i];
+    if (')]}'.contains(char)) depth++;
+    if ('([{'.contains(char)) {
+      if (depth == 0) return i;
+      depth--;
+    }
+  }
+  return null;
 }
 
 final RegExp _identifiant = RegExp(r'[A-Za-z0-9_]');

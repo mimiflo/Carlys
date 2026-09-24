@@ -70,7 +70,7 @@ export default function LoginPage() {
             />
           </label>
           {error !== null && (
-            <p role="alert" className="text-sm font-medium text-danger">
+            <p role="alert" className="text-sm font-medium text-danger-ink">
               {error}
             </p>
           )}
@@ -82,7 +82,7 @@ export default function LoginPage() {
             {isSubmitting ? 'Connexion…' : 'Se connecter'}
           </button>
         </form>
-        <Link href="/" className="mt-6 inline-block text-sm font-medium text-primary underline">
+        <Link href="/" className="mt-6 inline-block text-sm font-medium text-primary-ink underline">
           ← Retour à l’accueil
         </Link>
       </div>

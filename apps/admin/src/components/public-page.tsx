@@ -33,7 +33,7 @@ export function PublicNotice({
 }) {
   if (tone === 'error') {
     return (
-      <p role="alert" className="text-sm font-medium text-danger">
+      <p role="alert" className="text-sm font-medium text-danger-ink">
         {children}
       </p>
     );

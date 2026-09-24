@@ -76,7 +76,9 @@ class TemplateCard extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: AppSpacing.md),
-                    _StartButton(
+                    AppCtaButton(
+                      label: 'Lancer',
+                      icon: AppIcons.play,
                       onPressed: onStart,
                       semanticLabel: 'Lancer le modèle ${template.name}',
                     ),
@@ -173,51 +175,6 @@ class _Title extends StatelessWidget {
           color: AppColors.darkTextTertiary,
         ),
       ],
-    );
-  }
-}
-
-/// Unique action accent de la carte : lancer le modèle.
-class _StartButton extends StatelessWidget {
-  const _StartButton({required this.onPressed, required this.semanticLabel});
-
-  final VoidCallback onPressed;
-  final String semanticLabel;
-
-  /// Géométrie de la maquette : icône 19 ; le halo vient du design system.
-  static const double _iconSize = 19;
-
-  @override
-  Widget build(BuildContext context) {
-    return Semantics(
-      button: true,
-      label: semanticLabel,
-      child: DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: AppColors.cta,
-          borderRadius: AppRadius.buttonAll,
-          boxShadow: AppShadows.ctaGlow(),
-        ),
-        child: FilledButton(
-          style: FilledButton.styleFrom(
-            backgroundColor: Colors.transparent,
-            foregroundColor: AppColors.neutral0,
-            shadowColor: Colors.transparent,
-            textStyle: AppTypography.subheading.copyWith(
-              fontWeight: FontWeight.w700,
-            ),
-          ),
-          onPressed: onPressed,
-          child: const Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              Icon(AppIcons.play, size: _iconSize),
-              SizedBox(width: AppSpacing.xs),
-              Text('Lancer'),
-            ],
-          ),
-        ),
-      ),
     );
   }
 }

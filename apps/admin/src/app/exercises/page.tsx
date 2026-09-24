@@ -28,7 +28,7 @@ function PublicationToggle({ exercise }: { exercise: AdminExerciseSummary }) {
       aria-pressed={exercise.isPublished}
       className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors disabled:opacity-50 ${
         exercise.isPublished
-          ? 'bg-primary/10 text-primary hover:bg-primary/20'
+          ? 'bg-primary/10 text-primary-ink hover:ring-1 hover:ring-primary'
           : 'bg-black/5 text-muted hover:bg-black/10'
       }`}
     >
@@ -94,7 +94,7 @@ export default function ExercisesPage() {
 
       {isPending && <p className="mt-6 text-sm text-muted">Chargement…</p>}
       {isError && (
-        <p className="mt-6 text-sm text-danger" role="alert">
+        <p className="mt-6 text-sm text-danger-ink" role="alert">
           Catalogue indisponible : reconnectez-vous si le problème persiste.
         </p>
       )}
@@ -112,16 +112,18 @@ export default function ExercisesPage() {
             </thead>
             <tbody>
               {data.items.map((exercise) => (
-                <tr
-                  key={exercise.id}
-                  className={`border-b border-black/5 last:border-0 ${
-                    exercise.deletedAt === null ? '' : 'opacity-60'
-                  }`}
-                >
+                <tr key={exercise.id} className="border-b border-black/5 last:border-0">
                   <td className="px-4 py-3">
-                    <span className="font-medium">{exercise.name}</span>
+                    {/* Un exercice supprimé se BARRE, il ne pâlit pas : à
+                        60 % d'opacité, son slug tombait à 2,17:1 et le
+                        bouton « Restaurer », toujours actif, à 2,62. */}
+                    <span
+                      className={`font-medium ${exercise.deletedAt === null ? '' : 'line-through'}`}
+                    >
+                      {exercise.name}
+                    </span>
                     {exercise.isPremium && (
-                      <span className="ml-2 rounded bg-accent/10 px-1.5 py-0.5 text-xs font-semibold text-accent">
+                      <span className="ml-2 rounded bg-accent px-1.5 py-0.5 text-xs font-semibold text-on-accent">
                         Premium
                       </span>
                     )}

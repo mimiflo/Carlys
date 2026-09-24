@@ -51,8 +51,7 @@ class CoachScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.darkBackground,
+    return AppDarkScaffold(
       // La barre de saisie reste EN BAS, et passe au-dessus du clavier quand
       // il s'ouvre. Rien à calculer ici pour cela, et surtout aucune réserve
       // à ajouter sous le composeur :

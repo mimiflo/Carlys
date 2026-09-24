@@ -22,8 +22,7 @@ class ManifestoScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     final bottomInset = MediaQuery.paddingOf(context).bottom;
 
-    return Scaffold(
-      backgroundColor: AppColors.darkBackground,
+    return AppDarkScaffold(
       body: Stack(
         children: [
           const Positioned.fill(

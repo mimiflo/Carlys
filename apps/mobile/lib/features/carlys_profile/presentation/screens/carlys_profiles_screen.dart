@@ -26,8 +26,7 @@ class CarlysProfilesScreen extends ConsumerWidget {
     };
     final bottomInset = MediaQuery.paddingOf(context).bottom;
 
-    return Scaffold(
-      backgroundColor: AppColors.darkBackground,
+    return AppDarkScaffold(
       appBar: AppBar(title: const Text('Profil Carlys')),
       body: SafeArea(
         bottom: false,

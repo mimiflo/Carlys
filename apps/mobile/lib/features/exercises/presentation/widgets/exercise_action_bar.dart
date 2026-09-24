@@ -20,7 +20,6 @@ class ExerciseActionBar extends ConsumerWidget {
 
   static const double _buttonSize = 54;
   static const double _historyIconSize = 21;
-  static const double _addIconSize = 19;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -39,40 +38,15 @@ class ExerciseActionBar extends ConsumerWidget {
               _HistoryButton(exercise: exercise),
               const SizedBox(width: AppSpacing.gapTile),
               Expanded(
-                // Dégradé violet des écrans d'entrée peint derrière le
-                // bouton : l'action principale de la barre parle la même
-                // couleur que « Se connecter », plus l'orange d'avant.
-                child: DecoratedBox(
-                  decoration: const BoxDecoration(
-                    gradient: AppColors.cta,
-                    borderRadius: AppRadius.buttonAll,
-                  ),
-                  child: FilledButton(
-                    style: FilledButton.styleFrom(
-                      minimumSize: const Size.fromHeight(_buttonSize),
-                      backgroundColor: Colors.transparent,
-                      foregroundColor: AppColors.neutral0,
-                      shadowColor: Colors.transparent,
-                      textStyle: AppTypography.subheading.copyWith(
-                        fontWeight: FontWeight.w700,
-                      ),
-                    ),
-                    onPressed: () => _addToWorkout(context, ref),
-                    child: const Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(AppIcons.add, size: _addIconSize),
-                        SizedBox(width: AppSpacing.xs),
-                        Flexible(
-                          child: Text(
-                            'Ajouter à la séance',
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
+                // L'appel à l'action du design system : le violet de « Se
+                // connecter », plus l'orange d'avant. Sans halo dans la
+                // barre, il déborderait sur le verre dépoli.
+                child: AppCtaButton(
+                  label: 'Ajouter à la séance',
+                  icon: AppIcons.add,
+                  glow: false,
+                  height: _buttonSize,
+                  onPressed: () => _addToWorkout(context, ref),
                 ),
               ),
             ],

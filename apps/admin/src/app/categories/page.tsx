@@ -68,7 +68,7 @@ function CreateForm() {
         Ajouter
       </button>
       {create.isError && (
-        <p className="w-full text-sm text-danger" role="alert">
+        <p className="w-full text-sm text-danger-ink" role="alert">
           {create.error instanceof Error ? create.error.message : 'Création refusée.'}
         </p>
       )}
@@ -101,7 +101,7 @@ export default function CategoriesPage() {
 
       {isPending && <p className="mt-6 text-sm text-muted">Chargement…</p>}
       {isError && (
-        <p className="mt-6 text-sm text-danger" role="alert">
+        <p className="mt-6 text-sm text-danger-ink" role="alert">
           Catégories indisponibles : reconnectez-vous si le problème persiste.
         </p>
       )}

@@ -46,8 +46,7 @@ class _TemplateEditorScreenState extends ConsumerState<TemplateEditorScreen> {
           unawaited(_confirmThenPop());
         }
       },
-      child: Scaffold(
-        backgroundColor: AppColors.darkBackground,
+      child: AppDarkScaffold(
         body: SafeArea(
           bottom: false,
           child: Column(

@@ -1,14 +1,27 @@
 /* Design system web Carlys — styles des composants.
    Idiome : classes `carlys-*`, valeurs UNIQUEMENT via var(--carlys-*).
-   Les thèmes basculent par [data-carlys-theme] sur CarlysProvider. */
+   Les thèmes basculent par [data-carlys-theme] sur CarlysProvider.
+
+   Une ENCRE n'est pas un APLAT, comme dans l'application et l'admin : ce qui
+   s'écrit prend une variable `-ink` qui change avec le thème pour tenir AA
+   (4,5:1) sur les deux fonds, et `--carlys-color-*` remplit. Chaque paire
+   texte / fond de ce fichier est mesurée, thème par thème, par
+   src/contrast.test.ts. */
 
 .carlys-root {
   --carlys-background: var(--carlys-surface-lightBackground);
   --carlys-surface: var(--carlys-surface-lightSurface);
   --carlys-surface-alt: var(--carlys-surface-lightSurfaceAlt);
   --carlys-text: var(--carlys-neutral-900);
-  --carlys-text-muted: var(--carlys-neutral-500);
+  --carlys-text-muted: var(--carlys-neutral-600);
   --carlys-border: var(--carlys-neutral-200);
+  /* En clair, le violet PROFOND écrit (le vif tombe sous 4,5 sur sa propre
+     teinte), l'ambre ne s'écrit pas (1,83 sur sa teinte), le rouge d'erreur
+     est le rouge de remplissage (danger : 3,61 sur le fond de page). */
+  --carlys-primary-ink: var(--carlys-color-primaryDark);
+  --carlys-primary-tint: color-mix(in srgb, var(--carlys-color-primary) 10%, transparent);
+  --carlys-warning-ink: var(--carlys-neutral-950);
+  --carlys-danger-ink: var(--carlys-color-dangerStrong);
 
   background: var(--carlys-background);
   color: var(--carlys-text);
@@ -25,6 +38,10 @@
   --carlys-text: var(--carlys-neutral-50);
   --carlys-text-muted: var(--carlys-neutral-400);
   --carlys-border: var(--carlys-neutral-700);
+  --carlys-primary-ink: var(--carlys-color-primaryLight);
+  --carlys-primary-tint: color-mix(in srgb, var(--carlys-color-primaryLight) 14%, transparent);
+  --carlys-warning-ink: var(--carlys-color-warning);
+  --carlys-danger-ink: var(--carlys-color-danger);
 }
 
 .carlys-root[data-carlys-theme='oled'] {
@@ -34,6 +51,10 @@
   --carlys-text: var(--carlys-neutral-50);
   --carlys-text-muted: var(--carlys-neutral-400);
   --carlys-border: var(--carlys-neutral-700);
+  --carlys-primary-ink: var(--carlys-color-primaryLight);
+  --carlys-primary-tint: color-mix(in srgb, var(--carlys-color-primaryLight) 14%, transparent);
+  --carlys-warning-ink: var(--carlys-color-warning);
+  --carlys-danger-ink: var(--carlys-color-danger);
 }
 
 /* ── Bouton ─────────────────────────────────────────────────────── */
@@ -85,7 +106,7 @@
 
 .carlys-button--secondary {
   background: var(--carlys-surface);
-  color: var(--carlys-color-primary);
+  color: var(--carlys-primary-ink);
   border-color: var(--carlys-border);
 }
 .carlys-button--secondary:hover:not(:disabled) {
@@ -100,8 +121,10 @@
   background: var(--carlys-surface-alt);
 }
 
+/* Blanc sur `danger` ne tient que 3,76:1 : un bouton se remplit du rouge
+   PROFOND (4,83), et son survol le fonce encore. */
 .carlys-button--destructive {
-  background: var(--carlys-color-danger);
+  background: var(--carlys-color-dangerStrong);
   color: var(--carlys-neutral-0);
 }
 .carlys-button--destructive:hover:not(:disabled) {
@@ -152,16 +175,17 @@ button.carlys-card:hover {
   color: var(--carlys-text-muted);
 }
 .carlys-badge--primary {
-  background: color-mix(in srgb, var(--carlys-color-primary) 14%, transparent);
-  color: var(--carlys-color-primary);
+  background: var(--carlys-primary-tint);
+  color: var(--carlys-primary-ink);
 }
 .carlys-badge--accent {
   background: var(--carlys-color-accent);
   color: var(--carlys-neutral-950);
 }
+/* C'est la TEINTE qui dit « attention » ; l'encre est celle qui se lit. */
 .carlys-badge--warning {
   background: color-mix(in srgb, var(--carlys-color-warning) 16%, transparent);
-  color: var(--carlys-color-warning);
+  color: var(--carlys-warning-ink);
 }
 
 /* ── Métrique ───────────────────────────────────────────────────── */
@@ -231,7 +255,7 @@ button.carlys-card:hover {
 }
 .carlys-field__error {
   font-size: var(--carlys-text-xs);
-  color: var(--carlys-color-danger);
+  color: var(--carlys-danger-ink);
 }
 
 /* ── États (vide, erreur, chargement) ───────────────────────────── */

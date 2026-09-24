@@ -58,8 +58,7 @@ class FriendChallengeScreen extends ConsumerWidget {
       body = const AppLoadingIndicator();
     }
 
-    return Scaffold(
-      backgroundColor: AppColors.darkBackground,
+    return AppDarkScaffold(
       body: RefreshIndicator(
         // Un ami a pu marquer depuis l'ouverture : rien sur l'appareil ne
         // déclenche la relecture, le geste la demande.

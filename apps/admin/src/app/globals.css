@@ -5,15 +5,25 @@
    Toute évolution des jetons doit donc être reportée ici À LA MAIN.
    src/app/globals-tokens.test.ts échoue tant que ce n'est pas fait, et nomme
    la variable qui a dérivé et le jeton qu'elle recopie. */
+/* Un APLAT et une ENCRE ne sont pas la même variable. `--primary` et
+   `--danger` remplissent (bg-*) ; ce qui S'ÉCRIT prend `--primary-ink` et
+   `--danger-ink`, qui changent de valeur avec le thème pour tenir AA
+   (4,5:1) sur les deux fonds. `--danger-strong` est le rouge d'un aplat SOUS
+   un libellé blanc, `--on-accent` ce qui s'écrit sur l'accent. Les rapports
+   sont vérifiés par src/app/contrast.test.ts. */
 :root {
   --background: #fafafc;
   --foreground: #16162a;
   --surface: #ffffff;
   --primary: #9b30ff;
   --primary-dark: #7b1fff;
+  --primary-ink: #7b1fff;
   --accent: #ff7a45;
-  --muted: #7a7a8c;
+  --on-accent: #1a0a02;
+  --muted: #55556a;
   --danger: #ef4444;
+  --danger-strong: #dc2626;
+  --danger-ink: #dc2626;
   --success: #22c55e;
 }
 
@@ -23,9 +33,13 @@
   --color-surface: var(--surface);
   --color-primary: var(--primary);
   --color-primary-dark: var(--primary-dark);
+  --color-primary-ink: var(--primary-ink);
   --color-accent: var(--accent);
+  --color-on-accent: var(--on-accent);
   --color-muted: var(--muted);
   --color-danger: var(--danger);
+  --color-danger-strong: var(--danger-strong);
+  --color-danger-ink: var(--danger-ink);
   --color-success: var(--success);
 }
 
@@ -38,10 +52,19 @@
     --foreground: #f4f4f6;
     --surface: #15101f;
     --muted: #a5a5b5;
+    --primary-ink: #c88bff;
+    --danger-ink: #ef4444;
   }
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
+}
+
+/* Le preflight de Tailwind peint l'indicatif à 50 % du texte : 3,36:1 sur le
+   fond clair, alors qu'il est le SEUL libellé visible des champs de
+   recherche. Hors de toute couche, cette règle l'emporte sur le preflight. */
+::placeholder {
+  color: var(--muted);
 }

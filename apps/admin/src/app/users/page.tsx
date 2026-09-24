@@ -80,7 +80,7 @@ export default function UsersPage() {
 
       {isPending && <p className="mt-6 text-sm text-muted">Chargement…</p>}
       {isError && (
-        <p className="mt-6 text-sm text-danger" role="alert">
+        <p className="mt-6 text-sm text-danger-ink" role="alert">
           Liste indisponible : reconnectez-vous si le problème persiste.
         </p>
       )}
@@ -100,7 +100,10 @@ export default function UsersPage() {
               {users.map((user) => (
                 <tr key={user.id} className="border-b border-black/5 last:border-0">
                   <td className="px-4 py-3">
-                    <Link href={`/users/${user.id}`} className="font-medium text-primary underline">
+                    <Link
+                      href={`/users/${user.id}`}
+                      className="font-medium text-primary-ink underline"
+                    >
                       {user.email}
                     </Link>
                   </td>
@@ -128,7 +131,7 @@ export default function UsersPage() {
           type="button"
           onClick={() => void fetchNextPage()}
           disabled={isFetchingNextPage}
-          className="mt-4 rounded-lg border border-primary px-4 py-2 text-sm font-semibold text-primary hover:bg-primary hover:text-white disabled:opacity-50"
+          className="mt-4 rounded-lg border border-primary px-4 py-2 text-sm font-semibold text-primary-ink hover:bg-primary hover:text-white disabled:opacity-50"
         >
           {isFetchingNextPage ? 'Chargement…' : 'Charger la suite'}
         </button>

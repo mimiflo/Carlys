@@ -4,7 +4,7 @@ import '../colors/app_colors.dart';
 import '../radius/app_radius.dart';
 import '../shadows/app_shadows.dart';
 import '../spacing/app_spacing.dart';
-import '../theme/app_theme.dart';
+import '../theme/app_dark_theme.dart';
 import '../typography/app_typography.dart';
 import 'app_button.dart';
 
@@ -81,10 +81,6 @@ class AppPopupCard extends StatelessWidget {
   /// Libellé du voile, lu par les lecteurs d'écran : le toucher ferme.
   static const String dismissLabel = 'Fermer';
 
-  /// Le thème des popups, construit une fois : celui que l'application
-  /// applique en mode sombre.
-  static final ThemeData _theme = AppTheme.dark();
-
   @override
   Widget build(BuildContext context) {
     final title = this.title;
@@ -99,8 +95,7 @@ class AppPopupCard extends StatelessWidget {
     final endsOnGhost =
         last is AppButton && last.variant == AppButtonVariant.ghost;
 
-    return Theme(
-      data: _theme,
+    return AppDarkTheme(
       child: DecoratedBox(
         decoration: const BoxDecoration(
           borderRadius: AppRadius.cardMainAll,

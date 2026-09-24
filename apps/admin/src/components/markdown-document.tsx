@@ -20,7 +20,7 @@ function renderInline(nodes: readonly InlineNode[]): ReactNode[] {
         );
       case 'link':
         return (
-          <a key={index} href={node.href} className="text-primary underline">
+          <a key={index} href={node.href} className="text-primary-ink underline">
             {renderInline(node.children)}
           </a>
         );

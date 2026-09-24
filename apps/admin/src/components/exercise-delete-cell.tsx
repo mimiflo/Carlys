@@ -34,7 +34,7 @@ export function ExerciseDeleteCell({ exercise }: { exercise: AdminExerciseSummar
           type="button"
           disabled={mutate.isPending}
           onClick={() => mutate.mutate()}
-          className="rounded-lg px-3 py-1 text-xs font-semibold text-primary hover:bg-primary/10 disabled:opacity-50"
+          className="rounded-lg px-3 py-1 text-xs font-semibold text-primary-ink hover:bg-primary/10 disabled:opacity-50"
         >
           Restaurer
         </button>
@@ -50,7 +50,7 @@ export function ExerciseDeleteCell({ exercise }: { exercise: AdminExerciseSummar
       <button
         type="button"
         onClick={() => setConfirming(true)}
-        className="rounded-lg px-3 py-1 text-xs font-semibold text-danger hover:bg-danger/10"
+        className="rounded-lg px-3 py-1 text-xs font-semibold text-danger-ink hover:underline"
       >
         Supprimer
       </button>
@@ -63,7 +63,7 @@ export function ExerciseDeleteCell({ exercise }: { exercise: AdminExerciseSummar
         Il quitte le catalogue ; l’historique des séances qui le citent reste intact.
       </p>
       {mutate.isError && (
-        <p className="text-xs text-danger" role="alert">
+        <p className="text-xs text-danger-ink" role="alert">
           {mutate.error instanceof Error ? mutate.error.message : 'Suppression refusée.'}
         </p>
       )}
@@ -72,7 +72,7 @@ export function ExerciseDeleteCell({ exercise }: { exercise: AdminExerciseSummar
           type="button"
           disabled={mutate.isPending}
           onClick={() => mutate.mutate()}
-          className="rounded-lg bg-danger px-3 py-1 text-xs font-semibold text-white disabled:opacity-50"
+          className="rounded-lg bg-danger-strong px-3 py-1 text-xs font-semibold text-white disabled:opacity-50"
         >
           Confirmer
         </button>
