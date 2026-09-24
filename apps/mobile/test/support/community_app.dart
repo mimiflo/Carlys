@@ -14,6 +14,8 @@ import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
 import 'package:carlys_mobile/features/community/data/repositories/community_repository_impl.dart';
 import 'package:carlys_mobile/features/community/presentation/screens/community_screen.dart';
+import 'package:carlys_mobile/features/notifications/data/services/firebase_push_messenger.dart';
+import 'package:carlys_mobile/features/notifications/domain/services/push_messenger.dart';
 import 'package:carlys_mobile/features/nutrition/presentation/controllers/water_controllers.dart';
 import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';
 import 'package:flutter/material.dart';
@@ -27,41 +29,41 @@ import 'fake_workout_repository.dart';
 import 'in_memory_community_repository.dart';
 import 'navigation.dart';
 
+const _environment = AppEnvironment(
+  flavor: AppFlavor.development,
+  apiBaseUrl: 'http://localhost:3000',
+);
+
 /// L'écran Communauté sur le MONDE D'EXEMPLE en mémoire (amis, défis,
 /// encouragements — actions fonctionnelles, aucun réseau). [community] le
-/// fournit quand le test doit lire ce que le dépôt a reçu.
-Widget sampleWorldApp({InMemoryCommunityRepository? community}) =>
-    ProviderScope(
-      overrides: [
-        appEnvironmentProvider.overrideWithValue(
-          const AppEnvironment(
-            flavor: AppFlavor.development,
-            apiBaseUrl: 'http://localhost:3000',
-          ),
-        ),
-        authRepositoryProvider.overrideWithValue(
-          FakeAuthRepository(storedSession: true),
-        ),
-        workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
-        waterStoreProvider.overrideWithValue(FakeWaterStore()),
-        syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
-        appRestoreProvider.overrideWithValue(NoopAppRestore()),
-        communityRepositoryProvider.overrideWithValue(
-          community ?? InMemoryCommunityRepository(),
-        ),
-      ],
-      child: const CarlysApp(),
-    );
+/// fournit quand le test doit lire ce que le dépôt a reçu ; [messenger] et
+/// [environment] quand il joue une notification.
+Widget sampleWorldApp({
+  InMemoryCommunityRepository? community,
+  PushMessenger? messenger,
+  AppEnvironment environment = _environment,
+}) => ProviderScope(
+  overrides: [
+    appEnvironmentProvider.overrideWithValue(environment),
+    if (messenger != null) pushMessengerProvider.overrideWithValue(messenger),
+    authRepositoryProvider.overrideWithValue(
+      FakeAuthRepository(storedSession: true),
+    ),
+    workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
+    waterStoreProvider.overrideWithValue(FakeWaterStore()),
+    syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
+    appRestoreProvider.overrideWithValue(NoopAppRestore()),
+    communityRepositoryProvider.overrideWithValue(
+      community ?? InMemoryCommunityRepository(),
+    ),
+  ],
+  child: const CarlysApp(),
+);
 
 /// L'application connectée sur un dépôt communauté PILOTABLE (erreur, vide…).
 Widget appWith(FakeCommunityRepository community) => ProviderScope(
   overrides: [
-    appEnvironmentProvider.overrideWithValue(
-      const AppEnvironment(
-        flavor: AppFlavor.development,
-        apiBaseUrl: 'http://localhost:3000',
-      ),
-    ),
+    appEnvironmentProvider.overrideWithValue(_environment),
     authRepositoryProvider.overrideWithValue(
       FakeAuthRepository(storedSession: true),
     ),

@@ -1,5 +1,4 @@
-import 'dart:async';
-
+import 'package:carlys_mobile/app/environment/app_environment.dart';
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/notifications/data/repositories/device_token_repository_impl.dart';
 import 'package:carlys_mobile/features/notifications/data/services/firebase_push_messenger.dart';
@@ -10,6 +9,8 @@ import 'package:carlys_mobile/features/notifications/presentation/widgets/push_f
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../../support/fake_push_messenger.dart';
 
 /// CE QU'ON ACCEPTE DE RECEVOIR, et ce qui arrive quand on est déjà là.
 ///
@@ -46,21 +47,11 @@ class _Repository implements DeviceTokenRepository {
   Future<void> unregister(String token) async {}
 }
 
-class _Messenger implements PushMessenger {
-  final StreamController<PushNotice> notices = StreamController.broadcast();
-
-  @override
-  Stream<PushNotice> get onForegroundMessage => notices.stream;
-
-  @override
-  Future<String?> obtainToken(Object options) async => null;
-
-  @override
-  Stream<String> get onTokenRefresh => const Stream.empty();
-
-  @override
-  Future<void> deleteToken() async {}
-}
+/// Sans configuration Firebase : aucune notification n'a lancé l'application.
+const _environment = AppEnvironment(
+  flavor: AppFlavor.development,
+  apiBaseUrl: 'http://localhost:3000',
+);
 
 void main() {
   group('préférences', () {
@@ -112,12 +103,15 @@ void main() {
 
   group('réception application ouverte', () {
     testWidgets('une notification reçue se VOIT', (tester) async {
-      final messenger = _Messenger();
-      addTearDown(messenger.notices.close);
+      final messenger = FakePushMessenger(token: null);
+      addTearDown(messenger.close);
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [pushMessengerProvider.overrideWithValue(messenger)],
+          overrides: [
+            appEnvironmentProvider.overrideWithValue(_environment),
+            pushMessengerProvider.overrideWithValue(messenger),
+          ],
           child: MaterialApp(
             theme: AppTheme.dark(),
             home: const PushForegroundHost(
@@ -141,12 +135,15 @@ void main() {
     });
 
     testWidgets('deux d’affilée n’empilent pas deux bandeaux', (tester) async {
-      final messenger = _Messenger();
-      addTearDown(messenger.notices.close);
+      final messenger = FakePushMessenger(token: null);
+      addTearDown(messenger.close);
 
       await tester.pumpWidget(
         ProviderScope(
-          overrides: [pushMessengerProvider.overrideWithValue(messenger)],
+          overrides: [
+            appEnvironmentProvider.overrideWithValue(_environment),
+            pushMessengerProvider.overrideWithValue(messenger),
+          ],
           child: MaterialApp(
             theme: AppTheme.dark(),
             home: const PushForegroundHost(

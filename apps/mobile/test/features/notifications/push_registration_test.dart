@@ -1,11 +1,10 @@
-import 'dart:async';
-
 import 'package:carlys_mobile/app/environment/app_environment.dart';
 import 'package:carlys_mobile/core/errors/app_exception.dart';
 import 'package:carlys_mobile/features/notifications/domain/repositories/device_token_repository.dart';
-import 'package:carlys_mobile/features/notifications/domain/services/push_messenger.dart';
 import 'package:carlys_mobile/features/notifications/presentation/controllers/push_registration.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../../support/fake_push_messenger.dart';
 
 const options = FirebasePushOptions(
   apiKey: 'cle-de-test',
@@ -20,34 +19,6 @@ AppEnvironment environment({AppFlavor flavor = AppFlavor.development}) =>
       apiBaseUrl: 'http://localhost:3000',
       push: options,
     );
-
-class FakePushMessenger implements PushMessenger {
-  FakePushMessenger({this.token = 'jeton-1'});
-
-  /// Jeton rendu par [obtainToken] — null simule une permission refusée.
-  String? token;
-  int obtainCalls = 0;
-  int deleteCalls = 0;
-  final StreamController<String> refreshes = StreamController.broadcast();
-  final StreamController<PushNotice> notices = StreamController.broadcast();
-
-  @override
-  Future<String?> obtainToken(FirebasePushOptions options) async {
-    obtainCalls += 1;
-    return token;
-  }
-
-  @override
-  Stream<String> get onTokenRefresh => refreshes.stream;
-
-  @override
-  Stream<PushNotice> get onForegroundMessage => notices.stream;
-
-  @override
-  Future<void> deleteToken() async {
-    deleteCalls += 1;
-  }
-}
 
 class FakeDeviceTokenRepository implements DeviceTokenRepository {
   bool failRegister = false;

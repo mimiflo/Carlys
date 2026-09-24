@@ -50,7 +50,43 @@ utilise Carlys n'existerait pas.
 `FirebaseMessaging.onMessage` et pose un bandeau. Une seule à la fois : deux
 notifications coup sur coup empileraient deux bandeaux devant le contenu.
 C'est le seul endroit où l'application MONTRE une notification, et elle n'en
-fabrique jamais le contenu.
+fabrique jamais le contenu. Quand la notification annonce un écran, le
+bandeau propose « Voir », qui mène au même endroit que la toucher dans la
+barrette.
+
+## Toucher une notification
+
+Toucher « Léa te défie » ouvrait l'application, jamais le défi : il restait
+à chercher. Le serveur dit désormais OÙ mener, dans le champ `data` du
+message (clé `destination`, contrat `PUSH_DESTINATIONS` de
+`packages/api-contracts`), et l'application ouvre l'écran :
+
+| `destination` | Écran ouvert |
+| ------------- | ------------ |
+| `community-friends` (demande d'ami, acceptation, encouragement) | Communauté, onglet Amis |
+| `friend-challenge` + `challengeId` (invitation à un défi) | L'écran du défi entre amis |
+
+Côté mobile, `PushDestination` (`lib/features/notifications/domain/entities/`)
+est une **liste fermée** : l'application ne suit jamais une adresse brute
+venue du réseau. Une destination inconnue (serveur plus récent que
+l'application), absente ou mal formée (un `challengeId` qui n'est pas un
+UUID) ouvre simplement l'application, là où elle était. L'adresse de chaque
+destination vit dans `AppRoutes.pushDestination`, un `switch` exhaustif sur
+la classe scellée : une destination ajoutée sans son écran ne compile pas.
+
+Les trois chemins passent par `PushForegroundHost` :
+
+- application en arrière-plan : `FirebaseMessaging.onMessageOpenedApp` ;
+- application LANCÉE par le toucher : `getInitialMessage()`, demandé une fois
+  le SDK initialisé et seulement si la configuration Firebase existe (le SDK
+  ne rend ce message qu'une fois : recréer la coquille ne rouvre pas le
+  même écran) ;
+- application ouverte : l'action « Voir » du bandeau.
+
+Couvert par `test/features/notifications/push_destination_test.dart`
+(lecture des données, adresse de chaque destination, les trois chemins sur
+l'application montée), contre la doublure unique
+`test/support/fake_push_messenger.dart`.
 
 ## Principes
 
@@ -108,8 +144,8 @@ fabrique jamais le contenu.
 
 ## Réception
 
-Les messages envoyés sont des messages **de notification** (titre + corps) :
-en arrière-plan, le système les affiche lui-même dans la barrette — aucun
-gestionnaire d'arrière-plan n'est nécessaire. L'affichage au premier plan
-(bannière dans l'application) viendra avec un futur écran de préférences de
-notification.
+Les messages envoyés sont des messages **de notification** (titre + corps,
+plus la destination dans `data`) : en arrière-plan, le système les affiche
+lui-même dans la barrette — aucun gestionnaire d'arrière-plan n'est
+nécessaire. Au premier plan, c'est le bandeau de `PushForegroundHost` (voir
+« Application ouverte »).

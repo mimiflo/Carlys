@@ -1,4 +1,5 @@
 import '../../features/community/presentation/providers/community_tab_state.dart';
+import '../../features/notifications/domain/entities/push_destination.dart';
 
 /// Chemins de navigation nommés.
 abstract final class AppRoutes {
@@ -65,6 +66,16 @@ abstract final class AppRoutes {
   /// mot de celui qui l'a lancé.
   static String friendChallenge(String challengeId) =>
       '$community/defis/$challengeId';
+
+  /// L'écran qu'ouvre une notification TOUCHÉE. L'énumération est fermée :
+  /// une destination ajoutée sans son écran ne compile pas.
+  static String pushDestination(PushDestination destination) =>
+      switch (destination) {
+        CommunityFriendsDestination() => communityTab(CommunityTab.amis),
+        FriendChallengeDestination(:final challengeId) => friendChallenge(
+          challengeId,
+        ),
+      };
 
   static String exerciseDetail(String idOrSlug) => '/exercises/$idOrSlug';
 

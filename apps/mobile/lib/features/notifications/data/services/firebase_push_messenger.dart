@@ -3,6 +3,7 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../app/environment/app_environment.dart';
+import '../../domain/entities/push_destination.dart';
 import '../../domain/services/push_messenger.dart';
 
 /// Seul fichier du dépôt qui connaisse les plugins Firebase.
@@ -13,6 +14,18 @@ import '../../domain/services/push_messenger.dart';
 class FirebasePushMessenger implements PushMessenger {
   @override
   Future<String?> obtainToken(FirebasePushOptions options) async {
+    await _ensureInitialized(options);
+    final messaging = FirebaseMessaging.instance;
+    // Sur Android 13+ comme sur iOS, la permission se DEMANDE ; la refuser
+    // est un choix respecté — on rend null, jamais une erreur.
+    final settings = await messaging.requestPermission();
+    if (settings.authorizationStatus == AuthorizationStatus.denied) {
+      return null;
+    }
+    return messaging.getToken();
+  }
+
+  static Future<void> _ensureInitialized(FirebasePushOptions options) async {
     if (Firebase.apps.isEmpty) {
       await Firebase.initializeApp(
         options: FirebaseOptions(
@@ -23,14 +36,25 @@ class FirebasePushMessenger implements PushMessenger {
         ),
       );
     }
-    final messaging = FirebaseMessaging.instance;
-    // Sur Android 13+ comme sur iOS, la permission se DEMANDE ; la refuser
-    // est un choix respecté — on rend null, jamais une erreur.
-    final settings = await messaging.requestPermission();
-    if (settings.authorizationStatus == AuthorizationStatus.denied) {
-      return null;
-    }
-    return messaging.getToken();
+  }
+
+  static PushDestination? _destinationOf(RemoteMessage message) =>
+      PushDestination.fromData(message.data);
+
+  @override
+  Stream<PushDestination> get onNotificationOpened => FirebaseMessaging
+      .onMessageOpenedApp
+      .map(_destinationOf)
+      .where((destination) => destination != null)
+      .cast<PushDestination>();
+
+  @override
+  Future<PushDestination?> takeLaunchDestination(
+    FirebasePushOptions options,
+  ) async {
+    await _ensureInitialized(options);
+    final message = await FirebaseMessaging.instance.getInitialMessage();
+    return message == null ? null : _destinationOf(message);
   }
 
   @override
@@ -49,6 +73,7 @@ class FirebasePushMessenger implements PushMessenger {
         return PushNotice(
           title: notification.title ?? 'Carlys',
           body: notification.body ?? '',
+          destination: _destinationOf(message),
         );
       })
       .where((notice) => notice != null)

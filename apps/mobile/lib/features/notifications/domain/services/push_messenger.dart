@@ -1,4 +1,21 @@
 import '../../../../app/environment/app_environment.dart';
+import '../entities/push_destination.dart';
+
+/// Une notification reçue APPLICATION OUVERTE.
+///
+/// Le système ne l'affiche pas lui-même dans ce cas : sans traitement, elle
+/// n'existe simplement pas pour qui utilisait l'application au moment où
+/// elle est arrivée.
+class PushNotice {
+  const PushNotice({required this.title, required this.body, this.destination});
+
+  final String title;
+  final String body;
+
+  /// L'écran qui répond à la notification, s'il y en a un : le bandeau
+  /// propose alors « Voir ».
+  final PushDestination? destination;
+}
 
 /// Frontière UNIQUE avec Firebase Messaging.
 ///
@@ -6,18 +23,6 @@ import '../../../../app/environment/app_environment.dart';
 /// au serveur, rafraîchissement, oubli à la déconnexion) se teste contre un
 /// faux qui implémente ce port : aucun test ne touche un plugin de
 /// plateforme, et changer de fournisseur ne toucherait qu'un fichier.
-/// Une notification reçue APPLICATION OUVERTE.
-///
-/// Le système ne l'affiche pas lui-même dans ce cas : sans traitement, elle
-/// n'existe simplement pas pour qui utilisait l'application au moment où
-/// elle est arrivée.
-class PushNotice {
-  const PushNotice({required this.title, required this.body});
-
-  final String title;
-  final String body;
-}
-
 abstract class PushMessenger {
   /// Initialise le SDK avec [options] puis demande la permission de notifier.
   ///
@@ -32,6 +37,16 @@ abstract class PushMessenger {
 
   /// Notifications reçues pendant que l'application est au premier plan.
   Stream<PushNotice> get onForegroundMessage;
+
+  /// Notifications TOUCHÉES alors que l'application tournait en arrière-plan :
+  /// leur destination, pour ouvrir l'écran qu'elles annoncent. Celles qui
+  /// n'en portent pas ne remontent pas.
+  Stream<PushDestination> get onNotificationOpened;
+
+  /// La destination de la notification dont le toucher a LANCÉ
+  /// l'application, s'il y en a une — à demander une fois le SDK prêt
+  /// ([options]), et une seule fois par lancement.
+  Future<PushDestination?> takeLaunchDestination(FirebasePushOptions options);
 
   /// Invalide le jeton local (déconnexion) : l'appareil ne recevra plus rien
   /// même si une ligne serveur survivait quelque part.
