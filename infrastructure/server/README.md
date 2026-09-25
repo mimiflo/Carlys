@@ -13,7 +13,8 @@ Le **comment** l'y installer et l'y déployer vit dans `scripts/server/`.
 
 - **Pas l'environnement de développement.** Celui-là est le `docker-compose.yml`
   de la racine : ports ouverts sur l'hôte, secrets factices, images construites
-  sur place. Ici les images viennent du registre, taguées par SHA, et rien
+  sur place. Ici les images viennent du registre — celles de l'application
+  taguées par SHA, celles de MinIO par recette (voir plus bas) — et rien
   n'écoute ailleurs que sur `127.0.0.1`.
 - **Pas des fichiers de configuration.** Les `*.env.example` sont des
   **modèles versionnés** : chaque valeur y est factice et le dit
@@ -171,9 +172,46 @@ mêmes pour les deux environnements, donc leur place est dans le fichier
 versionné. Pour tester une montée de version sur la seule recette, poser la
 variable dans le `.env` de recette suffit à couvrir le défaut.
 
-MinIO et `mc` viennent de **quay.io**, épinglés par empreinte en plus du tag :
-MinIO a cessé de distribuer ses images en octobre 2025 et les dépôts
-`minio/minio` et `minio/mc` ont disparu de Docker Hub — même tag épinglé, plus
-rien à tirer. Le projet étant gelé, ces deux versions sont définitives ; si
-quay.io les retirait à son tour, `CARLYS_MINIO_IMAGE` et `CARLYS_MC_IMAGE`
-pointent vers n'importe quel miroir sans modifier `compose.yml`.
+### MinIO et `mc` : nos propres images, construites depuis les sources
+
+MinIO a cessé de distribuer son édition communautaire. Ses images ont d'abord
+disparu de Docker Hub, puis `quay.io`, où l'on s'était replié, a cessé de les
+servir à son tour (24 septembre 2026) : un serveur neuf, ou un simple
+`docker image prune`, n'avait plus rien à tirer. Les deux images sont
+désormais **construites par Carlys** depuis les sources officielles (AGPLv3),
+au tag et au commit épinglés dans `infrastructure/minio/versions.env`, et
+publiées par `images-publish` dans le registre de l'application :
+
+| Image | Service | Étiquette |
+| --- | --- | --- |
+| `${CARLYS_REGISTRY}/carlys-minio` | `minio` (serveur + `mc`, pour la sonde `mc ready local`) | `<version>-<empreinte de la recette>` |
+| `${CARLYS_REGISTRY}/carlys-mc` | `minio-init`, et `backup.sh` qui passe par lui | `<version>-<empreinte de la recette>` |
+
+- **Aucun nouveau secret** : elles se tirent avec le même jeton
+  `read:packages` que l'API et l'admin (`/srv/carlys/ghcr.token`), et
+  `deploy.sh` les tire à l'étape 2, avec les trois autres, avant que rien ne
+  bouge.
+- **Publiées avant l'application** : `images-publish` les pousse avant les
+  trois images `sha-…`, et refuse de pousser celles-ci si les images MinIO
+  que ce fichier tire manquent au registre. Un sha qui a ses images a donc
+  les siennes : la mise à jour automatique (qui ne regarde que les trois
+  images de l'application) ne déploie jamais un commit dont MinIO manque.
+- **Pas d'étiquette `sha-…`** : ces images suivent leur recette, pas le code.
+  Un retour arrière ne touche donc jamais MinIO, un déploiement ordinaire ne
+  recrée pas son conteneur, et l'élagage des `sha-…` ne les voit pas. Les
+  étiquettes sont écrites ici, en valeur par défaut, comme celles de
+  PostgreSQL ou de Redis — et images-ci refuse un commit où elles ne suivent
+  pas la recette.
+- **Même version, même volume, même utilisateur (root)** que l'image
+  `quay.io` remplacée. Le premier déploiement qui porte ce changement recrée
+  le conteneur `minio` sur le volume `minio-data` existant, au même tag
+  MinIO : format de données inchangé, quelques secondes de coupure des
+  médias. Rester root est délibéré — le volume a été rempli par root, et
+  `backup.sh` écrit dans un répertoire de l'hôte en mode 700 — : le passage
+  en non-root est un chantier à part, décrit dans
+  `infrastructure/minio/README.md`.
+
+`CARLYS_MINIO_IMAGE` et `CARLYS_MC_IMAGE` restent surchargeables dans le `.env`
+(un miroir, une version à éprouver en recette seule) ; la valeur doit désigner
+une image **tirable** d'un registre, `deploy.sh` la tirant explicitement.
+Monter de version : `infrastructure/minio/README.md`, « Monter de version ».

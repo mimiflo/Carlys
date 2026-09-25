@@ -6,6 +6,10 @@
 # seule CI ne rougisse. Ce workflow construit les trois cibles publiées par ce
 # README, puis DÉMARRE les images servies — voir les étapes « fumée » : une
 # image qui se construit n'est pas une image qui marche.
+#
+# Un second job, `minio`, fait de même pour les deux images d'infrastructure
+# que Carlys construit elle-même depuis les sources de MinIO et de mc, faute
+# d'images officielles (infrastructure/minio/README.md).
 name: images-ci
 
 # Pourquoi cette porte-ci nomme la branche de travail alors qu'api-ci et
@@ -45,6 +49,11 @@ on:
       - 'pnpm-workspace.yaml'
       - '.npmrc'
       - '.dockerignore'
+      # Les images MinIO et mc (job `minio`), construites depuis leurs
+      # sources : leur recette, et le compose du serveur qui en porte les
+      # étiquettes — les deux doivent bouger ensemble, et ce job le vérifie.
+      - 'infrastructure/minio/**'
+      - 'infrastructure/server/compose.yml'
       - '.github/workflows/images-ci.yml'
   push:
     branches: [development, production]
@@ -60,6 +69,8 @@ on:
       - 'pnpm-workspace.yaml'
       - '.npmrc'
       - '.dockerignore'
+      - 'infrastructure/minio/**'
+      - 'infrastructure/server/compose.yml'
       - '.github/workflows/images-ci.yml'
 
 # Construire une image coûte plusieurs minutes : les poussées successives d'une
@@ -232,3 +243,138 @@ jobs:
       - name: Nettoyage
         if: always()
         run: docker rm -f carlys-admin-smoke carlys-api-smoke || true
+
+  # ── MinIO et mc, construits depuis leurs sources ───────────────────────────
+  #
+  # Les images officielles ont disparu de Docker Hub, puis de quay.io
+  # (infrastructure/minio/README.md) : le serveur tire désormais NOS images,
+  # publiées par images-publish, et le développement les construit sur place.
+  # Ce job prouve, avant toute publication, qu'elles se construisent, qu'elles
+  # sont bien ce qu'elles prétendent être, et qu'elles reproduisent la
+  # configuration du serveur — sonde de santé et politiques des deux buckets
+  # comprises.
+  #
+  # Un job à part, en parallèle de `build` : rien de commun avec les images
+  # Node. Et buildx avec le cache GHA plutôt qu'un `docker build` nu comme
+  # ci-dessus : compiler minio coûte plusieurs minutes, et ce job tourne aussi
+  # sur les poussées qui ne touchent que l'API ou l'admin (le filtre `paths`
+  # vaut pour tout le workflow) — il doit alors se réduire à un rejeu du cache.
+  minio:
+    name: Images MinIO et mc (depuis les sources)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      # La seule recopie de la recette hors de infrastructure/minio/ : les
+      # étiquettes que le serveur tire par défaut. Une recette modifiée sans
+      # elles laisserait le serveur sur l'ancienne image, sans rien dire.
+      - name: Le compose du serveur référence les images de cette recette
+        run: sh infrastructure/minio/construire.sh verifier-compose infrastructure/server/compose.yml
+
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
+
+      - name: Image minio (serveur + mc)
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        with:
+          context: infrastructure/minio
+          target: minio
+          load: true
+          tags: carlys-minio:ci
+          cache-from: type=gha,scope=minio
+          cache-to: type=gha,scope=minio,mode=max
+          provenance: false
+
+      # Même étage de construction que ci-dessus : il se relit depuis le
+      # cache `minio`, seul l'étage final est propre à `mc`.
+      - name: Image mc
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        with:
+          context: infrastructure/minio
+          target: mc
+          load: true
+          tags: carlys-mc:ci
+          cache-from: |
+            type=gha,scope=mc
+            type=gha,scope=minio
+          cache-to: type=gha,scope=mc,mode=max
+          provenance: false
+
+      # Chaque binaire annonce-t-il le tag ET le commit de versions.env ? Le
+      # mc embarqué dans l'image du serveur compte : c'est lui qui répond à la
+      # sonde de santé.
+      #
+      # `sed -n 1p` et non `head -n 1` : head ferme le tube après la première
+      # ligne, `docker run` échoue alors sur « broken pipe », et le `pipefail`
+      # des étapes GitHub en fait un échec — mesuré en rejouant cette étape.
+      - name: Fumée — identité des binaires et licences
+        run: |
+          . infrastructure/minio/versions.env
+          verifier_version() {
+            annonce="$(docker run --rm --entrypoint "$2" "$1" --version | sed -n 1p)"
+            echo "$1 / $2 : $annonce"
+            case "$annonce" in
+              *"$3"*"$4"*) ;;
+              *) echo "::error::$1 : « $2 --version » n'annonce pas $3 / $4."; exit 1 ;;
+            esac
+          }
+          verifier_version carlys-minio:ci minio "$CARLYS_MINIO_RELEASE" "$CARLYS_MINIO_COMMIT"
+          verifier_version carlys-minio:ci mc "$CARLYS_MC_RELEASE" "$CARLYS_MC_COMMIT"
+          verifier_version carlys-mc:ci mc "$CARLYS_MC_RELEASE" "$CARLYS_MC_COMMIT"
+          docker run --rm --entrypoint cat carlys-minio:ci /licenses/minio/SOURCE /licenses/mc/SOURCE
+
+      # Le serveur tel que les deux compose le lancent, la sonde de santé
+      # qu'ils déclarent, puis la configuration que minio-init pose sur le
+      # serveur : bucket des médias lisible objet par objet mais PAS listable,
+      # bucket privé fermé. Les codes attendus sont ceux mesurés en exploitation
+      # (infrastructure/server/compose.yml).
+      - name: Fumée — sonde de santé, buckets et politiques
+        run: |
+          docker run -d --name carlys-minio-smoke --network host \
+            -e MINIO_ROOT_USER=carlys-ci -e MINIO_ROOT_PASSWORD=carlys-ci-secret \
+            carlys-minio:ci server /data --console-address :9001
+          pret=0
+          for _ in $(seq 1 30); do
+            if docker exec carlys-minio-smoke mc ready local; then pret=1; break; fi
+            sleep 2
+          done
+          if [ "$pret" -ne 1 ]; then
+            echo "::error::« mc ready local » (la sonde des compose) ne répond pas après 60 s."
+            docker logs carlys-minio-smoke
+            exit 1
+          fi
+
+          mkdir -p "$RUNNER_TEMP/fumee"
+          printf '%s' '{"Version":"2012-10-17","Statement":[{"Effect":"Allow","Principal":{"AWS":["*"]},"Action":["s3:GetObject"],"Resource":["arn:aws:s3:::carlys-media/*"]}]}' \
+            > "$RUNNER_TEMP/fumee/politique.json"
+          printf 'fumee' > "$RUNNER_TEMP/fumee/objet.txt"
+          docker run --rm --network host -v "$RUNNER_TEMP/fumee:/fumee:ro" \
+            --entrypoint /bin/sh carlys-mc:ci -c '
+              set -e
+              mc alias set local http://127.0.0.1:9000 carlys-ci carlys-ci-secret
+              mc mb --ignore-existing local/carlys-media
+              mc anonymous set-json /fumee/politique.json local/carlys-media
+              mc mb --ignore-existing local/carlys-private
+              mc anonymous set none local/carlys-private
+              mc cp /fumee/objet.txt local/carlys-media/fumee.txt > /dev/null
+              mc cp /fumee/objet.txt local/carlys-private/fumee.txt > /dev/null
+            '
+
+          attendu() {
+            obtenu="$(curl -s -o /dev/null -w '%{http_code}' "$1")"
+            echo "$1 → $obtenu (attendu : $2)"
+            [ "$obtenu" = "$2" ]
+          }
+          attendu 'http://127.0.0.1:9000/carlys-media/fumee.txt' 200
+          attendu 'http://127.0.0.1:9000/carlys-media/?list-type=2' 403
+          attendu 'http://127.0.0.1:9000/carlys-private/fumee.txt' 403
+          attendu 'http://127.0.0.1:9000/carlys-private/?list-type=2' 403
+
+      - name: Journal de MinIO en cas d'échec
+        if: failure()
+        run: docker logs carlys-minio-smoke || true
+
+      - name: Nettoyage
+        if: always()
+        run: docker rm -f carlys-minio-smoke || true

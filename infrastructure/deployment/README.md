@@ -147,6 +147,20 @@ d'être la même chose sans qu'on puisse dire quand.
 Un tag mouvant `staging` suit la branche de travail, pour lire d'un coup d'œil
 ce qui est récent dans l'onglet Packages. Aucun déploiement ne s'en sert.
 
+Deux images d'**infrastructure** vivent dans le même registre sans suivre
+cette règle : `carlys-minio` et `carlys-mc`, que Carlys construit depuis les
+sources de MinIO faute d'images officielles (retirées de Docker Hub, puis de
+`quay.io`). Elles suivent leur recette (`infrastructure/minio/`), pas le code :
+étiquette `<version>-<empreinte de la recette>`, publiée **une seule fois** par
+`images-publish` — **avant** les trois images de l'application, qui ne sont
+pas poussées si celles que le compose tire manquent au registre —, référencée
+en valeur par défaut dans `infrastructure/server/compose.yml` comme l'image de
+PostgreSQL. Un retour arrière de l'application ne les touche donc pas, et un
+sha qui a ses images `sha-…` a aussi les images MinIO de son compose : la
+mise à jour automatique, qui ne regarde que les trois premières, ne déploie
+jamais trop tôt. `deploy.sh` les tire à la même étape que les trois autres. Détail et montée de version :
+`infrastructure/minio/README.md`.
+
 `images-publish` tourne à **chaque** poussée sur les deux branches, **sans
 filtre de chemins** — à rebours des CI de code, et par conséquence directe du
 déploiement par SHA : le SHA qu'un opérateur a sous la main est celui de la

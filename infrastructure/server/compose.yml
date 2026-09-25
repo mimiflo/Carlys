@@ -10,8 +10,9 @@
 #
 # Ce fichier n'est PAS docker-compose.yml à la racine du dépôt : celui-là est
 # l'environnement de DÉVELOPPEMENT local (ports ouverts sur l'hôte, secrets
-# factices, images construites sur place). Ici les images viennent du registre,
-# taguées par SHA, et rien n'écoute ailleurs que sur 127.0.0.1.
+# factices, images construites sur place). Ici les images viennent du registre
+# — celles de l'application taguées par SHA, celles de MinIO par recette — et
+# rien n'écoute ailleurs que sur 127.0.0.1.
 #
 # Les migrations ne tournent JAMAIS au démarrage d'un conteneur : le service
 # `migrate` vit derrière un profil dédié et se lance en tâche ponctuelle AVANT
@@ -109,17 +110,24 @@ services:
   # ── Stockage objet ─────────────────────────────────────────────────────────
   # Publié sur la boucle locale parce que nginx sert media.DOMAIN devant lui :
   # les applications chargent les photos directement, sans traverser l'API.
-  # POURQUOI quay.io, ÉPINGLÉ PAR EMPREINTE : ces deux images ont DISPARU de
-  # Docker Hub (MinIO a cessé de distribuer ses images en octobre 2025 et
-  # archivé son dépôt en février 2026) — même tag épinglé, plus rien à tirer.
-  # quay.io, le registre historique de MinIO, sert encore tous les tags ;
-  # mêmes versions qu'avant, seul le registre change, et le digest fige ce qui
-  # tourne. Si quay.io disparaissait à son tour : CARLYS_MINIO_IMAGE et
-  # CARLYS_MC_IMAGE (.env) pointent vers n'importe quel miroir sans toucher à
-  # ce fichier.
+  #
+  # POURQUOI NOS PROPRES IMAGES. Les images officielles ont DISPARU de Docker
+  # Hub (MinIO a cessé de distribuer son édition communautaire), puis quay.io,
+  # où l'on s'était replié, a cessé de les servir à son tour (24 septembre
+  # 2026) : un serveur neuf n'avait plus rien à tirer. MinIO et mc sont
+  # désormais construits depuis leurs sources (infrastructure/minio/, mêmes
+  # versions qu'avant) et publiés par images-publish dans le registre de
+  # l'application — tirés avec le même jeton que l'API et l'admin.
+  #
+  # L'étiquette n'est PAS `sha-…` : `<version>-<empreinte de la recette>`,
+  # immuable, indépendante du sha déployé — un retour arrière ne touche donc
+  # jamais à MinIO. `sh infrastructure/minio/construire.sh etiquettes` la
+  # calcule, et images-ci refuse un commit où ces deux valeurs par défaut ne
+  # suivent pas la recette. CARLYS_MINIO_IMAGE et CARLYS_MC_IMAGE (.env)
+  # restent là pour pointer ailleurs sans toucher à ce fichier.
   minio:
     <<: *service
-    image: ${CARLYS_MINIO_IMAGE:-quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e}
+    image: ${CARLYS_MINIO_IMAGE:-${CARLYS_REGISTRY}/carlys-minio:RELEASE.2025-09-07T16-13-09Z-90fffbd9f7a8}
     command: ['server', '/data', '--console-address', ':9001']
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:?MINIO_ROOT_USER est obligatoire}
@@ -153,7 +161,7 @@ services:
   # bucket (PrivateBucketCheck).
   minio-init:
     <<: *task
-    image: ${CARLYS_MC_IMAGE:-quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727}
+    image: ${CARLYS_MC_IMAGE:-${CARLYS_REGISTRY}/carlys-mc:RELEASE.2025-08-13T08-35-41Z-90fffbd9f7a8}
     depends_on:
       minio:
         condition: service_healthy

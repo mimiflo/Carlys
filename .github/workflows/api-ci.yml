@@ -17,9 +17,9 @@ name: api-ci
 # images-ci.yml, qui nomment déjà les deux branches.
 #
 # L'arbitrage est assumé : ce workflow va tourner à chaque poussée qui touche
-# son périmètre, donc bien plus souvent et plus cher qu'avant (trois conteneurs
-# de service à démarrer, une installation pnpm complète, la suite unitaire et
-# la suite e2e). Le prix d'un échec n'est pourtant pas symétrique : un test
+# son périmètre, donc bien plus souvent et plus cher qu'avant (PostgreSQL,
+# Redis et MinIO à démarrer, une installation pnpm complète, la suite unitaire
+# et la suite e2e). Le prix d'un échec n'est pourtant pas symétrique : un test
 # rouge se voit dans la minute et se corrige dans le commit suivant, tandis
 # qu'une régression découverte après fusion se paie en bissection, en rollback
 # et en travail déjà construit par-dessus. Deux garde-fous bornent la facture —
@@ -33,6 +33,9 @@ on:
       - 'packages/**'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
+      # La recette de MinIO (versions épinglées, construire.sh) : une montée de
+      # version doit repasser les e2e qui parlent au vrai stockage objet.
+      - 'infrastructure/minio/**'
       - '.github/workflows/api-ci.yml'
   push:
     branches: [development, production]
@@ -43,6 +46,7 @@ on:
       - 'packages/**'
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
+      - 'infrastructure/minio/**'
       - '.github/workflows/api-ci.yml'
 
 concurrency:
@@ -101,42 +105,87 @@ jobs:
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
-      # MinIO n'est pas déclaré en `services` : un conteneur de service ne peut
-      # pas recevoir la commande `server /data`, et les buckets doivent exister
-      # avant les tests, comme en développement : celui des médias lisible en
-      # anonyme, celui des données personnelles (photos de repas) SANS aucune
-      # politique — `set none` le redit explicitement.
+      # ── MinIO, construit depuis ses SOURCES ─────────────────────────────────
       #
-      # POURQUOI quay.io, ÉPINGLÉ PAR EMPREINTE. Le 12 septembre 2026, ce job
-      # est tombé sur « pull access denied for minio/minio » : les dépôts
-      # minio/minio et minio/mc ont DISPARU de Docker Hub (MinIO a cessé de
-      # distribuer ses images en octobre 2025 et archivé son dépôt en février
-      # 2026 ; dl.min.io rend 410 jusqu'aux binaires signés). Mesuré depuis un
-      # runner : quay.io — le registre historique de MinIO — sert encore tous
-      # les tags. Le projet est gelé, ces images ne bougeront plus : le digest
-      # fige exactement ce que la CI exécute, comme le SHA fige chaque action
-      # de ce dépôt, et fera échouer FRANCHEMENT toute disparition future au
-      # lieu de tirer autre chose. Mêmes versions que le serveur
-      # (infrastructure/server/compose.yml) : on teste ce qu'on exploite.
-      - name: Stockage objet (MinIO + bucket public + bucket privé)
+      # POURQUOI PLUS AUCUNE IMAGE. Le 12 septembre 2026, ce job est tombé sur
+      # « pull access denied for minio/minio » : les dépôts minio/minio et
+      # minio/mc avaient DISPARU de Docker Hub (MinIO a cessé de distribuer son
+      # édition communautaire ; dl.min.io rend 410 jusqu'aux binaires signés).
+      # Repli sur quay.io, épinglé par empreinte. Le 24 septembre 2026, quay.io
+      # a cessé de servir les MÊMES images : « unauthorized: access to the
+      # requested resource is not authorized », échec en une seconde, sur des
+      # commits qui ne touchaient même pas l'API. Deux registres tiers, deux
+      # pannes. Les SOURCES, elles, restent publiques (github.com/minio/minio
+      # et github.com/minio/mc, AGPLv3) : on construit les deux binaires
+      # nous-mêmes, au tag ET au commit épinglés dans
+      # infrastructure/minio/versions.env, par infrastructure/minio/construire.sh
+      # — la recette même des images du serveur et du développement. On teste
+      # ce qu'on exploite.
+      #
+      # Le cache rend l'étape quasi gratuite : la clé porte les deux tags, la
+      # version de Go et l'empreinte de la recette (versions.env, donc les
+      # commits, et construire.sh). Une construction à froid ne se paie qu'à
+      # une montée de version — mesurée à 2 min 20 s pour les deux binaires sur
+      # 4 cœurs, téléchargement des modules Go compris.
+      - name: MinIO — versions épinglées
+        id: minio-versions
+        run: grep -E '^[A-Z0-9_]+=' infrastructure/minio/versions.env >> "$GITHUB_OUTPUT"
+
+      - name: MinIO — binaires en cache
+        id: minio-cache
+        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        with:
+          path: ~/.carlys-minio
+          key: minio-${{ runner.os }}-${{ runner.arch }}-${{ steps.minio-versions.outputs.CARLYS_MINIO_RELEASE }}-mc-${{ steps.minio-versions.outputs.CARLYS_MC_RELEASE }}-go${{ steps.minio-versions.outputs.CARLYS_MINIO_GO_VERSION }}-${{ hashFiles('infrastructure/minio/versions.env', 'infrastructure/minio/construire.sh') }}
+
+      # Go n'est installé QUE s'il faut construire. La version vient de
+      # versions.env, et construire.sh refuse toute autre (GOTOOLCHAIN=local).
+      # `cache: false` : il n'y a pas de go.sum dans ce dépôt à indexer, et les
+      # binaires sont déjà mis en cache ci-dessus.
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        if: steps.minio-cache.outputs.cache-hit != 'true'
+        with:
+          go-version: ${{ steps.minio-versions.outputs.CARLYS_MINIO_GO_VERSION }}
+          cache: false
+
+      - name: MinIO — construction depuis les sources (absent du cache)
+        if: steps.minio-cache.outputs.cache-hit != 'true'
         run: |
-          docker run -d --name minio -p 9000:9000 \
-            -e MINIO_ROOT_USER=carlys-ci \
-            -e MINIO_ROOT_PASSWORD=carlys-ci-secret \
-            quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e \
-            server /data
+          sh infrastructure/minio/construire.sh minio "$HOME/.carlys-minio"
+          sh infrastructure/minio/construire.sh mc "$HOME/.carlys-minio"
+
+      # MinIO tourne en processus d'arrière-plan, pas en `services` : un
+      # conteneur de service ne peut pas recevoir la commande `server`, et
+      # l'image n'existerait de toute façon qu'après ce job. Les buckets
+      # doivent exister avant les tests, comme en développement : celui des
+      # médias lisible en anonyme, celui des données personnelles (photos de
+      # repas) SANS aucune politique — `set none` le redit explicitement.
+      - name: Stockage objet (MinIO + bucket public + bucket privé)
+        env:
+          MINIO_ROOT_USER: carlys-ci
+          MINIO_ROOT_PASSWORD: carlys-ci-secret
+          MC_CONFIG_DIR: ${{ runner.temp }}/mc
+        run: |
+          bin="$HOME/.carlys-minio"
+          "$bin/minio" --version
+          mkdir -p "$RUNNER_TEMP/minio-data"
+          nohup "$bin/minio" server "$RUNNER_TEMP/minio-data" --address :9000 \
+            > "$RUNNER_TEMP/minio.log" 2>&1 &
+          pret=0
           for _ in $(seq 1 30); do
-            curl -fs http://localhost:9000/minio/health/live && break
+            if curl -fs http://localhost:9000/minio/health/live; then pret=1; break; fi
             sleep 2
           done
-          docker run --rm --network host --entrypoint sh \
-            quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727 -c "
-            mc alias set ci http://localhost:9000 carlys-ci carlys-ci-secret &&
-            mc mb --ignore-existing ci/carlys-media &&
-            mc anonymous set download ci/carlys-media &&
-            mc mb --ignore-existing ci/carlys-private &&
-            mc anonymous set none ci/carlys-private
-          "
+          if [ "$pret" -ne 1 ]; then
+            echo "::error::MinIO ne répond pas sur /minio/health/live après 60 s."
+            cat "$RUNNER_TEMP/minio.log"
+            exit 1
+          fi
+          "$bin/mc" alias set ci http://localhost:9000 carlys-ci carlys-ci-secret
+          "$bin/mc" mb --ignore-existing ci/carlys-media
+          "$bin/mc" anonymous set download ci/carlys-media
+          "$bin/mc" mb --ignore-existing ci/carlys-private
+          "$bin/mc" anonymous set none ci/carlys-private
 
       - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
 
@@ -220,3 +269,10 @@ jobs:
 
       - name: Build
         run: pnpm --filter @carlys/api build
+
+      # MinIO n'est plus un conteneur : sans cette étape, son journal
+      # disparaîtrait avec le runner, et un e2e de stockage rouge n'aurait
+      # que la moitié de son histoire.
+      - name: Journal de MinIO en cas d'échec
+        if: failure()
+        run: tail -n 200 "$RUNNER_TEMP/minio.log" 2>/dev/null || echo "MinIO n'a pas été démarré."

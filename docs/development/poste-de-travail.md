@@ -127,7 +127,7 @@ suite du parcours, elle, attendra l'API.
 ### b. Avec l'API locale, sur émulateur
 
 ```bash
-docker compose up -d       # postgres, redis, mailpit, minio
+docker compose up -d       # postgres, redis, mailpit, minio (construit depuis ses sources la 1re fois)
 pnpm prisma:migrate        # applique les migrations
 pnpm prisma:seed           # exercices, leçons, jeu de départ
 pnpm dev:api               # API sur le port 3000

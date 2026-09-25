@@ -90,7 +90,10 @@ aucun des deux.
 
 - les images publiées sous `ghcr.io/mimiflo/` et taguées `sha-<12 caractères>` ;
   l'admin de **production** porte en plus le suffixe `-prod` (garde légale
-  armée), et c'est la seule différence entre les deux environnements.
+  armée), et c'est la seule différence entre les deux environnements. MinIO et
+  `mc` (`carlys-minio`, `carlys-mc`), construits depuis leurs sources, sont
+  dans le même registre mais étiquetés par recette, pas par sha
+  (`infrastructure/minio/README.md`).
 
 ## Le TLS n'est pas sur cette machine
 
@@ -149,7 +152,8 @@ scripts/server/deploy.sh staging 4f2a91c0be77
    alors de décrire ce qui tourne. Le verrou est **par environnement** — une
    mise en production n'attend pas un déploiement de recette ;
 1. connexion au registre, **pull des trois images** — un sha inexistant échoue
-   ici, pendant que l'ancienne version sert encore ;
+   ici, pendant que l'ancienne version sert encore — puis des deux images de
+   MinIO que référence `compose.yml` (même raison) ;
 2. `postgres` et `redis` debout (ce n'est pas une bascule : rien de nouveau
    n'est exposé) ;
 3. **migration** en tâche ponctuelle, jamais au démarrage du conteneur ;

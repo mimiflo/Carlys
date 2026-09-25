@@ -12,7 +12,9 @@
 #
 #   1. pull des TROIS images AVANT de toucher à quoi que ce soit — un registre
 #      injoignable ou un sha inexistant doit échouer pendant que l'ancienne
-#      version sert encore le trafic ;
+#      version sert encore le trafic. Les deux images de MinIO (serveur et
+#      mc), construites par Carlys faute d'images officielles, sont tirées au
+#      même moment et pour la même raison ;
 #   2. migration en tâche PONCTUELLE, jamais au démarrage du conteneur
 #      (règle du dépôt, infrastructure/deployment/README.md) : un redémarrage
 #      ou une mise à l'échelle ne doit pas modifier le schéma ;
@@ -232,6 +234,28 @@ for image in "$IMG_API" "$IMG_MIGRATE" "$IMG_ADMIN"; do
     "et pour la production que l'image admin -prod existe (voir promote.sh)."
 done
 ok "trois images présentes localement"
+
+# MinIO et mc viennent AUSSI de ce registre : leurs images officielles ont
+# disparu de Docker Hub puis de quay.io, Carlys les construit depuis les
+# sources (infrastructure/minio/README.md). Elles ne sont pas taguées par sha
+# mais par recette — un retour arrière ne les touche donc pas. Les tirer ICI
+# plutôt que de laisser Compose le faire plus tard : sans cela, une image
+# introuvable ne se découvrait qu'au chargement du catalogue, qui démarre
+# MinIO, avec un message qui accusait le catalogue. `compose pull` plutôt
+# qu'un nom recopié : il résout CARLYS_MINIO_IMAGE et CARLYS_MC_IMAGE
+# exactement comme la bascule le fera.
+export_tags "$SHA"
+info "pull minio minio-init (images de $CARLYS_COMPOSE_FILE)"
+dc "$ENV_NAME" "$ENV_FILE" pull --quiet minio minio-init || die \
+  "Image MinIO ou mc introuvable, ou registre injoignable." \
+  "Rien n'a été déployé : l'environnement tourne toujours sur ${PREVIOUS_SHA:-son état précédent}." \
+  "Les étiquettes attendues sont les valeurs par défaut de CARLYS_MINIO_IMAGE et CARLYS_MC_IMAGE" \
+  "dans $CARLYS_COMPOSE_FILE (ou leur surcharge dans $ENV_FILE)." \
+  "images-publish les publie AVANT les images de l'application du même commit : tout commit" \
+  "qui a ses images sha-… a aussi celles que SON compose.yml tire. Or le compose lu ici est" \
+  "celui du CLONE du serveur : vérifier que images-publish a abouti sur son commit" \
+  "(git -C $CARLYS_REPO_DIR log -1, puis l'onglet Actions), et la surcharge éventuelle dans $ENV_FILE."
+ok "images MinIO présentes localement"
 
 # ── 2. Socle de données debout (préalable à la migration) ───────────────────
 # Démarrer postgres et redis n'est PAS une bascule : aucune nouvelle version

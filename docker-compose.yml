@@ -53,17 +53,29 @@ services:
       timeout: 3s
       retries: 5
 
-  # POURQUOI quay.io, ÉPINGLÉ PAR EMPREINTE : minio/minio et minio/mc ont
-  # DISPARU de Docker Hub (MinIO a cessé de distribuer ses images en octobre
-  # 2025, archivé son dépôt en février 2026 — dl.min.io rend 410 jusqu'aux
-  # binaires signés) ; un poste neuf n'aurait plus rien à tirer. quay.io, le
-  # registre historique de MinIO, sert encore tous les tags. Le projet est
-  # gelé : « latest » ne voudra plus jamais rien dire, le digest fige ce qui
-  # tourne et fait échouer franchement toute disparition future. Mêmes
-  # versions que la CI (api-ci.yml) et que le serveur
-  # (infrastructure/server/compose.yml) : un seul MinIO, partout.
+  # MinIO CONSTRUIT SUR CE POSTE, depuis ses sources — aucune image MinIO tierce.
+  # La construction tire seulement les images OFFICIELLES golang et alpine
+  # depuis Docker Hub (épinglées par empreinte), les sources depuis github.com
+  # et les modules Go depuis proxy.golang.org : la liste complète est en tête
+  # de infrastructure/minio/Dockerfile.
+  #
+  # POURQUOI : minio/minio et minio/mc ont d'abord DISPARU de Docker Hub (MinIO
+  # a cessé de distribuer son édition communautaire, dl.min.io rend 410), puis
+  # quay.io, où l'on s'était replié, a cessé de les servir à son tour (24
+  # septembre 2026). Un poste neuf n'avait plus rien à tirer. Les sources, elles,
+  # restent publiques : infrastructure/minio/ les clone au tag ET au commit
+  # épinglés dans versions.env, et les construit avec construire.sh — la recette
+  # même de la CI (api-ci.yml) et du serveur (infrastructure/server/compose.yml) :
+  # un seul MinIO, partout.
+  #
+  # Le premier `docker compose up -d` construit donc les deux images (quelques
+  # minutes : le module Go de minio est lourd) ; les suivants les réutilisent.
+  # Après une montée de version dans versions.env :
+  #   docker compose build minio minio-init && docker compose up -d
   minio:
-    image: quay.io/minio/minio:RELEASE.2025-09-07T16-13-09Z@sha256:14cea493d9a34af32f524e538b8346cf79f3321eff8e708c1e2960462bd8936e
+    build:
+      context: ./infrastructure/minio
+      target: minio
     restart: unless-stopped
     command: ['server', '/data', '--console-address', ':9001']
     environment:
@@ -90,7 +102,11 @@ services:
   # lit, et ne sert une photo qu'à son propriétaire. Un préfixe dans le bucket
   # public n'aurait pas suffi — sa politique vaut pour tout le bucket.
   minio-init:
-    image: quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727
+    # Même Dockerfile, cible `mc` : l'étage de construction est partagé, il
+    # n'est calculé qu'une fois.
+    build:
+      context: ./infrastructure/minio
+      target: mc
     depends_on:
       minio:
         condition: service_healthy

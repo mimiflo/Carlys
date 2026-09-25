@@ -221,6 +221,132 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # ── MinIO et mc : construits depuis leurs sources ──────────────────────
+      #
+      # Les images officielles ont disparu de Docker Hub, puis de quay.io
+      # (infrastructure/minio/README.md) : le serveur tire désormais
+      # `carlys-minio` et `carlys-mc` depuis ce registre, à côté des images de
+      # l'application.
+      #
+      # AVANT les trois images de l'application, et c'est ce qui rend l'ordre
+      # sûr sans rien demander à l'exploitant. La mise à jour automatique de la
+      # recette (scripts/server/_update.sh, update_cible_staging) juge un sha
+      # déployable dès que ses TROIS images d'application existent ; elle ne
+      # regarde pas MinIO. Publiées APRÈS elles, les images d'une recette
+      # MinIO nouvelle manquaient pendant plusieurs minutes (à froid, près de
+      # 3 min de compilation mesurées sur 4 cœurs, puis ~260 Mo à pousser) : une
+      # fenêtre où deploy.sh échouait à son étape 2 (`compose pull minio
+      # minio-init`) et où la mise à jour mettait le sha de côté pour de bon
+      # (update_marquer_echec). Dans cet ordre, « les images de l'application
+      # de ce sha existent » IMPLIQUE « les images MinIO que son compose.yml
+      # tire existent » — l'étape « …existent dans le registre » ci-dessous le
+      # vérifie avant qu'une seule image d'application soit poussée. Une
+      # construction MinIO en échec ne publie donc aucune image d'application :
+      # c'est voulu, deploy.sh échouerait de toute façon sur ce commit.
+      #
+      # PAS d'étiquette `sha-…`, et c'est délibéré. Ces deux images ne suivent
+      # pas le code de l'application : elles suivent leur RECETTE
+      # (infrastructure/minio/ : versions.env, construire.sh, Dockerfile), et
+      # leur étiquette en est l'empreinte — `<version>-<12 caractères>`. Une
+      # étiquette par commit aurait trois défauts, tous mesurables sur le
+      # serveur : un retour arrière vers un sha antérieur à ce workflow ne
+      # trouverait pas son image MinIO ; chaque déploiement recréerait le
+      # conteneur MinIO (coupure des médias) dès que deux constructions ne
+      # seraient pas identiques octet pour octet ; et l'élagage des `sha-…`
+      # emporterait l'image en service. infrastructure/server/compose.yml
+      # porte donc ces étiquettes en valeur par défaut, comme celles de
+      # PostgreSQL ou de Redis — et images-ci vérifie qu'elles suivent la
+      # recette.
+      #
+      # IMMUABLES : une étiquette déjà publiée n'est jamais repoussée. Même
+      # recette, même étiquette — il n'y a rien à refaire ; et une poussée sur
+      # la branche de travail ne peut pas modifier en douce l'image que la
+      # production tire. Le rattrapage d'un commit antérieur à la construction
+      # depuis les sources n'a, lui, rien à publier ici.
+      - name: Images MinIO — étiquettes de la recette
+        id: minio
+        run: |
+          if [ ! -f infrastructure/minio/construire.sh ]; then
+            echo "Commit antérieur à la construction de MinIO depuis les sources : rien à publier."
+            exit 0
+          fi
+          etiquettes="$(sh infrastructure/minio/construire.sh etiquettes)"
+          printf '%s\n' "$etiquettes" >> "$GITHUB_OUTPUT"
+          echo "presente=oui" >> "$GITHUB_OUTPUT"
+          for nom in minio mc; do
+            etiquette="$(printf '%s\n' "$etiquettes" | sed -n "s/^$nom=//p")"
+            reference="${{ env.REGISTRY }}/${{ steps.etiquettes.outputs.owner }}/carlys-$nom:$etiquette"
+            if docker buildx imagetools inspect "$reference" > /dev/null 2>&1; then
+              echo "publier_$nom=non" >> "$GITHUB_OUTPUT"
+              echo "déjà publiée, laissée telle quelle : $reference"
+            else
+              echo "publier_$nom=oui" >> "$GITHUB_OUTPUT"
+              echo "à construire et publier : $reference"
+            fi
+          done
+
+      - name: Image MinIO — serveur (+ mc pour la sonde de santé)
+        if: steps.minio.outputs.publier_minio == 'oui'
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        with:
+          context: infrastructure/minio
+          target: minio
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ steps.etiquettes.outputs.owner }}/carlys-minio:${{ steps.minio.outputs.minio }}
+          cache-from: type=gha,scope=minio
+          cache-to: type=gha,scope=minio,mode=max
+          provenance: false
+
+      - name: Image MinIO — client mc (minio-init, sauvegardes)
+        if: steps.minio.outputs.publier_mc == 'oui'
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        with:
+          context: infrastructure/minio
+          target: mc
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ steps.etiquettes.outputs.owner }}/carlys-mc:${{ steps.minio.outputs.mc }}
+          cache-from: |
+            type=gha,scope=mc
+            type=gha,scope=minio
+          cache-to: type=gha,scope=mc,mode=max
+          provenance: false
+
+      # Deux contrôles de infrastructure/server/compose.yml, de poids inégaux.
+      #   - Ses étiquettes suivent-elles la recette ? AVERTISSEMENT seulement :
+      #     en retard, il fait tirer au serveur l'image précédente — publiée,
+      #     donc rien ne casse — et images-ci est déjà rouge sur ce commit.
+      #     Bloquer empêcherait de déployer l'application pour un écart qui ne
+      #     la touche pas.
+      #   - Les images qu'il tire EXISTENT-elles ? ÉCHEC : sinon deploy.sh
+      #     échouerait sur ce commit, à l'étape 2, et la mise à jour
+      #     automatique le mettrait de côté. Échouer ICI, avant les images de
+      #     l'application, laisse ce sha sans images : la recette ne le voit
+      #     jamais comme déployable.
+      - name: Les images MinIO du compose du serveur existent dans le registre
+        if: steps.minio.outputs.presente == 'oui'
+        env:
+          REGISTRE: ${{ env.REGISTRY }}/${{ steps.etiquettes.outputs.owner }}
+        run: |
+          compose=infrastructure/server/compose.yml
+          sh infrastructure/minio/construire.sh verifier-compose "$compose" \
+            || echo "::warning title=compose.yml en retard sur la recette MinIO::Le serveur continuera de tirer l'image précédente. Voir « Monter de version » dans infrastructure/minio/README.md."
+          for nom in minio mc; do
+            # La valeur par défaut de la ligne `image:` du service :
+            #   ${CARLYS_…_IMAGE:-${CARLYS_REGISTRY}/carlys-<nom>:<étiquette>}
+            # CARLYS_REGISTRY vaut, sur le serveur, ce registre-ci.
+            etiquette="$(sed -n "/^[[:space:]]*image:/s|.*/carlys-$nom:\([^}]*\)}.*|\1|p" "$compose")"
+            if [ "$(printf '%s\n' "$etiquette" | grep -c .)" -ne 1 ]; then
+              echo "::error title=compose.yml illisible::$compose devrait porter exactement une image carlys-$nom en valeur par défaut ; trouvé : « $etiquette »."
+              exit 1
+            fi
+            reference="$REGISTRE/carlys-$nom:$etiquette"
+            if ! docker buildx imagetools inspect "$reference" > /dev/null 2>&1; then
+              echo "::error title=Image MinIO absente du registre::$compose tire $reference, qui n'existe pas : deploy.sh échouerait sur ce commit. Aucune image de l'application n'est publiée. Aligner l'étiquette sur la recette : sh infrastructure/minio/construire.sh verifier-compose $compose"
+              exit 1
+            fi
+            echo "le serveur tirera $reference — présente dans le registre"
+          done
+
       # ── Les trois images ───────────────────────────────────────────────────
       #
       # Le tag mouvant `staging` ne suit QUE la branche de travail, et il est
@@ -312,16 +438,27 @@ jobs:
 
       # ── La preuve que deploy.sh trouvera ce qu'il vient chercher ───────────
       # `push: true` a réussi ne dit pas que le TAG se résout : c'est ce que
-      # `deploy.sh` fera, et c'est donc ce qu'on vérifie, sur les trois noms.
-      - name: Les trois tags se résolvent dans le registre
+      # `deploy.sh` fera, et c'est donc ce qu'on vérifie, sur les trois noms —
+      # puis sur les deux images MinIO de la recette de ce commit.
+      - name: Les tags se résolvent dans le registre
+        env:
+          ETIQUETTE_MINIO: ${{ steps.minio.outputs.minio }}
+          ETIQUETTE_MC: ${{ steps.minio.outputs.mc }}
         run: |
+          references=""
           for image in carlys-api carlys-api-migrate carlys-admin; do
-            reference="${{ env.REGISTRY }}/${{ steps.etiquettes.outputs.owner }}/$image:sha-${{ steps.etiquettes.outputs.sha12 }}"
+            references="$references ${{ env.REGISTRY }}/${{ steps.etiquettes.outputs.owner }}/$image:sha-${{ steps.etiquettes.outputs.sha12 }}"
+          done
+          if [ -n "$ETIQUETTE_MINIO" ]; then
+            references="$references ${{ env.REGISTRY }}/${{ steps.etiquettes.outputs.owner }}/carlys-minio:$ETIQUETTE_MINIO"
+            references="$references ${{ env.REGISTRY }}/${{ steps.etiquettes.outputs.owner }}/carlys-mc:$ETIQUETTE_MC"
+          fi
+          for reference in $references; do
             echo "── $reference"
             docker buildx imagetools inspect "$reference" > /dev/null \
               || { echo "::error::$reference est introuvable dans le registre alors que la publication a été signalée réussie."; exit 1; }
           done
-          echo "Les trois images du commit ${{ steps.etiquettes.outputs.sha12 }} sont publiées."
+          echo "Les images du commit ${{ steps.etiquettes.outputs.sha12 }} sont publiées."
 
       - name: Récapitulatif
         run: |
@@ -333,6 +470,10 @@ jobs:
             for image in carlys-api carlys-api-migrate carlys-admin; do
               echo "| \`${{ env.REGISTRY }}/${{ steps.etiquettes.outputs.owner }}/$image\` | \`sha-${{ steps.etiquettes.outputs.sha12 }}\` |"
             done
+            if [ -n "${{ steps.minio.outputs.minio }}" ]; then
+              echo "| \`${{ env.REGISTRY }}/${{ steps.etiquettes.outputs.owner }}/carlys-minio\` | \`${{ steps.minio.outputs.minio }}\` (recette ; publiée ce coup-ci : ${{ steps.minio.outputs.publier_minio }}) |"
+              echo "| \`${{ env.REGISTRY }}/${{ steps.etiquettes.outputs.owner }}/carlys-mc\` | \`${{ steps.minio.outputs.mc }}\` (recette ; publiée ce coup-ci : ${{ steps.minio.outputs.publier_mc }}) |"
+            fi
             echo
             echo "Déploiement en recette, sur le serveur :"
             echo

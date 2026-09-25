@@ -72,6 +72,7 @@ Carlys/
 ├── infrastructure/
 │   ├── database/init/        # 01-init.sql (extension citext + base carlys_test)
 │   ├── docker/               # documentation des images
+│   ├── minio/                # MinIO et mc construits depuis leurs sources (versions épinglées)
 │   ├── nginx/                # reverse proxy staging/production (documentation)
 │   ├── monitoring/           # observabilité : état actuel et cible
 │   └── deployment/           # stratégie de déploiement
@@ -126,6 +127,8 @@ pnpm install
 pnpm --filter "./packages/**" build
 
 # 4. Infrastructure locale : PostgreSQL, Redis, Mailpit, MinIO
+#    La première fois, MinIO est CONSTRUIT depuis ses sources (quelques
+#    minutes, voir infrastructure/minio/README.md) ; ensuite, instantané.
 docker compose up -d
 
 # 5. Client Prisma
@@ -339,10 +342,20 @@ docker compose down                  # arrêt (ajouter -v pour purger les volume
 | `postgres` | `postgres:17-alpine` | 5432 | Base de données (init : extension `citext` + base `carlys_test`) |
 | `redis` | `redis:7-alpine` | 6379 | Cache, rate limiting |
 | `mailpit` | `axllent/mailpit` | 1025 (SMTP), 8025 (UI) | Réception des e-mails de dev |
-| `minio` | `quay.io/minio/minio` (épinglé par empreinte — MinIO a retiré ses images de Docker Hub) | 9000 (S3), 9001 (console) | Stockage compatible S3 |
-| `minio-init` | `quay.io/minio/mc` (épinglé par empreinte) | — | Crée le bucket `carlys-media` au premier démarrage et l'ouvre en lecture anonyme (les applications chargent les photos directement), puis le bucket PRIVÉ `carlys-private` (photos de repas), sans aucune politique d'accès |
+| `minio` | build `infrastructure/minio/Dockerfile`, cible `minio` — construit depuis les sources officielles (AGPLv3), aucun registre MinIO | 9000 (S3), 9001 (console) | Stockage compatible S3 |
+| `minio-init` | build `infrastructure/minio/Dockerfile`, cible `mc` | — | Crée le bucket `carlys-media` au premier démarrage et l'ouvre en lecture anonyme (les applications chargent les photos directement), puis le bucket PRIVÉ `carlys-private` (photos de repas), sans aucune politique d'accès |
 | `api` (profil `app`) | build `apps/api/Dockerfile` | 3000 | API conteneurisée |
 | `admin` (profil `app`) | build `apps/admin/Dockerfile` | 3001 | Admin conteneurisé (output standalone) |
+
+**Pourquoi MinIO se construit sur place.** Ses images officielles ont disparu de
+Docker Hub, puis de `quay.io` (24 septembre 2026) : un poste neuf n'avait plus
+rien à tirer. `infrastructure/minio/` clone `minio` et `mc` au tag **et** au
+commit épinglés dans `versions.env`, avec la même recette que la CI et le
+serveur. Après une montée de version : `docker compose build minio minio-init`.
+La construction tire encore les images officielles `golang` et `alpine` de
+Docker Hub (épinglées par empreinte), les sources depuis github.com et les
+modules Go depuis proxy.golang.org — sans image MinIO d'aucun registre
+(`infrastructure/minio/README.md`, « Ce que la construction tire »).
 
 Les deux Dockerfiles sont multi-stage avec la **racine du monorepo comme contexte** (nécessaire pour les packages workspace) :
 

@@ -298,6 +298,19 @@ ghcr.io/mimiflo/carlys-api-migrate:sha-<sha12>
 ghcr.io/mimiflo/carlys-admin:sha-<sha12>
 ```
 
+À sa première exécution, il publie aussi les deux images de **MinIO** que
+Carlys construit depuis les sources (les images officielles ont disparu de
+Docker Hub, puis de `quay.io`) : `ghcr.io/mimiflo/carlys-minio` et
+`ghcr.io/mimiflo/carlys-mc`, étiquetées `<version>-<empreinte de la recette>`
+et republiées seulement quand leur recette change (`Dockerfile`,
+`versions.env` ou `construire.sh` de `infrastructure/minio/`). Elles passent
+**avant** les trois images de l'application, et l'exécution échoue avant de
+pousser celles-ci si les images MinIO que `infrastructure/server/compose.yml`
+tire manquent au registre : un sha qui a ses trois images a donc aussi les
+siennes, et la mise à jour automatique ne peut pas déployer trop tôt. Le
+serveur les tire avec le même jeton que les autres ; rien à configurer de
+plus, aucun ordre à respecter.
+
 **`images-publish` tourne à CHAQUE poussée, sans filtre de chemins**, et c'est
 délibéré : le déploiement se fait par SHA, donc **tout** commit de la branche
 doit avoir ses images. Un filtre qui n'aurait rien publié pour un commit ne

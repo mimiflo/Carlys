@@ -133,6 +133,13 @@ update_cible_staging() {
   # qui vient d'être poussé et dont la CI tourne encore — ne doit rien
   # déclencher : la recette reste sur ce qu'elle a, et réessaiera au passage
   # suivant. C'est aussi ce qui empêche de déployer un commit rejeté par la CI.
+  #
+  # Les images de MinIO (carlys-minio, carlys-mc) ne sont PAS interrogées ici,
+  # et n'ont pas à l'être : images-publish les publie — et vérifie que celles
+  # que compose.yml tire existent — AVANT les trois images de l'application,
+  # dans la même exécution. La présence de ces trois-là implique donc la leur.
+  # Si cet ordre changeait, deploy.sh échouerait à son étape 2 sur un sha
+  # jugé prêt ici, et la mise à jour le mettrait de côté pour de bon.
   image_publiee "$(image_api "$sha12")" || return 0
   image_publiee "$(image_admin "$sha12" staging)" || return 0
   image_publiee "$(image_migrate "$sha12")" || return 0
