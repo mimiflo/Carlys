@@ -287,7 +287,7 @@ jobs:
 
       - name: Image MinIO — serveur (+ mc pour la sonde de santé)
         if: steps.minio.outputs.publier_minio == 'oui'
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: infrastructure/minio
           target: minio
@@ -299,7 +299,7 @@ jobs:
 
       - name: Image MinIO — client mc (minio-init, sauvegardes)
         if: steps.minio.outputs.publier_mc == 'oui'
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: infrastructure/minio
           target: mc
@@ -374,7 +374,7 @@ jobs:
           fi
 
       - name: Image API — exécution
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           file: apps/api/Dockerfile
@@ -390,7 +390,7 @@ jobs:
           provenance: false
 
       - name: Image API — migrations
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           file: apps/api/Dockerfile
@@ -421,7 +421,7 @@ jobs:
       # par images-publish-prod.yml, garde armée : c'est là que le tag `-prod`
       # se gagne, et nulle part ailleurs.
       - name: Image admin — recette (garde légale desserrée)
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           file: apps/admin/Dockerfile
