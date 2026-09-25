@@ -1,3 +1,4 @@
+import '../../core/utilities/formatting.dart';
 import '../../features/community/presentation/providers/community_tab_state.dart';
 import '../../features/notifications/domain/entities/push_destination.dart';
 
@@ -21,6 +22,22 @@ abstract final class AppRoutes {
 
   /// Recettes : poussée depuis l'onglet Nutrition, dans sa pile.
   static const String recipes = '/nutrition/recettes';
+
+  /// AJOUTER un repas, en plein écran. [day] date le repas du jour qu'affiche
+  /// le journal (`?jour=2026-09-12`) : consulter mardi puis ajouter, c'est
+  /// ajouter à mardi. Sans jour, aujourd'hui (l'accueil).
+  ///
+  /// Une route à part plutôt qu'un UUID ouvert d'avance comme pour les
+  /// modèles : l'écran de modification RELIT le repas sur le serveur, et un
+  /// identifiant neuf n'y serait qu'un « introuvable ». Elle est déclarée
+  /// AVANT `repas/:mealId` dans le routeur, et un UUID ne s'écrit jamais
+  /// « nouveau » : les deux ne se confondent pas.
+  static String newMeal({DateTime? day}) => day == null
+      ? '$nutrition/repas/nouveau'
+      : '$nutrition/repas/nouveau?jour=${formatDayKey(day)}';
+
+  /// MODIFIER un repas du journal, en plein écran.
+  static String meal(String mealId) => '$nutrition/repas/$mealId';
   static const String profile = '/profile';
 
   /// Les réglages, derrière le rouage du profil : le profil raconte, cet

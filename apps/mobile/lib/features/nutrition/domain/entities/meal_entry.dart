@@ -5,6 +5,12 @@
 /// champ ajouté d'un côté comme de l'autre.
 library;
 
+import 'meal_component.dart';
+import 'meal_moment.dart';
+
+export 'meal_component.dart';
+export 'meal_moment.dart';
+
 /// L'unité dans laquelle une quantité se dit.
 ///
 /// Quatre, parce que c'est ce qu'on lit sur un emballage ou dans une
@@ -16,18 +22,24 @@ enum MealQuantityUnit {
   portion('PORTION', 'portion', 'portions', 'portions'),
   piece('PIECE', 'pièce', 'pièces', 'pièces');
 
-  const MealQuantityUnit(this.apiValue, this.label, this._plural, this.pick);
+  const MealQuantityUnit(
+    this.apiValue,
+    this.label,
+    this._plural,
+    this.longName,
+  );
 
   final String apiValue;
 
-  /// Ce qui s'écrit après le nombre : « 250 g », « 1 portion ».
+  /// Ce qui s'écrit après le nombre : « 250 g », « 1 portion ». C'est aussi
+  /// le libellé de la pastille qui choisit l'unité.
   final String label;
   final String _plural;
 
-  /// Ce qui s'écrit dans le CHOISISSEUR, où il n'y a aucun nombre à côté
-  /// pour donner le sens : une pastille « g » isolée devient un jeton rond
-  /// d'un seul caractère, qu'on ne lit plus comme une unité.
-  final String pick;
+  /// Le nom en toutes lettres, là où aucun nombre n'est à côté pour donner
+  /// le sens : le libellé du champ (« Quantité (grammes) ») et ce que dit le
+  /// lecteur d'écran d'une pastille « g ».
+  final String longName;
 
   /// `null` pour une valeur absente OU inconnue — jamais une unité devinée.
   /// Rabattre l'inconnu sur « g » écrirait « 2 g » là où le serveur dit
@@ -55,41 +67,13 @@ enum MealQuantityUnit {
               .toStringAsFixed(2)
               .replaceFirst(RegExp(r'0+$'), '')
               .replaceAll('.', ',');
-    return '$nombre ${quantity >= 2 ? _plural : label}';
+    return '$nombre ${suffixFor(quantity)}';
   }
-}
 
-/// Ce qu'une correction dit d'un repas : TOUT ce qui se saisit.
-///
-/// La route accepte un fragment — un champ absent reste tel quel — mais le
-/// formulaire, lui, montre l'entrée ENTIÈRE et rend ce que la personne a
-/// sous les yeux au moment où elle valide. Vider la case « Protéines » veut
-/// alors dire « on ne sait plus », et cela doit s'écrire : n'envoyer que les
-/// champs modifiés laisserait cet effacement sans effet.
-///
-/// D'où un objet COMPLET plutôt qu'un fragment : les champs qui ne peuvent
-/// pas redevenir inconnus (nom, calories, heure) sont requis, les autres
-/// sont explicitement nuls quand la case est vide.
-class MealCorrection {
-  const MealCorrection({
-    required this.name,
-    required this.kcal,
-    required this.eatenAt,
-    this.quantity,
-    this.quantityUnit,
-    this.proteinG,
-    this.carbsG,
-    this.fatG,
-  });
-
-  final String name;
-  final int kcal;
-  final DateTime eatenAt;
-  final double? quantity;
-  final MealQuantityUnit? quantityUnit;
-  final int? proteinG;
-  final int? carbsG;
-  final int? fatG;
+  /// L'unité qui suit [quantity], accordée : « g », « portion »,
+  /// « pièces ». Sans nombre (champ vide), le singulier.
+  String suffixFor(double? quantity) =>
+      quantity != null && quantity >= 2 ? _plural : label;
 }
 
 /// Ce qui a été mangé : un nom, des calories, une heure, et ce qu'on sait du
@@ -103,11 +87,15 @@ class MealEntry {
     required this.name,
     required this.kcal,
     required this.eatenAt,
+    this.moment,
     this.quantity,
     this.quantityUnit,
     this.proteinG,
     this.carbsG,
     this.fatG,
+    this.components = const [],
+    this.computed = false,
+    this.photoUpdatedAt,
   });
 
   final String id;
@@ -137,6 +125,31 @@ class MealEntry {
 
   /// Instant de consommation, UTC — l'affichage est localisé.
   final DateTime eatenAt;
+
+  /// Le moment de la journée ENREGISTRÉ ; `null` pour un repas noté avant
+  /// son arrivée. Voir [displayedMoment].
+  final MealMoment? moment;
+
+  /// Les aliments du repas, dans l'ordre ; vide pour un repas saisi à la
+  /// main.
+  final List<MealComponent> components;
+
+  /// Vrai quand [kcal], les macros et la quantité sont CALCULÉS par le
+  /// serveur depuis [components] : ils ne se corrigent pas à la main.
+  final bool computed;
+
+  /// L'instant du dernier dépôt de la photo du plat, `null` sans photo. Il
+  /// change à chaque remplacement : c'est la clé de cache des octets, qui se
+  /// lisent par `GET …/meals/:id/photo`.
+  final DateTime? photoUpdatedAt;
+
+  bool get hasPhoto => photoUpdatedAt != null;
+
+  /// Le moment à MONTRER : l'enregistré, sinon celui que l'heure locale
+  /// propose (`MealMoment.suggestFor`). Rien ne s'écrit tant que la personne
+  /// n'enregistre pas le repas.
+  MealMoment get displayedMoment =>
+      moment ?? MealMoment.suggestFor(eatenAt.toLocal());
 
   /// La quantité prête à lire, ou `null` quand l'entrée n'en porte pas.
   ///

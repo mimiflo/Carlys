@@ -9,6 +9,7 @@ class AppSearchField extends StatelessWidget {
     required this.onChanged,
     this.hint = 'Rechercher',
     this.semanticLabel,
+    this.autofocus = false,
     super.key,
   });
 
@@ -16,6 +17,10 @@ class AppSearchField extends StatelessWidget {
   final ValueChanged<String> onChanged;
   final String hint;
   final String? semanticLabel;
+
+  /// Le champ prend le focus à l'ouverture : une feuille qui ne sert qu'à
+  /// chercher ouvre le clavier d'emblée.
+  final bool autofocus;
 
   @override
   Widget build(BuildContext context) {
@@ -25,6 +30,7 @@ class AppSearchField extends StatelessWidget {
       child: TextField(
         controller: controller,
         onChanged: onChanged,
+        autofocus: autofocus,
         textInputAction: TextInputAction.search,
         decoration: InputDecoration(
           hintText: hint,

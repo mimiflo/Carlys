@@ -102,7 +102,11 @@ cd Carlys
 `android/` et `ios/` **ne sont pas versionnés** : ils se régénèrent. Toute
 retouche faite à la main dedans sera perdue au prochain bootstrap — l'identité
 de l'application (nom, icône, permissions, réseau de debug) vit dans
-`scripts/android_branding.sh`, que le bootstrap appelle.
+`scripts/android_branding.sh`, que le bootstrap appelle. Les motifs iOS de
+l'appareil photo et de la photothèque, et la caméra déclarée facultative
+sous Android, y sont nés avec la photo du plat : voir
+[`photo-du-plat.md`](photo-du-plat.md). Un `android/` ou un `ios/` engendré
+avant les reçoit en relançant le script.
 
 Ouvrir le dossier dans VS Code : il proposera les extensions du dépôt
 (`.vscode/extensions.json`). Accepter.

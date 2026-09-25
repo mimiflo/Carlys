@@ -447,6 +447,24 @@ abstract final class AppColors {
   static const Color googleYellow = Color(0xFFFBBC05);
   static const Color googleGreen = Color(0xFF34A853);
 
+  // ── Valeurs d'un repas (tokens.json → color.nutrition) ─────────────────
+  //
+  // Énergie, protéines, glucides, lipides : l'icône de leur tuile et leur
+  // nom, écrit dans leur couleur (écran « Modifier ce repas »), et la jauge
+  // de chaque macro de la carte de l'écran Nutrition : une macro garde sa
+  // teinte d'un écran à l'autre. RÉSERVÉES à ces quatre valeurs, jamais une
+  // surface ni un bouton. Quatre teintes
+  // distinctes, parce que les quatre tuiles se lisent côte à côte ; chacune
+  // tient AA comme texte sur `darkSurfaceAlt`, le fond des tuiles
+  // (`contrast_pairs_test.dart` le mesure). L'énergie et les lipides
+  // reprennent l'accent et le violet clair ; protéines et glucides sont
+  // neufs, faute d'un jeton existant qui ne se confonde pas avec l'énergie
+  // (l'accent) ou qui tienne AA comme texte (`primary`, 3,58:1).
+  static const Color nutritionEnergy = accent;
+  static const Color nutritionProtein = Color(0xFFFF6B81);
+  static const Color nutritionCarbs = Color(0xFF5B9CFF);
+  static const Color nutritionFat = primaryLight;
+
   // ── Métaux des ligues (tokens.json → color.league) ──────────────────────
   //
   // Les cinq divisions de ligue, et RIEN d'autre : le blason de division et

@@ -357,6 +357,41 @@ void main() {
     });
   });
 
+  group('color.nutrition ↔ AppColors', () {
+    // Les quatre valeurs d'un repas (énergie, protéines, glucides, lipides) :
+    // une teinte chacune, réservée à sa tuile.
+    const nutrition = <String, Color>{
+      'energy': AppColors.nutritionEnergy,
+      'protein': AppColors.nutritionProtein,
+      'carbs': AppColors.nutritionCarbs,
+      'fat': AppColors.nutritionFat,
+    };
+
+    test('chaque valeur reflète son hexadécimal, et rien ne manque', () {
+      final declared = section('color.nutrition');
+      expect(
+        declared.keys.toSet(),
+        nutrition.keys.toSet(),
+        reason: 'un token sans reflet, ou un reflet sans token',
+      );
+      for (final entry in nutrition.entries) {
+        final hex = declared[entry.key];
+        expect(hex, isA<String>(), reason: 'color.nutrition.${entry.key}');
+        expect(
+          entry.value.toARGB32().toRadixString(16).toUpperCase(),
+          'FF${(hex! as String).substring(1).toUpperCase()}',
+          reason: 'color.nutrition.${entry.key}',
+        );
+      }
+    });
+
+    test('les quatre teintes se distinguent', () {
+      // Elles se lisent côte à côte : deux valeurs de la même couleur ne se
+      // reconnaîtraient plus qu'à leur libellé.
+      expect(nutrition.values.toSet(), hasLength(4));
+    });
+  });
+
   group('radius ↔ AppRadius', () {
     const radius = <String, double>{
       'xs': AppRadius.xs,

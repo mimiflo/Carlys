@@ -21,6 +21,7 @@ import '../../features/community/presentation/screens/friend_challenge_screen.da
 import '../../features/dashboard/presentation/screens/home_screen.dart';
 import '../../features/exercises/presentation/screens/exercise_detail_screen.dart';
 import '../../features/exercises/presentation/screens/exercise_library_screen.dart';
+import '../../features/nutrition/presentation/screens/meal_editor_screen.dart';
 import '../../features/nutrition/presentation/screens/nutrition_screen.dart';
 import '../../features/nutrition/presentation/screens/recipes_screen.dart';
 import '../../features/onboarding/domain/first_run_step.dart';
@@ -228,6 +229,27 @@ final appRouterProvider = Provider<GoRouter>((ref) {
                     path: 'recettes',
                     name: 'recipes',
                     builder: (context, state) => const RecipesScreen(),
+                  ),
+                  // Plein écran, hors de la coquille : on saisit un repas
+                  // sans la barre du bas. `nouveau` AVANT `:mealId`, sans
+                  // quoi il serait lu comme un identifiant.
+                  GoRoute(
+                    path: 'repas/nouveau',
+                    name: 'meal-new',
+                    parentNavigatorKey: _rootNavigatorKey,
+                    builder: (context, state) => MealEditorScreen(
+                      day: DateTime.tryParse(
+                        state.uri.queryParameters['jour'] ?? '',
+                      ),
+                    ),
+                  ),
+                  GoRoute(
+                    path: 'repas/:mealId',
+                    name: 'meal-edit',
+                    parentNavigatorKey: _rootNavigatorKey,
+                    builder: (context, state) => MealEditorScreen(
+                      mealId: state.pathParameters['mealId'] ?? '',
+                    ),
                   ),
                 ],
               ),

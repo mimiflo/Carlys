@@ -264,6 +264,45 @@ final _table = <Ligne>[
             ),
         ];
       }),
+    // Le contour rouge d'un écran sombre ; sur une page claire, il prend
+    // l'aplat du bouton destructif (aucun rouge n'y tient sous ses voiles).
+    Ligne('AppButton destructiveOutline, thème $theme : le libellé et '
+        'l’icône sur la page et sur une carte, au repos et à chaque état', (
+      tester,
+    ) async {
+      await poser(
+        tester,
+        AppButton(
+          label: 'Supprimer ce repas',
+          icon: AppIcons.delete,
+          variant: AppButtonVariant.destructiveOutline,
+          onPressed: () {},
+        ),
+        theme: construire,
+      );
+      final bouton = find.byWidgetPredicate((w) => w is ButtonStyleButton);
+      final contexte = Theme.of(tester.element(bouton));
+      return [
+        for (final (sur, dessous) in [
+          ('la page', contexte.scaffoldBackgroundColor),
+          ('une carte', contexte.colorScheme.surface),
+        ]) ...[
+          ...etatsSur(
+            '« Supprimer ce repas » sur $sur',
+            encreDe(tester, find.text('Supprimer ce repas')),
+            over(materielDe(tester, bouton), dessous),
+            voilesDe(tester, bouton),
+          ),
+          ...etatsSur(
+            'corbeille sur $sur',
+            encreDe(tester, find.byIcon(AppIcons.delete)),
+            over(materielDe(tester, bouton), dessous),
+            voilesDe(tester, bouton),
+            seuil: wcagGraphic,
+          ),
+        ],
+      ];
+    }),
   ],
   for (final (nom, degrade) in [
     ('par défaut (page de bienvenue)', null),
@@ -435,7 +474,271 @@ final _table = <Ligne>[
           ),
       ];
     }),
+  // ── Les pièces de l'écran de repas (sombre : l'écran l'est toujours) ──
+  for (final (nom, teinte) in [
+    ('Calories', AppColors.nutritionEnergy),
+    ('Protéines', AppColors.nutritionProtein),
+    ('Glucides', AppColors.nutritionCarbs),
+    ('Lipides', AppColors.nutritionFat),
+  ])
+    Ligne('AppNutrientTile « $nom » : le nom dans sa couleur, le nombre, '
+        'l’unité et l’icône sur le fond de la tuile', (tester) async {
+      await poser(
+        tester,
+        AppNutrientTile(
+          icon: AppIcons.nutrientEnergy,
+          tint: teinte,
+          label: nom,
+          unit: 'kcal',
+          value: '390',
+        ),
+      );
+      final fond = _surfaceDe(tester, find.byType(AppNutrientTile));
+      return [
+        (
+          quoi: '« $nom » sur ${hex(fond)}',
+          encre: encreDe(tester, find.text(nom)),
+          fond: fond,
+          seuil: wcagText,
+        ),
+        (
+          quoi: '« 390 » sur ${hex(fond)}',
+          encre: encreDe(tester, find.text('390')),
+          fond: fond,
+          seuil: wcagText,
+        ),
+        (
+          quoi: '« kcal » sur ${hex(fond)}',
+          encre: encreDe(tester, find.text('kcal')),
+          fond: fond,
+          seuil: wcagText,
+        ),
+        (
+          quoi: 'icône sur ${hex(fond)}',
+          encre: tester.widget<Icon>(find.byType(Icon)).color!,
+          fond: fond,
+          seuil: wcagGraphic,
+        ),
+      ];
+    }),
+  Ligne('AppNutrientTile en saisie : le nombre et l’indice « — » dans leur '
+      'puits', (tester) async {
+    final vide = TextEditingController();
+    final plein = TextEditingController(text: '380');
+    addTearDown(vide.dispose);
+    addTearDown(plein.dispose);
+    await poser(
+      tester,
+      Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (final controller in [vide, plein])
+            SizedBox(
+              width: 96,
+              child: AppNutrientTile.editable(
+                icon: AppIcons.nutrientEnergy,
+                tint: AppColors.nutritionEnergy,
+                label: 'Calories',
+                unit: 'kcal',
+                controller: controller,
+              ),
+            ),
+        ],
+      ),
+    );
+    final champ = tester.widget<TextField>(find.byType(TextField).first);
+    final puits = champ.decoration!.fillColor!;
+    return [
+      (
+        quoi: 'indice « — » sur le puits ${hex(puits)}',
+        encre: champ.decoration!.hintStyle!.color!,
+        fond: puits,
+        seuil: wcagText,
+      ),
+      (
+        quoi: '« 380 » sur le puits ${hex(puits)}',
+        encre: tester
+            .widget<TextField>(find.byType(TextField).last)
+            .style!
+            .color!,
+        fond: puits,
+        seuil: wcagText,
+      ),
+    ];
+  }),
+  for (final choisie in [false, true])
+    Ligne('AppIconChoiceTile ${choisie ? 'choisie' : 'libre'} : le libellé et '
+        'l’icône sur sa tuile posée sur une carte, au repos et à chaque '
+        'état', (tester) async {
+      await poser(
+        tester,
+        AppIconChoiceTile(
+          icon: AppIcons.mealLunch,
+          label: 'Déjeuner',
+          selected: choisie,
+          onTap: () {},
+        ),
+      );
+      final tuile = tester
+          .widget<Material>(
+            find.descendant(
+              of: find.byType(AppIconChoiceTile),
+              matching: find.byType(Material),
+            ),
+          )
+          .color!;
+      final fond = over(tuile, AppColors.darkSurface);
+      final voiles = voilesDeLEncre(tester, find.byType(InkWell));
+      return [
+        ...etatsSur(
+          '« Déjeuner » sur ${hex(fond)}',
+          encreDe(tester, find.text('Déjeuner')),
+          fond,
+          voiles.voiles,
+          eclaboussure: voiles.eclaboussure,
+        ),
+        ...etatsSur(
+          'icône sur ${hex(fond)}',
+          tester.widget<Icon>(find.byType(Icon)).color!,
+          fond,
+          voiles.voiles,
+          seuil: wcagGraphic,
+          eclaboussure: voiles.eclaboussure,
+        ),
+      ];
+    }),
+  Ligne('AppChoicePills : la choisie en blanc sur chaque arrêt du violet, '
+      'les autres sur leur pastille posée sur une carte', (tester) async {
+    await poser(
+      tester,
+      AppChoicePills<String>(
+        choices: const [AppChoice('g', 'g'), AppChoice('ml', 'ml')],
+        selected: 'g',
+        onSelected: (_) {},
+      ),
+    );
+    final pastille = _fondDe(tester, find.text('ml'));
+    return [
+      for (final arret in stopsOf(degradeSous(tester, find.text('g'))))
+        (
+          quoi: '« g » (choisie) sur ${hex(arret)}',
+          encre: encreDe(tester, find.text('g')),
+          fond: arret,
+          seuil: wcagText,
+        ),
+      (
+        quoi: '« ml » sur sa pastille, sur une carte',
+        encre: encreDe(tester, find.text('ml')),
+        fond: over(pastille, AppColors.darkSurface),
+        seuil: wcagText,
+      ),
+    ];
+  }),
+  Ligne('AppDashedButton : le libellé, l’icône et le pointillé sur une carte, '
+      'au repos et à chaque état', (tester) async {
+    await poser(
+      tester,
+      AppDashedButton(
+        label: 'Ajouter un aliment',
+        icon: AppIcons.addFood,
+        onPressed: () {},
+      ),
+    );
+    final voiles = voilesDeLEncre(tester, find.byType(InkWell));
+    return [
+      ...etatsSur(
+        '« Ajouter un aliment » sur une carte',
+        encreDe(tester, find.text('Ajouter un aliment')),
+        AppColors.darkSurface,
+        voiles.voiles,
+        eclaboussure: voiles.eclaboussure,
+      ),
+      ...etatsSur(
+        'icône sur une carte',
+        tester.widget<Icon>(find.byType(Icon)).color!,
+        AppColors.darkSurface,
+        voiles.voiles,
+        seuil: wcagGraphic,
+        eclaboussure: voiles.eclaboussure,
+      ),
+    ];
+  }),
+  Ligne('AppThumbnail sans photo : le dessin blanc sur chaque arrêt du '
+      'violet, et l’appareil photo sur son disque', (tester) async {
+    await poser(
+      tester,
+      AppThumbnail(
+        fallbackIcon: AppIcons.mealLunch,
+        semanticLabel: 'Pas encore de photo du plat',
+        action: AppThumbnailAction(
+          icon: AppIcons.mealPhoto,
+          tooltip: 'Ajouter une photo',
+          onPressed: () {},
+        ),
+      ),
+    );
+    final disque = _fondDe(tester, find.byIcon(AppIcons.mealPhoto));
+    return [
+      for (final arret in stopsOf(AppColors.violetRamp))
+        (
+          quoi: 'dessin du moment sur ${hex(arret)}',
+          encre: tester.widget<Icon>(find.byIcon(AppIcons.mealLunch)).color!,
+          fond: arret,
+          seuil: wcagGraphic,
+        ),
+      (
+        quoi: 'appareil photo sur son disque ${hex(disque)}',
+        encre: tester.widget<Icon>(find.byIcon(AppIcons.mealPhoto)).color!,
+        fond: disque,
+        seuil: wcagGraphic,
+      ),
+    ];
+  }),
+  Ligne('AppThumbnail pendant la préparation d’une photo : l’indicateur '
+      'blanc sur chaque arrêt du violet', (tester) async {
+    await poser(
+      tester,
+      const AppThumbnail(
+        fallbackIcon: AppIcons.mealLunch,
+        semanticLabel: 'Pas encore de photo du plat',
+        busy: true,
+      ),
+      enBoucle: true,
+    );
+    final indicateur = tester.widget<CircularProgressIndicator>(
+      find.byType(CircularProgressIndicator),
+    );
+    return [
+      for (final arret in stopsOf(AppColors.violetRamp))
+        (
+          quoi: 'indicateur sur ${hex(arret)}',
+          encre: indicateur.color!,
+          fond: arret,
+          seuil: wcagGraphic,
+        ),
+    ];
+  }),
 ];
+
+/// L'aplat le plus proche sous [cible] (le fond d'une pastille, d'un
+/// disque).
+Color _fondDe(WidgetTester tester, Finder cible) => voileSous(tester, cible);
+
+/// L'aplat que [composant] peint lui-même, sous tout ce qu'il écrit : sa
+/// première boîte décorée.
+Color _surfaceDe(WidgetTester tester, Finder composant) =>
+    (tester
+                .widget<DecoratedBox>(
+                  find
+                      .descendant(
+                        of: composant,
+                        matching: find.byType(DecoratedBox),
+                      )
+                      .first,
+                )
+                .decoration
+            as BoxDecoration)
+        .color!;
 
 /// L'icône de l'onglet dont le libellé est [libelle].
 Color _iconeDe(WidgetTester tester, String libelle) => tester

@@ -20,6 +20,7 @@ import '../../support/fake_nutrition_repository.dart';
 import '../../support/fake_water_store.dart';
 import '../../support/fake_workout_repository.dart';
 import '../../support/first_run_prefs.dart';
+import '../../support/meal_editor_app.dart';
 import '../../support/navigation.dart' as navigation;
 
 Widget appWith(FakeNutritionRepository nutrition) => ProviderScope(
@@ -293,9 +294,45 @@ void main() {
           .clearAccessibilityFeaturesTestValue();
     });
 
-    testWidgets('ajout par la feuille : le repas et le total apparaissent', (
-      tester,
-    ) async {
+    testWidgets('depuis l’accueil, la tuile des calories ouvre l’écran de '
+        'repas, et le repas compte aussitôt', (tester) async {
+      // Un profil COMPLET : sans cible, l'accueil montre l'amorçage du
+      // profil à la place de la grille.
+      final nutrition = FakeNutritionRepository(
+        weightKg: 80,
+        sex: BiologicalSex.male,
+        birthDate: DateTime.utc(1996, 3, 12),
+        heightCm: 180,
+        activityLevel: ActivityLevel.moderate,
+        goal: NutritionGoal.maintain,
+      );
+      tester.view.physicalSize = const Size(1179, 2556);
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
+      await tester.pumpWidget(appWith(nutrition));
+      await tester.pumpAndSettle();
+
+      await reveal(tester, find.text('CALORIES'));
+      await tester.tap(find.text('CALORIES'));
+      await tester.pumpAndSettle();
+      // Le MÊME écran que celui du journal, daté d'aujourd'hui.
+      expect(find.text('Nouveau repas'), findsOneWidget);
+      expect(find.text('Aujourd’hui'), findsOneWidget);
+
+      await tester.enterText(fieldLabelled('Nom du repas'), 'Banane');
+      await tester.enterText(tileField('Calories'), '105');
+      await tester.pumpAndSettle();
+      await showOnScreen(tester, find.text('Ajouter au journal'));
+      await tester.tap(find.text('Ajouter au journal'));
+      await tester.pumpAndSettle();
+
+      expect(nutrition.meals.single.name, 'Banane');
+      expect(find.text('Nouveau repas'), findsNothing);
+      expect(find.text('105'), findsWidgets);
+    });
+
+    testWidgets('ajout par l’écran de repas : le repas et le total '
+        'apparaissent', (tester) async {
       final nutrition = FakeNutritionRepository(
         weightKg: 80,
         sex: BiologicalSex.male,
@@ -310,19 +347,14 @@ void main() {
       await reveal(tester, find.text('Journal'));
       expect(find.textContaining('Rien au journal'), findsOneWidget);
 
+      // L'écran plein « Nouveau repas », par-dessus l'onglet.
       await tester.tap(find.text('Ajouter un repas'));
       await tester.pumpAndSettle();
-      // Les champs DE LA FEUILLE, dans l'ordre : repas, kcal, protéines —
-      // bornés à la feuille : le formulaire de profil, derrière, a les
-      // siens.
-      final fields = find.descendant(
-        of: find.byType(BottomSheet),
-        matching: find.byType(TextFormField),
-      );
-      await tester.enterText(fields.at(0), 'Skyr, granola');
-      await tester.enterText(fields.at(1), '654');
-      // La feuille DÉFILE : son bouton peut être sous le bord bas.
-      await tester.ensureVisible(find.text('Ajouter au journal'));
+      expect(find.text('Nouveau repas'), findsOneWidget);
+      await tester.enterText(fieldLabelled('Nom du repas'), 'Skyr, granola');
+      await tester.enterText(tileField('Calories'), '654');
+      await tester.pumpAndSettle();
+      await showOnScreen(tester, find.text('Ajouter au journal'));
       await tester.tap(find.text('Ajouter au journal'));
       await tester.pumpAndSettle();
 
@@ -401,14 +433,7 @@ void main() {
       goal: NutritionGoal.maintain,
     );
 
-    /// Les champs DE LA FEUILLE, dans l'ordre : repas, kcal, protéines,
-    /// glucides, lipides.
-    Finder champsFeuille() => find.descendant(
-      of: find.byType(BottomSheet),
-      matching: find.byType(TextFormField),
-    );
-
-    Future<void> ouvrirLaFeuille(
+    Future<void> ouvrirLEcran(
       WidgetTester tester,
       FakeNutritionRepository nutrition,
     ) async {
@@ -419,6 +444,13 @@ void main() {
       await tester.pumpAndSettle();
     }
 
+    Future<void> ajouter(WidgetTester tester) async {
+      await tester.pumpAndSettle();
+      await showOnScreen(tester, find.text('Ajouter au journal'));
+      await tester.tap(find.text('Ajouter au journal'));
+      await tester.pumpAndSettle();
+    }
+
     testWidgets('les trois macros se saisissent, et l’absence reste absente', (
       tester,
     ) async {
@@ -426,18 +458,13 @@ void main() {
       // sur les deux tiers de ce qu'il montrait, la comparaison consommé /
       // objectif n'était pas possible.
       final nutrition = profilComplet();
-      await ouvrirLaFeuille(tester, nutrition);
+      await ouvrirLEcran(tester, nutrition);
 
-      final champs = champsFeuille();
-      expect(champs, findsNWidgets(6));
-      await tester.enterText(champs.at(0), 'Riz complet');
-      await tester.enterText(champs.at(1), '650');
+      await tester.enterText(fieldLabelled('Nom du repas'), 'Riz complet');
+      await tester.enterText(tileField('Calories'), '650');
       // Protéines et lipides restent VIDES : « on ne sait pas », pas zéro.
-      await tester.enterText(champs.at(3), '80');
-      // La feuille DÉFILE : son bouton peut être sous le bord bas.
-      await tester.ensureVisible(find.text('Ajouter au journal'));
-      await tester.tap(find.text('Ajouter au journal'));
-      await tester.pumpAndSettle();
+      await tester.enterText(tileField('Glucides'), '80');
+      await ajouter(tester);
 
       final ajoute = nutrition.meals.single;
       expect(ajoute.carbsG, 80);
@@ -459,20 +486,16 @@ void main() {
       tester,
     ) async {
       final nutrition = profilComplet();
-      await ouvrirLaFeuille(tester, nutrition);
+      await ouvrirLEcran(tester, nutrition);
 
-      final champs = champsFeuille();
-      await tester.enterText(champs.at(0), 'Riz complet');
-      await tester.enterText(champs.at(1), '650');
-      await tester.enterText(champs.at(4), '2000');
-      // La feuille DÉFILE : son bouton peut être sous le bord bas.
-      await tester.ensureVisible(find.text('Ajouter au journal'));
-      await tester.tap(find.text('Ajouter au journal'));
-      await tester.pumpAndSettle();
+      await tester.enterText(fieldLabelled('Nom du repas'), 'Riz complet');
+      await tester.enterText(tileField('Calories'), '650');
+      await tester.enterText(tileField('Lipides'), '2000');
+      await ajouter(tester);
 
       // Les bornes sont celles du contrat serveur : mieux vaut les dire ici
       // qu'encaisser un 400 après coup.
-      expect(find.text('Entre 0 et 1 000.'), findsOneWidget);
+      expect(find.text('Lipides : entre 0 et 1 000 g.'), findsOneWidget);
       expect(nutrition.meals, isEmpty);
     });
   });

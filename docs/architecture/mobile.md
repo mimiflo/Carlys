@@ -169,6 +169,8 @@ l'accueil (plein écran).
 | `/progress`             | `progress`        | Progression (onglet)               |
 | `/academy`              | `academy`         | Academy (onglet)                   |
 | `/nutrition`            | `nutrition`       | Nutrition (branche Academy)        |
+| `/nutrition/repas/nouveau` | `meal-new`     | Ajouter un repas (plein écran) ; `?jour=AAAA-MM-JJ` le date du jour qu'affiche le journal (`AppRoutes.newMeal`) — déclarée AVANT `repas/:mealId` |
+| `/nutrition/repas/:mealId` | `meal-edit`    | Modifier un repas (plein écran) : relu par `GET /nutrition/meals/:id` (`AppRoutes.meal`) — voir `docs/product/nutrition.md` |
 | `/community`            | `community`       | Communauté (onglet) ; `?onglet=defis\|ligue\|amis` ouvre l'un de ses trois onglets (`AppRoutes.communityTab`), et l'adresse suit l'onglet choisi |
 | `/community/defis/:challengeId` | `friend-challenge` | Un défi entre amis (plein écran, depuis sa carte) : participants, classement, règle, mot du créateur |
 | `/profile`              | `profile`         | Profil (plein écran, via l'avatar de l'accueil) : le parcours, en portes vers chaque écran — voir `docs/product/profile.md` |
@@ -289,6 +291,39 @@ d'`ink_on_gradients_test.dart` le refuse), `AppLoadingIndicator` (libellé
 accessible), `AppErrorState` (icône, titre, message, réessai),
 `AppEmptyState`, `AppDarkScaffold` (le `Scaffold` d'un écran sombre).
 
+Nés de l'écran « Ajouter / Modifier ce repas » (25 septembre 2026), et
+réutilisables ailleurs : `AppScreenHeader.centered` (retour à gauche, titre
+centré, action à droite ; le titre passe sous les boutons quand il ne tient
+plus entre eux), `AppTitledCard` (icône et titre en capitales violettes, un
+`trailing` qui passe sous le titre quand la rangée est trop courte ; au
+lecteur d'écran, un GROUPE dont le titre est un nœud à lui seul et chaque
+pièce garde le sien),
+`AppAdaptiveGrid` (autant de colonnes que la largeur en loge, en points de
+TEXTE, sans cellule orpheline), `AppNutrientTile` (une valeur nutritionnelle
+lue, « — » quand elle est inconnue, ou saisie dans son puits ; en faute,
+`errorText` la DIT invalide au lecteur d'écran, avec sa phrase),
+`AppIconChoiceTile` (un choix exclusif, icône sur libellé), `AppChoicePills`
+(un choix compact, la pastille choisie au violet `cta` ; verrouillable),
+`AppDashedButton` (le bouton pointillé « ajouter » d'une liste),
+`AppThumbnail` et `AppIconDisc` (une photo ou, sans elle, un dessin violet,
+qui porte un indicateur pendant qu'une photo se prépare, `busy`, ou
+pendant qu'une photo existante se charge, `loading`, son bouton restant
+alors à la main ; un disque
+violet porteur d'icône), la variante `destructiveOutline`
+d'`AppButton` (contour rouge sur un écran sombre, aplat sur une page claire)
+et, dans `AppTextField`, `suffixText`, `suffixIcon` et `readOnly`. Chacun a
+sa ligne dans `contrast_pairs_test.dart` et ses tests
+(`meal_form_components_test.dart`).
+
+Et, du même écran, trois règles désormais tenues par des composants
+existants : `AppTextField` donne son libellé au CHAMP (le texte visible
+au-dessus n'est plus un nœud détaché, lu loin du champ) ; `AppListRow`
+laisse son titre passer à la ligne quand le texte est agrandi (sur 320
+points à 200 %, un titre coupé perdait le choix même qu'il nommait) ; et
+`AppRoundIconButton` accepte `onPressed: null` : tamisé
+(`darkIconInactive`) et annoncé désactivé, plutôt qu'un bouton plein qui ne
+ferait rien.
+
 **Ce qui est peint en sombre porte le thème sombre.** L'application est
 sombre par dessin, sous tous les réglages : ses écrans, ses feuilles, ses
 barres en verre et ses popups sont peints en sombre même sous le réglage
@@ -334,7 +369,7 @@ en local et en CI) :
 | ------ | ----- | ---- |
 | Message passager (succès, erreur, notification reçue) | `AppNotices.of(context).show(message, {title, tone, icon, actionLabel, onAction})` | rien ; `hide()` la retire |
 | Question avant un geste | `showAppConfirm(context, {title, message, confirmLabel, cancelLabel, destructive, icon})` | `Future<bool>` : `false` si l'on renonce, touche le voile ou fait retour |
-| Saisie courte (un nom) | `showAppPrompt(context, {title, message, hint, initialValue, maxLength, confirmLabel, cancelLabel, icon, validator})` | `Future<String?>` : le texte sans ses espaces de bord, `null` si l'on renonce |
+| Saisie courte (un nom, une quantité) | `showAppPrompt(context, {title, message, hint, initialValue, maxLength, confirmLabel, cancelLabel, icon, validator, keyboardType, suffixText})` | `Future<String?>` : le texte sans ses espaces de bord, `null` si l'on renonce |
 | Toute autre forme | `showAppDialog<T>(context, builder:)`, le `builder` rendant un `AppPopupCard` | `Future<T?>` |
 
 La coquille commune, `AppPopupCard` : surface `darkSurface` au liseré
@@ -389,7 +424,9 @@ est déjà en cours » vit une seule fois, `showResumeWorkoutConfirm`
 une séance.
 
 Ce qui RESTE une feuille (`showAppSheet`) : les menus d'options et les
-formulaires ou sélecteurs (création de défi, ajout de repas, signalement).
+formulaires ou sélecteurs (création de défi, signalement). La saisie d'un
+repas, longtemps une feuille, est devenue un écran plein le 25 septembre 2026
+(`/nutrition/repas/…`).
 Garanti par `test/design_system/app_notices_test.dart`,
 `app_dialogs_test.dart` et `app_popup_test.dart` (contraste AA de chaque
 texte au plus fort du halo, et du libellé de chaque bouton d'action sur son
@@ -725,6 +762,18 @@ mouvements — est un état NORMAL, pas une erreur.
 
 Les deux endroits qui en dépendent — la vignette de la carte et l'en-tête de
 la fiche — gardent exactement la même forme avec ou sans photo.
+
+**La photo d'un repas est l'autre cas, et elle ne passe PAS par
+`core/media/`.** Elle est privée : servie par `GET /nutrition/meals/:id/photo`
+avec la session de la personne, donc lue par le DÉPÔT nutrition
+(`NutritionRepository.mealPhoto`), jamais par un client HTTP nu. Son adresse
+ne change pas quand on la remplace : le cache (`MealPhotoCache`, dans
+`features/nutrition/data/`) la range sous (repas, `photo.updatedAt`), en
+mémoire seulement — une image privée n'a pas à rester dans les fichiers du
+téléphone. La prise de vue passe par un PORT du domaine,
+`MealPhotoPicker` (implémenté sur `image_picker`, la préparation JPEG en pur
+Dart avec `image`) : les tests le remplacent, aucun ne touche de greffon.
+Voir `docs/development/photo-du-plat.md`.
 
 Les images du catalogue sont **détourées** (WebP à canal alpha) : la figure
 seule, sans fond. Deux conséquences dans l'interface :

@@ -151,14 +151,14 @@ déclare ici à la main.
 | --- | --- | --- |
 | `GET /nutrition/meals` | **mobile** | apps/mobile |
 | `POST /nutrition/meals` | **mobile** | apps/mobile |
-| `GET /nutrition/meals/{id}` | **mobile** | apps/mobile — écran « Modifier ce repas », composants compris ; branché par le lot mobile qui suit le serveur (25 septembre 2026) |
+| `GET /nutrition/meals/{id}` | **mobile** | apps/mobile — écran « Modifier ce repas », composants compris (`NutritionRepository.meal`, `MealEditorController`) |
 | `PATCH /nutrition/meals/{id}` | **mobile** | apps/mobile |
 | `DELETE /nutrition/meals/{id}` | **mobile** | apps/mobile |
-| `PUT /nutrition/meals/{id}/photo` | **mobile** | apps/mobile — bouton appareil photo de l'écran « Ajouter / Modifier ce repas » (JPEG compressé et redressé sur l'appareil) ; branché par le lot mobile qui suit le serveur (25 septembre 2026) |
-| `GET /nutrition/meals/{id}/photo` | **mobile** | apps/mobile — affichage de la photo, cache client invalidé par `photo.updatedAt` ; même lot mobile (25 septembre 2026) |
-| `DELETE /nutrition/meals/{id}/photo` | **mobile** | apps/mobile — retrait de la photo depuis le même écran ; même lot mobile (25 septembre 2026) |
-| `GET /nutrition/foods` | **mobile** | apps/mobile — « + Ajouter un aliment » de l'écran d'ajout et de correction ; `meta.source` porte la mention CIQUAL à afficher ; branché par le lot mobile qui suit le serveur (25 septembre 2026) |
-| `GET /nutrition/foods/{code}` | **mobile** | apps/mobile — fiche d'un aliment de la base ; même lot mobile (25 septembre 2026) |
+| `PUT /nutrition/meals/{id}/photo` | **mobile** | apps/mobile — bouton appareil photo de l'écran « Ajouter / Modifier ce repas » : la photo, redressée, réduite à 1 600 px et réencodée en JPEG sans métadonnées SUR L'APPAREIL, part à l'enregistrement, après l'écriture du repas (`NutritionRepository.replaceMealPhoto`, via `NutritionActions.applyMealPhoto`) |
+| `GET /nutrition/meals/{id}/photo` | **mobile** | apps/mobile — vignette de l'écran de repas : octets lus par le dépôt (`NutritionRepository.mealPhoto`, 404 = pas de photo), gardés en mémoire sous (repas, `photo.updatedAt`) par `MealPhotoCache` |
+| `DELETE /nutrition/meals/{id}/photo` | **mobile** | apps/mobile — « Retirer la photo » du même écran, appliqué à l'enregistrement (`NutritionRepository.removeMealPhoto`) |
+| `GET /nutrition/foods` | **mobile** | apps/mobile — feuille « Ajouter un aliment » de l'écran de repas (`FoodSearchController` → `NutritionRepository.searchFoods`, anti-rebond, deux caractères au moins, réponses dépassées jetées) ; `meta.source` (mention CIQUAL et version) affichée en pied de feuille |
+| `GET /nutrition/foods/{code}` | **mobile** | apps/mobile — fiche d'un aliment de la base, exposée par le dépôt (`NutritionRepository.food`) ; la feuille de recherche ne l'appelle pas : la recherche rend déjà les valeurs pour 100 g et la mention |
 | `GET /nutrition/metabolism` | **mobile** | apps/mobile |
 
 ### Communauté

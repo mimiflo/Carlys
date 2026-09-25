@@ -36,7 +36,7 @@ class MealTile extends StatelessWidget {
 
     return AppCard(
       onTap: onEdit,
-      semanticLabel: 'Corriger ${meal.name}',
+      semanticLabel: 'Modifier ${meal.name}',
       child: Row(
         children: [
           Text(

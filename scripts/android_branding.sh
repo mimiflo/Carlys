@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Applique l'identité Carlys au dossier android/ GÉNÉRÉ par flutter create :
 # nom affiché (« Carlys »), icône de lanceur (le sceau de la marque, déclinée
-# dans apps/mobile/launcher/), permission de notification Android 13+.
+# dans apps/mobile/launcher/), permission de notification Android 13+,
+# appareil photo FACULTATIF ; et, côté ios/ s'il existe, le nom et les motifs
+# d'accès à l'appareil photo et aux photos.
 #
 # android/ et ios/ ne sont pas versionnés : l'identité vit ICI et dans
 # launcher/ — appelé par scripts/bootstrap_mobile.sh et par la CI mobile-recette.
@@ -32,6 +34,26 @@ cp -r launcher/res/. android/app/src/main/res/
 # corrompu sur tout poste Mac, et sur le runner macOS de mobile-recette.
 if ! grep -q "android.permission.POST_NOTIFICATIONS" "$MANIFEST"; then
   sed -i.bak 's|<application|<uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>\
+    <application|' "$MANIFEST"
+  rm -f "$MANIFEST.bak"
+fi
+
+# ── Appareil photo : utile, jamais exigé ────────────────────────────────────
+#
+# Deux usages : le scan du code ami (mobile_scanner) et la photo d'un repas
+# (image_picker). La permission CAMERA arrive par fusion du manifeste de
+# mobile_scanner, et image_picker la DEMANDE à l'exécution quand elle est
+# déclarée (refus → « camera_access_denied », que l'écran traduit). La
+# galerie, elle, ne demande rien : Android 13+ ouvre le sélecteur de photos
+# du système, les versions précédentes un sélecteur de fichiers.
+#
+# Reste à dire que la caméra n'est PAS requise : sinon le Play Store cache
+# l'application aux appareils sans caméra (tablettes, Chromebooks), qui
+# peuvent pourtant choisir une photo dans la galerie. mobile_scanner le dit
+# aussi dans son propre manifeste ; on le dit ICI, pour que la règle ne
+# dépende pas d'une bibliothèque qu'on pourrait retirer.
+if ! grep -q 'android.hardware.camera"' "$MANIFEST"; then
+  sed -i.bak 's|<application|<uses-feature android:name="android.hardware.camera" android:required="false"/>\
     <application|' "$MANIFEST"
   rm -f "$MANIFEST.bak"
 fi
@@ -76,25 +98,42 @@ if [ -f "$PLIST" ]; then
   sed -i.bak '/<key>CFBundleDisplayName<\/key>/{n;s|<string>.*</string>|<string>Carlys</string>|;}' "$PLIST"
   rm -f "$PLIST.bak"
 
-  # Scanner de code ami : iOS refuse d'ouvrir la caméra sans motif déclaré
-  # (l'app crasherait au premier scan). Android n'a rien à déclarer ici, le
-  # manifeste de mobile_scanner s'en charge par fusion. L'ancre est le
-  # DERNIER </dict> du plist — awk, parce que sed ne sait pas dire
+  # iOS refuse d'ouvrir la caméra ou la photothèque sans MOTIF déclaré :
+  # l'application planterait au premier accès, et l'App Store refuse une
+  # application qui référence ces accès sans les motiver. Deux motifs, en
+  # français, qui disent à quoi sert l'accès et rien de plus :
+  #  - la caméra : le scan du code ami ET la photo d'un repas ;
+  #  - la photothèque : exigée par l'App Store dès qu'image_picker est là,
+  #    même si Carlys passe `requestFullMetadata: false` et que le
+  #    sélecteur système n'ouvre alors aucune autorisation.
+  #
+  # `set_plist_string` REMPLACE la valeur d'une clé déjà présente (un ios/
+  # généré avant ce motif garde sinon l'ancien texte) et l'ajoute sinon,
+  # avant le DERNIER </dict> — awk, parce que sed ne sait pas dire
   # « dernier » et que Git Bash sous Windows n'a pas python.
-  if ! grep -q "NSCameraUsageDescription" "$PLIST"; then
-    awk '
+  set_plist_string() {
+    awk -v key="$1" -v value="$2" '
       { lines[NR] = $0 }
       /<\/dict>/ { last = NR }
+      index($0, "<key>" key "</key>") { found = NR }
       END {
         for (i = 1; i <= NR; i++) {
-          if (i == last) {
-            print "\t<key>NSCameraUsageDescription</key>"
-            print "\t<string>La caméra sert à scanner le code ami d’un profil Carlys.</string>"
+          if (found && i == found + 1) {
+            print "\t<string>" value "</string>"
+            continue
+          }
+          if (!found && i == last) {
+            print "\t<key>" key "</key>"
+            print "\t<string>" value "</string>"
           }
           print lines[i]
         }
       }' "$PLIST" > "$PLIST.tmp" && mv "$PLIST.tmp" "$PLIST"
-  fi
+  }
+  set_plist_string NSCameraUsageDescription \
+    "L’appareil photo sert à scanner le code ami d’un profil Carlys et à photographier tes repas."
+  set_plist_string NSPhotoLibraryUsageDescription \
+    "Carlys n’envoie que la photo de repas que tu choisis : le reste de ta photothèque reste sur ton téléphone."
 fi
 
-echo "Identité Carlys appliquée : nom, icône, permission de notification."
+echo "Identité Carlys appliquée : nom, icône, notifications, appareil photo facultatif, motifs iOS."

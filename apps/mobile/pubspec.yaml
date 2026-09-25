@@ -86,6 +86,27 @@ dependencies:
   google_sign_in: ^6.2.2
   sign_in_with_apple: ^6.1.3
 
+  # Photo du plat (écran « Modifier ce repas ») — deux paquets, deux rôles.
+  #
+  # `image_picker` : greffon OFFICIEL de l'équipe Flutter (flutter.dev), et
+  # seule porte standard vers l'appareil photo et la galerie des deux
+  # plateformes. Il ne sert qu'à OBTENIR les octets : une première réduction
+  # native (1 600 px) évite de monter une photo de 12 Mpx en mémoire Dart.
+  #
+  # `image` : décodage / encodage en PUR DART, sans natif. Il REDRESSE la
+  # photo (l'orientation EXIF appliquée aux pixels : Android laisse la photo
+  # couchée, avec une simple étiquette « tourner de 90° » que le serveur
+  # retire avec les autres métadonnées), la réduit et la réencode en JPEG
+  # SANS métadonnées. Choisi contre un compresseur natif
+  # (`flutter_image_compress`) parce que la préparation se TESTE alors sur de
+  # vrais octets, sans greffon, et donne le même résultat sur les deux
+  # plateformes. Son coût (un décodage en Dart) se paie dans un isolat, sur
+  # une image déjà réduite par `image_picker`. Tous deux restent derrière le
+  # port `MealPhotoPicker` : aucun test n'appelle de greffon.
+  # Voir docs/development/photo-du-plat.md.
+  image_picker: ^1.2.3
+  image: ^4.10.1
+
   # Utilitaires
   uuid: ^4.5.1
 

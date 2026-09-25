@@ -26,7 +26,7 @@ class TodayGrid extends StatelessWidget {
   /// Ouvre la feuille d'hydratation.
   final VoidCallback? onOpenHydration;
 
-  /// Ouvre la feuille de saisie d'un repas.
+  /// Ouvre l'écran d'ajout d'un repas.
   ///
   /// DEUX mesures se nourrissent donc depuis l'accueil, et les deux pour la
   /// même raison : boire et manger se décident plusieurs fois par jour, là

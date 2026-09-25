@@ -10,6 +10,11 @@ import '../../domain/nutrition_explanations.dart';
 /// Carte macros (maquette 2g) : trois lignes « nom → grammes » surmontant
 /// chacune une jauge de 6.
 ///
+/// Les jauges prennent les couleurs des valeurs d'un repas
+/// (`AppColors.nutrition…`) : une macro a la même teinte ici et sur l'écran
+/// « Modifier ce repas », et les protéines ne s'y confondent plus avec
+/// l'énergie, orange.
+///
 /// L'app ne suit AUCUN apport alimentaire : les jauges expriment donc la part
 /// de l'objectif calorique couverte par chaque macro (grammes × kcal/g ÷
 /// objectif), et non une consommation du jour.
@@ -42,7 +47,7 @@ class MacrosCard extends StatelessWidget {
             grams: metabolism.proteinG,
             kcalPerGram: 4,
             targetKcal: metabolism.targetKcal,
-            color: AppColors.accent,
+            color: AppColors.nutritionProtein,
             explication: NutritionExplanations.proteines,
           ),
           MacroRow(
@@ -50,7 +55,7 @@ class MacrosCard extends StatelessWidget {
             grams: metabolism.carbsG,
             kcalPerGram: 4,
             targetKcal: metabolism.targetKcal,
-            color: AppColors.primary,
+            color: AppColors.nutritionCarbs,
             explication: NutritionExplanations.glucides,
           ),
           MacroRow(
@@ -58,7 +63,7 @@ class MacrosCard extends StatelessWidget {
             grams: metabolism.fatG,
             kcalPerGram: 9,
             targetKcal: metabolism.targetKcal,
-            color: AppColors.primaryLight,
+            color: AppColors.nutritionFat,
             explication: NutritionExplanations.lipides,
           ),
         ],

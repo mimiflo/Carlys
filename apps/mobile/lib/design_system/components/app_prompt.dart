@@ -16,6 +16,10 @@ import 'app_text_field.dart';
 /// d'erreur à afficher sous le champ, ou `null` si la saisie convient. Le
 /// champ prend le focus à l'ouverture, et la popup remonte au-dessus du
 /// clavier.
+///
+/// [keyboardType] ouvre le clavier qui convient à la saisie (numérique pour
+/// une quantité) ; [suffixText] écrit l'unité dans le champ (« g »). Le
+/// texte rendu reste une chaîne : c'est au geste de la lire.
 Future<String?> showAppPrompt(
   BuildContext context, {
   required String title,
@@ -27,6 +31,8 @@ Future<String?> showAppPrompt(
   String cancelLabel = 'Annuler',
   IconData? icon,
   String? Function(String value)? validator,
+  TextInputType? keyboardType,
+  String? suffixText,
 }) {
   return showAppDialog<String>(
     context,
@@ -40,6 +46,8 @@ Future<String?> showAppPrompt(
       cancelLabel: cancelLabel,
       icon: icon ?? AppIcons.promptEdit,
       validator: validator,
+      keyboardType: keyboardType,
+      suffixText: suffixText,
     ),
   );
 }
@@ -55,6 +63,8 @@ class _PromptCard extends StatefulWidget {
     required this.cancelLabel,
     required this.icon,
     required this.validator,
+    required this.keyboardType,
+    required this.suffixText,
   });
 
   final String title;
@@ -66,6 +76,8 @@ class _PromptCard extends StatefulWidget {
   final String cancelLabel;
   final IconData icon;
   final String? Function(String value)? validator;
+  final TextInputType? keyboardType;
+  final String? suffixText;
 
   @override
   State<_PromptCard> createState() => _PromptCardState();
@@ -111,6 +123,8 @@ class _PromptCardState extends State<_PromptCard> {
         controller: _controller,
         maxLength: widget.maxLength,
         autofocus: true,
+        keyboardType: widget.keyboardType,
+        suffixText: widget.suffixText,
         textInputAction: TextInputAction.done,
         errorText: _error,
         // Chaque frappe réévalue le bouton, et efface une erreur devenue

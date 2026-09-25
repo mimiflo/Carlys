@@ -3,12 +3,16 @@
 /// Tous les calculs métaboliques sont faits CÔTÉ SERVEUR ; l'app collecte le
 /// profil et affiche le rapport, jamais l'inverse.
 ///
-/// Le journal alimentaire vit dans `meal_entry.dart` : ce fichier le
-/// réexporte pour que ses appelants n'aient pas à savoir lequel des deux les
+/// Le journal alimentaire vit dans `meal_entry.dart` (et ses voisins : le
+/// moment, les aliments, l'écriture, la base d'aliments) : ce fichier les
+/// réexporte pour que ses appelants n'aient pas à savoir lequel les
 /// concerne.
 library;
 
+export 'food.dart';
 export 'meal_entry.dart';
+export 'meal_photo.dart';
+export 'meal_write.dart';
 
 /// Sexe biologique — requis par la formule de Mifflin-St Jeor.
 enum BiologicalSex {

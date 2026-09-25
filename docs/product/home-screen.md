@@ -90,10 +90,11 @@ jour reste faux tant qu'on n'a pas ouvert un autre onglet — la tuile montrait
 le manque sans offrir de le combler, et noter un repas demandait un changement
 d'onglet suivi d'un défilement.
 
-La porte est **la même** que celle du journal, pas une copie : le geste
-d'écriture vit dans `meal_entry_flow.dart`, et les deux appelants s'y rendent.
-Deux copies d'un geste d'écriture divergent toujours par où ça se voit le plus
-— le message d'échec, le champ qu'on oublie de passer.
+La porte est **la même** que celle du journal, pas une copie : les deux
+poussent l'écran plein « Ajouter un repas » (`AppRoutes.newMeal`), qui porte
+seul le geste d'écriture — le journal le date du jour qu'il affiche, l'accueil
+d'aujourd'hui. Deux copies d'un geste d'écriture divergent toujours par où ça
+se voit le plus — le message d'échec, le champ qu'on oublie de passer.
 
 Les deux autres cellules n'ont **aucun geste**, et pour deux raisons
 distinctes. Le volume vient des séances, qui ont leur propre moment. Les

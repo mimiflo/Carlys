@@ -14,6 +14,12 @@ enum AppButtonVariant {
   /// d'entrée. Ne pas l'employer pour un bouton d'action courant.
   accent,
   destructive,
+
+  /// Le geste destructif SECONDAIRE d'un écran sombre (« Supprimer ce
+  /// repas », sous l'action principale) : contour et libellé rouges. Sur une
+  /// page CLAIRE, aucun rouge ne tient 4,5:1 sous les voiles d'un contour
+  /// (3,98 au mieux) : il y prend l'aplat de [destructive].
+  destructiveOutline,
 }
 
 enum AppButtonSize { small, medium, large }
@@ -59,6 +65,15 @@ class AppButton extends StatelessWidget {
   /// [AppGradientAction.stateOverlay]).
   static final WidgetStateProperty<Color?> stateOverlay =
       AppGradientAction.stateOverlay;
+
+  /// Voile d'état du contour rouge : le rouge à 5 %. Celui de Material (8 à
+  /// 10 %) fait tomber le libellé à 4,02:1 sur une carte à l'appui ; à 5 %,
+  /// 4,53 (`contrast_pairs_test.dart` mesure chaque état).
+  static final WidgetStateProperty<Color?> _dangerOverlay =
+      WidgetStateProperty.resolveWith(
+        (states) =>
+            states.isEmpty ? null : AppColors.danger.withValues(alpha: 0.05),
+      );
 
   @override
   Widget build(BuildContext context) {
@@ -114,18 +129,38 @@ class AppButton extends StatelessWidget {
       // Un rouge PLUS PROFOND que `colorScheme.error` (`danger`) : blanc sur
       // `danger` ne tient que 3,76:1, sous l'AA d'un libellé de 15 points.
       // Le voile d'état est SOMBRE (voir [stateVeil]).
-      AppButtonVariant.destructive => FilledButton(
-        onPressed: onPressedOrNull,
-        style: _sizeStyle().merge(
-          FilledButton.styleFrom(
-            backgroundColor: AppColors.dangerStrong,
-            foregroundColor: AppColors.neutral0,
-            overlayColor: stateVeil,
-          ),
-        ),
-        child: child,
+      AppButtonVariant.destructive => _destructiveFilled(
+        onPressedOrNull,
+        child,
       ),
+      AppButtonVariant.destructiveOutline =>
+        Theme.of(context).brightness == Brightness.light
+            ? _destructiveFilled(onPressedOrNull, child)
+            : OutlinedButton(
+                onPressed: onPressedOrNull,
+                style: _sizeStyle().merge(
+                  OutlinedButton.styleFrom(
+                    foregroundColor: AppColors.danger,
+                    side: const BorderSide(color: AppColors.danger),
+                  ).copyWith(overlayColor: _dangerOverlay),
+                ),
+                child: child,
+              ),
     };
+  }
+
+  Widget _destructiveFilled(VoidCallback? onPressed, Widget child) {
+    return FilledButton(
+      onPressed: onPressed,
+      style: _sizeStyle().merge(
+        FilledButton.styleFrom(
+          backgroundColor: AppColors.dangerStrong,
+          foregroundColor: AppColors.neutral0,
+          overlayColor: stateVeil,
+        ),
+      ),
+      child: child,
+    );
   }
 
   /// L'encre et le voile d'état des variantes SANS fond (contour, fantôme),

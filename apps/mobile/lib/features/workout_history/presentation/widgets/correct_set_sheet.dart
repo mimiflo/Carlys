@@ -96,8 +96,7 @@ class _CorrectSetFormState extends State<_CorrectSetForm> {
     // `showAppSheet` ne pose AUCUNE marge horizontale : elle garantit le
     // navigateur racine, le clavier et les zones sûres, et laisse la mise en
     // page à son contenu. Chaque feuille pose donc la sienne — celle-ci
-    // l'avait oubliée, et le texte touchait les deux bords. Même valeur que
-    // la feuille d'ajout d'un repas, qui est l'autre formulaire du dépôt.
+    // l'avait oubliée, et le texte touchait les deux bords.
     return Padding(
       padding: const EdgeInsets.all(AppSpacing.gutter),
       child: Form(

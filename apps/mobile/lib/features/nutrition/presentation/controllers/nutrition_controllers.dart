@@ -1,7 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:uuid/uuid.dart';
 
+import '../../../../core/errors/app_exception.dart';
 import '../../../../core/utilities/current_day.dart';
+import '../../data/repositories/meal_photo_cache.dart';
 import '../../data/repositories/nutrition_repository_impl.dart';
 import '../../domain/entities/nutrition.dart';
 import '../../domain/repositories/nutrition_repository.dart';
@@ -84,7 +85,6 @@ class NutritionActions {
   NutritionActions(this._ref);
 
   final Ref _ref;
-  static const _uuid = Uuid();
 
   NutritionRepository get _repository => _ref.read(nutritionRepositoryProvider);
 
@@ -93,46 +93,81 @@ class NutritionActions {
     _ref.invalidate(metabolismReportProvider);
   }
 
-  /// L'identifiant naît ICI, sur l'appareil : l'écriture est rejouable.
+  /// Ajoute un repas sous [id], né sur l'appareil À L'OUVERTURE de l'écran
+  /// de saisie : un enregistrement qui échoue puis se rejoue garde le même
+  /// identifiant, et le serveur ne fait pas de doublon.
   ///
-  /// `eatenAt` vient du formulaire et non de `DateTime.now()` : un repas se
-  /// journalise souvent APRÈS coup — le soir pour le midi, le lendemain
-  /// pour la veille — et l'heure de saisie le rangeait alors dans la
-  /// mauvaise journée.
-  Future<void> addMeal({
-    required String name,
-    required int kcal,
-    required DateTime eatenAt,
-    double? quantity,
-    MealQuantityUnit? quantityUnit,
-    int? proteinG,
-    int? carbsG,
-    int? fatG,
+  /// `eatenAt` vient de l'écran et non de `DateTime.now()` : un repas se
+  /// journalise souvent APRÈS coup — le soir pour le midi, le lendemain pour
+  /// la veille — et l'heure de saisie le rangeait alors dans la mauvaise
+  /// journée.
+  ///
+  /// [mayExist] : un essai précédent a échoué SANS qu'on sache s'il a écrit
+  /// (la réponse s'est perdue : délai dépassé, coupure). Un nouveau POST
+  /// rendrait alors le repas DÉJÀ écrit, sans rien réécrire, et ce qui a été
+  /// corrigé entre-temps se perdrait en silence. Le repas est donc RELU
+  /// d'abord : absent, il se crée ; présent, il se corrige avec tout ce que
+  /// l'écran montre.
+  Future<MealEntry> addMeal(
+    String id,
+    MealWrite write, {
+    bool mayExist = false,
   }) async {
-    await _repository.addMeal(
-      MealEntry(
-        id: _uuid.v4(),
-        name: name,
-        kcal: kcal,
-        quantity: quantity,
-        quantityUnit: quantityUnit,
-        proteinG: proteinG,
-        carbsG: carbsG,
-        fatG: fatG,
-        eatenAt: eatenAt.toUtc(),
-      ),
-    );
+    final added = mayExist && await _exists(id)
+        ? await _repository.updateMeal(id, write.overwriting())
+        : await _repository.addMeal(id, write);
     _refreshJournal();
+    return added;
+  }
+
+  /// Le serveur a-t-il le repas [id] ? Tout autre échec que « introuvable »
+  /// remonte : on ne sait toujours pas, et rien ne doit partir.
+  Future<bool> _exists(String id) async {
+    try {
+      await _repository.meal(id);
+      return true;
+    } on ServerException catch (error) {
+      if (error.statusCode == 404) {
+        return false;
+      }
+      rethrow;
+    }
   }
 
   /// Corrige un repas SUR PLACE : il garde son identifiant et sa place.
-  Future<void> updateMeal(String id, MealCorrection correction) async {
-    await _repository.updateMeal(id, correction);
+  Future<MealEntry> updateMeal(String id, MealWrite write) async {
+    final updated = await _repository.updateMeal(id, write);
     _refreshJournal();
+    return updated;
   }
 
   Future<void> deleteMeal(String id) async {
     await _repository.deleteMeal(id);
+    _ref.read(mealPhotoCacheProvider).forget(id);
+    _refreshJournal();
+  }
+
+  /// Applique à un repas DÉJÀ ÉCRIT le changement de photo décidé à
+  /// l'écran : la pose (`PUT`), ou la retire (`DELETE`).
+  ///
+  /// La photo envoyée est rangée dans le cache sous la date que le serveur
+  /// lui donne : rouvrir le repas ne retélécharge pas ce qu'on vient
+  /// d'envoyer.
+  Future<void> applyMealPhoto(String mealId, MealPhotoChange change) async {
+    final cache = _ref.read(mealPhotoCacheProvider);
+    switch (change) {
+      case KeepMealPhoto():
+        return;
+      case NewMealPhoto(:final jpeg):
+        final meal = await _repository.replaceMealPhoto(mealId, jpeg);
+        final updatedAt = meal.photoUpdatedAt;
+        if (updatedAt != null) {
+          cache.remember(mealId, updatedAt, jpeg);
+        }
+      case RemoveMealPhoto():
+        await _repository.removeMealPhoto(mealId);
+        cache.forget(mealId);
+    }
     _refreshJournal();
   }
 

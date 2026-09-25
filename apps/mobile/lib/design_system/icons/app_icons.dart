@@ -303,6 +303,63 @@ abstract final class AppIcons {
   static const IconData editOutline = Icons.edit_outlined;
   static const IconData emailSent = Icons.mark_email_read_outlined;
 
+  // ── Repas (écran « Ajouter / Modifier ce repas ») ─────────────────
+  // Le moment de la journée : la course du soleil, puis la lune, et la tasse
+  // d'une pause. Le petit-déjeuner prend le soleil LEVANT, pour que les deux
+  // repas du jour ne portent pas le même dessin.
+  static const IconData mealBreakfast = Icons.wb_twilight_rounded;
+  static const IconData mealLunch = Icons.wb_sunny_rounded;
+  static const IconData mealDinner = Icons.nightlight_round;
+  static const IconData mealSnack = Icons.local_cafe_rounded;
+
+  /// Prendre ou changer la photo de son plat — et, dans la feuille qui
+  /// s'ouvre alors, « Prendre une photo ».
+  static const IconData mealPhoto = Icons.photo_camera_rounded;
+
+  /// « Choisir dans la galerie » : une photo déjà prise.
+  static const IconData mealPhotoGallery = Icons.photo_library_rounded;
+
+  /// « Retirer la photo » : l'image barrée, pas la corbeille, qui
+  /// supprimerait le REPAS.
+  static const IconData mealPhotoRemove = Icons.hide_image_rounded;
+
+  /// La QUANTITÉ mangée : la balance de cuisine, pas celle du pèse-personne
+  /// ([bodyMetrics]).
+  static const IconData mealQuantity = Icons.scale_rounded;
+
+  /// Les valeurs nutritionnelles d'un repas, en parts.
+  static const IconData mealValues = Icons.pie_chart_rounded;
+
+  /// La liste des aliments qui composent un repas.
+  static const IconData mealFoods = Icons.format_list_bulleted_rounded;
+
+  /// Ajouter un aliment à la composition.
+  static const IconData addFood = Icons.add_circle_outline_rounded;
+
+  /// La base d'aliments pas encore chargée sur le serveur : elle ARRIVE,
+  /// la saisie à la main reste possible.
+  static const IconData foodDatabasePending = Icons.hourglass_top_rounded;
+
+  // Les quatre valeurs d'un repas. Les protéines gardent le dessin de
+  // [protein], celui de l'accueil : une valeur, un dessin.
+  static const IconData nutrientEnergy = Icons.local_fire_department_rounded;
+  static const IconData nutrientCarbs = Icons.grass_rounded;
+  static const IconData nutrientFat = Icons.opacity_rounded;
+
+  // Les familles d'aliments de la table CIQUAL : la vignette d'un aliment,
+  // faute de photo dans la table.
+  static const IconData foodDishes = Icons.dinner_dining_rounded;
+  static const IconData foodPlants = Icons.eco_rounded;
+  static const IconData foodCereals = Icons.bakery_dining_rounded;
+  static const IconData foodProteins = Icons.set_meal_rounded;
+  static const IconData foodDairy = Icons.local_drink_rounded;
+  static const IconData foodDrinks = Icons.emoji_food_beverage_rounded;
+  static const IconData foodSweets = Icons.cake_rounded;
+  static const IconData foodFrozen = Icons.icecream_rounded;
+  static const IconData foodFats = Icons.opacity_rounded;
+  static const IconData foodPantry = Icons.soup_kitchen_rounded;
+  static const IconData foodInfant = Icons.child_care_rounded;
+
   // ── Popups (AppNotices, showAppConfirm, showAppPrompt) ────────────
   // Le glyphe du médaillon, en haut de la carte : il dit le GENRE de ce qui
   // s'affiche avant qu'on le lise. Des glyphes pleins et sans cercle quand

@@ -17,6 +17,7 @@ import 'package:carlys_mobile/app/router/app_routes.dart';
 import 'package:carlys_mobile/core/database/app_database.dart';
 import 'package:carlys_mobile/core/errors/app_exception.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
+import 'package:carlys_mobile/core/utilities/debouncer.dart';
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/academy/presentation/screens/academy_screen.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
@@ -48,7 +49,9 @@ import 'package:carlys_mobile/features/notifications/domain/entities/push_destin
 import 'package:carlys_mobile/features/notifications/domain/services/push_messenger.dart';
 import 'package:carlys_mobile/features/nutrition/data/repositories/nutrition_repository_impl.dart';
 import 'package:carlys_mobile/features/nutrition/domain/entities/nutrition.dart';
+import 'package:carlys_mobile/features/nutrition/presentation/controllers/meal_editor_controller.dart';
 import 'package:carlys_mobile/features/nutrition/presentation/controllers/water_controllers.dart';
+import 'package:carlys_mobile/features/nutrition/presentation/screens/meal_editor_screen.dart';
 import 'package:carlys_mobile/features/nutrition/presentation/screens/nutrition_screen.dart';
 import 'package:carlys_mobile/features/onboarding/domain/first_run_step.dart';
 import 'package:carlys_mobile/features/onboarding/presentation/controllers/splash_gate.dart';
@@ -106,6 +109,8 @@ import '../../test/support/in_memory_community_repository.dart';
 import '../../test/support/in_memory_device_token_repository.dart';
 import '../../test/support/in_memory_program_repository.dart';
 import '../../test/support/in_memory_workout_template_repository.dart';
+import '../../test/support/sample_meal_photo.dart';
+import '../../test/support/sample_meals.dart';
 
 /// Minuit de la journée en cours.
 ///
@@ -115,7 +120,7 @@ import '../../test/support/in_memory_workout_template_repository.dart';
 ///
 /// **Trois repas ne s'y ancraient pas**, malgré ce commentaire : ils
 /// portaient `DateTime.now().subtract(...)`. Or la tuile REND l'heure
-/// (`MealMomentRows.spellTime`), à la minute : deux régénérations à quinze
+/// (`formatClock`), à la minute : deux régénérations à quinze
 /// minutes d'écart donnaient deux images différentes, et la galerie ne
 /// pouvait plus servir à prouver qu'un changement n'avait rien changé.
 ///
@@ -1122,35 +1127,197 @@ void main() {
     await capture(tester, '30-nutrition-journal', shows: find.text('Journal'));
   });
 
-  testWidgets('feuille de correction d’un repas', (tester) async {
-    final nutrition = nutritionOf()
-      ..meals.add(
-        MealEntry(
-          id: 'capture-repas-3',
-          name: 'Poulet, riz, brocoli',
-          kcal: 274,
-          quantity: 320,
-          quantityUnit: MealQuantityUnit.gram,
-          proteinG: 46,
-          carbsG: 58,
-          // Déjeuner : heure FIXE, pour que deux captures coïncident.
-          eatenAt: startOfToday().add(const Duration(hours: 13, minutes: 20)),
-        ),
-      );
-    await pumpApp(tester, nutrition: nutrition);
+  // L'écran « Ajouter / Modifier ce repas » (maquette du 25 septembre
+  // 2026), ouvert comme on l'ouvre : depuis le journal. Il remplace la
+  // feuille de correction de l'ancienne scène 31.
+  //
+  // LA PHOTO du repas composé est un DESSIN d'assiette vue de dessus
+  // (`test/support/sample_meal_photo.dart`) : l'application n'embarque
+  // aucune photo de plat, et l'image d'asset la plus proche (l'athlète de
+  // la bienvenue) aurait montré autre chose qu'un repas. Le « serveur » la
+  // rend par la même route que la vraie (GET authentifié du dépôt).
+  Future<void> openMealFromJournal(WidgetTester tester, String label) async {
     await openNutrition(tester);
     await tester.scrollUntilVisible(
-      find.text('Journal'),
+      find.text(label),
       240,
       scrollable: find.byType(Scrollable).last,
     );
     await settle(tester);
-    await tester.tap(find.text('Poulet, riz, brocoli'));
+    await tester.tap(find.text(label));
+    await settle(tester);
+    // La photo du plat se DÉCODE hors de l'horloge simulée, comme les
+    // images d'asset des autres scènes : sans cela, la vignette resterait
+    // vide sur la capture.
+    final thumbnail = find.byType(AppThumbnail);
+    final photo = thumbnail.evaluate().isEmpty
+        ? null
+        : tester.widget<AppThumbnail>(thumbnail).image;
+    if (photo != null) {
+      final context = tester.element(thumbnail);
+      await tester.runAsync(() => precacheImage(photo, context));
+      await settle(tester);
+    }
+  }
+
+  /// Le déjeuner de la maquette, composé de trois aliments : 320 g, à une
+  /// heure FIXE de la journée en cours, pour que deux captures coïncident ;
+  /// avec sa photo, et une base d'aliments où chercher.
+  FakeNutritionRepository composedWorld() {
+    final lunch = composedLunch(
+      eatenAt: startOfToday().add(const Duration(hours: 12, minutes: 30)),
+    );
+    return nutritionOf()
+      ..foods.addEntries(
+        searchableFoods.map((food) => MapEntry(food.code, food)),
+      )
+      ..meals.add(lunch)
+      ..photos[lunch.id] = sampleMealPhotoJpeg();
+  }
+
+  testWidgets('repas composé — haut de l’écran', (tester) async {
+    await pumpApp(tester, nutrition: composedWorld());
+    await openMealFromJournal(tester, 'Poulet, riz, brocoli');
+    await capture(
+      tester,
+      '31-repas-modifier-compose',
+      shows: find.text('Modifier ce repas'),
+    );
+  });
+
+  testWidgets('repas composé — bas de l’écran', (tester) async {
+    await pumpApp(tester, nutrition: composedWorld());
+    await openMealFromJournal(tester, 'Poulet, riz, brocoli');
+    await tester.ensureVisible(find.text('Supprimer ce repas'));
     await settle(tester);
     await capture(
       tester,
-      '31-nutrition-correction-repas',
-      shows: find.text('Corriger ce repas'),
+      '31b-repas-modifier-compose-bas',
+      shows: find.text('Aliments composant le repas'.toUpperCase()),
+    );
+  });
+
+  testWidgets('recherche d’un aliment, depuis le repas composé', (
+    tester,
+  ) async {
+    await pumpApp(tester, nutrition: composedWorld());
+    await openMealFromJournal(tester, 'Poulet, riz, brocoli');
+    await tester.ensureVisible(find.text('Ajouter un aliment'));
+    await settle(tester);
+    await tester.tap(find.text('Ajouter un aliment'));
+    await settle(tester);
+    await tester.enterText(
+      find.descendant(
+        of: find.byType(AppSearchField),
+        matching: find.byType(TextField),
+      ),
+      'riz',
+    );
+    // L'anti-rebond de la recherche, puis la réponse.
+    await tester.pump(Debouncer.search);
+    await settle(tester);
+    FocusManager.instance.primaryFocus?.unfocus();
+    await settle(tester);
+    await capture(
+      tester,
+      '31d-repas-recherche-aliment',
+      shows: find.textContaining('Ciqual (version 2020-07-07)'),
+    );
+  });
+
+  // La feuille du bouton appareil photo, sur le repas composé qui A une
+  // photo : ses trois choix, « Retirer la photo » compris. Puis la MÊME
+  // feuille sur 320 points en texte doublé : chaque choix passe à la ligne
+  // au lieu de se couper (« Choisir dans la gal… »).
+  Future<void> openPhotoSheet(WidgetTester tester) async {
+    await pumpApp(tester, nutrition: composedWorld());
+    await openMealFromJournal(tester, 'Poulet, riz, brocoli');
+    await tester.tap(find.byTooltip('Changer la photo'));
+    await settle(tester);
+  }
+
+  testWidgets('la feuille de la photo du plat', (tester) async {
+    await openPhotoSheet(tester);
+    await capture(
+      tester,
+      '31e-repas-photo-feuille',
+      shows: find.text('Retirer la photo'),
+    );
+  });
+
+  testWidgets('la feuille de la photo du plat, 320 points, texte doublé', (
+    tester,
+  ) async {
+    await openPhotoSheet(tester);
+    tester.view.physicalSize = const Size(960, 1920);
+    tester.platformDispatcher.textScaleFactorTestValue = 2;
+    addTearDown(tester.platformDispatcher.clearTextScaleFactorTestValue);
+    await settle(tester);
+    await capture(
+      tester,
+      '31f-repas-photo-feuille-grand-texte',
+      shows: find.text('Choisir dans la galerie'),
+    );
+  });
+
+  testWidgets('nouveau repas, en cours de saisie', (tester) async {
+    await pumpApp(tester, nutrition: nutritionOf());
+    await openNutrition(tester);
+    await tester.scrollUntilVisible(
+      find.text('Ajouter un repas'),
+      240,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await settle(tester);
+    await tester.tap(find.text('Ajouter un repas'));
+    await settle(tester);
+
+    // Une heure FIXE plutôt que « maintenant » : la pastille l'affiche, et
+    // l'image ne doit pas changer d'une exécution à l'autre.
+    final screen = tester.widget<MealEditorScreen>(
+      find.byType(MealEditorScreen),
+    );
+    ProviderScope.containerOf(tester.element(find.byType(MealEditorScreen)))
+        .read(
+          mealEditorProvider((mealId: screen.mealId, day: screen.day)).notifier,
+        )
+        .setEatenAt(startOfToday().add(const Duration(hours: 8, minutes: 15)));
+    // Un formulaire à moitié rempli, comme au milieu d'une vraie saisie :
+    // un écran vide ne montrerait ni les tuiles saisies ni l'unité.
+    Finder field(String label) => find.descendant(
+      of: find.widgetWithText(AppTextField, label),
+      matching: find.byType(TextField),
+    );
+    Finder tile(String label) => find.descendant(
+      of: find.widgetWithText(AppNutrientTile, label),
+      matching: find.byType(TextField),
+    );
+    await tester.enterText(field('Nom du repas'), 'Skyr, granola, myrtilles');
+    await tester.enterText(tile('Calories'), '380');
+    await tester.enterText(tile('Protéines'), '28');
+    await tester.enterText(tile('Glucides'), '44');
+    await settle(tester);
+    final portion = find.descendant(
+      of: find.byType(AppChoicePills<MealQuantityUnit>),
+      matching: find.text('portion'),
+    );
+    await tester.ensureVisible(portion);
+    await settle(tester);
+    await tester.tap(portion);
+    await settle(tester);
+    await tester.enterText(field('Quantité (portions)'), '1');
+    FocusManager.instance.primaryFocus?.unfocus();
+    await settle(tester);
+    await tester.scrollUntilVisible(
+      find.text('Nouveau repas'),
+      -240,
+      scrollable: find.byType(Scrollable).last,
+    );
+    await settle(tester);
+    await capture(
+      tester,
+      '31c-repas-nouveau',
+      shows: find.text('Nouveau repas'),
     );
   });
 

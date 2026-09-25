@@ -40,6 +40,13 @@ class AppListRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final tint = leadingTint ?? AppColors.primaryLight;
+    // Une ligne, coupée d'une ellipse, à la taille de texte d'origine : la
+    // liste garde son rythme. Texte AGRANDI, au contraire, le titre passe à
+    // la ligne : sur 320 points à 200 %, « Choisir dans la galerie » ne
+    // gardait que ses premières lettres, et c'est le choix même qu'on perdait.
+    final enlarged = MediaQuery.textScalerOf(context).scale(1) > 1;
+    final int? lines = enlarged ? null : 1;
+    final TextOverflow? cut = enlarged ? null : TextOverflow.ellipsis;
 
     final content = Container(
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
@@ -69,8 +76,8 @@ class AppListRow extends StatelessWidget {
               children: [
                 Text(
                   title,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  maxLines: lines,
+                  overflow: cut,
                   style: AppTypography.resized(
                     AppTypography.subheading,
                     14,
@@ -80,8 +87,8 @@ class AppListRow extends StatelessWidget {
                   const SizedBox(height: 5),
                   Text(
                     subtitle!.toUpperCase(),
-                    maxLines: 1,
-                    overflow: TextOverflow.ellipsis,
+                    maxLines: lines,
+                    overflow: cut,
                     style: AppTypography.labelMono.copyWith(
                       color: AppColors.darkTextTertiary,
                     ),

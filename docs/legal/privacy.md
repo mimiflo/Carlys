@@ -80,11 +80,31 @@ Si tu prends ou choisis une photo pour un repas, elle est envoyée à nos
 serveurs et conservée avec ce repas, pour que tu la retrouves sur tous tes
 appareils. Rien ne t'y oblige : un repas s'enregistre très bien sans photo.
 
+- **Ce qui quitte ton téléphone** : la photo que tu as prise ou choisie, et
+  elle seule. Avant l'envoi, ton téléphone la prépare : il la redresse (une
+  photo prise téléphone debout reste debout), la réduit à 1 600 pixels sur
+  son plus grand côté et la réenregistre en JPEG sans aucune des
+  informations que l'appareil y avait inscrites (position, marque et modèle,
+  date). Elle ne part qu'au moment où tu enregistres le repas ; si tu
+  renonces avant, rien n'est envoyé. Rien d'autre de ta photothèque n'est
+  lu ni envoyé.
+- **Les autorisations** : l'accès à l'appareil photo n'est demandé que
+  lorsque tu touches « Prendre une photo » (il sert aussi à scanner le code
+  ami d'un profil). « Choisir dans la galerie » ouvre le sélecteur de ton
+  téléphone : Carlys ne reçoit que la photo que tu y touches, sans accès au
+  reste de ta photothèque. Tu peux retirer l'accès à l'appareil photo à tout
+  moment dans les réglages de ton téléphone.
 - **Ce qui est stocké** : l'image seule. Avant tout stockage, Carlys en
   retire toutes les informations que ton téléphone y a inscrites : la
   position GPS du lieu de la prise de vue, la marque et le modèle de
-  l'appareil, la date, les légendes et commentaires. Le nom du fichier n'est
-  pas conservé non plus.
+  l'appareil, la date, les légendes et commentaires (ton téléphone les a
+  déjà retirées, le serveur s'en assure). Le nom du fichier n'est pas
+  conservé non plus. Sur ton téléphone, les copies temporaires que
+  l'appareil photo ou la galerie remet à l'application sont effacées dès
+  que la photo est préparée, y compris, sous Android, la copie ORIGINALE
+  (position comprise) que le sélecteur de la galerie dépose à côté de la
+  copie réduite, et la photo affichée n'est gardée qu'en mémoire, le temps
+  de l'utilisation de l'application.
 - **Qui la voit** : toi, et personne d'autre dans l'application. Elle n'est
   montrée ni à tes amis, ni dans les défis ou la ligue, et elle n'est
   transmise ni au coach IA, ni à aucun autre prestataire. Elle est rangée à

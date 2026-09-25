@@ -1,10 +1,14 @@
+import 'dart:typed_data';
+
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/api_error_mapper.dart';
 import '../../../../core/api/dio_client.dart';
+import '../../../../core/errors/app_exception.dart';
 import '../../domain/entities/nutrition.dart';
 import '../../domain/repositories/nutrition_repository.dart';
+import '../mappers/meal_mappers.dart';
 import '../mappers/metabolism_mappers.dart';
 
 class NutritionRepositoryImpl implements NutritionRepository {
@@ -63,65 +67,44 @@ class NutritionRepositoryImpl implements NutritionRepository {
       );
       final rows = response.data?['data'] as List<dynamic>? ?? const [];
       return rows
-          .cast<Map<String, dynamic>>()
-          .map(_meal)
+          .whereType<Map<String, dynamic>>()
+          .map(mealFromJson)
           .toList(growable: false);
     });
   }
 
   @override
-  Future<MealEntry> addMeal(MealEntry meal) {
+  Future<MealDetail> meal(String id) {
     return _guard(() async {
-      final response = await _dio.post<Map<String, dynamic>>(
-        '/nutrition/meals',
-        data: {
-          'id': meal.id,
-          'name': meal.name,
-          'kcal': meal.kcal,
-          // Une clé ABSENTE à la création, jamais `null` : le serveur accepte
-          // l'absence, et la paire quantité/unité se refuse à moitié.
-          if (meal.quantity != null && meal.quantityUnit != null) ...{
-            'quantity': meal.quantity,
-            'quantityUnit': meal.quantityUnit!.apiValue,
-          },
-          if (meal.proteinG != null) 'proteinG': meal.proteinG,
-          if (meal.carbsG != null) 'carbsG': meal.carbsG,
-          if (meal.fatG != null) 'fatG': meal.fatG,
-          'eatenAt': meal.eatenAt.toUtc().toIso8601String(),
-        },
+      final response = await _dio.get<Map<String, dynamic>>(
+        '/nutrition/meals/$id',
       );
-      final body = response.data?['data'] as Map<String, dynamic>? ?? const {};
-      return _meal(body);
+      return (
+        meal: mealFromJson(_data(response)),
+        attribution: attributionFromMeta(response.data?['meta']),
+      );
     });
   }
 
   @override
-  Future<MealEntry> updateMeal(String id, MealCorrection correction) {
+  Future<MealEntry> addMeal(String id, MealWrite write) {
     return _guard(() async {
-      // La paire est indivisible : à moitié renseignée, elle s'efface en
-      // entier plutôt que de partir en 400 pour une saisie que l'écran
-      // aurait dû empêcher.
-      final paire =
-          correction.quantity != null && correction.quantityUnit != null;
+      final response = await _dio.post<Map<String, dynamic>>(
+        '/nutrition/meals',
+        data: mealCreationBody(id, write),
+      );
+      return mealFromJson(_data(response));
+    });
+  }
+
+  @override
+  Future<MealEntry> updateMeal(String id, MealWrite write) {
+    return _guard(() async {
       final response = await _dio.patch<Map<String, dynamic>>(
         '/nutrition/meals/$id',
-        // Ici les clés sont TOUTES présentes, `null` compris : le formulaire
-        // montrait l'entrée entière, donc une case vidée veut dire « on ne
-        // sait plus », et seul un `null` explicite l'écrit. Omettre la clé
-        // laisserait l'ancienne valeur en place.
-        data: {
-          'name': correction.name,
-          'kcal': correction.kcal,
-          'quantity': paire ? correction.quantity : null,
-          'quantityUnit': paire ? correction.quantityUnit!.apiValue : null,
-          'proteinG': correction.proteinG,
-          'carbsG': correction.carbsG,
-          'fatG': correction.fatG,
-          'eatenAt': correction.eatenAt.toUtc().toIso8601String(),
-        },
+        data: mealCorrectionBody(write),
       );
-      final body = response.data?['data'] as Map<String, dynamic>? ?? const {};
-      return _meal(body);
+      return mealFromJson(_data(response));
     });
   }
 
@@ -132,19 +115,93 @@ class NutritionRepositoryImpl implements NutritionRepository {
     });
   }
 
-  MealEntry _meal(Map<String, dynamic> row) {
-    return MealEntry(
-      id: row['id'] as String,
-      name: row['name'] as String,
-      kcal: (row['kcal'] as num).toInt(),
-      quantity: (row['quantity'] as num?)?.toDouble(),
-      quantityUnit: MealQuantityUnit.fromApi(row['quantityUnit'] as String?),
-      proteinG: (row['proteinG'] as num?)?.toInt(),
-      carbsG: (row['carbsG'] as num?)?.toInt(),
-      fatG: (row['fatG'] as num?)?.toInt(),
-      eatenAt: DateTime.parse(row['eatenAt'] as String),
-    );
+  @override
+  Future<FoodSearchResult> searchFoods(String query, {int limit = 20}) {
+    return _guard(() async {
+      final response = await _dio.get<Map<String, dynamic>>(
+        '/nutrition/foods',
+        queryParameters: {'q': query, 'limit': limit},
+      );
+      final rows = response.data?['data'] as List<dynamic>? ?? const [];
+      return (
+        foods: rows
+            .whereType<Map<String, dynamic>>()
+            .map(foodFromJson)
+            .toList(growable: false),
+        source: foodSourceFromMeta(response.data?['meta']),
+      );
+    });
   }
+
+  @override
+  Future<FoodDetail> food(int code) {
+    return _guard(() async {
+      final response = await _dio.get<Map<String, dynamic>>(
+        '/nutrition/foods/$code',
+      );
+      return (
+        food: foodFromJson(_data(response)),
+        source: foodSourceFromMeta(response.data?['meta']),
+      );
+    });
+  }
+
+  @override
+  Future<Uint8List?> mealPhoto(String id) async {
+    try {
+      return await _guard(() async {
+        final response = await _dio.get<List<int>>(
+          '/nutrition/meals/$id/photo',
+          // La réponse est l'image elle-même, sans enveloppe JSON.
+          options: Options(responseType: ResponseType.bytes),
+        );
+        final bytes = response.data;
+        return bytes == null || bytes.isEmpty
+            ? null
+            : Uint8List.fromList(bytes);
+      });
+    } on ServerException catch (error) {
+      // 404 : pas de photo (ou plus de repas) — un repli, pas une panne.
+      if (error.statusCode == 404) {
+        return null;
+      }
+      rethrow;
+    }
+  }
+
+  @override
+  Future<MealEntry> replaceMealPhoto(String id, Uint8List jpeg) {
+    return _guard(() async {
+      final response = await _dio.put<Map<String, dynamic>>(
+        '/nutrition/meals/$id/photo',
+        data: _photoForm(jpeg),
+      );
+      return mealFromJson(_data(response));
+    });
+  }
+
+  @override
+  Future<void> removeMealPhoto(String id) {
+    return _guard(() async {
+      await _dio.delete<void>('/nutrition/meals/$id/photo');
+    });
+  }
+
+  /// Le corps d'un `PUT …/photo` : UN fichier, dans le champ « file »,
+  /// déclaré `image/jpeg`, et rien d'autre (le serveur refuse tout champ
+  /// texte à côté). Le nom est neutre : il ne dit rien de l'appareil ni de
+  /// la galerie, et le serveur ne le garde pas.
+  static FormData _photoForm(Uint8List jpeg) => FormData.fromMap({
+    'file': MultipartFile.fromBytes(
+      jpeg,
+      filename: 'photo.jpg',
+      contentType: DioMediaType('image', 'jpeg'),
+    ),
+  });
+
+  /// La charge utile d'une réponse enveloppée (`{ data, meta, requestId }`).
+  static Map<String, dynamic> _data(Response<Map<String, dynamic>> response) =>
+      response.data?['data'] as Map<String, dynamic>? ?? const {};
 
   Future<T> _guard<T>(Future<T> Function() action) async {
     try {

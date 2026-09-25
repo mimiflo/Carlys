@@ -22,7 +22,11 @@ class AppRoundIconButton extends StatelessWidget {
 
   /// Ce que le lecteur d'écran annonce, et l'infobulle d'un appui long.
   final String tooltip;
-  final VoidCallback onPressed;
+
+  /// `null` : le bouton est DÉSACTIVÉ (un envoi en cours, par exemple). Son
+  /// icône se tamise et le lecteur d'écran l'annonce désactivé, plutôt
+  /// qu'un bouton plein qui ne ferait rien.
+  final VoidCallback? onPressed;
   final Color color;
 
   /// Un bouton qui BASCULE (la loupe) se dit enfoncé tant que son mode dure :
@@ -52,7 +56,11 @@ class AppRoundIconButton extends StatelessWidget {
             width: AppSpacing.touchTarget,
             height: AppSpacing.touchTarget,
           ),
-          icon: Icon(icon, size: _iconSize, color: color),
+          icon: Icon(
+            icon,
+            size: _iconSize,
+            color: onPressed == null ? AppColors.darkIconInactive : color,
+          ),
         ),
       ),
     );

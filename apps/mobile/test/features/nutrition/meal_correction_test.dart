@@ -1,15 +1,10 @@
 import 'package:carlys_mobile/core/utilities/formatting.dart';
-import 'package:carlys_mobile/design_system/design_system.dart';
-import 'package:carlys_mobile/features/nutrition/data/repositories/nutrition_repository_impl.dart';
 import 'package:carlys_mobile/features/nutrition/domain/entities/meal_entry.dart';
-import 'package:carlys_mobile/features/nutrition/presentation/controllers/water_controllers.dart';
-import 'package:carlys_mobile/features/nutrition/presentation/widgets/meal_journal_section.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/fake_nutrition_repository.dart';
-import '../../support/fake_water_store.dart';
+import '../../support/meal_editor_app.dart';
 
 /// CE QUE CE FICHIER PROTÈGE : un repas mal saisi se répare, et une journée
 /// oubliée se rattrape.
@@ -21,29 +16,12 @@ import '../../support/fake_water_store.dart';
 /// sous un AUTRE identifiant. Et un repas oublié la veille était hors de
 /// portée, même pour la suppression.
 void main() {
-  /// Le journal SEUL : la section testée ici, sans l'écran qui l'entoure ni
-  /// son hélice animée, dont la boucle empêche `pumpAndSettle` d'aboutir.
-  Widget journalWith(FakeNutritionRepository nutrition) => ProviderScope(
-    overrides: [
-      nutritionRepositoryProvider.overrideWithValue(nutrition),
-      waterStoreProvider.overrideWithValue(FakeWaterStore(milliliters: 1250)),
-    ],
-    child: MaterialApp(
-      theme: AppTheme.dark(),
-      home: const Scaffold(
-        body: SingleChildScrollView(
-          child: MealJournalSection(targetKcal: 2000),
-        ),
-      ),
-    ),
-  );
-
   DateTime midi(DateTime jour) =>
       DateTime(jour.year, jour.month, jour.day, 12).toUtc();
 
   /// Un instant du jour COURANT et déjà PASSÉ.
   ///
-  /// Midi, sauf quand il n'est pas encore midi. La feuille refuse un repas
+  /// Midi, sauf quand il n'est pas encore midi. L'écran refuse un repas
   /// daté du futur — à raison, le serveur aussi — donc un repas d'exemple
   /// posé à « midi aujourd'hui » rendait ces tests rouges entre minuit et
   /// midi, heure locale. Invisible sous UTC, visible sous la
@@ -73,47 +51,46 @@ void main() {
     eatenAt: eatenAt ?? dejaPris(),
   );
 
+  /// Toucher le repas du journal ouvre l'écran de correction, plein écran.
   Future<void> ouvrirLaCorrection(WidgetTester tester) async {
     await tester.tap(find.text('Poulet riz'));
     await tester.pumpAndSettle();
-    expect(find.text('Corriger ce repas'), findsOneWidget);
+    expect(find.text('Modifier ce repas'), findsOneWidget);
   }
 
   Future<void> enregistrer(WidgetTester tester) async {
-    await tester.ensureVisible(find.text('Enregistrer la correction'));
-    await tester.tap(find.text('Enregistrer la correction'));
+    await tester.pumpAndSettle();
+    await showOnScreen(tester, find.text('Enregistrer la modification'));
+    await tester.tap(find.text('Enregistrer la modification'));
     await tester.pumpAndSettle();
   }
 
-  testWidgets('la feuille de correction s’ouvre PRÉ-REMPLIE', (tester) async {
+  String caseDe(WidgetTester tester, Finder field) =>
+      tester.widget<TextField>(field).controller!.text;
+
+  testWidgets('la correction s’ouvre PRÉ-REMPLIE', (tester) async {
     final nutrition = FakeNutritionRepository()
       ..meals.add(repas(quantity: 250, quantityUnit: MealQuantityUnit.gram));
-    await tester.pumpWidget(journalWith(nutrition));
-    await tester.pumpAndSettle();
+    await pumpMealApp(tester, nutrition);
 
     await ouvrirLaCorrection(tester);
 
     // Un formulaire vide obligerait à tout ressaisir pour changer un
     // chiffre, et la moindre distraction effacerait les macros.
-    expect(find.text('Poulet riz'), findsWidgets);
-    expect(find.text('650'), findsOneWidget);
-    expect(find.text('45'), findsOneWidget);
-    expect(find.text('250'), findsOneWidget);
+    expect(caseDe(tester, fieldLabelled('Nom du repas')), 'Poulet riz');
+    expect(caseDe(tester, tileField('Calories')), '650');
+    expect(caseDe(tester, tileField('Protéines')), '45');
+    expect(caseDe(tester, fieldLabelled('Quantité (grammes)')), '250');
   });
 
   testWidgets('corriger garde l’identifiant : ni suppression ni doublon', (
     tester,
   ) async {
     final nutrition = FakeNutritionRepository()..meals.add(repas());
-    await tester.pumpWidget(journalWith(nutrition));
-    await tester.pumpAndSettle();
+    await pumpMealApp(tester, nutrition);
     await ouvrirLaCorrection(tester);
 
-    final champs = find.descendant(
-      of: find.byType(BottomSheet),
-      matching: find.byType(TextFormField),
-    );
-    await tester.enterText(champs.at(1), '700');
+    await tester.enterText(tileField('Calories'), '700');
     await enregistrer(tester);
 
     // UNE entrée, la même, avec la nouvelle valeur : supprimer puis recréer
@@ -128,20 +105,15 @@ void main() {
     tester,
   ) async {
     final nutrition = FakeNutritionRepository()..meals.add(repas());
-    await tester.pumpWidget(journalWith(nutrition));
-    await tester.pumpAndSettle();
+    await pumpMealApp(tester, nutrition);
     await ouvrirLaCorrection(tester);
 
-    final champs = find.descendant(
-      of: find.byType(BottomSheet),
-      matching: find.byType(TextFormField),
-    );
-    await tester.enterText(champs.at(2), '');
+    await tester.enterText(tileField('Protéines'), '');
     await enregistrer(tester);
 
-    // Le formulaire montrait l'entrée ENTIÈRE : une case vidée veut dire
-    // « on ne sait plus », et n'envoyer que les champs remplis laisserait
-    // cet effacement sans effet.
+    // L'écran montrait l'entrée ENTIÈRE : une case vidée veut dire « on ne
+    // sait plus », et n'envoyer que les cases remplies laisserait cet
+    // effacement sans effet.
     expect(nutrition.meals.single.proteinG, isNull);
   });
 
@@ -152,8 +124,7 @@ void main() {
       ..meals.add(
         repas(quantity: 2, quantityUnit: MealQuantityUnit.piece, kcal: 180),
       );
-    await tester.pumpWidget(journalWith(nutrition));
-    await tester.pumpAndSettle();
+    await pumpMealApp(tester, nutrition);
 
     // « 2 pièces » à côté de « 180 kcal » : les calories restent celles du
     // repas entier, la quantité les DÉCRIT sans les multiplier.
@@ -173,8 +144,7 @@ void main() {
     final hier = DateTime.now().subtract(const Duration(days: 1));
     final nutrition = FakeNutritionRepository()
       ..meals.add(repas(name: 'Omelette d’hier', eatenAt: midi(hier)));
-    await tester.pumpWidget(journalWith(nutrition));
-    await tester.pumpAndSettle();
+    await pumpMealApp(tester, nutrition);
 
     // `byTooltip` désigne le Tooltip, pas le bouton : c'est l'icône qui
     // ramène l'IconButton dont on veut lire l'état.

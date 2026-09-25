@@ -107,14 +107,16 @@ Règles :
   distinction. La cohérence de la paire quantité/unité se juge sur l'état
   APRÈS correction, pas sur le fragment reçu.
 
-  Côté mobile, la feuille sert les DEUX usages — ajouter, corriger — et
-  s'ouvre pré-remplie en correction : elle montre l'entrée entière, donc une
-  case vidée veut dire « on ne sait plus » et part en `null` explicite.
-  Elle envoie donc TOUTES ses clés, totaux compris. Sur un repas composé
-  (depuis un autre appareil, plus récent), des totaux renvoyés **à
-  l'identique** ne sont pas une correction : ils sont ignorés, et renommer
-  ou changer l'heure reste possible depuis cette version. Un total CHANGÉ
-  reste refusé (400).
+  Côté mobile, UN écran plein sert les DEUX usages — ajouter, corriger (voir
+  « Mobile » plus bas). En correction, il relit le repas et le montre en
+  entier : une case vidée veut dire « on ne sait plus » et part en `null`
+  explicite. Un repas SAISI envoie donc toutes ses clés de totaux ; un repas
+  COMPOSÉ n'en envoie aucune (sa composition gardée, ou la liste de ses
+  lignes). La version publiée avant cet écran, une feuille, envoyait
+  toujours toutes ses clés : sur un repas composé, des totaux renvoyés **à
+  l'identique** ne sont pas une correction, ils sont ignorés, et renommer ou
+  changer l'heure reste possible depuis cette version. Un total CHANGÉ reste
+  refusé (400).
 
 - **Toute correction se décide sous verrou.** Le repas est relu sous le
   verrou de sa ligne (`SELECT … FOR UPDATE`) dans la transaction qui écrit :
@@ -143,8 +145,15 @@ correction.
 Les repas enregistrés avant son arrivée le laissent à `null` (migration
 `20260925100000_moment_aliments_composition`, colonne nullable sans défaut) :
 en inventer un les ferait mentir. Le client en déduit alors un **affichage**
-depuis l'heure locale, sans rien écrire. Le coach le reçoit tel quel
-(`get_recent_meals`), `null` compris.
+depuis l'heure locale, sans rien écrire tant que la personne n'enregistre pas
+le repas ; à l'enregistrement suivant, le moment affiché (proposé ou choisi)
+s'écrit. Le coach le reçoit tel quel (`get_recent_meals`), `null` compris.
+
+La proposition suit l'heure LOCALE du repas, bornes basses incluses : avant
+10 h 30, petit-déjeuner ; jusqu'à 15 h, déjeuner ; jusqu'à 18 h, collation ;
+jusqu'à 22 h 30, dîner ; au-delà, collation (`MealMoment.suggestFor`, éprouvée
+borne par borne par `meal_rules_test.dart`). Un repas neuf la reçoit aussi,
+et elle suit l'heure qu'on règle tant que personne n'a choisi.
 
 ## Base d'aliments (`/api/v1/nutrition/foods`) — table CIQUAL de l'Anses
 
@@ -654,8 +663,215 @@ oubliée dans `toutes`, qui échapperait sinon à tous les autres contrôles.
 ## Mobile
 
 - Écran Nutrition : section « Journal du jour » (liste, total en en-tête
-  face à l'objectif, feuille d'ajout nom/kcal/protéines, retrait) entre le
-  rapport métabolique et le profil.
+  face à l'objectif, retrait d'un geste) entre le rapport métabolique et le
+  profil. « Ajouter un repas » et le toucher d'un repas ouvrent l'écran plein
+  décrit ci-dessous.
+
+### L'écran « Ajouter / Modifier ce repas »
+
+D'après la maquette du propriétaire du 25 septembre 2026. **Un seul écran**
+pour ajouter et pour corriger, parce que ce sont les mêmes champs, les mêmes
+bornes et les mêmes pièges. Il a remplacé la feuille de saisie
+(`add_meal_sheet.dart` et ses voisins, supprimés).
+
+| | Ajouter | Modifier |
+| --- | --- | --- |
+| Route (plein écran, hors coquille) | `/nutrition/repas/nouveau?jour=AAAA-MM-JJ` (`AppRoutes.newMeal`) | `/nutrition/repas/:mealId` (`AppRoutes.meal`) |
+| En-tête | « Nouveau repas / NOTE CE QUE TU AS MANGÉ » | « Modifier ce repas / AJUSTE LES DÉTAILS », corbeille rouge à droite |
+| Lecture | aucune : l'identifiant (UUID) naît sur l'appareil à l'ouverture | `GET /nutrition/meals/:id` : chargement, erreur (hors connexion ou panne, avec « Réessayer »), introuvable (« Ce repas n'est plus là ») |
+| Bas de page | « Ajouter au journal » | « Enregistrer la modification », puis « Supprimer ce repas » (contour rouge) |
+
+Deux portes y mènent, et une seule écriture : le journal (daté du jour qu'il
+affiche : un jour passé propose midi) et la tuile Calories de l'accueil
+(aujourd'hui, à l'heure qu'il est). L'identifiant d'un repas neuf naît à
+l'OUVERTURE : un enregistrement raté puis rejoué part sous le même, et le
+serveur ne fait pas de doublon.
+
+**De haut en bas.**
+
+1. La carte d'identité : la vignette du plat (la photo, lue par le GET
+   authentifié ; sans elle, un dessin au dégradé violet et l'icône du
+   moment, jamais une case vide ; le bouton appareil photo en surimpression,
+   voir « La photo du plat » plus bas), le **nom**, le **moment de la journée**
+   en quatre tuiles (petit-déjeuner, déjeuner, dîner, collation) et, en
+   dessous, **le jour et l'heure** du repas (deux pastilles sobres qui
+   ouvrent les sélecteurs de date et d'heure ; la maquette ne les montre pas,
+   la fonction reste). Le moment d'un repas neuf, ou d'un repas noté avant
+   que le moment existe, est PROPOSÉ d'après l'heure (règle plus haut) et
+   s'enregistre avec le repas.
+2. **Quantité** : les pastilles d'unité g | ml | portion | pièce, le champ
+   « Quantité (grammes) » dont le libellé et le suffixe suivent l'unité, et
+   la mention « La quantité décrit ton assiette… ».
+3. **Valeurs nutritionnelles** : quatre tuiles (calories, protéines,
+   glucides, lipides), chacune avec son icône et son nom dans la couleur de
+   la valeur (`AppColors.nutrition*`, jetons `color.nutrition`).
+4. **Aliments composant le repas** : une ligne par aliment (vignette de sa
+   FAMILLE CIQUAL dans un disque violet, la table n'ayant pas de photos ; nom
+   court, nom officiel, quantité, croix de retrait), le bouton pointillé
+   « Ajouter un aliment » (la feuille de recherche, plus bas), et la mention
+   de la base avec la version de chaque ligne (licence Etalab).
+
+**Deux régimes, qui ne se mélangent jamais.**
+
+- **Saisi à la main** (aucun aliment) : les tuiles sont des cases. Calories
+  obligatoires (1 à 10 000), macros facultatives (0 à 1 000 g, case vide =
+  « on ne sait pas », jamais zéro), quantité descriptive facultative (0,01 à
+  9 999,99, deux décimales, virgule acceptée) et son unité, par paire. Les
+  fautes ne s'affichent qu'après une première tentative d'enregistrement,
+  sous le nom, sous la quantité et sous la grille des valeurs.
+- **Composé** (au moins un aliment) : valeurs et quantité se LISENT, l'unité
+  est verrouillée sur g ; « La somme des aliments du repas » sous la
+  quantité et « Calculé à partir des aliments » sous les valeurs le disent. Les
+  totaux affichés sont ceux du serveur tant que la composition n'a pas bougé ;
+  dès qu'une ligne est ajoutée, retirée ou requantifiée, l'écran montre un
+  APERÇU calculé sur l'appareil (`compositionPreview`, même règle que le
+  serveur : somme des « valeur pour 100 g × grammes / 100 », une macro
+  inconnue d'un seul aliment rend le total inconnu, affiché « — », arrondi
+  unique à l'entier, demi vers le haut). Les valeurs pour 100 g d'une ligne
+  déjà enregistrée se DÉDUISENT de ses valeurs au dixième : l'aperçu peut
+  différer d'une unité du total que le serveur calculera, et c'est ce
+  dernier qui s'enregistre. Toucher la quantité d'une ligne la corrige
+  (popup de saisie numérique, 1 à 5 000 g) ; la ligne garde son identifiant,
+  donc le serveur garde son instantané. Retirer le DERNIER aliment repasse
+  en saisie à la main, cases remplies des derniers totaux.
+
+**Ce qui part au serveur** (`meal_mappers.dart`, figé corps entier par
+`nutrition_repository_http_test.dart`) : le nom, le moment et l'heure
+toujours ; pour un repas composé, les lignes `{ id, foodCode, quantityG }`
+et AUCUN total (le serveur refuserait) — ou rien des aliments si la
+composition n'a pas bougé ; pour un repas saisi, tous les totaux, `null`
+compris, et `components: []` quand il vient de perdre son dernier aliment.
+
+**Les états.** Chargement de la lecture, erreur (hors connexion : la cause
+juste ; panne : réessayer), introuvable, envoi en cours, échec de l'envoi
+(popup d'erreur, l'écran reste avec tout ce qui a été saisi), date future
+refusée AVANT l'envoi (« On ne mange pas demain : choisis un moment
+passé. »). La suppression, par la corbeille ou par le bouton du bas, passe
+par une confirmation destructive, puis revient au journal.
+
+**Pendant l'envoi** (enregistrement ou suppression, jusqu'à 10 s de
+connexion et 20 s de réception hors ligne), ce qui part est déjà figé, donc
+l'écran aussi :
+
+- **les gestes sont suspendus** : le bouton tourne, la corbeille et
+  « Supprimer ce repas » se disent désactivés, et les cartes ne répondent
+  plus ni au doigt, ni au lecteur d'écran, ni au clavier (le champ qui avait
+  le focus le perd, le clavier se ferme). Le contrôleur ignore aussi toute
+  saisie arrivée par un autre chemin. Une frappe acceptée alors ne serait ni
+  envoyée ni gardée ;
+- **le retour est retenu** (`PopScope`) : l'écran se referme de lui-même à
+  la réponse. Et s'il a été refermé entre-temps par une navigation venue
+  d'ailleurs, la réponse ne dépile rien de plus : le message s'affiche, la
+  page du dessous reste ;
+- **une création dont la réponse s'est perdue** (délai dépassé, coupure) a
+  pu être écrite : le serveur rendrait alors, à un nouveau `POST` sous le
+  même identifiant, le repas DÉJÀ écrit, sans rien réécrire, et la
+  correction faite entre-temps se perdrait. Après tout échec d'une
+  création, le prochain essai RELIT donc le repas (`GET …/meals/:id`) :
+  absent (404), il se crée ; présent, il se corrige (`PATCH`) avec tout ce
+  que l'écran montre (`components: []` compris pour un repas saisi à la
+  main, qu'il ait été écrit composé ou non). Une création qui aboutit du
+  premier coup ne relit rien.
+
+**Au lecteur d'écran.** Chaque champ porte son libellé (« Nom du repas »,
+« Quantité (grammes) »), lu avant sa valeur ; « Moment de la journée » est
+le nom du groupe de ses quatre tuiles ; chaque titre de carte est un nœud à
+lui seul (la navigation par titres ne lit plus une carte entière), et chaque
+aliment se lit sur sa ligne, noms ensemble, suivis de ses deux gestes. Une
+case de valeur fautive se DIT invalide, avec sa faute (« Calories : entre 1
+et 10 000. ») : la couleur seule ne dit rien à qui ne la voit pas.
+
+#### La feuille « Ajouter un aliment »
+
+Le bouton pointillé ouvre une FEUILLE (`showFoodSearchSheet`) : un champ de
+recherche, les résultats, et en pied la **mention de la base avec sa
+version et son adresse**, là où l'on cherche, comme la licence l'exige
+(« Source : Anses, Table de composition nutritionnelle des aliments Ciqual
+(version 2020-07-07), Licence Ouverte Etalab 2.0, ciqual.anses.fr. », lue
+dans `meta.source` de la réponse — rien n'est codé en dur). L'adresse
+(`url`) s'écrit sans son préfixe `https://`, en texte et non en lien : la
+licence demande de citer la source, pas d'y renvoyer, et un appui distrait
+ouvrirait le navigateur au milieu d'une saisie.
+
+- **La recherche** (`FoodSearchController`, un Notifier à lui) part après
+  un anti-rebond (`Debouncer.search`, 350 ms) et à partir de DEUX
+  caractères (la borne du serveur) ; vingt résultats par réponse. Chaque
+  recherche porte un numéro de génération : une réponse dont le numéro
+  n'est plus le dernier est JETÉE — une réponse lente à « riz » ne remplace
+  jamais celle, plus récente, de « riz complet ». Pendant une nouvelle
+  recherche, les résultats précédents restent, sous une barre de
+  progression : la liste ne clignote pas à chaque mot.
+- **Un résultat** : la vignette de la famille de l'aliment, son nom court,
+  son nom officiel, et ses calories POUR 100 g (l'unité de la table). Toute
+  la rangée répond au doigt ; le lecteur d'écran la lit d'un tenant.
+- **Les états** : l'invitation à chercher (moins de deux caractères), le
+  chargement, aucun résultat (« Aucun aliment pour « … » », avec « Saisir à
+  la main »), hors connexion ou panne (la cause juste, et « Réessayer »), et
+  la **base vide** — le serveur n'a pas encore importé la table (version
+  nulle) : « La base d'aliments arrive bientôt : saisis les valeurs à la
+  main. », avec « Saisir à la main », qui referme la feuille sur les cases.
+- **La quantité** : toucher un résultat ouvre la popup de saisie numérique
+  (`showAppPrompt`), 100 g par défaut (les valeurs de la table sont pour
+  100 g), de 1 à 5 000. Renoncer ramène aux résultats ; valider referme la
+  feuille, et le contrôleur de l'écran (`MealEditorController.addFood`)
+  dépose la ligne sous un **UUID v4 né sur l'appareil**, qu'elle garde
+  d'une correction à l'autre. Rien ne part au serveur avant
+  l'enregistrement du repas.
+- **Petit écran, grand texte, clavier ouvert** : sous 420 points de texte de
+  hauteur, l'en-tête et la mention défilent avec les résultats au lieu de
+  rester fixes — trois blocs fixes ne laisseraient plus rien à la liste.
+
+#### La photo du plat
+
+Le bouton appareil photo de la vignette ouvre une feuille : « Prendre une
+photo », « Choisir dans la galerie », et « Retirer la photo » quand il y en
+a une. La photo reste privée : routes et stockage plus haut.
+
+- **Sur l'appareil, avant tout envoi** (`prepareMealPhoto`, pur Dart, dans
+  un isolat) : la photo est **redressée** (l'orientation EXIF appliquée aux
+  PIXELS — un téléphone tenu debout enregistre souvent l'image couchée avec
+  une simple étiquette, que le serveur retire avec les autres métadonnées :
+  sans ce redressement, le plat s'afficherait couché), **réduite** à 1 600
+  pixels sur son plus grand côté (jamais agrandie), et **réencodée** en JPEG
+  qualité 80 **sans aucune métadonnée** (ni position, ni appareil, ni
+  date). Au-delà de 5 Mio (le plafond du serveur), la qualité baisse, puis
+  la taille ; une image illisible est refusée avec sa cause.
+- **Quand elle part** : à l'ENREGISTREMENT, après l'écriture du repas (la
+  route a besoin d'un repas écrit) : `PUT …/photo` en multipart, un seul
+  fichier « file » déclaré `image/jpeg`. « Retirer la photo » montre le
+  dessin tout de suite et envoie `DELETE …/photo` à l'enregistrement.
+  Renoncer à l'écran n'a rien envoyé.
+- **Si l'envoi échoue** : le repas EST enregistré, et l'écran le dit
+  (« Repas ajouté, mais la photo n'est pas partie… », en précisant « hors
+  connexion » quand c'est la cause). L'écran reste ouvert, sur le repas
+  désormais enregistré (« Modifier ce repas »), la photo toujours en vue et
+  en attente : « Enregistrer la modification » corrige le repas (idempotent)
+  puis renvoie la photo. Rien n'est perdu en silence. Un RETRAIT en échec
+  se dit pour ce qu'il est — la photo est toujours là : « Repas modifié,
+  mais la photo n'a pas pu être retirée… Touche « Enregistrer la
+  modification » pour réessayer. », et le retrait reste demandé.
+- **Les autres échecs se nomment** : accès refusé à l'appareil photo ou aux
+  photos (« Autorise-le dans les réglages du téléphone… »), image
+  illisible, appareil photo qui ne s'ouvre pas.
+- **L'affichage** : les octets viennent du `GET …/photo` authentifié, par le
+  dépôt (jamais depuis un widget), et se gardent EN MÉMOIRE seulement
+  (`MealPhotoCache`, 12 Mio au plus, les plus anciennement vues partent)
+  sous la clé (repas, `photo.updatedAt`) : une photo remplacée change de
+  date, donc de clé ; rouvrir un repas ne relit pas sa photo. La photo
+  qu'on vient d'envoyer y est rangée sous la date que le serveur lui donne.
+  Pendant la préparation, la vignette porte un indicateur et l'enregistrement
+  attend ; pendant la lecture d'une photo existante aussi (« Photo du plat,
+  en chargement »). Sans photo, ou si elle ne se lit pas, le dessin violet :
+  mais une photo qui existe et ne se montre pas (hors connexion, introuvable)
+  se dit « Photo du plat, indisponible pour l'instant », jamais « Pas encore
+  de photo », et le bouton reste « Changer la photo ».
+- **Le port** : l'appareil photo et la galerie passent par
+  `MealPhotoPicker` (domaine), implémenté par `ImagePickerMealPhotoPicker`
+  (données). Les tests remplacent le port par un faux : aucun ne touche de
+  greffon. Dépendances et permissions : `docs/development/photo-du-plat.md`.
+
+### Le reste de l'écran Nutrition
+
 - **Le hero a deux états**, comme la grille et l'amorçage de l'accueil. Avec
   un métabolisme, la dépense totale en très grand. Sans, il garde son hélice
   et son titre mais ne prétend plus donner un chiffre : une phrase et le
@@ -732,7 +948,38 @@ oubliée dans `toutes`, qui échapperait sinon à tous les autres contrôles.
   (refusée, ou retrait qui emporte la nouvelle composition) ; après l'import
   d'une nouvelle version, corriger la quantité d'une ligne d'un repas qui
   contient un aliment retiré (200, instantanés v1 intacts, ligne neuve en v2).
-- Widgets mobile : ajout par la feuille (total mis à jour), suppression,
+- Écran de repas, mobile : règles pures (`meal_rules_test` : moment
+  proposé borne par borne, aperçu des totaux de la maquette et macro
+  inconnue, familles CIQUAL, fautes de saisie, forme de ce qui part) ; contrat
+  HTTP corps entier (`nutrition_repository_http_test` : lecture tolérante
+  d'un serveur plus ancien ou plus récent, création et correction saisies ou
+  composées, composition gardée, base d'aliments vide) ; écran
+  (`meal_editor_screen_test`, `meal_editor_states_test` : ajout à la main,
+  moment proposé puis changé, repas composé en lecture seule, retrait d'un
+  aliment et correction d'une quantité, dernier aliment retiré, repas ancien
+  sans moment, date future refusée, erreurs de lecture et d'envoi avec le
+  même identifiant au second essai, suppression confirmée, renoncée ou en
+  échec, portes du journal, grand texte sur 320 points).
+- Recherche d'aliments, mobile : contrôleur (`food_search_controller_test` :
+  anti-rebond, moins de deux caractères, réponse lente jetée, requête en vol
+  oubliée, résultats gardés pendant la suivante, base vide, échec puis
+  « Réessayer ») ; feuille (`food_search_sheet_test` : résultat, quantité,
+  ligne sous un UUID v4 envoyée telle quelle, mention et version en pied,
+  quantité hors bornes, base vide, aucun résultat, hors connexion, panne,
+  320 points en texte doublé).
+- Photo du plat, mobile : préparation sur de VRAIS octets
+  (`meal_photo_preparation_test`, une photo couchée écrite par Pillow avec
+  EXIF orientation 6 et position GPS : trame stockée debout, aucune
+  métadonnée, 1 600 px, sous la borne même sur du bruit, PNG transparent,
+  octets illisibles) ; contrat HTTP (`meal_photo_http_test` : multipart
+  exact, octets du GET, 404, 500, DELETE, rejeu après un 401 qui renvoie la
+  photo entière) ; cache (`meal_photo_cache_test`) ; écran avec un faux
+  appareil photo (`meal_photo_test` : prise et galerie, envoi après la
+  création, préparation en cours, octets du serveur lus une fois, retrait,
+  échec d'envoi signalé puis rejoué, hors connexion, accès refusé, image
+  illisible, renoncement).
+- Widgets mobile : ajout par l'écran de repas depuis le journal et depuis la
+  tuile Calories de l'accueil (total mis à jour), suppression,
   « 0 / objectif » sur journal vide et « 654 / objectif » avec repas ;
   premier jour (aucun tiret, bouton présent, formulaire avant le journal, le
   bouton du hero amène le formulaire à l'écran) et profil complet (chiffre,

@@ -61,6 +61,13 @@ class AuthInterceptor extends Interceptor {
 
     try {
       options.extra[_retriedKey] = true;
+      // Un corps multipart (la photo d'un repas) est un FLUX : lu une fois
+      // par le premier envoi, il ne se relit pas, et Dio refuse de rejouer
+      // un `FormData` déjà consommé. Il se CLONE avant d'être rejoué.
+      final body = options.data;
+      if (body is FormData) {
+        options.data = body.clone();
+      }
       final accessToken = await _storage.readAccessToken();
       options.headers['Authorization'] = 'Bearer $accessToken';
       final response = await _dio.fetch<Object?>(options);
