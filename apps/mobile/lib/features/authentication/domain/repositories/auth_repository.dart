@@ -6,6 +6,12 @@ import '../entities/social_provider.dart';
 ///
 /// Les implémentations persistent les jetons dans le stockage sécurisé ;
 /// les erreurs remontent en AppException, jamais en DioException.
+///
+/// Les trois ouvertures de session (`register`, `login`,
+/// `signInWithProvider`) distinguent les échecs survenus APRÈS la réponse
+/// du serveur : `MalformedResponseException` quand elle ne se lit pas,
+/// `StorageException` quand le trousseau refuse les jetons — la session,
+/// que l'appareil ne sait alors pas garder, est révoquée au passage.
 abstract interface class AuthRepository {
   /// Vraie si un refresh token est présent localement.
   Future<bool> hasStoredSession();

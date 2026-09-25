@@ -7,6 +7,13 @@ import 'package:sign_in_with_apple/sign_in_with_apple.dart';
 
 import '../../../../app/environment/app_environment.dart';
 import '../../domain/entities/social_provider.dart';
+import '../../domain/entities/social_sign_in_unavailable.dart';
+import 'social_sign_in_failure.dart';
+
+// Les types d'échec vivent dans le domaine ; ils se relisent aussi par ce
+// fichier, comme avant, pour que ses lecteurs n'aient pas à changer
+// d'import.
+export '../../domain/entities/social_sign_in_unavailable.dart';
 
 /// Ce que le SDK d'un fournisseur rapporte, et rien de plus.
 class SocialCredential {
@@ -20,45 +27,6 @@ class SocialCredential {
   /// connexion et jamais ensuite : il faut le faire suivre au serveur ce
   /// jour-là, ou le perdre pour de bon.
   final String? displayName;
-}
-
-/// Pourquoi l'appareil n'a même pas pu DEMANDER de jeton.
-enum SocialSignInObstacle {
-  /// Le fournisseur ne s'ouvre pas sur cette plateforme (Apple sur Android).
-  plateforme,
-
-  /// Le build n'a pas de quoi demander un jeton pour notre serveur
-  /// (client OAuth absent), ou le SDK n'en a pas rendu.
-  configuration,
-
-  /// Le fournisseur REFUSE cette installation : côté Google, le nom de
-  /// paquet ou l'empreinte SHA-1 de la clé de signature ne figurent pas
-  /// dans le client OAuth Android (`ApiException: 10`, DEVELOPER_ERROR).
-  ///
-  /// Distingué de [configuration] parce que le geste correctif n'est pas le
-  /// même : ici le build est bon, c'est la console Google Cloud qui ne
-  /// connaît pas cet APK. Les confondre envoyait chercher une variable
-  /// manquante là où tout était correctement injecté.
-  identiteAppareil,
-}
-
-/// L'appareil ne peut pas obtenir de jeton pour ce fournisseur.
-///
-/// Porte la RAISON : la présentation en tire un message juste sans avoir à
-/// interroger la plateforme elle-même — ce qu'un contrôleur ne doit pas faire,
-/// et ce qu'un test ne pourrait pas simuler.
-class SocialSignInUnavailable implements Exception {
-  const SocialSignInUnavailable(this.provider, this.obstacle, {this.cause});
-
-  final SocialProvider provider;
-  final SocialSignInObstacle obstacle;
-
-  /// L'erreur d'origine du SDK — pour les logs, jamais pour l'affichage.
-  final Object? cause;
-
-  @override
-  String toString() =>
-      'SocialSignInUnavailable(${provider.name}, ${obstacle.name}, $cause)';
 }
 
 /// Passerelle vers les SDK Apple et Google.
@@ -111,31 +79,12 @@ class PlatformSocialSignIn implements SocialSignIn {
     };
   }
 
-  /// Statut `DEVELOPER_ERROR` des services Google Play, tel qu'il arrive
-  /// enveloppé dans le message d'une `PlatformException` :
-  /// « com.google.android.gms.common.api.ApiException: 10: ». Le `\b` évite
-  /// de confondre 10 avec 100 (`DEVELOPER_ERROR` contre un statut inconnu).
-  static final RegExp _erreurDeveloppeur = RegExp(r':\s*10\b');
-
-  /// Traduit l'échec du SDK Google en obstacle NOMMÉ.
-  ///
-  /// `sign_in_failed` recouvre plusieurs causes très différentes ; seule
-  /// celle qui porte le statut 10 signifie « Google ne reconnaît pas cette
-  /// installation ». Les autres restent une configuration incomplète.
-  static SocialSignInObstacle _obstacleGoogle(PlatformException error) {
-    final estRefusDIdentite =
-        error.code == 'sign_in_failed' &&
-        _erreurDeveloppeur.hasMatch(error.message ?? '');
-    return estRefusDIdentite
-        ? SocialSignInObstacle.identiteAppareil
-        : SocialSignInObstacle.configuration;
-  }
-
   Future<SocialCredential?> _googleSignIn() async {
     if (environment.googleServerClientId == null) {
       throw const SocialSignInUnavailable(
         SocialProvider.google,
         SocialSignInObstacle.configuration,
+        code: 'google-config-web',
       );
     }
     // iOS n'a pas d'équivalent au couple « nom de paquet + empreinte » :
@@ -146,6 +95,7 @@ class PlatformSocialSignIn implements SocialSignIn {
       throw const SocialSignInUnavailable(
         SocialProvider.google,
         SocialSignInObstacle.configuration,
+        code: 'google-config-ios',
       );
     }
     final GoogleSignInAccount? compte;
@@ -171,26 +121,35 @@ class PlatformSocialSignIn implements SocialSignIn {
       compte = await _google.signIn();
       if (compte == null) return null; // renoncé
       // DANS le try : `authentication` lève elle aussi des
-      // `PlatformException` (jeton irrécupérable, compte révoqué). Dehors,
-      // elles traversaient `obtain()` et rompaient son contrat
+      // `PlatformException` (jeton irrécupérable, compte révoqué), et même
+      // une `StateError` quand le compte n'est plus le compte courant.
+      // Dehors, elles traversaient `obtain()` et rompaient son contrat
       // « un jeton, ou rien ».
       auth = await compte.authentication;
     } on PlatformException catch (error) {
-      // Le SDK Google avale l'annulation et rend `null` ; ce qui remonte ici
-      // est un vrai échec.
-      throw SocialSignInUnavailable(
-        SocialProvider.google,
-        _obstacleGoogle(error),
-        cause: error,
-      );
+      // Le SDK Google avale l'annulation de `signIn()` et rend `null`. Si
+      // elle remonte malgré tout d'un autre appel, c'est toujours un
+      // renoncement : muet, sans code.
+      if (error.code == GoogleSignIn.kSignInCanceledError) return null;
+      throw googleFailure(error);
+    } catch (error) {
+      // `catch` NU, et c'est le propos : `authentication` lève une
+      // `StateError`, un greffon à `MethodChannel` absent une
+      // `MissingPluginException` (celui de Google parle Pigeon : absent, il
+      // lève une `PlatformException` `channel-error`, rattrapée plus haut).
+      // Elles filaient jusqu'au filet du contrôleur, qui ne savait plus
+      // qu'elles venaient de Google : échec anonyme, sans cause ni code.
+      throw googleFailure(error);
     }
     final idToken = auth.idToken;
     if (idToken == null) {
-      // Réponse incomplète du SDK (configuration OAuth incomplète, le plus
-      // souvent) : sans jeton d'identité, il n'y a rien à vérifier.
+      // Le SDK a ouvert la session Google sans jeton d'identité pour nous :
+      // presque toujours un `serverClientId` qui n'est pas un client OAuth
+      // de type « Web ». Rien à vérifier côté serveur.
       throw const SocialSignInUnavailable(
         SocialProvider.google,
         SocialSignInObstacle.configuration,
+        code: 'google-sans-jeton',
       );
     }
     return SocialCredential(idToken: idToken, displayName: compte.displayName);
@@ -201,6 +160,7 @@ class PlatformSocialSignIn implements SocialSignIn {
       throw const SocialSignInUnavailable(
         SocialProvider.apple,
         SocialSignInObstacle.plateforme,
+        code: 'apple-plateforme',
       );
     }
     final AuthorizationCredentialAppleID identifiant;
@@ -217,29 +177,19 @@ class PlatformSocialSignIn implements SocialSignIn {
       // ressortait d'un `onPressed` : aucun message, aucune trace, un bouton
       // qui semble ne rien faire.
       if (error.code == AuthorizationErrorCode.canceled) return null;
-      throw SocialSignInUnavailable(
-        SocialProvider.apple,
-        SocialSignInObstacle.configuration,
-        cause: error,
-      );
-    } on SignInWithAppleException catch (error) {
-      throw SocialSignInUnavailable(
-        SocialProvider.apple,
-        SocialSignInObstacle.configuration,
-        cause: error,
-      );
-    } on PlatformException catch (error) {
-      throw SocialSignInUnavailable(
-        SocialProvider.apple,
-        SocialSignInObstacle.configuration,
-        cause: error,
-      );
+      throw appleFailure(error);
+    } catch (error) {
+      // Les autres exceptions du greffon (`SignInWithAppleException`,
+      // `PlatformException`), et ce qui n'en est pas une : même raison que
+      // côté Google, rien ne file sans son code.
+      throw appleFailure(error);
     }
     final idToken = identifiant.identityToken;
     if (idToken == null) {
       throw const SocialSignInUnavailable(
         SocialProvider.apple,
-        SocialSignInObstacle.configuration,
+        SocialSignInObstacle.echec,
+        code: 'apple-sans-jeton',
       );
     }
     // Apple découpe le nom ; il n'arrive qu'une fois dans la vie du compte.

@@ -99,8 +99,10 @@ export class SocialAuthService {
         ...client,
         metadata: { provider: input.provider },
       });
+      // Phrase AFFICHÉE telle quelle par l'application : typographie de
+      // l'application (apostrophe courbe), comme les autres messages lus.
       throw new UnauthorizedException(
-        "Le fournisseur n'a pas transmis d'adresse e-mail vérifiée. " +
+        'Le fournisseur n’a pas transmis d’adresse e-mail vérifiée. ' +
           'Connecte-toi avec ton adresse e-mail.',
       );
     }

@@ -1,9 +1,16 @@
 import 'package:dio/dio.dart';
 
+import '../../../../core/api/api_error_mapper.dart';
+import '../../../../core/errors/app_exception.dart';
 import '../dto/auth_dtos.dart';
 
 /// Datasource HTTP du domaine authentification.
 /// Déballe l'enveloppe { data, meta, requestId } et retourne des DTO.
+///
+/// Les corps se demandent NON typés (`Object?`) et se vérifient ici : typés
+/// `Map<String, dynamic>`, un corps d'une autre forme (page HTML, liste)
+/// échouait DANS Dio, enveloppé comme une coupure réseau, et la personne
+/// lisait « serveur injoignable » à propos d'un hôte qui avait répondu.
 class AuthApi {
   AuthApi(this._dio);
 
@@ -16,7 +23,7 @@ class AuthApi {
     String? deviceName,
     String? devicePlatform,
   }) async {
-    final response = await _dio.post<Map<String, dynamic>>(
+    final response = await _dio.post<Object?>(
       '/auth/register',
       data: {
         'email': email,
@@ -26,7 +33,7 @@ class AuthApi {
         if (devicePlatform != null) 'devicePlatform': devicePlatform,
       },
     );
-    return AuthResultDto.fromJson(_data(response));
+    return _read(response, AuthResultDto.fromJson);
   }
 
   Future<AuthResultDto> login({
@@ -35,7 +42,7 @@ class AuthApi {
     String? deviceName,
     String? devicePlatform,
   }) async {
-    final response = await _dio.post<Map<String, dynamic>>(
+    final response = await _dio.post<Object?>(
       '/auth/login',
       data: {
         'email': email,
@@ -44,7 +51,7 @@ class AuthApi {
         if (devicePlatform != null) 'devicePlatform': devicePlatform,
       },
     );
-    return AuthResultDto.fromJson(_data(response));
+    return _read(response, AuthResultDto.fromJson);
   }
 
   /// Échange un jeton d'identité Apple/Google contre une session Carlys.
@@ -59,7 +66,7 @@ class AuthApi {
     String? deviceName,
     String? devicePlatform,
   }) async {
-    final response = await _dio.post<Map<String, dynamic>>(
+    final response = await _dio.post<Object?>(
       '/auth/social',
       data: {
         'provider': provider,
@@ -69,7 +76,7 @@ class AuthApi {
         if (devicePlatform != null) 'devicePlatform': devicePlatform,
       },
     );
-    return AuthResultDto.fromJson(_data(response));
+    return _read(response, AuthResultDto.fromJson);
   }
 
   Future<void> logout() => _dio.post<void>('/auth/logout');
@@ -78,30 +85,31 @@ class AuthApi {
       _dio.post<void>('/auth/forgot-password', data: {'email': email});
 
   Future<AuthUserDto> me() async {
-    final response = await _dio.get<Map<String, dynamic>>('/users/me');
-    return AuthUserDto.fromJson(_data(response));
+    final response = await _dio.get<Object?>('/users/me');
+    return _read(response, AuthUserDto.fromJson);
   }
 
   /// PATCH /users/me — n'envoie QUE le fuseau : le corps décrit ce qui
   /// change, et le serveur laisse le reste du profil intact.
   Future<AuthUserDto> updateTimezone(String timezone) async {
-    final response = await _dio.patch<Map<String, dynamic>>(
+    final response = await _dio.patch<Object?>(
       '/users/me',
       data: {'timezone': timezone},
     );
-    return AuthUserDto.fromJson(_data(response));
+    return _read(response, AuthUserDto.fromJson);
   }
 
   Future<List<AuthSessionDto>> sessions() async {
-    final response = await _dio.get<Map<String, dynamic>>('/auth/sessions');
-    final list = response.data?['data'];
-    if (list is! List) {
-      throw const FormatException('Liste de sessions attendue');
-    }
-    return list
-        .whereType<Map<String, dynamic>>()
-        .map(AuthSessionDto.fromJson)
-        .toList();
+    final response = await _dio.get<Object?>('/auth/sessions');
+    return _readEnvelope(response, (data) {
+      if (data is! List) {
+        throw const FormatException('Liste de sessions attendue');
+      }
+      return data
+          .whereType<Map<String, dynamic>>()
+          .map(AuthSessionDto.fromJson)
+          .toList();
+    });
   }
 
   Future<void> revokeSession(String sessionId) =>
@@ -129,11 +137,51 @@ class AuthApi {
   Future<void> resendEmailVerification() =>
       _dio.post<void>('/auth/resend-verification');
 
-  Map<String, dynamic> _data(Response<Map<String, dynamic>> response) {
-    final data = response.data?['data'];
+  /// Lit l'objet `data` d'une réponse 2xx, puis le DTO qu'il porte.
+  T _read<T>(
+    Response<Object?> response,
+    T Function(Map<String, dynamic> json) parse,
+  ) => _readEnvelope(response, (data) {
     if (data is! Map<String, dynamic>) {
       throw const FormatException('Enveloppe de réponse inattendue');
     }
-    return data;
+    return parse(data);
+  });
+
+  /// Déballe `{ data, meta, requestId }` et confie `data` à [parse].
+  ///
+  /// Tout ce qui ne se lit pas devient [MalformedResponseException] : un
+  /// corps qui n'est pas un objet JSON, une enveloppe absente
+  /// (`FormatException`), un champ manquant ou d'un autre type (`TypeError`
+  /// des DTO, lus à la main par `as`). Les trois disent la même chose : ce
+  /// qui a répondu et l'application ne parlent pas le même contrat. La
+  /// conversion se fait ICI, où la réponse est encore là : son en-tête dit
+  /// si c'est bien l'API Carlys qui a répondu.
+  T _readEnvelope<T>(
+    Response<Object?> response,
+    T Function(Object? data) parse,
+  ) {
+    try {
+      final body = response.data;
+      if (body is! Map<String, dynamic>) {
+        throw const FormatException('Corps de réponse qui n’est pas un objet');
+      }
+      return parse(body['data']);
+    } on FormatException catch (error, trace) {
+      throw _malformed(response, error, trace);
+    } on TypeError catch (error, trace) {
+      throw _malformed(response, error, trace);
+    }
   }
+
+  MalformedResponseException _malformed(
+    Response<Object?> response,
+    Object error,
+    StackTrace trace,
+  ) => MalformedResponseException(
+    'Réponse de ${response.requestOptions.path} illisible',
+    requestId: requestIdOf(response.headers),
+    cause: error,
+    stackTrace: trace,
+  );
 }

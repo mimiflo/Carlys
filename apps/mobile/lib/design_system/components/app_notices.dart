@@ -40,9 +40,10 @@ enum AppNoticeTone {
 /// Fermeture : un toucher sur la carte, un toucher ailleurs (qui, sans
 /// action, atteint aussi l'écran : un simple message ne pose pas de voile ;
 /// avec une action, le voile arrête le doigt), le retour arrière d'Android,
-/// ou le minuteur ([displayDuration], [actionDisplayDuration]).
-/// Avec une action, et la navigation d'accessibilité active, la popup
-/// attend qu'on choisisse.
+/// ou le minuteur ([displayDuration], [actionDisplayDuration],
+/// [detailDisplayDuration]). Avec une action ou une ligne à recopier, et la
+/// navigation d'accessibilité active, la popup attend un geste : on choisit,
+/// ou on a fini de noter.
 @immutable
 class AppNotices {
   const AppNotices._(this._overlay);
@@ -65,6 +66,11 @@ class AppNotices {
   /// décider.
   static const Duration actionDisplayDuration = Duration(seconds: 6);
 
+  /// Plus long encore quand elle porte une ligne à RECOPIER (un code
+  /// d'erreur) : lire la phrase, puis noter le code ou faire une capture.
+  /// Trois secondes ne laissaient le temps que de voir qu'il y en avait un.
+  static const Duration detailDisplayDuration = Duration(seconds: 10);
+
   /// Le bouton qui renonce à l'action proposée.
   static const String laterLabel = 'Plus tard';
 
@@ -77,6 +83,8 @@ class AppNotices {
   ///
   /// [icon] remplace le glyphe du ton. [actionLabel] et [onAction] vont
   /// ensemble : la popup propose alors l'action, et « Plus tard ».
+  /// [detail] ajoute sous le message une ligne à recopier (un code), que
+  /// [detailSemanticsLabel] dit autrement aux lecteurs d'écran au besoin.
   void show(
     String message, {
     String? title,
@@ -84,6 +92,8 @@ class AppNotices {
     IconData? icon,
     String? actionLabel,
     VoidCallback? onAction,
+    String? detail,
+    String? detailSemanticsLabel,
   }) {
     assert(
       (actionLabel == null) == (onAction == null),
@@ -102,11 +112,15 @@ class AppNotices {
         notice: AppNoticeContent(
           message: message,
           title: title,
+          detail: detail,
+          detailSemanticsLabel: detailSemanticsLabel,
           icon: icon ?? _iconOf(tone),
           tone: tone == AppNoticeTone.error
               ? AppPopupTone.danger
               : AppPopupTone.brand,
-          autoClose: hasAction ? actionDisplayDuration : displayDuration,
+          autoClose: hasAction
+              ? actionDisplayDuration
+              : (detail != null ? detailDisplayDuration : displayDuration),
           laterLabel: laterLabel,
           actionLabel: hasAction ? actionLabel : null,
           onAction: hasAction ? onAction : null,

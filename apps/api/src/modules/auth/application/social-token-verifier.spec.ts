@@ -226,7 +226,7 @@ describe('SocialTokenVerifier', () => {
     // impossible. La réponse, elle, ne dit toujours rien.
     await expect(
       verifier.verify('google', await jeton({ sub: 'x' }, { cle: etrangere }), [GOOGLE_AUDIENCE]),
-    ).rejects.toThrow('Jeton Google invalide.');
+    ).rejects.toThrow('Google n’a pas pu confirmer ton identité.');
 
     expect(warn).toHaveBeenCalledTimes(1);
     const [details] = warn.mock.calls[0] as [Record<string, unknown>];

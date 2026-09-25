@@ -100,6 +100,63 @@ void main() {
     expect(find.byType(AppPopupCard), findsNothing);
   });
 
+  testWidgets('une ligne à recopier : sous le message, en chasse fixe, et '
+      'le temps de la noter', (tester) async {
+    await tester.pumpWidget(_app());
+    AppNotices.of(_screen).show(
+      'Le serveur Carlys n’a pas pu ouvrir ta session.',
+      tone: AppNoticeTone.error,
+      detail: 'Code : http-500 · réf. 1a2b3c4d',
+    );
+    await tester.pumpAndSettle();
+
+    // Sur sa PROPRE ligne, sous le message, dans la même carte.
+    final message = tester.getRect(
+      find.text('Le serveur Carlys n’a pas pu ouvrir ta session.'),
+    );
+    final detail = tester.getRect(find.text('Code : http-500 · réf. 1a2b3c4d'));
+    expect(detail.top, greaterThanOrEqualTo(message.bottom));
+    expect(find.byType(AppPopupCard), findsOneWidget);
+    final style = tester
+        .widget<Text>(find.text('Code : http-500 · réf. 1a2b3c4d'))
+        .style;
+    expect(style?.fontFamily, AppTypography.monoFamily);
+
+    // Trois secondes ne laissaient le temps que de voir qu'il y avait un
+    // code : elle reste le temps de le recopier. `pumpAndSettle` après
+    // l'attente : un départ déjà lancé irait alors à son terme, et la carte
+    // aurait disparu.
+    await tester.pump(AppNotices.actionDisplayDuration);
+    await tester.pumpAndSettle();
+    expect(find.text('Code : http-500 · réf. 1a2b3c4d'), findsOneWidget);
+
+    await tester.pump(
+      AppNotices.detailDisplayDuration - AppNotices.actionDisplayDuration,
+    );
+    await tester.pumpAndSettle();
+    expect(find.byType(AppPopupCard), findsNothing);
+  });
+
+  testWidgets('la ligne à recopier se DIT autrement qu’elle s’écrit', (
+    tester,
+  ) async {
+    final semantics = tester.ensureSemantics();
+    await tester.pumpWidget(_app());
+    AppNotices.of(_screen).show(
+      'Échec.',
+      detail: 'Code : google-sign_in_failed',
+      detailSemanticsLabel: 'Code : google sign in failed',
+    );
+    await tester.pumpAndSettle();
+
+    expect(
+      find.bySemanticsLabel(RegExp(r'Code : google sign in failed$')),
+      findsOneWidget,
+    );
+    expect(find.bySemanticsLabel(RegExp('sign_in_failed')), findsNothing);
+    semantics.dispose();
+  });
+
   testWidgets('un toucher sur la carte la ferme', (tester) async {
     await tester.pumpWidget(_app());
     await _show(tester, 'Objectif retenu.');
@@ -221,6 +278,31 @@ void main() {
       await _show(tester, 'Séance enregistrée.');
 
       await tester.pump(AppNotices.displayDuration);
+      await tester.pumpAndSettle();
+      expect(find.byType(AppPopupCard), findsNothing);
+    });
+
+    testWidgets('avec une ligne à recopier, elle attend un geste', (
+      tester,
+    ) async {
+      // La région vivante annonce phrase et code d'un bloc : l'annonce seule
+      // mange l'essentiel des dix secondes. Pour réentendre le code signe à
+      // signe et le noter, il faut aller jusqu'à lui, et il doit encore être
+      // là (WCAG 2.2.1).
+      await tester.pumpWidget(_app());
+      AppNotices.of(_screen).show(
+        'Le serveur Carlys n’a pas pu ouvrir ta session.',
+        tone: AppNoticeTone.error,
+        detail: 'Code : http-500 · réf. 1a2b3c4d',
+      );
+      await tester.pumpAndSettle();
+
+      await tester.pump(const Duration(minutes: 1));
+      await tester.pumpAndSettle();
+      expect(find.text('Code : http-500 · réf. 1a2b3c4d'), findsOneWidget);
+
+      // Et le geste la ferme, lui.
+      await tester.tap(find.byType(AppPopupCard));
       await tester.pumpAndSettle();
       expect(find.byType(AppPopupCard), findsNothing);
     });

@@ -20,12 +20,18 @@ class AppNoticeContent {
     required this.autoClose,
     required this.laterLabel,
     this.title,
+    this.detail,
+    this.detailSemanticsLabel,
     this.actionLabel,
     this.onAction,
   });
 
   final String message;
   final String? title;
+
+  /// Ligne à recopier sous le message (voir `AppPopupCard.detail`).
+  final String? detail;
+  final String? detailSemanticsLabel;
   final IconData icon;
   final AppPopupTone tone;
 
@@ -91,11 +97,17 @@ class AppNoticeLayerState extends State<AppNoticeLayer>
   /// d'accessibilité est active. Un lecteur d'écran met plus de six
   /// secondes à atteindre le bouton ; lui retirer l'action pendant qu'il y
   /// va, c'est la lui refuser.
+  ///
+  /// Même règle pour une ligne à RECOPIER ([AppNoticeContent.detail]) : la
+  /// région vivante l'annonce d'un bloc avec la phrase, et l'annonce seule
+  /// mange l'essentiel des dix secondes. Pour la réentendre signe à signe et
+  /// la noter, il faut aller jusqu'à elle, et elle doit encore être là. La
+  /// popup attend donc un geste : toucher, retour, ou l'action « fermer »
+  /// du lecteur d'écran (WCAG 2.2.1, délai réglable).
   void _armTimer() {
     final notice = widget.notice;
-    if (notice.hasAction && MediaQuery.accessibleNavigationOf(context)) {
-      return;
-    }
+    final mustStay = notice.hasAction || notice.detail != null;
+    if (mustStay && MediaQuery.accessibleNavigationOf(context)) return;
     _timer = Timer(notice.autoClose, close);
   }
 
@@ -204,6 +216,8 @@ class AppNoticeLayerState extends State<AppNoticeLayer>
                       tone: notice.tone,
                       title: notice.title,
                       message: notice.message,
+                      detail: notice.detail,
+                      detailSemanticsLabel: notice.detailSemanticsLabel,
                       actions: [
                         if (actionLabel != null) ...[
                           AppButton(label: actionLabel, onPressed: _act),

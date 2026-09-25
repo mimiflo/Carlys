@@ -5,6 +5,11 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 class FakeSecureStorage implements FlutterSecureStorage {
   final Map<String, String> values = {};
 
+  /// Ce que `write` lève, quand le trousseau doit REFUSER d'enregistrer
+  /// (keystore Android en vrac, matériel verrouillé). La lecture et
+  /// l'effacement continuent de fonctionner.
+  Object? failWrites;
+
   @override
   Future<String?> read({
     required String key,
@@ -29,6 +34,8 @@ class FakeSecureStorage implements FlutterSecureStorage {
     MacOsOptions? mOptions,
     WindowsOptions? wOptions,
   }) async {
+    final failure = failWrites;
+    if (failure != null) throw failure;
     if (value == null) {
       values.remove(key);
     } else {

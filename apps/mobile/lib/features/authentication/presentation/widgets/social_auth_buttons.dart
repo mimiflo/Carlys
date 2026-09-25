@@ -36,12 +36,17 @@ class SocialAuthButtons extends ConsumerWidget {
       // Refermer la feuille n'est pas un échec.
       case SocialAuthCancelled():
         return;
-      // Pas encore branché : on le DIT, ce n'est pas une panne. Une popup
-      // nouvelle remplace la précédente : deux touchers n'en empilent pas.
-      case SocialAuthUnavailable(:final message):
-        notices.show(message);
-      case SocialAuthFailed(:final message):
-        notices.show(message, tone: AppNoticeTone.error);
+      // La cause en clair, puis le code sur sa propre ligne, dans la MÊME
+      // popup. Pas encore branché : on le DIT sans le ton d'une panne. Une
+      // popup nouvelle remplace la précédente : deux touchers n'en empilent
+      // pas.
+      case SocialAuthFailed(:final failure):
+        notices.show(
+          failure.message,
+          tone: failure.unavailable ? AppNoticeTone.info : AppNoticeTone.error,
+          detail: failure.codeLine,
+          detailSemanticsLabel: failure.spokenCodeLine,
+        );
     }
   }
 

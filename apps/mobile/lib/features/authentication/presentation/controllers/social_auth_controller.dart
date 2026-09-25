@@ -1,10 +1,11 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/errors/app_exception.dart';
 import '../../../../core/logging/app_logger.dart';
-import '../../data/datasources/social_sign_in.dart';
 import '../../domain/entities/social_provider.dart';
+import '../utils/social_auth_failure.dart';
 import 'auth_controller.dart';
+
+export '../utils/social_auth_failure.dart' show SocialAuthFailure;
 
 /// Ce qu'il y a à DIRE à la fin d'une tentative de connexion sociale.
 sealed class SocialAuthOutcome {
@@ -16,36 +17,23 @@ final class SocialAuthSucceeded extends SocialAuthOutcome {
   const SocialAuthSucceeded();
 }
 
-/// La personne a refermé la feuille du fournisseur. Pas un échec : muet.
+/// La personne a refermé la feuille du fournisseur. Pas un échec : muet,
+/// et sans code.
 final class SocialAuthCancelled extends SocialAuthOutcome {
   const SocialAuthCancelled();
 }
 
-/// Le fournisseur n'est pas encore branché — côté serveur (503) ou côté
-/// application (client OAuth absent, Apple hors iOS). À dire honnêtement,
-/// jamais comme une panne.
-final class SocialAuthUnavailable extends SocialAuthOutcome {
-  const SocialAuthUnavailable(this.provider, {required this.appleHorsIos});
-
-  final SocialProvider provider;
-
-  /// Apple demandé sur un appareil qui ne sait pas l'ouvrir.
-  final bool appleHorsIos;
-
-  String get message => appleHorsIos
-      ? 'La connexion avec Apple n’existe que sur iPhone et iPad. '
-            'Utilise Google ou ton adresse e-mail.'
-      : 'La connexion avec ${provider.label} arrive bientôt. '
-            'Utilise ton adresse e-mail en attendant.';
-}
-
-/// Le fournisseur a bien répondu, mais la connexion a échoué. Le message
-/// vient du serveur quand il en donne un (adresse non vérifiée, compte
-/// suspendu), sinon d'un repli.
+/// La tentative n'a pas abouti : la cause en clair, et le code à recopier.
+///
+/// Un fournisseur pas encore branché (client OAuth absent du build, Apple
+/// hors iOS, 503 du serveur) passe aussi par ici, avec
+/// [SocialAuthFailure.unavailable] : il se dit honnêtement, jamais comme
+/// une panne, mais il porte son code comme le reste — c'est précisément
+/// quand « tout est configuré » que le propriétaire en a besoin.
 final class SocialAuthFailed extends SocialAuthOutcome {
-  const SocialAuthFailed(this.message);
+  const SocialAuthFailed(this.failure);
 
-  final String message;
+  final SocialAuthFailure failure;
 }
 
 /// Pilote les deux boutons sociaux : un seul fournisseur à la fois, et
@@ -82,61 +70,15 @@ class SocialAuthController extends AutoDisposeNotifier<SocialProvider?> {
       return user == null
           ? const SocialAuthCancelled()
           : const SocialAuthSucceeded();
-    } on SocialSignInUnavailable catch (error) {
-      // La cause d'origine du SDK était capturée par la passerelle puis
-      // JAMAIS lue : trois situations très différentes rendaient la même
-      // phrase, sans laisser la moindre trace. On l'écrit ici, une fois,
-      // au seul endroit qui décide quoi afficher.
-      _logger.error(
-        'Connexion ${error.provider.label} indisponible '
-        '(${error.obstacle.name})',
-        error: error.cause,
-      );
-      if (error.obstacle == SocialSignInObstacle.identiteAppareil) {
-        // Google a bien répondu — il REFUSE cette installation. Le dire
-        // « arrive bientôt » était faux, et envoyait chercher une variable
-        // manquante alors que le build est correct : c'est la console
-        // Google Cloud qui ne connaît pas le nom de paquet ou l'empreinte
-        // de signature de cet APK.
-        return SocialAuthFailed(
-          'Google n’a pas reconnu cette version de l’application. '
-          'Utilise ton adresse e-mail en attendant.',
-        );
-      }
-      // Côté application : client OAuth absent du build, ou fournisseur qui
-      // ne s'ouvre pas sur cette plateforme. La RAISON vient de la
-      // passerelle — le contrôleur n'interroge pas la plateforme.
-      return SocialAuthUnavailable(
-        error.provider,
-        appleHorsIos: error.obstacle == SocialSignInObstacle.plateforme,
-      );
-    } on ServerException catch (error) {
-      if (error.statusCode == 503) {
-        // Côté serveur : le fournisseur n'est pas configuré. Le message des
-        // 5xx est masqué par l'API (aucune fuite d'interne) — c'est le CODE
-        // qui porte le sens, et il vaut ici « pas encore activé ».
-        return SocialAuthUnavailable(provider, appleHorsIos: false);
-      }
-      return SocialAuthFailed(_repli(provider));
-    } on AppException catch (error) {
-      return SocialAuthFailed(
-        error is UnauthorizedException || error is ValidationException
-            // Ces deux-là portent un message écrit POUR la personne
-            // (adresse non vérifiée, compte suspendu).
-            ? error.message
-            : _repli(provider),
-      );
-    } catch (error, pile) {
-      // FILET DE SÉCURITÉ. Ce qui sort d'ici part dans un `onPressed` : une
-      // exception non rattrapée y disparaît sans message ni trace, et le
-      // bouton paraît ne rien faire. Tout ce qui n'a pas été prévu devient
-      // donc un échec ordinaire, dit à la personne et écrit dans les logs.
-      _logger.error(
-        'Connexion ${provider.label} inattendue',
-        error: error,
-        stackTrace: pile,
-      );
-      return SocialAuthFailed(_repli(provider));
+    } catch (error, trace) {
+      // UN SEUL rattrapage, et il attrape TOUT. Ce qui sortirait d'ici
+      // partirait dans un `onPressed`, où une exception disparaît sans
+      // message ni trace. Le classement — code, phrase, gravité — vit dans
+      // une fonction pure : ici, on ne fait que le demander, l'écrire une
+      // fois dans le journal, et le rendre à l'écran.
+      final failure = describeSocialFailure(provider, error);
+      _record(provider, failure, error, trace);
+      return SocialAuthFailed(failure);
     } finally {
       // Le contrôleur s'auto-dispose : l'écran a pu être quitté pendant que
       // la feuille du fournisseur était ouverte, et écrire dans un
@@ -145,9 +87,25 @@ class SocialAuthController extends AutoDisposeNotifier<SocialProvider?> {
     }
   }
 
-  String _repli(SocialProvider provider) =>
-      'La connexion avec ${provider.label} n’a pas abouti. Réessaie, ou '
-      'utilise ton adresse e-mail.';
+  /// Une ligne par échec, avec son code et l'identifiant COMPLET de la
+  /// requête. Jamais de jeton ni d'adresse : l'erreur journalisée est
+  /// l'exception de l'application ou celle du SDK, qui n'en portent pas.
+  void _record(
+    SocialProvider provider,
+    SocialAuthFailure failure,
+    Object error,
+    StackTrace trace,
+  ) {
+    final requestId = failure.requestId;
+    final line =
+        'Connexion ${provider.label} en échec [${failure.code}]'
+        '${requestId == null ? '' : ' requestId=$requestId'}';
+    if (failure.severe) {
+      _logger.error(line, error: error, stackTrace: trace);
+    } else {
+      _logger.warning(line, error: error);
+    }
+  }
 }
 
 final socialAuthControllerProvider =

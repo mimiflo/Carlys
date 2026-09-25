@@ -676,6 +676,10 @@ void main() {
 
     /// Le messager des notifications, quand la scène en reçoit une.
     PushMessenger? messenger,
+
+    /// Ce que rend la connexion Apple ou Google, quand la scène la fait
+    /// échouer — une erreur du SDK ou du serveur, comme en production.
+    Object? socialError,
   }) async {
     tester.view.physicalSize = const Size(1179, 2556);
     tester.view.devicePixelRatio = 3.0;
@@ -690,7 +694,8 @@ void main() {
             ),
           ),
           authRepositoryProvider.overrideWithValue(
-            FakeAuthRepository(storedSession: authenticated, user: user),
+            FakeAuthRepository(storedSession: authenticated, user: user)
+              ..socialError = socialError,
           ),
           exercisesRepositoryProvider.overrideWithValue(
             exercises ?? catalogOf(),
@@ -1040,6 +1045,33 @@ void main() {
     // de démarrage l'a déjà décodé.
     await precacheBrandImages(tester);
     await capture(tester, '01-connexion', shows: find.byType(LoginScreen));
+  });
+
+  testWidgets('connexion : échec Google et son code', (tester) async {
+    // La popup d'échec telle que la voit un testeur de la bêta : la cause
+    // en clair, puis le code et la référence de requête à recopier, sur
+    // l'écran de connexion qui reste derrière. Une erreur SERVEUR, parce
+    // que c'est la seule qui porte à la fois un code et une référence.
+    await pumpApp(
+      tester,
+      authenticated: false,
+      socialError: const ServerException(
+        'Une erreur interne est survenue.',
+        statusCode: 500,
+        requestId: '1a2b3c4d-9e8f-4a5b-8c7d-0123456789ab',
+      ),
+    );
+    await precacheBrandImages(tester);
+    await tester.tap(find.bySemanticsLabel('Continuer avec Google'));
+    // Assez pour que la carte finisse d'entrer, bien moins que les dix
+    // secondes au bout desquelles elle repart.
+    await settle(tester);
+    await settle(tester);
+    await capture(
+      tester,
+      '01c-connexion-echec-google',
+      shows: find.text('Code\u00A0: http-500 · réf.\u00A01a2b3c4d'),
+    );
   });
 
   testWidgets('inscription', (tester) async {

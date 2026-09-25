@@ -7,6 +7,7 @@ import '../../../../core/api/api_error_mapper.dart';
 import '../../../../core/api/dio_client.dart';
 import '../../../../core/auth/jwt.dart';
 import '../../../../core/auth/token_storage.dart';
+import '../../../../core/errors/app_exception.dart';
 import '../../../../core/logging/app_logger.dart';
 import '../../domain/entities/auth_session_device.dart';
 import '../../domain/entities/auth_user.dart';
@@ -53,29 +54,25 @@ class AuthRepositoryImpl implements AuthRepository {
     required String password,
     required String displayName,
   }) {
-    return _guard(() async {
-      final result = await _api.register(
+    return _openSession(
+      () => _api.register(
         email: email.trim(),
         password: password,
         displayName: displayName.trim(),
         devicePlatform: _devicePlatform,
-      );
-      await _saveTokens(result.tokens);
-      return result.user.toEntity();
-    });
+      ),
+    );
   }
 
   @override
   Future<AuthUser> login({required String email, required String password}) {
-    return _guard(() async {
-      final result = await _api.login(
+    return _openSession(
+      () => _api.login(
         email: email.trim(),
         password: password,
         devicePlatform: _devicePlatform,
-      );
-      await _saveTokens(result.tokens);
-      return result.user.toEntity();
-    });
+      ),
+    );
   }
 
   @override
@@ -86,16 +83,14 @@ class AuthRepositoryImpl implements AuthRepository {
     final credential = await _socialSignIn.obtain(provider);
     if (credential == null) return null;
 
-    return _guard(() async {
-      final result = await _api.socialLogin(
+    return _openSession(
+      () => _api.socialLogin(
         provider: provider.wireName,
         idToken: credential.idToken,
         displayName: credential.displayName,
         devicePlatform: _devicePlatform,
-      );
-      await _saveTokens(result.tokens);
-      return result.user.toEntity();
-    });
+      ),
+    );
   }
 
   @override
@@ -190,12 +185,62 @@ class AuthRepositoryImpl implements AuthRepository {
     return _guard(() => _api.resendEmailVerification());
   }
 
-  Future<void> _saveTokens(AuthTokensDto tokens) => _storage.save(
-    StoredTokens(
-      accessToken: tokens.accessToken,
-      refreshToken: tokens.refreshToken,
-    ),
-  );
+  /// Ouvre une session : l'appel, la LECTURE de la réponse, puis
+  /// l'enregistrement des jetons. Trois échecs possibles, trois types
+  /// distincts — un `TypeError` de désérialisation ou une erreur du
+  /// trousseau traversaient jusqu'ici l'écran sous une forme anonyme, et
+  /// rien ne disait lequel des deux avait joué.
+  ///
+  /// L'appel échoue en [AppException] par `_guard` ; une réponse 2xx
+  /// illisible, en [MalformedResponseException], nommée par `AuthApi`, là où
+  /// la réponse et son identifiant de requête sont encore sous la main — y
+  /// compris quand Dio lui-même n'a pas pu la décoder (`mapDioException`) ;
+  /// le trousseau qui refuse, en [StorageException] par [_keep].
+  Future<AuthUser> _openSession(
+    Future<AuthResultDto> Function() request,
+  ) async {
+    final result = await _guard(request);
+    final user = result.user.toEntity();
+    await _keep(result.tokens);
+    return user;
+  }
+
+  /// Enregistre les jetons reçus, ou renonce à la session.
+  ///
+  /// Le serveur vient d'ouvrir une session que l'appareil ne sait pas
+  /// garder : la laisser vivre là-bas, c'est une ligne de plus dans
+  /// « Appareils connectés » que personne ne pourra jamais fermer d'ici ; et
+  /// garder en mémoire un jeton que le trousseau n'a pas pris, c'est une
+  /// session à moitié ouverte. On la révoque (au mieux) et on vide tout.
+  Future<void> _keep(AuthTokensDto tokens) async {
+    try {
+      await _storage.save(
+        StoredTokens(
+          accessToken: tokens.accessToken,
+          refreshToken: tokens.refreshToken,
+        ),
+      );
+    } catch (error, trace) {
+      // `catch` NU : le trousseau refuse par une `PlatformException` comme
+      // par une `Error` (keystore en vrac, matériel verrouillé).
+      await _abandon();
+      throw StorageException(
+        'Jetons de session non enregistrés',
+        cause: error,
+        stackTrace: trace,
+      );
+    }
+  }
+
+  /// [logout], sans jamais jeter : il sert après un échec, qu'il ne doit
+  /// pas masquer.
+  Future<void> _abandon() async {
+    try {
+      await logout();
+    } catch (error) {
+      _logger.warning('Session abandonnée incomplètement', error: error);
+    }
+  }
 
   Future<T> _guard<T>(Future<T> Function() action) async {
     try {

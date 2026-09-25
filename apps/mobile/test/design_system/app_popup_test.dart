@@ -219,6 +219,28 @@ void main() {
       await expectFits(tester);
     });
 
+    testWidgets('message d’erreur avec sa ligne de code à recopier', (
+      tester,
+    ) async {
+      // La ligne la plus longue que produise la connexion sociale : un code
+      // Google sans espace, qui doit revenir à la ligne sans déborder.
+      await pumpNarrow(tester);
+      AppNotices.of(_screen).show(
+        'Google n’a pas pu terminer la connexion. Réessaie, ou utilise ton '
+        'adresse e-mail.',
+        tone: AppNoticeTone.error,
+        detail: 'Code : google-failed_to_recover_auth',
+      );
+      await expectFits(tester);
+      AppNotices.of(_screen).show(
+        'Le serveur Carlys n’a pas pu ouvrir ta session. Réessaie dans un '
+        'instant.',
+        tone: AppNoticeTone.error,
+        detail: 'Code : http-500 · réf. 1a2b3c4d',
+      );
+      await expectFits(tester);
+    });
+
     testWidgets('confirmation', (tester) async {
       await pumpNarrow(tester);
       unawaited(

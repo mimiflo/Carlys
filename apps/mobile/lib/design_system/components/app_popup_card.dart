@@ -46,6 +46,8 @@ class AppPopupCard extends StatelessWidget {
     required this.icon,
     this.title,
     this.message,
+    this.detail,
+    this.detailSemanticsLabel,
     this.content,
     this.actions = const <Widget>[],
     this.tone = AppPopupTone.brand,
@@ -62,6 +64,17 @@ class AppPopupCard extends StatelessWidget {
   /// place et la couleur du texte principal : une phrase unique n'est pas
   /// une précision, c'est le message. Vide, il n'est pas affiché.
   final String? message;
+
+  /// Une ligne technique à RECOPIER sous le message — un code d'erreur, une
+  /// référence : « Code : http-500 · réf. 1a2b3c4d ». Sur sa propre ligne,
+  /// en chasse fixe (JetBrains Mono distingue 0 et O, 1 et l), en texte
+  /// secondaire : elle sert au diagnostic, elle ne doit pas voler la vedette
+  /// à la phrase qui dit la cause.
+  final String? detail;
+
+  /// Ce que lit un lecteur d'écran à la place de [detail], quand la forme
+  /// écrite se dit mal (tirets, soulignés, référence à épeler).
+  final String? detailSemanticsLabel;
 
   /// Ce qui s'insère entre le texte et les boutons : un champ de saisie,
   /// une pastille de constat.
@@ -85,6 +98,7 @@ class AppPopupCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final title = this.title;
     final message = this.message;
+    final detail = this.detail;
     final content = this.content;
     final hasMessage = message != null && message.isNotEmpty;
     // Un bouton fantôme en dernier porte déjà son vide : sa zone tactile de
@@ -147,6 +161,22 @@ class AppPopupCard extends StatelessWidget {
                               color: AppColors.darkTextSecondary,
                             ),
                     ),
+                  if (detail != null) ...[
+                    const SizedBox(height: AppSpacing.sm),
+                    Semantics(
+                      label: detailSemanticsLabel ?? detail,
+                      child: ExcludeSemantics(
+                        child: Text(
+                          detail,
+                          textAlign: TextAlign.center,
+                          style: AppTypography.body.copyWith(
+                            fontFamily: AppTypography.monoFamily,
+                            color: AppColors.darkTextSecondary,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
                   if (content != null) ...[
                     const SizedBox(height: AppSpacing.md),
                     content,

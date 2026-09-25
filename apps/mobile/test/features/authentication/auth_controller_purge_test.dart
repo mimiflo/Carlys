@@ -2,7 +2,9 @@ import 'package:carlys_mobile/app/environment/app_environment.dart';
 import 'package:carlys_mobile/core/api/dio_client.dart';
 import 'package:carlys_mobile/core/database/local_account_purge.dart';
 import 'package:carlys_mobile/core/database/local_account_switch.dart';
+import 'package:carlys_mobile/core/errors/app_exception.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
+import 'package:carlys_mobile/features/authentication/domain/entities/social_provider.dart';
 import 'package:carlys_mobile/features/authentication/presentation/controllers/auth_controller.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -110,21 +112,95 @@ void main() {
     expect(container.read(authControllerProvider), isA<AuthAuthenticated>());
   });
 
-  test('une réclamation impossible fait échouer la connexion', () async {
-    // Entrer quand même, ce serait ouvrir l'application du nouveau compte
-    // sur les données de l'ancien : l'erreur remonte au formulaire.
-    entry.failure = StateError('base verrouillée');
-    final controller = container.read(authControllerProvider.notifier);
+  /// Les TROIS portes d'entrée — connexion, inscription, fournisseur — ont
+  /// le même défaut et le même correctif : la réclamation d'appareil échoue
+  /// APRÈS que le serveur a ouvert la session.
+  final entrees = <String, Future<Object?> Function(AuthController)>{
+    'connexion': (c) => c.login(email: 'basile@example.com', password: 'x'),
+    'inscription': (c) => c.register(
+      email: 'basile@example.com',
+      password: 'x',
+      displayName: 'Basile',
+    ),
+    'fournisseur': (c) => c.signInWithProvider(SocialProvider.google),
+  };
 
-    await expectLater(
-      controller.login(email: 'basile@example.com', password: 'x'),
-      throwsStateError,
-    );
-    expect(
-      container.read(authControllerProvider),
-      isNot(isA<AuthAuthenticated>()),
-    );
-  });
+  for (final MapEntry(key: porte, value: entrer) in entrees.entries) {
+    group('réclamation impossible à la $porte', () {
+      setUp(() => auth.storedSession = false);
+
+      test('l’entrée échoue, typée, sans basculer', () async {
+        // Entrer quand même, ce serait ouvrir l'application du nouveau
+        // compte sur les données de l'ancien : l'erreur remonte à l'écran.
+        entry.failure = StateError('base verrouillée');
+        final controller = container.read(authControllerProvider.notifier);
+
+        await expectLater(
+          entrer(controller),
+          throwsA(
+            isA<AccountClaimException>().having(
+              (e) => e.cause,
+              'cause',
+              isStateError,
+            ),
+          ),
+        );
+        expect(
+          container.read(authControllerProvider),
+          isNot(isA<AuthAuthenticated>()),
+        );
+      });
+
+      test('la session ouverte par le serveur est ABANDONNÉE', () async {
+        // Le défaut réparé : les jetons restaient au trousseau alors que
+        // l'écran disait « échec ». Session à moitié ouverte — chaque
+        // requête de l'écran de connexion partait avec ce jeton —, et
+        // surtout entrée DIFFÉRÉE : le démarrage suivant la rouvrait.
+        entry.failure = StateError('base verrouillée');
+        final controller = container.read(authControllerProvider.notifier);
+
+        await expectLater(entrer(controller), throwsA(anything));
+
+        expect(auth.logoutCalls, 1, reason: 'révocation serveur demandée');
+        expect(auth.storedSession, isFalse, reason: 'trousseau vidé');
+        // Et rien n'est PURGÉ en plus : le compte précédent garde ce que
+        // la réclamation n'a pas eu le temps d'effacer.
+        expect(purge.runs, 0);
+      });
+
+      test('le démarrage suivant n’ouvre PAS le compte refusé', () async {
+        entry.failure = StateError('base verrouillée');
+        final controller = container.read(authControllerProvider.notifier);
+        await expectLater(entrer(controller), throwsA(anything));
+
+        // La panne locale était passagère : au lancement suivant, la
+        // réclamation réussirait. Avec les jetons laissés en place, c'est
+        // le compte à qui l'on avait dit « échec » qui s'ouvrait — et qui
+        // purgeait, pour se faire une place, les données du propriétaire à
+        // qui l'appareil avait été rendu.
+        entry.failure = null;
+        final claimsAvant = entry.claims;
+        await controller.restore();
+
+        expect(
+          container.read(authControllerProvider),
+          isA<AuthUnauthenticated>(),
+        );
+        expect(entry.claims, claimsAvant, reason: 'rien à rejouer');
+      });
+
+      test('un abandon qui échoue ne masque pas la cause', () async {
+        entry.failure = StateError('base verrouillée');
+        auth.logoutFailure = Exception('trousseau verrouillé');
+        final controller = container.read(authControllerProvider.notifier);
+
+        await expectLater(
+          entrer(controller),
+          throwsA(isA<AccountClaimException>()),
+        );
+      });
+    });
+  }
 
   test('une réclamation impossible refuse la restauration', () async {
     // L'écran de démarrage appelle `restore()` sans attendre : l'échec ne
@@ -135,6 +211,20 @@ void main() {
     await controller.restore();
 
     expect(container.read(authControllerProvider), isA<AuthUnauthenticated>());
+  });
+
+  test('…mais la restauration GARDE la session, pour réessayer', () async {
+    // Différence voulue avec les trois portes : la session trouvée au
+    // démarrage est celle que l'appareil avait déjà, et personne ne s'est
+    // vu répondre « échec ». Une panne locale passagère ne doit pas coûter
+    // une reconnexion (voir `LocalAccountEntry`).
+    entry.failure = StateError('base verrouillée');
+    final controller = container.read(authControllerProvider.notifier);
+
+    await controller.restore();
+
+    expect(auth.logoutCalls, 0);
+    expect(auth.storedSession, isTrue);
   });
 
   /// Une purge en échec ne retient jamais la déconnexion, quel que soit le

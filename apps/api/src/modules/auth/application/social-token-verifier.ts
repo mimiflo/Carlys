@@ -137,8 +137,13 @@ export class SocialTokenVerifier {
         },
         'Jeton social refusé',
       );
+      // Cette phrase, l'application l'AFFICHE telle quelle : elle s'écrit
+      // pour la personne, pas pour un développeur (« jeton » ne lui dit
+      // rien). Le diagnostic, lui, est dans l'avertissement ci-dessus,
+      // retrouvé par la référence que la popup affiche sous la phrase.
       throw new UnauthorizedException(
-        provider === 'apple' ? 'Jeton Apple invalide.' : 'Jeton Google invalide.',
+        `${provider === 'apple' ? 'Apple' : 'Google'} n’a pas pu confirmer ton identité. ` +
+          'Réessaie, ou utilise ton adresse e-mail.',
       );
     }
   }

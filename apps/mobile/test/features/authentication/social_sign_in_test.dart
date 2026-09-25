@@ -1,7 +1,7 @@
 import 'package:carlys_mobile/app/environment/app_environment.dart';
 import 'package:carlys_mobile/features/authentication/data/datasources/social_sign_in.dart';
 import 'package:carlys_mobile/features/authentication/domain/entities/social_provider.dart';
-import 'package:flutter/services.dart' show PlatformException;
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
@@ -79,12 +79,13 @@ void main() {
               'obstacle',
               SocialSignInObstacle.identiteAppareil,
             )
+            .having((e) => e.code, 'code', 'google-10')
             .having((e) => e.cause, 'cause', isA<PlatformException>()),
       ),
     );
   });
 
-  test('un autre échec du SDK reste une configuration incomplète', () async {
+  test('le statut 7 est le RÉSEAU de Google, pas une configuration', () async {
     final google = _GoogleEnregistreur(
       erreur: PlatformException(
         code: 'sign_in_failed',
@@ -100,11 +101,9 @@ void main() {
     await expectLater(
       passerelle.obtain(SocialProvider.google),
       throwsA(
-        isA<SocialSignInUnavailable>().having(
-          (e) => e.obstacle,
-          'obstacle',
-          SocialSignInObstacle.configuration,
-        ),
+        isA<SocialSignInUnavailable>()
+            .having((e) => e.obstacle, 'obstacle', SocialSignInObstacle.reseau)
+            .having((e) => e.code, 'code', 'google-7'),
       ),
     );
   });
@@ -126,11 +125,9 @@ void main() {
     await expectLater(
       passerelle.obtain(SocialProvider.google),
       throwsA(
-        isA<SocialSignInUnavailable>().having(
-          (e) => e.obstacle,
-          'obstacle',
-          SocialSignInObstacle.configuration,
-        ),
+        isA<SocialSignInUnavailable>()
+            .having((e) => e.obstacle, 'obstacle', SocialSignInObstacle.echec)
+            .having((e) => e.code, 'code', 'google-100'),
       ),
     );
   });
@@ -148,16 +145,245 @@ void main() {
     await expectLater(
       passerelle.obtain(SocialProvider.google),
       throwsA(
-        isA<SocialSignInUnavailable>().having(
-          (e) => e.obstacle,
-          'obstacle',
-          SocialSignInObstacle.configuration,
-        ),
+        isA<SocialSignInUnavailable>()
+            .having(
+              (e) => e.obstacle,
+              'obstacle',
+              SocialSignInObstacle.configuration,
+            )
+            .having((e) => e.code, 'code', 'google-config-web'),
       ),
     );
     expect(google.appels, isEmpty, reason: 'rien à demander sans client OAuth');
   });
+
+  test(
+    'une erreur du SDK qui n’est PAS une PlatformException est enveloppée',
+    () async {
+      // Le défaut réparé : une `StateError` (celle de
+      // `GoogleSignInAccount.authentication`) ou une `MissingPluginException`
+      // traversait la passerelle et finissait au filet du contrôleur — un
+      // échec anonyme, sans fournisseur ni code.
+      final passerelle = PlatformSocialSignIn(
+        environment: environnement,
+        google: _GoogleEnregistreur(
+          erreur: StateError('User is no longer signed in.'),
+        ),
+      );
+
+      await expectLater(
+        passerelle.obtain(SocialProvider.google),
+        throwsA(
+          isA<SocialSignInUnavailable>()
+              .having((e) => e.code, 'code', 'google-inattendu')
+              .having((e) => e.cause, 'cause', isStateError),
+        ),
+      );
+    },
+  );
+
+  test(
+    'Apple hors iPhone et iPad : apple-plateforme, sans ouvrir le SDK',
+    () async {
+      // La machine de test n'est ni iOS ni macOS : c'est Android, pour la
+      // passerelle.
+      final passerelle = PlatformSocialSignIn(
+        environment: environnement,
+        google: _GoogleEnregistreur(),
+      );
+
+      await expectLater(
+        passerelle.obtain(SocialProvider.apple),
+        throwsA(
+          isA<SocialSignInUnavailable>()
+              .having(
+                (e) => e.obstacle,
+                'obstacle',
+                SocialSignInObstacle.plateforme,
+              )
+              .having((e) => e.code, 'code', 'apple-plateforme'),
+        ),
+      );
+    },
+  );
+
+  /// Le VRAI `GoogleSignIn`, branché sur un canal de plateforme simulé.
+  ///
+  /// Le compte Google ne se fabrique pas, mais le greffon le construit
+  /// lui-même à partir de ce que le canal lui rend : c'est ainsi que se
+  /// teste ce qui dépend du compte (jeton absent, échec de `getTokens`) et
+  /// ce qui dépend du canal (greffon absent), avec le code du greffon entre
+  /// les deux plutôt qu'une doublure.
+  group('à travers le vrai greffon', () {
+    const canal = MethodChannel('plugins.flutter.io/google_sign_in');
+    TestDefaultBinaryMessenger messager() =>
+        TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger;
+
+    PlatformSocialSignIn passerelleReelle() => PlatformSocialSignIn(
+      environment: environnement,
+      google: GoogleSignIn(
+        scopes: const ['email'],
+        serverClientId: environnement.googleServerClientId,
+      ),
+    );
+
+    /// Répond comme le greffon Android : `init` et `signOut` sans rien,
+    /// `signIn` avec un compte, `getTokens` avec ce qu'on lui donne.
+    void simule({Object? Function()? signIn, Object? Function()? getTokens}) {
+      messager().setMockMethodCallHandler(canal, (appel) async {
+        return switch (appel.method) {
+          'signIn' => (signIn ?? () => _compte(idToken: 'jeton-id'))(),
+          'getTokens' =>
+            (getTokens ?? () => <String, Object?>{'accessToken': 'a'})(),
+          _ => null,
+        };
+      });
+    }
+
+    setUp(() => TestWidgetsFlutterBinding.ensureInitialized());
+    tearDown(() => messager().setMockMethodCallHandler(canal, null));
+
+    test('un jeton rendu : la passerelle le transmet', () async {
+      simule();
+
+      final credential = await passerelleReelle().obtain(SocialProvider.google);
+
+      expect(credential?.idToken, 'jeton-id');
+      expect(credential?.displayName, 'Camille');
+    });
+
+    test('compte ouvert SANS jeton d’identité → google-sans-jeton', () async {
+      // Ce que fait Google quand `serverClientId` n'est pas un client de
+      // type « Web » : un compte, et pas de jeton pour notre serveur.
+      simule(signIn: () => _compte(idToken: null));
+
+      await expectLater(
+        passerelleReelle().obtain(SocialProvider.google),
+        throwsA(
+          isA<SocialSignInUnavailable>()
+              .having((e) => e.code, 'code', 'google-sans-jeton')
+              .having(
+                (e) => e.obstacle,
+                'obstacle',
+                SocialSignInObstacle.configuration,
+              ),
+        ),
+      );
+    });
+
+    test('l’échec de getTokens garde son code', () async {
+      simule(
+        getTokens: () => throw PlatformException(
+          code: 'failed_to_recover_auth',
+          message: 'Failed attempt to recover authentication',
+        ),
+      );
+
+      await expectLater(
+        passerelleReelle().obtain(SocialProvider.google),
+        throwsA(
+          isA<SocialSignInUnavailable>().having(
+            (e) => e.code,
+            'code',
+            'google-failed_to_recover_auth',
+          ),
+        ),
+      );
+    });
+
+    test('12500 remonte du greffon jusqu’au code', () async {
+      simule(
+        signIn: () => throw PlatformException(
+          code: 'sign_in_failed',
+          message: 'com.google.android.gms.common.api.ApiException: 12500: ',
+        ),
+      );
+
+      await expectLater(
+        passerelleReelle().obtain(SocialProvider.google),
+        throwsA(
+          isA<SocialSignInUnavailable>().having(
+            (e) => e.code,
+            'code',
+            'google-12500',
+          ),
+        ),
+      );
+    });
+
+    test('feuille refermée (12501) : null, rien à dire', () async {
+      simule(
+        signIn: () => throw PlatformException(
+          code: 'sign_in_canceled',
+          message: 'com.google.android.gms.common.api.ApiException: 12501: ',
+        ),
+      );
+
+      expect(await passerelleReelle().obtain(SocialProvider.google), isNull);
+    });
+
+    test('le natif ne répond rien (Pigeon) → google-plugin', () async {
+      // LA forme réelle sur Android et iOS : google_sign_in_android 6.2.1 et
+      // google_sign_in_ios 5.9.0 parlent Pigeon, et un natif qui ne répond
+      // rien y lève `channel-error` (`_createConnectionError`, copiée de
+      // leur `messages.g.dart`), jamais `MissingPluginException`. Le natif
+      // ne répond rien quand le greffon manque au build, mais aussi quand
+      // `GoogleSignInPlugin` lève hors de son canal d'erreur (« signIn
+      // needs a foreground activity ») : `DartMessenger` rattrape et répond
+      // VIDE. Le greffon Pigeon lui-même ne peut pas être branché ici sans
+      // ajouter `google_sign_in_android` aux dépendances : c'est donc son
+      // exception, telle qu'il la lève, qui passe par le vrai `GoogleSignIn`.
+      messager().setMockMethodCallHandler(canal, (appel) async {
+        throw PlatformException(
+          code: 'channel-error',
+          message:
+              'Unable to establish connection on channel: '
+              '"dev.flutter.pigeon.google_sign_in_android.GoogleSignInApi'
+              '.${appel.method}".',
+        );
+      });
+
+      await expectLater(
+        passerelleReelle().obtain(SocialProvider.google),
+        throwsA(
+          isA<SocialSignInUnavailable>()
+              .having((e) => e.code, 'code', 'google-plugin')
+              .having((e) => e.cause, 'cause', isA<PlatformException>()),
+        ),
+      );
+    });
+
+    test('greffon à MethodChannel absent → google-plugin', () async {
+      // Aucun gestionnaire sur le canal historique : l'implémentation par
+      // `MethodChannel` lève `MissingPluginException`. Ce n'est PAS ce que
+      // voit un téléphone (voir le test précédent) : c'est ce qui reste
+      // quand aucune implémentation de plateforme n'est enregistrée
+      // (bureau, tests), et la forme qu'a aussi un greffon Apple absent.
+      messager().setMockMethodCallHandler(canal, null);
+
+      await expectLater(
+        passerelleReelle().obtain(SocialProvider.google),
+        throwsA(
+          isA<SocialSignInUnavailable>().having(
+            (e) => e.code,
+            'code',
+            'google-plugin',
+          ),
+        ),
+      );
+    });
+  });
 }
+
+/// Un compte tel que le greffon Android le décrit à Dart.
+Map<String, Object?> _compte({required String? idToken}) => {
+  'email': 'camille@example.com',
+  'id': '1234',
+  'displayName': 'Camille',
+  'photoUrl': null,
+  'idToken': idToken,
+  'serverAuthCode': null,
+};
 
 /// Faux SDK Google : il n'ouvre rien, il NOTE l'ordre des appels.
 class _GoogleEnregistreur extends GoogleSignIn {
@@ -165,7 +391,7 @@ class _GoogleEnregistreur extends GoogleSignIn {
 
   /// Levée par `signIn()` quand elle est fournie ; sinon `signIn()` rend
   /// `null`, ce que le SDK fait quand la personne referme la feuille.
-  final PlatformException? erreur;
+  final Object? erreur;
 
   final List<String> appels = [];
 

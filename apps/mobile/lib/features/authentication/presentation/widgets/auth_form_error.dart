@@ -18,6 +18,11 @@ String authErrorMessage(Object error) {
     ValidationException(:final message, :final fieldErrors) =>
       fieldErrors.isEmpty ? message : fieldErrors.values.join('\n'),
     ServerException() => 'Le serveur est momentanément indisponible.',
+    // Le serveur a accepté, l'appareil n'a pas pu passer à ce compte : la
+    // session a été abandonnée (`LocalAccountEntry`), réessayer est sûr.
+    AccountClaimException() =>
+      'Ton compte n’a pas pu s’ouvrir sur ce téléphone. Réessaie dans un '
+          'instant.',
     _ => 'Une erreur inattendue est survenue.',
   };
 }

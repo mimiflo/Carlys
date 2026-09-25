@@ -120,9 +120,16 @@ class FakeAuthRepository implements AuthRepository {
     return user;
   }
 
+  /// Panne de la déconnexion (révocation ou trousseau) : elle sert aussi à
+  /// ABANDONNER une session refusée, et cet abandon ne doit jamais masquer
+  /// l'échec qui l'a provoqué.
+  Object? logoutFailure;
+
   @override
   Future<void> logout() async {
     logoutCalls++;
+    final failure = logoutFailure;
+    if (failure != null) throw failure;
     storedSession = false;
   }
 

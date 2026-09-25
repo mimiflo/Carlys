@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/api/dio_client.dart';
+import '../../../../core/database/local_account_entry.dart';
 import '../../../../core/database/local_account_purge.dart';
 import '../../../../core/database/local_account_switch.dart';
 import '../../../../core/logging/app_logger.dart';
@@ -213,12 +214,10 @@ class AuthController extends Notifier<AuthState> {
     state = const AuthUnauthenticated();
   }
 
-  /// Entrée dans un compte : l'appareil est réclamé avant que l'interface ne
-  /// bascule, donc avant que le moindre drainage ou rapatriement ne démarre.
-  /// L'échec remonte volontairement : la connexion échoue à l'écran plutôt
-  /// que d'ouvrir l'application sur les données d'un autre compte.
-  Future<void> _enterAccount() =>
-      ref.read(localAccountSwitchProvider).claimDevice();
+  /// Entrée dans un compte, AVANT que l'interface ne bascule : l'appareil est
+  /// réclamé, ou la session tout juste ouverte est abandonnée et l'erreur
+  /// remonte (`LocalAccountEntry` dit pourquoi, et pourquoi pas `restore`).
+  Future<void> _enterAccount() => ref.read(localAccountEntryProvider).enter();
 
   /// Frontière de compte : l'appareil ne garde rien du compte qui part,
   /// PUIS l'interface bascule — le compte suivant ne peut pas se connecter

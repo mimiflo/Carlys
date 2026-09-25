@@ -100,9 +100,48 @@ mais sépare toujours interface / logique / données.
 - **Erreurs converties en frontière.** Les repositories convertissent les
   exceptions brutes (Dio, Drift, plateforme) en `AppException`
   (`core/errors/app_exception.dart` : `NetworkException`, `ServerException`,
-  `StorageException`, `UnauthorizedException`, `ValidationException`,
+  `MalformedResponseException`, `StorageException`, `AccountClaimException`,
+  `UnauthorizedException`, `ForbiddenException`, `ValidationException`,
   `UnknownException`). La présentation ne manipule que ces types et choisit
   le texte utilisateur localisé.
+- **Ce qu'une erreur garde pour le diagnostic.** `mapDioException`
+  (`core/api/api_error_mapper.dart`) pose sur TOUTE la hiérarchie, pas
+  seulement sur `ServerException`, trois champs facultatifs : `statusCode`
+  (statut de la réponse d'erreur), `requestId` (celui de l'enveloppe
+  d'erreur, à défaut l'en-tête `x-request-id`, retenu seulement s'il a la
+  forme qu'accepte l'API) et `transport` (`TransportFailure` : délai,
+  connexion, certificat, autre — quand aucune réponse n'est arrivée). Le TYPE,
+  lui, ne change pas : un délai reste une `NetworkException`, que les écrans
+  lisent comme « hors ligne ». Une `HandshakeException` que Dio enveloppe en
+  `unknown` est classée `certificate` : c'est la forme réelle d'un certificat
+  refusé sur un téléphone. `requestIdOf` lit cet en-tête sans jamais jeter
+  (sa première valeur quand un proxy l'a répété : `Headers.value` lèverait).
+  Une réponse 2xx illisible devient `MalformedResponseException`, par deux
+  chemins : quand Dio lui-même ne peut pas la décoder (JSON tronqué, corps
+  d'un autre type que celui demandé), il lève DANS sa chaîne une
+  `FormatException` ou une `TypeError` qu'il enveloppe en `unknown`, comme
+  une coupure, et `mapDioException` la reclasse (sans quoi un hôte qui a
+  répondu passait pour injoignable) ; quand elle se décode mais ne se lit
+  pas, `AuthApi` demande les corps non typés (`Object?`) et la nomme lui-même,
+  avec le `requestId` de l'en-tête : sa présence dit que c'est bien l'API qui
+  a répondu. Un trousseau qui refuse les jetons devient `StorageException`
+  (`AuthRepositoryImpl._openSession`) : jamais une `TypeError` ou une
+  `PlatformException` brutes jusqu'à l'écran.
+- **Connexion sociale : une cause et un code.** Tout échec d'Apple ou de
+  Google passe par UNE fonction pure,
+  `describeSocialFailure` (`features/authentication/presentation/utils/social_auth_failure.dart`),
+  qui rend la phrase, un code court et stable (`google-12500`, `http-429`,
+  `appli-compte`…) et la référence de requête. Les échecs des SDK sont nommés
+  plus tôt, par la passerelle, qui seule connaît les greffons
+  (`data/datasources/social_sign_in_failure.dart`) ; le type qu'elle lève,
+  `SocialSignInUnavailable`, vit dans le domaine
+  (`domain/entities/social_sign_in_unavailable.dart`) pour que `utils/` le
+  lise sans toucher à la couche données. La liste est fermée et
+  documentée dans `docs/deployment/connexion-sociale.md` (§6), qu'un test
+  relit. La ligne affichée porte une coupure invisible (U+200B) après chaque
+  `_` du code : le moteur de texte ne coupe pas après un souligné, et un code
+  trop long se tranchait au caractère à 320 points, texte ×2 (mesuré avec
+  les vraies fontes, `social_auth_code_wrap_test.dart`).
 - **`const` partout où c'est possible** (imposé par l'analyseur strict —
   `analysis_options.yaml` : strict-casts, strict-inference, strict-raw-types).
 - **`dynamic` toléré mais jamais gratuit.** Il reste légitime là où le typage
@@ -367,7 +406,7 @@ en local et en CI) :
 
 | Besoin | Porte | Rend |
 | ------ | ----- | ---- |
-| Message passager (succès, erreur, notification reçue) | `AppNotices.of(context).show(message, {title, tone, icon, actionLabel, onAction})` | rien ; `hide()` la retire |
+| Message passager (succès, erreur, notification reçue) | `AppNotices.of(context).show(message, {title, tone, icon, actionLabel, onAction, detail, detailSemanticsLabel})` — `detail` : une ligne à recopier (un code d'erreur) sous le message, en chasse fixe ; la popup reste alors dix secondes, et jusqu'à un geste quand la navigation d'accessibilité est active (comme avec une action) | rien ; `hide()` la retire |
 | Question avant un geste | `showAppConfirm(context, {title, message, confirmLabel, cancelLabel, destructive, icon})` | `Future<bool>` : `false` si l'on renonce, touche le voile ou fait retour |
 | Saisie courte (un nom, une quantité) | `showAppPrompt(context, {title, message, hint, initialValue, maxLength, confirmLabel, cancelLabel, icon, validator, keyboardType, suffixText})` | `Future<String?>` : le texte sans ses espaces de bord, `null` si l'on renonce |
 | Toute autre forme | `showAppDialog<T>(context, builder:)`, le `builder` rendant un `AppPopupCard` | `Future<T?>` |
@@ -577,6 +616,16 @@ Points structurants :
   diffèrent — avant que l'état passe authentifié, donc avant tout drainage.
   Le propriétaire est retenu en préférence et non déduit de la file : celle-ci
   se vide au fil des envois et ne peut pas servir de mémoire.
+- **Entrée refusée = session abandonnée.** Les trois portes d'entrée
+  (connexion, inscription, Apple/Google) passent par `LocalAccountEntry`
+  (`core/database/local_account_entry.dart`) : si la réclamation échoue APRÈS
+  que le serveur a ouvert la session, celle-ci est révoquée (au mieux) et ses
+  jetons effacés, puis `AccountClaimException` remonte. Laissés au trousseau,
+  ils faisaient une session à moitié ouverte et, surtout, une entrée différée :
+  `restore()` rejouait la réclamation au lancement suivant et ouvrait en
+  silence le compte à qui l'on avait dit « échec ». `restore()` lui-même
+  n'abandonne pas : la session qu'il trouve est déjà celle de l'appareil, et
+  la garder permet de réessayer au lancement suivant.
 - En complément, chaque opération de la file de synchronisation porte le
   compte sous lequel elle a été écrite (`ownerUserId`, claim `sub` du jeton
   d'accès) et n'est jamais drainée sous un autre.
