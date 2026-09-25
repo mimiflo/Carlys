@@ -221,6 +221,11 @@ export class AppConfigService {
     return this.config.get('S3_BUCKET', { infer: true });
   }
 
+  /** Bucket PRIVÉ des données personnelles — jamais lisible sans jeton. */
+  get s3PrivateBucket(): string {
+    return this.config.get('S3_PRIVATE_BUCKET', { infer: true });
+  }
+
   get s3AccessKeyId(): string {
     return this.config.get('S3_ACCESS_KEY_ID', { infer: true });
   }

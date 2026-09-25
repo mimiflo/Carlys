@@ -208,6 +208,7 @@ grep -oE '\$\{[A-Z_][A-Z_0-9]*' docker-compose.yml | tr -d '${' | sort -u
 | `SMTP_HOST` / `SMTP_PORT` / `EMAIL_FROM` | SMTP (Mailpit en local) | `localhost` / `1025` / `Carlys <no-reply@carlys.local>` |
 | `PUBLIC_APP_URL` | URL **publique** de l'application web Next.js (`apps/admin`), qui sert les pages ouvertes depuis les e-mails (`/verify-email`, `/reset-password`) et les retours Stripe (`/abonnement/merci`, `/abonnement`) : jamais l'URL de l'API | `http://localhost:3001` |
 | `S3_ENDPOINT` / `S3_REGION` / `S3_BUCKET` | Stockage objet des médias (MinIO en local, S3 ou compatible en production) | `http://localhost:9000` / `us-east-1` / `carlys-media` |
+| `S3_PRIVATE_BUCKET` | Bucket PRIVÉ des photos de repas (données personnelles) : aucune lecture anonyme, servi par la seule API à son propriétaire. Doit différer de `S3_BUCKET` (refusé au démarrage sinon), et exister : `minio-init` le crée en local | `carlys-private` |
 | `S3_ACCESS_KEY_ID` / `S3_SECRET_ACCESS_KEY` | Identifiants du stockage objet | `carlys-dev` / `carlys-dev-secret` |
 | `S3_PUBLIC_BASE_URL` | Base des URLs **servies aux applications** — doit être joignable depuis le téléphone, pas seulement depuis l'API | `http://localhost:9000/carlys-media` |
 | `S3_FORCE_PATH_STYLE` | `true` pour MinIO (pas de sous-domaine de bucket) | `true` |
@@ -339,7 +340,7 @@ docker compose down                  # arrêt (ajouter -v pour purger les volume
 | `redis` | `redis:7-alpine` | 6379 | Cache, rate limiting |
 | `mailpit` | `axllent/mailpit` | 1025 (SMTP), 8025 (UI) | Réception des e-mails de dev |
 | `minio` | `quay.io/minio/minio` (épinglé par empreinte — MinIO a retiré ses images de Docker Hub) | 9000 (S3), 9001 (console) | Stockage compatible S3 |
-| `minio-init` | `quay.io/minio/mc` (épinglé par empreinte) | — | Crée le bucket `carlys-media` au premier démarrage et l'ouvre en lecture anonyme (les applications chargent les photos directement) |
+| `minio-init` | `quay.io/minio/mc` (épinglé par empreinte) | — | Crée le bucket `carlys-media` au premier démarrage et l'ouvre en lecture anonyme (les applications chargent les photos directement), puis le bucket PRIVÉ `carlys-private` (photos de repas), sans aucune politique d'accès |
 | `api` (profil `app`) | build `apps/api/Dockerfile` | 3000 | API conteneurisée |
 | `admin` (profil `app`) | build `apps/admin/Dockerfile` | 3001 | Admin conteneurisé (output standalone) |
 

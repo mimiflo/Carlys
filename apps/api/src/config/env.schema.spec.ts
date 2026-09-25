@@ -1,4 +1,6 @@
-import { validateEnv } from './env.schema';
+import { readFileSync } from 'node:fs';
+import { join } from 'node:path';
+import { envSchema, validateEnv } from './env.schema';
 
 const validEnv = {
   DATABASE_URL: 'postgresql://user:password@localhost:5432/carlys_dev',
@@ -65,6 +67,18 @@ describe('validateEnv', () => {
     // `true` accepterait un X-Forwarded-For forgé : refusé dès la configuration.
     expect(() => validateEnv({ ...validEnv, TRUST_PROXY_HOPS: 'true' })).toThrow(
       /Configuration invalide/,
+    );
+  });
+
+  it('S3_PRIVATE_BUCKET : un bucket à part, jamais celui des médias publics', () => {
+    expect(validateEnv({ ...validEnv }).S3_PRIVATE_BUCKET).toBe('carlys-private');
+    // Le même nom remettrait les photos de repas dans le bucket lisible sans
+    // jeton : refusé partout, pas seulement en production.
+    expect(() =>
+      validateEnv({ ...validEnv, S3_BUCKET: 'carlys-media', S3_PRIVATE_BUCKET: 'carlys-media' }),
+    ).toThrow(/S3_PRIVATE_BUCKET: doit différer de S3_BUCKET/);
+    expect(() => validateEnv({ ...validEnv, S3_PRIVATE_BUCKET: 'Photos Privées' })).toThrow(
+      /nom de bucket S3/,
     );
   });
 
@@ -202,5 +216,21 @@ describe('validateEnv en production', () => {
       expect(env.S3_ENDPOINT).toBe('http://localhost:9000');
       expect(env.SMTP_HOST).toBe('localhost');
     }
+  });
+});
+
+/**
+ * Le tableau « apps/api/.env » du README est ce qu'on lit pour configurer
+ * l'API. Il ne décrit pas tout (les fournisseurs ont leur guide), mais il
+ * présente le STOCKAGE OBJET comme complet : une variable S3 ajoutée au
+ * schéma sans sa ligne (`S3_PRIVATE_BUCKET`, le second bucket, privé)
+ * laissait ignorer qu'un bucket de plus doit exister.
+ */
+describe('README.md, tableau de apps/api/.env', () => {
+  it('décrit chaque variable S3 du schéma', () => {
+    const readme = readFileSync(join(__dirname, '..', '..', '..', '..', 'README.md'), 'utf8');
+    const s3 = Object.keys(envSchema.shape).filter((key) => key.startsWith('S3_'));
+    expect(s3.length).toBeGreaterThan(0);
+    expect(s3.filter((key) => !readme.includes(`\`${key}\``))).toEqual([]);
   });
 });

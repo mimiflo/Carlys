@@ -190,6 +190,29 @@ export const envSchema = z
     S3_ENDPOINT: z.string().url().default(DEVELOPMENT_DEFAULTS.S3_ENDPOINT),
     S3_REGION: z.string().min(1).default('us-east-1'),
     S3_BUCKET: z.string().min(1).default('carlys-media'),
+    /**
+     * Bucket PRIVÉ : les données personnelles (photo qu'une personne joint à
+     * son repas). Aucune lecture anonyme, aucune URL publique : seule l'API
+     * le lit, avec les identifiants S3 ci-dessous, et ne sert ses objets
+     * qu'à leur propriétaire.
+     *
+     * POURQUOI UN SECOND BUCKET, ET PAS UN PRÉFIXE DANS LE PREMIER. Le bucket
+     * des médias (`S3_BUCKET`) porte une politique de lecture anonyme
+     * (`s3:GetObject` sur `<bucket>/*`, posée par `minio-init`) : c'est ce qui
+     * permet aux applications de charger une photo d'exercice sans jeton. Une
+     * politique S3 s'applique au bucket entier ; un préfixe « privé » y
+     * resterait lisible par quiconque devine ou apprend une clé, et une
+     * commande `mc anonymous set download` tapée un jour à la main en
+     * ouvrirait même la liste. Un bucket distinct, sans aucune politique, ne
+     * dépend d'aucune de ces précautions.
+     */
+    S3_PRIVATE_BUCKET: z
+      .string()
+      .regex(
+        /^[a-z0-9][a-z0-9.-]{1,61}[a-z0-9]$/,
+        'S3_PRIVATE_BUCKET doit être un nom de bucket S3 (3 à 63 caractères : minuscules, chiffres, points, tirets)',
+      )
+      .default('carlys-private'),
     S3_ACCESS_KEY_ID: z.string().min(1).default(DEVELOPMENT_DEFAULTS.S3_ACCESS_KEY_ID),
     S3_SECRET_ACCESS_KEY: z.string().min(1).default(DEVELOPMENT_DEFAULTS.S3_SECRET_ACCESS_KEY),
     /**
@@ -237,7 +260,19 @@ export const envSchema = z
      */
     PUBLIC_APP_URL: z.string().url().default(DEVELOPMENT_DEFAULTS.PUBLIC_APP_URL),
   })
-  .superRefine(refineProductionEnv);
+  .superRefine(refineProductionEnv)
+  .superRefine((env, ctx) => {
+    // Le même nom pour les deux buckets remettrait les photos de repas dans
+    // le bucket lisible sans jeton : la séparation n'existerait plus que sur
+    // le papier. Refusé dans TOUS les environnements, développement compris.
+    if (env.S3_PRIVATE_BUCKET === env.S3_BUCKET) {
+      ctx.addIssue({
+        code: 'custom',
+        path: ['S3_PRIVATE_BUCKET'],
+        message: 'doit différer de S3_BUCKET, dont les objets sont lisibles sans jeton',
+      });
+    }
+  });
 
 export type Env = z.infer<typeof envSchema>;
 

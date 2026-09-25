@@ -41,6 +41,7 @@ carlysctl prune --essai     # ce qu'un élagage d'images supprimerait
 | Ajuster le nombre d'exemplaires d'API à la charge | **oui** | minuterie |
 | Tenir l'amont Nginx à jour | **oui** | minuterie |
 | Élaguer images et couches Docker à chaque passe (le filet de retour arrière est gardé) | **oui** | minuterie |
+| Effacer les photos de repas orphelines du bucket privé, une fois par jour (`_photos.sh` ; à la main : `carlysctl meal-photos-sweep <env> [--a-blanc]`) | **oui** | minuterie |
 | Sauvegarder les bases **et les médias MinIO** | **oui** | cron, 3 h du matin |
 | **Déployer une nouvelle version** | **non par défaut** | `CARLYS_AUTO_UPDATE` |
 
@@ -81,8 +82,9 @@ systemctl disable --now carlys-supervision.timer
 
 Trois lignes méritent une explication.
 
-**`· … exited / sans-sonde` n'est pas une panne.** `minio-init` crée le bucket
-puis se termine avec succès ; c'est une **tâche**, pas un service. `carlysctl`
+**`· … exited / sans-sonde` n'est pas une panne.** `minio-init` crée les deux
+buckets (médias publics, photos de repas privées) puis se termine avec
+succès ; c'est une **tâche**, pas un service. `carlysctl`
 les distingue par leur politique de redémarrage (`restart: 'no'` dans le
 compose), pas par une liste de noms qui périmerait au prochain service ajouté.
 
@@ -569,6 +571,7 @@ ajoutée.
 | déploiement automatique échoué, sha mis de côté | `_update.sh` |
 | **plafond de réparations atteint** — l'orchestrateur a renoncé | `_heal.sh` |
 | disque encore au-delà du seuil APRÈS élagage | `_prune.sh` |
+| balayage quotidien des photos de repas orphelines en échec (nouvel essai toutes les heures jusqu'à réussite) | `_photos.sh` |
 
 **On n'alerte que sur les transitions**, et c'est ce qui rend le système
 lisible. La supervision repasse toutes les deux minutes : signaler un *état*

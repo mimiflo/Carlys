@@ -15,6 +15,7 @@ export const apiErrorCodeSchema = z.enum([
   'NOT_FOUND',
   'CONFLICT',
   'PAYLOAD_TOO_LARGE',
+  'UNSUPPORTED_MEDIA_TYPE',
   'RATE_LIMITED',
   'INTERNAL_ERROR',
   'SERVICE_UNAVAILABLE',

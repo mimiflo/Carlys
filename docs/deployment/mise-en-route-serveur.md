@@ -787,6 +787,7 @@ tous la même chose**, et c'est voulu :
 | `api…/health/live`, `app…/` | **502** | le vhost proxifie, l'amont est absent |
 | la racine `/` de `api…` ou `media…` | **404** | aucune `location` ne couvre `/` : seuls des préfixes précis sont servis |
 | `media…/carlys-media/` | **404** | la racine du bucket est fermée exprès — c'est l'URL d'un `ListObjects` S3, pas celle d'un média |
+| `media…/carlys-private/…` | **404** | le bucket des photos de repas n'est servi par aucun vhost : seule l'API les lit, pour leur propriétaire |
 
 Ouvrir `https://media.carlys.example/` pour « contrôler ses six noms » rend
 donc 404, et ce 404 est le bon signe. Contrôlez avec les chemins ci-dessous.
@@ -1016,6 +1017,87 @@ carlysctl subscription-catalog production
 ```
 
 Idempotente, comme le catalogue d'exercices dont elle partage la forme.
+
+### La base d'aliments (CIQUAL)
+
+**Pas branchée dans le déploiement, pour l'instant.** La recherche d'aliments
+et les repas composés lisent la table CIQUAL de l'Anses, chargée par
+`dist/cli/ciqual-import`. Contrairement au catalogue d'exercices, cette table
+n'est pas livrée avec le code : on télécharge la distribution XML officielle,
+on la dépose sur l'hôte, et on lance la commande à la main. Tant qu'elle n'a
+pas tourné, la recherche rend une liste vide et seule la saisie à la main
+fonctionne. D'où télécharger le fichier, ce que la commande garantit, et
+pourquoi elle n'a **pas encore été validée sur le vrai fichier** :
+`docs/product/nutrition.md`, « Base d'aliments ».
+
+```bash
+# le dossier décompressé de la distribution (alim_*, alim_grp_*, compo_*, const_*),
+# lisible par l'utilisateur du conteneur (uid 1000)
+sudo mkdir -p /srv/carlys/ciqual/2020 && sudo chmod -R a+rX /srv/carlys/ciqual
+
+# 1. simulation : rien n'est écrit, le rapport dit ce qui changerait
+sudo docker compose --project-name carlys_staging \
+  --env-file /srv/carlys/staging/.env \
+  --file /srv/carlys/repo/infrastructure/server/compose.yml \
+  run --rm --no-deps -T -v /srv/carlys/ciqual/2020:/ciqual:ro api \
+  node dist/cli/ciqual-import /ciqual --a-blanc
+
+# 2. import réel : même commande sans --a-blanc
+```
+
+`--no-deps` : la commande ne touche que la base, déjà debout sur un serveur
+en service. Idempotente et transactionnelle : la rejouer ne change rien, un
+échec n'écrit rien. Une version qui retirerait plus d'un quart des aliments
+est refusée sans `--accepter-retraits`. Le jour où elle sera branchée, ce sera
+une sous-commande `carlysctl ciqual-import <env> <dossier>` sur le modèle de
+`catalogue_charger` (`scripts/server/_common.sh`) — la documentation produit
+détaille les deux options.
+
+### Les photos de repas (bucket privé)
+
+**Rien à faire au déploiement.** Une personne peut joindre une photo à SON
+repas ; c'est une donnée personnelle, rangée dans un second bucket,
+`S3_PRIVATE_BUCKET` (`carlys-private` dans les deux modèles de `.env`), que
+`minio-init` crée à chaque déploiement SANS politique d'accès (et dont il
+retire, par `mc anonymous set none`, toute politique posée à la main). Aucun
+vhost ne le sert : seule l'API le lit, et ne rend une photo qu'à son
+propriétaire. Pourquoi un second bucket plutôt qu'un préfixe dans
+`carlys-media` : ce dernier est lisible sans jeton, et sa politique vaut pour
+tout le bucket (voir `apps/api/src/config/env.schema.ts`).
+
+Un serveur installé avant le 25 septembre 2026 n'a pas la ligne
+`S3_PRIVATE_BUCKET` dans son `.env` : la passe de supervision la recopie du
+modèle (`carlysctl env-sync <env> --appliquer` le fait à la main), et un
+déploiement lancé sans elle s'arrête sur un message qui le dit.
+
+**Ce bucket n'est PAS sauvegardé** par `backup.sh`, volontairement : une
+photo effacée (repas supprimé, photo retirée, compte supprimé) ne doit
+survivre nulle part. Après une perte du disque, les repas restent, leurs
+photos non ; l'API retire d'elle-même la ligne d'une photo dont l'objet est
+introuvable.
+
+**Le rattrapage des orphelins.** Les suppressions effacent l'objet APRÈS la
+base, et journalisent en erreur (avec le `requestId`) un stockage qui ne
+répond pas, sans faire échouer la suppression. L'objet que plus aucune ligne
+ne cite est repris par `dist/cli/meal-photos-sweep`, une commande de l'image,
+rejouable à volonté. **Rien à lancer** : la passe de supervision
+(`carlysctl supervise`, minuterie `carlys-supervision.timer`) la lance
+d'elle-même une fois par jour et par environnement (`scripts/server/_photos.sh`) ;
+en cas d'échec, elle alerte par le canal configuré et retente toutes les
+heures jusqu'à réussir. La politique de confidentialité s'appuie sur ce
+passage quotidien : la minuterie doit donc être armée (`carlysctl doctor` le
+vérifie).
+
+À la main, pour compter sans rien effacer ou rejouer tout de suite un
+balayage raté :
+
+```bash
+sudo /srv/carlys/repo/scripts/server/carlysctl meal-photos-sweep production --a-blanc
+sudo /srv/carlys/repo/scripts/server/carlysctl meal-photos-sweep production
+```
+
+La commande épargne les objets de moins d'une heure, qui peuvent être un
+dépôt en cours, et sort en erreur si un effacement échoue.
 
 ### La boîte aux lettres de la recette
 

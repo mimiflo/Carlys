@@ -183,6 +183,15 @@ done
 # ont changé. Un objet supprimé du miroir reste vivant dans les instantanés
 # qui le pointent.
 #
+# LE BUCKET PRIVÉ (S3_PRIVATE_BUCKET) N'EST PAS SAUVEGARDÉ, ET C'EST VOULU.
+# Il porte les photos que les personnes joignent à leurs repas. Les copier
+# ici les ferait survivre quatorze nuits à leur effacement (repas supprimé,
+# photo retirée, compte supprimé), ce que docs/legal/privacy.md ne promet
+# pas. Le prix est assumé : après une perte du disque, les repas restent,
+# leurs photos non. Une base restaurée sans elles se répare seule : l'API
+# retire la ligne d'une photo dont l'objet est introuvable (404, et le repas
+# cesse de l'annoncer). Changer d'avis, c'est aussi réécrire la politique.
+#
 # LES IDENTIFIANTS NE TOUCHENT PAS L'HÔTE. Le miroir tourne dans l'image `mc`
 # du service minio-init, dont l'environnement compose porte déjà
 # MINIO_ROOT_USER/PASSWORD — même raisonnement que PGPASSWORD plus haut :

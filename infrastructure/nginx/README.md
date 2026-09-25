@@ -130,7 +130,11 @@ que par la droite ; ce qu'un client préfixe survit) sont dans
   (`MEDIA_TRANSPORT_HARD_CAP_BYTES`). Nginx s'aligne sur le plafond de
   transport et non sur `MEDIA_MAX_UPLOAD_BYTES`, qui est réglable par
   environnement : c'est l'API qui doit refuser un fichier trop lourd, avec son
-  enveloppe d'erreur, et Nginx qui ne doit jamais couper avant elle.
+  enveloppe d'erreur, et Nginx qui ne doit jamais couper avant elle. Même
+  règle pour la photo d'un repas : `6m` sur
+  `~ ^/api/v1/nutrition/meals/[^/]+/photo$`, au-dessus des 5 Mio de
+  `MEAL_PHOTO_MAX_BYTES` et de l'enveloppe multipart. (Le reverse proxy
+  réseau en tête, gra6, doit laisser passer au moins autant.)
 - **`/metrics` refusé** publiquement : le collecteur l'interroge sur la boucle
   locale.
 - **Médias en lecture seule.** Le vhost `media` n'expose que le préfixe du
@@ -138,6 +142,13 @@ que par la droite ; ce qu'un client préfixe survit) sont dans
   refuse toute méthode autre que `GET`/`HEAD`, efface les cookies dans les deux
   sens et sert avec un cache long (`immutable` : une clé d'objet est
   `<kind>/<uuid>.<extension>`, son contenu ne change jamais).
+- **Le bucket PRIVÉ n'est servi par aucun vhost.** Les photos de repas vivent
+  dans `S3_PRIVATE_BUCKET` (`carlys-private`), sans politique anonyme ; le
+  vhost `media` n'en expose rien (`location / { return 404; }` au-delà du
+  préfixe public). Seule l'API les lit, avec ses identifiants, et ne les rend
+  qu'à leur propriétaire par `GET /api/v1/nutrition/meals/:id/photo`. Ne
+  JAMAIS ajouter de `location /carlys-private/` : ce serait une seconde porte,
+  sans contrôle de propriétaire.
 - **Recette non indexable** : `X-Robots-Tag` sur chaque réponse et un
   `robots.txt` servi par Nginx. Un mot de passe HTTP est possible en plus, mais
   il n'est pas le défaut — le fichier de recette explique ce qu'il casse

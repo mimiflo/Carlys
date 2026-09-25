@@ -22,9 +22,10 @@ Tout est décrit dans
 | `carlysctl heal <env>` | quand quelque chose est tombé | relève ce qui manque, avec un plafond horaire |
 | `carlysctl admin-create <env> <email> [--role …] [--reset-password]` | après le premier déploiement, puis pour chaque collègue | crée un compte du back-office par la commande embarquée dans l'image API — la seule voie qui existe. Mot de passe saisi sans écho, jamais en argument. **`--role` ne touche aux rôles que s'il est écrit** : à la création il vaut `superadmin` par défaut, mais sur un compte existant (`--reset-password`) l'omettre laisse ses rôles INTACTS, et le préciser les REMPLACE |
 | `carlysctl catalog-seed <env> [--sans-photos]` | **rarement** : le déploiement le fait déjà (étape 5/7). Pour recharger sans redéployer — après un `CARLYS_DEPLOY_CATALOG=non`, ou après avoir réparé le stockage, **une fois la bascule réussie** | charge groupes musculaires, matériels, exercices et photos (MinIO) — idempotent par slug, purge le cache Redis du catalogue. Même code que l'étape du déploiement. Charge le catalogue de la version **déployée** : après un déploiement interrompu, c'est celui du sha précédent — redéployer, plutôt |
+| `carlysctl meal-photos-sweep <env> [--a-blanc]` | **rarement** : la supervision le fait une fois par jour. Pour compter sans effacer, ou rejouer tout de suite un balayage raté une fois le stockage réparé | efface du bucket PRIVÉ les photos de repas que plus aucune ligne d'un repas (et d'un compte) vivant ne cite ; épargne les objets de moins d'une heure ; sort en erreur si un effacement échoue |
 | `carlysctl env-sync <env> [--appliquer] [--tout]` | après un `git pull`, ou quand `doctor` signale une clé absente | ajoute au `.env` les réglages introduits depuis sa création. N'écrase jamais une ligne, engendre les secrets sûrs avec `--tout`, refuse ce qu'un humain seul peut choisir |
 | `carlysctl update <env>` | si `CARLYS_AUTO_UPDATE=oui` | recette : suit une branche ; production : promeut la recette après maturation |
-| `carlysctl supervise [env]` | par la minuterie | une passe complète : réparer, mettre à l'échelle, mettre à jour |
+| `carlysctl supervise [env]` | par la minuterie | une passe complète : réparer, mettre à l'échelle, élaguer, balayer les photos de repas orphelines (une fois par jour), mettre à jour |
 | `carlysctl deploy \| promote \| backup` | — | route vers les scripts ci-dessous, sans rien y ajouter |
 
 | Script | Quand | Ce qu'il fait |
@@ -53,6 +54,7 @@ fait d'effet de bord au chargement.
 | `_envsync.sh` | compléter un `.env` sans jamais rien deviner |
 | `_repo.sh` | le clone du serveur, et la divergence de branches |
 | `_alert.sh` | faire SORTIR une alerte, et ne la crier qu'une fois |
+| `_photos.sh` | le balayage quotidien des photos de repas orphelines, son délai, et son alerte |
 
 Elles existent pour que chaque règle ne soit écrite qu'une fois — `promote.sh`
 lit le `DEPLOYED` que `deploy.sh` écrit, `backup.sh` s'en sert pour savoir si

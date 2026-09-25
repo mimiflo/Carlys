@@ -1,0 +1,85 @@
+<?xml version="1.0" encoding="windows-1252"?>
+<!-- JEU D'ESSAI Carlys, PAS la table CIQUAL : noms d'aliments réels, mais codes (99xxxx) et valeurs ILLUSTRATIFS, choisis pour exercer l'import (traces, &lt; seuil, valeur absente, aliment sans énergie, retrait). Ne jamais s'en servir comme donnée nutritionnelle. -->
+<TABLE>
+<ALIM>
+<alim_code> 990001 </alim_code>
+<alim_nom_fr> Poulet, filet, sans peau, cuit </alim_nom_fr>
+<ALIM_NOM_INDEX_FR> Poulet, filet, sans peau, cuit </ALIM_NOM_INDEX_FR>
+<alim_nom_eng> Chicken, fillet, without skin, cooked </alim_nom_eng>
+<alim_grp_code> 04 </alim_grp_code>
+<alim_ssgrp_code> 0401 </alim_ssgrp_code>
+<alim_ssssgrp_code> 040103 </alim_ssssgrp_code>
+</ALIM>
+<ALIM>
+<alim_code> 990002 </alim_code>
+<alim_nom_fr> Riz blanc, cuit </alim_nom_fr>
+<ALIM_NOM_INDEX_FR> Riz blanc, cuit </ALIM_NOM_INDEX_FR>
+<alim_nom_eng> Rice, white, cooked </alim_nom_eng>
+<alim_grp_code> 03 </alim_grp_code>
+<alim_ssgrp_code> 0301 </alim_ssgrp_code>
+<alim_ssssgrp_code> 030103 </alim_ssssgrp_code>
+</ALIM>
+<ALIM>
+<alim_code> 990003 </alim_code>
+<alim_nom_fr> Brocoli, cuit </alim_nom_fr>
+<ALIM_NOM_INDEX_FR> Brocoli, cuit </ALIM_NOM_INDEX_FR>
+<alim_nom_eng> Broccoli, cooked </alim_nom_eng>
+<alim_grp_code> 02 </alim_grp_code>
+<alim_ssgrp_code> 0201 </alim_ssgrp_code>
+<alim_ssssgrp_code> 020102 </alim_ssssgrp_code>
+</ALIM>
+<ALIM>
+<alim_code> 990004 </alim_code>
+<alim_nom_fr> Eau du robinet </alim_nom_fr>
+<ALIM_NOM_INDEX_FR> Eau du robinet </ALIM_NOM_INDEX_FR>
+<alim_nom_eng> Tap water </alim_nom_eng>
+<alim_grp_code> 06 </alim_grp_code>
+<alim_ssgrp_code> 0601 </alim_ssgrp_code>
+<alim_ssssgrp_code> 000000 </alim_ssssgrp_code>
+</ALIM>
+<ALIM>
+<alim_code> 990005 </alim_code>
+<alim_nom_fr> Sel blanc alimentaire, iodé, non fluoré </alim_nom_fr>
+<ALIM_NOM_INDEX_FR> Sel blanc alimentaire, iodé, non fluoré </ALIM_NOM_INDEX_FR>
+<alim_nom_eng> Salt, iodised </alim_nom_eng>
+<alim_grp_code> 11 </alim_grp_code>
+<alim_ssgrp_code> 1101 </alim_ssgrp_code>
+<alim_ssssgrp_code> 000000 </alim_ssssgrp_code>
+</ALIM>
+<ALIM>
+<alim_code> 990006 </alim_code>
+<alim_nom_fr> Galette de riz soufflé, nature </alim_nom_fr>
+<ALIM_NOM_INDEX_FR> Galette de riz soufflé, nature </ALIM_NOM_INDEX_FR>
+<alim_nom_eng> Puffed rice cake </alim_nom_eng>
+<alim_grp_code> 03 </alim_grp_code>
+<alim_ssgrp_code> 0301 </alim_ssgrp_code>
+<alim_ssssgrp_code> 030103 </alim_ssssgrp_code>
+</ALIM>
+<ALIM>
+<alim_code> 990007 </alim_code>
+<alim_nom_fr> Riz complet, cuit </alim_nom_fr>
+<ALIM_NOM_INDEX_FR> Riz complet, cuit </ALIM_NOM_INDEX_FR>
+<alim_nom_eng> Rice, brown, cooked </alim_nom_eng>
+<alim_grp_code> 03 </alim_grp_code>
+<alim_ssgrp_code> 0301 </alim_ssgrp_code>
+<alim_ssssgrp_code> 030103 </alim_ssssgrp_code>
+</ALIM>
+<ALIM>
+<alim_code> 990008 </alim_code>
+<alim_nom_fr> Poulet, cuisse, avec peau, rôti </alim_nom_fr>
+<ALIM_NOM_INDEX_FR> Poulet, cuisse, avec peau, rôti </ALIM_NOM_INDEX_FR>
+<alim_nom_eng> Chicken, leg, with skin, roasted </alim_nom_eng>
+<alim_grp_code> 04 </alim_grp_code>
+<alim_ssgrp_code> 0401 </alim_ssgrp_code>
+<alim_ssssgrp_code> 040103 </alim_ssssgrp_code>
+</ALIM>
+<ALIM>
+<alim_code> 990009 </alim_code>
+<alim_nom_fr> Œuf, dur </alim_nom_fr>
+<ALIM_NOM_INDEX_FR> Œuf, dur </ALIM_NOM_INDEX_FR>
+<alim_nom_eng> Egg, hard-boiled </alim_nom_eng>
+<alim_grp_code> 04 </alim_grp_code>
+<alim_ssgrp_code> 0410 </alim_ssgrp_code>
+<alim_ssssgrp_code> 000000 </alim_ssssgrp_code>
+</ALIM>
+</TABLE>

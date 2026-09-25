@@ -35,11 +35,21 @@ dépôt. Le propriétaire du produit a tranché, les documents suivent :
    19 septembre 2026 — les deux documents portent l'arbitrage (voir le
    premier point du Plan 7). Le Plan 7 n'est donc plus bloqué par un
    arbitrage ; ce qu'il reste est du code et un document de règles de ligue.
-3. **Photo et description IA d'un repas** : `privacy.md` promet « Carlys ne te
-   demande jamais de photo ». Acté au Plan 6 : la photo est transmise au
-   modèle puis JETÉE, jamais stockée — la réécriture de la politique est
-   d'autant plus étroite. Reste un arbitrage ouvert : quel droit et quel
-   quota (`ai_coaching` ou une clé nouvelle) — voir `[!]` du Plan 6.
+3. **Photo d'un repas : DEUX choses distinctes, qu'il ne faut plus
+   confondre.**
+   - La photo que TU JOINS à ton repas (bouton appareil photo de l'écran
+     « Modifier ce repas ») : arbitrée le 25 septembre 2026, elle est
+     ENVOYÉE au serveur et STOCKÉE, privée — bucket à part, lisible par
+     l'API seule et pour toi seul, métadonnées (EXIF, GPS) retirées avant
+     stockage, effacée avec le repas et avec le compte. `privacy.md` a été
+     RÉÉCRIT en conséquence (« La photo de tes repas ») : il ne dit plus
+     « Carlys ne te demande jamais de photo ». Serveur FAIT (Plan 6, ligne
+     « Photo jointe »).
+   - La photo ANALYSÉE par l'IA pour estimer un repas (Plan 6, option 3) :
+     acté, elle est transmise au modèle puis JETÉE, jamais stockée. Reste un
+     arbitrage ouvert : quel droit et quel quota (`ai_coaching` ou une clé
+     nouvelle) — voir `[!]` du Plan 6. Le jour où elle arrive, la politique
+     doit dire à part ce qui part chez le prestataire.
 
 ---
 
@@ -362,15 +372,53 @@ Existant : saisie manuelle (nom, kcal, 3 macros), journal du jour, suppression.
       arrière, `mealsForDayProvider` par jour civil). Tests : 9 widget/unité
       mobiles, 5 e2e API, captures `30-nutrition-journal` et
       `31-nutrition-correction-repas` régénérées.
-- [!] Option 1 (base d'aliments) : la SOURCE est un choix produit/juridique —
-      CIQUAL (fiable, français, embarquable hors ligne, sans codes-barres),
-      Open Food Facts (ODbL, codes-barres, réseau), ou table maison.
-      Recommandation : CIQUAL embarquée. À trancher avant toute ligne.
+- [~] Option 1 (base d'aliments) : EN COURS. Arbitrée le 25 septembre 2026 :
+      table CIQUAL de l'Anses (Licence Ouverte Etalab 2.0, mention de source
+      obligatoire), tenue CÔTÉ SERVEUR plutôt qu'embarquée — c'est le serveur
+      qui calcule un repas composé, le client n'additionne rien. Serveur FAIT
+      (migration `20260925100000_moment_aliments_composition`) : moment du
+      repas (`MealMoment`, nullable), table `Food` chargée par
+      `dist/cli/ciqual-import` (XML officiel windows-1252, constituants
+      résolus par leur NOM, idempotent, transactionnel, simulation
+      `--a-blanc`, garde-fou des retraits massifs), recherche
+      `GET /nutrition/foods` avec la mention dans `meta.source`, repas
+      COMPOSÉ (`MealComponent` : instantané des aliments, totaux calculés,
+      400 d'ambiguïté, composition retirée qui garde ses totaux), lecture
+      `GET /nutrition/meals/:id`. Tests : unitaires de l'import et du calcul,
+      e2e `nutrition-foods` sur un JEU D'ESSAI au format de la distribution.
+      RESTE : (1) valider l'import sur le VRAI fichier dès l'ouverture du
+      réseau (ciqual.anses.fr et data.gouv.fr bloqués ici) — marche à suivre
+      dans `docs/product/nutrition.md`, « Pas encore validé sur le vrai
+      fichier » ; (2) le brancher (`carlysctl ciqual-import`, ou étape de
+      `deploy.sh` si la distribution est embarquée dans l'image) ; (3)
+      l'écran mobile « Ajouter / Modifier ce repas » (lot mobile suivant).
+- [~] Photo JOINTE au repas (≠ option 3) : arbitrée le 25 septembre 2026,
+      envoyée au serveur et gardée PRIVÉE. Serveur FAIT (migration
+      `20260925140000_photo_repas_privee`, table `MealPhoto`) :
+      `PUT|GET|DELETE /nutrition/meals/:id/photo` (propriétaire seul, 404
+      opaque ; JPEG prouvé par les octets, 415 ; 5 Mio, 413 ; 20 dépôts par
+      minute), `photo: { updatedAt } | null` sur le repas, métadonnées
+      retirées par un filtre de segments JPEG écrit à la main (EXIF, GPS,
+      XMP, IPTC, COM, octets après la fin d'image), bucket PRIVÉ distinct
+      `S3_PRIVATE_BUCKET` (le bucket des médias est lisible sans jeton),
+      effacement avec le repas et avec le compte, balayage des orphelins
+      `dist/cli/meal-photos-sweep`, `privacy.md` réécrit. Tests : unitaires
+      sur une vraie photo porteuse d'un EXIF GPS, e2e sans MinIO (stockage en
+      mémoire), e2e MinIO réel en CI (lecture anonyme refusée). RESTE : (1)
+      l'écran mobile (compression JPEG et redressement des pixels AVANT
+      l'envoi : l'orientation EXIF est retirée avec le reste) ; (2) FAIT :
+      le balayage tourne une fois par jour dans la passe de supervision
+      (`scripts/server/_photos.sh`, alerte s'il échoue), et à la main par
+      `carlysctl meal-photos-sweep <env>` ; (3) arbitrage : les
+      photos de repas ne sont PAS sauvegardées (une photo effacée ne survit
+      nulle part), à confirmer par le propriétaire.
 - [ ] Option 4 (description IA) : port d'estimation distinct du coach,
       workflow estimation → correction → validation, marquage « estimé ».
-- [ ] Option 3 (photo IA) : photo transmise puis JETÉE (décision actée),
-      dépendance de capture, motifs de permission (scripts de bootstrap),
-      réécriture de `privacy.md`.
+- [ ] Option 3 (photo IA) : photo transmise au MODÈLE puis JETÉE (décision
+      actée), à ne pas confondre avec la photo jointe au repas, qui, elle,
+      est stockée (ligne ci-dessus). Dépendance de capture et motifs de
+      permission (scripts de bootstrap) : partagés avec la photo jointe ;
+      `privacy.md` devra dire à part ce qui part chez le prestataire.
 - [!] Droit et quota des estimations IA : `ai_coaching` (30/jour) ou clé
       nouvelle dans `ENTITLEMENT_KEYS` — arbitrage propriétaire.
 

@@ -1,6 +1,6 @@
 # Politique de confidentialité de Carlys
 
-Dernière mise à jour : 19 septembre 2026.
+Dernière mise à jour : 25 septembre 2026.
 
 Carlys est une application mobile de suivi d'entraînement, accompagnée de
 quelques pages web (vérification d'adresse, nouveau mot de passe, retours de
@@ -65,10 +65,37 @@ l'application calcule à la fin de chaque séance.
 
 ### Ta nutrition
 
-Les repas que tu enregistres (calories) et les cibles calculées par
-l'application à partir de ton profil et de ta dernière pesée : métabolisme de
-base, dépense estimée, objectif calorique, macronutriments, indice de masse
-corporelle et hydratation.
+Les repas que tu enregistres (nom, calories, macronutriments, quantité,
+moment de la journée et, quand tu composes un repas, les aliments choisis et
+leurs quantités) et les cibles calculées par l'application à partir de ton
+profil et de ta dernière pesée : métabolisme de base, dépense estimée,
+objectif calorique, macronutriments, indice de masse corporelle et
+hydratation. Chercher un aliment n'envoie que les mots tapés : ils ne sont
+pas enregistrés avec ton compte, seulement dans les journaux techniques
+décrits plus bas, comme toute requête.
+
+### La photo de tes repas (facultative)
+
+Si tu prends ou choisis une photo pour un repas, elle est envoyée à nos
+serveurs et conservée avec ce repas, pour que tu la retrouves sur tous tes
+appareils. Rien ne t'y oblige : un repas s'enregistre très bien sans photo.
+
+- **Ce qui est stocké** : l'image seule. Avant tout stockage, Carlys en
+  retire toutes les informations que ton téléphone y a inscrites : la
+  position GPS du lieu de la prise de vue, la marque et le modèle de
+  l'appareil, la date, les légendes et commentaires. Le nom du fichier n'est
+  pas conservé non plus.
+- **Qui la voit** : toi, et personne d'autre dans l'application. Elle n'est
+  montrée ni à tes amis, ni dans les défis ou la ligue, et elle n'est
+  transmise ni au coach IA, ni à aucun autre prestataire. Elle est rangée à
+  part des images publiques de l'application, dans un espace de stockage
+  privé que seul le serveur de Carlys peut lire, et qu'il ne te rend qu'à
+  toi, après avoir vérifié ton identité. Les personnes qui exploitent le
+  serveur peuvent techniquement y accéder, comme au reste de la base de
+  données, et ne le font que pour faire fonctionner le service.
+- **Quand elle disparaît** : quand tu la remplaces ou la retires, quand tu
+  supprimes le repas, et quand tu supprimes ton compte (voir « Combien de
+  temps »).
 
 ### Ta communauté
 
@@ -120,7 +147,8 @@ figure jamais.
 
 Les pages web de Carlys ne déposent aucun cookie et n'embarquent aucun
 traceur ni outil de mesure d'audience. L'application ne lit ni tes contacts,
-ni ta position.
+ni ta position. Si tu joins une photo à un repas, la position que ton
+téléphone y a inscrite en est retirée avant tout stockage.
 
 ### Les pas de ton téléphone (facultatif, consentement dédié)
 
@@ -156,7 +184,8 @@ qui ne redescend pas ; il n'est plus rattaché à toi.
   de sécurité et limitation du nombre de tentatives. C'est notre intérêt
   légitime à sécuriser le service, et le tien.
 - **Pour les données de santé** (profil physique, mesures corporelles,
-  nutrition, conversations avec le coach) : c'est ton consentement. Tu les
+  nutrition et photos de repas, conversations avec le coach) : c'est ton
+  consentement. Tu les
   saisis toi-même, elles sont facultatives, et tu peux les effacer ou cesser
   d'utiliser ces fonctions à tout moment.
 - **Pour tes pas** (lus dans le service de santé de ton téléphone) : c'est un
@@ -188,8 +217,10 @@ langage. Il n'est utilisé que lorsque tu lui écris.
 - et seulement quand le coach en a besoin pour te répondre, les données qu'il
   lit par ses outils : tes modèles de séance, tes dernières séances
   terminées, tes records personnels, ta progression sur une période, tes
-  dernières pesées et ton rapport métabolique (sexe, date de naissance,
-  taille, dernier poids, niveau d'activité, objectif et cibles calculées).
+  dernières pesées, ton rapport métabolique (sexe, date de naissance,
+  taille, dernier poids, niveau d'activité, objectif et cibles calculées) et
+  tes repas récents (nom, moment, calories, macronutriments et aliments).
+  La photo d'un repas ne lui est jamais transmise.
 
 Le coach ne peut rien écrire dans ton compte : les séances qu'il propose ne
 sont enregistrées que si tu les acceptes. Les conversations sont conservées
@@ -218,9 +249,11 @@ non-utilisation pour l'entraînement des modèles, localisation).]
 - **Hébergement : serveur dédié de l'éditeur**, situé
   [À COMPLÉTER : pays d'hébergement du serveur]. La base de données, les
   journaux et les sauvegardes y résident.
-- **Stockage des médias.** Les photos d'exercices du catalogue sont servies
-  depuis un stockage objet. Aucune donnée personnelle n'y est stockée :
-  Carlys ne te demande jamais de photo.
+- **Stockage des images.** Les photos d'exercices du catalogue sont servies
+  depuis un stockage objet public : elles ne disent rien de toi. Les photos
+  que tu joins à tes repas sont rangées à part, dans un stockage objet
+  PRIVÉ, sur le même serveur dédié que la base de données : aucune adresse
+  publique n'y mène, et seul le serveur de Carlys les lit.
 
 Certains de ces prestataires (Anthropic, Google, Stripe) peuvent traiter les
 données en dehors de l'Union européenne, dans le cadre des garanties
@@ -239,6 +272,17 @@ transfert applicable à chaque prestataire.]
   quand tu les déconnectes.
 - **Les jetons de notification** sont supprimés quand tu te déconnectes de
   l'appareil, et dès que Google nous signale qu'ils ne sont plus valables.
+- **La photo d'un repas** est conservée tant que le repas existe et que tu ne
+  l'as pas retirée. Quand tu la remplaces ou la retires, quand tu supprimes
+  le repas ou ton compte, elle est effacée du stockage aussitôt, sans
+  attendre le délai de purge ci-dessous. Si le stockage ne répond pas à cet
+  instant, l'incident est consigné, et l'image est effacée par le nettoyage
+  automatique qui repasse chaque jour sur le stockage des photos ; s'il
+  échoue lui aussi, l'équipe qui exploite le serveur en est alertée, et il
+  recommence toutes les heures jusqu'à y parvenir. D'ici là, l'image reste
+  rangée sous l'identifiant de ton compte, mais plus rien dans l'application
+  ne la montre ni ne permet de la lire. Les photos de repas ne figurent dans
+  aucune sauvegarde : une photo effacée ne survit nulle part.
 - **Quand tu supprimes ton compte**, il est désactivé immédiatement : toutes
   tes sessions sont révoquées, plus personne ne peut s'y connecter, et ton
   identité (adresse e-mail, nom, code ami) n'est plus accessible depuis
@@ -257,8 +301,9 @@ Tu peux, à tout moment :
 - **Accéder** à tes données : l'application te montre déjà l'essentiel
   (profil, séances, mesures, amis, abonnement). Pour une copie complète et
   lisible, écris-nous.
-- **Les rectifier** : ton profil, tes mesures et tes séances se modifient
-  directement dans l'application.
+- **Les rectifier** : ton profil, tes mesures, tes séances et tes repas se
+  modifient directement dans l'application, et la photo d'un repas se
+  remplace ou se retire à tout moment.
 - **Supprimer ton compte** : depuis l'application, dans Profil → Compte →
   « Supprimer mon compte ». Ton mot de passe t'est demandé pour confirmer, et
   l'écran récapitule ce qui est effacé et ce qui reste. La désactivation est

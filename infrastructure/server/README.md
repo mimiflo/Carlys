@@ -5,7 +5,7 @@ Le **comment** l'y installer et l'y déployer vit dans `scripts/server/`.
 
 | Fichier | Rôle |
 | --- | --- |
-| `compose.yml` | la pile complète — PostgreSQL, Redis, MinIO (+ initialisation du bucket), API, application web, et Mailpit en recette |
+| `compose.yml` | la pile complète — PostgreSQL, Redis, MinIO (+ initialisation des deux buckets : médias publics, photos de repas privées), API, application web, et Mailpit en recette |
 | `env/staging.env.example` | modèle du `.env` de recette, à copier dans `/srv/carlys/staging/.env` |
 | `env/production.env.example` | modèle du `.env` de production, à copier dans `/srv/carlys/production/.env` |
 
@@ -83,7 +83,9 @@ error while interpolating services.admin.image: required variable
 CARLYS_ADMIN_TAG_SUFFIX is missing a value: …
 ```
 
-**`up -d` échoue si le bucket n'a pas pu être créé.** L'API dépend de
+**`up -d` échoue si un bucket n'a pas pu être créé** (celui des médias,
+lisible en anonyme, ou celui des photos de repas, `S3_PRIVATE_BUCKET`, dont
+toute politique d'accès est retirée à chaque passage). L'API dépend de
 `minio-init` en `service_completed_successfully`. Sans cette dépendance,
 personne n'attendait la tâche : elle pouvait sortir en erreur — nom de bucket
 invalide, identifiants MinIO faux — pendant que `up -d` rendait 0 et que l'API

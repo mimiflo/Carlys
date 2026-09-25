@@ -1,6 +1,7 @@
 import { ConflictException, UnauthorizedException } from '@nestjs/common';
 import { type Prisma } from '@prisma/client';
 import { type AuditService } from '../../audit/audit.service';
+import { type MealPhotosService } from '../../nutrition/application/meal-photos.service';
 import { type UsersRepository } from '../../users/infrastructure/users.repository';
 import { type SessionsRepository } from '../infrastructure/sessions.repository';
 import { AccountService } from './account.service';
@@ -11,6 +12,7 @@ interface Stubs {
   sessions: { deleteAllSessions: jest.Mock };
   passwords: { verify: jest.Mock };
   audit: { record: jest.Mock };
+  mealPhotos: { forgetAllOf: jest.Mock; eraseAllOf: jest.Mock };
 }
 
 function buildStubs(): Stubs {
@@ -22,6 +24,10 @@ function buildStubs(): Stubs {
     sessions: { deleteAllSessions: jest.fn().mockResolvedValue(undefined) },
     passwords: { verify: jest.fn().mockResolvedValue(true) },
     audit: { record: jest.fn() },
+    mealPhotos: {
+      forgetAllOf: jest.fn().mockResolvedValue(undefined),
+      eraseAllOf: jest.fn().mockResolvedValue(undefined),
+    },
   };
 }
 
@@ -31,6 +37,7 @@ function buildService(stubs: Stubs): AccountService {
     stubs.sessions as unknown as SessionsRepository,
     stubs.passwords as unknown as PasswordService,
     stubs.audit as unknown as AuditService,
+    stubs.mealPhotos as unknown as MealPhotosService,
   );
 }
 
@@ -94,5 +101,55 @@ describe('AccountService', () => {
     expect(stubs.audit.record).toHaveBeenCalledWith(
       expect.objectContaining({ action: 'account.deleted', userId: 'user-1' }),
     );
+  });
+
+  it('efface les photos de repas : les lignes DANS la transaction, les objets APRÈS', async () => {
+    const stubs = buildStubs();
+    const order: string[] = [];
+    stubs.users.deleteAccount.mockImplementation(
+      async (_userId: string, callback: (tx: Prisma.TransactionClient) => Promise<void>) => {
+        order.push('transaction ouverte');
+        await callback({ marqueur: 'transaction' } as unknown as Prisma.TransactionClient);
+        order.push('transaction validée');
+      },
+    );
+    stubs.mealPhotos.forgetAllOf.mockImplementation(() => {
+      order.push('lignes des photos');
+      return Promise.resolve();
+    });
+    stubs.mealPhotos.eraseAllOf.mockImplementation(() => {
+      order.push('objets des photos');
+      return Promise.resolve();
+    });
+    const service = buildService(stubs);
+
+    await service.deleteAccount('user-1', 'correct', { ...client, requestId: 'requete-7' });
+
+    // S3 n'est pas transactionnel : effacer les objets AVANT la validation
+    // laisserait, si la transaction échouait, un compte vivant aux photos
+    // perdues. Après, le pire est un orphelin journalisé et rattrapable.
+    expect(order).toEqual([
+      'transaction ouverte',
+      'lignes des photos',
+      'transaction validée',
+      'objets des photos',
+    ]);
+    expect(stubs.mealPhotos.forgetAllOf).toHaveBeenCalledWith(
+      'user-1',
+      expect.objectContaining({ marqueur: 'transaction' }),
+    );
+    expect(stubs.mealPhotos.eraseAllOf).toHaveBeenCalledWith('user-1', 'requete-7');
+  });
+
+  it('mot de passe erroné : aucune photo n’est touchée', async () => {
+    const stubs = buildStubs();
+    stubs.passwords.verify.mockResolvedValue(false);
+    const service = buildService(stubs);
+
+    await expect(service.deleteAccount('user-1', 'mauvais', client)).rejects.toThrow(
+      UnauthorizedException,
+    );
+    expect(stubs.mealPhotos.forgetAllOf).not.toHaveBeenCalled();
+    expect(stubs.mealPhotos.eraseAllOf).not.toHaveBeenCalled();
   });
 });

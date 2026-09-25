@@ -32,9 +32,10 @@ export class AccountController {
       'En une transaction : sessions révoquées et supprimées avec leurs ' +
       'refresh tokens, compte passé DELETED, adresse et code ami réécrits en ' +
       'valeurs tombales, profil personnel effacé (nom, naissance, sexe, ' +
-      'taille), jetons d’appareil supprimés. L’adresse redevient disponible ' +
-      'pour une nouvelle inscription. L’historique d’activité anonyme reste ' +
-      '(détail dans SECURITY.md).',
+      'taille), jetons d’appareil supprimés, photos de repas effacées (lignes ' +
+      'dans la transaction, objets du bucket privé juste après). L’adresse ' +
+      'redevient disponible pour une nouvelle inscription. L’historique ' +
+      'd’activité anonyme reste, sans photo (détail dans SECURITY.md).',
   })
   async deleteAccount(
     @CurrentUser() user: AuthenticatedPrincipal,

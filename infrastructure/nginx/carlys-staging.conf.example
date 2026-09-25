@@ -82,6 +82,18 @@ server {
         proxy_pass http://carlys_api_staging;
     }
 
+    # ── Photo d'un repas : 5 Mio côté API (MEAL_PHOTO_MAX_BYTES) ───────────
+    #
+    # Même règle que les médias : Nginx ne coupe jamais AVANT l'API. 6 Mio
+    # laissent passer une photo de 5 Mio et son enveloppe multipart ; entre
+    # les deux, c'est l'API qui répond 413 avec son message. Une expression
+    # régulière, parce que l'identifiant du repas est dans le chemin : elle
+    # l'emporte sur le préfixe /api/ ci-dessous, et sur lui seul.
+    location ~ ^/api/v1/nutrition/meals/[^/]+/photo$ {
+        client_max_body_size 6m;
+        proxy_pass http://carlys_api_staging;
+    }
+
     location /api/ {
         proxy_pass http://carlys_api_staging;
     }

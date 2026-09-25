@@ -53,6 +53,11 @@ AGIR À LA MAIN
                                           (étape 6/8). À relancer après avoir
                                           changé un STRIPE_PRICE_* ou un
                                           REVENUECAT_PRODUCT_* du .env
+  carlysctl meal-photos-sweep <env>       efface du bucket privé les photos de
+                                          repas que plus rien ne cite. La
+                                          supervision le fait d'elle-même une
+                                          fois par jour ; --a-blanc compte
+                                          sans rien effacer
   carlysctl scale <env> <n>               fixe le nombre d'exemplaires d'API
   carlysctl heal <env>                    répare ce qui est tombé
   carlysctl env-sync <env> [--appliquer]  ajoute au .env les réglages qui lui
@@ -70,7 +75,8 @@ LAISSER FAIRE
   carlysctl autoscale <env> [--appliquer] décide la taille ; n'agit qu'avec
                                           --appliquer
   carlysctl supervise [env]               UN passage complet : réparation,
-                                          mise à l'échelle, mise à jour.
+                                          mise à l'échelle, balayage quotidien
+                                          des photos orphelines, mise à jour.
                                           C'est ce que lance la minuterie
                                           systemd.
 
@@ -448,6 +454,49 @@ cmd_subscription_catalog() {
   ok "plans et produits en place — un paiement peut désormais accorder Premium."
 }
 
+# Efface du bucket PRIVÉ les photos de repas orphelines — les objets que plus
+# aucune ligne d'un repas vivant ne cite — via dist/cli/meal-photos-sweep de
+# l'image API.
+#
+# EN TEMPS NORMAL, PERSONNE N'A BESOIN DE CETTE COMMANDE : la passe de
+# supervision la lance une fois par jour (_photos.sh) et alerte si elle
+# échoue. Elle reste pour compter sans effacer (--a-blanc), et pour rejouer
+# tout de suite un balayage raté, une fois le stockage réparé.
+cmd_meal_photos_sweep() {
+  local env_name file a_blanc=non
+  env_name="$(environnement_requis "${1-}")"
+  shift || true
+  local options=()
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --a-blanc) options+=(--a-blanc); a_blanc=oui; shift ;;
+      *) die "Option inconnue : $1" "Attendu : --a-blanc" ;;
+    esac
+  done
+  file="$(env_file "$env_name")"
+  require_commands docker
+  require_compose_file
+  [ -n "$(deployed_current "$env_name")" ] || die "« $env_name » n'a jamais été déployé." \
+    "La commande vit dans l'image API : déployer d'abord (carlysctl deploy $env_name <sha>)."
+  # Le même verrou que la supervision, qui lance le même balayage.
+  lock_env "$env_name" "$CARLYS_LOCK_WAIT"
+  if ! photos_commande_presente "$env_name" "$file"; then
+    die "L'image API déployée sur « $env_name » ne porte pas encore meal-photos-sweep." \
+      "Elle est antérieure aux photos de repas : aucune n'a pu être stockée."
+  fi
+
+  step "Photos de repas orphelines sur « $env_name »"
+  photos_balayer "$env_name" "$file" ${options[@]+"${options[@]}"} \
+    || die "Le balayage a échoué — le rapport ci-dessus nomme chaque objet non effacé." \
+      "Le relancer une fois le stockage réparé : il est rejouable à volonté."
+  if [ "$a_blanc" = non ]; then
+    # Un balayage complet réussi remet le compteur de la supervision à zéro.
+    state_set_many "$env_name" balayage_photos "$(maintenant)" balayage_photos_echec non
+    alerte_resoudre "$env_name" balayage_photos "Photos de repas orphelines non effacees"
+  fi
+  ok "balayage terminé."
+}
+
 cmd_update() {
   local env_name file
   env_name="$(environnement_requis "${1-}")"
@@ -465,7 +514,9 @@ cmd_update() {
 #      nombre d'utilisateurs qui ne veulent rien dire, et la mise à l'échelle
 #      en tirerait la conclusion inverse de la bonne — moins de trafic reçu
 #      parce que moins d'exemplaires pour le recevoir, donc « réduisons ».
-#   2. METTRE À L'ÉCHELLE ensuite, sur une pile entière.
+#   2. METTRE À L'ÉCHELLE ensuite, sur une pile entière. Sous le même
+#      verrou suivent l'élagage du disque et, une fois par jour, le balayage
+#      des photos de repas orphelines (_photos.sh).
 #   3. METTRE À JOUR en dernier. Un déploiement recrée les conteneurs :
 #      le faire avant rendrait caduques les deux étapes précédentes.
 cmd_supervise() {
@@ -530,6 +581,9 @@ supervise_un() {
   # charge. Élague à CHAQUE passe (seuls les deux shas du filet sont gardés) ;
   # le seuil CARLYS_DISK_HIGH_PERCENT n'est plus que le niveau d'alerte.
   prune_si_necessaire "$file" || true
+  # Une fois par jour : les photos de repas que leur propriétaire a
+  # supprimées pendant que le stockage ne répondait pas. Voir _photos.sh.
+  photos_balayer_si_du "$env_name" "$file" || true
 
   unlock_env
   update_run "$env_name" "$file" || true
@@ -649,6 +703,7 @@ case "$COMMANDE" in
   admin-create) cmd_admin_create "$@" ;;
   catalog-seed) cmd_catalog_seed "$@" ;;
   subscription-catalog) cmd_subscription_catalog "$@" ;;
+  meal-photos-sweep) cmd_meal_photos_sweep "$@" ;;
   prune)     cmd_prune "${1-}" ;;
   update)    cmd_update "${1-}" ;;
   supervise) cmd_supervise "${1-}" ;;

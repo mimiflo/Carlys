@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="windows-1252"?>
+<!-- JEU D'ESSAI Carlys, PAS la table CIQUAL : noms d'aliments réels, mais codes (99xxxx) et valeurs ILLUSTRATIFS, choisis pour exercer l'import (traces, &lt; seuil, valeur absente, aliment sans énergie, retrait). Ne jamais s'en servir comme donnée nutritionnelle. -->
+<TABLE>
+<ALIM_GRP>
+<alim_grp_code> 02 </alim_grp_code>
+<alim_grp_nom_fr> fruits, légumes, légumineuses et oléagineux </alim_grp_nom_fr>
+<alim_grp_nom_eng> - </alim_grp_nom_eng>
+<alim_ssgrp_code> 0201 </alim_ssgrp_code>
+<alim_ssgrp_nom_fr> légumes </alim_ssgrp_nom_fr>
+<alim_ssgrp_nom_eng> - </alim_ssgrp_nom_eng>
+<alim_ssssgrp_code> 020102 </alim_ssssgrp_code>
+<alim_ssssgrp_nom_fr> légumes cuits </alim_ssssgrp_nom_fr>
+<alim_ssssgrp_nom_eng> - </alim_ssssgrp_nom_eng>
+</ALIM_GRP>
+<ALIM_GRP>
+<alim_grp_code> 03 </alim_grp_code>
+<alim_grp_nom_fr> produits céréaliers </alim_grp_nom_fr>
+<alim_grp_nom_eng> - </alim_grp_nom_eng>
+<alim_ssgrp_code> 0301 </alim_ssgrp_code>
+<alim_ssgrp_nom_fr> pâtes, riz et céréales </alim_ssgrp_nom_fr>
+<alim_ssgrp_nom_eng> - </alim_ssgrp_nom_eng>
+<alim_ssssgrp_code> 030103 </alim_ssssgrp_code>
+<alim_ssssgrp_nom_fr> riz et autres céréales cuits </alim_ssssgrp_nom_fr>
+<alim_ssssgrp_nom_eng> - </alim_ssssgrp_nom_eng>
+</ALIM_GRP>
+<ALIM_GRP>
+<alim_grp_code> 04 </alim_grp_code>
+<alim_grp_nom_fr> viandes, œufs, poissons et assimilés </alim_grp_nom_fr>
+<alim_grp_nom_eng> - </alim_grp_nom_eng>
+<alim_ssgrp_code> 0401 </alim_ssgrp_code>
+<alim_ssgrp_nom_fr> viandes cuites </alim_ssgrp_nom_fr>
+<alim_ssgrp_nom_eng> - </alim_ssgrp_nom_eng>
+<alim_ssssgrp_code> 040103 </alim_ssssgrp_code>
+<alim_ssssgrp_nom_fr> volaille </alim_ssssgrp_nom_fr>
+<alim_ssssgrp_nom_eng> - </alim_ssssgrp_nom_eng>
+</ALIM_GRP>
+<ALIM_GRP>
+<alim_grp_code> 04 </alim_grp_code>
+<alim_grp_nom_fr> viandes, œufs, poissons et assimilés </alim_grp_nom_fr>
+<alim_grp_nom_eng> - </alim_grp_nom_eng>
+<alim_ssgrp_code> 0410 </alim_ssgrp_code>
+<alim_ssgrp_nom_fr> œufs </alim_ssgrp_nom_fr>
+<alim_ssgrp_nom_eng> - </alim_ssgrp_nom_eng>
+<alim_ssssgrp_code> 000000 </alim_ssssgrp_code>
+<alim_ssssgrp_nom_fr> - </alim_ssssgrp_nom_fr>
+<alim_ssssgrp_nom_eng> - </alim_ssssgrp_nom_eng>
+</ALIM_GRP>
+<ALIM_GRP>
+<alim_grp_code> 06 </alim_grp_code>
+<alim_grp_nom_fr> eaux et autres boissons </alim_grp_nom_fr>
+<alim_grp_nom_eng> - </alim_grp_nom_eng>
+<alim_ssgrp_code> 0601 </alim_ssgrp_code>
+<alim_ssgrp_nom_fr> eaux </alim_ssgrp_nom_fr>
+<alim_ssgrp_nom_eng> - </alim_ssgrp_nom_eng>
+<alim_ssssgrp_code> 000000 </alim_ssssgrp_code>
+<alim_ssssgrp_nom_fr> - </alim_ssssgrp_nom_fr>
+<alim_ssssgrp_nom_eng> - </alim_ssssgrp_nom_eng>
+</ALIM_GRP>
+<ALIM_GRP>
+<alim_grp_code> 11 </alim_grp_code>
+<alim_grp_nom_fr> aides culinaires et ingrédients divers </alim_grp_nom_fr>
+<alim_grp_nom_eng> - </alim_grp_nom_eng>
+<alim_ssgrp_code> 1101 </alim_ssgrp_code>
+<alim_ssgrp_nom_fr> sels </alim_ssgrp_nom_fr>
+<alim_ssgrp_nom_eng> - </alim_ssgrp_nom_eng>
+<alim_ssssgrp_code> 000000 </alim_ssssgrp_code>
+<alim_ssssgrp_nom_fr> - </alim_ssssgrp_nom_fr>
+<alim_ssssgrp_nom_eng> - </alim_ssssgrp_nom_eng>
+</ALIM_GRP>
+</TABLE>

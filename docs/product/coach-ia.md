@@ -237,7 +237,7 @@ Prisma direct depuis le module coach pour les domaines voisins.
 | `get_progress_overview` | Volume, assiduité, tendance sur une période |
 | `get_body_weight_trend` | Mesures corporelles |
 | `get_nutrition_targets` | Cibles du module métabolisme (des objectifs, jamais le consommé) |
-| `get_recent_meals` | Le journal alimentaire : repas notés sur les N derniers jours (1 par défaut, 7 au plus), en instants UTC |
+| `get_recent_meals` | Le journal alimentaire : repas notés sur les N derniers jours (1 par défaut, 7 au plus), en instants UTC — nom, moment de la journée (`null` s'il n'a pas été noté), totaux, `computed`, et pour un repas composé ses aliments en clair (« Poulet, filet, sans peau, cuit : 120 g ») ; pas le détail d'écran de chaque composant, qui coûterait des jetons sans rien apprendre au modèle (`coach-meal-view.ts`). JAMAIS la photo du repas, ni même le fait qu'il en ait une : la vue ne recopie pas `photo`, et `docs/legal/privacy.md` promet qu'elle n'est transmise à aucun prestataire |
 | `propose_session` | **Seul outil « d'écriture »** — n'écrit rien, produit une proposition |
 
 Chaque description dit **quand** appeler l'outil, pas seulement ce qu'il fait :

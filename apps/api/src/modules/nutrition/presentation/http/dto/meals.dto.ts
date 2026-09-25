@@ -1,7 +1,10 @@
+import { MEAL_COMPONENTS_MAX } from '@carlys/api-contracts';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { MealQuantityUnit } from '@prisma/client';
+import { MealMoment, MealQuantityUnit } from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
+  IsArray,
   IsDate,
   IsEnum,
   IsInt,
@@ -15,8 +18,17 @@ import {
   Min,
   MinLength,
   ValidateIf,
+  ValidateNested,
 } from 'class-validator';
 import { nowWithClockSkew } from '../../../../../common/validators/clock-skew';
+import {
+  MEAL_KCAL_MAX,
+  MEAL_KCAL_MIN,
+  MEAL_MACRO_MAX_G,
+  MEAL_QUANTITY_MAX,
+  MEAL_QUANTITY_MIN,
+} from '../../../domain/meal-bounds';
+import { MealComponentInputDto } from './meal-component.dto';
 
 /**
  * Ce qu'on peut dire d'une quantité mangée : un nombre et son unité.
@@ -26,9 +38,24 @@ import { nowWithClockSkew } from '../../../../../common/validators/clock-skew';
  * l'API aurait dû refuser elle-même. Strictement positive, parce que « 0 g »
  * n'est pas une quantité — c'est l'absence de repas.
  */
-const QUANTITY_MIN = 0.01;
-const QUANTITY_MAX = 9_999.99;
+const QUANTITY_MIN = MEAL_QUANTITY_MIN;
+const QUANTITY_MAX = MEAL_QUANTITY_MAX;
 
+/** Des aliments à calculer : une liste NON VIDE (la vide veut dire « aucun »). */
+function hasComposition(dto: { components?: unknown }): boolean {
+  return Array.isArray(dto.components) && dto.components.length > 0;
+}
+
+const COMPONENTS_DESCRIPTION =
+  'Aliments du repas, dans l’ordre, chaque ligne sous un UUID de l’appareil. ' +
+  'Non vide : le serveur CALCULE kcal, macros et quantité (en grammes) depuis ' +
+  'la base, et refuse en 400 un corps qui porterait aussi kcal, proteinG, ' +
+  'carbsG, fatG, quantity ou quantityUnit.';
+
+/**
+ * Nouveau repas : SAISI À LA MAIN (`kcal` obligatoire, le reste facultatif)
+ * ou COMPOSÉ d'aliments de la base (`components` non vide, aucun total).
+ */
 export class CreateMealDto {
   @ApiProperty({ description: 'UUID généré côté client (création idempotente)' })
   @IsUUID()
@@ -40,11 +67,40 @@ export class CreateMealDto {
   @MaxLength(120)
   name!: string;
 
-  @ApiProperty({ minimum: 1, maximum: 10000 })
+  @ApiPropertyOptional({
+    enum: MealMoment,
+    nullable: true,
+    description: 'Moment de la journée ; absent ou null : le client le déduira de l’heure',
+  })
+  @IsOptional()
+  @IsEnum(MealMoment)
+  moment?: MealMoment | null;
+
+  @ApiPropertyOptional({
+    minimum: MEAL_KCAL_MIN,
+    maximum: MEAL_KCAL_MAX,
+    description: 'Obligatoire pour un repas saisi à la main ; interdit avec des aliments',
+  })
+  // Validé dès qu'il est envoyé, ou exigé quand rien d'autre ne dira les
+  // calories. Envoyé AVEC des aliments, c'est le service qui le refuse, avec
+  // un message qui dit pourquoi.
+  @ValidateIf((dto: CreateMealDto) => dto.kcal !== undefined || !hasComposition(dto))
   @IsInt()
-  @Min(1)
-  @Max(10_000)
-  kcal!: number;
+  @Min(MEAL_KCAL_MIN)
+  @Max(MEAL_KCAL_MAX)
+  kcal?: number;
+
+  @ApiPropertyOptional({
+    type: [MealComponentInputDto],
+    maxItems: MEAL_COMPONENTS_MAX,
+    description: COMPONENTS_DESCRIPTION,
+  })
+  @IsOptional()
+  @IsArray()
+  @ArrayMaxSize(MEAL_COMPONENTS_MAX)
+  @ValidateNested({ each: true })
+  @Type(() => MealComponentInputDto)
+  components?: MealComponentInputDto[];
 
   @ApiPropertyOptional({
     minimum: QUANTITY_MIN,
@@ -64,25 +120,25 @@ export class CreateMealDto {
   @IsEnum(MealQuantityUnit)
   quantityUnit?: MealQuantityUnit;
 
-  @ApiPropertyOptional({ minimum: 0, maximum: 1000 })
+  @ApiPropertyOptional({ minimum: 0, maximum: MEAL_MACRO_MAX_G })
   @IsOptional()
   @IsInt()
   @Min(0)
-  @Max(1_000)
+  @Max(MEAL_MACRO_MAX_G)
   proteinG?: number;
 
-  @ApiPropertyOptional({ minimum: 0, maximum: 1000 })
+  @ApiPropertyOptional({ minimum: 0, maximum: MEAL_MACRO_MAX_G })
   @IsOptional()
   @IsInt()
   @Min(0)
-  @Max(1_000)
+  @Max(MEAL_MACRO_MAX_G)
   carbsG?: number;
 
-  @ApiPropertyOptional({ minimum: 0, maximum: 1000 })
+  @ApiPropertyOptional({ minimum: 0, maximum: MEAL_MACRO_MAX_G })
   @IsOptional()
   @IsInt()
   @Min(0)
-  @Max(1_000)
+  @Max(MEAL_MACRO_MAX_G)
   fatG?: number;
 
   @ApiProperty({ description: 'Instant de consommation, UTC (ISO 8601) — pas dans le futur' })
@@ -110,6 +166,7 @@ export class CreateMealDto {
  * `eatenAt`) refusent un `null` explicite : `@IsOptional()` laisserait
  * passer, et Prisma répondrait par un 500 à ce qui est une erreur de saisie.
  * `@ValidateIf` ne saute la validation que pour un champ vraiment absent.
+ * `components` suit la même règle : `null` n'est pas `[]`.
  */
 export class UpdateMealDto {
   @ApiPropertyOptional({ minLength: 1, maxLength: 120 })
@@ -119,11 +176,20 @@ export class UpdateMealDto {
   @MaxLength(120)
   name?: string;
 
-  @ApiPropertyOptional({ minimum: 1, maximum: 10000 })
+  @ApiPropertyOptional({
+    enum: MealMoment,
+    nullable: true,
+    description: 'Moment de la journée ; null l’efface',
+  })
+  @IsOptional()
+  @IsEnum(MealMoment)
+  moment?: MealMoment | null;
+
+  @ApiPropertyOptional({ minimum: MEAL_KCAL_MIN, maximum: MEAL_KCAL_MAX })
   @ValidateIf((_, value) => value !== undefined)
   @IsInt()
-  @Min(1)
-  @Max(10_000)
+  @Min(MEAL_KCAL_MIN)
+  @Max(MEAL_KCAL_MAX)
   kcal?: number;
 
   // `type` explicite sur les champs `number | null` : sous
@@ -147,25 +213,25 @@ export class UpdateMealDto {
   @IsEnum(MealQuantityUnit)
   quantityUnit?: MealQuantityUnit | null;
 
-  @ApiPropertyOptional({ type: 'integer', minimum: 0, maximum: 1000, nullable: true })
+  @ApiPropertyOptional({ type: 'integer', minimum: 0, maximum: MEAL_MACRO_MAX_G, nullable: true })
   @IsOptional()
   @IsInt()
   @Min(0)
-  @Max(1_000)
+  @Max(MEAL_MACRO_MAX_G)
   proteinG?: number | null;
 
-  @ApiPropertyOptional({ type: 'integer', minimum: 0, maximum: 1000, nullable: true })
+  @ApiPropertyOptional({ type: 'integer', minimum: 0, maximum: MEAL_MACRO_MAX_G, nullable: true })
   @IsOptional()
   @IsInt()
   @Min(0)
-  @Max(1_000)
+  @Max(MEAL_MACRO_MAX_G)
   carbsG?: number | null;
 
-  @ApiPropertyOptional({ type: 'integer', minimum: 0, maximum: 1000, nullable: true })
+  @ApiPropertyOptional({ type: 'integer', minimum: 0, maximum: MEAL_MACRO_MAX_G, nullable: true })
   @IsOptional()
   @IsInt()
   @Min(0)
-  @Max(1_000)
+  @Max(MEAL_MACRO_MAX_G)
   fatG?: number | null;
 
   @ApiPropertyOptional({ description: 'Instant de consommation, UTC — pas dans le futur' })
@@ -176,6 +242,28 @@ export class UpdateMealDto {
   // porte que la création vient de fermer.
   @MaxDate(nowWithClockSkew, { message: 'La date du repas est dans le futur.' })
   eatenAt?: Date;
+
+  @ApiPropertyOptional({
+    type: [MealComponentInputDto],
+    maxItems: MEAL_COMPONENTS_MAX,
+    description:
+      COMPONENTS_DESCRIPTION +
+      ' La liste REMPLACE la composition : une ligne dont l’id est déjà dans le ' +
+      'repas garde son instantané (même si l’aliment a quitté la base) et ne ' +
+      'change que de quantité ou de place ; une ligne à id neuf lit la base. ' +
+      'Absent : la composition ne bouge pas, et les totaux d’un repas composé ' +
+      'ne se corrigent pas à la main (renvoyés à l’identique, ils sont ignorés ; ' +
+      'changés, refusés en 400). Vide : la composition est retirée, le repas ' +
+      'redevient saisi à la main et garde ses derniers totaux.',
+  })
+  // `null` n'est PAS « aucun aliment » : c'est `[]` qui le dit. Refusé en
+  // 400 plutôt que confondu avec l'absence.
+  @ValidateIf((_, value) => value !== undefined)
+  @IsArray()
+  @ArrayMaxSize(MEAL_COMPONENTS_MAX)
+  @ValidateNested({ each: true })
+  @Type(() => MealComponentInputDto)
+  components?: MealComponentInputDto[];
 }
 
 export class ListMealsQuery {

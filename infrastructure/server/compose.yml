@@ -141,6 +141,16 @@ services:
   # Crée le bucket au premier démarrage et le rend lisible en anonyme : les
   # applications chargent les médias sans jeton, seul le DÉPÔT est protégé.
   # Idempotent (`mb --ignore-existing`), donc rejouable à chaque déploiement.
+  #
+  # Crée AUSSI le bucket PRIVÉ (S3_PRIVATE_BUCKET) : les photos que les
+  # personnes joignent à leurs repas, données personnelles. Aucune lecture
+  # anonyme — et `mc anonymous set none` à CHAQUE déploiement retire toute
+  # politique qu'une commande tapée à la main y aurait posée. Un préfixe dans
+  # le bucket public n'aurait pas suffi : sa politique vaut pour tout le
+  # bucket, une clé devinée ou divulguée aurait suffi à lire une photo. nginx,
+  # de son côté, ne sert que le préfixe du bucket public (media.DOMAIN).
+  # L'API, au démarrage, journalise en ERREUR toute politique trouvée sur ce
+  # bucket (PrivateBucketCheck).
   minio-init:
     <<: *task
     image: ${CARLYS_MC_IMAGE:-quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727}
@@ -174,7 +184,9 @@ services:
       printf '%s'
       '{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"AWS\":[\"*\"]},\"Action\":[\"s3:GetObject\"],\"Resource\":[\"arn:aws:s3:::${S3_BUCKET}/*\"]}]}'
       > /tmp/politique.json &&
-      mc anonymous set-json /tmp/politique.json local/${S3_BUCKET}
+      mc anonymous set-json /tmp/politique.json local/${S3_BUCKET} &&
+      mc mb --ignore-existing local/${S3_PRIVATE_BUCKET:?S3_PRIVATE_BUCKET est obligatoire - carlysctl env-sync <env> --appliquer} &&
+      mc anonymous set none local/${S3_PRIVATE_BUCKET}
       "
 
   # ── Mailpit (staging UNIQUEMENT) ───────────────────────────────────────────
@@ -201,8 +213,9 @@ services:
   api:
     <<: *service
     image: ${CARLYS_REGISTRY:?CARLYS_REGISTRY est obligatoire}/carlys-api:${CARLYS_TAG:?CARLYS_TAG est obligatoire - sha-xxxxxxxxxxxx}
-    # Le .env EST la configuration de l'API : ses 49 variables y figurent
-    # toutes. Les passer en bloc plutôt qu'une à une évite la dérive silencieuse
+    # Le .env EST la configuration de l'API : toutes les variables du schéma
+    # Zod y figurent (le nombre ne s'écrit pas ici : il écrivait 49 quand le
+    # schéma en comptait déjà 57). Les passer en bloc plutôt qu'une à une évite la dérive silencieuse
     # du jour où le schéma Zod en gagne une de plus. Corollaire à connaître :
     # une variable FACULTATIVE laissée VIDE dans le .env arrive comme chaîne
     # vide et fait échouer la validation — elle doit rester COMMENTÉE.
@@ -253,8 +266,9 @@ services:
       # sortir en erreur — bucket au nom invalide, identifiants MinIO faux —
       # sans que `up -d` rende autre chose que 0 : le déploiement se déclarait
       # réussi, et l'API partait déposer ses médias dans un bucket qui
-      # n'existe pas. Ici l'API attend que le bucket soit créé ET la lecture
-      # anonyme posée ; si la tâche échoue, `up -d` échoue avec elle.
+      # n'existe pas. Ici l'API attend que les deux buckets soient créés, la
+      # lecture anonyme posée sur celui des médias et RETIRÉE de celui des
+      # données privées ; si la tâche échoue, `up -d` échoue avec elle.
       minio-init:
         condition: service_completed_successfully
     healthcheck:

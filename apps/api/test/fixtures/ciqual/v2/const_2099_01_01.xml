@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="windows-1252"?>
+<!-- JEU D'ESSAI Carlys, PAS la table CIQUAL : noms d'aliments réels, mais codes (99xxxx) et valeurs ILLUSTRATIFS, choisis pour exercer l'import (traces, &lt; seuil, valeur absente, aliment sans énergie, retrait). Ne jamais s'en servir comme donnée nutritionnelle. -->
+<TABLE>
+<CONST>
+<const_code> 900327 </const_code>
+<const_nom_fr> Energie, Règlement UE N° 1169/2011 (kJ/100 g) </const_nom_fr>
+<const_nom_eng> Energy, Regulation EU No 1169/2011 (kJ/100g) </const_nom_eng>
+</CONST>
+<CONST>
+<const_code> 900328 </const_code>
+<const_nom_fr> Energie, Règlement UE N° 1169/2011 (kcal/100 g) </const_nom_fr>
+<const_nom_eng> Energy, Regulation EU No 1169/2011 (kcal/100g) </const_nom_eng>
+</CONST>
+<CONST>
+<const_code> 900400 </const_code>
+<const_nom_fr> Eau (g/100 g) </const_nom_fr>
+<const_nom_eng> Water (g/100g) </const_nom_eng>
+</CONST>
+<CONST>
+<const_code> 925000 </const_code>
+<const_nom_fr> Protéines, N x facteur de Jones (g/100 g) </const_nom_fr>
+<const_nom_eng> Protein, N x Jones' factor (g/100g) </const_nom_eng>
+</CONST>
+<CONST>
+<const_code> 925003 </const_code>
+<const_nom_fr> Protéines, N x 6.25 (g/100 g) </const_nom_fr>
+<const_nom_eng> Protein, N x 6.25 (g/100g) </const_nom_eng>
+</CONST>
+<CONST>
+<const_code> 931000 </const_code>
+<const_nom_fr> Glucides (g/100 g) </const_nom_fr>
+<const_nom_eng> Carbohydrate (g/100g) </const_nom_eng>
+</CONST>
+<CONST>
+<const_code> 940000 </const_code>
+<const_nom_fr> Lipides (g/100 g) </const_nom_fr>
+<const_nom_eng> Fat (g/100g) </const_nom_eng>
+</CONST>
+<CONST>
+<const_code> 932000 </const_code>
+<const_nom_fr> Sucres (g/100 g) </const_nom_fr>
+<const_nom_eng> Sugars (g/100g) </const_nom_eng>
+</CONST>
+</TABLE>

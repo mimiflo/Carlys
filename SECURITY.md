@@ -211,14 +211,25 @@ vérifier.
   en `supprime+<id>@carlys.invalid` (l'adresse d'origine redevient disponible
   pour une nouvelle inscription), code ami réécrit hors alphabet (plus aucun
   scan ni saisie ne le résout), `displayName`, `birthDate`, `sex` et
-  `heightCm` effacés, jetons d'appareil supprimés. **Conservé, et pourquoi** :
+  `heightCm` effacés, jetons d'appareil supprimés, **photos de repas
+  effacées** (leurs lignes `MealPhoto` dans la transaction ; puis, hors
+  transaction puisque S3 n'en a pas, tout le préfixe
+  `meal-photos/<userId>/` du bucket PRIVÉ `S3_PRIVATE_BUCKET`, orphelins
+  compris ; un stockage muet est journalisé en erreur avec le `requestId`, ne
+  fait pas échouer la suppression, et laisse des objets que plus aucune
+  ligne ne cite, repris par `dist/cli/meal-photos-sweep`, que la
+  supervision lance chaque jour ; la ligne `User` est verrouillée en
+  premier, pour qu'un dépôt de photo en cours ne puisse pas écrire la sienne
+  après l'effacement). **Conservé, et
+  pourquoi** :
   la ligne `User` avec son identifiant (cité par le journal d'audit, qui
   doit rester lisible — l'audit garde sa **propre** `ipAddress` par
   événement, y compris celui de la suppression, pour l'enquête), la
   crédential (un lien de réinitialisation encore valide ne doit pas produire
   une erreur serveur), et l'historique d'activité (séances, séries, records,
-  mesures, journal alimentaire, conversations coach) rattaché à cet
-  identifiant, qui ne porte plus rien qui identifie la personne. **Non
+  mesures, journal alimentaire sans ses photos, conversations coach)
+  rattaché à cet identifiant, qui ne porte plus rien qui identifie la
+  personne. **Non
   fait** : aucune purge différée de cet historique n'existe encore (pas de
   travail de fond dans l'API).
 - **Rétention limitée des logs** applicatifs.

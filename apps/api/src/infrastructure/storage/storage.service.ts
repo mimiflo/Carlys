@@ -2,19 +2,24 @@ import {
   DeleteObjectCommand,
   HeadBucketCommand,
   PutObjectCommand,
-  S3Client,
+  type S3Client,
 } from '@aws-sdk/client-s3';
 import { Injectable, type OnModuleDestroy, type OnModuleInit } from '@nestjs/common';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { AppConfigService } from '../../config/app-config.service';
+import { createS3Client } from './s3-client';
 
 /**
- * Stockage objet — **seul endroit qui connaît S3**.
+ * Stockage objet des médias PUBLICS — photos d'exercices, maillages 3D.
  *
  * MinIO en développement, S3 (ou compatible) en production : c'est le même
  * protocole, et le reste du code ne voit qu'une clé et une URL. Aucun média
  * n'est embarqué dans une application ni écrit en dur ; ils entrent tous par
  * l'administration et sortent tous d'ici.
+ *
+ * Son bucket est LISIBLE SANS JETON : rien de personnel n'y entre. Les
+ * données privées (photo d'un repas) passent par `PrivateObjectStore`, dans
+ * un autre bucket.
  */
 @Injectable()
 export class StorageService implements OnModuleInit, OnModuleDestroy {
@@ -25,16 +30,7 @@ export class StorageService implements OnModuleInit, OnModuleDestroy {
     @InjectPinoLogger(StorageService.name)
     private readonly logger: PinoLogger,
   ) {
-    this.client = new S3Client({
-      endpoint: config.s3Endpoint,
-      region: config.s3Region,
-      // MinIO n'accepte pas les sous-domaines de bucket en local.
-      forcePathStyle: config.s3ForcePathStyle,
-      credentials: {
-        accessKeyId: config.s3AccessKeyId,
-        secretAccessKey: config.s3SecretAccessKey,
-      },
-    });
+    this.client = createS3Client(config);
   }
 
   /**

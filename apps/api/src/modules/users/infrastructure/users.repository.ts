@@ -232,12 +232,22 @@ export class UsersRepository {
    * La ligne reste : l'identifiant est cité par l'audit et par l'historique
    * agrégé (séances, records, journal alimentaire), qui ne portent plus rien
    * qui identifie la personne une fois ces colonnes effacées.
+   *
+   * La ligne User est VERROUILLÉE EN PREMIER, avant `within` : c'est sur ce
+   * verrou que s'alignent les écritures qui doivent voir la suppression
+   * (le dépôt d'une photo de repas la relit `FOR SHARE`). Prise en dernier,
+   * par l'`update` final, elle laissait `within` effacer les photos AVANT
+   * qu'un dépôt concurrent n'écrive la sienne, qui survivait au compte.
+   * `FOR NO KEY UPDATE` et non `FOR UPDATE` : il exclut `FOR SHARE` sans
+   * bloquer les insertions qui ne font que RÉFÉRENCER le compte (clé
+   * étrangère, `FOR KEY SHARE`) plus tôt que ne le faisait l'`update` final.
    */
   async deleteAccount(
     userId: string,
     within: (tx: Prisma.TransactionClient) => Promise<void>,
   ): Promise<void> {
     await this.prisma.$transaction(async (tx) => {
+      await tx.$queryRaw`SELECT 1 FROM "User" WHERE "id" = ${userId}::uuid FOR NO KEY UPDATE`;
       await within(tx);
       await tx.deviceToken.deleteMany({ where: { userId } });
       // Les identités externes partent AVEC le compte. Elles ne portent rien

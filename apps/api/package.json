@@ -22,7 +22,9 @@
     "prisma:studio": "prisma studio",
     "prisma:seed": "ts-node prisma/seed.ts",
     "admin:bootstrap": "node dist/cli/admin-bootstrap",
-    "catalog:seed": "node dist/cli/catalog-seed"
+    "catalog:seed": "node dist/cli/catalog-seed",
+    "ciqual:import": "node dist/cli/ciqual-import",
+    "meal-photos:sweep": "node dist/cli/meal-photos-sweep"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.116.0",

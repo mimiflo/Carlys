@@ -91,6 +91,9 @@ jobs:
       JWT_ACCESS_SECRET: secret-ci-uniquement-32-caracteres-minimum-x
       S3_ENDPOINT: http://localhost:9000
       S3_BUCKET: carlys-media
+      # Bucket PRIVÉ (photos de repas) : distinct du précédent, jamais lisible
+      # sans jeton. nutrition-photos-minio.e2e-spec.ts le vérifie.
+      S3_PRIVATE_BUCKET: carlys-private
       S3_ACCESS_KEY_ID: carlys-ci
       S3_SECRET_ACCESS_KEY: carlys-ci-secret
       S3_PUBLIC_BASE_URL: http://localhost:9000/carlys-media
@@ -99,8 +102,10 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
 
       # MinIO n'est pas déclaré en `services` : un conteneur de service ne peut
-      # pas recevoir la commande `server /data`, et le bucket doit exister —
-      # lisible en anonyme — avant les tests, comme en développement.
+      # pas recevoir la commande `server /data`, et les buckets doivent exister
+      # avant les tests, comme en développement : celui des médias lisible en
+      # anonyme, celui des données personnelles (photos de repas) SANS aucune
+      # politique — `set none` le redit explicitement.
       #
       # POURQUOI quay.io, ÉPINGLÉ PAR EMPREINTE. Le 12 septembre 2026, ce job
       # est tombé sur « pull access denied for minio/minio » : les dépôts
@@ -113,7 +118,7 @@ jobs:
       # de ce dépôt, et fera échouer FRANCHEMENT toute disparition future au
       # lieu de tirer autre chose. Mêmes versions que le serveur
       # (infrastructure/server/compose.yml) : on teste ce qu'on exploite.
-      - name: Stockage objet (MinIO + bucket public)
+      - name: Stockage objet (MinIO + bucket public + bucket privé)
         run: |
           docker run -d --name minio -p 9000:9000 \
             -e MINIO_ROOT_USER=carlys-ci \
@@ -128,7 +133,9 @@ jobs:
             quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727 -c "
             mc alias set ci http://localhost:9000 carlys-ci carlys-ci-secret &&
             mc mb --ignore-existing ci/carlys-media &&
-            mc anonymous set download ci/carlys-media
+            mc anonymous set download ci/carlys-media &&
+            mc mb --ignore-existing ci/carlys-private &&
+            mc anonymous set none ci/carlys-private
           "
 
       - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0

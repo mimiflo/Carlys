@@ -744,6 +744,80 @@ manuelles d'entitlements.
 
 ---
 
+## Journal alimentaire et base d'aliments (implémenté)
+
+> Repas saisis à la main ou composés d'aliments de la table CIQUAL. Les
+> règles (qui fait foi, instantané, import) sont décrites dans
+> [`docs/product/nutrition.md`](../product/nutrition.md) ; ici, seulement la
+> forme des tables. Migrations `20260925100000_moment_aliments_composition`
+> et `20260925140000_photo_repas_privee`.
+
+### `MealEntry`
+Un repas, id généré sur l'appareil, `eatenAt` instant UTC, suppression douce.
+- Champs clés : `name`, `moment` (`BREAKFAST | LUNCH | DINNER | SNACK`,
+  nullable sans défaut : les repas antérieurs n'ont jamais dit le leur),
+  `kcal` (entier), `proteinG` / `carbsG` / `fatG` (entiers nullables, `null` =
+  inconnu), `quantity` `Decimal(7, 2)` + `quantityUnit` (par paire).
+- Saisi à la main quand il n'a aucun `MealComponent` ; COMPOSÉ sinon, et ses
+  totaux sont alors calculés par le serveur (`quantityUnit = GRAM`).
+- Relations : n–1 `User` (`Cascade`) ; 1–n `MealComponent` ; 1–0..1
+  `MealPhoto`.
+- Index : `(userId, eatenAt)`.
+
+### `Food`
+Un aliment CIQUAL, écrit par `dist/cli/ciqual-import` seulement.
+- Clé : `code` (`alim_code` CIQUAL, entier, stable d'une version à l'autre).
+- Champs clés : `name`, `shortName` (avant la première virgule), groupe et
+  sous-groupe (codes et noms, nullables), `kcalPer100g` `Decimal(7, 2)`
+  obligatoire, `proteinPer100g` / `carbsPer100g` / `fatPer100g` nullables,
+  `searchKey` (nom normalisé), `sourceVersion`, `retiredAt`.
+- Jamais supprimé : un aliment disparu d'une version reçoit `retiredAt`.
+- Aucun index au-delà de la clé : ~3 200 lignes, la recherche est un
+  balayage séquentiel (pas d'extension `pg_trgm`).
+
+### `MealComponent`
+Un aliment dans un repas composé, avec l'INSTANTANÉ pris à l'ajout.
+- Clé : `id`, UUID généré SUR L'APPAREIL à l'ajout de la ligne et conservé
+  d'une correction à l'autre (un identifiant déjà pris par la ligne d'un
+  autre repas : 409).
+- Champs clés : `mealId`, `foodCode`, `position` (0 à 29), `quantityG`
+  `Decimal(7, 2)`, `foodName`, `foodShortName`, `foodGroup`,
+  `foodSourceVersion` (exposée comme `sourceVersion`), et les quatre valeurs
+  pour 100 g recopiées ; `createdAt`, la date de l'instantané, conservée
+  pour une ligne gardée.
+- Relations : n–1 `MealEntry` (`Cascade`) ; n–1 `Food` (`Restrict` : la
+  base refuse de supprimer un aliment qu'un repas cite).
+- Unique : `(mealId, position)`. Une correction remplace toute la liste
+  dans une transaction, sous le verrou de la ligne `MealEntry`
+  (`SELECT … FOR UPDATE`) : deux corrections simultanées passent l'une
+  après l'autre, la seconde jugée sur l'état laissé par la première. Une
+  ligne désignée par son `id` y est réécrite avec son instantané, seules sa
+  quantité et sa place changent.
+
+### `MealPhoto`
+La photo qu'une personne joint à SON repas (migration
+`20260925140000_photo_repas_privee`). Donnée personnelle : les octets vivent
+dans le bucket PRIVÉ `S3_PRIVATE_BUCKET`, jamais dans le bucket public des
+médias ; la ligne ne fait que les décrire.
+- Clé : `mealId` (une photo par repas au plus).
+- Champs clés : `storageKey` (unique, `meal-photos/<userId>/<uuid>.jpg`, un
+  UUID neuf par dépôt), `byteSize` et `sha256` des octets STOCKÉS
+  (métadonnées retirées ; l'empreinte sert d'ETag), `updatedAt` (clé de
+  cache du client, exposée comme `photo.updatedAt`).
+- Relations : 1–1 `MealEntry` (`Cascade`). La ligne part dans la
+  transaction de la suppression douce du repas et dans celle de la
+  suppression du compte ; l'objet est effacé juste après, hors transaction.
+- Écriture : la ligne ne s'écrit que sous le verrou du compte
+  (`FOR SHARE` sur `User`) et du repas (`FOR UPDATE` sur `MealEntry`), après
+  avoir revérifié que ni l'un ni l'autre n'a été supprimé pendant l'envoi
+  des octets ; la suppression du compte verrouille `User` en premier.
+- Règle : une ligne = un objet vivant. Un objet que plus aucune ligne (d'un
+  repas non supprimé, d'un compte non supprimé) ne cite est un orphelin,
+  repris par `dist/cli/meal-photos-sweep`, que la supervision du serveur
+  lance une fois par jour.
+
+---
+
 ## Communauté (implémenté)
 
 > Amis, encouragements, défis collectifs et modération. Les règles métier

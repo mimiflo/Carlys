@@ -323,3 +323,44 @@ quelques centaines de fichiers par an ne justifie pas un second chemin
 d'authentification côté stockage. Le garde-fou reste explicite —
 `MEDIA_MAX_UPLOAD_BYTES` (plafond métier, configurable) et un plafond de
 transport coupé pendant la réception.
+
+## Stockage des données privées (livré le 25 septembre 2026)
+
+La photo qu'une personne joint à SON repas est une donnée personnelle : elle
+ne suit AUCUNE des règles de lecture ci-dessus. Tout ce qui la concerne passe
+par un port, `PRIVATE_OBJECT_STORE`
+(`src/infrastructure/storage/private-object-store.ts`), implémenté sur S3 par
+`S3PrivateObjectStore` et fourni par `PrivateStorageModule`.
+
+- **Un bucket à part**, `S3_PRIVATE_BUCKET` (`carlys-private`), jamais le
+  même que `S3_BUCKET` : Zod refuse de démarrer sinon. Le bucket des médias
+  est lisible en anonyme, et une politique S3 vaut pour tout le bucket : un
+  préfixe « privé » y aurait laissé chaque photo à une clé près d'internet.
+  `minio-init` crée le bucket privé sans politique et retire, à chaque
+  déploiement, celle qu'on y aurait posée à la main ; au démarrage,
+  `PrivateBucketCheck` journalise en ERREUR toute politique qu'il y trouve.
+- **Aucune URL** : l'API lit l'objet avec ses identifiants et ne le rend qu'au
+  propriétaire du repas (`GET /api/v1/nutrition/meals/:id/photo`,
+  `Cache-Control: private, no-cache`, ETag = SHA-256 des octets). Nginx ne
+  sert pas ce bucket.
+- **Clé `meal-photos/<userId>/<uuid>.jpg`**, un UUID neuf par dépôt : jamais
+  le nom envoyé ni l'identifiant du repas. Le préfixe par personne permet
+  d'effacer tout un compte, orphelins compris.
+- **Les métadonnées sont retirées avant stockage** par un filtre de segments
+  JPEG écrit à la main (`src/common/images/jpeg-metadata.ts`) : EXIF et sa
+  position GPS, XMP, IPTC, commentaires, octets après la fin d'image. Liste
+  blanche : ce qui décode l'image, JFIF (sans vignette), le profil ICC et le
+  segment Adobe de douze octets. Aucune dépendance de traitement d'image.
+- **Ordre des écritures** : l'objet neuf AVANT la ligne `MealPhoto`, l'ancien
+  effacé APRÈS. La ligne s'écrit sous le verrou du compte et du repas, après
+  avoir revérifié qu'aucun des deux n'a été supprimé pendant l'envoi (sinon
+  404 et l'objet neuf est repris). Un effacement raté est journalisé en
+  erreur avec le `requestId` et ne fait jamais échouer la suppression ;
+  l'objet, que plus aucune ligne ne cite, est repris par
+  `dist/cli/meal-photos-sweep`, lancé chaque jour par la supervision.
+- **Suppression du compte** (`AccountService`) : les lignes des photos dans la
+  transaction, puis tout le préfixe de la personne dans le bucket.
+- **Tests** : `test/support/in-memory-object-store.ts` remplace le port dans
+  `nutrition-photos.e2e-spec.ts`, qui tourne sans MinIO ;
+  `nutrition-photos-minio.e2e-spec.ts` éprouve en CI le vrai bucket et son
+  refus de la lecture anonyme.

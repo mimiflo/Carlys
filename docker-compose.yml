@@ -83,6 +83,12 @@ services:
   # Crée le bucket de médias au premier démarrage, et le rend lisible en
   # anonyme : les applications chargent les photos directement depuis son URL,
   # sans passer par l'API ni présenter de jeton. Seul le DÉPÔT est protégé.
+  #
+  # Crée AUSSI le bucket PRIVÉ (carlys-private, S3_PRIVATE_BUCKET) : les photos
+  # que les personnes joignent à leurs repas. Aucune politique anonyme, et
+  # `set none` la retire si quelqu'un en a posé une à la main : seule l'API le
+  # lit, et ne sert une photo qu'à son propriétaire. Un préfixe dans le bucket
+  # public n'aurait pas suffi — sa politique vaut pour tout le bucket.
   minio-init:
     image: quay.io/minio/mc:RELEASE.2025-08-13T08-35-41Z@sha256:a7fe349ef4bd8521fb8497f55c6042871b2ae640607cf99d9bede5e9bdf11727
     depends_on:
@@ -102,7 +108,9 @@ services:
       printf '%s'
       '{\"Version\":\"2012-10-17\",\"Statement\":[{\"Effect\":\"Allow\",\"Principal\":{\"AWS\":[\"*\"]},\"Action\":[\"s3:GetObject\"],\"Resource\":[\"arn:aws:s3:::carlys-media/*\"]}]}'
       > /tmp/politique.json &&
-      mc anonymous set-json /tmp/politique.json local/carlys-media
+      mc anonymous set-json /tmp/politique.json local/carlys-media &&
+      mc mb --ignore-existing local/carlys-private &&
+      mc anonymous set none local/carlys-private
       "
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:-carlys-dev}
@@ -128,6 +136,7 @@ services:
       # publique doit rester joignable depuis le téléphone ou le navigateur.
       S3_ENDPOINT: http://minio:9000
       S3_BUCKET: carlys-media
+      S3_PRIVATE_BUCKET: carlys-private
       S3_ACCESS_KEY_ID: ${MINIO_ROOT_USER:-carlys-dev}
       S3_SECRET_ACCESS_KEY: ${MINIO_ROOT_PASSWORD:-carlys-dev-secret}
       S3_PUBLIC_BASE_URL: ${S3_PUBLIC_BASE_URL:-http://localhost:9000/carlys-media}

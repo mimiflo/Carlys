@@ -1,3 +1,4 @@
+import { type MealEntry } from '@carlys/api-contracts';
 import { type ExercisesService } from '../../exercises/application/exercises.service';
 import { type MealsService } from '../../nutrition/application/meals.service';
 import { type NutritionService } from '../../nutrition/application/nutrition.service';
@@ -23,10 +24,34 @@ function buildStubs(): Stubs {
         {
           id: 'repas-1',
           name: 'Poulet riz',
+          moment: 'DINNER',
           kcal: 650,
+          quantity: 270,
+          quantityUnit: 'GRAM',
           proteinG: 45,
+          carbsG: 80,
+          fatG: null,
           eatenAt: NOW.toISOString(),
-        },
+          components: [
+            {
+              id: 'composant-1',
+              foodCode: 990001,
+              name: 'Poulet, filet, sans peau, cuit',
+              shortName: 'Poulet',
+              group: 'viandes, œufs, poissons et assimilés',
+              sourceVersion: '2020-07-07',
+              quantityG: 120,
+              kcal: 180,
+              proteinG: 34.8,
+              carbsG: 0,
+              fatG: null,
+            },
+          ],
+          computed: true,
+          // Un repas AVEC photo : la vue du coach doit la laisser de côté
+          // (docs/legal/privacy.md : jamais transmise à un prestataire).
+          photo: { updatedAt: '2026-09-25T08:00:00.000Z' },
+        } satisfies MealEntry,
       ]),
     },
     nutrition: { metabolismReport: jest.fn().mockResolvedValue({ missing: [] }) },
@@ -70,6 +95,28 @@ describe('CoachTools', () => {
     expect(stubs.meals.list).toHaveBeenCalledWith(USER, new Date(NOW.getTime() - 3 * DAY_MS), NOW);
     expect(result?.isError).toBeUndefined();
     expect(result?.content).toContain('Poulet riz');
+  });
+
+  it('get_recent_meals transmet le moment et la composition en clair, sans le détail d’écran ni la photo', async () => {
+    const stubs = buildStubs();
+    const tools = buildTools(stubs);
+
+    const [result] = await tools.run(USER, [{ id: 'a', name: 'get_recent_meals', input: {} }]);
+    const [meal] = JSON.parse(result?.content ?? '[]') as Record<string, unknown>[];
+
+    expect(meal).toEqual({
+      name: 'Poulet riz',
+      moment: 'DINNER',
+      eatenAt: NOW.toISOString(),
+      kcal: 650,
+      proteinG: 45,
+      carbsG: 80,
+      fatG: null,
+      quantity: 270,
+      quantityUnit: 'GRAM',
+      computed: true,
+      foods: ['Poulet, filet, sans peau, cuit : 120 g'],
+    });
   });
 
   it('get_recent_meals : la veille par défaut, une semaine au plus', async () => {

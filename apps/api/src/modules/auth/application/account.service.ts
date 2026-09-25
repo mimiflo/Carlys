@@ -1,6 +1,7 @@
 import { ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
 import { type RequestClientContext } from '../../../common/types/authenticated-request';
 import { AuditService } from '../../audit/audit.service';
+import { MealPhotosService } from '../../nutrition/application/meal-photos.service';
 import { UsersRepository } from '../../users/infrastructure/users.repository';
 import { SessionsRepository } from '../infrastructure/sessions.repository';
 import { PasswordService } from './password.service';
@@ -19,6 +20,14 @@ import { PasswordService } from './password.service';
  * La ligne User et l'historique d'activité (séances, records, journal
  * alimentaire, conversations coach) restent, sans plus rien qui identifie la
  * personne ; ce qui est conservé et pourquoi est écrit dans SECURITY.md.
+ *
+ * Les PHOTOS de repas, elles, ne restent pas : une photo n'a rien d'un
+ * chiffre anonyme. Leurs lignes partent dans la transaction ; leurs objets
+ * (tout le préfixe de la personne dans le bucket privé, orphelins compris)
+ * juste après, hors transaction puisque S3 n'en connaît pas. Un échec de ce
+ * second temps est journalisé avec le `requestId` et ne rend pas la
+ * suppression, déjà faite, faussement échouée : les objets, que plus aucune
+ * ligne ne cite, sont repris par `meal-photos-sweep`.
  */
 @Injectable()
 export class AccountService {
@@ -27,6 +36,7 @@ export class AccountService {
     private readonly sessions: SessionsRepository,
     private readonly passwords: PasswordService,
     private readonly audit: AuditService,
+    private readonly mealPhotos: MealPhotosService,
   ) {}
 
   async deleteAccount(
@@ -52,7 +62,11 @@ export class AccountService {
       throw new UnauthorizedException('Mot de passe incorrect.');
     }
 
-    await this.users.deleteAccount(userId, (tx) => this.sessions.deleteAllSessions(userId, tx));
+    await this.users.deleteAccount(userId, async (tx) => {
+      await this.sessions.deleteAllSessions(userId, tx);
+      await this.mealPhotos.forgetAllOf(userId, tx);
+    });
     this.audit.record({ action: 'account.deleted', userId, ...client });
+    await this.mealPhotos.eraseAllOf(userId, client.requestId);
   }
 }

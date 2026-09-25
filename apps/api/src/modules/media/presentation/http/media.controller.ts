@@ -18,9 +18,12 @@ import {
   UseInterceptors,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
-import type { MulterOptions } from '@nestjs/platform-express/multer/interfaces/multer-options.interface';
 import { ApiBearerAuth, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Public } from '../../../../common/decorators/public.decorator';
+import {
+  singleFileLimits,
+  UploadErrorsInFrench,
+} from '../../../../common/uploads/single-file-upload';
 import { requestIdOf, type RequestWithId } from '../../../../common/types/request-with-id';
 import { CurrentAdmin } from '../../../admin/presentation/decorators/current-admin.decorator';
 import {
@@ -43,25 +46,11 @@ function actorOf(admin: AdminPrincipal, request: RequestWithId): MediaActor {
   };
 }
 
-// `fieldArrayIndexLimit: 0` ARME le correctif de GHSA-535w-7cp7-47q4. multer
-// 2.3.0 le livre ÉTEINT (défaut `Infinity`) : l'audit de sécurité passe au
-// vert sans que la protection existe. Sans elle, un nom de champ
-// `a[999999999]` fait allouer un tableau creux de cette taille pendant
-// l'analyse du multipart. Zéro, parce qu'aucun champ de cette route n'utilise
-// la syntaxe tableau.
-//
-// Le type est ÉLARGI localement : @types/multer s'arrête à 2.2.0, qui ignore
-// cette limite — les types sont en retard sur l'exécutable (résolu : multer
-// 2.3.0, vérifié). L'intersection reste assignable au `limits` de Nest sans
-// cast ni `any`, et cette déclaration disparaîtra quand @types/multer ≥ 2.3
-// existera.
-const LIMITES_TELEVERSEMENT: NonNullable<MulterOptions['limits']> & {
-  fieldArrayIndexLimit: number;
-} = {
-  files: 1,
-  fileSize: MEDIA_TRANSPORT_HARD_CAP_BYTES,
-  fieldArrayIndexLimit: 0,
-};
+// Les garde-fous multer (un fichier, `fieldArrayIndexLimit` armé) vivent dans
+// `common/uploads/single-file-upload.ts`, partagés avec la photo d'un repas.
+// Ici, le plafond de transport : le plafond MÉTIER (MEDIA_MAX_UPLOAD_BYTES)
+// s'applique ensuite, dans le service.
+const LIMITES_TELEVERSEMENT = singleFileLimits(MEDIA_TRANSPORT_HARD_CAP_BYTES);
 
 /**
  * Bibliothèque de médias — **la seule porte d'entrée des fichiers**.
@@ -82,6 +71,7 @@ export class MediaController {
   @ApiConsumes('multipart/form-data')
   @ApiOperation({ summary: 'Dépose un fichier (rejouable : l’id vient de l’admin)' })
   @UseInterceptors(
+    new UploadErrorsInFrench(`Fichier trop lourd (max ${MEDIA_TRANSPORT_HARD_CAP_BYTES} octets).`),
     // Un seul fichier, coupé pendant la réception : le plafond métier
     // (MEDIA_MAX_UPLOAD_BYTES) s'applique ensuite, dans le service.
     FileInterceptor('file', { limits: LIMITES_TELEVERSEMENT }),

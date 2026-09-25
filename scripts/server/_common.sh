@@ -526,3 +526,6 @@ admin_host_port() {
 # _alert.sh appelle state_* et status_duree : chargé après eux.
 # shellcheck source=scripts/server/_alert.sh
 . "$CARLYS_LIB_DIR/_alert.sh"
+# _photos.sh appelle state_* et alerte_* : chargé après eux.
+# shellcheck source=scripts/server/_photos.sh
+. "$CARLYS_LIB_DIR/_photos.sh"

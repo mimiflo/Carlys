@@ -1,6 +1,6 @@
 # Conditions d'utilisation de Carlys
 
-Dernière mise à jour : 3 septembre 2026.
+Dernière mise à jour : 25 septembre 2026.
 
 Ces conditions encadrent l'utilisation de l'application mobile Carlys et de
 ses pages web. En créant un compte, tu les acceptes. Elles sont écrites pour
@@ -115,9 +115,16 @@ Certaines fonctions sont réservées à l'abonnement Premium (voir la section
   et les photos qui l'illustrent appartiennent à l'éditeur ou à ses
   partenaires. Tu disposes d'un droit d'utilisation personnel et non
   exclusif, limité au service.
-- **Tes données t'appartiennent** : tes séances, tes programmes, tes mesures
-  et tes conversations. Tu nous autorises seulement à les traiter pour faire
+- **Tes données t'appartiennent** : tes séances, tes programmes, tes mesures,
+  tes repas et leurs photos, et tes conversations. Tu nous autorises seulement à les traiter pour faire
   fonctionner le service, comme décrit dans la politique de confidentialité.
+- **Les valeurs nutritionnelles des aliments** (calories, protéines,
+  glucides, lipides) que Carlys utilise pour calculer un repas viennent de
+  la table Ciqual, publiée par l'Anses sous Licence Ouverte Etalab 2.0.
+  Source : Anses, Table de composition nutritionnelle des aliments Ciqual.
+  L'application affiche cette mention, et la version de la table dont
+  viennent les valeurs, à côté d'elles. Ce sont des valeurs moyennes pour des aliments génériques : celles
+  de ton assiette peuvent s'en écarter.
 
 ## 9. Suspension et suppression
 

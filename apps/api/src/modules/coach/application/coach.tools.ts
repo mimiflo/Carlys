@@ -8,6 +8,7 @@ import { BodyMetricsService } from '../../progress/application/body-metrics.serv
 import { ProgressService } from '../../progress/application/progress.service';
 import { WorkoutsService } from '../../workout_sessions/application/workouts.service';
 import { WorkoutTemplatesService } from '../../workout_templates/application/workout-templates.service';
+import { coachMealView } from './coach-meal-view';
 import {
   type CoachToolCall,
   type CoachToolDefinition,
@@ -118,7 +119,9 @@ export const COACH_TOOLS: CoachToolDefinition[] = [
     name: 'get_recent_meals',
     description:
       'Le journal alimentaire : les repas notés par l’utilisateur sur les derniers ' +
-      'jours (nom, kcal, protéines, instant UTC). Appelle-le quand la question ' +
+      'jours (nom, moment de la journée, kcal, macros, aliments et grammes quand ' +
+      'le repas est composé, instant UTC). moment vaut BREAKFAST, LUNCH, DINNER ' +
+      'ou SNACK, ou null quand il n’a pas été noté. Appelle-le quand la question ' +
       'touche à ce qu’il mange réellement. Un journal vide ne prouve pas qu’il ' +
       'n’a rien mangé : seulement qu’il n’a rien noté.',
     inputSchema: {
@@ -238,7 +241,8 @@ export class CoachTools {
         // le coach reçoit une fenêtre glissante qui se termine maintenant.
         const to = new Date();
         const days = asBoundedInteger(input.days, DEFAULT_MEAL_DAYS, MAX_MEAL_DAYS);
-        return this.meals.list(userId, new Date(to.getTime() - days * DAY_MS), to);
+        const meals = await this.meals.list(userId, new Date(to.getTime() - days * DAY_MS), to);
+        return meals.map(coachMealView);
       }
 
       default:

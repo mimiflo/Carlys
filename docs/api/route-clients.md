@@ -151,8 +151,14 @@ déclare ici à la main.
 | --- | --- | --- |
 | `GET /nutrition/meals` | **mobile** | apps/mobile |
 | `POST /nutrition/meals` | **mobile** | apps/mobile |
+| `GET /nutrition/meals/{id}` | **mobile** | apps/mobile — écran « Modifier ce repas », composants compris ; branché par le lot mobile qui suit le serveur (25 septembre 2026) |
 | `PATCH /nutrition/meals/{id}` | **mobile** | apps/mobile |
 | `DELETE /nutrition/meals/{id}` | **mobile** | apps/mobile |
+| `PUT /nutrition/meals/{id}/photo` | **mobile** | apps/mobile — bouton appareil photo de l'écran « Ajouter / Modifier ce repas » (JPEG compressé et redressé sur l'appareil) ; branché par le lot mobile qui suit le serveur (25 septembre 2026) |
+| `GET /nutrition/meals/{id}/photo` | **mobile** | apps/mobile — affichage de la photo, cache client invalidé par `photo.updatedAt` ; même lot mobile (25 septembre 2026) |
+| `DELETE /nutrition/meals/{id}/photo` | **mobile** | apps/mobile — retrait de la photo depuis le même écran ; même lot mobile (25 septembre 2026) |
+| `GET /nutrition/foods` | **mobile** | apps/mobile — « + Ajouter un aliment » de l'écran d'ajout et de correction ; `meta.source` porte la mention CIQUAL à afficher ; branché par le lot mobile qui suit le serveur (25 septembre 2026) |
+| `GET /nutrition/foods/{code}` | **mobile** | apps/mobile — fiche d'un aliment de la base ; même lot mobile (25 septembre 2026) |
 | `GET /nutrition/metabolism` | **mobile** | apps/mobile |
 
 ### Communauté

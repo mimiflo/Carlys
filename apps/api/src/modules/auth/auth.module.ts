@@ -3,6 +3,7 @@ import { APP_GUARD } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { EmailModule } from '../../infrastructure/email/email.module';
+import { NutritionModule } from '../nutrition/nutrition.module';
 import { UsersModule } from '../users/users.module';
 import { AccountService } from './application/account.service';
 import { AuthService } from './application/auth.service';
@@ -20,7 +21,8 @@ import { AuthController } from './presentation/http/auth.controller';
 import { SessionsController } from './presentation/http/sessions.controller';
 
 @Module({
-  imports: [JwtModule.register({}), UsersModule, EmailModule],
+  // NutritionModule : supprimer le compte efface ses photos de repas.
+  imports: [JwtModule.register({}), UsersModule, EmailModule, NutritionModule],
   controllers: [AuthController, SessionsController, AccountController],
   providers: [
     AuthService,

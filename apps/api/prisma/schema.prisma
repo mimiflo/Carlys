@@ -151,7 +151,7 @@ model UserProfile {
 
   // ── Entrées de génération de programme (Plan 4) — tous facultatifs :
   // la génération liste ce qui manque, elle n'invente rien.
-  trainingExperience TrainingExperience?
+  trainingExperience   TrainingExperience?
   /// Séances visées par semaine (bornes du contrat : 1 à 7).
   weeklySessionsTarget Int?
   /// Durée visée d'une séance, en minutes (bornes du contrat : 15 à 240).
@@ -709,12 +709,12 @@ model WorkoutTemplateExercise {
 /// Série prévue d'une ligne d'exercice. Cibles, pas mesures :
 /// ce qui sera réellement fait vit dans WorkoutSet.
 model WorkoutTemplateSet {
-  id                 String         @id @db.Uuid
-  templateExerciseId String         @db.Uuid
-  position           Int
-  kind               WorkoutSetKind @default(NORMAL)
-  targetReps         Int?
-  targetWeightKg     Decimal?       @db.Decimal(6, 2)
+  id                    String         @id @db.Uuid
+  templateExerciseId    String         @db.Uuid
+  position              Int
+  kind                  WorkoutSetKind @default(NORMAL)
+  targetReps            Int?
+  targetWeightKg        Decimal?       @db.Decimal(6, 2)
   /// Cibles des mouvements qui se comptent en TEMPS ou en DISTANCE : un
   /// gainage, une course, un rameur. Elles existent parce que `targetReps`
   /// ne sait pas les dire : y écrire « 45 » pour quarante-cinq secondes de
@@ -724,7 +724,7 @@ model WorkoutTemplateSet {
   /// PRESCRIPTION qui ne savait pas les exprimer.
   targetDurationSeconds Int?
   targetDistanceMeters  Int?
-  restSeconds        Int?
+  restSeconds           Int?
 
   templateExercise WorkoutTemplateExercise @relation(fields: [templateExerciseId], references: [id], onDelete: Cascade)
 
@@ -787,13 +787,13 @@ enum MilestoneKind {
 /// L'unicité porte la règle du journal local sur le serveur — « la première
 /// gagne, rien ne s'efface » devient un `ON CONFLICT DO NOTHING`.
 model ProgressMilestone {
-  id     String        @id @default(uuid()) @db.Uuid
-  userId String        @db.Uuid
-  kind   MilestoneKind
+  id         String        @id @default(uuid()) @db.Uuid
+  userId     String        @db.Uuid
+  kind       MilestoneKind
   /// Clé STABLE du franchissement, gelée comme les identifiants du catalogue
   /// de récompenses : `constance-4`, `titre-artisan`,
   /// `record:<exercice>|MAX_WEIGHT|<valeur>`.
-  key    String
+  key        String
   /// La date du FAIT, jamais celle de l'inscription. Le journal local datait
   /// une récompense du jour où l'application avait regardé, ce qui la plaçait
   /// systématiquement APRÈS ce qui l'avait méritée — sur une frise
@@ -802,7 +802,7 @@ model ProgressMilestone {
   /// Libellé, valeur, exercice : de quoi écrire la ligne sans rejouer le
   /// calcul. Jamais interrogé, seulement rendu.
   payload    Json?
-  createdAt  DateTime @default(now())
+  createdAt  DateTime      @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -1220,17 +1220,17 @@ model FriendChallenge {
 }
 
 model FriendChallengeMember {
-  challengeId String                      @db.Uuid
-  userId      String                      @db.Uuid
-  status      FriendChallengeMemberStatus @default(INVITED)
-  invitedById String                      @db.Uuid
+  challengeId  String                      @db.Uuid
+  userId       String                      @db.Uuid
+  status       FriendChallengeMemberStatus @default(INVITED)
+  invitedById  String                      @db.Uuid
   /// Dans l'unité de `FriendChallenge.metric`, jamais un `+1` en dur.
-  contribution Int                        @default(0)
-  joinedAt    DateTime?
-  leftAt      DateTime?
+  contribution Int                         @default(0)
+  joinedAt     DateTime?
+  leftAt       DateTime?
   /// Figé à la clôture, nul avant : le classement d'un défi terminé ne doit
   /// plus bouger, même si quelqu'un continue à s'entraîner.
-  finalRank   Int?
+  finalRank    Int?
 
   challenge FriendChallenge @relation(fields: [challengeId], references: [id], onDelete: Cascade)
   user      User            @relation(fields: [userId], references: [id], onDelete: Cascade)
@@ -1251,17 +1251,40 @@ enum MealQuantityUnit {
   PIECE
 }
 
+/// Le moment de la journée auquel un repas se rattache.
+///
+/// Une DONNÉE enregistrée, pas une déduction de l'heure : un dîner pris à
+/// 23 h 40 reste un dîner, une collation à midi reste une collation. Les
+/// repas antérieurs à la colonne la laissent à `null` ; le client en déduit
+/// alors un affichage depuis l'heure locale, sans rien écrire.
+enum MealMoment {
+  BREAKFAST
+  LUNCH
+  DINNER
+  SNACK
+}
+
 /// Entrée du journal alimentaire : ce que l'utilisateur dit avoir mangé.
 ///
 /// C'est la moitié RÉELLE du « 654 / 2 100 » de l'accueil : le consommé vient
 /// d'ici, l'objectif du profil métabolique. Id généré SUR L'APPAREIL
 /// (création idempotente, rejouable) ; `eatenAt` est un INSTANT UTC — le
 /// découpage en journées appartient au client, qui connaît son fuseau.
+///
+/// Deux façons d'exister, jamais mélangées :
+///  - SAISI À LA MAIN (aucun `MealComponent`) : `kcal`, les macros et la
+///    quantité sont ce que la personne a tapé, la quantité reste descriptive ;
+///  - COMPOSÉ (au moins un `MealComponent`) : `kcal`, les macros et la
+///    quantité (en grammes) sont CALCULÉS par le serveur depuis les aliments,
+///    et ne se corrigent pas à la main tant que la composition existe.
 model MealEntry {
-  id        String    @id @db.Uuid
-  userId    String    @db.Uuid
-  name      String
-  kcal      Int
+  id           String            @id @db.Uuid
+  userId       String            @db.Uuid
+  name         String
+  /// Nullable sans défaut : les repas enregistrés avant son arrivée n'ont
+  /// jamais dit leur moment, et en inventer un les ferait mentir.
+  moment       MealMoment?
+  kcal         Int
   /// Ce qui a été mangé, en clair : « 250 g », « 1,5 portion », « 2 pièces ».
   ///
   /// PUREMENT DESCRIPTIVE : elle ne multiplie NI `kcal` NI les macros, qui
@@ -1286,17 +1309,128 @@ model MealEntry {
   /// L'écran affichait quatre macros CIBLES et n'en journalisait que deux :
   /// la comparaison consommé / objectif était impossible sur les deux tiers
   /// de ce qu'il montrait.
-  proteinG  Int?
-  carbsG    Int?
-  fatG      Int?
-  eatenAt   DateTime
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  deletedAt DateTime?
+  proteinG     Int?
+  carbsG       Int?
+  fatG         Int?
+  eatenAt      DateTime
+  createdAt    DateTime          @default(now())
+  updatedAt    DateTime          @updatedAt
+  deletedAt    DateTime?
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user       User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  components MealComponent[]
+  photo      MealPhoto?
 
   @@index([userId, eatenAt])
+}
+
+/// La photo qu'une personne joint à SON repas. Donnée personnelle.
+///
+/// Les octets vivent dans le bucket PRIVÉ (`S3_PRIVATE_BUCKET`), distinct du
+/// bucket des médias du catalogue, qui est lisible sans jeton : un préfixe
+/// dans ce dernier aurait laissé chaque photo à une URL près d'internet. Seule
+/// l'API les sert, et à la seule personne qui a enregistré le repas.
+///
+/// UNE ligne = UN objet vivant. Un objet du bucket que plus aucune ligne ne
+/// cite est un orphelin (échec de suppression, dépôt interrompu) : c'est
+/// cette règle, et elle seule, que suit le balayage `dist/cli/meal-photos-sweep`.
+model MealPhoto {
+  mealId     String   @id @db.Uuid
+  /// `meal-photos/<userId>/<uuid>.jpg` : un UUID NEUF à chaque dépôt, jamais
+  /// le nom d'origine. Le préfixe par personne permet d'effacer toutes ses
+  /// photos d'un coup à la suppression du compte, orphelins compris.
+  storageKey String   @unique
+  /// Taille des octets STOCKÉS, métadonnées déjà retirées.
+  byteSize   Int
+  /// SHA-256 (hex) des octets stockés : l'ETag de `GET …/photo`.
+  sha256     String
+  createdAt  DateTime @default(now())
+  /// Change à chaque remplacement : c'est la clé de cache du client.
+  updatedAt  DateTime @updatedAt
+
+  meal MealEntry @relation(fields: [mealId], references: [id], onDelete: Cascade)
+}
+
+/// Un aliment de la table CIQUAL de l'Anses (Licence Ouverte Etalab 2.0 :
+/// réutilisation libre, AVEC mention de la source).
+///
+/// Chargé par `dist/cli/ciqual-import` depuis la distribution XML officielle,
+/// jamais saisi à la main ni par l'API. Clé = `alim_code` CIQUAL, stable
+/// d'une version à l'autre : c'est elle qui rend l'import rejouable.
+///
+/// Un aliment qui disparaît d'une nouvelle version n'est JAMAIS supprimé :
+/// il reçoit `retiredAt`, sort de la recherche et ne peut plus être ajouté à
+/// un repas. Les repas qui le contiennent gardent leur INSTANTANÉ
+/// (`MealComponent`), qui seul fait foi. La relation depuis `MealComponent`
+/// est en `Restrict` pour que la base elle-même refuse la suppression.
+model Food {
+  code           Int       @id
+  /// `alim_nom_fr`, tel que publié : « Poulet, filet, sans peau, cuit ».
+  name           String
+  /// Le segment avant la première virgule : « Poulet ».
+  shortName      String
+  /// Groupe et sous-groupe CIQUAL (codes à zéros de tête, d'où des chaînes).
+  /// Nullables : un aliment dont le groupe n'est pas décrit dans
+  /// `alim_grp_*.xml` reste importable, il n'est simplement pas rangé.
+  groupCode      String?
+  groupName      String?
+  subgroupCode   String?
+  subgroupName   String?
+  /// Valeurs POUR 100 g. L'énergie est obligatoire : un aliment sans énergie
+  /// connue n'est pas importé, on ne saurait pas calculer un repas avec lui.
+  /// Les macros valent `null` quand la table ne donne pas de valeur (« - ») :
+  /// inconnu, jamais zéro. « traces » et « < x » valent 0.
+  kcalPer100g    Decimal   @db.Decimal(7, 2)
+  proteinPer100g Decimal?  @db.Decimal(7, 2)
+  carbsPer100g   Decimal?  @db.Decimal(7, 2)
+  fatPer100g     Decimal?  @db.Decimal(7, 2)
+  /// `name` normalisé : minuscules, sans accents ni ligatures, ponctuation
+  /// remplacée par des espaces. La recherche y cherche chaque mot saisi.
+  /// Pas d'index ni d'extension (pg_trgm) : ~3 200 lignes, un balayage
+  /// séquentiel répond en une milliseconde.
+  searchKey      String
+  /// La version de la table dont viennent ces valeurs (« 2020-07-07 »).
+  sourceVersion  String
+  retiredAt      DateTime?
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+
+  components MealComponent[]
+}
+
+/// Un aliment dans un repas COMPOSÉ, avec sa quantité en grammes.
+///
+/// L'INSTANTANÉ fait foi : nom, nom court, groupe et valeurs pour 100 g sont
+/// recopiés de `Food` au moment de l'ajout. Une nouvelle version de CIQUAL
+/// qui corrige une valeur ne réécrit donc pas un repas passé ; seule une
+/// nouvelle composition (PATCH) relit la base. `foodCode` garde la référence
+/// pour savoir d'où vient la ligne, pas pour la recalculer.
+///
+/// Les lignes n'ont pas de vie propre : un PATCH qui envoie `components`
+/// remplace toute la liste, dans la transaction qui recalcule le repas.
+model MealComponent {
+  id        String  @id @db.Uuid
+  mealId    String  @db.Uuid
+  foodCode  Int
+  /// Ordre d'affichage, 0 à 29 (30 composants au plus).
+  position  Int
+  /// 1 à 5 000 g, deux décimales.
+  quantityG Decimal @db.Decimal(7, 2)
+
+  foodName          String
+  foodShortName     String
+  foodGroup         String?
+  foodSourceVersion String
+  kcalPer100g       Decimal  @db.Decimal(7, 2)
+  proteinPer100g    Decimal? @db.Decimal(7, 2)
+  carbsPer100g      Decimal? @db.Decimal(7, 2)
+  fatPer100g        Decimal? @db.Decimal(7, 2)
+  createdAt         DateTime @default(now())
+
+  meal MealEntry @relation(fields: [mealId], references: [id], onDelete: Cascade)
+  food Food      @relation(fields: [foodCode], references: [code], onDelete: Restrict)
+
+  @@unique([mealId, position])
 }
 
 // ────────────────────────────── Communauté ────────────────────────────────
@@ -1549,7 +1683,7 @@ enum ChallengeMetric {
 /// concurrentes. La progression est la somme des contributions rapportée à
 /// l'objectif : la barre raconte l'effort commun.
 model CommunityChallenge {
-  id          String        @id @default(uuid()) @db.Uuid
+  id          String          @id @default(uuid()) @db.Uuid
   slug        String
   /// Mois du défi, `YYYY-MM` en UTC : la clé d'idempotence du jeu du mois.
   month       String
@@ -1563,10 +1697,10 @@ model CommunityChallenge {
   description String
   /// Objectif collectif (séances, bonnes réponses…).
   target      Int
-  startsAt    DateTime      @default(now())
+  startsAt    DateTime        @default(now())
   endsAt      DateTime
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
 
   participations ChallengeParticipation[]
 
@@ -1582,18 +1716,18 @@ model CommunityChallenge {
 /// `answeredOn` est le jour LOCAL de l'appareil (YYYY-MM-DD) — le serveur ne
 /// découpe pas les journées, même principe que le journal alimentaire.
 model QuizAnswer {
-  id         String   @id @default(uuid()) @db.Uuid
-  userId     String   @db.Uuid
+  id          String   @id @default(uuid()) @db.Uuid
+  userId      String   @db.Uuid
   /// Identifiant de la leçon du pack embarqué (contenu éditorial).
-  lessonId   String
-  answeredOn String
-  correct    Boolean
+  lessonId    String
+  answeredOn  String
+  correct     Boolean
   /// Index du choix retenu, pour reconstruire la carte de quiz sur un
   /// nouvel appareil (afficher la bonne réponse sans montrer le choix fait
   /// laisserait croire à une réussite). Nul sur les réponses d'avant la
   /// migration : on sait « abordée », pas « quoi ».
   choiceIndex Int?
-  createdAt  DateTime @default(now())
+  createdAt   DateTime @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -1602,12 +1736,12 @@ model QuizAnswer {
 }
 
 model ChallengeParticipation {
-  challengeId  String   @db.Uuid
-  userId       String   @db.Uuid
+  challengeId  String    @db.Uuid
+  userId       String    @db.Uuid
   /// Contribution individuelle à l'objectif collectif. Pour les défis SPORT,
   /// incrémentée à la clôture de chaque séance pendant la fenêtre du défi.
-  contribution Int      @default(0)
-  joinedAt     DateTime @default(now())
+  contribution Int       @default(0)
+  joinedAt     DateTime  @default(now())
   /// Départ du défi. La ligne SURVIT au départ : la contribution déjà versée
   /// appartient à l'objectif COLLECTIF, pas à celui qui l'a versée. Effacer
   /// la ligne faisait reculer un compteur qui ne peut que monter — les autres
@@ -1687,18 +1821,18 @@ model NotificationPreference {
 /// Comme le modèle de séance : identifiant fourni par l'appareil (création
 /// hors ligne), contenu TOUJOURS réécrit intégralement, suppression logique.
 model Program {
-  id          String    @id @db.Uuid
-  userId      String    @db.Uuid
-  name        String
-  description String?
+  id               String    @id @db.Uuid
+  userId           String    @db.Uuid
+  name             String
+  description      String?
   /// Nombre de semaines du plan (1 à 52). Les jours au-delà sont refusés.
-  weeksCount  Int
+  weeksCount       Int
   /// Programme suivi en ce moment. UN SEUL par utilisateur : deux programmes
   /// « en cours » n'ont aucun sens, l'application ne saurait lequel afficher.
   /// PostgreSQL ne peut pas l'exprimer ici (il faudrait un index unique
   /// PARTIEL, hors du vocabulaire Prisma), c'est donc le service qui l'impose,
   /// en désactivant les autres dans la même transaction.
-  isActive    Boolean   @default(false)
+  isActive         Boolean   @default(false)
   /// Premier jour RÉEL du plan — une DATE CIVILE, jamais un instant.
   ///
   /// C'est elle qui donne une date à chaque case : la grille est ancrée au
@@ -1718,7 +1852,7 @@ model Program {
   /// `NOT NULL` sans défaut casserait la migration sur une table peuplée.
   /// Sans date, un programme reste ce qu'il a toujours été — une GRILLE
   /// (semaine N, jour J), sans calendrier.
-  startsOn    DateTime? @db.Date
+  startsOn         DateTime? @db.Date
   /// Rapport de la génération qui a produit ce programme — `null` s'il a été
   /// composé à la main. Écrit UNE fois, jamais relu par le moteur.
   ///
@@ -1728,9 +1862,9 @@ model Program {
   /// il faudrait régénérer, et le profil aura bougé entre-temps. C'est
   /// justement la première chose qu'on change quand un programme déçoit.
   generationReport Json?
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  deletedAt   DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  deletedAt        DateTime?
 
   user User         @relation(fields: [userId], references: [id], onDelete: Cascade)
   days ProgramDay[]
