@@ -134,6 +134,31 @@ test "$(git rev-parse HEAD)" = "$(python3 -c "import json;print(json.load(open('
   && echo "graphe à jour" || graphify update .
 ```
 
+La version du CLI est épinglée dans `.claude/hooks/session-start.sh`
+(`GRAPHIFY_VERSION`) : le hook la réinstalle si le conteneur en a une autre.
+
+## Plugins de l'assistant (ponytail, agent-skills)
+
+Deux plugins Claude Code sont **recopiés dans `.claude/`** à un commit épinglé
+par `./scripts/vendoriser_plugins_claude.sh`, parce qu'une session web ne
+charge aucun plugin, alors qu'elle charge les skills, agents, commandes et
+hooks du projet :
+
+- **ponytail** : trois hooks (`.claude/settings.json`) injectent sa règle,
+  « le code le plus court qui marche », à chaque session et à chaque
+  sous-agent ; skills `/ponytail` (niveau `lite|full|ultra`), `/ponytail-review`,
+  `/ponytail-audit`, `/ponytail-debt`.
+- **agent-skills** : 25 skills d'ingénierie (`/test-driven-development`,
+  `/security-and-hardening`, `/performance-optimization`…), 4 agents
+  (`code-reviewer`, `security-auditor`, `test-engineer`,
+  `web-performance-auditor`) et 9 commandes `/agent-skills-<phase>`.
+
+**Ce fichier prime sur eux.** Tout ce qu'il exige — tests de la section
+« Qualité exigée », migrations, docs, états, design system, couches
+contrôleur → use case → repository — est une demande explicite, que ponytail
+ne « simplifie » jamais. Ponytail rogne ce que personne n'a demandé ; il ne
+rogne pas ce qui est écrit ici.
+
 ## Règles générales (spécification produit — à respecter intégralement)
 
 **Interdits :**

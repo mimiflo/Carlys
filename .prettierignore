@@ -8,3 +8,8 @@ apps/admin/next-env.d.ts
 apps/mobile/
 apps/api/prisma/migrations/
 *.md
+
+# Plugins Claude Code recopiés tels quels depuis leur dépôt (voir
+# scripts/vendoriser_plugins_claude.sh) : les reformater les écarterait de
+# l'amont et rendrait chaque montée de version illisible.
+.claude/ponytail/

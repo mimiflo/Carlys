@@ -19,12 +19,17 @@ fi
 
 export PATH="$HOME/.local/bin:$PATH"
 
-# 1. Le CLI, s'il manque (idempotent — l'état du conteneur est mis en cache).
-if ! command -v graphify >/dev/null 2>&1; then
+# 1. Le CLI, s'il manque OU s'il n'est pas à la version épinglée (idempotent —
+# l'état du conteneur est mis en cache, et un conteneur ancien garderait sinon
+# pour toujours la version qu'il a reçue à sa création). Épingler rend le
+# graphe identique d'une session à l'autre ; monter de version = changer
+# cette ligne, dans un commit.
+GRAPHIFY_VERSION="0.9.69"
+if [ "$(graphify --version 2>/dev/null)" != "graphify $GRAPHIFY_VERSION" ]; then
   if command -v uv >/dev/null 2>&1; then
-    uv tool install --quiet "graphifyy[sql]" || exit 0
+    uv tool install --quiet --force "graphifyy[sql]==$GRAPHIFY_VERSION" || exit 0
   elif command -v pipx >/dev/null 2>&1; then
-    pipx install --quiet "graphifyy[sql]" || exit 0
+    pipx install --quiet --force "graphifyy[sql]==$GRAPHIFY_VERSION" || exit 0
   else
     exit 0 # pas d'outillage Python : tant pis pour le graphe, pas d'échec
   fi

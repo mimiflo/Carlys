@@ -9,6 +9,38 @@
             "timeout": 600
           }
         ]
+      },
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "mkdir -p \"${CLAUDE_CONFIG_DIR:-$HOME/.claude}\" && touch \"${CLAUDE_CONFIG_DIR:-$HOME/.claude}/.ponytail-statusline-nudged\" && node \"$CLAUDE_PROJECT_DIR/.claude/ponytail/ponytail-activate.js\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/ponytail/ponytail-subagent.js\"",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"$CLAUDE_PROJECT_DIR/.claude/ponytail/ponytail-mode-tracker.js\"",
+            "timeout": 5
+          }
+        ]
       }
     ]
   }
