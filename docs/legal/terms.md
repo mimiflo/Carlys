@@ -69,8 +69,10 @@ Certaines fonctions sont réservées à l’abonnement Premium (voir la section
 ## 5. Le coach IA
 
 - Le coach est un assistant automatisé fondé sur un modèle de langage fourni
-  par un prestataire externe (Anthropic). Il peut se tromper, mal comprendre
-  ta demande ou proposer quelque chose d’inadapté : garde ton jugement.
+  par un prestataire externe : aujourd’hui Mistral AI, société française. La
+  politique de confidentialité nomme toujours celui qui est réellement
+  utilisé. Le coach peut se tromper, mal comprendre ta demande ou proposer
+  quelque chose d’inadapté : garde ton jugement.
 - Le coach lit tes données d’entraînement pour te répondre, mais **il
   n’écrit rien** dans ton compte : une séance proposée n’existe que si tu
   l’acceptes.

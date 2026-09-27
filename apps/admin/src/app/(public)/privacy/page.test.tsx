@@ -10,8 +10,9 @@ describe('Page /privacy', () => {
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
       /politique de confidentialité/i,
     );
-    // Le prestataire du coach et celui du paiement doivent être nommés.
-    expect(container).toHaveTextContent('Anthropic');
+    // Le prestataire du coach et celui du paiement doivent être nommés : pour
+    // le coach, celui que COACH_API_BASE_URL désigne réellement (Mistral AI).
+    expect(container).toHaveTextContent('Mistral AI');
     expect(container).toHaveTextContent('Stripe');
     expect(container).toHaveTextContent('Firebase Cloud Messaging');
   });

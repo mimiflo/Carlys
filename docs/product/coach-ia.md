@@ -176,19 +176,30 @@ apps/api/src/modules/coach/
     coach.quota.ts               # compteur Redis + garde
   infrastructure/
     coach.repository.ts          # Prisma
-    anthropic.client.ts          # implémentation de CoachModelPort
+    openai-compatible.client.ts  # CoachModelPort, API compatible OpenAI (Mistral…)
+    anthropic.client.ts          # CoachModelPort, Anthropic
 ```
+
+Le fournisseur est un **réglage** (`coachModelFor`, dans `coach.module.ts`) :
+`COACH_API_BASE_URL` posée, le client compatible OpenAI ; absente, le client
+Anthropic. Voir
+[l'ADR 0010](../decisions/0010-coach-fournisseur-compatible-openai.md).
 
 `coach.service.ts` dépasserait 300 lignes s'il portait tout : le prompt, les
 outils, la validation et le quota sont donc quatre fichiers, chacun testable
 seul.
 
 Ce plafond n'est plus une consigne écrite : `max-lines` l'applique dans
-`apps/api/eslint.config.mjs` (300 sur `src/**/*.service.ts`, 200 sur
-`src/**/*.controller.ts`, blancs et commentaires compris, comme `wc -l`).
-`coach.service.ts` est le plus proche du bord de tous les services — 296
-lignes, quatre de marge. La prochaine fonctionnalité du coach se découpe
-donc *avant* d'être écrite, pas après que le lint l'a refusée.
+`apps/api/eslint.config.mjs` (moins de 300 lignes pour `src/**/*.service.ts`,
+moins de 200 pour `src/**/*.controller.ts`, soit `max: 299` et `max: 199`,
+l'option étant inclusive ; blancs et commentaires compris, comme `wc -l`).
+La restitution du quota sur panne du fournisseur a fait passer
+`coach.service.ts` au-dessus : l'erreur `CoachQuotaExceededError` a rejoint
+`coach.quota.ts`, où elle a sa place. Avec la ligne « Tour de coach
+interrompu », le service est à 298 lignes : la prochaine fonctionnalité du
+coach se découpe *avant* d'être écrite, pas après que le lint l'a refusée.
+`app-config.service.ts` est à 299 lignes après l'ajout de `coachProvider` :
+la prochaine variable d'environnement impose de le découper par domaine.
 
 ### Le port du modèle
 
@@ -199,8 +210,11 @@ export interface CoachModelPort {
 ```
 
 Une seule frontière avec le fournisseur. Toute la logique métier se teste
-contre un faux ; **aucun test n'appelle l'API réelle**, et un changement de
-modèle ne touche qu'un fichier.
+contre un faux ; **aucun test n'appelle l'API réelle** (les deux clients se
+testent avec un `fetch` simulé), et changer de fournisseur est un réglage.
+Les règles communes aux deux clients (6 tours d'outils, 2048 jetons de
+sortie, échéance de 50 s pour le tour entier, textes de refus et d'abandon)
+sont exportées par le port, jamais recopiées.
 
 ### Routes
 
@@ -220,7 +234,9 @@ Enveloppes standard (`{ data, meta, requestId }`). Codes d'erreur utilisés :
 `FORBIDDEN` (droit absent), `RATE_LIMITED` (quota), `CONFLICT` (même
 identifiant de message avec un autre contenu), `NOT_FOUND` (fil d'autrui, ou
 identifiant déjà porté par un autre fil), `SERVICE_UNAVAILABLE` (fournisseur
-indisponible ou coach désactivé).
+indisponible ou coach désactivé). Un 429 du fournisseur, dont le quota est
+GLOBAL, devient lui aussi `SERVICE_UNAVAILABLE`, jamais `RATE_LIMITED` : le
+téléphone afficherait « ta limite du jour ».
 
 ## Les outils de lecture
 
@@ -247,8 +263,8 @@ c'est ce qui pèse le plus sur la qualité du déclenchement.
 `proposal.validator.ts` avant tout stockage. Une proposition est rejetée si un
 `exerciseId` est inconnu, si les positions ne sont pas contiguës, si une charge
 est absurde (> 500 kg, négative), ou si elle est vide. Un rejet n'est pas une
-erreur utilisateur : le tour repart une fois avec le motif du rejet, puis
-dégrade en réponse purement textuelle.
+erreur utilisateur : la réponse texte reste, sans séance, et le rejet est
+journalisé (« Proposition du coach rejetée »).
 
 ## Prompt et mise en cache
 
@@ -277,21 +293,51 @@ l'interdit explicitement pour les deux axes, et la composition rend la
 chaîne vide (pas un saut de ligne orphelin) quand rien n'est choisi.
 Voir [mentor.md](mentor.md) pour le personnage complet.
 
-Vérification : `usage.cache_read_input_tokens` doit être non nul dès le
-deuxième tour. Un test d'assemblage vérifie qu'aucune donnée volatile
+Vérification, chez Anthropic : `usage.cache_read_input_tokens` doit être
+non nul dès le deuxième tour. Chez un fournisseur compatible OpenAI, il n'y a
+pas de césure explicite : `cacheReadTokens` vaut ce qu'il déclare (souvent
+0), ce n'est pas un préfixe cassé. La règle du préfixe stable reste gardée,
+elle ne coûte rien ailleurs. Un test d'assemblage vérifie qu'aucune donnée volatile
 n'apparaît avant la césure, et l'e2e vérifie que le préfixe reste identique
 octet pour octet, briefing ou pas.
 
 ## Modèle, latence, coût
 
-`claude-opus-5` par défaut, configurable. Réflexion adaptative laissée active
-(elle l'est par défaut) ; `effort` bas à moyen pour une conversation, plus haut
-pour une adaptation de séance qui demande un vrai arbitrage.
+**Décision du 27 septembre 2026 : le coach est gratuit pour le
+propriétaire.** Fournisseur Mistral AI, offre « Free mode » (sans carte),
+modèle `mistral-small-latest`, entraînement désactivé dans la console,
+données stockées dans l'UE. Réglage : `COACH_API_BASE_URL`, `COACH_API_KEY`,
+`COACH_MODEL` (pas à pas dans
+[mise-en-route-serveur.md](../deployment/mise-en-route-serveur.md), « Coach
+IA gratuit avec Mistral »). Anthropic reste possible (`COACH_MODEL`
+facultatif, `claude-opus-5` par défaut), mais **les textes légaux passent
+d'abord** : Anthropic PBC calcule aux États-Unis, et `privacy.md` promet
+d'être mis à jour AVANT que les messages partent chez un autre prestataire.
+Dans l'ordre : `privacy.md` (nommer Anthropic PBC, le remettre parmi les
+traitements hors de l'Union européenne, des marqueurs pour sa conservation
+et l'entraînement) et `terms.md`, redéploiement de l'admin, et seulement
+ensuite retirer `COACH_API_BASE_URL` et poser `ANTHROPIC_API_KEY`. Aucun
+réglage de réflexion ni d'`effort` n'est envoyé, à aucun des deux.
 
-**Ordre de grandeur** : un tour avec préfixe caché coûte environ **un à deux
-centimes** — l'essentiel part dans la sortie. Un quota de 30 messages par jour
-plafonne donc un utilisateur intensif autour de 50 centimes par jour, ce qui
-doit être comparé au prix de l'abonnement avant d'ouvrir la vanne.
+**Ce que « gratuit » implique.** Mistral ne publie pas les limites du Free
+mode : elles se lisent dans Admin > API > Limits. Le volume mensuel inclus
+épuisé et le paiement à l'usage désactivé, le service s'arrête jusqu'au mois
+suivant : le coach répond alors 503, sans rien facturer. Le plafond par
+personne (`COACH_DAILY_MESSAGE_LIMIT`) se règle sur ces limites.
+
+**Latence.** Une seule échéance de 50 s couvre le tour entier (tentatives et
+outils), sous les 60 s de nginx. Le client compatible OpenAI réessaie deux
+fois un 429 ou un 5xx (pauses de 1 puis 2 s) ; toute autre panne (réseau,
+échéance, réponse illisible, génération interrompue par Mistral avec
+`finish_reason: error`, 4xx) donne un 503 dont le journal ne porte que le
+statut, jamais le corps ni la clé. Côté mobile, l'attente de réponse est de
+20 s (`dio_client.dart`) : porter l'envoi de message à 65 s est à faire dans
+l'application (reporté, tranche mobile).
+
+**Ordre de grandeur, si Anthropic est réglé** : un tour avec préfixe caché
+coûte environ **un à deux centimes**, l'essentiel part dans la sortie. Un
+quota de 30 messages par jour plafonne donc un utilisateur intensif autour de
+50 centimes par jour, à comparer au prix de l'abonnement.
 
 **Streaming.** Une réponse non diffusée fait attendre plusieurs secondes devant
 un écran figé. Deux options assumées :
@@ -313,25 +359,60 @@ d'usage — à toi de trancher si tu préfères l'inverse.
   Vérifié **côté serveur avant tout appel au modèle**, jamais côté client.
 - **Quota** : compteur Redis `coach:quota:{userId}:{yyyy-mm-dd}`, plafond
   configurable, `RATE_LIMITED` au-delà. Le compteur s'incrémente **avant**
-  l'appel : un échec du fournisseur ne doit pas offrir un tour gratuit à qui
-  boucle.
+  l'appel, atomiquement : deux envois simultanés ne passent jamais tous deux
+  sous le plafond. **Un fournisseur tombé (503) dès son premier appel rend
+  le message** (`refundIfUnavailable`, décision du propriétaire du 27
+  septembre 2026) : la personne n'a rien reçu, et rien n'a été consommé. Deux
+  bornes : un tour qui tombe APRÈS un appel servi (tour d'outils) garde le
+  décompte, ses jetons sont partis ; et trois restitutions au plus par
+  personne et par jour (`COACH_REFUNDS_PER_DAY`, compteur
+  `coach:refund:{userId}:{yyyy-mm-dd}`), sans quoi qui insiste pendant une
+  panne, ou la provoque en saturant les limites partagées du Free mode,
+  appellerait le fournisseur sans fin. Le message est rendu au jour où il a
+  été compté, même si minuit passe entre-temps, et un envoi refusé au plafond
+  rend aussi son incrément, sinon il avalerait sous concurrence un message
+  rendu. Une panne de notre propre code (500) garde le décompte : elle ne se
+  rejoue pas gratuitement.
 - **Interrupteur global** : `COACH_ENABLED=false` coupe la fonctionnalité sans
   déploiement, en renvoyant `SERVICE_UNAVAILABLE`.
 - **Refus du modèle** : un refus se traite comme un contenu, pas comme une
-  panne — message clair à l'utilisateur, jamais une erreur 500.
+  panne — message clair à l'utilisateur, jamais une erreur 500. Seul le
+  client Anthropic en reçoit (`stop_reason: refusal`) : Mistral n'émet ni
+  `finish_reason: content_filter` ni champ `refusal` (enum de son OpenAPI :
+  `stop`, `length`, `model_length`, `error`, `tool_calls`), le client
+  compatible OpenAI n'en guette donc aucun.
+- **Garde-fous santé du prompt**, pour tout fournisseur : renvoi vers un
+  professionnel face à une douleur ou un symptôme ; aucun apport sous les
+  planchers de l'application (1200 kcal femme, 1500 homme, lus dans
+  `metabolism.calculator.ts`) ni perte de plus d'un kilo par semaine ;
+  aucun conseil de régime face à des signes de trouble alimentaire ; rien sur
+  les produits dopants ni les dosages de médicaments ; texte brut sans
+  Markdown, que le téléphone affiche tel quel. Chaque consigne a son
+  assertion dans `coach.prompt.spec.ts`.
 - **Journalisation** : chaque tour trace `requestId`, utilisateur, jetons,
-  outils appelés, proposition acceptée ou non. Jamais le contenu du message.
+  outils appelés, proposition acceptée ou non. Un tour que le fournisseur
+  interrompt écrit « Tour de coach interrompu » (avertissement) avec les
+  jetons déjà consommés et le statut : sans elle, ces jetons ne
+  figureraient nulle part. Jamais le contenu du message.
 
-Nouvelles variables validées par Zod dans `env.schema.ts` :
-`ANTHROPIC_API_KEY` (optionnelle — si absente, le module se déclare
-indisponible au lieu d'empêcher le démarrage), `COACH_MODEL`,
-`COACH_DAILY_MESSAGE_LIMIT`, `COACH_ENABLED`.
+Variables validées par Zod dans `env.schema.ts`, toutes optionnelles : un
+fournisseur incomplet rend le coach indisponible (503) au lieu d'empêcher le
+démarrage.
+
+| Variable | Rôle |
+| --- | --- |
+| `COACH_API_BASE_URL` | Posée : API compatible OpenAI (`https://api.mistral.ai/v1`). Absente : Anthropic |
+| `COACH_API_KEY` | Clé de cette API. Absente pour un Ollama interne ; présente, jamais vide |
+| `COACH_MODEL` | Exigé avec `COACH_API_BASE_URL` (`mistral-small-latest`) ; sinon `claude-opus-5` |
+| `ANTHROPIC_API_KEY` | Lue seulement sans `COACH_API_BASE_URL` |
+| `COACH_DAILY_MESSAGE_LIMIT` | Plafond par personne et par jour (30) |
+| `COACH_ENABLED` | Interrupteur global |
 
 ## État : le socle serveur est construit
 
 Tout ce qui précède existe dans `apps/api/src/modules/coach/` : schéma et
 migration, port du modèle, neuf outils de lecture, validateur, quota, dépôt,
-contrôleur, client Anthropic. Le droit `ai_coaching` est accordé par le plan
+contrôleur, deux clients de modèle (compatible OpenAI et Anthropic). Le droit `ai_coaching` est accordé par le plan
 premium.
 
 **Deux limites de l'environnement de développement, à connaître.**
@@ -501,13 +582,18 @@ que de le laisser dériver.
 
 **API — unitaires.** Le validateur rejette un `exerciseId` inconnu, des
 positions non contiguës, une charge absurde, une proposition vide. La garde de
-quota compte avant l'appel et bloque au plafond. L'assemblage du prompt ne
+quota compte avant l'appel, bloque au plafond et rend le message sur un 503
+survenu avant toute consommation, trois fois par jour au plus, course et
+passage de minuit compris. Chaque client porte les jetons déjà consommés
+dans son 503, et garde UNE échéance pour tout le tour (tentatives, tours
+d'outils, pauses : prouvé par mutation). L'assemblage du prompt ne
 place aucune donnée volatile avant la césure de cache. Le port du modèle est un
 faux ; aucun test ne sort du réseau.
 
 **API — e2e.** `403` sans le droit `ai_coaching` pour ouvrir un fil ou
 écrire, mais `200` pour relire ses fils sans lui, `429` au-delà du quota, `503`
-coach désactivé à l'écriture (la lecture, elle, répond), `200` avec proposition valide, et le cas où le modèle propose
+coach désactivé à l'écriture (la lecture, elle, répond), `503` fournisseur tombé sans
+message décompté (puis le renvoi qui termine le tour), `200` avec proposition valide, et le cas où le modèle propose
 un exercice inconnu — la réponse doit rester utilisable.
 
 **Mobile.** Rendu des bulles, carte de proposition, lancement de séance depuis

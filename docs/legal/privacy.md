@@ -330,7 +330,8 @@ Le coach de Carlys est un assistant automatisé fourni par un modèle de
 langage. Il n’est utilisé que lorsque tu lui écris.
 
 À chaque message, les éléments suivants sont transmis au prestataire
-**Anthropic, PBC** (API Claude) pour produire la réponse :
+**Mistral AI**, société française établie à Paris (son API de modèles de
+langage), pour produire la réponse :
 
 - ton message et l’historique de la conversation en cours ;
 - le profil Carlys que tu as choisi (Constructeur, Challenger, Athlète ou
@@ -354,10 +355,27 @@ conservées sans y être listées, et nous t’en donnons une copie si tu la
 demandes (voir « Tes droits »). Écrire au coach demande un abonnement qui
 l’inclut. Un plafond quotidien de messages s’applique à chaque compte.
 
-Le prestataire traite ces données pour le seul compte de Carlys, dans le
-cadre de ses conditions commerciales. [À COMPLÉTER : vérifier et résumer les
-conditions de traitement du contrat Anthropic (durée de conservation,
-non-utilisation pour l’entraînement des modèles, localisation).]
+Le prestataire nommé ici est celui que Carlys utilise réellement pour le
+coach : si nous en changeons, cette politique est mise à jour avant que tes
+messages ne lui soient envoyés.
+
+Mistral AI traite ces données pour le seul compte de Carlys, dans le cadre de
+ses conditions et de son accord de traitement des données :
+
+- **Stockage** : dans l’Union européenne.
+- **Entraînement** : l’utilisation de tes échanges pour améliorer ses
+  modèles a été désactivée dans le compte de Carlys, le
+  [À COMPLÉTER : date de la désactivation, relevée sur la capture d’écran].
+- **Lieu de calcul de la réponse** : [À COMPLÉTER : avec l’adresse
+  européenne (api.eu.mistral.ai), « dans l’Union européenne » ; avec
+  l’adresse globale (api.mistral.ai), « sans engagement de lieu de la part
+  de Mistral AI, donc possiblement hors de l’Union européenne »].
+- **Durée de conservation chez Mistral AI** : [À COMPLÉTER : durée relevée
+  dans l’accord de traitement des données de Mistral AI].
+- **Données de santé** : [À COMPLÉTER : confirmation écrite de Mistral AI
+  que son accord de traitement des données couvre les données de santé
+  (article 9 du RGPD) transmises par le coach, ou référence de l’avenant
+  signé ; l’annexe publiée indique « None » pour ces catégories].
 
 ## 5. Les autres prestataires
 
@@ -392,9 +410,10 @@ non-utilisation pour l’entraînement des modèles, localisation).]
   PRIVÉ, sur le même serveur dédié que la base de données : aucune adresse
   publique n’y mène, et seul le serveur de Carlys les lit.
 
-Certains de ces prestataires (Anthropic, Apple, Google, Stripe) peuvent
-traiter les données en dehors de l’Union européenne, dans le cadre des
-garanties contractuelles qu’ils proposent. [À COMPLÉTER : vérifier le cadre
+Certains de ces prestataires (Apple, Google, Stripe) peuvent traiter les
+données en dehors de l’Union européenne, dans le cadre des garanties
+contractuelles qu’ils proposent. Pour Mistral AI, le lieu de calcul est
+indiqué plus haut, avec le coach. [À COMPLÉTER : vérifier le cadre
 de transfert applicable à chaque prestataire.]
 
 ## 6. Combien de temps
