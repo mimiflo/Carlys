@@ -159,6 +159,35 @@ contrôleur → use case → repository — est une demande explicite, que ponyt
 ne « simplifie » jamais. Ponytail rogne ce que personne n'a demandé ; il ne
 rogne pas ce qui est écrit ici.
 
+**Le propriétaire ne tape aucune commande** (décision du 27 septembre 2026) :
+c'est à l'assistant de déclencher lui-même le bon outil, sans attendre qu'on
+le lui demande, et de dire en une ligne lequel il a utilisé et ce qu'il en
+retient. La correspondance à suivre :
+
+| Situation | Outil à lancer soi-même |
+| --- | --- |
+| Toute question d'architecture, de dépendance, de rayon de casse | `graphify query / affected` (section Graphify), AVANT de parcourir les fichiers |
+| Fonctionnalité nouvelle ou demande floue | `spec-driven-development` puis `planning-and-task-breakdown` ; livrer en tranches par `incremental-implementation` |
+| Logique nouvelle, bogue à corriger | `test-driven-development` : le test qui échoue d'abord (pour un bogue, il reproduit le signalement) |
+| Test, build ou CI rouge, comportement inexpliqué | `debugging-and-error-recovery` : cause racine, pas symptôme |
+| Auth, abonnements et webhooks, données personnelles, envois de fichiers | `security-and-hardening` pendant, agent `security-auditor` sur le diff avant le commit |
+| Lenteur, requêtes, listes, démarrage de l'appli | `performance-optimization` : mesurer avant et après ; agent `web-performance-auditor` pour l'admin |
+| Écran mobile ou page admin | `frontend-ui-engineering`, sous le design system Carlys et le thème violet, qui priment |
+| Route ou contrat d'API | `api-and-interface-design` ; migration qui renomme ou supprime : `deprecation-and-migration` |
+| Workflows GitHub, scripts serveur | `ci-cd-and-automation` ; journaux et métriques : `observability-and-instrumentation` |
+| Décision d'architecture ou comportement visible changé | `documentation-and-adrs` |
+| **Avant tout commit non trivial** | agent `code-reviewer` sur le diff (cinq axes) et `ponytail-review` (sur-ingénierie) ; agent `test-engineer` si les tests paraissent minces. Corriger ce qu'ils trouvent de réel avant de commiter |
+| Découper et commiter | `git-workflow-and-versioning` : commits atomiques, un sujet chacun |
+| Avant de pousser sur `production` | `shipping-and-launch` (liste de mise en production, retour arrière) |
+| Demande d'optimisation, ou tous les grands chantiers | `ponytail-audit` sur le dépôt, puis `ponytail-debt` pour les raccourcis laissés en suspens |
+
+Trois skills ne s'appliquent PAS ici telles quelles :
+`constraint-driven-development` (le contrat de qualité, c'est CE fichier : pas
+de `CONSTRAINTS.md`), `browser-testing-with-devtools` (aucun serveur MCP
+Chrome DevTools : l'admin se teste avec Playwright, Chromium est préinstallé)
+et `interview-me` (le propriétaire n'est pas développeur : une seule question
+à la fois, et seulement pour une vraie décision produit).
+
 ## Règles générales (spécification produit — à respecter intégralement)
 
 **Interdits :**
