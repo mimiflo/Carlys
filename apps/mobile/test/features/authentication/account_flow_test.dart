@@ -244,12 +244,36 @@ void main() {
         findsOneWidget,
       );
       expect(find.textContaining('plus rien ne les relie'), findsNothing);
-      // Les deux points de la section 6 de la politique que l'écran taisait.
+      // La section 6 de la politique : 30 jours, puis l'effacement définitif
+      // que `deleted-accounts-purge` exécute chaque jour.
+      expect(find.textContaining('restent en base 30 jours'), findsOneWidget);
       expect(
-        find.textContaining('effacées ou rendues anonymes'),
+        find.textContaining('tout est effacé définitivement'),
         findsOneWidget,
       );
-      expect(find.textContaining('effacement immédiat'), findsOneWidget);
+      // L'effacement immédiat ne vise qu'un compte DÉJÀ supprimé, et la
+      // suppression efface l'adresse qui permettrait de le retrouver : la
+      // demande doit donc venir AVANT, et l'écran le dit dans cet ordre.
+      expect(
+        find.textContaining('écris-nous d’abord, depuis l’adresse de ton '),
+        findsOneWidget,
+      );
+      expect(find.textContaining('puis supprime-le'), findsOneWidget);
+    });
+
+    testWidgets('l’écran prévient que l’abonnement payé n’est pas résilié', (
+      tester,
+    ) async {
+      // `AccountService.deleteAccount` ne touche pas à Stripe : sans cette
+      // ligne, la personne découvrirait un prélèvement qu'elle ne peut plus
+      // arrêter depuis l'application.
+      await open(tester);
+
+      expect(
+        find.textContaining('la suppression ne le résilie pas'),
+        findsOneWidget,
+      );
+      expect(find.textContaining('Gérer mon abonnement'), findsOneWidget);
     });
 
     testWidgets('la politique de confidentialité est à un geste de là', (

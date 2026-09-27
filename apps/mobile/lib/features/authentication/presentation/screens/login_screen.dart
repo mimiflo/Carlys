@@ -10,6 +10,7 @@ import '../widgets/auth_backdrop.dart';
 import '../widgets/auth_form_error.dart';
 import '../widgets/auth_scaffold.dart';
 import '../widgets/auth_switch_prompt.dart';
+import '../widgets/legal_consent_notice.dart';
 import '../widgets/social_auth_buttons.dart';
 
 /// Connexion par e-mail. La redirection vers l'accueil est assurée par le
@@ -120,6 +121,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         ),
         const SizedBox(height: AppSpacing.lg),
         SocialAuthButtons(enabled: !isLoading),
+        const SizedBox(height: AppSpacing.md),
+        // Ces boutons créent un compte quand aucun n'existe à l'adresse
+        // reçue : la phrase de consentement les suit, comme à l'inscription.
+        const LegalConsentNotice.social(),
         const SizedBox(height: AppSpacing.md),
         AuthSwitchPrompt(
           prompt: 'Pas encore de compte ?',

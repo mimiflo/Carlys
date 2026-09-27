@@ -13,17 +13,30 @@ import '../../../../design_system/design_system.dart';
 /// la politique annonce (`docs/legal/privacy.md`, section 6). Promettre un
 /// effacement total serait faux, taire ce qui reste le serait aussi.
 ///
-/// Deux précisions que le serveur impose au texte :
-///  - la suppression PSEUDONYMISE, elle ne détruit pas : la ligne `User`, son
-///    identifiant et les clés étrangères survivent, et le journal d'audit
-///    garde `userId` ET l'adresse IP. « Plus rien ne les relie à toi » serait
-///    donc une promesse que personne ne tient ; « ton identité en est
-///    retirée » décrit ce qui se passe.
-///  - le délai de purge et la durée de conservation des journaux ne sont PAS
-///    écrits ici : ils portent encore un « à compléter » dans la politique.
-///    Les inventer sur cet écran serait pire que d'y renvoyer, puisque c'est
-///    la politique qui engage. Quand ces deux valeurs y seront posées, ce
-///    texte pourra les nommer.
+/// Trois précisions que le serveur impose au texte :
+///  - le jour même, la suppression PSEUDONYMISE, elle ne détruit pas : la
+///    ligne `User`, son identifiant et les clés étrangères survivent 30
+///    jours. « Plus rien ne les relie à toi » serait donc une promesse que
+///    personne ne tient ; « ton identité en est retirée » décrit ce qui se
+///    passe.
+///  - passé ce délai, `deleted-accounts-purge` (src/cli de l'API, lancé
+///    chaque jour par la supervision) efface le compte et, par cascade, tout
+///    ce qui s'y rattache. Le délai de 30 jours est celui de la politique
+///    (section 6) et de `CARLYS_ACCOUNT_PURGE_DAYS` : changer l'un, c'est
+///    changer tous les textes que SECURITY.md (« Données personnelles »)
+///    énumère, celui-ci compris. Seul le journal d'audit survit, sans le
+///    lien au compte et sans l'adresse (un échec de connexion n'y laisse
+///    qu'une empreinte) ; sa durée porte encore un « à compléter » dans la
+///    politique, et n'est donc pas écrite ici.
+///  - l'effacement IMMÉDIAT (`deleted-accounts-purge --compte <uuid>`) ne
+///    vise qu'un compte déjà supprimé, et la suppression efface tout ce qui
+///    mène de la personne à cet identifiant : la demande doit donc précéder
+///    la suppression (docs/deployment/orchestration.md, « Effacement
+///    immédiat sur demande »), et l'écran le dit dans cet ordre.
+///  - la suppression ne résilie pas un abonnement payé chez Stripe
+///    (`AccountService.deleteAccount` n'y touche pas) : l'écran le dit, sans
+///    quoi la personne découvre un prélèvement qu'elle ne peut plus arrêter
+///    depuis l'application.
 class AccountDeletionSummary extends ConsumerWidget {
   const AccountDeletionSummary({super.key});
 
@@ -33,18 +46,24 @@ class AccountDeletionSummary extends ConsumerWidget {
     'Ton profil personnel : date de naissance, sexe, taille.',
     'Toutes tes sessions, sur cet appareil comme sur les autres.',
     'Tes jetons de notification : plus rien ne t’est envoyé.',
+    'Les photos de tes repas, et le lien avec ton compte Google ou Apple.',
   ];
 
   static const List<String> _kept = [
-    'Ton historique d’entraînement, tes repas et tes échanges avec le coach '
-        'restent en base : ton identité en est retirée, mais les lignes ne '
-        'sont pas détruites le jour même.',
-    'Elles sont conservées un temps, puis effacées ou rendues anonymes. Le '
-        'délai est celui qu’annonce la politique de confidentialité.',
-    'Le journal de sécurité (connexions, actions sur ton compte) est gardé '
-        'la durée qu’elle annonce, puis supprimé.',
-    'Tu peux demander un effacement immédiat : écris à l’adresse de contact '
-        'indiquée dans cette même politique.',
+    'Ton historique d’entraînement, tes repas, tes mesures et tes échanges '
+        'avec le coach restent en base 30 jours : ton identité en est '
+        'retirée, mais les lignes ne sont pas détruites le jour même.',
+    'Au bout de ces 30 jours, tout est effacé définitivement.',
+    'Le journal de sécurité (connexions, actions sur ton compte) perd alors '
+        'le lien avec ton compte, et ne garde jamais ton adresse e-mail ; il '
+        'est gardé la durée qu’annonce la politique de confidentialité, puis '
+        'supprimé.',
+    'Pour tout effacer sans attendre ces 30 jours, écris-nous d’abord, '
+        'depuis l’adresse de ton compte, à l’adresse de contact de cette même '
+        'politique, puis supprime-le : une fois ton adresse effacée, plus rien '
+        'ne nous permet de retrouver ton compte.',
+    'Ton abonnement payant, si tu en as un : la suppression ne le résilie '
+        'pas. Résilie-le d’abord avec « Gérer mon abonnement ».',
     'Sur ce téléphone, rien : tout ce que Carlys garde en local est effacé '
         'au retour à l’écran de connexion.',
   ];

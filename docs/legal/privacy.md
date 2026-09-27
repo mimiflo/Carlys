@@ -1,13 +1,13 @@
 # Politique de confidentialité de Carlys
 
-Dernière mise à jour : 25 septembre 2026.
+Dernière mise à jour : 27 septembre 2026.
 
-Carlys est une application mobile de suivi d'entraînement, accompagnée de
-quelques pages web (vérification d'adresse, nouveau mot de passe, retours de
+Carlys est une application mobile de suivi d’entraînement, accompagnée de
+quelques pages web (vérification d’adresse, nouveau mot de passe, retours de
 paiement et ces textes). Cette politique explique, sans jargon, quelles
 données Carlys traite à ton sujet, pourquoi, combien de temps, avec quels
 prestataires, et ce que tu peux exiger. Elle est écrite à partir du
-fonctionnement réel du service, pas d'un modèle générique.
+fonctionnement réel du service, pas d’un modèle générique.
 
 ## 1. Qui est responsable de tes données
 
@@ -19,15 +19,16 @@ Pour toute question ou demande liée à tes données, écris à
 
 ## 2. Les données que Carlys traite
 
-Carlys ne collecte que ce que tu lui donnes ou ce qui est nécessaire pour
-faire fonctionner le service. Voici l'inventaire complet.
+Carlys ne collecte que ce que tu lui donnes, ce que Google ou Apple lui
+transmet si tu choisis de te connecter avec eux, et ce qui est nécessaire
+pour faire fonctionner le service. Voici l’inventaire complet.
 
 ### Ton compte
 
-- Ton adresse e-mail, ton nom d'affichage et ton mot de passe. Le mot de
-  passe n'est jamais conservé en clair : seule une empreinte (Argon2id) est
-  stockée, et personne, pas même nous, ne peut la retransformer en mot de
-  passe.
+- Ton adresse e-mail, ton nom d’affichage et, si tu en as un, ton mot de
+  passe. Le mot de passe n’est jamais conservé en clair : seule une
+  empreinte (Argon2id) est stockée, et personne, pas même nous, ne peut la
+  retransformer en mot de passe.
 - Un code ami de 8 caractères, généré par Carlys, que tu peux partager pour
   être ajouté sans donner ton adresse e-mail.
 - La date de création du compte, son statut (actif, suspendu, supprimé) et la
@@ -35,23 +36,60 @@ faire fonctionner le service. Voici l'inventaire complet.
 - Ta langue et ton fuseau horaire, pour afficher les dates et les séries de
   jours correctement.
 
+### Si tu te connectes avec Google ou Apple
+
+Les boutons « Continuer avec Google » et « Continuer avec Apple » te
+connectent sans mot de passe Carlys. Si aucun compte Carlys n’existe encore
+à l’adresse que Google ou Apple nous transmet, toucher l’un de ces boutons
+crée ton compte, y compris depuis l’écran de connexion.
+
+- **Ce que Google ou Apple nous transmet** : une preuve de connexion signée
+  qui contient l’identifiant de ton compte chez eux, ton adresse e-mail, le
+  fait qu’ils l’ont vérifiée et, s’ils le fournissent, ton nom. Carlys
+  vérifie cette preuve, en retient ce qui suit, et ne la conserve pas.
+- **Ce que Carlys conserve** : le fournisseur (Google ou Apple), cet
+  identifiant et l’adresse transmise, rattachés à ton compte. À la création
+  du compte, ton nom devient ton nom d’affichage ; à défaut, c’est le début
+  de ton adresse e-mail. Ton adresse est enregistrée comme vérifiée.
+- **Un compte créé ainsi n’a pas de mot de passe.** Tu peux en définir un à
+  tout moment avec « Mot de passe oublié ».
+- **Si un compte Carlys existe déjà à cette adresse**, Google ou Apple y est
+  rattaché. Si ce compte n’avait jamais vérifié son adresse, c’est Google ou
+  Apple qui vient de prouver qu’elle est à toi : toutes les sessions
+  ouvertes sur ce compte sont déconnectées, son mot de passe est retiré et
+  les liens de réinitialisation en cours cessent de valoir. Personne d’autre
+  ne garde ainsi l’accès à un compte créé avec ton adresse.
+- **Sans adresse vérifiée par Google ou Apple**, rien n’est créé ni
+  rattaché.
+
+Le lien avec ton compte Google ou Apple est effacé dès que tu supprimes ton
+compte Carlys.
+
 ### Tes appareils et tes sessions
 
-- Le nom et la plateforme de l'appareil que tu déclares à la connexion.
-- L'adresse IP et la signature technique de l'appareil ou du navigateur
+- Le nom et la plateforme de l’appareil que tu déclares à la connexion.
+- L’adresse IP et la signature technique de l’appareil ou du navigateur
   (user agent) au moment de chaque connexion, ainsi que les dates de
   connexion et de dernière utilisation.
 
 Ces informations servent à te montrer la liste de tes appareils connectés, à
-te permettre d'en déconnecter un à distance, et à détecter qu'une session
+te permettre d’en déconnecter un à distance, et à détecter qu’une session
 volée est réutilisée.
 
 ### Ton profil physique (facultatif)
 
 Si tu choisis de les renseigner : ton sexe biologique, ta date de naissance,
-ta taille, ton niveau d'activité, ton objectif nutritionnel et le profil
-Carlys que tu as choisi. Ces champs sont tous facultatifs : sans eux, le
-rapport métabolique reste simplement vide.
+ta taille, ton niveau d’activité et ton objectif nutritionnel. Ces champs
+sont tous facultatifs : sans eux, le rapport métabolique reste simplement
+vide.
+
+### Tes choix d’entraînement et de profil (facultatifs)
+
+Si tu les renseignes : le profil Carlys que tu as choisi (Constructeur,
+Challenger, Athlète ou Stratège), le style de voix du Mentor, ton objectif
+d’entraînement, ton niveau d’expérience, le nombre de séances que tu vises
+par semaine et leur durée, et le matériel dont tu disposes. Ils servent à
+te parler sur le bon ton et à préparer ton programme.
 
 ### Tes mesures corporelles
 
@@ -61,16 +99,16 @@ Les pesées et mesures que tu saisis, avec leur date.
 
 Tes modèles de séance, tes programmes, tes séances réalisées (exercices,
 séries, répétitions, charges, durées, notes) et les records personnels que
-l'application calcule à la fin de chaque séance.
+l’application calcule à la fin de chaque séance.
 
 ### Ta nutrition
 
 Les repas que tu enregistres (nom, calories, macronutriments, quantité,
 moment de la journée et, quand tu composes un repas, les aliments choisis et
-leurs quantités) et les cibles calculées par l'application à partir de ton
+leurs quantités) et les cibles calculées par l’application à partir de ton
 profil et de ta dernière pesée : métabolisme de base, dépense estimée,
 objectif calorique, macronutriments, indice de masse corporelle et
-hydratation. Chercher un aliment n'envoie que les mots tapés : ils ne sont
+hydratation. Chercher un aliment n’envoie que les mots tapés : ils ne sont
 pas enregistrés avec ton compte, seulement dans les journaux techniques
 décrits plus bas, comme toute requête.
 
@@ -78,38 +116,38 @@ décrits plus bas, comme toute requête.
 
 Si tu prends ou choisis une photo pour un repas, elle est envoyée à nos
 serveurs et conservée avec ce repas, pour que tu la retrouves sur tous tes
-appareils. Rien ne t'y oblige : un repas s'enregistre très bien sans photo.
+appareils. Rien ne t’y oblige : un repas s’enregistre très bien sans photo.
 
 - **Ce qui quitte ton téléphone** : la photo que tu as prise ou choisie, et
-  elle seule. Avant l'envoi, ton téléphone la prépare : il la redresse (une
+  elle seule. Avant l’envoi, ton téléphone la prépare : il la redresse (une
   photo prise téléphone debout reste debout), la réduit à 1 600 pixels sur
   son plus grand côté et la réenregistre en JPEG sans aucune des
-  informations que l'appareil y avait inscrites (position, marque et modèle,
-  date). Elle ne part qu'au moment où tu enregistres le repas ; si tu
-  renonces avant, rien n'est envoyé. Rien d'autre de ta photothèque n'est
+  informations que l’appareil y avait inscrites (position, marque et modèle,
+  date). Elle ne part qu’au moment où tu enregistres le repas ; si tu
+  renonces avant, rien n’est envoyé. Rien d’autre de ta photothèque n’est
   lu ni envoyé.
-- **Les autorisations** : l'accès à l'appareil photo n'est demandé que
+- **Les autorisations** : l’accès à l’appareil photo n’est demandé que
   lorsque tu touches « Prendre une photo » (il sert aussi à scanner le code
-  ami d'un profil). « Choisir dans la galerie » ouvre le sélecteur de ton
+  ami d’un profil). « Choisir dans la galerie » ouvre le sélecteur de ton
   téléphone : Carlys ne reçoit que la photo que tu y touches, sans accès au
-  reste de ta photothèque. Tu peux retirer l'accès à l'appareil photo à tout
+  reste de ta photothèque. Tu peux retirer l’accès à l’appareil photo à tout
   moment dans les réglages de ton téléphone.
-- **Ce qui est stocké** : l'image seule. Avant tout stockage, Carlys en
+- **Ce qui est stocké** : l’image seule. Avant tout stockage, Carlys en
   retire toutes les informations que ton téléphone y a inscrites : la
   position GPS du lieu de la prise de vue, la marque et le modèle de
-  l'appareil, la date, les légendes et commentaires (ton téléphone les a
-  déjà retirées, le serveur s'en assure). Le nom du fichier n'est pas
+  l’appareil, la date, les légendes et commentaires (ton téléphone les a
+  déjà retirées, le serveur s’en assure). Le nom du fichier n’est pas
   conservé non plus. Sur ton téléphone, les copies temporaires que
-  l'appareil photo ou la galerie remet à l'application sont effacées dès
+  l’appareil photo ou la galerie remet à l’application sont effacées dès
   que la photo est préparée, y compris, sous Android, la copie ORIGINALE
   (position comprise) que le sélecteur de la galerie dépose à côté de la
-  copie réduite, et la photo affichée n'est gardée qu'en mémoire, le temps
-  de l'utilisation de l'application.
-- **Qui la voit** : toi, et personne d'autre dans l'application. Elle n'est
-  montrée ni à tes amis, ni dans les défis ou la ligue, et elle n'est
+  copie réduite, et la photo affichée n’est gardée qu’en mémoire, le temps
+  de l’utilisation de l’application.
+- **Qui la voit** : toi, et personne d’autre dans l’application. Elle n’est
+  montrée ni à tes amis, ni dans les défis ou la ligue, et elle n’est
   transmise ni au coach IA, ni à aucun autre prestataire. Elle est rangée à
-  part des images publiques de l'application, dans un espace de stockage
-  privé que seul le serveur de Carlys peut lire, et qu'il ne te rend qu'à
+  part des images publiques de l’application, dans un espace de stockage
+  privé que seul le serveur de Carlys peut lire, et qu’il ne te rend qu’à
   toi, après avoir vérifié ton identité. Les personnes qui exploitent le
   serveur peuvent techniquement y accéder, comme au reste de la base de
   données, et ne le font que pour faire fonctionner le service.
@@ -119,252 +157,364 @@ appareils. Rien ne t'y oblige : un repas s'enregistre très bien sans photo.
 
 ### Ta communauté
 
-Tes demandes d'ami envoyées et reçues, ta liste d'amis, les encouragements
-envoyés et reçus, ta participation aux défis (collectifs comme entre amis)
-et ce que tu y as apporté, ton classement dans une ligue pendant la période
-en cours, tes réponses aux quiz et tes réglages de partage (ta progression
-visible par tes amis, et ta participation à la ligue).
+Tes demandes d’ami envoyées et reçues, ta liste d’amis, les encouragements
+envoyés et reçus, ta participation aux défis collectifs et ce que tu y as
+apporté, les défis entre amis que tu crées (leur titre, le mot que tu
+adresses à tes invités, ce qu’ils comptent, leur objectif et leur durée) ou
+auxquels tu es invité, et ce que tu y apportes, ta place et ton score dans
+la ligue pour chaque semaine où tu y as participé, tes réponses aux quiz et
+tes réglages de partage (ta progression visible par tes amis, et ta
+participation à la ligue).
 
-La ligue est FACULTATIVE et se rejoint explicitement : tant que tu n'y es pas
-entrée, rien n'y est compté et personne n'y voit ton nom. Une fois entrée, ton
-prénom d'affichage et ton score de la semaine sont visibles par les autres
-membres de ta division, et par eux seuls. Tu en sors quand tu veux : le compte
-s'arrête aussitôt.
+Qui voit quoi :
+
+- **Tes amis** voient ton nom d’affichage. Si tu partages ta progression
+  (réglage activé au départ, que tu peux couper à tout moment), ils voient
+  aussi ta série de jours d’entraînement et ton nombre de séances des sept
+  derniers jours. Tes séances elles-mêmes, tes charges, tes mesures et tes
+  repas ne sont montrés à personne.
+- **Un encouragement** est lu par l’ami à qui tu l’envoies, avec ton nom.
+- **Une personne à qui tu envoies une demande d’ami** voit ton nom
+  d’affichage dans ses demandes reçues, même si elle ne te connaît pas.
+- **Toute personne qui connaît ton code ami** peut lire ton nom d’affichage,
+  pour vérifier à qui elle s’adresse avant de t’envoyer une demande.
+- **Les personnes invitées à un même défi entre amis** voient le nom de
+  chacune des autres, sa réponse à l’invitation et ce qu’elle a apporté au
+  défi, ainsi que son titre et le mot de la personne qui l’a créé. Il leur
+  suffit d’être amies de cette personne : elles ne sont pas forcément amies
+  entre elles.
+- **La ligue** est FACULTATIVE et se rejoint explicitement : tant que tu n’y
+  es pas entrée, rien n’y est compté et personne n’y voit ton nom. Une fois
+  entrée, tu es classée chaque semaine dans un groupe de 20 membres de ta
+  division : ton nom d’affichage, ton score de la semaine et ton rang sont
+  visibles des autres membres de ce groupe qui participent à la ligue, et
+  d’eux seuls. Tu en sors quand tu veux : le compte s’arrête aussitôt et ton
+  nom disparaît du classement des autres. Ton score de la semaine en cours
+  reste enregistré, sans ton nom, pour que les rangs des autres ne bougent
+  pas.
+- **Une personne que tu bloques**, ou qui te bloque, cesse d’être ton amie,
+  ne peut plus te trouver par ton code ami ni t’envoyer de demande ou
+  d’encouragement, et ne voit plus ton nom dans le classement de la ligue,
+  ni toi le sien. Les défis entre amis font exception : dans un défi où
+  cette personne est invitée comme toi, chacune continue de voir le nom de
+  l’autre, sa réponse à l’invitation et ce qu’elle y apporte, qu’elle l’ait
+  accepté ou non. Seul le défi CRÉÉ par l’une des deux change pour
+  l’autre : tant que l’autre n’y a pas accepté, il disparaît de sa liste ;
+  si elle y avait déjà accepté, le défi reste lisible, mais le mot de celle
+  qui l’a créé n’y est plus montré.
+
+Un refus de demande d’ami n’est jamais notifié à la personne refusée.
+
+### Tes blocages et tes signalements
+
+Si tu bloques quelqu’un, Carlys enregistre ce blocage (qui bloque qui, et
+depuis quand) jusqu’à ce que tu le lèves, ou jusqu’à l’effacement définitif
+de l’un des deux comptes. La personne bloquée n’en est pas prévenue.
+
+Si tu signales une personne, un encouragement ou un défi entre amis, Carlys
+enregistre ton signalement : la raison choisie, tes précisions (500
+caractères au plus) et, pour un encouragement ou un défi, une copie de son
+texte prise au moment du signalement, qui reste lisible même si le message
+est retiré ensuite. Les signalements sont lus par les administrateurs de
+Carlys chargés de la modération, qui voient aussi le nom et l’adresse e-mail
+de la personne qui signale et de la personne signalée. La personne signalée
+n’est pas prévenue. Un signalement est conservé, même une fois traité,
+jusqu’à l’effacement définitif de ton compte ou de celui de la personne
+signalée.
 
 ### Tes notifications
 
-Le jeton d'appareil fourni par Firebase Cloud Messaging quand tu acceptes
-les notifications, et tes préférences par famille de notification (demandes
-d'ami, encouragements).
+Le jeton d’appareil fourni par Firebase Cloud Messaging quand tu acceptes
+les notifications, la session depuis laquelle il a été enregistré, et tes
+préférences par famille de notification (demandes d’ami, encouragements,
+invitations à un défi).
 
 ### Tes conversations avec le coach
 
-Les messages que tu écris au coach, ses réponses, les séances qu'il te
+Les messages que tu écris au coach, ses réponses, les séances qu’il te
 propose, et le volume de texte traité à chaque échange.
 
 ### Ton abonnement
 
-Le plan souscrit, son statut, ses dates de période, l'identifiant de
-l'abonnement chez le prestataire de paiement et les droits qui en découlent.
+Le plan souscrit, son statut, ses dates de période, l’identifiant de
+l’abonnement chez le prestataire de paiement et les droits qui en découlent.
 Carlys ne voit jamais ton numéro de carte : il est saisi et conservé chez le
 prestataire de paiement, jamais chez nous.
 
 ### Le journal de sécurité
 
 Les événements de sécurité liés à ton compte (connexion réussie ou échouée,
-renouvellement de session, réinitialisation de mot de passe, vérification
-d'adresse, suppression de compte, action d'un administrateur sur ton compte)
-avec leur date, l'adresse IP, le user agent et un identifiant de requête.
+connexion avec Google ou Apple, renouvellement de session, réinitialisation
+de mot de passe, vérification d’adresse, suppression de compte, action d’un
+administrateur sur ton compte) avec leur date, l’adresse IP, le user agent
+et un identifiant de requête. Une connexion échouée n’y laisse pas l’adresse
+e-mail saisie, seulement une empreinte de cette adresse : une courte suite
+de caractères qui permet de reconnaître des tentatives répétées sur la même
+adresse, sans l’écrire. Une action d’un administrateur sur ton compte y
+porte l’identifiant technique de ton compte et, s’il en a écrit une, la
+raison de sa décision ; le traitement d’un signalement que tu as fait y
+porte aussi cet identifiant.
 
 ### Les journaux techniques
 
 Chaque requête reçue par le serveur produit une ligne de journal, corrélée
-par un identifiant de requête. Les en-têtes d'authentification et les
-cookies en sont retirés avant écriture ; aucun mot de passe ni jeton n'y
-figure jamais.
+par un identifiant de requête, qui recopie le chemin demandé, recherche
+comprise. Les en-têtes d’authentification et les cookies en sont retirés
+avant écriture. Quand un envoi d’e-mail ou une tentative de connexion doit
+être tracé, seule une empreinte de ton adresse e-mail l’est. Une seule
+exception : si un administrateur cherche ton compte par ton adresse
+e-mail dans l’outil d’administration, cette recherche, adresse comprise,
+figure en clair dans la ligne de sa requête. Le serveur web qui reçoit les
+requêtes tient aussi son propre journal (adresse IP, page demandée avec sa
+recherche, date, user agent) : les jetons des liens de vérification et de
+réinitialisation y sont masqués. Aucun mot de passe ni jeton ne figure
+dans ces journaux.
 
 ### Ce que Carlys ne fait pas
 
-Les pages web de Carlys ne déposent aucun cookie et n'embarquent aucun
-traceur ni outil de mesure d'audience. L'application ne lit ni tes contacts,
+Les pages web de Carlys ne déposent aucun cookie et n’embarquent aucun
+traceur ni outil de mesure d’audience. L’application ne lit ni tes contacts,
 ni ta position. Si tu joins une photo à un repas, la position que ton
-téléphone y a inscrite en est retirée avant tout stockage.
-
-### Les pas de ton téléphone (facultatif, consentement dédié)
-
-Par défaut, Carlys ne lit RIEN dans le service de santé de ton téléphone
-(Health Connect sur Android, Santé/HealthKit sur iOS).
-
-Si tu veux participer à un défi qui compte les pas, et seulement à ce
-moment-là, l'application te demande d'abord un consentement DISTINCT de celui
-de ton compte : un écran qui dit ce qui sera lu et à quoi cela sert. Puis vient
-l'autorisation du système d'exploitation. Tant que les deux ne sont pas
-accordés, rien n'est lu et le reste de l'application fonctionne comme avant.
-
-Ce qui est alors lu, puis transmis à nos serveurs : ton **nombre de pas par
-journée**, et rien d'autre. Ni fréquence cardiaque, ni sommeil, ni poids
-mesuré ailleurs, ni position, ni séance enregistrée par une autre
-application. Ces totaux servent uniquement à faire avancer les défis auxquels
-tu participes.
-
-Tu retires ce consentement quand tu veux, dans l'application (Profil →
-Confidentialité → Pas et données de santé) ou en révoquant l'autorisation
-dans les réglages de ton téléphone. Le retrait arrête la lecture
-immédiatement et efface de nos serveurs les totaux déjà remontés. Ce qu'ils
-avaient déjà apporté à un défi reste acquis au compteur COLLECTIF de ce défi,
-qui ne redescend pas ; il n'est plus rattaché à toi.
+téléphone y a inscrite en est retirée avant tout stockage. Carlys ne lit
+rien non plus dans le service de santé de ton téléphone (Health Connect sur
+Android, Santé sur iOS) : ni pas, ni fréquence cardiaque, ni sommeil.
 
 ## 3. Pourquoi Carlys traite ces données
 
 - **Pour fournir le service que tu as demandé** : créer ton compte,
   enregistrer et synchroniser tes séances entre tes appareils, calculer ta
-  progression et tes records, gérer ton abonnement. C'est l'exécution du
+  progression et tes records, gérer ton abonnement. C’est l’exécution du
   contrat qui nous lie.
 - **Pour protéger ton compte** : sessions par appareil, adresses IP, journal
-  de sécurité et limitation du nombre de tentatives. C'est notre intérêt
+  de sécurité et limitation du nombre de tentatives. C’est notre intérêt
   légitime à sécuriser le service, et le tien.
 - **Pour les données de santé** (profil physique, mesures corporelles,
-  nutrition et photos de repas, conversations avec le coach) : c'est ton
-  consentement. Tu les
-  saisis toi-même, elles sont facultatives, et tu peux les effacer ou cesser
-  d'utiliser ces fonctions à tout moment.
-- **Pour tes pas** (lus dans le service de santé de ton téléphone) : c'est un
-  consentement SÉPARÉ, demandé uniquement si tu actives un défi qui les
-  compte, et révocable à tout moment sans toucher au reste de ton compte.
-  Refuser ce consentement n'enlève rien d'autre que ces défis-là.
-- **Pour la communauté** : ton nom d'affichage, ta série de jours et, si tu
-  l'as activé, ta progression sont visibles de tes amis uniquement. Un refus
-  de demande d'ami n'est jamais notifié à la personne refusée.
-- **Pour les notifications** : le jeton d'appareil n'est enregistré que si tu
+  nutrition et photos de repas, conversations avec le coach) : c’est ton
+  consentement. Tu les saisis toi-même, elles sont facultatives, et tu peux
+  les effacer ou cesser d’utiliser ces fonctions à tout moment.
+- **Pour la communauté** : faire fonctionner les amis, les encouragements,
+  les défis et la ligue que tu choisis d’utiliser. Ce que chacun y voit de
+  toi est détaillé plus haut (« Ta communauté », « Qui voit quoi ») : ta
+  série de jours et ton nombre de séances des sept derniers jours, que
+  montre le partage de ta progression, ne le sont qu’à tes amis ; en
+  revanche, ce que
+  tu apportes à un défi entre amis (par exemple ton nombre de séances depuis
+  son début, s’il compte les séances) est vu des autres personnes invitées,
+  même quand elles ne sont pas tes amies, et ton score de ligue, calculé à
+  partir de tes séances, est vu des autres membres de ton groupe. La ligue
+  ne compte rien tant que tu n’y es pas entrée.
+- **Pour la modération** : traiter les signalements et appliquer les
+  blocages. C’est notre intérêt légitime à garder la communauté
+  respectueuse, et celui des personnes qui l’utilisent.
+- **Pour les notifications** : le jeton d’appareil n’est enregistré que si tu
   acceptes les notifications sur ton téléphone, et chaque famille peut être
-  refusée séparément dans l'application. Le refus est appliqué côté serveur,
+  refusée séparément dans l’application. Le refus est appliqué côté serveur,
   avant tout envoi.
 - **Pour te contacter** : uniquement des e-mails de service (vérification
-  d'adresse, réinitialisation de mot de passe). Carlys n'envoie pas de
+  d’adresse, réinitialisation de mot de passe). Carlys n’envoie pas de
   newsletter ni de publicité.
 
 ## 4. Le coach IA et les données envoyées à un prestataire
 
 Le coach de Carlys est un assistant automatisé fourni par un modèle de
-langage. Il n'est utilisé que lorsque tu lui écris.
+langage. Il n’est utilisé que lorsque tu lui écris.
 
 À chaque message, les éléments suivants sont transmis au prestataire
 **Anthropic, PBC** (API Claude) pour produire la réponse :
 
-- ton message et l'historique de la conversation en cours ;
+- ton message et l’historique de la conversation en cours ;
 - le profil Carlys que tu as choisi (Constructeur, Challenger, Athlète ou
-  Stratège), sans ton nom ni ton adresse e-mail ;
-- et seulement quand le coach en a besoin pour te répondre, les données qu'il
+  Stratège) et le style de voix que tu as choisi pour le Mentor, sans ton
+  nom ni ton adresse e-mail ;
+- et seulement quand le coach en a besoin pour te répondre, les données qu’il
   lit par ses outils : tes modèles de séance, tes dernières séances
   terminées, tes records personnels, ta progression sur une période, tes
   dernières pesées, ton rapport métabolique (sexe, date de naissance,
-  taille, dernier poids, niveau d'activité, objectif et cibles calculées) et
+  taille, dernier poids, niveau d’activité, objectif et cibles calculées) et
   tes repas récents (nom, moment, calories, macronutriments et aliments).
-  La photo d'un repas ne lui est jamais transmise.
+  La photo d’un repas ne lui est jamais transmise.
 
-Le coach ne peut rien écrire dans ton compte : les séances qu'il propose ne
+Le coach ne peut rien écrire dans ton compte : les séances qu’il propose ne
 sont enregistrées que si tu les acceptes. Les conversations sont conservées
-sur nos serveurs pour que tu puisses les reprendre. Un plafond quotidien de
-messages s'applique à chaque compte.
+sur nos serveurs, jusqu’à l’effacement de ton compte, pour que tu puisses
+les relire et les reprendre. L’application te montre tes 30 conversations
+les plus récentes, que tu peux toujours relire, même sans abonnement ou
+quand le coach est momentanément coupé ; les plus anciennes restent
+conservées sans y être listées, et nous t’en donnons une copie si tu la
+demandes (voir « Tes droits »). Écrire au coach demande un abonnement qui
+l’inclut. Un plafond quotidien de messages s’applique à chaque compte.
 
 Le prestataire traite ces données pour le seul compte de Carlys, dans le
 cadre de ses conditions commerciales. [À COMPLÉTER : vérifier et résumer les
 conditions de traitement du contrat Anthropic (durée de conservation,
-non-utilisation pour l'entraînement des modèles, localisation).]
+non-utilisation pour l’entraînement des modèles, localisation).]
 
 ## 5. Les autres prestataires
 
 - **Paiement : Stripe.** Quand tu souscris un abonnement, tu es dirigé vers
   une page de paiement Stripe. Stripe reçoit un identifiant technique de ton
   compte Carlys, ainsi que les informations que tu saisis sur sa page
-  (adresse e-mail, carte bancaire). Carlys reçoit en retour l'état de
-  l'abonnement, jamais ta carte.
+  (adresse e-mail, carte bancaire). Carlys reçoit en retour l’état de
+  l’abonnement, jamais ta carte.
+- **Connexion : Google et Apple**, seulement si tu choisis de te connecter
+  avec eux. Ils savent alors que tu utilises Carlys, et nous transmettent ce
+  qui est décrit plus haut (« Si tu te connectes avec Google ou Apple »).
 - **Notifications : Firebase Cloud Messaging (Google).** Google reçoit le
   jeton de ton appareil et le contenu de chaque notification envoyée, par
-  exemple « Prénom a accepté ta demande d'ami » ou un encouragement avec le
-  prénom de son auteur.
-- **E-mails de service : [À COMPLÉTER : prestataire d'envoi d'e-mails].** Il
+  exemple « Prénom a accepté ta demande d’ami », un encouragement avec le
+  prénom de son auteur, ou l’invitation à un défi avec son titre.
+- **E-mails de service : [À COMPLÉTER : prestataire d’envoi d’e-mails].** Il
   reçoit ton adresse e-mail et le contenu des e-mails de vérification et de
   réinitialisation.
-- **Hébergement : serveur dédié de l'éditeur**, situé
-  [À COMPLÉTER : pays d'hébergement du serveur]. La base de données, les
+- **Hébergement : serveur dédié de l’éditeur**, situé
+  [À COMPLÉTER : pays d’hébergement du serveur]. La base de données, les
   journaux et les sauvegardes y résident.
-- **Stockage des images.** Les photos d'exercices du catalogue sont servies
+- **Copie de secours hors du serveur :
+  [À COMPLÉTER : fournisseur du stockage distant et pays, ou retirer ce
+  point si aucune copie distante n’est configurée].** Chaque nuit, une
+  sauvegarde de la base de données et une copie des images publiques de
+  l’application (les photos d’exercices) y sont envoyées, chiffrées avant de
+  quitter le serveur : ce prestataire les stocke sans pouvoir les lire. Les
+  photos de tes repas n’en font pas partie.
+- **Stockage des images.** Les photos d’exercices du catalogue sont servies
   depuis un stockage objet public : elles ne disent rien de toi. Les photos
   que tu joins à tes repas sont rangées à part, dans un stockage objet
   PRIVÉ, sur le même serveur dédié que la base de données : aucune adresse
-  publique n'y mène, et seul le serveur de Carlys les lit.
+  publique n’y mène, et seul le serveur de Carlys les lit.
 
-Certains de ces prestataires (Anthropic, Google, Stripe) peuvent traiter les
-données en dehors de l'Union européenne, dans le cadre des garanties
-contractuelles qu'ils proposent. [À COMPLÉTER : vérifier le cadre de
-transfert applicable à chaque prestataire.]
+Certains de ces prestataires (Anthropic, Apple, Google, Stripe) peuvent
+traiter les données en dehors de l’Union européenne, dans le cadre des
+garanties contractuelles qu’ils proposent. [À COMPLÉTER : vérifier le cadre
+de transfert applicable à chaque prestataire.]
 
 ## 6. Combien de temps
 
 - **Tant que ton compte existe**, toutes les données décrites ci-dessus sont
-  conservées : c'est ton historique, et c'est ce qui fait la valeur de
-  l'application pour toi.
+  conservées : c’est ton historique, et c’est ce qui fait la valeur de
+  l’application pour toi.
 - **Les liens envoyés par e-mail** expirent vite : 24 heures pour la
-  vérification d'adresse, 60 minutes pour la réinitialisation de mot de
-  passe. Un lien ne sert qu'une fois.
+  vérification d’adresse, 60 minutes pour la réinitialisation de mot de
+  passe. Un lien ne sert qu’une fois. Un nouveau lien de vérification
+  annule les précédents ; dès qu’un lien de réinitialisation sert, ou que
+  ton mot de passe change, tous ceux qui restaient tombent.
 - **Les sessions** expirent après 30 jours sans utilisation, ou immédiatement
   quand tu les déconnectes.
-- **Les jetons de notification** sont supprimés quand tu te déconnectes de
-  l'appareil, et dès que Google nous signale qu'ils ne sont plus valables.
-- **La photo d'un repas** est conservée tant que le repas existe et que tu ne
-  l'as pas retirée. Quand tu la remplaces ou la retires, quand tu supprimes
+- **Les jetons de notification** sont rattachés à la session qui les a
+  enregistrés. Ils sont supprimés quand tu te déconnectes de l’appareil,
+  quand cette session est déconnectée à distance ou révoquée (changement ou
+  réinitialisation du mot de passe, « déconnecter les autres appareils »,
+  réutilisation suspecte d’une session, suspension du compte), et dès que
+  Google nous signale qu’ils ne sont plus valables. Quand une session
+  expire, plus aucune notification n’est envoyée à ses jetons, et
+  l’application efface le sien de ton téléphone.
+- **La photo d’un repas** est conservée tant que le repas existe et que tu ne
+  l’as pas retirée. Quand tu la remplaces ou la retires, quand tu supprimes
   le repas ou ton compte, elle est effacée du stockage aussitôt, sans
   attendre le délai de purge ci-dessous. Si le stockage ne répond pas à cet
-  instant, l'incident est consigné, et l'image est effacée par le nettoyage
-  automatique qui repasse chaque jour sur le stockage des photos ; s'il
-  échoue lui aussi, l'équipe qui exploite le serveur en est alertée, et il
-  recommence toutes les heures jusqu'à y parvenir. D'ici là, l'image reste
-  rangée sous l'identifiant de ton compte, mais plus rien dans l'application
+  instant, l’incident est consigné, et l’image est effacée par le nettoyage
+  automatique qui repasse chaque jour sur le stockage des photos ; s’il
+  échoue lui aussi, l’équipe qui exploite le serveur en est alertée, et il
+  recommence toutes les heures jusqu’à y parvenir. D’ici là, l’image reste
+  rangée sous l’identifiant de ton compte, mais plus rien dans l’application
   ne la montre ni ne permet de la lire. Les photos de repas ne figurent dans
   aucune sauvegarde : une photo effacée ne survit nulle part.
-- **Quand tu supprimes ton compte**, il est désactivé immédiatement : toutes
-  tes sessions sont révoquées, plus personne ne peut s'y connecter, et ton
-  identité (adresse e-mail, nom, code ami) n'est plus accessible depuis
-  l'application. Les données rattachées au compte sont ensuite conservées au
-  plus [À COMPLÉTER : délai de purge après suppression, par exemple 30 jours]
-  puis effacées ou rendues anonymes. Si tu veux un effacement immédiat,
-  demande-le à l'adresse de contact.
-- **Le journal de sécurité et les journaux techniques** sont conservés
+- **Quand tu supprimes ton compte**, il est désactivé immédiatement : plus
+  personne ne peut s’y connecter, et sont effacés aussitôt tes sessions, ton
+  adresse e-mail, ton nom, ton code ami, ta date de naissance, ton sexe, ta
+  taille, tes jetons de notification, le lien avec ton compte Google ou
+  Apple et les photos de tes repas. Ton adresse redevient libre pour un
+  nouveau compte. Le reste (séances, modèles et programmes, records,
+  mesures, repas, conversations avec le coach, amis, encouragements, défis,
+  ligue, réponses aux quiz, signalements, abonnement) reste enregistré sous
+  un identifiant technique, sans plus rien qui te nomme, pendant 30 jours :
+  ce délai laisse le temps de corriger une erreur ou de traiter une
+  contestation. Au bout de ces 30 jours, un traitement automatique qui passe
+  chaque jour efface tout cela définitivement. Si tu veux cet effacement
+  définitif sans attendre ce délai, écris-nous AVANT de supprimer ton
+  compte, depuis son adresse e-mail : une fois ton adresse effacée, plus
+  rien ne nous permet de retrouver ton compte. Nous notons alors son
+  identifiant technique ; tu le supprimes ensuite dans l’application, et
+  nous l’effaçons définitivement dès que c’est fait, sans attendre les 30
+  jours.
+- **Le journal de sécurité** n’est pas effacé avec ton compte. À
+  l’effacement définitif, ses lignes perdent leur lien avec ton compte, qui
+  n’existe plus. Elles gardent leur date, l’adresse IP, le user agent et ce
+  qui est décrit plus haut (« Le journal de sécurité ») : l’empreinte d’une
+  adresse saisie lors d’une connexion échouée, jamais l’adresse elle-même,
+  et, pour une action d’un administrateur ou un signalement traité,
+  l’identifiant technique de ton ancien compte, qui ne renvoie plus à
+  aucune donnée. Il est conservé, comme les journaux techniques,
   [À COMPLÉTER : durée de conservation des journaux de sécurité et
-  techniques], puis supprimés.
+  techniques], puis supprimé.
+- **Les sauvegardes** de la base de données sont faites chaque nuit et
+  gardées environ deux semaines (16 jours au plus), sur le serveur comme
+  dans la copie de secours hors du serveur. Avant chaque mise à jour du
+  service, une sauvegarde de plus est prise, et gardée environ un mois (32
+  jours au plus). Une donnée effacée de la base, celles d’un compte
+  supprimé comprises, peut donc survivre dans ces sauvegardes jusqu’à 16
+  jours après son effacement, ou jusqu’à 32 jours dans une sauvegarde
+  d’avant mise à jour. Une vieille sauvegarde n’est effacée qu’une fois la
+  suivante réussie, pour ne jamais laisser le service sans sauvegarde : si
+  la sauvegarde d’une nuit échoue, l’équipe qui exploite le serveur en est
+  alertée, et ces durées s’allongent d’autant, jusqu’à la prochaine
+  sauvegarde réussie. Les sauvegardes ne sont lues que pour remettre le
+  service en état après un incident.
 
 ## 7. Tes droits
 
 Tu peux, à tout moment :
 
-- **Accéder** à tes données : l'application te montre déjà l'essentiel
+- **Accéder** à tes données : l’application te montre déjà l’essentiel
   (profil, séances, mesures, amis, abonnement). Pour une copie complète et
   lisible, écris-nous.
 - **Les rectifier** : ton profil, tes mesures, tes séances et tes repas se
-  modifient directement dans l'application, et la photo d'un repas se
+  modifient directement dans l’application, et la photo d’un repas se
   remplace ou se retire à tout moment.
-- **Supprimer ton compte** : depuis l'application, dans Profil → Compte →
-  « Supprimer mon compte ». Ton mot de passe t'est demandé pour confirmer, et
-  l'écran récapitule ce qui est effacé et ce qui reste. La désactivation est
-  immédiate et irréversible. Tu peux aussi nous écrire à l'adresse de contact,
-  l'effet est exactement le même.
+- **Supprimer ton compte** : depuis l’application, dans Profil → Réglages
+  (le rouage) → Compte → « Supprimer mon compte ». Ton mot de passe t’est
+  demandé pour confirmer, et l’écran récapitule ce qui est effacé et ce qui
+  reste. La désactivation est immédiate et irréversible. Un compte créé avec
+  Google ou Apple n’a pas de mot de passe : définis-en un d’abord avec « Mot
+  de passe oublié » (le lien arrive à l’adresse de ton compte), puis
+  supprime ton compte. Tu peux aussi nous écrire à l’adresse de contact,
+  depuis l’adresse e-mail de ton compte : nous le supprimons pour toi, avec
+  le même effet.
 - **Retirer ton consentement** pour les données de santé : efface ton profil
-  physique et tes mesures, ou cesse d'utiliser la nutrition et le coach. Pour
-  les pas lus dans ton téléphone, le retrait est un geste à part : Profil →
-  Confidentialité → Pas et données de santé, ou les réglages de ton
-  téléphone. Il arrête la lecture et efface les totaux déjà remontés.
-- **T'opposer** à un traitement fondé sur notre intérêt légitime, ou en
+  physique et tes mesures, ou cesse d’utiliser la nutrition et le coach.
+- **T’opposer** à un traitement fondé sur notre intérêt légitime, ou en
   demander la limitation.
 - **Obtenir la portabilité** de tes données dans un format structuré.
 
-Nous répondons dans un délai d'un mois. Si tu estimes que tes droits ne sont
-pas respectés, tu peux saisir l'autorité de contrôle compétente :
+Nous répondons dans un délai d’un mois. Si tu estimes que tes droits ne sont
+pas respectés, tu peux saisir l’autorité de contrôle compétente :
 [À COMPLÉTER : autorité de contrôle compétente, par exemple la CNIL].
 
 ## 8. Âge minimum
 
-Carlys s'adresse aux personnes d'au moins 15 ans. En dessous de cet âge,
-l'inscription nécessite l'accord d'un titulaire de l'autorité parentale.
-Carlys ne vérifie pas l'âge à l'inscription ; si nous apprenons qu'un compte
+Carlys s’adresse aux personnes d’au moins 15 ans. En dessous de cet âge,
+l’inscription nécessite l’accord d’un titulaire de l’autorité parentale.
+Carlys ne vérifie pas l’âge à l’inscription ; si nous apprenons qu’un compte
 appartient à une personne plus jeune sans cet accord, nous le désactivons.
 
 ## 9. Comment tes données sont protégées
 
-- Mot de passe stocké sous forme d'empreinte Argon2id, jamais en clair.
-- Sessions courtes renouvelées par un jeton tournant ; la réutilisation d'un
+- Mot de passe stocké sous forme d’empreinte Argon2id, jamais en clair.
+- Sessions courtes renouvelées par un jeton tournant ; la réutilisation d’un
   ancien jeton révoque toute la session.
 - Chiffrement en transit (TLS) sur tous les environnements distants.
 - Limitation du nombre de tentatives de connexion et de demandes sensibles.
 - Accès des administrateurs restreint par permission et intégralement
   journalisé : chaque action sur un compte est tracée avec son auteur.
-- Journaux techniques expurgés des en-têtes d'authentification et des
-  cookies.
+- Journaux techniques expurgés des en-têtes d’authentification, des
+  cookies, des jetons des liens envoyés par e-mail et des adresses e-mail,
+  à la seule exception de la recherche d’un compte par un administrateur
+  (voir « Les journaux techniques »).
+- Sauvegardes chiffrées avant de quitter le serveur.
 
 ## 10. Modifications de cette politique
 
 Si cette politique change de façon substantielle, la nouvelle version est
-publiée à cette adresse avec sa date, et l'application te le signale.
+publiée à cette adresse avec sa date, et l’application te le signale.
 
 ## 11. Contact
 

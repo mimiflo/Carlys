@@ -1,8 +1,10 @@
 import 'package:carlys_mobile/app/environment/app_environment.dart';
 import 'package:carlys_mobile/core/utilities/external_links.dart';
 import 'package:carlys_mobile/design_system/design_system.dart';
+import 'package:carlys_mobile/features/authentication/presentation/screens/login_screen.dart';
 import 'package:carlys_mobile/features/authentication/presentation/screens/register_screen.dart';
 import 'package:carlys_mobile/features/authentication/presentation/widgets/legal_consent_notice.dart';
+import 'package:carlys_mobile/features/authentication/presentation/widgets/social_auth_buttons.dart';
 import 'package:carlys_mobile/features/coaching/domain/entities/coach.dart';
 import 'package:carlys_mobile/features/coaching/presentation/screens/coach_screen.dart';
 import 'package:carlys_mobile/features/coaching/presentation/widgets/coach_notices.dart';
@@ -134,6 +136,34 @@ void main() {
       // moment où l'on s'apprête à appuyer.
       final button = tester.getTopLeft(find.text('Créer mon compte'));
       expect(tester.getTopLeft(notice).dy, greaterThan(button.dy));
+    });
+
+    testWidgets('l’écran de connexion la porte aussi, sous Google et Apple', (
+      tester,
+    ) async {
+      // « Continuer avec Google » ou « avec Apple » CRÉE un compte quand
+      // aucun n'existe à l'adresse reçue, y compris depuis la connexion :
+      // sans la phrase ici, un compte naissait sans que la personne ait vu
+      // un seul des deux textes qu'elle est réputée accepter.
+      await tester.pumpWidget(host(const LoginScreen(), []));
+      await tester.pumpAndSettle();
+
+      final notice = find.byType(LegalConsentNotice);
+      await tester.ensureVisible(notice);
+      await tester.pumpAndSettle();
+
+      expect(notice, findsOneWidget);
+      // C'est Carlys qui crée le compte, pas le fournisseur : la phrase
+      // attribue la création au GESTE (« continuer avec… »).
+      expect(
+        find.textContaining(
+          'continuer avec Google ou Apple en crée un',
+          findRichText: true,
+        ),
+        findsOneWidget,
+      );
+      final social = tester.getTopLeft(find.byType(SocialAuthButtons));
+      expect(tester.getTopLeft(notice).dy, greaterThan(social.dy));
     });
 
     testWidgets('la phrase est là, et tutoie', (tester) async {

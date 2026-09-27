@@ -16,8 +16,25 @@ import '../../../../design_system/design_system.dart';
 /// Écrit en spans plutôt qu'en boutons : la phrase doit se lire d'un trait,
 /// et deux boutons au milieu la casseraient en trois morceaux. Les
 /// reconnaisseurs de geste sont libérés avec l'état, sinon ils fuient.
+///
+/// [LegalConsentNotice.social] sert l'écran de CONNEXION : ses boutons
+/// Google et Apple créent un compte quand aucun n'existe à l'adresse reçue
+/// (`SocialAuthService`, issue 3). Sans la phrase là aussi, un compte naissait
+/// sans que la personne ait vu un seul des deux textes.
 class LegalConsentNotice extends ConsumerStatefulWidget {
-  const LegalConsentNotice({super.key});
+  const LegalConsentNotice({super.key})
+    : lead = 'En créant un compte, tu acceptes les ';
+
+  // C'est CARLYS qui crée le compte (`SocialAuthService`), à partir de ce
+  // que Google ou Apple lui transmet : la phrase qui recueille le
+  // consentement ne doit pas attribuer ce traitement au fournisseur.
+  const LegalConsentNotice.social({super.key})
+    : lead =
+          'Sans compte Carlys à ton adresse, continuer avec Google ou Apple '
+          'en crée un : tu acceptes alors les ';
+
+  /// Le début de la phrase, jusqu'au premier lien.
+  final String lead;
 
   @override
   ConsumerState<LegalConsentNotice> createState() => _LegalConsentNoticeState();
@@ -55,7 +72,7 @@ class _LegalConsentNoticeState extends ConsumerState<LegalConsentNotice> {
       TextSpan(
         style: base,
         children: [
-          const TextSpan(text: 'En créant un compte, tu acceptes les '),
+          TextSpan(text: widget.lead),
           TextSpan(
             text: 'conditions d’utilisation',
             style: link,
