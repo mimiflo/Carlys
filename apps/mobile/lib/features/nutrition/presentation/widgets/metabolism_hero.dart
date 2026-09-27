@@ -48,63 +48,76 @@ class MetabolismHero extends StatelessWidget {
     final result = metabolism;
     final topInset = MediaQuery.paddingOf(context).top;
 
-    return SizedBox(
-      height: _heroHeight + topInset,
-      child: Stack(
-        children: [
-          // Halo violet de fond (radial .22 de la maquette).
-          const Positioned.fill(
-            child: Opacity(opacity: _haloOpacity, child: AppSceneHalo()),
-          ),
-          Positioned(
-            // Jamais au-dessus du bord : la scène serait tranchée net,
-            // fondu compris, sur les écrans sans encoche.
-            top: math.max(0, topInset + _sceneTop),
-            left: 0,
-            right: 0,
-            child: const Center(
-              child: AppSceneContainer(
-                size: _heroHeight,
-                opacity: 1,
-                verticalFadeStops: _sceneFade,
-                child: Center(child: DnaHelix(height: _helixHeight)),
-              ),
+    // La hauteur de maquette est un MINIMUM : en texte agrandi, le hero
+    // grandit avec son contenu au lieu de le laisser sortir par le bas.
+    return Stack(
+      fit: StackFit.passthrough,
+      children: [
+        // Halo violet de fond (radial .22 de la maquette).
+        const Positioned.fill(
+          child: Opacity(opacity: _haloOpacity, child: AppSceneHalo()),
+        ),
+        Positioned(
+          // Jamais au-dessus du bord : la scène serait tranchée net,
+          // fondu compris, sur les écrans sans encoche.
+          top: math.max(0, topInset + _sceneTop),
+          left: 0,
+          right: 0,
+          child: const Center(
+            child: AppSceneContainer(
+              size: _heroHeight,
+              opacity: 1,
+              verticalFadeStops: _sceneFade,
+              child: Center(child: DnaHelix(height: _helixHeight)),
             ),
           ),
-          // Lisibilité : la colonne de texte est à gauche, le fond s'éteint
-          // ensuite vers le bas.
-          const Positioned.fill(child: AppSceneScrim.lateral()),
-          const Positioned.fill(child: AppSceneScrim.vertical()),
-          Positioned.fill(
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(
-                AppSpacing.gutter,
-                topInset + AppSpacing.md,
-                AppSpacing.gutter,
-                AppSpacing.gapRow,
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const AppSectionLabel('Métabolisme'),
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(
-                    'Ton moteur\naujourd’hui',
-                    style: AppTypography.display.copyWith(
-                      color: AppColors.darkTextPrimary,
+        ),
+        // Lisibilité : la colonne de texte est à gauche, le fond s'éteint
+        // ensuite vers le bas.
+        const Positioned.fill(child: AppSceneScrim.lateral()),
+        const Positioned.fill(child: AppSceneScrim.vertical()),
+        ConstrainedBox(
+          constraints: BoxConstraints(minHeight: _heroHeight + topInset),
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              AppSpacing.gutter,
+              topInset + AppSpacing.md,
+              AppSpacing.gutter,
+              AppSpacing.gapRow,
+            ),
+            child: Column(
+              // Le titre en haut, la dépense en bas : l'écart entre eux
+              // absorbe ce que la hauteur minimale laisse de libre.
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const AppSectionLabel('Métabolisme'),
+                    const SizedBox(height: AppSpacing.xs),
+                    // Aucun mot coupé : en texte ×2 sur 320 points, le
+                    // titre d'affiche s'écrivait « aujourd’h / ui ».
+                    AppWholeWordsText(
+                      'Ton moteur\naujourd’hui',
+                      style: AppTypography.display.copyWith(
+                        color: AppColors.darkTextPrimary,
+                      ),
                     ),
-                  ),
-                  const Spacer(),
-                  if (result != null)
-                    MetabolismExpenditureRow(metabolism: result)
-                  else
-                    _ProfilePrompt(onCompleteProfile: onCompleteProfile),
-                ],
-              ),
+                  ],
+                ),
+                Padding(
+                  padding: const EdgeInsets.only(top: AppSpacing.md),
+                  child: result != null
+                      ? MetabolismExpenditureRow(metabolism: result)
+                      : _ProfilePrompt(onCompleteProfile: onCompleteProfile),
+                ),
+              ],
             ),
           ),
-        ],
-      ),
+        ),
+      ],
     );
   }
 }

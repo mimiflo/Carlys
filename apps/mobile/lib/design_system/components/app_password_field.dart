@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../spacing/app_spacing.dart';
+import 'app_text_field.dart';
 
 /// Champ mot de passe avec bascule de visibilité accessible.
 class AppPasswordField extends StatefulWidget {
@@ -63,7 +64,14 @@ class _AppPasswordFieldState extends State<AppPasswordField> {
       validator: widget.validator,
       onFieldSubmitted: widget.onFieldSubmitted,
       decoration: InputDecoration(
-        hintText: widget.inlineLabel ? widget.label : null,
+        // Muet pour le lecteur d'écran : le champ dit déjà son libellé.
+        hint: widget.inlineLabel
+            ? AppTextField.silentHint(
+                context,
+                widget.label,
+                enabled: widget.enabled,
+              )
+            : null,
         helperText: widget.helper,
         errorText: widget.errorText,
         prefixIcon: widget.prefixIcon == null

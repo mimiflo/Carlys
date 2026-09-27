@@ -15,7 +15,7 @@ import 'seal_engraving.dart';
 
 /// LE BLOC COMPACT : le profil de progression, vu de l'ACCUEIL.
 ///
-/// Hauteur fixe, une seule ligne de base partagée, un sceau. C'est la
+/// Hauteur de maquette, une seule ligne de base partagée, un sceau. C'est la
 /// première chose qu'on voit en ouvrant l'application, et c'est là que « plus
 /// ça évolue, plus c'est majestueux » doit se ressentir sans avoir à ouvrir
 /// quoi que ce soit — d'où le fond qui prend la lumière au lieu d'un aplat.
@@ -25,8 +25,11 @@ import 'seal_engraving.dart';
 class ProgressionEntryCard extends ConsumerWidget {
   const ProgressionEntryCard({super.key});
 
-  /// Hauteur fixe : le bloc ne doit pas grandir avec la longueur d'un nom de
-  /// récompense, sinon l'accueil se réorganise à chaque médaille.
+  /// Hauteur de maquette, et MINIMALE : le bloc ne grandit pas avec la
+  /// longueur d'un nom de récompense (coupé d'une ellipse sur sa ligne),
+  /// sinon l'accueil se réorganiserait à chaque médaille. Il grandit en
+  /// revanche avec le texte système : fixe, il rognait « Dernière : … » dès
+  /// le texte ×1,3.
   static const double height = 120;
 
   @override
@@ -52,7 +55,7 @@ class ProgressionEntryCard extends ConsumerWidget {
         child: GestureDetector(
           onTap: () => context.push(AppRoutes.progression),
           child: Container(
-            height: height,
+            constraints: const BoxConstraints(minHeight: height),
             padding: const EdgeInsets.all(AppSpacing.md),
             decoration: BoxDecoration(
               gradient: AppColors.compactPlate,
@@ -176,7 +179,7 @@ class _Summary extends StatelessWidget {
   }
 
   /// La jauge la plus fine de l'application : le bloc compact tient sur
-  /// 120 points, chaque trait compte double.
+  /// 120 points à la taille d'origine, chaque trait compte double.
   static const double _gaugeHeight = 5;
 }
 

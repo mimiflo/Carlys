@@ -5,6 +5,7 @@ import '../motion/app_motion.dart';
 import '../radius/app_radius.dart';
 import '../spacing/app_spacing.dart';
 import '../typography/app_typography.dart';
+import 'app_action_label.dart';
 
 /// Bouton pleine largeur à **dégradé du design system**.
 ///
@@ -155,11 +156,16 @@ class _Surface extends StatelessWidget {
         gradient: gradient,
         borderRadius: AppRadius.fullAll,
       ),
+      // La hauteur de maquette est un MINIMUM : en texte agrandi, le
+      // libellé passe sur deux lignes et le bouton grandit avec lui.
       child: AnimatedContainer(
         duration: AppMotion.tap,
-        height: AppBrandButton._height,
+        constraints: const BoxConstraints(minHeight: AppBrandButton._height),
         alignment: Alignment.center,
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
+        padding: const EdgeInsets.symmetric(
+          horizontal: AppSpacing.md,
+          vertical: AppSpacing.xs,
+        ),
         decoration: BoxDecoration(
           color: AppColors.darkBackground.withValues(alpha: veil),
           borderRadius: AppRadius.fullAll,
@@ -197,11 +203,9 @@ class _Label extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final text = Text(
+    // Deux lignes en texte agrandi, jamais coupé net (voir le libellé).
+    final text = AppActionLabel(
       label,
-      textAlign: TextAlign.center,
-      maxLines: 1,
-      overflow: TextOverflow.ellipsis,
       style:
           AppTypography.resized(
             AppTypography.subheading,

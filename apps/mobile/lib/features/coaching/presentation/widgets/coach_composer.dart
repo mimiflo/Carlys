@@ -40,10 +40,6 @@ class CoachComposer extends StatelessWidget {
       children: [
         Expanded(
           child: Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: AppSpacing.md,
-              vertical: AppSpacing.sm,
-            ),
             // Ni liseré, ni angle : sur fond sombre, un contour dessine une
             // boîte autour du champ au lieu de le poser dessus. La surface
             // seule suffit à dire où l'on écrit, et la forme stadium
@@ -57,6 +53,7 @@ class CoachComposer extends StatelessWidget {
               minLines: 1,
               maxLines: 4,
               textInputAction: TextInputAction.send,
+              textAlignVertical: TextAlignVertical.center,
               onSubmitted: isSending ? null : onSend,
               style: AppTypography.body.copyWith(
                 color: AppColors.darkTextPrimary,
@@ -72,7 +69,17 @@ class CoachComposer extends StatelessWidget {
                 // À L'INTÉRIEUR de la pilule, et sa marge s'ajoute à celle
                 // du conteneur.
                 filled: false,
-                contentPadding: EdgeInsets.zero,
+                // La marge est CELLE DU CHAMP, pas du conteneur : toute la
+                // pilule répond au doigt. Posée sur le conteneur, elle
+                // laissait un champ de 19 points au milieu d'une pilule
+                // qui, autour, ne faisait rien.
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.md,
+                  vertical: AppSpacing.sm,
+                ),
+                constraints: const BoxConstraints(
+                  minHeight: AppSpacing.touchTarget,
+                ),
                 hintText: 'Pose ta question…',
                 hintStyle: AppTypography.body.copyWith(
                   color: AppColors.darkTextTertiary,

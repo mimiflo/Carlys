@@ -49,20 +49,30 @@ class EncouragementTile extends StatelessWidget {
                 color: AppColors.affection,
               ),
               const SizedBox(width: AppSpacing.xs),
+              // Le nom, puis l'heure à droite quand elle tient, dessous
+              // sinon : non flexible, elle repoussait le menu hors de la
+              // carte en texte ×2.
               Expanded(
-                child: Text(
-                  encouragement.fromName,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTypography.subheading.copyWith(
-                    color: AppColors.darkTextPrimary,
-                  ),
-                ),
-              ),
-              Text(
-                formatRelativeTime(encouragement.sentAt),
-                style: AppTypography.labelMono.copyWith(
-                  color: AppColors.darkTextTertiary,
+                child: Wrap(
+                  alignment: WrapAlignment.spaceBetween,
+                  crossAxisAlignment: WrapCrossAlignment.center,
+                  spacing: AppSpacing.xs,
+                  children: [
+                    Text(
+                      encouragement.fromName,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: AppTypography.subheading.copyWith(
+                        color: AppColors.darkTextPrimary,
+                      ),
+                    ),
+                    Text(
+                      formatRelativeTime(encouragement.sentAt),
+                      style: AppTypography.labelMono.copyWith(
+                        color: AppColors.darkTextTertiary,
+                      ),
+                    ),
+                  ],
                 ),
               ),
               const SizedBox(width: AppSpacing.xxs),

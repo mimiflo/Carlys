@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:io';
 
 import 'package:carlys_mobile/design_system/design_system.dart';
+import 'package:carlys_mobile/design_system/scenes/app_scene_container.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -77,6 +78,96 @@ void main() {
     });
   });
 
+  group('AppDarkScaffold', () {
+    // Le réglage « Sombre OLED » promet un fond NOIR PUR. L'écran sombre
+    // peignait pourtant `darkBackground` en dur : 42 écrans sur 44 gardaient
+    // #08050E sous l'OLED, seule la barre d'application passait au noir.
+    for (final (nom, construire, attendu) in [
+      ('OLED', AppTheme.oledDark, AppColors.oledBackground),
+      ('sombre', AppTheme.dark, AppColors.darkBackground),
+      ('clair', AppTheme.light, AppColors.darkBackground),
+    ]) {
+      testWidgets('sous le thème $nom, il peint ${hex(attendu)}', (
+        tester,
+      ) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: construire(),
+            home: AppDarkScaffold(
+              appBar: AppBar(title: const Text('Titre')),
+              body: const SizedBox(),
+            ),
+          ),
+        );
+        expect(
+          tester.widget<Scaffold>(find.byType(Scaffold)).backgroundColor,
+          attendu,
+        );
+        // La barre d'application prend le MÊME fond : pas de couture.
+        final barre = tester.widget<Material>(
+          find
+              .descendant(
+                of: find.byType(AppBar),
+                matching: find.byType(Material),
+              )
+              .first,
+        );
+        expect(barre.color, attendu);
+      });
+    }
+  });
+
+  group('ce qui se FOND dans la page en prend le fond', () {
+    // Les voiles des scènes (hero de l'accueil, de Nutrition, de
+    // l'abonnement) finissent sur le fond de la page, pour que la scène s'y
+    // éteigne. Peints en `darkBackground` en dur, ils dessinaient sous
+    // l'OLED, où la page est noire, une bande #08050E / #000000 au bas du
+    // hero : la couture de la barre d'application, déplacée plus bas.
+    for (final (nom, construire, attendu) in [
+      ('OLED', AppTheme.oledDark, AppColors.oledBackground),
+      ('sombre', AppTheme.dark, AppColors.darkBackground),
+      ('clair', AppTheme.light, AppColors.darkBackground),
+    ]) {
+      testWidgets('sous le thème $nom, les voiles des scènes finissent sur '
+          '${hex(attendu)}', (tester) async {
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: construire(),
+            home: const AppDarkScaffold(
+              body: Column(
+                children: [
+                  SizedBox(height: 100, child: AppSceneScrim.lateral()),
+                  SizedBox(height: 100, child: AppSceneScrim.vertical()),
+                ],
+              ),
+            ),
+          ),
+        );
+        final voiles = [
+          for (final element
+              in find
+                  .descendant(
+                    of: find.byType(AppSceneScrim),
+                    matching: find.byType(DecoratedBox),
+                  )
+                  .evaluate())
+            ((element.widget as DecoratedBox).decoration as BoxDecoration)
+                    .gradient!
+                as LinearGradient,
+        ];
+        expect(voiles, hasLength(2));
+        for (final voile in voiles) {
+          // Le point opaque est le fond de la page ; les points voilés en
+          // sont des transparences, jamais une autre encre.
+          expect(voile.colors.where((c) => c.a == 1), [attendu]);
+          for (final couleur in voile.colors.where((c) => c.a > 0)) {
+            expect(hex(couleur.withValues(alpha: 1)), hex(attendu));
+          }
+        }
+      });
+    }
+  });
+
   group('ce qui se pose sur une surface sombre, dans chaque thème', () {
     mesurerLaTable(_table);
   });
@@ -98,6 +189,26 @@ void main() {
           'son contenu, clair sous le réglage Clair : employer '
           '`AppDarkScaffold`.\n${fautes.join('\n')}',
     );
+  });
+
+  test('aucune barre d’application ne peint le fond sombre à la main', () {
+    // Posée sur un `AppDarkScaffold`, une barre peinte en `darkBackground`
+    // dessinait une couture sous l'OLED, où la page est noire : le thème
+    // donne déjà à la barre le fond de la page.
+    final fautes = <String>[
+      for (final fichier in _sources())
+        if (!fichier.startsWith('lib/design_system/'))
+          for (final ligne in _barresSombres(
+            dartCode(File(fichier).readAsStringSync()),
+          ))
+            '$fichier:$ligne',
+    ];
+    expect(fautes, isEmpty, reason: fautes.join('\n'));
+    expect(
+      _barresSombres('AppBar(backgroundColor: AppColors.darkBackground)'),
+      [1],
+    );
+    expect(_barresSombres('AppBar(title: x)'), isEmpty);
   });
 
   test('le balai reconnaît un Scaffold sombre, et rien de plus', () {
@@ -295,6 +406,17 @@ List<int> _scaffoldsSombres(String code) => [
       RegExp(
         r'backgroundColor:\s*AppColors\.(?:darkBackground|oledBackground)',
       ),
+    ))
+      '\n'.allMatches(code.substring(0, appel.start)).length + 1,
+];
+
+/// Les lignes des `AppBar` dont un argument DIRECT les peint en sombre.
+List<int> _barresSombres(String code) => [
+  for (final appel in RegExp(r'\bAppBar\(').allMatches(code))
+    if (_argumentDirect(
+      code,
+      appel.end - 1,
+      RegExp(r'backgroundColor:\s*AppColors\.darkBackground'),
     ))
       '\n'.allMatches(code.substring(0, appel.start)).length + 1,
 ];

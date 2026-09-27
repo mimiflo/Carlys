@@ -25,8 +25,9 @@ class ExerciseProgressionScreen extends ConsumerWidget {
     final progression = ref.watch(exerciseProgressionProvider(exerciseId));
 
     return AppDarkScaffold(
+      // Le fond de la barre est celui de la page, que le thème donne : noir
+      // pur sous l'OLED.
       appBar: AppBar(
-        backgroundColor: AppColors.darkBackground,
         leading: const AppBackButton(),
         title: Text(
           progression.valueOrNull?.exerciseName ?? 'Progression',

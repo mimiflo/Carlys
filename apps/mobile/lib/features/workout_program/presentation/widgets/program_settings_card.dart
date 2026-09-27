@@ -70,18 +70,22 @@ class ProgramSettingsCard extends StatelessWidget {
     return AppCard(
       child: Column(
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  'Programme suivi',
-                  style: AppTypography.subheading.copyWith(
-                    color: AppColors.darkTextPrimary,
+          // UN interrupteur qui dit son nom : la bascule s'annonçait
+          // « commutateur, activé » sans dire ce qu'elle suivait.
+          MergeSemantics(
+            child: Row(
+              children: [
+                Expanded(
+                  child: Text(
+                    'Programme suivi',
+                    style: AppTypography.subheading.copyWith(
+                      color: AppColors.darkTextPrimary,
+                    ),
                   ),
                 ),
-              ),
-              Switch(value: program.isActive, onChanged: onActive),
-            ],
+                Switch(value: program.isActive, onChanged: onActive),
+              ],
+            ),
           ),
           AppListRow(
             title: 'Premier jour',

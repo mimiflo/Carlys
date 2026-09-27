@@ -27,6 +27,7 @@ class ExerciseMediaHeader extends StatelessWidget {
         exercise.primaryMuscleGroup!.name,
       exercise.kind.label,
     ].join(' · ');
+    final page = AppDarkTheme.pageColorOf(context);
 
     return SizedBox(
       height: height,
@@ -54,7 +55,8 @@ class ExerciseMediaHeader extends StatelessWidget {
                 decodeWidth: MediaQuery.sizeOf(context).width.round(),
               ),
             ),
-          // Voile : le bas de l'image se fond dans le fond de l'écran.
+          // Voile : le bas de l'image se fond dans le fond de l'écran — celui
+          // que la page peint VRAIMENT, noir sous « Sombre OLED ».
           DecoratedBox(
             decoration: BoxDecoration(
               gradient: LinearGradient(
@@ -62,10 +64,10 @@ class ExerciseMediaHeader extends StatelessWidget {
                 end: Alignment.bottomCenter,
                 stops: const [0, 0.3, 0.82, 1],
                 colors: [
-                  AppColors.darkBackground.withValues(alpha: 0.6),
-                  AppColors.darkBackground.withValues(alpha: 0),
-                  AppColors.darkBackground.withValues(alpha: 0.85),
-                  AppColors.darkBackground,
+                  page.withValues(alpha: 0.6),
+                  page.withValues(alpha: 0),
+                  page.withValues(alpha: 0.85),
+                  page,
                 ],
               ),
             ),

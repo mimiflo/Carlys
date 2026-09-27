@@ -239,7 +239,6 @@ void main() {
     // pilule — c'est exactement ce qui était visible à l'écran.
     final field = tester.widget<TextField>(find.byType(TextField));
     expect(field.decoration?.filled, isFalse);
-    expect(field.decoration?.contentPadding, EdgeInsets.zero);
 
     // La pilule elle-même : le rayon doit dépasser sa demi-hauteur, sinon
     // ce sont des coins arrondis, pas un stade.
@@ -248,6 +247,11 @@ void main() {
       matching: find.byType(Container),
     );
     final box = tester.widget<Container>(pill.first);
+    // UNE seule marge, celle du CHAMP : le conteneur n'en ajoute pas. Posée
+    // sur lui, elle laissait au doigt un champ de 19 points au milieu d'une
+    // pilule qui, autour, ne répondait pas (touch_targets_test.dart).
+    expect(box.padding, isNull);
+    expect(field.decoration?.contentPadding, isNot(EdgeInsets.zero));
     final radius = (box.decoration! as BoxDecoration).borderRadius!
         .resolve(TextDirection.ltr)
         .topLeft

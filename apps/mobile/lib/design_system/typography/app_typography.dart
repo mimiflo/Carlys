@@ -218,6 +218,28 @@ abstract final class AppTypography {
     );
   }
 
+  /// Largeur naturelle de [text] sur UNE ligne, à l'échelle de texte du
+  /// système. Les composants qui réservent leur place avant de se poser
+  /// (action d'un en-tête, barre de section, mot à ne pas couper) mesurent
+  /// tous ainsi : un réglage de mesure ne peut plus diverger de l'un à
+  /// l'autre.
+  static double lineWidth(
+    String text,
+    TextStyle style, {
+    required TextScaler scaler,
+    TextDirection direction = TextDirection.ltr,
+  }) {
+    final painter = TextPainter(
+      text: TextSpan(text: text, style: style),
+      textDirection: direction,
+      textScaler: scaler,
+      maxLines: 1,
+    )..layout();
+    final width = painter.width;
+    painter.dispose();
+    return width;
+  }
+
   static TextTheme textTheme(Color color, Color mutedColor) {
     return TextTheme(
       displayLarge: display.copyWith(color: color),

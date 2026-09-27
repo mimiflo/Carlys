@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../colors/app_colors.dart';
+import '../theme/app_dark_theme.dart';
 
 /// Socle des scènes 3D (cœur, hélice) : applique les règles communes du
 /// handoff — extinction radiale du canvas, fondu linéaire selon la place à
@@ -78,37 +79,47 @@ class AppSceneContainer extends StatelessWidget {
 
 /// Gradient de lisibilité à poser PAR-DESSUS une scène quand du texte vit
 /// en colonne de gauche (latéral à 100°) ou en dessous (vertical).
+///
+/// Le voile finit sur le fond de la PAGE ([AppDarkTheme.pageColorOf]) : la
+/// scène s'y éteint sans bord. Peint en `darkBackground` en dur, il laissait
+/// sous « Sombre OLED » une bande #08050E / #000000 au pied du hero.
 class AppSceneScrim extends StatelessWidget {
   const AppSceneScrim.lateral({super.key}) : _lateral = true;
   const AppSceneScrim.vertical({super.key}) : _lateral = false;
 
   final bool _lateral;
 
+  /// Opacités des points intermédiaires (76 % et 66 % du fond), celles de
+  /// la maquette.
+  static const int _lateralVeilAlpha = 0xC2;
+  static const int _verticalVeilAlpha = 0xA8;
+
   @override
   Widget build(BuildContext context) {
+    final page = AppDarkTheme.pageColorOf(context);
     return IgnorePointer(
       child: DecoratedBox(
         decoration: BoxDecoration(
           gradient: _lateral
-              ? const LinearGradient(
+              ? LinearGradient(
                   begin: Alignment.centerLeft,
                   end: Alignment.centerRight,
                   colors: [
-                    AppColors.darkBackground,
-                    Color(0xC208050E),
+                    page,
+                    page.withAlpha(_lateralVeilAlpha),
                     Colors.transparent,
                   ],
-                  stops: [0.0, 0.44, 0.82],
+                  stops: const [0.0, 0.44, 0.82],
                 )
-              : const LinearGradient(
+              : LinearGradient(
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   colors: [
                     Colors.transparent,
-                    Color(0xA808050E),
-                    AppColors.darkBackground,
+                    page.withAlpha(_verticalVeilAlpha),
+                    page,
                   ],
-                  stops: [0.4, 0.82, 1.0],
+                  stops: const [0.4, 0.82, 1.0],
                 ),
         ),
         child: const SizedBox.expand(),

@@ -33,12 +33,22 @@ class AppDarkTheme extends StatelessWidget {
   /// tout ce qui en dépend.
   static final ThemeData theme = AppTheme.dark();
 
+  /// Le fond de la PAGE sombre à cet endroit : celui du thème que ce widget
+  /// poserait ici — `darkBackground` sous les réglages Sombre et Clair, le
+  /// noir pur d'`oledBackground` sous « Sombre OLED ».
+  ///
+  /// `AppDarkScaffold` le peint ; ce qui doit SE FONDRE dans la page (les
+  /// voiles des scènes, le fondu du bas d'une image) le lit aussi. Peint en
+  /// `darkBackground` en dur, un voile finissait en #08050E sur la page
+  /// noire de l'OLED : une bande nette au pied du hero.
+  static Color pageColorOf(BuildContext context) =>
+      _resolve(Theme.of(context)).scaffoldBackgroundColor;
+
+  static ThemeData _resolve(ThemeData ambient) =>
+      ambient.brightness == Brightness.dark ? ambient : theme;
+
   @override
   Widget build(BuildContext context) {
-    final ambient = Theme.of(context);
-    return Theme(
-      data: ambient.brightness == Brightness.dark ? ambient : theme,
-      child: child,
-    );
+    return Theme(data: _resolve(Theme.of(context)), child: child);
   }
 }

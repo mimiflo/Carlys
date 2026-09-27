@@ -24,28 +24,76 @@ class FriendChallengeFacts extends StatelessWidget {
       (AppIcons.community, (value: 'Amis', label: 'uniquement')),
     ];
 
+    // Quatre colonnes à la taille d'origine ; deux rangées de deux dès que
+    // le texte grandit : à quatre, « uniquement » se coupait en son milieu
+    // dès le texte ×1,15 sur 390 points (« uniquemen / t »).
+    final grid = MediaQuery.textScalerOf(context).scale(1) > _gridTextScale;
+    final perRow = grid ? 2 : facts.length;
+
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: AppSpacing.md),
-      child: IntrinsicHeight(
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            for (var index = 0; index < facts.length; index++) ...[
-              if (index > 0)
-                const VerticalDivider(
-                  width: 1,
-                  thickness: 1,
-                  color: AppColors.darkBorder,
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          // Mesuré ICI, hors de l'`IntrinsicHeight` des rangées : le corps
+          // commun qui laisse le plus long mot des libellés tenir dans sa
+          // colonne. Aucun mot ne se coupe, et les quatre gardent la même
+          // taille.
+          final cell =
+              (constraints.maxWidth - (perRow - 1) * _dividerWidth) / perRow -
+              2 * _Fact.inset;
+          final labelStyle = AppWholeWordsText.fittedStyle(
+            context,
+            texts: [for (final (_, fact) in facts) fact.label],
+            style: _Fact.baseLabelStyle,
+            maxWidth: cell,
+          );
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              for (var start = 0; start < facts.length; start += perRow) ...[
+                if (start > 0)
+                  const Divider(
+                    height: AppSpacing.md,
+                    thickness: _dividerWidth,
+                    color: AppColors.darkBorder,
+                  ),
+                IntrinsicHeight(
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      for (
+                        var index = start;
+                        index < start + perRow;
+                        index++
+                      ) ...[
+                        if (index > start)
+                          const VerticalDivider(
+                            width: _dividerWidth,
+                            thickness: _dividerWidth,
+                            color: AppColors.darkBorder,
+                          ),
+                        Expanded(
+                          child: _Fact(
+                            icon: facts[index].$1,
+                            fact: facts[index].$2,
+                            labelStyle: labelStyle,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
                 ),
-              Expanded(
-                child: _Fact(icon: facts[index].$1, fact: facts[index].$2),
-              ),
+              ],
             ],
-          ],
-        ),
+          );
+        },
       ),
     );
   }
+
+  /// Au-delà de ce facteur de texte, les faits passent en deux rangées.
+  static const double _gridTextScale = 1.1;
+  static const double _dividerWidth = 1;
 
   static IconData _metricIcon(ChallengeMetric metric) => switch (metric) {
     ChallengeMetric.workouts => AppIcons.workout,
@@ -56,12 +104,23 @@ class FriendChallengeFacts extends StatelessWidget {
 }
 
 class _Fact extends StatelessWidget {
-  const _Fact({required this.icon, required this.fact});
+  const _Fact({
+    required this.icon,
+    required this.fact,
+    required this.labelStyle,
+  });
 
   final IconData icon;
   final FriendChallengeFact fact;
 
+  /// Le style du libellé, ajusté par la rangée à la largeur des colonnes.
+  final TextStyle labelStyle;
+
   static const double _iconSize = 26;
+  static const double inset = AppSpacing.xxs;
+  static final TextStyle baseLabelStyle = AppTypography.label.copyWith(
+    color: AppColors.darkTextSecondary,
+  );
 
   @override
   Widget build(BuildContext context) {
@@ -70,7 +129,7 @@ class _Fact extends StatelessWidget {
       label: '${fact.value} ${fact.label}',
       excludeSemantics: true,
       child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: AppSpacing.xxs),
+        padding: const EdgeInsets.symmetric(horizontal: inset),
         child: Column(
           children: [
             Icon(icon, size: _iconSize, color: AppColors.primaryLight),
@@ -92,9 +151,7 @@ class _Fact extends StatelessWidget {
               textAlign: TextAlign.center,
               maxLines: 2,
               overflow: TextOverflow.ellipsis,
-              style: AppTypography.label.copyWith(
-                color: AppColors.darkTextSecondary,
-              ),
+              style: labelStyle,
             ),
           ],
         ),

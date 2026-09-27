@@ -89,15 +89,77 @@ class AppTextField extends StatelessWidget {
   /// Étiquette DANS le champ (texte fantôme) plutôt qu'au-dessus — le style
   /// des écrans d'entrée. Le libellé reste la référence : il devient le texte
   /// fantôme quand aucun [hint] n'est fourni, et reste annoncé aux lecteurs
-  /// d'écran.
+  /// d'écran — une fois. Un [hint] distinct du libellé est annoncé aussi.
   final bool inlineLabel;
 
   /// Prend le focus (et ouvre le clavier) dès l'affichage : pour le champ
   /// UNIQUE d'une popup de saisie, qu'on ouvre précisément pour écrire.
   final bool autofocus;
 
+  /// L'opacité d'un fantôme INACTIF chez Material : 38 % de 255, arrondi.
+  static const int _disabledHintAlpha = 97;
+
+  /// Le texte fantôme d'un champ à libellé intégré, MUET pour le lecteur
+  /// d'écran — à n'employer que lorsqu'il RÉPÈTE le libellé.
+  ///
+  /// Le libellé y était à la fois le texte fantôme et la sémantique du
+  /// champ : « Mot de passe, Mot de passe, champ de texte ». Le champ garde
+  /// sa sémantique — elle seule survit à la saisie, quand le fantôme
+  /// s'efface — et le fantôme se tait. Il se dessine exactement comme celui
+  /// de Material (`inline_label_fields_test.dart` compare les deux) : le
+  /// corps du thème, l'encre `onSurfaceVariant`, pâlie quand le champ est
+  /// inactif, puis le style de fantôme du thème s'il en pose un ; et il
+  /// tient dans les [maxLines] lignes du champ, ellipse au bout. Sans cette
+  /// borne, « Adresse e-mail » passait sur deux lignes à 320 points en
+  /// texte ×2, et le champ vide de la connexion de 68 à 112 points — qu'il
+  /// gardait pendant la saisie, la place du fantôme restant réservée.
+  static Widget silentHint(
+    BuildContext context,
+    String text, {
+    required bool enabled,
+    int? maxLines = 1,
+  }) {
+    final theme = Theme.of(context);
+    final colors = theme.colorScheme;
+    final states = {if (!enabled) WidgetState.disabled};
+    final style =
+        (theme.useMaterial3
+                ? theme.textTheme.bodyLarge!
+                : theme.textTheme.titleMedium!)
+            .merge(
+              TextStyle(
+                color: enabled
+                    ? colors.onSurfaceVariant
+                    // Le 38 % de Material, arrondi comme lui à l'octet.
+                    : colors.onSurface.withAlpha(_disabledHintAlpha),
+              ),
+            )
+            .merge(
+              WidgetStateProperty.resolveAs(
+                theme.inputDecorationTheme.hintStyle,
+                states,
+              ),
+            );
+    // La borne de Material : celle du thème s'il en pose une, sinon les
+    // lignes du champ.
+    final lines = theme.inputDecorationTheme.hintMaxLines ?? maxLines;
+    return ExcludeSemantics(
+      child: Text(
+        text,
+        style: style,
+        maxLines: lines,
+        overflow:
+            style.overflow ?? (lines == null ? null : TextOverflow.ellipsis),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
+    // Le fantôme ne se tait que s'il RÉPÈTE le libellé. Un exemple distinct
+    // (« Course, vélo, yoga… » dans la popup « Activité libre ») est le seul
+    // texte visible du champ et dit quoi y écrire : il reste lu.
+    final hintRepeatsLabel = inlineLabel && (hint == null || hint == label);
     final field = TextFormField(
       controller: controller,
       autofocus: autofocus,
@@ -114,7 +176,12 @@ class AppTextField extends StatelessWidget {
       minLines: minLines,
       maxLength: maxLength,
       decoration: InputDecoration(
-        hintText: inlineLabel ? (hint ?? label) : hint,
+        // Libellé intégré répété : le fantôme se tait, le champ dit son
+        // libellé (voir [silentHint]).
+        hint: hintRepeatsLabel
+            ? silentHint(context, label, enabled: enabled, maxLines: maxLines)
+            : null,
+        hintText: hintRepeatsLabel ? null : hint,
         helperText: helper,
         errorText: errorText,
         prefixIcon: prefixIcon == null

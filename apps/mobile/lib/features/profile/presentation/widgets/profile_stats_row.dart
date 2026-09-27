@@ -21,43 +21,65 @@ class ProfileStatsRow extends ConsumerWidget {
     final sessions = ref.watch(profileSessionsCountProvider).valueOrNull;
     final friends = ref.watch(profileFriendsCountProvider).valueOrNull;
 
-    return IntrinsicHeight(
-      child: Row(
-        // Par le haut : les chiffres s'alignent, quel que soit le nombre de
-        // lignes de leur libellé (« amis » en a une, les deux autres deux).
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Expanded(
-            child: _Stat(
-              icon: AppIcons.streak,
-              color: AppColors.accent,
-              value: streak,
-              singular: 'jour consécutif',
-              plural: 'jours consécutifs',
-            ),
-          ),
-          const _Separator(),
-          Expanded(
-            child: _Stat(
-              icon: AppIcons.workout,
-              color: AppColors.primary,
-              value: sessions,
-              singular: 'séance effectuée',
-              plural: 'séances effectuées',
-            ),
-          ),
-          const _Separator(),
-          Expanded(
-            child: _Stat(
-              icon: AppIcons.community,
-              color: AppColors.primaryLight,
-              value: friends,
-              singular: 'ami',
-              plural: 'amis',
-            ),
-          ),
-        ],
+    const stats = [
+      (
+        AppIcons.streak,
+        AppColors.accent,
+        'jour consécutif',
+        'jours consécutifs',
       ),
+      (
+        AppIcons.workout,
+        AppColors.primary,
+        'séance effectuée',
+        'séances effectuées',
+      ),
+      (AppIcons.community, AppColors.primaryLight, 'ami', 'amis'),
+    ];
+    final values = [streak, sessions, friends];
+
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Mesuré ICI, hors de l'`IntrinsicHeight` : le corps commun qui
+        // laisse le plus long mot des trois libellés tenir dans sa colonne.
+        // En texte ×1,5 sur 360 points, « consécutifs » se coupait en son
+        // milieu.
+        final column =
+            (constraints.maxWidth - (stats.length - 1) * AppSpacing.md) /
+            stats.length;
+        final labelStyle = AppWholeWordsText.fittedStyle(
+          context,
+          texts: [
+            for (var i = 0; i < stats.length; i++)
+              _Stat.labelFor(values[i], stats[i].$3, stats[i].$4),
+          ],
+          style: _Stat.baseLabelStyle,
+          maxWidth: column,
+        );
+        return IntrinsicHeight(
+          child: Row(
+            // Par le haut : les chiffres s'alignent, quel que soit le nombre
+            // de lignes de leur libellé (« amis » en a une, les deux autres
+            // deux).
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              for (var i = 0; i < stats.length; i++) ...[
+                if (i > 0) const _Separator(),
+                Expanded(
+                  child: _Stat(
+                    icon: stats[i].$1,
+                    color: stats[i].$2,
+                    value: values[i],
+                    singular: stats[i].$3,
+                    plural: stats[i].$4,
+                    labelStyle: labelStyle,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        );
+      },
     );
   }
 }
@@ -82,6 +104,7 @@ class _Stat extends StatelessWidget {
     required this.value,
     required this.singular,
     required this.plural,
+    required this.labelStyle,
   });
 
   final IconData icon;
@@ -90,12 +113,24 @@ class _Stat extends StatelessWidget {
   final String singular;
   final String plural;
 
+  /// Le style du libellé, ajusté par la rangée à la largeur des colonnes.
+  final TextStyle labelStyle;
+
   static const double _iconSize = 24;
+
+  static final TextStyle baseLabelStyle = AppTypography.label.copyWith(
+    color: AppColors.darkTextSecondary,
+    height: 1.25,
+  );
+
+  /// Le libellé accordé : en français, zéro et un sont au singulier.
+  static String labelFor(int? count, String singular, String plural) =>
+      count != null && count <= 1 ? singular : plural;
 
   @override
   Widget build(BuildContext context) {
     final count = value;
-    final label = count != null && count <= 1 ? singular : plural;
+    final label = labelFor(count, singular, plural);
 
     return Semantics(
       label: count == null
@@ -114,27 +149,26 @@ class _Stat extends StatelessWidget {
             children: [
               Icon(icon, size: _iconSize, color: color),
               const SizedBox(width: AppSpacing.xs),
+              // Le chiffre se resserre plutôt que de perdre ses derniers
+              // chiffres sous une ellipse (« 1… » pour 148, en texte ×2).
               Flexible(
-                child: Text(
-                  count == null ? '—' : formatThousands(count),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTypography.resized(
-                    AppTypography.title,
-                    19,
-                  ).copyWith(color: AppColors.darkTextPrimary),
+                child: FittedBox(
+                  fit: BoxFit.scaleDown,
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    count == null ? '—' : formatThousands(count),
+                    maxLines: 1,
+                    style: AppTypography.resized(
+                      AppTypography.title,
+                      19,
+                    ).copyWith(color: AppColors.darkTextPrimary),
+                  ),
                 ),
               ),
             ],
           ),
           const SizedBox(height: AppSpacing.xxs + 2),
-          Text(
-            label,
-            style: AppTypography.label.copyWith(
-              color: AppColors.darkTextSecondary,
-              height: 1.25,
-            ),
-          ),
+          Text(label, style: labelStyle),
         ],
       ),
     );

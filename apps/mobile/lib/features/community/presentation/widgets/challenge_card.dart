@@ -84,24 +84,35 @@ class ChallengeCard extends StatelessWidget {
             ),
           ],
           const SizedBox(height: AppSpacing.sm),
-          Row(
-            children: [
-              Text(
-                '${challenge.participants} participants',
-                style: AppTypography.label.copyWith(
-                  color: AppColors.darkTextTertiary,
+          // Le compte à gauche, le bouton à droite quand ils tiennent côte à
+          // côte ; le bouton passe dessous sinon, au lieu de sortir de la
+          // carte (texte ×2). Toute la largeur, sinon le `Wrap` se réduit à
+          // ses enfants (la colonne ne l'étire pas) et le bouton se colle
+          // au compte au lieu d'aller à droite.
+          SizedBox(
+            width: double.infinity,
+            child: Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: AppSpacing.xs,
+              runSpacing: AppSpacing.xs,
+              children: [
+                Text(
+                  '${challenge.participants} participants',
+                  style: AppTypography.label.copyWith(
+                    color: AppColors.darkTextTertiary,
+                  ),
                 ),
-              ),
-              const Spacer(),
-              AppButton(
-                label: challenge.joined ? 'Quitter' : 'Participer',
-                variant: challenge.joined
-                    ? AppButtonVariant.secondary
-                    : AppButtonVariant.primary,
-                size: AppButtonSize.small,
-                onPressed: onToggle,
-              ),
-            ],
+                AppButton(
+                  label: challenge.joined ? 'Quitter' : 'Participer',
+                  variant: challenge.joined
+                      ? AppButtonVariant.secondary
+                      : AppButtonVariant.primary,
+                  size: AppButtonSize.small,
+                  onPressed: onToggle,
+                ),
+              ],
+            ),
           ),
         ],
       ),

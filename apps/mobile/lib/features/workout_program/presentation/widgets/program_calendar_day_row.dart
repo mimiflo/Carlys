@@ -67,59 +67,68 @@ class ProgramCalendarDayRow extends StatelessWidget {
     final (label, color, icon) = _apparence;
     final date = day.localDate;
 
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(AppRadius.sm),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 58,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    programDayLabels[day.dayOfWeek - 1],
-                    style: AppTypography.labelMono.copyWith(
-                      // AUJOURD'HUI se repère d'un coup d'œil : c'est la
-                      // seule ligne que l'on cherche en ouvrant l'écran.
-                      color: isToday
-                          ? AppColors.primaryLight
-                          : AppColors.darkTextTertiary,
-                    ),
+    // 48 points de haut, et un bouton pour le lecteur d'écran quand la
+    // ligne a un geste : elle en faisait 38, sans rien annoncer.
+    return Semantics(
+      container: true,
+      button: onTap != null ? true : null,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: AppSpacing.touchTarget),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 58,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        programDayLabels[day.dayOfWeek - 1],
+                        style: AppTypography.labelMono.copyWith(
+                          // AUJOURD'HUI se repère d'un coup d'œil : c'est la
+                          // seule ligne que l'on cherche en ouvrant l'écran.
+                          color: isToday
+                              ? AppColors.primaryLight
+                              : AppColors.darkTextTertiary,
+                        ),
+                      ),
+                      Text(
+                        '${date.day.toString().padLeft(2, '0')}/'
+                        '${date.month.toString().padLeft(2, '0')}',
+                        style: AppTypography.label.copyWith(
+                          color: isToday
+                              ? AppColors.primaryLight
+                              : AppColors.darkTextTertiary,
+                        ),
+                      ),
+                    ],
                   ),
-                  Text(
-                    '${date.day.toString().padLeft(2, '0')}/'
-                    '${date.month.toString().padLeft(2, '0')}',
-                    style: AppTypography.label.copyWith(
-                      color: isToday
-                          ? AppColors.primaryLight
-                          : AppColors.darkTextTertiary,
-                    ),
-                  ),
+                ),
+                if (icon != null) ...[
+                  Icon(icon, size: 18, color: color),
+                  const SizedBox(width: AppSpacing.xs),
                 ],
-              ),
+                Expanded(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.body.copyWith(color: color),
+                  ),
+                ),
+                if (onTap != null)
+                  const Icon(
+                    AppIcons.startDay,
+                    size: 20,
+                    color: AppColors.primaryLight,
+                  ),
+              ],
             ),
-            if (icon != null) ...[
-              Icon(icon, size: 18, color: color),
-              const SizedBox(width: AppSpacing.xs),
-            ],
-            Expanded(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTypography.body.copyWith(color: color),
-              ),
-            ),
-            if (onTap != null)
-              const Icon(
-                AppIcons.startDay,
-                size: 20,
-                color: AppColors.primaryLight,
-              ),
-          ],
+          ),
         ),
       ),
     );

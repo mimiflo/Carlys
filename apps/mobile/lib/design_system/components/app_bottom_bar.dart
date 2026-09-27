@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../colors/app_colors.dart';
 import '../icons/app_icons.dart';
 import '../motion/app_motion.dart';
+import '../spacing/app_spacing.dart';
 import '../typography/app_typography.dart';
 import 'app_translucent_bar.dart';
 
@@ -170,11 +171,28 @@ class _BarItem extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 7),
-              AnimatedDefaultTextStyle(
-                duration: duration,
-                style: (active ? AppTypography.tabActive : AppTypography.tab)
-                    .copyWith(color: labelColor),
-                child: Text(item.label),
+              // Le libellé se dit déjà dans la sémantique de l'onglet : le
+              // texte visible s'y ajoutait (« Accueil Accueil »).
+              ExcludeSemantics(
+                child: AnimatedDefaultTextStyle(
+                  duration: duration,
+                  style: (active ? AppTypography.tabActive : AppTypography.tab)
+                      .copyWith(color: labelColor),
+                  // UNE ligne, qui se resserre plutôt que de se couper : un
+                  // onglet fait 65 points sur 390, et « Communauté » y passait
+                  // à la ligne au milieu du mot dès le texte ×1,15.
+                  child: Padding(
+                    // Un filet d'air entre deux libellés resserrés, qui
+                    // sinon se touchaient (« AccueilTraining »).
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: AppSpacing.xxs / 2,
+                    ),
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Text(item.label, maxLines: 1, softWrap: false),
+                    ),
+                  ),
+                ),
               ),
             ],
           ),

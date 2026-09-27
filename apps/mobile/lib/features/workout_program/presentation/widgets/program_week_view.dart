@@ -27,8 +27,9 @@ class ProgramWeekView extends StatelessWidget {
           child: Column(
             children: [
               for (var dayOfWeek = 1; dayOfWeek <= 7; dayOfWeek++) ...[
-                if (dayOfWeek > 1)
-                  const Divider(height: AppSpacing.sm, thickness: 0.5),
+                // Un filet sans marge : la ligne porte déjà sa hauteur de
+                // cible tactile, l'écart n'a plus à la fabriquer.
+                if (dayOfWeek > 1) const Divider(height: 1, thickness: 0.5),
                 _DayRow(
                   dayOfWeek: dayOfWeek,
                   day: program.dayAt(weekNumber, dayOfWeek),
@@ -72,33 +73,43 @@ class _DayRow extends StatelessWidget {
       _ => (entry.label, AppColors.darkTextPrimary, AppIcons.trainingDay),
     };
 
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(AppRadius.sm),
-      child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxs),
-        child: Row(
-          children: [
-            SizedBox(
-              width: 44,
-              child: Text(
-                programDayLabels[dayOfWeek - 1],
-                style: AppTypography.labelMono.copyWith(
-                  color: AppColors.darkTextTertiary,
+    // Une cible de 48 points annoncée comme un bouton : la ligne de 27
+    // points qu'elle était se visait mal entre ses deux voisines, et le
+    // lecteur d'écran n'y entendait pas de geste.
+    return Semantics(
+      container: true,
+      button: true,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(AppRadius.sm),
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(minHeight: AppSpacing.touchTarget),
+          child: Padding(
+            padding: const EdgeInsets.symmetric(vertical: AppSpacing.xxs),
+            child: Row(
+              children: [
+                SizedBox(
+                  width: 44,
+                  child: Text(
+                    programDayLabels[dayOfWeek - 1],
+                    style: AppTypography.labelMono.copyWith(
+                      color: AppColors.darkTextTertiary,
+                    ),
+                  ),
                 ),
-              ),
+                Icon(icon, size: 18, color: color),
+                const SizedBox(width: AppSpacing.xs),
+                Expanded(
+                  child: Text(
+                    label,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: AppTypography.body.copyWith(color: color),
+                  ),
+                ),
+              ],
             ),
-            Icon(icon, size: 18, color: color),
-            const SizedBox(width: AppSpacing.xs),
-            Expanded(
-              child: Text(
-                label,
-                maxLines: 1,
-                overflow: TextOverflow.ellipsis,
-                style: AppTypography.body.copyWith(color: color),
-              ),
-            ),
-          ],
+          ),
         ),
       ),
     );

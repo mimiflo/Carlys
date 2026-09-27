@@ -53,6 +53,10 @@ class AppExplainable extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Semantics(
+      // Une FRONTIÈRE : sans elle, la porte se fondait dans le premier
+      // ancêtre qui en pose une — l'élément de liste —, et un titre voisin
+      // s'annonçait avec elle, puis ouvrait l'explication à l'activation.
+      container: true,
       label: '$enonce. Explication',
       button: true,
       // `excludeSemantics` retire AUSSI l'action de l'InkWell enfant : sans

@@ -47,6 +47,13 @@ class AppListRow extends StatelessWidget {
     final enlarged = MediaQuery.textScalerOf(context).scale(1) > 1;
     final int? lines = enlarged ? null : 1;
     final TextOverflow? cut = enlarged ? null : TextOverflow.ellipsis;
+    // Texte agrandi, la valeur de fin passe SOUS le titre : à côté, non
+    // flexible, elle coupait « Premier jour » en son milieu dès ×1,5 sur
+    // 360 points, et sortait de la ligne en ×2 sur 320.
+    final valueBelow = enlarged && trailing == null && trailingText != null;
+    final valueStyle = AppTypography.metricS.copyWith(
+      color: AppColors.darkTextPrimary,
+    );
 
     final content = Container(
       padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
@@ -94,19 +101,24 @@ class AppListRow extends StatelessWidget {
                     ),
                   ),
                 ],
+                if (valueBelow) ...[
+                  const SizedBox(height: 5),
+                  // Une valeur (une date, un chiffre) ne se coupe pas : elle
+                  // se resserre si même la pleine largeur ne lui suffit pas.
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(trailingText!, style: valueStyle),
+                  ),
+                ],
               ],
             ),
           ),
           const SizedBox(width: 14),
           if (trailing != null)
             trailing!
-          else if (trailingText != null)
-            Text(
-              trailingText!,
-              style: AppTypography.metricS.copyWith(
-                color: AppColors.darkTextPrimary,
-              ),
-            )
+          else if (trailingText != null && !valueBelow)
+            Text(trailingText!, style: valueStyle)
           else if (onTap != null)
             const Icon(
               Icons.chevron_right_rounded,

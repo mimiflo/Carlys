@@ -13,7 +13,9 @@ class ExerciseLibraryHeader extends ConsumerWidget {
 
   static const double _titleSize = 27;
   static const double _iconSize = 23;
-  static const double _tapTarget = 44;
+
+  /// LA cible tactile du design system, pas une rivale à 44.
+  static const double _tapTarget = AppSpacing.touchTarget;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {

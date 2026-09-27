@@ -60,17 +60,20 @@ class HomeHero extends StatelessWidget {
     final topInset = MediaQuery.paddingOf(context).top;
 
     // Ce qui reste à la citation entre l'en-tête et le pied de la zone. Tout
-    // est connu — l'encoche, la gouttière, la hauteur FIXE de l'en-tête —
+    // est connu — l'encoche, la gouttière, la hauteur de l'en-tête —
     // donc la carte descend exactement jusqu'à la série, quel que soit
     // l'appareil, et la zone haute garde la même hauteur tous les jours.
     // Retrait haut FERME : la maquette pose le contenu à 88 du bord, quelle
     // que soit l'encoche. Sur un appareil à grande encoche, c'est elle qui
     // commande — jamais moins que la marge système.
     final top = math.max(_topInset, topInset + AppSpacing.xs);
+    final scaler = MediaQuery.textScalerOf(context);
+    // En texte agrandi, l'en-tête grandit : la citation garde alors de quoi
+    // s'écrire, et c'est la zone qui s'allonge.
     final quoteHeight = math.max(
-      0.0,
+      DailyQuoteCard.minHeightFor(scaler),
       _minHeight -
-          (top + HomeHeader.height + AppSpacing.gapRow) -
+          (top + HomeHeader.heightFor(scaler) + AppSpacing.gapRow) -
           AppSpacing.gapRow,
     );
 

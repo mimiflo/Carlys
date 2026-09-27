@@ -50,14 +50,28 @@ class AcademyDomainHeader extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          Row(
+          // Le compteur à droite du titre quand il tient, dessous sinon :
+          // après un `Spacer`, non flexible, il sortait de l'écran dès le
+          // texte ×1,5 sur 360 points.
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.center,
+            spacing: AppSpacing.xs,
             children: [
-              AppSectionLabel(category.label),
-              if (avancement != null && avancement.termine) ...[
-                const SizedBox(width: AppSpacing.xxs),
-                const Icon(AppIcons.record, size: 14, color: AppColors.accent),
-              ],
-              const Spacer(),
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Flexible(child: AppSectionLabel(category.label)),
+                  if (avancement != null && avancement.termine) ...[
+                    const SizedBox(width: AppSpacing.xxs),
+                    const Icon(
+                      AppIcons.record,
+                      size: 14,
+                      color: AppColors.accent,
+                    ),
+                  ],
+                ],
+              ),
               if (avancement != null)
                 Text(
                   '${avancement.abordees} / ${avancement.total}'

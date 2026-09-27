@@ -1,9 +1,16 @@
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/coaching/presentation/widgets/coach_composer.dart';
+import 'package:carlys_mobile/features/exercises/data/repositories/exercises_repository_impl.dart';
 import 'package:carlys_mobile/features/exercises/presentation/widgets/exercise_glass_button.dart';
+import 'package:carlys_mobile/features/exercises/presentation/widgets/exercise_library_header.dart';
 import 'package:carlys_mobile/features/onboarding/presentation/widgets/onboarding_height_card.dart';
+import 'package:carlys_mobile/features/workout_template/presentation/widgets/templates_header.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+
+import '../support/enlarged_text.dart';
+import '../support/fake_exercises_repository.dart';
 
 /// Les cibles tactiles se MESURENT.
 ///
@@ -14,6 +21,9 @@ import 'package:flutter_test/flutter_test.dart';
 /// dans une boîte de [AppSpacing.touchTarget] ; ce fichier presse le COIN de
 /// la boîte, là où l'ornement n'est pas, et attend une réponse.
 void main() {
+  // Les vraies polices : les hauteurs mesurées sont celles d'un téléphone.
+  setUpAll(loadAppFonts);
+
   Widget harness(Widget child) => MaterialApp(
     theme: AppTheme.dark(),
     home: Scaffold(body: Center(child: child)),
@@ -76,6 +86,82 @@ void main() {
 
     await tester.tapAt(corner(tester, send));
     expect(sent, ['Combien de séries ?']);
+  });
+
+  testWidgets('le champ du coach répond sur toute sa pilule', (tester) async {
+    // Le champ était « dense », sans marge : 19 points de haut au milieu
+    // d'une pilule de 43, dont le rembourrage ne transmettait pas le doigt.
+    final controller = TextEditingController();
+    addTearDown(controller.dispose);
+    await tester.pumpWidget(
+      harness(
+        SizedBox(
+          width: 360,
+          child: CoachComposer(
+            controller: controller,
+            onSend: (_) {},
+            onRetry: () {},
+          ),
+        ),
+      ),
+    );
+
+    final champ = find.byType(TextField);
+    expect(
+      tester.getSize(champ).height,
+      greaterThanOrEqualTo(AppSpacing.touchTarget),
+    );
+    final pilule = find
+        .ancestor(of: champ, matching: find.byType(Container))
+        .first;
+    await tester.tapAt(corner(tester, pilule) + const Offset(20, 0));
+    await tester.pump();
+    expect(
+      tester.widget<EditableText>(find.byType(EditableText)).focusNode.hasFocus,
+      isTrue,
+    );
+  });
+
+  testWidgets('« Nouveau » des modèles fait 48 points de haut', (tester) async {
+    var creations = 0;
+    await tester.pumpWidget(
+      harness(TemplatesHeader(onCreate: () => creations++)),
+    );
+
+    final bouton = find.ancestor(
+      of: find.text('NOUVEAU'),
+      matching: find.byType(GestureDetector),
+    );
+    expect(
+      tester.getSize(bouton.first).height,
+      greaterThanOrEqualTo(AppSpacing.touchTarget),
+    );
+    await tester.tapAt(corner(tester, bouton.first));
+    expect(creations, 1);
+  });
+
+  testWidgets('le filtre de la bibliothèque fait la cible du design system', (
+    tester,
+  ) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          exercisesRepositoryProvider.overrideWithValue(
+            FakeExercisesRepository(const []),
+          ),
+        ],
+        child: harness(const ExerciseLibraryHeader()),
+      ),
+    );
+
+    final filtre = find.ancestor(
+      of: find.byIcon(AppIcons.filter),
+      matching: find.byType(GestureDetector),
+    );
+    expect(
+      tester.getSize(filtre.first),
+      const Size.square(AppSpacing.touchTarget),
+    );
   });
 
   testWidgets('le bouton verre répond au-delà de son ornement', (tester) async {

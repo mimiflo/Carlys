@@ -4,6 +4,7 @@ import '../colors/app_colors.dart';
 import '../spacing/app_spacing.dart';
 import '../typography/app_typography.dart';
 import 'app_back_button.dart';
+import 'app_whole_words_text.dart';
 
 /// L'en-tête des écrans de la refonte : un titre, une ligne mono en
 /// capitales, et des actions rondes à droite.
@@ -65,6 +66,22 @@ class AppScreenHeader extends StatelessWidget {
     if (centered) {
       return _buildCentered();
     }
+    final heading = Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Semantics(
+          header: true,
+          child: AppWholeWordsText(
+            title,
+            style: AppTypography.pageTitle.copyWith(
+              color: AppColors.darkTextPrimary,
+            ),
+          ),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+        Text(tagline.toUpperCase(), style: _taglineStyle),
+      ],
+    );
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
@@ -72,41 +89,57 @@ class AppScreenHeader extends StatelessWidget {
           const Align(alignment: Alignment.centerLeft, child: AppBackButton()),
           const SizedBox(height: AppSpacing.xxs),
         ],
-        Row(
-          children: [
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Semantics(
-                    header: true,
-                    child: Text(
-                      title,
-                      style: AppTypography.pageTitle.copyWith(
-                        color: AppColors.darkTextPrimary,
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                  Text(tagline.toUpperCase(), style: _taglineStyle),
+        if (actions.isEmpty)
+          heading
+        else
+          LayoutBuilder(
+            builder: (context, constraints) {
+              // La même parade que la variante centrée : quand les boutons
+              // ne laissent plus au titre sa largeur minimale, ils passent
+              // AU-DESSUS de lui, qui prend alors toute la largeur. Sans
+              // elle, « Communauté » se coupait en son milieu dès ×1,3.
+              final room =
+                  constraints.maxWidth -
+                  actions.length * (AppSpacing.touchTarget + AppSpacing.sm);
+              final fits =
+                  room >=
+                  MediaQuery.textScalerOf(context).scale(_titleMinWidth);
+              final buttons = [
+                for (final (index, action) in actions.indexed) ...[
+                  if (index > 0 || fits) const SizedBox(width: AppSpacing.sm),
+                  action,
                 ],
-              ),
-            ),
-            for (final action in actions) ...[
-              const SizedBox(width: AppSpacing.sm),
-              action,
-            ],
-          ],
-        ),
+              ];
+              if (!fits) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: buttons,
+                    ),
+                    const SizedBox(height: AppSpacing.xxs),
+                    heading,
+                  ],
+                );
+              }
+              return Row(
+                children: [
+                  Expanded(child: heading),
+                  ...buttons,
+                ],
+              );
+            },
+          ),
       ],
     );
   }
 
-  /// La largeur, en points de TEXTE, sous laquelle le titre centré ne tient
-  /// plus entre ses deux boutons : il passe alors SOUS eux, sur toute la
-  /// largeur (320 points, texte agrandi), au lieu de se couper au milieu
-  /// d'un mot.
-  static const double _centeredTitleMinWidth = 160;
+  /// La largeur, en points de TEXTE, sous laquelle le titre ne tient plus à
+  /// côté de ses boutons : il passe alors SOUS eux, sur toute la largeur
+  /// (320 points, texte agrandi), au lieu de se couper au milieu d'un mot.
+  /// Les deux variantes, centrée et alignée, obéissent à la même règle.
+  static const double _titleMinWidth = 160;
 
   Widget _buildCentered() {
     // Chaque côté a la largeur de ses boutons, et l'autre côté la même : un
@@ -147,8 +180,7 @@ class AppScreenHeader extends StatelessWidget {
       builder: (context, constraints) {
         final room = constraints.maxWidth - 2 * (side + AppSpacing.xs);
         final fits =
-            room >=
-            MediaQuery.textScalerOf(context).scale(_centeredTitleMinWidth);
+            room >= MediaQuery.textScalerOf(context).scale(_titleMinWidth);
         if (!fits) {
           return Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,

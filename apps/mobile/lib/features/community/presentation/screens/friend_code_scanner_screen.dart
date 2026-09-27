@@ -48,8 +48,9 @@ class _FriendCodeScannerScreenState extends State<FriendCodeScannerScreen> {
   @override
   Widget build(BuildContext context) {
     return AppDarkScaffold(
+      // Le fond de la barre est celui de la page, que le thème donne : noir
+      // pur sous l'OLED.
       appBar: AppBar(
-        backgroundColor: AppColors.darkBackground,
         leading: IconButton(
           icon: const Icon(AppIcons.back, color: AppColors.darkTextPrimary),
           tooltip: 'Retour',

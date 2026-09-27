@@ -27,59 +27,75 @@ class MetabolismExpenditureRow extends StatelessWidget {
     // Activité = dépense totale − métabolisme de base : aucune valeur inventée.
     final activity = formatThousands(metabolism.tdeeKcal - metabolism.bmrKcal);
 
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        Expanded(
-          child: AppExplainable(
-            enonce: 'Dépense totale $total kilocalories',
-            onExplain: () => showExplanation(
-              context,
-              NutritionExplanations.depenseEnergetique,
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  total,
-                  style: AppTypography.metricXL.copyWith(
-                    color: AppColors.accent,
-                  ),
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                const _LabelExplique('Kcal / dépense totale'),
-              ],
+    final depense = AppExplainable(
+      enonce: 'Dépense totale $total kilocalories',
+      onExplain: () =>
+          showExplanation(context, NutritionExplanations.depenseEnergetique),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Le chiffre sur UNE ligne, qui se resserre plutôt que de se
+          // couper (« 2 75 / 9 » en texte ×2).
+          FittedBox(
+            fit: BoxFit.scaleDown,
+            alignment: Alignment.centerLeft,
+            child: Text(
+              total,
+              maxLines: 1,
+              softWrap: false,
+              style: AppTypography.metricXL.copyWith(color: AppColors.accent),
             ),
           ),
+          const SizedBox(height: AppSpacing.xs),
+          const _LabelExplique('Kcal / dépense totale'),
+        ],
+      ),
+    );
+    final decomposition = AppExplainable(
+      // « plus », jamais « dont » : l'activité est calculée comme
+      // `tdee − bmr`, donc elle s'AJOUTE au métabolisme de base. Le
+      // « dont » affirmait l'inverse au lecteur d'écran, alors que le
+      // visuel, lui, décompose bien la dépense totale en deux parts.
+      enonce:
+          'Métabolisme de base $bmr kilocalories, '
+          'plus $activity kilocalories d’activité',
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
+      onExplain: () =>
+          showExplanation(context, NutritionExplanations.metabolismeDeBase),
+      // Deux lignes de label font 30 points, 46 avec le rembourrage : la
+      // hauteur minimale porte le bloc à la cible tactile.
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(
+          minHeight: AppSpacing.touchTarget - 2 * AppSpacing.xs,
         ),
-        AppExplainable(
-          // « plus », jamais « dont » : l'activité est calculée comme
-          // `tdee − bmr`, donc elle s'AJOUTE au métabolisme de base. Le
-          // « dont » affirmait l'inverse au lecteur d'écran, alors que le
-          // visuel, lui, décompose bien la dépense totale en deux parts.
-          enonce:
-              'Métabolisme de base $bmr kilocalories, '
-              'plus $activity kilocalories d’activité',
-          // Deux lignes de label ne font pas 48 points : c'est ce
-          // rembourrage qui porte le bloc au-dessus de la cible tactile.
-          padding: const EdgeInsets.symmetric(vertical: AppSpacing.xs),
-          onExplain: () =>
-              showExplanation(context, NutritionExplanations.metabolismeDeBase),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.end,
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              _LabelExplique('MB $bmr', color: AppColors.darkTextTertiary),
-              const SizedBox(height: AppSpacing.xxs),
-              AppSectionLabel(
-                'Activité $activity',
-                color: AppColors.darkTextTertiary,
-              ),
-            ],
-          ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.end,
+          mainAxisAlignment: MainAxisAlignment.center,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _LabelExplique('MB $bmr', color: AppColors.darkTextTertiary),
+            const SizedBox(height: AppSpacing.xxs),
+            AppSectionLabel(
+              'Activité $activity',
+              color: AppColors.darkTextTertiary,
+            ),
+          ],
         ),
-      ],
+      ),
+    );
+
+    // Côte à côte quand ils tiennent, la décomposition SOUS la dépense
+    // sinon : en texte agrandi, elle recouvrait « KCAL / DÉPENSE TOTALE ».
+    return SizedBox(
+      width: double.infinity,
+      child: Wrap(
+        alignment: WrapAlignment.spaceBetween,
+        crossAxisAlignment: WrapCrossAlignment.end,
+        spacing: AppSpacing.sm,
+        runSpacing: AppSpacing.xs,
+        children: [depense, decomposition],
+      ),
     );
   }
 }
@@ -101,10 +117,13 @@ class _LabelExplique extends StatelessWidget {
     return Row(
       mainAxisSize: MainAxisSize.min,
       children: [
-        if (teinte == null)
-          AppSectionLabel(texte)
-        else
-          AppSectionLabel(texte, color: teinte),
+        // Flexible : en texte ×2 sur 320 points, « KCAL / DÉPENSE TOTALE »
+        // est plus large que l'écran, et passe à la ligne.
+        Flexible(
+          child: teinte == null
+              ? AppSectionLabel(texte)
+              : AppSectionLabel(texte, color: teinte),
+        ),
         const SizedBox(width: AppSpacing.xxs),
         Icon(
           AppIcons.info,

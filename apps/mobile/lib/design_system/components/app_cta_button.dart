@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../spacing/app_spacing.dart';
 import '../typography/app_typography.dart';
+import 'app_action_label.dart';
 import 'app_gradient_action.dart';
 
 /// L'APPEL À L'ACTION d'une barre ou d'une carte : l'unique geste que
@@ -100,9 +101,8 @@ class AppCtaButton extends StatelessWidget {
       children: [
         Icon(icon, size: _iconSize),
         const SizedBox(width: AppSpacing.xs),
-        Flexible(
-          child: Text(label, maxLines: 1, overflow: TextOverflow.ellipsis),
-        ),
+        // Deux lignes en texte agrandi, jamais coupé net (voir le libellé).
+        Flexible(child: AppActionLabel(label)),
       ],
     );
   }

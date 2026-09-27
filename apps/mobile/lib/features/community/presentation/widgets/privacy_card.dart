@@ -17,37 +17,44 @@ class PrivacyCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    // UN interrupteur, libellé par son titre et sa précision : sans cette
+    // fusion, l'état et le geste de la bascule remontaient jusqu'à
+    // l'élément de liste qui porte tout l'onglet Amis — lu d'un bloc comme
+    // un interrupteur, et un double-tap sur le nom d'une amie coupait le
+    // partage.
     return AppCard(
-      child: Row(
-        children: [
-          const Icon(AppIcons.lock, color: AppColors.primaryLight),
-          const SizedBox(width: AppSpacing.sm),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Partager ma progression',
-                  style: AppTypography.subheading.copyWith(
-                    color: AppColors.darkTextPrimary,
+      child: MergeSemantics(
+        child: Row(
+          children: [
+            const Icon(AppIcons.lock, color: AppColors.primaryLight),
+            const SizedBox(width: AppSpacing.sm),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Partager ma progression',
+                    style: AppTypography.subheading.copyWith(
+                      color: AppColors.darkTextPrimary,
+                    ),
                   ),
-                ),
-                Text(
-                  'Ta série et tes séances de la semaine, visibles par tes '
-                  'amis. Désactivé : ils ne voient que ton nom.',
-                  style: AppTypography.label.copyWith(
-                    color: AppColors.darkTextTertiary,
+                  Text(
+                    'Ta série et tes séances de la semaine, visibles par tes '
+                    'amis. Désactivé : ils ne voient que ton nom.',
+                    style: AppTypography.label.copyWith(
+                      color: AppColors.darkTextTertiary,
+                    ),
                   ),
-                ),
-              ],
+                ],
+              ),
             ),
-          ),
-          const SizedBox(width: AppSpacing.xs),
-          Switch(
-            value: sharesProgress ?? true,
-            onChanged: sharesProgress == null ? null : onChanged,
-          ),
-        ],
+            const SizedBox(width: AppSpacing.xs),
+            Switch(
+              value: sharesProgress ?? true,
+              onChanged: sharesProgress == null ? null : onChanged,
+            ),
+          ],
+        ),
       ),
     );
   }

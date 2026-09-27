@@ -1,4 +1,4 @@
-import 'dart:ui' show ImageFilter;
+import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 
@@ -7,7 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/app_routes.dart';
 import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
-import '../../../onboarding/presentation/widgets/brand_signature.dart';
+import 'home_brand_mark.dart';
 
 /// En-tête de l'accueil : date du jour en mono, salutation, phrase d'état,
 /// avatar 44×44 en dégradé violet portant l'initiale.
@@ -30,21 +30,50 @@ class HomeHeader extends StatelessWidget {
   /// Géométrie de la maquette : vignette carrée de 44.
   static const double _avatarSize = 44;
 
-  /// Hauteur FIXE de l'en-tête.
+  /// Hauteur RÉSERVÉE à l'en-tête pour une échelle de texte donnée : un
+  /// plancher, pas un plafond.
   ///
-  /// Elle vaut le pire cas de la colonne de texte — rangée marque et date
-  /// (15) + 8 + salutation (24,2) + 4 + phrase d'état sur DEUX lignes
-  /// (37,7) ≈ 89 — donc au-delà de l'avatar. La fixer permet à la zone haute
-  /// de calculer exactement la place qui reste à la citation, plutôt que de
-  /// la mesurer après coup.
+  /// Elle vaut la colonne de texte — rangée marque et date (15) + 8 +
+  /// salutation (24,2) + 4 + phrase d'état sur DEUX lignes (37,7) ≈ 89 à la
+  /// taille d'origine — donc au-delà de l'avatar. La calculer permet à la
+  /// zone haute de connaître exactement la place qui reste à la citation,
+  /// plutôt que de la mesurer après coup.
   ///
-  /// C'est le sceau de marque qui commande : sans lui, la première rangée
-  /// tenait dans les 10 points du libellé mono.
-  static const double height = 89;
+  /// Elle était FIXE, à 89 : dès le texte ×1,15, la seconde ligne de la
+  /// phrase d'état se peignait par-dessus la citation. Chaque ligne suit
+  /// désormais l'échelle du texte système ; seul le sceau de marque, une
+  /// image, garde ses 15 points.
+  static double heightFor(TextScaler scaler) {
+    double lines(TextStyle style, int count) =>
+        scaler.scale(style.fontSize!) * style.height! * count;
+    final brandRow = math.max(HomeBrandMark.height, lines(_dateStyle, 1));
+    return (brandRow +
+            AppSpacing.xs +
+            lines(_greetingStyle, 1) +
+            AppSpacing.xxs +
+            lines(_subtitleStyle, _reservedSubtitleLines))
+        .ceilToDouble();
+  }
 
-  /// La phrase d'état ne dépasse jamais deux lignes : au-delà elle pousserait
-  /// la citation hors de sa bande.
-  static const int _subtitleMaxLines = 2;
+  static const TextStyle _dateStyle = AppTypography.labelMono;
+  static final TextStyle _greetingStyle = AppTypography.title.copyWith(
+    color: AppColors.darkTextPrimary,
+  );
+  static final TextStyle _subtitleStyle = AppTypography.body.copyWith(
+    color: AppColors.darkTextSecondary,
+  );
+
+  /// Deux lignes RÉSERVÉES à la phrase d'état : à la taille d'origine,
+  /// chaque phrase y tient, et la zone haute garde la même hauteur tous les
+  /// jours. Au-delà, l'en-tête donne à la phrase les lignes qu'elle demande
+  /// plutôt que d'en couper la fin : [heightFor] est son plancher.
+  ///
+  /// Un plafond (trois lignes au-delà de ×1,3) ne suffisait pas : à 320
+  /// points en texte ×2, « Ton corps encaisse encore la dernière séance. »
+  /// en demande quatre, et perdait sa fin sous une ellipse. Et une mesure à
+  /// part ne voit ni le style hérité ni le réglage « texte en gras » du
+  /// système, que le texte peint, lui, applique.
+  static const int _reservedSubtitleLines = 2;
 
   @override
   Widget build(BuildContext context) {
@@ -53,50 +82,61 @@ class HomeHeader extends StatelessWidget {
         ? '?'
         : firstName.characters.first.toUpperCase();
 
-    return SizedBox(
-      height: height,
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        minHeight: heightFor(MediaQuery.textScalerOf(context)),
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    // Le sceau de marque, à hauteur de la date : l'accueil
-                    // est le seul écran où Carlys signe son nom.
-                    const _BrandMark(),
-                    const SizedBox(width: AppSpacing.xs),
-                    Flexible(
-                      child: AppSectionLabel(
-                        formatLongDateMono(DateTime.now()),
+            // Une FRONTIÈRE pour le lecteur d'écran : sans elle, la date, la
+            // salutation et la phrase d'état remontaient dans le bouton du
+            // profil, citation comprise, et un double-tap pour relire
+            // ouvrait le profil.
+            child: Semantics(
+              container: true,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      // Le sceau de marque, à hauteur de la date : l'accueil
+                      // est le seul écran où Carlys signe son nom.
+                      const HomeBrandMark(),
+                      const SizedBox(width: AppSpacing.xs),
+                      // Une ligne, toujours : la hauteur de l'en-tête la
+                      // compte pour une.
+                      Flexible(
+                        child: FittedBox(
+                          fit: BoxFit.scaleDown,
+                          alignment: Alignment.centerLeft,
+                          child: AppSectionLabel(
+                            formatLongDateMono(DateTime.now()),
+                          ),
+                        ),
                       ),
+                    ],
+                  ),
+                  const SizedBox(height: AppSpacing.xs),
+                  Semantics(
+                    header: true,
+                    child: Text(
+                      firstName == null ? 'Bonjour' : 'Bonjour, $firstName.',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: _greetingStyle,
                     ),
-                  ],
-                ),
-                const SizedBox(height: AppSpacing.xs),
-                Text(
-                  firstName == null ? 'Bonjour' : 'Bonjour, $firstName.',
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTypography.title.copyWith(
-                    color: AppColors.darkTextPrimary,
                   ),
-                ),
-                const SizedBox(height: AppSpacing.xxs),
-                Text(
-                  subtitle,
-                  maxLines: _subtitleMaxLines,
-                  overflow: TextOverflow.ellipsis,
-                  style: AppTypography.body.copyWith(
-                    color: AppColors.darkTextSecondary,
-                  ),
-                ),
-              ],
+                  const SizedBox(height: AppSpacing.xxs),
+                  // Entière, toujours : voir [_reservedSubtitleLines].
+                  Text(subtitle, style: _subtitleStyle),
+                ],
+              ),
             ),
           ),
           Semantics(
+            container: true,
             label: firstName == null ? 'Profil' : 'Profil de $firstName',
             button: true,
             child: _AvatarButton(
@@ -122,12 +162,16 @@ class HomeHeader extends StatelessWidget {
                     BorderSide(color: AppColors.darkBorderStrong),
                   ),
                 ),
+                // L'initiale est un ornement : le bouton se dit par son
+                // libellé, sans « M » accolé.
                 child: Center(
-                  child: Text(
-                    initial,
-                    style: AppTypography.subheading.copyWith(
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.neutral0,
+                  child: ExcludeSemantics(
+                    child: Text(
+                      initial,
+                      style: AppTypography.subheading.copyWith(
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.neutral0,
+                      ),
                     ),
                   ),
                 ),
@@ -136,57 +180,6 @@ class HomeHeader extends StatelessWidget {
           ),
         ],
       ),
-    );
-  }
-}
-
-/// Le sceau de marque de l'en-tête, halo violet compris.
-///
-/// Il reprend l'image de la page de bienvenue — la même signature du premier
-/// jour au centième, sans deuxième fichier à tenir à jour.
-///
-/// Le halo suit la SILHOUETTE, pas la boîte. Une ombre portée classique
-/// (`BoxShadow`) dessine le rectangle du conteneur : sous un sceau détouré,
-/// elle posait un bloc violet qui donnait l'image pour opaque. Ici la marque
-/// est recopiée en aplat violet, floutée, puis l'originale se pose dessus —
-/// l'équivalent exact du `drop-shadow` de la maquette.
-class _BrandMark extends StatelessWidget {
-  const _BrandMark();
-
-  static const double _height = 15;
-
-  /// Le flou d'un `drop-shadow` CSS de rayon r vaut un sigma de r / 2.
-  static const double _glowSigma = 5;
-
-  @override
-  Widget build(BuildContext context) {
-    const mark = Image(
-      image: AssetImage(BrandSignature.markAsset),
-      height: _height,
-      fit: BoxFit.contain,
-      excludeFromSemantics: true,
-      // La marque est décorative ici : elle ne doit pas retarder la première
-      // image de l'écran le plus ouvert de l'application.
-      gaplessPlayback: true,
-    );
-
-    return Stack(
-      alignment: Alignment.center,
-      children: [
-        ImageFiltered(
-          imageFilter: ImageFilter.blur(sigmaX: _glowSigma, sigmaY: _glowSigma),
-          child: ColorFiltered(
-            // `srcIn` garde l'alpha du sceau et n'en remplace que la
-            // couleur : c'est ce qui fait une silhouette, et non un carré.
-            colorFilter: ColorFilter.mode(
-              AppColors.primary.withValues(alpha: 0.45),
-              BlendMode.srcIn,
-            ),
-            child: mark,
-          ),
-        ),
-        mark,
-      ],
     );
   }
 }

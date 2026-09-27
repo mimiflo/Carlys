@@ -81,12 +81,20 @@ class SectionTitleBar extends StatelessWidget {
     final scaler = MediaQuery.textScalerOf(context);
     final value = trailing;
 
-    final labelWidth = _measure(label.toUpperCase(), _labelStyle, scaler);
+    final labelWidth = AppTypography.lineWidth(
+      label.toUpperCase(),
+      _labelStyle,
+      scaler: scaler,
+    );
     final trailingWidth = value == null
         ? 0.0
         : _gap +
               (leading == null ? 0.0 : _leadingWidth) +
-              _measure(value.toUpperCase(), _trailingStyle, scaler);
+              AppTypography.lineWidth(
+                value.toUpperCase(),
+                _trailingStyle,
+                scaler: scaler,
+              );
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -133,19 +141,6 @@ class SectionTitleBar extends StatelessWidget {
         );
       },
     );
-  }
-
-  /// Largeur naturelle d'une ligne, à l'échelle de texte du système.
-  static double _measure(String text, TextStyle style, TextScaler scaler) {
-    final painter = TextPainter(
-      text: TextSpan(text: text, style: style),
-      textDirection: TextDirection.ltr,
-      textScaler: scaler,
-      maxLines: 1,
-    )..layout();
-    final width = painter.width;
-    painter.dispose();
-    return width;
   }
 }
 

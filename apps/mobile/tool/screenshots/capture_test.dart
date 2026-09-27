@@ -7,7 +7,6 @@
 // rangé hors de test/ — l'avertissement visible_for_testing est donc infondé :
 // ignore_for_file: invalid_use_of_visible_for_testing_member
 import 'dart:async';
-import 'dart:convert';
 import 'dart:io';
 
 import 'package:carlys_mobile/app/app.dart';
@@ -95,6 +94,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:go_router/go_router.dart';
 
+import '../../test/support/enlarged_text.dart';
 import '../../test/support/fake_auth_repository.dart';
 import '../../test/support/fake_coach_repository.dart';
 import '../../test/support/fake_exercises_repository.dart';
@@ -132,58 +132,10 @@ DateTime startOfToday() {
   return DateTime(now.year, now.month, now.day);
 }
 
+/// Les polices de l'application (`loadAppFonts`, partagé avec les épreuves
+/// de texte agrandi), plus l'emoji du système.
 Future<void> loadRealFonts() async {
-  // Polices du bundle (MaterialIcons…).
-  final manifest = await rootBundle.loadStructuredData<List<dynamic>>(
-    'FontManifest.json',
-    (data) async => json.decode(data) as List<dynamic>,
-  );
-  for (final entry in manifest.whereType<Map<String, dynamic>>()) {
-    final loader = FontLoader(entry['family'] as String);
-    // LIMITE CONNUE : `FontLoader` n'expose aucun poids, et le harnais ne sait
-    // donc pas choisir la graisse — c'est la PREMIÈRE fonte chargée qui sert à
-    // tous les poids, les autres étant simulées. Les captures sous-rendent donc
-    // le gras : mesuré, « TON PARCOURS. » en 24/w700 fait 192 px ici contre
-    // ~211 sur un vrai appareil. On charge le 400 en tête, le plus proche de la
-    // moyenne de l'interface — sans quoi une fonte fine déclarée en premier
-    // amaigrirait toute la galerie.
-    final fonts =
-        (entry['fonts'] as List<dynamic>)
-            .whereType<Map<String, dynamic>>()
-            .toList()
-          ..sort((a, b) {
-            int gap(Map<String, dynamic> f) =>
-                ((f['weight'] as int?) ?? 400) - 400;
-            return gap(a).abs().compareTo(gap(b).abs());
-          });
-    for (final font in fonts) {
-      loader.addFont(rootBundle.load(font['asset'] as String));
-    }
-    await loader.load();
-  }
-
-  // Roboto depuis le cache du SDK : rendu de texte réaliste (la police de
-  // test « blocs » fausse largeurs et lisibilité des captures).
-  final flutterRoot = Platform.environment['FLUTTER_ROOT'];
-  if (flutterRoot != null) {
-    final fontsDir = Directory(
-      '$flutterRoot/bin/cache/artifacts/material_fonts',
-    );
-    // « FlutterTest » est la police par défaut du harnais (glyphes en blocs) :
-    // la remplacer aussi rend les styles sans famille explicite lisibles.
-    for (final family in const ['Roboto', 'FlutterTest']) {
-      final loader = FontLoader(family);
-      for (final file in fontsDir.listSync().whereType<File>()) {
-        if (file.path.endsWith('.ttf') && file.path.contains('Roboto-')) {
-          loader.addFont(
-            file.readAsBytes().then((bytes) => ByteData.sublistView(bytes)),
-          );
-        }
-      }
-      await loader.load();
-    }
-  }
-
+  await loadAppFonts();
   await _loadEmojiFont();
 }
 

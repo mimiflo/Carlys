@@ -2,12 +2,10 @@ import 'package:flutter/material.dart';
 
 import '../../../../design_system/design_system.dart';
 import '../../../progression/domain/progression.dart';
-import '../../../progression/domain/reward.dart';
 import '../../../progression/domain/reward_engine.dart';
-import '../../../progression/presentation/widgets/award_seal.dart';
-import '../../../progression/presentation/widgets/seal_size.dart';
 import '../../domain/academy_level.dart';
 import '../../domain/academy_progress.dart';
+import 'academy_progress_parts.dart';
 
 /// Où en est la lecture du pack, et ce qu'elle a déjà rapporté.
 ///
@@ -80,15 +78,17 @@ class AcademyProgressCard extends StatelessWidget {
         children: [
           const AppSectionLabel('Où tu en es'),
           const SizedBox(height: AppSpacing.sm),
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.end,
+          // Le pourcentage à droite du compte quand il tient, dessous
+          // sinon : non flexible, il écrasait le compte en texte agrandi.
+          Wrap(
+            alignment: WrapAlignment.spaceBetween,
+            crossAxisAlignment: WrapCrossAlignment.end,
+            spacing: AppSpacing.xs,
             children: [
-              Expanded(
-                child: Text(
-                  '${progress.abordees} leçons sur ${progress.total}',
-                  style: AppTypography.title.copyWith(
-                    color: AppColors.darkTextPrimary,
-                  ),
+              AppWholeWordsText(
+                '${progress.abordees} leçons sur ${progress.total}',
+                style: AppTypography.title.copyWith(
+                  color: AppColors.darkTextPrimary,
                 ),
               ),
               // La base du pourcentage se dit TOUJOURS : « du pack » est ce
@@ -129,113 +129,24 @@ class AcademyProgressCard extends StatelessWidget {
           // un « niveau zéro » se lirait comme une note d'échec d'office.
           if (niveau != null) ...[
             const SizedBox(height: AppSpacing.sm),
-            _NiveauLigne(niveau: niveau, abordees: progress.abordees),
+            AcademyLevelLine(niveau: niveau, abordees: progress.abordees),
           ],
           const SizedBox(height: AppSpacing.md),
           // Les sceaux déjà gagnés en pleine couleur, les autres éteints :
           // ce qui reste à faire se voit, sans jamais ressembler à un échec.
+          // Six sceaux à l'écart de la maquette ; sur 320 points, où six
+          // fois 34 + 8 ne tiennent pas, ce sont les ÉCARTS qui se
+          // resserrent, jamais les sceaux.
           Row(
             children: [
-              for (final id in rewardIds) ...[
-                _Sceau(reward: gagnees[id]),
-                const SizedBox(width: AppSpacing.xs),
+              for (final (index, id) in rewardIds.indexed) ...[
+                if (index > 0)
+                  const Flexible(child: SizedBox(width: AppSpacing.xs)),
+                AcademyRewardSeal(reward: gagnees[id]),
               ],
             ],
           ),
         ],
-      ),
-    );
-  }
-}
-
-/// Le niveau atteint, et ce qui ouvre le suivant.
-///
-/// Le rang et le nom disent où on en est ; la droite dit le PROCHAIN pas,
-/// jamais ce qui manque en creux : « encore 3 leçons avant Profondeur » est
-/// une direction, « il te manque 3 leçons » serait un reproche.
-class _NiveauLigne extends StatelessWidget {
-  const _NiveauLigne({required this.niveau, required this.abordees});
-
-  final AcademyLevel niveau;
-  final int abordees;
-
-  @override
-  Widget build(BuildContext context) {
-    final prochain = nextAcademyLevelOf(abordees);
-
-    return Semantics(
-      label:
-          'Niveau ${niveau.rang}, ${niveau.nom}'
-          '${prochain == null ? '' : '. ${_versLeProchain(prochain)}'}',
-      excludeSemantics: true,
-      child: Row(
-        children: [
-          Text(
-            'Niveau ${niveau.rang}',
-            style: AppTypography.resized(
-              AppTypography.labelMono,
-              11,
-            ).copyWith(color: AppColors.primaryLight),
-          ),
-          const SizedBox(width: AppSpacing.xs),
-          Text(
-            niveau.nom,
-            style: AppTypography.label.copyWith(
-              color: AppColors.darkTextSecondary,
-            ),
-          ),
-          const Spacer(),
-          if (prochain != null)
-            Text(
-              _versLeProchain(prochain),
-              style: AppTypography.label.copyWith(
-                color: AppColors.darkTextTertiary,
-              ),
-            ),
-        ],
-      ),
-    );
-  }
-
-  String _versLeProchain(AcademyLevel prochain) {
-    final manque = prochain.seuil - abordees;
-    final lecons = manque > 1 ? '$manque leçons' : '1 leçon';
-    return 'encore $lecons avant ${prochain.nom}';
-  }
-}
-
-/// Un sceau de récompense, gagné ou en attente.
-class _Sceau extends StatelessWidget {
-  const _Sceau({required this.reward});
-
-  /// `null` tant que la récompense n'est pas obtenue.
-  final Reward? reward;
-
-  @override
-  Widget build(BuildContext context) {
-    final gagne = reward;
-    if (gagne == null) {
-      return Semantics(
-        label: 'Récompense à venir',
-        child: Opacity(
-          opacity: 0.25,
-          child: SizedBox.square(
-            dimension: SealSize.small,
-            child: Icon(
-              AppIcons.record,
-              size: 22,
-              color: AppColors.darkTextTertiary,
-            ),
-          ),
-        ),
-      );
-    }
-    return Semantics(
-      label: '${gagne.label}, obtenu',
-      child: AwardSeal(
-        kind: gagne.kind,
-        figure: gagne.figure,
-        size: SealSize.small,
       ),
     );
   }

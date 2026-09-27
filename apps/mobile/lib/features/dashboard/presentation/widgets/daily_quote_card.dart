@@ -23,6 +23,19 @@ class DailyQuoteCard extends StatelessWidget {
   static const double _maxSize = 21;
   static const double _lineHeight = 1.16;
 
+  /// Corps et écart du libellé « CITATION DU JOUR ».
+  static const double _labelSize = 9;
+  static const double _labelGap = AppSpacing.sm;
+
+  /// Le plus petit cadre où la maxime s'écrit encore sur DEUX lignes à son
+  /// corps minimal, libellé compris, pour une échelle de texte donnée. La
+  /// zone haute ne descend pas en dessous : en texte agrandi, elle s'allonge
+  /// plutôt que de laisser la maxime déborder.
+  static double minHeightFor(TextScaler scaler) =>
+      2 * scaler.scale(_minSize) * _lineHeight +
+      _labelGap +
+      scaler.scale(_labelSize) * AppTypography.labelMono.height!;
+
   /// Épaisseur et retrait du filet de citation.
   static const double _rule = 1;
   static const double _inset = AppSpacing.gapRow;
@@ -57,14 +70,24 @@ class DailyQuoteCard extends StatelessWidget {
                       ),
                     ),
                   ),
-                  const SizedBox(height: AppSpacing.sm),
-                  Text(
-                    'CITATION DU JOUR',
-                    style: AppTypography.resized(AppTypography.labelMono, 9)
-                        .copyWith(
-                          letterSpacing: 1.4,
-                          color: AppColors.darkTextTertiary,
-                        ),
+                  const SizedBox(height: _labelGap),
+                  // Une ligne, toujours : en texte agrandi, le libellé passé
+                  // sur deux lignes prenait sa place à la maxime.
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'CITATION DU JOUR',
+                      maxLines: 1,
+                      style:
+                          AppTypography.resized(
+                            AppTypography.labelMono,
+                            _labelSize,
+                          ).copyWith(
+                            letterSpacing: 1.4,
+                            color: AppColors.darkTextTertiary,
+                          ),
+                    ),
                   ),
                 ],
               ),

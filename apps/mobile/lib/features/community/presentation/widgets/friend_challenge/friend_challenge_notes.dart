@@ -119,16 +119,20 @@ class _Section extends StatelessWidget {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  Row(
+                  // Le titre, puis l'heure à droite quand elle tient, SOUS le
+                  // titre sinon : en texte ×2, l'heure non flexible écrasait
+                  // le titre jusqu'à une lettre par ligne.
+                  Wrap(
+                    alignment: WrapAlignment.spaceBetween,
+                    crossAxisAlignment: WrapCrossAlignment.center,
+                    spacing: AppSpacing.xs,
                     children: [
-                      Expanded(
-                        child: Semantics(
-                          header: true,
-                          child: Text(
-                            title,
-                            style: AppTypography.subheading.copyWith(
-                              color: AppColors.darkTextPrimary,
-                            ),
+                      Semantics(
+                        header: true,
+                        child: AppWholeWordsText(
+                          title,
+                          style: AppTypography.subheading.copyWith(
+                            color: AppColors.darkTextPrimary,
                           ),
                         ),
                       ),

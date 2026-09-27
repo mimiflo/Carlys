@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../colors/app_colors.dart';
 import '../spacing/app_spacing.dart';
+import 'app_action_label.dart';
 import 'app_gradient_action.dart';
 
 enum AppButtonVariant {
@@ -236,9 +237,8 @@ class AppButton extends StatelessWidget {
       children: [
         Icon(icon, size: 20),
         const SizedBox(width: AppSpacing.xs),
-        // Un libellé long dans un bouton étroit se tronque plutôt que de
-        // déborder : un débordement est une erreur de rendu, pas un style.
-        Flexible(child: Text(label, maxLines: 1, overflow: TextOverflow.clip)),
+        // Deux lignes en texte agrandi, jamais coupé net (voir le libellé).
+        Flexible(child: AppActionLabel(label)),
       ],
     );
   }

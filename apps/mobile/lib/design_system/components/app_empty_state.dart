@@ -39,23 +39,37 @@ class AppEmptyState extends StatelessWidget {
           children: [
             Icon(icon, size: 48, color: AppColors.darkTextSecondary),
             const SizedBox(height: AppSpacing.md),
-            Text(
-              title,
-              style: theme.textTheme.titleLarge?.copyWith(
-                color: AppColors.darkTextPrimary,
+            // UNE annonce, polie, dès que l'état paraît : il REMPLACE en
+            // général un chargement, et sous lecteur d'écran le passage ne
+            // se disait pas — il fallait explorer l'écran pour le découvrir
+            // (WCAG 4.1.3). Le titre et le message forment ce qui est dit ;
+            // le geste qui suit reste un bouton à part.
+            Semantics(
+              container: true,
+              liveRegion: true,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    title,
+                    style: theme.textTheme.titleLarge?.copyWith(
+                      color: AppColors.darkTextPrimary,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  if (message != null) ...[
+                    const SizedBox(height: AppSpacing.xs),
+                    Text(
+                      message!,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: AppColors.darkTextSecondary,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ],
+                ],
               ),
-              textAlign: TextAlign.center,
             ),
-            if (message != null) ...[
-              const SizedBox(height: AppSpacing.xs),
-              Text(
-                message!,
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: AppColors.darkTextSecondary,
-                ),
-                textAlign: TextAlign.center,
-              ),
-            ],
             if (actionLabel != null && onAction != null) ...[
               const SizedBox(height: AppSpacing.lg),
               AppButton(label: actionLabel!, onPressed: onAction),

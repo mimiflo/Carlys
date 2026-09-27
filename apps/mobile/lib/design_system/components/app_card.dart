@@ -4,6 +4,12 @@ import '../radius/app_radius.dart';
 import '../spacing/app_spacing.dart';
 
 /// Carte de surface standard, cliquable ou non.
+///
+/// Une carte est une FRONTIÈRE pour le lecteur d'écran : ce qu'elle porte
+/// forme son propre nœud, et ne se fond jamais dans ses voisines. Sans
+/// elle, un interrupteur posé dans une carte remontait son état et son geste
+/// jusqu'au premier ancêtre qui en posait une — l'élément de liste qui porte
+/// tout l'onglet Amis, lu alors d'un bloc comme un interrupteur.
 class AppCard extends StatelessWidget {
   const AppCard({
     required this.child,
@@ -38,12 +44,10 @@ class AppCard extends StatelessWidget {
       ),
     );
 
-    if (semanticLabel == null) {
-      return content;
-    }
     return Semantics(
+      container: true,
       label: semanticLabel,
-      button: onTap != null,
+      button: semanticLabel != null && onTap != null ? true : null,
       child: content,
     );
   }

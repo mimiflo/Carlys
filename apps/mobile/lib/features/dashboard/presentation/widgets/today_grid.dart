@@ -144,32 +144,40 @@ class TodayCell extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: AppSpacing.gapTile - 1),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.baseline,
-                    textBaseline: TextBaseline.alphabetic,
-                    children: [
-                      Text(
-                        metric.value,
-                        style: AppTypography.resized(AppTypography.metricM, 17)
-                            .copyWith(
-                              letterSpacing: -0.34,
-                              color: AppColors.darkTextPrimary,
-                            ),
-                      ),
-                      if (metric.target.isNotEmpty) ...[
-                        const SizedBox(width: AppSpacing.xxs),
-                        Flexible(
-                          child: Text(
+                  // Le chiffre et sa cible se resserrent ENSEMBLE plutôt que
+                  // de couper la cible (« / 2 759 k… ») sur un écran étroit
+                  // ou en texte agrandi.
+                  FittedBox(
+                    fit: BoxFit.scaleDown,
+                    alignment: Alignment.centerLeft,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: CrossAxisAlignment.baseline,
+                      textBaseline: TextBaseline.alphabetic,
+                      children: [
+                        Text(
+                          metric.value,
+                          style:
+                              AppTypography.resized(
+                                AppTypography.metricM,
+                                17,
+                              ).copyWith(
+                                letterSpacing: -0.34,
+                                color: AppColors.darkTextPrimary,
+                              ),
+                        ),
+                        if (metric.target.isNotEmpty) ...[
+                          const SizedBox(width: AppSpacing.xxs),
+                          Text(
                             metric.target,
                             maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
                             style: AppTypography.labelMono.copyWith(
                               color: AppColors.textMuted,
                             ),
                           ),
-                        ),
+                        ],
                       ],
-                    ],
+                    ),
                   ),
                   const SizedBox(height: AppSpacing.gapTile - 1),
                   TodayGauge(ratio: metric.ratio, tint: tint),

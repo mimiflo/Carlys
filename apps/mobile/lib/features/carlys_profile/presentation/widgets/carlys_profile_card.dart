@@ -125,7 +125,6 @@ class _CardBody extends StatelessWidget {
         onTap: onTap,
         borderRadius: AppRadius.cardSecondaryAll,
         child: Ink(
-          height: CarlysProfileCard._height,
           decoration: const BoxDecoration(
             borderRadius: AppRadius.cardSecondaryAll,
             // Le liseré violet léger du thème, sur les QUATRE cartes — la
@@ -134,79 +133,116 @@ class _CardBody extends StatelessWidget {
               BorderSide(color: AppColors.primaryLightBorder),
             ),
           ),
-          child: Row(
-            children: [
-              ClipRRect(
-                // Le rayon de la CARTE (moins le liseré) : l'illustration
-                // épouse les angles jusqu'au bord — sans quoi un croissant
-                // sombre restait entre le coin et l'image.
-                borderRadius: const BorderRadius.horizontal(
-                  left: Radius.circular(AppRadius.cardSecondary - 1),
-                ),
-                child: SizedBox(
+          // La hauteur de maquette est un MINIMUM : fixe, elle coupait à
+          // l'ellipse les noms (« LE CONSTRUCTEUR », dès 390 points) et
+          // trois descriptions sur quatre à 320. La carte grandit avec son
+          // texte ; l'illustration suit sa hauteur.
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(
+              minHeight: CarlysProfileCard._height,
+            ),
+            child: Stack(
+              fit: StackFit.passthrough,
+              children: [
+                Positioned(
+                  left: 0,
+                  top: 0,
+                  bottom: 0,
                   width: ProfileIllustration.imageWidth,
-                  height: double.infinity,
-                  child: ProfileIllustration(content: content),
+                  child: ClipRRect(
+                    // Le rayon de la CARTE (moins le liseré) : l'illustration
+                    // épouse les angles jusqu'au bord — sans quoi un
+                    // croissant sombre restait entre le coin et l'image.
+                    borderRadius: const BorderRadius.horizontal(
+                      left: Radius.circular(AppRadius.cardSecondary - 1),
+                    ),
+                    child: ProfileIllustration(content: content),
+                  ),
                 ),
-              ),
-              const SizedBox(width: AppSpacing.md),
-              Expanded(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    if (isCurrent) ...[
-                      const AppBadge(
-                        label: 'Ton profil',
-                        variant: AppBadgeVariant.accent,
+                Padding(
+                  padding: const EdgeInsets.only(
+                    left: ProfileIllustration.imageWidth + AppSpacing.md,
+                  ),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: _Texts(content: content, isCurrent: isCurrent),
                       ),
-                      const SizedBox(height: AppSpacing.xxs),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: AppSpacing.md,
+                        ),
+                        child: Container(
+                          width: 36,
+                          height: 36,
+                          decoration: const BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.fromBorderSide(
+                              BorderSide(color: AppColors.primaryLightBorder),
+                            ),
+                          ),
+                          child: const Icon(
+                            AppIcons.chevronRight,
+                            size: 20,
+                            color: AppColors.primaryLight,
+                          ),
+                        ),
+                      ),
                     ],
-                    // Bornés : la hauteur de carte est FIXE — sur un écran
-                    // étroit (ou avec les glyphes carrés du harnais de test),
-                    // un texte libre déborderait sous le badge.
-                    Text(
-                      content.title.toUpperCase(),
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTypography.subheading,
-                    ),
-                    const SizedBox(height: AppSpacing.xxs),
-                    Text(
-                      content.tagline,
-                      // Quatre lignes : les quatre descriptions s'affichent
-                      // ENTIÈRES à la largeur d'un téléphone — la borne ne
-                      // joue que sur les écrans hors norme.
-                      maxLines: 4,
-                      overflow: TextOverflow.ellipsis,
-                      style: AppTypography.label.copyWith(
-                        color: AppColors.darkTextSecondary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: AppSpacing.md),
-                child: Container(
-                  width: 36,
-                  height: 36,
-                  decoration: const BoxDecoration(
-                    shape: BoxShape.circle,
-                    border: Border.fromBorderSide(
-                      BorderSide(color: AppColors.primaryLightBorder),
-                    ),
-                  ),
-                  child: const Icon(
-                    AppIcons.chevronRight,
-                    size: 20,
-                    color: AppColors.primaryLight,
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// Le badge, le nom et la description d'une carte de profil.
+class _Texts extends StatelessWidget {
+  const _Texts({required this.content, required this.isCurrent});
+
+  final CarlysProfileContent content;
+  final bool isCurrent;
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      // L'air au-dessus et au-dessous du texte quand c'est lui, et non la
+      // hauteur de maquette, qui fait la carte.
+      padding: const EdgeInsets.symmetric(vertical: AppSpacing.sm),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          if (isCurrent) ...[
+            // Le badge se resserre plutôt que de déborder d'une colonne
+            // étroite (320 points).
+            const FittedBox(
+              fit: BoxFit.scaleDown,
+              alignment: Alignment.centerLeft,
+              child: AppBadge(
+                label: 'Ton profil',
+                variant: AppBadgeVariant.accent,
+              ),
+            ),
+            const SizedBox(height: AppSpacing.xxs),
+          ],
+          // Entiers, et aucun mot coupé : la carte grandit avec eux.
+          AppWholeWordsText(
+            content.title.toUpperCase(),
+            style: AppTypography.subheading,
+          ),
+          const SizedBox(height: AppSpacing.xxs),
+          AppWholeWordsText(
+            content.tagline,
+            style: AppTypography.label.copyWith(
+              color: AppColors.darkTextSecondary,
+            ),
+          ),
+        ],
       ),
     );
   }

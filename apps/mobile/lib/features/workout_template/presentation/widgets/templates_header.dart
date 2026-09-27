@@ -32,28 +32,34 @@ class TemplatesHeader extends StatelessWidget {
           child: GestureDetector(
             onTap: onCreate,
             behavior: HitTestBehavior.opaque,
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: AppSpacing.xs,
-                vertical: AppSpacing.sm,
+            // 48 points de haut : le rembourrage seul en donnait 41.
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(
+                minHeight: AppSpacing.touchTarget,
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  const Icon(
-                    AppIcons.add,
-                    size: 17,
-                    color: AppColors.primaryLight,
-                  ),
-                  const SizedBox(width: AppSpacing.xxs),
-                  Text(
-                    'NOUVEAU',
-                    style: AppTypography.resized(
-                      AppTypography.labelMono,
-                      11,
-                    ).copyWith(color: AppColors.primaryLight),
-                  ),
-                ],
+              child: Padding(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: AppSpacing.xs,
+                  vertical: AppSpacing.sm,
+                ),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Icon(
+                      AppIcons.add,
+                      size: 17,
+                      color: AppColors.primaryLight,
+                    ),
+                    const SizedBox(width: AppSpacing.xxs),
+                    Text(
+                      'NOUVEAU',
+                      style: AppTypography.resized(
+                        AppTypography.labelMono,
+                        11,
+                      ).copyWith(color: AppColors.primaryLight),
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
