@@ -1,12 +1,10 @@
-import { REQUEST_ID_HEADER } from '@carlys/shared-config';
 import { Module } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { ThrottlerGuard } from '@nestjs/throttler';
-import { randomUUID } from 'node:crypto';
-import { type IncomingMessage, type ServerResponse } from 'node:http';
 import { LoggerModule } from 'nestjs-pino';
 import { AllExceptionsFilter } from '../common/filters/all-exceptions.filter';
 import { ResponseEnvelopeInterceptor } from '../common/interceptors/response-envelope.interceptor';
+import { generateRequestId } from '../common/utilities/request-id';
 import { AppConfigModule } from '../config/app-config.module';
 import { AppConfigService } from '../config/app-config.service';
 import { PrismaModule } from '../database/prisma/prisma.module';
@@ -32,16 +30,6 @@ import { WorkoutsModule } from '../modules/workout_sessions/workouts.module';
 import { ProgramsModule } from '../modules/programs/programs.module';
 import { WorkoutTemplatesModule } from '../modules/workout_templates/workout-templates.module';
 
-const REQUEST_ID_PATTERN = /^[\w-]{1,64}$/;
-
-function generateRequestId(request: IncomingMessage, response: ServerResponse): string {
-  const incoming = request.headers[REQUEST_ID_HEADER];
-  const requestId =
-    typeof incoming === 'string' && REQUEST_ID_PATTERN.test(incoming) ? incoming : randomUUID();
-  response.setHeader(REQUEST_ID_HEADER, requestId);
-  return requestId;
-}
-
 @Module({
   imports: [
     AppConfigModule,
@@ -56,8 +44,19 @@ function generateRequestId(request: IncomingMessage, response: ServerResponse): 
               request.url?.startsWith('/health') === true ||
               request.url?.startsWith('/metrics') === true,
           },
+          // Secrets de requête, puis, par précaution, toute adresse e-mail
+          // qui atteindrait le journal sous un nom attendu : les appelants
+          // journalisent une EMPREINTE (common/utilities/log-privacy.ts),
+          // cette liste rattrape un oubli.
           redact: {
-            paths: ['req.headers.authorization', 'req.headers.cookie'],
+            paths: [
+              'req.headers.authorization',
+              'req.headers.cookie',
+              'to',
+              'email',
+              '*.email',
+              'identifier',
+            ],
             remove: true,
           },
           transport: config.isDevelopment

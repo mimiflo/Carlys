@@ -4,6 +4,7 @@ import { type NestExpressApplication } from '@nestjs/platform-express';
 import express from 'express';
 import helmet from 'helmet';
 import { AppConfigService } from '../config/app-config.service';
+import { requestIdMiddleware } from '../common/utilities/request-id';
 import { validationExceptionFactory } from '../common/validation/validation-exception.factory';
 import { HttpMetricsMiddleware } from '../modules/metrics/http-metrics.middleware';
 
@@ -13,6 +14,14 @@ import { HttpMetricsMiddleware } from '../modules/metrics/http-metrics.middlewar
  */
 export function configureApp(app: NestExpressApplication): void {
   const config = app.get(AppConfigService);
+
+  // ── Identifiant de corrélation, AVANT TOUT ──────────────────────────────
+  // Une requête que refuse un parseur de corps, helmet ou CORS n'atteint
+  // jamais pino-http (intergiciel de module, posé par Nest à l'init, donc
+  // après ceux-ci) : sans ce premier intergiciel, sa réponse d'erreur portait
+  // `requestId: "unknown"` et aucun en-tête x-request-id. Détail :
+  // common/utilities/request-id.ts.
+  app.use(requestIdMiddleware);
 
   // ── Mesure du trafic, EN PREMIER ────────────────────────────────────────
   //
@@ -43,7 +52,7 @@ export function configureApp(app: NestExpressApplication): void {
   // Derrière un reverse proxy, `req.ip` vaudrait l'adresse du proxy pour TOUT
   // le trafic : la limitation de débit (ThrottlerGuard) et l'audit ne
   // verraient plus qu'une seule adresse. Le verrouillage de compte, lui, n'en
-  // dépend pas — il s'indexe sur l'identité, `lockout.status(email)`.
+  // dépend pas — il s'indexe sur l'identité, `lockout.reserveAttempt(email)`.
   //
   // On fait confiance à exactement TRUST_PROXY_HOPS sauts — jamais `true`,
   // qui accepterait un X-Forwarded-For entièrement forgé. Attention toutefois
@@ -61,11 +70,24 @@ export function configureApp(app: NestExpressApplication): void {
 
   // Webhooks de paiement : le corps BRUT est indispensable à la vérification
   // de signature — ce middleware doit précéder tout parseur JSON (l'ordre
-  // d'enregistrement fait foi, voir main.ts).
+  // d'enregistrement fait foi : les parseurs sont posés juste après).
   app.use(
     `/${API_GLOBAL_PREFIX}/v${API_VERSION}/webhooks`,
     express.raw({ type: () => true, limit: MAX_JSON_BODY_SIZE }),
   );
+
+  // ── Parseurs JSON et urlencoded, APRÈS le parseur brut des webhooks ─────
+  //
+  // Ils vivaient dans main.ts, après l'appel à cette fonction : les tests
+  // e2e, qui n'exécutent pas main.ts, tournaient donc avec le parseur par
+  // défaut de Nest — limité à 100 Ko au lieu de 1 Mo, et posé ailleurs dans
+  // la chaîne. Aucun e2e ne pouvait voir un défaut de limite de corps ni
+  // d'ordre des intergiciels. Posés ici, ils sont les mêmes partout : Nest
+  // n'ajoute pas les siens à l'init quand un `jsonParser` et un
+  // `urlencodedParser` sont déjà en place (`isMiddlewareApplied`), et main.ts
+  // crée de toute façon l'application avec `bodyParser: false`.
+  app.useBodyParser('json', { limit: MAX_JSON_BODY_SIZE });
+  app.useBodyParser('urlencoded', { extended: true, limit: MAX_JSON_BODY_SIZE });
 
   app.setGlobalPrefix(API_GLOBAL_PREFIX, {
     exclude: ['health', 'health/live', 'health/ready', 'metrics'],

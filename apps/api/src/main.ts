@@ -1,4 +1,3 @@
-import { MAX_JSON_BODY_SIZE } from '@carlys/shared-config';
 import { NestFactory } from '@nestjs/core';
 import { type NestExpressApplication } from '@nestjs/platform-express';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -16,16 +15,11 @@ async function bootstrap(): Promise<void> {
   const logger = app.get(Logger);
   app.useLogger(logger);
 
-  // configureApp enregistre le parseur BRUT des webhooks : il doit précéder
-  // les parseurs JSON/urlencoded (express applique les middlewares dans
-  // l'ordre d'enregistrement).
+  // configureApp pose TOUT l'ordre des intergiciels, parseurs de corps
+  // compris (le brut des webhooks d'abord, puis JSON et urlencoded à 1 Mo) :
+  // les tests e2e, qui l'appellent aussi, exercent la même chaîne.
+  // `bodyParser: false` empêche Nest d'ajouter les siens.
   configureApp(app);
-
-  app.useBodyParser('json', { limit: MAX_JSON_BODY_SIZE });
-  app.useBodyParser('urlencoded', {
-    extended: true,
-    limit: MAX_JSON_BODY_SIZE,
-  });
 
   const config = app.get(AppConfigService);
 

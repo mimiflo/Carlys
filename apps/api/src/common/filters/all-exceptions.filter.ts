@@ -28,6 +28,44 @@ const STATUS_TO_CODE: Readonly<Record<number, ApiErrorCode>> = {
 
 const DEFAULT_VALIDATION_MESSAGE = 'Certaines données sont invalides.';
 
+/**
+ * Messages des erreurs levées AVANT le routage par les intergiciels Express
+ * (body-parser et ses cousins, qui suivent la convention `http-errors`). Leur
+ * propre message (« request entity too large ») est anglais et technique ;
+ * on n'en garde que le statut.
+ */
+const PRE_ROUTING_MESSAGES: Readonly<Record<number, string>> = {
+  [HttpStatus.PAYLOAD_TOO_LARGE]: 'Le corps de la requête est trop volumineux.',
+  [HttpStatus.UNSUPPORTED_MEDIA_TYPE]: 'Ce type de contenu n’est pas pris en charge.',
+};
+const PRE_ROUTING_DEFAULT_MESSAGE = 'La requête est mal formée.';
+
+interface ClientHttpError {
+  status: number;
+  type?: unknown;
+}
+
+/**
+ * Une erreur CLIENT au sens de `http-errors` : un statut 4xx et
+ * `expose === true` (la bibliothèque dit elle-même que le message peut être
+ * montré). C'est ce que lèvent les parseurs de corps : corps trop lourd
+ * (413, y compris un gzip qui gonfle au-delà de la limite après
+ * décompression), encodage inconnu (415), gzip corrompu ou jeu de caractères
+ * invalide (400). Ce n'est ni une HttpException ni une SyntaxError — les
+ * deux seules formes que Nest convertit —, et le filtre en faisait un 500.
+ */
+function asClientHttpError(exception: unknown): ClientHttpError | null {
+  if (typeof exception !== 'object' || exception === null) {
+    return null;
+  }
+  const candidate = exception as { status?: unknown; statusCode?: unknown; expose?: unknown };
+  const status = typeof candidate.status === 'number' ? candidate.status : candidate.statusCode;
+  if (typeof status !== 'number' || status < 400 || status > 499 || candidate.expose !== true) {
+    return null;
+  }
+  return { status, type: (exception as { type?: unknown }).type };
+}
+
 /** Le corps porte-t-il des détails déjà structurés `{ field?, message }` ? */
 function isDetailList(value: unknown): value is ApiErrorDetail[] {
   return (
@@ -98,7 +136,22 @@ export class AllExceptionsFilter implements ExceptionFilter {
         this.logger.error({ err: exception, requestId, status }, 'Exception HTTP 5xx');
       }
     } else {
-      this.logger.error({ err: exception, requestId }, 'Exception non gérée');
+      const clientError = asClientHttpError(exception);
+      if (clientError === null) {
+        this.logger.error({ err: exception, requestId }, 'Exception non gérée');
+      } else {
+        // Refus d'un intergiciel AVANT le routage : c'est le client qui s'est
+        // trompé (ou qui essaie). Un 500 « Exception non gérée », stack
+        // comprise, gonflait à volonté le journal d'erreurs et la métrique
+        // 5xx — et ces requêtes ne passent même pas par le ThrottlerGuard.
+        status = clientError.status;
+        code = STATUS_TO_CODE[status] ?? 'BAD_REQUEST';
+        message = PRE_ROUTING_MESSAGES[status] ?? PRE_ROUTING_DEFAULT_MESSAGE;
+        this.logger.warn(
+          { requestId, status, type: clientError.type },
+          'Requête refusée avant le routage',
+        );
+      }
     }
 
     const body: ApiErrorEnvelope = {
