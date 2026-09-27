@@ -66,7 +66,17 @@ AGIR À LA MAIN
                                           --a-blanc compte sans rien effacer ;
                                           --compte <uuid> efface TOUT DE SUITE
                                           un compte déjà supprimé (demande
-                                          d'effacement immédiat)
+                                          d'effacement immédiat) ;
+                                          --compte-actif <uuid> supprime puis
+                                          efface un compte ENCORE ACTIF, sur
+                                          demande écrite PROUVÉE par le code
+                                          renvoyé (même chemin que la
+                                          suppression dans l'appli : Stripe
+                                          résilié, audit) ; l'adresse du
+                                          compte se tape ensuite, jamais en
+                                          argument. --a-blanc dit ce qui
+                                          serait fait. Procédure :
+                                          docs/deployment/orchestration.md
   carlysctl scale <env> <n>               fixe le nombre d'exemplaires d'API
   carlysctl heal <env>                    répare ce qui est tombé
   carlysctl env-sync <env> [--appliquer]  ajoute au .env les réglages qui lui
@@ -515,21 +525,36 @@ cmd_meal_photos_sweep() {
 # supervision la lance une fois par jour (_purge_comptes.sh) et alerte si
 # elle échoue. Elle reste pour compter sans effacer (--a-blanc), pour
 # rejouer une purge ratée, et pour l'effacement IMMÉDIAT qu'une personne
-# demande par écrit (--compte <uuid>, compte déjà supprimé seulement).
+# demande par écrit : --compte <uuid> pour un compte déjà supprimé,
+# --compte-actif <uuid> pour un compte encore actif (supprimé comme par
+# l'appli — abonnement Stripe résilié, ligne d'audit — puis effacé ; l'adresse
+# tapée ensuite doit être celle du compte). Ni l'une ni l'autre ne vérifie
+# QUI demande : la preuve est le code que la personne renvoie, écrit à
+# l'adresse du compte (docs/deployment/orchestration.md) ; l'adresse
+# d'expéditeur d'un courriel se falsifie.
 cmd_deleted_accounts_purge() {
-  local env_name file a_blanc=non
+  local env_name file a_blanc=non actif=non adresse=''
   env_name="$(environnement_requis "${1-}")"
   shift || true
   local options=()
   while [ "$#" -gt 0 ]; do
     case "$1" in
       --a-blanc) options+=(--a-blanc); a_blanc=oui; shift ;;
-      --compte)
-        [ -n "${2-}" ] || die "--compte attend l'identifiant du compte." ""
-        options+=(--compte "$2"); a_blanc=compte; shift 2 ;;
-      *) die "Option inconnue : $1" "Attendu : --a-blanc, --compte <uuid>" ;;
+      --compte|--compte-actif)
+        [ -n "${2-}" ] || die "$1 attend l'identifiant du compte." ""
+        [ "$1" = --compte ] || actif=oui
+        options+=("$1" "$2"); a_blanc=compte; shift 2 ;;
+      *) die "Option inconnue : $1" \
+        "Attendu : --a-blanc, --compte <uuid>, --compte-actif <uuid> (l'adresse se tape ensuite)" ;;
     esac
   done
+  if [ "$actif" = oui ]; then
+    # Tapée au clavier, jamais en argument : l'historique du shell de root
+    # garderait sinon l'adresse d'une personne dont on efface tout.
+    read -r -p "Adresse du compte, recopiée de sa fiche : " adresse || true
+    [ -n "$adresse" ] || die "Aucune adresse tapée : rien n'est fait." ""
+    options+=(--confirmer "$adresse")
+  fi
   file="$(env_file "$env_name")"
   require_commands docker
   require_compose_file

@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # Tests : ce que la passe de supervision fait d'elle-même — avancer le clone
 # du serveur (_repo.sh, repo_pull) et lancer les tâches quotidiennes
-# (_quotidien.sh : balayage des photos, purge des comptes supprimés).
+# (_quotidien.sh : balayage des photos, purge des comptes supprimés) ; et,
+# de la même purge lancée à la main, l'adresse de `--compte-actif`.
 #
 #   bash scripts/server/tests/supervision_test.sh
 #
@@ -112,6 +113,33 @@ printf 'CARLYS_ACCOUNT_PURGE_DAYS=45\n' >> "$CARLYS_ROOT/production/.env"
 appeler purge_comptes_si_due production "$CARLYS_ROOT/production/.env" > /dev/null
 grep -q -F -- 'node dist/cli/deleted-accounts-purge --delai-jours 45' "$FAUX_JOURNAL" && passe=oui || passe=non
 verifier "purge : CARLYS_ACCOUNT_PURGE_DAYS part au CLI (--delai-jours 45)" oui "$passe"
+banc_nettoyer
+
+echo
+echo "purge à la main, --compte-actif — l'adresse se tape, jamais en argument"
+
+# `effacer <adresse tapée> <arguments…>` — carlysctl deleted-accounts-purge
+# production, l'adresse sur l'entrée standard ; rend le code de sortie.
+effacer() {
+  local tapee="$1" code=0; shift
+  printf '%s' "$tapee" | bash "$BANC_SERVEUR/carlysctl" deleted-accounts-purge production "$@" \
+    > "$BANC_SORTIE" 2>&1 || code=$?
+  printf '%s' "$code"
+}
+UUID=11111111-2222-4333-8444-555555555555
+banc_preparer
+banc_deployer production aaaaaaaaaaaa
+code="$(effacer $'  Membre@Exemple.fr \n' --compte-actif "$UUID" --a-blanc)"
+grep -q -F -- "deleted-accounts-purge --compte-actif $UUID --a-blanc --confirmer Membre@Exemple.fr" \
+  "$FAUX_JOURNAL" && passe=oui || passe=non
+verifier "adresse tapée : elle part au CLI, espaces ôtés" "0 oui" "$code $passe"
+: > "$FAUX_JOURNAL"
+code="$(effacer '' --compte-actif "$UUID" --confirmer membre@exemple.fr)"
+verifier "adresse en argument (l'historique du shell la garderait) : refus, rien lancé" "1 0" \
+  "$code $(lancements deleted-accounts-purge)"
+: > "$FAUX_JOURNAL"
+code="$(effacer '' --compte-actif "$UUID")"
+verifier "rien de tapé : refus, rien lancé" "1 0" "$code $(lancements deleted-accounts-purge)"
 banc_nettoyer
 
 banc_bilan
