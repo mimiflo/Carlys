@@ -23,7 +23,7 @@
 # 2. DEUX JOBS, ET L'ORDRE COMPTE. L'approbation d'un environnement met le job
 #    en pause AVANT sa première étape : mettre les gardes dans le job protégé
 #    obligerait à approuver d'abord, puis à découvrir que les textes légaux ne
-#    sont pas prêts. Les trois gardes vivent donc dans `controles`, non
+#    sont pas prêts. Les gardes vivent donc dans `controles`, non
 #    protégé ; l'humain n'est sollicité qu'une fois qu'elles sont vertes, et il
 #    approuve en connaissance de cause — le récapitulatif de `controles` lui
 #    dit le sha, son message de commit et les trois --dart-define exacts.
@@ -89,7 +89,7 @@ concurrency:
 jobs:
   # ── Job 1 : les gardes, AVANT de déranger qui que ce soit ────────────────────
   controles:
-    name: Gardes de promotion (sha, build once, textes légaux)
+    name: Gardes de promotion (sha, build once, CI mobile, textes légaux)
     runs-on: ubuntu-latest
     timeout-minutes: 10
 
@@ -97,8 +97,8 @@ jobs:
       contents: read
       # Le seul droit ajouté : lire l'API Actions. La garde « build once »
       # interroge la liste des artefacts du dépôt, comme images-publish-prod
-      # interroge le registre d'images. Aucun secret à créer, le GITHUB_TOKEN
-      # de l'exécution suffit.
+      # interroge le registre d'images ; la garde de CI lit les exécutions de
+      # mobile-ci. Aucun secret à créer, le GITHUB_TOKEN de l'exécution suffit.
       actions: read
 
     outputs:
@@ -198,10 +198,20 @@ jobs:
       #
       # LE CONTRAT AVEC mobile-recette.yml, ET SA FRAGILITÉ. Cette garde tient
       # à une convention de NOMMAGE partagée : l'artefact de recette s'appelle
-      # `carlys-recette-apk-<sha12>`. GitHub Actions ne partage rien entre deux
-      # workflows — c'est la même duplication assumée que le contrôle de forme
-      # de CARLYS_DOMAIN, recopié mot pour mot entre images-publish.yml et
-      # images-publish-prod.yml. Toute renommée là-bas doit être reportée ici.
+      # `carlys-recette-apk-<sha12>`, et ses symboles
+      # `carlys-recette-symboles-<sha12>`. GitHub Actions ne partage rien entre
+      # deux workflows — c'est la même duplication assumée que le contrôle de
+      # forme de CARLYS_DOMAIN, recopié mot pour mot entre images-publish.yml
+      # et images-publish-prod.yml. Toute renommée là-bas doit être reportée
+      # ici ; scripts/ci/tests/preuve_recette_test.sh vérifie les deux noms.
+      #
+      # L'APK OU SES SYMBOLES. mobile-recette garde l'APK 14 jours et ses
+      # symboles 90 (sa section « Rétention ») : un binaire ancien ne sert à
+      # personne, une trace d'exécution à déchiffrer si. Chercher le seul APK
+      # refusait, quinze jours après la recette, un commit bel et bien
+      # construit et éprouvé. Les symboles sont une preuve aussi bonne : ils
+      # sortent du MÊME build de la même exécution, et n'existent que s'il a
+      # réussi. La garde accepte donc l'un ou l'autre, vivant.
       #
       # L'APK PLUTÔT QUE LE BUNDLE, et c'est un choix, pas un hasard :
       # mobile-recette téléverse TOUJOURS son artefact `-apk`, alors que son
@@ -227,12 +237,14 @@ jobs:
       #     qu'une image existe sans prouver qu'on l'a fait tourner. C'est
       #     l'approbation humaine du job suivant qui couvre ce trou, comme la
       #     confirmation de promote.sh le fait côté serveur ;
-      #   - qu'un commit ancien reste promouvable. Les artefacts EXPIRENT (90
-      #     jours par défaut, réglable dans Settings → Actions → Artifact and
-      #     log retention) et peuvent être supprimés à la main, là où une image
-      #     de registre persiste. La garde échoue alors sur un commit qui avait
-      #     bel et bien été construit. C'est un faux refus, jamais un faux
-      #     accord : elle se trompe du bon côté, et le message dit quoi faire.
+      #   - qu'un commit ancien reste promouvable. Les artefacts EXPIRENT (les
+      #     symboles au bout de 90 jours, le `retention-days` de
+      #     mobile-recette.yml, lui-même plafonné par Settings → Actions →
+      #     Artifact and log retention) et peuvent être supprimés à la main, là
+      #     où une image de registre persiste. La garde échoue alors sur un
+      #     commit qui avait bel et bien été construit. C'est un faux refus,
+      #     jamais un faux accord : elle se trompe du bon côté, et le message
+      #     dit quoi faire.
       - name: Règle « build once » — ce commit a été construit en recette
         env:
           GH_TOKEN: ${{ github.token }}
@@ -241,6 +253,7 @@ jobs:
           set -euo pipefail
           api="$GITHUB_API_URL/repos/$GITHUB_REPOSITORY/actions/artifacts"
           nom_canonique="carlys-recette-apk-$SHA12"
+          nom_symboles="carlys-recette-symboles-$SHA12"
 
           interroger() {
             curl -sS \
@@ -249,11 +262,13 @@ jobs:
               "$1"
           }
 
-          # 1. Chemin nominal : filtre exact, côté serveur. Il ne dépend
-          #    d'aucune pagination, donc il trouve l'artefact aussi loin
-          #    soit-il dans l'historique du dépôt.
-          trouves="$(interroger "$api?per_page=100&name=$nom_canonique" \
-            | jq -c '[.artifacts[]? | {name, expired, created_at}]')"
+          # 1. Chemin nominal : filtre exact, côté serveur, pour l'APK puis
+          #    ses symboles. Il ne dépend d'aucune pagination, donc il trouve
+          #    l'artefact aussi loin soit-il dans l'historique du dépôt.
+          trouves="$(for nom in "$nom_canonique" "$nom_symboles"; do
+              interroger "$api?per_page=100&name=$nom" \
+                | jq -c '[.artifacts[]? | {name, expired, created_at}]'
+            done | jq -cs 'add')"
 
           # 2. Repli borné : mobile-recette a peut-être nommé son artefact
           #    autrement (suffixe, variante). On balaie les 1 000 artefacts les
@@ -268,7 +283,7 @@ jobs:
                 '[.artifacts[] | select((.name | startswith("carlys-recette")) and (.name | contains($s))) | {name, expired, created_at}]')"
               if [ "$(printf '%s' "$corr" | jq 'length')" -gt 0 ]; then
                 trouves="$corr"
-                echo "::warning title=Artefact de recette hors convention::Aucun artefact nommé exactement « $nom_canonique », mais $(printf '%s' "$corr" | jq -r '.[0].name') correspond. La garde est satisfaite, la convention ne l'est pas : aligner le nom d'artefact de mobile-recette.yml sur carlys-recette-apk-<sha12> évitera qu'un jour le repli, borné aux 1 000 artefacts les plus récents, ne trouve plus rien."
+                echo "::warning title=Artefact de recette hors convention::Aucun artefact nommé exactement « $nom_canonique » ni « $nom_symboles », mais $(printf '%s' "$corr" | jq -r '.[0].name') correspond. La garde est satisfaite, la convention ne l'est pas : aligner le nom d'artefact de mobile-recette.yml sur carlys-recette-apk-<sha12> évitera qu'un jour le repli, borné aux 1 000 artefacts les plus récents, ne trouve plus rien."
                 break
               fi
               page=$((page + 1))
@@ -279,18 +294,42 @@ jobs:
           vivants="$(printf '%s' "$trouves" | jq '[.[] | select(.expired == false)] | length')"
 
           if [ "$total" -eq 0 ]; then
-            echo "::error title=Ce commit n'a pas été construit en recette::Aucun artefact de recette ne porte le sha $SHA12, alors que la règle « build once » du dépôt veut qu'on ne mette en production QUE ce qui a été éprouvé en recette. Marche à suivre : Actions → mobile-recette → Run workflow, en renseignant $SHA12 dans le champ « sha » (le laisser vide construirait la tête de la branche, pas ce commit) ; installer l'APK produit sur un téléphone et l'essayer VRAIMENT ; puis revenir ici. Artefact attendu et introuvable : $nom_canonique."
+            echo "::error title=Ce commit n'a pas été construit en recette::Aucun artefact de recette ne porte le sha $SHA12, alors que la règle « build once » du dépôt veut qu'on ne mette en production QUE ce qui a été éprouvé en recette. Marche à suivre : Actions → mobile-recette → Run workflow, en renseignant $SHA12 dans le champ « sha » (le laisser vide construirait la tête de la branche, pas ce commit) ; installer l'APK produit sur un téléphone et l'essayer VRAIMENT ; puis revenir ici. Artefacts attendus et introuvables : $nom_canonique, ou $nom_symboles."
             exit 1
           fi
 
           if [ "$vivants" -eq 0 ]; then
-            echo "::error title=L'artefact de recette a expiré::Le sha $SHA12 a bien été construit en recette, mais son artefact est expiré — GitHub les supprime après la durée de rétention du dépôt (90 jours par défaut). La preuve n'existe plus, donc la garde refuse : elle se trompe du bon côté. Deux issues, au choix : relancer mobile-recette sur $SHA12 pour refabriquer l'artefact (et en profiter pour ré-essayer l'application, ce qui est de toute façon la bonne pratique sur un commit vieux de plusieurs mois), ou promouvoir un commit plus récent."
+            echo "::error title=L'artefact de recette a expiré::Le sha $SHA12 a bien été construit en recette, mais ses artefacts ont expiré — mobile-recette garde l'APK 14 jours et ses symboles 90, puis GitHub les supprime. La preuve n'existe plus, donc la garde refuse : elle se trompe du bon côté. Deux issues, au choix : relancer mobile-recette sur $SHA12 pour refabriquer l'artefact (et en profiter pour ré-essayer l'application, ce qui est de toute façon la bonne pratique sur un commit vieux de plusieurs mois), ou promouvoir un commit plus récent."
             printf '%s' "$trouves" | jq -r '.[] | "  - \(.name) — créé le \(.created_at), expiré"'
             exit 1
           fi
 
           echo "Preuve de recette trouvée pour $SHA12 :"
           printf '%s' "$trouves" | jq -r '.[] | select(.expired == false) | "  - \(.name) — créé le \(.created_at)"'
+
+      # ── Garde 2 bis : la CI mobile de ce commit est verte ───────────────────
+      #
+      # « Construit en recette » ne dit pas « jugé par la CI » : mobile-recette
+      # construit l'APK et ses symboles sans attendre mobile-ci (seul son lien
+      # bêta l'attend). Sans cette garde, un commit à mobile-ci ROUGE —
+      # analyse ou tests — passait toutes les autres, et partait signé vers le
+      # magasin : le testeur bêta était mieux protégé que l'utilisateur final.
+      #
+      # Même porte que le lien bêta et les images du serveur
+      # (scripts/ci/verdict_ci.sh), lue dans le commit du WORKFLOW
+      # ($GITHUB_SHA) : l'arbre de travail est posé sur le commit promu, qui
+      # peut ne pas la connaître. Délai court : la CI d'un commit déjà
+      # construit en recette est d'ordinaire terminée depuis longtemps ; si
+      # elle tourne encore, relancer ce workflow une fois qu'elle a fini.
+      - name: La CI mobile de ce commit est verte (mobile-ci)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA40: ${{ steps.commit.outputs.sha40 }}
+          VERDICT_CI_DELAI: '300'
+        run: |
+          set -euo pipefail
+          git show "$GITHUB_SHA:scripts/ci/verdict_ci.sh" > "$RUNNER_TEMP/verdict_ci.sh"
+          bash "$RUNNER_TEMP/verdict_ci.sh" "$SHA40" mobile-ci.yml
 
       # ── Garde 3 : les textes légaux ─────────────────────────────────────────
       #
@@ -445,8 +484,9 @@ jobs:
             echo
             echo "> $SUJET"
             echo
-            echo "Les trois gardes sont vertes : le commit existe, il a été construit en"
-            echo "recette, et docs/legal/ ne porte plus aucun marqueur \`[À COMPLÉTER]\`."
+            echo "Les gardes sont vertes : le commit existe, il a été construit en recette,"
+            echo "\`mobile-ci\` est vert pour son code, et docs/legal/ ne porte plus aucun"
+            echo "marqueur \`[À COMPLÉTER]\`."
             echo
             echo "Ce qui sera figé dans le binaire, à la compilation :"
             echo
@@ -572,9 +612,11 @@ jobs:
           flutter-version: ${{ steps.pin.outputs.version }}
           channel: stable
           cache: true
+          # Cache pub : le nôtre seulement (restore-keys) — voir mobile-ci.yml.
+          pub-cache: false
 
       - name: Cache des paquets Dart
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.pub-cache
           key: pub-${{ runner.os }}-${{ hashFiles('apps/mobile/pubspec.lock') }}
@@ -584,13 +626,15 @@ jobs:
       # les configurations de signature diffèrent, donc les tâches qui en
       # dépendent aussi.
       - name: Cache Gradle
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: gradle-${{ runner.os }}-mobile-production
-          restore-keys: gradle-${{ runner.os }}-
+          # Clé mobile : voir mobile-recette.yml (« une clé qui bouge avec ce
+          # qui remplit le cache »). Même règle, scope propre à la production.
+          key: gradle-${{ runner.os }}-mobile-production-${{ steps.pin.outputs.version }}-${{ hashFiles('apps/mobile/pubspec.lock', 'scripts/mobile_platforms.sh', 'scripts/android_branding.sh') }}
+          restore-keys: gradle-${{ runner.os }}-mobile-production-${{ steps.pin.outputs.version }}-
 
       # android/ n'est pas versionné : il se régénère à la demande, par le MÊME
       # script que le poste de développement et que mobile-recette.yml — c'est
@@ -972,7 +1016,7 @@ jobs:
       # Actions, par quelqu'un qui a accès au dépôt, et ils montent ensuite
       # dans la Play Console. Même raisonnement que mobile-recette.yml.
       - name: Artefact de production
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: carlys-production-${{ needs.controles.outputs.sha12 }}
           path: ${{ runner.temp }}/production

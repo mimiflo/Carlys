@@ -14,11 +14,38 @@ RUN corepack enable
 WORKDIR /repo
 
 # ── Dépendances + build ───────────────────────────────────────────────────────
+#
+# LES MANIFESTES D'ABORD, LES SOURCES ENSUITE. L'installation ne dépend que du
+# lockfile et des package.json : la faire précéder de la copie des sources
+# l'invalidait à CHAQUE commit de l'API, et `COPY packages` entier la
+# faisait rejouer pour un commit qui ne touchait que design-tokens ou ui —
+# deux paquets dont l'API ne dépend pas. Mesuré par l'audit du 25/09 : un
+# commit de tokens.json seul reconstruisait l'API de zéro (install 12 s,
+# build 18 s, `pnpm deploy` 10 s, export du cache 64 s) ; médiane
+# d'images-publish 247 s pour ces commits, contre 67 s quand aucune entrée
+# d'image ne bouge. Désormais seul un changement de lockfile ou de manifeste
+# rejoue l'installation.
+#
+# SEULS LES PAQUETS QUE L'API UTILISE : api-contracts et shared-config
+# (production), eslint-config et typescript-config (build, et
+# tsconfig.json qui étend ../../packages/typescript-config). C'est la liste de
+# `pnpm --filter "@carlys/api..."`. Une dépendance de workspace ajoutée à
+# l'API doit l'être aussi ici, aux deux endroits : l'oublier fait échouer
+# l'installation (paquet de workspace introuvable) — images-ci le voit sur le
+# commit même.
 FROM base AS build
 COPY pnpm-workspace.yaml package.json pnpm-lock.yaml .npmrc ./
-COPY packages ./packages
-COPY apps/api ./apps/api
+COPY packages/api-contracts/package.json ./packages/api-contracts/
+COPY packages/shared-config/package.json ./packages/shared-config/
+COPY packages/eslint-config/package.json ./packages/eslint-config/
+COPY packages/typescript-config/package.json ./packages/typescript-config/
+COPY apps/api/package.json ./apps/api/
 RUN pnpm install --frozen-lockfile --filter "@carlys/api..."
+COPY packages/api-contracts ./packages/api-contracts
+COPY packages/shared-config ./packages/shared-config
+COPY packages/eslint-config ./packages/eslint-config
+COPY packages/typescript-config ./packages/typescript-config
+COPY apps/api ./apps/api
 # Construit d'abord les packages du workspace, puis l'API (prebuild = prisma generate).
 RUN pnpm --filter "@carlys/api..." run build
 

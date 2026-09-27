@@ -49,8 +49,18 @@
 # Les téléversements (piste interne Play, TestFlight) n'ont lieu QUE sur une
 # exécution manuelle avec la case « publier » cochée — jamais sur push, même
 # quand tous les secrets existent. La présence d'un secret dit qu'on PEUT
-# publier, pas qu'on VEUT : décider, c'est cliquer. Sans la case, les
-# artefacts signés sont construits et archivés, prêts, et rien ne part.
+# publier, pas qu'on VEUT : décider, c'est cliquer. Sans la case, une
+# exécution MANUELLE construit et archive les artefacts signés, prêts, et rien
+# ne part.
+#
+# UNE POUSSÉE NE CONSTRUIT PAS DE `.aab`, et c'est un arbitrage mesuré. Le
+# bundle coûtait 3 min sur un job de 8 min 41 s (job 108059432068, 35 %), à
+# chaque poussée mobile, pour un fichier de 80 Mo que rien ne dépose : le
+# téléversement Play n'a lieu que sur « publier », qui le reconstruit de toute
+# façon. Le besoin réel — déposer À LA MAIN un bundle sur le Galaxy Store, ou
+# sur Play sans compte de service — est couvert par Run workflow SANS la case
+# « publier » : même bundle, même signature, rien ne part. Effet de bord
+# voulu : le lien bêta, qui attend la fin de ce job, arrive 3 min plus tôt.
 #
 # ── Le filet d'`assertUsable()` a lieu AU LANCEMENT, pas à la compilation ─────
 #
@@ -276,25 +286,39 @@ jobs:
           flutter-version: ${{ steps.pin.outputs.version }}
           channel: stable
           cache: true
+          # Cache pub : le nôtre seulement (restore-keys) — voir mobile-ci.yml.
+          pub-cache: false
 
       # Les paquets Dart et surtout les dépendances Gradle représentent
       # l'essentiel du temps d'un build à froid : on les garde d'une fois sur
       # l'autre, la clé suivant les fichiers de verrouillage.
       - name: Cache des paquets Dart
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.pub-cache
           key: pub-${{ runner.os }}-${{ hashFiles('apps/mobile/pubspec.lock') }}
           restore-keys: pub-${{ runner.os }}-
 
       - name: Cache Gradle
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: |
             ~/.gradle/caches
             ~/.gradle/wrapper
-          key: gradle-${{ runner.os }}-mobile-recette
-          restore-keys: gradle-${{ runner.os }}-
+          # UNE CLÉ QUI BOUGE AVEC CE QUI REMPLIT LE CACHE. L'ancienne clé fixe
+          # (`gradle-<os>-mobile-recette`) n'était écrite QU'UNE FOIS : actions/cache
+          # ne réécrit jamais une clé présente (« Cache hit occurred on the
+          # primary key …, not saving cache », relevé du 10/09 au 25/09), et
+          # la relecture quotidienne l'empêchait d'expirer. 1,7 Go restauré à
+          # chaque build, figé : les dépendances Android ajoutées depuis
+          # (google_sign_in, sign_in_with_apple, image_picker) se
+          # retéléchargeaient à chaque fois. La clé suit maintenant le SDK et
+          # les trois fichiers qui décident des dépendances Gradle et du projet
+          # android/ engendré ; `restore-keys` repart du dernier cache du même
+          # SDK et du même workflow — jamais de celui de mobile-production, dont
+          # la signature diffère (l'ancien `gradle-<os>-` l'aurait accepté).
+          key: gradle-${{ runner.os }}-mobile-recette-${{ steps.pin.outputs.version }}-${{ hashFiles('apps/mobile/pubspec.lock', 'scripts/mobile_platforms.sh', 'scripts/android_branding.sh') }}
+          restore-keys: gradle-${{ runner.os }}-mobile-recette-${{ steps.pin.outputs.version }}-
 
       # android/ n'est pas versionné : il se régénère à la demande.
       #
@@ -656,8 +680,8 @@ jobs:
           LANCEZ-LE UNE FOIS avant de le distribuer : le contrôle des adresses
           (assertUsable) a lieu au démarrage, pas à la compilation.
 
-          symboles/ : à conserver pour déchiffrer les traces d'exécution,
-          le binaire étant obscurci (--obfuscate).
+          Symboles (--obfuscate) : artefact carlys-recette-symboles-$SHA12 de
+          la même exécution, gardé 90 jours — celui-ci ne l'est que 14.
           FIN
           ls -lh "build/livraison/apk/carlys-recette-$SHA12.apk"
 
@@ -793,14 +817,45 @@ jobs:
             echo "connexion Google échoue pour toutes les installations du Store."
           } >> "$GITHUB_STEP_SUMMARY"
 
+      # ── Rétention : 14 jours pour le binaire, 90 pour les symboles ─────────
+      #
+      # Sans `retention-days`, un artefact vit 90 jours (défaut du dépôt) :
+      # ~105 Mo par poussée mobile (APK et AAB avec leurs symboles), ~9 Go
+      # accumulés en treize jours (audit du 25/09) — au-delà du stockage
+      # inclus d'un dépôt privé. Or le binaire d'une vieille exécution ne sert
+      # à personne : la release « beta » sert le dernier, et une version
+      # ancienne se reconstruit par l'entrée `sha`.
+      #
+      # Les SYMBOLES, eux, servent aussi longtemps qu'un APK obscurci tourne
+      # sur un téléphone : sans eux, une trace d'exécution d'une bêta
+      # installée il y a trois semaines est indéchiffrable. Ils partent donc
+      # dans un artefact À PART (quelques Mo), gardé 90 jours.
+      #
+      # LES DEUX NOMS SONT UN CONTRAT. La garde « build once » de
+      # mobile-production.yml cherche `carlys-recette-apk-<sha12>`, puis,
+      # l'APK expiré, `carlys-recette-symboles-<sha12>` : ce sont eux qui
+      # prouvent qu'un commit a été construit en recette, 90 jours durant.
+      # Renommer l'un ici sans le reporter là-bas refuserait les promotions
+      # (scripts/ci/tests/preuve_recette_test.sh le vérifie).
       - name: Artefact — APK installable
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: carlys-recette-apk-${{ steps.commit.outputs.sha12 }}
           # Chemin depuis la RACINE du dépôt : `defaults.run.working-directory`
           # ne s'applique qu'aux étapes `run`, jamais aux actions.
-          path: apps/mobile/build/livraison/apk
+          path: |
+            apps/mobile/build/livraison/apk
+            !apps/mobile/build/livraison/apk/symboles
           if-no-files-found: error
+          retention-days: 14
+
+      - name: Artefact — symboles de l'APK (traces d'exécution)
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: carlys-recette-symboles-${{ steps.commit.outputs.sha12 }}
+          path: apps/mobile/build/livraison/apk/symboles
+          if-no-files-found: error
+          retention-days: 90
 
       # `flutter build appbundle` sans `--target-platform` : un bundle contient
       # toutes les architectures, c'est le magasin qui découpe par appareil au
@@ -814,8 +869,10 @@ jobs:
       # versionName visible en magasin, lui, reste le `version:` de
       # pubspec.yaml (0.1.0 tant qu'on ne le monte pas) : la CI ne passe
       # jamais --build-name, une version marketing se décide par un commit.
+      # Sur Run workflow SEULEMENT — voir « une poussée ne construit pas de
+      # `.aab` » en tête de fichier.
       - name: Build App Bundle (recette, signé)
-        if: steps.signature.outputs.actif == 'oui'
+        if: steps.signature.outputs.actif == 'oui' && github.event_name == 'workflow_dispatch'
         env:
           SHA12: ${{ steps.commit.outputs.sha12 }}
           API: ${{ steps.adresses.outputs.api }}
@@ -864,13 +921,17 @@ jobs:
           FIN
           ls -lh "build/livraison/aab/carlys-recette-$SHA12.aab"
 
+      # 90 jours quand il part vers un magasin (ses symboles déchiffrent les
+      # plantages remontés par la console), 14 sinon — un dépôt à la main se
+      # fait dans la foulée de l'exécution qui l'a produit.
       - name: Artefact — bundle de magasin
-        if: steps.signature.outputs.actif == 'oui'
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: steps.signature.outputs.actif == 'oui' && github.event_name == 'workflow_dispatch'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: carlys-recette-aab-${{ steps.commit.outputs.sha12 }}
           path: apps/mobile/build/livraison/aab
           if-no-files-found: error
+          retention-days: ${{ inputs.publier && 90 || 14 }}
 
       # ── 3. La piste interne Play, sur la case « publier » seulement ────────
       #
@@ -942,6 +1003,7 @@ jobs:
           PLAY: ${{ steps.play.outputs.actif }}
           PAQUET: ${{ steps.play.outputs.package }}
           PUBLIER: ${{ github.event_name == 'workflow_dispatch' && inputs.publier == true }}
+          EVENEMENT: ${{ github.event_name }}
         run: |
           # La version marketing (versionName) vient du pubspec : la CI ne
           # passe jamais --build-name, ce que verront les magasins est cette
@@ -975,10 +1037,16 @@ jobs:
               echo "version précédente. Il faut désinstaller d'abord, en perdant les données"
               echo "locales de l'appareil. Poser les quatre secrets de signature y met fin."
             fi
-            echo "Contient aussi \`symboles/\`, à garder pour déchiffrer les traces"
-            echo "d'exécution."
+            echo "Gardé 14 jours. Les symboles qui déchiffrent ses traces d'exécution"
+            echo "sont dans **\`carlys-recette-symboles-$SHA12\`**, gardé 90 jours."
             echo
-            if [ "$SIGNATURE" = "oui" ]; then
+            if [ "$SIGNATURE" = "oui" ] && [ "$EVENEMENT" != "workflow_dispatch" ]; then
+              echo "**Pas de bundle \`.aab\` sur une poussée** — il ne part vers aucun"
+              echo "magasin sans geste humain, et coûtait 3 min à chaque poussée. Pour en"
+              echo "obtenir un (dépôt à la main sur le Galaxy Store ou sur Play) : Actions →"
+              echo "mobile-recette → Run workflow, sans cocher \`publier\`. Avec la case,"
+              echo "il part en plus sur la piste interne Play."
+            elif [ "$SIGNATURE" = "oui" ]; then
               echo "**\`carlys-recette-aab-$SHA12\`** — le bundle pour les **magasins**"
               echo "(piste interne Play, Galaxy Store), signé avec le keystore des secrets de"
               echo "dépôt, toutes architectures, versionCode \`$NUMERO\`. Un \`.aab\` ne"
@@ -1078,17 +1146,54 @@ jobs:
   # development écrase sciemment — le récapitulatif de l'exécution fait foi.
   #
   # C'est LE SEUL job du workflow avec un droit d'écriture, et il ne s'en
-  # sert que pour la release et son tag. Il n'a même pas besoin de checkout.
+  # sert que pour la release et son tag.
+  #
+  # PAS DE LIEN BÊTA SANS mobile-ci VERT. Les deux workflows partent en
+  # parallèle sur la même poussée, et ce job ne dépendait que du build : le
+  # 17/09 (0cbc25d), mobile-ci était rouge à l'analyse statique, tests sautés,
+  # et l'APK remplaçait quand même celui que les testeurs installent. Le job
+  # attend donc le verdict de mobile-ci pour le code de ce commit (même
+  # porte qu'images-publish, scripts/ci/verdict_ci.sh), jusqu'à 15 min, et
+  # échoue SANS RIEN PUBLIER s'il n'est pas vert. L'APK reste dans l'artefact
+  # de l'exécution.
   lien-beta:
     name: Lien bêta (release « beta »)
     needs: recette
     if: github.ref == 'refs/heads/development'
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 25
     permissions:
       contents: write
+      # Lire les exécutions de mobile-ci : la porte ci-dessous.
+      actions: read
 
     steps:
+      # L'historique seul (commits et arbres, `blob:none`) : la porte remonte
+      # les ancêtres du commit pour trouver le dernier verdict de mobile-ci,
+      # qui ne tourne pas sur chaque poussée (filtres `paths`). Seuls
+      # scripts/ci et les workflows sont extraits : la porte lit les chemins
+      # que surveille mobile-ci pour savoir si le verdict d'un ancêtre vaut
+      # encore pour ce commit. Sur un rattrapage d'un autre sha, le workflow
+      # de CE commit peut manquer (clone partiel, sans jeton pour le
+      # rapatrier) : la porte compte alors tout l'arbre, et bloque plutôt que
+      # de supposer. Pas de jeton laissé dans .git/config : ce job écrit dans
+      # les releases, rien d'autre ne doit pouvoir s'en servir.
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          fetch-depth: 0
+          filter: blob:none
+          sparse-checkout: |
+            scripts/ci
+            .github/workflows
+          persist-credentials: false
+
+      - name: mobile-ci est vert pour ce commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA40: ${{ needs.recette.outputs.sha40 }}
+          VERDICT_CI_DELAI: '900'
+        run: bash scripts/ci/verdict_ci.sh "$SHA40" mobile-ci.yml
+
       # Téléchargement DANS la même exécution : aucun jeton supplémentaire,
       # l'artefact vient du job `recette` ci-dessus.
       - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
@@ -1143,7 +1248,8 @@ jobs:
 
           Lancez-la une fois avant de la faire circuler : le contrôle des adresses
           a lieu au démarrage, pas à la compilation. Les symboles de débogage sont
-          dans l'artefact de l'exécution, pas ici."
+          dans l'artefact carlys-recette-symboles-$SHA12 de l'exécution (90 jours),
+          pas ici."
 
           if gh release view beta --repo "$DEPOT" >/dev/null 2>&1; then
             # PAS de `upload --clobber` : il SUPPRIME l'ancien asset avant de
@@ -1293,9 +1399,11 @@ jobs:
           flutter-version: ${{ steps.pin.outputs.version }}
           channel: stable
           cache: true
+          # Cache pub : le nôtre seulement (restore-keys) — voir mobile-ci.yml.
+          pub-cache: false
 
       - name: Cache des paquets Dart
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.pub-cache
           key: pub-${{ runner.os }}-${{ hashFiles('apps/mobile/pubspec.lock') }}
@@ -1306,7 +1414,7 @@ jobs:
       # Firebase pèsent plusieurs centaines de mégaoctets — c'est le premier
       # poste de durée d'un build iOS à froid, et chaque minute ici en vaut dix.
       - name: Cache CocoaPods
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/Library/Caches/CocoaPods
           key: pods-${{ runner.os }}-${{ hashFiles('apps/mobile/pubspec.lock') }}
@@ -1704,7 +1812,7 @@ jobs:
           ls -lh "build/livraison/ipa/carlys-recette-$SHA12.ipa"
 
       - name: Artefact — IPA
-        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: carlys-recette-ipa-${{ steps.commit.outputs.sha12 }}
           path: apps/mobile/build/livraison/ipa

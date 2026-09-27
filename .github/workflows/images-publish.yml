@@ -45,6 +45,41 @@ name: images-publish
 #    et par le `concurrency` ci-dessous, qui sérialise les rafales au lieu de
 #    les paralléliser. La place occupée dans GHCR se purge depuis l'onglet
 #    Packages, comme le rappelle le guide de mise en route.
+#
+# ── Aucune étiquette `sha-…` sans une CI verte ────────────────────────────────
+#
+# Ce workflow publiait SANS lire aucun verdict. Or la mise à jour automatique
+# de la recette (scripts/server/_update.sh, update_cible_staging) juge un sha
+# déployable dès que ses trois images existent — et la production suit la
+# recette. Relevé par l'audit du 25/09 : douze commits à api-ci ROUGE ont eu
+# leurs images, dont 12c471e et sa migration cassée (« P3006 … failed to
+# apply cleanly »), qui partait se jouer sur la base de recette.
+#
+# Les images de l'application sont donc CONSTRUITES d'abord (en parallèle des
+# CI, le temps n'est pas perdu), puis la porte « La CI de ce commit est
+# verte » attend le verdict d'api-ci, admin-ci, images-ci et infra-ci, et
+# seulement ensuite les étiquettes `sha-…` et `staging` sont POUSSÉES — depuis
+# le cache du constructeur, sans rien recompiler. Un commit rouge n'a donc
+# AUCUNE image d'application : deploy.sh le refuse (« Image introuvable »), la
+# mise à jour automatique ne le voit pas, promote.sh non plus. La règle exacte
+# (verdict de l'ancêtre le plus proche pour un workflow filtré par `paths`,
+# tant que ce qu'il surveille n'a pas bougé depuis ; annulation = rien de
+# prouvé ; un commit sorti des 100 dernières exécutions demandé par son sha ;
+# historique introuvable = bloquant) est en tête de scripts/ci/verdict_ci.sh,
+# testée par scripts/ci/tests/verdict_ci_test.sh.
+#
+# POURQUOI infra-ci, QUI NE JUGE AUCUNE IMAGE. Un commit qui ne touche que
+# scripts/server/ a les mêmes images que son parent ; mais l'étiquette `sha-…`
+# est aussi le feu vert du SERVEUR : la supervision n'avance son clone — d'où
+# viennent backup.sh, deploy.sh, heal et compose.yml, exécutés sur la
+# production — que jusqu'à un commit dont les images existent
+# (scripts/server/_repo.sh, repo_pull). Sans infra-ci ici, un script serveur
+# qu'infra-ci rejette partait tourner en production à la passe suivante.
+#
+# Les images MinIO échappent à la porte, et c'est voulu : elles suivent leur
+# recette, pas le code (voir plus bas). Elles ne servent qu'une fois nommées
+# par le compose.yml du clone du serveur, et ce clone n'avance que jusqu'à un
+# commit qui a passé la porte (repo_pull, ci-dessus).
 on:
   push:
     branches: [development, production]
@@ -71,6 +106,15 @@ on:
           que `deploy.sh` refuse avec « Image introuvable ».
         required: false
         type: string
+      ignorer_ci:
+        description: >-
+          Publier MÊME SI la CI de ce commit n'est pas verte. Réservé au cas
+          où l'échec ne tient pas au code (registre tiers en panne, runner
+          perdu) et où relancer la CI ne suffit pas. Le récapitulatif le dit
+          en toutes lettres. Laisser décoché dans tous les autres cas.
+        required: false
+        type: boolean
+        default: false
 
 # `cancel-in-progress: false`, à REBOURS d'`images-ci`, et c'est délibéré.
 # `images-ci` donne un avis sur la tête d'une rafale : annuler les
@@ -98,6 +142,9 @@ jobs:
       # workflow ne demande jamais de PAT. Le SERVEUR, lui, en a besoin d'un
       # (lecture seule) : voir /srv/carlys/ghcr.token dans le guide.
       packages: write
+      # Lire les exécutions d'api-ci, admin-ci, images-ci et infra-ci de ce
+      # commit : la porte « La CI de ce commit est verte ».
+      actions: read
 
     steps:
       # fetch-depth: 0 — l'action ne sait pas récupérer un SHA abrégé, et le
@@ -135,7 +182,7 @@ jobs:
             echo "rattrapage=non" >> "$GITHUB_OUTPUT"
           fi
           sha12="$(echo "$full" | cut -c1-12)"
-          echo "sha12=$sha12" >> "$GITHUB_OUTPUT"
+          printf 'sha12=%s\nsha40=%s\n' "$sha12" "$full" >> "$GITHUB_OUTPUT"
           # GHCR n'accepte que des chemins en minuscules ; le dépôt s'appelle
           # « Carlys ». On dérive le propriétaire plutôt que de l'écrire en
           # dur, mais le contrat fixe le résultat attendu : ghcr.io/mimiflo.
@@ -215,7 +262,7 @@ jobs:
       - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
 
       - name: Connexion à GHCR
-        uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3.7.0
+        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f # v4.6.0
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -287,7 +334,7 @@ jobs:
 
       - name: Image MinIO — serveur (+ mc pour la sonde de santé)
         if: steps.minio.outputs.publier_minio == 'oui'
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: infrastructure/minio
           target: minio
@@ -299,7 +346,7 @@ jobs:
 
       - name: Image MinIO — client mc (minio-init, sauvegardes)
         if: steps.minio.outputs.publier_mc == 'oui'
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: infrastructure/minio
           target: mc
@@ -373,15 +420,18 @@ jobs:
             echo "Référence ${{ github.ref }} : publication par SHA seulement."
           fi
 
-      - name: Image API — exécution
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+      # ── 1. CONSTRUIRE, sans rien pousser ───────────────────────────────────
+      #
+      # `push: false` : le résultat reste dans le cache du constructeur buildx
+      # de ce job (et part dans le cache GHA). Les étapes de publication, après
+      # la porte, relancent EXACTEMENT les mêmes constructions avec `push:
+      # true` : tout sort du cache, seules les couches voyagent vers GHCR.
+      - name: Image API — exécution (construction)
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           file: apps/api/Dockerfile
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ steps.etiquettes.outputs.owner }}/carlys-api:sha-${{ steps.etiquettes.outputs.sha12 }}
-            ${{ steps.mouvant.outputs.actif == 'oui' && format('{0}/{1}/carlys-api:staging', env.REGISTRY, steps.etiquettes.outputs.owner) || '' }}
+          push: false
           cache-from: type=gha,scope=api
           cache-to: type=gha,scope=api,mode=max
           # Une seule image par plateforme, sans attestation : le registre
@@ -389,16 +439,13 @@ jobs:
           # n'a pas d'index à traverser.
           provenance: false
 
-      - name: Image API — migrations
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+      - name: Image API — migrations (construction)
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           file: apps/api/Dockerfile
           target: migrate
-          push: true
-          tags: |
-            ${{ env.REGISTRY }}/${{ steps.etiquettes.outputs.owner }}/carlys-api-migrate:sha-${{ steps.etiquettes.outputs.sha12 }}
-            ${{ steps.mouvant.outputs.actif == 'oui' && format('{0}/{1}/carlys-api-migrate:staging', env.REGISTRY, steps.etiquettes.outputs.owner) || '' }}
+          push: false
           # Deux scopes en LECTURE, un seul en écriture, et c'est volontaire :
           #   - `api` parce que les deux cibles partagent l'étage `build`
           #     (apps/api/Dockerfile : `FROM build AS migrate`, `FROM build AS
@@ -420,8 +467,75 @@ jobs:
       # avant qu'ils soient rédigés. L'image de PRODUCTION, elle, est bâtie
       # par images-publish-prod.yml, garde armée : c'est là que le tag `-prod`
       # se gagne, et nulle part ailleurs.
-      - name: Image admin — recette (garde légale desserrée)
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+      - name: Image admin — recette (construction, garde légale desserrée)
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: apps/admin/Dockerfile
+          push: false
+          build-args: |
+            LEGAL_PLACEHOLDERS=allow
+            NEXT_PUBLIC_API_BASE_URL=https://api-staging.${{ vars.CARLYS_DOMAIN }}
+          cache-from: type=gha,scope=admin
+          cache-to: type=gha,scope=admin,mode=max
+          provenance: false
+
+      # ── 2. LA PORTE : la CI de ce commit est verte ─────────────────────────
+      #
+      # Voir l'en-tête de ce fichier. Délai de 30 min : api-ci dure ~2 min 30,
+      # images-ci ~4 min, infra-ci quelques minutes (davantage s'il doit
+      # reconstruire minio et mc), et une file d'attente de runners peut les
+      # retarder.
+      # Au-delà, l'exécution échoue sans rien publier ; la relancer suffit.
+      #
+      # Le script de la porte est lu dans le commit du WORKFLOW ($GITHUB_SHA),
+      # pas dans l'arbre de travail : sur un rattrapage, celui-ci a été sorti
+      # sur un commit plus ancien, qui peut ne pas le connaître. L'historique
+      # complet est déjà là (fetch-depth: 0), sans second checkout.
+      - name: La CI de ce commit est verte (api-ci, admin-ci, images-ci, infra-ci)
+        env:
+          GH_TOKEN: ${{ github.token }}
+          IGNORER: ${{ inputs.ignorer_ci == true }}
+          SHA40: ${{ steps.etiquettes.outputs.sha40 }}
+        run: |
+          if [ "$IGNORER" = "true" ]; then
+            echo "::warning title=Porte de CI IGNORÉE::Publication demandée à la main avec « ignorer_ci » : les images de ${SHA40:0:12} partent sans verdict de CI."
+            echo "### ⚠ Porte de CI ignorée à la demande (\`ignorer_ci\`)" >> "$GITHUB_STEP_SUMMARY"
+            exit 0
+          fi
+          git show "$GITHUB_SHA:scripts/ci/verdict_ci.sh" > "$RUNNER_TEMP/verdict_ci.sh"
+          bash "$RUNNER_TEMP/verdict_ci.sh" "$SHA40" api-ci.yml admin-ci.yml images-ci.yml infra-ci.yml
+
+      # ── 3. PUBLIER, depuis le cache ────────────────────────────────────────
+      - name: Image API — exécution (publication)
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ steps.etiquettes.outputs.owner }}/carlys-api:sha-${{ steps.etiquettes.outputs.sha12 }}
+            ${{ steps.mouvant.outputs.actif == 'oui' && format('{0}/{1}/carlys-api:staging', env.REGISTRY, steps.etiquettes.outputs.owner) || '' }}
+          cache-from: type=gha,scope=api
+          provenance: false
+
+      - name: Image API — migrations (publication)
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
+        with:
+          context: .
+          file: apps/api/Dockerfile
+          target: migrate
+          push: true
+          tags: |
+            ${{ env.REGISTRY }}/${{ steps.etiquettes.outputs.owner }}/carlys-api-migrate:sha-${{ steps.etiquettes.outputs.sha12 }}
+            ${{ steps.mouvant.outputs.actif == 'oui' && format('{0}/{1}/carlys-api-migrate:staging', env.REGISTRY, steps.etiquettes.outputs.owner) || '' }}
+          cache-from: |
+            type=gha,scope=api-migrate
+            type=gha,scope=api
+          provenance: false
+
+      - name: Image admin — recette (publication)
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: .
           file: apps/admin/Dockerfile
@@ -433,7 +547,6 @@ jobs:
             ${{ env.REGISTRY }}/${{ steps.etiquettes.outputs.owner }}/carlys-admin:sha-${{ steps.etiquettes.outputs.sha12 }}
             ${{ steps.mouvant.outputs.actif == 'oui' && format('{0}/{1}/carlys-admin:staging', env.REGISTRY, steps.etiquettes.outputs.owner) || '' }}
           cache-from: type=gha,scope=admin
-          cache-to: type=gha,scope=admin,mode=max
           provenance: false
 
       # ── La preuve que deploy.sh trouvera ce qu'il vient chercher ───────────

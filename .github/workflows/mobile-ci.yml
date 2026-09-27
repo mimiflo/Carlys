@@ -35,9 +35,20 @@ on:
       # entrée, le geste même que la spécification prescrit — ne toucher que
       # tokens.json — ne réveillait AUCUN workflow capable d'exécuter ce test,
       # mobile-ci étant le seul du dépôt à faire tourner `flutter test`.
-      # admin-ci et api-ci listent `packages/**` depuis toujours ; c'est ici
-      # qu'il manquait.
-      - 'packages/**'
+      #
+      # Les DEUX fichiers de packages/ que la partie mobile lit, et eux seuls
+      # — pas `packages/**`. L'entrée large faisait tourner 4 à 5 min de
+      # Flutter pour chaque retouche d'api-contracts, des contrats TypeScript
+      # que Dart ne lit pas (4 poussées en deux semaines, audit du 25/09).
+      # Le second fichier est l'exception qui le confirme :
+      # test/features/notifications/notification_preferences_test.dart relit
+      # les familles de `notificationCategorySchema` dans le contrat partagé,
+      # pour qu'une famille ajoutée côté API ne manque pas au mobile. La
+      # recherche qui fait foi, à relancer avant de toucher cette liste :
+      #   grep -rn "packages/" apps/mobile/test apps/mobile/tool scripts/check_mobile*
+      # Tout nouveau fichier qu'elle rend s'ajoute ici, aux deux listes.
+      - 'packages/design-tokens/**'
+      - 'packages/api-contracts/src/notifications.ts'
       - '.github/workflows/mobile-ci.yml'
   push:
     branches: [development, production]
@@ -46,7 +57,8 @@ on:
     paths:
       - 'apps/mobile/**'
       - 'scripts/check_mobile*'
-      - 'packages/**'
+      - 'packages/design-tokens/**'
+      - 'packages/api-contracts/src/notifications.ts'
       - '.github/workflows/mobile-ci.yml'
   # Relance MANUELLE : un runner qui gèle (build_runner suspendu, coupé par
   # timeout-minutes) ne doit pas exiger un commit pour rejouer le workflow.
@@ -108,9 +120,19 @@ jobs:
           flutter-version: ${{ steps.pin.outputs.version }}
           channel: stable
           cache: true
+          # `cache: true` met aussi ~/.pub-cache en cache — SANS clé de repli :
+          # l'action le restaure sous `flutter-pub-…-<hash du lock>`, puis
+          # l'étape « Cache des paquets Dart » ci-dessous restaurait le MÊME
+          # dossier sous `pub-…-<même hash>` (deux « Cache hit » de ~88 Mo par
+          # job relevés le 25/09). On garde la nôtre, pas la sienne : elle
+          # porte un `restore-keys`, donc une restauration PARTIELLE quand
+          # pubspec.lock change — celle de l'action repartirait de zéro.
+          # `pub-cache: false` coupe le cache pub de l'action sans toucher à
+          # celui du SDK (condition relue dans son action.yaml, à ce SHA).
+          pub-cache: false
 
       - name: Cache des paquets Dart
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.pub-cache
           key: pub-${{ runner.os }}-${{ hashFiles('apps/mobile/pubspec.lock') }}
@@ -200,7 +222,18 @@ jobs:
       # Une seconde exécution complète sous UTC coûterait 1 min 30 par
       # poussée au workflow déjà le plus lent du dépôt pour ne couvrir que la
       # portabilité de la SUITE, jamais celle du produit : pas retenue.
+      #
+      # `--concurrency` = nombre de cœurs. Sans l'option, package:test lance
+      # `cœurs ÷ 2` fichiers de test à la fois (test_core, values.dart) : 2
+      # sur les runners à 4 CPU, pour l'étape la plus longue du workflow
+      # (4 min 19 s sur 8d096a5). Remesuré par l'audit sur 4 cœurs, même
+      # SDK, TZ=Europe/Paris : test/design_system 25,5 s → 16,9 s,
+      # test/features/nutrition 37,5 s → 27,5 s, tous verts ; les 15,6 Go du
+      # runner laissent la place à 4 flutter_tester. `getconf` et non
+      # `nproc`, absent d'un Mac : scripts/check_mobile.sh recopie ce bloc au
+      # caractère près. Si un test sensible au temps devient instable, c'est
+      # lui qu'on corrige ; à défaut, revenir ici à une valeur fixe (3).
       - name: Tests
         env:
           TZ: Europe/Paris
-        run: flutter test
+        run: flutter test --concurrency="$(getconf _NPROCESSORS_ONLN)"

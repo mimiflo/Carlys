@@ -126,7 +126,9 @@ echo "── Tests ────────────────────�
 # réintroduisant le bug d'origine de `dayOfYearIndex` : trois tests verts sous
 # UTC, deux rouges sous Europe/Paris. Le forcer ici rend la vérification locale
 # indépendante du réglage de la machine, ce qui est bien le but du script.
-TZ=Europe/Paris flutter test
+# `--concurrency` : un fichier de test par cœur, comme la CI (mobile-ci.yml
+# dit pourquoi et ce que ça fait gagner).
+TZ=Europe/Paris flutter test --concurrency="$(getconf _NPROCESSORS_ONLN)"
 
 echo ""
 echo "Toutes les vérifications Flutter sont passées."

@@ -133,7 +133,7 @@ jobs:
 
       - name: MinIO — binaires en cache
         id: minio-cache
-        uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
         with:
           path: ~/.carlys-minio
           key: minio-${{ runner.os }}-${{ runner.arch }}-${{ steps.minio-versions.outputs.CARLYS_MINIO_RELEASE }}-mc-${{ steps.minio-versions.outputs.CARLYS_MC_RELEASE }}-go${{ steps.minio-versions.outputs.CARLYS_MINIO_GO_VERSION }}-${{ hashFiles('infrastructure/minio/versions.env', 'infrastructure/minio/construire.sh') }}
@@ -187,9 +187,9 @@ jobs:
           "$bin/mc" mb --ignore-existing ci/carlys-private
           "$bin/mc" anonymous set none ci/carlys-private
 
-      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
 
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
           cache: pnpm
@@ -242,14 +242,37 @@ jobs:
       - name: Validation du schéma Prisma
         run: pnpm --filter @carlys/api exec prisma validate
 
+      # ── Base FANTÔME DÉDIÉE, puis `migrate deploy` : deux gestes distincts ──
+      #
+      # Le diff passait longtemps `--shadow-database-url "$DATABASE_URL"`,
+      # c'est-à-dire carlys_test ELLE-MÊME. Prisma y rejoue les migrations
+      # pour calculer l'écart et laisse le schéma en place, SANS table
+      # `_prisma_migrations` (reproduit par l'audit du 25/09) — et c'était le
+      # seul geste qui posait le schéma avant les e2e. Deux défauts : le jour
+      # où quelqu'un donnait au diff une base fantôme propre (la bonne
+      # pratique), tous les e2e tombaient en « relation does not exist » sans
+      # lien apparent ; et le chemin réellement joué en production
+      # (`migrate deploy` : historique `_prisma_migrations`, refus d'une
+      # migration modifiée ou échouée) n'était exercé par AUCUN workflow.
+      #
+      # D'où une base fantôme à part, jetée avec le runner, et une étape
+      # « Migrations » explicite juste avant les e2e, qui joue le geste de
+      # carlys-api-migrate sur carlys_test.
+      - name: Base fantôme pour le diff
+        env:
+          PGPASSWORD: carlys
+        run: psql -h localhost -U carlys -d carlys_test -c 'CREATE DATABASE carlys_shadow'
+
       - name: Détection des migrations manquantes
         working-directory: apps/api
+        env:
+          SHADOW_DATABASE_URL: postgresql://carlys:carlys@localhost:5432/carlys_shadow
         run: |
           if [ -d prisma/migrations ]; then
             pnpm exec prisma migrate diff \
               --from-migrations prisma/migrations \
               --to-schema-datamodel prisma/schema.prisma \
-              --shadow-database-url "$DATABASE_URL" \
+              --shadow-database-url "$SHADOW_DATABASE_URL" \
               --exit-code
           else
             echo "Aucune migration pour le moment (schéma vide — Étape 1)."
@@ -263,6 +286,16 @@ jobs:
 
       - name: Tests unitaires
         run: pnpm --filter @carlys/api test
+
+      # Le geste de la production (image carlys-api-migrate, deploy.sh étape
+      # 4/8), sur la base des e2e : ils testent donc le schéma tel que la
+      # production le reçoit, et la dépendance est écrite au lieu d'être un
+      # effet de bord du diff. `migrate deploy` s'arrête en erreur sur la
+      # première migration qui échoue (ou sur un dossier sans migration.sql)
+      # et journalise chacune de celles qu'il applique : un décompte SQL
+      # après lui ne pourrait jamais échouer.
+      - name: Migrations (prisma migrate deploy, comme en production)
+        run: pnpm --filter @carlys/api prisma:migrate:deploy
 
       - name: Tests end-to-end
         run: pnpm --filter @carlys/api test:e2e

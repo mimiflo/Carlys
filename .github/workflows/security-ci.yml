@@ -50,6 +50,13 @@ jobs:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
+          # Le dossier du dépôt est MONTÉ dans le conteneur TruffleHog, .git
+          # compris. Par défaut, checkout y laisse le GITHUB_TOKEN
+          # (`http.https://github.com/.extraheader` dans .git/config, relevé
+          # au nettoyage du job 108059432597) : l'image tierce le lisait avec
+          # tout l'historique. Le scan ne parle jamais à GitHub, il lit des
+          # objets git locaux : le jeton n'a rien à faire là.
+          persist-credentials: false
 
       # Les trois classes de TruffleHog ne disent PAS la même chose :
       #   verified   — le détecteur a joint le fournisseur, la clé est VIVANTE ;
@@ -75,10 +82,35 @@ jobs:
       # chaque exécution faisait tourner le dernier commit d'un dépôt tiers,
       # quel qu'il soit. Un SHA est immuable ; .github/dependabot.yml propose
       # les montées de version en pull request, où le nouveau SHA se relit.
+      #
+      # L'ÉPINGLE DE L'ACTION NE SUFFISAIT PAS, et l'audit du 25/09 l'a montré.
+      # L'action n'est qu'un script : il lance `docker run
+      # ghcr.io/trufflesecurity/trufflehog:${version}`, et `version` vaut
+      # `latest` par défaut (action.yml au SHA ci-dessous). Le journal du job
+      # 108059432597 le dit sans détour : « Downloaded newer image for
+      # …:latest », puis `"trufflehog_version": "3.97.9"`, sous une épingle
+      # qui annonçait la 3.97.4. Le binaire qui lisait tout l'historique était
+      # donc le dernier publié par un tiers, à chaque exécution : exactement
+      # la porte que le paragraphe ci-dessus disait fermée.
+      #
+      # D'où `version: <tag>@sha256:<empreinte>` : l'action forme
+      # `image:tag@digest`, que `docker run` résout par l'EMPREINTE (le tag
+      # n'est plus qu'une étiquette lisible). Empreinte de l'index
+      # multi-architecture de 3.97.9, relevée dans le registre le 25/09 :
+      #   curl -sI -H "Authorization: Bearer <jeton anonyme>" \
+      #     -H 'Accept: application/vnd.docker.distribution.manifest.list.v2+json' \
+      #     https://ghcr.io/v2/trufflesecurity/trufflehog/manifests/3.97.9
+      # (en-tête docker-content-digest ; le jeton anonyme se demande à
+      # https://ghcr.io/token?scope=repository:trufflesecurity/trufflehog:pull).
+      #
+      # DEPENDABOT NE VOIT PAS CETTE LIGNE : il suit les `uses:`, pas les
+      # entrées d'une action. Cette épingle se monte À LA MAIN, en même temps
+      # que celle de l'action, et SECURITY.md le rappelle.
       - name: TruffleHog (tout secret, même révoqué)
         uses: trufflesecurity/trufflehog@363923b901c911a9164f50b6c423f47c15372b1c # v3.97.4
         with:
           path: ./
+          version: 3.97.9@sha256:52e67fef4d054ecff5c2ce4b4ae376626d1ef54aa0898b53cac19c25e92e14db
           extra_args: --results=verified,unknown,unverified
 
   dependencies:
@@ -87,10 +119,15 @@ jobs:
     timeout-minutes: 10
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          # Même raison qu'au job précédent : `pnpm install` exécute les
+          # scripts d'installation de centaines de paquets tiers, et aucun n'a
+          # besoin du jeton du dépôt.
+          persist-credentials: false
 
-      - uses: pnpm/action-setup@b906affcce14559ad1aafd4ab0e942779e9f58b1 # v4.3.0
+      - uses: pnpm/action-setup@ea17c68df8912ef543352723c149a84f56e3d413 # v6.1.0
 
-      - uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 22
           cache: pnpm

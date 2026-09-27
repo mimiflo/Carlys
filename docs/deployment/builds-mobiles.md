@@ -39,8 +39,8 @@ la même forme, avec le même vocabulaire.
   │ CARLYS_FLAVOR=staging                      │
   │   → api-staging.DOMAINE                    │
   └──────────────────┬─────────────────────────┘
-                     │  .apk installable, toujours
-                     │  .aab seulement si signature posée
+                     │  .apk installable, toujours (14 jours)
+                     │  .aab sur Run workflow, si signature posée
                      │  .ipa sur demande (job macOS, §10)
                      ▼
         INSTALLER sur un téléphone, OUVRIR,
@@ -91,8 +91,9 @@ Ce qui sépare les deux chemins, ligne à ligne :
 | Approbation humaine | non | **oui** — environnement GitHub à « required reviewers » |
 | Textes légaux complets exigés | non | **oui** — refus tant qu'un `[À COMPLÉTER : …]` subsiste |
 | Le commit doit déjà exister en recette | — | **oui** (règle « build once ») |
-| `.apk` produit | toujours, sans aucun secret | oui, mais **de vérification seulement** |
-| `.aab` produit | seulement si la signature est configurée | **toujours** — sinon le workflow échoue |
+| `mobile-ci` vert pour ce code exigé | pour le lien bêta seulement (§3.4) | **oui** — vérifié avant l'approbation |
+| `.apk` produit | toujours, sans aucun secret ; artefact gardé **14 jours**, ses symboles de débogage à part, **90 jours** | oui, mais **de vérification seulement** |
+| `.aab` produit | sur **Run workflow** seulement (jamais sur une poussée), et si la signature est configurée | **toujours** — sinon le workflow échoue |
 | `.ipa` produit | **sur demande** (variable `CARLYS_IOS_BUILDS`, ou case « ios »), secrets Apple obligatoires — §10 | non : la production n'a pas de job iOS (§10.7) |
 | Dépôt sur le magasin | piste interne Play et TestFlight — **case « publier » uniquement**, secrets posés | à la main |
 | Où va l'artefact | onglet Actions de l'exécution | onglet Actions de l'exécution |
@@ -247,6 +248,14 @@ https://github.com/mimiflo/Carlys/releases/download/beta/carlys-beta.apk
 C'est le chemin le plus court vers un téléphone : ouvrir ce lien, installer,
 c'est tout — pas d'onglet Actions, pas de zip. La page de la release dit quel
 commit et quel versionCode il porte ; le tag `beta` suit le commit construit.
+
+**Le lien n'avance que si `mobile-ci` est vert.** Les deux workflows partent
+en parallèle sur la même poussée ; le job « Lien bêta » attend le verdict de
+`mobile-ci` pour le code de ce commit (au plus 15 minutes, par
+[`scripts/ci/verdict_ci.sh`](../../scripts/ci/verdict_ci.sh), la même porte
+que les images du serveur). Rouge, annulé ou toujours en cours au bout du
+délai : le job échoue **sans rien publier**, et les testeurs gardent l'APK
+précédent. L'APK du commit refusé reste dans l'artefact de l'exécution.
 
 **La limite, dite franchement : le dépôt est privé.** Ce lien n'est servi
 qu'aux comptes GitHub ayant accès au dépôt — collaborateurs et vous-même. Un
@@ -463,8 +472,11 @@ demandée à la main avec la case **publier** :
 > pouvoir finir verte) → Run.
 
 La présence d'un secret dit qu'on *peut* publier, pas qu'on *veut* : décider,
-c'est cliquer. Une poussée ordinaire construit et archive les artefacts signés,
-prêts, et n'envoie rien nulle part. Et le contraire vaut aussi : une exécution
+c'est cliquer. Une poussée ordinaire construit l'APK et n'envoie rien nulle
+part ; elle ne construit **pas** de `.aab`, que rien ne déposerait (3 minutes
+de gagnées à chaque poussée). Pour un bundle à déposer à la main (Galaxy
+Store, Play sans compte de service) : **Run workflow sans cocher publier** —
+même bundle, même signature, archivé dans l'exécution, et rien ne part. Et le contraire vaut aussi : une exécution
 **publier** à qui il manque un secret nécessaire au dépôt demandé **échoue en
 rouge** plutôt que de réussir sans avoir rien déposé.
 
@@ -689,7 +701,9 @@ récapitulatif le dit.
 | **Sur le téléphone** : « App not installed as package conflicts with an existing package » | l'APK installé et le nouveau portent des signatures différentes — sans secrets, la clé de debug est régénérée à chaque exécution | désinstaller Carlys puis installer (les données locales de l'appareil sont perdues). Pour que cela ne se reproduise plus : poser les quatre secrets du §4, l'APK du lien bêta est alors signé avec la clé du dépôt (§3.4) |
 | « Signature absente — bundle non produit et APK non mettable à jour » (avertissement, recette) | les quatre secrets de signature ne sont pas visibles par ce workflow | l'`.apk` est livré normalement, mais il ne pourra pas mettre à jour une installation existante (§3.4). Si les secrets sont posés sur l'environnement seulement, c'est le compromis assumé du §4.5 |
 | « Ce commit n'a pas été construit en recette » | la règle « build once » : aucun artefact de recette ne porte ce sha | relancer la recette **sur ce sha** (champ « sha » du Run workflow), l'installer, l'essayer, revenir |
-| « L'artefact de recette a expiré » | GitHub supprime les artefacts après la rétention du dépôt (90 jours par défaut) | relancer la recette sur ce sha — et en profiter pour ré-essayer un commit vieux de plusieurs mois — ou promouvoir un commit plus récent |
+| « L'artefact de recette a expiré » | la recette garde l'APK 14 jours et ses symboles 90 ; la garde accepte l'un ou l'autre, et les deux ont expiré | relancer la recette sur ce sha — et en profiter pour ré-essayer un commit vieux de plusieurs mois — ou promouvoir un commit plus récent |
+| « Lien bêta » en échec : « CI rouge », « CI toujours en cours » ou « CI introuvable » | `mobile-ci` n'est pas vert pour le code de ce commit (§3.4) : rouge, annulé, encore en cours au bout de 15 minutes, ou introuvable | corriger et pousser ; si l'échec ne tenait pas au code, relancer `mobile-ci` sur ce commit, puis le job « Lien bêta ». L'APK est dans l'artefact de l'exécution en attendant |
+| Production — la garde « La CI mobile de ce commit est verte » échoue : « CI rouge », « CI toujours en cours » ou « CI introuvable » | `mobile-ci` n'est pas vert pour le code du commit promu. « Construit en recette » ne le prouve pas : l'APK de recette naît sans attendre la CI | corriger, pousser, reconstruire en recette, promouvoir le nouveau sha ; si la CI tournait encore au bout de 5 minutes, relancer ce workflow une fois qu'elle a fini |
 | « Les textes légaux ne sont pas prêts pour la production » | un `[À COMPLÉTER : …]` subsiste dans `docs/legal/` | les compléter, pousser, reconstruire en recette, relancer sur le nouveau sha. Aucun contournement |
 | « Environnement mobile-production inexistant » ou « … sans reviewer » | l'approbation humaine n'est pas armée | §6 |
 | « Secrets de signature absents » (après approbation) | les quatre secrets ne sont pas sur l'environnement | §4.4 et §4.5 |
@@ -705,9 +719,11 @@ Deux limites à connaître, dites franchement plutôt que découvertes :
   qu'un humain l'a **installé et essayé**. Exactement comme, côté serveur,
   vérifier qu'une image existe ne prouve pas qu'on l'a fait tourner. C'est
   l'approbation humaine qui couvre ce trou — d'où l'insistance du §7, point 3.
-- Elle peut refuser un commit ancien dont l'artefact a **expiré**, alors qu'il
-  avait bel et bien été construit. C'est un faux refus, jamais un faux accord :
-  elle se trompe du bon côté.
+- Elle peut refuser un commit ancien dont les artefacts ont **expiré**, alors
+  qu'il avait bel et bien été construit : l'APK de recette vit 14 jours, mais
+  la garde accepte aussi ses symboles de débogage, issus du même build et
+  gardés 90 jours ; au-delà, elle refuse. C'est un faux refus, jamais un faux
+  accord : elle se trompe du bon côté.
 
 ---
 

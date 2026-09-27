@@ -65,6 +65,12 @@ ds-bundle/
 # Artefact Redis local (jamais versionné)
 dump.rdb
 
+# Bytecode Python : engendré par l'interpréteur au premier `import`, propre à
+# SA version (cpython-311, -312…). Un .pyc versionné périme à la première
+# retouche de la source et se réécrit sous les pieds de git à l'import suivant.
+__pycache__/
+*.pyc
+
 # Graphe de code Graphify (engendré localement : `graphify update .`)
 graphify-out/
 

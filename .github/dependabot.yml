@@ -14,9 +14,23 @@
 # Uniquement l'écosystème des actions : les dépendances JS ont `pnpm audit`
 # (security-ci.yml) et un lockfile, Dart a son pubspec.lock contraignant —
 # on ne double pas ces canaux ici.
+#
+# UNE SEULE PULL REQUEST PAR SEMAINE, groupée. Le dépôt avance par poussées
+# directes, pas par fusions : les PR séparées s'accumulaient sans suite (six
+# ouvertes le 11/09, encore ouvertes le 25/09, pendant que checkout, cache et
+# upload-artifact tournaient sur un Node 20 déprécié). Une PR groupée se relit
+# d'un coup, et ses SHA se recopient en poussée directe s'il le faut.
+#
+# CE QUE DEPENDABOT NE VOIT PAS : les entrées d'une action qui désignent un
+# autre artefact. L'image TruffleHog (`version:` dans security-ci.yml) en est
+# une — elle se monte à la main, SECURITY.md le rappelle.
 version: 2
 updates:
   - package-ecosystem: github-actions
     directory: /
     schedule:
       interval: weekly
+    groups:
+      actions-github:
+        patterns:
+          - '*'
