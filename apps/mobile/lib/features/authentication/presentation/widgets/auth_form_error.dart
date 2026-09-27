@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../core/errors/app_exception.dart';
+import '../../../../core/feedback/server_gesture.dart';
 import '../../../../design_system/design_system.dart';
 
 /// Traduit une erreur du domaine en message utilisateur.
@@ -17,7 +18,11 @@ String authErrorMessage(Object error) {
     UnauthorizedException(:final message) => message,
     ValidationException(:final message, :final fieldErrors) =>
       fieldErrors.isEmpty ? message : fieldErrors.values.join('\n'),
-    ServerException() => 'Le serveur est momentanément indisponible.',
+    // Un seul 5xx parle à la personne : le refus de supprimer un compte dont
+    // l'abonnement n'a pas pu être arrêté. Le taire derrière « indisponible »
+    // cachait l'essentiel : rien n'est supprimé, réessayer suffit.
+    ServerException() =>
+      refusalSentence(error) ?? 'Le serveur est momentanément indisponible.',
     // Le serveur a accepté, l'appareil n'a pas pu passer à ce compte : la
     // session a été abandonnée (`LocalAccountEntry`), réessayer est sûr.
     AccountClaimException() =>

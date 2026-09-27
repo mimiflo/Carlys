@@ -18,7 +18,10 @@ class DeleteAccountController extends AutoDisposeAsyncNotifier<bool> {
     return false;
   }
 
-  Future<void> submit(String password) async {
+  /// Rend vrai quand le compte est supprimé MAIS qu'un abonnement pris dans
+  /// un magasin d'applications prélève encore : l'écran, parti entre-temps,
+  /// le dit dans une popup. Ne jette jamais.
+  Future<bool> submit(String password) async {
     state = const AsyncLoading();
 
     // Les deux dépendances sont lues AVANT l'appel : après le premier
@@ -26,13 +29,14 @@ class DeleteAccountController extends AutoDisposeAsyncNotifier<bool> {
     final repository = ref.read(authRepositoryProvider);
     final auth = ref.read(authControllerProvider.notifier);
 
+    var storeStillBilling = false;
     final result = await AsyncValue.guard(() async {
-      await repository.deleteAccount(password);
+      storeStillBilling = await repository.deleteAccount(password);
       return true;
     });
     if (result.hasError) {
       state = result;
-      return;
+      return false;
     }
 
     // Le contrôleur RESTE en chargement pendant l'oubli local. Publier le
@@ -48,8 +52,8 @@ class DeleteAccountController extends AutoDisposeAsyncNotifier<bool> {
     // En pratique la bascule a déjà démonté l'écran ; on ne publie que si ce
     // n'est pas le cas, pour ne pas laisser un chargement éternel derrière
     // soi — et jamais sur un contrôleur mort.
-    if (_gone) return;
-    state = result;
+    if (!_gone) state = result;
+    return storeStillBilling;
   }
 }
 

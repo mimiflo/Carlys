@@ -13,7 +13,7 @@ import '../../../../design_system/design_system.dart';
 /// la politique annonce (`docs/legal/privacy.md`, section 6). Promettre un
 /// effacement total serait faux, taire ce qui reste le serait aussi.
 ///
-/// Trois précisions que le serveur impose au texte :
+/// Les précisions que le serveur impose au texte :
 ///  - le jour même, la suppression PSEUDONYMISE, elle ne détruit pas : la
 ///    ligne `User`, son identifiant et les clés étrangères survivent 30
 ///    jours. « Plus rien ne les relie à toi » serait donc une promesse que
@@ -28,15 +28,27 @@ import '../../../../design_system/design_system.dart';
 ///    lien au compte et sans l'adresse (un échec de connexion n'y laisse
 ///    qu'une empreinte) ; sa durée porte encore un « à compléter » dans la
 ///    politique, et n'est donc pas écrite ici.
-///  - l'effacement IMMÉDIAT (`deleted-accounts-purge --compte <uuid>`) ne
-///    vise qu'un compte déjà supprimé, et la suppression efface tout ce qui
-///    mène de la personne à cet identifiant : la demande doit donc précéder
-///    la suppression (docs/deployment/orchestration.md, « Effacement
-///    immédiat sur demande »), et l'écran le dit dans cet ordre.
-///  - la suppression ne résilie pas un abonnement payé chez Stripe
-///    (`AccountService.deleteAccount` n'y touche pas) : l'écran le dit, sans
-///    quoi la personne découvre un prélèvement qu'elle ne peut plus arrêter
-///    depuis l'application.
+///  - l'effacement IMMÉDIAT se demande par écrit AVANT la suppression, car
+///    celle-ci efface tout ce qui mène de la personne à son identifiant.
+///    L'opérateur supprime alors le compte encore actif par le même chemin
+///    que la route, puis l'efface :
+///    `deleted-accounts-purge --compte-actif <uuid> --confirmer <adresse>`.
+///    `--compte <uuid>` ne sert qu'au compte supprimé entre la demande et
+///    l'intervention (docs/deployment/orchestration.md, « Effacement
+///    immédiat sur demande »). L'écran dit donc « écris-nous avant », et
+///    que Carlys supprime pour la personne ;
+///  - l'abonnement payé chez Stripe est résilié AVANT la suppression
+///    (`AccountBillingService.stop`) ; si Stripe ne répond pas, le serveur
+///    refuse (503) et rien n'est supprimé. Un abonnement pris dans un
+///    magasin d'applications, lui, ne se résilie que dans le magasin : le
+///    serveur ne peut pas, l'écran le dit, et la réponse du serveur
+///    (`storeSubscriptionStillActive`) déclenche un rappel après coup ;
+///  - la personne sort de la communauté DANS la transaction de suppression
+///    (`CommunityWithdrawalService`) : son nom quitte le classement, les
+///    défis qu'elle a lancés et les encouragements qu'elle a envoyés
+///    partent. Sa ligne de la semaine, elle, RESTE (sans nom, pour les rangs
+///    des autres), et l'abonnement résilié reste en base 30 jours : ni l'un
+///    ni l'autre ne se range sans nuance sous « Effacé tout de suite ».
 class AccountDeletionSummary extends ConsumerWidget {
   const AccountDeletionSummary({super.key});
 
@@ -47,9 +59,19 @@ class AccountDeletionSummary extends ConsumerWidget {
     'Toutes tes sessions, sur cet appareil comme sur les autres.',
     'Tes jetons de notification : plus rien ne t’est envoyé.',
     'Les photos de tes repas, et le lien avec ton compte Google ou Apple.',
+    'Ta ligue, tes défis entre amis et le fil des encouragements : tu en '
+        'sors tout de suite. Ton nom quitte le classement (ton score de la '
+        'semaine reste compté, sans ton nom) ; les défis que tu as lancés et '
+        'les encouragements que tu as envoyés disparaissent.',
   ];
 
   static const List<String> _kept = [
+    'Ton abonnement payé sur le web, chez Stripe : il est résilié avant la '
+        'suppression, plus aucun prélèvement. Si on n’y arrive pas, ton '
+        'compte n’est pas supprimé et tu peux réessayer.',
+    'Un abonnement pris dans le Play Store ou l’App Store : Carlys ne peut '
+        'pas le résilier à ta place. Résilie-le là-bas, sinon le magasin '
+        'continuera de te prélever.',
     'Ton historique d’entraînement, tes repas, tes mesures et tes échanges '
         'avec le coach restent en base 30 jours : ton identité en est '
         'retirée, mais les lignes ne sont pas détruites le jour même.',
@@ -58,12 +80,11 @@ class AccountDeletionSummary extends ConsumerWidget {
         'le lien avec ton compte, et ne garde jamais ton adresse e-mail ; il '
         'est gardé la durée qu’annonce la politique de confidentialité, puis '
         'supprimé.',
-    'Pour tout effacer sans attendre ces 30 jours, écris-nous d’abord, '
-        'depuis l’adresse de ton compte, à l’adresse de contact de cette même '
-        'politique, puis supprime-le : une fois ton adresse effacée, plus rien '
-        'ne nous permet de retrouver ton compte.',
-    'Ton abonnement payant, si tu en as un : la suppression ne le résilie '
-        'pas. Résilie-le d’abord avec « Gérer mon abonnement ».',
+    'Pour tout effacer sans attendre ces 30 jours, écris-nous avant de '
+        'supprimer ton compte, depuis l’adresse de ce compte, à l’adresse de '
+        'contact de cette même politique : on le supprime et on l’efface tout '
+        'de suite pour toi. Une fois ton adresse effacée, plus rien ne nous '
+        'permet de retrouver ton compte.',
     'Sur ce téléphone, rien : tout ce que Carlys garde en local est effacé '
         'au retour à l’écran de connexion.',
   ];

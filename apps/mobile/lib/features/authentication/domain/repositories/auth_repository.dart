@@ -70,7 +70,11 @@ abstract interface class AuthRepository {
 
   /// Supprime le compte, mot de passe à l'appui. Irréversible côté serveur :
   /// l'appelant enchaîne sur la purge locale puis l'écran de connexion.
-  Future<void> deleteAccount(String password);
+  ///
+  /// Le serveur résilie d'abord l'abonnement Stripe, et refuse (503) s'il
+  /// n'y arrive pas. Rend vrai quand un abonnement pris dans un magasin
+  /// d'applications prélève encore : lui ne se résilie que dans le magasin.
+  Future<bool> deleteAccount(String password);
 
   /// Efface les jetons de l'appareil SANS rien demander au serveur — pour le
   /// cas où la session n'existe déjà plus là-bas (compte supprimé). `logout`

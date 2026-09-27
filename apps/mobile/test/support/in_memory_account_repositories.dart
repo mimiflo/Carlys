@@ -123,11 +123,12 @@ class InMemoryAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<void> deleteAccount(String password) async {
+  Future<bool> deleteAccount(String password) async {
     // La doublure joue le parcours entier, jusqu'au retour à la connexion :
     // elle n'a pas de compte à détruire, seulement une session à fermer.
     _connected = false;
     _devices = const [];
+    return false;
   }
 
   @override

@@ -109,6 +109,11 @@ String serverFailureMessage(AppException? exception) {
 ///    statut de refus (400, 403, 409, 422). La page d'erreur d'un
 ///    intermédiaire (nginx, portail captif) n'a rien à dire à la personne :
 ///    son texte technique ne s'affiche jamais ;
+///  - l'API encore, pour le seul 503 dont elle laisse passer le message
+///    (`UserFacingUnavailableException`, côté API) : « on n'a pas pu arrêter
+///    ton abonnement […] ton compte n'est pas supprimé ». Tout autre 5xx
+///    porte la phrase masquée [_maskedServerMessage], qui ne dit rien de
+///    plus que le repli de l'appelant ;
 ///  - l'application elle-même, quand elle refuse AVANT tout envoi : une
 ///    [ValidationException] sans statut HTTP.
 ///
@@ -118,9 +123,15 @@ String serverFailureMessage(AppException? exception) {
 String? refusalSentence(AppException exception) {
   final ecritePourLaPersonne = switch (exception) {
     ValidationException(statusCode: null) => true,
+    AppException(statusCode: 503, fromApi: true, :final message) =>
+      message != _maskedServerMessage,
     _ => exception.fromApi && _refusalStatuses.contains(exception.statusCode),
   };
   return ecritePourLaPersonne ? exception.message.replaceAll("'", '’') : null;
 }
 
 const _refusalStatuses = {400, 403, 409, 422};
+
+/// Ce que l'API écrit à la place du message de toute erreur 5xx qu'elle
+/// masque (`all-exceptions.filter.ts`).
+const _maskedServerMessage = 'Une erreur interne est survenue.';

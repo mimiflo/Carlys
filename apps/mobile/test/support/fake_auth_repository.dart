@@ -48,6 +48,10 @@ class FakeAuthRepository implements AuthRepository {
   /// Mots de passe reçus par `deleteAccount`.
   final List<String> deletionPasswords = <String>[];
 
+  /// Ce que le serveur répond après la suppression : un abonnement pris
+  /// dans un magasin d'applications prélève encore.
+  bool storeSubscriptionStillActive = false;
+
   /// Fuseaux reçus par `updateTimezone`, dans l'ordre.
   final List<String> timezonesSent = <String>[];
 
@@ -214,7 +218,7 @@ class FakeAuthRepository implements AuthRepository {
   }
 
   @override
-  Future<void> deleteAccount(String password) async {
+  Future<bool> deleteAccount(String password) async {
     deletionPasswords.add(password);
     final failure = accountFailure;
     if (failure != null) throw failure;
@@ -224,6 +228,7 @@ class FakeAuthRepository implements AuthRepository {
     // n'était jamais appelé, et l'assertion qui le vérifie ne prouverait
     // plus rien.
     devices = const [];
+    return storeSubscriptionStillActive;
   }
 
   @override

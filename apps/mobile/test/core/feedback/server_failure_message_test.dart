@@ -7,6 +7,8 @@
 /// cause POUR elle.
 library;
 
+import 'dart:io';
+
 import 'package:carlys_mobile/core/errors/app_exception.dart';
 import 'package:carlys_mobile/core/feedback/server_gesture.dart';
 import 'package:flutter/material.dart';
@@ -65,6 +67,67 @@ void main() {
         generique,
       );
       expect(serverFailureMessage(null), generique);
+    });
+
+    test('un 503 écrit pour la personne est lu, pas le 503 masqué', () {
+      // L'API masque tout message 5xx (« Une erreur interne est
+      // survenue. »), SAUF le refus qu'elle écrit pour la personne : la
+      // suppression de compte dont l'abonnement n'a pas pu être arrêté.
+      const refus =
+          "On n'a pas pu arrêter ton abonnement, réessaie dans un instant ; "
+          "ton compte n'est pas supprimé.";
+      expect(
+        serverFailureMessage(
+          const ServerException(refus, statusCode: 503, fromApi: true),
+        ),
+        'On n’a pas pu arrêter ton abonnement, réessaie dans un instant ; '
+        'ton compte n’est pas supprimé.',
+      );
+      expect(
+        serverFailureMessage(
+          const ServerException(
+            'Une erreur interne est survenue.',
+            statusCode: 503,
+            fromApi: true,
+          ),
+        ),
+        generique,
+      );
+      // Le 503 de nginx quand l'API est arrêtée : pas l'enveloppe Carlys.
+      expect(
+        serverFailureMessage(
+          const ServerException('Service Unavailable', statusCode: 503),
+        ),
+        generique,
+      );
+    });
+
+    test('la phrase masquée est, mot pour mot, celle qu’écrit l’API', () {
+      // Le tri ci-dessus tient à une ÉGALITÉ exacte avec la phrase que le
+      // filtre d'exceptions de l'API substitue à tout message 5xx. Qu'elle
+      // y soit reformulée, et tout 503 masqué s'afficherait comme un refus :
+      // on la lit donc là où l'API l'écrit, pas dans une copie.
+      final filtre = File(
+        '../api/src/common/filters/all-exceptions.filter.ts',
+      ).readAsStringSync();
+      final masquees = {
+        for (final m in RegExp(r"message = '([^']+)';").allMatches(filtre))
+          m.group(1)!,
+      };
+      expect(
+        masquees,
+        hasLength(1),
+        reason:
+            'Le filtre masque les 5xx avec une seule phrase ; il en écrit '
+            'maintenant $masquees. Aligne `_maskedServerMessage` '
+            '(server_gesture.dart) sur la phrase qu’il envoie.',
+      );
+      expect(
+        serverFailureMessage(
+          ServerException(masquees.single, statusCode: 503, fromApi: true),
+        ),
+        generique,
+      );
     });
 
     test('hors ligne reste hors ligne', () {

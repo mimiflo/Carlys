@@ -127,10 +127,24 @@ class AuthApi {
     data: {'currentPassword': currentPassword, 'newPassword': newPassword},
   );
 
-  /// DELETE /users/me — 204. Le mot de passe voyage dans le CORPS : c'est ce
-  /// que le contrôleur `DeleteAccountDto` exige.
-  Future<void> deleteAccount(String password) =>
-      _dio.delete<void>('/users/me', data: {'password': password});
+  /// DELETE /users/me — 200 `{ storeSubscriptionStillActive }`
+  /// (`AccountDeletionResult`). Le mot de passe voyage dans le CORPS : c'est
+  /// ce que le contrôleur `DeleteAccountDto` exige.
+  ///
+  /// Rend vrai quand un abonnement pris dans un magasin d'applications
+  /// prélève encore. Une réponse qui ne le dit pas (204 d'un serveur plus
+  /// ancien) vaut `false` et ne lève RIEN : un 2xx veut dire « supprimé »,
+  /// et lever empêcherait l'appareil d'oublier un compte qui n'existe plus.
+  Future<bool> deleteAccount(String password) async {
+    final response = await _dio.delete<Object?>(
+      '/users/me',
+      data: {'password': password},
+    );
+    final body = response.data;
+    final data = body is Map<String, dynamic> ? body['data'] : null;
+    return data is Map<String, dynamic> &&
+        data['storeSubscriptionStillActive'] == true;
+  }
 
   /// POST /auth/resend-verification — 204, même réponse si l'adresse est
   /// déjà vérifiée.

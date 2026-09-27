@@ -213,6 +213,16 @@ void main() {
     /// L'écran explique longuement avant de demander : sur la fenêtre de
     /// test (800 × 600) le bouton est sous la ligne de flottaison, comme il
     /// le sera sur un petit téléphone. On le fait venir, puis on appuie.
+    /// [extrait], lu sous le titre de bloc [titre] : une phrase juste prise
+    /// seule devient fausse sous « Effacé tout de suite » si le serveur la
+    /// garde.
+    Finder sous(String titre, String extrait) => find.descendant(
+      of: find
+          .ancestor(of: find.text(titre), matching: find.byType(AppCard))
+          .first,
+      matching: find.textContaining(extrait),
+    );
+
     Future<void> submit(WidgetTester tester) async {
       final button = find.text('Supprimer définitivement');
       await tester.ensureVisible(button);
@@ -251,29 +261,78 @@ void main() {
         find.textContaining('tout est effacé définitivement'),
         findsOneWidget,
       );
-      // L'effacement immédiat ne vise qu'un compte DÉJÀ supprimé, et la
-      // suppression efface l'adresse qui permettrait de le retrouver : la
-      // demande doit donc venir AVANT, et l'écran le dit dans cet ordre.
+      // La suppression efface l'adresse qui permettrait de retrouver le
+      // compte : la demande vient donc AVANT, et c'est Carlys qui supprime
+      // puis efface (`deleted-accounts-purge --compte-actif`), comme le dit
+      // la politique. Plus « puis supprime-le » : un geste qu'on fait pour
+      // la personne.
       expect(
-        find.textContaining('écris-nous d’abord, depuis l’adresse de ton '),
+        sous('Ce qui reste', 'écris-nous avant de supprimer ton compte'),
         findsOneWidget,
       );
-      expect(find.textContaining('puis supprime-le'), findsOneWidget);
+      expect(
+        find.textContaining(
+          'on le supprime et on l’efface tout de suite pour toi',
+        ),
+        findsOneWidget,
+      );
+      expect(find.textContaining('puis supprime-le'), findsNothing);
     });
 
-    testWidgets('l’écran prévient que l’abonnement payé n’est pas résilié', (
+    testWidgets('l’écran dit ce que devient l’abonnement', (tester) async {
+      // Le serveur résilie l'abonnement Stripe AVANT de supprimer le compte,
+      // et refuse (503) s'il n'y arrive pas. Un abonnement pris dans un
+      // magasin d'applications, lui, ne se résilie que dans le magasin.
+      await open(tester);
+
+      // Résilié n'est pas effacé : l'abonnement reste en base 30 jours,
+      // comme la politique le compte. Il se lit donc sous « Ce qui reste ».
+      expect(
+        sous(
+          'Ce qui reste',
+          'chez Stripe : il est résilié avant la suppression',
+        ),
+        findsOneWidget,
+      );
+      expect(sous('Effacé tout de suite', 'Stripe'), findsNothing);
+      expect(
+        find.textContaining('Play Store ou l’App Store : Carlys ne peut pas'),
+        findsOneWidget,
+      );
+      // L'ancienne consigne disait l'inverse : « la suppression ne le
+      // résilie pas, résilie-le d'abord avec Gérer mon abonnement ».
+      expect(
+        find.textContaining('la suppression ne le résilie pas'),
+        findsNothing,
+      );
+      expect(find.textContaining('Gérer mon abonnement'), findsNothing);
+    });
+
+    testWidgets('l’écran dit qu’on sort tout de suite de la communauté', (
       tester,
     ) async {
-      // `AccountService.deleteAccount` ne touche pas à Stripe : sans cette
-      // ligne, la personne découvrirait un prélèvement qu'elle ne peut plus
-      // arrêter depuis l'application.
+      // Le serveur retire la personne de sa ligue, de ses défis entre amis et
+      // du fil des encouragements DANS la transaction de suppression.
       await open(tester);
 
       expect(
-        find.textContaining('la suppression ne le résilie pas'),
+        find.textContaining(
+          'Ta ligue, tes défis entre amis et le fil des encouragements : tu '
+          'en sors tout de suite.',
+        ),
         findsOneWidget,
       );
-      expect(find.textContaining('Gérer mon abonnement'), findsOneWidget);
+      // Le nom part, pas le score : la ligne de la semaine reste pour que
+      // les rangs des autres ne bougent pas. Sous « Effacé tout de suite »,
+      // le taire serait promettre un effacement que le serveur ne fait pas.
+      expect(
+        sous(
+          'Effacé tout de suite',
+          'Ton nom quitte le classement (ton score de la semaine reste '
+              'compté, sans ton nom)',
+        ),
+        findsOneWidget,
+      );
     });
 
     testWidgets('la politique de confidentialité est à un geste de là', (
@@ -385,6 +444,99 @@ void main() {
       expect(find.text('Mot de passe incorrect.'), findsOneWidget);
       expect(purge.runs, 0);
       expect(auth.storedSession, isTrue);
+    });
+
+    testWidgets('abonnement non arrêté (503) : la phrase du serveur, et le '
+        'compte reste', (tester) async {
+      auth.accountFailure = const ServerException(
+        "On n'a pas pu arrêter ton abonnement, réessaie dans un instant ; "
+        "ton compte n'est pas supprimé.",
+        statusCode: 503,
+        fromApi: true,
+      );
+      await open(tester);
+      await typePassword(tester, 'secret');
+      await submit(tester);
+
+      // « Le serveur est momentanément indisponible. » taisait l'essentiel :
+      // rien n'est supprimé, et réessayer suffit.
+      expect(
+        find.text(
+          'On n’a pas pu arrêter ton abonnement, réessaie dans un instant ; '
+          'ton compte n’est pas supprimé.',
+        ),
+        findsOneWidget,
+      );
+      expect(purge.runs, 0);
+      expect(auth.storedSession, isTrue);
+      // Le bouton rouge reste là : la personne peut réessayer.
+      expect(find.text('Supprimer définitivement'), findsOneWidget);
+    });
+
+    testWidgets('un 503 masqué par l’API reste une panne générique', (
+      tester,
+    ) async {
+      auth.accountFailure = const ServerException(
+        'Une erreur interne est survenue.',
+        statusCode: 503,
+        fromApi: true,
+      );
+      await open(tester);
+      await typePassword(tester, 'secret');
+      await submit(tester);
+
+      expect(
+        find.text('Le serveur est momentanément indisponible.'),
+        findsOneWidget,
+      );
+      expect(purge.runs, 0);
+    });
+
+    testWidgets('abonnement de magasin encore actif : la popup le dit, '
+        'par-dessus l’écran de connexion', (tester) async {
+      auth.storeSubscriptionStillActive = true;
+      // Comme le routeur : dès que le compte est oublié, l'écran de
+      // suppression est DÉMONTÉ au milieu de `submit`, avant que la réponse
+      // du serveur n'ait été dite.
+      await tester.pumpWidget(
+        host(
+          Consumer(
+            builder: (context, ref, _) =>
+                ref.watch(authControllerProvider) is AuthUnauthenticated
+                ? const Text('Écran de connexion')
+                : const DeleteAccountScreen(),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      final container = ProviderScope.containerOf(
+        tester.element(find.byType(DeleteAccountScreen)),
+      );
+      await container.read(authControllerProvider.notifier).restore();
+      await typePassword(tester, 'secret');
+      await submit(tester);
+
+      expect(find.byType(DeleteAccountScreen), findsNothing);
+      expect(find.text('Écran de connexion'), findsOneWidget);
+      expect(purge.runs, 1);
+      expect(find.byType(AppPopupCard), findsOneWidget);
+      expect(find.text('Compte supprimé'), findsOneWidget);
+      expect(
+        find.text(
+          'Ton abonnement du Play Store ou de l’App Store court toujours : '
+          'résilie-le là-bas.',
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('sans abonnement de magasin : pas de popup', (tester) async {
+      await open(tester);
+      await typePassword(tester, 'secret');
+      await submit(tester);
+
+      expect(purge.runs, 1);
+      expect(find.text('Compte supprimé'), findsNothing);
     });
 
     testWidgets('hors ligne : le compte reste, et on le dit', (tester) async {

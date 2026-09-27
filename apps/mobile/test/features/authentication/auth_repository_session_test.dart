@@ -303,6 +303,62 @@ void main() {
       );
     },
   );
+
+  group('suppression du compte (DELETE /users/me)', () {
+    test('200 : le dépôt rend ce que le serveur dit de l’abonnement de '
+        'magasin', () async {
+      for (final encoreActif in [true, false]) {
+        serve(200, {
+          'data': {'storeSubscriptionStillActive': encoreActif},
+          'meta': <String, Object?>{},
+          'requestId': 'r',
+        });
+        expect(await repository().deleteAccount('secret'), encoreActif);
+      }
+      expect(requests, ['DELETE /users/me', 'DELETE /users/me']);
+    });
+
+    test(
+      '204 d’un serveur plus ancien : supprimé quand même, pas d’erreur',
+      () async {
+        // Le compte EST supprimé : lever ici empêcherait l'appareil de
+        // l'oublier, et la personne resterait sur un compte qui n'existe plus.
+        serveRaw(204, '', contentType: Headers.jsonContentType);
+
+        expect(await repository().deleteAccount('secret'), isFalse);
+      },
+    );
+
+    test(
+      '503 de l’API : refusé, avec la phrase écrite pour la personne',
+      () async {
+        serve(503, {
+          'error': {
+            'code': 'SERVICE_UNAVAILABLE',
+            'message':
+                'On n’a pas pu arrêter ton abonnement, réessaie dans un '
+                'instant ; ton compte n’est pas supprimé.',
+            'details': null,
+            'requestId': 'r',
+          },
+        });
+
+        await expectLater(
+          repository().deleteAccount('secret'),
+          throwsA(
+            isA<ServerException>()
+                .having((e) => e.statusCode, 'statusCode', 503)
+                .having((e) => e.fromApi, 'fromApi', isTrue)
+                .having(
+                  (e) => e.message,
+                  'message',
+                  endsWith('ton compte n’est pas supprimé.'),
+                ),
+          ),
+        );
+      },
+    );
+  });
 }
 
 /// Adaptateur HTTP factice : chaque requête passe par [_handler].

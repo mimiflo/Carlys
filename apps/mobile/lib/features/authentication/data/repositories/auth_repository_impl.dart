@@ -164,7 +164,7 @@ class AuthRepositoryImpl implements AuthRepository {
   }
 
   @override
-  Future<void> deleteAccount(String password) {
+  Future<bool> deleteAccount(String password) {
     return _guard(() => _api.deleteAccount(password));
   }
 

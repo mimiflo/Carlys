@@ -32,11 +32,23 @@ class _DeleteAccountScreenState extends ConsumerState<DeleteAccountScreen> {
     super.dispose();
   }
 
-  void _submit() {
+  Future<void> _submit() async {
     if (_formKey.currentState?.validate() != true) return;
-    ref
+    // Capturés AVANT l'attente : la bascule vers la connexion démonte cet
+    // écran pendant `submit`, la popup vit dans l'overlay racine.
+    final notices = AppNotices.of(context);
+    final storeStillBilling = await ref
         .read(deleteAccountControllerProvider.notifier)
         .submit(_passwordController.text);
+    // Le serveur ne peut pas résilier un abonnement de magasin : sans ce
+    // mot, la personne supprimée resterait prélevée sans le savoir.
+    if (storeStillBilling) {
+      notices.show(
+        'Ton abonnement du Play Store ou de l’App Store court toujours : '
+        'résilie-le là-bas.',
+        title: 'Compte supprimé',
+      );
+    }
   }
 
   @override
