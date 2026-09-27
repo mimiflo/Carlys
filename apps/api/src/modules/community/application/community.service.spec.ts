@@ -7,6 +7,7 @@ import { type CommunityRepository } from '../infrastructure/community.repository
 import { type CommunityChallengesService } from './community-challenges.service';
 import { CommunityNotifier } from './community-notifier';
 import { CommunityService } from './community.service';
+import { EncouragementsService } from './encouragements.service';
 
 const ME = 'utilisateur-moi';
 const FRIEND = 'utilisateur-ami';
@@ -26,7 +27,7 @@ interface Stubs {
   friendCodeOf: jest.Mock;
   completedSessionStartsByUser: jest.Mock;
   listEncouragements: jest.Mock;
-  createEncouragement: jest.Mock;
+  createEncouragementWithinLimit: jest.Mock;
   sharesProgress: jest.Mock;
   setSharesProgress: jest.Mock;
 }
@@ -47,7 +48,7 @@ function buildStubs(): Stubs {
     friendCodeOf: jest.fn().mockResolvedValue('AC23DEF4'),
     completedSessionStartsByUser: jest.fn().mockResolvedValue(new Map()),
     listEncouragements: jest.fn().mockResolvedValue([]),
-    createEncouragement: jest.fn().mockResolvedValue({}),
+    createEncouragementWithinLimit: jest.fn().mockResolvedValue(true),
     sharesProgress: jest.fn().mockResolvedValue(true),
     setSharesProgress: jest.fn().mockResolvedValue(undefined),
   };
@@ -95,6 +96,24 @@ function buildService(
     stubs as unknown as CommunityRepository,
     moderation as unknown as CommunityModerationRepository,
     challengesStub as unknown as CommunityChallengesService,
+    notifier,
+  );
+}
+
+/** Les encouragements ont leur service ; mêmes doublures, même vrai notifier. */
+function buildEncouragements(
+  stubs: Stubs,
+  notifications: NotificationsStub = buildNotifications(),
+  moderation: ModerationStub = buildModeration(),
+): EncouragementsService {
+  const notifier = new CommunityNotifier(
+    stubs as unknown as CommunityRepository,
+    notifications as unknown as NotificationsService,
+    loggerStub as unknown as PinoLogger,
+  );
+  return new EncouragementsService(
+    stubs as unknown as CommunityRepository,
+    moderation as unknown as CommunityModerationRepository,
     notifier,
   );
 }
@@ -383,16 +402,16 @@ describe('CommunityService — confidentialité des statistiques', () => {
   });
 });
 
-describe('CommunityService — encouragements', () => {
+describe('EncouragementsService — encouragements', () => {
   it('refuse d’encourager quelqu’un qui n’est pas un ami accepté', async () => {
     const stubs = buildStubs();
-    const service = buildService(stubs);
+    const service = buildEncouragements(stubs);
 
     const refusal = service.encourage(ME, FRIEND, 'Bravo !');
     await expect(refusal).rejects.toBeInstanceOf(ForbiddenException);
     // Le mobile affiche ce message tel quel : il tutoie, comme toute l'application.
     await expect(refusal).rejects.toThrow('Tu ne peux encourager que tes amis.');
-    expect(stubs.createEncouragement).not.toHaveBeenCalled();
+    expect(stubs.createEncouragementWithinLimit).not.toHaveBeenCalled();
   });
 
   it('écrit chez un ami accepté', async () => {
@@ -403,10 +422,13 @@ describe('CommunityService — encouragements', () => {
       addresseeId: ME,
       status: FriendRequestStatus.ACCEPTED,
     });
-    const service = buildService(stubs);
+    const service = buildEncouragements(stubs);
 
     await service.encourage(ME, FRIEND, 'Bravo !');
-    expect(stubs.createEncouragement).toHaveBeenCalledWith(ME, FRIEND, 'Bravo !');
+    expect(stubs.createEncouragementWithinLimit).toHaveBeenCalledWith(ME, FRIEND, 'Bravo !', {
+      max: 20,
+      windowMs: 86_400_000,
+    });
   });
 });
 
@@ -447,12 +469,12 @@ describe('CommunityService — blocages : réponses opaques partout', () => {
   it('encourager une personne bloquée est refusé comme un non-ami (403, pas plus)', async () => {
     const stubs = buildStubs();
     stubs.findFriendshipBetween.mockResolvedValue(accepted);
-    const service = buildService(stubs, buildNotifications(), buildModeration(true));
+    const service = buildEncouragements(stubs, buildNotifications(), buildModeration(true));
 
     await expect(service.encourage(ME, FRIEND, 'Bravo !')).rejects.toBeInstanceOf(
       ForbiddenException,
     );
-    expect(stubs.createEncouragement).not.toHaveBeenCalled();
+    expect(stubs.createEncouragementWithinLimit).not.toHaveBeenCalled();
   });
 
   it('la liste d’amis et le fil taisent les personnes bloquées', async () => {
@@ -466,7 +488,7 @@ describe('CommunityService — blocages : réponses opaques partout', () => {
     const friends = await service.listFriends(ME);
     expect(friends.map((friend) => friend.displayName)).toEqual(['Léa']);
 
-    await service.feed(ME);
+    await buildEncouragements(stubs, buildNotifications(), buildModeration(true)).feed(ME);
     expect(stubs.listEncouragements).toHaveBeenCalledWith(ME, expect.any(Number), [FRIEND]);
   });
 });
@@ -476,7 +498,7 @@ describe('CommunityService — relais vers les défis', () => {
     const service = buildService(buildStubs());
     const at = new Date('2026-08-11T10:00:00Z');
 
-    const effort = { activeSeconds: 600, distanceMeters: 2_000 };
+    const effort = { countsAsWorkout: true, activeSeconds: 600, distanceMeters: 2_000 };
     await service.recordWorkoutCompleted(ME, at, effort);
 
     expect(challengesStub.recordWorkoutCompleted).toHaveBeenCalledWith(ME, at, effort);
@@ -542,7 +564,7 @@ describe('CommunityService — notifications push', () => {
       status: FriendRequestStatus.ACCEPTED,
     });
     const notifications = buildNotifications();
-    const service = buildService(stubs, notifications);
+    const service = buildEncouragements(stubs, notifications);
 
     await service.encourage(ME, FRIEND, 'Bravo pour ta série !');
 
@@ -566,7 +588,7 @@ describe('CommunityService — notifications push', () => {
       status: FriendRequestStatus.ACCEPTED,
     });
     const notifications = buildNotifications(false);
-    const service = buildService(stubs, notifications);
+    const service = buildEncouragements(stubs, notifications);
 
     await service.encourage(ME, FRIEND, 'Bravo !');
 
@@ -583,9 +605,27 @@ describe('CommunityService — notifications push', () => {
       addresseeId: ME,
       status: FriendRequestStatus.ACCEPTED,
     });
-    const service = buildService(stubs);
+    const service = buildEncouragements(stubs);
 
     await expect(service.encourage(ME, FRIEND, 'Bravo !')).resolves.toBeUndefined();
     expect(loggerStub.error).toHaveBeenCalled();
+  });
+});
+
+describe('EncouragementsService — plafond par ami', () => {
+  it('au-delà du plafond du jour : 429, et AUCUNE notification poussée', async () => {
+    const stubs = buildStubs();
+    stubs.findFriendshipBetween.mockResolvedValue({
+      id: 'amitié-1',
+      requesterId: FRIEND,
+      addresseeId: ME,
+      status: FriendRequestStatus.ACCEPTED,
+    });
+    stubs.createEncouragementWithinLimit.mockResolvedValue(false);
+    const notifications = buildNotifications();
+    const service = buildEncouragements(stubs, notifications);
+
+    await expect(service.encourage(ME, FRIEND, 'Bravo !')).rejects.toMatchObject({ status: 429 });
+    expect(notifications.sendToUser).not.toHaveBeenCalled();
   });
 });

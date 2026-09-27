@@ -5,6 +5,7 @@ process.env.REDIS_URL ??= 'redis://localhost:6379';
 process.env.JWT_ACCESS_SECRET ??= 'secret-e2e-uniquement-32-caracteres-minimum';
 
 import {
+  ACADEMY_LESSON_IDS,
   type ApiSuccessEnvelope,
   type AuthResult,
   type CommunityChallenge,
@@ -344,6 +345,16 @@ describe('Communauté (e2e)', () => {
       .post('/api/v1/workout-sessions')
       .send({ id: sessionId, name: 'Défi e2e', startedAt: new Date().toISOString() })
       .expect(201);
+    // Une série : une séance VIDE ne compte plus comme une séance.
+    await authed(tokenA)
+      .post(`/api/v1/workout-sessions/${sessionId}/sets`)
+      .send({
+        id: randomUUID(),
+        exerciseName: 'Pompes',
+        position: 0,
+        completedAt: new Date().toISOString(),
+      })
+      .expect(201);
     await authed(tokenA)
       .post(`/api/v1/workout-sessions/${sessionId}/complete`)
       .send({})
@@ -399,7 +410,13 @@ describe('Communauté (e2e)', () => {
     const sessionId = randomUUID();
     await authed(tokenB)
       .post('/api/v1/workout-sessions')
-      .send({ id: sessionId, name: 'Sortie longue', startedAt: new Date().toISOString() })
+      // Commencée il y a une heure : la distance et le temps crédités sont
+      // bornés par le créneau de la séance (`creditedEffort`).
+      .send({
+        id: sessionId,
+        name: 'Sortie longue',
+        startedAt: new Date(Date.now() - 3_600_000).toISOString(),
+      })
       .expect(201);
     await authed(tokenB)
       .post(`/api/v1/workout-sessions/${sessionId}/sets`)
@@ -459,14 +476,14 @@ describe('Communauté (e2e)', () => {
     });
     await authed(tokenA).post(`/api/v1/community/challenges/${culture.id}/join`).expect(201);
 
-    const answer = { lessonId: 'lecon-dos', answeredOn: jour(), correct: true };
+    const answer = { lessonId: 'anatomie-dos', answeredOn: jour(), correct: true };
     await authed(tokenA).post('/api/v1/community/quiz-answers').send(answer).expect(204);
     // REJOUER la même réponse : aucune contribution supplémentaire.
     await authed(tokenA).post('/api/v1/community/quiz-answers').send(answer).expect(204);
     // Une réponse FAUSSE le lendemain : enregistrée, pas comptée.
     await authed(tokenA)
       .post('/api/v1/community/quiz-answers')
-      .send({ lessonId: 'lecon-dos', answeredOn: jour(-1), correct: false })
+      .send({ lessonId: 'anatomie-dos', answeredOn: jour(-1), correct: false })
       .expect(204);
 
     const challenges = data<CommunityChallenge[]>(
@@ -488,39 +505,39 @@ describe('Communauté (e2e)', () => {
     // choix : la relecture doit rendre le premier, comme le magasin local.
     await authed(tokenA)
       .post('/api/v1/community/quiz-answers')
-      .send({ lessonId: 'lecon-dos', answeredOn: jour(), correct: false, choiceIndex: 2 })
+      .send({ lessonId: 'anatomie-dos', answeredOn: jour(), correct: false, choiceIndex: 2 })
       .expect(204);
     await authed(tokenA)
       .post('/api/v1/community/quiz-answers')
-      .send({ lessonId: 'lecon-dos', answeredOn: jour(-1), correct: true, choiceIndex: 0 })
+      .send({ lessonId: 'anatomie-dos', answeredOn: jour(-1), correct: true, choiceIndex: 0 })
       .expect(204);
     // Un client d'avant la migration n'envoie pas le choix : la réponse
     // compte quand même, le choix relu est nul.
     await authed(tokenA)
       .post('/api/v1/community/quiz-answers')
-      .send({ lessonId: 'lecon-squat', answeredOn: jour(), correct: true })
+      .send({ lessonId: 'anatomie-epaules', answeredOn: jour(), correct: true })
       .expect(204);
 
     const answers = data<QuizAnswerRecord[]>(
       (await authed(tokenA).get('/api/v1/community/quiz-answers').expect(200)).body,
     );
 
-    const dos = answers.find((entry) => entry.lessonId === 'lecon-dos');
+    const dos = answers.find((entry) => entry.lessonId === 'anatomie-dos');
     expect(dos).toEqual({
-      lessonId: 'lecon-dos',
+      lessonId: 'anatomie-dos',
       choiceIndex: 2,
       correct: false,
       answeredOn: jour(),
     });
-    const squat = answers.find((entry) => entry.lessonId === 'lecon-squat');
+    const squat = answers.find((entry) => entry.lessonId === 'anatomie-epaules');
     expect(squat?.choiceIndex).toBeNull();
     // Une entrée PAR leçon, jamais une par jour.
-    expect(answers.filter((entry) => entry.lessonId === 'lecon-dos')).toHaveLength(1);
+    expect(answers.filter((entry) => entry.lessonId === 'anatomie-dos')).toHaveLength(1);
 
     // Et un choix hors bornes est refusé, pas tronqué.
     await authed(tokenA)
       .post('/api/v1/community/quiz-answers')
-      .send({ lessonId: 'lecon-dos', answeredOn: jour(1), correct: true, choiceIndex: 7 })
+      .send({ lessonId: 'anatomie-dos', answeredOn: jour(1), correct: true, choiceIndex: 7 })
       .expect(400);
   });
 
@@ -534,15 +551,16 @@ describe('Communauté (e2e)', () => {
     for (const fabrique of ['2020-01-01', jour(-9), jour(9)]) {
       await authed(tokenA)
         .post('/api/v1/community/quiz-answers')
-        .send({ lessonId: 'lecon-dos', answeredOn: fabrique, correct: true })
+        .send({ lessonId: 'anatomie-dos', answeredOn: fabrique, correct: true })
         .expect(400);
     }
     // La marge d'un fuseau reste acceptée, elle : un appareil à UTC+14 est
     // déjà demain, un autre à UTC-11 encore hier.
-    for (const admis of [jour(-1), jour(), jour(1)]) {
+    // Trois leçons RÉELLES du pack : un identifiant inventé est refusé.
+    for (const [index, admis] of [jour(-1), jour(), jour(1)].entries()) {
       await authed(tokenA)
         .post('/api/v1/community/quiz-answers')
-        .send({ lessonId: `lecon-fuseau-${admis}`, answeredOn: admis, correct: true })
+        .send({ lessonId: ACADEMY_LESSON_IDS[10 + index], answeredOn: admis, correct: true })
         .expect(204);
     }
   });

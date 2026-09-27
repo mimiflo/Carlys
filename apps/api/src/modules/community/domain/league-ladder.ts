@@ -129,6 +129,40 @@ export function previousPeriodKey(periodKey: string): string {
   return periodKeyOf(new Date(periodWindow(periodKey).startsAt.getTime() - 86_400_000));
 }
 
+/**
+ * Délai, après la fin d'une semaine, pendant lequel on peut encore y OUVRIR
+ * une ligne : le temps qu'une séance faite hors ligne le dimanche se
+ * synchronise le lundi ou le mardi. La ligne arrivée après le règlement se
+ * règle seule (voir `LeaguesRepository.settle`).
+ */
+export const LEAGUE_LATE_OPENING_MS = 48 * 3_600_000;
+
+/**
+ * Ce qu'une contribution datée de `at` peut faire à la ligue, vu de `now`.
+ *
+ *  - `open` : la période est en cours, ou vient de se fermer (délai de
+ *    grâce) — on peut y verser, et y ouvrir sa ligne ;
+ *  - `existing-only` : la période est close depuis plus longtemps — on ne
+ *    verse qu'à une ligne qui existe déjà et n'est pas réglée, on n'en ouvre
+ *    JAMAIS. Sans cette règle, une séance datée de 2001 ouvrait « 2001-W01 »
+ *    et un score choisi entrait dans une semaine réglée depuis longtemps ;
+ *  - `future` : un instant à venir (horloge d'appareil en avance) — la
+ *    contribution se range dans la période en cours, jamais dans une semaine
+ *    qui n'a pas commencé.
+ */
+export function periodAdmission(at: Date, now: Date): 'open' | 'existing-only' | 'future' {
+  const periodKey = periodKeyOf(at);
+  const current = periodKeyOf(now);
+  if (periodKey > current) {
+    return 'future';
+  }
+  if (periodKey === current) {
+    return 'open';
+  }
+  const late = now.getTime() - periodWindow(periodKey).endsAt.getTime();
+  return late <= LEAGUE_LATE_OPENING_MS ? 'open' : 'existing-only';
+}
+
 /** Un groupe d'une division pour une période, et combien il compte de membres. */
 export interface LeagueGroupCount {
   cohort: number;

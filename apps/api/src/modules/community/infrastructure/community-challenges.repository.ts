@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { type ChallengeMetric, type CommunityChallenge, Prisma } from '@prisma/client';
+import { lockNamed } from '../../../database/prisma/advisory-lock';
 import { PrismaService } from '../../../database/prisma/prisma.service';
 import { type MonthlyChallengeSeed } from '../domain/challenge-catalog';
 
@@ -234,12 +235,21 @@ export class CommunityChallengesRepository {
      * et l'unicité rendrait la perte définitive au rejeu.
      */
     alsoInTransaction?: (tx: Prisma.TransactionClient) => Promise<void>;
+    /**
+     * Bonnes réponses qui rapportent, par jour déclaré. Au-delà, la réponse
+     * s'écrit (la progression la garde) mais ne verse plus rien : sans ce
+     * plafond, vingt réponses « justes » valaient vingt fois dix points.
+     */
+    creditedPerDay: number;
   }): Promise<boolean> {
-    const { at, alsoInTransaction, ...answer } = input;
+    const { at, alsoInTransaction, creditedPerDay, ...answer } = input;
     try {
       await this.prisma.$transaction(async (tx) => {
+        // Compter puis verser sous un verrou par compte : des réponses
+        // parallèles liraient toutes le même décompte.
+        await lockNamed(tx, `quiz-answer:${answer.userId}`);
         await tx.quizAnswer.create({ data: answer });
-        if (answer.correct) {
+        if (answer.correct && (await this.correctOnDay(tx, answer)) <= creditedPerDay) {
           await this.contribute(answer.userId, 'QUIZ_CORRECT', 1, at, tx);
           await alsoInTransaction?.(tx);
         }
@@ -252,6 +262,16 @@ export class CommunityChallengesRepository {
       }
       throw error;
     }
+  }
+
+  /** Bonnes réponses de ce compte ce jour-là, celle qu'on vient d'écrire comprise. */
+  private correctOnDay(
+    tx: Prisma.TransactionClient,
+    answer: { userId: string; answeredOn: string },
+  ): Promise<number> {
+    return tx.quizAnswer.count({
+      where: { userId: answer.userId, answeredOn: answer.answeredOn, correct: true },
+    });
   }
 
   /**

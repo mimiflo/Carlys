@@ -95,3 +95,35 @@ describe('WorkoutsRepository.createSession', () => {
     expect(tx.workoutSessionPlanItem.createMany).toHaveBeenCalledWith({ data: PLAN });
   });
 });
+
+describe('WorkoutsRepository.softDeleteSet', () => {
+  /**
+   * La libération du plan est BORNÉE à la séance de la série. `doneSetId`
+   * n'a pas d'index : sans `sessionId`, PostgreSQL balayait les prévisions
+   * de tous les comptes (2 millions de lignes, 237 ms) à chaque suppression.
+   */
+  it('libère la prévision de la série dans SA séance, et seulement là', async () => {
+    const setUpdate = jest.fn().mockReturnValue('pierre-tombale');
+    const planUpdate = jest.fn().mockReturnValue('liberation');
+    const transaction = jest.fn().mockResolvedValue([]);
+    const prisma = {
+      $transaction: transaction,
+      workoutSet: { update: setUpdate },
+      workoutSessionPlanItem: { updateMany: planUpdate },
+    } as unknown as PrismaService;
+
+    await new WorkoutsRepository(prisma).softDeleteSet('set-1', 'session-1');
+
+    expect(setUpdate).toHaveBeenCalledWith({
+      where: { id: 'set-1' },
+      data: { deletedAt: expect.any(Date) as Date },
+    });
+    expect(planUpdate).toHaveBeenCalledWith({
+      where: { sessionId: 'session-1', doneSetId: 'set-1' },
+      data: { doneSetId: null },
+    });
+    // Les deux écritures partent ENSEMBLE : une série supprimée sans rendre
+    // sa prévision laisserait un orphelin compté « fait » pour toujours.
+    expect(transaction).toHaveBeenCalledWith(['pierre-tombale', 'liberation']);
+  });
+});

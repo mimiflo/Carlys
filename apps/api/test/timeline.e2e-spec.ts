@@ -5,6 +5,7 @@ process.env.REDIS_URL ??= 'redis://localhost:6379';
 process.env.JWT_ACCESS_SECRET ??= 'secret-e2e-uniquement-32-caracteres-minimum';
 
 import {
+  ACADEMY_LESSON_IDS,
   type ApiSuccessEnvelope,
   type AuthResult,
   type ProgressTimeline,
@@ -173,7 +174,8 @@ describe('Frise de progression (e2e)', () => {
 
   it('groupe les leçons par JOUR, après dédoublonnage par leçon', async () => {
     const jour = new Date().toISOString().slice(0, 10);
-    for (const lessonId of ['lecon-a', 'lecon-b', 'lecon-c']) {
+    // Trois leçons RÉELLES du pack : un identifiant inventé est refusé (400).
+    for (const lessonId of ACADEMY_LESSON_IDS.slice(0, 3)) {
       await as(token)
         .post('/api/v1/community/quiz-answers')
         .send({ lessonId, answeredOn: jour, correct: true, choiceIndex: 0 })

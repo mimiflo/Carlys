@@ -43,7 +43,9 @@ interface Stubs {
   listSessionsPage: jest.Mock;
   updateSession: jest.Mock;
   transitionStatus: jest.Mock;
+  findSessionOwner: jest.Mock;
   createSet: jest.Mock;
+  findSetRow: jest.Mock;
   findSetById: jest.Mock;
   updateSet: jest.Mock;
   softDeleteSet: jest.Mock;
@@ -51,6 +53,7 @@ interface Stubs {
   publishedExerciseNames: jest.Mock;
   linkPlanItem: jest.Mock;
   skipPlanItems: jest.Mock;
+  countCompletedEndedBetween: jest.Mock;
 }
 
 function buildStubs(): Stubs {
@@ -60,7 +63,10 @@ function buildStubs(): Stubs {
     listSessionsPage: jest.fn().mockResolvedValue([]),
     updateSession: jest.fn().mockResolvedValue(sessionRow()),
     transitionStatus: jest.fn().mockResolvedValue(true),
-    createSet: jest.fn().mockResolvedValue(true),
+    findSessionOwner: jest.fn().mockResolvedValue({ id: 'session-1', userId: USER }),
+    // L'insertion rend la ligne écrite : c'est elle que l'ajout sert.
+    createSet: jest.fn().mockImplementation(() => Promise.resolve(setRow())),
+    findSetRow: jest.fn().mockResolvedValue(null),
     findSetById: jest.fn().mockResolvedValue(null),
     updateSet: jest.fn(),
     softDeleteSet: jest.fn().mockResolvedValue(undefined),
@@ -68,6 +74,8 @@ function buildStubs(): Stubs {
     publishedExerciseNames: jest.fn().mockResolvedValue(new Map()),
     linkPlanItem: jest.fn().mockResolvedValue(undefined),
     skipPlanItems: jest.fn().mockResolvedValue(0),
+    // Plafond de séances créditées par jour : la séance close est la seule.
+    countCompletedEndedBetween: jest.fn().mockResolvedValue(1),
   };
 }
 
@@ -314,7 +322,6 @@ describe('WorkoutsService', () => {
   describe('appariement plan ↔ série', () => {
     it('apparie la prévision honorée par la série qui vient d’être créée', async () => {
       const stubs = buildStubs();
-      stubs.findSetById.mockResolvedValueOnce(null).mockResolvedValue(setRow());
       const sets = buildSetsService(stubs);
 
       await sets.addSet(USER, 'session-1', { ...setInput, planItemId: 'plan-1' });
@@ -324,7 +331,7 @@ describe('WorkoutsService', () => {
 
     it('réapparie sur un rejeu : le premier envoi a pu s’interrompre entre les deux', async () => {
       const stubs = buildStubs();
-      stubs.findSetById.mockResolvedValue(setRow()); // série déjà là
+      stubs.findSetRow.mockResolvedValue(setRow()); // série déjà là
       const sets = buildSetsService(stubs);
 
       await sets.addSet(USER, 'session-1', { ...setInput, planItemId: 'plan-1' });
@@ -335,7 +342,6 @@ describe('WorkoutsService', () => {
 
     it('une série hors programme n’apparie rien', async () => {
       const stubs = buildStubs();
-      stubs.findSetById.mockResolvedValueOnce(null).mockResolvedValue(setRow());
       const sets = buildSetsService(stubs);
 
       await sets.addSet(USER, 'session-1', setInput);
@@ -434,10 +440,50 @@ describe('WorkoutsService', () => {
     });
   });
 
+  describe('addSet — ne lit que ce qu’il vérifie', () => {
+    it('ne relit ni la séance entière ni la série qu’il vient d’écrire', async () => {
+      const stubs = buildStubs();
+      stubs.createSet.mockResolvedValue(setRow({ reps: 12 }));
+      const sets = buildSetsService(stubs);
+
+      const set = await sets.addSet(USER, 'session-1', { ...setInput, reps: 12 });
+
+      // La ligne rendue par l'insertion, telle quelle.
+      expect(set).toMatchObject({ id: 'set-1', reps: 12 });
+      expect(stubs.findSessionOwner).toHaveBeenCalledWith('session-1');
+      expect(stubs.findSessionById).not.toHaveBeenCalled();
+      expect(stubs.findSetById).not.toHaveBeenCalled();
+      expect(stubs.findSetRow).toHaveBeenCalledTimes(1);
+    });
+
+    it('la séance d’autrui, ou disparue, reste un 404 sans rien écrire', async () => {
+      const stubs = buildStubs();
+      const sets = buildSetsService(stubs);
+
+      stubs.findSessionOwner.mockResolvedValueOnce({ id: 'session-1', userId: OTHER_USER });
+      await expect(sets.addSet(USER, 'session-1', setInput)).rejects.toThrow(NotFoundException);
+      stubs.findSessionOwner.mockResolvedValueOnce(null);
+      await expect(sets.addSet(USER, 'session-1', setInput)).rejects.toThrow(NotFoundException);
+
+      expect(stubs.createSet).not.toHaveBeenCalled();
+    });
+
+    it('course entre deux rejeux : sert la ligne gagnante, relue une fois', async () => {
+      const stubs = buildStubs();
+      stubs.createSet.mockResolvedValue(null);
+      stubs.findSetRow.mockResolvedValueOnce(null).mockResolvedValue(setRow({ reps: 9 }));
+      const sets = buildSetsService(stubs);
+
+      const set = await sets.addSet(USER, 'session-1', setInput);
+
+      expect(set).toMatchObject({ id: 'set-1', reps: 9 });
+    });
+  });
+
   describe('addSet (upsert idempotent)', () => {
     it('rejouer l’ajout d’une série renvoie la série existante', async () => {
       const stubs = buildStubs();
-      stubs.findSetById.mockResolvedValue(setRow());
+      stubs.findSetRow.mockResolvedValue(setRow());
       const sets = buildSetsService(stubs);
 
       const set = await sets.addSet(USER, 'session-1', setInput);
@@ -448,7 +494,7 @@ describe('WorkoutsService', () => {
 
     it('un id de série déjà pris par une autre séance est un conflit', async () => {
       const stubs = buildStubs();
-      stubs.findSetById.mockResolvedValue(setRow({ sessionId: 'autre-session' }));
+      stubs.findSetRow.mockResolvedValue(setRow({ sessionId: 'autre-session' }));
       const sets = buildSetsService(stubs);
 
       await expect(sets.addSet(USER, 'session-1', setInput)).rejects.toThrow(ConflictException);
@@ -460,7 +506,7 @@ describe('WorkoutsService', () => {
       // mort : le plan revenait dans l'état exact que la suppression venait
       // de défaire, et la prévision restait « faite » pour toujours.
       const stubs = buildStubs();
-      stubs.findSetById.mockResolvedValue(setRow({ deletedAt: new Date() }));
+      stubs.findSetRow.mockResolvedValue(setRow({ deletedAt: new Date() }));
       const sets = buildSetsService(stubs);
 
       await expect(sets.addSet(USER, 'session-1', setInput)).rejects.toThrow(ConflictException);
@@ -470,9 +516,6 @@ describe('WorkoutsService', () => {
 
     it('le nom d’exercice est résolu depuis le catalogue quand exerciseId est connu', async () => {
       const stubs = buildStubs();
-      stubs.findSetById
-        .mockResolvedValueOnce(null) // pré-vérification
-        .mockResolvedValue(setRow()); // relecture après création
       const sets = buildSetsService(stubs);
 
       await sets.addSet(USER, 'session-1', setInput);
@@ -484,7 +527,6 @@ describe('WorkoutsService', () => {
 
     it('enregistre la cible affichée à côté de ce qui a été RÉELLEMENT fait', async () => {
       const stubs = buildStubs();
-      stubs.findSetById.mockResolvedValueOnce(null).mockResolvedValue(setRow());
       const sets = buildSetsService(stubs);
 
       // Déviation assumée : 7 reps faites pour 8 prévues — jamais une erreur.
@@ -535,6 +577,16 @@ describe('WorkoutsService', () => {
       const sets = buildSetsService(stubs);
 
       await expect(sets.deleteSet(USER, 'set-1')).rejects.toThrow(NotFoundException);
+    });
+
+    it('supprime en nommant la séance de la série : elle borne la libération du plan', async () => {
+      const stubs = buildStubs();
+      stubs.findSetById.mockResolvedValue(setRow({ sessionId: 'session-9' }));
+      const sets = buildSetsService(stubs);
+
+      await sets.deleteSet(USER, 'set-1');
+
+      expect(stubs.softDeleteSet).toHaveBeenCalledWith('set-1', 'session-9');
     });
   });
 

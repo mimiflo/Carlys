@@ -389,6 +389,54 @@ describe('Séances (e2e)', () => {
       .expect(404);
   });
 
+  it('supprimer une série rend SA prévision, sans sortir de sa séance', async () => {
+    const exercise = await ensureExerciseFixture(prisma, 'e2e-workouts-plan');
+    const [session, voisine] = [randomUUID(), randomUUID()];
+    const [prevision, previsionVoisine, serie] = [randomUUID(), randomUUID(), randomUUID()];
+    const planned = (id: string, itemId: string) => ({
+      id,
+      startedAt: '2026-08-08T16:00:00.000Z',
+      plan: [{ id: itemId, exercisePosition: 0, exerciseName: 'Tirage', setPosition: 0 }],
+    });
+    await authed(accessToken)
+      .post('/api/v1/workout-sessions')
+      .send(planned(session, prevision))
+      .expect(201);
+    await authed(accessToken)
+      .post('/api/v1/workout-sessions')
+      .send(planned(voisine, previsionVoisine))
+      .expect(201);
+    await authed(accessToken)
+      .post(`/api/v1/workout-sessions/${session}/sets`)
+      .send({
+        id: serie,
+        exerciseId: exercise.id,
+        position: 0,
+        reps: 8,
+        planItemId: prevision,
+        completedAt: '2026-08-08T16:05:00.000Z',
+      })
+      .expect(201);
+    // Une prévision d'une AUTRE séance qui citerait la même série : l'API ne
+    // l'écrit jamais (l'appariement se fait sous `sessionId`), mais c'est ce
+    // qui montre que la libération est bornée à la séance de la série — la
+    // borne qui permet à l'index `sessionId` de servir la requête au lieu d'un
+    // balayage des prévisions de tous les comptes.
+    await prisma.workoutSessionPlanItem.update({
+      where: { id: previsionVoisine },
+      data: { doneSetId: serie },
+    });
+
+    await authed(accessToken).delete(`/api/v1/workout-sets/${serie}`).expect(204);
+
+    const [rendue, intacte] = await Promise.all([
+      prisma.workoutSessionPlanItem.findUniqueOrThrow({ where: { id: prevision } }),
+      prisma.workoutSessionPlanItem.findUniqueOrThrow({ where: { id: previsionVoisine } }),
+    ]);
+    expect(rendue.doneSetId).toBeNull();
+    expect(intacte.doneSetId).toBe(serie);
+  });
+
   it('une séance dont le modèle est inconnu arrive QUAND MÊME, nom client conservé', async () => {
     const orphanId = randomUUID();
     const created = await authed(accessToken)

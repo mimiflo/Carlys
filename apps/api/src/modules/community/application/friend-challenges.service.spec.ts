@@ -1,5 +1,5 @@
 import { type CreateFriendChallengeRequest } from '@carlys/api-contracts';
-import { NotFoundException } from '@nestjs/common';
+import { ConflictException, ForbiddenException, NotFoundException } from '@nestjs/common';
 import { type CommunityModerationRepository } from '../infrastructure/community-moderation.repository';
 import { type CommunityRepository } from '../infrastructure/community.repository';
 import {
@@ -63,8 +63,7 @@ function build(
   borisStatus: MemberStatus = 'INVITED',
 ) {
   const challenges = {
-    create: jest.fn().mockResolvedValue(created),
-    countOpenCreatedBy: jest.fn().mockResolvedValue(0),
+    createWithinLimit: jest.fn().mockResolvedValue(created ? 'CREATED' : 'REPLAY'),
     findById: jest.fn().mockResolvedValue(stored(message, borisStatus)),
     listMine: jest.fn().mockResolvedValue([stored(message, borisStatus)]),
     setMemberStatus: jest.fn().mockResolvedValue(undefined),
@@ -83,7 +82,14 @@ function build(
     moderation as unknown as CommunityModerationRepository,
     notifier as unknown as CommunityNotifier,
   );
-  return { service, challenges, moderation, notifier };
+  return { service, challenges, community, moderation, notifier };
+}
+
+/** Création NEUVE : l'identifiant n'existe pas encore, puis se relit. */
+function buildForCreate(created: boolean, message: string | null) {
+  const built = build(created, message);
+  built.challenges.findById.mockResolvedValueOnce(null);
+  return built;
 }
 
 const request = (message?: string | null): CreateFriendChallengeRequest => ({
@@ -98,13 +104,14 @@ const request = (message?: string | null): CreateFriendChallengeRequest => ({
 
 describe('FriendChallengesService.create — le mot du créateur', () => {
   it('écrit le message découpé des blancs autour', async () => {
-    const { service, challenges } = build(true, 'On y va ?');
+    const { service, challenges } = buildForCreate(true, 'On y va ?');
 
     await service.create(CHLOE, request('  On y va ?  '));
 
-    expect(challenges.create).toHaveBeenCalledWith(
+    expect(challenges.createWithinLimit).toHaveBeenCalledWith(
       expect.objectContaining({ message: 'On y va ?' }),
       [BORIS],
+      5,
     );
   });
 
@@ -114,18 +121,20 @@ describe('FriendChallengesService.create — le mot du créateur', () => {
     ['vide', ''],
     ['blanc', '   '],
   ])('un message %s s’écrit NULL', async (_label, message) => {
-    const { service, challenges } = build(true, null);
+    const { service, challenges } = buildForCreate(true, null);
 
     const presented = await service.create(CHLOE, request(message));
 
-    expect(challenges.create).toHaveBeenCalledWith(expect.objectContaining({ message: null }), [
-      BORIS,
-    ]);
+    expect(challenges.createWithinLimit).toHaveBeenCalledWith(
+      expect.objectContaining({ message: null }),
+      [BORIS],
+      5,
+    );
     expect(presented.message).toBeNull();
   });
 
   it('la notification d’invitation porte le titre, JAMAIS le message', async () => {
-    const { service, notifier } = build(true, 'Texte privé du défi');
+    const { service, notifier } = buildForCreate(true, 'Texte privé du défi');
 
     await service.create(CHLOE, request('Texte privé du défi'));
 
@@ -140,9 +149,19 @@ describe('FriendChallengesService.create — le mot du créateur', () => {
   });
 
   it('un rejeu rend le défi TEL QU’IL EST en base, sans réinviter', async () => {
-    // Le dépôt refuse la seconde création (même id) : le message déjà écrit
-    // reste celui qui est rendu, pas celui du rejeu.
-    const { service, notifier } = build(false, 'Le premier mot');
+    // L'identifiant existe déjà : le message déjà écrit reste celui qui est
+    // rendu, pas celui du rejeu.
+    const { service, challenges, notifier } = build(false, 'Le premier mot');
+
+    const presented = await service.create(CHLOE, request('Un autre mot'));
+
+    expect(presented.message).toBe('Le premier mot');
+    expect(challenges.createWithinLimit).not.toHaveBeenCalled();
+    expect(notifier.challengeInvite).not.toHaveBeenCalled();
+  });
+
+  it('un rejeu concurrent (le dépôt voit l’identifiant pris) ne réinvite pas non plus', async () => {
+    const { service, notifier } = buildForCreate(false, 'Le premier mot');
 
     const presented = await service.create(CHLOE, request('Un autre mot'));
 
@@ -150,8 +169,37 @@ describe('FriendChallengesService.create — le mot du créateur', () => {
     expect(notifier.challengeInvite).not.toHaveBeenCalled();
   });
 
+  it('un rejeu passe AVANT les gardes : ni amitié ni plafond ne sont relus', async () => {
+    // Le cas qui rendait 403 : la création a réussi, elle a rempli le
+    // plafond (ou l'ami est parti depuis), et le client la rejoue.
+    const { service, challenges, community } = build(false, 'Le premier mot');
+    community.findFriendshipBetween.mockResolvedValue(null);
+
+    await expect(service.create(CHLOE, request('Le premier mot'))).resolves.toMatchObject({
+      id: 'defi-1',
+    });
+    expect(community.findFriendshipBetween).not.toHaveBeenCalled();
+    expect(challenges.createWithinLimit).not.toHaveBeenCalled();
+  });
+
+  it('l’identifiant d’un défi créé par QUELQU’UN D’AUTRE : 409', async () => {
+    const { service } = build(false, 'Le premier mot');
+
+    await expect(service.create(BORIS, { ...request(), invitedUserIds: [CHLOE] })).rejects.toThrow(
+      ConflictException,
+    );
+  });
+
+  it('plafond atteint (compté sous verrou par le dépôt) : 403, personne n’est notifié', async () => {
+    const { service, challenges, notifier } = buildForCreate(true, null);
+    challenges.createWithinLimit.mockResolvedValue('LIMIT');
+
+    await expect(service.create(CHLOE, request())).rejects.toThrow(ForbiddenException);
+    expect(notifier.challengeInvite).not.toHaveBeenCalled();
+  });
+
   it('la réponse porte l’heure de création, la durée et le créateur marqué', async () => {
-    const { service } = build(true, 'On y va ?');
+    const { service } = buildForCreate(true, 'On y va ?');
 
     const presented = await service.create(CHLOE, request('On y va ?'));
 

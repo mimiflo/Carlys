@@ -5,6 +5,7 @@ import {
   type FriendChallengeMember,
   Prisma,
 } from '@prisma/client';
+import { lockNamed } from '../../../database/prisma/advisory-lock';
 import { PrismaService } from '../../../database/prisma/prisma.service';
 
 /** Un défi, ses membres, et le nom d'affichage de chacun. */
@@ -27,18 +28,37 @@ export class FriendChallengesRepository {
   constructor(private readonly prisma: PrismaService) {}
 
   /**
-   * Crée le défi ET ses membres dans UNE transaction.
+   * Crée le défi ET ses membres dans UNE transaction, si le créateur a
+   * encore de la place sous `maxOpen` défis ouverts.
    *
-   * Rend `false` si l'identifiant existait déjà : c'est un REJEU, pas une
-   * erreur — l'identifiant vient de l'appareil, et une création rejouée
-   * après une coupure doit retrouver le défi, pas en poser un second.
+   * Le décompte et l'écriture se font sous un verrou par créateur : sans lui,
+   * quinze créations parallèles lisaient toutes « 0 défi ouvert » avant
+   * qu'aucune n'écrive, et onze passaient pour un plafond de cinq — onze
+   * notifications par invité, alors que le plafond borne justement ce
+   * canal-là.
+   *
+   * `REPLAY` : l'identifiant existait déjà (création rejouée en même temps
+   * que l'originale) — ce n'est pas une erreur, l'identifiant vient de
+   * l'appareil. `LIMIT` : plafond atteint, rien n'est écrit.
    */
-  async create(
-    challenge: Prisma.FriendChallengeUncheckedCreateInput,
+  async createWithinLimit(
+    challenge: Prisma.FriendChallengeUncheckedCreateInput & { startsAt: Date },
     invitedUserIds: string[],
-  ): Promise<boolean> {
+    maxOpen: number,
+  ): Promise<'CREATED' | 'REPLAY' | 'LIMIT'> {
     try {
-      await this.prisma.$transaction(async (tx) => {
+      return await this.prisma.$transaction(async (tx) => {
+        await lockNamed(tx, `friend-challenge-create:${challenge.creatorId}`);
+        const ouverts = await tx.friendChallenge.count({
+          where: {
+            creatorId: challenge.creatorId,
+            status: 'OPEN',
+            endsAt: { gte: challenge.startsAt },
+          },
+        });
+        if (ouverts >= maxOpen) {
+          return 'LIMIT';
+        }
         await tx.friendChallenge.create({ data: challenge });
         await tx.friendChallengeMember.createMany({
           data: [
@@ -58,11 +78,11 @@ export class FriendChallengesRepository {
             })),
           ],
         });
+        return 'CREATED';
       });
-      return true;
     } catch (error) {
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-        return false;
+        return 'REPLAY';
       }
       throw error;
     }
@@ -81,21 +101,41 @@ export class FriendChallengesRepository {
    *
    * Les refusés et les quittés en sortent : ce sont des décisions prises,
    * pas des choses à revoir.
+   *
+   * DEUX LECTURES BORNÉES, les défis EN COURS d'abord (fin la plus proche en
+   * tête), puis les plus récents des TERMINÉS. La clôture ne change pas le
+   * statut d'un membre, donc l'historique s'accumule : une lecture unique,
+   * triée par fin croissante et coupée à 50, servait les 50 défis les plus
+   * ANCIENS dès le cinquante et unième. Mesuré sur un compte à 123 défis :
+   * 50 servis, tous terminés, et les 4 en cours (invitations comprises)
+   * absents de l'écran.
+   *
+   * Un défi échu mais pas encore réglé tombe dans les terminés : c'est la
+   * lecture qui le règle (`settleIfDue`).
    */
-  listMine(userId: string, limit: number): Promise<FriendChallengeWithMembers[]> {
-    return this.prisma.friendChallenge.findMany({
-      where: { members: { some: { userId, status: { in: ['INVITED', 'ACCEPTED'] } } } },
-      include: AVEC_MEMBRES,
-      orderBy: [{ endsAt: 'asc' }, { id: 'asc' }],
-      take: limit,
-    });
-  }
-
-  /** Défis OUVERTS déjà créés par cette personne — sert le plafond. */
-  countOpenCreatedBy(userId: string, now: Date): Promise<number> {
-    return this.prisma.friendChallenge.count({
-      where: { creatorId: userId, status: 'OPEN', endsAt: { gte: now } },
-    });
+  async listMine(
+    userId: string,
+    now: Date,
+    limits: { ongoing: number; finished: number },
+  ): Promise<FriendChallengeWithMembers[]> {
+    const membre: Prisma.FriendChallengeWhereInput = {
+      members: { some: { userId, status: { in: ['INVITED', 'ACCEPTED'] } } },
+    };
+    const [enCours, termines] = await Promise.all([
+      this.prisma.friendChallenge.findMany({
+        where: { ...membre, endsAt: { gte: now } },
+        include: AVEC_MEMBRES,
+        orderBy: [{ endsAt: 'asc' }, { id: 'asc' }],
+        take: limits.ongoing,
+      }),
+      this.prisma.friendChallenge.findMany({
+        where: { ...membre, endsAt: { lt: now } },
+        include: AVEC_MEMBRES,
+        orderBy: [{ endsAt: 'desc' }, { id: 'desc' }],
+        take: limits.finished,
+      }),
+    ]);
+    return [...enCours, ...termines];
   }
 
   /** Change l'état d'un membre. Rend `false` si la ligne n'existe pas. */
@@ -116,9 +156,23 @@ export class FriendChallengesRepository {
    * `amount` sur tous les défis entre amis ACCEPTÉS, ouverts, de cette
    * métrique, dont la fenêtre couvre `at`.
    *
-   * Même forme que la contribution collective, et c'est voulu : un seul
-   * chemin d'écriture pour les deux familles de défis, sinon les deux
-   * compteurs dérivent.
+   * Ce qui est partagé avec les défis collectifs, c'est l'APPELANT : un
+   * seul, `CommunityChallengesService.verser`, écrit les trois compteurs
+   * ensemble, et c'est lui qui les empêche de dériver.
+   *
+   * La RÈGLE est celle de la contribution collective
+   * (`CommunityChallengesRepository.contribute`) : un membre encore dans le
+   * défi, la bonne métrique, une fenêtre qui couvre `at`. S'y ajoutent deux
+   * filtres propres aux défis entre amis : l'appartenance ACCEPTÉE (une
+   * invitation ne compte pas) et le défi OUVERT (un défi réglé est figé).
+   * Ces filtres, un par défi témoin, sont épinglés par l'e2e « une
+   * contribution ne va QU'aux défis acceptés… » de
+   * `test/friend-challenges.e2e-spec.ts`.
+   *
+   * La FORME, elle, diffère exprès : du SQL écrit à la main là où le
+   * collectif garde un `updateMany`, pour la raison donnée dans le corps.
+   * Ne pas « réaligner » l'une sur l'autre : `friend-challenges.repository
+   * .spec.ts` garde cette forme, qui décide du coût.
    */
   async contribute(
     userId: string,
@@ -130,14 +184,34 @@ export class FriendChallengesRepository {
     if (amount <= 0) {
       return;
     }
-    await client.friendChallengeMember.updateMany({
-      where: {
-        userId,
-        status: 'ACCEPTED',
-        challenge: { metric, status: 'OPEN', startsAt: { lte: at }, endsAt: { gte: at } },
-      },
-      data: { contribution: { increment: amount } },
-    });
+    // En SQL, pour choisir le point de départ : les APPARTENANCES de cette
+    // personne (index `userId, status`), puis, pour chacune, son défi par sa
+    // clé. L'`updateMany` de Prisma rendait une semi-jointure que PostgreSQL
+    // attaquait par l'autre bout, `FriendChallenge(status, endsAt)` : TOUS
+    // les défis ouverts de TOUS les comptes (estimés 10, trouvés 999 —
+    // statut et fin sont corrélés), une sonde de membre pour chacun. 8 ms
+    // et 3 890 tampons, à chaque séance close et chaque bonne réponse de
+    // quiz, pour un coût qui suivait la communauté et non la personne.
+    // L'`OFFSET 0` interdit au planificateur de remettre la semi-jointure à
+    // plat : 1,2 ms et 512 tampons, bornés par l'historique de la personne.
+    // Les bornes sont des `timestamp` SANS fuseau, écrits en UTC par Prisma :
+    // l'instant lié arrive en `timestamptz`, d'où le `AT TIME ZONE 'UTC'`,
+    // sans lequel la comparaison dépendrait du fuseau de la session.
+    await client.$executeRaw`
+      UPDATE "FriendChallengeMember" m
+      SET "contribution" = m."contribution" + ${amount}::int
+      WHERE m."userId" = ${userId}::uuid
+        AND m."status" = 'ACCEPTED'
+        AND EXISTS (
+          SELECT 1 FROM "FriendChallenge" c
+          WHERE c."id" = m."challengeId"
+            AND c."metric" = ${metric}::"ChallengeMetric"
+            AND c."status" = 'OPEN'
+            AND c."startsAt" <= (${at}::timestamptz AT TIME ZONE 'UTC')
+            AND c."endsAt" >= (${at}::timestamptz AT TIME ZONE 'UTC')
+          OFFSET 0
+        )
+    `;
   }
 
   /**

@@ -18,6 +18,7 @@ const REPONSE = {
   lessonId: 'lecon-dos',
   answeredOn: '2026-08-11',
   at: new Date('2026-08-11T09:00:00Z'),
+  creditedPerDay: 3,
 };
 
 function p2002(): Prisma.PrismaClientKnownRequestError {
@@ -36,7 +37,9 @@ interface Banc {
   horsTransaction: () => number;
 }
 
-function banc(options: { createRejette?: Error; updateRejette?: Error } = {}): Banc {
+function banc(
+  options: { createRejette?: Error; updateRejette?: Error; justesDuJour?: number } = {},
+): Banc {
   let dansTransaction = false;
   let horsTransaction = 0;
 
@@ -51,7 +54,12 @@ function banc(options: { createRejette?: Error; updateRejette?: Error } = {}): B
   const create = compter(options.createRejette);
   const updateMany = compter(options.updateRejette);
 
-  const modeles = { quizAnswer: { create }, challengeParticipation: { updateMany } };
+  const modeles = {
+    quizAnswer: { create, count: jest.fn(() => Promise.resolve(options.justesDuJour ?? 1)) },
+    challengeParticipation: { updateMany },
+    // Le verrou par compte : sans effet dans ce banc, qui n'a qu'un appelant.
+    $executeRaw: jest.fn(() => Promise.resolve(0)),
+  };
   const prisma = {
     ...modeles,
     // Le rejet REMONTE après avoir quitté la transaction : c'est ce qui
@@ -125,6 +133,16 @@ describe('CommunityChallengesRepository.recordQuizAnswer', () => {
     await expect(b.repository.recordQuizAnswer({ ...REPONSE, correct: true })).rejects.toThrow(
       'base indisponible',
     );
+  });
+
+  it('au-delà du plafond du jour, la réponse juste s’écrit mais ne rapporte plus', async () => {
+    const b = banc({ justesDuJour: 4 });
+
+    const cree = await b.repository.recordQuizAnswer({ ...REPONSE, correct: true });
+
+    expect(cree).toBe(true);
+    expect(b.create).toHaveBeenCalledTimes(1);
+    expect(b.updateMany).not.toHaveBeenCalled();
   });
 });
 

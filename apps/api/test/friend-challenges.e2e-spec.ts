@@ -19,6 +19,7 @@ import request from 'supertest';
 import { type App } from 'supertest/types';
 import { AppModule } from '../src/app/app.module';
 import { configureApp } from '../src/app/configure-app';
+import { FriendChallengesRepository } from '../src/modules/community/infrastructure/friend-challenges.repository';
 
 /**
  * DÉFIS ENTRE AMIS : individuels, invités un par un, clos tout seuls.
@@ -128,9 +129,11 @@ describe('Défis entre amis (e2e)', () => {
     // Boris accepte, puis court 3 km.
     await as(tokenB).post(`/api/v1/community/friend-challenges/${challengeId}/accept`).expect(201);
     const sessionId = randomUUID();
+    // Commencée il y a une heure : la distance créditée est bornée par le
+    // créneau de la séance (`creditedEffort`).
     await as(tokenB)
       .post('/api/v1/workout-sessions')
-      .send({ id: sessionId, startedAt: new Date().toISOString() })
+      .send({ id: sessionId, startedAt: new Date(Date.now() - 3_600_000).toISOString() })
       .expect(201);
     await as(tokenB)
       .post(`/api/v1/workout-sessions/${sessionId}/sets`)
@@ -233,6 +236,139 @@ describe('Défis entre amis (e2e)', () => {
     // Le plafond est rendu à l'épreuve suivante : il compte les défis
     // OUVERTS, et ceux-ci n'ont plus de raison de l'être.
     await prisma.friendChallenge.deleteMany({ where: { id: { in: crees } } });
+  });
+
+  it('au-delà de 50 défis terminés, ceux EN COURS restent servis, en tête', async () => {
+    // La clôture ne change pas le statut d'un membre : l'historique
+    // s'accumule, un défi par semaine en fait 50 en un an. La liste, triée
+    // par fin croissante puis coupée à 50, servait alors les 50 plus ANCIENS
+    // — tous terminés — et l'invitation en cours disparaissait de l'écran.
+    // Chloé porte l'historique : elle n'est l'amie de personne, les défis
+    // sont donc écrits en base, comme leur clôture.
+    const jour = 24 * 3_600_000;
+    const termines = Array.from({ length: 55 }, (_, index) => ({
+      id: randomUUID(),
+      endsAt: new Date(Date.now() - (400 - index * 7) * jour),
+    }));
+    const invitation = randomUUID();
+    try {
+      await prisma.friendChallenge.createMany({
+        data: [
+          ...termines.map(({ id, endsAt }) => ({
+            id,
+            creatorId: userIdC,
+            title: 'Ancien défi',
+            metric: 'WORKOUTS' as const,
+            durationDays: 7,
+            startsAt: new Date(endsAt.getTime() - 7 * jour),
+            endsAt,
+            status: 'CLOSED' as const,
+            closedAt: endsAt,
+          })),
+          {
+            id: invitation,
+            creatorId: userIdA,
+            title: 'Invitation en cours',
+            metric: 'WORKOUTS' as const,
+            durationDays: 7,
+            startsAt: new Date(Date.now() - jour),
+            endsAt: new Date(Date.now() + 6 * jour),
+          },
+        ],
+      });
+      await prisma.friendChallengeMember.createMany({
+        data: [
+          ...termines.map(({ id }) => ({
+            challengeId: id,
+            userId: userIdC,
+            invitedById: userIdC,
+            status: 'ACCEPTED' as const,
+            finalRank: 1,
+          })),
+          { challengeId: invitation, userId: userIdA, invitedById: userIdA, status: 'ACCEPTED' },
+          { challengeId: invitation, userId: userIdC, invitedById: userIdA },
+        ],
+      });
+
+      const liste = data<FriendChallenge[]>(
+        (await as(tokenC).get('/api/v1/community/friend-challenges').expect(200)).body,
+      );
+
+      // L'invitation d'abord, puis les dix terminés les plus RÉCENTS.
+      expect(liste.map((defi) => defi.id)).toEqual([
+        invitation,
+        ...termines
+          .slice(-10)
+          .reverse()
+          .map(({ id }) => id),
+      ]);
+    } finally {
+      await prisma.friendChallenge.deleteMany({
+        where: { id: { in: [invitation, ...termines.map(({ id }) => id)] } },
+      });
+    }
+  });
+
+  it('une contribution ne va QU’aux défis acceptés, ouverts, de sa métrique, en cours', async () => {
+    // La contribution est écrite en SQL (elle part des appartenances de la
+    // personne, pas des défis ouverts de toute la base) : chacun de ses
+    // filtres se vérifie ici, un défi témoin par filtre.
+    const jour = 24 * 3_600_000;
+    const maintenant = new Date();
+    const defi = (id: string, sur: Record<string, unknown> = {}) => ({
+      id,
+      creatorId: userIdC,
+      title: 'Témoin',
+      metric: 'DISTANCE_METERS' as const,
+      durationDays: 7,
+      startsAt: new Date(maintenant.getTime() - jour),
+      endsAt: new Date(maintenant.getTime() + 6 * jour),
+      ...sur,
+    });
+    const ids = {
+      compte: randomUUID(),
+      autreMetrique: randomUUID(),
+      clos: randomUUID(),
+      aVenir: randomUUID(),
+      echu: randomUUID(),
+      invitee: randomUUID(),
+    };
+    try {
+      await prisma.friendChallenge.createMany({
+        data: [
+          defi(ids.compte),
+          defi(ids.autreMetrique, { metric: 'WORKOUTS' }),
+          defi(ids.clos, { status: 'CLOSED', closedAt: maintenant }),
+          defi(ids.aVenir, { startsAt: new Date(maintenant.getTime() + jour) }),
+          defi(ids.echu, { endsAt: new Date(maintenant.getTime() - 1_000) }),
+          defi(ids.invitee),
+        ],
+      });
+      await prisma.friendChallengeMember.createMany({
+        data: Object.values(ids).map((challengeId) => ({
+          challengeId,
+          userId: userIdC,
+          invitedById: userIdC,
+          status: challengeId === ids.invitee ? ('INVITED' as const) : ('ACCEPTED' as const),
+        })),
+      });
+
+      await app
+        .get(FriendChallengesRepository)
+        .contribute(userIdC, 'DISTANCE_METERS', 1_200, maintenant);
+
+      const membres = await prisma.friendChallengeMember.findMany({
+        where: { userId: userIdC, challengeId: { in: Object.values(ids) } },
+      });
+      const contribution = (id: string) =>
+        membres.find((membre) => membre.challengeId === id)?.contribution;
+      expect(contribution(ids.compte)).toBe(1_200);
+      for (const temoin of [ids.autreMetrique, ids.clos, ids.aVenir, ids.echu, ids.invitee]) {
+        expect(contribution(temoin)).toBe(0);
+      }
+    } finally {
+      await prisma.friendChallenge.deleteMany({ where: { id: { in: Object.values(ids) } } });
+    }
   });
 
   it('le défi des autres est INTROUVABLE, pas interdit', async () => {

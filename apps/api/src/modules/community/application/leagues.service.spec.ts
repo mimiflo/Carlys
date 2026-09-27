@@ -19,7 +19,7 @@ const ME = 'utilisateur-moi';
 const COHORT = 3;
 
 /** Une ligne de classement telle que le dépôt la rend, nom compris. */
-const membre = (userId: string, score: number): LeagueMemberWithName => ({
+const membre = (userId: string, score: number, joinsLeague = true): LeagueMemberWithName => ({
   userId,
   periodKey: '2026-W39',
   division: 'OR',
@@ -29,7 +29,7 @@ const membre = (userId: string, score: number): LeagueMemberWithName => ({
   nextDivision: null,
   settledAt: null,
   createdAt: new Date('2026-09-21T08:00:00Z'),
-  user: { profile: { displayName: userId } },
+  user: { profile: { displayName: userId }, communityPreference: { joinsLeague } },
 });
 
 function buildService(options: {
@@ -59,6 +59,10 @@ function buildService(options: {
     divisionToOpen: jest.fn().mockResolvedValue(options.division ?? 'OR'),
     placeInPeriod: jest.fn().mockResolvedValue(COHORT),
     standings: jest.fn().mockResolvedValue(options.standings ?? []),
+    // Le règlement lit les SCORES seuls ; mêmes lignes que le classement.
+    groupScores: jest
+      .fn()
+      .mockResolvedValue((options.standings ?? []).map(({ userId, score }) => ({ userId, score }))),
     membership: jest.fn((_userId: string, periodKey: string) =>
       Promise.resolve(enBase.get(periodKey) ?? null),
     ),
@@ -151,8 +155,21 @@ describe('LeaguesService — le classement est celui de MON groupe', () => {
 
     await service.read(ME);
 
-    expect(repository.standings).toHaveBeenCalledWith('2026-W30', 'OR', 7);
+    expect(repository.groupScores).toHaveBeenCalledWith('2026-W30', 'OR', 7);
     expect(repository.settle).toHaveBeenCalledWith('2026-W30', expect.any(Array));
+  });
+
+  it('règle sans lire un seul nom : les scores du groupe suffisent', async () => {
+    // `standings` joint compte, profil et préférence de ligue pour
+    // l'affichage : trois requêtes de plus à CHAQUE semaine échue, qu'un
+    // revenant de 26 semaines payait 26 fois pour ne rien montrer.
+    const echue: LeagueMembership = { ...membre(ME, 90), periodKey: '2026-W30', cohort: 7 };
+    const { service, repository } = buildService({ joined: true, unsettled: [echue] });
+
+    await service.read(ME);
+
+    expect(repository.standings).not.toHaveBeenCalledWith('2026-W30', expect.anything(), 7);
+    expect(repository.standings).toHaveBeenCalledTimes(1); // le classement SERVI, seul
   });
 
   it('règle chaque semaine échue sur sa ligne RELUE, que le règlement d’avant a pu déplacer', async () => {
@@ -181,9 +198,9 @@ describe('LeaguesService — le classement est celui de MON groupe', () => {
 
     await service.read(ME);
 
-    expect(repository.standings).toHaveBeenCalledWith('2026-W30', 'ARGENT', 4);
-    expect(repository.standings).toHaveBeenCalledWith('2026-W31', 'OR', 9);
-    expect(repository.standings).not.toHaveBeenCalledWith('2026-W31', 'ARGENT', 5);
+    expect(repository.groupScores).toHaveBeenCalledWith('2026-W30', 'ARGENT', 4);
+    expect(repository.groupScores).toHaveBeenCalledWith('2026-W31', 'OR', 9);
+    expect(repository.groupScores).not.toHaveBeenCalledWith('2026-W31', 'ARGENT', 5);
   });
 
   it('ne règle pas une semaine échue qu’un autre lecteur a réglée entre-temps', async () => {
@@ -268,5 +285,38 @@ describe('LeaguesService — le résultat de la semaine passée, pour chacun', (
     const { service } = buildService({ joined: true, lastWeek: null });
 
     expect((await service.read(ME)).lastResult).toBeNull();
+  });
+});
+
+describe('LeaguesService — une personne partie n’y montre plus son nom', () => {
+  it('la tait aux autres, sans décaler les rangs ni la zone, ni fausser le règlement', async () => {
+    const { service, repository } = buildService({
+      joined: true,
+      standings: [membre('partie', 900, false), membre(ME, 500), membre('autre', 100)],
+    });
+
+    const ligue = await service.read(ME);
+
+    expect(ligue.standings.map((ligne) => ligne.userId)).toEqual([ME, 'autre']);
+    // Les rangs se calculent sur le groupe ENTIER : la partie reste 1re en
+    // base, personne ne monte d'un cran en la taisant.
+    expect(ligue.standings.find((ligne) => ligne.isMe)?.rank).toBe(2);
+    // Le règlement lit le même dépôt, sans filtre : la ligne reste comptée.
+    expect(repository.standings).toHaveBeenCalledWith(ligue.periodKey, 'OR', COHORT);
+  });
+
+  it('une préférence absente vaut « pas dans la ligue »', async () => {
+    const sansPreference: LeagueMemberWithName = {
+      ...membre('inconnu', 300),
+      user: { profile: { displayName: 'inconnu' }, communityPreference: null },
+    };
+    const { service } = buildService({
+      joined: true,
+      standings: [membre(ME, 500), sansPreference],
+    });
+
+    const ligue = await service.read(ME);
+
+    expect(ligue.standings.map((ligne) => ligne.userId)).toEqual([ME]);
   });
 });

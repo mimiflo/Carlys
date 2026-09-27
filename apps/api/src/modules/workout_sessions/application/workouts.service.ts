@@ -1,12 +1,16 @@
-import { type WorkoutSessionDetail, type WorkoutSessionSummary } from '@carlys/api-contracts';
+import {
+  WORKOUT_LIMITS,
+  type WorkoutSessionDetail,
+  type WorkoutSessionSummary,
+} from '@carlys/api-contracts';
 import { ConflictException, Injectable } from '@nestjs/common';
 import { type Prisma, WorkoutSessionStatus, WorkoutSetKind } from '@prisma/client';
-import { type SessionEffort } from '../../community/application/community-challenges.service';
 import { CommunityService } from '../../community/application/community.service';
 import { ProgramsRepository } from '../../programs/infrastructure/programs.repository';
 import { ProgressService } from '../../progress/application/progress.service';
 import { WorkoutTemplatesService } from '../../workout_templates/application/workout-templates.service';
 import { type SessionWithSets, WorkoutsRepository } from '../infrastructure/workouts.repository';
+import { creditedSessionEffort } from './session-effort';
 import { ownedSession } from './workout-ownership';
 import { presentSessionDetail, presentSessionSummary } from './workout.presenter';
 
@@ -46,28 +50,6 @@ export interface CreateSessionInput {
 }
 
 type PlanItemRow = Prisma.WorkoutSessionPlanItemUncheckedCreateInput;
-
-/**
- * Ce qu'une séance a coûté en TEMPS et en DISTANCE, d'après ses séries.
- *
- * Fonction pure, et volontairement ailleurs que dans la durée de la séance :
- * `durationSeconds` mesure du début à la fin, pauses et rangement compris,
- * alors que ces secondes-ci sont celles qu'on a réellement chronométrées
- * série par série. Un défi qui compte des secondes d'effort ne doit pas
- * créditer le temps passé à discuter entre deux séries.
- *
- * Les séries sans chrono ni distance — la fonte, l'immense majorité —
- * apportent zéro, ce qui est exact.
- */
-function sessionEffort(sets: SessionWithSets['sets']): SessionEffort {
-  return sets.reduce(
-    (total, set) => ({
-      activeSeconds: total.activeSeconds + (set.durationSeconds ?? 0),
-      distanceMeters: total.distanceMeters + (set.distanceMeters ?? 0),
-    }),
-    { activeSeconds: 0, distanceMeters: 0 },
-  );
-}
 
 export interface SessionsPage {
   items: WorkoutSessionSummary[];
@@ -250,10 +232,21 @@ export class WorkoutsService {
       throw new ConflictException('La séance est déjà clôturée.');
     }
 
-    const endedAt = input.endedAt ?? new Date();
-    const durationSeconds =
+    // Une fin ANTÉRIEURE au début se ramène au début plutôt que d'être
+    // refusée : un 4xx est définitif pour la file de synchronisation, et une
+    // horloge d'appareil remise à l'heure en cours de séance suffit à le
+    // produire. La durée, elle, reste dans les bornes du contrat : une
+    // séance laissée ouverte plus de 24 h (l'application la clôt avec sa
+    // vraie durée) ne doit ni être rejetée pour toujours ni déborder la
+    // colonne.
+    const endedAt = new Date(
+      Math.max((input.endedAt ?? new Date()).getTime(), session.startedAt.getTime()),
+    );
+    const durationSeconds = Math.min(
+      WORKOUT_LIMITS.durationSecondsMax,
       input.durationSeconds ??
-      Math.max(0, Math.round((endedAt.getTime() - session.startedAt.getTime()) / 1_000));
+        Math.round((endedAt.getTime() - session.startedAt.getTime()) / 1_000),
+    );
 
     const transitioned = await this.workouts.transitionStatus(sessionId, to, {
       endedAt,
@@ -268,7 +261,11 @@ export class WorkoutsService {
       // Aucun des deux ne fait échouer la clôture : chacun journalise
       // ses erreurs et se rattrape à la séance suivante.
       await this.progress.updateRecordsForSession(userId, sessionId, closed.sets);
-      await this.community.recordWorkoutCompleted(userId, endedAt, sessionEffort(closed.sets));
+      await this.community.recordWorkoutCompleted(
+        userId,
+        endedAt,
+        await creditedSessionEffort(this.workouts, userId, closed, endedAt),
+      );
     }
     return presentSessionDetail(closed);
   }

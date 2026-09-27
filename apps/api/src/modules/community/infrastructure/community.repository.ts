@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { type Encouragement, type Friendship, FriendRequestStatus, Prisma } from '@prisma/client';
+import { lockNamed } from '../../../database/prisma/advisory-lock';
 import { PrismaService } from '../../../database/prisma/prisma.service';
 import { friendshipPair } from '../domain/friendship-pair';
 
@@ -211,13 +212,33 @@ export class CommunityRepository {
     });
   }
 
-  createEncouragement(
+  /**
+   * Écrit un encouragement si l'expéditeur n'en a pas déjà envoyé `max` à
+   * ce destinataire sur la fenêtre glissante ; `false` sinon, rien n'est
+   * écrit. Compter puis écrire sous un verrou par couple : des envois
+   * parallèles liraient tous le même décompte et franchiraient le plafond
+   * ensemble. Le décompte suit l'index (recipientId, createdAt).
+   */
+  createEncouragementWithinLimit(
     senderId: string,
     recipientId: string,
     message: string,
-  ): Promise<Encouragement> {
-    return this.prisma.encouragement.create({
-      data: { senderId, recipientId, message },
+    limit: { max: number; windowMs: number },
+  ): Promise<boolean> {
+    return this.prisma.$transaction(async (tx) => {
+      await lockNamed(tx, `encouragement:${senderId}:${recipientId}`);
+      const recent = await tx.encouragement.count({
+        where: {
+          recipientId,
+          senderId,
+          createdAt: { gte: new Date(Date.now() - limit.windowMs) },
+        },
+      });
+      if (recent >= limit.max) {
+        return false;
+      }
+      await tx.encouragement.create({ data: { senderId, recipientId, message } });
+      return true;
     });
   }
 

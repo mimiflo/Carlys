@@ -62,9 +62,13 @@ describe('Ligues (e2e)', () => {
   /** Une séance de course de `metres`, du début à la clôture. */
   const courir = async (metres: number) => {
     const sessionId = randomUUID();
+    // Commencée il y a une heure : la distance créditée est bornée par ce
+    // qu'une vitesse plausible couvre sur le créneau de la séance
+    // (`creditedEffort`), et une séance ouverte et close dans la même
+    // seconde ne couvre rien.
     await as(token)
       .post('/api/v1/workout-sessions')
-      .send({ id: sessionId, startedAt: new Date().toISOString() })
+      .send({ id: sessionId, startedAt: new Date(Date.now() - 3_600_000).toISOString() })
       .expect(201);
     await as(token)
       .post(`/api/v1/workout-sessions/${sessionId}/sets`)
@@ -332,6 +336,16 @@ describe('Ligues (e2e)', () => {
           .post('/api/v1/workout-sessions')
           .send({ id: sessionId, startedAt: new Date().toISOString() })
           .expect(201);
+        // Une série : une séance VIDE ne compte plus comme une séance.
+        await as(moi.tokens.accessToken)
+          .post(`/api/v1/workout-sessions/${sessionId}/sets`)
+          .send({
+            id: randomUUID(),
+            exerciseName: 'Tractions',
+            position: 0,
+            completedAt: new Date().toISOString(),
+          })
+          .expect(201);
         await as(moi.tokens.accessToken)
           .post(`/api/v1/workout-sessions/${sessionId}/complete`)
           .send({})
@@ -428,6 +442,16 @@ describe('Ligues (e2e)', () => {
       await as(moi.tokens.accessToken)
         .post('/api/v1/workout-sessions')
         .send({ id: sessionId, startedAt: new Date().toISOString() })
+        .expect(201);
+      // Une série : une séance VIDE ne compte plus comme une séance.
+      await as(moi.tokens.accessToken)
+        .post(`/api/v1/workout-sessions/${sessionId}/sets`)
+        .send({
+          id: randomUUID(),
+          exerciseName: 'Tractions',
+          position: 0,
+          completedAt: new Date().toISOString(),
+        })
         .expect(201);
       await as(moi.tokens.accessToken)
         .post(`/api/v1/workout-sessions/${sessionId}/complete`)
@@ -623,6 +647,8 @@ describe('Ligues (e2e)', () => {
       await prisma.communityPreference.create({
         data: { userId: tardive.user.id, joinsLeague: true },
       });
+      // Une contribution ne peut plus OUVRIR une semaine close depuis plus de
+      // 48 h (`periodAdmission`) : 2001-W10 lui est fermée, et c'est voulu.
       await app
         .get(LeaguesService)
         .contribute(
@@ -631,6 +657,23 @@ describe('Ligues (e2e)', () => {
           5,
           new Date(periodWindow(semaine).startsAt.getTime() + 86_400_000),
         );
+      expect(
+        await prisma.leagueMembership.count({
+          where: { userId: tardive.user.id, periodKey: semaine },
+        }),
+      ).toBe(0);
+      // La ligne tardive légitime naît dans le délai de grâce (séance du
+      // dimanche synchronisée le lundi) ; on la pose telle qu'elle naîtrait,
+      // dans le premier groupe qui a de la place, pour éprouver son règlement.
+      await prisma.leagueMembership.create({
+        data: {
+          userId: tardive.user.id,
+          periodKey: semaine,
+          division: 'BRONZE',
+          cohort: 0,
+          score: 250,
+        },
+      });
       await as(tardive.tokens.accessToken).get('/api/v1/community/league').expect(200);
 
       // Les résultats déjà annoncés n'ont pas bougé d'un cran.

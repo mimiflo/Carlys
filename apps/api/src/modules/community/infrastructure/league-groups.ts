@@ -1,6 +1,6 @@
 import { type LeagueDivision, type Prisma } from '@prisma/client';
 import { createHash } from 'node:crypto';
-import { cohortToJoin } from '../domain/league-ladder';
+import { cohortToJoin, type LeagueGroupCount } from '../domain/league-ladder';
 
 /**
  * LE REMPLISSAGE DES GROUPES DE LIGUE, sous verrou.
@@ -66,12 +66,74 @@ export async function groupWithRoom(
   periodKey: string,
   division: LeagueDivision,
 ): Promise<number> {
+  return cohortToJoin(await groupCounts(tx, periodKey, division));
+}
+
+/** Le nombre de membres de chaque groupe de (période, division). */
+async function groupCounts(
+  tx: Prisma.TransactionClient,
+  periodKey: string,
+  division: LeagueDivision,
+): Promise<LeagueGroupCount[]> {
   const groupes = await tx.leagueMembership.groupBy({
     by: ['cohort'],
     where: { periodKey, division },
     _count: { _all: true },
   });
-  return cohortToJoin(
-    groupes.map((groupe) => ({ cohort: groupe.cohort, members: groupe._count._all })),
-  );
+  return groupes.map((groupe) => ({ cohort: groupe.cohort, members: groupe._count._all }));
+}
+
+/**
+ * Le groupe de chacun des `arrivals`, nouveaux membres de la MÊME (période,
+ * division), dans leur ordre d'arrivée : exactement ce que rendraient autant
+ * d'appels successifs à [groupWithRoom], chacun suivi de l'écriture de sa
+ * ligne — le premier groupe qui a de la place, et chaque arrivée y prend une
+ * place.
+ *
+ * Pure : c'est ce qui permet de ranger un lot sur UN comptage au lieu d'un
+ * par membre (voir [groupsForArrivals]).
+ */
+export function assignCohorts<T>(
+  groups: readonly LeagueGroupCount[],
+  arrivals: readonly T[],
+): Array<T & { cohort: number }> {
+  const effectifs = new Map(groups.map((group) => [group.cohort, group.members]));
+  return arrivals.map((arrival) => {
+    const cohort = cohortToJoin(
+      [...effectifs].map(([numero, members]) => ({ cohort: numero, members })),
+    );
+    effectifs.set(cohort, (effectifs.get(cohort) ?? 0) + 1);
+    return { ...arrival, cohort };
+  });
+}
+
+/**
+ * Le groupe de chaque membre d'un lot à ranger, UN comptage par (période,
+ * division) au lieu d'un par membre. À appeler SOUS les verrous de toutes
+ * les (période, division) du lot ([lockGroups]), dans la transaction qui
+ * écrira les lignes.
+ *
+ * L'ordre du lot est respecté à l'intérieur de chaque (période, division) :
+ * le résultat est celui qu'aurait donné un [groupWithRoom] par membre, pris
+ * dans cet ordre, chacun suivi de son écriture.
+ */
+export async function groupsForArrivals<T extends { periodKey: string; division: LeagueDivision }>(
+  tx: Prisma.TransactionClient,
+  lot: readonly T[],
+): Promise<Array<T & { cohort: number }>> {
+  const parPlace = new Map<
+    string,
+    { periodKey: string; division: LeagueDivision; arrivees: T[] }
+  >();
+  for (const arrivee of lot) {
+    const cle = `${arrivee.periodKey}|${arrivee.division}`;
+    const place = parPlace.get(cle) ?? { ...arrivee, arrivees: [] };
+    place.arrivees.push(arrivee);
+    parPlace.set(cle, place);
+  }
+  const ranges: Array<T & { cohort: number }> = [];
+  for (const { periodKey, division, arrivees } of parPlace.values()) {
+    ranges.push(...assignCohorts(await groupCounts(tx, periodKey, division), arrivees));
+  }
+  return ranges;
 }

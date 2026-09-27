@@ -1,11 +1,10 @@
 import {
   type CommunityFriend,
   type CommunityProfile,
-  type Encouragement as EncouragementContract,
   type FriendCodePreview,
   type FriendRequest,
 } from '@carlys/api-contracts';
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { type Friendship, FriendRequestStatus } from '@prisma/client';
 import { CommunityModerationRepository } from '../infrastructure/community-moderation.repository';
 import { CommunityRepository, type FriendRow } from '../infrastructure/community.repository';
@@ -14,14 +13,14 @@ import { CommunityChallengesService, type SessionEffort } from './community-chal
 import { CommunityNotifier } from './community-notifier';
 import { computeStreakDays } from './streak.calculator';
 
-const FEED_LIMIT = 50;
 /** Historique suffisant pour toute série plausible affichée (60 jours). */
 const STREAK_WINDOW_DAYS = 60;
 /** Après un refus, le même demandeur attend 30 jours avant de pouvoir redemander. */
 const DECLINE_COOLDOWN_MS = 30 * 24 * 3_600_000;
 
 /**
- * Amis, demandes, encouragements et préférence de partage.
+ * Amis, demandes et préférence de partage (les encouragements ont leur
+ * service : `EncouragementsService`).
  *
  * Les blocages sont consultés PARTOUT où deux personnes se rencontrent
  * (demande, aperçu de code, encouragement, listes) et la réponse est
@@ -239,37 +238,6 @@ export class CommunityService {
       streakDays,
       weeklySessions,
     };
-  }
-
-  // ── Fil d'encouragements ────────────────────────────────────────────────
-
-  /** Le fil tait les personnes bloquées, dans un sens comme dans l'autre. */
-  async feed(userId: string): Promise<EncouragementContract[]> {
-    const hidden = await this.moderation.blockedUserIdsEitherWay(userId);
-    const rows = await this.community.listEncouragements(userId, FEED_LIMIT, [...hidden]);
-    return rows.map((row) => ({
-      id: row.id,
-      fromUserId: row.senderId,
-      fromDisplayName: row.sender.profile?.displayName ?? 'Membre Carlys',
-      message: row.message,
-      sentAt: row.createdAt.toISOString(),
-    }));
-  }
-
-  async encourage(userId: string, recipientUserId: string, message: string): Promise<void> {
-    const friendship = await this.community.findFriendshipBetween(userId, recipientUserId);
-    if (
-      friendship === null ||
-      friendship.status !== FriendRequestStatus.ACCEPTED ||
-      (await this.moderation.isBlockedEitherWay(userId, recipientUserId))
-    ) {
-      // On n'écrit pas chez quelqu'un qui n'est pas un ami. 403, pas 404 :
-      // l'appelant connaît déjà cet identifiant (il vient de sa liste d'amis).
-      // Un blocage répond pareil : rien ne distingue « bloqué » de « plus ami ».
-      throw new ForbiddenException('Tu ne peux encourager que tes amis.');
-    }
-    await this.community.createEncouragement(userId, recipientUserId, message);
-    await this.notifier.encouragement(recipientUserId, userId, message);
   }
 
   // ── Défis (point d'entrée des autres modules) ───────────────────────────

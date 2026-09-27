@@ -22,6 +22,10 @@ import { Throttle } from '@nestjs/throttler';
 import { CurrentUser } from '../../../../common/decorators/current-user.decorator';
 import { type AuthenticatedPrincipal } from '../../../../common/types/authenticated-request';
 import { CommunityService } from '../../application/community.service';
+import {
+  ENCOURAGEMENTS_PER_FRIEND_PER_DAY,
+  EncouragementsService,
+} from '../../application/encouragements.service';
 import { EncourageDto, FriendRequestDto, UpdateCommunityProfileDto } from './dto/community.dto';
 
 /**
@@ -31,28 +35,44 @@ import { EncourageDto, FriendRequestDto, UpdateCommunityProfileDto } from './dto
  */
 const FRIEND_REQUEST_THROTTLE = { default: { limit: 10, ttl: 60_000 } };
 
+/**
+ * Limite dédiée aux encouragements, par adresse IP : chacun pousse une
+ * notification. Elle s'ajoute au plafond PAR AMI du service, qu'un
+ * changement d'adresse ne contourne pas.
+ */
+const ENCOURAGEMENT_THROTTLE = { default: { limit: 10, ttl: 60_000 } };
+
 @ApiTags('community')
 @ApiBearerAuth()
 @Controller('community')
 export class CommunityController {
-  constructor(private readonly community: CommunityService) {}
+  constructor(
+    private readonly community: CommunityService,
+    private readonly encouragements: EncouragementsService,
+  ) {}
 
   // ── Fil ─────────────────────────────────────────────────────────────────
 
   @Get('feed')
   @ApiOperation({ summary: 'Encouragements reçus, du plus récent au plus ancien' })
   feed(@CurrentUser() user: AuthenticatedPrincipal): Promise<Encouragement[]> {
-    return this.community.feed(user.userId);
+    return this.encouragements.feed(user.userId);
   }
 
   @Post('encouragements')
   @HttpCode(201)
-  @ApiOperation({ summary: 'Encourager un ami (amitié acceptée obligatoire)' })
+  @Throttle(ENCOURAGEMENT_THROTTLE)
+  @ApiOperation({
+    summary: 'Encourager un ami (amitié acceptée obligatoire)',
+    description:
+      `429 au-delà de ${ENCOURAGEMENTS_PER_FRIEND_PER_DAY} encouragements au même ami ` +
+      'sur 24 h glissantes, ou de 10 requêtes par minute et par adresse.',
+  })
   async encourage(
     @CurrentUser() user: AuthenticatedPrincipal,
     @Body() dto: EncourageDto,
   ): Promise<void> {
-    await this.community.encourage(user.userId, dto.recipientUserId, dto.message);
+    await this.encouragements.encourage(user.userId, dto.recipientUserId, dto.message);
   }
 
   // ── Amis ────────────────────────────────────────────────────────────────

@@ -112,6 +112,10 @@ export class CreateWorkoutSessionDto {
   @MaxLength(WORKOUT_LIMITS.notesMax)
   notes?: string;
 
+  // Pas de borne basse : une horloge d'appareil remise à une date d'usine
+  // rendait la séance insynchronisable (un 4xx est définitif pour la file),
+  // sans rien protéger — le crédit est borné au créneau de 24 h
+  // (`creditedEffort`) et la ligue n'ouvre pas une semaine close.
   @ApiProperty({ description: 'Début de séance, UTC (ISO 8601) — pas dans le futur' })
   @Type(() => Date)
   @IsDate()
@@ -174,17 +178,28 @@ export class UpdateWorkoutSessionDto {
 }
 
 export class CloseWorkoutSessionDto {
-  @ApiPropertyOptional({ description: 'Fin de séance, UTC (ISO 8601)' })
+  @ApiPropertyOptional({
+    description:
+      'Fin de séance, UTC (ISO 8601) — pas dans le futur (un jour de tolérance). ' +
+      'Antérieure au début, elle est ramenée au début.',
+  })
   @IsOptional()
   @Type(() => Date)
   @IsDate()
+  // Sans borne, 2099 débordait la durée calculée (500 : entier hors INT4),
+  // 2030 comptait trois ans de séance et ouvrait une semaine de ligue future.
+  @MaxDate(nowWithClockSkew, { message: 'La date de fin de séance est dans le futur.' })
   endedAt?: Date;
 
-  @ApiPropertyOptional({ maximum: WORKOUT_LIMITS.durationSecondsMax })
+  @ApiPropertyOptional({
+    description:
+      `Durée en secondes. Au-delà de ${WORKOUT_LIMITS.durationSecondsMax} (séance restée ` +
+      'ouverte plus de 24 h), elle est ramenée à ce plafond plutôt que refusée : un refus ' +
+      'serait définitif pour la file de synchronisation.',
+  })
   @IsOptional()
   @IsInt()
   @Min(0)
-  @Max(WORKOUT_LIMITS.durationSecondsMax)
   durationSeconds?: number;
 }
 

@@ -6,6 +6,7 @@ import { CommunityChallengesService } from './application/community-challenges.s
 import { CommunityModerationService } from './application/community-moderation.service';
 import { CommunityNotifier } from './application/community-notifier';
 import { CommunityService } from './application/community.service';
+import { EncouragementsService } from './application/encouragements.service';
 import { FriendChallengesService } from './application/friend-challenges.service';
 import { LeaguesService } from './application/leagues.service';
 import { CommunityChallengesRepository } from './infrastructure/community-challenges.repository';
@@ -38,6 +39,7 @@ import { LeaguesController } from './presentation/http/leagues.controller';
   ],
   providers: [
     CommunityService,
+    EncouragementsService,
     CommunityNotifier,
     CommunityChallengesService,
     FriendChallengesService,

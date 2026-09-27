@@ -191,6 +191,100 @@ describe('Ligues — groupes de vingt (e2e)', () => {
     expect(await tailles(suivante, 'OR')).toEqual({ 0: LEAGUE_GROUP_SIZE, 1: 1 });
   });
 
+  it('régler un groupe de vingt : deux écritures, pas vingt-cinq, et le même résultat', async () => {
+    // Le règlement est PARESSEUX : c'est une lecture qui règle chaque semaine
+    // en retard, et il écrivait une ligne par membre, puis une par membre à
+    // déplacer. Un groupe que personne n'avait lu depuis six mois payait 364
+    // à 623 requêtes sur un seul GET. On compte ici les requêtes d'un
+    // règlement, sur un dépôt branché à un client qui les journalise.
+    const reglee = '2099-W10';
+    const suivante = '2099-W11';
+    const groupe = (await figurants(LEAGUE_GROUP_SIZE, 'S')).sort((a, b) => (a.id < b.id ? -1 : 1));
+    // La division d'arrivée des montants a un groupe à UNE place : le
+    // premier montant la prend, les deux suivants ouvrent le groupe 1.
+    const presquePlein = await figurants(LEAGUE_GROUP_SIZE - 1, 'T');
+    await prisma.leagueMembership.createMany({
+      data: [
+        ...groupe.map((user, index) => ({
+          userId: user.id,
+          periodKey: reglee,
+          division: 'ARGENT' as const,
+          score: 100 - index,
+        })),
+        ...presquePlein.map((user) => ({
+          userId: user.id,
+          periodKey: suivante,
+          division: 'OR' as const,
+        })),
+      ],
+    });
+    const montants = groupe.slice(0, 3);
+    const descendants = groupe.slice(-2);
+    // Leur semaine suivante a été ouverte trop tôt, dans l'ancienne division.
+    await prisma.leagueMembership.createMany({
+      data: [...montants, ...descendants].map((user) => ({
+        userId: user.id,
+        periodKey: suivante,
+        division: 'ARGENT' as const,
+        score: 7,
+      })),
+    });
+    const cible = (index: number): LeagueDivision =>
+      index < 3 ? 'OR' : index >= groupe.length - 2 ? 'BRONZE' : 'ARGENT';
+    const resultats = groupe.map((user, index) => ({
+      userId: user.id,
+      rank: index + 1,
+      nextDivision: cible(index),
+    }));
+
+    const journal = new PrismaClient({
+      datasourceUrl: process.env.DATABASE_URL,
+      log: [{ emit: 'event', level: 'query' }],
+    });
+    const requetes: string[] = [];
+    journal.$on('query', (event) => requetes.push(event.query));
+    try {
+      const compte = new LeaguesRepository(journal as unknown as PrismaService);
+      // Mélangés : l'ordre d'arrivée ne doit rien changer au résultat.
+      expect(await compte.settle(reglee, [...resultats].reverse())).toBe(LEAGUE_GROUP_SIZE);
+      const ecritures = requetes.filter((sql) =>
+        /^\s*UPDATE "(public"\.")?LeagueMembership/.test(sql),
+      );
+      expect(ecritures).toHaveLength(2);
+      expect(requetes.length).toBeLessThanOrEqual(10);
+
+      // Rejouer ne règle plus rien : chaque ligne réglée l'est une fois.
+      expect(await compte.settle(reglee, resultats)).toBe(0);
+    } finally {
+      await journal.$disconnect();
+    }
+
+    const reglees = await prisma.leagueMembership.findMany({
+      where: { periodKey: reglee, userId: { in: groupe.map((user) => user.id) } },
+      orderBy: { userId: 'asc' },
+    });
+    expect(reglees.map((ligne) => [ligne.finalRank, ligne.nextDivision])).toEqual(
+      resultats.map((resultat) => [resultat.rank, resultat.nextDivision]),
+    );
+    expect(reglees.every((ligne) => ligne.settledAt !== null)).toBe(true);
+
+    const deplacees = await prisma.leagueMembership.findMany({
+      where: {
+        periodKey: suivante,
+        userId: { in: [...montants, ...descendants].map((user) => user.id) },
+      },
+      orderBy: { userId: 'asc' },
+    });
+    expect(deplacees.map((ligne) => [ligne.division, ligne.cohort, ligne.score])).toEqual([
+      ['OR', 0, 7],
+      ['OR', 1, 7],
+      ['OR', 1, 7],
+      ['BRONZE', 0, 7],
+      ['BRONZE', 0, 7],
+    ]);
+    expect(await tailles(suivante, 'OR')).toEqual({ 0: LEAGUE_GROUP_SIZE, 1: 2 });
+  });
+
   it('régler une semaine TARDIVE ne réaligne rien au-delà d’une semaine déjà réglée', async () => {
     // Une ligne ouverte après coup (séance synchronisée en retard) dans une
     // semaine plus ancienne que ma dernière semaine réglée. Sa « suivante »
@@ -269,6 +363,15 @@ describe('Ligues — groupes de vingt (e2e)', () => {
         { userId: derriere.id, score: 100, cohort: monGroupe },
         { userId: ailleurs.id, score: 999, cohort: monGroupe + 1 },
       ].map((ligne) => ({ ...ligne, periodKey: periode, division: 'BRONZE' as const })),
+    });
+    // Tous sont DANS la ligue : un membre qui l'a quittée n'y montre plus son
+    // nom aux autres (sa ligne reste, et compte au règlement).
+    await prisma.communityPreference.createMany({
+      data: [devant.id, bloquee.id, bloqueuse.user.id, derriere.id, ailleurs.id].map((userId) => ({
+        userId,
+        joinsLeague: true,
+      })),
+      skipDuplicates: true,
     });
 
     const avant = data<League>(

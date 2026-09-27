@@ -3,7 +3,12 @@ import {
   type CreateFriendChallengeRequest,
   type FriendChallenge as FriendChallengeContract,
 } from '@carlys/api-contracts';
-import { ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { FriendRequestStatus } from '@prisma/client';
 import { blankToNull } from '../../../common/utilities/blank-to-null';
 import { CommunityModerationRepository } from '../infrastructure/community-moderation.repository';
@@ -16,10 +21,13 @@ import { CommunityNotifier } from './community-notifier';
 import { finalRanks, isHiddenByBlock, presentFriendChallenge } from './friend-challenge.presenter';
 
 /**
- * Plafond de défis servis en une lecture. L'écran en montre quelques-uns ;
- * la borne existe pour que la requête ne grandisse pas avec l'usage.
+ * Plafonds de défis servis en une lecture : les EN COURS d'abord, puis les
+ * plus récents des TERMINÉS. L'écran en montre quelques-uns ; les bornes
+ * existent pour que la requête ne grandisse pas avec l'usage, et elles sont
+ * DEUX pour que l'historique, qui s'accumule, ne pousse jamais hors de la
+ * liste un défi en cours ou une invitation en attente.
  */
-const MAX_LISTED = 50;
+const MAX_LISTED = { ongoing: 50, finished: 10 } as const;
 
 /**
  * DÉFIS ENTRE AMIS : individuels, invités un par un, et clos tout seuls.
@@ -47,6 +55,19 @@ export class FriendChallengesService {
     userId: string,
     input: CreateFriendChallengeRequest,
   ): Promise<FriendChallengeContract> {
+    // Le REJEU est reconnu EN TÊTE, avant toute garde. La route est
+    // idempotente : un client qui rejoue une création RÉUSSIE doit retrouver
+    // son défi, même si le plafond est atteint depuis (c'est ce défi-là qui
+    // l'a rempli) ou si un invité a quitté ses amis entre-temps. Les gardes
+    // passaient avant : ce rejeu rendait 403.
+    const existant = await this.challenges.findById(input.id);
+    if (existant !== null) {
+      if (existant.creatorId !== userId) {
+        throw new ConflictException('Cet identifiant de défi est déjà utilisé.');
+      }
+      return this.detail(userId, input.id);
+    }
+
     const invites = [...new Set(input.invitedUserIds)].filter((id) => id !== userId);
     if (invites.length === 0) {
       throw new ForbiddenException(
@@ -56,14 +77,7 @@ export class FriendChallengesService {
     await this.assertInvitable(userId, invites);
 
     const now = new Date();
-    const ouverts = await this.challenges.countOpenCreatedBy(userId, now);
-    if (ouverts >= FRIEND_CHALLENGE_MAX_OPEN_PER_CREATOR) {
-      throw new ForbiddenException(
-        `Tu as déjà ${FRIEND_CHALLENGE_MAX_OPEN_PER_CREATOR} défis en cours. Termines-en un avant d’en lancer un autre.`,
-      );
-    }
-
-    const cree = await this.challenges.create(
+    const issue = await this.challenges.createWithinLimit(
       {
         id: input.id,
         creatorId: userId,
@@ -80,13 +94,20 @@ export class FriendChallengesService {
         endsAt: new Date(now.getTime() + input.durationDays * 24 * 3_600_000),
       },
       invites,
+      FRIEND_CHALLENGE_MAX_OPEN_PER_CREATOR,
     );
-    // Rejeu : le défi existe déjà, on le rend tel quel sans réinviter
-    // personne — une notification par tentative serait du harcèlement par
-    // mauvais réseau. La notification ne porte que le TITRE, jamais le
-    // message : un texte libre sur l'écran verrouillé échapperait au refus de
-    // l'invitation, et il n'est lisible que des membres, dans le défi.
-    if (cree) {
+    if (issue === 'LIMIT') {
+      throw new ForbiddenException(
+        `Tu as déjà ${FRIEND_CHALLENGE_MAX_OPEN_PER_CREATOR} défis en cours. Termines-en un avant d’en lancer un autre.`,
+      );
+    }
+    // Rejeu concurrent (`REPLAY`) : le défi existe déjà, on le rend tel quel
+    // sans réinviter personne — une notification par tentative serait du
+    // harcèlement par mauvais réseau. La notification ne porte que le TITRE,
+    // jamais le message : un texte libre sur l'écran verrouillé échapperait
+    // au refus de l'invitation, et il n'est lisible que des membres, dans le
+    // défi.
+    if (issue === 'CREATED') {
       await Promise.all(
         invites.map((invited) =>
           this.notifier.challengeInvite(invited, userId, input.id, input.title),
@@ -108,7 +129,7 @@ export class FriendChallengesService {
    */
   async list(userId: string): Promise<FriendChallengeContract[]> {
     const [challenges, hidden] = await Promise.all([
-      this.challenges.listMine(userId, MAX_LISTED),
+      this.challenges.listMine(userId, new Date(), MAX_LISTED),
       this.moderation.blockedUserIdsEitherWay(userId),
     ]);
     const visibles = challenges.filter((challenge) => !isHiddenByBlock(challenge, userId, hidden));

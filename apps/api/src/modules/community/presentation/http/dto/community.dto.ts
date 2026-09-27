@@ -1,4 +1,5 @@
 import {
+  ACADEMY_LESSON_IDS,
   ENCOURAGEMENT_MESSAGE_MAX_LENGTH,
   FRIEND_CHALLENGE_DURATIONS,
   FRIEND_CHALLENGE_MAX_INVITES,
@@ -78,10 +79,13 @@ export class UpdateCommunityProfileDto {
 }
 
 export class QuizAnswerDto {
-  @ApiProperty({ description: 'Identifiant de la leçon du pack embarqué' })
-  @IsString()
-  @MinLength(1)
-  @MaxLength(120)
+  @ApiProperty({
+    description: 'Identifiant d’une leçon du pack embarqué (ACADEMY_LESSON_IDS)',
+    enum: ACADEMY_LESSON_IDS,
+  })
+  // Une leçon du pack, et aucune autre : un identifiant inventé ouvrait
+  // autant de bonnes réponses qu'on voulait, chacune créditée à la ligue.
+  @IsIn(ACADEMY_LESSON_IDS, { message: 'Cette leçon n’existe pas.' })
   lessonId!: string;
 
   @ApiProperty({

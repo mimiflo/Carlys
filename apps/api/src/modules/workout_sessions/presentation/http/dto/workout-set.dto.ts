@@ -11,9 +11,11 @@ import {
   IsString,
   IsUUID,
   Max,
+  MaxDate,
   MaxLength,
   Min,
 } from 'class-validator';
+import { nowWithClockSkew } from '../../../../../common/validators/clock-skew';
 
 /**
  * Les SÉRIES : ce qui a été réellement fait.
@@ -119,9 +121,12 @@ export class CreateWorkoutSetDto {
   @IsUUID()
   planItemId?: string;
 
-  @ApiProperty({ description: 'Fin de la série, UTC (ISO 8601)' })
+  @ApiProperty({ description: 'Fin de la série, UTC (ISO 8601) — pas dans le futur' })
   @Type(() => Date)
   @IsDate()
+  // Les records en font leur date (`achievedAt`) : une date de 2099 se
+  // poserait pour toujours en tête de frise.
+  @MaxDate(nowWithClockSkew, { message: 'La date de la série est dans le futur.' })
   completedAt!: Date;
 }
 
@@ -173,9 +178,12 @@ export class UpdateWorkoutSetDto {
   @Max(WORKOUT_LIMITS.restSecondsMax)
   restSeconds?: number;
 
-  @ApiPropertyOptional({ description: 'Fin de la série, UTC (ISO 8601)' })
+  @ApiPropertyOptional({
+    description: 'Fin de la série, UTC (ISO 8601) — pas dans le futur',
+  })
   @IsOptional()
   @Type(() => Date)
   @IsDate()
+  @MaxDate(nowWithClockSkew, { message: 'La date de la série est dans le futur.' })
   completedAt?: Date;
 }

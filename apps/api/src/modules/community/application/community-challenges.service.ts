@@ -1,11 +1,13 @@
 import {
   type CommunityChallenge as ChallengeContract,
+  QUIZ_CORRECT_CREDITED_PER_DAY,
   type QuizAnswerRecord,
 } from '@carlys/api-contracts';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { type ChallengeMetric } from '@prisma/client';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { METRIC_UNITS, buildMonthlyChallenges } from '../domain/challenge-catalog';
+import { type SessionEffort } from '../domain/session-effort';
 import {
   type ChallengeWithStats,
   CommunityChallengesRepository,
@@ -37,18 +39,15 @@ function presentChallenge(challenge: ChallengeWithStats): ChallengeContract {
 }
 
 /**
- * Ce qu'une séance a coûté, dans les unités que les défis savent compter.
+ * Ce qu'une séance verse, dans les unités que les défis savent compter —
+ * DÉJÀ borné à ce qui est plausible (`creditedEffort`, domaine).
  *
  * Nommé plutôt qu'écrit en clair à chaque signature : trois endroits le
  * traversent (le service des séances qui le calcule, la façade communauté
  * qui le relaie, ce service qui le verse), et un objet anonyme recopié trois
  * fois est trois occasions de le faire diverger.
  */
-export interface SessionEffort {
-  /** Secondes réellement chronométrées série par série, pauses exclues. */
-  activeSeconds: number;
-  distanceMeters: number;
-}
+export type { SessionEffort } from '../domain/session-effort';
 
 /** Défis collectifs : progression de groupe, contributions des séances et des quiz. */
 @Injectable()
@@ -159,7 +158,11 @@ export class CommunityChallengesService {
     effort: SessionEffort,
   ): Promise<void> {
     try {
-      await this.verser(userId, 'WORKOUTS', 1, completedAt);
+      // Une séance sans série ne compte pas comme une séance : ouvrir et
+      // clore à vide ne remplit plus un classement.
+      if (effort.countsAsWorkout) {
+        await this.verser(userId, 'WORKOUTS', 1, completedAt);
+      }
       await this.verser(userId, 'ACTIVE_SECONDS', effort.activeSeconds, completedAt);
       await this.verser(userId, 'DISTANCE_METERS', effort.distanceMeters, completedAt);
     } catch (error) {
@@ -198,6 +201,7 @@ export class CommunityChallengesService {
       userId,
       ...input,
       at,
+      creditedPerDay: QUIZ_CORRECT_CREDITED_PER_DAY,
       // Les défis ENTRE AMIS et la LIGUE reçoivent leur part dans la MÊME
       // transaction : une contribution écrite à côté serait perdue
       // définitivement si elle échouait, l'unicité empêchant tout rejeu.

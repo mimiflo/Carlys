@@ -3,6 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { type ChallengeMetric, type Prisma } from '@prisma/client';
 import { competitionRanks } from '../domain/competition-ranks';
 import {
+  periodAdmission,
   periodKeyOf,
   periodWindow,
   pointsOf,
@@ -11,7 +12,7 @@ import {
   settleDivision,
 } from '../domain/league-ladder';
 import { CommunityModerationRepository } from '../infrastructure/community-moderation.repository';
-import { LeaguesRepository } from '../infrastructure/leagues.repository';
+import { type LeagueMemberWithName, LeaguesRepository } from '../infrastructure/leagues.repository';
 
 /**
  * LES LIGUES : un classement hebdomadaire, choisi, qui ne rend rien au profil.
@@ -32,6 +33,11 @@ import { LeaguesRepository } from '../infrastructure/leagues.repository';
  * Barème complet et raisons : `docs/product/community.md`, « Les ligues,
  * barème complet ».
  */
+/** Encore dans la ligue ? L'appelant l'est toujours (sinon, rien n'est lu). */
+function aRejoint(membre: LeagueMemberWithName, userId: string): boolean {
+  return membre.userId === userId || membre.user.communityPreference?.joinsLeague === true;
+}
+
 @Injectable()
 export class LeaguesService {
   constructor(
@@ -60,8 +66,14 @@ export class LeaguesService {
     if (points <= 0 || !(await this.leagues.hasJoined(userId, client))) {
       return;
     }
-    const periodKey = periodKeyOf(at);
+    const now = new Date();
+    const admission = periodAdmission(at, now);
+    const periodKey = periodKeyOf(admission === 'future' ? now : at);
     if ((await this.leagues.addPoints(userId, periodKey, points, client)) > 0) {
+      return;
+    }
+    if (admission === 'existing-only') {
+      // Semaine close depuis plus que le délai de grâce : on n'y ouvre rien.
       return;
     }
     const division = await this.leagues.divisionToOpen(userId, periodKey, client);
@@ -122,9 +134,14 @@ export class LeaguesService {
       division,
       score: membres.find((membre) => membre.userId === userId)?.score ?? 0,
       // Principe 6 : une personne bloquée, dans un sens ou dans l'autre, est
-      // absente des listes — celle-ci comprise.
+      // absente des listes — celle-ci comprise. Et une personne qui a QUITTÉ
+      // la ligue n'y montre plus son nom aux autres : sortir est aussi un
+      // consentement retiré. Sa ligne de la semaine reste en base, et compte
+      // au règlement comme aux rangs (calculés plus haut sur le groupe
+      // entier) : partir ne remonte personne d'un cran, ni ne fausse la
+      // semaine.
       standings: membres
-        .filter((membre) => !bloques.has(membre.userId))
+        .filter((membre) => !bloques.has(membre.userId) && aRejoint(membre, userId))
         .map((membre) => ({
           userId: membre.userId,
           displayName: membre.user.profile?.displayName ?? 'Membre Carlys',
@@ -162,7 +179,8 @@ export class LeaguesService {
       if (ligne === null || ligne.settledAt !== null) {
         continue; // Réglée entre-temps, par une lecture concurrente.
       }
-      const membres = await this.leagues.standings(echue, ligne.division, ligne.cohort);
+      // Les scores seuls : le règlement ne montre aucun nom (`groupScores`).
+      const membres = await this.leagues.groupScores(echue, ligne.division, ligne.cohort);
       // L'écriture reste conditionnée à `settledAt: null`, ligne par ligne :
       // un règlement concurrent du même groupe n'y touche plus.
       await this.leagues.settle(echue, settleDivision(ligne.division, membres));

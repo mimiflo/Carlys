@@ -123,6 +123,7 @@ describe('CommunityChallengesService — défis collectifs', () => {
 
     await expect(
       service.recordWorkoutCompleted(ME, new Date(), {
+        countsAsWorkout: true,
         activeSeconds: 0,
         distanceMeters: 0,
       }),
@@ -136,6 +137,7 @@ describe('CommunityChallengesService — défis collectifs', () => {
     const at = new Date('2026-09-15T12:00:00.000Z');
 
     await service.recordWorkoutCompleted(ME, at, {
+      countsAsWorkout: true,
       activeSeconds: 1_800,
       distanceMeters: 5_000,
     });
@@ -147,6 +149,20 @@ describe('CommunityChallengesService — défis collectifs', () => {
       ['ACTIVE_SECONDS', 1_800],
       ['DISTANCE_METERS', 5_000],
     ]);
+  });
+
+  it('une séance qui ne compte pas (sans série) ne verse PAS la métrique « séance »', async () => {
+    const stubs = buildStubs();
+    const service = buildService(stubs);
+
+    await service.recordWorkoutCompleted(ME, new Date('2026-09-15T12:00:00.000Z'), {
+      countsAsWorkout: false,
+      activeSeconds: 0,
+      distanceMeters: 0,
+    });
+
+    const metriques = stubs.contribute.mock.calls.map((call: unknown[]) => call[1]);
+    expect(metriques).not.toContain('WORKOUTS');
   });
 });
 
@@ -219,6 +235,7 @@ describe('CommunityChallengesService — réponses de quiz (défis CULTURE)', ()
       userId: ME,
       ...answer,
       at: expect.any(Date) as Date,
+      creditedPerDay: 3,
       // La contribution aux défis entre amis part DANS la transaction du
       // dépôt, sous forme de fonction : écrite à côté, son échec laisserait
       // la réponse seule, et l'unicité rendrait la perte définitive.

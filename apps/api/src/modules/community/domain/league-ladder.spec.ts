@@ -5,6 +5,7 @@ import {
   LEAGUE_LADDER,
   LEAGUE_MIN_PLAYERS,
   LEAGUE_PROMOTED,
+  periodAdmission,
   periodKeyOf,
   periodWindow,
   pointsOf,
@@ -348,5 +349,34 @@ describe('Les groupes de vingt', () => {
 
   it('les lignes d’avant les groupes (toutes au groupe 0, parfois plus de 20) débordent au 1', () => {
     expect(cohortToJoin([{ cohort: 0, members: 57 }])).toBe(1);
+  });
+});
+
+describe('periodAdmission — quelles semaines une contribution peut ouvrir', () => {
+  // Mercredi 23 septembre 2026, semaine 2026-W39.
+  const maintenant = new Date('2026-09-23T12:00:00Z');
+
+  it('la semaine en cours : ouverte', () => {
+    expect(periodAdmission(new Date('2026-09-21T08:00:00Z'), maintenant)).toBe('open');
+  });
+
+  it('la semaine passée, dans les 48 h qui suivent sa fin : encore ouverte (synchro tardive)', () => {
+    // Séance du dimanche soir, synchronisée le mardi matin.
+    expect(
+      periodAdmission(new Date('2026-09-20T21:00:00Z'), new Date('2026-09-22T09:00:00Z')),
+    ).toBe('open');
+  });
+
+  it('la semaine passée, au-delà du délai : on ne verse qu’à une ligne existante', () => {
+    expect(periodAdmission(new Date('2026-09-20T21:00:00Z'), maintenant)).toBe('existing-only');
+  });
+
+  it('une semaine de 2001 ou de l’an dernier : jamais ouverte', () => {
+    expect(periodAdmission(new Date('2001-01-01T00:00:00Z'), maintenant)).toBe('existing-only');
+    expect(periodAdmission(new Date('2025-09-23T12:00:00Z'), maintenant)).toBe('existing-only');
+  });
+
+  it('une semaine à venir (horloge en avance) : ramenée à la semaine en cours', () => {
+    expect(periodAdmission(new Date('2030-01-10T12:00:00Z'), maintenant)).toBe('future');
   });
 });

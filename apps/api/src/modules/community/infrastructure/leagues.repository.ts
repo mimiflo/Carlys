@@ -1,13 +1,18 @@
 import { Injectable } from '@nestjs/common';
 import { type LeagueDivision, type LeagueMembership, type Prisma } from '@prisma/client';
 import { PrismaService } from '../../../database/prisma/prisma.service';
-import { groupWithRoom, lockGroups } from './league-groups';
+import { type LeagueStanding } from '../domain/league-ladder';
+import { groupsForArrivals, groupWithRoom, lockGroups } from './league-groups';
 
 type Client = Prisma.TransactionClient | PrismaService;
 
 /** Une ligne de classement, avec le nom qu'on affiche à côté du score. */
 export type LeagueMemberWithName = LeagueMembership & {
-  user: { profile: { displayName: string } | null };
+  user: {
+    profile: { displayName: string } | null;
+    /** Absente ou `joinsLeague: false` : la personne a quitté la ligue. */
+    communityPreference: { joinsLeague: boolean } | null;
+  };
 };
 
 /** Accès Prisma des ligues — et de lui seul. */
@@ -196,7 +201,9 @@ export class LeaguesRepository {
   /**
    * Le classement d'un GROUPE de la division pour une période, du meilleur
    * au dernier. Jamais la division entière : on n'est classé qu'avec les
-   * membres de son groupe.
+   * membres de son groupe. TOUS les membres de la période, partis compris :
+   * le règlement se fait sur le groupe entier ; c'est la LECTURE qui tait
+   * ceux qui ont quitté la ligue (`communityPreference.joinsLeague`).
    */
   standings(
     periodKey: string,
@@ -205,7 +212,35 @@ export class LeaguesRepository {
   ): Promise<LeagueMemberWithName[]> {
     return this.prisma.leagueMembership.findMany({
       where: { periodKey, division, cohort },
-      include: { user: { select: { profile: { select: { displayName: true } } } } },
+      include: {
+        user: {
+          select: {
+            profile: { select: { displayName: true } },
+            communityPreference: { select: { joinsLeague: true } },
+          },
+        },
+      },
+      orderBy: [{ score: 'desc' }, { userId: 'asc' }],
+    });
+  }
+
+  /**
+   * Les SCORES d'un groupe, du meilleur au dernier : tout ce que le
+   * règlement lit (`settleDivision`), et rien de plus.
+   *
+   * `standings` joint le compte, le profil et la préférence de ligue pour
+   * l'AFFICHAGE : trois requêtes de plus, que le règlement payait à chaque
+   * semaine échue (78 sur 350 pour un revenant de 26 semaines). Même groupe,
+   * mêmes lignes (partis compris) et même ordre que `standings`.
+   */
+  groupScores(
+    periodKey: string,
+    division: LeagueDivision,
+    cohort: number,
+  ): Promise<LeagueStanding[]> {
+    return this.prisma.leagueMembership.findMany({
+      where: { periodKey, division, cohort },
+      select: { userId: true, score: true },
       orderBy: [{ score: 'desc' }, { userId: 'asc' }],
     });
   }
@@ -244,20 +279,63 @@ export class LeaguesRepository {
   async settle(periodKey: string, results: ReadonlyArray<SettlementResult>): Promise<number> {
     const ordonnes = [...results].sort((a, b) => (a.userId < b.userId ? -1 : 1));
     return this.prisma.$transaction(async (tx) => {
-      const settledAt = new Date();
-      const reglees: SettlementResult[] = [];
-      for (const result of ordonnes) {
-        const { count } = await tx.leagueMembership.updateMany({
-          where: { userId: result.userId, periodKey, settledAt: null },
-          data: { settledAt, finalRank: result.rank, nextDivision: result.nextDivision },
-        });
-        if (count > 0) {
-          reglees.push(result);
-        }
-      }
+      const reglees = await this.settleRows(tx, periodKey, ordonnes);
       await this.realignFollowing(tx, periodKey, reglees);
       return reglees.length;
     });
+  }
+
+  /**
+   * Les écritures du règlement, en DEUX requêtes pour tout le groupe.
+   *
+   * Elles en faisaient une par membre : vingt `UPDATE` à la suite par
+   * semaine, et le règlement étant paresseux, un groupe que personne n'avait
+   * lu depuis six mois payait 364 à 623 requêtes (0,4 à 0,7 s) sur un seul
+   * GET. Le contrat de chaque ligne ne change pas : `settledAt IS NULL` dans
+   * la condition, rang, division suivante et date posés ENSEMBLE, et seules
+   * les lignes réellement réglées ici sont rendues.
+   *
+   * Le `FOR UPDATE` trié garde l'ordre de verrouillage par identifiant que
+   * les écritures une à une donnaient d'elles-mêmes : un `UPDATE … FROM` ne
+   * promet aucun ordre, et deux règlements concurrents du même groupe
+   * pourraient sinon se prendre en croix.
+   */
+  private async settleRows(
+    tx: Prisma.TransactionClient,
+    periodKey: string,
+    ordonnes: readonly SettlementResult[],
+  ): Promise<SettlementResult[]> {
+    if (ordonnes.length === 0) {
+      return [];
+    }
+    const userIds = ordonnes.map((result) => result.userId);
+    await tx.$queryRaw`
+      SELECT "userId" FROM "LeagueMembership"
+      WHERE "periodKey" = ${periodKey} AND "userId" = ANY(${userIds}::uuid[])
+      ORDER BY "userId"
+      FOR UPDATE
+    `;
+    // `settledAt` est un `timestamp` SANS fuseau, écrit en UTC par Prisma ;
+    // une date liée en SQL brut arrive en `timestamptz`, que PostgreSQL
+    // convertirait dans le fuseau de la SESSION. `AT TIME ZONE 'UTC'` écrit
+    // la même heure que l'ORM, quel que soit le réglage du serveur.
+    const reglees = await tx.$queryRaw<{ userId: string }[]>`
+      UPDATE "LeagueMembership" lm
+      SET "settledAt" = (${new Date()}::timestamptz AT TIME ZONE 'UTC'),
+          "finalRank" = v.rank,
+          "nextDivision" = v.next::"LeagueDivision"
+      FROM unnest(
+        ${userIds}::uuid[],
+        ${ordonnes.map((result) => result.rank)}::int[],
+        ${ordonnes.map((result) => result.nextDivision)}::text[]
+      ) AS v(user_id, rank, next)
+      WHERE lm."userId" = v.user_id
+        AND lm."periodKey" = ${periodKey}
+        AND lm."settledAt" IS NULL
+      RETURNING lm."userId"::text AS "userId"
+    `;
+    const faites = new Set(reglees.map((ligne) => ligne.userId));
+    return ordonnes.filter((result) => faites.has(result.userId));
   }
 
   /**
@@ -280,14 +358,25 @@ export class LeaguesRepository {
     results: ReadonlyArray<SettlementResult>,
   ): Promise<void> {
     const deplacements = await this.misplacedFollowing(tx, periodKey, results);
-    await lockGroups(tx, deplacements);
-    for (const { userId, periodKey: suivante, division } of deplacements) {
-      const cohort = await groupWithRoom(tx, suivante, division);
-      await tx.leagueMembership.update({
-        where: { userId_periodKey: { userId, periodKey: suivante } },
-        data: { division, cohort },
-      });
+    if (deplacements.length === 0) {
+      return;
     }
+    await lockGroups(tx, deplacements);
+    // Un comptage par division d'arrivée, un seul `UPDATE` pour tout le lot :
+    // le résultat est celui d'un `groupWithRoom` et d'une écriture par
+    // membre, dans le même ordre, sans leurs allers-retours.
+    const places = await groupsForArrivals(tx, deplacements);
+    await tx.$executeRaw`
+      UPDATE "LeagueMembership" lm
+      SET "division" = v.division::"LeagueDivision", "cohort" = v.cohort
+      FROM unnest(
+        ${places.map((place) => place.userId)}::uuid[],
+        ${places.map((place) => place.periodKey)}::text[],
+        ${places.map((place) => place.division)}::text[],
+        ${places.map((place) => place.cohort)}::int[]
+      ) AS v(user_id, period_key, division, cohort)
+      WHERE lm."userId" = v.user_id AND lm."periodKey" = v.period_key
+    `;
   }
 
   /**

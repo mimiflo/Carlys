@@ -144,6 +144,22 @@ export class WorkoutsRepository {
     });
   }
 
+  /**
+   * Le propriétaire d'une séance vivante, et rien d'autre.
+   *
+   * C'est tout ce qu'un AJOUT de série a besoin de vérifier. Il passait par
+   * `findSessionById`, qui relit la séance avec TOUTES ses séries et TOUT son
+   * plan (trois requêtes, jusqu'à 600 prévisions) pour n'en garder que
+   * l'identifiant — sur le chemin d'écriture le plus chaud de l'API, qu'une
+   * synchronisation hors ligne emprunte une fois par série.
+   */
+  findSessionOwner(id: string): Promise<{ id: string; userId: string } | null> {
+    return this.prisma.workoutSession.findFirst({
+      where: { id, deletedAt: null },
+      select: { id: true, userId: true },
+    });
+  }
+
   listSessionsPage(userId: string, limit: number, cursor?: string): Promise<SessionSummaryRow[]> {
     return this.prisma.workoutSession.findMany({
       where: { userId, deletedAt: null },
@@ -178,20 +194,43 @@ export class WorkoutsRepository {
     return updated.count === 1;
   }
 
-  /** Création idempotente d'une série. Retourne false si l'id existe déjà. */
-  async createSet(data: Prisma.WorkoutSetUncheckedCreateInput): Promise<boolean> {
+  /**
+   * Séances TERMINÉES de ce compte dont la fin tombe dans [from, to[ — sert
+   * le plafond de séances créditées par jour aux défis et à la ligue.
+   */
+  countCompletedEndedBetween(userId: string, from: Date, to: Date): Promise<number> {
+    return this.prisma.workoutSession.count({
+      where: {
+        userId,
+        status: WorkoutSessionStatus.COMPLETED,
+        deletedAt: null,
+        endedAt: { gte: from, lt: to },
+      },
+    });
+  }
+
+  /**
+   * Création idempotente d'une série. Rend la ligne ÉCRITE (`INSERT …
+   * RETURNING`, qui la donne déjà : la relire coûtait deux requêtes de plus),
+   * ou `null` si l'id existe déjà.
+   */
+  async createSet(data: Prisma.WorkoutSetUncheckedCreateInput): Promise<WorkoutSet | null> {
     try {
-      await this.prisma.workoutSet.create({ data });
-      return true;
+      return await this.prisma.workoutSet.create({ data });
     } catch (error) {
       // UNE seule écriture ici : le seul conflit possible est l'identifiant
       // de la série, donc tout P2002 est bien un rejeu (contrairement à
       // `createSession`, qui écrit aussi le plan dans sa transaction).
       if (error instanceof Prisma.PrismaClientKnownRequestError && error.code === 'P2002') {
-        return false;
+        return null;
       }
       throw error;
     }
+  }
+
+  /** La série seule, sans sa séance : ce que vérifie le rejeu d'un ajout. */
+  findSetRow(id: string): Promise<WorkoutSet | null> {
+    return this.prisma.workoutSet.findUnique({ where: { id } });
   }
 
   findSetById(id: string): Promise<(WorkoutSet & { session: WorkoutSession }) | null> {
@@ -211,13 +250,22 @@ export class WorkoutsRepository {
    * orphelin — compté « fait » pour toujours, jamais reproposé, et
    * `linkPlanItem` (qui exige `doneSetId` null) ne pouvait plus jamais le
    * réapparier ; la reprise multi-appareil rapatriait le même orphelin.
+   *
+   * LA SÉANCE BORNE LA LIBÉRATION. `doneSetId` n'a pas d'index, et c'est
+   * voulu : la table du plan est l'une des plus écrites, et une série ne
+   * peut honorer qu'une prévision de SA séance (`linkPlanItem` apparie sous
+   * `sessionId`). Filtrer sur `doneSetId` seul balayait donc le plan de TOUS
+   * les comptes, dans la transaction qui tient le verrou de la série :
+   * 237 ms à chaud, 1,6 s à froid sur 2 millions de prévisions, un coût qui
+   * suivait la base et non la personne. Avec `sessionId`, l'index existant
+   * sert la requête : moins d'une milliseconde.
    */
-  softDeleteSet(id: string): Promise<void> {
+  softDeleteSet(id: string, sessionId: string): Promise<void> {
     return this.prisma
       .$transaction([
         this.prisma.workoutSet.update({ where: { id }, data: { deletedAt: new Date() } }),
         this.prisma.workoutSessionPlanItem.updateMany({
-          where: { doneSetId: id },
+          where: { sessionId, doneSetId: id },
           data: { doneSetId: null },
         }),
       ])
