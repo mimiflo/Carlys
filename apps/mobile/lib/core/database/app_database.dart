@@ -72,6 +72,16 @@ class LocalWorkoutSessions extends Table {
   /// pending | synced | failed.
   TextColumn get syncStatus => text().withDefault(const Constant('pending'))();
 
+  /// Révision SERVEUR de la copie locale : celle du détail que le
+  /// rapatriement a écrit. Tant que la liste de l'API sert la même, la
+  /// séance n'a pas changé là-bas, et le rapatriement ne la relit pas.
+  ///
+  /// Nulle pour une séance jamais rapatriée (née ici, ou d'avant cette
+  /// colonne) et pour un serveur qui ne la sert pas : relue, donc. Une
+  /// écriture de cet appareil ne la touche pas — acquittée, elle fait
+  /// monter la révision du serveur, et la séance est relue une fois.
+  IntColumn get revision => integer().nullable()();
+
   @override
   Set<Column<Object>> get primaryKey => {id};
 }
@@ -328,8 +338,10 @@ class AppDatabase extends _$AppDatabase {
   ///    programme elle honore. C'est la seule chose qu'on écrive du
   ///    calendrier — « fait », « manqué » et « à venir » se déduisent, ils ne
   ///    se stockent pas.
+  /// 8. La RÉVISION serveur sur la séance : le rapatriement saute une séance
+  ///    inchangée au lieu de relire et réécrire les 60 à chaque lancement.
   @override
-  int get schemaVersion => 7;
+  int get schemaVersion => 8;
 
   /// Vide TOUTES les tables, dans une transaction : rien ne survit d'un
   /// compte à l'autre sur le même appareil. Appelée à la frontière de compte
@@ -452,6 +464,15 @@ class AppDatabase extends _$AppDatabase {
         await migrator.addColumn(
           localWorkoutSessions,
           localWorkoutSessions.programDayId,
+        );
+      }
+      // Même table, même raisonnement : `from < 8`. Les séances déjà là
+      // reçoivent une révision nulle, donc sont relues UNE fois au prochain
+      // rapatriement, qui pose alors la révision servie.
+      if (from < 8) {
+        await migrator.addColumn(
+          localWorkoutSessions,
+          localWorkoutSessions.revision,
         );
       }
     },

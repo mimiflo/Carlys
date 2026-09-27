@@ -46,6 +46,11 @@ class WorkoutSessionDownloader {
 
   /// Renvoie le nombre de séances effectivement réécrites en local.
   ///
+  /// Seule la liste se relit à chaque fois : une séance dont la révision n'a
+  /// pas bougé depuis le dernier rapatriement n'est ni téléchargée ni
+  /// réécrite (60 séances inchangées : 0 détail et 0 écriture Drift, contre
+  /// 60 et 360 avant la révision).
+  ///
   /// [shouldContinue], consulté avant chaque séance, arrête la boucle dès
   /// qu'il rend faux : la purge de compte annule ainsi un rapatriement en
   /// vol, puis ATTEND sa fin — aucune écriture ne retombe dans la base
@@ -59,9 +64,18 @@ class WorkoutSessionDownloader {
         _logger.info('Rapatriement interrompu ($restored séances réécrites)');
         return restored;
       }
+      final local = await (_db.select(
+        _db.localWorkoutSessions,
+      )..where((row) => row.id.equals(ref.id))).getSingleOrNull();
+      // Même révision que la copie locale : rien n'a changé là-bas depuis le
+      // dernier rapatriement, ni relue ni réécrite. Une révision absente
+      // (serveur plus ancien, séance jamais rapatriée) ne prouve rien.
+      if (ref.revision != null && local?.revision == ref.revision) {
+        continue;
+      }
       // Une saisie locale non acquittée gagne TOUJOURS : l'appareil ne perd
       // jamais ce qu'il a enregistré au profit d'un état serveur plus ancien.
-      if (await _hasLocalChanges(ref.id)) {
+      if (local != null && await _hasLocalChanges(local)) {
         continue;
       }
       final detail = await _remote.detail(ref.id);
@@ -125,13 +139,8 @@ class WorkoutSessionDownloader {
     return refs;
   }
 
-  Future<bool> _hasLocalChanges(String sessionId) async {
-    final session = await (_db.select(
-      _db.localWorkoutSessions,
-    )..where((row) => row.id.equals(sessionId))).getSingleOrNull();
-    if (session == null) {
-      return false; // inconnue en local : rien à protéger
-    }
+  Future<bool> _hasLocalChanges(LocalWorkoutSession session) async {
+    final sessionId = session.id;
     if (session.syncStatus != 'synced') {
       return true;
     }
@@ -151,7 +160,8 @@ class WorkoutSessionDownloader {
   }
 
   /// Écrit la version serveur d'une séance (séance, séries, plan), marquée
-  /// `synced`. Une transaction par séance : une coupure au milieu laisse
+  /// `synced`, avec la révision du détail : lu APRÈS la liste, il est la
+  /// version la plus récente des deux. Une transaction par séance : une coupure au milieu laisse
   /// une base cohérente, simplement incomplète — le prochain appel
   /// reprendra.
   ///
@@ -178,6 +188,7 @@ class WorkoutSessionDownloader {
               templateName: Value(session.templateName),
               programDayId: Value(session.programDayId),
               syncStatus: const Value('synced'),
+              revision: Value(session.revision),
             ),
           );
 

@@ -57,6 +57,16 @@ export const workoutSessionSummarySchema = z.object({
    * jamais.
    */
   programDayId: z.string().nullable(),
+  /**
+   * Révision de la séance : un entier qui AUGMENTE à chaque modification de
+   * la séance, de l'une de ses séries (suppression comprise) ou de son plan,
+   * et ne bouge jamais sinon (lecture, rejeu sans effet). Le rapatriement
+   * compare la valeur de la liste à celle qu'il a enregistrée avec le
+   * détail : égales, la copie locale est à jour et le détail est inutile.
+   * Une valeur opaque à comparer par égalité, pas une date ni un compte de
+   * modifications. Absente d'un serveur antérieur : l'appareil retélécharge.
+   */
+  revision: z.number().int(),
 });
 export type WorkoutSessionSummary = z.infer<typeof workoutSessionSummarySchema>;
 

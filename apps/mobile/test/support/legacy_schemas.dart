@@ -222,6 +222,119 @@ CREATE TABLE local_water_intakes (
 );
 ''';
 
+/// Version 7 : `program_day_id` (la case du calendrier honorée) — la
+/// dernière version sans `revision`.
+const String _sessionsV7 = '''
+CREATE TABLE local_workout_sessions (
+  id TEXT NOT NULL,
+  name TEXT NULL,
+  notes TEXT NULL,
+  status TEXT NOT NULL,
+  started_at INTEGER NOT NULL,
+  ended_at INTEGER NULL,
+  duration_seconds INTEGER NULL,
+  template_id TEXT NULL,
+  template_name TEXT NULL,
+  program_day_id TEXT NULL,
+  sync_status TEXT NOT NULL DEFAULT 'pending',
+  PRIMARY KEY (id)
+);
+''';
+
+/// Version 6 : `distance_meters` sur la série réalisée.
+const String _setsV6 = '''
+CREATE TABLE local_workout_sets (
+  id TEXT NOT NULL,
+  session_id TEXT NOT NULL,
+  exercise_id TEXT NULL,
+  exercise_name TEXT NOT NULL,
+  position INTEGER NOT NULL,
+  kind TEXT NOT NULL DEFAULT 'NORMAL',
+  reps INTEGER NULL,
+  weight_kg REAL NULL,
+  duration_seconds INTEGER NULL,
+  distance_meters INTEGER NULL,
+  rest_seconds INTEGER NULL,
+  rpe INTEGER NULL,
+  planned_reps INTEGER NULL,
+  planned_weight_kg REAL NULL,
+  completed_at INTEGER NOT NULL,
+  deleted INTEGER NOT NULL DEFAULT 0,
+  sync_status TEXT NOT NULL DEFAULT 'pending',
+  PRIMARY KEY (id)
+);
+''';
+
+/// Version 5 : `server_error_count` et `owner_user_id` sur la file.
+const String _syncOperationsV5 = '''
+CREATE TABLE sync_operations (
+  id TEXT NOT NULL,
+  entity_type TEXT NOT NULL,
+  entity_id TEXT NOT NULL,
+  operation_type TEXT NOT NULL,
+  payload TEXT NOT NULL,
+  created_at INTEGER NOT NULL,
+  attempt_count INTEGER NOT NULL DEFAULT 0,
+  last_attempt_at INTEGER NULL,
+  server_error_count INTEGER NOT NULL DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'pending',
+  error TEXT NULL,
+  idempotency_key TEXT NOT NULL,
+  owner_user_id TEXT NULL,
+  PRIMARY KEY (id)
+);
+''';
+
+/// Version 6 : cibles en temps et en distance, côté prescription.
+const String _templateSetsV6 = '''
+CREATE TABLE local_template_sets (
+  id TEXT NOT NULL,
+  template_exercise_id TEXT NOT NULL,
+  position INTEGER NOT NULL,
+  kind TEXT NOT NULL DEFAULT 'NORMAL',
+  target_reps INTEGER NULL,
+  target_weight_kg REAL NULL,
+  target_duration_seconds INTEGER NULL,
+  target_distance_meters INTEGER NULL,
+  rest_seconds INTEGER NULL,
+  PRIMARY KEY (id)
+);
+''';
+
+/// Version 6 : cibles en temps et en distance, sur l'item de plan aussi.
+const String _planItemsV6 = '''
+CREATE TABLE local_session_plan_items (
+  id TEXT NOT NULL,
+  session_id TEXT NOT NULL,
+  exercise_position INTEGER NOT NULL,
+  exercise_id TEXT NULL,
+  exercise_name TEXT NOT NULL,
+  set_position INTEGER NOT NULL,
+  kind TEXT NOT NULL DEFAULT 'NORMAL',
+  target_reps INTEGER NULL,
+  target_weight_kg REAL NULL,
+  target_duration_seconds INTEGER NULL,
+  target_distance_meters INTEGER NULL,
+  rest_seconds INTEGER NULL,
+  done_set_id TEXT NULL,
+  skipped INTEGER NOT NULL DEFAULT 0,
+  sync_status TEXT NOT NULL DEFAULT 'pending',
+  PRIMARY KEY (id)
+);
+''';
+
+/// Version 5 : les quatre index, inchangés depuis.
+const List<String> _indexesV5 = [
+  'CREATE INDEX idx_local_workout_sessions_status_started_at '
+      'ON local_workout_sessions (status, started_at);',
+  'CREATE INDEX idx_local_workout_sets_session_id '
+      'ON local_workout_sets (session_id);',
+  'CREATE INDEX idx_local_session_plan_items_session_id '
+      'ON local_session_plan_items (session_id);',
+  'CREATE INDEX idx_sync_operations_status_created_at '
+      'ON sync_operations (status, created_at);',
+];
+
 // ── Schémas complets ────────────────────────────────────────────────────────
 
 /// Version 1 (Étape 4) : séances, séries, file de synchronisation.
@@ -267,6 +380,20 @@ const LegacySchema legacySchemaV4 = LegacySchema(4, [
   _waterIntakesV4,
 ]);
 
+/// Version 7 : calendrier (`program_day_id`), temps et distance, index —
+/// celle de tout appareil à jour avant la révision de séance (v8).
+const LegacySchema legacySchemaV7 = LegacySchema(7, [
+  _sessionsV7,
+  _setsV6,
+  _syncOperationsV5,
+  _templatesV2,
+  _templateExercisesV2,
+  _templateSetsV6,
+  _planItemsV6,
+  _waterIntakesV4,
+  ..._indexesV5,
+]);
+
 /// Tous les paliers historiques rejouables, du plus ancien au plus récent.
 ///
 /// C'est la liste sur laquelle boucle le test de forme
@@ -278,9 +405,10 @@ const List<LegacySchema> legacySchemas = [
   legacySchemaV2,
   legacySchemaV3,
   legacySchemaV4,
+  legacySchemaV7,
 ];
 
-/// Le plus haut palier historique couvert ici (aujourd'hui 4).
+/// Le plus haut palier historique couvert ici (aujourd'hui 7).
 ///
 /// `AppDatabase.schemaVersion` doit lui être STRICTEMENT supérieur : un
 /// palier figé ci-dessus est par définition une version révolue. C'est la

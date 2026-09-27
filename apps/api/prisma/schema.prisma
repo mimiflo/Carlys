@@ -537,6 +537,23 @@ model WorkoutSession {
   updatedAt       DateTime             @updatedAt
   deletedAt       DateTime?
 
+  /// Révision servie au rapatriement mobile : +1, EN BASE et dans la même
+  /// transaction, à chaque écriture qui change ce que le détail sert — la
+  /// séance, l'une de ses séries (suppression comprise) ou son plan. Ce sont
+  /// des DÉCLENCHEURS PostgreSQL qui l'incrémentent (migration
+  /// `20260927400000_revision_des_seances_en_base`), pas le code : une
+  /// écriture qui l'ignore (code d'avant, remis par un retour arrière du
+  /// déploiement) la fait monter quand même. Ne jamais l'écrire à la main ;
+  /// ne toucher aucune ligne quand rien ne change (rejeu).
+  ///
+  /// Pas le plus grand `updatedAt` : Prisma le date AVANT la validation, sur
+  /// l'horloge du réplica. Deux écritures concurrentes peuvent donc devenir
+  /// visibles dans l'ordre inverse de leurs dates, et la plus lente, datée
+  /// plus tôt, ne ferait jamais monter le maximum : une correction perdue
+  /// pour de bon. Un compteur sous le verrou de la ligne ne peut pas manquer
+  /// une écriture validée.
+  revision Int @default(1)
+
   /// Modèle lancé, s'il y en a un. SetNull : une purge physique du modèle
   /// n'efface jamais la séance.
   templateId   String? @db.Uuid

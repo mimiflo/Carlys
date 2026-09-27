@@ -31,6 +31,7 @@ function sessionRow(overrides: Partial<SessionWithSets> = {}): SessionWithSets {
     templateId: null,
     templateName: null,
     programDayId: null,
+    revision: 1,
     sets: [],
     planItems: [],
     ...overrides,

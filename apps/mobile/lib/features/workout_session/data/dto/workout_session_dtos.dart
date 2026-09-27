@@ -21,6 +21,7 @@ class RemoteWorkoutSession {
     this.templateId,
     this.templateName,
     this.programDayId,
+    this.revision,
   });
 
   final String id;
@@ -40,6 +41,11 @@ class RemoteWorkoutSession {
   /// leurs liens, et le calendrier de l'appareil neuf serait vide alors que
   /// le serveur sait tout.
   final String? programDayId;
+
+  /// Révision de la séance au moment de CETTE lecture : un compteur que
+  /// l'API fait monter à chaque écriture validée (séance, séries, plan,
+  /// case du calendrier). Nulle pour un serveur plus ancien que ce client.
+  final int? revision;
   final List<RemoteWorkoutSet> sets;
   final List<RemoteSessionPlanItem> plan;
 }
@@ -106,19 +112,27 @@ class RemoteSessionPlanItem {
   final bool skipped;
 }
 
-/// Identifiant + date de début d'une séance listée : tout ce dont le
-/// rapatriement a besoin avant de décider s'il télécharge le détail.
+/// Identifiant, date de début et révision d'une séance listée : tout ce dont
+/// le rapatriement a besoin avant de décider s'il télécharge le détail.
 class RemoteWorkoutSessionRef {
-  const RemoteWorkoutSessionRef({required this.id, required this.startedAt});
+  const RemoteWorkoutSessionRef({
+    required this.id,
+    required this.startedAt,
+    this.revision,
+  });
 
   final String id;
   final DateTime startedAt;
+
+  /// Voir [RemoteWorkoutSession.revision] ; nulle : retélécharger.
+  final int? revision;
 }
 
 RemoteWorkoutSessionRef sessionRefFromJson(Map<String, dynamic> json) {
   return RemoteWorkoutSessionRef(
     id: json['id'] as String,
     startedAt: DateTime.parse(json['startedAt'] as String).toUtc(),
+    revision: json['revision'] as int?,
   );
 }
 
@@ -137,6 +151,7 @@ RemoteWorkoutSession sessionFromJson(Map<String, dynamic> json) {
     // Un serveur plus vieux que ce client ne le sert pas : la clé manque, le
     // lien reste nul, et la séance se rapatrie quand même.
     programDayId: json['programDayId'] as String?,
+    revision: json['revision'] as int?,
     sets: (json['sets'] as List<dynamic>? ?? const [])
         .whereType<Map<String, dynamic>>()
         .map(_setFromJson)

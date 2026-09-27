@@ -136,6 +136,11 @@ export class ProgramsRepository {
    * honoré par au plus une séance.
    */
   async linkSessionToDay(dayId: string, userId: string, sessionId: string | null): Promise<void> {
+    // Chaque séance dont le lien CHANGE monte d'une révision
+    // (`WorkoutSession.revision`, tenue en base par déclencheur) :
+    // `programDayId` fait partie de ce que le téléphone rapatrie. Relier une
+    // séance déjà reliée à cette case ne change rien : le filtre ne touche
+    // alors aucune ligne, et la révision ne bouge pas.
     await this.prisma.$transaction(async (tx) => {
       await tx.workoutSession.updateMany({
         where: {
@@ -147,7 +152,11 @@ export class ProgramsRepository {
       });
       if (sessionId !== null) {
         await tx.workoutSession.updateMany({
-          where: { id: sessionId, userId },
+          where: {
+            id: sessionId,
+            userId,
+            OR: [{ programDayId: null }, { programDayId: { not: dayId } }],
+          },
           data: { programDayId: dayId },
         });
       }

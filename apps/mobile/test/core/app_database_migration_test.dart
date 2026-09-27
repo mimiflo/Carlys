@@ -7,7 +7,7 @@ import '../support/legacy_schemas.dart';
 
 /// Migrations locales 1 → 2 (modèles de séance), 2 → 3 (plan
 /// synchronisable, pour la reprise multi-appareil), 3 → 4 (hydratation du
-/// jour) puis 4 → 5 (index).
+/// jour), 4 → 5 (index) et 7 → 8 (révision serveur de la séance).
 ///
 /// Chaque test part d'une base **réellement créée avec le schéma d'alors**
 /// et la laisse monter jusqu'à la version courante. La règle est la même à
@@ -403,6 +403,57 @@ void main() {
         ),
         contains('idx_local_workout_sets_session_id'),
       );
+    });
+  });
+
+  group('depuis la version 7', () {
+    late AppDatabase db;
+
+    setUp(() {
+      db = openLegacyDatabase(
+        legacySchemaV7,
+        seed: [
+          // Une séance rapatriée avant la révision : acquittée, reliée à une
+          // case du calendrier, avec sa série et une opération en file.
+          '''
+          INSERT INTO local_workout_sessions
+            (id, name, status, started_at, program_day_id, sync_status)
+          VALUES ('session-v7', 'Push A', 'COMPLETED', 1786000000,
+                  'jour-3', 'synced');
+          ''',
+          '''
+          INSERT INTO local_workout_sets
+            (id, session_id, exercise_name, position, kind, reps,
+             distance_meters, completed_at, deleted, sync_status)
+          VALUES ('set-v7', 'session-v7', 'Rameur', 0, 'NORMAL', NULL, 2000,
+                  1786000600, 0, 'synced');
+          ''',
+          '''
+          INSERT INTO sync_operations
+            (id, entity_type, entity_id, operation_type, payload, created_at,
+             idempotency_key, owner_user_id)
+          VALUES ('op-v7', 'set', 'set-v7', 'set.upsert', '{}', 1786000000,
+                  'set-v7', 'compte-1');
+          ''',
+        ],
+      );
+    });
+
+    tearDown(() => db.close());
+
+    test('la révision arrive nulle, rien d’autre ne bouge', () async {
+      final session = await db.select(db.localWorkoutSessions).getSingle();
+      expect(session.programDayId, 'jour-3');
+      expect(session.syncStatus, 'synced');
+      // Nulle : la séance sera relue UNE fois au prochain rapatriement, qui
+      // posera la révision servie. Une valeur inventée la figerait.
+      expect(session.revision, isNull);
+
+      final set = await db.select(db.localWorkoutSets).getSingle();
+      expect(set.distanceMeters, 2000);
+      final operation = await db.select(db.syncOperations).getSingle();
+      expect(operation.ownerUserId, 'compte-1');
+      expect(await indexNamesOf(db), containsAll(_expectedIndexes));
     });
   });
 }

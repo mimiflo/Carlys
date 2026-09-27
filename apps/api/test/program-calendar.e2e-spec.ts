@@ -324,9 +324,25 @@ describe('Calendrier de programme (e2e)', () => {
     it('la reconnaissance est EXCLUSIVE : une seconde séance délie la première', async () => {
       const premiere = (await caseDatee(aujourdHui))?.sessionId;
       expect(premiere).not.toBeNull();
+      const revisionDe = async (id: string | null | undefined): Promise<number> =>
+        data<WorkoutSessionDetail>(
+          (
+            await as(token)
+              .get(`/api/v1/workout-sessions/${String(id)}`)
+              .expect(200)
+          ).body,
+        ).revision;
 
       const seconde = await seanceTerminee(new Date().toISOString());
+      const avant = [await revisionDe(premiere), await revisionDe(seconde)];
       await lier(caseDuJour, seconde).expect(200);
+      // `programDayId` est rapatrié par le téléphone : les DEUX séances dont
+      // le lien change montent d'une révision, et un rejeu n'en change aucune.
+      const apres = [await revisionDe(premiere), await revisionDe(seconde)];
+      expect(apres[0]).not.toBe(avant[0]);
+      expect(apres[1]).not.toBe(avant[1]);
+      await lier(caseDuJour, seconde).expect(200);
+      expect([await revisionDe(premiere), await revisionDe(seconde)]).toEqual(apres);
 
       // Sans cette exclusivité, deux séances honoreraient la même case, la
       // lecture n'en montrerait qu'une, et « délier » ne saurait plus

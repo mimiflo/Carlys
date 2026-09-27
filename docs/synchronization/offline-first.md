@@ -12,7 +12,7 @@
 > - table locale `sync_operations` avec exactement les colonnes décrites plus
 >   bas ; **une opération réussie est supprimée** (l'état `synced` vit sur
 >   l'entité), `failed` est réservé aux refus définitifs du serveur (4xx) ;
-> - **index Drift** (posés au schéma local v5 ; le schéma en est à la **v7**)
+> - **index Drift** (posés au schéma local v5 ; le schéma en est à la **v8**)
 >   sur les colonnes que les requêtes
 >   réelles filtrent : `(status, started_at)` des séances, `session_id` des
 >   séries et du plan, `(status, created_at)` de la file — sans eux, chaque
@@ -541,17 +541,30 @@ L'utilisateur installe l'application sur un second téléphone, base locale vide
    et réécrivait tous les modèles ;
 3. rapatrie les **séances** (`WorkoutSessionDownloader`) : les 60 plus
    récentes, avec leurs séries **et leur plan**. Le dépassement de ce plafond
-   est journalisé, jamais silencieux. Elles sont encore relues à chaque
-   lancement : le résumé de liste (statut, fin, nombre de séries, volume
-   arrondi) ne suffit pas à dire qu'une séance close n'a pas changé (une
-   correction de répétitions au poids du corps ne bouge aucun de ces
-   champs). Il faudra une révision servie par l'API (le plus grand
-   `updatedAt` de la séance, de ses séries, supprimées comprises, et de son
-   plan) pour sauter une séance inchangée sans risque.
+   est journalisé, jamais silencieux. Seule la **liste** se relit à chaque
+   lancement : elle sert, pour chaque séance, sa **révision**, un entier que
+   la base fait monter, par déclencheurs, dans la transaction de toute
+   écriture validée (séance, série ajoutée, corrigée ou supprimée, plan, case
+   du calendrier) : même un code d'avant, remis par un retour arrière du
+   déploiement, ne peut pas l'oublier. La
+   copie locale retient la révision du **détail** qu'elle a écrit (colonne
+   `revision`, schéma local v8). Même révision des deux côtés : la séance
+   n'est ni téléchargée ni réécrite. Mesuré par
+   `test/features/workout_session/session_restore_test.dart` : pour 60
+   séances inchangées, un second lancement coûtait 60 détails et 360
+   écritures Drift, il n'en coûte plus aucun. Un entier et non le plus grand
+   `updatedAt` : une écriture validée APRÈS une autre, mais datée avant
+   elle, ne ferait pas bouger le maximum, et Drift tronque les dates à la
+   seconde. Une révision absente (serveur plus ancien, séance née sur
+   l'appareil ou antérieure à la colonne) ne prouve rien : la séance est
+   relue. Une écriture de l'appareil ne touche pas la révision locale ;
+   acquittée, elle fait monter celle du serveur, et la séance est relue une
+   fois.
 
-Règle unique et non négociable : le rapatriement **saute** toute séance dont la
-séance, une série ou une prévision porte encore un `syncStatus` autre que
-`synced`. Un appareil ne perd jamais sa propre saisie au profit d'un état
+Règle unique et non négociable, que la révision ne lève jamais : le
+rapatriement **saute** toute séance dont la séance, une série ou une
+prévision porte encore un `syncStatus` autre que `synced`, quelle que soit la
+révision que le serveur annonce. Un appareil ne perd jamais sa propre saisie au profit d'un état
 serveur plus ancien. Hors ligne, l'échec est journalisé et l'application
 démarre normalement sur son local.
 

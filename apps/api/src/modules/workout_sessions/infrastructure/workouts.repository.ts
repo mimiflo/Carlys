@@ -61,7 +61,16 @@ function collidedOnSession(error: Prisma.PrismaClientKnownRequestError): boolean
   return typeof target === 'string' && /WorkoutSession_pkey|\bid\b/.test(target);
 }
 
-/** Accès Prisma des séances — toutes les requêtes sont scoppées à un userId. */
+/**
+ * Accès Prisma des séances — toutes les requêtes sont scoppées à un userId.
+ *
+ * LA RÉVISION (`WorkoutSession.revision`) n'est écrite nulle part ici : des
+ * déclencheurs PostgreSQL la font monter à chaque écriture de la séance, de
+ * ses séries ou de son plan (migration `20260927400000`), dans la
+ * transaction de l'écriture. Ce qui revient à ce code : ne toucher AUCUNE
+ * ligne quand rien ne change (rejeu), sans quoi la séance serait
+ * retéléchargée pour rien.
+ */
 @Injectable()
 export class WorkoutsRepository {
   constructor(private readonly prisma: PrismaService) {}
@@ -130,8 +139,10 @@ export class WorkoutsRepository {
    * une série réalisée est un fait acquis, on ne la « saute » pas après coup.
    */
   async skipPlanItems(sessionId: string, planItemIds: string[]): Promise<number> {
+    // `skipped: false` : un rejeu ne touche aucune ligne, donc ne fait pas
+    // monter la révision.
     const updated = await this.prisma.workoutSessionPlanItem.updateMany({
-      where: { id: { in: planItemIds }, sessionId, doneSetId: null },
+      where: { id: { in: planItemIds }, sessionId, doneSetId: null, skipped: false },
       data: { skipped: true },
     });
     return updated.count;

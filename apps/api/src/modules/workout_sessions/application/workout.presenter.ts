@@ -49,6 +49,7 @@ export function presentSessionSummary(session: SessionSummaryRow): WorkoutSessio
     templateId: session.templateId,
     templateName: session.templateName,
     programDayId: session.programDayId,
+    revision: session.revision,
   };
 }
 
