@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { hkdfSync } from 'node:crypto';
 import { type Env } from './env.schema';
 
 /**
@@ -78,6 +79,22 @@ export class AppConfigService {
 
   get jwtAccessSecret(): string {
     return this.config.get('JWT_ACCESS_SECRET', { infer: true });
+  }
+
+  /**
+   * Clé des EMPREINTES de journal (`logFingerprint`) : dérivée du secret JWT
+   * par HKDF, sous une étiquette propre — une même clé ne sert jamais à deux
+   * usages. Elle ne sort jamais du serveur ; sans elle, une empreinte ne se
+   * vérifie contre aucune adresse candidate.
+   *
+   * ponytail: dérivée plutôt qu'une variable d'environnement de plus, donc
+   * changer `JWT_ACCESS_SECRET` change aussi les empreintes (la corrélation
+   * ne traverse pas la rotation). Une clé dédiée le jour où elle devra.
+   */
+  get logFingerprintKey(): Buffer {
+    return Buffer.from(
+      hkdfSync('sha256', this.jwtAccessSecret, '', 'carlys/empreinte-de-journal', 32),
+    );
   }
 
   get jwtAccessTtlSeconds(): number {

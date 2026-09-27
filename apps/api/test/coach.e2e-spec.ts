@@ -151,10 +151,54 @@ describe('Coach IA (e2e)', () => {
     return value === null ? 0 : Number(value);
   };
 
-  it('sans le droit ai_coaching, le coach est refusé (403) avant toute dépense', async () => {
+  it('sans le droit ai_coaching, écrire au coach est refusé (403) avant toute dépense', async () => {
     await revokeCoaching();
-    await authed(accessToken).get('/api/v1/coach/conversations').expect(403);
+    await authed(accessToken)
+      .post('/api/v1/coach/conversations')
+      .send({ id: randomUUID() })
+      .expect(403);
+    await authed(accessToken)
+      .post(`/api/v1/coach/conversations/${randomUUID()}/messages`)
+      .send({ id: randomUUID(), content: 'Une question' })
+      .expect(403);
+    // LIRE ses propres fils reste ouvert, abonné ou non (CGU : ce qui a été
+    // créé avec le Premium reste consultable).
+    await authed(accessToken).get('/api/v1/coach/conversations').expect(200);
     await request(app.getHttpServer()).get('/api/v1/coach/conversations').expect(401);
+  });
+
+  it('un ANCIEN abonné relit ses conversations, sans pouvoir y écrire', async () => {
+    await grantCoaching();
+    await resetQuota();
+    nextOutput = textOnly('Garde 2 minutes de repos entre les séries.');
+    const conversationId = randomUUID();
+    await authed(accessToken)
+      .post('/api/v1/coach/conversations')
+      .send({ id: conversationId })
+      .expect(201);
+    await authed(accessToken)
+      .post(`/api/v1/coach/conversations/${conversationId}/messages`)
+      .send({ id: randomUUID(), content: 'Combien de repos ?' })
+      .expect(201);
+
+    await revokeCoaching();
+
+    const liste = data<CoachConversationSummary[]>(
+      (await authed(accessToken).get('/api/v1/coach/conversations').expect(200)).body,
+    );
+    expect(liste.map((fil) => fil.id)).toContain(conversationId);
+    const fil = data<{ messages: Array<{ content: string }> }>(
+      (await authed(accessToken).get(`/api/v1/coach/conversations/${conversationId}`).expect(200))
+        .body,
+    );
+    expect(fil.messages.map((message) => message.content)).toEqual([
+      'Combien de repos ?',
+      'Garde 2 minutes de repos entre les séries.',
+    ]);
+    await authed(accessToken)
+      .post(`/api/v1/coach/conversations/${conversationId}/messages`)
+      .send({ id: randomUUID(), content: 'Et demain ?' })
+      .expect(403);
   });
 
   it('avec le droit, un fil s’ouvre et le coach répond', async () => {
@@ -348,8 +392,10 @@ describe('Coach IA (e2e)', () => {
       .send({ id: conversationId })
       .expect(201);
 
-    // L'autre compte n'a pas le droit : 403 avant même la question de propriété.
-    await authed(otherAccessToken).get(`/api/v1/coach/conversations/${conversationId}`).expect(403);
+    // La lecture n'est plus gardée par l'abonnement, mais par la PROPRIÉTÉ :
+    // le fil d'autrui est introuvable (404), jamais « interdit » — un 403
+    // confirmerait qu'il existe.
+    await authed(otherAccessToken).get(`/api/v1/coach/conversations/${conversationId}`).expect(404);
   });
 
   it('un message est adressé par (fil, identifiant) : l’identifiant d’autrui ne s’écrit ni ne se lit', async () => {
@@ -496,11 +542,22 @@ describe('Coach IA (e2e)', () => {
     configureApp(disabled);
     await disabled.init();
 
-    await request(disabled.getHttpServer())
-      .get('/api/v1/coach/conversations')
-      .set('Authorization', `Bearer ${accessToken}`)
-      .expect(503);
-
-    await disabled.close();
+    try {
+      // Écrire est coupé : 503, jamais une erreur serveur.
+      await request(disabled.getHttpServer())
+        .post('/api/v1/coach/conversations')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .send({ id: randomUUID() })
+        .expect(503);
+      // Relire ses fils, non : l'historique reste consultable, coach coupé.
+      await request(disabled.getHttpServer())
+        .get('/api/v1/coach/conversations')
+        .set('Authorization', `Bearer ${accessToken}`)
+        .expect(200);
+    } finally {
+      // Fermée même en cas d'échec : une application restée ouverte retient
+      // le processus de test, qui ne rend alors jamais la main.
+      await disabled.close();
+    }
   });
 });

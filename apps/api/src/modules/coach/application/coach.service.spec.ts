@@ -1,4 +1,9 @@
-import { ConflictException, NotFoundException } from '@nestjs/common';
+import {
+  ConflictException,
+  ForbiddenException,
+  NotFoundException,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import { type PinoLogger } from 'nestjs-pino';
 import { type AppConfigService } from '../../../config/app-config.service';
 import { type EntitlementsService } from '../../subscriptions/application/entitlements.service';
@@ -18,6 +23,7 @@ interface Stubs {
   repository: {
     ensureConversation: jest.Mock;
     findConversation: jest.Mock;
+    listConversations: jest.Mock;
     voiceOf: jest.Mock;
     findMessageWithReply: jest.Mock;
     conversationIdOfMessage: jest.Mock;
@@ -59,6 +65,7 @@ function buildStubs(): Stubs {
     repository: {
       ensureConversation: jest.fn().mockResolvedValue(undefined),
       findConversation: jest.fn().mockResolvedValue(conversationWith([])),
+      listConversations: jest.fn().mockResolvedValue([]),
       voiceOf: jest.fn().mockResolvedValue({ carlysProfile: null, mentorStyle: null }),
       findMessageWithReply: jest.fn().mockResolvedValue(null),
       conversationIdOfMessage: jest.fn().mockResolvedValue(null),
@@ -78,13 +85,19 @@ function buildStubs(): Stubs {
   };
 }
 
-function buildService(stubs: Stubs): CoachService {
+function buildService(
+  stubs: Stubs,
+  acces: { abonne: boolean; coachEnabled: boolean } = { abonne: true, coachEnabled: true },
+): CoachService {
   const entitlements = {
     entitlementsFor: jest
       .fn()
-      .mockResolvedValue({ entitlements: [{ key: 'ai_coaching', isActive: true }] }),
+      .mockResolvedValue({ entitlements: [{ key: 'ai_coaching', isActive: acces.abonne }] }),
   };
-  const config = { coachEnabled: true, anthropicApiKey: 'cle-factice-de-test-32-caracteres' };
+  const config = {
+    coachEnabled: acces.coachEnabled,
+    anthropicApiKey: 'cle-factice-de-test-32-caracteres',
+  };
   const logger = { info: jest.fn(), warn: jest.fn() };
   // La porte (configuration + droit) est un collaborateur à part : on lui
   // passe les mêmes doubles qu'avant, la règle testée ne change pas.
@@ -245,5 +258,38 @@ describe('CoachService.sendMessage', () => {
       NotFoundException,
     );
     expect(stubs.model.reply).not.toHaveBeenCalled();
+  });
+});
+
+/**
+ * LIRE ses fils reste ouvert à leur auteur : ce qui a été écrit avec le
+ * Premium reste consultable (CGU), sans abonnement et même coach coupé.
+ * Seuls l'ouverture d'un fil et l'envoi d'un message passent la porte.
+ */
+describe('CoachService — la porte ne garde que ce qui coûte', () => {
+  it.each([
+    ['ancien abonné (403 à l’envoi)', { abonne: false, coachEnabled: true }, ForbiddenException],
+    [
+      'coach coupé (503 à l’envoi)',
+      { abonne: true, coachEnabled: false },
+      ServiceUnavailableException,
+    ],
+  ])('%s : la liste et le fil se lisent, écrire est refusé', async (_cas, acces, refus) => {
+    const stubs = buildStubs();
+    stubs.repository.findConversation.mockResolvedValue(
+      conversationWith([storedMessage('USER', 'Ma question d’avant.', 'message-1')]),
+    );
+    const service = buildService(stubs, acces);
+
+    await expect(service.listConversations(USER)).resolves.toEqual([]);
+    const fil = await service.conversation(USER, CONVERSATION);
+    expect(fil.messages.map((message) => message.content)).toEqual(['Ma question d’avant.']);
+
+    await expect(service.createConversation(USER, CONVERSATION)).rejects.toBeInstanceOf(refus);
+    await expect(
+      service.sendMessage(USER, CONVERSATION, MESSAGE, 'Encore une question'),
+    ).rejects.toBeInstanceOf(refus);
+    expect(stubs.model.reply).not.toHaveBeenCalled();
+    expect(stubs.quota.consume).not.toHaveBeenCalled();
   });
 });

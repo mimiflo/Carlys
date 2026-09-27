@@ -154,6 +154,19 @@ export class ProgramsRepository {
     });
   }
 
+  /**
+   * Parmi ces cases, celles qu'une séance TERMINÉE (et non supprimée) de ce
+   * compte honore — les mêmes critères que `weekWithSessions`.
+   */
+  async completedDayIds(userId: string, dayIds: string[]): Promise<Set<string>> {
+    if (dayIds.length === 0) return new Set();
+    const rows = await this.prisma.workoutSession.findMany({
+      where: { userId, programDayId: { in: dayIds }, status: 'COMPLETED', deletedAt: null },
+      select: { programDayId: true },
+    });
+    return new Set(rows.flatMap((row) => (row.programDayId === null ? [] : [row.programDayId])));
+  }
+
   /** Programmes vivants d'un compte — sert le plafond du plan gratuit. */
   countLive(userId: string): Promise<number> {
     return this.prisma.program.count({ where: { userId, deletedAt: null } });

@@ -5,12 +5,15 @@ import { type MealPhotosService } from '../../nutrition/application/meal-photos.
 import { type UsersRepository } from '../../users/infrastructure/users.repository';
 import { type SessionsRepository } from '../infrastructure/sessions.repository';
 import { AccountService } from './account.service';
+import { type LockoutService } from './lockout.service';
 import { type PasswordService } from './password.service';
+import { ReauthenticationService } from './reauthentication.service';
 
 interface Stubs {
   users: { findPasswordHash: jest.Mock; deleteAccount: jest.Mock };
   sessions: { deleteAllSessions: jest.Mock };
   passwords: { verify: jest.Mock };
+  lockout: { reserveAttempt: jest.Mock; reset: jest.Mock };
   audit: { record: jest.Mock };
   mealPhotos: { forgetAllOf: jest.Mock; eraseAllOf: jest.Mock };
 }
@@ -23,6 +26,10 @@ function buildStubs(): Stubs {
     },
     sessions: { deleteAllSessions: jest.fn().mockResolvedValue(undefined) },
     passwords: { verify: jest.fn().mockResolvedValue(true) },
+    lockout: {
+      reserveAttempt: jest.fn().mockResolvedValue({ locked: false }),
+      reset: jest.fn().mockResolvedValue(undefined),
+    },
     audit: { record: jest.fn() },
     mealPhotos: {
       forgetAllOf: jest.fn().mockResolvedValue(undefined),
@@ -35,7 +42,10 @@ function buildService(stubs: Stubs): AccountService {
   return new AccountService(
     stubs.users as unknown as UsersRepository,
     stubs.sessions as unknown as SessionsRepository,
-    stubs.passwords as unknown as PasswordService,
+    new ReauthenticationService(
+      stubs.passwords as unknown as PasswordService,
+      stubs.lockout as unknown as LockoutService,
+    ),
     stubs.audit as unknown as AuditService,
     stubs.mealPhotos as unknown as MealPhotosService,
   );
@@ -57,6 +67,19 @@ describe('AccountService', () => {
     expect(stubs.audit.record).toHaveBeenCalledWith(
       expect.objectContaining({ action: 'account.delete_failed', userId: 'user-1' }),
     );
+  });
+
+  it('verrouillage de re-authentification : 429 avant toute vérification, rien n’est supprimé', async () => {
+    const stubs = buildStubs();
+    stubs.lockout.reserveAttempt.mockResolvedValue({ locked: true, retryAfterSeconds: 300 });
+    const service = buildService(stubs);
+
+    await expect(service.deleteAccount('user-1', 'juste', client)).rejects.toMatchObject({
+      status: 429,
+    });
+    expect(stubs.lockout.reserveAttempt).toHaveBeenCalledWith('reauth:user-1');
+    expect(stubs.passwords.verify).not.toHaveBeenCalled();
+    expect(stubs.users.deleteAccount).not.toHaveBeenCalled();
   });
 
   it('compte SANS mot de passe (Apple/Google) : refus, mais on dit lequel', async () => {

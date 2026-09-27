@@ -7,8 +7,10 @@ import { NutritionModule } from '../nutrition/nutrition.module';
 import { UsersModule } from '../users/users.module';
 import { AccountService } from './application/account.service';
 import { AuthService } from './application/auth.service';
+import { EmailVerificationService } from './application/email-verification.service';
 import { LockoutService } from './application/lockout.service';
 import { PasswordService } from './application/password.service';
+import { ReauthenticationService } from './application/reauthentication.service';
 import { SessionsService } from './application/sessions.service';
 import { SocialAuthService } from './application/social-auth.service';
 import { SocialKeyStore, SocialTokenVerifier } from './application/social-token-verifier';
@@ -26,6 +28,7 @@ import { SessionsController } from './presentation/http/sessions.controller';
   controllers: [AuthController, SessionsController, AccountController],
   providers: [
     AuthService,
+    EmailVerificationService,
     SocialAuthService,
     SocialTokenVerifier,
     SocialKeyStore,
@@ -34,6 +37,7 @@ import { SessionsController } from './presentation/http/sessions.controller';
     PasswordService,
     TokenService,
     LockoutService,
+    ReauthenticationService,
     SessionsRepository,
     IdentitiesRepository,
     VerificationRepository,

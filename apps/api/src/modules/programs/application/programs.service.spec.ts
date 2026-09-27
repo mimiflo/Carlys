@@ -42,6 +42,7 @@ interface Stubs {
     ownedTemplateIds: jest.Mock;
     save: jest.Mock;
     softDelete: jest.Mock;
+    completedDayIds: jest.Mock;
   };
   entitlements: { hasEntitlement: jest.Mock };
 }
@@ -55,6 +56,7 @@ function buildStubs(): Stubs {
       ownedTemplateIds: jest.fn().mockResolvedValue(new Set<string>()),
       save: jest.fn().mockImplementation((row: ProgramWithDays) => Promise.resolve(program(row))),
       softDelete: jest.fn().mockResolvedValue(true),
+      completedDayIds: jest.fn().mockResolvedValue(new Set<string>()),
     },
     entitlements: { hasEntitlement: jest.fn().mockResolvedValue(false) },
   };
@@ -247,5 +249,123 @@ describe('ProgramsService', () => {
     expect(page.items).toHaveLength(2);
     expect(page.hasMore).toBe(true);
     expect(page.nextCursor).toBe('p-2');
+  });
+
+  describe('une case FAITE ne change plus de jour', () => {
+    const jour = (id: string, dayOfWeek: number) => ({
+      id,
+      programId: ID,
+      weekNumber: 1,
+      dayOfWeek,
+      templateId: null,
+      label: 'Séance',
+      isRest: false,
+    });
+    const existant = () => program({ days: [jour('case-pull', 3), jour('case-course', 4)] });
+
+    it('l’échange qui déplace la case honorée : 409, rien n’est écrit', async () => {
+      const stubs = buildStubs();
+      stubs.repository.findById.mockResolvedValue(existant());
+      stubs.repository.completedDayIds.mockResolvedValue(new Set(['case-pull']));
+
+      await expect(
+        buildService(stubs).save(ID, USER, {
+          ...baseInput,
+          days: [
+            { id: 'case-pull', weekNumber: 1, dayOfWeek: 4 },
+            { id: 'case-course', weekNumber: 1, dayOfWeek: 3 },
+          ],
+        }),
+      ).rejects.toThrow(ConflictException);
+      expect(stubs.repository.completedDayIds).toHaveBeenCalledWith(USER, [
+        'case-pull',
+        'case-course',
+      ]);
+      expect(stubs.repository.save).not.toHaveBeenCalled();
+    });
+
+    it('déplacer une case NON faite, ou garder la faite à sa place : accepté', async () => {
+      const stubs = buildStubs();
+      stubs.repository.findById.mockResolvedValue(existant());
+      stubs.repository.completedDayIds.mockResolvedValue(new Set(['case-pull']));
+
+      await buildService(stubs).save(ID, USER, {
+        ...baseInput,
+        days: [
+          { id: 'case-pull', weekNumber: 1, dayOfWeek: 3 },
+          { id: 'case-course', weekNumber: 1, dayOfWeek: 6 },
+        ],
+      });
+
+      expect(stubs.repository.save).toHaveBeenCalled();
+    });
+
+    describe('le premier jour (startsOn) déplace aussi la case faite', () => {
+      // Départ le jeudi 24/09 : lundi d'ancrage le 21/09, le Pull (mercredi)
+      // tombe le 23/09.
+      const date = () => program({ ...existant(), startsOn: new Date('2026-09-24T00:00:00Z') });
+      const memesCases = [
+        { id: 'case-pull', weekNumber: 1, dayOfWeek: 3 },
+        { id: 'case-course', weekNumber: 1, dayOfWeek: 4 },
+      ];
+      const enregistrer = (stubs: Stubs, startsOn: string | null) =>
+        buildService(stubs).save(ID, USER, { ...baseInput, startsOn, days: memesCases });
+
+      it('décalé d’une semaine, cases inchangées : 409 qui dit ce qui reste possible', async () => {
+        const stubs = buildStubs();
+        stubs.repository.findById.mockResolvedValue(date());
+        stubs.repository.completedDayIds.mockResolvedValue(new Set(['case-pull']));
+
+        const refus = enregistrer(stubs, '2026-09-17');
+
+        await expect(refus).rejects.toThrow(ConflictException);
+        await expect(refus).rejects.toThrow(
+          /premier jour ne peut plus changer que dans la même semaine/,
+        );
+        expect(stubs.repository.save).not.toHaveBeenCalled();
+      });
+
+      it('repris dans la même semaine : même lundi, rien ne bouge, accepté', async () => {
+        const stubs = buildStubs();
+        stubs.repository.findById.mockResolvedValue(date());
+        stubs.repository.completedDayIds.mockResolvedValue(new Set(['case-pull']));
+
+        await enregistrer(stubs, '2026-09-21');
+
+        expect(stubs.repository.save).toHaveBeenCalled();
+      });
+
+      it('première date donnée, ou date retirée : aucun jour revendiqué, accepté', async () => {
+        const sansDate = buildStubs();
+        sansDate.repository.findById.mockResolvedValue(existant());
+        sansDate.repository.completedDayIds.mockResolvedValue(new Set(['case-pull']));
+        await enregistrer(sansDate, '2026-09-24');
+        expect(sansDate.repository.save).toHaveBeenCalled();
+
+        const retiree = buildStubs();
+        retiree.repository.findById.mockResolvedValue(date());
+        retiree.repository.completedDayIds.mockResolvedValue(new Set(['case-pull']));
+        await enregistrer(retiree, null);
+        expect(retiree.repository.save).toHaveBeenCalled();
+      });
+
+      it('case ET départ décalés d’autant : la date de la case tient, accepté', async () => {
+        const stubs = buildStubs();
+        stubs.repository.findById.mockResolvedValue(
+          program({ ...date(), days: [jour('case-pull', 3)], weeksCount: 2 }),
+        );
+        stubs.repository.completedDayIds.mockResolvedValue(new Set(['case-pull']));
+
+        // Départ une semaine plus tôt, case une semaine plus loin : le 23/09.
+        await buildService(stubs).save(ID, USER, {
+          ...baseInput,
+          weeksCount: 2,
+          startsOn: '2026-09-17',
+          days: [{ id: 'case-pull', weekNumber: 2, dayOfWeek: 3 }],
+        });
+
+        expect(stubs.repository.save).toHaveBeenCalled();
+      });
+    });
   });
 });

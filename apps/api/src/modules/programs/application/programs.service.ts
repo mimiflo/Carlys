@@ -7,9 +7,10 @@ import {
   NotFoundException,
 } from '@nestjs/common';
 import { type Prisma } from '@prisma/client';
-import { columnOfDayKey } from '../../../common/utilities/civil-day';
+import { columnOfDayKey, dayKeyOfColumn } from '../../../common/utilities/civil-day';
 import { EntitlementsService } from '../../subscriptions/application/entitlements.service';
-import { ProgramsRepository } from '../infrastructure/programs.repository';
+import { anchorOf, dateOfSlot } from '../domain/calendar-dates';
+import { ProgramsRepository, type ProgramWithDays } from '../infrastructure/programs.repository';
 import { presentProgramDetail, presentProgramSummary } from './program.presenter';
 
 export interface ProgramDayInput {
@@ -90,6 +91,8 @@ export class ProgramsService {
     const isCreation = existing === null;
     if (isCreation) {
       await this.assertQuota(userId);
+    } else {
+      await this.assertDoneDaysStay(existing, userId, input);
     }
 
     const days = await this.buildDays(id, userId, input);
@@ -119,6 +122,67 @@ export class ProgramsService {
       throw new NotFoundException('Programme introuvable.');
     }
     await this.programs.softDelete(id, userId);
+  }
+
+  /**
+   * Une case HONORÉE par une séance terminée ne change plus de jour.
+   *
+   * « Fait » se déduit de l'identifiant de la case (`programDayId` de la
+   * séance), pas de sa date : déplacer une case faite déplaçait donc la
+   * séance dans le calendrier, qui annonçait un entraînement un jour où il
+   * n'y en avait pas eu. `linkSession` refuse déjà de lier une séance à une
+   * case d'une autre date ; le `PUT` du programme contournait cet invariant.
+   * Garde de défense : l'application ne propose plus ce déplacement.
+   *
+   * DEUX GESTES déplacent une case, et la garde voit les deux. Changer sa
+   * place dans la grille (semaine, jour de la semaine), d'abord. Changer le
+   * premier jour (`startsOn`), ensuite : la date d'une case se DÉDUIT du
+   * lundi de la semaine de départ ([anchorOf]), si bien que décaler le départ
+   * d'une semaine décale toutes les cases d'autant, la faite avec (mesuré
+   * avant correctif : la séance faite le 25/09 passait au 18/09 par le seul
+   * réglage « Premier jour »). Daté avant ET après, c'est donc la DATE de la
+   * case qui fait foi : un départ repris dans la même semaine garde le même
+   * lundi, et rien ne bouge. Donner sa première date à un programme, ou la
+   * lui retirer, ne revendique ni ne dément aucun jour : seule sa place dans
+   * la grille reste gardée.
+   */
+  private async assertDoneDaysStay(
+    existing: ProgramWithDays,
+    userId: string,
+    input: SaveProgramInput,
+  ): Promise<void> {
+    const done = await this.programs.completedDayIds(
+      userId,
+      existing.days.map((day) => day.id),
+    );
+    if (done.size === 0) return;
+    const before = existing.startsOn === null ? null : anchorOf(dayKeyOfColumn(existing.startsOn));
+    const after = input.startsOn == null ? null : anchorOf(input.startsOn);
+    const next = new Map(input.days.map((day) => [day.id, day]));
+    const kept = existing.days.flatMap((day) => {
+      const target = next.get(day.id);
+      return done.has(day.id) && target !== undefined ? [{ day, target }] : [];
+    });
+    const slotMoved = kept.some(
+      ({ day, target }) =>
+        target.weekNumber !== day.weekNumber || target.dayOfWeek !== day.dayOfWeek,
+    );
+    const moved =
+      before !== null && after !== null
+        ? kept.some(
+            ({ day, target }) =>
+              dateOfSlot(before, day.weekNumber, day.dayOfWeek) !==
+              dateOfSlot(after, target.weekNumber, target.dayOfWeek),
+          )
+        : slotMoved;
+    if (!moved) return;
+    // Deux messages : celui qui touche au premier jour n'a déplacé aucune
+    // case lui-même, il doit apprendre ce qui reste possible.
+    throw new ConflictException(
+      slotMoved
+        ? 'Cette séance est déjà faite : sa case reste au jour où tu t’es entraîné.'
+        : 'Une séance de ce programme est déjà faite : son premier jour ne peut plus changer que dans la même semaine.',
+    );
   }
 
   /**

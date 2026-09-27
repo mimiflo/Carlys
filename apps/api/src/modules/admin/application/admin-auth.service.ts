@@ -2,6 +2,7 @@ import { type AdminLoginResult, type AdminMe, adminPermissionSchema } from '@car
 import { HttpException, HttpStatus, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { AdminUserStatus } from '@prisma/client';
+import { logFingerprint } from '../../../common/utilities/log-privacy';
 import { AuditService } from '../../audit/audit.service';
 import { LockoutService, lockoutMessage } from '../../auth/application/lockout.service';
 import { PasswordService } from '../../auth/application/password.service';
@@ -59,15 +60,21 @@ export class AdminAuthService {
   ): Promise<AdminLoginResult> {
     const email = input.email.trim().toLowerCase();
     const lockoutId = adminLockoutIdentifier(email);
+    // L'audit ne garde de l'adresse saisie que son empreinte à clé, comme la
+    // connexion mobile : il survit aux comptes, et se lit au back-office.
+    const emailHash = logFingerprint(email, this.config.logFingerprintKey);
 
     // Verrouillé : refus AVANT toute lecture du compte, sans révéler s'il existe.
-    const lock = await this.lockout.status(lockoutId);
+    // L'essai est RÉSERVÉ, pas lu puis compté après la vérification : sinon
+    // une rafale simultanée, une requête par adresse IP, passait tout entière
+    // sous le seuil (LockoutService.reserveAttempt).
+    const lock = await this.lockout.reserveAttempt(lockoutId);
     if (lock.locked) {
       this.audit.record({
         action: 'admin.login_blocked_lockout',
         actorType: 'ADMIN',
         ...client,
-        metadata: { email },
+        metadata: { emailHash },
       });
       throw new HttpException(lockoutMessage(lock), HttpStatus.TOO_MANY_REQUESTS);
     }
@@ -82,13 +89,12 @@ export class AdminAuthService {
         : (await this.passwords.hash(input.password), false);
 
     if (!valid || admin === null || admin.status !== AdminUserStatus.ACTIVE) {
-      await this.lockout.recordFailure(lockoutId);
       this.audit.record({
         action: 'admin.login_failed',
         actorType: 'ADMIN',
         adminUserId: admin?.id,
         ...client,
-        metadata: { email },
+        metadata: { emailHash },
       });
       throw new UnauthorizedException(INVALID_CREDENTIALS_MESSAGE);
     }

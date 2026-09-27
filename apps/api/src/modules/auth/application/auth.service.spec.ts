@@ -1,5 +1,6 @@
 import { ConflictException, HttpException, UnauthorizedException } from '@nestjs/common';
 import { RefreshTokenStatus, UserStatus } from '@prisma/client';
+import { logFingerprint } from '../../../common/utilities/log-privacy';
 import { type AppConfigService } from '../../../config/app-config.service';
 import { type EmailService } from '../../../infrastructure/email/email.service';
 import { type AuditService } from '../../audit/audit.service';
@@ -10,8 +11,10 @@ import {
 } from '../infrastructure/sessions.repository';
 import { type VerificationRepository } from '../infrastructure/verification.repository';
 import { AuthService } from './auth.service';
+import { type EmailVerificationService } from './email-verification.service';
 import { type LockoutService } from './lockout.service';
 import { type PasswordService } from './password.service';
+import { ReauthenticationService } from './reauthentication.service';
 import { type SessionsService } from './sessions.service';
 import { TokenService } from './token.service';
 
@@ -37,7 +40,7 @@ interface Stubs {
   verifications: jest.Mocked<
     Pick<
       VerificationRepository,
-      'createPasswordReset' | 'findPasswordReset' | 'invalidateOpenPasswordResets'
+      'issuePasswordReset' | 'findPasswordReset' | 'invalidateOpenPasswordResets'
     >
   >;
   sessionsService: jest.Mocked<Pick<SessionsService, 'open'>>;
@@ -47,7 +50,7 @@ interface Stubs {
     generateOpaqueToken: jest.Mock;
     signAccessToken: jest.Mock;
   };
-  lockout: jest.Mocked<Pick<LockoutService, 'status' | 'recordFailure' | 'reset'>>;
+  lockout: jest.Mocked<Pick<LockoutService, 'reserveAttempt' | 'reset'>>;
   email: jest.Mocked<Pick<EmailService, 'sendEmailVerification' | 'sendPasswordReset'>>;
   audit: jest.Mocked<Pick<AuditService, 'record'>>;
 }
@@ -68,7 +71,7 @@ function buildStubs(): Stubs {
       revokeAllSessions: jest.fn().mockResolvedValue(undefined),
     },
     verifications: {
-      createPasswordReset: jest.fn().mockResolvedValue(undefined),
+      issuePasswordReset: jest.fn().mockResolvedValue(true),
       findPasswordReset: jest.fn(),
       invalidateOpenPasswordResets: jest.fn().mockResolvedValue(undefined),
     },
@@ -98,8 +101,7 @@ function buildStubs(): Stubs {
       signAccessToken: jest.fn().mockResolvedValue('jwt'),
     },
     lockout: {
-      status: jest.fn().mockResolvedValue({ locked: false }),
-      recordFailure: jest.fn().mockResolvedValue(undefined),
+      reserveAttempt: jest.fn().mockResolvedValue({ locked: false }),
       reset: jest.fn().mockResolvedValue(undefined),
     },
     email: {
@@ -110,11 +112,14 @@ function buildStubs(): Stubs {
   };
 }
 
+const CLE_EMPREINTE = Buffer.from('cle-des-empreintes-de-test');
+
 function buildService(stubs: Stubs): AuthService {
   const config = {
     jwtAccessTtlSeconds: 900,
     passwordResetTtlMinutes: 60,
     emailVerificationTtlHours: 24,
+    logFingerprintKey: CLE_EMPREINTE,
   } as unknown as AppConfigService;
 
   return new AuthService(
@@ -128,6 +133,11 @@ function buildService(stubs: Stubs): AuthService {
     stubs.email as unknown as EmailService,
     stubs.audit as unknown as AuditService,
     config,
+    new ReauthenticationService(
+      stubs.passwords as unknown as PasswordService,
+      stubs.lockout as unknown as LockoutService,
+    ),
+    { sendFirst: jest.fn().mockResolvedValue(undefined) } as unknown as EmailVerificationService,
   );
 }
 
@@ -178,7 +188,7 @@ describe('AuthService', () => {
   describe('login', () => {
     it('refuse avec 429 quand le compte est verrouillé, sans toucher à la base', async () => {
       const stubs = buildStubs();
-      stubs.lockout.status.mockResolvedValue({ locked: true, retryAfterSeconds: 300 });
+      stubs.lockout.reserveAttempt.mockResolvedValue({ locked: true, retryAfterSeconds: 300 });
       const service = buildService(stubs);
 
       await expect(
@@ -199,7 +209,9 @@ describe('AuthService', () => {
         service.login({ email: 'Inconnu@B.fr', password: 'x'.repeat(10) }, client),
       ).rejects.toThrow(GENERIC_MESSAGE);
       expect(stubs.passwords.hash).toHaveBeenCalled();
-      expect(stubs.lockout.recordFailure).toHaveBeenCalledWith('inconnu@b.fr');
+      // L'essai est compté AVANT la vérification, sous l'adresse normalisée.
+      expect(stubs.lockout.reserveAttempt).toHaveBeenCalledWith('inconnu@b.fr');
+      expect(stubs.lockout.reset).not.toHaveBeenCalled();
     });
 
     it('mot de passe erroné : même message générique que compte inconnu', async () => {
@@ -217,8 +229,34 @@ describe('AuthService', () => {
       await expect(
         service.login({ email: 'a@b.fr', password: 'mauvais-mdp' }, client),
       ).rejects.toThrow(GENERIC_MESSAGE);
-      expect(stubs.lockout.recordFailure).toHaveBeenCalledWith('a@b.fr');
+      expect(stubs.lockout.reserveAttempt).toHaveBeenCalledWith('a@b.fr');
+      expect(stubs.lockout.reset).not.toHaveBeenCalled();
       expect(stubs.sessionsService.open).not.toHaveBeenCalled();
+    });
+
+    // L'audit survit à la suppression et à la purge du compte : l'adresse
+    // saisie n'y entre qu'en empreinte, jamais en clair.
+    it("l'audit d'un échec ou d'un verrou ne garde que l'empreinte de l'adresse", async () => {
+      const stubs = buildStubs();
+      stubs.users.findActiveByEmail.mockResolvedValue(null);
+      const service = buildService(stubs);
+      await expect(
+        service.login({ email: 'Alice@B.fr', password: 'x'.repeat(10) }, client),
+      ).rejects.toThrow(GENERIC_MESSAGE);
+      stubs.lockout.reserveAttempt.mockResolvedValue({ locked: true, retryAfterSeconds: 300 });
+      await expect(
+        service.login({ email: 'Alice@B.fr', password: 'x'.repeat(10) }, client),
+      ).rejects.toThrow(HttpException);
+
+      const entries = stubs.audit.record.mock.calls.map(([entry]) => entry);
+      expect(entries.map((entry) => entry.action)).toEqual([
+        'auth.login_failed',
+        'auth.login_blocked_lockout',
+      ]);
+      for (const entry of entries) {
+        expect(entry.metadata).toEqual({ emailHash: logFingerprint('alice@b.fr', CLE_EMPREINTE) });
+        expect(JSON.stringify(entry)).not.toContain('alice@b.fr');
+      }
     });
   });
 
@@ -323,8 +361,37 @@ describe('AuthService', () => {
       const service = buildService(stubs);
 
       await expect(service.forgotPassword('inconnu@b.fr', client)).resolves.toBeUndefined();
-      expect(stubs.verifications.createPasswordReset).not.toHaveBeenCalled();
+      expect(stubs.verifications.issuePasswordReset).not.toHaveBeenCalled();
       expect(stubs.email.sendPasswordReset).not.toHaveBeenCalled();
+    });
+
+    it('cadence du compte atteinte : aucun e-mail, audit, et la même réponse', async () => {
+      const stubs = buildStubs();
+      stubs.users.findActiveByEmail.mockResolvedValue({ id: 'user-1', email: 'a@b.fr' } as never);
+      stubs.verifications.issuePasswordReset.mockResolvedValue(false);
+      const service = buildService(stubs);
+
+      await expect(service.forgotPassword('A@b.fr', client)).resolves.toBeUndefined();
+      expect(stubs.email.sendPasswordReset).not.toHaveBeenCalled();
+      expect(stubs.audit.record).toHaveBeenCalledWith(
+        expect.objectContaining({ action: 'auth.password_reset_throttled', userId: 'user-1' }),
+      );
+    });
+
+    it('lien posé à la cadence de la réinitialisation : la fenêtre dure la validité d’un lien', async () => {
+      const stubs = buildStubs();
+      stubs.users.findActiveByEmail.mockResolvedValue({ id: 'user-1', email: 'a@b.fr' } as never);
+      const service = buildService(stubs);
+
+      await service.forgotPassword('a@b.fr', client);
+
+      expect(stubs.verifications.issuePasswordReset).toHaveBeenCalledWith(
+        'user-1',
+        expect.any(String),
+        expect.any(Date),
+        { cooldownMs: 60_000, maxPerWindow: 5, windowMs: 60 * 60_000 },
+      );
+      expect(stubs.email.sendPasswordReset).toHaveBeenCalledWith('a@b.fr', expect.any(String));
     });
   });
 
@@ -386,6 +453,37 @@ describe('AuthService', () => {
       ).rejects.toThrow(UnauthorizedException);
 
       expect(stubs.verifications.invalidateOpenPasswordResets).not.toHaveBeenCalled();
+    });
+
+    it('chaque échec compte au verrouillage de RE-authentification, pas à celui de la connexion', async () => {
+      const stubs = buildStubs();
+      stubs.users.findPasswordHash.mockResolvedValue('$argon2id$reel');
+      stubs.passwords.verify.mockResolvedValue(false);
+      const service = buildService(stubs);
+
+      await expect(
+        service.changePassword('user-1', 'session-1', 'faux', 'x'.repeat(10), client),
+      ).rejects.toThrow(UnauthorizedException);
+
+      expect(stubs.lockout.reserveAttempt).toHaveBeenCalledWith('reauth:user-1');
+      expect(stubs.lockout.reset).not.toHaveBeenCalled();
+    });
+
+    it('compte verrouillé : 429 sans même vérifier le mot de passe, juste ou non', async () => {
+      const stubs = buildStubs();
+      stubs.users.findPasswordHash.mockResolvedValue('$argon2id$reel');
+      stubs.passwords.verify.mockResolvedValue(true);
+      stubs.lockout.reserveAttempt.mockResolvedValue({ locked: true, retryAfterSeconds: 600 });
+      const service = buildService(stubs);
+
+      const error: unknown = await service
+        .changePassword('user-1', 'session-1', 'actuel', 'x'.repeat(10), client)
+        .catch((caught: unknown) => caught);
+
+      expect(error).toBeInstanceOf(HttpException);
+      expect((error as HttpException).getStatus()).toBe(429);
+      expect(stubs.passwords.verify).not.toHaveBeenCalled();
+      expect(stubs.users.upsertPasswordHash).not.toHaveBeenCalled();
     });
   });
 });

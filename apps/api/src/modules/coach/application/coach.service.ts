@@ -59,8 +59,15 @@ export class CoachService {
     @InjectPinoLogger(CoachService.name) private readonly logger: PinoLogger,
   ) {}
 
+  /**
+   * LIRE ses propres fils reste ouvert à leur auteur, abonné ou non, coach
+   * configuré ou non : ce qu'on a écrit avec le Premium reste consultable
+   * (CGU), et les conversations sont conservées « pour que tu puisses les
+   * reprendre » (politique de confidentialité). La porte du coach
+   * (`CoachAvailability`) ne garde que ce qui coûte ou engage : ouvrir un fil
+   * et envoyer un message. La propriété, elle, est vérifiée partout.
+   */
   async listConversations(userId: string): Promise<CoachConversationSummary[]> {
-    await this.availability.assertAvailable(userId);
     const rows = await this.repository.listConversations(userId, CONVERSATIONS_LIMIT);
     return rows.map((row) => ({
       id: row.id,
@@ -82,8 +89,8 @@ export class CoachService {
     };
   }
 
+  /** Lecture d'un fil : ouverte à son auteur, comme la liste (voir plus haut). */
   async conversation(userId: string, id: string): Promise<CoachConversation> {
-    await this.availability.assertAvailable(userId);
     const conversation = await this.requireConversation(userId, id);
     return {
       id: conversation.id,
@@ -206,8 +213,13 @@ export class CoachService {
     };
   }
 
+  /**
+   * Lancer une séance proposée dans un fil passé reste possible sans
+   * abonnement : la proposition a été faite, elle appartient à son auteur
+   * (propriété vérifiée par le dépôt). Seuls l'ouverture d'un fil et l'envoi
+   * d'un message passent la porte du coach.
+   */
   async acceptProposal(userId: string, proposalId: string, sessionId: string): Promise<void> {
-    await this.availability.assertAvailable(userId);
     const marked = await this.repository.markProposalAccepted(userId, proposalId, sessionId);
     if (!marked) {
       throw new NotFoundException('Proposition introuvable.');

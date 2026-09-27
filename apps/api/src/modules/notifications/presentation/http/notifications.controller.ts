@@ -44,13 +44,14 @@ export class NotificationsController {
   @ApiOperation({
     summary:
       "Enregistrer le jeton push de l'appareil (idempotent — rejouer ou " +
-      'changer de compte réaffecte le jeton)',
+      'changer de compte réaffecte le jeton). Le jeton est rattaché à la ' +
+      'session courante et supprimé quand elle est révoquée.',
   })
   register(
     @CurrentUser() user: AuthenticatedPrincipal,
     @Body() dto: RegisterDeviceTokenDto,
   ): Promise<void> {
-    return this.notifications.registerDevice(user.userId, {
+    return this.notifications.registerDevice(user.userId, user.sessionId, {
       token: dto.token,
       platform: dto.platform,
     });

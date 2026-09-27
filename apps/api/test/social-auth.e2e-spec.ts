@@ -207,6 +207,14 @@ describe('Connexion sociale (e2e)', () => {
           .expect(201)
       ).body,
     );
+    // L'attaquant accepte les notifications : son téléphone recevrait
+    // ensuite celles de la victime si le jeton survivait à la reprise.
+    const jetonPush = `jeton-squatteur-${randomUUID()}`;
+    await server()
+      .post('/api/v1/notifications/device-tokens')
+      .set('Authorization', `Bearer ${attaquant.tokens.accessToken}`)
+      .send({ token: jetonPush, platform: 'ANDROID' })
+      .expect(204);
 
     const sub = `google-${randomUUID()}`;
     const victime = data<AuthResult>(
@@ -236,6 +244,8 @@ describe('Connexion sociale (e2e)', () => {
     expect(
       await prisma.userCredential.findUnique({ where: { userId: victime.user.id } }),
     ).toBeNull();
+    // …et son jeton push : plus aucune notification de la victime chez lui.
+    expect(await prisma.deviceToken.count({ where: { token: jetonPush } })).toBe(0);
 
     // La victime, elle, entre : la session qu'on vient de lui donner marche.
     await server()

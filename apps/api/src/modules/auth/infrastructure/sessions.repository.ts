@@ -82,20 +82,39 @@ export class SessionsRepository {
     });
   }
 
+  /**
+   * Révoque une session : ses refresh tokens meurent, et ses JETONS PUSH
+   * sont supprimés dans la même transaction — un appareil déconnecté à
+   * distance (ou dont le refresh token a été rejoué) ne reçoit plus rien sur
+   * son écran verrouillé. Les jetons antérieurs au rattachement
+   * (`sessionId` nul) du même compte tombent aussi : impossible de dire
+   * s'ils sont ceux de l'appareil révoqué, et les appareils légitimes les
+   * réenregistrent à leur prochain démarrage.
+   */
   async revokeSession(sessionId: string, reason: string): Promise<void> {
-    await this.prisma.$transaction([
-      this.prisma.userSession.update({
+    await this.prisma.$transaction(async (tx) => {
+      const session = await tx.userSession.update({
         where: { id: sessionId },
         data: { revokedAt: new Date(), revokedReason: reason },
-      }),
-      this.prisma.refreshToken.updateMany({
+      });
+      await tx.refreshToken.updateMany({
         where: { sessionId, status: RefreshTokenStatus.ACTIVE },
         data: { status: RefreshTokenStatus.REVOKED },
-      }),
-    ]);
+      });
+      await tx.deviceToken.deleteMany({
+        where: { userId: session.userId, OR: [{ sessionId }, { sessionId: null }] },
+      });
+    });
   }
 
-  /** Révoque toutes les sessions actives d'un utilisateur (sauf exclusion). */
+  /**
+   * Révoque toutes les sessions actives d'un utilisateur (sauf exclusion),
+   * et supprime les jetons push de toutes celles qui tombent — ceux de la
+   * session conservée restent. Sert le changement et la réinitialisation de
+   * mot de passe, la déconnexion des autres appareils et la reprise d'un
+   * compte par la connexion sociale : un squatteur évincé ne reçoit plus les
+   * notifications du propriétaire.
+   */
   async revokeAllSessions(userId: string, reason: string, exceptSessionId?: string): Promise<void> {
     const where = {
       userId,
@@ -106,6 +125,14 @@ export class SessionsRepository {
       this.prisma.refreshToken.updateMany({
         where: { session: where, status: RefreshTokenStatus.ACTIVE },
         data: { status: RefreshTokenStatus.REVOKED },
+      }),
+      this.prisma.deviceToken.deleteMany({
+        where: {
+          userId,
+          ...(exceptSessionId === undefined
+            ? {}
+            : { OR: [{ sessionId: null }, { sessionId: { not: exceptSessionId } }] }),
+        },
       }),
       this.prisma.userSession.updateMany({
         where,

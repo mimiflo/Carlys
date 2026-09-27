@@ -4,7 +4,7 @@ import { AuditService } from '../../audit/audit.service';
 import { MealPhotosService } from '../../nutrition/application/meal-photos.service';
 import { UsersRepository } from '../../users/infrastructure/users.repository';
 import { SessionsRepository } from '../infrastructure/sessions.repository';
-import { PasswordService } from './password.service';
+import { ReauthenticationService } from './reauthentication.service';
 
 /**
  * Suppression de compte : action irréversible côté utilisateur.
@@ -19,7 +19,10 @@ import { PasswordService } from './password.service';
  *
  * La ligne User et l'historique d'activité (séances, records, journal
  * alimentaire, conversations coach) restent, sans plus rien qui identifie la
- * personne ; ce qui est conservé et pourquoi est écrit dans SECURITY.md.
+ * personne, le temps du délai de conservation : `deleted-accounts-purge`
+ * (src/cli), lancé chaque jour par la supervision, les efface ensuite pour de
+ * bon. Ce qui est conservé, combien de temps et pourquoi est écrit dans
+ * SECURITY.md.
  *
  * Les PHOTOS de repas, elles, ne restent pas : une photo n'a rien d'un
  * chiffre anonyme. Leurs lignes partent dans la transaction ; leurs objets
@@ -34,7 +37,7 @@ export class AccountService {
   constructor(
     private readonly users: UsersRepository,
     private readonly sessions: SessionsRepository,
-    private readonly passwords: PasswordService,
+    private readonly reauth: ReauthenticationService,
     private readonly audit: AuditService,
     private readonly mealPhotos: MealPhotosService,
   ) {}
@@ -57,7 +60,9 @@ export class AccountService {
           'reviens supprimer ton compte.',
       );
     }
-    if (!(await this.passwords.verify(passwordHash, password))) {
+    // Verrouillage des re-authentifications (voir ReauthenticationService) :
+    // sans lui, cette route était un oracle de mot de passe sans plafond.
+    if (!(await this.reauth.verify(userId, passwordHash, password))) {
       this.audit.record({ action: 'account.delete_failed', userId, ...client });
       throw new UnauthorizedException('Mot de passe incorrect.');
     }

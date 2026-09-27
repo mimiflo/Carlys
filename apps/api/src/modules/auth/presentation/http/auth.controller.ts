@@ -10,6 +10,7 @@ import {
 } from '../../../../common/types/authenticated-request';
 import { type RequestWithId } from '../../../../common/types/request-with-id';
 import { AuthService } from '../../application/auth.service';
+import { EmailVerificationService } from '../../application/email-verification.service';
 import { SocialAuthService } from '../../application/social-auth.service';
 import {
   ChangePasswordDto,
@@ -21,9 +22,7 @@ import {
   SocialLoginDto,
   VerifyEmailDto,
 } from './dto/auth.dto';
-
-/** Limites renforcées sur les endpoints sensibles à l'abus. */
-const STRICT_THROTTLE = { default: { limit: 10, ttl: 60_000 } };
+import { RESEND_VERIFICATION_THROTTLE, STRICT_THROTTLE } from './throttles';
 
 @ApiTags('auth')
 @Controller('auth')
@@ -31,6 +30,7 @@ export class AuthController {
   constructor(
     private readonly auth: AuthService,
     private readonly social: SocialAuthService,
+    private readonly emailVerification: EmailVerificationService,
   ) {}
 
   @Public()
@@ -88,18 +88,24 @@ export class AuthController {
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiOperation({ summary: "Validation de l'adresse e-mail" })
   async verifyEmail(@Body() dto: VerifyEmailDto, @Req() request: RequestWithId): Promise<void> {
-    await this.auth.verifyEmail(dto.token, clientContextOf(request));
+    await this.emailVerification.verify(dto.token, clientContextOf(request));
   }
 
+  @Throttle(RESEND_VERIFICATION_THROTTLE)
   @Post('resend-verification')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiBearerAuth()
-  @ApiOperation({ summary: "Renvoi de l'e-mail de vérification" })
+  @ApiOperation({
+    summary: "Renvoi de l'e-mail de vérification",
+    description:
+      'Toujours 204. Rien ne part si un lien a été envoyé il y a moins de 60 s, ' +
+      'ou si 5 liens sont déjà partis en 24 h ; chaque envoi invalide les liens précédents.',
+  })
   async resendVerification(
     @CurrentUser() user: AuthenticatedPrincipal,
     @Req() request: RequestWithId,
   ): Promise<void> {
-    await this.auth.resendEmailVerification(user.userId, clientContextOf(request));
+    await this.emailVerification.resend(user.userId, clientContextOf(request));
   }
 
   @Public()
@@ -127,10 +133,16 @@ export class AuthController {
     await this.auth.resetPassword(dto.token, dto.newPassword, clientContextOf(request));
   }
 
+  @Throttle(STRICT_THROTTLE)
   @Post('change-password')
   @HttpCode(HttpStatus.NO_CONTENT)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Changement de mot de passe (révoque les autres sessions)' })
+  @ApiOperation({
+    summary: 'Changement de mot de passe (révoque les autres sessions)',
+    description:
+      '429 après AUTH_MAX_LOGIN_ATTEMPTS mots de passe actuels erronés, pendant ' +
+      'AUTH_LOCKOUT_MINUTES : compteur propre au compte, distinct de la connexion.',
+  })
   async changePassword(
     @CurrentUser() user: AuthenticatedPrincipal,
     @Body() dto: ChangePasswordDto,

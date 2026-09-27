@@ -28,12 +28,16 @@ export class NotificationsService {
     return this.sender.enabled;
   }
 
-  /** Idempotent — et un appareil qui change de compte change de main. */
+  /**
+   * Idempotent — et un appareil qui change de compte change de main. Le
+   * jeton est rattaché à la session qui l'enregistre : il tombe avec elle.
+   */
   async registerDevice(
     userId: string,
+    sessionId: string,
     input: { token: string; platform: DevicePlatform },
   ): Promise<void> {
-    await this.tokens.upsert({ userId, ...input });
+    await this.tokens.upsert({ userId, sessionId, ...input });
   }
 
   /** Oubli à la déconnexion. Idempotent, limité aux jetons de l'appelant. */

@@ -13,7 +13,7 @@ interface Stubs {
   passwords: { verify: jest.Mock; hash: jest.Mock };
   jwt: { signAsync: jest.Mock };
   audit: { record: jest.Mock };
-  lockout: { status: jest.Mock; recordFailure: jest.Mock; reset: jest.Mock };
+  lockout: { reserveAttempt: jest.Mock; reset: jest.Mock };
 }
 
 function adminRow(overrides: Record<string, unknown> = {}): unknown {
@@ -68,8 +68,7 @@ function buildStubs(): Stubs {
     jwt: { signAsync: jest.fn().mockResolvedValue('jeton-admin') },
     audit: { record: jest.fn() },
     lockout: {
-      status: jest.fn().mockResolvedValue({ locked: false }),
-      recordFailure: jest.fn().mockResolvedValue(undefined),
+      reserveAttempt: jest.fn().mockResolvedValue({ locked: false }),
       reset: jest.fn().mockResolvedValue(undefined),
     },
   };
@@ -79,6 +78,7 @@ function buildService(stubs: Stubs): AdminAuthService {
   const config = {
     jwtAccessSecret: 'secret-test-32-caracteres-minimum!!',
     jwtIssuer: 'carlys-api',
+    logFingerprintKey: Buffer.from('cle-de-test'),
   };
   return new AdminAuthService(
     stubs.admins as unknown as AdminRepository,
@@ -111,8 +111,8 @@ describe('AdminAuthService', () => {
       expect.objectContaining({ audience: 'carlys-admin', subject: 'admin-1' }),
     );
     // Compteur PROPRE au back-office : jamais celui d'un compte mobile de même adresse.
+    expect(stubs.lockout.reserveAttempt).toHaveBeenCalledWith('admin:admin@carlys.local');
     expect(stubs.lockout.reset).toHaveBeenCalledWith('admin:admin@carlys.local');
-    expect(stubs.lockout.recordFailure).not.toHaveBeenCalled();
   });
 
   it('compte inconnu : hachage factice quand même (anti-énumération), message uniforme', async () => {
@@ -127,8 +127,17 @@ describe('AdminAuthService', () => {
     expect(stubs.audit.record).toHaveBeenCalledWith(
       expect.objectContaining({ action: 'admin.login_failed', actorType: 'ADMIN' }),
     );
-    // Un compte inconnu compte AUSSI comme échec : le compteur ne trahit pas son absence.
-    expect(stubs.lockout.recordFailure).toHaveBeenCalledWith('admin:inconnu@carlys.local');
+    // L'audit survit aux comptes et se lit au back-office : l'adresse saisie
+    // n'y entre qu'en empreinte à clé, jamais en clair.
+    expect(JSON.stringify(stubs.audit.record.mock.calls)).not.toContain('inconnu@carlys.local');
+    expect(stubs.audit.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        metadata: { emailHash: expect.stringMatching(/^[0-9a-f]{12}$/) as unknown },
+      }),
+    );
+    // Un compte inconnu compte AUSSI comme essai : le compteur ne trahit pas son absence.
+    expect(stubs.lockout.reserveAttempt).toHaveBeenCalledWith('admin:inconnu@carlys.local');
+    expect(stubs.lockout.reset).not.toHaveBeenCalled();
   });
 
   it('compte désactivé : refusé même avec le bon mot de passe', async () => {
@@ -141,7 +150,7 @@ describe('AdminAuthService', () => {
     ).rejects.toThrow(UnauthorizedException);
   });
 
-  it('mauvais mot de passe : refus + audit + échec comptabilisé', async () => {
+  it('mauvais mot de passe : refus + audit, essai réservé AVANT la vérification', async () => {
     const stubs = buildStubs();
     stubs.passwords.verify.mockResolvedValue(false);
     const service = buildService(stubs);
@@ -150,13 +159,17 @@ describe('AdminAuthService', () => {
       service.login({ email: 'admin@carlys.local', password: 'mauvais-mdp!' }, CLIENT),
     ).rejects.toThrow(UnauthorizedException);
     expect(stubs.admins.markLogin).not.toHaveBeenCalled();
-    expect(stubs.lockout.recordFailure).toHaveBeenCalledWith('admin:admin@carlys.local');
+    // L'essai a été RÉSERVÉ avant la vérification ; l'échec ne remet rien à zéro.
+    expect(stubs.lockout.reserveAttempt).toHaveBeenCalledWith('admin:admin@carlys.local');
+    expect(stubs.lockout.reserveAttempt.mock.invocationCallOrder[0]).toBeLessThan(
+      stubs.passwords.verify.mock.invocationCallOrder[0] ?? 0,
+    );
     expect(stubs.lockout.reset).not.toHaveBeenCalled();
   });
 
   it('au-delà du seuil : 429 sans lire le compte ni révéler son état, même avec le bon mot de passe', async () => {
     const stubs = buildStubs();
-    stubs.lockout.status.mockResolvedValue({ locked: true, retryAfterSeconds: 300 });
+    stubs.lockout.reserveAttempt.mockResolvedValue({ locked: true, retryAfterSeconds: 300 });
     const service = buildService(stubs);
 
     const attempt = service.login(

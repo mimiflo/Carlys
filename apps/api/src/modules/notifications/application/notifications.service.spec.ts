@@ -62,14 +62,15 @@ function buildService(
 }
 
 describe('NotificationsService — jetons d’appareil', () => {
-  it('enregistre le jeton pour l’utilisateur appelant', async () => {
+  it('enregistre le jeton pour l’utilisateur appelant, rattaché à SA session', async () => {
     const tokens = buildTokens();
     const service = buildService(tokens, buildSender());
 
-    await service.registerDevice(USER, { token: 'jeton-a', platform: 'ANDROID' });
+    await service.registerDevice(USER, 'session-1', { token: 'jeton-a', platform: 'ANDROID' });
 
     expect(tokens.upsert).toHaveBeenCalledWith({
       userId: USER,
+      sessionId: 'session-1',
       token: 'jeton-a',
       platform: 'ANDROID',
     });

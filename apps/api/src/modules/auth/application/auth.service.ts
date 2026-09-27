@@ -8,14 +8,18 @@ import {
 } from '@nestjs/common';
 import { RefreshTokenStatus, UserStatus } from '@prisma/client';
 import { type RequestClientContext } from '../../../common/types/authenticated-request';
+import { logFingerprint } from '../../../common/utilities/log-privacy';
 import { AppConfigService } from '../../../config/app-config.service';
 import { EmailService } from '../../../infrastructure/email/email.service';
 import { AuditService } from '../../audit/audit.service';
 import { UsersRepository } from '../../users/infrastructure/users.repository';
 import { SessionsRepository } from '../infrastructure/sessions.repository';
 import { VerificationRepository } from '../infrastructure/verification.repository';
+import { EmailVerificationService } from './email-verification.service';
 import { LockoutService, lockoutMessage } from './lockout.service';
+import { passwordResetCadence } from './password-reset-cadence';
 import { PasswordService } from './password.service';
+import { reauthLockoutKey, ReauthenticationService } from './reauthentication.service';
 import { type DeviceInfo, SessionsService } from './sessions.service';
 import { TokenService } from './token.service';
 import { presentUser } from './user.presenter';
@@ -39,6 +43,8 @@ export class AuthService {
     private readonly email: EmailService,
     private readonly audit: AuditService,
     private readonly config: AppConfigService,
+    private readonly reauth: ReauthenticationService,
+    private readonly emailVerification: EmailVerificationService,
   ) {}
 
   async register(
@@ -57,7 +63,7 @@ export class AuthService {
       displayName: input.displayName.trim(),
     });
 
-    await this.sendEmailVerification(user.id, email);
+    await this.emailVerification.sendFirst(user.id, email);
     this.audit.record({ action: 'auth.registered', userId: user.id, ...client });
 
     const tokens = await this.sessionsService.open(user.id, input, client);
@@ -70,9 +76,19 @@ export class AuthService {
   ): Promise<AuthResult> {
     const email = normalizeEmail(input.email);
 
-    const lock = await this.lockout.status(email);
+    // L'essai est RÉSERVÉ avant la vérification : lire puis compter après
+    // laissait passer toute une rafale simultanée (LockoutService.reserveAttempt).
+    const lock = await this.lockout.reserveAttempt(email);
+    // L'audit n'est PAS effacé avec le compte : l'adresse saisie n'y entre
+    // qu'en empreinte, sans quoi elle survivait en clair à la suppression et
+    // à la purge (docs/legal/privacy.md, « Combien de temps »).
+    const emailHash = logFingerprint(email, this.config.logFingerprintKey);
     if (lock.locked) {
-      this.audit.record({ action: 'auth.login_blocked_lockout', ...client, metadata: { email } });
+      this.audit.record({
+        action: 'auth.login_blocked_lockout',
+        ...client,
+        metadata: { emailHash },
+      });
       throw new HttpException(lockoutMessage(lock), HttpStatus.TOO_MANY_REQUESTS);
     }
 
@@ -86,12 +102,11 @@ export class AuthService {
         : (await this.passwords.hash(input.password), false);
 
     if (!valid || user === null || user.status !== UserStatus.ACTIVE) {
-      await this.lockout.recordFailure(email);
       this.audit.record({
         action: 'auth.login_failed',
         userId: user?.id,
         ...client,
-        metadata: { email },
+        metadata: { emailHash },
       });
       throw new UnauthorizedException(INVALID_CREDENTIALS_MESSAGE);
     }
@@ -173,27 +188,28 @@ export class AuthService {
     this.audit.record({ action: 'auth.logout', userId, ...client, metadata: { sessionId } });
   }
 
-  async verifyEmail(token: string, client: RequestClientContext): Promise<void> {
-    const record = await this.verifications.findEmailVerification(TokenService.hashToken(token));
-    const valid =
-      record !== null && record.usedAt === null && record.expiresAt.getTime() > Date.now();
-    if (!valid) {
-      throw new UnauthorizedException('Lien de vérification invalide ou expiré.');
-    }
-    await this.verifications.markEmailVerificationUsed(record.id);
-    await this.users.markEmailVerified(record.userId);
-    this.audit.record({ action: 'auth.email_verified', userId: record.userId, ...client });
-  }
-
-  /** Réponse identique que le compte existe ou non — aucune énumération possible. */
+  /**
+   * Réponse identique que le compte existe ou non, et que le lien parte ou
+   * non : aucune énumération possible. Au rythme de [passwordResetCadence].
+   */
   async forgotPassword(email: string, client: RequestClientContext): Promise<void> {
     const user = await this.users.findActiveByEmail(normalizeEmail(email));
     if (user === null) {
       this.audit.record({ action: 'auth.password_reset_requested_unknown', ...client });
       return;
     }
-    const reset = this.tokens.generateOpaqueToken(this.config.passwordResetTtlMinutes * 60_000);
-    await this.verifications.createPasswordReset(user.id, reset.tokenHash, reset.expiresAt);
+    const ttlMinutes = this.config.passwordResetTtlMinutes;
+    const reset = this.tokens.generateOpaqueToken(ttlMinutes * 60_000);
+    const issued = await this.verifications.issuePasswordReset(
+      user.id,
+      reset.tokenHash,
+      reset.expiresAt,
+      passwordResetCadence(ttlMinutes),
+    );
+    if (!issued) {
+      this.audit.record({ action: 'auth.password_reset_throttled', userId: user.id, ...client });
+      return;
+    }
     this.email.sendPasswordReset(user.email, reset.token);
     this.audit.record({ action: 'auth.password_reset_requested', userId: user.id, ...client });
   }
@@ -215,6 +231,12 @@ export class AuthService {
     // Le mot de passe a pu être compromis : toutes les sessions tombent.
     await this.sessions.revokeAllSessions(record.userId, 'password_reset');
     await this.lockout.reset((await this.users.findActiveById(record.userId))?.email ?? '');
+    // Le compteur des RE-authentifications aussi : sinon, les essais faux
+    // d'un voleur de session — chassé à l'instant — interdisaient au
+    // propriétaire, qui vient de prouver qu'il tient la boîte mail, de
+    // supprimer son compte ou de changer son mot de passe (429) jusqu'à la
+    // fin de la fenêtre.
+    await this.lockout.reset(reauthLockoutKey(record.userId));
     this.audit.record({ action: 'auth.password_reset', userId: record.userId, ...client });
   }
 
@@ -226,7 +248,12 @@ export class AuthService {
     client: RequestClientContext,
   ): Promise<void> {
     const passwordHash = await this.users.findPasswordHash(userId);
-    if (passwordHash === null || !(await this.passwords.verify(passwordHash, currentPassword))) {
+    // Verrouillage des re-authentifications : sans lui, cette route était un
+    // oracle de mot de passe sans plafond par compte (ReauthenticationService).
+    if (
+      passwordHash === null ||
+      !(await this.reauth.verify(userId, passwordHash, currentPassword))
+    ) {
       this.audit.record({ action: 'auth.password_change_failed', userId, ...client });
       throw new UnauthorizedException('Mot de passe actuel incorrect.');
     }
@@ -241,27 +268,5 @@ export class AuthService {
     // Les autres appareils doivent se reconnecter ; la session courante survit.
     await this.sessions.revokeAllSessions(userId, 'password_changed', sessionId);
     this.audit.record({ action: 'auth.password_changed', userId, ...client });
-  }
-
-  /** (Ré)envoie l'e-mail de vérification pour l'utilisateur connecté. */
-  async resendEmailVerification(userId: string, client: RequestClientContext): Promise<void> {
-    const user = await this.users.findActiveById(userId);
-    if (user === null || user.emailVerifiedAt !== null) {
-      return;
-    }
-    await this.sendEmailVerification(user.id, user.email);
-    this.audit.record({ action: 'auth.email_verification_resent', userId, ...client });
-  }
-
-  private async sendEmailVerification(userId: string, email: string): Promise<void> {
-    const verification = this.tokens.generateOpaqueToken(
-      this.config.emailVerificationTtlHours * 3_600_000,
-    );
-    await this.verifications.createEmailVerification(
-      userId,
-      verification.tokenHash,
-      verification.expiresAt,
-    );
-    this.email.sendEmailVerification(email, verification.token);
   }
 }
