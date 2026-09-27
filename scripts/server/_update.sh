@@ -132,7 +132,17 @@ update_cible_staging() {
   # Les images doivent EXISTER. Un commit dont la construction a échoué — ou
   # qui vient d'être poussé et dont la CI tourne encore — ne doit rien
   # déclencher : la recette reste sur ce qu'elle a, et réessaiera au passage
-  # suivant. C'est aussi ce qui empêche de déployer un commit rejeté par la CI.
+  # suivant.
+  #
+  # C'est AUSSI ce qui empêche de déployer un commit rejeté par la CI — mais
+  # seulement parce qu'images-publish ne pousse les étiquettes `sha-…` qu'une
+  # fois api-ci, admin-ci, images-ci et infra-ci VERTS pour ce code (porte
+  # « La CI de ce commit est verte », scripts/ci/verdict_ci.sh). Cette phrase
+  # a longtemps été écrite ici sans que rien ne la tienne : douze commits à
+  # api-ci rouge avaient leurs images (audit du 25/09). Rien n'est vérifié de
+  # ce côté-ci : la garantie vit dans la CI, et « les images existent » est la
+  # seule question que le serveur ait à poser — ici avant de déployer, et dans
+  # repo_pull (_repo.sh) avant d'avancer le clone d'où viennent les scripts.
   #
   # Les images de MinIO (carlys-minio, carlys-mc) ne sont PAS interrogées ici,
   # et n'ont pas à l'être : images-publish les publie — et vérifie que celles

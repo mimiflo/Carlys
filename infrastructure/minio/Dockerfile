@@ -19,14 +19,20 @@
 #          l'image officielle, qui embarquait mc pour la même raison.
 # `minio` est la dernière cible : c'est elle qu'un build sans --target produit.
 #
-# UTILISATEUR : root, comme l'image quay.io que celle-ci remplace, et c'est
-# délibéré. Le volume minio-data des serveurs en service a été rempli par
-# cette image-là, donc par root : un utilisateur non privilégié n'y pourrait
-# plus écrire, et MinIO refuserait de démarrer sur des médias bien réels. Et
-# backup.sh fait écrire `mc mirror` dans un répertoire de l'hôte en mode 700,
-# propriété de root. Passer en non-root reste possible, mais c'est un chantier
-# à part (chown du volume sur chaque serveur, répertoire de sauvegarde
-# accessible) — pas l'effet de bord d'un changement de registre.
+# UTILISATEUR : le SERVEUR tourne en `minio` (uid et gid 10001), plus en
+# root. Il détient toutes les photos, bucket privé des repas compris, et son
+# préfixe public est exposé sur internet : une faille d'exécution y donnait
+# root dans le conteneur, volume monté (audit du 25/09). Les volumes déjà
+# remplis par l'image précédente appartiennent à root : demarrer-minio.sh les
+# rend à `minio` au premier démarrage, puis abandonne ses droits avant de
+# lancer le serveur — aucune étape manuelle sur les serveurs ni sur les postes.
+# Un volume NEUF, lui, hérite de /data tel que l'image le livre, déjà à
+# `minio`.
+#
+# Le CLIENT `mc` reste en root, et c'est voulu : il ne sert que des tâches
+# ponctuelles, jamais exposées (minio-init, sauvegarde nocturne, copie hors
+# machine), et backup.sh lui fait écrire son miroir dans un répertoire de
+# l'hôte en mode 700, propriété de root.
 
 # ── Construction ─────────────────────────────────────────────────────────────
 # Toute image de ce fichier est ÉPINGLÉE PAR EMPREINTE : un tag Docker se
@@ -66,9 +72,24 @@ ENTRYPOINT ["mc"]
 FROM mc AS minio
 COPY --from=construction /sortie/minio /usr/bin/minio
 COPY --from=construction /sortie/licences/minio /licenses/minio
+COPY demarrer-minio.sh /usr/local/bin/demarrer-minio
+# uid 10001 : hors de la plage des comptes humains de l'hôte (1000 et
+# suivants), pour qu'un fichier du volume ne soit jamais attribué, vu de
+# l'hôte, à une vraie personne. Ni mot de passe, ni dossier personnel, ni
+# shell de connexion. /data est à lui AVANT la déclaration VOLUME : un volume
+# neuf en hérite (Docker recopie le contenu et les droits de l'image), et une
+# modification après VOLUME serait perdue.
+RUN addgroup -S -g 10001 minio \
+ && adduser -S -D -H -u 10001 -G minio -h /nonexistent -s /sbin/nologin minio \
+ && mkdir -p /data \
+ && chown minio:minio /data \
+ && chmod 755 /usr/local/bin/demarrer-minio
 EXPOSE 9000 9001
 VOLUME ["/data"]
 # Les deux compose passent `server /data --console-address :9001` ; l'image
-# officielle préfixait déjà ses arguments de `minio`, celle-ci aussi.
-ENTRYPOINT ["minio"]
+# officielle préfixait déjà ses arguments de `minio`, celle-ci aussi — par
+# demarrer-minio, qui rend le volume à `minio` puis lance `minio "$@"` sous
+# cet utilisateur. `docker exec` (la sonde `mc ready local`) reste en root :
+# un geste d'exploitation ponctuel, pas le serveur exposé.
+ENTRYPOINT ["demarrer-minio"]
 CMD ["server", "/data"]

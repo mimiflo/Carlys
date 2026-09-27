@@ -44,6 +44,28 @@ x-service: &service
   logging: *logging
   labels: *labels
 
+# ── Mémoire : des PLAFONDS, réglés par environnement ─────────────────────────
+#
+# Recette et production partagent CET hôte, et la recette suit chaque poussée
+# — sa maturation d'une heure existe précisément pour révéler une fuite de
+# mémoire (_update.sh). Sans plafond, une fuite de recette, ou un Redis de
+# recette qui grossit sans `maxmemory`, prenait la mémoire de la machine
+# entière : la production se dégradait pour un commit qu'elle n'avait jamais
+# reçu (audit du 25/09). Chaque service porte donc un `mem_limit` lu dans le
+# .env de SON environnement :
+#
+#   - la RECETTE est plafonnée (valeurs de staging.env.example, justifiées
+#     là-bas) : c'est elle qui essuie les plâtres, c'est elle qu'on borne ;
+#   - la PRODUCTION n'a pas de plafond par défaut (`0` : aucun), mais son
+#     PostgreSQL porte `oom_score_adj` négatif (production.env.example) : si
+#     la machine manque de mémoire malgré tout, le noyau choisit un autre
+#     processus que la base. Un plafond de production mal calibré tuerait la
+#     production elle-même — il se pose en connaissance de la RAM de l'hôte.
+#
+# Un conteneur qui dépasse son plafond est tué et relancé par `restart:` — ce
+# qui se voit (`carlysctl status`), là où une machine qui swappe dégrade tout
+# sans rien dire.
+
 # Tâches ponctuelles : elles se terminent, on ne les relance pas.
 x-task: &task
   restart: 'no'
@@ -62,6 +84,48 @@ services:
   postgres:
     <<: *service
     image: ${CARLYS_POSTGRES_IMAGE:-postgres:17-alpine}
+    mem_limit: ${CARLYS_POSTGRES_MEM_LIMIT:-0}
+    oom_score_adj: ${CARLYS_POSTGRES_OOM_SCORE_ADJ:-0}
+    # ── Réglages du planificateur, et pourquoi CES valeurs ─────────────────
+    #
+    # Le service tournait aux défauts de PostgreSQL, pensés pour un disque
+    # ROTATIF. Mesuré par l'audit du 25/09 sur un jeu à l'échelle visée
+    # (10 000 comptes, ~200 000 séances) : avec random_page_cost=4, les
+    # jointures séance-séries d'UN utilisateur prenaient un Gather + Parallel
+    # Seq Scan sur WorkoutSession (3 processus, ~3,5 fois plus de pages lues)
+    # alors que WorkoutSession_userId_startedAt_idx convient exactement.
+    # Avec 1.1 : Bitmap Index Scan, totaux annuels 15,5-19,2 ms → 4,3-4,5 ms,
+    # recalcul des records à la clôture 17,5 → 7,2 ms, et plus aucun worker
+    # parallèle occupé. Sans effet sur les requêtes déjà indexées.
+    #
+    #   random_page_cost = 1.1   — lecture aléatoire à peine plus chère que
+    #     séquentielle : c'est un SSD/NVMe, le disque de tout serveur dédié
+    #     actuel. La documentation de PostgreSQL le conseille pour le SSD. Sur
+    #     un disque rotatif, remettre 4 dans le .env.
+    #   effective_io_concurrency = 200 — lectures anticipées en parallèle des
+    #     Bitmap Heap Scan, justement le plan que la valeur précédente fait
+    #     choisir ; 200 est la valeur d'usage pour un SSD (le défaut, 1,
+    #     suppose une seule tête de lecture).
+    #   shared_buffers, effective_cache_size — LAISSÉS aux défauts de
+    #     PostgreSQL (128MB, 4GB) tant que la RAM de l'hôte n'est pas connue :
+    #     deux instances (recette, production) se la partagent, et un
+    #     effective_cache_size SOUS 4GB pousserait au contraire le
+    #     planificateur vers les balayages. À poser dans le .env de
+    #     production une fois l'hôte connu : shared_buffers ≈ 25 % de la RAM
+    #     laissée à cette base, effective_cache_size ≈ 50 à 75 %.
+    #
+    # max_connections reste à 100 : les pools Prisma sont bornés en
+    # conséquence (DATABASE_URL, connection_limit=10 — voir les .env).
+    command:
+      - postgres
+      - -c
+      - random_page_cost=${CARLYS_POSTGRES_RANDOM_PAGE_COST:-1.1}
+      - -c
+      - effective_io_concurrency=${CARLYS_POSTGRES_EFFECTIVE_IO_CONCURRENCY:-200}
+      - -c
+      - shared_buffers=${CARLYS_POSTGRES_SHARED_BUFFERS:-128MB}
+      - -c
+      - effective_cache_size=${CARLYS_POSTGRES_EFFECTIVE_CACHE_SIZE:-4GB}
     environment:
       POSTGRES_USER: ${POSTGRES_USER:?POSTGRES_USER est obligatoire}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?POSTGRES_PASSWORD est obligatoire}
@@ -91,11 +155,17 @@ services:
   redis:
     <<: *service
     image: ${CARLYS_REDIS_IMAGE:-redis:7-alpine}
+    # Plafond du CONTENEUR ; celui de Redis lui-même est `--maxmemory`, dans
+    # CARLYS_REDIS_MEMOIRE_ARGS, et doit rester en dessous (staging.env.example).
+    # Une clé à part de CARLYS_REDIS_ARGS, et c'est ce qui la fait ARRIVER :
+    # `carlysctl env-sync` ajoute une clé nouvelle au .env d'un serveur en
+    # service, il ne réécrit jamais une clé existante.
+    mem_limit: ${CARLYS_REDIS_MEM_LIMIT:-0}
     # La persistance est un choix d'environnement, pas de fichier : staging est
     # un cache jetable (`--save "" --appendonly no`), production journalise
     # (`--appendonly yes`). CARLYS_REDIS_ARGS est découpé par compose comme une
     # ligne de commande, guillemets compris.
-    command: redis-server ${CARLYS_REDIS_ARGS:?CARLYS_REDIS_ARGS est obligatoire - voir le .env}
+    command: redis-server ${CARLYS_REDIS_ARGS:?CARLYS_REDIS_ARGS est obligatoire - voir le .env} ${CARLYS_REDIS_MEMOIRE_ARGS:-}
     environment:
       TZ: UTC
     volumes:
@@ -127,7 +197,8 @@ services:
   # restent là pour pointer ailleurs sans toucher à ce fichier.
   minio:
     <<: *service
-    image: ${CARLYS_MINIO_IMAGE:-${CARLYS_REGISTRY}/carlys-minio:RELEASE.2025-09-07T16-13-09Z-90fffbd9f7a8}
+    mem_limit: ${CARLYS_MINIO_MEM_LIMIT:-0}
+    image: ${CARLYS_MINIO_IMAGE:-${CARLYS_REGISTRY}/carlys-minio:RELEASE.2025-09-07T16-13-09Z-c93713c5770d}
     command: ['server', '/data', '--console-address', ':9001']
     environment:
       MINIO_ROOT_USER: ${MINIO_ROOT_USER:?MINIO_ROOT_USER est obligatoire}
@@ -161,7 +232,7 @@ services:
   # bucket (PrivateBucketCheck).
   minio-init:
     <<: *task
-    image: ${CARLYS_MC_IMAGE:-${CARLYS_REGISTRY}/carlys-mc:RELEASE.2025-08-13T08-35-41Z-90fffbd9f7a8}
+    image: ${CARLYS_MC_IMAGE:-${CARLYS_REGISTRY}/carlys-mc:RELEASE.2025-08-13T08-35-41Z-c93713c5770d}
     depends_on:
       minio:
         condition: service_healthy
@@ -232,6 +303,12 @@ services:
       # Le processus Node date ses journaux et ses jetons : même exigence UTC
       # que PostgreSQL.
       TZ: UTC
+      # Le tas de V8 borné SOUS le plafond du conteneur : une fuite finit en
+      # « heap out of memory » — un arrêt net, journalisé, relancé — plutôt
+      # qu'en processus tué par le noyau sans un mot. Vide : défaut de Node.
+      NODE_OPTIONS: ${CARLYS_API_NODE_OPTIONS:-}
+    # PAR EXEMPLAIRE : N exemplaires, N plafonds.
+    mem_limit: ${CARLYS_API_MEM_LIMIT:-0}
     # ── Plusieurs exemplaires de l'API ────────────────────────────────────
     #
     # `deploy.replicas` — et NON `docker compose up --scale` : le nombre doit
@@ -316,6 +393,7 @@ services:
     # NEXT_PUBLIC_API_BASE_URL est figé À LA CONSTRUCTION de l'image.
     environment:
       TZ: UTC
+    mem_limit: ${CARLYS_ADMIN_MEM_LIMIT:-0}
     ports:
       - '127.0.0.1:${CARLYS_ADMIN_HOST_PORT:?CARLYS_ADMIN_HOST_PORT est obligatoire}:3001'
     # Aucun depends_on : ni PostgreSQL ni Redis (elle n'y touche pas), ni même

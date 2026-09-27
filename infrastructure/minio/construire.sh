@@ -65,9 +65,10 @@ done
 
 # ── Étiquettes des images publiées ────────────────────────────────────────
 # `<version de l'amont>-<empreinte de la recette>`. L'empreinte couvre les
-# trois fichiers qui décident du contenu de l'image — ce script, versions.env
-# et le Dockerfile —, ni plus (un README modifié ne republie rien) ni moins (un
-# changement d'image de base, de Go ou d'option de build change l'étiquette).
+# quatre fichiers qui décident du contenu de l'image — ce script, versions.env,
+# le Dockerfile et demarrer-minio.sh (le point d'entrée du serveur) —, ni plus
+# (un README modifié ne republie rien) ni moins (un changement d'image de
+# base, de Go, d'option de build ou d'utilisateur change l'étiquette).
 #
 # D'où une étiquette IMMUABLE : même recette, même étiquette ; recette changée,
 # étiquette nouvelle. images-publish ne republie donc jamais par-dessus une
@@ -78,9 +79,9 @@ done
 # calculer la même empreinte que la CI.
 empreinte_recette() {
   if command -v sha256sum >/dev/null 2>&1; then
-    cat "$ici/Dockerfile" "$ici/versions.env" "$ici/construire.sh" | tr -d '\r' | sha256sum | cut -c1-12
+    cat "$ici/Dockerfile" "$ici/versions.env" "$ici/construire.sh" "$ici/demarrer-minio.sh" | tr -d '\r' | sha256sum | cut -c1-12
   else
-    cat "$ici/Dockerfile" "$ici/versions.env" "$ici/construire.sh" | tr -d '\r' | shasum -a 256 | cut -c1-12
+    cat "$ici/Dockerfile" "$ici/versions.env" "$ici/construire.sh" "$ici/demarrer-minio.sh" | tr -d '\r' | shasum -a 256 | cut -c1-12
   fi
 }
 

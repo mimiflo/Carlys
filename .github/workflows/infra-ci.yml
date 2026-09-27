@@ -1,0 +1,116 @@
+# Infrastructure — les scripts du serveur, les vhosts nginx, le compose du
+# serveur, les Dockerfile et la porte de CI ont désormais leurs essais.
+#
+# POURQUOI CE WORKFLOW. Rien ne vérifiait scripts/server/ ni
+# infrastructure/nginx/ : un script de sauvegarde, de déploiement ou un vhost
+# se découvrait cassé SUR LE SERVEUR. L'audit du 25/09 y a ajouté des
+# comportements qui ne se voient qu'en fonctionnant — un dump avant chaque
+# migration de production, une copie chiffrée hors machine, un journal nginx
+# sans jeton, une porte qui refuse de publier les images d'un commit rouge,
+# une garde « build once » qui accepte les symboles de recette (90 jours)
+# quand l'APK (14 jours) a expiré.
+# Chacun a son essai, et ce workflow les rejoue à chaque poussée qui les
+# touche. `./scripts/check_infra.sh` fait la même chose sur un poste.
+#
+# Les essais tournent SANS démon Docker ni serveur : un `docker` factice pour
+# les scripts serveur (scripts/server/tests/lib.sh), un vrai nginx sur un port
+# haut, de vrais minio et mc pour la copie hors machine, `docker compose
+# config` pour le compose. Ce qui ne se rejoue qu'avec des images — MinIO hors
+# root sur un volume hérité de root — est dans images-ci.
+name: infra-ci
+
+on:
+  pull_request:
+    paths:
+      - 'scripts/server/**'
+      - 'scripts/ci/**'
+      - 'scripts/check_infra.sh'
+      - 'infrastructure/**'
+      - 'apps/api/Dockerfile'
+      - 'apps/admin/Dockerfile'
+      # Le vérificateur des Dockerfile lit les dépendances de workspace.
+      - 'apps/api/package.json'
+      - 'apps/admin/package.json'
+      - 'packages/*/package.json'
+      # La garde « build once » et le contrat de nommage qu'elle lit
+      # (scripts/ci/tests/preuve_recette_test.sh).
+      - '.github/workflows/mobile-production.yml'
+      - '.github/workflows/mobile-recette.yml'
+      - '.github/workflows/infra-ci.yml'
+  push:
+    branches: [development, production]
+    # GitHub Actions ignore les ancres YAML : la liste ci-dessus est recopiée
+    # telle quelle. Toute entrée ajoutée ici doit l'être aux deux endroits.
+    paths:
+      - 'scripts/server/**'
+      - 'scripts/ci/**'
+      - 'scripts/check_infra.sh'
+      - 'infrastructure/**'
+      - 'apps/api/Dockerfile'
+      - 'apps/admin/Dockerfile'
+      - 'apps/api/package.json'
+      - 'apps/admin/package.json'
+      - 'packages/*/package.json'
+      - '.github/workflows/mobile-production.yml'
+      - '.github/workflows/mobile-recette.yml'
+      - '.github/workflows/infra-ci.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: infra-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verifier:
+    name: Scripts, vhosts et compose du serveur
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      # minio et mc, pour l'essai de la copie hors machine : le MÊME cache
+      # qu'api-ci (même clé), donc le plus souvent aucune construction.
+      - name: MinIO — versions épinglées
+        id: minio-versions
+        run: grep -E '^[A-Z0-9_]+=' infrastructure/minio/versions.env >> "$GITHUB_OUTPUT"
+
+      - name: MinIO — binaires en cache
+        id: minio-cache
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+        with:
+          path: ~/.carlys-minio
+          key: minio-${{ runner.os }}-${{ runner.arch }}-${{ steps.minio-versions.outputs.CARLYS_MINIO_RELEASE }}-mc-${{ steps.minio-versions.outputs.CARLYS_MC_RELEASE }}-go${{ steps.minio-versions.outputs.CARLYS_MINIO_GO_VERSION }}-${{ hashFiles('infrastructure/minio/versions.env', 'infrastructure/minio/construire.sh') }}
+
+      - uses: actions/setup-go@924ae3a1cded613372ab5595356fb5720e22ba16 # v6.5.0
+        if: steps.minio-cache.outputs.cache-hit != 'true'
+        with:
+          go-version: ${{ steps.minio-versions.outputs.CARLYS_MINIO_GO_VERSION }}
+          cache: false
+
+      - name: MinIO — construction depuis les sources (absent du cache)
+        if: steps.minio-cache.outputs.cache-hit != 'true'
+        run: |
+          sh infrastructure/minio/construire.sh minio "$HOME/.carlys-minio"
+          sh infrastructure/minio/construire.sh mc "$HOME/.carlys-minio"
+
+      # nginx fait partie de l'image des runners Ubuntu ; l'installer s'il
+      # venait à en disparaître plutôt que de laisser l'essai se sauter.
+      - name: Outils (nginx, shellcheck)
+        run: |
+          command -v nginx > /dev/null || { sudo apt-get update -q && sudo apt-get install -y -q nginx; }
+          command -v shellcheck > /dev/null || { sudo apt-get update -q && sudo apt-get install -y -q shellcheck; }
+          nginx -v
+          shellcheck --version | sed -n 2p
+
+      # Un essai SAUTÉ faute d'outil est un ÉCHEC ici : en CI, tout est là.
+      - name: Vérifications (scripts/check_infra.sh)
+        env:
+          CARLYS_TEST_EXIGER_MINIO: oui
+          CARLYS_TEST_EXIGER_NGINX: oui
+        run: ./scripts/check_infra.sh

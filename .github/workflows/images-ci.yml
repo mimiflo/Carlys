@@ -276,7 +276,7 @@ jobs:
       - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3.12.0
 
       - name: Image minio (serveur + mc)
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: infrastructure/minio
           target: minio
@@ -289,7 +289,7 @@ jobs:
       # Même étage de construction que ci-dessus : il se relit depuis le
       # cache `minio`, seul l'étage final est propre à `mc`.
       - name: Image mc
-        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6.19.2
+        uses: docker/build-push-action@c3c9e263c25d99ce0380d002d59b67737d91b0dc # v7.4.0
         with:
           context: infrastructure/minio
           target: mc
@@ -371,10 +371,82 @@ jobs:
           attendu 'http://127.0.0.1:9000/carlys-private/fumee.txt' 403
           attendu 'http://127.0.0.1:9000/carlys-private/?list-type=2' 403
 
+      # Le SERVEUR ne tourne plus en root (infrastructure/minio/README.md,
+      # « Utilisateur »), et c'est la migration qui décide si la mise à jour
+      # est une panne : les volumes des serveurs en service ont été remplis
+      # par l'ancienne image, donc par root. Ce qu'on rejoue ici, sur un
+      # volume neuf rempli EN ROOT comme l'ancienne image le faisait : le
+      # serveur redémarre dessus, relit l'objet existant, en écrit un autre,
+      # tourne en uid 10001, et le volume entier lui appartient. Sans
+      # demarrer-minio.sh, MinIO refuse de démarrer (« Unable to write to the
+      # backend »).
+      - name: Fumée — serveur hors root, volume hérité de root repris
+        env:
+          MINIO_ROOT_USER: carlys-ci
+          MINIO_ROOT_PASSWORD: carlys-ci-secret
+        run: |
+          uid="$(docker exec carlys-minio-smoke awk '/^Uid:/ {print $2}' /proc/1/status)"
+          echo "uid du serveur de la fumée (processus 1) : $uid"
+          [ "$uid" = 10001 ] || { echo "::error::Le serveur MinIO tourne en uid $uid, pas 10001."; exit 1; }
+
+          pret() {
+            for _ in $(seq 1 30); do
+              curl -fs http://127.0.0.1:9100/minio/health/ready > /dev/null && return 0
+              sleep 2
+            done
+            echo "::error::$1 n'est pas prêt sur :9100 après 60 s."; docker logs "$1"; return 1
+          }
+          mc_hote() {
+            docker run --rm --network host -e MINIO_ROOT_USER -e MINIO_ROOT_PASSWORD \
+              --entrypoint /bin/sh carlys-mc:ci -c \
+              'mc alias set h http://127.0.0.1:9100 "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD" > /dev/null && '"$1"
+          }
+          docker volume create carlys-minio-herite > /dev/null
+
+          # 1. L'ANCIENNE image : le serveur en root remplit le volume.
+          docker run -d --name carlys-minio-ancien --network host --user 0 --entrypoint minio \
+            -e MINIO_ROOT_USER -e MINIO_ROOT_PASSWORD -v carlys-minio-herite:/data \
+            carlys-minio:ci server /data --address :9100 --console-address :9101
+          pret carlys-minio-ancien
+          mc_hote 'mc mb h/carlys-media > /dev/null && echo avant | mc pipe h/carlys-media/avant.txt > /dev/null'
+          docker rm -f carlys-minio-ancien > /dev/null
+          # Un volume neuf hérite du /data de l'image (déjà à minio) : on le
+          # rend à root en entier, comme ceux que l'ancienne image a remplis.
+          docker run --rm -v carlys-minio-herite:/data --entrypoint chown carlys-mc:ci -R 0:0 /data
+          proprietaire="$(docker run --rm -v carlys-minio-herite:/data --entrypoint stat carlys-mc:ci -c %u /data)"
+          echo "volume rempli par root : propriétaire $proprietaire"
+          [ "$proprietaire" = 0 ]
+
+          # 2. La NOUVELLE image, telle que les compose la lancent.
+          docker run -d --name carlys-minio-repris --network host \
+            -e MINIO_ROOT_USER -e MINIO_ROOT_PASSWORD -v carlys-minio-herite:/data \
+            carlys-minio:ci server /data --address :9100 --console-address :9101
+          pret carlys-minio-repris
+          [ "$(mc_hote 'mc cat h/carlys-media/avant.txt')" = avant ] \
+            || { echo "::error::L'objet écrit par l'ancienne image est illisible."; exit 1; }
+          mc_hote 'echo apres | mc pipe h/carlys-media/apres.txt > /dev/null' \
+            || { echo "::error::Le serveur repris ne peut pas écrire."; exit 1; }
+          uid="$(docker exec carlys-minio-repris awk '/^Uid:/ {print $2}' /proc/1/status)"
+          # `-user`, pas `-uid` : le find de busybox (Alpine) ne connaît pas
+          # `-uid`, écrit son aide sur stderr et ne sort RIEN — derrière un
+          # `| wc -l`, le compte valait 0 et le contrôle passait toujours, même
+          # sans reprise du volume. D'où aussi le fichier intermédiaire et le
+          # `set -e` : un find en échec fait échouer l'étape, il ne compte plus
+          # zéro.
+          restes="$(docker run --rm -v carlys-minio-herite:/data --entrypoint /bin/sh carlys-mc:ci \
+            -c 'set -e; find /data ! -user 10001 > /tmp/restes; wc -l < /tmp/restes')"
+          echo "serveur repris : uid $uid ; fichiers du volume hors minio : $restes"
+          [ "$uid" = 10001 ] && [ "$restes" = 0 ]
+          docker logs carlys-minio-repris 2>&1 | grep 'rendu à minio'
+
       - name: Journal de MinIO en cas d'échec
         if: failure()
-        run: docker logs carlys-minio-smoke || true
+        run: |
+          docker logs carlys-minio-smoke || true
+          docker logs carlys-minio-repris || true
 
       - name: Nettoyage
         if: always()
-        run: docker rm -f carlys-minio-smoke || true
+        run: |
+          docker rm -f carlys-minio-smoke carlys-minio-ancien carlys-minio-repris || true
+          docker volume rm carlys-minio-herite || true

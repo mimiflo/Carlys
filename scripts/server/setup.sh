@@ -251,6 +251,22 @@ FIN
 poser_amont_initial production 3000
 poser_amont_initial staging 3100
 
+# Le format du journal d'accès SANS les jetons des liens d'e-mail : les vhosts
+# le nomment (`access_log … carlys_sans_jeton`), et nginx refuse toute la
+# configuration tant qu'il manque. Recopié à CHAQUE passage, contrairement
+# aux amonts : c'est un fichier du dépôt, pas un état que carlysctl tient.
+# Le raisonnement est en tête du fichier lui-même.
+journal_source="$CARLYS_REPO_DIR/infrastructure/nginx/conf.d/carlys-journal.conf"
+if [ "$DRY_RUN" = "1" ]; then
+  printf '   %s[essai]%s copie de %s vers /etc/nginx/conf.d/\n' "$_c_yellow" "$_c_off" "$journal_source"
+elif [ -f "$journal_source" ]; then
+  mkdir -p /etc/nginx/conf.d
+  install -m 644 "$journal_source" /etc/nginx/conf.d/carlys-journal.conf
+  ok "/etc/nginx/conf.d/carlys-journal.conf (journal d'accès sans jeton)"
+else
+  warn "absent du dépôt : $journal_source"
+fi
+
 enable_service nginx
 
 # ── 3. Pare-feu ────────────────────────────────────────────────────────────

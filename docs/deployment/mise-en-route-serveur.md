@@ -752,7 +752,8 @@ rechargement se font en une seule fois, juste en dessous.
 cd /srv/carlys/repo
 DOMAINE=carlys.example          # ← la SEULE ligne à adapter
 
-sudo cp infrastructure/nginx/snippets/carlys-proxy.conf /etc/nginx/snippets/
+sudo cp infrastructure/nginx/snippets/*.conf /etc/nginx/snippets/
+sudo cp infrastructure/nginx/conf.d/carlys-journal.conf /etc/nginx/conf.d/   # setup.sh l'a déjà posé ; sans danger
 
 for env in staging production; do
   sed "s/carlys\.example/$DOMAINE/g" "infrastructure/nginx/carlys-$env.conf.example" \
@@ -977,6 +978,18 @@ en ligne, sans que rien ne le dise. Un exercice supprimé voit maintenant son
 **contenu** mis à jour — il servira s'il est restauré — mais sa publication
 reste ce que l'administration a décidé. Quand il y en a, la commande le
 compte : « supprimés respectés : N exercice(s) du code laissé(s) hors ligne ».
+
+**Une photo remplacée quitte le stockage.** La clé d'une photo du catalogue
+porte son empreinte : changer une illustration dépose un NOUVEL objet, et
+l'ancien restait dans MinIO pour toujours (13,6 Mo au passage des quatorze
+PNG en WebP, recopiés par chaque sauvegarde). Une fois le cache du catalogue
+purgé, la commande efface les versions précédentes, et le compte :
+« anciennes photos : N version(s) précédente(s) effacée(s) du stockage ».
+Jamais la version courante, jamais un dépôt du back-office (sa clé ne porte
+pas d'empreinte), jamais un objet de moins d'une heure (un chargement
+concurrent s'apprête peut-être à le citer). Redis injoignable : le balayage
+attend le chargement suivant, qui retrouve tout ce qui reste. Un refus du
+stockage n'échoue pas le déploiement, il est écrit dans le bilan.
 
 Trois échappatoires, pour les cas où l'on veut agir autrement :
 
@@ -1307,7 +1320,10 @@ Contrairement à la recette, la production a besoin des vraies valeurs :
   `STRIPE_PRICE_MONTHLY`, `STRIPE_PRICE_YEARLY`, et
   `STRIPE_WEBHOOK_SECRET` obtenu en déclarant l'endpoint
   `https://api.carlys.example/api/v1/webhooks/stripe` dans le tableau de bord
-  Stripe (RevenueCat, si vous l'utilisez, pointe vers
+  Stripe, abonné aux seuls événements `customer.subscription.*` : l'API
+  acquitte les autres (factures, paiements) sans les garder ni les
+  appliquer, puisqu'ils portent l'adresse et le nom du client et qu'il n'y
+  a rien à en projeter (RevenueCat, si vous l'utilisez, pointe vers
   `/api/v1/webhooks/revenuecat`). Les
   prix affichés (`SUBSCRIPTION_*_CENTS`) doivent refléter les prix Stripe :
   c'est Stripe qui encaisse, l'API ne fait qu'afficher.
@@ -1458,9 +1474,11 @@ seulement due à un fichier compose vieux de plusieurs semaines.
 version modifie un vhost, il faut rejouer la substitution de l'étape 6
 (section « Activer les vhosts définitifs »), puis
 `sudo nginx -t && sudo systemctl reload nginx`. Les notes de version le disent
-quand c'est le cas ; en son absence, ce `git pull` suffit. Le snippet partagé
-`snippets/carlys-proxy.conf` suit la même règle et se copie séparément : c'est
-lui qui porte les en-têtes dont dépend l'adresse du client.
+quand c'est le cas ; en son absence, ce `git pull` suffit. Les snippets
+(`snippets/*.conf`) et `conf.d/carlys-journal.conf` suivent la même règle et
+se copient séparément : `carlys-proxy.conf` porte les en-têtes dont dépend
+l'adresse du client, `carlys-compression-api.conf` la compression du JSON,
+`carlys-journal.conf` le journal d'accès sans jeton.
 
 **Et la configuration de gra6 n'est dans aucun de ces dépôts.** Un changement
 qui touche les en-têtes attendus de lui — les trois du §6 — doit être porté
@@ -1529,7 +1547,8 @@ c'est ce champ qu'on suit d'une requête à l'autre.
 | Symptôme | Cause la plus fréquente |
 | --- | --- |
 | `nginx -t` échoue sur un `ssl_certificate` ou `/etc/letsencrypt/…` | un vhost d'une installation antérieure traîne dans `sites-enabled/` : plus aucun fichier du dépôt ne nomme de certificat. Listez `/etc/nginx/sites-enabled/` et retirez l'intrus |
-| `nginx -t` échoue sur un `include` introuvable | `snippets/carlys-proxy.conf` n'a pas été copié (étape 6) — et il vaut mieux ce refus qu'un Nginx qui servirait sans l'adresse du client |
+| `nginx -t` échoue sur un `include` introuvable | un des `snippets/*.conf` n'a pas été copié (étape 6) : `carlys-proxy.conf`, inclus partout, ou `carlys-compression-api.conf`, inclus par les vhosts `api`. Recopiez-les tous — et il vaut mieux ce refus qu'un Nginx qui servirait sans l'adresse du client |
+| `nginx -t` échoue sur `unknown log format "carlys_sans_jeton"` | `conf.d/carlys-journal.conf` manque dans `/etc/nginx/conf.d/` : rejouez `setup.sh`, ou copiez-le (étape 6). C'est lui qui retire du journal d'accès les jetons des liens de vérification et de réinitialisation |
 | 502 **sans ligne dans `/var/log/nginx/access.log`** d'ici | c'est le 502 de gra6 : il ne joint pas `172.16.0.158:80`. Pare-feu (`CARLYS_PROXY_CIDR`, étape 2), Nginx arrêté, ou mauvaise adresse dans son `proxy_pass` |
 | 502 sur tous les hôtes, **avec** une ligne dans l'`access.log` | aucun conteneur ne tourne : le déploiement a échoué ou n'a pas eu lieu |
 | 502 sur l'API seule | refus de démarrage sur une variable — `docker compose logs api` la nomme |

@@ -30,10 +30,18 @@
 # dont postgres ne tourne pas, en revanche, a des données qui ne sont pas
 # sauvegardées : celui-là fait sortir en erreur.
 #
+# HORS MACHINE, ENSUITE. Si /srv/carlys/sauvegarde-distante.env est rempli,
+# le dump et une archive du miroir des médias de la nuit partent, chiffrés
+# par gpg, vers un stockage S3 d'un autre fournisseur (_hors_site.sh). Sans
+# cette cible, tout reste sur le disque que les sauvegardes protègent :
+# `carlysctl doctor` le signale tant que la production tourne ainsi.
+#
 # RESTAURER (la sauvegarde qu'on n'a jamais restaurée n'en est pas une) :
 #   docker compose -p carlys_staging --env-file /srv/carlys/staging/.env \
 #     -f infrastructure/server/compose.yml exec -T postgres \
 #     pg_restore -U <user> -d <base> --clean --if-exists < <fichier>.dump
+# Depuis la copie distante : scripts/server/README.md, « Restaurer depuis la
+# copie hors machine ».
 set -euo pipefail
 
 # shellcheck source=scripts/server/_common.sh
@@ -48,16 +56,22 @@ Usage : backup.sh [staging|production]
   Sans argument : sauvegarde les deux environnements DÉPLOYÉS.
   Les dumps vont dans $CARLYS_ROOT/backups (défaut /srv/carlys/backups),
   nommés <environnement>-<horodatage UTC>.dump, rétention 14 jours.
+  Puis, si $CARLYS_ROOT/sauvegarde-distante.env est rempli, une copie
+  chiffrée part hors de la machine.
 
 Codes de retour :
   0   toutes les bases attendues sont sauvegardées (un environnement jamais
       déployé est sauté, ce n'est pas un échec)
-  1   au moins un environnement déployé n'a PAS pu être sauvegardé
+  1   au moins un environnement déployé n'a PAS pu être sauvegardé, ou la
+      copie hors machine configurée a échoué
   2   mauvaise utilisation
 
 Variables :
   CARLYS_ROOT                     racine des données (défaut /srv/carlys)
   CARLYS_BACKUP_RETENTION_DAYS    rétention en jours (défaut 14)
+  CARLYS_BACKUP_PREMIGRATION_MAX_DAYS
+                                  âge maximal des dumps d'avant-migration
+                                  (défaut 30 ; lu aussi dans le .env)
 FIN
   exit 2
 }
@@ -115,10 +129,12 @@ for env_name in "${TARGETS[@]}"; do
   fi
 
   project="$(compose_project "$env_name" "$file")"
-  db_user="$(env_value POSTGRES_USER "$file" carlys)"
-  db_name="$(env_value POSTGRES_DB "$file" "carlys_${env_name}")"
 
-  if ! dc "$env_name" "$file" ps --status running --services 2>/dev/null | grep -qx postgres; then
+  # `grep -x … >/dev/null`, pas `grep -q` : sous `pipefail`, `-q` ferme le
+  # tube au premier service trouvé, compose meurt de SIGPIPE en écrivant le
+  # suivant (141), et une base qui tourne passait pour arrêtée — nuit sans
+  # sauvegarde, alerte à tort.
+  if ! dc "$env_name" "$file" ps --status running --services 2>/dev/null | grep -x postgres >/dev/null; then
     warn "postgres ne tourne pas pour $env_name (projet $project, sha déployé $deployed) — RIEN n'a été sauvegardé"
     warn "  cet environnement A été déployé : une base existe et n'est pas sauvegardée."
     warn "  Diagnostic : docker compose -p $project --env-file $file ps"
@@ -126,41 +142,15 @@ for env_name in "${TARGETS[@]}"; do
     continue
   fi
 
+  # Le dump lui-même — conteneur, format custom, écriture atomique, signature
+  # vérifiée — est décrit une seule fois, dans _sauvegarde.sh : deploy.sh s'en
+  # sert aussi, juste avant chaque migration de production.
   target="$BACKUP_DIR/${env_name}-${STAMP}.dump"
-  partial="${target}.part"
-
-  # PGPASSWORD n'est pas nécessaire par la socket locale du conteneur (auth
-  # « trust » pour les connexions locales dans l'image officielle), mais une
-  # image durcie pourrait l'exiger. Il est donc lu DANS LE CONTENEUR, depuis
-  # POSTGRES_PASSWORD que le compose y place déjà — jamais passé en argument
-  # de `docker compose exec`. Un `--env PGPASSWORD=…` mettrait le mot de passe
-  # de production dans /proc/<pid>/cmdline, lisible par n'importe quel
-  # utilisateur local pendant toute la durée du dump ; les guillemets simples
-  # ci-dessous garantissent que l'hôte ne développe pas la variable.
-  if ! dc "$env_name" "$file" exec -T postgres sh -c \
-      'PGPASSWORD="${POSTGRES_PASSWORD-}" exec pg_dump -U "$1" -d "$2" --format=custom --no-owner' \
-      pg_dump "$db_user" "$db_name" \
-      > "$partial" 2>"${partial}.err"; then
-    warn "pg_dump a échoué pour $env_name (base $db_name, rôle $db_user) :"
-    sed 's/^/     /' < "${partial}.err" >&2 || true
-    rm -f "$partial" "${partial}.err"
-    failures=$((failures + 1))
-    continue
-  fi
-  rm -f "${partial}.err"
-
-  # Un dump au format custom commence par la signature « PGDMP ». Ce contrôle
-  # attrape le cas le plus vicieux : un fichier de taille non nulle rempli d'un
-  # message d'erreur, qui passerait un test « le fichier existe ».
-  if [ "$(head -c 5 "$partial" 2>/dev/null)" != "PGDMP" ]; then
-    warn "le dump de $env_name n'a pas la signature PGDMP attendue — rejeté"
-    rm -f "$partial"
+  if ! sauvegarde_base "$env_name" "$file" "$target"; then
     failures=$((failures + 1))
     continue
   fi
 
-  mv "$partial" "$target"
-  chmod 600 "$target"
   ok "$(basename -- "$target") ($(du -h "$target" | cut -f1))"
   made=$((made + 1))
   reussis="$reussis $env_name"
@@ -214,7 +204,7 @@ for env_name in "${TARGETS[@]}"; do
     failures=$((failures + 1))
     continue
   fi
-  if ! dc "$env_name" "$file" ps --status running --services 2>/dev/null | grep -qx minio; then
+  if ! dc "$env_name" "$file" ps --status running --services 2>/dev/null | grep -x minio >/dev/null; then
     warn "minio ne tourne pas pour $env_name — médias NON sauvegardés"
     failures=$((failures + 1))
     continue
@@ -295,6 +285,11 @@ for env_name in "${TARGETS[@]}"; do
   case " $reussis " in
     *" $env_name "*)
       purge_older_than "$RETENTION_DAYS" "${env_name}-*.dump"
+      # Les dumps d'avant-migration (deploy.sh) ont leur propre rétention,
+      # plus longue (_sauvegarde.sh) — mais bornée, et appliquée ICI chaque
+      # nuit : sinon, sans déploiement pendant un trimestre, ils survivaient
+      # des mois aux comptes que la purge quotidienne efface de la base.
+      purged=$((purged + $(sauvegarde_avant_migration_purger "$env_name" "$(env_file "$env_name")")))
       ;;
     *)
       warn "$env_name : aucune sauvegarde neuve cette nuit — rétention NON appliquée"
@@ -347,9 +342,46 @@ done
 PART_RETENTION_DAYS=1
 for env_name in "${TARGETS[@]}"; do
   purge_older_than "$PART_RETENTION_DAYS" "${env_name}-*.dump.part*"
+  # Ceux du dump d'avant-migration (deploy.sh), même raison.
+  purge_older_than "$PART_RETENTION_DAYS" "avant-migration-${env_name}-*.dump.part*"
 done
 
 [ "$purged" -gt 0 ] || info "aucun fichier à purger"
+
+# ── Copie hors machine ─────────────────────────────────────────────────────
+# APRÈS la rétention locale : elle ne dépend pas de l'envoi distant, et un
+# fournisseur injoignable ne doit pas retenir le nettoyage du disque. Un
+# échec ici n'est pas une base non sauvegardée — la copie locale de la nuit
+# existe — et il a donc sa PROPRE alerte, qui dit ce qui s'est passé.
+step "Copie hors machine"
+echecs_distants=0
+envoyes=0
+if ! hors_site_configuree; then
+  if [ -n "$(deployed_current production)" ]; then
+    warn "AUCUNE copie hors machine : la production n'a de sauvegardes QUE sur ce disque."
+    warn "  Poser la cible : $(hors_site_config_file) (voir carlysctl doctor)."
+  else
+    info "aucune cible distante ($(hors_site_config_file)) : facultative tant que la production n'est pas déployée"
+  fi
+elif ! command -v gpg >/dev/null 2>&1; then
+  warn "gpg ABSENT : rien ne peut être chiffré, donc rien ne part. sudo apt-get install -y gnupg"
+  echecs_distants=$((echecs_distants + 1))
+else
+  for env_name in "${TARGETS[@]}"; do
+    dump=''; medias=''
+    case " $reussis " in *" $env_name "*) dump="$BACKUP_DIR/${env_name}-${STAMP}.dump" ;; esac
+    case " $reussis_minio " in *" $env_name "*) medias="$BACKUP_DIR/minio-${env_name}/courant" ;; esac
+    [ -n "$dump$medias" ] || continue
+    if hors_site_exporter "$env_name" "$(env_file "$env_name")" "$dump" "$medias" "$STAMP"; then
+      envoyes=$((envoyes + 1))
+    else
+      echecs_distants=$((echecs_distants + 1))
+    fi
+  done
+  if [ "$echecs_distants" -eq 0 ] && [ "$envoyes" -gt 0 ]; then
+    state_set machine sauvegarde_distante_derniere "$(maintenant)"
+  fi
+fi
 
 step "Bilan"
 info "sauvegardes créées : $made (bases + instantanés de médias)"
@@ -363,6 +395,18 @@ info "répertoire         : $BACKUP_DIR"
 # cron redirige tout vers `logger` ; il n'y a ni MAILTO ni MTA sur la machine.
 # Le code de retour non nul reste juste et utile — il sert à qui appelle ce
 # script à la main — mais il ne réveille personne. Voir _alert.sh.
+if [ "$echecs_distants" -gt 0 ]; then
+  alerte_signaler machine sauvegarde_distante "Copie hors machine: ECHEC" \
+    "$echecs_distants environnement(s) n'ont PAS été copiés hors de la machine cette nuit." \
+    "Les sauvegardes LOCALES de la nuit existent : $BACKUP_DIR." \
+    "Cible : $(hors_site_valeur CARLYS_SAUVEGARDE_DISTANTE_URL '') ($(hors_site_config_file))." \
+    "" \
+    "Tant que ça dure, une panne du disque emporterait aussi les sauvegardes." \
+    "Journal complet : journalctl -t carlys-backup -n 200"
+elif hors_site_configuree; then
+  alerte_resoudre machine sauvegarde_distante "Copie hors machine: ECHEC"
+fi
+
 if [ "$failures" -gt 0 ]; then
   alerte_signaler machine sauvegarde "Sauvegarde des bases: ECHEC" \
     "$failures environnement(s) déployé(s) n'ont PAS été sauvegardés." \
@@ -376,3 +420,7 @@ if [ "$failures" -gt 0 ]; then
 fi
 
 alerte_resoudre machine sauvegarde "Sauvegarde des bases: ECHEC"
+if [ "$echecs_distants" -gt 0 ]; then
+  printf '\n%s✗ copie hors machine en échec (%s environnement(s))%s\n' "$_c_red" "$echecs_distants" "$_c_off" >&2
+  exit 1
+fi

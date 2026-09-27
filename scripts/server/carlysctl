@@ -58,6 +58,15 @@ AGIR À LA MAIN
                                           supervision le fait d'elle-même une
                                           fois par jour ; --a-blanc compte
                                           sans rien effacer
+  carlysctl deleted-accounts-purge <env>  efface définitivement les comptes
+                                          supprimés depuis plus de 30 jours
+                                          (CARLYS_ACCOUNT_PURGE_DAYS), photos
+                                          privées comprises. La supervision le
+                                          fait d'elle-même une fois par jour ;
+                                          --a-blanc compte sans rien effacer ;
+                                          --compte <uuid> efface TOUT DE SUITE
+                                          un compte déjà supprimé (demande
+                                          d'effacement immédiat)
   carlysctl scale <env> <n>               fixe le nombre d'exemplaires d'API
   carlysctl heal <env>                    répare ce qui est tombé
   carlysctl env-sync <env> [--appliquer]  ajoute au .env les réglages qui lui
@@ -76,7 +85,9 @@ LAISSER FAIRE
                                           --appliquer
   carlysctl supervise [env]               UN passage complet : réparation,
                                           mise à l'échelle, balayage quotidien
-                                          des photos orphelines, mise à jour.
+                                          des photos orphelines, purge
+                                          quotidienne des comptes supprimés,
+                                          mise à jour.
                                           C'est ce que lance la minuterie
                                           systemd.
 
@@ -403,7 +414,7 @@ cmd_catalog_seed() {
   # L'image déployée doit porter la commande — une image d'avant son
   # introduction ne l'a pas, et l'erreur de Node serait moins claire que
   # celle-ci.
-  if ! catalogue_commande_presente "$env_name" "$file"; then
+  if ! api_cli_present "$env_name" "$file" catalog-seed; then
     die "L'image API déployée sur « $env_name » ne porte pas encore catalog-seed." \
       "Elle est antérieure à cette commande : déployer une version plus récente, puis relancer."
   fi
@@ -442,7 +453,7 @@ cmd_subscription_catalog() {
   # lignes. On attend, ce rattrapage n'étant pas pressé.
   lock_env "$env_name" "$CARLYS_LOCK_WAIT"
 
-  if ! abonnement_commande_presente "$env_name" "$file"; then
+  if ! api_cli_present "$env_name" "$file" subscription-catalog; then
     die "L'image API déployée sur « $env_name » ne porte pas encore subscription-catalog." \
       "Elle est antérieure à cette commande : déployer une version plus récente, puis relancer."
   fi
@@ -480,7 +491,7 @@ cmd_meal_photos_sweep() {
     "La commande vit dans l'image API : déployer d'abord (carlysctl deploy $env_name <sha>)."
   # Le même verrou que la supervision, qui lance le même balayage.
   lock_env "$env_name" "$CARLYS_LOCK_WAIT"
-  if ! photos_commande_presente "$env_name" "$file"; then
+  if ! api_cli_present "$env_name" "$file" meal-photos-sweep; then
     die "L'image API déployée sur « $env_name » ne porte pas encore meal-photos-sweep." \
       "Elle est antérieure aux photos de repas : aucune n'a pu être stockée."
   fi
@@ -495,6 +506,52 @@ cmd_meal_photos_sweep() {
     alerte_resoudre "$env_name" balayage_photos "Photos de repas orphelines non effacees"
   fi
   ok "balayage terminé."
+}
+
+# Efface DÉFINITIVEMENT les comptes supprimés depuis plus que le délai de
+# conservation — via dist/cli/deleted-accounts-purge de l'image API.
+#
+# EN TEMPS NORMAL, PERSONNE N'A BESOIN DE CETTE COMMANDE : la passe de
+# supervision la lance une fois par jour (_purge_comptes.sh) et alerte si
+# elle échoue. Elle reste pour compter sans effacer (--a-blanc), pour
+# rejouer une purge ratée, et pour l'effacement IMMÉDIAT qu'une personne
+# demande par écrit (--compte <uuid>, compte déjà supprimé seulement).
+cmd_deleted_accounts_purge() {
+  local env_name file a_blanc=non
+  env_name="$(environnement_requis "${1-}")"
+  shift || true
+  local options=()
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --a-blanc) options+=(--a-blanc); a_blanc=oui; shift ;;
+      --compte)
+        [ -n "${2-}" ] || die "--compte attend l'identifiant du compte." ""
+        options+=(--compte "$2"); a_blanc=compte; shift 2 ;;
+      *) die "Option inconnue : $1" "Attendu : --a-blanc, --compte <uuid>" ;;
+    esac
+  done
+  file="$(env_file "$env_name")"
+  require_commands docker
+  require_compose_file
+  [ -n "$(deployed_current "$env_name")" ] || die "« $env_name » n'a jamais été déployé." \
+    "La commande vit dans l'image API : déployer d'abord (carlysctl deploy $env_name <sha>)."
+  # Le même verrou que la supervision, qui lance la même purge.
+  lock_env "$env_name" "$CARLYS_LOCK_WAIT"
+  if ! api_cli_present "$env_name" "$file" deleted-accounts-purge; then
+    die "L'image API déployée sur « $env_name » ne porte pas encore deleted-accounts-purge." \
+      "Déployer une version plus récente, puis relancer."
+  fi
+
+  step "Comptes supprimés à effacer sur « $env_name »"
+  purge_comptes_lancer "$env_name" "$file" ${options[@]+"${options[@]}"} \
+    || die "La purge a échoué ou a refusé — le message ci-dessus dit pourquoi." \
+      "Elle est rejouable à volonté, une fois la cause réparée."
+  if [ "$a_blanc" = non ]; then
+    # Une purge complète réussie remet le compteur de la supervision à zéro.
+    state_set_many "$env_name" purge_comptes "$(maintenant)" purge_comptes_echec non
+    alerte_resoudre "$env_name" purge_comptes "Comptes supprimes non effaces"
+  fi
+  ok "purge terminée."
 }
 
 cmd_update() {
@@ -516,7 +573,8 @@ cmd_update() {
 #      parce que moins d'exemplaires pour le recevoir, donc « réduisons ».
 #   2. METTRE À L'ÉCHELLE ensuite, sur une pile entière. Sous le même
 #      verrou suivent l'élagage du disque et, une fois par jour, le balayage
-#      des photos de repas orphelines (_photos.sh).
+#      des photos de repas orphelines (_photos.sh) et la purge des comptes
+#      supprimés (_purge_comptes.sh).
 #   3. METTRE À JOUR en dernier. Un déploiement recrée les conteneurs :
 #      le faire avant rendrait caduques les deux étapes précédentes.
 cmd_supervise() {
@@ -527,10 +585,11 @@ cmd_supervise() {
     while read -r env_name; do supervise_un "$env_name"; done < <(tous_les_environnements)
   fi
 
-  # LE CLONE, EN DERNIER — après toutes les passes, jamais avant. Un `git pull`
+  # LE CLONE, EN DERNIER — après toutes les passes, jamais avant. L'avancer
   # remplace les scripts que cette passe est en train d'exécuter ; c'est sans
   # danger (mesuré : l'inode change, le bash en cours garde le sien), mais il
-  # n'y a aucune raison de le faire pendant qu'ils travaillent.
+  # n'y a aucune raison de le faire pendant qu'ils travaillent. Il n'avance
+  # que jusqu'à un commit qui a passé la porte de CI (voir repo_pull).
   #
   # Sous la MÊME autorisation que le déploiement automatique, et pour la même
   # raison : `CARLYS_AUTO_UPDATE=oui` veut dire « suivre main tout seul », et
@@ -584,6 +643,9 @@ supervise_un() {
   # Une fois par jour : les photos de repas que leur propriétaire a
   # supprimées pendant que le stockage ne répondait pas. Voir _photos.sh.
   photos_balayer_si_du "$env_name" "$file" || true
+  # Une fois par jour : les comptes supprimés depuis plus que le délai de
+  # conservation, effacés pour de bon. Voir _purge_comptes.sh.
+  purge_comptes_si_due "$env_name" "$file" || true
 
   unlock_env
   update_run "$env_name" "$file" || true
@@ -663,6 +725,13 @@ cmd_doctor() {
     *) ok "canal : $(alerte_canal) — l'éprouver : carlysctl alert-test" ;;
   esac
 
+  # Des sauvegardes rangées sur le disque qu'elles protègent ne protègent pas
+  # de la perte de ce disque. Répété à CHAQUE doctor tant que la cible
+  # distante manque, et compté comme un manque dès que la production tourne.
+  # Voir _hors_site.sh.
+  step "Sauvegardes hors machine"
+  hors_site_doctor || manque=1
+
   step "Environnements"
   while read -r env_name; do
     file="$(env_file "$env_name")"
@@ -704,6 +773,7 @@ case "$COMMANDE" in
   catalog-seed) cmd_catalog_seed "$@" ;;
   subscription-catalog) cmd_subscription_catalog "$@" ;;
   meal-photos-sweep) cmd_meal_photos_sweep "$@" ;;
+  deleted-accounts-purge) cmd_deleted_accounts_purge "$@" ;;
   prune)     cmd_prune "${1-}" ;;
   update)    cmd_update "${1-}" ;;
   supervise) cmd_supervise "${1-}" ;;

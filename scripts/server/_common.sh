@@ -360,19 +360,19 @@ vaut_non() {
 # déploiement, automatiquement) et `carlysctl catalog-seed` (rattrapage à la
 # main, ou rechargement sans redéployer). Les recopier les ferait diverger.
 
-# Vrai si l'image API du tag courant porte la commande. Une image antérieure à
-# son introduction ne l'a pas : le savoir AVANT évite une erreur de Node
-# illisible, et permet à un retour arrière vers un vieux sha de passer son
-# chemin au lieu d'échouer.
-catalogue_commande_presente() {
-  local env_name="$1" file="$2"
-  dc "$env_name" "$file" run --rm --no-deps -T --entrypoint test api \
-    -f dist/cli/catalog-seed.js >/dev/null 2>&1
+# `api_cli_present <env> <.env> <cli>` — vrai si l'image API du tag courant
+# porte dist/cli/<cli>.js. Une image antérieure à son introduction ne l'a pas :
+# le savoir AVANT évite une erreur de Node illisible, et permet à un retour
+# arrière vers un vieux sha de passer son chemin au lieu d'échouer. Sert aux
+# quatre CLI que lance le serveur : catalog-seed, subscription-catalog,
+# meal-photos-sweep et deleted-accounts-purge.
+api_cli_present() {
+  dc "$1" "$2" run --rm --no-deps -T --entrypoint test api -f "dist/cli/$3.js" >/dev/null 2>&1
 }
 
 # Charge (ou met à jour) le catalogue. Rend le code de sortie du CLI.
 #
-# PAS `--no-deps`, contrairement à la sonde ci-dessus : les photos partent dans
+# PAS `--no-deps`, contrairement à `api_cli_present` : les photos partent dans
 # MinIO, qui doit être debout. Compose démarre alors postgres, redis, minio et
 # minio-init (création du bucket) s'ils ne le sont pas déjà — exactement les
 # services dont l'API dépend, donc rien de plus que ce que la bascule exigera
@@ -394,12 +394,6 @@ catalogue_charger() {
 # restait gratuit.
 #
 # `--no-deps` : la commande ne touche QUE la base, aucun stockage objet.
-abonnement_commande_presente() {
-  local env_name="$1" file="$2"
-  dc "$env_name" "$file" run --rm --no-deps -T --entrypoint test api \
-    -f dist/cli/subscription-catalog.js >/dev/null 2>&1
-}
-
 abonnement_projeter() {
   local env_name="$1" file="$2"
   dc "$env_name" "$file" run --rm -T api node dist/cli/subscription-catalog
@@ -523,9 +517,19 @@ admin_host_port() {
 . "$CARLYS_LIB_DIR/_envsync.sh"
 # shellcheck source=scripts/server/_repo.sh
 . "$CARLYS_LIB_DIR/_repo.sh"
+# Le dump d'une base (backup.sh ET deploy.sh, avant chaque migration de
+# production) et la copie chiffrée hors machine des sauvegardes.
+# shellcheck source=scripts/server/_sauvegarde.sh
+. "$CARLYS_LIB_DIR/_sauvegarde.sh"
+# shellcheck source=scripts/server/_hors_site.sh
+. "$CARLYS_LIB_DIR/_hors_site.sh"
 # _alert.sh appelle state_* et status_duree : chargé après eux.
 # shellcheck source=scripts/server/_alert.sh
 . "$CARLYS_LIB_DIR/_alert.sh"
-# _photos.sh appelle state_* et alerte_* : chargé après eux.
+# Les tâches quotidiennes (state_*, alerte_*) et les deux qui s'en servent.
+# shellcheck source=scripts/server/_quotidien.sh
+. "$CARLYS_LIB_DIR/_quotidien.sh"
 # shellcheck source=scripts/server/_photos.sh
 . "$CARLYS_LIB_DIR/_photos.sh"
+# shellcheck source=scripts/server/_purge_comptes.sh
+. "$CARLYS_LIB_DIR/_purge_comptes.sh"

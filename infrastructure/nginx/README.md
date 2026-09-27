@@ -49,6 +49,9 @@ doit jamais produire un `http://`.
 | Fichier | Rôle |
 | ------- | ---- |
 | `snippets/carlys-proxy.conf` | en-têtes de proxy, partagés par les six vhosts |
+| `snippets/carlys-compression-api.conf` | compression gzip du JSON des deux vhosts `api` ; chaque valeur y est justifiée et mesurée |
+| `conf.d/carlys-journal.conf` | niveau `http` : le format de journal `carlys_sans_jeton`, qui masque la valeur de tout paramètre `…token=` dans la requête et le Referer. Installé par `setup.sh` dans `/etc/nginx/conf.d/` ; sans lui, `nginx -t` refuse les vhosts (« unknown log format »). Le journal d'ERREURS n'a pas de format : les deux pages à jeton (`/verify-email`, `/reset-password`) y sont donc réduites au niveau `emerg` par leur propre `location` dans les vhosts `app`, sans quoi un 502 de l'admin y recopierait le jeton en clair |
+| `tests/nginx_test.sh` | charge ces vhosts dans un vrai nginx devant une application factice : aucun jeton au journal d'accès, ni au journal d'erreurs quand l'amont est tombé, liens intacts, JSON compressé même relayé en HTTP/1.0, jamais les réponses d'authentification |
 | `carlys-api-upstream.conf.example` | gabarit de l'amont **engendré** de l'API — le fichier réel est écrit par `carlysctl` |
 | `carlys-production.conf.example` | `api.` / `app.` / `media.` → 3000-3019 / 3050 / 9000 |
 | `carlys-staging.conf.example` | `api-staging.` / `app-staging.` / `media-staging.` → 3100-3119 / 3150 / 9200 |

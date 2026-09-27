@@ -17,7 +17,9 @@
 #      même moment et pour la même raison ;
 #   2. migration en tâche PONCTUELLE, jamais au démarrage du conteneur
 #      (règle du dépôt, infrastructure/deployment/README.md) : un redémarrage
-#      ou une mise à l'échelle ne doit pas modifier le schéma ;
+#      ou une mise à l'échelle ne doit pas modifier le schéma. En PRODUCTION,
+#      la base est SAUVEGARDÉE juste avant (voir « Ce que le retour arrière ne
+#      fait pas ») ; un échec de cette sauvegarde arrête tout ;
 #   3. échec de la migration ⇒ ARRÊT, api et admin n'ont pas été touchés ;
 #   4. CATALOGUE D'EXERCICES chargé juste après, toujours avant la bascule, et
 #      pour la même raison que la migration : il est LIVRÉ AVEC LE CODE (il vit
@@ -42,6 +44,16 @@
 # soigne. Corollaire à tenir : toute migration doit être compatible avec la
 # version précédente du code (ajout de colonne nullable, jamais de suppression
 # dans le même déploiement que le code qui cesse de l'utiliser).
+#
+# Cette discipline était longtemps la SEULE protection : aucun dump avant la
+# migration, et la dernière copie datait de la nuit — une migration
+# destructrice passée à 16 h emportait jusqu'à une journée d'écritures. En
+# production, la base est donc sauvegardée JUSTE AVANT la migration
+# (_sauvegarde.sh : backups/avant-migration-<env>-<horodatage>-<sha>.dump, les
+# 3 derniers gardés, 30 jours au plus). C'est ce fichier que l'on restaure si
+# la migration a détruit ce qu'il ne fallait pas :
+#   pg_restore -U <user> -d <base> --clean --if-exists < <ce fichier>
+# (par `docker compose … exec -T postgres`, comme en tête de backup.sh).
 #
 # Le CATALOGUE tombe sous LA MÊME CONTRAINTE, et il faut la dire en toutes
 # lettres : un retour arrière ne le rembobine pas, et il est chargé pendant que
@@ -112,6 +124,10 @@ Variables utiles :
   CARLYS_HEALTH_DELAY   secondes entre deux tentatives (défaut 2)
   CARLYS_DEPLOY_CATALOG non|no|false|0 saute le chargement du catalogue
                         (défaut : chargé ; toute autre valeur le charge aussi)
+  CARLYS_DEPLOY_BACKUP  sauvegarde de la base avant la migration : active en
+                        production (seul un non|no|false|0 la saute), inactive
+                        en recette (seul un oui|yes|true|1 l'arme). Lue aussi
+                        dans le .env de l'environnement.
 FIN
   exit 2
 }
@@ -296,7 +312,27 @@ ok "PostgreSQL accepte les connexions"
 # l'attente `pg_isready` de l'étape précédente — un second avis, plus faible
 # (`pg_isready` accepte une connexion, le healthcheck interroge la BASE), et
 # qui divergerait du compose au premier changement.
-step "4/8 Migrations Prisma (tâche ponctuelle)"
+step "4/8 Sauvegarde de la base, puis migrations Prisma (tâche ponctuelle)"
+# La sauvegarde d'avant-migration : voir « Ce que le retour arrière ne fait
+# pas » en tête de fichier. Rien à protéger au premier déploiement — aucune
+# donnée n'a encore été écrite par un utilisateur.
+if [ -z "$PREVIOUS_SHA" ]; then
+  info "premier déploiement : aucune base à protéger, pas de sauvegarde d'avant-migration"
+elif sauvegarde_avant_migration_active "$ENV_NAME" "$ENV_FILE"; then
+  info "sauvegarde de la base AVANT la migration"
+  if ! DUMP_AVANT="$(sauvegarde_avant_migration "$ENV_NAME" "$ENV_FILE" "$SHA")"; then
+    die "La sauvegarde d'avant-migration a échoué : DÉPLOIEMENT INTERROMPU." \
+      "RIEN n'a été migré ni basculé : api et admin tournent toujours sur $PREVIOUS_SHA." \
+      "Migrer sans copie de la base, c'est parier une journée d'écritures sur une" \
+      "migration qu'aucun retour arrière ne défait. La cause est ci-dessus (disque" \
+      "plein, rôle PostgreSQL du .env refusé…). Une fois réparée : carlysctl deploy $ENV_NAME $SHA" \
+      "Pour passer outre EN CONNAISSANCE DE CAUSE (une copie récente existe ailleurs) :" \
+      "  CARLYS_DEPLOY_BACKUP=non carlysctl deploy $ENV_NAME $SHA"
+  fi
+  ok "base sauvegardée : $DUMP_AVANT"
+else
+  info "pas de sauvegarde d'avant-migration sur « $ENV_NAME » (CARLYS_DEPLOY_BACKUP)"
+fi
 if ! dc "$ENV_NAME" "$ENV_FILE" run --rm migrate; then
   die "La migration a échoué — DÉPLOIEMENT INTERROMPU." \
     "RIEN n'a été basculé : api et admin tournent toujours sur ${PREVIOUS_SHA:-leur version précédente}." \
@@ -327,7 +363,7 @@ if vaut_non "$DEPLOY_CATALOG"; then
   warn "étape sautée : CARLYS_DEPLOY_CATALOG=$DEPLOY_CATALOG"
   info "La bibliothèque d'exercices reste telle qu'elle est en base."
   info "Pour la charger une fois ce sha en place : carlysctl catalog-seed $ENV_NAME"
-elif ! catalogue_commande_presente "$ENV_NAME" "$ENV_FILE"; then
+elif ! api_cli_present "$ENV_NAME" "$ENV_FILE" catalog-seed; then
   # Le cas normal d'un retour arrière ou d'une promotion de vieux sha : cette
   # image est antérieure à la commande. Ce n'est pas une panne — le catalogue
   # déjà en base reste servi — et faire échouer le déploiement pour autant
@@ -385,7 +421,7 @@ fi
 # Idempotente, comme le catalogue d'exercices, et rejouée à chaque
 # déploiement pour la même raison : elle se compte en secondes.
 step "6/8 Catalogue d'abonnement"
-if ! abonnement_commande_presente "$ENV_NAME" "$ENV_FILE"; then
+if ! api_cli_present "$ENV_NAME" "$ENV_FILE" subscription-catalog; then
   # Image antérieure à la commande (retour arrière, promotion d'un vieux
   # sha) : ce n'est pas une panne, le catalogue déjà en base reste servi.
   warn "l'image sha-$SHA ne porte pas dist/cli/subscription-catalog : plans laissés en l'état."

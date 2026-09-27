@@ -15,7 +15,8 @@
 # carlys-production.conf.example et dans snippets/carlys-proxy.conf.
 #
 # Installation :
-#   cp infrastructure/nginx/snippets/carlys-proxy.conf /etc/nginx/snippets/
+#   cp infrastructure/nginx/snippets/*.conf /etc/nginx/snippets/
+#   cp infrastructure/nginx/conf.d/carlys-journal.conf /etc/nginx/conf.d/
 #   sed 's/carlys.example/VOTRE-DOMAINE/g' \
 #     infrastructure/nginx/carlys-staging.conf.example \
 #     > /etc/nginx/sites-available/carlys-staging.conf
@@ -54,6 +55,9 @@ server {
     listen 80;
     listen [::]:80;
     server_name api-staging.carlys.example;
+    # Le journal d'accès SANS les jetons des liens d'e-mail (format défini
+    # dans conf.d/carlys-journal.conf, qui dit pourquoi).
+    access_log /var/log/nginx/access.log carlys_sans_jeton;
 
     # HSTS conservé bien que ce bloc n'écoute qu'en clair : c'est un en-tête de
     # RÉPONSE, il traverse gra6 jusqu'au navigateur, qui l'applique à l'origine
@@ -67,6 +71,21 @@ server {
     client_max_body_size 1m;
 
     include snippets/carlys-proxy.conf;
+    # JSON compressé (×7 mesuré sur les routes chaudes) : chaque valeur est
+    # justifiée dans le snippet.
+    include snippets/carlys-compression-api.conf;
+
+    # Réponses d'authentification JAMAIS compressées (BREACH) : jetons et
+    # adresse saisie dans la même réponse. Voir le snippet de compression.
+    location /api/v1/auth/ {
+        gzip off;
+        proxy_pass http://carlys_api_staging;
+    }
+
+    location /api/v1/admin/auth/ {
+        gzip off;
+        proxy_pass http://carlys_api_staging;
+    }
 
     location /health {
         proxy_pass http://carlys_api_staging;
@@ -121,6 +140,9 @@ server {
     listen 80;
     listen [::]:80;
     server_name app-staging.carlys.example;
+    # Le journal d'accès SANS les jetons des liens d'e-mail (format défini
+    # dans conf.d/carlys-journal.conf, qui dit pourquoi).
+    access_log /var/log/nginx/access.log carlys_sans_jeton;
 
     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
 
@@ -152,6 +174,18 @@ server {
         add_header X-Robots-Tag "noindex, nofollow, noarchive" always;
         add_header Cache-Control "public, max-age=31536000, immutable" always;
         access_log off;
+    }
+
+    # Les pages à jeton, hors du journal d'erreurs : même raison, même règle
+    # que dans carlys-production.conf.example (qui la détaille). `auth_basic
+    # off` est sans effet tant qu'aucun mot de passe de recette n'est posé ;
+    # il est là pour le jour où on le pose (plus bas) : cette regex, la
+    # première qui corresponde, traite ces deux pages, et sans lui elle leur
+    # ferait réclamer le mot de passe.
+    location ~ ^/(verify-email|reset-password)(/|$) {
+        error_log /var/log/nginx/error.log emerg;
+        auth_basic off;
+        proxy_pass http://carlys_admin_staging;
     }
 
     location / {
@@ -193,7 +227,8 @@ server {
     # requête, et elle hérite alors de l'`auth_basic` du bloc `server`. Le
     # `auth_basic off;` doit donc être posé DANS la location qui gagne. Les
     # pages publiques, elles, passent par une location `~ regex`, laquelle est
-    # évaluée après les préfixes et l'emporte sur eux : une seule suffit.
+    # évaluée après les préfixes et l'emporte sur eux : une seule suffit —
+    # plus celle des deux pages à jeton, plus haut, qui porte déjà le sien.
     #
     # Le mot de passe voyage en clair entre gra6 et cette machine — comme tout
     # le reste depuis que le TLS se termine sur gra6. C'est acceptable parce
@@ -207,7 +242,7 @@ server {
     # auth_basic           "Carlys — recette";
     # auth_basic_user_file /etc/nginx/carlys-staging.htpasswd;
     #
-    # location ~ ^/(privacy|terms|verify-email|reset-password|abonnement)(/|$) {
+    # location ~ ^/(privacy|terms|abonnement)(/|$) {
     #     auth_basic off;
     #     proxy_pass http://carlys_admin_staging;
     # }
@@ -225,6 +260,9 @@ server {
     listen 80;
     listen [::]:80;
     server_name media-staging.carlys.example;
+    # Le journal d'accès SANS les jetons des liens d'e-mail (format défini
+    # dans conf.d/carlys-journal.conf, qui dit pourquoi).
+    access_log /var/log/nginx/access.log carlys_sans_jeton;
 
     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains" always;
     add_header X-Robots-Tag "noindex, nofollow, noarchive" always;

@@ -26,8 +26,20 @@
 # modifications locales, n'est pas rattrapé de force. On le signale et on n'y
 # touche pas — écraser le travail de quelqu'un pour tenir une promesse
 # d'automatisme serait le pire des deux mondes.
+#
+# JUSQU'À UN COMMIT QUI A PASSÉ LA PORTE DE CI, JAMAIS AU-DELÀ. Ce clone est
+# celui de la recette ET de la production : backup.sh, deploy.sh (et son dump
+# d'avant-migration), heal et le compose.yml qu'ils lancent en viennent. Un
+# `git pull` de la tête y amenait aussi un commit qu'infra-ci venait de
+# rejeter, exécuté la nuit même sur la production. La tête n'est donc prise
+# que si son image API existe : images-publish ne la pousse qu'une fois
+# api-ci, admin-ci, images-ci et infra-ci verts pour ce code (porte « La CI de
+# ce commit est verte »). Sinon — CI rouge, ou encore en cours — le clone
+# reste où il est, et réessaie à la passe suivante. Même question, donc, que
+# celle que la mise à jour de la recette pose avant de déployer
+# (update_cible_staging).
 repo_pull() {
-  local branche avant apres etat
+  local branche avant cible etat
   [ -d "$CARLYS_REPO_DIR/.git" ] || return 0
 
   branche="$(git -C "$CARLYS_REPO_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || true)"
@@ -44,17 +56,27 @@ repo_pull() {
   fi
 
   avant="$(git -C "$CARLYS_REPO_DIR" rev-parse HEAD 2>/dev/null || true)"
-  if ! git -C "$CARLYS_REPO_DIR" pull --ff-only --quiet 2>/dev/null; then
-    warn "git pull --ff-only a échoué sur $CARLYS_REPO_DIR (branche $branche)"
-    warn "  soit le réseau, soit la branche a divergé — à regarder à la main"
+  if ! git -C "$CARLYS_REPO_DIR" fetch --quiet 2>/dev/null \
+    || ! cible="$(git -C "$CARLYS_REPO_DIR" rev-parse --verify --quiet '@{upstream}' 2>/dev/null)"; then
+    warn "git fetch a échoué sur $CARLYS_REPO_DIR (branche $branche)"
+    warn "  soit le réseau, soit la branche n'a pas d'amont — à regarder à la main"
     return 1
   fi
+  # Rien de neuf en amont (ou le clone porte des commits à lui, en avance).
+  git -C "$CARLYS_REPO_DIR" merge-base --is-ancestor "$cible" HEAD 2>/dev/null && return 0
 
-  apres="$(git -C "$CARLYS_REPO_DIR" rev-parse HEAD 2>/dev/null || true)"
-  if [ "$avant" != "$apres" ]; then
-    ok "clone mis à jour : ${avant:0:12} → ${apres:0:12} ($branche)"
-    info "  la passe EN COURS finit sur les anciens scripts ; la suivante prendra ceux-ci"
+  if ! image_publiee "$(image_api "$(normalize_sha "$cible")")"; then
+    info "tête de $branche (${cible:0:12}) sans images publiées — CI rouge ou en cours, ou registre injoignable :"
+    info "  le clone reste sur ${avant:0:12}"
+    return 0
   fi
+  if ! git -C "$CARLYS_REPO_DIR" merge --ff-only --quiet "$cible" 2>/dev/null; then
+    warn "le clone $CARLYS_REPO_DIR ne peut pas avancer en avance rapide jusqu'à ${cible:0:12}"
+    warn "  la branche $branche a divergé — à regarder à la main"
+    return 1
+  fi
+  ok "clone mis à jour : ${avant:0:12} → ${cible:0:12} ($branche)"
+  info "  la passe EN COURS finit sur les anciens scripts ; la suivante prendra ceux-ci"
   return 0
 }
 

@@ -45,6 +45,7 @@ Ceci résume la licence pour l'exploitation ; ce n'est pas un avis juridique.
 | `versions.env` | **Le seul endroit** où s'écrivent les tags, les commits et la version de Go |
 | `construire.sh` | Clone le tag, **refuse** si le commit diffère, construit (`CGO_ENABLED=0 go build -trimpath`, options officielles), vérifie que `--version` annonce ce tag et ce commit ; calcule aussi les étiquettes des images (`etiquettes`) et vérifie que le compose du serveur les référence (`verifier-compose`) |
 | `Dockerfile` | Deux cibles : `mc` (client + `/bin/sh`) et `minio` (serveur **+ mc**, pour la sonde `mc ready local`). Images de base épinglées par empreinte |
+| `demarrer-minio.sh` | Point d'entrée du serveur : rend un volume hérité de root à l'utilisateur `minio`, une fois, puis lance `minio` sans les droits root |
 
 ## Ce que la construction tire
 
@@ -78,8 +79,8 @@ ne construira pas MinIO sans lui.
 
 `<version de l'amont>-<empreinte de la recette>`, par exemple
 `carlys-minio:RELEASE.2025-09-07T16-13-09Z-<12 caractères hexadécimaux>`.
-L'empreinte est le SHA-256 de `Dockerfile`, `versions.env` et
-`construire.sh`, dans cet ordre :
+L'empreinte est le SHA-256 de `Dockerfile`, `versions.env`,
+`construire.sh` et `demarrer-minio.sh`, dans cet ordre :
 
 ```bash
 sh infrastructure/minio/construire.sh etiquettes
@@ -109,15 +110,32 @@ recette nouvelle auraient manqué quelques minutes (près de 3 min de
 compilation à froid), `deploy.sh` aurait échoué à son étape 2 et le sha
 aurait été mis de côté pour de bon. L'exploitant n'a aucun ordre à respecter.
 
-## Utilisateur : root, délibérément
+## Utilisateur : le serveur ne tourne pas en root
 
-Comme l'image `quay.io` remplacée. Le volume `minio-data` des serveurs en
-service a été rempli par elle, donc par root : un utilisateur non privilégié
-n'y écrirait plus, et MinIO refuserait de démarrer sur des médias bien réels.
-`backup.sh` fait aussi écrire `mc mirror` dans un répertoire de l'hôte en mode
-700, propriété de root. Passer en non-root reste possible, mais c'est un
-chantier à part : `chown` du volume sur chaque serveur et répertoire de
-sauvegarde accessible — pas l'effet de bord d'un changement de registre.
+Le **serveur** tourne sous `minio` (uid et gid 10001). Il détient toutes les
+photos, dont le bucket privé des repas, et son préfixe public est exposé sur
+internet : en root, une faille d'exécution dans MinIO donnait root dans le
+conteneur, volume monté (audit du 25/09). Les images API et admin posaient
+déjà `USER node`.
+
+**La migration des volumes existants est automatique.** Le `minio-data` des
+serveurs en service et des postes de développement a été rempli par l'image
+précédente, donc par root : lancé directement en `minio`, le serveur refuse
+de démarrer (« unable to rename … file access denied … Unable to write to the
+backend », reproduit sur un tel volume). Le point d'entrée
+[`demarrer-minio.sh`](demarrer-minio.sh) démarre donc en root, rend le volume
+à `minio` **une seule fois** (le dossier racine change de propriétaire en
+dernier, si bien qu'un `chown` interrompu est repris au démarrage suivant),
+puis abandonne ses droits (`su` de busybox, environnement conservé, `exec`
+jusqu'à `minio`, qui reste le processus 1 et reçoit l'arrêt). Éprouvé sur un
+volume rempli par l'ancienne image : migration, lecture de l'objet existant,
+écriture d'un nouveau, serveur en uid 10001, redémarrage sans nouvelle
+migration. images-ci rejoue ce scénario à chaque construction.
+
+Le **client `mc`** reste en root, délibérément : il ne sert que des tâches
+ponctuelles jamais exposées (minio-init, sauvegarde nocturne, copie hors
+machine), et `backup.sh` lui fait écrire son miroir dans un répertoire de
+l'hôte en mode 700, propriété de root.
 
 ## Monter de version
 

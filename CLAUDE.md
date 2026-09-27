@@ -55,6 +55,13 @@ flutter test
 flutter run --dart-define=CARLYS_FLAVOR=development --dart-define=CARLYS_API_BASE_URL=http://localhost:3000
 ```
 
+**Infrastructure** (scripts du serveur, Nginx, compose, Dockerfile, workflows
+mobiles de publication) :
+
+```bash
+./scripts/check_infra.sh    # rejoue infra-ci ; son en-tête dit ce qu'il exige
+```
+
 Les dossiers `android/` et `ios/` ne sont pas versionnés : ils se génèrent via
 `./scripts/bootstrap_mobile.sh`. La CI (`.github/workflows/`) rejoue ces mêmes
 vérifications : ne pousse jamais un commit qui ne passe pas localement.
