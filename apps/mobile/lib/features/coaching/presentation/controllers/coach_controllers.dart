@@ -7,6 +7,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
 import '../../../../core/errors/app_exception.dart';
+import '../../../../core/logging/app_logger.dart';
+import '../../../subscription/data/repositories/subscription_repository_impl.dart';
 import '../../data/repositories/coach_repository_impl.dart';
 import '../../data/repositories/coach_session_launcher.dart';
 import '../../domain/entities/coach.dart';
@@ -26,6 +28,7 @@ export '../providers/coach_suggestion_providers.dart';
 /// moment où il a quelque chose à contenir.
 class CoachThread extends AutoDisposeAsyncNotifier<CoachThreadState> {
   static const Uuid _uuid = Uuid();
+  static const _logger = AppLogger('CoachThread');
 
   /// Le fil existe côté serveur (créé, ou rapatrié depuis la liste).
   bool _created = false;
@@ -42,12 +45,20 @@ class CoachThread extends AutoDisposeAsyncNotifier<CoachThreadState> {
   /// la question précédente.
   ({String id, String content})? _pending;
 
+  /// La LECTURE de ses conversations reste ouverte à qui les a écrites,
+  /// abonné ou non : les CGU promettent que ce qui a été créé avec le Premium
+  /// reste consultable. Seules la création d'un fil et l'envoi d'un message
+  /// demandent le droit au coach, et c'est le serveur qui le tient.
   @override
   Future<CoachThreadState> build() async {
     final repository = ref.watch(coachRepositoryProvider);
     final threads = await repository.conversations();
+    final mayWrite = await _mayWrite();
 
     if (threads.isEmpty) {
+      // Rien à relire, et rien à écrire : l'invitation à l'abonnement, plutôt
+      // qu'un fil vide qui refuserait la première question.
+      if (!mayWrite) throw const ForbiddenException(_reserved, statusCode: 403);
       _created = false;
       return CoachThreadState(
         conversation: CoachConversation(id: _uuid.v4(), messages: const []),
@@ -57,7 +68,28 @@ class CoachThread extends AutoDisposeAsyncNotifier<CoachThreadState> {
     _created = true;
     return CoachThreadState(
       conversation: await repository.conversation(threads.first.id),
+      isReadOnly: !mayWrite,
     );
+  }
+
+  static const _reserved = 'Le coach est réservé aux abonnés.';
+
+  /// Le droit au coach, tel que le SERVEUR l'a décidé (`GET /entitlements`).
+  /// Inconnu (hors ligne, panne) : on laisse écrire, et l'envoi rapportera
+  /// le vrai refus, s'il y en a un.
+  Future<bool> _mayWrite() async {
+    try {
+      final droits = await ref
+          .read(subscriptionRepositoryProvider)
+          .entitlements();
+      return droits.any((d) => d.key == 'ai_coaching' && d.isActive);
+    } on Object catch (error) {
+      _logger.warning(
+        'Droit au coach inconnu : écriture permise',
+        error: error,
+      );
+      return true;
+    }
   }
 
   /// Envoie une question et attend la réplique.
@@ -118,7 +150,11 @@ class CoachThread extends AutoDisposeAsyncNotifier<CoachThreadState> {
         current.copyWith(
           isSending: false,
           isOffline: exception is NetworkException,
-          notice: _noticeFor(exception),
+          // 403 : le droit au coach est parti. Le fil reste à relire.
+          isReadOnly: exception is ForbiddenException,
+          notice: exception is ForbiddenException
+              ? null
+              : _noticeFor(exception),
         ),
       );
       return false;

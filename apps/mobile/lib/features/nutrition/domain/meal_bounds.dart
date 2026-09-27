@@ -44,6 +44,10 @@ abstract final class MealBounds {
   static const int foodSearchMinLength = 2;
   static const int foodSearchLimit = 20;
 
+  /// Soixante caractères au plus (`@MaxLength(60)` sur `q`) : au-delà, le
+  /// serveur refuse en 400, et « Réessayer » relançait la même requête.
+  static const int foodSearchMaxLength = 60;
+
   /// La quantité proposée pour un aliment qu'on vient de choisir : les
   /// valeurs de la table sont données pour 100 g.
   static const double componentDefaultG = 100;

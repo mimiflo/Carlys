@@ -98,6 +98,45 @@ void main() {
     storage = TokenStorage(secure);
   });
 
+  test('un nom de compte trop long part coupé à 60, jamais refusé', () async {
+    // Le serveur refusait TOUT le corps en 400 au-delà de 60 points de
+    // code : la connexion Google d'un compte au nom long était impossible,
+    // pour toujours. Coupé ici, le nom ne bloque plus l'entrée.
+    Object? corps;
+    dio.httpClientAdapter = _Adapter((options) async {
+      corps = options.data;
+      return ResponseBody.fromString(
+        jsonEncode(session()),
+        200,
+        headers: {
+          Headers.contentTypeHeader: [Headers.jsonContentType],
+        },
+      );
+    });
+    const long =
+        'Maria Fernanda de los Angeles Castellanos Rodriguez y Almeida';
+    expect(long.runes.length, 61);
+
+    await AuthRepositoryImpl(
+      api: AuthApi(dio),
+      storage: storage,
+      socialSignIn: _Credential(displayName: long),
+    ).signInWithProvider(SocialProvider.google);
+
+    final envoye = (corps! as Map<String, dynamic>)['displayName'] as String;
+    expect(envoye.runes.length, lessThanOrEqualTo(60));
+    expect(long.startsWith(envoye), isTrue);
+  });
+
+  test('un nom fait de blancs ne part pas', () {
+    expect(socialDisplayName('   '), isNull);
+    expect(socialDisplayName(null), isNull);
+    expect(socialDisplayName('  Léa  '), 'Léa');
+    // Un émoji composé ne se coupe pas en deux : on compte des points de
+    // code, comme le serveur.
+    expect(socialDisplayName('🏃' * 61)!.runes.length, 60);
+  });
+
   test('une réponse complète : session ouverte et jetons gardés', () async {
     serve(200, session());
 
@@ -286,9 +325,17 @@ class _Adapter implements HttpClientAdapter {
 /// Le fournisseur rend toujours un jeton : ces tests portent sur ce que le
 /// dépôt en fait ENSUITE.
 class _Credential implements SocialSignIn {
+  _Credential({this.displayName});
+
+  /// Le nom que rendrait le SDK du fournisseur.
+  final String? displayName;
+
   @override
   Future<SocialCredential?> obtain(SocialProvider provider) async =>
-      const SocialCredential(idToken: 'jeton-du-fournisseur');
+      SocialCredential(
+        idToken: 'jeton-du-fournisseur',
+        displayName: displayName,
+      );
 
   @override
   Future<void> forget() async {}

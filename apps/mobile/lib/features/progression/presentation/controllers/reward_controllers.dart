@@ -2,13 +2,13 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../core/logging/app_logger.dart';
 import '../../../academy/presentation/controllers/academy_controllers.dart';
 import '../../../academy/presentation/providers/academy_progress_providers.dart';
-import '../../../progress/data/repositories/progress_repository_impl.dart';
+import '../../../authentication/presentation/controllers/account_session.dart';
 import '../../../progress/domain/entities/progress.dart';
 import '../../../progress/presentation/controllers/progress_controllers.dart';
 import '../../../workout_session/presentation/controllers/workout_controllers.dart';
+import '../../data/milestone_push.dart';
 import '../../data/reward_ledger.dart';
 import '../../domain/progression.dart';
 import '../../domain/reward.dart';
@@ -23,6 +23,11 @@ import 'progression_controllers.dart';
 /// sans conséquence — le journal continue d'afficher ce qui est déjà
 /// obtenu, et la dérivation ne retire jamais rien.
 final rewardFactsProvider = Provider<RewardFacts?>((ref) {
+  // Sans session, pas de faits. Entre la purge d'une déconnexion et
+  // l'entrée du compte suivant, des faits vides OUVRAIENT le journal
+  // (`start()`) : le compte suivant voyait alors toute son histoire
+  // reconstruite comme fraîchement gagnée, et chaque médaille célébrée.
+  if (ref.watch(accountSessionProvider) == null) return null;
   final history = ref.watch(workoutHistoryProvider);
   final answered = ref.watch(answeredLessonsProvider);
   final pack = ref.watch(academyPackProvider);
@@ -37,13 +42,19 @@ final rewardFactsProvider = Provider<RewardFacts?>((ref) {
   // démarrage ouvraient le journal (`start()`) avec une histoire
   // incomplète : tout ce qui arrivait ensuite comptait comme fraîchement
   // gagné, et un appareil neuf rejouait les célébrations de tout un passé.
+  //
+  // « En route » compte aussi la source qui se RECHARGE parce que ses
+  // dépendances ont changé (la base après une purge, la session à l'entrée
+  // d'un compte) : `AsyncLoading` porte encore la valeur d'avant, celle
+  // d'un autre compte. Une relecture forcée du même compte, elle, reste un
+  // `AsyncData` ou un `AsyncError` : sa valeur est bonne à prendre.
   final pret = [
     history,
     answered,
     pack,
     records,
     lifetime,
-  ].every((source) => source.hasValue || source.hasError);
+  ].every((source) => source is! AsyncLoading);
   if (!pret || history.valueOrNull == null || profile == null) {
     return null;
   }
@@ -117,34 +128,19 @@ final earnedRewardsProvider = FutureProvider<List<EarnedReward>>((ref) async {
 
   // Le journal REMONTE, pour que la frise ait de quoi raconter. Tâche de
   // fond : l'échouer ne doit rien coûter à l'écran, et la plus ANCIENNE
-  // date gagnant côté serveur, un rejeu ne réécrit jamais l'histoire.
-  unawaited(_pousserLeJournal(ref, earned));
+  // date gagnant côté serveur, un rejeu ne réécrit jamais l'histoire. Il ne
+  // repart que s'il a changé depuis le dernier envoi accepté.
+  unawaited(
+    ref.read(milestonePushProvider).push({
+      for (final entry in earned) entry.reward.id: entry.earnedAt,
+    }),
+  );
 
   // Les plus récentes d'abord : la vitrine s'ouvre sur ce qui vient d'être
   // gagné, pas sur le premier badge d'il y a six mois.
   earned.sort((a, b) => b.earnedAt.compareTo(a.earnedAt));
   return earned;
 });
-
-/// Remonte le journal de CET appareil, sans jamais faire échouer l'écran.
-///
-/// Hors ligne, l'envoi échoue et le journal reste ce qu'il est : il n'a
-/// jamais cessé d'être la mémoire locale. La prochaine lecture réessaiera,
-/// et l'unicité côté serveur absorbe le rejeu.
-Future<void> _pousserLeJournal(Ref ref, List<EarnedReward> earned) async {
-  if (earned.isEmpty) {
-    return;
-  }
-  try {
-    await ref.read(progressRepositoryProvider).pushMilestones({
-      for (final entry in earned) entry.reward.id: entry.earnedAt,
-    });
-  } on Object catch (error) {
-    _logger.warning('Journal de récompenses non remonté', error: error);
-  }
-}
-
-const _logger = AppLogger('RewardControllers');
 
 /// LA VITRINE : le journal, ET les records réellement soulevés.
 ///

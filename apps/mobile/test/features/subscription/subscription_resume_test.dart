@@ -41,6 +41,8 @@ void main() {
     await tester.pumpWidget(appWith(subscription: repository));
     await tester.pumpAndSettle();
     await openSubscription(tester);
+    // La carte du plan est sous les neuf droits : on y descend.
+    await reveal(tester, find.text('GRATUIT'));
     expect(find.text('GRATUIT'), findsOneWidget);
 
     // Pendant que l'utilisateur payait, le webhook a accordé le droit.
@@ -65,6 +67,7 @@ void main() {
     await tester.pumpWidget(appWith(subscription: repository));
     await tester.pumpAndSettle();
     await openSubscription(tester);
+    await reveal(tester, find.text('GRATUIT'));
 
     // Retour AVANT que le webhook n'ait atteint le serveur : le plan relu
     // est encore Gratuit, et l'écran le dit tel quel.

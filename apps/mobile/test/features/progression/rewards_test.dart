@@ -66,6 +66,69 @@ void main() {
       expect(facts.balancedWeeks, 70);
     });
 
+    test('la séance tout juste close compte AVANT que le serveur la voie', () {
+      // LE DÉFAUT DE L'AUDIT. Le serveur est lu au lancement : il compte 9
+      // séances. La 10e est close, et l'historique local la voit aussitôt ;
+      // le serveur, lui, ne sera relu qu'au démarrage à froid suivant. Tant
+      // qu'il l'emportait seul, « Dix séances » et la semaine de constance
+      // de plus attendaient ce démarrage : la célébration tombait hors de
+      // son moment.
+      final lundis = [
+        for (var index = 0; index < 3; index++)
+          DateTime(2026, 1, 5).add(Duration(days: index * 7)),
+      ];
+      final history = [
+        for (final lundi in lundis)
+          for (var jour = 0; jour < 3; jour++)
+            session(lundi.add(Duration(days: jour * 2, hours: 10))),
+        // La 10e, dans une QUATRIÈME semaine que le serveur ignore encore.
+        session(DateTime(2026, 1, 26, 10)),
+      ];
+      final serveur = LifetimeStats(
+        completedSessions: 9,
+        weeks: [
+          for (final lundi in lundis)
+            LifetimeWeek(
+              mondayOn: DateTime.utc(
+                lundi.year,
+                lundi.month,
+                lundi.day,
+              ).toIso8601String().substring(0, 10),
+              sessions: 3,
+            ),
+        ],
+      );
+
+      final facts = buildRewardFacts(
+        history: history,
+        reachedTitle: CarlysTitle.apprenti,
+        lifetime: serveur,
+      );
+
+      expect(facts.completedSessions, 10);
+      expect(facts.bestWeekStreak, 4);
+    });
+
+    test('une séance déjà synchronisée ne compte pas deux fois', () {
+      // Fusionner au plus grand, pas additionner : la même séance est dans
+      // les deux sources une fois la file drainée.
+      final facts = buildRewardFacts(
+        history: [
+          session(DateTime(2026, 1, 5, 10)),
+          session(DateTime(2026, 1, 7, 10)),
+        ],
+        reachedTitle: CarlysTitle.apprenti,
+        lifetime: const LifetimeStats(
+          completedSessions: 2,
+          weeks: [LifetimeWeek(mondayOn: '2026-01-05', sessions: 2)],
+        ),
+      );
+
+      expect(facts.completedSessions, 2);
+      expect(facts.bestWeekStreak, 1);
+      expect(facts.balancedWeeks, 1);
+    });
+
     test('sans serveur, l’historique local reprend la main', () {
       // Hors ligne. Sous-compter n'efface rien : le journal ne s'écrit qu'en
       // AJOUT, et une récompense déjà inscrite y reste.

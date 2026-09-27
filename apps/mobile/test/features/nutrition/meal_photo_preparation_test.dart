@@ -158,4 +158,50 @@ void main() {
       );
     },
   );
+
+  test('les formats de la galerie passent : WebP et GIF aussi', () {
+    final plat = img.Image(width: 64, height: 48)
+      ..clear(img.ColorRgb8(200, 120, 40));
+    for (final octets in [
+      img.encodeGif(plat),
+      img.encodePng(plat),
+      img.encodeJpg(plat),
+    ]) {
+      final prete = img.decodeJpg(prepareMealPhoto(octets))!;
+      expect((prete.width, prete.height), (64, 48));
+    }
+  });
+
+  test('un format hors de la galerie (BMP) est « illisible »', () {
+    // Seuls les formats que livre la galerie sont décodés : les autres
+    // décodeurs du paquet ne sont plus embarqués dans l'application.
+    expect(
+      () => prepareMealPhoto(img.encodeBmp(img.Image(width: 8, height: 8))),
+      throwsA(
+        isA<MealPhotoException>().having(
+          (e) => e.failure,
+          'cause',
+          MealPhotoFailure.unreadable,
+        ),
+      ),
+    );
+  });
+
+  test('aucun appel qui embarquerait TOUS les décodeurs du paquet', () {
+    // `decodeImage` et `findDecoderForData` référencent TIFF, EXR, PSD,
+    // PVR, TGA, ICO, BMP… : la compilation AOT les embarquait tous, environ
+    // 0,9 Mo de code par architecture. La mesure se refait avec
+    // `flutter build apk --analyze-size --target-platform android-arm64`.
+    for (final fichier in Directory('lib').listSync(recursive: true)) {
+      if (fichier is! File || !fichier.path.endsWith('.dart')) continue;
+      final source = fichier.readAsStringSync();
+      expect(
+        RegExp(
+          r'\b(decodeImage|findDecoderForData|decodeNamedImage)\(',
+        ).hasMatch(source),
+        isFalse,
+        reason: fichier.path,
+      );
+    }
+  });
 }

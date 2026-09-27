@@ -108,7 +108,13 @@ class FriendChallengeScreen extends ConsumerWidget {
 
   /// Retour à la liste ; ouvert sans historique (une notification), l'écran
   /// ramène à l'onglet Défis plutôt que de laisser l'appli sans issue.
+  ///
+  /// Rien si l'écran est déjà parti : un refus qui aboutit APRÈS qu'on est
+  /// revenu en arrière cherchait le routeur depuis un élément désactivé, et
+  /// l'erreur (une `Error`, que le filet des gestes n'attrape pas)
+  /// s'échappait sans être gérée.
   static void _close(BuildContext context) {
+    if (!context.mounted) return;
     if (context.canPop()) {
       context.pop();
     } else {

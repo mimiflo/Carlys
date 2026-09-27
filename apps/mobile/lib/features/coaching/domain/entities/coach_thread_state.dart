@@ -13,6 +13,7 @@ class CoachThreadState {
     required this.conversation,
     this.isSending = false,
     this.isOffline = false,
+    this.isReadOnly = false,
     this.notice,
   });
 
@@ -26,6 +27,11 @@ class CoachThreadState {
   /// dans le vide.
   final bool isOffline;
 
+  /// Le fil se RELIT, il ne s'écrit plus : le coach est réservé aux abonnés
+  /// (le serveur le dit), et l'historique reste à qui l'a écrit. Le composeur
+  /// cède la place à une invitation vers l'abonnement.
+  final bool isReadOnly;
+
   /// Message court affiché au-dessus du composeur (plafond atteint, coach
   /// momentanément coupé…). Toujours issu d'un refus RÉEL du serveur.
   final String? notice;
@@ -34,6 +40,7 @@ class CoachThreadState {
     CoachConversation? conversation,
     bool? isSending,
     bool? isOffline,
+    bool? isReadOnly,
     // `notice` se remet à zéro à chaque envoi : un drapeau explicite évite
     // qu'un `null` passé volontairement soit confondu avec « inchangé ».
     bool clearNotice = false,
@@ -43,6 +50,7 @@ class CoachThreadState {
       conversation: conversation ?? this.conversation,
       isSending: isSending ?? this.isSending,
       isOffline: isOffline ?? this.isOffline,
+      isReadOnly: isReadOnly ?? this.isReadOnly,
       notice: clearNotice ? null : (notice ?? this.notice),
     );
   }

@@ -65,6 +65,27 @@ void main() {
     expect(tester.widget<FilledButton>(sendButton()).onPressed, isNotNull);
   });
 
+  testWidgets('les précisions se comptent en points de code, comme le '
+      'serveur', (tester) async {
+    // 300 « ❤️ » passent le compteur du champ (300 graphèmes) mais font 600
+    // points de code : le serveur refusait, et le signalement échouait sans
+    // dire pourquoi.
+    final results = <CommunityReportDraft?>[];
+    await pumpAndOpen(tester, results);
+    await tester.tap(find.text('Harcèlement'));
+    await tester.pump();
+    await tester.enterText(find.byType(TextFormField), '❤️' * 300);
+    await tester.ensureVisible(sendButton());
+    await tester.tap(sendButton());
+    await tester.pumpAndSettle();
+
+    expect(
+      find.text('Tes précisions dépassent 500 caractères.'),
+      findsOneWidget,
+    );
+    expect(results, isEmpty);
+  });
+
   testWidgets('motif et précisions nettoyées reviennent à l’appelant', (
     tester,
   ) async {

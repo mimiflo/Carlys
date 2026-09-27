@@ -87,7 +87,9 @@ class AuthRepositoryImpl implements AuthRepository {
       () => _api.socialLogin(
         provider: provider.wireName,
         idToken: credential.idToken,
-        displayName: credential.displayName,
+        // Borné comme le serveur l'exige : un nom trop long ou blanc faisait
+        // refuser la connexion elle-même.
+        displayName: socialDisplayName(credential.displayName),
         devicePlatform: _devicePlatform,
       ),
     );

@@ -128,6 +128,20 @@ void main() {
       },
     );
 
+    test(
+      'la liste du jour garde la mention de la base (meta.source)',
+      () async {
+        // Le journal affiche des totaux calculés depuis la table CIQUAL :
+        // l'API sert la mention avec la liste, et elle était jetée.
+        record((_) => _enveloped([_composedRow()], meta: {'source': _source}));
+
+        final jour = await repository.mealsBetween(eatenAt, eatenAt);
+
+        expect(jour.meals.single.computed, isTrue);
+        expect(jour.attribution?.license, 'Licence Ouverte Etalab 2.0');
+      },
+    );
+
     test('un serveur plus ANCIEN : ni moment, ni aliments, ni photo', () async {
       // La liste d'avant la composition : les clés manquent, elles ne sont
       // pas nulles. Rien ne doit casser, et rien ne doit s'inventer.
@@ -147,7 +161,10 @@ void main() {
         ]),
       );
 
-      final meal = (await repository.mealsBetween(eatenAt, eatenAt)).single;
+      final jour = await repository.mealsBetween(eatenAt, eatenAt);
+      final meal = jour.meals.single;
+      // Aucun aliment de la base : aucune mention à porter.
+      expect(jour.attribution, isNull);
 
       expect(meal.moment, isNull);
       expect(meal.components, isEmpty);

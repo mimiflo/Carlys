@@ -10,7 +10,6 @@ import 'package:carlys_mobile/features/nutrition/presentation/controllers/water_
 import 'package:carlys_mobile/features/nutrition/presentation/screens/nutrition_screen.dart';
 import 'package:carlys_mobile/features/nutrition/presentation/widgets/dna_helix.dart';
 import 'package:carlys_mobile/features/nutrition/presentation/widgets/metabolic_profile_form.dart';
-import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -20,6 +19,7 @@ import '../../support/fake_nutrition_repository.dart';
 import '../../support/fake_water_store.dart';
 import '../../support/fake_workout_repository.dart';
 import '../../support/first_run_prefs.dart';
+import '../../support/local_data_overrides.dart';
 import '../../support/meal_editor_app.dart';
 import '../../support/navigation.dart' as navigation;
 
@@ -34,7 +34,7 @@ Widget appWith(FakeNutritionRepository nutrition) => ProviderScope(
     authRepositoryProvider.overrideWithValue(
       FakeAuthRepository(storedSession: true),
     ),
-    workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
+    ...localDataOverrides(),
     syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
     appRestoreProvider.overrideWithValue(NoopAppRestore()),
     nutritionRepositoryProvider.overrideWithValue(nutrition),

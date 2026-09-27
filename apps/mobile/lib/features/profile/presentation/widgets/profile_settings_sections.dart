@@ -7,6 +7,7 @@ import '../../../notifications/domain/repositories/device_token_repository.dart'
 import '../../../notifications/presentation/controllers/notification_preferences.dart';
 import '../../../settings/domain/app_theme_setting.dart';
 import '../../../settings/presentation/controllers/theme_setting_controller.dart';
+import 'profile_hub_wording.dart';
 
 /// Groupe « PROFIL CARLYS » : l'identité choisie — jamais un niveau.
 class ProfileIdentitySettings extends StatelessWidget {
@@ -147,15 +148,35 @@ class ProfileAccountSettings extends StatelessWidget {
 /// qui coupe réellement l'envoi, une préférence gardée sur le téléphone
 /// laisserait la notification arriver quand même.
 ///
-/// La section disparaît quand le serveur ne répond pas : une bascule qui ne
-/// refléterait rien vaut moins que pas de bascule du tout.
+/// Pendant le chargement, la section se tait. Quand le serveur ne répond
+/// pas, elle ne montre aucune bascule — une bascule qui ne refléterait rien
+/// vaut moins que pas de bascule du tout — mais elle DIT pourquoi, avec un
+/// geste pour relire. Elle disparaissait sans un mot : on pouvait conclure
+/// que l'application n'avait pas de réglage de notifications.
 class NotificationSettingsSection extends ConsumerWidget {
   const NotificationSettingsSection({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final preferences = ref.watch(notificationPreferencesProvider).valueOrNull;
-    if (preferences == null) return const SizedBox.shrink();
+    final lecture = ref.watch(notificationPreferencesProvider);
+    // Seule une lecture ABOUTIE montre ses bascules : la carte retenue par
+    // une relecture en route (entrée d'un compte) ou ratée ne dit rien.
+    final preferences = lecture is AsyncData ? lecture.valueOrNull : null;
+    if (preferences == null) {
+      final error = lecture is AsyncError ? lecture.error : null;
+      if (error == null) return const SizedBox.shrink();
+      return AppSettingsGroup(
+        label: 'Notifications',
+        rows: [
+          AppSettingsRow(
+            icon: AppIcons.offline,
+            label: unavailableLine(error),
+            value: 'Réessayer',
+            onTap: () => ref.invalidate(notificationPreferencesProvider),
+          ),
+        ],
+      );
+    }
 
     return AppSettingsGroup(
       label: 'Notifications',

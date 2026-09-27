@@ -3,10 +3,12 @@ import 'package:carlys_mobile/features/coaching/data/repositories/coach_reposito
 import 'package:carlys_mobile/features/coaching/data/repositories/coach_session_launcher.dart';
 import 'package:carlys_mobile/features/coaching/domain/entities/coach.dart';
 import 'package:carlys_mobile/features/coaching/presentation/controllers/coach_controllers.dart';
+import 'package:carlys_mobile/features/subscription/data/repositories/subscription_repository_impl.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/fake_coach_repository.dart';
+import '../../support/fake_subscription_repository.dart';
 
 /// Lanceur de test : compte les séances créées, sans base ni synchronisation.
 class _CountingLauncher implements CoachSessionLauncher {
@@ -28,13 +30,118 @@ class _CountingLauncher implements CoachSessionLauncher {
 /// facturer deux fois la même question ; et le refus précédent revenait se
 /// coller sous la réponse qu'on venait tout juste de recevoir.
 void main() {
-  ProviderContainer containerWith(FakeCoachRepository repository) {
+  ProviderContainer containerWith(
+    FakeCoachRepository repository, {
+    bool abonne = true,
+    Object? droitsEnPanne,
+  }) {
     final container = ProviderContainer(
-      overrides: [coachRepositoryProvider.overrideWithValue(repository)],
+      overrides: [
+        coachRepositoryProvider.overrideWithValue(repository),
+        subscriptionRepositoryProvider.overrideWithValue(
+          FakeSubscriptionRepository(
+            coaching: abonne,
+            entitlementsError: droitsEnPanne,
+          ),
+        ),
+      ],
     );
     addTearDown(container.dispose);
     return container;
   }
+
+  final ancien = CoachConversationSummary(
+    id: '11111111-1111-4111-8111-111111111111',
+    messagesCount: 2,
+    updatedAt: DateTime.utc(2026, 8, 9),
+  );
+  const echange = [
+    CoachMessage(id: 'm-1', role: CoachRole.user, content: 'Et mes squats ?'),
+    CoachMessage(
+      id: 'm-2',
+      role: CoachRole.assistant,
+      content: 'Ajoute une série.',
+    ),
+  ];
+
+  group('ancien abonné : l’historique reste à relire', () {
+    // Les CGU promettent que ce qui a été créé avec le Premium reste
+    // consultable. La lecture est ouverte à l'auteur ; seuls la création
+    // d'un fil et l'envoi demandent le droit au coach.
+    test('le fil se relit, en lecture seule', () async {
+      final container = containerWith(
+        FakeCoachRepository(threads: [ancien], messages: echange),
+        abonne: false,
+      );
+
+      final etat = await container.read(coachThreadProvider.future);
+
+      expect(etat.conversation.messages, hasLength(2));
+      expect(etat.isReadOnly, isTrue);
+    });
+
+    test('sans historique ni droit : l’invitation à l’abonnement', () async {
+      final container = containerWith(FakeCoachRepository(), abonne: false);
+
+      await expectLater(
+        container.read(coachThreadProvider.future),
+        throwsA(isA<ForbiddenException>()),
+      );
+    });
+
+    test('un envoi refusé (403) passe le fil en lecture seule', () async {
+      final repository = FakeCoachRepository(
+        threads: [ancien],
+        messages: echange,
+        sendError: const ForbiddenException(
+          'Le coach est réservé aux abonnés.',
+          statusCode: 403,
+          fromApi: true,
+        ),
+      );
+      final container = containerWith(repository);
+      await container.read(coachThreadProvider.future);
+
+      final parti = await container
+          .read(coachThreadProvider.notifier)
+          .send('Encore une ?');
+
+      expect(parti, isFalse);
+      final etat = container.read(coachThreadProvider).requireValue;
+      expect(etat.isReadOnly, isTrue);
+      expect(etat.conversation.messages, hasLength(2));
+    });
+  });
+
+  // `GET /entitlements` en échec ponctuel (délai, 5xx) chez un abonné qui
+  // PAIE : le droit est inconnu, pas refusé. L'envoi rapportera le vrai
+  // refus s'il y en a un.
+  group('droit inconnu : l’écriture reste permise', () {
+    const panne = ServerException('droits indisponibles');
+
+    test('avec un historique, le fil reste ouvert', () async {
+      final container = containerWith(
+        FakeCoachRepository(threads: [ancien], messages: echange),
+        droitsEnPanne: panne,
+      );
+
+      final etat = await container.read(coachThreadProvider.future);
+
+      expect(etat.isReadOnly, isFalse);
+    });
+
+    test('sans historique, un fil neuf plutôt que l’invitation', () async {
+      final container = containerWith(
+        FakeCoachRepository(),
+        droitsEnPanne: panne,
+      );
+
+      final etat = await container.read(coachThreadProvider.future);
+
+      expect(etat.conversation.messages, isEmpty);
+      expect(etat.isReadOnly, isFalse);
+    });
+  });
 
   test('une même question rejouée garde SON identifiant', () async {
     final repository = FakeCoachRepository(

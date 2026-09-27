@@ -194,8 +194,39 @@ class FriendChallenge {
   }
 }
 
-/// Ce qu'il faut pour lancer un défi. L'identifiant naît sur l'appareil :
-/// rejouer la création après une coupure ne pose pas un second défi.
+/// Invités au plus, en plus du créateur (`FRIEND_CHALLENGE_MAX_INVITES`) :
+/// au-delà, ce n'est plus « entre amis », et le serveur refuse en 400.
+const int friendChallengeMaxInvites = 9;
+
+/// Défis OUVERTS qu'une personne peut avoir lancés en même temps
+/// (`FRIEND_CHALLENGE_MAX_OPEN_PER_CREATOR`) : le serveur refuse le suivant
+/// en 403.
+const int friendChallengeMaxOpenPerCreator = 5;
+
+/// Longueur du titre, en POINTS DE CODE après découpage des blancs
+/// (`FRIEND_CHALLENGE_TITLE_MAX_LENGTH`), comme le compte le serveur.
+const int friendChallengeTitleMaxLength = 80;
+
+/// Défis encore ouverts que J'AI lancés, tels que la liste les montre : ce
+/// que le plafond [friendChallengeMaxOpenPerCreator] compte côté serveur.
+int openFriendChallengesICreated(
+  Iterable<FriendChallenge> challenges,
+  DateTime now,
+) => challenges
+    .where(
+      (challenge) =>
+          challenge.status == FriendChallengeStatus.open &&
+          challenge.endsAt.isAfter(now) &&
+          (challenge.creator?.isMe ?? false),
+    )
+    .length;
+
+/// Ce qu'il faut pour lancer un défi.
+///
+/// Un OBJET VALEUR (`==` sur son contenu) : c'est ce qui dit qu'un nouvel
+/// essai rejoue le MÊME geste, et doit donc porter le même identifiant
+/// (`CreationIdentity`). L'identifiant, lui, n'est pas ici : il naît du
+/// brouillon au moment de l'envoi, pas de la saisie.
 class NewFriendChallenge {
   const NewFriendChallenge({
     required this.title,
@@ -217,4 +248,31 @@ class NewFriendChallenge {
 
   /// Le mot facultatif qui accompagne l'invitation (280 caractères au plus).
   final String? message;
+
+  @override
+  bool operator ==(Object other) =>
+      other is NewFriendChallenge &&
+      other.title == title &&
+      other.metric == metric &&
+      other.durationDays == durationDays &&
+      other.target == target &&
+      other.message == message &&
+      _sameIds(other.invitedUserIds, invitedUserIds);
+
+  @override
+  int get hashCode => Object.hash(
+    title,
+    metric,
+    durationDays,
+    target,
+    message,
+    Object.hashAllUnordered(invitedUserIds.toSet()),
+  );
+
+  /// Les invités sont un ENSEMBLE : décocher puis recocher un ami change
+  /// l'ordre de la liste, pas le geste — ni, donc, l'identifiant.
+  static bool _sameIds(List<String> a, List<String> b) {
+    final ids = a.toSet();
+    return ids.length == b.toSet().length && ids.containsAll(b);
+  }
 }

@@ -6,7 +6,9 @@
 /// seule ligne d'erreur sous leur grille.
 library;
 
+import '../../../../core/utilities/formatting.dart';
 import '../../domain/meal_bounds.dart';
+import '../../domain/services/meal_composition.dart';
 import 'meal_editor_state.dart';
 
 /// Les fautes d'un état, case par case ; toutes `null` si l'état peut
@@ -19,6 +21,7 @@ class MealEditorErrors {
     this.carbs,
     this.fat,
     this.quantity,
+    this.composition,
   });
 
   final String? name;
@@ -28,13 +31,18 @@ class MealEditorErrors {
   final String? fat;
   final String? quantity;
 
+  /// Les TOTAUX d'un repas composé sortent des bornes d'un repas : la phrase
+  /// que le serveur opposerait, dite avant l'envoi.
+  final String? composition;
+
   bool get isEmpty =>
       name == null &&
       kcal == null &&
       protein == null &&
       carbs == null &&
       fat == null &&
-      quantity == null;
+      quantity == null &&
+      composition == null;
 
   /// Les fautes des quatre tuiles de valeurs, dans leur ordre.
   List<String> get values => [?kcal, ?protein, ?carbs, ?fat];
@@ -43,9 +51,15 @@ class MealEditorErrors {
 MealEditorErrors validateMealEditor(MealEditorState state) {
   final name = state.name.trim().isEmpty ? 'Nomme ton repas.' : null;
   if (state.isComposed) {
-    // Les totaux d'un repas composé se calculent sur le serveur : rien à
-    // vérifier ici que le nom.
-    return MealEditorErrors(name: name);
+    // Les totaux se calculent sur le serveur, qui les BORNE comme une saisie
+    // à la main. L'aperçu calculé ici est le même (`compositionPreview`) :
+    // 1 500 g d'huile au lieu de 150 (13 500 kcal), ou de l'eau seule
+    // (0 kcal), partaient pour un refus que l'écran traduisait en
+    // « réessaie dans un instant ». Réessayer n'y changeait rien.
+    return MealEditorErrors(
+      name: name,
+      composition: compositionBoundsError(state.totals),
+    );
   }
   return MealEditorErrors(
     name: name,
@@ -55,6 +69,53 @@ MealEditorErrors validateMealEditor(MealEditorState state) {
     fat: _macroError('Lipides', state.fatText),
     quantity: _quantityError(state.quantityText),
   );
+}
+
+/// Ce que dit la notice d'un envoi refusé AVANT de partir.
+///
+/// Un repas SAISI a ses fautes dans ses cases, en rouge. Un repas COMPOSÉ
+/// n'a pas de case à ses valeurs : dire « il manque quelque chose, vérifie
+/// les cases en rouge » envoyait chercher ce qui n'existe pas — rien ne
+/// manque, aucune case n'est rouge. La phrase qui bloque est dite telle
+/// quelle, précédée du nom s'il manque aussi.
+String invalidMealNotice(MealEditorErrors errors) {
+  final composition = errors.composition;
+  if (composition == null) {
+    return 'Il manque quelque chose : vérifie les cases signalées en rouge.';
+  }
+  final name = errors.name;
+  return name == null ? composition : '$name $composition';
+}
+
+/// La phrase du serveur pour des totaux hors des bornes d'un repas
+/// (`assertWithinMealBounds`, `meal-composer.ts`), ou `null`.
+String? compositionBoundsError(MealTotals totals) {
+  if (totals.kcal < MealBounds.kcalMin) {
+    return 'Cette composition fait moins d’une kilocalorie : ajoute un '
+        'aliment ou augmente les quantités.';
+  }
+  if (totals.kcal > MealBounds.kcalMax) {
+    return 'Cette composition dépasse '
+        '${formatThousands(MealBounds.kcalMax)} kcal, la limite d’un '
+        'repas : vérifie les quantités.';
+  }
+  for (final (grams, label) in [
+    (totals.proteinG, 'protéines'),
+    (totals.carbsG, 'glucides'),
+    (totals.fatG, 'lipides'),
+  ]) {
+    if (grams != null && grams > MealBounds.macroMaxG) {
+      return 'Cette composition dépasse '
+          '${formatThousands(MealBounds.macroMaxG)} g de $label, la limite '
+          'd’un repas : vérifie les quantités.';
+    }
+  }
+  if (totals.quantityG > MealBounds.quantityMax) {
+    return 'Cette composition dépasse '
+        '${formatDecimal(MealBounds.quantityMax, decimals: 2)} g au total : '
+        'répartis-la en plusieurs repas.';
+  }
+  return null;
 }
 
 String? _kcalError(String raw) {

@@ -3,21 +3,46 @@ import 'dart:async';
 import 'package:carlys_mobile/features/subscription/domain/entities/subscription.dart';
 import 'package:carlys_mobile/features/subscription/domain/repositories/subscription_repository.dart';
 
+import 'api_contract.dart';
+
+/// Les droits que le serveur rend (`ENTITLEMENT_KEYS`, TOUS, actifs ou non)
+/// et ceux que Premium accorde (`PREMIUM_ENTITLEMENT_KEYS`), lus dans le
+/// contrat : recopiés ici, ils avaient divergé (quatre lignes au lieu de
+/// neuf, dont deux droits accordés jamais montrés).
+final List<String> entitlementKeys = contractStrings(
+  'subscriptions.ts',
+  RegExp(r'ENTITLEMENT_KEYS = \[([\s\S]*?)\]'),
+);
+final List<String> premiumEntitlementKeys = contractStrings(
+  'subscriptions.ts',
+  RegExp(
+    r'PREMIUM_ENTITLEMENT_KEYS: readonly EntitlementKey\[\] = \[([\s\S]*?)\]',
+  ),
+);
+
 /// SubscriptionRepository de test — état en mémoire, aucune requête réseau.
 class FakeSubscriptionRepository implements SubscriptionRepository {
   FakeSubscriptionRepository({
     this.isPremium = false,
+    this._coaching,
     this.checkoutAvailable = false,
     this.checkoutUrl = 'https://paiement.exemple/session',
     this.checkoutError,
     this.portalUrl = 'https://portail.exemple/session',
     this.portalError,
     this.offersError,
+    this.entitlementsError,
   });
 
   /// Mutable : un test simule le webhook qui accorde Premium PENDANT que
   /// l'utilisateur est parti payer, puis vérifie que le retour le relit.
   bool isPremium;
+
+  /// Le droit au coach (`ai_coaching`) : celui de Premium par défaut, comme
+  /// le plan le donne côté serveur, ou forcé par une épreuve du coach (un
+  /// ANCIEN abonné qui relit son fil sans pouvoir y écrire).
+  final bool? _coaching;
+  bool get coaching => _coaching ?? isPremium;
 
   /// Le serveur ouvre-t-il un paiement ? C'est LUI qui décide, l'écran suit.
   final bool checkoutAvailable;
@@ -49,6 +74,9 @@ class FakeSubscriptionRepository implements SubscriptionRepository {
   /// faire disparaître.
   final Object? offersError;
 
+  /// L'échec que `GET /entitlements` oppose (délai, 5xx), s'il y en a un.
+  final Object? entitlementsError;
+
   @override
   Future<PlanStatus> planStatus() async {
     planStatusReads += 1;
@@ -67,12 +95,19 @@ class FakeSubscriptionRepository implements SubscriptionRepository {
   }
 
   @override
-  Future<List<EntitlementEntry>> entitlements() async => [
-    EntitlementEntry(key: 'unlimited_programs', isActive: isPremium),
-    EntitlementEntry(key: 'advanced_statistics', isActive: isPremium),
-    EntitlementEntry(key: 'premium_exercises', isActive: isPremium),
-    const EntitlementEntry(key: 'ai_coaching', isActive: false),
-  ];
+  Future<List<EntitlementEntry>> entitlements() async {
+    final error = entitlementsError;
+    if (error != null) throw error;
+    return [
+      for (final key in entitlementKeys)
+        EntitlementEntry(
+          key: key,
+          isActive: key == 'ai_coaching'
+              ? coaching
+              : isPremium && premiumEntitlementKeys.contains(key),
+        ),
+    ];
+  }
 
   @override
   Future<OfferCatalog> offers() async {

@@ -62,6 +62,37 @@ class RewardFacts {
   /// Records personnels connus. Ils viennent du serveur : hors ligne on en
   /// compte zéro, et le journal continue d'afficher ceux déjà obtenus.
   final int personalRecords;
+
+  // Un OBJET VALEUR : sans `==`, chaque dépendance qui bougeait (records
+  // relus, séance passée à « synchronisée ») rendait des faits identiques
+  // mais NEUFS, et tout le calcul des récompenses se rejouait, journal lu,
+  // réécrit et remonté compris. `Provider` compare avec `==` avant de
+  // prévenir ceux qui l'écoutent.
+  @override
+  bool operator ==(Object other) =>
+      other is RewardFacts &&
+      other.reachedTitle == reachedTitle &&
+      other.completedSessions == completedSessions &&
+      other.bestWeekStreak == bestWeekStreak &&
+      other.balancedWeeks == balancedWeeks &&
+      other.lessonsAnswered == lessonsAnswered &&
+      other.lessonsTotal == lessonsTotal &&
+      other.academyDomainsCompleted == academyDomainsCompleted &&
+      other.academyDomainsServed == academyDomainsServed &&
+      other.personalRecords == personalRecords;
+
+  @override
+  int get hashCode => Object.hash(
+    reachedTitle,
+    completedSessions,
+    bestWeekStreak,
+    balancedWeeks,
+    lessonsAnswered,
+    lessonsTotal,
+    academyDomainsCompleted,
+    academyDomainsServed,
+    personalRecords,
+  );
 }
 
 /// Une règle du catalogue : la récompense, et ce qu'il faut pour l'avoir.

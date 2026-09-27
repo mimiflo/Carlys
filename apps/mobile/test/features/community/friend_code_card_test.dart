@@ -1,3 +1,4 @@
+import 'package:carlys_mobile/features/authentication/presentation/controllers/account_bound_cache.dart';
 import 'package:carlys_mobile/features/community/presentation/controllers/community_controllers.dart';
 import 'package:carlys_mobile/features/community/presentation/widgets/friend_code_card.dart';
 import 'package:flutter/material.dart';
@@ -18,13 +19,15 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
-          myFriendCodeProvider.overrideWith((ref) async {
-            appels += 1;
-            if (appels == 1) {
-              throw Exception('hors ligne');
-            }
-            return 'CARLYS-ABCD';
-          }),
+          myFriendCodeProvider.overrideWith(
+            () => AccountBoundCache((ref) async {
+              appels += 1;
+              if (appels == 1) {
+                throw Exception('hors ligne');
+              }
+              return 'CARLYS-ABCD';
+            }, none: ''),
+          ),
         ],
         child: const MaterialApp(
           home: Scaffold(body: Center(child: FriendCodeCard())),
@@ -51,7 +54,10 @@ void main() {
       ProviderScope(
         overrides: [
           myFriendCodeProvider.overrideWith(
-            (ref) async => throw Exception('hors ligne'),
+            () => AccountBoundCache(
+              (ref) async => throw Exception('hors ligne'),
+              none: '',
+            ),
           ),
         ],
         child: const MaterialApp(

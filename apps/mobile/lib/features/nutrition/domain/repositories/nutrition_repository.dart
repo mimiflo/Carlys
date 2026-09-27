@@ -6,6 +6,12 @@ import '../entities/nutrition.dart';
 /// de ses valeurs quand il en porte (`null` pour un repas saisi à la main).
 typedef MealDetail = ({MealEntry meal, FoodAttribution? attribution});
 
+/// Les repas d'une journée, et la mention de la base d'aliments dès que l'un
+/// d'eux en porte les valeurs (`null` sinon). Le journal affiche des totaux
+/// calculés depuis la table CIQUAL : la mention doit les accompagner, comme
+/// partout où une valeur de la base est montrée.
+typedef MealDay = ({List<MealEntry> meals, FoodAttribution? attribution});
+
 /// Accès au rapport métabolique, au profil nutritionnel, au journal
 /// alimentaire et à la base d'aliments.
 abstract interface class NutritionRepository {
@@ -17,7 +23,7 @@ abstract interface class NutritionRepository {
 
   /// Repas entre deux instants — le client envoie les bornes de SA journée
   /// locale, le serveur ne découpe jamais les jours à sa place.
-  Future<List<MealEntry>> mealsBetween(DateTime from, DateTime to);
+  Future<MealDay> mealsBetween(DateTime from, DateTime to);
 
   /// UN repas, aliments compris (`GET /nutrition/meals/:id`). Inconnu,
   /// supprimé ou d'autrui : le même « introuvable » (404).

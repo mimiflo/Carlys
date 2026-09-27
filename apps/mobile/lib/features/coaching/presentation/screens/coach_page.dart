@@ -76,6 +76,9 @@ class _CoachPageState extends ConsumerState<CoachPage> {
         isOffline: state.isOffline,
         isSending: state.isSending,
         notice: state.notice,
+        onUnlock: state.isReadOnly
+            ? () => GoRouter.of(context).go(AppRoutes.subscription)
+            : null,
       ),
     );
   }

@@ -136,8 +136,24 @@ class FakeAuthRepository implements AuthRepository {
   @override
   Future<void> forgotPassword(String email) async {}
 
+  /// Retient la réponse de `me()`, comme [timezoneGate] celle du fuseau :
+  /// la session peut se fermer, ou l'appareil changer de compte, pendant
+  /// l'aller-retour. Null = la réponse revient tout de suite.
+  Completer<void>? meGate;
+
+  /// Panne de `me()` (hors ligne) : la restauration ouvre alors la session
+  /// SANS profil.
+  AppException? meFailure;
+
   @override
-  Future<AuthUser> me() async => user;
+  Future<AuthUser> me() async {
+    // La réponse décrit le compte qui a FAIT l'appel : on le fige ici.
+    final owner = user;
+    await meGate?.future;
+    final failure = meFailure;
+    if (failure != null) throw failure;
+    return owner;
+  }
 
   @override
   Future<AuthUser> updateTimezone(String timezone) async {

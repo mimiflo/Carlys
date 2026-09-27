@@ -73,6 +73,7 @@ void main() {
     WidgetTester tester, {
     required ProgramCalendarDay day,
     List<WorkoutHistoryEntry> history = const [],
+    ProgramCalendarWeek? week,
   }) async {
     final geste = _Geste();
     await tester.pumpWidget(
@@ -91,6 +92,7 @@ void main() {
                   geste.valeur = await showProgramCalendarDaySheet(
                     context,
                     day: day,
+                    week: week,
                   );
                 },
                 child: const Text('ouvrir'),
@@ -259,6 +261,46 @@ void main() {
         await tester.tap(find.text('JEU'));
         await tester.pumpAndSettle();
         expect(geste.valeur, isA<MoveDayTo>());
+        expect((geste.valeur! as MoveDayTo).dayOfWeek, 4);
+      });
+
+      testWidgets('un jour dont la case est FAITE ne se prend pas', (
+        tester,
+      ) async {
+        // L'échange emportait la séance faite vers l'autre date : le
+        // calendrier disait « fait » un jour où l'on ne s'était pas
+        // entraîné. La pastille du mercredi fait reste là, INERTE.
+        final lundi = caseDu(status: ProgramDayStatus.missed);
+        final mercrediFait = ProgramCalendarDay(
+          id: 'jour-3',
+          weekNumber: 1,
+          dayOfWeek: 3,
+          date: jourCivil(aujourdHui),
+          status: ProgramDayStatus.done,
+          isRest: false,
+          sessionId: 'seance-mercredi',
+        );
+        final geste = await ouvrir(
+          tester,
+          day: lundi,
+          week: ProgramCalendarWeek(
+            programId: 'prog-1',
+            name: 'Force',
+            weeksCount: 2,
+            startsOn: jourCivil(aujourdHui),
+            weekNumber: 1,
+            today: jourCivil(aujourdHui),
+            days: [lundi, mercrediFait],
+          ),
+        );
+
+        expect(find.textContaining('Un jour déjà fait'), findsOneWidget);
+        await tester.tap(find.text('MER'));
+        await tester.pumpAndSettle();
+        expect(geste.valeur, isNull);
+
+        await tester.tap(find.text('JEU'));
+        await tester.pumpAndSettle();
         expect((geste.valeur! as MoveDayTo).dayOfWeek, 4);
       });
 

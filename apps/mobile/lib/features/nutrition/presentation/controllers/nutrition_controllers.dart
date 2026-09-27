@@ -30,7 +30,7 @@ final metabolismReportProvider = FutureProvider.autoDispose<MetabolismReport>((
 /// avant de pouvoir la corriger. L'accueil, lui, ne connaît qu'aujourd'hui —
 /// [todayMealsProvider] le lui rend.
 final mealsForDayProvider = FutureProvider.autoDispose
-    .family<List<MealEntry>, DateTime>((ref, dayStart) {
+    .family<MealDay, DateTime>((ref, dayStart) {
       final dayEnd = nextMidnight(dayStart);
       return ref
           .watch(nutritionRepositoryProvider)
@@ -44,8 +44,11 @@ final mealsForDayProvider = FutureProvider.autoDispose
 /// l'observe en permanence, donc rien ne rendait jamais cet auto-disposé, et
 /// les tuiles Calories et Protéines affichaient encore les totaux de la
 /// veille à 0 h 05.
-final todayMealsProvider = FutureProvider.autoDispose<List<MealEntry>>((ref) {
-  return ref.watch(mealsForDayProvider(ref.watch(currentDayProvider)).future);
+final todayMealsProvider = FutureProvider.autoDispose<List<MealEntry>>((
+  ref,
+) async {
+  final jour = ref.watch(currentDayProvider);
+  return (await ref.watch(mealsForDayProvider(jour).future)).meals;
 });
 
 /// Calories consommées aujourd'hui — la moitié RÉELLE du « 654 / 2 100 » de

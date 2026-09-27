@@ -28,9 +28,14 @@ class FakePushMessenger implements PushMessenger {
   final StreamController<PushNotice> notices = StreamController.broadcast();
   final StreamController<PushDestination> opened = StreamController.broadcast();
 
+  /// Retient le jeton jusqu'à ce que le test le libère : FCM qui répond
+  /// lentement, le temps qu'une session s'achève.
+  Completer<void>? obtainGate;
+
   @override
   Future<String?> obtainToken(FirebasePushOptions options) async {
     obtainCalls += 1;
+    await obtainGate?.future;
     return token;
   }
 
@@ -54,9 +59,14 @@ class FakePushMessenger implements PushMessenger {
     return destination;
   }
 
+  /// Retient l'effacement du jeton jusqu'à ce que le test le libère : c'est
+  /// la fenêtre pendant laquelle le compte suivant peut déjà démarrer.
+  Completer<void>? deleteGate;
+
   @override
-  Future<void> deleteToken() async {
+  Future<void> deleteToken(FirebasePushOptions options) async {
     deleteCalls += 1;
+    await deleteGate?.future;
   }
 
   /// À poser en `addTearDown` : aucun flux ne reste ouvert après le test.

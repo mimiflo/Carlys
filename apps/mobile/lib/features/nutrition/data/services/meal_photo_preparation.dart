@@ -22,8 +22,9 @@ import '../../domain/meal_bounds.dart';
 ///    retire toutes les métadonnées, l'étiquette comprise : sans ce
 ///    redressement, le plat s'afficherait couché. L'orientation est donc
 ///    appliquée AUX PIXELS, ici : le décodeur JPEG du paquet `image` le fait
-///    en décodant, et `bakeOrientation` couvre les autres formats porteurs
-///    d'EXIF (WebP, TIFF). Le test le prouve sur une vraie photo couchée.
+///    en décodant, et `bakeOrientation` couvre l'autre format porteur
+///    d'EXIF qu'on accepte (WebP). Le test le prouve sur une vraie photo
+///    couchée.
 /// 2. **Réduire** à [maxSide] points sur le plus grand côté, jamais agrandir.
 /// 3. **Réencoder** en JPEG qualité [quality], SANS AUCUNE métadonnée : ni
 ///    position GPS, ni appareil, ni date ne quittent le téléphone (le
@@ -44,8 +45,7 @@ Uint8List prepareMealPhoto(
 }) {
   final img.Image? decoded;
   try {
-    // La PREMIÈRE image seulement : un GIF animé n'a qu'un plat à montrer.
-    decoded = img.decodeImage(original, frame: 0);
+    decoded = _decode(original);
   } on Object catch (error) {
     throw MealPhotoException(MealPhotoFailure.unreadable, error);
   }
@@ -80,6 +80,31 @@ Uint8List prepareMealPhoto(
     }
   }
   throw const MealPhotoException(MealPhotoFailure.tooLarge);
+}
+
+/// Décode les QUATRE formats que la galerie et l'appareil photo livrent
+/// (`image_picker` réencode en JPEG, PNG ou WebP ; un GIF reste possible),
+/// et eux seuls.
+///
+/// `img.decodeImage` les essayait TOUS (TIFF, EXR, PSD, PVR, TGA, ICO,
+/// BMP…) : la compilation AOT embarquait donc tous les décodeurs du paquet,
+/// environ 0,9 Mo de code par architecture pour des formats qu'aucune photo
+/// de plat n'emprunte. Chaque décodeur reconnaît d'abord sa signature
+/// (`isValidFile`) : un format hors liste rend `null`, donc « illisible ».
+///
+/// La PREMIÈRE image seulement : un GIF animé n'a qu'un plat à montrer.
+img.Image? _decode(Uint8List bytes) {
+  for (final decoder in <img.Decoder>[
+    img.JpegDecoder(),
+    img.PngDecoder(),
+    img.WebPDecoder(),
+    img.GifDecoder(),
+  ]) {
+    if (decoder.isValidFile(bytes)) {
+      return decoder.decode(bytes, frame: 0);
+    }
+  }
+  return null;
 }
 
 /// Sous ce côté, une photo de plat ne se reconnaît plus : on renonce plutôt

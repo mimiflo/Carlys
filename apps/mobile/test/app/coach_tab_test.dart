@@ -19,7 +19,6 @@ import 'package:carlys_mobile/features/progress/data/repositories/progress_repos
 import 'package:carlys_mobile/features/progress/presentation/screens/progress_screen.dart';
 import 'package:carlys_mobile/features/subscription/data/repositories/subscription_repository_impl.dart';
 import 'package:carlys_mobile/features/training/presentation/screens/training_hub_screen.dart';
-import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -31,6 +30,7 @@ import '../support/fake_subscription_repository.dart';
 import '../support/fake_water_store.dart';
 import '../support/fake_workout_repository.dart';
 import '../support/first_run_prefs.dart';
+import '../support/local_data_overrides.dart';
 import '../support/navigation.dart';
 
 /// Le coach DANS la coquille.
@@ -74,7 +74,7 @@ void main() {
           authRepositoryProvider.overrideWithValue(
             FakeAuthRepository(storedSession: true),
           ),
-          workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
+          ...localDataOverrides(),
           coachRepositoryProvider.overrideWithValue(coach),
           progressRepositoryProvider.overrideWithValue(
             FakeProgressRepository(),

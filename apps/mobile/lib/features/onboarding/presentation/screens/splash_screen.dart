@@ -6,6 +6,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../design_system/design_system.dart';
 import '../../../../design_system/scenes/app_scene_container.dart';
 import '../../../authentication/presentation/controllers/auth_controller.dart';
+import '../../domain/first_run_step.dart';
+import '../controllers/first_run_controller.dart';
 import '../controllers/splash_gate.dart';
 import '../widgets/athlete_photo.dart';
 import '../widgets/splash_brand_intro.dart';
@@ -35,6 +37,12 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
   @override
   void initState() {
     super.initState();
+    // L'étape du parcours n'est connue qu'une fois la session restaurée :
+    // on l'ÉCOUTE, et la photographie ne se précharge que si elle mène à la
+    // page de bienvenue.
+    ref.listenManual<FirstRunStep?>(firstRunStepProvider, (_, step) {
+      if (step == FirstRunStep.welcome) _precacheAthlete();
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       ref.read(authControllerProvider.notifier).restore();
     });
@@ -42,23 +50,21 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
 
   /// Décode la photographie de la page de bienvenue PENDANT le plancher.
   ///
-  /// La page qui suit s'ouvre sur un cliché de 1,4 Mo : décodé au moment où
-  /// la route se pousse, il apparaissait en retard, au milieu de la
-  /// transition — l'à-coup se voyait à chaque première ouverture. Le plancher
-  /// de cet écran offre 2,6 s de calme : le décodage s'y glisse et la
-  /// transition trouve l'image déjà en cache. Le sceau de la signature, lui,
-  /// n'a pas besoin de ce geste : cet écran-ci l'affiche déjà, il est donc
-  /// en cache bien avant la bascule.
+  /// La page qui suit s'ouvre sur un cliché de 1 024 × 1 536 : décodé au
+  /// moment où la route se pousse, il apparaissait en retard, au milieu de
+  /// la transition — l'à-coup se voyait à chaque première ouverture. Le
+  /// plancher de cet écran offre 2,6 s de calme : le décodage s'y glisse et
+  /// la transition trouve l'image déjà en cache. Le sceau de la signature,
+  /// lui, n'a pas besoin de ce geste : cet écran-ci l'affiche déjà.
   ///
-  /// `didChangeDependencies` et non `initState` : le préchargement lit le
-  /// `MediaQuery` (densité d'écran) par le contexte, indisponible avant.
-  @override
-  void didChangeDependencies() {
-    super.didChangeDependencies();
-    if (!_athletePrecached) {
-      _athletePrecached = true;
-      unawaited(precacheImage(const AssetImage(AthletePhoto.asset), context));
-    }
+  /// SEULEMENT pour qui va la voir. Seule la page de bienvenue du premier
+  /// parcours l'affiche ; l'habitué, parcours terminé, va droit à l'accueil.
+  /// Précharger à chaque démarrage lui coûtait 6 Mio d'image décodée, gardés
+  /// dans le cache, pour rien.
+  void _precacheAthlete() {
+    if (_athletePrecached || !mounted) return;
+    _athletePrecached = true;
+    unawaited(precacheImage(const AssetImage(AthletePhoto.asset), context));
   }
 
   @override

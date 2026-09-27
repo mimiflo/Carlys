@@ -31,7 +31,23 @@ class _ReportForm extends StatefulWidget {
 
 class _ReportFormState extends State<_ReportForm> {
   final _details = TextEditingController();
+  final _formKey = GlobalKey<FormState>();
   CommunityReportReason? _reason;
+
+  /// Le serveur compte en POINTS DE CODE ; le compteur du champ, en
+  /// graphèmes. 300 cœurs emoji (U+2764 puis U+FE0F : deux points de code
+  /// pour un graphème) passaient le champ (300 graphèmes) et faisaient
+  /// 600 points de code : un signalement de harcèlement échouait sans dire
+  /// pourquoi. On compte donc comme le serveur, AVANT l'envoi.
+  ///
+  /// L'emoji n'est pas écrit en toutes lettres ici : `check_mobile_fonts.py`
+  /// lit tout `lib/`, commentaires compris, et exigerait alors d'Inter un
+  /// glyphe que le sous-ensemble a retiré à dessein.
+  static String? _validateDetails(String? value) =>
+      (value?.trim().runes.length ?? 0) > communityReportDetailsMaxLength
+      ? 'Tes précisions dépassent $communityReportDetailsMaxLength '
+            'caractères.'
+      : null;
 
   @override
   void dispose() {
@@ -41,7 +57,7 @@ class _ReportFormState extends State<_ReportForm> {
 
   void _submit() {
     final reason = _reason;
-    if (reason == null) {
+    if (reason == null || !(_formKey.currentState?.validate() ?? false)) {
       return;
     }
     Navigator.of(
@@ -83,12 +99,16 @@ class _ReportFormState extends State<_ReportForm> {
             const SizedBox(height: AppSpacing.xs),
           ],
           const SizedBox(height: AppSpacing.xs),
-          AppTextField(
-            label: 'Précisions (facultatif)',
-            controller: _details,
-            hint: 'Ce qui s’est passé, en quelques mots.',
-            maxLines: 3,
-            maxLength: communityReportDetailsMaxLength,
+          Form(
+            key: _formKey,
+            child: AppTextField(
+              label: 'Précisions (facultatif)',
+              controller: _details,
+              hint: 'Ce qui s’est passé, en quelques mots.',
+              maxLines: 3,
+              maxLength: communityReportDetailsMaxLength,
+              validator: _validateDetails,
+            ),
           ),
           const SizedBox(height: AppSpacing.md),
           AppButton(

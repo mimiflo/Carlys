@@ -5,6 +5,8 @@
 /// récente : une médaille se gagne une fois, un score se recalcule.
 library;
 
+import 'dart:math' as math;
+
 import '../../progress/domain/entities/progress.dart';
 import '../../workout_session/domain/entities/workout.dart';
 import 'progression.dart';
@@ -14,15 +16,27 @@ import 'reward_engine.dart';
 const int balancedWeekMin = 2;
 const int balancedWeekMax = 4;
 
-/// [lifetime] : ce que le SERVEUR compte sur la vie entière. Quand il est
-/// là, il l'emporte sur [history] — non par préférence, mais parce que
-/// l'historique local est plafonné à 60 séances au rapatriement
-/// (`WorkoutSessionDownloader.restoredSessionsMax`). Sur un compte à 200
-/// séances, un téléphone neuf en dérivait 60, ne re-méritait pas
-/// `discipline-150`, et la récompense DISPARAISSAIT — ce que le journal
+/// [lifetime] : ce que le SERVEUR compte sur la vie entière. Il couvre ce
+/// que [history] ne voit plus : l'historique local est plafonné à 60 séances
+/// au rapatriement (`WorkoutSessionDownloader.restoredSessionsMax`). Sur un
+/// compte à 200 séances, un téléphone neuf en dérivait 60, ne re-méritait
+/// pas `discipline-150`, et la récompense DISPARAISSAIT — ce que le journal
 /// promet justement de ne jamais laisser arriver.
 ///
-/// `null` hors ligne, et l'historique local reprend la main : sous-compter
+/// Mais une séance close n'arrive au serveur qu'après le drainage de la file
+/// (il est relu à l'acquittement, `rereadServerCountsOnClosure`) :
+/// l'historique local, lui, la voit dès la clôture. Les deux se FUSIONNENT
+/// donc au plus grand, pour le total comme semaine par semaine. Laisser le
+/// serveur l'emporter seul retardait chaque palier (« Dix séances », une
+/// semaine de constance ou d'équilibre de plus) jusqu'à la synchronisation :
+/// hors ligne, la célébration tombait hors de son moment. Prendre le maximum
+/// ne compte jamais une séance deux fois : une séance synchronisée est dans
+/// les deux sources, et c'est la plus grande des deux qui est retenue, pas
+/// leur somme. (« Serveur + séances en attente » la compterait deux fois
+/// quand le serveur l'a écrite mais que sa réponse s'est perdue — et une
+/// médaille gagnée à tort ne se retire plus.)
+///
+/// `null` hors ligne, et l'historique local reste seul : sous-compter
 /// n'efface rien, puisque le journal ne s'écrit qu'en AJOUT. Seul un
 /// appareil neuf ET hors ligne verrait moins — et il n'a de toute façon rien
 /// à montrer.
@@ -36,28 +50,33 @@ RewardFacts buildRewardFacts({
   int academyDomainsServed = 0,
   int personalRecords = 0,
 }) {
-  var completed = 0;
   // Nombre de séances par semaine, la semaine étant repérée par le numéro du
   // lundi qui l'ouvre : deux séances du même dimanche et du lundi suivant
   // n'appartiennent pas à la même semaine.
-  final perWeek = <int, int>{};
-
-  if (lifetime != null) {
-    completed = lifetime.completedSessions;
-    for (final week in lifetime.weeks) {
-      perWeek[_weekNumberOfMonday(week.mondayOn)] = week.sessions;
-    }
-  } else {
-    for (final entry in history) {
-      if (entry.session.status != WorkoutStatus.completed) continue;
-      completed++;
-      perWeek.update(
-        _weekNumber(entry.session.startedAt),
-        (count) => count + 1,
-        ifAbsent: () => 1,
-      );
-    }
+  var localCompleted = 0;
+  final localPerWeek = <int, int>{};
+  for (final entry in history) {
+    if (entry.session.status != WorkoutStatus.completed) continue;
+    localCompleted++;
+    localPerWeek.update(
+      _weekNumber(entry.session.startedAt),
+      (count) => count + 1,
+      ifAbsent: () => 1,
+    );
   }
+
+  final perWeek = <int, int>{
+    for (final week in lifetime?.weeks ?? const <LifetimeWeek>[])
+      _weekNumberOfMonday(week.mondayOn): week.sessions,
+  };
+  localPerWeek.forEach((week, local) {
+    perWeek.update(
+      week,
+      (server) => math.max(server, local),
+      ifAbsent: () => local,
+    );
+  });
+  final completed = math.max(lifetime?.completedSessions ?? 0, localCompleted);
 
   return RewardFacts(
     reachedTitle: reachedTitle,

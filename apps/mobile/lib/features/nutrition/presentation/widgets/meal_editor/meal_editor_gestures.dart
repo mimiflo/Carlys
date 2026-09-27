@@ -59,8 +59,11 @@ class MealEditorGestures {
           tone: AppNoticeTone.error,
         );
       case MealEditorOutcome.invalid:
+        final state = _ref.read(mealEditorProvider(_key)).valueOrNull;
         notices.show(
-          'Il manque quelque chose : vérifie les cases signalées en rouge.',
+          state == null
+              ? invalidMealNotice(const MealEditorErrors())
+              : invalidMealNotice(validateMealEditor(state)),
           tone: AppNoticeTone.error,
         );
       case MealEditorOutcome.future:

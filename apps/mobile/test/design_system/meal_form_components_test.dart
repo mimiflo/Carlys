@@ -4,6 +4,7 @@ import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:image/image.dart' as img;
 
 /// LES PIÈCES de l'écran « Ajouter / Modifier ce repas », versées au design
 /// system : ce que chacune promet, et qu'elle tient — la cible tactile, ce
@@ -386,6 +387,42 @@ void main() {
   });
 
   group('AppThumbnail, avec une photo', () {
+    testWidgets('une photo de 1 600 px se décode à la taille de la vignette', (
+      tester,
+    ) async {
+      // Décodée telle quelle pour 104 points, une photo de plat pesait
+      // 7,3 Mio dans le cache d'images, et une douzaine de repas ouverts en
+      // chassaient tout le reste. À 3 pixels par point, la vignette en
+      // montre 312 : le décodage s'arrête au double.
+      tester.view.devicePixelRatio = 3;
+      addTearDown(tester.view.reset);
+      final jpeg = await tester.runAsync(
+        () async => img.encodeJpg(img.Image(width: 1600, height: 1200)),
+      );
+      await tester.pumpWidget(
+        monte(
+          AppThumbnail(
+            fallbackIcon: AppIcons.mealLunch,
+            semanticLabel: 'Photo du plat',
+            image: MemoryImage(jpeg!),
+          ),
+        ),
+      );
+      await tester.runAsync(() async {
+        final element = tester.element(find.byType(Image));
+        await precacheImage(
+          tester.widget<Image>(find.byType(Image)).image,
+          element,
+        );
+      });
+      await tester.pump();
+
+      final decodee = tester.widget<RawImage>(find.byType(RawImage)).image!;
+      expect(decodee.width, lessThanOrEqualTo(2 * 312));
+      // Et jamais moins que ce que la vignette montre : pas de flou.
+      expect(decodee.height, greaterThanOrEqualTo(312));
+    });
+
     testWidgets('l’image au lieu du dessin ; pendant une préparation, '
         'l’indicateur et le bouton qui attend', (tester) async {
       final image = MemoryImage(Uint8List.fromList(const [1, 2, 3]));
@@ -404,7 +441,11 @@ void main() {
       );
 
       await tester.pumpWidget(vignette(busy: false));
-      expect(tester.widget<Image>(find.byType(Image)).image, same(image));
+      expect(
+        (tester.widget<Image>(find.byType(Image)).image as ResizeImage)
+            .imageProvider,
+        same(image),
+      );
       expect(find.byIcon(AppIcons.mealLunch), findsNothing);
 
       await tester.pumpWidget(vignette(busy: true));

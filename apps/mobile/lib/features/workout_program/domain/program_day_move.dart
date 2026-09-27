@@ -12,6 +12,7 @@
 library;
 
 import 'entities/program.dart';
+import 'entities/program_calendar.dart';
 
 /// Déplace la case du jour [fromDayOfWeek] vers [toDayOfWeek], dans la MÊME
 /// semaine.
@@ -25,7 +26,10 @@ import 'entities/program.dart';
 /// seule issue qui ne perd rien : écraser ferait disparaître une séance
 /// prévue sans le dire, et refuser obligerait à vider le jour d'arrivée
 /// d'abord — deux gestes pour intervertir un mardi et un jeudi, ce que
-/// personne ne fait.
+/// personne ne fait. Une exception : une case déjà FAITE ne bouge pas, ni au
+/// départ ni à l'arrivée ([daysHeldBySession]). Cette fonction ne la voit
+/// pas (un programme ne sait pas ce qui a été fait) : c'est à l'appelant de
+/// la tenir, avec le calendrier.
 ///
 /// **Les identifiants suivent leur case, pas leur jour.** Une case garde son
 /// `id` en changeant de jour : c'est elle qu'on déplace, et le serveur la
@@ -67,6 +71,27 @@ ProgramDetail moveProgramDay(
     ],
   );
 }
+
+/// Les jours de la semaine dont la case est HONORÉE par une séance : une
+/// case ne s'y déplace pas, et elle n'en part pas.
+///
+/// Le serveur déduit « fait » de l'IDENTIFIANT de la case, pas de sa date.
+/// Échanger une case à faire avec une case faite emportait donc la séance
+/// vers l'autre jour : le calendrier disait qu'on s'était entraîné jeudi
+/// quand la séance avait eu lieu mercredi, et le mercredi passait
+/// « manqué ». Le serveur refuse désormais ce déplacement en 409 ; la
+/// feuille ne le propose plus, et le contrôleur le refuse avant d'écrire.
+Set<int> daysHeldBySession(ProgramCalendarWeek week) => {
+  for (final day in week.days)
+    if (day.sessionId != null || day.status == ProgramDayStatus.done)
+      day.dayOfWeek,
+};
+
+/// La phrase du refus, écrite pour la personne : un jour déjà fait ne change
+/// pas de date.
+const heldDayMoveRefusal =
+    'Une séance déjà faite tient ce jour-là : sa case ne change pas de '
+    'date. Choisis un jour encore à faire.';
 
 /// Lundi (1) à dimanche (7), la convention de l'API.
 bool _estUnJour(int dayOfWeek) => dayOfWeek >= 1 && dayOfWeek <= 7;

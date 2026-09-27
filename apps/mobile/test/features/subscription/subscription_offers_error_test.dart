@@ -42,6 +42,8 @@ void main() {
     );
     await tester.pumpAndSettle();
     await openSubscription(tester);
+    // Les offres sont sous les neuf droits : on y descend.
+    await reveal(tester, find.text('Offres indisponibles'));
 
     expect(find.byType(SubscriptionOffers), findsNothing);
     expect(find.text('Offres indisponibles'), findsOneWidget);
@@ -63,6 +65,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     await openSubscription(tester);
+    await reveal(tester, find.textContaining('reviennent avec le réseau'));
 
     expect(find.textContaining('reviennent avec le réseau'), findsOneWidget);
   });
@@ -77,6 +80,7 @@ void main() {
     );
     await tester.pumpAndSettle();
     await openSubscription(tester);
+    await reveal(tester, find.byType(SubscriptionOffers));
 
     expect(find.byType(SubscriptionOffers), findsOneWidget);
     expect(find.text('Offres indisponibles'), findsNothing);

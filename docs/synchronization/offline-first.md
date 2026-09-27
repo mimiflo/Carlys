@@ -421,7 +421,7 @@ mémoire.
 | Suppression du compte | **Oui, immédiate** | Même raison. |
 | Connexion / inscription d'un compte **différent** | **Oui, avant tout** | `LocalAccountSwitch.claimDevice()` compare le compte qui arrive au propriétaire retenu, purge s'ils diffèrent, puis retient le nouveau — le tout **avant** que l'état passe authentifié, donc avant le moindre drainage ou rapatriement. |
 | Connexion du **même** compte | Non | Il retrouve ses séances, ses séries et sa file, qui repart. |
-| **Expiration de session** (401 au renouvellement) | **Non** | Ce n'est pas un changement de compte : c'est le même utilisateur, revenu après l'expiration du jeton de renouvellement (`REFRESH_TOKEN_TTL_DAYS`, 30 jours). Purger là détruisait **son** travail hors ligne, contre la garantie « aucune série saisie n'est jamais perdue ». L'interface bascule, rien n'est effacé. |
+| **Expiration de session** (401 au renouvellement) | **Non** | Ce n'est pas un changement de compte : c'est le même utilisateur, revenu après l'expiration du jeton de renouvellement (`REFRESH_TOKEN_TTL_DAYS`, 30 jours). Purger là détruisait **son** travail hors ligne, contre la garantie « aucune série saisie n'est jamais perdue ». L'interface bascule, aucune donnée n'est effacée. Seul le **jeton push** est oublié sur l'appareil (`PushRegistration.forgetLocally`, effacé chez FCM même si ce lancement ne l'avait pas encore enregistré, cas du démarrage à froid) : sans session, il restait attribué au compte parti, dont les notifications s'affichaient encore sur ce téléphone, et le compte suivant n'était jamais enregistré. |
 
 Ce que la purge emporte : toutes les tables Drift (`AppDatabase.wipeAll()`,
 une transaction), les préférences propriétaires du compte (journal des
@@ -429,6 +429,37 @@ récompenses, questions d'Academy abordées, réponses d'onboarding en attente
 d'envoi — un profil, pas un appareil) et les caches mémoire qui les tiennent
 (`DriftLocalAccountPurge.accountOwnedProviders`). Ce qui reste décrit
 l'appareil : le thème et l'étape atteinte du parcours de première ouverture.
+
+La liste des caches mémoire est tenue par un test
+(`test/core/local_account_purge_test.dart`) : tout `FutureProvider` permanent
+de `lib/` y figure, ou figure parmi les contenus propres à l'appareil (packs
+embarqués, préférences du Mentor), avec sa raison. Deux caches serveur y
+manquaient : les compteurs de vie entière des récompenses (le compte suivant
+héritait des séances du précédent, gagnait ses médailles et les poussait sur
+son propre serveur) et le profil d'entraînement (une coche de matériel
+écrivait l'équipement du précédent sur le profil du suivant).
+
+Les inscrire à la liste ne suffisait pas. Un cache serveur ÉCOUTÉ au moment
+de la purge (l'accueil reste monté quand on se déconnecte depuis le Profil)
+se relit aussitôt, sans session : la requête revient en 401, et Riverpod
+garde dans l'erreur la valeur précédente, que plus rien ne relisait à
+l'entrée du compte suivant. Les caches serveur permanents du compte (compteurs
+de vie entière, records, profil d'entraînement, code ami, préférences de
+notifications) sont donc des `accountBoundCache`
+(`features/authentication/presentation/controllers/account_bound_cache.dart`) :
+
+- relus à chaque passage de la frontière de session (`accountSessionProvider`,
+  tenu à jour par `AuthController` à chaque changement d'état) ;
+- jamais lus sans session : ils valent alors leur valeur vide ;
+- vidés avant la première lecture du compte qui arrive — Riverpod garde la
+  valeur précédente pendant une relecture et à travers un échec, ce qui est
+  voulu pour le MÊME compte hors ligne (ses médailles ne disparaissent pas)
+  mais pas d'un compte à l'autre.
+
+Les récompenses, elles, n'ont pas de faits sans session (sinon le journal
+s'ouvrait sur une histoire vide, et le compte suivant voyait tout son passé
+célébré comme neuf), et attendent toute source qui se recharge parce que ses
+dépendances ont changé (`test/features/progression/reward_account_boundary_test.dart`).
 
 ## Suppression différée (tombstones)
 
@@ -503,10 +534,20 @@ L'utilisateur installe l'application sur un second téléphone, base locale vide
 
 1. **pousse d'abord** ce qui reste en file (sinon une saisie non acquittée
    ferait barrage à l'étape suivante) ;
-2. rapatrie les **modèles** (`WorkoutTemplateDownloader`) ;
+2. rapatrie les **modèles** (`WorkoutTemplateDownloader`). Un modèle déjà
+   synchronisé dont la liste sert les mêmes `updatedAt` et `lastUsedAt` (à la
+   seconde : Drift range ses dates en secondes et les relit en heure locale)
+   n'est ni relu ni réécrit ; avant, chaque lancement à froid retéléchargeait
+   et réécrivait tous les modèles ;
 3. rapatrie les **séances** (`WorkoutSessionDownloader`) : les 60 plus
    récentes, avec leurs séries **et leur plan**. Le dépassement de ce plafond
-   est journalisé, jamais silencieux.
+   est journalisé, jamais silencieux. Elles sont encore relues à chaque
+   lancement : le résumé de liste (statut, fin, nombre de séries, volume
+   arrondi) ne suffit pas à dire qu'une séance close n'a pas changé (une
+   correction de répétitions au poids du corps ne bouge aucun de ces
+   champs). Il faudra une révision servie par l'API (le plus grand
+   `updatedAt` de la séance, de ses séries, supprimées comprises, et de son
+   plan) pour sauter une séance inchangée sans risque.
 
 Règle unique et non négociable : le rapatriement **saute** toute séance dont la
 séance, une série ou une prévision porte encore un `syncStatus` autre que

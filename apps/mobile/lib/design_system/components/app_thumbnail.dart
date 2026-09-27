@@ -72,6 +72,30 @@ class AppThumbnail extends StatelessWidget {
   static const double _actionDisc = 32;
   static const double _actionIcon = 18;
 
+  /// La photo DÉCODÉE pour la vignette, pas à sa taille d'origine.
+  ///
+  /// Une photo de plat arrive à 1 600 px : décodée telle quelle pour une
+  /// vignette de 104 points, elle pesait 7,3 Mio dans le cache d'images, et
+  /// une douzaine de repas ouverts suffisaient à en chasser tout le reste.
+  /// Le plafond est le DOUBLE du côté affiché (en pixels réels) sur les deux
+  /// axes, en `fit` : le petit côté d'une photo jusqu'au format 2:1 reste au
+  /// moins égal à la vignette, que `BoxFit.cover` remplit alors sans flou.
+  /// Jamais agrandie : une petite photo reste ce qu'elle est.
+  ImageProvider<Object> _decodedAtSize(
+    BuildContext context,
+    ImageProvider<Object> photo,
+  ) {
+    final ratio = MediaQuery.maybeDevicePixelRatioOf(context) ?? 1;
+    final plafond = (size * ratio * 2).round();
+    return ResizeImage(
+      photo,
+      width: plafond,
+      height: plafond,
+      policy: ResizeImagePolicy.fit,
+      allowUpscaling: false,
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final photo = image;
@@ -100,7 +124,7 @@ class AppThumbnail extends StatelessWidget {
           child: photo == null || waiting
               ? fallback
               : Image(
-                  image: photo,
+                  image: _decodedAtSize(context, photo),
                   fit: BoxFit.cover,
                   excludeFromSemantics: true,
                   errorBuilder: (_, _, _) => fallback,

@@ -17,7 +17,6 @@ import 'package:carlys_mobile/features/community/presentation/screens/community_
 import 'package:carlys_mobile/features/notifications/data/services/firebase_push_messenger.dart';
 import 'package:carlys_mobile/features/notifications/domain/services/push_messenger.dart';
 import 'package:carlys_mobile/features/nutrition/presentation/controllers/water_controllers.dart';
-import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -27,6 +26,7 @@ import 'fake_community_repository.dart';
 import 'fake_water_store.dart';
 import 'fake_workout_repository.dart';
 import 'in_memory_community_repository.dart';
+import 'local_data_overrides.dart';
 import 'navigation.dart';
 
 const _environment = AppEnvironment(
@@ -49,7 +49,7 @@ Widget sampleWorldApp({
     authRepositoryProvider.overrideWithValue(
       FakeAuthRepository(storedSession: true),
     ),
-    workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
+    ...localDataOverrides(),
     waterStoreProvider.overrideWithValue(FakeWaterStore()),
     syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
     appRestoreProvider.overrideWithValue(NoopAppRestore()),
@@ -67,7 +67,7 @@ Widget appWith(FakeCommunityRepository community) => ProviderScope(
     authRepositoryProvider.overrideWithValue(
       FakeAuthRepository(storedSession: true),
     ),
-    workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
+    ...localDataOverrides(),
     waterStoreProvider.overrideWithValue(FakeWaterStore()),
     syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
     appRestoreProvider.overrideWithValue(NoopAppRestore()),

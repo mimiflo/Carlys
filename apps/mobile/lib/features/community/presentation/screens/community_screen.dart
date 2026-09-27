@@ -41,11 +41,20 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
     _open(widget.initialTab);
   }
 
+  /// L'onglet que [_select] vient de pousser dans l'adresse : la page
+  /// reconstruite par le routeur n'est alors pas un RACCOURCI. Sans ce
+  /// repère, changer d'onglet à la main refermait la loupe et effaçait la
+  /// recherche — « nora » tapé dans les Amis ne suivait pas jusqu'à la
+  /// Ligue, où elle se trouvait.
+  CommunityTab? _selected;
+
   @override
   void didUpdateWidget(covariant CommunityScreen oldWidget) {
     super.didUpdateWidget(oldWidget);
     if (widget.initialTab != oldWidget.initialTab) {
-      _open(widget.initialTab);
+      final manuel = widget.initialTab == _selected;
+      _selected = null;
+      if (!manuel) _open(widget.initialTab);
     }
   }
 
@@ -71,6 +80,7 @@ class _CommunityScreenState extends ConsumerState<CommunityScreen> {
   /// raccourci ouvrait l'onglet qu'il n'annonçait pas.
   void _select(CommunityTab tab) {
     ref.read(communityTabProvider.notifier).state = tab;
+    if (tab != widget.initialTab) _selected = tab;
     context.go(AppRoutes.communityTab(tab));
   }
 

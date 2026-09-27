@@ -70,6 +70,8 @@ void main() {
     expect(find.text('Statistiques avancées'), findsOneWidget);
     expect(find.byIcon(Icons.lock_outline_rounded), findsWidgets);
     expect(find.byIcon(Icons.check_circle_rounded), findsNothing);
+    // La carte du plan est sous les neuf droits : on y descend.
+    await reveal(tester, find.text('GRATUIT'));
     expect(find.text('GRATUIT'), findsOneWidget);
     expect(find.text('Aucun abonnement actif'), findsOneWidget);
     // Rien à gérer chez le prestataire tant qu'on n'a rien souscrit.
@@ -87,9 +89,21 @@ void main() {
     // L'abonnement s'ouvre depuis la bannière de plan du profil.
     await openSubscription(tester);
 
-    expect(find.text('Premium'), findsWidgets);
+    // Autant de coches que le plan accorde de droits (contrat partagé), et
+    // un cadenas pour chaque droit que le serveur rend sans l'accorder.
+    expect(
+      find.byIcon(Icons.check_circle_rounded),
+      findsNWidgets(premiumEntitlementKeys.length),
+    );
+    expect(
+      find.byIcon(Icons.lock_outline_rounded),
+      findsNWidgets(entitlementKeys.length - premiumEntitlementKeys.length),
+    );
+    expect(find.text('Sauvegarde cloud'), findsOneWidget);
+    expect(find.text('Support prioritaire'), findsOneWidget);
+    await reveal(tester, find.text('ACTIF'));
     expect(find.text('ACTIF'), findsOneWidget);
-    expect(find.byIcon(Icons.check_circle_rounded), findsNWidgets(3));
+    expect(find.text('Premium'), findsWidgets);
     // Échéance formatée par formatShortDateMono. Le libellé attendu se
     // DÉRIVE du décor : coder un nom de mois y figeait la date, et la carte
     // a fini par annoncer un renouvellement déjà passé.
@@ -166,6 +180,7 @@ void main() {
       await tester.tap(find.text('Voir mon abonnement'));
       await tester.pumpAndSettle();
 
+      await reveal(tester, find.text('GRATUIT'));
       expect(find.text('GRATUIT'), findsOneWidget);
     },
   );

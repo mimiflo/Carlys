@@ -135,13 +135,23 @@ class FakeNutritionRepository implements NutritionRepository {
   }
 
   @override
-  Future<List<MealEntry>> mealsBetween(DateTime from, DateTime to) async =>
-      meals
-          .where(
-            (meal) => !meal.eatenAt.isBefore(from) && meal.eatenAt.isBefore(to),
-          )
-          .toList()
-        ..sort((a, b) => a.eatenAt.compareTo(b.eatenAt));
+  Future<MealDay> mealsBetween(DateTime from, DateTime to) async {
+    final jour =
+        meals
+            .where(
+              (meal) =>
+                  !meal.eatenAt.isBefore(from) && meal.eatenAt.isBefore(to),
+            )
+            .toList()
+          ..sort((a, b) => a.eatenAt.compareTo(b.eatenAt));
+    // Comme l'API : la mention dès qu'un repas du jour porte des aliments.
+    return (
+      meals: jour,
+      attribution: jour.any((meal) => meal.components.isNotEmpty)
+          ? _attribution
+          : null,
+    );
+  }
 
   @override
   Future<MealDetail> meal(String id) async {

@@ -13,7 +13,6 @@ import 'package:carlys_mobile/features/nutrition/presentation/controllers/water_
 import 'package:carlys_mobile/features/onboarding/presentation/widgets/onboarding_height_card.dart';
 import 'package:carlys_mobile/features/workout_program/data/repositories/training_goal_repository_impl.dart';
 import 'package:carlys_mobile/features/workout_program/domain/entities/training_goal.dart';
-import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -26,6 +25,7 @@ import '../../support/fake_training_goal_repository.dart';
 import '../../support/fake_water_store.dart';
 import '../../support/fake_workout_repository.dart';
 import '../../support/first_run_prefs.dart';
+import '../../support/local_data_overrides.dart';
 
 void main() {
   final binding = TestWidgetsFlutterBinding.ensureInitialized();
@@ -69,7 +69,7 @@ void main() {
           ),
           carlysProfileRepositoryProvider.overrideWithValue(carlysRepo),
           trainingGoalRepositoryProvider.overrideWithValue(trainingRepo),
-          workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
+          ...localDataOverrides(),
           nutritionRepositoryProvider.overrideWithValue(nutrition),
           waterStoreProvider.overrideWithValue(FakeWaterStore()),
           syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),

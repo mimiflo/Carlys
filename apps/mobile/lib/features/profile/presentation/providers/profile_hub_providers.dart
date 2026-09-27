@@ -1,3 +1,5 @@
+import 'dart:math' as math;
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/utilities/current_day.dart';
@@ -19,14 +21,20 @@ import '../../../workout_program/presentation/controllers/program_controllers.da
 
 /// Séances terminées depuis toujours, servies par le serveur.
 ///
-/// Pas l'historique local : il est plafonné à 60 séances au rapatriement,
-/// et un téléphone neuf afficherait 60 sur un compte qui en a 200.
+/// Pas l'historique local SEUL : il est plafonné à 60 séances au
+/// rapatriement, et un téléphone neuf afficherait 60 sur un compte qui en a
+/// 200. Mais pas le serveur seul non plus : la séance close tout à l'heure
+/// n'y compte qu'une fois sa clôture acquittée (il est alors relu,
+/// `rereadServerCountsOnClosure`). Le compte retenu est celui des
+/// récompenses (`buildRewardFacts`), qui fusionne les deux au plus grand ;
+/// l'état de chargement et d'échec reste celui du serveur.
 final profileSessionsCountProvider = Provider.autoDispose<AsyncValue<int>>((
   ref,
 ) {
+  final merged = ref.watch(rewardFactsProvider)?.completedSessions ?? 0;
   return ref
       .watch(lifetimeStatsProvider)
-      .whenData((stats) => stats.completedSessions);
+      .whenData((stats) => math.max(stats.completedSessions, merged));
 });
 
 /// Amis acceptés.

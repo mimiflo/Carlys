@@ -6,7 +6,6 @@ import 'package:carlys_mobile/features/authentication/data/repositories/auth_rep
 import 'package:carlys_mobile/features/exercises/data/repositories/exercises_repository_impl.dart';
 import 'package:carlys_mobile/features/exercises/presentation/widgets/muscle_group_card.dart';
 import 'package:carlys_mobile/features/nutrition/presentation/controllers/water_controllers.dart';
-import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -16,6 +15,7 @@ import '../../support/fake_exercises_repository.dart';
 import '../../support/fake_water_store.dart';
 import '../../support/fake_workout_repository.dart';
 import '../../support/first_run_prefs.dart';
+import '../../support/local_data_overrides.dart';
 import '../../support/navigation.dart';
 
 /// La bibliothèque à deux étages.
@@ -64,7 +64,7 @@ void main() {
               summary('id-2', 'Squat', group: 'quadriceps'),
             ], pageSize: 10),
           ),
-          workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
+          ...localDataOverrides(),
           waterStoreProvider.overrideWithValue(FakeWaterStore()),
           syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
           appRestoreProvider.overrideWithValue(NoopAppRestore()),

@@ -56,6 +56,27 @@ void main() {
     });
   });
 
+  test('un libellé trop long se cherche par ses 60 premiers caractères', () {
+    // Le serveur refuse q au-delà de 60 caractères, en 400 : la feuille
+    // passait en échec, et « Réessayer » renvoyait la même requête.
+    fakeAsync((async) {
+      const colle =
+          'Poulet rôti fermier Label Rouge, élevé en plein air, '
+          'barquette de 1,2 kg';
+      controller().search(colle);
+      async.elapse(Debouncer.search);
+      async.flushMicrotasks();
+
+      final envoye = nutrition.searches.single;
+      expect(envoye.runes.length, lessThanOrEqualTo(60));
+      expect(colle.startsWith(envoye), isTrue);
+
+      controller().retry();
+      async.flushMicrotasks();
+      expect(nutrition.searches.last, envoye);
+    });
+  });
+
   test('sous deux caractères, rien ne part', () {
     fakeAsync((async) {
       controller().search(' r ');

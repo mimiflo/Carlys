@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../../core/utilities/current_day.dart';
 import '../../../academy/presentation/providers/academy_progress_providers.dart';
 import '../../../authentication/presentation/controllers/auth_controller.dart';
 import '../../../workout_session/presentation/controllers/workout_controllers.dart';
@@ -70,7 +71,12 @@ final progressionProfileProvider = Provider<ProgressionProfile?>((ref) {
   return computeProgression(
     buildProgressionFacts(
       history: history,
-      today: DateTime.now(),
+      // Le JOUR COURANT, pas `DateTime.now()` : ce provider est permanent et
+      // l'accueil l'observe sans cesse. Lu une fois, « aujourd'hui » restait
+      // celui de la dernière écriture de séance, et les fenêtres de 28 jours
+      // ne glissaient plus : titre et axes ne redescendaient pas sur une
+      // application restée ouverte plusieurs jours.
+      today: ref.watch(currentDayProvider),
       lessonsAnswered: progress?.abordees ?? 0,
       lessonsTotal: progress?.total ?? 0,
     ),

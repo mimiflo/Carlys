@@ -6,41 +6,11 @@ import '../../../../design_system/design_system.dart';
 import '../../../workout_session/domain/entities/workout.dart';
 import '../../../workout_session/presentation/controllers/workout_controllers.dart';
 import '../../domain/entities/program_calendar.dart';
+import '../../domain/program_day_move.dart';
+import 'program_calendar_day_actions.dart';
 import 'program_day_move_picker.dart';
 
-/// Ce qu'on peut faire d'une case DATÉE du calendrier.
-sealed class CalendarDayAction {
-  const CalendarDayAction();
-}
-
-/// Lancer la séance prévue.
-class LaunchDay extends CalendarDayAction {
-  const LaunchDay();
-}
-
-/// Faire reconnaître par la case une séance déjà faite ce jour-là.
-class LinkSessionToDay extends CalendarDayAction {
-  const LinkSessionToDay(this.sessionId);
-
-  final String sessionId;
-}
-
-/// Détacher la séance que la case reconnaît.
-class UnlinkSessionFromDay extends CalendarDayAction {
-  const UnlinkSessionFromDay();
-}
-
-/// Déplacer la case vers un autre jour de la MÊME semaine.
-///
-/// La feuille désignait ce geste depuis sa livraison — « c'est la case qu'il
-/// faut déplacer » — sans qu'il existe. Une phrase qui renvoie à une action
-/// absente est pire qu'un silence : elle fait chercher.
-class MoveDayTo extends CalendarDayAction {
-  const MoveDayTo(this.dayOfWeek);
-
-  /// 1 (lundi) à 7 (dimanche), la convention de l'API.
-  final int dayOfWeek;
-}
+export 'program_calendar_day_actions.dart';
 
 /// La feuille d'une case du calendrier : son état en toutes lettres, et les
 /// gestes qu'il autorise.
@@ -50,22 +20,27 @@ class MoveDayTo extends CalendarDayAction {
 /// s'était entraîné hors calendrier restait rouge sans recours. La feuille
 /// rend visible ce que la case sait : ce qui était prévu, ce qui a été fait,
 /// et ce qu'on peut encore corriger.
+///
+/// [week] est la semaine affichée : sans elle, le déplacement proposerait des
+/// jours dont la case est déjà faite (voir [daysHeldBySession]).
 Future<CalendarDayAction?> showProgramCalendarDaySheet(
   BuildContext context, {
   required ProgramCalendarDay day,
+  ProgramCalendarWeek? week,
 }) {
   return showAppSheet<CalendarDayAction>(
     context,
-    builder: (_) => ProgramCalendarDaySheet(day: day),
+    builder: (_) => ProgramCalendarDaySheet(day: day, week: week),
   );
 }
 
 /// Le contenu de la feuille. PUBLIC pour que la galerie et les épreuves
 /// puissent la viser au type plutôt qu'à un texte qui bouge.
 class ProgramCalendarDaySheet extends ConsumerWidget {
-  const ProgramCalendarDaySheet({required this.day, super.key});
+  const ProgramCalendarDaySheet({required this.day, this.week, super.key});
 
   final ProgramCalendarDay day;
+  final ProgramCalendarWeek? week;
 
   /// Les séances TERMINÉES de ce jour civil, telles que l'appareil les
   /// connaît.
@@ -180,6 +155,7 @@ class ProgramCalendarDaySheet extends ConsumerWidget {
             const SizedBox(height: AppSpacing.sm),
             ProgramDayMovePicker(
               currentDayOfWeek: day.dayOfWeek,
+              heldDays: week == null ? const {} : daysHeldBySession(week!),
               onMove: (jour) => Navigator.of(context).pop(MoveDayTo(jour)),
             ),
           ],

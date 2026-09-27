@@ -20,7 +20,6 @@ import 'package:carlys_mobile/features/subscription/data/repositories/subscripti
 import 'package:carlys_mobile/features/subscription/presentation/controllers/subscription_controllers.dart';
 import 'package:carlys_mobile/features/workout_program/data/repositories/training_goal_repository_impl.dart';
 import 'package:carlys_mobile/features/workout_program/domain/entities/training_goal.dart';
-import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -34,6 +33,7 @@ import '../../support/fake_training_goal_repository.dart';
 import '../../support/fake_water_store.dart';
 import '../../support/fake_workout_repository.dart';
 import '../../support/first_run_prefs.dart';
+import '../../support/local_data_overrides.dart';
 
 /// PARCOURS DE PREMIÈRE OUVERTURE : page de marque → onboarding →
 /// création de compte →
@@ -98,7 +98,7 @@ void main() {
       nutritionRepositoryProvider.overrideWithValue(nutrition),
       subscriptionRepositoryProvider.overrideWithValue(subscription),
       progressRepositoryProvider.overrideWithValue(FakeProgressRepository()),
-      workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
+      ...localDataOverrides(),
       waterStoreProvider.overrideWithValue(FakeWaterStore()),
       syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
       appRestoreProvider.overrideWithValue(NoopAppRestore()),

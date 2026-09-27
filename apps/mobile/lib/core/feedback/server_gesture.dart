@@ -87,9 +87,40 @@ Future<bool> runLocalGesture(
 ///
 /// La distinction compte : « réessaie une fois connecté » est une consigne
 /// que la personne peut suivre, « ça n'a pas fonctionné » n'en est pas une.
+///
+/// Un REFUS se dit avec la phrase de celui qui refuse ([refusalSentence]).
+/// Le repli générique, lui, invitait à réessayer un geste qui échouerait
+/// toujours : cinq défis déjà ouverts, une composition à 13 500 kcal, un
+/// jour déjà fait. La personne réessayait en boucle sans jamais connaître la
+/// cause, que l'API avait pourtant écrite pour elle.
 String serverFailureMessage(AppException? exception) {
-  return exception is NetworkException
-      ? 'Hors connexion : ce geste a besoin du réseau. Réessaie une fois '
-            'connecté.'
-      : 'Ça n’a pas fonctionné. Réessaie dans un instant.';
+  if (exception is NetworkException) {
+    return 'Hors connexion : ce geste a besoin du réseau. Réessaie une fois '
+        'connecté.';
+  }
+  final refus = exception == null ? null : refusalSentence(exception);
+  return refus ?? 'Ça n’a pas fonctionné. Réessaie dans un instant.';
 }
+
+/// La phrase d'un REFUS écrite pour la personne, ou `null`.
+///
+/// Deux auteurs possibles :
+///  - l'API, quand sa réponse porte l'enveloppe Carlys (`fromApi`) et un
+///    statut de refus (400, 403, 409, 422). La page d'erreur d'un
+///    intermédiaire (nginx, portail captif) n'a rien à dire à la personne :
+///    son texte technique ne s'affiche jamais ;
+///  - l'application elle-même, quand elle refuse AVANT tout envoi : une
+///    [ValidationException] sans statut HTTP.
+///
+/// À la typographie de l'application près : l'API n'écrit pas toujours
+/// l'apostrophe courbe. Même règle que la connexion sociale
+/// (`social_auth_failure.dart`).
+String? refusalSentence(AppException exception) {
+  final ecritePourLaPersonne = switch (exception) {
+    ValidationException(statusCode: null) => true,
+    _ => exception.fromApi && _refusalStatuses.contains(exception.statusCode),
+  };
+  return ecritePourLaPersonne ? exception.message.replaceAll("'", '’') : null;
+}
+
+const _refusalStatuses = {400, 403, 409, 422};

@@ -232,4 +232,65 @@ void main() {
 
     expect(comptes, [0, 1]);
   });
+
+  group('la séance EN COURS ne réémet que si elle change', () {
+    test('écrire une séance CLOSE ne réémet pas la séance en cours', () async {
+      // Le rapatriement réécrit des dizaines de séances closes : chacune
+      // réémettait la séance en cours (le plus souvent `null`), et l'accueil
+      // se reconstruisait en entier à chaque fois.
+      final emises = <WorkoutWithSets?>[];
+      final abonnement = repository.watchActiveWorkout().listen(emises.add);
+      await pumpEventQueue();
+      expect(emises, [null], reason: 'la première lecture');
+
+      for (var i = 0; i < 5; i++) {
+        await insertSession(
+          id: 'rapatriee-$i',
+          status: 'COMPLETED',
+          startedAt: DateTime.utc(2026, 9, 1 + i, 10),
+        );
+        await insertSet(
+          id: 'serie-$i',
+          sessionId: 'rapatriee-$i',
+          position: 0,
+          reps: 10,
+          weightKg: 40,
+        );
+        await pumpEventQueue();
+      }
+      await abonnement.cancel();
+
+      expect(emises, [null]);
+    });
+
+    test('une série de la séance en cours réémet, elle', () async {
+      // Contre-épreuve : un flux qui ne réémettrait plus jamais passerait le
+      // test précédent tout aussi bien.
+      await insertSession(
+        id: 'en-cours',
+        status: 'IN_PROGRESS',
+        startedAt: DateTime.utc(2026, 9, 2, 10),
+      );
+      final series = <int>[];
+      final abonnement = repository.watchActiveWorkout().listen(
+        (seance) => series.add(seance?.sets.length ?? -1),
+      );
+      await pumpEventQueue();
+      await insertSet(
+        id: 'serie-1',
+        sessionId: 'en-cours',
+        position: 0,
+        reps: 8,
+        weightKg: 60,
+      );
+      await pumpEventQueue();
+      await (db.update(db.localWorkoutSets)
+            ..where((t) => t.id.equals('serie-1')))
+          .write(const LocalWorkoutSetsCompanion(reps: Value(9)));
+      await pumpEventQueue();
+      await abonnement.cancel();
+
+      expect(series, [0, 1, 1]);
+    });
+  });
 }

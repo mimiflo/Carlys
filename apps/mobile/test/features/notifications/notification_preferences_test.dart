@@ -10,6 +10,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import '../../support/api_contract.dart';
 import '../../support/fake_push_messenger.dart';
 
 /// CE QU'ON ACCEPTE DE RECEVOIR, et ce qui arrive quand on est déjà là.
@@ -64,6 +65,22 @@ double _contrast(Color a, Color b) {
 
 void main() {
   group('préférences', () {
+    test('l’appli connaît TOUTES les familles du contrat', () {
+      // La troisième, les invitations à un défi, manquait : le serveur la
+      // rendait, l'appli la jetait, et la section Notifications n'offrait
+      // que deux interrupteurs sur les trois que la doc promet.
+      final contrat = _contractCategories();
+      expect(contrat, contains('CHALLENGE_INVITES'));
+      expect(NotificationCategory.values.map((c) => c.wire), contrat);
+      for (final wire in contrat) {
+        expect(NotificationCategory.fromWire(wire), isNotNull, reason: wire);
+      }
+      expect(
+        NotificationCategory.challengeInvites.label,
+        'Invitations à un défi',
+      );
+    });
+
     test('une catégorie jamais réglée est ACCEPTÉE, sans écriture', () async {
       // Personne ne doit ouvrir les réglages pour que l'application se
       // comporte normalement.
@@ -200,3 +217,9 @@ void main() {
     });
   });
 }
+
+/// Les familles de `notificationCategorySchema`, lues dans le contrat.
+List<String> _contractCategories() => contractStrings(
+  'notifications.ts',
+  RegExp(r'notificationCategorySchema = z\.enum\(\[([\s\S]*?)\]\)'),
+);

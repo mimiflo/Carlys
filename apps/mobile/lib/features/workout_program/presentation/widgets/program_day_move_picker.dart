@@ -14,19 +14,29 @@ import '../../domain/entities/program.dart';
 /// rangée de six qu'il faudrait relire pour comprendre, et le rendre
 /// tapable proposerait un geste qui ne fait rien.
 ///
-/// Les sept sont proposés sans exception, y compris ceux déjà passés dans la
-/// semaine en cours. Déplacer une séance vers lundi quand on est jeudi est
-/// une décision qui se défend — on range son calendrier après coup — et le
-/// calendrier dira « manqué », ce qui est la vérité.
+/// Les jours déjà passés de la semaine en cours restent proposés. Déplacer
+/// une séance vers lundi quand on est jeudi est une décision qui se défend
+/// — on range son calendrier après coup — et le calendrier dira « manqué »,
+/// ce qui est la vérité.
+///
+/// Sauf un jour dont la case est déjà FAITE ([heldDays]) : l'échange
+/// emportait la séance faite vers l'autre date, et le calendrier affichait
+/// « fait » un jour où l'on ne s'était pas entraîné. Sa pastille reste là,
+/// verte comme dans le calendrier, et INERTE.
 class ProgramDayMovePicker extends StatelessWidget {
   const ProgramDayMovePicker({
     required this.currentDayOfWeek,
     required this.onMove,
+    this.heldDays = const {},
     super.key,
   });
 
   /// 1 (lundi) à 7 (dimanche) — le jour où la case se trouve aujourd'hui.
   final int currentDayOfWeek;
+
+  /// Les jours dont la case est honorée par une séance : ils ne se prennent
+  /// pas.
+  final Set<int> heldDays;
 
   /// Appelé avec le jour d'arrivée, dans la même convention.
   final ValueChanged<int> onMove;
@@ -46,37 +56,42 @@ class ProgramDayMovePicker extends StatelessWidget {
         Row(
           children: [
             for (var jour = 1; jour <= programDayLabels.length; jour++)
-              Expanded(
-                child: Center(
-                  child: Semantics(
-                    button: jour != currentDayOfWeek,
-                    selected: jour == currentDayOfWeek,
-                    label: jour == currentDayOfWeek
-                        ? 'Jour actuel : ${programDayLabels[jour - 1]}'
-                        : 'Déplacer vers ${programDayLabels[jour - 1]}',
-                    child: AppPill(
-                      label: programDayLabels[jour - 1],
-                      mono: true,
-                      selected: jour == currentDayOfWeek,
-                      selectedTone: AppPillTone.primary,
-                      onTap: jour == currentDayOfWeek
-                          ? null
-                          : () => onMove(jour),
-                    ),
-                  ),
-                ),
-              ),
+              Expanded(child: Center(child: _pastille(jour))),
           ],
         ),
         const SizedBox(height: AppSpacing.xxs),
         Text(
           'La séance change de jour dans la semaine. Si le jour d’arrivée '
-          'est déjà pris, les deux s’échangent.',
+          'est déjà pris, les deux s’échangent.'
+          '${heldDays.isEmpty ? '' : ' Un jour déjà fait, en vert, ne se prend pas.'}',
           style: AppTypography.label.copyWith(
             color: AppColors.darkTextTertiary,
           ),
         ),
       ],
+    );
+  }
+
+  Widget _pastille(int jour) {
+    final nom = programDayLabels[jour - 1];
+    final actuel = jour == currentDayOfWeek;
+    final tenu = !actuel && heldDays.contains(jour);
+    return Semantics(
+      button: !actuel && !tenu,
+      selected: actuel,
+      label: actuel
+          ? 'Jour actuel : $nom'
+          : tenu
+          ? '$nom : séance déjà faite, ce jour ne se prend pas'
+          : 'Déplacer vers $nom',
+      child: AppPill(
+        label: nom,
+        mono: true,
+        tone: tenu ? AppPillTone.success : AppPillTone.neutral,
+        selected: actuel,
+        selectedTone: AppPillTone.primary,
+        onTap: actuel || tenu ? null : () => onMove(jour),
+      ),
     );
   }
 }

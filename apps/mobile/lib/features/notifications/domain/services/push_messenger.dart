@@ -48,7 +48,9 @@ abstract class PushMessenger {
   /// ([options]), et une seule fois par lancement.
   Future<PushDestination?> takeLaunchDestination(FirebasePushOptions options);
 
-  /// Invalide le jeton local (déconnexion) : l'appareil ne recevra plus rien
-  /// même si une ligne serveur survivait quelque part.
-  Future<void> deleteToken();
+  /// Invalide le jeton local (fin de session) : l'appareil ne recevra plus
+  /// rien même si une ligne serveur survivait quelque part. Initialise le
+  /// SDK avec [options] au besoin : ce lancement a pu ne rien lui demander
+  /// d'autre.
+  Future<void> deleteToken(FirebasePushOptions options);
 }

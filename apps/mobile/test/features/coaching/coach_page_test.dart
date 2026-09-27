@@ -5,11 +5,13 @@ import 'package:carlys_mobile/features/coaching/domain/entities/coach.dart';
 import 'package:carlys_mobile/features/coaching/presentation/controllers/coach_controllers.dart';
 import 'package:carlys_mobile/features/coaching/presentation/screens/coach_page.dart';
 import 'package:carlys_mobile/features/coaching/presentation/widgets/coach_message_bubble.dart';
+import 'package:carlys_mobile/features/subscription/data/repositories/subscription_repository_impl.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/fake_coach_repository.dart';
+import '../../support/fake_subscription_repository.dart';
 
 /// L'onglet Coach, branché sur ses données.
 ///
@@ -28,11 +30,15 @@ void main() {
     WidgetTester tester,
     FakeCoachRepository repository, {
     List<String> suggestions = const ['Par où je commence ?'],
+    bool abonne = true,
   }) async {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
           coachRepositoryProvider.overrideWithValue(repository),
+          subscriptionRepositoryProvider.overrideWithValue(
+            FakeSubscriptionRepository(coaching: abonne),
+          ),
           // Les puces se calculent depuis les modèles, les records et le
           // poids : trois dépôts qui n'ont rien à faire dans ce test.
           coachSuggestionsProvider.overrideWithValue(suggestions),
@@ -57,6 +63,30 @@ void main() {
     expect(find.text('Voir Premium'), findsOneWidget);
     // Surtout pas le vocabulaire de la panne : ce n'est pas cassé.
     expect(find.text('Coach indisponible'), findsNothing);
+  });
+
+  testWidgets('ancien abonné : l’historique se relit, l’envoi mène à '
+      'Premium', (tester) async {
+    await pumpPage(
+      tester,
+      FakeCoachRepository(
+        threads: [thread],
+        messages: const [
+          CoachMessage(
+            id: 'm-1',
+            role: CoachRole.assistant,
+            content: 'Ajoute une série à tes squats.',
+          ),
+        ],
+      ),
+      abonne: false,
+    );
+
+    expect(find.text('Ajoute une série à tes squats.'), findsOneWidget);
+    expect(find.text('Voir Premium'), findsOneWidget);
+    // Plus de composeur ni d'amorces : rien qui refuserait la question.
+    expect(find.byType(TextField), findsNothing);
+    expect(find.text('Par où je commence ?'), findsNothing);
   });
 
   testWidgets('hors ligne, l’écran le dit et propose de réessayer', (

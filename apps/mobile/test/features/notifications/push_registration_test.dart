@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:carlys_mobile/app/environment/app_environment.dart';
 import 'package:carlys_mobile/core/errors/app_exception.dart';
 import 'package:carlys_mobile/features/notifications/domain/repositories/device_token_repository.dart';
@@ -25,19 +27,31 @@ class FakeDeviceTokenRepository implements DeviceTokenRepository {
   final List<(String, DevicePlatform)> registered = [];
   final List<String> unregistered = [];
 
+  /// Retient la réponse de l'enregistrement : la session peut expirer
+  /// pendant l'aller-retour.
+  Completer<void>? registerGate;
+
   @override
   Future<void> register({
     required String token,
     required DevicePlatform platform,
   }) async {
+    await registerGate?.future;
     if (failRegister) {
       throw const NetworkException('hors ligne (voulu par le test)');
     }
     registered.add((token, platform));
   }
 
+  /// Le désenregistrement échoue (hors ligne) : l'appareil doit oublier
+  /// quand même.
+  bool failUnregister = false;
+
   @override
   Future<void> unregister(String token) async {
+    if (failUnregister) {
+      throw const NetworkException('hors ligne (voulu par le test)');
+    }
     unregistered.add(token);
   }
 
@@ -199,12 +213,51 @@ void main() {
     },
   );
 
-  test('déconnexion sans enregistrement préalable : no-op', () async {
+  test('déconnexion sans enregistrement préalable : rien au serveur, le '
+      'jeton de l’appareil part quand même', () async {
+    // Ce lancement n'a rien enregistré (hors ligne, ou déconnexion avant
+    // l'accueil), mais l'appareil a un jeton, que le serveur peut tenir
+    // d'un lancement plus ancien : on ne peut pas le désenregistrer sans le
+    // connaître, on peut l'effacer chez FCM.
     final (registration, messenger, repository) = build();
 
     await registration.forgetDevice();
 
     expect(repository.unregistered, isEmpty);
+    expect(messenger.deleteCalls, 1);
+  });
+
+  test(
+    'déconnexion hors ligne : le jeton de l’appareil part quand même',
+    () async {
+      // Le désenregistrement échoue sans réseau : l'effacement chez FCM, lui,
+      // ne dépend pas du serveur, et c'est lui qui coupe l'arrivée.
+      final (registration, messenger, repository) = build();
+      repository.failUnregister = true;
+      registration.ensureStarted();
+      await pumpEventQueue();
+
+      await registration.forgetDevice();
+
+      expect(messenger.deleteCalls, 1);
+      expect(registration.registeredToken, isNull);
+    },
+  );
+
+  test('sans configuration Firebase, l’oubli ne touche pas au SDK', () async {
+    final messenger = FakePushMessenger();
+    final registration = PushRegistration(
+      environment: const AppEnvironment(
+        flavor: AppFlavor.development,
+        apiBaseUrl: 'http://localhost:3000',
+      ),
+      messenger: messenger,
+      repository: FakeDeviceTokenRepository(),
+    );
+
+    await registration.forgetDevice();
+    await registration.forgetLocally();
+
     expect(messenger.deleteCalls, 0);
   });
 
@@ -258,6 +311,114 @@ void main() {
       await pumpEventQueue();
 
       expect(repository.registered, hasLength(apres));
+    });
+  });
+  group('session EXPIRÉE', () {
+    test('démarrage à froid : expirée AVANT tout enregistrement, le jeton '
+        'de l’appareil part quand même', () async {
+      // LE DÉMARRAGE À FROID APRÈS TRENTE JOURS, dans son VRAI ordre. La
+      // restauration ouvre la session, `me()` rencontre le 401, le
+      // renouvellement échoue : la session expire pendant l'écran de
+      // démarrage, avant que l'accueil n'ait rien démarré. Ce processus ne
+      // connaît donc aucun jeton — mais l'appareil en a un, et le serveur
+      // le tient d'un enregistrement ancien (un jeton d'avant le
+      // rattachement aux sessions n'expire avec aucune). Sans l'effacer chez
+      // FCM, les notifications du compte parti continuaient d'arriver.
+      final (registration, messenger, repository) = build();
+
+      await registration.forgetLocally();
+
+      expect(messenger.deleteCalls, 1);
+      expect(repository.registered, isEmpty);
+
+      // Le compte suivant entre : un jeton NEUF, enregistré à son nom.
+      messenger.token = 'jeton-du-suivant';
+      registration.ensureStarted();
+      await pumpEventQueue();
+      expect(repository.registered.single.$1, 'jeton-du-suivant');
+    });
+
+    test(
+      'un jeton demandé mais jamais enregistré est effacé quand même',
+      () async {
+        // La session expire PENDANT l'enregistrement : son envoi est
+        // justement la requête qui rencontre le 401. `registeredToken`
+        // reste nul, alors que le serveur tient ce jeton d'un enregistrement
+        // plus ancien, au nom du compte parti.
+        final (registration, messenger, repository) = build();
+        repository.failRegister = true;
+        registration.ensureStarted();
+        await pumpEventQueue();
+        expect(registration.registeredToken, isNull);
+
+        await registration.forgetLocally();
+
+        expect(messenger.deleteCalls, 1);
+      },
+    );
+
+    test('un jeton rendu APRÈS l’oubli ne part pas au serveur', () async {
+      // FCM rend le jeton lentement (premier lancement, réseau lent), et la
+      // session expire entre-temps. Ce jeton est celui que l'oubli efface :
+      // l'enregistrer le poserait mort au serveur, voire sous le compte
+      // suivant s'il est déjà entré.
+      final (registration, messenger, repository) = build();
+      final gate = Completer<void>();
+      messenger.obtainGate = gate;
+      registration.ensureStarted();
+      await pumpEventQueue();
+
+      await registration.forgetLocally();
+      gate.complete();
+      await pumpEventQueue();
+
+      expect(repository.registered, isEmpty);
+    });
+
+    test('un enregistrement EN VOL ne ressuscite rien après l’oubli', () async {
+      // La session expire pendant l'aller-retour de l'enregistrement. Sa
+      // réponse, revenue après l'oubli, remettait le jeton en place et
+      // rouvrait l'abonnement au rafraîchissement : un jeton renouvelé
+      // s'enregistrait ensuite sous la session du compte suivant.
+      final (registration, messenger, repository) = build();
+      final gate = Completer<void>();
+      repository.registerGate = gate;
+      registration.ensureStarted();
+      await pumpEventQueue();
+
+      await registration.forgetLocally();
+      gate.complete();
+      await pumpEventQueue();
+
+      expect(registration.registeredToken, isNull);
+      final avant = repository.registered.length;
+      messenger.refreshes.add('jeton-fantome');
+      await pumpEventQueue();
+      expect(repository.registered, hasLength(avant));
+    });
+
+    test('le compte suivant attend que l’ancien jeton soit effacé', () async {
+      // Sans cette attente, le compte suivant pouvait obtenir le jeton même
+      // qu'on était en train d'effacer, et l'enregistrer mort.
+      final (registration, messenger, repository) = build();
+      registration.ensureStarted();
+      await pumpEventQueue();
+      final gate = Completer<void>();
+      messenger.deleteGate = gate;
+
+      final oubli = registration.forgetLocally();
+      messenger.token = 'jeton-du-suivant';
+      registration.ensureStarted();
+      await pumpEventQueue();
+      expect(messenger.obtainCalls, 1, reason: 'effacement pas fini');
+
+      gate.complete();
+      await oubli;
+      await pumpEventQueue();
+
+      expect(messenger.obtainCalls, 2);
+      expect(registration.registeredToken, 'jeton-du-suivant');
+      expect(repository.registered.last.$1, 'jeton-du-suivant');
     });
   });
 }

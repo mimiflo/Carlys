@@ -189,11 +189,60 @@ void main() {
       expect(validateMealEditor(manual(quantity: '10000')).quantity, isNotNull);
     });
 
-    test('un repas composé ne vérifie que son nom : le serveur calcule', () {
+    test('un repas composé dans les bornes n’a aucune faute', () {
       final composed = manual(
         kcal: '',
       ).copyWith(lines: [line('a', pouletCuit, 120)]);
       expect(validateMealEditor(composed).isEmpty, isTrue);
+    });
+
+    group('un repas composé hors des bornes d’un repas', () {
+      // Le serveur refuse ces totaux en 400, avec ces phrases-là ; l'écran
+      // les traduisait en « réessaie dans un instant », et réessayer n'y
+      // changeait rien.
+      const huile = Food(
+        code: 990100,
+        name: 'Huile d’olive',
+        shortName: 'Huile',
+        per100g: FoodPer100g(kcal: 900, proteinG: 0, carbsG: 0, fatG: 100),
+      );
+      const eau = Food(
+        code: 990101,
+        name: 'Eau du robinet',
+        shortName: 'Eau',
+        per100g: FoodPer100g(kcal: 0, proteinG: 0, carbsG: 0, fatG: 0),
+      );
+      MealEditorState compose(List<MealLine> lines) =>
+          manual(kcal: '').copyWith(lines: lines, linesChanged: true);
+
+      test('1 500 g d’huile au lieu de 150 : 13 500 kcal', () {
+        final errors = validateMealEditor(compose([line('a', huile, 1500)]));
+        expect(errors.isEmpty, isFalse);
+        expect(errors.composition, contains('dépasse 10'));
+        expect(errors.composition, contains('kcal, la limite d’un repas'));
+      });
+
+      test('de l’eau seule : moins d’une kilocalorie', () {
+        final errors = validateMealEditor(compose([line('a', eau, 330)]));
+        expect(
+          errors.composition,
+          'Cette composition fait moins d’une kilocalorie : ajoute un '
+          'aliment ou augmente les quantités.',
+        );
+      });
+
+      test('trop de lipides, sous le plafond des calories', () {
+        // 1 100 g de lipides purs, mais 9 900 kcal : c'est la macro qui
+        // dépasse.
+        const graisse = Food(
+          code: 990102,
+          name: 'Graisse',
+          shortName: 'Graisse',
+          per100g: FoodPer100g(kcal: 450, fatG: 50),
+        );
+        final errors = validateMealEditor(compose([line('a', graisse, 2200)]));
+        expect(errors.composition, contains('g de lipides'));
+      });
     });
 
     test('la quantité d’un aliment : 1 à 5 000 g', () {
@@ -278,6 +327,35 @@ void main() {
       expect(formatQuantityInput(null), '');
       expect(parseDecimalInput('1,5'), 1.5);
       expect(parseDecimalInput(' '), isNull);
+    });
+  });
+
+  group('la notice d’un envoi refusé avant de partir', () {
+    const composition =
+        'Cette composition dépasse 10 000 kcal, la limite d’un repas : '
+        'vérifie les quantités.';
+
+    test('repas saisi : ses cases sont rouges, la notice y renvoie', () {
+      expect(
+        invalidMealNotice(const MealEditorErrors(kcal: 'Calories : …')),
+        'Il manque quelque chose : vérifie les cases signalées en rouge.',
+      );
+    });
+
+    test('repas composé : la phrase qui bloque, pas une case rouge', () {
+      expect(
+        invalidMealNotice(const MealEditorErrors(composition: composition)),
+        composition,
+      );
+      expect(
+        invalidMealNotice(
+          const MealEditorErrors(
+            name: 'Nomme ton repas.',
+            composition: composition,
+          ),
+        ),
+        'Nomme ton repas. $composition',
+      );
     });
   });
 }

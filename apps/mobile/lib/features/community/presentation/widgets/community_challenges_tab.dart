@@ -58,6 +58,14 @@ class CommunityChallengesTab extends ConsumerWidget {
             query.trim().isNotEmpty &&
             monthly.isEmpty &&
             betweenFriends.isEmpty;
+        // Le plafond du serveur, dit AVANT la feuille : le sixième défi était
+        // refusé en 403 après qu'on avait tout saisi.
+        final plafond =
+            openFriendChallengesICreated(
+              friendChallenges.valueOrNull ?? const <FriendChallenge>[],
+              DateTime.now(),
+            ) >=
+            friendChallengeMaxOpenPerCreator;
 
         return Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -81,7 +89,7 @@ class CommunityChallengesTab extends ConsumerWidget {
                 // Pas avant d'avoir la liste : ouverte trop tôt, ou sur une
                 // liste en panne, la feuille dirait « pas encore d'ami » à
                 // qui en a.
-                onPressed: friends.hasValue
+                onPressed: friends.hasValue && !plafond
                     ? () => newFriendChallengeFlow(
                         context,
                         actions,
@@ -89,6 +97,11 @@ class CommunityChallengesTab extends ConsumerWidget {
                       )
                     : null,
               ),
+              if (plafond)
+                const CommunityNoMatch(
+                  'Tu as déjà $friendChallengeMaxOpenPerCreator défis en '
+                  'cours : termines-en un avant d’en lancer un autre.',
+                ),
               if (friends.hasError && !friends.hasValue)
                 const CommunityNoMatch(
                   'Ta liste d’amis n’a pas pu se charger. Tire vers le bas '

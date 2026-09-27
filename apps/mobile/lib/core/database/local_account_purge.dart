@@ -9,11 +9,15 @@ import '../../features/community/presentation/providers/community_tab_state.dart
 import '../../features/mentor/data/mentor_prefs_store.dart';
 import '../../features/mentor/presentation/controllers/mentor_controllers.dart';
 import '../../features/notifications/presentation/controllers/notification_preferences.dart';
+import '../../features/nutrition/data/repositories/meal_photo_cache.dart';
 import '../../features/onboarding/data/first_run_store.dart';
 import '../../features/progress/presentation/controllers/progress_controllers.dart';
+import '../../features/progression/data/milestone_push.dart';
 import '../../features/progression/data/reward_ledger.dart';
 import '../../features/progression/presentation/controllers/reward_controllers.dart';
 import '../../features/subscription/presentation/controllers/subscription_controllers.dart';
+import '../../features/workout_program/presentation/controllers/program_controllers.dart';
+import '../../features/workout_program/presentation/controllers/training_profile_controllers.dart';
 import '../logging/app_logger.dart';
 import '../synchronization/sync_lifecycle.dart';
 import 'app_database.dart';
@@ -78,14 +82,23 @@ class DriftLocalAccountPurge implements LocalAccountPurge {
   /// les siennes à l'écran — et le journal des récompenses, une fois relu
   /// depuis ce cache, se réécrirait dans les préférences du nouveau compte.
   ///
-  /// `personalRecordsProvider` est ici MALGRÉ son `autoDispose`, et c'est le
-  /// piège de cette liste : deux Provider permanents le regardent
-  /// (`rewardFactsProvider` et `showcaseRewardsProvider`), et l'accueil monte
-  /// le second dès le lancement. Un auditeur permanent ne relâche jamais,
-  /// donc l'élément auto-disposé n'est JAMAIS détruit. Sur un téléphone
-  /// partagé, le compte suivant voyait les records du précédent. La leçon
-  /// générale : « auto-disposé » ne dispense pas de cette liste, c'est
-  /// l'absence d'auditeur permanent qui en dispense.
+  /// `personalRecordsProvider` y est entré MALGRÉ son `autoDispose` d'alors,
+  /// et c'est le piège de cette liste : deux Provider permanents le
+  /// regardent (`rewardFactsProvider` et `showcaseRewardsProvider`), et
+  /// l'accueil monte le second dès le lancement. Un auditeur permanent ne
+  /// relâche jamais, donc l'élément auto-disposé n'était JAMAIS détruit. Sur
+  /// un téléphone partagé, le compte suivant voyait les records du
+  /// précédent. La leçon générale : « auto-disposé » ne dispense pas de
+  /// cette liste, c'est l'absence d'auditeur permanent qui en dispense.
+  ///
+  /// L'INVALIDATION NE SUFFIT PAS pour un cache serveur. Écouté au moment
+  /// de la purge (l'accueil est monté quand on se déconnecte du Profil), il
+  /// se relit aussitôt, sans session : l'échec garde la valeur précédente,
+  /// et rien ne la relisait à l'entrée du compte suivant. Les caches
+  /// serveur du compte sont donc des `accountBoundCache`
+  /// (`AccountBoundCache`) : relus à chaque passage de la frontière de
+  /// session, jamais lus sans elle, et vidés avant la première lecture du
+  /// compte qui arrive. Leur ligne ici reste l'inventaire.
   ///
   /// Cette liste est posée à côté de [accountOwnedPreferenceKeys] pour que
   /// l'ajout d'un futur cache de compte soit un geste évident.
@@ -115,6 +128,31 @@ class DriftLocalAccountPurge implements LocalAccountPurge {
     // inconnu.
     communitySearchProvider,
     communityTabProvider,
+    // Les compteurs de VIE ENTIÈRE (séances, semaines) que le serveur rend
+    // pour les récompenses. Provider permanent, alimenté par Dio seul : rien
+    // dans la purge ne le reconstruisait. Le compte suivant héritait des
+    // 200 séances de celui qui part, gagnait ses médailles, et
+    // `earnedRewardsProvider` les POUSSAIT sur son serveur : une écriture
+    // durable sur le compte d'un autre.
+    lifetimeStatsProvider,
+    // Niveau, rythme et MATÉRIEL de celui qui part. Une coche d'équipement
+    // relit cette valeur puis envoie la liste COMPLÈTE : sans cette ligne,
+    // le matériel du précédent s'écrivait sur le profil serveur du suivant.
+    trainingProfileProvider,
+    // Les photos PRIVÉES des repas déjà vus, en mémoire. L'interface du
+    // compte suivant ne les redemande pas (leurs clés sont les repas de
+    // l'autre), mais elles n'ont pas à survivre à la session qui les a
+    // montrées : c'est ce que promet le commentaire du cache.
+    mealPhotoCacheProvider,
+    // Le brouillon et l'identifiant d'une création restée sans réponse (un
+    // défi entre amis, un programme vide). Le compte suivant rouvrait la
+    // feuille sur les amis et le titre du précédent, et rejouait SON
+    // identifiant : le serveur le lui refusait, pour toujours.
+    friendChallengeCreationProvider,
+    programCreationProvider,
+    // Le dernier journal de récompenses que le serveur a accepté : le compte
+    // suivant remonte le sien sans le comparer à celui d'un autre.
+    milestonePushProvider,
   ];
 
   final Ref _ref;

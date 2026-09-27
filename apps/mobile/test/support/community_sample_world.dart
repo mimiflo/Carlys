@@ -208,14 +208,13 @@ const List<(String, String, int)> _classement = [
 /// celle de la maquette du 23 septembre 2026, message compris.
 List<FriendChallenge> sampleFriendChallenges() {
   final now = DateTime.now();
-  // Le mot de Léa est d'AUJOURD'HUI, quelle que soit l'heure du test :
-  // « il y a 5 h » tombait la veille entre minuit et 5 h (heure locale), et
-  // l'écran écrivait alors « Hier » là où le test attend « Aujourd'hui ».
-  final debutDuJour = DateTime(now.year, now.month, now.day);
-  final ilYaCinqHeures = now.subtract(const Duration(hours: 5));
-  final motDeLea = ilYaCinqHeures.isBefore(debutDuJour)
-      ? debutDuJour
-      : ilYaCinqHeures;
+  // Le mot de Léa est d'AUJOURD'HUI, à une heure POSÉE EN DUR (celle de la
+  // maquette) : « Aujourd’hui, 08h24 », quelle que soit l'heure du test.
+  // Daté « il y a 5 h » à la minute près, il changeait de rendu à chaque
+  // minute : la capture 35c ne se comparait jamais à elle-même, et son échec
+  // interrompait la comparaison des six scènes qui la suivent. La règle du
+  // harnais des captures le dit déjà : une HEURE se pose en dur dans le jour.
+  final motDeLea = DateTime(now.year, now.month, now.day, 8, 24);
   return [
     FriendChallenge(
       id: 'exemple-defi-ami-course',

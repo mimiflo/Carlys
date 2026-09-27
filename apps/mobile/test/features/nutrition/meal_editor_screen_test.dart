@@ -272,6 +272,71 @@ void main() {
       expect(find.byType(MealEditorScreen), findsNothing);
     });
 
+    testWidgets('des totaux hors des bornes d’un repas : dit sous la carte, '
+        'rien ne part', (tester) async {
+      // Une faute de frappe courante : 5000 au lieu de 500. Le serveur
+      // refusait le total en 400, et l'écran disait « réessaie ».
+      final nutrition = withLunch();
+      await openMealEditor(tester, nutrition, AppRoutes.meal('repas-compose'));
+      Future<void> corriger(String ligne, String grammes) async {
+        await tester.pumpAndSettle();
+        await showOnScreen(tester, find.text(ligne));
+        await tester.tap(find.text(ligne));
+        await tester.pumpAndSettle();
+        await tester.enterText(
+          find.descendant(
+            of: find.byType(AppPopupCard),
+            matching: find.byType(TextField),
+          ),
+          grammes,
+        );
+        await tester.tap(find.text('Valider'));
+        await tester.pumpAndSettle();
+      }
+
+      final semantics = tester.ensureSemantics();
+      await corriger('120 g', '5000');
+      await corriger('150 g', '5000');
+      await tapText(tester, 'Enregistrer la modification');
+
+      final sousLaCarte = find.descendant(
+        of: find.byType(MealEditorScreen),
+        matching: find.textContaining('kcal, la limite d’un repas'),
+      );
+      expect(sousLaCarte, findsOneWidget);
+      expect(nutrition.writes, isEmpty);
+      expect(find.byType(MealEditorScreen), findsOneWidget);
+
+      // Les tuiles d'un repas composé se LISENT : aucune ne porte de faute.
+      // La phrase sous la carte est donc la seule à dire ce qui bloque, et
+      // le lecteur d'écran doit l'entendre.
+      expect(
+        find.descendant(
+          of: find.byType(MealEditorScreen),
+          matching: find.bySemanticsLabel(RegExp('kcal, la limite d’un repas')),
+        ),
+        findsOneWidget,
+      );
+      // La notice dit la VRAIE cause : rien ne manque, aucune case n'est
+      // rouge.
+      final notice = find.byType(AppPopupCard);
+      expect(
+        find.descendant(
+          of: notice,
+          matching: find.textContaining('Il manque quelque chose'),
+        ),
+        findsNothing,
+      );
+      expect(
+        find.descendant(
+          of: notice,
+          matching: find.textContaining('kcal, la limite d’un repas'),
+        ),
+        findsOneWidget,
+      );
+      semantics.dispose();
+    });
+
     testWidgets('retirer le DERNIER aliment : saisie à la main, derniers '
         'totaux gardés', (tester) async {
       final nutrition = withLunch();

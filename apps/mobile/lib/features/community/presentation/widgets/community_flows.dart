@@ -52,12 +52,21 @@ Future<void> addFriendFlow(
 /// Lance un défi à ses amis. La liste d'amis vient de l'écran, déjà
 /// chargée : la feuille n'a pas à la redemander, et une feuille qui
 /// attendrait le réseau pour s'ouvrir se lirait comme une lenteur.
+///
+/// Après un envoi qui n'a pas abouti, la feuille se rouvre sur le MÊME
+/// brouillon, qui garde son identifiant : si le serveur avait écrit le défi
+/// avant que sa réponse se perde, le relancer retombe dessus au lieu d'en
+/// poser un second, et d'inviter deux fois chaque ami.
 Future<void> newFriendChallengeFlow(
   BuildContext context,
   CommunityActions actions,
   List<CommunityFriend> friends,
 ) async {
-  final draft = await showNewFriendChallengeSheet(context, friends: friends);
+  final draft = await showNewFriendChallengeSheet(
+    context,
+    friends: friends,
+    initial: actions.pendingFriendChallenge,
+  );
   if (draft == null || !context.mounted) {
     return;
   }

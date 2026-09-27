@@ -1,14 +1,27 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../authentication/presentation/controllers/account_bound_cache.dart';
 import '../../data/repositories/training_profile_repository_impl.dart';
 import '../../domain/entities/training_profile.dart';
 
 /// Les entrées de génération, lues une fois puis invalidées à l'écriture.
 /// Non auto-disposé : les actions le relisent dans des rappels tardifs, et
 /// l'écran de génération à venir s'y branchera aussi.
-final trainingProfileProvider = FutureProvider<TrainingProfile>((ref) {
-  return ref.read(trainingProfileRepositoryProvider).fetch();
-});
+///
+/// Cache DE COMPTE ([AccountBoundCache]) : l'écran le lit par `valueOrNull`,
+/// et le niveau, le rythme et le matériel du compte parti s'y montraient au
+/// suivant le temps de sa première lecture — ou pour de bon si elle
+/// échouait.
+final trainingProfileProvider = accountBoundCache<TrainingProfile>(
+  (ref) => ref.read(trainingProfileRepositoryProvider).fetch(),
+  none: const TrainingProfile(
+    goal: null,
+    experience: null,
+    weeklySessionsTarget: null,
+    sessionMinutesTarget: null,
+    equipmentSlugs: [],
+  ),
+);
 
 /// Écritures des entrées de génération : chaque geste écrit SON champ puis
 /// invalide la lecture — l'écran reflète toujours l'état serveur, jamais un

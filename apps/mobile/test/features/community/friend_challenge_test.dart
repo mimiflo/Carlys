@@ -291,5 +291,113 @@ void main() {
 
       expect(rendus.single?.message, 'Allez on y va !');
     });
+    group('bornes du contrat et brouillon', () {
+      Future<List<NewFriendChallenge?>> monterFeuille(
+        WidgetTester tester,
+        List<CommunityFriend> friends, {
+        NewFriendChallenge? initial,
+      }) async {
+        final rendus = <NewFriendChallenge?>[];
+        await tester.pumpWidget(
+          MaterialApp(
+            theme: AppTheme.dark(),
+            home: Scaffold(
+              body: Builder(
+                builder: (context) => ElevatedButton(
+                  onPressed: () async => rendus.add(
+                    await showNewFriendChallengeSheet(
+                      context,
+                      friends: friends,
+                      initial: initial,
+                    ),
+                  ),
+                  child: const Text('ouvrir'),
+                ),
+              ),
+            ),
+          ),
+        );
+        await tester.tap(find.text('ouvrir'));
+        await tester.pumpAndSettle();
+        return rendus;
+      }
+
+      List<CommunityFriend> amis(int combien) => [
+        for (var index = 1; index <= combien; index++)
+          CommunityFriend(
+            id: 'ami-$index',
+            displayName: 'Ami $index',
+            streakDays: 1,
+            weeklySessions: 1,
+            sharesProgress: true,
+          ),
+      ];
+
+      Future<void> lancer(WidgetTester tester) async {
+        await tester.ensureVisible(find.text('Lancer le défi'));
+        await tester.tap(find.text('Lancer le défi'));
+        await tester.pumpAndSettle();
+      }
+
+      testWidgets('au-delà de neuf invités, les autres ne se cochent plus', (
+        tester,
+      ) async {
+        // Le serveur refusait le dixième en 400, feuille déjà refermée :
+        // le brouillon était perdu, et « réessaie » échouait toujours.
+        tester.view.physicalSize = const Size(1200, 3000);
+        addTearDown(tester.view.reset);
+        final rendus = await monterFeuille(tester, amis(10));
+        await tester.enterText(find.byType(TextFormField).first, 'Dix amis');
+        for (var index = 1; index <= 10; index++) {
+          await tester.ensureVisible(find.text('Ami $index'));
+          await tester.tap(find.text('Ami $index'));
+          await tester.pumpAndSettle();
+        }
+        expect(find.text('9 amis au plus dans un défi.'), findsOneWidget);
+        // Le dixième ne se coche pas, et le geste dit pourquoi.
+        expect(find.textContaining('retire quelqu’un'), findsOneWidget);
+
+        await lancer(tester);
+
+        expect(rendus.single?.invitedUserIds, hasLength(9));
+        expect(rendus.single?.invitedUserIds, isNot(contains('ami-10')));
+      });
+
+      testWidgets('le titre se compte en points de code, comme le serveur', (
+        tester,
+      ) async {
+        // 80 « 💪🏽 » passent le compteur du champ (80 graphèmes) mais font
+        // 160 points de code : le serveur les refusait.
+        final rendus = await monterFeuille(tester, amis(1));
+        await tester.enterText(find.byType(TextFormField).first, '💪🏽' * 80);
+        await tester.tap(find.text('Ami 1'));
+        await tester.pumpAndSettle();
+
+        await lancer(tester);
+
+        expect(find.text('Ton titre dépasse 80 caractères.'), findsOneWidget);
+        expect(rendus, isEmpty);
+      });
+
+      testWidgets('rouverte sur un brouillon, elle le rend tel quel', (
+        tester,
+      ) async {
+        const brouillon = NewFriendChallenge(
+          title: 'Le mois du km',
+          metric: ChallengeMetric.distanceMeters,
+          durationDays: 30,
+          invitedUserIds: ['ami-2'],
+          message: 'On court ?',
+        );
+        final rendus = await monterFeuille(tester, amis(2), initial: brouillon);
+        expect(find.text('Le mois du km'), findsOneWidget);
+        expect(find.text('On court ?'), findsOneWidget);
+
+        await lancer(tester);
+
+        // ÉGAL au brouillon : c'est ce qui lui garde son identifiant.
+        expect(rendus.single, brouillon);
+      });
+    });
   });
 }

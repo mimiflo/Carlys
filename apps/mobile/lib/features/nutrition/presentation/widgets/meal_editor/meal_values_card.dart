@@ -42,7 +42,7 @@ class MealValuesCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final computed = state.isComposed;
-    final faults = computed ? const <String>[] : errors.values;
+    final faults = computed ? [?errors.composition] : errors.values;
     return AppTitledCard(
       icon: AppIcons.mealValues,
       title: 'Valeurs nutritionnelles',
@@ -57,14 +57,7 @@ class MealValuesCard extends StatelessWidget {
           ),
           if (faults.isNotEmpty) ...[
             const SizedBox(height: AppSpacing.xs),
-            // Chaque case fautive annonce DÉJÀ sa faute au lecteur d'écran :
-            // la phrase commune n'est là que pour les yeux.
-            ExcludeSemantics(
-              child: Text(
-                faults.join(' '),
-                style: AppTypography.body.copyWith(color: AppColors.danger),
-              ),
-            ),
+            _FaultLine(text: faults.join(' '), announced: computed),
           ],
           const SizedBox(height: AppSpacing.xs),
           Text(
@@ -179,5 +172,31 @@ class MealValuesCard extends StatelessWidget {
         onChanged: setters.fat,
       ),
     ];
+  }
+}
+
+/// La ligne des fautes, sous la grille des valeurs.
+///
+/// Repas SAISI : chaque case fautive annonce DÉJÀ sa faute au lecteur
+/// d'écran, la phrase commune n'est là que pour les yeux. Repas COMPOSÉ :
+/// les tuiles se lisent et ne portent aucune faute — cette phrase est la
+/// SEULE à dire ce qui bloque l'envoi. Tue, elle laissait une personne
+/// sous VoiceOver ou TalkBack devant un « Enregistrer » qui ne fait rien ;
+/// elle s'annonce donc dès qu'elle paraît.
+class _FaultLine extends StatelessWidget {
+  const _FaultLine({required this.text, required this.announced});
+
+  final String text;
+  final bool announced;
+
+  @override
+  Widget build(BuildContext context) {
+    final line = Text(
+      text,
+      style: AppTypography.body.copyWith(color: AppColors.danger),
+    );
+    return announced
+        ? Semantics(liveRegion: true, child: line)
+        : ExcludeSemantics(child: line);
   }
 }

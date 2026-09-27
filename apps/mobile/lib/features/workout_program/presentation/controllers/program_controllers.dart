@@ -1,6 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
+import '../../../../core/errors/app_exception.dart';
+import '../../../../core/utilities/creation_identity.dart';
 import '../../data/repositories/program_repository_impl.dart';
 import '../../domain/entities/generation_report.dart';
 import '../../domain/entities/program.dart';
@@ -43,6 +45,13 @@ final programCalendarProvider = FutureProvider.autoDispose
 /// durée de vie du `Ref` doit être garantie, pas fortuite.
 final programActionsProvider = Provider<ProgramActions>(ProgramActions.new);
 
+/// L'identifiant du programme vide en cours de création : le même brouillon
+/// renvoyé après un échec le rejoue. Appartient au COMPTE (purge locale).
+final programCreationProvider =
+    Provider<CreationIdentity<({String name, int weeksCount})>>(
+      (ref) => CreationIdentity(),
+    );
+
 class ProgramActions {
   ProgramActions(this._ref);
 
@@ -68,9 +77,11 @@ class ProgramActions {
     });
   }
 
-  /// Crée un programme vide et rend son identifiant, NÉ SUR L'APPAREIL.
+  /// Crée un programme vide et rend son identifiant, NÉ SUR L'APPAREIL et
+  /// stable d'un essai à l'autre du même geste (`CreationIdentity`).
   Future<String> create({required String name, required int weeksCount}) async {
-    final id = _uuid.v4();
+    final creation = _ref.read(programCreationProvider);
+    final id = creation.idFor((name: name, weeksCount: weeksCount));
     await _write(
       id,
       () => _ref
@@ -85,6 +96,7 @@ class ProgramActions {
             ),
           ),
     );
+    creation.settle();
     return id;
   }
 
@@ -124,6 +136,10 @@ class ProgramActions {
   /// L'écriture est ÉVITÉE quand rien ne bouge (même jour, départ vide, jour
   /// hors semaine) : `moveProgramDay` rend alors le programme inchangé, et
   /// on le reconnaît à son identité.
+  ///
+  /// REFUSÉE si l'un des deux jours est déjà fait ([daysHeldBySession], lu
+  /// sur le calendrier FRAIS) : la feuille ne le propose plus, ce refus
+  /// couvre la course entre son ouverture et le tap.
   Future<void> moveDay(
     String programId, {
     required int weekNumber,
@@ -133,6 +149,14 @@ class ProgramActions {
     return _write(programId, () async {
       final repository = _ref.read(programRepositoryProvider);
       final fresh = await repository.byId(programId);
+      final semaine = await repository.calendarWeek(
+        programId,
+        week: weekNumber,
+      );
+      final tenus = daysHeldBySession(semaine);
+      if (tenus.contains(fromDayOfWeek) || tenus.contains(toDayOfWeek)) {
+        throw const ValidationException(heldDayMoveRefusal);
+      }
       final moved = moveProgramDay(
         fresh,
         weekNumber: weekNumber,

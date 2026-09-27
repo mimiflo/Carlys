@@ -7,9 +7,11 @@ import '../../../../core/feedback/server_gesture.dart';
 import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
 import '../../../../shared/widgets/connection_aware_error.dart';
+import '../../domain/entities/nutrition.dart';
 import '../controllers/nutrition_controllers.dart';
 import '../providers/journal_day_provider.dart';
 import 'meal_day_selector.dart';
+import 'meal_editor/food_source_mention.dart';
 import 'meal_tile.dart';
 
 /// Le journal d'un jour : ce qui a été mangé, son total, et ce qu'on peut y
@@ -42,7 +44,7 @@ class MealJournalSection extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final day = ref.watch(journalDayProvider);
     final meals = ref.watch(mealsForDayProvider(day));
-    final consumed = meals.valueOrNull?.fold<int>(
+    final consumed = meals.valueOrNull?.meals.fold<int>(
       0,
       (sum, meal) => sum + meal.kcal,
     );
@@ -72,28 +74,24 @@ class MealJournalSection extends ConsumerWidget {
                 'reviendront avec le réseau.',
             onRetry: () => ref.invalidate(mealsForDayProvider(day)),
           ),
-          data: (entries) => Column(
+          data: (journee) => Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (entries.isEmpty)
-                AppCard(
-                  child: Text(
-                    'Rien au journal ce jour-là. Ajoute un repas pour suivre '
-                    'ton objectif.',
-                    style: AppTypography.body.copyWith(
-                      color: AppColors.darkTextSecondary,
-                    ),
-                  ),
-                )
-              else
-                for (final meal in entries) ...[
-                  MealTile(
-                    meal: meal,
-                    onEdit: () => context.push(AppRoutes.meal(meal.id)),
-                    onDelete: () => _deleteMeal(context, ref, meal.id),
-                  ),
-                  const SizedBox(height: AppSpacing.xs),
-                ],
+              ..._entries(context, ref, day, journee.meals),
+              // Des totaux calculés depuis la table CIQUAL : sa mention les
+              // accompagne, comme partout où une valeur de la base se montre
+              // (licence Etalab 2.0, CGU). L'API la sert dès qu'un repas du
+              // jour en porte ; elle était jetée.
+              if (journee.attribution case final attribution?) ...[
+                FoodSourceMention(
+                  attribution: attribution,
+                  versions: [
+                    for (final meal in journee.meals)
+                      for (final line in meal.components) ?line.sourceVersion,
+                  ],
+                ),
+                const SizedBox(height: AppSpacing.xs),
+              ],
               const SizedBox(height: AppSpacing.xs),
               AppButton(
                 label: 'Ajouter un repas',
@@ -106,4 +104,31 @@ class MealJournalSection extends ConsumerWidget {
       ],
     );
   }
+
+  List<Widget> _entries(
+    BuildContext context,
+    WidgetRef ref,
+    DateTime day,
+    List<MealEntry> entries,
+  ) => [
+    if (entries.isEmpty)
+      AppCard(
+        child: Text(
+          'Rien au journal ce jour-là. Ajoute un repas pour suivre '
+          'ton objectif.',
+          style: AppTypography.body.copyWith(
+            color: AppColors.darkTextSecondary,
+          ),
+        ),
+      )
+    else
+      for (final meal in entries) ...[
+        MealTile(
+          meal: meal,
+          onEdit: () => context.push(AppRoutes.meal(meal.id)),
+          onDelete: () => _deleteMeal(context, ref, meal.id),
+        ),
+        const SizedBox(height: AppSpacing.xs),
+      ],
+  ];
 }

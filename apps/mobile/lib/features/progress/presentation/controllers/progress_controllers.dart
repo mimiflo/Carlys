@@ -1,5 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../authentication/presentation/controllers/account_bound_cache.dart';
 import '../../data/repositories/progress_repository_impl.dart';
 import '../../domain/entities/progress.dart';
 
@@ -16,18 +17,26 @@ final progressOverviewProvider =
     });
 
 /// Records personnels, tous exercices confondus.
-final personalRecordsProvider =
-    FutureProvider.autoDispose<List<PersonalRecordEntry>>((ref) {
-      return ref.watch(progressRepositoryProvider).records();
-    });
+///
+/// Un cache DE COMPTE ([AccountBoundCache]) : la vitrine, les faits des
+/// récompenses et l'accueil le lisent par `valueOrNull`, et c'est là que
+/// les records d'un compte parti se montraient au suivant. Permanent : deux
+/// `Provider` permanents l'épinglaient déjà dès l'accueil, son `autoDispose`
+/// ne le détruisait jamais.
+final personalRecordsProvider = accountBoundCache<List<PersonalRecordEntry>>(
+  (ref) => ref.watch(progressRepositoryProvider).records(),
+  none: const [],
+);
 
 /// Ce que la vie entière compte, pour les récompenses.
 ///
-/// NON auto-disposé, comme `earnedRewardsProvider` qui en dépend : le
-/// relire à chaque navigation ferait clignoter les récompenses.
-final lifetimeStatsProvider = FutureProvider<LifetimeStats>((ref) {
-  return ref.watch(progressRepositoryProvider).lifetimeStats();
-});
+/// Permanent, comme `earnedRewardsProvider` qui en dépend : le relire à
+/// chaque navigation ferait clignoter les récompenses. Et cache DE COMPTE
+/// ([AccountBoundCache]) : ses 200 séances ne passent pas au compte suivant.
+final lifetimeStatsProvider = accountBoundCache<LifetimeStats>(
+  (ref) => ref.watch(progressRepositoryProvider).lifetimeStats(),
+  none: const LifetimeStats(completedSessions: 0, weeks: []),
+);
 
 /// Historique de poids corporel (du plus ancien au plus récent).
 final bodyWeightMetricsProvider =

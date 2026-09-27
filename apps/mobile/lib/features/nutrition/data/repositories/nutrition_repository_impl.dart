@@ -56,7 +56,7 @@ class NutritionRepositoryImpl implements NutritionRepository {
   }
 
   @override
-  Future<List<MealEntry>> mealsBetween(DateTime from, DateTime to) {
+  Future<MealDay> mealsBetween(DateTime from, DateTime to) {
     return _guard(() async {
       final response = await _dio.get<Map<String, dynamic>>(
         '/nutrition/meals',
@@ -66,10 +66,15 @@ class NutritionRepositoryImpl implements NutritionRepository {
         },
       );
       final rows = response.data?['data'] as List<dynamic>? ?? const [];
-      return rows
-          .whereType<Map<String, dynamic>>()
-          .map(mealFromJson)
-          .toList(growable: false);
+      return (
+        meals: rows
+            .whereType<Map<String, dynamic>>()
+            .map(mealFromJson)
+            .toList(growable: false),
+        // La mention que l'API sert avec la liste (`meta.source`) : elle
+        // était jetée, et le journal montrait des totaux CIQUAL sans elle.
+        attribution: attributionFromMeta(response.data?['meta']),
+      );
     });
   }
 

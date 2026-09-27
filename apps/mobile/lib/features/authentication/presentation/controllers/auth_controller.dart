@@ -12,6 +12,7 @@ import '../../data/repositories/auth_repository_impl.dart';
 import '../../domain/entities/auth_state.dart';
 import '../../domain/entities/auth_user.dart';
 import '../../domain/entities/social_provider.dart';
+import 'account_session.dart';
 import 'device_timezone_controller.dart';
 
 // L'état vit dans le domaine ; il se relit par ce fichier, comme avant, pour
@@ -26,6 +27,8 @@ class AuthController extends Notifier<AuthState> {
   AuthState build() {
     // La session expirée côté serveur (refresh impossible) déconnecte l'UI.
     ref.watch(tokenRefresherProvider).onSessionExpired = _onSessionExpired;
+    // La frontière franchie ici l'est au même instant pour les caches.
+    listenSelf((_, s) => ref.read(accountSessionProvider.notifier).follow(s));
     return const AuthUnknown();
   }
 
@@ -131,24 +134,17 @@ class AuthController extends Notifier<AuthState> {
   /// toujours. Une session ne se joue pas sur un fuseau horaire.
   Future<void> _declareDeviceTimezone(AuthUser user) async {
     final updated = await ref.read(deviceTimezoneSyncProvider).reconcile(user);
-    if (updated == null) return;
+    if (updated != null) _adopt(updated);
+  }
 
-    // La réponse revient LONGTEMPS après le départ, et l'appareil a pu
-    // changer de mains entre les deux. Regarder seulement « y a-t-il une
-    // session ouverte ? » ne suffit pas : une déclaration partie pour le
-    // compte A, revenue après que A s'est déconnecté et que B s'est
-    // connecté, réinstallait A par-dessus B — le profil affichait le nom et
-    // l'adresse du compte précédent jusqu'au prochain `me()`. C'est
-    // exactement la frontière de compte que `LocalAccountSwitch` et la purge
-    // locale défendent partout ailleurs. On compare donc l'IDENTITÉ, ce qui
-    // couvre du même geste la session fermée entre-temps (déconnexion,
-    // expiration) : on ne rallume rien.
-    final current = state;
-    if (current is! AuthAuthenticated || current.user?.id != updated.id) {
-      _logger.info('Fuseau reçu hors de la session qui l’a demandé');
+  /// Installe un profil revenu du serveur, SEULEMENT dans la session qui
+  /// l'a demandé : voir [AuthState.accepts].
+  void _adopt(AuthUser fetched) {
+    if (!state.accepts(fetched)) {
+      _logger.info('Profil reçu hors de la session qui l’a demandé');
       return;
     }
-    state = AuthAuthenticated(user: updated);
+    state = AuthAuthenticated(user: fetched);
   }
 
   Future<void> logout() async {
@@ -189,16 +185,15 @@ class AuthController extends Notifier<AuthState> {
     await _leaveAccount();
   }
 
-  /// Recharge le profil (après une modification par exemple).
+  /// Recharge le profil (après une modification par exemple). Une réponse
+  /// revenue après une déconnexion ne rallume rien : voir [_adopt].
   Future<void> refreshProfile() async {
     if (state is! AuthAuthenticated) return;
-    state = AuthAuthenticated(
-      user: await ref.read(authRepositoryProvider).me(),
-    );
+    _adopt(await ref.read(authRepositoryProvider).me());
   }
 
   /// Session expirée côté serveur (401 au renouvellement) : l'interface
-  /// bascule, et RIEN n'est effacé.
+  /// bascule, et aucune DONNÉE n'est effacée.
   ///
   /// Ce n'est pas un changement de compte : c'est le même utilisateur, sur
   /// son compte, revenu après l'expiration du jeton de renouvellement (trente
@@ -207,10 +202,15 @@ class AuthController extends Notifier<AuthState> {
   /// connexion d'un compte différent (`LocalAccountSwitch`) : s'il se
   /// reconnecte, il retrouve tout et la file repart ; si quelqu'un d'autre se
   /// connecte, tout part avant qu'il ne voie quoi que ce soit.
+  ///
+  /// Le jeton push, lui, est oublié : sans session, l'appareil recevait
+  /// encore les notifications du compte parti, et le suivant n'était jamais
+  /// enregistré (voir `PushRegistration.forgetLocally`).
   void _onSessionExpired() {
     if (state is AuthUnauthenticated) {
       return;
     }
+    unawaited(ref.read(pushRegistrationProvider).forgetLocally());
     state = const AuthUnauthenticated();
   }
 

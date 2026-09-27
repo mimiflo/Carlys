@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../progress/presentation/controllers/progress_controllers.dart';
 import '../../data/repositories/workout_repository_impl.dart';
 import '../../domain/entities/workout.dart';
+import '../providers/closure_acknowledgment.dart';
 
 /// Séance en cours (au plus une), en temps réel depuis la base locale.
 final activeWorkoutProvider = StreamProvider<WorkoutWithSets?>((ref) {
@@ -13,7 +14,10 @@ final activeWorkoutProvider = StreamProvider<WorkoutWithSets?>((ref) {
 
 /// Historique local, plus récentes d'abord.
 final workoutHistoryProvider = StreamProvider<List<WorkoutHistoryEntry>>((ref) {
-  return ref.watch(workoutRepositoryProvider).watchHistory();
+  return rereadServerCountsOnClosure(
+    ref,
+    ref.watch(workoutRepositoryProvider).watchHistory(),
+  );
 });
 
 final workoutDetailProvider = FutureProvider.autoDispose
@@ -143,8 +147,8 @@ class WorkoutActions {
   ///
   /// La clôture est LE moment où le serveur les recalcule (Étape 5). Sans
   /// cette invalidation ils restaient ceux du lancement de l'application :
-  /// `personalRecordsProvider` est bien `autoDispose`, mais deux Provider
-  /// permanents l'épinglent, donc il n'était jamais rejoué. On battait un
+  /// `personalRecordsProvider` est permanent (deux Provider permanents
+  /// l'épinglaient déjà), donc il n'était jamais rejoué. On battait un
   /// record et rien ne bougeait, ni dans Progrès, ni dans la vitrine, ni
   /// dans « Dernière récompense » — jusqu'au redémarrage de l'application.
   ///

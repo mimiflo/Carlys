@@ -54,20 +54,33 @@ ProgressOverviewEntity overviewOf(
 /// assiduité sur une seule semaine vaudrait mécaniquement 100 % » — et c'est
 /// ce qui décide entre la tuile de durée et celle d'assiduité. Une épreuve
 /// qui vise l'une des deux doit donc fixer la semaine, pas la subir.
+///
+/// Le lundi à minuit LOCAL, comme le serveur le pose (double `AT TIME ZONE`
+/// dans `progress.repository.ts`), puis en UTC pour l'échange. Il était
+/// posé à minuit UTC : l'écran ramène `bucketStart` à l'heure locale, et à
+/// l'ouest de Greenwich (Montréal, Los Angeles, São Paulo) ce lundi 00:00Z
+/// devenait le dimanche d'avant. Deux semaines couvertes, l'assiduité
+/// remplaçait la durée, et `progress_flow_test` échouait sur tout poste des
+/// Amériques ; la CI, calée sur Paris, ne le voyait pas.
 List<ProgressPoint> pointsMemeSemaine({
   double premier = 840,
   double second = 700,
 }) {
-  final maintenant = DateTime.now().toUtc();
-  final lundi = DateTime.utc(
+  final maintenant = DateTime.now();
+  final lundi = DateTime(
     maintenant.year,
     maintenant.month,
     maintenant.day - (maintenant.weekday - 1),
   );
+  final mardi = DateTime(lundi.year, lundi.month, lundi.day + 1);
   return [
-    ProgressPoint(bucketStart: lundi, sessionsCount: 1, volumeKg: premier),
     ProgressPoint(
-      bucketStart: lundi.add(const Duration(days: 1)),
+      bucketStart: lundi.toUtc(),
+      sessionsCount: 1,
+      volumeKg: premier,
+    ),
+    ProgressPoint(
+      bucketStart: mardi.toUtc(),
       sessionsCount: 1,
       volumeKg: second,
     ),
@@ -251,8 +264,18 @@ class FakeProgressRepository implements ProgressRepository {
     );
   }
 
+  /// Remontée qui échoue (hors ligne) : l'envoi est tenté, rien n'arrive.
+  bool pushFails = false;
+
+  /// Envois TENTÉS, aboutis ou non.
+  int pushAttempts = 0;
+
   @override
   Future<void> pushMilestones(Map<String, DateTime> rewards) async {
+    pushAttempts++;
+    if (pushFails) {
+      throw Exception('Hors ligne (voulu par le test).');
+    }
     pushedMilestones.add(Map.of(rewards));
   }
 

@@ -1,26 +1,39 @@
+import 'dart:io';
+
 import 'package:carlys_mobile/app/restore/app_restore.dart';
 import 'package:carlys_mobile/core/database/app_database.dart';
 import 'package:carlys_mobile/core/database/local_account_purge.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
 import 'package:carlys_mobile/features/academy/data/answered_lessons_store.dart';
 import 'package:carlys_mobile/features/academy/presentation/controllers/academy_controllers.dart';
+import 'package:carlys_mobile/features/authentication/presentation/controllers/account_bound_cache.dart';
+import 'package:carlys_mobile/features/community/domain/entities/friend_challenge.dart';
 import 'package:carlys_mobile/features/community/presentation/controllers/community_controllers.dart';
 import 'package:carlys_mobile/features/community/presentation/providers/community_tab_state.dart';
 import 'package:carlys_mobile/features/notifications/domain/repositories/device_token_repository.dart';
 import 'package:carlys_mobile/features/notifications/presentation/controllers/notification_preferences.dart';
+import 'package:carlys_mobile/features/nutrition/data/repositories/meal_photo_cache.dart';
+import 'package:carlys_mobile/features/nutrition/data/repositories/nutrition_repository_impl.dart';
 import 'package:carlys_mobile/features/onboarding/data/first_run_store.dart';
+import 'package:carlys_mobile/features/progress/data/repositories/progress_repository_impl.dart';
 import 'package:carlys_mobile/features/progress/domain/entities/progress.dart';
 import 'package:carlys_mobile/features/progress/presentation/controllers/progress_controllers.dart';
+import 'package:carlys_mobile/features/progression/data/milestone_push.dart';
 import 'package:carlys_mobile/features/progression/data/reward_ledger.dart';
 import 'package:carlys_mobile/features/progression/domain/reward.dart';
 import 'package:carlys_mobile/features/progression/presentation/controllers/reward_controllers.dart';
 import 'package:carlys_mobile/features/subscription/presentation/controllers/subscription_controllers.dart';
+import 'package:carlys_mobile/features/workout_program/domain/entities/training_profile.dart';
+import 'package:carlys_mobile/features/workout_program/presentation/controllers/program_controllers.dart';
+import 'package:carlys_mobile/features/workout_program/presentation/controllers/training_profile_controllers.dart';
 import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import '../support/fake_nutrition_repository.dart';
+import '../support/fake_progress_repository.dart';
 import '../support/fake_workout_repository.dart';
 
 /// À la frontière de compte, l'appareil ne garde rien du compte qui part :
@@ -66,7 +79,10 @@ void main() {
         // comptent : leur renouvellement est ce qu'on vérifie, pas leur
         // contenu (le serveur et le disque sont testés ailleurs).
         myFriendCodeProvider.overrideWith(
-          (ref) async => 'CARLYS-${countBuild('codeAmi')}',
+          () => AccountBoundCache(
+            (ref) async => 'CARLYS-${countBuild('codeAmi')}',
+            none: '',
+          ),
         ),
         answeredLessonsProvider.overrideWith((ref) async {
           countBuild('leconsRepondues');
@@ -76,14 +92,50 @@ void main() {
           countBuild('recompenses');
           return const <EarnedReward>[];
         }),
-        personalRecordsProvider.overrideWith((ref) async {
-          countBuild('records');
-          return const <PersonalRecordEntry>[];
-        }),
-        notificationPreferencesProvider.overrideWith((ref) async {
-          countBuild('preferencesNotifications');
-          return const <NotificationCategory, bool>{};
-        }),
+        personalRecordsProvider.overrideWith(
+          () => AccountBoundCache((ref) async {
+            countBuild('records');
+            return const <PersonalRecordEntry>[];
+          }, none: const []),
+        ),
+        notificationPreferencesProvider.overrideWith(
+          () => AccountBoundCache((ref) async {
+            countBuild('preferencesNotifications');
+            return const <NotificationCategory, bool>{};
+          }, none: const {}),
+        ),
+        lifetimeStatsProvider.overrideWith(
+          () => AccountBoundCache((ref) async {
+            countBuild('vieEntiere');
+            return const LifetimeStats(completedSessions: 200, weeks: []);
+          }, none: const LifetimeStats(completedSessions: 0, weeks: [])),
+        ),
+        trainingProfileProvider.overrideWith(
+          () => AccountBoundCache(
+            (ref) async {
+              countBuild('profilEntrainement');
+              return const TrainingProfile(
+                goal: null,
+                experience: null,
+                weeklySessionsTarget: null,
+                sessionMinutesTarget: null,
+                equipmentSlugs: ['barre', 'rack', 'banc'],
+              );
+            },
+            none: const TrainingProfile(
+              goal: null,
+              experience: null,
+              weeklySessionsTarget: null,
+              sessionMinutesTarget: null,
+              equipmentSlugs: [],
+            ),
+          ),
+        ),
+        nutritionRepositoryProvider.overrideWithValue(
+          FakeNutritionRepository(),
+        ),
+        // Pour `milestonePushProvider`, qui envoie le journal par lui.
+        progressRepositoryProvider.overrideWithValue(FakeProgressRepository()),
       ],
     );
     database = container.read(appDatabaseProvider);
@@ -186,6 +238,9 @@ void main() {
       'recompenses': 2,
       'records': 1,
       'preferencesNotifications': 1,
+      // Même mécanisme pour les deux caches serveur ajoutés à la liste.
+      'vieEntiere': 1,
+      'profilEntrainement': 1,
     });
   });
 
@@ -271,16 +326,129 @@ void main() {
     },
   );
 
-  test('les records personnels non plus, malgré leur autoDispose', () async {
-    // LE PIÈGE QUE CE TEST FIGE. `personalRecordsProvider` est déclaré
-    // `autoDispose`, ce qui donne à croire qu'il se détruit tout seul et
-    // n'a donc rien à faire dans la liste de purge. C'est faux ici : deux
+  test(
+    'les compteurs de vie entière et le profil d’entraînement sont relus',
+    () async {
+      // LE SCÉNARIO DE L'AUDIT. A (200 séances) se déconnecte, B (0 séance)
+      // se connecte dans le même processus. Ces deux providers sont
+      // PERMANENTS et ne lisent que le réseau : rien dans la purge ne les
+      // reconstruisait. B héritait des 200 séances de A, gagnait ses
+      // médailles et les poussait sur SON serveur ; une coche de matériel
+      // écrivait l'équipement de A sur le profil de B.
+      await container.read(lifetimeStatsProvider.future);
+      await container.read(trainingProfileProvider.future);
+      expect(builds['vieEntiere'], 1);
+      expect(builds['profilEntrainement'], 1);
+
+      await container.read(localAccountPurgeProvider).run();
+
+      await container.read(lifetimeStatsProvider.future);
+      await container.read(trainingProfileProvider.future);
+      expect(
+        builds['vieEntiere'],
+        2,
+        reason: 'les compteurs de vie entière du compte parti survivent',
+      );
+      expect(
+        builds['profilEntrainement'],
+        2,
+        reason: 'le matériel du compte parti survit à la purge',
+      );
+    },
+  );
+
+  test('une création restée sans réponse ne suit pas le compte', () async {
+    // A lance un défi (ou un programme), la réponse se perd, A se
+    // déconnecte. Sans la purge, B rouvrait la feuille sur le titre et les
+    // amis de A, et rejouait SON identifiant : refusé par le serveur.
+    const defi = NewFriendChallenge(
+      title: 'Cinq séances',
+      metric: ChallengeMetric.workouts,
+      durationDays: 7,
+      invitedUserIds: ['ami-de-a'],
+    );
+    const programme = (name: 'Force', weeksCount: 8);
+    final idDefiA = container.read(friendChallengeCreationProvider).idFor(defi);
+    final idProgrammeA = container
+        .read(programCreationProvider)
+        .idFor(programme);
+    final envoisA = container.read(milestonePushProvider);
+
+    await container.read(localAccountPurgeProvider).run();
+
+    final defis = container.read(friendChallengeCreationProvider);
+    final programmes = container.read(programCreationProvider);
+    expect(defis.pendingDraft, isNull);
+    expect(programmes.pendingDraft, isNull);
+    expect(defis.idFor(defi), isNot(idDefiA));
+    expect(programmes.idFor(programme), isNot(idProgrammeA));
+    // Le dernier journal accepté était celui de A : B remonte le sien.
+    expect(container.read(milestonePushProvider), isNot(same(envoisA)));
+  });
+
+  test('les photos privées de repas ne restent pas en mémoire', () async {
+    final avant = container.read(mealPhotoCacheProvider);
+
+    await container.read(localAccountPurgeProvider).run();
+
+    expect(container.read(mealPhotoCacheProvider), isNot(same(avant)));
+  });
+
+  test('tout cache PERMANENT lu au réseau est purgé ou déclaré', () {
+    // LE FILET qui manquait : `lifetimeStatsProvider` et
+    // `trainingProfileProvider` sont nés après la liste, et personne n'a
+    // pensé à les y ajouter. Un `FutureProvider` sans `autoDispose` garde sa
+    // valeur tant que le processus vit : il appartient au COMPTE, sauf s'il
+    // lit un contenu embarqué ou une préférence de l'appareil. Chaque
+    // nouveau venu doit donc choisir son camp ici, par écrit. Un
+    // `accountBoundCache` aussi : il se relit de lui-même à la frontière de
+    // session, mais la purge est la même frontière vue du disque, et la
+    // liste reste l'inventaire complet de ce qui appartient au compte. Une
+    // `CreationIdentity` de même : elle garde le brouillon d'un envoi.
+    const propresALAppareil = {
+      // Contenus EMBARQUÉS dans l'application, les mêmes pour tous.
+      'academyPackProvider',
+      'recipesPackProvider',
+      // La voix du Mentor et sa visite décrivent l'appareil (voir
+      // `accountOwnedPreferenceKeys`).
+      'mentorPrefsProvider',
+      'mentorTourVuesProvider',
+    };
+    final purge = File(
+      'lib/core/database/local_account_purge.dart',
+    ).readAsStringSync();
+    final declaration = RegExp(
+      r'final (\w+) =\s*(?:FutureProvider|accountBoundCache|'
+      r'Provider<CreationIdentity)<',
+    );
+    final oublis = <String>[];
+    for (final file in Directory('lib').listSync(recursive: true)) {
+      if (file is! File || !file.path.endsWith('.dart')) continue;
+      for (final match in declaration.allMatches(file.readAsStringSync())) {
+        final name = match.group(1)!;
+        if (propresALAppareil.contains(name)) continue;
+        if (!purge.contains('    $name,')) oublis.add('${file.path} : $name');
+      }
+    }
+    expect(
+      oublis,
+      isEmpty,
+      reason:
+          'Ajoute-les à `accountOwnedProviders`, ou à la liste des caches '
+          'propres à l’appareil de ce test, avec la raison.',
+    );
+  });
+
+  test('les records personnels non plus, sous un auditeur permanent', () async {
+    // LE PIÈGE QUE CE TEST FIGE. `personalRecordsProvider` était déclaré
+    // `autoDispose`, ce qui donnait à croire qu'il se détruisait tout seul
+    // et n'avait rien à faire dans la liste de purge. C'était faux : deux
     // Provider PERMANENTS le regardent (`rewardFactsProvider` et
     // `showcaseRewardsProvider`), et l'accueil monte le second dès le
     // lancement via `TitleSummary`. Un auditeur permanent ne relâche
-    // jamais : l'élément auto-disposé n'est jamais détruit, et il traverse
-    // la purge avec les records de celui qui part. Sur un téléphone
-    // partagé, le compte suivant voyait les records du précédent.
+    // jamais : l'élément n'était jamais détruit, et il traversait la purge
+    // avec les records de celui qui part. Il est désormais permanent et
+    // cache de compte, mais la leçon reste : c'est l'auditeur qui compte.
     final abonnement = container.listen(showcaseRewardsProvider, (_, _) {});
     addTearDown(abonnement.close);
     await container.read(personalRecordsProvider.future);
@@ -294,7 +462,7 @@ void main() {
       2,
       reason:
           'les records du compte parti survivent à la purge : '
-          'un Provider permanent épingle l’élément auto-disposé',
+          'un Provider permanent épingle l’élément',
     );
   });
 }

@@ -15,7 +15,6 @@ import 'package:carlys_mobile/features/exercises/data/repositories/exercises_rep
 import 'package:carlys_mobile/features/nutrition/presentation/controllers/water_controllers.dart';
 import 'package:carlys_mobile/features/profile/presentation/widgets/profile_plan_card.dart';
 import 'package:carlys_mobile/features/subscription/data/repositories/subscription_repository_impl.dart';
-import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -25,6 +24,7 @@ import 'fake_exercises_repository.dart';
 import 'fake_subscription_repository.dart';
 import 'fake_water_store.dart';
 import 'fake_workout_repository.dart';
+import 'local_data_overrides.dart';
 import 'navigation.dart';
 
 /// L'application complète, session ouverte, avec un abonnement factice.
@@ -46,7 +46,7 @@ Widget appWith({
     authRepositoryProvider.overrideWithValue(
       FakeAuthRepository(storedSession: true),
     ),
-    workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
+    ...localDataOverrides(),
     waterStoreProvider.overrideWithValue(FakeWaterStore()),
     syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
     appRestoreProvider.overrideWithValue(NoopAppRestore()),

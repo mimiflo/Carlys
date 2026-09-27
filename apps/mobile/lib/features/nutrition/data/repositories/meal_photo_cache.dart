@@ -104,8 +104,10 @@ class MealPhotoCache {
       '$mealId@${updatedAt.toUtc().toIso8601String()}';
 }
 
-/// UN cache pour toute l'application : il survit aux écrans, pas à la
-/// session (il vit en mémoire).
+/// UN cache pour toute l'application : il survit aux écrans, pas au compte.
+/// Il vit en mémoire, et la purge locale (`LocalAccountPurge`) le renouvelle
+/// à chaque changement de compte : sans elle, les photos privées du compte
+/// parti restaient en mémoire jusqu'à la fin du processus.
 final mealPhotoCacheProvider = Provider<MealPhotoCache>(
   (ref) => MealPhotoCache(ref.watch(nutritionRepositoryProvider)),
 );

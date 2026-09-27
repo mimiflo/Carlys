@@ -61,7 +61,7 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
           ),
         );
 
-    return query.watch().map((rows) {
+    return query.watch().distinct(_memesLignes).map((rows) {
       final workouts = _rows.groupRows(rows);
       if (workouts.isEmpty) {
         return null;
@@ -71,6 +71,29 @@ class WorkoutRepositoryImpl implements WorkoutRepository {
       );
       return workouts.first;
     });
+  }
+
+  /// La séance en cours se lit-elle sur les MÊMES lignes qu'avant ?
+  ///
+  /// Drift réémet à chaque écriture d'une table lue, sans comparer : le
+  /// rapatriement réémettait 60 fois `null`, le retour du réseau après une
+  /// séance hors ligne une trentaine de fois, et l'accueil, qui lit ce flux
+  /// à sa racine, se reconstruisait en entier à chaque fois. On compare les
+  /// LIGNES (les classes de Drift ont un `==` champ à champ), pas l'objet de
+  /// domaine : aucune liste de champs à tenir, rien d'affiché ne peut être
+  /// oublié, l'état de synchronisation d'une série compris.
+  bool _memesLignes(List<TypedResult> avant, List<TypedResult> apres) {
+    if (avant.length != apres.length) return false;
+    final seances = _db.localWorkoutSessions;
+    final series = _db.localWorkoutSets;
+    for (var i = 0; i < avant.length; i++) {
+      if (avant[i].readTable(seances) != apres[i].readTable(seances) ||
+          avant[i].readTableOrNull(series) !=
+              apres[i].readTableOrNull(series)) {
+        return false;
+      }
+    }
+    return true;
   }
 
   /// L'historique ne charge JAMAIS les séries : le nombre de séries et le

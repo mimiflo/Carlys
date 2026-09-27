@@ -48,8 +48,15 @@ class _ProgramCalendarScreenState extends ConsumerState<ProgramCalendarScreen> {
   /// ce qui était prévu, ce qui a été fait — puis propose. C'est ce qui rend
   /// atteignable la correction de celui qui s'est entraîné hors calendrier,
   /// et dont la case restait rouge sans recours.
-  Future<void> _openDay(ProgramCalendarDay day) async {
-    final geste = await showProgramCalendarDaySheet(context, day: day);
+  Future<void> _openDay(
+    ProgramCalendarDay day,
+    ProgramCalendarWeek week,
+  ) async {
+    final geste = await showProgramCalendarDaySheet(
+      context,
+      day: day,
+      week: week,
+    );
     if (geste == null || !mounted) {
       return;
     }
@@ -192,14 +199,18 @@ class _ProgramCalendarScreenState extends ConsumerState<ProgramCalendarScreen> {
                 child: Column(
                   children: [
                     for (final jour in calendrier.days) ...[
+                      // Un filet sans marge : chaque ligne porte déjà ses
+                      // 48 points de cible tactile.
                       if (jour.dayOfWeek > 1)
-                        const Divider(height: AppSpacing.sm, thickness: 0.5),
+                        const Divider(height: 1, thickness: 0.5),
                       ProgramCalendarDayRow(
                         day: jour,
                         isToday: jour.date == calendrier.today,
                         // Une case VIDE ne répond pas : une ligne qui répond
                         // au doigt sans rien faire se lit comme un défaut.
-                        onTap: jour.id == null ? null : () => _openDay(jour),
+                        onTap: jour.id == null
+                            ? null
+                            : () => _openDay(jour, calendrier),
                       ),
                     ],
                   ],

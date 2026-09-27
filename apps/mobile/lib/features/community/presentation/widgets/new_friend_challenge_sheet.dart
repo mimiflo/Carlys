@@ -18,20 +18,26 @@ const int friendChallengeMessageMaxLength = 280;
 ///
 /// La fin du défi n'est pas demandée : le serveur la CALCULE depuis la
 /// durée. Un écran qui l'enverrait poserait un défi éternel en une requête.
+///
+/// [initial] rouvre la feuille sur un brouillon dont l'envoi n'a pas
+/// abouti : la feuille était refermée avant l'envoi, et un échec perdait
+/// titre, mot et invités.
 Future<NewFriendChallenge?> showNewFriendChallengeSheet(
   BuildContext context, {
   required List<CommunityFriend> friends,
+  NewFriendChallenge? initial,
 }) {
   return showAppSheet<NewFriendChallenge>(
     context,
-    builder: (_) => _NewFriendChallengeForm(friends: friends),
+    builder: (_) => _NewFriendChallengeForm(friends: friends, initial: initial),
   );
 }
 
 class _NewFriendChallengeForm extends StatefulWidget {
-  const _NewFriendChallengeForm({required this.friends});
+  const _NewFriendChallengeForm({required this.friends, this.initial});
 
   final List<CommunityFriend> friends;
+  final NewFriendChallenge? initial;
 
   @override
   State<_NewFriendChallengeForm> createState() =>
@@ -39,13 +45,40 @@ class _NewFriendChallengeForm extends StatefulWidget {
 }
 
 class _NewFriendChallengeFormState extends State<_NewFriendChallengeForm> {
-  final _title = TextEditingController();
-  final _message = TextEditingController();
+  late final _title = TextEditingController(text: widget.initial?.title);
+  late final _message = TextEditingController(text: widget.initial?.message);
   final _formKey = GlobalKey<FormState>();
-  final Set<String> _invites = {};
 
-  ChallengeMetric _metric = ChallengeMetric.workouts;
-  int _duration = 7;
+  /// Seuls les amis ENCORE amis reviennent d'un brouillon : cocher un
+  /// identifiant que la liste ne montre plus enverrait un invité invisible.
+  late final Set<String> _invites = {
+    for (final id in widget.initial?.invitedUserIds ?? const <String>[])
+      if (widget.friends.any((ami) => ami.id == id)) id,
+  };
+
+  late ChallengeMetric _metric =
+      widget.initial?.metric ?? ChallengeMetric.workouts;
+  late int _duration = widget.initial?.durationDays ?? 7;
+
+  /// Le plafond du contrat est atteint : les autres amis ne se cochent plus.
+  /// Le serveur refusait le dixième en 400, et le brouillon était perdu.
+  bool get _complet => _invites.length >= friendChallengeMaxInvites;
+
+  /// Coche ou décoche. Au plafond, un ami de plus ne se coche pas, et le
+  /// geste DIT pourquoi : une pastille qui ne répond pas se lirait comme une
+  /// panne.
+  void _basculer(String amiId) {
+    if (_invites.contains(amiId)) {
+      setState(() => _invites.remove(amiId));
+    } else if (_complet) {
+      AppNotices.of(context).show(
+        '$friendChallengeMaxInvites amis au plus dans un défi : retire '
+        'quelqu’un pour en inviter un autre.',
+      );
+    } else {
+      setState(() => _invites.add(amiId));
+    }
+  }
 
   @override
   void dispose() {
@@ -87,6 +120,16 @@ class _NewFriendChallengeFormState extends State<_NewFriendChallengeForm> {
       ? 'Ton mot dépasse $friendChallengeMessageMaxLength caractères.'
       : null;
 
+  /// Même compte pour le titre : 80 points de code. Le champ, qui compte des
+  /// graphèmes, laissait passer 80 « 💪🏽 » — 160 points de code, refusés.
+  static String? _validateTitle(String? value) {
+    final titre = value?.trim() ?? '';
+    if (titre.isEmpty) return 'Donne un titre à ton défi.';
+    return titre.runes.length > friendChallengeTitleMaxLength
+        ? 'Ton titre dépasse $friendChallengeTitleMaxLength caractères.'
+        : null;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Form(
@@ -108,10 +151,8 @@ class _NewFriendChallengeFormState extends State<_NewFriendChallengeForm> {
               label: 'Titre du défi',
               controller: _title,
               hint: 'Qui court le plus ?',
-              maxLength: 80,
-              validator: (value) => (value?.trim().isEmpty ?? true)
-                  ? 'Donne un titre à ton défi.'
-                  : null,
+              maxLength: friendChallengeTitleMaxLength,
+              validator: _validateTitle,
             ),
             const SizedBox(height: AppSpacing.xs),
             // Facultatif : lu par les seuls invités, sur l'écran du défi.
@@ -176,14 +217,19 @@ class _NewFriendChallengeFormState extends State<_NewFriendChallengeForm> {
                       label: ami.displayName,
                       selected: _invites.contains(ami.id),
                       selectedTone: AppPillTone.primary,
-                      onTap: () => setState(() {
-                        if (!_invites.remove(ami.id)) {
-                          _invites.add(ami.id);
-                        }
-                      }),
+                      onTap: () => _basculer(ami.id),
                     ),
                 ],
               ),
+            if (_complet) ...[
+              const SizedBox(height: AppSpacing.xxs),
+              Text(
+                '$friendChallengeMaxInvites amis au plus dans un défi.',
+                style: AppTypography.label.copyWith(
+                  color: AppColors.darkTextTertiary,
+                ),
+              ),
+            ],
             const SizedBox(height: AppSpacing.md),
             SizedBox(
               width: double.infinity,

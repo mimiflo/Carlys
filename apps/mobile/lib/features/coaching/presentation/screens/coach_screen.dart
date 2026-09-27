@@ -7,6 +7,7 @@ import '../widgets/coach_header.dart';
 import '../widgets/coach_message_bubble.dart';
 import '../widgets/coach_notices.dart';
 import '../widgets/coach_proposal_card.dart';
+import '../widgets/coach_read_only_panel.dart';
 import '../widgets/coach_suggestions.dart';
 
 /// Écran du coach : une conversation qui se termine par une **action**.
@@ -25,6 +26,7 @@ class CoachScreen extends StatelessWidget {
     this.isOffline = false,
     this.isSending = false,
     this.notice,
+    this.onUnlock,
     super.key,
   });
 
@@ -43,6 +45,10 @@ class CoachScreen extends StatelessWidget {
   /// Refus explicite du serveur (plafond du jour, coach coupé). Jamais un
   /// message d'ambiance : s'il est là, c'est qu'un envoi a été refusé.
   final String? notice;
+
+  /// Présent quand le fil se RELIT sans plus s'écrire (coach réservé aux
+  /// abonnés) : le composeur cède la place à l'invitation qui y mène.
+  final VoidCallback? onUnlock;
 
   /// Part de la colonne qu'une bulle peut occuper. Au-delà, on ne lit plus une
   /// conversation mais un document : il faut voir que le bord est libre en
@@ -83,35 +89,47 @@ class CoachScreen extends StatelessWidget {
                     ),
             ),
             if (notice case final text?) CoachNotice(text: text),
-            if (suggestions.isNotEmpty && !isOffline) ...[
+            if (onUnlock case final unlock?)
               Padding(
                 padding: const EdgeInsets.fromLTRB(
                   AppSpacing.gutter,
                   0,
                   AppSpacing.gutter,
-                  AppSpacing.sm,
+                  AppSpacing.md,
                 ),
-                child: CoachSuggestions(
-                  suggestions: suggestions,
-                  onSelected: onSend,
+                child: CoachReadOnlyPanel(onUnlock: unlock),
+              )
+            else ...[
+              if (suggestions.isNotEmpty && !isOffline) ...[
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(
+                    AppSpacing.gutter,
+                    0,
+                    AppSpacing.gutter,
+                    AppSpacing.sm,
+                  ),
+                  child: CoachSuggestions(
+                    suggestions: suggestions,
+                    onSelected: onSend,
+                  ),
+                ),
+              ],
+              Padding(
+                padding: const EdgeInsets.fromLTRB(
+                  AppSpacing.gutter,
+                  0,
+                  AppSpacing.gutter,
+                  AppSpacing.md,
+                ),
+                child: CoachComposer(
+                  controller: composerController,
+                  onSend: onSend,
+                  onRetry: onRetry,
+                  isOffline: isOffline,
+                  isSending: isSending,
                 ),
               ),
             ],
-            Padding(
-              padding: const EdgeInsets.fromLTRB(
-                AppSpacing.gutter,
-                0,
-                AppSpacing.gutter,
-                AppSpacing.md,
-              ),
-              child: CoachComposer(
-                controller: composerController,
-                onSend: onSend,
-                onRetry: onRetry,
-                isOffline: isOffline,
-                isSending: isSending,
-              ),
-            ),
           ],
         ),
       ),

@@ -1,8 +1,9 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:uuid/uuid.dart';
 
 import '../../../../core/logging/app_logger.dart';
+import '../../../../core/utilities/creation_identity.dart';
 import '../../../../core/utilities/formatting.dart';
+import '../../../authentication/presentation/controllers/account_bound_cache.dart';
 
 import '../../data/repositories/community_repository_impl.dart';
 import '../../domain/entities/community.dart';
@@ -52,9 +53,11 @@ final sharesProgressProvider = FutureProvider.autoDispose<bool>((ref) {
 
 /// Mon code ami (forme canonique). Un code est attribué à VIE : pas
 /// d'auto-dispose, il ne changera pas sous les pieds de la feuille d'ajout.
-final myFriendCodeProvider = FutureProvider<String>((ref) {
-  return ref.watch(communityRepositoryProvider).myFriendCode();
-});
+/// Cache de compte : le code du compte parti ne se montre pas au suivant.
+final myFriendCodeProvider = accountBoundCache<String>(
+  (ref) => ref.watch(communityRepositoryProvider).myFriendCode(),
+  none: '',
+);
 
 /// Le dernier encouragement reçu — la « petite notif » de l'accueil.
 /// `null` tant qu'il n'y a rien à montrer : l'accueil masque alors sa carte.
@@ -73,11 +76,18 @@ final communityActionsProvider = Provider<CommunityActions>((ref) {
   return CommunityActions(ref);
 });
 
+/// L'identifiant du défi entre amis en cours de création, et son brouillon
+/// tant que l'envoi n'a pas abouti. Appartient au COMPTE : la purge locale le
+/// renouvelle (`LocalAccountPurge.accountOwnedProviders`).
+final friendChallengeCreationProvider =
+    Provider<CreationIdentity<NewFriendChallenge>>(
+      (ref) => CreationIdentity<NewFriendChallenge>(),
+    );
+
 class CommunityActions {
   CommunityActions(this._ref);
 
   static const _logger = AppLogger('CommunityActions');
-  static const _uuid = Uuid();
 
   final Ref _ref;
 
@@ -123,14 +133,23 @@ class CommunityActions {
     _ref.invalidate(communityChallengesProvider);
   }
 
-  /// Lance un défi à ses amis. L'identifiant naît ICI, sur l'appareil :
-  /// rejouer après une coupure ne pose pas un second défi.
+  /// Lance un défi à ses amis. L'identifiant naît sur l'appareil, et
+  /// SURVIT à l'échec : relancer le même brouillon après une réponse perdue
+  /// rejoue le même identifiant, et le serveur retombe sur le défi déjà
+  /// créé au lieu d'en poser un second (voir `CreationIdentity`).
   Future<void> createFriendChallenge(NewFriendChallenge challenge) async {
+    final creation = _ref.read(friendChallengeCreationProvider);
     await _ref
         .read(communityRepositoryProvider)
-        .createFriendChallenge(_uuid.v4(), challenge);
+        .createFriendChallenge(creation.idFor(challenge), challenge);
+    creation.settle();
     _ref.invalidate(friendChallengesProvider);
   }
+
+  /// Le brouillon du dernier défi dont l'envoi n'a pas abouti : la feuille
+  /// s'y rouvre, pour ne pas faire tout ressaisir.
+  NewFriendChallenge? get pendingFriendChallenge =>
+      _ref.read(friendChallengeCreationProvider).pendingDraft;
 
   /// Accepte une invitation : on entre au classement, à zéro.
   Future<void> acceptFriendChallenge(String challengeId) async {

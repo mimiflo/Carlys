@@ -1,6 +1,7 @@
 import 'package:carlys_mobile/app/router/app_routes.dart';
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/community/domain/entities/community.dart';
+import 'package:carlys_mobile/features/community/domain/entities/friend_challenge.dart';
 import 'package:carlys_mobile/features/community/presentation/providers/community_tab_state.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -152,6 +153,29 @@ void main() {
       expect(find.text('Sarah'), findsNothing);
     });
 
+    testWidgets('changer d’onglet à la main garde la recherche', (
+      tester,
+    ) async {
+      // On cherche Nora parmi les amis, puis on passe à la Ligue, où elle se
+      // trouve. Le changement d'onglet reconstruisait la page par le
+      // routeur, comme un raccourci : la loupe se refermait, « nora » perdu.
+      await openCommunity(tester, sampleWorldApp(), tab: 'Amis');
+      await tester.tap(find.byTooltip('Rechercher'));
+      await tester.pumpAndSettle();
+      await tester.enterText(find.byType(TextField), 'nora');
+      await tester.pumpAndSettle();
+
+      await showCommunityTab(tester, 'Ligue');
+
+      expect(find.byType(TextField), findsOneWidget);
+      expect(
+        tester.widget<TextField>(find.byType(TextField)).controller?.text,
+        'nora',
+      );
+      expect(find.text('Nora'), findsWidgets);
+      expect(find.text('Sarah'), findsNothing);
+    });
+
     testWidgets('dans les Défis, filtre par titre', (tester) async {
       await openCommunity(tester, sampleWorldApp());
 
@@ -189,6 +213,56 @@ void main() {
 
     expect(find.byType(TextField), findsNothing);
     expect(find.text('ENCOURAGEMENTS'), findsOneWidget);
+  });
+
+  testWidgets('cinq défis ouverts lancés : le sixième ne se propose pas', (
+    tester,
+  ) async {
+    // Le serveur refusait le sixième en 403, APRÈS qu'on avait tout saisi,
+    // et le message disait « réessaie ».
+    final community = FakeCommunityRepository(
+      friends: const [
+        CommunityFriend(
+          id: 'ami-1',
+          displayName: 'Sarah',
+          streakDays: 3,
+          weeklySessions: 2,
+          sharesProgress: true,
+        ),
+      ],
+    );
+    for (var index = 0; index < 5; index++) {
+      community.friendChallengeList.add(
+        FriendChallenge(
+          id: 'defi-$index',
+          title: 'Défi $index',
+          metric: ChallengeMetric.workouts,
+          unit: 'séances',
+          status: FriendChallengeStatus.open,
+          myStatus: FriendChallengeMemberStatus.accepted,
+          startsAt: DateTime.now().subtract(const Duration(days: 1)),
+          endsAt: DateTime.now().add(const Duration(days: 6)),
+          creatorDisplayName: 'Moi',
+          members: const [
+            FriendChallengeMember(
+              userId: 'moi',
+              displayName: 'Moi',
+              status: FriendChallengeMemberStatus.accepted,
+              contribution: 0,
+              isMe: true,
+              isCreator: true,
+            ),
+          ],
+        ),
+      );
+    }
+    await openCommunity(tester, appWith(community));
+
+    final defier = tester.widget<AppButton>(
+      find.widgetWithText(AppButton, 'Défier mes amis'),
+    );
+    expect(defier.onPressed, isNull);
+    expect(find.textContaining('Tu as déjà 5 défis en cours'), findsOneWidget);
   });
 
   testWidgets('amis en panne, défis là : la feuille ne dit pas « pas d’ami »', (

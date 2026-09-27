@@ -12,9 +12,15 @@ enum DevicePlatform {
 /// Familles de notifications réglables séparément. Une bascule unique
 /// couperait le lien social en même temps que tout le reste, alors qu'on ne
 /// refuse pas les deux pour les mêmes raisons.
+///
+/// Les TROIS du contrat (`notificationCategorySchema`), et un test le tient :
+/// la troisième, les invitations à un défi, manquait. Le serveur la rendait,
+/// l'appli la jetait comme venue « d'un serveur plus récent », et personne
+/// ne pouvait couper les invitations sans couper tout le reste.
 enum NotificationCategory {
   friendRequests('FRIEND_REQUESTS', 'Demandes d’ami'),
-  encouragements('ENCOURAGEMENTS', 'Encouragements');
+  encouragements('ENCOURAGEMENTS', 'Encouragements'),
+  challengeInvites('CHALLENGE_INVITES', 'Invitations à un défi');
 
   const NotificationCategory(this.wire, this.label);
 

@@ -145,6 +145,10 @@ final class ForbiddenException extends AppException {
 }
 
 /// Données saisies invalides (validation serveur ou locale).
+///
+/// SANS statut HTTP, c'est un refus LOCAL, décidé avant tout envoi : son
+/// [message] est alors une phrase écrite pour la personne, et les écrans
+/// l'affichent telle quelle (`refusalSentence`).
 final class ValidationException extends AppException {
   const ValidationException(
     super.message, {

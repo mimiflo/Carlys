@@ -80,7 +80,10 @@ class FirebasePushMessenger implements PushMessenger {
       .cast<PushNotice>();
 
   @override
-  Future<void> deleteToken() => FirebaseMessaging.instance.deleteToken();
+  Future<void> deleteToken(FirebasePushOptions options) async {
+    await _ensureInitialized(options);
+    await FirebaseMessaging.instance.deleteToken();
+  }
 }
 
 final pushMessengerProvider = Provider<PushMessenger>(

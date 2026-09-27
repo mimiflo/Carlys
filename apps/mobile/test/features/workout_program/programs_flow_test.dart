@@ -7,8 +7,6 @@ import 'package:carlys_mobile/features/authentication/data/repositories/auth_rep
 import 'package:carlys_mobile/features/nutrition/presentation/controllers/water_controllers.dart';
 import 'package:carlys_mobile/features/workout_program/data/repositories/program_repository_impl.dart';
 import 'package:carlys_mobile/features/workout_program/domain/entities/program.dart';
-import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';
-import 'package:carlys_mobile/features/workout_template/data/repositories/workout_template_repository_impl.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -18,7 +16,7 @@ import '../../support/fake_program_repository.dart';
 import '../../support/fake_water_store.dart';
 import '../../support/fake_workout_repository.dart';
 import '../../support/first_run_prefs.dart';
-import '../../support/in_memory_workout_template_repository.dart';
+import '../../support/local_data_overrides.dart';
 import '../../support/navigation.dart';
 
 /// Les programmes multi-semaines dans l'application : liste, création,
@@ -42,7 +40,6 @@ void main() {
     WidgetTester tester,
     FakeProgramRepository programs,
   ) async {
-    final workouts = FakeWorkoutRepository();
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
@@ -55,12 +52,9 @@ void main() {
           authRepositoryProvider.overrideWithValue(
             FakeAuthRepository(storedSession: true),
           ),
-          workoutRepositoryProvider.overrideWithValue(workouts),
           // Les modèles de la feuille d'affectation (Push force, Pull,
           // Hypertrophie) viennent du seed de démonstration.
-          workoutTemplateRepositoryProvider.overrideWithValue(
-            InMemoryWorkoutTemplateRepository(workouts),
-          ),
+          ...localDataOverrides(),
           programRepositoryProvider.overrideWithValue(programs),
           waterStoreProvider.overrideWithValue(FakeWaterStore()),
           syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),

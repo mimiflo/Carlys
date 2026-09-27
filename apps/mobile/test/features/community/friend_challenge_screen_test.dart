@@ -83,7 +83,9 @@ void main() {
 
     await voir(tester, find.text('Message de Léa'));
     expect(find.textContaining('Allez on y va !'), findsOneWidget);
-    expect(find.textContaining('Aujourd’hui, '), findsOneWidget);
+    // L'heure est celle de la maquette, posée en dur : le rendu ne dépend
+    // pas de la minute où tourne le test (capture 35c comparable).
+    expect(find.textContaining('Aujourd’hui, 08h24'), findsOneWidget);
   });
 
   testWidgets('accepter : le geste le dit, et j’entre au classement', (
@@ -116,6 +118,29 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.byType(FriendChallengeScreen), findsNothing);
+    expect(find.text('Cinq séances cette semaine'), findsNothing);
+  });
+
+  testWidgets('revenir pendant le refus : rien ne casse quand il aboutit', (
+    tester,
+  ) async {
+    // Réseau lent : on touche « Refuser », puis on revient à la Communauté
+    // avant la réponse. À la réponse, l'écran se refermait depuis un élément
+    // déjà désactivé : l'erreur s'échappait sans être gérée.
+    final community = _RefusLent();
+    await ouvrir(tester, sampleWorldApp(community: community));
+
+    await voir(tester, find.text('Refuser'));
+    await tester.tap(find.text('Refuser'));
+    await tester.pump();
+    GoRouter.of(tester.element(find.byType(FriendChallengeScreen))).pop();
+    await tester.pumpAndSettle();
+    expect(find.byType(FriendChallengeScreen), findsNothing);
+
+    community.reponse.complete();
+    await tester.pumpAndSettle();
+
+    expect(tester.takeException(), isNull);
     expect(find.text('Cinq séances cette semaine'), findsNothing);
   });
 
@@ -208,4 +233,15 @@ void main() {
     expect(find.byType(FriendChallengeScreen), findsOneWidget);
     expect(find.text('Léa te défie'), findsOneWidget);
   });
+}
+
+/// Un refus dont la réponse attend que le test la libère.
+class _RefusLent extends InMemoryCommunityRepository {
+  final reponse = Completer<void>();
+
+  @override
+  Future<void> declineFriendChallenge(String challengeId) async {
+    await reponse.future;
+    return super.declineFriendChallenge(challengeId);
+  }
 }

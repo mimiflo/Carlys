@@ -83,7 +83,7 @@ class FoodSearchController extends AutoDisposeNotifier<FoodSearchState> {
   /// À chaque frappe. Sous deux caractères, rien ne part, et une requête en
   /// vol est oubliée : sa réponse ne correspondrait plus au champ.
   void search(String text) {
-    final query = text.trim();
+    final query = _bounded(text.trim());
     if (query.length < MealBounds.foodSearchMinLength) {
       _debounce.cancel();
       _generation++;
@@ -98,6 +98,21 @@ class FoodSearchController extends AutoDisposeNotifier<FoodSearchState> {
       return;
     }
     _debounce.run(() => unawaited(_run(query)));
+  }
+
+  /// Un libellé collé (celui d'un emballage) dépasse souvent la borne du
+  /// serveur : il se cherche par son DÉBUT. Refusé en 400, il passait la
+  /// feuille en échec, et « Réessayer » renvoyait la même requête refusée.
+  /// Compté en points de code, jamais moins que le serveur : un émoji n'y
+  /// coupe pas un caractère en deux.
+  static String _bounded(String query) {
+    final runes = query.runes;
+    if (runes.length <= MealBounds.foodSearchMaxLength) {
+      return query;
+    }
+    return String.fromCharCodes(
+      runes.take(MealBounds.foodSearchMaxLength),
+    ).trim();
   }
 
   /// Relance la dernière recherche, tout de suite (« Réessayer »).

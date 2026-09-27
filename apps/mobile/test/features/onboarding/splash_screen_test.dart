@@ -12,18 +12,17 @@ import 'package:carlys_mobile/features/onboarding/presentation/widgets/athlete_p
 import 'package:carlys_mobile/features/onboarding/presentation/widgets/brand_signature.dart';
 import 'package:carlys_mobile/features/onboarding/presentation/widgets/splash_brand_intro.dart';
 import 'package:carlys_mobile/features/progress/data/repositories/progress_repository_impl.dart';
-import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';
-import 'package:carlys_mobile/features/workout_template/data/repositories/workout_template_repository_impl.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 import '../../support/fake_auth_repository.dart';
 import '../../support/fake_progress_repository.dart';
 import '../../support/fake_water_store.dart';
 import '../../support/fake_workout_repository.dart';
 import '../../support/first_run_prefs.dart';
-import '../../support/in_memory_workout_template_repository.dart';
+import '../../support/local_data_overrides.dart';
 
 /// PAGE DE CHARGEMENT : la marque s'installe, puis s'efface d'elle-même.
 ///
@@ -50,14 +49,11 @@ void main() {
       authRepositoryProvider.overrideWithValue(
         FakeAuthRepository(storedSession: storedSession),
       ),
-      workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
       // L'accueil lit les modèles enregistrés et les records personnels.
       // Sans dépôts factices, ces lectures partent au réseau et laissent
       // un minuteur en vol après la fin du test — l'écran est plus dense
       // qu'avant, donc la liste paresseuse les atteint désormais.
-      workoutTemplateRepositoryProvider.overrideWithValue(
-        InMemoryWorkoutTemplateRepository(FakeWorkoutRepository()),
-      ),
+      ...localDataOverrides(),
       progressRepositoryProvider.overrideWithValue(FakeProgressRepository()),
       waterStoreProvider.overrideWithValue(FakeWaterStore()),
       syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
@@ -98,33 +94,53 @@ void main() {
     expect(find.byType(HomeScreen), findsOneWidget);
   });
 
-  testWidgets('la photographie de bienvenue se précharge pendant le plancher', (
-    tester,
-  ) async {
-    // LA PANNE GARDÉE : le cliché de la page de bienvenue (1,4 Mo) se
-    // décodait au moment où la route se poussait — il apparaissait en
-    // retard, au milieu de la transition. Le décodage doit être LANCÉ dès
-    // l'écran de démarrage, pour aboutir pendant le plancher.
-    await tester.pumpWidget(app());
-    await tester.pump();
-
-    // `runAsync` : la résolution d'un AssetImage et son décodage passent par
-    // du vrai asynchrone, que l'horloge factice des tests ne fait pas
-    // avancer. `containsKey` est vrai dès l'entrée EN COURS de chargement —
-    // c'est le lancement pendant le splash qui est gardé, pas la durée du
-    // décodage.
-    await tester.runAsync(() async {
+  /// Le cliché de la page de bienvenue est-il en cache (ou en train d'y
+  /// entrer) ? `runAsync` : la résolution d'un AssetImage passe par du vrai
+  /// asynchrone, que l'horloge factice des tests ne fait pas avancer.
+  /// `containsKey` est vrai dès l'entrée EN COURS de chargement : c'est le
+  /// LANCEMENT pendant le splash qui se vérifie, pas la durée du décodage.
+  Future<bool> clicheEnCache(WidgetTester tester) async {
+    return (await tester.runAsync(() async {
       final key = await const AssetImage(
         AthletePhoto.asset,
       ).obtainKey(ImageConfiguration.empty);
-      expect(
-        imageCache.containsKey(key),
-        isTrue,
-        reason:
-            'le cliché de la page de bienvenue doit se précharger '
-            'dès l’écran de démarrage',
-      );
-    });
+      return imageCache.containsKey(key);
+    }))!;
+  }
+
+  testWidgets('premier lancement : la photographie de bienvenue se '
+      'précharge pendant le plancher', (tester) async {
+    // LA PANNE GARDÉE : le cliché de la page de bienvenue se décodait au
+    // moment où la route se poussait — il apparaissait en retard, au milieu
+    // de la transition. Le décodage doit être LANCÉ dès l'écran de démarrage.
+    SharedPreferences.setMockInitialValues({});
+    imageCache
+      ..clear()
+      ..clearLiveImages();
+    await tester.pumpWidget(app(storedSession: false));
+    await tester.pump();
+    await tester.pump();
+
+    expect(
+      await clicheEnCache(tester),
+      isTrue,
+      reason: 'le premier parcours s’ouvre sur la page de bienvenue',
+    );
+    expect(find.byType(SplashScreen), findsOneWidget);
+  });
+
+  testWidgets('l’habitué ne précharge pas une photographie qu’il ne verra '
+      'pas', (tester) async {
+    // Parcours terminé, session stockée : l'accueil, directement. Le cliché
+    // coûtait 6 Mio d'image décodée à chaque démarrage, pour rien.
+    imageCache
+      ..clear()
+      ..clearLiveImages();
+    await tester.pumpWidget(app());
+    await tester.pump();
+    await tester.pump();
+
+    expect(await clicheEnCache(tester), isFalse);
     expect(find.byType(SplashScreen), findsOneWidget);
   });
 

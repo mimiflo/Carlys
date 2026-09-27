@@ -7,7 +7,6 @@ import 'package:carlys_mobile/features/authentication/data/repositories/auth_rep
 import 'package:carlys_mobile/features/carlys_profile/data/repositories/carlys_profile_repository_impl.dart';
 import 'package:carlys_mobile/features/community/data/repositories/community_repository_impl.dart';
 import 'package:carlys_mobile/features/nutrition/presentation/controllers/water_controllers.dart';
-import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -19,6 +18,7 @@ import '../../support/fake_water_store.dart';
 import '../../support/fake_workout_repository.dart';
 import '../../support/first_run_prefs.dart';
 import '../../support/in_memory_account_repositories.dart';
+import '../../support/local_data_overrides.dart';
 import '../../support/navigation.dart';
 
 /// Les 4 profils Carlys : des identités, pas des niveaux — on les découvre
@@ -40,7 +40,7 @@ Widget worldApp() {
       carlysProfileRepositoryProvider.overrideWithValue(
         InMemoryCarlysProfileRepository(auth),
       ),
-      workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
+      ...localDataOverrides(),
       communityRepositoryProvider.overrideWithValue(FakeCommunityRepository()),
       waterStoreProvider.overrideWithValue(FakeWaterStore()),
       syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
@@ -61,7 +61,7 @@ Widget appWith(FakeCarlysProfileRepository repository) => ProviderScope(
     authRepositoryProvider.overrideWithValue(
       FakeAuthRepository(storedSession: true),
     ),
-    workoutRepositoryProvider.overrideWithValue(FakeWorkoutRepository()),
+    ...localDataOverrides(),
     communityRepositoryProvider.overrideWithValue(FakeCommunityRepository()),
     waterStoreProvider.overrideWithValue(FakeWaterStore()),
     syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),

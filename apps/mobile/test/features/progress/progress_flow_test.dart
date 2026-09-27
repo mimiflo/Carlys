@@ -11,8 +11,6 @@ import 'package:carlys_mobile/features/progress/presentation/widgets/body_weight
 import 'package:carlys_mobile/features/progress/presentation/widgets/body_weight_latest.dart';
 import 'package:carlys_mobile/features/progress/presentation/widgets/progress_first_steps.dart';
 import 'package:carlys_mobile/features/progress/presentation/widgets/progress_tiles.dart';
-import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';
-import 'package:carlys_mobile/features/workout_template/data/repositories/workout_template_repository_impl.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -22,13 +20,12 @@ import '../../support/fake_progress_repository.dart';
 import '../../support/fake_water_store.dart';
 import '../../support/fake_workout_repository.dart';
 import '../../support/first_run_prefs.dart';
-import '../../support/in_memory_workout_template_repository.dart';
+import '../../support/local_data_overrides.dart';
 
 /// Monte l'application avec TOUS ses dépôts en mémoire : l'amorçage du
 /// premier jour pousse l'écran des modèles, qui lit le dépôt de modèles —
 /// sans le substituer, une vraie base s'ouvre et l'écran charge sans fin.
 Widget appWith(FakeProgressRepository progress) {
-  final workouts = FakeWorkoutRepository();
   return ProviderScope(
     overrides: [
       appEnvironmentProvider.overrideWithValue(
@@ -40,10 +37,7 @@ Widget appWith(FakeProgressRepository progress) {
       authRepositoryProvider.overrideWithValue(
         FakeAuthRepository(storedSession: true),
       ),
-      workoutRepositoryProvider.overrideWithValue(workouts),
-      workoutTemplateRepositoryProvider.overrideWithValue(
-        InMemoryWorkoutTemplateRepository(workouts),
-      ),
+      ...localDataOverrides(),
       waterStoreProvider.overrideWithValue(FakeWaterStore()),
       syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
       appRestoreProvider.overrideWithValue(NoopAppRestore()),
