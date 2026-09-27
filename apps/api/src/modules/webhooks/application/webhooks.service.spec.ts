@@ -4,6 +4,7 @@ import { type PinoLogger } from 'nestjs-pino';
 import { type AppConfigService } from '../../../config/app-config.service';
 import { type EntitlementsService } from '../../subscriptions/application/entitlements.service';
 import { type SubscriptionsRepository } from '../../subscriptions/infrastructure/subscriptions.repository';
+import { type UsersRepository } from '../../users/infrastructure/users.repository';
 import { WebhooksService } from './webhooks.service';
 
 const SECRET = 'whsec_test_0123456789abcdef';
@@ -18,6 +19,8 @@ interface Stubs {
     markEventFailed: jest.Mock;
   };
   entitlements: { syncFromSubscription: jest.Mock };
+  /** `findActiveById` : le compte nommé existe-t-il encore, non supprimé ? */
+  users: { findActiveById: jest.Mock };
 }
 
 function buildStubs(): Stubs {
@@ -38,6 +41,7 @@ function buildStubs(): Stubs {
       markEventFailed: jest.fn().mockResolvedValue(undefined),
     },
     entitlements: { syncFromSubscription: jest.fn().mockResolvedValue(undefined) },
+    users: { findActiveById: jest.fn().mockResolvedValue({ id: USER_ID }) },
   };
 }
 
@@ -57,6 +61,7 @@ function buildService(
   return new WebhooksService(
     stubs.repository as unknown as SubscriptionsRepository,
     stubs.entitlements as unknown as EntitlementsService,
+    stubs.users as unknown as UsersRepository,
     config as unknown as AppConfigService,
     logger as unknown as PinoLogger,
   );
@@ -130,6 +135,57 @@ describe('WebhooksService', () => {
     );
     expect(stubs.entitlements.syncFromSubscription).toHaveBeenCalled();
     expect(stubs.repository.markEventProcessed).toHaveBeenCalledWith('event-1', 'sub-1');
+    // Le compte nommé est recopié sur l'événement : c'est par lui que la
+    // purge le retrouvera, même si la projection échoue.
+    expect(stubs.repository.recordEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: USER_ID }),
+    );
+  });
+
+  it('compte supprimé ou déjà effacé : acquitté, ni appliqué ni GARDÉ', async () => {
+    // Supprimer son compte ne résilie pas l'abonnement : les renouvellements
+    // arrivent encore. Après la purge, la projection recréait l'abonnement
+    // d'un compte disparu (clé étrangère, 503, réémission en boucle), et la
+    // charge utile brute restait en base pour toujours.
+    const stubs = buildStubs();
+    stubs.users.findActiveById.mockResolvedValue(null);
+    const service = buildService(stubs);
+    const body = stripeBody();
+
+    const ack = await service.handleStripe(body, signedHeader(body));
+
+    expect(ack).toEqual({ received: true });
+    expect(stubs.users.findActiveById).toHaveBeenCalledWith(USER_ID);
+    expect(stubs.repository.recordEvent).not.toHaveBeenCalled();
+    expect(stubs.repository.upsertSubscription).not.toHaveBeenCalled();
+  });
+
+  it('événement hors abonnement ou type non suivi : acquitté sans être gardé', async () => {
+    // Une facture ou une session de paiement porte l'adresse, le nom et
+    // l'adresse postale du client : rien à projeter, donc rien à retenir.
+    const stubs = buildStubs();
+    const service = buildService(stubs);
+    const facture = Buffer.from(
+      JSON.stringify({
+        id: 'evt_facture',
+        type: 'invoice.paid',
+        data: { object: { id: 'in_1', customer_email: 'personne@exemple.fr' } },
+      }),
+    );
+    const prolongation = Buffer.from(
+      JSON.stringify({
+        event: { id: 'rc_ext', type: 'SUBSCRIPTION_EXTENDED', app_user_id: USER_ID },
+      }),
+    );
+
+    await expect(service.handleStripe(facture, signedHeader(facture))).resolves.toEqual({
+      received: true,
+    });
+    await expect(service.handleRevenueCat(prolongation, `Bearer ${SECRET}`)).resolves.toEqual({
+      received: true,
+    });
+
+    expect(stubs.repository.recordEvent).not.toHaveBeenCalled();
   });
 
   it('rejouer un événement déjà traité ne retraite rien (idempotence)', async () => {

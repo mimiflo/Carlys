@@ -4,15 +4,18 @@ import {
   ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common';
-import { PaymentProvider, type Prisma } from '@prisma/client';
+import { PaymentProvider, type Prisma, type SubscriptionStatus } from '@prisma/client';
 import { timingSafeEqual } from 'node:crypto';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { AppConfigService } from '../../../config/app-config.service';
 import { EntitlementsService } from '../../subscriptions/application/entitlements.service';
 import { SubscriptionsRepository } from '../../subscriptions/infrastructure/subscriptions.repository';
+import { UsersRepository } from '../../users/infrastructure/users.repository';
 import {
   mapRevenueCatType,
   mapStripeStatus,
+  namedAccount,
+  UUID_PATTERN,
   type RevenueCatEvent,
   revenueCatEventSchema,
   type StripeEvent,
@@ -26,8 +29,6 @@ export interface WebhookAck {
   /** true : événement déjà traité — rejoué sans effet (idempotence). */
   duplicate?: true;
 }
-
-const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 function secondsToDate(seconds: number | null | undefined): Date | null {
   return typeof seconds === 'number' ? new Date(seconds * 1_000) : null;
@@ -43,6 +44,7 @@ export class WebhooksService {
   constructor(
     private readonly subscriptions: SubscriptionsRepository,
     private readonly entitlements: EntitlementsService,
+    private readonly users: UsersRepository,
     private readonly config: AppConfigService,
     @InjectPinoLogger(WebhooksService.name)
     private readonly logger: PinoLogger,
@@ -58,8 +60,14 @@ export class WebhooksService {
     }
 
     const { json, data: event } = this.parse(rawBody, stripeEventSchema);
-    return this.ingest(PaymentProvider.STRIPE, event.id, event.type, json, () =>
-      this.projectStripe(event),
+    if (!event.type.startsWith('customer.subscription.')) {
+      return { received: true }; // Facture, paiement… : rien à projeter, rien à GARDER.
+    }
+    return this.ingest(
+      { provider: PaymentProvider.STRIPE, externalEventId: event.id, eventType: event.type },
+      json,
+      namedAccount(event.data.object.metadata?.['userId']),
+      () => this.projectStripe(event),
     );
   }
 
@@ -73,8 +81,16 @@ export class WebhooksService {
     }
 
     const { json, data: payload } = this.parse(rawBody, revenueCatEventSchema);
-    return this.ingest(PaymentProvider.REVENUECAT, payload.event.id, payload.event.type, json, () =>
-      this.projectRevenueCat(payload),
+    const status = mapRevenueCatType(payload.event.type, payload.event.period_type);
+    if (status === null) {
+      return { received: true }; // Type non suivi : rien à projeter, rien à garder.
+    }
+    const { id: externalEventId, type: eventType } = payload.event;
+    return this.ingest(
+      { provider: PaymentProvider.REVENUECAT, externalEventId, eventType },
+      json,
+      namedAccount(payload.event.app_user_id),
+      () => this.projectRevenueCat(payload, status),
     );
   }
 
@@ -93,19 +109,29 @@ export class WebhooksService {
    * APPLIQUÉ. Rien d'autre ne rejouait, et `processingError` n'était lu par
    * personne : un paiement encaissé dont la projection échouait laissait le
    * compte gratuit, définitivement et sans un mot.
+   *
+   * UN COMPTE SUPPRIMÉ N'A PLUS DE WEBHOOK (acquitté, ni appliqué ni gardé) :
+   * la suppression ne résilie pas chez le fournisseur, et chaque échéance
+   * après la purge violait la clé étrangère (503 en boucle, charge gardée).
    */
   private async ingest(
-    provider: PaymentProvider,
-    externalEventId: string,
-    eventType: string,
+    source: { provider: PaymentProvider; externalEventId: string; eventType: string },
     payload: unknown,
-    project: () => Promise<string | null>,
+    userId: string | null,
+    project: () => Promise<string>,
   ): Promise<WebhookAck> {
+    const { provider, externalEventId, eventType } = source;
+    if (userId !== null && (await this.users.findActiveById(userId)) === null) {
+      this.logger.warn(
+        { provider, externalEventId, eventType },
+        'Webhook pour un compte supprimé — acquitté, ni appliqué ni gardé',
+      );
+      return { received: true };
+    }
     const { created, event } = await this.subscriptions.recordEvent({
-      provider,
-      externalEventId,
-      eventType,
+      ...source,
       payload: payload as Prisma.InputJsonValue,
+      userId,
     });
     if (!created && event.processedAt !== null) {
       return { received: true, duplicate: true };
@@ -137,10 +163,7 @@ export class WebhooksService {
     return { received: true };
   }
 
-  private async projectStripe(event: StripeEvent): Promise<string | null> {
-    if (!event.type.startsWith('customer.subscription.')) {
-      return null; // Événement hors abonnement : accusé de réception, rien à projeter.
-    }
+  private async projectStripe(event: StripeEvent): Promise<string> {
     const object = event.data.object;
     const userId = object.metadata?.['userId'];
     if (userId === undefined || !UUID_PATTERN.test(userId)) {
@@ -182,12 +205,11 @@ export class WebhooksService {
     return subscription.id;
   }
 
-  private async projectRevenueCat(payload: RevenueCatEvent): Promise<string | null> {
+  private async projectRevenueCat(
+    payload: RevenueCatEvent,
+    status: SubscriptionStatus,
+  ): Promise<string> {
     const event = payload.event;
-    const status = mapRevenueCatType(event.type, event.period_type);
-    if (status === null) {
-      return null; // Type d'événement non suivi : accusé de réception simple.
-    }
     if (!UUID_PATTERN.test(event.app_user_id)) {
       throw new PermanentWebhookError(
         'app_user_id RevenueCat invalide (UUID utilisateur attendu).',

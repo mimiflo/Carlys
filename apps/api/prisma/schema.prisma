@@ -187,8 +187,8 @@ model UserCredential {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
-/// Connexion via fournisseur externe (Apple, Google) — endpoints à venir,
-/// le modèle fixe dès maintenant la contrainte d'unicité.
+/// Connexion via fournisseur externe (Apple, Google) — `POST /auth/social`
+/// (SocialAuthService) ; une identité par couple (fournisseur, `sub`).
 enum ExternalIdentityProvider {
   APPLE
   GOOGLE
@@ -229,6 +229,8 @@ model UserSession {
 
   user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
   refreshTokens RefreshToken[]
+  /// Jetons push enregistrés depuis cette session : ils tombent avec elle.
+  deviceTokens  DeviceToken[]
 
   @@index([userId])
 }
@@ -762,6 +764,9 @@ model PersonalRecord {
 
   @@unique([userId, exerciseName, recordType])
   @@index([userId, achievedAt])
+  /// Sert le `SET NULL` quand une séance part : sans lui, effacer un compte
+  /// balayait toute la table une fois PAR SÉANCE (voir la purge des comptes).
+  @@index([sessionId])
 }
 
 /// Ce qu'un franchissement peut être.
@@ -953,11 +958,18 @@ model SubscriptionEvent {
   processedAt     DateTime?
   processingError String?
   subscriptionId  String?         @db.Uuid
+  /// Le compte que l'événement NOMME (`metadata.userId` Stripe, `app_user_id`
+  /// RevenueCat), recopié à la réception. Sans clé étrangère, exprès : un
+  /// événement dont la projection a échoué n'est rattaché à aucun abonnement,
+  /// et c'est par cette colonne seule que la purge d'un compte le retrouve.
+  userId          String?         @db.Uuid
 
   subscription Subscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
 
   @@unique([provider, externalEventId])
   @@index([receivedAt])
+  @@index([subscriptionId])
+  @@index([userId])
 }
 
 /// Source de vérité SERVEUR des droits effectifs, matérialisée pour une
@@ -977,6 +989,7 @@ model UserEntitlement {
 
   @@unique([userId, entitlementKey])
   @@index([userId, isActive])
+  @@index([sourceSubscriptionId])
 }
 
 // ────────────────────────── Administration (Étape 7) ──────────────────────────
@@ -1114,6 +1127,8 @@ model CoachSessionProposal {
   message  CoachMessage               @relation(fields: [messageId], references: [id], onDelete: Cascade)
   template WorkoutTemplate?           @relation(fields: [sourceTemplateId], references: [id], onDelete: SetNull)
   items    CoachSessionProposalItem[]
+
+  @@index([sourceTemplateId])
 }
 
 /// Série proposée — MÊME FORME que `WorkoutSessionPlanItem`, volontairement :
@@ -1565,6 +1580,7 @@ model Encouragement {
   reports   CommunityReport[]
 
   @@index([recipientId, createdAt(sort: Desc)])
+  @@index([senderId])
 }
 
 /// Blocage : décision UNILATÉRALE et opaque. Bloquer retire l'amitié et les
@@ -1638,6 +1654,9 @@ model CommunityReport {
 
   @@index([status, createdAt(sort: Desc)])
   @@index([reportedUserId])
+  @@index([reporterId])
+  @@index([encouragementId])
+  @@index([friendChallengeId])
 }
 
 enum ChallengeKind {
@@ -1777,17 +1796,28 @@ enum DevicePlatform {
 /// Un jeton appartient à UN utilisateur à la fois : se connecter avec un
 /// autre compte sur le même appareil réaffecte le jeton (upsert par `token`).
 /// Les jetons invalidés par FCM sont purgés au fil des envois.
+///
+/// Et il appartient à la SESSION qui l'a enregistré : révoquer une session
+/// (appareil déconnecté à distance, mot de passe changé ou réinitialisé,
+/// compte repris par la connexion sociale, suspension) supprime ses jetons.
+/// Sans ce lien, un téléphone perdu et déconnecté affichait encore les
+/// encouragements sur son écran verrouillé. `null` : jeton enregistré avant
+/// ce lien ; il tombe à la première révocation qui touche le compte, et
+/// l'appareil le réenregistre, rattaché, à son prochain démarrage.
 model DeviceToken {
   id        String         @id @default(uuid()) @db.Uuid
   userId    String         @db.Uuid
+  sessionId String?        @db.Uuid
   token     String         @unique
   platform  DevicePlatform
   createdAt DateTime       @default(now())
   updatedAt DateTime       @updatedAt
 
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user    User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  session UserSession? @relation(fields: [sessionId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([sessionId])
 }
 
 /// Ce qu'une personne accepte de recevoir, par CATÉGORIE.

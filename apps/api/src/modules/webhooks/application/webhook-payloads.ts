@@ -53,6 +53,16 @@ export const revenueCatEventSchema = z.object({
 });
 export type RevenueCatEvent = z.infer<typeof revenueCatEventSchema>;
 
+export const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/**
+ * Le compte qu'une charge utile NOMME (`metadata.userId`, `app_user_id`),
+ * s'il a la forme d'un UUID ; `null` sinon.
+ */
+export function namedAccount(value: string | undefined): string | null {
+  return value !== undefined && UUID_PATTERN.test(value) ? value : null;
+}
+
 /** Statut Stripe → statut interne. */
 export function mapStripeStatus(status: string | undefined): SubscriptionStatus {
   switch (status) {

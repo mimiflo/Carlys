@@ -185,6 +185,8 @@ export class SubscriptionsRepository {
     externalEventId: string;
     eventType: string;
     payload: Prisma.InputJsonValue;
+    /** Le compte que l'événement nomme, s'il en nomme un (voir le schéma). */
+    userId: string | null;
   }): Promise<RecordEventResult> {
     try {
       const event = await this.prisma.subscriptionEvent.create({ data: input });
