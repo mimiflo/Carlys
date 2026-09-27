@@ -5,6 +5,7 @@
   "description": "Contrats d'API Carlys — schémas Zod et types partagés des enveloppes de réponse",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "sideEffects": false,
   "files": [
     "dist"
   ],

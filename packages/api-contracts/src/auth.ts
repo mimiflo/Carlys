@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from './password-limits';
 
 /** Contrats du domaine authentification (/api/v1/auth, /api/v1/users/me). */
 
@@ -84,9 +85,8 @@ export const authSessionSchema = z.object({
 
 export type AuthSession = z.infer<typeof authSessionSchema>;
 
-/** Contraintes de mot de passe — compatibles gestionnaires de mots de passe. */
-export const PASSWORD_MIN_LENGTH = 10;
-export const PASSWORD_MAX_LENGTH = 128;
+/** Contraintes de mot de passe : voir `password-limits.ts` (module sans Zod). */
+export { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from './password-limits';
 
 export const registerRequestSchema = z.object({
   email: z.string().email(),

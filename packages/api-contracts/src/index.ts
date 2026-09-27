@@ -1,3 +1,4 @@
+export * from './academy';
 export * from './admin';
 export * from './auth';
 export * from './coach';
