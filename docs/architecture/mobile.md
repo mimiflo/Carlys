@@ -44,7 +44,7 @@ lib/
 ├── design_system/                # Source unique des valeurs visuelles
 │   ├── design_system.dart        # Barrel : seul import autorisé depuis les écrans
 │   ├── colors/ · typography/ · spacing/ · radius/ · shadows/ · motion/ · icons/
-│   ├── theme/                    # AppTheme (clair/sombre/OLED), AppColorSchemes, AppBreakpoints
+│   ├── theme/                    # AppTheme (sombre/OLED), AppColorSchemes, AppBreakpoints
 │   └── components/               # AppButton, AppLoadingIndicator, AppErrorState, AppEmptyState
 ├── features/                     # Fonctionnalités en tranches verticales
 │   ├── README.md                 # Structure data/domain/presentation détaillée
@@ -300,7 +300,7 @@ Fondations actuelles :
 
 | Classe            | Rôle                                                                 |
 | ----------------- | -------------------------------------------------------------------- |
-| `AppColors`       | Palette (marque, neutres, sémantiques, surfaces clair/sombre/OLED)   |
+| `AppColors`       | Palette (marque, neutres, sémantiques, surfaces sombre/OLED)         |
 | `AppTypography`   | Échelle typographique ; fonte système tant que les fontes ne sont pas embarquées dans `assets/fonts` |
 | `AppSpacing`      | Espacements `xxs` 4 → `xxxl` 64, gouttières ; `touchTarget` 48, la SEULE cible tactile |
 | `AppRadius`       | Rayons 4 → 24 + `full`                                                |
@@ -308,28 +308,32 @@ Fondations actuelles :
 | `AppMotion`       | Les onze durées de `motion.duration` (100 ms → 6 s, `route` branchée sur les transitions de page par `AppTheme`) et courbes ; `AppMotion.resolve` |
 | `AppIcons`        | Icônes sémantiques métier — jamais `Icons.*` dans les écrans          |
 | `AppBreakpoints`  | Window size classes M3 (`WindowSize` + extension `context.windowSize`) |
-| `AppTheme`        | `light()`, `dark()`, `oledDark()` construits depuis les tokens        |
+| `AppTheme`        | `dark()`, `oledDark()` construits depuis les tokens                   |
 
-Thèmes : le réglage d'apparence (`AppThemeSetting` : Système, Clair, Sombre,
-Sombre OLED ; Sombre à défaut de choix enregistré) est un choix utilisateur,
-persisté sur l'appareil et branché dans `CarlysApp` (`themeMode` et
-`darkTheme`, qui devient `AppTheme.oledDark()` sous « Sombre OLED »).
-L'application est sombre par dessin : `AppDarkScaffold` et `AppDarkTheme`
-imposent le thème sombre sous le réglage Clair, et `AppDarkScaffold` peint
-le fond du thème LU SOUS `AppDarkTheme` (`AppDarkTheme.pageColorOf`) —
-`darkBackground` sous Sombre et Clair, le noir pur d'`oledBackground` sous
-OLED ; les barres d'application en héritent, et ce qui doit SE FONDRE dans
-la page le lit aussi (les voiles `AppSceneScrim` des héros de l'accueil, de
-Nutrition et de l'abonnement, le fondu de la fiche d'un exercice) : peint en
-`darkBackground` en dur, un voile laissait sous l'OLED une bande #08050E au
-pied du hero. `dark_surfaces_test.dart` refuse une barre ou un `Scaffold`
-peints en sombre à la main, et vérifie la fin des voiles dans chaque thème.
-Les décors plein écran de l'onboarding et de la bienvenue gardent leur
-`darkBackground` : couvrant tout l'écran, ils ne dessinent aucune couture.
-Le thème Clair n'est honoré que par les cinq écrans qui suivent
-le réglage (mot de passe oublié, changement de mot de passe, suppression de
-compte, sessions, détail d'une séance) ; son avenir est une question
-produit ouverte.
+Thèmes : Carlys n'a que des thèmes SOMBRES. Le réglage d'apparence
+(`AppThemeSetting` : Sombre, Sombre OLED ; Sombre à défaut de choix
+enregistré) est un choix utilisateur, persisté sur l'appareil et branché
+dans `CarlysApp`, qui déclare un seul `theme` : `AppTheme.dark()`, ou
+`AppTheme.oledDark()` sous « Sombre OLED ». Le réglage du téléphone
+(clair ou sombre) n'y change rien. Les thèmes Clair et Système ont été
+retirés le 27 septembre 2026 (décision produit) : une préférence
+enregistrée avant (`light`, `system`), comme toute valeur inconnue, se lit
+« Sombre » (`settings_flow_test.dart`). Dans les réglages du profil, la
+ligne « Apparence » dit le thème choisi et ouvre l'écran où le changer.
+
+Chaque écran prend un `Scaffold` nu, dont le fond est celui du thème —
+`darkBackground` sous Sombre, le noir pur d'`oledBackground` sous OLED ; les
+barres d'application en héritent, et ce qui doit SE FONDRE dans la page lit
+aussi `Theme.of(context).scaffoldBackgroundColor` (les voiles
+`AppSceneScrim` des héros de l'accueil, de Nutrition et de l'abonnement, le
+fondu de la fiche d'un exercice) : peint en `darkBackground` en dur, un
+voile laissait sous l'OLED une bande #08050E au pied du hero.
+`dark_surfaces_test.dart` refuse une barre ou un `Scaffold` peints en sombre
+à la main, et vérifie la fin des voiles dans chaque thème. Les décors plein
+écran de l'onboarding et de la bienvenue gardent leur `darkBackground` :
+couvrant tout l'écran, ils ne dessinent aucune couture. Les écrans de marque
+de l'authentification (connexion, inscription) imposent « Sombre » même sous
+l'OLED : leur fond est celui des captures validées.
 
 **Réduction des animations** : toute animation décorative passe par
 `AppMotion.resolve(context, duration)`, qui renvoie `Duration.zero` quand le
@@ -345,7 +349,8 @@ largeur, chargement ; même mécanique que le principal d'`AppButton`,
 JAMAIS son propre bouton transparent sur `AppColors.cta`, un balai
 d'`ink_on_gradients_test.dart` le refuse), `AppLoadingIndicator` (libellé
 accessible), `AppErrorState` (icône, titre, message, réessai),
-`AppEmptyState`, `AppDarkScaffold` (le `Scaffold` d'un écran sombre).
+`AppEmptyState`. (`AppDarkScaffold` a été supprimé le 27 septembre 2026 :
+sans thème clair, il n'était plus qu'un `Scaffold`.)
 
 **Texte agrandi et lecteur d'écran** (audit de septembre 2026, épreuves à
 320 points et texte ×2) : le libellé d'une action (`AppButton` à icône,
@@ -390,7 +395,7 @@ qui porte un indicateur pendant qu'une photo se prépare, `busy`, ou
 pendant qu'une photo existante se charge, `loading`, son bouton restant
 alors à la main ; un disque
 violet porteur d'icône), la variante `destructiveOutline`
-d'`AppButton` (contour rouge sur un écran sombre, aplat sur une page claire)
+d'`AppButton` (contour et libellé rouges)
 et, dans `AppTextField`, `suffixText`, `suffixIcon` et `readOnly`. Chacun a
 sa ligne dans `contrast_pairs_test.dart` et ses tests
 (`meal_form_components_test.dart`).
@@ -404,18 +409,12 @@ points à 200 %, un titre coupé perdait le choix même qu'il nommait) ; et
 (`darkIconInactive`) et annoncé désactivé, plutôt qu'un bouton plein qui ne
 ferait rien.
 
-**Ce qui est peint en sombre porte le thème sombre.** L'application est
-sombre par dessin, sous tous les réglages : ses écrans, ses feuilles, ses
-barres en verre et ses popups sont peints en sombre même sous le réglage
-Clair. `AppDarkTheme` leur impose alors le thème sombre (sous un thème
-sombre ou OLED, il ne touche à rien), pour que ce qui s'y pose — un bouton
-contour, une carte, une plaque — lise les couleurs de ce qui est peint, et
-non celles d'une page claire : aucun violet ne tient 4,5:1 sur les deux.
-Un écran sombre prend `AppDarkScaffold`, qui porte le fond ET le thème ;
-`showAppSheet`, `AppTranslucentBar` et `AppPopupCard` l'imposent d'eux-mêmes.
-Un écran qui SUIT le réglage garde un `Scaffold` ordinaire.
-`dark_surfaces_test.dart` mesure chaque surface dans chaque thème et refuse
-un `Scaffold` peint en `darkBackground` hors du design system.
+**Ce qui est peint en sombre se mesure dans chaque thème.** Écrans,
+feuilles, barres en verre et popups sont sombres, et ce qui s'y pose — un
+bouton contour, une carte, une plaque — lit les couleurs du thème, sombre
+lui aussi. `dark_surfaces_test.dart` mesure chaque surface dans les deux
+thèmes (Sombre, OLED) et refuse un `Scaffold` peint en `darkBackground` hors
+du design system.
 
 **Portes d'explication** : deux composants, et une règle qui les départage.
 `AppExplainable` enveloppe une donnée AFFICHÉE — c'est la donnée entière qui
@@ -460,8 +459,7 @@ une confirmation de suppression reste violette, c'est son bouton
 message `body` en texte secondaire (seul, il prend la voix du texte
 principal) ; boutons `AppButton` EMPILÉS sur toute la largeur, l'action
 d'abord (`primary`, ou `destructive` rempli de `dangerStrong`, lisible sous
-son libellé blanc), la renonciation en `ghost`. La carte est sombre dans les deux
-thèmes et impose le thème sombre à son contenu. Largeur plafonnée à
+son libellé blanc), la renonciation en `ghost`. Largeur plafonnée à
 `AppPopupCard.maxWidth` (400), centrée, jamais sous la barre d'état ni sous
 le clavier, défilable quand le texte est agrandi. Voile `darkScrim`
 (`color.surface.darkScrim`). Apparition en fondu et zoom de 0,94 à 1 sur
@@ -497,7 +495,12 @@ validation refusée avant l'envoi), `info` pour un état qui n'est ni l'un ni
 l'autre (« Une séance est déjà en cours », « arrive bientôt »).
 `runServerGesture` et `runLocalGesture` (`core/feedback/server_gesture.dart`)
 le choisissent seuls : le texte rendu par le geste prend le ton succès,
-l'échec le ton erreur. Un geste qui supprime, retire, bloque, quitte ou
+l'échec le ton erreur. Le texte d'un refus est celui du serveur
+(`refusalSentence`) pour un 400, 403, 409 ou 422 de l'API, et pour le seul
+503 dont l'API laisse passer le message (la suppression du compte refusée
+faute de résiliation Stripe : « On n’a pas pu arrêter ton abonnement,
+réessaie dans un instant ; ton compte n’est pas supprimé. ») ; tout autre
+5xx, et la page d'un intermédiaire, gardent le message générique. Un geste qui supprime, retire, bloque, quitte ou
 déconnecte se confirme avec `destructive: true` ; la question « une séance
 est déjà en cours » vit une seule fois, `showResumeWorkoutConfirm`
 (`workout_session/presentation/widgets/`), pour les deux écrans qui lancent
@@ -787,7 +790,7 @@ Stratégie cible, par tranche :
 | Unitaires domaine       | Entités, services, use cases — purs, sans Flutter             |
 | Contrôleurs Riverpod    | `ProviderContainer` + overrides de repositories factices      |
 | Widget tests            | Écrans et composants du design system                         |
-| Golden tests (cible)    | Composants clés en clair/sombre, plusieurs tailles de texte   |
+| Golden tests (cible)    | Composants clés en sombre/OLED, plusieurs tailles de texte    |
 | Intégration (`integration_test/`) | Scénarios offline/synchronisation : séance enregistrée hors ligne, rejouée à la reconnexion (Étape 4) |
 
 ## Plateformes, environnement d'exécution et commandes

@@ -106,13 +106,19 @@ surfaces d'attaque différents. Ce que l'Étape 7 a livré, et ce qui reste :
 - comptes administrateurs avec **rôles et permissions** granulaires : livré ;
 - **journal d'audit** : qui a fait quoi, quand, sur quoi : livré ; le
   « pourquoi » (une raison écrite) n'est exigé que pour **couper un accès
-  premium**, et par le back-office seul (`premium-cut-form.tsx`) : l'API
-  reçoit `reason` facultative et l'audit l'enregistre nulle à défaut ;
+  premium**, et par l'API elle-même depuis le 27 septembre 2026 : une
+  coupure sans `reason` (ou vide, ou de plus de 500 caractères) reçoit 400,
+  quel que soit le client ; le contrat le dit par une union discriminée
+  (`managedEntitlementDecisionSchema`), et `adminApi.setPremium` ne compile
+  pas une coupure sans raison. Un octroi la garde facultative, et l'audit
+  l'enregistre nulle à défaut ;
 - **confirmation explicite + raison obligatoire** pour les autres actions
   sensibles : NON livré. La suspension d'un compte part en un geste, sans
   confirmation ni raison (`components/user-account-actions.tsx`) ;
   suppression de compte et remboursement n'ont pas de geste dans le
-  back-office. Le modèle à suivre est la coupure premium (adm-1) ;
+  back-office (la suppression sur demande écrite existe côté serveur :
+  `carlysctl deleted-accounts-purge --compte-actif`, voir
+  `docs/deployment/orchestration.md`). Le modèle à suivre est la coupure premium (adm-1) ;
 - protection des routes du tableau de bord côté serveur (middleware/layouts),
   jamais par simple masquage côté client : voir plus bas.
 
@@ -183,7 +189,7 @@ Chaque ligne dit ce qui est livré et ce qui reste cible ; une ligne sans
 
 | Domaine | Cible |
 | --- | --- |
-| Utilisateurs | **Livré (partiel)** — `/users` (recherche) et fiche `/users/[id]` (identité, statut, adresse vérifiée ou non, droits et leur origine), suspension et réactivation (toutes les sessions révoquées, jetons push supprimés). Restent cibles : sessions par appareil dans la fiche, confirmation et raison pour la suspension, suppression d'un compte sur demande écrite |
+| Utilisateurs | **Livré (partiel)** — `/users` (recherche par `POST /admin/users/search` : le terme, souvent une adresse, ne passe ni dans l'URL de l'API ni dans celle de la page) et fiche `/users/[id]` (identité, statut, adresse vérifiée ou non, droits et leur origine), suspension et réactivation (toutes les sessions révoquées, jetons push supprimés). Restent cibles : sessions par appareil dans la fiche, confirmation et raison pour la suspension, suppression d'un compte sur demande écrite depuis le back-office (elle se fait aujourd'hui en ligne de commande, `--compte-actif`) |
 | Abonnements (Étape 6+) | **Livré (partiel)** — la fiche montre l'ORIGINE de chaque droit (`source` : abonnement et son fournisseur, offert à la main, coupé à la main, jamais ouvert) et l'abonnement qui paie (`paidSubscription`). L'accès premium a trois gestes distincts (`components/user-premium-panel.tsx`) : « Offrir le premium » (octroi manuel), « Couper l'accès » (confirmation, raison obligatoire journalisée, avertissement quand un abonnement payé court : la coupure n'arrête pas la facturation et bloque les achats) et « Rendre la main à l'abonnement » (`DELETE /admin/users/:id/entitlements/:key`). Chaque geste vise TOUT le plan — chaque clé de `PREMIUM_ENTITLEMENT_KEYS`, coach IA et programmes illimités compris —, l'une après l'autre (`adminApi.setPremium`, `adminApi.releasePremium`) : un seul appel par clé, donc une entrée d'audit par clé. La route décide droit par droit, sans transaction commune ; un geste interrompu laisse un état partiel, que le panneau annonce « partiel » et que le même geste, idempotent, achève. Restent cibles : une décision de plan en une transaction côté API : historique Stripe/RevenueCat, remboursements, litiges |
 | Exercices | **Livré (partiel)** — `/exercises` : catalogue publiés ET non publiés, recherche, « Charger la suite » (curseur, cinquante par page), publication/dépublication, photo (dépôt, remplacement, retrait), reclassement (brouillon repris de la liste à chaque ouverture et à l'annulation). Taxonomie : `/categories` crée, renomme et supprime les groupes musculaires (livré) ; le matériel reste en lecture seule. Reste cible : création/édition d'exercices |
 | Programmes | création et édition de programmes d'entraînement, assignation, versions |

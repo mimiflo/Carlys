@@ -107,8 +107,8 @@ Certaines fonctions sont réservées à l’abonnement Premium (voir la section
   compte, par exemple pour corriger une erreur, ou le couper, par exemple
   en cas de fraude ; elle peut aussi annuler sa décision, et le compte
   retrouve alors exactement les droits que lui donne son abonnement.
-  Chaque geste est journalisé, et notre outil d’administration exige
-  d’écrire la raison d’une coupure, conservée dans ce journal. Couper
+  Chaque geste est journalisé, et une coupure n’est acceptée qu’avec sa
+  raison écrite, conservée dans ce journal. Couper
   l’accès n’arrête pas la facturation d’un abonnement en
   cours : [À COMPLÉTER : ce que l’éditeur fait d’un abonnement payant dont
   il coupe l’accès, par exemple le résilier et le rembourser au prorata].
@@ -154,16 +154,25 @@ Certaines fonctions sont réservées à l’abonnement Premium (voir la section
 ## 9. Suspension et suppression
 
 - **Par toi.** Tu peux supprimer ton compte à tout moment : la désactivation
-  est immédiate et irréversible, et les données de ton compte sont effacées
-  définitivement 30 jours plus tard (le journal de sécurité, lui, est
-  conservé sans le lien avec ton compte, et ne garde jamais ton adresse
-  e-mail). Le détail de ce qui est effacé tout de suite, de ce qui est
-  conservé et combien de temps, et la façon d’obtenir un effacement
-  définitif sans attendre, est décrit dans la politique de confidentialité.
-- **Ton abonnement n’est pas résilié par la suppression du compte.** Si tu
-  paies un abonnement, résilie-le d’abord depuis l’application (« Gérer mon
-  abonnement ») : une fois le compte supprimé, tu ne pourras plus y accéder
-  pour le faire, et il faudra nous écrire.
+  est immédiate et irréversible. Tu quittes aussitôt la ligue, les défis
+  entre amis et le fil des encouragements : les défis que tu as lancés et
+  les encouragements que tu as envoyés disparaissent. Les données de ton
+  compte sont effacées définitivement 30 jours plus tard (le journal de
+  sécurité, lui, est conservé sans le lien avec ton compte, et ne garde
+  jamais ton adresse e-mail). Le détail de ce qui est effacé tout de suite,
+  de ce qui est conservé et combien de temps, et la façon d’obtenir un
+  effacement définitif sans attendre, en nous écrivant, est décrit dans la
+  politique de confidentialité.
+- **Ton abonnement à la suppression du compte.** Un abonnement payé sur le
+  web, chez Stripe, est résilié automatiquement et tout de suite, avant que
+  rien ne soit supprimé : plus aucun prélèvement ne suit, et la période en
+  cours n’est pas remboursée d’elle-même (voir « Rétractation et
+  remboursement »). Si la résiliation échoue, ton compte n’est pas
+  supprimé, et tu peux réessayer un instant plus tard. Un abonnement pris
+  dans l’App Store ou le Play Store, lui, ne peut être résilié que dans le
+  magasin : Carlys ne peut pas le faire à ta place. Résilie-le là-bas,
+  sinon le magasin continuera de te prélever ; l’application te le
+  rappelle, avant comme après la suppression.
 - **Par nous.** Nous pouvons suspendre un compte en cas de fraude, d’abus des
   fonctions communautaires, de tentative de contournement de l’abonnement ou
   d’atteinte à la sécurité du service. Une suspension déconnecte

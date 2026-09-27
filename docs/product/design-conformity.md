@@ -413,10 +413,12 @@ décor haut-droite (`AuthBackdrop`), signature de marque compacte à gauche,
 champs à icône intégrée et texte d'aide, bouton violet à flèche (dégradé
 `cta`), entrées sociales sous un séparateur « OU ». Les deux écrans sont des
 **surfaces de marque** : `AuthScaffold`
-leur impose le thème sombre ENTIER — fond et textes ensemble — quel que
-soit le réglage de thème ; les écrans utilitaires du même gabarit (mot de
+leur impose le thème « Sombre » ENTIER — fond et textes ensemble — même
+sous « Sombre OLED » ; les écrans utilitaires du même gabarit (mot de
 passe oublié, changement, suppression de compte) suivent, eux, le thème
-ambiant (`auth_scaffold_theme_test.dart` garde les deux règles).
+choisi, sombre lui aussi depuis le retrait des thèmes Clair et Système
+(27 septembre 2026) ; `auth_scaffold_theme_test.dart` garde les deux
+règles.
 
 Deux ajouts aux tokens pour cette maquette, gardés par
 `design_tokens_test.dart` :
@@ -517,9 +519,8 @@ annonçait une notification reçue application ouverte (capture
   boutons de suppression avaient le même défaut (voir la section suivante).
 - **Mesuré** (`app_popup_test.dart`) : titre, message et bouton de
   renonciation tiennent AA sur la surface de la carte ET au plus fort de son
-  halo (`primaryBadgeBg` sur `darkSurface`), dans les deux thèmes — la carte
-  impose le thème sombre à son contenu, sans quoi le bouton fantôme prendrait
-  le violet vif du thème clair ; le libellé du bouton d'action, principal ou
+  halo (`primaryBadgeBg` sur `darkSurface`), dans les deux thèmes (Sombre,
+  OLED) ; le libellé du bouton d'action, principal ou
   destructif, tient AA sur ce qui est peint sous lui (le dégradé `cta` lu aux
   deux bords du libellé, ou le rouge `dangerStrong`) ; rien ne déborde à
   `textScaler` 2 sur 320 points, pas même la pastille de constat de la
@@ -534,6 +535,17 @@ ouverte hors du design system, qu'elle passe par une fonction
 (`DialogRoute`, `RawDialogRoute`, `CupertinoDialogRoute`…).
 
 ## Contraste AA de tout texte clair sur un fond coloré (24 septembre 2026)
+
+> **Mise à jour du 27 septembre 2026** : les thèmes Clair et Système de
+> l'application mobile sont retirés (décision produit). Ce que cette
+> section mesurait « en clair » n'a plus de lecteur, et les mécanismes
+> écrits pour lui sont partis avec : `AppDarkTheme`, l'encre violet profond
+> du contour et du fantôme, les variantes claires d'`AppBadge`, l'aplat du
+> contour destructif sur page claire. Les points ci-dessous le disent là où
+> ils les nommaient ; `contrast_pairs_test.dart` et
+> `dark_surfaces_test.dart` mesurent désormais les deux thèmes sombres,
+> Sombre et OLED. L'admin et le design system web gardent, eux, leurs
+> thèmes clair et sombre.
 
 Demande du propriétaire : tout texte clair posé sur un fond coloré de
 l'application tient l'AA de WCAG 2.2 — 4,5:1 pour un texte de taille normale,
@@ -596,63 +608,48 @@ passent par les jetons ; les ratios sont avant → après, au pire point.
   que la saisie de série. Désactivé, il retombe sur la plaque de
   la surface ; en chargement, l'indicateur de l'éditeur, peint en
   `darkBackground` sur cette plaque sombre (1,08:1), prend l'encre violette
-  du thème — du thème SOMBRE, que la barre en verre impose à son contenu
-  (voir « Ce qui est peint en sombre » ci-dessous) : sous le réglage Clair,
-  la plaque était sinon BLANCHE sur la barre sombre.
+  du thème.
 - **Le disque « play » de l'accueil** : un `InkWell` posé à la main sur un
   `Material` transparent, au-dessus du dégradé `cta`, sans voile à lui. Il
   prenait les voiles gris CLAIRS du thème, qui pâlissaient le disque sous
-  son icône blanche à l'appui (2,55 au bord du disque en clair, 2,99 en
-  sombre, sous le seuil de 3:1 d'une icône). Il prend
+  son icône blanche à l'appui (2,99 en sombre, sous le seuil de 3:1 d'une
+  icône). Il prend
   `AppButton.stateOverlay`, le voile sombre des boutons violets, état par
   état.
-- **`AppButton` contour et fantôme, thème clair** : leur libellé en violet
-  vif (`primary`) tombait sous son propre voile d'état — survol 4,22,
-  focus et appui 4,08, éclaboussure 3,55 sur la page. Il s'écrit en
-  `primaryDark`, et le voile devient le violet CLAIR (`primaryLight`) dans
-  les deux thèmes — celui que Material dérivait déjà du thème sombre. Un
-  voile tiré du violet profond ne suffisait pas : 4,20 sous l'éclaboussure.
-  Ce violet profond est celui d'une page CLAIRE ; sur ce que l'application
-  peint en sombre, voir le point suivant.
-- **Ce qui est peint en sombre porte le thème sombre.** L'application est
-  sombre par dessin : ses écrans peignent leur fond en `darkBackground`, ses
-  feuilles en `darkSurface` ou `darkSurfaceAlt`, ses barres basses un verre
-  sombre — sous le réglage Clair aussi. Ce qui s'y posait lisait pourtant le
-  thème AMBIANT : sous le Clair, le libellé violet profond d'un « Réessayer »
-  tombait à 3,35 sur la page sombre (2,53 sous l'éclaboussure), 3,09 dans
-  une feuille. Choisir l'encre selon le thème ne peut pas suffire : aucun
-  violet ne tient 4,5:1 à la fois sur la page claire et sur la page sombre.
-  C'est donc le thème qui dit ce qui est peint : `AppDarkTheme` impose le
-  thème sombre sous le réglage Clair — et ne touche à rien sous un thème
-  sombre ou OLED —, et l'enveloppent tout ce qui peint en sombre :
-  `AppDarkScaffold` (le `Scaffold` de chaque écran sombre, fond ET thème ;
-  un balai refuse un `Scaffold` peint en `darkBackground` à la main),
-  `showAppSheet`, `AppTranslucentBar`, `AppPopupCard`. Les écrans qui SUIVENT
-  le réglage (connexion utilitaire, sessions, détail d'une séance) gardent
-  un `Scaffold` ordinaire. Sous le réglage Clair, les cartes et barres
-  d'application de ces écrans sombres, jusqu'ici claires sur fond sombre,
-  deviennent sombres elles aussi.
+- **`AppButton` contour et fantôme** : sous l'ancien thème clair, leur
+  libellé en violet vif tombait sous son propre voile d'état (focus et
+  appui 4,08) ; il s'y écrivait en `primaryDark`, retiré avec ce thème.
+  Reste la règle commune : le libellé prend le `primary` du thème, et le
+  voile d'état le violet CLAIR (`primaryLight`), celui que Material
+  dérivait déjà du thème sombre.
+- **Ce qui est peint en sombre porte le thème sombre.** Sous l'ancien
+  réglage Clair, ce qui se posait sur les écrans, feuilles et barres
+  sombres lisait le thème AMBIANT : le libellé violet profond d'un
+  « Réessayer » tombait à 3,35 sur la page sombre. `AppDarkTheme` imposait
+  alors le thème sombre à tout ce qui peint en sombre. Le thème Clair
+  retiré, il est supprimé : il n'y a plus que des thèmes sombres.
+  `AppDarkScaffold`, devenu un simple `Scaffold` au fond du thème, l'est
+  aussi : chaque écran prend un `Scaffold` nu (un balai refuse un
+  `Scaffold` peint en `darkBackground` à la main).
 - **`AppSegmentedTabs` et `AppInitialAvatar`** passent de `violetRamp`
   (réservé à ce qui se remplit, 3,86 à son bord clair) à `cta` : « Ligue »
   sur 360 points 4,49 → ≥ 4,60, le « W » d'une initiale 4,46 → ≥ 4,60.
 - **`AppBottomBar`, onglets inactifs** : le libellé de 9 points portait la
   couleur de l'icône (3,95). La barre étant translucide, elle se mesure
-  au-dessus de tout ce qui peut passer dessous — fond sombre, page claire du
-  thème clair, photo blanche : libellé `darkTextSecondary`, icône
-  `textMuted` (là où `iconInactive` tombait à 2,79 au-dessus d'une page
-  claire). Le pire cas des deux est la photo blanche ; ses ratios ne sont
+  au-dessus de tout ce qui peut passer dessous — fond sombre, photo
+  blanche : libellé `darkTextSecondary`, icône `textMuted` (là où
+  `iconInactive` tombait sous 3:1 au-dessus d'un fond clair). Le pire cas des deux est la photo blanche ; ses ratios ne sont
   pas recopiés ici, `contrast_pairs_test.dart` les calcule (ligne
   « AppBottomBar »).
-- **`AppBadge`, thème clair** : la variante `primary` écrit en `primaryDark`
-  sur une teinte à 10 % (3,85 → 5,01 sur le fond de page, 4,76 au pire sur
-  la surface alternée), la variante `warning` en `neutral950` (1,83 →
-  16,66). Le thème sombre est inchangé.
+- **`AppBadge`, thème clair** : ses variantes claires (`primaryDark`,
+  `neutral950`) sont parties avec ce thème ; le thème sombre était, et
+  reste, inchangé.
 - **`AppButton` en chargement** : l'indicateur prenait `onPrimary`, sombre
   sur une carte sombre (1,05). Hors variante principale, un bouton en
   chargement est désactivé et n'a plus de fond à lui : l'indicateur prend
   l'encre violette du thème, mesurée sur ce qui est réellement peint — le
-  pire cas est le voile gris d'un bouton plein désactivé, en thème clair,
-  au-dessus du seuil de 3:1 d'une icône. Le ratio se lit dans le test, pas
+  pire cas est le voile gris d'un bouton plein désactivé, au-dessus du
+  seuil de 3:1 d'une icône. Le ratio se lit dans le test, pas
   ici : ce document en a recopié un faux.
 
 **Admin** (`globals.css`, recopié de `tokens.json`) : une ENCRE n'est plus un
@@ -683,7 +680,7 @@ en clair (4,04 → 6,96 sur la page et une carte, 3,83 → 6,61 sous le
 survol du bouton fantôme).
 
 **Ce qui le garde.** `contrast_pairs_test.dart` est une TABLE : chaque ligne
-pose un composant du design system dans un état (thème clair, sombre, OLED ;
+pose un composant du design system dans un état (thème sombre, OLED ;
 repos, survol, focus, appui, éclaboussure, chargement), lit les couleurs
 qu'il peint et mesure chaque paire — le bouton principal et `AppCtaButton`
 contre les DEUX bords de leur dégradé, libellé et icône. Le voile d'un état
@@ -691,16 +688,14 @@ est lu sur l'`InkWell` du bouton, où Material a déjà résolu le style du
 widget, celui du thème et ses défauts : un voile que personne n'a écrit est
 mesuré comme les autres. Il échoue avec l'ancien `ctaStart` (3,99:1 au bord
 gauche), sans le voile sombre (3,95 au focus), avec l'ancien indicateur de
-l'éditeur (1,08) et avec l'encre vive du contour en clair (4,08). Sa
+l'éditeur (1,08). Sa
 mécanique vit dans `test/support/contrast_table.dart`, que partage
 `dark_surfaces_test.dart` : dans chaque thème, il pose le contour, le
 fantôme et l'appel à l'action en chargement sur chaque surface peinte en
 sombre (écran, feuille formulaire et sélecteur, barre en verre) et les
-mesure contre ce qu'elle PEINT — il échoue sans `AppDarkTheme` (3,35 sur la
-page sombre en clair) —, vérifie qu'`AppDarkTheme` ne touche à rien sous
-un thème sombre, et refuse un `Scaffold` peint en sombre hors du design
-system. `app_cta_button_test.dart` y ajoute la plaque de l'éditeur,
-sombre dans les trois thèmes.
+mesure contre ce qu'elle PEINT, et refuse un `Scaffold` peint en sombre
+hors du design system. `app_cta_button_test.dart` y ajoute la plaque de
+l'éditeur, sombre dans les deux thèmes.
 `ink_on_gradients_test.dart` pose les bandeaux des écrans et le disque
 « play » de l'accueil, et mesure tout ce qu'ils écrivent contre chaque arrêt
 de leur dégradé, voile d'appui compris pour le disque ; ses balais y

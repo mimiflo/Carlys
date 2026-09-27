@@ -130,6 +130,27 @@ réels (paiement chez Stripe, gestion depuis le portail) au lieu d'un
 catalogue de prix absent et d'une résiliation « depuis le compte Stripe »
 que rien ne reliait.
 
+## Supprimer son compte arrête de payer
+
+Décision du 27 septembre 2026. `DELETE /users/me` résilie d'abord, chez
+Stripe et tout de suite, chaque abonnement qui prélève encore (actif, en
+essai, en retard de paiement) : `DELETE /v1/subscriptions/{id}`, sans
+facture de clôture ni prorata, un 404 valant succès. Si Stripe ne l'a pas
+fait, la suppression est REFUSÉE (503, « On n’a pas pu arrêter ton
+abonnement, réessaie dans un instant ; ton compte n’est pas supprimé. »)
+et rien n'est supprimé : un compte supprimé encore prélevé est pire qu'une
+suppression à refaire. Dans la transaction de suppression, les abonnements
+résiliés passent `CANCELED`. Un webhook `customer.subscription.*` qui
+arrive ensuite pour ce compte (celui de la résiliation, ou d'un paiement conclu juste avant) est
+acquitté sans rien garder, et résilie à son tour un abonnement qui
+prélèverait encore.
+
+Un abonnement de magasin (App Store, Play Store, via RevenueCat) ne se
+résilie que dans le magasin : la réponse `200` porte
+`storeSubscriptionStillActive: true`, et le mobile dit, avant comme après
+la suppression, de le résilier là-bas. L'écran de suppression ne renvoie
+donc plus à « Gérer mon abonnement ».
+
 ## Un seul client Stripe par compte
 
 Le webhook `customer.subscription.*` porte l'identifiant du client Stripe
@@ -166,9 +187,11 @@ un achat.
 | Fichier | Rôle |
 | ------- | ---- |
 | `application/subscription-offers.ts` | Le barème du catalogue, fonction PURE |
-| `infrastructure/stripe-form-request.ts` | Le SEUL appel HTTP vers l'API de Stripe : formulaire, adresse en retour, erreurs neutres |
+| `infrastructure/stripe-form-request.ts` | Le SEUL appel HTTP vers l'API de Stripe (`stripeFetch` : clé, idempotence, délai de 10 s) ; formulaire, adresse en retour, erreurs neutres |
 | `infrastructure/stripe-checkout.client.ts` | La page de paiement (Checkout), avec réutilisation du client |
 | `infrastructure/stripe-billing-portal.client.ts` | Le portail de gestion (Billing Portal) |
+| `infrastructure/stripe-subscription.client.ts` | La résiliation IMMÉDIATE (`DELETE /v1/subscriptions/{id}`) qu'exige la suppression du compte |
+| `application/account-billing.service.ts` | Ce que la suppression du compte doit arrêter : résilier Stripe AVANT de rien supprimer, signaler un abonnement de magasin |
 | `presentation/widgets/subscription_purchase_panel.dart` | Les offres et le bouton |
 | `presentation/controllers/subscription_controllers.dart` | L'action d'achat, testable sans navigateur |
 | `presentation/controllers/subscription_resume_refresh.dart` | La relecture au retour, et sa relance unique |
@@ -182,10 +205,10 @@ lancer un navigateur.
 ## Pas de SDK Stripe
 
 Le dépôt vérifie déjà les signatures de webhook à la main
-(`stripe-signature.util.ts`), et deux routes de l'API Stripe sont appelées
-(page de paiement, portail), toutes deux sur le même schéma. Ajouter la
-bibliothèque complète pour deux `POST` en formulaire coûterait une
-dépendance de plus sans rien simplifier.
+(`stripe-signature.util.ts`), et trois routes de l'API Stripe sont appelées
+(page de paiement, portail, résiliation à la suppression du compte), toutes
+sur le même schéma. Ajouter la bibliothèque complète pour trois requêtes en
+formulaire coûterait une dépendance de plus sans rien simplifier.
 
 ## Couverture
 

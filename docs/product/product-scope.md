@@ -21,7 +21,7 @@ Trois convictions structurent le produit :
   une optimisation (Étape 4).
 - **Premium par la qualité, pas par la surenchère.** Peu de fonctionnalités,
   mais irréprochables : design system complet dès l'Étape 1 (thèmes
-  clair/sombre/OLED, respect de la réduction d'animations, accessibilité),
+  sombre et OLED, respect de la réduction d'animations, accessibilité),
   états de chargement/vide/erreur systématiques, performances.
 - **Le serveur décide.** Les droits d'accès (entitlements d'abonnement) sont
   évalués côté serveur ; le client affiche, il n'autorise jamais (Étape 6).

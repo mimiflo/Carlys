@@ -240,7 +240,8 @@ requête HTTP
      (routes /api/… uniquement ; /health et /metrics restent bruts)
   9. AllExceptionsFilter (en cas d'exception, à n'importe quelle étape) :
      enveloppe { error: { code, message, details, requestId } } ;
-     les 5xx sont journalisées et leur message est masqué au client
+     les 5xx sont journalisées et leur message est masqué au client,
+     sauf un UserFacingUnavailableException (503 écrit pour la personne)
   │
 réponse HTTP (+ en-tête x-request-id)
 ```
@@ -407,7 +408,11 @@ par un port, `PRIVATE_OBJECT_STORE`
   l'objet, que plus aucune ligne ne cite, est repris par
   `dist/cli/meal-photos-sweep`, lancé chaque jour par la supervision.
 - **Suppression du compte** (`AccountService`) : les lignes des photos dans la
-  transaction, puis tout le préfixe de la personne dans le bucket.
+  transaction, puis tout le préfixe de la personne dans le bucket. La même
+  suppression résilie d'abord l'abonnement Stripe (`subscriptions/`,
+  `AccountBillingService`) et retire la personne de la communauté dans sa
+  transaction (`community/`, `CommunityWithdrawalService`) : `auth` importe
+  ces deux modules, qui exportent ces services.
 - **Tests** : `test/support/in-memory-object-store.ts` remplace le port dans
   `nutrition-photos.e2e-spec.ts`, qui tourne sans MinIO ;
   `nutrition-photos-minio.e2e-spec.ts` éprouve en CI le vrai bucket et son

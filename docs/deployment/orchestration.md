@@ -42,7 +42,7 @@ carlysctl prune --essai     # ce qu'un élagage d'images supprimerait
 | Tenir l'amont Nginx à jour | **oui** | minuterie |
 | Élaguer images et couches Docker à chaque passe (le filet de retour arrière est gardé) | **oui** | minuterie |
 | Effacer les photos de repas orphelines du bucket privé, une fois par jour (`_photos.sh` ; à la main : `carlysctl meal-photos-sweep <env> [--a-blanc]`) | **oui** | minuterie |
-| Effacer définitivement les comptes supprimés depuis plus de `CARLYS_ACCOUNT_PURGE_DAYS` jours (30 par défaut : le délai qu'annoncent la politique, les CGU et l'écran de suppression, à changer avec eux ; la liste complète des textes qui l'écrivent est dans `SECURITY.md`, « Données personnelles »), photos privées comprises, une fois par jour (`_purge_comptes.sh` ; à la main : `carlysctl deleted-accounts-purge <env> [--a-blanc] [--compte <uuid>]`, voir « Effacement immédiat sur demande » ci-dessous) | **oui** | minuterie |
+| Effacer définitivement les comptes supprimés depuis plus de `CARLYS_ACCOUNT_PURGE_DAYS` jours (30 par défaut : le délai qu'annoncent la politique, les CGU et l'écran de suppression, à changer avec eux ; la liste complète des textes qui l'écrivent est dans `SECURITY.md`, « Données personnelles »), photos privées comprises, et les événements de paiement anonymes jamais appliqués reçus depuis plus de 90 jours, une fois par jour (`_purge_comptes.sh` ; à la main : `carlysctl deleted-accounts-purge <env> [--a-blanc] [--compte <uuid>] [--compte-actif <uuid>]`, voir « Effacement immédiat sur demande » ci-dessous) | **oui** | minuterie |
 | Sauvegarder les bases **et les médias MinIO** | **oui** | cron, 3 h du matin |
 | **Déployer une nouvelle version** | **non par défaut** | `CARLYS_AUTO_UPDATE` |
 
@@ -59,37 +59,80 @@ systemctl disable --now carlys-supervision.timer
 
 ### Effacement immédiat sur demande
 
-La politique de confidentialité (section 6) promet un effacement définitif
-sans attendre les 30 jours à qui l'écrit **avant** de supprimer son compte,
-depuis l'adresse de ce compte. L'ordre n'est pas un détail : la suppression
-réécrit l'adresse en `supprime+<uuid>@carlys.invalid`, vide le nom et
-efface les identités Google ou Apple, et plus rien ne mène alors de la
-personne à l'UUID que `--compte` exige. D'où la procédure :
+La politique de confidentialité (sections 6 et 7) promet un effacement
+définitif sans attendre les 30 jours à qui l'écrit **avant** de supprimer
+son compte, depuis l'adresse de ce compte. L'ordre n'est pas un détail : la
+suppression réécrit l'adresse en `supprime+<uuid>@carlys.invalid`, vide le
+nom et efface les identités Google ou Apple, et plus rien ne mène alors de
+la personne à l'UUID que les commandes exigent.
+
+**L'adresse d'expéditeur ne prouve rien.** L'en-tête `From` d'un courriel se
+falsifie (il suffit que le domaine de la personne n'impose pas DMARC
+`p=reject`), et `Reply-To` décide où part une réponse. Or la commande
+supprime ET efface, tout de suite : plus de délai de 30 jours pour corriger
+une erreur. Sans preuve, un tiers qui connaît l'adresse d'un membre ferait
+effacer son compte. La preuve est donc celle de « Mot de passe oublié » :
+la personne montre qu'elle LIT la boîte du compte, en renvoyant un code que
+Carlys y a écrit. D'où la procédure :
 
 1. **À réception de la demande**, dans le back-office, page Utilisateurs :
    chercher l'adresse de l'expéditeur, ouvrir la fiche, noter l'UUID (il est
-   dans l'adresse de la page, `/users/<uuid>`). Une demande qui n'arrive pas
-   de l'adresse du compte n'est pas une preuve : ne rien noter.
-2. **Répondre** à la personne qu'elle peut supprimer son compte dans
-   l'application (Profil → Réglages → Compte).
-3. **Une fois le compte supprimé** (la fiche `/users/<uuid>` affiche le
-   statut `DELETED`) :
+   dans l'adresse de la page, `/users/<uuid>`) et l'adresse **telle que la
+   fiche l'affiche**. Aucun compte à cette adresse : ne rien faire (voir la
+   fin de cette section).
+2. **Prouver la boîte, avant toute commande.** Tirer un code pour cette
+   demande seule :
+
+   ```bash
+   openssl rand -hex 4
+   ```
+
+   L'envoyer dans un **nouveau** message, pas par « Répondre », à l'adresse
+   notée sur la fiche, en demandant de le renvoyer pour confirmer
+   l'effacement. N'agir que sur une réponse qui porte **ce** code. Sans
+   réponse, ou avec un autre code, ne rien faire : si la demande était
+   usurpée, la vraie personne vient d'en être avertie, et son compte n'a
+   pas bougé.
+3. **Compte encore actif** (le cas normal) : l'outil le supprime exactement
+   comme l'appli (abonnement Stripe résilié, refus si Stripe ne l'a pas
+   fait ; sortie de la ligue, des défis et du fil ; ligne d'audit
+   `account.deleted_by_operator`), puis l'efface tout de suite.
+   L'adresse ne se passe PAS en argument, que l'historique du shell de
+   root garderait : `carlysctl` la demande au clavier, recopier celle de la
+   fiche. Si ce n'est pas celle du compte (casse et espaces ignorés), rien
+   n'est fait, code 2. Cette recopie garde d'une faute de frappe sur
+   l'UUID ; elle ne prouve pas qui demande, c'est le code de l'étape 2 qui
+   le prouve.
+
+   ```bash
+   carlysctl deleted-accounts-purge production --compte-actif <uuid> --a-blanc   # vérifier
+   carlysctl deleted-accounts-purge production --compte-actif <uuid>
+   ```
+
+   Si la sortie annonce un abonnement App Store ou Play Store qui court
+   encore, le dire à la personne dans la réponse : le serveur ne peut pas le
+   résilier, seul le magasin le peut. Si Stripe n'a pas résilié, rien n'est
+   supprimé : relancer un peu plus tard. Si la ligne d'audit n'a pas pu
+   être écrite, le compte est supprimé mais PAS effacé : relancer avec
+   `--compte <uuid>` une fois la base réparée.
+4. **Compte déjà supprimé** entre la demande et l'intervention (la fiche
+   `/users/<uuid>` affiche le statut `DELETED`), le code ayant été renvoyé :
 
    ```bash
    carlysctl deleted-accounts-purge production --compte <uuid> --a-blanc   # vérifier
    carlysctl deleted-accounts-purge production --compte <uuid>
    ```
 
-   Un refus (le compte n'est pas encore supprimé : la commande n'efface
-   jamais un compte actif ou suspendu) ou un échec (stockage des photos
-   muet, le plus souvent) arrête `carlysctl` avec le message de la
-   commande. Sur un refus, attendre la suppression, puis relancer ; sur un
-   échec, relancer une fois la cause réparée (sinon la purge quotidienne
-   le reprendra au bout des 30 jours).
-4. **Confirmer** l'effacement à la personne, à l'adresse de sa demande.
+   Un refus (`--compte` n'efface jamais un compte actif ou suspendu, et
+   `--compte-actif` jamais un compte déjà supprimé) ou un échec (stockage
+   des photos muet, le plus souvent) arrête `carlysctl` avec le message de
+   la commande. Sur un échec, relancer une fois la cause réparée (sinon la
+   purge quotidienne le reprendra au bout des 30 jours).
+5. **Confirmer** l'effacement à la personne, à l'adresse de la fiche,
+   celle qui a reçu le code.
 
-Une demande reçue APRÈS la suppression ne peut être exécutée par
-`--compte` : l'effacement se fait alors au bout des 30 jours, par la purge
+Une demande reçue APRÈS la suppression ne peut être rattachée à aucun
+compte : l'effacement se fait alors au bout des 30 jours, par la purge
 quotidienne, ce que la réponse doit dire.
 
 ---

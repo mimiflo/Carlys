@@ -146,9 +146,12 @@ d'authentification ici.
   clé que cette cascade traverse a son index (migration
   `20260926200100_index_cles_de_la_purge`, vérifié par
   `test/purge-index.e2e-spec.ts`).
-- Suppression par la personne : `status = DELETED`, `deletedAt` posé, adresse
-  et code ami réécrits en valeurs tombales ; effacement définitif 30 jours
-  plus tard (`SECURITY.md`, « Données personnelles »).
+- Suppression par la personne (ou par l'exploitation, sur sa demande
+  écrite) : abonnement Stripe résilié d'abord, puis `status = DELETED`,
+  `deletedAt` posé, adresse et code ami réécrits en valeurs tombales,
+  retrait immédiat de la communauté ; effacement définitif 30 jours plus
+  tard, ou tout de suite sur demande écrite (`SECURITY.md`, « Données
+  personnelles »).
 
 ### `UserProfile`
 Données de présentation et de contexte, séparées de l'identité pour garder
@@ -490,6 +493,25 @@ Une séance effectuée (ou en cours) par un utilisateur.
   jamais de doublon), `userId`, `templateId` nullable (origine), `startedAt`,
   `endedAt` nullable, `status` (`in_progress | completed | abandoned`),
   `timezone` (contexte local de réalisation), `deletedAt`.
+- `revision` (`Int`, défaut 1 ; migration
+  `20260927300000_revision_des_seances`) : +1, EN BASE et dans la même
+  transaction, à chaque écriture qui change ce que le détail sert — la
+  séance, l'une de ses séries (suppression douce comprise), son plan, sa
+  case du calendrier (`programDayId`). Ce sont des DÉCLENCHEURS PostgreSQL
+  qui l'incrémentent (migration `20260927400000_revision_des_seances_en_base` :
+  +1 par mise à jour de la séance, +1 par instruction qui écrit ses séries
+  ou son plan), pas le code : un retour arrière du déploiement, qui remet le
+  code d'avant sans défaire le schéma, ne la fausse pas. Jamais sur une
+  lecture ni sur un rejeu sans effet (une instruction qui ne touche aucune
+  ligne ne fait rien monter). Servie dans la liste et le détail : le rapatriement
+  mobile saute une séance dont la révision n'a pas bougé
+  (`docs/synchronization/offline-first.md`). Un compteur et non le plus
+  grand `updatedAt` : Prisma date AVANT la validation, et une écriture
+  validée après une autre mais datée avant elle ne ferait jamais monter le
+  maximum. Le code ne l'écrit JAMAIS à la main ; une nouvelle écriture de
+  ces tables doit seulement ne toucher aucune ligne quand rien ne change
+  (les filtres de rejeu de `WorkoutsRepository` et
+  `ProgramsRepository.linkSessionToDay`).
 - Relations : n–1 `User` ; n–1 `WorkoutTemplate` (optionnelle) ; 1–n
   `WorkoutSessionExercise`, `WorkoutNote`, `WorkoutSessionPlanItem`.
 - Index : `(user_id, started_at DESC, id)` (historique paginé par curseur).
@@ -695,6 +717,10 @@ fournisseurs.
   laisse passer, faute de pouvoir comparer.
 - Relations : n–1 `User`, n–1 `SubscriptionPlan` ; 1–n `SubscriptionEvent`.
 - Index : `(user_id, status)`.
+- À la suppression du compte, un abonnement Stripe `active`, `trialing` ou
+  `past_due` est résilié chez Stripe AVANT la transaction, puis passé
+  `canceled` (`cancelAtPeriodEnd` à faux) dedans
+  (`SubscriptionsRepository.billableSubscriptions`, `markCanceled`).
 
 ### `SubscriptionEvent`
 Journal **append-only** des webhooks reçus — la garantie d'idempotence du
@@ -715,9 +741,21 @@ domaine.
   `customer.subscription.*` (facture, paiement : ils portent l'adresse et le
   nom du client, et rien n'est à projeter), un type RevenueCat non suivi, et
   tout événement qui nomme un compte supprimé ou déjà effacé. Ils sont
-  acquittés (200) sans être enregistrés ni appliqués : la suppression d'un
-  compte ne résilie pas chez le fournisseur, et chaque échéance après la purge
-  aurait sinon violé la clé étrangère de l'abonnement (503 réémis en boucle).
+  acquittés (200) sans être enregistrés ni appliqués : après la purge, la
+  projection aurait violé la clé étrangère de l'abonnement (503 réémis en
+  boucle). Seule action, et seulement pour un compte SUPPRIMÉ dont la ligne
+  existe encore (pas encore effacé par la purge) : un abonnement Stripe qui
+  prélève encore est résilié à réception
+  (`AccountBillingService.stopForAbsentAccount`). Un compte inconnu de la
+  base ou déjà effacé n'entraîne aucune résiliation : rien ne prouve que
+  cet abonnement est le nôtre (sauvegarde restaurée, compte Stripe de test
+  partagé), et une résiliation est irréversible.
+- **Durée** : effacé avec le compte qu'il nomme (purge). Un événement qui
+  n'en nomme AUCUN (`userId` nul : achat RevenueCat anonyme, charge Stripe
+  sans `metadata.userId`) ne peut être appliqué à personne : jamais traité
+  (`processedAt` nul), il est effacé par la passe quotidienne de
+  `deleted-accounts-purge` 90 jours après sa réception
+  (`ORPHAN_PAYMENT_EVENT_RETENTION_DAYS`, lu sur l'index `receivedAt`).
 - Traitement en transaction : insertion de l'événement → mise à jour de
   `Subscription` → recalcul des `UserEntitlement`.
 - **`processedAt` à `null` signifie « à rejouer », et la réponse HTTP est ce
@@ -835,7 +873,11 @@ manuelles d'entitlements.
   `x-request-id`), `metadata` (JSON : diff avant/après, contexte — usage
   légitime ; jamais l'adresse d'un membre en clair : un échec de connexion
   n'y porte que son empreinte, `emailHash`), `ipAddress`, `userAgent`,
-  `createdAt`.
+  `createdAt`. Les lignes écrites avant l'empreinte à clé ont été vidées une
+  fois, au déploiement, par la migration de DONNÉES
+  `20260927200000_audit_adresses_et_empreintes_nues` : `metadata.email` en
+  clair, ou une `emailHash` datée d'avant le HMAC ou hors de sa forme,
+  deviennent `emailHash: null`.
 - Relations : volontairement **sans clé étrangère** vers les ressources
   auditées (le journal doit survivre à leur suppression) ; référence logique
   par `(resourceType, resourceId)` — qui garde donc l'UUID d'un compte
@@ -996,6 +1038,9 @@ Mot d'un ami ; le nom de l'expéditeur est lu au moment de servir.
 - Champs clés : `senderId`, `recipientId`, `message`.
 - Relations : n–1 `User` (deux fois, `Cascade`) ; référencé par
   `CommunityReport` (`SetNull`).
+- Ceux qu'un compte a ENVOYÉS sont supprimés dès sa suppression, dans la
+  même transaction (`CommunityRepository.deleteEncouragementsSentBy`) ; ceux
+  qu'il a reçus partent à la purge.
 - Index : `(recipient_id, created_at DESC)`.
 
 ### `CommunityChallenge`
@@ -1062,6 +1107,17 @@ Défi lancé par un membre à ses amis (migrations
 - Index : `(creatorId)`, `(status, endsAt)`. Relations : n–1 `User`
   (`Cascade`) ; 1–n `FriendChallengeMember` ; référencé par
   `CommunityReport` (`SetNull`).
+- À la suppression d'un compte, dans sa transaction
+  (`FriendChallengesRepository.withdrawAccount`) : les défis qu'il a LANCÉS
+  sont supprimés ; un défi ÉCHU pas encore réglé dont il est membre est
+  d'abord RÉGLÉ avec lui (`dueUnsettledOf`, puis `settle` dans la même
+  transaction : rangs figés, `CLOSED`), pour qu'un résultat ne dépende pas
+  du jour de la suppression ; puis ses lignes de membre sont retirées de
+  tous les autres, et un défi `OPEN` non réglé où plus aucun invité
+  n'attend ni ne joue face au créateur passe `CANCELLED` avec `closedAt`
+  (la clôture paresseuse, conditionnée à sa nullité, ne le rouvre pas en
+  `CLOSED`). Un défi `CANCELLED` ne s'accepte plus (`404` « Ce défi est
+  terminé. ») et se range parmi les terminés.
 
 ### `FriendChallengeMember`
 Un invité (ou le créateur) d'un défi entre amis.
@@ -1084,6 +1140,8 @@ La place d'un membre dans la ligue pour UNE semaine (migrations
   groupe), `(userId, periodKey DESC)`.
 - La ligne SURVIT à la sortie de la ligue (`joinsLeague = false`) : elle
   compte aux rangs et au règlement, mais le nom n'est plus servi aux autres.
+  La suppression d'un compte fait cette même sortie, dans sa transaction ;
+  la ligne part à la purge.
 
 ---
 

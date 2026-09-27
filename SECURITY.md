@@ -124,6 +124,10 @@ aucune version antérieure ne reçoit de correctif.
   exception en enveloppe `{ error: { code, message, details, requestId } }` ;
   pour les erreurs 5xx, le message renvoyé est générique (« Une erreur interne
   est survenue. ») — les détails internes ne partent que dans les logs serveur.
+  Seule exception : un 503 levé en `UserFacingUnavailableException`
+  (`common/filters/user-facing-unavailable.exception.ts`), dont le message
+  est écrit pour la personne et ne cite rien d'interne — aujourd'hui le seul
+  refus de suppression du compte quand Stripe n'a pas résilié.
 - **Swagger désactivé en production** (`/api/docs` disponible uniquement hors
   production, surchargeable par `SWAGGER_ENABLED`).
 
@@ -153,15 +157,23 @@ aucune version antérieure ne reçoit de correctif.
   se renversait par dictionnaire ; sans la clé, une adresse candidate ne se
   vérifie plus. Contrepartie : changer `JWT_ACCESS_SECRET` change aussi les
   empreintes, la corrélation ne traverse pas la rotation. Les lignes d'audit
-  écrites avant ce changement gardent leur empreinte SHA-256 nue, et celles
-  du back-office l'adresse en clair : aucune migration ne les réécrit (une
-  décision de rétention du journal, pas prise). Un refus SMTP est journalisé
-  sans les adresses qu'il cite. **Exception connue, non masquée** : la ligne de
-  requête. Pino (`req.url`, `req.query`) et le journal d'accès Nginx la
-  recopient ; une recherche du back-office par adresse
-  (`GET /admin/users?search=…`) y laisse donc l'adresse en clair. La
-  masquer demanderait un sérialiseur `req` côté Pino et un motif `search=`
-  dans `carlys-journal.conf`, ou une recherche en `POST`.
+  écrites avant ce changement (7921f3f) portaient l'adresse en clair
+  (`metadata.email`, back-office ET mobile) : la migration de données
+  `20260927200000_audit_adresses_et_empreintes_nues` la remplace par
+  `emailHash: null`, et passe aussi à `null` toute `emailHash` datée d'avant
+  le code HMAC ou qui n'a pas sa forme (12 caractères hexadécimaux) — une
+  empreinte sans clé, qu'aucune version du dépôt n'a écrite dans l'audit
+  mais qu'aucune forme ne distingue d'un HMAC. Pas de réécriture en HMAC :
+  la clé dérive de `JWT_ACCESS_SECRET`, que ni la base ni une migration
+  versionnée ne doivent connaître ; la corrélation de ces anciens échecs est
+  perdue. Un refus SMTP est journalisé sans les adresses qu'il cite. **La
+  ligne de requête ne porte plus d'adresse** : Pino (`req.url`,
+  `req.query`, jamais le corps) et le journal d'accès Nginx la recopient,
+  et la recherche du back-office, qui porte souvent une adresse, est
+  désormais un `POST /admin/users/search`, terme et curseur dans le corps
+  (`SearchManagedUsersDto`) ; l'ancienne `GET /admin/users?search=…` est
+  supprimée. `apps/admin/src/app/users/page.test.tsx` échoue si l'adresse
+  cherchée apparaît dans une URL (requête, historique, barre d'adresse).
 - **Journal Nginx sans jetons** : le format `carlys_sans_jeton`
   (`infrastructure/nginx/conf.d/carlys-journal.conf`) masque la valeur de
   tout paramètre `…token=` dans la requête et le Referer du journal d'accès,
@@ -294,8 +306,10 @@ Chaque domaine dit ce qui est **en place**, et ce qui reste **cible**.
   **idempotents** (rejeu sans effet) et **journalisés**.
 - Les **droits (entitlements) sont validés côté serveur uniquement** — jamais
   décidés par le client. Une décision manuelle du back-office (octroi ou
-  coupure ; le back-office exige une raison pour couper, l'API la reçoit
-  facultative, `reason` du contrat, et l'audit l'enregistre, nulle à défaut)
+  coupure ; une coupure SANS raison est refusée par l'API, 400, quel que
+  soit le client : `SetEntitlementDto.reason`, 1 à 500 caractères sans les
+  espaces autour, et l'union `managedEntitlementDecisionSchema` du contrat ;
+  l'octroi la garde facultative, et l'audit l'enregistre, nulle à défaut)
   prime sur l'abonnement jusqu'à ce
   qu'un administrateur « rende la main »
   (`DELETE /admin/users/:id/entitlements/:key`, permission
@@ -314,7 +328,20 @@ Chaque domaine dit ce qui est **en place**, et ce qui reste **cible**.
 - **Suppression du compte à la demande — en place** (`DELETE /api/v1/users/me`,
   mot de passe exigé, `AccountService`). Un compte né d'une connexion Apple
   ou Google n'a pas de mot de passe : la route répond **409** et renvoie à
-  « Mot de passe oublié », qui en pose un. En **une transaction** : sessions
+  « Mot de passe oublié », qui en pose un. **D'abord, l'abonnement qui
+  prélève** : les abonnements Stripe actifs, en essai ou en retard de
+  paiement sont résiliés chez Stripe AVANT toute suppression
+  (`AccountBillingService`, `DELETE /v1/subscriptions/{id}` par
+  `StripeSubscriptionClient`, délai de 10 s ; un 404 vaut succès, l'abonnement
+  n'existant plus ; clé d'idempotence par TENTATIVE, Stripe gardant 24 h la
+  première réponse d'une clé, échec compris). Si Stripe échoue : **503**
+  `SERVICE_UNAVAILABLE`, message écrit pour la personne
+  (`UserFacingUnavailableException`), et RIEN n'est supprimé. En production,
+  un abonnement Stripe à résilier sans clé Stripe configurée est un refus ;
+  hors production, la suppression passe, journalisée. Un abonnement de
+  magasin (RevenueCat) ne se résilie que dans le magasin : la réponse **200**
+  porte `storeSubscriptionStillActive` (`AccountDeletionResult`), et l'appli
+  dit de le résilier là-bas. Puis, en **une transaction** : sessions
   **supprimées** avec leurs refresh tokens (elles portaient `ipAddress`,
   `userAgent`, `deviceName` et `devicePlatform` — des données personnelles
   qui ne survivent pas au compte), compte passé `DELETED`, adresse réécrite
@@ -331,7 +358,16 @@ Chaque domaine dit ce qui est **en place**, et ce qui reste **cible**.
   ligne ne cite, repris par `dist/cli/meal-photos-sweep`, que la
   supervision lance chaque jour ; la ligne `User` est verrouillée en
   premier, pour qu'un dépôt de photo en cours ne puisse pas écrire la sienne
-  après l'effacement). **Conservé, et
+  après l'effacement), abonnements résiliés passés `CANCELED`, et **retrait
+  immédiat de la communauté** (`CommunityWithdrawalService`) : sortie de la
+  ligue (`joinsLeague: false`, la ligne de la semaine restant comptée au
+  règlement, sans nom), défis entre amis LANCÉS supprimés (un signalement
+  garde ses clichés), défi échu pas encore réglé RÉGLÉ d'abord avec elle
+  (rangs figés), lignes de membre retirées de tous les autres, défi en
+  cours resté sans personne face à son créateur passé `CANCELLED` avec
+  `closedAt` (il ne s'accepte plus), encouragements ENVOYÉS supprimés. La ligne d'audit
+  (`account.deleted`, ou `account.deleted_by_operator`) note
+  `stripeSubscriptionsCanceled` et `storeSubscriptionStillActive`. **Conservé, et
   pourquoi** :
   la ligne `User` avec son identifiant (cité par le journal d'audit, qui
   doit rester lisible — l'audit garde sa **propre** `ipAddress` par
@@ -347,37 +383,69 @@ Chaque domaine dit ce qui est **en place**, et ce qui reste **cible**.
   puis la ligne `User` et, par cascade, tout ce qui s'y rattache, avec la
   trace brute des webhooks de paiement qui les nomment (retrouvés par
   `SubscriptionEvent.userId`, recopié à la réception, comme par
-  l'abonnement). Un webhook qui nomme un compte supprimé ou déjà effacé est
-  acquitté sans être ni gardé ni appliqué, et un événement hors abonnement
-  (facture, paiement) n'est jamais gardé : ni l'un ni l'autre ne laisse de
-  charge utile en base. Le journal
+  l'abonnement). Un webhook qui nomme un compte supprimé, déjà effacé ou
+  inconnu est acquitté sans être ni gardé ni appliqué — mais si le compte
+  est SUPPRIMÉ et pas encore effacé (sa ligne existe, `deletedAt` posé) et
+  que c'est un abonnement Stripe qui prélève encore, il est résilié à
+  réception (`AccountBillingService.stopForAbsentAccount` : un paiement
+  conclu juste avant la suppression, dont le webhook arrive juste après,
+  échappait sinon à la résiliation ; un échec de Stripe répond 5xx, et
+  Stripe réémet). Un compte inconnu ou déjà effacé ne déclenche AUCUNE
+  résiliation : rien ne prouve que l'abonnement est le nôtre (sauvegarde
+  restaurée, compte Stripe de test partagé), et elle est irréversible —, et
+  un événement hors abonnement (facture, paiement) n'est jamais gardé : ni
+  l'un ni l'autre ne laisse de charge utile en base. La passe quotidienne
+  efface aussi les événements de paiement jamais appliqués qui ne nomment
+  AUCUN compte (`processedAt` et `userId` nuls : achat RevenueCat anonyme,
+  charge Stripe sans `metadata.userId`), reçus depuis plus de 90 jours
+  (`ORPHAN_PAYMENT_EVENT_RETENTION_DAYS`) — la purge d'un compte ne les
+  retrouvait jamais, et leur charge brute restait pour toujours ; un
+  effacement ciblé (`--compte`) n'y touche pas. Le journal
   d'audit reste, `userId` mis à nul ; il ne porte pas l'adresse (un échec
   de connexion n'y laisse que `emailHash`), mais les actions du back-office
   gardent l'UUID de l'ancien compte dans `resourceId` (`<uuid>` ou
   `<uuid>:<droit>`) et le traitement d'un signalement dans
   `metadata.reporterId` : un identifiant qui, la ligne `User` partie, ne
-  renvoie plus à rien. `--compte <uuid>` exécute une demande d'effacement
-  immédiat d'un compte DÉJÀ supprimé ; comme la suppression réécrit
-  l'adresse et efface nom et identités externes, plus rien ne mène alors
-  de la personne à son UUID. La procédure (`docs/deployment/orchestration.md`,
-  « Effacement immédiat sur demande ») relève donc l'UUID AVANT la
-  suppression, dans le back-office, et la politique demande d'écrire avant
-  de supprimer. Le délai de 30 jours est écrit en huit endroits, à changer
+  renvoie plus à rien. **Effacement immédiat sur demande écrite** :
+  `--compte-actif <uuid> --confirmer <adresse>` traite un compte ENCORE
+  ACTIF. Cette voie, et elle seule, démarre l'application : elle passe par
+  `AccountService.deleteOnWrittenRequest`, donc par le MÊME
+  `deleteVerified` que la route (résiliation Stripe, refus si elle échoue,
+  retrait de la communauté), auditée `account.deleted_by_operator` (acteur
+  `SYSTEM`, `requestId` `cli-…`), attend que la ligne d'audit soit écrite
+  (elle nomme le compte), puis efface comme `--compte`. L'adresse recopiée
+  (casse et espaces ignorés) doit être celle du compte, sinon code 2 et
+  rien n'est fait ; `--a-blanc` dit ce qui serait fait. Cette recopie
+  garde d'une faute de frappe sur l'UUID, pas d'une usurpation :
+  l'expéditeur d'un courriel se falsifie, et aucun outil ne prouve qui
+  demande. La procédure l'exige donc avant toute commande : un code tiré
+  pour la demande, écrit dans un nouveau message à l'adresse du compte, et
+  renvoyé par la personne. `carlysctl` demande l'adresse au clavier,
+  jamais en argument, pour que l'historique du shell de root ne la garde
+  pas. `--compte <uuid>`
+  efface tout de suite un compte DÉJÀ supprimé ; comme la suppression
+  réécrit l'adresse et efface nom et identités externes, plus rien ne mène
+  alors de la personne à son UUID. La procédure
+  (`docs/deployment/orchestration.md`, « Effacement immédiat sur demande »)
+  relève donc l'UUID dans le back-office à réception de la demande, et la
+  politique demande d'écrire AVANT de supprimer. Le délai de 30 jours est
+  écrit en huit endroits, à changer
   ENSEMBLE avec `CARLYS_ACCOUNT_PURGE_DAYS` ou `DEFAULT_PURGE_DELAY_DAYS`
   (`users/application/deleted-accounts-purge.ts`) : `docs/legal/privacy.md`
-  (section 6), `docs/legal/terms.md` (section 9), l'écran de suppression
+  (sections 6 et 7), `docs/legal/terms.md` (section 9), l'écran de suppression
   (`account_deletion_summary.dart`), ce paragraphe,
   `docs/security/authentication.md` (encadré de statut),
   `docs/database/schema.md` (`User`), `README.md` (section sécurité) et
   `docs/deployment/orchestration.md` ; les commandes
   (`scripts/server/README.md`, `carlysctl`, `_purge_comptes.sh`) disent
   « 30 par défaut ». Aucun garde ne compare aujourd'hui ces textes à la
-  valeur réglée sur le serveur. Aucun outil ne supprime un compte ENCORE
-  ACTIF sur demande écrite : c'est l'appli qui le fait, ou une intervention
-  manuelle.
-- **Abonnement à la suppression** : `DELETE /users/me` ne résilie pas
-  l'abonnement Stripe en cours ; les conditions d'utilisation et l'écran de
-  suppression le disent, et renvoient à « Gérer mon abonnement ».
+  valeur réglée sur le serveur.
+- **Abonnement à la suppression — en place** : résilié chez Stripe avant
+  toute suppression, refus 503 sinon (voir ci-dessus) ; un abonnement de
+  magasin est signalé, pas résilié. La politique (section 6), les
+  conditions d'utilisation (section 9) et l'écran de suppression le disent ;
+  l'écran le rappelle après coup quand `storeSubscriptionStillActive` vaut
+  `true`.
 - **Rétention limitée des logs** applicatifs : cible, la durée reste « à
   compléter » dans la politique de confidentialité.
 - **Chiffrement en transit** (TLS) sur tous les environnements distants.
@@ -395,9 +463,9 @@ Chaque domaine dit ce qui est **en place**, et ce qui reste **cible**.
 | Config Zod bloquante au démarrage | En place |
 | Validation `whitelist` + `forbidNonWhitelisted`, Helmet, CORS restreint | En place |
 | Rate limiting 100 req/60 s, corps limité à 1 Mo (multipart : 5 Mio et `MEDIA_MAX_UPLOAD_BYTES`) | En place |
-| Enveloppes d'erreur sans fuite (5xx génériques) | En place |
+| Enveloppes d'erreur sans fuite (5xx génériques, sauf le 503 écrit pour la personne) | En place |
 | `/metrics` protégé par Bearer token en production (comparaison temps constant) | En place |
-| Logs Pino avec `requestId` (posé avant les parseurs de corps), `authorization`/`cookie` rédigés, adresses e-mail en empreinte (audit compris), sauf la recherche du back-office dans la ligne de requête | En place (exception connue) |
+| Logs Pino avec `requestId` (posé avant les parseurs de corps), `authorization`/`cookie` rédigés, adresses e-mail en empreinte (audit compris, anciennes lignes vidées), recherche du back-office dans le corps d'un `POST` | En place |
 | Journal Nginx sans jetons de liens (accès masqué, erreurs écartées) | En place |
 | Argon2id, JWT court, refresh rotatif hashé, détection de réutilisation | En place (Étape 2) |
 | Verrouillage par compte réservé avant Argon2 (connexion, back-office, ré-authentification) | En place |
@@ -405,8 +473,9 @@ Chaque domaine dit ce qui est **en place**, et ce qui reste **cible**.
 | Catalogue en bucket public, photos de repas en bucket privé servies par l'API | En place |
 | Webhooks signés idempotents, entitlements côté serveur | En place (Étape 6) |
 | Rôles/permissions/audit admin | En place (Étape 7) |
-| Suppression de compte : identité libérée en une transaction, réinscription possible | En place |
-| Purge différée des comptes supprimés (`deleted-accounts-purge`, quotidienne) | En place |
+| Suppression de compte : abonnement Stripe résilié d'abord, identité libérée et communauté quittée en une transaction, réinscription possible | En place |
+| Purge différée des comptes supprimés (`deleted-accounts-purge`, quotidienne), événements de paiement anonymes effacés à 90 jours | En place |
+| Effacement immédiat sur demande écrite, compte actif compris (`--compte-actif`), après un code renvoyé depuis l'adresse du compte | En place (preuve procédurale) |
 | Sauvegardes nocturnes, avant migration, copie hors machine chiffrée | En place (copie distante dès sa configuration) |
 | Consentement horodaté, export, rétention des logs | Cible |
 

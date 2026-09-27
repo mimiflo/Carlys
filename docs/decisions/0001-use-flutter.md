@@ -27,7 +27,7 @@ propre CI (`mobile-ci.yml`).
   identique sur les deux plateformes (moteur de rendu propre, pas de ponts vers
   les widgets natifs).
 - **Contrôle total du pixel** : le design system Carlys (`lib/design_system` :
-  AppColors, AppTypography, AppTheme clair/sombre/OLED…) reflète fidèlement
+  AppColors, AppTypography, AppTheme sombre/OLED…) reflète fidèlement
   `packages/design-tokens/src/tokens.json` sans dépendre des composants système.
 - **Animations** : support de première classe de **Rive** et pipeline
   d'animation performant, essentiel pour une app fitness engageante. *(Mise à

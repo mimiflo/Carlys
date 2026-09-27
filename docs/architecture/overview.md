@@ -140,8 +140,9 @@ Dart/Flutter distinct). Architecture feature-first (`lib/app`, `lib/core`,
 `lib/design_system`, `lib/features/<feature>/{data,domain,presentation}`,
 `lib/shared`), Riverpod, GoRouter, Dio, Drift/SQLite (seul générateur de
 code ; ni Freezed ni json_serializable : modèles et DTO écrits à la main). Design system
-initial complet (couleurs, typographie, espacements, thèmes clair/sombre/OLED,
-composants de base) aligné sur les design tokens. Environnement injecté par
+initial complet (couleurs, typographie, espacements, thèmes sombre/OLED,
+composants de base ; le thème clair livré alors est retiré depuis le
+27 septembre 2026) aligné sur les design tokens. Environnement injecté par
 `--dart-define` (`CARLYS_FLAVOR`, `CARLYS_API_BASE_URL`) ; les dossiers de
 plateformes se génèrent via `scripts/bootstrap_mobile.sh`. Détails dans
 [mobile.md](./mobile.md).

@@ -18,7 +18,8 @@ fichiers principaux du plan.
 ## Décisions produit actées (et où elles sont écrites)
 
 Trois demandes de la feuille de route contredisaient des règles écrites du
-dépôt. Le propriétaire du produit a tranché, les documents suivent :
+dépôt (points 1 à 3), d'autres arbitrages ont suivi (point 4). Le
+propriétaire du produit a tranché, les documents suivent :
 
 1. **Pourcentage de complétion Academy** : demandé deux fois, malgré
    l'exclusion écrite dans `docs/product/academy.md` (« un pourcentage global
@@ -50,6 +51,20 @@ dépôt. Le propriétaire du produit a tranché, les documents suivent :
      arbitrage ouvert : quel droit et quel quota (`ai_coaching` ou une clé
      nouvelle) — voir `[!]` du Plan 6. Le jour où elle arrive, la politique
      doit dire à part ce qui part chez le prestataire.
+4. **Arbitrages du 27 septembre 2026**, tous FAITS et écrits dans les textes
+   légaux (`privacy.md` sections 2, 6, 7 et 9, `terms.md` sections 6 et 9)
+   et dans `SECURITY.md` : supprimer son compte **résilie l'abonnement
+   Stripe** d'abord (refus 503 si Stripe n'a pas résilié ; un abonnement de
+   magasin est signalé, pas résilié) et **retire tout de suite** la personne
+   de la ligue, des défis entre amis et du fil ; l'exploitation **efface sur
+   demande écrite** un compte encore actif (`--compte-actif`,
+   `docs/deployment/orchestration.md`) ; les événements de paiement
+   anonymes sont effacés à **90 jours** et les anciennes lignes d'audit
+   vidées de leurs adresses ; l'appli n'a plus que les thèmes **Sombre et
+   Sombre OLED** ; une **révision** servie par l'API évite de retélécharger
+   une séance inchangée (`offline-first.md`) ; la recherche du back-office
+   ne met plus d'adresse dans une URL ; couper le premium **exige une
+   raison**, côté API.
 
 ---
 
@@ -891,7 +906,7 @@ tests.
 ## Hors plans, mais bloquant la publication (rappel)
 
 Ces verrous ne figurent pas dans les onze plans et restent entiers :
-les 20 marqueurs `[À COMPLÉTER]` des pages légales (le build de production
+les marqueurs `[À COMPLÉTER]` des pages légales (23 le 27 septembre 2026 ; `grep -o 'À COMPLÉTER' docs/legal/*.md | wc -l` les recompte) (le build de production
 admin ÉCHOUE tant qu'ils sont là — faits juridiques, pas du code), l'achat
 intégré absent (page Stripe navigateur = refus App Store / Play), le binaire
 iOS de production (entitlement Apple, icône, `CFBundleURLTypes` Google), et

@@ -31,16 +31,21 @@
 >   `AUTH_MAX_LOGIN_ATTEMPTS`, réponse `429 RATE_LIMITED` avant toute lecture
 >   du compte, sans rien révéler de son existence ni de son état
 >   (`admin.login_blocked_lockout` dans l'audit).
-> - **Suppression de compte** (`DELETE /users/me`) : en une transaction,
->   sessions supprimées avec leurs refresh tokens (leurs adresse IP,
->   user-agent et nom d'appareil partent avec le compte), compte `DELETED`,
->   adresse et code ami réécrits en valeurs tombales, profil personnel
->   effacé, jetons d'appareil et identités externes supprimés ; l'adresse
->   d'origine est de nouveau disponible pour une inscription. Un compte sans
->   mot de passe (né d'une connexion Apple ou Google) reçoit **409** et est
->   renvoyé à « Mot de passe oublié ». L'historique est effacé 30 jours plus
->   tard par `dist/cli/deleted-accounts-purge` (détail et données
->   conservées : `SECURITY.md`).
+> - **Suppression de compte** (`DELETE /users/me`) : l'abonnement Stripe
+>   qui prélève encore est d'abord résilié chez Stripe (sinon **503**, rien
+>   n'est supprimé) ; puis, en une transaction, sessions supprimées avec
+>   leurs refresh tokens (leurs adresse IP, user-agent et nom d'appareil
+>   partent avec le compte), compte `DELETED`, adresse et code ami réécrits
+>   en valeurs tombales, profil personnel effacé, jetons d'appareil et
+>   identités externes supprimés, retrait immédiat de la ligue, des défis
+>   entre amis et du fil d'encouragements ; l'adresse d'origine est de
+>   nouveau disponible pour une inscription. **200**
+>   `{ storeSubscriptionStillActive }` : un abonnement de magasin ne se
+>   résilie que dans le magasin. Un compte sans mot de passe (né d'une
+>   connexion Apple ou Google) reçoit **409** et est renvoyé à « Mot de
+>   passe oublié ». L'historique est effacé 30 jours plus tard par
+>   `dist/cli/deleted-accounts-purge`, ou tout de suite sur demande écrite
+>   (détail et données conservées : `SECURITY.md`).
 > - **Connexion Apple et Google** : livrée, `POST /auth/social` (§4.3).
 > - **Reste à venir** : 2FA.
 
@@ -279,11 +284,14 @@ est donc le navigateur, pas l'application mobile.
   figurent que par une empreinte à clé : un HMAC-SHA-256 tronqué
   (`common/utilities/log-privacy.ts`), sous une clé dérivée de
   `JWT_ACCESS_SECRET` (`AppConfigService.logFingerprintKey`), que seul le
-  serveur tient — un SHA-256 nu se renversait par dictionnaire. Une exception, non masquée : la
-  ligne de requête. Pino (`req.url`, `req.query`) et le journal d'accès
-  Nginx la recopient telle quelle ; quand un administrateur cherche un
-  compte par son adresse dans le back-office
-  (`GET /admin/users?search=…`), l'adresse y figure donc en clair.
+  serveur tient — un SHA-256 nu se renversait par dictionnaire. Les
+  lignes d'audit écrites avant ce changement ont été vidées de l'adresse
+  en clair et des empreintes sans clé (migration
+  `20260927200000_audit_adresses_et_empreintes_nues`, voir `SECURITY.md`).
+  La ligne de requête, que Pino (`req.url`, `req.query`) et le journal
+  d'accès Nginx recopient telle quelle, ne porte plus d'adresse non plus :
+  la recherche d'un compte dans le back-office passe par
+  `POST /admin/users/search`, terme dans le corps.
 
 ### 4.6 Journalisation des événements de sécurité
 

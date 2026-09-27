@@ -239,18 +239,27 @@ propose, et le volume de texte traité à chaque échange.
 Le plan souscrit, son statut, ses dates de période, l’identifiant de
 l’abonnement chez le prestataire de paiement et les droits qui en découlent.
 Carlys ne voit jamais ton numéro de carte : il est saisi et conservé chez le
-prestataire de paiement, jamais chez nous.
+prestataire de paiement, jamais chez nous. Chaque avis par lequel le
+prestataire de paiement ou le magasin d’applications annonce un changement
+de ton abonnement (souscription, renouvellement, résiliation) est aussi
+conservé tel qu’il est reçu, pour qu’aucun ne soit appliqué deux fois. Les
+autres avis (factures, paiements) ne sont pas conservés.
 
 ### Le journal de sécurité
 
 Les événements de sécurité liés à ton compte (connexion réussie ou échouée,
 connexion avec Google ou Apple, renouvellement de session, réinitialisation
-de mot de passe, vérification d’adresse, suppression de compte, action d’un
-administrateur sur ton compte) avec leur date, l’adresse IP, le user agent
-et un identifiant de requête. Une connexion échouée n’y laisse pas l’adresse
-e-mail saisie, seulement une empreinte de cette adresse : une courte suite
-de caractères qui permet de reconnaître des tentatives répétées sur la même
-adresse, sans l’écrire. Une action d’un administrateur sur ton compte y
+de mot de passe, vérification d’adresse, suppression de compte, par toi ou
+par nous à ta demande écrite, action d’un administrateur sur ton compte)
+avec leur date, l’adresse IP, le user agent et un identifiant de requête.
+La suppression d’un compte y note aussi combien d’abonnements payés sur le
+web ont été résiliés, et si un abonnement pris dans un magasin
+d’applications courait encore. Une connexion échouée n’y laisse pas
+l’adresse e-mail saisie, seulement une empreinte de cette adresse : une
+courte suite de caractères qui permet de reconnaître des tentatives
+répétées sur la même adresse, sans l’écrire. Les lignes plus anciennes, qui
+pouvaient encore porter l’adresse saisie, en ont été vidées : elles disent
+qu’une adresse a été saisie, sans plus dire laquelle. Une action d’un administrateur sur ton compte y
 porte l’identifiant technique de ton compte et, s’il en a écrit une, la
 raison de sa décision ; le traitement d’un signalement que tu as fait y
 porte aussi cet identifiant.
@@ -261,10 +270,11 @@ Chaque requête reçue par le serveur produit une ligne de journal, corrélée
 par un identifiant de requête, qui recopie le chemin demandé, recherche
 comprise. Les en-têtes d’authentification et les cookies en sont retirés
 avant écriture. Quand un envoi d’e-mail ou une tentative de connexion doit
-être tracé, seule une empreinte de ton adresse e-mail l’est. Une seule
-exception : si un administrateur cherche ton compte par ton adresse
-e-mail dans l’outil d’administration, cette recherche, adresse comprise,
-figure en clair dans la ligne de sa requête. Le serveur web qui reçoit les
+être tracé, seule une empreinte de ton adresse e-mail l’est. Quand un
+administrateur cherche ton compte dans l’outil d’administration, par ton
+nom ou ton adresse e-mail, sa recherche voyage dans le contenu de sa
+requête, jamais dans le chemin demandé : aucun de ces journaux ne la
+recopie. Le serveur web qui reçoit les
 requêtes tient aussi son propre journal (adresse IP, page demandée avec sa
 recherche, date, user agent) : les jetons des liens de vérification et de
 réinitialisation y sont masqués. Aucun mot de passe ni jeton ne figure
@@ -418,24 +428,53 @@ de transfert applicable à chaque prestataire.]
   rangée sous l’identifiant de ton compte, mais plus rien dans l’application
   ne la montre ni ne permet de la lire. Les photos de repas ne figurent dans
   aucune sauvegarde : une photo effacée ne survit nulle part.
-- **Quand tu supprimes ton compte**, il est désactivé immédiatement : plus
-  personne ne peut s’y connecter, et sont effacés aussitôt tes sessions, ton
-  adresse e-mail, ton nom, ton code ami, ta date de naissance, ton sexe, ta
-  taille, tes jetons de notification, le lien avec ton compte Google ou
-  Apple et les photos de tes repas. Ton adresse redevient libre pour un
-  nouveau compte. Le reste (séances, modèles et programmes, records,
-  mesures, repas, conversations avec le coach, amis, encouragements, défis,
-  ligue, réponses aux quiz, signalements, abonnement) reste enregistré sous
-  un identifiant technique, sans plus rien qui te nomme, pendant 30 jours :
-  ce délai laisse le temps de corriger une erreur ou de traiter une
+- **Quand tu supprimes ton compte**, ton abonnement payé sur le web, chez
+  Stripe, est d’abord résilié, tout de suite : plus aucun prélèvement ne
+  suit. Si Stripe ne confirme pas cette résiliation, rien n’est supprimé,
+  l’application te le dit, et tu peux réessayer un instant plus tard. Un
+  abonnement pris dans l’App Store ou le Play Store, lui, ne peut être
+  résilié que dans le magasin : Carlys ne peut pas le faire à ta place, et
+  l’application te rappelle de le résilier là-bas, sans quoi le magasin
+  continuera de te prélever. Ton compte est ensuite désactivé
+  immédiatement : plus personne ne peut s’y connecter, et sont effacés
+  aussitôt tes sessions, ton adresse e-mail, ton nom, ton code ami, ta date
+  de naissance, ton sexe, ta taille, tes jetons de notification, le lien
+  avec ton compte Google ou Apple et les photos de tes repas. Tu quittes au
+  même instant la ligue, les défis entre amis et le fil des
+  encouragements : ton nom disparaît du classement de la ligue (ton score
+  de la semaine reste compté, sans ton nom, pour que les rangs des autres
+  ne bougent pas), les défis entre amis que tu as lancés sont effacés, ta
+  participation aux défis des autres en est retirée (un défi déjà fini est
+  d’abord réglé avec ton score, pour que son résultat ne change pas ; un
+  défi en cours où plus personne ne reste face à la personne qui l’a lancé
+  est annulé), et les encouragements que tu as envoyés disparaissent. Ton adresse redevient libre pour un nouveau compte. Le
+  reste (séances, modèles et programmes, records, mesures, repas,
+  conversations avec le coach, liste d’amis, encouragements reçus,
+  participation aux défis collectifs, scores de ligue, réponses aux quiz,
+  blocages, signalements, abonnement résilié) reste enregistré sous un
+  identifiant technique, sans plus rien qui te nomme, pendant 30 jours : ce
+  délai laisse le temps de corriger une erreur ou de traiter une
   contestation. Au bout de ces 30 jours, un traitement automatique qui passe
-  chaque jour efface tout cela définitivement. Si tu veux cet effacement
-  définitif sans attendre ce délai, écris-nous AVANT de supprimer ton
-  compte, depuis son adresse e-mail : une fois ton adresse effacée, plus
-  rien ne nous permet de retrouver ton compte. Nous notons alors son
-  identifiant technique ; tu le supprimes ensuite dans l’application, et
-  nous l’effaçons définitivement dès que c’est fait, sans attendre les 30
-  jours.
+  chaque jour efface tout cela définitivement.
+- **Pour un effacement définitif sans attendre ces 30 jours**, écris-nous
+  depuis l’adresse e-mail de ton compte, AVANT de le supprimer : une fois
+  ton adresse effacée, plus rien ne nous permet de retrouver ton compte.
+  Pour vérifier que la demande vient bien de toi, nous t’écrivons d’abord à
+  l’adresse de ton compte un code à nous renvoyer : sans lui, nous ne
+  touchons à rien. À réception de ce code, nous supprimons ton compte pour
+  toi, exactement comme le fait l’application (abonnement payé sur le web
+  résilié, sortie de la ligue, des défis et du fil des encouragements),
+  puis nous l’effaçons définitivement, tout de suite. Si tu le supprimes
+  toi-même entre-temps, nous l’effaçons
+  définitivement dès que c’est fait. Une demande reçue après la suppression
+  ne peut plus être rattachée à ton compte : l’effacement définitif se fait
+  alors au bout des 30 jours.
+- **Les avis de paiement** (voir « Ton abonnement ») sont conservés avec ton
+  compte et effacés avec lui. Un avis qui ne désigne aucun compte, par
+  exemple un achat fait dans un magasin d’applications avant toute
+  connexion à Carlys, n’a pu être appliqué à personne : il est conservé 90
+  jours, le temps de vérifier s’il devait l’être, puis effacé par le même
+  traitement quotidien.
 - **Le journal de sécurité** n’est pas effacé avec ton compte. À
   l’effacement définitif, ses lignes perdent leur lien avec ton compte, qui
   n’existe plus. Elles gardent leur date, l’adresse IP, le user agent et ce
@@ -473,12 +512,17 @@ Tu peux, à tout moment :
 - **Supprimer ton compte** : depuis l’application, dans Profil → Réglages
   (le rouage) → Compte → « Supprimer mon compte ». Ton mot de passe t’est
   demandé pour confirmer, et l’écran récapitule ce qui est effacé et ce qui
-  reste. La désactivation est immédiate et irréversible. Un compte créé avec
-  Google ou Apple n’a pas de mot de passe : définis-en un d’abord avec « Mot
-  de passe oublié » (le lien arrive à l’adresse de ton compte), puis
-  supprime ton compte. Tu peux aussi nous écrire à l’adresse de contact,
-  depuis l’adresse e-mail de ton compte : nous le supprimons pour toi, avec
-  le même effet.
+  reste. La désactivation est immédiate et irréversible ; ton abonnement
+  payé sur le web est résilié automatiquement, un abonnement pris dans
+  l’App Store ou le Play Store se résilie dans le magasin (voir « Combien
+  de temps »). Un compte créé avec Google ou Apple n’a pas de mot de
+  passe : définis-en un d’abord avec « Mot de passe oublié » (le lien
+  arrive à l’adresse de ton compte), puis supprime ton compte. Tu peux
+  aussi nous écrire à l’adresse de contact, depuis l’adresse e-mail de ton
+  compte : une fois renvoyé le code que nous t’écrivons à cette adresse
+  pour vérifier que la demande vient de toi, nous le supprimons pour toi,
+  avec le même effet, puis l’effaçons définitivement sans attendre les 30
+  jours.
 - **Retirer ton consentement** pour les données de santé : efface ton profil
   physique et tes mesures, ou cesse d’utiliser la nutrition et le coach.
 - **T’opposer** à un traitement fondé sur notre intérêt légitime, ou en
@@ -507,8 +551,8 @@ appartient à une personne plus jeune sans cet accord, nous le désactivons.
   journalisé : chaque action sur un compte est tracée avec son auteur.
 - Journaux techniques expurgés des en-têtes d’authentification, des
   cookies, des jetons des liens envoyés par e-mail et des adresses e-mail,
-  à la seule exception de la recherche d’un compte par un administrateur
-  (voir « Les journaux techniques »).
+  y compris celle qu’un administrateur cherche dans l’outil
+  d’administration (voir « Les journaux techniques »).
 - Sauvegardes chiffrées avant de quitter le serveur.
 
 ## 10. Modifications de cette politique

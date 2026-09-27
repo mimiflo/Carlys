@@ -67,6 +67,20 @@ l'application ne dépend d'elle.
    résout avec une permission dédiée ; la personne signalée n'en sait rien,
    et retirer son message n'efface pas la preuve : le texte est figé au
    moment du signalement.
+7. **Un compte supprimé quitte la communauté TOUT DE SUITE**, dans la
+   transaction de sa suppression (`CommunityWithdrawalService`, décision
+   du 27 septembre 2026), et non trente jours plus tard à la purge : les
+   autres ne voient plus de nom vide. Il sort de la ligue comme on la quitte
+   (sa ligne de la semaine reste au règlement, sans nom : personne ne
+   remonte d'un cran, un trou de rang peut apparaître) ; les défis entre
+   amis qu'il a LANCÉS sont supprimés ; un défi échu que personne n'a
+   encore ouvert est RÉGLÉ d'abord, avec lui (rangs figés : le résultat ne
+   dépend pas du jour de la suppression) ; puis sa ligne de membre part de
+   tous les autres, et un défi en cours où plus personne ne reste face au
+   créateur passe `CANCELLED` : il ne s'accepte plus (`404` « Ce défi est
+   terminé. ») et la liste le range parmi les défis terminés ; les
+   encouragements qu'il a ENVOYÉS quittent le fil. Les signalements gardent
+   leurs clichés.
 
 ## Modèle de données (Prisma)
 
@@ -98,10 +112,10 @@ l'application ne dépend d'elle.
 | GET | `/challenges` | Défis ouverts, progression collective incluse ; crée le jeu du mois à la première lecture (voir ci-dessous) |
 | POST | `/challenges/:id/join` | Rejoindre (idempotent) |
 | DELETE | `/challenges/:id/join` | Quitter (idempotent) : la contribution déjà versée reste au compteur collectif |
-| GET | `/friend-challenges` | Mes défis ENTRE AMIS (proposés et acceptés) : les défis en cours d'abord, fin la plus proche en tête (50 au plus), puis les 10 terminés les plus récents ; un défi échu est réglé à la lecture ; une invitation dont le créateur est séparé de moi par un blocage n'y figure pas |
+| GET | `/friend-challenges` | Mes défis ENTRE AMIS (proposés et acceptés) : les défis en cours d'abord, fin la plus proche en tête (50 au plus), puis les 10 terminés les plus récents (un défi ANNULÉ, `CANCELLED`, en fait partie même avant sa date de fin) ; un défi échu est réglé à la lecture ; une invitation dont le créateur est séparé de moi par un blocage n'y figure pas |
 | POST | `/friend-challenges` | Défier ses amis (id appareil, création idempotente) — `403` si l'un des invités n'est pas un ami accepté ou qu'un blocage les sépare ; `title` de 80 caractères et `message` facultatif de 280, tous deux comptés en points de code après découpage (`400` au-delà, `message` blanc = absent), jamais réécrits par un rejeu ; le rejeu d'une création réussie rend le défi, même identifiant présenté par un autre compte → `409` ; après un échec, l'appli rouvre la feuille avec le brouillon précédent et le MÊME identifiant |
 | GET | `/friend-challenges/:id` | Un défi et son classement — `404` pour qui n'en est pas membre, et pour une INVITATION dont le créateur est séparé de moi par un blocage (même message « Défi introuvable. »). Même forme que la liste, la création et l'acceptation : `message` (ou `null`), `createdAt` (ISO UTC, l'heure du message), `durationDays`, et `isCreator` sur chaque membre ; sur un défi déjà accepté, `message` vaut aussi `null` quand un blocage, dans un sens ou l'autre, me sépare du créateur |
-| POST | `/friend-challenges/:id/accept` | Accepter : on entre au classement, à zéro — `404` « Défi introuvable. » pour une invitation masquée par un blocage |
+| POST | `/friend-challenges/:id/accept` | Accepter : on entre au classement, à zéro — `404` « Défi introuvable. » pour une invitation masquée par un blocage, `404` « Ce défi est terminé. » pour un défi échu, réglé ou annulé |
 | DELETE | `/friend-challenges/:id/join` | Refuser ou quitter (`204`) : dans les deux cas, on SORT du classement (`404` pour une invitation masquée par un blocage) |
 | GET | `/league` | Ma ligue de la semaine : le classement de MON GROUPE de 20, sans les personnes bloquées ni celles qui ont quitté la ligue (rangs calculés sur le groupe entier) ; sans adhésion, classement VIDE |
 | POST | `/league/join` | Entrer dans la ligue (le geste EST le consentement) |
