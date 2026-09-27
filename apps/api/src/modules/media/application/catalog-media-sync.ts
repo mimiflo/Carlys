@@ -1,10 +1,13 @@
 /**
  * Photos du catalogue livrées avec le seed.
  *
- * Les fichiers sont DÉTOURÉS (PNG ou WebP à canal alpha) : la figure seule, sans
+ * Les fichiers sont DÉTOURÉS (WebP à canal alpha) : la figure seule, sans
  * fond. C'est ce qui permet aux écrans de les poser sur leur propre fond
  * sombre — et c'est pourquoi ils s'affichent en `contain`, jamais en `cover`,
- * qui rognerait les bras et les barres.
+ * qui rognerait les bras et les barres. Ils partent vers le stockage SANS
+ * retouche : leur poids est celui que chaque appareil télécharge, d'où le
+ * format et le plafond que garde `seed-media-weight.spec.ts`. Le PNG reste
+ * lu ici, mais le dépôt n'en livre plus.
  *
  * Ce n'est PAS une entorse à l'ADR 0009 : rien n'est embarqué dans
  * l'application mobile. Ces fichiers suivent exactement le chemin d'un dépôt
@@ -41,7 +44,8 @@ const NAMESPACE = 'carlys.seed.media';
  *
  * C'est ce qui rend l'étape rejouable : re-seeder ne crée pas un second
  * média. La clé de stockage inclut le checksum pour renouveler les caches
- * immuables lorsque l'illustration change.
+ * immuables lorsque l'illustration change ; la version précédente, elle,
+ * quitte le stockage au balayage qui suit (`catalog-media-sweep.ts`).
  *
  * Le calcul lui-même vit dans `common/utilities/derived-uuid.ts` depuis que la
  * génération de programme en a eu besoin : une seule définition, deux
@@ -49,6 +53,23 @@ const NAMESPACE = 'carlys.seed.media';
  */
 function mediaIdFor(slug: string): string {
   return derivedUuid(NAMESPACE, slug);
+}
+
+/**
+ * La clé d'une photo de seed : `image/<id>-<sha256>.<ext>`. L'empreinte la
+ * distingue d'un dépôt d'administration (`image/<id>.<ext>`), et c'est ce que
+ * le balayage des versions précédentes lit (`seedMediaIdOf`).
+ */
+export function seedMediaKey(id: string, checksum: string, extension: 'png' | 'webp'): string {
+  return `image/${id}-${checksum}.${extension}`;
+}
+
+const SEED_KEY =
+  /^image\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})-[0-9a-f]{64}\.(?:png|webp)$/;
+
+/** L'identifiant du média d'une clé de seed, `null` pour toute autre clé. */
+export function seedMediaIdOf(key: string): string | null {
+  return SEED_KEY.exec(key)?.[1] ?? null;
 }
 
 interface StorageSettings {
@@ -129,7 +150,7 @@ export async function syncExerciseMedia(
     const extension = file.endsWith('.png') ? 'png' : 'webp';
     const mimeType = `image/${extension}`;
     const checksum = createHash('sha256').update(content).digest('hex');
-    const storageKey = `image/${id}-${checksum}.${extension}`;
+    const storageKey = seedMediaKey(id, checksum, extension);
     const size = readImageSize(content);
 
     try {

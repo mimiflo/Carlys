@@ -21,6 +21,10 @@
  * passer l'écriture, et sans purge les listes resteraient périmées jusqu'à
  * une heure. Redis injoignable n'est pas un échec — le TTL fait alors foi,
  * et la commande le dit.
+ *
+ * Puis, cache purgé, les VERSIONS PRÉCÉDENTES des photos changées quittent
+ * le stockage (`sweepSupersededSeedMedia`) : sans ce balayage, chaque
+ * illustration remplacée y restait pour toujours.
  */
 import { Redis } from 'ioredis';
 import { ConfigService } from '@nestjs/config';
@@ -28,8 +32,13 @@ import { PrismaClient } from '@prisma/client';
 import { AppConfigService } from '../config/app-config.service';
 import { type Env, validateEnv } from '../config/env.schema';
 import { purgePrefix } from '../infrastructure/cache/purge-prefix';
+import { createS3Client } from '../infrastructure/storage/s3-client';
 import { syncCatalog } from '../modules/exercises/application/catalog-sync';
 import { CATALOG_CACHE_PREFIX } from '../modules/exercises/application/exercises.service';
+import {
+  type SeedMediaSweep,
+  sweepSupersededSeedMedia,
+} from '../modules/media/application/catalog-media-sweep';
 import { syncExerciseMedia } from '../modules/media/application/catalog-media-sync';
 
 export class UsageError extends Error {}
@@ -86,6 +95,36 @@ export async function purgeCatalogCache(redisUrl: string): Promise<number | null
   }
 }
 
+/**
+ * Balaye les versions précédentes des photos, et SEULEMENT une fois le cache
+ * purgé (`purged !== null`) : tant qu'une liste en cache cite l'ancienne URL,
+ * effacer l'objet la casserait. Le balayage reprend alors au chargement
+ * suivant, qui retrouve tout ce qui reste.
+ *
+ * Rend la ligne du bilan, ou `null` s'il n'y a rien à dire. Jamais un échec :
+ * le catalogue est chargé, et un objet de trop ne sert rien de faux.
+ */
+export async function sweepAfterPurge(
+  purged: number | null,
+  sweep: () => Promise<SeedMediaSweep>,
+): Promise<string | null> {
+  if (purged === null) {
+    return '  anciennes photos : balayage remis au prochain chargement (cache non purgé).';
+  }
+  try {
+    const report = await sweep();
+    if (report.deleted === 0 && report.failures.length === 0) {
+      return null;
+    }
+    return [
+      `  anciennes photos : ${report.deleted} version(s) précédente(s) effacée(s) du stockage.`,
+      ...report.failures.map((failure) => `    ÉCHEC : ${failure}`),
+    ].join('\n');
+  } catch (error) {
+    return `  anciennes photos : balayage impossible (${(error as Error).message}), repris au prochain chargement.`;
+  }
+}
+
 async function main(argv: readonly string[]): Promise<number> {
   let args: CatalogSeedArgs;
   try {
@@ -137,6 +176,16 @@ async function main(argv: readonly string[]): Promise<number> {
     }
 
     const purged = await purgeCatalogCache(config.redisUrl);
+    const sweepLine = args.withPhotos
+      ? await sweepAfterPurge(purged, async () => {
+          const client = createS3Client(config);
+          try {
+            return await sweepSupersededSeedMedia(prisma, { client, bucket: config.s3Bucket });
+          } finally {
+            client.destroy();
+          }
+        })
+      : null;
     process.stdout.write(
       [
         'Catalogue chargé.',
@@ -156,6 +205,7 @@ async function main(argv: readonly string[]): Promise<number> {
         purged === null
           ? '  cache : Redis injoignable — les listes se rafraîchiront au TTL (≤ 1 h).'
           : `  cache : ${purged} clé(s) « catalog: » purgée(s), l'API sert le nouveau catalogue immédiatement.`,
+        ...(sweepLine === null ? [] : [sweepLine]),
         '',
       ].join('\n'),
     );
