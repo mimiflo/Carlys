@@ -88,7 +88,7 @@ class _AcademyScreenState extends ConsumerState<AcademyScreen> {
     final bottomInset =
         AppBottomBar.height + MediaQuery.paddingOf(context).bottom;
 
-    return AppDarkScaffold(
+    return Scaffold(
       body: pack.when(
         loading: () => const AppLoadingIndicator(),
         // `academyPackProvider` n'est pas `autoDispose` : sans reprise, un

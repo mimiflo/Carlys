@@ -59,10 +59,9 @@ void mesurerLaTable(List<Ligne> table) {
   }
 }
 
-/// Les trois thèmes de l'application.
+/// Les deux thèmes de l'application.
 const themesMesures = <String, ThemeData Function()>{
   'sombre': AppTheme.dark,
-  'clair': AppTheme.light,
   'OLED': AppTheme.oledDark,
 };
 

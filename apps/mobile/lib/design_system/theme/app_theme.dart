@@ -8,14 +8,10 @@ import '../typography/app_typography.dart';
 import 'app_color_schemes.dart';
 import 'app_page_transitions.dart';
 
-/// Thèmes Carlys : clair, sombre et sombre OLED.
+/// Thèmes Carlys : sombre et sombre OLED — l'application n'a pas de thème
+/// clair (retiré le 27 septembre 2026).
 /// Toute valeur visuelle provient des tokens du design system.
 abstract final class AppTheme {
-  static ThemeData light() => _build(
-    colorScheme: AppColorSchemes.light,
-    background: AppColors.lightBackground,
-  );
-
   static ThemeData dark() => _build(
     colorScheme: AppColorSchemes.dark,
     background: AppColors.darkBackground,

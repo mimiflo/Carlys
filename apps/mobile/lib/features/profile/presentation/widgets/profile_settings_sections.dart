@@ -5,7 +5,6 @@ import '../../../../core/feedback/server_gesture.dart';
 import '../../../../design_system/design_system.dart';
 import '../../../notifications/domain/repositories/device_token_repository.dart';
 import '../../../notifications/presentation/controllers/notification_preferences.dart';
-import '../../../settings/domain/app_theme_setting.dart';
 import '../../../settings/presentation/controllers/theme_setting_controller.dart';
 import 'profile_hub_wording.dart';
 
@@ -62,10 +61,10 @@ class ProfileIdentitySettings extends StatelessWidget {
 
 /// Groupe « APPLICATION ».
 ///
-/// L'interrupteur bascule entre les thèmes clair et sombre ; la ligne elle-même
-/// ouvre l'écran d'apparence, seul endroit où choisir « Système » ou
-/// « Sombre OLED ». Les lignes « rappels de séance » et « exporter mes
-/// données » de la maquette sont absentes : rien ne les alimente.
+/// La ligne « Apparence » dit le thème choisi (« Sombre » ou « Sombre OLED »)
+/// et ouvre l'écran où le changer. Les lignes « rappels de séance » et
+/// « exporter mes données » de la maquette sont absentes : rien ne les
+/// alimente.
 class ProfileAppSettings extends ConsumerWidget {
   const ProfileAppSettings({
     required this.onAppearance,
@@ -78,24 +77,13 @@ class ProfileAppSettings extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final setting = ref.watch(themeSettingProvider);
-    final isDark = switch (setting) {
-      AppThemeSetting.light => false,
-      AppThemeSetting.dark || AppThemeSetting.oledDark => true,
-      AppThemeSetting.system =>
-        MediaQuery.platformBrightnessOf(context) == Brightness.dark,
-    };
-
     return AppSettingsGroup(
       label: 'Application',
       rows: [
         AppSettingsRow(
           icon: AppIcons.theme,
-          label: 'Thème sombre',
-          toggleValue: isDark,
-          onToggle: (value) => ref
-              .read(themeSettingProvider.notifier)
-              .setTheme(value ? AppThemeSetting.dark : AppThemeSetting.light),
+          label: 'Apparence',
+          value: ref.watch(themeSettingProvider).label,
           onTap: onAppearance,
         ),
         AppSettingsRow(

@@ -7,10 +7,8 @@ import 'app_button.dart';
 
 /// État vide standard : icône, titre, description et action facultative.
 ///
-/// Couleurs du fond SOMBRE, pas celles du thème — même raison que
-/// [AppErrorState] : les écrans qui l'accueillent peignent tous leur fond en
-/// `AppColors.darkBackground`, et sous le thème Clair ce composant écrivait
-/// en quasi-noir dessus.
+/// Couleurs du fond SOMBRE, écrites en clair — même raison que
+/// [AppErrorState].
 class AppEmptyState extends StatelessWidget {
   const AppEmptyState({
     required this.title,

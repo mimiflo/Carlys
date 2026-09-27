@@ -78,7 +78,7 @@ class _ExerciseLibraryScreenState extends ConsumerState<ExerciseLibraryScreen> {
     final catalogueOpen = ref.watch(exerciseCatalogueOpenProvider);
     final showList = searching || selectedSlug != null || catalogueOpen;
 
-    return AppDarkScaffold(
+    return Scaffold(
       body: SafeArea(
         bottom: false,
         child: Column(

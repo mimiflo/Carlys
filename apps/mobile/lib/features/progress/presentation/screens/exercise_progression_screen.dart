@@ -24,7 +24,7 @@ class ExerciseProgressionScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final progression = ref.watch(exerciseProgressionProvider(exerciseId));
 
-    return AppDarkScaffold(
+    return Scaffold(
       // Le fond de la barre est celui de la page, que le thème donne : noir
       // pur sous l'OLED.
       appBar: AppBar(

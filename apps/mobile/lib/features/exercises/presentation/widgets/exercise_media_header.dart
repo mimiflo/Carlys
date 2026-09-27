@@ -27,7 +27,7 @@ class ExerciseMediaHeader extends StatelessWidget {
         exercise.primaryMuscleGroup!.name,
       exercise.kind.label,
     ].join(' · ');
-    final page = AppDarkTheme.pageColorOf(context);
+    final page = Theme.of(context).scaffoldBackgroundColor;
 
     return SizedBox(
       height: height,

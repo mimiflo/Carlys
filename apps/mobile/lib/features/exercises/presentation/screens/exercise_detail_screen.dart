@@ -28,7 +28,7 @@ class ExerciseDetailScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final detail = ref.watch(exerciseDetailProvider(idOrSlug));
 
-    return AppDarkScaffold(
+    return Scaffold(
       body: Stack(
         children: [
           detail.when(

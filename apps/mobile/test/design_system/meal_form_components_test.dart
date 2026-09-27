@@ -641,21 +641,20 @@ void main() {
   });
 
   group('AppButton.destructiveOutline', () {
-    testWidgets('sombre : le contour rouge ; clair : l’aplat lisible', (
-      tester,
-    ) async {
-      Widget bouton() => AppButton(
-        label: 'Supprimer ce repas',
-        variant: AppButtonVariant.destructiveOutline,
-        onPressed: () {},
-      );
-
-      await tester.pumpWidget(monte(bouton()));
-      expect(find.byType(OutlinedButton), findsOneWidget);
-
-      await tester.pumpWidget(monte(bouton(), theme: AppTheme.light()));
-      await tester.pumpAndSettle();
-      expect(find.byType(FilledButton), findsOneWidget);
+    testWidgets('le contour rouge, sous les deux thèmes', (tester) async {
+      for (final theme in [AppTheme.dark(), AppTheme.oledDark()]) {
+        await tester.pumpWidget(
+          monte(
+            AppButton(
+              label: 'Supprimer ce repas',
+              variant: AppButtonVariant.destructiveOutline,
+              onPressed: () {},
+            ),
+            theme: theme,
+          ),
+        );
+        expect(find.byType(OutlinedButton), findsOneWidget);
+      }
     });
   });
 

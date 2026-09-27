@@ -29,7 +29,7 @@ class ProgressionScreen extends ConsumerWidget {
     final profile = ref.watch(progressionProfileProvider);
     final bottomInset = MediaQuery.paddingOf(context).bottom;
 
-    return AppDarkScaffold(
+    return Scaffold(
       body: SafeArea(
         bottom: false,
         child: ListView(

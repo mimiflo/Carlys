@@ -59,7 +59,7 @@ class _TimelineScreenState extends ConsumerState<TimelineScreen> {
   Widget build(BuildContext context) {
     final frise = ref.watch(timelineControllerProvider);
 
-    return AppDarkScaffold(
+    return Scaffold(
       // Le fond de la barre est celui de la page, que le thème donne : noir
       // pur sous l'OLED.
       appBar: AppBar(

@@ -38,7 +38,7 @@ class ProgressScreen extends ConsumerWidget {
     final bottomInset =
         AppBottomBar.height + MediaQuery.paddingOf(context).bottom;
 
-    return AppDarkScaffold(
+    return Scaffold(
       body: SafeArea(
         bottom: false,
         child: ListView(

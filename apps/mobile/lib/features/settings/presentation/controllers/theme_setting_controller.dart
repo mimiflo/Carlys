@@ -27,7 +27,7 @@ class ThemeSettingController extends Notifier<AppThemeSetting> {
       }
     } on Exception catch (error) {
       _logger.warning(
-        'Préférence de thème illisible, défaut système appliqué',
+        'Préférence de thème illisible, thème Sombre appliqué',
         error: error,
       );
     }

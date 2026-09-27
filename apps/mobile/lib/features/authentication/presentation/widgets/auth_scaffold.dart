@@ -11,12 +11,10 @@ import 'auth_brand_header.dart';
 /// verticalement dans l'espace restant, défilant s'il déborde.
 ///
 /// Les écrans d'ENTRÉE (connexion, inscription) passent un [backdrop] et
-/// `brand: true` — ce sont des surfaces de marque, sombres quel que soit le
-/// réglage de thème, comme la page de bienvenue. Les écrans UTILITAIRES
-/// (mot de passe oublié, changement, suppression) ne passent rien : même
-/// squelette, fond au thème AMBIANT — atteints connecté, là où le réglage
-/// clair s'applique, un fond sombre forcé sous des textes au thème rendrait
-/// le titre illisible.
+/// `brand: true` — ce sont des surfaces de marque, au fond des captures
+/// validées (`darkBackground`) même sous « Sombre OLED », comme la page de
+/// bienvenue. Les écrans UTILITAIRES (mot de passe oublié, changement,
+/// suppression) ne passent rien : même squelette, fond du thème choisi.
 class AuthScaffold extends StatelessWidget {
   const AuthScaffold({
     required this.title,
@@ -34,15 +32,14 @@ class AuthScaffold extends StatelessWidget {
   /// Décor pleine page derrière le contenu ([AuthBackdrop], typiquement).
   final Widget? backdrop;
 
-  /// Surface de marque : signature compacte sous le chevron, et thème sombre
-  /// IMPOSÉ à tout l'écran — champs, liens et titre compris.
+  /// Surface de marque : signature compacte sous le chevron, et thème
+  /// « Sombre » IMPOSÉ à tout l'écran — champs, liens et titre compris.
   final bool brand;
 
-  /// Le thème des surfaces de marque : celui que l'application applique en
-  /// mode sombre — les captures validées —, construit une fois par le design
-  /// system. Toujours LUI, même sous le thème OLED : le fond de marque est
-  /// celui des captures.
-  static final ThemeData _brandTheme = AppDarkTheme.theme;
+  /// Le thème des surfaces de marque : « Sombre », celui des captures
+  /// validées, construit une fois. Toujours LUI, même sous le thème OLED :
+  /// le fond de marque est celui des captures.
+  static final ThemeData _brandTheme = AppTheme.dark();
 
   @override
   Widget build(BuildContext context) {
@@ -143,11 +140,9 @@ class AuthScaffold extends StatelessWidget {
     );
 
     // L'AppBar posait l'habillage de la barre de statut ; sans elle, on le
-    // pose nous-mêmes, d'après la luminosité du thème EFFECTIF de l'écran.
+    // pose nous-mêmes : icônes claires, sur un fond toujours sombre.
     return AnnotatedRegion<SystemUiOverlayStyle>(
-      value: theme.brightness == Brightness.dark
-          ? SystemUiOverlayStyle.light
-          : SystemUiOverlayStyle.dark,
+      value: SystemUiOverlayStyle.light,
       child: brand ? Theme(data: theme, child: scaffold) : scaffold,
     );
   }

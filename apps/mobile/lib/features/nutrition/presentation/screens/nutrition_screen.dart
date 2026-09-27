@@ -25,7 +25,7 @@ class NutritionScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final report = ref.watch(metabolismReportProvider);
 
-    return AppDarkScaffold(
+    return Scaffold(
       body: Stack(
         children: [
           report.when(

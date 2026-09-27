@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 
 import '../colors/app_colors.dart';
-import '../theme/app_dark_theme.dart';
 
 /// Socle des scènes 3D (cœur, hélice) : applique les règles communes du
 /// handoff — extinction radiale du canvas, fondu linéaire selon la place à
@@ -80,8 +79,8 @@ class AppSceneContainer extends StatelessWidget {
 /// Gradient de lisibilité à poser PAR-DESSUS une scène quand du texte vit
 /// en colonne de gauche (latéral à 100°) ou en dessous (vertical).
 ///
-/// Le voile finit sur le fond de la PAGE ([AppDarkTheme.pageColorOf]) : la
-/// scène s'y éteint sans bord. Peint en `darkBackground` en dur, il laissait
+/// Le voile finit sur le fond de la PAGE (celui du thème) : la scène s'y
+/// éteint sans bord. Peint en `darkBackground` en dur, il laissait
 /// sous « Sombre OLED » une bande #08050E / #000000 au pied du hero.
 class AppSceneScrim extends StatelessWidget {
   const AppSceneScrim.lateral({super.key}) : _lateral = true;
@@ -96,7 +95,7 @@ class AppSceneScrim extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final page = AppDarkTheme.pageColorOf(context);
+    final page = Theme.of(context).scaffoldBackgroundColor;
     return IgnorePointer(
       child: DecoratedBox(
         decoration: BoxDecoration(

@@ -15,7 +15,6 @@ void main() {
   for (final (nom, construire, attendu) in [
     ('OLED', AppTheme.oledDark, AppColors.oledBackground),
     ('sombre', AppTheme.dark, AppColors.darkBackground),
-    ('clair', AppTheme.light, AppColors.darkBackground),
   ]) {
     testWidgets('sous le thème $nom, le bas du voile est ${hex(attendu)}', (
       tester,
@@ -23,7 +22,7 @@ void main() {
       await tester.pumpWidget(
         MaterialApp(
           theme: construire(),
-          home: AppDarkScaffold(
+          home: Scaffold(
             body: ExerciseMediaHeader(
               exercise: detailOf(summary('id-1', 'Squat', group: 'quadri')),
             ),

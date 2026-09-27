@@ -33,7 +33,7 @@ void main() {
         overrides: overrides,
         child: MaterialApp(
           theme: AppTheme.dark(),
-          home: AppDarkScaffold(
+          home: Scaffold(
             body: ListView(
               padding: const EdgeInsets.all(AppSpacing.gutter),
               children: [enfant],

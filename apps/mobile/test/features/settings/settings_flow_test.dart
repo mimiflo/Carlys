@@ -50,15 +50,16 @@ Future<void> openSettings(WidgetTester tester) async {
   // L'apparence se règle dans les réglages, derrière le rouage du profil
   // — lui-même ouvert par l'avatar de l'accueil.
   await openProfileSettings(tester);
-  // La ligne « Thème sombre » ouvre l'écran d'apparence (l'interrupteur ne
-  // bascule que clair ↔ sombre).
-  await reveal(tester, find.text('Thème sombre'));
-  await tester.tap(find.text('Thème sombre'));
+  await reveal(tester, find.text('Apparence'));
+  await tester.tap(find.text('Apparence'));
   await tester.pumpAndSettle();
 }
 
-ThemeMode themeModeOf(WidgetTester tester) =>
-    tester.widget<MaterialApp>(find.byType(MaterialApp)).themeMode!;
+/// Le thème que les écrans lisent RÉELLEMENT, pas celui qu'on a déclaré :
+/// sous `ThemeMode.system`, un thème clair déclaré s'appliquerait à un
+/// téléphone réglé en clair — le harnais l'est.
+ThemeData themeOf(WidgetTester tester) =>
+    Theme.of(tester.element(find.byType(Navigator).first));
 
 void main() {
   setUp(() {
@@ -81,48 +82,51 @@ void main() {
     seedCompletedFirstRun();
   });
 
-  testWidgets('thème sombre : appliqué immédiatement et persisté', (
-    tester,
-  ) async {
+  testWidgets('deux thèmes, tous deux sombres : Sombre par défaut, Sombre '
+      'OLED au noir pur, chacun appliqué et persisté', (tester) async {
     await tester.pumpWidget(app());
     await openSettings(tester);
 
-    // Dark-first : sombre par défaut.
-    expect(themeModeOf(tester), ThemeMode.dark);
-
-    await tester.tap(find.text('Clair'));
-    await tester.pumpAndSettle();
-    expect(themeModeOf(tester), ThemeMode.light);
-
-    await tester.tap(find.text('Sombre'));
-    await tester.pumpAndSettle();
-
-    expect(themeModeOf(tester), ThemeMode.dark);
-    final prefs = await SharedPreferences.getInstance();
-    expect(prefs.getString('apparence.theme'), 'dark');
-  });
-
-  testWidgets('thème sombre OLED : fond noir pur', (tester) async {
-    await tester.pumpWidget(app());
-    await openSettings(tester);
+    // Les thèmes Clair et Système ont été retirés (décision du 27 septembre
+    // 2026) : il n'en reste que deux.
+    expect(find.text('Clair'), findsNothing);
+    expect(find.text('Système'), findsNothing);
+    expect(themeOf(tester).brightness, Brightness.dark);
+    expect(themeOf(tester).scaffoldBackgroundColor, AppColors.darkBackground);
 
     await tester.tap(find.text('Sombre OLED'));
     await tester.pumpAndSettle();
+    expect(themeOf(tester).scaffoldBackgroundColor, AppColors.oledBackground);
+    final prefs = await SharedPreferences.getInstance();
+    expect(prefs.getString('apparence.theme'), 'oled');
 
-    expect(themeModeOf(tester), ThemeMode.dark);
-    final materialApp = tester.widget<MaterialApp>(find.byType(MaterialApp));
-    expect(
-      materialApp.darkTheme!.scaffoldBackgroundColor,
-      AppColors.oledBackground,
-    );
+    await tester.tap(find.text('Sombre'));
+    await tester.pumpAndSettle();
+    expect(themeOf(tester).scaffoldBackgroundColor, AppColors.darkBackground);
+    expect(prefs.getString('apparence.theme'), 'dark');
   });
 
-  testWidgets('préférence restaurée au démarrage', (tester) async {
-    seedCompletedFirstRun({'apparence.theme': 'light'});
+  for (final ancienne in ['light', 'system']) {
+    testWidgets('préférence « $ancienne » enregistrée avant le retrait : lue '
+        'comme Sombre', (tester) async {
+      seedCompletedFirstRun({'apparence.theme': ancienne});
+
+      await tester.pumpWidget(app());
+      await tester.pumpAndSettle();
+
+      expect(themeOf(tester).brightness, Brightness.dark);
+      expect(themeOf(tester).scaffoldBackgroundColor, AppColors.darkBackground);
+    });
+  }
+
+  testWidgets('préférence « Sombre OLED » restaurée au démarrage', (
+    tester,
+  ) async {
+    seedCompletedFirstRun({'apparence.theme': 'oled'});
 
     await tester.pumpWidget(app());
     await tester.pumpAndSettle();
 
-    expect(themeModeOf(tester), ThemeMode.light);
+    expect(themeOf(tester).scaffoldBackgroundColor, AppColors.oledBackground);
   });
 }

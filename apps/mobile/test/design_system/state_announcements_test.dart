@@ -16,7 +16,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.dark(),
-        home: AppDarkScaffold(body: etat),
+        home: Scaffold(body: etat),
       ),
     );
     return tester.getSemantics(find.text('Hors connexion'));

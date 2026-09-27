@@ -54,7 +54,7 @@ class MealEditorScreen extends ConsumerWidget {
     // à la réponse, la page du dessous.
     return PopScope(
       canPop: !(state?.isSending ?? false),
-      child: AppDarkScaffold(
+      child: Scaffold(
         // Une colonne défilante plutôt qu'une liste paresseuse : quatre cartes
         // et deux boutons, tous construits d'emblée — un champ qui prend le
         // focus ou une erreur à montrer peuvent ainsi toujours être amenés à

@@ -264,8 +264,7 @@ final _table = <Ligne>[
             ),
         ];
       }),
-    // Le contour rouge d'un écran sombre ; sur une page claire, il prend
-    // l'aplat du bouton destructif (aucun rouge n'y tient sous ses voiles).
+    // Le contour rouge d'un écran sombre.
     Ligne('AppButton destructiveOutline, thème $theme : le libellé et '
         'l’icône sur la page et sur une carte, au repos et à chaque état', (
       tester,
@@ -369,7 +368,6 @@ final _table = <Ligne>[
       'le fond sombre': AppColors.darkBackground,
       'une carte': AppColors.darkSurface,
       'une plaque gravée': AppColors.surfaceIcon,
-      'une page claire': AppColors.lightBackground,
       'une photo blanche': AppColors.neutral0,
     };
     return [

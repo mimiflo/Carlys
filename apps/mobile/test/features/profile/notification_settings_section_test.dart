@@ -28,7 +28,7 @@ void main() {
         ],
         child: MaterialApp(
           theme: AppTheme.dark(),
-          home: const AppDarkScaffold(
+          home: const Scaffold(
             body: SingleChildScrollView(child: NotificationSettingsSection()),
           ),
         ),

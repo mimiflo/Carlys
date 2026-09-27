@@ -23,7 +23,7 @@ void main() {
     VoidCallback? onTap,
   }) => MaterialApp(
     theme: AppTheme.dark(),
-    home: AppDarkScaffold(
+    home: Scaffold(
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.gutter),
         children: [

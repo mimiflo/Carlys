@@ -4,7 +4,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 Widget _wrap(Widget child) {
   return MaterialApp(
-    theme: AppTheme.light(),
+    theme: AppTheme.dark(),
     home: Scaffold(body: Center(child: child)),
   );
 }

@@ -50,7 +50,7 @@ class ProfileScreen extends ConsumerWidget {
     final friends = ref.watch(profileFriendsCountProvider);
     final bottomInset = MediaQuery.paddingOf(context).bottom;
 
-    return AppDarkScaffold(
+    return Scaffold(
       body: SafeArea(
         bottom: false,
         child: RefreshIndicator(

@@ -149,7 +149,7 @@ class _CoachShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return AppDarkScaffold(
+    return Scaffold(
       body: SafeArea(
         child: Column(
           children: [

@@ -7,13 +7,9 @@ import 'app_button.dart';
 
 /// État d'erreur standard : icône, titre, message et action de réessai.
 ///
-/// LES COULEURS SONT CELLES DU FOND SOMBRE, pas celles du thème. Les écrans
-/// qui accueillent cet état peignent leur `Scaffold` en
-/// `AppColors.darkBackground` — quarante-cinq fichiers le font, l'application
-/// est sombre par dessin. Or ce composant lisait `Theme.of(context)`, dont
-/// l'`onSurface` vaut `neutral900` sous le thème Clair : titre et message
-/// s'écrivaient alors en quasi-noir sur ce fond sombre, illisibles. Il n'y a
-/// qu'un seul fond possible derrière cet état ; autant le dire.
+/// LES COULEURS SONT CELLES DU FOND SOMBRE, écrites en clair : l'application
+/// n'a que des thèmes sombres, il n'y a qu'un seul fond possible derrière
+/// cet état ; autant le dire.
 class AppErrorState extends StatelessWidget {
   const AppErrorState({
     required this.title,

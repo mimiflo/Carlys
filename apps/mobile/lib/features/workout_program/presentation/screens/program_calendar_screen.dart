@@ -150,7 +150,7 @@ class _ProgramCalendarScreenState extends ConsumerState<ProgramCalendarScreen> {
       programCalendarProvider((programId: widget.programId, week: _week)),
     );
 
-    return AppDarkScaffold(
+    return Scaffold(
       body: SafeArea(
         bottom: false,
         child: semaine.when(

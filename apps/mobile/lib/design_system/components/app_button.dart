@@ -16,10 +16,8 @@ enum AppButtonVariant {
   accent,
   destructive,
 
-  /// Le geste destructif SECONDAIRE d'un écran sombre (« Supprimer ce
-  /// repas », sous l'action principale) : contour et libellé rouges. Sur une
-  /// page CLAIRE, aucun rouge ne tient 4,5:1 sous les voiles d'un contour
-  /// (3,98 au mieux) : il y prend l'aplat de [destructive].
+  /// Le geste destructif SECONDAIRE d'un écran (« Supprimer ce repas »,
+  /// sous l'action principale) : contour et libellé rouges.
   destructiveOutline,
 }
 
@@ -107,14 +105,17 @@ class AppButton extends StatelessWidget {
         style: _sizeStyle(),
         child: child,
       ),
+      // Sans fond à elles, le contour et le fantôme gardent l'encre et le
+      // voile que Material dérive de `colorScheme.primary` (violet clair) :
+      // `contrast_pairs_test.dart` mesure chaque état.
       AppButtonVariant.secondary => OutlinedButton(
         onPressed: onPressedOrNull,
-        style: _sizeStyle().merge(_inkStyle(context)),
+        style: _sizeStyle(),
         child: child,
       ),
       AppButtonVariant.ghost => TextButton(
         onPressed: onPressedOrNull,
-        style: _sizeStyle().merge(_inkStyle(context)),
+        style: _sizeStyle(),
         child: child,
       ),
       AppButtonVariant.accent => FilledButton(
@@ -130,64 +131,28 @@ class AppButton extends StatelessWidget {
       // Un rouge PLUS PROFOND que `colorScheme.error` (`danger`) : blanc sur
       // `danger` ne tient que 3,76:1, sous l'AA d'un libellé de 15 points.
       // Le voile d'état est SOMBRE (voir [stateVeil]).
-      AppButtonVariant.destructive => _destructiveFilled(
-        onPressedOrNull,
-        child,
-      ),
-      AppButtonVariant.destructiveOutline =>
-        Theme.of(context).brightness == Brightness.light
-            ? _destructiveFilled(onPressedOrNull, child)
-            : OutlinedButton(
-                onPressed: onPressedOrNull,
-                style: _sizeStyle().merge(
-                  OutlinedButton.styleFrom(
-                    foregroundColor: AppColors.danger,
-                    side: const BorderSide(color: AppColors.danger),
-                  ).copyWith(overlayColor: _dangerOverlay),
-                ),
-                child: child,
-              ),
-    };
-  }
-
-  Widget _destructiveFilled(VoidCallback? onPressed, Widget child) {
-    return FilledButton(
-      onPressed: onPressed,
-      style: _sizeStyle().merge(
-        FilledButton.styleFrom(
-          backgroundColor: AppColors.dangerStrong,
-          foregroundColor: AppColors.neutral0,
-          overlayColor: stateVeil,
+      AppButtonVariant.destructive => FilledButton(
+        onPressed: onPressedOrNull,
+        style: _sizeStyle().merge(
+          FilledButton.styleFrom(
+            backgroundColor: AppColors.dangerStrong,
+            foregroundColor: AppColors.neutral0,
+            overlayColor: stateVeil,
+          ),
         ),
+        child: child,
       ),
-      child: child,
-    );
-  }
-
-  /// L'encre et le voile d'état des variantes SANS fond (contour, fantôme),
-  /// dont le libellé se pose sur la page ou sur une carte.
-  ///
-  /// Le voile est le violet CLAIR dans les deux thèmes — celui que Material
-  /// dérivait déjà de `colorScheme.primary` en sombre. En clair, le violet
-  /// vif du thème tombait sous 4,5:1 dès que son propre voile teintait le
-  /// fond (survol 4,21, focus 4,09 sur la page) : le libellé y prend le
-  /// violet PROFOND, et le voile clair le fonce moins que le vif ne le
-  /// faisait. `contrast_pairs_test.dart` mesure chaque état.
-  ///
-  /// Ce violet profond est celui d'une page CLAIRE : aucun violet ne tient
-  /// 4,5:1 à la fois sur la page claire et sur la page sombre. Tout ce que
-  /// l'application peint en sombre sous le réglage Clair (écran, feuille,
-  /// barre en verre, popup) porte donc le thème sombre ([AppDarkTheme]) :
-  /// le bouton y lit `primary` sombre (`dark_surfaces_test.dart`).
-  ButtonStyle _inkStyle(BuildContext context) {
-    final colorScheme = Theme.of(context).colorScheme;
-    final ink = colorScheme.brightness == Brightness.light
-        ? AppColors.primaryDark
-        : colorScheme.primary;
-    return TextButton.styleFrom(
-      foregroundColor: ink,
-      overlayColor: AppColors.primaryLight,
-    );
+      AppButtonVariant.destructiveOutline => OutlinedButton(
+        onPressed: onPressedOrNull,
+        style: _sizeStyle().merge(
+          OutlinedButton.styleFrom(
+            foregroundColor: AppColors.danger,
+            side: const BorderSide(color: AppColors.danger),
+          ).copyWith(overlayColor: _dangerOverlay),
+        ),
+        child: child,
+      ),
+    };
   }
 
   ButtonStyle _sizeStyle() {
@@ -213,7 +178,7 @@ class AppButton extends StatelessWidget {
       // chargement donc désactivées, n'ont plus de fond à elles — rien pour
       // le contour et le texte, un voile gris pour les pleines : l'indicateur
       // se pose sur la carte, et prend l'encre violette du thème. `onPrimary`
-      // y valait 1,05:1 en sombre, 1,00 en clair.
+      // y valait 1,05:1.
       final onFill = variant == AppButtonVariant.primary
           ? AppColors.neutral0
           : Theme.of(context).colorScheme.primary;

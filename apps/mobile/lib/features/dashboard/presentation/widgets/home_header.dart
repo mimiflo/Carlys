@@ -12,8 +12,10 @@ import 'home_brand_mark.dart';
 /// En-tête de l'accueil : date du jour en mono, salutation, phrase d'état,
 /// avatar 44×44 en dégradé violet portant l'initiale.
 ///
-/// La salutation tient sur UNE ligne : la zone haute appartient au cœur, et
-/// chaque ligne de texte gagnée est du cœur rendu visible.
+/// La salutation tient sur une ligne à la taille d'origine, et passe à la
+/// ligne plutôt que de perdre le prénom sous une ellipse (petit écran, texte
+/// agrandi, prénom long) : l'en-tête grandit alors, comme pour la phrase
+/// d'état, et la citation part dessous.
 class HomeHeader extends StatelessWidget {
   const HomeHeader({
     required this.displayName,
@@ -119,12 +121,13 @@ class HomeHeader extends StatelessWidget {
                     ],
                   ),
                   const SizedBox(height: AppSpacing.xs),
+                  // Entière, toujours : à 320 points en texte ×2,
+                  // « Bonjour, Maximilien-Alexandre. » demande quatre lignes,
+                  // et un plafond à deux le couperait encore.
                   Semantics(
                     header: true,
                     child: Text(
                       firstName == null ? 'Bonjour' : 'Bonjour, $firstName.',
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
                       style: _greetingStyle,
                     ),
                   ),

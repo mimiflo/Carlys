@@ -20,15 +20,11 @@ class CarlysApp extends ConsumerWidget {
       title: 'Carlys',
       debugShowCheckedModeBanner: false,
       routerConfig: router,
-      theme: AppTheme.light(),
-      darkTheme: themeSetting == AppThemeSetting.oledDark
+      // Sombre, quel que soit le réglage du téléphone : un seul thème est
+      // déclaré, il n'y a donc pas de mode clair vers lequel basculer.
+      theme: themeSetting == AppThemeSetting.oledDark
           ? AppTheme.oledDark()
           : AppTheme.dark(),
-      themeMode: switch (themeSetting) {
-        AppThemeSetting.system => ThemeMode.system,
-        AppThemeSetting.light => ThemeMode.light,
-        AppThemeSetting.dark || AppThemeSetting.oledDark => ThemeMode.dark,
-      },
       // UNE seule langue déclarée, le français : c'est la seule dans laquelle
       // l'application est écrite. Déclarer `en` en plus ne traduisait rien —
       // aucun fichier de traduction n'existe — mais suffisait à faire basculer

@@ -92,10 +92,7 @@ void main() {
 
     for (final (name, theme) in [
       ('thème sombre', AppTheme.dark()),
-      // La carte est sombre dans les DEUX thèmes : elle impose le sien à
-      // son contenu, sans quoi le bouton fantôme prendrait le violet vif
-      // du thème clair, illisible sur elle.
-      ('thème clair', AppTheme.light()),
+      ('thème OLED', AppTheme.oledDark()),
     ]) {
       testWidgets('$name : titre, message et bouton de renonciation', (
         tester,
@@ -141,7 +138,7 @@ void main() {
 
     for (final (name, theme) in [
       ('thème sombre', AppTheme.dark()),
-      ('thème clair', AppTheme.light()),
+      ('thème OLED', AppTheme.oledDark()),
     ]) {
       for (final destructive in [false, true]) {
         final variant = destructive ? 'destructif' : 'principal';

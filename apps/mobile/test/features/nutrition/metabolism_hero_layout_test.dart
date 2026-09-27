@@ -48,7 +48,7 @@ void main() {
 
   Widget onglet() => MaterialApp(
     theme: AppTheme.dark(),
-    home: AppDarkScaffold(
+    home: Scaffold(
       body: ListView(
         children: [
           MetabolismHero(metabolism: resultat, onCompleteProfile: () {}),
@@ -156,7 +156,7 @@ void main() {
         theme: AppTheme.oledDark(),
         home: RepaintBoundary(
           key: cadre,
-          child: AppDarkScaffold(
+          child: Scaffold(
             body: ListView(
               padding: EdgeInsets.zero,
               children: [

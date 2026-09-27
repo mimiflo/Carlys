@@ -132,7 +132,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
     final authenticated =
         ref.watch(authControllerProvider) is AuthAuthenticated;
 
-    return AppDarkScaffold(
+    return Scaffold(
       body: Stack(
         children: [
           const Positioned.fill(child: OnboardingBackdrop()),

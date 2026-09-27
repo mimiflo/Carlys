@@ -50,7 +50,7 @@ class WelcomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    return AppDarkScaffold(
+    return Scaffold(
       body: Stack(
         children: [
           const Positioned.fill(child: WelcomeBackdrop()),

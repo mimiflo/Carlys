@@ -141,7 +141,7 @@ void main() {
 
   for (final (nom, construire) in [
     ('sombre', AppTheme.dark),
-    ('clair', AppTheme.light),
+    ('OLED', AppTheme.oledDark),
   ]) {
     Widget monte(Widget champ) => MaterialApp(
       theme: construire(),

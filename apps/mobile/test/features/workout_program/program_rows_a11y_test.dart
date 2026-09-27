@@ -25,7 +25,7 @@ void main() {
 
   Widget monte(Widget enfant) => MaterialApp(
     theme: AppTheme.dark(),
-    home: AppDarkScaffold(
+    home: Scaffold(
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(AppSpacing.gutter),
         child: enfant,

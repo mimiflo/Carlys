@@ -23,7 +23,7 @@ void main() {
 
   Widget monte(Widget enfant) => MaterialApp(
     theme: AppTheme.dark(),
-    home: AppDarkScaffold(
+    home: Scaffold(
       body: ListView(
         padding: const EdgeInsets.all(AppSpacing.md),
         children: [enfant],

@@ -22,7 +22,7 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         theme: AppTheme.dark(),
-        home: AppDarkScaffold(
+        home: Scaffold(
           body: ListView(
             children: [
               Column(

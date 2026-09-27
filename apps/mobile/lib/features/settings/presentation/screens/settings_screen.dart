@@ -7,8 +7,9 @@ import '../controllers/theme_setting_controller.dart';
 
 /// Apparence de l'application — préférence locale, aucune donnée serveur.
 ///
-/// Les réglages du profil basculent clair/sombre d'un geste ; cet écran
-/// expose le choix complet (Système, Sombre OLED).
+/// Carlys est sombre : on n'y choisit que la profondeur du fond, « Sombre »
+/// ou le noir pur de « Sombre OLED ». La ligne « Apparence » des réglages du
+/// profil mène ici.
 class SettingsScreen extends ConsumerWidget {
   const SettingsScreen({super.key});
 
@@ -16,7 +17,7 @@ class SettingsScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final selected = ref.watch(themeSettingProvider);
 
-    return AppDarkScaffold(
+    return Scaffold(
       appBar: AppBar(title: const Text('Apparence')),
       body: SafeArea(
         child: ListView(
@@ -40,8 +41,8 @@ class SettingsScreen extends ConsumerWidget {
             ],
             const SizedBox(height: AppSpacing.sm),
             Text(
-              'Le mode sombre OLED utilise un fond noir pur, économe sur les '
-              'écrans OLED.',
+              'Carlys est sombre. Sombre OLED passe le fond au noir pur, '
+              'économe sur les écrans OLED.',
               style: AppTypography.body.copyWith(
                 color: AppColors.darkTextTertiary,
               ),
@@ -86,6 +87,7 @@ class _ThemeOption extends StatelessWidget {
       selected: selected,
       child: AppListRow(
         title: setting.label,
+        subtitle: setting.description,
         leading: AppIcons.theme,
         onTap: onTap,
         trailing: selected

@@ -31,7 +31,7 @@ class TrainingSetupScreen extends ConsumerWidget {
     final goal = ref.watch(currentTrainingGoalProvider);
     final bottomInset = MediaQuery.paddingOf(context).bottom;
 
-    return AppDarkScaffold(
+    return Scaffold(
       body: SafeArea(
         bottom: false,
         child: switch ((value, profile)) {

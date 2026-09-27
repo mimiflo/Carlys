@@ -67,7 +67,7 @@ class _DomainQuizScreenState extends ConsumerState<DomainQuizScreen> {
         .firstOrNull;
     final pack = ref.watch(academyPackProvider);
 
-    return AppDarkScaffold(
+    return Scaffold(
       appBar: AppBar(
         title: Text(categorie == null ? 'Quiz' : 'Quiz ${categorie.label}'),
       ),

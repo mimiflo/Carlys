@@ -3,7 +3,6 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../../design_system/design_system.dart';
 import '../../../../design_system/scenes/app_scene_container.dart';
 import '../../../authentication/presentation/controllers/auth_controller.dart';
 import '../../domain/first_run_step.dart';
@@ -69,7 +68,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return AppDarkScaffold(
+    return Scaffold(
       body: Stack(
         children: [
           // Halo de marque, haut-centre : la même lueur violette que la page

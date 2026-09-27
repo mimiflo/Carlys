@@ -21,7 +21,7 @@ class TrainingHubScreen extends ConsumerWidget {
     final bottomInset =
         AppBottomBar.height + MediaQuery.paddingOf(context).bottom;
 
-    return AppDarkScaffold(
+    return Scaffold(
       body: ListView(
         padding: EdgeInsets.fromLTRB(
           AppSpacing.gutter,

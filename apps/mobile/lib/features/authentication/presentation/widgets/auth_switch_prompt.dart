@@ -6,8 +6,7 @@ import 'package:flutter/material.dart';
 /// Widget à part entière, pas un morceau d'écran : son style se résout dans
 /// SON contexte, donc SOUS le thème de marque qu'[AuthScaffold] impose.
 /// Construit directement dans l'écran, `Theme.of` remontait au thème
-/// AMBIANT — et le réglage clair posait un gris sombre (2,79:1) sur le fond
-/// sombre imposé.
+/// AMBIANT — celui du réglage, et non celui de la marque.
 class AuthSwitchPrompt extends StatelessWidget {
   const AuthSwitchPrompt({
     required this.prompt,

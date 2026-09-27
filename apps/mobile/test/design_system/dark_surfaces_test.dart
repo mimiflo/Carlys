@@ -10,82 +10,25 @@ import '../support/contrast.dart';
 import '../support/contrast_table.dart';
 import '../support/dart_source.dart';
 
-/// CE QUI EST PEINT EN SOMBRE PORTE LE THÈME SOMBRE.
+/// CE QUI EST PEINT EN SOMBRE SE LIT DANS LE THÈME.
 ///
-/// L'écran, la feuille et la barre en verre sont sombres sous TOUS les
-/// réglages, thème Clair compris. Ce qui s'y pose lisait pourtant le thème
-/// ambiant : sous le Clair, un bouton contour y prenait le violet profond
-/// pensé pour une page claire (3,35:1 sur la page sombre), et l'appel à
-/// l'action désactivé de l'éditeur une plaque BLANCHE. Aucune encre violette
-/// ne tient 4,5:1 à la fois sur la page claire et sur la page sombre : c'est
-/// le thème qui doit dire ce qui est peint. Trois gardes :
+/// L'application n'a que deux thèmes, tous deux sombres : « Sombre » et
+/// « Sombre OLED », qui promet un fond NOIR PUR. Trois gardes :
 ///
-/// 1. `AppDarkTheme` impose le thème sombre sous le Clair, et ne touche à
-///    rien sous un thème sombre ;
+/// 1. la page (`Scaffold`) et les voiles des scènes prennent le fond du
+///    thème, jamais `darkBackground` en dur ;
 /// 2. la table mesure, dans chaque thème, ce qui se pose sur chaque surface
 ///    sombre, contre ce que la surface PEINT ;
-/// 3. un balai refuse un `Scaffold` peint en sombre à la main hors du design
-///    system : c'est `AppDarkScaffold`, qui porte le fond ET le thème.
+/// 3. un balai refuse un `Scaffold` ou une barre d'application peints en
+///    sombre à la main hors du design system.
 void main() {
-  group('AppDarkTheme', () {
-    ThemeData? lu;
-    Widget sonde() => Builder(
-      builder: (context) {
-        lu = Theme.of(context);
-        return const SizedBox();
-      },
-    );
-
-    testWidgets('sous le thème clair, il impose le thème sombre', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: AppTheme.light(),
-          home: AppDarkTheme(child: sonde()),
-        ),
-      );
-      expect(lu!.brightness, Brightness.dark);
-      expect(lu!.colorScheme.primary, AppDarkTheme.theme.colorScheme.primary);
-    });
-
-    testWidgets('sous un thème sombre, il transmet le thème ambiant', (
-      tester,
-    ) async {
-      await tester.pumpWidget(
-        MaterialApp(
-          theme: AppTheme.oledDark(),
-          home: AppDarkTheme(child: sonde()),
-        ),
-      );
-      // Le fond OLED reste celui de l'OLED : rien n'est imposé.
-      expect(lu!.scaffoldBackgroundColor, AppColors.oledBackground);
-    });
-
-    testWidgets('basculer le réglage ne reconstruit pas ce qu’il porte', (
-      tester,
-    ) async {
-      final cle = GlobalKey();
-      Widget app(ThemeData theme) => MaterialApp(
-        theme: theme,
-        home: AppDarkTheme(child: SizedBox(key: cle)),
-      );
-      await tester.pumpWidget(app(AppTheme.light()));
-      final avant = cle.currentContext;
-      await tester.pumpWidget(app(AppTheme.dark()));
-      await tester.pumpAndSettle();
-      expect(cle.currentContext, same(avant));
-    });
-  });
-
-  group('AppDarkScaffold', () {
+  group('la page (Scaffold)', () {
     // Le réglage « Sombre OLED » promet un fond NOIR PUR. L'écran sombre
     // peignait pourtant `darkBackground` en dur : 42 écrans sur 44 gardaient
     // #08050E sous l'OLED, seule la barre d'application passait au noir.
     for (final (nom, construire, attendu) in [
       ('OLED', AppTheme.oledDark, AppColors.oledBackground),
       ('sombre', AppTheme.dark, AppColors.darkBackground),
-      ('clair', AppTheme.light, AppColors.darkBackground),
     ]) {
       testWidgets('sous le thème $nom, il peint ${hex(attendu)}', (
         tester,
@@ -93,16 +36,13 @@ void main() {
         await tester.pumpWidget(
           MaterialApp(
             theme: construire(),
-            home: AppDarkScaffold(
+            home: Scaffold(
               appBar: AppBar(title: const Text('Titre')),
               body: const SizedBox(),
             ),
           ),
         );
-        expect(
-          tester.widget<Scaffold>(find.byType(Scaffold)).backgroundColor,
-          attendu,
-        );
+        expect(_fondDeLaPage(tester), attendu);
         // La barre d'application prend le MÊME fond : pas de couture.
         final barre = tester.widget<Material>(
           find
@@ -126,14 +66,13 @@ void main() {
     for (final (nom, construire, attendu) in [
       ('OLED', AppTheme.oledDark, AppColors.oledBackground),
       ('sombre', AppTheme.dark, AppColors.darkBackground),
-      ('clair', AppTheme.light, AppColors.darkBackground),
     ]) {
       testWidgets('sous le thème $nom, les voiles des scènes finissent sur '
           '${hex(attendu)}', (tester) async {
         await tester.pumpWidget(
           MaterialApp(
             theme: construire(),
-            home: const AppDarkScaffold(
+            home: const Scaffold(
               body: Column(
                 children: [
                   SizedBox(height: 100, child: AppSceneScrim.lateral()),
@@ -185,14 +124,14 @@ void main() {
       fautes,
       isEmpty,
       reason:
-          'Un `Scaffold` peint en `darkBackground` laisse le thème ambiant à '
-          'son contenu, clair sous le réglage Clair : employer '
-          '`AppDarkScaffold`.\n${fautes.join('\n')}',
+          'Un `Scaffold` peint en `darkBackground` reste #08050E sous '
+          '« Sombre OLED », qui promet un fond noir : laisser le fond au '
+          'thème.\n${fautes.join('\n')}',
     );
   });
 
   test('aucune barre d’application ne peint le fond sombre à la main', () {
-    // Posée sur un `AppDarkScaffold`, une barre peinte en `darkBackground`
+    // Posée sur la page, une barre peinte en `darkBackground`
     // dessinait une couture sous l'OLED, où la page est noire : le thème
     // donne déjà à la barre le fond de la page.
     final fautes = <String>[
@@ -229,7 +168,7 @@ void main() {
       ),
       isEmpty,
     );
-    expect(_scaffoldsSombres('AppDarkScaffold(body: x)'), isEmpty);
+    expect(_scaffoldsSombres('Scaffold(body: x)'), isEmpty);
   });
 }
 
@@ -258,11 +197,11 @@ final _surfaces = <_Surface>[
     await tester.pumpWidget(
       MaterialApp(
         theme: theme(),
-        home: AppDarkScaffold(body: Center(child: composant)),
+        home: Scaffold(body: Center(child: composant)),
       ),
     );
     await attendre(tester, enBoucle: enBoucle);
-    return [tester.widget<Scaffold>(find.byType(Scaffold)).backgroundColor!];
+    return [_fondDeLaPage(tester)];
   }),
   for (final style in AppSheetStyle.values)
     _Surface('dans une feuille ${style.name}', (
@@ -286,9 +225,8 @@ final _surfaces = <_Surface>[
         tester.widget<BottomSheet>(find.byType(BottomSheet)).backgroundColor!,
       ];
     }),
-  // La barre en verre se pose sur un écran qui SUIT le thème : elle impose
-  // le sien d'elle-même. Son verre translucide se compose sur ce qui défile
-  // dessous — la page sombre, une carte, une page claire.
+  // Le verre translucide se compose sur ce qui défile dessous — la page
+  // sombre, une carte, une photo blanche.
   _Surface('dans une barre en verre', (
     tester,
     composant,
@@ -326,7 +264,7 @@ final _surfaces = <_Surface>[
       for (final dessous in [
         AppColors.darkBackground,
         AppColors.darkSurface,
-        AppColors.lightBackground,
+        AppColors.neutral0,
       ])
         over(verre, dessous),
     ];
@@ -396,6 +334,18 @@ final _table = <Ligne>[
       }),
     ],
 ];
+
+/// Ce que le `Scaffold` PEINT : son `Material`, au fond du thème.
+Color _fondDeLaPage(WidgetTester tester) => tester
+    .widget<Material>(
+      find
+          .descendant(
+            of: find.byType(Scaffold),
+            matching: find.byType(Material),
+          )
+          .first,
+    )
+    .color!;
 
 /// Les lignes des `Scaffold` dont un argument DIRECT les peint en sombre.
 List<int> _scaffoldsSombres(String code) => [

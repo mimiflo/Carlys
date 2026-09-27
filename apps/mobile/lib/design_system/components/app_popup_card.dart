@@ -4,7 +4,6 @@ import '../colors/app_colors.dart';
 import '../radius/app_radius.dart';
 import '../shadows/app_shadows.dart';
 import '../spacing/app_spacing.dart';
-import '../theme/app_dark_theme.dart';
 import '../typography/app_typography.dart';
 import 'app_button.dart';
 
@@ -37,10 +36,6 @@ enum AppPopupTone {
 ///  - boutons EMPILÉS sur toute la largeur, l'action principale d'abord.
 ///    Côte à côte, deux libellés ne tiennent plus à 320 points de large dès
 ///    que le texte est agrandi : empilés, ils ne débordent jamais.
-///
-/// La carte est sombre dans les DEUX thèmes, et elle impose donc le thème
-/// sombre à son contenu : en thème clair, un bouton fantôme prendrait le
-/// violet vif du thème clair, illisible sur cette surface.
 class AppPopupCard extends StatelessWidget {
   const AppPopupCard({
     required this.icon,
@@ -109,87 +104,85 @@ class AppPopupCard extends StatelessWidget {
     final endsOnGhost =
         last is AppButton && last.variant == AppButtonVariant.ghost;
 
-    return AppDarkTheme(
-      child: DecoratedBox(
-        decoration: const BoxDecoration(
+    return DecoratedBox(
+      decoration: const BoxDecoration(
+        borderRadius: AppRadius.cardMainAll,
+        boxShadow: AppShadows.lg,
+      ),
+      child: Material(
+        color: AppColors.darkSurface,
+        clipBehavior: Clip.antiAlias,
+        shape: const RoundedRectangleBorder(
           borderRadius: AppRadius.cardMainAll,
-          boxShadow: AppShadows.lg,
+          side: BorderSide(color: AppColors.primaryLightBorder),
         ),
-        child: Material(
-          color: AppColors.darkSurface,
-          clipBehavior: Clip.antiAlias,
-          shape: const RoundedRectangleBorder(
-            borderRadius: AppRadius.cardMainAll,
-            side: BorderSide(color: AppColors.primaryLightBorder),
-          ),
-          child: DecoratedBox(
-            decoration: const BoxDecoration(gradient: AppColors.popupHalo),
-            child: Padding(
-              padding: EdgeInsets.fromLTRB(
-                AppSpacing.lg,
-                AppSpacing.lg,
-                AppSpacing.lg,
-                endsOnGhost ? AppSpacing.xs : AppSpacing.lg,
-              ),
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  Center(
-                    child: _Medallion(icon: icon, tone: tone),
+        child: DecoratedBox(
+          decoration: const BoxDecoration(gradient: AppColors.popupHalo),
+          child: Padding(
+            padding: EdgeInsets.fromLTRB(
+              AppSpacing.lg,
+              AppSpacing.lg,
+              AppSpacing.lg,
+              endsOnGhost ? AppSpacing.xs : AppSpacing.lg,
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Center(
+                  child: _Medallion(icon: icon, tone: tone),
+                ),
+                const SizedBox(height: AppSpacing.md),
+                if (title != null) ...[
+                  Text(
+                    title,
+                    textAlign: TextAlign.center,
+                    style: AppTypography.subheading.copyWith(
+                      color: AppColors.darkTextPrimary,
+                    ),
                   ),
-                  const SizedBox(height: AppSpacing.md),
-                  if (title != null) ...[
-                    Text(
-                      title,
-                      textAlign: TextAlign.center,
-                      style: AppTypography.subheading.copyWith(
-                        color: AppColors.darkTextPrimary,
-                      ),
-                    ),
-                    if (hasMessage) const SizedBox(height: AppSpacing.xs),
-                  ],
-                  if (hasMessage)
-                    Text(
-                      message,
-                      textAlign: TextAlign.center,
-                      style: title == null
-                          ? AppTypography.bodyLarge.copyWith(
-                              color: AppColors.darkTextPrimary,
-                            )
-                          : AppTypography.body.copyWith(
-                              color: AppColors.darkTextSecondary,
-                            ),
-                    ),
-                  if (detail != null) ...[
-                    const SizedBox(height: AppSpacing.sm),
-                    Semantics(
-                      label: detailSemanticsLabel ?? detail,
-                      child: ExcludeSemantics(
-                        child: Text(
-                          detail,
-                          textAlign: TextAlign.center,
-                          style: AppTypography.body.copyWith(
-                            fontFamily: AppTypography.monoFamily,
+                  if (hasMessage) const SizedBox(height: AppSpacing.xs),
+                ],
+                if (hasMessage)
+                  Text(
+                    message,
+                    textAlign: TextAlign.center,
+                    style: title == null
+                        ? AppTypography.bodyLarge.copyWith(
+                            color: AppColors.darkTextPrimary,
+                          )
+                        : AppTypography.body.copyWith(
                             color: AppColors.darkTextSecondary,
                           ),
+                  ),
+                if (detail != null) ...[
+                  const SizedBox(height: AppSpacing.sm),
+                  Semantics(
+                    label: detailSemanticsLabel ?? detail,
+                    child: ExcludeSemantics(
+                      child: Text(
+                        detail,
+                        textAlign: TextAlign.center,
+                        style: AppTypography.body.copyWith(
+                          fontFamily: AppTypography.monoFamily,
+                          color: AppColors.darkTextSecondary,
                         ),
                       ),
                     ),
-                  ],
-                  if (content != null) ...[
-                    const SizedBox(height: AppSpacing.md),
-                    content,
-                  ],
-                  if (actions.isNotEmpty) ...[
-                    const SizedBox(height: AppSpacing.lg),
-                    for (final (index, action) in actions.indexed) ...[
-                      if (index > 0) const SizedBox(height: AppSpacing.xs),
-                      action,
-                    ],
+                  ),
+                ],
+                if (content != null) ...[
+                  const SizedBox(height: AppSpacing.md),
+                  content,
+                ],
+                if (actions.isNotEmpty) ...[
+                  const SizedBox(height: AppSpacing.lg),
+                  for (final (index, action) in actions.indexed) ...[
+                    if (index > 0) const SizedBox(height: AppSpacing.xs),
+                    action,
                   ],
                 ],
-              ),
+              ],
             ),
           ),
         ),

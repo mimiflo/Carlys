@@ -211,10 +211,8 @@ abstract final class AppColors {
   static const Color darkBorder = Color(0x12FFFFFF);
   static const Color darkBorderStrong = Color(0x24FFFFFF);
 
-  // Surfaces — thème clair (secondaire) et OLED
-  static const Color lightBackground = Color(0xFFFAFAFC);
-  static const Color lightSurface = Color(0xFFFFFFFF);
-  static const Color lightSurfaceAlt = Color(0xFFF4F4F6);
+  // Surface — thème Sombre OLED (les surfaces claires de tokens.json ne
+  // servent qu'à l'admin : l'application n'a plus de thème clair).
   static const Color oledBackground = Color(0xFF000000);
 
   // Teintes dérivées récurrentes (handoff/design-tokens.md)

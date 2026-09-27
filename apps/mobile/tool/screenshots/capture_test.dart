@@ -14,6 +14,7 @@ import 'package:carlys_mobile/app/environment/app_environment.dart';
 import 'package:carlys_mobile/app/restore/app_restore.dart';
 import 'package:carlys_mobile/app/router/app_routes.dart';
 import 'package:carlys_mobile/core/database/app_database.dart';
+import 'package:carlys_mobile/core/database/local_account_purge.dart';
 import 'package:carlys_mobile/core/errors/app_exception.dart';
 import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
 import 'package:carlys_mobile/core/utilities/debouncer.dart';
@@ -21,6 +22,7 @@ import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/academy/presentation/screens/academy_screen.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
 import 'package:carlys_mobile/features/authentication/domain/entities/auth_user.dart';
+import 'package:carlys_mobile/features/authentication/presentation/screens/delete_account_screen.dart';
 import 'package:carlys_mobile/features/authentication/presentation/screens/login_screen.dart';
 import 'package:carlys_mobile/features/authentication/presentation/screens/register_screen.dart';
 import 'package:carlys_mobile/features/carlys_profile/domain/entities/carlys_profile.dart';
@@ -109,6 +111,7 @@ import '../../test/support/in_memory_community_repository.dart';
 import '../../test/support/in_memory_device_token_repository.dart';
 import '../../test/support/in_memory_program_repository.dart';
 import '../../test/support/in_memory_workout_template_repository.dart';
+import '../../test/support/noop_local_account_purge.dart';
 import '../../test/support/sample_meal_photo.dart';
 import '../../test/support/sample_meals.dart';
 
@@ -632,6 +635,10 @@ void main() {
     /// Ce que rend la connexion Apple ou Google, quand la scène la fait
     /// échouer — une erreur du SDK ou du serveur, comme en production.
     Object? socialError,
+
+    /// Le dépôt d'authentification, quand la scène règle ce que le
+    /// « serveur » répond (suppression du compte refusée, par exemple).
+    FakeAuthRepository? auth,
   }) async {
     tester.view.physicalSize = const Size(1179, 2556);
     tester.view.devicePixelRatio = 3.0;
@@ -646,8 +653,9 @@ void main() {
             ),
           ),
           authRepositoryProvider.overrideWithValue(
-            FakeAuthRepository(storedSession: authenticated, user: user)
-              ..socialError = socialError,
+            auth ??
+                (FakeAuthRepository(storedSession: authenticated, user: user)
+                  ..socialError = socialError),
           ),
           exercisesRepositoryProvider.overrideWithValue(
             exercises ?? catalogOf(),
@@ -705,6 +713,11 @@ void main() {
           ]),
           syncLifecycleProvider.overrideWithValue(NoopSyncLifecycle()),
           appRestoreProvider.overrideWithValue(NoopAppRestore()),
+          // Supprimer le compte oublie l'appareil : la vraie purge ouvrait
+          // le trousseau (absent des tests) et relançait le profil
+          // d'entraînement au réseau, dont le minuteur Dio survivait à la
+          // scène (« A Timer is still pending »).
+          localAccountPurgeProvider.overrideWithValue(NoopLocalAccountPurge()),
           if (messenger != null)
             pushMessengerProvider.overrideWithValue(messenger),
           // Base EN MÉMOIRE : sans cet écrasement, le harnais ouvrait la vraie
@@ -1074,6 +1087,30 @@ void main() {
         ]),
     );
     await capture(tester, '02-accueil', shows: find.byType(HomeScreen));
+  });
+
+  testWidgets('accueil, prénom long, 320 points', (tester) async {
+    // La salutation passe à la ligne plutôt que de perdre le prénom sous
+    // une ellipse : l'en-tête grandit, la citation part dessous.
+    await pumpApp(
+      tester,
+      user: AuthUser(
+        id: fakeUser.id,
+        email: fakeUser.email,
+        displayName: 'Maximilien-Alexandre Durand',
+        emailVerified: true,
+        locale: fakeUser.locale,
+        timezone: fakeUser.timezone,
+      ),
+      workouts: FakeWorkoutRepository()..history = historyOf(),
+    );
+    tester.view.physicalSize = const Size(960, 1920);
+    await settle(tester);
+    await capture(
+      tester,
+      '02c-accueil-prenom-long',
+      shows: find.text('Bonjour, Maximilien-Alexandre.'),
+    );
   });
 
   testWidgets('journal alimentaire', (tester) async {
@@ -1766,7 +1803,7 @@ void main() {
     );
   });
 
-  testWidgets('profil + réglages + thème clair', (tester) async {
+  testWidgets('profil + réglages + apparence', (tester) async {
     await pumpApp(
       tester,
       premium: true,
@@ -1804,18 +1841,14 @@ void main() {
     // Les réglages sont POUSSÉS par-dessus le profil et l'accueil : plusieurs
     // Scrollable cohabitent dans l'arbre, on vise celui de l'écran visible.
     await tester.scrollUntilVisible(
-      find.text('Thème sombre'),
+      find.text('Apparence'),
       150,
       scrollable: find.byType(Scrollable).last,
     );
     await settle(tester);
-    // Taper la LIGNE (pas l'interrupteur) ouvre l'écran d'apparence — seul
-    // endroit où choisir « Système » ou « Sombre OLED ». On y bascule sur
-    // « Clair » pour que la capture montre les réglages en thème clair,
-    // fidèle au titre du test.
-    await tester.tap(find.text('Thème sombre'));
-    await settle(tester);
-    await tester.tap(find.text('Clair'));
+    // La ligne « Apparence » ouvre l'écran des deux thèmes, tous deux
+    // sombres : « Sombre » (par défaut) et « Sombre OLED ».
+    await tester.tap(find.text('Apparence'));
     await settle(tester);
     // « Sombre OLED » n'existe que sur cet écran-là ; l'étiquette de section,
     // elle, est rendue en capitales et se cherche mal au texte exact.
@@ -1832,6 +1865,76 @@ void main() {
       tester,
       '15-historique',
       shows: find.byType(WorkoutHistoryScreen),
+    );
+  });
+
+  testWidgets('suppression du compte', (tester) async {
+    // Le « serveur » refuse d'abord (Stripe n'a pas résilié), puis accepte
+    // en signalant un abonnement de magasin qui prélève encore.
+    final auth = FakeAuthRepository(storedSession: true, user: fakeUser)
+      // La phrase exacte de l'API (`BILLING_NOT_STOPPED`).
+      ..accountFailure = const ServerException(
+        'On n’a pas pu arrêter ton abonnement, réessaie dans un instant ; '
+        'ton compte n’est pas supprimé.',
+        statusCode: 503,
+        fromApi: true,
+      );
+    await pumpApp(tester, auth: auth);
+    final context = tester.element(find.byType(AppBottomBar));
+    unawaited(GoRouter.of(context).push(AppRoutes.deleteAccount));
+    await settle(tester);
+    await capture(
+      tester,
+      '17-suppression-compte',
+      shows: find.byType(DeleteAccountScreen),
+    );
+
+    final page = find
+        .descendant(
+          of: find.byType(DeleteAccountScreen),
+          matching: find.byType(Scrollable),
+        )
+        .first;
+    await tester.scrollUntilVisible(
+      find.text('Lire la politique de confidentialité'),
+      150,
+      scrollable: page,
+    );
+    await settle(tester);
+    await capture(
+      tester,
+      '17a-suppression-ce-qui-reste',
+      shows: find.text('Ce qui reste'),
+    );
+
+    await tester.enterText(find.byType(TextFormField), 'secret-du-jour');
+    final bouton = find.text('Supprimer définitivement');
+    await tester.scrollUntilVisible(bouton, 150, scrollable: page);
+    await tester.tap(bouton);
+    await settle(tester);
+    // Le bandeau d'erreur pousse le bouton sous la ligne de flottaison : on
+    // le fait revenir, bandeau et bouton dans le même cadre.
+    await tester.ensureVisible(bouton);
+    await settle(tester);
+    await capture(
+      tester,
+      '17b-suppression-refus',
+      // Le bandeau seul : la fin de sa phrase figure aussi au récapitulatif.
+      shows: find.textContaining('On n’a pas pu arrêter ton abonnement'),
+    );
+
+    // Second appui, accepté : la bascule vers la connexion a lieu, et la
+    // popup dit ce que le serveur ne peut pas faire.
+    auth
+      ..accountFailure = null
+      ..storeSubscriptionStillActive = true;
+    await tester.tap(bouton);
+    await settle(tester);
+    await precacheBrandImages(tester);
+    await capture(
+      tester,
+      '17c-suppression-abonnement-magasin',
+      shows: find.text('Compte supprimé'),
     );
   });
 

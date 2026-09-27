@@ -1,5 +1,6 @@
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/dashboard/domain/entities/daily_quote.dart';
+import 'package:carlys_mobile/features/dashboard/presentation/widgets/daily_quote_card.dart';
 import 'package:carlys_mobile/features/dashboard/presentation/widgets/home_header.dart';
 import 'package:carlys_mobile/features/dashboard/presentation/widgets/home_hero.dart';
 import 'package:flutter/material.dart';
@@ -39,14 +40,15 @@ void main() {
 
   Widget accueil({
     String subtitle = 'Récupération faite : le créneau est bon.',
+    String displayName = 'Maximilien Durand',
   }) => MaterialApp(
     theme: AppTheme.dark(),
-    home: AppDarkScaffold(
+    home: Scaffold(
       body: ListView(
         padding: EdgeInsets.zero,
         children: [
           HomeHero(
-            displayName: 'Maximilien Durand',
+            displayName: displayName,
             subtitle: subtitle,
             quote: citation,
           ),
@@ -109,6 +111,32 @@ void main() {
           );
         }
       }
+    });
+  }
+
+  for (final (largeur, texte) in const [(320.0, 1.0), (320.0, 2.0)]) {
+    testWidgets('à $largeur points, texte ×$texte : un prénom long passe à la '
+        'ligne plutôt que sous une ellipse, et la citation reste dessous', (
+      tester,
+    ) async {
+      // « Bonjour, Maximilien-… » : la salutation tenait sur UNE ligne, et
+      // perdait le prénom sous des points de suspension.
+      setPhone(tester, width: largeur, textScale: texte);
+      await tester.pumpWidget(
+        accueil(displayName: 'Maximilien-Alexandre Durand'),
+      );
+      await tester.pump();
+
+      final salutation = find.text('Bonjour, Maximilien-Alexandre.');
+      expect(truncatedTexts(find.byType(HomeHeader)), isEmpty);
+      expect(midWordBreaks(salutation), isEmpty);
+      final entete = tester.getRect(find.byType(HomeHeader));
+      expect(tester.getRect(salutation).bottom, lessThan(entete.bottom));
+      // L'en-tête grandit de la ligne gagnée : la citation part dessous.
+      expect(
+        tester.getRect(find.byType(DailyQuoteCard)).top,
+        greaterThanOrEqualTo(entete.bottom),
+      );
     });
   }
 

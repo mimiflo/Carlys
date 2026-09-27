@@ -44,7 +44,7 @@ class ProgramsScreen extends ConsumerWidget {
     final programs = ref.watch(programsProvider);
     final bottomInset = MediaQuery.paddingOf(context).bottom;
 
-    return AppDarkScaffold(
+    return Scaffold(
       body: SafeArea(
         bottom: false,
         child: ListView(

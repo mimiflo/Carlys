@@ -66,7 +66,7 @@ class HomeScreen extends ConsumerWidget {
     final bottomInset =
         AppBottomBar.height + MediaQuery.paddingOf(context).bottom;
 
-    return AppDarkScaffold(
+    return Scaffold(
       // Pendant le défilement, le cœur se fige et rend son budget au fil
       // d'interface — c'est lui qui faisait accrocher le haut de l'écran
       // sur les téléphones modestes.

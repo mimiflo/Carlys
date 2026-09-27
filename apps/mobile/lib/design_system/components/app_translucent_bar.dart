@@ -3,7 +3,6 @@ import 'dart:ui';
 import 'package:flutter/widgets.dart';
 
 import '../colors/app_colors.dart';
-import '../theme/app_dark_theme.dart';
 
 /// LE VERRE DÉPOLI DES BARRES BASSES — la recette, à un seul endroit.
 ///
@@ -22,11 +21,7 @@ import '../theme/app_dark_theme.dart';
 ///
 /// Ce composant ne pose ni marge intérieure ni zone sûre : la respiration
 /// diffère réellement d'une barre à l'autre (l'une veut `SafeArea`, l'autre
-/// ajoute l'encoche à son propre padding bas). Il ne tient que le verre —
-/// et le thème qui va avec : le verre est sombre sous tous les réglages, et
-/// son contenu prend le thème SOMBRE ([AppDarkTheme]). Sous le thème Clair,
-/// l'appel à l'action désactivé de l'éditeur y posait sinon une plaque
-/// BLANCHE, et le bouton texte voisin le violet pensé pour une page claire.
+/// ajoute l'encoche à son propre padding bas). Il ne tient que le verre.
 class AppTranslucentBar extends StatelessWidget {
   const AppTranslucentBar({required this.child, this.color, super.key});
 
@@ -66,7 +61,7 @@ class AppTranslucentBar extends StatelessWidget {
               top: BorderSide(color: AppColors.darkBorder, width: borderWidth),
             ),
           ),
-          child: AppDarkTheme(child: child),
+          child: child,
         ),
       ),
     );

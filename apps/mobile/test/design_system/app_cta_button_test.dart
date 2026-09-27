@@ -114,12 +114,9 @@ void main() {
   });
 
   // Dans une barre en verre (l'éditeur de modèle), le bouton se pose sur un
-  // fond sombre sous TOUS les réglages. Sous le thème clair, il posait une
-  // plaque BLANCHE et un indicateur au violet vif sur la barre sombre :
-  // la barre lui impose le thème sombre, et il y paraît comme en sombre.
+  // fond sombre, sous les deux thèmes.
   for (final (nom, theme) in [
     ('sombre', AppTheme.dark),
-    ('clair', AppTheme.light),
     ('OLED', AppTheme.oledDark),
   ]) {
     testWidgets('thème $nom, dans une barre en verre : la plaque sombre et '

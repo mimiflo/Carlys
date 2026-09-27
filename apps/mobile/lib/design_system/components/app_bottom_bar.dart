@@ -72,10 +72,10 @@ const List<AppBottomBarItem> appBottomBarItems = [
 /// [AppMotion.tab].
 ///
 /// La barre est TRANSLUCIDE : elle se mesure au-dessus de ce qui passe
-/// dessous, fond sombre comme page claire du thème clair ou photo blanche.
-/// Inactifs, l'icône et le libellé portaient `iconInactive` : 3,95:1 sous
-/// un libellé de 9 points (il en faut 4,5) au-dessus du fond sombre, et
-/// 2,79 sous l'icône (il en faut 3) au-dessus d'une page claire. Le gris
+/// dessous, fond sombre comme photo blanche. Inactifs, l'icône et le libellé
+/// portaient `iconInactive` : 3,95:1 sous un libellé de 9 points (il en faut
+/// 4,5) au-dessus du fond sombre, et sous 3:1 pour l'icône au-dessus d'un
+/// fond clair. Le gris
 /// secondaire sous le libellé et le gris éteint sous l'icône tiennent leur
 /// seuil quoi qu'il passe dessous — le pire cas est la photo blanche, et
 /// `contrast_pairs_test.dart` le mesure : ce commentaire ne recopie pas ses
