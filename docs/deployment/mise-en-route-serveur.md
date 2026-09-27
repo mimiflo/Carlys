@@ -645,9 +645,8 @@ le premier vrai message**.
    (plus de 50 secondes). Si la panne survient dès la première demande à
    Mistral, le message n'est **pas** décompté du quota de la personne, trois
    fois par jour au plus ; s'il a déjà servi une partie de la réponse, le
-   message reste décompté. Limite connue : l'application mobile
-   n'attend encore que 20 secondes, et affiche « hors ligne » au-delà ; le
-   passage à 65 secondes suivra dans une mise à jour de l'application.
+   message reste décompté. L'application attend la réponse du coach
+   65 secondes, au-delà des 50 secondes que le serveur laisse à Mistral.
 
 10. **Production.** Créez une seconde clé (`carlys-coach-prod`, même
     expiration), pour pouvoir révoquer l'une sans l'autre, puis refaites les

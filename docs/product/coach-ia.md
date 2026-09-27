@@ -330,9 +330,10 @@ outils), sous les 60 s de nginx. Le client compatible OpenAI réessaie deux
 fois un 429 ou un 5xx (pauses de 1 puis 2 s) ; toute autre panne (réseau,
 échéance, réponse illisible, génération interrompue par Mistral avec
 `finish_reason: error`, 4xx) donne un 503 dont le journal ne porte que le
-statut, jamais le corps ni la clé. Côté mobile, l'attente de réponse est de
-20 s (`dio_client.dart`) : porter l'envoi de message à 65 s est à faire dans
-l'application (reporté, tranche mobile).
+statut, jamais le corps ni la clé. Côté mobile, l'envoi d'un message attend
+la réponse 65 s (`coachReplyTimeout`, `coach_repository_impl.dart`), au-delà
+de l'échéance de 50 s du serveur ; les autres appels gardent les 20 s du
+client partagé (`dio_client.dart`).
 
 **Ordre de grandeur, si Anthropic est réglé** : un tour avec préfixe caché
 coûte environ **un à deux centimes**, l'essentiel part dans la sortie. Un

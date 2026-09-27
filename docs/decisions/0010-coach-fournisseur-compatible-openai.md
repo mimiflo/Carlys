@@ -132,6 +132,6 @@ quota quotidien de la personne, qui n'avait pourtant rien reçu.
   de traitement). L'admin, qui publie ces pages, doit être redéployée.
 - Pas à pas du propriétaire : `docs/deployment/mise-en-route-serveur.md`,
   « Coach IA gratuit avec Mistral ».
-- Reste à faire côté mobile : l'envoi d'un message attend 20 s
-  (`dio_client.dart`), à porter à 65 s sur cette seule route, sans quoi une
-  réponse lente s'affiche « hors ligne ».
+- Côté mobile, l'envoi d'un message attend 65 s (`coachReplyTimeout`) au
+  lieu des 20 s du client partagé, sur cette seule route : sans ce délai,
+  une réponse lente s'afficherait « hors ligne ».

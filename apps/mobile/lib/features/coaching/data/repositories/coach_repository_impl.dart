@@ -7,6 +7,12 @@ import '../../domain/entities/coach.dart';
 import '../../domain/repositories/coach_repository.dart';
 import '../dto/coach_dtos.dart';
 
+/// Délai de réception de l'envoi d'un message : le serveur laisse 50 s au
+/// fournisseur d'IA pour tout le tour (`COACH_TURN_DEADLINE_MS`), plus que
+/// les 20 s du client partagé. Sans ce délai propre, une réponse lente
+/// s'afficherait « hors ligne » alors qu'elle arrive.
+const coachReplyTimeout = Duration(seconds: 65);
+
 /// Dépôt coach — **direct sur l'API**, sans base locale ni file de
 /// synchronisation.
 ///
@@ -69,6 +75,7 @@ class CoachRepositoryImpl implements CoachRepository {
         // L'identifiant vient de l'appareil : un renvoi ne crée pas un
         // second message, et ne consomme pas un second message de quota.
         data: {'id': messageId, 'content': content},
+        options: Options(receiveTimeout: coachReplyTimeout),
       );
       return coachReplyFromJson(
         response.data?['data'] as Map<String, dynamic>? ?? const {},
