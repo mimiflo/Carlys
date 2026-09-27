@@ -1,5 +1,23 @@
 import { type PersonalRecordType } from '@carlys/api-contracts';
-import { type WorkoutSet } from '@prisma/client';
+import { type PersonalRecord, type WorkoutSet } from '@prisma/client';
+
+/**
+ * Ce qu'un calcul de record lit d'une série — et le dépôt n'en rapatrie pas
+ * davantage (`findSetsForRecords`). Huit colonnes sur dix-huit : l'historique
+ * d'un exercice fréquent compte des milliers de séries, et il se relit à
+ * chaque clôture de séance.
+ */
+export type RecordSet = Pick<
+  WorkoutSet,
+  | 'sessionId'
+  | 'exerciseId'
+  | 'exerciseName'
+  | 'position'
+  | 'reps'
+  | 'weightKg'
+  | 'completedAt'
+  | 'deletedAt'
+>;
 
 export interface RecordCandidate {
   exerciseId: string | null;
@@ -30,10 +48,10 @@ export interface RecordCandidate {
  * record depuis l'historique avec le même code que celui qui le calculait
  * séance par séance.
  */
-export function computeBests(sets: WorkoutSet[]): RecordCandidate[] {
+export function computeBests(sets: readonly RecordSet[]): RecordCandidate[] {
   const candidates = new Map<string, RecordCandidate>();
 
-  const consider = (set: WorkoutSet, recordType: PersonalRecordType, value: number): void => {
+  const consider = (set: RecordSet, recordType: PersonalRecordType, value: number): void => {
     const key = `${set.exerciseName}|${recordType}`;
     const current = candidates.get(key);
     if (current === undefined || value > current.value) {
@@ -67,4 +85,51 @@ export function computeBests(sets: WorkoutSet[]): RecordCandidate[] {
   }
 
   return [...candidates.values()];
+}
+
+/** Une valeur en centièmes : l'échelle des colonnes `Decimal(…, 2)` du record. */
+function cents(value: number | null): number | null {
+  return value === null ? null : Math.round(value * 100);
+}
+
+/**
+ * Le record stocké dit-il DÉJÀ exactement ce que l'historique vient de
+ * calculer ? Valeur, charge, répétitions, date et séance d'origine.
+ *
+ * Comparées en centièmes : la base arrondit à deux décimales, et un produit
+ * flottant (22,1 × 3 = 66,300000000000001) ne doit pas passer pour un record
+ * qui a bougé.
+ */
+function sameRecord(stored: PersonalRecord, best: RecordCandidate): boolean {
+  return (
+    cents(Number(stored.value)) === cents(best.value) &&
+    cents(stored.weightKg === null ? null : Number(stored.weightKg)) === cents(best.weightKg) &&
+    stored.reps === best.reps &&
+    stored.achievedAt.getTime() === best.achievedAt.getTime() &&
+    stored.sessionId === best.sessionId &&
+    stored.exerciseId === best.exerciseId
+  );
+}
+
+/**
+ * Les meilleures performances qui DIFFÈRENT de ce qui est stocké : les seules
+ * à écrire.
+ *
+ * Le recalcul depuis l'historique rend tous les records des exercices
+ * touchés — trois par exercice, dix-huit pour une séance de six — alors
+ * qu'une séance ordinaire n'en bat aucun ou presque. Les réécrire tous
+ * coûtait dix-huit `INSERT … ON CONFLICT DO UPDATE` à la suite, chacun une
+ * vraie écriture (nouvelle version de ligne), à chaque clôture.
+ */
+export function changedBests(
+  bests: readonly RecordCandidate[],
+  stored: readonly PersonalRecord[],
+): RecordCandidate[] {
+  const parCle = new Map(
+    stored.map((record) => [`${record.exerciseName}|${record.recordType}`, record]),
+  );
+  return bests.filter((best) => {
+    const existant = parCle.get(`${best.exerciseName}|${best.recordType}`);
+    return existant === undefined || !sameRecord(existant, best);
+  });
 }

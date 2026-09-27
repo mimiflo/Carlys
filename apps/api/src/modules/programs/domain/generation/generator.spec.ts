@@ -123,7 +123,7 @@ describe('génération de programme', () => {
       }
     }
 
-    // Le balayage engendre 8 232 programmes complets. Les produire une fois et
+    // Le balayage engendre 5 880 programmes complets. Les produire une fois et
     // les partager entre les assertions plutôt que de recommencer à chaque
     // `it` divise le temps du fichier par trois : un test lent finit désactivé,
     // et un invariant désactivé ne vaut rien.

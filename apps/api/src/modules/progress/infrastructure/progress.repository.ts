@@ -5,11 +5,11 @@ import {
   type PersonalRecord,
   type PersonalRecordType,
   Prisma,
-  type WorkoutSet,
   WorkoutSessionStatus,
 } from '@prisma/client';
 import { PrismaService } from '../../../database/prisma/prisma.service';
-import { type RecordCandidate } from '../application/records.calculator';
+import { type RecordCandidate, type RecordSet } from '../application/records.calculator';
+import { timelinePage, timelineSources } from './timeline.sql';
 
 export interface PeriodTotals {
   sessionsCount: number;
@@ -64,6 +64,12 @@ export interface RawTimelineEvent {
   occurredAt: Date;
   payload: Prisma.JsonValue;
 }
+
+/**
+ * Points servis par la courbe d'un exercice : de quoi tracer un an à deux
+ * séances par semaine, sans que la réponse grossisse avec l'historique.
+ */
+const EXERCISE_POINTS_MAX = 50;
 
 /** Regroupement SQL par période — mots-clés STRICTEMENT whitelistés. */
 const BUCKET_BY_PERIOD: Record<ProgressPeriod, string> = {
@@ -225,6 +231,16 @@ export class ProgressRepository {
     }));
   }
 
+  /**
+   * La courbe d'un exercice : une ligne par séance terminée, les
+   * [EXERCISE_POINTS_MAX] plus RÉCENTES, rendues dans l'ordre chronologique.
+   *
+   * Le tri « du plus ancien au plus récent » se fait APRÈS la coupe, dans la
+   * requête englobante. Fait avant, comme au premier jet, il gardait les 50
+   * PREMIÈRES séances : dès la cinquante et unième, la courbe se figeait
+   * dans le passé et ne montrait plus jamais les progrès récents (mesuré :
+   * 124 séances, courbe arrêtée quatorze mois avant la dernière).
+   */
   async exercisePoints(userId: string, exerciseId: string): Promise<RawExercisePoint[]> {
     const rows = await this.prisma.$queryRaw<
       {
@@ -237,23 +253,26 @@ export class ProgressRepository {
         duration: number | null;
       }[]
     >(Prisma.sql`
-      SELECT
-        w."id"                                            AS session_id,
-        w."startedAt"                                     AS date,
-        MAX(s."weightKg")::float8                         AS max_weight,
-        MAX(s."reps")                                     AS max_reps,
-        COALESCE(SUM(s."reps" * s."weightKg"), 0)::float8 AS volume,
-        COALESCE(SUM(s."distanceMeters"), 0)::float8      AS distance,
-        COALESCE(SUM(s."durationSeconds"), 0)::float8     AS duration
-      FROM "WorkoutSession" w
-      JOIN "WorkoutSet" s ON s."sessionId" = w."id" AND s."deletedAt" IS NULL
-      WHERE w."userId" = ${userId}::uuid
-        AND w."status" = 'COMPLETED'
-        AND w."deletedAt" IS NULL
-        AND s."exerciseId" = ${exerciseId}::uuid
-      GROUP BY w."id", w."startedAt"
-      ORDER BY w."startedAt" ASC
-      LIMIT 50
+      SELECT p.* FROM (
+        SELECT
+          w."id"                                            AS session_id,
+          w."startedAt"                                     AS date,
+          MAX(s."weightKg")::float8                         AS max_weight,
+          MAX(s."reps")                                     AS max_reps,
+          COALESCE(SUM(s."reps" * s."weightKg"), 0)::float8 AS volume,
+          COALESCE(SUM(s."distanceMeters"), 0)::float8      AS distance,
+          COALESCE(SUM(s."durationSeconds"), 0)::float8     AS duration
+        FROM "WorkoutSession" w
+        JOIN "WorkoutSet" s ON s."sessionId" = w."id" AND s."deletedAt" IS NULL
+        WHERE w."userId" = ${userId}::uuid
+          AND w."status" = 'COMPLETED'
+          AND w."deletedAt" IS NULL
+          AND s."exerciseId" = ${exerciseId}::uuid
+        GROUP BY w."id", w."startedAt"
+        ORDER BY w."startedAt" DESC, w."id" DESC
+        LIMIT ${EXERCISE_POINTS_MAX}
+      ) p
+      ORDER BY p.date ASC, p.session_id ASC
     `);
 
     return rows.map((row) => ({
@@ -281,23 +300,6 @@ export class ProgressRepository {
   }
 
   /**
-   * TOUTES les séries qui comptent pour ces exercices, tous entraînements
-   * confondus — la matière d'un recalcul de record.
-   *
-   * Les trois filtres sont la définition même de « ce qui compte », et ils
-   * sont déjà ceux de `exercisePoints` juste au-dessus : séance terminée,
-   * séance non supprimée, série non supprimée. Une séance ABANDONNÉE n'entre
-   * donc pas, ce qu'un test e2e exige explicitement.
-   *
-   * Pas d'index dédié, et c'est délibéré : le plan part de
-   * `WorkoutSession(userId, startedAt)`, qui existe, puis rejoint les séries
-   * par `WorkoutSet(sessionId, position)`, qui existe aussi. La lecture est
-   * donc bornée à l'historique de LA personne, jamais à la table entière, et
-   * elle n'a lieu qu'à la clôture d'une séance ou à la correction d'une
-   * série. Indexer `exerciseName` coûterait une écriture de plus sur la
-   * table la plus écrite du schéma pour un gain que rien ne mesure encore.
-   */
-  /**
    * LA FRISE : quatre sources fusionnées, une page, un curseur.
    *
    * Séances, mesures et leçons sont DÉRIVÉES — ce sont déjà trois tables
@@ -316,6 +318,9 @@ export class ProgressRepository {
    * serveur garde les deux réponses (la clé est `(userId, lessonId,
    * answeredOn)`) là où l'appareil applique « la première gagne ». Sans le
    * groupement, cinquante-huit lignes de bruit noieraient la frise.
+   *
+   * Le SQL vit dans `timeline.sql.ts` ; le volume des séances s'y calcule
+   * APRÈS la coupe de la page, jamais sur tout l'historique.
    */
   async timeline(
     userId: string,
@@ -323,78 +328,13 @@ export class ProgressRepository {
     kinds: string[],
     cursor: { occurredAt: Date; id: string } | null,
   ): Promise<RawTimelineEvent[]> {
-    const voulu = (kind: string) => kinds.length === 0 || kinds.includes(kind);
-    const borne =
-      cursor === null
-        ? Prisma.sql`TRUE`
-        : Prisma.sql`(e.occurred_at, e.id) < (${cursor.occurredAt}, ${cursor.id})`;
-
-    const sources: Prisma.Sql[] = [];
-    if (voulu('SESSION')) {
-      sources.push(Prisma.sql`
-        SELECT 'SESSION' AS kind, w."id"::text AS id, w."startedAt" AS occurred_at,
-               jsonb_build_object(
-                 'name', w."name",
-                 'setsCount', (SELECT COUNT(*) FROM "WorkoutSet" s
-                                WHERE s."sessionId" = w."id" AND s."deletedAt" IS NULL),
-                 'volumeKg', COALESCE((SELECT SUM(s."reps" * s."weightKg") FROM "WorkoutSet" s
-                                        WHERE s."sessionId" = w."id" AND s."deletedAt" IS NULL), 0)
-               ) AS payload
-        FROM "WorkoutSession" w
-        WHERE w."userId" = ${userId}::uuid
-          AND w."status" = 'COMPLETED'
-          AND w."deletedAt" IS NULL
-      `);
-    }
-    if (voulu('MEASURE')) {
-      sources.push(Prisma.sql`
-        SELECT 'MEASURE' AS kind, m."id"::text AS id, m."measuredAt" AS occurred_at,
-               jsonb_build_object('metricType', m."metricType", 'value', m."value") AS payload
-        FROM "BodyMetric" m
-        WHERE m."userId" = ${userId}::uuid AND m."deletedAt" IS NULL
-      `);
-    }
-    if (voulu('LESSON')) {
-      sources.push(Prisma.sql`
-        SELECT 'LESSON' AS kind, 'lesson-' || d.jour AS id,
-               (d.jour || ' 12:00:00')::timestamp AS occurred_at,
-               jsonb_build_object('lessons', COUNT(*)) AS payload
-        FROM (
-          SELECT DISTINCT ON (q."lessonId") q."lessonId", q."answeredOn" AS jour
-          FROM "QuizAnswer" q
-          WHERE q."userId" = ${userId}::uuid
-          ORDER BY q."lessonId", q."createdAt" ASC
-        ) d
-        GROUP BY d.jour
-      `);
-    }
-    const franchissements = ['RECORD', 'REWARD', 'TITLE'].filter(voulu);
-    if (franchissements.length > 0) {
-      sources.push(Prisma.sql`
-        SELECT ms."kind"::text AS kind, ms."id"::text AS id, ms."occurredAt" AS occurred_at,
-               -- La CLÉ voyage avec la ligne : sans elle, « Récompense
-               -- obtenue » ne nomme rien, et le client n'a aucun moyen de
-               -- retrouver de laquelle il s'agit dans son catalogue.
-               jsonb_build_object('key', ms."key") ||
-                 COALESCE(ms."payload", '{}'::jsonb) AS payload
-        FROM "ProgressMilestone" ms
-        WHERE ms."userId" = ${userId}::uuid
-          AND ms."kind"::text IN (${Prisma.join(franchissements)})
-      `);
-    }
+    const sources = timelineSources(userId, kinds);
     if (sources.length === 0) {
       return [];
     }
-
     const rows = await this.prisma.$queryRaw<
       { kind: string; id: string; occurred_at: Date; payload: Prisma.JsonValue }[]
-    >(Prisma.sql`
-      SELECT e.kind, e.id, e.occurred_at, e.payload
-      FROM (${Prisma.join(sources, ' UNION ALL ')}) AS e
-      WHERE ${borne}
-      ORDER BY e.occurred_at DESC, e.id DESC
-      LIMIT ${limit}
-    `);
+    >(timelinePage(sources, cursor, limit));
 
     return rows.map((row) => ({
       kind: row.kind,
@@ -450,6 +390,12 @@ export class ProgressRepository {
    * suppression, une charge saisie 100 au lieu de 10 laisserait derrière
    * elle un record qui n'a jamais eu lieu, sur une frise qui prétend
    * raconter une histoire vraie.
+   *
+   * On LIT d'abord les clés connues, puis on n'écrit que la différence. La
+   * version précédente réinsérait TOUS les franchissements à chaque clôture
+   * (`skipDuplicates`) : 263 lignes et 1 841 paramètres pour six exercices
+   * d'un habitué, alors qu'une séance n'en ajoute qu'une poignée. Les clés
+   * se lisent sur l'index unique `(userId, kind, key)`.
    */
   async syncRecordMilestones(
     userId: string,
@@ -459,41 +405,87 @@ export class ProgressRepository {
     if (exerciseNames.length === 0) {
       return;
     }
-    const gardees = breaks.map((entry) => entry.key);
-    await this.prisma.progressMilestone.deleteMany({
-      where: {
-        userId,
-        kind: 'RECORD',
-        key: { notIn: gardees.length === 0 ? [''] : gardees },
-        // Bornée aux exercices recalculés : les autres n'ont pas bougé, et
-        // les relire pour les réécrire à l'identique coûterait tout
-        // l'historique à chaque clôture de séance.
-        OR: exerciseNames.map((name) => ({ key: { startsWith: `record:${name}|` } })),
-      },
-    });
-    if (breaks.length === 0) {
+    const connues = await this.recordMilestoneKeys(userId, exerciseNames);
+    const gardees = new Set(breaks.map((entry) => entry.key));
+    const perimees = [...connues].filter((key) => !gardees.has(key));
+    if (perimees.length > 0) {
+      await this.prisma.progressMilestone.deleteMany({
+        where: { userId, kind: 'RECORD', key: { in: perimees } },
+      });
+    }
+    const nouvelles = breaks.filter((entry) => !connues.has(entry.key));
+    if (nouvelles.length === 0) {
       return;
     }
     await this.prisma.progressMilestone.createMany({
-      data: breaks.map((entry) => ({
+      data: nouvelles.map((entry) => ({
         userId,
         kind: 'RECORD' as const,
         key: entry.key,
         occurredAt: entry.occurredAt,
         payload: entry.payload,
       })),
-      // « La première gagne, rien ne s'efface » : rejouer n'écrase pas une
-      // date déjà inscrite.
+      // « La première gagne, rien ne s'efface » : une clôture concurrente
+      // qui l'aurait écrite entre la lecture et ici garde sa date.
       skipDuplicates: true,
     });
   }
 
-  findSetsForRecords(userId: string, exerciseNames: string[]): Promise<WorkoutSet[]> {
+  /**
+   * Les clés de franchissement de RECORD déjà inscrites pour ces exercices.
+   *
+   * Bornée aux exercices recalculés : les autres n'ont pas bougé, et les
+   * relire coûterait tout l'historique à chaque clôture de séance.
+   */
+  private async recordMilestoneKeys(userId: string, exerciseNames: string[]): Promise<Set<string>> {
+    const lignes = await this.prisma.progressMilestone.findMany({
+      where: {
+        userId,
+        kind: 'RECORD',
+        OR: exerciseNames.map((name) => ({ key: { startsWith: `record:${name}|` } })),
+      },
+      select: { key: true },
+    });
+    return new Set(lignes.map((ligne) => ligne.key));
+  }
+
+  /**
+   * TOUTES les séries qui comptent pour ces exercices, tous entraînements
+   * confondus — la matière d'un recalcul de record.
+   *
+   * Les trois filtres sont la définition même de « ce qui compte », et ils
+   * sont déjà ceux de `exercisePoints` : séance terminée,
+   * séance non supprimée, série non supprimée. Une séance ABANDONNÉE n'entre
+   * donc pas, ce qu'un test e2e exige explicitement.
+   *
+   * Pas d'index dédié, et c'est délibéré : le plan part de
+   * `WorkoutSession(userId, startedAt)`, qui existe, puis rejoint les séries
+   * par `WorkoutSet(sessionId, position)`, qui existe aussi. La lecture est
+   * donc bornée à l'historique de LA personne, jamais à la table entière, et
+   * elle n'a lieu qu'à la clôture d'une séance ou à la correction d'une
+   * série. Indexer `exerciseName` coûterait une écriture de plus sur la
+   * table la plus écrite du schéma pour un gain que rien ne mesure encore.
+   *
+   * Seules les colonnes que les calculs lisent partent ([RecordSet]) : les
+   * dix autres (charges prévues, RPE, repos, horodatages…) grossissaient
+   * chaque ligne d'un historique qui en compte des milliers.
+   */
+  findSetsForRecords(userId: string, exerciseNames: string[]): Promise<RecordSet[]> {
     return this.prisma.workoutSet.findMany({
       where: {
         exerciseName: { in: exerciseNames },
         deletedAt: null,
         session: { userId, status: 'COMPLETED', deletedAt: null },
+      },
+      select: {
+        sessionId: true,
+        exerciseId: true,
+        exerciseName: true,
+        position: true,
+        reps: true,
+        weightKg: true,
+        completedAt: true,
+        deletedAt: true,
       },
     });
   }

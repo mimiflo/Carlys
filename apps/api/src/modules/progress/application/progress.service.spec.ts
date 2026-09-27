@@ -19,6 +19,7 @@ interface Stubs {
   findSetsForRecords: jest.Mock;
   deleteRecords: jest.Mock;
   upsertRecord: jest.Mock;
+  syncRecordMilestones: jest.Mock;
   createBodyMetric: jest.Mock;
   findBodyMetricById: jest.Mock;
   listBodyMetrics: jest.Mock;
@@ -42,6 +43,7 @@ function buildStubs(): Stubs {
     findSetsForRecords: jest.fn().mockResolvedValue([]),
     deleteRecords: jest.fn().mockResolvedValue(undefined),
     upsertRecord: jest.fn().mockResolvedValue(undefined),
+    syncRecordMilestones: jest.fn().mockResolvedValue(undefined),
     createBodyMetric: jest.fn().mockResolvedValue(true),
     findBodyMetricById: jest.fn().mockResolvedValue(null),
     listBodyMetrics: jest.fn().mockResolvedValue([]),
@@ -177,6 +179,37 @@ describe('ProgressService', () => {
         USER,
         expect.objectContaining({ recordType: 'MAX_WEIGHT', value: 10 }),
       );
+    });
+
+    it('un record que l’historique confirme à l’identique n’est PAS réécrit', async () => {
+      // Le cas ordinaire d'une clôture : aucune série du jour ne bat rien.
+      // Réécrire les trois records quand même coûtait trois écritures par
+      // exercice touché, à chaque séance.
+      const stubs = buildStubs();
+      stubs.findSetsForRecords.mockResolvedValue([
+        workoutSet({ id: 'ancienne', sessionId: 'session-0', reps: 5, weightKg: 100 }),
+        workoutSet(),
+      ]);
+      stubs.findRecords.mockResolvedValue([
+        storedRecord({
+          recordType: 'MAX_WEIGHT',
+          value: 100,
+          reps: 5,
+          weightKg: 100,
+          sessionId: 'session-0',
+          achievedAt: new Date('2026-08-07T10:05:00Z'),
+        }),
+      ]);
+      const service = buildService(stubs);
+
+      await service.updateRecordsForSession(USER, 'session-1', [workoutSet()]);
+
+      const ecrits = stubs.upsertRecord.mock.calls.map(
+        ([, candidate]) => (candidate as { recordType: string }).recordType,
+      );
+      expect(ecrits.sort()).toEqual(['MAX_REPS', 'MAX_SET_VOLUME']);
+      expect(stubs.syncRecordMilestones).toHaveBeenCalledTimes(1);
+      expect(loggerStub.error).not.toHaveBeenCalled();
     });
 
     it('un record que plus aucune série ne porte est SUPPRIMÉ', async () => {

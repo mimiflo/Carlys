@@ -36,8 +36,17 @@ export interface Prescription {
   deload: boolean;
 }
 
+/**
+ * Lus une fois au chargement, pour la même raison que `imul` dans `hash.ts` :
+ * sous Jest, chaque lecture du global `Math` passe par l'intercepteur du
+ * contexte `vm`, et `clamp` tourne des centaines de milliers de fois dans le
+ * balayage de `generator.spec.ts` (1,7 s de son profil). Même résultat.
+ */
+const lower = Math.min;
+const upper = Math.max;
+
 function clamp(value: number, min: number, max: number): number {
-  return Math.min(Math.max(value, min), max);
+  return lower(upper(value, min), max);
 }
 
 /**

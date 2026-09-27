@@ -1,5 +1,5 @@
-import { type WorkoutSet } from '@prisma/client';
-import { computeBests } from './records.calculator';
+import { Prisma, type PersonalRecord, type WorkoutSet } from '@prisma/client';
+import { changedBests, computeBests, type RecordCandidate } from './records.calculator';
 
 function set(overrides: Partial<Record<keyof WorkoutSet, unknown>> = {}): WorkoutSet {
   return {
@@ -73,5 +73,63 @@ describe('computeBests', () => {
   it('renvoie une liste vide sans série exploitable', () => {
     expect(computeBests([])).toEqual([]);
     expect(computeBests([set({ reps: null, weightKg: null })])).toEqual([]);
+  });
+});
+
+describe('changedBests', () => {
+  const best: RecordCandidate = {
+    exerciseId: 'exercise-1',
+    exerciseName: 'Développé couché',
+    recordType: 'MAX_SET_VOLUME',
+    value: 66.3,
+    reps: 3,
+    weightKg: 22.1,
+    achievedAt: new Date('2026-08-07T10:05:00Z'),
+    sessionId: 'session-1',
+  };
+
+  /** Le record tel que Prisma le rend : `Decimal` pour les colonnes chiffrées. */
+  function stored(overrides: Partial<PersonalRecord> = {}): PersonalRecord {
+    return {
+      id: 'record-1',
+      userId: 'user-1',
+      exerciseId: 'exercise-1',
+      exerciseName: 'Développé couché',
+      recordType: 'MAX_SET_VOLUME',
+      value: new Prisma.Decimal('66.30'),
+      reps: 3,
+      weightKg: new Prisma.Decimal('22.10'),
+      achievedAt: new Date('2026-08-07T10:05:00Z'),
+      sessionId: 'session-1',
+      createdAt: new Date(),
+      updatedAt: new Date(),
+      ...overrides,
+    };
+  }
+
+  it('un record que l’historique confirme à l’identique ne se réécrit pas', () => {
+    // 22,1 × 3 vaut 66,300000000000001 en flottant : la base, elle, garde
+    // 66,30. Ce n'est pas un record qui a bougé.
+    expect(changedBests([{ ...best, value: 22.1 * 3 }], [stored()])).toEqual([]);
+  });
+
+  it('un record absent, ou qui a bougé d’un seul de ses faits, se réécrit', () => {
+    expect(changedBests([best], [])).toEqual([best]);
+    for (const change of [
+      { value: new Prisma.Decimal('70.00') },
+      { weightKg: null },
+      { reps: 4 },
+      { achievedAt: new Date('2026-08-08T10:05:00Z') },
+      { sessionId: 'session-0' },
+      { exerciseId: null },
+    ]) {
+      expect(changedBests([best], [stored(change)])).toEqual([best]);
+    }
+  });
+
+  it('compare chaque record à SON homologue, exercice et type compris', () => {
+    const autreType = stored({ recordType: 'MAX_WEIGHT' });
+    const autreExercice = stored({ exerciseName: 'Squat' });
+    expect(changedBests([best], [autreType, autreExercice])).toEqual([best]);
   });
 });

@@ -1,5 +1,5 @@
 import { type PersonalRecordType } from '@carlys/api-contracts';
-import { type WorkoutSet } from '@prisma/client';
+import { type RecordSet } from './records.calculator';
 
 /** Un record BATTU : le jour où une valeur a dépassé tout ce qui précédait. */
 export interface RecordBreak {
@@ -38,7 +38,7 @@ export function recordBreakKey(
  * Les ex æquo ne franchissent pas : égaler son record n'est pas le battre, et
  * la première fois garde la date. `>` et non `>=`, comme `computeBests`.
  */
-export function computeRecordBreaks(sets: WorkoutSet[]): RecordBreak[] {
+export function computeRecordBreaks(sets: readonly RecordSet[]): RecordBreak[] {
   const chronologiques = sets
     .filter((set) => set.deletedAt === null)
     // À l'instant près, l'ordre des séries d'une même seconde est
@@ -49,7 +49,7 @@ export function computeRecordBreaks(sets: WorkoutSet[]): RecordBreak[] {
   const maxima = new Map<string, number>();
   const franchissements: RecordBreak[] = [];
 
-  const considerer = (set: WorkoutSet, recordType: PersonalRecordType, value: number): void => {
+  const considerer = (set: RecordSet, recordType: PersonalRecordType, value: number): void => {
     const cle = `${set.exerciseName}|${recordType}`;
     const courant = maxima.get(cle);
     if (courant !== undefined && value <= courant) {

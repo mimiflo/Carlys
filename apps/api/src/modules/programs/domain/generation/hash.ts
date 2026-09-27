@@ -1,4 +1,17 @@
 /**
+ * `Math.imul`, lu UNE fois au chargement du module.
+ *
+ * Même fonction, même résultat au bit près : c'est la lecture de `Math` qui
+ * coûte, pas la multiplication. Sous Jest, le module tourne dans un contexte
+ * `vm` où chaque accès à un global passe par un intercepteur : `Math.imul`
+ * relu à chaque caractère rendait `fnv1a32` 127 fois plus lent qu'en Node nu
+ * (8,3 s contre 65 ms pour 300 000 appels), et `generator.spec.ts`, qui
+ * génère 5 880 programmes, fixait à lui seul la durée de la suite unitaire.
+ * En production, rien ne change.
+ */
+const imul = Math.imul;
+
+/**
  * FNV-1a 32 bits — un hachage, pas un générateur aléatoire.
  *
  * Il sert la ROTATION : deux créneaux, deux semaines, deux programmes tombent
@@ -16,7 +29,7 @@ export function fnv1a32(text: string): number {
   for (let index = 0; index < text.length; index += 1) {
     hash ^= text.charCodeAt(index);
     // Multiplication par 16 777 619 en arithmétique 32 bits non signée.
-    hash = Math.imul(hash, 0x01000193) >>> 0;
+    hash = imul(hash, 0x01000193) >>> 0;
   }
   return hash >>> 0;
 }

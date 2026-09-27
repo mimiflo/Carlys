@@ -77,7 +77,9 @@ describe('Progression (e2e)', () => {
     // Nettoyage strictement limité à cette suite (les e2e partagent la base).
     await prisma.user.deleteMany({ where: { email: { in: [userEmail, otherEmail] } } });
     await prisma.exercise.deleteMany({
-      where: { slug: { in: ['e2e-progress-exercice', 'e2e-progress-course'] } },
+      where: {
+        slug: { in: ['e2e-progress-exercice', 'e2e-progress-course', 'e2e-progress-habitude'] },
+      },
     });
     await prisma.$disconnect();
     await app.close();
@@ -286,6 +288,55 @@ describe('Progression (e2e)', () => {
     // Et aucune charge : le tiret de l'écran ne ment pas, il n'y en a pas.
     expect(progression.points[0]?.maxWeightKg).toBeNull();
     expect(progression.points[0]?.volumeKg).toBe(0);
+  });
+
+  it('au-delà de 50 séances, la courbe garde les 50 plus RÉCENTES, dans l’ordre', async () => {
+    // Un développé couché deux fois par semaine passe les 50 séances en six
+    // mois. La requête triait du plus ancien au plus récent AVANT de couper :
+    // elle servait les 50 premières, et la courbe se figeait dans le passé,
+    // sans jamais montrer les progrès du jour.
+    const habitude = await ensureExerciseFixture(prisma, 'e2e-progress-habitude');
+    const { id: userId } = await prisma.user.findUniqueOrThrow({ where: { email: userEmail } });
+    const jour = 24 * 3_600_000;
+    const seances = Array.from({ length: 60 }, (_, index) => ({
+      id: randomUUID(),
+      // La plus ancienne il y a 400 jours, la plus récente il y a 5 jours.
+      startedAt: new Date(now - (400 - index * 6.7) * jour),
+      charge: 40 + index,
+    }));
+    await prisma.workoutSession.createMany({
+      data: seances.map((seance) => ({
+        id: seance.id,
+        userId,
+        status: 'COMPLETED' as const,
+        startedAt: seance.startedAt,
+        endedAt: new Date(seance.startedAt.getTime() + 3_600_000),
+      })),
+    });
+    await prisma.workoutSet.createMany({
+      data: seances.map((seance) => ({
+        id: randomUUID(),
+        sessionId: seance.id,
+        exerciseId: habitude.id,
+        exerciseName: habitude.name,
+        position: 0,
+        reps: 5,
+        weightKg: seance.charge,
+        completedAt: new Date(seance.startedAt.getTime() + 600_000),
+      })),
+    });
+
+    const { points } = data<ExerciseProgression>(
+      (await authed(accessToken).get(`/api/v1/progress/exercises/${habitude.id}`).expect(200)).body,
+    );
+
+    expect(points).toHaveLength(50);
+    // Les dix plus anciennes sortent, la plus récente est la dernière.
+    expect(points.map((point) => point.sessionId)).toEqual(
+      seances.slice(10).map((seance) => seance.id),
+    );
+    expect(points.at(-1)?.maxWeightKg).toBe(99);
+    expect(points[0]?.maxWeightKg).toBe(50);
   });
 
   it('la progression d’autrui reste invisible', async () => {

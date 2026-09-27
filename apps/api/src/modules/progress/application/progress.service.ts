@@ -10,7 +10,7 @@ import { type PersonalRecord, type WorkoutSet } from '@prisma/client';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { PrismaService } from '../../../database/prisma/prisma.service';
 import { ProgressRepository } from '../infrastructure/progress.repository';
-import { computeBests } from './records.calculator';
+import { changedBests, computeBests } from './records.calculator';
 import { computeRecordBreaks } from './record-breaks.calculator';
 import { safeTimeZone } from '../../../common/utilities/time-zone';
 
@@ -108,7 +108,10 @@ export class ProgressService {
         })),
     );
 
-    for (const best of bests) {
+    // Seuls les records qui ont BOUGÉ s'écrivent : une séance ordinaire n'en
+    // bat aucun, et en réécrire dix-huit identiques à chaque clôture coûtait
+    // dix-huit vraies écritures (voir [changedBests]).
+    for (const best of changedBests(bests, existants)) {
       await this.progress.upsertRecord(userId, best);
     }
 
