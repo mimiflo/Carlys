@@ -36,9 +36,13 @@ connaîtrait laisserait la notification arriver quand même : elle ne servirait
 | `GET /api/v1/notifications/preferences` | Toutes les familles, celles jamais réglées valant `true` |
 | `PATCH /api/v1/notifications/preferences` | Accepte ou refuse une famille (idempotent) |
 
-Côté mobile, la section « Notifications » du profil porte les bascules. Elle
-disparaît si le serveur ne répond pas : une bascule qui ne refléterait rien
-vaut moins que pas de bascule. Et une bascule qui n'aboutit PAS le dit :
+Côté mobile, la section « Notifications » des réglages (Profil → Réglages)
+porte trois bascules, une par famille. Pendant le chargement, elle se tait ;
+si le serveur ne répond pas, elle ne montre PAS de bascules (une bascule qui
+ne refléterait rien vaut moins que pas de bascule) mais « Hors connexion » ou
+« Indisponible pour l’instant », avec « Réessayer ». Les préférences sont un
+cache lié au compte : le compte suivant sur le même téléphone ne voit jamais
+celles du précédent. Et une bascule qui n'aboutit PAS le dit :
 l'appel part sur le réseau, il échoue hors ligne, et le message le nomme au
 lieu de laisser l'interrupteur revenir tout seul à sa place.
 
@@ -173,7 +177,21 @@ l'application montée), contre la doublure unique
   de toute façon pas versionné.
 - Cycle : permission → jeton → `POST device-tokens` ; ré-enregistrement à
   chaque rafraîchissement de jeton FCM ; à la déconnexion, oubli côté serveur
-  (pendant que l'appel est encore authentifié) puis invalidation locale.
+  (pendant que l'appel est encore authentifié) puis invalidation locale. À
+  l'**expiration de la session** (401 au renouvellement) comme à la
+  suppression du compte, oubli LOCAL seul (`forgetLocally`). Dans tous les
+  cas, le jeton de l'APPAREIL est effacé chez FCM, que ce lancement l'ait
+  enregistré ou non, et que le désenregistrement ait abouti ou non : au
+  démarrage à froid après trente jours, la session expire pendant l'écran
+  de démarrage, avant tout enregistrement, alors que le serveur tient le
+  jeton d'un lancement plus ancien (un jeton d'avant le rattachement aux
+  sessions n'expire avec aucune). FCM en réémet un neuf au démarrage
+  suivant, et le compte suivant qui se connecte sans relancer l'application
+  est bien réenregistré. Un démarrage attend la fin d'un oubli en cours, et une
+  réponse revenue après l'oubli ne rattache rien à la session d'après.
+- Les réglages (`GET/PATCH notifications/preferences`) couvrent les TROIS
+  familles du contrat, invitations à un défi comprises ; un test compare
+  l'énumération mobile à `notificationCategorySchema`.
 - Sans configuration (tests, CI) : no-op journalisé, aucun plugin
   touché — c'est ce que vérifient les tests de `PushRegistration`.
 - `scripts/bootstrap_mobile.sh` déclare `POST_NOTIFICATIONS` dans le

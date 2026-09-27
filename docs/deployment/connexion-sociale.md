@@ -234,8 +234,21 @@ jetons, même rotation, même révocation par appareil.
 ## 5. Questions fréquentes
 
 **« J'avais déjà un compte par e-mail, et je me connecte avec Google. »**
-C'est le même compte : l'identité Google s'y rattache, et le mot de passe
-continue de fonctionner. Deux portes, une seule maison.
+C'est le même compte : l'identité Google s'y rattache. La suite dépend d'une
+seule chose, l'adresse de ce compte avait-elle été vérifiée ?
+
+- **Oui** : rien n'est retiré. Le mot de passe continue de fonctionner,
+  deux portes pour une seule maison.
+- **Non** (le lien de vérification n'a jamais été ouvert) : le compte est
+  REPRIS, comme le décrit le point 5 plus haut. Le mot de passe est retiré,
+  toutes les autres sessions sont déconnectées (et leurs jetons push
+  supprimés), les liens de réinitialisation en cours cessent de valoir.
+  Pour retrouver une connexion par mot de passe : « Mot de passe oublié ».
+
+Ne réponds donc jamais « le mot de passe continue de fonctionner » sans
+avoir vérifié l'adresse du compte (`emailVerifiedAt` dans la fiche
+utilisateur du back-office, ou l'événement
+`auth.social_claimed_unverified_account` du journal d'audit).
 
 **« Un compte créé par Google peut-il se connecter par mot de passe ? »**
 Pas tant qu'il n'en a pas : il n'a aucune ligne `UserCredential`. « Mot de

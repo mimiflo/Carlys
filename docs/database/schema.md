@@ -1,11 +1,24 @@
-# Modèle de données cible (PostgreSQL + Prisma)
+# Modèle de données (PostgreSQL + Prisma)
 
-> **Statut : cible.** Le schéma Prisma actuel (`apps/api/prisma/schema.prisma`) est
-> **volontairement vide** à l'Étape 1 : il ne contient que le générateur et la
-> datasource PostgreSQL. Les modèles décrits ici arrivent **par tranches
-> verticales** (Étapes 2 à 7), chacun avec sa migration, ses tests et son seed.
-> Ce document est la référence que chaque tranche vient concrétiser — il ne
-> décrit **aucune table existante** aujourd'hui.
+> **Statut : décrit le schéma RÉEL.** `apps/api/prisma/schema.prisma` fait foi :
+> ce document en donne la carte et les raisons, domaine par domaine. Les
+> modèles marqués « différé » (dans le tableau des domaines ET dans le titre
+> de leur section) n'existent PAS ; ils restent ici parce qu'ils disent ce
+> qui a été écarté et pourquoi. Tout le reste est une table en base, décrite
+> sous ses noms Prisma — conventions comprises, qui disent aussi ce qui a
+> été écarté (`citext`, `snake_case` physique).
+>
+> Les nombres de modèles et de migrations ne sont pas recopiés ici, ils se
+> comptent. Et un modèle du schéma absent de ce document se trouve en une
+> commande (à relancer après chaque migration ; elle doit ne rien rendre) :
+>
+> ```bash
+> grep -c '^model ' apps/api/prisma/schema.prisma          # modèles
+> ls -d apps/api/prisma/migrations/*/ | wc -l             # migrations
+> for m in $(awk '$1=="model"{print $2}' apps/api/prisma/schema.prisma); do
+>   grep -q "\`$m\`" docs/database/schema.md || echo "absent : $m"
+> done
+> ```
 
 Base : PostgreSQL 17 (dev : `postgres:17-alpine` via `docker-compose.yml`),
 accédée exclusivement via Prisma 6 depuis `apps/api`. L'extension `citext` et la
@@ -18,68 +31,89 @@ migration manque par rapport au schéma.
 
 | Domaine | Modèles | Tranche |
 |---|---|---|
-| Identité | `User`, `UserProfile`, `UserCredential`, `UserSession`, `RefreshToken`, `EmailVerification`, `PasswordReset`, `ExternalIdentity` — **implémenté** (migration `20260806180000_auth_foundation`) ; `UserDevice` et `UserPreference` différés | Étape 2 ✅ |
-| Catalogue d'exercices | `Exercise`, `ExerciseMuscle`, `ExerciseEquipment`, `MuscleGroup`, `Equipment` — **implémenté** (migration `20260806220000_exercise_catalog`, contenu français directement sur `Exercise`) ; `ExerciseTranslation`, `ExerciseMedia`, `ExerciseVariant`, `CustomExercise` différés | Étape 3 ✅ |
-| Médias | `MediaAsset` | Étape 3 (premier besoin : médias d'exercices) |
-| Programmes | `WorkoutTemplate`, `WorkoutTemplateExercise`, `WorkoutTemplateSet`, `WorkoutSessionPlanItem` — **implémenté** (migrations `20260808135805_workout_templates` et `20260808153828_workout_session_plan_items` ; modèles de séance autonomes, plan de séance persisté pour la reprise multi-appareil, ids générés sur l'appareil) ; `TrainingProgram`, `ProgramWeek`, `ProgramDay` (programmes multi-semaines) différés | Étape 4 ✅ |
+| Identité | `User`, `UserProfile`, `UserCredential`, `UserSession`, `RefreshToken`, `EmailVerification`, `PasswordReset`, `ExternalIdentity` — **implémenté** (migration `20260806180000_auth_foundation` ; connexion Apple et Google branchée sur `ExternalIdentity`) ; `UserDevice` abandonné (le jeton push est rattaché à la session, voir `DeviceToken`) ; `UserPreference` différé | Étape 2 ✅ |
+| Catalogue d'exercices | `Exercise`, `ExerciseMuscle`, `ExerciseEquipment`, `MuscleGroup`, `Equipment` — **implémenté** (migration `20260806220000_exercise_catalog`, contenu français directement sur `Exercise`) ; matériel possédé par un membre : `UserEquipment` ; `ExerciseTranslation`, `ExerciseMedia`, `ExerciseVariant`, `CustomExercise` différés | Étape 3 ✅ |
+| Médias | `MediaAsset` — **implémenté** (migration `20260809140000_media_assets`) | Étape 3 ✅ |
+| Programmes | `WorkoutTemplate`, `WorkoutTemplateExercise`, `WorkoutTemplateSet`, `WorkoutSessionPlanItem` — **implémenté** (migrations `20260808135805_workout_templates` et `20260808153828_workout_session_plan_items` ; modèles de séance autonomes, plan de séance persisté pour la reprise multi-appareil, ids générés sur l'appareil) ; programmes multi-semaines `Program` et `ProgramDay` — **implémenté** (migration `20260809170000_programs`, date de début `20260919185324_calendrier_date`, génération `20260919163304_generation_de_programme`), voir [Programmes](#programmes--livré) | Étape 4 ✅ |
 | Séances | `WorkoutSession`, `WorkoutSet` — **implémenté** (migration `20260807010000_workout_sessions`, ids générés sur l'appareil, écritures idempotentes ; provenance et cibles ajoutées par `20260808135805_workout_templates`) ; `WorkoutSessionExercise` fusionné dans `WorkoutSet` (`exerciseId` + `exerciseName` dénormalisé), `WorkoutNote` porté par `WorkoutSession.notes`, `PersonalRecord` livré à l'Étape 5 | Étape 4 ✅ |
-| Progression | `PersonalRecord`, `BodyMetric` — **implémenté** (migration `20260807040000_progress`, records recalculés à la clôture, mesures idempotentes) ; `ProgressGoal` et `ProgressSnapshot` différés (agrégats calculés à la volée) | Étape 5 ✅ |
-| Abonnements | `SubscriptionPlan`, `SubscriptionPlanEntitlement`, `SubscriptionProduct`, `Subscription`, `SubscriptionEvent`, `UserEntitlement` — **implémenté** (migrations `20260807064832_subscriptions` et `20260915140000_plan_entitlements`) | Étape 6 ✅ |
-| Notifications | `Notification`, `NotificationPreference`, `PushDevice` | Introduit avec l'intégration FCM réelle (au plus tôt Étape 4, `NotificationPreference` au plus tard Étape 6) |
-| Administration | `AdminUser`, `AdminRole`, `AdminPermission` (+ jointures), `AuditLog` enrichi (`actorType`, `resourceType`/`resourceId`, `requestId`) — **implémenté** (migration `20260807070624_administration` ; `AuditLog` introduit dès l'Étape 2) | Étape 7 ✅ |
-| Communauté | `Friendship`, `Encouragement`, `CommunityChallenge`, `ChallengeParticipation`, `CommunityPreference`, `QuizAnswer`, `CommunityBlock`, `CommunityReport` — **implémenté** (migrations `20260811120000_community`, `20260811190000_quiz_answers`, `20260830120000_friend_codes`, `20260906100000_community_moderation`, `20260906110000_community_monthly_challenges`, `20260906130000_community_report_snapshot`) — voir la section [Communauté](#communauté-implémenté) | Vague 1 ✅ |
+| Progression | `PersonalRecord`, `BodyMetric` — **implémenté** (migration `20260807040000_progress`, records recalculés à la clôture, mesures idempotentes) ; `ProgressMilestone` (franchissements, migration `20260922113702_franchissements`) ; `ProgressGoal` et `ProgressSnapshot` différés (agrégats calculés à la volée) | Étape 5 ✅ |
+| Abonnements | `SubscriptionPlan`, `SubscriptionPlanEntitlement`, `SubscriptionProduct`, `Subscription`, `SubscriptionEvent`, `UserEntitlement` — **implémenté** (migrations `20260807064832_subscriptions`, `20260915140000_plan_entitlements` et `20260927100000_evenement_paiement_compte`) | Étape 6 ✅ |
+| Notifications | `DeviceToken`, `NotificationPreference` — **implémenté** (migrations `20260811210000_device_tokens`, `20260816120000_notification_preferences`, `20260926200000_jetons_push_par_session`) ; `Notification` (historique in-app) différé | ✅ |
+| Administration | `AdminUser`, `AdminRole`, `AdminPermission`, jointures `AdminUserRole` et `AdminRolePermission`, `AuditLog` enrichi (`actorType`, `resourceType`/`resourceId`, `requestId`) — **implémenté** (migration `20260807070624_administration` ; `AuditLog` introduit dès l'Étape 2) | Étape 7 ✅ |
+| Coach IA | `CoachConversation`, `CoachMessage`, `CoachSessionProposal`, `CoachSessionProposalItem` — **implémenté** (migration `20260809120000_coach_ia`) | ✅ |
+| Journal alimentaire | `MealEntry`, `Food`, `MealComponent`, `MealPhoto` — **implémenté**, voir [Journal alimentaire](#journal-alimentaire-et-base-daliments-implémenté) | ✅ |
+| Communauté | `Friendship`, `Encouragement`, `CommunityChallenge`, `ChallengeParticipation`, `CommunityPreference`, `QuizAnswer`, `CommunityBlock`, `CommunityReport`, `FriendChallenge`, `FriendChallengeMember`, `LeagueMembership` — **implémenté** (migrations `20260811120000_community`, `20260811190000_quiz_answers`, `20260830120000_friend_codes`, `20260906100000_community_moderation`, `20260906110000_community_monthly_challenges`, `20260906130000_community_report_snapshot`, `20260919201000_defis_entre_amis`, `20260919225014_ligues`, `20260924120000_ligues_groupes_de_vingt`) — voir la section [Communauté](#communauté-implémenté) | Vague 1 ✅ |
 
 ## Conventions transverses
 
-Ces règles s'appliquent à **tous** les modèles ci-dessous ; elles ne sont pas
-répétées modèle par modèle.
+Ces règles décrivent le schéma **tel qu'il est** ; elles ne sont pas
+répétées modèle par modèle. Deux d'entre elles ont longtemps été écrites
+comme la cible (`citext`, noms physiques en `snake_case`) : elles sont
+signalées ici comme écartées, pour qu'on ne les cherche pas en base.
 
-- **Identifiants** : UUID partout (clé primaire `id`). Côté serveur,
-  `gen_random_uuid()` (natif PostgreSQL). Côté mobile, les entités de séance
-  (`WorkoutSession`, `WorkoutSessionExercise`, `WorkoutSet`, `WorkoutNote`) sont
-  créées **hors ligne** avec un UUID généré par le client (paquet `uuid`
-  Flutter) : l'API accepte l'identifiant fourni, ce qui rend la synchronisation
-  rejouable.
-- **Dates** : `timestamptz` uniquement, toujours en UTC. Nommage `*At`
-  (`createdAt`, `expiresAt`, `measuredAt`…). L'affichage local est l'affaire des
-  clients.
-- **Horodatage systématique** : `createdAt` (défaut `now()`) et `updatedAt`
-  (`@updatedAt`) sur chaque modèle, sauf tables strictement append-only
-  (`AuditLog`, `SubscriptionEvent`) qui n'ont que `createdAt`.
-- **Suppression logique** : `deletedAt` nullable quand l'historique doit
-  survivre à la suppression (`User`, `Exercise`, `CustomExercise`,
-  `TrainingProgram`, `WorkoutTemplate`, `MediaAsset`). Les contraintes
-  d'unicité concernées deviennent des **index uniques partiels**
-  (`WHERE deleted_at IS NULL`). Les tables de jetons (`EmailVerification`,
-  `PasswordReset`, `UserSession` expirées) sont purgées physiquement.
-- **E-mail** : type `citext` (unicité insensible à la casse), extension
-  installée par `01-init.sql`.
-- **Nommage physique** : modèles Prisma en PascalCase, tables et colonnes en
-  `snake_case` via `@@map`/`@map`. Énumérations métier en `enum` Prisma
-  (enums PostgreSQL natifs).
-- **Pagination par curseur** : toutes les listes API sont paginées par curseur
+- **Identifiants** : UUID (`String @db.Uuid`) en clé primaire `id` pour les
+  entités ; les tables de jointure et les tables 1–1 ont une clé composée
+  (`@@id`) ou la clé du parent (`UserProfile.userId`). Le serveur n'appelle
+  pas `gen_random_uuid()` : c'est le client Prisma qui tire l'UUID
+  (`@default(uuid())`). Une entité créée sur l'appareil, hors ligne, n'a
+  PAS de `@default` : son identifiant vient du client (paquet `uuid`
+  Flutter) ou est dérivé par le serveur, ce qui rend la synchronisation
+  rejouable — séances et séries, modèles de séance, programmes, mesures,
+  repas, défis entre amis, fils du coach, médias déposés.
+- **Dates** : `DateTime` Prisma, soit `timestamp(3)` SANS fuseau en
+  PostgreSQL (aucun `@db.Timestamptz` dans le schéma). Prisma y écrit et en
+  relit de l'UTC : c'est cette convention, pas le type de colonne, qui
+  tient l'UTC. Nommage `*At` (`createdAt`, `expiresAt`, `measuredAt`…). Les
+  dates CIVILES sont en `@db.Date` (`Program.startsOn`). L'affichage local
+  est l'affaire des clients.
+- **Horodatage** : `createdAt` (défaut `now()`) et `updatedAt`
+  (`@updatedAt`) sur la plupart des entités, pas sur toutes : les tables
+  append-only, les jetons et les sessions n'ont que `createdAt` (`AuditLog`,
+  `UserSession`, `RefreshToken`, `CoachMessage`…), `SubscriptionEvent` a
+  `receivedAt`, et les jointures n'ont aucun horodatage (`ExerciseMuscle`,
+  `AdminUserRole`…). Le schéma fait foi, modèle par modèle.
+- **Suppression logique** : `deletedAt` nullable là où l'historique doit
+  survivre à la suppression — `User`, `Exercise`, `MediaAsset`,
+  `WorkoutTemplate`, `Program`, `WorkoutSession`, `WorkoutSet`,
+  `BodyMetric`, `MealEntry`, `CoachConversation`. Aucun index unique
+  partiel : l'adresse d'un compte supprimé est réécrite en valeur tombale
+  (`supprime+<id>@carlys.invalid`), ce qui libère l'originale sous un
+  `@unique` ordinaire. Les jetons d'e-mail (`EmailVerification`,
+  `PasswordReset`) et les sessions ne sont PAS purgés par une tâche : les
+  sessions partent avec le compte (suppression ou purge), les jetons
+  expirent et restent.
+- **E-mail** : `String @unique`, normalisé (`trim` puis minuscules) par la
+  couche application avant toute lecture ou écriture (`normalizeEmail`) —
+  `User` comme `AdminUser`. Écarté : le type `citext`. L'extension est
+  installée par `01-init.sql`, mais aucune colonne ne la porte.
+- **Nommage physique** : AUCUN `@map` ni `@@map` dans le schéma. Les tables
+  portent le nom du modèle (`"User"`, `"AuditLog"`, `"WorkoutSession"`) et
+  les colonnes celui du champ (`"userId"`, `"createdAt"`), guillemets
+  compris en SQL brut (`*.sql.ts`). Écarté : le `snake_case` physique.
+  Énumérations métier en `enum` Prisma (enums PostgreSQL natifs).
+- **Pagination par curseur** : les listes paginées le sont par curseur
   (`DEFAULT_PAGE_SIZE = 20`, `MAX_PAGE_SIZE = 100`,
-  `packages/shared-config`). Chaque liste s'appuie sur un index composite
-  couvrant l'ordre de tri, se terminant par `id` pour départager les
-  ex-aequo — ex. `(user_id, started_at DESC, id)` sur `workout_sessions`.
+  `packages/shared-config`), sur un index qui couvre l'ordre de tri — ex.
+  `@@index([userId, startedAt(sort: Desc)])` sur `WorkoutSession`.
 - **Transactions** : toute opération multi-tables critique est exécutée en
-  transaction Prisma — rotation de refresh token, ingestion d'une séance
-  (session + exercices + séries + records personnels), traitement d'un webhook
-  d'abonnement (événement + abonnement + entitlements).
+  transaction Prisma — rotation de refresh token, ingestion d'une séance,
+  traitement d'un webhook d'abonnement (événement + abonnement +
+  entitlements), suppression puis purge d'un compte.
 - **Champs JSON** : réservés aux métadonnées de systèmes externes, aux payloads
-  bruts de webhooks et aux configurations réellement variables. **Jamais** pour
-  remplacer une relation ou une colonne interrogeable.
-- **Contraintes et index attendus** (exemples structurants) :
+  bruts de webhooks, au contexte de l'audit et aux configurations réellement
+  variables. **Jamais** pour remplacer une relation ou une colonne
+  interrogeable.
+- **Contraintes structurantes** (noms Prisma, tels qu'au schéma) :
 
 | Contrainte | Où | Pourquoi |
 |---|---|---|
-| `UNIQUE (email)` partiel (`citext`) | `users`, `admin_users` | un compte actif par adresse |
-| `UNIQUE (idempotency_key)` | `workout_sessions` | une écriture de séance rejouée n'est appliquée qu'une fois |
-| `UNIQUE (provider, external_event_id)` | `subscription_events` | un événement webhook traité une seule fois |
-| `UNIQUE (provider, provider_user_id)` | `external_identities` | une identité OAuth liée à un seul compte |
-| `UNIQUE (exercise_id, locale)` | `exercise_translations` | une traduction par langue |
-| `UNIQUE (user_id, exercise_id, record_type)` | `personal_records` | un record courant par type |
-| `UNIQUE (token)` (FCM) | `push_devices` | un jeton push enregistré une seule fois |
+| `email @unique` (normalisé par l'application) | `User`, `AdminUser` | un compte par adresse ; l'adresse d'un compte supprimé est réécrite, donc libérée |
+| `id` fourni par l'appareil (clé primaire) | `WorkoutSession`, `WorkoutSet`, `BodyMetric`, `MealEntry`… | une écriture rejouée retombe sur la même ligne : c'est l'idempotence de la synchronisation, sans colonne `idempotency_key` |
+| `@@unique([provider, externalEventId])` | `SubscriptionEvent` | un événement webhook traité une seule fois |
+| `@@unique([provider, subject])` | `ExternalIdentity` | une identité Apple ou Google liée à un seul compte |
+| `@@unique([userId, exerciseName, recordType])` | `PersonalRecord` | un record courant par type |
+| `token @unique` (FCM) | `DeviceToken` | un jeton push enregistré une seule fois |
+| `storageKey @unique` | `MediaAsset` | deux médias ne partagent jamais un objet du stockage |
 
 ---
 
@@ -94,39 +128,55 @@ réutilisation d'un refresh token déjà consommé.
 > initiale : la chaîne de rotation est portée par le couple
 > `UserSession` + `RefreshToken` (une ligne par jeton, statuts
 > `ACTIVE | ROTATED | REVOKED`) plutôt que par un `familyId` ; et `UserDevice`
-> est différé — les métadonnées d'appareil vivent sur `UserSession` jusqu'à
-> l'arrivée des notifications push.
+> n'a jamais été créé — les métadonnées d'appareil vivent sur `UserSession`,
+> et le jeton push (`DeviceToken`) est rattaché à la session qui l'a
+> enregistré.
 
 ### `User`
 Racine de l'identité d'un membre (application mobile). Aucune donnée sensible
 d'authentification ici.
-- Champs clés : `id`, `email` (`citext`, unique partiel), `status`
-  (`active | suspended | deleted`), `emailVerifiedAt`, `deletedAt`.
-- Relations : 1–1 `UserProfile`, `UserCredential`, `UserPreference` ; 1–n
-  `UserSession`, `UserDevice`, `ExternalIdentity`, `EmailVerification`,
-  `PasswordReset`, et vers tous les domaines métier (séances, mesures,
-  abonnements…).
+- Champs clés : `id`, `email` (`String @unique`, normalisé par
+  l'application), `status` (`ACTIVE | SUSPENDED | DELETED`),
+  `emailVerifiedAt`, `deletedAt`.
+- Relations : 1–1 `UserProfile`, `UserCredential` ; 1–n `UserSession`,
+  `DeviceToken`, `ExternalIdentity`, `EmailVerification`, `PasswordReset`,
+  et vers tous les domaines métier (séances, mesures, abonnements…), tous en
+  `onDelete: Cascade` sauf `AuditLog` (`SetNull`) : c'est ce qui permet à
+  `deleted-accounts-purge` d'effacer un compte d'un seul `DELETE`. Chaque
+  clé que cette cascade traverse a son index (migration
+  `20260926200100_index_cles_de_la_purge`, vérifié par
+  `test/purge-index.e2e-spec.ts`).
+- Suppression par la personne : `status = DELETED`, `deletedAt` posé, adresse
+  et code ami réécrits en valeurs tombales ; effacement définitif 30 jours
+  plus tard (`SECURITY.md`, « Données personnelles »).
 
 ### `UserProfile`
 Données de présentation et de contexte, séparées de l'identité pour garder
 `User` minimal.
-- Champs clés : `userId` (unique), `displayName`, `avatarMediaId` (→
-  `MediaAsset`, nullable), `birthDate`, `heightCm`, `unitSystem`
-  (`metric | imperial`), `locale`, `timezone`.
+- Champs clés : `userId` (clé), `displayName`, `birthDate`, `heightCm`,
+  `locale`, `timezone`. Pas d'avatar ni de système d'unités : tout est
+  stocké en métrique.
+- Choix d'usage, tous nullables : `carlysProfile` (profil Carlys),
+  `mentorStyle` (voix du Mentor, envoyée au coach IA), `trainingGoal`,
+  `trainingExperience`, `weeklySessionsTarget`, `sessionMinutesTarget`
+  (entrées de la génération de programme ; migrations
+  `20260812090000_carlys_profiles`, `20260917175451_mentor_style`,
+  `20260917190658_training_goal`,
+  `20260917192528_training_generation_inputs`).
 - Profil métabolique (migration `20260807171346_nutrition_profile`) : `sex`
   (`MALE | FEMALE`, nullable), `activityLevel` (`SEDENTARY → VERY_ACTIVE`,
   nullable), `nutritionGoal` (`LOSE_WEIGHT | MAINTAIN | GAIN_MUSCLE`,
   nullable) — consommés par `GET /nutrition/metabolism` ; le poids n'est
   **pas** stocké ici, il provient de la dernière `BodyMetric` `WEIGHT_KG`.
-- Relations : 1–1 `User` ; n–1 `MediaAsset` (avatar).
+- Relations : 1–1 `User`.
 
 ### `UserCredential`
 Secret de connexion, isolé dans sa propre table pour restreindre les chemins de
 lecture.
 - Champs clés : `userId` (unique), `passwordHash` (**Argon2id**, jamais exposé
   par l'API), `passwordUpdatedAt`.
-- Relations : 1–1 `User`. Nullable côté usage : un compte purement OAuth n'a pas
-  de ligne ici.
+- Relations : 1–1 `User`. Un compte né d'une connexion Apple ou Google n'a
+  pas de ligne ici, jusqu'à ce que « Mot de passe oublié » en pose une.
 
 ### `UserSession` (implémenté)
 Une session **par appareil**. L'access token JWT référence la session (claim
@@ -136,8 +186,11 @@ invalide donc immédiatement ses access tokens.
   `userAgent`, `expiresAt` (expiration **glissante**, repoussée à chaque
   rotation), `lastUsedAt`, `revokedAt`, `revokedReason`
   (`logout | user_revoked | user_revoked_all | password_reset |
-  password_changed | refresh_reuse_detected | account_deleted`).
-- Relations : n–1 `User` ; 1–n `RefreshToken`.
+  password_changed | refresh_reuse_detected | admin_suspension |
+  social_link_unverified_email`). La suppression du compte, elle, SUPPRIME
+  les sessions au lieu de les révoquer.
+- Relations : n–1 `User` ; 1–n `RefreshToken` ; 1–n `DeviceToken` (les
+  jetons push tombent avec la session).
 - Index : `(user_id)`.
 
 ### `RefreshToken` (implémenté)
@@ -152,13 +205,10 @@ SHA-256 (`tokenHash` unique).
   révocation de **toute la session** + événement d'audit.
 - Index : `(session_id)`.
 
-### `UserDevice` (différé — arrivera avec les notifications push)
-Appareil logique de l'utilisateur (un téléphone = un appareil), support des
-sessions et du push.
-- Champs clés : `userId`, `platform` (`ios | android`), `model`, `osVersion`,
-  `appVersion`, `lastSeenAt`.
-- Relations : n–1 `User` ; 1–n `UserSession` ; 1–n `PushDevice` (quand FCM
-  arrive).
+### `UserDevice` (abandonné)
+Un appareil logique séparé de la session n'a jamais été nécessaire : le push
+est arrivé avec `DeviceToken`, rattaché à la session (section
+[Notifications](#notifications-implémenté)). Il n'existe pas en base.
 
 ### `EmailVerification`
 Jeton de vérification d'adresse, à usage unique, stocké hashé.
@@ -173,12 +223,13 @@ Jeton de réinitialisation de mot de passe — mêmes règles que
 - Relations : n–1 `User`.
 
 ### `ExternalIdentity`
-Lien vers un fournisseur d'identité externe (Sign in with Apple, Google), si/
-quand activé.
-- Champs clés : `userId`, `provider`, `providerUserId`
-  (unique composé `(provider, providerUserId)`), `email` rapporté par le
-  fournisseur, `lastAuthenticatedAt`.
+Lien vers un fournisseur d'identité externe, utilisé par `POST /auth/social`
+(connexion Apple et Google).
+- Champs clés : `userId`, `provider` (`APPLE | GOOGLE`), `subject` (claim
+  `sub` du jeton d'identité ; unique composé `(provider, subject)`), `email`
+  rapporté par le fournisseur, `createdAt`.
 - Relations : n–1 `User` (un utilisateur peut lier plusieurs fournisseurs).
+  Supprimée avec le compte dès `DELETE /users/me`, sans attendre la purge.
 
 ### `UserPreference`
 Préférences applicatives transverses, une ligne par utilisateur, **colonnes
@@ -208,63 +259,70 @@ explicites** (pas de sac JSON) : chaque nouvelle préférence est une migration.
 > `ExerciseMuscle` porte un rôle `PRIMARY | SECONDARY` (exactement un
 > `PRIMARY` par exercice, garanti par le seed et la couche application).
 
-Catalogue officiel (seed ≥ 30 exercices, `pnpm prisma:seed`), multilingue,
+Catalogue officiel (seed ≥ 30 exercices, `pnpm prisma:seed`), en français,
 servi avec cache Redis (lecture intensive, écriture rare — invalidation à la
 publication).
 
 ### `Exercise`
-Exercice du catalogue officiel, entité neutre en langue (le contenu textuel est
-dans `ExerciseTranslation`).
+Exercice du catalogue officiel, contenu en français directement sur la ligne
+(pas de table de traductions).
 - Champs clés : `id`, `slug` (unique, stable pour le cache et les URLs),
-  `measurementType` (`reps | duration | distance` — pilote les champs de série
-  autorisés), `level` (`beginner | intermediate | advanced`), `mechanics`
-  (`compound | isolation`), `force` (`push | pull | static`), `isPublished`,
-  `deletedAt`.
-- Relations : 1–n `ExerciseTranslation`, `ExerciseMedia`, `ExerciseMuscle`,
-  `ExerciseVariant` ; n–n `Equipment` (table de jointure) ; référencé par les
-  programmes, les séances et les records.
+  `name`, `description`, `instructions` (`String[]`, étapes ordonnées),
+  `difficulty` (`BEGINNER | INTERMEDIATE | ADVANCED`), `type`
+  (`STRENGTH | CARDIO | MOBILITY | STRETCHING`), `isPremium`,
+  `isPublished`, `deletedAt`, `tags` (`String[]`), `imageId` et `meshId`
+  (→ `MediaAsset`, `SetNull`).
+- Relations : 1–n `ExerciseMuscle`, `ExerciseEquipment` ; référencé par les
+  séries, les modèles de séance, les plans de séance, les records et les
+  propositions du coach. Index : `(isPublished, name)`, `(deletedAt)`.
 
-### `ExerciseTranslation`
-Contenu localisé d'un exercice.
-- Champs clés : `exerciseId`, `locale`, `name`, `shortDescription`,
-  `instructions` (étapes ordonnées). Unique `(exerciseId, locale)`.
-- Relations : n–1 `Exercise`.
-- Index de recherche sur `name` (préfixe/trigram) pour la recherche du
-  catalogue.
+### `ExerciseTranslation` — différé
 
-### `ExerciseMedia`
-Association ordonnée entre un exercice et ses médias.
-- Champs clés : `exerciseId`, `mediaAssetId`, `role`
-  (`thumbnail | video | illustration`), `position`.
-  Unique `(exerciseId, role, position)`.
-- Relations : n–1 `Exercise`, n–1 `MediaAsset`.
+N'existe PAS : le contenu est en français sur `Exercise`. Prévu avec l'i18n :
+`exerciseId`, `locale`, `name`, `shortDescription`, `instructions`, unique
+`(exerciseId, locale)`.
+
+### `ExerciseMedia` — différé
+
+N'existe PAS : un exercice porte directement sa photo (`imageId`) et son
+maillage (`meshId`). Prévu pour plusieurs médias ordonnés par exercice :
+`exerciseId`, `mediaAssetId`, `role`, `position`.
 
 ### `MuscleGroup`
 Référentiel des groupes musculaires (seedé, quasi immuable).
-- Champs clés : `slug` (unique), nom localisable, zone corporelle.
+- Champs clés : `slug` (unique), `name`, `sortOrder`.
 - Relations : 1–n `ExerciseMuscle`.
 
 ### `ExerciseMuscle`
 Jointure exercice ↔ groupe musculaire, qualifiée.
 - Champs clés : `exerciseId`, `muscleGroupId`, `role`
-  (`primary | secondary`). Unique `(exerciseId, muscleGroupId)`.
+  (`PRIMARY | SECONDARY`). Clé primaire `(exerciseId, muscleGroupId)`,
+  index `(muscleGroupId)`.
 - Relations : n–1 `Exercise`, n–1 `MuscleGroup`.
 
 ### `Equipment`
 Référentiel du matériel (barre, haltères, poids du corps…), seedé.
-- Champs clés : `slug` (unique), nom localisable.
-- Relations : n–n `Exercise`.
+- Champs clés : `slug` (unique), `name`.
+- Relations : n–n `Exercise` par `ExerciseEquipment` ; n–n `User` par
+  `UserEquipment`.
 
-### `ExerciseVariant`
-Lien orienté entre deux exercices du catalogue (« variante de » : inclinaison,
+### `UserEquipment`
+Le matériel dont un membre dispose, déclaré à la préparation d'un programme
+et lu par la génération.
+- Clé primaire `(userId, equipmentId)`, `createdAt`.
+- Relations : n–1 `User`, n–1 `Equipment` (`Cascade` des deux côtés).
+  Index : `(equipmentId)`.
+
+### `ExerciseVariant` — différé
+N'existe PAS. Prévu : lien orienté entre deux exercices du catalogue (« variante de » : inclinaison,
 prise, unilatéral…).
 - Champs clés : `exerciseId`, `variantExerciseId`, `variationType`.
   Unique `(exerciseId, variantExerciseId)` ; contrainte `CHECK` interdisant
   l'auto-référence.
 - Relations : n–1 `Exercise` (deux fois).
 
-### `CustomExercise`
-Exercice créé par un utilisateur, **privé** (jamais visible d'un autre compte),
+### `CustomExercise` — différé
+N'existe PAS. Prévu : exercice créé par un utilisateur, **privé** (jamais visible d'un autre compte),
 hors cache catalogue.
 - Champs clés : `id`, `ownerId` (→ `User`), `name`, `measurementType`,
   matériel/muscles optionnels, `deletedAt` (une suppression ne casse pas
@@ -278,15 +336,20 @@ hors cache catalogue.
 ## Médias — Étape 3
 
 ### `MediaAsset`
-Représentation en base d'un objet stocké dans S3/R2 en production (dev : MinIO,
-bucket `carlys-media` créé par le service `minio-init` du compose). La base ne
-stocke **jamais** le binaire.
-- Champs clés : `id`, `storageKey` (unique, chemin objet), `mimeType`,
-  `sizeBytes`, `checksum`, `width`/`height`/`durationSeconds` (selon type),
-  `status` (`pending | ready | failed` — upload en deux temps), `ownerId`
-  nullable (null = média du catalogue, sinon média utilisateur), `deletedAt`.
-- Relations : n–1 `User` (optionnelle) ; référencé par `ExerciseMedia` et
-  `UserProfile.avatarMediaId`.
+Fichier déposé depuis l'ADMINISTRATION et servi par le stockage objet public
+(MinIO en développement comme sur le serveur, bucket `S3_BUCKET`, créé par le
+service `minio-init` du compose). La base ne stocke **jamais** le binaire.
+Les photos de repas des membres n'en sont PAS : elles vivent dans le bucket
+privé, sous `MealPhoto` (voir « Journal alimentaire »).
+- Champs clés : `id` (fourni par l'administration : un dépôt rejoué ne crée
+  pas de doublon), `kind` (`IMAGE | MESH_3D | VIDEO`), `storageKey` (unique,
+  chemin objet), `mimeType`, `byteSize`, `width`/`height` (images et vidéos
+  seulement), `checksum` (SHA-256 du contenu), `originalName`,
+  `uploadedById` (→ `AdminUser`, `SetNull`), `deletedAt`. Pas de statut
+  d'envoi : le dépôt est synchrone.
+- Relations : n–1 `AdminUser` (optionnelle) ; référencé par `Exercise`
+  (`imageId` pour la photo, `meshId` pour le maillage, `SetNull` des deux
+  côtés). Index : `(kind, createdAt)`, `(checksum)`.
 
 ---
 
@@ -305,7 +368,10 @@ Structures **prescriptives** (ce qui est prévu), distinctes des séances
 ### `Program`
 Un plan sur plusieurs semaines, propre à un utilisateur.
 - Champs clés : `id` (fourni par le client), `userId` **non nul**, `name`,
-  `description` nullable, `weeksCount` (1 à 52), `isActive`, `deletedAt`.
+  `description` nullable, `weeksCount` (1 à 52), `isActive`, `startsOn`
+  (`date` nullable, le « Premier jour » : migration
+  `20260919185324_calendrier_date`), `generationReport` (JSON nullable,
+  migration `20260919163304_generation_de_programme`), `deletedAt`.
 - `isActive` : **un seul programme suivi à la fois**. PostgreSQL ne peut pas
   l'exprimer ici — il faudrait un index unique PARTIEL, hors du vocabulaire
   Prisma — c'est donc le service qui l'impose, en désactivant les autres dans
@@ -324,13 +390,15 @@ la semaine est un simple entier porté par le jour.
   jamais disparaître le programme.
 - Unique `(programId, weekNumber, dayOfWeek)`.
 
-**Ce que ce schéma NE permet PAS, et qu'il faudra trancher.** `dayOfWeek` est
-une colonne du programme, verrouillée par cette contrainte d'unicité : la
-prescription (« ce jour-là, ce modèle ») et le PLACEMENT dans le calendrier
-sont donc le même objet. Un programme n'a par ailleurs aucune date de début,
-ce qui rend un plan daté — préparation Hyrox, plan marathon — impossible à
-exprimer. Les séparer suppose une migration de données sur une table déjà
-déployée, donc une décision, pas seulement du code.
+**La date d'une case se calcule, elle n'est pas stockée.** `dayOfWeek` reste
+une colonne de la case, verrouillée par la contrainte d'unicité : la
+prescription (« ce jour-là, ce modèle ») et le placement dans la semaine sont
+le même objet. Depuis `startsOn`, la date civile d'une case vaut
+`dateOfSlot(anchorOf(startsOn), weekNumber, dayOfWeek)`. Conséquence
+défendue par l'API : un `PUT /programs/:id` qui changerait la DATE d'une case
+déjà honorée par une séance terminée (en changeant son jour, ou le premier
+jour du programme vers une autre semaine) est refusé en **409**
+(`programs.service.ts`, `test/programme-case-faite.e2e-spec.ts`).
 
 ### `WorkoutTemplate` — implémenté
 
@@ -442,6 +510,11 @@ Série **prévue** d'une séance : copie APLATIE du modèle au moment du lanceme
   peut encore être dans la file d'envoi de l'appareil quand l'appariement
   remonte. Une contrainte ferait échouer l'opération en 4xx, donc la perdrait ;
   un identifiant orphelin est sans conséquence.
+- `doneSetId` n'a **pas d'index non plus**, et toute requête qui le filtre
+  nomme aussi `sessionId` : une série n'honore qu'une prévision de SA séance,
+  et c'est l'index `sessionId` qui sert alors. Libérer la prévision d'une
+  série supprimée sur `doneSetId` seul balayait le plan de tous les comptes
+  (2 millions de lignes, 0,3 s, mesuré en septembre 2026).
 - C'est une **copie**, pas un lien vivant : renommer ou supprimer le modèle
   ensuite ne touche jamais une séance déjà lancée (D1 de
   [workout-templates.md](../product/workout-templates.md)).
@@ -486,6 +559,9 @@ recalculé en transaction lors de l'ingestion d'une séance.
   `value` (décimal), `achievedAt`, `workoutSetId` (→ série d'origine, preuve).
   Unique `(userId, exerciseId, recordType)`.
 - Relations : n–1 `User`, `Exercise`/`CustomExercise`, `WorkoutSet`.
+- Réel : voir « Progression » ci-dessous. `sessionId` est indexé : la
+  cascade d'effacement d'un compte y passe (`SET NULL`) pour chaque séance,
+  et sans index chaque séance balayait la table entière.
 
 ---
 
@@ -531,6 +607,17 @@ répartition musculaire) pour servir les graphiques sans re-agréger les
   Unique `(userId, period, periodStart)`.
 - Relations : n–1 `User`. Recalculable à tout moment depuis les séances (donnée
   dérivée, jamais source de vérité).
+
+### `ProgressMilestone` (implémenté)
+Journal des FRANCHISSEMENTS d'un membre (migration
+`20260922113702_franchissements`) : records battus (dérivés des séries à la
+clôture), récompenses du catalogue (poussées par le moteur du mobile) et
+paliers de titre.
+- Champs clés : `userId`, `kind` (`RECORD | REWARD | TITLE`), `key` (clé
+  stable du franchissement), `occurredAt`, `payload` (JSON nullable).
+  Unique `(userId, kind, key)` : rejouer un envoi n'écrit rien.
+- Index : `(userId, occurredAt DESC)`.
+- Relations : n–1 `User` (`Cascade`).
 
 ---
 
@@ -616,9 +703,21 @@ domaine.
   `(provider, externalEventId)` : un événement n'est traité qu'une seule
   fois** — l'insertion en conflit court-circuite le retraitement), `eventType`,
   `payload` (JSON brut du webhook — usage légitime du JSON), `receivedAt`,
-  `processedAt` nullable, `processingError` nullable.
+  `processedAt` nullable, `processingError` nullable, `userId` nullable
+  (migration `20260927100000_evenement_paiement_compte`, indexé, **sans clé
+  étrangère**) : le compte que l'événement NOMME (`metadata.userId` Stripe,
+  `app_user_id` RevenueCat), recopié à la réception. C'est par lui que la
+  purge d'un compte retrouve aussi les événements dont la projection a échoué,
+  rattachés à aucun abonnement.
 - Relations : n–1 `Subscription` (nullable tant que la corrélation n'est pas
   établie).
+- **Ce qui n'est PAS gardé** : un événement Stripe hors
+  `customer.subscription.*` (facture, paiement : ils portent l'adresse et le
+  nom du client, et rien n'est à projeter), un type RevenueCat non suivi, et
+  tout événement qui nomme un compte supprimé ou déjà effacé. Ils sont
+  acquittés (200) sans être enregistrés ni appliqués : la suppression d'un
+  compte ne résilie pas chez le fournisseur, et chaque échéance après la purge
+  aurait sinon violé la clé étrangère de l'abonnement (503 réémis en boucle).
 - Traitement en transaction : insertion de l'événement → mise à jour de
   `Subscription` → recalcul des `UserEntitlement`.
 - **`processedAt` à `null` signifie « à rejouer », et la réponse HTTP est ce
@@ -644,34 +743,42 @@ pour une lecture O(1) par l'API et le mobile.
 
 ---
 
-## Notifications — avec l'intégration FCM (config réelle, pas de dépendance morte)
+## Notifications (implémenté)
 
-FCM et sa configuration arrivent ensemble (au plus tôt Étape 4 pour les rappels
-de séance) ; `NotificationPreference` est requis au plus tard à l'Étape 6
-(communications liées à l'abonnement).
+Push par FCM uniquement, sans historique en base : le serveur ne garde que ce
+qu'il faut pour envoyer (le jeton) et ce que la personne a refusé. Règles
+d'envoi et destinations : [`docs/product/notifications.md`](../product/notifications.md).
 
-### `Notification`
-Notification persistée adressée à un utilisateur (historique in-app, trace de
-l'envoi push).
-- Champs clés : `userId`, `category` (`workout_reminder | progress |
-  subscription | system`), `title`, `body`, `data` (JSON : payload de deep-link
-  uniquement), `sentAt`, `readAt` nullable.
-- Relations : n–1 `User`.
-- Index : `(user_id, created_at DESC, id)` ; purge programmée des anciennes
-  lignes lues.
+### `DeviceToken`
+Jeton FCM d'un appareil (migrations `20260811210000_device_tokens` et
+`20260926200000_jetons_push_par_session`).
+- Champs clés : `userId`, `sessionId` (nullable), `token` (**unique** : un
+  jeton appartient à un seul compte à la fois, se connecter avec un autre
+  compte sur le même appareil le réaffecte), `platform` (`ANDROID | IOS`),
+  `createdAt`, `updatedAt`.
+- **Rattaché à la session qui l'a enregistré** (`onDelete: Cascade`) :
+  révoquer la session supprime ses jetons dans la même transaction, et
+  l'envoi ne sert que les jetons d'une session vivante (ni révoquée, ni
+  expirée). `sessionId` nul : jeton enregistré avant la migration ; il est
+  encore servi, et tombe à la première révocation qui touche le compte.
+- Supprimé aussi à la déconnexion (`DELETE /notifications/device-tokens`),
+  quand FCM le déclare mort, à la suspension et à la suppression du compte.
+- Relations : n–1 `User`, n–1 `UserSession`. Index : `(userId)`,
+  `(sessionId)`.
 
 ### `NotificationPreference`
-Consentement par utilisateur × canal × catégorie.
-- Champs clés : `userId`, `channel` (`push | email`), `category`, `enabled`.
-  Unique `(userId, channel, category)`.
+Refus par utilisateur × famille de notification (migration
+`20260816120000_notification_preferences`).
+- Clé primaire `(userId, category)`, `enabled`, `updatedAt`. `category` :
+  `FRIEND_REQUESTS | ENCOURAGEMENTS | CHALLENGE_INVITES`. Pas de canal : seul
+  le push existe.
+- Absence de ligne = famille acceptée. Le refus est appliqué côté serveur,
+  avant tout envoi.
 - Relations : n–1 `User`.
 
-### `PushDevice`
-Jeton FCM enregistré pour un appareil.
-- Champs clés : `userDeviceId` (→ `UserDevice`), `token` (**unique**),
-  `platform`, `lastRegisteredAt`, `disabledAt` nullable (jeton signalé invalide
-  par FCM — jamais re-sollicité).
-- Relations : n–1 `UserDevice` (et via lui, `User`).
+### `Notification` (différé)
+Un historique in-app des notifications n'existe pas : rien n'est persisté
+après l'envoi.
 
 ---
 
@@ -692,8 +799,9 @@ journal d'audit immuable.
 
 ### `AdminUser`
 Compte d'administration, jamais confondu avec `User`.
-- Champs clés : `email` (`citext`, unique), `passwordHash` (Argon2id),
-  `displayName`, `status` (`active | disabled`), `lastLoginAt`.
+- Champs clés : `email` (`String @unique`, normalisé en minuscules par
+  l'application), `passwordHash` (Argon2id), `displayName`, `status`
+  (`ACTIVE | DISABLED`), `lastLoginAt`.
 - Relations : n–n `AdminRole` (table de jointure) ; 1–n `AuditLog` (en tant
   qu'acteur).
 
@@ -710,6 +818,11 @@ la liste des permissions).
   Unique `(resource, action)`.
 - Relations : n–n `AdminRole`.
 
+### `AdminUserRole` et `AdminRolePermission`
+Les deux tables de jointure du RBAC : `(adminUserId, roleId)` et
+`(roleId, permissionId)` en clé primaire composée, `Cascade` des deux
+côtés. Aucune autre colonne.
+
 ### `AuditLog`
 Journal **append-only et immuable** (jamais de `UPDATE`/`DELETE` applicatif) de
 toute action sensible : actions admin, événements de sécurité (révocation de
@@ -720,10 +833,14 @@ manuelles d'entitlements.
   `actorId` unique), `action`, `resourceType` et `resourceId` nullables,
   `requestId` (corrélation directe avec les logs Pino et l'en-tête
   `x-request-id`), `metadata` (JSON : diff avant/après, contexte — usage
-  légitime), `ipAddress`, `userAgent`, `createdAt`.
+  légitime ; jamais l'adresse d'un membre en clair : un échec de connexion
+  n'y porte que son empreinte, `emailHash`), `ipAddress`, `userAgent`,
+  `createdAt`.
 - Relations : volontairement **sans clé étrangère** vers les ressources
   auditées (le journal doit survivre à leur suppression) ; référence logique
-  par `(resourceType, resourceId)`. Les deux colonnes d'acteur, elles, ont
+  par `(resourceType, resourceId)` — qui garde donc l'UUID d'un compte
+  effacé par la purge (`<uuid>`, `<uuid>:<droit>`), comme
+  `metadata.reporterId` d'un signalement traité. Les deux colonnes d'acteur, elles, ont
   bien une relation, en `onDelete: SetNull` — c'est la seule nuance à
   « jamais de `UPDATE` applicatif » plus haut : effacer un compte détache ses
   lignes d'audit au lieu de les supprimer, le journal survit à la personne.
@@ -741,6 +858,41 @@ manuelles d'entitlements.
     contrat, ni filtre au contrôleur — et se payaient à chaque écriture, sur
     une table alimentée à chaque connexion. Ils reviendront avec les filtres
     qui les justifieront.
+
+---
+
+## Coach IA (implémenté)
+
+> Migration `20260809120000_coach_ia`. Règles (outils, plafond quotidien,
+> ce qui part chez le fournisseur du modèle) :
+> [`docs/product/coach-ia.md`](../product/coach-ia.md).
+
+### `CoachConversation`
+Un fil de conversation d'un membre avec le coach.
+- Champs clés : `id` (fourni par l'appareil), `userId`, `title` nullable,
+  `createdAt`, `updatedAt`, `deletedAt`.
+- Index : `(userId, updatedAt DESC)`. Relations : n–1 `User` (`Cascade`) ;
+  1–n `CoachMessage`.
+- La LECTURE de ses propres fils n'est gardée ni par l'abonnement ni par la
+  disponibilité du coach ; seuls l'ouverture d'un fil et l'envoi d'un
+  message le sont.
+
+### `CoachMessage`
+- Champs clés : `id`, `conversationId`, `role`, `content`, `inputTokens` et
+  `outputTokens` nullables (volume traité par le modèle), `createdAt`.
+- Index : `(conversationId, createdAt)`. Relations : n–1
+  `CoachConversation` (`Cascade`) ; 0–1 `CoachSessionProposal`.
+
+### `CoachSessionProposal` et `CoachSessionProposalItem`
+Une séance PROPOSÉE par le coach, jamais écrite dans le compte tant que la
+personne ne l'accepte pas.
+- `CoachSessionProposal` : `messageId` (unique), `name`,
+  `estimatedMinutes`, `sourceTemplateId` (`SetNull`),
+  `acceptedSessionId` nullable.
+- `CoachSessionProposalItem` : une ligne PAR SÉRIE (`exercisePosition`,
+  `exerciseId`, `exerciseName`, `setPosition`, `kind`, `targetReps`,
+  `targetWeightKg`, `restSeconds`), unique
+  `(proposalId, exercisePosition, setPosition)`.
 
 ---
 
@@ -867,7 +1019,9 @@ Participation et `contribution` individuelle à l'objectif collectif.
 - Relations : n–1 `CommunityChallenge`, n–1 `User` (`Cascade`).
 
 ### `CommunityPreference` et `QuizAnswer`
-- `CommunityPreference` : `userId` (clé), `sharesProgress` (absence = partagé).
+- `CommunityPreference` : `userId` (clé), `sharesProgress` (absence =
+  partagé), `joinsLeague` (défaut `false` : entrer dans la ligue EST le
+  consentement ; `false` retire aussi le nom du classement des autres).
 - `QuizAnswer` : réponse de l'Academy, unique `(userId, lessonId, answeredOn)`
   (jour LOCAL de l'appareil) — la source des défis `CULTURE`.
 
@@ -893,6 +1047,43 @@ créé.
   (`HARCELEMENT | SPAM | CONTENU_INAPPROPRIE | AUTRE`), `details`,
   `status` (`OPEN | RESOLVED`), `resolvedAt`.
 - Index : `(status, created_at DESC)`, `(reported_user_id)`.
+- Conservé tant que ni le signalant ni la personne signalée n'est effacé
+  (`Cascade` des deux côtés) : même résolu, il reste.
+
+### `FriendChallenge`
+Défi lancé par un membre à ses amis (migrations
+`20260919201000_defis_entre_amis` et `20260923142820_defi_entre_amis_message`).
+- Champs clés : `id` (fourni par l'appareil : rejouer la création ne crée
+  pas de doublon), `creatorId`, `title`, `message` nullable (le mot du
+  créateur, 280 points de code au plus), `metric`, `target` nullable
+  (« qui en fait le plus »), `durationDays` (3, 7 ou 30), `startsAt`,
+  `endsAt` (calculée par le serveur), `status` (`OPEN | CLOSED | CANCELLED`),
+  `closedAt`.
+- Index : `(creatorId)`, `(status, endsAt)`. Relations : n–1 `User`
+  (`Cascade`) ; 1–n `FriendChallengeMember` ; référencé par
+  `CommunityReport` (`SetNull`).
+
+### `FriendChallengeMember`
+Un invité (ou le créateur) d'un défi entre amis.
+- Clé primaire `(challengeId, userId)`, `status`
+  (`INVITED | ACCEPTED | DECLINED | LEFT`), `invitedById`, `contribution`,
+  `joinedAt`, `leftAt`, `finalRank` (figé à l'échéance).
+- Chaque membre voit le nom, le statut et la contribution de TOUS les
+  autres (`friend-challenge.presenter.ts`), qu'ils soient amis entre eux ou
+  non.
+- Index : `(userId, status)`.
+
+### `LeagueMembership`
+La place d'un membre dans la ligue pour UNE semaine (migrations
+`20260919225014_ligues` et `20260924120000_ligues_groupes_de_vingt`).
+- Clé primaire `(userId, periodKey)` (`periodKey` : semaine ISO),
+  `division`, `cohort` (le groupe de 20 dans la division), `score`,
+  `finalRank`, `nextDivision`, `settledAt` (règlement de la semaine),
+  `createdAt`.
+- Index : `(periodKey, division, cohort, score DESC)` (le classement d'un
+  groupe), `(userId, periodKey DESC)`.
+- La ligne SURVIT à la sortie de la ligue (`joinsLeague = false`) : elle
+  compte aux rangs et au règlement, mais le nom n'est plus servi aux autres.
 
 ---
 
@@ -901,5 +1092,5 @@ créé.
 - `docs/api/README.md` — enveloppes de réponse, pagination par curseur,
   `x-request-id`.
 - `docs/architecture/backend.md` — modules NestJS qui porteront ces domaines.
-- `apps/api/prisma/schema.prisma` — état réel du schéma (vide à l'Étape 1).
+- `apps/api/prisma/schema.prisma` — état réel du schéma, qui fait foi.
 - `infrastructure/database/init/01-init.sql` — `citext` + base `carlys_test`.

@@ -10,9 +10,13 @@
 >   (une ligne par jeton, hash SHA-256 unique, statuts
 >   `ACTIVE | ROTATED | REVOKED`). La « famille » de la conception correspond
 >   à la session : réutilisation détectée → révocation de la session entière.
->   `UserDevice` est différé : les métadonnées d'appareil (nom, plateforme,
->   IP, user-agent) vivent sur la session ; le modèle dédié arrivera avec les
->   notifications push.
+>   Pas de `UserDevice` : les métadonnées d'appareil (nom, plateforme, IP,
+>   user-agent) vivent sur la session, et le jeton push (`DeviceToken`) est
+>   rattaché à la session qui l'a enregistré (`sessionId`, migration
+>   `20260926200000_jetons_push_par_session`) : révoquer la session supprime
+>   ses jetons dans la même transaction (`SessionsRepository.revokeSession`,
+>   `revokeAllSessions`), et une session expirée n'en reçoit plus
+>   (`DeviceTokensRepository.listTokens`).
 > - **Rotation conditionnelle** : la rotation n'aboutit que si le jeton est
 >   encore `ACTIVE` (mise à jour conditionnelle en transaction) ; deux refresh
 >   concurrents du même jeton → le second est traité comme une réutilisation.
@@ -31,12 +35,14 @@
 >   sessions supprimées avec leurs refresh tokens (leurs adresse IP,
 >   user-agent et nom d'appareil partent avec le compte), compte `DELETED`,
 >   adresse et code ami réécrits en valeurs tombales, profil personnel
->   effacé, jetons d'appareil supprimés ; l'adresse d'origine est de nouveau
->   disponible pour une inscription (détail et données conservées :
->   `SECURITY.md`).
-> - **Restent à venir** : OAuth Apple/Google (modèle `ExternalIdentity` et
->   contrainte d'unicité déjà en place), 2FA, purge différée de l'historique
->   d'activité des comptes supprimés.
+>   effacé, jetons d'appareil et identités externes supprimés ; l'adresse
+>   d'origine est de nouveau disponible pour une inscription. Un compte sans
+>   mot de passe (né d'une connexion Apple ou Google) reçoit **409** et est
+>   renvoyé à « Mot de passe oublié ». L'historique est effacé 30 jours plus
+>   tard par `dist/cli/deleted-accounts-purge` (détail et données
+>   conservées : `SECURITY.md`).
+> - **Connexion Apple et Google** : livrée, `POST /auth/social` (§4.3).
+> - **Reste à venir** : 2FA.
 
 Ce document s'appuie sur les fondations déjà en place (Étape 1) : enveloppes de
 réponse `{ data, meta, requestId }` / `{ error: { code, message, details, requestId } }`
@@ -80,7 +86,7 @@ métadonnées sans donnée sensible).
 | Modèle | Rôle | Champs clés |
 | --- | --- | --- |
 | `User` | Compte utilisateur | `id` (UUID), `email` (citext, unique), `passwordHash` (Argon2id, nullable si compte social uniquement), `emailVerifiedAt`, `createdAt` |
-| `ExternalIdentity` | Lien Apple / Google | `provider` (`apple` \| `google`), `providerUserId` (unique par provider), `userId`, `email` fourni par le provider |
+| `ExternalIdentity` | Lien Apple / Google (réel : `schema.prisma`) | `provider` (`APPLE` \| `GOOGLE`), `subject` (claim `sub`, unique par provider), `userId`, `email` fourni par le provider, `createdAt` |
 | `Session` | Session par appareil | `id`, `userId`, `deviceName`, `devicePlatform`, `userAgent`, `ipCreated`, `createdAt`, `lastUsedAt`, `revokedAt` |
 | `RefreshToken` | Maillon de la chaîne de rotation | `id`, `sessionId`, `tokenHash` (unique), `familyId`, `expiresAt`, `consumedAt`, `revokedAt`, `replacedById` |
 | `EmailVerificationToken` | Validation d'e-mail | `tokenHash`, `userId`, `expiresAt`, `consumedAt` |
@@ -89,8 +95,11 @@ métadonnées sans donnée sensible).
 
 Notes :
 
-- L'extension **citext** (déjà installée par
-  `infrastructure/database/init/01-init.sql`) rend l'e-mail insensible à la casse.
+- Réel : l'e-mail est un `String @unique` ordinaire, rendu insensible à la
+  casse par la couche application (`normalizeEmail` : `trim` puis
+  minuscules, avant toute lecture ou écriture). L'extension **citext**,
+  installée par `infrastructure/database/init/01-init.sql`, n'est portée
+  par aucune colonne.
 - `familyId` regroupe tous les refresh tokens issus d'une même connexion sur une
   même session ; c'est l'unité de révocation en cas de réutilisation détectée.
 - Un `RefreshToken` est stocké **hashé** (SHA-256 du token opaque — suffisant car
@@ -142,7 +151,7 @@ Endpoints cibles, tous sous `/api/v1/auth`, réponses conformes aux enveloppes
 | `/auth/register` | POST | Inscription e-mail + mot de passe ; envoi d'un e-mail de validation |
 | `/auth/verify-email` | POST | Consommation du jeton de validation d'e-mail |
 | `/auth/login` | POST | Connexion e-mail + mot de passe ; crée une session par appareil |
-| `/auth/apple` / `/auth/google` | POST | Sign in with Apple / Google (vérification du jeton du provider côté serveur, liaison `ExternalIdentity`) |
+| `/auth/social` | POST | Connexion Apple ou Google (`provider`, `idToken`) : vérification du jeton d'identité côté serveur, liaison `ExternalIdentity`, création du compte au besoin |
 | `/auth/refresh` | POST | Rotation du refresh token, nouvel access token |
 | `/auth/logout` | POST | Révoque la session courante (et sa famille de tokens) |
 | `/auth/forgot-password` | POST | Envoi d'un jeton de réinitialisation (réponse identique que l'e-mail existe ou non) |
@@ -160,7 +169,7 @@ est donc le navigateur, pas l'application mobile.
 
 ### 4.1 Inscription et validation d'e-mail
 
-- E-mail normalisé (citext), mot de passe soumis à une politique de robustesse
+- E-mail normalisé (`normalizeEmail`), mot de passe soumis à une politique de robustesse
   vérifiée dans le DTO.
 - Hash **Argon2id** (paramètres mémoire/itérations documentés dans le code et
   ajustables par configuration).
@@ -181,18 +190,42 @@ est donc le navigateur, pas l'application mobile.
 
 ### 4.3 Sign in with Apple et Google
 
-- Le client obtient un jeton d'identité auprès du provider ; l'API le **vérifie
-  côté serveur** (signature via les clés publiques du provider, `aud`, `iss`,
-  expiration, nonce).
-- Correspondance par `ExternalIdentity (provider, providerUserId)` ;
-  création du `User` au premier passage. La liaison à un compte e-mail existant
-  exige que l'e-mail du provider soit vérifié.
+- Le client obtient un jeton d'identité auprès du provider et le poste à
+  `POST /auth/social`. L'API le **vérifie côté serveur**
+  (`SocialTokenVerifier`) : signature par les clés publiques du provider
+  (JWKS), `iss`, `aud` (`GOOGLE_OAUTH_CLIENT_IDS`, `APPLE_OAUTH_AUDIENCES`),
+  claims `sub`, `iat` et `exp` exigés, âge maximal du jeton, tolérance
+  d'horloge. Sans audience configurée : 503.
+- **Pas de nonce.** Le mobile n'en envoie pas et le serveur n'en compare
+  aucun. Risque accepté : un jeton d'identité volé pourrait être rejoué
+  pendant sa courte vie (`exp`, plus l'âge maximal), et seulement vers une
+  audience qui est la nôtre. L'ajouter demande un nonce généré par
+  l'application, passé au SDK, puis comparé côté serveur.
+- Trois issues, dans l'ordre : identité `ExternalIdentity (provider, subject)`
+  connue → connexion ; adresse d'un compte existant, **vérifiée par le
+  provider** → rattachement ; sinon création d'un compte SANS mot de passe,
+  adresse marquée vérifiée. Sans adresse vérifiée par le provider : 401, rien
+  n'est créé ni rattaché.
+- **Reprise d'un compte non vérifié** : si le compte existant n'avait jamais
+  prouvé son adresse, le provider vient de le faire. Ses sessions sont
+  révoquées (avec leurs jetons push), sa crédential supprimée et ses liens de
+  réinitialisation invalidés (`auth.social_claimed_unverified_account`).
 - Ensuite, même mécanique de session et de tokens que la connexion classique.
+- Guide de mise en route et dépannage : `docs/deployment/connexion-sociale.md`.
 
 ### 4.4 Mot de passe oublié / changement
 
 - `forgot-password` répond **toujours pareil** (pas d'énumération d'e-mails) ;
   jeton à usage unique, expiration courte, stocké hashé.
+- **Cadence par compte** de `forgot-password` (`password-reset-cadence.ts`) :
+  un lien par minute au plus, cinq par fenêtre égale à la validité d'un lien
+  (`PASSWORD_RESET_TTL_MINUTES`), comptés sous un verrou PostgreSQL par
+  compte. Au-delà, rien ne part, et la réponse reste la même (202). Sans
+  elle, la limite par IP seule laissait n'importe qui inonder une adresse
+  inscrite de vrais courriers en multipliant les IP. Les liens ne
+  s'invalident PAS entre eux (la demande est anonyme : invalider laisserait
+  n'importe qui casser le lien qu'on s'apprête à ouvrir) ; ils tombent tous
+  dès que l'un sert, ou que le mot de passe change.
 - `reset-password` et `change-password` **révoquent toutes les sessions**
   (sauf, pour `change-password`, la session courante) et journalisent un
   `SecurityEvent`.
@@ -205,6 +238,52 @@ est donc le navigateur, pas l'application mobile.
 - **Compteur d'échecs par compte et par IP dans Redis** ; au-delà du seuil,
   **verrouillage temporaire** avec backoff progressif. Réponse `RATE_LIMITED`
   sans révéler l'état du compte. `SecurityEvent` `account_locked`.
+- **Re-authentification d'une session** (`POST /auth/change-password`,
+  `DELETE /users/me`) : même seuil et même durée que la connexion
+  (`AUTH_MAX_LOGIN_ATTEMPTS`, `AUTH_LOCKOUT_MINUTES`), sur un compteur À PART
+  (`reauth:<userId>`, `ReauthenticationService`) — sinon qui tient une session
+  volée pourrait verrouiller la connexion du propriétaire. Sans ce
+  verrouillage, ces deux routes étaient un oracle de mot de passe à 100 essais
+  par minute et par IP, sans plafond par compte. Le 429 est rendu AVANT toute
+  vérification Argon2, même pour un mot de passe juste. Limite par IP :
+  10/min (`STRICT_THROTTLE`). Une réinitialisation du mot de passe par
+  e-mail remet À ZÉRO ce compteur, comme celui de la connexion : le
+  propriétaire qui reprend son compte a prouvé qu'il tient la boîte mail, et
+  les essais faux du voleur qu'il vient de chasser ne lui interdisent plus
+  de changer son mot de passe ou de supprimer son compte.
+- **L'essai est RÉSERVÉ avant la vérification** (`LockoutService.reserveAttempt`,
+  un `INCR` Redis atomique), à la connexion mobile, à celle du back-office et
+  à la re-authentification : parmi N essais simultanés venus de N adresses IP,
+  exactement `AUTH_MAX_LOGIN_ATTEMPTS` sont vérifiés, les autres reçoivent
+  429. Lire le compteur puis compter l'échec après coup laissait passer toute
+  une rafale (mesuré : 25 vérifications sur 30 essais parallèles, pour un
+  seuil de 5). Un succès remet le compteur à zéro ; un essai refusé ne
+  prolonge pas le verrouillage. `test/auth-plafonds-par-compte.e2e-spec.ts`.
+- **Renvoi du lien de vérification** : un lien par minute au plus, cinq par
+  24 h, par compte ; chaque lien invalide les précédents ; limite par IP :
+  3 appels / 10 min. La réponse reste 204 dans tous les cas.
+- **Plafond par ADRESSE** (`EmailService`, `LINKS_PER_ADDRESS`) : cinq liens
+  au plus vers une même adresse, tous comptes confondus — par 24 h pour la
+  vérification, par durée de validité d'un lien pour la réinitialisation.
+  Les cadences par compte ne voyaient pas la rotation des comptes :
+  « s'inscrire avec l'adresse d'une victime, puis supprimer le compte », en
+  boucle, repartait chaque fois d'une cadence neuve (mesuré : 8 tours,
+  8 courriers). Compté dans Redis sous l'empreinte à clé de l'adresse,
+  jamais en clair ; un lien refusé ne change rien à la réponse HTTP (pas
+  d'oracle) ; Redis injoignable, le lien part et c'est journalisé.
+- **Journaux** : l'API n'écrit pas d'adresse e-mail en clair — le
+  destinataire d'un courrier, l'identifiant d'un verrouillage et l'adresse
+  saisie lors d'une connexion échouée, mobile ou back-office
+  (`auth.login_failed`, `auth.login_blocked_lockout`, `admin.login_failed`,
+  `admin.login_blocked_lockout`, `metadata.emailHash` dans l'audit) n'y
+  figurent que par une empreinte à clé : un HMAC-SHA-256 tronqué
+  (`common/utilities/log-privacy.ts`), sous une clé dérivée de
+  `JWT_ACCESS_SECRET` (`AppConfigService.logFingerprintKey`), que seul le
+  serveur tient — un SHA-256 nu se renversait par dictionnaire. Une exception, non masquée : la
+  ligne de requête. Pino (`req.url`, `req.query`) et le journal d'accès
+  Nginx la recopient telle quelle ; quand un administrateur cherche un
+  compte par son adresse dans le back-office
+  (`GET /admin/users?search=…`), l'adresse y figure donc en clair.
 
 ### 4.6 Journalisation des événements de sécurité
 
@@ -214,7 +293,10 @@ verrouillage, rafraîchissements, **réutilisation de refresh token détectée**
 révocations (ciblée/globale), réinitialisations et changements de mot de passe,
 liaison d'identité externe. **Jamais** de mot de passe, de token en clair ni de
 hash dans ces journaux — les en-têtes `authorization` et `cookie` sont déjà
-rédigés par la configuration Pino de l'Étape 1.
+rédigés par la configuration Pino de l'Étape 1. L'adresse saisie lors d'un
+échec de connexion n'entre dans l'audit qu'en empreinte (`emailHash`) :
+l'audit survit à la suppression et à la purge du compte, l'adresse ne doit
+pas y survivre avec lui.
 
 ### 4.7 2FA — extensibilité
 
@@ -240,9 +322,17 @@ l'Étape 2** — l'architecture ne doit simplement pas l'empêcher.
 - L'identité de l'appareil (nom, plateforme) est envoyée à la connexion pour
   alimenter la liste des sessions.
 
-Le tableau de bord admin n'est pas concerné ici : l'authentification admin
-(rôles, permissions, audit) arrive à l'**Étape 7** — `/login` n'est aujourd'hui
-qu'un emplacement documenté sans fausse authentification.
+- À l'expiration de la session (refresh refusé), l'application oublie aussi
+  son jeton push (`PushRegistration.forgetLocally`) : effacé chez FCM, SANS
+  appel à l'API, puisqu'il n'y a plus de session pour lui parler. Le serveur
+  ne le sert déjà plus : `DeviceTokensRepository.listTokens` ne rend que les
+  jetons d'une session ni révoquée ni expirée (un jeton antérieur au
+  rattachement aux sessions, `sessionId` nul, reste servi : c'est
+  l'effacement chez FCM qui le rend inutilisable). Le compte suivant en
+  réenregistre un.
+
+Le tableau de bord admin a sa propre authentification (Étape 7, comptes admin
+séparés, rôles et permissions, audit) : `docs/architecture/admin.md`.
 
 ---
 

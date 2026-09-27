@@ -89,7 +89,7 @@ On le compose une fois, on le relance en un geste.
 
 - **Y accéder** : depuis l'accueil (« Lancer un modèle », sous le bouton de
   démarrage — c'est là qu'un entraînement commence) ou depuis
-  Profil → Entraînement → « Mes modèles de séance ».
+  Profil → Réglages (le rouage) → Entraînement → « Mes modèles de séance ».
 - **Composer** : `/templates` → « Nouveau ». Les exercices viennent du
   catalogue (option « exercice libre » comprise) ; chaque série se règle au
   pas-à-pas, se duplique et se réordonne. Le brouillon reste en mémoire

@@ -413,11 +413,24 @@ quelque chose à contenir. Le même identifiant sert à rejouer l'envoi sans
 créer de doublon — ni de second message de quota.
 
 **Le droit vient du serveur, et de lui seul.** L'application ne calcule jamais
-si l'utilisateur a `ai_coaching` : elle appelle, et un `403` devient un écran
-qui explique et mène à Premium. Un `429` devient une phrase au-dessus du
-composeur — et la question reste dans le champ, prête à repartir demain. Un
-`503` devient « le coach est en pause ». Aucun des trois ne ressemble à une
-panne, parce qu'aucun n'en est une.
+si l'utilisateur a `ai_coaching` : elle le LIT (`GET /entitlements`) et
+appelle. Le serveur ne garde que deux gestes, ouvrir un fil et envoyer un
+message (`403` sans le droit, `503` coach coupé) ; la LECTURE de ses propres
+fils reste ouverte à leur auteur, abonné ou non, coach configuré ou non — les
+CGU promettent que ce qui a été créé avec le Premium reste consultable. D'où
+trois écrans :
+
+- un historique existe mais le droit manque : le fil s'affiche **en lecture
+  seule**, un panneau « Voir Premium » à la place du composeur ; un envoi
+  refusé en `403` fait basculer dans ce mode ;
+- ni historique ni droit : l'écran qui explique et mène à Premium ;
+- droit inconnu (hors ligne) : l'écriture reste permise, l'envoi rapportera
+  le vrai refus.
+
+Un `429` devient une phrase au-dessus du composeur — et la question reste
+dans le champ, prête à repartir demain. Un `503` à l'ouverture d'un premier
+fil devient « le coach est en pause ». Aucun ne ressemble à une panne, parce
+qu'aucun n'en est une.
 
 **Accepter une proposition lance une vraie séance.** `CoachSessionLauncher`
 écrit la séance ET son plan dans **une seule** transaction locale, en
@@ -492,8 +505,9 @@ quota compte avant l'appel et bloque au plafond. L'assemblage du prompt ne
 place aucune donnée volatile avant la césure de cache. Le port du modèle est un
 faux ; aucun test ne sort du réseau.
 
-**API — e2e.** `403` sans le droit `ai_coaching`, `429` au-delà du quota, `503`
-coach désactivé, `200` avec proposition valide, et le cas où le modèle propose
+**API — e2e.** `403` sans le droit `ai_coaching` pour ouvrir un fil ou
+écrire, mais `200` pour relire ses fils sans lui, `429` au-delà du quota, `503`
+coach désactivé à l'écriture (la lecture, elle, répond), `200` avec proposition valide, et le cas où le modèle propose
 un exercice inconnu — la réponse doit rester utilisable.
 
 **Mobile.** Rendu des bulles, carte de proposition, lancement de séance depuis

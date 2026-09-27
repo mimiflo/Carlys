@@ -68,7 +68,7 @@ limites de taille de corps) — section 6.
 
 À noter pour ne pas se tromper de garde-fou : le **verrouillage de compte**
 (`LockoutService`, `AUTH_MAX_LOGIN_ATTEMPTS`) est indexé par **adresse
-e-mail**, pas par adresse IP — `auth.service.ts` appelle `lockout.status(email)`
+e-mail**, pas par adresse IP — `auth.service.ts` appelle `lockout.reserveAttempt(email)`
 et l'admin `adminLockoutIdentifier(email)`. Une usurpation d'adresse ne le
 contourne pas directement ; elle contourne le throttler, qui est ce qui protège
 le verrouillage d'être atteint depuis mille adresses à la fois.

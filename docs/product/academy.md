@@ -96,7 +96,12 @@ qu'une erreur : le pire d'une lecture ratée est de reposer une question.
 
 L'envoi aux défis culturels part **ensuite**, en meilleur effort : la marque
 locale doit tenir hors ligne, une panne de réseau ne fait pas perdre la
-trace d'une question abordée.
+trace d'une question abordée. Le serveur, lui, ne crédite aux défis et à la
+ligue que **3 bonnes réponses par jour** (les suivantes sont enregistrées sans
+points), et refuse (`400`) une leçon absente du pack (`ACADEMY_LESSON_IDS`,
+tenu égal à `assets/academy/pack.json` par un test de l'API) : ajouter une
+leçon au pack, c'est l'ajouter aussi au contrat. Détail :
+[`community.md`](./community.md).
 
 ## Couverture
 

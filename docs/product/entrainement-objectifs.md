@@ -187,6 +187,19 @@ l'emmener ailleurs ferait dire au calendrier qu'on s'est entraîné un jour où
 on ne s'est pas entraîné. Le geste qui a du sens là est de détacher. Une case
 d'avant le départ ne se déplace pas non plus : elle n'a jamais été promise.
 
+La règle vaut dans les deux sens de l'échange (septembre 2026) : dans le
+sélecteur, les jours dont la case est déjà faite sont en vert et **inertes**,
+et le contrôleur relit le calendrier avant d'écrire, pour refuser un échange
+qui emmènerait une case faite (« Une séance déjà faite tient ce jour-là : sa
+case ne change pas de date. Choisis un jour encore à faire. »). L'API la
+défend aussi, pour un client qui ne la connaîtrait pas : un `PUT` qui change
+le jour d'une case liée à une séance TERMINÉE répond **409** (« Cette séance
+est déjà faite : sa case reste au jour où tu t'es entraîné. »), et, pour un
+programme daté, déplacer le « Premier jour » vers une autre semaine aussi
+(« … son premier jour ne peut plus changer que dans la même semaine. ») :
+c'est la DATE de la case faite qui compte. L'appli affiche ces refus tels
+quels, comme tout refus métier en 400, 403, 409 ou 422.
+
 Aucune route nouvelle : le PUT complet du programme suffit, puisque les
 identifiants de jour sont stables d'une écriture à l'autre — la case emporte
 son lien avec elle. **Une seule lecture et une seule écriture**, quoi qu'il

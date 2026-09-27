@@ -88,7 +88,7 @@ l'application ne dépend d'elle.
 | Méthode | Chemin | Rôle |
 | --- | --- | --- |
 | GET | `/feed` | Encouragements reçus (50 max, plus récents d'abord) |
-| POST | `/encouragements` | Encourager un ami accepté (`403` sinon) ; `message` de 280 caractères au plus, comptés en points de code (`encourageRequestSchema`) |
+| POST | `/encouragements` | Encourager un ami accepté (`403` sinon) ; `message` de 280 caractères au plus, comptés en points de code (`encourageRequestSchema`) ; au plus 20 encouragements au même ami sur 24 h glissantes, comptés sous verrou (`429` « Tu as déjà envoyé 20 encouragements à cet ami aujourd’hui. Garde les suivants pour demain ! »), et 10/min par adresse IP (`EncouragementsService`) |
 | GET | `/friends` | Amis acceptés, stats `null` si progression privée |
 | DELETE | `/friends/:userId` | Retirer un ami (idempotent) |
 | GET | `/requests` | Demandes REÇUES en attente |
@@ -98,14 +98,14 @@ l'application ne dépend d'elle.
 | GET | `/challenges` | Défis ouverts, progression collective incluse ; crée le jeu du mois à la première lecture (voir ci-dessous) |
 | POST | `/challenges/:id/join` | Rejoindre (idempotent) |
 | DELETE | `/challenges/:id/join` | Quitter (idempotent) : la contribution déjà versée reste au compteur collectif |
-| GET | `/friend-challenges` | Mes défis ENTRE AMIS (proposés et acceptés) ; un défi échu est réglé à la lecture ; une invitation dont le créateur est séparé de moi par un blocage n'y figure pas |
-| POST | `/friend-challenges` | Défier ses amis (id appareil, création idempotente) — `403` si l'un des invités n'est pas un ami accepté ou qu'un blocage les sépare ; `title` de 80 caractères et `message` facultatif de 280, tous deux comptés en points de code après découpage (`400` au-delà, `message` blanc = absent), jamais réécrits par un rejeu |
+| GET | `/friend-challenges` | Mes défis ENTRE AMIS (proposés et acceptés) : les défis en cours d'abord, fin la plus proche en tête (50 au plus), puis les 10 terminés les plus récents ; un défi échu est réglé à la lecture ; une invitation dont le créateur est séparé de moi par un blocage n'y figure pas |
+| POST | `/friend-challenges` | Défier ses amis (id appareil, création idempotente) — `403` si l'un des invités n'est pas un ami accepté ou qu'un blocage les sépare ; `title` de 80 caractères et `message` facultatif de 280, tous deux comptés en points de code après découpage (`400` au-delà, `message` blanc = absent), jamais réécrits par un rejeu ; le rejeu d'une création réussie rend le défi, même identifiant présenté par un autre compte → `409` ; après un échec, l'appli rouvre la feuille avec le brouillon précédent et le MÊME identifiant |
 | GET | `/friend-challenges/:id` | Un défi et son classement — `404` pour qui n'en est pas membre, et pour une INVITATION dont le créateur est séparé de moi par un blocage (même message « Défi introuvable. »). Même forme que la liste, la création et l'acceptation : `message` (ou `null`), `createdAt` (ISO UTC, l'heure du message), `durationDays`, et `isCreator` sur chaque membre ; sur un défi déjà accepté, `message` vaut aussi `null` quand un blocage, dans un sens ou l'autre, me sépare du créateur |
 | POST | `/friend-challenges/:id/accept` | Accepter : on entre au classement, à zéro — `404` « Défi introuvable. » pour une invitation masquée par un blocage |
 | DELETE | `/friend-challenges/:id/join` | Refuser ou quitter (`204`) : dans les deux cas, on SORT du classement (`404` pour une invitation masquée par un blocage) |
-| GET | `/league` | Ma ligue de la semaine : le classement de MON GROUPE de 20, sans les personnes bloquées ; sans adhésion, classement VIDE |
+| GET | `/league` | Ma ligue de la semaine : le classement de MON GROUPE de 20, sans les personnes bloquées ni celles qui ont quitté la ligue (rangs calculés sur le groupe entier) ; sans adhésion, classement VIDE |
 | POST | `/league/join` | Entrer dans la ligue (le geste EST le consentement) |
-| DELETE | `/league/join` | Sortir : le compte s'arrête, la semaine en cours se règle |
+| DELETE | `/league/join` | Sortir : le compte s'arrête, le nom disparaît aussitôt du classement des autres ; la ligne de la semaine en cours reste, sans nom, et se règle |
 | GET · PATCH | `/profile` | Ma préférence `sharesProgress` + mon `friendCode` |
 | POST | `/blocks/:userId` | Bloquer (idempotent, `204`) : retire amitié et demandes dans les deux sens ; `400` soi-même, `404` compte inconnu |
 | DELETE | `/blocks/:userId` | Débloquer (idempotent, `204`) : ne rétablit rien |
@@ -240,7 +240,26 @@ Les défis **CULTURE** sont alimentés par les quiz de l'Academy :
 (utilisateur, leçon, jour LOCAL de l'appareil, table `QuizAnswer`) — et seule
 une PREMIÈRE réponse juste contribue aux défis culturels rejoints. Rejouer
 l'envoi ne compte jamais deux fois ; une réponse fausse est enregistrée mais
-ne contribue pas. Côté mobile, l'envoi ne gêne JAMAIS le quiz : l'Academy
+ne contribue pas. `lessonId` doit appartenir au pack de l'Academy
+(`ACADEMY_LESSON_IDS`, contrat `academy.ts`, comparé au `pack.json` du mobile
+par un test) : une leçon inventée est refusée (`400`). Et **3 bonnes réponses
+par jour** au plus sont créditées aux défis et à la ligue ; les suivantes sont
+enregistrées sans points.
+
+**Ce qu'une séance verse est borné** (`creditedEffort`,
+`community/domain/session-effort.ts`), pour les défis collectifs, les défis
+entre amis et la ligue à la fois : une séance sans série ne compte pas ; le
+temps et la distance sont bornés par le créneau de la séance (72 km/h au plus,
+300 km au plus), en secondes entières ; au plus 3 séances sont créditées par
+jour. L'effort reste déclaratif : un client forgé peut encore atteindre ces
+bornes, plus les dépasser — mesuré, 4 490 points par séance (24 h, 300 km) et
+94 272 par semaine, pour 150 à 400 chez un membre régulier. Un plafond
+hebdomadaire borne ce total, pas le rang, seule chose qu'une ligue
+récompense, et compter le jour à l'heure du serveur ne créditerait que trois
+séances d'une semaine hors ligne synchronisée d'un coup : c'est le prix
+d'une appli sans capteur. Plafonner la part d'une personne dans un défi
+collectif reste une décision produit, pas prise. La ligue n'ouvre plus une semaine close depuis plus de 48 h, ni une
+semaine future. Côté mobile, l'envoi ne gêne JAMAIS le quiz : l'Academy
 fonctionne hors ligne, un échec réseau est journalisé et la contribution est
 simplement perdue (la barre est collective, pas comptable).
 
@@ -682,8 +701,14 @@ zone.
 `false`). Y entrer EST le consentement, ce qu’exige le « périmètre choisi ».
 C’est un réglage DISTINCT de `sharesProgress` : celui-ci décide si un ami voit
 ta progression, il n’a jamais promis de montrer ton nom et ton score à
-dix-neuf inconnus. Sortir arrête le compte ; la ligne de la semaine en cours
-reste jusqu’à son règlement, et aucune autre n’est créée ensuite.
+dix-neuf inconnus. Sortir arrête le compte, et le NOM disparaît aussitôt du
+classement que voient les autres (`leagues.service.ts`, `aRejoint`) : sortir
+est aussi un consentement retiré. La ligne de la semaine en cours reste
+pourtant en base, sans nom servi, et compte au règlement comme aux rangs
+(calculés sur le groupe entier avant de taire qui que ce soit) : partir ne
+remonte personne d’un cran, ni ne fausse la semaine. Aucune autre ligne n’est
+créée ensuite. Une personne bloquée, dans un sens ou dans l’autre, est tue de
+la même façon.
 
 **Le règlement est PARESSEUX**, comme le jeu du mois et les défis entre amis :
 la première lecture qui passe après la fin d’une période fige les rangs de
@@ -796,7 +821,11 @@ Les garde-fous, chacun repris d'une règle déjà écrite :
   son défi et son invitée (membre acceptée d'office, sa liste ne se réécrit
   pas), et le signalement reste possible. Débloquer fait revenir
   l'invitation ;
-- **plafonds** : 9 invités par défi, 5 défis ouverts par créateur. Sans eux,
+- **plafonds** : 9 invités par défi, 5 défis ouverts par créateur (`403`,
+  compté sous verrou par créateur : 15 créations simultanées en ouvrent
+  exactement 5). L'appli les montre avant le refus : au 9e invité une note
+  apparaît et le 10e ami ne se coche pas ; avec 5 défis ouverts, « Défier mes
+  amis » est désactivé, avec la phrase qui dit pourquoi. Sans eux,
   l'invitation devient un canal d'envoi de messages vers quelqu'un qui ne l'a
   pas demandé — exactement ce que le refus opposable des demandes d'ami avait
   fermé ;

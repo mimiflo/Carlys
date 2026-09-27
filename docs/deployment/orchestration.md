@@ -42,6 +42,7 @@ carlysctl prune --essai     # ce qu'un élagage d'images supprimerait
 | Tenir l'amont Nginx à jour | **oui** | minuterie |
 | Élaguer images et couches Docker à chaque passe (le filet de retour arrière est gardé) | **oui** | minuterie |
 | Effacer les photos de repas orphelines du bucket privé, une fois par jour (`_photos.sh` ; à la main : `carlysctl meal-photos-sweep <env> [--a-blanc]`) | **oui** | minuterie |
+| Effacer définitivement les comptes supprimés depuis plus de `CARLYS_ACCOUNT_PURGE_DAYS` jours (30 par défaut : le délai qu'annoncent la politique, les CGU et l'écran de suppression, à changer avec eux ; la liste complète des textes qui l'écrivent est dans `SECURITY.md`, « Données personnelles »), photos privées comprises, une fois par jour (`_purge_comptes.sh` ; à la main : `carlysctl deleted-accounts-purge <env> [--a-blanc] [--compte <uuid>]`, voir « Effacement immédiat sur demande » ci-dessous) | **oui** | minuterie |
 | Sauvegarder les bases **et les médias MinIO** | **oui** | cron, 3 h du matin |
 | **Déployer une nouvelle version** | **non par défaut** | `CARLYS_AUTO_UPDATE` |
 
@@ -55,6 +56,41 @@ Pour tout arrêter :
 ```bash
 systemctl disable --now carlys-supervision.timer
 ```
+
+### Effacement immédiat sur demande
+
+La politique de confidentialité (section 6) promet un effacement définitif
+sans attendre les 30 jours à qui l'écrit **avant** de supprimer son compte,
+depuis l'adresse de ce compte. L'ordre n'est pas un détail : la suppression
+réécrit l'adresse en `supprime+<uuid>@carlys.invalid`, vide le nom et
+efface les identités Google ou Apple, et plus rien ne mène alors de la
+personne à l'UUID que `--compte` exige. D'où la procédure :
+
+1. **À réception de la demande**, dans le back-office, page Utilisateurs :
+   chercher l'adresse de l'expéditeur, ouvrir la fiche, noter l'UUID (il est
+   dans l'adresse de la page, `/users/<uuid>`). Une demande qui n'arrive pas
+   de l'adresse du compte n'est pas une preuve : ne rien noter.
+2. **Répondre** à la personne qu'elle peut supprimer son compte dans
+   l'application (Profil → Réglages → Compte).
+3. **Une fois le compte supprimé** (la fiche `/users/<uuid>` affiche le
+   statut `DELETED`) :
+
+   ```bash
+   carlysctl deleted-accounts-purge production --compte <uuid> --a-blanc   # vérifier
+   carlysctl deleted-accounts-purge production --compte <uuid>
+   ```
+
+   Un refus (le compte n'est pas encore supprimé : la commande n'efface
+   jamais un compte actif ou suspendu) ou un échec (stockage des photos
+   muet, le plus souvent) arrête `carlysctl` avec le message de la
+   commande. Sur un refus, attendre la suppression, puis relancer ; sur un
+   échec, relancer une fois la cause réparée (sinon la purge quotidienne
+   le reprendra au bout des 30 jours).
+4. **Confirmer** l'effacement à la personne, à l'adresse de sa demande.
+
+Une demande reçue APRÈS la suppression ne peut être exécutée par
+`--compte` : l'effacement se fait alors au bout des 30 jours, par la purge
+quotidienne, ce que la réponse doit dire.
 
 ---
 
@@ -232,8 +268,21 @@ la tête de `CARLYS_UPDATE_BRANCH` (défaut `development`), **dès que les trois
 ce commit existent dans le registre**.
 
 Un commit dont la construction a échoué ne déclenche donc rien : la recette
-reste sur ce qu'elle a et réessaiera au passage suivant. C'est ce qui empêche
-de déployer un commit rejeté par la CI.
+reste sur ce qu'elle a et réessaiera au passage suivant. C'est aussi ce qui
+empêche de déployer un commit rejeté par la CI, parce que `images-publish`
+ne pousse les étiquettes `sha-…` qu'une fois `api-ci`, `admin-ci`,
+`images-ci` et `infra-ci` verts pour le code de ce commit (porte « La CI de ce commit est
+verte », [`scripts/ci/verdict_ci.sh`](../../scripts/ci/verdict_ci.sh)). Un
+commit rouge n'a aucune image d'application : ni la recette, ni `promote.sh`
+ne peuvent le déployer. Cela vaut aussi pour un rattrapage ancien : un commit
+dont l'exécution est sortie des 100 dernières est demandé par son sha, et un
+verdict introuvable bloque au lieu de passer. Un commit du milieu d'une
+poussée groupée, que la CI n'a jugé qu'à travers la tête de sa poussée, n'a
+pas non plus de verdict à lui dès que le code qu'elle surveille a changé
+depuis le dernier commit jugé : il bloque aussi. Si l'échec ne tenait pas au
+code (registre tiers en panne), relancer la CI de ce commit puis
+`images-publish`, ou lancer `images-publish` à la main avec son sha et la
+case `ignorer_ci`.
 
 ### Production — elle suit la RECETTE, jamais une branche
 
@@ -490,6 +539,13 @@ nomme, et tout ce qui traverse `env_file` lui est opaque.
 | `<CLÉ> porte encore un CHANGE_MOI_` | **bloquant** — valeur factice publique | `carlysctl env-sync <env> --appliquer --tout`, ou la vraie valeur à la main |
 | `<CLÉ> absente` | **bloquant** | `carlysctl env-sync <env> --appliquer` (voir ci-dessous) |
 
+Hors des `.env`, `doctor` réclame aussi, à chaque passage, la **copie hors
+machine** des sauvegardes tant que `/srv/carlys/sauvegarde-distante.env` manque
+ou reste au modèle — un manque compté dès que la production est déployée, et
+une copie distante vieille de plus de deux jours. Voir
+[`scripts/server/README.md`](../../scripts/server/README.md), « La copie hors
+machine ».
+
 Deux de ces verdicts méritent un mot, parce qu'ils viennent de pannes mesurées
 et non d'une précaution de principe.
 
@@ -674,10 +730,20 @@ taire.
 restaient donc figés au dernier `git pull` tapé à la main — et `env-sync`, qui
 compare à ces exemples, n'avait rien de neuf à comparer.
 
-La supervision termine désormais sa passe par un `git pull --ff-only` sur le
-clone, **sous la même autorisation que le déploiement** (`CARLYS_AUTO_UPDATE`,
-puisque « suivre la branche » inclut les scripts). Un clone qui porte des
-modifications locales ou qui a divergé est **signalé, jamais écrasé**.
+La supervision termine désormais sa passe en avançant le clone (`git fetch`,
+puis avance rapide seulement), **sous la même autorisation que le
+déploiement** (`CARLYS_AUTO_UPDATE`, puisque « suivre la branche » inclut les
+scripts). Un clone qui porte des modifications locales ou qui a divergé est
+**signalé, jamais écrasé**.
+
+Le clone n'avance **que jusqu'à un commit qui a passé la porte de CI** : la
+tête de la branche n'est prise que si son image API existe, donc si `api-ci`,
+`admin-ci`, `images-ci` et `infra-ci` étaient verts pour son code. Sinon (CI
+rouge, ou encore en cours), il reste où il est et réessaie à la passe
+suivante. C'est ce clone, partagé par la recette et la production, qui fournit
+`backup.sh`, `deploy.sh`, la réparation et le `compose.yml` : un `git pull` de
+la tête y amenait un script serveur qu'`infra-ci` venait de rejeter, exécuté
+la nuit même sur la production.
 
 Remplacer un script pendant qu'il s'exécute est sans danger, et c'est mesuré :
 `git checkout` crée un nouveau fichier et le renomme par-dessus, l'inode change,
@@ -740,9 +806,12 @@ DOMAINE=carlys.example        # ← ton domaine réel
 sed "s/carlys\.example/$DOMAINE/g" infrastructure/nginx/carlys-staging.conf.example \
   | sudo tee /etc/nginx/sites-available/carlys-staging.conf > /dev/null
 sudo ln -sf /etc/nginx/sites-available/carlys-staging.conf /etc/nginx/sites-enabled/
-# Le snippet a changé lui aussi (`proxy_set_header Connection ""`, sans quoi le
-# pool de connexions de l'amont existerait sans jamais servir).
-sudo cp infrastructure/nginx/snippets/carlys-proxy.conf /etc/nginx/snippets/
+# Les snippets aussi, TOUS : carlys-proxy.conf a changé (`proxy_set_header
+# Connection ""`, sans quoi le pool de connexions de l'amont existerait sans
+# jamais servir), et les vhosts `api` incluent carlys-compression-api.conf —
+# absent, `nginx -t` refuse. Le format de journal sans jeton
+# (conf.d/carlys-journal.conf), lui, est posé par setup.sh à l'étape 4.
+sudo cp infrastructure/nginx/snippets/*.conf /etc/nginx/snippets/
 
 # 4. setup.sh : il pose les amonts de départ et la minuterie. Il NE TOUCHE PAS
 #    aux .env déjà remplis — c'est sa propriété la plus importante.

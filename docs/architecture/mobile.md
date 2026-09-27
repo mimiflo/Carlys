@@ -70,11 +70,11 @@ Chaque fonctionnalité importante suit la structure documentée dans
 feature/
 ├── data/
 │   ├── datasources/     # API distante (Dio) et base locale (Drift)
-│   ├── dto/             # Objets de transfert (json_serializable)
+│   ├── dto/             # Objets de transfert (fromJson/toJson écrits à la main)
 │   ├── mappers/         # DTO/Drift ⇄ entités du domaine
 │   └── repositories/    # Implémentations des contrats du domaine
 ├── domain/
-│   ├── entities/        # Objets métier immuables (Freezed)
+│   ├── entities/        # Objets métier immuables (classes `final`, `==` écrit à la main)
 │   ├── repositories/    # Contrats abstraits
 │   ├── services/        # Logique métier pure
 │   └── usecases/        # Cas d'usage orchestrant les repositories
@@ -310,9 +310,26 @@ Fondations actuelles :
 | `AppBreakpoints`  | Window size classes M3 (`WindowSize` + extension `context.windowSize`) |
 | `AppTheme`        | `light()`, `dark()`, `oledDark()` construits depuis les tokens        |
 
-Thèmes : clair et sombre sont branchés (`themeMode: ThemeMode.system` dans
-`CarlysApp`). La variante **OLED (fond noir pur)** existe (`AppTheme.oledDark()`)
-et deviendra un choix utilisateur avec la fonctionnalité `settings` (cible).
+Thèmes : le réglage d'apparence (`AppThemeSetting` : Système, Clair, Sombre,
+Sombre OLED ; Sombre à défaut de choix enregistré) est un choix utilisateur,
+persisté sur l'appareil et branché dans `CarlysApp` (`themeMode` et
+`darkTheme`, qui devient `AppTheme.oledDark()` sous « Sombre OLED »).
+L'application est sombre par dessin : `AppDarkScaffold` et `AppDarkTheme`
+imposent le thème sombre sous le réglage Clair, et `AppDarkScaffold` peint
+le fond du thème LU SOUS `AppDarkTheme` (`AppDarkTheme.pageColorOf`) —
+`darkBackground` sous Sombre et Clair, le noir pur d'`oledBackground` sous
+OLED ; les barres d'application en héritent, et ce qui doit SE FONDRE dans
+la page le lit aussi (les voiles `AppSceneScrim` des héros de l'accueil, de
+Nutrition et de l'abonnement, le fondu de la fiche d'un exercice) : peint en
+`darkBackground` en dur, un voile laissait sous l'OLED une bande #08050E au
+pied du hero. `dark_surfaces_test.dart` refuse une barre ou un `Scaffold`
+peints en sombre à la main, et vérifie la fin des voiles dans chaque thème.
+Les décors plein écran de l'onboarding et de la bienvenue gardent leur
+`darkBackground` : couvrant tout l'écran, ils ne dessinent aucune couture.
+Le thème Clair n'est honoré que par les cinq écrans qui suivent
+le réglage (mot de passe oublié, changement de mot de passe, suppression de
+compte, sessions, détail d'une séance) ; son avenir est une question
+produit ouverte.
 
 **Réduction des animations** : toute animation décorative passe par
 `AppMotion.resolve(context, duration)`, qui renvoie `Duration.zero` quand le
@@ -329,6 +346,30 @@ JAMAIS son propre bouton transparent sur `AppColors.cta`, un balai
 d'`ink_on_gradients_test.dart` le refuse), `AppLoadingIndicator` (libellé
 accessible), `AppErrorState` (icône, titre, message, réessai),
 `AppEmptyState`, `AppDarkScaffold` (le `Scaffold` d'un écran sombre).
+
+**Texte agrandi et lecteur d'écran** (audit de septembre 2026, épreuves à
+320 points et texte ×2) : le libellé d'une action (`AppButton` à icône,
+`AppCtaButton`, `AppBrandButton`, par `app_action_label.dart`, interne)
+tient sur une ligne à la taille d'origine et sur DEUX en texte agrandi,
+jamais coupé net ; `AppWholeWordsText` est un texte dont aucun mot ne se
+coupe (il passe à la ligne entre les mots et ne réduit son corps que si un
+mot SEUL déborde, mesuré en gras sous le réglage système « texte en gras »,
+comme `Text` le dessine ; `fittedStyle` sert les libellés posés sous un
+`IntrinsicHeight`). Les composants qui réservent leur place avant de se
+poser mesurent tous une ligne par `AppTypography.lineWidth` ; `AppSectionHeader`, `AppSettingsRow` et
+`AppScreenHeader` posent leur texte de fin (ou leurs boutons) SOUS le titre
+quand il ne tient plus à côté. Au lecteur d'écran, un geste du design
+system est une FRONTIÈRE (`Semantics(container: true)`) : `AppCard`,
+l'action d'`AppSectionHeader` (48 points de haut) et son titre (annoncé
+comme titre), `AppExplainable`, chaque `AppSettingsRow` (sa bascule porte le
+nom de la ligne) ; sans frontière, une annotation se fondait dans l'élément
+de liste et absorbait le texte voisin. `AppErrorState` et `AppEmptyState`
+sont des régions vivantes : le passage chargement → échec s'annonce. Dans
+un champ à libellé intégré (`inlineLabel`), le texte fantôme qui RÉPÈTE le
+libellé est muet (`AppTextField.silentHint`, borné comme celui de Material
+aux lignes du champ) ; un exemple distinct du libellé (« Course, vélo,
+yoga… ») reste lu. La phrase d'état de l'accueil a deux lignes réservées,
+et en prend davantage en texte agrandi plutôt que d'être coupée.
 
 Nés de l'écran « Ajouter / Modifier ce repas » (25 septembre 2026), et
 réutilisables ailleurs : `AppScreenHeader.centered` (retour à gauche, titre
@@ -601,9 +642,27 @@ Points structurants :
   `personalRecordsProvider` était dans ce cas, épinglé par `rewardFactsProvider`
   et `showcaseRewardsProvider`, eux-mêmes montés dès l'accueil par
   `TitleSummary` ; sur un téléphone partagé, le compte suivant voyait les
-  records du précédent. Il figure désormais dans la liste, et
+  records du précédent. Il figure désormais dans la liste (et il est devenu
+  permanent), et
   `local_account_purge_test.dart` fige le piège en montant un auditeur
-  permanent avant de purger.
+  permanent avant de purger. Le même test parcourt `lib/` : tout
+  `FutureProvider` permanent y est purgé, ou déclaré propre à l'appareil
+  avec sa raison (les compteurs de vie entière et le profil d'entraînement
+  avaient échappé à la liste). Les brouillons de création gardés pour un
+  nouvel essai (`CreationIdentity` : défi entre amis, programme vide) et la
+  mémoire du dernier journal de récompenses remonté y figurent aussi.
+- **Un cache serveur du compte ne se contente pas d'être invalidé.** Écouté
+  pendant la purge, il se relisait sans session, en 401, et Riverpod gardait
+  la valeur du compte parti dans l'erreur ; rien ne la relisait ensuite.
+  Compteurs de vie entière, records, profil d'entraînement, code ami et
+  préférences de notifications sont des `accountBoundCache`
+  (`authentication/presentation/controllers/account_bound_cache.dart`) :
+  relus à chaque passage de la frontière de session
+  (`accountSessionProvider`, que `AuthController` tient à jour de façon
+  synchrone), jamais lus sans session, et vidés avant la première lecture du
+  compte qui arrive. Une relecture ratée du MÊME compte garde, elle, sa
+  valeur. `rewardFactsProvider` ne rend aucun fait sans session et attend
+  toute source qui se recharge pour de nouvelles dépendances.
 - **Quand purger** : l'expiration de session (401 au renouvellement, soit
   trente jours sans ouvrir l'application) n'est **pas** un changement de
   compte, et ne purge rien : c'est le même utilisateur, et effacer là
@@ -756,7 +815,7 @@ embarqué :
 | --------------------- | ----------------------------------------- | ----------------------- |
 | `CARLYS_FLAVOR`       | `development` \| `staging` \| `production` (alignés sur les environnements serveur) | `development` |
 | `CARLYS_API_BASE_URL` | Base de l'API sans préfixe de version     | `http://localhost:3000` |
-| `CARLYS_PUBLIC_WEB_BASE_URL` | Base de l'application **web publique** (le Next.js d'`apps/admin`), qui sert `/privacy` et `/terms` — les pages ouvertes par la section « Légal » des réglages et par la phrase de consentement de l'inscription. Même adresse que le `PUBLIC_APP_URL` du serveur, celle que portent les liens des e-mails ; **jamais** celle de l'API | `http://localhost:3001` |
+| `CARLYS_PUBLIC_WEB_BASE_URL` | Base de l'application **web publique** (le Next.js d'`apps/admin`), qui sert `/privacy` et `/terms` — les pages ouvertes par la section « Légal » des réglages et par la phrase de consentement (`LegalConsentNotice`), sous les boutons qui créent un compte : à l'inscription, et sous « Continuer avec Google / Apple » à la connexion, qui crée le compte quand aucun n'existe. Même adresse que le `PUBLIC_APP_URL` du serveur, celle que portent les liens des e-mails ; **jamais** celle de l'API | `http://localhost:3001` |
 
 En `staging` et en `production`, `bootstrap()` REFUSE de démarrer si
 `CARLYS_PUBLIC_WEB_BASE_URL` est resté au défaut ou pointe en local
@@ -774,7 +833,7 @@ flutter run \
   --dart-define=CARLYS_API_BASE_URL=http://localhost:3000 \
   --dart-define=CARLYS_PUBLIC_WEB_BASE_URL=http://localhost:3001
 
-# Génération de code (Riverpod, Freezed, Drift, JSON) — dès qu'elle sera utilisée :
+# Génération de code — Drift seulement (ni Freezed, ni json_serializable, ni riverpod_generator) :
 dart run build_runner build
 
 # Builds de distribution (mêmes --dart-define, valeurs de l'environnement visé)

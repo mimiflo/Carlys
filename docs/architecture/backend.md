@@ -57,7 +57,7 @@ Rôle de chaque dossier racine :
 | `config/` | Configuration validée par Zod, exposée uniquement via `AppConfigService` (aucun module ne lit `process.env` directement). |
 | `common/` | Transverse HTTP : filtre d'exceptions, intercepteur d'enveloppe, types et utilitaires partagés. |
 | `database/` | Accès aux données : `PrismaService` (et, à terme, les repositories transverses). |
-| `infrastructure/` | Adaptateurs techniques : cache Redis aujourd'hui ; files BullMQ, stockage objet, e-mail… demain (cible). |
+| `infrastructure/` | Adaptateurs techniques transverses : `cache/` (Redis), `email/` (SMTP), `presence/`, `storage/` (S3/MinIO, buckets public et privé), `throttling/` (limitation de débit dans Redis). Pas de files de tâches : les travaux de fond sont des commandes `src/cli` lancées par la supervision du serveur. |
 | `modules/` | Modules fonctionnels, un par domaine métier — 18 aujourd'hui (`ls apps/api/src/modules \| wc -l`). |
 
 ## Les modules livrés
@@ -89,7 +89,9 @@ src/modules/
 ├── metrics/              # Étape 1 — export Prometheus
 ├── notifications/        # jetons d'appareil + envoi FCM
 │                         #   (docs/product/notifications.md)
-├── nutrition/            # profil métabolique, journal alimentaire, recettes
+├── nutrition/            # profil métabolique, journal alimentaire, aliments
+│                         #   CIQUAL, photos de repas (les recettes sont un
+│                         #   pack local du mobile, sans API)
 ├── programs/             # plan multi-semaines, jours reliés aux modèles
 ├── progress/             # Étape 5 — records, statistiques, mesures corporelles
 ├── subscriptions/        # Étape 6 — entitlements côté serveur, Stripe web
@@ -109,41 +111,48 @@ musculaires dans `exercises/`, les séries dans `workout_sessions/`, les mesures
 corporelles dans `progress/`, les entitlements dans `subscriptions/`, et les
 signalements dans `community/`. Un module par DOMAINE, pas par table.
 
-## Structure interne d'un module métier (cible)
+## Structure interne d'un module métier (réelle)
 
-Un module riche en logique métier suit un découpage en quatre couches :
+La forme que les modules suivent vraiment : **contrôleur mince → service →
+dépôt concret**.
 
 ```text
 modules/<module>/
-├── application/           # orchestration des cas d'usage
-│   ├── commands/          # écritures (ex. StartWorkoutSessionCommand)
-│   ├── queries/           # lectures (ex. ListExercisesQuery)
-│   ├── dto/               # objets de transfert internes à la couche application
-│   └── services/          # services applicatifs (orchestrent domaine + infra)
-├── domain/                # cœur métier, sans dépendance NestJS/Prisma
-│   ├── entities/
-│   ├── enums/
-│   ├── events/            # événements de domaine
-│   ├── repositories/      # interfaces (ports) — implémentées dans infrastructure/
-│   ├── services/          # règles métier pures
-│   └── value-objects/
-├── infrastructure/        # adaptateurs concrets
-│   ├── persistence/       # repositories Prisma (implémentations)
-│   ├── providers/         # intégrations externes (Stripe, FCM, stockage…)
-│   └── mappers/           # modèle Prisma ⇄ entité de domaine
+├── application/           # services : les cas d'usage, la logique métier
+│                          #   (orchestrent domaine + infrastructure)
+├── domain/                # règles pures, testées sans Nest ni base
+│                          #   (barèmes, calculs, validations)
+├── infrastructure/        # dépôts Prisma CONCRETS (`*.repository.ts`),
+│                          #   SQL brut isolé (`*.sql.ts`), clients externes
 └── presentation/
-    └── http/
-        ├── controllers/   # routes, aucune logique métier
-        ├── dto/           # DTO d'entrée validés (class-validator)
-        └── presenters/    # mise en forme des réponses (avant enveloppe)
+    └── http/              # contrôleurs, `dto/` (class-validator), présentateurs
 ```
 
-**Pragmatisme avant tout.** Ce découpage complet se justifie pour les modules
-à forte logique métier (`auth`, `workout_sessions`, `subscriptions`). Pour un
-CRUD simple (`muscle_groups` par exemple), un module aplati
-`controller + service + dto + repository` est parfaitement acceptable : on
-n'introduit une couche que lorsqu'elle paie sa complexité. Les modules
-`health` et `metrics` de l'Étape 1 illustrent cette forme minimale.
+Ce que ce découpage ne comporte PAS, et qu'on ne doit pas « rétablir » :
+
+- **Pas d'interface de dépôt dans `domain/`** : les services importent et
+  reçoivent par injection les classes de dépôt concrètes
+  (`account.service.ts` importe `UsersRepository`). Un PORT n'existe que là
+  où une implémentation doit se substituer pour de bon : le modèle du coach
+  (`coach/domain/coach-model.port.ts`), le stockage privé
+  (`infrastructure/storage/private-object-store.ts`), le registre des
+  comptes supprimés lu par la commande de purge
+  (`users/application/deleted-accounts-purge.ts`).
+- **Pas de dossier `infrastructure/persistence/`** : les dépôts sont
+  directement sous `infrastructure/`.
+- **`domain/` importe les énumérations de `@prisma/client`** (une vingtaine
+  de fichiers, par exemple `community/domain/league-ladder.ts` ou
+  `programs/domain/generation/`). C'est assumé : les enums Prisma sont des
+  types TypeScript sans effet de bord, et les recopier créerait une seconde
+  source de vérité. Le domaine n'importe JAMAIS `PrismaClient` ni
+  `PrismaService` : il ne lit ni n'écrit la base.
+- Pas de sous-dossiers `commands/`, `queries/`, `entities/`,
+  `value-objects/` : un module les créera le jour où ils paieront leur
+  complexité, pas avant.
+
+Les modules `health` et `metrics` de l'Étape 1 gardent une forme aplatie
+(`controller + service`), qui suffit quand il n'y a ni règle métier ni
+données propres.
 
 ## Règles d'architecture
 
@@ -151,11 +160,43 @@ n'introduit une couche que lorsqu'elle paie sa complexité. Les modules
    l'entrée (DTO), délèguent au service, retournent le résultat. Jamais
    d'accès Prisma direct depuis un contrôleur.
 2. **Prisma n'est accessible que via `PrismaService`** (`src/database/prisma`),
-   et uniquement depuis les repositories/services — dans `database/` pour le
-   transverse, dans `infrastructure/persistence/` du module pour le métier.
-3. **Les interfaces de repositories vivent dans le domaine**, leurs
-   implémentations Prisma dans l'infrastructure du module : le domaine ne
-   dépend jamais de Prisma.
+   et uniquement depuis les dépôts de `infrastructure/` du module (les
+   commandes `src/cli`, hors de Nest, ouvrent leur propre `PrismaClient`).
+   Un service qui a besoin d'une transaction la reçoit d'un dépôt, jamais en
+   appelant Prisma lui-même. Les écarts, à relire avec la commande qui les
+   rend (elle voit `PrismaService` ET `PrismaClient`, la seconde forme
+   échappait à la première) :
+
+   ```bash
+   grep -rlnE 'PrismaService|PrismaClient' apps/api/src/modules/*/application \
+     | grep -v '\.spec\.ts$'
+   ```
+
+   - **À résorber** : `progress/application/progress.service.ts` lit encore
+     `exercise` par `PrismaService`, au cœur d'un service Nest.
+   - **Exceptions assumées** : les synchronisations de référentiels, des
+     fonctions qui reçoivent un `PrismaClient` NU en paramètre et écrivent
+     en base, parce qu'elles servent hors de Nest, aux commandes `src/cli`
+     et au seed (`prisma/seed.ts`), qui ouvrent leur propre client :
+     `admin/application/admin-rbac.ts` (`syncAdminRbac` : seed,
+     `admin-bootstrap`), `exercises/application/catalog-sync.ts`
+     (`syncCatalog` : seed, `catalog-seed`),
+     `subscriptions/application/subscription-catalog-sync.ts`
+     (`syncSubscriptionCatalog` : seed, `subscription-catalog`),
+     `media/application/catalog-media-sync.ts` et
+     `media/application/catalog-media-sweep.ts` (`syncExerciseMedia`,
+     `sweepSupersededSeedMedia` : `catalog-seed`). Le seed et la commande
+     rejouent ainsi le MÊME code ; leur place naturelle serait
+     `infrastructure/`, et un nouveau venu de ce genre y va.
+   - `workout_templates/application/workout-templates.service.ts` n'importe
+     de Prisma que des TYPES (`Prisma.…CreateManyInput`) et la classe
+     d'erreur `PrismaClientKnownRequestError` : il ne touche pas la base, la
+     commande le rend pourtant, c'est attendu.
+3. **Le domaine ne touche jamais la base** : `domain/` peut importer les
+   énumérations et les types de `@prisma/client`, jamais `PrismaClient` ni
+   `PrismaService`. Les dépôts sont des classes concrètes ; une interface
+   (port) n'est écrite que pour une implémentation réellement substituable
+   (modèle du coach, stockage, commande de purge).
 4. **Transactions courtes** : une transaction Prisma englobe le strict
    nécessaire (écritures cohérentes), jamais d'appel réseau externe (HTTP,
    e-mail, stockage) à l'intérieur d'une transaction.
@@ -179,11 +220,18 @@ requête HTTP
      sessions et l'audit. Le compteur ne protège pas à lui seul — il ne
      retire des entrées que par la droite —, c'est le proxy de tête qui doit
      ÉCRASER X-Forwarded-For (docs/security/reverse-proxy.md)
-  2. pino-http (nestjs-pino) : requestId — reprend l'en-tête x-request-id
-     entrant s'il est valide ([\w-]{1,64}), sinon génère un UUID ;
-     l'en-tête est renvoyé sur la réponse, le log est corrélé
+  2. requestId, POSÉ EN PREMIER par configureApp (common/utilities/
+     request-id.ts) — reprend l'en-tête x-request-id entrant s'il est
+     valide ([\w-]{1,64}), sinon génère un UUID ; l'en-tête est renvoyé sur
+     la réponse. pino-http (nestjs-pino, intergiciel de module, donc posé
+     après les parseurs) reprend ce même `req.id` : une requête refusée par
+     un parseur porte donc, elle aussi, un requestId réel
   3. helmet + CORS (origines issues de CORS_ORIGINS)
-  4. body parser JSON/urlencoded, limité à 1 Mo (MAX_JSON_BODY_SIZE)
+  4. body parser brut des webhooks, puis JSON/urlencoded, limités à 1 Mo
+     (MAX_JSON_BODY_SIZE) — posés par configureApp, donc les MÊMES en e2e
+     qu'en production ; une erreur de parseur (413 corps trop lourd, gzip
+     qui gonfle compris ; 415 encodage inconnu ; 400 gzip corrompu ou JSON
+     malformé) devient un 4xx enveloppé, journalisé en warn — jamais un 500
   5. ThrottlerGuard global : 100 requêtes / 60 s par défaut → 429 sinon
   6. ValidationPipe global : whitelist + forbidNonWhitelisted + transform
      → 400 VALIDATION_ERROR si le DTO est invalide

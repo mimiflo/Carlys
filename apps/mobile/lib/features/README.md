@@ -44,16 +44,16 @@ et sa place est `utils/`.
 
 ## Dépendances entre fonctionnalités
 
-Elles sont **nombreuses**, et c'est assumé. Mesure du 7 septembre 2026, faite
-en résolvant les URI d'import de tous les `.dart` de `lib/features/` — les
-`package:carlys/…` **et** les chemins relatifs, qu'un `grep` naïf manque :
+Elles sont **nombreuses**, et c'est assumé. Mesure du **27 septembre 2026**,
+faite en résolvant les URI d'import de tous les `.dart` de `lib/features/` —
+les `package:carlys_mobile/…` **et** les chemins relatifs, qu'un `grep` naïf
+manque (méthode sous « Remesurer ») :
 
-> **137 imports franchissent une frontière de fonctionnalité, répartis sur
-> 46 arêtes entre les 20 fonctionnalités qui portent du code.**
+> **214 imports franchissent une frontière de fonctionnalité, répartis sur
+> 68 arêtes entre les 21 fonctionnalités.**
 
-Six dossiers ne contiennent encore qu'un `.gitkeep` et n'apparaissent donc
-nulle part ci-dessous : `body_metrics`, `health`, `programs`, `social`,
-`subscriptions`, `workout_builder`.
+(La mesure du 7 septembre en comptait 137 sur 46 arêtes : les chiffres qui
+suivent périment vite, seule la méthode fait foi.)
 
 Une colonne « dépend de : — » serait fausse pour presque tout le monde. Ce
 qui se vérifie, en revanche, c'est le **sens des couches**.
@@ -61,81 +61,97 @@ qui se vérifie, en revanche, c'est le **sens des couches**.
 ### La règle qui tient
 
 **Aucune couche `domain` n'importe la `presentation` ni la `data` d'une autre
-fonctionnalité.** Zéro exception sur les 137 imports. Répartition mesurée :
+fonctionnalité.** Zéro exception sur les 214 imports. Répartition mesurée :
 
 | Franchissement                     | Imports |
 | ---------------------------------- | ------: |
-| `presentation` → `presentation`    |      71 |
-| `presentation` → `domain`          |      41 |
-| `domain` → `domain`                |      12 |
-| `data` → `domain`                  |       5 |
+| `presentation` → `presentation`    |     116 |
+| `presentation` → `domain`          |      60 |
+| `domain` → `domain`                |      20 |
+| `data` → `domain`                  |       9 |
+| `data` → `data`                    |       5 |
 | `presentation` → `data`            |       4 |
-| `data` → `data`                    |       4 |
 | `domain` → `data` ou `presentation`|   **0** |
 
 C'est l'invariant à préserver quand on ajoute une fonctionnalité : **un
 `domain` ne connaît que des `domain`.** Il rend le métier testable seul et
 empêche une entité de dépendre d'un écran.
 
-Les huit franchissements `presentation → data` et `data → data` sont, eux,
+Les neuf franchissements `presentation → data` et `data → data` sont, eux,
 des **coutures nommées** (liste plus bas) : assumées une par une, pas
 accidentelles. Toute nouvelle entrée dans cette liste se discute.
 
 ### Qui importe qui
 
-| Fonctionnalité     | Importe (nombre d'imports)                                                                                                                                       | Total |
-| ------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----: |
-| `dashboard`        | `workout_session` (7), `nutrition` (4), `carlys_profile` (3), `progression` (3), `academy` (2), `community` (2), `progress` (2), `authentication`, `notifications`, `onboarding`, `workout_template` |    27 |
-| `workout_template` | `workout_session` (18)                                                                                                                                             |    18 |
-| `profile`          | `authentication` (5), `progress` (3), `notifications` (2), `settings` (2), `subscription` (2), `carlys_profile`, `nutrition`, `progression`                          |    17 |
-| `onboarding`       | `carlys_profile` (6), `nutrition` (5), `authentication` (3)                                                                                                        |    14 |
-| `workout_history`  | `workout_session` (10), `progress` (3)                                                                                                                             |    13 |
-| `coaching`         | `workout_session` (4), `carlys_profile` (2), `progress` (2), `workout_template` (2)                                                                                |    10 |
-| `progression`      | `workout_session` (5), `academy` (2), `progress` (2), `authentication`                                                                                              |    10 |
-| `exercises`        | `progress` (4), `workout_session` (3)                                                                                                                              |     7 |
-| `workout_session`  | `workout_template` (4), `exercises` (3)                                                                                                                            |     7 |
-| `authentication`   | `carlys_profile` (2), `notifications`                                                                                                                              |     3 |
-| `subscription`     | `onboarding` (3)                                                                                                                                                   |     3 |
-| `academy`          | `community`, `exercises`                                                                                                                                            |     2 |
-| `carlys_profile`   | `authentication` (2)                                                                                                                                                |     2 |
-| `progress`         | `progression` (2)                                                                                                                                                   |     2 |
-| `training`         | `workout_session`                                                                                                                                                   |     1 |
-| `workout_program`  | `workout_template`                                                                                                                                                  |     1 |
+| Fonctionnalité     | Importe (nombre d'imports)                                                                                                                                                                                  | Total |
+| ------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----: |
+| `profile`          | `workout_program` (12), `authentication` (6), `community` (3), `progression` (3), `carlys_profile` (2), `notifications` (2), `progress` (2), `settings` (2), `subscription` (2), `dashboard`, `mentor`, `nutrition` |    37 |
+| `dashboard`        | `workout_session` (8), `nutrition` (5), `progress` (4), `progression` (4), `carlys_profile` (3), `community` (3), `academy` (2), `mentor` (2), `authentication`, `notifications`, `onboarding`, `workout_template` |    35 |
+| `workout_template` | `workout_session` (21)                                                                                                                                                                                      |    21 |
+| `onboarding`       | `carlys_profile` (6), `workout_program` (6), `nutrition` (5), `authentication` (3)                                                                                                                          |    20 |
+| `workout_history`  | `workout_session` (13), `progress` (3)                                                                                                                                                                      |    16 |
+| `progression`      | `progress` (5), `workout_session` (5), `academy` (3), `authentication` (2)                                                                                                                                  |    15 |
+| `coaching`         | `workout_session` (4), `carlys_profile` (2), `progress` (2), `workout_template` (2), `subscription`                                                                                                         |    11 |
+| `workout_program`  | `workout_session` (4), `authentication` (2), `exercises` (2), `workout_template` (2), `onboarding`                                                                                                          |    11 |
+| `academy`          | `progression` (5), `community` (2), `exercises`                                                                                                                                                             |     8 |
+| `authentication`   | `carlys_profile` (2), `mentor` (2), `workout_program` (2), `notifications`, `onboarding`                                                                                                                    |     8 |
+| `exercises`        | `progress` (4), `workout_session` (3)                                                                                                                                                                       |     7 |
+| `workout_session`  | `workout_template` (4), `exercises` (2), `progress` (2)                                                                                                                                                     |     8 |
+| `mentor`           | `progression` (3), `academy`, `authentication`                                                                                                                                                              |     5 |
+| `progress`         | `progression` (3), `authentication`                                                                                                                                                                         |     4 |
+| `subscription`     | `onboarding` (3)                                                                                                                                                                                            |     3 |
+| `carlys_profile`   | `authentication` (2)                                                                                                                                                                                        |     2 |
+| `community`        | `authentication`                                                                                                                                                                                            |     1 |
+| `notifications`    | `authentication`                                                                                                                                                                                            |     1 |
+| `training`         | `workout_session`                                                                                                                                                                                           |     1 |
 
-Quatre fonctionnalités n'importent **aucune** autre : `community`,
-`nutrition`, `notifications`, `settings`. Ce sont les seules feuilles.
+Deux fonctionnalités n'importent **aucune** autre : `nutrition` et
+`settings`. Ce sont les seules feuilles. `community` et `notifications` ont
+cessé de l'être : leurs caches liés au compte s'appuient sur
+`authentication/…/account_bound_cache.dart`.
 
-Dans l'autre sens, `workout_session` est la plaque tournante : **48 imports
-reçus de 7 fonctionnalités**. Toucher `Workout`, `WorkoutSessionWriter` ou
+Dans l'autre sens, `workout_session` est la plaque tournante : **59 imports
+reçus de 8 fonctionnalités**. Toucher `Workout`, `WorkoutSessionWriter` ou
 `workoutControllers` se paie donc loin de `workout_session`.
+`authentication` est la plus largement importée (10 fonctionnalités) : son
+`auth_controller` et `account_bound_cache` bornent tout ce qui dépend du
+compte ouvert.
 
-### Quatre cycles, et pourquoi ils existent
+### Les cycles, et pourquoi ils existent
 
 Ce ne sont pas des erreurs à corriger en urgence, mais ils se connaissent :
 casser l'un des deux sens sans le savoir casse l'autre.
 
-| Cycle                                 | Imports | Ce qui le crée                                                                                                                                                                            |
-| ------------------------------------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `workout_template` ⇄ `workout_session` | 18 / 4  | Le modèle écrit une **vraie** séance (`WorkoutSessionWriter`) ; la séance relit son plan (`sessionGuidance`, `SessionPlanLocalDataSource`)                                                  |
-| `exercises` ⇄ `workout_session`        | 3 / 3   | `exercise_picker_sheet` (séance) lit le catalogue ; `exercise_action_bar` (catalogue) ouvre la saisie d'une série                                                                            |
-| `progression` ⇄ `progress`             | 2 / 2   | `progress_screen` affiche les cartes de paliers et de sceaux ; `reward_controllers` lit les records pour décider d'un sceau                                                                  |
-| `carlys_profile` ⇄ `authentication`    | 2 / 2   | `AuthUser` porte `carlysProfile` (`domain` → `domain`, le sens sain) ; les contrôleurs du profil rafraîchissent l'utilisateur après un choix                                                 |
+| Cycle                                   | Imports | Ce qui le crée                                                                                                                                                                  |
+| --------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `workout_template` ⇄ `workout_session`   | 21 / 4  | Le modèle écrit une **vraie** séance (`WorkoutSessionWriter`) ; la séance relit son plan (`sessionGuidance`, `SessionPlanLocalDataSource`)                                        |
+| `progression` ⇄ `progress`               | 5 / 3   | `reward_controllers` et `milestone_push` lisent les records et poussent le journal des récompenses ; `progress_screen` et `timeline_row` affichent sceaux et paliers              |
+| `academy` ⇄ `progression`                | 3 / 5   | les récompenses lisent l'avancement de l'Academy ; la carte d'avancement de l'Academy dessine les sceaux                                                                        |
+| `exercises` ⇄ `workout_session`          | 3 / 2   | `exercise_action_bar` (catalogue) ouvre la saisie d'une série ; `exercise_picker_sheet` (séance) lit le catalogue                                                                |
+| `onboarding` ⇄ `workout_program`         | 6 / 1   | le premier lancement pose l'objectif d'entraînement ; la feuille d'objectif réutilise les choix du premier lancement                                                            |
+| `carlys_profile` ⇄ `authentication`      | 2 / 2   | `AuthUser` porte `carlysProfile` (`domain` → `domain`, le sens sain) ; les contrôleurs du profil rafraîchissent l'utilisateur après un choix                                     |
+| `mentor` ⇄ `authentication`              | 1 / 2   | `AuthUser` porte `mentorStyle` ; le contrôleur du Mentor rafraîchit l'utilisateur                                                                                               |
+| `workout_program` ⇄ `authentication`     | 2 / 2   | `AuthUser` porte `trainingGoal` ; l'objectif et le profil d'entraînement suivent le compte ouvert                                                                               |
+| `onboarding` ⇄ `authentication`          | 3 / 1   | le premier lancement et l'écran de démarrage lisent l'état de session ; l'en-tête d'authentification réutilise la signature de marque                                          |
+| `notifications` ⇄ `authentication`       | 1 / 1   | `auth_controller` démarre et oublie l'enregistrement push ; les préférences de notification sont un cache lié au compte                                                         |
 
-### Les huit coutures nommées
+### Les neuf coutures nommées
 
 `presentation` → `data` — un contrôleur câble une implémentation concrète
 d'une autre fonctionnalité :
 
+- `academy/…/academy_controllers.dart` → `community/data/repositories/community_repository_impl.dart`
+- `coaching/…/coach_controllers.dart` → `subscription/data/repositories/subscription_repository_impl.dart` (le coach lit le droit `ai_coaching` décidé par le serveur, pour passer un ancien abonné en lecture seule)
 - `dashboard/…/form_reading_providers.dart` → `progress/data/repositories/progress_repository_impl.dart`
-- `profile/…/profile_controllers.dart` → `progress/data/repositories/progress_repository_impl.dart`
-- `workout_session/…/exercise_picker_sheet.dart` → `exercises/data/repositories/exercises_repository_impl.dart`
 - `workout_template/…/workout_template_controllers.dart` → `workout_session/data/repositories/workout_repository_impl.dart`
 
 `data` → `data` — deux fonctionnalités écrivent dans **la même transaction
-Drift**, parce que dupliquer l'écriture serait pire :
+Drift**, ou une donnée pousse vers le dépôt d'une autre, parce que dupliquer
+l'écriture serait pire :
 
 - `coaching/…/coach_session_launcher.dart` → `workout_session/data/local/workout_session_writer.dart`
 - `coaching/…/coach_session_launcher.dart` → `workout_template/data/datasources/session_plan_local_data_source.dart`
+- `progression/data/milestone_push.dart` → `progress/data/repositories/progress_repository_impl.dart`
 - `workout_session/…/workout_session_downloader.dart` → `workout_template/data/datasources/session_plan_local_data_source.dart`
 - `workout_template/…/workout_template_repository_impl.dart` → `workout_session/data/local/workout_session_writer.dart`
 
@@ -198,10 +214,12 @@ Le contrat complet est dans
 
 Ce tableau vieillit. Pour le refaire : parcourir tous les `.dart` de
 `lib/features/`, extraire les `import`/`export`/`part`, résoudre chaque URI
-(`package:carlys/x` → `lib/x`, sinon chemin relatif au fichier), et ne garder
-que les cibles dont le premier segment sous `features/` diffère de celui de
-la source. Les chemins relatifs portent l'essentiel des arêtes : un `grep`
-sur `package:carlys/features/` en manque la quasi-totalité.
+(`package:carlys_mobile/x` → `lib/x`, sinon chemin relatif au fichier), et ne
+garder que les cibles dont le premier segment sous `features/` diffère de
+celui de la source. Les chemins relatifs portent l'essentiel des arêtes : un
+`grep` sur `package:carlys_mobile/features/` en manque la quasi-totalité. La
+liste des coutures se relit ainsi : une cible sous `<autre>/data/` depuis une
+source sous `presentation/` ou `data/`.
 
 ## Règles
 

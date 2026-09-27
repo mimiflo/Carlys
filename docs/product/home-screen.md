@@ -193,7 +193,8 @@ eux ont dû l'apprendre d'un coup.
 | ------- | ---- |
 | `presentation/screens/home_screen.dart` | L'ordre des sections, et rien d'autre |
 | `presentation/widgets/section_title_bar.dart` | La barre de titre mesurée |
-| `presentation/controllers/dashboard_controllers.dart` | Constance, sous-titre, lecture de forme |
+| `presentation/providers/home_day_providers.dart` | Constance de la semaine, sous-titre, citation du jour, séance du jour, repos depuis la dernière séance |
+| `presentation/providers/form_reading_providers.dart` | Lecture de forme (bilan de la semaine, indice de forme) |
 | `presentation/controllers/today_metrics.dart` | Les quatre mesures, prêtes à afficher |
 | `presentation/widgets/today_grid.dart` | La grille 2×2 et ses cellules |
 | `presentation/widgets/today_gauge.dart` | La jauge d'une cellule (pleine, ou en tirets) |
@@ -201,7 +202,7 @@ eux ont dû l'apprendre d'un coup.
 | `presentation/widgets/today_workout_card.dart` | La séance du jour : sa composition et ses deux gestes |
 | `presentation/widgets/today_workout_heading.dart` | Son en-tête, et la phrase qui dit où en est la séance |
 
-Les contrôleurs formatent : l'écran ne calcule ni n'arrondit rien.
+Les providers et le contrôleur formatent : l'écran ne calcule ni n'arrondit rien.
 
 ### Le Mentor dans « Pour toi »
 

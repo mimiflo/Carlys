@@ -21,7 +21,7 @@ flowchart LR
   subgraph Infra["Infrastructure"]
     pg[("PostgreSQL 17<br/>(Prisma 6)")]
     redis[("Redis 7<br/>(ioredis)")]
-    s3[("Stockage objet S3<br/>(MinIO en dev, S3/R2 en prod)")]
+    s3[("Stockage objet S3<br/>(MinIO, en dev comme sur le serveur)")]
   end
 
   mobile -- "HTTPS (Dio)<br/>+ file de synchronisation (Étape 4)" --> api
@@ -91,16 +91,19 @@ ou conteneurisées derrière le profil Compose `app`.
   `motion.easing.$comment-easing`.
 - **Tranches verticales.** Chaque étape livre une fonctionnalité complète de
   bout en bout (schéma → API → clients → tests → docs) plutôt que des couches
-  horizontales : Étape 1 fondation (faite), 2 authentification, 3 exercices,
-  4 séances, 5 progression, 6 abonnements, 7 administration.
+  horizontales : Étape 1 fondation, 2 authentification, 3 exercices,
+  4 séances, 5 progression, 6 abonnements, 7 administration — toutes faites.
+  Les tranches suivantes (nutrition, communauté, coach, programmes…) suivent
+  la même règle.
 
 ## Les briques
 
 ### API — `apps/api` (NestJS 11)
 
-Cœur du système. TypeScript strict, Prisma 6 sur PostgreSQL 17 (schéma encore
-vide : les modèles arrivent par tranches verticales), Redis via ioredis.
-Garde-fous en place dès l'Étape 1 :
+Cœur du système. TypeScript strict, Prisma 6 sur PostgreSQL 17 (modèles
+ajoutés par tranches verticales, carte dans
+[`docs/database/schema.md`](../database/schema.md)), Redis via ioredis.
+Garde-fous posés dès l'Étape 1 :
 
 - configuration validée par Zod au démarrage (`src/config/env.schema.ts`) —
   le serveur **refuse de démarrer** si une variable essentielle manque ;
@@ -113,28 +116,30 @@ Garde-fous en place dès l'Étape 1 :
 - Swagger sur `/api/docs` (désactivé en production) ;
 - `/metrics` Prometheus, protégé par Bearer `METRICS_TOKEN` en production ;
 - Dockerfile multi-stage (contexte de build : racine du monorepo) ;
-- tests Jest unitaires + e2e (le projet e2e `sans-infra` passe sans
-  infrastructure ; les vingt et un autres fichiers e2e exigent PostgreSQL et
+- tests Jest unitaires + e2e (le projet `sans-infra` passe sans
+  infrastructure ; tous les fichiers du projet `e2e` exigent PostgreSQL et
   Redis, car `setup-e2e.ts` remet à zéro un compteur de débit qui vit dans
-  Redis).
+  Redis — les compter : `ls apps/api/test/*.e2e-spec.ts | wc -l`).
 
 Détails dans [backend.md](./backend.md).
 
 ### Admin — `apps/admin` (Next.js 16)
 
 Tableau de bord d'administration : App Router, Tailwind CSS v4, TanStack
-Query, React Hook Form + Zod, tests vitest + Testing Library, port 3001,
-build `standalone` pour Docker. À l'Étape 1 : page d'accueil affichant le
-statut de la plateforme (interrogation de `/health`) et `/login` comme
-emplacement documenté — sans fausse authentification (l'auth admin arrive à
-l'Étape 7). Détails dans [admin.md](./admin.md).
+Query, Zod (`zod/mini` sur les pages publiques ; pas de bibliothèque de
+formulaires), tests vitest + Testing Library, port 3001, build `standalone`
+pour Docker. Connexion réelle des comptes admin (Étape 7), pages
+d'administration réservées par permission, accueil qui interroge `/health`
+toutes les 15 s, et pages publiques du produit (`/verify-email`,
+`/reset-password`, `/privacy`, `/terms`). Détails dans [admin.md](./admin.md).
 
 ### Mobile — `apps/mobile` (Flutter)
 
 Application utilisateur, volontairement **hors** du workspace pnpm (outillage
 Dart/Flutter distinct). Architecture feature-first (`lib/app`, `lib/core`,
 `lib/design_system`, `lib/features/<feature>/{data,domain,presentation}`,
-`lib/shared`), Riverpod, GoRouter, Dio, Drift/SQLite, Freezed. Design system
+`lib/shared`), Riverpod, GoRouter, Dio, Drift/SQLite (seul générateur de
+code ; ni Freezed ni json_serializable : modèles et DTO écrits à la main). Design system
 initial complet (couleurs, typographie, espacements, thèmes clair/sombre/OLED,
 composants de base) aligné sur les design tokens. Environnement injecté par
 `--dart-define` (`CARLYS_FLAVOR`, `CARLYS_API_BASE_URL`) ; les dossiers de
@@ -160,25 +165,33 @@ Quatre environnements, distingués par `NODE_ENV`
 | --- | --- | --- |
 | development | poste développeur | Docker Compose local (PostgreSQL, Redis, Mailpit, MinIO) |
 | test | CI GitHub Actions | services éphémères postgres + redis |
-| staging | recette proche production | PostgreSQL/Redis managés, stockage S3/R2 |
-| production | utilisateurs réels | PostgreSQL/Redis managés, stockage S3/R2 |
+| staging | recette proche production | serveur dédié : PostgreSQL, Redis et MinIO en conteneurs (`infrastructure/server/compose.yml`), projet Compose `carlys_staging` |
+| production | utilisateurs réels | même serveur dédié, projet Compose `carlys_production` isolé ; sauvegardes nocturnes et copie chiffrée hors machine |
 
-Flux de déploiement cible (cadre posé à l'Étape 1, mise en œuvre avec la
-première release — voir `infrastructure/deployment/README.md`) :
+Flux de déploiement (orchestré par `carlysctl` sur le serveur dédié — voir
+`docs/deployment/orchestration.md` et `infrastructure/deployment/README.md`) :
 
 1. CI verte sur la pull request — et déjà sur les poussées de la branche de
-   travail, que ces cinq portes (`api-ci`, `admin-ci`, `mobile-ci`,
-   `images-ci`, `security-ci`) nomment explicitement, faute de quoi elles ne
-   s'ouvriraient qu'après l'intégration dans un dépôt qui avance sans fusion ;
-2. construction des images Docker multi-stage, taguées par SHA ;
+   travail, que ces six portes (`api-ci`, `admin-ci`, `mobile-ci`,
+   `images-ci`, `infra-ci`, `security-ci`) nomment explicitement, faute de
+   quoi elles ne s'ouvriraient qu'après l'intégration dans un dépôt qui
+   avance sans fusion ;
+2. construction des images Docker multi-stage, taguées par SHA, publiées
+   seulement si `api-ci`, `admin-ci`, `images-ci` et `infra-ci` sont verts
+   sur le commit (`scripts/ci/verdict_ci.sh`) ; le clone du serveur, d'où
+   viennent ses scripts et son `compose.yml`, n'avance que jusqu'à un commit
+   qui a ses images ;
 3. `prisma migrate deploy` exécuté comme étape distincte **avant** la bascule
-   du trafic — jamais au démarrage du conteneur ;
+   du trafic — jamais au démarrage du conteneur —, précédé en production
+   d'un dump de la base ;
 4. catalogue d'exercices chargé dans la foulée, toujours avant la bascule : il
    est livré avec le code (il vit dans l'image de l'API), donc la version qui
    prend le trafic sert le catalogue de sa propre livraison ;
 5. bascule pilotée par les health checks (`/health/ready`) ;
-6. staging automatique depuis `development`, production **manuelle** après
-   validation humaine.
+6. déploiement par SHA, à la main (`carlysctl deploy <env> <sha>`) ; la
+   mise à jour automatique de la recette depuis `development` existe mais
+   reste coupée par défaut (`CARLYS_AUTO_UPDATE=non`), et la production
+   demande toujours une validation humaine.
 
 ## Documents liés
 

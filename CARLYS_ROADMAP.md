@@ -390,8 +390,9 @@ Existant : saisie manuelle (nom, kcal, 3 macros), journal du jour, suppression.
       réseau (ciqual.anses.fr et data.gouv.fr bloqués ici) — marche à suivre
       dans `docs/product/nutrition.md`, « Pas encore validé sur le vrai
       fichier » ; (2) le brancher (`carlysctl ciqual-import`, ou étape de
-      `deploy.sh` si la distribution est embarquée dans l'image) ; (3)
-      l'écran mobile « Ajouter / Modifier ce repas » (lot mobile suivant).
+      `deploy.sh` si la distribution est embarquée dans l'image). FAIT :
+      l'écran mobile « Ajouter / Modifier ce repas » (`e42edc8`,
+      `meal_editor_screen.dart`).
 - [~] Photo JOINTE au repas (≠ option 3) : arbitrée le 25 septembre 2026,
       envoyée au serveur et gardée PRIVÉE. Serveur FAIT (migration
       `20260925140000_photo_repas_privee`, table `MealPhoto`) :
@@ -404,9 +405,10 @@ Existant : saisie manuelle (nom, kcal, 3 macros), journal du jour, suppression.
       effacement avec le repas et avec le compte, balayage des orphelins
       `dist/cli/meal-photos-sweep`, `privacy.md` réécrit. Tests : unitaires
       sur une vraie photo porteuse d'un EXIF GPS, e2e sans MinIO (stockage en
-      mémoire), e2e MinIO réel en CI (lecture anonyme refusée). RESTE : (1)
-      l'écran mobile (compression JPEG et redressement des pixels AVANT
-      l'envoi : l'orientation EXIF est retirée avec le reste) ; (2) FAIT :
+      mémoire), e2e MinIO réel en CI (lecture anonyme refusée). (1) FAIT :
+      l'écran mobile, avec compression JPEG et redressement des pixels AVANT
+      l'envoi (`e42edc8`, `data/services/meal_photo_preparation.dart`,
+      `docs/development/photo-du-plat.md`) ; (2) FAIT :
       le balayage tourne une fois par jour dans la passe de supervision
       (`scripts/server/_photos.sh`, alerte s'il échoue), et à la main par
       `carlysctl meal-photos-sweep <env>` ; (3) arbitrage : les
@@ -514,9 +516,13 @@ entre amis, aucune ligue, aucun pas.
       ce qu'elle mesurait. Rien de plus à livrer : l'item était la
       conséquence de la tranche précédente, pas une tranche de plus.
 - [ ] Pas : abstraction santé (Health Connect / HealthKit), permissions,
-      historique, doublons, révocation. La dépendance à `privacy.md` est
-      LEVÉE (réécriture du 19 septembre 2026, section « Les pas de ton
-      téléphone »). Ce qui bloque désormais est MATÉRIEL, et il faut le
+      historique, doublons, révocation. La section « Les pas de ton
+      téléphone » écrite à l'avance dans `privacy.md` (19 septembre 2026) en
+      a été RETIRÉE le 27 septembre 2026 : un texte légal en vigueur ne
+      décrit pas un traitement qui n'a pas lieu, ni un écran de retrait
+      introuvable. Elle est à rétablir AVEC la fonction et son écran de
+      consentement (texte d'origine : `git show 8d096a5:docs/legal/privacy.md`,
+      sections 2, 3 et 7). Ce qui bloque est MATÉRIEL, et il faut le
       dire : `android/` et `ios/` ne sont pas versionnés (ils se génèrent
       par `bootstrap_mobile.sh`), Health Connect et HealthKit exigent un
       appareil réel pour accorder puis révoquer une permission, et aucun

@@ -2,7 +2,7 @@
 
 Plateforme fitness SaaS multiplateforme — application mobile Flutter (iOS & Android), API NestJS et tableau de bord d'administration Next.js, dans un monorepo unique.
 
-> **État actuel : Étapes 1 (fondation), 2 (authentification), 3 (exercices) et 4 (séances offline-first) terminées.** Les fonctionnalités métier arrivent par tranches verticales — voir [État du projet](#état-du-projet).
+> **État actuel : les sept étapes sont terminées** (fondation, authentification, exercices, séances offline-first, progression, abonnements, administration), ainsi que la nutrition, la communauté (amis, défis, ligues), le coach IA, les programmes et la connexion Apple et Google. Les fonctionnalités suivantes arrivent par tranches verticales — voir [État du projet](#état-du-projet).
 
 ---
 
@@ -27,7 +27,7 @@ L'Étape 1 pose la fondation : monorepo outillé, API durcie (sécurité, observ
 | Application | Rôle | Technologies principales |
 | --- | --- | --- |
 | `apps/api` | Backend (monolithe modulaire) | NestJS 11, TypeScript strict, Prisma 6 + PostgreSQL 17, Redis (ioredis), Pino (`nestjs-pino`), Helmet, `@nestjs/throttler`, class-validator, Zod (validation de la config), Swagger, Jest |
-| `apps/admin` | Tableau de bord d'administration | Next.js 16 (App Router), TypeScript, Tailwind CSS v4, TanStack Query, React Hook Form + Zod, Vitest + Testing Library |
+| `apps/admin` | Tableau de bord d'administration | Next.js 16 (App Router), TypeScript, Tailwind CSS v4, TanStack Query, Zod (`zod/mini` sur les pages publiques), Vitest + Testing Library |
 | `apps/mobile` | Application mobile iOS/Android | Flutter, Riverpod, GoRouter, Dio, Drift/SQLite, flutter_secure_storage, connectivity_plus, fl_chart |
 | `packages/*` | Code partagé TypeScript | Zod (contrats d'API), tokens de design (JSON), configs TypeScript/ESLint, constantes partagées |
 
@@ -77,8 +77,10 @@ Carlys/
 │   ├── monitoring/           # observabilité : état actuel et cible
 │   └── deployment/           # stratégie de déploiement
 ├── docs/                     # documentation détaillée (voir fin de ce fichier)
-├── scripts/                  # setup.sh, check.sh, bootstrap_mobile.sh, check_mobile.sh (+ check_mobile_file_sizes.sh, check_mobile_icons.sh)
-├── .github/workflows/        # 9 : api-ci, admin-ci, mobile-ci, security-ci, images-ci,
+├── scripts/                  # setup.sh, check.sh, check_infra.sh, bootstrap_mobile.sh, check_mobile.sh
+│                             #     (+ check_mobile_file_sizes.sh, check_mobile_icons.sh, check_mobile_popups.sh),
+│                             #     server/ (carlysctl et le serveur), ci/ (porte de CI et ses essais)
+├── .github/workflows/        # 10 : api-ci, admin-ci, mobile-ci, security-ci, images-ci, infra-ci,
 │                             #     images-publish, images-publish-prod,
 │                             #     mobile-recette, mobile-production
 ├── docker-compose.yml        # PostgreSQL, Redis, Mailpit, MinIO (+ profil "app")
@@ -263,12 +265,14 @@ flutter run \
 
 ## Migrations Prisma
 
-Chaque tranche verticale apporte ses modèles et sa migration. Le schéma (`apps/api/prisma/schema.prisma`) en porte **50** aujourd'hui, pour **26** migrations datées dans `apps/api/prisma/migrations/` — deux nombres qui se comptent plutôt qu'ils ne se recopient :
+Chaque tranche verticale apporte ses modèles et sa migration. Combien le schéma (`apps/api/prisma/schema.prisma`) porte de modèles, et `apps/api/prisma/migrations/` de migrations datées : deux nombres qui se comptent plutôt qu'ils ne se recopient (ce paragraphe en citait deux, faux au bout de quelques semaines) :
 
 ```bash
 grep -c '^model ' apps/api/prisma/schema.prisma
 ls apps/api/prisma/migrations | grep -c '^2'
 ```
+
+La carte des modèles, domaine par domaine, est [`docs/database/schema.md`](./docs/database/schema.md) ; elle porte la commande qui liste les modèles qu'elle oublierait.
 
 ```bash
 pnpm prisma:generate                          # (ré)génère le client Prisma
@@ -281,8 +285,8 @@ pnpm --filter @carlys/api prisma:migrate:deploy  # déploiement (staging/product
 Règles :
 
 - en développement : `prisma migrate dev` (crée et applique la migration) ;
-- en staging/production : `prisma migrate deploy` **avant** la bascule du trafic, **jamais** au démarrage du conteneur ;
-- la CI (`api-ci.yml`) exécute `prisma validate` et détecte les migrations manquantes par rapport au schéma.
+- en staging/production : `prisma migrate deploy` **avant** la bascule du trafic, **jamais** au démarrage du conteneur, précédé en production d'un dump de la base ;
+- la CI (`api-ci.yml`) exécute `prisma validate`, détecte les migrations manquantes par rapport au schéma (sur une base fantôme dédiée), puis applique `prisma migrate deploy` avant les e2e.
 
 ## Tests
 
@@ -369,7 +373,7 @@ docker build -f apps/admin/Dockerfile -t carlys-admin .
 - **Tranches verticales** : chaque étape livre une fonctionnalité complète de bout en bout (schéma Prisma + API + admin + mobile + tests + docs). Pas de couche « en avance » sans consommateur, pas de dépendance morte.
 - **Commits** : [Conventional Commits](https://www.conventionalcommits.org/fr/) — `feat(api): …`, `fix(mobile): …`, `docs: …`, `chore: …`.
 - **Branches** : deux permanentes, `development` (le travail, et ce que suit la recette) et `production` (ce qui est promu). Travail sur `feat/<sujet>`, `fix/<sujet>`, `docs/<sujet>` ; intégration dans `development` par pull request avec CI verte. Les branches `archive/*` conservent des lignes de travail abandonnées : elles ne se rouvrent pas, elles se consultent.
-- **CI GitHub Actions — neuf workflows**, de deux natures. Cinq **portes**, qui rendent un avis sur un commit et s'ouvrent sur les pull requests et sur les poussées directes de `development` et `production` : `api-ci.yml` (services PostgreSQL + Redis ; format, lint, typecheck, tests, e2e, build, `prisma validate`, détection de migrations manquantes), `admin-ci.yml`, `mobile-ci.yml` (Flutter épinglé par `apps/mobile/.flutter-version` : format bloquant, analyze, test), `images-ci.yml` (les trois images se construisent, démarrent et répondent ; la garde légale mord) et `security-ci.yml` (TruffleHog + `pnpm audit` niveau high, plus une exécution hebdomadaire). `api-ci` et `admin-ci` lintent et testent en plus les paquets partagés (`pnpm --filter "./packages/**" lint` et `test`) : les compiler ne suffit pas à les juger. Et quatre **producteurs d'artefacts**, qui écrivent quelque part : `images-publish.yml` (publie les trois images dans GHCR à **chaque** poussée, délibérément sans filtre de chemins — le déploiement se fait par SHA, donc tout commit doit avoir ses images), `images-publish-prod.yml` (`workflow_dispatch` : l'image admin de production, garde légale **armée**), `mobile-recette.yml` (APK de recette à chaque poussée mobile — la release `beta` du dépôt garde, sous un lien stable, le dernier construit sur `development` —, bundle signé dès que le keystore existe, job iOS sur demande ; le **dépôt** sur la piste interne Play et TestFlight n'a lieu que sur la case « publier » d'une exécution manuelle) et `mobile-production.yml` (`workflow_dispatch` : le bundle de production, derrière une approbation humaine). Toutes les actions tierces y sont épinglées par **SHA de commit** (un tag est mutable), et `.github/dependabot.yml` tient ces épingles à jour.
+- **CI GitHub Actions — dix workflows**, de deux natures. Six **portes**, qui rendent un avis sur un commit et s'ouvrent sur les pull requests et sur les poussées directes de `development` et `production` : `api-ci.yml` (services PostgreSQL + Redis ; format, lint, typecheck, tests, build, `prisma validate`, détection de migrations manquantes sur une base fantôme dédiée, puis `prisma migrate deploy` et les e2e), `admin-ci.yml`, `mobile-ci.yml` (Flutter épinglé par `apps/mobile/.flutter-version` : format bloquant, analyze, test), `images-ci.yml` (les trois images se construisent, démarrent et répondent ; la garde légale mord), `infra-ci.yml` (scripts du serveur, vhosts Nginx, compose du serveur, Dockerfile, porte de CI et garde « build once » des builds mobiles : rejoue `./scripts/check_infra.sh`) et `security-ci.yml` (TruffleHog + `pnpm audit` niveau high, plus une exécution hebdomadaire). `api-ci` et `admin-ci` lintent et testent en plus les paquets partagés (`pnpm --filter "./packages/**" lint` et `test`) : les compiler ne suffit pas à les juger. Et quatre **producteurs d'artefacts**, qui écrivent quelque part : `images-publish.yml` (à chaque poussée, délibérément sans filtre de chemins — le déploiement se fait par SHA, donc tout commit VERT doit avoir ses images : il construit d'abord sans pousser, attend le verdict d'`api-ci`, `admin-ci`, `images-ci` et `infra-ci` (`scripts/ci/verdict_ci.sh`), et ne publie dans GHCR que s'il est vert ; un commit rouge n'a pas d'images, sauf rattrapage manuel avec `ignorer_ci` — et le clone du serveur n'avance que jusqu'à un commit qui a ses images), `images-publish-prod.yml` (`workflow_dispatch` : l'image admin de production, garde légale **armée**), `mobile-recette.yml` (APK de recette à chaque poussée mobile, gardé 14 jours, ses symboles de débogage à part, gardés 90 jours ; la release `beta` du dépôt garde, sous un lien stable, le dernier APK construit sur `development`, mis à jour seulement si `mobile-ci` est vert ; le bundle signé `.aab` n'est construit que sur « Run workflow », job iOS sur demande ; le **dépôt** sur la piste interne Play et TestFlight n'a lieu que sur la case « publier » d'une exécution manuelle) et `mobile-production.yml` (`workflow_dispatch` : le bundle de production, derrière une approbation humaine, pour un commit construit en recette depuis 90 jours au plus et dont `mobile-ci` est vert). Toutes les actions tierces y sont épinglées par **SHA de commit** (un tag est mutable), et `.github/dependabot.yml` tient ces épingles à jour, groupées en une pull request par semaine.
 - **Documentation** : ne documenter que l'existant, ou du planifié explicitement marqué comme tel (« Étape N », « cible »).
 
 ## Déploiement
@@ -382,14 +386,16 @@ Détails de la stratégie : [infrastructure/deployment/README.md](./infrastructu
 
 ## Sécurité
 
-Résumé des règles en place à l'Étape 1 :
+Résumé des règles en place :
 
 - aucun secret dans le dépôt — uniquement des `.env.example` factices ; TruffleHog en CI ;
-- API durcie : Helmet, CORS liste blanche, rate limiting, validation stricte des entrées (whitelist + `forbidNonWhitelisted`), limite de taille de body (1 Mo), config validée au démarrage ;
+- API durcie : Helmet, CORS liste blanche, rate limiting, validation stricte des entrées (whitelist + `forbidNonWhitelisted`), limite de taille de body (1 Mo, sauf les deux routes de dépôt d'image), config validée au démarrage ;
 - `/metrics` protégé par Bearer token en production ; Swagger désactivé en production ;
-- logs structurés Pino avec `requestId` propagé (en-tête `x-request-id`), sans données sensibles ;
-- authentification (Étape 2) : mots de passe **Argon2id**, access token JWT court (issuer/audience vérifiés + session contrôlée en base à chaque requête), refresh token **rotatif** stocké hashé (SHA-256) avec **détection de réutilisation** (révocation immédiate de la session), verrouillage temporaire après échecs répétés, réponses anti-énumération, jetons e-mail à usage unique, journal d'audit des événements de sécurité ;
-- à venir : OAuth Apple/Google, 2FA (Étape 2+) ; webhooks signés et idempotents (Étape 6).
+- logs structurés Pino avec `requestId` propagé (en-tête `x-request-id`), sans données sensibles (adresses e-mail réduites à une empreinte, audit compris ; seule la recherche du back-office par adresse reste en clair dans la ligne de requête) ; journal Nginx sans les jetons des liens envoyés par e-mail ;
+- authentification (Étape 2) : mots de passe **Argon2id**, access token JWT court (issuer/audience vérifiés + session contrôlée en base à chaque requête), refresh token **rotatif** stocké hashé (SHA-256) avec **détection de réutilisation** (révocation immédiate de la session), verrouillage par compte réservé avant la vérification (connexion, back-office, ré-authentification), réponses anti-énumération, jetons e-mail à usage unique et à cadence limitée, connexion **Apple et Google**, jetons push supprimés avec leur session, journal d'audit des événements de sécurité ;
+- webhooks de paiement signés et idempotents, droits décidés côté serveur (Étape 6) ;
+- comptes supprimés effacés définitivement 30 jours plus tard ; sauvegardes nocturnes, avant migration et hors machine (chiffrées) ;
+- à venir : 2FA, export des données, consentement horodaté.
 
 Politique complète et signalement de vulnérabilités : [SECURITY.md](./SECURITY.md).
 
@@ -405,6 +411,7 @@ Politique complète et signalement de vulnérabilités : [SECURITY.md](./SECURIT
 | `pnpm test` | Tests de tous les projets TypeScript |
 | `pnpm format` / `pnpm format:check` | Prettier |
 | `pnpm check` / `./scripts/check.sh` | Toutes les vérifications, build EN PREMIER (avant commit) |
+| `./scripts/check_infra.sh` | Vérifications de l'infrastructure (scripts serveur, Nginx, compose, Dockerfile, porte de CI) — rejoue `infra-ci` |
 | `pnpm prisma:generate` / `prisma:migrate` / `prisma:seed` | Cycle Prisma |
 | `docker compose up -d` / `down` | Infrastructure locale |
 | `./scripts/setup.sh` | Installation complète |
@@ -414,6 +421,7 @@ Politique complète et signalement de vulnérabilités : [SECURITY.md](./SECURIT
 | `./scripts/check_mobile.sh` | Vérifications Flutter — rejoue `mobile-ci` à l'identique, précédé des tailles de fichiers, de la banque d'icônes et de la couverture des polices (que la CI exécute aussi, en étapes distinctes) |
 | `./scripts/check_mobile_file_sizes.sh` | Seuls les seuils de taille (widgets, contrôleurs, use cases, services) — appelé par le précédent et par la CI |
 | `./scripts/check_mobile_icons.sh` | Aucun `Icons.` hors du design system : les écrans nomment `AppIcons.<sens>` — appelé par le précédent et par la CI |
+| `./scripts/check_mobile_popups.sh` | Aucune popup ouverte à la main (`SnackBar`, `showDialog`…) : tout passe par le design system — appelé par `check_mobile.sh` et par la CI |
 | `flutter pub get` | Dépendances Flutter |
 | `dart run build_runner build` | Génération de code Flutter |
 | `flutter analyze` / `flutter test` | Qualité Flutter |
@@ -434,7 +442,7 @@ Politique complète et signalement de vulnérabilités : [SECURITY.md](./SECURIT
 
 **Étape 6 — Abonnements : terminée.** Le premium existe, et c'est le **serveur qui décide** : plans (`free`, `premium`) et correspondances produits par fournisseur en base, webhooks **Stripe** (signature `Stripe-Signature` HMAC vérifiée sur le corps brut, fenêtre anti-rejeu) et **RevenueCat** (Bearer dédié) — tous **idempotents** grâce au journal append-only `SubscriptionEvent` (unicité `(provider, externalEventId)` ; un échec de traitement est journalisé sur l'événement et retraitable par rejeu). Chaque événement projette l'état `Subscription` puis matérialise les **`UserEntitlement`** (accès maintenu jusqu'à la fin de période payée en cas d'impayé/résiliation, expiration réévaluée à chaque lecture, attributions manuelles jamais écrasées). API : `GET /subscriptions/me`, `GET /entitlements` — et le catalogue applique le droit `premium_exercises` : la fiche d'un exercice premium répond 403 sans abonnement. Côté app : écran **Abonnement** (plan effectif, état, droits verrouillés/actifs), écran d'exercice avec état « Exercice Premium » et renvoi vers l'abonnement. Aucun faux paiement : l'achat passera par les stores/Stripe, l'app ne fait qu'afficher l'état serveur.
 
-**Étape 7 — Administration : terminée.** Le back-office devient réel, avec des **comptes administrateurs séparés** des comptes mobiles (Argon2id, jeton JWT à **audience dédiée** `carlys-admin` — jamais interchangeable avec un jeton mobile, dans un sens comme dans l'autre) et un **RBAC par permissions** — dix, déclarées dans `packages/api-contracts/src/admin.ts` qui fait foi : `user:read`, `user:update`, `entitlement:grant`, `exercise:read`, `exercise:publish`, `exercise:write`, `media:read`, `media:write`, `audit:read`, `community:moderate` — seedé depuis le code avec les rôles `superadmin`, `support` et `content-manager`. API : synthèse plateforme, liste/fiche des utilisateurs, **suspension** (toutes les sessions révoquées immédiatement, reconnexion refusée), **attribution manuelle d'entitlements** (jamais écrasée par la synchro des webhooks), publication/dépublication d'exercices (cache catalogue invalidé), **journal d'audit** enrichi (acteur, ressource, `requestId`) et paginé. Côté `apps/admin` : connexion réelle, tableau utilisateurs avec recherche, fiche avec actions, journal d'audit — réponses validées par les contrats Zod partagés, le serveur restant seul décideur des accès.
+**Étape 7 — Administration : terminée.** Le back-office devient réel, avec des **comptes administrateurs séparés** des comptes mobiles (Argon2id, jeton JWT à **audience dédiée** `carlys-admin` — jamais interchangeable avec un jeton mobile, dans un sens comme dans l'autre) et un **RBAC par permissions** — dix, déclarées dans `packages/api-contracts/src/admin.ts` qui fait foi : `user:read`, `user:update`, `entitlement:grant`, `exercise:read`, `exercise:publish`, `exercise:write`, `media:read`, `media:write`, `audit:read`, `community:moderate` — seedé depuis le code avec les rôles `superadmin`, `support` et `content-manager`. API : synthèse plateforme, liste/fiche des utilisateurs, **suspension** (toutes les sessions révoquées immédiatement, reconnexion refusée), **attribution manuelle d'entitlements** (octroi, coupure avec raison obligatoire dans le back-office, ou retour aux droits de l'abonnement ; une décision manuelle n'est jamais écrasée par la synchro des webhooks, et la fiche dit l'origine de chaque droit), publication/dépublication d'exercices (cache catalogue invalidé), **journal d'audit** enrichi (acteur, ressource, `requestId`) et paginé. Côté `apps/admin` : connexion réelle, tableau utilisateurs avec recherche, fiche avec actions, journal d'audit — réponses validées par les contrats Zod partagés, le serveur restant seul décideur des accès.
 
 **Nutrition & réglages : terminés.** La nutrition suit la même règle que le premium : **le serveur calcule, l'app affiche**. `GET /nutrition/metabolism` renvoie un rapport complet — **BMR** (Mifflin-St Jeor), **TDEE** (facteur d'activité), **objectif calorique** selon le but (perte/maintien/prise de muscle), **macros** (protéines par kg selon l'objectif, lipides 25 %, glucides en complément), **IMC** avec catégorie OMS et **hydratation** (35 ml/kg). Le poids n'est jamais ressaisi : il provient de la **dernière mesure corporelle** (Étape 5), le reste du profil (sexe biologique, naissance, taille, activité, objectif) se complète via `PATCH /users/me` (migration `nutrition_profile`, validations bornées). Côté app : écran **Nutrition** avec **hélice d'ADN animée en continu** (CustomPainter isolé dans un RepaintBoundary, pose statique si l'utilisateur réduit les animations), objectif calorique en grand, barres de macros, IMC et hydratation, et formulaire de profil sur place (champs manquants listés par le serveur). S'y ajoutent un écran **Réglages** avec thème **système/clair/sombre/sombre OLED** (persisté via `shared_preferences`, appliqué instantanément) et des optimisations de rendu (graphiques fl_chart isolés dans des RepaintBoundary).
 

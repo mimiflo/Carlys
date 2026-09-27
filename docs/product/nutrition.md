@@ -185,8 +185,10 @@ porte des aliments de la base : `meta.source` (`attribution`, `license`,
 qui reste celle de l'ajout (une ligne gardée d'une version à l'autre ne
 prend pas la date de la nouvelle table). Un repas saisi à la main n'en porte
 pas (`meta` vide). Le client n'a rien à coder en dur, même pour un aliment
-retiré depuis. Les conditions d'utilisation (`docs/legal/terms.md`, §8) le
-disent aussi.
+retiré depuis. Côté appli, le JOURNAL du jour affiche aussi cette mention
+(`FoodSourceMention`) dès qu'un de ses repas porte des aliments de la base
+(`mealsBetween` rend les repas ET la mention). Les conditions d'utilisation
+(`docs/legal/terms.md`, §8) le disent aussi.
 
 ### Ce que la base contient
 
@@ -240,7 +242,9 @@ est réactivé.
 
 ### La recherche
 
-`q` de 2 à 60 caractères, `limit` de 1 à 30 (20 par défaut). Chaque mot de
+`q` de 2 à 60 caractères, `limit` de 1 à 30 (20 par défaut) ; l'appli coupe
+sa saisie à 60 points de code avant l'envoi (`MealBounds.foodSearchMaxLength`),
+au lieu de laisser partir un `400`. Chaque mot de
 `q`, normalisé comme la clé, doit figurer dans la clé de recherche ; les
 aliments retirés sont exclus. Classement simple : d'abord ceux dont le nom
 court **commence** par le premier mot, puis les noms les plus courts —
