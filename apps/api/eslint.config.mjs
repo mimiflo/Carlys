@@ -20,8 +20,9 @@ export default [
   },
   {
     // Le tableau « Tailles de fichiers » de CLAUDE.md devient exécutable ici.
-    // Comptage PAR DÉFAUT, blancs et commentaires compris : c'est la lecture
-    // littérale du tableau (« Service < 300 lignes »), et surtout la seule qui
+    // `max` est INCLUSIF : « < 300 » s'écrit donc 299 (300 laissait passer un
+    // service à 300 lignes pile). Comptage PAR DÉFAUT, blancs et commentaires
+    // compris : c'est la lecture littérale du tableau, et surtout la seule qui
     // colle à `wc -l` — un auteur vérifie sa marge sans lancer ESLint. Les trois
     // autres modes ont été mesurés (skipBlankLines, skipComments, les deux) :
     // tous à dette nulle eux aussi, mais aucun ne se relit dans l'éditeur.
@@ -32,11 +33,11 @@ export default [
     // de données déclaratives, sous src/ pour être compilé dans l'image)
     // n'a rien à faire sous ce plafond, et n'y est pas.
     files: ['src/**/*.service.ts'],
-    rules: { 'max-lines': ['error', { max: 300, skipBlankLines: false, skipComments: false }] },
+    rules: { 'max-lines': ['error', { max: 299, skipBlankLines: false, skipComments: false }] },
   },
   {
     files: ['src/**/*.controller.ts'],
-    rules: { 'max-lines': ['error', { max: 200, skipBlankLines: false, skipComments: false }] },
+    rules: { 'max-lines': ['error', { max: 199, skipBlankLines: false, skipComments: false }] },
   },
   {
     // « Ne jamais accéder à Prisma depuis un contrôleur NestJS » (CLAUDE.md).
