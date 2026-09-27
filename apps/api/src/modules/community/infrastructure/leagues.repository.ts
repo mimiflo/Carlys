@@ -29,9 +29,12 @@ export class LeaguesRepository {
     return preference?.joinsLeague ?? false;
   }
 
-  /** Entre dans la ligue, ou en sort. Crée la préférence si besoin. */
-  async setJoined(userId: string, joined: boolean): Promise<void> {
-    await this.prisma.communityPreference.upsert({
+  /**
+   * Entre dans la ligue, ou en sort. Crée la préférence si besoin. Dans la
+   * transaction de l'appelant s'il en fournit une (suppression du compte).
+   */
+  async setJoined(userId: string, joined: boolean, client: Client = this.prisma): Promise<void> {
+    await client.communityPreference.upsert({
       where: { userId },
       create: { userId, joinsLeague: joined },
       update: { joinsLeague: joined },

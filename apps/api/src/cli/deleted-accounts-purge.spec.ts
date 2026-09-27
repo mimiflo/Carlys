@@ -27,12 +27,42 @@ describe('deleted-accounts-purge — arguments', () => {
 
   it('le rapport dit la portée, les comptes et chaque échec', () => {
     const texte = formatReport(
-      { eligible: 2, erased: 1, objectsDeleted: 3, failures: ['id : panne'], refused: null },
+      {
+        eligible: 2,
+        erased: 1,
+        objectsDeleted: 3,
+        paymentEventsErased: 4,
+        failures: ['id : panne'],
+        refused: null,
+      },
       { dryRun: false, delayDays: 30 },
     );
     expect(texte).toContain('supprimés depuis plus de 30 jours');
     expect(texte).toContain('comptes effacés    : 1');
     expect(texte).toContain('photos effacées    : 3');
+    expect(texte).toContain('paiements orphelins effacés (plus de 90 jours) : 4');
     expect(texte).toContain('ÉCHEC : id : panne');
+  });
+
+  it('--compte-actif exige --confirmer, et l’inverse ; jamais avec --compte', () => {
+    expect(parseArgs(['--compte-actif', COMPTE, '--confirmer', ' Lea@Exemple.fr '])).toEqual({
+      dryRun: false,
+      delayDays: DEFAULT_PURGE_DELAY_DAYS,
+      activeAccount: { id: COMPTE, confirmEmail: 'Lea@Exemple.fr' },
+    });
+    expect(
+      parseArgs(['--a-blanc', '--compte-actif', COMPTE, '--confirmer', 'lea@exemple.fr']),
+    ).toMatchObject({ dryRun: true, activeAccount: { id: COMPTE } });
+    expect(() => parseArgs(['--compte-actif', COMPTE])).toThrow(UsageError);
+    expect(() => parseArgs(['--confirmer', 'lea@exemple.fr'])).toThrow(UsageError);
+    expect(() => parseArgs(['--compte-actif', 'tout-le-monde', '--confirmer', 'a@b.c'])).toThrow(
+      UsageError,
+    );
+    expect(() => parseArgs(['--compte-actif', COMPTE, '--confirmer', 'pas-une-adresse'])).toThrow(
+      UsageError,
+    );
+    expect(() =>
+      parseArgs(['--compte', COMPTE, '--compte-actif', COMPTE, '--confirmer', 'a@b.c']),
+    ).toThrow(UsageError);
   });
 });

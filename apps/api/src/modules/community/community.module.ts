@@ -6,6 +6,7 @@ import { CommunityChallengesService } from './application/community-challenges.s
 import { CommunityModerationService } from './application/community-moderation.service';
 import { CommunityNotifier } from './application/community-notifier';
 import { CommunityService } from './application/community.service';
+import { CommunityWithdrawalService } from './application/community-withdrawal.service';
 import { EncouragementsService } from './application/encouragements.service';
 import { FriendChallengesService } from './application/friend-challenges.service';
 import { LeaguesService } from './application/leagues.service';
@@ -39,6 +40,7 @@ import { LeaguesController } from './presentation/http/leagues.controller';
   ],
   providers: [
     CommunityService,
+    CommunityWithdrawalService,
     EncouragementsService,
     CommunityNotifier,
     CommunityChallengesService,
@@ -51,7 +53,8 @@ import { LeaguesController } from './presentation/http/leagues.controller';
     LeaguesRepository,
     CommunityModerationRepository,
   ],
-  // Exporté pour la clôture de séance (contribution aux défis SPORT).
-  exports: [CommunityService],
+  // Exportés pour la clôture de séance (contribution aux défis SPORT) et
+  // pour la suppression du compte (retrait immédiat de la communauté).
+  exports: [CommunityService, CommunityWithdrawalService],
 })
 export class CommunityModule {}

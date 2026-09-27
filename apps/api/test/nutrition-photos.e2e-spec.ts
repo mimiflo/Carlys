@@ -323,7 +323,7 @@ describe('Photo d’un repas (e2e, stockage en mémoire)', () => {
     await store.put(`meal-photos/${carol.userId}/${randomUUID()}.jpg`, PHOTO, 'image/jpeg');
     expect(store.keysUnder(`meal-photos/${carol.userId}/`)).toHaveLength(3);
 
-    await as(carol.token).delete('/api/v1/users/me').send({ password: PASSWORD }).expect(204);
+    await as(carol.token).delete('/api/v1/users/me').send({ password: PASSWORD }).expect(200);
 
     expect(store.keysUnder(`meal-photos/${carol.userId}/`)).toEqual([]);
     expect(await prisma.mealPhoto.count({ where: { mealId: { in: meals } } })).toBe(0);
@@ -379,7 +379,7 @@ describe('Photo d’un repas (e2e, stockage en mémoire)', () => {
 
       const uploading = upload(dave.token, mealId).then((response) => response);
       await hold.reached;
-      await as(dave.token).delete('/api/v1/users/me').send({ password: PASSWORD }).expect(204);
+      await as(dave.token).delete('/api/v1/users/me').send({ password: PASSWORD }).expect(200);
       // La garde avait laissé passer le dépôt AVANT la suppression ; une
       // requête neuve, elle, est refusée.
       await as(dave.token).get(`/api/v1/nutrition/meals/${mealId}`).expect(401);

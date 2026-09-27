@@ -13,6 +13,7 @@ import {
 import { type Response } from 'express';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { requestIdOf, type RequestWithId } from '../types/request-with-id';
+import { UserFacingUnavailableException } from './user-facing-unavailable.exception';
 
 const STATUS_TO_CODE: Readonly<Record<number, ApiErrorCode>> = {
   [HttpStatus.BAD_REQUEST]: 'BAD_REQUEST',
@@ -82,7 +83,8 @@ function isDetailList(value: unknown): value is ApiErrorDetail[] {
 /**
  * Convertit toute exception en enveloppe d'erreur normalisée
  * `{ error: { code, message, details, requestId } }` sans fuiter de détails
- * internes pour les erreurs 5xx.
+ * internes pour les erreurs 5xx — sauf le message d'un
+ * [UserFacingUnavailableException], écrit pour la personne.
  */
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
@@ -131,7 +133,9 @@ export class AllExceptionsFilter implements ExceptionFilter {
       }
 
       if (status >= 500) {
-        message = 'Une erreur interne est survenue.';
+        if (!(exception instanceof UserFacingUnavailableException)) {
+          message = 'Une erreur interne est survenue.';
+        }
         details = [];
         this.logger.error({ err: exception, requestId, status }, 'Exception HTTP 5xx');
       }

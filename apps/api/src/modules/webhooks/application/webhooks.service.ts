@@ -1,13 +1,8 @@
-import {
-  BadRequestException,
-  Injectable,
-  ServiceUnavailableException,
-  UnauthorizedException,
-} from '@nestjs/common';
+import { Injectable, ServiceUnavailableException, UnauthorizedException } from '@nestjs/common';
 import { PaymentProvider, type Prisma, type SubscriptionStatus } from '@prisma/client';
-import { timingSafeEqual } from 'node:crypto';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
 import { AppConfigService } from '../../../config/app-config.service';
+import { AccountBillingService } from '../../subscriptions/application/account-billing.service';
 import { EntitlementsService } from '../../subscriptions/application/entitlements.service';
 import { SubscriptionsRepository } from '../../subscriptions/infrastructure/subscriptions.repository';
 import { UsersRepository } from '../../users/infrastructure/users.repository';
@@ -22,6 +17,7 @@ import {
   stripeEventSchema,
 } from './webhook-payloads';
 import { PermanentWebhookError } from './webhook-errors';
+import { bearerMatches, parseWebhookBody } from './webhook-request';
 import { verifyStripeSignature } from './stripe-signature.util';
 
 export interface WebhookAck {
@@ -45,6 +41,7 @@ export class WebhooksService {
     private readonly subscriptions: SubscriptionsRepository,
     private readonly entitlements: EntitlementsService,
     private readonly users: UsersRepository,
+    private readonly billing: AccountBillingService,
     private readonly config: AppConfigService,
     @InjectPinoLogger(WebhooksService.name)
     private readonly logger: PinoLogger,
@@ -59,7 +56,7 @@ export class WebhooksService {
       throw new UnauthorizedException('Signature Stripe invalide.');
     }
 
-    const { json, data: event } = this.parse(rawBody, stripeEventSchema);
+    const { json, data: event } = parseWebhookBody(rawBody, stripeEventSchema);
     if (!event.type.startsWith('customer.subscription.')) {
       return { received: true }; // Facture, paiement… : rien à projeter, rien à GARDER.
     }
@@ -68,6 +65,11 @@ export class WebhooksService {
       json,
       namedAccount(event.data.object.metadata?.['userId']),
       () => this.projectStripe(event),
+      () =>
+        this.billing.stopForAbsentAccount(
+          event.data.object.id,
+          event.type === 'customer.subscription.deleted' ? 'canceled' : event.data.object.status,
+        ),
     );
   }
 
@@ -76,11 +78,11 @@ export class WebhooksService {
     if (secret === undefined) {
       throw new ServiceUnavailableException('Webhook RevenueCat non configuré.');
     }
-    if (!this.bearerMatches(authHeader, secret)) {
+    if (!bearerMatches(authHeader, secret)) {
       throw new UnauthorizedException('Autorisation RevenueCat invalide.');
     }
 
-    const { json, data: payload } = this.parse(rawBody, revenueCatEventSchema);
+    const { json, data: payload } = parseWebhookBody(rawBody, revenueCatEventSchema);
     const status = mapRevenueCatType(payload.event.type, payload.event.period_type);
     if (status === null) {
       return { received: true }; // Type non suivi : rien à projeter, rien à garder.
@@ -110,21 +112,32 @@ export class WebhooksService {
    * personne : un paiement encaissé dont la projection échouait laissait le
    * compte gratuit, définitivement et sans un mot.
    *
-   * UN COMPTE SUPPRIMÉ N'A PLUS DE WEBHOOK (acquitté, ni appliqué ni gardé) :
-   * la suppression ne résilie pas chez le fournisseur, et chaque échéance
-   * après la purge violait la clé étrangère (503 en boucle, charge gardée).
+   * UN COMPTE ABSENT N'A PLUS DE WEBHOOK (acquitté, ni appliqué ni gardé :
+   * après la purge, la projection violait la clé étrangère). Seul un compte
+   * SUPPRIMÉ, dont la ligne existe encore, passe par `onAbsentAccount` : un
+   * abonnement Stripe qui prélève est résilié
+   * (`AccountBillingService.stopForAbsentAccount`). Un compte que cette base
+   * ne connaît pas (sauvegarde restaurée, compte Stripe de test partagé avec
+   * un autre environnement) ou déjà effacé n'est PAS résilié : la résiliation
+   * est irréversible, et rien ne dit que cet abonnement est le nôtre. Ceux
+   * d'un compte effacé l'ont été à sa suppression.
    */
   private async ingest(
     source: { provider: PaymentProvider; externalEventId: string; eventType: string },
     payload: unknown,
     userId: string | null,
     project: () => Promise<string>,
+    onAbsentAccount: () => Promise<void> = () => Promise.resolve(),
   ): Promise<WebhookAck> {
     const { provider, externalEventId, eventType } = source;
     if (userId !== null && (await this.users.findActiveById(userId)) === null) {
+      const deleted = await this.users.isDeleted(userId);
+      if (deleted) {
+        await onAbsentAccount();
+      }
       this.logger.warn(
-        { provider, externalEventId, eventType },
-        'Webhook pour un compte supprimé — acquitté, ni appliqué ni gardé',
+        { provider, externalEventId, eventType, deleted },
+        'Webhook pour un compte supprimé ou inconnu — acquitté, ni appliqué ni gardé',
       );
       return { received: true };
     }
@@ -268,32 +281,5 @@ export class WebhooksService {
       { provider, externalEventId, subscriptionId },
       'Webhook plus ancien que le dernier appliqué — ignoré, droits recalculés sur l’état courant',
     );
-  }
-
-  private parse<T>(
-    rawBody: Buffer,
-    schema: { safeParse: (value: unknown) => { success: boolean; data?: T } },
-  ): { json: unknown; data: T } {
-    let json: unknown;
-    try {
-      json = JSON.parse(rawBody.toString('utf8'));
-    } catch {
-      throw new BadRequestException('Corps de webhook illisible (JSON attendu).');
-    }
-    const result = schema.safeParse(json);
-    if (!result.success || result.data === undefined) {
-      throw new BadRequestException('Charge utile de webhook invalide.');
-    }
-    return { json, data: result.data };
-  }
-
-  private bearerMatches(authHeader: string | undefined, secret: string): boolean {
-    if (authHeader === undefined) {
-      return false;
-    }
-    const token = authHeader.startsWith('Bearer ') ? authHeader.slice(7) : authHeader;
-    const candidate = Buffer.from(token);
-    const expected = Buffer.from(secret);
-    return candidate.length === expected.length && timingSafeEqual(candidate, expected);
   }
 }

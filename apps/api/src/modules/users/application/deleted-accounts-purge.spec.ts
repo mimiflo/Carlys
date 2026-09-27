@@ -1,5 +1,9 @@
 import { InMemoryObjectStore } from '../../../../test/support/in-memory-object-store';
-import { type DeletedAccountsLedger, purgeDeletedAccounts } from './deleted-accounts-purge';
+import {
+  type DeletedAccountsLedger,
+  ORPHAN_PAYMENT_EVENT_RETENTION_DAYS,
+  purgeDeletedAccounts,
+} from './deleted-accounts-purge';
 
 /// CE QUE CE FICHIER PROTÈGE : la purge efface les comptes SUPPRIMÉS depuis
 /// plus que le délai, photos privées d'abord, et rien d'autre.
@@ -18,7 +22,21 @@ function compte(id: string, joursDepuis: number): Supprime {
 class FauxRegistre implements DeletedAccountsLedger {
   readonly effaces: string[] = [];
   readonly ordre: string[] = [];
-  constructor(private readonly comptes: Supprime[]) {}
+  /** Réception des événements de paiement en échec qui ne nomment aucun compte. */
+  constructor(
+    private readonly comptes: Supprime[],
+    public orphelins: Date[] = [],
+  ) {}
+
+  countOrphanPaymentEventsBefore(before: Date): Promise<number> {
+    return Promise.resolve(this.orphelins.filter((recu) => recu < before).length);
+  }
+
+  eraseOrphanPaymentEventsBefore(before: Date): Promise<number> {
+    const avant = this.orphelins.length;
+    this.orphelins = this.orphelins.filter((recu) => recu >= before);
+    return Promise.resolve(avant - this.orphelins.length);
+  }
 
   listDeletedBefore(before: Date): Promise<string[]> {
     return Promise.resolve(
@@ -61,6 +79,7 @@ describe('purgeDeletedAccounts', () => {
       eligible: 1,
       erased: 1,
       objectsDeleted: 2,
+      paymentEventsErased: 0,
       failures: [],
       refused: null,
     });
@@ -121,5 +140,32 @@ describe('purgeDeletedAccounts', () => {
     });
     expect(refus.refused).toContain('n’est pas un compte supprimé');
     expect(refus.erased).toBe(0);
+  });
+
+  it('événements de paiement en échec SANS compte : effacés après 90 jours, par la passe quotidienne', async () => {
+    // `$RCAnonymousID`, charge sans `metadata.userId` : la purge d'un compte
+    // ne les retrouve jamais, puisqu'ils n'en nomment aucun.
+    const jours = (n: number) => new Date(MAINTENANT.getTime() - n * 86_400_000);
+    expect(ORPHAN_PAYMENT_EVENT_RETENTION_DAYS).toBe(90);
+    const registre = new FauxRegistre([compte('hier', 1)], [jours(91), jours(89)]);
+    const store = new InMemoryObjectStore();
+    const options = { now: MAINTENANT, delayDays: 30 };
+
+    const simulation = await purgeDeletedAccounts(registre, store, { ...options, dryRun: true });
+    expect(simulation.paymentEventsErased).toBe(1);
+    expect(registre.orphelins).toHaveLength(2);
+
+    // Un effacement ciblé (`--compte`) ne touche qu'à son compte.
+    const cible = await purgeDeletedAccounts(registre, store, {
+      ...options,
+      accountId: 'hier',
+      dryRun: false,
+    });
+    expect(cible.paymentEventsErased).toBe(0);
+    expect(registre.orphelins).toHaveLength(2);
+
+    const rapport = await purgeDeletedAccounts(registre, store, { ...options, dryRun: false });
+    expect(rapport.paymentEventsErased).toBe(1);
+    expect(registre.orphelins).toEqual([jours(89)]);
   });
 });

@@ -165,7 +165,7 @@ describe('Photo d’un repas (e2e, MinIO réel)', () => {
       .delete('/api/v1/users/me')
       .set('Authorization', `Bearer ${token}`)
       .send({ password: PASSWORD })
-      .expect(204);
+      .expect(200);
 
     const left = await s3.send(
       new ListObjectsV2Command({ Bucket: PRIVATE_BUCKET, Prefix: `meal-photos/${userId}/` }),

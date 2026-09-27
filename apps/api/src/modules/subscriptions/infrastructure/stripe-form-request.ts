@@ -2,14 +2,46 @@ import { BadGatewayException } from '@nestjs/common';
 
 /**
  * Le SEUL endroit du dépôt qui parle à l'API de Stripe (la vérification de
- * signature des webhooks, elle, ne l'appelle pas) : un `POST` en formulaire,
- * une réponse JSON dont on ne garde que l'adresse à ouvrir.
+ * signature des webhooks, elle, ne l'appelle pas) : [stripeFetch] porte la
+ * clé, l'idempotence et le délai ; [requestStripeUrl] en fait un `POST` en
+ * formulaire dont on ne garde que l'adresse à ouvrir.
  *
- * **Sans SDK** : deux routes sont appelées (page de paiement, portail de
- * gestion), toutes deux sur ce même schéma. Ajouter la bibliothèque complète
- * pour deux `POST` en formulaire coûterait une dépendance de plus sans rien
- * simplifier.
+ * **Sans SDK** : trois routes sont appelées (page de paiement, portail de
+ * gestion, résiliation à la suppression du compte), toutes sur ce même
+ * schéma. Ajouter la bibliothèque complète pour trois requêtes en formulaire
+ * coûterait une dépendance de plus sans rien simplifier.
  */
+
+/**
+ * Au-delà, Stripe est tenu pour injoignable. Sans borne, une route qui
+ * l'attend (la suppression d'un compte attend la résiliation) restait
+ * suspendue aussi longtemps que la pile réseau le voulait.
+ */
+const STRIPE_TIMEOUT_MS = 10_000;
+
+export interface StripeCall {
+  readonly secret: string;
+  readonly method: 'POST' | 'DELETE';
+  readonly endpoint: string;
+  readonly body?: URLSearchParams;
+  /** Stripe garantit lui-même l'unicité sur cette clé : rejouer rend la MÊME réponse. */
+  readonly idempotencyKey?: string;
+}
+
+/** Un appel à l'API de Stripe, tel quel : c'est l'appelant qui lit la réponse. */
+export function stripeFetch(call: StripeCall): Promise<Response> {
+  return fetch(call.endpoint, {
+    method: call.method,
+    headers: {
+      Authorization: `Bearer ${call.secret}`,
+      'Content-Type': 'application/x-www-form-urlencoded',
+      ...(call.idempotencyKey === undefined ? {} : { 'Idempotency-Key': call.idempotencyKey }),
+    },
+    body: call.body,
+    signal: AbortSignal.timeout(STRIPE_TIMEOUT_MS),
+  });
+}
+
 export interface StripeUrlRequest {
   readonly secret: string;
   readonly endpoint: string;
@@ -32,17 +64,7 @@ export interface StripeUrlRequest {
 }
 
 export async function requestStripeUrl(request: StripeUrlRequest): Promise<string> {
-  const response = await fetch(request.endpoint, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${request.secret}`,
-      'Content-Type': 'application/x-www-form-urlencoded',
-      ...(request.idempotencyKey === undefined
-        ? {}
-        : { 'Idempotency-Key': request.idempotencyKey }),
-    },
-    body: request.body,
-  });
+  const response = await stripeFetch({ ...request, method: 'POST' });
 
   if (!response.ok) {
     throw new BadGatewayException(request.failureLog);

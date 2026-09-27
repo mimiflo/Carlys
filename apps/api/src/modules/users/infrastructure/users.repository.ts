@@ -55,6 +55,15 @@ export class UsersRepository {
     });
   }
 
+  /**
+   * Vrai si ce compte a existé ici et est SUPPRIMÉ (pas encore effacé).
+   * Faux pour un compte actif, déjà effacé, ou que cette base n'a jamais
+   * connu (sauvegarde restaurée, compte Stripe de test partagé).
+   */
+  async isDeleted(id: string): Promise<boolean> {
+    return (await this.prisma.user.count({ where: { id, deletedAt: { not: null } } })) > 0;
+  }
+
   emailExists(email: string): Promise<User | null> {
     return this.prisma.user.findUnique({ where: { email } });
   }

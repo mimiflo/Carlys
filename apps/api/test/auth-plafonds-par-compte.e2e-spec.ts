@@ -188,7 +188,7 @@ describe('Plafonds par compte face à une rafale multi-IP (e2e)', () => {
       .set('X-Forwarded-For', ip(3))
       .set('Authorization', `Bearer ${reconnecte.tokens.accessToken}`)
       .send({ password: nouveau })
-      .expect(204);
+      .expect(200);
   });
 
   it('inscription puis suppression en boucle : pas plus de liens vers une adresse que son plafond', async () => {
@@ -220,7 +220,7 @@ describe('Plafonds par compte face à une rafale multi-IP (e2e)', () => {
           .set('X-Forwarded-For', ip(100 + tour))
           .set('Authorization', `Bearer ${compte.tokens.accessToken}`)
           .send({ password: PASSWORD })
-          .expect(204);
+          .expect(200);
       }
       await service.flush();
       const versVictime = envoi.mock.calls.filter(([mail]) => mail.to === victime);

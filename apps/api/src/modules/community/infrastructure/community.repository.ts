@@ -242,6 +242,15 @@ export class CommunityRepository {
     });
   }
 
+  /**
+   * Suppression du compte, DANS sa transaction : ses mots quittent le fil
+   * des autres tout de suite, pas à la purge. Un signalement qui en visait
+   * un garde son cliché (`SetNull`).
+   */
+  async deleteEncouragementsSentBy(senderId: string, tx: Prisma.TransactionClient): Promise<void> {
+    await tx.encouragement.deleteMany({ where: { senderId } });
+  }
+
   // ── Code ami ────────────────────────────────────────────────────────────
 
   /** Résout un code ami (forme canonique) vers son porteur actif. */

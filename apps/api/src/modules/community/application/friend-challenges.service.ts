@@ -151,7 +151,9 @@ export class FriendChallengesService {
     // ou quitté, puis séparé de son créateur par un blocage, est masqué lui
     // aussi — sans quoi réaccepter rouvrait ce que le blocage a fermé.
     const challenge = await this.mine(userId, challengeId, hidden);
-    if (challenge.endsAt < new Date()) {
+    // Terminé : échu, réglé, ou ANNULÉ (plus personne en face, voir
+    // `FriendChallengesRepository.withdrawAccount`).
+    if (challenge.status !== 'OPEN' || challenge.endsAt < new Date()) {
       throw new NotFoundException('Ce défi est terminé.');
     }
     await this.challenges.setMemberStatus(challengeId, userId, 'ACCEPTED', {

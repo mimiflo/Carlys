@@ -1,4 +1,4 @@
-import { type PrismaClient, UserStatus } from '@prisma/client';
+import { type Prisma, type PrismaClient, UserStatus } from '@prisma/client';
 import { type DeletedAccountsLedger } from '../application/deleted-accounts-purge';
 
 /**
@@ -11,6 +11,15 @@ import { type DeletedAccountsLedger } from '../application/deleted-accounts-purg
  * compte n'était jamais effacé, et l'échec revenait chaque nuit.
  */
 export const ERASE_ACCOUNT_TIMEOUT_MS = 60_000;
+
+/**
+ * Un événement de paiement JAMAIS appliqué (`processedAt` nul) qui ne nomme
+ * aucun compte (`userId` nul), reçu avant `before` : l'index `receivedAt`
+ * sert la lecture.
+ */
+function orphelinsAvant(before: Date): Prisma.SubscriptionEventWhereInput {
+  return { processedAt: null, userId: null, receivedAt: { lt: before } };
+}
 
 /**
  * Les comptes supprimés vus par la purge — un client Prisma NU, hors de
@@ -30,6 +39,17 @@ export class PrismaDeletedAccountsLedger implements DeletedAccountsLedger {
 
   async isDeleted(id: string): Promise<boolean> {
     return (await this.prisma.user.count({ where: { id, status: UserStatus.DELETED } })) === 1;
+  }
+
+  countOrphanPaymentEventsBefore(before: Date): Promise<number> {
+    return this.prisma.subscriptionEvent.count({ where: orphelinsAvant(before) });
+  }
+
+  async eraseOrphanPaymentEventsBefore(before: Date): Promise<number> {
+    const { count } = await this.prisma.subscriptionEvent.deleteMany({
+      where: orphelinsAvant(before),
+    });
+    return count;
   }
 
   /**

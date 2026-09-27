@@ -85,6 +85,21 @@ export const authSessionSchema = z.object({
 
 export type AuthSession = z.infer<typeof authSessionSchema>;
 
+/**
+ * Réponse de `DELETE /users/me` (200) : le compte EST supprimé.
+ *
+ * Un abonnement Stripe est déjà résilié à ce stade — la suppression est
+ * refusée (503) tant qu'il ne l'est pas. Un abonnement pris dans un magasin
+ * d'applications (App Store, Play Store), lui, ne se résilie que dans le
+ * magasin : `storeSubscriptionStillActive` vaut alors `true`, et l'appli dit
+ * à la personne de le résilier elle-même, sans quoi elle reste prélevée.
+ */
+export const accountDeletionResultSchema = z.object({
+  storeSubscriptionStillActive: z.boolean(),
+});
+
+export type AccountDeletionResult = z.infer<typeof accountDeletionResultSchema>;
+
 /** Contraintes de mot de passe : voir `password-limits.ts` (module sans Zod). */
 export { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from './password-limits';
 

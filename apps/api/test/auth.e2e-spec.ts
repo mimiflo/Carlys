@@ -509,7 +509,7 @@ describe('Authentification (e2e)', () => {
       .delete('/api/v1/users/me')
       .set('Authorization', auth)
       .send({ password })
-      .expect(204);
+      .expect(200);
 
     await api().post('/api/v1/auth/login').send({ email, password }).expect(401);
     // Le jeton d'accès encore valide meurt avec sa session.

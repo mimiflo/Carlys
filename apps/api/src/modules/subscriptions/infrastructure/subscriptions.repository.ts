@@ -2,6 +2,7 @@ import { Injectable } from '@nestjs/common';
 import {
   type PaymentProvider,
   Prisma,
+  type Subscription,
   type SubscriptionEvent,
   type SubscriptionStatus,
   type UserEntitlement,
@@ -165,6 +166,32 @@ export class SubscriptionsRepository {
         include: PLAN_AVEC_DROITS,
       });
       return { subscription, stale: false };
+    });
+  }
+
+  /**
+   * Les abonnements qui prélèvent encore, ou peuvent encore prélever : actif,
+   * en essai, ou en retard de paiement — le fournisseur retente alors le
+   * prélèvement. Ce que la suppression du compte doit arrêter.
+   */
+  billableSubscriptions(userId: string): Promise<Subscription[]> {
+    return this.prisma.subscription.findMany({
+      where: { userId, status: { in: ['ACTIVE', 'TRIALING', 'PAST_DUE'] } },
+      orderBy: { createdAt: 'asc' },
+    });
+  }
+
+  /**
+   * DANS la transaction de suppression du compte : les abonnements résiliés
+   * chez le fournisseur le disent aussi ici. Le webhook qui suit la
+   * résiliation arrive pour un compte supprimé, qui n'en applique plus
+   * aucun : sans cette écriture, la ligne resterait « active » jusqu'à la
+   * purge.
+   */
+  async markCanceled(ids: readonly string[], tx: Prisma.TransactionClient): Promise<void> {
+    await tx.subscription.updateMany({
+      where: { id: { in: [...ids] } },
+      data: { status: 'CANCELED', cancelAtPeriodEnd: false },
     });
   }
 

@@ -16,6 +16,17 @@ import { mealPhotoPrefixOf } from '../../nutrition/domain/meal-photo-key';
  */
 export const DEFAULT_PURGE_DELAY_DAYS = 30;
 
+/**
+ * Conservation des événements de paiement EN ÉCHEC qui ne nomment aucun
+ * compte : 90 jours. Un webhook RevenueCat d'un achat anonyme
+ * (`$RCAnonymousID`) ou une charge Stripe sans `metadata.userId` ne se
+ * projette jamais, et sa charge utile brute (identifiants de transaction,
+ * parfois une adresse) restait pour toujours : la purge d'un compte ne le
+ * retrouve pas, puisqu'il n'en nomme aucun. Trois mois laissent le temps de
+ * lire `processingError` et de rejouer à la main ce qui devait l'être.
+ */
+export const ORPHAN_PAYMENT_EVENT_RETENTION_DAYS = 90;
+
 /** L'accès aux comptes supprimés — la base, pour la purge et elle seule. */
 export interface DeletedAccountsLedger {
   /** Identifiants des comptes DELETED supprimés avant `before`. */
@@ -27,6 +38,10 @@ export interface DeletedAccountsLedger {
    * `false` : le compte n'était plus DELETED (ou n'existait plus).
    */
   eraseAccount(id: string): Promise<boolean>;
+  /** Événements de paiement jamais appliqués, sans compte, reçus avant `before`. */
+  countOrphanPaymentEventsBefore(before: Date): Promise<number>;
+  /** Les efface ; rend combien. */
+  eraseOrphanPaymentEventsBefore(before: Date): Promise<number>;
 }
 
 export interface PurgeOptions {
@@ -44,6 +59,12 @@ export interface PurgeReport {
   readonly erased: number;
   /** Photos privées effacées. */
   readonly objectsDeleted: number;
+  /**
+   * Événements de paiement en échec et sans compte, plus vieux que
+   * [ORPHAN_PAYMENT_EVENT_RETENTION_DAYS] : effacés (comptés à blanc). La
+   * passe quotidienne seule s'en charge, jamais un effacement ciblé.
+   */
+  readonly paymentEventsErased: number;
   /** Un message par compte qui n'a pas pu être effacé. */
   readonly failures: readonly string[];
   /** `--compte` visait un compte introuvable ou encore actif. */
@@ -66,6 +87,9 @@ export interface PurgeReport {
  *  2. la base : le compte et, par cascade, tout ce qui s'y rattache, plus la
  *     trace des webhooks de paiement qui le nomment.
  *
+ * La passe quotidienne efface aussi les événements de paiement en échec qui
+ * ne nomment AUCUN compte, passé [ORPHAN_PAYMENT_EVENT_RETENTION_DAYS].
+ *
  * Seul un compte DELETED est effacé, jamais un compte actif ou suspendu, y
  * compris par `--compte`. Le journal d'audit n'est PAS effacé : il perd le
  * lien vers le compte (`userId` à nul) et suit sa propre durée de
@@ -82,12 +106,21 @@ export async function purgeDeletedAccounts(
       eligible: 0,
       erased: 0,
       objectsDeleted: 0,
+      paymentEventsErased: 0,
       failures: [],
       refused: `Le compte ${options.accountId ?? ''} n’est pas un compte supprimé : rien n’est effacé.`,
     };
   }
+  const paymentEventsErased = await orphanPaymentEvents(ledger, options);
   if (options.dryRun) {
-    return { eligible: accounts.length, erased: 0, objectsDeleted: 0, failures: [], refused: null };
+    return {
+      eligible: accounts.length,
+      erased: 0,
+      objectsDeleted: 0,
+      paymentEventsErased,
+      failures: [],
+      refused: null,
+    };
   }
 
   let erased = 0;
@@ -103,7 +136,30 @@ export async function purgeDeletedAccounts(
       failures.push(`${id} : ${(error as Error).message}`);
     }
   }
-  return { eligible: accounts.length, erased, objectsDeleted, failures, refused: null };
+  return {
+    eligible: accounts.length,
+    erased,
+    objectsDeleted,
+    paymentEventsErased,
+    failures,
+    refused: null,
+  };
+}
+
+/** La passe quotidienne seule : un effacement ciblé ne touche qu'à son compte. */
+function orphanPaymentEvents(
+  ledger: DeletedAccountsLedger,
+  options: PurgeOptions,
+): Promise<number> {
+  if (options.accountId !== undefined) {
+    return Promise.resolve(0);
+  }
+  const before = new Date(
+    options.now.getTime() - ORPHAN_PAYMENT_EVENT_RETENTION_DAYS * 24 * 3_600_000,
+  );
+  return options.dryRun
+    ? ledger.countOrphanPaymentEventsBefore(before)
+    : ledger.eraseOrphanPaymentEventsBefore(before);
 }
 
 /**

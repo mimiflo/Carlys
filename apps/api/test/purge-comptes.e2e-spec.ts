@@ -3,6 +3,7 @@ process.env.LOG_LEVEL = 'silent';
 process.env.DATABASE_URL ??= 'postgresql://carlys:carlys@localhost:5432/carlys_test';
 process.env.REDIS_URL ??= 'redis://localhost:6379';
 process.env.JWT_ACCESS_SECRET ??= 'secret-e2e-uniquement-32-caracteres-minimum';
+process.env.STRIPE_SECRET_KEY ??= 'sk_test_e2e_0123456789abcdef';
 process.env.STRIPE_WEBHOOK_SECRET ??= 'whsec_e2e_stripe_0123456789';
 
 import { type ApiSuccessEnvelope, type AuthResult } from '@carlys/api-contracts';
@@ -15,10 +16,12 @@ import request from 'supertest';
 import { type App } from 'supertest/types';
 import { AppModule } from '../src/app/app.module';
 import { configureApp } from '../src/app/configure-app';
+import { runPurge } from '../src/cli/deleted-accounts-purge';
 import { AuditService } from '../src/modules/audit/audit.service';
 import { purgeDeletedAccounts } from '../src/modules/users/application/deleted-accounts-purge';
 import { PrismaDeletedAccountsLedger } from '../src/modules/users/infrastructure/deleted-accounts-ledger';
 import { InMemoryObjectStore } from './support/in-memory-object-store';
+import { type StripeSimule, simulerStripe } from './support/stripe-frontier';
 import { reinitialiserDebit } from './support/throttle';
 
 const PASSWORD = 'MotDePasseSolide42';
@@ -34,6 +37,7 @@ describe('Purge des comptes supprimés (e2e)', () => {
   let prisma: PrismaClient;
   const emails: string[] = [];
   const idsCrees: string[] = [];
+  let stripe: StripeSimule;
 
   const data = <T>(body: unknown): T => (body as ApiSuccessEnvelope<T>).data;
   const server = () => request(app.getHttpServer());
@@ -137,7 +141,7 @@ describe('Purge des comptes supprimés (e2e)', () => {
     await as(u.tokens.accessToken)
       .delete('/api/v1/users/me')
       .send({ password: PASSWORD })
-      .expect(204);
+      .expect(200);
     await prisma.user.update({
       where: { id: u.user.id },
       data: { deletedAt: new Date(Date.now() - joursDepuis * 86_400_000) },
@@ -150,11 +154,16 @@ describe('Purge des comptes supprimés (e2e)', () => {
     app = moduleFixture.createNestApplication<NestExpressApplication>();
     configureApp(app as NestExpressApplication);
     await app.init();
+    stripe = simulerStripe();
   });
 
-  beforeEach(reinitialiserDebit);
+  beforeEach(async () => {
+    stripe.reinitialiser();
+    await reinitialiserDebit();
+  });
 
   afterAll(async () => {
+    jest.restoreAllMocks();
     await app.close();
     await prisma.user.deleteMany({ where: { id: { in: idsCrees } } });
     await prisma.$disconnect();
@@ -273,8 +282,10 @@ describe('Purge des comptes supprimés (e2e)', () => {
   });
 
   it('webhooks de paiement : rien ne survit à la purge, et un renouvellement ultérieur est acquitté sans être gardé', async () => {
-    // Supprimer son compte ne résilie pas l'abonnement chez le fournisseur :
-    // les événements continuent d'arriver, avant comme après la purge.
+    // Des événements peuvent encore arriver, avant comme après la purge :
+    // un magasin d'applications ne se résilie jamais depuis le serveur, et
+    // Stripe émet encore après la résiliation. Stripe est simulé à sa
+    // frontière réseau (`support/stripe-frontier.ts`).
     const u = await register('paiement');
     const userId = u.user.id;
     const prix = `price_purge_${randomUUID()}`;
@@ -339,9 +350,13 @@ describe('Purge des comptes supprimés (e2e)', () => {
       );
 
       await supprimer(u, 1);
-      // Supprimé, pas encore effacé : aucun droit ne se rouvre, rien n'est gardé.
+      const resiliation = `DELETE https://api.stripe.com/v1/subscriptions/${abonnementStripe}`;
+      expect(stripe.appels).toEqual([resiliation]);
+      // Supprimé, pas encore effacé : aucun droit ne se rouvre, rien n'est
+      // gardé, et un abonnement qui se dit encore actif est résilié.
       await webhook('customer.subscription.updated', { status: 'active' }).expect(200);
       expect(await gardes()).toHaveLength(2);
+      expect(stripe.appels).toEqual([resiliation, resiliation]);
 
       const purge = await purgeDeletedAccounts(
         new PrismaDeletedAccountsLedger(prisma),
@@ -353,12 +368,153 @@ describe('Purge des comptes supprimés (e2e)', () => {
 
       // Le renouvellement du mois suivant, compte effacé : 200 et non 503 en
       // boucle, aucun abonnement recréé, aucune charge utile gardée.
+      // Et Stripe n'est plus appelé : la base ne connaît plus ce compte.
       await webhook('customer.subscription.updated', { status: 'active' }).expect(200);
       expect(await gardes()).toEqual([]);
       expect(await prisma.subscription.count({ where: { userId } })).toBe(0);
+      expect(stripe.appels).toHaveLength(2);
     } finally {
       await prisma.subscriptionEvent.deleteMany({ where: { externalEventId: { in: evenements } } });
       await prisma.subscriptionProduct.deleteMany({ where: { externalProductId: prix } });
+    }
+  });
+
+  it('--compte-actif : la demande écrite passe par le chemin de la route, est auditée, puis efface', async () => {
+    const debut = new Date();
+    const u = await register('ecrit');
+    const ami = await register('ami-ecrit');
+    await as(u.tokens.accessToken)
+      .post('/api/v1/community/requests')
+      .send({ email: ami.email })
+      .expect(202);
+    const recues = data<Array<{ id: string }>>(
+      (await as(ami.tokens.accessToken).get('/api/v1/community/requests').expect(200)).body,
+    );
+    await as(ami.tokens.accessToken)
+      .post(`/api/v1/community/requests/${recues[0]?.id}/accept`)
+      .expect(204);
+    // Un défi de son ami, dont elle est la seule adversaire : c'est le
+    // chemin de la route qui l'annule — la purge, elle, ne ferait qu'en
+    // retirer sa ligne.
+    const defi = randomUUID();
+    await as(ami.tokens.accessToken)
+      .post('/api/v1/community/friend-challenges')
+      .send({
+        id: defi,
+        title: 'Duel',
+        metric: 'WORKOUTS',
+        durationDays: 7,
+        invitedUserIds: [u.user.id],
+      })
+      .expect(201);
+    await as(u.tokens.accessToken)
+      .post(`/api/v1/community/friend-challenges/${defi}/accept`)
+      .expect(201);
+    // Un autre compte, supprimé depuis 31 jours : la passe QUOTIDIENNE
+    // l'effacerait. La demande écrite ne vise que le sien.
+    const temoin = await register('temoin-ecrit');
+    await supprimer(temoin, 31);
+    const store = new InMemoryObjectStore();
+    await store.put(`meal-photos/${u.user.id}/photo.jpg`, Buffer.from('x'), 'image/jpeg');
+    const sorties = { out: '', err: '' };
+    // LA commande (`runPurge`, celle de `main`), l'application de la suite
+    // tenant lieu de celle que `main` démarre.
+    const demande = (confirmEmail: string, dryRun: boolean): Promise<number> =>
+      runPurge(
+        { dryRun, delayDays: 30, activeAccount: { id: u.user.id, confirmEmail } },
+        {
+          ledger: new PrismaDeletedAccountsLedger(prisma),
+          store,
+          io: {
+            out: (texte) => (sorties.out += texte),
+            err: (texte) => (sorties.err += texte),
+          },
+          withApp: (work) => work(app),
+        },
+      );
+    const actif = async () =>
+      (await prisma.user.findUnique({ where: { id: u.user.id } }))?.deletedAt === null;
+
+    // Une adresse qui ne correspond pas : refus, rien n'est touché.
+    expect(await demande(ami.email, false)).toBe(2);
+    expect(sorties.err).toContain('ne correspond pas');
+    expect(await actif()).toBe(true);
+
+    // À blanc : ce qui serait fait, rien de fait.
+    expect(await demande(u.email.toUpperCase(), true)).toBe(0);
+    expect(sorties.out).toContain('RIEN n’a été supprimé');
+    expect(await actif()).toBe(true);
+
+    expect(await demande(u.email, false)).toBe(0);
+
+    // Supprimé par le chemin de la route (le défi resté sans adversaire est
+    // annulé), puis effacé pour de bon, photos comprises.
+    expect(await prisma.user.count({ where: { id: u.user.id } })).toBe(0);
+    expect(sorties.out).toContain(`compte ${u.user.id}, effacement immédiat`);
+    expect(sorties.out).toContain('comptes effacés    : 1');
+    expect(await prisma.user.count({ where: { id: temoin.user.id } })).toBe(1);
+    expect((await prisma.friendChallenge.findUniqueOrThrow({ where: { id: defi } })).status).toBe(
+      'CANCELLED',
+    );
+    expect(store.keysUnder(`meal-photos/${u.user.id}/`)).toEqual([]);
+    expect(sorties.out).toContain(`Compte ${u.user.id} supprimé`);
+    // La ligne d'audit est posée (l'outil a drainé l'audit avant d'effacer),
+    // et survit à l'effacement sans le lien.
+    await app.get(AuditService).flush();
+    const audit = await prisma.auditLog.findMany({
+      where: { action: 'account.deleted_by_operator', createdAt: { gte: debut } },
+    });
+    expect(audit).toHaveLength(1);
+    expect(audit[0]).toMatchObject({ actorType: 'SYSTEM', userId: null });
+    expect(audit[0]?.requestId).toMatch(/^cli-/);
+
+    // Un compte déjà effacé : plus rien à supprimer, refus.
+    expect(await demande(u.email, false)).toBe(2);
+  });
+
+  it('les événements de paiement en échec SANS compte partent après 90 jours, avec la passe quotidienne', async () => {
+    const jours = (n: number) => new Date(Date.now() - n * 86_400_000);
+    const evenement = (receivedAt: Date, userId: string | null, processedAt: Date | null) =>
+      prisma.subscriptionEvent.create({
+        data: {
+          provider: PaymentProvider.REVENUECAT,
+          externalEventId: `evt_orphelin_${randomUUID()}`,
+          eventType: 'INITIAL_PURCHASE',
+          payload: { event: { app_user_id: '$RCAnonymousID:abc' } },
+          receivedAt,
+          userId,
+          processedAt,
+          processingError: processedAt === null ? 'app_user_id RevenueCat invalide' : null,
+        },
+      });
+    const vivant = await register('orphelins');
+    const vieux = await evenement(jours(91), null, null);
+    const recent = await evenement(jours(89), null, null);
+    const nomme = await evenement(jours(120), vivant.user.id, null);
+    const applique = await evenement(jours(120), null, jours(120));
+    const ids = [vieux, recent, nomme, applique].map((ligne) => ligne.id);
+    try {
+      const ledger = new PrismaDeletedAccountsLedger(prisma);
+      const store = new InMemoryObjectStore();
+      const simulation = await purgeDeletedAccounts(ledger, store, {
+        now: new Date(),
+        delayDays: 30,
+        dryRun: true,
+      });
+      expect(simulation.paymentEventsErased).toBeGreaterThanOrEqual(1);
+      expect(await prisma.subscriptionEvent.count({ where: { id: { in: ids } } })).toBe(4);
+
+      await purgeDeletedAccounts(ledger, store, { now: new Date(), delayDays: 30, dryRun: false });
+
+      const restes = await prisma.subscriptionEvent.findMany({
+        where: { id: { in: ids } },
+        select: { id: true },
+      });
+      expect(restes.map((ligne) => ligne.id).sort()).toEqual(
+        [recent.id, nomme.id, applique.id].sort(),
+      );
+    } finally {
+      await prisma.subscriptionEvent.deleteMany({ where: { id: { in: ids } } });
     }
   });
 });

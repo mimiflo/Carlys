@@ -111,7 +111,8 @@ export class FriendChallengesRepository {
    * absents de l'écran.
    *
    * Un défi échu mais pas encore réglé tombe dans les terminés : c'est la
-   * lecture qui le règle (`settleIfDue`).
+   * lecture qui le règle (`settleIfDue`). Un défi ANNULÉ aussi, même avant
+   * sa date de fin : il est terminé.
    */
   async listMine(
     userId: string,
@@ -121,15 +122,19 @@ export class FriendChallengesRepository {
     const membre: Prisma.FriendChallengeWhereInput = {
       members: { some: { userId, status: { in: ['INVITED', 'ACCEPTED'] } } },
     };
+    const enCoursSeulement: Prisma.FriendChallengeWhereInput = {
+      status: 'OPEN',
+      endsAt: { gte: now },
+    };
     const [enCours, termines] = await Promise.all([
       this.prisma.friendChallenge.findMany({
-        where: { ...membre, endsAt: { gte: now } },
+        where: { ...membre, ...enCoursSeulement },
         include: AVEC_MEMBRES,
         orderBy: [{ endsAt: 'asc' }, { id: 'asc' }],
         take: limits.ongoing,
       }),
       this.prisma.friendChallenge.findMany({
-        where: { ...membre, endsAt: { lt: now } },
+        where: { ...membre, NOT: enCoursSeulement },
         include: AVEC_MEMBRES,
         orderBy: [{ endsAt: 'desc' }, { id: 'desc' }],
         take: limits.finished,
@@ -215,6 +220,73 @@ export class FriendChallengesRepository {
   }
 
   /**
+   * Suppression du compte, DANS sa transaction : la personne quitte tous les
+   * défis entre amis, tout de suite.
+   *
+   *  - Les défis qu'elle a LANCÉS partent entiers. Leur titre et leur mot
+   *    sont les siens, et la purge les emporterait de toute façon avec elle
+   *    (cascade du créateur) : les garder trente jours laisserait aux autres
+   *    un défi sans créateur, au nom vide. Un signalement qui en visait un
+   *    garde ses clichés (`SetNull`).
+   *  - Dans les défis des autres, sa ligne de membre part : elle n'est plus
+   *    au classement. Un rang déjà FIGÉ (défi clos) ne bouge pas.
+   *  - Un défi en cours où plus personne n'attend ni ne joue face au
+   *    créateur est ANNULÉ : un défi contre personne n'en est pas un — la
+   *    création le refuse déjà. `closedAt` est posé avec : la clôture
+   *    paresseuse, conditionnée à sa nullité, ne le rouvrira pas en `CLOSED`.
+   *
+   * Un défi ÉCHU doit donc être RÉGLÉ avant l'appel, avec elle
+   * (`CommunityWithdrawalService`, via [dueUnsettledOf] et [settle]) : son
+   * `closedAt` posé, il n'est ni annulé ici ni réglé plus tard sans elle.
+   */
+  async withdrawAccount(userId: string, now: Date, tx: Prisma.TransactionClient): Promise<void> {
+    await tx.friendChallenge.deleteMany({ where: { creatorId: userId } });
+    const quittes = await tx.friendChallengeMember.findMany({
+      where: { userId },
+      select: { challengeId: true },
+    });
+    if (quittes.length === 0) {
+      return;
+    }
+    await tx.friendChallengeMember.deleteMany({ where: { userId } });
+    const maintenant = Prisma.sql`(${now}::timestamptz AT TIME ZONE 'UTC')`;
+    await tx.$executeRaw`
+      UPDATE "FriendChallenge" c
+      SET "status" = 'CANCELLED', "closedAt" = ${maintenant}, "updatedAt" = ${maintenant}
+      WHERE c."id" = ANY(${quittes.map((ligne) => ligne.challengeId)}::uuid[])
+        AND c."status" = 'OPEN'
+        AND c."closedAt" IS NULL
+        AND NOT EXISTS (
+          SELECT 1 FROM "FriendChallengeMember" m
+          WHERE m."challengeId" = c."id"
+            AND m."userId" <> c."creatorId"
+            AND m."status" IN ('INVITED', 'ACCEPTED')
+        )
+    `;
+  }
+
+  /**
+   * Les défis ÉCHUS pas encore réglés dont `userId` est membre, hors ceux
+   * qu'il a lancés : ce qu'une suppression de compte doit régler avant d'en
+   * retirer sa ligne.
+   */
+  dueUnsettledOf(
+    userId: string,
+    now: Date,
+    tx: Prisma.TransactionClient,
+  ): Promise<FriendChallengeWithMembers[]> {
+    return tx.friendChallenge.findMany({
+      where: {
+        members: { some: { userId } },
+        creatorId: { not: userId },
+        closedAt: null,
+        endsAt: { lt: now },
+      },
+      include: AVEC_MEMBRES,
+    });
+  }
+
+  /**
    * RÈGLE un défi échu : fige les rangs, ferme le défi. Idempotent.
    *
    * L'écriture est conditionnée à `closedAt: null`, et c'est toute
@@ -222,22 +294,30 @@ export class FriendChallengesRepository {
    * le règlement, une seule le gagne. Sans cron — comme le jeu du mois, qui
    * se matérialise à la première lecture — mais avec une écriture, parce
    * qu'un classement doit rester stable même si plus personne ne regarde.
+   *
+   * `tx` : dans la transaction de l'appelant (suppression de compte) ;
+   * sinon, dans la sienne.
    */
-  async settle(challengeId: string, ranks: Array<{ userId: string; rank: number }>): Promise<void> {
-    await this.prisma.$transaction(async (tx) => {
-      const ferme = await tx.friendChallenge.updateMany({
-        where: { id: challengeId, closedAt: null },
-        data: { status: 'CLOSED', closedAt: new Date() },
-      });
-      if (ferme.count === 0) {
-        return; // Déjà réglé par une lecture concurrente.
-      }
-      for (const { userId, rank } of ranks) {
-        await tx.friendChallengeMember.updateMany({
-          where: { challengeId, userId },
-          data: { finalRank: rank },
-        });
-      }
+  async settle(
+    challengeId: string,
+    ranks: Array<{ userId: string; rank: number }>,
+    tx?: Prisma.TransactionClient,
+  ): Promise<void> {
+    if (tx === undefined) {
+      return this.prisma.$transaction((client) => this.settle(challengeId, ranks, client));
+    }
+    const ferme = await tx.friendChallenge.updateMany({
+      where: { id: challengeId, closedAt: null },
+      data: { status: 'CLOSED', closedAt: new Date() },
     });
+    if (ferme.count === 0) {
+      return; // Déjà réglé par une lecture concurrente.
+    }
+    for (const { userId, rank } of ranks) {
+      await tx.friendChallengeMember.updateMany({
+        where: { challengeId, userId },
+        data: { finalRank: rank },
+      });
+    }
   }
 }

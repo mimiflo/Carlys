@@ -2,6 +2,7 @@ import { ServiceUnavailableException, UnauthorizedException } from '@nestjs/comm
 import { createHmac } from 'node:crypto';
 import { type PinoLogger } from 'nestjs-pino';
 import { type AppConfigService } from '../../../config/app-config.service';
+import { type AccountBillingService } from '../../subscriptions/application/account-billing.service';
 import { type EntitlementsService } from '../../subscriptions/application/entitlements.service';
 import { type SubscriptionsRepository } from '../../subscriptions/infrastructure/subscriptions.repository';
 import { type UsersRepository } from '../../users/infrastructure/users.repository';
@@ -19,8 +20,13 @@ interface Stubs {
     markEventFailed: jest.Mock;
   };
   entitlements: { syncFromSubscription: jest.Mock };
-  /** `findActiveById` : le compte nommé existe-t-il encore, non supprimé ? */
-  users: { findActiveById: jest.Mock };
+  /**
+   * `findActiveById` : le compte nommé existe-t-il encore, non supprimé ?
+   * `isDeleted` : sinon, sa ligne est-elle celle d'un compte SUPPRIMÉ (et
+   * non d'un compte que cette base n'a jamais connu, ou déjà effacé) ?
+   */
+  users: { findActiveById: jest.Mock; isDeleted: jest.Mock };
+  billing: { stopForAbsentAccount: jest.Mock };
 }
 
 function buildStubs(): Stubs {
@@ -41,7 +47,11 @@ function buildStubs(): Stubs {
       markEventFailed: jest.fn().mockResolvedValue(undefined),
     },
     entitlements: { syncFromSubscription: jest.fn().mockResolvedValue(undefined) },
-    users: { findActiveById: jest.fn().mockResolvedValue({ id: USER_ID }) },
+    users: {
+      findActiveById: jest.fn().mockResolvedValue({ id: USER_ID }),
+      isDeleted: jest.fn().mockResolvedValue(false),
+    },
+    billing: { stopForAbsentAccount: jest.fn().mockResolvedValue(undefined) },
   };
 }
 
@@ -62,6 +72,7 @@ function buildService(
     stubs.repository as unknown as SubscriptionsRepository,
     stubs.entitlements as unknown as EntitlementsService,
     stubs.users as unknown as UsersRepository,
+    stubs.billing as unknown as AccountBillingService,
     config as unknown as AppConfigService,
     logger as unknown as PinoLogger,
   );
@@ -142,9 +153,9 @@ describe('WebhooksService', () => {
     );
   });
 
-  it('compte supprimé ou déjà effacé : acquitté, ni appliqué ni GARDÉ', async () => {
-    // Supprimer son compte ne résilie pas l'abonnement : les renouvellements
-    // arrivent encore. Après la purge, la projection recréait l'abonnement
+  it('compte supprimé, effacé ou inconnu : acquitté, ni appliqué ni GARDÉ', async () => {
+    // Un abonnement de magasin ne se résilie pas depuis le serveur : ses
+    // renouvellements arrivent encore. Après la purge, la projection recréait l'abonnement
     // d'un compte disparu (clé étrangère, 503, réémission en boucle), et la
     // charge utile brute restait en base pour toujours.
     const stubs = buildStubs();
@@ -158,6 +169,58 @@ describe('WebhooksService', () => {
     expect(stubs.users.findActiveById).toHaveBeenCalledWith(USER_ID);
     expect(stubs.repository.recordEvent).not.toHaveBeenCalled();
     expect(stubs.repository.upsertSubscription).not.toHaveBeenCalled();
+  });
+
+  it('compte supprimé : un abonnement Stripe qui prélève encore est résilié à réception', async () => {
+    // Paiement conclu juste avant la suppression, webhook arrivé juste après :
+    // la suppression n'en savait rien.
+    const stubs = buildStubs();
+    stubs.users.findActiveById.mockResolvedValue(null);
+    stubs.users.isDeleted.mockResolvedValue(true);
+    const service = buildService(stubs);
+    const cree = stripeBody();
+    const resilie = Buffer.from(
+      JSON.stringify({
+        ...JSON.parse(cree.toString('utf8')),
+        type: 'customer.subscription.deleted',
+      }),
+    );
+
+    await service.handleStripe(cree, signedHeader(cree));
+    await service.handleStripe(resilie, signedHeader(resilie));
+
+    expect(stubs.billing.stopForAbsentAccount.mock.calls).toEqual([
+      ['sub_ext_1', 'active'],
+      ['sub_ext_1', 'canceled'],
+    ]);
+  });
+
+  it('compte que cette base n’a jamais connu : acquitté, et RIEN n’est résilié chez Stripe', async () => {
+    // Base restaurée depuis une sauvegarde plus ancienne que l'abonné, ou
+    // compte Stripe de test partagé avec un autre environnement : ce n'est
+    // pas un compte supprimé, et la résiliation est irréversible.
+    const stubs = buildStubs();
+    stubs.users.findActiveById.mockResolvedValue(null);
+    const service = buildService(stubs);
+    const body = stripeBody();
+
+    await expect(service.handleStripe(body, signedHeader(body))).resolves.toEqual({
+      received: true,
+    });
+    expect(stubs.billing.stopForAbsentAccount).not.toHaveBeenCalled();
+    expect(stubs.repository.recordEvent).not.toHaveBeenCalled();
+  });
+
+  it('compte supprimé, Stripe n’a pas résilié : pas de 2xx, Stripe réémettra', async () => {
+    const stubs = buildStubs();
+    stubs.users.findActiveById.mockResolvedValue(null);
+    stubs.users.isDeleted.mockResolvedValue(true);
+    stubs.billing.stopForAbsentAccount.mockRejectedValue(new Error('HTTP 500'));
+    const service = buildService(stubs);
+    const body = stripeBody();
+
+    await expect(service.handleStripe(body, signedHeader(body))).rejects.toThrow();
+    expect(stubs.repository.recordEvent).not.toHaveBeenCalled();
   });
 
   it('événement hors abonnement ou type non suivi : acquitté sans être gardé', async () => {
