@@ -3,17 +3,14 @@ import {
   type CoachConversationSummary,
   type CoachReply,
 } from '@carlys/api-contracts';
-import {
-  ConflictException,
-  HttpException,
-  HttpStatus,
-  Inject,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { ConflictException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { randomUUID } from 'node:crypto';
 import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
-import { COACH_MODEL_PORT, type CoachModelPort } from '../domain/coach-model.port';
+import {
+  COACH_MODEL_PORT,
+  type CoachModelPort,
+  CoachProviderUnavailableException,
+} from '../domain/coach-model.port';
 import {
   type ConversationWithMessages,
   CoachRepository,
@@ -23,19 +20,9 @@ import { CoachAvailability } from './coach.availability';
 import { presentMessage } from './coach.presenter';
 import { COACH_TOOLS, CoachTools } from './coach.tools';
 import { COACH_SYSTEM_PROMPT, mentorVoiceBriefing } from './coach.prompt';
-import { CoachQuota } from './coach.quota';
+import { CoachQuota, CoachQuotaExceededError } from './coach.quota';
 import { HISTORY_LIMIT, buildHistory, extractExerciseIds, titleFrom } from './coach.turn';
 import { validateProposal } from './proposal.validator';
-
-/**
- * Plafond quotidien atteint. `HttpException` plutôt qu'une erreur maison : le
- * filtre global la traduit en 429 / RATE_LIMITED sans code d'adaptation.
- */
-export class CoachQuotaExceededError extends HttpException {
-  constructor() {
-    super('Tu as atteint ta limite de messages pour aujourd’hui.', HttpStatus.TOO_MANY_REQUESTS);
-  }
-}
 
 const CONVERSATIONS_LIMIT = 30;
 /** Même réponse qu'un fil inconnu : ne pas révéler l'existence d'autrui. */
@@ -145,9 +132,10 @@ export class CoachService {
       .voiceOf(userId)
       .catch(() => ({ carlysProfile: null, mentorStyle: null }));
 
-    // Le compteur passe AVANT l'appel : un échec du fournisseur ne doit pas
-    // offrir un tour gratuit à qui insiste.
-    const remaining = await this.quota.consume(userId);
+    // Le compteur passe AVANT l'appel : deux envois simultanés ne franchissent
+    // jamais le plafond. `now` est gardé pour rendre le message au même jour.
+    const now = new Date();
+    const remaining = await this.quota.consume(userId, now);
     if (remaining === null) {
       throw new CoachQuotaExceededError();
     }
@@ -164,15 +152,27 @@ export class CoachService {
       conversation.messages.filter((message) => message.id !== messageId),
       content,
     );
-    const output = await this.model.reply({
-      system: COACH_SYSTEM_PROMPT,
-      // Après la césure de cache : le préfixe partagé reste identique pour
-      // tous les utilisateurs, briefing ou pas.
-      systemPerUser: mentorVoiceBriefing(voice),
-      tools: COACH_TOOLS,
-      history,
-      runTools: (calls) => this.tools.run(userId, calls),
-    });
+    const output = await this.model
+      .reply({
+        system: COACH_SYSTEM_PROMPT,
+        // Après la césure de cache : le préfixe partagé reste identique pour
+        // tous les utilisateurs, briefing ou pas.
+        systemPerUser: mentorVoiceBriefing(voice),
+        tools: COACH_TOOLS,
+        history,
+        runTools: (calls) => this.tools.run(userId, calls),
+      })
+      .catch((error: unknown) => {
+        if (error instanceof CoachProviderUnavailableException) {
+          // « Tour de coach » ne sera pas écrit : les jetons déjà partis le sont ici.
+          this.logger.warn(
+            { userId, conversationId, ...error.usage, reason: error.message },
+            'Tour de coach interrompu',
+          );
+        }
+        // Fournisseur tombé sans rien consommer : le message est rendu.
+        return this.quota.refundIfUnavailable(userId, now, error);
+      });
 
     const proposal = await this.acceptableProposal(output.proposal);
 

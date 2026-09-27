@@ -1,34 +1,39 @@
 import Anthropic from '@anthropic-ai/sdk';
-import { Injectable, ServiceUnavailableException } from '@nestjs/common';
-import { AppConfigService } from '../../../config/app-config.service';
+import { ServiceUnavailableException } from '@nestjs/common';
+import { type AppConfigService } from '../../../config/app-config.service';
 import {
+  COACH_GAVE_UP_TEXT,
+  COACH_MAX_OUTPUT_TOKENS,
+  COACH_MAX_TOOL_ROUNDS,
+  COACH_REFUSAL_TEXT,
+  COACH_TURN_DEADLINE_MS,
+  CoachProviderUnavailableException,
   type CoachModelPort,
   type CoachToolCall,
   type CoachTurnInput,
   type CoachTurnOutput,
+  type CoachTurnUsage,
 } from '../domain/coach-model.port';
 import { PROPOSE_SESSION_TOOL } from '../application/coach.tools';
 
 /**
- * Seul fichier du dépôt qui connaisse le fournisseur.
+ * Client Anthropic : choisi quand `COACH_API_BASE_URL` est absente (voir
+ * coach.module.ts). Seul fichier du dépôt qui importe le SDK Anthropic.
  *
  * Le point de césure du cache est posé sur le **dernier bloc système** : tout
  * ce qui précède — définitions d'outils puis prompt — est stable et se relit
  * à un dixième du prix. Rien de volatile ne doit remonter dans ce préfixe.
  */
-@Injectable()
 export class AnthropicCoachClient implements CoachModelPort {
   /** Créé paresseusement : sans clé, le module reste chargeable. */
   private client: Anthropic | null = null;
 
   constructor(private readonly config: AppConfigService) {}
 
-  /** Tours d'outils autorisés avant d'arrêter les frais. */
-  private static readonly maxToolRounds = 6;
-  private static readonly maxTokens = 2048;
-
   async reply(input: CoachTurnInput): Promise<CoachTurnOutput> {
     const client = this.ensureClient();
+    // Une seule échéance pour tout le tour : le SDK, seul, attendrait 10 min.
+    const signal = AbortSignal.timeout(COACH_TURN_DEADLINE_MS);
 
     const messages: Anthropic.MessageParam[] = input.history.map((turn) => ({
       role: turn.role,
@@ -51,35 +56,32 @@ export class AnthropicCoachClient implements CoachModelPort {
     }
 
     let proposal: Record<string, unknown> | null = null;
-    let inputTokens = 0;
-    let outputTokens = 0;
-    let cacheReadTokens = 0;
+    const usage = { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0 };
 
-    for (let round = 0; round < AnthropicCoachClient.maxToolRounds; round++) {
-      const response = await client.messages.create({
-        model: this.config.coachModel,
-        max_tokens: AnthropicCoachClient.maxTokens,
-        system,
-        tools: input.tools.map((tool) => ({
-          name: tool.name,
-          description: tool.description,
-          input_schema: tool.inputSchema as Anthropic.Tool.InputSchema,
-        })),
-        messages,
-      });
+    for (let round = 0; round < COACH_MAX_TOOL_ROUNDS; round++) {
+      const response = await client.messages
+        .create(
+          {
+            model: this.config.coachProvider.model ?? 'claude-opus-5',
+            max_tokens: COACH_MAX_OUTPUT_TOKENS,
+            system,
+            tools: input.tools.map((tool) => ({
+              name: tool.name,
+              description: tool.description,
+              input_schema: tool.inputSchema as Anthropic.Tool.InputSchema,
+            })),
+            messages,
+          },
+          { signal },
+        )
+        .catch((error: unknown) => unavailable(error, usage));
 
-      inputTokens += response.usage.input_tokens;
-      outputTokens += response.usage.output_tokens;
-      cacheReadTokens += response.usage.cache_read_input_tokens ?? 0;
+      usage.inputTokens += response.usage.input_tokens;
+      usage.outputTokens += response.usage.output_tokens;
+      usage.cacheReadTokens += response.usage.cache_read_input_tokens ?? 0;
 
       if (response.stop_reason === 'refusal') {
-        // Un refus est un CONTENU, pas une panne : l'utilisateur doit le lire.
-        return {
-          text: 'Je ne peux pas répondre à cette demande.',
-          proposal: null,
-          usage: { inputTokens, outputTokens, cacheReadTokens },
-          refused: true,
-        };
+        return { text: COACH_REFUSAL_TEXT, proposal: null, usage, refused: true };
       }
 
       const calls: CoachToolCall[] = [];
@@ -100,12 +102,7 @@ export class AnthropicCoachClient implements CoachModelPort {
       }
 
       if (calls.length === 0 || response.stop_reason !== 'tool_use') {
-        return {
-          text: textOf(response),
-          proposal,
-          usage: { inputTokens, outputTokens, cacheReadTokens },
-          refused: false,
-        };
+        return { text: textOf(response), proposal, usage, refused: false };
       }
 
       const results = await input.runTools(
@@ -134,13 +131,7 @@ export class AnthropicCoachClient implements CoachModelPort {
       messages.push({ role: 'user', content: blocks });
     }
 
-    // Plafond de tours atteint : on rend ce qu'on a plutôt que de boucler.
-    return {
-      text: 'Je n’ai pas réussi à aboutir. Reformule ta demande ?',
-      proposal,
-      usage: { inputTokens, outputTokens, cacheReadTokens },
-      refused: false,
-    };
+    return { text: COACH_GAVE_UP_TEXT, proposal, usage, refused: false };
   }
 
   private ensureClient(): Anthropic {
@@ -151,6 +142,23 @@ export class AnthropicCoachClient implements CoachModelPort {
     this.client ??= new Anthropic({ apiKey });
     return this.client;
   }
+}
+
+/**
+ * Erreur du SDK (réseau, échéance, statut du fournisseur) : 503, que le
+ * mobile sait afficher, au lieu du 500 d'une exception inconnue, avec les
+ * jetons déjà consommés. Le message ne sert qu'aux JOURNAUX (le filtre masque
+ * tout 5xx) : il porte le statut, jamais le corps de la réponse ni la clé.
+ * Toute autre erreur est un bogue et repart telle quelle.
+ */
+function unavailable(error: unknown, usage: CoachTurnUsage): never {
+  if (error instanceof Anthropic.APIError) {
+    throw new CoachProviderUnavailableException(
+      `Coach : Anthropic en échec (${error.status ?? error.name}).`,
+      usage,
+    );
+  }
+  throw error;
 }
 
 function textOf(response: Anthropic.Message): string {

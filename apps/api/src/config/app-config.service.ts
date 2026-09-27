@@ -212,8 +212,12 @@ export class AppConfigService {
     return this.config.get('ANTHROPIC_API_KEY', { infer: true });
   }
 
-  get coachModel(): string {
-    return this.config.get('COACH_MODEL', { infer: true });
+  get coachProvider(): { baseUrl?: string; apiKey?: string; model?: string } {
+    return {
+      baseUrl: this.config.get('COACH_API_BASE_URL', { infer: true }),
+      apiKey: this.config.get('COACH_API_KEY', { infer: true }),
+      model: this.config.get('COACH_MODEL', { infer: true }),
+    };
   }
 
   get coachDailyMessageLimit(): number {

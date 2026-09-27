@@ -57,9 +57,10 @@ const FAT_RATIO = 0.25;
  * sûrement pas parce qu'une multiplication est tombée là.
  *
  * Le plancher s'applique AVANT les macros, sinon les lipides et les glucides
- * se calculeraient sur une cible que l'écran n'affiche pas.
+ * se calculeraient sur une cible que l'écran n'affiche pas. Le prompt du coach
+ * cite ces mêmes valeurs (coach.prompt.ts) : les changer ici les change là.
  */
-const TARGET_KCAL_FLOOR: Record<BiologicalSex, number> = {
+export const TARGET_KCAL_FLOOR: Record<BiologicalSex, number> = {
   FEMALE: 1200,
   MALE: 1500,
 };

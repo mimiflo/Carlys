@@ -168,13 +168,23 @@ export const envSchema = z
     APPLE_OAUTH_AUDIENCES: z.string().min(1).optional(),
 
     // ── Coach IA ────────────────────────────────────────────────────────────
-    /**
-     * Clé du fournisseur de modèle. **Optionnelle** : sans elle, le module se
-     * déclare indisponible (503) au lieu d'empêcher le démarrage — l'API doit
-     * tourner en développement sans qu'on ait à fournir une clé payante.
-     */
+    //
+    // Le fournisseur est un RÉGLAGE, choisi par la présence d'une seule
+    // variable : `COACH_API_BASE_URL` posée, le coach parle à une API
+    // compatible OpenAI (Mistral, décision du 27 septembre 2026 ; Ollama ou
+    // Cloudflare de la même façon) ; absente, à Anthropic. Pas de
+    // `COACH_PROVIDER` : une variable de moins, et aucune combinaison
+    // incohérente possible. Toutes sont **optionnelles** : un réglage
+    // incomplet rend le coach indisponible (503), jamais l'API impossible à
+    // démarrer. Voir docs/decisions/0010-coach-fournisseur-compatible-openai.md.
+    /** Clé Anthropic, lue seulement quand `COACH_API_BASE_URL` est absente. */
     ANTHROPIC_API_KEY: z.string().min(20).optional(),
-    COACH_MODEL: z.string().min(1).default('claude-opus-5'),
+    /** Base « …/v1 » d'une API compatible OpenAI (https://api.mistral.ai/v1). */
+    COACH_API_BASE_URL: z.string().url().optional(),
+    /** Clé de cette API. Absente pour un Ollama interne ; présente, jamais vide. */
+    COACH_API_KEY: z.string().min(8).optional(),
+    /** Modèle. Exigé avec `COACH_API_BASE_URL` ; sinon, `claude-opus-5`. */
+    COACH_MODEL: z.string().min(1).optional(),
     /** Plafond par utilisateur et par jour. Le coût du coach est réel. */
     COACH_DAILY_MESSAGE_LIMIT: z.coerce.number().int().min(1).max(500).default(30),
     /** Interrupteur global : coupe la fonctionnalité sans déploiement. */

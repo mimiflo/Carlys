@@ -7,7 +7,11 @@ import {
 import { type PinoLogger } from 'nestjs-pino';
 import { type AppConfigService } from '../../../config/app-config.service';
 import { type EntitlementsService } from '../../subscriptions/application/entitlements.service';
-import { type CoachTurnInput, type CoachTurnOutput } from '../domain/coach-model.port';
+import {
+  CoachProviderUnavailableException,
+  type CoachTurnInput,
+  type CoachTurnOutput,
+} from '../domain/coach-model.port';
 import { type CoachRepository } from '../infrastructure/coach.repository';
 import { type CoachQuota } from './coach.quota';
 import { CoachAvailability } from './coach.availability';
@@ -31,8 +35,9 @@ interface Stubs {
     saveAssistantMessage: jest.Mock;
     catalogueNames: jest.Mock;
   };
-  quota: { consume: jest.Mock; remaining: jest.Mock };
+  quota: { consume: jest.Mock; remaining: jest.Mock; refundIfUnavailable: jest.Mock };
   model: { reply: jest.Mock<Promise<CoachTurnOutput>, [CoachTurnInput]> };
+  logger: { info: jest.Mock; warn: jest.Mock };
 }
 
 function storedMessage(role: 'USER' | 'ASSISTANT', content: string, id = `${role}-${content}`) {
@@ -73,7 +78,14 @@ function buildStubs(): Stubs {
       saveAssistantMessage: jest.fn().mockResolvedValue(storedMessage('ASSISTANT', 'Salut.')),
       catalogueNames: jest.fn().mockResolvedValue(new Map()),
     },
-    quota: { consume: jest.fn().mockResolvedValue(29), remaining: jest.fn().mockResolvedValue(29) },
+    quota: {
+      consume: jest.fn().mockResolvedValue(29),
+      remaining: jest.fn().mockResolvedValue(29),
+      // Comme le vrai : l'erreur repart toujours.
+      refundIfUnavailable: jest.fn((_user: string, _now: Date, error: Error) =>
+        Promise.reject(error),
+      ),
+    },
     model: {
       reply: jest.fn<Promise<CoachTurnOutput>, [CoachTurnInput]>().mockResolvedValue({
         text: 'Salut.',
@@ -82,6 +94,7 @@ function buildStubs(): Stubs {
         refused: false,
       }),
     },
+    logger: { info: jest.fn(), warn: jest.fn() },
   };
 }
 
@@ -97,8 +110,8 @@ function buildService(
   const config = {
     coachEnabled: acces.coachEnabled,
     anthropicApiKey: 'cle-factice-de-test-32-caracteres',
+    coachProvider: {},
   };
-  const logger = { info: jest.fn(), warn: jest.fn() };
   // La porte (configuration + droit) est un collaborateur à part : on lui
   // passe les mêmes doubles qu'avant, la règle testée ne change pas.
   const availability = new CoachAvailability(
@@ -111,7 +124,7 @@ function buildService(
     stubs.quota as unknown as CoachQuota,
     availability,
     stubs.model,
-    logger as unknown as PinoLogger,
+    stubs.logger as unknown as PinoLogger,
   );
 }
 
@@ -247,6 +260,50 @@ describe('CoachService.sendMessage', () => {
     expect(stubs.quota.consume).not.toHaveBeenCalled();
     expect(stubs.model.reply).not.toHaveBeenCalled();
     expect(stubs.repository.saveUserMessage).not.toHaveBeenCalled();
+  });
+
+  it('fournisseur tombé (503) : le 503 repart, et le message est rendu au jour où il a été compté', async () => {
+    const stubs = buildStubs();
+    const panne = new ServiceUnavailableException('Coach : le fournisseur a répondu 503.');
+    stubs.model.reply.mockRejectedValue(panne);
+    const service = buildService(stubs);
+
+    await expect(service.sendMessage(USER, CONVERSATION, MESSAGE, 'Bonjour')).rejects.toBe(panne);
+
+    const [, consumedAt] = stubs.quota.consume.mock.calls[0] as [string, Date];
+    expect(consumedAt).toBeInstanceOf(Date);
+    expect(stubs.quota.refundIfUnavailable).toHaveBeenCalledWith(USER, consumedAt, panne);
+    expect(stubs.repository.saveAssistantMessage).not.toHaveBeenCalled();
+  });
+
+  it('tour interrompu : ses jetons déjà consommés sont journalisés, jamais le contenu', async () => {
+    // Sans cette ligne, un tour qui a vidé le volume du fournisseur avant de
+    // tomber n'apparaîtrait nulle part : « Tour de coach » n'est pas écrit.
+    const stubs = buildStubs();
+    const panne = new CoachProviderUnavailableException('Coach : le fournisseur a répondu 429.', {
+      inputTokens: 9000,
+      outputTokens: 1800,
+      cacheReadTokens: 0,
+    });
+    stubs.model.reply.mockRejectedValue(panne);
+    const service = buildService(stubs);
+
+    await expect(
+      service.sendMessage(USER, CONVERSATION, MESSAGE, 'J’ai mal au genou'),
+    ).rejects.toBe(panne);
+
+    expect(stubs.logger.warn).toHaveBeenCalledWith(
+      {
+        userId: USER,
+        conversationId: CONVERSATION,
+        inputTokens: 9000,
+        outputTokens: 1800,
+        cacheReadTokens: 0,
+        reason: 'Coach : le fournisseur a répondu 429.',
+      },
+      'Tour de coach interrompu',
+    );
+    expect(JSON.stringify(stubs.logger.warn.mock.calls)).not.toContain('genou');
   });
 
   it('course perdue à l’écriture (le dépôt rend null) : même 404, rien n’est renvoyé', async () => {

@@ -7,6 +7,7 @@ import {
   mentorVoiceBriefing,
   volatileContext,
 } from './coach.prompt';
+import { TARGET_KCAL_FLOOR } from '../../nutrition/application/metabolism.calculator';
 import { COACH_TOOLS, PROPOSE_SESSION_TOOL } from './coach.tools';
 
 /**
@@ -43,6 +44,23 @@ describe('Prompt du coach', () => {
     expect(COACH_SYSTEM_PROMPT).toContain('sommeil');
     expect(COACH_SYSTEM_PROMPT).toContain('professionnel de santé');
     expect(COACH_SYSTEM_PROMPT).toContain("N'invente jamais");
+  });
+
+  it('le prompt exige du texte brut : le téléphone affiche la réponse telle quelle', () => {
+    // coach_message_bubble.dart affiche un Text : un Markdown s'y lirait en
+    // astérisques et en dièses.
+    expect(COACH_SYSTEM_PROMPT).toContain('texte brut, sans Markdown');
+  });
+
+  it('le prompt pose les garde-fous santé, quel que soit le fournisseur', () => {
+    // Les planchers sont CEUX de l'application (metabolism.calculator.ts),
+    // pas une recopie qui pourrait diverger.
+    expect(COACH_SYSTEM_PROMPT).toContain(`${TARGET_KCAL_FLOOR.FEMALE} kcal`);
+    expect(COACH_SYSTEM_PROMPT).toContain(`${TARGET_KCAL_FLOOR.MALE} pour un homme`);
+    expect(COACH_SYSTEM_PROMPT).toContain("plus d'un kilo par semaine");
+    expect(COACH_SYSTEM_PROMPT).toContain('trouble alimentaire');
+    expect(COACH_SYSTEM_PROMPT).toMatch(/dopants.*stéroïdes.*SARMs/);
+    expect(COACH_SYSTEM_PROMPT).toContain('dosage de médicament');
   });
 
   it('le prompt interdit les identifiants d’exercice inventés', () => {

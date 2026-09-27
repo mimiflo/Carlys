@@ -23,12 +23,12 @@ export class CoachAvailability {
   ) {}
 
   /**
-   * Coupé globalement ou sans clé → 503. Sans droit → 403. Dans les deux cas,
-   * AVANT toute dépense de jeton : un refus ne coûte jamais un tour de quota
-   * ni un appel au modèle.
+   * Coupé globalement ou fournisseur mal réglé → 503. Sans droit → 403. Dans
+   * les deux cas, AVANT toute dépense de jeton : un refus ne coûte jamais un
+   * tour de quota ni un appel au modèle.
    */
   async assertAvailable(userId: string): Promise<void> {
-    if (!this.config.coachEnabled || this.config.anthropicApiKey === undefined) {
+    if (!this.config.coachEnabled || !this.providerConfigured()) {
       throw new ServiceUnavailableException('Le coach est momentanément indisponible.');
     }
     const { entitlements } = await this.entitlements.entitlementsFor(userId);
@@ -38,5 +38,14 @@ export class CoachAvailability {
     if (!granted) {
       throw new ForbiddenException('Le coach est réservé aux abonnés.');
     }
+  }
+
+  /**
+   * Adresse compatible OpenAI posée : il lui faut un modèle (la clé, elle,
+   * manque légitimement à un Ollama interne). Sinon : la clé Anthropic.
+   */
+  private providerConfigured(): boolean {
+    const { baseUrl, model } = this.config.coachProvider;
+    return baseUrl === undefined ? this.config.anthropicApiKey !== undefined : model !== undefined;
   }
 }

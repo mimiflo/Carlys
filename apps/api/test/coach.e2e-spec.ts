@@ -29,6 +29,7 @@ import { type Env } from '../src/config/env.schema';
 import {
   COACH_MODEL_PORT,
   type CoachModelPort,
+  CoachProviderUnavailableException,
   type CoachTurnInput,
   type CoachTurnOutput,
 } from '../src/modules/coach/domain/coach-model.port';
@@ -62,6 +63,9 @@ describe('Coach IA (e2e)', () => {
   /** Dernière entrée reçue par le faux : c'est là que se lit le prompt réel. */
   let lastInput: CoachTurnInput | undefined;
 
+  /** Panne que le faux lèvera au prochain tour, comme un vrai client. */
+  let nextFailure: Error | undefined;
+
   const textOnly = (text: string): CoachTurnOutput => ({
     text,
     proposal: null,
@@ -72,6 +76,9 @@ describe('Coach IA (e2e)', () => {
   const fakeModel: CoachModelPort = {
     reply: async (input) => {
       lastInput = input;
+      if (nextFailure !== undefined) {
+        throw nextFailure;
+      }
       // Le faux appelle un outil de lecture : on vérifie ainsi que la chaîne
       // complète fonctionne, pas seulement l'écriture en base.
       await input.runTools([{ id: 'call-1', name: 'get_personal_records', input: {} }]);
@@ -486,6 +493,42 @@ describe('Coach IA (e2e)', () => {
     await send('Une autre question.').expect(409);
     expect(await consumedToday(userId)).toBe(1);
     expect(lastInput).toBeUndefined();
+  });
+
+  it('fournisseur tombé : 503, le message n’est pas décompté, et le renvoi termine le tour', async () => {
+    await grantCoaching();
+    await resetQuota();
+    const conversationId = randomUUID();
+    await authed(accessToken)
+      .post('/api/v1/coach/conversations')
+      .send({ id: conversationId })
+      .expect(201);
+    const send = () =>
+      authed(accessToken)
+        .post(`/api/v1/coach/conversations/${conversationId}/messages`)
+        .send({ id: messageId, content: 'Une séance jambes de 30 minutes ?' });
+    const messageId = randomUUID();
+
+    // Ce que lève un client réel quand Mistral rend 429 trois fois de suite
+    // dès le premier appel : rien n'a été consommé.
+    nextFailure = new CoachProviderUnavailableException('Coach : le fournisseur a répondu 429.', {
+      inputTokens: 0,
+      outputTokens: 0,
+      cacheReadTokens: 0,
+    });
+    try {
+      const failed = await send().expect(503);
+      // Jamais RATE_LIMITED : le téléphone afficherait « limite du jour ».
+      expect((failed.body as { error: { code: string } }).error.code).toBe('SERVICE_UNAVAILABLE');
+    } finally {
+      nextFailure = undefined;
+    }
+    expect(await consumedToday(userId)).toBe(0);
+
+    // Le même envoi, une fois le fournisseur revenu : un seul message compté.
+    nextOutput = textOnly('Voici une séance courte.');
+    await send().expect(201);
+    expect(await consumedToday(userId)).toBe(1);
   });
 
   it('au-delà du plafond quotidien, l’envoi est refusé (429)', async () => {

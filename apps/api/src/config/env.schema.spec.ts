@@ -82,6 +82,33 @@ describe('validateEnv', () => {
     );
   });
 
+  it('coach : le fournisseur est un réglage, absent = 503, jamais un refus de démarrer', () => {
+    const minimal = validateEnv({ ...validEnv });
+    // Rien de posé : Anthropic par défaut, sans modèle imposé par le schéma
+    // (le défaut vit dans le client Anthropic, le seul à qui il a un sens).
+    expect(minimal.COACH_API_BASE_URL).toBeUndefined();
+    expect(minimal.COACH_API_KEY).toBeUndefined();
+    expect(minimal.COACH_MODEL).toBeUndefined();
+
+    const mistral = validateEnv({
+      ...validEnv,
+      COACH_API_BASE_URL: 'https://api.mistral.ai/v1',
+      COACH_API_KEY: 'cle-factice-de-test',
+      COACH_MODEL: 'mistral-small-latest',
+    });
+    expect(mistral.COACH_API_BASE_URL).toBe('https://api.mistral.ai/v1');
+    expect(mistral.COACH_MODEL).toBe('mistral-small-latest');
+
+    // Une adresse sans schéma, ou une variable présente mais VIDE : c'est une
+    // faute de frappe, refusée dès la configuration (« optionnel » veut dire
+    // absent, pas vide).
+    expect(() => validateEnv({ ...validEnv, COACH_API_BASE_URL: 'api.mistral.ai/v1' })).toThrow(
+      /COACH_API_BASE_URL/,
+    );
+    expect(() => validateEnv({ ...validEnv, COACH_API_KEY: '' })).toThrow(/COACH_API_KEY/);
+    expect(() => validateEnv({ ...validEnv, COACH_MODEL: '' })).toThrow(/COACH_MODEL/);
+  });
+
   it('exige un METRICS_TOKEN suffisamment long', () => {
     expect(() => validateEnv({ ...validEnv, METRICS_TOKEN: 'court' })).toThrow(
       /Configuration invalide/,
@@ -164,6 +191,26 @@ describe('validateEnv en production', () => {
     expect(() =>
       validateEnv({ ...productionEnv, S3_PUBLIC_BASE_URL: 'http://media.carlys.example' }),
     ).toThrow(/S3_PUBLIC_BASE_URL.*https/);
+  });
+
+  // Le coach envoie `Authorization: Bearer <clé>` et des données de santé à
+  // cette adresse : en clair, une faute de frappe les ferait voyager lisibles.
+  it('exige https:// pour COACH_API_BASE_URL quand une clé est posée, pas pour un Ollama interne sans clé', () => {
+    const coach = { COACH_MODEL: 'mistral-small-latest', COACH_API_KEY: 'cle-factice-de-test' };
+    expect(() =>
+      validateEnv({ ...productionEnv, ...coach, COACH_API_BASE_URL: 'http://api.mistral.ai/v1' }),
+    ).toThrow(/COACH_API_BASE_URL.*https/);
+    expect(
+      validateEnv({ ...productionEnv, ...coach, COACH_API_BASE_URL: 'https://api.mistral.ai/v1' })
+        .COACH_API_BASE_URL,
+    ).toBe('https://api.mistral.ai/v1');
+    expect(
+      validateEnv({
+        ...productionEnv,
+        COACH_MODEL: 'ministral-3:8b',
+        COACH_API_BASE_URL: 'http://ollama:11434/v1',
+      }).COACH_API_BASE_URL,
+    ).toBe('http://ollama:11434/v1');
   });
 
   // CORS_ORIGINS est une LISTE : le contrôle doit voir chaque entrée, pas

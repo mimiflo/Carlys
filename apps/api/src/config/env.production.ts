@@ -29,7 +29,11 @@ export const DEVELOPMENT_DEFAULTS = {
 type ProductionKey = keyof typeof DEVELOPMENT_DEFAULTS;
 
 /** Ce que le raffinement lit : le sous-ensemble du schéma qui le concerne. */
-export type ProductionSensitiveEnv = { NODE_ENV: string } & Record<ProductionKey, string>;
+export type ProductionSensitiveEnv = {
+  NODE_ENV: string;
+  COACH_API_BASE_URL?: string;
+  COACH_API_KEY?: string;
+} & Record<ProductionKey, string>;
 
 /** URL que des tiers (téléphone, navigateur, client e-mail) doivent joindre. */
 const PUBLIC_URL_KEYS: readonly ProductionKey[] = [
@@ -111,5 +115,16 @@ export function refineProductionEnv(env: ProductionSensitiveEnv, ctx: z.Refineme
         `identifiant de développement (${DEVELOPMENT_CREDENTIAL_PREFIX}*) refusé en production`,
       );
     }
+  }
+
+  // Le coach envoie `Authorization: Bearer <clé>` et l'historique (données de
+  // santé) à cette adresse : en clair, les deux voyageraient lisibles. Un
+  // Ollama interne sans clé (`http://ollama:11434/v1`) reste permis.
+  if (env.COACH_API_KEY !== undefined && env.COACH_API_BASE_URL?.startsWith('https://') === false) {
+    ctx.addIssue({
+      code: 'custom',
+      path: ['COACH_API_BASE_URL'],
+      message: 'doit être une URL https:// en production quand COACH_API_KEY est posée',
+    });
   }
 }
