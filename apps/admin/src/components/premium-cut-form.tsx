@@ -1,11 +1,8 @@
 'use client';
 
-import type { ManagedPaidSubscription } from '@carlys/api-contracts';
+import { MANUAL_ENTITLEMENT_REASON_MAX, type ManagedPaidSubscription } from '@carlys/api-contracts';
 import { useId, useState, type FormEvent, type Ref } from 'react';
 import { PROVIDER_LABELS } from '@/lib/entitlement-labels';
-
-/** Borne du DTO de l'API (`SetEntitlementDto.reason`). */
-const REASON_MAX_LENGTH = 500;
 
 /**
  * Couper l'accès premium : le geste le plus lourd de la fiche, donc une
@@ -66,7 +63,7 @@ export function PremiumCutForm({
         ref={reasonRef}
         value={reason}
         onChange={(event) => setReason(event.target.value)}
-        maxLength={REASON_MAX_LENGTH}
+        maxLength={MANUAL_ENTITLEMENT_REASON_MAX}
         rows={3}
         required
         className="rounded-lg border border-black/10 px-3 py-2 text-sm"

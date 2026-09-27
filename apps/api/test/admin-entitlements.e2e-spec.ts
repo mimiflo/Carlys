@@ -257,6 +257,40 @@ describe('Administration — origine des droits et retour à l’abonnement (e2e
     ).toBe(0);
   });
 
+  it('couper exige une raison : absente, vide ou trop longue, rien n’est coupé', async () => {
+    // Le back-office l'exigeait déjà dans son formulaire ; un appel direct à
+    // l'API coupait pourtant l'accès d'un membre sans rien dire à l'audit.
+    const couper = (extra: Record<string, unknown>) =>
+      as(adminToken)
+        .put(`/api/v1/admin/users/${freeId}/entitlements`)
+        .send({ key: 'premium_exercises', isActive: false, ...extra });
+    const raison400 = async (extra: Record<string, unknown>) => {
+      const refus = await couper(extra).expect(400);
+      expect(JSON.stringify(refus.body)).toContain('reason');
+    };
+
+    await raison400({});
+    await raison400({ reason: null });
+    await raison400({ reason: '   ' });
+    await raison400({ reason: 'x'.repeat(501) });
+    expect(
+      await prisma.userEntitlement.count({
+        where: { userId: freeId, entitlementKey: 'premium_exercises' },
+      }),
+    ).toBe(0);
+
+    // La borne est inclusive, et elle se mesure APRÈS élagage des espaces.
+    await couper({ reason: ` ${'x'.repeat(500)} ` }).expect(200);
+    // Offrir reste possible sans raison : seule la coupure prive un membre.
+    await as(adminToken)
+      .put(`/api/v1/admin/users/${freeId}/entitlements`)
+      .send({ key: 'premium_exercises', isActive: true })
+      .expect(200);
+    await as(adminToken)
+      .delete(`/api/v1/admin/users/${freeId}/entitlements/premium_exercises`)
+      .expect(200);
+  });
+
   it('garde : permission entitlement:grant exigée, clé et identifiant validés', async () => {
     await as(supportToken)
       .delete(`/api/v1/admin/users/${freeId}/entitlements/premium_exercises`)

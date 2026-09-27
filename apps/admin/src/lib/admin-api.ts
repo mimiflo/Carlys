@@ -19,6 +19,7 @@ import {
   type Equipment,
   type SetExerciseCategoriesInput,
   type EntitlementKey,
+  type ManagedEntitlementDecision,
   type SetManagedEntitlement,
   type ManagedUserDetail,
   type ManagedUserSummary,
@@ -96,8 +97,16 @@ export const adminApi = {
     return parseData(await call('/admin/overview'), adminOverviewSchema);
   },
 
+  /**
+   * Terme et curseur partent dans le CORPS d'un POST, jamais dans l'URL : la
+   * recherche porte souvent une adresse e-mail, et une URL finit dans les
+   * journaux d'accès et l'historique du navigateur.
+   */
   async listUsers(search?: string, cursor?: string): Promise<Page<ManagedUserSummary>> {
-    const body = await call(`/admin/users${query({ search, cursor })}`);
+    const body = await call('/admin/users/search', {
+      method: 'POST',
+      body: JSON.stringify({ search, cursor }),
+    });
     return parsePage(body, managedUserSummarySchema);
   },
 
@@ -116,7 +125,8 @@ export const adminApi = {
   /**
    * Décision MANUELLE sur un droit : `isActive: true` l'offre, `false` le
    * coupe. Une coupure survit à tout paiement ET bloque les achats ; elle
-   * part avec sa raison, journalisée dans l'audit.
+   * part avec sa raison, OBLIGATOIRE (le type l'exige, l'API rend 400 sans
+   * elle), journalisée dans l'audit.
    */
   async setEntitlement(id: string, input: SetManagedEntitlement): Promise<ManagedUserDetail> {
     const body = await call(`/admin/users/${id}/entitlements`, {
@@ -141,10 +151,7 @@ export const adminApi = {
    * après « Couper l'accès », le coach IA et les programmes illimités d'un
    * abonné ouverts, et « Offrir le premium » ne les ouvrait pas.
    */
-  async setPremium(
-    id: string,
-    input: Omit<SetManagedEntitlement, 'key'>,
-  ): Promise<ManagedUserDetail> {
+  async setPremium(id: string, input: ManagedEntitlementDecision): Promise<ManagedUserDetail> {
     return eachPremiumKey((key) => adminApi.setEntitlement(id, { ...input, key }));
   },
 

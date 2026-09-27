@@ -14,6 +14,7 @@ import {
   type AdminOverview,
   type ApiSuccessEnvelope,
   type AuthResult,
+  type CursorPaginationMeta,
   type EntitlementsResponse,
   type ManagedUserDetail,
   type ManagedUserSummary,
@@ -201,7 +202,7 @@ describe('Administration (e2e)', () => {
 
   it('les jetons mobiles et admin ne sont JAMAIS interchangeables', async () => {
     // Jeton mobile sur une route admin : refusé.
-    await asAdmin(memberToken).get('/api/v1/admin/users').expect(401);
+    await asAdmin(memberToken).post('/api/v1/admin/users/search').send({}).expect(401);
     // Jeton admin sur une route mobile : refusé (audience différente).
     await server().get('/api/v1/users/me').set('Authorization', `Bearer ${superToken}`).expect(401);
     // Sans jeton : refusé.
@@ -212,7 +213,8 @@ describe('Administration (e2e)', () => {
     const users = data<ManagedUserSummary[]>(
       (
         await asAdmin(supportToken)
-          .get(`/api/v1/admin/users?search=${encodeURIComponent(memberEmail)}`)
+          .post('/api/v1/admin/users/search')
+          .send({ search: memberEmail })
           .expect(200)
       ).body,
     );
@@ -227,6 +229,46 @@ describe('Administration (e2e)', () => {
       .put(`/api/v1/admin/users/${memberId}/entitlements`)
       .send({ key: 'premium_exercises', isActive: true })
       .expect(403);
+  });
+
+  it('la recherche d’un membre passe dans le CORPS : l’adresse ne touche aucune URL', async () => {
+    // Une URL finit dans le journal d'accès Nginx, dans celui de Pino
+    // (`req.url`) et dans l'historique du navigateur ; un corps de POST, non.
+    // L'ancienne route `GET /admin/users?search=` n'existe plus.
+    await asAdmin(superToken)
+      .get(`/api/v1/admin/users?search=${encodeURIComponent(memberEmail)}`)
+      .expect(404);
+
+    // La pagination suit le même chemin : le curseur voyage dans le corps.
+    // Le membre et le témoin de cette suite répondent tous deux au terme.
+    const first = await asAdmin(superToken)
+      .post('/api/v1/admin/users/search')
+      .send({ search: 'e2e-admin-', limit: 1 })
+      .expect(200);
+    const page = first.body as ApiSuccessEnvelope<ManagedUserSummary[], CursorPaginationMeta>;
+    expect(page.data).toHaveLength(1);
+    expect(page.meta.hasMore).toBe(true);
+    const next = data<ManagedUserSummary[]>(
+      (
+        await asAdmin(superToken)
+          .post('/api/v1/admin/users/search')
+          .send({ search: 'e2e-admin-', limit: 1, cursor: page.meta.nextCursor })
+          .expect(200)
+      ).body,
+    );
+    expect(next[0]?.id).not.toBe(page.data[0]?.id);
+
+    // Sans terme : toute la liste. Un champ inconnu est refusé, comme partout.
+    await asAdmin(superToken).post('/api/v1/admin/users/search').send({}).expect(200);
+    await asAdmin(superToken)
+      .post('/api/v1/admin/users/search')
+      .send({ email: memberEmail })
+      .expect(400);
+    // Un corps JSON porte déjà des nombres : `limit` n'en accepte pas
+    // d'autre forme (texte, booléen, `null`), et absent, il vaut 20.
+    for (const limit of ['20', true, null]) {
+      await asAdmin(superToken).post('/api/v1/admin/users/search').send({ limit }).expect(400);
+    }
   });
 
   it('synthèse plateforme : compteurs cohérents', async () => {
@@ -507,7 +549,7 @@ describe('Administration (e2e)', () => {
 
   it('désactiver un admin tue ses jetons aussitôt : 401 sur un jeton encore valide', async () => {
     // Avant : le support lit encore.
-    await asAdmin(supportToken).get('/api/v1/admin/users').expect(200);
+    await asAdmin(supportToken).post('/api/v1/admin/users/search').send({}).expect(200);
 
     // Le compte est relu en base à CHAQUE requête : pas d'attente d'expiration.
     await prisma.adminUser.update({
@@ -515,7 +557,7 @@ describe('Administration (e2e)', () => {
       data: { status: AdminUserStatus.DISABLED },
     });
 
-    await asAdmin(supportToken).get('/api/v1/admin/users').expect(401);
+    await asAdmin(supportToken).post('/api/v1/admin/users/search').send({}).expect(401);
     await asAdmin(supportToken).get('/api/v1/admin/auth/me').expect(401);
     // Et la reconnexion est refusée avec le même message générique que
     // n'importe quel échec : rien sur l'état du compte.

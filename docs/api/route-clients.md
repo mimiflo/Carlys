@@ -263,7 +263,7 @@ ou la restreindre à l'orchestrateur, casserait cet indicateur.
 | `DELETE /admin/muscle-groups/{id}` | **admin** | apps/admin (back-office) |
 | `PATCH /admin/muscle-groups/{id}` | **admin** | apps/admin (back-office) |
 | `GET /admin/overview` | **admin** | apps/admin (back-office) |
-| `GET /admin/users` | **admin** | apps/admin (back-office) |
+| `POST /admin/users/search` | **admin** | apps/admin (back-office) : recherche d’un membre, terme et curseur dans le corps, jamais dans l’URL |
 | `GET /admin/users/{id}` | **admin** | apps/admin (back-office) |
 | `DELETE /admin/users/{id}/entitlements/{key}` | **admin** | apps/admin (back-office) : « Rendre la main à l'abonnement » |
 | `PUT /admin/users/{id}/entitlements` | **admin** | apps/admin (back-office) |

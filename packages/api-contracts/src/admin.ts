@@ -118,19 +118,38 @@ export const managedUserDetailSchema = managedUserSummarySchema.extend({
 });
 export type ManagedUserDetail = z.infer<typeof managedUserDetailSchema>;
 
+/** Longueur maximale de la raison d'une décision manuelle, mesurée sans les espaces autour. */
+export const MANUAL_ENTITLEMENT_REASON_MAX = 500;
+
+const manualDecisionReasonSchema = z.string().trim().min(1).max(MANUAL_ENTITLEMENT_REASON_MAX);
+/** Expiration UTC ; absente = sans expiration. */
+const manualDecisionExpirySchema = z.string().datetime().optional();
+
 /**
- * PUT /admin/users/:id/entitlements — décision MANUELLE sur un droit.
- * `isActive: true` l'offre, `isActive: false` le coupe (et bloque les
- * achats). `reason` est journalisée dans l'audit ; le back-office l'exige
- * pour une coupure.
+ * La décision MANUELLE sur un droit, sans le droit visé : `isActive: true`
+ * l'offre, `isActive: false` le coupe (et bloque les achats). `reason` part
+ * dans l'audit. Facultative pour offrir, elle est OBLIGATOIRE pour couper
+ * (400 sinon) : une coupure prive un membre d'un accès parfois payé, et
+ * l'audit doit dire pourquoi.
  */
-export const setManagedEntitlementSchema = z.object({
-  key: entitlementKeySchema,
-  isActive: z.boolean(),
-  /** Expiration UTC ; absente = sans expiration. */
-  expiresAt: z.string().datetime().optional(),
-  reason: z.string().trim().min(1).max(500).optional(),
-});
+export const managedEntitlementDecisionSchema = z.discriminatedUnion('isActive', [
+  z.object({
+    isActive: z.literal(true),
+    expiresAt: manualDecisionExpirySchema,
+    reason: manualDecisionReasonSchema.optional(),
+  }),
+  z.object({
+    isActive: z.literal(false),
+    expiresAt: manualDecisionExpirySchema,
+    reason: manualDecisionReasonSchema,
+  }),
+]);
+export type ManagedEntitlementDecision = z.infer<typeof managedEntitlementDecisionSchema>;
+
+/** PUT /admin/users/:id/entitlements — la décision, et le droit qu'elle vise. */
+export const setManagedEntitlementSchema = z
+  .object({ key: entitlementKeySchema })
+  .and(managedEntitlementDecisionSchema);
 export type SetManagedEntitlement = z.infer<typeof setManagedEntitlementSchema>;
 
 export const adminActorTypeSchema = z.enum(['USER', 'ADMIN', 'SYSTEM']);

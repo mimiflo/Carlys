@@ -1,4 +1,8 @@
-import { ENTITLEMENT_KEYS, type EntitlementKey } from '@carlys/api-contracts';
+import {
+  ENTITLEMENT_KEYS,
+  type EntitlementKey,
+  MANUAL_ENTITLEMENT_REASON_MAX,
+} from '@carlys/api-contracts';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
 import { trimmed } from '../../../../../common/transforms/trimmed';
@@ -15,6 +19,7 @@ import {
   MaxLength,
   Min,
   MinLength,
+  ValidateIf,
 } from 'class-validator';
 
 export class AdminLoginDto {
@@ -29,7 +34,13 @@ export class AdminLoginDto {
   password!: string;
 }
 
-export class ListManagedUsersQuery {
+/**
+ * POST /admin/users/search — un CORPS, et non une query string : la
+ * recherche porte souvent une adresse e-mail, et une URL finit dans le
+ * journal d'accès Nginx, dans celui de Pino (`req.url`) et dans
+ * l'historique du navigateur.
+ */
+export class SearchManagedUsersDto {
   @ApiPropertyOptional({ description: 'Recherche sur e-mail ou nom affiché' })
   @IsOptional()
   @IsString()
@@ -41,9 +52,12 @@ export class ListManagedUsersQuery {
   @IsUUID()
   cursor?: string;
 
+  /**
+   * Ni `@IsOptional` ni `@Type` : absent, il garde sa valeur par défaut ;
+   * présent, c'est un entier, jamais `"20"`, `true` ou `null` (un corps JSON
+   * porte déjà des nombres, et `null` servait une page vide).
+   */
   @ApiPropertyOptional({ default: 20, maximum: 100 })
-  @IsOptional()
-  @Type(() => Number)
   @IsInt()
   @Min(1)
   @Max(100)
@@ -103,14 +117,16 @@ export class SetEntitlementDto {
 
   @ApiPropertyOptional({
     description:
-      'Raison de la décision, journalisée dans l’audit (exigée par le back-office pour une coupure)',
-    maxLength: 500,
+      'Raison de la décision, journalisée dans l’audit : facultative pour offrir, OBLIGATOIRE pour couper (`isActive: false`)',
+    maxLength: MANUAL_ENTITLEMENT_REASON_MAX,
   })
-  @IsOptional()
+  // Une coupure prive un membre d'un accès parfois payé : sans raison, elle
+  // est refusée, quel que soit le client (contrat `managedEntitlementDecisionSchema`).
+  @ValidateIf((dto: SetEntitlementDto) => dto.isActive === false || dto.reason !== undefined)
   @Transform(trimmed)
   @IsString()
   @MinLength(1)
-  @MaxLength(500)
+  @MaxLength(MANUAL_ENTITLEMENT_REASON_MAX)
   reason?: string;
 }
 

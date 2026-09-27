@@ -1,4 +1,8 @@
-import { managedUserSummarySchema, PREMIUM_ENTITLEMENT_KEYS } from '@carlys/api-contracts';
+import {
+  managedEntitlementDecisionSchema,
+  managedUserSummarySchema,
+  PREMIUM_ENTITLEMENT_KEYS,
+} from '@carlys/api-contracts';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AdminApiError, adminApi, adminToken, parseData, parsePage } from './admin-api';
 
@@ -218,6 +222,21 @@ describe('transport JSON', () => {
       AdminApiError,
     );
     expect(fetchMock).toHaveBeenCalledTimes(2);
+  });
+
+  /**
+   * L'API refuse une coupure sans raison (400) : le client ne doit même pas
+   * pouvoir l'écrire. `Omit<…, 'key'>` sur l'union du contrat effaçait la
+   * distinction, et `{ isActive: false }` compilait.
+   */
+  it('couper sans raison ne compile pas, et le contrat le refuse', () => {
+    // @ts-expect-error — une coupure exige sa raison (contrat `managedEntitlementDecisionSchema`).
+    const sansRaison: Parameters<typeof adminApi.setPremium>[1] = { isActive: false };
+    expect(managedEntitlementDecisionSchema.safeParse(sansRaison).success).toBe(false);
+    expect(
+      managedEntitlementDecisionSchema.safeParse({ isActive: false, reason: '   ' }).success,
+    ).toBe(false);
+    expect(managedEntitlementDecisionSchema.safeParse({ isActive: true }).success).toBe(true);
   });
 
   it('sans enveloppe lisible (proxy, HTML), garde le statut et un message générique', async () => {

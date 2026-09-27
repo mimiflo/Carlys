@@ -9,11 +9,13 @@ import {
   Controller,
   Delete,
   Get,
+  HttpCode,
+  HttpStatus,
   Param,
   ParseUUIDPipe,
   Patch,
+  Post,
   Put,
-  Query,
   Req,
   UseGuards,
 } from '@nestjs/common';
@@ -26,8 +28,8 @@ import { CurrentAdmin } from '../decorators/current-admin.decorator';
 import { AdminAuthGuard, type AdminPrincipal } from '../guards/admin-auth.guard';
 import { AdminPermissionsGuard, RequirePermissions } from '../guards/admin-permissions.guard';
 import {
-  ListManagedUsersQuery,
   ManagedEntitlementParams,
+  SearchManagedUsersDto,
   SetEntitlementDto,
   SetUserStatusDto,
 } from './dto/admin.dto';
@@ -41,17 +43,23 @@ import {
 export class AdminUsersController {
   constructor(private readonly users: AdminUsersService) {}
 
-  @Get()
+  @Post('search')
+  @HttpCode(HttpStatus.OK)
   @RequirePermissions('user:read')
-  @ApiOperation({ summary: 'Utilisateurs (recherche, pagination par curseur)' })
-  async list(
-    @Query() query: ListManagedUsersQuery,
+  @ApiOperation({
+    summary: 'Utilisateurs (recherche, pagination par curseur)',
+    description:
+      'Terme et curseur voyagent dans le CORPS : une adresse e-mail ne doit jamais ' +
+      'apparaître dans une URL, donc ni dans les journaux ni dans l’historique.',
+  })
+  async search(
+    @Body() dto: SearchManagedUsersDto,
     @Req() request: RequestWithId,
   ): Promise<ApiSuccessEnvelope<ManagedUserSummary[], CursorPaginationMeta>> {
     const page = await this.users.listUsers(
-      query.search === '' ? undefined : query.search,
-      query.limit,
-      query.cursor,
+      dto.search === '' ? undefined : dto.search,
+      dto.limit,
+      dto.cursor,
     );
     return enveloped(page.items, { nextCursor: page.nextCursor, hasMore: page.hasMore }, request);
   }
