@@ -32,7 +32,14 @@ export function subscriptionGrantsAccess(
   }
 }
 
-function rowIsActive(row: UserEntitlement, nowMs: number): boolean {
+/**
+ * Un droit matérialisé est-il ouvert À CET INSTANT ? La seule définition :
+ * le back-office l'affiche avec elle, l'accès se décide avec elle.
+ */
+export function rowIsActive(
+  row: Pick<UserEntitlement, 'isActive' | 'expiresAt'>,
+  nowMs: number,
+): boolean {
   return row.isActive && (row.expiresAt === null || row.expiresAt.getTime() > nowMs);
 }
 
@@ -120,6 +127,19 @@ export class EntitlementsService {
   }
 
   /**
+   * Recalcule les droits d'un compte depuis ses abonnements, sans événement
+   * de paiement : c'est le geste « rendre la main à l'abonnement » du
+   * back-office, une fois la décision manuelle retirée. Sans abonnement, il
+   * n'y a rien à recalculer.
+   */
+  async resyncFromSubscriptions(userId: string): Promise<void> {
+    const [latest] = await this.subscriptions.listSubscriptions(userId);
+    if (latest !== undefined) {
+      await this.syncFromSubscription(latest);
+    }
+  }
+
+  /**
    * Recalcule les droits matérialisés d'un compte, depuis TOUS ses
    * abonnements — pas depuis celui dont l'événement vient d'arriver.
    *
@@ -136,8 +156,10 @@ export class EntitlementsService {
    * On prend le MEILLEUR des abonnements : dès qu'un seul ouvre le droit, le
    * droit est ouvert, et l'échéance retenue est la plus lointaine.
    *
-   * Les attributions MANUELLES actives (sourceSubscriptionId null — Étape 7)
-   * ne sont jamais écrasées par la synchronisation.
+   * Les décisions MANUELLES (sourceSubscriptionId null — Étape 7), l'octroi
+   * comme le retrait, ne sont jamais écrasées par la synchronisation : seul
+   * le back-office les lève ([resyncFromSubscriptions], une fois la ligne
+   * manuelle supprimée).
    */
   async syncFromSubscription(subscription: SubscriptionWithPlan): Promise<void> {
     const now = Date.now();

@@ -2,9 +2,31 @@
 
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { useState, type FormEvent } from 'react';
+import { useState, useSyncExternalStore, type FormEvent } from 'react';
 import { firstAllowedRoute } from '@/components/admin-shell';
 import { AdminApiError, adminApi, adminPermissions, adminToken } from '@/lib/admin-api';
+import { isNetworkFailure } from '@/lib/api-transport';
+
+/**
+ * La phrase d'une connexion refusée, décidée par sa CAUSE.
+ *
+ * Tout ce qui n'était pas un 401 affichait « vérifiez que l'API est
+ * démarrée » : une consigne de développeur, servie en production, au
+ * vouvoiement, et fausse pour un compte verrouillé après trop d'essais (429),
+ * à qui elle faisait chercher une panne qui n'existait pas.
+ */
+function loginFailureMessage(cause: unknown): string {
+  if (cause instanceof AdminApiError && cause.status === 401) {
+    return 'E-mail ou mot de passe incorrect.';
+  }
+  if (cause instanceof AdminApiError && cause.status === 429) {
+    return 'Trop de tentatives : patiente quelques minutes avant de réessayer.';
+  }
+  if (isNetworkFailure(cause)) {
+    return 'Connexion impossible pour le moment : le serveur ne répond pas. Réessaie dans un instant.';
+  }
+  return 'Connexion impossible pour le moment. Réessaie dans un instant.';
+}
 
 /**
  * Connexion administrateur (comptes séparés des comptes mobiles).
@@ -17,6 +39,9 @@ export default function LoginPage() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [isSubmitting, setSubmitting] = useState(false);
+  // Arrivé ici parce que le serveur a refusé le jeton (`adminToken.expire`) :
+  // le dire, sinon la page de connexion surgit sans explication.
+  const expired = useSyncExternalStore(adminToken.subscribe, adminToken.wasExpired, () => false);
 
   const onSubmit = async (event: FormEvent) => {
     event.preventDefault();
@@ -30,11 +55,7 @@ export default function LoginPage() {
       adminPermissions.set(result.admin.permissions);
       router.replace(firstAllowedRoute(result.admin.permissions));
     } catch (cause) {
-      setError(
-        cause instanceof AdminApiError && cause.status === 401
-          ? 'E-mail ou mot de passe incorrect.'
-          : 'Connexion impossible : vérifiez que l’API est démarrée.',
-      );
+      setError(loginFailureMessage(cause));
       setSubmitting(false);
     }
   };
@@ -43,6 +64,11 @@ export default function LoginPage() {
     <main className="flex flex-1 items-center justify-center p-8">
       <div className="w-full max-w-md rounded-2xl bg-surface p-8 shadow-sm ring-1 ring-black/5">
         <h1 className="text-2xl font-bold tracking-tight">Connexion administrateur</h1>
+        {expired && (
+          <p role="status" className="mt-2 text-sm text-muted">
+            Ta session a expiré : reconnecte-toi pour continuer.
+          </p>
+        )}
         <form onSubmit={onSubmit} className="mt-6 flex flex-col gap-4" noValidate>
           <label className="flex flex-col gap-1 text-sm font-medium">
             Adresse e-mail

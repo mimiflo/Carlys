@@ -4,6 +4,10 @@ import { type AdminExerciseSummary } from '@carlys/api-contracts';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { adminApi } from '@/lib/admin-api';
+import { useFocusOnSwap } from './use-focus-on-swap';
+
+/** Où en est l'exercice dans le catalogue, et donc où va le geste. */
+type CatalogState = 'present' | 'deleted';
 
 /**
  * Retirer un exercice du catalogue — ou l'y remettre.
@@ -15,15 +19,24 @@ import { adminApi } from '@/lib/admin-api';
 export function ExerciseDeleteCell({ exercise }: { exercise: AdminExerciseSummary }) {
   const queryClient = useQueryClient();
   const [confirming, setConfirming] = useState(false);
+  const state: CatalogState = exercise.deletedAt === null ? 'present' : 'deleted';
+  // Chaque état a son contrôle focalisé : « Supprimer », puis « Annuler »
+  // (jamais le geste destructeur par défaut), puis « Restaurer ».
+  const { target: focusTarget, request: requestFocus } = useFocusOnSwap(state);
 
   const mutate = useMutation({
-    mutationFn: () =>
-      exercise.deletedAt === null
+    mutationFn: (goal: CatalogState) =>
+      goal === 'deleted'
         ? adminApi.deleteExercise(exercise.id)
         : adminApi.restoreExercise(exercise.id),
-    onSuccess: async () => {
+    onSuccess: async (_done, goal) => {
       await queryClient.invalidateQueries({ queryKey: ['admin', 'exercises'] });
       setConfirming(false);
+      // Le contrôle à focaliser (« Restaurer » après une suppression,
+      // « Supprimer » après une restauration) ne paraît qu'avec la liste
+      // rafraîchie, que React Query livre souvent APRÈS la fin de
+      // `invalidateQueries` : la demande attend donc l'état qu'elle vise.
+      requestFocus(goal);
     },
   });
 
@@ -31,9 +44,10 @@ export function ExerciseDeleteCell({ exercise }: { exercise: AdminExerciseSummar
     return (
       <div>
         <button
+          ref={focusTarget}
           type="button"
           disabled={mutate.isPending}
-          onClick={() => mutate.mutate()}
+          onClick={() => mutate.mutate('present')}
           className="rounded-lg px-3 py-1 text-xs font-semibold text-primary-ink hover:bg-primary/10 disabled:opacity-50"
         >
           Restaurer
@@ -48,8 +62,12 @@ export function ExerciseDeleteCell({ exercise }: { exercise: AdminExerciseSummar
   if (!confirming) {
     return (
       <button
+        ref={focusTarget}
         type="button"
-        onClick={() => setConfirming(true)}
+        onClick={() => {
+          requestFocus();
+          setConfirming(true);
+        }}
         className="rounded-lg px-3 py-1 text-xs font-semibold text-danger-ink hover:underline"
       >
         Supprimer
@@ -71,14 +89,18 @@ export function ExerciseDeleteCell({ exercise }: { exercise: AdminExerciseSummar
         <button
           type="button"
           disabled={mutate.isPending}
-          onClick={() => mutate.mutate()}
+          onClick={() => mutate.mutate('deleted')}
           className="rounded-lg bg-danger-strong px-3 py-1 text-xs font-semibold text-white disabled:opacity-50"
         >
           Confirmer
         </button>
         <button
+          ref={focusTarget}
           type="button"
-          onClick={() => setConfirming(false)}
+          onClick={() => {
+            requestFocus();
+            setConfirming(false);
+          }}
           className="rounded-lg px-3 py-1 text-xs text-muted hover:bg-black/5"
         >
           Annuler

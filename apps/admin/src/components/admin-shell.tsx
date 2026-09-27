@@ -3,7 +3,8 @@
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useEffect, useSyncExternalStore, type ReactNode } from 'react';
-import { EMPTY_PERMISSIONS, adminPermissions, adminToken } from '@/lib/admin-api';
+import { adminToken } from '@/lib/admin-api';
+import { useAdminPermissions } from './use-admin-permissions';
 
 /**
  * Chaque entrée porte la permission que sa page EXIGE — la même que le
@@ -42,23 +43,27 @@ export function firstAllowedRoute(permissions: readonly string[]): string {
  * Coquille des pages du back-office : barre de navigation, déconnexion et
  * garde de session côté client (redirection immédiate vers /login sans
  * jeton — le VRAI contrôle d'accès reste côté serveur, sur chaque requête).
+ *
+ * Le jeton est ÉCOUTÉ, pas seulement lu au montage : quand une requête
+ * revient en 401 (jeton expiré, compte désactivé), le client l'oublie
+ * (`adminToken.expire`), la coquille bascule et renvoie vers la connexion,
+ * quelle que soit la page ouverte.
  */
-const subscribeNoop = () => () => {};
-
 export function AdminShell({ title, children }: { title: string; children: ReactNode }) {
   const router = useRouter();
   const pathname = usePathname();
   // Jeton lu hors rendu serveur (instantané serveur : null → rien n'est
   // affiché avant l'hydratation, puis redirection si non connecté).
-  const token = useSyncExternalStore(subscribeNoop, adminToken.get, () => null);
-  const permissions = useSyncExternalStore(
-    subscribeNoop,
-    adminPermissions.get,
-    () => EMPTY_PERMISSIONS,
-  );
+  const token = useSyncExternalStore(adminToken.subscribe, adminToken.get, () => null);
+  const permissions = useAdminPermissions();
 
   useEffect(() => {
-    if (token === null) {
+    // Le STOCKAGE décide, pas la valeur rendue. Au chargement d'une page
+    // (rechargement, lien ouvert dans un nouvel onglet), l'hydratation rend
+    // l'instantané serveur, `null`, et cet effet s'exécute avant le rendu
+    // qui lit le vrai jeton : il renvoyait vers /login un administrateur
+    // bel et bien connecté, à chaque rechargement.
+    if (token === null && adminToken.get() === null) {
       router.replace('/login');
     }
   }, [token, router]);

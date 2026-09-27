@@ -1,6 +1,7 @@
 import { ENTITLEMENT_KEYS, type EntitlementKey } from '@carlys/api-contracts';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Transform, Type } from 'class-transformer';
+import { trimmed } from '../../../../../common/transforms/trimmed';
 import {
   IsBoolean,
   IsDate,
@@ -99,6 +100,29 @@ export class SetEntitlementDto {
   @Type(() => Date)
   @IsDate()
   expiresAt?: Date;
+
+  @ApiPropertyOptional({
+    description:
+      'Raison de la décision, journalisée dans l’audit (exigée par le back-office pour une coupure)',
+    maxLength: 500,
+  })
+  @IsOptional()
+  @Transform(trimmed)
+  @IsString()
+  @MinLength(1)
+  @MaxLength(500)
+  reason?: string;
+}
+
+/** DELETE /admin/users/:id/entitlements/:key — le compte et le droit à relâcher. */
+export class ManagedEntitlementParams {
+  @ApiProperty({ format: 'uuid' })
+  @IsUUID()
+  id!: string;
+
+  @ApiProperty({ enum: ENTITLEMENT_KEYS })
+  @IsIn(ENTITLEMENT_KEYS)
+  key!: EntitlementKey;
 }
 
 export class ListAuditLogsQuery {

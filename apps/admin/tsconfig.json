@@ -7,7 +7,11 @@
       }
     ],
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@carlys/api-contracts": ["../../packages/api-contracts/src/index.ts"],
+      "@carlys/api-contracts/password-limits": [
+        "../../packages/api-contracts/src/password-limits.ts"
+      ]
     },
     "types": ["vitest/globals", "@testing-library/jest-dom"]
   },

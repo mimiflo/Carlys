@@ -78,6 +78,20 @@ describe('CategoryRow', () => {
     expect(screen.getByLabelText('Nom de Poitrine')).toHaveValue('Poitrine');
   });
 
+  // « Modifier » et « Annuler » démontent le bouton qu'on vient d'activer :
+  // le focus retombait sur <body>, sans contour ni annonce.
+  it('le focus suit le geste : le champ Nom à l’ouverture, « Modifier » à la fermeture', () => {
+    renderRow();
+    const modifier = screen.getByRole('button', { name: 'Modifier' });
+    modifier.focus();
+
+    fireEvent.click(modifier);
+    expect(screen.getByLabelText('Nom de Pectoraux')).toHaveFocus();
+
+    fireEvent.click(screen.getByRole('button', { name: 'Annuler' }));
+    expect(screen.getByRole('button', { name: 'Modifier' })).toHaveFocus();
+  });
+
   it('enregistrer envoie ce qui est à l’écran', async () => {
     const update = vi.spyOn(adminApi, 'updateMuscleGroup').mockResolvedValue(undefined);
     renderRow();

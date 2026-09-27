@@ -4,6 +4,7 @@ import { useInfiniteQuery } from '@tanstack/react-query';
 import type { AdminAuditLog } from '@carlys/api-contracts';
 import { AdminShell } from '@/components/admin-shell';
 import { adminApi } from '@/lib/admin-api';
+import { unavailableMessage } from '@/lib/load-error';
 
 /** Le type d'acteur, en français : « ADMIN » n'est pas un mot de la langue. */
 const ACTOR_LABELS: Record<AdminAuditLog['actorType'], string> = {
@@ -34,7 +35,7 @@ function actorId(log: AdminAuditLog): string | null {
  * pleine, et sans le moindre moyen de s'en sortir autrement qu'en attendant.
  */
 export default function AuditPage() {
-  const { data, isPending, isError, fetchNextPage, hasNextPage, isFetchingNextPage } =
+  const { data, isPending, error, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useInfiniteQuery({
       queryKey: ['admin', 'audit'],
       queryFn: ({ pageParam }) => adminApi.auditLogs(pageParam),
@@ -47,9 +48,9 @@ export default function AuditPage() {
 
   return (
     <AdminShell title="Journal d’audit">
-      {isError && (
+      {error !== null && (
         <p className="text-sm text-danger-ink" role="alert">
-          Journal indisponible : la permission audit:read est requise.
+          {unavailableMessage(error, 'Journal indisponible', 'audit:read')}
         </p>
       )}
       <div className="overflow-x-auto rounded-xl bg-surface ring-1 ring-black/5">

@@ -1,4 +1,7 @@
-import { z } from 'zod';
+// `zod/mini` et non `zod` : ce transport sert AUSSI les pages publiques
+// ouvertes sur téléphone depuis un e-mail, qui n'ont besoin que de lire une
+// enveloppe d'erreur. Zod « classique » y pesait 65 Ko gzip à lui seul.
+import * as z from 'zod/mini';
 import { publicEnv } from './env';
 
 /**

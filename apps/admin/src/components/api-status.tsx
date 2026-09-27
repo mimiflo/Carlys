@@ -13,6 +13,15 @@ async function fetchHealth(): Promise<HealthReport> {
   return healthReportSchema.parse(body);
 }
 
+/**
+ * Les composants de `/health`, en français. Un composant inconnu garde son
+ * nom technique : mieux vaut un mot brut qu'une ligne qui disparaît.
+ */
+const COMPONENT_LABELS: Record<string, string> = {
+  database: 'Base de données',
+  redis: 'Cache (Redis)',
+};
+
 function StatusDot({ up }: { up: boolean }) {
   return (
     <span
@@ -22,6 +31,17 @@ function StatusDot({ up }: { up: boolean }) {
   );
 }
 
+/**
+ * L'état de la plateforme, sur la page d'accueil PUBLIQUE (aucune connexion).
+ *
+ * Elle affichait `component.error` mot pour mot : pour une base arrêtée,
+ * « Can't reach database server at `10.20.30.40:5432` », soit l'hôte et le
+ * port internes, lisibles par n'importe qui. L'API ne publie plus ce détail
+ * (il part à son journal) ; cette page ne l'affiche plus non plus, quoi que
+ * le serveur envoie : en service ou indisponible, rien d'autre. Elle donnait
+ * aussi, en production, la consigne de développement « lancez `pnpm dev:api`
+ * et `docker compose up -d` ».
+ */
 export function ApiStatus() {
   const { data, isPending, isError } = useQuery({
     queryKey: ['api-health'],
@@ -36,7 +56,7 @@ export function ApiStatus() {
   if (isError || data === undefined) {
     return (
       <p className="text-sm text-danger-ink" role="status">
-        API injoignable : vérifiez que `pnpm dev:api` et `docker compose up -d` sont lancés.
+        API injoignable pour le moment : l’état de la plateforme n’a pas pu être lu.
       </p>
     );
   }
@@ -51,7 +71,8 @@ export function ApiStatus() {
         <li key={name} className="flex items-center gap-2">
           <StatusDot up={component.status === 'up'} />
           <span>
-            {name} : {component.status === 'up' ? 'connecté' : (component.error ?? 'indisponible')}
+            {COMPONENT_LABELS[name] ?? name} :{' '}
+            {component.status === 'up' ? 'en service' : 'indisponible'}
           </span>
         </li>
       ))}

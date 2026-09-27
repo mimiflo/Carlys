@@ -18,7 +18,12 @@ pnpm test       # vitest + Testing Library
 Étape 7 livrée : connexion administrateur réelle (`/login`, comptes séparés
 des comptes mobiles, jeton à audience dédiée en sessionStorage), gestion des
 utilisateurs (`/users` — recherche, fiche, suspension avec révocation des
-sessions, attribution manuelle du premium) et journal d'audit (`/audit`).
+sessions, accès premium : origine de chaque droit et trois gestes distincts,
+« Offrir », « Couper » avec raison, « Rendre la main à l'abonnement », qui
+visent chacun TOUS les droits du plan premium — `PREMIUM_ENTITLEMENT_KEYS`,
+coach IA et programmes illimités compris — l'un après l'autre) et
+journal d'audit (`/audit`). Un 401 (jeton expiré, compte désactivé) ramène à
+la connexion ; les gestes sans permission ne sont pas proposés.
 S'y ajoutent les signalements de la communauté (`/reports` : ouverts par
 défaut, résolution ou réouverture, lien vers la fiche des deux personnes ;
 permission `community:moderate`, voir `docs/product/community.md`).

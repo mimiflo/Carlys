@@ -1,4 +1,4 @@
-import { managedUserSummarySchema } from '@carlys/api-contracts';
+import { managedUserSummarySchema, PREMIUM_ENTITLEMENT_KEYS } from '@carlys/api-contracts';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { AdminApiError, adminApi, adminToken, parseData, parsePage } from './admin-api';
 
@@ -141,12 +141,83 @@ describe('transport JSON', () => {
     );
 
     const failure: unknown = await adminApi
-      .setEntitlement(USER.id, 'premium_exercises', true)
+      .setEntitlement(USER.id, { key: 'premium_exercises', isActive: true })
       .catch((cause: unknown) => cause);
 
     expect(failure).toBeInstanceOf(AdminApiError);
     expect((failure as AdminApiError).status).toBe(403);
     expect((failure as AdminApiError).message).toBe('Permission entitlement:grant requise.');
+  });
+
+  it('coupe un droit avec sa raison, et le rend à l’abonnement par DELETE', async () => {
+    const detail = {
+      ...USER,
+      sessionsCount: 0,
+      completedWorkoutsCount: 0,
+      entitlements: [],
+      paidSubscription: null,
+    };
+    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(respond({ data: detail })));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await adminApi.setEntitlement(USER.id, {
+      key: 'premium_exercises',
+      isActive: false,
+      reason: 'Fraude',
+    });
+    await adminApi.releaseEntitlement(USER.id, 'premium_exercises');
+
+    const [putUrl, put] = fetchMock.mock.calls[0] as [string, RequestInit];
+    expect(putUrl).toBe(`http://localhost:3000/api/v1/admin/users/${USER.id}/entitlements`);
+    expect(put.method).toBe('PUT');
+    expect(JSON.parse(put.body as string)).toEqual({
+      key: 'premium_exercises',
+      isActive: false,
+      reason: 'Fraude',
+    });
+    const [deleteUrl, remove] = fetchMock.mock.calls[1] as [string, RequestInit];
+    expect(deleteUrl).toBe(
+      `http://localhost:3000/api/v1/admin/users/${USER.id}/entitlements/premium_exercises`,
+    );
+    expect(remove.method).toBe('DELETE');
+  });
+
+  /**
+   * « Premium » est tout le plan : une coupure qui ne visait que
+   * `premium_exercises` laissait le coach IA et les programmes illimités ouverts.
+   */
+  it('le premium se décide sur chaque droit du plan, l’un après l’autre, et s’arrête au premier refus', async () => {
+    const detail = {
+      ...USER,
+      sessionsCount: 0,
+      completedWorkoutsCount: 0,
+      entitlements: [],
+      paidSubscription: null,
+    };
+    const fetchMock = vi.fn().mockImplementation(() => Promise.resolve(respond({ data: detail })));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await adminApi.setPremium(USER.id, { isActive: false, reason: 'Fraude' });
+    await adminApi.releasePremium(USER.id);
+
+    const calls = fetchMock.mock.calls as [string, RequestInit][];
+    expect(calls.slice(0, 6).map(([, init]) => JSON.parse(init.body as string) as unknown)).toEqual(
+      PREMIUM_ENTITLEMENT_KEYS.map((key) => ({ key, isActive: false, reason: 'Fraude' })),
+    );
+    expect(calls.slice(6).map(([url, init]) => `${init.method} ${url}`)).toEqual(
+      PREMIUM_ENTITLEMENT_KEYS.map(
+        (key) => `DELETE http://localhost:3000/api/v1/admin/users/${USER.id}/entitlements/${key}`,
+      ),
+    );
+
+    fetchMock.mockClear();
+    fetchMock
+      .mockImplementationOnce(() => Promise.resolve(respond({ data: detail })))
+      .mockImplementationOnce(() => Promise.resolve(new Response('', { status: 502 })));
+    await expect(adminApi.setPremium(USER.id, { isActive: true })).rejects.toBeInstanceOf(
+      AdminApiError,
+    );
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it('sans enveloppe lisible (proxy, HTML), garde le statut et un message générique', async () => {
@@ -160,5 +231,79 @@ describe('transport JSON', () => {
     expect(failure).toBeInstanceOf(AdminApiError);
     expect((failure as AdminApiError).status).toBe(502);
     expect((failure as AdminApiError).message).toBe('Erreur 502');
+  });
+});
+
+/**
+ * Le jeton vit douze heures et la coquille ne vérifiait que sa PRÉSENCE : un
+ * onglet resté ouvert, ou un compte désactivé, recevait des 401 partout sans
+ * jamais revenir à la connexion. Un 401 sur une requête qui portait un jeton
+ * termine désormais la session, quelle que soit la route.
+ */
+describe('fin de session sur 401', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    adminToken.clear();
+  });
+
+  const refus = (status: number) =>
+    respond({ error: { code: 'X', message: 'Refus.', details: [], requestId: 'r' } }, status);
+
+  it('un 401 avec jeton oublie le jeton et marque la session comme expirée', async () => {
+    adminToken.set('jeton-perime');
+    const ecoute = vi.fn();
+    const desabonne = adminToken.subscribe(ecoute);
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(refus(401)));
+
+    await expect(adminApi.overview()).rejects.toMatchObject({ status: 401 });
+
+    expect(adminToken.get()).toBeNull();
+    expect(adminToken.wasExpired()).toBe(true);
+    expect(ecoute).toHaveBeenCalled();
+    desabonne();
+  });
+
+  it('vaut aussi pour un dépôt de fichier', async () => {
+    adminToken.set('jeton-perime');
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(refus(401)));
+
+    await expect(
+      adminApi.uploadMedia(new File(['x'], 'a.webp'), 'IMAGE', 'id-1'),
+    ).rejects.toMatchObject({ status: 401 });
+
+    expect(adminToken.get()).toBeNull();
+  });
+
+  it('un 403 laisse la session intacte : c’est le rôle, pas la session', async () => {
+    adminToken.set('jeton-admin');
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(refus(403)));
+
+    await expect(adminApi.overview()).rejects.toMatchObject({ status: 403 });
+
+    expect(adminToken.get()).toBe('jeton-admin');
+    expect(adminToken.wasExpired()).toBe(false);
+  });
+
+  it('la connexion part SANS jeton : un mot de passe faux n’est pas une fin de session', async () => {
+    adminToken.set('jeton-perime-reste-dans-l-onglet');
+    const fetchMock = vi.fn().mockResolvedValue(refus(401));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(adminApi.login('a@carlys.test', 'mauvais-mdp')).rejects.toMatchObject({
+      status: 401,
+    });
+
+    const [, init] = requestOf(fetchMock);
+    expect(Object.keys(init.headers as Record<string, string>)).not.toContain('Authorization');
+    expect(adminToken.wasExpired()).toBe(false);
+  });
+
+  it('une nouvelle connexion efface la marque d’expiration', () => {
+    adminToken.expire();
+    expect(adminToken.wasExpired()).toBe(true);
+
+    adminToken.set('jeton-neuf');
+
+    expect(adminToken.wasExpired()).toBe(false);
   });
 });

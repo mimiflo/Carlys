@@ -48,6 +48,22 @@ afterEach(() => {
 });
 
 describe('Page Connexion', () => {
+  // Renvoyé ici par un 401 (jeton expiré, compte désactivé) : la page le dit,
+  // sinon elle surgit sans explication au milieu d'une tâche.
+  it('annonce une session expirée quand le serveur a refusé le jeton', () => {
+    adminToken.expire();
+
+    render(<LoginPage />);
+
+    expect(screen.getByRole('status')).toHaveTextContent('Ta session a expiré');
+  });
+
+  it('n’annonce rien à qui arrive simplement pour se connecter', () => {
+    render(<LoginPage />);
+
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
+  });
+
   it('garde les permissions reçues et ouvre la première page autorisée', async () => {
     vi.spyOn(adminApi, 'login').mockResolvedValue(
       resultat(['exercise:read', 'exercise:write', 'media:read', 'media:write']),
@@ -82,11 +98,13 @@ describe('Page Connexion', () => {
     });
   });
 
-  it('distingue un mot de passe faux d’une API injoignable', async () => {
+  // Un serveur injoignable, c'est `fetch` qui rejette (TypeError), pas une
+  // réponse de l'API.
+  it('distingue un mot de passe faux d’un serveur injoignable', async () => {
     const login = vi
       .spyOn(adminApi, 'login')
       .mockRejectedValueOnce(new AdminApiError('Identifiants invalides.', 401))
-      .mockRejectedValueOnce(new AdminApiError('Échec réseau', 0));
+      .mockRejectedValueOnce(new TypeError('Failed to fetch'));
 
     render(<LoginPage />);
     connecte();
@@ -94,11 +112,32 @@ describe('Page Connexion', () => {
 
     connecte();
     await waitFor(() => {
-      expect(screen.getByRole('alert')).toHaveTextContent('l’API est démarrée');
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        'Connexion impossible pour le moment : le serveur ne répond pas. Réessaie dans un instant.',
+      );
     });
 
     expect(login).toHaveBeenCalledTimes(2);
     expect(routerReplace).not.toHaveBeenCalled();
     expect(adminToken.get()).toBeNull();
+  });
+
+  /**
+   * Tout ce qui n'était pas un 401 conseillait de « vérifier que l'API est
+   * démarrée » : une consigne de développeur, en production, au vouvoiement,
+   * et fausse pour un compte verrouillé après trop d'essais.
+   */
+  it.each([
+    [429, 'Trop de tentatives : patiente quelques minutes avant de réessayer.'],
+    [502, 'Connexion impossible pour le moment. Réessaie dans un instant.'],
+  ])('un refus %i se dit par sa cause, sans consigne de développeur', async (status, message) => {
+    vi.spyOn(adminApi, 'login').mockRejectedValue(new AdminApiError('Refus.', status));
+
+    render(<LoginPage />);
+    connecte();
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent(message);
+    expect(alert).not.toHaveTextContent(/API|vérifiez/);
   });
 });

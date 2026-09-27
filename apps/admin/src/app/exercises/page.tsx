@@ -1,13 +1,14 @@
 'use client';
 
 import { type AdminExerciseSummary } from '@carlys/api-contracts';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useInfiniteQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { AdminShell } from '@/components/admin-shell';
 import { ExerciseCategoriesCell } from '@/components/exercise-categories-cell';
 import { ExerciseDeleteCell } from '@/components/exercise-delete-cell';
 import { ExercisePhotoCell } from '@/components/exercise-photo-cell';
 import { adminApi } from '@/lib/admin-api';
+import { unavailableMessage } from '@/lib/load-error';
 
 function PublicationToggle({ exercise }: { exercise: AdminExerciseSummary }) {
   const queryClient = useQueryClient();
@@ -43,16 +44,27 @@ function PublicationToggle({ exercise }: { exercise: AdminExerciseSummary }) {
  * **Tout média passe par ici** : les photos d'exercices ne sont pas embarquées
  * dans l'application, elles sont déposées depuis cet écran et servies par le
  * stockage objet. Ajouter une illustration ne demande donc aucune livraison.
+ *
+ * Page par page, comme les utilisateurs. La page ne demandait QUE la
+ * première : la route en sert cinquante, le catalogue en compte près de
+ * deux cents, et les autres n'étaient atteignables qu'en tapant leur nom.
+ * Passer en revue les exercices sans photo ou masqués était impossible.
  */
 export default function ExercisesPage() {
   const [search, setSearch] = useState('');
   const [submitted, setSubmitted] = useState('');
   const [includeDeleted, setIncludeDeleted] = useState(false);
-  const { data, isPending, isError } = useQuery({
-    queryKey: ['admin', 'exercises', submitted, includeDeleted],
-    queryFn: () =>
-      adminApi.listExercises(submitted === '' ? undefined : submitted, undefined, includeDeleted),
-  });
+  const { data, isPending, error, fetchNextPage, hasNextPage, isFetchingNextPage } =
+    useInfiniteQuery({
+      queryKey: ['admin', 'exercises', submitted, includeDeleted],
+      queryFn: ({ pageParam }) =>
+        adminApi.listExercises(submitted === '' ? undefined : submitted, pageParam, includeDeleted),
+      initialPageParam: undefined as string | undefined,
+      // `undefined` = fin du catalogue ; c'est ce qui éteint le bouton.
+      getNextPageParam: (last) =>
+        last.hasMore && last.nextCursor !== null ? last.nextCursor : undefined,
+    });
+  const exercises = data?.pages.flatMap((page) => page.items) ?? [];
 
   return (
     <AdminShell title="Exercices">
@@ -93,9 +105,9 @@ export default function ExercisesPage() {
       </form>
 
       {isPending && <p className="mt-6 text-sm text-muted">Chargement…</p>}
-      {isError && (
+      {error !== null && (
         <p className="mt-6 text-sm text-danger-ink" role="alert">
-          Catalogue indisponible : reconnectez-vous si le problème persiste.
+          {unavailableMessage(error, 'Catalogue indisponible', 'exercise:read')}
         </p>
       )}
       {data !== undefined && (
@@ -111,7 +123,7 @@ export default function ExercisesPage() {
               </tr>
             </thead>
             <tbody>
-              {data.items.map((exercise) => (
+              {exercises.map((exercise) => (
                 <tr key={exercise.id} className="border-b border-black/5 last:border-0">
                   <td className="px-4 py-3">
                     {/* Un exercice supprimé se BARRE, il ne pâlit pas : à
@@ -143,7 +155,7 @@ export default function ExercisesPage() {
                   </td>
                 </tr>
               ))}
-              {data.items.length === 0 && (
+              {exercises.length === 0 && (
                 <tr>
                   <td colSpan={5} className="px-4 py-6 text-center text-muted">
                     Aucun exercice trouvé.
@@ -154,10 +166,15 @@ export default function ExercisesPage() {
           </table>
         </div>
       )}
-      {data?.hasMore === true && (
-        <p className="mt-3 text-xs text-muted">
-          Seuls les {data.items.length} premiers exercices sont affichés : affinez la recherche.
-        </p>
+      {hasNextPage && (
+        <button
+          type="button"
+          onClick={() => void fetchNextPage()}
+          disabled={isFetchingNextPage}
+          className="mt-4 rounded-lg border border-primary px-4 py-2 text-sm font-semibold text-primary-ink hover:bg-primary hover:text-white disabled:opacity-50"
+        >
+          {isFetchingNextPage ? 'Chargement…' : 'Charger la suite'}
+        </button>
       )}
     </AdminShell>
   );

@@ -46,7 +46,7 @@ export function CommunityReportStatusCell({ report }: { report: AdminCommunityRe
         <p className="mt-1 text-xs text-danger-ink" role="alert">
           {mutate.error instanceof AdminApiError && mutate.error.status === 403
             ? 'Permission manquante pour cette action.'
-            : 'Action impossible, réessayez.'}
+            : 'Action impossible, réessaie.'}
         </p>
       )}
     </div>

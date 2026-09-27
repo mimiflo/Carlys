@@ -9,6 +9,7 @@ import {
   managedUserSummarySchema,
   equipmentSchema,
   mediaAssetSchema,
+  PREMIUM_ENTITLEMENT_KEYS,
   type AdminAuditLog,
   type AdminExerciseSummary,
   type AdminLoginResult,
@@ -18,6 +19,7 @@ import {
   type Equipment,
   type SetExerciseCategoriesInput,
   type EntitlementKey,
+  type SetManagedEntitlement,
   type ManagedUserDetail,
   type ManagedUserSummary,
   type MediaAsset,
@@ -26,7 +28,7 @@ import {
 import { z } from 'zod';
 import { call, callUpload, parseData, parsePage, query, type Page } from './admin-api-client';
 import { communityApi } from './admin-community-api';
-import { ApiError } from './api-transport';
+import { ApiError, requestJson } from './api-transport';
 
 /**
  * Client de l'API d'administration : réponses VALIDÉES par les contrats Zod
@@ -50,15 +52,39 @@ export {
   type Page,
 } from './admin-api-client';
 
+/**
+ * La même décision sur chaque droit du plan premium, l'un APRÈS l'autre : la
+ * dernière réponse porte donc l'état complet. La route décide droit par
+ * droit, sans transaction commune : un échec en cours de route laisse les
+ * premiers droits décidés, et le geste, idempotent, se rejoue tel quel.
+ */
+async function eachPremiumKey(
+  apply: (key: EntitlementKey) => Promise<ManagedUserDetail>,
+): Promise<ManagedUserDetail> {
+  let detail: ManagedUserDetail | undefined;
+  for (const key of PREMIUM_ENTITLEMENT_KEYS) {
+    detail = await apply(key);
+  }
+  if (detail === undefined) {
+    throw new Error('Le plan premium n’ouvre aucun droit.');
+  }
+  return detail;
+}
+
 export const adminApi = {
   // Signalements de la communauté — voir `admin-community-api.ts`.
   ...communityApi,
 
+  /**
+   * Sans jeton, jamais : un jeton périmé resté dans l'onglet ferait lire le
+   * 401 d'un mot de passe faux comme une fin de session.
+   */
   async login(email: string, password: string): Promise<AdminLoginResult> {
-    const body = await call('/admin/auth/login', {
-      method: 'POST',
-      body: JSON.stringify({ email, password }),
-    });
+    const body = await requestJson(
+      '/admin/auth/login',
+      { method: 'POST', body: JSON.stringify({ email, password }) },
+      null,
+    );
     return parseData(body, adminLoginResultSchema);
   },
 
@@ -87,16 +113,43 @@ export const adminApi = {
     return parseData(body, managedUserSummarySchema);
   },
 
-  async setEntitlement(
-    id: string,
-    key: EntitlementKey,
-    isActive: boolean,
-  ): Promise<ManagedUserDetail> {
+  /**
+   * Décision MANUELLE sur un droit : `isActive: true` l'offre, `false` le
+   * coupe. Une coupure survit à tout paiement ET bloque les achats ; elle
+   * part avec sa raison, journalisée dans l'audit.
+   */
+  async setEntitlement(id: string, input: SetManagedEntitlement): Promise<ManagedUserDetail> {
     const body = await call(`/admin/users/${id}/entitlements`, {
       method: 'PUT',
-      body: JSON.stringify({ key, isActive }),
+      body: JSON.stringify(input),
     });
     return parseData(body, managedUserDetailSchema);
+  },
+
+  /**
+   * Rend la main à l'abonnement : la décision manuelle disparaît et le droit
+   * suit de nouveau les paiements (ouvert s'il est payé, fermé sinon).
+   */
+  async releaseEntitlement(id: string, key: EntitlementKey): Promise<ManagedUserDetail> {
+    const body = await call(`/admin/users/${id}/entitlements/${key}`, { method: 'DELETE' });
+    return parseData(body, managedUserDetailSchema);
+  },
+
+  /**
+   * « Premium », au back-office, c'est TOUT le plan : chaque droit de
+   * `PREMIUM_ENTITLEMENT_KEYS`. Ne viser que `premium_exercises` laissait,
+   * après « Couper l'accès », le coach IA et les programmes illimités d'un
+   * abonné ouverts, et « Offrir le premium » ne les ouvrait pas.
+   */
+  async setPremium(
+    id: string,
+    input: Omit<SetManagedEntitlement, 'key'>,
+  ): Promise<ManagedUserDetail> {
+    return eachPremiumKey((key) => adminApi.setEntitlement(id, { ...input, key }));
+  },
+
+  async releasePremium(id: string): Promise<ManagedUserDetail> {
+    return eachPremiumKey((key) => adminApi.releaseEntitlement(id, key));
   },
 
   async auditLogs(cursor?: string): Promise<Page<AdminAuditLog>> {

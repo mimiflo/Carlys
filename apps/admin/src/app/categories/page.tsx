@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { AdminShell } from '@/components/admin-shell';
 import { CategoryRow } from '@/components/category-row';
 import { adminApi } from '@/lib/admin-api';
+import { unavailableMessage } from '@/lib/load-error';
 
 /** Slug proposé à partir du nom : accents retirés, espaces en tirets. */
 export function slugify(name: string): string {
@@ -85,7 +86,7 @@ function CreateForm() {
  * part, la contrainte de base étant en cascade.
  */
 export default function CategoriesPage() {
-  const { data, isPending, isError } = useQuery<AdminMuscleGroup[]>({
+  const { data, isPending, error } = useQuery<AdminMuscleGroup[]>({
     queryKey: ['admin', 'muscle-groups'],
     queryFn: () => adminApi.listMuscleGroups(),
   });
@@ -100,9 +101,9 @@ export default function CategoriesPage() {
       <CreateForm />
 
       {isPending && <p className="mt-6 text-sm text-muted">Chargement…</p>}
-      {isError && (
+      {error !== null && (
         <p className="mt-6 text-sm text-danger-ink" role="alert">
-          Catégories indisponibles : reconnectez-vous si le problème persiste.
+          {unavailableMessage(error, 'Catégories indisponibles', 'exercise:read')}
         </p>
       )}
       {data !== undefined && (

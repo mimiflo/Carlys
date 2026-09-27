@@ -159,6 +159,60 @@ const FORBIDDEN: [RegExp, string][] = [
   [/hover:opacity-/, 'un survol par opacité éclaircit le fond sous le texte'],
 ];
 
+/**
+ * Les couleurs que Tailwind CONNAÎT ici : celles que `@theme inline` déclare
+ * (`--color-x`), plus les absolues du cadre.
+ *
+ * Une classe de couleur inconnue ne casse rien de visible au build : Tailwind
+ * n'émet simplement aucune règle, et l'élément hérite de la couleur de son
+ * parent. C'est ainsi que `text-ink` (aucune `--color-ink`) peignait le nom
+ * du groupe principal d'un exercice dans le gris `text-muted` du bouton, là
+ * où l'intention était l'encre pleine. Les paires ci-dessus ne le voyaient
+ * pas : elles mesurent les couleurs qui existent.
+ */
+const THEME_COLORS = new Set(
+  [...css.matchAll(/--color-([\w-]+)\s*:/g)].flatMap(([, name]) =>
+    name === undefined ? [] : [name],
+  ),
+);
+const FRAMEWORK_COLORS = new Set(['white', 'black', 'transparent', 'current', 'inherit']);
+
+/** Ce qui, après chaque préfixe, n'est PAS une couleur (taille, alignement, style…). */
+const NOT_A_COLOR: Record<string, RegExp> = {
+  text: /^(?:xs|sm|base|lg|left|center|right|justify|start|end|wrap|nowrap|balance|pretty|ellipsis|clip|shadow(?:-.*)?)$/,
+  bg: /^(?:fixed|local|scroll|auto|cover|contain|none|no-repeat|repeat(?:-.*)?|center|top|bottom|left|right|(?:left|right)-(?:top|bottom)|(?:clip|origin|blend|linear|radial|conic|gradient|size|position)-.*)$/,
+  border: /^(?:solid|dashed|dotted|double|hidden|none|collapse|separate|spacing(?:-.*)?)$/,
+  ring: /^(?:inset|offset-.*)$/,
+  outline: /^(?:none|hidden|solid|dashed|dotted|double|offset-.*)$/,
+};
+
+/** Les classes `text-*`, `bg-*`, `border-*`, `ring-*`, `outline-*` d'une ligne dont la couleur est inconnue. */
+function unknownColorClasses(line: string): string[] {
+  const unknown: string[] = [];
+  for (const match of line.matchAll(
+    /(?<![\w-])(text|bg|border|ring|outline)-([a-z][\w-]*)(?:\/\d+)?(?![\w/-])/g,
+  )) {
+    const [whole, prefix, rest] = match;
+    if (prefix === undefined || rest === undefined) {
+      continue;
+    }
+    // `border-t-primary` : le côté d'abord, la couleur ensuite ; `border-t`
+    // seul (ou `border-t-2`) n'est qu'une épaisseur.
+    const side = prefix === 'border' ? /^(?:[tblrxyse])(?:-(.*))?$/.exec(rest) : null;
+    const suffix = side === null ? rest : side[1];
+    if (suffix === undefined || /^\d/.test(suffix)) {
+      continue;
+    }
+    if (NOT_A_COLOR[prefix]?.test(suffix) === true || /^\d?xl$/.test(suffix)) {
+      continue;
+    }
+    if (!THEME_COLORS.has(suffix) && !FRAMEWORK_COLORS.has(suffix)) {
+      unknown.push(whole.replace(/\/\d+$/, ''));
+    }
+  }
+  return unknown;
+}
+
 describe('les écrans n’emploient que des paires mesurées', () => {
   const files = sources(join(adminRoot, 'src'));
 
@@ -180,6 +234,36 @@ describe('les écrans n’emploient que des paires mesurées', () => {
         });
     }
     expect(faults).toEqual([]);
+  });
+
+  it('aucune classe ne nomme une couleur que le thème ne déclare pas', () => {
+    const faults: string[] = [];
+    for (const file of files) {
+      readFileSync(file, 'utf8')
+        .split('\n')
+        .forEach((line, index) => {
+          for (const unknown of unknownColorClasses(line)) {
+            faults.push(`${file.slice(adminRoot.length + 1)}:${index + 1} — ${unknown}`);
+          }
+        });
+    }
+    expect(faults).toEqual([]);
+  });
+
+  it('la liste blanche reconnaît ce qu’elle doit, et rien de plus', () => {
+    expect(THEME_COLORS.has('foreground')).toBe(true);
+    expect(unknownColorClasses('className="block font-medium text-ink"')).toEqual(['text-ink']);
+    expect(unknownColorClasses('className="hover:bg-grey border-t-danger-inkk"')).toEqual([
+      'bg-grey',
+      'border-t-danger-inkk',
+    ]);
+    expect(
+      unknownColorClasses(
+        'className="text-sm text-left text-foreground bg-primary/10 bg-black/5 border-b ' +
+          'border-black/10 border-t-primary ring-1 ring-danger-strong/40 outline-2 ' +
+          'outline-offset-2 hover:text-primary-ink text-white bg-cover"',
+      ),
+    ).toEqual([]);
   });
 
   it('le balai reconnaît ce qu’il doit, et rien de plus', () => {

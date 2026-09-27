@@ -1,5 +1,6 @@
 import { ADMIN_PERMISSIONS } from '@carlys/api-contracts';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import { renderToString } from 'react-dom/server';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { EMPTY_PERMISSIONS, adminPermissions, adminToken } from '@/lib/admin-api';
 import { AdminShell, firstAllowedRoute } from './admin-shell';
@@ -111,6 +112,39 @@ describe('AdminShell', () => {
 
     expect(liens()).toEqual([]);
     expect(screen.getByText('contenu')).toBeInTheDocument();
+  });
+
+  // Un geste refusé en 401 dans un composant enfant (une mutation) ne fait
+  // pas re-rendre la coquille : elle doit ÉCOUTER le jeton, pas le relire
+  // au hasard d'un rendu.
+  it('bascule vers la connexion dès que le client oublie le jeton (401)', () => {
+    adminToken.set('jeton-admin');
+    adminPermissions.set(SUPER_ADMIN);
+    render(<AdminShell title="Utilisateurs">contenu</AdminShell>);
+    expect(screen.getByText('contenu')).toBeInTheDocument();
+
+    act(() => adminToken.expire());
+
+    expect(routerReplace).toHaveBeenCalledWith('/login');
+    expect(screen.queryByText('contenu')).not.toBeInTheDocument();
+  });
+
+  // Une page du back-office est rendue au build (statique) : au chargement,
+  // React HYDRATE avec l'instantané serveur (aucun jeton), et l'effet de
+  // garde s'exécutait avant le rendu qui lit le vrai jeton. Chaque
+  // rechargement renvoyait donc un administrateur connecté vers /login.
+  it('au chargement d’une page (hydratation), un jeton présent ne renvoie pas vers la connexion', async () => {
+    adminToken.set('jeton-admin');
+    adminPermissions.set(SUPER_ADMIN);
+    const container = document.createElement('div');
+    container.innerHTML = renderToString(<AdminShell title="Utilisateurs">contenu</AdminShell>);
+    document.body.append(container);
+
+    render(<AdminShell title="Utilisateurs">contenu</AdminShell>, { container, hydrate: true });
+
+    expect(await screen.findByText('contenu')).toBeInTheDocument();
+    expect(routerReplace).not.toHaveBeenCalled();
+    container.remove();
   });
 
   it('la déconnexion efface AUSSI les permissions, pas seulement le jeton', () => {

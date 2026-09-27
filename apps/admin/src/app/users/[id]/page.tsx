@@ -1,18 +1,22 @@
 'use client';
 
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useParams } from 'next/navigation';
 import { AdminShell } from '@/components/admin-shell';
+import { UserAccountActions } from '@/components/user-account-actions';
+import { PremiumPanel } from '@/components/user-premium-panel';
 import { AdminApiError, adminApi } from '@/lib/admin-api';
+import { sourceLabel } from '@/lib/entitlement-labels';
 
 /**
- * Fiche d'un compte mobile : activité, droits, actions sensibles
- * (suspension = sessions révoquées ; attribution manuelle = auditée).
+ * Fiche d'un compte mobile : activité, droits et leur ORIGINE, accès
+ * premium (trois gestes distincts, voir `PremiumPanel`) et suspension. Les
+ * gestes ne s'affichent qu'à qui a la permission de les faire ; le serveur
+ * reste le seul juge.
  */
 export default function UserDetailPage() {
   const params = useParams<{ id: string }>();
   const userId = params.id;
-  const queryClient = useQueryClient();
 
   const {
     data: user,
@@ -22,21 +26,6 @@ export default function UserDetailPage() {
     queryKey: ['admin', 'user', userId],
     queryFn: () => adminApi.userDetail(userId),
   });
-
-  const refresh = () => {
-    void queryClient.invalidateQueries({ queryKey: ['admin', 'user', userId] });
-    void queryClient.invalidateQueries({ queryKey: ['admin', 'users'] });
-  };
-  const statusMutation = useMutation({
-    mutationFn: (status: 'ACTIVE' | 'SUSPENDED') => adminApi.setUserStatus(userId, status),
-    onSuccess: refresh,
-  });
-  const entitlementMutation = useMutation({
-    mutationFn: (isActive: boolean) =>
-      adminApi.setEntitlement(userId, 'premium_exercises', isActive),
-    onSuccess: refresh,
-  });
-  const actionError = statusMutation.error ?? entitlementMutation.error;
 
   return (
     <AdminShell title="Fiche utilisateur">
@@ -97,7 +86,7 @@ export default function UserDetailPage() {
                   />
                   <span className="font-mono">{entitlement.key}</span>
                   <span className="text-muted">
-                    {entitlement.isActive ? 'actif' : 'inactif'}
+                    {entitlement.isActive ? 'actif' : 'inactif'} · {sourceLabel(entitlement)}
                     {entitlement.expiresAt !== null &&
                       ` · expire le ${new Date(entitlement.expiresAt).toLocaleDateString('fr-FR')}`}
                   </span>
@@ -106,49 +95,8 @@ export default function UserDetailPage() {
             </ul>
           </section>
 
-          <section className="rounded-xl bg-surface p-6 ring-1 ring-black/5">
-            <h2 className="text-lg font-semibold">Actions</h2>
-            <p className="mt-1 text-sm text-muted">
-              Chaque action est journalisée dans l’audit. La suspension révoque immédiatement toutes
-              les sessions de l’utilisateur.
-            </p>
-            <div className="mt-4 flex flex-wrap gap-3">
-              {user.status === 'SUSPENDED' ? (
-                <button
-                  type="button"
-                  disabled={statusMutation.isPending}
-                  onClick={() => statusMutation.mutate('ACTIVE')}
-                  className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white hover:bg-primary-dark disabled:opacity-50"
-                >
-                  Réactiver le compte
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  disabled={statusMutation.isPending || user.status === 'DELETED'}
-                  onClick={() => statusMutation.mutate('SUSPENDED')}
-                  className="rounded-lg bg-danger-strong px-4 py-2 text-sm font-semibold text-white hover:ring-2 hover:ring-danger-strong/40 disabled:opacity-50"
-                >
-                  Suspendre le compte
-                </button>
-              )}
-              <button
-                type="button"
-                disabled={entitlementMutation.isPending}
-                onClick={() => entitlementMutation.mutate(!user.isPremium)}
-                className="rounded-lg border border-primary px-4 py-2 text-sm font-semibold text-primary-ink hover:bg-primary hover:text-white disabled:opacity-50"
-              >
-                {user.isPremium ? 'Retirer le premium manuel' : 'Accorder le premium (manuel)'}
-              </button>
-            </div>
-            {actionError !== null && (
-              <p className="mt-3 text-sm text-danger-ink" role="alert">
-                {actionError instanceof AdminApiError && actionError.status === 403
-                  ? 'Permission manquante pour cette action.'
-                  : 'Action impossible, réessayez.'}
-              </p>
-            )}
-          </section>
+          <PremiumPanel user={user} />
+          <UserAccountActions user={user} />
         </div>
       )}
     </AdminShell>

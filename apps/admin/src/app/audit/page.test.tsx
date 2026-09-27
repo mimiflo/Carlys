@@ -3,7 +3,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { render, screen, within } from '@testing-library/react';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { ADMIN_PERMISSIONS } from '@carlys/api-contracts';
-import { adminApi, adminPermissions, adminToken, type Page } from '@/lib/admin-api';
+import { AdminApiError, adminApi, adminPermissions, adminToken, type Page } from '@/lib/admin-api';
 import AuditPage from './page';
 
 /**
@@ -148,13 +148,32 @@ describe('Page Journal d’audit', () => {
     expect(auditLogs).toHaveBeenCalledTimes(1);
   });
 
-  it('montre le refus de permission comme tel', async () => {
+  it('montre le refus de permission (403) comme tel', async () => {
     adminToken.set('jeton-admin');
     adminPermissions.set(ADMIN_PERMISSIONS);
-    vi.spyOn(adminApi, 'auditLogs').mockRejectedValue(new Error('403'));
+    vi.spyOn(adminApi, 'auditLogs').mockRejectedValue(
+      new AdminApiError('Permission audit:read requise.', 403),
+    );
 
     renderPage();
 
-    expect(await screen.findByRole('alert')).toHaveTextContent('audit:read');
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Journal indisponible : la permission audit:read est requise.',
+    );
+  });
+
+  // Le journal disait « la permission audit:read est requise » pour TOUTE
+  // erreur : une panne réseau envoyait l'administrateur réclamer un droit
+  // qu'il avait déjà.
+  it('une panne réseau n’est pas un refus de permission', async () => {
+    adminToken.set('jeton-admin');
+    adminPermissions.set(ADMIN_PERMISSIONS);
+    vi.spyOn(adminApi, 'auditLogs').mockRejectedValue(new TypeError('Failed to fetch'));
+
+    renderPage();
+
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('le serveur ne répond pas');
+    expect(alert).not.toHaveTextContent('permission');
   });
 });

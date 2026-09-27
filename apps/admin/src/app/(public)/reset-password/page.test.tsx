@@ -89,6 +89,18 @@ describe('Page « Nouveau mot de passe »', () => {
     expect(fetchMock).not.toHaveBeenCalled();
   });
 
+  // Le formulaire est passé à `zod/mini` : la borne haute tient toujours.
+  it('refuse un mot de passe trop long sans appeler le serveur', () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    renderPage();
+    fillAndSubmit('x'.repeat(129));
+
+    expect(screen.getByRole('alert')).toHaveTextContent('ne peut pas dépasser 128 caractères');
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
   it('dit que le lien est expiré ou invalide sur un 401', async () => {
     vi.stubGlobal(
       'fetch',

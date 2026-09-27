@@ -1,35 +1,45 @@
 'use client';
 
-import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from '@carlys/api-contracts';
+import { PASSWORD_MAX_LENGTH, PASSWORD_MIN_LENGTH } from '@carlys/api-contracts/password-limits';
 import { useMutation } from '@tanstack/react-query';
 import { useSearchParams } from 'next/navigation';
 import { useState, type FormEvent } from 'react';
-import { z } from 'zod';
+import * as z from 'zod/mini';
 import { PublicNotice } from '@/components/public-page';
 import { publicApi, publicFailureMessage } from '@/lib/public-api';
 
 const INPUT_CLASSES =
   'rounded-lg border border-black/10 px-3 py-2 text-base focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary';
 
-/** Mêmes bornes que le DTO de l'API : refuser ici ce que le serveur refuserait. */
+/**
+ * Mêmes bornes que le DTO de l'API : refuser ici ce que le serveur refuserait.
+ *
+ * En `zod/mini`, et les bornes lues dans un module SANS Zod : cette page
+ * s'ouvre sur téléphone depuis un e-mail, et deux contrôles de longueur y
+ * faisaient charger Zod « classique » et tous les contrats de l'API.
+ */
 const formSchema = z
   .object({
     newPassword: z
       .string()
-      .min(
-        PASSWORD_MIN_LENGTH,
-        `Le mot de passe doit contenir au moins ${PASSWORD_MIN_LENGTH} caractères.`,
-      )
-      .max(
-        PASSWORD_MAX_LENGTH,
-        `Le mot de passe ne peut pas dépasser ${PASSWORD_MAX_LENGTH} caractères.`,
+      .check(
+        z.minLength(
+          PASSWORD_MIN_LENGTH,
+          `Le mot de passe doit contenir au moins ${PASSWORD_MIN_LENGTH} caractères.`,
+        ),
+        z.maxLength(
+          PASSWORD_MAX_LENGTH,
+          `Le mot de passe ne peut pas dépasser ${PASSWORD_MAX_LENGTH} caractères.`,
+        ),
       ),
     confirmation: z.string(),
   })
-  .refine((values) => values.newPassword === values.confirmation, {
-    message: 'Les deux mots de passe ne sont pas identiques.',
-    path: ['confirmation'],
-  });
+  .check(
+    z.refine((values) => values.newPassword === values.confirmation, {
+      message: 'Les deux mots de passe ne sont pas identiques.',
+      path: ['confirmation'],
+    }),
+  );
 
 const FAILURE_BY_STATUS = {
   401: 'Ce lien est expiré ou n’est plus valable. Refais une demande de réinitialisation depuis l’application.',

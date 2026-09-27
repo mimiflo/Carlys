@@ -1,5 +1,4 @@
 import {
-  ENTITLEMENT_KEYS,
   type EntitlementKey,
   type ManagedUserDetail,
   type ManagedUserSummary,
@@ -8,9 +7,25 @@ import { ConflictException, Injectable, NotFoundException } from '@nestjs/common
 import { UserStatus } from '@prisma/client';
 import { AuditService } from '../../audit/audit.service';
 import {
+  EntitlementsService,
+  rowIsActive,
+} from '../../subscriptions/application/entitlements.service';
+import {
   AdminUsersRepository,
+  type ManagedUserDetailRow,
   type ManagedUserRow,
 } from '../infrastructure/admin-users.repository';
+import {
+  entitlementSource,
+  paidSubscriptionOf,
+  presentManagedEntitlements,
+} from './managed-entitlements';
+
+interface AdminActor {
+  adminUserId: string;
+  ipAddress?: string;
+  requestId?: string;
+}
 
 export interface UsersPage {
   items: ManagedUserSummary[];
@@ -22,9 +37,7 @@ function isPremiumNow(row: ManagedUserRow): boolean {
   const now = Date.now();
   return row.entitlements.some(
     (entitlement) =>
-      entitlement.entitlementKey === 'premium_exercises' &&
-      entitlement.isActive &&
-      (entitlement.expiresAt === null || entitlement.expiresAt.getTime() > now),
+      entitlement.entitlementKey === 'premium_exercises' && rowIsActive(entitlement, now),
   );
 }
 
@@ -46,6 +59,7 @@ export class AdminUsersService {
   constructor(
     private readonly admin: AdminUsersRepository,
     private readonly audit: AuditService,
+    private readonly entitlements: EntitlementsService,
   ) {}
 
   async listUsers(search: string | undefined, limit: number, cursor?: string): Promise<UsersPage> {
@@ -61,25 +75,18 @@ export class AdminUsersService {
 
   async userDetail(userId: string): Promise<ManagedUserDetail> {
     const row = await this.ownedUser(userId);
-    const activity = await this.admin.userActivity(userId);
+    const [activity, subscriptions] = await Promise.all([
+      this.admin.userActivity(userId),
+      this.admin.listSubscriptions(userId),
+    ]);
     const now = Date.now();
-    const byKey = new Map(row.entitlements.map((row) => [row.entitlementKey, row]));
 
     return {
       ...presentSummary(row),
       sessionsCount: activity.sessionsCount,
       completedWorkoutsCount: activity.completedCount,
-      entitlements: ENTITLEMENT_KEYS.map((key) => {
-        const entitlement = byKey.get(key);
-        return {
-          key,
-          isActive:
-            entitlement !== undefined &&
-            entitlement.isActive &&
-            (entitlement.expiresAt === null || entitlement.expiresAt.getTime() > now),
-          expiresAt: entitlement?.expiresAt?.toISOString() ?? null,
-        };
-      }),
+      entitlements: presentManagedEntitlements(row.entitlements, now),
+      paidSubscription: paidSubscriptionOf(subscriptions, now),
     };
   }
 
@@ -90,7 +97,7 @@ export class AdminUsersService {
   async setUserStatus(
     userId: string,
     status: 'ACTIVE' | 'SUSPENDED',
-    actor: { adminUserId: string; ipAddress?: string; requestId?: string },
+    actor: AdminActor,
   ): Promise<ManagedUserSummary> {
     const user = await this.ownedUser(userId);
     if (user.status === UserStatus.DELETED) {
@@ -120,15 +127,22 @@ export class AdminUsersService {
     return presentSummary(updated);
   }
 
-  /** Attribution/retrait MANUEL d'un droit — tracé, jamais écrasé par la synchro. */
+  /**
+   * Attribution/retrait MANUEL d'un droit — tracé, jamais écrasé par la
+   * synchro. Un retrait COUPE aussi un accès payé et bloque les achats :
+   * la raison donnée par l'administration part dans l'audit.
+   */
   async setEntitlement(
     userId: string,
     key: EntitlementKey,
-    input: { isActive: boolean; expiresAt: Date | null },
-    actor: { adminUserId: string; ipAddress?: string; requestId?: string },
+    input: { isActive: boolean; expiresAt: Date | null; reason?: string },
+    actor: AdminActor,
   ): Promise<ManagedUserDetail> {
     await this.ownedUser(userId);
-    await this.admin.upsertManualEntitlement(userId, key, input);
+    await this.admin.upsertManualEntitlement(userId, key, {
+      isActive: input.isActive,
+      expiresAt: input.expiresAt,
+    });
     this.audit.record({
       action: input.isActive ? 'admin.entitlement_granted' : 'admin.entitlement_revoked',
       actorType: 'ADMIN',
@@ -138,12 +152,46 @@ export class AdminUsersService {
       resourceId: `${userId}:${key}`,
       requestId: actor.requestId,
       ipAddress: actor.ipAddress,
-      metadata: { key, expiresAt: input.expiresAt?.toISOString() ?? null },
+      metadata: {
+        key,
+        expiresAt: input.expiresAt?.toISOString() ?? null,
+        reason: input.reason ?? null,
+      },
     });
     return this.userDetail(userId);
   }
 
-  private async ownedUser(userId: string): Promise<ManagedUserRow> {
+  /**
+   * Rend la main à l'abonnement : la décision manuelle (octroi OU coupure)
+   * disparaît, puis les droits se recalculent depuis les abonnements du
+   * compte. Un membre qui paie retrouve son accès ; sans abonnement, le droit
+   * redevient simplement absent. Idempotent : sans décision manuelle, rien
+   * ne change, et le geste est tout de même tracé.
+   */
+  async releaseEntitlement(
+    userId: string,
+    key: EntitlementKey,
+    actor: AdminActor,
+  ): Promise<ManagedUserDetail> {
+    const user = await this.ownedUser(userId);
+    const previous = entitlementSource(user.entitlements.find((row) => row.entitlementKey === key));
+    const removed = await this.admin.deleteManualEntitlement(userId, key);
+    await this.entitlements.resyncFromSubscriptions(userId);
+    this.audit.record({
+      action: 'admin.entitlement_released',
+      actorType: 'ADMIN',
+      adminUserId: actor.adminUserId,
+      userId,
+      resourceType: 'entitlement',
+      resourceId: `${userId}:${key}`,
+      requestId: actor.requestId,
+      ipAddress: actor.ipAddress,
+      metadata: { key, previousSource: previous, removed: removed > 0 },
+    });
+    return this.userDetail(userId);
+  }
+
+  private async ownedUser(userId: string): Promise<ManagedUserDetailRow> {
     const row = await this.admin.findUserById(userId);
     if (row === null) {
       throw new NotFoundException('Utilisateur introuvable.');

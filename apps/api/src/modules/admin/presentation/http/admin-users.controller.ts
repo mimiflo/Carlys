@@ -7,6 +7,7 @@ import {
 import {
   Body,
   Controller,
+  Delete,
   Get,
   Param,
   ParseUUIDPipe,
@@ -24,7 +25,12 @@ import { AdminUsersService } from '../../application/admin-users.service';
 import { CurrentAdmin } from '../decorators/current-admin.decorator';
 import { AdminAuthGuard, type AdminPrincipal } from '../guards/admin-auth.guard';
 import { AdminPermissionsGuard, RequirePermissions } from '../guards/admin-permissions.guard';
-import { ListManagedUsersQuery, SetEntitlementDto, SetUserStatusDto } from './dto/admin.dto';
+import {
+  ListManagedUsersQuery,
+  ManagedEntitlementParams,
+  SetEntitlementDto,
+  SetUserStatusDto,
+} from './dto/admin.dto';
 
 /** Gestion des comptes mobiles — RBAC par permission, tout est audité. */
 @ApiTags('admin')
@@ -85,12 +91,29 @@ export class AdminUsersController {
     return this.users.setEntitlement(
       id,
       dto.key,
-      { isActive: dto.isActive, expiresAt: dto.expiresAt ?? null },
+      { isActive: dto.isActive, expiresAt: dto.expiresAt ?? null, reason: dto.reason },
       {
         adminUserId: admin.adminUserId,
         ipAddress: request.ip,
         requestId: requestIdOf(request),
       },
     );
+  }
+
+  @Delete(':id/entitlements/:key')
+  @RequirePermissions('entitlement:grant')
+  @ApiOperation({
+    summary: 'Rendre la main à l’abonnement : retire la décision manuelle (auditée)',
+  })
+  releaseEntitlement(
+    @Param() params: ManagedEntitlementParams,
+    @CurrentAdmin() admin: AdminPrincipal,
+    @Req() request: RequestWithId,
+  ): Promise<ManagedUserDetail> {
+    return this.users.releaseEntitlement(params.id, params.key, {
+      adminUserId: admin.adminUserId,
+      ipAddress: request.ip,
+      requestId: requestIdOf(request),
+    });
   }
 }

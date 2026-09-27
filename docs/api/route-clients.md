@@ -46,7 +46,7 @@ OpenAPI : `{id}`.
 
 | Route | Consommateur | Où |
 | --- | --- | --- |
-| `GET /health` | **supervision** | orchestrateur / supervision |
+| `GET /health` | **supervision**, **admin** | orchestrateur / supervision ; et `apps/admin`, page d'accueil (`src/components/api-status.tsx`, toutes les 15 s, sans jeton) |
 | `GET /health/live` | **supervision** | orchestrateur / supervision |
 | `GET /health/ready` | **supervision** | orchestrateur / supervision |
 | `GET /metrics` | **supervision** | Prometheus — exposition protégée par `MetricsAuthGuard`, hors préfixe de version |
@@ -57,6 +57,13 @@ que `route-clients.e2e-spec.ts` compare à ce tableau. Le test ne pouvait ni
 réclamer sa ligne ni la voir disparaître ; elle manquait depuis sa livraison.
 C'est le seul angle mort du mécanisme : une route exclue de Swagger se
 déclare ici à la main.
+
+`GET /health` a DEUX consommateurs, et c'est le seul cas du tableau :
+l'orchestrateur, et l'accueil du back-office, qui l'interroge toutes les
+15 secondes pour afficher « en service » ou « indisponible » par composant
+(le détail d'une panne ne quitte plus l'API : un composant en panne y vaut
+`{ status: 'down', error: 'injoignable' }`). La fermer au public dans Nginx,
+ou la restreindre à l'orchestrateur, casserait cet indicateur.
 
 ### Authentification
 
@@ -258,5 +265,6 @@ déclare ici à la main.
 | `GET /admin/overview` | **admin** | apps/admin (back-office) |
 | `GET /admin/users` | **admin** | apps/admin (back-office) |
 | `GET /admin/users/{id}` | **admin** | apps/admin (back-office) |
+| `DELETE /admin/users/{id}/entitlements/{key}` | **admin** | apps/admin (back-office) : « Rendre la main à l'abonnement » |
 | `PUT /admin/users/{id}/entitlements` | **admin** | apps/admin (back-office) |
 | `PATCH /admin/users/{id}/status` | **admin** | apps/admin (back-office) |

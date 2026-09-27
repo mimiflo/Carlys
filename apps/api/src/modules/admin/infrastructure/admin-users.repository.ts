@@ -6,6 +6,27 @@ export type ManagedUserRow = Prisma.UserGetPayload<{
   include: { profile: true; entitlements: true };
 }>;
 
+/**
+ * La fiche d'un compte : chaque droit porte le fournisseur de l'abonnement
+ * qui l'a posé, pour que le back-office sache D'OÙ vient un accès avant d'y
+ * toucher.
+ */
+const DETAIL_INCLUDE = {
+  profile: true,
+  entitlements: { include: { sourceSubscription: { select: { provider: true } } } },
+} satisfies Prisma.UserInclude;
+
+export type ManagedUserDetailRow = Prisma.UserGetPayload<{ include: typeof DETAIL_INCLUDE }>;
+
+export type ManagedSubscriptionRow = Prisma.SubscriptionGetPayload<{
+  select: {
+    provider: true;
+    status: true;
+    currentPeriodEnd: true;
+    cancelAtPeriodEnd: true;
+  };
+}>;
+
 /** Les comptes MOBILES vus du back-office : lecture, statut, droits manuels. */
 @Injectable()
 export class AdminUsersRepository {
@@ -29,10 +50,16 @@ export class AdminUsersRepository {
     });
   }
 
-  findUserById(id: string): Promise<ManagedUserRow | null> {
-    return this.prisma.user.findUnique({
-      where: { id },
-      include: { profile: true, entitlements: true },
+  findUserById(id: string): Promise<ManagedUserDetailRow | null> {
+    return this.prisma.user.findUnique({ where: { id }, include: DETAIL_INCLUDE });
+  }
+
+  /** Abonnements du compte, le plus récemment touché d'abord. */
+  listSubscriptions(userId: string): Promise<ManagedSubscriptionRow[]> {
+    return this.prisma.subscription.findMany({
+      where: { userId },
+      select: { provider: true, status: true, currentPeriodEnd: true, cancelAtPeriodEnd: true },
+      orderBy: { updatedAt: 'desc' },
     });
   }
 
@@ -52,14 +79,20 @@ export class AdminUsersRepository {
       .then(() => undefined);
   }
 
-  /** Révoque toutes les sessions actives : les access tokens meurent aussitôt. */
-  revokeUserSessions(userId: string, reason: string): Promise<number> {
-    return this.prisma.userSession
-      .updateMany({
+  /**
+   * Révoque toutes les sessions actives : les access tokens meurent aussitôt,
+   * et les jetons push du compte tombent avec elles — un compte suspendu ne
+   * reçoit plus de notification.
+   */
+  async revokeUserSessions(userId: string, reason: string): Promise<number> {
+    const [revoked] = await this.prisma.$transaction([
+      this.prisma.userSession.updateMany({
         where: { userId, revokedAt: null },
         data: { revokedAt: new Date(), revokedReason: reason },
-      })
-      .then((result) => result.count);
+      }),
+      this.prisma.deviceToken.deleteMany({ where: { userId } }),
+    ]);
+    return revoked.count;
   }
 
   /** Attribution MANUELLE : sourceSubscriptionId null, jamais écrasée par la synchro. */
@@ -75,5 +108,16 @@ export class AdminUsersRepository {
         update: { ...data, sourceSubscriptionId: null },
       })
       .then(() => undefined);
+  }
+
+  /**
+   * Retire la décision MANUELLE posée sur un droit (octroi comme coupure).
+   * Une ligne posée par un abonnement n'est jamais visée : elle se
+   * recalcule, elle ne s'efface pas. Rend le nombre de lignes retirées.
+   */
+  deleteManualEntitlement(userId: string, entitlementKey: string): Promise<number> {
+    return this.prisma.userEntitlement
+      .deleteMany({ where: { userId, entitlementKey, sourceSubscriptionId: null } })
+      .then((result) => result.count);
   }
 }

@@ -1,7 +1,12 @@
 import { z } from 'zod';
 import { communityReportSchema, communityReportStatusSchema } from './community';
 import { mediaAssetSchema } from './media';
-import { entitlementSchema } from './subscriptions';
+import {
+  entitlementKeySchema,
+  entitlementSchema,
+  paymentProviderSchema,
+  subscriptionStatusSchema,
+} from './subscriptions';
 
 /** Contrats de l'administration (/api/v1/admin/*) — comptes SÉPARÉS. */
 
@@ -57,12 +62,76 @@ export const managedUserSummarySchema = z.object({
 });
 export type ManagedUserSummary = z.infer<typeof managedUserSummarySchema>;
 
+/**
+ * D'où vient l'état d'un droit, vu du back-office.
+ *
+ * - `SUBSCRIPTION` : l'état suit un abonnement (ouvert tant qu'il est payé,
+ *   fermé quand il s'arrête) ; `provider` dit lequel.
+ * - `MANUAL_GRANT` : offert à la main par l'administration. Il survit à la
+ *   fin de tout abonnement.
+ * - `MANUAL_REVOCATION` : coupé à la main par l'administration. Il survit à
+ *   tout paiement, et BLOQUE les achats (`POST /subscriptions/checkout` rend
+ *   403) : couper l'accès n'arrête pas une facturation déjà en cours.
+ * - `NONE` : aucune ligne, le droit n'a jamais été ouvert.
+ *
+ * Les deux décisions manuelles se lèvent par
+ * `DELETE /admin/users/:id/entitlements/:key`, qui rend la main à
+ * l'abonnement.
+ */
+export const managedEntitlementSourceSchema = z.enum([
+  'SUBSCRIPTION',
+  'MANUAL_GRANT',
+  'MANUAL_REVOCATION',
+  'NONE',
+]);
+export type ManagedEntitlementSource = z.infer<typeof managedEntitlementSourceSchema>;
+
+export const managedEntitlementSchema = entitlementSchema.extend({
+  source: managedEntitlementSourceSchema,
+  /** Fournisseur de l'abonnement, pour `source === 'SUBSCRIPTION'` seulement. */
+  provider: paymentProviderSchema.optional(),
+});
+export type ManagedEntitlement = z.infer<typeof managedEntitlementSchema>;
+
+/**
+ * L'abonnement qui ouvre l'accès AUJOURD'HUI (essai, actif, ou période déjà
+ * payée qui court encore), quelle que soit la décision manuelle posée
+ * par-dessus. C'est lui qui dit « un paiement est en cours » : après une
+ * coupure manuelle, les droits portent `MANUAL_REVOCATION` et ne nomment
+ * plus de fournisseur, alors que la facturation, elle, continue.
+ * `null` : aucun abonnement n'ouvre l'accès.
+ */
+export const managedPaidSubscriptionSchema = z.object({
+  provider: paymentProviderSchema,
+  status: subscriptionStatusSchema,
+  currentPeriodEnd: z.string().nullable(),
+  cancelAtPeriodEnd: z.boolean(),
+});
+export type ManagedPaidSubscription = z.infer<typeof managedPaidSubscriptionSchema>;
+
 export const managedUserDetailSchema = managedUserSummarySchema.extend({
   sessionsCount: z.number(),
   completedWorkoutsCount: z.number(),
-  entitlements: z.array(entitlementSchema),
+  entitlements: z.array(managedEntitlementSchema),
+  /** Facultatif pour un client antérieur ; le serveur le renseigne toujours. */
+  paidSubscription: managedPaidSubscriptionSchema.nullable().optional(),
 });
 export type ManagedUserDetail = z.infer<typeof managedUserDetailSchema>;
+
+/**
+ * PUT /admin/users/:id/entitlements — décision MANUELLE sur un droit.
+ * `isActive: true` l'offre, `isActive: false` le coupe (et bloque les
+ * achats). `reason` est journalisée dans l'audit ; le back-office l'exige
+ * pour une coupure.
+ */
+export const setManagedEntitlementSchema = z.object({
+  key: entitlementKeySchema,
+  isActive: z.boolean(),
+  /** Expiration UTC ; absente = sans expiration. */
+  expiresAt: z.string().datetime().optional(),
+  reason: z.string().trim().min(1).max(500).optional(),
+});
+export type SetManagedEntitlement = z.infer<typeof setManagedEntitlementSchema>;
 
 export const adminActorTypeSchema = z.enum(['USER', 'ADMIN', 'SYSTEM']);
 export type AdminActorType = z.infer<typeof adminActorTypeSchema>;

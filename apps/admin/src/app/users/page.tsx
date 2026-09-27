@@ -5,6 +5,7 @@ import { useInfiniteQuery, useQuery } from '@tanstack/react-query';
 import { useState } from 'react';
 import { AdminShell } from '@/components/admin-shell';
 import { adminApi } from '@/lib/admin-api';
+import { unavailableMessage } from '@/lib/load-error';
 
 function OverviewCards() {
   const { data } = useQuery({ queryKey: ['admin', 'overview'], queryFn: adminApi.overview });
@@ -41,7 +42,7 @@ function OverviewCards() {
 export default function UsersPage() {
   const [search, setSearch] = useState('');
   const [submitted, setSubmitted] = useState('');
-  const { data, isPending, isError, fetchNextPage, hasNextPage, isFetchingNextPage } =
+  const { data, isPending, error, fetchNextPage, hasNextPage, isFetchingNextPage } =
     useInfiniteQuery({
       queryKey: ['admin', 'users', submitted],
       queryFn: ({ pageParam }) =>
@@ -79,9 +80,9 @@ export default function UsersPage() {
       </form>
 
       {isPending && <p className="mt-6 text-sm text-muted">Chargement…</p>}
-      {isError && (
+      {error !== null && (
         <p className="mt-6 text-sm text-danger-ink" role="alert">
-          Liste indisponible : reconnectez-vous si le problème persiste.
+          {unavailableMessage(error, 'Liste indisponible', 'user:read')}
         </p>
       )}
       {data !== undefined && (

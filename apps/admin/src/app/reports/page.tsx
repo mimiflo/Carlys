@@ -6,7 +6,9 @@ import { useState } from 'react';
 import { AdminShell } from '@/components/admin-shell';
 import { CommunityReportRow } from '@/components/community-report-row';
 import { COMMUNITY_REPORTS_QUERY_KEY } from '@/components/community-report-status-cell';
-import { AdminApiError, adminApi } from '@/lib/admin-api';
+import { useAdminPermissions } from '@/components/use-admin-permissions';
+import { adminApi } from '@/lib/admin-api';
+import { unavailableMessage } from '@/lib/load-error';
 
 type StatusFilter = CommunityReportStatus | 'ALL';
 
@@ -43,12 +45,18 @@ export default function ReportsPage() {
         last.hasMore && last.nextCursor !== null ? last.nextCursor : undefined,
     });
   const reports = data?.pages.flatMap((page) => page.items) ?? [];
+  // Le support traite les signalements mais ne suspend pas (pas de
+  // `user:update`) : l'envoyer sur la fiche « pour suspendre » le menait à un
+  // bouton toujours refusé.
+  const canSuspend = useAdminPermissions().includes('user:update');
 
   return (
     <AdminShell title="Signalements">
       <p className="text-sm text-muted">
-        Résoudre un signalement le classe sans prévenir personne. Pour agir sur un compte
-        (suspension), ouvrez sa fiche depuis le tableau.
+        Résoudre un signalement le classe sans prévenir personne.{' '}
+        {canSuspend
+          ? 'Pour agir sur un compte (suspension), ouvre sa fiche depuis le tableau.'
+          : 'Suspendre un compte demande la permission user:update, que ton rôle n’a pas : transmets le lien de sa fiche à un super-administrateur.'}
       </p>
 
       <fieldset className="mt-6">
@@ -72,9 +80,7 @@ export default function ReportsPage() {
       {isPending && <p className="mt-6 text-sm text-muted">Chargement…</p>}
       {error !== null && (
         <p className="mt-6 text-sm text-danger-ink" role="alert">
-          {error instanceof AdminApiError && error.status === 403
-            ? 'Signalements indisponibles : la permission community:moderate est requise.'
-            : 'Signalements indisponibles : reconnectez-vous si le problème persiste.'}
+          {unavailableMessage(error, 'Signalements indisponibles', 'community:moderate')}
         </p>
       )}
       {data !== undefined && (

@@ -1,6 +1,7 @@
 import { ConflictException, NotFoundException } from '@nestjs/common';
 import { UserStatus } from '@prisma/client';
 import { type AuditService } from '../../audit/audit.service';
+import { type EntitlementsService } from '../../subscriptions/application/entitlements.service';
 import { type AdminUsersRepository } from '../infrastructure/admin-users.repository';
 import { AdminUsersService } from './admin-users.service';
 
@@ -13,6 +14,8 @@ interface Stubs {
   setUserStatus: jest.Mock;
   revokeUserSessions: jest.Mock;
   upsertManualEntitlement: jest.Mock;
+  listSubscriptions: jest.Mock;
+  deleteManualEntitlement: jest.Mock;
 }
 
 function userRow(overrides: Record<string, unknown> = {}): unknown {
@@ -38,20 +41,40 @@ function buildStubs(): Stubs {
     setUserStatus: jest.fn().mockResolvedValue(undefined),
     revokeUserSessions: jest.fn().mockResolvedValue(2),
     upsertManualEntitlement: jest.fn().mockResolvedValue(undefined),
+    listSubscriptions: jest.fn().mockResolvedValue([]),
+    deleteManualEntitlement: jest.fn().mockResolvedValue(1),
   };
 }
 
 const auditStub = { record: jest.fn() };
+const entitlementsStub = { resyncFromSubscriptions: jest.fn().mockResolvedValue(undefined) };
 
 function buildService(stubs: Stubs): AdminUsersService {
   return new AdminUsersService(
     stubs as unknown as AdminUsersRepository,
     auditStub as unknown as AuditService,
+    entitlementsStub as unknown as EntitlementsService,
   );
 }
 
+function entitlementRow(overrides: Record<string, unknown>): unknown {
+  return {
+    id: 'ent-1',
+    userId: 'user-1',
+    entitlementKey: 'premium_exercises',
+    isActive: true,
+    expiresAt: null,
+    sourceSubscriptionId: null,
+    sourceSubscription: null,
+    ...overrides,
+  };
+}
+
 describe('AdminUsersService', () => {
-  beforeEach(() => auditStub.record.mockClear());
+  beforeEach(() => {
+    auditStub.record.mockClear();
+    entitlementsStub.resyncFromSubscriptions.mockClear();
+  });
 
   it('suspendre un compte révoque TOUTES ses sessions et audite l’action', async () => {
     const stubs = buildStubs();
@@ -144,5 +167,85 @@ describe('AdminUsersService', () => {
     expect(detail.sessionsCount).toBe(2);
     expect(detail.completedWorkoutsCount).toBe(5);
     expect(detail.entitlements.length).toBeGreaterThanOrEqual(9);
+  });
+
+  it('le détail dit D’OÙ vient chaque droit : abonnement (et fournisseur), octroi, coupure, rien', async () => {
+    const stubs = buildStubs();
+    stubs.findUserById.mockResolvedValue(
+      userRow({
+        entitlements: [
+          entitlementRow({
+            entitlementKey: 'premium_exercises',
+            sourceSubscriptionId: 'sub-1',
+            sourceSubscription: { provider: 'STRIPE' },
+          }),
+          entitlementRow({ entitlementKey: 'ai_coaching', isActive: false }),
+          entitlementRow({ entitlementKey: 'cloud_backup', isActive: true }),
+        ],
+      }),
+    );
+    stubs.listSubscriptions.mockResolvedValue([
+      { provider: 'STRIPE', status: 'ACTIVE', currentPeriodEnd: null, cancelAtPeriodEnd: false },
+    ]);
+    const service = buildService(stubs);
+
+    const detail = await service.userDetail('user-1');
+    const byKey = new Map(detail.entitlements.map((entitlement) => [entitlement.key, entitlement]));
+
+    expect(byKey.get('premium_exercises')).toMatchObject({
+      source: 'SUBSCRIPTION',
+      provider: 'STRIPE',
+    });
+    expect(byKey.get('ai_coaching')).toMatchObject({ source: 'MANUAL_REVOCATION' });
+    expect(byKey.get('ai_coaching')).not.toHaveProperty('provider');
+    expect(byKey.get('cloud_backup')).toMatchObject({ source: 'MANUAL_GRANT' });
+    expect(byKey.get('health_sync')).toMatchObject({ source: 'NONE', isActive: false });
+    expect(detail.paidSubscription).toEqual({
+      provider: 'STRIPE',
+      status: 'ACTIVE',
+      currentPeriodEnd: null,
+      cancelAtPeriodEnd: false,
+    });
+  });
+
+  it('rendre la main à l’abonnement : la ligne manuelle part, les droits se recalculent, c’est audité', async () => {
+    const stubs = buildStubs();
+    stubs.findUserById.mockResolvedValue(
+      userRow({ entitlements: [entitlementRow({ isActive: false })] }),
+    );
+    const service = buildService(stubs);
+
+    await service.releaseEntitlement('user-1', 'premium_exercises', ACTOR);
+
+    expect(stubs.deleteManualEntitlement).toHaveBeenCalledWith('user-1', 'premium_exercises');
+    expect(entitlementsStub.resyncFromSubscriptions).toHaveBeenCalledWith('user-1');
+    expect(stubs.deleteManualEntitlement.mock.invocationCallOrder[0]).toBeLessThan(
+      entitlementsStub.resyncFromSubscriptions.mock.invocationCallOrder[0] ?? 0,
+    );
+    expect(auditStub.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'admin.entitlement_released',
+        metadata: { key: 'premium_exercises', previousSource: 'MANUAL_REVOCATION', removed: true },
+      }),
+    );
+  });
+
+  it('une coupure garde sa raison dans l’audit', async () => {
+    const stubs = buildStubs();
+    const service = buildService(stubs);
+
+    await service.setEntitlement(
+      'user-1',
+      'premium_exercises',
+      { isActive: false, expiresAt: null, reason: 'Fraude au remboursement' },
+      ACTOR,
+    );
+
+    expect(auditStub.record).toHaveBeenCalledWith(
+      expect.objectContaining({
+        action: 'admin.entitlement_revoked',
+        metadata: { key: 'premium_exercises', expiresAt: null, reason: 'Fraude au remboursement' },
+      }),
+    );
   });
 });

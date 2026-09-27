@@ -12,6 +12,20 @@ import { ApiError, apiUrl, requestJson, unwrapResponse } from './api-transport';
 
 const TOKEN_KEY = 'carlys-admin-token';
 const PERMISSIONS_KEY = 'carlys-admin-permissions';
+const EXPIRED_KEY = 'carlys-admin-session-expired';
+
+/**
+ * Qui écoute le jeton : la coquille (`useSyncExternalStore`) et la page de
+ * connexion. Le stockage de session n'émet aucun événement dans l'onglet
+ * qui l'écrit, d'où cette liste.
+ */
+const tokenListeners = new Set<() => void>();
+
+function notifyTokenListeners(): void {
+  for (const listener of tokenListeners) {
+    listener();
+  }
+}
 
 export const adminToken = {
   get(): string | null {
@@ -19,10 +33,41 @@ export const adminToken = {
   },
   set(token: string): void {
     window.sessionStorage.setItem(TOKEN_KEY, token);
+    window.sessionStorage.removeItem(EXPIRED_KEY);
+    notifyTokenListeners();
   },
   clear(): void {
     window.sessionStorage.removeItem(TOKEN_KEY);
     window.sessionStorage.removeItem(PERMISSIONS_KEY);
+    window.sessionStorage.removeItem(EXPIRED_KEY);
+    notifyTokenListeners();
+  },
+  /**
+   * Le serveur a REFUSÉ le jeton (401) : expiré au bout de ses douze heures,
+   * ou compte administrateur désactivé entre-temps.
+   *
+   * La coquille ne vérifiait que la PRÉSENCE du jeton : un onglet resté
+   * ouvert recevait des 401 partout, chaque page les traduisait à sa façon
+   * (« la permission audit:read est requise », « reconnectez-vous si le
+   * problème persiste »), et rien ne ramenait à la connexion. Oublier le
+   * jeton ici fait basculer la coquille, qui renvoie vers `/login` ; la
+   * marque laissée derrière permet à la connexion de dire pourquoi.
+   */
+  expire(): void {
+    window.sessionStorage.removeItem(TOKEN_KEY);
+    window.sessionStorage.removeItem(PERMISSIONS_KEY);
+    window.sessionStorage.setItem(EXPIRED_KEY, '1');
+    notifyTokenListeners();
+  },
+  /** Vrai quand la dernière session s'est terminée sur un refus du serveur. */
+  wasExpired(): boolean {
+    return typeof window !== 'undefined' && window.sessionStorage.getItem(EXPIRED_KEY) === '1';
+  },
+  subscribe(listener: () => void): () => void {
+    tokenListeners.add(listener);
+    return () => {
+      tokenListeners.delete(listener);
+    };
   },
 };
 
@@ -124,9 +169,26 @@ export function parsePage<T>(body: unknown, itemSchema: z.ZodType<T>): Page<T> {
   };
 }
 
+/**
+ * Un 401 sur une requête qui PORTAIT un jeton : la session est finie, quelle
+ * que soit la page qui l'a découvert. Sans jeton (la connexion elle-même),
+ * un 401 n'est qu'un mot de passe faux et ne regarde que sa page.
+ */
+function endSessionOn401(cause: unknown, token: string | null): void {
+  if (token !== null && cause instanceof ApiError && cause.status === 401) {
+    adminToken.expire();
+  }
+}
+
 /** Requête JSON du back-office : le jeton d'administration, s'il existe, part avec. */
-export function call(path: string, init: RequestInit = {}): Promise<unknown> {
-  return requestJson(path, init, adminToken.get());
+export async function call(path: string, init: RequestInit = {}): Promise<unknown> {
+  const token = adminToken.get();
+  try {
+    return await requestJson(path, init, token);
+  } catch (cause) {
+    endSessionOn401(cause, token);
+    throw cause;
+  }
 }
 
 /**
@@ -137,13 +199,18 @@ export function call(path: string, init: RequestInit = {}): Promise<unknown> {
  */
 export async function callUpload(path: string, form: FormData): Promise<unknown> {
   const token = adminToken.get();
-  const response = await fetch(apiUrl(path), {
-    method: 'POST',
-    body: form,
-    headers: token === null ? {} : { Authorization: `Bearer ${token}` },
-    cache: 'no-store',
-  });
-  return unwrapResponse(response);
+  try {
+    const response = await fetch(apiUrl(path), {
+      method: 'POST',
+      body: form,
+      headers: token === null ? {} : { Authorization: `Bearer ${token}` },
+      cache: 'no-store',
+    });
+    return await unwrapResponse(response);
+  } catch (cause) {
+    endSessionOn401(cause, token);
+    throw cause;
+  }
 }
 
 /** Chaîne de requête : les paramètres absents ou vides ne sont pas envoyés. */

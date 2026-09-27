@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { AuditModule } from '../audit/audit.module';
 import { AuthModule } from '../auth/auth.module';
 import { ExercisesModule } from '../exercises/exercises.module';
+import { SubscriptionsModule } from '../subscriptions/subscriptions.module';
 import { AdminAccessModule } from './admin-access.module';
 import { AdminAuthService } from './application/admin-auth.service';
 import { AdminCatalogService } from './application/admin-catalog.service';
@@ -23,7 +24,7 @@ import { AdminUsersController } from './presentation/http/admin-users.controller
  * qui exposent des routes d'administration.
  */
 @Module({
-  imports: [AdminAccessModule, AuthModule, AuditModule, ExercisesModule],
+  imports: [AdminAccessModule, AuthModule, AuditModule, ExercisesModule, SubscriptionsModule],
   controllers: [
     AdminAuthController,
     AdminUsersController,

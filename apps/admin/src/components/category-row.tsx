@@ -4,6 +4,7 @@ import { type AdminMuscleGroup } from '@carlys/api-contracts';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import { adminApi } from '@/lib/admin-api';
+import { useFocusOnSwap } from './use-focus-on-swap';
 
 /** Une catégorie : renommage, rang d'affichage, suppression. */
 export function CategoryRow({ group }: { group: AdminMuscleGroup }) {
@@ -11,6 +12,8 @@ export function CategoryRow({ group }: { group: AdminMuscleGroup }) {
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(group.name);
   const [sortOrder, setSortOrder] = useState(String(group.sortOrder));
+  // Le champ Nom à l'ouverture, « Modifier » à la fermeture.
+  const { target: focusTarget, request: requestFocus } = useFocusOnSwap();
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ['admin', 'muscle-groups'] });
 
@@ -34,6 +37,7 @@ export function CategoryRow({ group }: { group: AdminMuscleGroup }) {
       adminApi.updateMuscleGroup(group.id, { name, sortOrder: Number(sortOrder) || 0 }),
     onSuccess: async () => {
       await refresh();
+      requestFocus();
       setEditing(false);
     },
   });
@@ -52,6 +56,7 @@ export function CategoryRow({ group }: { group: AdminMuscleGroup }) {
       <td className="px-4 py-3">
         {editing ? (
           <input
+            ref={focusTarget}
             value={name}
             onChange={(event) => setName(event.target.value)}
             aria-label={`Nom de ${group.name}`}
@@ -98,6 +103,7 @@ export function CategoryRow({ group }: { group: AdminMuscleGroup }) {
                 type="button"
                 onClick={() => {
                   resetDraft();
+                  requestFocus();
                   setEditing(false);
                 }}
                 className="rounded-lg px-3 py-1 text-xs text-muted hover:bg-black/5"
@@ -107,9 +113,11 @@ export function CategoryRow({ group }: { group: AdminMuscleGroup }) {
             </>
           ) : (
             <button
+              ref={focusTarget}
               type="button"
               onClick={() => {
                 resetDraft();
+                requestFocus();
                 setEditing(true);
               }}
               className="rounded-lg px-3 py-1 text-xs text-primary-ink hover:bg-primary/10"
@@ -124,7 +132,7 @@ export function CategoryRow({ group }: { group: AdminMuscleGroup }) {
             title={
               removable
                 ? undefined
-                : 'Cette catégorie est le groupe principal d’exercices : reclassez-les d’abord.'
+                : 'Cette catégorie est le groupe principal d’exercices : reclasse-les d’abord.'
             }
             className="rounded-lg px-3 py-1 text-xs font-semibold text-danger-ink hover:underline disabled:opacity-40 disabled:hover:no-underline"
           >

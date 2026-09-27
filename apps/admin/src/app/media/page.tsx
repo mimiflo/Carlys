@@ -4,7 +4,9 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useState } from 'react';
 import type { MediaAsset, MediaKind } from '@carlys/api-contracts';
 import { AdminShell } from '@/components/admin-shell';
+import { useFocusOnSwap } from '@/components/use-focus-on-swap';
 import { adminApi } from '@/lib/admin-api';
+import { unavailableMessage } from '@/lib/load-error';
 
 const KINDS: readonly { value: MediaKind | 'ALL'; label: string }[] = [
   { value: 'ALL', label: 'Tous' },
@@ -33,7 +35,7 @@ export default function MediaPage() {
   const [kind, setKind] = useState<MediaKind | 'ALL'>('ALL');
   const [confirming, setConfirming] = useState<string | null>(null);
 
-  const { data, isPending, isError } = useQuery({
+  const { data, isPending, error } = useQuery({
     queryKey: ['admin', 'media', kind],
     queryFn: () => adminApi.listMedia(kind === 'ALL' ? undefined : kind),
   });
@@ -64,9 +66,9 @@ export default function MediaPage() {
         ))}
       </div>
 
-      {isError && (
+      {error !== null && (
         <p className="mt-6 text-sm text-danger-ink" role="alert">
-          Bibliothèque indisponible : la permission media:read est requise.
+          {unavailableMessage(error, 'Bibliothèque indisponible', 'media:read')}
         </p>
       )}
       {remove.isError && (
@@ -113,14 +115,25 @@ function MediaCard({
   onCancel: () => void;
   onConfirm: () => void;
 }) {
+  // « Supprimer » devient « Confirmer / Annuler » : le focus va à
+  // « Annuler » (jamais au geste destructeur), puis revient à « Supprimer ».
+  const { target: focusTarget, request: requestFocus } = useFocusOnSwap();
   return (
     <li className="overflow-hidden rounded-xl bg-surface ring-1 ring-black/5">
       <div className="flex h-40 items-center justify-center bg-black/5">
         {asset.kind === 'IMAGE' ? (
           // Aperçu sans composant d'image optimisée : les médias viennent du
-          // stockage objet, dont le domaine varie par environnement.
+          // stockage objet, dont le domaine varie par environnement. Chargé
+          // à l'approche de l'écran : la liste en montre jusqu'à 200, en
+          // taille d'origine.
           // eslint-disable-next-line @next/next/no-img-element
-          <img src={asset.url} alt={asset.originalName} className="h-full w-full object-contain" />
+          <img
+            src={asset.url}
+            alt={asset.originalName}
+            loading="lazy"
+            decoding="async"
+            className="h-full w-full object-contain"
+          />
         ) : (
           <span className="text-xs uppercase tracking-widest text-muted">
             {asset.kind === 'MESH_3D' ? 'Maillage 3D' : 'Vidéo'}
@@ -145,12 +158,28 @@ function MediaCard({
             >
               {isDeleting ? 'Suppression…' : 'Confirmer'}
             </button>
-            <button type="button" onClick={onCancel} className="text-xs text-muted">
+            <button
+              ref={focusTarget}
+              type="button"
+              onClick={() => {
+                requestFocus();
+                onCancel();
+              }}
+              className="text-xs text-muted"
+            >
               Annuler
             </button>
           </div>
         ) : (
-          <button type="button" onClick={onAskDelete} className="pt-2 text-xs text-danger-ink">
+          <button
+            ref={focusTarget}
+            type="button"
+            onClick={() => {
+              requestFocus();
+              onAskDelete();
+            }}
+            className="pt-2 text-xs text-danger-ink"
+          >
             Supprimer
           </button>
         )}

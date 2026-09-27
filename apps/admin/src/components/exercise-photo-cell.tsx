@@ -69,10 +69,14 @@ export function ExercisePhotoCell({ exercise }: { exercise: AdminExerciseSummary
       {exercise.image === null ? (
         <div aria-hidden className="h-12 w-12 shrink-0 rounded-lg bg-black/5 ring-1 ring-black/5" />
       ) : (
+        // Différée : une page du catalogue en montre cinquante, chacune en
+        // taille d'origine derrière sa vignette de 48 px.
         // eslint-disable-next-line @next/next/no-img-element -- source externe (stockage objet), hors domaines Next
         <img
           src={exercise.image.url}
           alt={`Photo de ${exercise.name}`}
+          loading="lazy"
+          decoding="async"
           className="h-12 w-12 shrink-0 rounded-lg object-cover ring-1 ring-black/5"
         />
       )}
@@ -84,6 +88,10 @@ export function ExercisePhotoCell({ exercise }: { exercise: AdminExerciseSummary
           type="file"
           accept={ACCEPT}
           className="sr-only"
+          // Hors de l'ordre de tabulation : c'est le bouton visible qui
+          // l'ouvre. Focalisable, il faisait un arrêt INVISIBLE par ligne.
+          tabIndex={-1}
+          aria-hidden
           onChange={(event) => {
             const file = event.target.files?.[0];
             // Le champ garde sa valeur : sans remise à zéro, redéposer le même
