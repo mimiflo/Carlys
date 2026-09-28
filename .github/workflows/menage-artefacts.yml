@@ -1,5 +1,5 @@
-# Ménage des artefacts — à lancer à la main (Actions → menage-artefacts →
-# Run workflow).
+# Ménage des artefacts — lancé par la poussée qui modifie ce fichier, ou à
+# la main (Actions → menage-artefacts → Run workflow).
 #
 # Les artefacts d'un dépôt PRIVÉ comptent dans le stockage inclus du compte,
 # et GitHub ne supprime chacun qu'au terme de la rétention fixée À SA
@@ -14,6 +14,11 @@
 # recopie aucune rétention, rien ne peut donc dériver.
 name: menage-artefacts
 on:
+  # La poussée qui modifie ce fichier le lance : l'intégration de
+  # l'assistant ne peut pas cliquer « Run workflow » (403).
+  push:
+    branches: [development]
+    paths: ['.github/workflows/menage-artefacts.yml']
   workflow_dispatch:
 permissions:
   actions: write
