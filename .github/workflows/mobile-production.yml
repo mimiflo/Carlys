@@ -205,10 +205,10 @@ jobs:
       # et images-publish-prod.yml. Toute renommée là-bas doit être reportée
       # ici ; scripts/ci/tests/preuve_recette_test.sh vérifie les deux noms.
       #
-      # L'APK OU SES SYMBOLES. mobile-recette garde l'APK 14 jours et ses
-      # symboles 90 (sa section « Rétention ») : un binaire ancien ne sert à
+      # L'APK OU SES SYMBOLES. mobile-recette garde l'APK un jour et ses
+      # symboles 30 (sa section « Rétention ») : un binaire ancien ne sert à
       # personne, une trace d'exécution à déchiffrer si. Chercher le seul APK
-      # refusait, quinze jours après la recette, un commit bel et bien
+      # refusait, dès le lendemain de la recette, un commit bel et bien
       # construit et éprouvé. Les symboles sont une preuve aussi bonne : ils
       # sortent du MÊME build de la même exécution, et n'existent que s'il a
       # réussi. La garde accepte donc l'un ou l'autre, vivant.
@@ -238,7 +238,7 @@ jobs:
       #     l'approbation humaine du job suivant qui couvre ce trou, comme la
       #     confirmation de promote.sh le fait côté serveur ;
       #   - qu'un commit ancien reste promouvable. Les artefacts EXPIRENT (les
-      #     symboles au bout de 90 jours, le `retention-days` de
+      #     symboles au bout de 30 jours, le `retention-days` de
       #     mobile-recette.yml, lui-même plafonné par Settings → Actions →
       #     Artifact and log retention) et peuvent être supprimés à la main, là
       #     où une image de registre persiste. La garde échoue alors sur un
@@ -299,7 +299,7 @@ jobs:
           fi
 
           if [ "$vivants" -eq 0 ]; then
-            echo "::error title=L'artefact de recette a expiré::Le sha $SHA12 a bien été construit en recette, mais ses artefacts ont expiré — mobile-recette garde l'APK 14 jours et ses symboles 90, puis GitHub les supprime. La preuve n'existe plus, donc la garde refuse : elle se trompe du bon côté. Deux issues, au choix : relancer mobile-recette sur $SHA12 pour refabriquer l'artefact (et en profiter pour ré-essayer l'application, ce qui est de toute façon la bonne pratique sur un commit vieux de plusieurs mois), ou promouvoir un commit plus récent."
+            echo "::error title=L'artefact de recette a expiré::Le sha $SHA12 a bien été construit en recette, mais ses artefacts ont expiré — mobile-recette garde l'APK un jour et ses symboles 30, puis GitHub les supprime. La preuve n'existe plus, donc la garde refuse : elle se trompe du bon côté. Deux issues, au choix : relancer mobile-recette sur $SHA12 pour refabriquer l'artefact (et en profiter pour ré-essayer l'application, ce qui est de toute façon la bonne pratique sur un commit vieux de plusieurs mois), ou promouvoir un commit plus récent."
             printf '%s' "$trouves" | jq -r '.[] | "  - \(.name) — créé le \(.created_at), expiré"'
             exit 1
           fi

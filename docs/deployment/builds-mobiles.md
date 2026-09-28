@@ -39,7 +39,7 @@ la même forme, avec le même vocabulaire.
   │ CARLYS_FLAVOR=staging                      │
   │   → api-staging.DOMAINE                    │
   └──────────────────┬─────────────────────────┘
-                     │  .apk installable, toujours (14 jours)
+                     │  .apk installable, toujours (1 jour)
                      │  .aab sur Run workflow, si signature posée
                      │  .ipa sur demande (job macOS, §10)
                      ▼
@@ -92,7 +92,7 @@ Ce qui sépare les deux chemins, ligne à ligne :
 | Textes légaux complets exigés | non | **oui** — refus tant qu'un `[À COMPLÉTER : …]` subsiste |
 | Le commit doit déjà exister en recette | — | **oui** (règle « build once ») |
 | `mobile-ci` vert pour ce code exigé | pour le lien bêta seulement (§3.4) | **oui** — vérifié avant l'approbation |
-| `.apk` produit | toujours, sans aucun secret ; artefact gardé **14 jours**, ses symboles de débogage à part, **90 jours** | oui, mais **de vérification seulement** |
+| `.apk` produit | toujours, sans aucun secret ; artefact gardé **un jour** (la release « beta » garde le dernier), ses symboles de débogage à part, **30 jours** | oui, mais **de vérification seulement** |
 | `.aab` produit | sur **Run workflow** seulement (jamais sur une poussée), et si la signature est configurée | **toujours** — sinon le workflow échoue |
 | `.ipa` produit | **sur demande** (variable `CARLYS_IOS_BUILDS`, ou case « ios »), secrets Apple obligatoires — §10 | non : la production n'a pas de job iOS (§10.7) |
 | Dépôt sur le magasin | piste interne Play et TestFlight — **case « publier » uniquement**, secrets posés | à la main |
@@ -255,7 +255,8 @@ en parallèle sur la même poussée ; le job « Lien bêta » attend le verdict 
 [`scripts/ci/verdict_ci.sh`](../../scripts/ci/verdict_ci.sh), la même porte
 que les images du serveur). Rouge, annulé ou toujours en cours au bout du
 délai : le job échoue **sans rien publier**, et les testeurs gardent l'APK
-précédent. L'APK du commit refusé reste dans l'artefact de l'exécution.
+précédent. L'APK du commit refusé reste 24 heures dans l'artefact de
+l'exécution ; au-delà, relancer la recette sur ce sha (champ « sha »).
 
 **La limite, dite franchement : le dépôt est privé.** Ce lien n'est servi
 qu'aux comptes GitHub ayant accès au dépôt — collaborateurs et vous-même. Un
@@ -700,9 +701,9 @@ récapitulatif le dit.
 | « Variable de dépôt `CARLYS_DOMAIN` absente » ou « mal formée » | la variable manque, ou porte un schéma / une barre / un port | §3.1 — le domaine **nu**, rien d'autre |
 | **Sur le téléphone** : « App not installed as package conflicts with an existing package » | l'APK installé et le nouveau portent des signatures différentes — sans secrets, la clé de debug est régénérée à chaque exécution | désinstaller Carlys puis installer (les données locales de l'appareil sont perdues). Pour que cela ne se reproduise plus : poser les quatre secrets du §4, l'APK du lien bêta est alors signé avec la clé du dépôt (§3.4) |
 | « Signature absente — bundle non produit et APK non mettable à jour » (avertissement, recette) | les quatre secrets de signature ne sont pas visibles par ce workflow | l'`.apk` est livré normalement, mais il ne pourra pas mettre à jour une installation existante (§3.4). Si les secrets sont posés sur l'environnement seulement, c'est le compromis assumé du §4.5 |
-| « Ce commit n'a pas été construit en recette » | la règle « build once » : aucun artefact de recette ne porte ce sha | relancer la recette **sur ce sha** (champ « sha » du Run workflow), l'installer, l'essayer, revenir |
-| « L'artefact de recette a expiré » | la recette garde l'APK 14 jours et ses symboles 90 ; la garde accepte l'un ou l'autre, et les deux ont expiré | relancer la recette sur ce sha — et en profiter pour ré-essayer un commit vieux de plusieurs mois — ou promouvoir un commit plus récent |
-| « Lien bêta » en échec : « CI rouge », « CI toujours en cours » ou « CI introuvable » | `mobile-ci` n'est pas vert pour le code de ce commit (§3.4) : rouge, annulé, encore en cours au bout de 15 minutes, ou introuvable | corriger et pousser ; si l'échec ne tenait pas au code, relancer `mobile-ci` sur ce commit, puis le job « Lien bêta ». L'APK est dans l'artefact de l'exécution en attendant |
+| « Ce commit n'a pas été construit en recette » | la règle « build once » : aucun artefact de recette ne porte ce sha — c'est aussi le cas d'un commit construit avant le 27/09 : ses artefacts ont été supprimés au ménage du stockage du 28/09 | relancer la recette **sur ce sha** (champ « sha » du Run workflow), l'installer, l'essayer, revenir |
+| « L'artefact de recette a expiré » | la recette garde l'APK un jour et ses symboles 30 ; la garde accepte l'un ou l'autre, et les deux ont expiré | relancer la recette sur ce sha — et en profiter pour ré-essayer un commit vieux de plusieurs mois — ou promouvoir un commit plus récent |
+| « Lien bêta » en échec : « CI rouge », « CI toujours en cours » ou « CI introuvable » | `mobile-ci` n'est pas vert pour le code de ce commit (§3.4) : rouge, annulé, encore en cours au bout de 15 minutes, ou introuvable | corriger et pousser ; si l'échec ne tenait pas au code, relancer `mobile-ci` sur ce commit, puis le job « Lien bêta », dans les 24 heures : l'APK de l'artefact n'est gardé qu'un jour. Au-delà, relancer la recette sur ce sha |
 | Production — la garde « La CI mobile de ce commit est verte » échoue : « CI rouge », « CI toujours en cours » ou « CI introuvable » | `mobile-ci` n'est pas vert pour le code du commit promu. « Construit en recette » ne le prouve pas : l'APK de recette naît sans attendre la CI | corriger, pousser, reconstruire en recette, promouvoir le nouveau sha ; si la CI tournait encore au bout de 5 minutes, relancer ce workflow une fois qu'elle a fini |
 | « Les textes légaux ne sont pas prêts pour la production » | un `[À COMPLÉTER : …]` subsiste dans `docs/legal/` | les compléter, pousser, reconstruire en recette, relancer sur le nouveau sha. Aucun contournement |
 | « Environnement mobile-production inexistant » ou « … sans reviewer » | l'approbation humaine n'est pas armée | §6 |
@@ -720,9 +721,9 @@ Deux limites à connaître, dites franchement plutôt que découvertes :
   vérifier qu'une image existe ne prouve pas qu'on l'a fait tourner. C'est
   l'approbation humaine qui couvre ce trou — d'où l'insistance du §7, point 3.
 - Elle peut refuser un commit ancien dont les artefacts ont **expiré**, alors
-  qu'il avait bel et bien été construit : l'APK de recette vit 14 jours, mais
+  qu'il avait bel et bien été construit : l'APK de recette vit un jour, mais
   la garde accepte aussi ses symboles de débogage, issus du même build et
-  gardés 90 jours ; au-delà, elle refuse. C'est un faux refus, jamais un faux
+  gardés 30 jours ; au-delà, elle refuse. C'est un faux refus, jamais un faux
   accord : elle se trompe du bon côté.
 
 ---

@@ -681,7 +681,7 @@ jobs:
           (assertUsable) a lieu au démarrage, pas à la compilation.
 
           Symboles (--obfuscate) : artefact carlys-recette-symboles-$SHA12 de
-          la même exécution, gardé 90 jours — celui-ci ne l'est que 14.
+          la même exécution, gardé 30 jours — celui-ci ne l'est qu'un jour.
           FIN
           ls -lh "build/livraison/apk/carlys-recette-$SHA12.apk"
 
@@ -817,24 +817,27 @@ jobs:
             echo "connexion Google échoue pour toutes les installations du Store."
           } >> "$GITHUB_STEP_SUMMARY"
 
-      # ── Rétention : 14 jours pour le binaire, 90 pour les symboles ─────────
+      # ── Rétention : un jour pour le binaire, 30 pour les symboles ──────────
       #
       # Sans `retention-days`, un artefact vit 90 jours (défaut du dépôt) :
       # ~105 Mo par poussée mobile (APK et AAB avec leurs symboles), ~9 Go
       # accumulés en treize jours (audit du 25/09) — au-delà du stockage
-      # inclus d'un dépôt privé. Or le binaire d'une vieille exécution ne sert
-      # à personne : la release « beta » sert le dernier, et une version
-      # ancienne se reconstruit par l'entrée `sha`.
+      # inclus d'un dépôt privé. Et même à 14 jours, l'APK (22 Mo) débordait
+      # encore : six poussées par jour en gardaient ~1,9 Go (mesuré le 28/09).
+      # Or le binaire d'une vieille exécution ne sert à personne : la release
+      # « beta », qui ne compte pas dans ce stockage, sert le dernier, et une
+      # version ancienne se reconstruit par l'entrée `sha`.
       #
       # Les SYMBOLES, eux, servent aussi longtemps qu'un APK obscurci tourne
       # sur un téléphone : sans eux, une trace d'exécution d'une bêta
       # installée il y a trois semaines est indéchiffrable. Ils partent donc
-      # dans un artefact À PART (quelques Mo), gardé 90 jours.
+      # dans un artefact À PART (1,6 Mo), gardé 30 jours : ~300 Mo au même
+      # rythme, sous les 500 Mo inclus.
       #
       # LES DEUX NOMS SONT UN CONTRAT. La garde « build once » de
       # mobile-production.yml cherche `carlys-recette-apk-<sha12>`, puis,
       # l'APK expiré, `carlys-recette-symboles-<sha12>` : ce sont eux qui
-      # prouvent qu'un commit a été construit en recette, 90 jours durant.
+      # prouvent qu'un commit a été construit en recette, 30 jours durant.
       # Renommer l'un ici sans le reporter là-bas refuserait les promotions
       # (scripts/ci/tests/preuve_recette_test.sh le vérifie).
       - name: Artefact — APK installable
@@ -847,7 +850,7 @@ jobs:
             apps/mobile/build/livraison/apk
             !apps/mobile/build/livraison/apk/symboles
           if-no-files-found: error
-          retention-days: 14
+          retention-days: 1
 
       - name: Artefact — symboles de l'APK (traces d'exécution)
         uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
@@ -855,7 +858,7 @@ jobs:
           name: carlys-recette-symboles-${{ steps.commit.outputs.sha12 }}
           path: apps/mobile/build/livraison/apk/symboles
           if-no-files-found: error
-          retention-days: 90
+          retention-days: 30
 
       # `flutter build appbundle` sans `--target-platform` : un bundle contient
       # toutes les architectures, c'est le magasin qui découpe par appareil au
@@ -1037,8 +1040,9 @@ jobs:
               echo "version précédente. Il faut désinstaller d'abord, en perdant les données"
               echo "locales de l'appareil. Poser les quatre secrets de signature y met fin."
             fi
-            echo "Gardé 14 jours. Les symboles qui déchiffrent ses traces d'exécution"
-            echo "sont dans **\`carlys-recette-symboles-$SHA12\`**, gardé 90 jours."
+            echo "Gardé **un jour** : à télécharger dans les 24 heures, sinon relancer ce"
+            echo "workflow sur ce sha. Les symboles qui déchiffrent ses traces d'exécution sont dans"
+            echo "**\`carlys-recette-symboles-$SHA12\`**, gardé 30 jours."
             echo
             if [ "$SIGNATURE" = "oui" ] && [ "$EVENEMENT" != "workflow_dispatch" ]; then
               echo "**Pas de bundle \`.aab\` sur une poussée** — il ne part vers aucun"
@@ -1248,7 +1252,7 @@ jobs:
 
           Lancez-la une fois avant de la faire circuler : le contrôle des adresses
           a lieu au démarrage, pas à la compilation. Les symboles de débogage sont
-          dans l'artefact carlys-recette-symboles-$SHA12 de l'exécution (90 jours),
+          dans l'artefact carlys-recette-symboles-$SHA12 de l'exécution (30 jours),
           pas ici."
 
           if gh release view beta --repo "$DEPOT" >/dev/null 2>&1; then
@@ -1817,6 +1821,8 @@ jobs:
           name: carlys-recette-ipa-${{ steps.commit.outputs.sha12 }}
           path: apps/mobile/build/livraison/ipa
           if-no-files-found: error
+          # Même règle que le bundle : 90 jours s'il part vers TestFlight.
+          retention-days: ${{ inputs.publier && 90 || 14 }}
 
       # ── TestFlight, sur la case « publier » et avec une clé API posée ──────
       #

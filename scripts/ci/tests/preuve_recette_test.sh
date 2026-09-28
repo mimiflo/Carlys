@@ -10,12 +10,13 @@
 # l'API GitHub (filtre exact `name=`, sinon pages de 100). Aucune copie de la
 # garde ici : c'est le fichier du workflow qui est jugé.
 #
-# POURQUOI CET ESSAI. mobile-recette garde l'APK 14 jours et ses symboles 90
-# (audit du 25/09, ci-10). La garde ne cherchait que l'APK : quinze jours
-# après la recette, un commit bel et bien construit et éprouvé était refusé
-# en production, avec un message qui parlait encore de « 90 jours ». Les
-# symboles de la MÊME exécution de recette sont une preuve aussi bonne — ils
-# ne naissent que si le build a réussi — et ils vivent 90 jours.
+# POURQUOI CET ESSAI. mobile-recette garde l'APK un jour et ses symboles 30
+# (audit du 25/09, ci-10 ; stockage du 28/09). La garde ne cherchait que
+# l'APK : passé sa rétention, un commit bel et bien construit et éprouvé
+# était refusé en production, avec un message qui parlait encore de
+# « 90 jours ». Les symboles de la MÊME exécution de recette sont une preuve
+# aussi bonne — ils ne naissent que si le build a réussi — et ils vivent
+# 30 jours.
 #
 # L'essai vérifie aussi, dans mobile-recette.yml, le CONTRAT DE NOMMAGE dont
 # la garde dépend : un artefact renommé là-bas sans l'être ici ferait refuser
@@ -110,7 +111,7 @@ echo "mobile-production.yml — garde « build once »"
 artefacts "carlys-recette-apk-$SHA12:false" "carlys-recette-symboles-$SHA12:false"
 verifier "APK de recette vivant → accepté" 0 "$(lancer)"
 
-# Le cas que la rétention de 14 jours a créé : l'APK a expiré, ses symboles
+# Le cas que la rétention courte de l'APK crée : il a expiré, ses symboles
 # (même exécution) vivent encore.
 artefacts "carlys-recette-apk-$SHA12:true" "carlys-recette-symboles-$SHA12:false"
 verifier "APK expiré, symboles de la même recette vivants → accepté" 0 "$(lancer)"
@@ -186,8 +187,8 @@ contrat() {
     vu && /- name: / { print "sans-retention"; exit }
   ' "$RECETTE"
 }
-verifier "l'APK s'appelle carlys-recette-apk-<sha12> (gardé 14 jours)" 14 "$(contrat carlys-recette-apk-)"
-verifier "les symboles s'appellent carlys-recette-symboles-<sha12> (gardés 90 jours)" 90 "$(contrat carlys-recette-symboles-)"
+verifier "l'APK s'appelle carlys-recette-apk-<sha12> (gardé un jour)" 1 "$(contrat carlys-recette-apk-)"
+verifier "les symboles s'appellent carlys-recette-symboles-<sha12> (gardés 30 jours)" 30 "$(contrat carlys-recette-symboles-)"
 
 printf '\n%s réussi(s), %s échec(s)\n' "$reussis" "$echecs"
 [ "$echecs" -eq 0 ]

@@ -7,8 +7,8 @@
 # comportements qui ne se voient qu'en fonctionnant — un dump avant chaque
 # migration de production, une copie chiffrée hors machine, un journal nginx
 # sans jeton, une porte qui refuse de publier les images d'un commit rouge,
-# une garde « build once » qui accepte les symboles de recette (90 jours)
-# quand l'APK (14 jours) a expiré.
+# une garde « build once » qui accepte les symboles de recette (30 jours)
+# quand l'APK (un jour) a expiré.
 # Chacun a son essai, et ce workflow les rejoue à chaque poussée qui les
 # touche. `./scripts/check_infra.sh` fait la même chose sur un poste.
 #
