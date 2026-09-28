@@ -50,11 +50,12 @@ const PAID_PLAN_SLUG = 'premium';
 /**
  * Projette plans, droits et produits. IDEMPOTENT : rejouable à volonté.
  *
- * Les produits passés REMPLACENT ceux du plan payant pour les fournisseurs
- * cités : un identifiant retiré de la configuration disparaît de la base,
- * sinon un ancien `price_…` continuerait d'ouvrir des droits. Les
- * fournisseurs absents de la liste ne sont pas touchés — configurer Stripe
- * seul n'efface pas ce que RevenueCat a posé.
+ * Les produits s'AJOUTENT : un identifiant retiré de la configuration reste
+ * lié. Un prix Stripe est immuable — changer de tarif, c'est en créer un
+ * autre — et les abonnés restés sur l'ancien renouvellent dessus : l'effacer
+ * faisait échouer leur webhook sur « produit inconnu », prélevés sans Premium.
+ * Un identifiant n'arrive que par un webhook signé du compte marchand ; on
+ * retire un tarif en l'archivant chez le fournisseur.
  */
 export async function syncSubscriptionCatalog(
   prisma: PrismaClient,
@@ -108,17 +109,6 @@ export async function syncSubscriptionCatalog(
         provider: product.provider,
         externalProductId: product.externalProductId,
         billingPeriod: product.billingPeriod,
-      },
-    });
-  }
-
-  const touchedProviders = [...new Set(products.map((product) => product.provider))];
-  if (touchedProviders.length > 0) {
-    await prisma.subscriptionProduct.deleteMany({
-      where: {
-        planId: paid.id,
-        provider: { in: touchedProviders },
-        externalProductId: { notIn: products.map((product) => product.externalProductId) },
       },
     });
   }

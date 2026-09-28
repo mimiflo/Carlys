@@ -470,9 +470,9 @@ cmd_subscription_catalog() {
 
   step "Catalogue d'abonnement sur « $env_name »"
   abonnement_projeter "$env_name" "$file" \
-    || die "La projection a échoué — le message ci-dessus dit pourquoi." \
-      "Cause la plus fréquente : aucun STRIPE_PRICE_* ni REVENUECAT_PRODUCT_* dans $file."
-  ok "plans et produits en place — un paiement peut désormais accorder Premium."
+    || die "La projection a échoué — la ligne ATTENTION (ou Échec) ci-dessus nomme" \
+      "la cause et les variables à renseigner dans $file."
+  ok "catalogue d'abonnement en place."
 }
 
 # Efface du bucket PRIVÉ les photos de repas orphelines — les objets que plus

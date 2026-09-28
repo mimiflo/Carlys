@@ -20,6 +20,17 @@ export const PLAN_AVEC_DROITS = {
   plan: { include: { entitlements: true } },
 } satisfies Prisma.SubscriptionInclude;
 
+/**
+ * Les statuts d'un abonnement qui prélève encore, ou peut encore prélever :
+ * actif, en essai, ou en retard de paiement — le fournisseur retente alors
+ * le prélèvement.
+ */
+export const BILLABLE_STATUSES = [
+  'ACTIVE',
+  'TRIALING',
+  'PAST_DUE',
+] as const satisfies readonly SubscriptionStatus[];
+
 export type SubscriptionWithPlan = Prisma.SubscriptionGetPayload<{
   include: typeof PLAN_AVEC_DROITS;
 }>;
@@ -169,14 +180,10 @@ export class SubscriptionsRepository {
     });
   }
 
-  /**
-   * Les abonnements qui prélèvent encore, ou peuvent encore prélever : actif,
-   * en essai, ou en retard de paiement — le fournisseur retente alors le
-   * prélèvement. Ce que la suppression du compte doit arrêter.
-   */
+  /** Les abonnements qui prélèvent encore : ce que la suppression du compte doit arrêter. */
   billableSubscriptions(userId: string): Promise<Subscription[]> {
     return this.prisma.subscription.findMany({
-      where: { userId, status: { in: ['ACTIVE', 'TRIALING', 'PAST_DUE'] } },
+      where: { userId, status: { in: [...BILLABLE_STATUSES] } },
       orderBy: { createdAt: 'asc' },
     });
   }

@@ -1216,11 +1216,26 @@ paiement était encaissé et le compte restait gratuit**, sans un mot.
 Les identifiants produits viennent du `.env` de l'environnement, jamais de
 l'image : `STRIPE_PRICE_MONTHLY`, `STRIPE_PRICE_YEARLY` et, le jour où les
 magasins s'ouvrent, `REVENUECAT_PRODUCT_MONTHLY` / `REVENUECAT_PRODUCT_YEARLY`.
-Tant qu'aucun n'est renseigné, **le déploiement refuse de basculer** : un
-catalogue sans produit est lisible mais n'accorde rien, et mieux vaut le
-savoir avant le premier paiement réel que le découvrir après.
+Le déploiement **refuse de basculer** quand un paiement pourrait y être
+encaissé sans rien accorder : un fournisseur configuré (`STRIPE_SECRET_KEY`
+ou `STRIPE_WEBHOOK_SECRET` ; `REVENUECAT_WEBHOOK_SECRET`), ou qui a encore
+des abonnés qui prélèvent (comptés en base), à qui manque son secret de
+webhook — le webhook répondrait `503` — ou tout identifiant produit. Mieux
+vaut le savoir avant le premier paiement réel que le découvrir après. La
+ligne `ATTENTION` nomme le fournisseur et les variables en cause.
 
-Après avoir changé un de ces identifiants sans redéployer :
+Sans **aucun** moyen de paiement ni abonné qui prélève — une recette, ou une
+production qui n'a jamais encaissé —, il n'y a rien à protéger : l'étape
+projette plans et droits, affiche « aucun paiement configuré sur ce serveur :
+Premium ne s’obtient que par le back-office », et le déploiement continue.
+Premium s'accorde alors à la main, depuis la fiche d'un utilisateur du
+back-office.
+
+Changer de tarif, c'est créer un nouveau `price_…` chez Stripe (un prix est
+immuable) et le mettre à la place de l'ancien dans le `.env` : l'ancien
+**reste lié en base**, car les abonnés restés dessus renouvellent sur lui. Un
+tarif se retire en l'archivant chez Stripe. Après avoir changé un de ces
+identifiants sans redéployer :
 
 ```bash
 carlysctl subscription-catalog production

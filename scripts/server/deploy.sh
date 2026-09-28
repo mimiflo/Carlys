@@ -419,31 +419,19 @@ fi
 # gratuit, sans un mot.
 #
 # Idempotente, comme le catalogue d'exercices, et rejouée à chaque
-# déploiement pour la même raison : elle se compte en secondes.
+# déploiement pour la même raison : elle se compte en secondes. Quand elle
+# rend 1 : voir paymentVerdict (apps/api/src/cli/subscription-catalog.ts).
 step "6/8 Catalogue d'abonnement"
 if ! api_cli_present "$ENV_NAME" "$ENV_FILE" subscription-catalog; then
   # Image antérieure à la commande (retour arrière, promotion d'un vieux
   # sha) : ce n'est pas une panne, le catalogue déjà en base reste servi.
   warn "l'image sha-$SHA ne porte pas dist/cli/subscription-catalog : plans laissés en l'état."
 elif ! abonnement_projeter "$ENV_NAME" "$ENV_FILE"; then
-  # La commande rend 1 quand AUCUN identifiant produit n'est configuré : le
-  # catalogue est alors lisible mais ne peut rien accorder. On refuse de
-  # basculer en le taisant — c'est exactement le trou qui laissait un
-  # paiement réel sans effet.
   die "Le catalogue d'abonnement n'a pas pu être projeté — DÉPLOIEMENT INTERROMPU." \
     "RIEN n'a été basculé : api et admin tournent toujours sur ${PREVIOUS_SHA:-leur version précédente}." \
-    "" \
-    "Cause la plus fréquente : aucun identifiant produit dans le .env de cet" \
-    "environnement. Sans eux, un paiement Stripe ou un achat dans les magasins" \
-    "n'accorde RIEN — le webhook échoue sur « produit inconnu », est réémis," \
-    "puis abandonné." \
-    "" \
-    "Renseigner dans $ENV_FILE :" \
-    "  STRIPE_PRICE_MONTHLY=price_…      (tableau de bord Stripe)" \
-    "  STRIPE_PRICE_YEARLY=price_…" \
-    "  REVENUECAT_PRODUCT_MONTHLY=…      (si les magasins sont ouverts)" \
-    "  REVENUECAT_PRODUCT_YEARLY=…" \
-    "puis relancer : carlysctl deploy $ENV_NAME $SHA"
+    "La ligne ATTENTION (ou Échec) ci-dessus nomme la cause : renseigner ses variables dans $ENV_FILE," \
+    "ou retirer la clé et le secret du fournisseur s'il n'encaisse pas encore." \
+    "Puis relancer : carlysctl deploy $ENV_NAME $SHA"
 else
   ok "catalogue d'abonnement à jour"
 fi

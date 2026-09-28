@@ -55,10 +55,8 @@ describe('productsFromConfig', () => {
     expect(products[0]?.provider).toBe(PaymentProvider.STRIPE);
   });
 
-  it('rend une liste VIDE quand rien n’est configuré — le déploiement s’y arrête', () => {
-    // C'est ce cas-là que la commande signale par un code d'échec : un
-    // catalogue sans produit est lisible, mais aucun paiement ne peut
-    // accorder Premium.
+  it('rend une liste VIDE quand rien n’est configuré', () => {
+    // Arrêter ou non le déploiement là-dessus : `paymentVerdict` en décide.
     expect(productsFromConfig({})).toEqual([]);
     expect(productsFromConfig({ stripePriceMonthly: '' })).toEqual([]);
   });
