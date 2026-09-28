@@ -180,7 +180,7 @@ jobs:
       # rattrapage manuel en accepte un de 12 caractères (c'est la longueur
       # qu'affichent DEPLOYED, deploy.sh et promote.sh). On rapatrie donc tout
       # l'historique, puis on résout nous-mêmes.
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
@@ -1178,7 +1178,7 @@ jobs:
       # rapatrier) : la porte compte alors tout l'arbre, et bloque plutôt que
       # de supposer. Pas de jeton laissé dans .git/config : ce job écrit dans
       # les releases, rien d'autre ne doit pouvoir s'en servir.
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
           filter: blob:none
@@ -1196,7 +1196,7 @@ jobs:
 
       # Téléchargement DANS la même exécution : aucun jeton supplémentaire,
       # l'artefact vient du job `recette` ci-dessus.
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+      - uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: carlys-recette-apk-${{ needs.recette.outputs.sha12 }}
           path: livraison
@@ -1332,7 +1332,7 @@ jobs:
         working-directory: apps/mobile
 
     steps:
-      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           fetch-depth: 0
 
