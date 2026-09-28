@@ -170,7 +170,10 @@ function unavailable(error: unknown, usage: CoachTurnUsage): never {
  * Le corps d'un refus (4xx) n'est jamais lu : il peut citer le message de la
  * personne. Celui d'un 429 ou d'un 5xx dit POURQUOI le fournisseur refuse
  * (débit, volume du mois, capacité saturée) : son seul champ `message`,
- * tronqué, part au journal.
+ * tronqué, part au journal, avec les en-têtes de limites. Ce sont eux qui
+ * départagent : `x-ratelimit-limit-req-minute=0` dit que le modèle n'a AUCUNE
+ * allocation dans l'offre (changer `COACH_MODEL`), une limite pleine dit
+ * qu'il faut attendre.
  */
 async function refusalReason(response: Response, retryable: boolean): Promise<string> {
   if (!retryable) {
@@ -182,7 +185,16 @@ async function refusalReason(response: Response, retryable: boolean): Promise<st
     error?: { message?: unknown };
   } | null;
   const message = body?.message ?? body?.error?.message;
-  return typeof message === 'string' ? ` (${message.slice(0, 160)})` : '';
+  const limits: string[] = [];
+  response.headers.forEach((value, name) => {
+    if (/ratelimit|retry-after/i.test(name)) {
+      limits.push(`${name}=${value.slice(0, 40)}`);
+    }
+  });
+  return (
+    (typeof message === 'string' ? ` (${message.slice(0, 160)})` : '') +
+    (limits.length > 0 ? ` [${limits.join(', ').slice(0, 300)}]` : '')
+  );
 }
 
 /** Ce que le modèle relit de chaque appel, dans l'ordre de ses appels. */

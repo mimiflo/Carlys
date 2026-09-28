@@ -64,10 +64,15 @@ function completion(
   };
 }
 
-function failure(status: number, body = '{"message":"erreur"}') {
+function failure(
+  status: number,
+  body = '{"message":"erreur"}',
+  headers: Record<string, string> = {},
+) {
   return {
     ok: false,
     status,
+    headers: new Headers(headers),
     // Rejette, comme `fetch`, sur un corps qui n'est pas du JSON.
     json: jest.fn(() => Promise.resolve().then(() => JSON.parse(body) as unknown)),
     body: { cancel: jest.fn(() => Promise.resolve()) },
@@ -449,6 +454,26 @@ describe('OpenAiCompatibleCoachClient', () => {
       // Le corps d'un refus n'est pas même lu : il est abandonné.
       expect(refus.json).not.toHaveBeenCalled();
       expect(refus.body.cancel).toHaveBeenCalled();
+    });
+
+    it('429 définitif : le journal porte les en-têtes de limites, et eux seuls', async () => {
+      global.fetch = jest.fn().mockResolvedValue(
+        failure(429, '{"message":"Rate limit exceeded","code":"1300"}', {
+          'x-ratelimit-limit-req-minute': '0',
+          'x-ratelimit-remaining-req-minute': '0',
+          'content-type': 'application/json',
+          'set-cookie': 'session=secret',
+        }),
+      );
+
+      const error = (await client()
+        .reply(input())
+        .catch((caught: unknown) => caught)) as ServiceUnavailableException;
+
+      expect(error.message).toBe(
+        'Coach : le fournisseur a répondu 429 (Rate limit exceeded) ' +
+          '[x-ratelimit-limit-req-minute=0, x-ratelimit-remaining-req-minute=0].',
+      );
     });
 
     it.each([

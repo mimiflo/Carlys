@@ -84,9 +84,10 @@ export interface CoachModelPort {
  * Le fournisseur a lâché en cours de tour : 503 pour le téléphone, et, pour le
  * quota et les journaux, les jetons DÉJÀ consommés avant la panne (zéro si le
  * premier appel a échoué). Le message porte un statut ou un nom d'erreur,
- * jamais la clé ; pour un 429 ou un 5xx, s'y ajoute le champ `message` que le
- * fournisseur a écrit (160 caractères au plus). Un fournisseur qui y
- * recopierait la demande l'enverrait au journal : Mistral ne le fait pas.
+ * jamais la clé ; pour un 429 ou un 5xx, s'y ajoutent le champ `message` que
+ * le fournisseur a écrit (160 caractères au plus) et ses en-têtes de limites
+ * (`x-ratelimit-*`, `retry-after`). Un fournisseur qui recopierait la
+ * demande dans ce `message` l'enverrait au journal : Mistral ne le fait pas.
  */
 export class CoachProviderUnavailableException extends ServiceUnavailableException {
   constructor(
