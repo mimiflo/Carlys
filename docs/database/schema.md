@@ -25,7 +25,9 @@ accédée exclusivement via Prisma 6 depuis `apps/api`. L'extension `citext` et 
 base `carlys_test` sont créées par `infrastructure/database/init/01-init.sql`.
 Les migrations s'appliquent via `prisma migrate deploy` **avant** la bascule du
 trafic, jamais au démarrage du conteneur ; la CI (`api-ci.yml`) échoue si une
-migration manque par rapport au schéma.
+migration manque par rapport au schéma, ou si une migration déjà publiée a été
+renommée, supprimée ou modifiée — la règle, et la réparation d'un serveur
+tombé dans ce cas : [migrations.md](migrations.md).
 
 ## Domaines et tranches verticales
 

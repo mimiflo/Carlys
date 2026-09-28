@@ -337,7 +337,8 @@ if ! dc "$ENV_NAME" "$ENV_FILE" run --rm migrate; then
   die "La migration a échoué — DÉPLOIEMENT INTERROMPU." \
     "RIEN n'a été basculé : api et admin tournent toujours sur ${PREVIOUS_SHA:-leur version précédente}." \
     "Le socle de données est debout, le schéma est resté dans l'état où la migration l'a laissé." \
-    "Relire la sortie ci-dessus, corriger la migration, publier un nouveau sha." \
+    "Relire la sortie ci-dessus. Migration en échec (P3018) à corriger, ou" \
+    "« already exists » puis P3009 sur une migration RENOMMÉE : docs/database/migrations.md." \
     "Pour rejouer la seule migration :" \
     "  CARLYS_TAG=sha-$SHA docker compose -p $PROJECT --env-file $ENV_FILE \\" \
     "    -f $CARLYS_COMPOSE_FILE run --rm migrate"

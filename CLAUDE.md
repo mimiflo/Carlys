@@ -381,6 +381,11 @@ Chaque fonctionnalité livrée comprend :
   dans les tests, isolés et remplaçables.
 - **Migrations en production** : `prisma migrate deploy` avant bascule du trafic,
   jamais au démarrage du conteneur.
+- **Migrations publiées** : une migration publiée ne se renomme, ne se supprime
+  ni ne se modifie ; on en écrit une nouvelle (garde
+  `scripts/ci/migrations_publiees.sh` dans api-ci et `./scripts/check.sh` ;
+  réécriture nécessaire, déclarée dans `REECRITES`, et serveur tombé :
+  `docs/database/migrations.md`).
 - Ne **jamais** déclarer une fonctionnalité terminée sans avoir réellement exécuté
   ses tests (et les avoir vus passer).
 

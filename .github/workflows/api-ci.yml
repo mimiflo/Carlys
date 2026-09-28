@@ -36,6 +36,8 @@ on:
       # La recette de MinIO (versions épinglées, construire.sh) : une montée de
       # version doit repasser les e2e qui parlent au vrai stockage objet.
       - 'infrastructure/minio/**'
+      # La garde des migrations publiées (étape du même nom plus bas).
+      - 'scripts/ci/migrations_publiees.sh'
       - '.github/workflows/api-ci.yml'
   push:
     branches: [development, production]
@@ -47,6 +49,7 @@ on:
       - 'pnpm-lock.yaml'
       - 'pnpm-workspace.yaml'
       - 'infrastructure/minio/**'
+      - 'scripts/ci/migrations_publiees.sh'
       - '.github/workflows/api-ci.yml'
 
 concurrency:
@@ -59,6 +62,8 @@ concurrency:
 # compromise n'y trouverait pas de jeton en écriture.
 permissions:
   contents: read
+  # La garde des migrations lit le dernier verdict vert d'api-ci.
+  actions: read
 
 jobs:
   verify:
@@ -104,6 +109,25 @@ jobs:
 
     steps:
       - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+
+      # ── Une migration PUBLIÉE ne se réécrit pas ─────────────────────────────
+      # Base : en pull request, la branche cible ; en poussée, le dernier
+      # commit VERT d'api-ci sur la branche. Règle et incident :
+      # docs/database/migrations.md.
+      # ponytail: un dernier vert devenu introuvable (poussée forcée, puis
+      # ménage côté GitHub) laisse la garde rouge : se replier alors sur le
+      # commit d'avant la poussée.
+      - name: Migrations publiées intactes
+        env:
+          GH_TOKEN: ${{ github.token }}
+          BASE: ${{ github.event.pull_request.base.sha }}
+          AVANT: ${{ github.event.before }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = pull_request ]; then
+            scripts/ci/migrations_publiees.sh "$BASE"
+          else
+            scripts/ci/migrations_publiees.sh --poussee "$AVANT"
+          fi
 
       # ── MinIO, construit depuis ses SOURCES ─────────────────────────────────
       #

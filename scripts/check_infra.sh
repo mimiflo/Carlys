@@ -31,6 +31,9 @@ python3 scripts/ci/verifier_dockerfiles.py
 echo "── Porte de CI (verdict_ci.sh) ─────────────────────────────────────"
 bash scripts/ci/tests/verdict_ci_test.sh
 
+echo "── Migrations publiées (migrations_publiees.sh) ────────────────────"
+bash scripts/ci/tests/migrations_publiees_test.sh
+
 echo "── Garde « build once » de mobile-production ───────────────────────"
 bash scripts/ci/tests/preuve_recette_test.sh
 
