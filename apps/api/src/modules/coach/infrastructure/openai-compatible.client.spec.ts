@@ -65,7 +65,13 @@ function completion(
 }
 
 function failure(status: number, body = '{"message":"erreur"}') {
-  return { ok: false, status, json: () => Promise.resolve(JSON.parse(body) as unknown) };
+  return {
+    ok: false,
+    status,
+    // Rejette, comme `fetch`, sur un corps qui n'est pas du JSON.
+    json: jest.fn(() => Promise.resolve().then(() => JSON.parse(body) as unknown)),
+    body: { cancel: jest.fn(() => Promise.resolve()) },
+  };
 }
 
 function toolCall(id: string, name: string, args: string) {
@@ -430,9 +436,8 @@ describe('OpenAiCompatibleCoachClient', () => {
     });
 
     it('le message d’erreur (journalisé) porte le statut, jamais la clé ni le corps de la réponse', async () => {
-      global.fetch = jest
-        .fn()
-        .mockResolvedValue(failure(422, '{"message":"J’ai mal au genou depuis mardi"}'));
+      const refus = failure(422, '{"message":"J’ai mal au genou depuis mardi"}');
+      global.fetch = jest.fn().mockResolvedValue(refus);
 
       const error = (await client()
         .reply(input())
@@ -441,6 +446,52 @@ describe('OpenAiCompatibleCoachClient', () => {
       expect(error.message).toContain('422');
       expect(error.message).not.toContain('cle-mistral-factice');
       expect(error.message).not.toContain('genou');
+      // Le corps d'un refus n'est pas même lu : il est abandonné.
+      expect(refus.json).not.toHaveBeenCalled();
+      expect(refus.body.cancel).toHaveBeenCalled();
     });
+
+    it.each([
+      ['corps HTML d’une passerelle', 502, '<html>Bad Gateway</html>', ''],
+      ['message qui n’est pas un texte', 503, '{"message":{"detail":"x"}}', ''],
+      [
+        'raison trop longue',
+        503,
+        JSON.stringify({ message: 'x'.repeat(500) }),
+        ` (${'x'.repeat(160)})`,
+      ],
+    ])(
+      '5xx définitif, %s : le statut, et la raison seulement si elle se lit',
+      async (_cas, statut, corps, raison) => {
+        global.fetch = jest.fn().mockResolvedValue(failure(statut, corps));
+
+        const error = (await client()
+          .reply(input())
+          .catch((caught: unknown) => caught)) as ServiceUnavailableException;
+
+        expect(error.message).toBe(`Coach : le fournisseur a répondu ${statut}${raison}.`);
+      },
+    );
+
+    it.each([
+      [
+        'Mistral',
+        '{"object":"error","message":"Service tier capacity exceeded for this model.","code":"3505"}',
+      ],
+      ['OpenAI', '{"error":{"message":"Service tier capacity exceeded for this model."}}'],
+    ])(
+      '429 qui persiste (%s) : le journal dit pourquoi, le message du fournisseur seul',
+      async (_format, corps) => {
+        global.fetch = jest.fn().mockResolvedValue(failure(429, corps));
+
+        const error = (await client()
+          .reply(input())
+          .catch((caught: unknown) => caught)) as ServiceUnavailableException;
+
+        expect(error.message).toBe(
+          'Coach : le fournisseur a répondu 429 (Service tier capacity exceeded for this model.).',
+        );
+      },
+    );
   });
 });

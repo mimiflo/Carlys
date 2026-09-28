@@ -137,16 +137,15 @@ export class OpenAiCompatibleCoachClient implements CoachModelPort {
         }
         return body;
       }
-      // Le corps n'est jamais lu : il peut citer le message de la personne.
-      await response.body?.cancel();
       const retryable = response.status === 429 || response.status >= 500;
       if (!retryable || attempt === RETRIES) {
         // Jamais relayé tel quel : un 429 du fournisseur (quota GLOBAL)
         // s'afficherait « limite du jour » sur le téléphone.
         throw new ServiceUnavailableException(
-          `Coach : le fournisseur a répondu ${response.status}.`,
+          `Coach : le fournisseur a répondu ${response.status}${await refusalReason(response, retryable)}.`,
         );
       }
+      await response.body?.cancel();
       await wait(RETRY_DELAY_MS * (attempt + 1), undefined, { signal });
     }
   }
@@ -155,8 +154,9 @@ export class OpenAiCompatibleCoachClient implements CoachModelPort {
 /**
  * Statut refusé, réseau coupé, échéance dépassée, JSON illisible : 503, avec
  * les jetons déjà consommés. Le message ne sert qu'aux JOURNAUX (le filtre
- * masque tout 5xx) : notre propre texte, ou le NOM de l'erreur, jamais son
- * message, qui peut citer le corps de la réponse.
+ * masque tout 5xx) : notre propre texte (avec, pour un 429 ou un 5xx, la
+ * raison du fournisseur, voir `refusalReason`), ou le NOM de l'erreur,
+ * jamais son message, qui peut citer le corps de la réponse.
  */
 function unavailable(error: unknown, usage: CoachTurnUsage): never {
   const reason =
@@ -164,6 +164,25 @@ function unavailable(error: unknown, usage: CoachTurnUsage): never {
       ? error.message
       : `Coach : fournisseur injoignable (${error instanceof Error ? error.name : 'inconnue'}).`;
   throw new CoachProviderUnavailableException(reason, usage);
+}
+
+/**
+ * Le corps d'un refus (4xx) n'est jamais lu : il peut citer le message de la
+ * personne. Celui d'un 429 ou d'un 5xx dit POURQUOI le fournisseur refuse
+ * (débit, volume du mois, capacité saturée) : son seul champ `message`,
+ * tronqué, part au journal.
+ */
+async function refusalReason(response: Response, retryable: boolean): Promise<string> {
+  if (!retryable) {
+    await response.body?.cancel();
+    return '';
+  }
+  const body = (await response.json().catch(() => null)) as {
+    message?: unknown;
+    error?: { message?: unknown };
+  } | null;
+  const message = body?.message ?? body?.error?.message;
+  return typeof message === 'string' ? ` (${message.slice(0, 160)})` : '';
 }
 
 /** Ce que le modèle relit de chaque appel, dans l'ordre de ses appels. */

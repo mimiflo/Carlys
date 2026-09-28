@@ -640,8 +640,11 @@ le premier vrai message**.
    Une réponse « momentanément indisponible » ? Le journal d'erreurs dit
    pourquoi, sans rien citer du message : « Coach : le fournisseur a répondu
    401 » (clé fausse ou expirée), « … 400 » ou « … 422 » (nom de modèle mal
-   écrit), « … 429 » (limites atteintes : baissez
-   `COACH_DAILY_MESSAGE_LIMIT`), « fournisseur injoignable (TimeoutError) »
+   écrit), « … 429 (…) » (Mistral refuse, et la parenthèse recopie sa
+   raison : débit dépassé, baissez `COACH_DAILY_MESSAGE_LIMIT` ; volume du
+   mois épuisé, attendez le mois suivant ; « Service tier capacity
+   exceeded », le Free mode est saturé pour ce modèle, réessayez plus tard
+   ou changez `COACH_MODEL`), « fournisseur injoignable (TimeoutError) »
    (plus de 50 secondes). Si la panne survient dès la première demande à
    Mistral, le message n'est **pas** décompté du quota de la personne, trois
    fois par jour au plus ; s'il a déjà servi une partie de la réponse, le
