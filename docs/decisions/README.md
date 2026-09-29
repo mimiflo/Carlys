@@ -49,7 +49,8 @@ vers l'ADR qui la remplace).
 | [0007](0007-use-riverpod.md) | Riverpod pour l'état et l'injection de dépendances Flutter | Acceptée — 2026-08 |
 | [0008](0008-use-drift.md) | Drift (SQLite) pour la persistance locale mobile | Acceptée — 2026-08 |
 | [0009](0009-use-object-storage-for-media.md) | Stockage objet pour les médias, administrés depuis le back-office | Acceptée — 2026-08 |
-| [0010](0010-coach-fournisseur-compatible-openai.md) | Fournisseur du coach IA : un réglage, Mistral gratuit par défaut | Acceptée — 2026-09 |
+| [0010](0010-coach-fournisseur-compatible-openai.md) | Fournisseur du coach IA : un réglage, Mistral gratuit par défaut | Acceptée — 2026-09 (décision 2 remplacée par 0011) |
+| [0011](0011-coach-qwen3-sur-le-serveur.md) | Coach IA : Qwen3-4B sur notre serveur, servi par Ollama | Acceptée — 2026-09 |
 
 ## Ajouter un ADR
 

@@ -1,6 +1,6 @@
 # Conditions d’utilisation de Carlys
 
-Dernière mise à jour : 27 septembre 2026.
+Dernière mise à jour : 29 septembre 2026.
 
 Ces conditions encadrent l’utilisation de l’application mobile Carlys et de
 ses pages web. En créant un compte, que ce soit avec ton adresse e-mail ou
@@ -68,10 +68,10 @@ Certaines fonctions sont réservées à l’abonnement Premium (voir la section
 
 ## 5. Le coach IA
 
-- Le coach est un assistant automatisé fondé sur un modèle de langage fourni
-  par un prestataire externe : aujourd’hui Mistral AI, société française. La
-  politique de confidentialité nomme toujours celui qui est réellement
-  utilisé. Le coach peut se tromper, mal comprendre ta demande ou proposer
+- Le coach est un assistant automatisé fondé sur un modèle de langage ouvert
+  (Qwen3) que Carlys fait tourner sur son propre serveur : tes messages ne
+  partent chez aucun prestataire d’intelligence artificielle. La politique de
+  confidentialité dit toujours où il tourne. Le coach peut se tromper, mal comprendre ta demande ou proposer
   quelque chose d’inadapté : garde ton jugement.
 - Le coach lit tes données d’entraînement pour te répondre, mais **il
   n’écrit rien** dans ton compte : une séance proposée n’existe que si tu

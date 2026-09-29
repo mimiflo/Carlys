@@ -10,9 +10,11 @@ describe('Page /privacy', () => {
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
       /politique de confidentialité/i,
     );
-    // Le prestataire du coach et celui du paiement doivent être nommés : pour
-    // le coach, celui que COACH_API_BASE_URL désigne réellement (Mistral AI).
-    expect(container).toHaveTextContent('Mistral AI');
+    // Le coach tourne sur le serveur de Carlys (COACH_API_BASE_URL vise
+    // l'Ollama interne, ADR 0011) : la page doit le dire, et ne plus nommer
+    // un prestataire qui ne reçoit rien. Le paiement a le sien.
+    expect(container).toHaveTextContent('sur son propre serveur');
+    expect(container).not.toHaveTextContent('Mistral');
     expect(container).toHaveTextContent('Stripe');
     expect(container).toHaveTextContent('Firebase Cloud Messaging');
   });

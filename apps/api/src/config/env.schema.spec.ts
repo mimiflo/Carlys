@@ -107,6 +107,19 @@ describe('validateEnv', () => {
     );
     expect(() => validateEnv({ ...validEnv, COACH_API_KEY: '' })).toThrow(/COACH_API_KEY/);
     expect(() => validateEnv({ ...validEnv, COACH_MODEL: '' })).toThrow(/COACH_MODEL/);
+
+    // Qwen3 sur le serveur (Ollama interne) : ni clé ni https, la réflexion
+    // coupée ; une valeur hors liste est une faute de frappe.
+    const ollama = validateEnv({
+      ...validEnv,
+      COACH_API_BASE_URL: 'http://ollama:11434/v1',
+      COACH_MODEL: 'qwen3:4b',
+      COACH_REASONING_EFFORT: 'none',
+    });
+    expect(ollama.COACH_REASONING_EFFORT).toBe('none');
+    expect(() => validateEnv({ ...validEnv, COACH_REASONING_EFFORT: 'off' })).toThrow(
+      /COACH_REASONING_EFFORT/,
+    );
   });
 
   it('exige un METRICS_TOKEN suffisamment long', () => {

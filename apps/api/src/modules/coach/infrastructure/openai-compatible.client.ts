@@ -119,7 +119,7 @@ export class OpenAiCompatibleCoachClient implements CoachModelPort {
     payload: Record<string, unknown>,
     signal: AbortSignal,
   ): Promise<ChatCompletion> {
-    const { baseUrl = '', apiKey, model } = this.config.coachProvider;
+    const { baseUrl = '', apiKey, model, reasoningEffort } = this.config.coachProvider;
     for (let attempt = 0; ; attempt++) {
       const response = await fetch(`${baseUrl.replace(/\/+$/, '')}/chat/completions`, {
         method: 'POST',
@@ -128,7 +128,13 @@ export class OpenAiCompatibleCoachClient implements CoachModelPort {
           'Content-Type': 'application/json',
           ...(apiKey === undefined ? {} : { Authorization: `Bearer ${apiKey}` }),
         },
-        body: JSON.stringify({ model, max_tokens: COACH_MAX_OUTPUT_TOKENS, ...payload }),
+        body: JSON.stringify({
+          model,
+          max_tokens: COACH_MAX_OUTPUT_TOKENS,
+          // Seulement si posé : un fournisseur qui ne le connaît pas le refuse.
+          ...(reasoningEffort === undefined ? {} : { reasoning_effort: reasoningEffort }),
+          ...payload,
+        }),
       });
       if (response.ok) {
         const body: unknown = await response.json();

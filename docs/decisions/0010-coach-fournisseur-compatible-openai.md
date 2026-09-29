@@ -2,7 +2,9 @@
 
 ## Statut
 
-Acceptée — 2026-09
+Acceptée — 2026-09. Sa décision 2 (Mistral Free mode en production) est
+remplacée par l'ADR 0011 (Qwen3-4B sur notre serveur) : le Free mode a
+refusé toutes les demandes le 28 septembre 2026. Le reste tient.
 
 ## Contexte
 

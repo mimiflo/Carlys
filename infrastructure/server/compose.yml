@@ -288,6 +288,61 @@ services:
       retries: 5
       start_period: 10s
 
+  # ── Coach IA sur le serveur (facultatif) ───────────────────────────────────
+  # Qwen3-4B servi par Ollama (décision du 29/09/2026, ADR 0011) : les
+  # messages du coach ne quittent plus le serveur, et aucun fournisseur ne
+  # rationne plus les réponses. ÉTEINT par défaut (0 exemplaire) : on l'allume
+  # dans le .env de l'environnement (CARLYS_OLLAMA_REPLICAS=1), avec les
+  # variables COACH_* qui y envoient l'API (bloc « Coach IA » du gabarit).
+  #
+  # Aucun port publié : seule l'API lui parle, par le réseau compose
+  # (http://ollama:11434/v1). Le modèle (COACH_MODEL, ≈ 2,5 Go pour qwen3:4b)
+  # est téléchargé au démarrage dans le volume `ollama-data`, puis seulement
+  # vérifié les fois suivantes. La sonde ne passe au vert qu'une fois le
+  # modèle présent : un téléchargement raté finit en conteneur « unhealthy »,
+  # que la supervision redémarre, donc en nouvel essai. Tant qu'il manque, le
+  # coach répond « momentanément indisponible » ; le reste de l'application
+  # ne voit rien.
+  ollama:
+    <<: *service
+    image: ${CARLYS_OLLAMA_IMAGE:-ollama/ollama:0.34.4}
+    deploy:
+      replicas: ${CARLYS_OLLAMA_REPLICAS:-0}
+    mem_limit: ${CARLYS_OLLAMA_MEM_LIMIT:-0}
+    environment:
+      TZ: UTC
+      CARLYS_OLLAMA_MODEL: ${COACH_MODEL:-qwen3:4b}
+      # Gardé en mémoire : sans cela Ollama décharge le modèle après cinq
+      # minutes, et la réponse suivante paie des secondes de rechargement.
+      OLLAMA_KEEP_ALIVE: '-1'
+      # Consignes et outils (≈ 3 000 jetons), historique, résultats d'outils :
+      # un contexte trop court les tronquerait EN SILENCE.
+      OLLAMA_CONTEXT_LENGTH: ${CARLYS_OLLAMA_CONTEXT_LENGTH:-8192}
+      # Une réponse à la fois : sur un processeur, deux en parallèle vont
+      # chacune deux fois moins vite, et le préfixe commun des consignes
+      # n'est gardé en cache que pour une seule file.
+      OLLAMA_NUM_PARALLEL: '1'
+      OLLAMA_MAX_LOADED_MODELS: '1'
+    entrypoint: ['/bin/sh', '-c']
+    command:
+      - >-
+        ollama serve & pid=$$!;
+        trap 'kill $$pid; wait $$pid' TERM INT;
+        until ollama list >/dev/null 2>&1; do sleep 1; done;
+        ollama pull "$$CARLYS_OLLAMA_MODEL"
+        || echo "Modèle $$CARLYS_OLLAMA_MODEL non téléchargé : le coach répondra 503";
+        wait $$pid
+    volumes:
+      - ollama-data:/root/.ollama
+    healthcheck:
+      test: ['CMD-SHELL', 'ollama show "$$CARLYS_OLLAMA_MODEL" >/dev/null 2>&1 || exit 1']
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      # Le premier téléchargement prend quelques minutes : pas de « unhealthy »
+      # (donc pas de redémarrage par la supervision) pendant ce temps.
+      start_period: 30m
+
   # ── API ────────────────────────────────────────────────────────────────────
   api:
     <<: *service
@@ -441,3 +496,4 @@ volumes:
   postgres-data:
   redis-data:
   minio-data:
+  ollama-data:

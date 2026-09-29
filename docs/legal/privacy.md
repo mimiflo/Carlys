@@ -1,6 +1,6 @@
 # Politique de confidentialité de Carlys
 
-Dernière mise à jour : 27 septembre 2026.
+Dernière mise à jour : 29 septembre 2026.
 
 Carlys est une application mobile de suivi d’entraînement, accompagnée de
 quelques pages web (vérification d’adresse, nouveau mot de passe, retours de
@@ -324,14 +324,15 @@ Android, Santé sur iOS) : ni pas, ni fréquence cardiaque, ni sommeil.
   d’adresse, réinitialisation de mot de passe). Carlys n’envoie pas de
   newsletter ni de publicité.
 
-## 4. Le coach IA et les données envoyées à un prestataire
+## 4. Le coach IA
 
 Le coach de Carlys est un assistant automatisé fourni par un modèle de
-langage. Il n’est utilisé que lorsque tu lui écris.
+langage ouvert (Qwen3) que Carlys fait tourner **sur son propre serveur**,
+celui qui héberge déjà la base de données (voir « Hébergement » plus bas). Il
+n’est utilisé que lorsque tu lui écris.
 
-À chaque message, les éléments suivants sont transmis au prestataire
-**Mistral AI**, société française établie à Paris (son API de modèles de
-langage), pour produire la réponse :
+Pour produire la réponse, les éléments suivants sont traités sur ce serveur,
+et **aucun n’est transmis à un prestataire d’intelligence artificielle** :
 
 - ton message et l’historique de la conversation en cours ;
 - le profil Carlys que tu as choisi (Constructeur, Challenger, Athlète ou
@@ -345,6 +346,10 @@ langage), pour produire la réponse :
   tes repas récents (nom, moment, calories, macronutriments et aliments).
   La photo d’un repas ne lui est jamais transmise.
 
+Le modèle ne garde rien d’un message à l’autre et n’apprend pas de tes
+échanges : il produit la réponse, puis l’oublie. Seules les conversations
+enregistrées par Carlys, décrites ci-dessous, sont conservées.
+
 Le coach ne peut rien écrire dans ton compte : les séances qu’il propose ne
 sont enregistrées que si tu les acceptes. Les conversations sont conservées
 sur nos serveurs, jusqu’à l’effacement de ton compte, pour que tu puisses
@@ -355,27 +360,9 @@ conservées sans y être listées, et nous t’en donnons une copie si tu la
 demandes (voir « Tes droits »). Écrire au coach demande un abonnement qui
 l’inclut. Un plafond quotidien de messages s’applique à chaque compte.
 
-Le prestataire nommé ici est celui que Carlys utilise réellement pour le
-coach : si nous en changeons, cette politique est mise à jour avant que tes
-messages ne lui soient envoyés.
-
-Mistral AI traite ces données pour le seul compte de Carlys, dans le cadre de
-ses conditions et de son accord de traitement des données :
-
-- **Stockage** : dans l’Union européenne.
-- **Entraînement** : l’utilisation de tes échanges pour améliorer ses
-  modèles a été désactivée dans le compte de Carlys, le
-  [À COMPLÉTER : date de la désactivation, relevée sur la capture d’écran].
-- **Lieu de calcul de la réponse** : [À COMPLÉTER : avec l’adresse
-  européenne (api.eu.mistral.ai), « dans l’Union européenne » ; avec
-  l’adresse globale (api.mistral.ai), « sans engagement de lieu de la part
-  de Mistral AI, donc possiblement hors de l’Union européenne »].
-- **Durée de conservation chez Mistral AI** : [À COMPLÉTER : durée relevée
-  dans l’accord de traitement des données de Mistral AI].
-- **Données de santé** : [À COMPLÉTER : confirmation écrite de Mistral AI
-  que son accord de traitement des données couvre les données de santé
-  (article 9 du RGPD) transmises par le coach, ou référence de l’avenant
-  signé ; l’annexe publiée indique « None » pour ces catégories].
+Si Carlys confiait un jour le coach à un prestataire extérieur, cette
+politique serait mise à jour, en le nommant, avant que tes messages ne lui
+soient envoyés.
 
 ## 5. Les autres prestataires
 
@@ -412,9 +399,8 @@ ses conditions et de son accord de traitement des données :
 
 Certains de ces prestataires (Apple, Google, Stripe) peuvent traiter les
 données en dehors de l’Union européenne, dans le cadre des garanties
-contractuelles qu’ils proposent. Pour Mistral AI, le lieu de calcul est
-indiqué plus haut, avec le coach. [À COMPLÉTER : vérifier le cadre
-de transfert applicable à chaque prestataire.]
+contractuelles qu’ils proposent. [À COMPLÉTER : vérifier le cadre de
+transfert applicable à chaque prestataire.]
 
 ## 6. Combien de temps
 

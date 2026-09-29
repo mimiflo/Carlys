@@ -473,7 +473,7 @@ d'empêcher le démarrage :
 | `STRIPE_SECRET_KEY`, `STRIPE_PRICE_*` | le catalogue reste lisible, l'achat se déclare indisponible |
 | `STRIPE_WEBHOOK_SECRET` | l'endpoint de webhook répond 503 — aucun webhook non signé n'est jamais traité |
 | `FIREBASE_SERVICE_ACCOUNT_JSON` | l'envoi de notifications est désactivé ; l'enregistrement des jetons d'appareil continue de fonctionner |
-| `COACH_API_BASE_URL`, `COACH_API_KEY`, `COACH_MODEL` (Mistral, voir « Coach IA gratuit avec Mistral » plus bas), ou `ANTHROPIC_API_KEY` | le coach IA répond 503 |
+| `CARLYS_OLLAMA_REPLICAS`, `COACH_API_BASE_URL`, `COACH_MODEL`, `COACH_REASONING_EFFORT` (le coach sur le serveur, voir « Coach IA sur le serveur » plus bas), ou Mistral, ou `ANTHROPIC_API_KEY` | le coach IA répond 503 |
 | `METRICS_TOKEN` | `/metrics` n'est pas exposé (il est de toute façon refusé par Nginx) |
 
 > **« Optionnel » veut dire ABSENT, pas vide.** Chacun de ces secrets est
@@ -505,7 +505,100 @@ production, il faut un vrai relais, et le schéma le prend désormais :
 place : sans quoi les messages de vérification d'adresse partent en
 indésirables, et l'inscription paraît cassée sans qu'aucun journal ne le dise.
 
-### Coach IA gratuit avec Mistral
+### Coach IA sur le serveur (Qwen3-4B)
+
+Le coach IA tourne **sur votre serveur**, sans fournisseur : Qwen3-4B, un
+modèle ouvert, servi par Ollama dans le service `ollama` de la pile. Gratuit,
+sans quota imposé, et les messages de vos utilisateurs (poids, repas,
+douleurs) ne quittent pas la machine. Ce choix date du 29 septembre 2026
+([ADR 0011](../decisions/0011-coach-qwen3-sur-le-serveur.md)), après que
+l'offre gratuite de Mistral a refusé toutes les demandes.
+
+1. **La place.** Le modèle pèse ≈ 2,5 Go sur le disque et prend ≈ 4 à 5 Go
+   de mémoire vive une fois chargé :
+
+   ```bash
+   free -h                  # « available » : 5 Go au moins
+   df -h /var/lib/docker    # « Avail » : 6 Go au moins (image + modèle)
+   ```
+
+2. **Allumer, dans le `.env` de l'environnement.**
+
+   ```bash
+   sudoedit /srv/carlys/staging/.env
+   ```
+
+   Dans le bloc « Coach IA » : **commentez** (un `#` devant) les lignes de
+   Mistral encore actives, `COACH_API_KEY` **comprise** (avec une clé et une
+   adresse sans `https`, l'API refuse de démarrer), puis posez ces quatre
+   lignes, sans `#` :
+
+   ```bash
+   CARLYS_OLLAMA_REPLICAS=1
+   COACH_API_BASE_URL=http://ollama:11434/v1
+   COACH_MODEL=qwen3:4b
+   COACH_REASONING_EFFORT=none
+   ```
+
+   En recette, `CARLYS_OLLAMA_MEM_LIMIT=6g` plafonne sa mémoire (la
+   supervision ajoute la ligne d'elle-même ; sinon, ajoutez-la).
+
+3. **Déployer** comme d'habitude (§10) : la version doit contenir le service
+   `ollama` ; la déployer recrée aussi l'API, qui relit le `.env`.
+
+   ```bash
+   sudo /srv/carlys/repo/scripts/server/carlysctl deploy staging <sha12>
+   ```
+
+4. **Suivre le téléchargement du modèle** (quelques minutes, la première
+   fois seulement) :
+
+   ```bash
+   sudo docker compose -p carlys_staging logs -f ollama   # Ctrl+C pour sortir
+   sudo docker compose -p carlys_staging ps ollama        # « healthy » = prêt
+   ```
+
+   Tant qu'il n'est pas prêt, le coach répond « momentanément
+   indisponible » ; rien d'autre n'est touché.
+
+5. **Mesurer la vitesse**, parce que c'est le processeur qui calcule :
+
+   ```bash
+   sudo docker compose -p carlys_staging exec ollama \
+     ollama run qwen3:4b --verbose "/no_think Propose une séance jambes de 30 minutes en 5 lignes."
+   ```
+
+   Notez `prompt eval rate` et `eval rate` (jetons par seconde). Un tour du
+   coach lit ≈ 3 000 jetons de consignes, puis écrit ≈ 200 à 400 jetons :
+   `3000 / prompt eval rate + 300 / eval rate` doit rester **sous 45
+   secondes**, car le serveur abandonne un tour à 50 s. Au-dessus, le coach
+   répondra « momentanément indisponible » (journal : « fournisseur
+   injoignable (TimeoutError) ») : transmettez les deux chiffres, on ajustera
+   les délais ou la taille du modèle. Ollama garde les consignes communes en
+   cache : les réponses suivantes vont plus vite que la première.
+
+6. **Essayer : les vingt vraies questions** de l'étape 9 de la section
+   Mistral ci-dessous (séance proposée, records, protéines, genou, régime à
+   800 kcal). Un petit modèle suit moins bien les consignes : c'est ce test
+   qui le dit.
+
+7. **Production** : refaites les étapes 1 à 5 dans
+   `/srv/carlys/production/.env`. Les deux environnements allumés, c'est deux
+   fois la mémoire : sur une petite machine, n'allumez que celui qui sert.
+
+La politique de confidentialité et les conditions le disent déjà (« le coach
+tourne sur son propre serveur ») : l'admin, qui publie ces pages, se met à
+jour avec le déploiement.
+
+### Autre possibilité : le coach chez Mistral
+
+> **Avant de revenir à Mistral**, mettez à jour `docs/legal/privacy.md` et
+> `terms.md` (ils disent aujourd'hui qu'aucun prestataire d'IA ne reçoit les
+> messages) et redéployez l'admin, puis seulement les variables. Mistral
+> Free mode a refusé toutes les demandes du 28 septembre 2026
+> (`mistral-small-latest` à zéro requête) : c'est ce qui a motivé l'ADR 0011.
+
+#### Mise en route de Mistral
 
 Le coach IA peut tourner **sans rien vous coûter** : Mistral AI, société
 française, ouvre son API gratuitement (« Free mode »), sans carte bancaire.
@@ -1536,9 +1629,9 @@ Contrairement à la recette, la production a besoin des vraies valeurs :
   c'est Stripe qui encaisse, l'API ne fait qu'afficher.
 - **Firebase** : `FIREBASE_SERVICE_ACCOUNT_JSON`, le JSON complet du compte de
   service (console Firebase → Paramètres → Comptes de service).
-- **Coach IA** : `COACH_API_BASE_URL`, `COACH_API_KEY` (la clé de
-  production, distincte de celle de la recette) et `COACH_MODEL`, comme au
-  §5, « Coach IA gratuit avec Mistral ».
+- **Coach IA** : les quatre lignes du coach sur le serveur
+  (`CARLYS_OLLAMA_REPLICAS`, `COACH_API_BASE_URL`, `COACH_MODEL`,
+  `COACH_REASONING_EFFORT`), comme au §5, « Coach IA sur le serveur ».
 - **SMTP** : un vrai relais, avec son identifiant et son mot de passe —
   les deux pièges sont détaillés au §5, « Les e-mails de production ».
   Mailpit n'existe pas ici :

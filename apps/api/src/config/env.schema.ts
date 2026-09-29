@@ -185,6 +185,13 @@ export const envSchema = z
     COACH_API_KEY: z.string().min(8).optional(),
     /** Modèle. Exigé avec `COACH_API_BASE_URL` ; sinon, `claude-opus-5`. */
     COACH_MODEL: z.string().min(1).optional(),
+    /**
+     * `reasoning_effort` envoyé au fournisseur compatible OpenAI, seulement
+     * si posé. `none` coupe la « réflexion » de Qwen3 servi par Ollama (qui
+     * l'active d'office) ; jamais pour Mistral, dont les Ministral refusent
+     * le champ (400).
+     */
+    COACH_REASONING_EFFORT: z.enum(['none', 'low', 'medium', 'high']).optional(),
     /** Plafond par utilisateur et par jour. Le coût du coach est réel. */
     COACH_DAILY_MESSAGE_LIMIT: z.coerce.number().int().min(1).max(500).default(30),
     /** Interrupteur global : coupe la fonctionnalité sans déploiement. */

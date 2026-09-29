@@ -43,11 +43,23 @@ echo "compose.yml — mémoire et réglages"
 recette="$(rendu staging)"
 production="$(rendu production)"
 
-for service in api admin postgres redis minio; do
+for service in api admin postgres redis minio ollama; do
   verifier "recette : $service a un plafond mémoire" oui \
     "$(champ "$recette" ".services.$service.mem_limit // \"\"" | grep -qE '^[1-9][0-9]*$' && echo oui || echo non)"
   verifier "production : $service n'a pas de plafond par défaut" aucun \
     "$(champ "$production" ".services.$service.mem_limit // \"aucun\"")"
+done
+
+# Le coach sur le serveur : éteint tant qu'on ne l'allume pas (un modèle de
+# 2,5 Go et 4 Go de mémoire ne se téléchargent pas par surprise), et
+# injoignable depuis l'extérieur (aucun port publié, l'API passe par le
+# réseau compose).
+for env_name in staging production; do
+  json="$([ "$env_name" = staging ] && echo "$recette" || echo "$production")"
+  verifier "$env_name : ollama éteint par défaut" 0 \
+    "$(champ "$json" '.services.ollama.deploy.replicas')"
+  verifier "$env_name : ollama ne publie aucun port" 0 \
+    "$(champ "$json" '(.services.ollama.ports // []) | length')"
 done
 
 verifier "production : la base est protégée du tueur de processus" -500 \
