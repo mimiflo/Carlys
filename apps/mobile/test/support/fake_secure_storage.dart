@@ -10,6 +10,10 @@ class FakeSecureStorage implements FlutterSecureStorage {
   /// l'effacement continuent de fonctionner.
   Object? failWrites;
 
+  /// Ce que `read` lève, quand le trousseau est ILLISIBLE (clé perdue
+  /// après une restauration, keystore occupé).
+  Object? failReads;
+
   @override
   Future<String?> read({
     required String key,
@@ -20,6 +24,8 @@ class FakeSecureStorage implements FlutterSecureStorage {
     MacOsOptions? mOptions,
     WindowsOptions? wOptions,
   }) async {
+    final failure = failReads;
+    if (failure != null) throw failure;
     return values[key];
   }
 
