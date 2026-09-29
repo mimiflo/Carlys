@@ -95,6 +95,7 @@ void main() {
       'google-network_error',
       'google-java-illegal-state',
       'reseau-certificat',
+      'reseau-coupure-ecriture',
     ])
       describeSocialFailure(
         SocialProvider.google,

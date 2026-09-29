@@ -114,7 +114,10 @@ SocialAuthFailure describeSocialFailure(SocialProvider provider, Object error) {
           'La réponse du serveur Carlys n’a pas pu être lue. Réessaie dans '
           'un instant, ou mets l’application à jour.',
     ),
-    AppException(transport: final how?) => _transport(how),
+    AppException(transport: final how?, :final transportDetail) => _transport(
+      how,
+      transportDetail,
+    ),
     // Hors ligne sans précision : c'est quand même le réseau.
     NetworkException() => _transport(TransportFailure.other),
     AppException(statusCode: final status?) when status > 0 => _http(
@@ -176,8 +179,9 @@ SocialAuthFailure _sdk(SocialSignInUnavailable error) {
   };
 }
 
-/// La requête vers Carlys n'a obtenu aucune réponse.
-SocialAuthFailure _transport(TransportFailure how) {
+/// La requête vers Carlys n'a obtenu aucune réponse ([detail] : ce qui a
+/// rompu une connexion établie, voir `AppException.transportDetail`).
+SocialAuthFailure _transport(TransportFailure how, [String? detail]) {
   const injoignable =
       'Le serveur Carlys est injoignable. Vérifie ta connexion, puis '
       'réessaie.';
@@ -201,6 +205,17 @@ SocialAuthFailure _transport(TransportFailure how) {
       message:
           'La connexion sécurisée au serveur Carlys a échoué. Vérifie la '
           'date de ton téléphone, ou essaie un autre réseau.',
+    ),
+    // Le serveur a été ATTEINT (TCP et TLS réussis) : « injoignable »
+    // enverrait vérifier la connexion du téléphone, qui marche. Le détail
+    // (104, 103, corps…) départage un intermédiaire qui coupe d'une
+    // réponse perdue en route.
+    TransportFailure.cut => SocialAuthFailure(
+      code: 'reseau-coupure-${detail ?? 'inconnue'}',
+      message:
+          'La connexion au serveur Carlys a été coupée en route. Réessaie ; '
+          'si ça recommence, change de réseau (Wi-Fi ou données mobiles).',
+      severe: false,
     ),
     TransportFailure.other => const SocialAuthFailure(
       code: 'reseau-inconnu',

@@ -1,8 +1,10 @@
-import 'dart:io' show HandshakeException, SocketException;
+import 'dart:io'
+    show HandshakeException, HttpException, OSError, SocketException;
 
 import 'package:carlys_mobile/core/api/api_error_mapper.dart';
 import 'package:carlys_mobile/core/errors/app_exception.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/services.dart' show PlatformException;
 import 'package:flutter_test/flutter_test.dart';
 
 /// Ce que `mapDioException` retient d'un échec pour le DIAGNOSTIC : le
@@ -221,14 +223,79 @@ void main() {
       expect(error.transport, isNull);
     });
 
-    test('un autre `unknown` reste inconnu', () {
+    // Une E/S qui échoue ICI a suivi une connexion établie (l'échec de la
+    // connexion elle-même arrive en `connectionError`) : c'est une coupure,
+    // et son détail dit qui l'a faite. Formes réelles de `dart:io` : l'erreur
+    // d'une écriture garde son `OSError`, celle d'une lecture est
+    // ré-enveloppée en `HttpException` qui n'en garde que le texte.
+    group('connexion établie puis rompue : le détail de la coupure', () {
+      for (final (cause, detail) in <(Object, String)>[
+        (
+          const SocketException(
+            'Write failed',
+            osError: OSError('Connection reset by peer', 104),
+          ),
+          'reset',
+        ),
+        // Le même RST sous iOS : même mot, pas un autre numéro.
+        (
+          const SocketException(
+            'Write failed',
+            osError: OSError('Connection reset by peer', 54),
+          ),
+          'reset',
+        ),
+        (const OSError('Software caused connection abort', 53), 'abandon'),
+        (const OSError('Broken pipe', 32), 'tube'),
+        (const OSError('Connection timed out', 110), 'delai'),
+        (const OSError('Network is unreachable', 101), '101'),
+        (const SocketException('Write failed'), 'socket'),
+        (const HttpException('Connection reset by peer'), 'reset'),
+        (const HttpException('Software caused connection abort'), 'abandon'),
+        (const HttpException('Broken pipe'), 'tube'),
+        (const HttpException('Connection timed out'), 'delai'),
+        (const HttpException('Read failed'), 'lecture'),
+        (const HttpException('Write failed'), 'ecriture'),
+        (
+          const HttpException('Connection closed while receiving data'),
+          'corps',
+        ),
+        (
+          const HttpException(
+            'Connection closed before full body was received',
+          ),
+          'corps',
+        ),
+        (const HttpException('Something else'), 'http'),
+      ]) {
+        test('$cause → cut, $detail', () {
+          final error = mapDioException(
+            DioException(requestOptions: options, error: cause),
+          );
+          expect(error.transport, TransportFailure.cut);
+          expect(error.transportDetail, detail);
+          expect(error, isA<UnknownException>());
+        });
+      }
+    });
+
+    test('exception LOCALE avant l’envoi : ni réseau ni transport', () {
+      // Le trousseau illisible dans l'intercepteur d'authentification :
+      // aucun octet n'est parti, « injoignable » enverrait au mauvais endroit.
       final error = mapDioException(
         DioException(
           requestOptions: options,
-          error: const SocketException('reset'),
+          error: PlatformException(code: 'Exception encountered'),
         ),
       );
+      expect(error, isA<UnknownException>());
+      expect(error.transport, isNull);
+    });
+
+    test('`unknown` sans cause : inconnu', () {
+      final error = mapDioException(DioException(requestOptions: options));
       expect(error.transport, TransportFailure.other);
+      expect(error.transportDetail, isNull);
     });
   });
 }

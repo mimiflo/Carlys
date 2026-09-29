@@ -1,4 +1,5 @@
-import 'dart:io' show TlsException;
+import 'dart:io'
+    show HttpException, IOException, OSError, SocketException, TlsException;
 
 import 'package:dio/dio.dart';
 
@@ -53,13 +54,33 @@ AppException mapDioException(DioException exception) {
       // pas) : l'adaptateur d'E/S de Dio laisse filer la `HandshakeException`,
       // qu'il enveloppe alors en `unknown`. C'est pourtant, sur un vrai
       // téléphone, LA forme d'un échec de certificat (date du téléphone
-      // fausse, réseau qui intercepte le TLS).
-      return _unknown(
-        exception,
-        exception.error is TlsException
-            ? TransportFailure.certificate
-            : TransportFailure.other,
-      );
+      // fausse, réseau qui intercepte le TLS). AVANT les E/S : une
+      // `TlsException` en est une.
+      if (cause is TlsException) {
+        return _unknown(exception, TransportFailure.certificate);
+      }
+      // Tout le reste des E/S qui arrive ici a suivi une connexion ÉTABLIE :
+      // l'échec de la connexion elle-même, Dio le classe en `connectionError`
+      // ou `connectionTimeout`. Le détail sépare, sur la popup, un
+      // intermédiaire qui coupe (104) d'une réponse perdue en route (corps).
+      if (cause is IOException || cause is OSError) {
+        return _unknown(
+          exception,
+          TransportFailure.cut,
+          detail: _cutDetail(cause!),
+        );
+      }
+      // Une exception LOCALE levée avant tout envoi (un intercepteur, le
+      // trousseau…) : ce n'est pas le réseau, et le dire enverrait chercher
+      // au mauvais endroit.
+      if (cause != null) {
+        return UnknownException(
+          exception.message ?? 'Erreur inattendue avant l’envoi',
+          cause: exception,
+          stackTrace: exception.stackTrace,
+        );
+      }
+      return _unknown(exception, TransportFailure.other);
     case DioExceptionType.cancel:
       return _unknown(exception, TransportFailure.other);
   }
@@ -73,13 +94,59 @@ NetworkException _network(DioException exception, TransportFailure how) =>
       stackTrace: exception.stackTrace,
     );
 
-UnknownException _unknown(DioException exception, TransportFailure how) =>
-    UnknownException(
-      exception.message ?? 'Erreur réseau inattendue',
-      transport: how,
-      cause: exception,
-      stackTrace: exception.stackTrace,
-    );
+UnknownException _unknown(
+  DioException exception,
+  TransportFailure how, {
+  String? detail,
+}) => UnknownException(
+  exception.message ?? 'Erreur réseau inattendue',
+  transport: how,
+  transportDetail: detail,
+  cause: exception,
+  stackTrace: exception.stackTrace,
+);
+
+/// Ce qui a rompu une connexion établie, en un mot STABLE d'une plateforme
+/// à l'autre : le même RST vaut 104 sous Android et 54 sous iOS, et
+/// `dart:io` ré-enveloppe l'erreur d'une LECTURE en `HttpException` qui n'en
+/// garde que le texte. `reset` : remise à zéro par un intermédiaire ;
+/// `abandon` : connexion abandonnée par le téléphone ; `tube` : écriture
+/// sur une connexion fermée ; `delai` : délai du noyau ; `corps` : réponse
+/// commencée puis coupée. Un numéro d'erreur que la table ne connaît pas
+/// reste un numéro. Ces textes ne sont pas un contrat du SDK : s'ils
+/// changent, le détail retombe sur `http`, moins précis, jamais faux.
+String _cutDetail(Object cause) {
+  final osError = switch (cause) {
+    SocketException(:final osError) => osError,
+    OSError() => cause,
+    _ => null,
+  };
+  if (osError != null && osError.errorCode > 0) {
+    return switch (osError.errorCode) {
+      104 || 54 => 'reset',
+      103 || 53 => 'abandon',
+      32 => 'tube',
+      110 || 60 => 'delai',
+      final code => '$code',
+    };
+  }
+  if (cause is SocketException) return 'socket';
+  final text = (cause is HttpException ? cause.message : '$cause')
+      .toLowerCase();
+  for (final (needle, detail) in const [
+    ('while receiving data', 'corps'),
+    ('full body', 'corps'),
+    ('reset by peer', 'reset'),
+    ('connection abort', 'abandon'),
+    ('broken pipe', 'tube'),
+    ('timed out', 'delai'),
+    ('read failed', 'lecture'),
+    ('write failed', 'ecriture'),
+  ]) {
+    if (text.contains(needle)) return detail;
+  }
+  return 'http';
+}
 
 AppException _mapResponse(DioException exception) {
   final response = exception.response;

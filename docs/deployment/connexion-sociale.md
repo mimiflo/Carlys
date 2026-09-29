@@ -369,7 +369,8 @@ vingt-quatre caractères au plus, jamais de texte libre venu d'un message.
 | `reseau-delai` | Délai dépassé (connexion 10 s, réponse 20 s) | Réseau lent ou API figée : `curl` du §3 depuis un autre réseau |
 | `reseau-connexion` | Connexion refusée ou coupée, nom introuvable | L'adresse figée dans l'APK (`CARLYS_API_BASE_URL`, récapitulatif de `mobile-recette`) est-elle la bonne ? DNS de `api-staging.<domaine>` ; réseau du téléphone |
 | `reseau-certificat` | Le certificat TLS de l'API est refusé par le téléphone | Date du téléphone ; certificat du vhost expiré ou incomplet (chaîne intermédiaire) ; Wi-Fi qui intercepte le TLS. Jamais « accepter quand même » |
-| `reseau-inconnu` | Requête annulée, ou échec de transport que Dio ne classe pas | Changer de réseau ; transmettre le code |
+| `reseau-coupure-<détail>` | Connexion **établie** (DNS, TCP et TLS réussis), puis rompue avant la fin de la réponse. Le détail dit comment, avec le même mot sous Android et iOS : `reset` remise à zéro par un intermédiaire (opérateur, NAT64, pare-feu de gra6), `abandon` connexion abandonnée par le téléphone, `tube` écriture sur une connexion déjà fermée, `delai` délai du système, `lecture` / `ecriture` / `socket` / `http` sans plus de précision, un nombre pour une erreur système plus rare, `corps` réponse **commencée** puis coupée (l'API a répondu : une session a pu s'ouvrir) | Réessayer. Si ça recommence : même téléphone en Wi-Fi, puis via le partage de connexion d'un autre opérateur. Journal nginx (`POST /api/v1/auth/social` aux heures des essais) : aucune ligne, la coupure est en amont de nginx (à transmettre à l'administrateur de gra6 avec les heures) ; un `200` ou un `499`, la réponse s'est perdue au retour |
+| `reseau-inconnu` | Échec de transport sans cause lisible | Changer de réseau ; transmettre le code |
 
 **Réponse HTTP d'erreur**
 

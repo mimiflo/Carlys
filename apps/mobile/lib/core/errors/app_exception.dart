@@ -11,6 +11,7 @@ sealed class AppException implements Exception {
     this.statusCode,
     this.requestId,
     this.transport,
+    this.transportDetail,
     this.fromApi = false,
   });
 
@@ -38,6 +39,11 @@ sealed class AppException implements Exception {
   /// certificat). `null` dès que le serveur a répondu.
   final TransportFailure? transport;
 
+  /// Pour [TransportFailure.cut] : ce qui a rompu la connexion, en quelques
+  /// mot, sans rien de personnel : `reset`, `abandon`, `tube`, `delai`,
+  /// `corps`, `lecture`, `ecriture`… (voir `_cutDetail`).
+  final String? transportDetail;
+
   /// La réponse d'erreur portait l'ENVELOPPE de l'API Carlys : [message]
   /// est alors une phrase écrite par l'API, et le statut dit ce que l'API a
   /// décidé. Faux pour la page d'erreur d'un intermédiaire (nginx quand
@@ -61,6 +67,12 @@ enum TransportFailure {
   /// Certificat refusé, ou poignée de main TLS en échec.
   certificate,
 
+  /// Connexion ÉTABLIE (TCP et TLS réussis), puis rompue avant la fin de la
+  /// réponse : remise à zéro par un intermédiaire, connexion abandonnée par
+  /// le téléphone, réponse coupée en route. Le détail est dans
+  /// [AppException.transportDetail].
+  cut,
+
   /// Requête annulée, ou échec que Dio ne classe pas.
   other,
 }
@@ -72,6 +84,7 @@ final class NetworkException extends AppException {
     super.cause,
     super.stackTrace,
     super.transport,
+    super.transportDetail,
   });
 }
 
@@ -171,5 +184,6 @@ final class UnknownException extends AppException {
     super.cause,
     super.stackTrace,
     super.transport,
+    super.transportDetail,
   });
 }

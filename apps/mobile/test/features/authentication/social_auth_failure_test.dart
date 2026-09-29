@@ -6,6 +6,7 @@ import 'package:carlys_mobile/features/authentication/data/datasources/social_si
 import 'package:carlys_mobile/features/authentication/domain/entities/social_provider.dart';
 import 'package:carlys_mobile/features/authentication/presentation/utils/social_auth_failure.dart';
 import 'package:dio/dio.dart';
+import 'package:flutter/services.dart' show PlatformException;
 import 'package:flutter_test/flutter_test.dart';
 
 /// CE QUE CE FICHIER PROTÈGE : la liste FERMÉE des codes d'échec de la
@@ -152,8 +153,18 @@ void main() {
       ),
       (DioExceptionType.unknown, null, 'reseau-inconnu'),
       (DioExceptionType.cancel, null, 'reseau-inconnu'),
+      (
+        DioExceptionType.unknown,
+        const HttpException('Connection reset by peer'),
+        'reseau-coupure-reset',
+      ),
+      (
+        DioExceptionType.unknown,
+        const HttpException('Connection closed while receiving data'),
+        'reseau-coupure-corps',
+      ),
     ]) {
-      test('${type.name}${error == null ? '' : ' (TLS)'} → $code', () {
+      test('${type.name}${error == null ? '' : ' ($error)'} → $code', () {
         final failure = of(transport(type, error: error));
         expect(failure.code, code);
         expect(
@@ -170,6 +181,31 @@ void main() {
         'Le serveur Carlys est injoignable. Vérifie ta connexion, puis '
         'réessaie.',
       );
+    });
+
+    test(
+      'coupure : le serveur a été atteint, ce n’est pas « injoignable »',
+      () {
+        final failure = of(
+          transport(
+            DioExceptionType.unknown,
+            error: const HttpException('Connection reset by peer'),
+          ),
+        );
+        expect(failure.message, isNot(contains('injoignable')));
+        expect(failure.message, contains('coupée'));
+        expect(failure.severe, isFalse);
+      },
+    );
+
+    test('exception locale avant l’envoi : appli-inattendu, jamais réseau', () {
+      final failure = of(
+        transport(
+          DioExceptionType.unknown,
+          error: PlatformException(code: 'Exception encountered'),
+        ),
+      );
+      expect(failure.code, 'appli-inattendu');
     });
 
     test('certificat : jamais une invitation à contourner', () {
@@ -440,6 +476,7 @@ void main() {
       'google-java-<classe>',
       'apple-<code>',
       'http-<statut>',
+      'reseau-coupure-<détail>',
     ]) {
       expect(table, contains('`$family`'), reason: '$family absent');
     }
