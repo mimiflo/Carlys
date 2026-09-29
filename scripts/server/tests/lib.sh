@@ -140,7 +140,15 @@ banc_demarrer_minio() {
     sleep 0.25
     [ "$i" -lt 40 ] || { cat "$BANC/minio.log"; return 1; }
   done
-  printf '%s\n%s\n' "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD" | mc alias set banc "$FAUX_MINIO_URL" >/dev/null
+  # « live » répond avant que MinIO ait fini d'initialiser ses identifiants :
+  # `mc alias set` échouait alors une fois de temps en temps (« Server not
+  # initialized yet », infra-ci du 29/09). On réessaie donc l'alias lui-même.
+  for i in $(seq 1 40); do
+    printf '%s\n%s\n' "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD" \
+      | mc alias set banc "$FAUX_MINIO_URL" >/dev/null 2>&1 && return 0
+    sleep 0.25
+  done
+  printf '%s\n%s\n' "$MINIO_ROOT_USER" "$MINIO_ROOT_PASSWORD" | mc alias set banc "$FAUX_MINIO_URL"
 }
 
 # Le docker factice. Écrit sur la sortie standard.
