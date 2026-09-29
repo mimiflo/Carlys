@@ -142,4 +142,29 @@ code="$(effacer '' --compte-actif "$UUID")"
 verifier "rien de tapé : refus, rien lancé" "1 0" "$code $(lancements deleted-accounts-purge)"
 banc_nettoyer
 
+echo
+echo "dc — le coach sur le serveur n'existe que si le .env l'allume"
+
+# Le défaut trouvé à la relecture du 29/09 : à zéro exemplaire, le service
+# existait assez pour que `up -d` tire son image de près de 4 Go sur chaque
+# serveur. Il vit donc sous le profil `ollama`, que SEUL `dc` active ; un
+# COMPOSE_PROFILES du .env serait ignoré, `dc` passant déjà `--profile`.
+banc_preparer
+ENV_STAGING="$CARLYS_ROOT/staging/.env"
+profils() {
+  : > "$FAUX_JOURNAL"
+  appeler dc staging "$ENV_STAGING" ps > /dev/null
+  grep -q -F -- '--profile ollama' "$FAUX_JOURNAL" && echo allumé || echo éteint
+}
+verifier "sans CARLYS_OLLAMA_REPLICAS : profil ollama absent" éteint "$(profils)"
+echo 'CARLYS_OLLAMA_REPLICAS=0' >> "$ENV_STAGING"
+verifier "CARLYS_OLLAMA_REPLICAS=0 : profil ollama absent" éteint "$(profils)"
+echo 'CARLYS_OLLAMA_REPLICAS=oui' >> "$ENV_STAGING"
+verifier "valeur non numérique : éteint, pas d'erreur" éteint "$(profils)"
+echo 'CARLYS_OLLAMA_REPLICAS=1' >> "$ENV_STAGING"
+verifier "CARLYS_OLLAMA_REPLICAS=1 : profil ollama passé à compose" allumé "$(profils)"
+grep -q -F -- '--profile staging' "$FAUX_JOURNAL" && garde=oui || garde=non
+verifier "… sans perdre le profil de l'environnement" oui "$garde"
+banc_nettoyer
+
 banc_bilan

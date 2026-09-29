@@ -208,14 +208,11 @@ export class AppConfigService {
     return this.config.get('ANTHROPIC_API_KEY', { infer: true });
   }
 
-  get coachProvider(): Readonly<Record<'baseUrl' | 'apiKey' | 'model', string | undefined>> & {
-    reasoningEffort?: Env['COACH_REASONING_EFFORT'];
-  } {
+  get coachProvider(): { baseUrl?: string; apiKey?: string; model?: string } {
     return {
       baseUrl: this.config.get('COACH_API_BASE_URL', { infer: true }),
       apiKey: this.config.get('COACH_API_KEY', { infer: true }),
       model: this.config.get('COACH_MODEL', { infer: true }),
-      reasoningEffort: this.config.get('COACH_REASONING_EFFORT', { infer: true }),
     };
   }
 

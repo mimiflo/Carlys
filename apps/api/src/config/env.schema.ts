@@ -171,27 +171,21 @@ export const envSchema = z
     //
     // Le fournisseur est un RÉGLAGE, choisi par la présence d'une seule
     // variable : `COACH_API_BASE_URL` posée, le coach parle à une API
-    // compatible OpenAI (Mistral, décision du 27 septembre 2026 ; Ollama ou
-    // Cloudflare de la même façon) ; absente, à Anthropic. Pas de
+    // compatible OpenAI (Qwen3 sur notre serveur par Ollama, ADR 0011 du 29
+    // septembre 2026 ; Mistral ou Cloudflare de la même façon) ; absente, à
+    // Anthropic. Pas de
     // `COACH_PROVIDER` : une variable de moins, et aucune combinaison
     // incohérente possible. Toutes sont **optionnelles** : un réglage
     // incomplet rend le coach indisponible (503), jamais l'API impossible à
     // démarrer. Voir docs/decisions/0010-coach-fournisseur-compatible-openai.md.
     /** Clé Anthropic, lue seulement quand `COACH_API_BASE_URL` est absente. */
     ANTHROPIC_API_KEY: z.string().min(20).optional(),
-    /** Base « …/v1 » d'une API compatible OpenAI (https://api.mistral.ai/v1). */
+    /** Base « …/v1 » d'une API compatible OpenAI (http://ollama:11434/v1). */
     COACH_API_BASE_URL: z.string().url().optional(),
     /** Clé de cette API. Absente pour un Ollama interne ; présente, jamais vide. */
     COACH_API_KEY: z.string().min(8).optional(),
     /** Modèle. Exigé avec `COACH_API_BASE_URL` ; sinon, `claude-opus-5`. */
     COACH_MODEL: z.string().min(1).optional(),
-    /**
-     * `reasoning_effort` envoyé au fournisseur compatible OpenAI, seulement
-     * si posé. `none` coupe la « réflexion » de Qwen3 servi par Ollama (qui
-     * l'active d'office) ; jamais pour Mistral, dont les Ministral refusent
-     * le champ (400).
-     */
-    COACH_REASONING_EFFORT: z.enum(['none', 'low', 'medium', 'high']).optional(),
     /** Plafond par utilisateur et par jour. Le coût du coach est réel. */
     COACH_DAILY_MESSAGE_LIMIT: z.coerce.number().int().min(1).max(500).default(30),
     /** Interrupteur global : coupe la fonctionnalité sans déploiement. */

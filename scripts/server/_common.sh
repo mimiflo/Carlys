@@ -300,14 +300,30 @@ compose_project() {
 # --profile <env> : mailpit n'existe qu'en staging (profil compose « staging »
 # au contrat). En production le profil ne sélectionne rien, ce qui est
 # exactement le comportement voulu — une seule ligne, pas de branche.
+#
+# --profile ollama : le coach sur le serveur (ADR 0011), seulement si le .env
+# l'allume (CARLYS_OLLAMA_REPLICAS=1). Lu ICI et non par COMPOSE_PROFILES du
+# .env : mesuré, un `--profile` passé en ligne de commande fait ignorer
+# COMPOSE_PROFILES, et le service resterait éteint quoi que dise le fichier.
 dc() {
   local env_name="$1" file="$2"; shift 2
+  local coach=()
+  coach_local_actif "$file" && coach=(--profile ollama)
   docker compose \
     --project-name "$(compose_project "$env_name" "$file")" \
     --env-file "$file" \
     --file "$CARLYS_COMPOSE_FILE" \
     --profile "$env_name" \
+    ${coach[@]+"${coach[@]}"} \
     "$@"
+}
+
+# `coach_local_actif <fichier .env>` — vrai si le coach tourne sur le serveur
+# (service `ollama`) : CARLYS_OLLAMA_REPLICAS vaut un entier au moins égal à 1.
+coach_local_actif() {
+  local n
+  n="$(env_value CARLYS_OLLAMA_REPLICAS "$1" 0)"
+  [[ "$n" =~ ^[0-9]+$ ]] && [ "$n" -ge 1 ]
 }
 
 # ── Lecture d'un « oui / non » écrit par un humain ──────────────────────────

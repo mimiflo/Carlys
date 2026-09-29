@@ -273,6 +273,19 @@ dc "$ENV_NAME" "$ENV_FILE" pull --quiet minio minio-init || die \
   "(git -C $CARLYS_REPO_DIR log -1, puis l'onglet Actions), et la surcharge éventuelle dans $ENV_FILE."
 ok "images MinIO présentes localement"
 
+# Le coach sur le serveur, s'il est allumé : son image (≈ 3,75 Go) se tire ICI,
+# avant toute migration, pour la même raison que MinIO — introuvable ou
+# registre refusé, on s'arrête sans avoir rien touché, au lieu d'échouer à la
+# bascule puis à son propre retour arrière.
+if coach_local_actif "$ENV_FILE"; then
+  info "pull ollama (coach sur le serveur)"
+  dc "$ENV_NAME" "$ENV_FILE" pull --quiet ollama || die \
+    "Image d'Ollama introuvable, ou Docker Hub injoignable (limite de téléchargement anonyme ?)." \
+    "Rien n'a été déployé : l'environnement tourne toujours sur ${PREVIOUS_SHA:-son état précédent}." \
+    "Réessayer dans quelques minutes, ou éteindre le coach (CARLYS_OLLAMA_REPLICAS=0) pour déployer sans lui."
+  ok "image Ollama présente localement"
+fi
+
 # ── 2. Socle de données debout (préalable à la migration) ───────────────────
 # Démarrer postgres et redis n'est PAS une bascule : aucune nouvelle version
 # n'est exposée au trafic. En régime établi ils tournent déjà et cette étape ne

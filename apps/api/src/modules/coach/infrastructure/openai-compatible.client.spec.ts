@@ -21,14 +21,7 @@ const MISTRAL = {
   model: 'mistral-small-latest',
 };
 
-function client(
-  provider: {
-    baseUrl?: string;
-    apiKey?: string;
-    model?: string;
-    reasoningEffort?: 'none' | 'low' | 'medium' | 'high';
-  } = MISTRAL,
-) {
+function client(provider: { baseUrl?: string; apiKey?: string; model?: string } = MISTRAL) {
   return new OpenAiCompatibleCoachClient({
     coachProvider: provider,
   } as unknown as AppConfigService);
@@ -99,7 +92,6 @@ function sent(fetchMock: jest.Mock, call = 0) {
     body: JSON.parse(init.body as string) as {
       model: string;
       max_tokens: number;
-      reasoning_effort?: string;
       messages: Record<string, unknown>[];
       tools: Record<string, unknown>[];
     },
@@ -128,8 +120,6 @@ describe('OpenAiCompatibleCoachClient', () => {
       expect(headers['Authorization']).toBe('Bearer cle-mistral-factice');
       expect(body.model).toBe('mistral-small-latest');
       expect(body.max_tokens).toBe(2048);
-      // Absent quand il n'est pas réglé : les Ministral de Mistral le refusent.
-      expect(body).not.toHaveProperty('reasoning_effort');
       expect(body.messages).toEqual([
         { role: 'system', content: 'Tu es le coach.' },
         { role: 'system', content: 'Profil Constructeur.' },
@@ -192,28 +182,6 @@ describe('OpenAiCompatibleCoachClient', () => {
       const { headers, body } = sent(fetchMock);
       expect(headers).not.toHaveProperty('Authorization');
       expect(body.messages.filter((message) => message['role'] === 'system')).toHaveLength(1);
-    });
-
-    it('Qwen3 sur Ollama : reasoning_effort « none » coupe la réflexion, à chaque appel', async () => {
-      const fetchMock = jest
-        .fn()
-        .mockResolvedValueOnce(
-          completion(
-            { content: null, tool_calls: [toolCall('a1', 'get_personal_records', '{}')] },
-            'tool_calls',
-          ),
-        )
-        .mockResolvedValueOnce(completion({ content: 'Ton record : 100 kg.' }));
-      global.fetch = fetchMock;
-
-      await client({
-        baseUrl: 'http://ollama:11434/v1',
-        model: 'qwen3:4b',
-        reasoningEffort: 'none',
-      }).reply(input());
-
-      expect(sent(fetchMock, 0).body.reasoning_effort).toBe('none');
-      expect(sent(fetchMock, 1).body.reasoning_effort).toBe('none');
     });
   });
 

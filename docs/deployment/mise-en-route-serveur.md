@@ -473,7 +473,7 @@ d'empêcher le démarrage :
 | `STRIPE_SECRET_KEY`, `STRIPE_PRICE_*` | le catalogue reste lisible, l'achat se déclare indisponible |
 | `STRIPE_WEBHOOK_SECRET` | l'endpoint de webhook répond 503 — aucun webhook non signé n'est jamais traité |
 | `FIREBASE_SERVICE_ACCOUNT_JSON` | l'envoi de notifications est désactivé ; l'enregistrement des jetons d'appareil continue de fonctionner |
-| `CARLYS_OLLAMA_REPLICAS`, `COACH_API_BASE_URL`, `COACH_MODEL`, `COACH_REASONING_EFFORT` (le coach sur le serveur, voir « Coach IA sur le serveur » plus bas), ou Mistral, ou `ANTHROPIC_API_KEY` | le coach IA répond 503 |
+| `CARLYS_OLLAMA_REPLICAS`, `COACH_API_BASE_URL`, `COACH_MODEL` (le coach sur le serveur, voir « Coach IA sur le serveur » plus bas), ou Mistral, ou `ANTHROPIC_API_KEY` | le coach IA répond 503 |
 | `METRICS_TOKEN` | `/metrics` n'est pas exposé (il est de toute façon refusé par Nginx) |
 
 > **« Optionnel » veut dire ABSENT, pas vide.** Chacun de ces secrets est
@@ -514,13 +514,17 @@ douleurs) ne quittent pas la machine. Ce choix date du 29 septembre 2026
 ([ADR 0011](../decisions/0011-coach-qwen3-sur-le-serveur.md)), après que
 l'offre gratuite de Mistral a refusé toutes les demandes.
 
-1. **La place.** Le modèle pèse ≈ 2,5 Go sur le disque et prend ≈ 4 à 5 Go
-   de mémoire vive une fois chargé :
+1. **La place.** L'image d'Ollama pèse ≈ 3,75 Go compressée (davantage une
+   fois décompressée), le modèle ≈ 2,5 Go par environnement allumé, et il
+   prend ≈ 4 à 5 Go de mémoire vive une fois chargé :
 
    ```bash
    free -h                  # « available » : 5 Go au moins
-   df -h /var/lib/docker    # « Avail » : 6 Go au moins (image + modèle)
+   df -h /var/lib/docker    # « Avail » : 12 Go au moins
    ```
+
+   Après le déploiement, `sudo docker system df` donne la place réellement
+   prise. Un disque plein arrête PostgreSQL : gardez de la marge.
 
 2. **Allumer, dans le `.env` de l'environnement.**
 
@@ -530,23 +534,30 @@ l'offre gratuite de Mistral a refusé toutes les demandes.
 
    Dans le bloc « Coach IA » : **commentez** (un `#` devant) les lignes de
    Mistral encore actives, `COACH_API_KEY` **comprise** (avec une clé et une
-   adresse sans `https`, l'API refuse de démarrer), puis posez ces quatre
+   adresse sans `https`, l'API refuse de démarrer), puis posez ces trois
    lignes, sans `#` :
 
    ```bash
    CARLYS_OLLAMA_REPLICAS=1
    COACH_API_BASE_URL=http://ollama:11434/v1
-   COACH_MODEL=qwen3:4b
-   COACH_REASONING_EFFORT=none
+   COACH_MODEL=qwen3:4b-instruct-2507-q4_K_M
    ```
+
+   Le modèle est une étiquette **exacte**, la variante « instruct » de
+   Qwen3-4B, qui ne « réfléchit » pas avant de répondre : l'étiquette courte
+   `qwen3:4b` peut désigner une version qui réfléchit, plus lente, et changer
+   de cible en amont.
 
    En recette, `CARLYS_OLLAMA_MEM_LIMIT=6g` plafonne sa mémoire (la
    supervision ajoute la ligne d'elle-même ; sinon, ajoutez-la).
 
-3. **Déployer** comme d'habitude (§10) : la version doit contenir le service
-   `ollama` ; la déployer recrée aussi l'API, qui relit le `.env`.
+3. **Déployer** comme d'habitude (§10). Le clone du serveur doit contenir le
+   service `ollama` (la supervision l'avance seule ; `git pull` le fait tout
+   de suite), et le déploiement tire son image AVANT toute migration : Docker
+   Hub injoignable, rien ne bouge.
 
    ```bash
+   sudo git -C /srv/carlys/repo pull --ff-only
    sudo /srv/carlys/repo/scripts/server/carlysctl deploy staging <sha12>
    ```
 
@@ -559,13 +570,16 @@ l'offre gratuite de Mistral a refusé toutes les demandes.
    ```
 
    Tant qu'il n'est pas prêt, le coach répond « momentanément
-   indisponible » ; rien d'autre n'est touché.
+   indisponible » ; rien d'autre n'est touché. Le modèle n'est téléchargé
+   que s'il manque : les redémarrages suivants ne le retéléchargent pas. Un
+   téléchargement raté arrête le conteneur, que Docker relance ; `logs`
+   montre la raison.
 
 5. **Mesurer la vitesse**, parce que c'est le processeur qui calcule :
 
    ```bash
    sudo docker compose -p carlys_staging exec ollama \
-     ollama run qwen3:4b --verbose "/no_think Propose une séance jambes de 30 minutes en 5 lignes."
+     ollama run qwen3:4b-instruct-2507-q4_K_M --verbose "Propose une séance jambes de 30 minutes en 5 lignes."
    ```
 
    Notez `prompt eval rate` et `eval rate` (jetons par seconde). Un tour du
@@ -575,7 +589,10 @@ l'offre gratuite de Mistral a refusé toutes les demandes.
    répondra « momentanément indisponible » (journal : « fournisseur
    injoignable (TimeoutError) ») : transmettez les deux chiffres, on ajustera
    les délais ou la taille du modèle. Ollama garde les consignes communes en
-   cache : les réponses suivantes vont plus vite que la première.
+   cache : les réponses suivantes vont plus vite que la première. Il répond
+   à UNE personne à la fois : la seconde attend, et l'attente compte dans
+   ses 50 s ; deux messages simultanés peuvent donc donner un
+   « momentanément indisponible » au second.
 
 6. **Essayer : les vingt vraies questions** de l'étape 9 de la section
    Mistral ci-dessous (séance proposée, records, protéines, genou, régime à
@@ -594,9 +611,12 @@ jour avec le déploiement.
 
 > **Avant de revenir à Mistral**, mettez à jour `docs/legal/privacy.md` et
 > `terms.md` (ils disent aujourd'hui qu'aucun prestataire d'IA ne reçoit les
-> messages) et redéployez l'admin, puis seulement les variables. Mistral
-> Free mode a refusé toutes les demandes du 28 septembre 2026
-> (`mistral-small-latest` à zéro requête) : c'est ce qui a motivé l'ADR 0011.
+> messages) et redéployez l'admin, puis seulement les variables. Les
+> marqueurs `[À COMPLÉTER]` de Mistral cités plus bas ont été retirés de la
+> politique le 29 septembre 2026 : le paragraphe Mistral est à réécrire, pas
+> à compléter. Mistral Free mode a refusé toutes les demandes du 28
+> septembre 2026 (`mistral-small-latest` à zéro requête) : c'est ce qui a
+> motivé l'ADR 0011 ; un Ministral (`ministral-14b-latest`) répondait encore.
 
 #### Mise en route de Mistral
 
@@ -657,7 +677,7 @@ le premier vrai message**.
    ```bash
    COACH_API_BASE_URL=https://api.mistral.ai/v1
    COACH_API_KEY=la-clé-copiée-à-l-étape-5
-   COACH_MODEL=mistral-small-latest
+   COACH_MODEL=ministral-14b-latest
    ```
 
    Quatre pièges :
@@ -1629,9 +1649,9 @@ Contrairement à la recette, la production a besoin des vraies valeurs :
   c'est Stripe qui encaisse, l'API ne fait qu'afficher.
 - **Firebase** : `FIREBASE_SERVICE_ACCOUNT_JSON`, le JSON complet du compte de
   service (console Firebase → Paramètres → Comptes de service).
-- **Coach IA** : les quatre lignes du coach sur le serveur
-  (`CARLYS_OLLAMA_REPLICAS`, `COACH_API_BASE_URL`, `COACH_MODEL`,
-  `COACH_REASONING_EFFORT`), comme au §5, « Coach IA sur le serveur ».
+- **Coach IA** : les trois lignes du coach sur le serveur
+  (`CARLYS_OLLAMA_REPLICAS`, `COACH_API_BASE_URL`, `COACH_MODEL`), comme au
+  §5, « Coach IA sur le serveur ».
 - **SMTP** : un vrai relais, avec son identifiant et son mot de passe —
   les deux pièges sont détaillés au §5, « Les e-mails de production ».
   Mailpit n'existe pas ici :

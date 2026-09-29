@@ -291,27 +291,37 @@ services:
   # ── Coach IA sur le serveur (facultatif) ───────────────────────────────────
   # Qwen3-4B servi par Ollama (décision du 29/09/2026, ADR 0011) : les
   # messages du coach ne quittent plus le serveur, et aucun fournisseur ne
-  # rationne plus les réponses. ÉTEINT par défaut (0 exemplaire) : on l'allume
-  # dans le .env de l'environnement (CARLYS_OLLAMA_REPLICAS=1), avec les
-  # variables COACH_* qui y envoient l'API (bloc « Coach IA » du gabarit).
+  # rationne plus les réponses.
+  #
+  # ÉTEINT par défaut, et PAS SEULEMENT « à zéro exemplaire » : sous le profil
+  # `ollama`, que `dc` (scripts/server/_common.sh) n'active que si le .env
+  # porte CARLYS_OLLAMA_REPLICAS=1. Un service hors profil n'existe pas pour
+  # Compose ; à zéro exemplaire, il existait assez pour que `up -d` tire son
+  # image (≈ 3,75 Go compressés) sur chaque serveur.
   #
   # Aucun port publié : seule l'API lui parle, par le réseau compose
-  # (http://ollama:11434/v1). Le modèle (COACH_MODEL, ≈ 2,5 Go pour qwen3:4b)
-  # est téléchargé au démarrage dans le volume `ollama-data`, puis seulement
-  # vérifié les fois suivantes. La sonde ne passe au vert qu'une fois le
-  # modèle présent : un téléchargement raté finit en conteneur « unhealthy »,
-  # que la supervision redémarre, donc en nouvel essai. Tant qu'il manque, le
-  # coach répond « momentanément indisponible » ; le reste de l'application
-  # ne voit rien.
+  # (http://ollama:11434/v1). Le modèle (COACH_MODEL, étiquette EXACTE, ≈ 2,5
+  # Go) n'est téléchargé que s'il manque au volume `ollama-data` : une
+  # étiquette qui bougerait en amont ne change pas le modèle en service dans
+  # notre dos. Un téléchargement raté arrête le conteneur (sortie 1) : Docker
+  # le relance, la supervision le voit et le compte, au lieu d'une boucle
+  # silencieuse.
   ollama:
     <<: *service
+    profiles: ['ollama']
     image: ${CARLYS_OLLAMA_IMAGE:-ollama/ollama:0.34.4}
     deploy:
       replicas: ${CARLYS_OLLAMA_REPLICAS:-0}
     mem_limit: ${CARLYS_OLLAMA_MEM_LIMIT:-0}
+    # Priorité RELATIVE (1024 par défaut pour les autres) : sur un processeur,
+    # une réponse occupe tous les cœurs jusqu'à 50 s ; l'API et PostgreSQL,
+    # de recette comme de production, passent devant quand ils en ont besoin,
+    # et Ollama prend le reste. Pas de `cpus` fixe : il échouerait sur une
+    # machine qui a moins de cœurs que la valeur écrite.
+    cpu_shares: 256
     environment:
       TZ: UTC
-      CARLYS_OLLAMA_MODEL: ${COACH_MODEL:-qwen3:4b}
+      CARLYS_OLLAMA_MODEL: ${COACH_MODEL:-qwen3:4b-instruct-2507-q4_K_M}
       # Gardé en mémoire : sans cela Ollama décharge le modèle après cinq
       # minutes, et la réponse suivante paie des secondes de rechargement.
       OLLAMA_KEEP_ALIVE: '-1'
@@ -327,21 +337,24 @@ services:
     command:
       - >-
         ollama serve & pid=$$!;
-        trap 'kill $$pid; wait $$pid' TERM INT;
-        until ollama list >/dev/null 2>&1; do sleep 1; done;
-        ollama pull "$$CARLYS_OLLAMA_MODEL"
-        || echo "Modèle $$CARLYS_OLLAMA_MODEL non téléchargé : le coach répondra 503";
+        trap 'kill $$pid; wait $$pid; exit 143' TERM INT;
+        until ollama list >/dev/null 2>&1; do kill -0 $$pid || exit 1; sleep 1; done;
+        ollama show "$$CARLYS_OLLAMA_MODEL" >/dev/null 2>&1
+        || ollama pull "$$CARLYS_OLLAMA_MODEL"
+        || { echo "Modèle $$CARLYS_OLLAMA_MODEL introuvable ou non téléchargé"; kill $$pid; exit 1; };
         wait $$pid
     volumes:
       - ollama-data:/root/.ollama
     healthcheck:
-      test: ['CMD-SHELL', 'ollama show "$$CARLYS_OLLAMA_MODEL" >/dev/null 2>&1 || exit 1']
+      # Le serveur répond. Le modèle, lui, est garanti par la commande : sans
+      # lui, le conteneur ne reste pas debout.
+      test: ['CMD', 'ollama', 'list']
       interval: 30s
       timeout: 10s
       retries: 3
-      # Le premier téléchargement prend quelques minutes : pas de « unhealthy »
-      # (donc pas de redémarrage par la supervision) pendant ce temps.
-      start_period: 30m
+      # Le serveur répond en quelques secondes, et la sonde passe pendant le
+      # téléchargement : celui-ci ne dépend que de la commande.
+      start_period: 60s
 
   # ── API ────────────────────────────────────────────────────────────────────
   api:

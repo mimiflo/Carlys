@@ -346,9 +346,9 @@ et **aucun n’est transmis à un prestataire d’intelligence artificielle** :
   tes repas récents (nom, moment, calories, macronutriments et aliments).
   La photo d’un repas ne lui est jamais transmise.
 
-Le modèle ne garde rien d’un message à l’autre et n’apprend pas de tes
-échanges : il produit la réponse, puis l’oublie. Seules les conversations
-enregistrées par Carlys, décrites ci-dessous, sont conservées.
+Le modèle n’apprend pas de tes échanges : ils ne servent jamais à
+l’entraîner. Seules les conversations enregistrées par Carlys, décrites
+ci-dessous, sont conservées.
 
 Le coach ne peut rien écrire dans ton compte : les séances qu’il propose ne
 sont enregistrées que si tu les acceptes. Les conversations sont conservées

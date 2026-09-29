@@ -28,11 +28,15 @@ if ! docker compose version >/dev/null 2>&1; then
 fi
 
 # `rendu <env>` — le compose interpolé en JSON, avec les valeurs de l'exemple.
+# Un second argument ajoute un profil : `rendu staging ollama` rend la pile
+# avec le coach sur le serveur allumé, comme `dc` le fait quand le .env porte
+# CARLYS_OLLAMA_REPLICAS=1.
 rendu() {
-  local env_name="$1" fichier="$TMP/$1.env"
+  local env_name="$1" fichier="$TMP/$1.env" profils=(--profile "$1")
+  [ -n "${2-}" ] && profils+=(--profile "$2")
   grep -E '^[A-Z_][A-Z0-9_]*=' "$EXEMPLES/$env_name.env.example" > "$fichier"
   CARLYS_ENV_FILE="$fichier" CARLYS_TAG=sha-000000000000 CARLYS_ADMIN_TAG_SUFFIX='' \
-    docker compose --env-file "$fichier" -f "$COMPOSE" --profile "$env_name" \
+    docker compose --env-file "$fichier" -f "$COMPOSE" "${profils[@]}" \
     config --format json 2>"$TMP/$env_name.err"
 }
 champ() { jq -r "$2" <<< "$1"; }
@@ -43,24 +47,31 @@ echo "compose.yml — mémoire et réglages"
 recette="$(rendu staging)"
 production="$(rendu production)"
 
-for service in api admin postgres redis minio ollama; do
+for service in api admin postgres redis minio; do
   verifier "recette : $service a un plafond mémoire" oui \
     "$(champ "$recette" ".services.$service.mem_limit // \"\"" | grep -qE '^[1-9][0-9]*$' && echo oui || echo non)"
   verifier "production : $service n'a pas de plafond par défaut" aucun \
     "$(champ "$production" ".services.$service.mem_limit // \"aucun\"")"
 done
 
-# Le coach sur le serveur : éteint tant qu'on ne l'allume pas (un modèle de
-# 2,5 Go et 4 Go de mémoire ne se téléchargent pas par surprise), et
-# injoignable depuis l'extérieur (aucun port publié, l'API passe par le
-# réseau compose).
+# Le coach sur le serveur : ABSENT tant qu'on ne l'allume pas — pas seulement
+# à zéro exemplaire, sinon `up -d` tirerait quand même son image de près de
+# 4 Go —, et injoignable de l'extérieur une fois allumé.
 for env_name in staging production; do
   json="$([ "$env_name" = staging ] && echo "$recette" || echo "$production")"
-  verifier "$env_name : ollama éteint par défaut" 0 \
-    "$(champ "$json" '.services.ollama.deploy.replicas')"
-  verifier "$env_name : ollama ne publie aucun port" 0 \
-    "$(champ "$json" '(.services.ollama.ports // []) | length')"
+  verifier "$env_name : ollama absent sans son profil" absent \
+    "$(champ "$json" 'if .services.ollama then "présent" else "absent" end')"
 done
+recette_coach="$(rendu staging ollama)"
+production_coach="$(rendu production ollama)"
+for json in "$recette_coach" "$production_coach"; do
+  verifier "ollama allumé : aucun port publié" 0 "$(champ "$json" '(.services.ollama.ports // []) | length')"
+  verifier "ollama allumé : priorité processeur sous l'API" 256 "$(champ "$json" '.services.ollama.cpu_shares')"
+done
+verifier "recette : ollama a un plafond mémoire" oui \
+  "$(champ "$recette_coach" '.services.ollama.mem_limit // ""' | grep -qE '^[1-9][0-9]*$' && echo oui || echo non)"
+verifier "production : ollama n'a pas de plafond par défaut" aucun \
+  "$(champ "$production_coach" '.services.ollama.mem_limit // "aucun"')"
 
 verifier "production : la base est protégée du tueur de processus" -500 \
   "$(champ "$production" '.services.postgres.oom_score_adj // 0')"

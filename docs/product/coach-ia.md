@@ -305,31 +305,29 @@ octet pour octet, briefing ou pas.
 
 **Décision du 29 septembre 2026 : le coach tourne sur notre serveur**
 ([ADR 0011](../decisions/0011-coach-qwen3-sur-le-serveur.md)). Modèle
-Qwen3-4B (`qwen3:4b`) servi par Ollama (service `ollama` de la pile), sans
-quota ni facture, et sans que les messages quittent la machine. Réglage :
+Qwen3-4B, variante instruct 2507 (`qwen3:4b-instruct-2507-q4_K_M`, sans « réflexion »),
+servi par Ollama (service `ollama` de la pile, profil `ollama`), sans quota
+ni facture, et sans que les messages quittent la machine. Réglage :
 `CARLYS_OLLAMA_REPLICAS=1`, `COACH_API_BASE_URL=http://ollama:11434/v1`,
-`COACH_MODEL=qwen3:4b`, `COACH_REASONING_EFFORT=none` (pas à pas dans
+`COACH_MODEL=qwen3:4b-instruct-2507-q4_K_M` (pas à pas dans
 [mise-en-route-serveur.md](../deployment/mise-en-route-serveur.md), « Coach
-IA sur le serveur »). `reasoning_effort: "none"` coupe la réflexion de
-Qwen3, qu'Ollama active d'office ; il n'est envoyé que si la variable est
-posée, les Ministral de Mistral le refusant. Mistral Free mode, retenu le 27
-septembre, a refusé toutes les demandes dès le lendemain. Mistral ou
-Anthropic restent possibles (`COACH_MODEL` facultatif pour Anthropic,
-`claude-opus-5` par défaut), mais **les textes légaux passent d'abord** : ils
-disent aujourd'hui qu'aucun prestataire d'IA ne reçoit les messages, et
-`privacy.md` promet d'être mis à jour AVANT que les messages partent chez un
-prestataire. Dans l'ordre : `privacy.md` (nommer Anthropic PBC, le remettre parmi les
+IA sur le serveur »). Mistral Free mode, retenu le 27 septembre, a refusé
+toutes les demandes dès le lendemain. Mistral ou Anthropic restent possibles
+(`COACH_MODEL` facultatif pour Anthropic, `claude-opus-5` par défaut), mais
+**les textes légaux passent d'abord** : ils disent aujourd'hui qu'aucun
+prestataire d'IA ne reçoit les messages, et `privacy.md` promet d'être mis
+à jour AVANT que les messages partent chez un prestataire. Dans l'ordre : `privacy.md` (nommer Anthropic PBC, le remettre parmi les
 traitements hors de l'Union européenne, des marqueurs pour sa conservation
 et l'entraînement) et `terms.md`, redéploiement de l'admin, et seulement
 ensuite retirer `COACH_API_BASE_URL` et poser `ANTHROPIC_API_KEY`. Aucun
-réglage de réflexion ni d'`effort` n'est envoyé à Anthropic, ni à Mistral
-tant que `COACH_REASONING_EFFORT` reste absent.
+réglage de réflexion ni d'`effort` n'est envoyé, à aucun fournisseur.
 
 **Ce que « sur le serveur » implique.** Plus de quota de fournisseur : la
 limite, c'est le processeur. Une réponse à la fois (`OLLAMA_NUM_PARALLEL=1`),
 le modèle gardé en mémoire, un contexte de 8 192 jetons ; la vitesse se
 mesure au déploiement (guide, étape 5) et doit tenir dans l'échéance de 50 s
-ci-dessous. Le plafond par personne (`COACH_DAILY_MESSAGE_LIMIT`) protège
+ci-dessous, attente dans la file d'Ollama comprise : deux messages
+simultanés, le second peut recevoir un 503. Le plafond par personne (`COACH_DAILY_MESSAGE_LIMIT`) protège
 désormais la machine, plus une facture.
 
 **Latence.** Une seule échéance de 50 s couvre le tour entier (tentatives et
@@ -411,9 +409,8 @@ démarrage.
 | --- | --- |
 | `COACH_API_BASE_URL` | Posée : API compatible OpenAI (`http://ollama:11434/v1` sur le serveur, ou `https://api.mistral.ai/v1`). Absente : Anthropic |
 | `COACH_API_KEY` | Clé de cette API. Absente pour un Ollama interne ; présente, jamais vide |
-| `COACH_MODEL` | Exigé avec `COACH_API_BASE_URL` (`qwen3:4b` sur le serveur) ; sinon `claude-opus-5` |
-| `COACH_REASONING_EFFORT` | Envoyé comme `reasoning_effort` seulement si posé : `none` pour Qwen3 sur Ollama, jamais pour Mistral |
-| `CARLYS_OLLAMA_REPLICAS` | Compose : 1 allume le service `ollama` (0 par défaut) |
+| `COACH_MODEL` | Exigé avec `COACH_API_BASE_URL` (`qwen3:4b-instruct-2507-q4_K_M` sur le serveur) ; sinon `claude-opus-5` |
+| `CARLYS_OLLAMA_REPLICAS` | Serveur : 1 allume le service `ollama` (profil compose activé par `dc`) ; absent ou 0, le service n'existe pas |
 | `ANTHROPIC_API_KEY` | Lue seulement sans `COACH_API_BASE_URL` |
 | `COACH_DAILY_MESSAGE_LIMIT` | Plafond par personne et par jour (30) |
 | `COACH_ENABLED` | Interrupteur global |
