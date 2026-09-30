@@ -10,7 +10,6 @@ import {
   periodWindow,
   pointsOf,
   previousPeriodKey,
-  isPeriodKey,
   promoted,
   promotionOutlook,
   relegated,
@@ -76,13 +75,6 @@ describe('La période est la semaine ISO, en UTC', () => {
     expect(periodKeyOf(periodWindow('2026-W38').startsAt)).toBe('2026-W38');
     expect(previousPeriodKey('2026-W38')).toBe('2026-W37');
     expect(previousPeriodKey('2027-W01')).toBe('2026-W53');
-  });
-
-  it('reconnaît une clé de période, et rejette une semaine inexistante', () => {
-    expect(isPeriodKey('2026-W38')).toBe(true);
-    expect(isPeriodKey('2026-W99')).toBe(false);
-    expect(isPeriodKey('2026-38')).toBe(false);
-    expect(isPeriodKey(38)).toBe(false);
   });
 });
 

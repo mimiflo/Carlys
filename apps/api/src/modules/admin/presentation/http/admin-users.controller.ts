@@ -21,12 +21,13 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Public } from '../../../../common/decorators/public.decorator';
-import { requestIdOf, type RequestWithId } from '../../../../common/types/request-with-id';
+import { type RequestWithId } from '../../../../common/types/request-with-id';
 import { enveloped } from '../../../../common/utilities/enveloped';
 import { AdminUsersService } from '../../application/admin-users.service';
 import { CurrentAdmin } from '../decorators/current-admin.decorator';
 import { AdminAuthGuard, type AdminPrincipal } from '../guards/admin-auth.guard';
 import { AdminPermissionsGuard, RequirePermissions } from '../guards/admin-permissions.guard';
+import { actorOf } from './admin-actor';
 import {
   ManagedEntitlementParams,
   SearchManagedUsersDto,
@@ -80,11 +81,7 @@ export class AdminUsersController {
     @CurrentAdmin() admin: AdminPrincipal,
     @Req() request: RequestWithId,
   ): Promise<ManagedUserSummary> {
-    return this.users.setUserStatus(id, dto.status, {
-      adminUserId: admin.adminUserId,
-      ipAddress: request.ip,
-      requestId: requestIdOf(request),
-    });
+    return this.users.setUserStatus(id, dto.status, actorOf(admin, request));
   }
 
   @Put(':id/entitlements')
@@ -100,11 +97,7 @@ export class AdminUsersController {
       id,
       dto.key,
       { isActive: dto.isActive, expiresAt: dto.expiresAt ?? null, reason: dto.reason },
-      {
-        adminUserId: admin.adminUserId,
-        ipAddress: request.ip,
-        requestId: requestIdOf(request),
-      },
+      actorOf(admin, request),
     );
   }
 
@@ -118,10 +111,6 @@ export class AdminUsersController {
     @CurrentAdmin() admin: AdminPrincipal,
     @Req() request: RequestWithId,
   ): Promise<ManagedUserDetail> {
-    return this.users.releaseEntitlement(params.id, params.key, {
-      adminUserId: admin.adminUserId,
-      ipAddress: request.ip,
-      requestId: requestIdOf(request),
-    });
+    return this.users.releaseEntitlement(params.id, params.key, actorOf(admin, request));
   }
 }

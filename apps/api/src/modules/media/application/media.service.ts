@@ -15,17 +15,10 @@ import { type MediaAsset } from '@prisma/client';
 import { createHash } from 'node:crypto';
 import { AppConfigService } from '../../../config/app-config.service';
 import { StorageService } from '../../../infrastructure/storage/storage.service';
-import { AuditService } from '../../audit/audit.service';
+import { type AdminActor, AuditService } from '../../audit/audit.service';
 import { ExercisesService } from '../../exercises/application/exercises.service';
 import { MediaRepository } from '../infrastructure/media.repository';
 import { readImageSize } from './image-size';
-
-/** Qui agit — repris tel quel dans l'audit, jamais deviné côté service. */
-export interface MediaActor {
-  adminUserId: string;
-  requestId?: string;
-  ipAddress?: string;
-}
 
 /** Extension déduite du type MIME — jamais du nom déposé. */
 const EXTENSIONS: Record<string, string> = {
@@ -64,7 +57,7 @@ export class MediaService {
     mimeType: string;
     originalName: string;
     content: Buffer;
-    actor: MediaActor;
+    actor: AdminActor;
   }): Promise<MediaAssetContract> {
     // Un dépôt rejoué après une coupure ne crée pas un second média :
     // l'identifiant vient de l'administration et fait foi.
@@ -110,7 +103,7 @@ export class MediaService {
    * référence — sinon une photo disparaîtrait des applications déjà
    * installées sans que personne ne l'ait décidé.
    */
-  async remove(id: string, actor: MediaActor): Promise<void> {
+  async remove(id: string, actor: AdminActor): Promise<void> {
     const media = await this.repository.findById(id);
     if (media === null) {
       throw new NotFoundException('Média introuvable.');
@@ -147,7 +140,7 @@ export class MediaService {
     exerciseId: string,
     role: 'image' | 'mesh',
     mediaId: string | null,
-    actor: MediaActor,
+    actor: AdminActor,
   ): Promise<void> {
     if (mediaId !== null) {
       const media = await this.repository.findById(mediaId);
@@ -199,7 +192,7 @@ export class MediaService {
   private record(
     action: string,
     mediaId: string,
-    actor: MediaActor,
+    actor: AdminActor,
     metadata: Record<string, string | number>,
   ): void {
     this.audit.record({

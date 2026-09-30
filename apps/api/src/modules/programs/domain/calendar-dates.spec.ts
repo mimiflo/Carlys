@@ -5,7 +5,7 @@ import {
   isoWeekday,
   mondayOf,
 } from '../../../common/utilities/civil-day';
-import { anchorOf, dateOfSlot, lastDayOf, statusOfSlot, weekOfDate } from './calendar-dates';
+import { anchorOf, dateOfSlot, statusOfSlot, weekOfDate } from './calendar-dates';
 
 /**
  * CE QUE CE FICHIER PROTÈGE : la date d'une case, et ce qu'elle autorise à
@@ -65,7 +65,8 @@ describe('la date d’une case', () => {
     expect(dateOfSlot(anchor, 1, 3)).toBe('2026-09-23');
     // Semaine 2, lundi : sept jours plus tard.
     expect(dateOfSlot(anchor, 2, 1)).toBe('2026-09-28');
-    expect(lastDayOf(anchor, 4)).toBe('2026-10-18');
+    // Dernier jour d'un plan de quatre semaines : le dimanche de la semaine 4.
+    expect(dateOfSlot(anchor, 4, 7)).toBe('2026-10-18');
   });
 
   it('retrouve la semaine d’une date, et sort du plan quand il est fini', () => {

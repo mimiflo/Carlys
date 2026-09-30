@@ -45,11 +45,6 @@ export function weekOfDate(anchor: string, weeksCount: number, dayKey: string): 
   return semaine > weeksCount ? null : semaine;
 }
 
-/** Le dernier jour du plan — l'avant-dernière information d'un calendrier. */
-export function lastDayOf(anchor: string, weeksCount: number): string {
-  return dateOfSlot(anchor, weeksCount, 7);
-}
-
 /**
  * L'état d'une case, déduit — jamais stocké.
  *

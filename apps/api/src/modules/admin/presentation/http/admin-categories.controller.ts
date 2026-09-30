@@ -20,7 +20,7 @@ import { AdminCategoriesService } from '../../application/admin-categories.servi
 import { CurrentAdmin } from '../decorators/current-admin.decorator';
 import { AdminAuthGuard, type AdminPrincipal } from '../guards/admin-auth.guard';
 import { AdminPermissionsGuard, RequirePermissions } from '../guards/admin-permissions.guard';
-import { actorOf } from './catalog-actor';
+import { actorOf } from './admin-actor';
 import { CreateMuscleGroupDto, UpdateMuscleGroupDto } from './dto/catalog.dto';
 
 /** Les CATÉGORIES du catalogue — les groupes musculaires. */

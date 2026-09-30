@@ -307,7 +307,7 @@ Fondations actuelles :
 | `AppShadows`      | Ombres sm/md/lg                                                       |
 | `AppMotion`       | Les onze durées de `motion.duration` (100 ms → 6 s, `route` branchée sur les transitions de page par `AppTheme`) et courbes ; `AppMotion.resolve` |
 | `AppIcons`        | Icônes sémantiques métier — jamais `Icons.*` dans les écrans          |
-| `AppBreakpoints`  | Window size classes M3 (`WindowSize` + extension `context.windowSize`) |
+| `AppBreakpoints`  | Seuils des classes de taille M3 (600 / 840 / 1200 / 1600)             |
 | `AppTheme`        | `dark()`, `oledDark()` construits depuis les tokens                   |
 
 Thèmes : Carlys n'a que des thèmes SOMBRES. Le réglage d'apparence
@@ -697,8 +697,10 @@ Points structurants :
 L'app vise Windows/macOS à terme : **on ne portera pas un écran de téléphone
 étiré**, on compose des layouts par classe de taille.
 
-- `WindowSize` (`compact` < 600 < `medium` < 840 < `expanded` < 1200 <
-  `large` < 1600 ≤ `xlarge`) est disponible partout via `context.windowSize`.
+- Les seuils (`compact` < 600 < `medium` < 840 < `expanded` < 1200 <
+  `large` < 1600 ≤ `xlarge`) vivent dans `AppBreakpoints` ; la classe de
+  taille elle-même (`context.windowSize`) s'écrira avec le premier layout
+  adaptatif qui en aura besoin — aucun écran ne s'en sert aujourd'hui.
 - Cibles : `ResponsiveScaffold` (barre inférieure / rail / panneau latéral),
   layouts maître-détail en `expanded` et plus (liste d'exercices + détail,
   progression + graphique), largeurs de contenu bornées.

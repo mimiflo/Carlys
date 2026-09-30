@@ -7,17 +7,11 @@ import {
 } from '@carlys/api-contracts';
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { blankToNull } from '../../../common/utilities/blank-to-null';
-import { AuditService } from '../../audit/audit.service';
+import { type AdminActor, AuditService } from '../../audit/audit.service';
 import {
   CommunityModerationRepository,
   type CommunityReportRow,
 } from '../infrastructure/community-moderation.repository';
-
-export interface AdminActor {
-  adminUserId: string;
-  ipAddress?: string;
-  requestId?: string;
-}
 
 export interface CreateReportCommand {
   reportedUserId: string;

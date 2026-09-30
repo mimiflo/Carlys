@@ -5,19 +5,12 @@ import {
 } from '@carlys/api-contracts';
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { AppConfigService } from '../../../config/app-config.service';
-import { AuditService } from '../../audit/audit.service';
+import { type AdminActor, AuditService } from '../../audit/audit.service';
 import { ExercisesService } from '../../exercises/application/exercises.service';
 import {
   type AdminExerciseRow,
   AdminCatalogRepository,
 } from '../infrastructure/admin-catalog.repository';
-
-/** Auteur d'une action de catalogue, tel que le journal d'audit le retient. */
-export interface CatalogActor {
-  adminUserId: string;
-  ipAddress?: string;
-  requestId?: string;
-}
 
 export interface AdminExercisePage {
   items: AdminExerciseSummary[];
@@ -57,7 +50,7 @@ export class AdminCatalogService {
   async setExercisePublication(
     exerciseId: string,
     isPublished: boolean,
-    actor: CatalogActor,
+    actor: AdminActor,
   ): Promise<void> {
     const updated = await this.admin.setExercisePublication(exerciseId, isPublished);
     if (!updated) {
@@ -77,7 +70,7 @@ export class AdminCatalogService {
    * de séance le citent. L'effacer pour de bon trouerait l'historique de gens
    * qui n'ont rien demandé — et l'opération serait irréversible.
    */
-  async deleteExercise(exerciseId: string, actor: CatalogActor): Promise<void> {
+  async deleteExercise(exerciseId: string, actor: AdminActor): Promise<void> {
     const deleted = await this.admin.softDeleteExercise(exerciseId);
     if (!deleted) {
       throw new NotFoundException('Exercice introuvable ou déjà supprimé.');
@@ -86,7 +79,7 @@ export class AdminCatalogService {
   }
 
   /** Remet un exercice supprimé — dépublié : sa republication se décide. */
-  async restoreExercise(exerciseId: string, actor: CatalogActor): Promise<void> {
+  async restoreExercise(exerciseId: string, actor: AdminActor): Promise<void> {
     const restored = await this.admin.restoreExercise(exerciseId);
     if (!restored) {
       throw new NotFoundException('Exercice introuvable ou déjà en place.');
@@ -98,7 +91,7 @@ export class AdminCatalogService {
   async setExerciseCategories(
     exerciseId: string,
     input: SetExerciseCategoriesInput,
-    actor: CatalogActor,
+    actor: AdminActor,
   ): Promise<AdminExerciseSummary> {
     const exercise = await this.admin.findExercise(exerciseId);
     if (exercise === null || exercise.deletedAt !== null) {
@@ -151,7 +144,7 @@ export class AdminCatalogService {
   private async afterCatalogChange(
     action: string,
     exerciseId: string,
-    actor: CatalogActor,
+    actor: AdminActor,
   ): Promise<void> {
     // Sans invalidation, la modification attendrait l'expiration du cache.
     await this.exercises.invalidateCache();

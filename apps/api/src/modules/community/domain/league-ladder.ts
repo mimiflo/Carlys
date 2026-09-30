@@ -104,15 +104,6 @@ export function periodKeyOf(at: Date): string {
   return `${annee}-W${String(semaine).padStart(2, '0')}`;
 }
 
-/** Vrai si la chaîne a la forme `YYYY-Www` et désigne une semaine réelle. */
-export function isPeriodKey(value: unknown): value is string {
-  return (
-    typeof value === 'string' &&
-    /^\d{4}-W\d{2}$/.test(value) &&
-    periodKeyOf(periodWindow(value).startsAt) === value
-  );
-}
-
 /** La fenêtre d'une période : du lundi 00:00 UTC au lundi suivant, exclu. */
 export function periodWindow(periodKey: string): { startsAt: Date; endsAt: Date } {
   const annee = periodKey.slice(0, 4);

@@ -16,8 +16,9 @@ import {
 } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { Public } from '../../../../common/decorators/public.decorator';
-import { requestIdOf, type RequestWithId } from '../../../../common/types/request-with-id';
+import { type RequestWithId } from '../../../../common/types/request-with-id';
 import { enveloped } from '../../../../common/utilities/enveloped';
+import { actorOf } from '../../../admin/presentation/http/admin-actor';
 import { CurrentAdmin } from '../../../admin/presentation/decorators/current-admin.decorator';
 import {
   AdminAuthGuard,
@@ -69,10 +70,6 @@ export class AdminCommunityController {
     @CurrentAdmin() admin: AdminPrincipal,
     @Req() request: RequestWithId,
   ): Promise<AdminCommunityReport> {
-    return this.moderation.setReportStatus(id, dto.status, {
-      adminUserId: admin.adminUserId,
-      ipAddress: request.ip,
-      requestId: requestIdOf(request),
-    });
+    return this.moderation.setReportStatus(id, dto.status, actorOf(admin, request));
   }
 }

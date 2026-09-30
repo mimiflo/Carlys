@@ -128,16 +128,3 @@ export function planBudget(
     overBudget: count > affordable,
   };
 }
-
-/** Durée réelle d'une séance déjà composée — ce que le rapport annonce. */
-export function estimateSessionSeconds(
-  warmup: number,
-  exercises: { sets: number; reps: number | null; restSeconds: number }[],
-  format: SessionFormat,
-): number {
-  return exercises.reduce(
-    (total, exercise) =>
-      total + exerciseSeconds(exercise.sets, exercise.reps, exercise.restSeconds, format),
-    warmup,
-  );
-}

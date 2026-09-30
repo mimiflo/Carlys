@@ -24,7 +24,8 @@ import {
   singleFileLimits,
   UploadErrorsInFrench,
 } from '../../../../common/uploads/single-file-upload';
-import { requestIdOf, type RequestWithId } from '../../../../common/types/request-with-id';
+import { type RequestWithId } from '../../../../common/types/request-with-id';
+import { actorOf } from '../../../admin/presentation/http/admin-actor';
 import { CurrentAdmin } from '../../../admin/presentation/decorators/current-admin.decorator';
 import {
   AdminAuthGuard,
@@ -34,17 +35,8 @@ import {
   AdminPermissionsGuard,
   RequirePermissions,
 } from '../../../admin/presentation/guards/admin-permissions.guard';
-import { type MediaActor, MediaService } from '../../application/media.service';
+import { MediaService } from '../../application/media.service';
 import { AttachExerciseMediaDto, ListMediaQuery, UploadMediaDto } from './dto/media.dto';
-
-/** Acteur d'une action de média, reconstitué depuis la requête HTTP. */
-function actorOf(admin: AdminPrincipal, request: RequestWithId): MediaActor {
-  return {
-    adminUserId: admin.adminUserId,
-    requestId: requestIdOf(request),
-    ipAddress: request.ip,
-  };
-}
 
 // Les garde-fous multer (un fichier, `fieldArrayIndexLimit` armé) vivent dans
 // `common/uploads/single-file-upload.ts`, partagés avec la photo d'un repas.

@@ -5,7 +5,7 @@ import {
 } from '@carlys/api-contracts';
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { UserStatus } from '@prisma/client';
-import { AuditService } from '../../audit/audit.service';
+import { type AdminActor, AuditService } from '../../audit/audit.service';
 import {
   EntitlementsService,
   rowIsActive,
@@ -20,12 +20,6 @@ import {
   paidSubscriptionOf,
   presentManagedEntitlements,
 } from './managed-entitlements';
-
-interface AdminActor {
-  adminUserId: string;
-  ipAddress?: string;
-  requestId?: string;
-}
 
 export interface UsersPage {
   items: ManagedUserSummary[];

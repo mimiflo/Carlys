@@ -20,6 +20,13 @@ export interface AuditEntry {
   metadata?: Record<string, string | number | boolean | null>;
 }
 
+/** Auteur d'un geste du back-office, tel que le journal d'audit le retient. */
+export interface AdminActor {
+  adminUserId: string;
+  ipAddress?: string;
+  requestId?: string;
+}
+
 /** Ce qu'un drainage d'audit a réellement obtenu. */
 export type AuditFlushResult = DrainageResult;
 

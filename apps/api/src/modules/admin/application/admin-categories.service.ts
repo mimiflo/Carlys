@@ -5,10 +5,9 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
-import { AuditService } from '../../audit/audit.service';
+import { type AdminActor, AuditService } from '../../audit/audit.service';
 import { ExercisesService } from '../../exercises/application/exercises.service';
 import { AdminCatalogRepository } from '../infrastructure/admin-catalog.repository';
-import { type CatalogActor } from './admin-catalog.service';
 
 /** Catégories du catalogue — les groupes musculaires, créés et retirés ici. */
 @Injectable()
@@ -36,7 +35,7 @@ export class AdminCategoriesService {
 
   async create(
     input: { slug: string; name: string; sortOrder?: number },
-    actor: CatalogActor,
+    actor: AdminActor,
   ): Promise<AdminMuscleGroup> {
     const existing = await this.admin.findMuscleGroupBySlug(input.slug);
     if (existing !== null) {
@@ -58,7 +57,7 @@ export class AdminCategoriesService {
   async update(
     id: string,
     input: { name?: string; sortOrder?: number },
-    actor: CatalogActor,
+    actor: AdminActor,
   ): Promise<void> {
     if (input.name === undefined && input.sortOrder === undefined) {
       throw new BadRequestException('Rien à modifier.');
@@ -78,7 +77,7 @@ export class AdminCategoriesService {
    * passerait en silence et laisserait ces exercices sans muscle principal,
    * donc introuvables dans une bibliothèque qui se parcourt par groupe.
    */
-  async remove(id: string, actor: CatalogActor): Promise<void> {
+  async remove(id: string, actor: AdminActor): Promise<void> {
     const group = (await this.admin.listMuscleGroups()).find((row) => row.id === id);
     if (group === undefined) {
       throw new NotFoundException('Catégorie introuvable.');
@@ -96,7 +95,7 @@ export class AdminCategoriesService {
     await this.after('admin.muscle_group_deleted', id, actor);
   }
 
-  private async after(action: string, groupId: string, actor: CatalogActor): Promise<void> {
+  private async after(action: string, groupId: string, actor: AdminActor): Promise<void> {
     await this.exercises.invalidateCache();
     this.audit.record({
       action,

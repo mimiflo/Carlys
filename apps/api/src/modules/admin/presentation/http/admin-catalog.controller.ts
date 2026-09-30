@@ -26,7 +26,7 @@ import { AdminCatalogService } from '../../application/admin-catalog.service';
 import { CurrentAdmin } from '../decorators/current-admin.decorator';
 import { AdminAuthGuard, type AdminPrincipal } from '../guards/admin-auth.guard';
 import { AdminPermissionsGuard, RequirePermissions } from '../guards/admin-permissions.guard';
-import { actorOf } from './catalog-actor';
+import { actorOf } from './admin-actor';
 import { ListAdminExercisesQuery, SetPublicationDto } from './dto/admin.dto';
 import { SetExerciseCategoriesDto } from './dto/catalog.dto';
 

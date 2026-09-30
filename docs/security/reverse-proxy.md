@@ -58,13 +58,12 @@ limites de taille de corps) — section 6.
   `reset-password`, `admin/auth/login` — et `POST community/requests`,
   souvent oublié parce qu'il porte un autre nom de constante
   (`FRIEND_REQUEST_THROTTLE`) pour des valeurs identiques ;
-- l'**audit et les sessions** : `request.ip` est lu à **six endroits** de
+- l'**audit et les sessions** : `request.ip` est lu à **deux endroits** de
   `apps/api/src` — `clientContextOf`
   (`common/types/authenticated-request.ts`), qui alimente à la fois l'adresse
   d'ouverture d'une session (visible dans « Appareils connectés ») et le
-  journal d'audit, plus cinq points d'audit d'administration
-  (`admin-users.controller.ts` deux fois, `admin-community.controller.ts`,
-  `catalog-actor.ts`, `media.controller.ts`).
+  journal d'audit, plus l'acteur de tout geste d'administration
+  (`admin/presentation/http/admin-actor.ts`).
 
 À noter pour ne pas se tromper de garde-fou : le **verrouillage de compte**
 (`LockoutService`, `AUTH_MAX_LOGIN_ATTEMPTS`) est indexé par **adresse

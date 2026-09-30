@@ -124,8 +124,6 @@ export const EXERCISE_WEEKLY_REPEAT_RELAXED = 3;
 
 /** Trois semaines qui montent, une qui décharge. */
 export const MESOCYCLE_WEEKS = 4;
-/** Repos allongé en semaine de décharge : la fatigue nerveuse tombe aussi. */
-export const DELOAD_REST_BONUS_SECONDS = 15;
 
 /**
  * Le débutant progresse par la TECHNIQUE et la régularité, pas par le volume :
@@ -138,13 +136,6 @@ export const BLOCK_PROGRESS_FACTOR: Record<TrainingExperience, number> = {
 };
 
 // ── Sélection ──────────────────────────────────────────────────────────────
-
-/**
- * Au-delà de ce nombre de répétitions au poids du corps, on travaille
- * l'endurance locale — plus la force ni l'hypertrophie. Le générateur passe
- * alors à la variante plus dure si elle existe et que le niveau l'autorise.
- */
-export const BODYWEIGHT_VARIANT_THRESHOLD_REPS = 15;
 
 /** Poids de score : ce que le moteur préfère, et de combien. */
 export const SCORE_POLYARTICULAR = 3;
