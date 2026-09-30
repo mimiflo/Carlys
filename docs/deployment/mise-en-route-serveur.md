@@ -582,17 +582,17 @@ l'offre gratuite de Mistral a refusé toutes les demandes.
      ollama run qwen3:4b-instruct-2507-q4_K_M --verbose "Propose une séance jambes de 30 minutes en 5 lignes."
    ```
 
-   Notez `prompt eval rate` et `eval rate` (jetons par seconde). Un tour du
-   coach lit ≈ 3 000 jetons de consignes, puis écrit ≈ 200 à 400 jetons :
-   `3000 / prompt eval rate + 300 / eval rate` doit rester **sous 45
-   secondes**, car le serveur abandonne un tour à 50 s. Au-dessus, le coach
-   répondra « momentanément indisponible » (journal : « fournisseur
-   injoignable (TimeoutError) ») : transmettez les deux chiffres, on ajustera
-   les délais ou la taille du modèle. Ollama garde les consignes communes en
-   cache : les réponses suivantes vont plus vite que la première. Il répond
-   à UNE personne à la fois : la seconde attend, et l'attente compte dans
-   ses 50 s ; deux messages simultanés peuvent donc donner un
-   « momentanément indisponible » au second.
+   Notez `prompt eval rate` et `eval rate` (jetons par seconde ; relevé le
+   30 septembre 2026 : 26 et 8,2). Un tour du coach lit ≈ 3 000 jetons de
+   consignes, puis ce que ses outils rendent (≈ 500 à 2 000), et écrit ≈ 200
+   à 400 jetons. L'application reçoit la réponse EN FLUX : le serveur lui
+   laisse **3 minutes** et garde la connexion vivante pendant que le coach
+   relit sans écrire. Au-delà, le coach répondra « momentanément
+   indisponible » (journal : « fournisseur injoignable (TimeoutError) ») :
+   transmettez les deux chiffres, on ajustera le délai ou la taille du
+   modèle. Ollama garde les consignes communes en cache : les réponses
+   suivantes vont plus vite que la première. Il répond à UNE personne à la
+   fois : la seconde attend, et l'attente compte dans ses 3 minutes.
 
 6. **Essayer : les vingt vraies questions** de l'étape 9 de la section
    Mistral ci-dessous (séance proposée, records, protéines, genou, régime à
@@ -723,9 +723,10 @@ le premier vrai message**.
    ```
 
 8. **Le délai de gra6 (Zoraxy) : 60 secondes au moins.** Une réponse du
-   coach peut prendre jusqu'à 50 secondes : au-delà, le serveur abandonne et
-   répond « momentanément indisponible ». Nginx attend 60 secondes ; gra6,
-   devant lui, ne doit pas couper avant. Dans Zoraxy, ouvrez la règle de
+   coach s'écrit en flux jusqu'à 3 minutes, mais il ne se passe jamais plus
+   de 15 secondes sans qu'un octet parte (le texte, ou un battement). Nginx
+   coupe après 60 secondes SANS octet ; gra6, devant lui, ne doit pas couper
+   avant. Dans Zoraxy, ouvrez la règle de
    l'hôte de l'API (`api-staging.carlys.example`, puis
    `api.carlys.example`) et vérifiez que son délai d'attente (*timeout*)
    vaut **au moins 60 secondes**.
@@ -763,11 +764,11 @@ le premier vrai message**.
    volume du mois épuisé, attendez le mois suivant ; « Service tier
    capacity exceeded », le Free mode est saturé pour ce modèle, réessayez
    plus tard), « fournisseur injoignable (TimeoutError) »
-   (plus de 50 secondes). Si la panne survient dès la première demande à
+   (plus de 50 secondes d'un bloc, 3 minutes en flux). Si la panne survient dès la première demande à
    Mistral, le message n'est **pas** décompté du quota de la personne, trois
    fois par jour au plus ; s'il a déjà servi une partie de la réponse, le
-   message reste décompté. L'application attend la réponse du coach
-   65 secondes, au-delà des 50 secondes que le serveur laisse à Mistral.
+   message reste décompté. L'application attend le début de la réponse du
+   coach 65 secondes ; il arrive au plus tard au premier battement, 15 s.
 
 10. **Production.** Créez une seconde clé (`carlys-coach-prod`, même
     expiration), pour pouvoir révoquer l'une sans l'autre, puis refaites les

@@ -18,7 +18,7 @@ import {
 import { ApiBearerAuth, ApiOperation, ApiProduces, ApiTags } from '@nestjs/swagger';
 import { type Response } from 'express';
 import { CurrentUser } from '../../../../common/decorators/current-user.decorator';
-import { sseEmitter } from '../../../../common/http/sse';
+import { sseEmitter, sseKeepAlive } from '../../../../common/http/sse';
 import { type AuthenticatedPrincipal } from '../../../../common/types/authenticated-request';
 import { type RequestWithId } from '../../../../common/types/request-with-id';
 import { enveloped } from '../../../../common/utilities/enveloped';
@@ -29,6 +29,12 @@ import {
   CreateCoachConversationDto,
   SendCoachMessageDto,
 } from './dto/coach.dto';
+
+/**
+ * Un battement toutes les 15 s pendant qu'une réponse en flux se tait : bien
+ * sous les 60 s de nginx et les 65 s d'attente du mobile.
+ */
+const SSE_KEEPALIVE_MS = 15_000;
 
 /** Contrôleur mince : aucune logique, aucune décision. */
 @ApiTags('coach')
@@ -97,11 +103,16 @@ export class CoachController {
     @Res() response: Response,
   ): Promise<void> {
     const emit = sseEmitter(response);
-    const reply = await this.coach.sendMessage(user.userId, id, body.id, body.content, (text) =>
-      emit('delta', { text }),
-    );
-    emit('done', enveloped(reply, {}, request));
-    response.end();
+    const stopKeepAlive = sseKeepAlive(response, SSE_KEEPALIVE_MS);
+    try {
+      const reply = await this.coach.sendMessage(user.userId, id, body.id, body.content, (text) =>
+        emit('delta', { text }),
+      );
+      emit('done', enveloped(reply, {}, request));
+      response.end();
+    } finally {
+      stopKeepAlive();
+    }
   }
 
   @Post('proposals/:id/accepted')

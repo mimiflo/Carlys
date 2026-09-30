@@ -8,10 +8,11 @@ import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-/// Le coach met jusqu'à 50 s à répondre (échéance du tour côté serveur,
-/// `COACH_TURN_DEADLINE_MS`) : avec les 20 s de réception du client
-/// partagé, une réponse lente s'afficherait « hors ligne » alors qu'elle
-/// arrive. Seul l'envoi d'un message attend plus longtemps.
+/// Le coach peut se taire longtemps avant son premier mot (il relit des
+/// séances) : avec les 20 s de réception du client partagé, une réponse
+/// lente s'afficherait « hors ligne » alors qu'elle arrive. Seul l'envoi d'un
+/// message attend plus longtemps — ses en-têtes, que le premier battement du
+/// serveur (`: ping`, toutes les 15 s) fait partir.
 class _RecordingAdapter implements HttpClientAdapter {
   final List<RequestOptions> requests = [];
 
@@ -120,6 +121,27 @@ void main() {
   });
 
   group('réponse en flux', () {
+    test(
+      'les battements du serveur (`: ping`) passent sans rien dire',
+      () async {
+        adapter.responses = (
+          200,
+          ': ping\n\n${_sse(['delta'])}: ping\n\n: ping\n\n${_sse(['done'])}',
+        );
+        final seen = <String>[];
+
+        final reply = await repository.sendMessage(
+          conversationId: 'c1',
+          messageId: 'm1',
+          content: 'Séance jambes 30 min ?',
+          onText: seen.add,
+        );
+
+        expect(seen, ['Répon']);
+        expect(reply.assistantMessage.content, 'Réponse');
+      },
+    );
+
     test(
       'chaque morceau part à l’écran, la réplique archivée fait foi',
       () async {

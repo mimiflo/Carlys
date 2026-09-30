@@ -78,9 +78,15 @@ fournisseur : faire tourner le modèle nous-mêmes, sur le serveur.
   (étape 5) reste à relever. Le serveur laisse 50 s à un tour
   (`COACH_TURN_DEADLINE_MS`), nginx 60 s, l'application 65 s : si la mesure
   le demande, ces trois délais bougent ensemble, ou le modèle rétrécit.
+  *Relevé le 30 septembre 2026 : 8,2 jetons/s en écriture. Les réponses qui
+  relisaient des séances s'arrêtaient net à 50 s ; un tour EN FLUX a
+  désormais 3 minutes (`COACH_STREAM_DEADLINE_MS`), nginx et l'application
+  tenus éveillés par un battement toutes les 15 s — voir `coach-ia.md`,
+  « Latence ». Le tour d'un bloc garde ses 50 s.*
 - **Une réponse à la fois**, et l'attente dans la file d'Ollama compte dans
-  les 50 s : deux personnes qui écrivent en même temps, la seconde peut
-  recevoir « momentanément indisponible » au lieu d'attendre.
+  l'échéance du tour (3 min en flux depuis le 30 septembre 2026) : deux
+  personnes qui écrivent en même temps, la seconde attend, et peut recevoir
+  « momentanément indisponible » si la première réponse est longue.
 - Un petit modèle suit moins bien les consignes : les garde-fous du prompt
   (santé, planchers caloriques, dopants) se revérifient par les vingt
   questions du guide avant toute ouverture.

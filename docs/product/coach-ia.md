@@ -263,7 +263,8 @@ Une seule frontière avec le fournisseur. Toute la logique métier se teste
 contre un faux ; **aucun test n'appelle l'API réelle** (les deux clients se
 testent avec un `fetch` simulé), et changer de fournisseur est un réglage.
 Les règles communes aux deux clients (6 tours d'outils, 2048 jetons de
-sortie, échéance de 50 s pour le tour entier, textes de refus et d'abandon)
+sortie, échéance du tour entier — 50 s d'un bloc, 3 min en flux —, textes
+de refus et d'abandon)
 sont exportées par le port, jamais recopiées.
 
 ### Routes
@@ -377,19 +378,28 @@ réglage de réflexion ni d'`effort` n'est envoyé, à aucun fournisseur.
 **Ce que « sur le serveur » implique.** Plus de quota de fournisseur : la
 limite, c'est le processeur. Une réponse à la fois (`OLLAMA_NUM_PARALLEL=1`),
 le modèle gardé en mémoire, un contexte de 8 192 jetons ; la vitesse se
-mesure au déploiement (guide, étape 5) et doit tenir dans l'échéance de 50 s
+mesure au déploiement (guide, étape 5) et doit tenir dans l'échéance
 ci-dessous, attente dans la file d'Ollama comprise : deux messages
 simultanés, le second peut recevoir un 503. Le plafond par personne (`COACH_DAILY_MESSAGE_LIMIT`) protège
 désormais la machine, plus une facture.
 
-**Latence.** Une seule échéance de 50 s couvre le tour entier (tentatives et
-outils), sous les 60 s de nginx. Le client compatible OpenAI réessaie deux
+**Latence.** Une seule échéance couvre le tour entier (tentatives et
+outils) : **3 minutes en flux** (`COACH_STREAM_DEADLINE_MS`), **50 s d'un
+bloc** (`COACH_TURN_DEADLINE_MS`, sous les 60 s de nginx). En flux, les 60 s
+de nginx ne comptent qu'entre deux octets, et il en passe toujours : le texte,
+ou un battement (`: ping`, commentaire SSE que tout client ignore) toutes les
+15 s pendant que le coach relit des séances sans rien écrire
+(`sseKeepAlive`, `common/http/sse.ts`). Le premier battement ne part qu'après
+15 s : un refus (quota, fil inconnu) garde son statut HTTP. Mesuré le
+30 septembre 2026 sur le serveur, Qwen3-4B écrit ≈ 8 jetons/s : relire des
+séances puis répondre y dépassait 50 s, et la réponse s'arrêtait net —
+c'était le « il s'arrête » signalé. Le client compatible OpenAI réessaie deux
 fois un 429 ou un 5xx (pauses de 1 puis 2 s) ; toute autre panne (réseau,
-échéance, réponse illisible, génération interrompue par Mistral avec
+échéance, réponse illisible, génération interrompue avec
 `finish_reason: error`, 4xx) donne un 503 dont le journal ne porte que le
 statut, jamais le corps ni la clé. Côté mobile, l'envoi d'un message attend
-la réponse 65 s (`coachReplyTimeout`, `coach_repository_impl.dart`), au-delà
-de l'échéance de 50 s du serveur ; les autres appels gardent les 20 s du
+ses en-têtes 65 s (`coachReplyTimeout`, `coach_repository_impl.dart`) — le
+premier battement arrive bien avant ; les autres appels gardent les 20 s du
 client partagé (`dio_client.dart`).
 
 **Ce qui accélère une réponse sur processeur** (30 septembre 2026). Le

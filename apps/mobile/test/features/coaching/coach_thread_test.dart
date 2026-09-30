@@ -294,6 +294,29 @@ void main() {
     expect(etat?.notice, 'Le coach est momentanément indisponible.');
   });
 
+  test(
+    'question déjà en cours : le même avis, que le refus arrive par HTTP ou par le flux',
+    () async {
+      // Par HTTP, un 409 devient une ValidationException ; dans le flux,
+      // une ServerException. C'est le cas courant : le verrou de la
+      // question est vérifié avant le premier octet.
+      for (final refus in const <AppException>[
+        ValidationException('déjà en cours', statusCode: 409),
+        ServerException('déjà en cours', statusCode: 409),
+      ]) {
+        final container = containerWith(FakeCoachRepository(sendError: refus));
+        await container.read(coachThreadProvider.future);
+
+        await container.read(coachThreadProvider.notifier).send('Demain ?');
+
+        expect(
+          container.read(coachThreadProvider).valueOrNull?.notice,
+          'Le coach termine sa réponse. Réessaie dans un instant.',
+        );
+      }
+    },
+  );
+
   group('proposition déjà acceptée', () {
     const proposition = CoachSessionProposal(
       id: 'proposition-1',

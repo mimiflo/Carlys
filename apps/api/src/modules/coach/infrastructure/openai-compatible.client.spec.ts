@@ -4,6 +4,7 @@ import { type AppConfigService } from '../../../config/app-config.service';
 import {
   COACH_GAVE_UP_TEXT,
   COACH_MAX_TOOL_ROUNDS,
+  COACH_STREAM_DEADLINE_MS,
   COACH_TURN_DEADLINE_MS,
   CoachProviderUnavailableException,
   type CoachToolCall,
@@ -168,6 +169,19 @@ describe('OpenAiCompatibleCoachClient', () => {
         { signal?: AbortSignal } | undefined,
       ];
       expect(pause?.signal).toBe(signal);
+      timeout.mockRestore();
+    });
+
+    it(`EN FLUX, le tour a ${COACH_STREAM_DEADLINE_MS} ms : sur processeur, relire des séances dépasse à lui seul 50 s`, async () => {
+      // nginx ne coupe qu'après 60 s SANS octet ; en flux, le texte et les
+      // battements de `sseKeepAlive` l'en empêchent. L'échéance courte ne
+      // protège que la route sans flux.
+      const timeout = jest.spyOn(AbortSignal, 'timeout');
+      global.fetch = jest.fn().mockRejectedValue(new TypeError('fetch failed'));
+
+      await expect(client().reply(input({ onText: jest.fn() }))).rejects.toThrow();
+
+      expect(timeout).toHaveBeenCalledWith(COACH_STREAM_DEADLINE_MS);
       timeout.mockRestore();
     });
 

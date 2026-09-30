@@ -6,7 +6,7 @@ import {
   COACH_MAX_OUTPUT_TOKENS,
   COACH_MAX_TOOL_ROUNDS,
   COACH_REFUSAL_TEXT,
-  COACH_TURN_DEADLINE_MS,
+  turnDeadlineMs,
   CoachProviderUnavailableException,
   type CoachModelPort,
   type CoachToolCall,
@@ -33,7 +33,7 @@ export class AnthropicCoachClient implements CoachModelPort {
   async reply(input: CoachTurnInput): Promise<CoachTurnOutput> {
     const client = this.ensureClient();
     // Une seule échéance pour tout le tour : le SDK, seul, attendrait 10 min.
-    const signal = AbortSignal.timeout(COACH_TURN_DEADLINE_MS);
+    const signal = AbortSignal.timeout(turnDeadlineMs(input));
 
     const messages: Anthropic.MessageParam[] = input.history.map((turn) => ({
       role: turn.role,

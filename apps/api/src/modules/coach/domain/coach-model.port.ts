@@ -116,9 +116,20 @@ export const COACH_MAX_OUTPUT_TOKENS = 2048;
 /**
  * Échéance d'un tour ENTIER (tentatives et outils compris), sous les 60 s de
  * nginx (`proxy_read_timeout`) : au-delà, le client recevrait un 504 muet
- * alors que le serveur répond encore.
+ * alors que le serveur répond encore. C'est celle de la route SANS flux.
  */
 export const COACH_TURN_DEADLINE_MS = 50_000;
+/**
+ * Échéance d'un tour EN FLUX. Là, les 60 s de nginx ne comptent qu'entre deux
+ * octets, et il en passe toujours : le texte, ou le battement de
+ * `sseKeepAlive`. Sur le processeur du serveur (≈ 8 jetons/s en écriture),
+ * relire des séances puis répondre dépasse souvent 50 s : couper là rendait
+ * une réponse amputée. Trois minutes couvrent un tour d'outils complet.
+ */
+export const COACH_STREAM_DEADLINE_MS = 180_000;
+/** L'échéance d'un tour selon qu'il s'écrit en flux ou d'un bloc. */
+export const turnDeadlineMs = (input: Pick<CoachTurnInput, 'onText'>): number =>
+  input.onText ? COACH_STREAM_DEADLINE_MS : COACH_TURN_DEADLINE_MS;
 /** Un refus est un CONTENU, pas une panne : l'utilisateur doit le lire. */
 export const COACH_REFUSAL_TEXT = 'Je ne peux pas répondre à cette demande.';
 /** Plafond de tours atteint : on rend ce qu'on a plutôt que de boucler. */

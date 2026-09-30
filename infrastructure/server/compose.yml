@@ -310,7 +310,7 @@ services:
   # Le modèle est PRÉCHARGÉ dès le démarrage (`ollama run <modèle> ""`, la
   # méthode de la FAQ d'Ollama), en arrière-plan : sans cela, la première
   # question après un redémarrage attendait en plus le chargement des 2,5 Go
-  # en mémoire, dans les 50 s du tour. OLLAMA_KEEP_ALIVE=-1 l'y garde ensuite.
+  # en mémoire, dans l'échéance du tour. OLLAMA_KEEP_ALIVE=-1 l'y garde ensuite.
   ollama:
     <<: *service
     profiles: ['ollama']
@@ -319,7 +319,7 @@ services:
       replicas: ${CARLYS_OLLAMA_REPLICAS:-0}
     mem_limit: ${CARLYS_OLLAMA_MEM_LIMIT:-0}
     # Priorité RELATIVE (1024 par défaut pour les autres) : sur un processeur,
-    # une réponse occupe tous les cœurs jusqu'à 50 s ; l'API et PostgreSQL,
+    # une réponse occupe tous les cœurs jusqu'à 3 min ; l'API et PostgreSQL,
     # de recette comme de production, passent devant quand ils en ont besoin,
     # et Ollama prend le reste. Pas de `cpus` fixe : il échouerait sur une
     # machine qui a moins de cœurs que la valeur écrite.

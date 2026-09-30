@@ -3,7 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { AppConfigService } from '../../../config/app-config.service';
 import { RedisService } from '../../../infrastructure/cache/redis.service';
 import {
-  COACH_TURN_DEADLINE_MS,
+  COACH_STREAM_DEADLINE_MS,
   CoachProviderUnavailableException,
 } from '../domain/coach-model.port';
 
@@ -88,15 +88,15 @@ export class CoachQuota {
 
   /**
    * Verrou d'UNE question pendant qu'on y répond : rend de quoi le lever, ou
-   * `null` s'il est déjà tenu. Il expire seul après l'échéance d'un tour
-   * (plus une marge) : une API tuée en plein tour ne bloque pas la question.
+   * `null` s'il est déjà tenu. Il expire seul après la plus longue échéance
+   * d'un tour, celle du flux (plus une marge) : une API tuée en plein tour ne bloque pas la question.
    * La levée ne supprime que SON verrou, jamais celui d'un tour suivant.
    */
   async holdTurn(messageId: string): Promise<(() => Promise<void>) | null> {
     const client = this.redis.getClient();
     const key = `coach:turn:${messageId}`;
     const token = randomUUID();
-    const held = await client.set(key, token, 'PX', COACH_TURN_DEADLINE_MS + 20_000, 'NX');
+    const held = await client.set(key, token, 'PX', COACH_STREAM_DEADLINE_MS + 20_000, 'NX');
     if (held === null) {
       return null;
     }

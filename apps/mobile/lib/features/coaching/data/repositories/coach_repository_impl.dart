@@ -9,12 +9,12 @@ import '../coach_thread_cache.dart';
 import '../dto/coach_dtos.dart';
 import 'coach_reply_stream.dart';
 
-/// Délai de réception de l'envoi d'un message : le serveur laisse 50 s au
-/// fournisseur d'IA pour tout le tour (`COACH_TURN_DEADLINE_MS`), plus que
-/// les 20 s du client partagé. En flux, c'est surtout l'attente du PREMIER
-/// mot (le coach consulte tes séances, réfléchit) qu'il couvre. Sans ce délai
-/// propre, une réponse lente s'afficherait « hors ligne » alors qu'elle
-/// arrive.
+/// Délai de réception de l'envoi d'un message : Dio ne le compte que jusqu'aux
+/// EN-TÊTES de la réponse, qui partent au premier mot du coach ou à son
+/// premier battement (`sseKeepAlive`, toutes les 15 s côté serveur). Il
+/// dépasse donc les 20 s du client partagé sans borner la réponse elle-même,
+/// que le serveur laisse durer trois minutes en flux
+/// (`COACH_STREAM_DEADLINE_MS`).
 const coachReplyTimeout = Duration(seconds: 65);
 
 /// Dépôt coach — **direct sur l'API**, sans base locale ni file de

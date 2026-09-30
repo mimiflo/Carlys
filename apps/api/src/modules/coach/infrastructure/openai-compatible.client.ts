@@ -6,7 +6,7 @@ import {
   COACH_GAVE_UP_TEXT,
   COACH_MAX_OUTPUT_TOKENS,
   COACH_MAX_TOOL_ROUNDS,
-  COACH_TURN_DEADLINE_MS,
+  turnDeadlineMs,
   CoachProviderUnavailableException,
   type CoachModelPort,
   type CoachToolCall,
@@ -35,7 +35,7 @@ export class OpenAiCompatibleCoachClient implements CoachModelPort {
 
   async reply(input: CoachTurnInput): Promise<CoachTurnOutput> {
     // UNE échéance pour tout le tour, tentatives et outils compris.
-    const signal = AbortSignal.timeout(COACH_TURN_DEADLINE_MS);
+    const signal = AbortSignal.timeout(turnDeadlineMs(input));
     const messages: Record<string, unknown>[] = [
       { role: 'system', content: input.system },
       ...(input.systemPerUser ? [{ role: 'system', content: input.systemPerUser }] : []),

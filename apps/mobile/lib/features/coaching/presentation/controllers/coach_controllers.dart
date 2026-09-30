@@ -219,7 +219,9 @@ class CoachThread extends AutoDisposeAsyncNotifier<CoachThreadState> {
   /// déjà ce qu'il faut : pas de second message redondant.
   String? _noticeFor(AppException exception) {
     if (exception is NetworkException) return null;
-    if (exception is ServerException) {
+    // Un 409 arrive en ValidationException par HTTP, en ServerException par
+    // le flux : c'est le même refus.
+    if (exception is ServerException || exception.statusCode == 409) {
       return switch (exception.statusCode) {
         429 =>
           'Tu as atteint le nombre de messages du jour. '
