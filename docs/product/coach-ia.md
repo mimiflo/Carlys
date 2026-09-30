@@ -223,7 +223,8 @@ sont exportées par le port, jamais recopiées.
 | `GET` | `/api/v1/coach/conversations` | Liste des fils |
 | `POST` | `/api/v1/coach/conversations` | Création (UUID client, idempotent) |
 | `GET` | `/api/v1/coach/conversations/:id` | Fil + messages + propositions |
-| `POST` | `/api/v1/coach/conversations/:id/messages` | Envoi, renvoie la réponse ; rejouable (même identifiant, même contenu → même réponse, sans tour ni appel au modèle) |
+| `POST` | `/api/v1/coach/conversations/:id/messages` | Envoi, renvoie la réponse ; rejouable (même identifiant, même contenu → même réponse, sans tour ni appel au modèle). Gardée pour les versions de l'appli d'avant le flux |
+| `POST` | `/api/v1/coach/conversations/:id/messages/stream` | Même envoi, réponse en flux SSE : `delta` à chaque morceau, puis `done` (même `CoachReply`) ou `error` — voir l'ADR 0012 |
 | `POST` | `/api/v1/coach/proposals/:id/accepted` | Marque la proposition acceptée |
 
 L'acceptation **ne crée pas** la séance : l'app la crée par la route de séance
@@ -345,18 +346,11 @@ coûte environ **un à deux centimes**, l'essentiel part dans la sortie. Un
 quota de 30 messages par jour plafonne donc un utilisateur intensif autour de
 50 centimes par jour, à comparer au prix de l'abonnement.
 
-**Streaming.** Une réponse non diffusée fait attendre plusieurs secondes devant
-un écran figé. Deux options assumées :
-
-- **v1 sans streaming**, avec un état « le coach réfléchit » explicite — plus
-  simple, aucune infrastructure SSE à introduire ;
-- **v1 avec streaming** (SSE côté API, consommation Dio côté Flutter) — nettement
-  meilleur ressenti, une complexité de plus dans une tranche déjà chargée.
-
-**Recommandation : sans streaming d'abord**, avec l'indicateur d'attente soigné,
-et le streaming en second temps une fois le reste stabilisé. C'est le seul point
-de ce document où je choisis le confort de construction contre le confort
-d'usage — à toi de trancher si tu préfères l'inverse.
+**Streaming : fait** (septembre 2026, ADR 0012). La question s'affiche
+aussitôt, une bulle « Réfléchit… » attend le premier mot, puis la réponse
+s'écrit à mesure qu'Ollama la produit. Un renvoi de la même question pendant
+qu'elle s'écrit est refusé (409) par un verrou Redis, au lieu d'être compté et
+répondu deux fois.
 
 ## Droits, quota, garde-fous
 
@@ -619,11 +613,12 @@ un exercice inconnu — la réponse doit rester utilisable.
    proposition branchée sur la création de séance, documentation Swagger et
    `docs/`.
 
-Le streaming, s'il est retenu, s'insère entre 2 et 3.
+Le streaming est venu ensuite (ADR 0012).
 
 ## Décisions ouvertes
 
-1. **Streaming en v1 ou en v2 ?** Ma recommandation : v2.
+1. ~~**Streaming en v1 ou en v2 ?**~~ — tranché en septembre 2026 : fait,
+   voir l'ADR 0012.
 2. **Bulles en `primary` ou dégradé de signature ?** Ma recommandation :
    `primary`.
 3. **Quota quotidien** — 30 messages par jour est une valeur de départ, à caler
