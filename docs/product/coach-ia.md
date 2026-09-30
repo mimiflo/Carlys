@@ -572,7 +572,7 @@ et ne prend qu'un `CoachContext` de valeurs simples : elle se teste seule, et
 semaines n'invite plus à « continuer » mais à débloquer, et une variation de
 poids sous 400 g est du bruit de balance — elle ne dit rien.
 
-### Couleurs — une décision à prendre
+### Couleurs — tranché : le violet de Carlys
 
 La maquette montre des bulles utilisateur en dégradé violet → magenta, qui
 correspond à `AppColors.signature`. Or ce dégradé est aujourd'hui **réservé aux
@@ -585,9 +585,10 @@ très proche de la maquette), bulles du coach sur `AppColors.darkSurface`, et le
 bouton « Voir la séance » en `AppButton` accent — la couleur d'action de toute
 l'application. Le dégradé de signature reste à la marque.
 
-C'est un changement d'une ligne si tu préfères la maquette telle quelle ; il
-faudra alors élargir explicitement la portée du jeton et le documenter, plutôt
-que de le laisser dériver.
+**Tranché le 30 septembre 2026 par le propriétaire : les bulles suivent le
+thème de Carlys.** C'est ce que peint `coach_message_bubble.dart`
+(`AppColors.primary` pour tes messages, `darkSurface` pour ceux du coach) ;
+le dégradé de signature reste réservé à la marque (CLAUDE.md, point 9).
 
 ## Tests
 
@@ -629,10 +630,12 @@ Le streaming est venu ensuite (ADR 0012).
 
 1. ~~**Streaming en v1 ou en v2 ?**~~ — tranché en septembre 2026 : fait,
    voir l'ADR 0012.
-2. **Bulles en `primary` ou dégradé de signature ?** Ma recommandation :
-   `primary`.
-3. **Quota quotidien** — 30 messages par jour est une valeur de départ, à caler
-   sur le prix de l'abonnement.
+2. ~~**Bulles en `primary` ou dégradé de signature ?**~~ — tranché le
+   30 septembre 2026 : le violet de Carlys (`primary`), voir « Couleurs ».
+3. ~~**Quota quotidien**~~ — tranché le 30 septembre 2026 : **30 messages par
+   jour** et par personne, pour l'abonnement qui ouvre le coach (droit
+   `ai_coaching`, plan premium). C'est la valeur par défaut de
+   `COACH_DAILY_MESSAGE_LIMIT` et celle des trois `.env.example`.
 4. ~~**Point d'entrée**~~ — tranché une première fois comme sixième onglet au
    centre de la barre, puis **re-tranché en août 2026** avec la réorganisation
    en onglets : le coach s'ouvre depuis la carte « Coach IA » du hub
