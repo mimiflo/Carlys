@@ -231,7 +231,7 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(CoachDataNotice), findsOneWidget);
-      expect(find.textContaining('prestataire externe'), findsOneWidget);
+      expect(find.textContaining('serveurs de Carlys'), findsOneWidget);
     });
 
     testWidgets('elle ne s’affiche qu’UNE fois, quel que soit le nombre de '

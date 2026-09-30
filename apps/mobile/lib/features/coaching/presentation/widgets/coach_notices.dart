@@ -10,9 +10,12 @@ import '../../../../design_system/design_system.dart';
 /// En tête de conversation : d'où vient la réponse du coach.
 ///
 /// Le coach lit les séances, les records et les mesures pour répondre, et
-/// c'est un prestataire externe qui produit le texte. La politique de
-/// confidentialité le dit ; il faut aussi le dire LÀ, au moment où l'on
-/// commence à écrire, pas seulement dans un document que personne n'ouvre.
+/// depuis septembre 2026 c'est un modèle que Carlys fait tourner sur SON
+/// serveur (ADR 0011) : ces données ne partent chez aucun prestataire. La
+/// politique de confidentialité le dit ; il faut aussi le dire LÀ, au moment
+/// où l'on commence à écrire, pas seulement dans un document que personne
+/// n'ouvre. Si le coach repartait un jour chez un prestataire, cette phrase
+/// changerait avec lui.
 ///
 /// Volontairement sobre et non actionnable : ce n'est ni une alerte ni un
 /// consentement à donner (l'usage du coach relève du contrat), c'est un fait
@@ -21,8 +24,8 @@ class CoachDataNotice extends StatelessWidget {
   const CoachDataNotice({super.key});
 
   static const String message =
-      'Tes données d’entraînement citées ici sont traitées par un prestataire '
-      'externe pour produire la réponse.';
+      'Tes données d’entraînement citées ici restent sur les serveurs de '
+      'Carlys : c’est là que le coach produit sa réponse.';
 
   @override
   Widget build(BuildContext context) {

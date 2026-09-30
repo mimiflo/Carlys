@@ -544,8 +544,9 @@ départ), hors ligne (état dédié sur le composeur).
 
 **La conversation dit d'où vient la réponse.** `CoachDataNotice` pose une
 ligne sobre en tête du fil, au-dessus du premier message : « Tes données
-d'entraînement citées ici sont traitées par un prestataire externe pour
-produire la réponse. » Elle n'est ni une alerte ni un consentement à recueillir
+d'entraînement citées ici restent sur les serveurs de Carlys : c'est là que
+le coach produit sa réponse. » (Elle parlait d'un prestataire externe tant
+que le coach tournait chez Mistral ou Anthropic ; ADR 0011.) Elle n'est ni une alerte ni un consentement à recueillir
 — l'usage du coach relève du contrat, et la politique de confidentialité le
 détaille déjà. Elle est là parce qu'un fait pareil doit se lire au moment où
 l'on écrit, pas seulement dans un document que personne n'ouvre. Techniquement
