@@ -42,6 +42,8 @@ AGIR À LA MAIN
                                           (--role support|content-manager,
                                           --reset-password) — mot de passe
                                           saisi sans écho, jamais en argument
+  carlysctl coach-bench <env> [options]   banc de charge du coach (--levels,
+                                          --question, --confirm en production)
   carlysctl catalog-seed <env>            recharge le catalogue d'exercices
                                           SANS redéployer — le déploiement s'en
                                           charge tout seul (étape 5/8).
@@ -375,6 +377,45 @@ cmd_admin_create() {
   hote="app"
   [ "$env_name" = staging ] && hote="app-staging"
   ok "connexion : https://${hote}.$(env_value DOMAIN "$file" '<domaine>')/login"
+}
+
+# `coach-bench <env> [--levels 1,5,10,25,50,100] [--question <texte>] [--confirm]`
+# — le banc de charge du coach (ADR 0013), par la commande embarquée dans
+# l'image API : des demandes RÉELLES, palier par palier, par le chemin du
+# téléphone. Ses comptes de banc sont supprimés à la fin. Il OCCUPE le coach
+# pendant la mesure : sur la production, il exige `--confirm` (heure creuse).
+cmd_coach_bench() {
+  local env_name file
+  env_name="$(environnement_requis "${1-}")"
+  shift || true
+  local -a opts=("$@")
+  if [ "$env_name" = production ]; then
+    case " ${opts[*]-} " in
+      *" --confirm "*) ;;
+      *) die "Le banc occupe le coach de la PRODUCTION pendant toute la mesure." \
+           "Relancer avec --confirm, de préférence à une heure creuse." ;;
+    esac
+  else
+    opts+=(--confirm)
+  fi
+  file="$(env_file "$env_name")"
+  require_commands docker
+  require_compose_file
+  [ -n "$(deployed_current "$env_name")" ] || die "« $env_name » n'a jamais été déployé." \
+    "La commande vit dans l'image API : déployer d'abord (carlysctl deploy $env_name <sha>)."
+  if ! dc "$env_name" "$file" run --rm --no-deps -T --entrypoint test api \
+      -f dist/cli/coach-bench.js >/dev/null 2>&1; then
+    die "L'image API déployée sur « $env_name » ne porte pas encore coach-bench." \
+      "Elle est antérieure à cette commande : déployer une version plus récente, puis relancer."
+  fi
+  step "Banc de charge du coach sur « $env_name »"
+  info "des questions réelles, palier par palier ; comptes de banc supprimés à la fin"
+  # L'API répond sur le réseau compose, sous le nom de son service.
+  # Ctrl-C : node, processus 1 du conteneur, écoute SIGINT et SIGTERM
+  # lui-même, et retire ses comptes de banc avant de sortir.
+  dc "$env_name" "$file" run --rm --no-deps -T api \
+    node dist/cli/coach-bench --url http://api:3000 "${opts[@]}" \
+    || die "Le banc a échoué — le message ci-dessus dit pourquoi."
 }
 
 # Charge (ou met à jour) le catalogue d'exercices — groupes musculaires,
@@ -795,6 +836,7 @@ case "$COMMANDE" in
   env-sync)  cmd_envsync "$@" ;;
   alert-test) cmd_alert_test ;;
   admin-create) cmd_admin_create "$@" ;;
+  coach-bench) cmd_coach_bench "$@" ;;
   catalog-seed) cmd_catalog_seed "$@" ;;
   subscription-catalog) cmd_subscription_catalog "$@" ;;
   meal-photos-sweep) cmd_meal_photos_sweep "$@" ;;

@@ -500,8 +500,43 @@ mobile ─SSE─▶ CoachController ─▶ CoachService (porte, verrou, rejeu)
   compte ici. Les lectures par personne (profil, voix) coûtent quelques
   millisecondes contre des dizaines de secondes de génération : les mettre en
   cache ne se mesurerait pas, et aucune réponse n'est jamais mise en cache.
-- **Capacité** : se mesure, ne s'estime pas — `coach-bench` (voir le guide
-  de mise en route).
+- **Capacité** : se mesure, ne s'estime pas. `carlysctl coach-bench <env>`
+  (`scripts/server/README.md`) envoie des questions réelles, par le chemin du
+  téléphone, palier par palier.
+
+### Première mesure (30 septembre 2026)
+
+Machine de développement, **4 cœurs de processeur, 16 Go, sans carte
+graphique**, Qwen3-4B q4_K_M sous Ollama, `OLLAMA_NUM_PARALLEL=1`, réglages
+par défaut (1 génération à la fois, file de 20, 120 s d'attente au plus).
+Tous les comptes du banc posent la même question avec le même profil : le
+préfixe calculé d'Ollama sert donc d'une personne à l'autre. C'est le
+**meilleur cas** ; de vraies personnes relisent en plus leur bloc personnel.
+
+| Simultanés | Réussies | « Très sollicité » | Erreurs | Réponses/min | 1er mot p50 / p95 | Réponse p50 / p95 |
+| --- | --- | --- | --- | --- | --- | --- |
+| 1 | 1 | 0 | 0 | 0,6 | 84,9 s / 84,9 s | 108,9 s / 108,9 s |
+| 5 | 5 | 0 | 0 | 2,8 | 52,8 s / 82,4 s | 67,8 s / 105,8 s |
+| 10 | 7 | 3 | 0 | 3,1 | 55,9 s / 115,3 s | 75,8 s / 133,5 s |
+| 25 | 6 | 19 | 0 | 2,7 | 40,4 s / 113,7 s | 62,7 s / 131,8 s |
+| 50 | 7 | 43 | 0 | 3,0 | 66,7 s / 118,3 s | 83,4 s / 140,7 s |
+| 100 | 7 | 93 | 0 | 3,2 | 54,6 s / 112,9 s | 74,1 s / 130,4 s |
+
+Ce qu'elle dit :
+
+- **Le goulot est le processeur qui fait tourner le modèle** : Ollama à
+  400 % (4 cœurs sur 4) pendant toute la mesure ; PostgreSQL 10 % au plus,
+  Redis 4 %, l'API 2 % et 220 Mo ; 5,5 Go de mémoire sur 16.
+- **La lecture de la question coûte plus que la réponse** : 2 698 jetons
+  d'entrée (consignes, outils, profil) lus à 32 jetons/s, soit 85 s avant le
+  premier mot quand rien n'est en cache ; ≈ 100 jetons écrits ensuite en
+  ≈ 20 s. Préfixe en cache, un tour dure ≈ 20 s : **≈ 3 réponses par minute,
+  quel que soit le nombre de personnes**.
+- Au-delà de ≈ 7 personnes à la fois, la file tient 120 s puis répond
+  « très sollicité » : aucune erreur, aucune attente sans fin, aucun
+  plantage, jusqu'à 100 simultanées.
+- Un démarrage à froid (modèle pas encore en mémoire) a pris plus de 3 min
+  sur ce disque : le premier tour a dépassé l'échéance de 180 s.
 
 ## Droits, quota, garde-fous
 
