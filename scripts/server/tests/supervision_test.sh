@@ -167,4 +167,17 @@ grep -q -F -- '--profile staging' "$FAUX_JOURNAL" && garde=oui || garde=non
 verifier "… sans perdre le profil de l'environnement" oui "$garde"
 banc_nettoyer
 
+echo
+echo "élagage — chaque passe vide aussi ce que Docker garde sans que personne le lise"
+
+banc_preparer
+appeler prune_si_necessaire "$CARLYS_ROOT/staging/.env" > /dev/null || true
+grep -q -x -F -- 'image prune -f' "$FAUX_JOURNAL" && pendantes=oui || pendantes=non
+verifier "élagage : couches pendantes supprimées" oui "$pendantes"
+grep -q -x -F -- 'builder prune -f --filter until=168h' "$FAUX_JOURNAL" && cache=oui || cache=non
+verifier "élagage : cache de construction de plus d'une semaine supprimé" oui "$cache"
+grep -q -E -- 'prune.*(-a|--all|--volumes)|volume prune' "$FAUX_JOURNAL" && large=oui || large=non
+verifier "élagage : jamais -a, jamais les volumes" non "$large"
+banc_nettoyer
+
 banc_bilan

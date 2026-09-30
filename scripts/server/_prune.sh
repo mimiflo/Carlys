@@ -130,6 +130,11 @@ prune_si_necessaire() {
   # Les couches PENDANTES : détaguées quand un tag mouvant avance, référencées
   # par rien ni personne. `image prune` sans -a ne touche QUE celles-là.
   docker image prune -f > /dev/null 2>&1 || true
+  # Le CACHE DE CONSTRUCTION : le serveur construit MinIO depuis ses sources
+  # (infrastructure/minio), chaîne Go et modules compris, et Docker garde
+  # tout, sans limite. Seul ce qui n'a pas servi depuis une semaine part :
+  # une construction en cours, ou refaite dans la semaine, garde le sien.
+  docker builder prune -f --filter until=168h > /dev/null 2>&1 || true
 
   occupe="$(disque_pourcent)"
   seuil="$(prune_seuil_pourcent "$file")"
