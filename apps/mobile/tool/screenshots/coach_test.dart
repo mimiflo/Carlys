@@ -13,26 +13,37 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'capture_test.dart' show loadRealFonts;
 
+/// Aujourd'hui à 18 h, en heure locale : les séparateurs de jour se lisent
+/// « Hier » et « Aujourd’hui », quel que soit le jour de la capture.
+final DateTime _today = () {
+  final now = DateTime.now();
+  return DateTime(now.year, now.month, now.day, 18);
+}();
+
 /// Conversation d'exemple : la question la plus fréquente qu'un pratiquant se
-/// pose un soir de semaine, et la seule réponse qui l'aide — une séance.
-const List<CoachMessage> _conversation = [
+/// pose un soir de semaine, et la seule réponse qui l'aide — une séance. Elle
+/// commence la veille, pour montrer les séparateurs de jour.
+final List<CoachMessage> _conversation = [
   CoachMessage(
     id: 'm1',
     role: CoachRole.assistant,
     content: 'Bonjour Clarisse ! Comment puis-je t’aider aujourd’hui ?',
+    createdAt: _today.subtract(const Duration(days: 1)),
   ),
   CoachMessage(
     id: 'm2',
     role: CoachRole.user,
     content: 'J’ai peu de temps aujourd’hui, que me conseilles-tu ?',
+    createdAt: _today,
   ),
   CoachMessage(
     id: 'm3',
+    createdAt: _today.add(const Duration(minutes: 1)),
     role: CoachRole.assistant,
     content:
         'Tu as 25 minutes : je garde tes deux mouvements lourds, je retire '
         'les accessoires et je resserre les repos.',
-    proposal: CoachSessionProposal(
+    proposal: const CoachSessionProposal(
       id: 'p1',
       name: 'Haut du corps, format court',
       estimatedMinutes: 25,

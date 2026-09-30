@@ -526,6 +526,13 @@ La liste est **inversée** : la conversation s'ancre en bas, là où l'on écrit
 là où arrive la réponse. Une histoire courte flottant en haut d'un écran vide
 est le défaut le plus visible d'un premier jet de messagerie.
 
+**Les jours sont datés** (30 septembre 2026, à la demande du propriétaire :
+revenir le lendemain et comparer). Un séparateur « Aujourd’hui », « Hier »
+ou « 28/09/2026 » se pose au-dessus du premier message de chaque journée,
+en heure locale, depuis le `createdAt` que l'API rend déjà pour chaque
+message (`widgets/coach_thread_view.dart`). Un message sans date n'invente
+pas de jour.
+
 **Hors ligne — écart assumé.** Le composeur est **désactivé** avec un état
 explicite : une question posée hors ligne recevrait sa réponse des heures plus
 tard, ce qui n'est pas une conversation. C'est le seul écran de l'app qui

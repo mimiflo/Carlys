@@ -92,6 +92,7 @@ CoachMessage coachMessageFromJson(Map<String, dynamic> json) {
     proposal: proposal is Map<String, dynamic>
         ? coachProposalFromJson(proposal)
         : null,
+    createdAt: DateTime.tryParse(json['createdAt'] as String? ?? ''),
   );
 }
 

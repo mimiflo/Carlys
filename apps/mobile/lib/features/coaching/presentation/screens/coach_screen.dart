@@ -5,12 +5,10 @@ import '../../domain/entities/coach.dart';
 import '../../domain/entities/coach_thread_state.dart';
 import '../widgets/coach_composer.dart';
 import '../widgets/coach_header.dart';
-import '../widgets/coach_live_bubble.dart';
-import '../widgets/coach_message_bubble.dart';
 import '../widgets/coach_notices.dart';
-import '../widgets/coach_proposal_card.dart';
 import '../widgets/coach_read_only_panel.dart';
 import '../widgets/coach_suggestions.dart';
+import '../widgets/coach_thread_view.dart';
 
 /// Écran du coach : une conversation qui se termine par une **action**.
 ///
@@ -83,7 +81,7 @@ class CoachScreen extends StatelessWidget {
               child: messages.isEmpty && live == null
                   ? const _CoachIntro()
                   : LayoutBuilder(
-                      builder: (context, constraints) => _Conversation(
+                      builder: (context, constraints) => CoachThreadView(
                         messages: messages,
                         live: live,
                         maxBubbleWidth:
@@ -141,86 +139,6 @@ class CoachScreen extends StatelessWidget {
   }
 }
 
-class _Conversation extends StatelessWidget {
-  const _Conversation({
-    required this.messages,
-    required this.live,
-    required this.maxBubbleWidth,
-    required this.onOpenProposal,
-  });
-
-  final List<CoachMessage> messages;
-  final CoachLiveTurn? live;
-  final double maxBubbleWidth;
-  final ValueChanged<CoachSessionProposal> onOpenProposal;
-
-  @override
-  Widget build(BuildContext context) {
-    // `reverse` ancre la conversation EN BAS : c'est là qu'on lit, c'est là
-    // qu'arrive la réponse, et une histoire courte ne flotte pas en haut d'un
-    // écran vide. Le défilement remonte alors vers le passé, comme partout.
-    // Le tour en cours tient deux rangs : la question, et la réponse qui
-    // s'écrit dessous.
-    final live = this.live;
-    final pending = live == null ? 0 : 2;
-
-    return ListView.separated(
-      reverse: true,
-      padding: const EdgeInsets.symmetric(
-        horizontal: AppSpacing.gutter,
-        vertical: AppSpacing.md,
-      ),
-      // Un rang de plus, en tête du fil — donc en DERNIER dans une liste
-      // inversée : la mention de traitement, posée au-dessus du premier
-      // message. Elle remonte avec l'histoire au lieu de coller à l'écran.
-      itemCount: messages.length + pending + 1,
-      separatorBuilder: (_, __) => const SizedBox(height: AppSpacing.sm),
-      itemBuilder: (context, index) {
-        if (index == messages.length + pending) {
-          return const CoachDataNotice();
-        }
-        if (live != null && index < pending) {
-          return index == 0
-              ? CoachLiveBubble(text: live.text, maxWidth: maxBubbleWidth)
-              : CoachBubble(
-                  isUser: true,
-                  maxWidth: maxBubbleWidth,
-                  child: CoachBubbleText(live.question, isUser: true),
-                );
-        }
-
-        // La liste est inversée : l'index 0 est le bas de l'écran.
-        final message = messages[messages.length - 1 - (index - pending)];
-        final proposal = message.proposal;
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            CoachMessageBubble(message: message, maxWidth: maxBubbleWidth),
-            if (proposal != null) ...[
-              const SizedBox(height: AppSpacing.xs),
-              CoachProposalCard(
-                proposal: proposal,
-                maxWidth: maxBubbleWidth,
-                onOpen: () => onOpenProposal(proposal),
-              ),
-            ],
-          ],
-        );
-      },
-    );
-  }
-}
-
-/// Première ouverture : le coach dit ce qu'il sait faire plutôt que d'ouvrir
-/// un champ vide sur lequel on ne sait pas quoi écrire.
-///
-/// Elle DÉFILE, et c'est ce qui la sauve : c'est le seul bloc de la colonne
-/// sans défilement propre (la conversation, elle, est une liste). Ouvrir le
-/// clavier sur cette invitation, geste exactement attendu d'un nouvel
-/// utilisateur, ne lui laisse qu'une centaine de pixels — et sur un écran
-/// court, ou avec le texte système agrandi, l'invitation était rognée.
-/// Centrée tant qu'il y a la place, elle glisse au lieu d'être coupée.
 class _CoachIntro extends StatelessWidget {
   const _CoachIntro();
 

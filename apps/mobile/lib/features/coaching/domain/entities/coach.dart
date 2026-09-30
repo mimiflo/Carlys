@@ -105,6 +105,7 @@ class CoachMessage {
     required this.role,
     required this.content,
     this.proposal,
+    this.createdAt,
   });
 
   final String id;
@@ -113,6 +114,11 @@ class CoachMessage {
 
   /// Proposition rattachée au message, quand le coach en a formulé une.
   final CoachSessionProposal? proposal;
+
+  /// Instant d'écriture, tel que le serveur l'a daté (UTC). `null` pour un
+  /// message qui n'en porte pas (données de démonstration, anciens tests) :
+  /// on ne lui invente pas de jour.
+  final DateTime? createdAt;
 }
 
 /// Fil de discussion complet.
