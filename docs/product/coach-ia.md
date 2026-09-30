@@ -402,7 +402,14 @@ identifiants de ligne, révisions et champs vides que le modèle ne fait que
 relire : mesuré sur un jeu réaliste, 10 séances passent de ≈ 1 140 à ≈ 470
 jetons, un modèle de 6 exercices × 4 séries de ≈ 1 730 à ≈ 710, 15 records de
 ≈ 1 040 à ≈ 780 (on y garde `exerciseId`, réutilisable dans une
-proposition). Le modèle est aussi PRÉCHARGÉ au démarrage du service `ollama`
+proposition). Chronométré le même jour avec le vrai prompt et les vrais
+outils (Qwen3-4B q4_K_M, Ollama 0.34.4, 4 cœurs sans GPU, deux passes
+identiques) sur un tour qui relit 10 séances, les records et un modèle : la
+lecture passe de 215 à 80 s et le tour de 275 à 148 s ; l'écriture accélère
+aussi (2,3 → 3,2 jetons/s), parce qu'un contexte plus court coûte moins à
+chaque jeton produit. Ces secondes sont celles d'une machine de test : sur
+le serveur, seule la proportion se transpose. Le modèle est aussi PRÉCHARGÉ
+au démarrage du service `ollama`
 (`compose.yml`) : la première question après un redémarrage n'attend plus
 le chargement des 2,5 Go.
 
