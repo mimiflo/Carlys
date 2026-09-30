@@ -1,5 +1,5 @@
 import 'package:carlys_mobile/features/authentication/presentation/controllers/account_bound_cache.dart';
-import 'package:carlys_mobile/features/community/presentation/controllers/community_controllers.dart';
+import 'package:carlys_mobile/features/community/presentation/providers/community_providers.dart';
 import 'package:carlys_mobile/features/community/presentation/widgets/friend_code_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

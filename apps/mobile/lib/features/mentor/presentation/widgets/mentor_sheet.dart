@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../design_system/design_system.dart';
-import '../controllers/mentor_controllers.dart';
+import '../providers/mentor_providers.dart';
 import 'mentor_bandeau.dart';
 import 'mentor_style_sheet.dart';
 import 'mentor_tour_sheet.dart';

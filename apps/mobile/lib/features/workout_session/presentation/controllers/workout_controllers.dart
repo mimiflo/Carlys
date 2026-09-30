@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../progress/presentation/controllers/progress_controllers.dart';
+import '../../../progress/presentation/providers/progress_providers.dart';
 import '../../data/repositories/workout_repository_impl.dart';
 import '../../domain/entities/workout.dart';
 import '../providers/closure_acknowledgment.dart';

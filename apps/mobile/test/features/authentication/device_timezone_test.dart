@@ -7,7 +7,7 @@ import 'package:carlys_mobile/core/errors/app_exception.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
 import 'package:carlys_mobile/features/authentication/domain/entities/auth_user.dart';
 import 'package:carlys_mobile/features/authentication/presentation/controllers/auth_controller.dart';
-import 'package:carlys_mobile/features/authentication/presentation/controllers/device_timezone_controller.dart';
+import 'package:carlys_mobile/features/authentication/presentation/providers/device_timezone_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 

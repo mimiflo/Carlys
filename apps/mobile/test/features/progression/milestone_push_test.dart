@@ -2,7 +2,7 @@ import 'package:carlys_mobile/features/progress/data/repositories/progress_repos
 import 'package:carlys_mobile/features/progression/data/milestone_push.dart';
 import 'package:carlys_mobile/features/progression/domain/progression.dart';
 import 'package:carlys_mobile/features/progression/domain/reward_engine.dart';
-import 'package:carlys_mobile/features/progression/presentation/controllers/reward_controllers.dart';
+import 'package:carlys_mobile/features/progression/presentation/providers/reward_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';

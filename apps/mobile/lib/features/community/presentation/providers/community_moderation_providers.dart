@@ -4,7 +4,7 @@ import '../../data/repositories/community_repository_impl.dart';
 import '../../domain/entities/community.dart';
 import '../../domain/entities/community_moderation.dart';
 import '../../domain/entities/friend_challenge.dart';
-import 'community_controllers.dart';
+import 'community_providers.dart';
 
 /// Personnes que j'ai bloquées. Rafraîchie par invalidation après chaque
 /// blocage ou déblocage, comme les autres lectures de la communauté.

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../../design_system/design_system.dart';
-import '../controllers/today_metrics.dart';
+import '../providers/today_metrics.dart';
 import 'today_gauge.dart';
 
 /// AUJOURD'HUI : quatre mesures dans UNE surface.

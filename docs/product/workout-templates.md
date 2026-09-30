@@ -723,7 +723,7 @@ insère les `LocalSessionPlanItems`, enfile `session.create` — le tout dans un
 transaction SQLite, puis notifie le moteur. Lancer un modèle **fonctionne
 intégralement hors ligne**, y compris au premier lancement.
 
-Providers (`presentation/controllers/workout_template_controllers.dart`) :
+Providers (`presentation/providers/workout_template_providers.dart`) :
 `workoutTemplateRepositoryProvider`, `workoutTemplatesProvider`
 (`StreamProvider`), `workoutTemplateDetailProvider` (`FutureProvider.family`),
 `sessionPlanProvider` (`StreamProvider.family<SessionPlan?, String>`),

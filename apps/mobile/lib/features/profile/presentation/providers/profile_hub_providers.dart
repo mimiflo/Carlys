@@ -3,13 +3,13 @@ import 'dart:math' as math;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/utilities/current_day.dart';
-import '../../../community/presentation/controllers/community_controllers.dart';
-import '../../../progress/presentation/controllers/progress_controllers.dart';
+import '../../../community/presentation/providers/community_providers.dart';
+import '../../../progress/presentation/providers/progress_providers.dart';
 import '../../../progression/domain/reward.dart';
-import '../../../progression/presentation/controllers/reward_controllers.dart';
+import '../../../progression/presentation/providers/reward_providers.dart';
 import '../../../workout_program/domain/entities/program.dart';
 import '../../../workout_program/domain/program_advancement.dart';
-import '../../../workout_program/presentation/controllers/program_controllers.dart';
+import '../../../workout_program/presentation/providers/program_providers.dart';
 
 /// LES CHIFFRES DU PROFIL, chacun lu à sa source.
 ///

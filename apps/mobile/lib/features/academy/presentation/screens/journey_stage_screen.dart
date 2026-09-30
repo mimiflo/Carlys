@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../design_system/design_system.dart';
 import '../../domain/academy_journey.dart';
-import '../controllers/academy_controllers.dart';
+import '../providers/academy_providers.dart';
 import '../widgets/lesson_card.dart';
 
 /// Une étape du Parcours : ses leçons dans l'ordre du manifeste, à lire et

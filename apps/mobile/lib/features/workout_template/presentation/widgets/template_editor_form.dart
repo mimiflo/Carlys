@@ -4,8 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../design_system/design_system.dart';
 import '../../../workout_session/presentation/widgets/exercise_picker_sheet.dart';
 import '../../domain/entities/workout_template.dart';
-import '../controllers/template_draft.dart';
 import '../controllers/template_editor_controller.dart';
+import '../utils/template_draft.dart';
 import 'template_exercise_tile.dart';
 
 /// Formulaire de l'éditeur : identité du modèle puis ses lignes d'exercice,

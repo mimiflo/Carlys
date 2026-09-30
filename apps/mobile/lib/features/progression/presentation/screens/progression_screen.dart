@@ -4,8 +4,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../design_system/design_system.dart';
 import '../../../workout_session/presentation/controllers/workout_controllers.dart';
 import '../../domain/progression.dart';
-import '../controllers/progression_controllers.dart';
-import '../controllers/reward_controllers.dart';
+import '../providers/progression_providers.dart';
+import '../providers/reward_providers.dart';
 import '../widgets/first_steps_body.dart';
 import '../widgets/progression_body.dart';
 

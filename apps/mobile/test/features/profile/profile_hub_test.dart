@@ -11,7 +11,7 @@ import 'package:carlys_mobile/features/profile/presentation/widgets/profile_prog
 import 'package:carlys_mobile/features/workout_program/domain/entities/program.dart';
 import 'package:carlys_mobile/features/workout_program/domain/entities/training_goal.dart';
 import 'package:carlys_mobile/features/workout_program/domain/program_advancement.dart';
-import 'package:carlys_mobile/features/workout_program/presentation/controllers/training_goal_controllers.dart';
+import 'package:carlys_mobile/features/workout_program/presentation/providers/training_goal_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';

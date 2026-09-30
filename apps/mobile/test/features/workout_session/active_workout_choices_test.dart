@@ -1,7 +1,7 @@
 import 'package:carlys_mobile/features/workout_session/domain/entities/workout.dart';
 import 'package:carlys_mobile/features/workout_session/presentation/widgets/active_workout_choices.dart';
 import 'package:carlys_mobile/features/workout_session/presentation/widgets/exercise_picker_sheet.dart';
-import 'package:carlys_mobile/features/workout_template/presentation/controllers/session_guidance.dart';
+import 'package:carlys_mobile/features/workout_template/presentation/providers/session_guidance.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// CE QUE LA SÉANCE ACTIVE DÉDUIT, vérifié sans monter un écran.

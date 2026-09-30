@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/logging/app_logger.dart';
 import '../../../authentication/presentation/controllers/auth_controller.dart';
 import '../../../progression/domain/reward.dart';
-import '../../../progression/presentation/controllers/reward_controllers.dart';
+import '../../../progression/presentation/providers/reward_providers.dart';
 import '../../data/mentor_prefs_store.dart';
 import '../../data/repositories/mentor_repository_impl.dart';
 import '../../domain/entities/mentor_prefs.dart';

@@ -7,7 +7,7 @@ import '../../../../design_system/design_system.dart';
 import '../../../progression/presentation/widgets/progression_entry_card.dart';
 import '../../../progression/presentation/widgets/reward_showcase.dart';
 import '../../domain/entities/progress.dart';
-import '../controllers/progress_controllers.dart';
+import '../providers/progress_providers.dart';
 import '../widgets/body_weight_section.dart';
 import '../widgets/progress_first_steps.dart';
 import '../widgets/progress_header.dart';

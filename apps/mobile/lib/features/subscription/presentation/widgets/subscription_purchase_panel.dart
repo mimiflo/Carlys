@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../design_system/design_system.dart';
 import '../../../../shared/widgets/connection_aware_error.dart';
 import '../../domain/entities/subscription.dart';
-import '../controllers/subscription_controllers.dart';
+import '../providers/subscription_providers.dart';
 import 'subscription_offers.dart';
 
 /// Le bloc d'achat : les offres, puis le bouton qui ouvre le paiement.

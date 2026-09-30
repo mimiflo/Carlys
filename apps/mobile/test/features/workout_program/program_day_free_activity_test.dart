@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/workout_program/presentation/widgets/program_day_sheet.dart';
 import 'package:carlys_mobile/features/workout_template/domain/entities/workout_template.dart';
-import 'package:carlys_mobile/features/workout_template/presentation/controllers/workout_template_controllers.dart';
+import 'package:carlys_mobile/features/workout_template/presentation/providers/workout_template_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';

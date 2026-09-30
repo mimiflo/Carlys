@@ -12,7 +12,7 @@ library;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../progress/domain/entities/progress.dart';
-import '../../../progress/presentation/controllers/progress_controllers.dart';
+import '../../../progress/presentation/providers/progress_providers.dart';
 import '../../data/repositories/exercises_repository_impl.dart';
 import '../../domain/entities/exercise.dart';
 import '../../domain/repositories/exercises_repository.dart';

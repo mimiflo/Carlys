@@ -4,7 +4,7 @@ import 'package:carlys_mobile/core/brand/carlys_manifesto.dart';
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/progression/domain/progression.dart';
 import 'package:carlys_mobile/features/progression/domain/progression_engine.dart';
-import 'package:carlys_mobile/features/progression/presentation/controllers/progression_controllers.dart';
+import 'package:carlys_mobile/features/progression/presentation/providers/progression_providers.dart';
 import 'package:carlys_mobile/features/progression/presentation/screens/manifesto_screen.dart';
 import 'package:carlys_mobile/features/progression/presentation/screens/progression_screen.dart';
 import 'package:carlys_mobile/features/progression/presentation/widgets/axes_card.dart';

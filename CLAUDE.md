@@ -316,7 +316,7 @@ awk 'FNR==1{s=0;d=0} /^  @/{next} !s && /^  [A-Za-z_]/{s=FNR;d=0}
 # Fichiers de `controllers/` qui ne portent pas EXACTEMENT un Notifier :
 # `2` et plus violent « un seul par fichier », `0` désigne un fichier de
 # providers dérivés à ranger dans `presentation/providers/`.
-grep -c 'extends [A-Za-z]*Notifier' \
+grep -cH 'extends [A-Za-z]*Notifier' \
   apps/mobile/lib/features/*/presentation/controllers/*.dart | grep -v ':1$'
 
 # Contrôleurs, par taille : lignes de FICHIER, puis lignes de CODE (hors
@@ -328,16 +328,15 @@ for f in apps/mobile/lib/features/*/presentation/controllers/*.dart; do
 done | sort -rn | head
 ```
 
-Ce qu'elles rendaient le 22 septembre 2026, pour donner l'ordre de grandeur —
+Ce qu'elles rendaient le 30 septembre 2026, pour donner l'ordre de grandeur —
 **relancer plutôt que croire** : AUCUNE méthode de repository au-dessus de 40
-lignes ; **aucun** fichier de `controllers/` portant plusieurs Notifier ; et
-**vingt-quatre** qui n'en portent aucun. Le plus long contrôleur,
-`auth_controller.dart`, fait 249 lignes de fichier pour 139 de code — l'écart
-que le seuil de 250 reconnaît. Ce troisième écart reste entier : les
-vingt-quatre sont des providers dérivés à ranger dans
-`presentation/providers/`, un dossier qui EXISTE désormais — `exercises` et
-`dashboard` y ont rangé les leurs, et `check_mobile_file_sizes.sh` lui
-applique le même seuil qu'à `controllers/`.
+lignes ; et **aucun** fichier de `controllers/` qui ne porte pas exactement un
+Notifier. Les vingt-deux fichiers de providers qui y traînaient ont été rangés
+dans `presentation/providers/` le 30 septembre (et l'état d'écran de
+l'éditeur de modèle, qui n'est pas un provider, dans `utils/`), et
+`check_mobile_file_sizes.sh` refuse désormais tout écart — en local et en CI.
+Le plus long contrôleur, `auth_controller.dart`, fait 249 lignes de fichier
+pour 139 de code — l'écart que le seuil de 250 reconnaît.
 
 ## Qualité exigée par fonctionnalité
 

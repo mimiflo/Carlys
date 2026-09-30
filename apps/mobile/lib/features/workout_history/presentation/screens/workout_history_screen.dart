@@ -6,7 +6,7 @@ import '../../../../app/router/app_routes.dart';
 import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
 import '../../../progress/domain/entities/progress.dart';
-import '../../../progress/presentation/controllers/progress_controllers.dart';
+import '../../../progress/presentation/providers/progress_providers.dart';
 import '../../../workout_session/domain/entities/workout.dart';
 import '../../../workout_session/presentation/controllers/workout_controllers.dart';
 import '../utils/history_stats.dart';

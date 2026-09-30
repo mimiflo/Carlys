@@ -126,6 +126,19 @@ if [ "$violations" -gt 0 ]; then
   exit 1
 fi
 
+# « Un seul Notifier par fichier » (CLAUDE.md) : un fichier de `controllers/`
+# en porte EXACTEMENT un. Zéro, c'est un provider dérivé, à ranger dans
+# `providers/` — les vingt-deux qui traînaient l'ont été le 30/09/2026.
+# `-H` : sans lui, un glob d'un seul fichier rendrait « 1 » sans nom.
+misplaced=$(grep -cH 'extends [A-Za-z]*Notifier' \
+  lib/features/*/presentation/controllers/*.dart | grep -v ':1$' || true)
+if [ -n "$misplaced" ]; then
+  echo "✗ Fichiers de controllers/ sans exactement un Notifier (fichier:nombre) :"
+  echo "$misplaced" | sed 's/^/  apps\/mobile\//'
+  echo "  2 et plus : scinder. 0 : ranger dans presentation/providers/."
+  exit 1
+fi
+
 printf 'Widgets : %d fichiers (max %d/%d) · ' \
   "$widget_count" "$widget_max" "$WIDGET_LIMIT"
 printf 'contrôleurs : %d (max %d/%d) · ' \

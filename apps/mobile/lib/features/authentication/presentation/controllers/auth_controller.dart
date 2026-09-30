@@ -7,13 +7,13 @@ import '../../../../core/database/local_account_entry.dart';
 import '../../../../core/database/local_account_purge.dart';
 import '../../../../core/database/local_account_switch.dart';
 import '../../../../core/logging/app_logger.dart';
-import '../../../notifications/presentation/controllers/push_registration.dart';
+import '../../../notifications/presentation/providers/push_registration.dart';
 import '../../data/repositories/auth_repository_impl.dart';
 import '../../domain/entities/auth_state.dart';
 import '../../domain/entities/auth_user.dart';
 import '../../domain/entities/social_provider.dart';
+import '../providers/device_timezone_providers.dart';
 import 'account_session.dart';
-import 'device_timezone_controller.dart';
 
 // L'état vit dans le domaine ; il se relit par ce fichier, comme avant, pour
 // que les dizaines d'écrans qui l'observent n'aient pas à changer d'import.

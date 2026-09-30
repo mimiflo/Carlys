@@ -8,7 +8,7 @@ import '../../../../design_system/design_system.dart';
 import '../../domain/entities/nutrition.dart';
 import '../../domain/height_cm.dart';
 import '../../domain/nutrition_explanations.dart';
-import '../controllers/nutrition_controllers.dart';
+import '../providers/nutrition_providers.dart';
 import 'explained_field_label.dart';
 
 /// Formulaire du profil métabolique (sexe, naissance, taille, activité, but).

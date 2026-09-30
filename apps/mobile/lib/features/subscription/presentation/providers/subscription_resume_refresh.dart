@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import 'subscription_controllers.dart';
+import 'subscription_providers.dart';
 
 /// Relit l'état d'abonnement au RETOUR dans l'application.
 ///

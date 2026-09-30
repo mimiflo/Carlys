@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/academy/domain/entities/academy.dart';
-import 'package:carlys_mobile/features/academy/presentation/controllers/academy_controllers.dart';
+import 'package:carlys_mobile/features/academy/presentation/providers/academy_providers.dart';
 import 'package:carlys_mobile/features/academy/presentation/screens/journey_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

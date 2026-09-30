@@ -9,7 +9,7 @@ import '../../data/repositories/community_repository_impl.dart';
 import '../../domain/entities/community.dart';
 import '../../domain/entities/friend_challenge.dart';
 import '../../domain/entities/league.dart';
-import '../providers/friend_challenge_detail_providers.dart';
+import 'friend_challenge_detail_providers.dart';
 
 /// Encouragements reçus. Rafraîchis par invalidation après chaque action.
 final encouragementsProvider = FutureProvider.autoDispose<List<Encouragement>>((

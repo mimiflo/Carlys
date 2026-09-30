@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/recipe.dart';
 import '../../domain/recipe_selection.dart';
-import '../controllers/recipes_controllers.dart';
+import '../providers/recipes_providers.dart';
 import '../widgets/recipe_card.dart';
 
 /// Recettes — deux volets : ce qu'on mange le matin ou entre les repas, et

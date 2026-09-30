@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/app_routes.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/mentor_tour.dart';
-import '../controllers/mentor_controllers.dart';
+import '../providers/mentor_providers.dart';
 import 'mentor_tour_chemin.dart';
 
 /// Où chaque étape emmène. La table vit ICI, pas dans le manifeste : le

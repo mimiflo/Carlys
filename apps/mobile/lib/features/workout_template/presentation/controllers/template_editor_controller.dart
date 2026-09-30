@@ -1,8 +1,8 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../workout_session/domain/entities/workout.dart';
-import 'template_draft.dart';
-import 'workout_template_controllers.dart';
+import '../providers/workout_template_providers.dart';
+import '../utils/template_draft.dart';
 
 /// Contrôleur du brouillon d'éditeur, **une instance par modèle édité**.
 ///

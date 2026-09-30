@@ -1,8 +1,8 @@
 import 'package:carlys_mobile/features/mentor/data/mentor_prefs_store.dart';
 import 'package:carlys_mobile/features/mentor/domain/entities/mentor_style.dart';
-import 'package:carlys_mobile/features/mentor/presentation/controllers/mentor_controllers.dart';
+import 'package:carlys_mobile/features/mentor/presentation/providers/mentor_providers.dart';
 import 'package:carlys_mobile/features/progression/domain/reward.dart';
-import 'package:carlys_mobile/features/progression/presentation/controllers/reward_controllers.dart';
+import 'package:carlys_mobile/features/progression/presentation/providers/reward_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';

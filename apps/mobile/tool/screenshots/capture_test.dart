@@ -51,7 +51,7 @@ import 'package:carlys_mobile/features/notifications/domain/services/push_messen
 import 'package:carlys_mobile/features/nutrition/data/repositories/nutrition_repository_impl.dart';
 import 'package:carlys_mobile/features/nutrition/domain/entities/nutrition.dart';
 import 'package:carlys_mobile/features/nutrition/presentation/controllers/meal_editor_controller.dart';
-import 'package:carlys_mobile/features/nutrition/presentation/controllers/water_controllers.dart';
+import 'package:carlys_mobile/features/nutrition/presentation/providers/water_providers.dart';
 import 'package:carlys_mobile/features/nutrition/presentation/screens/meal_editor_screen.dart';
 import 'package:carlys_mobile/features/nutrition/presentation/screens/nutrition_screen.dart';
 import 'package:carlys_mobile/features/onboarding/domain/first_run_step.dart';

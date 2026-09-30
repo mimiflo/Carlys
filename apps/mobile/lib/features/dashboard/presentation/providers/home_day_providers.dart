@@ -14,15 +14,15 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/utilities/current_day.dart';
 import '../../../../core/utilities/formatting.dart';
 import '../../../progress/domain/entities/progress.dart';
-import '../../../progress/presentation/controllers/progress_controllers.dart';
-import '../../../progression/presentation/controllers/progression_controllers.dart';
+import '../../../progress/presentation/providers/progress_providers.dart';
+import '../../../progression/presentation/providers/progression_providers.dart';
 import '../../../workout_session/domain/entities/workout.dart';
 import '../../../workout_session/presentation/controllers/workout_controllers.dart';
 import '../../data/daily_quotes.dart';
 import '../../domain/entities/consistency_week.dart';
 import '../../domain/entities/daily_quote.dart';
 import '../../domain/quote_facts.dart';
-import '../controllers/today_metrics.dart';
+import 'today_metrics.dart';
 
 /// LES FAITS qui décident de la maxime.
 ///

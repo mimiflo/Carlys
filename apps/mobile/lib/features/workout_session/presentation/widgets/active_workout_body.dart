@@ -4,8 +4,8 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_routes.dart';
 import '../../../../design_system/design_system.dart';
-import '../../../workout_template/presentation/controllers/session_guidance.dart';
-import '../../../workout_template/presentation/controllers/workout_template_controllers.dart';
+import '../../../workout_template/presentation/providers/session_guidance.dart';
+import '../../../workout_template/presentation/providers/workout_template_providers.dart';
 import '../../domain/entities/workout.dart';
 import '../controllers/workout_controllers.dart';
 import 'active_workout_bottom_bar.dart';

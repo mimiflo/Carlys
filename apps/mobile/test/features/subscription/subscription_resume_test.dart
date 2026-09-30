@@ -1,6 +1,6 @@
 import 'package:carlys_mobile/features/subscription/data/repositories/subscription_repository_impl.dart';
-import 'package:carlys_mobile/features/subscription/presentation/controllers/subscription_controllers.dart';
-import 'package:carlys_mobile/features/subscription/presentation/controllers/subscription_resume_refresh.dart';
+import 'package:carlys_mobile/features/subscription/presentation/providers/subscription_providers.dart';
+import 'package:carlys_mobile/features/subscription/presentation/providers/subscription_resume_refresh.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 

@@ -1,7 +1,7 @@
 import 'package:carlys_mobile/core/errors/app_exception.dart';
 import 'package:carlys_mobile/features/workout_program/data/repositories/program_repository_impl.dart';
 import 'package:carlys_mobile/features/workout_program/domain/program_day_move.dart';
-import 'package:carlys_mobile/features/workout_program/presentation/controllers/program_controllers.dart';
+import 'package:carlys_mobile/features/workout_program/presentation/providers/program_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 

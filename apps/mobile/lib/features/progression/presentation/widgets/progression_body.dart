@@ -5,7 +5,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/app_routes.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/progression.dart';
-import '../controllers/reward_controllers.dart';
+import '../providers/reward_providers.dart';
 import 'axes_card.dart';
 import 'manifesto_tile.dart';
 import 'progression_header.dart';

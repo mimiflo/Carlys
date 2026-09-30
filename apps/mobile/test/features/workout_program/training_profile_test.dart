@@ -1,7 +1,7 @@
 import 'package:carlys_mobile/features/workout_program/data/repositories/training_profile_repository_impl.dart';
 import 'package:carlys_mobile/features/workout_program/domain/entities/training_goal.dart';
 import 'package:carlys_mobile/features/workout_program/domain/entities/training_profile.dart';
-import 'package:carlys_mobile/features/workout_program/presentation/controllers/training_profile_controllers.dart';
+import 'package:carlys_mobile/features/workout_program/presentation/providers/training_profile_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 

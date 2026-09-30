@@ -6,9 +6,9 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/workout_template.dart';
-import '../controllers/template_draft.dart';
 import '../controllers/template_editor_controller.dart';
-import '../controllers/workout_template_controllers.dart';
+import '../providers/workout_template_providers.dart';
+import '../utils/template_draft.dart';
 import '../widgets/template_editor_bottom_bar.dart';
 import '../widgets/template_editor_form.dart';
 

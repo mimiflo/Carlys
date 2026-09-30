@@ -27,7 +27,7 @@
 ///    ailleurs ; l'assertion viendra après, sur une base honnête.
 ///
 /// 2. `presentation` → `data`. Il en existe une trentaine, presque toutes
-///    dans `presentation/controllers/` : c'est le câblage Riverpod, un
+///    dans `presentation/providers/` et `controllers/` : c'est le câblage Riverpod, un
 ///    contrôleur doit bien nommer l'implémentation qu'il fournit au
 ///    provider. Celles qui restent dans `widgets/` vont chercher un
 ///    provider, pas un client HTTP. Interdire l'arête entière punirait le
@@ -273,7 +273,7 @@ void main() {
         'de câblage écrite dans la couche de dessin : l’appel qu’il porte '
         'échappe au contrôleur, donc à l’anti-rebond, à la pagination et à '
         'la reprise d’erreur que le contrôleur de la fonctionnalité tient '
-        'déjà. Déplacer le provider dans `presentation/controllers/` de la '
+        'déjà. Déplacer le provider dans `presentation/providers/` de la '
         'fonctionnalité qui possède la donnée, et n’en garder ici que le '
         '`ref.watch`.',
         offenders,

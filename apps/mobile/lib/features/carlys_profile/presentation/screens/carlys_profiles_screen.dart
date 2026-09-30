@@ -5,7 +5,7 @@ import '../../../../core/errors/app_exception.dart';
 import '../../../../design_system/design_system.dart';
 import '../../../authentication/presentation/controllers/auth_controller.dart';
 import '../../domain/entities/carlys_profile.dart';
-import '../controllers/carlys_profile_controllers.dart';
+import '../providers/carlys_profile_providers.dart';
 import '../widgets/carlys_profile_card.dart';
 import '../widgets/carlys_profile_sheet.dart';
 

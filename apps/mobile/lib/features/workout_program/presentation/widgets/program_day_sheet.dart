@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../design_system/design_system.dart';
-import '../../../workout_template/presentation/controllers/workout_template_controllers.dart';
+import '../../../workout_template/presentation/providers/workout_template_providers.dart';
 
 /// Ce qu'on peut poser sur une case du calendrier.
 sealed class ProgramDayChoice {

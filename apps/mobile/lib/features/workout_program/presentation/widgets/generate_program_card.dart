@@ -5,7 +5,7 @@ import '../../../../core/errors/app_exception.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/generation_report.dart';
 import '../../domain/entities/training_profile.dart';
-import '../controllers/program_controllers.dart';
+import '../providers/program_providers.dart';
 import 'generation_report_sheet.dart';
 
 /// Le bouton « Générer », et ce qu'il faut savoir avant de l'appuyer.

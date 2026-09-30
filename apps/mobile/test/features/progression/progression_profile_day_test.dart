@@ -1,6 +1,6 @@
 import 'package:carlys_mobile/core/utilities/current_day.dart';
 import 'package:carlys_mobile/features/academy/presentation/providers/academy_progress_providers.dart';
-import 'package:carlys_mobile/features/progression/presentation/controllers/progression_controllers.dart';
+import 'package:carlys_mobile/features/progression/presentation/providers/progression_providers.dart';
 import 'package:carlys_mobile/features/workout_session/domain/entities/workout.dart';
 import 'package:carlys_mobile/features/workout_session/presentation/controllers/workout_controllers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/feedback/server_gesture.dart';
 import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
-import '../controllers/water_controllers.dart';
+import '../providers/water_providers.dart';
 
 /// Feuille « Hydratation » : le total du jour, deux gestes pour l'augmenter,
 /// un pour revenir en arrière.

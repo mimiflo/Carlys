@@ -2,8 +2,8 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/utilities/current_day.dart';
 import '../../../../core/utilities/formatting.dart';
-import '../../../nutrition/presentation/controllers/nutrition_controllers.dart';
-import '../../../nutrition/presentation/controllers/water_controllers.dart';
+import '../../../nutrition/presentation/providers/nutrition_providers.dart';
+import '../../../nutrition/presentation/providers/water_providers.dart';
 import '../../../workout_session/domain/entities/workout.dart';
 import '../../../workout_session/presentation/controllers/workout_controllers.dart';
 

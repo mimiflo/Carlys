@@ -1,6 +1,6 @@
 import 'package:carlys_mobile/features/workout_session/domain/entities/workout.dart';
 import 'package:carlys_mobile/features/workout_template/domain/entities/session_plan.dart';
-import 'package:carlys_mobile/features/workout_template/presentation/controllers/session_guidance.dart';
+import 'package:carlys_mobile/features/workout_template/presentation/providers/session_guidance.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 /// Traduction du plan en consigne d'écran — logique pure, testée sans widget.

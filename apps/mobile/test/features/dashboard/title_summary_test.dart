@@ -1,7 +1,7 @@
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/dashboard/presentation/widgets/title_summary.dart';
 import 'package:carlys_mobile/features/progression/domain/progression.dart';
-import 'package:carlys_mobile/features/progression/presentation/controllers/progression_controllers.dart';
+import 'package:carlys_mobile/features/progression/presentation/providers/progression_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';

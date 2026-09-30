@@ -8,7 +8,7 @@ import '../../../../core/feedback/server_gesture.dart';
 import '../../../../design_system/design_system.dart';
 import '../../../../shared/widgets/connection_aware_error.dart';
 import '../../domain/entities/program.dart';
-import '../controllers/program_controllers.dart';
+import '../providers/program_providers.dart';
 import '../widgets/program_day_sheet.dart';
 import '../widgets/program_settings_card.dart';
 import '../widgets/program_week_view.dart';

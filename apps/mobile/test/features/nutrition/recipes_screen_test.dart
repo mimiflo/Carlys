@@ -1,6 +1,6 @@
 import 'package:carlys_mobile/features/nutrition/domain/entities/nutrition.dart';
 import 'package:carlys_mobile/features/nutrition/domain/entities/recipe.dart';
-import 'package:carlys_mobile/features/nutrition/presentation/controllers/recipes_controllers.dart';
+import 'package:carlys_mobile/features/nutrition/presentation/providers/recipes_providers.dart';
 import 'package:carlys_mobile/features/nutrition/presentation/screens/recipes_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

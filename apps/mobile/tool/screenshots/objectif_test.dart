@@ -21,7 +21,7 @@ import 'package:carlys_mobile/features/workout_program/data/repositories/program
 import 'package:carlys_mobile/features/workout_program/data/repositories/training_profile_repository_impl.dart';
 import 'package:carlys_mobile/features/workout_program/domain/entities/training_goal.dart';
 import 'package:carlys_mobile/features/workout_program/domain/entities/training_profile.dart';
-import 'package:carlys_mobile/features/workout_program/presentation/controllers/training_goal_controllers.dart';
+import 'package:carlys_mobile/features/workout_program/presentation/providers/training_goal_providers.dart';
 import 'package:carlys_mobile/features/workout_program/presentation/screens/training_setup_screen.dart';
 import 'package:carlys_mobile/features/workout_program/presentation/widgets/training_goal_sheet.dart';
 import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';

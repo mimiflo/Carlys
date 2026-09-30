@@ -9,7 +9,7 @@ import 'package:carlys_mobile/features/carlys_profile/domain/entities/carlys_pro
 import 'package:carlys_mobile/features/dashboard/presentation/screens/home_screen.dart';
 import 'package:carlys_mobile/features/nutrition/data/repositories/nutrition_repository_impl.dart';
 import 'package:carlys_mobile/features/nutrition/domain/entities/nutrition.dart';
-import 'package:carlys_mobile/features/nutrition/presentation/controllers/water_controllers.dart';
+import 'package:carlys_mobile/features/nutrition/presentation/providers/water_providers.dart';
 import 'package:carlys_mobile/features/onboarding/data/first_run_store.dart';
 import 'package:carlys_mobile/features/onboarding/domain/first_run_step.dart';
 import 'package:carlys_mobile/features/onboarding/presentation/widgets/brand_pillars.dart';
@@ -17,7 +17,7 @@ import 'package:carlys_mobile/features/onboarding/presentation/widgets/brand_sig
 import 'package:carlys_mobile/features/onboarding/presentation/widgets/onboarding_height_card.dart';
 import 'package:carlys_mobile/features/progress/data/repositories/progress_repository_impl.dart';
 import 'package:carlys_mobile/features/subscription/data/repositories/subscription_repository_impl.dart';
-import 'package:carlys_mobile/features/subscription/presentation/controllers/subscription_controllers.dart';
+import 'package:carlys_mobile/features/subscription/presentation/providers/subscription_providers.dart';
 import 'package:carlys_mobile/features/workout_program/data/repositories/training_goal_repository_impl.dart';
 import 'package:carlys_mobile/features/workout_program/domain/entities/training_goal.dart';
 import 'package:flutter/material.dart';

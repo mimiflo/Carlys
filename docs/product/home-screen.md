@@ -195,7 +195,7 @@ eux ont dû l'apprendre d'un coup.
 | `presentation/widgets/section_title_bar.dart` | La barre de titre mesurée |
 | `presentation/providers/home_day_providers.dart` | Constance de la semaine, sous-titre, citation du jour, séance du jour, repos depuis la dernière séance |
 | `presentation/providers/form_reading_providers.dart` | Lecture de forme (bilan de la semaine, indice de forme) |
-| `presentation/controllers/today_metrics.dart` | Les quatre mesures, prêtes à afficher |
+| `presentation/providers/today_metrics.dart` | Les quatre mesures, prêtes à afficher |
 | `presentation/widgets/today_grid.dart` | La grille 2×2 et ses cellules |
 | `presentation/widgets/today_gauge.dart` | La jauge d'une cellule (pleine, ou en tirets) |
 | `presentation/widgets/today_primer.dart` | L'amorçage, tant qu'aucune cible n'existe |

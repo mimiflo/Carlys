@@ -16,7 +16,7 @@ import 'package:carlys_mobile/features/community/data/repositories/community_rep
 import 'package:carlys_mobile/features/community/presentation/screens/community_screen.dart';
 import 'package:carlys_mobile/features/notifications/data/services/firebase_push_messenger.dart';
 import 'package:carlys_mobile/features/notifications/domain/services/push_messenger.dart';
-import 'package:carlys_mobile/features/nutrition/presentation/controllers/water_controllers.dart';
+import 'package:carlys_mobile/features/nutrition/presentation/providers/water_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';

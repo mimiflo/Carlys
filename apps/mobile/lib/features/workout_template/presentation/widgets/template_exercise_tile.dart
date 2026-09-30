@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../../../../core/utilities/formatting.dart';
 import '../../../../design_system/design_system.dart';
-import '../controllers/template_draft.dart';
+import '../utils/template_draft.dart';
 import 'planned_set_row.dart';
 
 /// Une **ligne d'exercice** de l'éditeur : repliée elle résume le programme

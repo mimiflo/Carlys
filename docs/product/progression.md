@@ -300,7 +300,7 @@ les essais n'entrent dans le calcul : se tromper fait apprendre, et compter les
 | `domain/progression.dart` | Les types : axes, titres, profil |
 | `domain/progression_engine.dart` | Le barème, fonction PURE (le jour entre par paramètre) |
 | `domain/progression_facts_builder.dart` | Historique local vers faits, fonction pure |
-| `presentation/controllers/` | Le seul endroit qui lit l'horloge et les providers |
+| `presentation/providers/` | Le seul endroit qui lit l'horloge et les providers |
 | `presentation/widgets/majesty.dart` | Les cinq crans de fabrication, sans leur contenu |
 | `presentation/widgets/majesty_plate.dart` | La plaque : surface, filet, grain, équerres |
 | `presentation/widgets/award_seal.dart` | Le sceau posé dans la page, à deux tailles |

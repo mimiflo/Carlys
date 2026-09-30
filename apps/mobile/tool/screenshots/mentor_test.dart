@@ -19,13 +19,13 @@ import 'package:carlys_mobile/features/mentor/domain/entities/mentor_prefs.dart'
 import 'package:carlys_mobile/features/mentor/domain/entities/mentor_style.dart';
 import 'package:carlys_mobile/features/mentor/domain/mentor_tour.dart';
 import 'package:carlys_mobile/features/mentor/domain/mentor_word.dart';
-import 'package:carlys_mobile/features/mentor/presentation/controllers/mentor_controllers.dart';
+import 'package:carlys_mobile/features/mentor/presentation/providers/mentor_providers.dart';
 import 'package:carlys_mobile/features/mentor/presentation/widgets/mentor_settings_section.dart';
 import 'package:carlys_mobile/features/mentor/presentation/widgets/mentor_sheet.dart';
 import 'package:carlys_mobile/features/mentor/presentation/widgets/mentor_style_sheet.dart';
 import 'package:carlys_mobile/features/mentor/presentation/widgets/mentor_tour_sheet.dart';
 import 'package:carlys_mobile/features/progression/domain/reward.dart';
-import 'package:carlys_mobile/features/progression/presentation/controllers/reward_controllers.dart';
+import 'package:carlys_mobile/features/progression/presentation/providers/reward_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';

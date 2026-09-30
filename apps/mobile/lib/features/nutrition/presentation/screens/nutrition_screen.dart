@@ -6,7 +6,7 @@ import '../../../../design_system/design_system.dart';
 import '../../../../design_system/scenes/scene_scroll_activity.dart';
 import '../../../../shared/widgets/connection_aware_error.dart';
 import '../../domain/entities/nutrition.dart';
-import '../controllers/nutrition_controllers.dart';
+import '../providers/nutrition_providers.dart';
 import '../widgets/meal_journal_section.dart';
 import '../widgets/metabolic_profile_form.dart';
 import '../widgets/metabolism_hero.dart';

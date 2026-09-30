@@ -6,7 +6,7 @@ import '../../../../app/router/app_routes.dart';
 import '../../../../design_system/design_system.dart';
 import '../../../workout_session/presentation/controllers/workout_controllers.dart';
 import '../../../workout_session/presentation/widgets/resume_workout_confirm.dart';
-import '../controllers/workout_template_controllers.dart';
+import '../providers/workout_template_providers.dart';
 import '../widgets/template_card.dart';
 import '../widgets/templates_header.dart';
 

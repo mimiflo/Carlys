@@ -6,7 +6,7 @@ import '../../../../app/router/app_routes.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/progression.dart';
 import '../../domain/reward.dart';
-import '../controllers/reward_controllers.dart';
+import '../providers/reward_providers.dart';
 import 'axes_card.dart';
 import 'first_award_card.dart';
 import 'progression_header.dart';

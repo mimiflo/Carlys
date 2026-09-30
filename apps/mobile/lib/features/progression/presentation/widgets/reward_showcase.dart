@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../design_system/design_system.dart';
 import '../../domain/reward.dart';
-import '../controllers/reward_controllers.dart';
+import '../providers/reward_providers.dart';
 import 'award_cards.dart';
 import 'upcoming_award_row.dart';
 

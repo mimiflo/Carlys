@@ -2,7 +2,7 @@ import 'package:carlys_mobile/core/errors/app_exception.dart';
 import 'package:carlys_mobile/core/utilities/external_links.dart';
 import 'package:carlys_mobile/features/subscription/data/repositories/subscription_repository_impl.dart';
 import 'package:carlys_mobile/features/subscription/domain/entities/subscription.dart';
-import 'package:carlys_mobile/features/subscription/presentation/controllers/subscription_controllers.dart';
+import 'package:carlys_mobile/features/subscription/presentation/providers/subscription_providers.dart';
 import 'package:carlys_mobile/features/subscription/presentation/widgets/subscription_offers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';

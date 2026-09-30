@@ -9,7 +9,7 @@ import '../../../../design_system/scenes/heart_scene.dart';
 import '../../../../design_system/scenes/scene_scroll_activity.dart';
 import '../../../onboarding/domain/first_run_step.dart';
 import '../../../onboarding/presentation/controllers/first_run_controller.dart';
-import '../controllers/subscription_controllers.dart';
+import '../providers/subscription_providers.dart';
 import '../widgets/first_run_premium_footer.dart';
 import '../widgets/subscription_benefits.dart';
 import '../widgets/subscription_hero.dart';

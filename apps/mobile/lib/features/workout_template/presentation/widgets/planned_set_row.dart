@@ -5,7 +5,7 @@ import '../../../../design_system/design_system.dart';
 import '../../../workout_session/domain/entities/workout.dart';
 import '../../../workout_session/presentation/widgets/set_stepper_field.dart';
 import '../../domain/entities/workout_template.dart';
-import '../controllers/template_draft.dart';
+import '../utils/template_draft.dart';
 import 'planned_rest_field.dart';
 
 /// Une **série prévue** dans l'éditeur : nature de la série, charge et

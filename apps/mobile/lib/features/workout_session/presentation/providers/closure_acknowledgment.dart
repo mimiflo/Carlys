@@ -1,6 +1,6 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../progress/presentation/controllers/progress_controllers.dart';
+import '../../../progress/presentation/providers/progress_providers.dart';
 import '../../domain/entities/workout.dart';
 
 /// Relit ce que le serveur compte quand il ACQUITTE une clôture.

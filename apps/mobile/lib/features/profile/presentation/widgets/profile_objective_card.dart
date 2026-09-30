@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../design_system/design_system.dart';
 import '../../../workout_program/domain/program_advancement.dart';
-import '../../../workout_program/presentation/controllers/training_goal_controllers.dart';
+import '../../../workout_program/presentation/providers/training_goal_providers.dart';
 import '../providers/profile_hub_providers.dart';
 import 'profile_hub_tile.dart';
 import 'profile_hub_wording.dart';

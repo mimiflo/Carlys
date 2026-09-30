@@ -7,7 +7,7 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/app_routes.dart';
 import '../../../../design_system/design_system.dart';
 import '../../../onboarding/presentation/controllers/first_run_controller.dart';
-import '../controllers/subscription_controllers.dart';
+import '../providers/subscription_providers.dart';
 import 'subscription_purchase_note.dart';
 import 'subscription_purchase_panel.dart';
 

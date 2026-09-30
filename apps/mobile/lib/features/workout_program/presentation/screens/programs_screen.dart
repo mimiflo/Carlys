@@ -6,7 +6,7 @@ import '../../../../app/router/app_routes.dart';
 import '../../../../core/errors/app_exception.dart';
 import '../../../../design_system/design_system.dart';
 import '../../../../shared/widgets/connection_aware_error.dart';
-import '../controllers/program_controllers.dart';
+import '../providers/program_providers.dart';
 import '../widgets/create_program_sheet.dart';
 import '../widgets/program_card.dart';
 

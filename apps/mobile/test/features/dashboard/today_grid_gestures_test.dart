@@ -1,5 +1,5 @@
 import 'package:carlys_mobile/design_system/design_system.dart';
-import 'package:carlys_mobile/features/dashboard/presentation/controllers/today_metrics.dart';
+import 'package:carlys_mobile/features/dashboard/presentation/providers/today_metrics.dart';
 import 'package:carlys_mobile/features/dashboard/presentation/widgets/today_grid.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';

@@ -5,7 +5,7 @@ import '../../../../core/errors/app_exception.dart';
 import '../../../../design_system/design_system.dart';
 import '../../../onboarding/presentation/widgets/onboarding_choices.dart';
 import '../../domain/entities/training_goal.dart';
-import '../controllers/training_goal_controllers.dart';
+import '../providers/training_goal_providers.dart';
 
 /// Feuille « Ton objectif d'entraînement » : huit objectifs, un choix,
 /// modifiable à tout moment. La sélection affichée vient de

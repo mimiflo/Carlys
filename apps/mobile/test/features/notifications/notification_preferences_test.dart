@@ -4,7 +4,7 @@ import 'package:carlys_mobile/features/notifications/data/repositories/device_to
 import 'package:carlys_mobile/features/notifications/data/services/firebase_push_messenger.dart';
 import 'package:carlys_mobile/features/notifications/domain/repositories/device_token_repository.dart';
 import 'package:carlys_mobile/features/notifications/domain/services/push_messenger.dart';
-import 'package:carlys_mobile/features/notifications/presentation/controllers/notification_preferences.dart';
+import 'package:carlys_mobile/features/notifications/presentation/providers/notification_preferences.dart';
 import 'package:carlys_mobile/features/notifications/presentation/widgets/push_foreground_host.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

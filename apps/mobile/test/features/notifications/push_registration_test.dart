@@ -3,7 +3,7 @@ import 'dart:async';
 import 'package:carlys_mobile/app/environment/app_environment.dart';
 import 'package:carlys_mobile/core/errors/app_exception.dart';
 import 'package:carlys_mobile/features/notifications/domain/repositories/device_token_repository.dart';
-import 'package:carlys_mobile/features/notifications/presentation/controllers/push_registration.dart';
+import 'package:carlys_mobile/features/notifications/presentation/providers/push_registration.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import '../../support/fake_push_messenger.dart';

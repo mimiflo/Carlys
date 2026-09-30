@@ -3,9 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../design_system/design_system.dart';
 import '../../../../shared/widgets/connection_aware_error.dart';
-import '../../../nutrition/presentation/controllers/nutrition_controllers.dart';
-import '../../../nutrition/presentation/controllers/water_controllers.dart';
-import '../controllers/today_metrics.dart';
+import '../../../nutrition/presentation/providers/nutrition_providers.dart';
+import '../../../nutrition/presentation/providers/water_providers.dart';
+import '../providers/today_metrics.dart';
 import 'section_title_bar.dart';
 import 'today_grid.dart';
 import 'today_primer.dart';

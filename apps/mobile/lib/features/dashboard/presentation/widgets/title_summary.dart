@@ -5,8 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/app_routes.dart';
 import '../../../../design_system/design_system.dart';
 import '../../../progression/domain/progression.dart';
-import '../../../progression/presentation/controllers/progression_controllers.dart';
-import '../../../progression/presentation/controllers/reward_controllers.dart';
+import '../../../progression/presentation/providers/progression_providers.dart';
+import '../../../progression/presentation/providers/reward_providers.dart';
 import 'section_title_bar.dart';
 
 /// TON TITRE, vu de l'accueil : trois lignes, aucune surface.

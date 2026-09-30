@@ -2,7 +2,7 @@ import 'package:flutter/widgets.dart';
 
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/community.dart';
-import '../controllers/community_controllers.dart';
+import '../providers/community_providers.dart';
 import 'add_friend_sheet.dart';
 import 'community_feedback.dart';
 import 'new_friend_challenge_sheet.dart';

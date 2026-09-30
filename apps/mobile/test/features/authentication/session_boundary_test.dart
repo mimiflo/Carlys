@@ -10,7 +10,7 @@ import 'package:carlys_mobile/features/authentication/domain/entities/auth_user.
 import 'package:carlys_mobile/features/authentication/presentation/controllers/auth_controller.dart';
 import 'package:carlys_mobile/features/notifications/data/repositories/device_token_repository_impl.dart';
 import 'package:carlys_mobile/features/notifications/data/services/firebase_push_messenger.dart';
-import 'package:carlys_mobile/features/notifications/presentation/controllers/push_registration.dart';
+import 'package:carlys_mobile/features/notifications/presentation/providers/push_registration.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 

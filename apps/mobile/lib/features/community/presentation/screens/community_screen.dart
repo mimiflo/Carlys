@@ -4,7 +4,7 @@ import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_routes.dart';
 import '../../../../design_system/design_system.dart';
-import '../controllers/community_controllers.dart';
+import '../providers/community_providers.dart';
 import '../providers/community_screen_state.dart';
 import '../providers/community_tab_state.dart';
 import '../widgets/community_challenges_tab.dart';

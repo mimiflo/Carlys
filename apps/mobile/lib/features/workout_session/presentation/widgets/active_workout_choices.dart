@@ -1,4 +1,4 @@
-import '../../../workout_template/presentation/controllers/session_guidance.dart';
+import '../../../workout_template/presentation/providers/session_guidance.dart';
 import '../../domain/entities/workout.dart';
 import 'exercise_picker_sheet.dart';
 

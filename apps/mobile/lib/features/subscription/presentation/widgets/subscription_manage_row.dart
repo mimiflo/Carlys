@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../design_system/design_system.dart';
-import '../controllers/subscription_controllers.dart';
+import '../providers/subscription_providers.dart';
 
 /// « Gérer mon abonnement » : la ligne qui ouvre le portail de facturation
 /// du prestataire, une fois Premium.

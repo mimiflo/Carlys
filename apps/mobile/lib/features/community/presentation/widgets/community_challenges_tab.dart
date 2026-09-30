@@ -3,13 +3,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 
 import '../../../../app/router/app_routes.dart';
-
 import '../../../../core/utilities/text_search.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/community.dart';
 import '../../domain/entities/friend_challenge.dart';
-import '../controllers/community_controllers.dart';
-import '../controllers/community_moderation_controllers.dart';
+import '../providers/community_moderation_providers.dart';
+import '../providers/community_providers.dart';
 import '../providers/community_tab_state.dart';
 import 'challenge_card.dart';
 import 'community_flows.dart';

@@ -4,7 +4,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/feedback/server_gesture.dart';
 import '../../../../design_system/design_system.dart';
 import '../../../notifications/domain/repositories/device_token_repository.dart';
-import '../../../notifications/presentation/controllers/notification_preferences.dart';
+import '../../../notifications/presentation/providers/notification_preferences.dart';
 import '../../../settings/presentation/controllers/theme_setting_controller.dart';
 import 'profile_hub_wording.dart';
 

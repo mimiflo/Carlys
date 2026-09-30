@@ -4,10 +4,10 @@ import 'package:carlys_mobile/features/authentication/presentation/controllers/a
 import 'package:carlys_mobile/features/profile/presentation/providers/profile_hub_providers.dart';
 import 'package:carlys_mobile/features/progress/data/repositories/progress_repository_impl.dart';
 import 'package:carlys_mobile/features/progress/domain/entities/progress.dart';
-import 'package:carlys_mobile/features/progress/presentation/controllers/progress_controllers.dart';
+import 'package:carlys_mobile/features/progress/presentation/providers/progress_providers.dart';
 import 'package:carlys_mobile/features/progression/domain/progression.dart';
 import 'package:carlys_mobile/features/progression/domain/reward_engine.dart';
-import 'package:carlys_mobile/features/progression/presentation/controllers/reward_controllers.dart';
+import 'package:carlys_mobile/features/progression/presentation/providers/reward_providers.dart';
 import 'package:carlys_mobile/features/workout_session/data/repositories/workout_repository_impl.dart';
 import 'package:carlys_mobile/features/workout_session/domain/entities/workout.dart';
 import 'package:carlys_mobile/features/workout_session/presentation/controllers/workout_controllers.dart';

@@ -4,7 +4,7 @@ import '../../../../core/database/app_database.dart';
 import '../../data/datasources/water_local_data_source.dart';
 import '../../data/repositories/local_water_store.dart';
 import '../../domain/repositories/water_store.dart';
-import 'nutrition_controllers.dart';
+import 'nutrition_providers.dart';
 
 /// Quantités proposées au pouce. Un verre, une grande bouteille.
 const int waterGlassMl = 250;

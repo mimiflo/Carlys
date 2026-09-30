@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/mentor_prefs.dart';
-import '../controllers/mentor_controllers.dart';
+import '../providers/mentor_providers.dart';
 import 'mentor_style_sheet.dart';
 import 'mentor_tour_sheet.dart';
 

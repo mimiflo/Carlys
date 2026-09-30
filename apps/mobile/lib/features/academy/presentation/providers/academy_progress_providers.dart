@@ -2,12 +2,12 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../domain/academy_journey.dart';
 import '../../domain/academy_progress.dart';
-import '../controllers/academy_controllers.dart';
+import 'academy_providers.dart';
 
 /// L'avancement dans le pack, croisé depuis les deux sources existantes.
 ///
 /// Dérivé et sans état propre, donc `providers/` et non `controllers/` —
-/// c'est la règle du dépôt, et `academy_controllers.dart` ne porte déjà
+/// c'est la règle du dépôt, et `academy_providers.dart` ne porte déjà
 /// aucun Notifier.
 ///
 /// Rend `null` tant que le pack n'est pas lu : un avancement de « 0 sur 0 »

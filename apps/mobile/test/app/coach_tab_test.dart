@@ -12,7 +12,7 @@ import 'package:carlys_mobile/features/coaching/presentation/controllers/coach_c
 import 'package:carlys_mobile/features/coaching/presentation/screens/coach_page.dart';
 import 'package:carlys_mobile/features/coaching/presentation/widgets/coach_composer.dart';
 import 'package:carlys_mobile/features/nutrition/data/repositories/nutrition_repository_impl.dart';
-import 'package:carlys_mobile/features/nutrition/presentation/controllers/water_controllers.dart';
+import 'package:carlys_mobile/features/nutrition/presentation/providers/water_providers.dart';
 import 'package:carlys_mobile/features/nutrition/presentation/screens/nutrition_screen.dart';
 import 'package:carlys_mobile/features/profile/presentation/screens/profile_screen.dart';
 import 'package:carlys_mobile/features/progress/data/repositories/progress_repository_impl.dart';

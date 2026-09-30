@@ -5,11 +5,11 @@ import '../../../../core/logging/app_logger.dart';
 import '../../data/repositories/nutrition_repository_impl.dart';
 import '../../data/services/image_picker_meal_photo_picker.dart';
 import '../../domain/entities/nutrition.dart';
+import '../providers/nutrition_providers.dart';
 import '../utils/meal_editor_lines.dart';
 import '../utils/meal_editor_outcome.dart';
 import '../utils/meal_editor_state.dart';
 import '../utils/meal_editor_validation.dart';
-import 'nutrition_controllers.dart';
 
 export '../utils/meal_editor_outcome.dart';
 

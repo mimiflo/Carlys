@@ -1,13 +1,13 @@
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/carlys_profile/domain/entities/carlys_profile.dart';
 import 'package:carlys_mobile/features/carlys_profile/presentation/widgets/carlys_profile_card.dart';
-import 'package:carlys_mobile/features/dashboard/presentation/controllers/today_metrics.dart';
+import 'package:carlys_mobile/features/dashboard/presentation/providers/today_metrics.dart';
 import 'package:carlys_mobile/features/dashboard/presentation/widgets/today_grid.dart';
 import 'package:carlys_mobile/features/progression/domain/progression.dart';
 import 'package:carlys_mobile/features/progression/domain/reward.dart';
 import 'package:carlys_mobile/features/progression/domain/reward_engine.dart';
-import 'package:carlys_mobile/features/progression/presentation/controllers/progression_controllers.dart';
-import 'package:carlys_mobile/features/progression/presentation/controllers/reward_controllers.dart';
+import 'package:carlys_mobile/features/progression/presentation/providers/progression_providers.dart';
+import 'package:carlys_mobile/features/progression/presentation/providers/reward_providers.dart';
 import 'package:carlys_mobile/features/progression/presentation/widgets/progression_entry_card.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

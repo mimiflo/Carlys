@@ -7,7 +7,7 @@ import '../../../../design_system/design_system.dart';
 import '../../domain/reward.dart';
 import '../../domain/reward_engine.dart';
 import '../../domain/title_explanations.dart';
-import '../controllers/reward_controllers.dart';
+import '../providers/reward_providers.dart';
 import 'award_seal.dart';
 import 'seal_engraving.dart';
 

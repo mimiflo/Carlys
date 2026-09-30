@@ -18,8 +18,8 @@ library;
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../core/logging/app_logger.dart';
-import '../controllers/community_controllers.dart';
-import '../controllers/community_moderation_controllers.dart';
+import 'community_moderation_providers.dart';
+import 'community_providers.dart';
 
 /// Redemande au serveur ce que l'écran MONTRE, et attend la réponse.
 ///

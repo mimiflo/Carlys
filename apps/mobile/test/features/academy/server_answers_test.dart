@@ -1,5 +1,5 @@
 import 'package:carlys_mobile/features/academy/data/answered_lessons_store.dart';
-import 'package:carlys_mobile/features/academy/presentation/controllers/academy_controllers.dart';
+import 'package:carlys_mobile/features/academy/presentation/providers/academy_providers.dart';
 import 'package:carlys_mobile/features/community/data/repositories/community_repository_impl.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';

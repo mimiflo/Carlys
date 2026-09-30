@@ -25,22 +25,23 @@ feature/
 └── presentation/
     ├── controllers/     # UN Notifier Riverpod par fichier, et rien d'autre
     ├── providers/       # Providers dérivés (Provider, FutureProvider…) qui
-    │                    #   ne portent aucun état : la destination prévue
-    │                    #   par la règle de CLAUDE.md. `exercises` est la
-    │                    #   première fonctionnalité à les y ranger ; les
-    │                    #   autres ont encore les leurs dans `controllers/`
+    │                    #   ne portent aucun Notifier — gardé par
+    │                    #   `scripts/check_mobile_file_sizes.sh`
     ├── screens/         # Écrans
     ├── utils/           # Calculs purs de l'écran, sans Riverpod : agrégats,
-    │                    #   formatage, seuils (`workout_history`, `progress`)
+    │                    #   formatage, seuils (`workout_history`, `progress`),
+    │                    #   état d'écran immuable (`template_draft.dart`)
     └── widgets/         # Widgets propres à la fonctionnalité
 ```
 
-`controllers/` contre `providers/` — la couture est celle de l'**état**. Un
-`Notifier` détient un état et le fait évoluer : il va dans `controllers/`,
-seul dans son fichier. Un provider qui ne fait que **lire d'autres providers
-et calculer** ne détient rien : il va dans `providers/`. Un calcul qui n'a
-même pas besoin de `ref` n'est pas un provider du tout — c'est une fonction,
-et sa place est `utils/`.
+`controllers/` contre `providers/` — la couture est le **Notifier**. Un
+`Notifier` détient un état d'écran et le fait évoluer : il va dans
+`controllers/`, seul dans son fichier. Tout autre provider va dans
+`providers/` : celui qui ne fait que **lire d'autres providers et
+calculer**, mais aussi un `StateProvider` ou un service de câblage qui garde
+sa propre mécanique (minuterie, abonnement, file d'écritures — voir
+`push_registration.dart`). Un calcul qui n'a même pas besoin de `ref` n'est
+pas un provider du tout — c'est une fonction, et sa place est `utils/`.
 
 ## Dépendances entre fonctionnalités
 
@@ -125,7 +126,7 @@ casser l'un des deux sens sans le savoir casse l'autre.
 | Cycle                                   | Imports | Ce qui le crée                                                                                                                                                                  |
 | --------------------------------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `workout_template` ⇄ `workout_session`   | 21 / 4  | Le modèle écrit une **vraie** séance (`WorkoutSessionWriter`) ; la séance relit son plan (`sessionGuidance`, `SessionPlanLocalDataSource`)                                        |
-| `progression` ⇄ `progress`               | 5 / 3   | `reward_controllers` et `milestone_push` lisent les records et poussent le journal des récompenses ; `progress_screen` et `timeline_row` affichent sceaux et paliers              |
+| `progression` ⇄ `progress`               | 5 / 3   | `reward_providers` et `milestone_push`   lisent les records et poussent le journal des récompenses ; `progress_screen` et `timeline_row` affichent sceaux et paliers              |
 | `academy` ⇄ `progression`                | 3 / 5   | les récompenses lisent l'avancement de l'Academy ; la carte d'avancement de l'Academy dessine les sceaux                                                                        |
 | `exercises` ⇄ `workout_session`          | 3 / 2   | `exercise_action_bar` (catalogue) ouvre la saisie d'une série ; `exercise_picker_sheet` (séance) lit le catalogue                                                                |
 | `onboarding` ⇄ `workout_program`         | 6 / 1   | le premier lancement pose l'objectif d'entraînement ; la feuille d'objectif réutilise les choix du premier lancement                                                            |
@@ -140,10 +141,10 @@ casser l'un des deux sens sans le savoir casse l'autre.
 `presentation` → `data` — un contrôleur câble une implémentation concrète
 d'une autre fonctionnalité :
 
-- `academy/…/academy_controllers.dart` → `community/data/repositories/community_repository_impl.dart`
+- `academy/…/academy_providers.dart` → `community/data/repositories/community_repository_impl.dart`
 - `coaching/…/coach_controllers.dart` → `subscription/data/repositories/subscription_repository_impl.dart` (le coach lit le droit `ai_coaching` décidé par le serveur, pour passer un ancien abonné en lecture seule)
 - `dashboard/…/form_reading_providers.dart` → `progress/data/repositories/progress_repository_impl.dart`
-- `workout_template/…/workout_template_controllers.dart` → `workout_session/data/repositories/workout_repository_impl.dart`
+- `workout_template/…/workout_template_providers.dart` → `workout_session/data/repositories/workout_repository_impl.dart`
 
 `data` → `data` — deux fonctionnalités écrivent dans **la même transaction
 Drift**, ou une donnée pousse vers le dépôt d'une autre, parce que dupliquer

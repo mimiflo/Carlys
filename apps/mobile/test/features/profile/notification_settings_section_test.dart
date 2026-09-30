@@ -4,7 +4,7 @@ import 'package:carlys_mobile/core/errors/app_exception.dart';
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/authentication/presentation/controllers/account_bound_cache.dart';
 import 'package:carlys_mobile/features/notifications/domain/repositories/device_token_repository.dart';
-import 'package:carlys_mobile/features/notifications/presentation/controllers/notification_preferences.dart';
+import 'package:carlys_mobile/features/notifications/presentation/providers/notification_preferences.dart';
 import 'package:carlys_mobile/features/profile/presentation/widgets/profile_settings_sections.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

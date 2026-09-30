@@ -3,8 +3,8 @@ import 'package:flutter/widgets.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/community.dart';
 import '../../domain/entities/community_moderation.dart';
-import '../controllers/community_controllers.dart';
-import '../controllers/community_moderation_controllers.dart';
+import '../providers/community_moderation_providers.dart';
+import '../providers/community_providers.dart';
 import 'community_feedback.dart';
 import 'report_sheet.dart';
 

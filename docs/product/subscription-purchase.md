@@ -193,8 +193,8 @@ un achat.
 | `infrastructure/stripe-subscription.client.ts` | La résiliation IMMÉDIATE (`DELETE /v1/subscriptions/{id}`) qu'exige la suppression du compte |
 | `application/account-billing.service.ts` | Ce que la suppression du compte doit arrêter : résilier Stripe AVANT de rien supprimer, signaler un abonnement de magasin |
 | `presentation/widgets/subscription_purchase_panel.dart` | Les offres et le bouton |
-| `presentation/controllers/subscription_controllers.dart` | L'action d'achat, testable sans navigateur |
-| `presentation/controllers/subscription_resume_refresh.dart` | La relecture au retour, et sa relance unique |
+| `presentation/providers/subscription_providers.dart` | L'action d'achat, testable sans navigateur |
+| `presentation/providers/subscription_resume_refresh.dart` | La relecture au retour, et sa relance unique |
 | `presentation/widgets/subscription_resume_listener.dart` | L'écoute du retour au premier plan |
 | `presentation/widgets/subscription_manage_row.dart` | La ligne « Gérer mon abonnement » et ses états |
 | `domain/repositories/subscription_repository.dart` | `startCheckout` et `startBillingPortal` : les deux portes vers le prestataire |

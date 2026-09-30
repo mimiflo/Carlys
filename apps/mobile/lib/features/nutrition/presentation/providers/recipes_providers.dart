@@ -7,7 +7,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../data/datasources/recipes_pack.dart';
 import '../../domain/entities/nutrition.dart';
 import '../../domain/entities/recipe.dart';
-import 'nutrition_controllers.dart';
+import 'nutrition_providers.dart';
 
 /// Le pack embarqué. Sans `autoDispose` : le contenu ne change jamais en
 /// cours de session, le relire à chaque retour sur l'écran serait du travail

@@ -5,7 +5,7 @@ import 'package:carlys_mobile/core/synchronization/sync_lifecycle.dart';
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/authentication/data/repositories/auth_repository_impl.dart';
 import 'package:carlys_mobile/features/dashboard/presentation/screens/home_screen.dart';
-import 'package:carlys_mobile/features/nutrition/presentation/controllers/water_controllers.dart';
+import 'package:carlys_mobile/features/nutrition/presentation/providers/water_providers.dart';
 import 'package:carlys_mobile/features/onboarding/presentation/controllers/splash_gate.dart';
 import 'package:carlys_mobile/features/onboarding/presentation/screens/splash_screen.dart';
 import 'package:carlys_mobile/features/onboarding/presentation/widgets/athlete_photo.dart';

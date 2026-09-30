@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../../core/logging/app_logger.dart';
 import '../../../../core/utilities/current_day.dart';
 import '../../../community/data/repositories/community_repository_impl.dart';
-import '../../../community/presentation/controllers/community_controllers.dart';
+import '../../../community/presentation/providers/community_providers.dart';
 import '../../data/academy_pack.dart';
 import '../../data/answered_lessons_store.dart';
 import '../../domain/daily_lesson.dart';

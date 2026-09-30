@@ -10,7 +10,7 @@ import 'package:carlys_mobile/features/mentor/presentation/widgets/mentor_bandea
 import 'package:carlys_mobile/features/progression/domain/progression.dart';
 import 'package:carlys_mobile/features/progression/domain/reward.dart';
 import 'package:carlys_mobile/features/progression/domain/reward_engine.dart';
-import 'package:carlys_mobile/features/progression/presentation/controllers/reward_controllers.dart';
+import 'package:carlys_mobile/features/progression/presentation/providers/reward_providers.dart';
 import 'package:carlys_mobile/features/progression/presentation/widgets/title_crossing_banner.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';

@@ -1,7 +1,7 @@
 import 'package:carlys_mobile/core/errors/app_exception.dart';
 import 'package:carlys_mobile/features/community/data/repositories/community_repository_impl.dart';
 import 'package:carlys_mobile/features/community/domain/entities/friend_challenge.dart';
-import 'package:carlys_mobile/features/community/presentation/controllers/community_controllers.dart';
+import 'package:carlys_mobile/features/community/presentation/providers/community_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
 

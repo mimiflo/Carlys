@@ -5,7 +5,7 @@ import '../../../../core/errors/app_exception.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/mentor_style.dart';
 import '../../domain/mentor_word.dart';
-import '../controllers/mentor_controllers.dart';
+import '../providers/mentor_providers.dart';
 
 /// L'image de chaque voix — présentation pure, le domaine n'en sait rien.
 IconData mentorVoiceIcon(MentorStyle style) => switch (style) {

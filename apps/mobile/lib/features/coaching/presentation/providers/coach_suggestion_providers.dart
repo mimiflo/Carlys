@@ -8,11 +8,11 @@ library;
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../carlys_profile/presentation/controllers/carlys_profile_controllers.dart';
+import '../../../carlys_profile/presentation/providers/carlys_profile_providers.dart';
 import '../../../progress/domain/entities/progress.dart';
-import '../../../progress/presentation/controllers/progress_controllers.dart';
+import '../../../progress/presentation/providers/progress_providers.dart';
 import '../../../workout_session/presentation/controllers/workout_controllers.dart';
-import '../../../workout_template/presentation/controllers/workout_template_controllers.dart';
+import '../../../workout_template/presentation/providers/workout_template_providers.dart';
 import '../../domain/services/coach_suggestions.dart';
 
 /// Amorces calculées depuis l'état réel de l'utilisateur.

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../shared/widgets/connection_aware_error.dart';
-import '../../../subscription/presentation/controllers/subscription_controllers.dart';
+import '../../../subscription/presentation/providers/subscription_providers.dart';
 import 'profile_plan_card.dart';
 
 /// L'ABONNEMENT, en tête des réglages.

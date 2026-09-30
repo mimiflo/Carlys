@@ -4,7 +4,7 @@ import 'package:qr_flutter/qr_flutter.dart';
 
 import '../../../../design_system/design_system.dart';
 import '../../domain/friend_code.dart';
-import '../controllers/community_controllers.dart';
+import '../providers/community_providers.dart';
 
 /// « Mon code » : le QR à faire scanner et le code à dicter.
 ///

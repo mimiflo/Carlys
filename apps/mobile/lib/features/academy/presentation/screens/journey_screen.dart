@@ -5,8 +5,8 @@ import 'package:go_router/go_router.dart';
 import '../../../../app/router/app_routes.dart';
 import '../../../../design_system/design_system.dart';
 import '../../domain/academy_journey.dart';
-import '../controllers/academy_controllers.dart';
 import '../providers/academy_progress_providers.dart';
+import '../providers/academy_providers.dart';
 
 /// Le Parcours en un coup d'œil : six étapes, où on en est, où reprendre.
 ///

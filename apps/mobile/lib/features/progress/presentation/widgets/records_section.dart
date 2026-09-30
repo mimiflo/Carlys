@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/progress.dart';
-import '../controllers/progress_controllers.dart';
+import '../providers/progress_providers.dart';
 import 'record_row.dart';
 
 /// Records personnels : une ligne par record, du plus récent au plus ancien.

@@ -2,11 +2,11 @@ import 'dart:async';
 
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../../academy/presentation/controllers/academy_controllers.dart';
 import '../../../academy/presentation/providers/academy_progress_providers.dart';
+import '../../../academy/presentation/providers/academy_providers.dart';
 import '../../../authentication/presentation/controllers/account_session.dart';
 import '../../../progress/domain/entities/progress.dart';
-import '../../../progress/presentation/controllers/progress_controllers.dart';
+import '../../../progress/presentation/providers/progress_providers.dart';
 import '../../../workout_session/presentation/controllers/workout_controllers.dart';
 import '../../data/milestone_push.dart';
 import '../../data/reward_ledger.dart';
@@ -14,7 +14,7 @@ import '../../domain/progression.dart';
 import '../../domain/reward.dart';
 import '../../domain/reward_engine.dart';
 import '../../domain/reward_facts_builder.dart';
-import 'progression_controllers.dart';
+import 'progression_providers.dart';
 
 /// Les faits qui décident des récompenses.
 ///

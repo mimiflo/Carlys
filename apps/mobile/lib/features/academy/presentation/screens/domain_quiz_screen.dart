@@ -3,7 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../design_system/design_system.dart';
 import '../../domain/entities/academy.dart';
-import '../controllers/academy_controllers.dart';
+import '../providers/academy_providers.dart';
 import '../widgets/quiz_card.dart';
 
 /// Le quiz d'un domaine : ses questions rejouées d'un trait, une à la fois.

@@ -1,7 +1,7 @@
 import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../controllers/subscription_resume_refresh.dart';
+import '../providers/subscription_resume_refresh.dart';
 
 /// Écoute le retour au premier plan tant que l'écran d'abonnement est
 /// affiché, et fait relire le plan et les droits.

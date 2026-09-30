@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../../design_system/design_system.dart';
-import '../controllers/progress_controllers.dart';
+import '../providers/progress_providers.dart';
 import 'add_weight_sheet.dart';
 
 /// Ouvre la feuille d'ajout et enregistre la mesure.

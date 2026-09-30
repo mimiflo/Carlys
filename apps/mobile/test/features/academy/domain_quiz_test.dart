@@ -1,7 +1,7 @@
 import 'package:carlys_mobile/design_system/design_system.dart';
 import 'package:carlys_mobile/features/academy/domain/academy_progress.dart';
 import 'package:carlys_mobile/features/academy/domain/entities/academy.dart';
-import 'package:carlys_mobile/features/academy/presentation/controllers/academy_controllers.dart';
+import 'package:carlys_mobile/features/academy/presentation/providers/academy_providers.dart';
 import 'package:carlys_mobile/features/academy/presentation/screens/domain_quiz_screen.dart';
 import 'package:carlys_mobile/features/academy/presentation/widgets/academy_domain_header.dart';
 import 'package:flutter/material.dart';
