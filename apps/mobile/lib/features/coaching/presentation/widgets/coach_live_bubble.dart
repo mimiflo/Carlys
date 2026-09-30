@@ -7,19 +7,32 @@ import 'coach_message_bubble.dart';
 
 /// La réponse du coach PENDANT qu'elle s'écrit.
 ///
-/// Deux temps, comme une personne qui répond : d'abord « réfléchit… »
-/// (le coach lit tes séances et tes records avant d'écrire), puis le texte
-/// qui s'allonge mot après mot. La réplique archivée la remplace à la fin.
+/// Trois temps, comme une personne sollicitée : « en attente » quand d'autres
+/// passent avant (le coach répond à un nombre fixe de personnes à la fois),
+/// puis « réfléchit… » (il lit tes séances et tes records avant d'écrire),
+/// puis le texte qui s'allonge mot après mot. La réplique archivée la
+/// remplace à la fin.
 class CoachLiveBubble extends StatelessWidget {
   const CoachLiveBubble({
     required this.text,
+    this.ahead,
     this.maxWidth = double.infinity,
     super.key,
   });
 
   /// La réponse reçue jusqu'ici ; vide tant que le coach réfléchit.
   final String text;
+
+  /// Demandes qui passent avant, en file d'attente ; `null` : son tour.
+  final int? ahead;
   final double maxWidth;
+
+  String get _waiting {
+    final ahead = this.ahead;
+    if (ahead == null) return 'Réfléchit…';
+    if (ahead == 0) return 'En attente · tu es le prochain';
+    return 'En attente · $ahead avant toi';
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -28,7 +41,9 @@ class CoachLiveBubble extends StatelessWidget {
         isUser: false,
         maxWidth: maxWidth,
         child: Semantics(
-          label: 'Le coach réfléchit',
+          label: ahead == null
+              ? 'Le coach réfléchit'
+              : 'Le coach est sollicité : $_waiting',
           excludeSemantics: true,
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -36,7 +51,7 @@ class CoachLiveBubble extends StatelessWidget {
               const CoachThinkingDots(),
               const SizedBox(width: AppSpacing.xs),
               Text(
-                'Réfléchit…',
+                _waiting,
                 style: AppTypography.label.copyWith(
                   color: AppColors.darkTextSecondary,
                 ),

@@ -13,6 +13,7 @@ class CoachComposer extends StatelessWidget {
     required this.controller,
     required this.onSend,
     required this.onRetry,
+    this.onStop,
     this.isOffline = false,
     this.isSending = false,
     super.key,
@@ -28,6 +29,10 @@ class CoachComposer extends StatelessWidget {
   /// Un envoi est en cours : la saisie reste possible, l'envoi non — sinon
   /// deux questions partent avant la première réponse.
   final bool isSending;
+
+  /// Arrête la réponse en cours. Pendant un envoi, le bouton d'envoi devient
+  /// « Arrêter » : la génération s'arrête sur le serveur, la question reste.
+  final VoidCallback? onStop;
 
   @override
   Widget build(BuildContext context) {
@@ -89,17 +94,28 @@ class CoachComposer extends StatelessWidget {
           ),
         ),
         const SizedBox(width: AppSpacing.xs),
-        _SendButton(
-          onPressed: isSending ? null : () => onSend(controller.text),
-        ),
+        if (isSending && onStop != null)
+          _RoundButton(icon: AppIcons.stop, label: 'Arrêter', onPressed: onStop)
+        else
+          _RoundButton(
+            icon: AppIcons.send,
+            label: 'Envoyer',
+            onPressed: isSending ? null : () => onSend(controller.text),
+          ),
       ],
     );
   }
 }
 
-class _SendButton extends StatelessWidget {
-  const _SendButton({required this.onPressed});
+class _RoundButton extends StatelessWidget {
+  const _RoundButton({
+    required this.icon,
+    required this.label,
+    required this.onPressed,
+  });
 
+  final IconData icon;
+  final String label;
   final VoidCallback? onPressed;
 
   /// Diamètre du DISQUE, ce qui se voit. La zone qui répond au doigt est
@@ -112,7 +128,7 @@ class _SendButton extends StatelessWidget {
 
     return Semantics(
       button: true,
-      label: 'Envoyer',
+      label: label,
       // `enabled` ET `onTap` : sans le second, le nœud s'annonce comme un
       // bouton mais ne publie aucune action, et l'activer depuis un lecteur
       // d'écran ne fait rien. `enabled` dit en plus que l'envoi est en cours,
@@ -138,11 +154,7 @@ class _SendButton extends StatelessWidget {
                       : AppColors.primary.withValues(alpha: 0.35),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
-                  AppIcons.send,
-                  size: 20,
-                  color: AppColors.neutral0,
-                ),
+                child: Icon(icon, size: 20, color: AppColors.neutral0),
               ),
             ),
           ),

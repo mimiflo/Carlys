@@ -23,6 +23,9 @@ abstract final class AppIcons {
   static const IconData add = Icons.add_rounded;
   static const IconData back = Icons.arrow_back_rounded;
   static const IconData close = Icons.close_rounded;
+
+  /// Arrêter une réponse en train de s'écrire : le carré de « stop ».
+  static const IconData stop = Icons.stop_rounded;
   static const IconData search = Icons.search_rounded;
   static const IconData settings = Icons.settings_rounded;
 

@@ -92,12 +92,18 @@ final class NetworkException extends AppException {
 final class ServerException extends AppException {
   const ServerException(
     super.message, {
+    this.code,
     super.statusCode,
     super.requestId,
     super.fromApi,
     super.cause,
     super.stackTrace,
   });
+
+  /// Code de l'enveloppe d'erreur de l'API (`SERVICE_BUSY`…), quand il y en
+  /// a une : il distingue ce que le statut seul confond — un 503 « très
+  /// sollicité, réessaie » d'un 503 « en panne ».
+  final String? code;
 }
 
 /// Le serveur a répondu SANS erreur, mais sa réponse ne se lit pas : corps

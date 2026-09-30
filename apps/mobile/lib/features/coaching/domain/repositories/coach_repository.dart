@@ -29,11 +29,19 @@ abstract interface class CoachRepository {
   ///
   /// [messageId] vient de l'appareil : renvoyer la même requête ne crée aucun
   /// doublon.
+  ///
+  /// Le coach très sollicité fait attendre : [onQueued] reçoit le nombre de
+  /// demandes qui passent avant, [onStarted] dit que c'est son tour. Quand
+  /// [cancel] se termine (« Arrêter »), la requête est abandonnée et le
+  /// serveur arrête de générer ; l'envoi échoue alors.
   Future<CoachReply> sendMessage({
     required String conversationId,
     required String messageId,
     required String content,
     void Function(String text)? onText,
+    void Function(int ahead)? onQueued,
+    void Function()? onStarted,
+    Future<void>? cancel,
   });
 
   /// Signale qu'une proposition a été lancée. N'écrit **aucune** séance : la

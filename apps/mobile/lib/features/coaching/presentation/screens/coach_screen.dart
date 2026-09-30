@@ -24,6 +24,7 @@ class CoachScreen extends StatelessWidget {
     required this.onOpenProposal,
     required this.onOpenProgram,
     required this.onRetry,
+    this.onStop,
     this.busyProgramId,
     this.isOffline = false,
     this.live,
@@ -47,6 +48,9 @@ class CoachScreen extends StatelessWidget {
   /// Sortie de l'état hors ligne : l'encart qui remplace le composeur
   /// l'offre, faute de quoi l'écran resterait muet le réseau revenu.
   final VoidCallback onRetry;
+
+  /// Arrête la réponse en cours (bouton « Arrêter » du composeur).
+  final VoidCallback? onStop;
   final bool isOffline;
 
   /// Le tour en cours d'écriture, s'il y en a un.
@@ -137,6 +141,7 @@ class CoachScreen extends StatelessWidget {
                   controller: composerController,
                   onSend: onSend,
                   onRetry: onRetry,
+                  onStop: onStop,
                   isOffline: isOffline,
                   isSending: live != null,
                 ),

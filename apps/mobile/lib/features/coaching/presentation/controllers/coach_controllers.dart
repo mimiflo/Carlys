@@ -3,6 +3,8 @@
 /// Aucun widget n'appelle l'API : écran → contrôleur → repository.
 library;
 
+import 'dart:async';
+
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:uuid/uuid.dart';
 
@@ -13,6 +15,7 @@ import '../../data/repositories/coach_repository_impl.dart';
 import '../../domain/entities/coach.dart';
 import '../../domain/entities/coach_thread_state.dart';
 import '../../domain/repositories/coach_repository.dart';
+import '../utils/coach_notice.dart';
 
 // L'état du fil vit dans le domaine, les amorces dans `providers/` (elles ne
 // portent aucun Notifier) ; les deux se relisent par ce fichier, comme avant,
@@ -45,6 +48,9 @@ class CoachThread extends AutoDisposeAsyncNotifier<CoachThreadState> {
   /// le texte en tire un nouveau, sans quoi le serveur rendrait la réponse de
   /// la question précédente.
   ({String id, String content})? _pending;
+
+  /// Se termine quand la personne arrête la réponse en cours.
+  Completer<void>? _cancel;
 
   /// Le fil affiché est la copie gardée sur l'appareil, lue hors ligne.
   bool _fromCache = false;
@@ -130,6 +136,7 @@ class CoachThread extends AutoDisposeAsyncNotifier<CoachThreadState> {
     );
 
     final repository = ref.read(coachRepositoryProvider);
+    final cancel = _cancel = Completer<void>();
     try {
       if (!_created) {
         await repository.createConversation(current.conversation.id);
@@ -146,7 +153,10 @@ class CoachThread extends AutoDisposeAsyncNotifier<CoachThreadState> {
         conversationId: current.conversation.id,
         messageId: messageId,
         content: trimmed,
-        onText: _appendLive,
+        onText: (text) => _updateLive((live) => live.append(text)),
+        onQueued: (ahead) => _updateLive((live) => live.queued(ahead)),
+        onStarted: () => _updateLive((live) => live.started()),
+        cancel: cancel.future,
       );
 
       _pending = null;
@@ -171,6 +181,12 @@ class CoachThread extends AutoDisposeAsyncNotifier<CoachThreadState> {
       );
       return true;
     } on AppException catch (exception) {
+      if (cancel.isCompleted) {
+        // Arrêtée par la personne : ni avis ni hors ligne, la question reste
+        // dans le champ, et son identifiant pour un renvoi sans doublon.
+        state = AsyncData(current.copyWith(clearLive: true));
+        return false;
+      }
       state = AsyncData(
         current.copyWith(
           clearLive: true,
@@ -179,19 +195,25 @@ class CoachThread extends AutoDisposeAsyncNotifier<CoachThreadState> {
           isReadOnly: exception is ForbiddenException,
           notice: exception is ForbiddenException
               ? null
-              : _noticeFor(exception),
+              : coachNoticeFor(exception),
         ),
       );
       return false;
     }
   }
 
-  /// Un morceau de la réponse vient d'arriver : il s'ajoute au tour en cours.
-  void _appendLive(String text) {
+  /// Arrête la réponse en cours : le serveur cesse de générer.
+  void stop() {
+    final cancel = _cancel;
+    if (cancel != null && !cancel.isCompleted) cancel.complete();
+  }
+
+  /// Le tour en cours avance : file, premier mot, morceau de texte.
+  void _updateLive(CoachLiveTurn Function(CoachLiveTurn live) update) {
     final now = state.valueOrNull;
     final live = now?.live;
     if (now == null || live == null) return;
-    state = AsyncData(now.copyWith(live: live.append(text)));
+    state = AsyncData(now.copyWith(live: update(live)));
   }
 
   /// Rouvre le composeur après une coupure.
@@ -213,27 +235,6 @@ class CoachThread extends AutoDisposeAsyncNotifier<CoachThreadState> {
       return;
     }
     state = AsyncData(current.copyWith(isOffline: false, clearNotice: true));
-  }
-
-  /// Texte utilisateur d'un refus du serveur. Hors ligne, le composeur dit
-  /// déjà ce qu'il faut : pas de second message redondant.
-  String? _noticeFor(AppException exception) {
-    if (exception is NetworkException) return null;
-    // Un 409 arrive en ValidationException par HTTP, en ServerException par
-    // le flux : c'est le même refus.
-    if (exception is ServerException || exception.statusCode == 409) {
-      return switch (exception.statusCode) {
-        429 =>
-          'Tu as atteint le nombre de messages du jour. '
-              'Le coach revient demain.',
-        // La même question part encore : sa réponse s'écrit toujours côté
-        // serveur (flux coupé puis renvoyé). Elle sera là au prochain envoi.
-        409 => 'Le coach termine sa réponse. Réessaie dans un instant.',
-        503 => 'Le coach est momentanément indisponible.',
-        _ => 'Le coach n’a pas pu répondre. Réessaie dans un instant.',
-      };
-    }
-    return 'Le coach n’a pas pu répondre. Réessaie dans un instant.';
   }
 }
 

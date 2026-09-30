@@ -112,6 +112,7 @@ class _CoachPageState extends ConsumerState<CoachPage> {
         onOpenProgram: _openProgram,
         busyProgramId: _busyProgramId,
         onRetry: () => ref.read(coachThreadProvider.notifier).clearOffline(),
+        onStop: () => ref.read(coachThreadProvider.notifier).stop(),
         isOffline: state.isOffline,
         live: state.live,
         notice: state.notice,

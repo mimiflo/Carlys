@@ -14,7 +14,7 @@ import 'coach_reply_stream.dart';
 /// premier battement (`sseKeepAlive`, toutes les 15 s côté serveur). Il
 /// dépasse donc les 20 s du client partagé sans borner la réponse elle-même,
 /// que le serveur laisse durer trois minutes en flux
-/// (`COACH_STREAM_DEADLINE_MS`).
+/// (`COACH_REQUEST_TIMEOUT_MS`).
 const coachReplyTimeout = Duration(seconds: 65);
 
 /// Dépôt coach — **direct sur l'API**, sans base locale ni file de
@@ -79,7 +79,13 @@ class CoachRepositoryImpl implements CoachRepository {
     required String messageId,
     required String content,
     void Function(String text)? onText,
+    void Function(int ahead)? onQueued,
+    void Function()? onStarted,
+    Future<void>? cancel,
   }) {
+    // Fermer la requête, c'est arrêter la génération côté serveur.
+    final cancelToken = CancelToken();
+    cancel?.then((_) => cancelToken.cancel('Arrêté par la personne'));
     return _guard(() async {
       final response = await _dio.post<ResponseBody>(
         '/coach/conversations/$conversationId/messages/stream',
@@ -90,10 +96,13 @@ class CoachRepositoryImpl implements CoachRepository {
           responseType: ResponseType.stream,
           receiveTimeout: coachReplyTimeout,
         ),
+        cancelToken: cancelToken,
       );
       return readCoachReplyStream(
         response,
         onText,
+        onQueued: onQueued,
+        onStarted: onStarted,
         onDone: (json) => _cache.append(conversationId, [
           json['userMessage'] as Map<String, dynamic>,
           json['assistantMessage'] as Map<String, dynamic>,

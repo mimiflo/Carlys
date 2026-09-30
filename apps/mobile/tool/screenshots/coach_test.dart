@@ -100,6 +100,8 @@ void main() {
           onOpenProposal: (_) {},
           onOpenProgram: (_) {},
           onRetry: () {},
+          // Comme dans l'appli : pendant une réponse, l'envoi devient « Arrêter ».
+          onStop: () {},
           isOffline: isOffline,
           live: live,
         ),
@@ -136,6 +138,16 @@ void main() {
       live: const CoachLiveTurn(question: question),
     );
     await capture(tester, 'coach-03-reflexion');
+  });
+
+  // Le coach sollicité (ADR 0013) : la file se dit, au lieu d'un silence.
+  testWidgets('coach — en attente, d’autres passent avant', (tester) async {
+    await pumpCoach(
+      tester,
+      messages: _conversation,
+      live: const CoachLiveTurn(question: question, ahead: 2),
+    );
+    await capture(tester, 'coach-07-en-attente');
   });
 
   testWidgets('coach — la réponse s’écrit en direct', (tester) async {

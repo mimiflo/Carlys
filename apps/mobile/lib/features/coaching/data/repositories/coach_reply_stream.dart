@@ -9,9 +9,12 @@ import '../../../../core/errors/app_exception.dart';
 import '../../domain/entities/coach.dart';
 import '../dto/coach_dtos.dart';
 
-/// Lit la réponse EN FLUX du coach (`…/messages/stream`) : chaque `delta`
-/// part à [onText], `done` rend la réplique archivée (son JSON passe d'abord
-/// par [onDone]), `error` lève la même exception qu'un refus ordinaire.
+/// Lit la réponse EN FLUX du coach (`…/messages/stream`) : `queued` dit à
+/// [onQueued] combien de demandes passent avant, `started` à [onStarted] que
+/// c'est son tour, chaque `delta` part à [onText], `done` rend la réplique
+/// archivée (son JSON passe d'abord par [onDone]), `error` lève la même
+/// exception qu'un refus ordinaire. Un évènement inconnu est ignoré : le
+/// serveur peut en ajouter sans casser les versions installées.
 ///
 /// Un flux qui s'arrête SANS `done` est une coupure : le serveur, lui, finit
 /// son tour et l'archive — renvoyer la même question la rendra.
@@ -19,6 +22,8 @@ Future<CoachReply> readCoachReplyStream(
   Response<ResponseBody> response,
   void Function(String text)? onText, {
   Future<void> Function(Map<String, dynamic> json)? onDone,
+  void Function(int ahead)? onQueued,
+  void Function()? onStarted,
 }) async {
   final requestId = requestIdOf(response.headers);
   final body = response.data;
@@ -32,6 +37,10 @@ Future<CoachReply> readCoachReplyStream(
     await for (final sse in sseEvents(body.stream)) {
       final data = jsonDecode(sse.data) as Map<String, dynamic>;
       switch (sse.event) {
+        case 'queued':
+          onQueued?.call((data['ahead'] as num?)?.toInt() ?? 0);
+        case 'started':
+          onStarted?.call();
         case 'delta':
           onText?.call(data['text'] as String? ?? '');
         case 'done':
@@ -84,6 +93,7 @@ ServerException _streamError(Map<String, dynamic> body, String? requestId) {
   final error = body['error'] as Map<String, dynamic>? ?? const {};
   return ServerException(
     error['message'] as String? ?? 'Le coach n’a pas pu répondre',
+    code: error['code'] as String?,
     statusCode: _statusOf[error['code']] ?? 500,
     requestId: error['requestId'] as String? ?? requestId,
     fromApi: true,
@@ -93,6 +103,7 @@ ServerException _streamError(Map<String, dynamic> body, String? requestId) {
 /// Le statut HTTP qu'aurait eu l'erreur si elle était arrivée avant le flux.
 const _statusOf = {
   'SERVICE_UNAVAILABLE': 503,
+  'SERVICE_BUSY': 503,
   'RATE_LIMITED': 429,
   'CONFLICT': 409,
   'NOT_FOUND': 404,

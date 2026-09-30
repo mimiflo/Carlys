@@ -64,7 +64,7 @@ class CoachThreadState {
 
 /// Un tour de conversation pendant qu'il s'écrit.
 class CoachLiveTurn {
-  const CoachLiveTurn({required this.question, this.text = ''});
+  const CoachLiveTurn({required this.question, this.text = '', this.ahead});
 
   /// La question envoyée, affichée tout de suite sans attendre le serveur.
   final String question;
@@ -73,6 +73,17 @@ class CoachLiveTurn {
   /// tes séances, tes records) avant d'écrire son premier mot.
   final String text;
 
+  /// En file d'attente : demandes qui passent avant celle-ci. `null` : son
+  /// tour est venu (ou n'a jamais attendu).
+  final int? ahead;
+
+  bool get isQueued => ahead != null;
+
   CoachLiveTurn append(String more) =>
       CoachLiveTurn(question: question, text: text + more);
+
+  CoachLiveTurn queued(int ahead) =>
+      CoachLiveTurn(question: question, text: text, ahead: ahead);
+
+  CoachLiveTurn started() => CoachLiveTurn(question: question, text: text);
 }

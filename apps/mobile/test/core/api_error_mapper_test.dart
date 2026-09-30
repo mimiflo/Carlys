@@ -77,6 +77,27 @@ void main() {
       );
     }
 
+    test(
+      'le code de l’enveloppe suit l’erreur : un 503 SATURÉ n’est pas une panne',
+      () {
+        final busy = mapDioException(
+          reponse(
+            503,
+            body: {
+              'error': {
+                'code': 'SERVICE_BUSY',
+                'message': 'Le coach est très sollicité en ce moment.',
+                'details': <Object?>[],
+              },
+            },
+          ),
+        );
+        expect(busy, isA<ServerException>());
+        expect((busy as ServerException).code, 'SERVICE_BUSY');
+        expect(busy.statusCode, 503);
+      },
+    );
+
     test('le message de l’enveloppe reste celui de l’erreur', () {
       final error = mapDioException(
         reponse(401, body: enveloppe('Jeton Google invalide.')),

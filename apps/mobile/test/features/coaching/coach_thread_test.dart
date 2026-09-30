@@ -317,6 +317,108 @@ void main() {
     },
   );
 
+  group('file d’attente, arrêt, saturation (ADR 0013)', () {
+    test('en file : la bulle sait combien passent avant', () async {
+      final repository = FakeCoachRepository()
+        ..queued = [2, 1]
+        ..hangUntilCancelled = true;
+      final container = containerWith(repository);
+      // Un écran l'écoute : sans lui, le fil autoDispose partirait pendant
+      // que la réponse se fait attendre.
+      container.listen(coachThreadProvider, (_, __) {});
+      await container.read(coachThreadProvider.future);
+
+      final sent = container
+          .read(coachThreadProvider.notifier)
+          .send('Demain ?');
+      await pumpEventQueue();
+
+      expect(container.read(coachThreadProvider).valueOrNull?.live?.ahead, 1);
+      container.read(coachThreadProvider.notifier).stop();
+      await sent;
+    });
+
+    test(
+      '« Arrêter » : plus de tour en cours, ni avis ni hors ligne, la question reste à renvoyer',
+      () async {
+        final repository = FakeCoachRepository()..hangUntilCancelled = true;
+        final container = containerWith(repository);
+        container.listen(coachThreadProvider, (_, __) {});
+        await container.read(coachThreadProvider.future);
+
+        final sent = container
+            .read(coachThreadProvider.notifier)
+            .send('Demain ?');
+        await pumpEventQueue();
+        expect(
+          container.read(coachThreadProvider).valueOrNull?.isSending,
+          isTrue,
+        );
+
+        container.read(coachThreadProvider.notifier).stop();
+
+        expect(await sent, isFalse, reason: 'le champ garde la question');
+        final etat = container.read(coachThreadProvider).valueOrNull;
+        expect(etat?.live, isNull);
+        expect(etat?.notice, isNull);
+        expect(etat?.isOffline, isFalse);
+
+        // Renvoyée telle quelle : MÊME identifiant, aucun doublon côté serveur.
+        repository.hangUntilCancelled = false;
+        await container.read(coachThreadProvider.notifier).send('Demain ?');
+        expect(repository.sentIds.toSet(), hasLength(1));
+      },
+    );
+
+    test(
+      'très sollicité : un avis qui invite à réessayer, pas une panne',
+      () async {
+        final container = containerWith(
+          FakeCoachRepository(
+            sendError: const ServerException(
+              'Le coach est très sollicité en ce moment. Réessaie dans un instant.',
+              code: 'SERVICE_BUSY',
+              statusCode: 503,
+              fromApi: true,
+            ),
+          ),
+        );
+        await container.read(coachThreadProvider.future);
+
+        expect(
+          await container.read(coachThreadProvider.notifier).send('Demain ?'),
+          isFalse,
+        );
+        expect(
+          container.read(coachThreadProvider).valueOrNull?.notice,
+          'Le coach est très sollicité en ce moment. Réessaie dans un instant.',
+        );
+      },
+    );
+
+    test(
+      'un 429 du serveur dit LEQUEL des plafonds : son message fait foi',
+      () async {
+        final container = containerWith(
+          FakeCoachRepository(
+            sendError: const ServerException(
+              'Tu envoies trop de messages d’un coup. Attends une minute.',
+              statusCode: 429,
+              fromApi: true,
+            ),
+          ),
+        );
+        await container.read(coachThreadProvider.future);
+
+        await container.read(coachThreadProvider.notifier).send('Demain ?');
+        expect(
+          container.read(coachThreadProvider).valueOrNull?.notice,
+          'Tu envoies trop de messages d’un coup. Attends une minute.',
+        );
+      },
+    );
+  });
+
   group('proposition déjà acceptée', () {
     const proposition = CoachSessionProposal(
       id: 'proposition-1',

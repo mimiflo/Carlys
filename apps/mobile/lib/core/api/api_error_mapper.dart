@@ -201,6 +201,7 @@ AppException _mapResponse(DioException exception) {
   }
   return ServerException(
     message,
+    code: envelope?.code,
     statusCode: statusCode,
     requestId: requestId,
     fromApi: fromApi,
@@ -224,11 +225,17 @@ String? _validRequestId(String? raw) =>
     raw != null && _requestIdShape.hasMatch(raw) ? raw : null;
 
 class _ErrorEnvelope {
-  const _ErrorEnvelope(this.message, this.fieldErrors, this.requestId);
+  const _ErrorEnvelope(
+    this.message,
+    this.fieldErrors,
+    this.requestId,
+    this.code,
+  );
 
   final String message;
   final Map<String, String> fieldErrors;
   final String? requestId;
+  final String? code;
 }
 
 /// Enveloppe d'erreur Carlys : { error: { code, message, details, requestId } }.
@@ -240,6 +247,7 @@ _ErrorEnvelope? _errorEnvelopeOf(Object? body) {
   final message = error['message'];
   final details = error['details'];
   final requestId = error['requestId'];
+  final code = error['code'];
   final fieldErrors = <String, String>{};
   if (details is List) {
     for (final (index, detail) in details.indexed) {
@@ -255,6 +263,7 @@ _ErrorEnvelope? _errorEnvelopeOf(Object? body) {
           message,
           fieldErrors,
           requestId is String ? requestId : null,
+          code is String ? code : null,
         )
       : null;
 }

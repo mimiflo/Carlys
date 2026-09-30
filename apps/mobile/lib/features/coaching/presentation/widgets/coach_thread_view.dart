@@ -62,7 +62,11 @@ class CoachThreadView extends StatelessWidget {
         }
         if (live != null && index < pending) {
           return index == 0
-              ? CoachLiveBubble(text: live.text, maxWidth: maxBubbleWidth)
+              ? CoachLiveBubble(
+                  text: live.text,
+                  ahead: live.ahead,
+                  maxWidth: maxBubbleWidth,
+                )
               : CoachBubble(
                   isUser: true,
                   maxWidth: maxBubbleWidth,

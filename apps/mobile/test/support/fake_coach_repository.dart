@@ -38,6 +38,12 @@ class FakeCoachRepository implements CoachRepository {
   /// Morceaux rendus au fil de l'écriture, avant la réplique.
   List<String> streamed = const [];
 
+  /// Attentes annoncées avant le tour (`queued`), puis `started`.
+  List<int> queued = const [];
+
+  /// Le tour « génère » jusqu'à ce qu'on l'arrête, comme le serveur.
+  bool hangUntilCancelled = false;
+
   final List<String> sent = [];
 
   /// Les identifiants reçus, dans l'ordre : c'est la clé d'idempotence du
@@ -83,11 +89,23 @@ class FakeCoachRepository implements CoachRepository {
     required String messageId,
     required String content,
     void Function(String text)? onText,
+    void Function(int ahead)? onQueued,
+    void Function()? onStarted,
+    Future<void>? cancel,
   }) async {
     sent.add(content);
     sentIds.add(messageId);
     final error = sendError;
     if (error != null) throw error;
+    for (final ahead in queued) {
+      onQueued?.call(ahead);
+    }
+    if (hangUntilCancelled) {
+      await cancel;
+      // Ce que Dio lève quand la requête est abandonnée.
+      throw const UnknownException('Requête annulée');
+    }
+    if (queued.isNotEmpty) onStarted?.call();
     for (final part in streamed) {
       onText?.call(part);
     }

@@ -122,6 +122,55 @@ void main() {
 
   group('réponse en flux', () {
     test(
+      'en file : `queued` dit combien passent avant, `started` que c’est son tour',
+      () async {
+        adapter.responses = (
+          200,
+          'event: queued\ndata: {"ahead":2}\n\n'
+              'event: queued\ndata: {"ahead":0}\n\n'
+              'event: started\ndata: {}\n\n'
+              '${_sse(['delta', 'done'])}',
+        );
+        final events = <String>[];
+
+        await repository.sendMessage(
+          conversationId: 'c1',
+          messageId: 'm1',
+          content: 'Séance jambes 30 min ?',
+          onQueued: (ahead) => events.add('file:$ahead'),
+          onStarted: () => events.add('tour'),
+          onText: (text) => events.add('texte:$text'),
+        );
+
+        expect(events, ['file:2', 'file:0', 'tour', 'texte:Répon']);
+      },
+    );
+
+    test(
+      'file trop longue APRÈS l’attente : SERVICE_BUSY porté par l’erreur',
+      () async {
+        adapter.responses = (
+          200,
+          'event: queued\ndata: {"ahead":1}\n\n'
+              'event: error\ndata: {"error":{"code":"SERVICE_BUSY","message":"Le coach est très sollicité.","details":[],"requestId":"r-2"}}\n\n',
+        );
+
+        await expectLater(
+          repository.sendMessage(
+            conversationId: 'c1',
+            messageId: 'm1',
+            content: 'Q ?',
+          ),
+          throwsA(
+            isA<ServerException>()
+                .having((e) => e.code, 'code', 'SERVICE_BUSY')
+                .having((e) => e.statusCode, 'statusCode', 503),
+          ),
+        );
+      },
+    );
+
+    test(
       'les battements du serveur (`: ping`) passent sans rien dire',
       () async {
         adapter.responses = (
