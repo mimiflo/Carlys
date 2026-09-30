@@ -13,6 +13,7 @@ import request from 'supertest';
 import { type App } from 'supertest/types';
 import { AppModule } from '../src/app/app.module';
 import { configureApp } from '../src/app/configure-app';
+import { RedisService } from '../src/infrastructure/cache/redis.service';
 import { PresenceService } from '../src/infrastructure/presence/presence.service';
 import { RedisThrottlerStorage } from '../src/infrastructure/throttling/redis-throttler.storage';
 
@@ -167,6 +168,16 @@ describe('Observabilité (e2e)', () => {
       const presence = app.get(PresenceService);
 
       await dansLaMemeMinute(async () => {
+        // FENÊTRE VIDÉE D'ABORD. PFCOUNT est une ESTIMATION (≈ 0,8 %) : sur
+        // les ~80 utilisateurs que la suite a déjà touchés, un nouvel arrivant
+        // peut laisser le compte inchangé. Observé en CI : « Expected: 78,
+        // Received: 77 », dans la même minute. À une poignée d'éléments,
+        // l'HyperLogLog est exact : c'est là qu'on vérifie qu'il déduplique.
+        const redis = app.get(RedisService).getClient();
+        const seaux = await redis.keys('carlys:presence:m:*');
+        if (seaux.length > 0) {
+          await redis.del(...seaux);
+        }
         const avant = await presence.onlineUsers();
 
         const utilisateur = randomUUID();
