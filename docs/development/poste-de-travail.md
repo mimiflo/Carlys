@@ -101,7 +101,8 @@ cd Carlys
 
 `android/` et `ios/` **ne sont pas versionnés** : ils se régénèrent. Toute
 retouche faite à la main dedans sera perdue au prochain bootstrap — l'identité
-de l'application (nom, icône, permissions, réseau de debug) vit dans
+de l'application (nom, icône, permissions, réseau de debug, sauvegarde
+Android coupée) vit dans
 `scripts/android_branding.sh`, que le bootstrap appelle. Les motifs iOS de
 l'appareil photo et de la photothèque, et la caméra déclarée facultative
 sous Android, y sont nés avec la photo du plat : voir

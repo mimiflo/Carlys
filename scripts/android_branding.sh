@@ -58,6 +58,22 @@ if ! grep -q 'android.hardware.camera"' "$MANIFEST"; then
   rm -f "$MANIFEST.bak"
 fi
 
+# ── Pas de sauvegarde Android ───────────────────────────────────────────────
+#
+# Par défaut (`allowBackup` absent vaut « true »), Android copie les données de
+# l'application vers le compte Google, EN CLAIR pour elle : la base Drift
+# (séances, eau), les préférences (réponses de profil — poids, taille, âge —,
+# dernier fil du coach). Rien de cela n'a besoin d'une sauvegarde : le serveur
+# fait foi et l'application rapatrie tout à la connexion, et les jetons, eux,
+# ne se restaurent de toute façon pas (trousseau lié à l'appareil). Garder la
+# sauvegarde n'apportait rien et exposait des données de santé. Aucune
+# bibliothèque du projet ne déclare l'attribut : la fusion du manifeste ne
+# peut pas entrer en conflit (vérifié le 30/09/2026).
+if ! grep -q 'android:allowBackup' "$MANIFEST"; then
+  sed -i.bak 's|<application|<application android:allowBackup="false"|' "$MANIFEST"
+  rm -f "$MANIFEST.bak"
+fi
+
 # ── HTTP en clair, en DEBUG uniquement ──────────────────────────────────────
 #
 # Au-delà d'API 28, Android refuse le trafic en clair : une API locale servie
@@ -136,4 +152,4 @@ if [ -f "$PLIST" ]; then
     "Carlys n’envoie que la photo de repas que tu choisis : le reste de ta photothèque reste sur ton téléphone."
 fi
 
-echo "Identité Carlys appliquée : nom, icône, notifications, appareil photo facultatif, motifs iOS."
+echo "Identité Carlys appliquée : nom, icône, notifications, appareil photo facultatif, sans sauvegarde Android, motifs iOS."

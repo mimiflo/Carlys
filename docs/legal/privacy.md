@@ -362,8 +362,10 @@ dernière conversation reste aussi sur ton téléphone, pour que tu puisses la
 relire sans connexion. Elle s’efface quand tu te déconnectes de
 l’application, quand tu y supprimes ton compte, ou quand un autre compte s’y
 connecte ; si ta session expire ou est fermée à distance, elle reste sur ton
-téléphone jusqu’à l’un de ces moments, et elle peut figurer dans ses
-sauvegardes. Écrire au coach demande un abonnement qui l’inclut. Un plafond quotidien de messages s’applique à chaque compte.
+téléphone jusqu’à l’un de ces moments. Sur Android, l’application est exclue
+des sauvegardes du téléphone ; sur iPhone, cette copie peut figurer dans ses
+sauvegardes, chiffrées par Apple. Écrire au coach demande un abonnement qui
+l’inclut. Un plafond quotidien de messages s’applique à chaque compte.
 
 Si Carlys confiait un jour le coach à un prestataire extérieur, cette
 politique serait mise à jour, en le nommant, avant que tes messages ne lui
