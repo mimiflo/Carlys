@@ -35,7 +35,12 @@ interface Stubs {
     saveAssistantMessage: jest.Mock;
     catalogueNames: jest.Mock;
   };
-  quota: { consume: jest.Mock; remaining: jest.Mock; refundIfUnavailable: jest.Mock };
+  quota: {
+    consume: jest.Mock;
+    remaining: jest.Mock;
+    refundIfUnavailable: jest.Mock;
+    holdTurn: jest.Mock;
+  };
   model: { reply: jest.Mock<Promise<CoachTurnOutput>, [CoachTurnInput]> };
   logger: { info: jest.Mock; warn: jest.Mock };
 }
@@ -85,6 +90,7 @@ function buildStubs(): Stubs {
       refundIfUnavailable: jest.fn((_user: string, _now: Date, error: Error) =>
         Promise.reject(error),
       ),
+      holdTurn: jest.fn().mockResolvedValue(jest.fn().mockResolvedValue(undefined)),
     },
     model: {
       reply: jest.fn<Promise<CoachTurnOutput>, [CoachTurnInput]>().mockResolvedValue({
@@ -323,6 +329,66 @@ describe('CoachService.sendMessage', () => {
  * Premium reste consultable (CGU), sans abonnement et même coach coupé.
  * Seuls l'ouverture d'un fil et l'envoi d'un message passent la porte.
  */
+describe('CoachService.sendMessage — un tour à la fois, au fil de l’écriture', () => {
+  it('une réponse déjà en cours pour cette question : 409, ni quota, ni modèle, ni écriture', async () => {
+    const stubs = buildStubs();
+    stubs.quota.holdTurn.mockResolvedValue(null);
+
+    await expect(
+      buildService(stubs).sendMessage(USER, CONVERSATION, MESSAGE, 'Salut coach.'),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(stubs.quota.consume).not.toHaveBeenCalled();
+    expect(stubs.model.reply).not.toHaveBeenCalled();
+    expect(stubs.repository.saveUserMessage).not.toHaveBeenCalled();
+  });
+
+  it('le verrou est pris AVANT de chercher le rejeu : un renvoi tardif trouve la réponse archivée', async () => {
+    const stubs = buildStubs();
+
+    await buildService(stubs).sendMessage(USER, CONVERSATION, MESSAGE, 'Salut coach.');
+
+    const [verrou] = stubs.quota.holdTurn.mock.invocationCallOrder;
+    const [rejeu] = stubs.repository.findMessageWithReply.mock.invocationCallOrder;
+    expect(verrou).toBeLessThan(rejeu ?? 0);
+  });
+
+  it('un verrou qui ne se lève pas ne masque pas la réponse', async () => {
+    const stubs = buildStubs();
+    stubs.quota.holdTurn.mockResolvedValue(jest.fn().mockRejectedValue(new Error('redis')));
+
+    const reply = await buildService(stubs).sendMessage(
+      USER,
+      CONVERSATION,
+      MESSAGE,
+      'Salut coach.',
+    );
+
+    expect(reply.assistantMessage.content).toBe('Salut.');
+    expect(stubs.logger.warn).toHaveBeenCalled();
+  });
+
+  it('le verrou se lève même quand le fournisseur tombe', async () => {
+    const stubs = buildStubs();
+    const release = jest.fn().mockResolvedValue(undefined);
+    stubs.quota.holdTurn.mockResolvedValue(release);
+    stubs.model.reply.mockRejectedValue(new ServiceUnavailableException('panne'));
+
+    await expect(
+      buildService(stubs).sendMessage(USER, CONVERSATION, MESSAGE, 'Salut coach.'),
+    ).rejects.toBeInstanceOf(ServiceUnavailableException);
+    expect(release).toHaveBeenCalledTimes(1);
+  });
+
+  it('le texte en cours d’écriture est confié au modèle, qui le rend morceau par morceau', async () => {
+    const stubs = buildStubs();
+    const onText = jest.fn();
+
+    await buildService(stubs).sendMessage(USER, CONVERSATION, MESSAGE, 'Salut coach.', onText);
+
+    expect(stubs.model.reply.mock.calls[0]?.[0].onText).toBe(onText);
+  });
+});
+
 describe('CoachService — la porte ne garde que ce qui coûte', () => {
   it.each([
     ['ancien abonné (403 à l’envoi)', { abonne: false, coachEnabled: true }, ForbiddenException],

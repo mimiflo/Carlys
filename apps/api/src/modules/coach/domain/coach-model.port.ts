@@ -54,6 +54,12 @@ export interface CoachTurnInput {
    * port ignore tout du domaine, il ne sait qu'appeler.
    */
   runTools: (calls: CoachToolCall[]) => Promise<CoachToolResult[]>;
+  /**
+   * Reçoit le texte AU FIL de sa génération (route en flux). Un fournisseur
+   * qui ne sait pas streamer l'ignore : la réponse arrive alors d'un bloc,
+   * dans `CoachTurnOutput.text`, qui reste la seule version archivée.
+   */
+  onText?: (delta: string) => void;
 }
 
 export interface CoachTurnUsage {

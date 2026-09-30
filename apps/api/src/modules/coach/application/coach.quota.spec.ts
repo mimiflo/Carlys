@@ -26,6 +26,7 @@ describe('CoachQuota', () => {
 
   function fakeRedis(): { redis: RedisService; store: Map<string, number>; expiries: string[] } {
     const store = new Map<string, number>();
+    const locks = new Map<string, string>();
     const expiries: string[] = [];
     const client = {
       incr: (key: string) => {
@@ -42,7 +43,14 @@ describe('CoachQuota', () => {
         store.set(key, next);
         return Promise.resolve(next);
       },
-      get: (key: string) => Promise.resolve(store.get(key)?.toString() ?? null),
+      get: (key: string) => Promise.resolve(store.get(key)?.toString() ?? locks.get(key) ?? null),
+      // SET … NX : les verrous de tour, à part du compteur.
+      set: (key: string, value: string) => {
+        if (locks.has(key)) return Promise.resolve(null);
+        locks.set(key, value);
+        return Promise.resolve('OK');
+      },
+      del: (key: string) => Promise.resolve(locks.delete(key) ? 1 : 0),
     } as unknown as Redis;
     return { redis: { getClient: () => client } as RedisService, store, expiries };
   }
@@ -217,5 +225,17 @@ describe('CoachQuota', () => {
     expect(store.get(CoachQuota.keyFor(USER, avantMinuit))).toBe(0);
     // Aucune clé du lendemain créée à -1, sans expiration.
     expect(store.has(CoachQuota.keyFor(USER, new Date('2026-09-28T00:00:10.000Z')))).toBe(false);
+  });
+
+  it('une question ne se répond qu’une fois à la fois ; levé, le verrou se reprend', async () => {
+    const quota = new CoachQuota(fakeRedis().redis, config(3));
+
+    const release = await quota.holdTurn('message-1');
+    expect(release).not.toBeNull();
+    await expect(quota.holdTurn('message-1')).resolves.toBeNull();
+    await expect(quota.holdTurn('message-2')).resolves.not.toBeNull();
+
+    await release?.();
+    await expect(quota.holdTurn('message-1')).resolves.not.toBeNull();
   });
 });

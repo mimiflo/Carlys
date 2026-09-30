@@ -66,6 +66,9 @@ describe('Coach IA (e2e)', () => {
   /** Panne que le faux lèvera au prochain tour, comme un vrai client. */
   let nextFailure: Error | undefined;
 
+  /** Panne APRÈS le premier morceau de texte : le flux est déjà parti. */
+  let nextStreamFailure: Error | undefined;
+
   const textOnly = (text: string): CoachTurnOutput => ({
     text,
     proposal: null,
@@ -82,6 +85,13 @@ describe('Coach IA (e2e)', () => {
       // Le faux appelle un outil de lecture : on vérifie ainsi que la chaîne
       // complète fonctionne, pas seulement l'écriture en base.
       await input.runTools([{ id: 'call-1', name: 'get_personal_records', input: {} }]);
+      // En flux, le texte part en deux morceaux, comme un vrai modèle.
+      const half = Math.ceil(nextOutput.text.length / 2);
+      input.onText?.(nextOutput.text.slice(0, half));
+      if (nextStreamFailure !== undefined) {
+        throw nextStreamFailure;
+      }
+      input.onText?.(nextOutput.text.slice(half));
       return nextOutput;
     },
   };
@@ -602,5 +612,91 @@ describe('Coach IA (e2e)', () => {
       // le processus de test, qui ne rend alors jamais la main.
       await disabled.close();
     }
+  });
+
+  describe('réponse en flux', () => {
+    /** Les évènements SSE d'un corps texte, dans l'ordre. */
+    const events = (text: string) =>
+      text
+        .split('\n\n')
+        .filter((block) => block.trim() !== '')
+        .map((block) => ({
+          event: /^event: (.*)$/m.exec(block)?.[1],
+          data: JSON.parse(/^data: (.*)$/m.exec(block)?.[1] ?? 'null') as unknown,
+        }));
+
+    const streamTo = (conversationId: string, content: string, id = randomUUID()) =>
+      authed(accessToken)
+        .post(`/api/v1/coach/conversations/${conversationId}/messages/stream`)
+        .buffer(true)
+        .parse((res, done) => {
+          let body = '';
+          res.setEncoding('utf8');
+          res.on('data', (chunk: string) => (body += chunk));
+          res.on('end', () => done(null, body));
+        })
+        .send({ id, content });
+
+    it('le texte arrive morceau par morceau, puis la réponse archivée', async () => {
+      await grantCoaching();
+      await resetQuota();
+      nextOutput = textOnly('Garde 90 secondes de repos.');
+      const conversationId = randomUUID();
+
+      const response = await streamTo(conversationId, 'Combien de repos ?').expect(200);
+
+      expect(response.headers['content-type']).toContain('text/event-stream');
+      expect(response.headers['x-accel-buffering']).toBe('no');
+      const flux = events(response.body as string);
+      expect(flux.map((e) => e.event)).toEqual(['delta', 'delta', 'done']);
+      expect(
+        flux
+          .slice(0, 2)
+          .map((e) => (e.data as { text: string }).text)
+          .join(''),
+      ).toBe('Garde 90 secondes de repos.');
+      const reply = data<CoachReply>(flux[2]?.data);
+      expect(reply.assistantMessage.content).toBe('Garde 90 secondes de repos.');
+      expect((flux[2]?.data as { requestId?: string }).requestId).toEqual(expect.any(String));
+      // Archivé comme par la route sans flux : le fil se relit.
+      const fil = data<CoachConversation>(
+        (await authed(accessToken).get(`/api/v1/coach/conversations/${conversationId}`)).body,
+      );
+      expect(fil.messages.map((m) => m.content)).toEqual([
+        'Combien de repos ?',
+        'Garde 90 secondes de repos.',
+      ]);
+    });
+
+    it('un refus AVANT le premier mot garde son statut HTTP (403)', async () => {
+      await revokeCoaching();
+      await streamTo(randomUUID(), 'Une question').expect(403);
+      await grantCoaching();
+    });
+
+    it('une panne APRÈS le premier mot devient l’évènement error, sans archiver de réponse', async () => {
+      await grantCoaching();
+      await resetQuota();
+      nextOutput = textOnly('Réponse qui ne finira pas.');
+      nextStreamFailure = new CoachProviderUnavailableException('Coach : flux interrompu.', {
+        inputTokens: 50,
+        outputTokens: 5,
+        cacheReadTokens: 0,
+      });
+      const conversationId = randomUUID();
+
+      try {
+        const response = await streamTo(conversationId, 'Une question').expect(200);
+        const flux = events(response.body as string);
+        expect(flux.map((e) => e.event)).toEqual(['delta', 'error']);
+        expect(flux[1]?.data).toMatchObject({ error: { code: 'SERVICE_UNAVAILABLE' } });
+      } finally {
+        nextStreamFailure = undefined;
+      }
+      const fil = data<CoachConversation>(
+        (await authed(accessToken).get(`/api/v1/coach/conversations/${conversationId}`)).body,
+      );
+      expect(fil.messages.map((m) => m.role)).toEqual(['USER']);
+    });
   });
 });

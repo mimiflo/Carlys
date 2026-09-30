@@ -15,24 +15,7 @@ import {
   type CoachTurnOutput,
   type CoachTurnUsage,
 } from '../domain/coach-model.port';
-
-/** Ce qu'on lit d'une réponse Chat Completions, rien de plus. */
-interface ChatToolCall {
-  id: string;
-  function?: { name?: string; arguments?: unknown };
-}
-interface ChatChoice {
-  finish_reason?: string;
-  message?: { content?: unknown; tool_calls?: ChatToolCall[] | null };
-}
-interface ChatCompletion {
-  choices?: ChatChoice[];
-  usage?: {
-    prompt_tokens?: number;
-    completion_tokens?: number;
-    prompt_tokens_details?: { cached_tokens?: number } | null;
-  };
-}
+import { type ChatCompletion, readChatStream } from './chat-completion-stream';
 
 /** Nouvelles tentatives sur un 429 ou un 5xx, comme le SDK Anthropic. */
 const RETRIES = 2;
@@ -67,10 +50,23 @@ export class OpenAiCompatibleCoachClient implements CoachModelPort {
     // Dernier texte non vide : la phrase dite AVEC une proposition survit à
     // un dernier tour vide.
     let said = '';
+    // En flux : du texte déjà montré (`shown`), et dans CE tour (`spoke`). Un
+    // tour d'outils qui parlait ne se colle pas au suivant : un saut de
+    // paragraphe les sépare, le temps que la réplique archivée les remplace.
+    let shown = false;
+    let spoke = false;
+    const onText =
+      input.onText &&
+      ((text: string) => {
+        if (shown && !spoke) input.onText?.('\n\n');
+        shown = spoke = true;
+        input.onText?.(text);
+      });
 
     for (let round = 0; round < COACH_MAX_TOOL_ROUNDS; round++) {
-      const completion = await this.complete({ messages, tools }, signal).catch((error: unknown) =>
-        unavailable(error, usage),
+      spoke = false;
+      const completion = await this.complete({ messages, tools }, signal, onText).catch(
+        (error: unknown) => unavailable(error, usage, shown),
       );
       usage.inputTokens += completion.usage?.prompt_tokens ?? 0;
       usage.outputTokens += completion.usage?.completion_tokens ?? 0;
@@ -118,7 +114,10 @@ export class OpenAiCompatibleCoachClient implements CoachModelPort {
   private async complete(
     payload: Record<string, unknown>,
     signal: AbortSignal,
+    onText?: (delta: string) => void,
   ): Promise<ChatCompletion> {
+    // En flux, l'usage n'arrive que si on le demande (dernier morceau).
+    const stream = onText ? { stream: true, stream_options: { include_usage: true } } : {};
     const { baseUrl = '', apiKey, model } = this.config.coachProvider;
     for (let attempt = 0; ; attempt++) {
       const response = await fetch(`${baseUrl.replace(/\/+$/, '')}/chat/completions`, {
@@ -128,8 +127,11 @@ export class OpenAiCompatibleCoachClient implements CoachModelPort {
           'Content-Type': 'application/json',
           ...(apiKey === undefined ? {} : { Authorization: `Bearer ${apiKey}` }),
         },
-        body: JSON.stringify({ model, max_tokens: COACH_MAX_OUTPUT_TOKENS, ...payload }),
+        body: JSON.stringify({ model, max_tokens: COACH_MAX_OUTPUT_TOKENS, ...payload, ...stream }),
       });
+      if (response.ok && onText) {
+        return readChatStream(response, onText);
+      }
       if (response.ok) {
         const body: unknown = await response.json();
         if (typeof body !== 'object' || body === null) {
@@ -158,7 +160,13 @@ export class OpenAiCompatibleCoachClient implements CoachModelPort {
  * raison du fournisseur, voir `refusalReason`), ou le NOM de l'erreur,
  * jamais son message, qui peut citer le corps de la réponse.
  */
-function unavailable(error: unknown, usage: CoachTurnUsage): never {
+function unavailable(error: unknown, usage: CoachTurnUsage, shown = false): never {
+  // Un flux coupé ne dit pas ce qu'il a coûté (l'usage n'arrive qu'à la
+  // fin) : du texte montré prouve des jetons consommés, le message n'est
+  // donc PAS rendu (`refundIfUnavailable` ne rend qu'à zéro jeton).
+  if (shown && usage.inputTokens === 0) {
+    usage.inputTokens = 1;
+  }
   const reason =
     error instanceof HttpException
       ? error.message

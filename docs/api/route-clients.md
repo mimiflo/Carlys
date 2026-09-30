@@ -209,7 +209,8 @@ ou la restreindre à l'orchestrateur, casserait cet indicateur.
 | `GET /coach/conversations` | **mobile** | apps/mobile |
 | `POST /coach/conversations` | **mobile** | apps/mobile |
 | `GET /coach/conversations/{id}` | **mobile** | apps/mobile |
-| `POST /coach/conversations/{id}/messages` | **mobile** | apps/mobile |
+| `POST /coach/conversations/{id}/messages` | **mobile** (versions d'avant le flux, déjà installées ; l'appli actuelle passe par `/stream`) | apps/mobile |
+| `POST /coach/conversations/{id}/messages/stream` | **mobile** | apps/mobile |
 | `POST /coach/proposals/{id}/accepted` | **mobile** | apps/mobile |
 
 ### Abonnements et droits

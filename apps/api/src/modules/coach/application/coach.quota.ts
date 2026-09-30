@@ -1,7 +1,11 @@
 import { HttpException, HttpStatus, Injectable } from '@nestjs/common';
+import { randomUUID } from 'node:crypto';
 import { AppConfigService } from '../../../config/app-config.service';
 import { RedisService } from '../../../infrastructure/cache/redis.service';
-import { CoachProviderUnavailableException } from '../domain/coach-model.port';
+import {
+  COACH_TURN_DEADLINE_MS,
+  CoachProviderUnavailableException,
+} from '../domain/coach-model.port';
 
 /**
  * Restitutions sur panne par personne et par jour. Au-delà, une panne garde
@@ -80,6 +84,27 @@ export class CoachQuota {
       await this.redis.getClient().decr(CoachQuota.keyFor(userId, now));
     }
     throw error;
+  }
+
+  /**
+   * Verrou d'UNE question pendant qu'on y répond : rend de quoi le lever, ou
+   * `null` s'il est déjà tenu. Il expire seul après l'échéance d'un tour
+   * (plus une marge) : une API tuée en plein tour ne bloque pas la question.
+   * La levée ne supprime que SON verrou, jamais celui d'un tour suivant.
+   */
+  async holdTurn(messageId: string): Promise<(() => Promise<void>) | null> {
+    const client = this.redis.getClient();
+    const key = `coach:turn:${messageId}`;
+    const token = randomUUID();
+    const held = await client.set(key, token, 'PX', COACH_TURN_DEADLINE_MS + 20_000, 'NX');
+    if (held === null) {
+      return null;
+    }
+    return async () => {
+      if ((await client.get(key)) === token) {
+        await client.del(key);
+      }
+    };
   }
 
   /** INCR, et l'expiration posée à la naissance de la clé. */

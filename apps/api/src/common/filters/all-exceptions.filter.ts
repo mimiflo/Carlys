@@ -161,6 +161,16 @@ export class AllExceptionsFilter implements ExceptionFilter {
     const body: ApiErrorEnvelope = {
       error: { code, message, details, requestId },
     };
+    if (response.headersSent) {
+      // Réponse déjà commencée. EN FLUX (SSE) : l'erreur devient son dernier
+      // évènement, avec la même enveloppe. Toute autre : on coupe, plutôt que
+      // de coller une enveloppe au bout d'un corps d'un autre format.
+      const sse = String(response.getHeader('Content-Type')).startsWith('text/event-stream');
+      if (response.writableEnded || response.destroyed) return;
+      if (sse) response.end(`event: error\ndata: ${JSON.stringify(body)}\n\n`);
+      else response.destroy();
+      return;
+    }
     response.status(status).json(body);
   }
 }

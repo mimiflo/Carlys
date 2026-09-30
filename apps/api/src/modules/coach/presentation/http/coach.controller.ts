@@ -12,10 +12,16 @@ import {
   Param,
   ParseUUIDPipe,
   Post,
+  Req,
+  Res,
 } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiProduces, ApiTags } from '@nestjs/swagger';
+import { type Response } from 'express';
 import { CurrentUser } from '../../../../common/decorators/current-user.decorator';
+import { sseEmitter } from '../../../../common/http/sse';
 import { type AuthenticatedPrincipal } from '../../../../common/types/authenticated-request';
+import { type RequestWithId } from '../../../../common/types/request-with-id';
+import { enveloped } from '../../../../common/utilities/enveloped';
 import { CoachService } from '../../application/coach.service';
 import {
   AcceptCoachProposalDto,
@@ -69,6 +75,32 @@ export class CoachController {
     @Body() body: SendCoachMessageDto,
   ): Promise<CoachReply> {
     return this.coach.sendMessage(user.userId, id, body.id, body.content);
+  }
+
+  @Post('conversations/:id/messages/stream')
+  @ApiProduces('text/event-stream')
+  @ApiOperation({
+    summary: 'Envoie un message ; la réponse du coach arrive AU FIL de son écriture',
+    description:
+      'Mêmes règles que la route sans flux (rejeu, 409, 404). Un refus AVANT ' +
+      'le premier mot garde son statut HTTP. Ensuite, flux SSE : `delta` ' +
+      '({ text }) à chaque morceau, puis `done` (enveloppe de succès, même ' +
+      '`CoachReply`), ou `error` (enveloppe d’erreur). Le texte archivé est ' +
+      'celui de `done`.',
+  })
+  async stream(
+    @CurrentUser() user: AuthenticatedPrincipal,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() body: SendCoachMessageDto,
+    @Req() request: RequestWithId,
+    @Res() response: Response,
+  ): Promise<void> {
+    const emit = sseEmitter(response);
+    const reply = await this.coach.sendMessage(user.userId, id, body.id, body.content, (text) =>
+      emit('delta', { text }),
+    );
+    emit('done', enveloped(reply, {}, request));
+    response.end();
   }
 
   @Post('proposals/:id/accepted')
