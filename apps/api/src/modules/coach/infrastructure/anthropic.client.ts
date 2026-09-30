@@ -24,6 +24,9 @@ import { PROPOSE_SESSION_TOOL } from '../application/coach.tool-definitions';
  * ce qui précède — définitions d'outils puis prompt — est stable et se relit
  * à un dixième du prix. Rien de volatile ne doit remonter dans ce préfixe.
  */
+/** Le modèle sans `COACH_MODEL` : le défaut vit ici, pas dans le schéma. */
+const DEFAULT_MODEL = 'claude-opus-5-5';
+
 export class AnthropicCoachClient implements CoachModelPort {
   /** Créé paresseusement : sans clé, le module reste chargeable. */
   private client: Anthropic | null = null;
@@ -35,7 +38,7 @@ export class AnthropicCoachClient implements CoachModelPort {
     // Une seule échéance pour tout le tour : le SDK, seul, attendrait 10 min.
     const signal = AbortSignal.timeout(turnDeadlineMs(input));
 
-    const messages: Anthropic.MessageParam[] = input.history.map((turn) => ({
+    const messages: Anthropic.Beta.BetaMessageParam[] = input.history.map((turn) => ({
       role: turn.role,
       content: turn.content,
     }));
@@ -43,7 +46,7 @@ export class AnthropicCoachClient implements CoachModelPort {
     // Le préfixe partagé porte la césure de cache ; le bloc par utilisateur
     // (profil Carlys) vient APRÈS, sans cache_control — sinon le préfixe se
     // fragmenterait en une variante par profil.
-    const system: Anthropic.TextBlockParam[] = [
+    const system: Anthropic.Beta.BetaTextBlockParam[] = [
       {
         type: 'text',
         text: input.system,
@@ -59,16 +62,24 @@ export class AnthropicCoachClient implements CoachModelPort {
     const usage = { inputTokens: 0, outputTokens: 0, cacheReadTokens: 0 };
 
     for (let round = 0; round < COACH_MAX_TOOL_ROUNDS; round++) {
-      const response = await client.messages
+      const response = await client.beta.messages
         .create(
           {
-            model: this.config.coachProvider.model ?? 'claude-opus-5',
+            model: this.config.coachProvider.model ?? DEFAULT_MODEL,
             max_tokens: COACH_MAX_OUTPUT_TOKENS,
+            // Un refus d'un classifieur de sécurité — un faux positif sur des
+            // compléments ou une blessure — est repris par un autre modèle
+            // dans le même appel, choisi par l'API selon la catégorie.
+            betas: ['server-side-fallback-2026-07-01'],
+            fallbacks: 'default',
+            // Le défaut de Claude Opus 5.5 ; posé pour qu'un changement de
+            // modèle ne change pas la profondeur de réflexion en silence.
+            output_config: { effort: 'medium' },
             system,
             tools: input.tools.map((tool) => ({
               name: tool.name,
               description: tool.description,
-              input_schema: tool.inputSchema as Anthropic.Tool.InputSchema,
+              input_schema: tool.inputSchema as Anthropic.Beta.BetaTool.InputSchema,
             })),
             messages,
           },
@@ -109,7 +120,7 @@ export class AnthropicCoachClient implements CoachModelPort {
         calls.filter((call) => call.name !== PROPOSE_SESSION_TOOL),
       );
 
-      const blocks: Anthropic.ToolResultBlockParam[] = results.map((result) => ({
+      const blocks: Anthropic.Beta.BetaToolResultBlockParam[] = results.map((result) => ({
         type: 'tool_result',
         tool_use_id: result.id,
         content: result.content,
@@ -161,9 +172,9 @@ function unavailable(error: unknown, usage: CoachTurnUsage): never {
   throw error;
 }
 
-function textOf(response: Anthropic.Message): string {
+function textOf(response: Anthropic.Beta.BetaMessage): string {
   return response.content
-    .filter((block): block is Anthropic.TextBlock => block.type === 'text')
+    .filter((block): block is Anthropic.Beta.BetaTextBlock => block.type === 'text')
     .map((block) => block.text)
     .join('\n')
     .trim();

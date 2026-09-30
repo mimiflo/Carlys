@@ -34,7 +34,7 @@ describe('AnthropicCoachClient', () => {
     global.fetch = originalFetch;
   });
 
-  it('sans COACH_MODEL, demande claude-opus-5 (le défaut vit ici, pas dans le schéma)', async () => {
+  it('sans COACH_MODEL, demande claude-opus-5-5 (le défaut vit ici, pas dans le schéma), avec le repli serveur sur refus', async () => {
     const fetchMock = jest.fn().mockResolvedValue(
       jsonResponse(200, {
         id: 'msg_1',
@@ -52,7 +52,17 @@ describe('AnthropicCoachClient', () => {
 
     expect(output.text).toBe('Salut !');
     const [, init] = fetchMock.mock.calls[0] as [string, RequestInit];
-    expect(JSON.parse(init.body as string)).toMatchObject({ model: 'claude-opus-5' });
+    expect(JSON.parse(init.body as string)).toMatchObject({
+      model: 'claude-opus-5-5',
+      // Un refus d'un classifieur de sécurité (faux positif sur une question
+      // de compléments, de blessure…) est repris par un autre modèle dans le
+      // même appel, au lieu de rendre « Je ne peux pas répondre ».
+      fallbacks: 'default',
+      output_config: { effort: 'medium' },
+    });
+    expect(new Headers(init.headers).get('anthropic-beta')).toContain(
+      'server-side-fallback-2026-07-01',
+    );
   });
 
   it('l’échéance du tour est bien passée au SDK : échue, aucun appel ne part et le tour rend 503', async () => {

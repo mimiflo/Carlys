@@ -366,14 +366,21 @@ ni facture, et sans que les messages quittent la machine. Réglage :
 [mise-en-route-serveur.md](../deployment/mise-en-route-serveur.md), « Coach
 IA sur le serveur »). Mistral Free mode, retenu le 27 septembre, a refusé
 toutes les demandes dès le lendemain. Mistral ou Anthropic restent possibles
-(`COACH_MODEL` facultatif pour Anthropic, `claude-opus-5` par défaut), mais
+(`COACH_MODEL` facultatif pour Anthropic, `claude-opus-5-5` par défaut), mais
 **les textes légaux passent d'abord** : ils disent aujourd'hui qu'aucun
 prestataire d'IA ne reçoit les messages, et `privacy.md` promet d'être mis
 à jour AVANT que les messages partent chez un prestataire. Dans l'ordre : `privacy.md` (nommer Anthropic PBC, le remettre parmi les
 traitements hors de l'Union européenne, des marqueurs pour sa conservation
 et l'entraînement) et `terms.md`, redéploiement de l'admin, et seulement
-ensuite retirer `COACH_API_BASE_URL` et poser `ANTHROPIC_API_KEY`. Aucun
-réglage de réflexion ni d'`effort` n'est envoyé, à aucun fournisseur.
+ensuite retirer `COACH_API_BASE_URL` et poser `ANTHROPIC_API_KEY`. Chez
+Anthropic, le client pose l'effort `medium` (le défaut de Claude Opus 5.5,
+écrit pour qu'un changement de modèle ne le déplace pas en silence) et le
+repli serveur sur refus (`fallbacks: "default"`) : un faux positif d'un
+classifieur de sécurité — compléments, blessure — est repris par un autre
+modèle dans le même appel au lieu de rendre « Je ne peux pas répondre ».
+Rien de tel n'est envoyé au fournisseur compatible OpenAI. Chez Anthropic, la
+réponse arrive d'un bloc (≈ 5 à 15 s), pas mot à mot : le client n'écrit pas
+encore en flux.
 
 **Ce que « sur le serveur » implique.** Plus de quota de fournisseur : la
 limite, c'est le processeur. Une réponse à la fois (`OLLAMA_NUM_PARALLEL=1`),
@@ -485,7 +492,7 @@ démarrage.
 | --- | --- |
 | `COACH_API_BASE_URL` | Posée : API compatible OpenAI (`http://ollama:11434/v1` sur le serveur, ou `https://api.mistral.ai/v1`). Absente : Anthropic |
 | `COACH_API_KEY` | Clé de cette API. Absente pour un Ollama interne ; présente, jamais vide |
-| `COACH_MODEL` | Exigé avec `COACH_API_BASE_URL` (`qwen3:4b-instruct-2507-q4_K_M` sur le serveur) ; sinon `claude-opus-5` |
+| `COACH_MODEL` | Exigé avec `COACH_API_BASE_URL` (`qwen3:4b-instruct-2507-q4_K_M` sur le serveur) ; sinon `claude-opus-5-5` |
 | `CARLYS_OLLAMA_REPLICAS` | Serveur : 1 allume le service `ollama` (profil compose activé par `dc`) ; absent ou 0, le service n'existe pas |
 | `ANTHROPIC_API_KEY` | Lue seulement sans `COACH_API_BASE_URL` |
 | `COACH_DAILY_MESSAGE_LIMIT` | Plafond par personne et par jour (30) |

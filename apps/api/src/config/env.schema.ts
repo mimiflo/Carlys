@@ -184,7 +184,7 @@ export const envSchema = z
     COACH_API_BASE_URL: z.string().url().optional(),
     /** Clé de cette API. Absente pour un Ollama interne ; présente, jamais vide. */
     COACH_API_KEY: z.string().min(8).optional(),
-    /** Modèle. Exigé avec `COACH_API_BASE_URL` ; sinon, `claude-opus-5`. */
+    /** Modèle. Exigé avec `COACH_API_BASE_URL` ; sinon, `claude-opus-5-5`. */
     COACH_MODEL: z.string().min(1).optional(),
     /** Plafond par utilisateur et par jour. Le coût du coach est réel. */
     COACH_DAILY_MESSAGE_LIMIT: z.coerce.number().int().min(1).max(500).default(30),
